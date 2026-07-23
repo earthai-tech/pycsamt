@@ -262,6 +262,14 @@ def _apply_row_mask_to_block(
     """Apply a row-keep mask to tensor/tipper arrays and their frequency."""
     if _set_masked_strict_block(obj, fields, keep, fr):
         return
+    # z/z_err must shrink first, freq second: the freq setter hard-rejects
+    # (raises) any length that doesn't match the *current* z, so setting
+    # freq first while z is still the old (larger) length would silently
+    # leave freq stale (the caller-side try/except swallows that ZError).
+    # Setting z first instead trips one harmless, self-correcting ERROR
+    # log from the z setter's own rho/phi recompute (still against the
+    # stale freq) — resolved a line later when freq is set and its setter
+    # recomputes rho/phi again, now with both arrays consistent.
     for field in fields:
         value = getattr(obj, field, None)
         if isinstance(value, np.ndarray) and value.shape[0] == fr.size:

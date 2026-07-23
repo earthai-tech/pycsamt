@@ -146,12 +146,10 @@ together with skew and period stability.
    :linenos:
 
    from pycsamt.emtools import build_phase_tensor_table
-
    pt = build_phase_tensor_table(
        sites,
        recursive=False,
    )
-
    print(pt.head())
    print(pt[["station", "freq", "period", "theta", "skew", "ellipt"]])
 
@@ -163,7 +161,6 @@ together with skew and period stability.
    2  18-001A   7289.0  0.000137  ... -51.452210 -51.452210  0.213894
    3  18-001A   6102.0  0.000164  ... -61.983725 -61.983725  0.212655
    4  18-001A   5108.0  0.000196  ... -60.874439 -60.874439  0.425503
-
    [5 rows x 10 columns]
          station       freq    period       theta       skew    ellipt
    0     18-001A  10400.000  0.000096  120.687698 -56.700714  0.194909
@@ -177,7 +174,6 @@ together with skew and period stability.
    1481  18-025A      1.438  0.695410   40.621212 -32.840732  0.216635
    1482  18-025A      1.204  0.830565 -125.802958 -33.743310  0.527659
    1483  18-025A      1.008  0.992063 -107.576221 -21.335294  0.931748
-
    [1484 rows x 6 columns]
 
 The table contains these core columns:
@@ -221,7 +217,6 @@ plotting:
        median_ellipt=("ellipt", "median"),
        theta_iqr=("theta", lambda values: values.quantile(0.75) - values.quantile(0.25)),
    )
-
    print(summary.sort_values("median_abs_skew", ascending=False))
 
 .. code-block:: text
@@ -268,23 +263,18 @@ Filter By Period
 Most tensor interpretation should be tied to a period band.  A shallow
 band and a deeper band can show different strike, skew, or ellipticity.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   period_band = (0.001, 10.0)
-   band_pt = pt[
-       (pt["period"] >= period_band[0])
-       & (pt["period"] <= period_band[1])
-   ]
-
-   print("rows in band:", len(band_pt))
-   print("stations in band:", band_pt["station"].nunique())
-   print("median |skew|:", band_pt["skew"].abs().median())
-
-.. code-block:: text
-
+   >>> period_band = (0.001, 10.0)
+   >>> band_pt = pt[
+   ...     (pt["period"] >= period_band[0])
+   ...     & (pt["period"] <= period_band[1])
+   ... ]
+   >>> print("rows in band:", len(band_pt))
    rows in band: 1092
+   >>> print("stations in band:", band_pt["station"].nunique())
    stations in band: 28
+   >>> print("median |skew|:", band_pt["skew"].abs().median())
    median |skew|: 39.133827836405146
 
 When you report a tensor result, always report the period band.  A map at
@@ -319,14 +309,11 @@ A simple phase-tensor dimensionality rule uses skew and ellipticity:
    :linenos:
 
    import numpy as np
-
    skew_threshold = 3.0
    ellipt_threshold = 0.2
-
    work = band_pt.copy()
    abs_skew = work["skew"].abs()
    abs_ellipt = work["ellipt"].abs()
-
    work["dimensionality"] = np.select(
        [
            (abs_skew <= skew_threshold) & (abs_ellipt <= ellipt_threshold),
@@ -335,7 +322,6 @@ A simple phase-tensor dimensionality rule uses skew and ellipticity:
        ["1D", "2D"],
        default="3D",
    )
-
    print(work["dimensionality"].value_counts(normalize=True))
 
 .. code-block:: text

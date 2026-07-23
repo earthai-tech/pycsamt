@@ -117,10 +117,10 @@ def fmt_text(
         headers = [str(i) for i in range(ncols)]
     if len(headers) < ncols:
         headers = list(headers) + [""] * (ncols - len(headers))
-    # compute column widths
-    cols = list(zip(*rows))
+    # compute column widths (rows may be ragged, so pad missing cells)
     widths = []
-    for i, col in enumerate(cols):
+    for i in range(ncols):
+        col = [r[i] if i < len(r) else "" for r in rows]
         max_cell = max(len(str(cell)) for cell in col)
         widths.append(max(len(headers[i]), max_cell))
     # build line

@@ -268,6 +268,12 @@ html_theme_options = {
     # Per-page override lives in _configure_secondary_sidebar() below; this is
     # the fallback for any page that handler does not touch.
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
+    # NOTE: do NOT add "sidebar-collapse" here. That component only exists
+    # in unreleased pydata-sphinx-theme builds (>0.16.1) that also inject
+    # their own collapse toggle at the top of the primary sidebar; on the
+    # latest PyPI release (0.16.1, see the "docs" extra pin) the component
+    # template does not exist at all, and referencing it here throws
+    # "'sidebar-collapse.html' not found" and hard-fails the whole build.
     "primary_sidebar_end": [],
     # Code highlighting — NOTE: pydata-sphinx-theme spells these
     # "pygment_*" (no "s"); the "pygments_*" spelling is ignored and
@@ -321,6 +327,7 @@ html_css_files = [
     "css/gallery.css",
     "css/gallery-hub.css",
     "css/code-action.css",
+    "css/hosted-preview.css",
 ]
 html_js_files = [
     ("js/pycsamt-home.js", {"defer": "defer"}),
@@ -328,6 +335,7 @@ html_js_files = [
     ("js/gallery-hub.js", {"defer": "defer"}),
     ("js/code-action.js", {"defer": "defer"}),
     ("js/api-search.js", {"defer": "defer"}),
+    ("js/hosted-preview.js", {"defer": "defer"}),
 ]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).

@@ -82,7 +82,7 @@ class Grid3D:
         ...     x_max=8_000.0, y_max=8_000.0, z_max=4_000.0,
         ...     nx_stations=5, ny_stations=5)
         >>> g.resistivity.shape   # includes padding
-        (23, 28, 28)
+        (23, 36, 36)
 
     3-D conductive block::
 
@@ -360,7 +360,11 @@ class Grid3D:
         """
         import matplotlib.pyplot as plt
 
-        cx, cy, cz = self._cx, self._cy, self._cz
+        cx, cy, cz = (
+            (self._cx, self._cy, self._cz)
+            if clip_core and self.n_pad
+            else (slice(None), slice(None), slice(None))
+        )
         rho = self.resistivity
 
         xn = (

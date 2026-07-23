@@ -319,18 +319,14 @@ frequency arrays used by the plotting functions.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import ensure_sites
    from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-
    survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
    rows = []
    for index, site in enumerate(_iter_items(survey)):
        _, z, freq = _get_z_block(site)
        if z is None:
            continue
-
        rows.append(
            {
                "station": _name(site, index),
@@ -340,7 +336,6 @@ frequency arrays used by the plotting functions.
                "mean_abs_zyy": float(np.nanmean(np.abs(z[:, 1, 1]))),
            }
        )
-
    for row in rows[:5]:
        print(row)
 

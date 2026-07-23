@@ -385,6 +385,48 @@ class TestStratagemSurvey:
         with pytest.raises(Exception):
             sv.remove_static_shift()
 
+    def test_accepts_list_of_edifile(self, tmp_path):
+        """edi_dir may be a plain list of EDIFile, not just a directory."""
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edis = _load_edis(tmp_path, n=5)
+        csv = _make_coord_csv(tmp_path, n=5)
+        sv = StratagemSurvey(edis, csv, epsg=32649).fit()
+        assert sv.batch_ is None  # no directory was involved
+        assert sv.n_stations_ == 5
+        assert len(sv.edi_objects_) == 5
+
+    def test_accepts_sites_object(self, tmp_path):
+        """edi_dir may be an already-built Sites, per pycsamt.emtools convention."""
+        from pycsamt.site.base import Sites
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edis = _load_edis(tmp_path, n=5)
+        csv = _make_coord_csv(tmp_path, n=5)
+        sv = StratagemSurvey(Sites(edis), csv, epsg=32649).fit()
+        assert sv.batch_ is None
+        assert sv.n_stations_ == 5
+
+    def test_sites_property_wraps_current_state(self, tmp_path):
+        from pycsamt.site.base import Sites
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path)
+        sv = StratagemSurvey(edi_dir, csv, epsg=32649).fit()
+        sites = sv.sites_
+        assert isinstance(sites, Sites)
+        assert len(sites) == len(sv.edi_objects_)
+
+    def test_sites_property_writes_via_site_api(self, tmp_path):
+        edi_dir, csv = self._setup(tmp_path)
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        sv = StratagemSurvey(edi_dir, csv, epsg=32649).fit()
+        out = tmp_path / "sites_out"
+        paths = sv.sites_.write(out, exist_ok=True)
+        assert len(paths) == len(sv.edi_objects_)
+        assert all(p.exists() for p in paths)
+
     def test_raw_dir_not_required(self, tmp_path):
         from pycsamt.stratagem.survey import StratagemSurvey
 

@@ -295,5 +295,5 @@ Where To Go Next
 * :doc:`data_formats` for AVG, Jones J, spectra, TEM/TDEM, and EDI details;
 * :doc:`../tutorials/inspect_and_qc_survey` for richer diagnostics;
 * :doc:`../tutorials/correct_static_shift` for the full static-shift workflow;
-* :doc:`../pipeline/index` for custom processing chains;
+* :doc:`../user_guide/pipeline/index` for custom processing chains;
 * :doc:`../tutorials/prepare_occam2d_inversion` for inversion preparation.

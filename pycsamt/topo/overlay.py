@@ -65,6 +65,7 @@ def draw_topo_section(
     station_x_km: np.ndarray | None = None,
     cfg=None,
     dark: bool = True,
+    marker_style=None,
 ) -> None:
     """Overlay terrain on a depth-section axes (terrain-following frame).
 
@@ -96,6 +97,13 @@ def draw_topo_section(
         Configuration override.  Defaults to :data:`PYCSAMT_TOPO`.
     dark : bool
         Use dark-palette label colours when True.
+    marker_style : pycsamt.api.station.StationMarkerStyle, optional
+        Station-pin style override.  Defaults to
+        :data:`pycsamt.api.station.PYCSAMT_STATION_RENDERING`'s
+        ``inversion`` marker when omitted, so existing callers keep
+        their current appearance; pass this to use a different marker
+        for this call only, without touching the global rendering
+        config.
     """
     cfg = _get_cfg(cfg)
     chain = np.asarray(chainage_km, dtype=float)
@@ -152,10 +160,13 @@ def draw_topo_section(
     pad = toward_top * cfg.marker_pad_fraction * y_range
     marker_y = pin_elev + pad
 
-    # Use station marker style from the global rendering config.
-    from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+    # Use the caller's marker style, else the global rendering config.
+    if marker_style is not None:
+        _mstyle = marker_style
+    else:
+        from pycsamt.api.station import PYCSAMT_STATION_RENDERING
 
-    _mstyle = PYCSAMT_STATION_RENDERING.inversion.marker
+        _mstyle = PYCSAMT_STATION_RENDERING.inversion.marker
     ax.scatter(
         sx,
         marker_y,
@@ -203,6 +214,8 @@ def draw_topo_strip(
     *,
     cfg=None,
     dark: bool = True,
+    marker_style=None,
+    facecolor: str | None = None,
 ) -> Any:
     """Add an elevation-profile strip above a pseudosection image axes.
 
@@ -226,6 +239,16 @@ def draw_topo_strip(
         Labels for the strip tick marks.
     cfg : TopoConfig, optional
     dark : bool
+    marker_style : pycsamt.api.station.StationMarkerStyle, optional
+        Station-pin style override for the strip, analogous to
+        :func:`draw_topo_section`'s *marker_style*.  Defaults to
+        :data:`pycsamt.api.station.PYCSAMT_STATION_RENDERING`'s
+        ``pseudosection`` marker when omitted.
+    facecolor : str, optional
+        Strip axes background colour.  Defaults to a dark slate in
+        ``dark=True`` mode and ``"none"`` (transparent, so the strip
+        blends into the figure background rather than sitting inside a
+        visibly distinct box) in ``dark=False`` mode.
 
     Returns
     -------
@@ -278,13 +301,16 @@ def draw_topo_strip(
             linewidth=cfg.line_width,
             zorder=3,
         )
-    # Station pins — use marker style from global rendering config
+    # Station pins — use the caller's marker style, else the global config
     from pycsamt.api.station import (
         PYCSAMT_STATION_RENDERING,
         StationAxisStyle,
     )
 
-    _mstyle = PYCSAMT_STATION_RENDERING.pseudosection.marker
+    if marker_style is not None:
+        _mstyle = marker_style
+    else:
+        _mstyle = PYCSAMT_STATION_RENDERING.pseudosection.marker
     ax_s.scatter(
         x_idx,
         elev_ex,
@@ -300,7 +326,10 @@ def draw_topo_strip(
 
     # ── Style the strip ────────────────────────────────────────────────────
     fg = _DEFAULT_LABEL if dark else "#4c4f69"
-    bg = "#181825" if dark else "#eff1f5"
+    if facecolor is not None:
+        bg = facecolor
+    else:
+        bg = "#181825" if dark else "none"
 
     ax_s.set_facecolor(bg)
     ax_s.set_xlim(

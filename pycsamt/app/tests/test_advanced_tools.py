@@ -6,7 +6,7 @@ and all advanced-plot catalogue entries.
 
 Real data
 ---------
-data/AMT/TIPPER/        — 2 TIPPER EDIs (HBH03_IMP, ZBR02_IMP)
+data/MT/kap03lmt_edis/  — 26 KP TIPPER EDIs
 data/AMT/WILLY_DATA/    — 128 WILLY AMT EDIs across 5 profiles
                           (L18PLT 28, L22PLT 25, L26PLT 25, L30PLT 25, L34PLT 25)
 
@@ -31,7 +31,7 @@ import pytest
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _ROOT = Path(__file__).parents[3]  # pycsamt/
-_TIPPER = _ROOT / "data" / "AMT" / "TIPPER"
+_TIPPER = _ROOT / "data" / "MT" / "kap03lmt_edis"
 _WILLY = _ROOT / "data" / "AMT" / "WILLY_DATA"
 
 _HAS_TIPPER = _TIPPER.exists() and any(_TIPPER.glob("*.edi"))

@@ -404,12 +404,23 @@ def _period(fr: np.ndarray) -> np.ndarray:
 def _angles_deg(
     a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
-    num_b = b + c
-    den_b = a - d
-    beta = 0.5 * np.degrees(np.arctan2(num_b, den_b))
-    num_a = -(b - c)
-    den_a = a + d
-    alpha = 0.5 * np.degrees(np.arctan2(num_a, den_a))
+    """Phase-tensor orientation angle alpha and skew angle beta (degrees).
+
+    Caldwell, Bibby & Brown (2004) convention, Phi = [[a, b], [c, d]]:
+
+        alpha = 0.5 * atan2(b + c, a - d)   -- rotation-variant orientation
+        beta  = 0.5 * atan2(b - c, a + d)   -- rotation-invariant skew
+
+    alpha shifts with coordinate rotation (like the strike angle); beta
+    does not, which is what makes it usable as a distortion/dimensionality
+    diagnostic. A previous version of this function swapped the two
+    formulas (and additionally sign-flipped the skew one), so the
+    dataframe's "beta" column tracked coordinate rotation while "alpha"
+    stayed invariant -- exactly backwards. Confirmed by rotating a
+    synthetic 2-D tensor: only the corrected "beta" below stays fixed.
+    """
+    alpha = 0.5 * np.degrees(np.arctan2(b + c, a - d))
+    beta = 0.5 * np.degrees(np.arctan2(b - c, a + d))
     return alpha, beta
 
 

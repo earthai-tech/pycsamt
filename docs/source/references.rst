@@ -99,6 +99,22 @@ CSAMT / MT methodology and source effects
 
 ----
 
+Tensor decomposition and dimensionality
+-------------------------------------------
+
+.. [Caldwell2004] Caldwell, T.G., Bibby, H.M., Brown, C. (2004). ‡
+   The magnetotelluric phase tensor.
+   *Geophysical Journal International*, 158(2), 457–469.
+   https://doi.org/10.1111/j.1365-246X.2004.02281.x
+
+.. [GroomBailey1989] Groom, R.W., Bailey, R.C. (1989). ‡
+   Decomposition of magnetotelluric impedance tensors in the presence of
+   local three-dimensional galvanic distortion.
+   *Journal of Geophysical Research: Solid Earth*, 94(B2), 1913–1925.
+   https://doi.org/10.1029/JB094iB02p01913
+
+----
+
 Deep learning and AI-assisted inversion
 -----------------------------------------
 
@@ -192,3 +208,33 @@ Data standards
    The transient electromagnetic method.
    In: Kirsch, R. (Ed.), *Groundwater Geophysics: A Tool for
    Hydrogeology*, 2nd ed. Springer, pp. 179–226.
+
+----
+
+Bundled example datasets
+----------------------------
+
+The real field surveys bundled with pyCSAMT for docstrings, tests, and
+documentation examples come from published field studies. Please cite the
+relevant paper below if you reuse this data beyond exploring pyCSAMT itself.
+
+.. [Kouabena2025] Kouabena, K.A.W., Zhou, J., Chen, R., Yin, L., Cai, H.,
+   Lu, Z., Gu, J., Yu, W. (2025).
+   Enhanced prediction of deep-seated Cu-Mo porphyry mineralization: A
+   comprehensive interpretation based on 2D inversion of
+   audio-magnetotelluric data.
+   *Ore Geology Reviews*, 185, 106798.
+   https://doi.org/10.1016/j.oregeorev.2025.106798
+
+   (Field dataset: ``data/AMT/WILLY_DATA/`` — see the README there for
+   which lines are bundled.)
+
+.. [Kouadio2020] Kouadio, K.L., Xu, Y., Liu, C., Boukhalfa, Z. (2020).
+   Two-dimensional inversion of CSAMT data and three-dimensional
+   geological mapping for groundwater exploration in Tongkeng Area,
+   Hunan Province, China.
+   *Journal of Applied Geophysics*, 104204.
+   https://doi.org/10.1016/j.jappgeo.2020.104204
+
+   (Field dataset: ``data/CSAMT/`` — see the README there for survey
+   details.)

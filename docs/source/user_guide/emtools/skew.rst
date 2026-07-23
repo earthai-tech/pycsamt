@@ -130,14 +130,11 @@ station-frequency row.
    :linenos:
 
    from pycsamt.emtools import ensure_sites, skew_table
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
    table = skew_table(sites)
-
    print(table.columns)
    print(table[["station", "freq", "period", "beta", "skew"]].head())
    print(table["skew"].abs().describe())
-
    station_summary = (
        table.assign(abs_skew=table["skew"].abs())
        .groupby("station", as_index=False)
@@ -201,19 +198,14 @@ directly from impedance.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import bahr_skewness, ensure_sites
-
    sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
    # Example: use the first station in the loaded Sites collection.
    station = next(iter(sites))
    z = station.z
    freq = station.freq
-
    eta = bahr_skewness(z)
    period = 1.0 / freq
-
    print(np.nanmin(eta), np.nanmedian(eta), np.nanmax(eta))
    print(period[:5], eta[:5])
 
@@ -351,12 +343,9 @@ A simple count helper is often enough for documentation and QC tables.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools import ensure_sites, mask_by_skew
-
    raw = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
    masked = mask_by_skew(raw, thresh=6.0, also="z", inplace=False)
-
    rows = []
    for station in masked:
        z = station.z
@@ -369,7 +358,6 @@ A simple count helper is often enough for documentation and QC tables.
                "kept_fraction": float(good.mean()),
            }
        )
-
    print(rows[:5])
 
 .. code-block:: text

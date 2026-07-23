@@ -158,11 +158,8 @@ table.
    :linenos:
 
    from pathlib import Path
-
    from pycsamt.emtools.fieldzone import classify_field_zones
-
    edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-
    zones = classify_field_zones(
        edi_dir,
        source_offset=2000.0,
@@ -173,7 +170,6 @@ table.
        strict=False,
        verbose=0,
    )
-
    print(zones.head())
    zones.to_csv("l18plt_field_zones.csv", index=False)
 
@@ -185,7 +181,6 @@ table.
    2  18-001A   7289.0  0.000137  ...        39.281217  50.914919   far
    3  18-001A   6102.0  0.000164  ...        48.935465  40.870155   far
    4  18-001A   5108.0  0.000196  ...        61.450026  32.546772   far
-
    [5 rows x 8 columns]
 
 The output columns are:
@@ -283,19 +278,15 @@ near-field expression departs from the far-field limit.
    :linenos:
 
    from pycsamt.emtools.fieldzone import classify_field_zones, near_field_factor
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
    offset_m = 2000.0
-
    zones = classify_field_zones(survey, offset_m)
    factors = near_field_factor(survey, offset_m)
-
    merged = zones.merge(
        factors[["station", "freq_hz", "nf_factor"]],
        on=["station", "freq_hz"],
        how="inner",
    )
-
    print(
        merged.groupby("zone")["nf_factor"]
        .agg(["count", "mean", "median", "max"])
@@ -367,27 +358,20 @@ Station-Specific Offsets
 Real CSAMT geometry often varies by station. Pass a dictionary when
 each station has its own source-receiver distance.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.fieldzone import classify_field_zones
-
-   offsets_m = {
-       "18-001A": 1800.0,
-       "18-002U": 1950.0,
-       "18-003A": 2100.0,
-   }
-
-   zones = classify_field_zones(
-       "data/AMT/WILLY_DATA/L18PLT",
-       source_offset=offsets_m,
-       verbose=1,
-   )
-
-   print(zones["station"].unique())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.fieldzone import classify_field_zones
+   >>> offsets_m = {
+   ...     "18-001A": 1800.0,
+   ...     "18-002U": 1950.0,
+   ...     "18-003A": 2100.0,
+   ... }
+   >>> zones = classify_field_zones(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     source_offset=offsets_m,
+   ...     verbose=1,
+   ... )
+   >>> print(zones["station"].unique())
    ['18-001A' '18-002U' '18-003A']
 
 Only stations with offsets are classified. With ``verbose=1``, missing
@@ -421,12 +405,9 @@ processing conclusion depends on an assumed transmitter distance.
    :linenos:
 
    import pandas as pd
-
    from pycsamt.emtools.fieldzone import classify_field_zones
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
    offsets = [500.0, 2000.0, 8000.0]
-
    rows = []
    for offset in offsets:
        zones = classify_field_zones(survey, source_offset=offset)
@@ -439,7 +420,6 @@ processing conclusion depends on an assumed transmitter distance.
                "near": fractions.get("near", 0.0),
            }
        )
-
    sensitivity = pd.DataFrame(rows)
    print(sensitivity)
 

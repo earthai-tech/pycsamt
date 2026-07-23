@@ -116,9 +116,7 @@ Start by estimating parameters without changing the data.
    :linenos:
 
    from pycsamt.emtools.gb import groom_bailey_table
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
-
    table = groom_bailey_table(
        survey,
        band=(1e-3, 10.0),
@@ -128,7 +126,6 @@ Start by estimating parameters without changing the data.
        tol=1e-6,
        robust=True,
    )
-
    print(
        table[
            [
@@ -153,7 +150,6 @@ Start by estimating parameters without changing the data.
    2  18-003A     ok  ...               0.373588              0.379570
    3  18-004A     ok  ...               0.454007              0.323360
    4  18-005U     ok  ...               0.496585              0.305364
-
    [5 rows x 9 columns]
 
 The ``band`` argument is in period seconds, not hertz. Choose a band
@@ -416,26 +412,20 @@ Estimate And Apply In One Step
 Use ``groom_bailey_decomposition`` when you want a result container with
 the fitted table and optionally corrected sites.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gb import groom_bailey_decomposition
-
-   result = groom_bailey_decomposition(
-       "data/AMT/WILLY_DATA/L18PLT",
-       apply=True,
-       band=(1e-3, 10.0),
-       rotate_deg=None,
-       robust=True,
-       inplace=False,
-   )
-
-   print(result.summary())
-   corrected_sites = result.sites
-   gb_table = result.table
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.gb import groom_bailey_decomposition
+   >>> result = groom_bailey_decomposition(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     apply=True,
+   ...     band=(1e-3, 10.0),
+   ...     rotate_deg=None,
+   ...     robust=True,
+   ...     inplace=False,
+   ... )
+   >>> print(result.summary())
+   >>> corrected_sites = result.sites
+   >>> gb_table = result.table
    GroomBaileyResult(stations=28, applied=True, median_rms=0.2797)
 
 The result container records:
@@ -534,32 +524,24 @@ correction reduces diagonal leakage.
    :linenos:
 
    import numpy as np
-
    from pycsamt.emtools.gb import groom_bailey_table
-
    class ZBlock:
        def __init__(self, z, freq):
            self.z = z
            self.freq = freq
            self.z_err = None
-
    class Site:
        station = "SYN001"
-
        def __init__(self, z, freq):
            self.Z = ZBlock(z, freq)
-
    freq = np.logspace(0, 3, 12)
    regional = np.zeros((freq.size, 2, 2), dtype=complex)
    regional[:, 0, 1] = 1.0 + 0.2j
    regional[:, 1, 0] = -0.8 + 0.1j
-
    D = np.array([[1.0, 0.25], [-0.15, 1.1]])
    observed = D[None, :, :] @ regional
    site = Site(observed, freq)
-
    table = groom_bailey_table([site], robust=False)
-
    print(table[["station", "rms_fit", "diagonal_ratio_before", "diagonal_ratio_after"]])
 
 .. code-block:: text
@@ -582,17 +564,14 @@ running Groom-Bailey, record whether it was attempted and applied.
 
    from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
    from pycsamt.emtools.gb import groom_bailey_decomposition
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
    band = (1e-3, 10.0)
-
    gb = groom_bailey_decomposition(
        survey,
        apply=True,
        band=band,
        robust=True,
    )
-
    assessment = pre2d_inversion_assessment(
        gb.sites,
        band=band,
@@ -601,7 +580,6 @@ running Groom-Bailey, record whether it was attempted and applied.
        groom_bailey_applied=gb.applied,
        groom_bailey_reason="Applied pycsamt.emtools.gb real 2-D distortion fit.",
    )
-
    print(assessment[["station", "frac_3d", "groom_bailey_applied", "recommendation"]].head())
 
 .. code-block:: text

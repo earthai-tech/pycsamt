@@ -125,22 +125,15 @@ Pure Coverage Score
 ``coverage_score`` is the pure arithmetic helper. It does not load EDI
 files. Use it when you already have observed values and interval bounds.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   from pycsamt.emtools.diag import coverage_score
-
-   rho_obs = np.array([98.0, 105.0, 87.0, 130.0, 112.0])
-   q_lo = np.array([90.0, 95.0, 90.0, 100.0, 100.0])
-   q_hi = np.array([110.0, 115.0, 100.0, 120.0, 125.0])
-
-   score = coverage_score(rho_obs, q_lo, q_hi)
-   print(f"empirical coverage = {score:.2f}")
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> from pycsamt.emtools.diag import coverage_score
+   >>> rho_obs = np.array([98.0, 105.0, 87.0, 130.0, 112.0])
+   >>> q_lo = np.array([90.0, 95.0, 90.0, 100.0, 100.0])
+   >>> q_hi = np.array([110.0, 115.0, 100.0, 120.0, 125.0])
+   >>> score = coverage_score(rho_obs, q_lo, q_hi)
+   >>> print(f"empirical coverage = {score:.2f}")
    empirical coverage = 0.60
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-01.png
@@ -243,7 +236,6 @@ Use ``rho_coverage`` when you need one row per station and frequency.
    :linenos:
 
    from pycsamt.emtools.diag import rho_coverage
-
    detail = rho_coverage(
        "data/AMT/WILLY_DATA/L18PLT",
        q_lo=q_lo,
@@ -254,7 +246,6 @@ Use ``rho_coverage`` when you need one row per station and frequency.
        strict=False,
        verbose=0,
    )
-
    print(detail.head())
    detail.to_csv("l18plt_coverage_detail.csv", index=False)
 
@@ -266,7 +257,6 @@ Use ``rho_coverage`` when you need one row per station and frequency.
    2  18-001A   7289.0  0.000137  ...   87.159020     True  32.307651
    3  18-001A   6102.0  0.000164  ...  101.271129     True  33.461671
    4  18-001A   5108.0  0.000196  ...  112.968367     True  34.616073
-
    [5 rows x 8 columns]
 
 The output columns are:
@@ -330,24 +320,18 @@ Per-Station Coverage Table
 
 Use ``coverage_table`` to summarize each station.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.diag import coverage_table
-
-   table = coverage_table(
-       "data/AMT/WILLY_DATA/L18PLT",
-       q_lo=q_lo,
-       q_hi=q_hi,
-       rho_comp="xy",
-       nominal=0.9,
-   )
-
-   ranked = table.sort_values("empirical_cov")
-   print(ranked.head(10))
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.diag import coverage_table
+   >>> table = coverage_table(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     q_lo=q_lo,
+   ...     q_hi=q_hi,
+   ...     rho_comp="xy",
+   ...     nominal=0.9,
+   ... )
+   >>> ranked = table.sort_values("empirical_cov")
+   >>> print(ranked.head(10))
        station  n_freq  empirical_cov  mean_width_pct  calibrated_flag
    20  18-021B      53       0.754717       61.136034            False
    23  18-022V      53       0.811321       61.889193            False
@@ -521,15 +505,12 @@ while the color follows the sign of
    :linenos:
 
    from pycsamt.emtools.diag import rho_error_stats, plot_polar_errors
-
    errors = rho_error_stats(
        "data/AMT/WILLY_DATA/L18PLT",
        model_rho=model,
        rho_comp="xy",
    )
-
    print(errors[["station", "freq_hz", "rel_err_pct", "abs_err_pct"]].head())
-
    ax = plot_polar_errors(
        "data/AMT/WILLY_DATA/L18PLT",
        model_rho=model,

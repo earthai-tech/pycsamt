@@ -1098,7 +1098,15 @@ def to_ll(
 
     if zone is not None:
         if isinstance(zone, str):
-            z_arr = np.asarray([zone], dtype=object)
+            # A zone string is inherently ambiguous with a column name
+            # (both are strings). Only treat it as a column lookup when
+            # 'data' is given and actually has a column by that name;
+            # otherwise treat it as a literal per-point zone designator
+            # (e.g. "11S"), matching the common no-'data' usage.
+            if data is not None and zone in data.columns:
+                z_arr = _extract(zone, "zone")
+            else:
+                z_arr = np.asarray([zone], dtype=object)
         else:
             z_arr = _extract(zone, "zone")
         if z_arr.size == 1 and e_arr.size > 1:
@@ -1138,22 +1146,34 @@ def to_ll(
     # --------------------------------------------------------------
     if as_frame:
 
-        def _orig(v, arr):
-            if np.isscalar(v):
-                return np.asarray([v])
+        def _orig(v, arr, *, is_zone: bool = False):
+            # String/column-name check must come before np.isscalar(),
+            # since np.isscalar("E") is True and would otherwise shadow
+            # the column lookup with the literal column-name string.
+            # For 'zone', a string is only a column lookup when it
+            # actually names a column in 'data' (see the disambiguation
+            # applied above for z_arr); otherwise it is a literal value.
             if isinstance(v, str) and data is not None:
-                return np.asarray(data[v].to_numpy())
+                if not is_zone or v in data.columns:
+                    return np.asarray(data[v].to_numpy())
             if hasattr(v, "to_numpy"):
                 return np.asarray(v.to_numpy())
+            if np.isscalar(v):
+                return np.asarray([v])
             return np.asarray(arr)
 
         e_col = _orig(easting, e_arr)
         n_col = _orig(northing, n_arr)
         z_col = (
-            _orig(zone, z_arr)
+            _orig(zone, z_arr, is_zone=True)
             if zone is not None
             else np.asarray([None] * e_arr.size, dtype=object)
         )
+        # A scalar zone (e.g. "11S") is not broadcast by _orig(), so it
+        # comes back length-1 even when easting/northing are arrays;
+        # match z_arr's earlier broadcast so the DataFrame columns align.
+        if z_col.size == 1 and e_arr.size > 1:
+            z_col = np.full(e_arr.shape, z_col.item(), dtype=object)
 
         df = pd.DataFrame(
             {
@@ -1344,22 +1364,25 @@ def to_utm(
 
     # Return per user request
     if as_frame:
-        # Build lat/lon columns reflecting original inputs
-        if np.isscalar(lat):
-            lat_col = np.asarray([lat])
-        elif isinstance(lat, str) and data is not None:
+        # Build lat/lon columns reflecting original inputs. The
+        # string/column-name check must come before np.isscalar(),
+        # since np.isscalar("lat_deg") is True and would otherwise
+        # shadow the column lookup with the literal column-name string.
+        if isinstance(lat, str) and data is not None:
             lat_col = np.asarray(data[lat].to_numpy())
         elif hasattr(lat, "to_numpy"):
             lat_col = np.asarray(lat.to_numpy())
+        elif np.isscalar(lat):
+            lat_col = np.asarray([lat])
         else:
             lat_col = np.asarray(lat_arr)
 
-        if np.isscalar(lon):
-            lon_col = np.asarray([lon])
-        elif isinstance(lon, str) and data is not None:
+        if isinstance(lon, str) and data is not None:
             lon_col = np.asarray(data[lon].to_numpy())
         elif hasattr(lon, "to_numpy"):
             lon_col = np.asarray(lon.to_numpy())
+        elif np.isscalar(lon):
+            lon_col = np.asarray([lon])
         else:
             lon_col = np.asarray(lon_arr)
 
@@ -1514,7 +1537,7 @@ def project_point_ll2utm(
                     znum, znorth, zone_str = get_utm_zone(la, lo)
                 else:
                     znum = int(utm_zone[:-1])
-                    znorth = utm_zone[-1].lower() > "n"
+                    znorth = utm_zone[-1].lower() >= "n"
                     zone_str = utm_zone
                 utm_cs.SetUTM(znum, znorth)
 
@@ -1553,7 +1576,7 @@ def project_point_ll2utm(
                     znum, znorth, zone_str = get_utm_zone(la, lo)
                 else:
                     znum = int(utm_zone[:-1])
-                    znorth = utm_zone[-1].lower() > "n"
+                    znorth = utm_zone[-1].lower() >= "n"
                     zone_str = utm_zone
                 proj4 = "+proj=utm +zone={} +{} +datum={}".format(
                     znum,
@@ -1588,7 +1611,7 @@ def project_point_utm2ll(
     northing: float,
     utm_zone,
     datum: str = "WGS84",
-    epsg: int | None = 3149,
+    epsg: int | None = None,
 ) -> tuple[float, float]:
     r"""
     Transform a UTM point to latitude/longitude.
@@ -1611,8 +1634,9 @@ def project_point_utm2ll(
         Geodetic datum name (e.g., ``"WGS84"``, ``"NAD27"``).
     epsg : int, optional
         EPSG code defining the projected CRS. When provided, it
-        takes precedence over ``utm_zone`` and ``datum``. The
-        default is ``3149`` for historical compatibility.
+        takes precedence over ``utm_zone`` and ``datum``. Defaults
+        to ``None``, in which case ``utm_zone`` and ``datum`` are
+        used to resolve the projected CRS.
 
     Returns
     -------
@@ -1810,6 +1834,9 @@ def project_points_ll2utm(
     .. [3] GDAL/OSR, https://gdal.org/
     """
 
+    if lat is None or lon is None:
+        return (None, None, None)
+
     lat = np.array(lat)
     lon = np.array(lon)
 
@@ -1824,9 +1851,6 @@ def project_points_ll2utm(
         flattened = True
         lat = lat.flatten()
         lon = lon.flatten()
-
-    if lat is None or lon is None:
-        return (None, None, None)
 
     if HAS_GDAL:
         utm_cs = osr.SpatialReference()
@@ -2423,13 +2447,28 @@ def _extract_value_from_nested_dict(data: dict, key_path: str) -> Any:
     value = data
     # Sequentially access each key in the path.
     for key in keys:
-        if isinstance(value, list) and key.isdigit():
-            try:
-                # Handle list indexing if a key is a digit.
-                value = value[int(key)]
-            except IndexError:
-                # Index is out of bounds.
-                return None
+        if isinstance(value, list):
+            if key.isdigit():
+                try:
+                    # Handle list indexing if a key is a digit.
+                    value = value[int(key)]
+                except IndexError:
+                    # Index is out of bounds.
+                    return None
+            else:
+                # Some APIs nest one result object per queried point
+                # under a list (e.g. opentopodata's
+                # {"results": [{"elevation": ...}, ...]}). Map the
+                # remaining key over each element so a path like
+                # "results.elevation" yields one value per point.
+                value = [
+                    item.get(key) if isinstance(item, dict) else None
+                    for item in value
+                ]
+                if all(v is None for v in value):
+                    # Nothing resolved for any element -> genuinely
+                    # invalid path, not a list of point-results.
+                    return None
         elif isinstance(value, dict):
             # Access the next level of the dictionary.
             value = value.get(key)

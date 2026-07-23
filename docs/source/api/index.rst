@@ -46,6 +46,7 @@ from each subpackage's current public exports, including the IoT field stack.
    pycsamt.z
    pycsamt.jones
    pycsamt.zonge
+   pycsamt.stratagem
    pycsamt.emtools
    pycsamt.transformers
    pycsamt.interp
@@ -59,6 +60,7 @@ from each subpackage's current public exports, including the IoT field stack.
    pycsamt.agents
    pycsamt.pipeline
    pycsamt.session
+   pycsamt.topo
    pycsamt.map
    pycsamt.gis
    pycsamt.iot
@@ -78,6 +80,7 @@ from each subpackage's current public exports, including the IoT field stack.
    z
    jones
    zonge
+   stratagem
    emtools
    transformers
    interp
@@ -91,6 +94,7 @@ from each subpackage's current public exports, including the IoT field stack.
    agents
    pipeline
    session
+   topo
    map
    gis
    iot

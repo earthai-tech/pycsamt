@@ -487,9 +487,9 @@ def make_plot_colors(
             colors = colors[cs4_start:]
 
     if colors is not None:
-        if not is_iterable(colors):
+        if not is_iterable(colors, exclude_string=True):
             colors = [colors]
-        colors += m_cs
+        colors = list(colors) + m_cs
     else:
         colors = m_cs
 
@@ -514,7 +514,7 @@ def savefigure(fig: object, figname: str = None, ext: str = ".png", **skws):
     if figname is None:
         figname = (
             "_"
-            + os.path.splitext(os.path.basename(__file__))
+            + os.path.splitext(os.path.basename(__file__))[0]
             + datetime.datetime.now().strftime("%m-%d-%Y %H:%M:%S")
             + ext
         )
@@ -588,7 +588,7 @@ def resetting_ticks(get_xyticks, number_of_ticks=None):
         new_array = np.linspace(
             get_xyticks[1], get_xyticks[-2], number_of_ticks
         )
-    elif len(get_xyticks) < 2:
+    else:
         new_array = np.array(get_xyticks)
 
     return new_array
@@ -766,7 +766,7 @@ def controle_delineate_curve(res_deline=None, phase_deline=None):
     :returns: delineate resistivity or phase values
     :rtype: array_like
     """
-    fmt = ["resistivity, phase"]
+    fmt = ["resistivity", "phase"]
 
     for ii, xx_deline in enumerate([res_deline, phase_deline]):
         if xx_deline is not None:
@@ -832,6 +832,7 @@ def fmt_text(data_text, fmt="~", leftspace=3, return_to_line=77):
             # remain and add return chariot
             text = (
                 text
+                + num
                 + f" {fmt}\n"
                 + begin_text
                 + fmt * (return_to_line + 7)
@@ -1166,9 +1167,14 @@ def get_color_palette(RGB_color_palette):
         else:
             rgba[1] = _knae / 255.0
     if "b" in RGB_color_palette:
-        knae = knae = RGB_color_palette.replace("g", "/").split("/")
+        knae = (
+            RGB_color_palette.replace("r", "")
+            .replace("g", "/")
+            .replace("b", "/")
+            .split("/")
+        )
         try:
-            _knae = ascertain_cp(float(knae[1]))
+            _knae = ascertain_cp(float(knae[-1]))
         except:
             rgba[2] = 1.0
         else:
@@ -1435,7 +1441,7 @@ def plot_confidence(
             b_samples, int, float, objname="Bootstrap samples `b_samples`"
         )
 
-        from sklearn.metrics import resample
+        from sklearn.utils import resample
 
         # configure bootstrap
         n_iterations = 1000  # here k=no. of bootstrapped samples

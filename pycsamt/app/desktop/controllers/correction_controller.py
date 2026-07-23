@@ -1340,7 +1340,7 @@ class CorrectionController:
             else np.arange(len(df))
         )
         n = len(stations)
-        import matplotlib.pyplot as plt
+        from pycsamt.compat.matplotlib import get_cmap
 
         cols = ["frac_ok", "snr_med"]
         if "skew_med" in df.columns:
@@ -1364,7 +1364,7 @@ class CorrectionController:
             ax.barh(
                 np.arange(n),
                 vals,
-                color=plt.cm.get_cmap(cmaps[col])(
+                color=get_cmap(cmaps[col])(
                     vals / (np.nanmax(vals) + 1e-12)
                 ),
                 edgecolor=s["spine"],

@@ -377,8 +377,18 @@ html[data-theme="dark"] .pyc-btn--ghost { color: #b9cdf3 !important; }
   text-align: center;
 }
 
+/* Install pill pinned to the far left (flush with "Get started" above);
+   the workflow nav keeps centering itself in the remaining space. */
+.pyc-hero-foot-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+
 .pyc-hero-flow {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
@@ -428,6 +438,103 @@ html[data-theme="dark"] .pyc-flow-step:hover {
 }
 
 html[data-theme="dark"] .pyc-flow-step:hover i { color: var(--pyc-gold); }
+
+/* "pip install pycsamt" pill — pinned to the far left of the hero-foot
+   row (flush with "Get started" above it), styled as a mini terminal
+   chip so it reads as a command, not a nav link. The translucent
+   --pyc-surface background (auto light/dark) keeps it legible over the
+   rotating hero photo in both themes. */
+.pyc-flow-install {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--pyc-blue) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pyc-surface) 88%, transparent);
+  box-shadow: var(--pyc-shadow-sm);
+  color: var(--pyc-ink);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease,
+    background 150ms ease;
+}
+
+.pyc-flow-install i.fa-terminal {
+  font-size: 0.85rem;
+  color: var(--pyc-blue);
+}
+
+.pyc-flow-install code {
+  font-family: var(--pst-font-family-monospace, ui-monospace, SFMono-Regular,
+    Menlo, Consolas, monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--pyc-ink);
+  background: none;
+  padding: 0;
+  border: 0;
+}
+
+.pyc-flow-install-prompt {
+  color: var(--pyc-orange);
+  font-weight: 800;
+}
+
+.pyc-flow-install-icon {
+  font-size: 0.82rem;
+  color: var(--pyc-muted);
+}
+
+.pyc-flow-install-icon--ok {
+  display: none;
+  color: #1a9e6a;
+}
+
+.pyc-flow-install:hover,
+.pyc-flow-install:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--pyc-orange) 55%, transparent);
+  background: var(--pyc-surface);
+}
+
+.pyc-flow-install:hover .pyc-flow-install-icon,
+.pyc-flow-install:focus-visible .pyc-flow-install-icon {
+  color: var(--pyc-orange);
+}
+
+.pyc-flow-install.is-copied .pyc-flow-install-icon { display: none; }
+.pyc-flow-install.is-copied .pyc-flow-install-icon--ok { display: inline; }
+.pyc-flow-install.is-copied {
+  border-color: color-mix(in srgb, #1a9e6a 55%, transparent);
+}
+
+html[data-theme="dark"] .pyc-flow-install {
+  color: #f2f6fc;
+  border-color: color-mix(in srgb, var(--pyc-blue) 45%, transparent);
+}
+
+html[data-theme="dark"] .pyc-flow-install code { color: #f2f6fc; }
+html[data-theme="dark"] .pyc-flow-install i.fa-terminal { color: #9db8ea; }
+html[data-theme="dark"] .pyc-flow-install-prompt { color: var(--pyc-gold); }
+
+html[data-theme="dark"] .pyc-flow-install:hover,
+html[data-theme="dark"] .pyc-flow-install:focus-visible {
+  border-color: color-mix(in srgb, var(--pyc-gold) 55%, transparent);
+  background: color-mix(in srgb, var(--pyc-blue) 22%, var(--pyc-surface));
+}
+
+html[data-theme="dark"] .pyc-flow-install:hover .pyc-flow-install-icon,
+html[data-theme="dark"] .pyc-flow-install:focus-visible .pyc-flow-install-icon {
+  color: var(--pyc-gold);
+}
+
+@media (max-width: 560px) {
+  .pyc-flow-install code { display: none; }
+  .pyc-flow-install::after { content: "Install"; font-size: 0.82rem; }
+}
 
 .pyc-hero-dots {
   display: flex;
@@ -1043,6 +1150,7 @@ body.pycsamt-home-page .prev-next-area,
   .pyc-hero-grid { grid-template-columns: 1fr; }
   .pyc-hero-points { justify-self: stretch; width: 100%; }
   .pyc-flow-sep { display: none; }
+  .pyc-hero-foot-row { justify-content: center; }
   .pyc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pyc-statsbar { margin-top: -2.2rem; }
   .pyc-duo { grid-template-columns: 1fr; }

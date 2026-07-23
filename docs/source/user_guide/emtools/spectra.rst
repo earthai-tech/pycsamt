@@ -93,44 +93,33 @@ Load spectra with ``Spectra.from_file``. This is the one required
 three-level import on this page because ``Spectra`` is a segmentation
 container, not an ``emtools`` function.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.seg.spectra import Spectra
-
-   spectra_dir = Path("data/MT/SPECTRA")
-   sp1 = Spectra.from_file(spectra_dir / "spectra01.edi")
-   sp2 = Spectra.from_file(spectra_dir / "spectra02.edi")
-
-   print(sp1.name, sp1.n_freq, sp1.n_chan)
-   print(sp1.freq.min(), sp1.freq.max())
-   print(sp1.id_to_chtype)
-
-.. code-block:: text
-
+   >>> from pathlib import Path
+   >>> from pycsamt.seg.spectra import Spectra
+   >>> spectra_dir = Path("data/MT/SPECTRA")
+   >>> sp1 = Spectra.from_file(spectra_dir / "spectra01.edi")
+   >>> sp2 = Spectra.from_file(spectra_dir / "spectra02.edi")
+   >>> print(sp1.name, sp1.n_freq, sp1.n_chan)
    SPECTRA01 51 7
+   >>> print(sp1.freq.min(), sp1.freq.max())
    1.72 10400.0
+   >>> print(sp1.id_to_chtype)
    {'31.003': 'HX', '32.003': 'HY', '33.003': 'HZ', '34.003': 'EX', '35.003': 'EY', '36.003': 'HX', '37.003': 'HY'}
 
 A ``Spectra`` object exposes the core arrays used by this module:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   print(sp1.freq.shape)       # frequency vector
-   print(sp1.S.shape)          # cross-power matrix: (n_freq, n_chan, n_chan)
-   print(sp1.bw.shape)         # bandwidth metadata
-   print(sp1.avgt.shape)       # averaging-time metadata
-   print(sp1.chan_ids)         # channel identifiers
-
-.. code-block:: text
-
+   >>> print(sp1.freq.shape)       # frequency vector
    (51,)
+   >>> print(sp1.S.shape)          # cross-power matrix: (n_freq, n_chan, n_chan)
    (51, 7, 7)
+   >>> print(sp1.bw.shape)         # bandwidth metadata
    (51,)
+   >>> print(sp1.avgt.shape)       # averaging-time metadata
    (51,)
+   >>> print(sp1.chan_ids)         # channel identifiers
    ['31.003', '32.003', '33.003', '34.003', '35.003', '36.003', '37.003']
 
 The matrix ``sp1.S[k]`` is the full channel-by-channel
@@ -150,23 +139,16 @@ channel pair:
 
 The result is real-valued and bounded between 0 and 1.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   from pycsamt.emtools import coherence_matrix
-
-   coh = coherence_matrix(sp1)
-
-   print(coh.shape)
-   print(np.nanmin(coh), np.nanmax(coh))
-   print(np.diagonal(coh, axis1=1, axis2=2)[0])
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> from pycsamt.emtools import coherence_matrix
+   >>> coh = coherence_matrix(sp1)
+   >>> print(coh.shape)
    (51, 7, 7)
+   >>> print(np.nanmin(coh), np.nanmax(coh))
    3.26311824218168e-06 1.0
+   >>> print(np.diagonal(coh, axis1=1, axis2=2)[0])
    [1. 1. 1. 1. 1. 1. 1.]
 
 The diagonal is 1 because each channel is perfectly coherent with
@@ -181,25 +163,19 @@ the diagonal of the cross-power matrix as a tidy table. It accepts one
 ``Spectra`` object, a list of spectra, or a dictionary of station names
 to spectra.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import psd_table
-
-   psd = psd_table(sp1)
-   print(psd.head())
-
-   psd_norm = psd_table({"spectra01": sp1, "spectra02": sp2}, normalize=True)
-   print(psd_norm.groupby(["station", "channel"])["psd"].max().head())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import psd_table
+   >>> psd = psd_table(sp1)
+   >>> print(psd.head())
       station     freq    period     channel           psd
    0  SPECTRA01  10400.0  0.000096  HX(31.003)  1.561000e-09
    1  SPECTRA01   8800.0  0.000114  HX(31.003)  2.342000e-09
    2  SPECTRA01   7200.0  0.000139  HX(31.003)  4.808000e-09
    3  SPECTRA01   6000.0  0.000167  HX(31.003)  3.892000e-09
    4  SPECTRA01   5200.0  0.000192  HX(31.003)  2.224000e-09
+   >>> psd_norm = psd_table({"spectra01": sp1, "spectra02": sp2}, normalize=True)
+   >>> print(psd_norm.groupby(["station", "channel"])["psd"].max().head())
    station    channel
    spectra01  EX(34.003)    1.0
               EY(35.003)    1.0
@@ -225,34 +201,26 @@ Coherence Table
 table. By default it includes all upper-triangle channel pairs. Pass
 ``pairs`` to focus on physically meaningful pairs.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import coherence_table
-
-   # Example channel-index pairs used by the bundled spectra example:
-   # EX-HY and EY-HX.
-   mt_pairs = [(3, 1), (4, 0)]
-
-   coherence = coherence_table(sp1, pairs=mt_pairs)
-   print(coherence.head())
-   print(coherence.groupby("pair")["coherence"].describe())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import coherence_table
+   >>> # Example channel-index pairs used by the bundled spectra example:
+   >>> # EX-HY and EY-HX.
+   >>> mt_pairs = [(3, 1), (4, 0)]
+   >>> coherence = coherence_table(sp1, pairs=mt_pairs)
+   >>> print(coherence.head())
       station     freq    period  ...        ch_j                   pair coherence
    0  SPECTRA01  10400.0  0.000096  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.956060
    1  SPECTRA01   8800.0  0.000114  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.976360
    2  SPECTRA01   7200.0  0.000139  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.986516
    3  SPECTRA01   6000.0  0.000167  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.985696
    4  SPECTRA01   5200.0  0.000192  ...  HY(32.003)  EX(34.003)-HY(32.003)  0.997629
-
    [5 rows x 7 columns]
+   >>> print(coherence.groupby("pair")["coherence"].describe())
                           count      mean       std  ...       50%       75%       max
    pair                                              ...
    EX(34.003)-HY(32.003)   51.0  0.797033  0.270587  ...  0.900658  0.959647  0.998137
    EY(35.003)-HX(31.003)   51.0  0.728161  0.244365  ...  0.798813  0.938283  0.996734
-
    [2 rows x 8 columns]
 
 Expected columns:
@@ -277,25 +245,19 @@ Coherence-Derived SNR
 
    \mathrm{SNR}_{dB} = 10\log_{10}(\mathrm{SNR})
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import snr_table
-
-   mt_pairs = [(3, 1), (4, 0)]
-
-   snr = snr_table(sp1, pairs=mt_pairs)
-   print(snr[["station", "freq", "pair", "coherence", "snr", "snr_db"]].head())
-   print(snr.groupby("pair")["snr_db"].mean())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import snr_table
+   >>> mt_pairs = [(3, 1), (4, 0)]
+   >>> snr = snr_table(sp1, pairs=mt_pairs)
+   >>> print(snr[["station", "freq", "pair", "coherence", "snr", "snr_db"]].head())
       station     freq                   pair  coherence         snr     snr_db
    0  SPECTRA01  10400.0  EX(34.003)-HY(32.003)   0.956060   21.758405  13.376271
    1  SPECTRA01   8800.0  EX(34.003)-HY(32.003)   0.976360   41.301034  16.159609
    2  SPECTRA01   7200.0  EX(34.003)-HY(32.003)   0.986516   73.161532  18.642828
    3  SPECTRA01   6000.0  EX(34.003)-HY(32.003)   0.985696   68.909149  18.382769
    4  SPECTRA01   5200.0  EX(34.003)-HY(32.003)   0.997629  420.809415  26.240854
+   >>> print(snr.groupby("pair")["snr_db"].mean())
    pair
    EX(34.003)-HY(32.003)    9.044718
    EY(35.003)-HX(31.003)    6.879817
@@ -311,19 +273,13 @@ Band Selection
 ``band_select`` returns a new ``Spectra`` object restricted to a
 frequency interval. It slices all spectra arrays and metadata together.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import band_select
-
-   high_band = band_select(sp1, f_min=100.0, f_max=10400.0)
-
-   print(sp1.n_freq, high_band.n_freq)
-   print(high_band.freq.min(), high_band.freq.max())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import band_select
+   >>> high_band = band_select(sp1, f_min=100.0, f_max=10400.0)
+   >>> print(sp1.n_freq, high_band.n_freq)
    51 27
+   >>> print(high_band.freq.min(), high_band.freq.max())
    115.0 10400.0
 
 Use band selection when a frequency range is known to be more reliable
@@ -340,23 +296,19 @@ passes the coherence criterion.
    :linenos:
 
    from pycsamt.emtools import mask_low_coherence
-
    mt_pairs = [(3, 1), (4, 0)]
-
    pass_any = mask_low_coherence(
        sp1,
        pairs=mt_pairs,
        threshold=0.5,
        require_all=False,
    )
-
    pass_all = mask_low_coherence(
        sp1,
        pairs=mt_pairs,
        threshold=0.5,
        require_all=True,
    )
-
    print(f"any pair passes: {pass_any.sum()} / {pass_any.size}")
    print(f"all pairs pass: {pass_all.sum()} / {pass_all.size}")
 
@@ -375,25 +327,19 @@ Spectra Summary
 ``spectra_summary`` produces one row per frequency. It combines
 frequency metadata, channel PSD values, and mean off-diagonal coherence.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import spectra_summary
-
-   summary = spectra_summary(sp1)
-   print(summary.head())
-   print(summary[["freq", "period", "mean_coherence"]].head())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import spectra_summary
+   >>> summary = spectra_summary(sp1)
+   >>> print(summary.head())
          freq    period      bw  ...  psd_HX(36.003)  psd_HY(37.003)  mean_coherence
    0  10400.0  0.000096  2600.0  ...    1.561000e-09    5.204000e-09        0.399433
    1   8800.0  0.000114  2904.0  ...    2.342000e-09    7.303000e-09        0.530258
    2   7200.0  0.000139  1800.0  ...    4.808000e-09    1.702000e-08        0.666576
    3   6000.0  0.000167  1980.0  ...    3.892000e-09    1.619000e-08        0.690481
    4   5200.0  0.000192  1300.0  ...    2.224000e-09    9.476000e-09        0.695167
-
    [5 rows x 13 columns]
+   >>> print(summary[["freq", "period", "mean_coherence"]].head())
          freq    period  mean_coherence
    0  10400.0  0.000096        0.399433
    1   8800.0  0.000114        0.530258
@@ -571,21 +517,16 @@ from the resulting impedance.
 
 For programmatic access, call ``to_Z`` on the ``Spectra`` object:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   z_obj, tipper_obj = sp1.to_Z(
-       e_labels=("EX", "EY"),
-       h_labels=("HX", "HY"),
-       estimate_error=False,
-   )
-
-   print(z_obj.z.shape)
-   print(z_obj.resistivity[:, 0, 1].min(), z_obj.resistivity[:, 0, 1].max())
-
-.. code-block:: text
-
+   >>> z_obj, tipper_obj = sp1.to_Z(
+   ...     e_labels=("EX", "EY"),
+   ...     h_labels=("HX", "HY"),
+   ...     estimate_error=False,
+   ... )
+   >>> print(z_obj.z.shape)
    (51, 2, 2)
+   >>> print(z_obj.resistivity[:, 0, 1].min(), z_obj.resistivity[:, 0, 1].max())
    3.9104053794314146 119.75913187624168
 
 Use ``ridge`` when the magnetic cross-power block is poorly conditioned.
@@ -717,9 +658,7 @@ A compact spectra QC sequence is:
        mask_low_coherence,
        spectra_summary,
    )
-
    mt_pairs = [(3, 1), (4, 0)]
-
    full_mask = mask_low_coherence(
        sp1,
        pairs=mt_pairs,
@@ -727,7 +666,6 @@ A compact spectra QC sequence is:
        require_all=True,
    )
    print(f"full band pass: {full_mask.sum()} / {full_mask.size}")
-
    clean = band_select(sp1, f_min=100.0, f_max=10400.0)
    clean_mask = mask_low_coherence(
        clean,
@@ -736,10 +674,8 @@ A compact spectra QC sequence is:
        require_all=True,
    )
    print(f"selected band pass: {clean_mask.sum()} / {clean_mask.size}")
-
    coh = coherence_table(clean, pairs=mt_pairs)
    summary = spectra_summary(clean)
-
    print(coh.groupby("pair")["coherence"].describe())
    print(summary[["freq", "mean_coherence"]].head())
 
@@ -751,7 +687,6 @@ A compact spectra QC sequence is:
    pair                                              ...
    EX(34.003)-HY(32.003)   27.0  0.947011  0.045600  ...  0.956582  0.986106  0.998137
    EY(35.003)-HX(31.003)   27.0  0.858419  0.153881  ...  0.925313  0.988420  0.996734
-
    [2 rows x 8 columns]
          freq  mean_coherence
    0  10400.0        0.399433

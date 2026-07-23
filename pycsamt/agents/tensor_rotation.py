@@ -140,6 +140,10 @@ class TensorRotationAgent(BaseAgent):
                 hint="Pass output_dir='/path/to/rotated_edis'.",
                 elapsed=time.time() - t0,
             )
+        # Resolve once: EDIFile.write()/write_new_edi() root a bare filename
+        # under `savepath`, so a relative output_dir must be made absolute
+        # before being folded into a full file path (see _write_rotated_edi).
+        output_dir = os.path.abspath(output_dir)
         os.makedirs(output_dir, exist_ok=True)
 
         written_paths: list[str] = []
@@ -330,8 +334,13 @@ def _write_rotated_edi(
                 Tip_copy = copy.deepcopy(ed.Tip)
                 if hasattr(Tip_copy, "tipper"):
                     Tip_copy.tipper = tip_rot[:, np.newaxis, :]
+            # write_new_edi()/write() root a bare filename under `savepath`
+            # rather than under a directory folded into edi_fn/new_edifn, so
+            # pass the directory and filename separately (a relative
+            # out_path here would otherwise resolve under cwd/edi_out).
             return ed.write_new_edi(
-                edi_fn=out_path,
+                edi_fn=os.path.basename(out_path),
+                savepath=os.path.dirname(out_path) or ".",
                 Z=Z_copy,
                 Tipper=Tip_copy,
             )
@@ -349,7 +358,10 @@ def _write_rotated_edi(
                 and ed_copy.Tip is not None
             ):
                 ed_copy.Tip.tipper = tip_rot[:, np.newaxis, :]
-            return ed_copy.write(new_edifn=out_path)
+            return ed_copy.write(
+                savepath=os.path.dirname(out_path) or ".",
+                new_edifn=os.path.basename(out_path),
+            )
 
         warnings.append(f"{station_name}: EDI object has no write method.")
         return None

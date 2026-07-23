@@ -526,7 +526,7 @@ class EdiFileBase(EDIComponentBase, ABC):
 
     @staticmethod
     def _normalize_section_name(name: str) -> str:
-        return (name or "").strip().lower()
+        return (name or "").strip().lstrip(">=").lower()
 
     def compose_to_string(self) -> str:
         text = self.compose()

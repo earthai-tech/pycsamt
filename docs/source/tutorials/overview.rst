@@ -52,6 +52,13 @@ task you need.
        geometry, real EDI topography, and agent-returned depth layers.
      - L18 station-topography profile and embedded-topography 3-D AI inversion
        block.
+   * - :doc:`map_porphyry_mineralization_from_noisy_amt`
+     - You have a genuinely noisy, infrastructure-affected AMT survey and
+       need the full correction-to-inversion chain, on two lines at once,
+       for a real Cu-Mo porphyry exploration target.
+     - Correction diagnostics and parameter report, rotated/unrotated
+       corrected EDIs, Occam2D and ModEM inputs, 2-D/3-D AI inversion with
+       raw-versus-corrected RMS, topography-draped final sections.
    * - :doc:`run_pipeline_from_config`
      - You want a repeatable processing workflow stored in YAML, JSON, or
        Python config files and runnable from Python or the CLI.
@@ -105,11 +112,20 @@ Recommended Learning Path
    This page treats L18PLT as corrected EDI, runs 3-D AI, and drapes the result
    on package-extracted station topography.
 
-9. Use :doc:`run_pipeline_from_config` when the workflow should be repeated.
+9. Use :doc:`map_porphyry_mineralization_from_noisy_amt` for a real,
+   infrastructure-noisy field case study.
 
-   Once the steps are stable, move them into a config file. This gives you a
-   reproducible processing chain that can be reviewed, rerun, and archived with
-   the results.
+   This page runs the full chain on two lines at once: powerline notching,
+   near-field/source-overprint screening, dictionary-learned dimensionality,
+   Groom-Bailey distortion, conditional static shift, EMAP filtering, strike
+   and rotation, classical Occam2D/ModEM preparation, and 2-D/3-D AI
+   inversion with a measured raw-versus-corrected RMS improvement.
+
+10. Use :doc:`run_pipeline_from_config` when the workflow should be repeated.
+
+    Once the steps are stable, move them into a config file. This gives you a
+    reproducible processing chain that can be reviewed, rerun, and archived with
+    the results.
 
 Before You Start
 --------------------

@@ -10,10 +10,66 @@ tests can instantiate Qt widgets without a real display.
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+# Some tests import both torch and scipy in the same process (e.g.
+# pycsamt.app.web.callbacks.inversion pulls in torch at module scope, then
+# a "Traditional" inversion test calls scipy.optimize.least_squares for
+# real). On Windows/conda that combination can abort the whole interpreter
+# ("OMP: Error #15: Initializing libiomp5md.dll, but found ... already
+# initialized") -- duplicate OpenMP runtime registration, not a bug in
+# either library. Must be set before either one is imported.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+_exit_status = 0
+_qt_active = False
+_IS_WINDOWS = sys.platform == "win32"
+
+
+def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
+    global _exit_status
+    _exit_status = int(exitstatus)
+
+
+def pytest_unconfigure(config):  # noqa: ARG001
+    """
+    Hard-kill the process to dodge a PySide6/Shiboken shutdown crash.
+
+    Widgets created across the whole test session build up reference
+    cycles that CPython's normal shutdown GC resolves in an order
+    Shiboken doesn't expect (``QObject: shared QObject was deleted
+    directly``), segfaulting *after* results and coverage have already
+    been written. Nothing meaningful happens between here and process
+    exit, so leave before interpreter shutdown touches the Qt object
+    graph — without importing Qt or querying ``QApplication.instance()``
+    here, since that state may already be corrupted.
+
+    ``os._exit`` maps straight to the ``_exit(2)`` syscall on POSIX
+    (where CI actually runs): it skips ``Py_Finalize`` entirely, and
+    since shared objects loaded via the dynamic linker get no
+    equivalent of a DLL-unload notification on ``_exit``, that's
+    enough. On Windows, ``ExitProcess`` (which ``os._exit`` still goes
+    through) *does* run ``DLL_PROCESS_DETACH`` for every loaded DLL,
+    including Qt's native ones, so it crashes the same way there;
+    ``TerminateProcess`` is the only call that skips that too, and it
+    takes the exit code directly so status reporting stays intact.
+    """
+    if not _qt_active:
+        return
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if _IS_WINDOWS:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), _exit_status)
+    else:
+        os._exit(_exit_status)
+
 
 # ── Qt / offscreen setup ───────────────────────────────────────────────────
 
@@ -29,6 +85,9 @@ def qt_offscreen():
 def qapp():
     """Single QApplication shared across the whole test session."""
     from PySide6.QtWidgets import QApplication
+
+    global _qt_active
+    _qt_active = True
 
     existing = QApplication.instance()
     if existing is not None:
@@ -102,6 +161,17 @@ def no_modal_dialogs(monkeypatch):
     yield
 
 
+# ── Dash web app ─────────────────────────────────────────────────────────────
+
+
+@pytest.fixture(scope="session")
+def web_app():
+    """Single fully-wired Dash app (all callbacks registered) for reuse."""
+    from pycsamt.app.web.app import create_app
+
+    return create_app()
+
+
 # ── EDI fixtures ───────────────────────────────────────────────────────────
 
 
@@ -136,7 +206,7 @@ def simulated_edi(tmp_path_factory):
         " REFLAT=48:30:0.0",
         " REFLONG=7:45:0.0",
         " REFELEV=200.0",
-        ">MTSECT",
+        ">=MTSECT",
         " SECTID=SIM001",
         f" NFREQ={nfreq}",
         " HX=1001.001",

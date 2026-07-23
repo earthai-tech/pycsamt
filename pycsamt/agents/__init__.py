@@ -197,7 +197,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover - imports exist only for static analyzers
     from .ai_inversion import AIInversionAgent
     from .anomaly_agent import AnomalyDetectionAgent
     from .batch_survey import BatchSurveyAgent
@@ -239,7 +239,7 @@ if TYPE_CHECKING:
     from .tipper_analysis import TipperAnalysisAgent
 
 
-__version__ = "2.0.0rc1"
+__version__ = "2.0.0rc2"
 
 __all__ = [
     # global LLM config

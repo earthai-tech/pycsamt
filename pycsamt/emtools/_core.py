@@ -246,7 +246,13 @@ def _get_t_block(
     *,
     with_errors: bool = False,
 ) -> tuple:
-    T = _first_attr(ed, ("Tipper", "tipper", "Tip"))
+    # Only probe the exact-cased wrapper names here (mirrors
+    # _get_z_block's "Z"-only first pass). Site-wrapped objects expose
+    # a lowercase ``tipper`` property that already returns the final
+    # raw array rather than a wrapper with its own ``.tipper``/``.freq``
+    # sub-attributes; including it here would short-circuit the
+    # ``ed.edi`` fallback below and get treated as an unwrapped array.
+    T = _first_attr(ed, ("Tipper", "Tip"))
     if T is None:
         edi = getattr(ed, "edi", None)
         if edi is not None:

@@ -107,27 +107,37 @@
      </div>
 
      <div class="pyc-wrap pyc-hero-foot">
-       <nav class="pyc-hero-flow" aria-label="Survey workflow">
-         <a class="pyc-flow-step" href="user_guide/data_loading.html">
-           <i class="fa-solid fa-wave-square"></i><span>Acquire</span>
-         </a>
-         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
-         <a class="pyc-flow-step" href="user_guide/emtools/index.html">
-           <i class="fa-solid fa-sliders"></i><span>Process</span>
-         </a>
-         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
-         <a class="pyc-flow-step" href="user_guide/site/index.html">
-           <i class="fa-solid fa-magnifying-glass-chart"></i><span>Analyze</span>
-         </a>
-         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
-         <a class="pyc-flow-step" href="user_guide/inversion/index.html">
-           <i class="fa-solid fa-chart-line"></i><span>Invert</span>
-         </a>
-         <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
-         <a class="pyc-flow-step" href="user_guide/interpretation/index.html">
-           <i class="fa-solid fa-map"></i><span>Interpret</span>
-         </a>
-       </nav>
+       <div class="pyc-hero-foot-row">
+         <button type="button" class="pyc-flow-install" data-copy="pip install pycsamt"
+                 aria-label="Copy install command: pip install pycsamt">
+           <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+           <code><span class="pyc-flow-install-prompt">$</span> pip install pycsamt</code>
+           <i class="fa-regular fa-copy pyc-flow-install-icon" aria-hidden="true"></i>
+           <i class="fa-solid fa-check pyc-flow-install-icon pyc-flow-install-icon--ok" aria-hidden="true"></i>
+         </button>
+
+         <nav class="pyc-hero-flow" aria-label="Survey workflow">
+           <a class="pyc-flow-step" href="user_guide/data_loading.html">
+             <i class="fa-solid fa-wave-square"></i><span>Acquire</span>
+           </a>
+           <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+           <a class="pyc-flow-step" href="user_guide/emtools/index.html">
+             <i class="fa-solid fa-sliders"></i><span>Process</span>
+           </a>
+           <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+           <a class="pyc-flow-step" href="user_guide/site/index.html">
+             <i class="fa-solid fa-magnifying-glass-chart"></i><span>Analyze</span>
+           </a>
+           <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+           <a class="pyc-flow-step" href="user_guide/inversion/index.html">
+             <i class="fa-solid fa-chart-line"></i><span>Invert</span>
+           </a>
+           <span class="pyc-flow-sep" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
+           <a class="pyc-flow-step" href="user_guide/interpretation/index.html">
+             <i class="fa-solid fa-map"></i><span>Interpret</span>
+           </a>
+         </nav>
+       </div>
 
        <div class="pyc-hero-dots" role="tablist" aria-label="Hero background slides">
          <button type="button" class="is-active" role="tab" aria-selected="true"

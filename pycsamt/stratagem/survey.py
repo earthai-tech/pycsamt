@@ -44,9 +44,13 @@ Replicate the old ``stratagem_edi_process_script.py`` in four lines:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Sequence, Union
 
 from ..api.property import MetadataMixin, PyCSAMTObject
+from ..emtools._core import ensure_sites
 from ..exceptions import NotFittedError
+from ..seg.edi import EDIFile
+from ..site.base import Sites
 from .gis_correct import CoordinateInjector
 from .io import EDIBatch, StratagemRawReader
 from .process import NoiseRemover, StaticShiftCorrector
@@ -55,14 +59,28 @@ from .rename import EDIRenamer, EDIWriter
 
 __all__ = ["StratagemSurvey"]
 
+#: Accepted forms for the EDI source: a WinGLink export directory (uses
+#: Stratagem's own natural 3-digit sort), or anything the conventional
+#: ``pycsamt.emtools``/``pycsamt.site`` stack already understands (a
+#: :class:`~pycsamt.site.base.Sites`, a list of
+#: :class:`~pycsamt.seg.edi.EDIFile`, or an ``EDICollection``).
+EdiSource = Union[str, Path, Sites, Sequence[EDIFile]]
+
 
 class StratagemSurvey(PyCSAMTObject, MetadataMixin):
     """End-to-end Stratagem AMT survey processing pipeline.
 
     Parameters
     ----------
-    edi_dir : path-like
-        Directory of WinGLink-exported EDI files.
+    edi_dir : path-like, Sites, or sequence of EDIFile
+        Directory of WinGLink-exported EDI files (uses Stratagem's own
+        natural 3-digit sort via :class:`~pycsamt.stratagem.io.EDIBatch`),
+        or an already-loaded :class:`~pycsamt.site.base.Sites` /
+        ``EDICollection`` / list of :class:`~pycsamt.seg.edi.EDIFile` —
+        normalised through :func:`~pycsamt.emtools._core.ensure_sites`,
+        the same entry point the rest of ``pycsamt.emtools`` uses. In the
+        latter case :attr:`batch_` stays ``None`` (there's no directory
+        to report) and ordering is whatever the source already has.
     coord_file : path-like
         GPS coordinate table (CSV / XLS / XLSX).
     raw_dir : path-like, optional
@@ -79,12 +97,28 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
     order : str, default ``'auto'``
         Station-to-GPS row ordering for
         :class:`~pycsamt.stratagem.gis_correct.StationLocator`.
+    drop_stations : list of int, optional
+        0-based indices into the loaded ``EDIBatch`` to exclude *before*
+        coordinate injection — e.g. a calibration/test shot that isn't a
+        real profile position and has no matching row in *coord_file*.
+    easting_col, northing_col : str, optional
+        Column names in *coord_file* for the projected E-W / N-S
+        coordinates.  Forwarded to
+        :meth:`~pycsamt.stratagem.gis_correct.CoordinateInjector.fit`.
+        Required whenever *coord_file* has more than two numeric columns
+        besides *elev_col* — auto-detection raises rather than guessing
+        in that case (see :mod:`pycsamt.stratagem.gis_correct`).
+    elev_col : str, default ``'elev'``
+    station_col : str, default ``'stations'``
+    read_kwargs : dict, optional
+        Extra keyword arguments forwarded to the *coord_file* reader.
     verbose : int, default 0
 
     Attributes
     ----------
-    batch_ : EDIBatch
-        Loaded EDI collection.
+    batch_ : EDIBatch or None
+        Loaded EDI collection when *edi_dir* was a directory path;
+        ``None`` when *edi_dir* was already a ``Sites``/list of EDIFile.
     raw_reader_ : StratagemRawReader or None
         Hardware file reader (None when *raw_dir* not supplied).
     injector_ : CoordinateInjector
@@ -126,7 +160,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
 
     def __init__(
         self,
-        edi_dir: str | Path,
+        edi_dir: EdiSource,
         coord_file: str | Path,
         *,
         raw_dir: str | Path | None = None,
@@ -134,6 +168,12 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         utm_zone: str = "49N",
         coordinate_system: str = "utm",
         order: str = "auto",
+        drop_stations: list[int] | None = None,
+        easting_col: str | None = None,
+        northing_col: str | None = None,
+        elev_col: str = "elev",
+        station_col: str = "stations",
+        read_kwargs: dict | None = None,
         verbose: int = 0,
     ) -> None:
         self.edi_dir = edi_dir
@@ -143,6 +183,12 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         self.utm_zone = utm_zone
         self.coordinate_system = coordinate_system
         self.order = order
+        self.drop_stations = drop_stations
+        self.easting_col = easting_col
+        self.northing_col = northing_col
+        self.elev_col = elev_col
+        self.station_col = station_col
+        self.read_kwargs = read_kwargs
         self.verbose = verbose
 
         # populated by fit()
@@ -168,14 +214,40 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         self
         """
         # ── 1. load EDIs ─────────────────────────────────────────────
-        self.batch_ = EDIBatch(
-            self.edi_dir,
-            verbose=self.verbose,
-        ).fit()
-        self.n_stations_ = len(self.batch_)
+        if isinstance(self.edi_dir, (str, Path)):
+            self.batch_ = EDIBatch(
+                self.edi_dir,
+                verbose=self.verbose,
+            ).fit()
+            n_loaded = len(self.batch_)
+            edi_list = list(self.batch_.edi_objects_)
+        else:
+            # already a Sites / EDICollection / list of EDIFile — hand it
+            # to the same normaliser the rest of pycsamt.emtools uses.
+            self.batch_ = None
+            sites = ensure_sites(self.edi_dir, verbose=self.verbose)
+            n_loaded = len(sites)
+            edi_list = sites.as_list()
+
+        # drop non-survey stations (e.g. a calibration/test shot) by
+        # 0-based index *before* coordinate injection, so the coordinate
+        # table only needs one row per real station.
+        if self.drop_stations:
+            drop = set(self.drop_stations)
+            edi_list = [e for i, e in enumerate(edi_list) if i not in drop]
+
+        self.n_stations_ = len(edi_list)
 
         if self.verbose:
-            print(f"[StratagemSurvey] loaded {self.n_stations_} EDI files")
+            print(
+                f"[StratagemSurvey] loaded {n_loaded} EDI files"
+                + (
+                    f", using {self.n_stations_} after dropping "
+                    f"{n_loaded - self.n_stations_} station(s)"
+                    if self.drop_stations
+                    else ""
+                )
+            )
 
         # ── 2. load raw hardware files (optional) ─────────────────────
         if self.raw_dir is not None:
@@ -203,7 +275,15 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
             utm_zone=self.utm_zone,
             order=self.order,
             verbose=self.verbose,
-        ).fit(self.batch_, self.coord_file)
+        ).fit(
+            edi_list,
+            self.coord_file,
+            easting_col=self.easting_col,
+            northing_col=self.northing_col,
+            elev_col=self.elev_col,
+            station_col=self.station_col,
+            read_kwargs=self.read_kwargs,
+        )
 
         self.edi_objects_ = self.injector_.edi_objects_
 
@@ -523,6 +603,25 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
         """DataFrame of WGS84 coordinates (requires :meth:`fit`)."""
         self._require_fit()
         return self.injector_.coordinate_frame()
+
+    @property
+    def sites_(self) -> Sites:
+        """Current :attr:`edi_objects_` wrapped as a :class:`~pycsamt.site.base.Sites`.
+
+        A fresh view built on every access, so it always reflects the
+        current pipeline state (post-QC, post-static-shift, etc.). This is
+        the interop point with the conventional ``pycsamt.emtools`` /
+        ``pycsamt.site`` stack — e.g. use ``sv.sites_.write(outdir)`` for
+        the generic ``{station}.edi`` writer instead of Stratagem's own
+        :meth:`export`/:meth:`rename` (which additionally handle DATAID
+        prefixing and Stratagem's zero-padded naming convention).
+
+        Examples
+        --------
+        >>> sv.sites_.write("out_dir", exist_ok=True)
+        """
+        self._require_fit()
+        return Sites(self.edi_objects_)
 
     # ------------------------------------------------------------------
     # internal

@@ -161,6 +161,23 @@ definitions here are the single source of truth.
       workflow. In inversion, topography can affect mesh geometry, air cells,
       receiver elevations, and the interpretation of near-surface structure.
 
+   Terrain-following coordinates
+      A depth-section coordinate frame in which the flat datum
+      :math:`z=0` at every profile position :math:`x` is replaced by the
+      local :term:`topography` elevation, so that
+
+      .. math::
+
+         z_{\mathrm{real}}(x,z) = \mathrm{elev}(x) - z,
+
+      with :math:`\mathrm{elev}(x)` in the same units as :math:`z`. Cell
+      values keep their flat-datum depth :math:`z`; only the plotted
+      vertical position moves, so a :class:`~pycsamt.topo.section.TopoSection`
+      drapes correctly over real relief instead of implying every station
+      sits at the same elevation. It is distinct from a
+      :term:`pseudosection`, whose vertical axis is period or frequency
+      and carries no elevation information at all.
+
    Sensitivity
       The degree to which a change in a model parameter affects the predicted
       data. Low-sensitivity regions may be displayed in a model mesh but should
@@ -332,6 +349,13 @@ definitions here are the single source of truth.
       :term:`static shift`. Its ellipse and skew angle summarise dimensionality
       and strike without distortion.
 
+   Ellipticity
+      The normalised difference between the phase tensor's two singular
+      values, :math:`\lambda = (\phi_{\max}-\phi_{\min})/(\phi_{\max}+
+      \phi_{\min})`. Zero for a perfectly circular (1-D) phase tensor;
+      growing values indicate 2-D or 3-D phase anisotropy. Used together
+      with :term:`Skew` to classify :term:`Dimensionality`.
+
    Static shift
       A frequency-independent vertical shift of the :term:`apparent resistivity`
       curve caused by galvanic charges on small near-surface heterogeneities.
@@ -392,6 +416,44 @@ definitions here are the single source of truth.
    Transition field
       The intermediate regime between near field and far field, where source
       effects may be present but are not as dominant as in the near field.
+
+   Field zone
+      A CSAMT classification of a station-period measurement as
+      :term:`far field`, :term:`transition field`, or :term:`near field`,
+      based on the dimensionless parameter :math:`|k r| = r/\delta_B`, where
+      :math:`r` is the source-receiver offset and :math:`\delta_B` is the
+      :term:`Bostick depth`. The classification assumes a real controlled
+      source at a known offset; for plane-wave AMT or MT surveys with no such
+      transmitter, a field-zone run is a diagnostic exercise, not evidence of
+      genuine near-field bias.
+
+   Skew
+      The phase-tensor asymmetry angle
+      :math:`\beta=\tfrac{1}{2}\arctan\!\big[(\Phi_{12}-\Phi_{21})/
+      (\Phi_{11}+\Phi_{22})\big]`, derived from the :term:`Phase tensor`.
+      Values near zero support a 1-D/2-D regional structure; large
+      :math:`|\beta|` flags 3-D structure, noise, or unresolved
+      :term:`galvanic distortion` and should be reviewed before rotating a
+      line to a single strike angle.
+
+   Dictionary learning
+   Sparse coding
+      An unsupervised technique that represents a set of feature vectors
+      (for example phase-tensor :term:`Skew`, ellipticity, determinant
+      :term:`apparent resistivity`, and tipper amplitude) as sparse linear
+      combinations of a small learned set of atoms. In pyCSAMT it classifies
+      station-period rows by dimensionality or noise behaviour without
+      predefined thresholds, complementing skew- and ellipticity-based rules.
+
+   Porphyry
+   Porphyry deposit
+      A large-volume, disseminated ore deposit associated with felsic to
+      intermediate porphyritic intrusions, for example granodiorite or
+      quartz diorite, commonly zoned with a resistive, weakly altered
+      intrusive core surrounded by lower-resistivity hydrothermally altered
+      or sulfide-bearing zones. Cu-Mo porphyry systems are a common AMT and
+      CSAMT exploration target because that resistivity contrast between
+      fresh intrusion and alteration/mineralization is often detectable.
 
    Phased-array source
    PAS
@@ -1333,6 +1395,15 @@ definitions here are the single source of truth.
       :math:`\rho_a'=\rho_a/g`, while phase is not shifted by the same galvanic
       factor.
 
+   EMAP
+   Electromagnetic array profiling
+      A processing style that treats a line of closely spaced stations as
+      one spatial array and smooths or corrects each response using its
+      along-profile neighbours, rather than treating stations independently.
+      :term:`AMA`, :term:`FLMA`, and :term:`TMA` are EMAP-style spatial
+      filters used in pyCSAMT for static-shift and incoherent-noise
+      suppression.
+
    AMA
    Adaptive moving average
       A spatial static-shift correction strategy that estimates a station's
@@ -1340,6 +1411,20 @@ definitions here are the single source of truth.
       with robust weighting or smoothing. It is useful when static offsets vary
       laterally but neighbouring stations still sample a comparable regional
       response.
+
+   FLMA
+   Fixed-length moving average
+      An :term:`EMAP`-style filter that smooths a response along a profile
+      using a fixed count of neighbouring stations rather than a physical
+      distance window. It is less sensitive to irregular station spacing
+      than a purely distance-based :term:`AMA` window.
+
+   TMA
+   Trimmed moving average
+      A :term:`FLMA`-style fixed-length spatial filter that discards the
+      smallest and largest values inside the window before averaging. The
+      trimming reduces sensitivity to one or two anomalous stations compared
+      with a plain fixed-length average.
 
    Traditional inversion
       A physics-based iterative inversion that updates model parameters by
@@ -1618,6 +1703,15 @@ definitions here are the single source of truth.
       amplitude, :math:`\delta \approx 503\,\sqrt{\rho / f}` metres. It sets the
       depth of investigation for a given period and resistivity.
 
+   Bostick depth
+      An empirical depth estimate,
+      :math:`\delta_B \approx 356\,\sqrt{\rho_a / f}` metres -- about
+      0.71 times the plain :term:`skin depth` -- used as the length
+      scale in the dimensionless CSAMT field-zone parameter
+      :math:`|k\cdot r|`. Unlike skin depth, it is computed directly
+      from the observed :term:`apparent resistivity` at each frequency
+      rather than from an assumed half-space value.
+
    TE mode
    TM mode
       The transverse-electric (electric field along strike) and transverse-magnetic
@@ -1646,10 +1740,28 @@ definitions here are the single source of truth.
       frequency grid, before interpolation or resampling to a requested common
       comparison frequency.
 
+   Stack count
+      The number of raw time-series windows a hardware instrument averaged
+      together to produce one frequency-bin measurement. Stratagem records
+      it per station and frequency in column 2 of each raw
+      19-column component file; a stack count of zero means no usable
+      signal was captured at that bin, which
+      :class:`~pycsamt.stratagem.io.StratagemRawReader` turns into a
+      boolean ``snr_mask_``.
+
    Frequency decade
       A factor-of-ten interval in frequency. A slope reported in degrees per
       decade means the fitted phase change for each unit increase in
       :math:`\log_{10}(f)`.
+
+   WinGLink
+      The Geometrics/EMI desktop program that converts raw Stratagem
+      hardware files into :term:`EDI`. It is an external, manual step --
+      :mod:`pycsamt.stratagem` neither reads Stratagem's raw spectral
+      capture nor calls WinGLink itself, only the files and correction
+      stages downstream of its export. A freshly exported EDI carries
+      placeholder ``LAT``/``LONG`` (``0:00:00.00``) and no static-shift or
+      noise correction; both are added later in the workflow.
 
    AVG file
       Zonge instrument-averaged CSAMT/AMT export format; pyCSAMT reads it and can
@@ -1728,6 +1840,47 @@ definitions here are the single source of truth.
       datum, projection, units, and axis order. A CRS transform makes station
       coordinates comparable when one source is projected in metres and another
       expects WGS84 longitude and latitude.
+
+   Gauss-Kruger
+      A transverse-Mercator projected :term:`CRS` family, in China
+      typically referenced to the Beijing 1954 datum, that expresses
+      position as metre-scale easting/northing rather than
+      longitude/latitude. Field GPS tables projected this way commonly
+      label their columns ``longitude``/``latitude`` out of habit even
+      though the values are really easting/northing -- the column
+      *name* cannot be trusted, only the value magnitude (northing is
+      the larger of the two in the northern hemisphere) reliably
+      distinguishes them.
+
+   Ellipsoid
+   Reference ellipsoid
+      A mathematical oblate-spheroid approximation of the Earth's shape,
+      defined by an equatorial radius and an eccentricity (or flattening).
+      Different surveys and eras adopted different ellipsoids -- WGS-84 is
+      the modern GPS default, while legacy national grids such as
+      :term:`Gauss-Kruger` may reference an older ellipsoid/datum pair.
+      Ellipsoid choice affects computed UTM easting/northing by tens of
+      metres, so it must match the source data's original datum.
+
+   EPSG
+   EPSG code
+      A numeric identifier from the EPSG Geodetic Parameter Dataset that
+      unambiguously specifies a :term:`CRS` (ellipsoid, datum, projection,
+      units, and axis order) -- for example ``4326`` for geographic
+      WGS-84 longitude/latitude, or ``326XX`` for a WGS-84 UTM zone. Passing
+      the wrong EPSG code silently reprojects coordinates rather than
+      raising an error, so it should always be confirmed against the data
+      provider's metadata rather than assumed.
+
+   UTM
+   Universal Transverse Mercator
+      A family of conformal projected :term:`CRS` that divides the globe
+      into 60 six-degree-wide longitude zones, each further split into
+      latitude bands lettered C through X (excluding I and O), giving zone
+      labels such as ``49R``. Within a zone, position is expressed as
+      metre-scale easting/northing rather than longitude/latitude, with a
+      false easting of 500,000 m and a scale factor of 0.9996 at the
+      central meridian.
 
    Basemap
       The geographic tile layer and map-camera settings used behind station
@@ -1983,6 +2136,14 @@ definitions here are the single source of truth.
       station order when any station is missing a finite coordinate,
       so a distance axis is never silently wrong -- only degraded to
       an index.
+
+   Natural sort
+      Ordering file names by their embedded numeric value rather than
+      lexicographically, so ``station.2`` sorts before ``station.10``.
+      pyCSAMT applies it when loading a directory of Stratagem raw
+      hardware or :term:`EDI` files, since a plain path sort places
+      ``…10`` before ``…2`` as soon as a delivery's station numbers are
+      not all zero-padded to the same width.
 
    Station identity
       The normalized name pyCSAMT assigns to one site container. It is

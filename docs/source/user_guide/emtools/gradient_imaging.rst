@@ -137,13 +137,11 @@ the right along the sorted line, while negative means it decreases.
    :linenos:
 
    from pycsamt.emtools.gradient_imaging import rho_spatial_gradient
-
    spatial = rho_spatial_gradient(
        "data/AMT/WILLY_DATA/L18PLT",
        spacing_m=200.0,
        comp="det",
    )
-
    print(spatial.head())
    spatial.to_csv("l18plt_spatial_gradient.csv", index=False)
 
@@ -155,7 +153,6 @@ the right along the sorted line, while negative means it decreases.
    2   18-001A   18-002U  100.0  ...  15708.445184  1402.456235  -407.796992
    3   18-001A   18-002U  100.0  ...  16229.672127  1788.573047    68.027386
    4   18-001A   18-002U  100.0  ...  22026.195330  3934.779127 -5968.395877
-
    [5 rows x 9 columns]
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-01.png
@@ -192,22 +189,16 @@ to the upper frequency :math:`f_k`.  Because frequency and depth are
 linked only approximately, this is a frequency-direction contrast, not a
 true derivative with respect to physical depth.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gradient_imaging import rho_frequency_gradient
-
-   vertical = rho_frequency_gradient(
-       "data/AMT/WILLY_DATA/L18PLT",
-       spacing_m=200.0,
-       comp="det",
-   )
-
-   one = vertical.loc[vertical["station"] == "18-001A"].sort_values("period_s")
-   print(one[["period_s", "rho_a_ohmm", "delta_rho_z"]].head())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.gradient_imaging import rho_frequency_gradient
+   >>> vertical = rho_frequency_gradient(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     spacing_m=200.0,
+   ...     comp="det",
+   ... )
+   >>> one = vertical.loc[vertical["station"] == "18-001A"].sort_values("period_s")
+   >>> print(one[["period_s", "rho_a_ohmm", "delta_rho_z"]].head())
       period_s  rho_a_ohmm  delta_rho_z
    51  0.000096   80.630809    -7.264990
    50  0.000115   86.503532    -4.480456
@@ -266,13 +257,11 @@ This is a mixed finite difference on the station-frequency grid:
    :linenos:
 
    from pycsamt.emtools.gradient_imaging import rho_joint_gradient
-
    joint = rho_joint_gradient(
        "data/AMT/WILLY_DATA/L18PLT",
        spacing_m=200.0,
        comp="det",
    )
-
    print(joint.head())
    joint.to_csv("l18plt_joint_gradient.csv", index=False)
 
@@ -284,7 +273,6 @@ This is a mixed finite difference on the station-frequency grid:
    2   18-001A   18-002U  100.0  ...  0.582072  15731.499213    475.824378
    3   18-001A   18-002U  100.0  ...  0.487329  14850.211800  -6036.423263
    4   18-001A   18-002U  100.0  ...  0.407997  16531.998598   3783.198291
-
    [5 rows x 8 columns]
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-03.png
@@ -394,11 +382,8 @@ the two modes disagree.
    :linenos:
 
    import pandas as pd
-
    from pycsamt.emtools.gradient_imaging import rho_joint_gradient
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
-
    rows = []
    for comp in ("det", "xy", "yx"):
        table = rho_joint_gradient(survey, comp=comp)
@@ -409,7 +394,6 @@ the two modes disagree.
                "max_abs": table["delta_rho_zx"].abs().max(),
            }
        )
-
    component_sensitivity = pd.DataFrame(rows)
    print(component_sensitivity)
 
@@ -492,15 +476,11 @@ background variation has been reduced.
        rho_joint_gradient,
        rho_spatial_gradient,
    )
-
    survey = "data/AMT/WILLY_DATA/L18PLT"
-
    spatial = rho_spatial_gradient(survey)
    joint = rho_joint_gradient(survey)
-
    spatial_std = spatial["delta_rho_x"].std()
    joint_std = joint["delta_rho_zx"].std()
-
    print(f"spatial std = {spatial_std:.1f} ohm.m")
    print(f"joint std   = {joint_std:.1f} ohm.m")
    print(f"ratio       = {joint_std / spatial_std:.2f}")

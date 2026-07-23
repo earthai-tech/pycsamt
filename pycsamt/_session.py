@@ -209,7 +209,7 @@ class Session(CoreObject):
             return
 
         if self._orig_to_edi is None:
-            self._orig_to_edi = to_edi
+            self._orig_to_edi = b.to_edi
 
         def _wrapped(source: Any, *a: Any, **k: Any) -> Any:
             out = self._orig_to_edi(source, *a, **k)

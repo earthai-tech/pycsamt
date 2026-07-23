@@ -166,24 +166,18 @@ This keeps maps and roses reproducible across stations with slightly
 different frequency grids, but it also means that a very narrow band
 should be chosen only when the original sampling supports it.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   # Example period choices for a broad-band MT profile.
-   periods = [25.0, 650.0, 2000.0, 17000.0]
-   short_band = (25.0, 200.0)
-   long_band = (2000.0, 17000.0)
-
-   print("periods:", periods)
-   print("short band:", short_band)
-   print("long band:", long_band)
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> # Example period choices for a broad-band MT profile.
+   >>> periods = [25.0, 650.0, 2000.0, 17000.0]
+   >>> short_band = (25.0, 200.0)
+   >>> long_band = (2000.0, 17000.0)
+   >>> print("periods:", periods)
    periods: [25.0, 650.0, 2000.0, 17000.0]
+   >>> print("short band:", short_band)
    short band: (25.0, 200.0)
+   >>> print("long band:", long_band)
    long band: (2000.0, 17000.0)
 
 Use the same period choices across maps, roses, and sections when you

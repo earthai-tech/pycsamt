@@ -233,7 +233,14 @@ class _MapPopOutButton(QPushButton):
     # ── event filter on the MapPanel container ────────────────────────────────
 
     def eventFilter(self, obj, event) -> bool:
-        if obj is self._container:
+        # ``self`` can be re-entered here while its own C++ object is being
+        # torn down: destroying this button sends a ChildRemoved event to
+        # ``container``, and since this button is registered as one of
+        # ``container``'s filters, Qt calls back into this very instance --
+        # possibly after CPython has already cleared its ``__dict__`` as
+        # part of deallocation. ``getattr`` guards that reentrant case
+        # instead of raising out of a virtual-method override.
+        if obj is getattr(self, "_container", None):
             t = event.type()
             if t == QEvent.Type.Resize:
                 self._reposition()
@@ -345,8 +352,13 @@ class MapPanel(QWidget):
         self._canvas = MplCanvas(self, toolbar=True)
         layout.addWidget(self._canvas)
 
-        # Hover-reveal pop-out button — floats over the top-right corner
-        _MapPopOutButton(container=self)
+        # Hover-reveal pop-out button — floats over the top-right corner.
+        # Keep a reference on self: PySide6 only owns the button on the C++
+        # side via its `container` parent, so an unassigned Python wrapper
+        # can be garbage-collected while the C++ object survives. Qt then
+        # has to re-wrap it from the bare C++ pointer without going through
+        # __init__, and the resulting instance is missing `_container`.
+        self._pop_out_button = _MapPopOutButton(container=self)
 
         # Connect once — survive fig.clf() because they're on the canvas object
         self._canvas.figure.canvas.mpl_connect("pick_event", self._on_pick)

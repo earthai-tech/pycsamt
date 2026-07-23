@@ -149,7 +149,6 @@ corner selection numerically.
    :linenos:
 
    from pycsamt.emtools import lcurve_table
-
    table = lcurve_table(
        misfit,
        roughness,
@@ -158,10 +157,8 @@ corner selection numerically.
        smooth=3,
        skip=1,
    )
-
    corner = table.attrs["corner_idx"]
    row = table.iloc[corner]
-
    print(f"corner index: {corner}")
    print(f"lambda*: {row['lam']:.4g}")
    print(f"misfit: {row['misfit']:.4g}")
@@ -202,26 +199,19 @@ Use A Dictionary Result
 For small helper functions or serialization, ``return_dict=True`` gives
 arrays plus the selected corner index.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import lcurve_table
-
-   result = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       method="maxdist",
-       return_dict=True,
-   )
-
-   corner = result["corner"]
-   lambda_star = result["lam"][corner]
-
-   print(lambda_star)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import lcurve_table
+   >>> result = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     method="maxdist",
+   ...     return_dict=True,
+   ... )
+   >>> corner = result["corner"]
+   >>> lambda_star = result["lam"][corner]
+   >>> print(lambda_star)
    0.8376776400682924
 
 The dictionary keys are ``rough``, ``misfit``, ``lam``, ``curv``,
@@ -281,7 +271,6 @@ Two corner-picking methods are available.
    :linenos:
 
    from pycsamt.emtools import lcurve_table
-
    curvature = lcurve_table(
        misfit,
        roughness,
@@ -289,17 +278,14 @@ Two corner-picking methods are available.
        method="curvature",
        smooth=3,
    )
-
    maxdist = lcurve_table(
        misfit,
        roughness,
        lambdas,
        method="maxdist",
    )
-
    j_curv = curvature.attrs["corner_idx"]
    j_dist = maxdist.attrs["corner_idx"]
-
    print("curvature lambda*:", curvature["lam"].iloc[j_curv])
    print("maxdist lambda*:", maxdist["lam"].iloc[j_dist])
 
@@ -349,7 +335,6 @@ corner.
    :linenos:
 
    from pycsamt.emtools import lcurve_table
-
    for smooth in (1, 3, 5, 7):
        table = lcurve_table(
            misfit,

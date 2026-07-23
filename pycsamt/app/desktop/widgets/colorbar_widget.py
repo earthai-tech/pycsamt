@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pycsamt.compat.matplotlib import get_cmap
+
 
 def _qt_canvas_class():
     from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -90,7 +92,7 @@ class ColorbarWidget(QWidget):
             self._ax = self._fig.add_axes([0.05, 0.20, 0.90, 0.35])
 
         if isinstance(cmap, str):
-            cmap = mcm.get_cmap(cmap)
+            cmap = get_cmap(cmap)
         norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
         sm = mcm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])

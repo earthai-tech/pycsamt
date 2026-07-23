@@ -163,10 +163,11 @@ def plot_response_1d(
     response : ForwardResponse
         Output of :class:`~pycsamt.forward.em1d.MT1DForward` or
         :class:`~pycsamt.forward.em1d.CSAMT1DForward`.
-    modes : {'te', 'tm', 'both'}
+    modes : {'te', 'tm', 'both'} or sequence thereof
         Which modes to plot.  For a 1-D response ``response.rho_a`` and
-        ``response.phase`` hold a single polarisation; pass ``'both'`` to
-        show both ρ_a curves with TE/TM styling on the same axes.
+        ``response.phase`` hold a single polarisation; pass ``'both'`` (or
+        ``['te', 'tm']``) to show both ρ_a curves with TE/TM styling on
+        the same axes.
     show_te, show_tm : bool
         Override visibility of each mode independently.
     color_te, color_tm : colour spec
@@ -250,9 +251,11 @@ def plot_response_1d(
         alpha=_st.tm.alpha,
     )
 
-    modes_str = modes if isinstance(modes, str) else ",".join(modes)
-    plot_te = modes_str in ("te", "both") and show_te is not False
-    plot_tm = modes_str in ("tm", "both") and show_tm is not False
+    mode_set = {modes} if isinstance(modes, str) else set(modes)
+    if "both" in mode_set:
+        mode_set |= {"te", "tm"}
+    plot_te = "te" in mode_set and show_te is not False
+    plot_tm = "tm" in mode_set and show_tm is not False
 
     if plot_te:
         ax_r.plot(x, _rho_vals(rho_a), label=label_te, **kw_te)

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.0.0rc1"
+version     = "2.0.0rc2"
 description = "Python toolkit for audio-frequency magnetotelluric (MT/AMT/CSAMT/CSEM) data processing, inversion, and geological interpretation"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
@@ -41,7 +41,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=1.22",
+    # numpy 2.1+ dropped Python 3.9 support, so unconstrained resolution
+    # pins 3.9 to numpy 2.0.2 forever -- the first, roughest numpy 2.x
+    # release, paired here with matplotlib 3.9.x (the last matplotlib line
+    # supporting 3.9). That specific combination segfaults deep inside
+    # matplotlib.transforms when a QtAgg canvas is created (CI: "Python 3.9 /
+    # interfaces" shard, test_correction_window.py). Python >=3.10 resolves
+    # numpy 2.2+ / matplotlib 3.10+ instead and is unaffected, so cap numpy
+    # below 2 only on 3.9, where the 1.26.x line is long-proven with these
+    # matplotlib/PySide6 versions.
+    "numpy>=1.22,<2; python_version < '3.10'",
+    "numpy>=1.22; python_version >= '3.10'",
     "scipy>=1.8",
     "matplotlib>=3.5",
     "pandas>=1.4",

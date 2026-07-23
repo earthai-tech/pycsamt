@@ -24,6 +24,9 @@ omit =
     */pycsamt/projection.py
     # legacy site/borehole location helper, slated for removal
     */pycsamt/loc.py
+    # TensorFlow backend — exercised in the base-attentiv conda env where TF
+    # actually loads; this box's TF install has a broken native runtime
+    */pycsamt/backends/_tensorflow.py
 
 
 [report]

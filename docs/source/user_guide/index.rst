@@ -16,10 +16,13 @@ User Guide
 
    prerequisites
    data_loading
+   transformers
    map/index
+   topo/index
    inversion/index
    interpretation/index
    iot/index
+   stratagem/index
    emtools/index
    site/index
    forward/index

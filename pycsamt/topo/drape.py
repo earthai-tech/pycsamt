@@ -282,7 +282,11 @@ def station_surface_z(
         z-coordinates (km) at which to place station markers.
     """
     elev_interp = interp_elev(chainage_km, elev_km, station_x_km)
-    # In the draped frame surface is at elev; z_nodes[0] = 0 maps to elev.
-    # The marker sits exactly at the surface, so its draped z = elev.
-    # With exaggeration the datum shifts but the surface stays at elev.
+    # In the draped frame the surface is at elev; z_nodes[0] = 0 maps to
+    # elev, so the marker sits exactly at the surface when exaggeration=1.
+    # Note this scales the *absolute* elevation, unlike drape_section's
+    # z_draped[0] row (the mesh's own surface), which is left unscaled by
+    # exaggeration -- only the depth term below it is stretched. Markers
+    # placed with exaggeration != 1 will therefore not sit exactly on a
+    # drape_section-drawn surface line at the same exaggeration.
     return elev_interp * exaggeration if exaggeration != 1.0 else elev_interp

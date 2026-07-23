@@ -14,6 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 
+from pycsamt.compat.numpy import trapz as _trapz
 from pycsamt.api import (
     APIFrame,
     APIResult,
@@ -675,7 +676,7 @@ class TestHanningWeights:
     def test_integral_approx_one(self):
         dx = np.linspace(-499.9, 499.9, 10000)
         w = self._w(dx, 1000.0)
-        val = float(np.trapezoid(w, dx))
+        val = float(_trapz(w, dx))
         assert val == pytest.approx(1.0, abs=0.01)
 
     def test_symmetry(self):

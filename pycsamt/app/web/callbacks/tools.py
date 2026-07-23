@@ -10609,10 +10609,11 @@ def register_tools(app) -> None:
                         vlo, vhi = -vm, vm
 
                     # Plotly colourscale from matplotlib cmap
-                    import matplotlib.cm as _mcm
                     import matplotlib.colors as _mco
 
-                    _cm = _mcm.get_cmap(cmap, 256)
+                    from pycsamt.compat.matplotlib import get_cmap
+
+                    _cm = get_cmap(cmap, lut=256)
                     _cs = [[i / 255, _mco.to_hex(_cm(i))] for i in range(256)]
 
                     log_periods = np.log10(piv.index.to_numpy())

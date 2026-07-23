@@ -2,10 +2,11 @@
 # License: LGPL-3.0
 """Tests for BatchExportDialog and its background ``_ExportWorker``.
 
-``_ExportWorker`` is a real ``QThread`` whose ``run()`` performs actual
-file-saving via ``Figure.savefig`` — it is exercised directly (calling
-``.run()`` synchronously, not ``.start()``) so the real save logic is
-covered. The dialog's own orchestration is tested separately with a
+``_ExportWorker`` is a real ``QThread`` whose ``run()`` delegates file
+creation through the figure ``savefig`` protocol. It is exercised directly
+(calling ``.run()`` synchronously, not ``.start()``) with lightweight test
+figures, keeping Matplotlib's native renderer out of the Qt interface shard.
+The dialog's own orchestration is tested separately with a
 lightweight fake worker whose ``.start()`` synchronously emits through
 plain-callable "signals", mirroring the idiom used in
 test_main_window_actions.py / test_recompute_dlg.py / test_inversion_dlg_extra.py.
@@ -68,6 +69,24 @@ class _FakeSignal:
             self._fn(*a)
 
 
+class _FakeFigure:
+    """Minimal savefig protocol for worker-only tests.
+
+    Keeping live Matplotlib rendering out of the Qt interface shard avoids a
+    Python 3.9 Linux crash while still testing all worker orchestration.
+    """
+
+    def __init__(self, error=None):
+        self.error = error
+        self.calls = []
+
+    def savefig(self, path, **kwargs):
+        self.calls.append((path, kwargs))
+        if self.error is not None:
+            raise self.error
+        Path(path).write_bytes(b"pycsamt-test-figure")
+
+
 def _fake_worker_cls(store):
     """Build a fake _ExportWorker class recording construction args.
 
@@ -97,9 +116,10 @@ def _fake_worker_cls(store):
 
 
 @pytest.mark.parametrize("fmt", ["png", "pdf", "svg"])
-def test_worker_run_saves_files_for_each_format(two_figures, tmp_path, fmt):
+def test_worker_run_saves_files_for_each_format(tmp_path, fmt):
     out_dir = tmp_path / "out"
-    worker = _ExportWorker(two_figures, out_dir, fmt, 100, False)
+    figures = [("Station A", _FakeFigure()), ("Station B", _FakeFigure())]
+    worker = _ExportWorker(figures, out_dir, fmt, 100, False)
 
     progress_calls = []
     done_calls = []
@@ -116,18 +136,19 @@ def test_worker_run_saves_files_for_each_format(two_figures, tmp_path, fmt):
     assert done_calls == [(2, str(out_dir))]
 
 
-def test_worker_run_creates_out_dir_if_missing(two_figures, tmp_path):
+def test_worker_run_creates_out_dir_if_missing(tmp_path):
     out_dir = tmp_path / "does" / "not" / "exist"
     assert not out_dir.exists()
-    worker = _ExportWorker(two_figures, out_dir, "png", 150, False)
+    worker = _ExportWorker(
+        [("Station A", _FakeFigure())], out_dir, "png", 150, False
+    )
     worker.run()
     assert out_dir.exists()
     assert (out_dir / "Station_A.png").exists()
 
 
 def test_worker_run_sanitizes_label_for_filename(tmp_path):
-    fig, ax = plt.subplots()
-    ax.plot([1, 2])
+    fig = _FakeFigure()
     figures = [("Weird/Label:*?<>|Name", fig)]
     worker = _ExportWorker(figures, tmp_path, "png", 100, False)
     worker.run()
@@ -135,26 +156,16 @@ def test_worker_run_sanitizes_label_for_filename(tmp_path):
     assert len(saved) == 1
     # all disallowed characters replaced with "_", spaces -> "_"
     assert saved[0].name == "Weird_Label______Name.png"
-    plt.close(fig)
 
 
-def test_worker_run_transparent_flag_passed_through(tmp_path, monkeypatch):
-    fig, ax = plt.subplots()
-    ax.plot([1, 2])
-    captured = {}
-    orig_savefig = fig.savefig
-
-    def spy_savefig(*a, **k):
-        captured.update(k)
-        return orig_savefig(*a, **k)
-
-    monkeypatch.setattr(fig, "savefig", spy_savefig)
+def test_worker_run_transparent_flag_passed_through(tmp_path):
+    fig = _FakeFigure()
     worker = _ExportWorker([("Fig1", fig)], tmp_path, "png", 200, True)
     worker.run()
+    _, captured = fig.calls[0]
     assert captured["dpi"] == 200
     assert captured["transparent"] is True
     assert captured["bbox_inches"] == "tight"
-    plt.close(fig)
 
 
 def test_worker_run_empty_figures_emits_done_zero(tmp_path):
@@ -167,18 +178,9 @@ def test_worker_run_empty_figures_emits_done_zero(tmp_path):
     assert tmp_path.exists()
 
 
-def test_worker_run_savefig_error_is_caught_and_reported_via_progress(
-    tmp_path, monkeypatch
-):
-    fig1, ax1 = plt.subplots()
-    ax1.plot([1, 2])
-    fig2, ax2 = plt.subplots()
-    ax2.plot([2, 1])
-
-    def boom(*a, **k):
-        raise RuntimeError("disk full")
-
-    monkeypatch.setattr(fig1, "savefig", boom)
+def test_worker_run_savefig_error_is_caught_and_reported_via_progress(tmp_path):
+    fig1 = _FakeFigure(RuntimeError("disk full"))
+    fig2 = _FakeFigure()
 
     worker = _ExportWorker(
         [("Bad", fig1), ("Good", fig2)], tmp_path, "png", 150, False
@@ -197,9 +199,6 @@ def test_worker_run_savefig_error_is_caught_and_reported_via_progress(
     assert progress_calls[1] == (2, 2, "Good")
     # only the successfully-saved figure is counted
     assert done_calls == [(1, str(tmp_path))]
-
-    plt.close(fig1)
-    plt.close(fig2)
 
 
 # ── BatchExportDialog construction ──────────────────────────────────────

@@ -188,6 +188,15 @@ def test_launch_spawns_new_process_sets_windows_creationflags(monkeypatch):
     fake_os.name = "nt"
     fake_os.environ = bridge.os.environ
     monkeypatch.setattr(bridge, "os", fake_os)
+    monkeypatch.setattr(
+        bridge.subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False
+    )
+    monkeypatch.setattr(
+        bridge.subprocess,
+        "CREATE_NEW_PROCESS_GROUP",
+        0x00000200,
+        raising=False,
+    )
 
     bridge.launch_agent_master(open_browser=False)
 

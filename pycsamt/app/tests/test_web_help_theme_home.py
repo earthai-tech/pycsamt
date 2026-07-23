@@ -62,7 +62,12 @@ def test_toggle_about_closes_on_close_button(web_app):
 
 
 def _toggle_theme_fn(web_app):
-    matches = [k for k in web_app.callback_map if IDs.STORE_THEME in k]
+    matches = [
+        k
+        for k in web_app.callback_map
+        if f"{IDs.STORE_THEME}.data" in k
+        and f"{IDs.BTN_THEME}.children" in k
+    ]
     assert len(matches) == 1, matches
     return _unwrap(web_app.callback_map[matches[0]])
 

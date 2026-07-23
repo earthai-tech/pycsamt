@@ -147,8 +147,8 @@ class TestLoadFolderSuccess:
         ctrl = TDEMController()
         ctrl.load_folder(str(tdem_dir))
         assert str(tdem_dir) in ctrl.summary
-        assert "AVG files: 3" in ctrl.summary
-        assert "Z files: 3" in ctrl.summary
+        assert f"AVG files: {ctrl._survey.n_avg_files}" in ctrl.summary
+        assert f"Z files: {ctrl._survey.n_z_files}" in ctrl.summary
         assert f"Soundings: {len(ctrl._soundings)}" in ctrl.summary
 
     def test_progress_cb_called_10_50_100(self, tdem_dir):

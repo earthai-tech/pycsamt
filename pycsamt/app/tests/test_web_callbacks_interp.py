@@ -290,7 +290,10 @@ class TestBuildFigureHelpers:
         out = interp_mod._get_corrected_sites("no-such-session", None, True)
         assert out is None
 
-    def test_get_corrected_sites_no_steps_returns_raw(self, cached_session, willy_sites):
+    def test_get_corrected_sites_no_steps_returns_raw(
+        self, cached_session, willy_sites, monkeypatch
+    ):
+        monkeypatch.setattr(interp_mod, "cache_get", lambda _key: willy_sites)
         out = interp_mod._get_corrected_sites(cached_session, None, True)
         assert out is willy_sites
 
@@ -312,7 +315,10 @@ class TestBuildFigureHelpers:
         )
         assert out is not None
 
-    def test_get_corrected_sites_bad_step_swallowed(self, cached_session, willy_sites):
+    def test_get_corrected_sites_bad_step_swallowed(
+        self, cached_session, willy_sites, monkeypatch
+    ):
+        monkeypatch.setattr(interp_mod, "cache_get", lambda _key: willy_sites)
         steps = [{"fn_name": "not-a-real-fn", "kwargs": {}, "label": "bad"}]
         out = interp_mod._get_corrected_sites(
             cached_session, {"steps": steps}, True

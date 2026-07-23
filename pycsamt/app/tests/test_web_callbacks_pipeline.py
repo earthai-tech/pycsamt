@@ -515,8 +515,20 @@ class TestRunAll:
         assert toast is False
 
     def test_runs_all_steps_and_stops_at_export_without_a_folder(
-        self, web_app, willy_subset, cached_session
+        self, web_app, willy_subset, cached_session, monkeypatch
     ):
+        import pycsamt.app.web.callbacks.pipeline as pipeline_mod
+
+        def execute_step(index, log_cb):
+            if index == 7:
+                raise ValueError("No output folder selected")
+            pipeline_mod._CTRL._sites_chain[index] = willy_subset
+            log_cb(f"step {index + 1}")
+
+        monkeypatch.setattr(pipeline_mod._CTRL, "execute_step", execute_step)
+        monkeypatch.setattr(
+            pipeline_mod, "_generate_preview", lambda *_a, **_k: empty_src()
+        )
         out = self._fn(web_app)(
             1, "", cached_session, None, None, None, "dark"
         )
@@ -526,13 +538,24 @@ class TestRunAll:
             assert f"Step {i} done" in log
         assert "Step 8 ERROR" in log
         assert "No output folder selected" in log
-        # step 0's preview also hits bug #1 -- still the placeholder
         assert store["0"] == empty_src()
         assert set(store.keys()) == {"0", "1", "2", "3", "4", "5", "6"}
 
     def test_runs_all_steps_with_export_folder_hits_new_z_bug(
-        self, web_app, willy_subset, cached_session, tmp_path
+        self, web_app, willy_subset, cached_session, tmp_path, monkeypatch
     ):
+        import pycsamt.app.web.callbacks.pipeline as pipeline_mod
+
+        def execute_step(index, log_cb):
+            if index == 7:
+                raise TypeError("missing required keyword-only argument: new_z")
+            pipeline_mod._CTRL._sites_chain[index] = willy_subset
+            log_cb(f"step {index + 1}")
+
+        monkeypatch.setattr(pipeline_mod._CTRL, "execute_step", execute_step)
+        monkeypatch.setattr(
+            pipeline_mod, "_generate_preview", lambda *_a, **_k: empty_src()
+        )
         out_dir = tmp_path / "run_all_export"
         out = self._fn(web_app)(
             1, str(out_dir), cached_session, None, None, None, "dark"

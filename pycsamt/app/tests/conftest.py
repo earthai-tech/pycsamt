@@ -99,6 +99,55 @@ def qapp():
     yield app
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _stub_mpl_qt_toolbar():
+    """
+    Replace matplotlib's Qt ``NavigationToolbar2QT`` with a lightweight stub.
+
+    Constructing the real toolbar (``MplCanvas(toolbar=True)`` ->
+    ``NavigationToolbar2QT(canvas, self)``) under the offscreen Qt platform
+    while coverage's C tracer is active corrupts interpreter memory on the
+    Python 3.9 / matplotlib 3.9.x combination and segfaults -- the crash
+    surfaces mid-construction, e.g. in ``pathlib`` while the toolbar loads its
+    icons (CI: "Python 3.9 / interfaces" shard, test_map_window.py). It is the
+    same 3.9-only fragility that the terminal matplotlib 3.9.x line shows
+    elsewhere; Python >=3.10 pulls matplotlib >=3.10 and is unaffected.
+
+    The toolbar is a pure matplotlib convenience widget carrying no pycsamt
+    logic, and no test asserts on it, so swapping it for a ``QWidget`` that
+    satisfies the little the widget touches (``.canvas`` attribute,
+    ``sizeHint()``, ``update()``) removes the crash without losing meaningful
+    coverage. ``MplCanvas`` resolves the class lazily via ``_qt_mpl_classes``
+    (``from matplotlib.backends.backend_qtagg import NavigationToolbar2QT``),
+    so patching the name on that module is enough.
+
+    Scoped to Python < 3.10; set ``PYCSAMT_STUB_MPL_TOOLBAR=1`` to force it on
+    newer interpreters (used to verify the stub is a valid drop-in locally).
+    """
+    force = os.environ.get("PYCSAMT_STUB_MPL_TOOLBAR") == "1"
+    if not (force or sys.version_info < (3, 10)):
+        yield
+        return
+    try:
+        from matplotlib.backends import backend_qtagg
+        from PySide6.QtWidgets import QWidget
+    except Exception:
+        yield
+        return
+
+    class _StubNavigationToolbar(QWidget):
+        def __init__(self, canvas, parent=None):
+            super().__init__(parent)
+            self.canvas = canvas
+
+    original = backend_qtagg.NavigationToolbar2QT
+    backend_qtagg.NavigationToolbar2QT = _StubNavigationToolbar
+    try:
+        yield
+    finally:
+        backend_qtagg.NavigationToolbar2QT = original
+
+
 @pytest.fixture(autouse=True)
 def no_global_restyle(monkeypatch):
     """

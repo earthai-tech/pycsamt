@@ -304,7 +304,7 @@ def _dms_to_deg(s: str) -> float | None:
     d = float(m.group("d"))
     mnt = float(m.group("m"))
     sec = float(m.group("s"))
-    hemi = m.group(5)  # optional N/S/E/W
+    hemi = m.group(4)  # optional N/S/E/W
     val = abs(d) + mnt / 60.0 + sec / 3600.0
     if d < 0:
         val = -val

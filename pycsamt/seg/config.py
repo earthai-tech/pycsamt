@@ -136,7 +136,15 @@ def discover_mixins() -> tuple[type, ...]:
         if m not in seen:
             uniq.append(m)
             seen.add(m)
-    return tuple(uniq)
+    # A candidate such as ``Base`` may also be an ancestor of one or more
+    # specialised candidates.  Supplying both to ``type`` (with the ancestor
+    # first) produces an inconsistent MRO.  The subclass already contributes
+    # the ancestor's API, so retain only the most specialised entries.
+    return tuple(
+        m
+        for m in uniq
+        if not any(m is not other and issubclass(other, m) for other in uniq)
+    )
 
 
 class _Facade:

@@ -753,6 +753,8 @@ class Topography(SurveyBase):
         dmin, dmax = float(self._d.min()), float(self._d.max())
         di = np.arange(dmin, dmax + s * 0.5, s, float)
         zi = np.interp(di, self._d, self._z)
+        if self._trend is not None:
+            self._trend = np.interp(di, self._d, self._trend)
         self._d, self._z = di, zi
         return self
 
@@ -1377,7 +1379,6 @@ class EDIProfile(SurveyBase):
                 ax.set_title(title)
             return ax
         # raw profile
-        d = self._d
         ax.plot(d, z, marker="o", lw=1.0, label="raw")
         ax.set_xlabel("distance (m)")
         ax.set_ylabel("elevation (m)")

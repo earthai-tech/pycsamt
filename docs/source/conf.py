@@ -327,6 +327,7 @@ html_css_files = [
     "css/gallery.css",
     "css/gallery-hub.css",
     "css/code-action.css",
+    "css/hosted-preview.css",
 ]
 html_js_files = [
     ("js/pycsamt-home.js", {"defer": "defer"}),
@@ -334,6 +335,7 @@ html_js_files = [
     ("js/gallery-hub.js", {"defer": "defer"}),
     ("js/code-action.js", {"defer": "defer"}),
     ("js/api-search.js", {"defer": "defer"}),
+    ("js/hosted-preview.js", {"defer": "defer"}),
 ]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).

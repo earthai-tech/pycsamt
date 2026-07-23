@@ -1,0 +1,197 @@
+/* pyCSAMT — "hosted instance not open yet" dialog (applications/hosted.rst).
+ *
+ * The three hosted-app cards link to real subdomains that aren't live for
+ * public, isolated use yet. js/hosted-preview.js intercepts the click and
+ * opens this dialog instead of following the (currently unready) link.
+ * Uses pydata-sphinx-theme CSS variables so light/dark themes both work
+ * without extra rules.
+ */
+
+.pyc-hosted-install {
+  display: none; /* JS-only data source: the real :doc: href, never shown */
+}
+
+.phd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(10, 14, 20, 0.55);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0s linear 0.18s;
+}
+
+.phd-overlay.phd-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.18s ease;
+}
+
+.phd-panel {
+  position: relative;
+  width: 100%;
+  max-width: 26rem;
+  background: var(--pst-color-background);
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.9rem;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  padding: 1.9rem 1.7rem 1.6rem;
+  transform: translateY(10px) scale(0.98);
+  transition: transform 0.18s ease;
+}
+
+.phd-overlay.phd-open .phd-panel {
+  transform: translateY(0) scale(1);
+}
+
+.phd-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--pst-color-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.phd-close:hover,
+.phd-close:focus-visible {
+  background: var(--pst-color-surface);
+  color: var(--pst-color-text-base);
+}
+
+.phd-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  width: 4.4rem;
+  height: 4.4rem;
+  position: relative;
+}
+
+.phd-badge-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--pst-color-primary);
+  border-radius: 50%;
+  opacity: 0.55;
+  animation: phd-breathe 2.4s ease-in-out infinite;
+}
+
+.phd-badge-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--pst-color-primary);
+  border-radius: 50%;
+  animation: phd-breathe 2.4s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+.phd-badge img {
+  position: relative;
+  width: 2.4rem;
+  height: 2.4rem;
+  z-index: 1;
+}
+
+@keyframes phd-breathe {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.phd-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--pst-color-text-base);
+}
+
+.phd-body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--pst-color-text-muted);
+}
+
+.phd-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 1.4rem;
+}
+
+.phd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.phd-btn:hover,
+.phd-btn:focus-visible {
+  text-decoration: none;
+}
+
+.phd-btn-primary {
+  background: var(--pst-color-primary);
+  color: #fff;
+}
+
+.phd-btn-primary:hover,
+.phd-btn-primary:focus-visible {
+  filter: brightness(1.08);
+  color: #fff;
+}
+
+.phd-btn-secondary {
+  background: transparent;
+  border-color: var(--pst-color-border);
+  color: var(--pst-color-text-base);
+}
+
+.phd-btn-secondary:hover,
+.phd-btn-secondary:focus-visible {
+  background: var(--pst-color-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phd-overlay,
+  .phd-panel {
+    transition: none;
+  }
+  .phd-badge-ring,
+  .phd-badge-ring::after {
+    animation: none;
+    opacity: 0.55;
+    transform: none;
+  }
+}

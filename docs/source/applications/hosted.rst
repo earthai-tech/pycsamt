@@ -9,10 +9,12 @@ running on a server, reachable straight from a browser. No install, no
 Python environment, no local server to keep open.
 
 Each card below previews its app with the same walkthrough animation used
-in its guide; click a card to open the live instance in a new tab.
+in its guide. The secured, per-user hosted rollout is still in progress
+(see the note below the table) — click a card for its current status.
 
 .. grid:: 1 1 3 3
    :gutter: 3
+   :class-container: pyc-hosted-grid
 
    .. grid-item-card:: Agent Master
       :img-top: /_static/applications/agent_master/agent-master-walkthrough.gif
@@ -22,6 +24,10 @@ in its guide; click a card to open the live instance in a new tab.
 
       Conversational workflow surface — load EDI data, chat through a
       pipeline, and collect reports and figures.
+
+      .. container:: pyc-hosted-install
+
+         :doc:`agent_master/installation`
 
       +++
       Open Agent Master →
@@ -35,6 +41,10 @@ in its guide; click a card to open the live instance in a new tab.
       Browser dashboard for loading, processing, and visualizing EDI
       surveys end to end.
 
+      .. container:: pyc-hosted-install
+
+         :doc:`web/installation`
+
       +++
       Open Web App →
 
@@ -46,6 +56,10 @@ in its guide; click a card to open the live instance in a new tab.
 
       Dedicated map workbench for viewing survey lines and stations in
       space.
+
+      .. container:: pyc-hosted-install
+
+         :doc:`mapview/installation`
 
       +++
       Open MapView →

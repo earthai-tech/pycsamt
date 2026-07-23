@@ -268,7 +268,11 @@ html_theme_options = {
     # Per-page override lives in _configure_secondary_sidebar() below; this is
     # the fallback for any page that handler does not touch.
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
-    "primary_sidebar_end": [],
+    # Keep the theme's desktop sidebar control.  An empty list removes the
+    # ``sidebar-collapse`` template entirely, which also makes a working
+    # navigation tree look like a static, always-open list when JavaScript has
+    # not yet initialised.
+    "primary_sidebar_end": ["sidebar-collapse"],
     # Code highlighting — NOTE: pydata-sphinx-theme spells these
     # "pygment_*" (no "s"); the "pygments_*" spelling is ignored and
     # dark mode falls back to black-on-dark unreadable tokens.

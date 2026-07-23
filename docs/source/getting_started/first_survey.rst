@@ -484,12 +484,13 @@ your task:
 * :doc:`data_formats` for converting or understanding non-EDI inputs.
 * :doc:`../tutorials/read_edi_survey` for a deeper EDI-reading tutorial.
 * :doc:`../tutorials/inspect_and_qc_survey` for richer station diagnostics.
-* :doc:`../pipeline/presets` for choosing a processing preset.
-* :doc:`../pipeline/outputs` for understanding generated pipeline files.
+* :doc:`../user_guide/pipeline/presets` for choosing a processing preset.
+* :doc:`../user_guide/pipeline/outputs` for understanding generated pipeline
+  files.
 * :doc:`../tutorials/prepare_occam2d_inversion` when the data are ready for
   Occam2D preparation.
-* :doc:`../agents/overview` if you want the AI-assisted agents to help review
-  a survey, plan processing, or summarize results.
+* :doc:`../user_guide/agents/overview` if you want the AI-assisted agents to
+  help review a survey, plan processing, or summarize results.
 
 In Short
 --------

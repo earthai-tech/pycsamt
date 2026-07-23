@@ -271,7 +271,7 @@ Google Gemini:
    export GOOGLE_API_KEY="..."
 
 The exact environment variables used by an agent workflow are documented in
-:doc:`../agents/llm_configuration`.
+:doc:`../user_guide/agents/llm_configuration`.
 
 Geospatial Support
 ------------------
@@ -546,5 +546,5 @@ After installation:
 * open :doc:`configuration` to set API, plotting, pipeline, and agent
   defaults;
 * open :doc:`first_survey` to load your first EDI directory and run basic QC;
-* open :doc:`../agents/llm_configuration` if you plan to use LLM-assisted
+* open :doc:`../user_guide/agents/llm_configuration` if you plan to use LLM-assisted
   agents.

@@ -26,6 +26,8 @@ foundation.
    correct_static_shift
    condition_mt_line_with_tipper_and_rotation
    prepare_occam2d_inversion
+   prepare_modem_inversion
+   prepare_mare2dem_inversion
    run_classical_inversions
    ai_inversion_from_corrected_edis
    essential_3d_ai_inversion

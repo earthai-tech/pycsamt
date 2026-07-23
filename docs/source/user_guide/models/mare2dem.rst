@@ -1069,6 +1069,9 @@ Confusing ``tx_type`` with ``rx_type``
 Next Steps
 ------------
 
+* :doc:`../../tutorials/prepare_mare2dem_inversion` walks through preparing a
+  real MARE2DEM run end to end from EDI data, including Y/Z grid design and
+  the ``.poly`` triangulation boundary.
 * :doc:`configuration_and_io` for source-of-truth configuration and archive
   practice.
 * :doc:`choosing_backend` for deciding when MARE2DEM is the right integration.

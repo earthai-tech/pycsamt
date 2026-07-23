@@ -9,5 +9,6 @@ and compatibility notes for pyCSAMT releases.
 .. toctree::
    :maxdepth: 1
 
-   v2.0.0
+   Version 2.0.0 (latest) <v2.0.0>
+   Version 1.2.1 (legacy) <v1.2.1>
 

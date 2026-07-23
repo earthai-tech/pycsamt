@@ -1104,6 +1104,9 @@ Common Mistakes
 Next Steps
 ------------
 
+* :doc:`../../tutorials/prepare_modem_inversion` walks through preparing a
+  real 3-D ModEM run end to end, including horizontal and vertical mesh
+  design.
 * :doc:`choosing_backend` explains when ModEM is preferable to other model
   backends.
 * :doc:`configuration_and_io` gives the shared model-backend configuration

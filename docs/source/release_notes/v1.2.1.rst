@@ -1,0 +1,19 @@
+.. _release_v1_2_1:
+
+-------------
+Version 1.2.1
+-------------
+*(Legacy line — superseded, not maintained)*
+
+pyCSAMT 1.2.1 |Docs|
+~~~~~~~~~~~~~~~~~~~~
+
+1.2.1 is the last stable release of the original pyCSAMT 1.x line --
+``pycsamt.ff``, ``pycsamt.viewer``, ``pycsamt.geodrill``, ``pycsamt.modeling``,
+and the v1 CLI entry points. It predates the ground-up v2 rework described in
+:ref:`release_v2_0_0` and receives no further changes.
+
+* See ``README_v1.md`` in the repository root for the full v1 changelog.
+* See :ref:`migration` for the v1 -> v2 module and class name map.
+* New work should target the current :ref:`release_v2_0_0` line; v1 is kept
+  here only for historical reference.

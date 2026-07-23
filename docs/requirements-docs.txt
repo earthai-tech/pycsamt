@@ -1,6 +1,6 @@
 # Documentation build requirements for pyCSAMT v2
 sphinx>=7.2
-pydata-sphinx-theme>=0.15
+pydata-sphinx-theme>=0.20
 numpydoc>=1.7
 myst-parser>=2.0
 sphinx-copybutton>=0.5

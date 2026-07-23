@@ -61,36 +61,31 @@ Prepare the Survey
 
 Start from the same EDI loading and QC path used in the previous tutorials.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pathlib import Path
+   >>> from pathlib import Path
 
-   from pycsamt.api import read_edis
-   from pycsamt.emtools.qc import station_confidence_table
+   >>> from pycsamt.api import read_edis
+   >>> from pycsamt.emtools.qc import station_confidence_table
 
-   run_root = Path("runs")
-   run_root.mkdir(exist_ok=True)
+   >>> run_root = Path("runs")
+   >>> run_root.mkdir(exist_ok=True)
 
-   survey = read_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       recursive=False,
-       strict=False,
-       progress=False,
-   )
-   sites = survey.collection
+   >>> survey = read_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=False,
+   ...     strict=False,
+   ...     progress=False,
+   ... )
+   >>> sites = survey.collection
 
-   confidence = station_confidence_table(
-       sites,
-       method="composite",
-       api=True,
-   )
-   print(confidence)
-
-Example confidence output from the bundled WILLY ``L18PLT`` line:
-
-.. code-block:: text
-
+   >>> confidence = station_confidence_table(
+   ...     sites,
+   ...     method="composite",
+   ...     api=True,
+   ... )
+   >>> print(confidence)
    station  confidence  coverage
    18-001A    0.709038       1.0
    18-002U    0.774634       1.0
@@ -108,21 +103,21 @@ Apply Optional Static-Shift Correction
 If the QC review supports a static-shift correction, apply it to a copy of the
 survey and keep the original data available.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.emtools.ss import correct_ss_ama
+   >>> from pycsamt.emtools.ss import correct_ss_ama
 
-   corrected = correct_ss_ama(
-       sites,
-       sort_by="name",
-       half_window=3,
-       weights="tri",
-       max_skew=None,
-       inplace=False,
-       recursive=False,
-       verbose=1,
-   )
+   >>> corrected = correct_ss_ama(
+   ...     sites,
+   ...     sort_by="name",
+   ...     half_window=3,
+   ...     weights="tri",
+   ...     max_skew=None,
+   ...     inplace=False,
+   ...     recursive=False,
+   ...     verbose=1,
+   ... )
 
 If static-shift evidence is weak, use ``sites`` directly for the first trial
 and compare that model with a corrected run later.
@@ -139,31 +134,31 @@ Choose an Occam Configuration
 controls data rows, error floors, mesh geometry, startup options, filenames,
 and executable discovery.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.occam2d import OccamConfig
+   >>> from pycsamt.models.occam2d import OccamConfig
 
-   cfg = OccamConfig(
-       modes=["TE", "TM"],
-       freq_min=0.1,
-       freq_max=1000.0,
-       error_floor_rho=0.05,
-       error_floor_phase=0.5,
-       n_layers=32,
-       n_airlayers=4,
-       cell_size_horizontal=100.0,
-       cell_size_vertical_top=25.0,
-       depth_scale=1.15,
-       target_misfit=1.0,
-       max_iterations=80,
-       initial_rho=100.0,
-       data_file="OccamDataFile.dat",
-       mesh_file="Occam2DMesh",
-       model_file="Occam2DModel",
-       startup_file="Startup",
-       binary_name="Occam2D",
-   )
+   >>> cfg = OccamConfig(
+   ...     modes=["TE", "TM"],
+   ...     freq_min=0.1,
+   ...     freq_max=1000.0,
+   ...     error_floor_rho=0.05,
+   ...     error_floor_phase=0.5,
+   ...     n_layers=32,
+   ...     n_airlayers=4,
+   ...     cell_size_horizontal=100.0,
+   ...     cell_size_vertical_top=25.0,
+   ...     depth_scale=1.15,
+   ...     target_misfit=1.0,
+   ...     max_iterations=80,
+   ...     initial_rho=100.0,
+   ...     data_file="OccamDataFile.dat",
+   ...     mesh_file="Occam2DMesh",
+   ...     model_file="Occam2DModel",
+   ...     startup_file="Startup",
+   ...     binary_name="Occam2D",
+   ... )
 
 Important options:
 
@@ -190,39 +185,35 @@ Important options:
 
 Write the configuration next to the run so it can be reviewed later:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   workdir = run_root / "L18PLT_occam2d_native"
-   workdir.mkdir(parents=True, exist_ok=True)
+   >>> workdir = run_root / "L18PLT_occam2d_native"
+   >>> workdir.mkdir(parents=True, exist_ok=True)
 
-   cfg.to_template(workdir / "occam2d.yml")
+   >>> cfg.to_template(workdir / "occam2d.yml")
 
 Build Native Occam2D Files
 --------------------------
 
 Use :class:`pycsamt.models.occam2d.InputBuilder` to write the four native input
-files required before the external executable can run.
+files required before the external executable can run. For the tutorial
+configuration, this writes a complete native input set:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.occam2d import InputBuilder
+   >>> from pycsamt.models.occam2d import InputBuilder
 
-   builder = InputBuilder(
-       sites,
-       workdir=workdir,
-       config=cfg,
-       verbose=1,
-   )
+   >>> builder = InputBuilder(
+   ...     sites,
+   ...     workdir=workdir,
+   ...     config=cfg,
+   ...     verbose=1,
+   ... )
 
-   builder.build(title="L18PLT pyCSAMT v2 Occam2D preparation")
-   print(builder.summary())
-
-For the tutorial configuration, the builder writes a complete native input set:
-
-.. code-block:: text
-
+   >>> builder.build(title="L18PLT pyCSAMT v2 Occam2D preparation")
+   >>> print(builder.summary())
    InputBuilder summary
      workdir   : runs/L18PLT_occam2d_native
      sites     : 28
@@ -265,25 +256,20 @@ Inspect the Built Objects
 Before running the solver, inspect the generated data, mesh, model, and startup
 objects.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   print("sites:", builder.data.n_sites)
-   print("frequencies:", builder.data.n_frequencies)
-   print("data rows:", builder.data.n_data)
-   print("mesh cells:", builder.mesh.n_xcells, "x", builder.mesh.n_zcells)
-   print("parameters:", builder.model.n_params)
-   print("startup file:", cfg.startup_file)
-
-Example output:
-
-.. code-block:: text
-
+   >>> print("sites:", builder.data.n_sites)
    sites: 28
+   >>> print("frequencies:", builder.data.n_frequencies)
    frequencies: 39
+   >>> print("data rows:", builder.data.n_data)
    data rows: 4368
+   >>> print("mesh cells:", builder.mesh.n_xcells, "x", builder.mesh.n_zcells)
    mesh cells: 42 x 36
+   >>> print("parameters:", builder.model.n_params)
    parameters: 512
+   >>> print("startup file:", cfg.startup_file)
    startup file: Startup
 
 The selected period band and mesh skeleton provide a quick visual audit before
@@ -304,24 +290,19 @@ Validate File Types
 pyCSAMT can detect native Occam2D file types. Use this to catch path mistakes
 before sending a run to a cluster or external workstation.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.occam2d.validation import detect_file_type
+   >>> from pycsamt.models.occam2d.validation import detect_file_type
 
-   for filename in (
-       cfg.data_file,
-       cfg.mesh_file,
-       cfg.model_file,
-       cfg.startup_file,
-   ):
-       path = workdir / filename
-       print(path.name, "->", detect_file_type(path))
-
-Example output:
-
-.. code-block:: text
-
+   >>> for filename in (
+   ...     cfg.data_file,
+   ...     cfg.mesh_file,
+   ...     cfg.model_file,
+   ...     cfg.startup_file,
+   ... ):
+   ...     path = workdir / filename
+   ...     print(path.name, "->", detect_file_type(path))
    OccamDataFile.dat  -> data
    Occam2DMesh        -> mesh
    Occam2DModel       -> model
@@ -343,35 +324,30 @@ Build a TM-Only First Trial
 For many CSAMT and AMT profiles, a TM-only first run is easier to interpret
 than a joint TE/TM run. Use a separate work directory for the experiment.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   tm_workdir = run_root / "L18PLT_occam2d_tm"
+   >>> tm_workdir = run_root / "L18PLT_occam2d_tm"
 
-   tm_builder = InputBuilder(
-       sites,
-       workdir=tm_workdir,
-       config=OccamConfig(),
-       verbose=1,
-   )
+   >>> tm_builder = InputBuilder(
+   ...     sites,
+   ...     workdir=tm_workdir,
+   ...     config=OccamConfig(),
+   ...     verbose=1,
+   ... )
 
-   tm_builder.build(
-       modes=["TM"],
-       freq_min=0.2,
-       freq_max=500.0,
-       error_floor_rho=0.07,
-       error_floor_phase=1.0,
-       n_layers=28,
-       cell_size=150.0,
-       title="L18PLT TM-only Occam2D first trial",
-   )
+   >>> tm_builder.build(
+   ...     modes=["TM"],
+   ...     freq_min=0.2,
+   ...     freq_max=500.0,
+   ...     error_floor_rho=0.07,
+   ...     error_floor_phase=1.0,
+   ...     n_layers=28,
+   ...     cell_size=150.0,
+   ...     title="L18PLT TM-only Occam2D first trial",
+   ... )
 
-   print(tm_builder.summary())
-
-Example output:
-
-.. code-block:: text
-
+   >>> print(tm_builder.summary())
    InputBuilder summary
      workdir   : runs/L18PLT_occam2d_tm
      sites     : 28
@@ -391,24 +367,24 @@ Run Occam2D
 When a compiled Occam2D executable is available, launch the solver with
 :class:`pycsamt.models.occam2d.OccamRunner`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.occam2d import OccamRunner
+   >>> from pycsamt.models.occam2d import OccamRunner
 
-   runner = OccamRunner(
-       workdir=workdir,
-       binary_path="/usr/local/bin/Occam2D",
-       startup_file=cfg.startup_file,
-       verbose=1,
-   )
+   >>> runner = OccamRunner(
+   ...     workdir=workdir,
+   ...     binary_path="/usr/local/bin/Occam2D",
+   ...     startup_file=cfg.startup_file,
+   ...     verbose=1,
+   ... )
 
-   exit_code = runner.run(
-       max_iter=80,
-       target_misfit=1.0,
-       auto_compile=False,
-   )
-   print("Occam2D exit code:", exit_code)
+   >>> exit_code = runner.run(
+   ...     max_iter=80,
+   ...     target_misfit=1.0,
+   ...     auto_compile=False,
+   ... )
+   >>> print("Occam2D exit code:", exit_code)
 
 ``OccamRunner`` does not build input files. It only runs a prepared directory.
 If the executable is not available, stop after the build step and move the
@@ -420,55 +396,55 @@ Load Finished Results
 After an external run completes, load the directory with
 :class:`pycsamt.models.occam2d.InversionResult`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.models.occam2d import InversionResult
+   >>> from pycsamt.models.occam2d import InversionResult
 
-   result = InversionResult(workdir)
+   >>> result = InversionResult(workdir)
 
-   print("iteration files:", len(result.iter_files))
-   print("response files:", len(result.resp_files))
-   print("final RMS:", result.final_rms)
-   print("model grid:", None if result.rho_2d is None else result.rho_2d.shape)
+   >>> print("iteration files:", len(result.iter_files))
+   >>> print("response files:", len(result.resp_files))
+   >>> print("final RMS:", result.final_rms)
+   >>> print("model grid:", None if result.rho_2d is None else result.rho_2d.shape)
 
 ``rho_2d`` stores log10 resistivity on the Occam mesh. Convert to ohm metres
 only when you need physical resistivity values:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   if result.rho_2d is not None:
-       rho_ohm_m = 10.0 ** result.rho_2d
-       print(np.nanmin(rho_ohm_m), np.nanmax(rho_ohm_m))
+   >>> if result.rho_2d is not None:
+   ...     rho_ohm_m = 10.0 ** result.rho_2d
+   ...     print(np.nanmin(rho_ohm_m), np.nanmax(rho_ohm_m))
 
 Plot Model and Misfit
 ---------------------
 
 Use the Occam plotting helpers after a completed run.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import matplotlib.pyplot as plt
-   from pycsamt.models.occam2d import PlotMisfit, PlotModel, PlotPseudo
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.models.occam2d import PlotMisfit, PlotModel, PlotPseudo
 
-   figure_dir = workdir / "figures"
-   figure_dir.mkdir(exist_ok=True)
+   >>> figure_dir = workdir / "figures"
+   >>> figure_dir.mkdir(exist_ok=True)
 
-   fig = PlotModel(result).plot()
-   fig.savefig(figure_dir / "occam2d_model.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> fig = PlotModel(result).plot()
+   >>> fig.savefig(figure_dir / "occam2d_model.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
-   fig = PlotMisfit(result).plot()
-   fig.savefig(figure_dir / "occam2d_misfit.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> fig = PlotMisfit(result).plot()
+   >>> fig.savefig(figure_dir / "occam2d_misfit.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
-   fig = PlotPseudo(result).plot()
-   fig.savefig(figure_dir / "occam2d_observed_pseudo.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> fig = PlotPseudo(result).plot()
+   >>> fig.savefig(figure_dir / "occam2d_observed_pseudo.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 If a plot helper reports that a response, iteration, or log file is missing,
 check that the external solver completed and that output files were written in
@@ -481,36 +457,36 @@ The backend-neutral inversion API can prepare the same native files while
 returning a common inversion result object. Keep ``run_external=False`` when
 you only want to build and validate files.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.inversion import InversionConfig, run_inversion
+   >>> from pycsamt.inversion import InversionConfig, run_inversion
 
-   inv_cfg = InversionConfig(
-       method="mt",
-       dimension="2d",
-       backend="occam2d",
-       data=sites,
-       workdir=run_root / "L18PLT_occam2d_workflow",
-       run_external=False,
-       error_floor=0.05,
-       phase_error=0.5,
-       backend_options={
-           "config": {
-               "modes": ["TE", "TM"],
-               "freq_min": 0.1,
-               "freq_max": 1000.0,
-               "n_layers": 32,
-               "target_misfit": 1.0,
-               "initial_rho": 100.0,
-           },
-       },
-   )
+   >>> inv_cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="2d",
+   ...     backend="occam2d",
+   ...     data=sites,
+   ...     workdir=run_root / "L18PLT_occam2d_workflow",
+   ...     run_external=False,
+   ...     error_floor=0.05,
+   ...     phase_error=0.5,
+   ...     backend_options={
+   ...         "config": {
+   ...             "modes": ["TE", "TM"],
+   ...             "freq_min": 0.1,
+   ...             "freq_max": 1000.0,
+   ...             "n_layers": 32,
+   ...             "target_misfit": 1.0,
+   ...             "initial_rho": 100.0,
+   ...         },
+   ...     },
+   ... )
 
-   workflow_result = run_inversion(inv_cfg)
-   print(workflow_result.status)
-   print(workflow_result.files)
-   print(workflow_result.warnings)
+   >>> workflow_result = run_inversion(inv_cfg)
+   >>> print(workflow_result.status)
+   >>> print(workflow_result.files)
+   >>> print(workflow_result.warnings)
 
 Use the native ``InputBuilder`` path when you want direct control over Occam2D
 objects. Use the backend-neutral path when a larger application, agent, or

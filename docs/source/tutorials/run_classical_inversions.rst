@@ -116,7 +116,7 @@ MARE2DEM synthetic sample documented in the engine pages:
      params    : 512
      modes     : ['TE', 'TM']
 
-   >>> # ModEM -- see the user_guide/models/modem "Build A 3-D Input Set" section
+   >>> # ModEM -- see prepare_modem_inversion for the full mesh-building walkthrough
    >>> from pycsamt.models.modem import InputBuilder as ModEmBuilder, ModEmConfig
    >>> modem_cfg = ModEmConfig(
    ...     mode="3d",
@@ -143,7 +143,7 @@ MARE2DEM synthetic sample documented in the engine pages:
    >>> print(sorted(modem_files))
    ['control', 'covariance', 'data', 'model']
 
-   >>> # MARE2DEM -- see user_guide/models/mare2dem "Build A Run Directory"
+   >>> # MARE2DEM -- see prepare_mare2dem_inversion for the full mesh-building walkthrough
    >>> from pycsamt.models.mare2dem import InputBuilder as Mare2DEMBuilder, Mare2DEMConfig
    >>> mare_cfg = Mare2DEMConfig(
    ...     initial_rho=10.0,
@@ -503,6 +503,12 @@ See Also
 
 :doc:`prepare_occam2d_inversion`
     Full Occam2D preparation walkthrough.
+
+:doc:`prepare_modem_inversion`
+    Full 3-D ModEM preparation and mesh-building walkthrough.
+
+:doc:`prepare_mare2dem_inversion`
+    Full MARE2DEM preparation and mesh-building walkthrough.
 
 :doc:`map_porphyry_mineralization_from_noisy_amt`
     A combined Occam2D/ModEM preparation case study on a real noisy AMT

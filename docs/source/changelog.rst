@@ -22,6 +22,32 @@ carries a colour-coded badge so the log can be scanned at a glance:
 
 ----
 
+.. _changelog-2-0-0:
+
+2.0.0 |Feature| |API Change| |Breaking|
+---------------------------------------
+
+*First stable release of the v2 line. It consolidates* :ref:`2.0.0rc1
+<changelog-2-0-0rc1>` *and* :ref:`2.0.0rc2 <changelog-2-0-0rc2>` *— see those
+entries for the full v2 feature set — plus the changes below. The public API
+is now stable; v1 users should read* :ref:`migration` *for the v1 → v2 name
+map.*
+
+Fixed
+~~~~~
+
+* |Fix| |Tests| **Python 3.9 Qt-toolbar segfault** — stub matplotlib's Qt
+  navigation toolbar under the offscreen platform so the CI *interfaces* shard
+  no longer crashes on the Python 3.9 / matplotlib 3.9.x combination.
+
+Changed
+~~~~~~~
+
+* |Docs| **PyPI summary** rescoped to the v2 feature set — "Scientific Python
+  for electromagnetic geophysics — processing, inversion, AI agents, and apps".
+
+----
+
 .. _changelog-2-0-0rc2:
 
 2.0.0rc2 |Fix| |Build| |Docs|

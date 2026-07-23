@@ -14,6 +14,19 @@ from pathlib import Path
 
 import pytest
 
+# Root conftest.py is imported during pytest's initial-conftest phase,
+# before pytest-cov's coverage tracer starts (that happens in
+# pytest_configure). Some test modules (e.g. test_web_callbacks_inversion.py)
+# import torch at module scope for the first time mid-session; initializing
+# torch's C extension while coverage.py is already tracing corrupts memory
+# and causes unrelated-looking segfaults later on (see
+# pycsamt/app/tests/_cov_runner_scratch.py for the original diagnosis).
+# Pre-importing here, before tracing begins, avoids it.
+try:
+    import torch  # noqa: F401
+except ImportError:
+    pass
+
 
 def get_project_root() -> Path:
     """Find repo root by locating the 'pycsamt' dir."""

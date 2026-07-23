@@ -268,11 +268,13 @@ html_theme_options = {
     # Per-page override lives in _configure_secondary_sidebar() below; this is
     # the fallback for any page that handler does not touch.
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
-    # Keep the theme's desktop sidebar control.  An empty list removes the
-    # ``sidebar-collapse`` template entirely, which also makes a working
-    # navigation tree look like a static, always-open list when JavaScript has
-    # not yet initialised.
-    "primary_sidebar_end": ["sidebar-collapse"],
+    # NOTE: do NOT add "sidebar-collapse" here. That component only exists
+    # in unreleased pydata-sphinx-theme builds (>0.16.1) that also inject
+    # their own collapse toggle at the top of the primary sidebar; on the
+    # latest PyPI release (0.16.1, see the "docs" extra pin) the component
+    # template does not exist at all, and referencing it here throws
+    # "'sidebar-collapse.html' not found" and hard-fails the whole build.
+    "primary_sidebar_end": [],
     # Code highlighting — NOTE: pydata-sphinx-theme spells these
     # "pygment_*" (no "s"); the "pygments_*" spelling is ignored and
     # dark mode falls back to black-on-dark unreadable tokens.

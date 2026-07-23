@@ -10,6 +10,7 @@ for tests that do not rely on repository data.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,40 @@ try:
     import torch  # noqa: F401
 except ImportError:
     pass
+
+
+@pytest.fixture(autouse=True)
+def _close_matplotlib_figures():
+    """
+    Close every pyplot figure after each test to bound figure accumulation.
+
+    Nothing in the suite closes figures globally: the interfaces shard alone
+    makes ~160 ``plt.subplots``/``plt.figure`` calls, most of which never get
+    a matching ``plt.close``. Left open, each figure keeps its Axes, transform
+    graphs, and Agg render buffers alive in pyplot's ``Gcf`` registry, so the
+    live graph grows monotonically across the whole session.
+
+    On Python 3.9 -- the only interpreter that resolves the *terminal*
+    matplotlib 3.9.x line (3.10+ pull matplotlib 3.10+, which is unaffected) --
+    that unbounded pile eventually tips matplotlib's C extensions into a
+    segmentation fault deep in ``matplotlib.transforms`` while a brand-new
+    Axes is being created. The tell is the crash point: it lands ~15% into the
+    session, not at the first ``plt.subplots`` call, which is the signature of
+    resource accumulation rather than an intrinsic per-call bug (CI:
+    "Python 3.9 / interfaces" shard, test_batch_export_tool.py).
+
+    Bounding the live figure set to what a single test creates removes the
+    trigger, and it is good hygiene on every interpreter. Runs in teardown
+    (after the test body), and only touches pyplot if the test actually
+    imported it -- pure parsing/CLI tests never pull matplotlib in.
+    """
+    yield
+    plt = sys.modules.get("matplotlib.pyplot")
+    if plt is not None:
+        try:
+            plt.close("all")
+        except Exception:  # pragma: no cover - defensive teardown
+            pass
 
 
 def get_project_root() -> Path:

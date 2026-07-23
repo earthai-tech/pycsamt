@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.0.0rc2"
+version     = "2.0.0"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }

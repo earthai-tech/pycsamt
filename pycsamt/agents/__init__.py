@@ -239,7 +239,7 @@ if TYPE_CHECKING:  # pragma: no cover - imports exist only for static analyzers
     from .tipper_analysis import TipperAnalysisAgent
 
 
-__version__ = "2.0.0rc2"
+__version__ = "2.0.0"
 
 __all__ = [
     # global LLM config

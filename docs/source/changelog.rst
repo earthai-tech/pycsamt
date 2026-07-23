@@ -22,6 +22,38 @@ carries a colour-coded badge so the log can be scanned at a glance:
 
 ----
 
+.. _changelog-2-0-0rc2:
+
+2.0.0rc2 |Fix| |Build| |Docs|
+-----------------------------
+
+*Second pre-release of the v2 line, published to PyPI and TestPyPI for
+community testing ahead of the 2.0.0 final. Bug fixes, packaging, and docs
+only — no public API change since* :ref:`2.0.0rc1 <changelog-2-0-0rc1>`.
+
+Fixed
+~~~~~
+
+* |Fix| |Tests| **Python 3.9 interpreter segfaults** — bounded runaway
+  matplotlib figure accumulation across the test session (a per-test
+  ``plt.close("all")``) and stubbed matplotlib's Qt navigation toolbar under
+  the offscreen platform. Both crashed the process on the Python 3.9 /
+  matplotlib 3.9.x combination the CI *interfaces* shard runs.
+* |Fix| **SEG parsing and plotting** (:mod:`pycsamt.seg`) — consistent mixin
+  MRO discovery, ``>=``-prefixed section-name normalisation, DMS hemisphere
+  parsing, and trend carry-through on topography resample.
+
+Changed
+~~~~~~~
+
+* |Build| **Lean distributions** — the source distribution no longer bundles
+  the documentation tree (which pushed it past PyPI's 100 MB per-file limit)
+  or the test suites; the sdist drops ~153 MB → ~4 MB and the wheel
+  5.8 MB → ~4.4 MB, with every runtime resource retained.
+* |Docs| **Hosted-applications status** — the Applications cards now reflect
+  the in-progress hosted rollout and link each app's installation guide
+  rather than promising a live instance.
+
 .. _changelog-2-0-0rc1:
 
 2.0.0rc1 |Feature| |API Change| |Breaking| |Docs|

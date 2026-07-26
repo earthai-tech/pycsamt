@@ -212,6 +212,19 @@ Added
   low-level utilities. Executable examples use interactive ``pycon`` output,
   and scientific equations and generated figures are explained in context.
 
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| Added a project `Code of Conduct
+  <https://github.com/earthai-tech/pycsamt/blob/master/CODE_OF_CONDUCT.md>`__
+  and a "powered by Netlify" attribution link in the footer of every
+  documentation page.
+* |Build| Documentation deploys are now release-gated -- ``pycsamt.org``
+  rebuilds only when a ``vX.Y.Z`` tag is pushed, through a GitHub Actions
+  workflow that calls a Netlify build hook, instead of on every commit to
+  ``master``. The previous per-commit pattern had exhausted the hosting
+  team's free-plan credits and suspended the site.
+
 Compatibility
 ~~~~~~~~~~~~~
 

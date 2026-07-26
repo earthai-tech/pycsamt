@@ -97,6 +97,19 @@ Changed
   does not accept a dictionary as a rename table. Use
   :meth:`pycsamt.site.Sites.rename` for explicit station-name mappings.
 
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| **Code of Conduct and Netlify attribution** -- added a project
+  Code of Conduct and a "powered by Netlify" link in the footer of every
+  documentation page, meeting the requirements of Netlify's Open Source
+  Plan.
+* |Build| **Release-gated docs deploys** -- ``pycsamt.org`` now rebuilds
+  only on a ``vX.Y.Z`` tag push (a GitHub Actions workflow calling a
+  Netlify build hook), rather than on every commit to ``master``. The
+  previous per-commit pattern exhausted the hosting team's free-plan
+  credits and suspended the site.
+
 ----
 
 .. _changelog-2-0-0:

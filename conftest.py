@@ -31,19 +31,31 @@ def _terminate_process(code: int) -> None:
         os._exit(code)
 
 
+def _is_qt_interface_run(config) -> bool:
+    """Return whether this pytest invocation owns the desktop Qt tests."""
+
+    args = {
+        str(arg).replace("\\", "/").rstrip("/") for arg in config.args
+    }
+    return "PySide6" in sys.modules and any(
+        arg == "pycsamt/app/tests" or "/pycsamt/app/tests" in arg
+        for arg in args
+    )
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
+    """Exit after reports are persisted but before Qt plugin finalization."""
+
+    if _is_qt_interface_run(config):
+        _terminate_process(int(exitstatus))
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
     """Bypass unsafe Qt/Shiboken finalization after interface test runs."""
 
-    args = {
-        str(arg).replace("\\", "/").rstrip("/")
-        for arg in session.config.args
-    }
-    runs_app_tests = any(
-        arg == "pycsamt/app/tests" or "/pycsamt/app/tests" in arg
-        for arg in args
-    )
-    if not runs_app_tests or "PySide6" not in sys.modules:
+    if not _is_qt_interface_run(session.config):
         return
 
     # Root conftest is loaded during pytest's initial configuration, so this

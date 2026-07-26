@@ -105,6 +105,7 @@ jobs:
       # --timeout keeps a single hung test (e.g. an unexpected modal
       # dialog) from stalling the shard until the job-level timeout.
       - name: Test
+        if: matrix.test-shard != 'interfaces'
         env:
           QT_QPA_PLATFORM: offscreen
           MPLBACKEND: Agg
@@ -118,6 +119,40 @@ jobs:
           --cov=pycsamt
           --cov-branch
           --cov-report=term-missing
+
+      # PySide6 can abort with exit 139 after pytest has completed every test
+      # and written coverage ("QObject: shared QObject was deleted directly").
+      # Accept that native teardown defect only when a complete JUnit report
+      # independently proves the suite was non-empty and fully passing. A
+      # mid-run crash, malformed report, or real test failure remains fatal.
+      - name: Test interfaces
+        if: matrix.test-shard == 'interfaces'
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MPLBACKEND: Agg
+        shell: bash
+        run: |
+          set +e
+          python -m pytest ${{ matrix.test-paths }} \
+            -m "not live" \
+            --timeout=300 \
+            --timeout-method=thread \
+            --cov-append \
+            --cov=pycsamt \
+            --cov-branch \
+            --cov-report=term-missing \
+            --junitxml=.pytest-interface.xml
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if [ "$status" -eq 139 ]; then
+            python .github/scripts/verify_pytest_junit.py .pytest-interface.xml
+            echo "Accepted post-suite Qt teardown exit 139 after verified pass."
+            exit 0
+          fi
+          exit "$status"
 
       # always() so a shard with test failures still contributes its
       # coverage data; otherwise every package in that shard reads 0%.

@@ -22,6 +22,83 @@ carries a colour-coded badge so the log can be scanned at a glance:
 
 ----
 
+.. _changelog-2-0-1:
+
+2.0.1 |Fix| |API Change| |Docs| |Tests|
+-----------------------------------------
+
+*Maintenance release for deterministic, spatially correct station ordering
+and validated, auditable station-metadata editing. See*
+:ref:`release_v2_0_1` *for upgrade guidance and migration examples.*
+
+Added
+~~~~~
+
+* |API Change| **Global station-ordering policy** -- added
+  :func:`pycsamt.api.configure_ordering`,
+  :func:`pycsamt.api.reset_ordering`, ``PYCSAMT_ORDERING``, and
+  :class:`pycsamt.api.SiteOrderingConfig`. Configure ``mode="auto"`` once and
+  APIs using :func:`pycsamt.emtools.ensure_sites` inherit it.
+* |API Change| **Sites ordering API** -- added
+  :meth:`pycsamt.site.Sites.ordered` with ``auto``, ``chainage``, ``input``,
+  natural ``station``, ``latitude``, and ``longitude`` strategies, plus
+  :attr:`pycsamt.site.Sites.ordering` diagnostics.
+* |API Change| **Transactional metadata API** -- added
+  :class:`pycsamt.site.metadata.SiteMetadataEditor`,
+  :class:`pycsamt.site.metadata.MetadataChange`,
+  :func:`pycsamt.site.metadata.rename_sites`,
+  :func:`pycsamt.site.metadata.update_metadata`, and
+  :func:`pycsamt.site.metadata.update_metadata_all`. The editor supports
+  copy-on-write staging, dry-run plans, batch validation, atomic in-place
+  commits, audit records, and metadata-aware export.
+* |API Change| **Container metadata conveniences** -- added
+  :meth:`pycsamt.site.Site.update_metadata`,
+  :meth:`pycsamt.site.Sites.update_metadata`, and
+  :meth:`pycsamt.site.Sites.rename`. Renaming changes station identity without
+  reordering the collection or changing station coordinates.
+* |Tests| **Spatial regression coverage** -- added synthetic edge cases and
+  real-data tests for the bundled L18PLT and L22PLT survey lines, including a
+  combined multiple-line collection.
+* |Tests| **Metadata regression coverage** -- added mapping, sequence,
+  callable, DataFrame, and CSV sources; nested ``HEAD``/``INFO`` changes;
+  coordinate and duplicate-name validation; error policies; atomic commits;
+  planning, auditing, export/reload; and real L18PLT and L22PLT workflows.
+
+Fixed
+~~~~~
+
+* |Fix| **Oblique survey lines** -- order is derived from both geographic
+  coordinates and projected chainage instead of longitude, latitude, or
+  lexical station names alone.
+* |Fix| **Unsafe geometry guesses** -- ``auto`` validates coordinate coverage,
+  linearity, and cross-track spread and preserves input order when the spatial
+  evidence is insufficient.
+* |Fix| **Multiple-line interleaving** -- separated parallel profiles are
+  ordered independently.
+* |Fix| **Pseudosection station order** -- dataframe pivots no longer replace
+  canonical profile order with lexical column order.
+* |Fix| **Processing consistency** -- static-shift and near-surface methods,
+  field-zone and CS/AMT sections, strike profiles, and pipeline presets now
+  inherit the shared ordering strategy by default.
+
+Changed
+~~~~~~~
+
+* |API Change| Processing ``sort_by=None`` and
+  :func:`pycsamt.emtools.ensure_sites` ``order_by=None`` now mean "use the
+  global policy". Explicit arguments still override it; select ``input`` to
+  retain loader order.
+* |Docs| Added configuration, migration, override, threshold, reset, and
+  compatibility guidance for the ordering policy. Reworked the complete Site
+  Tools guide with executable ``pycon`` transcripts, captured outputs, labeled
+  equations, generated figures, and dedicated metadata guidance including the
+  L22PLT rename-versus-order comparison.
+* |API Change| :meth:`pycsamt.site.Sites.map` remains a callable mapper and
+  does not accept a dictionary as a rename table. Use
+  :meth:`pycsamt.site.Sites.rename` for explicit station-name mappings.
+
+----
+
 .. _changelog-2-0-0:
 
 2.0.0 |Feature| |API Change| |Breaking|

@@ -152,7 +152,16 @@ def _unwrap(ed: Any) -> Any:
     return ed
 
 
-def _sorted_stations(stations: list[str], S: Any, sort_by: str) -> list[str]:
+def _sorted_stations(
+    stations: list[str], S: Any, sort_by: str | None
+) -> list[str]:
+    if sort_by in (None, "auto", "chainage", "profile", "spatial", "input"):
+        available = set(stations)
+        return [
+            _name(ed, i)
+            for i, ed in enumerate(_iter_items(S))
+            if _name(ed, i) in available
+        ]
     if sort_by not in ("lon", "lat"):
         return sorted(stations)
     coords: dict[str, float] = {}
@@ -384,7 +393,7 @@ def plot_field_zones(
     near_threshold: float = 0.3,
     contour_kr: bool = True,
     kr_levels: tuple[float, ...] = (0.1, 0.3, 1.0, 3.0, 10.0),
-    sort_by: str = "name",
+    sort_by: str | None = None,
     period_axis: bool = True,
     log_y: bool = True,
     figsize: tuple[float, float] = (10.0, 5.0),
@@ -416,8 +425,9 @@ def plot_field_zones(
         Draw |k·r| contours.
     kr_levels : tuple of float
         |k·r| values to contour.
-    sort_by : {"name", "lon", "lat"}
-        Station ordering along the x-axis.
+    sort_by : {"auto", "chainage", "input", "name", "lon", "lat"}, optional
+        Station ordering along the x-axis. ``None`` inherits
+        :data:`pycsamt.api.PYCSAMT_ORDERING`.
     period_axis : bool, default=True
         If True y-axis shows period (s), else frequency (Hz).
     log_y : bool, default=True
@@ -462,11 +472,21 @@ def plot_field_zones(
 
     # station order
     stations = df["station"].unique().tolist()
-    if sort_by in ("lon", "lat"):
+    if sort_by in (
+        None,
+        "auto",
+        "chainage",
+        "profile",
+        "spatial",
+        "input",
+        "lon",
+        "lat",
+    ):
         S = ensure_sites(
             sites,
             recursive=recursive,
             on_dup=on_dup,
+            order_by=sort_by,
             strict=strict,
             verbose=verbose,
         )

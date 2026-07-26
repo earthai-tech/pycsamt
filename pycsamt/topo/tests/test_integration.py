@@ -5,7 +5,7 @@
 These tests exercise the complete chain:
     EDI files → extract → drape → overlay → rendered figure
 
-All five WILLY profiles (L18–L34, 128 stations) are tested.
+The two WILLY profiles committed to the repository are tested.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ _WILLY_ROOT = os.path.join(
     "WILLY_DATA",
 )
 
-_PROFILES = ["L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"]
+_PROFILES = ["L18PLT", "L22PLT"]
 
 
 def _load(profile: str) -> list[EDIFile]:
@@ -294,9 +294,6 @@ class TestAllProfilesConsistency:
         expected = {
             "L18PLT": 28,
             "L22PLT": 25,
-            "L26PLT": 25,
-            "L30PLT": 25,
-            "L34PLT": 25,
         }
         for p, n in expected.items():
             edis = _load(p)
@@ -304,12 +301,12 @@ class TestAllProfilesConsistency:
                 f"{p}: expected {n} stations, got {len(edis)}"
             )
 
-    def test_l34_has_highest_terrain(self):
-        """L34PLT is documented as having the highest terrain (59–224 m)."""
+    def test_l22_has_highest_terrain(self):
+        """L22PLT has the highest terrain of the committed profiles."""
         max_elevs = {}
         for p in _PROFILES:
             max_elevs[p] = extract_elevation(_load(p)).max()
-        assert max_elevs["L34PLT"] == max(max_elevs.values())
+        assert max_elevs["L22PLT"] == max(max_elevs.values())
 
     def test_edi_collection_same_as_list(self):
         for p in _PROFILES:

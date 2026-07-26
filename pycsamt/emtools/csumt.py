@@ -511,7 +511,7 @@ def plot_depth_section(
     sites: Any,
     *,
     log_color: bool = True,
-    sort_by: str = "name",
+    sort_by: str | None = None,
     cmap: str = "viridis_r",
     figsize: tuple[float, float] = (10.0, 5.0),
     period_axis: bool = True,
@@ -532,8 +532,9 @@ def plot_depth_section(
     sites : path, EDI-like, Sites, or iterable
     log_color : bool, default=True
         Color by log10(depth) instead of depth.
-    sort_by : {"name", "lon", "lat"}
-        Station ordering along the x-axis.
+    sort_by : {"auto", "chainage", "input", "name", "lon", "lat"}, optional
+        Station ordering along the x-axis. ``None`` inherits
+        :data:`pycsamt.api.PYCSAMT_ORDERING`.
     cmap : str, default="viridis_r"
         Matplotlib colormap name.
     figsize : (float, float), default=(10, 5)
@@ -570,16 +571,17 @@ def plot_depth_section(
         )
         return ax
 
-    # station order
+    # station order from the shared Sites ordering policy
     stations = df["station"].unique().tolist()
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        order_by=sort_by,
+        strict=strict,
+        verbose=verbose,
+    )
     if sort_by in ("lon", "lat"):
-        S = ensure_sites(
-            sites,
-            recursive=recursive,
-            on_dup=on_dup,
-            strict=strict,
-            verbose=verbose,
-        )
         coords: dict[str, float] = {}
         for ii, ed in enumerate(_iter_items(S)):
             ed = _unwrap(ed)
@@ -589,8 +591,15 @@ def plot_depth_section(
             )
             coords[nm] = float(v) if v is not None else float("inf")
         stations = sorted(stations, key=lambda s: coords.get(s, float("inf")))
-    else:
+    elif sort_by in ("name", "station"):
         stations = sorted(stations)
+    else:
+        available = set(stations)
+        stations = [
+            _name(ed, ii)
+            for ii, ed in enumerate(_iter_items(S))
+            if _name(ed, ii) in available
+        ]
 
     y_key = "period_s" if period_axis else "freq_hz"
     all_y = np.sort(df[y_key].unique())

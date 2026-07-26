@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import copy
 import math
+import re
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from os import PathLike
 from pathlib import Path
 from typing import (
@@ -806,6 +807,17 @@ class Site(SiteMixin):
 
         return _maybe_copy(self.edi) if copy else self.edi
 
+    def update_metadata(
+        self,
+        update: Mapping[str, Any],
+        *,
+        inplace: bool = False,
+    ) -> Site:
+        """Update station, coordinate, HEAD, or INFO metadata."""
+        from .metadata import update_metadata
+
+        return update_metadata(self, update, inplace=inplace)
+
     def __repr__(self) -> str:
         r"""
         Debug-friendly, one-line summary of the site.
@@ -1154,6 +1166,231 @@ class Sites(CoreObject):
 
         return [s.edi for s in self._items]
 
+    @property
+    def ordering(self) -> dict[str, Any]:
+        """Describe the most recent ordering decision for this container."""
+
+        return dict(
+            getattr(
+                self,
+                "_ordering",
+                {"requested": "input", "applied": "input"},
+            )
+        )
+
+    def ordered(
+        self,
+        by: str | None = None,
+        *,
+        inplace: bool = False,
+        min_linearity: float | None = None,
+        max_cross_track_ratio: float | None = None,
+        min_coordinate_fraction: float | None = None,
+    ) -> Sites:
+        """Return sites in a deterministic spatial or identity order.
+
+        ``by='auto'`` applies chainage ordering only when the finite
+        coordinates describe one credible, approximately straight survey
+        line. Otherwise it preserves input order. ``by='chainage'`` forces
+        projection onto the PCA profile axis; sites without usable
+        coordinates are retained at the end in their original order.
+
+        Other modes are ``'input'``, ``'station'`` (natural numeric station
+        order), ``'latitude'``/``'lat'``, and ``'longitude'``/``'lon'``.
+        Station names remain identifiers and are never changed.
+        """
+
+        aliases = {
+            "name": "station",
+            "natural": "station",
+            "lat": "latitude",
+            "lon": "longitude",
+            "profile": "chainage",
+            "spatial": "chainage",
+            "none": "input",
+            "preserve": "input",
+        }
+        from ..api.ordering import PYCSAMT_ORDERING
+
+        requested = str(PYCSAMT_ORDERING.mode if by is None else by).strip().lower()
+        min_linearity = float(
+            PYCSAMT_ORDERING.min_linearity
+            if min_linearity is None
+            else min_linearity
+        )
+        max_cross_track_ratio = float(
+            PYCSAMT_ORDERING.max_cross_track_ratio
+            if max_cross_track_ratio is None
+            else max_cross_track_ratio
+        )
+        min_coordinate_fraction = float(
+            PYCSAMT_ORDERING.min_coordinate_fraction
+            if min_coordinate_fraction is None
+            else min_coordinate_fraction
+        )
+        mode = aliases.get(requested, requested)
+        allowed = {"auto", "input", "station", "latitude", "longitude", "chainage"}
+        if mode not in allowed:
+            raise ValueError(f"by must be one of {sorted(allowed)}, got {by!r}")
+
+        target = self if inplace else Sites(self.as_list())
+        n = len(target._items)
+        report: dict[str, Any] = {
+            "requested": mode,
+            "applied": mode,
+            "n_sites": n,
+            "n_coordinates": 0,
+        }
+        if n < 2 or mode == "input":
+            report["applied"] = "input"
+            target._ordering = report
+            return target
+
+        def natural_key(site: Site) -> tuple[Any, ...]:
+            parts = re.split(r"(\d+)", site.name)
+            return tuple(int(p) if p.isdigit() else p.casefold() for p in parts)
+
+        if mode == "station":
+            target._items.sort(key=natural_key)
+            target._ordering = report
+            return target
+
+        coords = np.asarray([s.coords[:2] for s in target._items], dtype=float)
+        finite = np.isfinite(coords).all(axis=1)
+        valid_idx = np.flatnonzero(finite)
+        report["n_coordinates"] = int(valid_idx.size)
+        if valid_idx.size < 2:
+            report.update(applied="input", reason="fewer than two finite coordinates")
+            target._ordering = report
+            return target
+
+        if mode in {"latitude", "longitude"}:
+            column = 0 if mode == "latitude" else 1
+            target._items = [
+                target._items[i]
+                for i in sorted(
+                    range(n),
+                    key=lambda i: (
+                        not finite[i],
+                        coords[i, column] if finite[i] else np.inf,
+                        natural_key(target._items[i]),
+                    ),
+                )
+            ]
+            target._ordering = report
+            return target
+
+        # Work in local metres before PCA; raw degree-space PCA biases the
+        # east component by latitude and is unsuitable for chainage.
+        ll = coords[finite]
+        lat0, lon0 = np.mean(ll, axis=0)
+        east = (ll[:, 1] - lon0) * 111_000.0 * math.cos(math.radians(lat0))
+        north = (ll[:, 0] - lat0) * 111_000.0
+        xy = np.column_stack((east, north))
+        centred = xy - xy.mean(axis=0)
+        _, singular, vh = np.linalg.svd(centred, full_matrices=False)
+        axis = vh[0]
+        along = centred @ axis
+        across = centred @ np.array([-axis[1], axis[0]])
+        variance = singular * singular
+        linearity = float(variance[0] / variance.sum()) if variance.sum() else 0.0
+        span = float(np.ptp(along))
+        cross_ratio = (
+            float(np.ptp(across) / span) if span > 0.0 else float("inf")
+        )
+        # A pair of parallel profiles can still have excellent global PCA
+        # linearity. Detect a well-populated gap across the fitted axis so
+        # such lines are ordered independently instead of interleaved.
+        cross_order = np.argsort(across)
+        cross_gaps = np.diff(across[cross_order])
+        profile_groups: list[np.ndarray] = [np.arange(valid_idx.size)]
+        if cross_gaps.size and np.ptp(across) > 0.0:
+            split = int(np.argmax(cross_gaps)) + 1
+            min_group = max(2, int(math.ceil(0.15 * valid_idx.size)))
+            gap_ratio = float(cross_gaps[split - 1] / np.ptp(across))
+            if (
+                split >= min_group
+                and (valid_idx.size - split) >= min_group
+                and gap_ratio >= 0.25
+                and cross_ratio >= 0.05
+            ):
+                profile_groups = [cross_order[:split], cross_order[split:]]
+                report["cross_track_gap_ratio"] = gap_ratio
+        coordinate_fraction = float(valid_idx.size / n)
+        report.update(
+            linearity=linearity,
+            cross_track_ratio=cross_ratio,
+            coordinate_fraction=coordinate_fraction,
+            n_profiles=len(profile_groups),
+        )
+
+        if mode == "auto" and (
+            coordinate_fraction < float(min_coordinate_fraction)
+            or linearity < float(min_linearity)
+            or cross_ratio > float(max_cross_track_ratio)
+            or span <= 0.0
+        ):
+            report.update(
+                applied="input",
+                reason="coordinates do not define one credible straight line",
+            )
+            target._ordering = report
+            return target
+
+        if len(profile_groups) > 1:
+            # Refit and order each detected line independently. A single
+            # global axis is close for parallel lines but can reverse tiny
+            # within-line offsets or ties compared with each line's own fit.
+            groups = [valid_idx[group] for group in profile_groups]
+            groups.sort(key=lambda group: int(np.min(group)))
+            ordered_items: list[Site] = []
+            for group in groups:
+                subset = Sites([target._items[int(i)].edi for i in group])
+                ordered_items.extend(subset.ordered("chainage")._items)
+            ordered_items.extend(target._items[i] for i in range(n) if not finite[i])
+            target._items = ordered_items
+            report.update(
+                applied="chainage_by_line",
+                azimuth=math.degrees(math.atan2(axis[0], axis[1])) % 360.0,
+                span_m=span,
+            )
+            target._ordering = report
+            return target
+
+        # Resolve PCA's sign ambiguity with natural station numbers when
+        # they carry a useful monotonic signal; otherwise use a deterministic
+        # north/east-positive orientation.
+        numbers = []
+        for idx in valid_idx:
+            found = re.findall(r"\d+", target._items[int(idx)].name)
+            numbers.append(float(found[-1]) if found else float("nan"))
+        numbers_a = np.asarray(numbers, dtype=float)
+        if np.isfinite(numbers_a).sum() >= 2 and np.nanstd(numbers_a) > 0:
+            ok = np.isfinite(numbers_a)
+            corr = float(np.corrcoef(numbers_a[ok], along[ok])[0, 1])
+            if np.isfinite(corr) and corr < 0:
+                along *= -1.0
+                axis *= -1.0
+            report["station_chainage_correlation"] = abs(corr) if np.isfinite(corr) else None
+        elif axis[int(np.argmax(np.abs(axis)))] < 0:
+            along *= -1.0
+            axis *= -1.0
+
+        azimuth = math.degrees(math.atan2(axis[0], axis[1])) % 360.0
+        chainage = {int(idx): float(value) for idx, value in zip(valid_idx, along)}
+        ordered_idx = sorted(
+            range(n),
+            key=lambda i: (
+                i not in chainage,
+                chainage.get(i, np.inf),
+                i,
+            ),
+        )
+        target._items = [target._items[i] for i in ordered_idx]
+        report.update(applied="chainage", azimuth=azimuth, span_m=span)
+        target._ordering = report
+        return target
+
     def to_edis(
         self,
         *,
@@ -1310,6 +1547,44 @@ class Sites(CoreObject):
         """
 
         return [fn(s) for s in self._items]
+
+    def rename(
+        self,
+        names: Any,
+        *,
+        inplace: bool = False,
+        missing: str = "raise",
+        allow_duplicates: bool = False,
+    ) -> Sites:
+        """Rename stations from a mapping, sequence, or callable."""
+        from .metadata import rename_sites
+
+        return rename_sites(
+            self,
+            names,
+            inplace=inplace,
+            missing=missing,
+            allow_duplicates=allow_duplicates,
+        )
+
+    def update_metadata(
+        self,
+        updates: Any,
+        *,
+        inplace: bool = False,
+        missing: str = "raise",
+        allow_duplicates: bool = False,
+    ) -> Sites:
+        """Apply declarative station, HEAD, INFO, and coordinate updates."""
+        from .metadata import update_metadata_all
+
+        return update_metadata_all(
+            self,
+            updates,
+            inplace=inplace,
+            missing=missing,
+            allow_duplicates=allow_duplicates,
+        )
 
     def edit_all(
         self,

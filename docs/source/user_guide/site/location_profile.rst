@@ -26,47 +26,47 @@ The examples below use a small synthetic station class. It exposes the same
 ``get_section("head")`` pattern that pyCSAMT uses for EDI headers, so the
 outputs can be reproduced without depending on local EDI files.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import copy
-   import numpy as np
+   >>> import copy
+   >>> import numpy as np
 
-   class Head:
-       def __init__(self, name, lat=np.nan, lon=np.nan, elev=np.nan):
-           self.dataid = name
-           self.station = name
-           self.lat = lat
-           self.lon = lon
-           self.long = lon
-           self.elev = elev
-
-   class DemoSite:
-       def __init__(self, name, lat=np.nan, lon=np.nan, elev=np.nan):
-           self.name = name
-           self.Head = Head(name, lat, lon, elev)
-
-       def get_section(self, key):
-           if str(key).lower() == "head":
-               return self.Head
-           return None
-
-       def set_section(self, key, value):
-           if str(key).lower() == "head":
-               self.Head = value
-
-       def __copy__(self):
-           new = type(self).__new__(type(self))
-           new.__dict__ = copy.deepcopy(self.__dict__)
-           return new
-
-   def demo_sites():
-       return [
-           DemoSite("S01", 35.100, 12.700, 100.0),
-           DemoSite("S02", 35.105, 12.711, 105.0),
-           DemoSite("S03", 35.110, 12.722, 109.0),
-           DemoSite("S04", 35.125, 12.755, 120.0),
-       ]
+   >>> class Head:
+   ...     def __init__(self, name, lat=np.nan, lon=np.nan, elev=np.nan):
+   ...         self.dataid = name
+   ...         self.station = name
+   ...         self.lat = lat
+   ...         self.lon = lon
+   ...         self.long = lon
+   ...         self.elev = elev
+   ...
+   >>> class DemoSite:
+   ...     def __init__(self, name, lat=np.nan, lon=np.nan, elev=np.nan):
+   ...         self.name = name
+   ...         self.Head = Head(name, lat, lon, elev)
+   ...
+   ...     def get_section(self, key):
+   ...         if str(key).lower() == "head":
+   ...             return self.Head
+   ...         return None
+   ...
+   ...     def set_section(self, key, value):
+   ...         if str(key).lower() == "head":
+   ...             self.Head = value
+   ...
+   ...     def __copy__(self):
+   ...         new = type(self).__new__(type(self))
+   ...         new.__dict__ = copy.deepcopy(self.__dict__)
+   ...         return new
+   ...
+   >>> def demo_sites():
+   ...     return [
+   ...         DemoSite("S01", 35.100, 12.700, 100.0),
+   ...         DemoSite("S02", 35.105, 12.711, 105.0),
+   ...         DemoSite("S03", 35.110, 12.722, 109.0),
+   ...         DemoSite("S04", 35.125, 12.755, 120.0),
+   ...     ]
+   ...
 
 Location Tool Map
 -----------------
@@ -138,23 +138,17 @@ Coordinate Containers
 Use :class:`pycsamt.site.location.Coord` when a small explicit coordinate
 object is clearer than passing loose tuples.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import Coord
+   >>> from pycsamt.site.location import Coord
 
-   station = Coord(lat=10.25, lon=20.75, elev=640.0)
+   >>> station = Coord(lat=10.25, lon=20.75, elev=640.0)
 
-   print(station.lat)
-   print(station.lon)
-   print(station.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> print(station.lat)
    10.25
+   >>> print(station.lon)
    20.75
+   >>> print(station.elev)
    640.0
 
 ``Coord`` does not validate values at construction time. Validation happens in
@@ -167,27 +161,21 @@ Parsing Coordinates
 Field coordinate tables are not always consistent. The parser accepts numeric
 values and common degree/minute/second style strings.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import parse_elev, parse_lat, parse_lon
+   >>> from pycsamt.site.location import parse_elev, parse_lat, parse_lon
 
-   lat1 = parse_lat("45N")
-   lat2 = parse_lat("45 30 0 S")
-   lon1 = parse_lon("123W")
-   lon2 = parse_lon("123 15 30 E")
-   elev = parse_elev("1200")
+   >>> lat1 = parse_lat("45N")
+   >>> lat2 = parse_lat("45 30 0 S")
+   >>> lon1 = parse_lon("123W")
+   >>> lon2 = parse_lon("123 15 30 E")
+   >>> elev = parse_elev("1200")
 
-   print(lat1, lat2)
-   print(lon1, lon2)
-   print(elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> print(lat1, lat2)
    45.0 -45.5
+   >>> print(lon1, lon2)
    -123.0 123.25833333333334
+   >>> print(elev)
    1200.0
 
 Parsing conventions:
@@ -208,26 +196,20 @@ Normalizing EDI Head Coordinates
 object. It guarantees that the ``HEAD`` section carries numeric ``lat``,
 ``lon``, ``long``, and ``elev`` values.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import ensure_head_coords
+   >>> from pycsamt.site.location import ensure_head_coords
 
-   edi = DemoSite("S01")
+   >>> edi = DemoSite("S01")
 
-   head = ensure_head_coords(
-       edi,
-       lat="35 07 30 N",
-       lon="12 45 00 E",
-       elev="1234",
-   )
+   >>> head = ensure_head_coords(
+   ...     edi,
+   ...     lat="35 07 30 N",
+   ...     lon="12 45 00 E",
+   ...     elev="1234",
+   ... )
 
-   print(head.lat, head.lon, head.long, head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> print(head.lat, head.lon, head.long, head.elev)
    35.125 12.75 12.75 1234.0
 
 If a coordinate is missing or invalid, the function uses ``empty`` as the
@@ -235,22 +217,16 @@ fallback sentinel. By default ``empty`` is ``0.0``.
 
 For an invalid or absent coordinate, the sentinel is written explicitly:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   head = ensure_head_coords(
-       DemoSite("BAD"),
-       lat="bad",
-       lon=None,
-       elev=None,
-       empty=-9999.0,
-   )
-   print(head.lat, head.lon, head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> head = ensure_head_coords(
+   ...     DemoSite("BAD"),
+   ...     lat="bad",
+   ...     lon=None,
+   ...     elev=None,
+   ...     empty=-9999.0,
+   ... )
+   >>> print(head.lat, head.lon, head.elev)
    -9999.0 -9999.0 -9999.0
 
 Use this helper early when downstream code expects numeric coordinates.
@@ -261,32 +237,27 @@ Applying Topography Tables
 :func:`apply_topography` updates one site, a list of sites, or a container with
 ``._items`` from a table matched by station identifier.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
+   >>> import pandas as pd
 
-   from pycsamt.site.location import apply_topography
+   >>> from pycsamt.site.location import apply_topography
 
-   collection = demo_sites()
+   >>> collection = demo_sites()
 
-   topo = pd.DataFrame(
-       {
-           "station": ["S01", "S02", "S03", "S04"],
-           "latitude": [35.100, 35.105, 35.110, 35.125],
-           "longitude": [12.700, 12.711, 12.722, 12.755],
-           "elevation": [101.0, 106.0, 110.0, 122.0],
-       }
-   )
+   >>> topo = pd.DataFrame(
+   ...     {
+   ...         "station": ["S01", "S02", "S03", "S04"],
+   ...         "latitude": [35.100, 35.105, 35.110, 35.125],
+   ...         "longitude": [12.700, 12.711, 12.722, 12.755],
+   ...         "elevation": [101.0, 106.0, 110.0, 122.0],
+   ...     }
+   ... )
 
-   updated = apply_topography(collection, topo, inplace=False)
-   for site in updated:
-       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> updated = apply_topography(collection, topo, inplace=False)
+   >>> for site in updated:
+   ...     print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+   ...
    S01 35.1 12.7 101.0
    S02 35.105 12.711 106.0
    S03 35.11 12.722 110.0
@@ -319,26 +290,20 @@ Coordinate Projection
 systems. When :mod:`pyproj` is available, pyCSAMT uses it with
 ``always_xy=True``. GDAL is used as a fallback when available.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import project
+   >>> from pycsamt.site.location import project
 
-   x, y = project(
-       [(12.5, 35.25), (12.6, 35.30)],
-       crs_from="EPSG:4326",
-       crs_to="EPSG:32633",
-   )
+   >>> x, y = project(
+   ...     [(12.5, 35.25), (12.6, 35.30)],
+   ...     crs_from="EPSG:4326",
+   ...     crs_to="EPSG:32633",
+   ... )
 
-   print(x)
-   print(y)
-
-Output:
-
-.. code-block:: text
-
-   [272542.60324923 281777.00583762]
-   [3903632.81369047 3908954.71755057]
+   >>> print(np.round(x, 2))
+   [272542.59 281776.97]
+   >>> print(np.round(y, 2))
+   [3903632.75 3908954.73]
 
 Important convention: projected coordinate pairs are interpreted as ``(x, y)``.
 For geographic CRS values, that means ``(lon, lat)`` when using
@@ -366,25 +331,19 @@ Three modes are available:
    Project both points to UTM, or to ``crs_to`` when supplied, and compute
    Euclidean distance.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import Coord, bearing, distance
+   >>> from pycsamt.site.location import Coord, bearing, distance
 
-   a = Coord(0.0, 0.0, 0.0)
-   b = Coord(0.0, 1.0, 0.0)
+   >>> a = Coord(0.0, 0.0, 0.0)
+   >>> b = Coord(0.0, 1.0, 0.0)
 
-   d = distance(a, b, mode="geodetic")
-   az = bearing(a, b)
+   >>> d = distance(a, b, mode="geodetic")
+   >>> az = bearing(a, b)
 
-   print(d)   # about 111 km at the equator
-   print(az)  # about 90 degrees, east
-
-Output:
-
-.. code-block:: text
-
+   >>> print(d)   # about 111 km at the equator
    111194.92664455874
+   >>> print(az)  # about 90 degrees, east
    90.0
 
 :func:`bearing` uses the same mode names. It returns azimuth in degrees with
@@ -393,6 +352,7 @@ Output:
 The :term:`geodetic distance` is based on:
 
 .. math::
+   :label: site-location-haversine
 
    d =
    2R \arcsin
@@ -407,6 +367,7 @@ The :term:`geodetic distance` is based on:
 The geodetic bearing uses the spherical forward azimuth:
 
 .. math::
+   :label: site-location-bearing
 
    \theta =
    \operatorname{atan2}
@@ -416,6 +377,12 @@ The geodetic bearing uses the spherical forward azimuth:
       - \sin\phi_1 \cos\phi_2 \cos\Delta\lambda
    \right).
 
+Equation :eq:`site-location-haversine` returns surface separation, whereas
+equation :eq:`site-location-bearing` returns the direction of travel from the
+first coordinate to the second; reversing the points therefore changes the
+bearing and does not generally produce the same angle plus exactly 180 degrees
+on a sphere.
+
 Chainage Along A Line
 ---------------------
 
@@ -423,50 +390,44 @@ Chainage Along A Line
 The axis is defined by an origin and azimuth. Azimuth follows the geophysical
 line convention used in pyCSAMT: 0 degrees is north and 90 degrees is east.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import chainage_along
+   >>> from pycsamt.site.location import chainage_along
 
-   origin = (0.0, 0.0)
-   station = (0.0, 1.0 / 111.0)  # about 1 km east near the equator
+   >>> origin = (0.0, 0.0)
+   >>> station = (0.0, 1.0 / 111.0)  # about 1 km east near the equator
 
-   s = chainage_along(origin, azimuth=90.0, pts=station)
-   print(s)
-
-Output:
-
-.. code-block:: text
-
+   >>> s = chainage_along(origin, azimuth=90.0, pts=station)
+   >>> print(s)
    1000.0
 
 For local offsets :math:`dx` east and :math:`dy` north, chainage is:
 
 .. math::
+   :label: site-location-chainage
 
    s = dx \sin A + dy \cos A,
 
 where :math:`A` is the profile azimuth in radians.
 
+Equation :eq:`site-location-chainage` is a signed projection, not cumulative
+distance between successive stations. A station can therefore have a small
+chainage even when it lies far from the line if most of its displacement is
+cross-track.
+
 The function returns a scalar for one point and a NumPy array for a sequence of
 points.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   points = [
-       (0.0, 0.0),
-       (0.0, 1.0 / 111.0),
-       (0.0, 2.0 / 111.0),
-   ]
+   >>> points = [
+   ...     (0.0, 0.0),
+   ...     (0.0, 1.0 / 111.0),
+   ...     (0.0, 2.0 / 111.0),
+   ... ]
 
-   chainages = chainage_along(origin, 90.0, points)
-   print(chainages)
-
-Output:
-
-.. code-block:: text
-
+   >>> chainages = chainage_along(origin, 90.0, points)
+   >>> print(chainages)
    [   0. 1000. 2000.]
 
 Inferring Line Orientation
@@ -478,19 +439,13 @@ Inferring Line Orientation
 set of site coordinates. It builds local Cartesian offsets and applies PCA.
 The principal component with the largest variance defines the line direction.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.profile import infer_line_orientation
+   >>> from pycsamt.site.profile import infer_line_orientation
 
-   collection = demo_sites()
-   azimuth = infer_line_orientation(collection)
-   print(round(azimuth, 1))
-
-Output:
-
-.. code-block:: text
-
+   >>> collection = demo_sites()
+   >>> azimuth = infer_line_orientation(collection)
+   >>> print(round(azimuth, 1))
    60.9
 
 The returned azimuth is in degrees, with 0 degrees north and 90 degrees east.
@@ -502,6 +457,7 @@ Mathematically, pyCSAMT first converts station coordinates to local offsets
 :math:`x` east and :math:`y` north about the mean station position:
 
 .. math::
+   :label: site-location-pca-offsets
 
    x_i = (\lambda_i-\bar{\lambda})\,M\cos\bar{\phi},
    \qquad
@@ -512,6 +468,181 @@ and :math:`\phi` is latitude. PCA then finds the unit vector
 :math:`\mathbf{v}=(v_x,v_y)` with maximum projected variance. The profile
 azimuth is the north-clockwise angle of that vector,
 :math:`A=\operatorname{atan2}(v_x,v_y)`.
+The local scaling in equation :eq:`site-location-pca-offsets` prevents raw
+longitude degrees from being treated as the same physical length as latitude
+degrees away from the equator.
+
+Ordering Sites Along A Survey Line
+----------------------------------
+
+File discovery order, station-name order, and physical profile order are
+different concepts. :meth:`pycsamt.site.base.Sites.ordered` makes that choice
+explicit without renaming stations or changing their data. It accepts six
+primary modes:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 34 46
+
+   * - ``by``
+     - Ordering key
+     - Appropriate use
+   * - ``"input"``
+     - Preserve the current container order.
+     - Replaying acquisition or a deliberately prepared manifest. Directory
+       enumeration is not automatically a meaningful input order.
+   * - ``"station"``
+     - Natural numeric station name, so ``S2`` precedes ``S10``.
+     - Lines whose identifiers were assigned monotonically during acquisition.
+   * - ``"latitude"``
+     - Increasing latitude; missing coordinates are placed last.
+     - Predominantly north--south lines known to progress northward.
+   * - ``"longitude"``
+     - Increasing longitude; missing coordinates are placed last.
+     - Predominantly east--west lines known to progress eastward.
+   * - ``"chainage"``
+     - Projection onto the PCA line axis.
+     - Forcing spatial order when the caller has already established that the
+       coordinates represent a profile.
+   * - ``"auto"``
+     - Chainage only after geometry checks; otherwise input order.
+     - The safest general default for unknown survey geometry.
+
+The distinction is visible in the bundled 25-station ``L22PLT`` line. The
+example deliberately begins with case-insensitive lexical filenames, which
+put ``22-013VF`` and ``22-025AF`` before ``22-10U`` and therefore do not
+describe acquisition progress:
+
+.. code-block:: pycon
+
+   >>> from pathlib import Path
+   >>> from pycsamt.seg.edi import EDIFile
+   >>> from pycsamt.site.base import Sites
+
+   >>> data_dir = Path("data/AMT/WILLY_DATA/L22PLT")
+   >>> paths = sorted(data_dir.glob("*.edi"), key=lambda path: path.name.casefold())
+   >>> l22 = Sites([EDIFile(path) for path in paths])
+
+   >>> for mode in ("input", "station", "latitude", "longitude", "chainage", "auto"):
+   ...     ordered_l22 = l22.ordered(mode)
+   ...     print(
+   ...         mode,
+   ...         ordered_l22[0].name,
+   ...         ordered_l22[-1].name,
+   ...         ordered_l22.ordering["applied"],
+   ...     )
+   ...
+   input 22-013VF 22-9A input
+   station 22-1BF 22-025AF station
+   latitude 22-1BF 22-025AF latitude
+   longitude 22-23VF 22-1BF longitude
+   chainage 22-1BF 22-025AF chainage
+   auto 22-1BF 22-025AF chainage
+
+``auto`` does not merely alias ``chainage``. It converts valid coordinates to
+local east/north offsets, fits the PCA axis, and evaluates
+
+.. math::
+   :label: site-profile-order-validation
+
+   L=\frac{\sigma_1^2}{\sigma_1^2+\sigma_2^2},
+   \qquad
+   C=\frac{\operatorname{range}(u_\perp)}
+           {\operatorname{range}(u_\parallel)},
+   \qquad
+   F=\frac{N_{\mathrm{finite}}}{N_{\mathrm{sites}}},
+
+where :math:`L` is :term:`profile linearity`, :math:`C` is the
+:term:`cross-track ratio`, and :math:`F` is the finite-coordinate fraction.
+Automatic chainage is applied only when these quantities meet the configured
+thresholds. The ordering report records both the requested and applied modes
+so downstream code can audit the decision:
+
+.. code-block:: pycon
+
+   >>> report = l22.ordered("auto").ordering
+   >>> print(report["applied"])
+   chainage
+   >>> print(round(report["linearity"], 5))
+   0.99994
+   >>> print(round(report["cross_track_ratio"], 4))
+   0.0136
+   >>> print(round(report["span_m"], 1), round(report["azimuth"], 1))
+   2353.4 359.4
+
+The line is therefore almost due north, more than 99.99% of its coordinate
+variance lies along one axis, and its full cross-line spread is only about
+1.36% of its along-line span. Those numbers justify the automatic decision;
+they are more informative than the word ``chainage`` alone.
+
+The following plot uses color for returned position and a grey segment between
+successive sites. It displays the same coordinates in every panel, so only the
+ordering rule changes:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> import numpy as np
+
+   >>> coords = np.asarray([site.coords[:2] for site in l22], dtype=float)
+   >>> lat0, lon0 = np.mean(coords, axis=0)
+
+   >>> def local_offsets(ordered_sites):
+   ...     ll = np.asarray([site.coords[:2] for site in ordered_sites], dtype=float)
+   ...     east = (ll[:, 1] - lon0) * 111_000.0 * np.cos(np.radians(lat0))
+   ...     north = (ll[:, 0] - lat0) * 111_000.0
+   ...     return east, north
+   ...
+   >>> modes = ("input", "station", "latitude", "longitude", "chainage", "auto")
+   >>> fig, axes = plt.subplots(2, 3, figsize=(11, 8), constrained_layout=True)
+   >>> for axis, mode in zip(axes.ravel(), modes):
+   ...     ordered_l22 = l22.ordered(mode)
+   ...     east, north = local_offsets(ordered_l22)
+   ...     rank = np.arange(1, len(ordered_l22) + 1)
+   ...     _ = axis.plot(east, north, color="0.75", linewidth=1.0)
+   ...     points = axis.scatter(
+   ...         east, north, c=rank, cmap="viridis", s=34,
+   ...         edgecolor="black", linewidth=0.35, zorder=2,
+   ...     )
+   ...     _ = axis.annotate("1", (east[0], north[0]), xytext=(5, 3),
+   ...                       textcoords="offset points", fontsize=8, weight="bold")
+   ...     _ = axis.annotate("25", (east[-1], north[-1]), xytext=(5, 3),
+   ...                       textcoords="offset points", fontsize=8, weight="bold")
+   ...     applied = ordered_l22.ordering["applied"]
+   ...     _ = axis.set_title(f"by={mode!r}  →  {applied}")
+   ...     _ = axis.set_xlabel("cross-line east offset (m)")
+   ...     _ = axis.set_ylabel("north offset (m)")
+   ...     axis.grid(True, alpha=0.22)
+   ...     axis.set_box_aspect(1)
+   ...
+   >>> colorbar = fig.colorbar(points, ax=axes, shrink=0.82, pad=0.02)
+   >>> colorbar.set_label("position in returned order")
+   >>> _ = fig.suptitle("L22PLT: all Sites.ordered modes")
+   >>> fig.savefig("location_profile_l22_ordering.png", dpi=180)
+
+.. figure:: ../../images/user_guide/site/location_profile_l22_ordering.png
+   :alt: Six maps of the L22PLT stations connected and colored according to input, station, latitude, longitude, chainage, and automatic ordering.
+   :width: 100%
+   :align: center
+
+   The same ``L22PLT`` coordinates under every supported ordering mode. Dark
+   purple is the first returned site and yellow is the last; grey connections
+   reveal jumps between consecutive sites.
+
+The ``input`` panel crosses the line repeatedly because lexical filenames are
+not a profile coordinate. ``longitude`` is also unsuitable here: the line is
+north--south, so sorting on its small east--west GPS deviations produces a
+sequence that moves backward and forward along the line. Natural ``station``
+and ``latitude`` happen to agree with chainage for this survey, but that is a
+property of ``L22PLT``, not a general guarantee. ``auto`` reaches the same
+result as forced chainage only after validating the geometry.
+
+Missing coordinates are another important difference. Forced chainage keeps
+such sites at the end in their original relative order, preserving the
+container membership for later repair. By contrast,
+:meth:`Profile.sort_sites` drops sites without a finite chainage because a
+profile cannot place them along its axis. Choose between those behaviors
+deliberately rather than treating both operations as interchangeable.
 
 Building Profiles
 -----------------
@@ -526,66 +657,66 @@ Building Profiles
 
 Build one from sites:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.profile import Profile
+   >>> from pycsamt.site.profile import Profile
 
-   collection = demo_sites()
-   profile = Profile.from_sites(collection)
+   >>> collection = demo_sites()
+   >>> profile = Profile.from_sites(collection)
 
-   print(round(profile.azimuth, 1))
-   print({k: round(v, 1) for k, v in profile.chainages.items()})
-   print({k: round(v, 1) for k, v in profile.spacing_stats.items()})
-   print([(round(a, 1), round(b, 1)) for a, b in profile.gaps])
-
-Output:
-
-.. code-block:: text
-
+   >>> print(round(profile.azimuth, 1))
    60.9
+   >>> print({k: round(v, 1) for k, v in profile.chainages.items()})
    {'S01': 0.0, 'S02': 1142.8, 'S03': 2285.6, 'S04': 5713.9}
+   >>> print({k: round(v, 1) for k, v in profile.spacing_stats.items()})
    {'spacing_mean': 1904.6, 'spacing_med': 1142.8, 'spacing_min': 1142.8, 'spacing_max': 3428.3}
+   >>> print([(round(a, 1), round(b, 1)) for a, b in profile.gaps])
    [(2285.6, 5713.9)]
 
 If no ``origin`` is supplied, the first finite site coordinate is used. If no
 ``azimuth`` is supplied, :func:`infer_line_orientation` is used.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-   import numpy as np
+   >>> import matplotlib.pyplot as plt
+   >>> import numpy as np
 
-   lons = np.array([site.Head.lon for site in collection])
-   lats = np.array([site.Head.lat for site in collection])
-   names = [site.name for site in collection]
-   chainage = np.array([profile.chainages[name] for name in names])
-   elev = np.array([site.Head.elev for site in collection])
+   >>> lons = np.array([site.Head.lon for site in collection])
+   >>> lats = np.array([site.Head.lat for site in collection])
+   >>> names = [site.name for site in collection]
+   >>> chainage = np.array([profile.chainages[name] for name in names])
+   >>> elev = np.array([site.Head.elev for site in collection])
 
-   fig, ax = plt.subplots(1, 2, figsize=(8, 3.4), constrained_layout=True)
-   ax[0].plot(lons, lats, marker="o")
-   for lon, lat, name in zip(lons, lats, names):
-       ax[0].annotate(name, (lon, lat), textcoords="offset points", xytext=(4, 4))
-   ax[0].set_xlabel("longitude")
-   ax[0].set_ylabel("latitude")
-   ax[0].set_title("Station map")
-   ax[0].margins(0.08)
+   >>> fig, ax = plt.subplots(1, 2, figsize=(8, 3.4), constrained_layout=True)
+   >>> _ = ax[0].plot(lons, lats, marker="o")
+   >>> for lon, lat, name in zip(lons, lats, names):
+   ...     _ = ax[0].annotate(
+   ...         name, (lon, lat), textcoords="offset points", xytext=(4, 4)
+   ...     )
+   ...
+   >>> _ = ax[0].set_xlabel("longitude")
+   >>> _ = ax[0].set_ylabel("latitude")
+   >>> _ = ax[0].set_title("Station map")
+   >>> ax[0].margins(0.08)
 
-   ax[1].plot(chainage, elev, marker="s")
-   for s, z, name in zip(chainage, elev, names):
-       ax[1].annotate(name, (s, z), textcoords="offset points", xytext=(4, 4))
-   for left, right in profile.gaps:
-       ax[1].axvspan(left, right, alpha=0.15)
-   ax[1].set_xlabel("chainage (m)")
-   ax[1].set_ylabel("elevation (m)")
-   ax[1].set_title("Profile chainage")
-   ax[1].margins(0.08)
+   >>> _ = ax[1].plot(chainage, elev, marker="s")
+   >>> for s, z, name in zip(chainage, elev, names):
+   ...     _ = ax[1].annotate(
+   ...         name, (s, z), textcoords="offset points", xytext=(4, 4)
+   ...     )
+   ...
+   >>> for left, right in profile.gaps:
+   ...     _ = ax[1].axvspan(left, right, alpha=0.15)
+   ...
+   >>> _ = ax[1].set_xlabel("chainage (m)")
+   >>> _ = ax[1].set_ylabel("elevation (m)")
+   >>> _ = ax[1].set_title("Profile chainage")
+   >>> ax[1].margins(0.08)
 
-   for axis in ax:
-       axis.grid(True, alpha=0.25)
-
-   fig.savefig("location_profile_chainage.png", dpi=160)
+   >>> for axis in ax:
+   ...     axis.grid(True, alpha=0.25)
+   ...
+   >>> fig.savefig("location_profile_chainage.png", dpi=160)
 
 .. figure:: ../../images/user_guide/site/location_profile_chainage.png
    :alt: Two-panel location-profile plot showing station map positions and elevation versus chainage with a highlighted spacing gap.
@@ -598,34 +729,27 @@ If no ``origin`` is supplied, the first finite site coordinate is used. If no
 
 You can also force both:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import Coord
+   >>> from pycsamt.site.location import Coord
 
-   profile = Profile.from_sites(
-       collection,
-       origin=Coord(35.0, 12.0, 0.0),
-       azimuth=90.0,
-   )
+   >>> custom_profile = Profile.from_sites(
+   ...     collection,
+   ...     origin=Coord(35.0, 12.0, 0.0),
+   ...     azimuth=90.0,
+   ... )
 
 For the synthetic line, forcing an east-directed profile from the first
 station gives simple east-west chainages:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   profile = Profile.from_sites(
-       collection,
-       origin=Coord(35.1, 12.7, 0.0),
-       azimuth=90.0,
-   )
-   print({k: round(v, 1) for k, v in profile.chainages.items()})
-
-Output:
-
-.. code-block:: text
-
+   >>> east_profile = Profile.from_sites(
+   ...     collection,
+   ...     origin=Coord(35.1, 12.7, 0.0),
+   ...     azimuth=90.0,
+   ... )
+   >>> print({k: round(v, 1) for k, v in east_profile.chainages.items()})
    {'S01': 0.0, 'S02': 999.0, 'S03': 1997.9, 'S04': 4994.8}
 
 Sorting And Slicing Profiles
@@ -634,30 +758,18 @@ Sorting And Slicing Profiles
 Use :meth:`Profile.sort_sites` to return sites ordered by increasing chainage.
 Sites without finite coordinates are dropped.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   ordered = profile.sort_sites(collection)
-   print([site.name for site in ordered if hasattr(site, "name")])
-
-Output:
-
-.. code-block:: text
-
+   >>> ordered = profile.sort_sites(collection)
+   >>> print([site.name for site in ordered if hasattr(site, "name")])
    ['S01', 'S02', 'S03', 'S04']
 
 Use :meth:`Profile.slice` to select a chainage window:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   window = profile.slice(500.0, 2500.0)
-   print({k: round(v, 1) for k, v in window.items()})
-
-Output:
-
-.. code-block:: text
-
+   >>> window = profile.slice(500.0, 2500.0)
+   >>> print({k: round(v, 1) for k, v in window.items()})
    {'S02': 1142.8, 'S03': 2285.6}
 
 The returned mapping is ordered by chainage.
@@ -668,37 +780,25 @@ Resampling And Summary
 :meth:`Profile.resample` builds a regular chainage grid between the minimum and
 maximum station chainage.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   grid = profile.resample(step=250.0)
-   print(np.round(grid, 1).tolist())
-
-Output:
-
-.. code-block:: text
-
+   >>> grid = profile.resample(step=250.0)
+   >>> print(np.round(grid, 1).tolist())
    [0.0, 250.0, 500.0, 750.0, 1000.0, 1250.0, 1500.0, 1750.0, 2000.0, 2250.0, 2500.0, 2750.0, 3000.0, 3250.0, 3500.0, 3750.0, 4000.0, 4250.0, 4500.0, 4750.0, 5000.0, 5250.0, 5500.0]
 
 :meth:`Profile.summary` returns spacing and gap information:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   summary = profile.summary()
+   >>> summary = profile.summary()
 
-   print(summary["n_sites"])
-   print(summary.get("spacing_mean"))
-   print(summary.get("spacing_med"))
-   print(summary["n_gaps"])
-
-Output:
-
-.. code-block:: text
-
+   >>> print(summary["n_sites"])
    4.0
-   1904.640080713573
-   1142.7840484281436
+   >>> print(round(summary.get("spacing_mean"), 1))
+   1904.6
+   >>> print(round(summary.get("spacing_med"), 1))
+   1142.8
+   >>> print(summary["n_gaps"])
    1.0
 
 Spacing statistics include:
@@ -732,17 +832,12 @@ After chainages are sorted, :class:`Profile` computes station spacings with
 ``1.5 * median_spacing``. Gaps are stored as ``(s_left, s_right)`` chainage
 intervals.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   if profile.gaps:
-       for left, right in profile.gaps:
-           print(f"Gap from {left:.1f} m to {right:.1f} m")
-
-Output:
-
-.. code-block:: text
-
+   >>> if profile.gaps:
+   ...     for left, right in profile.gaps:
+   ...         print(f"Gap from {left:.1f} m to {right:.1f} m")
+   ...
    Gap from 2285.6 m to 5713.9 m
 
 This is a simple QC rule, not a geological interpretation. Use it to find
@@ -755,39 +850,33 @@ End-To-End Example
 The following example applies a topography table, builds a profile, sorts the
 survey, and checks spacing.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
+   >>> import pandas as pd
 
-   from pycsamt.site.location import apply_topography
-   from pycsamt.site.profile import Profile
+   >>> from pycsamt.site.location import apply_topography
+   >>> from pycsamt.site.profile import Profile
 
-   collection = demo_sites()
-   topo = pd.DataFrame(
-       {
-           "station": ["S01", "S02", "S03", "S04"],
-           "latitude": [35.100, 35.105, 35.110, 35.125],
-           "longitude": [12.700, 12.711, 12.722, 12.755],
-           "elevation": [101.0, 106.0, 110.0, 122.0],
-       }
-   )
-   collection = apply_topography(collection, topo, inplace=False)
+   >>> collection = demo_sites()
+   >>> topo = pd.DataFrame(
+   ...     {
+   ...         "station": ["S01", "S02", "S03", "S04"],
+   ...         "latitude": [35.100, 35.105, 35.110, 35.125],
+   ...         "longitude": [12.700, 12.711, 12.722, 12.755],
+   ...         "elevation": [101.0, 106.0, 110.0, 122.0],
+   ...     }
+   ... )
+   >>> collection = apply_topography(collection, topo, inplace=False)
 
-   profile = Profile.from_sites(collection)
-   ordered = profile.sort_sites(collection)
-   summary = profile.summary()
+   >>> profile = Profile.from_sites(collection)
+   >>> ordered = profile.sort_sites(collection)
+   >>> summary = profile.summary()
 
-   print(round(profile.azimuth, 1))
-   print({k: round(v, 1) for k, v in summary.items()})
-   print([site.name for site in ordered if hasattr(site, "name")])
-
-Output:
-
-.. code-block:: text
-
+   >>> print(round(profile.azimuth, 1))
    60.9
+   >>> print({k: round(v, 1) for k, v in summary.items()})
    {'spacing_mean': 1904.6, 'spacing_med': 1142.8, 'spacing_min': 1142.8, 'spacing_max': 3428.3, 'n_sites': 4.0, 's_min': 0.0, 's_max': 5713.9, 'n_gaps': 1.0}
+   >>> print([site.name for site in ordered if hasattr(site, "name")])
    ['S01', 'S02', 'S03', 'S04']
 
 Common Mistakes

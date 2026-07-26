@@ -5,6 +5,10 @@ import pytest
 from pycsamt.core import base as b
 from pycsamt.core import config as regmod
 
+# Session tests intentionally replace the public module attribute. Keep the
+# implementation under test stable across full-suite ordering on Python 3.9.
+_TO_EDI = b.to_edi
+
 
 def test_public_api_all():
     expected = {
@@ -67,12 +71,12 @@ def test_to_edi_errors_when_no_key_or_adapter(monkeypatch):
         pass
 
     with pytest.raises(RuntimeError):
-        b.to_edi(Unknown())
+        _TO_EDI(Unknown())
 
     # Explicit key but no adapter registered
     monkeypatch.delitem(regmod._ADAPTERS, "avg", raising=False)
     with pytest.raises(RuntimeError):
-        b.to_edi(object(), key="avg")
+        _TO_EDI(object(), key="avg")
 
 
 def test_to_edi_with_registered_adapter(monkeypatch):
@@ -89,7 +93,7 @@ def test_to_edi_with_registered_adapter(monkeypatch):
     Avg = type("Avg", (), {})
     Avg.__module__ = "pycsamt.zonge.avg"
 
-    out = b.to_edi(Avg(), some="arg")
+    out = _TO_EDI(Avg(), some="arg")
     assert out["ok"] is True
     assert calls.get("called") is True
     assert calls.get("kw", {}).get("some") == "arg"

@@ -132,7 +132,10 @@ def get_cmap(
         if _MPL_VERSION >= parse("3.6"):
             cmap = matplotlib.colormaps.get(cmap_name)
             if cmap is not None and lut is not None:
-                cmap = cmap.resampled(int(lut))
+                resample = getattr(cmap, "resampled", None)
+                if resample is None:  # Matplotlib 3.5 registry objects
+                    resample = cmap._resample
+                cmap = resample(int(lut))
             return cmap
         # Legacy (<3.6): cm.get_cmap accepts the lut directly.
         if lut is not None:
@@ -185,3 +188,15 @@ def get_cmap(
         stacklevel=2,
     )
     return _retrieve("viridis")
+
+
+def _install_legacy_cm_get_cmap():
+    """Restore the removed ``matplotlib.cm.get_cmap`` compatibility hook."""
+
+    if not hasattr(matplotlib.cm, "get_cmap"):
+        # Optional GUI dependencies may still resolve the historical public
+        # name. Our adapter already dispatches through the modern registry.
+        matplotlib.cm.get_cmap = get_cmap
+
+
+_install_legacy_cm_get_cmap()

@@ -67,10 +67,16 @@ def _site_order_key(ed: Any, key: str) -> tuple[int, float, str]:
     return (0, 0.0, st)  # by name later
 
 
-def _order_sites(S, sort_by: str) -> list[Any]:
+def _order_sites(S, sort_by: str | None) -> list[Any]:
+    if sort_by is None:
+        return list(_iter_items(S))
+    mode = str(sort_by).lower()
+    if mode in ("auto", "chainage", "profile", "spatial", "input") and hasattr(S, "ordered"):
+        return list(_iter_items(S.ordered(mode)))
     items = list(_iter_items(S))
-    if sort_by in ("lon", "lat"):
-        items = sorted(items, key=lambda e: _site_order_key(e, sort_by))
+    if mode in ("lon", "lat", "longitude", "latitude"):
+        key = "lon" if mode in ("lon", "longitude") else "lat"
+        items = sorted(items, key=lambda e: _site_order_key(e, key))
     else:
         items = sorted(items, key=lambda e: _name(e, 0))
     return items
@@ -112,7 +118,7 @@ def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 def estimate_ss_ama(
     sites: Any,
     *,
-    sort_by: str = "lon",  # lon|lat|name
+    sort_by: str | None = None,  # global|auto|chainage|lon|lat|name|input
     half_window: int = 3,  # k neighbors each side
     weights: str = "tri",  # tri|gauss|uniform
     pband: tuple[float, float] | None = None,  # (s,s)
@@ -138,9 +144,11 @@ def estimate_ss_ama(
     sites : Sites, str, Path, list, EDICollection
         EDI data source accepted by
         :func:`ensure_sites`.
-    sort_by : str, default ``'lon'``
-        Along-line order axis.
-        ``'lon'``, ``'lat'``, or ``'name'``.
+    sort_by : str, optional
+        Along-line ordering policy. ``None`` inherits
+        :data:`pycsamt.api.PYCSAMT_ORDERING`. Explicit alternatives include
+        ``'auto'``, ``'chainage'``, ``'lon'``, ``'lat'``, ``'name'``, and
+        ``'input'``.
     half_window : int, default 3
         Neighbours on each side of the target.
     weights : str, default ``'tri'``
@@ -498,7 +506,7 @@ def apply_ss_factors(
 def correct_ss_ama(
     sites: Any,
     *,
-    sort_by: str = "lon",
+    sort_by: str | None = None,
     half_window: int = 3,
     weights: str = "tri",
     pband: tuple[float, float] | None = None,
@@ -522,8 +530,9 @@ def correct_ss_ama(
     ----------
     sites : Sites, str, Path, list, EDICollection
         EDI data source.
-    sort_by : str, default ``'lon'``
-        Along-line order axis for AMA estimation.
+    sort_by : str, optional
+        Along-line ordering policy for AMA estimation. ``None`` inherits the
+        package-wide ordering configuration.
     half_window : int, default 3
         Neighbours on each side of the target.
     weights : str, default ``'tri'``
@@ -3029,7 +3038,7 @@ def detect_near_surface(
     pband: tuple[float, float] | None = None,
     ns_threshold: float = 2.0,
     ss_threshold: float = 0.1,
-    sort_by: str = "lon",
+    sort_by: str | None = None,
     half_window: int = 3,
     weights: str = "tri",
     max_skew: float | None = 6.0,
@@ -3089,8 +3098,9 @@ def detect_near_surface(
         η > this → near-surface flag.
     ss_threshold : float, default=0.1
         |δ| > this (log10 units) → static-shift flag.
-    sort_by : {"lon", "lat", "name"}, default="lon"
-        Station ordering for the AMA spatial trend.
+    sort_by : {"auto", "chainage", "lon", "lat", "name", "input"}, optional
+        Station ordering for the AMA spatial trend. ``None`` inherits the
+        package-wide ordering configuration.
     half_window : int, default=3
         Number of neighbouring stations each side in the AMA trend.
     weights : {"tri", "gauss", "uniform"}, default="tri"
@@ -3258,7 +3268,7 @@ def plot_ns_detection(
     pband: tuple[float, float] | None = None,
     ns_threshold: float = 2.0,
     ss_threshold: float = 0.1,
-    sort_by: str = "lon",
+    sort_by: str | None = None,
     half_window: int = 3,
     weights: str = "tri",
     max_skew: float | None = 6.0,
@@ -3284,7 +3294,7 @@ def plot_ns_detection(
         HF/LF split frequency in Hz.
     pband : (float, float) or None
     ns_threshold, ss_threshold : float
-    sort_by : {"lon", "lat", "name"}
+    sort_by : {"auto", "chainage", "lon", "lat", "name", "input"}
     half_window, weights, max_skew
         Forwarded to :func:`detect_near_surface`.
     show_ss : bool, default=True

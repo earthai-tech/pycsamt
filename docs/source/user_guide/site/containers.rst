@@ -83,21 +83,17 @@ examples on this page use one line of the bundled WILLY AMT survey,
 ``data/AMT/WILLY_DATA/L18PLT``, so every printed value below is real output
 from real stations rather than a sketch.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.edi import EDIFile
-   from pycsamt.site.base import Site
+   >>> from pycsamt.seg.edi import EDIFile
+   >>> from pycsamt.site.base import Site
 
-   edi = EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
-   site = Site(edi)
+   >>> edi = EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
+   >>> site = Site(edi)
 
-   print(site.name)
-   print(site.coords)
-   print(site.summary())
-
-.. code-block:: text
-
+   >>> print(site.name)
+   >>> print(site.coords)
+   >>> print(site.summary())
    18-001A
    (32.1203, 119.12883333333333, 99.0)
    {'name': '18-001A', 'nfreq': 53, 'lat': 32.1203, 'lon': 119.12883333333333,
@@ -107,11 +103,10 @@ The wrapper keeps the original EDI object available as ``site.edi`` and
 through :meth:`Site.to_edi`. Prefer the :class:`Site` accessors for routine
 work, and unwrap to EDI only when you need lower-level EDI functionality.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   raw = site.to_edi()
-   detached = site.to_edi(copy=True)
+   >>> raw = site.to_edi()
+   >>> detached = site.to_edi(copy=True)
 
 Station Identity
 ----------------
@@ -130,17 +125,13 @@ When a :class:`Site` is created, the constructor attempts to stabilize the EDI
 header so that ``dataid`` and, when absent, ``station`` match the resolved
 site stem. This makes name lookup and downstream joins more predictable.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   site = Site(EDIFile("data/AMT/WILLY_DATA/L18PLT/18-012A.edi"))
+   >>> site = Site(EDIFile("data/AMT/WILLY_DATA/L18PLT/18-012A.edi"))
 
-   print(site.name)
-   print(site.meta)
-
-.. code-block:: text
-
+   >>> print(site.name)
    18-012A
+   >>> print(site.meta)
    {'station': '18-012A', 'lat': 32.13016666666667, 'lon': 119.12876666666666,
     'elev': 126.0, 'dataid': '18-012A'}
 
@@ -149,25 +140,20 @@ untouched; on a file where the header disagreed with the stem, this same
 step is what keeps ``site.name`` predictable. Rename a site with
 :meth:`Site.rename`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   renamed = site.rename("L01_012")
+   >>> renamed = site.rename("L01_012")
 
-   print(site.name)      # original unchanged
-   print(renamed.name)   # new wrapper
-
-.. code-block:: text
-
+   >>> print(site.name)      # original unchanged
    18-012A
+   >>> print(renamed.name)   # new wrapper
    L01_012
 
 Use ``inplace=True`` when the existing wrapper should be modified:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   site.rename("L01_012", inplace=True)
+   >>> site.rename("L01_012", inplace=True)
 
 Coordinates
 -----------
@@ -175,14 +161,10 @@ Coordinates
 Coordinates are exposed as ``(lat, lon, elev)`` in decimal degrees and meters.
 Continuing with the renamed ``site`` from the previous section:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   lat, lon, elev = site.coords
-   print(lat, lon, elev)
-
-.. code-block:: text
-
+   >>> lat, lon, elev = site.coords
+   >>> print(lat, lon, elev)
    32.13016666666667 119.12876666666666 126.0
 
 .. figure:: ../../images/user_guide/site/user-guide-site-containers-01.png
@@ -196,28 +178,51 @@ Continuing with the renamed ``site`` from the previous section:
 
 Update coordinates with :meth:`Site.set_coords`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   moved = site.set_coords(10.25, 20.75, 640.0)
-   print(moved.coords)
-
-.. code-block:: text
-
+   >>> moved = site.set_coords(10.25, 20.75, 640.0)
+   >>> print(moved.coords)
    (10.25, 20.75, 640.0)
 
 Like :meth:`Site.rename`, coordinate updates are copy-returning by default and
 in-place when requested:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   site.set_coords(10.25, 20.75, 640.0, inplace=True)
+   >>> site.set_coords(10.25, 20.75, 640.0, inplace=True)
 
 Array Accessors
 ---------------
 
 The container exposes the most common station arrays as properties.
+
+At each angular frequency :math:`\omega=2\pi f`, the horizontal electric
+and magnetic field phasors are related by the complex impedance tensor
+
+.. math::
+   :label: site-containers-impedance
+
+   \begin{bmatrix}E_x\\E_y\end{bmatrix}
+   =
+   \begin{bmatrix}Z_{xx} & Z_{xy}\\Z_{yx} & Z_{yy}\end{bmatrix}
+   \begin{bmatrix}H_x\\H_y\end{bmatrix}.
+
+Thus ``site.z[k, i, j]`` is :math:`Z_{ij}` at ``site.freq[k]``.  The
+``rho`` and ``phase`` arrays are not independent observations: for each
+component they are derived from the same complex value as
+
+.. math::
+   :label: site-containers-rho-phase
+
+   \rho_{a,ij}(f)=\frac{|Z_{ij}(f)|^2}{\mu_0\,2\pi f},
+   \qquad
+   \phi_{ij}(f)=\operatorname{atan2}
+   \!\left(\Im Z_{ij},\Re Z_{ij}\right)\frac{180}{\pi},
+
+when impedance is expressed in SI units. EDI field units use the equivalent
+conversion factor during parsing. Equations :eq:`site-containers-impedance`
+and :eq:`site-containers-rho-phase` explain why frequency, impedance,
+resistivity, and phase must retain the same first-axis ordering.
 
 .. list-table::
    :header-rows: 1
@@ -251,15 +256,11 @@ The container exposes the most common station arrays as properties.
 
 Example:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   print(site.freq)
-   print(site.z.shape if site.z is not None else "no Z")
-   print(site.quality_flags())
-
-.. code-block:: text
-
+   >>> print(site.freq)
+   >>> print(site.z.shape if site.z is not None else "no Z")
+   >>> print(site.quality_flags())
    [1.040e+04 8.707e+03 7.289e+03 6.102e+03 5.108e+03 4.277e+03 3.580e+03
     2.997e+03 2.509e+03 2.101e+03 1.759e+03 1.472e+03 1.233e+03 1.032e+03
     8.639e+02 7.232e+02 6.054e+02 5.069e+02 4.243e+02 3.552e+02 2.974e+02
@@ -281,17 +282,13 @@ Quality And Component Checks
 
 Use :meth:`Site.quality_flags` for coarse array availability checks.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   flags = site.quality_flags()
-   print(flags)
+   >>> flags = site.quality_flags()
+   >>> print(flags)
 
-   if not flags["has_z"]:
-       print(f"{site.name} has no finite impedance tensor")
-
-.. code-block:: text
-
+   >>> if not flags["has_z"]:
+   ...     print(f"{site.name} has no finite impedance tensor")
    {'has_freq': True, 'has_z': True, 'has_z_err': True, 'has_rho': True,
     'has_phase': True, 'has_tipper': False}
 
@@ -300,17 +297,13 @@ for this station; the branch only fires for a station whose impedance tensor
 is missing or non-finite. Use :meth:`Site.has_component` when a specific
 impedance or tipper component matters.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   if site.has_component("Zxy") and site.has_component("Zyx"):
-       print("off-diagonal impedance components are available")
-
-   if site.has_component("tipper"):
-       print("tipper is available")
-
-.. code-block:: text
-
+   >>> if site.has_component("Zxy") and site.has_component("Zyx"):
+   ...     print("off-diagonal impedance components are available")
+   ...
+   >>> if site.has_component("tipper"):
+   ...     print("tipper is available")
    off-diagonal impedance components are available
 
 The second ``if`` prints nothing, consistent with ``has_tipper`` being
@@ -327,19 +320,15 @@ DataFrame Export
 :class:`pandas.DataFrame` objects. This is the quickest way to inspect one
 station in a notebook or build masks for editing.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   z = site.to_dataframe("z")
-   rp = site.to_dataframe("resphase")
-   tip = site.to_dataframe("tipper")
+   >>> z = site.to_dataframe("z")
+   >>> rp = site.to_dataframe("resphase")
+   >>> tip = site.to_dataframe("tipper")
 
-   print(z.head())
-   print(rp.head())
-   print(tip.head())
-
-.. code-block:: text
-
+   >>> print(z.head())
+   >>> print(rp.head())
+   >>> print(tip.head())
                      Zxx             Zxy             Zyx           Zyy
    f
    10400.0  51.63+94.43j  1737.0+ 922.4j -2235.0- 754.6j -132.7+278.8j
@@ -389,15 +378,11 @@ off-diagonal components first. The accepted ``kind`` values are:
 
 Pass ``api=True`` when a pyCSAMT ``APIFrame`` is required:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   frame = site.to_dataframe("z", api=True)
-   print(frame.kind)
-   print(frame.df.head())
-
-.. code-block:: text
-
+   >>> frame = site.to_dataframe("z", api=True)
+   >>> print(frame.kind)
+   >>> print(frame.df.head())
    site.z
                      Zxx             Zxy             Zyx           Zyy
    f
@@ -416,44 +401,36 @@ Creating A Collection
 
 Use :class:`Sites` when working with more than one station.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.edi import EDIFile
-   from pycsamt.site.base import Sites
+   >>> from pycsamt.seg.edi import EDIFile
+   >>> from pycsamt.site.base import Sites
 
-   edis = [
-       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi"),
-       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-002U.edi"),
-       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-003A.edi"),
-   ]
+   >>> edis = [
+   ...     EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi"),
+   ...     EDIFile("data/AMT/WILLY_DATA/L18PLT/18-002U.edi"),
+   ...     EDIFile("data/AMT/WILLY_DATA/L18PLT/18-003A.edi"),
+   ... ]
 
-   sites = Sites(edis)
+   >>> sites = Sites(edis)
 
-   print(len(sites))
-   print([site.name for site in sites])
-
-.. code-block:: text
-
+   >>> print(len(sites))
+   >>> print([site.name for site in sites])
    3
    ['18-001A', '18-002U', '18-003A']
 
 If your input is a directory or glob pattern, parse it first with
 :class:`pycsamt.seg.collection.EDICollection`, then wrap it:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.base import Sites
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.base import Sites
 
-   collection = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
-   sites = Sites(collection)
+   >>> collection = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = Sites(collection)
 
-   print(len(sites))
-
-.. code-block:: text
-
+   >>> print(len(sites))
    28
 
 That is the whole ``L18PLT`` line rather than the three-station subset above
@@ -461,16 +438,12 @@ That is the whole ``L18PLT`` line rather than the three-station subset above
 this 28-station collection. For API boundaries that may receive several
 input types, use :func:`to_sites`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.base import to_sites
+   >>> from pycsamt.site.base import to_sites
 
-   sites = to_sites(collection)
-   print(len(sites))
-
-.. code-block:: text
-
+   >>> sites = to_sites(collection)
+   >>> print(len(sites))
    28
 
 Unwrapping Back To EDI
@@ -480,21 +453,17 @@ The site layer is intentionally reversible. Use :func:`to_edis` when a
 workflow has prepared, filtered, renamed, or edited :class:`Site` objects but
 the next function expects raw EDI objects.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.base import to_edis
+   >>> from pycsamt.site.base import to_edis
 
-   raw = to_edis(site)
-   edis = to_edis(sites)
-   collection = to_edis(sites, as_collection=True)
+   >>> raw = to_edis(site)
+   >>> edis = to_edis(sites)
+   >>> collection = to_edis(sites, as_collection=True)
 
-   print(type(raw).__name__)
-   print(len(edis))
-   print(type(collection).__name__, len(collection))
-
-.. code-block:: text
-
+   >>> print(type(raw).__name__)
+   >>> print(len(edis))
+   >>> print(type(collection).__name__, len(collection))
    EDIFile
    28
    EDICollection 28
@@ -507,31 +476,23 @@ default, unwrapping is shallow: the returned EDI objects are the same
 objects stored by the wrappers. Pass ``copy=True`` when the caller should be
 able to mutate the returned objects independently.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   detached_edis = to_edis(sites, copy=True)
-   print(len(detached_edis))
-
-.. code-block:: text
-
+   >>> detached_edis = to_edis(sites, copy=True)
+   >>> print(len(detached_edis))
    28
 
 The helper also accepts mixed inputs, path-like sources, raw EDI objects, and
 existing :class:`~pycsamt.seg.collection.EDICollection` instances. Invalid
 items are skipped unless ``strict=True`` is requested.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   edis = to_edis([site, raw, "data/AMT/WILLY_DATA/L18PLT"], strict=False)
-   print(len(edis))
+   >>> edis = to_edis([site, raw, "data/AMT/WILLY_DATA/L18PLT"], strict=False)
+   >>> print(len(edis))
 
-   checked = to_edis(sites, strict=True, progress=True)
-   print(len(checked))
-
-.. code-block:: text
-
+   >>> checked = to_edis(sites, strict=True, progress=True)
+   >>> print(len(checked))
    29
    28
 
@@ -543,31 +504,23 @@ it does not change ``checked`` itself, which is still the 28-station list.
 Use the collection methods when you are already holding a :class:`Sites`
 instance:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   edis = sites.to_edis()
-   collection = sites.to_edicollection(copy=True)
+   >>> edis = sites.to_edis()
+   >>> collection = sites.to_edicollection(copy=True)
 
-   print(len(edis))
-   print(type(collection).__name__, len(collection))
-
-.. code-block:: text
-
+   >>> print(len(edis))
+   >>> print(type(collection).__name__, len(collection))
    28
    EDICollection 28
 
 ``Sites.from_any`` is another entry point when you want pyCSAMT's session
 normalization to interpret heterogeneous inputs:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   sites = Sites.from_any("data/AMT/WILLY_DATA/L18PLT")
-   print(len(sites))
-
-.. code-block:: text
-
+   >>> sites = Sites.from_any("data/AMT/WILLY_DATA/L18PLT")
+   >>> print(len(sites))
    28
 
 Collection Lookup
@@ -576,21 +529,17 @@ Collection Lookup
 :class:`Sites` preserves input order and supports integer indexing,
 case-insensitive name lookup, and safe lookup.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   first = sites[0]
-   same = sites.by_index(0)
-   station = sites["18-002u"]
-   maybe = sites.get("missing")
+   >>> first = sites[0]
+   >>> same = sites.by_index(0)
+   >>> station = sites["18-002u"]
+   >>> maybe = sites.get("missing")
 
-   print(first.name)
-   print(same.name)
-   print(station.name)
-   print(maybe is None)
-
-.. code-block:: text
-
+   >>> print(first.name)
+   >>> print(same.name)
+   >>> print(station.name)
+   >>> print(maybe is None)
    18-001A
    18-001A
    18-002U
@@ -603,14 +552,10 @@ rely on for :term:`station identity`. ``sites["missing"]`` raises
 
 The :meth:`Sites.as_list` method returns the underlying EDI objects:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   edi_objects = sites.as_list()
-   print(len(edi_objects), type(edi_objects[0]).__name__)
-
-.. code-block:: text
-
+   >>> edi_objects = sites.as_list()
+   >>> print(len(edi_objects), type(edi_objects[0]).__name__)
    28 EDIFile
 
 This is useful when passing a prepared collection into utilities that still
@@ -623,17 +568,13 @@ Mapping And Selection
 
 Use :meth:`Sites.map` to apply a lightweight operation to every station:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   names = sites.map(lambda site: site.name)
-   coverage = sites.map(lambda site: site.summary()["nfreq"])
+   >>> names = sites.map(lambda site: site.name)
+   >>> coverage = sites.map(lambda site: site.summary()["nfreq"])
 
-   print(names)
-   print(coverage[:8], "...")
-
-.. code-block:: text
-
+   >>> print(names)
+   >>> print(coverage[:8], "...")
    ['18-001A', '18-002U', '18-003A', '18-004A', '18-005U', '18-006A',
     '18-007U', '18-008U', '18-009A', '18-010U', '18-011A', '18-012A',
     '18-013U', '18-014A', '18-015U', '18-016A', '18-017U', '18-018A',
@@ -646,17 +587,13 @@ Every station on this line shares the same 53-row :term:`frequency grid`, so
 first place a shorter frequency run would show up. For simple collection
 filtering, use :meth:`Sites.select`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   subset = sites.select(names=["18-001A", "18-003A"])
-   with_zxy = sites.select(predicate=lambda site: site.has_component("Zxy"))
+   >>> subset = sites.select(names=["18-001A", "18-003A"])
+   >>> with_zxy = sites.select(predicate=lambda site: site.has_component("Zxy"))
 
-   print(len(subset), [s.name for s in subset])
-   print(len(with_zxy))
-
-.. code-block:: text
-
+   >>> print(len(subset), [s.name for s in subset])
+   >>> print(len(with_zxy))
    2 ['18-001A', '18-003A']
    28
 
@@ -672,24 +609,20 @@ Bulk Edits
 
 :meth:`Sites.edit_all` applies common operations across the collection.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   renamed = sites.edit_all(
-       rename=lambda name: f"LINE01_{name}",
-       inplace=False,
-   )
+   >>> renamed = sites.edit_all(
+   ...     rename=lambda name: f"LINE01_{name}",
+   ...     inplace=False,
+   ... )
 
-   sliced = sites.edit_all(
-       freq_slice=slice(1, None),
-       inplace=False,
-   )
+   >>> sliced = sites.edit_all(
+   ...     freq_slice=slice(1, None),
+   ...     inplace=False,
+   ... )
 
-   print([s.name for s in renamed][:5])
-   print(len(sliced[0].freq), len(sites[0].freq))
-
-.. code-block:: text
-
+   >>> print([s.name for s in renamed][:5])
+   >>> print(len(sliced[0].freq), len(sites[0].freq))
    ['LINE01_18-001A', 'LINE01_18-002U', 'LINE01_18-003A', 'LINE01_18-004A',
     'LINE01_18-005U']
    52 53
@@ -700,18 +633,14 @@ station, so each sliced site carries 52 rows against 53 on the untouched
 ``site.to_dataframe("z")`` and returns a boolean mask. Rows where the mask is
 ``False`` are set to ``NaN`` in the impedance tensor.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   def keep_lower_frequencies(frame):
-       cutoff = frame.index.to_series().median()
-       return frame.index <= cutoff
-
-   masked = sites.edit_all(mask=keep_lower_frequencies)
-   print(masked[0].to_dataframe("z").notna().sum())
-
-.. code-block:: text
-
+   >>> def keep_lower_frequencies(frame):
+   ...     cutoff = frame.index.to_series().median()
+   ...     return frame.index <= cutoff
+   ...
+   >>> masked = sites.edit_all(mask=keep_lower_frequencies)
+   >>> print(masked[0].to_dataframe("z").notna().sum())
    Zxx    27
    Zxy    27
    Zyx    27
@@ -729,29 +658,25 @@ Topography Alignment
 :meth:`Sites.with_topography` updates site coordinates and elevation from a
 table-like object. Station identifiers are matched by normalized names.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
+   >>> import pandas as pd
 
-   print(sites["18-001A"].coords)
-   print(sites["18-002U"].coords)
+   >>> print(sites["18-001A"].coords)
+   >>> print(sites["18-002U"].coords)
 
-   topo = pd.DataFrame(
-       {
-           "station": ["18-001A", "18-002U"],
-           "latitude": [32.1205, 32.1212],
-           "longitude": [119.12890, 119.12895],
-           "elevation": [101.5, 112.0],
-       }
-   )
+   >>> topo = pd.DataFrame(
+   ...     {
+   ...         "station": ["18-001A", "18-002U"],
+   ...         "latitude": [32.1205, 32.1212],
+   ...         "longitude": [119.12890, 119.12895],
+   ...         "elevation": [101.5, 112.0],
+   ...     }
+   ... )
 
-   updated = sites.with_topography(topo, inplace=False)
-   print(updated["18-001A"].coords)
-   print(updated["18-002U"].coords)
-
-.. code-block:: text
-
+   >>> updated = sites.with_topography(topo, inplace=False)
+   >>> print(updated["18-001A"].coords)
+   >>> print(updated["18-002U"].coords)
    (32.1203, 119.12883333333333, 99.0)
    (32.12113333333333, 119.12889999999999, 110.0)
    (32.1205, 119.1289, 101.5)
@@ -769,17 +694,28 @@ Closest Site
 :term:`geodetic distance`, which is what makes it meaningful to search by
 plain latitude/longitude rather than a projected offset.
 
-.. code-block:: python
-   :linenos:
+For coordinates in radians, the distance tested against ``tol`` is the
+haversine distance
 
-   target_lat, target_lon = 32.1211, 119.12888
-   nearest = sites.closest(lat=target_lat, lon=target_lon)
+.. math::
+   :label: site-containers-haversine
 
-   if nearest is not None:
-       print(nearest.name)
+   d=2R\arcsin\!\sqrt{
+      \sin^2\!\left(\frac{\phi_2-\phi_1}{2}\right)
+      +\cos\phi_1\cos\phi_2
+       \sin^2\!\left(\frac{\lambda_2-\lambda_1}{2}\right)},
 
-.. code-block:: text
+where :math:`R` is Earth radius, :math:`\phi` is latitude, and
+:math:`\lambda` is longitude. This makes the 50 m tolerance below a physical
+surface distance rather than a difference in decimal degrees.
 
+.. code-block:: pycon
+
+   >>> target_lat, target_lon = 32.1211, 119.12888
+   >>> nearest = sites.closest(lat=target_lat, lon=target_lon)
+
+   >>> if nearest is not None:
+   ...     print(nearest.name)
    18-002U
 
 The target here is a stand-in for a field GPS fix a few metres from
@@ -787,17 +723,13 @@ The target here is a stand-in for a field GPS fix a few metres from
 without needing an exact match. Add ``tol`` in meters when a maximum
 distance is required:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   nearest = sites.closest(lat=target_lat, lon=target_lon, tol=50.0)
-   print(nearest.name if nearest is not None else None)
+   >>> nearest = sites.closest(lat=target_lat, lon=target_lon, tol=50.0)
+   >>> print(nearest.name if nearest is not None else None)
 
-   too_strict = sites.closest(lat=target_lat, lon=target_lon, tol=1.0)
-   print(too_strict)
-
-.. code-block:: text
-
+   >>> too_strict = sites.closest(lat=target_lat, lon=target_lon, tol=1.0)
+   >>> print(too_strict)
    18-002U
    None
 
@@ -820,39 +752,31 @@ profile for line-ordered work, sorting stations by :term:`chainage` rather
 than by name. An origin and azimuth define the line; a natural choice is the
 first station and the :term:`geodetic distance` bearing toward the last one:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.location import bearing
+   >>> from pycsamt.site.location import bearing
 
-   first_s = sites[0]
-   last_s = sites.by_index(len(sites) - 1)
-   azimuth = bearing(first_s.coords[:2], last_s.coords[:2])
-   print(round(azimuth, 3))
-
-.. code-block:: text
-
+   >>> first_s = sites[0]
+   >>> last_s = sites.by_index(len(sites) - 1)
+   >>> azimuth = bearing(first_s.coords[:2], last_s.coords[:2])
+   >>> print(round(azimuth, 3))
    0.411
 
 An azimuth near zero confirms ``L18PLT`` runs almost due north, which is
 consistent with the mostly-vertical scatter in the coordinate plot above.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   origin = (first_s.coords[0], first_s.coords[1])
-   profile = sites.to_profile(origin=origin, azimuth=azimuth)
+   >>> origin = (first_s.coords[0], first_s.coords[1])
+   >>> profile = sites.to_profile(origin=origin, azimuth=azimuth)
 
-   if hasattr(profile, "chainages"):
-       for name, chainage in sorted(
-           profile.chainages.items(), key=lambda kv: kv[1]
-       )[:6]:
-           print(name, round(chainage, 2))
-   else:
-       print([site.name for site in profile["sites"]])
-
-.. code-block:: text
-
+   >>> if hasattr(profile, "chainages"):
+   ...     for name, chainage in sorted(
+   ...         profile.chainages.items(), key=lambda kv: kv[1]
+   ...     )[:6]:
+   ...         print(name, round(chainage, 2))
+   >>> else:
+   ...     print([site.name for site in profile["sites"]])
    18-001A 0.0
    18-002U 92.54
    18-003A 197.96
@@ -862,7 +786,18 @@ consistent with the mostly-vertical scatter in the coordinate plot above.
 
 ``18-001A`` sits at the origin by construction, so its chainage is ``0.0``;
 each later station's chainage is its signed distance along ``azimuth`` from
-that origin. When :class:`pycsamt.site.profile.Profile` is available, the
+that origin. In local east--north offsets :math:`(\Delta e,\Delta n)`, the
+projection used to order the line is
+
+.. math::
+   :label: site-containers-chainage
+
+   s=\Delta e\sin A+\Delta n\cos A,
+
+with azimuth :math:`A` measured clockwise from north. Positive values in the
+transcript therefore lie forward from the origin along the inferred line;
+an off-line displacement contributes only its projection onto that direction.
+When :class:`pycsamt.site.profile.Profile` is available, the
 method returns a rich profile object exposing ``chainages`` as a
 ``{station: metres}`` dictionary, as above. Otherwise it returns a fallback
 dictionary containing ``origin``, ``azimuth``, and line-ordered ``sites``.
@@ -875,20 +810,16 @@ Writing Sites
 
 :meth:`Sites.write` writes one EDI file per station into a directory.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   paths = sites.write(
-       "outputs/clean_edi",
-       template="{station}.edi",
-       exist_ok=True,
-   )
+   >>> paths = sites.write(
+   ...     "outputs/clean_edi",
+   ...     template="{station}.edi",
+   ...     exist_ok=True,
+   ... )
 
-   for path in paths:
-       print(path)
-
-.. code-block:: text
-
+   >>> for path in paths:
+   ...     print(path)
    outputs/clean_edi/18-001A.edi
    outputs/clean_edi/18-002U.edi
    outputs/clean_edi/18-003A.edi
@@ -905,30 +836,22 @@ Common Patterns
 
 Inspect one station:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   site = sites["18-001A"]
-   print(site.summary())
-   print(site.to_dataframe("resphase").head())
-
-.. code-block:: text
-
+   >>> site = sites["18-001A"]
+   >>> print(site.summary())
+   >>> print(site.to_dataframe("resphase").head())
    {'name': '18-001A', 'nfreq': 53, 'lat': 32.1203, 'lon': 119.12883333333333,
     'elev': 99.0, 'components': ['Zxx', 'Zxy', 'Zyx', 'Zyy'], 'tipper': False}
 
 Build a QC table:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
+   >>> import pandas as pd
 
-   qc = pd.DataFrame([site.summary() for site in sites])
-   print(qc[["name", "nfreq", "components", "tipper"]])
-
-.. code-block:: text
-
+   >>> qc = pd.DataFrame([site.summary() for site in sites])
+   >>> print(qc[["name", "nfreq", "components", "tipper"]])
          name  nfreq            components  tipper
    0  18-001A     53  [Zxx, Zxy, Zyx, Zyy]   False
    1  18-002U     53  [Zxx, Zxy, Zyx, Zyy]   False
@@ -942,12 +865,11 @@ A QC table like this is the fastest way to spot a station that fell short of
 the survey's frequency count or is missing a component, before it reaches
 plotting or inversion. Select, align, and export:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   selected = sites.select(predicate=lambda site: site.has_component("Zxy"))
-   updated = selected.with_topography(topo)
-   updated.write("outputs/selected_edi", exist_ok=True)
+   >>> selected = sites.select(predicate=lambda site: site.has_component("Zxy"))
+   >>> updated = selected.with_topography(topo)
+   >>> updated.write("outputs/selected_edi", exist_ok=True)
 
 Common Mistakes
 ---------------

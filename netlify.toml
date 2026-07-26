@@ -10,6 +10,22 @@
 # Only the first, cold build runs everything; if that one hits the timeout,
 # deploy once with `-D plot_gallery=0` appended to the sphinx command (or ask
 # Netlify support to raise the site's timeout), then restore this command.
+#
+# Release-gated builds: pycsamt.org previously rebuilt on every commit to
+# master, which burns a production-deploy credit each time and is what
+# exhausted the team's free-plan allowance and suspended the site (see
+# HOW-TO-USE-NETLIGY-FOR-OPEN-SOURCE.md, kept local-only, never committed).
+# Two layers now stop that:
+#   1. The GitHub App's push-triggered builds for `master` must be disabled
+#      in the Netlify UI (Site configuration -> Build & deploy -> Stop
+#      builds), so ordinary commits never even start a build. This is a
+#      dashboard setting, not something netlify.toml can express.
+#   2. Production deploys instead come from .github/workflows/netlify-
+#      release-deploy.yml, which POSTs to a Netlify Build Hook only when a
+#      `v*` tag is pushed (i.e. on release).
+# The `ignore` command below is a second line of defense in case build
+# triggers are ever re-enabled or a build starts by some other path: it
+# skips the deploy unless HEAD is exactly a `v*` release tag.
 
 [build]
   publish = "docs/build/html"
@@ -18,10 +34,12 @@
   # build image cannot afford. The cpu index wheel is ~190 MB.
   command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && python -m sphinx -b html -j auto docs/source docs/build/html"
 
-  # Skip deploys for commits that cannot affect the docs (exit 0 = skip).
-  # On the very first build CACHED_COMMIT_REF is unset, git diff exits
-  # non-zero, and the build proceeds — the safe direction.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs pycsamt pyproject.toml netlify.toml .python-version package.json"
+  # Build only for release tags. Netlify's clone can be shallow enough to
+  # miss tag refs, so fetch them explicitly first; `git describe` then
+  # succeeds (exit 0) only when HEAD is exactly tagged `vX.Y.Z...`. Negate
+  # it so the overall exit code carries Netlify's expected meaning (0 =
+  # skip, non-zero = proceed).
+  ignore = "git fetch --tags --quiet 2>/dev/null; ! git describe --tags --exact-match --match 'v*' HEAD >/dev/null 2>&1"
 
 [build.environment]
   # Python runtime on Netlify's build image. Newer (mise-based) images read

@@ -27,68 +27,68 @@ reproduced exactly. In production, replace ``DemoSite(...)`` with
 :class:`pycsamt.seg.edi.EDIFile`, :class:`pycsamt.site.base.Site`, or a
 :class:`pycsamt.site.base.Sites` collection loaded from survey files.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import copy
-   import numpy as np
+   >>> import copy
+   >>> import numpy as np
 
-   class Head:
-       def __init__(self, dataid, lat=np.nan, lon=np.nan, elev=np.nan):
-           self.dataid = dataid
-           self.station = dataid
-           self.lat = lat
-           self.lon = lon
-           self.elev = elev
-
-   class ZBlock:
-       def __init__(self, freq, z):
-           self.freq = np.asarray(freq, float)
-           self.z = np.asarray(z, complex)
-           self.rho = None
-           self.phase = None
-
-       def compute_resistivity_phase(self):
-           mu0 = 4 * np.pi * 1e-7
-           self.rho = (
-               np.abs(self.z) ** 2
-               / (mu0 * 2 * np.pi * self.freq[:, None, None])
-           )
-           self.phase = np.degrees(np.angle(self.z))
-
-   class TipBlock:
-       def __init__(self, tipper):
-           self.tipper = np.asarray(tipper, complex)
-
-   class DemoSite:
-       def __init__(self, name, scale=1.0):
-           self.name = name
-           self.Head = Head(name)
-           freq = np.array([1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0])
-           base = (1 + 0.2j) * np.sqrt(freq / 100.0) * scale
-           z = np.zeros((freq.size, 2, 2), dtype=complex)
-           z[:, 0, 0] = 0.05 * base
-           z[:, 1, 1] = -0.03 * base
-           z[:, 0, 1] = base * (1 + 0.05j)
-           z[:, 1, 0] = -0.8 * base * (1 - 0.04j)
-           z[2, 0, 1] = np.nan + 0j
-           self.Z = ZBlock(freq, z)
-           self.Tip = TipBlock(
-               np.column_stack([
-                   0.10 * scale * np.ones(freq.size),
-                   0.04j * np.linspace(1.0, 1.5, freq.size),
-               ])
-           )
-
-       def get_section(self, name):
-           if str(name).lower() == "head":
-               return self.Head
-           return getattr(self, name, None)
-
-       def __copy__(self):
-           new = type(self).__new__(type(self))
-           new.__dict__ = copy.deepcopy(self.__dict__)
-           return new
+   >>> class Head:
+   ...     def __init__(self, dataid, lat=np.nan, lon=np.nan, elev=np.nan):
+   ...         self.dataid = dataid
+   ...         self.station = dataid
+   ...         self.lat = lat
+   ...         self.lon = lon
+   ...         self.elev = elev
+   ...
+   >>> class ZBlock:
+   ...     def __init__(self, freq, z):
+   ...         self.freq = np.asarray(freq, float)
+   ...         self.z = np.asarray(z, complex)
+   ...         self.rho = None
+   ...         self.phase = None
+   ...
+   ...     def compute_resistivity_phase(self):
+   ...         mu0 = 4 * np.pi * 1e-7
+   ...         self.rho = (
+   ...             np.abs(self.z) ** 2
+   ...             / (mu0 * 2 * np.pi * self.freq[:, None, None])
+   ...         )
+   ...         self.phase = np.degrees(np.angle(self.z))
+   ...
+   >>> class TipBlock:
+   ...     def __init__(self, tipper):
+   ...         self.tipper = np.asarray(tipper, complex)
+   ...
+   >>> class DemoSite:
+   ...     def __init__(self, name, scale=1.0):
+   ...         self.name = name
+   ...         self.Head = Head(name)
+   ...         freq = np.array([1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0])
+   ...         base = (1 + 0.2j) * np.sqrt(freq / 100.0) * scale
+   ...         z = np.zeros((freq.size, 2, 2), dtype=complex)
+   ...         z[:, 0, 0] = 0.05 * base
+   ...         z[:, 1, 1] = -0.03 * base
+   ...         z[:, 0, 1] = base * (1 + 0.05j)
+   ...         z[:, 1, 0] = -0.8 * base * (1 - 0.04j)
+   ...         z[2, 0, 1] = np.nan + 0j
+   ...         self.Z = ZBlock(freq, z)
+   ...         self.Tip = TipBlock(
+   ...             np.column_stack([
+   ...                 0.10 * scale * np.ones(freq.size),
+   ...                 0.04j * np.linspace(1.0, 1.5, freq.size),
+   ...             ])
+   ...         )
+   ...
+   ...     def get_section(self, name):
+   ...         if str(name).lower() == "head":
+   ...             return self.Head
+   ...         return getattr(self, name, None)
+   ...
+   ...     def __copy__(self):
+   ...         new = type(self).__new__(type(self))
+   ...         new.__dict__ = copy.deepcopy(self.__dict__)
+   ...         return new
+   ...
 
 Editing Map
 -----------
@@ -142,38 +142,26 @@ Copy Versus In-Place Editing
 
 Most editing helpers accept ``inplace``. The default is ``False``:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import rename
-   from pycsamt.site.utils import station_name
+   >>> from pycsamt.site.edit import rename
+   >>> from pycsamt.site.utils import station_name
 
-   edi = DemoSite("S01")
+   >>> edi = DemoSite("S01")
 
-   edited = rename(edi, name="LINE01_S01", inplace=False)
+   >>> edited = rename(edi, name="LINE01_S01", inplace=False)
 
-   print(edited is edi)
-   print(station_name(edi), station_name(edited))
-
-Output:
-
-.. code-block:: text
-
+   >>> print(edited is edi)
    False
+   >>> print(station_name(edi), station_name(edited))
    S01 LINE01_S01
 
 Use ``inplace=True`` when you intentionally want to mutate the provided object:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   rename(edi, name="LINE01_S01", inplace=True)
-   print(station_name(edi))
-
-Output:
-
-.. code-block:: text
-
+   >>> _ = rename(edi, name="LINE01_S01", inplace=True)
+   >>> print(station_name(edi))
    LINE01_S01
 
 For collection helpers, ``inplace=False`` returns a new
@@ -189,6 +177,7 @@ Tensor Rotation
 coordinate transform. At each frequency :math:`f`,
 
 .. math::
+   :label: site-editing-tensor-rotation
 
    \mathbf{Z}'(f) =
    \mathbf{R}(\theta)\,\mathbf{Z}(f)\,\mathbf{R}^{-1}(\theta),
@@ -204,59 +193,71 @@ same tensor in a rotated field coordinate frame. The inverse appears on the
 right because the tensor maps horizontal magnetic-field components to
 horizontal electric-field components.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   from pycsamt.site.edit import rotate
+   >>> import numpy as np
+   >>> from pycsamt.site.edit import rotate
 
-   edi = DemoSite("S01")
-   before = edi.Z.z[0].copy()
-   rotated = rotate(edi, angle_deg=30.0, inplace=False)
+   >>> edi = DemoSite("S01")
+   >>> before = edi.Z.z[0].copy()
+   >>> rotated = rotate(edi, angle_deg=30.0, inplace=False)
 
-   print("before:")
-   print(np.round(before, 3))
-   print("after:")
-   print(np.round(rotated.Z.z[0], 3))
-   print("original unchanged:", np.allclose(edi.Z.z[0], before))
-
-Output:
-
-.. code-block:: text
-
+   >>> print("before:")
    before:
+   >>> print(np.round(before, 3))
    [[ 0.005+0.001j  0.099+0.025j]
     [-0.081-0.013j -0.003-0.001j]]
+   >>> print("after:")
    after:
+   >>> print(np.round(rotated.Z.z[0], 3))
    [[ 0.011+0.006j  0.091+0.021j]
     [-0.089-0.017j -0.009-0.005j]]
+   >>> print("original unchanged:", np.allclose(edi.Z.z[0], before))
    original unchanged: True
+
+Because equation :eq:`site-editing-tensor-rotation` is a similarity
+transformation, it changes individual tensor components but preserves the
+trace and determinant at each frequency. Those invariants provide a compact
+numerical check that the operation changed coordinates rather than the
+underlying response:
+
+.. code-block:: pycon
+
+   >>> after = rotated.Z.z[0]
+   >>> print(np.allclose(np.trace(after), np.trace(before)))
+   True
+   >>> print(np.allclose(np.linalg.det(after), np.linalg.det(before)))
+   True
 
 The helper checks common tensor attribute names such as ``z``, ``impedance``,
 and ``_z``. Tipper arrays may live under ``T``, ``TIP``, ``Tip``, or sometimes
 as a tipper-like attribute under ``Z``.
 
 Error arrays are rotated with a magnitude-only approximation using absolute
-values of the rotation matrices. Treat this as a practical uncertainty
-propagation, not a full covariance rotation.
+values of the rotation matrices. If :math:`\boldsymbol{\sigma}_Z` contains
+component-wise standard deviations, the approximation is
+
+.. math::
+   :label: site-editing-error-rotation
+
+   \boldsymbol{\sigma}_{Z'} \approx
+   |\mathbf R|\,\boldsymbol{\sigma}_Z\,|\mathbf R^{-1}|.
+
+Equation :eq:`site-editing-error-rotation` ignores cross-component
+covariances. Treat it as practical uncertainty propagation, not as a full
+rotation of a :term:`covariance matrix`.
 
 Rotate a whole collection with :func:`rotate_all`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import rotate_all
+   >>> from pycsamt.site.edit import rotate_all
 
-   collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
-   rotated_sites = rotate_all(collection, angle_deg=30.0)
-   print(len(rotated_sites.as_list()))
-   print(np.round(rotated_sites.as_list()[0].Z.z[0], 3))
-
-Output:
-
-.. code-block:: text
-
+   >>> collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
+   >>> rotated_sites = rotate_all(collection, angle_deg=30.0)
+   >>> print(len(rotated_sites.as_list()))
    2
+   >>> print(np.round(rotated_sites.as_list()[0].Z.z[0], 3))
    [[ 0.011+0.006j  0.091+0.021j]
     [-0.089-0.017j -0.009-0.005j]]
 
@@ -267,130 +268,125 @@ Frequency Subsetting
 aligned arrays together. It handles Z, Z errors, apparent resistivity, phase,
 tipper, tipper errors, and several common aliases.
 
+For a frequency vector :math:`\mathbf f=(f_1,\ldots,f_N)`, range selection
+constructs one mask
+
+.. math::
+   :label: site-editing-frequency-mask
+
+   m_k=(f_k\geq f_{\min})\land(f_k\leq f_{\max}),
+
+and applies the same :math:`m_k` to every frequency-indexed array. Reusing one
+mask is essential: slicing impedance and tipper independently could associate
+values with the wrong frequencies even when their final row counts match.
+
 Keep a frequency range:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   edi = DemoSite("S01")
-   band = select_freq(
-       edi,
-       fmin=10.0,
-       fmax=300.0,
-       inplace=False,
-   )
-   print(band.Z.freq.tolist())
+   >>> from pycsamt.site.edit import select_freq
 
-Output:
-
-.. code-block:: text
-
+   >>> edi = DemoSite("S01")
+   >>> band = select_freq(
+   ...     edi,
+   ...     fmin=10.0,
+   ...     fmax=300.0,
+   ...     inplace=False,
+   ... )
+   >>> print(band.Z.freq.tolist())
    [10.0, 30.0, 100.0, 300.0]
+   >>> print(band.Z.z.shape, band.Tip.tipper.shape)
+   (4, 2, 2) (4, 2)
+
+The four retained frequencies therefore correspond to four rows in both
+arrays; this shape check is a quick audit of the alignment promised by
+equation :eq:`site-editing-frequency-mask`.
 
 Keep explicit row indices:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   edges = select_freq(edi, keep=[0, -1])
-   print(edges.Z.freq.tolist())
-
-Output:
-
-.. code-block:: text
-
+   >>> edges = select_freq(edi, keep=[0, -1])
+   >>> print(edges.Z.freq.tolist())
    [1.0, 1000.0]
 
 Use a boolean mask:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   freq = np.asarray(edi.Z.freq)
-   mask = freq >= 30.0
-   high = select_freq(edi, keep=mask)
-   print(high.Z.freq.tolist())
-
-Output:
-
-.. code-block:: text
-
+   >>> freq = np.asarray(edi.Z.freq)
+   >>> mask = freq >= 30.0
+   >>> high = select_freq(edi, keep=mask)
+   >>> print(high.Z.freq.tolist())
    [30.0, 100.0, 300.0, 1000.0]
 
 When ``keep`` is provided, ``fmin`` and ``fmax`` are ignored. Use
 :func:`select_freq_all` for collections:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import select_freq_all
+   >>> from pycsamt.site.edit import select_freq_all
 
-   trimmed = select_freq_all(
-       collection,
-       fmin=10.0,
-       fmax=300.0,
-   )
-   print(trimmed.as_list()[0].Z.freq.tolist())
-
-Output:
-
-.. code-block:: text
-
+   >>> trimmed = select_freq_all(
+   ...     collection,
+   ...     fmin=10.0,
+   ...     fmax=300.0,
+   ... )
+   >>> print(trimmed.as_list()[0].Z.freq.tolist())
    [10.0, 30.0, 100.0, 300.0]
 
 The same synthetic station can also be plotted before and after rotation and
 frequency subsetting. The selected points are drawn in one panel so the
 frequency mask is easy to audit visually.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-   from pycsamt.site.edit import fill_missing, rotate, select_freq
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.site.edit import fill_missing, rotate, select_freq
 
-   raw = DemoSite("S01")
-   rotated = rotate(raw, angle_deg=30.0, inplace=False)
-   raw_filled = fill_missing(raw, how="zero", components=("Z",), inplace=False)
-   band = select_freq(raw_filled, fmin=10.0, fmax=300.0, inplace=False)
+   >>> raw = DemoSite("S01")
+   >>> rotated = rotate(raw, angle_deg=30.0, inplace=False)
+   >>> raw_filled = fill_missing(raw, how="zero", components=("Z",), inplace=False)
+   >>> band = select_freq(raw_filled, fmin=10.0, fmax=300.0, inplace=False)
 
-   fig, ax = plt.subplots(1, 2, figsize=(8, 3.2), constrained_layout=True)
+   >>> fig, ax = plt.subplots(1, 2, figsize=(8, 3.2), constrained_layout=True)
 
-   ax[0].plot(raw.Z.freq, np.abs(raw.Z.z[:, 0, 1]), marker="o", label="raw Zxy")
-   ax[0].plot(
-       rotated.Z.freq,
-       np.abs(rotated.Z.z[:, 0, 1]),
-       marker="s",
-       label="rotated Zxy",
-   )
-   ax[0].set_xscale("log")
-   ax[0].set_xlabel("frequency (Hz)")
-   ax[0].set_ylabel("|Zxy|")
-   ax[0].set_title("Rotation effect")
-   ax[0].legend(frameon=False)
+   >>> _ = ax[0].plot(raw.Z.freq, np.abs(raw.Z.z[:, 0, 1]), marker="o", label="raw Zxy")
+   >>> _ = ax[0].plot(
+   ...     rotated.Z.freq,
+   ...     np.abs(rotated.Z.z[:, 0, 1]),
+   ...     marker="s",
+   ...     label="rotated Zxy",
+   ... )
+   >>> _ = ax[0].set_xscale("log")
+   >>> _ = ax[0].set_xlabel("frequency (Hz)")
+   >>> _ = ax[0].set_ylabel("|Zxy|")
+   >>> _ = ax[0].set_title("Rotation effect")
+   >>> _ = ax[0].legend(frameon=False)
 
-   ax[1].plot(
-       raw_filled.Z.freq,
-       np.abs(raw_filled.Z.z[:, 0, 1]),
-       marker="o",
-       label="all rows",
-   )
-   ax[1].scatter(
-       band.Z.freq,
-       np.abs(band.Z.z[:, 0, 1]),
-       s=80,
-       label="selected band",
-   )
-   ax[1].set_xscale("log")
-   ax[1].set_xlabel("frequency (Hz)")
-   ax[1].set_title("Frequency subset")
-   ax[1].legend(frameon=False)
+   >>> _ = ax[1].plot(
+   ...     raw_filled.Z.freq,
+   ...     np.abs(raw_filled.Z.z[:, 0, 1]),
+   ...     marker="o",
+   ...     label="all rows",
+   ... )
+   >>> _ = ax[1].scatter(
+   ...     band.Z.freq,
+   ...     np.abs(band.Z.z[:, 0, 1]),
+   ...     s=80,
+   ...     label="selected band",
+   ... )
+   >>> _ = ax[1].set_xscale("log")
+   >>> _ = ax[1].set_xlabel("frequency (Hz)")
+   >>> _ = ax[1].set_title("Frequency subset")
+   >>> _ = ax[1].legend(frameon=False)
 
-   for axis in ax:
-       axis.grid(True, alpha=0.25)
-
-   fig.savefig("editing_rotation_frequency.png", dpi=160)
+   >>> for axis in ax:
+   ...     axis.grid(True, alpha=0.25)
+   ...
+   >>> fig.savefig("editing_rotation_frequency.png", dpi=160)
 
 .. figure:: ../../images/user_guide/site/editing_rotation_frequency.png
    :alt: Two-panel plot showing rotated impedance magnitude and selected frequency rows for a synthetic station.
@@ -399,6 +395,14 @@ frequency mask is easy to audit visually.
 
    A compact check of the two edits that most often affect numerical
    interpretation: tensor rotation and frequency subsetting.
+
+The left panel shows a small change in :math:`|Z_{xy}|` after rotation. This
+is redistribution among tensor components, not a change in the measured
+electromagnetic response, as the invariant checks above confirm. In the right
+panel, the selected band contains the 10--300 Hz rows only. The point at zero
+near 10 Hz comes from the deliberately zero-filled missing value; it is a
+processing artifact and must not be interpreted as a measured vanishing
+impedance.
 
 Station Renaming
 ----------------
@@ -410,36 +414,24 @@ consistent.
 
 Set an explicit name:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import rename
+   >>> from pycsamt.site.edit import rename
 
-   edi = DemoSite("S01")
-   renamed = rename(edi, name="LINE01_S01")
-   print(station_name(renamed))
-
-Output:
-
-.. code-block:: text
-
+   >>> edi = DemoSite("S01")
+   >>> renamed = rename(edi, name="LINE01_S01")
+   >>> print(station_name(renamed))
    LINE01_S01
 
 Apply a policy to the current station name:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   renamed = rename(
-       edi,
-       policy=lambda old: f"LINE01_{old}",
-   )
-   print(station_name(renamed), renamed.Head.dataid)
-
-Output:
-
-.. code-block:: text
-
+   >>> renamed = rename(
+   ...     edi,
+   ...     policy=lambda old: f"LINE01_{old}",
+   ... )
+   >>> print(station_name(renamed), renamed.Head.dataid)
    LINE01_S01 LINE01_S01
 
 If both ``name`` and ``policy`` are provided, the explicit ``name`` wins.
@@ -448,21 +440,15 @@ you want output filenames to follow the new station names.
 
 For collections, use :func:`rename_all`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import rename_all
+   >>> from pycsamt.site.edit import rename_all
 
-   renamed_sites = rename_all(
-       collection,
-       name_fn=lambda edi: f"L01_{station_name(edi)}",
-   )
-   print([station_name(edi) for edi in renamed_sites.as_list()])
-
-Output:
-
-.. code-block:: text
-
+   >>> renamed_sites = rename_all(
+   ...     collection,
+   ...     name_fn=lambda edi: f"L01_{station_name(edi)}",
+   ... )
+   >>> print([station_name(edi) for edi in renamed_sites.as_list()])
    ['L01_S01', 'L01_S02']
 
 Prefer ``name_fn`` when the original EDI files have duplicate station names.
@@ -475,102 +461,81 @@ Coordinate Editing
 :func:`set_coords` updates latitude, longitude, and elevation on one site.
 Only the values provided are changed.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import set_coords
+   >>> from pycsamt.site.edit import set_coords
 
-   moved = set_coords(
-       edi,
-       lat=35.125,
-       lon=12.750,
-       elev=1234.0,
-   )
-   print(moved.Head.lat, moved.Head.lon, moved.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> moved = set_coords(
+   ...     edi,
+   ...     lat=35.125,
+   ...     lon=12.750,
+   ...     elev=1234.0,
+   ... )
+   >>> print(moved.Head.lat, moved.Head.lon, moved.Head.elev)
    35.125 12.75 1234.0
 
 To apply coordinates to many sites, use :func:`set_coords_all`.
 
 From a mapping keyed by station name:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import set_coords_all
+   >>> from pycsamt.site.edit import set_coords_all
 
-   collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
-   coords = {
-       "S01": (35.125, 12.750, 1234.0),
-       "S02": (35.200, 12.900, 1180.0),
-   }
+   >>> collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
+   >>> coords = {
+   ...     "S01": (35.125, 12.750, 1234.0),
+   ...     "S02": (35.200, 12.900, 1180.0),
+   ... }
 
-   updated = set_coords_all(collection, coords)
-   for site in updated.as_list():
-       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> updated = set_coords_all(collection, coords)
+   >>> for site in updated.as_list():
+   ...     print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+   ...
    S01 35.125 12.75 1234.0
    S02 35.2 12.9 1180.0
 
 From a callable:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
+   >>> collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
 
-   def lookup(edi):
-       name = getattr(edi, "name", "")
-       if name == "S01":
-           return 35.125, 12.750, 1234.0
-       return None
-
-   updated = set_coords_all(collection, lookup)
-   for site in updated.as_list():
-       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> def lookup(edi):
+   ...     name = getattr(edi, "name", "")
+   ...     if name == "S01":
+   ...         return 35.125, 12.750, 1234.0
+   ...     return None
+   ...
+   >>> updated = set_coords_all(collection, lookup)
+   >>> for site in updated.as_list():
+   ...     print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+   ...
    S01 35.125 12.75 1234.0
    S02 nan nan nan
 
 From an object exposing a ``.frame`` attribute:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
+   >>> import pandas as pd
 
-   class CoordinateTable:
-       def __init__(self, frame):
-           self.frame = frame
-
-   frame = pd.DataFrame(
-       {
-           "station": ["S01", "S02"],
-           "lat": [35.125, 35.200],
-           "lon": [12.750, 12.900],
-           "elev": [1234.0, 1180.0],
-       }
-   )
-   updated = set_coords_all(collection, CoordinateTable(frame))
-   for site in updated.as_list():
-       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> class CoordinateTable:
+   ...     def __init__(self, frame):
+   ...         self.frame = frame
+   ...
+   >>> frame = pd.DataFrame(
+   ...     {
+   ...         "station": ["S01", "S02"],
+   ...         "lat": [35.125, 35.200],
+   ...         "lon": [12.750, 12.900],
+   ...         "elev": [1234.0, 1180.0],
+   ...     }
+   ... )
+   >>> updated = set_coords_all(collection, CoordinateTable(frame))
+   >>> for site in updated.as_list():
+   ...     print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+   ...
    S01 35.125 12.75 1234.0
    S02 35.2 12.9 1180.0
 
@@ -588,30 +553,25 @@ Coordinate Tables
 
 With standard geographic columns:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-   from pycsamt.site.edit import set_coords_from_table
+   >>> import pandas as pd
+   >>> from pycsamt.site.edit import set_coords_from_table
 
-   collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
-   table = pd.DataFrame(
-       {
-           "station": ["S01", "S02"],
-           "lat": [35.125, 35.200],
-           "lon": [12.750, 12.900],
-           "elev": [1234.0, 1180.0],
-       }
-   )
+   >>> collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
+   >>> table = pd.DataFrame(
+   ...     {
+   ...         "station": ["S01", "S02"],
+   ...         "lat": [35.125, 35.200],
+   ...         "lon": [12.750, 12.900],
+   ...         "elev": [1234.0, 1180.0],
+   ...     }
+   ... )
 
-   updated = set_coords_from_table(collection, table)
-   for site in updated.as_list():
-       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> updated = set_coords_from_table(collection, table)
+   >>> for site in updated.as_list():
+   ...     print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+   ...
    S01 35.125 12.75 1234.0
    S02 35.2 12.9 1180.0
 
@@ -642,38 +602,33 @@ The resolver understands common aliases:
 
 Use an explicit column map when a field table uses non-standard names:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
+   >>> import pandas as pd
 
-   collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
-   alias_table = pd.DataFrame(
-       {
-           "name": ["S01", "S02"],
-           "latitude": [35.125, 35.200],
-           "long": [12.750, 12.900],
-           "elevation": [1234.0, 1180.0],
-       }
-   )
+   >>> collection = [DemoSite("S01"), DemoSite("S02", scale=1.2)]
+   >>> alias_table = pd.DataFrame(
+   ...     {
+   ...         "name": ["S01", "S02"],
+   ...         "latitude": [35.125, 35.200],
+   ...         "long": [12.750, 12.900],
+   ...         "elevation": [1234.0, 1180.0],
+   ...     }
+   ... )
 
-   updated = set_coords_from_table(
-       collection,
-       alias_table,
-       columns={
-           "station": "name",
-           "lat": "latitude",
-           "lon": "long",
-           "elev": "elevation",
-       },
-   )
-   for site in updated.as_list():
-       print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
-
-Output:
-
-.. code-block:: text
-
+   >>> updated = set_coords_from_table(
+   ...     collection,
+   ...     alias_table,
+   ...     columns={
+   ...         "station": "name",
+   ...         "lat": "latitude",
+   ...         "lon": "long",
+   ...         "elev": "elevation",
+   ...     },
+   ... )
+   >>> for site in updated.as_list():
+   ...     print(site.name, site.Head.lat, site.Head.lon, site.Head.elev)
+   ...
    S01 35.125 12.75 1234.0
    S02 35.2 12.9 1180.0
 
@@ -687,23 +642,22 @@ Easting/Northing Conversion
 
 If a table provides projected coordinates, pass ``crs_from``:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   table = pd.DataFrame(
-       {
-           "station": ["S10", "S11"],
-           "easting": [400000.0, 401250.0],
-           "northing": [5750000.0, 5750400.0],
-           "elev": [250.0, 252.0],
-       }
-   )
+   >>> table = pd.DataFrame(
+   ...     {
+   ...         "station": ["S10", "S11"],
+   ...         "easting": [400000.0, 401250.0],
+   ...         "northing": [5750000.0, 5750400.0],
+   ...         "elev": [250.0, 252.0],
+   ...     }
+   ... )
 
-   updated = set_coords_from_table(
-       collection,
-       table,
-       crs_from="EPSG:32631",
-   )
+   >>> updated = set_coords_from_table(
+   ...     collection,
+   ...     table,
+   ...     crs_from="EPSG:32631",
+   ... )
 
 Projection uses :mod:`pyproj`. If ``pyproj`` is not installed and projected
 coordinates must be converted, the helper raises ``ImportError``. The
@@ -713,24 +667,18 @@ a different geographic position.
 
 For one site, use :func:`set_coords_from_en`:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import set_coords_from_en
+   >>> from pycsamt.site.edit import set_coords_from_en
 
-   projected = set_coords_from_en(
-       edi,
-       easting=400000.0,
-       northing=5750000.0,
-       crs_from="EPSG:32631",
-       elev=250.0,
-   )
-   print(round(projected.Head.lat, 3), round(projected.Head.lon, 3))
-
-Output:
-
-.. code-block:: text
-
+   >>> projected = set_coords_from_en(
+   ...     edi,
+   ...     easting=400000.0,
+   ...     northing=5750000.0,
+   ...     crs_from="EPSG:32631",
+   ...     elev=250.0,
+   ... )
+   >>> print(round(projected.Head.lat, 3), round(projected.Head.lon, 3))
    51.892 1.547
 
 Missing Data Filling
@@ -739,24 +687,18 @@ Missing Data Filling
 :func:`fill_missing` fills or allocates missing Z and tipper arrays. It is
 often used before diagnostics or before recomputing derived quantities.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import fill_missing
+   >>> from pycsamt.site.edit import fill_missing
 
-   filled = fill_missing(
-       edi,
-       how="zero",
-       components=("Z",),
-   )
-   print(int(np.isnan(filled.Z.z).sum()))
-   print(filled.Z.z[2, 0, 1])
-
-Output:
-
-.. code-block:: text
-
+   >>> filled = fill_missing(
+   ...     edi,
+   ...     how="zero",
+   ...     components=("Z",),
+   ... )
+   >>> print(int(np.isnan(filled.Z.z).sum()))
    0
+   >>> print(filled.Z.z[2, 0, 1])
    0j
 
 Available fill policies are:
@@ -777,6 +719,7 @@ some robust workflows, but zeros are not measured values. Mathematically, the
 policy replaces each non-finite array entry :math:`x_i` by
 
 .. math::
+   :label: site-editing-fill-policy
 
    x_i' =
    \begin{cases}
@@ -785,7 +728,22 @@ policy replaces each non-finite array entry :math:`x_i` by
       \mathrm{NaN}, & x_i \text{ is not finite and } \texttt{how="nan"}.
    \end{cases}
 
-Keep a note in the processing log when missing data have been filled.
+Equation :eq:`site-editing-fill-policy` makes clear that ``how="nan"`` does
+not infer a value—it preserves the gap explicitly. This can be verified on
+the same synthetic station:
+
+.. code-block:: pycon
+
+   >>> gap_preserved = fill_missing(edi, how="nan", components=("Z",))
+   >>> print(int(np.isnan(gap_preserved.Z.z).sum()))
+   1
+   >>> print(np.isnan(gap_preserved.Z.z[2, 0, 1]))
+   True
+
+Keep the chosen policy in the processing log when missing data have been
+filled. For inversion or statistical estimation, preserving ``NaN`` and
+letting an explicit mask reject the row is generally safer than silently
+turning the gap into a zero-amplitude observation.
 
 Recomputing Resistivity And Phase
 ---------------------------------
@@ -794,22 +752,16 @@ Recomputing Resistivity And Phase
 ``compute_resistivity_phase()`` method. It is best used after changing
 frequency rows, tensor values, or masks.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import recompute_res_phase
+   >>> from pycsamt.site.edit import recompute_res_phase
 
-   edited = select_freq(edi, fmin=1.0, fmax=1000.0)
-   edited = fill_missing(edited, how="zero", components=("Z",))
-   edited = recompute_res_phase(edited)
-   print(edited.Z.rho.shape)
-   print(round(float(edited.Z.phase[4, 0, 1]), 3))
-
-Output:
-
-.. code-block:: text
-
+   >>> edited = select_freq(edi, fmin=1.0, fmax=1000.0)
+   >>> edited = fill_missing(edited, how="zero", components=("Z",))
+   >>> edited = recompute_res_phase(edited)
+   >>> print(edited.Z.rho.shape)
    (7, 2, 2)
+   >>> print(round(float(edited.Z.phase[4, 0, 1]), 3))
    14.172
 
 The function is best-effort. If the Z section is missing, incompatible, or does
@@ -817,13 +769,16 @@ not expose a recomputation method, the object is returned unchanged. For each
 component, a typical recomputation stores
 
 .. math::
+   :label: site-editing-resistivity-phase
 
    \rho_a(f) = \frac{|Z(f)|^2}{\mu_0\,2\pi f},
    \qquad
    \phi(f) = \arg(Z(f))\,\frac{180}{\pi},
 
 so apparent resistivity and phase remain synchronized with the current
-frequency rows and tensor values.
+frequency rows and tensor values. The :math:`Z` in equation
+:eq:`site-editing-resistivity-phase` is in SI impedance units; an EDI reader
+must apply the corresponding field-unit conversion before using this form.
 
 Practical Preparation Workflow
 ------------------------------
@@ -833,60 +788,54 @@ For a real survey, ``sites`` would normally come from
 ``EDICollection.from_sources("data/raw_edi")`` or ``Sites.from_path(...)``;
 the synthetic list keeps the example output reproducible.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-   from pycsamt.site.edit import (
-       fill_missing,
-       recompute_res_phase,
-       rename_all,
-       rotate_all,
-       select_freq_all,
-       set_coords_from_table,
-   )
-   from pycsamt.site.utils import station_name
+   >>> import pandas as pd
+   >>> from pycsamt.site.edit import (
+   ...     fill_missing,
+   ...     recompute_res_phase,
+   ...     rename_all,
+   ...     rotate_all,
+   ...     select_freq_all,
+   ...     set_coords_from_table,
+   ... )
+   >>> from pycsamt.site.utils import station_name
 
-   sites = [
-       DemoSite("S01"),
-       DemoSite("S02", scale=1.2),
-       DemoSite("S03", scale=0.8),
-   ]
+   >>> sites = [
+   ...     DemoSite("S01"),
+   ...     DemoSite("S02", scale=1.2),
+   ...     DemoSite("S03", scale=0.8),
+   ... ]
 
-   sites = rename_all(
-       sites,
-       name_fn=lambda edi: f"L01_{station_name(edi)}",
-   )
-   coords = pd.DataFrame(
-       {
-           "station": ["L01_S01", "L01_S02", "L01_S03"],
-           "lat": [35.1, 35.2, 35.3],
-           "lon": [12.7, 12.8, 12.9],
-           "elev": [100.0, 110.0, 120.0],
-       }
-   )
-   sites = set_coords_from_table(sites, coords)
-   sites = rotate_all(sites, angle_deg=30.0)
-   sites = select_freq_all(sites, fmin=10.0, fmax=300.0)
+   >>> sites = rename_all(
+   ...     sites,
+   ...     name_fn=lambda edi: f"L01_{station_name(edi)}",
+   ... )
+   >>> coords = pd.DataFrame(
+   ...     {
+   ...         "station": ["L01_S01", "L01_S02", "L01_S03"],
+   ...         "lat": [35.1, 35.2, 35.3],
+   ...         "lon": [12.7, 12.8, 12.9],
+   ...         "elev": [100.0, 110.0, 120.0],
+   ...     }
+   ... )
+   >>> sites = set_coords_from_table(sites, coords)
+   >>> sites = rotate_all(sites, angle_deg=30.0)
+   >>> sites = select_freq_all(sites, fmin=10.0, fmax=300.0)
 
-   rows = []
-   for edi in sites.as_list():
-       edi = fill_missing(edi, how="nan", components=("Z",))
-       edi = recompute_res_phase(edi)
-       rows.append(
-           {
-               "name": station_name(edi),
-               "freq_rows": len(edi.Z.freq),
-               "nan_z": int(np.isnan(edi.Z.z).sum()),
-           }
-       )
-
-   print(pd.DataFrame(rows).to_string(index=False))
-
-Output:
-
-.. code-block:: text
-
+   >>> rows = []
+   >>> for edi in sites.as_list():
+   ...     edi = fill_missing(edi, how="nan", components=("Z",))
+   ...     edi = recompute_res_phase(edi)
+   ...     rows.append(
+   ...         {
+   ...             "name": station_name(edi),
+   ...             "freq_rows": len(edi.Z.freq),
+   ...             "nan_z": int(np.isnan(edi.Z.z).sum()),
+   ...         }
+   ...     )
+   ...
+   >>> print(pd.DataFrame(rows).to_string(index=False))
       name  freq_rows  nan_z
    L01_S01          4      4
    L01_S02          4      4

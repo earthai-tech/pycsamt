@@ -10,10 +10,58 @@ for tests that do not rely on repository data.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import pytest
+
+
+def _terminate_process(code: int) -> None:
+    """Terminate without running CPython extension finalizers."""
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if sys.platform == "win32":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), code)
+    else:
+        os._exit(code)
+
+
+def _is_qt_interface_run(config) -> bool:
+    """Return whether this pytest invocation owns the desktop Qt tests."""
+
+    args = {
+        str(arg).replace("\\", "/").rstrip("/") for arg in config.args
+    }
+    return "PySide6" in sys.modules and any(
+        arg == "pycsamt/app/tests" or "/pycsamt/app/tests" in arg
+        for arg in args
+    )
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
+    """Exit after reports are persisted but before Qt plugin finalization."""
+
+    if _is_qt_interface_run(config):
+        _terminate_process(int(exitstatus))
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    """Bypass unsafe Qt/Shiboken finalization after interface test runs."""
+
+    if not _is_qt_interface_run(session.config):
+        return
+
+    # Root conftest is loaded during pytest's initial configuration, so this
+    # session hook cannot be unregistered with a nested test directory.
+    # ``trylast`` lets coverage and terminal reporters persist results first.
+    _terminate_process(int(exitstatus))
 
 # Root conftest.py is imported during pytest's initial-conftest phase,
 # before pytest-cov's coverage tracer starts (that happens in

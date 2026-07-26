@@ -8,6 +8,19 @@ table/result view objects, and high-level reader functions.
    :members:
    :show-inheritance:
 
+Site Ordering Configuration
+---------------------------
+
+.. autoclass:: pycsamt.api.SiteOrderingConfig
+   :members:
+
+.. autofunction:: pycsamt.api.configure_ordering
+.. autofunction:: pycsamt.api.reset_ordering
+
+The live process-wide configuration is available as
+:data:`pycsamt.api.PYCSAMT_ORDERING`. See
+:ref:`api-configuration` for modes, thresholds, overrides, and examples.
+
 Topography Configuration
 ------------------------
 
@@ -29,6 +42,7 @@ API Modules
    pycsamt.api.control
    pycsamt.api.docs
    pycsamt.api.interp
+   pycsamt.api.ordering
    pycsamt.api.pipe
    pycsamt.api.pipe.config
    pycsamt.api.plot

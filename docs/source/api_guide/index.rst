@@ -24,11 +24,13 @@ Everything documented here is importable directly from ``pycsamt.api``:
        read_edis,            # data in
        configure_api_view,   # what api=True returns
        configure_pipe,       # where pipeline outputs go
+       configure_ordering,   # how survey stations are ordered
        use_style,            # how figures look
    )
 
    configure_api_view(backend="pycsamt")
    configure_pipe(output_root="results/run01", plot_dpi=200)
+   configure_ordering(mode="auto")
    use_style("publication")
 
    survey = read_edis("data/edi/", progress="auto")
@@ -81,6 +83,10 @@ Configuration Families
    * - Pipeline
      - :func:`~pycsamt.api.configure_pipe`, ``PYCSAMT_PIPE``
      - Output roots, plot DPI/format, progress display, step-error policy.
+   * - Site ordering
+     - :func:`~pycsamt.api.configure_ordering`, ``PYCSAMT_ORDERING``
+     - Package-wide station order: validated coordinate chainage, input,
+       natural station name, latitude, or longitude.
    * - CLI
      - :func:`~pycsamt.api.configure_cli`, ``PYCSAMT_CLI``
      - Logging level, output format and directory, parallel build jobs.

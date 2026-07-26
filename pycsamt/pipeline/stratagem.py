@@ -162,7 +162,7 @@ STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
         steps=[
             (
                 "remove_static_shift",
-                {"sort_by": "lon", "half_window": 3, "weights": "tri"},
+                {"half_window": 3, "weights": "tri"},
             ),
             (
                 "drop_frequencies",
@@ -206,7 +206,6 @@ STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
             (
                 "remove_static_shift",
                 {
-                    "sort_by": "lon",
                     "half_window": 3,
                     "weights": "tri",
                     "max_skew": 6.0,
@@ -256,7 +255,6 @@ STRATAGEM_PRESETS: dict[str, StratagemPreset] = {
             (
                 "remove_static_shift",
                 {
-                    "sort_by": "lon",
                     "half_window": 5,
                     "weights": "tri",
                     "max_skew": 5.0,

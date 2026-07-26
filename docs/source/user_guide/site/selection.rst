@@ -67,23 +67,19 @@ Selection Contract
 
 All functional selectors follow the same broad contract.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import by_names, keep_finite_z
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import by_names, keep_finite_z
 
-   collection = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> collection = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   selected = by_names(collection, "18-01*")
-   selected = keep_finite_z(selected)
+   >>> selected = by_names(collection, "18-01*")
+   >>> selected = keep_finite_z(selected)
 
-   print(type(selected).__name__)
-   print([site.name for site in selected])
-
-.. code-block:: text
-
+   >>> print(type(selected).__name__)
    Sites
+   >>> print([site.name for site in selected])  # doctest: +NORMALIZE_WHITESPACE
    ['18-010U', '18-011A', '18-012A', '18-013U', '18-014A', '18-015U',
     '18-016A', '18-017U', '18-018A', '18-019U']
 
@@ -134,32 +130,28 @@ Supported pattern types are:
 ``list`` or ``tuple``
    Any mix of the above. A station is kept if any pattern matches.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import re
+   >>> import re
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import by_names
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import by_names
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   first_nine = by_names(sites, "18-00*")
-   stations_10_to_19 = by_names(sites, re.compile(r"^18-01[0-9][A-Z]+$"))
-   reviewed = by_names(sites, ["18-001A", "18-005U", "18-009A"])
-   ending_with_a = by_names(sites, lambda name: name.endswith("A"))
+   >>> first_nine = by_names(sites, "18-00*")
+   >>> stations_10_to_19 = by_names(sites, re.compile(r"^18-01[0-9][A-Z]+$"))
+   >>> reviewed = by_names(sites, ["18-001A", "18-005U", "18-009A"])
+   >>> ending_with_a = by_names(sites, lambda name: name.endswith("A"))
 
-   print(len(first_nine), [s.name for s in first_nine])
-   print(len(stations_10_to_19))
-   print([s.name for s in reviewed])
-   print(len(ending_with_a), [s.name for s in ending_with_a])
-
-.. code-block:: text
-
+   >>> print(len(first_nine), [s.name for s in first_nine])  # doctest: +NORMALIZE_WHITESPACE
    9 ['18-001A', '18-002U', '18-003A', '18-004A', '18-005U', '18-006A',
       '18-007U', '18-008U', '18-009A']
+   >>> print(len(stations_10_to_19))
    10
+   >>> print([s.name for s in reviewed])
    ['18-001A', '18-005U', '18-009A']
+   >>> print(len(ending_with_a), [s.name for s in ending_with_a])  # doctest: +NORMALIZE_WHITESPACE
    13 ['18-001A', '18-003A', '18-004A', '18-006A', '18-009A', '18-011A',
        '18-012A', '18-014A', '18-016A', '18-018A', '18-020A', '18-023A',
        '18-025A']
@@ -175,23 +167,19 @@ Index Selection
 normal Python sequence rules, so ``-1`` means the last station and ``-2`` means
 the station before it.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import by_index
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import by_index
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   first_and_last = by_index(sites, [0, -1])
-   second = by_index(sites, 1)
+   >>> first_and_last = by_index(sites, [0, -1])
+   >>> second = by_index(sites, 1)
 
-   print([site.name for site in first_and_last])
-   print([site.name for site in second])
-
-.. code-block:: text
-
+   >>> print([site.name for site in first_and_last])
    ['18-001A', '18-025A']
+   >>> print([site.name for site in second])
    ['18-002U']
 
 Invalid indices are ignored. If all requested indices are invalid, the result
@@ -200,16 +188,12 @@ is an empty ``Sites`` container.
 The output order follows the original survey order, not the order of the
 ``indices`` argument:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   subset = by_index(sites, [-1, 0])
+   >>> subset = by_index(sites, [-1, 0])
 
-   # The first station still appears before the last station in the result.
-   print([site.name for site in subset])
-
-.. code-block:: text
-
+   >>> # The first station still appears before the last station in the result.
+   >>> print([site.name for site in subset])
    ['18-001A', '18-025A']
 
 Chainage Selection
@@ -221,19 +205,15 @@ interval :math:`s_{min} \le s \le s_{max}`. The selector first looks for
 present on a freshly loaded EDI file, so calling it straight away skips
 every station:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import by_chainage
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import by_chainage
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   model_window = by_chainage(sites, smin=1_000.0, smax=8_000.0)
-   print(len(model_window))
-
-.. code-block:: text
-
+   >>> model_window = by_chainage(sites, smin=1_000.0, smax=8_000.0)
+   >>> print(len(model_window))
    0
 
 Stations without numeric chainage are skipped -- here, all of them. This
@@ -241,24 +221,20 @@ selector is only useful after a profile has already been computed and
 chainage values have been written onto the EDI headers or attached to the
 EDI objects, so build a profile first:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.profile import Profile
-   from pycsamt.site.selection import by_chainage
+   >>> from pycsamt.site.profile import Profile
+   >>> from pycsamt.site.selection import by_chainage
 
-   profile = Profile.from_sites(sites)
+   >>> profile = Profile.from_sites(sites)
 
-   for ed in sites:
-       # Store chainage on the raw EDI object for later selectors.
-       station = getattr(ed, "station", "")
-       ed.chainage = profile.chainages.get(station)
-
-   middle = by_chainage(sites, -2_000.0, -1_000.0)
-   print(len(middle), sorted(site.name for site in middle))
-
-.. code-block:: text
-
+   >>> for ed in sites:
+   ...     # Store chainage on the raw EDI object for later selectors.
+   ...     station = getattr(ed, "station", "")
+   ...     ed.chainage = profile.chainages.get(station)
+   ...
+   >>> middle = by_chainage(sites, -2_000.0, -1_000.0)
+   >>> print(len(middle), sorted(site.name for site in middle))  # doctest: +NORMALIZE_WHITESPACE
    11 ['18-012A', '18-013U', '18-014A', '18-015U', '18-016A', '18-017U',
        '18-018A', '18-019U', '18-020A', '18-021B', '18-021U']
 
@@ -277,27 +253,27 @@ Frequency Coverage Selection
 inside a closed interval.
 
 .. math::
+   :label: site-selection-frequency-overlap
 
-   f_{min} \le f_i \le f_{max}
+   \operatorname{keep}(S)=
+   \mathbb{1}\!\left[\exists i:\ f_i\text{ is finite and }
+   f_{\min}\leq f_i\leq f_{\max}\right].
 
 This is a station-level filter. It does not remove frequency rows from each
-station.
+station. Equation :eq:`site-selection-frequency-overlap` returns one Boolean
+decision for the whole station; it is not a frequency mask.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import by_freq
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import by_freq
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   broadband = by_freq(sites, fmin=0.1, fmax=1_000.0)
-   no_overlap = by_freq(sites, fmin=20_000.0, fmax=30_000.0)
+   >>> broadband = by_freq(sites, fmin=0.1, fmax=1_000.0)
+   >>> no_overlap = by_freq(sites, fmin=20_000.0, fmax=30_000.0)
 
-   print(len(broadband), len(no_overlap))
-
-.. code-block:: text
-
+   >>> print(len(broadband), len(no_overlap))
    28 0
 
 Every station on this line shares the same :term:`frequency grid`, so any
@@ -308,26 +284,22 @@ station to station, or when the window misses the data entirely, as
 frequency-indexed arrays, use :func:`pycsamt.site.edit.select_freq` for one
 site or :func:`pycsamt.site.edit.select_freq_all` for a collection.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.edit import select_freq_all
-   from pycsamt.site.selection import by_freq
+   >>> from pycsamt.site.edit import select_freq_all
+   >>> from pycsamt.site.selection import by_freq
 
-   sites = by_freq(sites, fmin=0.1, fmax=100.0)
-   sliced = select_freq_all(
-       sites,
-       fmin=0.1,
-       fmax=100.0,
-       inplace=False,
-   )
+   >>> sites = by_freq(sites, fmin=0.1, fmax=100.0)
+   >>> sliced = select_freq_all(
+   ...     sites,
+   ...     fmin=0.1,
+   ...     fmax=100.0,
+   ...     inplace=False,
+   ... )
 
-   print(len(sites))
-   print([len(s.freq) for s in sliced][:5])
-
-.. code-block:: text
-
+   >>> print(len(sites))
    28
+   >>> print([len(s.freq) for s in sliced][:5])
    [26, 26, 26, 26, 26]
 
 ``by_freq`` above only decided which 28 stations qualify;
@@ -340,33 +312,34 @@ Bounding Box Selection
 :func:`by_bbox` keeps stations inside an inclusive latitude/longitude box.
 
 .. math::
+   :label: site-selection-bounding-box
 
-   minlat \le lat \le maxlat
+   \operatorname{keep}(S)=
+   \mathbb{1}\!\left[
+   \phi_{\min}\leq\phi_S\leq\phi_{\max}
+   \ \land\
+   \lambda_{\min}\leq\lambda_S\leq\lambda_{\max}
+   \right],
 
-.. math::
+where :math:`\phi` denotes latitude and :math:`\lambda` longitude. Both
+boundaries in equation :eq:`site-selection-bounding-box` are inclusive.
 
-   minlon \le lon \le maxlon
+.. code-block:: pycon
 
-.. code-block:: python
-   :linenos:
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import by_bbox
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import by_bbox
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> field_area = by_bbox(
+   ...     sites,
+   ...     minlat=32.12,
+   ...     minlon=119.128,
+   ...     maxlat=32.13,
+   ...     maxlon=119.130,
+   ... )
 
-   field_area = by_bbox(
-       sites,
-       minlat=32.12,
-       minlon=119.128,
-       maxlat=32.13,
-       maxlon=119.130,
-   )
-
-   print(len(field_area), sorted(site.name for site in field_area))
-
-.. code-block:: text
-
+   >>> print(len(field_area), sorted(site.name for site in field_area))  # doctest: +NORMALIZE_WHITESPACE
    11 ['18-001A', '18-002U', '18-003A', '18-004A', '18-005U', '18-006A',
        '18-007U', '18-008U', '18-009A', '18-010U', '18-011A']
 
@@ -388,26 +361,22 @@ Custom Predicate Selection
 ``True``. The predicate receives the raw EDI-like object, not a
 :class:`pycsamt.site.base.Site` wrapper.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.base import Site
-   from pycsamt.site.selection import by_predicate
+   >>> from pycsamt.site.base import Site
+   >>> from pycsamt.site.selection import by_predicate
 
-   stations_with_tipper = by_predicate(
-       sites,
-       lambda ed: Site(ed).has_component("tipper"),
-   )
+   >>> stations_with_tipper = by_predicate(
+   ...     sites,
+   ...     lambda ed: Site(ed).has_component("tipper"),
+   ... )
 
-   enough_frequencies = by_predicate(
-       sites,
-       lambda ed: len(Site(ed).freq) >= 8,
-   )
+   >>> enough_frequencies = by_predicate(
+   ...     sites,
+   ...     lambda ed: len(Site(ed).freq) >= 8,
+   ... )
 
-   print(len(stations_with_tipper), len(enough_frequencies))
-
-.. code-block:: text
-
+   >>> print(len(stations_with_tipper), len(enough_frequencies))
    0 28
 
 None of these stations carry :term:`tipper` data, so the first predicate
@@ -420,39 +389,35 @@ Use ``by_predicate`` for project logic that is too specific for the standard
 selectors. This line has three station numbers that were occupied twice,
 under different letter suffixes:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import re
+   >>> import re
 
-   from pycsamt.site.utils import station_name
+   >>> from pycsamt.site.utils import station_name
 
-   seen = set()
+   >>> seen = set()
 
-   def keep_first_occupation(ed):
-       # Match the trailing "-<number><letters>" so this works whether
-       # ``ed``'s station identity has already been normalized to
-       # "18-001A" or still carries a raw EDI dataid like "23-18-001A".
-       name = station_name(ed)
-       number = re.search(r"-(\d{3})[A-Za-z]+$", name).group(1)
-       if number in seen:
-           return False
-       seen.add(number)
-       return True
+   >>> def keep_first_occupation(ed):
+   ...     # Match the trailing "-<number><letters>" so this works whether
+   ...     # ``ed``'s station identity has already been normalized to
+   ...     # "18-001A" or still carries a raw EDI dataid like "23-18-001A".
+   ...     name = station_name(ed)
+   ...     number = re.search(r"-(\d{3})[A-Za-z]+$", name).group(1)
+   ...     if number in seen:
+   ...         return False
+   ...     seen.add(number)
+   ...     return True
+   ...
+   >>> first_occupations = by_predicate(sites, keep_first_occupation)
+   >>> # ``sites`` holds raw EDI objects (no ``.name``); ``first_occupations``
+   >>> # holds Site wrappers. Compare through the shared station_name() helper.
+   >>> dropped = {station_name(ed) for ed in sites} - {
+   ...     station_name(s.edi) for s in first_occupations
+   ... }
 
-   first_occupations = by_predicate(sites, keep_first_occupation)
-   # ``sites`` holds raw EDI objects (no ``.name``); ``first_occupations``
-   # holds Site wrappers. Compare through the shared station_name() helper.
-   dropped = {station_name(ed) for ed in sites} - {
-       station_name(s.edi) for s in first_occupations
-   }
-
-   print(len(first_occupations))
-   print(sorted(dropped))
-
-.. code-block:: text
-
+   >>> print(len(first_occupations))
    25
+   >>> print(sorted(dropped))
    ['18-021U', '18-022V', '18-023V']
 
 Stations ``21``, ``22``, and ``23`` were each recorded twice --
@@ -470,19 +435,15 @@ Finite Impedance Selection
 impedance value. If impedance values are unavailable, it falls back to common
 resistivity array names such as ``_resistivity``, ``resistivity``, or ``rho``.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.selection import keep_finite_z
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.selection import keep_finite_z
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
-   valid = keep_finite_z(sites)
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> valid = keep_finite_z(sites)
 
-   print(f"{len(valid)} stations contain finite impedance data")
-
-.. code-block:: text
-
+   >>> print(f"{len(valid)} stations contain finite impedance data")
    28 stations contain finite impedance data
 
 This is the selector to run before diagnostics that require real impedance
@@ -500,17 +461,26 @@ not mask individual data rows. A station is kept when:
 * the phase-error array is empty or entirely non-finite;
 * the maximum finite phase error is less than or equal to ``thresh``.
 
-.. code-block:: python
-   :linenos:
+When a finite phase-error array exists, the implemented station-level rule is
 
-   from pycsamt.site.selection import mask_large_phase_err
+.. math::
+   :label: site-selection-phase-error
 
-   conservative = mask_large_phase_err(sites, thresh=10.0)
+   e_{\max}(S)=\max_{i,j,k\,:\,e_{ijk}\text{ finite}}e_{ijk},
+   \qquad
+   \operatorname{keep}(S)=\mathbb{1}[e_{\max}(S)\leq\tau],
 
-   print([site.name for site in conservative])
+with threshold :math:`\tau=\texttt{thresh}`. If no usable error value exists,
+the implementation bypasses equation :eq:`site-selection-phase-error` and
+keeps the station by default.
 
-.. code-block:: text
+.. code-block:: pycon
 
+   >>> from pycsamt.site.selection import mask_large_phase_err
+
+   >>> conservative = mask_large_phase_err(sites, thresh=10.0)
+
+   >>> print([site.name for site in conservative])
    []
 
 Every station on this line has a stored phase-error array whose maximum
@@ -519,14 +489,10 @@ finite value is a ``90``-degree sentinel -- except two, ``18-001A`` and
 gate is stricter than any of them, so it empties the collection; loosen it
 past the two genuine values and only they survive:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   conservative = mask_large_phase_err(sites, thresh=30.0)
-   print([site.name for site in conservative])
-
-.. code-block:: text
-
+   >>> conservative = mask_large_phase_err(sites, thresh=30.0)
+   >>> print([site.name for site in conservative])
    ['18-001A', '18-019U']
 
 Common phase-error attributes are checked on the ``Z`` container, including
@@ -537,25 +503,21 @@ best used as a quality gate after a processing step that actually produced
 phase-error products. If absence of error estimates should be considered a
 failure in your workflow, combine this selector with a stricter predicate.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.site.selection import by_predicate, mask_large_phase_err
+   >>> from pycsamt.site.selection import by_predicate, mask_large_phase_err
 
-   def has_phase_error(ed):
-       z = getattr(ed, "Z", None)
-       arr = getattr(z, "_phase_err", None) if z is not None else None
-       return arr is not None and np.asarray(arr).size > 0
+   >>> def has_phase_error(ed):
+   ...     z = getattr(ed, "Z", None)
+   ...     arr = getattr(z, "_phase_err", None) if z is not None else None
+   ...     return arr is not None and np.asarray(arr).size > 0
+   ...
+   >>> with_errors = by_predicate(sites, has_phase_error)
+   >>> clean = mask_large_phase_err(with_errors, thresh=30.0)
 
-   with_errors = by_predicate(sites, has_phase_error)
-   clean = mask_large_phase_err(with_errors, thresh=30.0)
-
-   print(len(with_errors), len(clean))
-
-.. code-block:: text
-
+   >>> print(len(with_errors), len(clean))
    28 2
 
 All 28 stations here do carry a phase-error array -- so ``with_errors``
@@ -563,6 +525,84 @@ changes nothing by itself on this survey -- but chaining it in front of
 ``mask_large_phase_err`` is what makes the pipeline strict on data that
 *doesn't* store phase error, turning "kept by default" into "kept only with
 evidence."
+
+The geographic and phase-error decisions can be audited together. Orange
+points in the map satisfy the inclusive box used earlier; green bars satisfy
+the 30-degree whole-station error gate:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> import numpy as np
+   >>> from matplotlib.patches import Rectangle
+   >>> from pycsamt.site.base import Site
+   >>> from pycsamt.site.utils import get_coords
+
+   >>> edis = list(EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT"))
+   >>> names = [Site(ed).name for ed in edis]
+   >>> coords = [get_coords(ed) for ed in edis]
+   >>> lats = np.asarray([coord.lat for coord in coords])
+   >>> lons = np.asarray([coord.lon for coord in coords])
+   >>> bbox = (32.12, 119.128, 32.13, 119.130)
+   >>> inside = (
+   ...     (lats >= bbox[0]) & (lats <= bbox[2])
+   ...     & (lons >= bbox[1]) & (lons <= bbox[3])
+   ... )
+
+   >>> maxima = []
+   >>> for ed in edis:
+   ...     errors = np.asarray(getattr(ed.Z, "_phase_err", []), dtype=float)
+   ...     finite = errors[np.isfinite(errors)]
+   ...     maxima.append(float(np.max(finite)) if finite.size else np.nan)
+   ...
+   >>> maxima = np.asarray(maxima)
+   >>> passes = maxima <= 30.0
+
+   >>> fig, ax = plt.subplots(1, 2, figsize=(11, 4), constrained_layout=True)
+   >>> _ = ax[0].scatter(lons[~inside], lats[~inside], color="0.72", label="outside")
+   >>> _ = ax[0].scatter(lons[inside], lats[inside], color="#d95f02", label="inside")
+   >>> _ = ax[0].add_patch(Rectangle(
+   ...     (bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0],
+   ...     fill=False, edgecolor="#d95f02", linewidth=1.5,
+   ... ))
+   >>> _ = ax[0].set(
+   ...     xlabel="longitude", ylabel="latitude", title="Inclusive bounding box"
+   ... )
+   >>> ax[0].ticklabel_format(axis="x", style="plain", useOffset=False)
+   >>> _ = ax[0].legend(frameon=False)
+
+   >>> colors = np.where(passes, "#1b9e77", "0.68")
+   >>> _ = ax[1].bar(np.arange(len(names)), maxima, color=colors)
+   >>> _ = ax[1].axhline(
+   ...     30.0, color="#d95f02", linestyle="--", label="threshold = 30°"
+   ... )
+   >>> _ = ax[1].set(
+   ...     xticks=np.arange(len(names)), xticklabels=names,
+   ...     ylabel="maximum finite phase error (degrees)",
+   ...     title="Whole-station phase-error gate",
+   ... )
+   >>> ax[1].tick_params(axis="x", labelrotation=90, labelsize=7)
+   >>> _ = ax[1].legend(frameon=False)
+   >>> for axis in ax:
+   ...     axis.grid(True, axis="y", alpha=0.22)
+   ...
+   >>> fig.savefig("selection_bbox_phase_error.png", dpi=180)
+
+.. figure:: ../../images/user_guide/site/selection_bbox_phase_error.png
+   :alt: L18PLT station map showing an inclusive bounding box beside maximum phase-error bars and a 30-degree threshold.
+   :width: 100%
+   :align: center
+
+   Two independent station-level decisions on ``L18PLT``: geographic
+   inclusion on the left and maximum phase-error acceptance on the right.
+
+The box retains the southern 11 stations because its northern edge is
+``lat=32.13``. The phase gate tells a different story: only ``18-001A`` and
+``18-019U`` lie below 30 degrees. The remaining grey bars reach the stored
+90-degree sentinel, so their rejection reflects that value—not geographic
+position or missing impedance. Combining the selectors computes the
+intersection of these independent conditions; it should not be interpreted as
+one selector confirming the other.
 
 Empty Site Selection
 --------------------
@@ -576,18 +616,14 @@ considered empty when:
 * available arrays are empty, entirely non-finite, or only huge sentinel
   values.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.selection import drop_empty, keep_finite_z
+   >>> from pycsamt.site.selection import drop_empty, keep_finite_z
 
-   non_empty = drop_empty(sites)
-   finite = keep_finite_z(non_empty)
+   >>> non_empty = drop_empty(sites)
+   >>> finite = keep_finite_z(non_empty)
 
-   print(len(non_empty), len(finite))
-
-.. code-block:: text
-
+   >>> print(len(non_empty), len(finite))
    28 28
 
 None of this line's stations are structurally empty, so both steps pass all
@@ -603,24 +639,20 @@ The :class:`pycsamt.site.base.Sites` container also exposes a compact
 :meth:`pycsamt.site.base.Sites.select` method. Use it for simple name lists or
 wrapper-based predicates.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.base import Sites
+   >>> from pycsamt.site.base import Sites
 
-   sites = Sites.from_any("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = Sites.from_any("data/AMT/WILLY_DATA/L18PLT")
 
-   reviewed = sites.select(names=["18-001A", "18-003A"])
-   with_zxy = sites.select(
-       predicate=lambda site: site.has_component("Zxy")
-   )
+   >>> reviewed = sites.select(names=["18-001A", "18-003A"])
+   >>> with_zxy = sites.select(
+   ...     predicate=lambda site: site.has_component("Zxy")
+   ... )
 
-   print([s.name for s in reviewed])
-   print(len(with_zxy))
-
-.. code-block:: text
-
+   >>> print([s.name for s in reviewed])
    ['18-001A', '18-003A']
+   >>> print(len(with_zxy))
    28
 
 Use the functions in :mod:`pycsamt.site.selection` when you need richer
@@ -634,51 +666,47 @@ Selectors compose naturally because each one returns a ``Sites`` object.
 Order the pipeline from cheap structural filters to more specific project
 filters.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.edit import select_freq_all
-   from pycsamt.site.selection import (
-       by_bbox,
-       by_freq,
-       by_names,
-       drop_empty,
-       keep_finite_z,
-       mask_large_phase_err,
-   )
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.edit import select_freq_all
+   >>> from pycsamt.site.selection import (
+   ...     by_bbox,
+   ...     by_freq,
+   ...     by_names,
+   ...     drop_empty,
+   ...     keep_finite_z,
+   ...     mask_large_phase_err,
+   ... )
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
 
-   sites = drop_empty(sites)
-   sites = keep_finite_z(sites)
-   sites = by_names(sites, ["18-00*", "18-01*"])
-   sites = by_bbox(
-       sites,
-       minlat=32.12,
-       minlon=119.128,
-       maxlat=32.20,
-       maxlon=119.130,
-   )
-   sites = by_freq(sites, fmin=0.1, fmax=10_000.0)
-   sites = mask_large_phase_err(sites, thresh=30.0)
+   >>> sites = drop_empty(sites)
+   >>> sites = keep_finite_z(sites)
+   >>> sites = by_names(sites, ["18-00*", "18-01*"])
+   >>> sites = by_bbox(
+   ...     sites,
+   ...     minlat=32.12,
+   ...     minlon=119.128,
+   ...     maxlat=32.20,
+   ...     maxlon=119.130,
+   ... )
+   >>> sites = by_freq(sites, fmin=0.1, fmax=10_000.0)
+   >>> sites = mask_large_phase_err(sites, thresh=30.0)
 
-   print(len(sites), [s.name for s in sites])
-
-   # Now modify the frequency rows, after selecting stations that overlap
-   # the requested band.
-   prepared = select_freq_all(
-       sites,
-       fmin=0.1,
-       fmax=100.0,
-       inplace=False,
-   )
-
-   print([len(s.freq) for s in prepared])
-
-.. code-block:: text
-
+   >>> print(len(sites), [s.name for s in sites])
    2 ['18-001A', '18-019U']
+
+   >>> # Now modify the frequency rows, after selecting stations that overlap
+   >>> # the requested band.
+   >>> prepared = select_freq_all(
+   ...     sites,
+   ...     fmin=0.1,
+   ...     fmax=100.0,
+   ...     inplace=False,
+   ... )
+
+   >>> print([len(s.freq) for s in prepared])
    [26, 26]
 
 Structural and name filters narrow 28 stations to 19; the bounding box and
@@ -703,39 +731,35 @@ should normally answer four questions:
 
 For a 2-D profile workflow, combine selectors with the profile tools:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.collection import EDICollection
-   from pycsamt.site.profile import Profile
-   from pycsamt.site.selection import (
-       by_chainage,
-       by_freq,
-       drop_empty,
-       keep_finite_z,
-   )
+   >>> from pycsamt.seg.collection import EDICollection
+   >>> from pycsamt.site.profile import Profile
+   >>> from pycsamt.site.selection import (
+   ...     by_chainage,
+   ...     by_freq,
+   ...     drop_empty,
+   ...     keep_finite_z,
+   ... )
 
-   sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
-   sites = drop_empty(sites)
-   sites = keep_finite_z(sites)
-   sites = by_freq(sites, 0.1, 10_000.0)
+   >>> sites = EDICollection.from_sources("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = drop_empty(sites)
+   >>> sites = keep_finite_z(sites)
+   >>> sites = by_freq(sites, 0.1, 10_000.0)
 
-   profile = Profile.from_sites(sites)
+   >>> profile = Profile.from_sites(sites)
 
-   for ed in sites:
-       # ``sites`` is already a Sites wrapper here, so iterating it
-       # yields Site objects: use the normalized ``.name`` and reach
-       # through ``.edi`` to store chainage on the underlying EDI, which
-       # is what by_chainage actually inspects.
-       ed.edi.chainage = profile.chainages.get(ed.name)
+   >>> for ed in sites:
+   ...     # ``sites`` is already a Sites wrapper here, so iterating it
+   ...     # yields Site objects: use the normalized ``.name`` and reach
+   ...     # through ``.edi`` to store chainage on the underlying EDI, which
+   ...     # is what by_chainage actually inspects.
+   ...     ed.edi.chainage = profile.chainages.get(ed.name)
+   ...
+   >>> model_sites = by_chainage(sites, -2_000.0, -200.0)
+   >>> ordered = profile.sort_sites(model_sites)
 
-   model_sites = by_chainage(sites, -2_000.0, -200.0)
-   ordered = profile.sort_sites(model_sites)
-
-   print(len(model_sites))
-
-.. code-block:: text
-
+   >>> print(len(model_sites))
    19
 
 Once ``sites`` has passed through any selector, it is a
@@ -750,19 +774,15 @@ actually reads.
 For a 3-D or map-based workflow, prefer geographic selection and then export
 or modelling preparation:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.selection import by_bbox, by_freq, keep_finite_z
+   >>> from pycsamt.site.selection import by_bbox, by_freq, keep_finite_z
 
-   cube_sites = keep_finite_z(sites)
-   cube_sites = by_bbox(cube_sites, 32.12, 119.128, 32.20, 119.130)
-   cube_sites = by_freq(cube_sites, 0.01, 10_000.0)
+   >>> cube_sites = keep_finite_z(sites)
+   >>> cube_sites = by_bbox(cube_sites, 32.12, 119.128, 32.20, 119.130)
+   >>> cube_sites = by_freq(cube_sites, 0.01, 10_000.0)
 
-   print(len(cube_sites))
-
-.. code-block:: text
-
+   >>> print(len(cube_sites))
    28
 
 Common Mistakes

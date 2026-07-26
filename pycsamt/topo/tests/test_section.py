@@ -604,7 +604,7 @@ class TestPlotTopoSectionDefaultStyling:
 
 class TestPlotTopoSectionRealData:
     @pytest.mark.parametrize(
-        "profile", ["L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"]
+        "profile", ["L18PLT", "L22PLT"]
     )
     def test_pcolormesh_all_profiles(self, profile):
         edis = _load(profile)

@@ -66,6 +66,12 @@ from .labels import (
     STATION_LABEL,
     period_axis_label,
 )
+from .ordering import (
+    PYCSAMT_ORDERING,
+    SiteOrderingConfig,
+    configure_ordering,
+    reset_ordering,
+)
 from .pipe import (
     PYCSAMT_PIPE,
     PipelineAPIConfig,
@@ -142,6 +148,11 @@ from .view import (
 )
 
 __all__ = [
+    # site-ordering API
+    "PYCSAMT_ORDERING",
+    "SiteOrderingConfig",
+    "configure_ordering",
+    "reset_ordering",
     # topography API
     "TopoConfig",
     "PYCSAMT_TOPO",

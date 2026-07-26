@@ -362,6 +362,7 @@ def ensure_sites(
     *,
     recursive: bool = True,
     on_dup: str = "replace",
+    order_by: str | None = None,
     strict: bool = False,
     verbose: int = 0,
 ):
@@ -388,6 +389,13 @@ def ensure_sites(
 default="replace"
         Duplicate site-name policy. See
         :func:`pycsamt.seg.base.to_sites` for semantics.
+    order_by : {"auto", "chainage", "input", "station", "latitude", \
+"longitude"}, optional
+        Site ordering policy. ``None`` uses the package-wide
+        :data:`pycsamt.api.PYCSAMT_ORDERING` setting. Automatic mode uses
+        coordinate-derived profile chainage only when the coordinates pass a
+        conservative single-line geometry check; otherwise input order is
+        preserved.
     strict : bool, default=False
         If ``True``, raise when no items can be resolved.
     verbose : int, default=0
@@ -457,4 +465,8 @@ default="replace"
             "given input."
         )
 
-    return S
+    # ``Sites.ordered`` resolves ``None`` through the process-wide ordering
+    # configuration, including its spatial-validation thresholds.  Keeping
+    # that resolution in one place also preserves compatibility with custom
+    # Sites-like implementations that expose the simple ``ordered(by)`` API.
+    return S.ordered(order_by)

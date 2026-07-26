@@ -150,6 +150,63 @@ def test_sites_closest(tmp_path: Path, simulated_edi: Path) -> None:
     assert near is None
 
 
+def test_sites_ordered_auto_uses_validated_chainage(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    made = []
+    for number, lat in ((3, 0.03), (1, 0.01), (4, 0.04), (2, 0.02)):
+        site, _ = _mk_two_sites(
+            tmp_path, simulated_edi, f"LINE{number:02d}", f"unused{number}"
+        )
+        site.set_coords(lat, 10.0 + lat * 0.01, 0.0, inplace=True)
+        made.append(site.edi)
+
+    original = Sites(made)
+    ordered = original.ordered("auto")
+
+    assert [s.name for s in ordered] == ["LINE01", "LINE02", "LINE03", "LINE04"]
+    assert [s.name for s in original] == ["LINE03", "LINE01", "LINE04", "LINE02"]
+    assert ordered.ordering["applied"] == "chainage"
+    assert ordered.ordering["linearity"] >= 0.95
+
+
+def test_sites_ordered_auto_preserves_non_line_geometry(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    names_xy = [
+        ("Q03", 0.0, 0.0),
+        ("Q01", 0.0, 1.0),
+        ("Q04", 1.0, 1.0),
+        ("Q02", 1.0, 0.0),
+    ]
+    made = []
+    for i, (name, lat, lon) in enumerate(names_xy):
+        site, _ = _mk_two_sites(tmp_path, simulated_edi, name, f"unused_q{i}")
+        site.set_coords(lat, lon, 0.0, inplace=True)
+        made.append(site.edi)
+
+    ordered = Sites(made).ordered("auto")
+
+    assert [s.name for s in ordered] == [p[0] for p in names_xy]
+    assert ordered.ordering["applied"] == "input"
+    assert "credible straight line" in ordered.ordering["reason"]
+
+
+def test_sites_ordered_chainage_retains_missing_coordinates(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    s2, missing = _mk_two_sites(tmp_path, simulated_edi, "S02", "MISSING")
+    s1, _ = _mk_two_sites(tmp_path, simulated_edi, "S01", "unused_missing")
+    s2.set_coords(0.0, 2.0, 0.0, inplace=True)
+    s1.set_coords(0.0, 1.0, 0.0, inplace=True)
+    missing.set_coords(float("nan"), float("nan"), 0.0, inplace=True)
+
+    ordered = Sites([s2.edi, missing.edi, s1.edi]).ordered("chainage")
+
+    assert [s.name for s in ordered] == ["S01", "S02", "MISSING"]
+    assert ordered.ordering["applied"] == "chainage"
+
+
 def test_sites_edit_all_rename_and_slice(
     tmp_path: Path, simulated_edi: Path
 ) -> None:

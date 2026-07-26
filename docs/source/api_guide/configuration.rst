@@ -70,6 +70,89 @@ Batch runs often prefer log-style progress and intermediate saves:
        save_intermediate=True,
    )
 
+Site Ordering
+-------------
+
+Set the station-ordering policy once for the current Python process.  Calls
+that normalize their inputs through :func:`pycsamt.emtools.ensure_sites`, and
+direct calls to :meth:`pycsamt.site.Sites.ordered` without a ``by`` argument,
+then use the same policy:
+
+.. code-block:: python
+
+   from pycsamt.api import configure_ordering, PYCSAMT_ORDERING
+   from pycsamt.emtools import ensure_sites
+
+   configure_ordering(mode="auto")
+   sites = ensure_sites("data/AMT/WILLY_DATA/L22PLT")
+
+   print(PYCSAMT_ORDERING)
+   print(sites.ordering)
+
+``auto`` is the recommended default for survey lines.  It converts latitude
+and longitude to local metre coordinates, finds the principal profile axis,
+and sorts stations by projected chainage.  It applies that spatial order only
+when the coordinates describe a credible approximately straight line.  If
+coordinates are missing or fail the geometry checks, input order is preserved
+instead of guessing from station names or from only one coordinate component.
+
+Available modes are:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Mode
+     - Behaviour
+   * - ``auto``
+     - Use validated coordinate-derived chainage; otherwise preserve input
+       order.
+   * - ``chainage``
+     - Force projection along the coordinate-derived profile axis. Sites
+       without usable coordinates remain at the end in their input order.
+   * - ``input``
+     - Preserve the order received from the loader or caller.
+   * - ``station``
+     - Natural numeric station-name order, for example ``S2`` before ``S10``.
+   * - ``latitude``
+     - Sort by latitude only.
+   * - ``longitude``
+     - Sort by longitude only.
+
+The conservative acceptance thresholds for ``auto`` can be adjusted for a
+known survey geometry:
+
+.. code-block:: python
+
+   configure_ordering(
+       mode="auto",
+       min_linearity=0.95,
+       max_cross_track_ratio=0.15,
+       min_coordinate_fraction=0.60,
+   )
+
+An explicit per-call strategy remains authoritative and does not change the
+global setting:
+
+.. code-block:: python
+
+   original = ensure_sites(path, order_by="input")
+   named = sites.ordered("station")
+
+Use a context when only one block of work needs a different strategy.  The
+previous configuration is restored even if the block raises an exception:
+
+.. code-block:: python
+
+   with PYCSAMT_ORDERING.context(mode="station"):
+       named_sites = ensure_sites(path)
+
+   # Back to the configuration active before the context.
+
+The configuration is process-local: set it near the start of each script,
+notebook kernel, worker process, or application startup.  Restore package
+defaults with :func:`pycsamt.api.reset_ordering`.
+
 CLI Defaults
 ------------
 
@@ -205,11 +288,18 @@ Each family has a ``reset_*`` helper; together they restore a clean session:
 
 .. code-block:: python
 
-   from pycsamt.api import reset_api_view, reset_cli, reset_pipe, reset_style
+   from pycsamt.api import (
+       reset_api_view,
+       reset_cli,
+       reset_ordering,
+       reset_pipe,
+       reset_style,
+   )
    from pycsamt.agents import reset_agents
 
    reset_api_view()
    reset_cli()
+   reset_ordering()
    reset_pipe()
    reset_style()
    reset_agents()

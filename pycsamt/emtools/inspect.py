@@ -683,6 +683,13 @@ def pseudosection(
         values=quantity,
         aggfunc="median",
     )
+    if axis_x == "station":
+        # pivot_table sorts labels lexically by default, which destroys the
+        # validated chainage order established by ensure_sites (e.g. S1,
+        # S10, S2). Reindex to the canonical Sites sequence.
+        site_order = [_name(ed, i) for i, ed in enumerate(_iter_items(S))]
+        present = set(piv.columns)
+        piv = piv.reindex(columns=[name for name in site_order if name in present])
     # Sort periods ascending; shallow (short period) will go to the top.
     piv = piv.sort_index()
     Y = piv.index.to_numpy()  # period values, ascending

@@ -56,6 +56,25 @@ def test_ensure_sites_rejects_none_before_loader():
         _core.ensure_sites(None)
 
 
+def test_ensure_sites_forwards_default_global_order(monkeypatch):
+    class _OrderedSites:
+        def ordered(self, by):
+            self.by = by
+            return self
+
+        def __len__(self):
+            return 1
+
+    fake = _OrderedSites()
+    monkeypatch.setattr("pycsamt.site.base.to_sites", lambda *args, **kwargs: fake)
+    monkeypatch.setattr("pycsamt.site.base.Sites", _OrderedSites)
+
+    out = _core.ensure_sites("ignored")
+
+    assert out is fake
+    assert out.by is None
+
+
 def test_qc_table_has_stable_columns_and_skips_invalid_z(monkeypatch):
     valid = _site("S01")
     invalid = SimpleNamespace(

@@ -1405,7 +1405,7 @@ def plot_strike_profile(
     *,
     method: str = "consensus",  # consensus|sweep|pt
     band: tuple[float, float] | None = None,
-    sort_by: str = "auto",  # auto|lon|lat|name
+    sort_by: str | None = None,  # global|auto|chainage|input|lon|lat|name
     figsize: tuple[float, float] = (8.6, 3.8),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1417,6 +1417,7 @@ def plot_strike_profile(
         sites,
         recursive=recursive,
         on_dup=on_dup,
+        order_by=sort_by,
         strict=strict,
         verbose=verbose,
     )
@@ -1461,14 +1462,17 @@ def plot_strike_profile(
             return (1, st) if y is None else (0, float(y))
         if sort_by == "name":
             return (0, st)
-        # auto: lon then name
-        return (0, float(x)) if x is not None else (1, st)
+        # auto/chainage/input: ensure_sites already established the order
+        return (0, 0)
 
     order = []
     for i, ed in enumerate(_iter_items(S)):
         st = _name(ed, i)
         order.append((st, _key(st, ed)))
-    order = [st for st, _ in sorted(order, key=lambda t: t[1])]
+    if sort_by in (None, "auto", "chainage", "profile", "spatial", "input"):
+        order = [st for st, _ in order]
+    else:
+        order = [st for st, _ in sorted(order, key=lambda t: t[1])]
     tb = tb.set_index("station").reindex(order).reset_index()
     ang = tb["ang"].to_numpy(dtype=float) % 180.0
     iq = tb["iqr"].to_numpy(dtype=float)

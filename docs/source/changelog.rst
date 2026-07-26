@@ -22,6 +22,59 @@ carries a colour-coded badge so the log can be scanned at a glance:
 
 ----
 
+.. _changelog-2-0-1:
+
+2.0.1 |Fix| |API Change| |Docs| |Tests|
+-----------------------------------------
+
+*Maintenance release for deterministic, spatially correct station ordering.
+See* :ref:`release_v2_0_1` *for upgrade guidance and migration examples.*
+
+Added
+~~~~~
+
+* |API Change| **Global station-ordering policy** -- added
+  :func:`pycsamt.api.configure_ordering`,
+  :func:`pycsamt.api.reset_ordering`, ``PYCSAMT_ORDERING``, and
+  :class:`pycsamt.api.SiteOrderingConfig`. Configure ``mode="auto"`` once and
+  APIs using :func:`pycsamt.emtools.ensure_sites` inherit it.
+* |API Change| **Sites ordering API** -- added
+  :meth:`pycsamt.site.Sites.ordered` with ``auto``, ``chainage``, ``input``,
+  natural ``station``, ``latitude``, and ``longitude`` strategies, plus
+  :attr:`pycsamt.site.Sites.ordering` diagnostics.
+* |Tests| **Spatial regression coverage** -- added synthetic edge cases and
+  real-data tests for the bundled L18PLT and L22PLT survey lines, including a
+  combined multiple-line collection.
+
+Fixed
+~~~~~
+
+* |Fix| **Oblique survey lines** -- order is derived from both geographic
+  coordinates and projected chainage instead of longitude, latitude, or
+  lexical station names alone.
+* |Fix| **Unsafe geometry guesses** -- ``auto`` validates coordinate coverage,
+  linearity, and cross-track spread and preserves input order when the spatial
+  evidence is insufficient.
+* |Fix| **Multiple-line interleaving** -- separated parallel profiles are
+  ordered independently.
+* |Fix| **Pseudosection station order** -- dataframe pivots no longer replace
+  canonical profile order with lexical column order.
+* |Fix| **Processing consistency** -- static-shift and near-surface methods,
+  field-zone and CS/AMT sections, strike profiles, and pipeline presets now
+  inherit the shared ordering strategy by default.
+
+Changed
+~~~~~~~
+
+* |API Change| Processing ``sort_by=None`` and
+  :func:`pycsamt.emtools.ensure_sites` ``order_by=None`` now mean "use the
+  global policy". Explicit arguments still override it; select ``input`` to
+  retain loader order.
+* |Docs| Added configuration, migration, override, threshold, reset, and
+  compatibility guidance for the ordering policy.
+
+----
+
 .. _changelog-2-0-0:
 
 2.0.0 |Feature| |API Change| |Breaking|

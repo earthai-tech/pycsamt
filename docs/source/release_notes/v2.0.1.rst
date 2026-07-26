@@ -8,10 +8,12 @@ pyCSAMT 2.0.1 |Fix| |API Change| |Docs| |Tests|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This maintenance release fixes incorrect station placement along survey
-profiles.  Processing and plotting no longer have to infer profile order from
-station names, longitude alone, or latitude alone.  A shared spatial-ordering
-policy now follows the two-dimensional station geometry and is used
-consistently throughout pyCSAMT.
+profiles and introduces validated, auditable station-metadata editing.
+Processing and plotting no longer have to infer profile order from station
+names, longitude alone, or latitude alone. A shared spatial-ordering policy
+now follows the two-dimensional station geometry and is used consistently
+throughout pyCSAMT. Metadata changes can likewise be planned, validated, and
+reviewed before edited EDI files are delivered.
 
 Why this fix matters
 ~~~~~~~~~~~~~~~~~~~~
@@ -44,13 +46,18 @@ the script or notebook:
 
    >>> from pycsamt.api import configure_ordering
 
-   >>> configure_ordering(mode="auto")
+   >>> _ = configure_ordering(mode="auto")
 
    >>> # Existing processing calls now inherit the same spatial order.
    >>> from pycsamt.emtools import ensure_sites
 
    >>> sites = ensure_sites("data/AMT/WILLY_DATA/L22PLT")
-   >>> print(sites.ordering)
+   >>> print(sites.ordering["requested"])
+   auto
+   >>> print(sites.ordering["applied"])
+   chainage
+   >>> print(sites.ordering["n_sites"])
+   25
 
 That single call fixes the ordering for APIs that normalize data through
 :func:`pycsamt.emtools.ensure_sites`, including the affected static-shift,
@@ -68,8 +75,13 @@ Old code often selected one coordinate axis manually:
 
 .. code-block:: pycon
 
-   >>> corrected = correct_ss_ama(edi_path, sort_by="lon")
-   >>> section = plot_field_zones(edi_path, sort_by="name")
+   >>> edi_path = "data/AMT/WILLY_DATA/L22PLT"
+   >>> corrected = correct_ss_ama(  # doctest: +SKIP
+   ...     edi_path, sort_by="lon"
+   ... )
+   >>> section = plot_field_zones(  # doctest: +SKIP
+   ...     edi_path, sort_by="name"
+   ... )
 
 The recommended replacement configures the geometry policy once and lets all
 participating tools inherit it:
@@ -79,19 +91,25 @@ participating tools inherit it:
    >>> from pycsamt.api import configure_ordering
    >>> from pycsamt.emtools import correct_ss_ama, plot_field_zones
 
-   >>> configure_ordering(mode="auto")
+   >>> _ = configure_ordering(mode="auto")
 
-   >>> corrected = correct_ss_ama(edi_path)
-   >>> section = plot_field_zones(edi_path)
+   >>> corrected = correct_ss_ama(edi_path)  # doctest: +SKIP
+   >>> section = plot_field_zones(edi_path)  # doctest: +SKIP
 
 Explicit per-call choices still override the global setting without changing
 it:
 
 .. code-block:: pycon
 
-   >>> original_order = ensure_sites(edi_path, order_by="input")
-   >>> forced_profile = ensure_sites(edi_path, order_by="chainage")
-   >>> station_order = ensure_sites(edi_path, order_by="station")
+   >>> original_order = ensure_sites(  # doctest: +SKIP
+   ...     edi_path, order_by="input"
+   ... )
+   >>> forced_profile = ensure_sites(  # doctest: +SKIP
+   ...     edi_path, order_by="chainage"
+   ... )
+   >>> station_order = ensure_sites(  # doctest: +SKIP
+   ...     edi_path, order_by="station"
+   ... )
 
 Use ``chainage`` only when spatial projection must be forced even if the
 automatic geometry checks reject the line.  Use ``input`` when an external
@@ -101,7 +119,7 @@ For unusual field geometry, tune the automatic acceptance thresholds once:
 
 .. code-block:: pycon
 
-   >>> configure_ordering(
+   >>> _ = configure_ordering(
    ...     mode="auto",
    ...     min_linearity=0.95,
    ...     max_cross_track_ratio=0.15,
@@ -110,6 +128,41 @@ For unusual field geometry, tune the automatic acceptance thresholds once:
 
 Inspect ``sites.ordering`` to see the requested and applied strategies, the
 number of usable coordinates, and the geometry diagnostics used by ``auto``.
+
+Auditable station metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Version 2.0.1 adds :mod:`pycsamt.site.metadata` for changes that must remain
+consistent across a station wrapper, the underlying EDI object, ``HEAD``, and
+linked section identifiers. It supports a single site or a collection and
+accepts station-keyed mappings, order-aligned sequences, callables,
+:class:`pandas.DataFrame` objects, and CSV files.
+
+The public entry points are
+:class:`~pycsamt.site.metadata.SiteMetadataEditor`,
+:class:`~pycsamt.site.metadata.MetadataChange`,
+:func:`~pycsamt.site.metadata.rename_sites`,
+:func:`~pycsamt.site.metadata.update_metadata`, and
+:func:`~pycsamt.site.metadata.update_metadata_all`. Convenience methods are
+also available as :meth:`pycsamt.site.Site.update_metadata`,
+:meth:`pycsamt.site.Sites.update_metadata`, and
+:meth:`pycsamt.site.Sites.rename`.
+
+Metadata operations use copy-on-write behavior by default. Before committing,
+the editor resolves the complete batch and checks missing station keys, empty
+identities, case-insensitive duplicate names, coordinate bounds, and optional
+user validators. ``plan()`` exposes the proposed before-and-after state without
+changing the source, while ``audit()`` records requested fields, changed
+fields, status, and any captured error for every station. With the default
+``on_error="raise"`` policy, in-place changes are committed atomically only
+after all staged stations pass validation.
+
+Renaming deliberately does not reorder a collection or move a station. This
+separation matters for field lines such as the bundled L22PLT data, whose raw
+station identifiers are not in profile order. When sequential names are meant
+to encode position along a line, order by accepted chainage first and rename
+second. See :ref:`site_metadata` for the complete workflow and the four-panel
+L22PLT comparison.
 
 Fixed
 ~~~~~
@@ -138,11 +191,26 @@ Added
 * |API Change| :meth:`pycsamt.site.Sites.ordered` and
   :attr:`pycsamt.site.Sites.ordering` for deterministic ordering and decision
   diagnostics.
+* |API Change| :mod:`pycsamt.site.metadata` with declarative station renaming,
+  coordinate correction, nested ``HEAD``/``INFO`` updates, set/unset/transform
+  actions, custom validators, dry-run planning, audit records, and validated
+  edit-and-write delivery.
+* |API Change| :meth:`pycsamt.site.Site.update_metadata`,
+  :meth:`pycsamt.site.Sites.update_metadata`, and
+  :meth:`pycsamt.site.Sites.rename` as container-level metadata conveniences.
 * |Tests| Coverage for reordered and reversed inputs, missing or invalid
   coordinates, oblique lines, multiple lines, per-call overrides, temporary
   configuration, and the bundled L18PLT and L22PLT field data.
-* |Docs| A package-wide configuration guide with modes, thresholds, contexts,
-  reset behaviour, and migration examples.
+* |Tests| Metadata coverage for mapping, sequence, callable, DataFrame, and CSV
+  inputs; duplicate and missing-name policies; coordinate validation; nested
+  sections; ``INFO`` updates; custom validators; atomic commits; audit schemas;
+  export and reload; and real L18PLT and L22PLT data.
+* |Docs| A package-wide ordering configuration guide with modes, thresholds,
+  contexts, reset behaviour, and migration examples, plus a rewritten site
+  guide covering containers, metadata, location and profile ordering,
+  selection, editing, recomputation, diagnostics, export/reporting, and
+  low-level utilities. Executable examples use interactive ``pycon`` output,
+  and scientific equations and generated figures are explained in context.
 
 Compatibility
 ~~~~~~~~~~~~~
@@ -155,10 +223,18 @@ explicitly:
 
    >>> from pycsamt.api import configure_ordering
 
-   >>> configure_ordering(mode="input")
+   >>> _ = configure_ordering(mode="input")
 
 Or preserve input order for only one call with ``order_by="input"`` or the
 tool's corresponding ``sort_by="input"`` argument.  Existing explicit
 ``sort_by`` and ``order_by`` arguments remain authoritative.
 
-See :ref:`api-configuration` for the complete configuration reference.
+Metadata edits are non-mutating unless ``inplace=True`` is requested. Code
+that previously used :meth:`pycsamt.site.Sites.map` with a callable continues
+to behave as before; ``Sites.map`` has not become a dictionary-based rename
+operation. Use :meth:`pycsamt.site.Sites.rename` or
+:func:`pycsamt.site.metadata.rename_sites` for explicit rename tables.
+
+See :ref:`api-configuration` for the complete ordering configuration reference
+and :ref:`site_metadata` for metadata planning, validation, auditing, ordering,
+and export guidance.

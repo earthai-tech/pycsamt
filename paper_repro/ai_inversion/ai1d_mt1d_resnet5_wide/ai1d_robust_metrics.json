@@ -1,0 +1,21 @@
+{
+  "test_models": 5000,
+  "median_per_model_thickness_relative_error": 0.6203285579754108,
+  "median_per_model_thickness_relative_error_ci95": [
+    0.5975370943633953,
+    0.646731265313099
+  ],
+  "per_model_thickness_relative_error_iqr": [
+    0.3337480264437804,
+    1.4871893221976125
+  ],
+  "mean_thickness_relative_error": 2.2063671900595825,
+  "median_absolute_log10_thickness_error": 0.19680414801777957,
+  "mean_absolute_boundary_depth_error_m": 322.75095383399855,
+  "median_absolute_boundary_depth_error_m": 298.9898785870562,
+  "median_per_model_log_resistivity_rmse": 0.594990811711167,
+  "median_per_model_log_resistivity_rmse_ci95": [
+    0.5840649595562456,
+    0.606947004218951
+  ]
+}

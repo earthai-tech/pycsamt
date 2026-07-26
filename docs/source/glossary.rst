@@ -156,6 +156,15 @@ definitions here are the single source of truth.
       cells are smoothed, linked, masked, or otherwise regularized. It is part
       of the model prior, not merely an output uncertainty table.
 
+   Covariance matrix
+      A square matrix whose diagonal entries are component variances and whose
+      off-diagonal entries describe correlated errors between components. For
+      a linear coordinate transformation :math:`\mathbf y=\mathbf A\mathbf x`,
+      full uncertainty propagation is
+      :math:`\mathbf C_y=\mathbf A\mathbf C_x\mathbf A^{\mathsf T}`. This
+      statistical object is distinct from the model-smoothing
+      :term:`covariance` used by some inversion file formats.
+
    Topography
       The elevation of the ground surface represented in a model or plotting
       workflow. In inversion, topography can affect mesh geometry, air cells,
@@ -2154,6 +2163,25 @@ definitions here are the single source of truth.
       absent) so that later name-based lookups and joins see one
       consistent label per station.
 
+   Copy-on-write metadata edit
+      A metadata operation that stages changes on an independent copy and
+      returns the edited copy while leaving the source object unchanged. In
+      pyCSAMT this is the default behavior of the site metadata editor; an
+      explicit ``inplace=True`` request is required to commit validated state
+      back into the supplied object.
+
+   Metadata transaction
+      A batch of station metadata changes evaluated on private copies before
+      any in-place commit. With the default error policy, all station-level and
+      batch-level constraints must pass before the source collection changes,
+      preventing a late failure from leaving a partially edited survey.
+
+   Metadata audit trail
+      The ordered station-level record produced by a metadata plan or apply
+      operation. Each row identifies the old and new station names, requested
+      and changed fields, status, error, and compact before/after values so the
+      transformation can be reviewed or tested reproducibly.
+
    Geodetic distance
       The great-circle separation between two ``(lat, lon)`` points on
       a spherical Earth of radius :math:`R`, used by station
@@ -2182,6 +2210,20 @@ definitions here are the single source of truth.
       coordinate that :term:`profile line` construction sorts stations
       by, and it is distinct from :term:`station distance`, which
       accumulates separation without reference to a single azimuth.
+
+   Profile linearity
+      The fraction of local station-coordinate variance explained by the first
+      principal component, :math:`L=\sigma_1^2/(\sigma_1^2+\sigma_2^2)`. A
+      value near one indicates that the coordinates lie close to a single
+      straight axis; it does not by itself prove that they belong to one
+      acquisition line.
+
+   Cross-track ratio
+      The range of station offsets perpendicular to a fitted profile axis
+      divided by their range along that axis. Small values indicate a narrow
+      line relative to its length. pyCSAMT combines this ratio with
+      :term:`profile linearity` and coordinate coverage before automatically
+      applying chainage ordering.
 
    Native file
       A file format read or written directly by an external modelling or

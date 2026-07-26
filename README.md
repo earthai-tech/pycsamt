@@ -222,7 +222,8 @@ If pyCSAMT contributes to published research, please cite
 Bug reports and feature requests are welcome on the
 [issue tracker](https://github.com/earthai-tech/pycsamt/issues); see the
 [developer guide](https://pycsamt.org/development/index.html)
-before opening a pull request. Distributed under the
+before opening a pull request. Participation is governed by our
+[Code of Conduct](CODE_OF_CONDUCT.md). Distributed under the
 [LGPL-3.0](https://opensource.org/licenses/LGPL-3.0) or later — see
 [`LICENSE.md`](LICENSE.md).
 

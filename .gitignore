@@ -416,3 +416,10 @@ docs/examples/topo/l18_prepared_workspace/
 # data/stratagem/K2/k2-corrected-sample/ and k2-renamed-sample/.
 /k2_corrected/
 /k2_renamed/
+
+# Generated social-media assets
+/social_media/
+
+# Netlify Open Source Plan admin drafts — internal prep, not project source
+/HOW-TO-USE-NETLIGY-FOR-OPEN-SOURCE.md
+/NETLIFY-OPEN-SOURCE-APPLICATION.md

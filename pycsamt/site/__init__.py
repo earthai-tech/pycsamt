@@ -31,6 +31,13 @@ from .export import (
     write_site,
     write_sites,
 )
+from .metadata import (
+    MetadataChange,
+    SiteMetadataEditor,
+    rename_sites,
+    update_metadata,
+    update_metadata_all,
+)
 from .recompute import (
     EDIRecomputer,
     EDIRecomputeRecord,
@@ -92,6 +99,12 @@ __all__ = [
     "write_site",
     "write_sites",
     "pack_zip",
+    # metadata
+    "MetadataChange",
+    "SiteMetadataEditor",
+    "rename_sites",
+    "update_metadata",
+    "update_metadata_all",
     # recompute
     "EDIRecomputeRecord",
     "EDIRecomputeResult",

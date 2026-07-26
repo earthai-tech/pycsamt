@@ -58,7 +58,8 @@ The user-facing correction list for this kind of survey is naturally out of
 sequence -- several of the diagnostics only make sense once an earlier step
 has removed a confound. The order used here, and why:
 
-1. load both lines and build baseline QC/confidence tables;
+1. load both lines, order each one by coordinate-derived chainage, and build
+   baseline QC/confidence tables;
 2. remove powerline harmonics first, because a narrowband 50 Hz comb would
    otherwise pollute every later statistical diagnostic;
 3. run the CSAMT near-field and source-overprint diagnostics anyway, to
@@ -88,15 +89,60 @@ Load Both Lines
 .. code-block:: pycon
 
    >>> from pycsamt.api import read_edis
+   >>> from pycsamt.site import Sites
    >>> survey26 = read_edis("data/AMT/WILLY_DATA/L26PLT", recursive=False, strict=False, progress=False)
    >>> survey30 = read_edis("data/AMT/WILLY_DATA/L30PLT", recursive=False, strict=False, progress=False)
-   >>> sites26, sites30 = survey26.collection, survey30.collection
+   >>> sites26 = Sites(survey26.collection).ordered("chainage")
+   >>> sites30 = Sites(survey30.collection).ordered("chainage")
    >>> len(list(sites26)), len(list(sites30))
    (25, 25)
+   >>> sites26.ordering["applied"], sites30.ordering["applied"]
+   ('chainage', 'chainage')
+   >>> round(sites26.ordering["span_m"], 1), round(sites30.ordering["span_m"], 1)
+   (2403.2, 2399.6)
+   >>> raw26_names = [site.name for site in Sites(survey26.collection)]
+   >>> raw30_names = [site.name for site in Sites(survey30.collection)]
+   >>> ordered26_names = [site.name for site in sites26]
+   >>> ordered30_names = [site.name for site in sites30]
+   >>> raw26_names == ordered26_names, raw30_names == ordered30_names
+   (True, True)
 
 Both lines carry 53 frequencies from 1.008 Hz to 10.4 kHz -- ordinary AMT
 band coverage, no tipper (confirmed in the WILLY README), and real station
-elevation, which the closing section relies on.
+elevation, which the closing section relies on. Chainage is established here,
+before any neighbour-based filter or station-column plot. Consequently every
+later pseudosection, static-shift window, inversion data row, and topographic
+section inherits physical profile order rather than filesystem or station-name
+order. Renaming would not provide that guarantee because it changes identity,
+not geometry or sequence; see :doc:`../user_guide/site/location_profile`.
+
+For each line, the geographic coordinates are converted to local east/north
+positions :math:`\mathbf{r}_i`, a principal line direction
+:math:`\hat{\mathbf{u}}` is estimated from all valid stations, and the
+:term:`Chainage` used for sorting is
+
+.. math::
+   :label: porphyry-tutorial-chainage-order
+
+   c_i = (\mathbf{r}_i-\mathbf{r}_0)\mathbin{\cdot}
+         \hat{\mathbf{u}},
+   \qquad
+   \pi = \operatorname{argsort}_{i}(c_i).
+
+The permutation :math:`\pi` in :eq:`porphyry-tutorial-chainage-order` is
+applied to the complete station objects, so coordinates, impedance tensors,
+errors, and metadata remain attached to the same station. The reported spans
+and the successful ``applied`` values make this ordering decision explicit and
+reproducible before the scientific workflow begins.
+
+For this particular L26PLT/L30PLT delivery, the final comparison returns
+``True`` for both lines: loader order already happens to agree with chainage.
+That is why deterministic QC and correction numbers remain unchanged in this
+rerun. The explicit ordering is still essential—it removes that accidental
+dependence on filenames or directory enumeration, and protects the same
+tutorial when the EDI files are copied, renamed, or supplied in another input
+order. The regenerated AI figures differ because the models were retrained;
+they should not be interpreted as evidence that chainage moved these stations.
 
 Baseline Quality Check
 ----------------------
@@ -167,13 +213,51 @@ Remove Powerline Harmonics
 used at this site (Jiangsu Province, mainland China grid) and its harmonics.
 The default ``mode="interp"`` replaces the affected bins in place by
 interpolation rather than dropping them, so the row count is unchanged --
-only the values at the harmonic bins move.
+only the values at the harmonic bins move. The tolerance must reflect the
+sampled frequency grid: these EDIs contain 50.29 Hz rather than exactly
+50.00 Hz, so the former ``tol_hz=0.06`` matched no row and performed no
+correction. A 0.30 Hz tolerance includes 50.29 Hz without reaching the next
+logarithmically spaced frequency.
+
+For sampled frequency :math:`f_i`, mains frequency :math:`f_m`, harmonic
+index :math:`k`, and absolute tolerance :math:`\epsilon`, the implementation
+changes a row only when
+
+.. math::
+   :label: porphyry-powerline-harmonic-mask
+
+   M_i = \mathbf{1}\!\left[
+       \min_{1\leq k\leq K}|f_i-kf_m|\leq\epsilon
+   \right].
+
+With :math:`\epsilon=0.06` Hz, equation
+:eq:`porphyry-powerline-harmonic-mask` gives :math:`M_i=0` for all 53 rows;
+with :math:`\epsilon=0.30` Hz, it gives :math:`M_i=1` at 50.29 Hz and zero
+elsewhere. This makes the selected correction narrow, explicit, and
+reproducible rather than visually widening the notch until a difference
+appears.
 
 .. code-block:: pycon
 
    >>> from pycsamt.emtools import notch_powerline
-   >>> notched26 = notch_powerline(sites26, mains_hz=50.0, n_harm=20, tol_hz=0.06, recursive=False)
-   >>> notched30 = notch_powerline(sites30, mains_hz=50.0, n_harm=20, tol_hz=0.06, recursive=False)
+   >>> import numpy as np
+   >>> notched26 = notch_powerline(sites26, mains_hz=50.0, n_harm=20, tol_hz=0.30, recursive=False)
+   >>> notched30 = notch_powerline(sites30, mains_hz=50.0, n_harm=20, tol_hz=0.30, recursive=False)
+   >>> from pycsamt.emtools._core import _get_z_block
+   >>> def largest_notch_change(before, after):
+   ...     records = []
+   ...     for raw, corrected in zip(before, after):
+   ...         _, z_raw, freq = _get_z_block(raw)
+   ...         _, z_corrected, _ = _get_z_block(corrected)
+   ...         relative = np.abs(z_corrected[:, 0, 1] - z_raw[:, 0, 1]) / np.maximum(np.abs(z_raw[:, 0, 1]), 1e-30)
+   ...         row = int(np.nanargmax(relative))
+   ...         records.append((float(relative[row]), raw.name, float(freq[row])))
+   ...     change, station, frequency = max(records)
+   ...     return station, round(frequency, 2), round(100.0 * change, 1)
+   >>> largest_notch_change(sites26, notched26)
+   ('26-001A', 50.29, 68.2)
+   >>> largest_notch_change(sites30, notched30)
+   ('30-023U', 50.29, 82.1)
 
 .. code-block:: python
    :linenos:
@@ -182,30 +266,52 @@ only the values at the harmonic bins move.
    import matplotlib.pyplot as plt
    from pycsamt.emtools._core import _get_z_block
 
-   fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.4), constrained_layout=True)
-   for ax, name, before, after in zip(
-       axes, ["L26PLT", "L30PLT"], [sites26, sites30], [notched26, notched30]
-   ):
-       ed_before, ed_after = next(iter(before)), next(iter(after))
-       _, zb, frb = _get_z_block(ed_before)
-       _, za, fra = _get_z_block(ed_after)
-       ax.loglog(frb, np.abs(zb[:, 0, 1]), "o-", ms=3, label="raw", color="0.5")
-       ax.loglog(fra, np.abs(za[:, 0, 1]), "s-", ms=3, label="notched (50 Hz + harmonics)", color="crimson")
-       ax.set_xlabel("Frequency (Hz)")
+   fig, axes = plt.subplots(2, 2, figsize=(13.0, 7.2), constrained_layout=True)
+   for col, (name, before, after) in enumerate(zip(
+       ["L26PLT", "L30PLT"], [sites26, sites30], [notched26, notched30]
+   )):
+       records = []
+       for ed_before, ed_after in zip(before, after):
+           _, zb, fr = _get_z_block(ed_before)
+           _, za, _ = _get_z_block(ed_after)
+           rel = np.abs(za[:, 0, 1] - zb[:, 0, 1]) / np.maximum(np.abs(zb[:, 0, 1]), 1e-30)
+           records.append((float(np.nanmax(rel)), ed_before, ed_after, rel))
+
+       max_rel, ed_before, ed_after, rel = max(records, key=lambda item: item[0])
+       _, zb, fr = _get_z_block(ed_before)
+       _, za, _ = _get_z_block(ed_after)
+       local = (fr >= 20.0) & (fr <= 130.0)
+       changed = int(np.nanargmax(rel))
+
+       ax = axes[0, col]
+       ax.loglog(fr[local], np.abs(zb[local, 0, 1]), "o-", ms=5, label="raw", color="0.45")
+       ax.loglog(fr[local], np.abs(za[local, 0, 1]), "s--", ms=5, label="interpolated", color="crimson")
+       ax.axvline(fr[changed], color="#2471a3", linestyle=":", linewidth=1.2)
        ax.set_ylabel("|Zxy|")
-       ax.set_title(f"{name} station {getattr(ed_before, 'station', '?')}")
+       ax.set_title(f"{name} {ed_before.name}: {100 * max_rel:.1f}% at {fr[changed]:.2f} Hz")
        ax.legend(fontsize=8)
+
+       ax = axes[1, col]
+       station_change = [100.0 * record[0] for record in records]
+       ax.bar(np.arange(len(station_change)), station_change, color="#2471a3")
+       ax.set_xlabel("Chainage-ordered station index")
+       ax.set_ylabel("max |delta Zxy| / |Zxy| (%)")
+       ax.set_title(f"{name}: correction across all stations")
    fig.savefig("willy_powerline_notch_before_after.png", dpi=170)
 
 .. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_powerline_notch_before_after.png
    :alt: Powerline notch before and after on a representative station from each line
    :width: 100%
 
-   The two curves mostly overlap: at these station-frequency combinations
-   the harmonic comb did not land on badly corrupted bins. Keep the notch
-   step anyway -- it is cheap, and it protects every later statistical
-   diagnostic (skew, confidence, Groom-Bailey fit) from being pulled around
-   by a handful of narrowband spikes elsewhere on the line.
+   The upper panels deliberately zoom around the 50 Hz fundamental and select
+   the station with the largest change on each line; the vertical marker makes
+   the interpolated 50.29 Hz row visible instead of compressing it into the
+   full 1 Hz--10.4 kHz range. The lower panels show that this is not merely a
+   cosmetic change at two chosen stations: every bar is computed independently
+   from one chainage-ordered station. Large peaks identify stations for which
+   the raw 50.29 Hz impedance departed most strongly from its log-frequency
+   neighbours, while small bars show where interpolation leaves an already
+   smooth local spectrum nearly unchanged.
 
 Rule Out Near-Field Bias
 ------------------------
@@ -223,10 +329,10 @@ confirm that rather than merely assert it.
    >>> from pycsamt.emtools import classify_field_zones
    >>> zones26 = classify_field_zones(notched26, source_offset=500.0, recursive=False)
    >>> zones26["zone"].value_counts().to_dict()
-   {'transition': 534, 'near': 521, 'far': 270}
+   {'transition': 536, 'near': 519, 'far': 270}
    >>> zones30 = classify_field_zones(notched30, source_offset=500.0, recursive=False)
    >>> zones30["zone"].value_counts().to_dict()
-   {'near': 546, 'transition': 514, 'far': 265}
+   {'near': 544, 'transition': 516, 'far': 265}
 
 .. code-block:: python
    :linenos:
@@ -270,7 +376,7 @@ this line is not that.
    >>> from pycsamt.emtools import detect_source_overprint
    >>> ov26 = detect_source_overprint(notched26, source_offset=500.0, recursive=False)
    >>> round(ov26["beta_pct"].median(), 2), int(ov26["overprint_flag"].sum()), len(ov26)
-   (48.53, 1166, 1325)
+   (48.52, 1166, 1325)
    >>> ov30 = detect_source_overprint(notched30, source_offset=500.0, recursive=False)
    >>> round(ov30["beta_pct"].median(), 2), int(ov30["overprint_flag"].sum()), len(ov30)
    (49.16, 1191, 1325)
@@ -317,11 +423,11 @@ threshold.
    >>> model26 = learn_dim_dictionary(notched26, n_atoms=6, lam=0.05, n_iter=40, code_iter=50, recursive=False)
    >>> enc26 = encode_dimensionality(notched26, model26, recursive=False, api=True).to_pandas()
    >>> enc26["dim_pred"].value_counts().to_dict()
-   {2: 930, 1: 395}
+   {2: 927, 1: 398}
    >>> model30 = learn_dim_dictionary(notched30, n_atoms=6, lam=0.05, n_iter=40, code_iter=50, recursive=False)
    >>> enc30 = encode_dimensionality(notched30, model30, recursive=False, api=True).to_pandas()
    >>> enc30["dim_pred"].value_counts().to_dict()
-   {2: 971, 1: 354}
+   {2: 965, 1: 360}
 
 Label ``1`` (moderate skew, low ellipticity) makes up roughly a
 quarter to a third of each line (30 percent of ``L26PLT``, 27 percent of
@@ -378,24 +484,24 @@ what the dedicated static-shift step further below is for.
    >>> gb_corr26 = apply_groom_bailey(notched26, table=gb26, inplace=False, recursive=False)
    >>> ok26 = gb26[gb26["status"] == "ok"]
    >>> round(ok26["twist_deg"].median(), 2), round(ok26["shear"].median(), 4)
-   (2.79, -0.0023)
+   (2.8, -0.0028)
    >>> round(ok26["diagonal_ratio_before"].median(), 3), round(ok26["diagonal_ratio_after"].median(), 3)
-   (0.347, 0.358)
+   (0.345, 0.359)
    >>> gb30 = groom_bailey_table(notched30, min_freq=4, robust=True, recursive=False, api=True).to_pandas()
    >>> gb_corr30 = apply_groom_bailey(notched30, table=gb30, inplace=False, recursive=False)
    >>> ok30 = gb30[gb30["status"] == "ok"]
    >>> round(ok30["twist_deg"].median(), 2), round(ok30["shear"].median(), 4)
-   (8.81, -0.2592)
+   (8.73, -0.2585)
    >>> round(ok30["diagonal_ratio_before"].median(), 3), round(ok30["diagonal_ratio_after"].median(), 3)
    (0.487, 0.333)
 
 The line-median twist is mild on both lines, but medians hide the stations
 that matter. Six stations reach a twist beyond 40 degrees on ``L26PLT``
 alone (``26-020A`` at 60.3, ``26-023A`` at -49.8, ``26-019U`` at -49.5,
-``26-025U`` at 42.2, ``26-021U`` at -14.8, ``26-022U`` at -17.6), and
-``L30PLT`` has an even larger cluster (``30-025A`` 60.7, ``30-013A`` 56.1,
+``26-025U`` at 42.2, ``26-002A`` at 25.2, ``26-001A`` at 19.7), and
+``L30PLT`` has an even larger cluster (``30-025A`` 60.7, ``30-013A`` 55.7,
 ``30-002A`` 48.8). ``L30PLT``'s larger median diagonal-ratio drop (0.487 to
-0.333, versus ``L26PLT``'s 0.347 to 0.358) says the correction is doing more
+0.333, versus ``L26PLT``'s 0.345 to 0.359) says the correction is doing more
 real work there.
 
 .. code-block:: python
@@ -448,10 +554,10 @@ given the skew range already seen.
    >>> from pycsamt.emtools import detect_near_surface
    >>> ns26 = detect_near_surface(gb_corr26, f_split=50.0, max_skew=None, recursive=False, api=True).to_pandas()
    >>> ns26["distortion_type"].value_counts().to_dict()
-   {'mixed': 17, 'static': 7, 'near_surface': 1}
+   {'mixed': 17, 'static': 8}
    >>> ns30 = detect_near_surface(gb_corr30, f_split=50.0, max_skew=None, recursive=False, api=True).to_pandas()
    >>> ns30["distortion_type"].value_counts().to_dict()
-   {'static': 15, 'mixed': 10}
+   {'static': 13, 'mixed': 12}
 
 Neither line has a single ``clean`` station by this classification --
 consistent with everything found so far -- but the split between
@@ -470,10 +576,10 @@ correction each station gets next.
    ... )
    >>> factors26[["station", "fac_z", "distortion_type", "fac_z_reviewed"]].iloc[[0, 15, 19, 20]].round(3)
        station  fac_z distortion_type  fac_z_reviewed
-   0   26-001A  0.564          static           0.564
-   15  26-016A  0.840    near_surface           0.840
-   19  26-020A  0.464          static           0.464
-   20  26-021U  2.075          static           2.075
+   0   26-001A  0.565          static           0.565
+   15  26-016A  0.840          static           0.840
+   19  26-020A  0.464           mixed           0.464
+   20  26-021U  2.107          static           2.107
 
    >>> reviewed26 = factors26[["station", "fac_z_reviewed"]].rename(columns={"fac_z_reviewed": "fac_z"})
    >>> ss_corr26 = apply_ss_factors(gb_corr26, reviewed26, key="fac_z", inplace=False, recursive=False)
@@ -482,7 +588,7 @@ The clip at ``[0.3, 3.0]`` is a review guard, not blanket correction --
 every station here already qualified as ``static``, ``mixed``, or
 ``near_surface``, so every factor is applied; a fully clean station would
 instead be pinned at ``1.0`` (no change), which is what the ``np.where``
-branch is for. ``26-021U`` still gets a large 2.08x scaler even after
+branch is for. ``26-021U`` still gets a large 2.11x scaler even after
 clipping, which is exactly the kind of factor that deserves a note in a
 production project rather than silent acceptance.
 
@@ -551,12 +657,12 @@ blindly.
    ...
    >>> r0, ra, rf = rho_xy_all(ss_corr26), rho_xy_all(ama26), rho_xy_all(flma26)
    >>> round(np.std(np.log10(r0)), 4), round(np.std(np.log10(ra)), 4), round(np.std(np.log10(rf)), 4)
-   (1.0205, 0.9452, 0.8782)
+   (1.0364, 0.9598, 0.8924)
 
 Both filters reduce the log-resistivity spread; FLMA reduces it further on
-``L26PLT`` (0.878 versus AMA's 0.945, down from an unfiltered 1.021). The
-same comparison on ``L30PLT`` gives 0.949 (FLMA) versus 0.975 (AMA) against
-an unfiltered 1.067 -- FLMA wins on both lines, so it is the production
+``L26PLT`` (0.892 versus AMA's 0.960, down from an unfiltered 1.036). The
+same comparison on ``L30PLT`` gives 0.954 (FLMA) versus 0.967 (AMA) against
+an unfiltered 1.066 -- FLMA wins on both lines, so it is the production
 choice below.
 
 .. code-block:: pycon
@@ -617,7 +723,7 @@ corrected data rather than the raw one.
    :width: 100%
 
    ``L26PLT`` loses 79 of 1325 station-frequency rows (about 6.0 percent);
-   ``L30PLT`` loses 157 (about 11.8 percent). One ``L30PLT`` station,
+   ``L30PLT`` loses 154 (about 11.6 percent). One ``L30PLT`` station,
    ``30-011A``, drops from 53 usable frequencies to only 5 -- a station
    worth flagging for manual review or exclusion in a production project,
    not silently carried forward at face value.
@@ -644,15 +750,15 @@ changed the skew and dimensionality picture, rather than assuming it.
 .. code-block:: pycon
 
    >>> from pycsamt.api import read_edis
-   >>> corr26 = read_edis("runs/L26PLT_corrected", recursive=False, strict=False, progress=False).collection
-   >>> corr30 = read_edis("runs/L30PLT_corrected", recursive=False, strict=False, progress=False).collection
+   >>> corr26 = Sites(read_edis("runs/L26PLT_corrected", recursive=False, strict=False, progress=False).collection).ordered("chainage")
+   >>> corr30 = Sites(read_edis("runs/L30PLT_corrected", recursive=False, strict=False, progress=False).collection).ordered("chainage")
    >>> from pycsamt.emtools import build_phase_tensor_table
    >>> pt26 = build_phase_tensor_table(corr26, recursive=False)
    >>> len(pt26), round(pt26["beta"].abs().median(), 2), round(pt26["beta"].abs().quantile(0.9), 2)
-   (1246, 13.03, 44.82)
+   (1246, 13.05, 45.44)
    >>> pt30 = build_phase_tensor_table(corr30, recursive=False)
    >>> len(pt30), round(pt30["beta"].abs().median(), 2), round(pt30["beta"].abs().quantile(0.9), 2)
-   (1168, 14.72, 53.23)
+   (1171, 15.15, 53.25)
 
 The correction chain removes powerline spikes, galvanic distortion, static
 shift, incoherent noise, and weak rows -- it does not, and should not,
@@ -709,13 +815,13 @@ station; combine the per-station angles into a circular mean.
    >>> doubled = np.deg2rad(2.0 * ang26)
    >>> dominant26 = 0.5 * np.rad2deg(np.arctan2(np.sin(doubled).mean(), np.cos(doubled).mean()))
    >>> round(dominant26, 2)
-   -34.11
+   -36.42
    >>> consensus30 = estimate_strike_consensus(corr30, recursive=False)
    >>> ang30 = consensus30["ang"].dropna().to_numpy()
    >>> doubled = np.deg2rad(2.0 * ang30)
    >>> dominant30 = 0.5 * np.rad2deg(np.arctan2(np.sin(doubled).mean(), np.cos(doubled).mean()))
    >>> round(dominant30, 2)
-   -42.55
+   -45.84
 
 The circular spread behind each of these means is close to 50 degrees on
 both lines -- broad, not a tight single-domain result. That is worth
@@ -759,18 +865,18 @@ a diagonal-suppression check: whether rotating actually reduced
 .. code-block:: pycon
 
    >>> from pycsamt.agents.tensor_rotation import TensorRotationAgent
-   >>> agent26 = TensorRotationAgent(strike_deg=-34.11)
+   >>> agent26 = TensorRotationAgent(strike_deg=-36.42)
    >>> rot26 = agent26.execute({"sites": corr26, "output_dir": "runs/L26PLT_rotated", "overwrite": True})
    >>> rot26.status, rot26.data["n_written"], round(rot26.data["z_diag_reduction"], 4)
-   ('success', 25, -0.1672)
-   >>> agent30 = TensorRotationAgent(strike_deg=-42.55)
+   ('success', 25, -0.1864)
+   >>> agent30 = TensorRotationAgent(strike_deg=-45.84)
    >>> rot30 = agent30.execute({"sites": corr30, "output_dir": "runs/L30PLT_rotated", "overwrite": True})
    >>> rot30.status, rot30.data["n_written"], round(rot30.data["z_diag_reduction"], 4)
-   ('success', 25, 0.2374)
+   ('success', 25, 0.2749)
 
 This is the honest outcome of a broad, noisy strike estimate: rotation
-*helps* ``L30PLT`` (diagonal suppression improves by 0.237) but *does not
-help* ``L26PLT`` (it gets 0.167 worse, consistently across several period
+*helps* ``L30PLT`` (diagonal suppression improves by 0.275) but *does not
+help* ``L26PLT`` (it gets 0.186 worse, consistently across several period
 bands and consensus methods tried while preparing this tutorial). Rotating
 ``L26PLT`` anyway keeps the two lines on a comparable classical-inversion
 footing, but its 2-D/TE-TM split should be trusted less than ``L30PLT``'s;
@@ -803,7 +909,7 @@ builds a native 2-D input set exactly as in
    ...     cell_size_vertical_top=15.0, depth_scale=1.15,
    ...     target_misfit=1.0, max_iterations=80, initial_rho=100.0,
    ... )
-   >>> rot26_sites = read_edis("runs/L26PLT_rotated", recursive=False, strict=False, progress=False).collection
+   >>> rot26_sites = Sites(read_edis("runs/L26PLT_rotated", recursive=False, strict=False, progress=False).collection).ordered("chainage")
    >>> builder26 = InputBuilder(rot26_sites, workdir="runs/L26PLT_occam2d", config=cfg, verbose=0)
    >>> _ = builder26.build(title="L26PLT pyCSAMT porphyry Occam2D preparation")
    >>> print(builder26.summary())
@@ -816,11 +922,11 @@ builds a native 2-D input set exactly as in
      params    : 780
      modes     : ['TE', 'TM']
    <BLANKLINE>
-   >>> rot30_sites = read_edis("runs/L30PLT_rotated", recursive=False, strict=False, progress=False).collection
+   >>> rot30_sites = Sites(read_edis("runs/L30PLT_rotated", recursive=False, strict=False, progress=False).collection).ordered("chainage")
    >>> builder30 = InputBuilder(rot30_sites, workdir="runs/L30PLT_occam2d", config=cfg, verbose=0)
    >>> _ = builder30.build(title="L30PLT pyCSAMT porphyry Occam2D preparation")
    >>> builder30.data.n_data
-   4672
+   4684
 
 .. code-block:: python
    :linenos:
@@ -847,7 +953,7 @@ builds a native 2-D input set exactly as in
    :alt: Occam2D data rows by station for both lines
    :width: 100%
 
-   ``L26PLT`` carries more data points than ``L30PLT`` (4984 versus 4672)
+   ``L26PLT`` carries more data points than ``L30PLT`` (4984 versus 4684)
    purely from the earlier frequency-drop step -- ``L30PLT`` lost more rows
    at the QC stage, and Occam2D simply reflects that in its row count.
 
@@ -892,7 +998,7 @@ combine both lines into a single 3-D survey with
 
    >>> from pycsamt.models.modem import ModEmConfig
    >>> from pycsamt.models.modem.builder import InputBuilder as ModEmBuilder
-   >>> combined = list(corr26) + list(corr30)
+   >>> combined = corr26.to_edis() + corr30.to_edis()
    >>> len(combined)
    50
    >>> cfg3d = ModEmConfig(mode="3d", initial_rho=100.0, freq_min=1.0, freq_max=10400.0)
@@ -973,16 +1079,23 @@ the page builds quickly, with fixed seeds for reproducibility -- scale up
 .. code-block:: pycon
 
    >>> import numpy as np
+   >>> import random
    >>> np.random.seed(7)
+   >>> random.seed(7)
+   >>> try:
+   ...     import torch
+   ...     _ = torch.manual_seed(7)
+   ... except ImportError:
+   ...     pass
    >>> from pycsamt.agents.inv2d_agent import Inv2DAgent
    >>> agent2d_26 = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8)
    >>> res2d_26 = agent2d_26.execute({"sites": rot26_sites, "output_dir": "runs/L26PLT_ai2d"})
    >>> res2d_26.status, round(res2d_26.data["rms_global"], 4)
-   ('success', 1.4049)
+   ('success', 1.2866)
    >>> agent2d_30 = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8)
    >>> res2d_30 = agent2d_30.execute({"sites": rot30_sites, "output_dir": "runs/L30PLT_ai2d"})
    >>> res2d_30.status, round(res2d_30.data["rms_global"], 4)
-   ('success', 1.5008)
+   ('success', 1.5285)
 
 ``n_stations_per_profile=25`` matters here: the agent's own default (20)
 silently truncates a profile to its first 20 stations, which would quietly
@@ -1111,7 +1224,7 @@ result below.
    >>> agent3d = Inv3DAgent(n_layers=6, n_freqs=16, n_train_profiles=12, epochs=4, n_mc=0, radius=450.0)
    >>> res3d = agent3d.execute({"sites": combined, "coords": coords, "output_dir": "runs/willy_ai3d"})
    >>> res3d.status, round(res3d.data["rms_global"], 4)
-   ('success', 3.7398)
+   ('success', 3.5881)
    >>> res3d.data["pred_rho"].shape
    (50, 6)
 
@@ -1146,20 +1259,20 @@ both AI inversions on the untouched raw EDIs and compare RMS directly.
 
 .. code-block:: pycon
 
-   >>> raw26 = read_edis("data/AMT/WILLY_DATA/L26PLT", recursive=False, strict=False, progress=False).collection
-   >>> raw30 = read_edis("data/AMT/WILLY_DATA/L30PLT", recursive=False, strict=False, progress=False).collection
+   >>> raw26 = Sites(read_edis("data/AMT/WILLY_DATA/L26PLT", recursive=False, strict=False, progress=False).collection).ordered("chainage")
+   >>> raw30 = Sites(read_edis("data/AMT/WILLY_DATA/L30PLT", recursive=False, strict=False, progress=False).collection).ordered("chainage")
    >>> res2d_26_raw = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8).execute(
    ...     {"sites": raw26, "output_dir": "runs/L26PLT_ai2d_raw"}
    ... )
    >>> res2d_30_raw = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8).execute(
    ...     {"sites": raw30, "output_dir": "runs/L30PLT_ai2d_raw"}
    ... )
-   >>> combined_raw = list(raw26) + list(raw30)
+   >>> combined_raw = raw26.to_edis() + raw30.to_edis()
    >>> res3d_raw = Inv3DAgent(n_layers=6, n_freqs=16, n_train_profiles=12, epochs=4, n_mc=0, radius=450.0).execute(
    ...     {"sites": combined_raw, "coords": coords, "output_dir": "runs/willy_ai3d_raw"}
    ... )
    >>> round(res2d_26_raw.data["rms_global"], 4), round(res2d_30_raw.data["rms_global"], 4), round(res3d_raw.data["rms_global"], 4)
-   (1.63, 1.808, 5.1633)
+   (1.7334, 1.6443, 8.4667)
 
 AI training is stochastic -- rerunning this exact cell can shift these
 numbers by more than a few percent even with the seeds set above, because
@@ -1175,11 +1288,13 @@ artefact, not evidence that the correction chain failed. Raise
 ``n_train_profiles`` and ``epochs`` before trusting a 2-D comparison in a
 real project; the 3-D result is the one to lean on here.
 
+For the seeded run reported by this page, the comparison is:
+
 .. code-block:: text
 
-   AI-2D L26PLT     raw RMS 1.6300  corrected RMS 1.4049  improvement 13.8%
-   AI-2D L30PLT     raw RMS 1.8080  corrected RMS 1.5008  improvement 17.0%
-   AI-3D combined   raw RMS 5.1633  corrected RMS 3.7398  improvement 27.6%
+   AI-2D L26PLT     raw RMS 1.7334  corrected RMS 1.2866  improvement 25.8%
+   AI-2D L30PLT     raw RMS 1.6443  corrected RMS 1.5285  improvement 7.0%
+   AI-3D combined   raw RMS 8.4667  corrected RMS 3.5881  improvement 57.6%
 
 .. code-block:: python
    :linenos:
@@ -1188,9 +1303,9 @@ real project; the 3-D result is the one to lean on here.
    import matplotlib.pyplot as plt
 
    rms_all = {
-       "AI-2D L26PLT": (1.6300, 1.4049),
-       "AI-2D L30PLT": (1.8080, 1.5008),
-       "AI-3D combined": (5.1633, 3.7398),
+       "AI-2D L26PLT": (1.7334, 1.2866),
+       "AI-2D L30PLT": (1.6443, 1.5285),
+       "AI-3D combined": (8.4667, 3.5881),
    }
    fig, ax = plt.subplots(figsize=(7.6, 4.4), constrained_layout=True)
    labels = list(rms_all.keys())
@@ -1236,19 +1351,19 @@ computed above.
    ... ).merge(
    ...     factors26[["station", "fac_z_reviewed"]], on="station", how="left"
    ... )
-   >>> report26["strike_deg"] = -34.11
+   >>> report26["strike_deg"] = -36.42
    >>> report26["emap_method"] = "flma"
    >>> report26.iloc[[0, 15, 19, 20]].round(3)
        station  gain  twist_deg  shear  ns_index  ss_delta_log10 distortion_type  fac_z_reviewed  strike_deg emap_method
-   0   26-001A   1.0     19.940 -0.469     1.448           0.491          static           0.564      -34.11        flma
-   15  26-016A   1.0     -0.498  0.175     2.114           0.080    near_surface           0.840      -34.11        flma
-   19  26-020A   1.0     60.347  0.544     1.232          -1.154          static           0.464      -34.11        flma
-   20  26-021U   1.0    -14.757  0.892     0.797          -0.130          static           2.075      -34.11        flma
+   0   26-001A   1.0     19.724 -0.466     1.625           0.496          static           0.565      -36.42        flma
+   15  26-016A   1.0     -0.505  0.175     1.907           0.151          static           0.840      -36.42        flma
+   19  26-020A   1.0     60.352  0.544     2.378           0.667           mixed           0.464      -36.42        flma
+   20  26-021U   1.0    -14.728  0.891     1.244          -0.647          static           2.107      -36.42        flma
 
    >>> report26["distortion_type"].value_counts().to_dict()
-   {'mixed': 17, 'static': 7, 'near_surface': 1}
+   {'mixed': 17, 'static': 8}
    >>> round(report26["twist_deg"].abs().median(), 2), round(report26["fac_z_reviewed"].median(), 3)
-   (8.29, 0.51)
+   (8.34, 0.542)
 
 .. code-block:: pycon
 
@@ -1257,12 +1372,12 @@ computed above.
    ... ).merge(
    ...     factors30[["station", "fac_z_reviewed"]], on="station", how="left"
    ... )
-   >>> report30["strike_deg"] = -42.55
+   >>> report30["strike_deg"] = -45.84
    >>> report30["emap_method"] = "flma"
    >>> report30["distortion_type"].value_counts().to_dict()
-   {'static': 15, 'mixed': 10}
+   {'static': 13, 'mixed': 12}
    >>> round(report30["twist_deg"].abs().median(), 2), round(report30["fac_z_reviewed"].median(), 3)
-   (10.34, 0.535)
+   (10.37, 0.535)
 
 Save both tables next to the corrected EDIs so a reviewer -- or a future
 run of this same pipeline -- can see exactly which correction each station

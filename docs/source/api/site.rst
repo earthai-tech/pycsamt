@@ -17,6 +17,7 @@ Site Modules
    pycsamt.site.base
    pycsamt.site.compute
    pycsamt.site.edit
+   pycsamt.site.metadata
    pycsamt.site.export
    pycsamt.site.location
    pycsamt.site.profile

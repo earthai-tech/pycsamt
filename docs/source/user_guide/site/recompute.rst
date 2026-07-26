@@ -63,28 +63,24 @@ The examples on this page recompute the bundled WILLY AMT survey,
 ``L22PLT``, ``L26PLT``, ``L30PLT``, and ``L34PLT``. Recompute a single line
 folder and keep the line name in the output tree:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.recompute import recompute_edis
+   >>> from pycsamt.site.recompute import recompute_edis
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       rotate_angle=30.0,
-       template="{source_stem}.edi",
-       overwrite=True,
-       progress=True,
-       verbose=1,
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     rotate_angle=30.0,
+   ...     template="{source_stem}.edi",
+   ...     overwrite=True,
+   ...     progress=True,
+   ...     verbose=1,
+   ... )
 
-   print(result.output_root.name)
-   print(sorted(p.name for p in result.paths)[:5])
-   print(len(result.paths))
-
-.. code-block:: text
-
+   >>> print(result.output_root.name)
    recomputed_edis
+   >>> print(sorted(p.name for p in result.paths)[:5])
    ['18-001A.edi', '18-002U.edi', '18-003A.edi', '18-004A.edi', '18-005U.edi']
+   >>> print(len(result.paths))
    28
 
 ``output_root`` is resolved next to the source line folder -- here, a
@@ -139,30 +135,26 @@ subdirectory is treated as a survey line.
 
 Run:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.site.recompute import EDIRecomputer
+   >>> from pycsamt.site.recompute import EDIRecomputer
 
-   runner = EDIRecomputer(
-       rotate_angle=30.0,
-       rotate_components=("Z", "Tip"),
-       recompute_resphase=True,
-       template="{source_stem}.edi",
-       overwrite=True,
-   )
+   >>> runner = EDIRecomputer(
+   ...     rotate_angle=30.0,
+   ...     rotate_components=("Z", "Tip"),
+   ...     recompute_resphase=True,
+   ...     template="{source_stem}.edi",
+   ...     overwrite=True,
+   ... )
 
-   result = runner.run("data/AMT/WILLY_DATA")
+   >>> result = runner.run("data/AMT/WILLY_DATA")
 
-   import collections
-   print(collections.Counter(record.line for record in result.records))
-   print(len(result.paths))
-   print(len(result.failed))
-
-.. code-block:: text
-
+   >>> import collections
+   >>> print(collections.Counter(record.line for record in result.records))
    Counter({'L18PLT': 28, 'L22PLT': 25, 'L26PLT': 25, 'L30PLT': 25, 'L34PLT': 25})
+   >>> print(len(result.paths))
    128
+   >>> print(len(result.failed))
    0
 
 The output preserves the line structure:
@@ -190,22 +182,18 @@ Set ``preserve_line_dirs=False`` when all recomputed files should be written
 directly inside the output root. In that case, include ``{line}`` in the
 filename template to avoid collisions between stations from different lines.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA",
-       preserve_line_dirs=False,
-       template="{line}_{source_stem}.edi",
-       overwrite=True,
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA",
+   ...     preserve_line_dirs=False,
+   ...     template="{line}_{source_stem}.edi",
+   ...     overwrite=True,
+   ... )
 
-   print(sorted(p.name for p in result.paths)[:3])
-   print(len(result.paths))
-
-.. code-block:: text
-
+   >>> print(sorted(p.name for p in result.paths)[:3])
    ['L18PLT_18-001A.edi', 'L18PLT_18-002U.edi', 'L18PLT_18-003A.edi']
+   >>> print(len(result.paths))
    128
 
 This writes:
@@ -246,6 +234,74 @@ transient, self-correcting intermediate state -- the next array in the
 sequence brings resistivity and phase back into agreement with the new
 frequency count -- not a failure of the recomputation itself.
 
+The effect is easier to audit on one real station. Here the source response is
+compared with a copied response after 30-degree rotation, restriction to
+10--1000 Hz, and derived-value recomputation:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> import numpy as np
+   >>> from pycsamt.seg.edi import EDIFile
+   >>> from pycsamt.site.recompute import recompute_edi
+
+   >>> raw = EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
+   >>> processed = recompute_edi(
+   ...     raw,
+   ...     rotate_angle=30.0,
+   ...     fmin=10.0,
+   ...     fmax=1000.0,
+   ...     recompute_resphase=True,
+   ...     copy=True,
+   ... )
+
+   >>> fig, ax = plt.subplots(1, 2, figsize=(9, 3.6), constrained_layout=True)
+   >>> _ = ax[0].loglog(
+   ...     raw.Z.freq, np.abs(raw.Z.z[:, 0, 1]), "o-", ms=3, label="source Zxy"
+   ... )
+   >>> _ = ax[0].loglog(
+   ...     processed.Z.freq, np.abs(processed.Z.z[:, 0, 1]),
+   ...     "s-", ms=3, label="rotated, retained Zxy",
+   ... )
+   >>> _ = ax[0].set(
+   ...     xlabel="frequency (Hz)", ylabel="|Zxy|", title="Tensor and band"
+   ... )
+   >>> _ = ax[0].legend(frameon=False)
+
+   >>> source_phase = np.degrees(np.angle(raw.Z.z[:, 0, 1]))
+   >>> final_phase = np.degrees(np.angle(processed.Z.z[:, 0, 1]))
+   >>> _ = ax[1].semilogx(
+   ...     raw.Z.freq, source_phase, "o-", ms=3, label="source phase"
+   ... )
+   >>> _ = ax[1].semilogx(
+   ...     processed.Z.freq, final_phase,
+   ...     "s-", ms=3, label="recomputed phase",
+   ... )
+   >>> _ = ax[1].set(
+   ...     xlabel="frequency (Hz)", ylabel="phase (degrees)",
+   ...     title="Derived phase",
+   ... )
+   >>> _ = ax[1].legend(frameon=False)
+   >>> for axis in ax:
+   ...     axis.grid(True, which="both", alpha=0.22)
+   ...
+   >>> fig.savefig("recompute_operation_order.png", dpi=180)
+
+.. figure:: ../../images/user_guide/site/recompute_operation_order.png
+   :alt: Two panels comparing source and recomputed Zxy magnitude and phase for station 18-001A after rotation and frequency selection.
+   :width: 95%
+   :align: center
+
+   Source and recomputed ``Zxy`` for ``18-001A``. The recomputed curve contains
+   only native frequencies inside the requested band.
+
+The orange series begins at the first native frequency above 10 Hz and ends at
+863.9 Hz, the last native value below 1000 Hz; the workflow does not invent
+samples at the requested endpoints. Rotation changes both ``Zxy`` magnitude
+and phase because it mixes all four tensor components. The resulting phase is
+then derived from that rotated, sliced complex tensor rather than trimmed from
+the blue source-phase series.
+
 Rotation Control
 ----------------
 
@@ -254,6 +310,7 @@ same congruence rotation as the tensor-editing tools in
 :mod:`pycsamt.emtools`:
 
 .. math::
+   :label: site-recompute-rotation
 
    Z' = R(\alpha) Z R(\alpha)^T,
    \qquad
@@ -263,36 +320,38 @@ same congruence rotation as the tensor-editing tools in
    -\sin\alpha & \cos\alpha
    \end{bmatrix}.
 
-.. code-block:: python
-   :linenos:
+Equation :eq:`site-recompute-rotation` is a coordinate transformation: it
+redistributes values among tensor components but preserves tensor invariants
+such as trace and determinant. It must therefore precede recomputation of
+component-wise apparent resistivity and phase.
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       rotate_angle=30.0,
-       rotate_components=("Z", "Tip"),
-   )
+.. code-block:: pycon
+
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     rotate_angle=30.0,
+   ...     rotate_components=("Z", "Tip"),
+   ... )
 
 Rotate only impedance:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       rotate_angle=30.0,
-       rotate_components=("Z",),
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     rotate_angle=30.0,
+   ...     rotate_components=("Z",),
+   ... )
 
 Rotate only tipper:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       rotate_angle=30.0,
-       rotate_components=("Tip",),
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     rotate_angle=30.0,
+   ...     rotate_components=("Tip",),
+   ... )
 
 ``rotate_components=("Z",)`` and ``("Z", "Tip")`` rotate impedance
 identically; the difference only shows up in stations that carry tipper
@@ -316,24 +375,20 @@ Frequency And Missing Values
 
 Keep a frequency band before recomputing derived quantities:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA",
-       fmin=1.0,
-       fmax=1000.0,
-       recompute_resphase=True,
-       write=False,
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA",
+   ...     fmin=1.0,
+   ...     fmax=1000.0,
+   ...     recompute_resphase=True,
+   ...     write=False,
+   ... )
 
-   station0 = result.sites[0]
-   print(station0.freq.size)
-   print(station0.freq.min(), station0.freq.max())
-
-.. code-block:: text
-
+   >>> station0 = result.sites[0]
+   >>> print(station0.freq.size)
    39
+   >>> print(station0.freq.min(), station0.freq.max())
    1.008 863.9
 
 The retained rows are the 39 stations-by-frequency samples that actually
@@ -341,30 +396,41 @@ fall in ``[1.0, 1000.0]`` Hz, whether the EDI stores frequency ascending or
 -- as in this survey -- descending; ``freq``, :math:`Z`, its errors, and the
 recomputed resistivity/phase all stay aligned to the same 39 rows.
 
+For a native frequency vector :math:`\mathbf f`, range selection constructs
+one inclusive mask and applies it to every aligned first axis:
+
+.. math::
+   :label: site-recompute-frequency-mask
+
+   m_k=(f_k\geq f_{\min})\land(f_k\leq f_{\max}),
+   \qquad
+   \mathbf f'=\mathbf f[m],\quad
+   \mathbf Z'=\mathbf Z[m,:,:].
+
+Using the same :math:`m` from equation :eq:`site-recompute-frequency-mask` for
+errors, tipper, and derived arrays is what keeps row :math:`k` associated with
+one physical frequency throughout the workflow.
+
 Fill missing values before recomputation. ``how="zero"`` replaces
 non-finite entries with ``0``; ``how="nan"`` leaves them as ``NaN`` so they
 stay visibly missing instead of looking like a real zero-amplitude reading:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.seg.edi import EDIFile
-   from pycsamt.site.edit import fill_missing
+   >>> from pycsamt.seg.edi import EDIFile
+   >>> from pycsamt.site.edit import fill_missing
 
-   edi = EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
-   edi.Z.z[5, 0, 1] = np.nan  # simulate one bad reading
+   >>> edi = EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
+   >>> edi.Z.z[5, 0, 1] = np.nan  # simulate one bad reading
 
-   filled_zero = fill_missing(edi, how="zero", inplace=False)
-   filled_nan = fill_missing(edi, how="nan", inplace=False)
+   >>> filled_zero = fill_missing(edi, how="zero", inplace=False)
+   >>> filled_nan = fill_missing(edi, how="nan", inplace=False)
 
-   print(filled_zero.Z.z[5, 0, 1])
-   print(filled_nan.Z.z[5, 0, 1])
-
-.. code-block:: text
-
+   >>> print(filled_zero.Z.z[5, 0, 1])
    0j
+   >>> print(filled_nan.Z.z[5, 0, 1])
    (nan+0j)
 
 Use ``"zero"`` only when zeros are meaningful for your downstream workflow.
@@ -372,6 +438,21 @@ For quality-control workflows, ``"nan"`` is often safer because missing values
 remain visible in later checks. In ``recompute_edis``, pass
 ``fill_missing_values="zero"`` or ``"nan"`` to apply this survey-wide before
 the resistivity/phase recomputation step.
+
+After rotation, selection, and filling, each retained impedance component is
+converted using
+
+.. math::
+   :label: site-recompute-resistivity-phase
+
+   \rho_{a,ij}(f)=\frac{|Z_{ij}(f)|^2}{\mu_0\,2\pi f},
+   \qquad
+   \phi_{ij}(f)=\operatorname{atan2}
+      \!\left(\Im Z_{ij},\Re Z_{ij}\right)\frac{180}{\pi}.
+
+Thus equation :eq:`site-recompute-resistivity-phase` operates on the final
+tensor and frequency rows rather than copying potentially stale derived
+values from the source EDI.
 
 .. _recompute_filename_templates:
 
@@ -409,21 +490,17 @@ its short line/station code (``18-001A.edi``), but its EDI header ``dataid``
 still carries the original acquisition-year prefix used when the line was
 collected (``23-18-001A``):
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       template="{index:04d}_{station}.edi",
-       write=False,
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     template="{index:04d}_{station}.edi",
+   ...     write=False,
+   ... )
 
-   print(result.records[0].station)
-   print([p.name for p in result.paths][:1] if result.paths else "no write")
-
-.. code-block:: text
-
+   >>> print(result.records[0].station)
    23-18-001A
+   >>> print([p.name for p in result.paths][:1] if result.paths else "no write")
    no write
 
 Using the class default template, ``{station}.edi``, would therefore write
@@ -434,24 +511,23 @@ when the EDI ``dataid`` values are the identifiers you actually want on
 disk; otherwise ``{source_stem}`` keeps written filenames matching their
 inputs regardless of what a header happens to say.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   recompute_edis(
-       "data/AMT/WILLY_DATA",
-       template="{source_stem}.edi",
-   )
+   >>> _ = recompute_edis(
+   ...     "data/AMT/WILLY_DATA",
+   ...     template="{source_stem}.edi",
+   ... )
 
-   recompute_edis(
-       "data/AMT/WILLY_DATA",
-       preserve_line_dirs=False,
-       template="{line}_{source_stem}.edi",
-   )
+   >>> _ = recompute_edis(
+   ...     "data/AMT/WILLY_DATA",
+   ...     preserve_line_dirs=False,
+   ...     template="{line}_{source_stem}.edi",
+   ... )
 
-   recompute_edis(
-       "data/AMT/WILLY_DATA",
-       template="{index:04d}_{source_stem}.edi",
-   )
+   >>> _ = recompute_edis(
+   ...     "data/AMT/WILLY_DATA",
+   ...     template="{index:04d}_{source_stem}.edi",
+   ... )
 
 If a template does not end with ``.edi``, the extension is appended
 automatically.
@@ -462,27 +538,24 @@ Result Object
 The returned :class:`EDIRecomputeResult` gives access to both in-memory objects
 and written paths.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       template="{source_stem}.edi",
-       overwrite=True,
-   )
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     template="{source_stem}.edi",
+   ...     overwrite=True,
+   ... )
 
-   edis = result.edis
-   sites = result.sites
-   paths = result.paths
-   failed = result.failed
+   >>> edis = result.edis
+   >>> sites = result.sites
+   >>> paths = result.paths
+   >>> failed = result.failed
 
-   print(len(edis), type(sites).__name__, len(paths), len(failed))
-   for record in result.records[:3]:
-       print(record.station, record.status, record.output.name)
-
-.. code-block:: text
-
+   >>> print(len(edis), type(sites).__name__, len(paths), len(failed))
    28 Sites 28 0
+   >>> for record in result.records[:3]:
+   ...     print(record.station, record.status, record.output.name)
+   ...
    23-18-001A ok 18-001A.edi
    23-18-002U ok 18-002U.edi
    23-18-003A ok 18-003A.edi
@@ -542,22 +615,18 @@ survey.
 
 You can also write a manifest manually:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   result = recompute_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       template="{source_stem}.edi",
-       manifest_csv=False,
-       overwrite=True,
-   )
-   manifest_path = result.to_manifest("reports/recompute_manifest.csv")
-   print(manifest_path)
-   print((result.output_root / "manifest.csv").exists())
-
-.. code-block:: text
-
+   >>> result = recompute_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     template="{source_stem}.edi",
+   ...     manifest_csv=False,
+   ...     overwrite=True,
+   ... )
+   >>> manifest_path = result.to_manifest("reports/recompute_manifest.csv")
+   >>> print(manifest_path)
    reports/recompute_manifest.csv
+   >>> print((result.output_root / "manifest.csv").exists())
    False
 
 ``manifest_csv=False`` skips the automatic ``manifest.csv`` next to the
@@ -571,31 +640,27 @@ In-Memory Recompute
 Use ``write=False`` when you want recomputed objects but do not want files on
 disk.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.seg.edi import EDIFile
+   >>> from pycsamt.seg.edi import EDIFile
 
-   edis = [
-       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi"),
-       EDIFile("data/AMT/WILLY_DATA/L18PLT/18-002U.edi"),
-   ]
+   >>> edis = [
+   ...     EDIFile("data/AMT/WILLY_DATA/L18PLT/18-001A.edi"),
+   ...     EDIFile("data/AMT/WILLY_DATA/L18PLT/18-002U.edi"),
+   ... ]
 
-   result = recompute_edis(
-       edis,
-       rotate_angle=15.0,
-       write=False,
-   )
+   >>> result = recompute_edis(
+   ...     edis,
+   ...     rotate_angle=15.0,
+   ...     write=False,
+   ... )
 
-   recomputed_edis = result.edis
-   print(len(recomputed_edis))
-   print(result.output_root)
-   print(len(result.paths))
-
-.. code-block:: text
-
+   >>> recomputed_edis = result.edis
+   >>> print(len(recomputed_edis))
    2
+   >>> print(result.output_root)
    None
+   >>> print(len(result.paths))
    0
 
 With ``write=False``, ``output_root`` is ``None`` and ``paths`` is empty --

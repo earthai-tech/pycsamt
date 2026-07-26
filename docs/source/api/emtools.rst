@@ -6,8 +6,8 @@ static-shift correction, source-effect tools, and plotting helpers.
 
 .. seealso::
 
-   :doc:`../user_guide/emtools/index` for narrative, runnable examples built
-   module by module (currently: :doc:`../user_guide/emtools/tf`).
+   :doc:`../user_guide/emtools/index` for narrative, runnable examples built module
+   by module (currently: :doc:`../user_guide/emtools/tf`).
 
 .. automodule:: pycsamt.emtools
    :members:

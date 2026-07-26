@@ -282,7 +282,9 @@ html_theme_options = {
     "pygment_dark_style": "monokai",
     # Footer
     "footer_start": ["copyright"],
-    "footer_end": ["sphinx-version", "theme-version"],
+    # "netlify-badge" satisfies the Netlify Open Source Plan's requirement
+    # of a link back to Netlify on every page (see _templates/netlify-badge.html).
+    "footer_end": ["sphinx-version", "theme-version", "netlify-badge"],
     # Search
     "search_bar_text": "Search pyCSAMT docs...",
     "switcher": {

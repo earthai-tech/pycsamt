@@ -7,7 +7,7 @@ import copy
 import math
 import re
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from os import PathLike
 from pathlib import Path
 from typing import (
@@ -807,6 +807,17 @@ class Site(SiteMixin):
 
         return _maybe_copy(self.edi) if copy else self.edi
 
+    def update_metadata(
+        self,
+        update: Mapping[str, Any],
+        *,
+        inplace: bool = False,
+    ) -> Site:
+        """Update station, coordinate, HEAD, or INFO metadata."""
+        from .metadata import update_metadata
+
+        return update_metadata(self, update, inplace=inplace)
+
     def __repr__(self) -> str:
         r"""
         Debug-friendly, one-line summary of the site.
@@ -1536,6 +1547,44 @@ class Sites(CoreObject):
         """
 
         return [fn(s) for s in self._items]
+
+    def rename(
+        self,
+        names: Any,
+        *,
+        inplace: bool = False,
+        missing: str = "raise",
+        allow_duplicates: bool = False,
+    ) -> Sites:
+        """Rename stations from a mapping, sequence, or callable."""
+        from .metadata import rename_sites
+
+        return rename_sites(
+            self,
+            names,
+            inplace=inplace,
+            missing=missing,
+            allow_duplicates=allow_duplicates,
+        )
+
+    def update_metadata(
+        self,
+        updates: Any,
+        *,
+        inplace: bool = False,
+        missing: str = "raise",
+        allow_duplicates: bool = False,
+    ) -> Sites:
+        """Apply declarative station, HEAD, INFO, and coordinate updates."""
+        from .metadata import update_metadata_all
+
+        return update_metadata_all(
+            self,
+            updates,
+            inplace=inplace,
+            missing=missing,
+            allow_duplicates=allow_duplicates,
+        )
 
     def edit_all(
         self,

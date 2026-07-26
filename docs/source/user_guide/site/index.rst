@@ -28,6 +28,7 @@ Use this section when you need to:
    :class: pycsamt-guide-toc
 
    containers
+   metadata
    location_profile
    selection
    editing

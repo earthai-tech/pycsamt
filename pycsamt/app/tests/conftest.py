@@ -30,9 +30,31 @@ _qt_active = False
 _IS_WINDOWS = sys.platform == "win32"
 
 
+def _terminate_after_qt() -> None:
+    """Exit without running the unsafe Qt/Shiboken finalizer graph."""
+
+    if not _qt_active:
+        return
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if _IS_WINDOWS:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), _exit_status)
+    else:
+        os._exit(_exit_status)
+
+
+@pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     global _exit_status
     _exit_status = int(exitstatus)
+    # Conftest plugins may be unregistered before pytest_unconfigure, so that
+    # hook is not reliable on every pytest/Python combination. Sessionfinish
+    # is guaranteed while this plugin is active; ``trylast`` lets coverage and
+    # terminal reporters persist their results first.
+    _terminate_after_qt()
 
 
 def pytest_unconfigure(config):  # noqa: ARG001
@@ -58,17 +80,7 @@ def pytest_unconfigure(config):  # noqa: ARG001
     ``TerminateProcess`` is the only call that skips that too, and it
     takes the exit code directly so status reporting stays intact.
     """
-    if not _qt_active:
-        return
-    sys.stdout.flush()
-    sys.stderr.flush()
-    if _IS_WINDOWS:
-        import ctypes
-
-        kernel32 = ctypes.windll.kernel32
-        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), _exit_status)
-    else:
-        os._exit(_exit_status)
+    _terminate_after_qt()
 
 
 # ── Qt / offscreen setup ───────────────────────────────────────────────────

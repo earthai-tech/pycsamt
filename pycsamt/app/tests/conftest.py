@@ -77,7 +77,17 @@ def pytest_unconfigure(config):  # noqa: ARG001
 @pytest.fixture(scope="session", autouse=True)
 def qt_offscreen():
     """Force Qt to use the offscreen (headless) platform for all tests."""
+    global _qt_active
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    try:
+        import PySide6  # noqa: F401
+    except ImportError:
+        yield
+        return
+    # Qt can be initialized by pytest-qt or directly by a test, bypassing our
+    # local qapp fixture. Always enable the safe process-exit path whenever
+    # the bindings used by this test tree are available.
+    _qt_active = True
     yield
 
 

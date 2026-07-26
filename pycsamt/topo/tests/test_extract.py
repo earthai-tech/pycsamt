@@ -2,7 +2,7 @@
 # License: LGPL-3.0
 """Tests for pycsamt.topo.extract using real WILLY AMT EDI data.
 
-All five WILLY profiles (L18PLT–L34PLT, 128 stations total) are exercised.
+The two WILLY profiles committed to the repository are exercised.
 Tests verify:
   * elevation extraction from EDIFile list and EDICollection
   * monotonic along-profile chainage
@@ -142,8 +142,8 @@ class TestExtractElevation:
         arr = extract_elevation([])
         assert len(arr) == 0
 
-    def test_all_five_profiles(self):
-        for prof in ("L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"):
+    def test_all_committed_profiles(self):
+        for prof in ("L18PLT", "L22PLT"):
             edis = _load_profile(prof)
             elev = extract_elevation(edis)
             assert len(elev) == len(edis)
@@ -217,13 +217,13 @@ class TestExtractChainage:
         assert chain.shape == (1,)
         assert chain[0] == pytest.approx(0.0)
 
-    def test_all_five_profiles_have_reasonable_lengths(self):
+    def test_all_committed_profiles_have_reasonable_lengths(self):
         """Every WILLY profile should span at least 1 km and at most 15 km.
 
         L22PLT has one large gap (~2.1 km) due to a station with a large
         lon offset, giving a total chainage of ~10.5 km.
         """
-        for prof in ("L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"):
+        for prof in ("L18PLT", "L22PLT"):
             edis = _load_profile(prof)
             chain = extract_chainage(edis)
             total_km = chain[-1]
@@ -296,8 +296,8 @@ class TestExtractStationNames:
         names = extract_station_names([_NoName()])
         assert names == ["S000"]
 
-    def test_all_five_profiles(self):
-        for prof in ("L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"):
+    def test_all_committed_profiles(self):
+        for prof in ("L18PLT", "L22PLT"):
             edis = _load_profile(prof)
             names = extract_station_names(edis)
             assert len(names) == len(edis)
@@ -342,7 +342,7 @@ class TestEdgeCases:
 
     def test_edi_collection_all_profiles(self):
         """Load each profile into EDICollection and extract successfully."""
-        for prof in ("L18PLT", "L22PLT", "L26PLT", "L30PLT", "L34PLT"):
+        for prof in ("L18PLT", "L22PLT"):
             edis = _load_profile(prof)
             coll = EDICollection(edis)
             elev = extract_elevation(coll)

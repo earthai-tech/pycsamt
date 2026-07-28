@@ -29,17 +29,13 @@ def test_all_entries_have_type():
 def test_llm_entries_have_class_name():
     for name, entry in AGENT_REGISTRY.items():
         if entry["type"] == "llm":
-            assert "class_name" in entry, (
-                f"LLM agent '{name}' missing 'class_name'"
-            )
+            assert "class_name" in entry, f"LLM agent '{name}' missing 'class_name'"
 
 
 def test_processing_entries_have_fn_name():
     for name, entry in AGENT_REGISTRY.items():
         if entry["type"] == "processing":
-            assert "fn_name" in entry, (
-                f"Processing agent '{name}' missing 'fn_name'"
-            )
+            assert "fn_name" in entry, f"Processing agent '{name}' missing 'fn_name'"
 
 
 def test_all_entries_have_description():
@@ -50,26 +46,24 @@ def test_all_entries_have_description():
 def test_all_param_specs_have_type():
     for agent_name, entry in AGENT_REGISTRY.items():
         for p_name, spec in entry.get("params", {}).items():
-            assert "type" in spec, (
-                f"'{agent_name}'.params.'{p_name}' missing 'type'"
-            )
+            assert "type" in spec, f"'{agent_name}'.params.'{p_name}' missing 'type'"
 
 
 def test_all_param_specs_have_default():
     for agent_name, entry in AGENT_REGISTRY.items():
         for p_name, spec in entry.get("params", {}).items():
-            assert "default" in spec, (
-                f"'{agent_name}'.params.'{p_name}' missing 'default'"
-            )
+            assert (
+                "default" in spec
+            ), f"'{agent_name}'.params.'{p_name}' missing 'default'"
 
 
 def test_combo_params_have_options():
     for agent_name, entry in AGENT_REGISTRY.items():
         for p_name, spec in entry.get("params", {}).items():
             if spec["type"] == "combo":
-                assert "options" in spec and len(spec["options"]) > 0, (
-                    f"'{agent_name}'.params.'{p_name}' combo has no options"
-                )
+                assert (
+                    "options" in spec and len(spec["options"]) > 0
+                ), f"'{agent_name}'.params.'{p_name}' combo has no options"
 
 
 # ── Helper functions ──────────────────────────────────────────────────────

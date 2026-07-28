@@ -287,9 +287,7 @@ class TestBoreholes:
     def test_add_borehole_csv(self, ctrl, tmp_path):
         p = tmp_path / "Bo17.csv"
         p.write_text(
-            "top,bottom,lithology,resistivity\n"
-            "0,20,Clay,10.0\n"
-            "20,40,Sand,150.0\n"
+            "top,bottom,lithology,resistivity\n" "0,20,Clay,10.0\n" "20,40,Sand,150.0\n"
         )
         name = ctrl.add_borehole_csv(str(p))
         assert name == "Bo17"
@@ -452,9 +450,7 @@ class TestRunMonteCarlo:
         assert ctrl.run_monte_carlo() == "Run hydro estimation first."
 
     def test_model_but_no_cfg(self, loaded_ctrl):
-        assert (
-            loaded_ctrl.run_monte_carlo() == "Run hydro estimation first."
-        )
+        assert loaded_ctrl.run_monte_carlo() == "Run hydro estimation first."
 
     def test_small_run_succeeds(self, hydro_ctrl):
         msg = hydro_ctrl.run_monte_carlo(n_samples=8)
@@ -789,7 +785,9 @@ _EMTOOLS_METHODS_POLAR = ["plot_strike_rose", "plot_phasor_wheel"]
 
 
 class TestEmtoolsPlotsNoSites:
-    @pytest.mark.parametrize("method", _EMTOOLS_METHODS_NONPOLAR + _EMTOOLS_METHODS_POLAR)
+    @pytest.mark.parametrize(
+        "method", _EMTOOLS_METHODS_NONPOLAR + _EMTOOLS_METHODS_POLAR
+    )
     def test_no_sites_shows_message(self, ctrl, method):
         fig = ctrl.generate(method)
         texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts)
@@ -833,7 +831,11 @@ class TestEmtoolsPlotsWithSites:
 
 class TestMcPlots:
     def test_no_mc_result_all_three(self, ctrl):
-        for name in ("plot_mc_K_section", "plot_mc_wt_profile", "plot_mc_histograms"):
+        for name in (
+            "plot_mc_K_section",
+            "plot_mc_wt_profile",
+            "plot_mc_histograms",
+        ):
             fig = ctrl.generate(name)
             texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts)
             assert "run monte carlo" in texts.lower()

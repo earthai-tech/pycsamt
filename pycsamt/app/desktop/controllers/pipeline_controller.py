@@ -392,9 +392,7 @@ def _build_steps() -> list[PipelineStep]:
                     "rpca",
                     "Robust PCA denoising",
                     params={
-                        "keep_phase": ParamSpec(
-                            "bool", "Preserve phase", True
-                        ),
+                        "keep_phase": ParamSpec("bool", "Preserve phase", True),
                     },
                 ),
             ],
@@ -625,16 +623,12 @@ class PipelineController:
                 dc = DataController()
                 import glob
 
-                paths = glob.glob(
-                    str(Path(folder) / "*.edi"), recursive=False
-                )
+                paths = glob.glob(str(Path(folder) / "*.edi"), recursive=False)
                 if not paths:
                     raise ValueError(f"No EDI files found in {folder}")
                 result = dc.load(paths)
                 self._sites_input = result
-                step.result_info = (
-                    f"{len(paths)} files → {self._n(result)} stations"
-                )
+                step.result_info = f"{len(paths)} files → {self._n(result)} stations"
                 log(f"Loaded {len(paths)} EDI files.")
                 return result
 
@@ -673,9 +667,7 @@ class PipelineController:
             else:
                 mode = prm.get("mode", "auto")
                 ci_hi = float(prm.get("ci_hi", 0.8))
-                log(
-                    f"Editing frequencies by confidence (mode={mode}, ci_hi={ci_hi})."
-                )
+                log(f"Editing frequencies by confidence (mode={mode}, ci_hi={ci_hi}).")
                 result = et.edit_frequencies_by_confidence(
                     sites_in, mode=mode, ci_hi=ci_hi
                 )
@@ -689,9 +681,7 @@ class PipelineController:
                 hw = int(prm.get("half_window", 3))
                 wt = prm.get("weights", "tri")
                 sk = float(prm.get("max_skew", 6.0))
-                log(
-                    f"AMA static-shift correction (window={hw}, weights={wt})."
-                )
+                log(f"AMA static-shift correction (window={hw}, weights={wt}).")
                 result = et.correct_ss_ama(
                     sites_in,
                     half_window=hw,
@@ -707,12 +697,8 @@ class PipelineController:
             elif meth == "bilateral":
                 sd = float(prm.get("sig_dist", 2.0))
                 sv = float(prm.get("sig_val", 0.5))
-                log(
-                    f"Bilateral static-shift correction (sig_dist={sd}, sig_val={sv})."
-                )
-                tbl = et.estimate_ss_bilateral(
-                    sites_in, sig_dist=sd, sig_val=sv
-                )
+                log(f"Bilateral static-shift correction (sig_dist={sd}, sig_val={sv}).")
+                tbl = et.estimate_ss_bilateral(sites_in, sig_dist=sd, sig_val=sv)
                 result = et.apply_ss_factors(sites_in, tbl, inplace=False)
             else:
                 log("Reference-median static-shift correction.")
@@ -729,9 +715,7 @@ class PipelineController:
                 filt = prm.get("method", "median")
                 win = int(prm.get("window", 5))
                 log(f"EMAP filter ({filt}, window={win}).")
-                result = et.apply_emap_filter(
-                    sites_in, method=filt, window=win
-                )
+                result = et.apply_emap_filter(sites_in, method=filt, window=win)
             elif meth == "rpca":
                 kp = bool(prm.get("keep_phase", True))
                 log(f"RPCA denoising (keep_phase={kp}).")
@@ -747,9 +731,7 @@ class PipelineController:
                 mhz = float(prm.get("mains_hz", 50.0))
                 sw = int(prm.get("smooth_win", 3))
                 log(f"Noise pipeline (mains={mhz} Hz, smooth_win={sw}).")
-                result = et.remove_noise_pipeline(
-                    sites_in, mains_hz=mhz, smooth_win=sw
-                )
+                result = et.remove_noise_pipeline(sites_in, mains_hz=mhz, smooth_win=sw)
             result = self._coerce_sites(result, sites_in)
             step.result_info = "Noise removed."
             log("Noise removal complete.")
@@ -768,9 +750,7 @@ class PipelineController:
                 ws = float(prm.get("w_sweep", 0.5))
                 wp = float(prm.get("w_pt", 0.5))
                 log(f"Consensus strike estimate (w_sweep={ws}, w_pt={wp}).")
-                tbl = et.estimate_strike_consensus(
-                    sites_in, w_sweep=ws, w_pt=wp
-                )
+                tbl = et.estimate_strike_consensus(sites_in, w_sweep=ws, w_pt=wp)
             import pandas as pd
 
             if isinstance(tbl, pd.DataFrame) and not tbl.empty:
@@ -806,9 +786,7 @@ class PipelineController:
             else:
                 rot_meth = prm.get("method", "consensus")
                 log(f"Rotating to strike (method={rot_meth}).")
-                result = et.rotate_to_strike(
-                    sites_in, method=rot_meth, inplace=False
-                )
+                result = et.rotate_to_strike(sites_in, method=rot_meth, inplace=False)
             result = self._coerce_sites(result, sites_in)
             step.result_info = f"Rotated — {self._n(result)} stations"
             log("Rotation complete.")
@@ -894,9 +872,7 @@ class PipelineController:
         if hasattr(result, "as_list"):
             return result
         # APIResult wraps Sites in some functions
-        inner = getattr(result, "sites", None) or getattr(
-            result, "data", None
-        )
+        inner = getattr(result, "sites", None) or getattr(result, "data", None)
         if inner is not None and hasattr(inner, "as_list"):
             return inner
         return fallback

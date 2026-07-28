@@ -84,9 +84,7 @@ def test_unmapped_protocol_falls_back_to_recorder():
 
 
 def test_edge_processor_decimates_and_scores_coverage():
-    proc = EdgeProcessor(
-        EdgeProcessingConfig(decimation=2, finite_threshold=0.7)
-    )
+    proc = EdgeProcessor(EdgeProcessingConfig(decimation=2, finite_threshold=0.7))
     result = proc.process(np.array([1.0, 2.0, np.nan, 4.0, 5.0]))
 
     assert result.data.shape[0] == 3

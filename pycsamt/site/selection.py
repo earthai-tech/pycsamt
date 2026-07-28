@@ -169,7 +169,7 @@ def by_index(sites: Any, indices: Iterable[int] | int):
     >>> from pycsamt.site.base import Sites
     >>> from pycsamt.site.selection import by_index
     >>> sites = Sites([e1, e2, e3])  # names: A, B, C
-    >>> out = by_index(sites, [0, -1])   # first and last
+    >>> out = by_index(sites, [0, -1])  # first and last
     >>> [s.name for s in out]
     ['A', 'C']
 
@@ -472,8 +472,7 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
     >>> from pycsamt.site.selection import by_predicate
     >>> s = Sites([e1, e2, e3])
     >>> out = by_predicate(
-    ...     s, lambda ed: (Site(ed).freq is not None and
-    ...                    len(Site(ed).freq) >= 3)
+    ...     s, lambda ed: Site(ed).freq is not None and len(Site(ed).freq) >= 3
     ... )
     >>> [t.name for t in out]
     ['A01', 'A03']
@@ -483,8 +482,7 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
     >>> import re
     >>> from pycsamt.site.utils import station_name
     >>> rule = re.compile(r"^X_")
-    >>> out = by_predicate(s, lambda ed: bool(rule.search(
-    ...     station_name(ed))))
+    >>> out = by_predicate(s, lambda ed: bool(rule.search(station_name(ed))))
     >>> [t.name for t in out]
     ['X_E01', 'X_E02']
 

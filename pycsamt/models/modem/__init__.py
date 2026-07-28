@@ -17,14 +17,14 @@ Computers & Geosciences, 66, 40-53.
 Quick start — 3D
 -----------------
 >>> from pycsamt.models.modem import ModEmConfig, InputBuilder
->>> cfg = ModEmConfig(mode='3d', initial_rho=100.0)
+>>> cfg = ModEmConfig(mode="3d", initial_rho=100.0)
 >>> builder = InputBuilder(config=cfg)
->>> builder.build(edi_source, workdir='./modem_run')
+>>> builder.build(edi_source, workdir="./modem_run")
 >>> from pycsamt.models.modem import ModEmRunner
->>> ModEmRunner(workdir='./modem_run', config=cfg).run()
+>>> ModEmRunner(workdir="./modem_run", config=cfg).run()
 >>> from pycsamt.models.modem import InversionResult
->>> result = InversionResult(workdir='./modem_run')
->>> result.plot_model().savefig('model.png')
+>>> result = InversionResult(workdir="./modem_run")
+>>> result.plot_model().savefig("model.png")
 """
 
 from .builder import InputBuilder

@@ -81,9 +81,7 @@ def layout() -> html.Div:
                         [
                             dbc.Button(
                                 [
-                                    html.I(
-                                        className="bi bi-arrow-repeat me-1"
-                                    ),
+                                    html.I(className="bi bi-arrow-repeat me-1"),
                                     "Refresh",
                                 ],
                                 id=IDs.BTN_QC_RUN,
@@ -108,9 +106,7 @@ def layout() -> html.Div:
                         size="sm",
                         color="info",
                     ),
-                    html.Div(
-                        id=IDs.QC_FEEDBACK, className="qc-feedback-sidebar"
-                    ),
+                    html.Div(id=IDs.QC_FEEDBACK, className="qc-feedback-sidebar"),
                 ],
                 className="qc-run-bar",
             ),
@@ -149,9 +145,7 @@ def layout() -> html.Div:
                             html.Div("Parameters", className="ctrl-label"),
                             html.Div(
                                 [
-                                    html.Span(
-                                        "Metric", className="qc-param-label"
-                                    ),
+                                    html.Span("Metric", className="qc-param-label"),
                                     dbc.Select(
                                         id=IDs.QC_PARAM_METRIC,
                                         options=_METRIC_OPTS,
@@ -163,9 +157,7 @@ def layout() -> html.Div:
                             ),
                             html.Div(
                                 [
-                                    html.Span(
-                                        "Method", className="qc-param-label"
-                                    ),
+                                    html.Span("Method", className="qc-param-label"),
                                     dbc.Select(
                                         id=IDs.QC_PARAM_METHOD,
                                         options=_METHOD_OPTS,
@@ -213,9 +205,7 @@ def layout() -> html.Div:
                             ),
                             html.Div(
                                 [
-                                    html.Span(
-                                        "Mains Hz", className="qc-param-label"
-                                    ),
+                                    html.Span("Mains Hz", className="qc-param-label"),
                                     dbc.RadioItems(
                                         id=IDs.QC_PARAM_MAINS,
                                         options=[
@@ -253,9 +243,7 @@ def layout() -> html.Div:
                     html.Div(
                         dbc.Select(
                             id=IDs.QC_GROUP_SELECT,
-                            options=[
-                                {"label": g, "value": g} for g, _ in _GROUPS
-                            ],
+                            options=[{"label": g, "value": g} for g, _ in _GROUPS],
                             value=first_group,
                         ),
                         style={"display": "none"},

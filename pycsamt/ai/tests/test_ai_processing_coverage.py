@@ -69,7 +69,15 @@ def test_sites_to_feature_df_and_prepare_z_features(sites):
 
     df = _sites_to_feature_df(sites)
     assert set(
-        ["station", "freq", "snr", "swift_skew", "asym", "phase_xy", "phase_yx"]
+        [
+            "station",
+            "freq",
+            "snr",
+            "swift_skew",
+            "asym",
+            "phase_xy",
+            "phase_yx",
+        ]
     ).issubset(df.columns)
     assert len(df) > 0
 
@@ -190,7 +198,7 @@ def test_emdenoiser_numpy_fallback_scipy_missing(monkeypatch):
     monkeypatch.setitem(sys.modules, "scipy.ndimage", None)
 
     X = _denoise_X(n=8, n_freqs=10)
-    den = EMDenoiser = denoise_mod.EMDenoiser()
+    den = denoise_mod.EMDenoiser()
     den.fit(X, epochs=1, verbose=False)
     assert den._use_numpy is True
 
@@ -234,9 +242,7 @@ def test_anomaly_detector_save_load_round_trip_torch(tmp_path):
 
     scores_after = loaded.transform(X)
     np.testing.assert_allclose(scores_before, scores_after, rtol=1e-4, atol=1e-5)
-    np.testing.assert_array_equal(
-        loaded.flag_anomalies(X), det.flag_anomalies(X)
-    )
+    np.testing.assert_array_equal(loaded.flag_anomalies(X), det.flag_anomalies(X))
 
 
 def test_anomaly_detector_pca_fallback_verbose_prints(monkeypatch, capsys):
@@ -246,9 +252,7 @@ def test_anomaly_detector_pca_fallback_verbose_prints(monkeypatch, capsys):
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_torch",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
-            ImportError("no torch")
-        ),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no torch")),
     )
     X = _anomaly_X(n=20, n_feat=10)
     det = anomaly_mod.AnomalyDetector(latent_dim=3)
@@ -271,9 +275,7 @@ def _dim_Xy(n=80, seed=9):
     from pycsamt.ai.processing.classify import _rule_labels
 
     y = _rule_labels(X[:, 0], X[:, 1])
-    strike = np.where(
-        y == 1, rng.uniform(-90.0, 90.0, n), np.nan
-    ).astype(np.float32)
+    strike = np.where(y == 1, rng.uniform(-90.0, 90.0, n), np.nan).astype(np.float32)
     return X, y, strike
 
 

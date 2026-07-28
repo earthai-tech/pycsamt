@@ -65,10 +65,12 @@ def get_triangle_regions(
     Examples
     --------
     >>> import numpy as np
-    >>> from pycsamt.models.mare2dem.geom.triangle_regions import get_triangle_regions
-    >>> pts = np.array([[0.,0.],[1.,0.],[0.5,1.]])
-    >>> tris = np.array([[1,2,3]])
-    >>> segs = np.array([[1,2]])
+    >>> from pycsamt.models.mare2dem.geom.triangle_regions import (
+    ...     get_triangle_regions,
+    ... )
+    >>> pts = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]])
+    >>> tris = np.array([[1, 2, 3]])
+    >>> segs = np.array([[1, 2]])
     >>> tri_index, region_map = get_triangle_regions(pts, tris, segs)
     >>> tri_index
     array([1])

@@ -74,16 +74,12 @@ class TestContextBuilder(unittest.TestCase):
     def test_rerank_fn_reorders_chunks(self):
         # A rerank_fn that names candidates "2, 1" reverses the two-chunk
         # pool, whatever order retrieval produced.
-        default_ids = [
-            c.id for c in self.builder.build("static shift").chunks
-        ]
+        default_ids = [c.id for c in self.builder.build("static shift").chunks]
         self.assertEqual(len(default_ids), 2)
         reranked = self.builder.build(
             "static shift", rerank_fn=lambda prompt, system: "2, 1"
         )
-        self.assertEqual(
-            [c.id for c in reranked.chunks], list(reversed(default_ids))
-        )
+        self.assertEqual([c.id for c in reranked.chunks], list(reversed(default_ids)))
 
     def test_rerank_absent_leaves_default_path(self):
         # No rerank_fn → identical to a plain build (no crash, same lead).
@@ -219,15 +215,11 @@ class TestApiCardsAndGraph(unittest.TestCase):
         from pycsamt.assistant.rag.graph import SymbolGraph
 
         chunks = self._chunks()
-        self.builder = ContextBuilder(
-            Retriever(chunks), None, SymbolGraph(chunks)
-        )
+        self.builder = ContextBuilder(Retriever(chunks), None, SymbolGraph(chunks))
 
     def test_api_card_rendered_for_lead_symbol(self):
         ac = self.builder.build("correct static shift ama")
-        self.assertIn(
-            "API: correct_ss_ama(sites, half_window=3)", ac.context_text
-        )
+        self.assertIn("API: correct_ss_ama(sites, half_window=3)", ac.context_text)
         self.assertIn("half_window: int = 3", ac.context_text)
 
     def test_related_symbols_from_graph(self):
@@ -240,9 +232,7 @@ class TestApiCardsAndGraph(unittest.TestCase):
         cards = {c["symbol"]: c for c in ac.api_cards()}
         card = cards["pycsamt.emtools.ss.correct_ss_ama"]
         self.assertEqual(card["returns"], "dict")
-        self.assertEqual(
-            [p["name"] for p in card["params"]], ["sites", "half_window"]
-        )
+        self.assertEqual([p["name"] for p in card["params"]], ["sites", "half_window"])
 
     def test_related_symbols_lead_the_see_also(self):
         ac = self.builder.build("correct static shift ama")

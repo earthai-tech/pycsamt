@@ -58,17 +58,13 @@ class TestMain:
 
         import pycsamt.app.mapview.__main__ as main_mod
 
-        monkeypatch.setattr(
-            sys, "argv", ["pycsamt-mapview", "--no-browser"]
-        )
+        monkeypatch.setattr(sys, "argv", ["pycsamt-mapview", "--no-browser"])
         recorded = {}
 
         def fake_launch(**kwargs):
             recorded.update(kwargs)
 
-        monkeypatch.setattr(
-            "pycsamt.app.mapview.app.launch", fake_launch
-        )
+        monkeypatch.setattr("pycsamt.app.mapview.app.launch", fake_launch)
         assert main_mod.main() == 0
         assert recorded["host"] == "127.0.0.1"
         assert recorded["port"] == 8770

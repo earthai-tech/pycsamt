@@ -122,12 +122,8 @@ class Grid3D:
 
         xlo, xhi = self.x_nodes[0], self.x_nodes[-1]
         ylo, yhi = self.y_nodes[0], self.y_nodes[-1]
-        bad_x = (self.stations_xy[:, 0] < xlo) | (
-            self.stations_xy[:, 0] > xhi
-        )
-        bad_y = (self.stations_xy[:, 1] < ylo) | (
-            self.stations_xy[:, 1] > yhi
-        )
+        bad_x = (self.stations_xy[:, 0] < xlo) | (self.stations_xy[:, 0] > xhi)
+        bad_y = (self.stations_xy[:, 1] < ylo) | (self.stations_xy[:, 1] > yhi)
         if bad_x.any() or bad_y.any():
             raise ValueError(
                 f"{(bad_x | bad_y).sum()} station(s) outside the grid extent."
@@ -196,22 +192,12 @@ class Grid3D:
 
     def _station_x_cells(self) -> np.ndarray:
         """x-cell index for every station."""
-        idx = (
-            np.searchsorted(
-                self.x_nodes, self.stations_xy[:, 0], side="right"
-            )
-            - 1
-        )
+        idx = np.searchsorted(self.x_nodes, self.stations_xy[:, 0], side="right") - 1
         return np.clip(idx, 0, self.nx - 1)
 
     def _station_y_cells(self) -> np.ndarray:
         """y-cell index for every station."""
-        idx = (
-            np.searchsorted(
-                self.y_nodes, self.stations_xy[:, 1], side="right"
-            )
-            - 1
-        )
+        idx = np.searchsorted(self.y_nodes, self.stations_xy[:, 1], side="right") - 1
         return np.clip(idx, 0, self.ny - 1)
 
     # ── 2-D slice extraction (used by the quasi-3D solver) ───────────────────
@@ -287,9 +273,7 @@ class Grid3D:
         )
         return g2d, indices
 
-    def column_profile_3d(
-        self, xi: int, yi: int
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def column_profile_3d(self, xi: int, yi: int) -> tuple[np.ndarray, np.ndarray]:
         """Return the 1-D resistivity/thickness profile at cell (xi, yi).
 
         Parameters
@@ -385,14 +369,10 @@ class Grid3D:
 
         # midpoint indices in core
         mid_y = (
-            self.n_pad + (self.ny - 2 * self.n_pad) // 2
-            if self.n_pad
-            else self.ny // 2
+            self.n_pad + (self.ny - 2 * self.n_pad) // 2 if self.n_pad else self.ny // 2
         )
         mid_x = (
-            self.n_pad + (self.nx - 2 * self.n_pad) // 2
-            if self.n_pad
-            else self.nx // 2
+            self.n_pad + (self.nx - 2 * self.n_pad) // 2 if self.n_pad else self.nx // 2
         )
         mid_z = (self.nz - self.n_pad) // 2 if self.n_pad else self.nz // 2
 
@@ -423,9 +403,7 @@ class Grid3D:
             ),
         ]
 
-        fig, axs = plt.subplots(
-            1, 3, figsize=figsize, constrained_layout=True
-        )
+        fig, axs = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
         for ax, (data, h_nodes, v_nodes, xlb, ylb, ttl) in zip(axs, slices):
             d = np.log10(np.maximum(data, 1e-12)) if log_scale else data
             pc = ax.pcolormesh(
@@ -459,9 +437,7 @@ class Grid3D:
                 zorder=5,
             )
 
-        fig.suptitle(
-            self.name or "3-D resistivity model", fontsize=10, y=1.01
-        )
+        fig.suptitle(self.name or "3-D resistivity model", fontsize=10, y=1.01)
         return fig, axs
 
     def __repr__(self) -> str:
@@ -698,9 +674,7 @@ class Grid3D:
         nx_tot, ny_tot, nz_tot = g.nx, g.ny, g.nz
 
         # Background layers
-        layer_bounds = np.round(np.linspace(0, nz_tot, n_layers + 1)).astype(
-            int
-        )
+        layer_bounds = np.round(np.linspace(0, nz_tot, n_layers + 1)).astype(int)
         log_lo, log_hi = np.log10(rho_min), np.log10(rho_max)
         rho_3d = np.ones((nz_tot, ny_tot, nx_tot))
         for k in range(n_layers):
@@ -719,14 +693,10 @@ class Grid3D:
                 sy = max(1.0, corr_length / dy_mean)
                 from scipy.ndimage import gaussian_filter
 
-                smooth = gaussian_filter(
-                    noise, sigma=[sy, sx], mode="reflect"
-                )
+                smooth = gaussian_filter(noise, sigma=[sy, sx], mode="reflect")
                 smooth /= max(smooth.std(), 1e-10)  # normalise to unit std
                 log_perturb = 0.3 * smooth  # ±30% log perturbation
-                rho_3d[iz] = np.clip(
-                    rho_3d[iz] * 10.0**log_perturb, rho_min, rho_max
-                )
+                rho_3d[iz] = np.clip(rho_3d[iz] * 10.0**log_perturb, rho_min, rho_max)
 
         g.resistivity = rho_3d
         return g

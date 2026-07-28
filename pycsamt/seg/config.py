@@ -284,9 +284,7 @@ SEG = type(
     "SEG",
     (*_mixins, _Facade),
     {
-        "__doc__": (
-            "Facade that inherits from all discovered SEG components."
-        ),
+        "__doc__": ("Facade that inherits from all discovered SEG components."),
         "__mixins__": _mixins,
         "__config__": SEGConfig(),
     },

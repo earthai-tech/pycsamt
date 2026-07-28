@@ -185,9 +185,7 @@ def _write_json(
             ),
             "parameters": {
                 name: {
-                    "group": by_name.get(name).group
-                    if name in by_name
-                    else "General",
+                    "group": by_name.get(name).group if name in by_name else "General",
                     "description": by_name.get(name).description
                     if name in by_name
                     else "",
@@ -276,9 +274,7 @@ def _read_python(path: Path) -> dict[str, Any]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                is_config = (
-                    isinstance(target, ast.Name) and target.id == "CONFIG"
-                )
+                is_config = isinstance(target, ast.Name) and target.id == "CONFIG"
                 if is_config:
                     data = ast.literal_eval(node.value)
                     if isinstance(data, dict):

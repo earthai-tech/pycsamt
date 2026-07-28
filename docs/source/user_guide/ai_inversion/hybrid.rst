@@ -11,6 +11,7 @@ regularization, and geometry assumptions.  It is not a shortcut around
 :doc:`validation`.  It is a two-stage scientific claim:
 
 .. math::
+   :label: eq-hybrid-two-stage-map
 
    \mathbf{x}
    \xrightarrow{\;g_\theta\;}
@@ -25,6 +26,8 @@ model.  A hybrid result is useful only when both stages remain visible.  If the
 final section is shown without the initial AI estimate, the reader cannot tell
 whether physics refinement improved the result, merely preserved it, or moved
 it into a different but still non-unique model.
+Equation :eq:`eq-hybrid-two-stage-map` also fixes the order of operations:
+preprocessing and AI inference precede observation-specific optimization.
 
 Use hybrid inversion when a supervised inverter already has a validated
 :term:`feature contract`, but field observations deserve a physical correction
@@ -84,6 +87,7 @@ Stage 1 is a supervised inverse mapping.  For a fitted AI model
 :math:`g_\theta`, the starting model is
 
 .. math::
+   :label: eq-hybrid-stage1-map
 
    \mathbf{m}_{0,i}=g_\theta(\mathbf{x}_i).
 
@@ -91,6 +95,7 @@ Stage 2 starts from :math:`\mathbf{m}_{0,i}` and minimizes a physics objective
 against the observed response.  In compact form,
 
 .. math::
+   :label: eq-hybrid-objective
 
    \mathcal{J}(\mathbf{m})
    =
@@ -104,6 +109,7 @@ term compares the measured response :math:`\mathbf{d}^{\mathrm{obs}}` with the
 response reconstructed by the :term:`forward operator`:
 
 .. math::
+   :label: eq-hybrid-data-term
 
    \mathcal{J}_{\mathrm{data}}
    =
@@ -132,11 +138,14 @@ parameterization.  A 1-D station run usually uses vertical roughness only; a
 2-D profile also uses lateral roughness; a 3-D graph workflow can penalize
 roughness across graph edges.  The weights therefore have scientific meaning:
 they decide how much misfit reduction is worth compared with added structure.
+Thus :eq:`eq-hybrid-objective` is not reproducible unless the residual
+definition in :eq:`eq-hybrid-data-term` and every active weight are reported.
 
 The mask and weights deserve the same care as the network architecture.  A
 typical normalized residual can be written
 
 .. math::
+   :label: eq-hybrid-normalized-residual
 
    r_{ij}
    =
@@ -154,6 +163,7 @@ log-resistivity section :math:`u_{zk}=\log_{10}\rho_{zk}`, one possible reading
 is
 
 .. math::
+   :label: eq-hybrid-section-roughness
 
    \mathcal{J}_{\mathrm{vert}}
    =
@@ -168,6 +178,7 @@ is
 For a graph model with edge set :math:`\mathcal{E}`,
 
 .. math::
+   :label: eq-hybrid-graph-roughness
 
    \mathcal{J}_{\mathrm{graph}}
    =
@@ -179,12 +190,17 @@ where :math:`a_{pq}` is an edge weight.  These equations make the trade-off
 visible: lowering the data term by introducing sharp or isolated structure is
 penalized only to the degree encoded by :math:`\lambda_z`, :math:`\lambda_x`,
 or :math:`\lambda_g`.
+The distinction between the grid differences in
+:eq:`eq-hybrid-section-roughness` and graph edges in
+:eq:`eq-hybrid-graph-roughness` matters when results are compared across
+dimensions.
 
 The improvement made by Stage 2 should be measured in response space, not only
 by a smaller training-style loss.  If :math:`r^{(1)}_{ij}` and
 :math:`r^{(2)}_{ij}` are normalized residuals for Stage 1 and Stage 2,
 
 .. math::
+   :label: eq-hybrid-nrms-gain
 
    \Delta_{\mathrm{NRMS}}
    =
@@ -196,6 +212,9 @@ Positive :math:`\Delta_{\mathrm{NRMS}}` means Stage 2 improved normalized
 response fit.  It does not by itself prove geological correctness; it must be
 read beside model change, regularization, uncertainty, and independent
 evidence.
+Use exactly the same finite mask and error model in both terms of
+:eq:`eq-hybrid-nrms-gain`; otherwise a positive value can be created merely by
+discarding difficult observations.
 
 .. code-block:: pycon
 
@@ -236,6 +255,7 @@ because it moves farther; it is better only when the movement is justified by
 the data and by geology.  A compact way to summarize the move is
 
 .. math::
+   :label: eq-hybrid-model-move
 
    D_i
    =
@@ -290,6 +310,25 @@ This style of table is intentionally simple.  It lets a reviewer ask the
 right next question: did the largest model changes occur where the residuals
 actually improved?
 
+.. figure:: ../../images/user_guide/ai_inversion/hybrid_paired_diagnostic.png
+   :alt: Stage-1 and Stage-2 normalized residual grids followed by NRMS gain
+         plotted against model movement for three stations.
+   :align: center
+   :width: 100%
+
+   Executed paired diagnostic for the arrays above.  The common residual color
+   scale beneath the two heatmaps makes the contraction toward zero visible.
+   Stations are columns labelled at the top and frequency bins run vertically.
+   The final panel prevents that improvement from being separated from the
+   model displacement defined by :eq:`eq-hybrid-model-move`.
+
+All three stations move upward from the zero-gain line, so refinement improves
+the adopted response metric in every case.  Station S3 moves farthest and also
+gains most; it deserves closer geological review than S2, whose similar gain is
+obtained with less model movement.  This is the intended interpretation of the
+pair, not proof that any of these illustrative models is a WILLY subsurface
+result.
+
 1-D hybrid inversion
 --------------------
 
@@ -299,13 +338,18 @@ refinement.  The 1-D workflow is appropriate when each station can reasonably
 be interpreted as a layered earth, or when the result is explicitly used as a
 screening or initialization product before higher-dimensional inversion.
 
+The repository does not ship ``checkpoints/amt1d_resnet.npz``.  The following
+is therefore a reference run that becomes executable only after the
+:doc:`training` workflow has produced and validated that artifact.  It must not
+be quoted as an executed WILLY result from the documentation build.
+
 .. code-block:: pycon
 
    >>> from pycsamt.ai.inversion import EMInverter1D, HybridInverter1D
    >>>
    >>> ai = EMInverter1D.load("checkpoints/amt1d_resnet.npz")  # doctest: +SKIP
    >>> hybrid = HybridInverter1D(  # doctest: +SKIP
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     ai_inverter=ai,
    ...     solver="mt1d",
    ...     comp="xy",
@@ -315,6 +359,7 @@ screening or initialization product before higher-dimensional inversion.
    ...     lr=5e-3,
    ... ).fit(verbose=True)
    >>> models = hybrid.predict()  # doctest: +SKIP
+   >>> stage1_models = hybrid.stage1_models()  # doctest: +SKIP
    >>> stage1_residuals = hybrid.residuals(stage=1)  # doctest: +SKIP
    >>> stage2_residuals = hybrid.residuals(stage=2)  # doctest: +SKIP
 
@@ -350,13 +395,20 @@ then jointly refines all stations.  The method is especially useful when a
 U-Net-like section captures large-scale structure but needs explicit response
 checking station by station.
 
+Unlike :class:`~pycsamt.ai.inversion.EMInverter1D`, the current
+:class:`~pycsamt.ai.inversion.EMInverter2D` API has no ``load`` method.  Pass a
+fitted object directly and retain the training script and weights as part of
+the run record.  The placeholder below deliberately starts at that supported
+boundary; ``ai2d`` means the fitted and validated object created in
+:doc:`training`, not a filename silently loaded here.
+
 .. code-block:: pycon
 
-   >>> from pycsamt.ai.inversion import EMInverter2D, HybridInverter2D
+   >>> from pycsamt.ai.inversion import HybridInverter2D
    >>>
-   >>> ai2d = EMInverter2D.load("checkpoints/amt2d_unet.npz")  # doctest: +SKIP
+   >>> # ai2d is a fitted EMInverter2D retained from training.
    >>> hybrid = HybridInverter2D(  # doctest: +SKIP
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     ai_inverter=ai2d,
    ...     n_layers=10,
    ...     depth_max=2000.0,
@@ -382,6 +434,7 @@ solver.
 The useful diagnostic is the difference between Stage 1 and Stage 2:
 
 .. math::
+   :label: eq-hybrid-section-change
 
    \Delta \log_{10}\rho_{zk}
    =
@@ -413,7 +466,9 @@ the final grid and preserve the Stage-1 grid in the reproducibility record.
 ------------------------------
 
 :class:`pycsamt.ai.inversion.HybridInverter3D` follows the same pattern with a
-3-D or graph-based Stage-1 estimate.  The graph penalty should be tied to the
+quasi-3-D, graph-based Stage-1 estimate.  Its Stage-2 response term is assembled
+from station-wise layered-earth responses and coupled by graph smoothness; it
+is not a full 3-D Maxwell solver.  The graph penalty should be tied to the
 survey geometry, not chosen only because it makes a smoother volume.  Record
 the graph construction rule, edge radius, disconnected components, coordinate
 system, and station exclusions.  Stratify diagnostics by node degree and survey
@@ -452,7 +507,7 @@ figures, and Stage-1 versus Stage-2 summaries.
    ...     api_key="",
    ... )
    >>> result = agent.execute({  # doctest: +SKIP
-   ...     "path": "data/AMT/WILLY_DATA/L18PLT",
+   ...     "path": "data/AMT/WILLY_data/L18PLT",
    ...     "ai_inverter": ai,
    ...     "output_dir": "outputs/hybrid/L18_1d",
    ... })

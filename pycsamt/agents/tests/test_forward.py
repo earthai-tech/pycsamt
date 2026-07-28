@@ -47,9 +47,7 @@ class TestForwardModelAgent(unittest.TestCase):
         self.assertIsNotNone(r.status)
 
     def test_single_layer_model(self):
-        r = self.agent.execute(
-            {"model": {"resistivity": [100.0], "thickness": []}}
-        )
+        r = self.agent.execute({"model": {"resistivity": [100.0], "thickness": []}})
         self.assertIn(r.status, ("success", "needs_review", "failed"))
 
     def test_negative_resistivity_handled(self):

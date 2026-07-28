@@ -14,11 +14,9 @@ when input values must be checked.
 Examples
 --------
 >>> from pycsamt.api.typing import ArrayLike, NDArray, PathLike
->>> def normalize(values: ArrayLike[float]) -> NDArray[float]:
-...     ...
+>>> def normalize(values: ArrayLike[float]) -> NDArray[float]: ...
 
->>> def read_any(path: PathLike) -> str:
-...     ...
+>>> def read_any(path: PathLike) -> str: ...
 """
 
 from __future__ import annotations

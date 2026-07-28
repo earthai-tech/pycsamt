@@ -209,11 +209,7 @@ def _ifn_empty_model(r):
 
 def _ifn_inv2d_model(r):
     sec = r["inv2d"].get("pred_section", [])
-    return {
-        "model": {
-            "resistivity": (sec.tolist() if hasattr(sec, "tolist") else sec)
-        }
-    }
+    return {"model": {"resistivity": (sec.tolist() if hasattr(sec, "tolist") else sec)}}
 
 
 def _ifn_results(r):
@@ -856,19 +852,23 @@ class WorkflowOrchestratorAgent(BaseAgent):
     Dry-run preview::
 
         agent = WorkflowOrchestratorAgent()
-        r = agent.execute({
-            "request": "Load L22PLT EDIs, run full phase tensor analysis",
-            "dry_run": True,
-        })
+        r = agent.execute(
+            {
+                "request": "Load L22PLT EDIs, run full phase tensor analysis",
+                "dry_run": True,
+            }
+        )
         print(r["workflow_type"])  # "phase_analysis"
 
     Full run with LLM::
 
         agent = WorkflowOrchestratorAgent(api_key="sk-ant-…")
-        r = agent.execute({
-            "request": "Clean and denoise the WILLY data, then run AI inversion",
-            "data_path": "/data/WILLY_DATA",
-        })
+        r = agent.execute(
+            {
+                "request": "Clean and denoise the WILLY data, then run AI inversion",
+                "data_path": "/data/WILLY_DATA",
+            }
+        )
     """
 
     SYSTEM_PROMPT = _SYSTEM_PROMPT
@@ -926,8 +926,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
                     elapsed=time.time() - t0,
                 )
             return AgentResult.failed(
-                f"Unknown workflow {workflow_type!r}.  "
-                f"Available: {available}",
+                f"Unknown workflow {workflow_type!r}.  Available: {available}",
                 elapsed=time.time() - t0,
             )
 
@@ -1035,8 +1034,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
                         elapsed=time.time() - t0,
                     )
                 warnings.append(
-                    f"Agent {agent_class_name!r} not "
-                    f"available; skipping step."
+                    f"Agent {agent_class_name!r} not available; skipping step."
                 )
                 continue
 
@@ -1203,9 +1201,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
             },
             warnings=warnings + exec_result.warnings,
             elapsed_seconds=elapsed,
-            cost_estimate_usd=(
-                self._last_cost + exec_result.cost_estimate_usd
-            ),
+            cost_estimate_usd=(self._last_cost + exec_result.cost_estimate_usd),
         )
 
 
@@ -1363,9 +1359,7 @@ def _build_output_manifest(
             entries.append(
                 {
                     "path": rel,
-                    "producing_step": _infer_producing_step(
-                        rel, step_names
-                    ),
+                    "producing_step": _infer_producing_step(rel, step_names),
                     "size_bytes": stat.st_size,
                     "sha256": _sha256_file(path),
                     "created": datetime.fromtimestamp(
@@ -1437,9 +1431,7 @@ def _build_registry(
                 exc,
             )
 
-    _try(
-        "ContextInputAgent", lambda: _import("context", "ContextInputAgent")()
-    )
+    _try("ContextInputAgent", lambda: _import("context", "ContextInputAgent")())
     _try("MTLoaderAgent", lambda: _import("loader", "MTLoaderAgent")())
     _try("DataQCAgent", lambda: _import("qc", "DataQCAgent")())
     _try(
@@ -1450,9 +1442,7 @@ def _build_registry(
         "PhaseAnalysisAgent",
         lambda: _import("phase_analysis", "PhaseAnalysisAgent")(),
     )
-    _try(
-        "ForwardModelAgent", lambda: _import("forward", "ForwardModelAgent")()
-    )
+    _try("ForwardModelAgent", lambda: _import("forward", "ForwardModelAgent")())
     _try(
         "InversionPrepAgent",
         lambda: _import("inversion_prep", "InversionPrepAgent")(),
@@ -1480,25 +1470,19 @@ def _build_registry(
     )
     _try("Occam2DAgent", lambda: _import("occam2d_agent", "Occam2DAgent")())
     _try("ModEmAgent", lambda: _import("modem_agent", "ModEmAgent")())
-    _try(
-        "Mare2DEMAgent", lambda: _import("mare2dem_agent", "Mare2DEMAgent")()
-    )
+    _try("Mare2DEMAgent", lambda: _import("mare2dem_agent", "Mare2DEMAgent")())
     _try(
         "AnomalyDetectionAgent",
         lambda: _import("anomaly_agent", "AnomalyDetectionAgent")(),
     )
     _try("Inv3DAgent", lambda: _import("inv3d_agent", "Inv3DAgent")())
     _try("Inv2DAgent", lambda: _import("inv2d_agent", "Inv2DAgent")())
-    _try(
-        "EnsembleAgent", lambda: _import("ensemble_agent", "EnsembleAgent")()
-    )
+    _try("EnsembleAgent", lambda: _import("ensemble_agent", "EnsembleAgent")())
     _try(
         "JointInversionAgent",
         lambda: _import("joint_agent", "JointInversionAgent")(),
     )
-    _try(
-        "ModelZooAgent", lambda: _import("model_zoo_agent", "ModelZooAgent")()
-    )
+    _try("ModelZooAgent", lambda: _import("model_zoo_agent", "ModelZooAgent")())
     _try(
         "TensorRotationAgent",
         lambda: _import("tensor_rotation", "TensorRotationAgent")(),

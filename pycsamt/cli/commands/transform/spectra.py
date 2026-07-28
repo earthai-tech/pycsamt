@@ -187,9 +187,7 @@ def spectra(
         return
 
     if str(output_dir) == ".":
-        raise click.UsageError(
-            "--output-dir is required when not using --dry-run"
-        )
+        raise click.UsageError("--output-dir is required when not using --dry-run")
 
     from pycsamt.transformers import (
         SpectraToEDI,  # noqa: PLC0415
@@ -233,9 +231,7 @@ def spectra(
             }
             for ed in result.collection
         ],
-        "failures": [
-            {"source": r.source, "error": r.error} for r in result.failures
-        ],
+        "failures": [{"source": r.source, "error": r.error} for r in result.failures],
     }
 
     if output_format == "json":
@@ -249,9 +245,7 @@ def spectra(
         if verbose >= 1:
             for ed in result.collection:
                 tip = "tipper ✓" if ed.has_tipper else "no tipper"
-                click.echo(
-                    f"  ✓  {ed.station:30}  {ed.Z.n_freq:3d} freq  {tip}"
-                )
+                click.echo(f"  ✓  {ed.station:30}  {ed.Z.n_freq:3d} freq  {tip}")
         if result.failures:
             click.echo("\nFailed conversions:", err=True)
             for r in result.failures:

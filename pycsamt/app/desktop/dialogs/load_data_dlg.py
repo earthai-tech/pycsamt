@@ -62,9 +62,7 @@ class _DropZone(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setAcceptDrops(True)
         self.setMinimumHeight(88)
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setProperty("drag_over", "false")
         self.setText(self._TEXT_IDLE)
 
@@ -120,9 +118,7 @@ class LoadDataDialog(QDialog):
         self.setWindowTitle("Open Survey Data")
         self.setMinimumSize(580, 460)
         self._last_dir = last_dir or str(Path.home())
-        self._recomputed_dir = (
-            Path(recomputed_dir) if recomputed_dir else None
-        )
+        self._recomputed_dir = Path(recomputed_dir) if recomputed_dir else None
         self.selected_paths: list[str] = []
         self._build_ui()
 
@@ -207,9 +203,7 @@ class LoadDataDialog(QDialog):
         # ── File list ─────────────────────────────────────────────
         self._file_list = QListWidget()
         self._file_list.setObjectName("FileList")
-        self._file_list.setSelectionMode(
-            QListWidget.SelectionMode.ExtendedSelection
-        )
+        self._file_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self._file_list.setMinimumHeight(150)
         self._file_list.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -219,8 +213,7 @@ class LoadDataDialog(QDialog):
 
         # ── OK / Cancel ───────────────────────────────────────────
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self._ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
         self._ok_btn.setText("Load Data")
@@ -262,9 +255,7 @@ class LoadDataDialog(QDialog):
         if found:
             self._set_paths(found)
         else:
-            self._drop_zone.setText(
-                "⚠  No EDI files found in recomputed folder"
-            )
+            self._drop_zone.setText("⚠  No EDI files found in recomputed folder")
 
     def _browse_files(self) -> None:
         exts = " ".join(_FORMAT_MAP[self._fmt_combo.currentText()])
@@ -305,8 +296,7 @@ class LoadDataDialog(QDialog):
     def _add_paths(self, paths: list[str]) -> None:
         """Append paths, skipping duplicates already in the list."""
         existing = {
-            self._file_list.item(i).text()
-            for i in range(self._file_list.count())
+            self._file_list.item(i).text() for i in range(self._file_list.count())
         }
         for p in paths:
             if p not in existing:
@@ -340,7 +330,6 @@ class LoadDataDialog(QDialog):
 
     def _on_accepted(self) -> None:
         self.selected_paths = [
-            self._file_list.item(i).text()
-            for i in range(self._file_list.count())
+            self._file_list.item(i).text() for i in range(self._file_list.count())
         ]
         self.accept()

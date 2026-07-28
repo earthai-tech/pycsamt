@@ -122,17 +122,13 @@ class TestJonesGroup:
 
 
 class TestJonesInfo:
-    def test_single_file_text(
-        self, runner: CliRunner, j_single: Path
-    ) -> None:
+    def test_single_file_text(self, runner: CliRunner, j_single: Path) -> None:
         result = runner.invoke(main, ["jones", "info", str(j_single)])
         assert result.exit_code == 0
         assert "S01" in result.output
         assert "n_freq" in result.output
 
-    def test_single_file_json(
-        self, runner: CliRunner, j_single: Path
-    ) -> None:
+    def test_single_file_json(self, runner: CliRunner, j_single: Path) -> None:
         result = runner.invoke(
             main, ["jones", "info", str(j_single), "--format", "json"]
         )
@@ -156,9 +152,7 @@ class TestJonesInfo:
         assert result.exit_code == 0
 
     def test_directory_json(self, runner: CliRunner, j_dir: Path) -> None:
-        result = runner.invoke(
-            main, ["jones", "info", str(j_dir), "--format", "json"]
-        )
+        result = runner.invoke(main, ["jones", "info", str(j_dir), "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert isinstance(data, list)
@@ -185,9 +179,7 @@ class TestJonesValidate:
     def test_single_valid(self, runner: CliRunner, j_single: Path) -> None:
         result = runner.invoke(main, ["jones", "validate", str(j_single)])
         assert result.exit_code == 0
-        assert (
-            "ok" in result.output.lower() or "valid" in result.output.lower()
-        )
+        assert "ok" in result.output.lower() or "valid" in result.output.lower()
 
     def test_directory_valid(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(main, ["jones", "validate", str(j_dir)])
@@ -203,14 +195,10 @@ class TestJonesValidate:
         assert data["n_fail"] == 0
 
     def test_no_deep(self, runner: CliRunner, j_single: Path) -> None:
-        result = runner.invoke(
-            main, ["jones", "validate", str(j_single), "--no-deep"]
-        )
+        result = runner.invoke(main, ["jones", "validate", str(j_single), "--no-deep"])
         assert result.exit_code == 0
 
-    def test_invalid_file_exits_1(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_invalid_file_exits_1(self, runner: CliRunner, tmp_path: Path) -> None:
         bad = tmp_path / "bad.j"
         bad.write_text("this is not a j file\n")
         result = runner.invoke(main, ["jones", "validate", str(bad)])
@@ -351,17 +339,11 @@ class TestJonesBlocks:
         assert all(b["comp"] == "XY" for b in data["blocks"])
 
     def test_qa_flag(self, runner: CliRunner, j_single: Path) -> None:
-        result = runner.invoke(
-            main, ["jones", "blocks", str(j_single), "--qa"]
-        )
+        result = runner.invoke(main, ["jones", "blocks", str(j_single), "--qa"])
         assert result.exit_code == 0
 
-    def test_no_match_shows_error(
-        self, runner: CliRunner, j_single: Path
-    ) -> None:
-        result = runner.invoke(
-            main, ["jones", "blocks", str(j_single), "--kind", "T"]
-        )
+    def test_no_match_shows_error(self, runner: CliRunner, j_single: Path) -> None:
+        result = runner.invoke(main, ["jones", "blocks", str(j_single), "--kind", "T"])
         assert result.exit_code != 0
 
 
@@ -372,9 +354,7 @@ class TestJonesBlocks:
 
 class TestJonesSelect:
     def test_dry_run_all(self, runner: CliRunner, j_dir: Path) -> None:
-        result = runner.invoke(
-            main, ["jones", "select", str(j_dir), "--dry-run"]
-        )
+        result = runner.invoke(main, ["jones", "select", str(j_dir), "--dry-run"])
         assert result.exit_code == 0
         assert "2" in result.output  # 2 stations match
 
@@ -458,9 +438,7 @@ class TestJonesSelect:
         data = json.loads(result.output)
         assert data["n_selected"] == 2  # both have R data
 
-    def test_has_z_filter_dry_run(
-        self, runner: CliRunner, j_dir: Path
-    ) -> None:
+    def test_has_z_filter_dry_run(self, runner: CliRunner, j_dir: Path) -> None:
         # Our synthetic files have Res (converted from R) but may or may not
         # have explicit Z. Just verify the filter runs without crashing.
         result = runner.invoke(
@@ -479,9 +457,7 @@ class TestJonesSelect:
         data = json.loads(result.output)
         assert "n_selected" in data
 
-    def test_no_output_dir_fails(
-        self, runner: CliRunner, j_dir: Path
-    ) -> None:
+    def test_no_output_dir_fails(self, runner: CliRunner, j_dir: Path) -> None:
         result = runner.invoke(main, ["jones", "select", str(j_dir)])
         assert result.exit_code != 0
 

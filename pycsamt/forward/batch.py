@@ -21,8 +21,8 @@ Quick start
 ...     n_jobs=4,
 ...     output="mt1d_train.npz",
 ... )
->>> ds.X.shape          # (5000, 60) — log10(rho_a) + phase at 30 freqs
->>> ds.y.shape          # (5000, 9) — log10(rho) and thickness for up to 7 layers
+>>> ds.X.shape  # (5000, 60) — log10(rho_a) + phase at 30 freqs
+>>> ds.y.shape  # (5000, 9) — log10(rho) and thickness for up to 7 layers
 
 Dataset layout
 --------------
@@ -115,9 +115,7 @@ class ForwardDataset:
         meta = None
         if "meta_n_layers" in d:
             n = len(d["meta_n_layers"])
-            meta = np.zeros(
-                n, dtype=[("n_layers", "i4"), ("noise_level", "f4")]
-            )
+            meta = np.zeros(n, dtype=[("n_layers", "i4"), ("noise_level", "f4")])
             meta["n_layers"] = d["meta_n_layers"]
             meta["noise_level"] = d["meta_noise"]
         return cls(
@@ -334,9 +332,7 @@ def generate_dataset(
 
     solver = solver.lower().strip()
     if solver not in ("mt1d", "tem1d", "csamt1d"):
-        raise ValueError(
-            f"Unknown solver {solver!r}. Use 'mt1d', 'tem1d', 'csamt1d'."
-        )
+        raise ValueError(f"Unknown solver {solver!r}. Use 'mt1d', 'tem1d', 'csamt1d'.")
 
     # Default grids
     if freqs is None and solver in ("mt1d", "csamt1d"):
@@ -384,9 +380,7 @@ def generate_dataset(
                 print(f"  {i + 1}/{n_samples} samples generated")
     else:
         with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {
-                pool.submit(_worker, a): i for i, a in enumerate(args_list)
-            }
+            futures = {pool.submit(_worker, a): i for i, a in enumerate(args_list)}
             done = 0
             for fut in as_completed(futures):
                 results.append(fut.result())
@@ -511,9 +505,7 @@ class SurveyDataset3D:
         meta = None
         if "meta_corr_length" in d:
             n = len(d["meta_corr_length"])
-            meta = np.zeros(
-                n, dtype=[("corr_length", "f4"), ("noise_level", "f4")]
-            )
+            meta = np.zeros(n, dtype=[("corr_length", "f4"), ("noise_level", "f4")])
             meta["corr_length"] = d["meta_corr_length"]
             meta["noise_level"] = d["meta_noise"]
         return cls(
@@ -680,9 +672,7 @@ def _worker_3d(args):
                 level=noise_level,
                 seed=int(rng.integers(2**31)),
             )
-        x_list.append(
-            resp.to_array(log_rho=True, include_phase=include_phase)
-        )
+        x_list.append(resp.to_array(log_rho=True, include_phase=include_phase))
         y_list.append(model.to_vector(log_rho=True))
 
     X_survey = np.array(x_list, dtype=np.float32)  # (n_sta, n_feat)
@@ -790,11 +780,16 @@ def generate_dataset_3d(
     >>> import numpy as np
     >>> from pycsamt.forward.batch import generate_dataset_3d
     >>> from pycsamt.ai.nets.gcn import build_adjacency
-    >>> ds = generate_dataset_3d(n_surveys=500, n_stations=16,
-    ...                          n_layers=4, corr_length=2000., seed=0)
+    >>> ds = generate_dataset_3d(
+    ...     n_surveys=500,
+    ...     n_stations=16,
+    ...     n_layers=4,
+    ...     corr_length=2000.0,
+    ...     seed=0,
+    ... )
     >>> ds.X.shape
     (500, 16, 60)
-    >>> A = build_adjacency(ds.coords, radius=3000.)
+    >>> A = build_adjacency(ds.coords, radius=3000.0)
     >>> from pycsamt.ai.inversion.inv3d import GCNInverter3D
     >>> inv = GCNInverter3D(n_features=ds.n_features, n_layers=4)
     >>> inv.fit(ds.X, ds.y, adjacency=A, epochs=5, verbose=False)
@@ -804,8 +799,7 @@ def generate_dataset_3d(
     solver = solver.lower().strip()
     if solver != "mt1d":
         raise ValueError(
-            f"generate_dataset_3d currently supports solver='mt1d'; "
-            f"got {solver!r}."
+            f"generate_dataset_3d currently supports solver='mt1d'; " f"got {solver!r}."
         )
 
     if freqs is None:
@@ -863,9 +857,7 @@ def generate_dataset_3d(
                 print(f"  {i + 1}/{n_surveys} surveys generated")
     else:
         with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {
-                pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)
-            }
+            futures = {pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)}
             done = 0
             for fut in as_completed(futures):
                 results.append(fut.result())

@@ -16,7 +16,6 @@ import pytest
 from pycsamt.forward.config2d import ForwardConfig2D
 from pycsamt.forward.grid2d import Grid2D
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Defaults / validate()
 # ─────────────────────────────────────────────────────────────────────────────
@@ -128,9 +127,7 @@ def test_validate_rejects_inverted_anomaly_x_bounds():
 
 
 def test_validate_rejects_inverted_anomaly_z_bounds():
-    cfg = ForwardConfig2D(
-        model_type="anomaly", anomaly_z_lo=1500.0, anomaly_z_hi=300.0
-    )
+    cfg = ForwardConfig2D(model_type="anomaly", anomaly_z_lo=1500.0, anomaly_z_hi=300.0)
     with pytest.raises(ValueError, match="anomaly_z_lo"):
         cfg.validate()
 
@@ -184,7 +181,11 @@ def test_freq_grid_matches_logspace_definition():
 
 def test_to_grid_halfspace_uses_uniform_bg_rho():
     cfg = ForwardConfig2D(
-        model_type="halfspace", bg_rho=250.0, nx=10, nz=8, n_pad=3,
+        model_type="halfspace",
+        bg_rho=250.0,
+        nx=10,
+        nz=8,
+        n_pad=3,
         n_stations=4,
     )
     grid = cfg.to_grid()

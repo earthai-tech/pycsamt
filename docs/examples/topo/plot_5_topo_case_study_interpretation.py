@@ -146,9 +146,7 @@ resistive_shoulder = (
     * np.exp(-(((Z - 0.28) / 0.16) ** 2))
 )
 
-log10_rho = (
-    basement + weathered_layer + conductive_target + resistive_shoulder
-)
+log10_rho = basement + weathered_layer + conductive_target + resistive_shoulder
 rho = 10.0**log10_rho
 
 print(f"Synthetic resistivity range: {rho.min():.1f}-{rho.max():.1f} ohm.m")
@@ -214,9 +212,7 @@ fig.tight_layout()
 # feature look laterally continuous when it is actually tied to terrain.
 
 fig, ax = plt.subplots(figsize=(10.5, 4.8))
-mesh = ax.pcolormesh(
-    x_nodes, z_nodes, log10_rho, shading="auto", cmap="turbo"
-)
+mesh = ax.pcolormesh(x_nodes, z_nodes, log10_rho, shading="auto", cmap="turbo")
 ax.invert_yaxis()
 ax.scatter(
     chain_km,

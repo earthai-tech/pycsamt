@@ -108,9 +108,7 @@ def _status_dict(workdir: Path, solver: str, verbose: int) -> dict[str, Any]:
     else:
         model_files = sorted(workdir.glob("*.rho"))
         info["n_model_files"] = len(model_files)
-        info["last_model_file"] = (
-            model_files[-1].name if model_files else None
-        )
+        info["last_model_file"] = model_files[-1].name if model_files else None
         info["has_data"] = bool(any(".dat" in f for f in files))
         info["has_control"] = bool(any(".inv" in f for f in files))
         info["has_cov"] = bool(any(".cov" in f for f in files))
@@ -124,9 +122,7 @@ def _last_rms_occam(log_path: Path | None) -> float | None:
     if log_path is None or not log_path.exists():
         return None
     try:
-        for line in reversed(
-            log_path.read_text(errors="replace").splitlines()
-        ):
+        for line in reversed(log_path.read_text(errors="replace").splitlines()):
             low = line.lower()
             if "rms" in low or "misfit" in low:
                 for token in line.split():

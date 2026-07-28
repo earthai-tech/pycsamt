@@ -86,9 +86,7 @@ class _HeroBanner(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedHeight(175)
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self._renderer = None
         if _LOGO_SVG.exists():
@@ -132,9 +130,7 @@ class _HeroBanner(QWidget):
         path2.moveTo(0, wave_y + 4)
         for x in range(1, w + 1):
             path1.lineTo(x, wave_y - amp1 * math.sin(freq * x))
-            path2.lineTo(
-                x, wave_y + 4 - amp2 * math.sin(freq * x + math.pi * 0.65)
-            )
+            path2.lineTo(x, wave_y + 4 - amp2 * math.sin(freq * x + math.pi * 0.65))
 
         pen1 = QPen(QColor(255, 255, 255, 38), 1.6)
         pen2 = QPen(QColor(251, 176, 64, 48), 1.2)
@@ -237,9 +233,7 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("About pycsamt")
         self.setFixedWidth(530)
-        self.setSizePolicy(
-            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum
-        )
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
         self._build_ui()
 
     def _build_ui(self) -> None:

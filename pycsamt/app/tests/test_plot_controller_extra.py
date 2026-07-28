@@ -159,9 +159,7 @@ class TestPhaseTensorCache:
         ctrl.clear()
         assert ctrl._pt_df_cache == {}
 
-    def test_phase_tensor_key_changes_with_sites_period_dark(
-        self, willy_sites
-    ):
+    def test_phase_tensor_key_changes_with_sites_period_dark(self, willy_sites):
         ctrl = PlotController()
         key0 = ctrl.phase_tensor_key()
         ctrl.set_sites(willy_sites)
@@ -389,9 +387,7 @@ class TestStyleFigureFull:
 
     def test_recolors_bbox_text_dark(self):
         fig, ax = plt.subplots()
-        txt = ax.text(
-            0.5, 0.5, "hi", bbox=dict(facecolor="white", edgecolor="black")
-        )
+        txt = ax.text(0.5, 0.5, "hi", bbox=dict(facecolor="white", edgecolor="black"))
         txt.set_color("#2166ac")
         _style_figure_full(ax, dark=True)
         assert txt.get_color() == "#89b4fa"
@@ -524,12 +520,8 @@ class TestApplyLog10Xfmt:
         fig, ax = plt.subplots()
         ax.set_xscale("log")
         _apply_log10_xfmt(ax)
-        assert isinstance(
-            ax.xaxis.get_major_formatter(), mticker.FuncFormatter
-        )
-        assert isinstance(
-            ax.xaxis.get_minor_formatter(), mticker.NullFormatter
-        )
+        assert isinstance(ax.xaxis.get_major_formatter(), mticker.FuncFormatter)
+        assert isinstance(ax.xaxis.get_minor_formatter(), mticker.NullFormatter)
         plt.close(fig)
 
     def test_formatter_maps_powers_of_ten(self):
@@ -1030,9 +1022,7 @@ class TestRegressionLegendNcolsBug:
         """Sanity-check *why* the bug does or doesn't reproduce here."""
         import matplotlib
 
-        major, minor = (
-            int(x) for x in matplotlib.__version__.split(".")[:2]
-        )
+        major, minor = (int(x) for x in matplotlib.__version__.split(".")[:2])
         supports_ncols = (major, minor) >= (3, 6)
         fig, ax = plt.subplots()
         ax.plot([0, 1], [0, 1], label="x")
@@ -1043,9 +1033,7 @@ class TestRegressionLegendNcolsBug:
                 ax.legend(ncols=1)
         plt.close(fig)
 
-    def test_draw_rho_phi_still_draws_curves_despite_legend_bug(
-        self, willy_sites
-    ):
+    def test_draw_rho_phi_still_draws_curves_despite_legend_bug(self, willy_sites):
         """Even when the legend() call raises, the earlier errorbar()
         calls already happened, so lines are still visible — this is why
         a naive 'is something drawn' smoke test does not catch the bug."""

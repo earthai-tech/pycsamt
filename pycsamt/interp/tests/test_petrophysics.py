@@ -16,7 +16,6 @@ from pycsamt.interp.petrophysics import (
     WaxmanSmitsModel,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # ArchieModel
 # ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +23,14 @@ from pycsamt.interp.petrophysics import (
 
 @pytest.mark.parametrize(
     "kwargs",
-    [{"m": 0.0}, {"m": -1.0}, {"n": 0.0}, {"n": -1.0}, {"a": 0.0}, {"a": -1.0}],
+    [
+        {"m": 0.0},
+        {"m": -1.0},
+        {"n": 0.0},
+        {"n": -1.0},
+        {"a": 0.0},
+        {"a": -1.0},
+    ],
 )
 def test_archie_invalid_params(kwargs):
     with pytest.raises(ValueError):
@@ -74,9 +80,7 @@ def test_archie_water_content():
 
 def test_archie_array_inputs():
     a = ArchieModel()
-    rho = a.forward(
-        phi=np.array([0.2, 0.3]), Sw=np.array([1.0, 0.8]), rho_w=0.025
-    )
+    rho = a.forward(phi=np.array([0.2, 0.3]), Sw=np.array([1.0, 0.8]), rho_w=0.025)
     assert rho.shape == (2,)
 
 
@@ -119,9 +123,7 @@ def test_waxman_smits_saturation_inverts_forward_bracketed():
 
 def test_waxman_smits_saturation_array_input():
     ws = WaxmanSmitsModel(sigma_s=0.01)
-    rho = ws.forward(
-        phi=np.array([0.2, 0.3]), Sw=np.array([0.5, 0.9]), sigma_w=40.0
-    )
+    rho = ws.forward(phi=np.array([0.2, 0.3]), Sw=np.array([0.5, 0.9]), sigma_w=40.0)
     Sw = ws.saturation(rho, phi=np.array([0.2, 0.3]), sigma_w=40.0)
     assert Sw.shape == (2,)
     np.testing.assert_allclose(Sw, [0.5, 0.9], atol=1e-2)

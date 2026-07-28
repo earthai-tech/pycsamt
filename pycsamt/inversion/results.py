@@ -51,10 +51,12 @@ class InversionHistory(PyCSAMTObject, MetadataMixin):
         Examples
         --------
         >>> from pycsamt.inversion.results import InversionHistory
-        >>> history = InversionHistory(records=[
-        ...     {"iteration": 0, "objective": 5.0},
-        ...     {"iteration": 1, "objective": 2.5},
-        ... ])
+        >>> history = InversionHistory(
+        ...     records=[
+        ...         {"iteration": 0, "objective": 5.0},
+        ...         {"iteration": 1, "objective": 2.5},
+        ...     ]
+        ... )
         >>> history.arrays()["objective"].tolist()
         [5.0, 2.5]
         """
@@ -143,7 +145,9 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
         Examples
         --------
         >>> from pycsamt.inversion.results import InversionResult
-        >>> InversionResult("mt", "1d", "builtin", status="converged").converged
+        >>> InversionResult(
+        ...     "mt", "1d", "builtin", status="converged"
+        ... ).converged
         True
         """
         return self.status in {"success", "converged", "prepared", "loaded"}
@@ -213,11 +217,8 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
                 rho,
                 x,
                 z,
-                station_x=np.asarray(
-                    self.model.get("station_x", x), dtype=float
-                ),
-                station_names=list(self.model.get("station_names", []))
-                or None,
+                station_x=np.asarray(self.model.get("station_x", x), dtype=float),
+                station_names=list(self.model.get("station_names", [])) or None,
                 method=f"{self.backend}:{self.method}",
                 rms=self.rms,
             )

@@ -12,7 +12,7 @@ Quick start
 
     from pycsamt.forward.config3d import ForwardConfig3D
 
-    ForwardConfig3D.write_template("my_3d.yml")   # annotated defaults
+    ForwardConfig3D.write_template("my_3d.yml")  # annotated defaults
 
     # edit my_3d.yml …
 
@@ -21,6 +21,7 @@ Quick start
 
     grid = cfg.to_grid()
     from pycsamt.forward.em3d import MT3DForward
+
     resp = MT3DForward(cfg.freq_grid(), grid, verbose=cfg.verbose).run()
 """
 
@@ -295,9 +296,7 @@ class ForwardConfig3D:
         if self.n_freqs < 2:
             raise ValueError("n_freqs must be at least 2.")
         if self.method not in {"quasi3d"}:
-            raise ValueError(
-                f"method must be 'quasi3d', got {self.method!r}."
-            )
+            raise ValueError(f"method must be 'quasi3d', got {self.method!r}.")
         if any(n < 4 for n in (self.nx, self.ny, self.nz)):
             raise ValueError("nx, ny, nz must each be at least 4.")
         if any(v <= 0 for v in (self.x_max, self.y_max, self.z_max)):
@@ -320,9 +319,7 @@ class ForwardConfig3D:
                 (self.anomaly_z_lo, self.anomaly_z_hi, "z"),
             ):
                 if lo >= hi:
-                    raise ValueError(
-                        f"anomaly_{ax}_lo must be < anomaly_{ax}_hi."
-                    )
+                    raise ValueError(f"anomaly_{ax}_lo must be < anomaly_{ax}_hi.")
         if self.nx_stations < 1 or self.ny_stations < 1:
             raise ValueError("nx_stations and ny_stations must be ≥ 1.")
 

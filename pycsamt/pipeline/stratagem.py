@@ -47,6 +47,7 @@ Usage examples
 One-liner (Level 2, backwards-compatible)::
 
     from pycsamt.pipeline.stratagem import run_stratagem_preset
+
     sv = run_stratagem_preset(
         "basic",
         edi_dir="2/2EDI",
@@ -59,6 +60,7 @@ One-liner (Level 2, backwards-compatible)::
 Pipeline API with a directory of EDIs (Level 1)::
 
     from pycsamt.pipeline.stratagem import StratagemPipeline
+
     pipe = StratagemPipeline.from_preset(
         "stratagem_mt",
         coord_file="2.csv",
@@ -74,19 +76,21 @@ Pipeline API with a single EDI file::
 Pipeline API with an already-loaded Sites::
 
     from pycsamt.emtools._core import ensure_sites
+
     sites = ensure_sites("2/2EDI")
     result = pipe.run(sites, outdir="2/processed")
 
 Custom step list::
 
     from pycsamt.pipeline import Step
+
     pipe = StratagemPipeline(
         [
-            ("correct_ss",  Step("SS001")),
+            ("correct_ss", Step("SS001")),
             ("select_band", Step("FREQ001", band_hz=(10.0, 1e5))),
-            ("notch",       Step("NR001")),
-            ("hampel",      Step("NR004")),
-            ("qc",          Step("QC001")),
+            ("notch", Step("NR001")),
+            ("hampel", Step("NR004")),
+            ("qc", Step("QC001")),
         ],
         coord_file="2.csv",
         raw_dir="原始数据/2HX",
@@ -480,6 +484,7 @@ class StratagemPipeline(Pipeline):
     Load a directory and inject coordinates::
 
         from pycsamt.pipeline.stratagem import StratagemPipeline
+
         pipe = StratagemPipeline.from_preset(
             "stratagem_mt",
             coord_file="2.csv",
@@ -496,14 +501,19 @@ class StratagemPipeline(Pipeline):
     Already-loaded Sites::
 
         from pycsamt.emtools._core import ensure_sites
+
         S = ensure_sites("2/2EDI")
         result = pipe.run(S, outdir="2/processed")
 
     Custom steps with hardware mask::
 
         from pycsamt.pipeline import Step
+
         pipe = StratagemPipeline(
-            [("ss", Step("SS001")), ("band", Step("FREQ001", band_hz=(10, 1e5)))],
+            [
+                ("ss", Step("SS001")),
+                ("band", Step("FREQ001", band_hz=(10, 1e5))),
+            ],
             coord_file="2.csv",
             raw_dir="原始数据/2HX",
             epsg=32649,
@@ -794,8 +804,6 @@ def run_stratagem_preset(
             if method is not None:
                 method(**kw)
             elif verbose:
-                print(
-                    f"[run_stratagem_preset] unknown step {method_name!r}, skip"
-                )
+                print(f"[run_stratagem_preset] unknown step {method_name!r}, skip")
 
     return sv

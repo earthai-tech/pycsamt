@@ -35,10 +35,12 @@ Typical use (TDEM + AMT)
 >>> fused = MultiMethodEMModel(
 ...     primary=tdem_model,
 ...     secondary=amt_model,
-...     blend='sigmoid',
+...     blend="sigmoid",
 ... ).merge()
 >>>
->>> result = EMHydroModel(fused, PetrophysicalConfig(), method_tag='TDEM+AMT').fit()
+>>> result = EMHydroModel(
+...     fused, PetrophysicalConfig(), method_tag="TDEM+AMT"
+... ).fit()
 """
 
 from __future__ import annotations
@@ -153,7 +155,7 @@ class MultiMethodEMModel(PyCSAMTObject):
     Examples
     --------
     >>> fused_model = MultiMethodEMModel(
-    ...     tdem_model, amt_model, blend='sigmoid', sigmoid_k=0.03
+    ...     tdem_model, amt_model, blend="sigmoid", sigmoid_k=0.03
     ... ).merge()
     >>> fused_model.method
     'TDEM+AMT'
@@ -172,9 +174,7 @@ class MultiMethodEMModel(PyCSAMTObject):
         sigmoid_k: float = 0.02,
     ) -> None:
         if blend not in _BLEND_MODES:
-            raise ValueError(
-                f"blend must be one of {_BLEND_MODES}, got {blend!r}."
-            )
+            raise ValueError(f"blend must be one of {_BLEND_MODES}, got {blend!r}.")
         self.primary = primary
         self.secondary = secondary
         self.primary_max_depth = primary_max_depth
@@ -309,11 +309,7 @@ class MultiMethodEMModel(PyCSAMTObject):
         if self.blend == "rms_weighted":
             rms_p = float(self.primary.rms)
             rms_s = float(self.secondary.rms)
-            if (
-                np.isfinite(rms_p)
-                and np.isfinite(rms_s)
-                and (rms_p + rms_s) > 0
-            ):
+            if np.isfinite(rms_p) and np.isfinite(rms_s) and (rms_p + rms_s) > 0:
                 # lower RMS → higher weight (better fit)
                 w_const = rms_s / (rms_p + rms_s)
                 w[:] = 1.0

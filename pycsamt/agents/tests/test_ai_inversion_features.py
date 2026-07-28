@@ -38,9 +38,7 @@ class TestFeatureLayout(unittest.TestCase):
         self.rho = np.full(53, 100.0)
         self.pha = np.full(53, 45.0)
         self.zobj = _FakeZ(self.fr, self.rho, self.pha)
-        self.z = np.zeros(
-            (53, 2, 2), complex
-        )  # unused (resistivity_xy present)
+        self.z = np.zeros((53, 2, 2), complex)  # unused (resistivity_xy present)
         self.freqs_target = np.logspace(-4, 3, 40)
 
     def test_feature_length_matches_training_width(self):

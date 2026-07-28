@@ -22,7 +22,6 @@ import pytest  # noqa: E402
 from pycsamt.forward.grid2d import Grid2D  # noqa: E402
 from pycsamt.forward.grid3d import Grid3D, _ensure_rng  # noqa: E402
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # _ensure_rng
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,11 +53,13 @@ def _make_grid(n_pad=0):
         for iy in range(ny):
             for ix in range(nx):
                 rho[iz, iy, ix] = 100 * iz + 10 * iy + ix + 1
-    stations = np.array(
-        [[15.0, 7.0], [25.0, 12.0], [5.0, 2.0], [50.0, 18.0]]
-    )
+    stations = np.array([[15.0, 7.0], [25.0, 12.0], [5.0, 2.0], [50.0, 18.0]])
     return Grid3D(
-        dx=dx, dy=dy, dz=dz, resistivity=rho, stations_xy=stations,
+        dx=dx,
+        dy=dy,
+        dz=dz,
+        resistivity=rho,
+        stations_xy=stations,
         n_pad=n_pad,
     )
 
@@ -101,7 +102,10 @@ def test_post_init_rejects_bad_resistivity_shape():
     bad_rho = np.full((1, 2, 3), 100.0)  # nx should be 2, not 3
     with pytest.raises(ValueError, match="does not match"):
         Grid3D(
-            dx=dx, dy=dy, dz=dz, resistivity=bad_rho,
+            dx=dx,
+            dy=dy,
+            dz=dz,
+            resistivity=bad_rho,
             stations_xy=[[5.0, 5.0]],
         )
 
@@ -114,7 +118,10 @@ def test_post_init_rejects_nonpositive_resistivity():
     rho[0, 0, 0] = 0.0
     with pytest.raises(ValueError, match="strictly positive"):
         Grid3D(
-            dx=dx, dy=dy, dz=dz, resistivity=rho,
+            dx=dx,
+            dy=dy,
+            dz=dz,
+            resistivity=rho,
             stations_xy=[[5.0, 5.0]],
         )
 
@@ -126,7 +133,10 @@ def test_post_init_rejects_station_outside_x_extent():
     rho = np.full((1, 2, 2), 100.0)
     with pytest.raises(ValueError, match="outside the grid extent"):
         Grid3D(
-            dx=dx, dy=dy, dz=dz, resistivity=rho,
+            dx=dx,
+            dy=dy,
+            dz=dz,
+            resistivity=rho,
             stations_xy=[[999.0, 5.0]],
         )
 
@@ -138,7 +148,10 @@ def test_post_init_rejects_station_outside_y_extent():
     rho = np.full((1, 2, 2), 100.0)
     with pytest.raises(ValueError, match="outside the grid extent"):
         Grid3D(
-            dx=dx, dy=dy, dz=dz, resistivity=rho,
+            dx=dx,
+            dy=dy,
+            dz=dz,
+            resistivity=rho,
             stations_xy=[[5.0, 999.0]],
         )
 
@@ -176,9 +189,7 @@ def test_xz_slice_matches_3d_array_and_station_indices():
         expected_idx = np.where(y_cells == yi)[0]
         assert np.array_equal(idx, expected_idx)
         if expected_idx.size:
-            assert np.array_equal(
-                g2d.x_stations, g.stations_xy[expected_idx, 0]
-            )
+            assert np.array_equal(g2d.x_stations, g.stations_xy[expected_idx, 0])
 
 
 def test_yz_slice_matches_3d_array_and_station_indices():
@@ -196,9 +207,7 @@ def test_yz_slice_matches_3d_array_and_station_indices():
         expected_idx = np.where(x_cells == xi)[0]
         assert np.array_equal(idx, expected_idx)
         if expected_idx.size:
-            assert np.array_equal(
-                g2d.x_stations, g.stations_xy[expected_idx, 1]
-            )
+            assert np.array_equal(g2d.x_stations, g.stations_xy[expected_idx, 1])
 
 
 def test_xz_slice_falls_back_to_grid_midpoint_when_row_empty():
@@ -212,9 +221,7 @@ def test_xz_slice_falls_back_to_grid_midpoint_when_row_empty():
     g2d, idx = g.xz_slice(3)  # empty row
     assert idx.size == 0
     assert g2d.x_stations.shape == (1,)
-    assert g2d.x_stations[0] == pytest.approx(
-        g.x_nodes[g.n_pad + g.nx // 2]
-    )
+    assert g2d.x_stations[0] == pytest.approx(g.x_nodes[g.n_pad + g.nx // 2])
 
 
 def test_yz_slice_falls_back_to_grid_midpoint_when_column_empty():
@@ -228,9 +235,7 @@ def test_yz_slice_falls_back_to_grid_midpoint_when_column_empty():
     g2d, idx = g.yz_slice(2)  # empty column
     assert idx.size == 0
     assert g2d.x_stations.shape == (1,)
-    assert g2d.x_stations[0] == pytest.approx(
-        g.y_nodes[g.n_pad + g.ny // 2]
-    )
+    assert g2d.x_stations[0] == pytest.approx(g.y_nodes[g.n_pad + g.ny // 2])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -257,9 +262,15 @@ def test_conductivity_is_inverse_of_resistivity():
 
 def test_core_slices_exclude_padding():
     g = Grid3D.halfspace(
-        nx=6, ny=8, nz=5, n_pad=3,
-        x_max=600.0, y_max=800.0, z_max=500.0,
-        nx_stations=2, ny_stations=2,
+        nx=6,
+        ny=8,
+        nz=5,
+        n_pad=3,
+        x_max=600.0,
+        y_max=800.0,
+        z_max=500.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     assert g._cx == slice(3, g.nx - 3)
     assert g._cy == slice(3, g.ny - 3)
@@ -284,9 +295,15 @@ def test_core_slices_are_full_slices_when_no_padding():
 
 def test_plot_returns_figure_and_three_axes():
     g = Grid3D.halfspace(
-        nx=6, ny=6, nz=5, n_pad=2,
-        x_max=600.0, y_max=600.0, z_max=500.0,
-        nx_stations=3, ny_stations=3,
+        nx=6,
+        ny=6,
+        nz=5,
+        n_pad=2,
+        x_max=600.0,
+        y_max=600.0,
+        z_max=500.0,
+        nx_stations=3,
+        ny_stations=3,
     )
     fig, axs = g.plot()
     try:
@@ -298,14 +315,23 @@ def test_plot_returns_figure_and_three_axes():
 
 def test_plot_kwargs_branches_linear_scale_no_clip_no_stations():
     g = Grid3D.block_anomaly(
-        nx=6, ny=6, nz=5, n_pad=2,
-        x_max=600.0, y_max=600.0, z_max=500.0,
+        nx=6,
+        ny=6,
+        nz=5,
+        n_pad=2,
+        x_max=600.0,
+        y_max=600.0,
+        z_max=500.0,
         bounds=(100.0, 400.0, 100.0, 400.0, 50.0, 300.0),
-        nx_stations=2, ny_stations=2,
+        nx_stations=2,
+        ny_stations=2,
     )
     fig, axs = g.plot(
-        log_scale=False, clip_core=False, show_stations=False,
-        vmin=1.0, vmax=1000.0,
+        log_scale=False,
+        clip_core=False,
+        show_stations=False,
+        vmin=1.0,
+        vmax=1000.0,
     )
     try:
         assert axs.shape == (3,)
@@ -315,9 +341,15 @@ def test_plot_kwargs_branches_linear_scale_no_clip_no_stations():
 
 def test_plot_with_no_padding_and_no_stations():
     g = Grid3D.halfspace(
-        nx=4, ny=4, nz=4, n_pad=0,
-        x_max=400.0, y_max=400.0, z_max=400.0,
-        nx_stations=0, ny_stations=0,
+        nx=4,
+        ny=4,
+        nz=4,
+        n_pad=0,
+        x_max=400.0,
+        y_max=400.0,
+        z_max=400.0,
+        nx_stations=0,
+        ny_stations=0,
     )
     assert g.n_stations == 0
     fig, axs = g.plot()
@@ -343,9 +375,15 @@ def test_repr_contains_key_info():
 def test_repr_includes_name_when_set():
     g = Grid3D.halfspace(
         name="myhalfspace",
-        nx=4, ny=4, nz=4, n_pad=0,
-        x_max=400.0, y_max=400.0, z_max=400.0,
-        nx_stations=2, ny_stations=2,
+        nx=4,
+        ny=4,
+        nz=4,
+        n_pad=0,
+        x_max=400.0,
+        y_max=400.0,
+        z_max=400.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     assert "name='myhalfspace'" in repr(g)
 
@@ -357,9 +395,16 @@ def test_repr_includes_name_when_set():
 
 def test_halfspace_uniform_resistivity_and_sizing():
     g = Grid3D.halfspace(
-        rho=250.0, nx=10, ny=12, nz=8,
-        x_max=1000.0, y_max=1200.0, z_max=800.0,
-        n_pad=4, nx_stations=3, ny_stations=3,
+        rho=250.0,
+        nx=10,
+        ny=12,
+        nz=8,
+        x_max=1000.0,
+        y_max=1200.0,
+        z_max=800.0,
+        n_pad=4,
+        nx_stations=3,
+        ny_stations=3,
     )
     assert np.all(g.resistivity == 250.0)
     # padding is added on both sides in x/y, only at the bottom in z
@@ -371,9 +416,16 @@ def test_halfspace_uniform_resistivity_and_sizing():
 
 def test_halfspace_station_grid_positions():
     g = Grid3D.halfspace(
-        nx=10, ny=10, nz=5,
-        x_max=1000.0, y_max=1000.0, z_max=500.0,
-        n_pad=4, pad_factor=1.3, nx_stations=3, ny_stations=3,
+        nx=10,
+        ny=10,
+        nz=5,
+        x_max=1000.0,
+        y_max=1000.0,
+        z_max=500.0,
+        n_pad=4,
+        pad_factor=1.3,
+        nx_stations=3,
+        ny_stations=3,
     )
     x_pad_off = g.x_nodes[g.n_pad]  # cumulative left-padding width
     y_pad_off = g.y_nodes[g.n_pad]
@@ -392,24 +444,27 @@ def test_halfspace_station_grid_positions():
 def test_block_anomaly_inside_and_outside_values():
     # nx=10 core cells over x_max=1000 -> dx=100/cell; likewise y and z.
     g = Grid3D.block_anomaly(
-        bg_rho=300.0, anomaly_rho=3.0,
+        bg_rho=300.0,
+        anomaly_rho=3.0,
         bounds=(200.0, 600.0, 200.0, 600.0, 100.0, 400.0),
-        nx=10, ny=10, nz=8,
-        x_max=1000.0, y_max=1000.0, z_max=800.0,
-        n_pad=3, nx_stations=2, ny_stations=2,
+        nx=10,
+        ny=10,
+        nz=8,
+        x_max=1000.0,
+        y_max=1000.0,
+        z_max=800.0,
+        n_pad=3,
+        nx_stations=2,
+        ny_stations=2,
     )
     # A cell clearly inside the block: core column/row 4 (x,y in
     # [400, 500]), core depth row 2 (z in [200, 300]); global indices
     # shift x/y by n_pad (no shift needed in z, padding is at the bottom).
     assert g.resistivity[2, g.n_pad + 4, g.n_pad + 4] == pytest.approx(3.0)
     # A cell clearly outside in x (core column 0, x in [0, 100]):
-    assert g.resistivity[2, g.n_pad + 4, g.n_pad + 0] == pytest.approx(
-        300.0
-    )
+    assert g.resistivity[2, g.n_pad + 4, g.n_pad + 0] == pytest.approx(300.0)
     # A cell clearly outside in z (core depth row 6, z in [600, 700]):
-    assert g.resistivity[6, g.n_pad + 4, g.n_pad + 4] == pytest.approx(
-        300.0
-    )
+    assert g.resistivity[6, g.n_pad + 4, g.n_pad + 4] == pytest.approx(300.0)
     # Padding cells are always background.
     assert np.all(g.resistivity[:, : g.n_pad, :] == 300.0)
     assert np.all(g.resistivity[:, :, : g.n_pad] == 300.0)
@@ -418,19 +473,32 @@ def test_block_anomaly_inside_and_outside_values():
 def test_block_anomaly_custom_name():
     g = Grid3D.block_anomaly(
         name="custom",
-        nx=4, ny=4, nz=4, n_pad=0,
-        x_max=400.0, y_max=400.0, z_max=400.0,
-        nx_stations=2, ny_stations=2,
+        nx=4,
+        ny=4,
+        nz=4,
+        n_pad=0,
+        x_max=400.0,
+        y_max=400.0,
+        z_max=400.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     assert g.name == "custom"
 
 
 def test_block_anomaly_default_name_mentions_both_resistivities():
     g = Grid3D.block_anomaly(
-        bg_rho=500.0, anomaly_rho=5.0,
-        nx=4, ny=4, nz=4, n_pad=0,
-        x_max=400.0, y_max=400.0, z_max=400.0,
-        nx_stations=2, ny_stations=2,
+        bg_rho=500.0,
+        anomaly_rho=5.0,
+        nx=4,
+        ny=4,
+        nz=4,
+        n_pad=0,
+        x_max=400.0,
+        y_max=400.0,
+        z_max=400.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     assert "500" in g.name
     assert "5" in g.name
@@ -443,9 +511,15 @@ def test_block_anomaly_default_name_mentions_both_resistivities():
 
 def test_random_layered_reproducible_with_same_seed():
     kwargs = dict(
-        nx=6, ny=6, nz=6, n_pad=2,
-        x_max=600.0, y_max=600.0, z_max=600.0,
-        nx_stations=2, ny_stations=2,
+        nx=6,
+        ny=6,
+        nz=6,
+        n_pad=2,
+        x_max=600.0,
+        y_max=600.0,
+        z_max=600.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     g1 = Grid3D.random_layered(seed=42, **kwargs)
     g2 = Grid3D.random_layered(seed=42, **kwargs)
@@ -454,9 +528,15 @@ def test_random_layered_reproducible_with_same_seed():
 
 def test_random_layered_differs_across_seeds():
     kwargs = dict(
-        nx=6, ny=6, nz=6, n_pad=2,
-        x_max=600.0, y_max=600.0, z_max=600.0,
-        nx_stations=2, ny_stations=2,
+        nx=6,
+        ny=6,
+        nz=6,
+        n_pad=2,
+        x_max=600.0,
+        y_max=600.0,
+        z_max=600.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     g1 = Grid3D.random_layered(seed=1, **kwargs)
     g2 = Grid3D.random_layered(seed=2, **kwargs)
@@ -465,10 +545,18 @@ def test_random_layered_differs_across_seeds():
 
 def test_random_layered_resistivity_within_bounds():
     g = Grid3D.random_layered(
-        seed=7, nx=8, ny=8, nz=8, n_pad=2,
-        rho_min=1.0, rho_max=10_000.0,
-        x_max=800.0, y_max=800.0, z_max=800.0,
-        nx_stations=2, ny_stations=2,
+        seed=7,
+        nx=8,
+        ny=8,
+        nz=8,
+        n_pad=2,
+        rho_min=1.0,
+        rho_max=10_000.0,
+        x_max=800.0,
+        y_max=800.0,
+        z_max=800.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     assert np.all(g.resistivity >= 1.0)
     assert np.all(g.resistivity <= 10_000.0)
@@ -476,10 +564,18 @@ def test_random_layered_resistivity_within_bounds():
 
 def test_random_layered_without_lateral_variation_is_uniform_per_layer():
     g = Grid3D.random_layered(
-        seed=3, n_layers=3, nx=6, ny=6, nz=9, n_pad=0,
+        seed=3,
+        n_layers=3,
+        nx=6,
+        ny=6,
+        nz=9,
+        n_pad=0,
         lateral_variation=False,
-        x_max=600.0, y_max=600.0, z_max=900.0,
-        nx_stations=2, ny_stations=2,
+        x_max=600.0,
+        y_max=600.0,
+        z_max=900.0,
+        nx_stations=2,
+        ny_stations=2,
     )
     for iz in range(g.nz):
         layer = g.resistivity[iz]

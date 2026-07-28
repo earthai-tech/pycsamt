@@ -108,9 +108,7 @@ def draw_topo_section(
     cfg = _get_cfg(cfg)
     chain = np.asarray(chainage_km, dtype=float)
     elev = np.asarray(elev_m, dtype=float) / 1000.0  # → km
-    sx = np.asarray(
-        station_x_km if station_x_km is not None else chain, dtype=float
-    )
+    sx = np.asarray(station_x_km if station_x_km is not None else chain, dtype=float)
 
     if len(chain) == 0:
         return
@@ -200,7 +198,11 @@ def draw_topo_section(
                 va="bottom" if toward_top > 0 else "top",
                 ha="center",
                 color=label_color,
-                clip_on=True,
+                # Labels deliberately sit above the terrain pins.  Clipping
+                # them to the data axes hides the names whenever relief is
+                # close to the upper y-limit, which defeats the shared API
+                # convention that station names appear at the top.
+                clip_on=False,
                 zorder=_mstyle.zorder + 1,
             )
 
@@ -333,9 +335,7 @@ def draw_topo_strip(
 
     ax_s.set_facecolor(bg)
     ax_s.set_xlim(
-        main_ax.get_xlim()
-        if hasattr(main_ax, "get_xlim")
-        else (-0.5, n - 0.5)
+        main_ax.get_xlim() if hasattr(main_ax, "get_xlim") else (-0.5, n - 0.5)
     )
     ax_s.margins(x=0)
     ax_s.tick_params(
@@ -354,9 +354,7 @@ def draw_topo_strip(
     # Station name labels — smart thinning: markers always visible, labels subset
     if station_names and len(station_names) == n:
         _dummy = StationAxisStyle()
-        figwidth = (
-            ax_s.figure.get_figwidth() if ax_s.figure is not None else 10.0
-        )
+        figwidth = ax_s.figure.get_figwidth() if ax_s.figure is not None else 10.0
         visible_idx = _dummy.label_indices(station_names, figwidth)
         for i in visible_idx:
             ax_s.text(

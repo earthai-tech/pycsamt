@@ -102,7 +102,9 @@ def test_inversion_import_decode_and_confirm(monkeypatch, tmp_path):
     app = _capture(inv, "register_inversion_import")
     confirm = app.get("confirm")
     assert confirm(1, {}, False, "sid", "replace", "light")[0] is no_update
-    assert "Session" in confirm(1, {"filenames": ["x"]}, False, "", "replace", "light")[1]
+    assert (
+        "Session" in confirm(1, {"filenames": ["x"]}, False, "", "replace", "light")[1]
+    )
 
     fake_view = SimpleNamespace(n_stations=2, data=SimpleNamespace(stations=["known"]))
     monkeypatch.setattr(inv, "_decode_to_tempdir", lambda *a: str(tmp_path))
@@ -147,9 +149,9 @@ def test_settings_callbacks(monkeypatch):
     assert app.get("mask_hidden")(1, store, {"active": ["L1"]}, []) == ["B"]
     opts, active = app.get("populate")(store, {"all": ["L1", "L2"], "active": ["L1"]})
     assert len(opts) == 2 and active == ["L1"]
-    assert app.get("set_active")(["L2"], {"all": ["L1", "L2"], "active": ["L1"]})["active"] == [
-        "L2"
-    ]
+    assert app.get("set_active")(["L2"], {"all": ["L1", "L2"], "active": ["L1"]})[
+        "active"
+    ] == ["L2"]
     assert "No data" in str(app.get("summary")({}, {}, [])[0])
     summary, chips = app.get("summary")(store, {"active": ["L1"]}, ["A"])
     assert "masked" in str(summary) and "A" in str(chips)
@@ -188,10 +190,14 @@ def test_session_callbacks():
         no_update,
         no_update,
     )
-    saved, chip = app.get("_auto_snapshot")("map", {}, {}, None, [], "light", {"n_stations": 1}, "")
+    saved, chip = app.get("_auto_snapshot")(
+        "map", {}, {}, None, [], "light", {"n_stations": 1}, ""
+    )
     assert saved["app"] == "mapview" and "Auto-saved" in str(chip)
     assert app.get("_download")(0, *([None] * 8)) == (no_update, no_update)
-    download = app.get("_download")(1, "map", {}, {}, None, [], "light", {"n_stations": 1}, "n")
+    download = app.get("_download")(
+        1, "map", {}, {}, None, [], "light", {"n_stations": 1}, "n"
+    )
     assert download[0]["filename"].endswith(".json")
 
     encoded = base64.b64encode(json.dumps(snap).encode()).decode()
@@ -212,7 +218,9 @@ def test_toolbar_callbacks(monkeypatch):
     assert "2 stations" in app.get("info")({"n_stations": 2, "n_lines": 1})
     monkeypatch.setattr(toolbar, "ctx", SimpleNamespace(triggered_id=IDs.TB_BM_DARK))
     assert app.get("quickswitch", 0)() == "carto-darkmatter"
-    monkeypatch.setattr(toolbar, "ctx", SimpleNamespace(triggered_id=IDs.TB3D_MODE_DEPTH))
+    monkeypatch.setattr(
+        toolbar, "ctx", SimpleNamespace(triggered_id=IDs.TB3D_MODE_DEPTH)
+    )
     assert app.get("quickswitch", 1)() == "depth"
     assert "EPSG" in str(app.get("crs_info")("geo", None, None, None))
 
@@ -267,8 +275,22 @@ def test_lines_callbacks(monkeypatch):
 
     app = _capture(lines, "register_lines")
     records = [
-        {"ID": "A", "Line": "L1", "Latitude": 1, "Longitude": 2, "Elevation": 100, "Index": 0},
-        {"ID": "B", "Line": "L2", "Latitude": 3, "Longitude": 4, "Elevation": 200, "Index": 1},
+        {
+            "ID": "A",
+            "Line": "L1",
+            "Latitude": 1,
+            "Longitude": 2,
+            "Elevation": 100,
+            "Index": 0,
+        },
+        {
+            "ID": "B",
+            "Line": "L2",
+            "Latitude": 3,
+            "Longitude": 4,
+            "Elevation": 200,
+            "Index": 1,
+        },
     ]
     store = {"lines": ["L1", "L2"], "station_records": records}
     state = app.get("init_lines")(store, {"active": ["L2"]})
@@ -293,18 +315,26 @@ def test_lines_callbacks(monkeypatch):
         "ctx",
         SimpleNamespace(triggered_id=IDs.CANVAS_GRAPH, triggered=[{"value": 1}]),
     )
-    assert app.get("select")([], {"points": [{"customdata": ["A"]}]}) == {"station_id": "A"}
+    assert app.get("select")([], {"points": [{"customdata": ["A"]}]}) == {
+        "station_id": "A"
+    }
     inspected = app.get("inspect")({"station_id": "A"}, {}, store)
     assert "Elevation" in str(inspected)
-    assert "Station not found" in str(app.get("inspect")({"station_id": "X"}, {}, store))
-    data, cols = app.get("fill_table")(store, {"active": ["L1"]}, {"crs_mode": "geo"}, [])
+    assert "Station not found" in str(
+        app.get("inspect")({"station_id": "X"}, {}, store)
+    )
+    data, cols = app.get("fill_table")(
+        store, {"active": ["L1"]}, {"crs_mode": "geo"}, []
+    )
     assert [r["ID"] for r in data] == ["A"]
     monkeypatch.setattr(
         render_mod,
         "project_to_crs",
         lambda *a: (np.array([10.0]), np.array([20.0]), 32650),
     )
-    projected, cols = lines._add_projected_columns([dict(records[0])], {"crs_mode": "utm"}, cols)
+    projected, cols = lines._add_projected_columns(
+        [dict(records[0])], {"crs_mode": "utm"}, cols
+    )
     assert projected[0]["E (32650)"] == 10.0
 
 
@@ -313,7 +343,9 @@ def test_load_helpers_and_callbacks(monkeypatch):
     from pycsamt.app.mapview.callbacks import load
 
     assert load._sanitize("../bad:name.edi", "x") == "bad_name.edi"
-    entries = load._entries(["a", "b"], ["root/L1/a.edi", "root/L2/readme.txt"], source="folder")
+    entries = load._entries(
+        ["a", "b"], ["root/L1/a.edi", "root/L2/readme.txt"], source="folder"
+    )
     assert len(entries) == 1
     assert load._line_from_path("root/L1/a.edi") == "L1"
     assert load._infer_lines(["root/L1/a.edi", "root/L1/b.edi"]) == {"L1": 2}
@@ -329,7 +361,9 @@ def test_load_helpers_and_callbacks(monkeypatch):
     staged = {"contents": ["x"], "filenames": ["root/L1/a.edi"]}
     assert app.get("capture")(None, staged, None)[0]["source"] == "folder"
     assert app.get("populate")([])[2] == {"display": "none"}
-    multi = load._entries(["a", "b"], ["root/L1/a.edi", "root/L2/b.edi"], source="folder")
+    multi = load._entries(
+        ["a", "b"], ["root/L1/a.edi", "root/L2/b.edi"], source="folder"
+    )
     opts, selected, style = app.get("populate")(multi)
     assert len(opts) == 2 and selected == ["L1", "L2"]
     assert "No files" in str(app.get("preflight")([], [], "replace"))

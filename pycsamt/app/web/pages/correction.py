@@ -98,9 +98,7 @@ def _run_bar() -> html.Div:
                 [
                     dbc.Button(
                         [
-                            html.I(
-                                className="bi bi-arrow-counterclockwise me-1"
-                            ),
+                            html.I(className="bi bi-arrow-counterclockwise me-1"),
                             "Undo",
                         ],
                         id=IDs.BTN_CORR_UNDO,
@@ -125,9 +123,7 @@ def _run_bar() -> html.Div:
             ),
             # Spinner + feedback
             html.Div(
-                dbc.Spinner(
-                    html.Div(id=IDs.CORR_SPINNER), size="sm", color="success"
-                ),
+                dbc.Spinner(html.Div(id=IDs.CORR_SPINNER), size="sm", color="success"),
                 className="corr-run-spinner",
             ),
             html.Div(id=IDs.CORR_FEEDBACK, className="corr-feedback-text"),
@@ -230,9 +226,7 @@ def _ctrl_scroll() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.I(
-                                className="bi bi-funnel me-1 corr-drop-icon"
-                            ),
+                            html.I(className="bi bi-funnel me-1 corr-drop-icon"),
                             html.Span(
                                 "Drop Bad Frequencies",
                                 className="ctrl-label mb-0",
@@ -299,9 +293,7 @@ def _ctrl_scroll() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.I(
-                                className="bi bi-activity me-1 corr-smooth-icon"
-                            ),
+                            html.I(className="bi bi-activity me-1 corr-smooth-icon"),
                             html.Span(
                                 "Smooth ρ/φ Trend",
                                 className="ctrl-label mb-0",
@@ -415,9 +407,7 @@ def _ctrl_scroll() -> html.Div:
                             dbc.Col(
                                 dbc.Button(
                                     [
-                                        html.I(
-                                            className="bi bi-check2-circle me-1"
-                                        ),
+                                        html.I(className="bi bi-check2-circle me-1"),
                                         "Apply",
                                     ],
                                     id=IDs.BTN_CORR_SMOOTH_APPLY,
@@ -442,9 +432,7 @@ def _ctrl_scroll() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.I(
-                                className="bi bi-sliders me-1 corr-mfreq-icon"
-                            ),
+                            html.I(className="bi bi-sliders me-1 corr-mfreq-icon"),
                             html.Span(
                                 "Manual Frequency Drop",
                                 className="ctrl-label mb-0",
@@ -459,9 +447,7 @@ def _ctrl_scroll() -> html.Div:
                             dbc.Col(
                                 dbc.Button(
                                     [
-                                        html.I(
-                                            className="bi bi-arrow-repeat me-1"
-                                        ),
+                                        html.I(className="bi bi-arrow-repeat me-1"),
                                         "Load Frequencies",
                                     ],
                                     id=IDs.BTN_CORR_MFREQ_LOAD,
@@ -609,9 +595,7 @@ def _ctrl_scroll() -> html.Div:
                                     _lbl(" "),
                                     dbc.Button(
                                         [
-                                            html.I(
-                                                className="bi bi-download me-1"
-                                            ),
+                                            html.I(className="bi bi-download me-1"),
                                             "Export",
                                         ],
                                         id=IDs.BTN_CORR_EXPORT,
@@ -658,8 +642,7 @@ def _tab_bar() -> html.Div:
             html.Button(
                 [html.I(className=f"bi {icon} me-1"), label],
                 id=f"corr-tab-btn-{slug}",
-                className="corr-tab-btn"
-                + (" active" if slug == "ba" else ""),
+                className="corr-tab-btn" + (" active" if slug == "ba" else ""),
                 n_clicks=0,
             )
             for slug, label, icon in _CORR_TABS
@@ -693,9 +676,7 @@ def _view_panels() -> html.Div:
                                     html.Div(
                                         id="corr-label-left",
                                         children=[
-                                            html.I(
-                                                className="bi bi-camera me-1"
-                                            ),
+                                            html.I(className="bi bi-camera me-1"),
                                             "Raw / Before",
                                         ],
                                         className="corr-panel-label",
@@ -713,9 +694,7 @@ def _view_panels() -> html.Div:
                                     html.Div(
                                         id="corr-label-right",
                                         children=[
-                                            html.I(
-                                                className="bi bi-stars me-1"
-                                            ),
+                                            html.I(className="bi bi-stars me-1"),
                                             "Corrected / After",
                                         ],
                                         className="corr-panel-label",
@@ -920,9 +899,7 @@ def _view_panels() -> html.Div:
                             html.Span(className="flex-grow-1"),
                             html.Small(
                                 [
-                                    html.I(
-                                        className="bi bi-info-circle me-1"
-                                    ),
+                                    html.I(className="bi bi-info-circle me-1"),
                                     html.Span(
                                         id="corr-overlay-hint",
                                         children="Median ± IQR: statistical summary across all stations — "
@@ -953,9 +930,7 @@ def _view_panels() -> html.Div:
                         className="fig-area",
                         style={"flex": "1"},
                     ),
-                    html.Div(
-                        id=IDs.CORR_DIFF_STATS, className="corr-diff-stats"
-                    ),
+                    html.Div(id=IDs.CORR_DIFF_STATS, className="corr-diff-stats"),
                 ],
                 id="corr-panel-diff",
                 className="corr-panel",

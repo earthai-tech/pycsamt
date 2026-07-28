@@ -67,18 +67,14 @@ def _3d_z(freqs: np.ndarray, skew: float = 0.4) -> np.ndarray:
     return z
 
 
-def _site(
-    name: str, n: int = 12, *, east=None, north=None, three_d=False
-) -> _FakeSite:
+def _site(name: str, n: int = 12, *, east=None, north=None, three_d=False) -> _FakeSite:
     fr = _freqs(n)
     z = _3d_z(fr) if three_d else _iso_z(fr)
     return _FakeSite(name, z, fr, east=east, north=north)
 
 
 def _profile(n: int = 4) -> list:
-    return [
-        _site(f"S{i:02d}", east=float(i) * 200.0, north=0.0) for i in range(n)
-    ]
+    return [_site(f"S{i:02d}", east=float(i) * 200.0, north=0.0) for i in range(n)]
 
 
 def _mixed(n: int = 3) -> list:
@@ -86,9 +82,7 @@ def _mixed(n: int = 3) -> list:
     for i in range(n):
         fr = _freqs()
         z = _3d_z(fr) if i % 2 else _iso_z(fr)
-        sites.append(
-            _FakeSite(f"S{i:02d}", z, fr, east=float(i) * 200.0, north=0.0)
-        )
+        sites.append(_FakeSite(f"S{i:02d}", z, fr, east=float(i) * 200.0, north=0.0))
     return sites
 
 

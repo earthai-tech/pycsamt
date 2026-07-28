@@ -72,11 +72,7 @@ def sanitize_frame_cols(
     if isinstance(regex, re.Pattern):
         splitter = regex
     else:
-        pat = (
-            regex
-            if isinstance(regex, str)
-            else (pattern or r"[_#&.\)\(*@!_,;\s-]+")
-        )
+        pat = regex if isinstance(regex, str) else (pattern or r"[_#&.\)\(*@!_,;\s-]+")
         splitter = re.compile(pat)
 
     def _clean(name: Any) -> str:
@@ -164,7 +160,7 @@ def drop_constant_columns(
     --------
     >>> import pandas as pd
     >>> from pycsamt.utils.cleaner import drop_constant_columns
-    >>> df = pd.DataFrame({'A':[1,1,1], 'B':[1,2,3]})
+    >>> df = pd.DataFrame({"A": [1, 1, 1], "B": [1, 2, 3]})
     >>> drop_constant_columns(df)
        B
     0  1
@@ -197,8 +193,7 @@ def drop_constant_columns(
         # Identify rows to drop
         mask = df2.apply(
             lambda row: (
-                row.value_counts(normalize=True, dropna=False).iloc[0]
-                >= threshold
+                row.value_counts(normalize=True, dropna=False).iloc[0] >= threshold
             ),
             axis=1,
         )
@@ -247,11 +242,8 @@ def impute_missing(
     --------
     >>> import pandas as pd
     >>> from pycsamt.utils.cleaner import impute_missing
-    >>> df = pd.DataFrame({
-    ...     'A': [1, None, 3],
-    ...     'B': [None, 2, 2]
-    ... })
-    >>> impute_missing(df, strategy='median')
+    >>> df = pd.DataFrame({"A": [1, None, 3], "B": [None, 2, 2]})
+    >>> impute_missing(df, strategy="median")
          A    B
     0  1.0  2.0
     1  2.0  2.0
@@ -322,10 +314,10 @@ def fill_nan(
     --------
     >>> import numpy as np
     >>> from pycsamt.utils.arrayops import fill_nan
-    >>> a = np.array([np.nan,1,np.nan,2])
-    >>> fill_nan(a, method='ff')
+    >>> a = np.array([np.nan, 1, np.nan, 2])
+    >>> fill_nan(a, method="ff")
     array([nan, 1., 1., 2.])
-    >>> fill_nan(a, method='both')
+    >>> fill_nan(a, method="both")
     array([1., 1., 1., 2.])
     """
 
@@ -416,16 +408,16 @@ def ismissing(
     >>> import numpy as np
     >>> from pycsamt.utils.arrayops import ismissing
     >>> ref = np.arange(5)
-    >>> arr = np.array([0,2,4])
+    >>> arr = np.array([0, 2, 4])
     >>> f, miss = ismissing(ref, arr)
     >>> f
     array([ 0., nan, 2., nan, 4.])
     >>> miss
     array([1., 3.])
-    >>> _, idx = ismissing(ref, arr, return_index='index')
+    >>> _, idx = ismissing(ref, arr, return_index="index")
     >>> idx
     [1, 3]
-    >>> _, mask = ismissing(ref, arr, return_index='mask')
+    >>> _, mask = ismissing(ref, arr, return_index="mask")
     >>> mask
     array([False, True, False, True, False])
     """

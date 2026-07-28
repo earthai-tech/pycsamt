@@ -179,9 +179,7 @@ class TensorBase(AVGComponentBase):
                 # tolerant numeric compare
                 st_mask = (
                     np.isclose(
-                        pd.to_numeric(
-                            work.get("station", np.nan), errors="coerce"
-                        ),
+                        pd.to_numeric(work.get("station", np.nan), errors="coerce"),
                         float(station),
                         equal_nan=False,
                     )
@@ -238,9 +236,7 @@ class TensorBase(AVGComponentBase):
         if sort_freq:
             freqs = np.sort(freqs)
 
-        T = np.full(
-            (stations.size, freqs.size, 2, 2), fill_value, dtype=float
-        )
+        T = np.full((stations.size, freqs.size, 2, 2), fill_value, dtype=float)
 
         for si, st in enumerate(stations):
             mask = np.isclose(

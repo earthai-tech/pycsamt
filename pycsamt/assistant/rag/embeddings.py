@@ -134,18 +134,14 @@ def resolve_embedding_backend(
             import openai  # noqa: F401
         except Exception:  # noqa: BLE001
             return None
-        return OpenAIEmbeddingBackend(
-            api_key, model=model or "text-embedding-3-small"
-        )
+        return OpenAIEmbeddingBackend(api_key, model=model or "text-embedding-3-small")
     return None
 
 
 # ── persisted vector store ──────────────────────────────────────────────────────
 
 
-def save_vectors(
-    path: Path | str, ids: Sequence[str], vectors: np.ndarray
-) -> Path:
+def save_vectors(path: Path | str, ids: Sequence[str], vectors: np.ndarray) -> Path:
     """Persist ``ids`` + a ``(n, dim)`` matrix to ``path`` (``.npz``)."""
     import numpy as np
 

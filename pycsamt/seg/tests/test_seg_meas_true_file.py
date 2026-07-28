@@ -17,7 +17,6 @@ from pycsamt.seg.meas import (
     MeasMixin,
 )
 
-
 _EDI_SAMPLES = [
     Path("MT") / "kap03lmt_edis" / "kap103.edi",
     Path("MT") / "SPECTRA" / "spectra01.edi",

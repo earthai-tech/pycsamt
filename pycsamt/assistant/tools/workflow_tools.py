@@ -36,9 +36,7 @@ _WORKFLOW_AGENTS: dict[str, str] = {
 }
 
 
-def resolve_target(
-    line_or_path: str, *, registry: Any | None = None
-) -> dict[str, Any]:
+def resolve_target(line_or_path: str, *, registry: Any | None = None) -> dict[str, Any]:
     """Resolve a survey-line name or a path to a concrete EDI location.
 
     Returns ``{"kind": "line"|"path", "path", "line", "exists", ...}``.
@@ -89,8 +87,7 @@ def run_workflow(
     """
     if workflow not in _WORKFLOW_AGENTS:
         raise ValueError(
-            f"Unsupported workflow {workflow!r}. "
-            f"Known: {sorted(_WORKFLOW_AGENTS)}"
+            f"Unsupported workflow {workflow!r}. " f"Known: {sorted(_WORKFLOW_AGENTS)}"
         )
     target = resolve_target(line_or_path, registry=registry)
     edi_dir = target.get("edi_dir") or target.get("path")

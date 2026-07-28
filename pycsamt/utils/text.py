@@ -42,11 +42,11 @@ def smart_format(
 
     Examples
     --------
-    >>> smart_format(['a','b','c'])
+    >>> smart_format(["a", "b", "c"])
     "'a', 'b', and 'c'"
-    >>> smart_format(['a','b'], choice='or', oxford_comma=False)
+    >>> smart_format(["a", "b"], choice="or", oxford_comma=False)
     "'a' or 'b'"
-    >>> smart_format('x')
+    >>> smart_format("x")
     "'x'"
     >>> smart_format([])
     ""
@@ -96,16 +96,10 @@ def fmt_text(
             else:
                 row = [k, v]
             rows.append(row)
-    elif isinstance(features, Iterable) and not isinstance(
-        features, (str, bytes)
-    ):
+    elif isinstance(features, Iterable) and not isinstance(features, (str, bytes)):
         # list of rows or single row
         first = next(iter(features), None)
-        if (
-            not first
-            or not isinstance(first, Iterable)
-            or isinstance(first, str)
-        ):
+        if not first or not isinstance(first, Iterable) or isinstance(first, str):
             rows = [list(features)]
         else:
             rows = [list(r) for r in features]
@@ -162,9 +156,7 @@ def str2columns(
     if isinstance(regex, re.Pattern):
         splitter = regex
     else:
-        pat = (
-            regex if isinstance(regex, str) else (pattern or r"[^0-9A-Za-z]+")
-        )
+        pat = regex if isinstance(regex, str) else (pattern or r"[^0-9A-Za-z]+")
         splitter = re.compile(pat)
     tokens = [tok for tok in splitter.split(txt) if tok]
     if strip_chars:

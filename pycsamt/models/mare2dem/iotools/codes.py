@@ -105,9 +105,7 @@ DATA_CODES: dict[int, tuple[str, str]] = {
 }
 
 # Integer code sets for fast classification
-_CSEM_CODES: frozenset[int] = frozenset(range(1, 50)) | frozenset(
-    range(151, 167)
-)
+_CSEM_CODES: frozenset[int] = frozenset(range(1, 50)) | frozenset(range(151, 167))
 _MT_CODES: frozenset[int] = frozenset(range(100, 140))
 
 

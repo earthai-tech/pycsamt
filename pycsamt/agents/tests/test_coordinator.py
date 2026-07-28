@@ -14,9 +14,7 @@ class TestAgentCoordinatorDryRun(unittest.TestCase):
         )
 
         coord = AgentCoordinator(name)
-        coord.add_step(
-            "parse", ContextInputAgent(), description="Parse request"
-        )
+        coord.add_step("parse", ContextInputAgent(), description="Parse request")
         coord.add_step(
             "load",
             MTLoaderAgent(),

@@ -159,9 +159,7 @@ class PyCSAMTObject:
             if isinstance(slots, str):
                 slots = (slots,)
             names.extend(
-                slot
-                for slot in slots
-                if slot not in {"__dict__", "__weakref__"}
+                slot for slot in slots if slot not in {"__dict__", "__weakref__"}
             )
         return names
 
@@ -185,10 +183,7 @@ class PyCSAMTObject:
             import numpy as np
 
             if isinstance(value, np.ndarray):
-                return (
-                    "ndarray(shape="
-                    f"{tuple(value.shape)}, dtype={value.dtype})"
-                )
+                return f"ndarray(shape={tuple(value.shape)}, dtype={value.dtype})"
         except Exception:
             pass
         if isinstance(value, Mapping):
@@ -202,14 +197,11 @@ class PyCSAMTObject:
         if isinstance(value, (list, tuple, set, frozenset)):
             seq = list(value)
             sample = ", ".join(
-                cls._short_value(item, max_string=max_string)
-                for item in seq[:3]
+                cls._short_value(item, max_string=max_string) for item in seq[:3]
             )
             if len(seq) > 3:
                 sample += ", ..."
-            return (
-                f"{type(value).__name__}(len={len(seq)}, sample=[{sample}])"
-            )
+            return f"{type(value).__name__}(len={len(seq)}, sample=[{sample}])"
         shape = getattr(value, "shape", None)
         dtype = getattr(value, "dtype", None)
         if shape is not None:
@@ -282,9 +274,7 @@ class PyCSAMTObject:
         if hasattr(obj, "__dict__"):
             names.extend(obj.__dict__.keys())
         names.extend(
-            obj.__class__._slot_names()
-            if isinstance(obj, PyCSAMTObject)
-            else []
+            obj.__class__._slot_names() if isinstance(obj, PyCSAMTObject) else []
         )
         out: dict[str, Any] = {}
         exclude = getattr(obj, "__repr_exclude__", set())

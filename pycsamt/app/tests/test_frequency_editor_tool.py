@@ -173,9 +173,7 @@ class TestEditWorkerReal:
         # A diagnostic figure should normally be produced.
         assert fig is None or hasattr(fig, "savefig")
 
-    def test_run_drop_mode_high_threshold_produces_drops(
-        self, qapp, small_sites
-    ):
+    def test_run_drop_mode_high_threshold_produces_drops(self, qapp, small_sites):
         """A near-1.0 threshold in drop mode should flag rows as dropped."""
         done_calls = []
         w = _EditWorker(
@@ -259,9 +257,7 @@ class TestEditWorkerReal:
         class _OuterWrapper:
             frame = _InnerWrapper()
 
-        fake_result = SimpleNamespace(
-            sites="EDITED", decisions=_OuterWrapper()
-        )
+        fake_result = SimpleNamespace(sites="EDITED", decisions=_OuterWrapper())
         monkeypatch.setattr(
             freq_mod,
             "edit_frequencies_by_confidence",
@@ -295,9 +291,7 @@ class TestEditWorkerReal:
         def _raise(*a, **k):
             raise RuntimeError("synthetic plot failure")
 
-        monkeypatch.setattr(
-            freq_mod, "plot_frequency_edit_summary", _raise
-        )
+        monkeypatch.setattr(freq_mod, "plot_frequency_edit_summary", _raise)
         done_calls = []
         w = _EditWorker(
             small_sites,
@@ -358,9 +352,7 @@ class TestDialogConstruction:
         assert dlg._cilo_spin.value() == pytest.approx(0.50)
 
     def test_table_headers(self, dlg):
-        headers = [
-            dlg._table.horizontalHeaderItem(i).text() for i in range(4)
-        ]
+        headers = [dlg._table.horizontalHeaderItem(i).text() for i in range(4)]
         assert headers == ["Station", "Period (s)", "Confidence", "Action"]
 
     def test_table_starts_empty(self, dlg):
@@ -415,9 +407,7 @@ class TestOnRunDone:
         assert captured["kw"]["reject"] == "mask"
         assert captured["kw"]["also"] == "z"
 
-    def test_on_run_disables_buttons_and_sets_status(
-        self, dlg_with_sites, monkeypatch
-    ):
+    def test_on_run_disables_buttons_and_sets_status(self, dlg_with_sites, monkeypatch):
         FakeWorker = _fake_worker_cls(lambda inst: None)
         monkeypatch.setattr(fet, "_EditWorker", FakeWorker)
 

@@ -119,11 +119,7 @@ class ForwardResponse:
             Include phase alongside ρ_a (MT only).
         """
         if self.method in ("MT1D", "CSAMT1D"):
-            ra = (
-                np.log10(np.maximum(self.rho_a, 1e-12))
-                if log_rho
-                else self.rho_a
-            )
+            ra = np.log10(np.maximum(self.rho_a, 1e-12)) if log_rho else self.rho_a
             if include_phase:
                 return np.concatenate([ra, self.phase])
             return ra
@@ -157,9 +153,7 @@ class ForwardResponse:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _z_surface_mt(
-    omega: float, rho: np.ndarray, thick: np.ndarray
-) -> complex:
+def _z_surface_mt(omega: float, rho: np.ndarray, thick: np.ndarray) -> complex:
     """
     Compute the MT surface impedance for a single angular frequency.
 
@@ -308,10 +302,7 @@ class MT1DForward(_Base1DForward):
     >>> from pycsamt.forward.em1d import MT1DForward
     >>> from pycsamt.forward.synthetic import LayeredModel
     >>> freqs = np.logspace(-3, 4, 30)
-    >>> model = LayeredModel(
-    ...     resistivity=[100, 10, 500],
-    ...     thickness=[500, 1000]
-    ... )
+    >>> model = LayeredModel(resistivity=[100, 10, 500], thickness=[500, 1000])
     >>> resp = MT1DForward(freqs).run(model)
     >>> resp.rho_a.shape
     (30,)
@@ -338,9 +329,7 @@ class MT1DForward(_Base1DForward):
         thick = model.thickness
         omega = 2.0 * np.pi * self.freqs
 
-        z_surf = np.array(
-            [_z_surface_mt(w, rho, thick) for w in omega], dtype=complex
-        )
+        z_surf = np.array([_z_surface_mt(w, rho, thick) for w in omega], dtype=complex)
         rho_a = np.abs(z_surf) ** 2 / (omega * MU0)
         phase = np.angle(z_surf, deg=True)
 
@@ -467,9 +456,7 @@ class TEM1DForward(_Base1DForward):
             integrand = omega * np.imag(hz_fd) * np.cos(omega * t)
             # Trapezoidal in log-space: integrate f(ω)*ω d(log ω)
             pts = integrand * omega  # f·ω for log spacing
-            result[i] = (2.0 / np.pi) * np.sum(
-                0.5 * (pts[:-1] + pts[1:]) * dlog_omega
-            )
+            result[i] = (2.0 / np.pi) * np.sum(0.5 * (pts[:-1] + pts[1:]) * dlog_omega)
         return result
 
 
@@ -550,9 +537,7 @@ class CSAMT1DForward(_Base1DForward):
 
         # Correct apparent resistivity and recompute phase-compatible Z
         rho_a_corr = resp.rho_a * f_nf
-        z_corr = np.sqrt(rho_a_corr * omega * MU0) * np.exp(
-            1j * np.angle(resp.z)
-        )
+        z_corr = np.sqrt(rho_a_corr * omega * MU0) * np.exp(1j * np.angle(resp.z))
         return ForwardResponse(
             method="CSAMT1D",
             freqs=self.freqs,

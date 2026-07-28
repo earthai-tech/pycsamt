@@ -130,9 +130,7 @@ def test_plot_field_dashboard_returns_figure_and_attaches_data():
     assert data["survey_id"] == "survey-a"
     assert data["n_packets"] == 5
     assert len(data["stations"]) == 2
-    levels = {
-        row["station_id"]: row["health_level"] for row in data["stations"]
-    }
+    levels = {row["station_id"]: row["health_level"] for row in data["stations"]}
     assert levels["S01"] == "ok"
     assert levels["S02"] == "critical"
     plt.close(fig)
@@ -169,9 +167,7 @@ def test_plot_edge_qc_summary_accepts_edge_results():
             max_spike_fraction=0.4,
         )
     )
-    result = proc.process(
-        [[1.0, 2.0], [1.1, 2.1], [float("nan"), 50.0], [1.0, 2.0]]
-    )
+    result = proc.process([[1.0, 2.0], [1.1, 2.1], [float("nan"), 50.0], [1.0, 2.0]])
 
     fig = plot_edge_qc_summary(result)
 

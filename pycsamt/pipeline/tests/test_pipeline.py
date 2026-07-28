@@ -236,9 +236,7 @@ class TestStepRegistry:
     def test_special_case_override_fns_callable(self):
         for code in ("NR007", "SS002", "SS003"):
             spec = STEP_REGISTRY[code]
-            assert callable(spec.override_fn), (
-                f"{code} override_fn not callable"
-            )
+            assert callable(spec.override_fn), f"{code} override_fn not callable"
 
     def test_all_specs_resolvable(self):
         for code, spec in STEP_REGISTRY.items():
@@ -249,9 +247,9 @@ class TestStepRegistry:
         for code, spec in STEP_REGISTRY.items():
             for entry in spec.qc_defs:
                 assert len(entry) == 2, f"{code}: qc_def not a 2-tuple"
-                assert all(isinstance(s, str) for s in entry), (
-                    f"{code}: qc_def contains non-strings"
-                )
+                assert all(
+                    isinstance(s, str) for s in entry
+                ), f"{code}: qc_def contains non-strings"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -511,9 +509,7 @@ class TestPipelineConstruction:
         assert result is pipe
 
     def test_remove_found(self):
-        pipe = Pipeline(
-            [("notch", _identity("NR001")), ("band", _identity("FREQ001"))]
-        )
+        pipe = Pipeline([("notch", _identity("NR001")), ("band", _identity("FREQ001"))])
         pipe.remove("notch")
         assert len(pipe) == 1
         assert pipe._steps[0][0] == "band"
@@ -524,9 +520,7 @@ class TestPipelineConstruction:
             pipe.remove("notch_missing")
 
     def test_insert_at_position(self):
-        pipe = Pipeline(
-            [("a", _identity("NR001")), ("c", _identity("FREQ001"))]
-        )
+        pipe = Pipeline([("a", _identity("NR001")), ("c", _identity("FREQ001"))])
         pipe.insert(1, "b", _identity("FREQ004"))
         assert pipe._steps[1][0] == "b"
         assert len(pipe) == 3
@@ -678,9 +672,7 @@ steps:
 
 class TestPipelineConfigFiles:
     def test_yaml_roundtrip_name(self, tmp_path):
-        pipe = Pipeline(
-            [("notch", _identity("NR001"))], name="roundtrip_pipe"
-        )
+        pipe = Pipeline([("notch", _identity("NR001"))], name="roundtrip_pipe")
         yaml_path = tmp_path / "pipe.yaml"
         pipe.to_yaml(yaml_path)
         loaded = Pipeline.from_yaml(yaml_path)
@@ -835,9 +827,7 @@ class TestPipelineRun:
         assert result.pipeline_name == "test_pipe"
 
     def test_run_no_outdir_does_not_write_files(self, simple_pipe, sites):
-        result = simple_pipe.run(
-            sites, outdir=None, save_edis=False, save_report=False
-        )
+        result = simple_pipe.run(sites, outdir=None, save_edis=False, save_report=False)
         assert result.outdir is None
         assert len(result.processed_paths) == 0
 
@@ -879,9 +869,7 @@ class TestPipelineRun:
 
         assert result.step_results[0].error is not None
         # no user-visible warning with "skip"
-        user_warns = [
-            w for w in ws if "deliberate step failure" in str(w.message)
-        ]
+        user_warns = [w for w in ws if "deliberate step failure" in str(w.message)]
         assert len(user_warns) == 0
 
     def test_run_error_raise_propagates(self, sites):
@@ -897,31 +885,23 @@ class TestPipelineRun:
 
     def test_run_with_outdir_creates_tree(self, simple_pipe, sites, tmp_path):
         root = tmp_path / "out"
-        simple_pipe.run(
-            sites, outdir=root, save_edis=False, save_report=False
-        )
+        simple_pipe.run(sites, outdir=root, save_edis=False, save_report=False)
         assert root.exists()
         assert (root / "processed").exists()
         assert (root / "plots").exists()
 
     def test_run_with_outdir_saves_yaml(self, simple_pipe, sites, tmp_path):
         root = tmp_path / "out"
-        simple_pipe.run(
-            sites, outdir=root, save_edis=False, save_report=False
-        )
+        simple_pipe.run(sites, outdir=root, save_edis=False, save_report=False)
         assert (root / "pipeline.yaml").exists()
 
-    def test_run_with_outdir_saves_reports(
-        self, simple_pipe, sites, tmp_path
-    ):
+    def test_run_with_outdir_saves_reports(self, simple_pipe, sites, tmp_path):
         root = tmp_path / "out"
         simple_pipe.run(sites, outdir=root, save_edis=False, save_report=True)
         assert (root / "summary.txt").exists()
         assert (root / "report.html").exists()
 
-    def test_run_plots_dir_has_step_subdirs(
-        self, simple_pipe, sites, tmp_path
-    ):
+    def test_run_plots_dir_has_step_subdirs(self, simple_pipe, sites, tmp_path):
         root = tmp_path / "out"
         simple_pipe.run(
             sites,
@@ -949,9 +929,7 @@ class TestPipelineRun:
 class TestPipelineResult:
     @pytest.fixture()
     def clean_result(self, simple_pipe, sites):
-        return simple_pipe.run(
-            sites, outdir=None, save_edis=False, save_report=False
-        )
+        return simple_pipe.run(sites, outdir=None, save_edis=False, save_report=False)
 
     def test_plots_aggregates_all_step_plots(self, clean_result):
         # _IdentityStep returns no plots so this should be empty

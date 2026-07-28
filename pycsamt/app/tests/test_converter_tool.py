@@ -111,9 +111,7 @@ def _fake_worker_cls(
 
 class TestConvertWorkerCSV:
     def test_writes_csv_file(self, tmp_path, small_sites):
-        worker = _ConvertWorker(
-            small_sites, tmp_path, "CSV (station metadata)"
-        )
+        worker = _ConvertWorker(small_sites, tmp_path, "CSV (station metadata)")
         done, errors = [], []
         worker.done.connect(done.append)
         worker.error.connect(errors.append)
@@ -127,13 +125,11 @@ class TestConvertWorkerCSV:
         assert "station" in text.splitlines()[0]
 
     def test_progress_emitted_per_station(self, tmp_path, small_sites):
-        worker = _ConvertWorker(
-            small_sites, tmp_path, "CSV (station metadata)"
-        )
+        worker = _ConvertWorker(small_sites, tmp_path, "CSV (station metadata)")
         calls = []
-        worker.progress.connect(lambda cur, total, name: calls.append(
-            (cur, total, name)
-        ))
+        worker.progress.connect(
+            lambda cur, total, name: calls.append((cur, total, name))
+        )
         worker.run()
 
         assert len(calls) == 3
@@ -141,9 +137,7 @@ class TestConvertWorkerCSV:
         assert all(c[1] == 3 for c in calls)  # total is constant
 
     def test_done_message_mentions_count_and_dir(self, tmp_path, small_sites):
-        worker = _ConvertWorker(
-            small_sites, tmp_path, "CSV (station metadata)"
-        )
+        worker = _ConvertWorker(small_sites, tmp_path, "CSV (station metadata)")
         done = []
         worker.done.connect(done.append)
         worker.run()
@@ -170,9 +164,7 @@ class TestConvertWorkerCSV:
 
 class TestConvertWorkerJSON:
     def test_writes_json_file(self, tmp_path, small_sites):
-        worker = _ConvertWorker(
-            small_sites, tmp_path, "JSON (station metadata)"
-        )
+        worker = _ConvertWorker(small_sites, tmp_path, "JSON (station metadata)")
         done, errors = [], []
         worker.done.connect(done.append)
         worker.error.connect(errors.append)
@@ -311,9 +303,7 @@ class TestConvertWorkerMetadataEdgeCases:
         assert rows[0]["lon"] != rows[0]["lon"]  # NaN
 
     def test_z_object_with_no_freq_yields_zero_n_freq(self, tmp_path):
-        worker = _ConvertWorker(
-            [_FakeEdNoZFreq()], tmp_path, "JSON (station metadata)"
-        )
+        worker = _ConvertWorker([_FakeEdNoZFreq()], tmp_path, "JSON (station metadata)")
         worker.run()
         rows = json.loads(
             (tmp_path / "survey_stations.json").read_text(encoding="utf-8")
@@ -322,9 +312,7 @@ class TestConvertWorkerMetadataEdgeCases:
         assert rows[0]["t_min"] is None
         assert rows[0]["t_max"] is None
 
-    def test_z_object_with_only_non_positive_freq_yields_zero_n_freq(
-        self, tmp_path
-    ):
+    def test_z_object_with_only_non_positive_freq_yields_zero_n_freq(self, tmp_path):
         worker = _ConvertWorker(
             [_FakeEdNonPositiveFreq()], tmp_path, "JSON (station metadata)"
         )
@@ -363,9 +351,7 @@ class TestConvertWorkerMetadataEdgeCases:
             def __init__(self):
                 self.edi = _RaisingEdiObj()
 
-        worker = _ConvertWorker(
-            [_FakeEdRaisingWriter()], tmp_path, "EDI (re-export)"
-        )
+        worker = _ConvertWorker([_FakeEdRaisingWriter()], tmp_path, "EDI (re-export)")
         done, errors = [], []
         worker.done.connect(done.append)
         worker.error.connect(errors.append)
@@ -374,9 +360,7 @@ class TestConvertWorkerMetadataEdgeCases:
         assert errors == []
         assert len(done) == 1
 
-    def test_unwrap_exception_is_swallowed(
-        self, monkeypatch, tmp_path, small_sites
-    ):
+    def test_unwrap_exception_is_swallowed(self, monkeypatch, tmp_path, small_sites):
         """When `_unwrap` itself raises, the worker must catch it and
         keep processing the original (non-unwrapped) item."""
         import pycsamt.emtools._core as core
@@ -386,9 +370,7 @@ class TestConvertWorkerMetadataEdgeCases:
 
         monkeypatch.setattr(core, "_unwrap", _raise)
 
-        worker = _ConvertWorker(
-            small_sites, tmp_path, "JSON (station metadata)"
-        )
+        worker = _ConvertWorker(small_sites, tmp_path, "JSON (station metadata)")
         done, errors = [], []
         worker.done.connect(done.append)
         worker.error.connect(errors.append)
@@ -414,9 +396,7 @@ class TestConvertWorkerImportFallback:
         dummy = types.ModuleType("pycsamt.emtools._core")
         monkeypatch.setitem(sys.modules, "pycsamt.emtools._core", dummy)
 
-        worker = _ConvertWorker(
-            ["a", "b"], tmp_path, "JSON (station metadata)"
-        )
+        worker = _ConvertWorker(["a", "b"], tmp_path, "JSON (station metadata)")
         done, errors = [], []
         worker.done.connect(done.append)
         worker.error.connect(errors.append)
@@ -444,9 +424,7 @@ class TestConvertWorkerImportFallback:
             def __iter__(self):
                 raise RuntimeError("cannot iterate")
 
-        worker = _ConvertWorker(
-            _BadIterable(), tmp_path, "JSON (station metadata)"
-        )
+        worker = _ConvertWorker(_BadIterable(), tmp_path, "JSON (station metadata)")
         done, errors = [], []
         worker.done.connect(done.append)
         worker.error.connect(errors.append)
@@ -498,10 +476,7 @@ class TestDialogConstruction:
 
     def test_format_combo_has_three_options(self, qapp):
         dlg = FormatConverterDialog(None)
-        items = [
-            dlg._fmt_combo.itemText(i)
-            for i in range(dlg._fmt_combo.count())
-        ]
+        items = [dlg._fmt_combo.itemText(i) for i in range(dlg._fmt_combo.count())]
         assert items == [
             "CSV (station metadata)",
             "JSON (station metadata)",
@@ -519,9 +494,7 @@ class TestDialogConstruction:
         assert dlg._progress.value() == 0
         dlg.close()
 
-    def test_build_ui_handles_core_import_failure(
-        self, qapp, monkeypatch, small_sites
-    ):
+    def test_build_ui_handles_core_import_failure(self, qapp, monkeypatch, small_sites):
         """When `_iter_items` can't be imported while building the
         source label, the dialog must fall back to the plain
         "Loaded survey" label instead of raising."""
@@ -551,9 +524,7 @@ class TestPickDir:
         assert dlg._dir_edit.text() == str(tmp_path)
         dlg.close()
 
-    def test_pick_dir_cancelled_leaves_line_edit_unchanged(
-        self, qapp, monkeypatch
-    ):
+    def test_pick_dir_cancelled_leaves_line_edit_unchanged(self, qapp, monkeypatch):
         dlg = FormatConverterDialog(None)
         original = dlg._dir_edit.text()
         monkeypatch.setattr(
@@ -603,9 +574,7 @@ class TestOnRunWithFakeWorker:
         states_during_progress = []
 
         def _capture_state(fake_self):
-            states_during_progress.append(
-                dlg._run_btn.isEnabled()
-            )
+            states_during_progress.append(dlg._run_btn.isEnabled())
 
         fake_cls = _fake_worker_cls(
             progress_events=[(1, 1, "S1")],

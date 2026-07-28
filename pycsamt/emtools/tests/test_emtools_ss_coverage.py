@@ -18,6 +18,7 @@ import pytest
 
 from pycsamt.api import APIFrame, reset_api_view
 from pycsamt.emtools.ss import (
+    _scale_site_Z,
     apply_ss_factors,
     correct_ss_ama,
     detect_near_surface,
@@ -38,7 +39,6 @@ from pycsamt.emtools.ss import (
     ss_qc_psection,
     ss_qc_station_curves,
 )
-from pycsamt.emtools.ss import _scale_site_Z
 
 # ----------------------------- fixtures ----------------------------------- #
 
@@ -172,9 +172,7 @@ def test_estimate_ss_ama_weight_schemes(weights):
     sites = _shifted_profile(9)
     tbl = estimate_ss_ama(sites, half_window=2, weights=weights)
     assert len(tbl) > 0
-    assert {"delta_log10_rho", "fac_rho", "fac_z", "n_used"}.issubset(
-        tbl.columns
-    )
+    assert {"delta_log10_rho", "fac_rho", "fac_z", "n_used"}.issubset(tbl.columns)
 
 
 @pytest.mark.parametrize("robust_freq", ["median", "mean"])
@@ -245,9 +243,7 @@ def test_apply_ss_factors_bad_dataframe_raises():
 
 def test_apply_ss_factors_unknown_station_defaults_to_one():
     sites = [_site("S1"), _site("S2")]
-    corr = apply_ss_factors(
-        sites, {"NOT_S1": 5.0}, key="fac_z", inplace=False
-    )
+    corr = apply_ss_factors(sites, {"NOT_S1": 5.0}, key="fac_z", inplace=False)
     assert corr is not None
 
 
@@ -281,9 +277,7 @@ def test_correct_ss_ama_inplace_true():
 @pytest.mark.parametrize("summary", ["median", "mean"])
 def test_estimate_ss_loess_main_path(poly, summary):
     sites = _shifted_profile(9)
-    tbl = estimate_ss_loess(
-        sites, half_window=3, poly=poly, it=2, summary=summary
-    )
+    tbl = estimate_ss_loess(sites, half_window=3, poly=poly, it=2, summary=summary)
     assert len(tbl) > 0
     assert {"station", "delta_log10_rho", "fac_rho", "fac_z", "n_used"} == (
         set(tbl.columns)
@@ -298,9 +292,7 @@ def test_estimate_ss_loess_it_one_iteration():
 
 def test_estimate_ss_loess_pband_and_skew():
     sites = _profile(6, n_freq=12)
-    tbl = estimate_ss_loess(
-        sites, half_window=2, pband=(1e-2, 10.0), max_skew=None
-    )
+    tbl = estimate_ss_loess(sites, half_window=2, pband=(1e-2, 10.0), max_skew=None)
     assert len(tbl) > 0
 
 
@@ -331,9 +323,7 @@ def test_estimate_ss_bilateral_main_path(summary):
 
 def test_estimate_ss_bilateral_explicit_sigmas():
     sites = _shifted_profile(7)
-    tbl = estimate_ss_bilateral(
-        sites, half_window=2, sig_dist=1.5, sig_val=0.2
-    )
+    tbl = estimate_ss_bilateral(sites, half_window=2, sig_dist=1.5, sig_val=0.2)
     assert len(tbl) > 0
 
 
@@ -451,9 +441,7 @@ def test_plot_ss_station_curves_named_station_and_pband():
     import matplotlib.pyplot as plt
 
     before, after = _before_after(4)
-    ax = plot_ss_station_curves(
-        before, after, station="S02", pband=(1e-2, 1e2)
-    )
+    ax = plot_ss_station_curves(before, after, station="S02", pband=(1e-2, 1e2))
     assert ax is not None
     plt.close("all")
 
@@ -897,7 +885,7 @@ def test_plot_ns_detection_mixed_profile_all_types():
     # clean
     sites += [_site(f"C{i}") for i in range(3)]
     # static shift
-    sites += [_site(f"T{i}", rho=100.0 * 10 ** 0.4) for i in range(2)]
+    sites += [_site(f"T{i}", rho=100.0 * 10**0.4) for i in range(2)]
     # near-surface (HF scatter)
     for i in range(2):
         fr = np.logspace(-2, 3, 12)
@@ -967,9 +955,7 @@ def test_prep_lr_curves_pband_excludes_one_station_only():
     branch fires while the rest of the profile still yields rows."""
     sites = _profile(4, n_freq=10, f_lo=-2, f_hi=3)
     outlier = _site("OUT", n=6, f_lo=4, f_hi=5)  # far outside pband below
-    tbl = estimate_ss_bilateral(
-        sites + [outlier], half_window=2, pband=(1e-2, 1.0)
-    )
+    tbl = estimate_ss_bilateral(sites + [outlier], half_window=2, pband=(1e-2, 1.0))
     assert "OUT" not in set(tbl["station"])
 
 

@@ -85,9 +85,7 @@ class SectionPanel(QWidget):
         btn_bar.setContentsMargins(4, 4, 4, 2)
 
         self._btn_load = QPushButton("Load Result…")
-        self._btn_load.setStatusTip(
-            "Load an Occam2D inversion working directory"
-        )
+        self._btn_load.setStatusTip("Load an Occam2D inversion working directory")
         self._btn_load.clicked.connect(self._on_load)
         btn_bar.addWidget(self._btn_load)
 
@@ -217,9 +215,7 @@ class SectionPanel(QWidget):
         self._spin_exag.setDecimals(1)
         self._spin_exag.setSuffix(" ×")
         self._spin_exag.setEnabled(False)
-        self._spin_exag.setToolTip(
-            "Vertical exaggeration of the terrain surface"
-        )
+        self._spin_exag.setToolTip("Vertical exaggeration of the terrain surface")
         self._spin_exag.valueChanged.connect(self._on_exag_changed)
         topo_form.addRow("Exaggeration:", self._spin_exag)
 
@@ -426,9 +422,7 @@ class SectionPanel(QWidget):
 
             if self._show_stations.isChecked():
                 try:
-                    sx = (
-                        np.asarray(result.mesh.station_x) - x_shift
-                    ) / 1000.0
+                    sx = (np.asarray(result.mesh.station_x) - x_shift) / 1000.0
                     ax.plot(
                         sx,
                         np.zeros_like(sx),
@@ -444,9 +438,7 @@ class SectionPanel(QWidget):
 
         # RMS annotation
         try:
-            rms_txt = (
-                f"RMS = {result.final_rms:.3f}  ({result.n_iterations} iter)"
-            )
+            rms_txt = f"RMS = {result.final_rms:.3f}  ({result.n_iterations} iter)"
             ax.set_title(rms_txt, fontsize=9, pad=3)
         except Exception:
             pass

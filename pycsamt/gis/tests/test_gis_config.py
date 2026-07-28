@@ -10,7 +10,6 @@ Covers :class:`ElevationAPIConfig` lookup helpers and the module-level
 from __future__ import annotations
 
 import importlib
-import os
 from unittest.mock import patch
 
 import pytest
@@ -93,9 +92,7 @@ def test_config_reload_with_gdal_available_branch(_reload_config_module):
     assert config_mod.HAS_GDAL is True
 
 
-def test_config_reload_with_legacy_pyproj_epsg_file(
-    tmp_path, _reload_config_module
-):
+def test_config_reload_with_legacy_pyproj_epsg_file(tmp_path, _reload_config_module):
     config_mod = _reload_config_module
     epsg_file = tmp_path / "epsg"
     epsg_file.write_text(

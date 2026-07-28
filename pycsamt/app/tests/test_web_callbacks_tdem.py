@@ -49,9 +49,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -313,17 +311,13 @@ class TestUpdateCtxBar:
 
     def test_with_plot_label_adds_separator_and_label(self, web_app):
         parts = self._fn(web_app)("decay", "PlotDecayCurve", None)
-        texts = [
-            p.children if isinstance(p.children, str) else None for p in parts
-        ]
+        texts = [p.children if isinstance(p.children, str) else None for p in parts]
         assert "Decay curves" in texts
         assert "Browse and load" in parts[-1].children
 
     def test_data_loaded_shows_loaded_stat(self, web_app):
         parts = self._fn(web_app)("map", "PlotSurveyMap", True)
-        joined = " ".join(
-            p.children for p in parts if isinstance(p.children, str)
-        )
+        joined = " ".join(p.children for p in parts if isinstance(p.children, str))
         assert "data loaded" in joined
 
     def test_unknown_tab_falls_back_to_decay_group(self, web_app):
@@ -337,7 +331,9 @@ class TestUpdateCtxBar:
 class TestLoadTdem:
     def _fn(self, web_app):
         return _cb_multi(
-            web_app, f"{IDs.TDEM_INFO}.children", f"{IDs.STORE_TDEM_LOADED}.data"
+            web_app,
+            f"{IDs.TDEM_INFO}.children",
+            f"{IDs.STORE_TDEM_LOADED}.data",
         )
 
     def test_no_folder_no_sample_prevents_update(self, monkeypatch, web_app):
@@ -368,9 +364,7 @@ class TestLoadTdem:
 
     def test_empty_folder_reports_no_files_found(self, monkeypatch, web_app, tmp_path):
         monkeypatch.setattr(tdem_mod, "ctx", _FakeCtx(IDs.BTN_TDEM_LOAD))
-        info, loaded, folder, is_open, body = self._fn(web_app)(
-            1, None, str(tmp_path)
-        )
+        info, loaded, folder, is_open, body = self._fn(web_app)(1, None, str(tmp_path))
         assert loaded is False
         assert info == "No TDEM files found in that folder."
         assert is_open is True
@@ -387,9 +381,7 @@ class TestLoadTdem:
             raise RuntimeError("disk exploded")
 
         monkeypatch.setattr(tdem_mod._CTRL, "load_folder", _boom)
-        info, loaded, folder, is_open, body = self._fn(web_app)(
-            1, None, "Z:/wherever"
-        )
+        info, loaded, folder, is_open, body = self._fn(web_app)(1, None, "Z:/wherever")
         assert loaded is False
         assert "Error: disk exploded" in info
         assert is_open is True
@@ -402,7 +394,9 @@ class TestLoadTdem:
 class TestRunTdem:
     def _fn(self, web_app):
         return _cb_multi(
-            web_app, f"{IDs.IMG_TDEM_DECAY}.src", f"{IDs.TDEM_SPINNER}.children"
+            web_app,
+            f"{IDs.IMG_TDEM_DECAY}.src",
+            f"{IDs.TDEM_SPINNER}.children",
         )
 
     def _base_kwargs(self):
@@ -459,7 +453,14 @@ class TestRunTdem:
         kw = self._base_kwargs()
         out = self._fn(web_app)(**kw)
         decay_src, section_src, map_src, dash_src, spinner, is_open, body = out
-        print("DEBUG body=", repr(body), "is_open=", is_open, "decay_src=", repr(decay_src)[:80])
+        print(
+            "DEBUG body=",
+            repr(body),
+            "is_open=",
+            is_open,
+            "decay_src=",
+            repr(decay_src)[:80],
+        )
         assert decay_src.startswith("data:image/png;base64,")
         assert section_src is no_update
         assert map_src is no_update
@@ -546,7 +547,7 @@ class TestRunTdem:
 class TestCtrlDraw:
     def test_no_kwargs_calls_draw_directly(self, monkeypatch):
         calls = []
-        ctrl = TDEMController()
+        TDEMController()
         monkeypatch.setattr(
             tdem_mod,
             "_CTRL",
@@ -583,9 +584,7 @@ class TestCtrlDraw:
         assert result == "ok"
         # draw_ext was never called (fake controller doesn't even have one);
         # draw() was called instead, and the cmap kwarg never reached it.
-        assert calls == [
-            ("draw", ("PlotTEMAVGSection", True, "survey", fig), {})
-        ]
+        assert calls == [("draw", ("PlotTEMAVGSection", True, "survey", fig), {})]
         _close()
 
     def test_draw_ext_used_when_present(self, monkeypatch):

@@ -170,46 +170,54 @@ class Mare2DEMAgent(BaseAgent):
     --------
     Prepare input files from an existing data file:
 
-    >>> agent  = Mare2DEMAgent(n_procs=8)
-    >>> result = agent.execute({
-    ...     "emdata":     "/data/survey.emdata",
-    ...     "output_dir": "/run/mare2dem",
-    ... })
+    >>> agent = Mare2DEMAgent(n_procs=8)
+    >>> result = agent.execute(
+    ...     {
+    ...         "emdata": "/data/survey.emdata",
+    ...         "output_dir": "/run/mare2dem",
+    ...     }
+    ... )
     >>> print(result["data_path"])
     /run/mare2dem/mare2dem.emdata
 
     Build from MT survey parameters (flat seafloor at −1000 m):
 
     >>> import numpy as np
-    >>> result = agent.execute({
-    ...     "mt": {
-    ...         "frequencies": list(np.logspace(-3, 3, 20)),
-    ...         "rx_y":        list(np.linspace(-5000, 5000, 20)),
-    ...         "rx_type":     "marine",
-    ...         "lTE":         True,
-    ...         "lTM":         True,
-    ...     },
-    ...     "topo":       -1000.0,
-    ...     "output_dir": "/run/mare2dem_mt",
-    ... })
+    >>> result = agent.execute(
+    ...     {
+    ...         "mt": {
+    ...             "frequencies": list(np.logspace(-3, 3, 20)),
+    ...             "rx_y": list(np.linspace(-5000, 5000, 20)),
+    ...             "rx_type": "marine",
+    ...             "lTE": True,
+    ...             "lTM": True,
+    ...         },
+    ...         "topo": -1000.0,
+    ...         "output_dir": "/run/mare2dem_mt",
+    ...     }
+    ... )
 
     Run a full inversion (requires compiled MARE2DEM binary):
 
-    >>> result = agent.execute({
-    ...     "emdata":     "survey.emdata",
-    ...     "output_dir": "./run",
-    ...     "mode":       "run",
-    ...     "n_procs":    16,
-    ... })
+    >>> result = agent.execute(
+    ...     {
+    ...         "emdata": "survey.emdata",
+    ...         "output_dir": "./run",
+    ...         "mode": "run",
+    ...         "n_procs": 16,
+    ...     }
+    ... )
     >>> print(result["final_rms"])
     0.98
 
     Report results from a completed run directory:
 
-    >>> result = agent.execute({
-    ...     "output_dir": "./run",
-    ...     "mode":       "report",
-    ... })
+    >>> result = agent.execute(
+    ...     {
+    ...         "output_dir": "./run",
+    ...         "mode": "report",
+    ...     }
+    ... )
     >>> result["converged"]
     True
     """
@@ -314,20 +322,14 @@ class Mare2DEMAgent(BaseAgent):
         if not binary_found:
             if auto_download:
                 try:
-                    self._log.info(
-                        "Mare2DEMAgent: downloading MARE2DEM source..."
-                    )
+                    self._log.info("Mare2DEMAgent: downloading MARE2DEM source...")
                     sm.download()
-                    self._log.info(
-                        "Mare2DEMAgent: building MARE2DEM binary..."
-                    )
+                    self._log.info("Mare2DEMAgent: building MARE2DEM binary...")
                     sm.build()
                     binary_found = sm.is_built()
                     source_downloaded = binary_found
                     if binary_found:
-                        self._log.info(
-                            "Mare2DEMAgent: MARE2DEM binary ready."
-                        )
+                        self._log.info("Mare2DEMAgent: MARE2DEM binary ready.")
                     else:
                         warnings.append(
                             "Source downloaded but build may have failed. "
@@ -378,9 +380,7 @@ class Mare2DEMAgent(BaseAgent):
             elif mt_kwargs is not None or csem_kwargs is not None:
                 # build from survey parameters
                 mt_cfg = MTSurveyConfig(**mt_kwargs) if mt_kwargs else None
-                csem_cfg = (
-                    CSEMSurveyConfig(**csem_kwargs) if csem_kwargs else None
-                )
+                csem_cfg = CSEMSurveyConfig(**csem_kwargs) if csem_kwargs else None
                 files = builder.build(
                     None,
                     output_dir,
@@ -420,12 +420,8 @@ class Mare2DEMAgent(BaseAgent):
                         input_data.get("confidence_method", "composite")
                     ),
                     confidence_weights=input_data.get("confidence_weights"),
-                    confidence_min=float(
-                        input_data.get("confidence_min", 0.05)
-                    ),
-                    confidence_power=float(
-                        input_data.get("confidence_power", 1.0)
-                    ),
+                    confidence_min=float(input_data.get("confidence_min", 0.05)),
+                    confidence_power=float(input_data.get("confidence_power", 1.0)),
                     topo=topo,
                 )
                 files = {
@@ -455,9 +451,7 @@ class Mare2DEMAgent(BaseAgent):
                 dest = Path(output_dir) / cfg.resistivity_file
                 shutil.copy2(str(resist_src), str(dest))
                 resist_path = dest
-                self._log.info(
-                    "Mare2DEMAgent: used provided resistivity: %s", dest
-                )
+                self._log.info("Mare2DEMAgent: used provided resistivity: %s", dest)
 
             # read back statistics
             if data_path and data_path.exists():
@@ -544,9 +538,7 @@ class Mare2DEMAgent(BaseAgent):
 
         # ── assemble result ────────────────────────────────────────────
         files_ok = sum(
-            1
-            for p in [data_path, resist_path, settings_path]
-            if p and p.exists()
+            1 for p in [data_path, resist_path, settings_path] if p and p.exists()
         )
         elapsed = time.time() - t0
 
@@ -565,9 +557,7 @@ class Mare2DEMAgent(BaseAgent):
             summary_parts.append(f"{n_data} data points")
         summary_parts.append(f"{files_ok}/3 files written")
         if mode == "run" and final_rms is not None:
-            summary_parts.append(
-                f"final RMS={final_rms:.3f} (converged={converged})"
-            )
+            summary_parts.append(f"final RMS={final_rms:.3f} (converged={converged})")
         summary = ". ".join(summary_parts) + f". Output: {output_dir}."
 
         return AgentResult(
@@ -623,9 +613,7 @@ class Mare2DEMAgent(BaseAgent):
         converged = result_obj.converged
 
         n_mt_rx = result_obj.data.n_data if result_obj.data else 0
-        n_csem_tx = (
-            result_obj.data.n_csem_transmitters if result_obj.data else 0
-        )
+        n_csem_tx = result_obj.data.n_csem_transmitters if result_obj.data else 0
         n_data = result_obj.data.n_data if result_obj.data else 0
 
         self._log.info(

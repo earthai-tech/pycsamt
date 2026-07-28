@@ -27,9 +27,7 @@ class TestCheckpointSafe(unittest.TestCase):
     def _fig_with_lambda(self):
         fig, ax = plt.subplots()
         # secondary axis uses lambdas → unpicklable
-        ax.secondary_xaxis(
-            "top", functions=(lambda x: x * 2, lambda x: x / 2)
-        )
+        ax.secondary_xaxis("top", functions=(lambda x: x * 2, lambda x: x / 2))
         return fig
 
     def test_figures_stripped_result_is_picklable(self):

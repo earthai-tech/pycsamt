@@ -13,8 +13,8 @@ pytest.importorskip("dash_bootstrap_components", reason="dbc required")
 class TestModalTitleAndHint:
     def test_append_mode_title_and_hint(self):
         from pycsamt.app.mapview.callbacks.load import (
-            _mode_hint,
             _modal_title,
+            _mode_hint,
         )
 
         title = _modal_title("append")
@@ -23,8 +23,8 @@ class TestModalTitleAndHint:
 
     def test_replace_mode_title_and_hint(self):
         from pycsamt.app.mapview.callbacks.load import (
-            _mode_hint,
             _modal_title,
+            _mode_hint,
         )
 
         title = _modal_title("replace")
@@ -78,9 +78,7 @@ class TestEntries:
     def test_accepts_avg_and_j_extensions(self):
         from pycsamt.app.mapview.callbacks.load import _entries
 
-        out = _entries(
-            ["data:...", "data:..."], ["a.avg", "b.j"], source="folder"
-        )
+        out = _entries(["data:...", "data:..."], ["a.avg", "b.j"], source="folder")
         assert len(out) == 2
 
     def test_missing_filename_gets_default(self):
@@ -109,9 +107,7 @@ class TestInferLinesAndPath:
     def test_infer_lines_counts_by_group(self):
         from pycsamt.app.mapview.callbacks.load import _infer_lines
 
-        counts = _infer_lines(
-            ["L1/a.edi", "L1/b.edi", "L2/c.edi", "d.edi"]
-        )
+        counts = _infer_lines(["L1/a.edi", "L1/b.edi", "L2/c.edi", "d.edi"])
         assert counts == {"L1": 2, "L2": 1, "flat files": 1}
 
     def test_entry_line_prefers_original_over_filename(self):
@@ -171,9 +167,7 @@ class TestBuildView:
                 return "built-view"
 
         monkeypatch.setattr("pycsamt.map.MapView", _FlakyMapView)
-        result = load_mod._build_view(
-            {"L1": ["a.edi"]}, "light", attempts=4, delay=0.0
-        )
+        result = load_mod._build_view({"L1": ["a.edi"]}, "light", attempts=4, delay=0.0)
         assert result == "built-view"
         assert calls["n"] == 3
 
@@ -187,9 +181,7 @@ class TestBuildView:
 
         monkeypatch.setattr("pycsamt.map.MapView", _AlwaysLocked)
         with pytest.raises(OSError, match="still locked"):
-            load_mod._build_view(
-                {"L1": ["a.edi"]}, "light", attempts=2, delay=0.0
-            )
+            load_mod._build_view({"L1": ["a.edi"]}, "light", attempts=2, delay=0.0)
 
 
 class TestDecode:
@@ -223,9 +215,7 @@ class TestDecode:
         assert line_map == {}
         assert tmpdir == "/tmp/y"
 
-    def test_folder_source_uses_decode_folder_upload_to_tempdir(
-        self, monkeypatch
-    ):
+    def test_folder_source_uses_decode_folder_upload_to_tempdir(self, monkeypatch):
         import pycsamt.app.mapview.callbacks.load as load_mod
         import pycsamt.app.web.utils as web_utils
 

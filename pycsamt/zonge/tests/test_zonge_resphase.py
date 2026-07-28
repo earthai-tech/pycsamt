@@ -49,9 +49,7 @@ def test_resistivity_to_tensor_union_and_intersection():
         dict(station=150.0, freq=2.0, comp="ExHy", ARes_mag=7.0),
         dict(station=150.0, freq=4.0, comp="ExHy", ARes_mag=8.0),
     ]
-    df = pd.DataFrame.from_records(rows).rename(
-        columns={"ARes_mag": "ARes.mag"}
-    )
+    df = pd.DataFrame.from_records(rows).rename(columns={"ARes_mag": "ARes.mag"})
     r = Resistivity.from_avg((df, {}))
 
     # UNION → freqs {1,2,4}
@@ -84,9 +82,7 @@ def test_resistivity_write_block_has_banner_and_unit_meta():
     )
     r = Resistivity.from_avg((df, {"Unit.Rho": "ohm·m"}))
     lines = r.write()
-    assert _has_line(
-        lines, lambda s: s.strip().startswith(r"\ $Resistivity Block")
-    )
+    assert _has_line(lines, lambda s: s.strip().startswith(r"\ $Resistivity Block"))
     assert _has_line(lines, lambda s: s.strip().startswith("$Unit.Rho="))
 
 
@@ -119,9 +115,7 @@ def test_phase_read_modern_and_unit_convert_roundtrip():
     assert p.meta["Unit.Phase"].lower() == "mrad"
 
 
-@pytest.mark.skipif(
-    pytest.importorskip("xarray") is None, reason="xarray required"
-)
+@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
 def test_phase_to_xarray_dims_and_var_attrs():
     df = pd.DataFrame(
         {

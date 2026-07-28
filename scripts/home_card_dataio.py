@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Home-page card image: "Data I/O & quality control".
 
 Loads the bundled kap03 MT line (26 real EDI files) with
@@ -12,6 +11,7 @@ Output: docs/source/_static/images/home/card-dataio.png
 Usage (any cwd):
     python scripts/home_card_dataio.py
 """
+
 import os
 import sys
 from pathlib import Path
@@ -85,8 +85,15 @@ def main():
     ax_l.set_yticklabels(qc["station"][::4], fontsize=6.8)
     ax_l.set_xlabel("period (s)", fontsize=8.5)
     ax_l.set_title(f"audit — coverage · {len(qc)} EDIs", pad=6)
-    ax_l.grid(True, axis="x", which="both", ls=":", lw=0.4,
-              color="#c8d0dc", alpha=0.7)
+    ax_l.grid(
+        True,
+        axis="x",
+        which="both",
+        ls=":",
+        lw=0.4,
+        color="#c8d0dc",
+        alpha=0.7,
+    )
     ax_l.tick_params(labelsize=7, length=2.5)
     cbar = fig.colorbar(
         cm.ScalarMappable(norm=norm, cmap=cmap),
@@ -99,11 +106,14 @@ def main():
 
     # -- QC: SNR ranking with flagged stations -------------------------------
     ranked = qc.sort_values("snr_med", ascending=False).reset_index(drop=True)
-    colors = [
-        ORANGE if s < SNR_FLAG else BLUE for s in ranked["snr_med"]
-    ]
-    ax_r.bar(np.arange(len(ranked)), ranked["snr_med"], color=colors,
-             width=0.8, zorder=3)
+    colors = [ORANGE if s < SNR_FLAG else BLUE for s in ranked["snr_med"]]
+    ax_r.bar(
+        np.arange(len(ranked)),
+        ranked["snr_med"],
+        color=colors,
+        width=0.8,
+        zorder=3,
+    )
     ax_r.axhline(SNR_FLAG, ls="--", lw=1.2, color=INK, alpha=0.6, zorder=4)
     ax_r.text(
         len(ranked) - 0.5,
@@ -120,8 +130,15 @@ def main():
     ax_r.set_xlabel("stations (ranked)", fontsize=8.5)
     ax_r.set_ylabel("median SNR", fontsize=8.5)
     ax_r.set_title(f"QC — {n_flag} stations flagged", pad=6)
-    ax_r.grid(True, axis="y", which="both", ls=":", lw=0.4,
-              color="#c8d0dc", alpha=0.7)
+    ax_r.grid(
+        True,
+        axis="y",
+        which="both",
+        ls=":",
+        lw=0.4,
+        color="#c8d0dc",
+        alpha=0.7,
+    )
     ax_r.tick_params(labelsize=7.5, length=2.5)
 
     fig.tight_layout(pad=0.6, w_pad=1.2)

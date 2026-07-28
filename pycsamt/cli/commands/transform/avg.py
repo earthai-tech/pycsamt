@@ -97,9 +97,7 @@ def avg(
                 except Exception as we:  # noqa: BLE001
                     failures.append({"source": str(f), "error": str(we)})
                     continue
-                edis.append(
-                    {"station": getattr(ed, "station", "?"), "source": f.name}
-                )
+                edis.append({"station": getattr(ed, "station", "?"), "source": f.name})
         except Exception as exc:  # noqa: BLE001
             failures.append({"source": str(f), "error": str(exc)})
 

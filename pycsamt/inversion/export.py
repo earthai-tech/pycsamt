@@ -27,9 +27,7 @@ __all__ = [
 ]
 
 
-def to_csv(
-    result: InversionResult, path: PathLike, *, log_rho: bool = True
-) -> Path:
+def to_csv(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> Path:
     """Export a recovered resistivity model as long-form CSV.
 
     The CSV writer stores one row per model cell with profile position, depth,
@@ -78,9 +76,7 @@ def to_csv(
             if ix < len(model.station_names):
                 station = model.station_names[ix]
             for iz, z in enumerate(model.z_centers):
-                writer.writerow(
-                    [float(x), float(z), float(values[iz, ix]), station]
-                )
+                writer.writerow([float(x), float(z), float(values[iz, ix]), station])
     return out
 
 
@@ -209,10 +205,7 @@ def to_geojson(
                 value_key: float(values[iz, ix]),
             }
             properties.update(
-                {
-                    key: float(array[iz, ix])
-                    for key, array in uncertainty.items()
-                }
+                {key: float(array[iz, ix]) for key, array in uncertainty.items()}
             )
             features.append(
                 {
@@ -245,9 +238,7 @@ def to_geojson(
     return out
 
 
-def to_vtk(
-    result: InversionResult, path: PathLike, *, log_rho: bool = True
-) -> Path:
+def to_vtk(result: InversionResult, path: PathLike, *, log_rho: bool = True) -> Path:
     """Export a 2-D inversion section as legacy ASCII VTK.
 
     The file is a ``RECTILINEAR_GRID`` with one cell in the cross-line
@@ -444,9 +435,7 @@ def to_archive(
     """
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix="pycsamt-inv-export-"
-    ) as tmp_name:
+    with tempfile.TemporaryDirectory(prefix="pycsamt-inv-export-") as tmp_name:
         tmp = Path(tmp_name)
         metadata_path = tmp / "metadata.json"
         with metadata_path.open("w", encoding="utf-8") as fh:
@@ -454,9 +443,7 @@ def to_archive(
         npz_path = to_npz(result, tmp / "result.npz")
         csv_path = to_csv(result, tmp / "model.csv", log_rho=log_rho)
 
-        with zipfile.ZipFile(
-            out, "w", compression=zipfile.ZIP_DEFLATED
-        ) as zf:
+        with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.write(metadata_path, "metadata.json")
             zf.write(npz_path, "result.npz")
             zf.write(csv_path, "model.csv")
@@ -474,9 +461,7 @@ def _cell_edges(centers: Any) -> np.ndarray:
         raise ValueError("cannot export model with empty cell coordinates.")
     if centers.size == 1:
         half_width = max(abs(float(centers[0])) * 0.05, 0.5)
-        return np.array(
-            [centers[0] - half_width, centers[0] + half_width], dtype=float
-        )
+        return np.array([centers[0] - half_width, centers[0] + half_width], dtype=float)
     mids = 0.5 * (centers[:-1] + centers[1:])
     first = centers[0] - (mids[0] - centers[0])
     last = centers[-1] + (centers[-1] - mids[-1])
@@ -540,9 +525,7 @@ def _metadata(result: InversionResult) -> dict[str, Any]:
         "metadata": dict(result.metadata),
     }
     if result.uncertainty is not None:
-        payload["uncertainty"] = {
-            "metadata": dict(result.uncertainty.metadata)
-        }
+        payload["uncertainty"] = {"metadata": dict(result.uncertainty.metadata)}
     if result.history is not None:
         payload["history"] = {
             "n_records": result.history.n_records,

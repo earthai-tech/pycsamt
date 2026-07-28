@@ -382,9 +382,7 @@ print(
     f"correct_static_shift (AMA, window=1500 m): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_cs))):.3g}"
 )
 for method in ("ama", "flma", "tma"):
-    out_m = apply_emap_filter(
-        survey, method=method, window=5, window_m=1500.0
-    )
+    out_m = apply_emap_filter(survey, method=method, window=5, window_m=1500.0)
     rho_m, _ = rho_xy(out_m)
     print(
         f"apply_emap_filter({method!r}): max |change| = {np.nanmax(np.abs(np.log10(rho0) - np.log10(rho_m))):.3g}"

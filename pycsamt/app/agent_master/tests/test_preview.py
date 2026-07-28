@@ -142,20 +142,14 @@ class TestExportFigure:
         self._set_trigger("png")
         fn = self._fn(agent_app)
         raw_png = base64.b64encode(b"fake-png-bytes").decode()
-        result = fn(
-            [1], "k1", {"k1": {"b64": raw_png, "title": "My Figure"}}, {}
-        )
+        result = fn([1], "k1", {"k1": {"b64": raw_png, "title": "My Figure"}}, {})
         assert result["filename"] == "my_figure.png"
 
     def test_exports_svg_via_conversion(self, agent_app, monkeypatch):
         from pycsamt.app.agent_master.callbacks import preview as preview_mod
 
-        monkeypatch.setattr(
-            preview_mod, "_convert_png_to", lambda b64, fmt: b"<svg/>"
-        )
+        monkeypatch.setattr(preview_mod, "_convert_png_to", lambda b64, fmt: b"<svg/>")
         self._set_trigger("svg")
         fn = self._fn(agent_app)
-        result = fn(
-            [1], "k1", {"k1": {"b64": "x", "title": "a/b c"}}, {}
-        )
+        result = fn([1], "k1", {"k1": {"b64": "x", "title": "a/b c"}}, {})
         assert result["filename"] == "a_b_c.svg"

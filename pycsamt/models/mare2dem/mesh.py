@@ -97,10 +97,7 @@ class ResistivityModel:
         return m
 
     def __repr__(self) -> str:
-        return (
-            f"ResistivityModel(path={self.path}, "
-            f"n_elements={self.n_elements})"
-        )
+        return f"ResistivityModel(path={self.path}, n_elements={self.n_elements})"
 
 
 class PolyMesh:

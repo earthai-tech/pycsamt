@@ -60,9 +60,7 @@ class TestUseExample:
             + ".n_clicks"
         )
         cc.context_value.set(
-            AttributeDict(
-                triggered_inputs=[{"prop_id": prop_id, "value": 1}]
-            )
+            AttributeDict(triggered_inputs=[{"prop_id": prop_id, "value": 1}])
         )
 
     def teardown_method(self, _method):

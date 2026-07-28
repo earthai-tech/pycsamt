@@ -4,11 +4,15 @@
 Version 2.0.1
 -------------
 
-pyCSAMT 2.0.1 |Fix| |API Change| |Docs| |Tests|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pyCSAMT 2.0.1 |Feature| |Fix| |API Change| |Docs| |Tests|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This maintenance release fixes incorrect station placement along survey
-profiles and introduces validated, auditable station-metadata editing.
+This release fixes incorrect station placement along survey profiles,
+introduces validated, auditable station-metadata editing, and adds the
+first physics-grounded building blocks of AI inversion: a staged loss
+package, synthetic-recovery and response-residual validation, and a
+genuine 2-D Maxwell training-data pipeline.
+
 Processing and plotting no longer have to infer profile order from station
 names, longitude alone, or latitude alone. A shared spatial-ordering policy
 now follows the two-dimensional station geometry and is used consistently
@@ -163,6 +167,85 @@ station identifiers are not in profile order. When sequential names are meant
 to encode position along a line, order by accepted chainage first and rename
 second. See :ref:`site_metadata` for the complete workflow and the four-panel
 L22PLT comparison.
+
+AI inversion: losses, validation, and 2-D training data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Version 2.0.1 lands the first working slice of the project's AI-inversion
+implementation plan: the staged training objective, the diagnostics that
+score whether a trained model deserves trust, and a genuine 2-D forward-
+physics dataset generator, wired into :class:`~pycsamt.agents.Inv2DAgent`
+as an opt-in mode. See :doc:`/user_guide/ai_inversion/roadmap` for why this
+work started and how the pieces fit together.
+
+:mod:`pycsamt.ai.losses` implements the staged objective
+``L = w_m*L_model + lambda_x*L_grad_x + lambda_z*L_grad_z + lambda_tv*L_TV
++ lambda_d*L_response`` as five independent, NumPy-only submodules: masked
+L1/L2/Huber data fit (:mod:`~pycsamt.ai.losses.model`), gradient/total-
+variation spatial regularization (:mod:`~pycsamt.ai.losses.spatial`),
+uncertainty-normalized complex-impedance residuals
+(:mod:`~pycsamt.ai.losses.response`), masked-target boundary constraints
+(:mod:`~pycsamt.ai.losses.boundary`), and heteroscedastic Gaussian
+negative-log-likelihood plus calibration penalties
+(:mod:`~pycsamt.ai.losses.uncertainty`):
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.losses import model_l2_loss
+   >>> model_l2_loss(np.array([1.0, 2.0]), np.array([1.0, 0.0]))
+   ModelLossResult(value=2.0, kind='l2', reduction='mean', n_valid=2, weight_sum=2.0)
+
+:mod:`pycsamt.ai.validation` turns those losses into decision evidence:
+known-truth recovery metrics including a windowed structural-similarity
+index (:mod:`~pycsamt.ai.validation.recovery`), response residuals broken
+down by station, frequency, and component
+(:mod:`~pycsamt.ai.validation.residuals`), Gaussian reliability curves with
+coverage and sharpness (:mod:`~pycsamt.ai.validation.calibration`), and
+Mahalanobis/k-nearest-neighbour out-of-distribution screening
+(:mod:`~pycsamt.ai.validation.ood`).
+
+:func:`pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` generates
+spatially correlated 2-D geological realizations
+(:mod:`pycsamt.ai.geology`), solves each one with the analytically verified
+:class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter`, and packages the
+results into a versioned, realization-split, resumable-cache training
+dataset — replacing ad hoc tiling of independent 1-D forward models with
+genuine 2-D physics.
+
+:class:`~pycsamt.agents.Inv2DAgent` gained an opt-in ``physics="mt2d"``
+mode built on top of these three pieces: it trains on the new dataset
+generator with the staged spatial-regularization loss
+(:meth:`~pycsamt.ai.inversion.inv2d.EMInverter2D.fit`'s new
+``lambda_x``/``lambda_z``/``lambda_tv``), and reports a genuine held-out
+recovery check in the returned result, since — unlike a field survey — the
+synthetic dataset's true resistivity is known. The prior behaviour,
+``physics="mt1d"`` (tiling independent 1-D forward models), remains the
+unchanged default.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.agents import Inv2DAgent  # doctest: +SKIP
+   >>> agent = Inv2DAgent(physics="mt2d", lambda_x=0.05, lambda_z=0.05)  # doctest: +SKIP
+   >>> result = agent.execute({"sites": sites})  # doctest: +SKIP
+   >>> result.data["mt2d_recovery"]  # doctest: +SKIP
+   {'rmse': 0.31, 'mae': 0.22, 'r2': 0.71, 'n_samples': 4}
+
+.. admonition:: Known limitation: TM mode is not yet available
+   :class: warning
+
+   Only the TE-mode (``zxy``) response is generated and trained on. The
+   TM-mode (``zyx``) response has an unresolved 30-65% accuracy problem in
+   the underlying finite-difference solver for laterally fine 2-D
+   structure, found and documented while building this dataset pipeline
+   (see :mod:`pycsamt.ai.training.dataset2d`'s module docstring). Requesting
+   ``"zyx"`` explicitly raises a runtime warning rather than silently
+   training on unvalidated data.
+
+:mod:`pycsamt.ai.domain_gap.willy_fit` is renamed to
+:mod:`pycsamt.ai.domain_gap.survey_fit`: the bridge between a real field
+survey and the domain-gap noise simulator works for any AMT, CSAMT, or MT
+survey, not only the bundled WILLY line.
 
 Fixed
 ~~~~~

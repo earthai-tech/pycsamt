@@ -42,13 +42,15 @@ def _close_figures():
 def test_forward_agent_1d_layered_model(tmp_path):
     from pycsamt.agents import ForwardModelAgent
 
-    result = mk(ForwardModelAgent).execute({
-        "model": {
-            "resistivities": [100.0, 10.0, 500.0],
-            "thicknesses": [300.0, 800.0],
-        },
-        "output_dir": str(tmp_path),
-    })
+    result = mk(ForwardModelAgent).execute(
+        {
+            "model": {
+                "resistivities": [100.0, 10.0, 500.0],
+                "thicknesses": [300.0, 800.0],
+            },
+            "output_dir": str(tmp_path),
+        }
+    )
     assert result.status == "success"
     assert result.summary
 
@@ -56,10 +58,12 @@ def test_forward_agent_1d_layered_model(tmp_path):
 def test_forward_agent_2d_halfspace(tmp_path):
     from pycsamt.agents import ForwardModelAgent
 
-    result = mk(ForwardModelAgent, dim=2).execute({
-        "model": {"type": "halfspace", "rho": 100.0},
-        "output_dir": str(tmp_path),
-    })
+    result = mk(ForwardModelAgent, dim=2).execute(
+        {
+            "model": {"type": "halfspace", "rho": 100.0},
+            "output_dir": str(tmp_path),
+        }
+    )
     assert result.status in {"success", "failed"}
     assert result.summary or result.error
 
@@ -80,19 +84,19 @@ def test_forward_agent_missing_model_fails():
 def test_code_generation_agent_offline_templates(tmp_path, edi_dir):
     from pycsamt.agents import CodeGenerationAgent, ContextInputAgent
 
-    ctx = mk(ContextInputAgent).execute(
-        {"request": f"Run QC on {edi_dir}"}
-    )
+    ctx = mk(ContextInputAgent).execute({"request": f"Run QC on {edi_dir}"})
     # regex-only extraction may flag itself for review; the config
     # dict is produced either way
     assert ctx.status in {"success", "needs_review"}
     config = ctx["config"]
 
-    result = mk(CodeGenerationAgent).execute({
-        "workflow_config": config,
-        "results": {},
-        "output_dir": str(tmp_path),
-    })
+    result = mk(CodeGenerationAgent).execute(
+        {
+            "workflow_config": config,
+            "results": {},
+            "output_dir": str(tmp_path),
+        }
+    )
     # offline template generation flags itself for human review
     assert result.status in {"success", "needs_review"}
     scripts = list(tmp_path.rglob("*.py"))
@@ -130,10 +134,12 @@ def test_ai_inversion_then_hybrid_chain(edi_dir: Path, tmp_path):
     assert inverter is not None
 
     hy = mk(HybridInversionAgent)
-    r2 = hy.execute({
-        "path": str(edi_dir),
-        "ai_inverter": inverter,
-        "output_dir": str(tmp_path),
-    })
+    r2 = hy.execute(
+        {
+            "path": str(edi_dir),
+            "ai_inverter": inverter,
+            "output_dir": str(tmp_path),
+        }
+    )
     assert r2.status in {"success", "needs_review", "failed"}
     assert r2.summary or r2.error

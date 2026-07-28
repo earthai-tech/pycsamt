@@ -156,9 +156,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -208,9 +206,7 @@ class TestHandleFolderStore:
         import base64
         from pathlib import Path
 
-        content = "data:text/plain;base64," + base64.b64encode(
-            b"edi-content"
-        ).decode()
+        content = "data:text/plain;base64," + base64.b64encode(b"edi-content").decode()
         fn = self._fn(agent_app)
         tmp = fn(
             {
@@ -268,9 +264,7 @@ class TestUpdateLinesPanel:
         assert panel is no_update
         assert "Path not found" in str(status)
 
-    def test_single_file_path_groups_as_default(
-        self, agent_app, tmp_path
-    ):
+    def test_single_file_path_groups_as_default(self, agent_app, tmp_path):
         f = tmp_path / "station.edi"
         f.write_text("x")
         fn = self._fn(agent_app)
@@ -286,11 +280,10 @@ class TestUpdateLinesPanel:
         panel, status = fn(str(tmp_path), None, "folder")
         assert "2 EDI file(s) in 1 line(s)" in str(status)
 
-    def test_auto_mode_detect_click_regroups_by_station_id(
-        self, agent_app, tmp_path
-    ):
+    def test_auto_mode_detect_click_regroups_by_station_id(self, agent_app, tmp_path):
         import dash._callback_context as cc
         from dash._utils import AttributeDict
+
         from pycsamt.app.agent_master._ids import IDs
 
         sub = tmp_path / "somefolder"
@@ -333,9 +326,7 @@ class TestHandleUpload:
         import base64
         from pathlib import Path
 
-        content = "data:text/plain;base64," + base64.b64encode(
-            b"hello"
-        ).decode()
+        content = "data:text/plain;base64," + base64.b64encode(b"hello").decode()
         fn = self._fn(agent_app)
         tmp = fn(content, "a.edi")
         assert (Path(tmp) / "a.edi").read_bytes() == b"hello"
@@ -397,9 +388,7 @@ class TestConfirmLoad:
         assert store["mode"] == "folder"
         assert "L1" in store["groups"]
 
-    def test_auto_mode_load_groups_by_station_prefix(
-        self, agent_app, tmp_path
-    ):
+    def test_auto_mode_load_groups_by_station_prefix(self, agent_app, tmp_path):
         sub = tmp_path / "any"
         sub.mkdir()
         (sub / "22-001.edi").write_text("x")
@@ -412,8 +401,6 @@ class TestConfirmLoad:
         sub.mkdir()
         (sub / "a.edi").write_text("x")
         fn = self._fn(agent_app)
-        store, _cls, _text, _is_open = fn(
-            1, str(tmp_path), "edit", ["RenamedLine"]
-        )
+        store, _cls, _text, _is_open = fn(1, str(tmp_path), "edit", ["RenamedLine"])
         assert "RenamedLine" in store["groups"]
         assert "OrigName" not in store["groups"]

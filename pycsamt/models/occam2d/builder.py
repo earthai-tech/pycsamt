@@ -16,7 +16,7 @@ Usage
 >>> from pycsamt.models.occam2d import InputBuilder
 >>> from pycsamt.site import Sites
 >>>
->>> sites   = Sites.from_any("edi/")
+>>> sites = Sites.from_any("edi/")
 >>> builder = InputBuilder(sites, workdir="occam_run/")
 >>> builder.build(modes=["TE", "TM"], n_layers=30)
 >>> # → writes four files to occam_run/
@@ -110,9 +110,7 @@ class InputBuilder(OccamBase):
         self.startup.write(self.workdir / cfg.startup_file)
 
         if self.verbose:
-            self.logger.info(
-                "InputBuilder: wrote 4 files to %s", self.workdir
-            )
+            self.logger.info("InputBuilder: wrote 4 files to %s", self.workdir)
 
         return self
 
@@ -123,8 +121,7 @@ class InputBuilder(OccamBase):
     def is_ready(self) -> bool:
         """Return ``True`` when all build objects are populated."""
         return all(
-            obj is not None
-            for obj in (self.data, self.mesh, self.model, self.startup)
+            obj is not None for obj in (self.data, self.mesh, self.model, self.startup)
         )
 
     def summary(self) -> str:

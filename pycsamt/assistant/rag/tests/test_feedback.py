@@ -117,20 +117,14 @@ class TestRetrieverFeedbackIntegration(unittest.TestCase):
         self.assertEqual(len(baseline.chunks), 2)
 
         s = _store()
-        s.record(
-            _QUERY, chunk_key(baseline.chunks[0]), False
-        )  # reject winner
+        s.record(_QUERY, chunk_key(baseline.chunks[0]), False)  # reject winner
         s.record(_QUERY, chunk_key(baseline.chunks[1]), True)  # promote other
 
-        tuned = Retriever(chunks, feedback_adjust=s.adjustments).search(
-            _QUERY, k=2
-        )
+        tuned = Retriever(chunks, feedback_adjust=s.adjustments).search(_QUERY, k=2)
         self.assertEqual(tuned.chunks[0].symbol, baseline.chunks[1].symbol)
         # demoted, not removed
         self.assertEqual(len(tuned.chunks), 2)
-        self.assertIn(
-            baseline.chunks[0].symbol, [c.symbol for c in tuned.chunks]
-        )
+        self.assertIn(baseline.chunks[0].symbol, [c.symbol for c in tuned.chunks])
 
     def test_doc_chunk_can_be_demoted(self):
         # A symbol-less doc section is the top hit; rejecting it must work.
@@ -156,17 +150,13 @@ class TestRetrieverFeedbackIntegration(unittest.TestCase):
 
         s = _store()
         s.record(_QUERY, chunk_key(top), False)
-        tuned = Retriever(docs, feedback_adjust=s.adjustments).search(
-            _QUERY, k=2
-        )
+        tuned = Retriever(docs, feedback_adjust=s.adjustments).search(_QUERY, k=2)
         self.assertNotEqual(tuned.chunks[0].id, top.id)
 
     def test_no_feedback_leaves_order_unchanged(self):
         chunks = _chunks()
         a = Retriever(chunks).search(_QUERY, k=2)
-        b = Retriever(chunks, feedback_adjust=_store().adjustments).search(
-            _QUERY, k=2
-        )
+        b = Retriever(chunks, feedback_adjust=_store().adjustments).search(_QUERY, k=2)
         self.assertEqual([c.id for c in a.chunks], [c.id for c in b.chunks])
 
     def test_broken_adjuster_does_not_break_search(self):

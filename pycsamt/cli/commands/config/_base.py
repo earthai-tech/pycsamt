@@ -17,17 +17,17 @@ TOML layout
 ::
 
     [control]
-    rho__view        = "log10"
-    x__view          = "log10_period"
-    phase__wrap      = true
+    rho__view = "log10"
+    x__view = "log10_period"
+    phase__wrap = true
 
     [style]
-    preset           = "publication"
-    multiline__mode  = "gradient"
+    preset = "publication"
+    multiline__mode = "gradient"
 
     [plot]
-    fmt              = "pdf"
-    dpi              = 300
+    fmt = "pdf"
+    dpi = 300
 """
 
 from __future__ import annotations

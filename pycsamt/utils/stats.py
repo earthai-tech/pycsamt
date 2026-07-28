@@ -236,13 +236,13 @@ def remove_outliers(
     Examples
     ---------
     >>> import numpy as np
-    >>> np.random.seed (42 )
+    >>> np.random.seed(42)
     >>> from watex.utils.funcutils import remove_outliers
-    >>> data = np.random.randn (7, 3 )
-    >>> data_r = remove_outliers ( data )
-    >>> data.shape , data_r.shape
+    >>> data = np.random.randn(7, 3)
+    >>> data_r = remove_outliers(data)
+    >>> data.shape, data_r.shape
     (7, 3) (5, 3)
-    >>> remove_outliers ( data, fill_value =np.nan )
+    >>> remove_outliers(data, fill_value=np.nan)
     array([[ 0.49671415, -0.1382643 ,  0.64768854],
            [ 1.52302986, -0.23415337, -0.23413696],
            [ 1.57921282,  0.76743473, -0.46947439],
@@ -251,12 +251,17 @@ def remove_outliers(
            [-0.56228753, -1.01283112,  0.31424733],
            [-0.90802408,         nan,  1.46564877]])
     >>> # for one dimensional
-    >>> remove_outliers ( data[:, 0] , fill_value =np.nan )
+    >>> remove_outliers(data[:, 0], fill_value=np.nan)
     array([ 0.49671415,  1.52302986,  1.57921282,  0.54256004,  0.24196227,
            -0.56228753,         nan])
-    >>> remove_outliers ( data[:, 0] , fill_value =np.nan, interpolate=True  )
+    >>> remove_outliers(data[:, 0], fill_value=np.nan, interpolate=True)
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot (np.arange (len(data ), data, ))
+    >>> plt.plot(
+    ...     np.arange(
+    ...         len(data),
+    ...         data,
+    ...     )
+    ... )
     """
 
     # DataFrame path
@@ -415,9 +420,7 @@ def scale_position(
     return pd.Series(y_fit, index=y.index), popt, pcov
 
 
-def drawn_boundaries(
-    profile: Any, peak_value: float, peak_index: int
-) -> tuple:
+def drawn_boundaries(profile: Any, peak_value: float, peak_index: int) -> tuple:
     """
     Identify anomaly boundaries around a peak in a 1D profile.
 
@@ -442,9 +445,7 @@ def drawn_boundaries(
     arr = np.asarray(profile, dtype=float)
     n = arr.size
     if not (0 <= peak_index < n):
-        raise StatsError(
-            f"Peak index {peak_index} out of bounds for length {n}"
-        )
+        raise StatsError(f"Peak index {peak_index} out of bounds for length {n}")
     peak = float(peak_value)
     # search left boundary
     left_vals = []

@@ -106,7 +106,6 @@ class EMBase:
     ...         super().__init__(name=name, verbose=verbose)
     ...         self.freq = f
     ...         self._z = np.asarray(z, complex)
-    ...
     >>> f = np.array([10.0, 1.0])
     >>> z = np.zeros((2, 2, 2), complex)
     >>> d = Dummy(f, z, name="site-A", verbose=1)
@@ -288,8 +287,7 @@ class EMBase:
                 bad.append(f"{name}:{tuple(value.shape)}")
         if bad:
             raise ZError(
-                "freq-aligned arrays mismatch n_freq. "
-                f"n={n}; bad={', '.join(bad)}"
+                "freq-aligned arrays mismatch n_freq. " f"n={n}; bad={', '.join(bad)}"
             )
 
     def _array_sig(self) -> tuple[_StrSeq, _StrSeq]:

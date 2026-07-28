@@ -126,9 +126,7 @@ def _kr(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
     return k1_abs * abs(offset)
 
 
-def _resolve_offset(
-    ed: Any, source_offset: Any, station: str
-) -> float | None:
+def _resolve_offset(ed: Any, source_offset: Any, station: str) -> float | None:
     if isinstance(source_offset, dict):
         return source_offset.get(station, None)
     if source_offset is not None:
@@ -278,9 +276,7 @@ def overprint_beta(
     result = np.empty(rho_b.size, dtype=float)
     for i in range(rho_b.size):
         result[i] = (
-            _beta_Ey_scalar(
-                float(rho_b[i]), float(freq_b[i]), float(off_b[i]), dh_frac
-            )
+            _beta_Ey_scalar(float(rho_b[i]), float(freq_b[i]), float(off_b[i]), dh_frac)
             * 100.0
         )
 
@@ -464,9 +460,7 @@ def source_overprint_table(
                 "station": station,
                 "n_freq": n_freq,
                 "offset_m": grp["offset_m"].iloc[0],
-                "beta_max_pct": float(valid_beta.max())
-                if len(valid_beta)
-                else np.nan,
+                "beta_max_pct": float(valid_beta.max()) if len(valid_beta) else np.nan,
                 "beta_mean_pct": float(valid_beta.mean())
                 if len(valid_beta)
                 else np.nan,
@@ -593,9 +587,7 @@ def plot_overprint_section(
     )
     X, Y = np.meshgrid(x_vals, y_vals)
 
-    pcm = ax.pcolormesh(
-        X, Y, grid_beta, cmap=cmap, norm=norm, shading="nearest"
-    )
+    pcm = ax.pcolormesh(X, Y, grid_beta, cmap=cmap, norm=norm, shading="nearest")
     plt.colorbar(pcm, ax=ax, label="β_Ey (%)")
 
     if (
@@ -643,9 +635,7 @@ def plot_overprint_section(
     else:
         ax.set_ylabel("Frequency (Hz)")
 
-    ax.set_title(
-        f"Source overprint β_Ey — threshold {beta_threshold:.1f} % (yan2004)"
-    )
+    ax.set_title(f"Source overprint β_Ey — threshold {beta_threshold:.1f} % (yan2004)")
     return ax
 
 
@@ -711,9 +701,7 @@ def _zone_wang(kr: np.ndarray) -> np.ndarray:
     )
 
 
-def _F_complex(
-    rho: np.ndarray, freq: np.ndarray, offset: float
-) -> np.ndarray:
+def _F_complex(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
     """
     Complex near-field factor F(p) = 1 − 3/p² + 3/p³  (equatorial HED).
 
@@ -721,9 +709,7 @@ def _F_complex(
     F → 1 in the far field; diverges in the geometric near field.
     """
     omega = 2.0 * np.pi * np.maximum(np.asarray(freq, dtype=float), 1e-12)
-    k_abs = np.sqrt(
-        omega * _MU0 / np.maximum(np.asarray(rho, dtype=float), 1e-6)
-    )
+    k_abs = np.sqrt(omega * _MU0 / np.maximum(np.asarray(rho, dtype=float), 1e-6))
     p = k_abs * abs(offset) * (1.0 + 1j) / np.sqrt(2.0)
     tiny = np.abs(p) < 1e-10
     if np.any(tiny):
@@ -838,13 +824,9 @@ def normalize_response(
         phi_diff = phi - float(phi_ref_deg)
 
         has_off = off is not None and off > 0.0
-        kr_arr = (
-            _kr_wang(rho_a, fr, off) if has_off else np.full(fr.size, np.nan)
-        )
+        kr_arr = _kr_wang(rho_a, fr, off) if has_off else np.full(fr.size, np.nan)
         zone_arr = (
-            _zone_wang(kr_arr)
-            if has_off
-            else np.full(fr.size, None, dtype=object)
+            _zone_wang(kr_arr) if has_off else np.full(fr.size, None, dtype=object)
         )
 
         for j in range(fr.size):
@@ -948,9 +930,7 @@ def correct_near_field(
             F = _F_complex(rho_a, fr, off)
             F_mag = np.abs(F)
             # guard: don't amplify Z by more than 1000× (|F| floor at 1e-3)
-            F_eff = np.where(
-                F_mag >= 1e-3, F, F * (1e-3 / np.maximum(F_mag, 1e-30))
-            )
+            F_eff = np.where(F_mag >= 1e-3, F, F * (1e-3 / np.maximum(F_mag, 1e-30)))
             Z_wrap.z = z / F_eff[:, None, None]
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
@@ -1071,18 +1051,14 @@ def plot_normalized_response(
     valid_rn = grid_rho_n[np.isfinite(grid_rho_n)]
     if rho_n_lim is None:
         vdev = max(
-            float(np.nanmax(np.abs(valid_rn - 1.0)))
-            if len(valid_rn)
-            else 1.0,
+            float(np.nanmax(np.abs(valid_rn - 1.0))) if len(valid_rn) else 1.0,
             0.01,
         )
         rn_min, rn_max = 1.0 - vdev, 1.0 + vdev
     else:
         rn_min, rn_max = rho_n_lim
     try:
-        norm_rn = TwoSlopeNorm(
-            vmin=rn_min, vcenter=1.0, vmax=max(rn_max, 1.0 + 1e-6)
-        )
+        norm_rn = TwoSlopeNorm(vmin=rn_min, vcenter=1.0, vmax=max(rn_max, 1.0 + 1e-6))
     except Exception:
         norm_rn = Normalize(vmin=rn_min, vmax=rn_max)
     pcm1 = ax1.pcolormesh(
@@ -1100,16 +1076,12 @@ def plot_normalized_response(
     # ── φ_diff panel ──────────────────────────────────────────────────────
     valid_pd = grid_phi[np.isfinite(grid_phi)]
     if phi_diff_lim is None:
-        vdev_p = max(
-            float(np.nanmax(np.abs(valid_pd))) if len(valid_pd) else 10.0, 1.0
-        )
+        vdev_p = max(float(np.nanmax(np.abs(valid_pd))) if len(valid_pd) else 10.0, 1.0)
         pd_min, pd_max = -vdev_p, vdev_p
     else:
         pd_min, pd_max = phi_diff_lim
     try:
-        norm_pd = TwoSlopeNorm(
-            vmin=pd_min, vcenter=0.0, vmax=max(pd_max, 1e-6)
-        )
+        norm_pd = TwoSlopeNorm(vmin=pd_min, vcenter=0.0, vmax=max(pd_max, 1e-6))
     except Exception:
         norm_pd = Normalize(vmin=pd_min, vmax=pd_max)
     pcm2 = ax2.pcolormesh(

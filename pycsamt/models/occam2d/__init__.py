@@ -27,7 +27,9 @@ Typical Workflow
 Examples
 --------
 >>> from pycsamt.models.occam2d import (
-...     InputBuilder, OccamRunner, InversionResult,
+...     InputBuilder,
+...     OccamRunner,
+...     InversionResult,
 ... )
 >>> from pycsamt.site import Sites
 >>> sites = Sites.from_any("edi")

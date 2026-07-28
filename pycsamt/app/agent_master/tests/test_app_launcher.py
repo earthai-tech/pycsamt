@@ -76,9 +76,7 @@ class TestLaunchBubble(unittest.TestCase):
         self.assertIn("8770", s)
 
     def test_desktop_card_no_link(self):
-        b = C._launch_bubble(
-            "desktop", note="A native pyCSAMT window should appear."
-        )
+        b = C._launch_bubble("desktop", note="A native pyCSAMT window should appear.")
         s = str(b)
         self.assertIn("Launching pyCSAMT Desktop", s)
         self.assertNotIn("am-webapp-link", s)

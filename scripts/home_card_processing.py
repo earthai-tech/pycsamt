@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Home-page card image: "Processing & corrections".
 
 Runs a real pyCSAMT noise-removal pass (:func:`pycsamt.emtools.smooth_logfreq`)
@@ -10,6 +9,7 @@ Output: docs/source/_static/images/home/card-processing.png
 Usage (any cwd):
     python scripts/home_card_processing.py
 """
+
 import os
 import sys
 from pathlib import Path
@@ -98,7 +98,9 @@ def main():
     fig.tight_layout(pad=0.6)
     out = ROOT / "docs/source/_static/images/home/card-processing.png"
     fig.savefig(out, dpi=200, facecolor="white", bbox_inches="tight")
-    print(f"saved: {out} ({out.stat().st_size / 1024:.0f} KB)  stations: {pick}")
+    print(
+        f"saved: {out} ({out.stat().st_size / 1024:.0f} KB)  stations: {pick}"
+    )
 
 
 if __name__ == "__main__":

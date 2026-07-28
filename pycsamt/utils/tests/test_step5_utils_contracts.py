@@ -31,12 +31,8 @@ def test_metric_conversion_dispatch_and_unit_validation():
 
 def test_temperature_and_time_conversions():
     assert convert_temperature("32F", unit_to="C") == pytest.approx(0.0)
-    assert convert_temperature(
-        273.15, unit_from="K", unit_to="C"
-    ) == pytest.approx(0.0)
-    assert convert(100, "C", "F", category="temperature") == pytest.approx(
-        212.0
-    )
+    assert convert_temperature(273.15, unit_from="K", unit_to="C") == pytest.approx(0.0)
+    assert convert(100, "C", "F", category="temperature") == pytest.approx(212.0)
 
     assert convert_time("2h", unit_to="min") == pytest.approx(120.0)
     assert convert("3600s", "s", "h") == pytest.approx(1.0)
@@ -51,15 +47,12 @@ def test_sanitize_frame_cols_preserves_data_and_handles_series_and_lists():
     cleaned = sanitize_frame_cols(df, case="lower")
 
     assert list(cleaned.columns) == ["a1", "b2"]
-    pd.testing.assert_frame_equal(
-        cleaned, pd.DataFrame({"a1": [1, 2], "b2": [3, 4]})
-    )
+    pd.testing.assert_frame_equal(cleaned, pd.DataFrame({"a1": [1, 2], "b2": [3, 4]}))
     assert list(df.columns) == [" A-1 ", "B#2"]
 
     series = pd.Series([1, 2], name=" Site Name ")
     assert (
-        sanitize_frame_cols(series, fill_pattern="_", case="upper").name
-        == "SITE_NAME"
+        sanitize_frame_cols(series, fill_pattern="_", case="upper").name == "SITE_NAME"
     )
     assert sanitize_frame_cols([" A ", "B-C"], case="lower") == ["a", "bc"]
 
@@ -78,9 +71,7 @@ def test_drop_constant_columns_and_rows():
         "mostly",
         "varying",
     ]
-    assert list(drop_constant_columns(df, threshold=0.6).columns) == [
-        "varying"
-    ]
+    assert list(drop_constant_columns(df, threshold=0.6).columns) == ["varying"]
 
     rows = pd.DataFrame([[1, 1, 1], [1, 2, 3], [np.nan, np.nan, np.nan]])
     out = drop_constant_columns(rows, axis="rows")

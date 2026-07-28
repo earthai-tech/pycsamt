@@ -55,9 +55,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -164,9 +162,7 @@ class TestSyncDimStationScope:
     def test_filters_stations_to_selected_line(
         self, web_app, store_data_willy, active_lines_both
     ):
-        opts, value = self._fn(web_app)(
-            ["L1"], store_data_willy, active_lines_both
-        )
+        opts, value = self._fn(web_app)(["L1"], store_data_willy, active_lines_both)
         assert value is None
         assert opts  # non-empty
         assert all("L1" in o["label"] for o in opts)
@@ -174,9 +170,7 @@ class TestSyncDimStationScope:
     def test_no_selection_returns_all_active_stations(
         self, web_app, store_data_willy, active_lines_both
     ):
-        opts, _ = self._fn(web_app)(
-            None, store_data_willy, active_lines_both
-        )
+        opts, _ = self._fn(web_app)(None, store_data_willy, active_lines_both)
         assert len(opts) == len(store_data_willy["station_records"])
 
 
@@ -186,16 +180,42 @@ class TestRunDimensionality:
 
     def test_no_clicks_no_update(self, web_app):
         out, saved = self._fn(web_app)(
-            None, None, None, "psection", 3.0, 0.2, None, None, 10.0, 24,
-            None, None, "sess", "dark", None,
+            None,
+            None,
+            None,
+            "psection",
+            3.0,
+            0.2,
+            None,
+            None,
+            10.0,
+            24,
+            None,
+            None,
+            "sess",
+            "dark",
+            None,
         )
         assert out is no_update
         assert saved is no_update
 
     def test_session_expired_shows_warning(self, web_app, store_data_willy):
         out, saved = self._fn(web_app)(
-            1, None, None, "psection", 3.0, 0.2, None, None, 10.0, 24,
-            store_data_willy, None, "not-a-real-session", "dark", None,
+            1,
+            None,
+            None,
+            "psection",
+            3.0,
+            0.2,
+            None,
+            None,
+            10.0,
+            24,
+            store_data_willy,
+            None,
+            "not-a-real-session",
+            "dark",
+            None,
         )
         assert "Session expired" in out.children
         assert saved is no_update
@@ -204,8 +224,20 @@ class TestRunDimensionality:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved = self._fn(web_app)(
-            1, None, None, "psection", 3.0, 0.2, None, None, 10.0, 24,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            None,
+            None,
+            "psection",
+            3.0,
+            0.2,
+            None,
+            None,
+            10.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
         assert saved["dimensionality"]["type"] == "html"
@@ -217,8 +249,20 @@ class TestRunDimensionality:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved = self._fn(web_app)(
-            1, None, None, "occupancy", 3.0, 0.2, None, None, 10.0, 24,
-            store_data_willy, active_lines_both, cached_session, "light",
+            1,
+            None,
+            None,
+            "occupancy",
+            3.0,
+            0.2,
+            None,
+            None,
+            10.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "light",
             {"other-tool": {"foo": "bar"}},
         )
         assert saved["dimensionality"]["imgs"]
@@ -228,8 +272,20 @@ class TestRunDimensionality:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved = self._fn(web_app)(
-            1, None, None, "map", 3.0, 0.2, None, None, 15.0, 24,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            None,
+            None,
+            "map",
+            3.0,
+            0.2,
+            None,
+            None,
+            15.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
         assert saved["dimensionality"]["imgs"]
@@ -238,8 +294,20 @@ class TestRunDimensionality:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved = self._fn(web_app)(
-            1, None, None, "scatter", 3.0, 0.2, 1e-3, 1e3, 10.0, 24,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            None,
+            None,
+            "scatter",
+            3.0,
+            0.2,
+            1e-3,
+            1e3,
+            10.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
         # scatter view produces a dcc.Graph + summary bar -> 2 children
@@ -253,23 +321,43 @@ class TestRunDimensionality:
         branch, and the always-on summary bar is skipped too since it
         also filters on df_filt."""
         out, saved = self._fn(web_app)(
-            1, None, None, "scatter", 3.0, 0.2, 1e6, 1e7, 10.0, 24,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            None,
+            None,
+            "scatter",
+            3.0,
+            0.2,
+            1e6,
+            1e7,
+            10.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
-        texts = [
-            getattr(c, "children", "") for c in out.children
-        ]
-        assert any(
-            "No data in selected period range" in str(t) for t in texts
-        )
+        texts = [getattr(c, "children", "") for c in out.children]
+        assert any("No data in selected period range" in str(t) for t in texts)
 
     def test_all_views_real_data(
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved = self._fn(web_app)(
-            1, ["L1"], None, "all", 3.0, 0.2, None, None, 10.0, 24,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            ["L1"],
+            None,
+            "all",
+            3.0,
+            0.2,
+            None,
+            None,
+            10.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
         # psection + occupancy + map + scatter + summary bar == 5 sections
@@ -283,8 +371,20 @@ class TestRunDimensionality:
         defaults when the Input values are None (e.g. cleared by the
         user)."""
         out, saved = self._fn(web_app)(
-            1, None, None, None, None, None, None, None, None, None,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
         assert saved["dimensionality"]["type"] == "html"
@@ -294,8 +394,20 @@ class TestRunDimensionality:
     ):
         first_id = store_data_willy["station_records"][0]["ID"]
         out, saved = self._fn(web_app)(
-            1, None, [first_id], "psection", 3.0, 0.2, None, None, 10.0, 24,
-            store_data_willy, active_lines_both, cached_session, "dark",
+            1,
+            None,
+            [first_id],
+            "psection",
+            3.0,
+            0.2,
+            None,
+            None,
+            10.0,
+            24,
+            store_data_willy,
+            active_lines_both,
+            cached_session,
+            "dark",
             None,
         )
         assert saved["dimensionality"]["imgs"]
@@ -310,17 +422,13 @@ class TestFreqEditorBody:
     def test_zero_clicks_returns_no_data(self):
         assert tools_mod._freq_editor_body(0, NO_DATA) is NO_DATA
 
-    def test_builds_body_with_scope_options(
-        self, store_data_willy, active_lines_both
-    ):
+    def test_builds_body_with_scope_options(self, store_data_willy, active_lines_both):
         body = tools_mod._freq_editor_body(
             1, NO_DATA, store_data_willy, active_lines_both, None
         )
         assert body.children  # non-trivial layout produced
 
-    def test_last_output_restores_from_store(
-        self, store_data_willy, active_lines_both
-    ):
+    def test_last_output_restores_from_store(self, store_data_willy, active_lines_both):
         stored = {"type": "text", "content": "hello", "cls": "small"}
         body = tools_mod._freq_editor_body(
             1, NO_DATA, store_data_willy, active_lines_both, stored
@@ -331,17 +439,14 @@ class TestFreqEditorBody:
 
 
 class TestFreqBeforeAfterHeatmaps:
-    def test_produces_alert_and_two_heatmap_sections(
-        self, willy_sites, cached_session
-    ):
+    def test_produces_alert_and_two_heatmap_sections(self, willy_sites, cached_session):
         import matplotlib
 
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        from dash import html as dhtml
 
         from pycsamt.emtools.frequency import plot_coverage_quality_heatmap
-
-        from dash import html as dhtml
 
         def _mpl_wrap(plot_fn, *args, **kw):
             fig, ax = plt.subplots()
@@ -373,7 +478,10 @@ class TestFreqBeforeAfterHeatmaps:
             object(),
             lambda *a, **k: None,
             lambda *a, **k: None,
-            "#000", "#fff", "#333", "#111",
+            "#000",
+            "#fff",
+            "#333",
+            "#111",
             lambda *a, **k: None,
         )
         assert "0 stations" in children[0].children[1]
@@ -381,16 +489,12 @@ class TestFreqBeforeAfterHeatmaps:
 
 class TestSyncFreqStationScope:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-freq-stations.options", "tool-freq-lines"
-        )
+        return _cb_by_input(web_app, "tool-freq-stations.options", "tool-freq-lines")
 
     def test_filters_by_selected_lines(
         self, web_app, store_data_willy, active_lines_both
     ):
-        opts, value = self._fn(web_app)(
-            ["L2"], store_data_willy, active_lines_both
-        )
+        opts, value = self._fn(web_app)(["L2"], store_data_willy, active_lines_both)
         assert value is None
         assert all("L2" in o["label"] for o in opts)
 
@@ -411,9 +515,7 @@ class TestSyncFreqSource:
 
 class TestSyncFreqActionParams:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-freq-conf-params.style", "tool-freq-action"
-        )
+        return _cb_by_input(web_app, "tool-freq-conf-params.style", "tool-freq-action")
 
     def test_confidence_shows_conf_params_only(self, web_app):
         styles = self._fn(web_app)("confidence")
@@ -517,25 +619,60 @@ class TestRunFreqEditor:
 
     def test_no_clicks_no_update(self, web_app):
         out, saved, disabled = self._fn(web_app)(
-            None, "session", None, None, None, "diagnostics",
-            "recover", "composite", 0.5, 0.9, 0.5, "both", "linear", "drop",
-            None, None, None, None, None, 6, "nearest", "union", None,
-            "smooth", 3, 2, None, None, "sess", "dark", None,
+            None,
+            "session",
+            None,
+            None,
+            None,
+            "diagnostics",
+            "recover",
+            "composite",
+            0.5,
+            0.9,
+            0.5,
+            "both",
+            "linear",
+            "drop",
+            None,
+            None,
+            None,
+            None,
+            None,
+            6,
+            "nearest",
+            "union",
+            None,
+            "smooth",
+            3,
+            2,
+            None,
+            None,
+            "sess",
+            "dark",
+            None,
         )
         assert out is no_update and saved is no_update and disabled is no_update
 
     def test_folder_source_missing_dir(self, web_app):
         out, saved, disabled = self._call(
-            self._fn(web_app), "diagnostics", "sess", None, None,
-            source="folder", folder="Z:/definitely/not/a/real/path",
+            self._fn(web_app),
+            "diagnostics",
+            "sess",
+            None,
+            None,
+            source="folder",
+            folder="Z:/definitely/not/a/real/path",
         )
         assert "Folder not found" in out.children
         assert disabled is True
 
     def test_session_expired(self, web_app, store_data_willy):
         out, saved, disabled = self._call(
-            self._fn(web_app), "diagnostics", "no-such-session",
-            store_data_willy, None,
+            self._fn(web_app),
+            "diagnostics",
+            "no-such-session",
+            store_data_willy,
+            None,
         )
         assert "Session expired" in out.children
         assert disabled is True
@@ -544,16 +681,24 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "diagnostics", cached_session,
-            store_data_willy, active_lines_both,
+            self._fn(web_app),
+            "diagnostics",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
         )
         assert saved["freq-editor"]["imgs"]
         assert disabled is True  # diagnostics never sets has_edit
 
     def test_folder_source_real_edi_dir(self, web_app, active_lines_both):
         out, saved, disabled = self._call(
-            self._fn(web_app), "diagnostics", "unused-session", None,
-            active_lines_both, source="folder", folder=str(_WILLY_L18),
+            self._fn(web_app),
+            "diagnostics",
+            "unused-session",
+            None,
+            active_lines_both,
+            source="folder",
+            folder=str(_WILLY_L18),
         )
         assert saved["freq-editor"]["imgs"]
 
@@ -561,8 +706,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "confidence", cached_session,
-            store_data_willy, active_lines_both, mode="recover",
+            self._fn(web_app),
+            "confidence",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            mode="recover",
         )
         assert saved["freq-editor"]["imgs"]
         assert disabled is False  # an edit was applied -> export enabled
@@ -572,8 +721,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "confidence", cached_session,
-            store_data_willy, active_lines_both, mode="drop",
+            self._fn(web_app),
+            "confidence",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            mode="drop",
             reject="mask",
         )
         assert disabled is False
@@ -582,8 +735,13 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "band", cached_session,
-            store_data_willy, active_lines_both, fmin=1.0, fmax=1000.0,
+            self._fn(web_app),
+            "band",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            fmin=1.0,
+            fmax=1000.0,
         )
         assert disabled is False
         assert saved["freq-editor"]["imgs"]
@@ -592,8 +750,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "band", cached_session,
-            store_data_willy, active_lines_both, keep_str="not,a,number",
+            self._fn(web_app),
+            "band",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            keep_str="not,a,number",
         )
         texts = [str(getattr(c, "children", c)) for c in out.children]
         assert any("Could not parse" in t for t in texts)
@@ -602,8 +764,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "regrid", cached_session,
-            store_data_willy, active_lines_both, rg_ppd=4,
+            self._fn(web_app),
+            "regrid",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            rg_ppd=4,
             rg_method="nearest",
         )
         assert disabled is False
@@ -613,8 +779,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "align", cached_session,
-            store_data_willy, active_lines_both, align_mode="union",
+            self._fn(web_app),
+            "align",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            align_mode="union",
         )
         assert disabled is False
         assert saved["freq-editor"]["imgs"]
@@ -623,8 +793,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "smooth", cached_session,
-            store_data_willy, active_lines_both, smooth_op="smooth",
+            self._fn(web_app),
+            "smooth",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            smooth_op="smooth",
             smooth_k=3,
         )
         assert disabled is False
@@ -633,8 +807,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "smooth", cached_session,
-            store_data_willy, active_lines_both, smooth_op="decimate",
+            self._fn(web_app),
+            "smooth",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            smooth_op="decimate",
             smooth_step=2,
         )
         assert disabled is False
@@ -643,8 +821,12 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "smooth", cached_session,
-            store_data_willy, active_lines_both, smooth_op="dedupe",
+            self._fn(web_app),
+            "smooth",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
+            smooth_op="dedupe",
         )
         assert disabled is False
 
@@ -652,8 +834,11 @@ class TestRunFreqEditor:
         self, web_app, store_data_willy, active_lines_both, cached_session
     ):
         out, saved, disabled = self._call(
-            self._fn(web_app), "diagnostics", cached_session,
-            store_data_willy, active_lines_both,
+            self._fn(web_app),
+            "diagnostics",
+            cached_session,
+            store_data_willy,
+            active_lines_both,
             saved_outputs={"dimensionality": {"type": "html", "imgs": []}},
         )
         assert "dimensionality" in saved
@@ -684,9 +869,7 @@ class TestExportFreqEdis:
 
         cache_set_freq_edit(cached_session, willy_sites)
         out_dir = tmp_path / "edited_out"
-        out = self._fn(web_app)(
-            1, str(out_dir), "{station}.edi", cached_session
-        )
+        out = self._fn(web_app)(1, str(out_dir), "{station}.edi", cached_session)
         assert "Exported" in out.children
         written = list(out_dir.glob("*.edi"))
         assert len(written) == len(willy_sites.as_list())
@@ -719,9 +902,7 @@ class TestRunBatch:
         )
 
     def test_no_out_path_warns(self, web_app):
-        out = self._fn(web_app)(
-            1, "  ", "png", 150, ["map"], [], None, None, "sess"
-        )
+        out = self._fn(web_app)(1, "  ", "png", 150, ["map"], [], None, None, "sess")
         assert "output folder" in out.children
 
     def test_no_items_warns(self, web_app, tmp_path):
@@ -732,68 +913,129 @@ class TestRunBatch:
 
     def test_session_expired_warns(self, web_app, tmp_path):
         out = self._fn(web_app)(
-            1, str(tmp_path), "png", 150, ["map"], [], None, None,
+            1,
+            str(tmp_path),
+            "png",
+            150,
+            ["map"],
+            [],
+            None,
+            None,
             "no-such-session",
         )
         assert "Session expired" in out.children
 
     def test_exports_map_only_to_tmp_path(
-        self, web_app, store_data_willy, active_lines_both, cached_session,
+        self,
+        web_app,
+        store_data_willy,
+        active_lines_both,
+        cached_session,
         tmp_path,
     ):
-        out = self._fn(web_app)(
-            1, str(tmp_path), "png", 96, ["map"], ["manifest"],
-            store_data_willy, active_lines_both, cached_session,
+        self._fn(web_app)(
+            1,
+            str(tmp_path),
+            "png",
+            96,
+            ["map"],
+            ["manifest"],
+            store_data_willy,
+            active_lines_both,
+            cached_session,
         )
         # _batch_result_view renders a metric row + DataTable
         assert (tmp_path / "station_map.png").exists()
         assert (tmp_path / "pycsamt_batch_export_manifest.csv").exists()
 
     def test_exports_curves_and_pseudosections_to_tmp_path(
-        self, web_app, store_data_willy, active_lines_both, cached_session,
+        self,
+        web_app,
+        store_data_willy,
+        active_lines_both,
+        cached_session,
         tmp_path,
     ):
-        out = self._fn(web_app)(
-            1, str(tmp_path), "png", 96,
-            ["curves", "rho_pseudo", "phi_pseudo"], [],
-            store_data_willy, active_lines_both, cached_session,
+        self._fn(web_app)(
+            1,
+            str(tmp_path),
+            "png",
+            96,
+            ["curves", "rho_pseudo", "phi_pseudo"],
+            [],
+            store_data_willy,
+            active_lines_both,
+            cached_session,
         )
         assert (tmp_path / "mt_curves_rho_phase.png").exists()
         assert (tmp_path / "rho_xy_pseudosection.png").exists()
         assert (tmp_path / "phase_xy_pseudosection.png").exists()
 
     def test_exports_strike_dimensionality_to_tmp_path(
-        self, web_app, store_data_willy, active_lines_both, cached_session,
+        self,
+        web_app,
+        store_data_willy,
+        active_lines_both,
+        cached_session,
         tmp_path,
     ):
-        out = self._fn(web_app)(
-            1, str(tmp_path), "svg", 72, ["strike"], [],
-            store_data_willy, active_lines_both, cached_session,
+        self._fn(web_app)(
+            1,
+            str(tmp_path),
+            "svg",
+            72,
+            ["strike"],
+            [],
+            store_data_willy,
+            active_lines_both,
+            cached_session,
         )
         assert (tmp_path / "skew_traffic_pseudosection.svg").exists()
         assert (tmp_path / "dimensionality_pseudosection.svg").exists()
 
     def test_skip_existing_when_not_overwriting(
-        self, web_app, store_data_willy, active_lines_both, cached_session,
+        self,
+        web_app,
+        store_data_willy,
+        active_lines_both,
+        cached_session,
         tmp_path,
     ):
         (tmp_path / "station_map.png").write_bytes(b"placeholder")
         out = self._fn(web_app)(
-            1, str(tmp_path), "png", 96, ["map"], [],
-            store_data_willy, active_lines_both, cached_session,
+            1,
+            str(tmp_path),
+            "png",
+            96,
+            ["map"],
+            [],
+            store_data_willy,
+            active_lines_both,
+            cached_session,
         )
         table = out.children[-1]
         rows = table.data
         assert rows[0]["Status"] == "SKIPPED"
 
     def test_overwrite_flag_replaces_existing(
-        self, web_app, store_data_willy, active_lines_both, cached_session,
+        self,
+        web_app,
+        store_data_willy,
+        active_lines_both,
+        cached_session,
         tmp_path,
     ):
         (tmp_path / "station_map.png").write_bytes(b"placeholder")
         out = self._fn(web_app)(
-            1, str(tmp_path), "png", 96, ["map"], ["overwrite"],
-            store_data_willy, active_lines_both, cached_session,
+            1,
+            str(tmp_path),
+            "png",
+            96,
+            ["map"],
+            ["overwrite"],
+            store_data_willy,
+            active_lines_both,
+            cached_session,
         )
         table = out.children[-1]
         assert table.data[0]["Status"] == "SAVED"
@@ -847,8 +1089,16 @@ class TestElevParseUpload:
         b64 = base64.b64encode(csv_text.encode()).decode()
         contents = f"data:text/csv;base64,{b64}"
         (
-            data, info, opt_id, opt_lat, opt_lon, opt_elev,
-            v_id, v_lat, v_lon, v_elev,
+            data,
+            info,
+            opt_id,
+            opt_lat,
+            opt_lon,
+            opt_elev,
+            v_id,
+            v_lat,
+            v_lon,
+            v_elev,
         ) = self._fn(web_app)(contents, "stations.csv")
         assert v_id == "Station"
         assert v_lat == "Lat"
@@ -865,24 +1115,34 @@ class TestElevParseUpload:
 
 class TestElevLoadFile:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-elev-raw-store.data", "tool-elev-load-btn"
-        )
+        return _cb_by_input(web_app, "tool-elev-raw-store.data", "tool-elev-load-btn")
 
     def test_no_clicks_no_update(self, web_app):
-        assert self._fn(web_app)(None, {"records": [], "columns": []},
-                                  None, None, None, None) == (no_update, no_update)
+        assert self._fn(web_app)(
+            None, {"records": [], "columns": []}, None, None, None, None
+        ) == (no_update, no_update)
 
     def test_no_upload_data_no_update(self, web_app):
         assert self._fn(web_app)(1, None, None, None, None, None) == (
-            no_update, no_update,
+            no_update,
+            no_update,
         )
 
     def test_loads_rows_with_explicit_columns(self, web_app):
         upload_data = {
             "records": [
-                {"Station": "S1", "Lat": 10.0, "Lon": 20.0, "Elevation": 300.0},
-                {"Station": "S2", "Lat": 11.0, "Lon": 21.0, "Elevation": 310.0},
+                {
+                    "Station": "S1",
+                    "Lat": 10.0,
+                    "Lon": 20.0,
+                    "Elevation": 300.0,
+                },
+                {
+                    "Station": "S2",
+                    "Lat": 11.0,
+                    "Lon": 21.0,
+                    "Elevation": 310.0,
+                },
             ],
             "columns": ["Station", "Lat", "Lon", "Elevation"],
         }
@@ -891,7 +1151,10 @@ class TestElevLoadFile:
         )
         assert len(rows) == 2
         assert rows[0] == {
-            "station": "S1", "lat": 10.0, "lon": 20.0, "elev": 300.0
+            "station": "S1",
+            "lat": 10.0,
+            "lon": 20.0,
+            "elev": 300.0,
         }
         assert "loaded" in out.children[0].children[1]
 
@@ -900,9 +1163,7 @@ class TestElevLoadFile:
             "records": [{"Station": "S1"}],
             "columns": ["Station"],
         }
-        rows, out = self._fn(web_app)(
-            1, upload_data, "Station", None, None, None
-        )
+        rows, out = self._fn(web_app)(1, upload_data, "Station", None, None, None)
         assert rows is no_update
         assert "Could not find an elevation column" in out.children
 
@@ -921,7 +1182,13 @@ class TestElevFetch:
         self, web_app, store_data_willy, cached_session
     ):
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "session", "WGS84", "all", None, None, store_data_willy,
+            1,
+            "session",
+            "WGS84",
+            "all",
+            None,
+            None,
+            store_data_willy,
             cached_session,
         )
         assert style == {}
@@ -933,12 +1200,17 @@ class TestElevFetch:
         self, web_app, store_data_willy, cached_session
     ):
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "session", "WGS84", "lines", ["L1"], None, store_data_willy,
+            1,
+            "session",
+            "WGS84",
+            "lines",
+            ["L1"],
+            None,
+            store_data_willy,
             cached_session,
         )
         assert len(rows) == sum(
-            1 for r in store_data_willy["station_records"]
-            if r["Line"] == "L1"
+            1 for r in store_data_willy["station_records"] if r["Line"] == "L1"
         )
 
     def test_scope_selected_stations_filters_records(
@@ -946,7 +1218,13 @@ class TestElevFetch:
     ):
         first_id = store_data_willy["station_records"][0]["ID"]
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "session", "WGS84", "sel", None, [first_id], store_data_willy,
+            1,
+            "session",
+            "WGS84",
+            "sel",
+            None,
+            [first_id],
+            store_data_willy,
             cached_session,
         )
         assert len(rows) == 1
@@ -955,20 +1233,31 @@ class TestElevFetch:
         self, web_app, store_data_willy, cached_session
     ):
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "session", "WGS84", "sel", ["L2"], None, store_data_willy,
+            1,
+            "session",
+            "WGS84",
+            "sel",
+            ["L2"],
+            None,
+            store_data_willy,
             cached_session,
         )
         assert len(rows) == sum(
-            1 for r in store_data_willy["station_records"]
-            if r["Line"] == "L2"
+            1 for r in store_data_willy["station_records"] if r["Line"] == "L2"
         )
 
     def test_no_records_after_scope_filter_warns(
         self, web_app, store_data_willy, cached_session
     ):
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "session", "WGS84", "lines", ["NoSuchLine"], None,
-            store_data_willy, cached_session,
+            1,
+            "session",
+            "WGS84",
+            "lines",
+            ["NoSuchLine"],
+            None,
+            store_data_willy,
+            cached_session,
         )
         assert "No stations matched the scope" in out.children
         assert style == {"display": "none"}
@@ -987,22 +1276,31 @@ class TestElevFetch:
             assert api_name == "open_elevation"
             return np.full(len(lats), 123.0)
 
-        monkeypatch.setattr(
-            gis_utils, "get_elevation_from_api", _fake_get_elevation
-        )
+        monkeypatch.setattr(gis_utils, "get_elevation_from_api", _fake_get_elevation)
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "open-elevation", "WGS84", "all", None, None,
-            store_data_willy, cached_session,
+            1,
+            "open-elevation",
+            "WGS84",
+            "all",
+            None,
+            None,
+            store_data_willy,
+            cached_session,
         )
         assert "fetched" in label
         assert any(r.get("elev") == 123.0 for r in rows)
 
     def test_session_expired_warns(self, web_app, store_data_willy):
-        from pycsamt.app.web.cache import cache_get
 
         # session_id that was never cache_set -> cache_get returns None
         out, rows, prog, label, style = self._fn(web_app)(
-            1, "session", "WGS84", "all", None, None, store_data_willy,
+            1,
+            "session",
+            "WGS84",
+            "all",
+            None,
+            None,
+            store_data_willy,
             "definitely-not-cached-session-id",
         )
         assert "Session expired" in out.children
@@ -1010,9 +1308,7 @@ class TestElevFetch:
 
 class TestElevCorrect:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-elev-out.children", "tool-elev-correct-btn"
-        )
+        return _cb_by_input(web_app, "tool-elev-out.children", "tool-elev-correct-btn")
 
     RAW = [
         {"station": "S1", "lat": 1.0, "lon": 1.0, "elev": 100.0},
@@ -1023,15 +1319,11 @@ class TestElevCorrect:
     ]
 
     def test_no_clicks_no_update(self, web_app):
-        result = self._fn(web_app)(
-            None, self.RAW, ["smooth"], "loess", 5, 0.0, [], 3.0
-        )
+        result = self._fn(web_app)(None, self.RAW, ["smooth"], "loess", 5, 0.0, [], 3.0)
         assert result == (no_update,) * 5
 
     def test_no_raw_data_no_update(self, web_app):
-        result = self._fn(web_app)(
-            1, None, ["smooth"], "loess", 5, 0.0, [], 3.0
-        )
+        result = self._fn(web_app)(1, None, ["smooth"], "loess", 5, 0.0, [], 3.0)
         assert result == (no_update,) * 5
 
     def test_missing_elev_column_warns(self, web_app):
@@ -1113,9 +1405,7 @@ class TestElevCorrect:
 
 class TestElevExportCsv:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-elev-dl-csv.data", "tool-elev-export-csv"
-        )
+        return _cb_by_input(web_app, "tool-elev-dl-csv.data", "tool-elev-export-csv")
 
     def test_no_clicks_no_update(self, web_app):
         assert self._fn(web_app)(None, None, None) == (no_update, no_update)
@@ -1127,8 +1417,13 @@ class TestElevExportCsv:
 
     def test_exports_corrected_csv(self, web_app):
         corrected = [
-            {"station": "S1", "lat": 1.0, "lon": 1.0, "elev": 100.0,
-             "elev_corrected": 101.0},
+            {
+                "station": "S1",
+                "lat": 1.0,
+                "lon": 1.0,
+                "elev": 100.0,
+                "elev_corrected": 101.0,
+            },
         ]
         dl, status = self._fn(web_app)(1, corrected, None)
         assert dl["filename"] == "pycsamt_elevation.csv"
@@ -1143,9 +1438,7 @@ class TestElevExportCsv:
 
 class TestElevExportH5:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-elev-dl-h5.data", "tool-elev-export-h5"
-        )
+        return _cb_by_input(web_app, "tool-elev-dl-h5.data", "tool-elev-export-h5")
 
     def test_no_clicks_no_update(self, web_app):
         assert self._fn(web_app)(None, None, None) == (no_update, no_update)
@@ -1157,13 +1450,19 @@ class TestElevExportH5:
 
     def test_exports_h5_or_npz(self, web_app):
         corrected = [
-            {"station": "S1", "lat": 1.0, "lon": 1.0, "elev": 100.0,
-             "elev_corrected": 101.0},
+            {
+                "station": "S1",
+                "lat": 1.0,
+                "lon": 1.0,
+                "elev": 100.0,
+                "elev_corrected": 101.0,
+            },
         ]
         dl, status = self._fn(web_app)(1, corrected, None)
         assert dl["base64"] is True
         assert dl["filename"] in (
-            "pycsamt_elevation.h5", "pycsamt_elevation.npz"
+            "pycsamt_elevation.h5",
+            "pycsamt_elevation.npz",
         )
         assert "exported" in status.children[1]
 
@@ -1184,7 +1483,8 @@ class TestElevUpdateSession:
 
     def test_session_expired_warns(self, web_app):
         out = self._fn(web_app)(
-            1, [{"station": "S1", "elev_corrected": 100.0}],
+            1,
+            [{"station": "S1", "elev_corrected": 100.0}],
             "no-such-session-xyz",
         )
         assert "Session expired" in out.children
@@ -1204,9 +1504,7 @@ class TestElevUpdateSession:
 
 class TestRestoreElevOutput:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tool-elev-out.children", IDs.ACTIVE_TOOL
-        )
+        return _cb_by_input(web_app, "tool-elev-out.children", IDs.ACTIVE_TOOL)
 
     def test_wrong_tool_no_update(self, web_app):
         result = self._fn(web_app)("strike", None, None)
@@ -1218,12 +1516,15 @@ class TestRestoreElevOutput:
 
     def test_restores_corrected_data(self, web_app):
         corrected = [
-            {"station": "S1", "lat": 1.0, "lon": 1.0, "elev": 100.0,
-             "elev_corrected": 101.0},
+            {
+                "station": "S1",
+                "lat": 1.0,
+                "lon": 1.0,
+                "elev": 100.0,
+                "elev_corrected": 101.0,
+            },
         ]
-        out, style, prog, label = self._fn(web_app)(
-            "elevation", None, corrected
-        )
+        out, style, prog, label = self._fn(web_app)("elevation", None, corrected)
         assert style == {}
         assert prog == 100
         assert "1/1 stations" in label
@@ -1377,16 +1678,25 @@ class TestBatchExportToolFigures:
     def test_unsupported_format_raises(self, willy_sites, tmp_path):
         with pytest.raises(ValueError, match="Unsupported export format"):
             tools_mod._batch_export_tool_figures(
-                willy_sites, dest=tmp_path, fmt="bmp", dpi=100, items=["map"],
-                flags=set(), store_data={}, active_lines_store={},
+                willy_sites,
+                dest=tmp_path,
+                fmt="bmp",
+                dpi=100,
+                items=["map"],
+                flags=set(),
+                store_data={},
+                active_lines_store={},
             )
 
-    def test_pseudo_alias_expands_to_both_pseudosections(
-        self, willy_sites, tmp_path
-    ):
+    def test_pseudo_alias_expands_to_both_pseudosections(self, willy_sites, tmp_path):
         result = tools_mod._batch_export_tool_figures(
-            willy_sites, dest=tmp_path, fmt="png", dpi=72,
-            items=["pseudo"], flags=set(), store_data={},
+            willy_sites,
+            dest=tmp_path,
+            fmt="png",
+            dpi=72,
+            items=["pseudo"],
+            flags=set(),
+            store_data={},
             active_lines_store={},
         )
         assert (tmp_path / "rho_xy_pseudosection.png").exists()
@@ -1395,8 +1705,14 @@ class TestBatchExportToolFigures:
 
     def test_no_manifest_flag_skips_csv(self, willy_sites, tmp_path):
         tools_mod._batch_export_tool_figures(
-            willy_sites, dest=tmp_path, fmt="png", dpi=72, items=["map"],
-            flags=set(), store_data={}, active_lines_store={},
+            willy_sites,
+            dest=tmp_path,
+            fmt="png",
+            dpi=72,
+            items=["map"],
+            flags=set(),
+            store_data={},
+            active_lines_store={},
         )
         assert not (tmp_path / "pycsamt_batch_export_manifest.csv").exists()
 
@@ -1404,19 +1720,36 @@ class TestBatchExportToolFigures:
 class TestBatchResultView:
     def test_no_rows_shows_warning(self):
         out = tools_mod._batch_result_view(
-            {"rows": [], "saved": 0, "skipped": 0, "failed": 0,
-             "n_stations": 0, "fmt": "png", "dpi": 150, "dest": "x"}
+            {
+                "rows": [],
+                "saved": 0,
+                "skipped": 0,
+                "failed": 0,
+                "n_stations": 0,
+                "fmt": "png",
+                "dpi": 150,
+                "dest": "x",
+            }
         )
         assert "No figures were generated" in out.children[-1].children
 
     def test_with_rows_shows_table_and_manifest(self):
         result = {
             "rows": [
-                {"Figure": "a", "Status": "SAVED", "File": "a.png",
-                 "Message": ""},
+                {
+                    "Figure": "a",
+                    "Status": "SAVED",
+                    "File": "a.png",
+                    "Message": "",
+                },
             ],
-            "saved": 1, "skipped": 0, "failed": 0, "n_stations": 5,
-            "fmt": "png", "dpi": 150, "dest": "x",
+            "saved": 1,
+            "skipped": 0,
+            "failed": 0,
+            "n_stations": 5,
+            "fmt": "png",
+            "dpi": 150,
+            "dest": "x",
             "manifest": "x/manifest.csv",
         }
         out = tools_mod._batch_result_view(result)
@@ -1426,10 +1759,15 @@ class TestBatchResultView:
 
 class TestRenderStoredToolResult:
     def test_no_payload_returns_none(self):
-        assert tools_mod._render_stored_tool_result("dimensionality", None, "dark") is None
-        assert tools_mod._render_stored_tool_result(
-            "dimensionality", {"strike": {}}, "dark"
-        ) is None
+        assert (
+            tools_mod._render_stored_tool_result("dimensionality", None, "dark") is None
+        )
+        assert (
+            tools_mod._render_stored_tool_result(
+                "dimensionality", {"strike": {}}, "dark"
+            )
+            is None
+        )
 
     def test_non_strike_tool_returns_none(self):
         assert (

@@ -84,10 +84,7 @@ def stations(
     values = list(st.values) if st.values is not None else []
     unit = getattr(st, "unit", "m")
 
-    rows = [
-        {"name": n, "position": v, "unit": unit}
-        for n, v in zip(names, values)
-    ]
+    rows = [{"name": n, "position": v, "unit": unit} for n, v in zip(names, values)]
 
     # Attach topography if stn file provided
     topo_attached = False
@@ -96,17 +93,11 @@ def stations(
         try:
             obj.add_topography(str(stn_file))
             topo = obj.topo
-            if (
-                topo is not None
-                and hasattr(topo, "frame")
-                and topo.frame is not None
-            ):
+            if topo is not None and hasattr(topo, "frame") and topo.frame is not None:
                 topo_frame = topo.frame
                 topo_attached = True
         except Exception as exc:  # noqa: BLE001
-            click.echo(
-                f"Warning: could not load {stn_file.name}: {exc}", err=True
-            )
+            click.echo(f"Warning: could not load {stn_file.name}: {exc}", err=True)
 
     if topo_attached and topo_frame is not None:
         import numpy as np  # noqa: PLC0415
@@ -192,9 +183,7 @@ def stations(
         click.echo(hdr)
         click.echo("-" * len(hdr))
         for r in rows:
-            line = (
-                f"{str(r.get('name', '?')):<10} {r.get('position', 0):>10.1f}"
-            )
+            line = f"{str(r.get('name', '?')):<10} {r.get('position', 0):>10.1f}"
             if has_topo:
                 line += (
                     f" {r.get('easting', float('nan')):>12.1f}"

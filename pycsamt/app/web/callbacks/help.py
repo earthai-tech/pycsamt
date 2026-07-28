@@ -12,7 +12,6 @@ from pycsamt.app.web.layout import IDs
 
 
 def register_help(app) -> None:
-
     @app.callback(
         Output(IDs.ABOUT_MODAL, "is_open"),
         Input(IDs.BTN_ABOUT, "n_clicks"),
@@ -24,8 +23,7 @@ def register_help(app) -> None:
         if not (n_open or n_close):
             return no_update
         triggered = [
-            t["prop_id"]
-            for t in __import__("dash").callback_context.triggered
+            t["prop_id"] for t in __import__("dash").callback_context.triggered
         ]
         if any("about-close-btn" in t for t in triggered):
             return False

@@ -262,9 +262,7 @@ after_frac = (
 fig, ax = plt.subplots(figsize=(6, 4.5))
 x = np.arange(3)
 w = 0.35
-ax.bar(
-    x - w / 2, before_frac.to_numpy(), width=w, label="before", color="0.6"
-)
+ax.bar(x - w / 2, before_frac.to_numpy(), width=w, label="before", color="0.6")
 ax.bar(
     x + w / 2,
     after_frac.to_numpy(),

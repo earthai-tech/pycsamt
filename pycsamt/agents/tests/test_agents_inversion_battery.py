@@ -50,11 +50,21 @@ def sites3(edi_dir: Path):
 # ── missing-input contract ───────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("cls_name", [
-    "Inv2DAgent", "Inv3DAgent", "EnsembleAgent", "JointInversionAgent",
-    "HybridInversionAgent", "PINNInversionAgent", "InversionBackendAgent",
-    "InversionPrepAgent", "Occam2DAgent", "ModEmAgent",
-])
+@pytest.mark.parametrize(
+    "cls_name",
+    [
+        "Inv2DAgent",
+        "Inv3DAgent",
+        "EnsembleAgent",
+        "JointInversionAgent",
+        "HybridInversionAgent",
+        "PINNInversionAgent",
+        "InversionBackendAgent",
+        "InversionPrepAgent",
+        "Occam2DAgent",
+        "ModEmAgent",
+    ],
+)
 def test_inversion_agents_fail_without_input(cls_name):
     import pycsamt.agents as agents_pkg
 
@@ -70,9 +80,7 @@ def test_inversion_agents_fail_without_input(cls_name):
 def test_occam2d_agent_prepares_files(sites3, tmp_path):
     from pycsamt.agents import Occam2DAgent
 
-    result = mk(Occam2DAgent).execute(
-        {"sites": sites3, "output_dir": str(tmp_path)}
-    )
+    result = mk(Occam2DAgent).execute({"sites": sites3, "output_dir": str(tmp_path)})
     assert result.status == "success"
     assert result.summary
     assert any(tmp_path.rglob("*")), "expected prepared files on disk"
@@ -81,9 +89,7 @@ def test_occam2d_agent_prepares_files(sites3, tmp_path):
 def test_modem_agent_prepares_files(sites3, tmp_path):
     from pycsamt.agents import ModEmAgent
 
-    result = mk(ModEmAgent).execute(
-        {"sites": sites3, "output_dir": str(tmp_path)}
-    )
+    result = mk(ModEmAgent).execute({"sites": sites3, "output_dir": str(tmp_path)})
     assert result.status == "success"
     assert result.summary
     assert any(tmp_path.rglob("*")), "expected prepared files on disk"
@@ -92,11 +98,13 @@ def test_modem_agent_prepares_files(sites3, tmp_path):
 def test_inversion_prep_agent_occam2d(sites3, tmp_path):
     from pycsamt.agents import InversionPrepAgent
 
-    result = mk(InversionPrepAgent).execute({
-        "sites": sites3,
-        "code": "occam2d",
-        "output_dir": str(tmp_path),
-    })
+    result = mk(InversionPrepAgent).execute(
+        {
+            "sites": sites3,
+            "code": "occam2d",
+            "output_dir": str(tmp_path),
+        }
+    )
     # prep runs flag sparse inputs for human review
     assert result.status in {"success", "needs_review", "failed"}
     assert result.summary or result.error
@@ -115,9 +123,7 @@ def test_inversion_backend_agent_builtin(sites3, tmp_path):
         n_layers=4,
         max_iter=3,
     )
-    result = ag.execute(
-        {"sites": sites3, "output_dir": str(tmp_path)}
-    )
+    result = ag.execute({"sites": sites3, "output_dir": str(tmp_path)})
     assert result.status in {"success", "failed"}
     assert result.summary or result.error
 
@@ -130,12 +136,56 @@ def test_inv2d_agent_tiny_training(sites3, tmp_path):
     from pycsamt.agents import Inv2DAgent
 
     ag = mk(Inv2DAgent, epochs=1)
-    result = ag.execute(
-        {"sites": sites3, "output_dir": str(tmp_path)}
-    )
+    result = ag.execute({"sites": sites3, "output_dir": str(tmp_path)})
     assert result.status in {"success", "failed"}
     if result.status == "success":
         assert result.summary
+        assert result.data["physics"] == "mt1d"
+        assert result.data["mt2d_recovery"] is None
+
+
+@requires_dl
+def test_inv2d_agent_mt2d_physics_end_to_end(sites3):
+    """physics='mt2d' trains on real 2-D Maxwell solves (not tiled
+    1-D) and reports a genuine held-out recovery check, per the
+    AI-inversion plan's M5 slice. n_train_profiles is kept modest but
+    large enough to survive the dataset's own train/val/test split
+    plus EMInverter2D.fit's internal validation split without ever
+    handing BatchNorm a batch of size one.
+    """
+    import numpy as np
+
+    from pycsamt.agents import Inv2DAgent
+
+    ag = mk(
+        Inv2DAgent,
+        epochs=1,
+        n_depth=4,
+        n_freqs=3,
+        n_train_profiles=20,
+        n_stations_per_profile=3,
+        physics="mt2d",
+        station_spacing_m=200.0,
+    )
+    result = ag.execute({"sites": sites3, "freqs": [100.0, 30.0, 10.0]})
+    assert result.status == "success", result.error
+    assert result.data["physics"] == "mt2d"
+    assert result.data["pred_section"].shape == (4, 3)
+    assert np.all(np.isfinite(result.data["pred_section"]))
+
+    recovery = result.data["mt2d_recovery"]
+    assert recovery is not None
+    assert recovery["n_samples"] >= 1
+    assert np.isfinite(recovery["rmse"])
+    assert np.isfinite(recovery["mae"])
+
+
+@requires_dl
+def test_inv2d_agent_rejects_bad_physics():
+    from pycsamt.agents import Inv2DAgent
+
+    with pytest.raises(ValueError, match="physics"):
+        mk(Inv2DAgent, physics="mt3d")
 
 
 @requires_dl
@@ -176,11 +226,13 @@ def test_pinn_agent_tiny_training(sites3, tmp_path):
     from pycsamt.agents import PINNInversionAgent
 
     ag = mk(PINNInversionAgent, dim=1, n_layers=4)
-    result = ag.execute({
-        "sites": sites3,
-        "epochs": 1,
-        "output_dir": str(tmp_path),
-    })
+    result = ag.execute(
+        {
+            "sites": sites3,
+            "epochs": 1,
+            "output_dir": str(tmp_path),
+        }
+    )
     assert result.status in {"success", "failed"}
     if result.status == "success":
         assert result.summary
@@ -227,6 +279,7 @@ def test_web_launch_without_gradio():
     pytest.importorskip
     try:
         import gradio  # noqa: F401
+
         pytest.skip("gradio installed: launch would start a server")
     except ImportError:
         pass

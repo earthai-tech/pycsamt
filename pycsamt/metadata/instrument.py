@@ -35,11 +35,14 @@ Quick start
 
     # Round-trip JSON
     import json
+
     s = inst.to_json()
     inst3 = InstrumentMeta.from_json(s)
 
     # Push fields to an EDI Head dict
-    head_dict = inst.to_head_fields()   # {"acqby": "Phoenix V8 / V8-20473", ...}
+    head_dict = (
+        inst.to_head_fields()
+    )  # {"acqby": "Phoenix V8 / V8-20473", ...}
 
 API Reference
 -------------
@@ -226,9 +229,7 @@ class InstrumentMeta:
         return "\n".join(lines)
 
     def __repr__(self) -> str:
-        return (
-            f"<InstrumentMeta system={self.system!r} serial={self.serial!r}>"
-        )
+        return f"<InstrumentMeta system={self.system!r} serial={self.serial!r}>"
 
     # ------------------------------------------------------------------
     # EDI HEAD integration
@@ -394,9 +395,7 @@ class InstrumentMeta:
         elif fmt in ("yaml", "yml"):
             p.write_text(self.to_yaml(), encoding="utf-8")
         else:
-            raise ValueError(
-                f"Unknown format {fmt!r}; choose 'json' or 'yaml'."
-            )
+            raise ValueError(f"Unknown format {fmt!r}; choose 'json' or 'yaml'.")
 
     @classmethod
     def load(cls, path: str) -> InstrumentMeta:

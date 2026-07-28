@@ -33,17 +33,17 @@ Typical use
 >>>
 >>> cal = ConstrainedCalibrator(
 ...     constraints=[
-...         WaterLevelConstraint(x=500.0,  depth_m=18.5),
+...         WaterLevelConstraint(x=500.0, depth_m=18.5),
 ...         WaterLevelConstraint(x=1200.0, depth_m=22.0),
 ...         PumpingTestConstraint(x=800.0, T_m2s=1.2e-3),
 ...     ],
 ...     calibrate_rho_w=True,
 ...     calibrate_phi_prior=True,
 ... )
->>> model   = EMHydroModel(rm, PetrophysicalConfig())
->>> result  = cal.fit(model)      # returns calibrated EMHydroResult
->>> print(cal.calibrated_config_) # fitted PetrophysicalConfig
->>> print(cal.misfit_history_)    # optimiser convergence
+>>> model = EMHydroModel(rm, PetrophysicalConfig())
+>>> result = cal.fit(model)  # returns calibrated EMHydroResult
+>>> print(cal.calibrated_config_)  # fitted PetrophysicalConfig
+>>> print(cal.misfit_history_)  # optimiser convergence
 
 References
 ----------
@@ -326,9 +326,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
             Model result evaluated at the calibrated parameters.
         """
         if not _SCIPY_OK:
-            raise ImportError(
-                "scipy is required for ConstrainedCalibrator.fit()."
-            )
+            raise ImportError("scipy is required for ConstrainedCalibrator.fit().")
 
         x0, bounds = self._pack_params(em_hydro_model.config)
         rng = np.random.default_rng(42)
@@ -418,8 +416,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
                         "observed_T_m2s": c.T_m2s,
                         "predicted_T_m2s": result.transmissivity[ix],
                         "residual_log10": pred - obs,
-                        "normalized": (pred - obs)
-                        / np.log10(c.uncertainty_factor),
+                        "normalized": (pred - obs) / np.log10(c.uncertainty_factor),
                     }
                 )
 
@@ -432,8 +429,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
                         "observed_K_ms": c.K_ms,
                         "predicted_K_ms": float(result.hydraulic_K[iz, ix]),
                         "residual_log10": pred - obs,
-                        "normalized": (pred - obs)
-                        / np.log10(c.uncertainty_factor),
+                        "normalized": (pred - obs) / np.log10(c.uncertainty_factor),
                     }
                 )
 
@@ -453,9 +449,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
 
     # ── private optimisation helpers ───────────────────────────────────────
 
-    def _pack_params(
-        self, cfg: PetrophysicalConfig
-    ) -> tuple[np.ndarray, list]:
+    def _pack_params(self, cfg: PetrophysicalConfig) -> tuple[np.ndarray, list]:
         """Extract free parameters as a 1-D array with bounds."""
         x0_list: list[float] = []
         bounds_list: list[tuple[float, float]] = []
@@ -491,9 +485,7 @@ class ConstrainedCalibrator(PyCSAMTObject):
             )
             idx += 1
         if self.calibrate_phi_prior:
-            updates["porosity_prior"] = float(
-                np.clip(x[idx], *self.phi_bounds)
-            )
+            updates["porosity_prior"] = float(np.clip(x[idx], *self.phi_bounds))
         return dataclasses.replace(cfg, **updates)
 
     def _objective(self, x: np.ndarray, base_model: EMHydroModel) -> float:

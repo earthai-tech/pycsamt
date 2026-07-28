@@ -31,9 +31,7 @@ def test_save_session_prevents_update_without_click(agent_app):
         fn(None, [], {}, {})
 
 
-def test_save_session_writes_json_and_returns_status(
-    agent_app, tmp_path, monkeypatch
-):
+def test_save_session_writes_json_and_returns_status(agent_app, tmp_path, monkeypatch):
     monkeypatch.setattr(session_mod, "_SESSION_DIR", tmp_path)
 
     messages = [{"role": "user", "content": "hi"}]

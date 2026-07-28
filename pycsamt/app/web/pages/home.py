@@ -258,9 +258,7 @@ def _profile_panel():
                             label="Phase Tensor",
                             tab_id="tab-pt",
                         ),
-                        dbc.Tab(
-                            _qc_tab_content(), label="QC", tab_id="tab-qc"
-                        ),
+                        dbc.Tab(_qc_tab_content(), label="QC", tab_id="tab-qc"),
                     ],
                     id=IDs.PROFILE_TABS,
                     active_tab="tab-rho-ps",
@@ -298,9 +296,7 @@ def _agents_sidebar():
     return dbc.Card(
         [
             dbc.CardHeader(
-                html.Span(
-                    [_icon("agents"), "AI Agents"], className="panel-title"
-                ),
+                html.Span([_icon("agents"), "AI Agents"], className="panel-title"),
                 className="py-2 px-3",
             ),
             dbc.CardBody(
@@ -327,14 +323,10 @@ def _agents_sidebar():
                         size="sm",
                         color="success",
                     ),
-                    html.Hr(
-                        style={"borderColor": "#313244", "margin": "6px 0"}
-                    ),
+                    html.Hr(style={"borderColor": "#313244", "margin": "6px 0"}),
                     html.P(
                         [
-                            html.I(
-                                className="bi bi-terminal-fill me-1 text-muted"
-                            ),
+                            html.I(className="bi bi-terminal-fill me-1 text-muted"),
                             "Log",
                         ],
                         className="mb-1 text-muted small",

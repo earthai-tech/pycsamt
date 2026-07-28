@@ -74,9 +74,7 @@ def test_version_release_tuple():
         ("1.0a", "a", 0),  # implicit 0
     ],
 )
-def test_version_prerelease_normalizes_spelling(
-    raw, expected_letter, expected_number
-):
+def test_version_prerelease_normalizes_spelling(raw, expected_letter, expected_number):
     v = Version(raw)
     assert v.pre == (expected_letter, expected_number)
     assert v.is_prerelease is True
@@ -273,7 +271,9 @@ def test_version_equality_ignores_trailing_release_zeros():
 def test_version_equality_and_inequality():
     assert Version("1.0") == Version("1.0")
     assert Version("1.0") != Version("2.0")
-    assert not (Version("1.0") == "1.0")  # not a _BaseVersion -> NotImplemented -> False
+    assert not (
+        Version("1.0") == "1.0"
+    )  # not a _BaseVersion -> NotImplemented -> False
 
 
 def test_version_comparison_with_non_baseversion_is_notimplemented():
@@ -416,9 +416,7 @@ def test_parse_version_parts_pads_numeric_and_marks_alpha():
 def test_parse_version_parts_replacement_map():
     # "pre"/"preview" -> "c", "rc" -> "c", "dev" -> "@", "-" -> "final-"
     parts = list(_parse_version_parts("1.0-dev"))
-    assert "@" in [p.lstrip("*") for p in parts] or any(
-        p == "*@" for p in parts
-    )
+    assert "@" in [p.lstrip("*") for p in parts] or any(p == "*@" for p in parts)
 
 
 def test_legacy_cmpkey_epoch_is_always_negative_one():

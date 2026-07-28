@@ -84,7 +84,10 @@ def write_settings(
 
     Examples
     --------
-    >>> from pycsamt.models.mare2dem.iotools.settings import SettingsFile, write_settings
+    >>> from pycsamt.models.mare2dem.iotools.settings import (
+    ...     SettingsFile,
+    ...     write_settings,
+    ... )
     >>> sf = SettingsFile(tx_per_group=5, csem_rx_per_group=20)
     >>> write_settings(sf, "mare2dem.settings")
     PosixPath('mare2dem.settings')

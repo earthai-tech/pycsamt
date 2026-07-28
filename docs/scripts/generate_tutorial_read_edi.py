@@ -14,17 +14,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 ONE_EDI = DATA_DIR / "18-001A.edi"
 IMAGE_DIR = (
-    ROOT
-    / "docs"
-    / "source"
-    / "images"
-    / "tutorials"
-    / "read_edi_survey"
+    ROOT / "docs" / "source" / "images" / "tutorials" / "read_edi_survey"
 )
 
 
@@ -32,8 +26,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.api import read_edi, read_edis
-        from pycsamt.emtools.advanced import plot_survey_fingerprint
+        pass
 
     return locals()
 
@@ -54,9 +47,13 @@ def _save(fig: plt.Figure, name: str) -> None:
 
 def _inventory_plot(inventory) -> None:
     plot_df = inventory.copy()
-    plot_df["short_station"] = plot_df["station"].str.replace("23-", "", regex=False)
+    plot_df["short_station"] = plot_df["station"].str.replace(
+        "23-", "", regex=False
+    )
     x = np.arange(len(plot_df))
-    fig, axes = plt.subplots(2, 1, figsize=(11.2, 7.0), constrained_layout=True)
+    fig, axes = plt.subplots(
+        2, 1, figsize=(11.2, 7.0), constrained_layout=True
+    )
 
     axes[0].bar(
         x,
@@ -67,17 +64,25 @@ def _inventory_plot(inventory) -> None:
         alpha=0.88,
     )
     axes[0].set_xticks(x[::2])
-    axes[0].set_xticklabels(plot_df["short_station"].iloc[::2], rotation=45, ha="right")
+    axes[0].set_xticklabels(
+        plot_df["short_station"].iloc[::2], rotation=45, ha="right"
+    )
     axes[0].set_ylabel("Frequency rows")
     axes[0].set_title("Loaded station inventory")
     _style_axis(axes[0])
 
-    availability = plot_df[["tipper", "spectra", "ts"]].astype(int).T.to_numpy()
-    im = axes[1].imshow(availability, aspect="auto", cmap="YlGnBu", vmin=0, vmax=1)
+    availability = (
+        plot_df[["tipper", "spectra", "ts"]].astype(int).T.to_numpy()
+    )
+    im = axes[1].imshow(
+        availability, aspect="auto", cmap="YlGnBu", vmin=0, vmax=1
+    )
     axes[1].set_yticks([0, 1, 2])
     axes[1].set_yticklabels(["tipper", "spectra", "time series"])
     axes[1].set_xticks(x[::2])
-    axes[1].set_xticklabels(plot_df["short_station"].iloc[::2], rotation=45, ha="right")
+    axes[1].set_xticklabels(
+        plot_df["short_station"].iloc[::2], rotation=45, ha="right"
+    )
     axes[1].set_xlabel("Station")
     axes[1].set_title("Optional EDI sections detected")
     axes[1].grid(False)
@@ -165,7 +170,9 @@ def main() -> int:
     print("errors:")
     print(f"{len(survey.errors())} read error(s)")
     print("focused_table:")
-    focused = survey.summary(fields=["station", "n_freq", "tipper", "path"]).to_pandas(copy=True)
+    focused = survey.summary(
+        fields=["station", "n_freq", "tipper", "path"]
+    ).to_pandas(copy=True)
     focused["path"] = focused["path"].map(lambda value: Path(value).name)
     print(focused.head(3).to_string(index=False))
     print(f"images: {IMAGE_DIR.relative_to(ROOT)}")

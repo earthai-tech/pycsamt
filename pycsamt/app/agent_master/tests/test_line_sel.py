@@ -56,8 +56,7 @@ def _run_with_lines_fn(agent_app):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == "am-btn-line-run-sel"
+        if entry["inputs"] and entry["inputs"][0]["id"] == "am-btn-line-run-sel"
     ]
     assert len(matches) == 1, matches
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -107,9 +106,7 @@ class TestRunWithLines:
 
         cc.context_value.set(
             AttributeDict(
-                triggered_inputs=[
-                    {"prop_id": f"{component_id}.n_clicks", "value": 1}
-                ]
+                triggered_inputs=[{"prop_id": f"{component_id}.n_clicks", "value": 1}]
             )
         )
 
@@ -132,8 +129,15 @@ class TestRunWithLines:
         self._set_trigger(IDs.BTN_LINE_RUN_SEL)
         fn = _run_with_lines_fn(agent_app)
         result = fn(
-            1, None, [], {"text": "run it", "groups": {"L1": []}},
-            {}, {}, {}, [], [],
+            1,
+            None,
+            [],
+            {"text": "run it", "groups": {"L1": []}},
+            {},
+            {},
+            {},
+            [],
+            [],
         )
         from dash import no_update
 
@@ -141,21 +145,13 @@ class TestRunWithLines:
         assert result[5] is True
         assert "Select at least one line" in str(result[6])
 
-    def test_run_all_spawns_job_when_no_quick_workflow(
-        self, agent_app, monkeypatch
-    ):
+    def test_run_all_spawns_job_when_no_quick_workflow(self, agent_app, monkeypatch):
         from pycsamt.app.agent_master._ids import IDs
         from pycsamt.app.agent_master.callbacks import line_sel as line_sel_mod
 
-        monkeypatch.setattr(
-            line_sel_mod, "_quick_workflow", lambda text: None
-        )
-        monkeypatch.setattr(
-            line_sel_mod, "_new_job", lambda: "job-123"
-        )
-        monkeypatch.setattr(
-            line_sel_mod, "_drop_workflow", lambda cfg: cfg
-        )
+        monkeypatch.setattr(line_sel_mod, "_quick_workflow", lambda text: None)
+        monkeypatch.setattr(line_sel_mod, "_new_job", lambda: "job-123")
+        monkeypatch.setattr(line_sel_mod, "_drop_workflow", lambda cfg: cfg)
         started = {}
 
         class _FakeThread:
@@ -166,15 +162,20 @@ class TestRunWithLines:
             def start(self):
                 started["started"] = True
 
-        monkeypatch.setattr(
-            line_sel_mod.threading, "Thread", _FakeThread
-        )
+        monkeypatch.setattr(line_sel_mod.threading, "Thread", _FakeThread)
 
         self._set_trigger(IDs.BTN_LINE_RUN_ALL)
         fn = _run_with_lines_fn(agent_app)
         result = fn(
-            None, 1, [], {"text": "run it", "groups": {"L1": [], "L2": []}},
-            {}, {}, {}, [], [],
+            None,
+            1,
+            [],
+            {"text": "run it", "groups": {"L1": [], "L2": []}},
+            {},
+            {},
+            {},
+            [],
+            [],
         )
 
         assert started.get("started") is True
@@ -197,8 +198,15 @@ class TestRunWithLines:
         self._set_trigger(IDs.BTN_LINE_RUN_ALL)
         fn = _run_with_lines_fn(agent_app)
         result = fn(
-            None, 1, [], {"text": "run it", "groups": {"L1": []}},
-            {}, {}, {}, [], [],
+            None,
+            1,
+            [],
+            {"text": "run it", "groups": {"L1": []}},
+            {},
+            {},
+            {},
+            [],
+            [],
         )
         from dash import no_update
 
@@ -245,13 +253,9 @@ class TestRunWithLines:
         from pycsamt.app.agent_master._ids import IDs
         from pycsamt.app.agent_master.callbacks import line_sel as line_sel_mod
 
-        monkeypatch.setattr(
-            line_sel_mod, "_quick_workflow", lambda text: None
-        )
+        monkeypatch.setattr(line_sel_mod, "_quick_workflow", lambda text: None)
         monkeypatch.setattr(line_sel_mod, "_new_job", lambda: "job-456")
-        monkeypatch.setattr(
-            line_sel_mod, "_drop_workflow", lambda cfg: cfg
-        )
+        monkeypatch.setattr(line_sel_mod, "_drop_workflow", lambda cfg: cfg)
 
         class _FakeThread:
             def __init__(self, target, args, daemon):

@@ -102,9 +102,7 @@ def data_to_frame(data, source):
     for block in data.blocks:
         component_type = block["component_type"]
         for row in block["rows"]:
-            period, site_idx, x_m, y_m, z_m, component, real, imag, error = (
-                row
-            )
+            period, site_idx, x_m, y_m, z_m, component, real, imag, error = row
             station = data.site_names[int(site_idx)]
             rows.append(
                 {
@@ -263,9 +261,7 @@ plt.show()
 
 for component in ("ZXY", "ZYX"):
     fig_pseudo = PlotPseudo(result=result, component=component).plot()
-    pseudo_file = (
-        figure_dir / f"modem_observed_pseudo_{component.lower()}.png"
-    )
+    pseudo_file = figure_dir / f"modem_observed_pseudo_{component.lower()}.png"
     fig_pseudo.savefig(pseudo_file, dpi=120)
     plt.show()
     print(f"{component} pseudo-section: {pseudo_file}")

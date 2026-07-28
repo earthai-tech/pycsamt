@@ -100,30 +100,22 @@ MU0 = 4.0 * np.pi * 1e-7  # H/m
 # ---------------------------------------------------------------------------
 
 
-def _hz_horiz_seg(
-    y0: float, x1: float, x2: float, rx: float, ry: float
-) -> float:
+def _hz_horiz_seg(y0: float, x1: float, x2: float, rx: float, ry: float) -> float:
     """Hz from a horizontal wire segment at y=y0, running x1→x2."""
     d = ry - y0
     if abs(d) < 1e-14:
         return 0.0
     u1, u2 = x1 - rx, x2 - rx
-    return (1.0 / d) * (
-        u2 / np.sqrt(d * d + u2 * u2) - u1 / np.sqrt(d * d + u1 * u1)
-    )
+    return (1.0 / d) * (u2 / np.sqrt(d * d + u2 * u2) - u1 / np.sqrt(d * d + u1 * u1))
 
 
-def _hz_vert_seg(
-    x0: float, y1: float, y2: float, rx: float, ry: float
-) -> float:
+def _hz_vert_seg(x0: float, y1: float, y2: float, rx: float, ry: float) -> float:
     """Hz from a vertical wire segment at x=x0, running y1→y2."""
     d = rx - x0
     if abs(d) < 1e-14:
         return 0.0
     u1, u2 = y1 - ry, y2 - ry
-    return -(1.0 / d) * (
-        u2 / np.sqrt(d * d + u2 * u2) - u1 / np.sqrt(d * d + u1 * u1)
-    )
+    return -(1.0 / d) * (u2 / np.sqrt(d * d + u2 * u2) - u1 / np.sqrt(d * d + u1 * u1))
 
 
 def _biot_savart_rect_hz(
@@ -455,19 +447,13 @@ def _in_loop_geometry_factor_td(
         else:
             a = float(loop_dims[0]) / 2.0
             b = float(loop_dims[1]) / 2.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
-            rx, ry, a, b
-        )
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(rx, ry, a, b)
     elif loop_shape == "circle":
         r_loop = float(loop_dims[0])
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_circle_hz_segments(
-            rx, ry, r_loop
-        )
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_circle_hz_segments(rx, ry, r_loop)
     else:
         a = b = np.sqrt(float(loop_dims[0])) / 2.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
-            rx, ry, a, b
-        )
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(rx, ry, a, b)
 
     # --- diffusion length per gate ---
     rho_safe = np.maximum(np.asarray(rho_a), 1e-6)
@@ -484,9 +470,7 @@ def _in_loop_geometry_factor_td(
     hz_td_00 = (hz_00[:, None] * w_00).sum(axis=0)
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        eta_t = np.where(
-            np.abs(hz_td_00) > 1e-30, hz_td_rx / hz_td_00, np.ones(n)
-        )
+        eta_t = np.where(np.abs(hz_td_00) > 1e-30, hz_td_rx / hz_td_00, np.ones(n))
 
     return eta_t
 
@@ -553,9 +537,7 @@ def _rho_a_late_time(
        electromagnetic prospecting methods.  SEG, Vol. 2.
     """
     with np.errstate(divide="ignore", invalid="ignore"):
-        arg = (moment * MU0**2.5) / (
-            10.0 * np.sqrt(np.pi) * np.abs(dBdt) * t**2.5
-        )
+        arg = (moment * MU0**2.5) / (10.0 * np.sqrt(np.pi) * np.abs(dBdt) * t**2.5)
         rho = arg ** (2.0 / 3.0)
     return np.where(np.isfinite(rho) & (rho > 0.0), rho, np.nan)
 
@@ -628,9 +610,7 @@ def _rho_a_in_loop(
         # Fill NaN/non-positive ρ_a with median for stable η(t) computation
         finite = rho_a[np.isfinite(rho_a) & (rho_a > 0.0)]
         fill = float(np.median(finite)) if len(finite) > 0 else 100.0
-        rho_for_eta = np.where(
-            np.isfinite(rho_a) & (rho_a > 0.0), rho_a, fill
-        )
+        rho_for_eta = np.where(np.isfinite(rho_a) & (rho_a > 0.0), rho_a, fill)
 
         eta_t = _in_loop_geometry_factor_td(
             rx, ry, loop_shape, loop_dims, t, rho_for_eta
@@ -770,9 +750,7 @@ def _phase_from_rho(
         phase_deg[~np.isfinite(rho_a)] = np.nan
         return phase_deg
 
-    raise ValueError(
-        f"Unknown phase mode '{mode}'. Use 'homogeneous' or 'weidelt'."
-    )
+    raise ValueError(f"Unknown phase mode '{mode}'. Use 'homogeneous' or 'weidelt'.")
 
 
 def _build_z_array(
@@ -1063,10 +1041,10 @@ class LateTimeTransform(PyCSAMTObject):
     >>> from pycsamt.tdem import TEMSounding
     >>> from pycsamt.tdem.transform import LateTimeTransform
     >>> t = np.logspace(-5, -2, 30)
-    >>> M = 8.0 * 100.0 ** 2
+    >>> M = 8.0 * 100.0**2
     >>> MU0_loc = 4e-7 * np.pi
-    >>> dBdt = M * MU0_loc**2.5 / (10*np.sqrt(np.pi)*100.**1.5*t**2.5)
-    >>> snd = TEMSounding(t, dBdt, current=8.0, tx_area=100.**2)
+    >>> dBdt = M * MU0_loc**2.5 / (10 * np.sqrt(np.pi) * 100.0**1.5 * t**2.5)
+    >>> snd = TEMSounding(t, dBdt, current=8.0, tx_area=100.0**2)
     >>> tr = LateTimeTransform()
     >>> result = tr.transform(snd)
     >>> result["freq"].shape
@@ -1074,8 +1052,14 @@ class LateTimeTransform(PyCSAMTObject):
 
     Offset-loop sounding:
 
-    >>> snd_off = TEMSounding(t, dBdt, current=8.0, tx_area=100.**2,
-    ...                       offset=500.0, loop_dims=(100.0,))
+    >>> snd_off = TEMSounding(
+    ...     t,
+    ...     dBdt,
+    ...     current=8.0,
+    ...     tx_area=100.0**2,
+    ...     offset=500.0,
+    ...     loop_dims=(100.0,),
+    ... )
     >>> result_off = tr.transform(snd_off)
     """
 
@@ -1202,9 +1186,7 @@ class LateTimeTransform(PyCSAMTObject):
 
         # ρ_a error → Z_err
         if err_raw is not None:
-            rho_err = (
-                (2.0 / 3.0) * rho_a * np.abs(err_raw / (dBdt[order] + 1e-300))
-            )
+            rho_err = (2.0 / 3.0) * rho_a * np.abs(err_raw / (dBdt[order] + 1e-300))
         else:
             rho_err = None
 
@@ -1276,9 +1258,7 @@ def _cosine_transform_1d(
     ndarray (m,)
     """
     if n_interp > len(t):
-        t_fine = np.exp(
-            np.linspace(np.log(t[0]), np.log(t[-1]), int(n_interp))
-        )
+        t_fine = np.exp(np.linspace(np.log(t[0]), np.log(t[-1]), int(n_interp)))
         log_abs_g = np.log(np.maximum(np.abs(g), 1e-300))
         g_fine = np.sign(np.interp(np.log(t_fine), np.log(t), g)) * np.exp(
             np.interp(np.log(t_fine), np.log(t), log_abs_g)
@@ -1334,9 +1314,7 @@ def _kramers_kronig_re(
         tol = 1e-10 * max(w2, 1e-100)
         mask_ok = np.abs(den) > tol
 
-        integrand = np.where(
-            mask_ok, num_base / np.where(mask_ok, den, 1.0), 0.0
-        )
+        integrand = np.where(mask_ok, num_base / np.where(mask_ok, den, 1.0), 0.0)
         bad = np.where(~mask_ok)[0]
         for j in bad:
             left = j - 1 if j > 0 else j + 1
@@ -1410,8 +1388,10 @@ class FourierTransform(PyCSAMTObject):
     >>> from pycsamt.tdem import TEMSounding
     >>> from pycsamt.tdem.transform import FourierTransform
     >>> t = np.logspace(-5, -2, 40)
-    >>> MU0_v = 4e-7 * np.pi; rho0 = 100.0; M = 8.0 * 1e4
-    >>> dBdt = M * MU0_v**2.5 / (10*np.sqrt(np.pi)*rho0**1.5*t**2.5)
+    >>> MU0_v = 4e-7 * np.pi
+    ... rho0 = 100.0
+    ... M = 8.0 * 1e4
+    >>> dBdt = M * MU0_v**2.5 / (10 * np.sqrt(np.pi) * rho0**1.5 * t**2.5)
     >>> snd = TEMSounding(t, dBdt, current=8.0, tx_area=1e4)
     >>> res = FourierTransform(n_freq=30).transform(snd)
     >>> np.isfinite(res["rho_a"]).all()
@@ -1450,14 +1430,10 @@ class FourierTransform(PyCSAMTObject):
 
     def _output_freqs(self, t: np.ndarray) -> np.ndarray:
         f_lo = (
-            self.freq_min
-            if self.freq_min is not None
-            else 1.0 / (2.0 * np.pi * t[-1])
+            self.freq_min if self.freq_min is not None else 1.0 / (2.0 * np.pi * t[-1])
         )
         f_hi = (
-            self.freq_max
-            if self.freq_max is not None
-            else 1.0 / (2.0 * np.pi * t[0])
+            self.freq_max if self.freq_max is not None else 1.0 / (2.0 * np.pi * t[0])
         )
         f_lo = max(f_lo, 1e-8)
         return np.logspace(np.log10(f_lo), np.log10(f_hi), self.n_freq)
@@ -1509,9 +1485,7 @@ class FourierTransform(PyCSAMTObject):
             )
 
         if self.waveform_correction:
-            dBdt, t, _ = _apply_waveform_correction(
-                dBdt, t, sounding.waveform
-            )
+            dBdt, t, _ = _apply_waveform_correction(dBdt, t, sounding.waveform)
             if len(t) < 4:
                 raise ValueError(
                     "After waveform correction fewer than 4 gates remain. "
@@ -1540,12 +1514,7 @@ class FourierTransform(PyCSAMTObject):
                 omega_aux > 0.0, fc_err / (sounding.moment * omega_aux), 0.0
             )
             ik_err = np.interp(np.log(omega_out), np.log(omega_aux), ik_err_a)
-            rho_err = (
-                2.0
-                * np.abs(ik_err)
-                * rho_a
-                / np.maximum(np.abs(im_k), 1e-300)
-            )
+            rho_err = 2.0 * np.abs(ik_err) * rho_a / np.maximum(np.abs(im_k), 1e-300)
         else:
             rho_err = None
 
@@ -1630,16 +1599,23 @@ class TEMtoEDI(PyCSAMTObject):
     >>> import numpy as np
     >>> t = np.logspace(-5, -2, 25)
     >>> dBdt = 5e-5 * t ** (-5.0 / 2.0)
-    >>> snd = TEMSounding(t, dBdt, current=8.0, tx_area=1e4,
-    ...                   station_name="S01")
+    >>> snd = TEMSounding(
+    ...     t, dBdt, current=8.0, tx_area=1e4, station_name="S01"
+    ... )
     >>> conv = TEMtoEDI(method="late_time")
     >>> coll = conv.transform(snd)
 
     Offset (separated) loop — just set ``offset``:
 
-    >>> snd_off = TEMSounding(t, dBdt, current=8.0, tx_area=1e4,
-    ...                       offset=500.0, loop_dims=(100.0,),
-    ...                       station_name="S01")
+    >>> snd_off = TEMSounding(
+    ...     t,
+    ...     dBdt,
+    ...     current=8.0,
+    ...     tx_area=1e4,
+    ...     offset=500.0,
+    ...     loop_dims=(100.0,),
+    ...     station_name="S01",
+    ... )
     >>> coll_off = conv.transform(snd_off)
     """
 
@@ -1709,9 +1685,7 @@ class TEMtoEDI(PyCSAMTObject):
             written.append(fp)
             if self.verbose:
                 cfg = result.get("loop_config", "?")
-                print(
-                    f"  Wrote {fp}  ({result['freq'].size} freq, cfg={cfg})"
-                )
+                print(f"  Wrote {fp}  ({result['freq'].size} freq, cfg={cfg})")
 
         return written
 

@@ -69,9 +69,7 @@ def test_fast_station_scan(j_single_file: Path):
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_coreparser_parse_single(j_single_file: Path):
-    pr = JCoreParser(
-        recursive=True, strict=False, on_dup="replace", verbose=0
-    )
+    pr = JCoreParser(recursive=True, strict=False, on_dup="replace", verbose=0)
     items = pr.parse([j_single_file])
     assert isinstance(items, list) and len(items) >= 1
     assert all(isinstance(it, JFile) for it in items)

@@ -109,9 +109,7 @@ class DenoisingAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -148,17 +146,13 @@ class DenoisingAgent(BaseAgent):
 
                 denoised_sites = apply_emap_filter(sites, verbose=0)
             except Exception as exc:
-                warnings.append(
-                    f"EMAP filter failed: {exc}. No denoising applied."
-                )
+                warnings.append(f"EMAP filter failed: {exc}. No denoising applied.")
 
         elif method == "pipeline":
             try:
                 denoised_sites = remove_noise_pipeline(sites, verbose=0)
             except Exception as exc:
-                warnings.append(
-                    f"Noise pipeline failed: {exc}. No denoising applied."
-                )
+                warnings.append(f"Noise pipeline failed: {exc}. No denoising applied.")
 
         elif method in ("ai", "ai_cae"):
             denoised_sites = _apply_ai_denoiser(sites, warnings)
@@ -174,13 +168,9 @@ class DenoisingAgent(BaseAgent):
                 valid_b = snr_before[np.isfinite(snr_before)]
                 valid_a = snr_after[np.isfinite(snr_after)]
                 if valid_b.size and valid_a.size:
-                    snr_gain = float(
-                        np.nanmean(valid_a) - np.nanmean(valid_b)
-                    )
+                    snr_gain = float(np.nanmean(valid_a) - np.nanmean(valid_b))
                     # count cells where SNR crossed the threshold of 3
-                    n_recovered = int(
-                        np.sum((snr_after >= 3.0) & (snr_before < 3.0))
-                    )
+                    n_recovered = int(np.sum((snr_after >= 3.0) & (snr_before < 3.0)))
             except Exception:
                 pass
 
@@ -285,9 +275,7 @@ def _apply_rpca(sites: Any, rank: int, warnings: list) -> Any:
         result = rpca_offdiag_denoise(sites, rank=rank, verbose=0)
         return result if result is not None else sites
     except Exception as exc:
-        warnings.append(
-            f"RPCA denoising failed: {exc}. Original sites returned."
-        )
+        warnings.append(f"RPCA denoising failed: {exc}. Original sites returned.")
         return sites
 
 
@@ -299,9 +287,7 @@ def _apply_hampel(sites: Any, half_window: int, warnings: list) -> Any:
         result = hampel_filter_freq(sites, k=half_window, verbose=0)
         return result if result is not None else sites
     except Exception as exc:
-        warnings.append(
-            f"Hampel filter failed: {exc}. Original sites returned."
-        )
+        warnings.append(f"Hampel filter failed: {exc}. Original sites returned.")
         return sites
 
 

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import re
 
-import pytest
-
 from pycsamt.utils.text import (
     fmt_text,
     listing_items_format,
@@ -40,9 +38,7 @@ def test_smart_format_more_than_two_oxford_comma_true():
 
 
 def test_smart_format_more_than_two_oxford_comma_false():
-    assert smart_format(["a", "b", "c"], oxford_comma=False) == (
-        "'a', 'b' and 'c'"
-    )
+    assert smart_format(["a", "b", "c"], oxford_comma=False) == ("'a', 'b' and 'c'")
 
 
 def test_smart_format_quote_false():

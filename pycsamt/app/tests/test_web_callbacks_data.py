@@ -51,9 +51,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -64,10 +62,7 @@ def _cb_by_input(web_app, output_substr, input_id_substr):
     for k, v in web_app.callback_map.items():
         if output_substr not in k:
             continue
-        if any(
-            input_id_substr in str(i.get("id"))
-            for i in v.get("inputs", [])
-        ):
+        if any(input_id_substr in str(i.get("id")) for i in v.get("inputs", [])):
             return _unwrap(v)
     raise AssertionError(
         f"no callback found for output~={output_substr!r} "
@@ -79,9 +74,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -122,14 +115,10 @@ class TestSanitizeUploadName:
         assert _sanitize_upload_name("a b?.edi", "x") == "a b_.edi"
 
     def test_preserves_relative_folders(self):
-        assert (
-            _sanitize_upload_name("L1/STA01.edi", "x") == "L1/STA01.edi"
-        )
+        assert _sanitize_upload_name("L1/STA01.edi", "x") == "L1/STA01.edi"
 
     def test_backslashes_normalised_to_slashes(self):
-        assert (
-            _sanitize_upload_name("L1\\STA01.edi", "x") == "L1/STA01.edi"
-        )
+        assert _sanitize_upload_name("L1\\STA01.edi", "x") == "L1/STA01.edi"
 
 
 class TestUploadEntries:
@@ -266,7 +255,7 @@ class TestMergeStore:
 
         with mock.patch.object(
             data_mod, "cache_merge_sites", return_value=merged_sites_obj
-        ) as m:
+        ):
             store, sites = _merge_store(
                 existing,
                 new_records,
@@ -307,16 +296,12 @@ class TestMergeStore:
 
 class TestToggleModal:
     def _fn(self, web_app):
-        return _cb_multi(
-            web_app, f"{IDs.MODAL_LOAD}.is_open", "load-mode-store.data"
-        )
+        return _cb_multi(web_app, f"{IDs.MODAL_LOAD}.is_open", "load-mode-store.data")
 
     def test_close_button_closes_modal(self, web_app):
         _set_triggered("modal-close-btn.n_clicks")
         try:
-            result = self._fn(web_app)(
-                0, 0, 1, 0, 0, 0, 0, 0, True
-            )
+            result = self._fn(web_app)(0, 0, 1, 0, 0, 0, 0, 0, True)
         finally:
             _clear_triggered()
         is_open, *_rest = result
@@ -350,9 +335,7 @@ class TestToggleModal:
 
 class TestCaptureUploadSelection:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "load-upload-selection.data", IDs.UPLOAD
-        )
+        return _cb_by_input(web_app, "load-upload-selection.data", IDs.UPLOAD)
 
     def test_from_folder_store(self, web_app, edi_data_uri):
         _set_triggered(f"{IDs.FOLDER_UPLOAD_STORE}.data")
@@ -388,9 +371,7 @@ class TestCaptureUploadSelection:
 
 class TestEditUploadSelection:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "load-upload-selection.data", "load-file-remove"
-        )
+        return _cb_by_input(web_app, "load-upload-selection.data", "load-file-remove")
 
     def test_clear_initial_render_ignored(self, web_app):
         import dash._callback_context as cc
@@ -590,9 +571,7 @@ class TestUpdatePreflight:
 
     def test_with_entries(self, web_app):
         entries = [{"filename": "L1/a.edi", "source": "folder"}]
-        preview, summary, source = self._fn(web_app)(
-            entries, None, "replace", None
-        )
+        preview, summary, source = self._fn(web_app)(entries, None, "replace", None)
         assert source == "folder"
 
 
@@ -710,17 +689,13 @@ class TestRenderStationList:
             ]
         }
         active_lines = {"active": ["L1", "L2"], "all": ["L1", "L2"]}
-        pills, rows = self._fn(web_app)(
-            store_data, active_lines, None, "L1", "dark"
-        )
+        pills, rows = self._fn(web_app)(store_data, active_lines, None, "L1", "dark")
         assert len(rows) == 1
 
     def test_filter_matches_nothing_shows_message(self, web_app):
         store_data = {"station_records": [{"ID": "S1", "Line": "L1"}]}
         active_lines = {"active": ["L1"], "all": ["L1"]}
-        pills, rows = self._fn(web_app)(
-            store_data, active_lines, None, "L2", "dark"
-        )
+        pills, rows = self._fn(web_app)(store_data, active_lines, None, "L2", "dark")
         assert "No stations match" in str(rows)
 
     def test_bad_numeric_metadata_swallowed(self, web_app):
@@ -733,9 +708,7 @@ class TestRenderStationList:
                 }
             ]
         }
-        pills, rows = self._fn(web_app)(
-            store_data, None, None, None, "dark"
-        )
+        pills, rows = self._fn(web_app)(store_data, None, None, None, "dark")
         assert len(rows) == 1
 
 
@@ -786,9 +759,7 @@ class TestToggleLineFilter:
 
 class TestLoadData:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.STORE_DATA}.data", IDs.BTN_LOAD_CONFIRM
-        )
+        return _cb_by_input(web_app, f"{IDs.STORE_DATA}.data", IDs.BTN_LOAD_CONFIRM)
 
     def test_no_session_id(self, web_app):
         result = self._fn(web_app)(1, [], None, None, "replace", None)
@@ -857,17 +828,13 @@ class TestLoadData:
         result = self._fn(web_app)(1, entries, None, "sess", "replace", None)
         assert "No recognised files" in result[1]
 
-    def test_upload_loader_exception_reported(
-        self, web_app, edi_data_uri, monkeypatch
-    ):
+    def test_upload_loader_exception_reported(self, web_app, edi_data_uri, monkeypatch):
         import pycsamt.app.web.callbacks.data as data_mod
 
         def _boom(self, paths):
             raise RuntimeError("parse failed")
 
-        monkeypatch.setattr(
-            data_mod.DataController, "load", _boom
-        )
+        monkeypatch.setattr(data_mod.DataController, "load", _boom)
         entries = [
             {
                 "id": "e1",
@@ -898,9 +865,7 @@ class TestLoadData:
         assert store["n_lines"] == 1
         assert "Loaded 1 station" in feedback
 
-    def test_folder_append_mode(
-        self, web_app, edi_data_uri, monkeypatch
-    ):
+    def test_folder_append_mode(self, web_app, edi_data_uri, monkeypatch):
         import pycsamt.app.web.callbacks.data as data_mod
 
         entries = [
@@ -916,9 +881,7 @@ class TestLoadData:
             "station_records": [{"ID": "OLD1", "Line": "L1"}],
             "data_dir": "[browsed]",
         }
-        monkeypatch.setattr(
-            data_mod, "cache_merge_sites", lambda *a, **k: object()
-        )
+        monkeypatch.setattr(data_mod, "cache_merge_sites", lambda *a, **k: object())
         store, feedback, is_open, filelist, selection = self._fn(web_app)(
             1, entries, None, "sess-folder-append", "append", existing_store
         )
@@ -939,9 +902,7 @@ class TestLoadData:
         result = self._fn(web_app)(1, entries, None, "sess", "replace", None)
         assert "Choose a survey folder" in result[1]
 
-    def test_folder_loader_exception_reported(
-        self, web_app, edi_data_uri, monkeypatch
-    ):
+    def test_folder_loader_exception_reported(self, web_app, edi_data_uri, monkeypatch):
         import pycsamt.app.web.callbacks.data as data_mod
 
         def _boom(self, paths, path_to_line=None):

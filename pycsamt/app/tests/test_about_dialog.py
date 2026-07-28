@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -20,7 +19,6 @@ from pycsamt.app.desktop.dialogs.about_dialog import (
     _HeroBanner,
     _LinkButton,
 )
-
 
 # ── _HeroBanner ───────────────────────────────────────────────────────────
 

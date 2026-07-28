@@ -26,7 +26,7 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 required")
 
-from PySide6.QtCore import QEvent, QPoint
+from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import QMessageBox
 
 import pycsamt.app.desktop.panels.map_panel as mp
@@ -34,8 +34,8 @@ from pycsamt.app.desktop.panels.map_panel import (
     MapPanel,
     _build_provider_table,
     _is_geographic,
-    _merc_tick_formatter,
     _MapPopOutButton,
+    _merc_tick_formatter,
     _project_to_merc,
     _reshape_z,
     _rho_app,
@@ -110,9 +110,7 @@ class TestProjectToMerc:
 
     def test_invalid_crs_raises(self):
         with pytest.raises(Exception):
-            _project_to_merc(
-                np.array([0.0]), np.array([0.0]), "NOT_A_REAL_CRS"
-            )
+            _project_to_merc(np.array([0.0]), np.array([0.0]), "NOT_A_REAL_CRS")
 
 
 class TestIsGeographic:
@@ -520,17 +518,13 @@ class TestRhoAtFreqAndDepth:
         panel._sites = [bad]
         assert panel._rho_at_depth(100.0) == {}
 
-    def test_rho_at_freq_rho_comp_exception_is_caught(
-        self, panel, real_sites_df
-    ):
+    def test_rho_at_freq_rho_comp_exception_is_caught(self, panel, real_sites_df):
         """An invalid component key makes _rho_comp raise; must be swallowed."""
         sites, _ = real_sites_df
         panel._sites = sites
         assert panel._rho_at_freq(1000.0, comp="zz") == {}
 
-    def test_rho_at_depth_rho_comp_exception_is_caught(
-        self, panel, real_sites_df
-    ):
+    def test_rho_at_depth_rho_comp_exception_is_caught(self, panel, real_sites_df):
         sites, _ = real_sites_df
         panel._sites = sites
         assert panel._rho_at_depth(100.0, comp="zz") == {}
@@ -542,9 +536,7 @@ class TestRhoAtFreqAndDepth:
         excluded from the output map (the ``val > 0`` guard's False arm)."""
         sites, _ = real_sites_df
         panel._sites = sites
-        monkeypatch.setattr(
-            mp, "_rho_app", lambda zc, freqs: np.zeros_like(freqs)
-        )
+        monkeypatch.setattr(mp, "_rho_app", lambda zc, freqs: np.zeros_like(freqs))
         assert panel._rho_at_freq(1000.0) == {}
 
     def test_rho_at_depth_non_positive_value_excluded(
@@ -552,9 +544,7 @@ class TestRhoAtFreqAndDepth:
     ):
         sites, _ = real_sites_df
         panel._sites = sites
-        monkeypatch.setattr(
-            mp, "_rho_app", lambda zc, freqs: np.zeros_like(freqs)
-        )
+        monkeypatch.setattr(mp, "_rho_app", lambda zc, freqs: np.zeros_like(freqs))
         assert panel._rho_at_depth(100.0) == {}
 
     def test_z_arrays_missing_edi_attr_hits_except(self, panel):
@@ -580,9 +570,7 @@ class TestDrawMapDispatch:
         assert panel._map_type == "station"
 
     def test_empty_dataframe_shows_no_stations_title(self, panel):
-        panel.set_dataframe(
-            pd.DataFrame(columns=["ID", "Latitude", "Longitude"])
-        )
+        panel.set_dataframe(pd.DataFrame(columns=["ID", "Latitude", "Longitude"]))
         assert panel._canvas.axes.get_title() == "No stations loaded"
 
     def test_elevation_map_no_column_shows_no_data(self, panel, coords_df):
@@ -608,9 +596,7 @@ class TestDrawMapDispatch:
         sites, df = real_sites_df
         panel.set_dataframe(df)
         panel.set_sites(sites)
-        panel.redraw(
-            map_type="depth", target_depth_m=200.0, component="xy"
-        )
+        panel.redraw(map_type="depth", target_depth_m=200.0, component="xy")
         assert panel._scatter is not None
         assert "Depth Map" in panel._canvas.axes.get_title()
 
@@ -618,9 +604,7 @@ class TestDrawMapDispatch:
         sites, df = real_sites_df
         panel.set_dataframe(df)
         panel.set_sites(sites)
-        panel.redraw(
-            map_type="resistivity", target_freq_hz=1000.0, component="xy"
-        )
+        panel.redraw(map_type="resistivity", target_freq_hz=1000.0, component="xy")
         assert panel._scatter is not None
         assert "Resistivity Map" in panel._canvas.axes.get_title()
 
@@ -630,14 +614,10 @@ class TestDrawMapDispatch:
         station-map path."""
         sites, df = real_sites_df
         panel.set_dataframe(df)
-        panel.redraw(
-            map_type="elevation", show_profile=False, show_labels=False
-        )
+        panel.redraw(map_type="elevation", show_profile=False, show_labels=False)
         assert panel._annots == {}
 
-    def test_resistivity_map_zero_freq_does_not_raise(
-        self, panel, real_sites_df
-    ):
+    def test_resistivity_map_zero_freq_does_not_raise(self, panel, real_sites_df):
         sites, df = real_sites_df
         panel.set_dataframe(df)
         panel.set_sites(sites)
@@ -677,9 +657,7 @@ class TestStationMapColorBy:
         panel.redraw(color_by="index")
         assert panel._scatter is not None
 
-    def test_color_by_elevation_missing_column_falls_back(
-        self, panel, coords_df
-    ):
+    def test_color_by_elevation_missing_column_falls_back(self, panel, coords_df):
         panel.set_dataframe(coords_df)
         panel.redraw(color_by="elevation")  # no Elevation column present
         assert panel._scatter is not None
@@ -713,9 +691,7 @@ class TestContour:
             target_freq_hz=1000.0,
         )
 
-    def test_contour_unrecognized_mode_falls_through(
-        self, panel, real_sites_df
-    ):
+    def test_contour_unrecognized_mode_falls_through(self, panel, real_sites_df):
         """A mode string matching none of none/lines/filled/filled_labels
         must reach the end of the if/elif chain without drawing or raising."""
         sites, df = real_sites_df
@@ -741,9 +717,7 @@ class TestContour:
         panel.redraw(map_type="elevation", contour_mode="lines")
         assert panel._scatter is not None
 
-    def test_contour_griddata_unavailable(
-        self, panel, real_sites_df, monkeypatch
-    ):
+    def test_contour_griddata_unavailable(self, panel, real_sites_df, monkeypatch):
         sites, df = real_sites_df
         monkeypatch.setattr(mp, "_try_griddata", lambda: None)
         panel.set_dataframe(df)
@@ -768,17 +742,15 @@ class TestContour:
         sites, df = real_sites_df
 
         def _all_nan(*a, **k):
-            pts = a[2] if len(a) > 2 else k.get("xi")
-            shape = np.asarray(a[-2]).shape if len(a) >= 2 else (200, 200)
+            a[2] if len(a) > 2 else k.get("xi")
+            np.asarray(a[-2]).shape if len(a) >= 2 else (200, 200)
             return np.full((200, 200), np.nan)
 
         monkeypatch.setattr(mp, "_try_griddata", lambda: _all_nan)
         panel.set_dataframe(df)
         panel.redraw(map_type="elevation", contour_mode="filled")  # no raise
 
-    def test_colorbar_hidden_when_show_cbar_false(
-        self, panel, real_sites_df
-    ):
+    def test_colorbar_hidden_when_show_cbar_false(self, panel, real_sites_df):
         sites, df = real_sites_df
         panel.set_dataframe(df)
         panel.redraw(map_type="elevation", show_cbar=False)
@@ -789,9 +761,7 @@ class TestContour:
         panel.set_dataframe(df)
         panel.redraw(map_type="elevation", cbar_orient="horizontal")
 
-    def test_colorbar_log_scale_horizontal_formatter(
-        self, panel, real_sites_df
-    ):
+    def test_colorbar_log_scale_horizontal_formatter(self, panel, real_sites_df):
         """log_scale + horizontal orientation exercises the xaxis
         formatter branch (the yaxis branch is covered elsewhere)."""
         sites, df = real_sites_df
@@ -808,9 +778,7 @@ class TestContour:
         sites, df = real_sites_df
         panel.set_dataframe(df)
         panel.set_sites(sites)
-        panel.redraw(
-            map_type="resistivity", log_scale=True, target_freq_hz=1000.0
-        )
+        panel.redraw(map_type="resistivity", log_scale=True, target_freq_hz=1000.0)
 
     def test_colorbar_log_scale_formatter_exception_swallowed(
         self, panel, real_sites_df, monkeypatch
@@ -862,9 +830,7 @@ class TestOverlaysAndValues:
         assert "B" not in vals
 
     def test_profile_lines_single_point_noop(self, panel):
-        panel._add_profile_lines(
-            panel._canvas.axes, np.array([1.0]), np.array([1.0])
-        )
+        panel._add_profile_lines(panel._canvas.axes, np.array([1.0]), np.array([1.0]))
 
     def test_profile_lines_multi_point(self, panel, coords_df):
         panel.set_dataframe(coords_df)
@@ -915,9 +881,7 @@ class TestBasemap:
         assert called.get("source") is not None
         assert panel._info_label.text() == ""
 
-    def test_basemap_provider_not_available(
-        self, panel, coords_df, monkeypatch
-    ):
+    def test_basemap_provider_not_available(self, panel, coords_df, monkeypatch):
         ctx = _try_ctx()
         if ctx is None:
             pytest.skip("contextily not installed")
@@ -943,27 +907,21 @@ class TestBasemap:
         panel.redraw(provider="None")
         assert panel._scatter is not None
 
-    def test_basemap_crs_projection_error_falls_back(
-        self, panel, coords_df
-    ):
+    def test_basemap_crs_projection_error_falls_back(self, panel, coords_df):
         panel.set_dataframe(coords_df)
         panel.redraw(provider="OpenStreetMap", source_crs="NOT_A_REAL_CRS")
         assert "CRS projection error" in panel._info_label.text()
         # Reset back to a valid CRS so other tests using this panel
         # instance (there are none, function-scoped) aren't affected.
 
-    def test_ctx_unavailable_offers_install(
-        self, panel, coords_df, monkeypatch
-    ):
+    def test_ctx_unavailable_offers_install(self, panel, coords_df, monkeypatch):
         monkeypatch.setattr(mp, "_try_ctx", lambda: None)
         called = {}
 
         def fake_ask(self):
             called["asked"] = True
 
-        monkeypatch.setattr(
-            MapPanel, "_ask_install_contextily", fake_ask
-        )
+        monkeypatch.setattr(MapPanel, "_ask_install_contextily", fake_ask)
         panel.set_dataframe(coords_df)
         panel.redraw(provider="OpenStreetMap")
         assert called.get("asked") is True
@@ -982,9 +940,7 @@ class TestBasemap:
         label = fmt(0, 0)
         assert "°" in label
 
-    def test_format_merc_ticks_exception_swallowed(
-        self, panel, monkeypatch
-    ):
+    def test_format_merc_ticks_exception_swallowed(self, panel, monkeypatch):
         monkeypatch.setattr(
             mp,
             "_merc_tick_formatter",
@@ -1005,9 +961,9 @@ class TestAskInstallContextily:
         # no_modal_dialogs autouse fixture makes QMessageBox.question -> Yes
         called = {}
         monkeypatch.setattr(
-            panel, "_install_contextily", lambda: called.setdefault(
-                "installed", True
-            )
+            panel,
+            "_install_contextily",
+            lambda: called.setdefault("installed", True),
         )
         panel._ask_install_contextily()
         assert called.get("installed") is True
@@ -1016,15 +972,13 @@ class TestAskInstallContextily:
         monkeypatch.setattr(
             QMessageBox,
             "question",
-            staticmethod(
-                lambda *a, **k: QMessageBox.StandardButton.No
-            ),
+            staticmethod(lambda *a, **k: QMessageBox.StandardButton.No),
         )
         called = {}
         monkeypatch.setattr(
-            panel, "_install_contextily", lambda: called.setdefault(
-                "installed", True
-            )
+            panel,
+            "_install_contextily",
+            lambda: called.setdefault("installed", True),
         )
         panel._ask_install_contextily()
         assert "installed" not in called

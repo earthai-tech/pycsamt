@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from pycsamt.map._core import MapData, StationRecord
 from pycsamt.map.view import MapView
@@ -284,7 +283,6 @@ class TestReprojectView:
 
     def test_utm_reprojects_using_transform_xy(self, monkeypatch):
         import pycsamt.map.overlays as overlays_mod
-
         from pycsamt.app.mapview._render import reproject_view
 
         def fake_transform_xy(lon, lat, crs):
@@ -300,7 +298,6 @@ class TestReprojectView:
 
     def test_transform_failure_returns_same_view(self, monkeypatch):
         import pycsamt.map.overlays as overlays_mod
-
         from pycsamt.app.mapview._render import reproject_view
 
         def boom(*a, **k):
@@ -326,40 +323,32 @@ class TestProjectToCrs:
     def test_geo_mode_returns_none_pair(self):
         from pycsamt.app.mapview._render import project_to_crs
 
-        east, north, code = project_to_crs(
-            [1.0], [2.0], "geo", None, "N", None
-        )
+        east, north, code = project_to_crs([1.0], [2.0], "geo", None, "N", None)
         assert east is None and north is None
         assert code == 4326
 
     def test_utm_mode_returns_transformed_arrays(self, monkeypatch):
         import pycsamt.map.overlays as overlays_mod
-
         from pycsamt.app.mapview._render import project_to_crs
 
         def fake_transform_xy(lon, lat, crs):
             return np.asarray(lon) * 2, np.asarray(lat) * 2
 
         monkeypatch.setattr(overlays_mod, "transform_xy", fake_transform_xy)
-        east, north, code = project_to_crs(
-            [1.0, 2.0], [3.0, 4.0], "utm", 32, "N", None
-        )
+        east, north, code = project_to_crs([1.0, 2.0], [3.0, 4.0], "utm", 32, "N", None)
         assert list(east) == [2.0, 4.0]
         assert list(north) == [6.0, 8.0]
         assert code == 32632
 
     def test_transform_failure_returns_none_pair(self, monkeypatch):
         import pycsamt.map.overlays as overlays_mod
-
         from pycsamt.app.mapview._render import project_to_crs
 
         def boom(*a, **k):
             raise RuntimeError("boom")
 
         monkeypatch.setattr(overlays_mod, "transform_xy", boom)
-        east, north, code = project_to_crs(
-            [1.0], [2.0], "utm", 32, "N", None
-        )
+        east, north, code = project_to_crs([1.0], [2.0], "utm", 32, "N", None)
         assert east is None and north is None
         assert code == 32632
 
@@ -385,9 +374,7 @@ class TestFigureFor:
         from pycsamt.app.mapview._render import figure_for
 
         view = _view()
-        fig = figure_for(
-            "map", view, {}, masked=["S00", "S01", "S02"]
-        )
+        fig = figure_for("map", view, {}, masked=["S00", "S01", "S02"])
         assert "hidden or masked" in fig.layout.annotations[0].text
 
     def test_map_view_sets_uirevision(self):

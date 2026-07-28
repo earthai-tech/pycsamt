@@ -78,10 +78,9 @@ class ParseMixin:
         class Finder(ParseMixin):
             recursive = True
 
+
         f = Finder()
-        paths = list(f._iter_edi_files(
-            ['data', 'logs/*.edi'], root=Path('.')
-        ))
+        paths = list(f._iter_edi_files(["data", "logs/*.edi"], root=Path(".")))
 
     See Also
     --------
@@ -159,11 +158,7 @@ class ParseMixin:
             if _is_glob(str(p)):
                 if p.is_absolute():
                     parent, name = p.parent, p.name
-                    it = (
-                        parent.rglob(name)
-                        if "**" in name
-                        else parent.glob(name)
-                    )
+                    it = parent.rglob(name) if "**" in name else parent.glob(name)
                 else:
                     pat = str(p)
                     it = base.rglob(pat) if "**" in pat else base.glob(pat)
@@ -191,8 +186,7 @@ class ParseMixin:
                     if not s:
                         continue
                     if s.startswith(">=") or (
-                        s.startswith(">")
-                        and not s.upper().startswith(">HEAD")
+                        s.startswith(">") and not s.upper().startswith(">HEAD")
                     ):
                         if in_head:
                             break
@@ -264,8 +258,8 @@ class CoreParser(ParseMixin):
     --------
     Parse a folder and a glob, keep the first copy::
 
-        cp = CoreParser(on_dup='keep', recursive=True)
-        edis = cp.parse(['data/edi', 'more/*.edi'])
+        cp = CoreParser(on_dup="keep", recursive=True)
+        edis = cp.parse(["data/edi", "more/*.edi"])
         errs = cp.errors()
 
     See Also
@@ -319,9 +313,7 @@ class CoreParser(ParseMixin):
         self._errors.clear()
 
         for p in self._iter_edi_files(
-            sources
-            if isinstance(sources, list)
-            else list(self._iter_paths(sources))
+            sources if isinstance(sources, list) else list(self._iter_paths(sources))
         ):
             res = self._read_one(p)
             self.results.append(res)
@@ -422,8 +414,8 @@ class CBBase:
     --------
     Build a collection indexed by station::
 
-        edis = CoreParser().parse(['data/edi'])
-        coll = CBBase(edis, index_by='station')
+        edis = CoreParser().parse(["data/edi"])
+        coll = CBBase(edis, index_by="station")
         for key, ed in coll.items():
             print(key, ed.Z.n_freq)
 

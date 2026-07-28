@@ -222,9 +222,7 @@ class InversionConfig(PyCSAMTObject, MetadataMixin):
         )
 
     @classmethod
-    def from_file(
-        cls, path: str | Path, *, strict: bool = True
-    ) -> InversionConfig:
+    def from_file(cls, path: str | Path, *, strict: bool = True) -> InversionConfig:
         """Load a Python/JSON/YAML configuration file."""
         return cls(**read_config_file(path, cls, strict=strict))
 

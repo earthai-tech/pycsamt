@@ -394,7 +394,9 @@ def _is_landing_page(pagename, doctree):
     )
 
 
-def _configure_secondary_sidebar(app, pagename, templatename, context, doctree):
+def _configure_secondary_sidebar(
+    app, pagename, templatename, context, doctree
+):
     """Decide the right-hand sidebar per page: drop it, or pick its contents.
 
     Runs before the theme's own ``set_secondary_sidebar_items`` (priority 400
@@ -421,7 +423,9 @@ def _configure_secondary_sidebar(app, pagename, templatename, context, doctree):
 
 
 def setup(app):
-    app.connect("html-page-context", _configure_secondary_sidebar, priority=400)
+    app.connect(
+        "html-page-context", _configure_secondary_sidebar, priority=400
+    )
 
 
 # -- LaTeX / PDF ---------------------------------------------------------------

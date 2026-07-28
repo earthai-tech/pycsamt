@@ -82,12 +82,8 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
     edi = _get_edi(path, verbose=verbose)
     freq = getattr(edi.Z, "freq", None)
     n_freq = int(getattr(edi.Z, "n_freq", 0) or 0)
-    freq_min = (
-        float(freq.min()) if freq is not None and freq.size else float("nan")
-    )
-    freq_max = (
-        float(freq.max()) if freq is not None and freq.size else float("nan")
-    )
+    freq_min = float(freq.min()) if freq is not None and freq.size else float("nan")
+    freq_max = float(freq.max()) if freq is not None and freq.size else float("nan")
 
     head = getattr(edi, "Head", None) or {}
     lat = float(getattr(head, "lat", None) or float("nan"))
@@ -161,32 +157,18 @@ def _info_collection(
     for edi in coll:
         freq = getattr(edi.Z, "freq", None)
         n_freq = int(getattr(edi.Z, "n_freq", 0) or 0)
-        freq_min = (
-            float(freq.min())
-            if freq is not None and freq.size
-            else float("nan")
-        )
-        freq_max = (
-            float(freq.max())
-            if freq is not None and freq.size
-            else float("nan")
-        )
+        freq_min = float(freq.min()) if freq is not None and freq.size else float("nan")
+        freq_max = float(freq.max()) if freq is not None and freq.size else float("nan")
 
         head = getattr(edi, "Head", None)
         lat = (
-            float(getattr(head, "lat", None) or float("nan"))
-            if head
-            else float("nan")
+            float(getattr(head, "lat", None) or float("nan")) if head else float("nan")
         )
         lon = (
-            float(getattr(head, "lon", None) or float("nan"))
-            if head
-            else float("nan")
+            float(getattr(head, "lon", None) or float("nan")) if head else float("nan")
         )
         elev = (
-            float(getattr(head, "elev", None) or float("nan"))
-            if head
-            else float("nan")
+            float(getattr(head, "elev", None) or float("nan")) if head else float("nan")
         )
 
         rows.append(

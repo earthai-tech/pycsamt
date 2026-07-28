@@ -35,9 +35,7 @@ class _FakeTipper:
 
 
 class _FakeSite:
-    def __init__(
-        self, station, z, freq, *, tipper=None, east=None, north=None
-    ):
+    def __init__(self, station, z, freq, *, tipper=None, east=None, north=None):
         self.station = station
         self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
@@ -80,9 +78,7 @@ def _site(
 
 
 def _profile(n_sites: int = 4) -> list:
-    return [
-        _site(f"S{i:02d}", east=i * 200.0, north=0.0) for i in range(n_sites)
-    ]
+    return [_site(f"S{i:02d}", east=i * 200.0, north=0.0) for i in range(n_sites)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -153,9 +149,7 @@ class TestPlotInductionArrows:
 
     def test_convention_wiese(self):
         sites = _profile(3)
-        result = plot_induction_arrows(
-            sites, periods=[1.0], convention="wiese"
-        )
+        result = plot_induction_arrows(sites, periods=[1.0], convention="wiese")
         plt.close("all")
         assert result is not None
 

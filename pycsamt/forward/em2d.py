@@ -104,6 +104,12 @@ class ForwardResponse2D:
         TM apparent resistivity [Ω·m].
     phase_tm : ndarray, shape (n_freqs, n_stations)
         TM impedance phase [degrees].
+    residual_te, residual_tm : ndarray, shape (n_freqs,)
+        Relative linear-system residual ``norm(A @ x - b) /
+        norm(b)`` of the direct sparse solve for each mode, one
+        value per frequency. This measures the achieved numerical
+        accuracy of ``scipy.sparse.linalg.spsolve``; it is not an
+        iteration count, since the solver is direct.
     grid : Grid2D
         The model grid used for the forward run.
     """
@@ -116,6 +122,8 @@ class ForwardResponse2D:
     phase_te: np.ndarray
     rho_a_tm: np.ndarray
     phase_tm: np.ndarray
+    residual_te: np.ndarray
+    residual_tm: np.ndarray
     grid: Grid2D = field(repr=False)
 
     # ─── convenience ─────────────────────────────────────────────────────
@@ -170,11 +178,7 @@ class ForwardResponse2D:
         """
         parts = []
         for mode_key in (
-            ["te"]
-            if mode == "te"
-            else ["tm"]
-            if mode == "tm"
-            else ["te", "tm"]
+            ["te"] if mode == "te" else ["tm"] if mode == "tm" else ["te", "tm"]
         ):
             rho = getattr(self, f"rho_a_{mode_key}")  # (n_freqs, n_stations)
             phi = getattr(self, f"phase_{mode_key}")
@@ -223,7 +227,9 @@ class ForwardResponse2D:
         ax[1].semilogx(per, self.phase_tm[:, station], "r-s", ms=3)
         ax[1].set_ylabel("Phase  (°)")
         ax[1].set_xlabel("Period  (s)")
-        ax[1].set_ylim(0, 90)
+        # Zyx = -Zxy for a 1-D earth, so phase_tm normally falls in a
+        # different quadrant than phase_te; let matplotlib auto-scale
+        # rather than assume both share one fixed range.
         plt.tight_layout()
         return ax
 
@@ -314,6 +320,18 @@ def _node_index(i: int, j: int, nx1: int) -> int:
     return i * nx1 + j
 
 
+def _relative_residual(
+    A: sparse.csr_matrix,
+    x: np.ndarray,
+    b: np.ndarray,
+) -> float:
+    """Return ``norm(A @ x - b) / norm(b)`` for a direct solve."""
+    denominator = np.linalg.norm(b)
+    if denominator <= 0.0:
+        denominator = 1e-300
+    return float(np.linalg.norm(A @ x - b) / denominator)
+
+
 def _assemble_te(
     grid: Grid2D,
     omega: float,
@@ -382,9 +400,7 @@ def _assemble_te(
             a_bl = dx_l * dz_d
             a_br = dx_r * dz_d
             a_tot = a_tl + a_tr + a_bl + a_br
-            sigma_n = (
-                a_tl * s_tl + a_tr * s_tr + a_bl * s_bl + a_br * s_br
-            ) / a_tot
+            sigma_n = (a_tl * s_tl + a_tr * s_tr + a_bl * s_bl + a_br * s_br) / a_tot
             react = 1j * omega * MU0 * sigma_n
 
             # ── diagonal ───────────────────────────────────────────────
@@ -412,9 +428,7 @@ def _assemble_te(
             cols.append(k_zu)
             vals.append(c_zu)
 
-    return sparse.csr_matrix(
-        (vals, (rows, cols)), shape=(n, n), dtype=complex
-    )
+    return sparse.csr_matrix((vals, (rows, cols)), shape=(n, n), dtype=complex)
 
 
 def _assemble_tm(
@@ -427,10 +441,31 @@ def _assemble_tm(
 
         ∂/∂x(ρ ∂H_y/∂x) + ∂/∂z(ρ ∂H_y/∂z) − iωμ₀ H_y = 0
 
-    where ρ = 1/σ is resistivity.  Interface resistivities are computed as
-    depth-weighted (x-interfaces) or width-weighted (z-interfaces) arithmetic
-    means of the adjacent cell resistivities, which gives second-order accuracy
-    and correctly reduces to the TE equation for a uniform medium.
+    where ρ = 1/σ is resistivity.  At an interior node, the coefficient
+    for each direction's second difference is evaluated at a point that
+    sits exactly on a material boundary in the *other* direction: the
+    x-direction coefficient connecting node (i, j) to (i, j+1) lies on
+    the shared edge between cell rows i-1 (above) and i (below), and
+    the z-direction coefficient connecting (i, j) to (i+1, j) lies on
+    the shared edge between cell columns j-1 (left) and j (right).  In
+    both cases the two adjacent cells act as parallel current paths
+    for that direction's flux (they carry independent current side by
+    side, not current passing through one cell then the other), so the
+    physically- and flux-consistent interface value is a
+    thickness-weighted **harmonic** mean of resistivity (equivalently
+    a thickness-weighted *arithmetic* mean of conductivity) — the same
+    parallel-conductance combination :func:`_surface_impedance_tm`
+    already uses when it averages conductivity, not resistivity,
+    across laterally adjacent surface cells.  Using an arithmetic mean
+    of resistivity here instead is the standard convention for the
+    unrelated case of two cells in *series* along the differentiation
+    direction, and was an inconsistency with that surface-extraction
+    step for genuinely heterogeneous 2-D structure (a laterally or
+    vertically uniform earth is unaffected either way, since averaging
+    two equal values gives the same result regardless of method).
+    This still reduces exactly to the TE equation for a uniform
+    medium, since harmonic and arithmetic means agree when the two
+    inputs are equal.
 
     Returns
     -------
@@ -467,18 +502,25 @@ def _assemble_tm(
 
             # ── ρ at x-directed interfaces ───────────────────────────────
             # Right interface (between node j and j+1, at depth z_nodes[i]):
-            # arithmetic mean of the two cells straddling this depth.
-            rho_xr = 0.5 * (rho[i - 1, j] + rho[i, j])
+            # thickness-weighted harmonic mean of the two cells straddling
+            # this depth (parallel current paths; see the docstring).
+            rho_xr = (dz_u + dz_d) / (dz_u / rho[i - 1, j] + dz_d / rho[i, j])
 
             # Left interface (between node j-1 and j):
-            rho_xl = 0.5 * (rho[i - 1, j - 1] + rho[i, j - 1])
+            rho_xl = (dz_u + dz_d) / (
+                dz_u / rho[i - 1, j - 1] + dz_d / rho[i, j - 1]
+            )
 
             # ── ρ at z-directed interfaces ───────────────────────────────
             # Lower interface (between node i and i+1, at x_nodes[j]):
-            rho_zd = 0.5 * (rho[i, j - 1] + rho[i, j])
+            # thickness-weighted harmonic mean of the two cells straddling
+            # this position (parallel current paths; see the docstring).
+            rho_zd = (dx_l + dx_r) / (dx_l / rho[i, j - 1] + dx_r / rho[i, j])
 
             # Upper interface (between node i-1 and i):
-            rho_zu = 0.5 * (rho[i - 1, j - 1] + rho[i - 1, j])
+            rho_zu = (dx_l + dx_r) / (
+                dx_l / rho[i - 1, j - 1] + dx_r / rho[i - 1, j]
+            )
 
             # ── FD coefficients ──────────────────────────────────────────
             c_xr = rho_xr / (dx_r * dx_avg)
@@ -514,9 +556,7 @@ def _assemble_tm(
             cols.append(k_zu)
             vals.append(c_zu)
 
-    return sparse.csr_matrix(
-        (vals, (rows, cols)), shape=(n, n), dtype=complex
-    )
+    return sparse.csr_matrix((vals, (rows, cols)), shape=(n, n), dtype=complex)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -639,9 +679,12 @@ def _surface_impedance_tm(
 ) -> np.ndarray:
     """Compute Z_yx = −E_x / H_y at the surface nodes.
 
-    From Ampere's law:  ∂H_y/∂z = σ E_x
-    E_x ≈ (1/σ_top) * ∂H_y/∂z
-    Z_yx = −E_x / H_y  (negative by convention)
+    From Ampere's law in 2-D (no y-dependence), the x-component of
+    curl(H) is ``-∂H_y/∂z``, so ``-∂H_y/∂z = σ E_x`` and
+    ``E_x = -(1/σ_top) * ∂H_y/∂z``. Omitting this negative sign
+    previously made ``Z_yx`` come out equal to ``Z_xy`` instead of
+    ``-Z_xy`` on a half-space, contradicting both this module's own
+    documented convention and the standard MT sign convention.
 
     Returns
     -------
@@ -656,7 +699,7 @@ def _surface_impedance_tm(
     sigma_nodes[-1] = sigma_top[-1]
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        Ex = np.where(sigma_nodes > 0.0, dHy_dz / sigma_nodes, 0.0 + 0j)
+        Ex = np.where(sigma_nodes > 0.0, -dHy_dz / sigma_nodes, 0.0 + 0j)
         Zyx = np.where(np.abs(hy_surface) > 1e-30, -Ex / hy_surface, 0.0 + 0j)
     return Zyx
 
@@ -767,6 +810,8 @@ class MT2DForward:
 
         zxy_all = np.zeros((nf, ns), dtype=complex)
         zyx_all = np.zeros((nf, ns), dtype=complex)
+        residual_te = np.zeros(nf)
+        residual_tm = np.zeros(nf)
 
         sigma_top = grid.conductivity[0, :]  # top cell row
 
@@ -781,6 +826,7 @@ class MT2DForward:
             b_te = _bc_te(grid, omega)
             A_te, b_te = _apply_dirichlet(A_te, b_te, grid)
             ey_flat = spsolve(A_te, b_te)
+            residual_te[fi] = _relative_residual(A_te, ey_flat, b_te)
             ey_grid = ey_flat.reshape(grid.nz + 1, nx1)  # (nz+1, nx+1)
 
             ey_surf = ey_grid[0, :]
@@ -796,6 +842,7 @@ class MT2DForward:
             b_tm = _bc_tm(grid, omega)
             A_tm, b_tm = _apply_dirichlet(A_tm, b_tm, grid)
             hy_flat = spsolve(A_tm, b_tm)
+            residual_tm[fi] = _relative_residual(A_tm, hy_flat, b_tm)
             hy_grid = hy_flat.reshape(grid.nz + 1, nx1)
 
             hy_surf = hy_grid[0, :]
@@ -811,12 +858,9 @@ class MT2DForward:
         if self.verbose:
             print(f"  [MT2D] {nf} frequencies done.          ")
 
-        rho_a_te, phase_te = _z_to_rho_phase(
-            zxy_all, 2.0 * np.pi * freqs[:, None]
-        )
-        rho_a_tm, phase_tm = _z_to_rho_phase(
-            zyx_all, 2.0 * np.pi * freqs[:, None]
-        )
+        omega_col = 2.0 * np.pi * freqs[:, None]
+        rho_a_te, phase_te = _z_to_rho_phase(zxy_all, omega_col)
+        rho_a_tm, phase_tm = _z_to_rho_phase(zyx_all, omega_col)
 
         return ForwardResponse2D(
             freqs=freqs,
@@ -827,6 +871,8 @@ class MT2DForward:
             phase_te=phase_te,
             rho_a_tm=rho_a_tm,
             phase_tm=phase_tm,
+            residual_te=residual_te,
+            residual_tm=residual_tm,
             grid=grid,
         )
 

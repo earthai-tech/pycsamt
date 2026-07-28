@@ -62,9 +62,7 @@ class _DimWorker(QThread):
     done = Signal(object, object)  # (DataFrame, Figure|None)
     error = Signal(str)
 
-    def __init__(
-        self, sites, skew_th: float, ellipt_th: float, show_map: bool
-    ):
+    def __init__(self, sites, skew_th: float, ellipt_th: float, show_map: bool):
         super().__init__()
         self._sites = sites
         self._skew_th = skew_th
@@ -254,9 +252,7 @@ class DimensionalityDialog(QDialog):
         if map_fig is not None:
             self._map_canvas.show_figure(map_fig)
         total = len(df)
-        counts = (
-            df["dim"].value_counts().to_dict() if "dim" in df.columns else {}
-        )
+        counts = df["dim"].value_counts().to_dict() if "dim" in df.columns else {}
         self._status_lbl.setText(
             f"{total} rows — "
             f"1D: {counts.get(0, 0)}  2D: {counts.get(1, 0)}  3D: {counts.get(2, 0)}"
@@ -293,9 +289,7 @@ class DimensionalityDialog(QDialog):
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 return it
 
-            self._table.setItem(
-                r, 0, _item(row[station_col] if station_col else "—")
-            )
+            self._table.setItem(r, 0, _item(row[station_col] if station_col else "—"))
             self._table.setItem(
                 r, 1, _item(f"{row[period_col]:.4g}" if period_col else "—")
             )

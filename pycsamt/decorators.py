@@ -88,7 +88,6 @@ def has_fit(
     ... class Loader:
     ...     def read(self, src, **kw):
     ...         print(f"reading {src!r}")
-    ...
     >>> loader = Loader()
     >>> loader.fit("dataset.avg")
     reading 'dataset.avg'
@@ -96,7 +95,7 @@ def has_fit(
     Attempting to decorate a class that lacks both *read* **and**
     *fit* while ``error="raise"``::
 
-        @has_fit()                # default is "raise"
+        @has_fit()  # default is "raise"
         class Empty:
             pass
 
@@ -170,9 +169,7 @@ class Deprecated:
 
     def __init__(self, reason: str) -> None:
         if not isinstance(reason, str) or not reason.strip():
-            raise ValueError(
-                "A non-empty deprecation reason must be provided."
-            )
+            raise ValueError("A non-empty deprecation reason must be provided.")
         self.reason = reason
 
     def __call__(self, obj: F) -> F:
@@ -338,9 +335,7 @@ def isdf(func):
 
         # Get 'data' argument from bound arguments
         data = bound_args.arguments.get(data_param_name, None)
-        columns = bound_args.arguments.get(
-            "columns", kwargs.get("columns", None)
-        )
+        columns = bound_args.arguments.get("columns", kwargs.get("columns", None))
         if isinstance(columns, str):
             columns = [columns]
 
@@ -621,7 +616,9 @@ def ensure_fit(
 
             @functools.wraps(cls.read)
             def _fit(self, *args, **kwargs):  # type: ignore[no-self-use]
-                return self.read(*args, **kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+                return self.read(
+                    *args, **kwargs
+                )  # pyright: ignore[reportGeneralTypeIssues]
 
             cls.fit = _fit  # type: ignore[attr-defined]
             return cls

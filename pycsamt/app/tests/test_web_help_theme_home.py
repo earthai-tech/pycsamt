@@ -33,9 +33,7 @@ def test_toggle_about_opens_on_about_button(web_app, monkeypatch):
 
     fn = _toggle_about_fn(web_app)
     cc.context_value.set(
-        AttributeDict(
-            triggered_inputs=[{"prop_id": f"{IDs.BTN_ABOUT}.n_clicks"}]
-        )
+        AttributeDict(triggered_inputs=[{"prop_id": f"{IDs.BTN_ABOUT}.n_clicks"}])
     )
     try:
         assert fn(1, 0, False) is True
@@ -48,9 +46,7 @@ def test_toggle_about_closes_on_close_button(web_app):
 
     fn = _toggle_about_fn(web_app)
     cc.context_value.set(
-        AttributeDict(
-            triggered_inputs=[{"prop_id": "about-close-btn.n_clicks"}]
-        )
+        AttributeDict(triggered_inputs=[{"prop_id": "about-close-btn.n_clicks"}])
     )
     try:
         assert fn(0, 1, True) is False
@@ -65,8 +61,7 @@ def _toggle_theme_fn(web_app):
     matches = [
         k
         for k in web_app.callback_map
-        if f"{IDs.STORE_THEME}.data" in k
-        and f"{IDs.BTN_THEME}.children" in k
+        if f"{IDs.STORE_THEME}.data" in k and f"{IDs.BTN_THEME}.children" in k
     ]
     assert len(matches) == 1, matches
     return _unwrap(web_app.callback_map[matches[0]])
@@ -107,9 +102,7 @@ def _stub_qc_tab_content(monkeypatch):
 
     from pycsamt.app.web.pages import qc_page
 
-    monkeypatch.setattr(
-        qc_page, "_qc_tab_content", lambda: None, raising=False
-    )
+    monkeypatch.setattr(qc_page, "_qc_tab_content", lambda: None, raising=False)
     return types.SimpleNamespace()
 
 

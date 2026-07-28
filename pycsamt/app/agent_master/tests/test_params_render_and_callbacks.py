@@ -173,9 +173,7 @@ class TestCollectParams:
                 {"key": "epochs", "default": 500},
             ]
         }
-        result = _collect_params(
-            schema, {"n_layers": 15}, {"unrelated": "kept"}
-        )
+        result = _collect_params(schema, {"n_layers": 15}, {"unrelated": "kept"})
         assert result["n_layers"] == 15
         assert result["epochs"] == 500  # falls back to default
         assert result["unrelated"] == "kept"
@@ -246,9 +244,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -276,9 +272,7 @@ class TestOpenParamModal:
 
     def test_opens_with_fields_and_steps(self, agent_app):
         fn = self._fn(agent_app)
-        is_open, title, desc, form, line_to_st = fn(
-            {"workflow": "denoise"}, {}, {}
-        )
+        is_open, title, desc, form, line_to_st = fn({"workflow": "denoise"}, {}, {})
         assert is_open is True
         assert "Data Denoising" in str(title) or "Denoising" in str(desc)
         assert len(form) > 0
@@ -300,8 +294,7 @@ class TestStationsForLines:
             k
             for k, entry in agent_app.callback_map.items()
             if entry["inputs"]
-            and entry["inputs"][0]["id"]
-            == '{"key":"lines","type":"am-pf"}'
+            and entry["inputs"][0]["id"] == '{"key":"lines","type":"am-pf"}'
         ]
         assert len(matches) == 1, matches
         return _unwrap(agent_app.callback_map[matches[0]])
@@ -310,7 +303,10 @@ class TestStationsForLines:
         fn = self._fn(agent_app)
         line_to_st = {"L1": ["a", "b"], "L2": ["c"]}
         opts = fn(["L1"], line_to_st)
-        assert opts == [{"label": "a", "value": "a"}, {"label": "b", "value": "b"}]
+        assert opts == [
+            {"label": "a", "value": "a"},
+            {"label": "b", "value": "b"},
+        ]
 
     def test_empty_selection_returns_all_stations(self, agent_app):
         fn = self._fn(agent_app)
@@ -357,17 +353,20 @@ class TestSubmitParams:
         import dash._callback_context as cc
         from dash._utils import AttributeDict
 
-        pf_list = [
-            {"id": {"type": "am-pf", "key": k}, "value": v}
-            for k, v in pf_pairs
-        ]
-        ps_list = [
-            {"id": {"type": "am-ps", "key": k}, "value": v}
-            for k, v in ps_pairs
-        ]
+        pf_list = [{"id": {"type": "am-pf", "key": k}, "value": v} for k, v in pf_pairs]
+        ps_list = [{"id": {"type": "am-ps", "key": k}, "value": v} for k, v in ps_pairs]
         cc.context_value.set(
             AttributeDict(
-                states_list=[None, None, None, None, None, None, pf_list, ps_list]
+                states_list=[
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    pf_list,
+                    ps_list,
+                ]
             )
         )
 
@@ -474,9 +473,7 @@ class TestSubmitParams:
         assert edi_use["groups"] == {"L1": ["a.edi"]}
         assert edi_use["selected_lines"] == ["L1"]
 
-    def test_replaces_waiting_bubble_with_thinking(
-        self, agent_app, monkeypatch
-    ):
+    def test_replaces_waiting_bubble_with_thinking(self, agent_app, monkeypatch):
         from pycsamt.app.agent_master.callbacks import params as params_mod
 
         monkeypatch.setattr(params_mod, "_new_job", lambda: "job-3")

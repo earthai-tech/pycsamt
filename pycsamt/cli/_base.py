@@ -88,11 +88,7 @@ class _RichGroup(click.Group):
     """Click Group that shows a rich help panel when called without args."""
 
     def invoke(self, ctx: click.Context) -> Any:
-        if (
-            not ctx.protected_args
-            and not ctx.args
-            and not ctx.invoked_subcommand
-        ):
+        if not ctx.protected_args and not ctx.args and not ctx.invoked_subcommand:
             if _RICH:
                 _print_rich_help(ctx)
             else:

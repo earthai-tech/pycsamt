@@ -76,8 +76,9 @@ Build the data without plotting (e.g. for a custom figure)::
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
-from typing import Any, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -275,7 +276,10 @@ def build_topo_section(
         raise ValueError("model_unit must be 'm' or 'km'.")
 
     grid = _extract_grid(
-        model, station_x=station_x, station_names=station_names, unit=model_unit
+        model,
+        station_x=station_x,
+        station_names=station_names,
+        unit=model_unit,
     )
 
     x_centers_km = _to_km(grid.x_centers, grid.unit)
@@ -360,9 +364,7 @@ def build_topo_section(
         station_x_km=station_x_km,
         station_names=names,
         depth_min_km=depth_min_km,
-        depth_max_km=(
-            float(z_centers_km.max()) if z_centers_km.size else depth_min_km
-        ),
+        depth_max_km=(float(z_centers_km.max()) if z_centers_km.size else depth_min_km),
         exaggeration=float(exaggeration),
         log_rho=bool(log_rho),
         method=grid.method,
@@ -497,7 +499,10 @@ def plot_topo_section(
     Cropped to the shallow 1.5 km and rendered as a pseudosection:
 
     >>> ax = plot_topo_section(
-    ...     result, sites=sites, kind="imshow", depth_max=1500.0,
+    ...     result,
+    ...     sites=sites,
+    ...     kind="imshow",
+    ...     depth_max=1500.0,
     ... )  # doctest: +SKIP
     """
     import matplotlib.pyplot as plt
@@ -579,9 +584,7 @@ def plot_topo_section(
         # rather than tinted with the fill colour. clip_below_surface stays
         # True so mismatched-column gaps (see docs/user_guide/topo/concepts)
         # blend into that same white instead of standing out separately.
-        topo_cfg = TopoConfig(
-            station_pins_at_surface=show_stations, fill_alpha=0.0
-        )
+        topo_cfg = TopoConfig(station_pins_at_surface=show_stations, fill_alpha=0.0)
     if station_marker is None:
         from ..api.station import PYCSAMT_STATION_RENDERING, StationMarkerStyle
 
@@ -610,7 +613,13 @@ def plot_topo_section(
         ax.set_xlabel("Profile distance (km)")
         ax.set_ylabel("Elevation (km)")
         if section_style.figure.title:
-            ax.set_title(_title(data, title))
+            # Rotated station names occupy the band immediately above the
+            # terrain.  Reserve that band so the section title cannot pass
+            # through the labels on dense profiles.
+            ax.set_title(
+                _title(data, title),
+                pad=62 if (show_stations and show_station_names) else None,
+            )
         ax.grid(bool(section_style.axis.grid))
         if ax.yaxis_inverted():
             ax.invert_yaxis()
@@ -651,7 +660,10 @@ def plot_topo_section(
             interpolation="nearest",
         )
         section_style.apply_axis(
-            ax, xlabel="Station", ylabel="Depth (km)", title=_title(data, title)
+            ax,
+            xlabel="Station",
+            ylabel="Depth (km)",
+            title=_title(data, title),
         )
         ax.set_xlim(-0.5, n_x - 0.5)
         if colorbar:
@@ -836,11 +848,7 @@ def _extract_grid(
         return info
 
     # 4. Native Occam2D InversionResult (rho_2d + mesh, no x_centers).
-    if (
-        hasattr(model, "rho_2d")
-        and hasattr(model, "mesh")
-        and getattr(model, "rho_2d") is not None
-    ):
+    if hasattr(model, "rho_2d") and hasattr(model, "mesh") and model.rho_2d is not None:
         from ..interp import ResistivityModel
 
         rm = ResistivityModel.from_occam2d(model)
@@ -974,14 +982,18 @@ def _resolve_topography(
     if topo_source not in valid_sources:
         raise ValueError(f"topo_source must be one of {sorted(valid_sources)}.")
 
-    names = list(station_names) if station_names is not None else list(
-        grid.station_names
+    names = (
+        list(station_names) if station_names is not None else list(grid.station_names)
     )
 
     if topo_source == "sites" or (topo_source == "auto" and sites is not None):
         if sites is None:
             raise ValueError("topo_source='sites' requires the `sites` argument.")
-        from .extract import extract_chainage, extract_elevation, extract_station_names
+        from .extract import (
+            extract_chainage,
+            extract_elevation,
+            extract_station_names,
+        )
 
         chain_km = extract_chainage(sites)
         elev_m = extract_elevation(sites)

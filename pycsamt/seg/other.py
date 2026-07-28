@@ -136,9 +136,7 @@ class OtherSECT(EDIComponentBase):
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         start = None
         for i, ln in enumerate(lines):
@@ -303,8 +301,7 @@ class OtherIO(EDIComponentBase):
     Examples
     --------
     >>> hdr = OtherSECT.from_file("site.edi")
-    >>> io = OtherIO.from_file("site.edi",
-    ...                        start_line=hdr.start_data_lines_num)
+    >>> io = OtherIO.from_file("site.edi", start_line=hdr.start_data_lines_num)
     >>> [b.keyword for b in io.blocks]
     ['>COH', '>ANNO']
     >>> out = io.write()
@@ -345,9 +342,7 @@ class OtherIO(EDIComponentBase):
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         if start_line is None:
             for i, ln in enumerate(lines):
@@ -375,9 +370,7 @@ class OtherIO(EDIComponentBase):
                 i += 1
                 continue
 
-            blk, nxt = cls._parse_block(
-                lines, i, verbose=verbose, logger=logger
-            )
+            blk, nxt = cls._parse_block(lines, i, verbose=verbose, logger=logger)
             inst.blocks.append(blk)
             i = nxt
 

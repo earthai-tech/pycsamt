@@ -28,6 +28,15 @@ requirements remain distinct.
    :class: pycsamt-guide-toc
 
    concepts
+   roadmap
+   data_contracts
+   geology_priors
+   domain_gap
+   forward_physics
+   dataset2d
+   losses
+   scientific_validation
+   experiments
    data_preparation
    model_selection
    training

@@ -154,9 +154,7 @@ def test_from_edi_phs_tm_normalised():
     sites = _make_sites(2, 5)
     d = OccamData.from_edi(sites, modes=["TM"])
     phs = d.data_blocks[d.data_blocks[:, 2] == 6, 3]
-    assert np.all(np.abs(phs - 45.0) < 0.1), (
-        f"PhsTM not normalised: {phs[:3]}"
-    )
+    assert np.all(np.abs(phs - 45.0) < 0.1), f"PhsTM not normalised: {phs[:3]}"
 
 
 def test_from_edi_rho_te_log10():
@@ -176,13 +174,9 @@ def test_from_edi_error_floor():
     sites = _make_sites(2, 4)
     cfg = OccamConfig(error_floor_rho=0.05, error_floor_phase=0.5)
     d = OccamData.from_edi(sites, config=cfg)
-    rho_errs = d.data_blocks[
-        np.isin(d.data_blocks[:, 2].astype(int), [1, 5]), 4
-    ]
+    rho_errs = d.data_blocks[np.isin(d.data_blocks[:, 2].astype(int), [1, 5]), 4]
     assert np.all(rho_errs > 0)
-    phs_errs = d.data_blocks[
-        np.isin(d.data_blocks[:, 2].astype(int), [2, 6]), 4
-    ]
+    phs_errs = d.data_blocks[np.isin(d.data_blocks[:, 2].astype(int), [2, 6]), 4]
     assert np.all(phs_errs >= cfg.error_floor_phase - 1e-9)
 
 

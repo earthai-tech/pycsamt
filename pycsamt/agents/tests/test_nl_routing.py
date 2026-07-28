@@ -359,8 +359,7 @@ class TestNLRoutingBenchmark(unittest.TestCase):
                     "got_path": cfg.get("data_path", ""),
                     "wf_ok": cfg.get("workflow", "") == exp_wf,
                     "path_ok": (
-                        exp_path is None
-                        or cfg.get("data_path", "") == exp_path
+                        exp_path is None or cfg.get("data_path", "") == exp_path
                     ),
                 }
             )
@@ -378,9 +377,7 @@ class TestNLRoutingBenchmark(unittest.TestCase):
             msg=(
                 f"Workflow {expected_wf!r}: "
                 f"{len(wrong)}/{len(cases)} misclassified.\n"
-                + "\n".join(
-                    f"  [{c['got_wf']!r}] {c['request'][:60]}" for c in wrong
-                )
+                + "\n".join(f"  [{c['got_wf']!r}] {c['request'][:60]}" for c in wrong)
             ),
         )
 
@@ -562,9 +559,7 @@ def _print_accuracy_report():
         print(f"{wf:<25} {sum(hits):>8} {len(hits):>7} {acc:>5.1%}{mark}")
     n = len(overall)
     print("-" * 50)
-    print(
-        f"{'OVERALL':<25} {sum(overall):>8} {n:>7} {sum(overall) / n:>5.1%}"
-    )
+    print(f"{'OVERALL':<25} {sum(overall):>8} {n:>7} {sum(overall) / n:>5.1%}")
     if path_hits:
         pa = sum(path_hits) / len(path_hits)
         print(

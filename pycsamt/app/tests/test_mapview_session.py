@@ -61,9 +61,7 @@ class TestBuildSnapshot:
     def test_missing_note_defaults_to_empty_string(self):
         from pycsamt.app.mapview.callbacks.session import _build_snapshot
 
-        snap = _build_snapshot(
-            "map", {}, {}, None, [], "light", {}, None
-        )
+        snap = _build_snapshot("map", {}, {}, None, [], "light", {}, None)
         assert snap["note"] == ""
 
 

@@ -76,17 +76,23 @@ Quick start
 -----------
 Without an LLM key (regex fallback, no cost)::
 
-    from pycsamt.agents import ContextInputAgent, MTLoaderAgent, AgentCoordinator
+    from pycsamt.agents import (
+        ContextInputAgent,
+        MTLoaderAgent,
+        AgentCoordinator,
+    )
 
-    ctx    = ContextInputAgent()   # no api_key → pure regex
+    ctx = ContextInputAgent()  # no api_key → pure regex
     loader = MTLoaderAgent()
 
-    coord  = AgentCoordinator("mt_qc")
-    coord.add_step("parse", ctx,
-                   description="Parse request into config")
-    coord.add_step("load",  loader,
-                   input_fn=lambda r: {"path": r["parse"]["config"]["data_path"]},
-                   description="Load EDI files and QC scan")
+    coord = AgentCoordinator("mt_qc")
+    coord.add_step("parse", ctx, description="Parse request into config")
+    coord.add_step(
+        "load",
+        loader,
+        input_fn=lambda r: {"path": r["parse"]["config"]["data_path"]},
+        description="Load EDI files and QC scan",
+    )
 
     result = coord.execute(
         {"request": "Load /data/EDIs, QC, period range 1e-4 to 1 s"},

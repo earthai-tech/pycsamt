@@ -37,8 +37,8 @@ class SettingsPage(QWidget):
         Example::
 
             {
-                "station":  {"side": "top", "marker_symbol": "v"},
-                "section":  {"y_direction": "down"},
+                "station": {"side": "top", "marker_symbol": "v"},
+                "section": {"y_direction": "down"},
             }
 
         Return an empty dict (or sub-dicts) to signal no changes.

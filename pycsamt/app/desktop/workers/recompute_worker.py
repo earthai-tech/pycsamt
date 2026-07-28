@@ -28,9 +28,7 @@ class RecomputeWorker(QThread):
         Human-readable error message if setup or an unhandled exception fails.
     """
 
-    station_done = Signal(
-        int, int, str, str, str
-    )  # done, total, name, status, message
+    station_done = Signal(int, int, str, str, str)  # done, total, name, status, message
     finished = Signal(object)  # EDIRecomputeResult
     error = Signal(str)
 

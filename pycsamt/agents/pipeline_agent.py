@@ -111,33 +111,47 @@ class PipelineAgent(BaseAgent):
     --------
     Guided mode::
 
-        agent  = PipelineAgent()
-        result = agent.execute({
-            "sites": sites,
-            "request": "50 Hz grid noise, possible static shift, Occam2D target",
-            "output_dir": "willy_pipeline/",
-        })
+        agent = PipelineAgent()
+        result = agent.execute(
+            {
+                "sites": sites,
+                "request": "50 Hz grid noise, possible static shift, Occam2D target",
+                "output_dir": "willy_pipeline/",
+            }
+        )
         processed = result["sites_out"]
         print(result.llm_interpretation)
 
     Direct mode::
 
-        agent  = PipelineAgent(preset="full_processing")
-        result = agent.execute({
-            "sites": sites,
-            "param_overrides": {"NR001": {"mains_hz": 60}},
-        })
+        agent = PipelineAgent(preset="full_processing")
+        result = agent.execute(
+            {
+                "sites": sites,
+                "param_overrides": {"NR001": {"mains_hz": 60}},
+            }
+        )
 
     Chain with :class:`~.occam2d_agent.Occam2DAgent` via
     :class:`~.coordinator.AgentCoordinator`::
 
-        from pycsamt.agents import AgentCoordinator, PipelineAgent, Occam2DAgent
+        from pycsamt.agents import (
+            AgentCoordinator,
+            PipelineAgent,
+            Occam2DAgent,
+        )
 
         coord = AgentCoordinator("willy_full")
-        coord.add_step("pipeline", PipelineAgent(preset="full_processing"),
-                       input_fn=lambda r: {"sites": r["load"].data["sites"]})
-        coord.add_step("invert",   Occam2DAgent(),
-                       input_fn=lambda r: {"sites": r["pipeline"].data["sites_out"]})
+        coord.add_step(
+            "pipeline",
+            PipelineAgent(preset="full_processing"),
+            input_fn=lambda r: {"sites": r["load"].data["sites"]},
+        )
+        coord.add_step(
+            "invert",
+            Occam2DAgent(),
+            input_fn=lambda r: {"sites": r["pipeline"].data["sites_out"]},
+        )
     """
 
     SYSTEM_PROMPT = _SYSTEM_INTERPRET
@@ -216,9 +230,7 @@ class PipelineAgent(BaseAgent):
                 parsed = self.extract_json(rec_text)
                 if isinstance(parsed, dict):
                     recommendation = parsed
-                    effective_preset = (
-                        parsed.get("preset") or effective_preset
-                    )
+                    effective_preset = parsed.get("preset") or effective_preset
                     effective_steps = parsed.get("steps") or effective_steps
                     merged_ov = parsed.get("param_overrides") or {}
                     effective_overrides = {**effective_overrides, **merged_ov}
@@ -299,8 +311,7 @@ class PipelineAgent(BaseAgent):
             f"  [{sr.step_code}] {sr.step_label}  "
             f"{'OK' if sr.ok else 'ERR'}  "
             f"{sr.n_sites_in}→{sr.n_sites_out} sites  "
-            f"{sr.elapsed_sec:.2f}s"
-            + (f"  error={sr.error}" if not sr.ok else "")
+            f"{sr.elapsed_sec:.2f}s" + (f"  error={sr.error}" if not sr.ok else "")
             for sr in pipe_result.step_results
         )
         request_line = f"User request : {request}" if request else ""

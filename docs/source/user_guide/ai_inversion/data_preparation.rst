@@ -79,7 +79,7 @@ directories, and existing site containers follow the same validation path:
    >>> from pycsamt.emtools._core import ensure_sites
 
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     strict=False,
    ...     on_dup="replace",
@@ -194,8 +194,8 @@ feature matrix:
    ...     sites,
    ...     comp="xy",
    ...     n_freqs=32,
-   ...     freq_min=1e-3,
-   ...     freq_max=1e3,
+   ...     freq_min=1.01,
+   ...     freq_max=1e4,
    ... )
 
    >>> print(X_field.shape)
@@ -214,6 +214,7 @@ Equivalently, for station :math:`s` and a common frequency grid
 :math:`\{f_j\}_{j=1}^{n_f}`, the row is
 
 .. math::
+   :label: eq-ai-data-feature-row
 
    \mathbf x_s =
    \left[
@@ -224,6 +225,24 @@ Equivalently, for station :math:`s` and a common frequency grid
 The common grid is logarithmically spaced. Interpolation occurs in
 :math:`\log_{10}f`; :term:`apparent resistivity` is interpolated in
 :math:`\log_{10}\rho_a` space and :term:`phase` in linear degrees.
+
+For WILLY L18, ``1.01`` and ``10_000`` Hz lie just inside the measured
+1.008--10,400 Hz endpoints. This small inward margin avoids treating floating
+point endpoint comparisons as missing observations. It also keeps the field
+and synthetic grids identical; widening the synthetic grid would not create
+field information outside the acquired band.
+
+.. figure:: ../../images/user_guide/ai_inversion/data_preparation_contract.png
+   :alt: WILLY L18 feature contract showing resistivity, phase, and finite-value coverage
+   :align: center
+   :width: 94%
+
+   The two feature blocks in equation :eq:`eq-ai-data-feature-row` retain
+   frequency structure across all 28 stations. Stations are columns labelled
+   along the top, while frequency increases vertically on the logarithmic
+   axis. The finite-value panel is a required audit: a correctly shaped matrix
+   can still be unusable when its requested grid extends beyond measured
+   support.
 
 .. warning::
 
@@ -249,8 +268,8 @@ Record the contract as machine-readable metadata:
    frequency_unit: Hz
    frequency_order: low_to_high
    n_frequencies: 32
-   frequency_min: 0.001
-   frequency_max: 1000.0
+   frequency_min: 1.01
+   frequency_max: 10000.0
    feature_layout: [log10_rho_block, phase_deg_block]
    missing_policy: explicit_mask_and_training_median
 
@@ -270,8 +289,8 @@ field profile:
    ...     n_components=4,
    ...     comp_te="xy",
    ...     comp_tm="yx",
-   ...     freq_min=1e-3,
-   ...     freq_max=1e3,
+   ...     freq_min=1.01,
+   ...     freq_max=1e4,
    ... )
 
    >>> print(X_profile.shape)
@@ -302,10 +321,10 @@ Inspect missingness by channel and station:
    (28,)
    >>> for name, fraction in list(zip(station_names, missing_fraction))[:4]:
    ...     print(name, round(float(fraction), 3))
-   18-001A 0.5
-   18-002U 0.5
-   18-003A 0.5
-   18-004A 0.5
+   18-001A 0.0
+   18-002U 0.0
+   18-003A 0.0
+   18-004A 0.0
 
 Do not fill all missing values with a smooth interpolation unless training
 contains the same pattern. Interpolation can manufacture lateral continuity.
@@ -380,6 +399,7 @@ configuration rather than assuming all target blocks use the same scaling.
 For a fixed :math:`L`-layer target, a common supervised target is
 
 .. math::
+   :label: eq-ai-data-target-vector
 
    \mathbf y =
    \left[
@@ -387,8 +407,9 @@ For a fixed :math:`L`-layer target, a common supervised target is
    h_1,\ldots,h_{L-1}
    \right],
 
-where :math:`\rho_\ell` is resistivity in ohm metres and :math:`h_\ell` is
-the finite layer thickness in metres. If ``log_thickness=True`` is used later
+In equation :eq:`eq-ai-data-target-vector`, :math:`\rho_\ell` is resistivity
+in ohm metres and :math:`h_\ell` is the finite layer thickness in metres. If
+``log_thickness=True`` is used later
 by an inverter, record whether thickness was transformed during dataset
 generation, target preprocessing, or model training; mixing those locations is
 an easy way to make a checkpoint unreproducible.
@@ -410,7 +431,7 @@ strategy.
    >>> import numpy as np
    >>> from pycsamt.forward.batch import generate_dataset
 
-   >>> frequencies_hz = np.logspace(-3, 3, 32)
+   >>> frequencies_hz = np.logspace(np.log10(1.01), 4, 32)
 
    >>> dataset = generate_dataset(
    ...     solver="mt1d",
@@ -549,6 +570,7 @@ layered station models for :class:`pycsamt.ai.inversion.GCNInverter3D`:
    ...     seed=42,
    ...     n_jobs=1,
    ...     output=None,
+   ...     verbose=False,
    ... )
 
    >>> print(surveys.X.shape)
@@ -642,7 +664,7 @@ Run structural and numerical checks immediately after generation:
    ...     "Feature percentiles:",
    ...     np.round(np.nanpercentile(dataset.X, [0, 1, 50, 99, 100]), 3),
    ... )
-   Feature percentiles: [4.8000e-02 3.4500e-01 3.9080e+00 8.2043e+01 8.9931e+01]
+   Feature percentiles: [-0.098  0.317 10.157 84.282 96.21 ]
    >>> print(
    ...     "Target percentiles:",
    ...     np.round(np.nanpercentile(dataset.y, [0, 1, 50, 99, 100]), 3),
@@ -707,6 +729,21 @@ or data preparation decisions, that set has become validation data.
 If features or targets are standardized, compute statistics from the training
 set only:
 
+.. math::
+   :label: eq-ai-data-standardization
+
+   \mu_j = \frac{1}{N_{\mathrm{tr}}}\sum_{i\in\mathrm{train}}X_{ij},
+   \qquad
+   \sigma_j = \sqrt{\frac{1}{N_{\mathrm{tr}}}
+      \sum_{i\in\mathrm{train}}(X_{ij}-\mu_j)^2},
+   \qquad
+   \widetilde X_{ij}=\frac{X_{ij}-\mu_j}{\sigma_j}.
+
+The index :math:`j` identifies one fixed frequency-channel feature. Equation
+:eq:`eq-ai-data-standardization` must use the same saved :math:`\mu_j` and
+:math:`\sigma_j` for validation, test, calibration, and WILLY field rows;
+estimating them again on any of those sets changes the transformation.
+
 .. code-block:: pycon
 
    >>> x_mean = np.nanmean(train.X, axis=0)
@@ -750,15 +787,25 @@ training data:
 
    >>> for name, fraction in list(zip(station_names, outside_fraction))[:4]:
    ...     print(name, round(float(fraction), 3))
-   18-001A 0.375
-   18-002U 0.375
-   18-003A 0.375
-   18-004A 0.391
+   18-001A 0.688
+   18-002U 0.703
+   18-003A 0.703
+   18-004A 0.719
 
 This per-feature envelope is only a basic diagnostic. It ignores feature
 correlation and does not prove in-distribution status; with only 40 synthetic
 examples it is intentionally a smoke test, not acceptance evidence. Add
 multivariate or latent-distance diagnostics where appropriate.
+
+.. figure:: ../../images/user_guide/ai_inversion/data_preparation_coverage.png
+   :alt: Comparison of WILLY L18 field features with the synthetic training envelope
+   :align: center
+   :width: 94%
+
+   Much of the WILLY median response lies outside the central synthetic
+   envelope generated by the deliberately small, generic model prior. The
+   mismatch is evidence to redesign the prior and nuisance effects before
+   training; it is not evidence that the field curve is erroneous.
 
 Review domain coverage by:
 
@@ -833,7 +880,7 @@ Complete 1-D preparation example
    >>> root = Path("datasets/mt1d_5layer_v001")
    >>> root.mkdir(parents=True, exist_ok=True)
 
-   >>> frequencies_hz = np.logspace(-3, 3, 32)
+   >>> frequencies_hz = np.logspace(np.log10(1.01), 4, 32)
 
    >>> dataset = generate_dataset(
    ...     solver="mt1d",
@@ -861,7 +908,7 @@ Complete 1-D preparation example
    >>> test.save(root / "test.npz")
 
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
@@ -984,3 +1031,8 @@ Continue with:
 * :doc:`inference` to apply the exact field transformation at deployment;
 * :doc:`uncertainty` to assess calibration and distribution shift;
 * :doc:`reporting` to publish dataset and model provenance.
+
+The two diagnostic figures on this page are reproduced by
+``docs/scripts/generate_ai_inversion_figures.py``. They use the bundled WILLY
+L18 observations; the synthetic envelope is deterministic teaching data from
+seed 42, not an accepted training distribution or inversion result.

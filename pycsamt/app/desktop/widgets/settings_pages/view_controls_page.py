@@ -118,11 +118,7 @@ class ViewControlsPage(SettingsPage):
 
             self._rho_combo.setCurrentIndex(
                 next(
-                    (
-                        i
-                        for i, (_, v) in enumerate(_RHO_VIEWS)
-                        if v == C.rho.view
-                    ),
+                    (i for i, (_, v) in enumerate(_RHO_VIEWS) if v == C.rho.view),
                     0,
                 )
             )
@@ -131,11 +127,7 @@ class ViewControlsPage(SettingsPage):
             self._ph_max.setValue(hi)
             self._ph_unit_combo.setCurrentIndex(
                 next(
-                    (
-                        i
-                        for i, (_, v) in enumerate(_PHASE_UNITS)
-                        if v == C.phase.unit
-                    ),
+                    (i for i, (_, v) in enumerate(_PHASE_UNITS) if v == C.phase.unit),
                     0,
                 )
             )
@@ -154,9 +146,7 @@ class ViewControlsPage(SettingsPage):
             "view_controls": {
                 "rho_view": _RHO_VIEWS[self._rho_combo.currentIndex()][1],
                 "phase_range": (self._ph_min.value(), self._ph_max.value()),
-                "phase_unit": _PHASE_UNITS[
-                    self._ph_unit_combo.currentIndex()
-                ][1],
+                "phase_unit": _PHASE_UNITS[self._ph_unit_combo.currentIndex()][1],
                 "phase_wrap": self._ph_wrap_cb.isChecked(),
                 "x_view": _X_VIEWS[self._x_combo.currentIndex()][1],
             }

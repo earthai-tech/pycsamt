@@ -29,9 +29,7 @@ class SessionState:
     freq_max_hz: float | None = None
     overlay: str = "Apparent Resistivity"
     dock_geometry: str | None = None  # base64-encoded QMainWindow geometry
-    dock_state: str | None = (
-        None  # base64-encoded QMainWindow state (docks/toolbars)
-    )
+    dock_state: str | None = None  # base64-encoded QMainWindow state (docks/toolbars)
 
     # ── Per-window geometries (profile / map / qc / agent) ────────────
     # Each value is {"geometry": "<base64>", "visible": bool}
@@ -66,11 +64,7 @@ class SessionState:
             with open(path, encoding="utf-8") as fh:
                 data = json.load(fh)
             return cls(
-                **{
-                    k: v
-                    for k, v in data.items()
-                    if k in cls.__dataclass_fields__
-                }
+                **{k: v for k, v in data.items() if k in cls.__dataclass_fields__}
             )
         except Exception:
             return cls()

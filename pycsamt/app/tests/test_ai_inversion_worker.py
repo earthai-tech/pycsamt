@@ -70,15 +70,9 @@ def fake_backend(monkeypatch):
     monkeypatch.setattr(
         "pycsamt.forward.batch.generate_dataset", _fake_generate_dataset
     )
-    monkeypatch.setattr(
-        "pycsamt.ai.inversion.inv1d.EMInverter1D", _FakeInverter
-    )
-    monkeypatch.setattr(
-        "pycsamt.ai.inversion.inv2d.EMInverter2D", _FakeInverter
-    )
-    monkeypatch.setattr(
-        "pycsamt.ai.inversion.inv3d.GCNInverter3D", _FakeInverter
-    )
+    monkeypatch.setattr("pycsamt.ai.inversion.inv1d.EMInverter1D", _FakeInverter)
+    monkeypatch.setattr("pycsamt.ai.inversion.inv2d.EMInverter2D", _FakeInverter)
+    monkeypatch.setattr("pycsamt.ai.inversion.inv3d.GCNInverter3D", _FakeInverter)
     _FakeInverter.instances = []
     return _FakeInverter
 
@@ -140,9 +134,7 @@ class Test1D:
         def _boom(**kw):
             raise RuntimeError("dataset generation failed")
 
-        monkeypatch.setattr(
-            "pycsamt.forward.batch.generate_dataset", _boom
-        )
+        monkeypatch.setattr("pycsamt.forward.batch.generate_dataset", _boom)
         w = AIInversionWorker({"dim": "1D"})
         errors = []
         w.error.connect(errors.append)
@@ -197,9 +189,7 @@ class Test2D:
         def _boom(**kw):
             raise RuntimeError("2D dataset failed")
 
-        monkeypatch.setattr(
-            "pycsamt.forward.batch.generate_dataset", _boom
-        )
+        monkeypatch.setattr("pycsamt.forward.batch.generate_dataset", _boom)
         w = AIInversionWorker({"dim": "2D"})
         errors = []
         w.error.connect(errors.append)
@@ -258,9 +248,7 @@ class Test3D:
         def _boom(**kw):
             raise RuntimeError("3D dataset failed")
 
-        monkeypatch.setattr(
-            "pycsamt.forward.batch.generate_dataset", _boom
-        )
+        monkeypatch.setattr("pycsamt.forward.batch.generate_dataset", _boom)
         w = AIInversionWorker({"dim": "3D"})
         errors = []
         w.error.connect(errors.append)

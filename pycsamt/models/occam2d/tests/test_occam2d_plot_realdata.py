@@ -42,11 +42,7 @@ import matplotlib.pyplot as plt
 _PYCSAMT_DIR = Path(__file__).parents[4] / "data" / "occam2D"
 
 _OCCAM_BASE = (
-    Path.home()
-    / "Documents"
-    / "OCCAM2DMT_V3.0"
-    / "OCCAM2DMT_V3.0"
-    / "Examples"
+    Path.home() / "Documents" / "OCCAM2DMT_V3.0" / "OCCAM2DMT_V3.0" / "Examples"
 )
 _TEST2_DIR = _OCCAM_BASE / "Test2"
 _TEST4_DIR = _OCCAM_BASE / "Test4"
@@ -145,10 +141,7 @@ class TestPycsamtData:
 
         fig = PlotMisfit(result=result_pycsamt).plot()
         ax = fig.get_axes()[0]
-        assert (
-            "rms" in ax.get_ylabel().lower()
-            or "misfit" in ax.get_ylabel().lower()
-        )
+        assert "rms" in ax.get_ylabel().lower() or "misfit" in ax.get_ylabel().lower()
 
     @_SKIP_PYCSAMT
     def test_misfit_has_convergence_line(self, result_pycsamt):
@@ -189,9 +182,7 @@ class TestPycsamtData:
     def test_model_rho_range_accepted(self, result_pycsamt):
         from pycsamt.models.occam2d.plot import PlotModel
 
-        fig = PlotModel(
-            result=result_pycsamt, rho_min=1, rho_max=10000
-        ).plot()
+        fig = PlotModel(result=result_pycsamt, rho_min=1, rho_max=10000).plot()
         assert _is_figure(fig)
 
     @_SKIP_PYCSAMT
@@ -350,9 +341,7 @@ class TestPycsamtData:
         )
 
         sites = np.unique(result_pycsamt.response.site_indices).tolist()
-        fig = PlotResponseGrid(
-            result=result_pycsamt, station=sites[:5]
-        ).plot()
+        fig = PlotResponseGrid(result=result_pycsamt, station=sites[:5]).plot()
         assert _is_figure(fig)
 
 
@@ -582,9 +571,7 @@ class TestOccamMT4:
     def test_pseudo_rho_min_max(self, result_test4):
         from pycsamt.models.occam2d.plot import PlotPseudo
 
-        fig = PlotPseudo(
-            result=result_test4, rho_min=0.1, rho_max=1000
-        ).plot()
+        fig = PlotPseudo(result=result_test4, rho_min=0.1, rho_max=1000).plot()
         assert _is_figure(fig)
 
     # ── PlotResponse ─────────────────────────────────────────────────────────
@@ -676,9 +663,7 @@ class TestCrossDataset:
         not (_TEST2_DIR.exists() and _TEST4_DIR.exists()),
         reason="needs OCCAM2DMT Test2 and Test4 data",
     )
-    def test_response_grid_two_occam_examples(
-        self, result_test2, result_test4
-    ):
+    def test_response_grid_two_occam_examples(self, result_test2, result_test4):
         from pycsamt.models.occam2d.plot import (
             PlotResponseGrid,
         )

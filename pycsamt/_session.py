@@ -674,9 +674,7 @@ class Normalize(CoreObject):
 
             # Folder / glob / non-Jones-suffix → try JCollection(sources=...)
             try:
-                coll = JCollection.from_sources(
-                    sources=src, verbose=0
-                )  # real API
+                coll = JCollection.from_sources(sources=src, verbose=0)  # real API
                 return coll if len(coll) > 0 else None
             except:
                 # Fallback for stubs
@@ -754,9 +752,7 @@ class Normalize(CoreObject):
             # No suffix (folder/glob) → try EDICollection(sources=...)
             if suf == "":
                 try:
-                    coll = EDICollection.from_sources(
-                        sources=source, verbose=0
-                    )
+                    coll = EDICollection.from_sources(sources=source, verbose=0)
                     if len(coll) > 0:
                         return coll
                 except:

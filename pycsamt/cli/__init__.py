@@ -13,6 +13,7 @@ Programmatic use
 ::
 
     from pycsamt.cli import main
+
     main(["info", "station.edi"])
     main(["convert", "survey/", "--output-dir", "edis/"])
 

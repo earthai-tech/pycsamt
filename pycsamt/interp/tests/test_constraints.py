@@ -23,9 +23,12 @@ from pycsamt.interp.constraints import (
     _nearest_x_ix,
     _nearest_z_ix,
 )
-from pycsamt.interp.hydromodel import EMHydroModel, EMHydroResult, PetrophysicalConfig
+from pycsamt.interp.hydromodel import (
+    EMHydroModel,
+    EMHydroResult,
+    PetrophysicalConfig,
+)
 from pycsamt.interp.petrophysics import ArchieModel
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures / helpers
@@ -175,9 +178,7 @@ def test_init_requires_at_least_one_calibrate_flag():
 
 
 def test_init_defaults():
-    cal = ConstrainedCalibrator(
-        constraints=[WaterLevelConstraint(x=0.0, depth_m=10.0)]
-    )
+    cal = ConstrainedCalibrator(constraints=[WaterLevelConstraint(x=0.0, depth_m=10.0)])
     assert cal.calibrated_config_ is None
     assert cal.misfit_history_ == []
     assert cal.opt_result_ is None
@@ -251,9 +252,7 @@ def test_pack_params_m_fallback_when_petro_lacks_m():
 
 def test_fit_raises_without_scipy(monkeypatch):
     monkeypatch.setattr(constraints_mod, "_SCIPY_OK", False)
-    cal = ConstrainedCalibrator(
-        constraints=[WaterLevelConstraint(x=0.0, depth_m=10.0)]
-    )
+    cal = ConstrainedCalibrator(constraints=[WaterLevelConstraint(x=0.0, depth_m=10.0)])
     with pytest.raises(ImportError, match="scipy is required"):
         cal.fit(_hydro_model())
 
@@ -497,9 +496,7 @@ def test_scipy_missing_at_import_sets_flag_false():
     """Simulates `import scipy.optimize` failing at module load time, which
     is otherwise untestable in an environment where scipy is installed."""
     try:
-        with mock.patch.dict(
-            sys.modules, {"scipy": None, "scipy.optimize": None}
-        ):
+        with mock.patch.dict(sys.modules, {"scipy": None, "scipy.optimize": None}):
             importlib.reload(constraints_mod)
         assert constraints_mod._SCIPY_OK is False
     finally:

@@ -63,16 +63,16 @@ of stations, and :math:`L` is the number of layers.
 Example
 -------
 >>> from pycsamt.ai.inversion import PINNInverter2D
->>> inv = PINNInverter2D(          # doctest: +SKIP
+>>> inv = PINNInverter2D(  # doctest: +SKIP
 ...     "edi/profile1/",
 ...     n_layers=12,
 ...     depth_max=3000.0,
 ...     epochs=300,
 ... )
->>> inv.fit()                      # doctest: +SKIP
+>>> inv.fit()  # doctest: +SKIP
 PINNInverter2D(n_stations=20, fitted)
->>> section = inv.resistivity_section()   # doctest: +SKIP
->>> df = inv.residuals()           # doctest: +SKIP
+>>> section = inv.resistivity_section()  # doctest: +SKIP
+>>> df = inv.residuals()  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -159,9 +159,7 @@ class PINNInverter2D(BasePINNInverter):
         verbose: int = 0,
     ) -> None:
         if mode not in ("te", "tm", "both"):
-            raise ValueError(
-                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
-            )
+            raise ValueError(f"mode must be 'te', 'tm', or 'both'; got {mode!r}.")
         super().__init__(
             n_layers=n_layers,
             depth_max=depth_max,
@@ -332,12 +330,8 @@ class PINNInverter2D(BasePINNInverter):
                 rp = np.full_like(obs.freq, np.nan)
                 pp = np.full_like(obs.freq, np.nan)
 
-            rho_obs = (
-                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
-            )
-            ph_obs = (
-                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
-            )
+            rho_obs = obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
+            ph_obs = obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             for k in range(len(obs.freq)):
                 rows.append(
                     {

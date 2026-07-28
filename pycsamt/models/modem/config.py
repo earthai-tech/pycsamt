@@ -90,8 +90,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "n_airlayers_2d",
-        "Number of high-resistivity air layers above the earth "
-        "in 2-D models.",
+        "Number of high-resistivity air layers above the earth in 2-D models.",
         "2-D Grid",
     ),
     ConfigParameter(
@@ -111,8 +110,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "n_padding_x_2d",
-        "Number of lateral padding cells added to each side of "
-        "the 2-D model.",
+        "Number of lateral padding cells added to each side of the 2-D model.",
         "2-D Grid",
     ),
     ConfigParameter(
@@ -152,20 +150,17 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "n_padding_xy",
-        "Number of padding cells added around the 3-D horizontal "
-        "core region.",
+        "Number of padding cells added around the 3-D horizontal core region.",
         "3-D Grid",
     ),
     ConfigParameter(
         "smooth_x",
-        "Covariance smoothing weight in the x direction for 3-D "
-        "regularization.",
+        "Covariance smoothing weight in the x direction for 3-D " "regularization.",
         "Covariance",
     ),
     ConfigParameter(
         "smooth_y",
-        "Covariance smoothing weight in the y direction for 3-D "
-        "regularization.",
+        "Covariance smoothing weight in the y direction for 3-D " "regularization.",
         "Covariance",
     ),
     ConfigParameter(
@@ -209,8 +204,7 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "rms_diff_tol",
-        "Small RMS-change tolerance used to decide when progress "
-        "has stalled.",
+        "Small RMS-change tolerance used to decide when progress has stalled.",
         "Inversion Control",
     ),
     ConfigParameter(

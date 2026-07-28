@@ -143,9 +143,7 @@ class TestToolHelpers(unittest.TestCase):
         )
 
         catalogue_fns = {
-            entry["fn"]
-            for methods in CATALOGUE.values()
-            for entry in methods.values()
+            entry["fn"] for methods in CATALOGUE.values() for entry in methods.values()
         }
         registered_fns = {m["fn"] for m in CORRECTION_METHODS.values()}
         self.assertEqual(catalogue_fns, registered_fns)
@@ -180,9 +178,7 @@ class TestToolHelpers(unittest.TestCase):
             "correct near field": "corr_near_field",
         }
         for text, wf in cases.items():
-            self.assertEqual(
-                classify_intent_offline(text)[0], "workflow", msg=text
-            )
+            self.assertEqual(classify_intent_offline(text)[0], "workflow", msg=text)
             self.assertEqual(classify_workflow(text), wf, msg=text)
 
     def test_capability_text_lists_corrections(self):
@@ -287,9 +283,7 @@ class TestToolHelpers(unittest.TestCase):
         )
 
     def test_missing_data(self):
-        self.assertEqual(
-            ToolAgent().execute({"kind": "strike"}).status, "failed"
-        )
+        self.assertEqual(ToolAgent().execute({"kind": "strike"}).status, "failed")
 
 
 @unittest.skipUnless(_HAS_DATA, "sample EDI data not available")
@@ -317,9 +311,7 @@ class TestToolAgent(unittest.TestCase):
         self.assertEqual((r.data.get("figures") or {}), {})
 
     # ── Wave 0/A: static-shift correction methods ────────────────────────────
-    def _run_correction(
-        self, wf_id, path=None, expect_corrected=True, **params
-    ):
+    def _run_correction(self, wf_id, path=None, expect_corrected=True, **params):
         from pycsamt.agents._corrections import fn_for
 
         r = ToolAgent().execute(
@@ -391,9 +383,7 @@ class TestToolAgent(unittest.TestCase):
 
     # ── Wave D: coordinate corrections (corrected Sites, position figure) ─────
     def test_correction_coord_projection(self):
-        self._run_correction(
-            "corr_coord_projection", azimuth=-1.0, keep_elevation=True
-        )
+        self._run_correction("corr_coord_projection", azimuth=-1.0, keep_elevation=True)
 
     def test_correction_coord_shift(self):
         # A pure offset must change the stored coordinates.
@@ -408,9 +398,7 @@ class TestToolAgent(unittest.TestCase):
             delta_lon=0.002,
             delta_elev=5.0,
         )
-        before = _get_coords_df(
-            ensure_sites(_DATA, recursive=True, verbose=0)
-        )
+        before = _get_coords_df(ensure_sites(_DATA, recursive=True, verbose=0))
         after = _get_coords_df(r.data["corrected_sites"])
         self.assertAlmostEqual(
             float(after["lat"].iloc[0]) - float(before["lat"].iloc[0]),
@@ -428,9 +416,7 @@ class TestToolAgent(unittest.TestCase):
     @unittest.skipUnless(_HAS_WILLY, "Stratagem EDI directory not available")
     def test_correction_strat_qc(self):
         # QC is diagnostic: a report table, no corrected_sites to apply.
-        r = self._run_correction(
-            "corr_strat_qc", path=_WILLY, expect_corrected=False
-        )
+        r = self._run_correction("corr_strat_qc", path=_WILLY, expect_corrected=False)
         self.assertIn("Stratagem", r.summary)
 
     @unittest.skipUnless(_HAS_WILLY, "Stratagem EDI directory not available")
@@ -471,9 +457,7 @@ class TestToolAgent(unittest.TestCase):
 
         out = tempfile.mkdtemp(prefix="wc_conv_")
         r = self._run("converter", format="csv", output_dir=out)
-        self.assertTrue(
-            os.path.isfile(os.path.join(out, "survey_stations.csv"))
-        )
+        self.assertTrue(os.path.isfile(os.path.join(out, "survey_stations.csv")))
         self.assertEqual((r.data.get("figures") or {}), {})
 
     def test_converter_json(self):
@@ -481,9 +465,7 @@ class TestToolAgent(unittest.TestCase):
 
         out = tempfile.mkdtemp(prefix="wc_conv_")
         self._run("converter", format="json", output_dir=out)
-        self.assertTrue(
-            os.path.isfile(os.path.join(out, "survey_stations.json"))
-        )
+        self.assertTrue(os.path.isfile(os.path.join(out, "survey_stations.json")))
 
     def test_batch_export(self):
         import tempfile
@@ -517,9 +499,7 @@ class TestToolAgent(unittest.TestCase):
             ("B", 12.1, -3.1),
             ("C", None, None),
         ]
-        G.get_elevation_from_api = lambda lat, lon, api_name=None: (
-            [100.0, 200.0]
-        )
+        G.get_elevation_from_api = lambda lat, lon, api_name=None: ([100.0, 200.0])
         try:
             r = ToolAgent().execute({"path": _DATA, "kind": "elevation"})
         finally:

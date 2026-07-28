@@ -68,11 +68,13 @@ def simplify_poly(
     --------
     >>> import numpy as np
     >>> from pycsamt.models.mare2dem.geom.simplify_poly import simplify_poly
-    >>> nodes = np.array([[0.,0.],[1.,0.],[2.,0.],[3.,0.]])
-    >>> adj = np.zeros((4,4))
-    >>> adj[0,1]=adj[1,0]=1; adj[1,2]=adj[2,1]=1; adj[2,3]=adj[3,2]=1
+    >>> nodes = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0]])
+    >>> adj = np.zeros((4, 4))
+    >>> adj[0, 1] = adj[1, 0] = 1
+    ... adj[1, 2] = adj[2, 1] = 1
+    ... adj[2, 3] = adj[3, 2] = 1
     >>> n_out, a_out = simplify_poly(nodes, adj)
-    >>> len(n_out)   # interior collinear nodes 1 and 2 removed
+    >>> len(n_out)  # interior collinear nodes 1 and 2 removed
     2
     """
     nodes = np.asarray(nodes, dtype=float).copy()

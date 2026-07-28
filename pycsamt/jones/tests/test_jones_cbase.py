@@ -82,6 +82,7 @@ def test_jcbbase_container_minimal():
                 # `items` is a read-only property over `_items`
                 self._items = list(inputs)
                 return self.items
+
     except TypeError:
         # Fallback: try to instantiate directly if not abstract
         _Mini = JCBBase  # type: ignore[assignment]
@@ -112,9 +113,7 @@ def test_jcbbase_container_minimal():
     assert isinstance(repr(inst), str)
 
 
-def test_jcoreparser_parse_single_and_dir(
-    project_root: Path, j_single_file: Path
-):
+def test_jcoreparser_parse_single_and_dir(project_root: Path, j_single_file: Path):
     if JCoreParser is None:
         pytest.skip("JCoreParser not implemented yet")
 

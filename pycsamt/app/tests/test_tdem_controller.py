@@ -334,9 +334,7 @@ class TestDrawHasAxTrue:
         _HAS_AX_TRUE_PLOTS,
         ids=[p[1] for p in _HAS_AX_TRUE_PLOTS],
     )
-    def test_does_not_raise(
-        self, loaded_ctrl, label, class_name, has_ax, data_key
-    ):
+    def test_does_not_raise(self, loaded_ctrl, label, class_name, has_ax, data_key):
         fig = _fig()
         loaded_ctrl.draw(class_name, has_ax, data_key, fig)  # must never raise
         _close()
@@ -365,9 +363,7 @@ class TestDrawHasAxFalse:
         _HAS_AX_FALSE_PLOTS,
         ids=[p[1] for p in _HAS_AX_FALSE_PLOTS],
     )
-    def test_does_not_raise(
-        self, loaded_ctrl, label, class_name, has_ax, data_key
-    ):
+    def test_does_not_raise(self, loaded_ctrl, label, class_name, has_ax, data_key):
         fig = _fig()
         loaded_ctrl.draw(class_name, has_ax, data_key, fig)  # must never raise
         _close()
@@ -376,9 +372,7 @@ class TestDrawHasAxFalse:
         """PlotTransformedRho has real soundings and coordinate-free data,
         so it should produce a genuine multi-axes figure (not an error)."""
         fig = _fig()
-        ret = loaded_ctrl.draw(
-            "PlotTransformedRho", False, "soundings", fig
-        )
+        ret = loaded_ctrl.draw("PlotTransformedRho", False, "soundings", fig)
         assert ret is not None
         assert len(ret.axes) >= 1
         texts = " ".join(t.get_text() for ax in ret.axes for t in ax.texts)
@@ -387,24 +381,18 @@ class TestDrawHasAxFalse:
 
     def test_full_dashboard_returns_populated_figure(self, loaded_ctrl):
         fig = _fig()
-        ret = loaded_ctrl.draw(
-            "PlotTEMDashboard", False, "dashboard", fig
-        )
+        ret = loaded_ctrl.draw("PlotTEMDashboard", False, "dashboard", fig)
         assert ret is not None
         assert len(ret.axes) >= 1
         _close()
 
-    def test_survey_overview_missing_coords_shows_no_figure_message(
-        self, loaded_ctrl
-    ):
+    def test_survey_overview_missing_coords_shows_no_figure_message(self, loaded_ctrl):
         """The small JIANGSU subset carries no coordinate rows, so
         PlotSurveyOverview (which needs PlotSurveyMap internally) fails
         inside _call_figure_cls and draw() falls back to the
         'No figure produced' annotation instead of raising."""
         fig = _fig()
-        ret = loaded_ctrl.draw(
-            "PlotSurveyOverview", False, "survey", fig
-        )
+        ret = loaded_ctrl.draw("PlotSurveyOverview", False, "survey", fig)
         assert ret is None
         texts = " ".join(_all_texts(fig)).lower()
         assert "no figure produced" in texts
@@ -426,13 +414,9 @@ class TestDrawErrorAnnotation:
         assert "plotsurveymap error" in texts
         _close()
 
-    def test_elevation_profile_missing_coords_annotates_error(
-        self, loaded_ctrl
-    ):
+    def test_elevation_profile_missing_coords_annotates_error(self, loaded_ctrl):
         fig = _fig()
-        ret = loaded_ctrl.draw(
-            "PlotElevationProfile", True, "survey", fig
-        )
+        ret = loaded_ctrl.draw("PlotElevationProfile", True, "survey", fig)
         assert ret is None
         texts = " ".join(_all_texts(fig)).lower()
         assert "plotelevationprofile error" in texts
@@ -477,9 +461,7 @@ class TestTightLayoutGuard:
     tight_layout() itself to raise to exercise those guards directly.
     """
 
-    def test_has_ax_true_tight_layout_failure_swallowed(
-        self, loaded_ctrl, monkeypatch
-    ):
+    def test_has_ax_true_tight_layout_failure_swallowed(self, loaded_ctrl, monkeypatch):
         import matplotlib.figure
 
         def _boom(self, *_a, **_kw):
@@ -501,9 +483,7 @@ class TestTightLayoutGuard:
 
         monkeypatch.setattr(matplotlib.figure.Figure, "tight_layout", _boom)
         fig = _fig()
-        ret = loaded_ctrl.draw(
-            "PlotTransformedRho", False, "soundings", fig
-        )
+        ret = loaded_ctrl.draw("PlotTransformedRho", False, "soundings", fig)
         assert ret is not None  # own-figure path still returns the figure
         _close()
 
@@ -613,6 +593,6 @@ class TestCatalogue:
 
         for _group_name, plots in TDEM_GROUPS:
             for _label, class_name, _has_ax, _data_key in plots:
-                assert hasattr(tdem, class_name), (
-                    f"{class_name} missing from pycsamt.tdem"
-                )
+                assert hasattr(
+                    tdem, class_name
+                ), f"{class_name} missing from pycsamt.tdem"

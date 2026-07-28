@@ -1710,7 +1710,15 @@ definitions here are the single source of truth.
    Skin depth
       The depth at which an EM field attenuates to :math:`1/e` of its surface
       amplitude, :math:`\delta \approx 503\,\sqrt{\rho / f}` metres. It sets the
-      depth of investigation for a given period and resistivity.
+      attenuation scale for a given frequency and resistivity, but is not by
+      itself a recoverable-depth or vertical-resolution estimate.
+
+   Depth of investigation
+      The depth interval over which the measured data provide useful
+      sensitivity to model changes under a stated survey, error model,
+      parameterization, and regularization. It must be appraised with
+      sensitivity, perturbation or recovery tests and response fit; it is not
+      identical to :term:`skin depth` or to the bottom of an inversion mesh.
 
    Bostick depth
       An empirical depth estimate,

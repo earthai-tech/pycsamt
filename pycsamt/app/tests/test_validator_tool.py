@@ -42,10 +42,10 @@ from pycsamt.app.desktop.tools.validator_tool import (
     _GREEN,
     _RED,
     _YELLOW,
+    EDIValidatorDialog,
     _check_site,
     _icon,
     _swap_excluded,
-    EDIValidatorDialog,
 )
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -839,9 +839,7 @@ class TestOnDelete:
         monkeypatch.setattr(
             QMessageBox,
             "question",
-            staticmethod(
-                lambda *a, **k: QMessageBox.StandardButton.Cancel
-            ),
+            staticmethod(lambda *a, **k: QMessageBox.StandardButton.Cancel),
         )
         dlg._on_delete()
         assert len(dlg._items) == 5
@@ -857,9 +855,7 @@ class TestOnDelete:
             captured["text"] = a[2] if len(a) > 2 else k.get("text", "")
             return QMessageBox.StandardButton.Yes
 
-        monkeypatch.setattr(
-            QMessageBox, "question", staticmethod(_fake_question)
-        )
+        monkeypatch.setattr(QMessageBox, "question", staticmethod(_fake_question))
         dlg._on_delete()
         assert "more" in captured["text"]
         assert len(dlg._items) == 0
@@ -1068,9 +1064,7 @@ class TestOnApply:
         assert len(dlg.modified_sites) == 3
         assert "excluded" in dlg._summary_lbl.text()
 
-    def test_apply_pushes_rename_to_underlying_object(
-        self, qapp, willy_sites
-    ):
+    def test_apply_pushes_rename_to_underlying_object(self, qapp, willy_sites):
         dlg = EDIValidatorDialog(willy_sites)
         dlg._results[0]["Station"] = "RenamedByApply"
         dlg._on_apply()
@@ -1145,9 +1139,7 @@ class TestOnExport:
         assert all(r["Excluded"] == "no" for r in rows)
         assert "saved" in dlg._summary_lbl.text()
 
-    def test_export_marks_excluded_rows(
-        self, qapp, willy_sites, monkeypatch, tmp_path
-    ):
+    def test_export_marks_excluded_rows(self, qapp, willy_sites, monkeypatch, tmp_path):
         out = tmp_path / "report2.csv"
         monkeypatch.setattr(
             QFileDialog,

@@ -75,11 +75,19 @@ def _sites_agents():
     ]
 
 
-@pytest.mark.parametrize("cls_name", [
-    "DataQCAgent", "DenoisingAgent", "EDIExportAgent",
-    "FrequencyDecimationAgent", "PhaseAnalysisAgent",
-    "SensitivityAgent", "TensorRotationAgent", "TipperAnalysisAgent",
-])
+@pytest.mark.parametrize(
+    "cls_name",
+    [
+        "DataQCAgent",
+        "DenoisingAgent",
+        "EDIExportAgent",
+        "FrequencyDecimationAgent",
+        "PhaseAnalysisAgent",
+        "SensitivityAgent",
+        "TensorRotationAgent",
+        "TipperAnalysisAgent",
+    ],
+)
 def test_sites_agents_fail_without_input(cls_name):
     import pycsamt.agents as agents_pkg
 
@@ -96,11 +104,13 @@ def test_phase_analysis_agent_full_run(sites3, tmp_path):
     from pycsamt.agents import PhaseAnalysisAgent
 
     ag = mk(PhaseAnalysisAgent)
-    result = ag.execute({
-        "sites": sites3,
-        "output_dir": str(tmp_path),
-        "run_mohr": True,
-    })
+    result = ag.execute(
+        {
+            "sites": sites3,
+            "output_dir": str(tmp_path),
+            "run_mohr": True,
+        }
+    )
     assert result.status == "success"
     assert result.summary
     data = result.data
@@ -115,11 +125,13 @@ def test_phase_analysis_agent_full_run(sites3, tmp_path):
 def test_tensor_rotation_agent_rotates(sites3, tmp_path):
     from pycsamt.agents import TensorRotationAgent
 
-    result = mk(TensorRotationAgent).execute({
-        "sites": sites3,
-        "strike_deg": 30.0,
-        "output_dir": str(tmp_path),
-    })
+    result = mk(TensorRotationAgent).execute(
+        {
+            "sites": sites3,
+            "strike_deg": 30.0,
+            "output_dir": str(tmp_path),
+        }
+    )
     assert result.status == "success"
     assert result.summary
 
@@ -127,9 +139,7 @@ def test_tensor_rotation_agent_rotates(sites3, tmp_path):
 def test_denoising_agent_hampel(sites3):
     from pycsamt.agents import DenoisingAgent
 
-    result = mk(DenoisingAgent, method="hampel").execute(
-        {"sites": sites3}
-    )
+    result = mk(DenoisingAgent, method="hampel").execute({"sites": sites3})
     assert result.status == "success"
     assert result.summary
 
@@ -174,9 +184,7 @@ def test_edi_export_agent_writes_files(sites3, tmp_path):
     from pycsamt.agents import EDIExportAgent
 
     out = tmp_path / "edis"
-    result = mk(EDIExportAgent).execute(
-        {"sites": sites3, "output_dir": str(out)}
-    )
+    result = mk(EDIExportAgent).execute({"sites": sites3, "output_dir": str(out)})
     assert result.status == "success"
     written = list(out.rglob("*.edi"))
     assert written, "expected exported EDI files"
@@ -200,13 +208,9 @@ def test_inversion_comparison_agent_synthetic():
 
     rng = np.random.default_rng(0)
     depths = np.linspace(0.05, 2.0, 8)
-    a = {"pred_rho": 10 ** rng.normal(2, 0.3, (3, 8)),
-         "depths_km": depths}
-    b = {"pred_rho": 10 ** rng.normal(2, 0.3, (3, 8)),
-         "depths_km": depths}
-    result = mk(InversionComparisonAgent).execute(
-        {"result_a": a, "result_b": b}
-    )
+    a = {"pred_rho": 10 ** rng.normal(2, 0.3, (3, 8)), "depths_km": depths}
+    b = {"pred_rho": 10 ** rng.normal(2, 0.3, (3, 8)), "depths_km": depths}
+    result = mk(InversionComparisonAgent).execute({"result_a": a, "result_b": b})
     assert result.status == "success"
     assert result.summary
 
@@ -217,11 +221,13 @@ def test_inversion_comparison_agent_synthetic():
 def test_inversion_evaluation_agent_self_comparison(edi_dir, tmp_path):
     from pycsamt.agents import InversionEvaluationAgent
 
-    result = mk(InversionEvaluationAgent).execute({
-        "path_obs": str(edi_dir),
-        "path_mod": str(edi_dir),
-        "output_dir": str(tmp_path),
-    })
+    result = mk(InversionEvaluationAgent).execute(
+        {
+            "path_obs": str(edi_dir),
+            "path_mod": str(edi_dir),
+            "output_dir": str(tmp_path),
+        }
+    )
     # observed == modelled -> misfit ~ 0, must succeed
     assert result.status == "success"
     assert result.summary
@@ -245,12 +251,14 @@ def test_resistivity_map_agent_synthetic(tmp_path):
         )
         for i, s in enumerate(stations)
     }
-    result = mk(ResistivityMapAgent).execute({
-        "predictions": predictions,
-        "station_coords": coords,
-        "depths_km": np.linspace(0.05, 2.0, 10),
-        "output_dir": str(tmp_path),
-    })
+    result = mk(ResistivityMapAgent).execute(
+        {
+            "predictions": predictions,
+            "station_coords": coords,
+            "depths_km": np.linspace(0.05, 2.0, 10),
+            "output_dir": str(tmp_path),
+        }
+    )
     assert result.status == "success"
     assert result.summary
 
@@ -267,11 +275,13 @@ def test_report_agent_markdown(tmp_path):
         summary="QC finished: 3 stations, coverage 98%.",
         data={"n_stations": 3},
     )
-    result = mk(ReportAgent, formats=["md"]).execute({
-        "results": {"qc": qc_res},
-        "output_dir": str(tmp_path),
-        "title": "Battery report",
-    })
+    result = mk(ReportAgent, formats=["md"]).execute(
+        {
+            "results": {"qc": qc_res},
+            "output_dir": str(tmp_path),
+            "title": "Battery report",
+        }
+    )
     assert result.status == "success"
     md_files = list(tmp_path.rglob("*.md"))
     assert md_files, "expected a markdown report on disk"
@@ -295,13 +305,15 @@ def test_batch_survey_agent_single_profile(edi_dir):
 def test_interpretation_agent_layered_model():
     from pycsamt.agents import InterpretationAgent
 
-    result = mk(InterpretationAgent).execute({
-        "model": {
-            "resistivity": [100.0, 10.0, 500.0],
-            "thickness": [300.0, 800.0],
-        },
-        "rms": 1.2,
-    })
+    result = mk(InterpretationAgent).execute(
+        {
+            "model": {
+                "resistivity": [100.0, 10.0, 500.0],
+                "thickness": [300.0, 800.0],
+            },
+            "rms": 1.2,
+        }
+    )
     assert result.status in {"success", "failed"}
     assert result.summary or result.error
 
@@ -312,10 +324,12 @@ def test_interpretation_agent_layered_model():
 def test_pipeline_agent_direct_mode(sites3):
     from pycsamt.agents import PipelineAgent
 
-    result = mk(PipelineAgent).execute({
-        "sites": sites3,
-        "preset": "basic_qc",
-    })
+    result = mk(PipelineAgent).execute(
+        {
+            "sites": sites3,
+            "preset": "basic_qc",
+        }
+    )
     assert result.status in {"success", "partial"}
     assert result.summary
 

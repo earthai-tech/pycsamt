@@ -92,9 +92,7 @@ class TestRefsExtraction(unittest.TestCase):
     """Import-aware resolution: only real pyCSAMT call targets become edges."""
 
     def setUp(self):
-        self.refs = _by_symbol()[
-            "pycsamt.emtools.ss.correct_ss_ama"
-        ].metadata["refs"]
+        self.refs = _by_symbol()["pycsamt.emtools.ss.correct_ss_ama"].metadata["refs"]
 
     def test_local_def_resolves_to_module_qualified(self):
         self.assertIn("pycsamt.emtools.ss.ensure_sites", self.refs)
@@ -116,9 +114,7 @@ class TestRefsExtraction(unittest.TestCase):
 
     def test_leaf_with_no_calls_has_no_refs(self):
         self.assertEqual(
-            _by_symbol()["pycsamt.emtools.ss.estimate_ss_ama"].metadata[
-                "refs"
-            ],
+            _by_symbol()["pycsamt.emtools.ss.estimate_ss_ama"].metadata["refs"],
             [],
         )
 
@@ -144,9 +140,7 @@ class TestSymbolGraph(unittest.TestCase):
         )
 
     def test_unknown_symbol_returns_empty(self):
-        self.assertEqual(
-            SymbolGraph(_indexed()).related("pycsamt.no.Thing"), []
-        )
+        self.assertEqual(SymbolGraph(_indexed()).related("pycsamt.no.Thing"), [])
 
     def test_unique_leaf_recovers_reexport(self):
         # ref points at a package re-export; the real symbol lives deeper.

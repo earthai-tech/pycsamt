@@ -62,9 +62,7 @@ def test_builder_chaining_public_api() -> None:
         .with_overlay("rho", frequency=10.0)
         .with_options(show_labels=False)
     )
-    profile = (
-        pcmap.ProfileMap(data).with_quantity("phase").with_component("xy")
-    )
+    profile = pcmap.ProfileMap(data).with_quantity("phase").with_component("xy")
     volume = (
         pcmap.VolumeMap(data)
         .with_mode("surface")

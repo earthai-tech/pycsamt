@@ -89,9 +89,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -119,9 +117,7 @@ class TestOpenOutputModal:
     def _fn(self, agent_app):
         from pycsamt.app.agent_master._ids import IDs
 
-        return _find(
-            agent_app, IDs.BTN_OUTPUT_BROWSE, IDs.MODAL_OUTPUT_BROWSE
-        )
+        return _find(agent_app, IDs.BTN_OUTPUT_BROWSE, IDs.MODAL_OUTPUT_BROWSE)
 
     def test_prevent_update_without_click(self, agent_app):
         from dash.exceptions import PreventUpdate
@@ -167,18 +163,14 @@ class TestEnterSubdir:
     def test_prevent_update_for_nonexistent_target(self, agent_app, tmp_path):
         from dash.exceptions import PreventUpdate
 
-        _set_pattern_trigger(
-            {"index": 0, "name": "ghost", "type": "am-outdir-entry"}
-        )
+        _set_pattern_trigger({"index": 0, "name": "ghost", "type": "am-outdir-entry"})
         fn = self._fn(agent_app)
         with pytest.raises(PreventUpdate):
             fn([1], {"path": str(tmp_path)})
 
     def test_navigates_into_subdir(self, agent_app, tmp_path):
         (tmp_path / "child").mkdir()
-        _set_pattern_trigger(
-            {"index": 0, "name": "child", "type": "am-outdir-entry"}
-        )
+        _set_pattern_trigger({"index": 0, "name": "child", "type": "am-outdir-entry"})
         fn = self._fn(agent_app)
         store, path_text, _listing, status = fn([1], {"path": str(tmp_path)})
         assert store == {"path": str(tmp_path / "child")}
@@ -190,9 +182,7 @@ class TestGoUp:
     def _fn(self, agent_app):
         from pycsamt.app.agent_master._ids import IDs
 
-        return _find(
-            agent_app, IDs.BTN_OUTPUT_UP, IDs.OUTPUT_BROWSE_STORE
-        )
+        return _find(agent_app, IDs.BTN_OUTPUT_UP, IDs.OUTPUT_BROWSE_STORE)
 
     def test_prevent_update_without_click(self, agent_app, tmp_path):
         from dash.exceptions import PreventUpdate
@@ -222,9 +212,7 @@ class TestMkdir:
     def _fn(self, agent_app):
         from pycsamt.app.agent_master._ids import IDs
 
-        return _find(
-            agent_app, IDs.BTN_OUTPUT_MKDIR, IDs.OUTPUT_BROWSE_STORE
-        )
+        return _find(agent_app, IDs.BTN_OUTPUT_MKDIR, IDs.OUTPUT_BROWSE_STORE)
 
     def test_prevent_update_without_click(self, agent_app, tmp_path):
         from dash.exceptions import PreventUpdate
@@ -252,8 +240,9 @@ class TestMkdir:
         assert cleared == ""
 
     def test_mkdir_failure_reports_error(self, agent_app, tmp_path, monkeypatch):
-        from dash import no_update
         from pathlib import Path
+
+        from dash import no_update
 
         def boom(self, parents=True, exist_ok=True):
             raise OSError("disk full")

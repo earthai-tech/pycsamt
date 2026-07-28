@@ -11,6 +11,8 @@ available; the no-backend error path is always tested.
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 _EDI_DIR = Path(__file__).parents[4] / "data" / "3edis"
 _HAS_EDIS = _EDI_DIR.exists() and any(_EDI_DIR.glob("*.edi"))
 
@@ -40,9 +42,7 @@ def _load_sites():
 class TestAIInversionAgentNoBackend(unittest.TestCase):
     """Error-path test: clear failure message when no DL framework."""
 
-    @unittest.skipIf(
-        _has_backend(), "DL backend present — skip no-backend path"
-    )
+    @unittest.skipIf(_has_backend(), "DL backend present — skip no-backend path")
     def test_no_backend_returns_failed(self):
         from pycsamt.agents import AIInversionAgent
 
@@ -57,9 +57,7 @@ class TestAIInversionAgentNoBackend(unittest.TestCase):
         self.assertTrue(callable(AIInversionAgent.from_pretrained))
 
 
-@unittest.skipUnless(
-    _HAS_EDIS and _has_backend(), "requires 3edis data + DL backend"
-)
+@unittest.skipUnless(_HAS_EDIS and _has_backend(), "requires 3edis data + DL backend")
 class TestAIInversionAgentWithBackend(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -92,9 +90,7 @@ class TestAIInversionAgentWithBackend(unittest.TestCase):
 
 
 class TestInv2DAgentNoBackend(unittest.TestCase):
-    @unittest.skipIf(
-        _has_backend(), "DL backend present — skip no-backend path"
-    )
+    @unittest.skipIf(_has_backend(), "DL backend present — skip no-backend path")
     def test_no_backend_fails_gracefully(self):
         from pycsamt.agents import Inv2DAgent
 
@@ -104,9 +100,7 @@ class TestInv2DAgentNoBackend(unittest.TestCase):
         self.assertIsNotNone(r.error_fix_hint)
 
 
-@unittest.skipUnless(
-    _HAS_EDIS and _has_backend(), "requires 3edis data + DL backend"
-)
+@unittest.skipUnless(_HAS_EDIS and _has_backend(), "requires 3edis data + DL backend")
 class TestInv2DAgentWithBackend(unittest.TestCase):
     def test_execute_returns_result(self):
         from pycsamt.agents import Inv2DAgent
@@ -123,9 +117,7 @@ class TestInv2DAgentWithBackend(unittest.TestCase):
 
 
 class TestEnsembleAgentNoBackend(unittest.TestCase):
-    @unittest.skipIf(
-        _has_backend(), "DL backend present — skip no-backend path"
-    )
+    @unittest.skipIf(_has_backend(), "DL backend present — skip no-backend path")
     def test_no_backend_fails_gracefully(self):
         from pycsamt.agents import EnsembleAgent
 
@@ -134,9 +126,7 @@ class TestEnsembleAgentNoBackend(unittest.TestCase):
         self.assertEqual(r.status, "failed")
 
 
-@unittest.skipUnless(
-    _HAS_EDIS and _has_backend(), "requires 3edis data + DL backend"
-)
+@unittest.skipUnless(_HAS_EDIS and _has_backend(), "requires 3edis data + DL backend")
 class TestEnsembleAgentWithBackend(unittest.TestCase):
     def test_execute_coverage_in_range(self):
         from pycsamt.agents import EnsembleAgent
@@ -144,9 +134,7 @@ class TestEnsembleAgentWithBackend(unittest.TestCase):
         sites = _load_sites()
         if sites is None:
             self.skipTest("Could not load sites.")
-        ag = EnsembleAgent(
-            n_estimators=2, n_layers=3, n_train_samples=100, epochs=2
-        )
+        ag = EnsembleAgent(n_estimators=2, n_layers=3, n_train_samples=100, epochs=2)
         r = ag.execute({"sites": sites})
         self.assertIn(r.status, ("success", "needs_review"))
         cov = r.get("coverage")
@@ -159,9 +147,7 @@ class TestEnsembleAgentWithBackend(unittest.TestCase):
 
 
 class TestJointInversionAgentNoBackend(unittest.TestCase):
-    @unittest.skipIf(
-        _has_backend(), "DL backend present — skip no-backend path"
-    )
+    @unittest.skipIf(_has_backend(), "DL backend present — skip no-backend path")
     def test_no_backend_fails_gracefully(self):
         from pycsamt.agents import JointInversionAgent
 
@@ -176,9 +162,7 @@ class TestJointInversionAgentNoBackend(unittest.TestCase):
         self.assertEqual(ag.modalities, ["mt", "csamt"])
 
 
-@unittest.skipUnless(
-    _HAS_EDIS and _has_backend(), "requires 3edis data + DL backend"
-)
+@unittest.skipUnless(_HAS_EDIS and _has_backend(), "requires 3edis data + DL backend")
 class TestJointInversionAgentWithBackend(unittest.TestCase):
     def test_execute_returns_result(self):
         from pycsamt.agents import JointInversionAgent
@@ -201,9 +185,7 @@ class TestJointInversionAgentWithBackend(unittest.TestCase):
 
 
 class TestInv3DAgentNoBackend(unittest.TestCase):
-    @unittest.skipIf(
-        _has_backend(), "DL backend present — skip no-backend path"
-    )
+    @unittest.skipIf(_has_backend(), "DL backend present — skip no-backend path")
     def test_no_backend_fails_gracefully(self):
         from pycsamt.agents import Inv3DAgent
 
@@ -237,9 +219,7 @@ class TestInv3DAgentNoBackend(unittest.TestCase):
         self.assertEqual(r.status, "failed")
 
 
-@unittest.skipUnless(
-    _HAS_EDIS and _has_backend(), "requires 3edis data + DL backend"
-)
+@unittest.skipUnless(_HAS_EDIS and _has_backend(), "requires 3edis data + DL backend")
 class TestInv3DAgentWithBackend(unittest.TestCase):
     def test_execute_returns_result(self):
         from pycsamt.agents import Inv3DAgent
@@ -282,6 +262,46 @@ class TestInv3DAgentWithBackend(unittest.TestCase):
             # pred_rho shape: (n_stations, n_layers)
             self.assertEqual(r["pred_rho"].ndim, 2)
             self.assertEqual(r["pred_rho"].shape[1], 3)  # n_layers=3
+
+
+class TestInv3DTopographyContract(unittest.TestCase):
+    def test_explicit_topography_uses_coordinate_chainage(self):
+        from pycsamt.agents._topography import resolve_agent_topography
+
+        caught = []
+        topo = resolve_agent_topography(
+            {"elevation_m": [310.0, 325.0, 318.0]},
+            sites=None,
+            station_names=["S00", "S01", "S02"],
+            coords_m=np.array([[0.0, 0.0], [300.0, 400.0], [900.0, 400.0]]),
+            warnings_list=caught,
+        )
+        self.assertTrue(topo["applied"])
+        self.assertFalse(topo["affects_forward_physics"])
+        np.testing.assert_allclose(topo["chainage_km"], [0.0, 0.5, 1.1])
+        self.assertEqual(caught, [])
+
+    def test_flat_missing_elevation_is_not_silently_applied(self):
+        from pycsamt.agents._topography import resolve_agent_topography
+
+        caught = []
+        topo = resolve_agent_topography(
+            {"elevation_m": [0.0, 0.0], "chainage_km": [0.0, 1.0]},
+            sites=None,
+            station_names=["S00", "S01"],
+            coords_m=np.zeros((2, 2)),
+            warnings_list=caught,
+        )
+        self.assertFalse(topo["applied"])
+        self.assertTrue(any("not applied" in msg for msg in caught))
+
+    def test_inv2d_explicit_depth_grid_ends_at_requested_bottom(self):
+        from pycsamt.agents.inv2d_agent import _inv2d_thicknesses
+
+        thickness = _inv2d_thicknesses(8, np.logspace(1.0, 4.0, 16), 2000.0)
+        self.assertEqual(thickness.shape, (7,))
+        self.assertAlmostEqual(float(thickness.sum()), 2000.0)
+        self.assertTrue(np.all(np.diff(thickness) > 0.0))
 
 
 if __name__ == "__main__":

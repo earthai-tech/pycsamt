@@ -138,9 +138,7 @@ class InversionBackendAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -151,9 +149,7 @@ class InversionBackendAgent(BaseAgent):
         method = str(input_data.get("method", self.method))
         n_layers = int(input_data.get("n_layers", self.n_layers))
         max_iter = int(input_data.get("max_iter", self.max_iter))
-        regularization = str(
-            input_data.get("regularization", self.regularization)
-        )
+        regularization = str(input_data.get("regularization", self.regularization))
         error_floor = float(input_data.get("error_floor", self.error_floor))
         backend_options = dict(input_data.get("backend_options", {}))
         output_dir = input_data.get("output_dir", "pycsamt_inversion_output")
@@ -230,11 +226,7 @@ class InversionBackendAgent(BaseAgent):
         try:
             model = getattr(inv_result, "model", None)
             if model is not None:
-                sec = (
-                    model.get("log_rho_section")
-                    if hasattr(model, "get")
-                    else None
-                )
+                sec = model.get("log_rho_section") if hasattr(model, "get") else None
                 if sec is not None:
                     log_rho_section = np.asarray(sec, dtype=float)
                     if log_rho_section.ndim == 1:
@@ -243,9 +235,7 @@ class InversionBackendAgent(BaseAgent):
             warnings.append(f"Could not extract log_rho_section: {exc}")
 
         try:
-            station_names = list(
-                getattr(inv_result, "station_names", None) or []
-            )
+            station_names = list(getattr(inv_result, "station_names", None) or [])
         except Exception:
             pass
 
@@ -311,11 +301,7 @@ class InversionBackendAgent(BaseAgent):
         interp: str | None = None
         if self.api_key:
             rms_str = f"{rms:.4f}" if not np.isnan(rms) else "N/A"
-            n_sta = (
-                log_rho_section.shape[1]
-                if log_rho_section is not None
-                else "?"
-            )
+            n_sta = log_rho_section.shape[1] if log_rho_section is not None else "?"
             prompt = (
                 f"Inversion result:\n"
                 f"  Backend: {backend} | Dimension: {dimension} | Method: {method}\n"

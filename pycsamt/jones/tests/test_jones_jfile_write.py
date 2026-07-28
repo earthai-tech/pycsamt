@@ -29,8 +29,7 @@ def _assert_blocks_have_kinds(col: JBlocks, required: set[str]) -> None:
 def _assert_blocks_have_comps(col: JBlocks, tokens: set[str]) -> None:
     # tokens like "ZXY", "RXY", ...
     seen = {
-        f"{b.head.dtype.kind}{b.head.dtype.comp}"  # type: ignore
-        for b in col.blocks
+        f"{b.head.dtype.kind}{b.head.dtype.comp}" for b in col.blocks  # type: ignore
     }
     missing = tokens.difference(seen)
     assert not missing, f"Missing components: {missing}"
@@ -126,12 +125,8 @@ def test_write_Z_only(tmp_path: Path, j_single_file: Path):
 def test_write_no_overwrite_suffix(tmp_path: Path, j_single_file: Path):
     jf = JFile.from_file(j_single_file, verbose=0)
     base = tmp_path / "dup.j"
-    out1 = jf.write(
-        savepath=tmp_path, new_jfn=base.name, datatype="R", overwrite=False
-    )
-    out2 = jf.write(
-        savepath=tmp_path, new_jfn=base.name, datatype="R", overwrite=False
-    )
+    out1 = jf.write(savepath=tmp_path, new_jfn=base.name, datatype="R", overwrite=False)
+    out2 = jf.write(savepath=tmp_path, new_jfn=base.name, datatype="R", overwrite=False)
     p1 = Path(out1)
     p2 = Path(out2)
     assert p1.exists() and p2.exists()

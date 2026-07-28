@@ -24,6 +24,7 @@ Quick start
 
     grid = cfg.to_grid()
     from pycsamt.forward.em2d import MT2DForward
+
     resp = MT2DForward(cfg.freq_grid(), grid).run()
 """
 

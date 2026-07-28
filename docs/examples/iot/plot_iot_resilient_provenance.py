@@ -108,9 +108,7 @@ if not (
     tmp = Path(tempfile.mkdtemp())
     freq = np.logspace(4, 0, 24)
     for i in range(12):
-        z = impedance_to_z(
-            (1 + 1j) * np.sqrt(freq), freq, station=f"S{i:02d}"
-        )
+        z = impedance_to_z((1 + 1j) * np.sqrt(freq), freq, station=f"S{i:02d}")
         z_to_edi(
             z,
             station=f"S{i:02d}",
@@ -175,8 +173,7 @@ for i, station in enumerate(stations):
 n_delivered_live = sum(1 for _, s, _, _ in timeline if s == "delivered")
 n_buffered = sum(1 for _, s, _, _ in timeline if s == "buffered")
 print(
-    f"live-delivered: {n_delivered_live}, buffered during outage: "
-    f"{n_buffered}"
+    f"live-delivered: {n_delivered_live}, buffered during outage: {n_buffered}"
 )
 print(
     f"finally delivered: {len(link.delivered)}/{len(stations)} "

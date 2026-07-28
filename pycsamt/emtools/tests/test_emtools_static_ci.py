@@ -14,13 +14,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 
-from pycsamt.compat.numpy import trapz as _trapz
 from pycsamt.api import (
     APIFrame,
     APIResult,
     configure_api_view,
     reset_api_view,
 )
+from pycsamt.compat.numpy import trapz as _trapz
 from pycsamt.emtools.dimensionality import (
     pre2d_inversion_assessment,
 )
@@ -130,13 +130,9 @@ def _shifted_site(
     return _FakeSite(station, z_s, fr, east=east, north=north)
 
 
-def _line_sites(
-    n: int = 5, rho: float = 100.0, spacing: float = 200.0
-) -> list:
+def _line_sites(n: int = 5, rho: float = 100.0, spacing: float = 200.0) -> list:
     """n stations along a line with identical ρ_a (no static shift)."""
-    return [
-        _site(f"S{i:02d}", rho, east=i * spacing, north=0.0) for i in range(n)
-    ]
+    return [_site(f"S{i:02d}", rho, east=i * spacing, north=0.0) for i in range(n)]
 
 
 def test_confidence_ratio_weighted_formula_and_error():
@@ -234,18 +230,12 @@ def test_pre2d_inversion_assessment_records_strike_and_gb_status(monkeypatch):
     )
 
     monkeypatch.setattr(dim_mod, "ensure_sites", lambda sites, **_: sites)
-    monkeypatch.setattr(
-        dim_mod, "classify_dimensionality", lambda *_, **__: dim
-    )
-    monkeypatch.setattr(
-        dim_mod, "estimate_strike_sweep", lambda *_, **__: strike
-    )
+    monkeypatch.setattr(dim_mod, "classify_dimensionality", lambda *_, **__: dim)
+    monkeypatch.setattr(dim_mod, "estimate_strike_sweep", lambda *_, **__: strike)
     monkeypatch.setattr(
         dim_mod, "estimate_strike_phase_tensor", lambda *_, **__: strike
     )
-    monkeypatch.setattr(
-        dim_mod, "estimate_strike_consensus", lambda *_, **__: strike
-    )
+    monkeypatch.setattr(dim_mod, "estimate_strike_consensus", lambda *_, **__: strike)
     monkeypatch.setattr(dim_mod, "strike_curve_sweep", lambda *_, **__: curve)
 
     report = pre2d_inversion_assessment(
@@ -313,9 +303,7 @@ class TestCorrectStaticShiftContract:
         for ed in _iter_items(result):
             z, _ = _z_freq(ed)
             assert z is not None
-            np.testing.assert_allclose(
-                np.abs(z), np.abs(_make_z(_freqs())), rtol=1e-10
-            )
+            np.testing.assert_allclose(np.abs(z), np.abs(_make_z(_freqs())), rtol=1e-10)
 
     def test_uniform_profile_no_change(self):
         """Uniform ρ_a across all stations → spatial mean = individual → C=1."""
@@ -323,8 +311,7 @@ class TestCorrectStaticShiftContract:
 
         sites = _line_sites(5, rho=200.0, spacing=300.0)
         z_before = [
-            _z_freq(ed)[0].copy()
-            for ed in _iter_items(ensure_sites_local(sites))
+            _z_freq(ed)[0].copy() for ed in _iter_items(ensure_sites_local(sites))
         ]
         result = correct_static_shift(sites, window_m=2000.0)
         z_after = [_z_freq(ed)[0] for ed in _iter_items(result)]
@@ -364,11 +351,7 @@ def _z_freq(ed):
     """Return (z, freq) from either a _FakeSite or a Sites-wrapped Site."""
     z = getattr(ed, "z", None)
     fr = getattr(ed, "freq", None)
-    if (
-        isinstance(z, np.ndarray)
-        and z.ndim == 3
-        and isinstance(fr, np.ndarray)
-    ):
+    if isinstance(z, np.ndarray) and z.ndim == 3 and isinstance(fr, np.ndarray):
         return z, fr
     Z_obj = getattr(ed, "Z", None)
     if Z_obj is not None:
@@ -399,9 +382,7 @@ class TestCorrectStaticShiftDirection:
                     north=0.0,
                 )
             else:
-                site = _site(
-                    f"S{i:02d}", rho=rho_local, east=i * 300.0, north=0.0
-                )
+                site = _site(f"S{i:02d}", rho=rho_local, east=i * 300.0, north=0.0)
             sites.append(site)
         return sites
 
@@ -413,17 +394,14 @@ class TestCorrectStaticShiftDirection:
         # Capture before-snapshots (copy!) before correction modifies in-place
         S0 = ensure_sites_local(sites)
         mag_before = [
-            float(np.mean(np.abs(_z_freq(ed)[0][:, 0, 1])))
-            for ed in _iter_items(S0)
+            float(np.mean(np.abs(_z_freq(ed)[0][:, 0, 1]))) for ed in _iter_items(S0)
         ]
         result = correct_static_shift(sites, window_m=3000.0)
         mag_after = [
             float(np.mean(np.abs(_z_freq(ed)[0][:, 0, 1])))
             for ed in _iter_items(result)
         ]
-        assert mag_after[2] < mag_before[2], (
-            "shifted station: |Z| should decrease"
-        )
+        assert mag_after[2] < mag_before[2], "shifted station: |Z| should decrease"
 
     def test_phase_unchanged(self):
         """Static shift is a real scalar — it should NOT change the impedance phase."""
@@ -432,13 +410,9 @@ class TestCorrectStaticShiftDirection:
         sites = self._build_shifted_line(n=5, shift_idx=2, ss=4.0)
         S0 = ensure_sites_local(sites)
         # Capture phase before (static shift doesn't touch phase)
-        ph_before = [
-            np.angle(_z_freq(ed)[0][:, 0, 1]).copy() for ed in _iter_items(S0)
-        ]
+        ph_before = [np.angle(_z_freq(ed)[0][:, 0, 1]).copy() for ed in _iter_items(S0)]
         result = correct_static_shift(sites, window_m=3000.0)
-        ph_after = [
-            np.angle(_z_freq(ed)[0][:, 0, 1]) for ed in _iter_items(result)
-        ]
+        ph_after = [np.angle(_z_freq(ed)[0][:, 0, 1]) for ed in _iter_items(result)]
         for pb, pa in zip(ph_before, ph_after):
             np.testing.assert_allclose(pa, pb, atol=1e-10)
 
@@ -714,9 +688,7 @@ class TestStationPositions:
     def test_monotone_on_line(self):
         from pycsamt.emtools._core import _station_positions
 
-        eds = [
-            _site(f"S{i}", east=float(i * 400), north=0.0) for i in range(5)
-        ]
+        eds = [_site(f"S{i}", east=float(i * 400), north=0.0) for i in range(5)]
         pos = _station_positions(eds, spacing_m=200.0)
         assert np.all(np.diff(pos) > 0)
 
@@ -743,9 +715,7 @@ class TestStationPositions:
 class TestPlotConfidenceProfile:
     def _sites_all_good(self, n=5):
         """All stations with 100 % valid Z → CI = 1.0."""
-        return [
-            _site(f"S{i:02d}", east=i * 300.0, north=0.0) for i in range(n)
-        ]
+        return [_site(f"S{i:02d}", east=i * 300.0, north=0.0) for i in range(n)]
 
     def _sites_mixed(self):
         """Three stations: good, some NaN, mostly NaN."""
@@ -797,19 +767,14 @@ class TestPlotConfidenceProfile:
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites)
         assert (
-            "distance" in ax.get_xlabel().lower()
-            or "dist" in ax.get_xlabel().lower()
+            "distance" in ax.get_xlabel().lower() or "dist" in ax.get_xlabel().lower()
         )
         plt.close("all")
 
     def test_scatter_points_count(self):
         sites = self._sites_all_good(n=4)
         ax = plot_confidence_profile(sites)
-        colls = [
-            coll
-            for coll in ax.collections
-            if isinstance(coll, PathCollection)
-        ]
+        colls = [coll for coll in ax.collections if isinstance(coll, PathCollection)]
         n_pts = sum(len(c.get_offsets()) for c in colls)
         assert n_pts == 4
         plt.close("all")
@@ -825,9 +790,7 @@ class TestPlotConfidenceProfile:
     def test_custom_thresholds(self):
         sites = self._sites_all_good()
         ax = plot_confidence_profile(sites, ci_hi=0.80, ci_lo=0.40)
-        legend_text = " ".join(
-            t.get_text() for t in ax.get_legend().get_texts()
-        )
+        legend_text = " ".join(t.get_text() for t in ax.get_legend().get_texts())
         assert "0.80" in legend_text or "0.8" in legend_text
         assert "0.40" in legend_text or "0.4" in legend_text
         plt.close("all")
@@ -898,9 +861,7 @@ class TestPlotConfidenceProfile:
             assert not isinstance(out_default, APIFrame)
             assert "confidence" in out_default.columns
 
-            out_forced = station_confidence_table(
-                sites, method="composite", api=True
-            )
+            out_forced = station_confidence_table(sites, method="composite", api=True)
             assert isinstance(out_forced, APIFrame)
         finally:
             reset_api_view()
@@ -955,9 +916,7 @@ class TestPlotConfidenceProfile:
 
     def test_frequency_confidence_table_api_flag(self):
         sites = self._sites_mixed()
-        plain = frequency_confidence_table(
-            sites, method="presence", api=False
-        )
+        plain = frequency_confidence_table(sites, method="presence", api=False)
         view = frequency_confidence_table(sites, method="presence", api=True)
 
         assert isinstance(view, APIFrame)
@@ -1110,9 +1069,7 @@ class TestConfidenceFrequencyEditing:
             ci_lo=0.50,
             reject="drop",
         )
-        plain = frequency_edit_report(
-            before, out, method="presence", api=False
-        )
+        plain = frequency_edit_report(before, out, method="presence", api=False)
         view = frequency_edit_report(before, out, method="presence", api=True)
 
         assert isinstance(view, APIFrame)
@@ -1149,9 +1106,7 @@ class TestConfidenceFrequencyEditing:
             ci_lo=0.50,
             reject="drop",
         )
-        plain = frequency_edit_decision_table(
-            before, out, method="presence", api=False
-        )
+        plain = frequency_edit_decision_table(before, out, method="presence", api=False)
         view = frequency_edit_decision_table(
             before,
             out,
@@ -1323,9 +1278,7 @@ class TestApplyEachInplaceSemantics:
                     )
                 )
             else:
-                sites.append(
-                    _site(f"S{i:02d}", rho=100.0, east=i * 300.0, north=0.0)
-                )
+                sites.append(_site(f"S{i:02d}", rho=100.0, east=i * 300.0, north=0.0))
         return sites
 
     def test_inplace_false_preserves_original_and_changes_copy(self):
@@ -1340,15 +1293,14 @@ class TestApplyEachInplaceSemantics:
         # original is untouched
         z_after_orig = [_z_freq(ed)[0] for ed in list(sites)]
         for a, b in zip(z_orig, z_after_orig):
-            assert np.allclose(a, b, equal_nan=True), (
-                "inplace=False mutated the caller's sites"
-            )
+            assert np.allclose(
+                a, b, equal_nan=True
+            ), "inplace=False mutated the caller's sites"
 
         # the returned copy actually differs from the original
         z_corr = [_z_freq(ed)[0] for ed in list(corrected)]
         changed = any(
-            not np.allclose(o, c, equal_nan=True)
-            for o, c in zip(z_orig, z_corr)
+            not np.allclose(o, c, equal_nan=True) for o, c in zip(z_orig, z_corr)
         )
         assert changed, "correction produced no change in the copy"
 
@@ -1362,7 +1314,6 @@ class TestApplyEachInplaceSemantics:
 
         z_now = [_z_freq(ed)[0] for ed in list(sites)]
         changed = any(
-            not np.allclose(o, c, equal_nan=True)
-            for o, c in zip(z_orig, z_now)
+            not np.allclose(o, c, equal_nan=True) for o, c in zip(z_orig, z_now)
         )
         assert changed, "inplace=True did not mutate the original"

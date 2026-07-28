@@ -43,8 +43,9 @@ Replicate the old ``stratagem_edi_process_script.py`` in four lines:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 from ..api.property import MetadataMixin, PyCSAMTObject
 from ..emtools._core import ensure_sites
@@ -574,9 +575,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
             )
         if self.qc_ is not None:
             n_flag = len(self.qc_.flagged_stations())
-            lines.append(
-                f"  QC flags   : {n_flag} / {len(self.qc_.report_)} stations"
-            )
+            lines.append(f"  QC flags   : {n_flag} / {len(self.qc_.report_)} stations")
         if hasattr(self, "_ss_corrector_"):
             med = self._ss_corrector_.factors_["fac_z"].median()
             lines.append(f"  SS fac_z   : median={med:.3f}")
@@ -587,9 +586,7 @@ class StratagemSurvey(PyCSAMTObject, MetadataMixin):
                 f"band={ff.n_dropped_band_}, incoh={ff.n_masked_stat_}"
             )
         if hasattr(self, "_noise_remover_"):
-            lines.append(
-                f"  noise rm   : {self._noise_remover_.n_stations_} stations"
-            )
+            lines.append(f"  noise rm   : {self._noise_remover_.n_stations_} stations")
         if hasattr(self, "_writer_"):
             lines.append(
                 f"  export     : {self._writer_.n_written_} files → {self._last_export_dir_}"

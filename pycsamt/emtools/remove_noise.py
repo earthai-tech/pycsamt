@@ -169,23 +169,19 @@ def emi_mitigation_report(
             "rr_processed",
         )
         rr_available = any(
-            getattr(ed, key, None) not in (None, "", False)
-            for key in rr_fields
+            getattr(ed, key, None) not in (None, "", False) for key in rr_fields
         )
         if not rr_available:
             edi = getattr(ed, "edi", None)
             rr_available = edi is not None and any(
-                getattr(edi, key, None) not in (None, "", False)
-                for key in rr_fields
+                getattr(edi, key, None) not in (None, "", False) for key in rr_fields
             )
         harm_z = 0
         n_freq = 0
         if Z is not None and fr is not None:
             fr = np.asarray(fr, dtype=float).ravel()
             n_freq = int(fr.size)
-            harm_z = int(
-                np.count_nonzero(_harm_mask(fr, mains_hz, n_harm, tol_hz))
-            )
+            harm_z = int(np.count_nonzero(_harm_mask(fr, mains_hz, n_harm, tol_hz)))
         harm_tipper = 0
         if T is not None and ft is not None:
             ft = np.asarray(ft, dtype=float).ravel()
@@ -215,9 +211,7 @@ def emi_mitigation_report(
 # --------------------------- power-line notching ------------------------- #
 
 
-def _harm_mask(
-    fr: np.ndarray, mains: float, n_harm: int, tol_hz: float
-) -> np.ndarray:
+def _harm_mask(fr: np.ndarray, mains: float, n_harm: int, tol_hz: float) -> np.ndarray:
     kk = np.arange(1, int(n_harm) + 1, dtype=float)
     fH = kk * float(mains)
     m = np.zeros(fr.size, dtype=bool)
@@ -651,9 +645,7 @@ or sequence, default "offdiag"
                     robust_iters=robust_iters,
                 )
                 if blend < 1.0:
-                    log_rho_fit = (
-                        1.0 - blend
-                    ) * log_rho + blend * log_rho_fit
+                    log_rho_fit = (1.0 - blend) * log_rho + blend * log_rho_fit
                 rho_fit = 10.0**log_rho_fit
                 ok_fit = ok_rho & np.isfinite(rho_fit) & (rho_fit > 0.0)
                 amp_new[ok_fit] = np.sqrt(5.0 * fr[ok_fit] * rho_fit[ok_fit])
@@ -674,9 +666,7 @@ or sequence, default "offdiag"
                 phase_new[ok_phi] = phase_fit[ok_phi]
 
             ok = valid_freq & np.isfinite(amp_new) & np.isfinite(phase_new)
-            z2[ok, i, j] = amp_new[ok] * np.exp(
-                1j * np.deg2rad(phase_new[ok])
-            )
+            z2[ok, i, j] = amp_new[ok] * np.exp(1j * np.deg2rad(phase_new[ok]))
 
         try:
             z_full = np.asarray(Z.z, dtype=np.complex128).copy()
@@ -912,26 +902,17 @@ def hampel_filter_freq(
                 m = np.abs(Y)
                 p = np.angle(Y)
                 m2 = np.vstack(
-                    [
-                        _hampel_1d(m[:, j], win, nsig)
-                        for j in range(m.shape[1])
-                    ]
+                    [_hampel_1d(m[:, j], win, nsig) for j in range(m.shape[1])]
                 ).T
                 Y2 = m2 * np.exp(1j * p)
             else:
                 R = np.real(Y)
                 I = np.imag(Y)
                 R2 = np.vstack(
-                    [
-                        _hampel_1d(R[:, j], win, nsig)
-                        for j in range(R.shape[1])
-                    ]
+                    [_hampel_1d(R[:, j], win, nsig) for j in range(R.shape[1])]
                 ).T
                 I2 = np.vstack(
-                    [
-                        _hampel_1d(I[:, j], win, nsig)
-                        for j in range(I.shape[1])
-                    ]
+                    [_hampel_1d(I[:, j], win, nsig) for j in range(I.shape[1])]
                 ).T
                 Y2 = R2 + 1j * I2
             Z.z = Y2.reshape(z.shape)
@@ -943,16 +924,10 @@ def hampel_filter_freq(
                 r = np.real(t)
                 im = np.imag(t)
                 r2 = np.vstack(
-                    [
-                        _hampel_1d(r[:, j], win, nsig)
-                        for j in range(r.shape[1])
-                    ]
+                    [_hampel_1d(r[:, j], win, nsig) for j in range(r.shape[1])]
                 ).T
                 i2 = np.vstack(
-                    [
-                        _hampel_1d(im[:, j], win, nsig)
-                        for j in range(im.shape[1])
-                    ]
+                    [_hampel_1d(im[:, j], win, nsig) for j in range(im.shape[1])]
                 ).T
                 T.tipper = r2 + 1j * i2
         return Si
@@ -1043,9 +1018,7 @@ def spatial_median_filter(
                             pass
                         if Tj is None:
                             continue
-                        jj = np.clip(
-                            np.searchsorted(ftj, ft[k]), 0, ftj.size - 1
-                        )
+                        jj = np.clip(np.searchsorted(ftj, ft[k]), 0, ftj.size - 1)
                         pool.append(tj[jj])
                     if pool:
                         med = np.nanmedian(np.asarray(pool), axis=0)
@@ -1630,10 +1603,7 @@ def _emap_component_indices(component: str) -> tuple[tuple[int, int], ...]:
         "all": ((0, 0), (0, 1), (1, 0), (1, 1)),
     }
     if component not in mapping:
-        msg = (
-            "component must be one of 'all', 'offdiag', "
-            "'xx', 'xy', 'yx', or 'yy'."
-        )
+        msg = "component must be one of 'all', 'offdiag', " "'xx', 'xy', 'yx', or 'yy'."
         raise ValueError(msg)
     return mapping[component]
 
@@ -2001,9 +1971,7 @@ def confidence_gated_emap_filter(
         strict=False,
         verbose=verbose,
     )
-    before_map = {
-        _name(ed, i): ed for i, ed in enumerate(_iter_items(before))
-    }
+    before_map = {_name(ed, i): ed for i, ed in enumerate(_iter_items(before))}
     comps = _emap_component_indices(component)
     decisions = []
     for i, edf in enumerate(_iter_items(filtered)):
@@ -2021,9 +1989,7 @@ def confidence_gated_emap_filter(
             if fr0.size == 0:
                 continue
             idx0 = int(np.nanargmin(np.abs(fr0 - freq)))
-            if not np.isclose(
-                fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12
-            ):
+            if not np.isclose(fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12):
                 continue
             ci = conf[idx0]
             if not np.isfinite(ci):
@@ -2047,9 +2013,7 @@ def confidence_gated_emap_filter(
             for a, b in comps:
                 original = z0[idx0, a, b]
                 filtered_value = zf[j, a, b]
-                znew[j, a, b] = (
-                    1.0 - alpha
-                ) * original + alpha * filtered_value
+                znew[j, a, b] = (1.0 - alpha) * original + alpha * filtered_value
                 before_mag.append(abs(original))
                 after_mag.append(abs(znew[j, a, b]))
             before_ref = float(np.nanmedian(before_mag))
@@ -2059,15 +2023,12 @@ def confidence_gated_emap_filter(
                     station=station,
                     frequency_hz=float(freq),
                     period_s=float(1.0 / freq) if freq else np.nan,
-                    log10_period=(
-                        float(np.log10(1.0 / freq)) if freq > 0 else np.nan
-                    ),
+                    log10_period=(float(np.log10(1.0 / freq)) if freq > 0 else np.nan),
                     confidence=float(ci) if np.isfinite(ci) else np.nan,
                     blend_weight=float(alpha),
                     action=action,
                     delta_log10_abs_z=float(
-                        np.log10(after_ref + 1e-24)
-                        - np.log10(before_ref + 1e-24)
+                        np.log10(after_ref + 1e-24) - np.log10(before_ref + 1e-24)
                     ),
                 )
             )
@@ -2232,9 +2193,7 @@ def _component_index(component: str) -> tuple[int, int]:
     return mapping[component]
 
 
-def _paired_z_items(
-    before_sites: Any, after_sites: Any
-) -> list[tuple[str, Any, Any]]:
+def _paired_z_items(before_sites: Any, after_sites: Any) -> list[tuple[str, Any, Any]]:
     """Pair before/after Z-bearing items by station name."""
     before = ensure_sites(before_sites, recursive=False, strict=False)
     after = ensure_sites(after_sites, recursive=False, strict=False)
@@ -2297,8 +2256,7 @@ def emap_filter_report(
             after = z1[idx, a, b]
             if np.isfinite(before) and np.isfinite(after):
                 vals.append(
-                    np.log10(np.abs(after) + 1e-24)
-                    - np.log10(np.abs(before) + 1e-24)
+                    np.log10(np.abs(after) + 1e-24) - np.log10(np.abs(before) + 1e-24)
                 )
         vals_arr = np.asarray(vals, dtype=float)
         row = dict(
@@ -2309,9 +2267,7 @@ def emap_filter_report(
                 float(np.nanmedian(vals_arr)) if vals_arr.size else np.nan
             ),
             rms_delta_log10_abs_z=(
-                float(np.sqrt(np.nanmean(vals_arr**2)))
-                if vals_arr.size
-                else np.nan
+                float(np.sqrt(np.nanmean(vals_arr**2))) if vals_arr.size else np.nan
             ),
         )
         if ref_freq is not None:
@@ -2323,8 +2279,7 @@ def emap_filter_report(
                 before_log10_abs_z=float(np.log10(np.abs(v0) + 1e-24)),
                 after_log10_abs_z=float(np.log10(np.abs(v1) + 1e-24)),
                 reference_delta_log10_abs_z=float(
-                    np.log10(np.abs(v1) + 1e-24)
-                    - np.log10(np.abs(v0) + 1e-24)
+                    np.log10(np.abs(v1) + 1e-24) - np.log10(np.abs(v0) + 1e-24)
                 ),
             )
         rows.append(row)
@@ -2504,9 +2459,7 @@ def plot_emap_filter_psection(
     if delta_vlim is None:
         dvals = np.abs(delta[np.isfinite(delta)])
         delta_vlim = (
-            float(np.nanpercentile(dvals, delta_vlim_pct))
-            if dvals.size
-            else 0.25
+            float(np.nanpercentile(dvals, delta_vlim_pct)) if dvals.size else 0.25
         )
         delta_vlim = max(delta_vlim, 1e-6)
 

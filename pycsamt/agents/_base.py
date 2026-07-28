@@ -85,7 +85,7 @@ class AgentResult:
     >>> result = some_agent.execute({"path": "/data/EDIs"})
     >>> result.status
     'success'
-    >>> result["sites"]          # dict-like access to data
+    >>> result["sites"]  # dict-like access to data
     <Sites 25 stations>
     >>> result.get("n_stations", 0)
     25
@@ -116,11 +116,7 @@ class AgentResult:
 
     def __repr__(self) -> str:
         warn_str = f", {len(self.warnings)} warnings" if self.warnings else ""
-        cost_str = (
-            f", ${self.cost_estimate_usd:.4f}"
-            if self.cost_estimate_usd
-            else ""
-        )
+        cost_str = f", ${self.cost_estimate_usd:.4f}" if self.cost_estimate_usd else ""
         return (
             f"AgentResult(status={self.status!r}, "
             f"elapsed={self.elapsed_seconds:.1f}s{cost_str}{warn_str})"
@@ -222,9 +218,7 @@ class BaseAgent(ABC):
         self.model = model or _DEFAULT_MODELS[llm_provider]
 
         # ── pycsamt API injection ──────────────────────────────────────────
-        self._section: SectionStyle = PYCSAMT_SECTION.style_for(
-            section_preset
-        )
+        self._section: SectionStyle = PYCSAMT_SECTION.style_for(section_preset)
         self._style = PYCSAMT_STYLE
         self._station = PYCSAMT_STATION_RENDERING
         self._control = PYCSAMT_CONTROL
@@ -395,9 +389,7 @@ class BaseAgent(ABC):
         # Gemini doesn't expose exact token counts via the basic API; estimate
         n_in = len(prompt.split()) * 4 // 3
         n_out = len(text.split()) * 4 // 3
-        cost = AGENT_CONFIG.estimate_cost(
-            self.llm_provider, self.model, n_in, n_out
-        )
+        cost = AGENT_CONFIG.estimate_cost(self.llm_provider, self.model, n_in, n_out)
         return text, cost
 
     def _query_deepseek(
@@ -602,9 +594,7 @@ class BaseAgent(ABC):
     # ── repr ──────────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        llm = (
-            f"{self.llm_provider}/{self.model}" if self.api_key else "no-LLM"
-        )
+        llm = f"{self.llm_provider}/{self.model}" if self.api_key else "no-LLM"
         return f"{type(self).__name__}(name={self.name!r}, llm={llm!r})"
 
 

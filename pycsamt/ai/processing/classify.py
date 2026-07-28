@@ -74,9 +74,7 @@ def _build_dim_mlp_torch(
     try:
         import torch.nn as nn
     except ImportError as exc:
-        raise ImportError(
-            "PyTorch is required for DimensionalityClassifier"
-        ) from exc
+        raise ImportError("PyTorch is required for DimensionalityClassifier") from exc
 
     dims = [n_features] + list(hidden)
 
@@ -189,11 +187,11 @@ class DimensionalityClassifier(BaseEMProcessor):
     --------
     >>> from pycsamt.ai.processing import DimensionalityClassifier
     >>> clf = DimensionalityClassifier()
-    >>> clf.fit(X_train, y_train, epochs=30)         # doctest: +SKIP
+    >>> clf.fit(X_train, y_train, epochs=30)  # doctest: +SKIP
     DimensionalityClassifier(n_classes=3, torch)
-    >>> clf.predict(X_test)                           # doctest: +SKIP
+    >>> clf.predict(X_test)  # doctest: +SKIP
     array([0, 1, 2, ...])
-    >>> clf.predict_strike(X_2d)                      # doctest: +SKIP
+    >>> clf.predict_strike(X_2d)  # doctest: +SKIP
     array([ 35., -12., ...])
     """
 
@@ -254,9 +252,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         -------
         DimensionalityClassifier
         """
-        X, y, strike = _df_to_Xy(
-            df, label_col, strike_col, skew_th, ellipt_th
-        )
+        X, y, strike = _df_to_Xy(df, label_col, strike_col, skew_th, ellipt_th)
         obj = cls()
         obj.fit(X, y, strike=strike, **fit_kwargs)
         return obj
@@ -365,9 +361,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         Xn = (X_arr - self._x_mean) / self._x_std
 
         if self._backend_name == "tensorflow":
-            _, strike_raw = self._network.predict(
-                Xn.astype(np.float32), verbose=0
-            )
+            _, strike_raw = self._network.predict(Xn.astype(np.float32), verbose=0)
             strike = np.asarray(strike_raw).ravel()
         else:
             try:
@@ -400,9 +394,7 @@ class DimensionalityClassifier(BaseEMProcessor):
                 phase_features_table,
             )
         except ImportError as exc:
-            raise ImportError(
-                "emtools is required for predict_table"
-            ) from exc
+            raise ImportError("emtools is required for predict_table") from exc
 
         df = phase_features_table(sites)
         if df.empty:
@@ -480,9 +472,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for xb, yb, sb in DataLoader(
-                tr_ds, batch_size=batch_size, shuffle=True
-            ):
+            for xb, yb, sb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
                 xb, yb, sb = xb.to(dev), yb.to(dev), sb.to(dev)
                 cls_out, str_out = self._network(xb)
                 loss = ce(cls_out, yb)
@@ -608,9 +598,7 @@ class DimensionalityClassifier(BaseEMProcessor):
             "val_loss": hist.history.get("val_loss", []),
         }
 
-    def _fit_rf(
-        self, Xn: np.ndarray, y: np.ndarray, *, verbose: bool
-    ) -> None:
+    def _fit_rf(self, Xn: np.ndarray, y: np.ndarray, *, verbose: bool) -> None:
         try:
             from sklearn.ensemble import (
                 RandomForestClassifier,
@@ -636,9 +624,7 @@ class DimensionalityClassifier(BaseEMProcessor):
             return out
 
         if self._backend_name == "tensorflow":
-            cls_logits, _ = self._network.predict(
-                Xn.astype(np.float32), verbose=0
-            )
+            cls_logits, _ = self._network.predict(Xn.astype(np.float32), verbose=0)
             # Softmax over logits
             e = np.exp(cls_logits - cls_logits.max(axis=1, keepdims=True))
             return e / e.sum(axis=1, keepdims=True)
@@ -677,11 +663,7 @@ class DimensionalityClassifier(BaseEMProcessor):
                     y_arr = np.zeros(len(X_arr), dtype=int)
             else:
                 y_arr = np.asarray(y, dtype=int)
-            strike_arr = (
-                np.asarray(strike, dtype=float)
-                if strike is not None
-                else None
-            )
+            strike_arr = np.asarray(strike, dtype=float) if strike is not None else None
         return X_arr, y_arr, strike_arr
 
     # ─── serialisation ────────────────────────────────────────────────────
@@ -712,9 +694,7 @@ class DimensionalityClassifier(BaseEMProcessor):
 
                 buf = io.BytesIO()
                 pickle.dump(self._rf, buf)
-                out["_rf_pickle"] = np.frombuffer(
-                    buf.getvalue(), dtype=np.uint8
-                )
+                out["_rf_pickle"] = np.frombuffer(buf.getvalue(), dtype=np.uint8)
             except Exception:
                 pass
         return out
@@ -723,9 +703,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
         backend_blob = weights.pop("_backend", None)
-        self._backend_name = (
-            str(backend_blob) if backend_blob is not None else "torch"
-        )
+        self._backend_name = str(backend_blob) if backend_blob is not None else "torch"
 
         rf_blob = weights.pop("_rf_pickle", None)
         if rf_blob is not None:

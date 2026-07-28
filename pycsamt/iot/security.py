@@ -75,9 +75,7 @@ class TLSConfig(PyCSAMTObject):
         self.verify = _c.as_bool(self.verify)
         self.min_version = _c.as_optional_str(self.min_version, "min_version")
         if (self.certfile is None) != (self.keyfile is None):
-            raise ValueError(
-                "certfile and keyfile must be provided together."
-            )
+            raise ValueError("certfile and keyfile must be provided together.")
 
     def as_dict(self) -> dict[str, Any]:
         """Return TLS configuration (paths are not secrets)."""
@@ -118,14 +116,10 @@ class Credential(PyCSAMTObject):
         self.username = _c.as_optional_str(self.username, "username")
         self.password = _c.as_optional_str(self.password, "password")
         self.api_key = _c.as_optional_str(self.api_key, "api_key")
-        self.api_key_header = _c.as_nonempty_str(
-            self.api_key_header, "api_key_header"
-        )
+        self.api_key_header = _c.as_nonempty_str(self.api_key_header, "api_key_header")
         if self.scheme is AuthScheme.BEARER and not self.token:
             raise ValueError("bearer scheme requires a token.")
-        if self.scheme is AuthScheme.BASIC and not (
-            self.username and self.password
-        ):
+        if self.scheme is AuthScheme.BASIC and not (self.username and self.password):
             raise ValueError("basic scheme requires username and password.")
         if self.scheme is AuthScheme.API_KEY and not self.api_key:
             raise ValueError("api_key scheme requires an api_key.")
@@ -268,9 +262,7 @@ class SecurityConfig(PyCSAMTObject):
         if token:
             credential = Credential(scheme=AuthScheme.BEARER, token=token)
         elif api_key:
-            credential = Credential(
-                scheme=AuthScheme.API_KEY, api_key=api_key
-            )
+            credential = Credential(scheme=AuthScheme.API_KEY, api_key=api_key)
         elif username and password:
             credential = Credential(
                 scheme=AuthScheme.BASIC, username=username, password=password

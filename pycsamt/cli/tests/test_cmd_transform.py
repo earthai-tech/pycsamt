@@ -77,9 +77,7 @@ class TestSpectraToEDIUnit:
     @pytest.fixture(autouse=True)
     def require_spectra(self) -> None:
         if not _has_spectra():
-            pytest.skip(
-                "data/MT/SPECTRA/ not found — skipping spectra unit tests"
-            )
+            pytest.skip("data/MT/SPECTRA/ not found — skipping spectra unit tests")
 
     def test_single_file_returns_collection(self) -> None:
         from pycsamt.transformers import SpectraToEDI
@@ -230,9 +228,7 @@ class TestTransformSpectraCLI:
         if not _has_spectra():
             pytest.skip("data/MT/SPECTRA/ not found")
 
-    def test_dry_run_no_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_dry_run_no_output(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             ["transform", "spectra", str(_SPECTRA_DIR), "--dry-run"],
@@ -250,9 +246,7 @@ class TestTransformSpectraCLI:
         assert result.exit_code == 0
         assert f"{n} file(s)" in result.output
 
-    def test_single_file_text_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_single_file_text_output(self, runner: CliRunner, tmp_path: Path) -> None:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
         result = runner.invoke(
             main,
@@ -261,9 +255,7 @@ class TestTransformSpectraCLI:
         assert result.exit_code == 0
         assert "Converted: 1/1" in result.output
 
-    def test_single_file_json_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_single_file_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
         result = runner.invoke(
             main,
@@ -283,9 +275,7 @@ class TestTransformSpectraCLI:
         assert data["n_fail"] == 0
         assert data["converted"][0]["has_tipper"] is True
 
-    def test_directory_converts_all(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_directory_converts_all(self, runner: CliRunner, tmp_path: Path) -> None:
         n = len(list(_SPECTRA_DIR.glob("*.edi")))
         result = runner.invoke(
             main,
@@ -300,9 +290,7 @@ class TestTransformSpectraCLI:
         assert result.exit_code == 0
         assert f"Converted: {n}/{n}" in result.output
 
-    def test_station_suffix_in_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_station_suffix_in_output(self, runner: CliRunner, tmp_path: Path) -> None:
         src = sorted(_SPECTRA_DIR.glob("*.edi"))[0]
         result = runner.invoke(
             main,
@@ -322,9 +310,7 @@ class TestTransformSpectraCLI:
         data = json.loads(result.output)
         assert data["converted"][0]["station"].endswith("_IMP")
 
-    def test_estimate_error_flag(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_estimate_error_flag(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -359,9 +345,7 @@ class TestTransformSpectraCLI:
         assert result.exit_code != 0
         assert "--output-dir" in result.output
 
-    def test_nonexistent_source_fails(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_nonexistent_source_fails(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -374,9 +358,7 @@ class TestTransformSpectraCLI:
         )
         assert result.exit_code != 0
 
-    def test_files_actually_written(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_files_actually_written(self, runner: CliRunner, tmp_path: Path) -> None:
         n = len(list(_SPECTRA_DIR.glob("*.edi")))
         runner.invoke(
             main,
@@ -416,9 +398,7 @@ class TestTransformAvgCLI:
             main,
             ["transform", "avg", str(avgs[0]), "--output-dir", str(tmp_path)],
         )
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
     def test_no_output_dir_fails(self, runner: CliRunner) -> None:
         avgs = sorted(_AVG_DIR.glob("*.avg"))

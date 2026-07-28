@@ -14,16 +14,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 IMAGE_DIR = (
-    ROOT
-    / "docs"
-    / "source"
-    / "images"
-    / "tutorials"
-    / "inspect_and_qc_survey"
+    ROOT / "docs" / "source" / "images" / "tutorials" / "inspect_and_qc_survey"
 )
 
 
@@ -105,19 +99,25 @@ def _make_inventory_plot(qc_df, station_ci_df) -> None:
     ax1.set_ylabel("Median SNR proxy")
     ax2.set_ylabel("Station confidence")
     ax1.set_xlabel("Station")
-    ax1.set_title("L18PLT station inventory: coverage is complete, review focuses on confidence")
+    ax1.set_title(
+        "L18PLT station inventory: coverage is complete, review focuses on confidence"
+    )
     ax2.set_ylim(0.35, 1.02)
     _style_axis(ax1)
     for spine in ax2.spines.values():
         spine.set_color("#3d4752")
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8)
+    ax1.legend(
+        lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8
+    )
     _save(fig, "station_inventory_qc.png")
 
 
 def _make_confidence_grid(functions, sites) -> None:
-    fig, axes = plt.subplots(2, 1, figsize=(11.2, 8.4), constrained_layout=True)
+    fig, axes = plt.subplots(
+        2, 1, figsize=(11.2, 8.4), constrained_layout=True
+    )
     ax = functions["plot_confidence_profile"](
         sites,
         method="composite",
@@ -217,13 +217,23 @@ def main() -> int:
     _make_confidence_grid(functions, sites)
     _make_frequency_psection(functions, sites)
 
-    print(f"survey_summary: {len(inventory)} stations x {inventory['n_freq'].iloc[0]} frequencies")
+    print(
+        f"survey_summary: {len(inventory)} stations x {inventory['n_freq'].iloc[0]} frequencies"
+    )
     print("inventory_head:")
     print(inventory.head(3).to_string(index=False))
     print("qc_head:")
     print(
         qc_df[
-            ["station", "n_freq", "frac_ok", "snr_med", "skew_med", "pmin", "pmax"]
+            [
+                "station",
+                "n_freq",
+                "frac_ok",
+                "snr_med",
+                "skew_med",
+                "pmin",
+                "pmax",
+            ]
         ]
         .head(5)
         .to_string(index=False)
@@ -232,16 +242,21 @@ def main() -> int:
     print(flagged["flags"].value_counts().head().to_string())
     low_ci = station_ci_df[station_ci_df["confidence"] < 0.60]
     high_ci = station_ci_df[station_ci_df["confidence"] >= 0.80]
-    print(f"confidence_groups: review={len(low_ci)}, first_trial={len(high_ci)}")
+    print(
+        f"confidence_groups: review={len(low_ci)}, first_trial={len(high_ci)}"
+    )
     print("low_confidence:")
     print(
-        low_ci[["station", "confidence", "coverage", "phase", "spatial"]]
-        .to_string(index=False)
+        low_ci[
+            ["station", "confidence", "coverage", "phase", "spatial"]
+        ].to_string(index=False)
     )
     weak_freq = freq_ci_df[freq_ci_df["confidence"] < 0.50]
     print(f"weak_frequency_rows: {len(weak_freq)}")
     print(
-        weak_freq[["station", "frequency_hz", "period_s", "confidence", "flags"]]
+        weak_freq[
+            ["station", "frequency_hz", "period_s", "confidence", "flags"]
+        ]
         .head(8)
         .to_string(index=False)
     )

@@ -106,9 +106,7 @@ class TestExtractToDrape:
 
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain)
         nx = len(chain) - 1
-        elev_centres = interp_elev(
-            chain, elev, (chain[:-1] + chain[1:]) / 2.0
-        )
+        elev_centres = interp_elev(chain, elev, (chain[:-1] + chain[1:]) / 2.0)
 
         xo, zd, do = drape_section(x_nodes, z_nodes, rho, elev_centres)
 
@@ -154,12 +152,8 @@ class TestExtractToDrape:
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain, n_depth=5)
         el_c = interp_elev(chain, elev, (chain[:-1] + chain[1:]) / 2.0)
 
-        _, zd1, _ = drape_section(
-            x_nodes, z_nodes, rho, el_c, exaggeration=1.0
-        )
-        _, zd2, _ = drape_section(
-            x_nodes, z_nodes, rho, el_c, exaggeration=2.0
-        )
+        _, zd1, _ = drape_section(x_nodes, z_nodes, rho, el_c, exaggeration=1.0)
+        _, zd2, _ = drape_section(x_nodes, z_nodes, rho, el_c, exaggeration=2.0)
 
         # Surface row (k=0) is identical — exaggeration doesn't move the surface
         np.testing.assert_allclose(zd1[0], zd2[0], rtol=1e-9)
@@ -215,9 +209,7 @@ class TestExtractToOverlay:
         _, zd, rho_out = drape_section(x_nodes, z_nodes, rho, el_c)
 
         fig, ax = plt.subplots()
-        ax.pcolormesh(
-            x_nodes, zd, rho_out, shading="flat", cmap="jet", vmin=0, vmax=3
-        )
+        ax.pcolormesh(x_nodes, zd, rho_out, shading="flat", cmap="jet", vmin=0, vmax=3)
         draw_topo_section(ax, chain, elev, names)
         ax.set_xlabel("Chainage (km)")
         ax.set_ylabel("Elevation (km)")
@@ -279,9 +271,7 @@ class TestAllProfilesConsistency:
     def test_chainage_starts_at_zero_all_profiles(self):
         for p in _PROFILES:
             chain = extract_chainage(_load(p))
-            assert chain[0] == pytest.approx(0.0), (
-                f"{p} chain does not start at 0"
-            )
+            assert chain[0] == pytest.approx(0.0), f"{p} chain does not start at 0"
 
     def test_elevation_in_expected_range_all_profiles(self):
         """WILLY elevations are between 20 m and 300 m."""
@@ -297,9 +287,7 @@ class TestAllProfilesConsistency:
         }
         for p, n in expected.items():
             edis = _load(p)
-            assert len(edis) == n, (
-                f"{p}: expected {n} stations, got {len(edis)}"
-            )
+            assert len(edis) == n, f"{p}: expected {n} stations, got {len(edis)}"
 
     def test_l22_has_highest_terrain(self):
         """L22PLT has the highest terrain of the committed profiles."""
@@ -332,12 +320,8 @@ class TestAllProfilesConsistency:
             elev = extract_elevation(edis) / 1000.0
             fine = np.linspace(chain[0], chain[-1], 200)
             out = interp_elev(chain, elev, fine)
-            assert np.all(np.isfinite(out)), (
-                f"{p}: NaN in interpolated elevation"
-            )
-            assert out.min() > 0.0, (
-                f"{p}: zero/negative interpolated elevation"
-            )
+            assert np.all(np.isfinite(out)), f"{p}: NaN in interpolated elevation"
+            assert out.min() > 0.0, f"{p}: zero/negative interpolated elevation"
 
     @pytest.mark.parametrize("profile", _PROFILES)
     def test_drape_zd_top_row_within_elev_bounds(self, profile):
@@ -348,9 +332,7 @@ class TestAllProfilesConsistency:
 
         x_nodes, z_nodes, rho = _build_mock_inversion_grid(chain, n_depth=10)
         el_c = interp_elev(chain, elev, (chain[:-1] + chain[1:]) / 2.0)
-        _, zd, _ = drape_section(
-            x_nodes, z_nodes, rho, el_c, exaggeration=1.0
-        )
+        _, zd, _ = drape_section(x_nodes, z_nodes, rho, el_c, exaggeration=1.0)
 
         # Inner columns (not boundary extrapolation) stay within elev bounds
         inner = zd[0, 1:-1]

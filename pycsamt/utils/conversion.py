@@ -37,9 +37,7 @@ _PREFIXES = {
 }
 
 
-def convert_value(
-    value: Union[str, float, int], /, target_unit: str = "m"
-) -> float:
+def convert_value(value: Union[str, float, int], /, target_unit: str = "m") -> float:
     """
     Convert a numeric value with unit suffix to specified unit.
 
@@ -70,17 +68,17 @@ def convert_value(
     Examples
     --------
     >>> from pycsamt.utils.conversion import convert_value
-    >>> convert_value('20mm')
+    >>> convert_value("20mm")
     0.02
-    >>> convert_value('3.5km', target_unit='m')
+    >>> convert_value("3.5km", target_unit="m")
     3500.0
-    >>> convert_value('1.2kg', target_unit='g')
+    >>> convert_value("1.2kg", target_unit="g")
     1200.0
-    >>> convert_value(5, target_unit='m')
+    >>> convert_value(5, target_unit="m")
     5.0
-    >>> convert_value('100', target_unit='cm')
+    >>> convert_value("100", target_unit="cm")
     10000.0
-    >>> convert_value('10m', target_unit='g')  # mismatched base
+    >>> convert_value("10m", target_unit="g")  # mismatched base
     Traceback (most recent call last):
       ...
     ValueError: Incompatible units 'm' and 'g'
@@ -89,8 +87,7 @@ def convert_value(
     s = str(value).strip()
     # Regex: capture number and optional unit suffix
     m = re.fullmatch(
-        r"([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
-        r"\s*([a-zA-Zµ]+)?",
+        r"([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)" r"\s*([a-zA-Zµ]+)?",
         s,
     )
     if not m:
@@ -154,9 +151,9 @@ def convert_temperature(
 
     Examples
     --------
-    >>> convert_temperature('0C','C','K')
+    >>> convert_temperature("0C", "C", "K")
     273.15
-    >>> convert_temperature(100,'C','F')
+    >>> convert_temperature(100, "C", "F")
     212.0
     """
     s = str(value).strip()
@@ -214,15 +211,13 @@ def convert_time(
 
     Examples
     --------
-    >>> convert_time('3600s','s','h')
+    >>> convert_time("3600s", "s", "h")
     1.0
-    >>> convert_time(2,'h','min')
+    >>> convert_time(2, "h", "min")
     120.0
     """
     s = str(value).strip()
-    m = re.fullmatch(
-        r"([+-]?\d+(?:\.\d+)?)(?:\s*(s|min|h|d))?", s, flags=re.IGNORECASE
-    )
+    m = re.fullmatch(r"([+-]?\d+(?:\.\d+)?)(?:\s*(s|min|h|d))?", s, flags=re.IGNORECASE)
     if not m:
         raise ValueError(f"Cannot parse time {value!r}")
     num, suf = m.groups()
@@ -293,13 +288,13 @@ def convert(
 
     Examples
     --------
-    >>> convert(1,'km','m')
+    >>> convert(1, "km", "m")
     1000.0
-    >>> convert('20mm','mm','m')
+    >>> convert("20mm", "mm", "m")
     0.02
-    >>> convert(100,'C','F',category='temperature')
+    >>> convert(100, "C", "F", category="temperature")
     212.0
-    >>> convert('3600s','s','h')
+    >>> convert("3600s", "s", "h")
     1.0
     """
     uf = unit_from.strip()
@@ -307,14 +302,12 @@ def convert(
     cat = category.lower() if category else None
     # temperature
     if cat == "temperature" or (
-        uf[:1].upper() in ("C", "F", "K")
-        and ut[:1].upper() in ("C", "F", "K")
+        uf[:1].upper() in ("C", "F", "K") and ut[:1].upper() in ("C", "F", "K")
     ):
         res = convert_temperature(value, uf, ut)
     # time
     elif cat == "time" or (
-        uf.lower() in ("s", "min", "h", "d")
-        and ut.lower() in ("s", "min", "h", "d")
+        uf.lower() in ("s", "min", "h", "d") and ut.lower() in ("s", "min", "h", "d")
     ):
         res = convert_time(value, uf, ut)
     # metric

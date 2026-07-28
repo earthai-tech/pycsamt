@@ -106,9 +106,11 @@ class SimPEGBackend(BaseInversionBackend):
         ...     method="mt",
         ...     dimension="1d",
         ...     backend="simpeg",
-        ...     data={"freqs": [1.0, 10.0],
-        ...           "rho_a": [100.0, 120.0],
-        ...           "phase": [45.0, 47.0]},
+        ...     data={
+        ...         "freqs": [1.0, 10.0],
+        ...         "rho_a": [100.0, 120.0],
+        ...         "phase": [45.0, 47.0],
+        ...     },
         ...     max_iter=8,
         ... )
         >>> result = SimPEGBackend(cfg).run()  # doctest: +SKIP
@@ -127,9 +129,7 @@ class SimPEGBackend(BaseInversionBackend):
             return self._run_profile(em_data, modules)
         return self._run_sounding(em_data, modules, station_index=None)
 
-    def _run_3d(
-        self, em_data: EMData, modules: _SimPEGModules
-    ) -> InversionResult:
+    def _run_3d(self, em_data: EMData, modules: _SimPEGModules) -> InversionResult:
         cfg = self.config
         mesh, centers = _build_3d_mesh(em_data, cfg.backend_options, modules)
         survey = _build_nsem_survey(em_data, modules, dimension="3d")
@@ -137,9 +137,7 @@ class SimPEGBackend(BaseInversionBackend):
 
         active_map = modules.maps.IdentityMap(nP=mesh.nC)
         sigma_map = modules.maps.ExpMap(mesh) * active_map
-        sigma_primary = float(
-            cfg.backend_options.get("sigma_primary", 1.0 / 100.0)
-        )
+        sigma_primary = float(cfg.backend_options.get("sigma_primary", 1.0 / 100.0))
         simulation = modules.nsem.Simulation3DPrimarySecondary(
             mesh,
             survey=survey,
@@ -158,9 +156,7 @@ class SimPEGBackend(BaseInversionBackend):
             tolX=cfg.tol,
             tolF=cfg.tol,
         )
-        inv_problem = modules.inverse_problem.BaseInvProblem(
-            data_misfit, reg, opt
-        )
+        inv_problem = modules.inverse_problem.BaseInvProblem(data_misfit, reg, opt)
         beta0 = float(cfg.backend_options.get("beta0", 1.0))
         inv_problem.beta = beta0
         inv = modules.inversion.BaseInversion(
@@ -168,9 +164,7 @@ class SimPEGBackend(BaseInversionBackend):
             directiveList=_build_directives(modules, cfg),
         )
 
-        start = StartingModel.coerce(
-            cfg.starting_model, n_layers=cfg.n_layers
-        )
+        start = StartingModel.coerce(cfg.starting_model, n_layers=cfg.n_layers)
         m0 = _starting_3d_log_sigma(start, centers)
         recovered_model = inv.run(m0)
         predicted = np.asarray(simulation.dpred(recovered_model), dtype=float)
@@ -231,9 +225,7 @@ class SimPEGBackend(BaseInversionBackend):
             },
         )
 
-    def _run_profile(
-        self, em_data: EMData, modules: _SimPEGModules
-    ) -> InversionResult:
+    def _run_profile(self, em_data: EMData, modules: _SimPEGModules) -> InversionResult:
         cfg = self.config
         n_st = em_data.n_stations
         names = _station_names(em_data, n_st)
@@ -247,13 +239,9 @@ class SimPEGBackend(BaseInversionBackend):
         for idx in range(n_st):
             sounding = _station_data(em_data, idx)
             try:
-                result = self._run_sounding(
-                    sounding, modules, station_index=idx
-                )
+                result = self._run_sounding(sounding, modules, station_index=idx)
             except Exception as exc:
-                warnings.append(
-                    f"{names[idx]}: SimPEG inversion failed: {exc}"
-                )
+                warnings.append(f"{names[idx]}: SimPEG inversion failed: {exc}")
                 continue
             station_results.append(result)
             used.append(idx)
@@ -292,9 +280,7 @@ class SimPEGBackend(BaseInversionBackend):
             data=em_data,
             predicted=[r.predicted for r in station_results],
             rms=float(np.nanmean(rms_values)),
-            objective=float(
-                np.nansum([r.objective for r in station_results])
-            ),
+            objective=float(np.nansum([r.objective for r in station_results])),
             n_iter=int(np.sum([r.n_iter for r in station_results])),
             workdir=cfg.workdir,
             native=station_results,
@@ -315,9 +301,7 @@ class SimPEGBackend(BaseInversionBackend):
         station_index: int | None,
     ) -> InversionResult:
         cfg = self.config
-        start = StartingModel.coerce(
-            cfg.starting_model, n_layers=cfg.n_layers
-        )
+        start = StartingModel.coerce(cfg.starting_model, n_layers=cfg.n_layers)
         mesh, z_centers = _build_1d_mesh(start, cfg.backend_options, modules)
         survey = _build_nsem_survey(em_data, modules)
         observed, errors = _pack_nsem_observations(em_data, cfg)
@@ -342,23 +326,17 @@ class SimPEGBackend(BaseInversionBackend):
             tolX=cfg.tol,
             tolF=cfg.tol,
         )
-        inv_problem = modules.inverse_problem.BaseInvProblem(
-            data_misfit, reg, opt
-        )
+        inv_problem = modules.inverse_problem.BaseInvProblem(data_misfit, reg, opt)
         beta0 = float(cfg.backend_options.get("beta0", 1.0))
         inv_problem.beta = beta0
         directive_list = _build_directives(modules, cfg)
-        inv = modules.inversion.BaseInversion(
-            inv_problem, directiveList=directive_list
-        )
+        inv = modules.inversion.BaseInversion(inv_problem, directiveList=directive_list)
 
         m0 = _starting_sigma_model(start, z_centers)
         recovered_model = inv.run(m0)
         predicted = np.asarray(simulation.dpred(recovered_model), dtype=float)
         rms = weighted_rms(observed, predicted, errors)
-        recovered = _model_from_sigma_cells(
-            recovered_model, z_centers, start.n_layers
-        )
+        recovered = _model_from_sigma_cells(recovered_model, z_centers, start.n_layers)
         mesh_out = InversionMesh(
             dimension="1d",
             x_centers=np.array([0.0]),
@@ -505,9 +483,7 @@ def _build_nsem_survey(
                 sources.PlanewaveXYPrimary(rx_list, frequency=float(freq))
             )
         else:
-            source_list.append(
-                sources.Planewave(rx_list, frequency=float(freq))
-            )
+            source_list.append(sources.Planewave(rx_list, frequency=float(freq)))
     return survey_cls(source_list)
 
 
@@ -537,20 +513,10 @@ def _pack_nsem_observations(
 ) -> tuple[np.ndarray, np.ndarray]:
     values: list[float] = []
     errors: list[float] = []
-    rho = (
-        None
-        if em_data.rho_a is None
-        else np.asarray(em_data.rho_a, dtype=float)
-    )
-    phase = (
-        None
-        if em_data.phase is None
-        else np.asarray(em_data.phase, dtype=float)
-    )
+    rho = None if em_data.rho_a is None else np.asarray(em_data.rho_a, dtype=float)
+    phase = None if em_data.phase is None else np.asarray(em_data.phase, dtype=float)
     raw_err = (
-        None
-        if em_data.errors is None
-        else np.asarray(em_data.errors, dtype=float)
+        None if em_data.errors is None else np.asarray(em_data.errors, dtype=float)
     )
     n = em_data.n_samples
     for i in range(n):
@@ -563,21 +529,17 @@ def _pack_nsem_observations(
                 if raw_err is not None and raw_err.ndim == 1
                 else (raw_err[:, i] if raw_err is not None else None)
             )
-            err = component_errors(
-                rho_i, cfg, component="rho", explicit=err_i
-            ).reshape(-1)
+            err = component_errors(rho_i, cfg, component="rho", explicit=err_i).reshape(
+                -1
+            )
             err[~mask_i] = 1e30
             errors.extend(err.tolist())
         if phase is not None:
             phase_i = phase[i] if phase.ndim == 1 else phase[:, i]
             phase_i = np.asarray(phase_i, dtype=float).reshape(-1)
-            mask_i = component_mask(phase_i, cfg, component="phase").reshape(
-                -1
-            )
+            mask_i = component_mask(phase_i, cfg, component="phase").reshape(-1)
             values.extend(phase_i.tolist())
-            err = component_errors(phase_i, cfg, component="phase").reshape(
-                -1
-            )
+            err = component_errors(phase_i, cfg, component="phase").reshape(-1)
             err[~mask_i] = 1e30
             errors.extend(err.tolist())
     return np.asarray(values, dtype=float), np.asarray(errors, dtype=float)
@@ -592,9 +554,7 @@ def _build_regularization(
     reg_cfg = regularization_from_config(cfg)
     kind = reg_cfg.kind
     if hasattr(modules.regularization, "WeightedLeastSquares"):
-        reg = modules.regularization.WeightedLeastSquares(
-            mesh, mapping=mapping
-        )
+        reg = modules.regularization.WeightedLeastSquares(mesh, mapping=mapping)
     else:
         reg = modules.regularization.Simple(mesh, mapping=mapping)
     if kind == "none":
@@ -651,35 +611,25 @@ def _build_directives(modules: _SimPEGModules, cfg: Any) -> list[Any]:
         beta_cls = getattr(modules.directives, "BetaEstimate_ByEig", None)
         if beta_cls is not None:
             directives.append(
-                beta_cls(
-                    beta0_ratio=float(
-                        cfg.backend_options.get("beta0_ratio", 1.0)
-                    )
-                )
+                beta_cls(beta0_ratio=float(cfg.backend_options.get("beta0_ratio", 1.0)))
             )
     target_cls = getattr(modules.directives, "TargetMisfit", None)
     if target_cls is not None:
         directives.append(
-            target_cls(
-                chifact=float(cfg.backend_options.get("target_chifact", 1.0))
-            )
+            target_cls(chifact=float(cfg.backend_options.get("target_chifact", 1.0)))
         )
     beta_schedule = getattr(modules.directives, "BetaSchedule", None)
     if beta_schedule is not None:
         directives.append(
             beta_schedule(
-                coolingFactor=float(
-                    cfg.backend_options.get("cooling_factor", 2.0)
-                ),
+                coolingFactor=float(cfg.backend_options.get("cooling_factor", 2.0)),
                 coolingRate=int(cfg.backend_options.get("cooling_rate", 1)),
             )
         )
     return directives
 
 
-def _starting_sigma_model(
-    start: StartingModel, z_centers: np.ndarray
-) -> np.ndarray:
+def _starting_sigma_model(start: StartingModel, z_centers: np.ndarray) -> np.ndarray:
     rho = np.asarray(start.resistivities, dtype=float)
     depths = np.r_[0.0, np.cumsum(start.thicknesses)]
     out = np.empty_like(z_centers, dtype=float)
@@ -706,9 +656,7 @@ def _starting_3d_log_sigma(
 
 def _rho_3d_from_log_sigma(log_sigma: np.ndarray, mesh: Any) -> np.ndarray:
     shape = _mesh_shape(mesh)
-    sigma = np.exp(np.asarray(log_sigma, dtype=float)).reshape(
-        shape, order="F"
-    )
+    sigma = np.exp(np.asarray(log_sigma, dtype=float)).reshape(shape, order="F")
     return 1.0 / np.maximum(sigma, 1e-12)
 
 
@@ -733,9 +681,7 @@ def _model_from_sigma_cells(
     z_centers = np.asarray(z_centers, dtype=float)
     if n_layers < 2:
         n_layers = 2
-    edges = np.linspace(
-        float(z_centers[0]), float(z_centers[-1]), n_layers + 1
-    )
+    edges = np.linspace(float(z_centers[0]), float(z_centers[-1]), n_layers + 1)
     resistivities = []
     thicknesses = []
     for layer in range(n_layers):
@@ -769,9 +715,7 @@ def _station_data(em_data: EMData, idx: int) -> EMData:
         phase=None if em_data.phase is None else _row(em_data.phase, idx),
         errors=None if em_data.errors is None else _row(em_data.errors, idx),
         station_names=[_station_names(em_data, em_data.n_stations)[idx]],
-        station_x=np.array(
-            [_station_x(em_data, em_data.n_stations)[idx]], dtype=float
-        ),
+        station_x=np.array([_station_x(em_data, em_data.n_stations)[idx]], dtype=float),
         source=em_data.source,
         metadata=em_data.metadata_dict(),
     )

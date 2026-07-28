@@ -135,8 +135,7 @@ class StepSpec:
             return self.override_fn
         if self.mod is None or self.fn_name is None:
             raise RuntimeError(
-                f"StepSpec {self.code!r} has neither override_fn "
-                "nor (mod, fn_name)."
+                f"StepSpec {self.code!r} has neither override_fn " "nor (mod, fn_name)."
             )
         m = importlib.import_module(self.mod)
         return getattr(m, self.fn_name)
@@ -778,9 +777,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
 }
 
 # Build a secondary index: name → StepSpec (for lookup by human name)
-_NAME_INDEX: dict[str, StepSpec] = {
-    spec.name: spec for spec in STEP_REGISTRY.values()
-}
+_NAME_INDEX: dict[str, StepSpec] = {spec.name: spec for spec in STEP_REGISTRY.values()}
 
 
 # ---------------------------------------------------------------------------

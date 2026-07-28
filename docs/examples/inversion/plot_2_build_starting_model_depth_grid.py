@@ -192,9 +192,7 @@ elevation_centres_m = (
 
 fig, axs = plt.subplots(2, 1, figsize=(10.5, 7.2), sharex=False)
 
-axs[0].plot(
-    chain_km * 1000.0, elev_m, "o-", color="#92400e", label="stations"
-)
+axs[0].plot(chain_km * 1000.0, elev_m, "o-", color="#92400e", label="stations")
 axs[0].plot(
     x_centres_m,
     surface_m_at_cells,

@@ -279,9 +279,7 @@ if modem_sample.exists():
         }
     )
 
-summary_file = (
-    package_dirs["metadata"] / "selected_inversion_run_summary.json"
-)
+summary_file = package_dirs["metadata"] / "selected_inversion_run_summary.json"
 summary_file.write_text(json.dumps(run_summary, indent=2), encoding="utf-8")
 manifest_records.append(
     {

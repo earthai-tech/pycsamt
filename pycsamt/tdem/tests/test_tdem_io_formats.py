@@ -210,8 +210,7 @@ def test_read_geosoft_dat_parses_header_metadata(fmt_files):
 def test_read_geosoft_dat_missing_gate_times(tmp_path):
     p = tmp_path / "nogates.dat"
     p.write_text(
-        "/ Current: 8.0\n/ LoopSide: 200.0\n"
-        "X Y ELEV G1 G2\n1 2 0 1e4 5e3\n",
+        "/ Current: 8.0\n/ LoopSide: 200.0\nX Y ELEV G1 G2\n1 2 0 1e4 5e3\n",
         encoding="utf-8",
     )
     with pytest.raises(ValueError):

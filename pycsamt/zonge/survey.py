@@ -109,14 +109,11 @@ class Topography(AVGComponentBase):
     --------
     >>> from pycsamt.zonge.survey import Topography
     >>> # Load topography from a .stn file
-    >>> topo = Topography().read('data/avg/K1.stn')
+    >>> topo = Topography().read("data/avg/K1.stn")
     >>>
     >>> # Generate a synthetic survey line
     >>> synthetic_topo = Topography.generate(
-    ...     start_coord=(500000, 4000000),
-    ...     n_stations=20,
-    ...     step=50,
-    ...     azimuth=45
+    ...     start_coord=(500000, 4000000), n_stations=20, step=50, azimuth=45
     ... )
     >>> # Get the average station spacing
     >>> avg_step = synthetic_topo.get_step().mean()
@@ -198,7 +195,7 @@ class Topography(AVGComponentBase):
         --------
         >>> from pycsamt.zonge.survey import Topography
         >>> # Load topography from a .stn file
-        >>> topo = Topography().read('data/avg/K1.stn')
+        >>> topo = Topography().read("data/avg/K1.stn")
         >>> print(topo.stations[:5])
         [150. 200. 250. 300. 350.]
         """
@@ -212,12 +209,8 @@ class Topography(AVGComponentBase):
         self._frame = self._normalize_stn_columns(df)
 
         # initialize longitude and latitude
-        self._longitude = pd.Series(
-            np.zeros((self._frame.shape[0],), dtype=float)
-        )
-        self._latitude = pd.Series(
-            np.zeros((self._frame.shape[0],), dtype=float)
-        )
+        self._longitude = pd.Series(np.zeros((self._frame.shape[0],), dtype=float))
+        self._latitude = pd.Series(np.zeros((self._frame.shape[0],), dtype=float))
 
         # reset the cache when new data is loaded
         self._azimuths = None
@@ -254,9 +247,7 @@ class Topography(AVGComponentBase):
         required = ["station", "easting", "northing", "elevation"]
         missing = [c for c in required if c not in df.columns]
         if missing:
-            raise ProcessingError(
-                f"STN data is missing required columns: {missing}"
-            )
+            raise ProcessingError(f"STN data is missing required columns: {missing}")
         return df.dropna(subset=required)
 
     def convert_coords(
@@ -371,8 +362,7 @@ class Topography(AVGComponentBase):
 
         else:
             raise ValueError(
-                f"Invalid target system '{to}'. Must be "
-                "'utm', 'll', or 'auto'."
+                f"Invalid target system '{to}'. Must be " "'utm', 'll', or 'auto'."
             )
 
         if inplace:
@@ -479,7 +469,7 @@ class Topography(AVGComponentBase):
         Examples
         --------
         >>> from pycsamt.zonge.survey import Topography
-        >>> topo = Topography().read('data/avg/K1.stn')
+        >>> topo = Topography().read("data/avg/K1.stn")
         >>> steps = topo.get_step()
         >>> print(f"Average station spacing: {steps.mean():.2f} m")
         """
@@ -490,9 +480,7 @@ class Topography(AVGComponentBase):
         dy = np.diff(self.northing)
         steps = np.hypot(dx, dy)
 
-        return pd.Series(
-            np.concatenate(([0], steps)), index=self._frame.index
-        )
+        return pd.Series(np.concatenate(([0], steps)), index=self._frame.index)
 
     def correct_coords(
         self, step: float | None = None, *, inplace: bool = True
@@ -542,9 +530,7 @@ class Topography(AVGComponentBase):
             average station spacing.
         """
         if self._frame.empty or len(self._frame) < 2:
-            warnings.warn(
-                "Not enough data to correct coordinates.", stacklevel=2
-            )
+            warnings.warn("Not enough data to correct coordinates.", stacklevel=2)
             return
 
         x = self.easting
@@ -557,9 +543,7 @@ class Topography(AVGComponentBase):
         if step is None:
             step = self.get_step().mean()
             if self.verbose:
-                self._logger.info(
-                    f"Using auto-detected average step of {step:.2f} m."
-                )
+                self._logger.info(f"Using auto-detected average step of {step:.2f} m.")
 
         # 3. Project the first station onto the line
         x0, y0 = x[0], y[0]
@@ -665,17 +649,12 @@ class Topography(AVGComponentBase):
         if coord_type == "ll":
             import_optional_dependency(
                 "geopy",
-                extra=(
-                    "'geopy' is required for geodetectic"
-                    " position calculations"
-                ),
+                extra=("'geopy' is required for geodetectic position calculations"),
             )
             # For lat/lon, we must calculate geodetic positions
             from geopy.distance import geodesic
 
-            start_lat, start_lon = normalize_lat_lon(
-                *start_coord, assume="latlon"
-            )
+            start_lat, start_lon = normalize_lat_lon(*start_coord, assume="latlon")
             # start_lat, start_lon = start_coord
 
             points = [start_coord]
@@ -732,8 +711,10 @@ class Topography(AVGComponentBase):
         --------
         >>> from pycsamt.zonge.survey import Topography
         >>> topo = Topography.generate(
-        ...     start_coord=(500000, 4000000), n_stations=3,
-        ...     step=100, azimuth=90
+        ...     start_coord=(500000, 4000000),
+        ...     n_stations=3,
+        ...     step=100,
+        ...     azimuth=90,
         ... )
         >>> stn_lines = topo.write()
         >>> for line in stn_lines:
@@ -808,8 +789,7 @@ class Topography(AVGComponentBase):
         # Ensure the topography data frame has been loaded first
         if self._frame.empty:
             raise ProcessingError(
-                "Topography data has not been loaded. "
-                "Call the .read() method first."
+                "Topography data has not been loaded. " "Call the .read() method first."
             )
 
         elevations = np.array([], dtype=float)
@@ -818,9 +798,7 @@ class Topography(AVGComponentBase):
         if from_ == "utm":
             # The UTM zone is required for this operation
             if zone is None:
-                raise ValueError(
-                    "A UTM 'zone' must be provided when from_='utm'."
-                )
+                raise ValueError("A UTM 'zone' must be provided when from_='utm'.")
             # Fetch elevations using existing easting/northing
             elevations = get_elevation_from_utm(
                 easting=self.easting,
@@ -847,8 +825,7 @@ class Topography(AVGComponentBase):
             )
         else:
             raise ValueError(
-                f"Invalid 'from_' argument: '{from_}'. "
-                "Must be 'utm' or 'api'."
+                f"Invalid 'from_' argument: '{from_}'. Must be 'utm' or 'api'."
             )
 
         return elevations
@@ -938,9 +915,7 @@ class Topography(AVGComponentBase):
                 self._azimuths = np.array([], dtype=float)
             else:
                 # If not cached, calculate and store the result
-                self._azimuths = calculate_azimuth(
-                    self.easting, self.northing
-                )
+                self._azimuths = calculate_azimuth(self.easting, self.northing)
         return self._azimuths
 
     @property
@@ -1093,9 +1068,7 @@ class Station(AVGComponentBase):
         munit = (meta or {}).get("Unit.Length") if meta else None
         unit = (unit or munit or self.unit or "m").lower()
         normalize = self.normalize if normalize is None else normalize
-        allow_ragged = (
-            self.allow_ragged if allow_ragged is None else allow_ragged
-        )
+        allow_ragged = self.allow_ragged if allow_ragged is None else allow_ragged
 
         # build a minimal frame with a numeric 'station' column
         if isinstance(source, pd.DataFrame):
@@ -1160,9 +1133,7 @@ class Station(AVGComponentBase):
         # station names (one per unique position)
         if names is not None:
             if len(names) != self.values.size:
-                raise StationError(
-                    "`names` length must match unique station count"
-                )
+                raise StationError("`names` length must match unique station count")
             self.names = list(names)
         else:
             ids, _ = number_stations(self.values.size, 1, prefix="S")
@@ -1205,9 +1176,7 @@ class Station(AVGComponentBase):
         cols = ["station"] + (
             ["station_m"] if "station_m" in self._frame.columns else []
         )
-        csv = self._frame.loc[:, cols].to_csv(
-            index=False, float_format="%.6g"
-        )
+        csv = self._frame.loc[:, cols].to_csv(index=False, float_format="%.6g")
         lines.extend(csv.splitlines())
         return lines
 
@@ -1230,9 +1199,7 @@ class Station(AVGComponentBase):
 
     def label_map(self) -> dict[float, str]:
         """Map station numeric value → generated label (e.g., 'S03')."""
-        return {
-            float(v): n for v, n in zip_strict(self.values, self.names)
-        }
+        return {float(v): n for v, n in zip_strict(self.values, self.names)}
 
     def to_keywords(self) -> dict[str, Any]:
         """

@@ -113,9 +113,7 @@ def test_bounds_sample_fixed_params_stay_at_central_value():
     rng = np.random.default_rng(0)
     configs = b.sample(cfg, 5, rng)
     assert all(c.petro.m == pytest.approx(cfg.petro.m) for c in configs)
-    assert all(
-        c.porosity_prior == pytest.approx(cfg.porosity_prior) for c in configs
-    )
+    assert all(c.porosity_prior == pytest.approx(cfg.porosity_prior) for c in configs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -266,9 +264,7 @@ def test_run_basic_shapes():
 
 def test_run_verbose_prints_progress(capsys):
     bounds = UncertaintyBounds(rho_w_range=(15.0, 25.0))
-    mc = MonteCarloHydro(
-        _model(), _cfg(), bounds, n_samples=3, seed=0, verbose=True
-    )
+    mc = MonteCarloHydro(_model(), _cfg(), bounds, n_samples=3, seed=0, verbose=True)
     mc.run()
     out = capsys.readouterr().out
     assert "MC sample 0/3" in out
@@ -278,9 +274,7 @@ def test_run_verbose_prints_progress(capsys):
 def test_run_all_samples_fail_produces_all_nan_without_crash():
     bounds = UncertaintyBounds(rho_w_range=(15.0, 25.0))
     mc = MonteCarloHydro(_model(), _cfg(), bounds, n_samples=3, seed=0)
-    with mock.patch.object(
-        EMHydroModel, "fit", side_effect=RuntimeError("boom")
-    ):
+    with mock.patch.object(EMHydroModel, "fit", side_effect=RuntimeError("boom")):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             unc = mc.run()
@@ -300,9 +294,7 @@ def test_run_ensemble_returns_raw_arrays():
 def test_run_cv_K_is_nan_where_mean_K_nonpositive():
     bounds = UncertaintyBounds(rho_w_range=(15.0, 25.0))
     mc = MonteCarloHydro(_model(), _cfg(), bounds, n_samples=3, seed=0)
-    with mock.patch.object(
-        EMHydroModel, "fit", side_effect=RuntimeError("boom")
-    ):
+    with mock.patch.object(EMHydroModel, "fit", side_effect=RuntimeError("boom")):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             unc = mc.run()
@@ -381,9 +373,7 @@ def test_extract_params_without_rho_w_free():
 def test_run_ensemble_all_samples_fail_without_crash():
     bounds = UncertaintyBounds(rho_w_range=(15.0, 25.0))
     mc = MonteCarloHydro(_model(), _cfg(), bounds, n_samples=3, seed=0)
-    with mock.patch.object(
-        EMHydroModel, "fit", side_effect=RuntimeError("boom")
-    ):
+    with mock.patch.object(EMHydroModel, "fit", side_effect=RuntimeError("boom")):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             unc, wt_ens, T_ens = mc.run_ensemble()

@@ -69,8 +69,7 @@ PRESETS: dict[str, Preset] = {
     "basic_qc": Preset(
         name="basic_qc",
         description=(
-            "Minimal denoising + frequency cleanup.  "
-            "Good for quick-look inspection."
+            "Minimal denoising + frequency cleanup.  " "Good for quick-look inspection."
         ),
         steps=[
             ("notch", Step("NR001")),
@@ -82,9 +81,7 @@ PRESETS: dict[str, Preset] = {
     ),
     "noise_reduction": Preset(
         name="noise_reduction",
-        description=(
-            "Stacked noise-removal chain for high-EMI environments."
-        ),
+        description=("Stacked noise-removal chain for high-EMI environments."),
         steps=[
             ("notch", Step("NR001")),
             ("hampel", Step("NR004")),
@@ -208,9 +205,7 @@ def get_preset(name: str) -> Preset:
     """
     if name not in PRESETS:
         available = sorted(PRESETS)
-        raise KeyError(
-            f"Unknown preset {name!r}.  Available presets: {available}"
-        )
+        raise KeyError(f"Unknown preset {name!r}.  Available presets: {available}")
     return PRESETS[name]
 
 

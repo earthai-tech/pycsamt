@@ -203,9 +203,7 @@ class StrikeAnalyzerDialog(QDialog):
         self._df = df
         self._run_btn.setEnabled(True)
         if df.empty:
-            self._status_lbl.setText(
-                "No strike estimates — check data coverage."
-            )
+            self._status_lbl.setText("No strike estimates — check data coverage.")
             return
         self._status_lbl.setText(f"Done — {len(df)} stations.")
         self._fill_table(df)
@@ -225,9 +223,7 @@ class StrikeAnalyzerDialog(QDialog):
             ang = row.get("ang", float("nan"))
             iqr = row.get("iqr", float("nan"))
             n = int(row.get("n", 0))
-            self._table.setItem(
-                r, 0, QTableWidgetItem(str(row.get("station", "")))
-            )
+            self._table.setItem(r, 0, QTableWidgetItem(str(row.get("station", ""))))
             self._table.setItem(
                 r,
                 1,

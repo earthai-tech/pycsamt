@@ -111,9 +111,7 @@ class Borehole:
         self.name = name
         self.x = float(x)
         self.collar_elevation = float(collar_elevation)
-        self.intervals: list[Interval] = sorted(
-            list(intervals), key=lambda iv: iv.top
-        )
+        self.intervals: list[Interval] = sorted(list(intervals), key=lambda iv: iv.top)
 
     # ------------------------------------------------------------------
     # Accessors
@@ -222,9 +220,7 @@ class Borehole:
                     except ValueError:
                         pass
                 intervals.append(
-                    Interval(
-                        top=top, bottom=bot, lithology=lith, resistivity=res
-                    )
+                    Interval(top=top, bottom=bot, lithology=lith, resistivity=res)
                 )
 
         return cls(name, x, intervals, collar_elevation=collar_elevation)
@@ -326,11 +322,7 @@ class Borehole:
 
         depths = np.array(curves[dept_key])
         resis = np.array(curves.get(res_key, [null_val] * len(depths)))
-        liths = (
-            np.array(curves.get(lith_key, [0] * len(depths)))
-            if lith_key
-            else None
-        )
+        liths = np.array(curves.get(lith_key, [0] * len(depths))) if lith_key else None
 
         mask_null = np.isclose(resis, null_val, atol=1.0)
         resis = np.where(mask_null, np.nan, resis)
@@ -338,9 +330,7 @@ class Borehole:
         # Build intervals: group consecutive same-lithology / same-depth-step
         intervals: list[Interval] = []
         if len(depths) < 2:
-            return cls(
-                well_name, x, intervals, collar_elevation=collar_elevation
-            )
+            return cls(well_name, x, intervals, collar_elevation=collar_elevation)
 
         ds = step if step is not None else float(np.median(np.diff(depths)))
 
@@ -382,9 +372,7 @@ class Borehole:
         try:
             import pandas as pd
         except ImportError as exc:
-            raise ImportError(
-                "pandas is required for Borehole.to_dataframe"
-            ) from exc
+            raise ImportError("pandas is required for Borehole.to_dataframe") from exc
         rows = [
             {
                 "top": iv.top,

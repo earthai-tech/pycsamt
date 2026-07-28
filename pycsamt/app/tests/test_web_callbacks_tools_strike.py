@@ -22,7 +22,6 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 from dash import html, no_update
@@ -30,7 +29,6 @@ from dash.exceptions import PreventUpdate
 
 import pycsamt.app.web.callbacks.tools as tools_mod
 from pycsamt.app.web.cache import cache_get, cache_set
-from pycsamt.app.web.layout import IDs
 
 _ROOT = Path(__file__).parents[3]  # pycsamt/
 _WILLY_L18 = _ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
@@ -53,9 +51,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -91,9 +87,7 @@ def willy_sites():
 def willy_ids(willy_sites):
     from pycsamt.emtools._core import _iter_items, _name
 
-    return [
-        _name(ed, i) for i, ed in enumerate(_iter_items(willy_sites))
-    ]
+    return [_name(ed, i) for i, ed in enumerate(_iter_items(willy_sites))]
 
 
 @pytest.fixture
@@ -133,7 +127,10 @@ class TestStyledTable:
     def test_builds_datatable_from_dataframe(self):
         df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
         tbl = tools_mod._styled_table(df)
-        assert tbl.columns == [{"name": "a", "id": "a"}, {"name": "b", "id": "b"}]
+        assert tbl.columns == [
+            {"name": "a", "id": "a"},
+            {"name": "b", "id": "b"},
+        ]
         assert tbl.data == [{"a": 1, "b": "x"}, {"a": 2, "b": "y"}]
 
 
@@ -249,7 +246,13 @@ class TestRestoreFromStore:
             "type": "validator_rows",
             "rows": [{"Station": "S1", "Status": "PASS"}],
             "cols": ["Station", "Status"],
-            "summary": {"scope": "All", "total": 1, "pass": 1, "warn": 0, "fail": 0},
+            "summary": {
+                "scope": "All",
+                "total": 1,
+                "pass": 1,
+                "warn": 0,
+                "fail": 0,
+            },
         }
         out = tools_mod._restore_from_store(stored)
         assert isinstance(out, html.Div)
@@ -257,7 +260,11 @@ class TestRestoreFromStore:
 
     def test_text_type(self):
         out = tools_mod._restore_from_store(
-            {"type": "text", "content": "hi there", "cls": "small text-warning"}
+            {
+                "type": "text",
+                "content": "hi there",
+                "cls": "small text-warning",
+            }
         )
         assert out.children == "hi there"
         assert out.className == "small text-warning"
@@ -267,9 +274,7 @@ class TestRestoreFromStore:
         assert "click Run to regenerate" in str(out)
 
     def test_html_type_with_imgs(self):
-        out = tools_mod._restore_from_store(
-            {"type": "html", "imgs": ["AAAA", "BBBB"]}
-        )
+        out = tools_mod._restore_from_store({"type": "html", "imgs": ["AAAA", "BBBB"]})
         imgs = [c for c in out.children if getattr(c, "src", None)]
         assert len(imgs) == 2
         assert imgs[0].src.startswith("data:image/png;base64,AAAA")
@@ -326,11 +331,7 @@ class TestActiveLineNames:
 
 
 class TestStationOptionsForLines:
-    STORE = {
-        "station_records": _records(
-            [("A1", "L1"), ("A2", "L1"), ("B1", "L2")]
-        )
-    }
+    STORE = {"station_records": _records([("A1", "L1"), ("A2", "L1"), ("B1", "L2")])}
 
     def test_all_active_no_selection(self):
         opts = tools_mod._station_options_for_lines(
@@ -361,9 +362,7 @@ class TestStationOptionsForLines:
 
 class TestStationLineMap:
     def test_maps_id_to_line(self):
-        out = tools_mod._station_line_map(
-            {"station_records": _records([("A1", "L1")])}
-        )
+        out = tools_mod._station_line_map({"station_records": _records([("A1", "L1")])})
         assert out == {"A1": "L1"}
 
     def test_missing_line_defaults_unassigned(self):
@@ -408,9 +407,7 @@ class TestFilterSitesByStationIds:
         assert got == set(wanted)
 
     def test_real_no_match_returns_none(self, willy_sites):
-        out = tools_mod._filter_sites_by_station_ids(
-            willy_sites, ["does-not-exist"]
-        )
+        out = tools_mod._filter_sites_by_station_ids(willy_sites, ["does-not-exist"])
         assert out is None
 
 
@@ -424,14 +421,14 @@ class TestScopedSites:
 
     def test_no_active_lines_left(self, cached_session, store_data_willy):
         sites, msg = tools_mod._scoped_sites(
-            cached_session, store_data_willy, {"active": ["NOPE"], "all": ["L1"]}
+            cached_session,
+            store_data_willy,
+            {"active": ["NOPE"], "all": ["L1"]},
         )
         assert sites is None
         assert "No active survey lines" in msg
 
-    def test_selected_lines_empty_after_filter(
-        self, cached_session, store_data_willy
-    ):
+    def test_selected_lines_empty_after_filter(self, cached_session, store_data_willy):
         sites, msg = tools_mod._scoped_sites(
             cached_session,
             store_data_willy,
@@ -542,8 +539,19 @@ class TestRunStrike:
 
     def test_no_clicks_returns_triple_no_update(self, web_app):
         out = self._fn(web_app)(
-            None, None, None, "consensus", "all", 1.0, 40,
-            None, None, "sid", "dark", None, None,
+            None,
+            None,
+            None,
+            "consensus",
+            "all",
+            1.0,
+            40,
+            None,
+            None,
+            "sid",
+            "dark",
+            None,
+            None,
         )
         assert out == (no_update, no_update, no_update)
 
@@ -560,8 +568,19 @@ class TestRunStrike:
         as a too-short tuple.
         """
         out = self._fn(web_app)(
-            1, None, None, "consensus", "all", 1.0, 40,
-            store_data_willy, ACTIVE_ALL, "no-such-session", "dark", None, None,
+            1,
+            None,
+            None,
+            "consensus",
+            "all",
+            1.0,
+            40,
+            store_data_willy,
+            ACTIVE_ALL,
+            "no-such-session",
+            "dark",
+            None,
+            None,
         )
         assert len(out) == 2
         assert "Session expired" in str(out[0])
@@ -596,8 +615,19 @@ class TestRunStrike:
         self, web_app, cached_session, store_data_willy, willy_ids
     ):
         out = self._fn(web_app)(
-            1, None, willy_ids[:3], "sweep", "high", 10.0, 10,
-            store_data_willy, ACTIVE_ALL, cached_session, "light", None, None,
+            1,
+            None,
+            willy_ids[:3],
+            "sweep",
+            "high",
+            10.0,
+            10,
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            "light",
+            None,
+            None,
         )
         _, run_store, _ = out
         assert run_store["strike"]["method_label"] == "Z tensor rotation sweep"
@@ -606,8 +636,19 @@ class TestRunStrike:
         self, web_app, cached_session, store_data_willy, willy_ids
     ):
         out = self._fn(web_app)(
-            1, None, willy_ids[:3], "pt", "all", 10.0, 10,
-            store_data_willy, ACTIVE_ALL, cached_session, "dark", None, None,
+            1,
+            None,
+            willy_ids[:3],
+            "pt",
+            "all",
+            10.0,
+            10,
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            "dark",
+            None,
+            None,
         )
         _, run_store, _ = out
         assert run_store["strike"]["method_label"] == "Phase tensor strike"
@@ -623,8 +664,19 @@ class TestRunStrike:
             lambda *a, **k: pd.DataFrame(),
         )
         out = self._fn(web_app)(
-            1, None, willy_ids[:2], "consensus", "all", 5.0, 10,
-            store_data_willy, ACTIVE_ALL, cached_session, "dark", None, None,
+            1,
+            None,
+            willy_ids[:2],
+            "consensus",
+            "all",
+            5.0,
+            10,
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            "dark",
+            None,
+            None,
         )
         # same missing-3rd-output bug as the session-expired branch
         assert len(out) == 2
@@ -649,8 +701,19 @@ class TestRunStrike:
             strike_mod, "estimate_strike_consensus", lambda *a, **k: fake_df
         )
         out = self._fn(web_app)(
-            1, None, willy_ids[:2], "consensus", "all", 5.0, 10,
-            store_data_willy, ACTIVE_ALL, cached_session, "dark", None, None,
+            1,
+            None,
+            willy_ids[:2],
+            "consensus",
+            "all",
+            5.0,
+            10,
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            "dark",
+            None,
+            None,
         )
         assert len(out) == 2
         assert "non-finite" in str(out[0])
@@ -665,8 +728,19 @@ class TestRunStrike:
 
         monkeypatch.setattr(strike_mod, "estimate_strike_sweep", _boom)
         out = self._fn(web_app)(
-            1, None, willy_ids[:2], "sweep", "all", 5.0, 10,
-            store_data_willy, ACTIVE_ALL, cached_session, "dark", None, None,
+            1,
+            None,
+            willy_ids[:2],
+            "sweep",
+            "all",
+            5.0,
+            10,
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            "dark",
+            None,
+            None,
         )
         assert len(out) == 3
         assert "kaboom" in str(out[0])
@@ -680,10 +754,7 @@ class TestRenderStoredToolResult:
 
     def test_unknown_tool_returns_none(self):
         assert (
-            tools_mod._render_stored_tool_result(
-                "other", {"other": {}}, "dark"
-            )
-            is None
+            tools_mod._render_stored_tool_result("other", {"other": {}}, "dark") is None
         )
 
     def test_strike_payload_renders(self):
@@ -730,15 +801,11 @@ class TestStrikeScopeLabel:
         assert out == "L1, L2"
 
     def test_selected_lines_truncated_with_count(self):
-        out = tools_mod._strike_scope_label(
-            None, None, ["L1", "L2", "L3", "L4"], None
-        )
+        out = tools_mod._strike_scope_label(None, None, ["L1", "L2", "L3", "L4"], None)
         assert out == "L1, L2, L3 +1"
 
     def test_active_lines_fallback(self, store_data_willy):
-        out = tools_mod._strike_scope_label(
-            store_data_willy, ACTIVE_ALL, None, None
-        )
+        out = tools_mod._strike_scope_label(store_data_willy, ACTIVE_ALL, None, None)
         assert out == "All active lines (2)"
 
     def test_no_scope_at_all(self):
@@ -796,9 +863,7 @@ class TestValidatorBody:
 
 class TestSyncValidatorStationScope:
     def test_returns_options(self, web_app, store_data_willy):
-        fn = _cb_by_input(
-            web_app, "tool-valid-stations.options", "tool-valid-lines"
-        )
+        fn = _cb_by_input(web_app, "tool-valid-stations.options", "tool-valid-lines")
         opts, val = fn(["L2"], store_data_willy, ACTIVE_ALL)
         assert val is None
         assert len(opts) == len(store_data_willy["station_records"]) // 2
@@ -816,8 +881,16 @@ class TestRunValidator:
 
     def test_session_expired(self, web_app, store_data_willy):
         out = self._fn(web_app)(
-            1, None, None, "all", 3, ["coords"],
-            store_data_willy, ACTIVE_ALL, "no-such-session", None,
+            1,
+            None,
+            None,
+            "all",
+            3,
+            ["coords"],
+            store_data_willy,
+            ACTIVE_ALL,
+            "no-such-session",
+            None,
         )
         assert len(out) == 2
         assert "Session expired" in str(out[0])
@@ -847,8 +920,16 @@ class TestRunValidator:
         self, web_app, cached_session, store_data_willy, willy_ids
     ):
         out = self._fn(web_app)(
-            1, None, willy_ids[:6], "issues", 3, ["coords", "z"],
-            store_data_willy, ACTIVE_ALL, cached_session, None,
+            1,
+            None,
+            willy_ids[:6],
+            "issues",
+            3,
+            ["coords", "z"],
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            None,
         )
         _, saved = out
         rows = saved["validator"]["rows"]
@@ -858,8 +939,16 @@ class TestRunValidator:
         self, web_app, cached_session, store_data_willy, willy_ids
     ):
         out = self._fn(web_app)(
-            1, None, willy_ids[:6], "pass", 1, ["z"],
-            store_data_willy, ACTIVE_ALL, cached_session, None,
+            1,
+            None,
+            willy_ids[:6],
+            "pass",
+            1,
+            ["z"],
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            None,
         )
         _, saved = out
         rows = saved["validator"]["rows"]
@@ -872,8 +961,16 @@ class TestRunValidator:
         # WARN), so with only the "freq" check enabled this should yield an
         # empty (but valid) fail-only table -- exercises the "fail" branch.
         out = self._fn(web_app)(
-            1, None, willy_ids[:4], "fail", 999999, ["freq"],
-            store_data_willy, ACTIVE_ALL, cached_session, None,
+            1,
+            None,
+            willy_ids[:4],
+            "fail",
+            999999,
+            ["freq"],
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            None,
         )
         _, saved = out
         assert saved["validator"]["rows"] == []
@@ -887,8 +984,16 @@ class TestRunValidator:
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")),
         )
         out = self._fn(web_app)(
-            1, None, willy_ids[:2], "all", 3, ["coords"],
-            store_data_willy, ACTIVE_ALL, cached_session, None,
+            1,
+            None,
+            willy_ids[:2],
+            "all",
+            3,
+            ["coords"],
+            store_data_willy,
+            ACTIVE_ALL,
+            cached_session,
+            None,
         )
         assert "boom" in str(out[0])
         assert out[1] is no_update
@@ -979,7 +1084,9 @@ class TestConverterBody:
 class TestSyncConverterOptions:
     def _fn(self, web_app):
         return _cb_multi(
-            web_app, "tool-conv-avg-options.style", "tool-conv-spectra-options.style"
+            web_app,
+            "tool-conv-avg-options.style",
+            "tool-conv-spectra-options.style",
         )
 
     def test_avg_shows_avg_hides_spectra(self, web_app):
@@ -1010,24 +1117,71 @@ class TestRunConverter:
 
     def test_no_clicks_returns_pair_no_update(self, web_app):
         out = self._fn(web_app)(
-            None, "AVG -> EDI", "", "", "", "", "", True, "EX,EY", "HX,HY",
-            "", [], "descending", None, ["compute_z"], "", None, "sid",
+            None,
+            "AVG -> EDI",
+            "",
+            "",
+            "",
+            "",
+            "",
+            True,
+            "EX,EY",
+            "HX,HY",
+            "",
+            [],
+            "descending",
+            None,
+            ["compute_z"],
+            "",
+            None,
+            "sid",
         )
         assert out == (no_update, no_update)
 
     def test_empty_source_path_warns(self, web_app):
         out = self._fn(web_app)(
-            1, "AVG -> EDI", "  ", "", "", "", "", True, "EX,EY", "HX,HY",
-            "", [], "descending", None, ["compute_z"], "", None, "sid",
+            1,
+            "AVG -> EDI",
+            "  ",
+            "",
+            "",
+            "",
+            "",
+            True,
+            "EX,EY",
+            "HX,HY",
+            "",
+            [],
+            "descending",
+            None,
+            ["compute_z"],
+            "",
+            None,
+            "sid",
         )
         assert "Enter a source AVG/J/Spectra path first." in str(out[0])
         assert out[1] is no_update
 
     def test_nonexistent_source_warns(self, web_app):
         out = self._fn(web_app)(
-            1, "AVG -> EDI", "/no/such/path.AVG", "", "", "", "", True,
-            "EX,EY", "HX,HY", "", [], "descending", None, ["compute_z"], "",
-            None, "sid",
+            1,
+            "AVG -> EDI",
+            "/no/such/path.AVG",
+            "",
+            "",
+            "",
+            "",
+            True,
+            "EX,EY",
+            "HX,HY",
+            "",
+            [],
+            "descending",
+            None,
+            ["compute_z"],
+            "",
+            None,
+            "sid",
         )
         assert "Source path does not exist" in str(out[0])
         assert out[1] is no_update
@@ -1095,9 +1249,24 @@ class TestRunConverter:
         bad = tmp_path / "bad.AVG"
         bad.write_text("this is not a valid AVG file\n", encoding="utf-8")
         out = self._fn(web_app)(
-            1, "AVG -> EDI", str(bad), "", "", "", "", True,
-            "EX,EY", "HX,HY", "", [], "descending", None,
-            ["compute_z", "compute_rho_phi"], "", None, "sid",
+            1,
+            "AVG -> EDI",
+            str(bad),
+            "",
+            "",
+            "",
+            "",
+            True,
+            "EX,EY",
+            "HX,HY",
+            "",
+            [],
+            "descending",
+            None,
+            ["compute_z", "compute_rho_phi"],
+            "",
+            None,
+            "sid",
         )
         children, new_store = out
         assert "✗" in str(children)
@@ -1107,10 +1276,19 @@ class TestRunConverter:
 class TestConverterOptionsFromValues:
     def test_defaults(self):
         opts = tools_mod._converter_options_from_values(
-            output_dir=None, stn_path=None, utm_zone=None, epsg=None,
-            convert_coords=False, e_labels=None, h_labels=None, suffix=None,
-            spectra_flags=None, freq_order=None, freq_tol=None,
-            core_flags=None, station_name=None,
+            output_dir=None,
+            stn_path=None,
+            utm_zone=None,
+            epsg=None,
+            convert_coords=False,
+            e_labels=None,
+            h_labels=None,
+            suffix=None,
+            spectra_flags=None,
+            freq_order=None,
+            freq_tol=None,
+            core_flags=None,
+            station_name=None,
         )
         assert opts["e_labels"] == "EX,EY"
         assert opts["h_labels"] == "HX,HY"
@@ -1120,11 +1298,19 @@ class TestConverterOptionsFromValues:
 
     def test_flags_and_freq_tol(self):
         opts = tools_mod._converter_options_from_values(
-            output_dir="/out", stn_path="/stn", utm_zone="49N", epsg="32649",
-            convert_coords=True, e_labels="A,B", h_labels="C,D", suffix="_X",
+            output_dir="/out",
+            stn_path="/stn",
+            utm_zone="49N",
+            epsg="32649",
+            convert_coords=True,
+            e_labels="A,B",
+            h_labels="C,D",
+            suffix="_X",
             spectra_flags=["estimate_error", "use_remote"],
-            freq_order="ascending", freq_tol="1e-6",
-            core_flags=["compute_z", "compute_rho_phi"], station_name="K1",
+            freq_order="ascending",
+            freq_tol="1e-6",
+            core_flags=["compute_z", "compute_rho_phi"],
+            station_name="K1",
         )
         assert opts["estimate_error"] is True
         assert opts["use_remote"] is True
@@ -1150,9 +1336,7 @@ class TestConvertedSitesToStore:
         assert store["data_dir"] == "[converted]"
 
     def test_reuses_line_assignments_from_old_store(self, willy_sites, willy_ids):
-        old_store = {
-            "station_records": _records([(willy_ids[0], "West Line")])
-        }
+        old_store = {"station_records": _records([(willy_ids[0], "West Line")])}
         store = tools_mod._converted_sites_to_store(
             willy_sites, old_store=old_store, data_dir="/tmp"
         )
@@ -1171,9 +1355,15 @@ class TestConverterResultView:
         stats = {
             "rows": [
                 {
-                    "station": "S1", "n_freqs": 10, "f_min": 0.1, "f_max": 100.0,
-                    "lat": 26.0, "lon": 113.0, "elev": 500.0,
-                    "has_Z": True, "has_tipper": False,
+                    "station": "S1",
+                    "n_freqs": 10,
+                    "f_min": 0.1,
+                    "f_max": 100.0,
+                    "lat": 26.0,
+                    "lon": 113.0,
+                    "elev": 500.0,
+                    "has_Z": True,
+                    "has_tipper": False,
                 }
             ],
             "n_total": 1,
@@ -1355,12 +1545,8 @@ class TestCoordParseCsv:
 
     def test_parses_valid_csv(self, web_app):
         raw = "Easting,Northing,ID\n500000,4500000,ST1\n510000,4510000,ST2\n"
-        contents = "data:text/csv;base64," + base64.b64encode(
-            raw.encode()
-        ).decode()
-        data, info, e_opts, n_opts, id_opts = self._fn(web_app)(
-            contents, "points.csv"
-        )
+        contents = "data:text/csv;base64," + base64.b64encode(raw.encode()).decode()
+        data, info, e_opts, n_opts, id_opts = self._fn(web_app)(contents, "points.csv")
         assert len(data) == 2
         assert "points.csv" in str(info)
         assert {o["value"] for o in e_opts} == {"Easting", "Northing", "ID"}
@@ -1434,9 +1620,7 @@ class TestRunCoords:
         assert "Fill in Latitude and Longitude." in str(out[0])
 
     def test_single_ll2utm_success(self, web_app):
-        out = self._call(
-            web_app, direction="ll2utm", lat=26.05, lon=113.48
-        )
+        out = self._call(web_app, direction="ll2utm", lat=26.05, lon=113.48)
         text, result, pct, label, style, disabled = out
         assert pct == 100
         assert result[0]["Latitude"] == 26.05
@@ -1457,18 +1641,18 @@ class TestRunCoords:
         )
         text, result, pct, label, style, disabled = out
         assert pct == 100
-        assert "EPSG:32649" in result[0]["EPSG_src"] if isinstance(
-            result[0]["EPSG_src"], str
-        ) else result[0]["EPSG_src"] == 32649
+        assert (
+            "EPSG:32649" in result[0]["EPSG_src"]
+            if isinstance(result[0]["EPSG_src"], str)
+            else result[0]["EPSG_src"] == 32649
+        )
 
     def test_batch_no_csv_warns(self, web_app):
         out = self._call(web_app, mode="batch")
         assert "Upload a CSV file first." in str(out[0])
 
     def test_batch_missing_columns_selection_warns(self, web_app):
-        out = self._call(
-            web_app, mode="batch", csv_data=[{"E": 1, "N": 2}]
-        )
+        out = self._call(web_app, mode="batch", csv_data=[{"E": 1, "N": 2}])
         assert "Select the Easting and Northing columns." in str(out[0])
 
     def test_batch_columns_not_found_warns(self, web_app):
@@ -1552,9 +1736,7 @@ class TestRunCoords:
         even when a survey is actively loaded, making it permanently
         unreachable in the running app.
         """
-        out = self._call(
-            web_app, mode="survey", survey_store=store_data_willy
-        )
+        out = self._call(web_app, mode="survey", survey_store=store_data_willy)
         assert "No survey data loaded." in str(out[0])
         assert out[5] is True
 
@@ -1640,7 +1822,9 @@ class TestCoordMap:
 
 class TestCoordExport:
     def _fn(self, web_app):
-        return _cb_by_input(web_app, "tool-coord-download.data", "tool-coord-export-btn")
+        return _cb_by_input(
+            web_app, "tool-coord-download.data", "tool-coord-export-btn"
+        )
 
     def test_no_clicks_no_update(self, web_app):
         assert self._fn(web_app)(None, [{"a": 1}]) is no_update
@@ -1669,17 +1853,13 @@ class _FakeCtx:
 
 class TestToolsPathBrowse:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tools-path-modal.is_open", "tools-path-browse"
-        )
+        return _cb_by_input(web_app, "tools-path-modal.is_open", "tools-path-browse")
 
     def test_no_clicks_raises_prevent_update(self, web_app):
         with _raises_prevent_update():
             self._fn(web_app)([None, 0])
 
-    def test_non_dict_trigger_raises_prevent_update(
-        self, monkeypatch, web_app
-    ):
+    def test_non_dict_trigger_raises_prevent_update(self, monkeypatch, web_app):
         monkeypatch.setattr(tools_mod, "ctx", _FakeCtx("some-string-id"))
         with _raises_prevent_update():
             self._fn(web_app)([1])
@@ -1718,9 +1898,7 @@ class TestRefreshToolsPathListing:
     def test_folder_mode_excludes_files(self, web_app, tmp_path):
         (tmp_path / "notes.txt").write_text("x", encoding="utf-8")
         rows, _ = self._fn(web_app)(str(tmp_path), {"mode": "folder"})
-        assert "No sub-folders here." in str(rows) or "notes.txt" not in str(
-            rows
-        )
+        assert "No sub-folders here." in str(rows) or "notes.txt" not in str(rows)
 
     def test_empty_folder_shows_hint(self, web_app, tmp_path):
         empty = tmp_path / "empty"
@@ -1737,9 +1915,7 @@ class TestRefreshToolsPathListing:
 
 class TestToolsPathEnterDir:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tools-path-current.data", "tools-path-dir"
-        )
+        return _cb_by_input(web_app, "tools-path-current.data", "tools-path-dir")
 
     def test_no_clicks_raises(self, web_app):
         with _raises_prevent_update():
@@ -1747,7 +1923,9 @@ class TestToolsPathEnterDir:
 
     def test_enters_clicked_dir(self, monkeypatch, web_app):
         monkeypatch.setattr(
-            tools_mod, "ctx", _FakeCtx({"type": "tools-path-dir", "path": "/x/y"})
+            tools_mod,
+            "ctx",
+            _FakeCtx({"type": "tools-path-dir", "path": "/x/y"}),
         )
         assert self._fn(web_app)([1]) == "/x/y"
 
@@ -1759,9 +1937,7 @@ class TestToolsPathEnterDir:
 
 class TestToolsPathParent:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tools-path-current.data", "tools-path-up"
-        )
+        return _cb_by_input(web_app, "tools-path-current.data", "tools-path-up")
 
     def test_no_clicks_raises(self, web_app):
         with _raises_prevent_update():
@@ -1785,9 +1961,7 @@ def _fs_root() -> str:
 
 class TestToolsPathMkdir:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tools-path-current.data", "tools-path-mkdir"
-        )
+        return _cb_by_input(web_app, "tools-path-current.data", "tools-path-mkdir")
 
     def test_no_clicks_raises(self, web_app):
         with _raises_prevent_update():
@@ -1809,9 +1983,7 @@ class TestToolsPathMkdir:
 
 class TestToolsPathCancel:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tools-path-modal.is_open", "tools-path-cancel"
-        )
+        return _cb_by_input(web_app, "tools-path-modal.is_open", "tools-path-cancel")
 
     def test_no_clicks_raises(self, web_app):
         with _raises_prevent_update():
@@ -1838,11 +2010,11 @@ class TestToolsPathSelectFolder:
     def test_selects_and_calls_set_props(self, monkeypatch, web_app, tmp_path):
         calls = []
         monkeypatch.setattr(
-            tools_mod, "set_props", lambda cid, props: calls.append((cid, props))
+            tools_mod,
+            "set_props",
+            lambda cid, props: calls.append((cid, props)),
         )
-        is_open = self._fn(web_app)(
-            1, str(tmp_path), {"target": "tool-conv-source"}
-        )
+        is_open = self._fn(web_app)(1, str(tmp_path), {"target": "tool-conv-source"})
         assert is_open is False
         assert calls[0][0] == "tool-conv-source"
         assert calls[0][1]["value"] == str(tmp_path)
@@ -1850,9 +2022,7 @@ class TestToolsPathSelectFolder:
 
 class TestToolsPathSelectFile:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "tools-path-modal.is_open", "tools-path-file"
-        )
+        return _cb_by_input(web_app, "tools-path-modal.is_open", "tools-path-file")
 
     def test_no_clicks_raises(self, web_app):
         with _raises_prevent_update():
@@ -1866,7 +2036,9 @@ class TestToolsPathSelectFile:
     def test_selects_file_and_calls_set_props(self, monkeypatch, web_app):
         calls = []
         monkeypatch.setattr(
-            tools_mod, "set_props", lambda cid, props: calls.append((cid, props))
+            tools_mod,
+            "set_props",
+            lambda cid, props: calls.append((cid, props)),
         )
         monkeypatch.setattr(
             tools_mod,

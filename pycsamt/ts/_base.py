@@ -113,7 +113,8 @@ class TSData(BaseEM):
     >>> from pycsamt.ts import TSData
     >>> ts = TSData(
     ...     data={"HX": np.zeros(8), "EX": np.zeros(8)},
-    ...     dt=5.0, station="kap103",
+    ...     dt=5.0,
+    ...     station="kap103",
     ... )
     >>> ts.n_chan, ts.n_samples
     (2, 8)
@@ -214,9 +215,7 @@ class TSData(BaseEM):
         Channels shorter than the longest one are right-padded
         with ``NaN``.  Returns ``(M, order)``.
         """
-        order = (
-            [_norm_cid(c) for c in ids] if ids is not None else list(self.ids)
-        )
+        order = [_norm_cid(c) for c in ids] if ids is not None else list(self.ids)
         n = max(self.data[c].size for c in order)
         M = np.full((n, len(order)), np.nan, dtype=float)
         for j, c in enumerate(order):

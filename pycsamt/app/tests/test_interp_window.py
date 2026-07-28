@@ -164,12 +164,8 @@ class TestGeneratePlot:
         exercises the ``finished`` (not ``failed``) path for a bogus name.
         """
         results = []
-        worker = _GeneratePlotWorker(
-            win._ctrl, "not_a_real_method", "Bogus", {}
-        )
-        worker.finished.connect(
-            lambda fig, label: results.append((fig, label))
-        )
+        worker = _GeneratePlotWorker(win._ctrl, "not_a_real_method", "Bogus", {})
+        worker.finished.connect(lambda fig, label: results.append((fig, label)))
         worker.run()
         assert len(results) == 1
         win._on_plot_ready(*results[0])
@@ -282,16 +278,12 @@ class TestRunActions:
 
     def test_on_run_geological_wires_worker(self, win, monkeypatch):
         started = []
-        monkeypatch.setattr(
-            _RunWorker, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(_RunWorker, "start", lambda self: started.append(self))
         win._on_run_geological()
         assert len(started) == 1
         assert not win._btn_run_geo.isEnabled()
 
-    def test_on_run_hydro_wires_worker_and_pushes_params(
-        self, win, monkeypatch
-    ):
+    def test_on_run_hydro_wires_worker_and_pushes_params(self, win, monkeypatch):
         from pycsamt.app.desktop.controllers.interp_controller import (
             CATEGORIES,
         )
@@ -299,21 +291,15 @@ class TestRunActions:
         idx = CATEGORIES.index("Hydrology")
         win._combo_category.setCurrentIndex(idx)
         started = []
-        monkeypatch.setattr(
-            _RunWorker, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(_RunWorker, "start", lambda self: started.append(self))
         win._on_run_hydro()
         assert len(started) == 1
         assert win._ctrl.state.petro_cfg is not None
         assert not win._btn_run_hydro.isEnabled()
 
-    def test_on_run_mc_uses_default_when_no_param_widget(
-        self, win, monkeypatch
-    ):
+    def test_on_run_mc_uses_default_when_no_param_widget(self, win, monkeypatch):
         started = []
-        monkeypatch.setattr(
-            _RunWorker, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(_RunWorker, "start", lambda self: started.append(self))
         win._param_widgets = {}
         win._on_run_mc()
         assert len(started) == 1
@@ -328,9 +314,7 @@ class TestRunActions:
         win._combo_category.setCurrentIndex(idx)
         win._param_widgets["n_samples"].setValue(500)
         started = []
-        monkeypatch.setattr(
-            _RunWorker, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(_RunWorker, "start", lambda self: started.append(self))
         win._on_run_mc()
         assert "500" in win._run_status.text()
 
@@ -376,9 +360,7 @@ class TestModelLoading:
         win.setParent(None)
         parent.deleteLater()
 
-    def test_load_from_inversion_model_missing_depth_max_crashes(
-        self, win, qapp
-    ):
+    def test_load_from_inversion_model_missing_depth_max_crashes(self, win, qapp):
         """
         Real bug: ``model_status`` deliberately uses
         ``getattr(m, "depth_max", None)`` so a model lacking that
@@ -425,9 +407,7 @@ class TestModelLoading:
             "getExistingDirectory",
             staticmethod(lambda *a, **k: "/fake/dir"),
         )
-        monkeypatch.setattr(
-            win._ctrl, "set_model_from_occam2d", lambda path: None
-        )
+        monkeypatch.setattr(win._ctrl, "set_model_from_occam2d", lambda path: None)
         win._load_occam2d()
         assert win._run_status.text() == "Occam2D model loaded."
 
@@ -451,9 +431,7 @@ class TestBoreholeManagement:
             "getOpenFileName",
             staticmethod(lambda *a, **k: ("/fake/bh.csv", "")),
         )
-        monkeypatch.setattr(
-            win._ctrl, "add_borehole_csv", lambda path: "BH-1"
-        )
+        monkeypatch.setattr(win._ctrl, "add_borehole_csv", lambda path: "BH-1")
         win._add_borehole_csv()
         assert win._bh_list.count() == 1
         assert win._bh_list.item(0).text() == "BH-1"
@@ -478,9 +456,7 @@ class TestBoreholeManagement:
             "getOpenFileName",
             staticmethod(lambda *a, **k: ("/fake/bh.las", "")),
         )
-        monkeypatch.setattr(
-            win._ctrl, "add_borehole_las", lambda path: "BH-LAS"
-        )
+        monkeypatch.setattr(win._ctrl, "add_borehole_las", lambda path: "BH-LAS")
         win._add_borehole_las()
         assert win._bh_list.item(0).text() == "BH-LAS"
 
@@ -499,9 +475,7 @@ class TestBoreholeManagement:
         assert "LAS load failed" in win._run_status.text()
 
     def test_remove_borehole(self, win, monkeypatch):
-        monkeypatch.setattr(
-            win._ctrl, "remove_borehole", lambda name: None
-        )
+        monkeypatch.setattr(win._ctrl, "remove_borehole", lambda name: None)
         win._bh_list.addItem("BH-1")
         win._bh_list.setCurrentRow(0)
         win._remove_borehole()
@@ -542,9 +516,7 @@ class TestExport:
             "getSaveFileName",
             staticmethod(lambda *a, **k: ("/fake/out.xyz", "")),
         )
-        monkeypatch.setattr(
-            win._ctrl, "export_xyz", lambda path: "Exported XYZ."
-        )
+        monkeypatch.setattr(win._ctrl, "export_xyz", lambda path: "Exported XYZ.")
         win._export_xyz()
         assert win._run_status.text() == "Exported XYZ."
 

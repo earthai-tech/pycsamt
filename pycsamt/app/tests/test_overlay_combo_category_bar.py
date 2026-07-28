@@ -10,7 +10,6 @@ from pycsamt.app.desktop.widgets.overlay_combo import (
     OverlayCombo,
 )
 
-
 # ── OverlayCombo ─────────────────────────────────────────────────────────────
 
 

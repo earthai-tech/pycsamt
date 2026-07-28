@@ -141,9 +141,7 @@ class TestRunExport:
     def test_run_success_with_figure(self, win, monkeypatch):
         _select_category(win, "Strike Analysis")
         win._ctrl._sites = object()
-        monkeypatch.setattr(
-            win._ctrl, "draw", lambda fn, has_ax, fig: None
-        )
+        monkeypatch.setattr(win._ctrl, "draw", lambda fn, has_ax, fig: None)
         win._on_run()
         assert win._status_lbl.text() == "Done."
         assert win._btn_run.isEnabled()
@@ -154,9 +152,7 @@ class TestRunExport:
         _select_category(win, "Strike Analysis")
         win._ctrl._sites = object()
         new_fig = matplotlib.figure.Figure()
-        monkeypatch.setattr(
-            win._ctrl, "draw", lambda fn, has_ax, fig: new_fig
-        )
+        monkeypatch.setattr(win._ctrl, "draw", lambda fn, has_ax, fig: new_fig)
         win._on_run()
         assert win._status_lbl.text() == "Done."
 
@@ -243,9 +239,7 @@ class TestAutoRender:
         win._ctrl._sites = object()
         win._auto_rendered = False
         calls = []
-        monkeypatch.setattr(
-            win, "_auto_render_if_ready", lambda: calls.append(1)
-        )
+        monkeypatch.setattr(win, "_auto_render_if_ready", lambda: calls.append(1))
         win.showEvent(QShowEvent())
         assert calls == [1]
 
@@ -261,9 +255,7 @@ class TestTrainModel:
     def test_train_starts_worker(self, win, monkeypatch):
         win._ctrl._sites = object()
         started = []
-        monkeypatch.setattr(
-            DimModelWorker, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(DimModelWorker, "start", lambda self: started.append(self))
         win._on_train_model()
         assert len(started) == 1
         assert not win._btn_train_model.isEnabled()
@@ -347,9 +339,7 @@ class TestTopoSlots:
     def test_on_topo_apply_success(self, win, monkeypatch):
         import pycsamt.topo.config as topo_cfg
 
-        monkeypatch.setattr(
-            topo_cfg, "configure_topo", lambda **kw: None
-        )
+        monkeypatch.setattr(topo_cfg, "configure_topo", lambda **kw: None)
 
         class _FakeSummary:
             def summary(self):
@@ -393,8 +383,9 @@ class TestTopoSlots:
         assert "Error: reset failed" in win._topo_status.text()
 
     def test_sync_topo_widgets_from_config(self, win, monkeypatch):
-        import pycsamt.topo.config as topo_cfg
         from types import SimpleNamespace
+
+        import pycsamt.topo.config as topo_cfg
 
         fake_t = SimpleNamespace(
             enabled=True,
@@ -441,9 +432,7 @@ class TestTopoSlots:
             "get_stats",
             lambda: {"n_stations": 5, "elev_min": 100.0, "elev_max": 500.0},
         )
-        monkeypatch.setattr(
-            win._topo_ctrl, "plot_elevation_profile", lambda fig: None
-        )
+        monkeypatch.setattr(win._topo_ctrl, "plot_elevation_profile", lambda fig: None)
         win._combo_topo_view.setCurrentIndex(0)
         win._refresh_topo_preview()
         assert "5 stations" in win._topo_stats_lbl.text()
@@ -455,15 +444,11 @@ class TestTopoSlots:
             raise RuntimeError("stats failed")
 
         monkeypatch.setattr(win._topo_ctrl, "get_stats", _boom)
-        monkeypatch.setattr(
-            win._topo_ctrl, "plot_elevation_profile", lambda fig: None
-        )
+        monkeypatch.setattr(win._topo_ctrl, "plot_elevation_profile", lambda fig: None)
         win._refresh_topo_preview()
         assert win._topo_stats_lbl.text() == ""
 
-    def test_refresh_topo_preview_plot_error_shows_message(
-        self, win, monkeypatch
-    ):
+    def test_refresh_topo_preview_plot_error_shows_message(self, win, monkeypatch):
         win._topo_ctrl._sites = object()
         monkeypatch.setattr(
             win._topo_ctrl,
@@ -486,9 +471,7 @@ class TestTopoSlots:
             "get_stats",
             lambda: {"n_stations": 1, "elev_min": 1, "elev_max": 2},
         )
-        monkeypatch.setattr(
-            win._topo_ctrl, "plot_fill_preview", lambda fig: None
-        )
+        monkeypatch.setattr(win._topo_ctrl, "plot_fill_preview", lambda fig: None)
         monkeypatch.setattr(
             win._topo_ctrl, "plot_elevation_histogram", lambda fig: None
         )
@@ -595,9 +578,7 @@ class TestConversionSlots:
         monkeypatch.setattr(ConversionWorker, "start", lambda self: None)
         win._on_conv_run()
 
-    def test_on_conv_finished_populates_table_and_plots(
-        self, win, monkeypatch
-    ):
+    def test_on_conv_finished_populates_table_and_plots(self, win, monkeypatch):
         rows = [
             {
                 "station": "S1",
@@ -631,12 +612,8 @@ class TestConversionSlots:
                 "n_failures": 1,
             },
         )
-        monkeypatch.setattr(
-            win._conv_ctrl, "plot_impedance_curves", lambda fig: None
-        )
-        monkeypatch.setattr(
-            win._conv_ctrl, "plot_station_map", lambda fig: None
-        )
+        monkeypatch.setattr(win._conv_ctrl, "plot_impedance_curves", lambda fig: None)
+        monkeypatch.setattr(win._conv_ctrl, "plot_station_map", lambda fig: None)
         win._on_conv_finished(object(), ["failure1"])
         assert win._conv_table.rowCount() == 2
         assert "2 stations" in win._conv_status.text()
@@ -746,9 +723,7 @@ class TestPublicApi:
     def test_set_sites_refreshes_topo_when_on_topo_page(self, win, monkeypatch):
         win._combo_category.setCurrentIndex(TOPO_INDEX)
         calls = []
-        monkeypatch.setattr(
-            win, "_refresh_topo_preview", lambda: calls.append(1)
-        )
+        monkeypatch.setattr(win, "_refresh_topo_preview", lambda: calls.append(1))
         win.set_sites(object())
         assert calls == [1]
 

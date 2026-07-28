@@ -123,8 +123,7 @@ class PhaseStdBase(AVGComponentBase):
         # dataframe path
         if not isinstance(source, pd.DataFrame):
             raise TypeError(
-                f"{self.__class__.__name__}.read expects "
-                "DataFrame or vector-like"
+                f"{self.__class__.__name__}.read expects " "DataFrame or vector-like"
             )
 
         df = source.copy()

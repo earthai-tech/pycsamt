@@ -231,9 +231,7 @@ kap_subset = by_index(kap_clean, subset_indices)
 subset_report = SitesReport(kap_subset).to_dataframe()
 
 print("Compact plotting subset:")
-print(
-    subset_report[["station", "nfreq", "has_tipper"]].to_string(index=False)
-)
+print(subset_report[["station", "nfreq", "has_tipper"]].to_string(index=False))
 
 # %%
 # 7. Raw tipper geometry: hodograms and polar view

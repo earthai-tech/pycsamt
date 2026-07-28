@@ -13,9 +13,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from matplotlib.patches import Ellipse
-
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
@@ -33,23 +31,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.agents.inv3d_agent import Inv3DAgent
-        from pycsamt.api import read_edis
-        from pycsamt.emtools import (
-            apply_ss_factors,
-            build_phase_tensor_table,
-            estimate_ss_ama,
-            plot_strike_rose,
-            pseudosection,
-        )
-        from pycsamt.topo import (
-            drape_section,
-            extract_chainage,
-            extract_elevation,
-            extract_station_names,
-            has_elevation,
-            interp_elev,
-        )
+        pass
 
     return locals()
 
@@ -119,7 +101,9 @@ def _edi(site):
     return getattr(site, "edi", site)
 
 
-def _rho_phase(site, comp: tuple[int, int]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _rho_phase(
+    site, comp: tuple[int, int]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     z_obj = _edi(site).Z
     freq = np.asarray(z_obj.freq, dtype=float)
     z = np.asarray(z_obj.z, dtype=complex)[:, comp[0], comp[1]]
@@ -141,14 +125,32 @@ def _rho_values(sites, comp: tuple[int, int] = (0, 1)) -> np.ndarray:
 def _plot_three_station_rho_phase(sites) -> None:
     stations = ["18-001A", "18-013U", "18-025A"]
     colors = {"xy": "#2f6f8f", "yx": "#c85745"}
-    fig, axes = plt.subplots(2, 3, figsize=(13.4, 6.7), sharex="col", constrained_layout=True)
+    fig, axes = plt.subplots(
+        2, 3, figsize=(13.4, 6.7), sharex="col", constrained_layout=True
+    )
     for col, station in enumerate(stations):
         site = _get_site(sites, station)
         for label, comp in {"xy": (0, 1), "yx": (1, 0)}.items():
             freq, rho, phase = _rho_phase(site, comp)
             period = 1.0 / np.maximum(freq, 1e-30)
-            axes[0, col].plot(period, rho, marker="o", markersize=3, linewidth=1.0, color=colors[label], label=label)
-            axes[1, col].plot(period, phase, marker="s", markersize=3, linewidth=1.0, color=colors[label], label=label)
+            axes[0, col].plot(
+                period,
+                rho,
+                marker="o",
+                markersize=3,
+                linewidth=1.0,
+                color=colors[label],
+                label=label,
+            )
+            axes[1, col].plot(
+                period,
+                phase,
+                marker="s",
+                markersize=3,
+                linewidth=1.0,
+                color=colors[label],
+                label=label,
+            )
         axes[0, col].set_title(station)
         axes[0, col].set_xscale("log")
         axes[0, col].set_yscale("log")
@@ -177,7 +179,9 @@ def _apply_static_shift(functions, sites):
     if factors.empty or "fac_z" not in factors:
         return factors, sites
     factors["fac_z_reviewed"] = factors["fac_z"].clip(lower=0.35, upper=2.85)
-    applied = factors[["station", "fac_z_reviewed"]].rename(columns={"fac_z_reviewed": "fac_z"})
+    applied = factors[["station", "fac_z_reviewed"]].rename(
+        columns={"fac_z_reviewed": "fac_z"}
+    )
     shifted = functions["apply_ss_factors"](
         sites,
         applied,
@@ -189,7 +193,9 @@ def _apply_static_shift(functions, sites):
 
 
 def _plot_static_shift_grid(functions, before_sites, after_sites) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.1), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1, 2, figsize=(13.0, 5.1), constrained_layout=True
+    )
     rho = np.concatenate([_rho_values(before_sites), _rho_values(after_sites)])
     rho = rho[np.isfinite(rho) & (rho > 0.0)]
     if rho.size:
@@ -249,7 +255,9 @@ def _plot_strike_and_phase_tensor(functions, sites) -> None:
     pt = functions["build_phase_tensor_table"](sites, recursive=False)
     stations = list(dict.fromkeys(pt["station"]))
     periods = np.array(sorted(pt["period"].unique()))
-    selected = periods[np.linspace(0, len(periods) - 1, min(9, len(periods))).astype(int)]
+    selected = periods[
+        np.linspace(0, len(periods) - 1, min(9, len(periods))).astype(int)
+    ]
     fig, ax = plt.subplots(figsize=(13.2, 5.9), constrained_layout=True)
     max_s1 = np.nanpercentile(pt["s1"], 85)
     for ix, station in enumerate(stations):
@@ -268,7 +276,9 @@ def _plot_strike_and_phase_tensor(functions, sites) -> None:
                 width=width,
                 height=height,
                 angle=float(r["theta"]),
-                facecolor=plt.cm.RdBu_r(np.clip((float(r["beta"]) + 20.0) / 40.0, 0.0, 1.0)),
+                facecolor=plt.cm.RdBu_r(
+                    np.clip((float(r["beta"]) + 20.0) / 40.0, 0.0, 1.0)
+                ),
                 edgecolor="#27323a",
                 linewidth=0.35,
                 alpha=0.92,
@@ -277,7 +287,9 @@ def _plot_strike_and_phase_tensor(functions, sites) -> None:
     ax.set_xlim(-0.8, len(stations) - 0.2)
     ax.set_ylim(-0.7, len(selected) - 0.3)
     ax.set_xticks(np.arange(len(stations)))
-    ax.set_xticklabels([s.replace("23-", "") for s in stations], rotation=90, fontsize=6.6)
+    ax.set_xticklabels(
+        [s.replace("23-", "") for s in stations], rotation=90, fontsize=6.6
+    )
     ax.set_yticks(np.arange(len(selected)))
     ax.set_yticklabels([f"{p:.3g}" for p in selected])
     ax.set_ylabel("Period (s)")
@@ -321,7 +333,9 @@ def _plot_geometry(functions, sites) -> None:
         alpha=0.75,
     )
     ax.plot(chain_km, elev_m, color="#2f2419", linewidth=1.6)
-    ax.scatter(chain_km, elev_m + 3.0, marker="v", s=34, color="black", zorder=5)
+    ax.scatter(
+        chain_km, elev_m + 3.0, marker="v", s=34, color="black", zorder=5
+    )
     for i, label in enumerate(labels):
         ax.text(
             chain_km[i],
@@ -344,11 +358,15 @@ def _plot_topography_block(functions, sites, result) -> None:
     if result.status != "success":
         raise RuntimeError(result.summary)
     if not functions["has_elevation"](sites):
-        raise RuntimeError("L18PLT has no usable elevation in the loaded EDIs.")
+        raise RuntimeError(
+            "L18PLT has no usable elevation in the loaded EDIs."
+        )
 
     chain_km = functions["extract_chainage"](sites)
     elev_m = functions["extract_elevation"](sites)
-    labels = [s.replace("23-", "") for s in functions["extract_station_names"](sites)]
+    labels = [
+        s.replace("23-", "") for s in functions["extract_station_names"](sites)
+    ]
     pred_rho = np.asarray(result.data["pred_rho"], dtype=float)
 
     periods = []
@@ -461,7 +479,9 @@ def _plot_topography_block(functions, sites, result) -> None:
     ax.set_xlim(float(chain_km.min()), float(chain_km.max()))
     ax.set_xlabel("Profile distance (km)")
     ax.set_ylabel("Elevation (km)")
-    ax.set_title("L18PLT AI-constrained 3-D block with embedded real topography", pad=18)
+    ax.set_title(
+        "L18PLT AI-constrained 3-D block with embedded real topography", pad=18
+    )
     cb = fig.colorbar(im, ax=ax, pad=0.015)
     cb.set_label("log10 rho")
     _style_axis(ax)

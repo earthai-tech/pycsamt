@@ -38,7 +38,6 @@ from dash import no_update
 
 import pycsamt.app.web.callbacks.tools as tools_mod
 from pycsamt.app.web.cache import cache_set
-from pycsamt.app.web.layout import IDs
 
 _ROOT = Path(__file__).parents[3]  # pycsamt/
 _WILLY_L18 = _ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
@@ -164,9 +163,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -185,9 +182,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -329,9 +324,7 @@ class TestStrikeProfileBody:
         nd = tools_mod._no_data_msg()
         out = tools_mod._strike_profile_body(3, nd, {})
         line_dd = out.children[1]
-        assert line_dd.options == [
-            {"label": "All stations", "value": "__all__"}
-        ]
+        assert line_dd.options == [{"label": "All stations", "value": "__all__"}]
         assert line_dd.value == ["__all__"]
 
     def test_line_counts_build_labelled_options(self):
@@ -361,9 +354,7 @@ class TestPhaseTensorBody:
         nd = tools_mod._no_data_msg()
         out = tools_mod._phase_tensor_body(3, nd, {})
         line_dd = out.children[1]
-        assert line_dd.options == [
-            {"label": "All stations", "value": "__all__"}
-        ]
+        assert line_dd.options == [{"label": "All stations", "value": "__all__"}]
 
     def test_line_counts_build_labelled_options(self):
         nd = tools_mod._no_data_msg()
@@ -429,39 +420,91 @@ class TestRunResponse:
 
     def test_no_clicks_prevents_render(self, web_app):
         out = self._fn(web_app)(
-            None, "A", "", ["xy"], [], "rho_phi", "log", None, None, True,
-            "sess", "dark", None,
+            None,
+            "A",
+            "",
+            ["xy"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            "sess",
+            "dark",
+            None,
         )
         assert out == (no_update, no_update)
 
     def test_no_station_selected(self, web_app):
         out = self._fn(web_app)(
-            1, None, "", ["xy"], [], "rho_phi", "log", None, None, True,
-            "sess", "dark", None,
+            1,
+            None,
+            "",
+            ["xy"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            "sess",
+            "dark",
+            None,
         )
         assert out == (no_update, no_update)
 
     def test_session_expired(self, web_app):
         out = self._fn(web_app)(
-            1, "18-001A", "", ["xy"], [], "rho_phi", "log", None, None,
-            True, "no-such-session", "dark", None,
+            1,
+            "18-001A",
+            "",
+            ["xy"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            "no-such-session",
+            "dark",
+            None,
         )
         assert "Session expired" in out[0].children
         assert out[1] is no_update
 
     def test_station_not_found(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, "NOT-A-REAL-STATION", "", ["xy"], [], "rho_phi", "log",
-            None, None, True, cached_session, "dark", None,
+            1,
+            "NOT-A-REAL-STATION",
+            "",
+            ["xy"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            cached_session,
+            "dark",
+            None,
         )
         assert "not found" in out[0].children
 
-    def test_success_rho_phi_real_data(
-        self, web_app, cached_session, willy_ids
-    ):
+    def test_success_rho_phi_real_data(self, web_app, cached_session, willy_ids):
         out = self._fn(web_app)(
-            1, willy_ids[0], "", ["xy", "yx", "xx", "yy", "det"], [],
-            "rho_phi", "log", None, None, True, cached_session, "dark",
+            1,
+            willy_ids[0],
+            "",
+            ["xy", "yx", "xx", "yy", "det"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            cached_session,
+            "dark",
             None,
         )
         body, saved = out
@@ -491,8 +534,19 @@ class TestRunResponse:
         session_id = "test-tools-pt-rho-none-session"
         cache_mod.cache_set(session_id, _FakeSitesRhoNone())
         out = self._fn(web_app)(
-            1, "FAKE-RHO-NONE", "", ["xy"], [], "rho_phi", "log", None,
-            None, False, session_id, "dark", None,
+            1,
+            "FAKE-RHO-NONE",
+            "",
+            ["xy"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            False,
+            session_id,
+            "dark",
+            None,
         )
         assert "0-dimensional" in out[0].children
 
@@ -500,8 +554,18 @@ class TestRunResponse:
         self, web_app, cached_session, willy_ids
     ):
         out = self._fn(web_app)(
-            1, willy_ids[0], willy_ids[1], ["xy", "yx"], [], "rho_phi",
-            "linear", 1e-4, 10.0, True, cached_session, "light",
+            1,
+            willy_ids[0],
+            willy_ids[1],
+            ["xy", "yx"],
+            [],
+            "rho_phi",
+            "linear",
+            1e-4,
+            10.0,
+            True,
+            cached_session,
+            "light",
             {"existing": True},
         )
         body, saved = out
@@ -510,22 +574,53 @@ class TestRunResponse:
 
     def test_success_reim_view(self, web_app, cached_session, willy_ids):
         out = self._fn(web_app)(
-            1, willy_ids[0], "", ["xy", "yx"], [], "reim", "log", None,
-            None, False, cached_session, "dark", None,
+            1,
+            willy_ids[0],
+            "",
+            ["xy", "yx"],
+            [],
+            "reim",
+            "log",
+            None,
+            None,
+            False,
+            cached_session,
+            "dark",
+            None,
         )
         assert "response" in out[1]
 
-    def test_success_rho_only_and_phi_only(
-        self, web_app, cached_session, willy_ids
-    ):
+    def test_success_rho_only_and_phi_only(self, web_app, cached_session, willy_ids):
         fn = self._fn(web_app)
         out_rho = fn(
-            1, willy_ids[0], "", ["xy"], [], "rho", "log", None, None,
-            False, cached_session, "dark", None,
+            1,
+            willy_ids[0],
+            "",
+            ["xy"],
+            [],
+            "rho",
+            "log",
+            None,
+            None,
+            False,
+            cached_session,
+            "dark",
+            None,
         )
         out_phi = fn(
-            1, willy_ids[0], "", ["xy"], [], "phi", "log", None, None,
-            False, cached_session, "dark", None,
+            1,
+            willy_ids[0],
+            "",
+            ["xy"],
+            [],
+            "phi",
+            "log",
+            None,
+            None,
+            False,
+            cached_session,
+            "dark",
+            None,
         )
         assert "response" in out_rho[1]
         assert "response" in out_phi[1]
@@ -536,8 +631,19 @@ class TestRunResponse:
         session_id = "test-tools-pt-tipper-session"
         cache_mod.cache_set(session_id, _FakeSitesWithTipper())
         out = self._fn(web_app)(
-            1, "FAKE1", "", ["xy", "yx"], ["tx", "ty", "mag"], "rho_phi",
-            "log", None, None, True, session_id, "dark", None,
+            1,
+            "FAKE1",
+            "",
+            ["xy", "yx"],
+            ["tx", "ty", "mag"],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            session_id,
+            "dark",
+            None,
         )
         body, saved = out
         assert "response" in saved
@@ -555,8 +661,19 @@ class TestRunResponse:
 
         monkeypatch.setattr(cache_mod, "cache_get", _boom)
         out = self._fn(web_app)(
-            1, "18-001A", "", ["xy"], [], "rho_phi", "log", None, None,
-            True, cached_session, "dark", None,
+            1,
+            "18-001A",
+            "",
+            ["xy"],
+            [],
+            "rho_phi",
+            "log",
+            None,
+            None,
+            True,
+            cached_session,
+            "dark",
+            None,
         )
         assert "cache boom" in out[0].children
         assert out[1] is no_update
@@ -586,8 +703,21 @@ class TestRunStrikeProfile:
 
     def test_no_clicks_no_update(self, web_app):
         out = self._fn(web_app)(
-            None, "all", ["__all__"], "sweep", None, None, "profile",
-            ["iqr", "table"], "angle", 30, 0.2, {}, "sess", "dark", None,
+            None,
+            "all",
+            ["__all__"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            ["iqr", "table"],
+            "angle",
+            30,
+            0.2,
+            {},
+            "sess",
+            "dark",
+            None,
         )
         assert out[0] is no_update
         assert out[1] is no_update
@@ -595,8 +725,21 @@ class TestRunStrikeProfile:
 
     def test_no_clicks_custom_band_shows_custom_style(self, web_app):
         out = self._fn(web_app)(
-            None, "custom", ["__all__"], "sweep", None, None, "profile",
-            [], "angle", 30, 0.2, {}, "sess", "dark", None,
+            None,
+            "custom",
+            ["__all__"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            {},
+            "sess",
+            "dark",
+            None,
         )
         assert out[2]["display"] == "flex"
 
@@ -606,8 +749,21 @@ class TestRunStrikeProfile:
 
         monkeypatch.setattr(tools_mod, "ctx", _FakeCtx())
         out = self._fn(web_app)(
-            1, "custom", ["__all__"], "sweep", None, None, "profile", [],
-            "angle", 30, 0.2, {}, "sess", "dark", None,
+            1,
+            "custom",
+            ["__all__"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            {},
+            "sess",
+            "dark",
+            None,
         )
         assert out[0] is no_update
         assert out[1] is no_update
@@ -615,8 +771,21 @@ class TestRunStrikeProfile:
 
     def test_session_expired(self, web_app):
         out = self._fn(web_app)(
-            1, "all", ["__all__"], "sweep", None, None, "profile", [],
-            "angle", 30, 0.2, {}, "no-such-session", "dark", None,
+            1,
+            "all",
+            ["__all__"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            {},
+            "no-such-session",
+            "dark",
+            None,
         )
         assert "Session expired" in out[0].children
 
@@ -624,8 +793,20 @@ class TestRunStrikeProfile:
         self, web_app, cached_session, store_data_with_stale_line
     ):
         out = self._fn(web_app)(
-            1, "all", ["L3"], "sweep", None, None, "profile", [], "angle",
-            30, 0.2, store_data_with_stale_line, cached_session, "dark",
+            1,
+            "all",
+            ["L3"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            store_data_with_stale_line,
+            cached_session,
+            "dark",
             None,
         )
         assert "No stations found" in out[0].children
@@ -643,9 +824,21 @@ class TestRunStrikeProfile:
         producing an empty/']' selection or a warning.
         """
         out = self._fn(web_app)(
-            1, "all", ["NO-SUCH-LINE-AT-ALL"], "sweep", None, None,
-            "profile", [], "angle", 30, 0.2, store_data_willy,
-            cached_session, "dark", None,
+            1,
+            "all",
+            ["NO-SUCH-LINE-AT-ALL"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
         # A real warning would read "No stations found for the
         # selected line(s)." -- instead we get a normal profile plot
@@ -653,13 +846,23 @@ class TestRunStrikeProfile:
         assert "No stations found" not in str(out[0])
         assert out[1] != no_update
 
-    def test_sweep_method_success(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_sweep_method_success(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
-            1, "all", ["L1", "L2"], "sweep", None, None, "profile",
-            ["iqr", "skew", "flag3d", "table"], "angle", 30, 0.2,
-            store_data_willy, cached_session, "dark", None,
+            1,
+            "all",
+            ["L1", "L2"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            ["iqr", "skew", "flag3d", "table"],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
         body, saved, _style = out
         assert "strike-profile" in saved
@@ -668,8 +871,20 @@ class TestRunStrikeProfile:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._fn(web_app)(
-            1, "all", ["L1"], "phase_tensor", None, None, "profile", [],
-            "iqr", 30, 0.2, store_data_willy, cached_session, "light",
+            1,
+            "all",
+            ["L1"],
+            "phase_tensor",
+            None,
+            None,
+            "profile",
+            [],
+            "iqr",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "light",
             None,
         )
         assert "strike-profile" in out[1]
@@ -679,64 +894,141 @@ class TestRunStrikeProfile:
     ):
         fn = self._fn(web_app)
         out_skew = fn(
-            1, "all", ["L1"], "consensus", None, None, "profile",
-            ["skew"], "skew", 30, 0.2, store_data_willy, cached_session,
-            "dark", None,
+            1,
+            "all",
+            ["L1"],
+            "consensus",
+            None,
+            None,
+            "profile",
+            ["skew"],
+            "skew",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
         out_n = fn(
-            1, "all", ["L1"], "consensus", None, None, "profile", [], "n",
-            30, 0.2, store_data_willy, cached_session, "dark", None,
+            1,
+            "all",
+            ["L1"],
+            "consensus",
+            None,
+            None,
+            "profile",
+            [],
+            "n",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
         assert "strike-profile" in out_skew[1]
         assert "strike-profile" in out_n[1]
 
-    def test_custom_band_range(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_custom_band_range(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
-            1, "custom", ["L1"], "sweep", 0.001, 100.0, "profile", [],
-            "angle", 30, 0.2, store_data_willy, cached_session, "dark",
+            1,
+            "custom",
+            ["L1"],
+            "sweep",
+            0.001,
+            100.0,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
             None,
         )
         assert "strike-profile" in out[1]
 
-    def test_shallow_mid_deep_bands(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_shallow_mid_deep_bands(self, web_app, cached_session, store_data_willy):
         fn = self._fn(web_app)
         for band in ("shallow", "mid", "deep"):
             out = fn(
-                1, band, ["L1", "L2"], "sweep", None, None, "profile", [],
-                "angle", 30, 0.2, store_data_willy, cached_session,
-                "dark", None,
+                1,
+                band,
+                ["L1", "L2"],
+                "sweep",
+                None,
+                None,
+                "profile",
+                [],
+                "angle",
+                30,
+                0.2,
+                store_data_willy,
+                cached_session,
+                "dark",
+                None,
             )
             assert out[0] is not no_update
 
-    def test_normalise_overlay(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_normalise_overlay(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
-            1, "all", ["L1"], "sweep", None, None, "profile", ["norm"],
-            "angle", 30, 0.2, store_data_willy, cached_session, "dark",
+            1,
+            "all",
+            ["L1"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            ["norm"],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
             None,
         )
         assert "strike-profile" in out[1]
 
     def test_heatmap_view(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
-            1, "all", ["L1", "L2"], "sweep", None, None, "heatmap", [],
-            "angle", 30, 0.2, store_data_willy, cached_session, "dark",
+            1,
+            "all",
+            ["L1", "L2"],
+            "sweep",
+            None,
+            None,
+            "heatmap",
+            [],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
             None,
         )
         body, saved, _style = out
         assert "strike-profile" in saved
 
-    def test_heatmap_view_normalised(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_heatmap_view_normalised(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
-            1, "all", ["L1"], "sweep", None, None, "heatmap", ["norm"],
-            "angle", 30, 0.2, store_data_willy, cached_session, "dark",
+            1,
+            "all",
+            ["L1"],
+            "sweep",
+            None,
+            None,
+            "heatmap",
+            ["norm"],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
             None,
         )
         assert "strike-profile" in out[1]
@@ -751,8 +1043,21 @@ class TestRunStrikeProfile:
 
         monkeypatch.setattr(aniso_mod, "analyze_anisotropy", _boom)
         out = self._fn(web_app)(
-            1, "all", ["L1"], "sweep", None, None, "heatmap", [], "angle",
-            30, 0.2, store_data_willy, cached_session, "dark", None,
+            1,
+            "all",
+            ["L1"],
+            "sweep",
+            None,
+            None,
+            "heatmap",
+            [],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
         assert "heatmap boom" in out[0].children
 
@@ -766,8 +1071,20 @@ class TestRunStrikeProfile:
 
         monkeypatch.setattr(aniso_mod, "analyze_anisotropy", _boom)
         out = self._fn(web_app)(
-            1, "all", ["L1"], "sweep", None, None, "profile", ["skew"],
-            "skew", 30, 0.2, store_data_willy, cached_session, "dark",
+            1,
+            "all",
+            ["L1"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            ["skew"],
+            "skew",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
             None,
         )
         # skew lookup failure is caught internally -> profile still renders
@@ -783,8 +1100,21 @@ class TestRunStrikeProfile:
 
         monkeypatch.setattr(strike_mod, "estimate_strike_sweep", _boom)
         out = self._fn(web_app)(
-            1, "all", ["L1"], "sweep", None, None, "profile", [], "angle",
-            30, 0.2, store_data_willy, cached_session, "dark", None,
+            1,
+            "all",
+            ["L1"],
+            "sweep",
+            None,
+            None,
+            "profile",
+            [],
+            "angle",
+            30,
+            0.2,
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
         assert "estimator boom" in out[0].children
         assert out[2] == {"display": "none"}
@@ -827,20 +1157,59 @@ class TestRunPhaseTensor:
 
     def test_no_clicks_no_update(self, web_app):
         out = self._fn(web_app)(
-            None, ["L1"], "ellipses", 1.0, None, None, "skew", "RdBu_r",
-            5, 95, "cell", 0.85, 0.92, 0.3, "logperiod_up", True, True,
-            "none", True, 5.0, {}, "sess", "dark", None,
+            None,
+            ["L1"],
+            "ellipses",
+            1.0,
+            None,
+            None,
+            "skew",
+            "RdBu_r",
+            5,
+            95,
+            "cell",
+            0.85,
+            0.92,
+            0.3,
+            "logperiod_up",
+            True,
+            True,
+            "none",
+            True,
+            5.0,
+            {},
+            "sess",
+            "dark",
+            None,
         )
         assert out == (no_update, no_update)
 
     def test_session_expired(self, web_app):
         a = self._base_args()
         out = self._fn(web_app)(
-            a["n"], a["lines"], a["view"], a["period"], a["t_lo"],
-            a["t_hi"], a["colorby"], a["cmap"], a["clim_lo"], a["clim_hi"],
-            a["norm_by"], a["scale"], a["alpha_v"], a["lw_v"],
-            a["yaxis_v"], a["ref_ellipse"], a["sym_clim"], a["tipper_mode"],
-            a["mark3d"], a["skew_thresh"], {}, "no-such-session", "dark",
+            a["n"],
+            a["lines"],
+            a["view"],
+            a["period"],
+            a["t_lo"],
+            a["t_hi"],
+            a["colorby"],
+            a["cmap"],
+            a["clim_lo"],
+            a["clim_hi"],
+            a["norm_by"],
+            a["scale"],
+            a["alpha_v"],
+            a["lw_v"],
+            a["yaxis_v"],
+            a["ref_ellipse"],
+            a["sym_clim"],
+            a["tipper_mode"],
+            a["mark3d"],
+            a["skew_thresh"],
+            {},
+            "no-such-session",
+            "dark",
             None,
         )
         assert "Session expired" in out[0].children
@@ -850,29 +1219,63 @@ class TestRunPhaseTensor:
     ):
         a = self._base_args(lines=["L3"])
         out = self._fn(web_app)(
-            a["n"], a["lines"], a["view"], a["period"], a["t_lo"],
-            a["t_hi"], a["colorby"], a["cmap"], a["clim_lo"], a["clim_hi"],
-            a["norm_by"], a["scale"], a["alpha_v"], a["lw_v"],
-            a["yaxis_v"], a["ref_ellipse"], a["sym_clim"], a["tipper_mode"],
-            a["mark3d"], a["skew_thresh"], store_data_with_stale_line,
-            cached_session, "dark", None,
+            a["n"],
+            a["lines"],
+            a["view"],
+            a["period"],
+            a["t_lo"],
+            a["t_hi"],
+            a["colorby"],
+            a["cmap"],
+            a["clim_lo"],
+            a["clim_hi"],
+            a["norm_by"],
+            a["scale"],
+            a["alpha_v"],
+            a["lw_v"],
+            a["yaxis_v"],
+            a["ref_ellipse"],
+            a["sym_clim"],
+            a["tipper_mode"],
+            a["mark3d"],
+            a["skew_thresh"],
+            store_data_with_stale_line,
+            cached_session,
+            "dark",
+            None,
         )
         assert "No stations" in out[0].children
 
     def _run(self, web_app, cached_session, store_data_willy, **overrides):
         a = self._base_args(**overrides)
         return self._fn(web_app)(
-            a["n"], a["lines"], a["view"], a["period"], a["t_lo"],
-            a["t_hi"], a["colorby"], a["cmap"], a["clim_lo"], a["clim_hi"],
-            a["norm_by"], a["scale"], a["alpha_v"], a["lw_v"],
-            a["yaxis_v"], a["ref_ellipse"], a["sym_clim"], a["tipper_mode"],
-            a["mark3d"], a["skew_thresh"], store_data_willy, cached_session,
-            "dark", None,
+            a["n"],
+            a["lines"],
+            a["view"],
+            a["period"],
+            a["t_lo"],
+            a["t_hi"],
+            a["colorby"],
+            a["cmap"],
+            a["clim_lo"],
+            a["clim_hi"],
+            a["norm_by"],
+            a["scale"],
+            a["alpha_v"],
+            a["lw_v"],
+            a["yaxis_v"],
+            a["ref_ellipse"],
+            a["sym_clim"],
+            a["tipper_mode"],
+            a["mark3d"],
+            a["skew_thresh"],
+            store_data_willy,
+            cached_session,
+            "dark",
+            None,
         )
 
-    def test_view_ellipses_success(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_view_ellipses_success(self, web_app, cached_session, store_data_willy):
         out = self._run(web_app, cached_session, store_data_willy)
         body, saved = out
         assert "phase-tensor" in saved
@@ -881,8 +1284,12 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, view="psection",
-            skew_thresh=0.01, mark3d=True,
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="psection",
+            skew_thresh=0.01,
+            mark3d=True,
         )
         assert "phase-tensor" in out[1]
 
@@ -890,7 +1297,10 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, view="map",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="map",
             tipper_mode="parkinson",
         )
         assert "phase-tensor" in out[1]
@@ -899,7 +1309,10 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, view="map",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="map",
             tipper_mode="wiese",
         )
         assert "phase-tensor" in out[1]
@@ -908,7 +1321,10 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, view="all",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="all",
         )
         body, saved = out
         assert len(body.children) == 3
@@ -918,28 +1334,43 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, view="psection",
-            t_lo=0.001, t_hi=1.0,
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="psection",
+            t_lo=0.001,
+            t_hi=1.0,
         )
         assert "phase-tensor" in out[1]
 
     def test_yaxis_variants(self, web_app, cached_session, store_data_willy):
         for yv in ("logperiod_up", "logperiod_dn", "logfreq_up"):
             out = self._run(
-                web_app, cached_session, store_data_willy, view="ellipses",
+                web_app,
+                cached_session,
+                store_data_willy,
+                view="ellipses",
                 yaxis_v=yv,
             )
             assert "phase-tensor" in out[1]
 
-    def test_colorby_variants(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_colorby_variants(self, web_app, cached_session, store_data_willy):
         for cb in (
-            "skew", "theta", "alpha", "ellipt", "phi_max", "phi_min",
-            "s1", "s2", "unknown-value",
+            "skew",
+            "theta",
+            "alpha",
+            "ellipt",
+            "phi_max",
+            "phi_min",
+            "s1",
+            "s2",
+            "unknown-value",
         ):
             out = self._run(
-                web_app, cached_session, store_data_willy, view="psection",
+                web_app,
+                cached_session,
+                store_data_willy,
+                view="psection",
                 colorby=cb,
             )
             assert "phase-tensor" in out[1]
@@ -948,16 +1379,20 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, ref_ellipse=False,
+            web_app,
+            cached_session,
+            store_data_willy,
+            ref_ellipse=False,
             sym_clim=False,
         )
         assert "phase-tensor" in out[1]
 
-    def test_lines_as_plain_string(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_lines_as_plain_string(self, web_app, cached_session, store_data_willy):
         out = self._run(
-            web_app, cached_session, store_data_willy, lines="L1",
+            web_app,
+            cached_session,
+            store_data_willy,
+            lines="L1",
         )
         assert "phase-tensor" in out[1]
 
@@ -965,7 +1400,10 @@ class TestRunPhaseTensor:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._run(
-            web_app, cached_session, store_data_willy, view="bogus-view",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="bogus-view",
         )
         assert "Nothing to display" in out[0].children
 
@@ -979,10 +1417,15 @@ class TestRunPhaseTensor:
         # _run_phase_tensor imports build_phase_tensor_table locally
         # (function-scope import), so the source module must be patched.
         monkeypatch.setattr(
-            tensor_mod, "build_phase_tensor_table", lambda *a, **k: pd.DataFrame()
+            tensor_mod,
+            "build_phase_tensor_table",
+            lambda *a, **k: pd.DataFrame(),
         )
         out = self._run(
-            web_app, cached_session, store_data_willy, view="psection",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="psection",
         )
         assert any(
             "No phase tensor data" in str(getattr(c, "children", c))
@@ -1000,7 +1443,10 @@ class TestRunPhaseTensor:
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("ellipse boom")),
         )
         out = self._run(
-            web_app, cached_session, store_data_willy, view="all",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="all",
         )
         body, saved = out
         texts = [str(getattr(c, "children", c)) for c in body.children]
@@ -1019,7 +1465,10 @@ class TestRunPhaseTensor:
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("map boom")),
         )
         out = self._run(
-            web_app, cached_session, store_data_willy, view="map",
+            web_app,
+            cached_session,
+            store_data_willy,
+            view="map",
         )
         assert "map boom" in str(out[0])
 
@@ -1069,19 +1518,25 @@ class TestLmSolverSync:
     def test_mt1d_shows_freq_params(self, web_app):
         out = self._fn(web_app)("mt1d")
         assert out == (
-            {"display": "block"}, {"display": "none"}, {"display": "none"}
+            {"display": "block"},
+            {"display": "none"},
+            {"display": "none"},
         )
 
     def test_csamt1d_shows_freq_and_offset(self, web_app):
         out = self._fn(web_app)("csamt1d")
         assert out == (
-            {"display": "block"}, {"display": "none"}, {"display": "block"}
+            {"display": "block"},
+            {"display": "none"},
+            {"display": "block"},
         )
 
     def test_tem1d_shows_tem_params(self, web_app):
         out = self._fn(web_app)("tem1d")
         assert out == (
-            {"display": "none"}, {"display": "block"}, {"display": "none"}
+            {"display": "none"},
+            {"display": "block"},
+            {"display": "none"},
         )
 
 
@@ -1104,7 +1559,9 @@ class TestLmNoiseSync:
     def test_none(self, web_app):
         out = self._fn(web_app)("none")
         assert out == (
-            {"display": "none"}, {"display": "none"}, {"display": "none"}
+            {"display": "none"},
+            {"display": "none"},
+            {"display": "none"},
         )
 
 
@@ -1164,24 +1621,50 @@ class TestLmRun:
             n=1,
             ctor="manual",
             tbl_rows=None,
-            r_nl=5, r_rmin=1.0, r_rmax=10000.0, r_dmax=2000.0, r_seed=1,
-            b_nl=4, b_rbg=100.0, b_ranom=5.0, b_alyr=1, b_dmax=1000.0,
-            b_equal_th=True, b_seed=1,
-            s_nl=10, s_rsurf=100.0, s_rdeep=10.0, s_dmax=5000.0,
-            s_perturb=0.2, s_seed=1,
-            geo_name="sedimentary", geo_seed=1,
+            r_nl=5,
+            r_rmin=1.0,
+            r_rmax=10000.0,
+            r_dmax=2000.0,
+            r_seed=1,
+            b_nl=4,
+            b_rbg=100.0,
+            b_ranom=5.0,
+            b_alyr=1,
+            b_dmax=1000.0,
+            b_equal_th=True,
+            b_seed=1,
+            s_nl=10,
+            s_rsurf=100.0,
+            s_rdeep=10.0,
+            s_dmax=5000.0,
+            s_perturb=0.2,
+            s_seed=1,
+            geo_name="sedimentary",
+            geo_seed=1,
             solver="mt1d",
-            freq_min=0.001, freq_max=10000.0, n_freqs=12,
+            freq_min=0.001,
+            freq_max=10000.0,
+            n_freqs=12,
             src_offset=1000.0,
-            time_min=1e-6, time_max=0.01, n_times=10,
-            loop_radius=50.0, moment=1.0,
-            noise_type="none", noise_level=5.0, noise_phase=None,
+            time_min=1e-6,
+            time_max=0.01,
+            n_times=10,
+            loop_radius=50.0,
+            moment=1.0,
+            noise_type="none",
+            noise_level=5.0,
+            noise_phase=None,
             noise_seed=1,
-            field_base=2.0, field_plfreq=50.0, field_pllevel=30.0,
+            field_base=2.0,
+            field_plfreq=50.0,
+            field_pllevel=30.0,
             field_dead=True,
             mult_sigma=0.05,
-            view="both", depth_plot=None, log_rho=True,
-            theme="dark", saved_outputs=None,
+            view="both",
+            depth_plot=None,
+            log_rho=True,
+            theme="dark",
+            saved_outputs=None,
         )
         a.update(overrides)
         return a
@@ -1189,18 +1672,53 @@ class TestLmRun:
     def _call(self, web_app, **overrides):
         a = self._args(**overrides)
         return self._fn(web_app)(
-            a["n"], a["ctor"], a["tbl_rows"], a["r_nl"], a["r_rmin"],
-            a["r_rmax"], a["r_dmax"], a["r_seed"], a["b_nl"], a["b_rbg"],
-            a["b_ranom"], a["b_alyr"], a["b_dmax"], a["b_equal_th"],
-            a["b_seed"], a["s_nl"], a["s_rsurf"], a["s_rdeep"], a["s_dmax"],
-            a["s_perturb"], a["s_seed"], a["geo_name"], a["geo_seed"],
-            a["solver"], a["freq_min"], a["freq_max"], a["n_freqs"],
-            a["src_offset"], a["time_min"], a["time_max"], a["n_times"],
-            a["loop_radius"], a["moment"], a["noise_type"],
-            a["noise_level"], a["noise_phase"], a["noise_seed"],
-            a["field_base"], a["field_plfreq"], a["field_pllevel"],
-            a["field_dead"], a["mult_sigma"], a["view"], a["depth_plot"],
-            a["log_rho"], a["theme"], a["saved_outputs"],
+            a["n"],
+            a["ctor"],
+            a["tbl_rows"],
+            a["r_nl"],
+            a["r_rmin"],
+            a["r_rmax"],
+            a["r_dmax"],
+            a["r_seed"],
+            a["b_nl"],
+            a["b_rbg"],
+            a["b_ranom"],
+            a["b_alyr"],
+            a["b_dmax"],
+            a["b_equal_th"],
+            a["b_seed"],
+            a["s_nl"],
+            a["s_rsurf"],
+            a["s_rdeep"],
+            a["s_dmax"],
+            a["s_perturb"],
+            a["s_seed"],
+            a["geo_name"],
+            a["geo_seed"],
+            a["solver"],
+            a["freq_min"],
+            a["freq_max"],
+            a["n_freqs"],
+            a["src_offset"],
+            a["time_min"],
+            a["time_max"],
+            a["n_times"],
+            a["loop_radius"],
+            a["moment"],
+            a["noise_type"],
+            a["noise_level"],
+            a["noise_phase"],
+            a["noise_seed"],
+            a["field_base"],
+            a["field_plfreq"],
+            a["field_pllevel"],
+            a["field_dead"],
+            a["mult_sigma"],
+            a["view"],
+            a["depth_plot"],
+            a["log_rho"],
+            a["theme"],
+            a["saved_outputs"],
         )
 
     def test_no_clicks_no_update(self, web_app):
@@ -1240,9 +1758,7 @@ class TestLmRun:
             {"ρ (Ω·m)": 200.0, "Thickness (m)": 60.0},
         ]
         # inject an extra bogus row with a thickness to overflow the list
-        rows.insert(
-            1, {"ρ (Ω·m)": 150.0, "Thickness (m)": 70.0}
-        )
+        rows.insert(1, {"ρ (Ω·m)": 150.0, "Thickness (m)": 70.0})
         body, saved, disabled = self._call(web_app, tbl_rows=rows)
         assert disabled is False
         assert len(saved["layered-model"]["model"]["thickness"]) == 2
@@ -1267,9 +1783,7 @@ class TestLmRun:
         assert saved["layered-model"]["model"]["name"] == "smooth"
 
     def test_geology_constructor(self, web_app):
-        body, saved, disabled = self._call(
-            web_app, ctor="geology", geo_name="porphyry"
-        )
+        body, saved, disabled = self._call(web_app, ctor="geology", geo_name="porphyry")
         assert disabled is False
 
     def test_geology_constructor_default_name_and_no_seed(self, web_app):
@@ -1289,9 +1803,7 @@ class TestLmRun:
         assert "rho_a" in saved["layered-model"]["response"]
 
     def test_tem1d_solver(self, web_app):
-        body, saved, disabled = self._call(
-            web_app, solver="tem1d", view="response"
-        )
+        body, saved, disabled = self._call(web_app, solver="tem1d", view="response")
         assert saved["layered-model"]["solver"] == "tem1d"
         assert "dBz_dt" in saved["layered-model"]["response"]
         assert "times" in saved["layered-model"]["response"]
@@ -1299,8 +1811,7 @@ class TestLmRun:
     def test_unrecognised_solver_produces_no_response(self, web_app):
         body, saved, disabled = self._call(web_app, solver="not-a-solver")
         assert any(
-            "no response" in str(getattr(c, "children", c))
-            for c in body.children
+            "no response" in str(getattr(c, "children", c)) for c in body.children
         )
         assert saved["layered-model"]["response"] == {}
 
@@ -1324,7 +1835,8 @@ class TestLmRun:
         # _lm_run imports these names locally (function-scope import), so
         # the source module must be patched, not tools_mod.
         monkeypatch.setattr(
-            forward_mod, "add_noise",
+            forward_mod,
+            "add_noise",
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("noise boom")),
         )
         body, saved, disabled = self._call(web_app, noise_type="gaussian")
@@ -1340,9 +1852,7 @@ class TestLmRun:
         assert disabled is False
 
     def test_log_rho_false_and_depth_plot_set(self, web_app):
-        body, saved, disabled = self._call(
-            web_app, log_rho=False, depth_plot=500.0
-        )
+        body, saved, disabled = self._call(web_app, log_rho=False, depth_plot=500.0)
         assert disabled is False
 
     def test_light_theme(self, web_app):
@@ -1353,31 +1863,29 @@ class TestLmRun:
         import pycsamt.forward as forward_mod
 
         monkeypatch.setattr(
-            forward_mod, "plot_model_1d",
+            forward_mod,
+            "plot_model_1d",
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("model plot boom")),
         )
         body, saved, disabled = self._call(web_app, view="model")
         assert any(
-            "model plot boom" in str(getattr(c, "children", c))
-            for c in body.children
+            "model plot boom" in str(getattr(c, "children", c)) for c in body.children
         )
 
     def test_response_plot_exception_appends_err(self, web_app, monkeypatch):
         import pycsamt.forward as forward_mod
 
         monkeypatch.setattr(
-            forward_mod, "plot_response_and_model_1d",
+            forward_mod,
+            "plot_response_and_model_1d",
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("resp plot boom")),
         )
         body, saved, disabled = self._call(web_app, view="both")
         assert any(
-            "resp plot boom" in str(getattr(c, "children", c))
-            for c in body.children
+            "resp plot boom" in str(getattr(c, "children", c)) for c in body.children
         )
 
-    def test_response_only_view_uses_plot_response_1d(
-        self, web_app, monkeypatch
-    ):
+    def test_response_only_view_uses_plot_response_1d(self, web_app, monkeypatch):
         import pycsamt.forward as forward_mod
 
         calls = []
@@ -1395,10 +1903,17 @@ class TestLmRun:
         import pycsamt.forward as forward_mod
 
         monkeypatch.setattr(
-            forward_mod, "LayeredModel",
-            type("Boom", (), {"__init__": lambda *a, **k: (_ for _ in ()).throw(
-                RuntimeError("ctor boom")
-            )}),
+            forward_mod,
+            "LayeredModel",
+            type(
+                "Boom",
+                (),
+                {
+                    "__init__": lambda *a, **k: (_ for _ in ()).throw(
+                        RuntimeError("ctor boom")
+                    )
+                },
+            ),
         )
         body, saved, disabled = self._call(web_app)
         assert "ctor boom" in body.children
@@ -1488,7 +2003,8 @@ class TestLmExport:
         import json as json_mod
 
         monkeypatch.setattr(
-            json_mod, "dumps",
+            json_mod,
+            "dumps",
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("dump boom")),
         )
         out = self._fn(web_app)(1, "json", self._saved())

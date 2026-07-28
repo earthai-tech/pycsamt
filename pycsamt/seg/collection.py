@@ -78,18 +78,13 @@ class CollectionMixin(ParseMixin):
     --------
     Filter by station prefix and compute sample counts::
 
-        view = coll.select(
-            predicate=lambda ed: ed.station.startswith('A')
-        )
+        view = coll.select(predicate=lambda ed: ed.station.startswith("A"))
         counts = view.map(lambda ed: ed.Z.n_freq)
 
     Group by presence of tipper and list stations::
 
-        groups = coll.groupby(
-            lambda ed: ed.Tip.tipper is not None
-        )
-        stations_with_tip = [ed.station for ed in
-                             groups.get(True, [])]
+        groups = coll.groupby(lambda ed: ed.Tip.tipper is not None)
+        stations_with_tip = [ed.station for ed in groups.get(True, [])]
 
     See Also
     --------
@@ -280,21 +275,16 @@ class EDICollection(CBBase, CollectionMixin):
     Load a folder, keep first duplicates, and summarize::
 
         coll = EDICollection(
-            sources=['data/edi'],
-            on_dup='keep', recursive=True
+            sources=["data/edi"], on_dup="keep", recursive=True
         )
-        tbl = coll.summary(
-            fields=('station', 'n_freq', 'tipper')
-        )
+        tbl = coll.summary(fields=("station", "n_freq", "tipper"))
         for row in tbl:
             print(row)
 
     Add more files later and filter by predicate::
 
-        coll.load(['more/*.edi'])
-        mt_only = coll.select(
-            predicate=lambda ed: ed.has_section('mtsect')
-        )
+        coll.load(["more/*.edi"])
+        mt_only = coll.select(predicate=lambda ed: ed.has_section("mtsect"))
         stations = mt_only.map(lambda ed: ed.station)
 
     See Also
@@ -438,9 +428,7 @@ class EDICollection(CBBase, CollectionMixin):
         if w == "z":
             return getattr(ed.Z, "z", None)
         if w in {"zxx", "zxy", "zyx", "zyy"}:
-            m = {"zxx": (0, 0), "zxy": (0, 1), "zyx": (1, 0), "zyy": (1, 1)}[
-                w
-            ]
+            m = {"zxx": (0, 0), "zxy": (0, 1), "zyx": (1, 0), "zyy": (1, 1)}[w]
             z = getattr(ed.Z, "z", None)
             if z is None:
                 return default
@@ -694,9 +682,7 @@ class EDICollection(CBBase, CollectionMixin):
                 output_path = out_dir / filename
 
                 # Delegate the actual writing to the EDIFile instance
-                written_path = ed.write(
-                    new_edifn=str(output_path), **edi_write_kwargs
-                )
+                written_path = ed.write(new_edifn=str(output_path), **edi_write_kwargs)
                 successful_paths.append(written_path)
             except Exception as e:
                 failed_items.append((sid, e))
@@ -804,7 +790,7 @@ class EDICollection(CBBase, CollectionMixin):
         >>> ed = coll.fetch(site=150, first=True)
 
         >>> # Enforce a helpful error when not found
-        >>> coll.fetch(site='S999', first=True, strict=True)
+        >>> coll.fetch(site="S999", first=True, strict=True)
         Traceback (most recent call last):
             ...
         SiteError: No station found. Try one of: ...
@@ -813,7 +799,7 @@ class EDICollection(CBBase, CollectionMixin):
         >>> ed = coll.fetch(lat=-22.37, lon=139.19, first=True)
 
         >>> # Filter by metadata on >HEAD (case-insensitive)
-        >>> zs = coll.fetch(acqby='Zonge')
+        >>> zs = coll.fetch(acqby="Zonge")
 
         See Also
         --------
@@ -830,9 +816,7 @@ class EDICollection(CBBase, CollectionMixin):
 
         matches: list[EDIFile] = []
 
-        site_cands = (
-            set(_site_candidates(site, policy)) if site is not None else set()
-        )
+        site_cands = set(_site_candidates(site, policy)) if site is not None else set()
 
         for edi in self:
             head = edi.get_section("head")
@@ -979,12 +963,8 @@ class EDICollection(CBBase, CollectionMixin):
             if all_freqs.size > 0
             else "N/A"
         )
-        lat_range = (
-            f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
-        )
-        lon_range = (
-            f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
-        )
+        lat_range = f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
+        lon_range = f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
 
         lines = [
             "  " + "-" * 65,
@@ -1035,9 +1015,7 @@ class EDICollection(CBBase, CollectionMixin):
             )
 
         details.append("  " + "-" * table_width)
-        details.append(
-            "  *Y = Yes (data present); *N = No (data not present)"
-        )
+        details.append("  *Y = Yes (data present); *N = No (data not present)")
 
         # --- Statistical Summary ---
         stats_str = self._summary_stats(summary_data)

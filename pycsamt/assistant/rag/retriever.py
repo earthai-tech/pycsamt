@@ -126,9 +126,7 @@ class BM25:
                 continue
             for i, f in self.postings[t]:
                 dl = self.doc_len[i]
-                denom = f + self.k1 * (
-                    1.0 - self.b + self.b * dl / self.avgdl
-                )
+                denom = f + self.k1 * (1.0 - self.b + self.b * dl / self.avgdl)
                 out[i] += idf * (f * (self.k1 + 1.0)) / denom
         return out
 
@@ -261,8 +259,7 @@ class Retriever:
                 "source_path": c.source_path,
             }
             for c in top
-            if c.symbol
-            and c.kind in ("python_symbol", "python_method", "module_doc")
+            if c.symbol and c.kind in ("python_symbol", "python_method", "module_doc")
         ]
         return RetrievedContext(
             query=query,
@@ -424,9 +421,7 @@ def _resolve_dense(corpus, *, root, api_key, provider):
         store = load_vectors(default_index_dir(root) / VECTOR_FILENAME)
         if store is None:
             return None, None
-        backend = resolve_embedding_backend(
-            api_key=api_key, provider=provider
-        )
+        backend = resolve_embedding_backend(api_key=api_key, provider=provider)
         if backend is None:
             return None, None
 

@@ -135,9 +135,7 @@ def _check_site(ed) -> dict:
         result["Status"] = "WARN"
 
     # Z tensor
-    Z_obj = getattr(ed, "Z", None) or getattr(
-        getattr(ed, "edi", None), "Z", None
-    )
+    Z_obj = getattr(ed, "Z", None) or getattr(getattr(ed, "edi", None), "Z", None)
     z = z_err = freqs = None
     if Z_obj is not None:
         z = getattr(Z_obj, "z", None)
@@ -149,12 +147,8 @@ def _check_site(ed) -> dict:
         result["Status"] = "FAIL"
     else:
         z_arr = np.asarray(z)
-        xy_ok = (
-            np.any(np.isfinite(z_arr[:, 0, 1])) if z_arr.ndim == 3 else False
-        )
-        yx_ok = (
-            np.any(np.isfinite(z_arr[:, 1, 0])) if z_arr.ndim == 3 else False
-        )
+        xy_ok = np.any(np.isfinite(z_arr[:, 0, 1])) if z_arr.ndim == 3 else False
+        yx_ok = np.any(np.isfinite(z_arr[:, 1, 0])) if z_arr.ndim == 3 else False
         result["Z ok"] = "YES" if (xy_ok and yx_ok) else "PARTIAL"
         if not (xy_ok and yx_ok) and result["Status"] == "PASS":
             result["Status"] = "WARN"
@@ -172,9 +166,7 @@ def _check_site(ed) -> dict:
                 result["Status"] = "WARN"
 
     # Error estimates
-    if z_err is None or (
-        hasattr(z_err, "size") and not np.any(np.isfinite(z_err))
-    ):
+    if z_err is None or (hasattr(z_err, "size") and not np.any(np.isfinite(z_err))):
         result["Errors"] = "NO"
         if result["Status"] == "PASS":
             result["Status"] = "WARN"
@@ -320,9 +312,7 @@ class EDIValidatorDialog(QDialog):
             )
         )
         tb.addStretch()
-        tb.addWidget(
-            _tbtn("Export CSV…", "Save current table as CSV", self._on_export)
-        )
+        tb.addWidget(_tbtn("Export CSV…", "Save current table as CSV", self._on_export))
         self._apply_btn = _tbtn(
             "Apply to Survey",
             "Push renames + filtered list back to the loaded survey",
@@ -339,24 +329,14 @@ class EDIValidatorDialog(QDialog):
         self._table.setHorizontalHeaderLabels(_COLS)
         hh = self._table.horizontalHeader()
         hh.setSectionResizeMode(_COL_STATION, QHeaderView.ResizeMode.Stretch)
-        hh.setSectionResizeMode(
-            _COL_STATUS, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self._table.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
-        )
-        self._table.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
+        hh.setSectionResizeMode(_COL_STATUS, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self._table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked)
         self._table.setAlternatingRowColors(False)
         self._table.itemChanged.connect(self._on_item_changed)
-        self._table.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
-        self._table.customContextMenuRequested.connect(
-            self._show_context_menu
-        )
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._show_context_menu)
         root.addWidget(self._table, stretch=1)
 
         # ── Bottom buttons ────────────────────────────────────────────────
@@ -405,11 +385,7 @@ class EDIValidatorDialog(QDialog):
         self._results = []
         for ed in items:
             try:
-                ed = (
-                    _unwrap(ed)
-                    if "pycsamt" in str(type(ed).__module__)
-                    else ed
-                )
+                ed = _unwrap(ed) if "pycsamt" in str(type(ed).__module__) else ed
             except Exception:
                 pass
             self._items.append(ed)
@@ -420,11 +396,7 @@ class EDIValidatorDialog(QDialog):
                     {
                         "Station": "?",
                         "Status": "FAIL",
-                        **{
-                            c: "—"
-                            for c in _COLS
-                            if c not in ("Station", "Status")
-                        },
+                        **{c: "—" for c in _COLS if c not in ("Station", "Status")},
                         "NaN rows": str(exc),
                     }
                 )
@@ -525,8 +497,7 @@ class EDIValidatorDialog(QDialog):
             f"  {names}\n\n"
             "This does not affect files on disk.  "
             "Click <b>Apply to Survey</b> to push the change to the loaded survey.",
-            QMessageBox.StandardButton.Yes
-            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
@@ -672,14 +643,10 @@ class EDIValidatorDialog(QDialog):
                     writer.writerow(
                         {
                             **res,
-                            "Excluded": "yes"
-                            if r in self._excluded
-                            else "no",
+                            "Excluded": "yes" if r in self._excluded else "no",
                         }
                     )
-            self._summary_lbl.setText(
-                self._summary_lbl.text() + f"  →  saved {path}"
-            )
+            self._summary_lbl.setText(self._summary_lbl.text() + f"  →  saved {path}")
         except Exception as exc:
             self._summary_lbl.setText(f"Export error: {exc}")
 

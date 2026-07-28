@@ -335,10 +335,7 @@ class TestBalanceOffdiag:
 
 class TestPlotStrikeDirectorField:
     def _sites(self, n_sta: int = 5, n_freq: int = 12):
-        return [
-            _site(f"S{i:02d}", _3d_z(_freqs(n_freq)), n_freq)
-            for i in range(n_sta)
-        ]
+        return [_site(f"S{i:02d}", _3d_z(_freqs(n_freq)), n_freq) for i in range(n_sta)]
 
     def test_returns_axes(self):
         from pycsamt.emtools.tensor import (
@@ -369,13 +366,9 @@ class TestPlotStrikeDirectorField:
         )
 
         n_sta, n_freq = 4, 10
-        ax = plot_strike_director_field(
-            self._sites(n_sta, n_freq), streamlines=False
-        )
+        ax = plot_strike_director_field(self._sites(n_sta, n_freq), streamlines=False)
         # exactly one quiver collection holding n_sta * n_freq directors
-        quivers = [
-            c for c in ax.collections if c.__class__.__name__ == "Quiver"
-        ]
+        quivers = [c for c in ax.collections if c.__class__.__name__ == "Quiver"]
         assert len(quivers) == 1
         assert quivers[0].N == n_sta * n_freq
         plt.close("all")
@@ -410,8 +403,6 @@ class TestPlotStrikeDirectorField:
         )
 
         fig, ax0 = plt.subplots()
-        ax = plot_strike_director_field(
-            self._sites(), ax=ax0, streamlines=False
-        )
+        ax = plot_strike_director_field(self._sites(), ax=ax0, streamlines=False)
         assert ax is ax0
         plt.close("all")

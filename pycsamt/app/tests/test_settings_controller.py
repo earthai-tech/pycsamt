@@ -290,7 +290,13 @@ def test_apply_station_bad_value_aborts_remaining_kwargs(ctrl):
 # ── apply_section() ──────────────────────────────────────────────────────
 
 
-_APPLIED_PRESETS = ("pseudosection", "dashboard", "compact", "publication", "dynamic")
+_APPLIED_PRESETS = (
+    "pseudosection",
+    "dashboard",
+    "compact",
+    "publication",
+    "dynamic",
+)
 
 
 def test_apply_section_writes_all_applied_presets(ctrl):

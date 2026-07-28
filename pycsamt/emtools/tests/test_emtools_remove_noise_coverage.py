@@ -157,9 +157,7 @@ def _clean_site(
     z = _make_z(fr, rho)
     z_err = 0.02 * np.abs(z) if with_err else None
     tip = _tipper(fr) if with_tipper else None
-    return _FakeSite(
-        station, z, fr, z_err=z_err, tipper=tip, east=east, north=north
-    )
+    return _FakeSite(station, z, fr, z_err=z_err, tipper=tip, east=east, north=north)
 
 
 def _harm_site(
@@ -381,8 +379,8 @@ def test_smooth_logfreq_reduces_variance_on_noisy_series():
     rng = np.random.default_rng(0)
     rho = 100.0 * (1.0 + 0.15 * rng.standard_normal(fr.size))
     z = _make_z(fr, 100.0)
-    z[:, 0, 1] *= (rho / 100.0)
-    z[:, 1, 0] *= (rho / 100.0)
+    z[:, 0, 1] *= rho / 100.0
+    z[:, 1, 0] *= rho / 100.0
     site = _FakeSite("S00", z, fr)
     out = smooth_logfreq([site], win=5, kind="tri", also="z")
     z2, fr2 = _first_z(out)
@@ -440,15 +438,13 @@ def test_smooth_logfreq_also_tipper():
 
 
 def test_shrink_to_group_trend_auto_groups_moves_outlier_toward_median():
-    fr = _HARM_FREQS.copy()
+    _HARM_FREQS.copy()
     sites = [_harm_site(f"S{i:02d}") for i in range(4)]
     outlier = _harm_site("OUT", rho=500.0)
     all_sites = sites + [outlier]
     out = shrink_to_group_trend(all_sites, lam=0.9, gate_harm=False)
     z_before, _ = _z_for(all_sites, "OUT")[1:]
-    z_after, fr_after = _first_z(
-        [ed for i, ed in enumerate(_iter_items(out))][-1:]
-    )
+    z_after, fr_after = _first_z([ed for i, ed in enumerate(_iter_items(out))][-1:])
     mag_before = np.abs(z_before[:, 0, 1])
     mag_after = np.abs(z_after[:, 0, 1])
     # shrinking toward the group median should reduce the outlier magnitude
@@ -463,9 +459,7 @@ def test_shrink_to_group_trend_explicit_groups_and_unmatched_station():
 
     # a station absent from every group is returned unchanged
     unmatched = _harm_site("C0")
-    out2 = shrink_to_group_trend(
-        sites + [unmatched], groups=groups, lam=0.5
-    )
+    out2 = shrink_to_group_trend(sites + [unmatched], groups=groups, lam=0.5)
     z_before = unmatched.Z.z
     _, z_c0, _ = _z_for(out2, "C0")
     np.testing.assert_allclose(z_c0, z_before)
@@ -500,9 +494,7 @@ def test_remove_noise_pipeline_basic_runs_and_changes_data():
 
 def test_remove_noise_pipeline_with_group_shrink():
     sites = [_harm_site(f"S{i:02d}") for i in range(3)]
-    out = remove_noise_pipeline(
-        sites, gate_snr=None, group_shrink=True, shrink_lam=0.3
-    )
+    out = remove_noise_pipeline(sites, gate_snr=None, group_shrink=True, shrink_lam=0.3)
     assert len(list(_iter_items(out))) == 3
 
 
@@ -566,15 +558,11 @@ def test_spatial_median_filter_pulls_outlier_station_toward_neighbors():
     out = spatial_median_filter(sites, half_window=2, lam=0.8, on="z")
     z_before = sites[2].Z.z
     _, z_after, _ = _z_for(out, "S02")
-    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(
-        np.abs(z_before[:, 0, 1])
-    )
+    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(np.abs(z_before[:, 0, 1]))
 
 
 def test_spatial_median_filter_also_tipper():
-    sites = [
-        _clean_site(f"S{i:02d}", rho=100.0, with_tipper=True) for i in range(4)
-    ]
+    sites = [_clean_site(f"S{i:02d}", rho=100.0, with_tipper=True) for i in range(4)]
     out = spatial_median_filter(sites, half_window=1, lam=0.5, on="both")
     ed = next(_iter_items(out))
     assert ed.tipper.shape[1] == 2
@@ -599,9 +587,7 @@ def test_rpca_offdiag_denoise_keep_phase_true_reduces_spike():
     sites[3] = spiked
     out = rpca_offdiag_denoise(sites, rank=1, keep_phase=True)
     _, z_after, _ = _z_for(out, "S03")
-    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(
-        np.abs(spiked.Z.z[:, 0, 1])
-    )
+    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(np.abs(spiked.Z.z[:, 0, 1]))
 
 
 def test_rpca_offdiag_denoise_keep_phase_false():
@@ -676,9 +662,7 @@ def test_mask_incoherent_freqs_also_tipper_runs_without_error():
         z = _make_z(fr, 100.0)
         z_err = np.full_like(np.abs(z), 0.01)
         z_err[3] = 100.0
-        sites.append(
-            _FakeSite(f"S{i:02d}", z, fr, z_err=z_err, tipper=_tipper(fr))
-        )
+        sites.append(_FakeSite(f"S{i:02d}", z, fr, z_err=z_err, tipper=_tipper(fr)))
     out = mask_incoherent_freqs(sites, snr_thresh=5.0, min_frac=0.5, also="both")
     ed = next(_iter_items(out))
     assert ed.tipper.shape[1] == 2
@@ -787,9 +771,7 @@ def test_fixed_length_moving_average_smooths_profile():
     out = fixed_length_moving_average(sites, window=5, component="xy")
     _, z_after, fr_after = _z_for(out, "S03")
     _, z_before, _ = _z_for(sites, "S03")
-    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(
-        np.abs(z_before[:, 0, 1])
-    )
+    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(np.abs(z_before[:, 0, 1]))
 
 
 def test_trimmed_moving_average_smooths_profile():
@@ -798,9 +780,7 @@ def test_trimmed_moving_average_smooths_profile():
     out = trimmed_moving_average(sites, window=5, component="xy")
     _, z_after, _ = _z_for(out, "S03")
     _, z_before, _ = _z_for(sites, "S03")
-    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(
-        np.abs(z_before[:, 0, 1])
-    )
+    assert np.median(np.abs(z_after[:, 0, 1])) < np.median(np.abs(z_before[:, 0, 1]))
 
 
 def test_fixed_length_moving_average_empty_sites():

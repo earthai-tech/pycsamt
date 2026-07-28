@@ -86,9 +86,7 @@ def detect_lines_from_station_ids(
 
     # Merge small groups
     if min_stations_per_line > 1:
-        tiny = [
-            k for k, v in groups.items() if len(v) < min_stations_per_line
-        ]
+        tiny = [k for k, v in groups.items() if len(v) < min_stations_per_line]
         if tiny:
             unassigned = groups.setdefault("unassigned", [])
             for k in tiny:
@@ -213,7 +211,8 @@ def pick_representative_stations(
     Examples
     --------
     >>> pick_representative_stations(
-    ...     ["18-001A", "18-010U", "18-019U", "18-025A", "18-005U"], 3)
+    ...     ["18-001A", "18-010U", "18-019U", "18-025A", "18-005U"], 3
+    ... )
     ['18-001A', '18-010U', '18-025A']
     """
     names = sorted(station_ids)

@@ -138,9 +138,7 @@ def test_tipper_rotate(mt):
     Tr = MTBase.tipper_rotate(T, 90.0)
     assert_allclose(Tr, np.array([0.0, -1.0]), rtol=1e-12, atol=1e-12)
     # or
-    assert_allclose(
-        Tr.reshape(1, 2), np.array([[0.0, -1.0]]), rtol=1e-12, atol=1e-12
-    )
+    assert_allclose(Tr.reshape(1, 2), np.array([[0.0, -1.0]]), rtol=1e-12, atol=1e-12)
 
 
 def test_induction_arrows(mt):
@@ -151,9 +149,7 @@ def test_induction_arrows(mt):
     assert_allclose(ay, [1.0])
 
     # Parkinson uses components directly -> (1, 0)
-    ax2, ay2 = MTBase.induction_arrows(
-        T, convention="parkinson", use_imag=False
-    )
+    ax2, ay2 = MTBase.induction_arrows(T, convention="parkinson", use_imag=False)
     assert_allclose(ax2, [1.0])
     assert_allclose(ay2, [0.0])
 
@@ -180,9 +176,7 @@ def test_halfspace_impedance(mt):
     # Magnitude should be sqrt(mu0*w*rho); phase ~ 45°
     mag = np.abs(Z)
     ang = np.degrees(np.angle(Z))
-    assert_allclose(
-        mag, np.sqrt(mt.MU0 * mt.omega(f) * rho), rtol=1e-12, atol=0.0
-    )
+    assert_allclose(mag, np.sqrt(mt.MU0 * mt.omega(f) * rho), rtol=1e-12, atol=0.0)
     assert_allclose(ang, np.full_like(ang, 45.0), rtol=1e-12, atol=1e-12)
 
 
@@ -230,9 +224,7 @@ def test_phase_tensor_params_shapes_and_values(mt):
     Z = np.zeros((4, 2, 2), dtype=complex)
     Z.real[...] = np.eye(2)
     Z.imag[...] = np.array([[a, 0.0], [0.0, a]])
-    phi_max, phi_min, alpha, beta, ellipt = mt.phase_tensor_params(
-        Z, angle_unit="deg"
-    )
+    phi_max, phi_min, alpha, beta, ellipt = mt.phase_tensor_params(Z, angle_unit="deg")
 
     # Shapes
     assert phi_max.shape == (4,)

@@ -33,13 +33,11 @@ class TestWorkflowTypeAuthority(unittest.TestCase):
 
         # 1. Router returns the correct intent but a WRONG workflow slot.
         orig_route = R.IntentRouter.route
-        R.IntentRouter.route = lambda self, text, history=None: (
-            RouterDecision(
-                intent=WORKFLOW,
-                workflow="ai_inversion",
-                confidence=0.9,
-                source="llm",
-            )
+        R.IntentRouter.route = lambda self, text, history=None: RouterDecision(
+            intent=WORKFLOW,
+            workflow="ai_inversion",
+            confidence=0.9,
+            source="llm",
         )
 
         # 2. Capture the config the orchestrator actually receives,
@@ -47,9 +45,7 @@ class TestWorkflowTypeAuthority(unittest.TestCase):
         captured = {}
 
         def fake_execute(self, input_data):
-            captured["workflow"] = input_data.get("config", {}).get(
-                "workflow"
-            )
+            captured["workflow"] = input_data.get("config", {}).get("workflow")
             return AgentResult(
                 status="success",
                 summary="stub",

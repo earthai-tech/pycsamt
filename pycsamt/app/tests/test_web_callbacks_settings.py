@@ -39,9 +39,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -129,7 +127,13 @@ class TestPersist:
 
     def test_all_values_provided(self, web_app):
         out = self._fn(web_app)(
-            "nearest", "niblett", "srtm", "plasma", "openai", "sk-abc", "gpt-4o"
+            "nearest",
+            "niblett",
+            "srtm",
+            "plasma",
+            "openai",
+            "sk-abc",
+            "gpt-4o",
         )
         assert out == {
             "interp": "nearest",
@@ -161,7 +165,10 @@ class TestPickProvider:
     def _fn(self, web_app):
         return _cb_where(
             web_app,
-            include=["settings-ai-provider-store.data", "settings-provider-btn"],
+            include=[
+                "settings-ai-provider-store.data",
+                "settings-provider-btn",
+            ],
         )
 
     def test_no_trigger_all_no_update(self, monkeypatch, web_app):
@@ -177,7 +184,9 @@ class TestPickProvider:
         import pycsamt.app.web.callbacks.settings as settings_mod
 
         monkeypatch.setattr(
-            settings_mod, "ctx", type("C", (), {"triggered_id": "settings-interp"})()
+            settings_mod,
+            "ctx",
+            type("C", (), {"triggered_id": "settings-interp"})(),
         )
         out = self._fn(web_app)([1], "claude")
         assert out == (no_update, no_update, no_update, no_update)
@@ -193,7 +202,12 @@ class TestPickProvider:
             type(
                 "C",
                 (),
-                {"triggered_id": {"type": "settings-provider-btn", "index": "openai"}},
+                {
+                    "triggered_id": {
+                        "type": "settings-provider-btn",
+                        "index": "openai",
+                    }
+                },
             )(),
         )
         provider, classes, opts, model = self._fn(web_app)(
@@ -209,9 +223,7 @@ class TestPickProvider:
         assert opts == _MODEL_OPTIONS["openai"]
         assert model == _MODEL_DEFAULT["openai"]
 
-    def test_unknown_provider_falls_back_to_claude_options(
-        self, monkeypatch, web_app
-    ):
+    def test_unknown_provider_falls_back_to_claude_options(self, monkeypatch, web_app):
         import pycsamt.app.web.callbacks.settings as settings_mod
 
         monkeypatch.setattr(
@@ -271,9 +283,7 @@ class TestSyncProviderUi:
         ]
         assert opts == _MODEL_OPTIONS["gemini"]
 
-    def test_unknown_provider_falls_back_to_claude_options_all_inactive(
-        self, web_app
-    ):
+    def test_unknown_provider_falls_back_to_claude_options_all_inactive(self, web_app):
         classes, opts = self._fn(web_app)("mystery-llm")
         assert classes == ["settings-provider-btn"] * 4
         assert opts == _MODEL_OPTIONS["claude"]
@@ -285,7 +295,9 @@ class TestSyncProviderUi:
 class TestTestConnection:
     def _fn(self, web_app):
         return _cb_multi(
-            web_app, "settings-ai-status.children", "settings-ai-status.className"
+            web_app,
+            "settings-ai-status.children",
+            "settings-ai-status.className",
         )
 
     def test_no_clicks_no_update(self, web_app):
@@ -417,7 +429,9 @@ class TestLoad:
         assert "Profile loaded from myprofile.json." in out[7][1]
 
     def test_malformed_base64_shows_parse_error(self, web_app):
-        out = self._fn(web_app)("data:application/json;base64,not-valid-b64!!", "bad.json")
+        out = self._fn(web_app)(
+            "data:application/json;base64,not-valid-b64!!", "bad.json"
+        )
         assert out[:7] == (no_update,) * 7
         assert "Could not parse bad.json" in out[7][1]
 
@@ -435,7 +449,11 @@ class TestLoad:
 class TestStatusIcon:
     @pytest.mark.parametrize(
         "variant,color",
-        [("ok", "var(--green)"), ("warn", "var(--yellow)"), ("danger", "var(--red)")],
+        [
+            ("ok", "var(--green)"),
+            ("warn", "var(--yellow)"),
+            ("danger", "var(--red)"),
+        ],
     )
     def test_known_variants_map_to_color(self, variant, color):
         icon = _status_icon("bi-check-circle-fill", variant)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Home-page card image: "Inversion — classical & AI".
 
 Left panel: a real ModEM 3-D result (bundled Willy line-02 sample) sliced
@@ -14,6 +13,7 @@ Output: docs/source/_static/images/home/card-inversion.png
 Usage (any cwd):
     python scripts/home_card_inversion.py
 """
+
 import os
 import sys
 from pathlib import Path
@@ -31,8 +31,8 @@ import numpy as np
 
 sys.path.insert(0, str(ROOT))
 
-from pycsamt.forward.batch import generate_dataset  # noqa: E402
 from pycsamt.ai.inversion.inv1d import EMInverter1D  # noqa: E402
+from pycsamt.forward.batch import generate_dataset  # noqa: E402
 from pycsamt.models.modem import InversionResult  # noqa: E402
 
 BLUE, ORANGE, GOLD, SLATE = "#3e65b0", "#f15a29", "#d99114", "#5c677d"
@@ -57,9 +57,7 @@ DIST_MAX_KM = 2.0
 
 def modem_section():
     """Most-structured N-S section (distance, depth, rho) from the sample."""
-    result = InversionResult(
-        SAMPLE, load_control=False, load_covariance=False
-    )
+    result = InversionResult(SAMPLE, load_control=False, load_covariance=False)
     key = "final" if "final" in result.models else sorted(result.models)[-1]
     model = result.models[key]
 
@@ -151,7 +149,9 @@ def main():
     ax_r.set_title("AI — EMInverter1D", pad=6)
     ax_r.set_xlabel(r"true $\log_{10}\rho$", fontsize=8.5)
     ax_r.set_ylabel(r"predicted $\log_{10}\rho$", fontsize=8.5)
-    ax_r.legend(fontsize=6.8, loc="upper left", frameon=False, handletextpad=0.2)
+    ax_r.legend(
+        fontsize=6.8, loc="upper left", frameon=False, handletextpad=0.2
+    )
     ax_r.grid(True, ls=":", lw=0.4, color="#c8d0dc", alpha=0.7)
     ax_r.tick_params(labelsize=7.5, length=2.5)
     ax_r.set_aspect("equal")

@@ -328,9 +328,7 @@ def linkage_matrix(
                 "distance",
                 "no. of items in clust.",
             ],
-            index=[
-                "cluster %d" % (i + 1) for i in range(row_clusters.shape[0])
-            ],
+            index=["cluster %d" % (i + 1) for i in range(row_clusters.shape[0])],
         )
     return row_clusters
 
@@ -371,20 +369,17 @@ def betaj(xj: int, L: int, W: int, **kws) -> float:
     :example:
         >>> from watex.exmath import betaj
         >>> # compute the weight point for window-size = 5 at position j =2
-        >>> L= 1 ; W=5
-        >>> betaj (xj = 2 , L=L, W=W )
+        >>> L = 1
+        ... W = 5
+        >>> betaj(xj=2, L=L, W=W)
         ... 0.35136534572813144
     """
     if W < L:
-        raise ValueError(
-            "Window-size must be greater than the dipole length."
-        )
+        raise ValueError("Window-size must be greater than the dipole length.")
 
     xk = W / 2
     # vec_betaj = np.vectorize( betaj ) ; vec_betaj(0, 1, 5)
-    return quad(
-        d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws
-    )[0]
+    return quad(d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws)[0]
 
 
 def rhoa2z(
@@ -406,10 +401,10 @@ def rhoa2z(
     :example:
     >>> import numpy as np
     >>> rhoa = np.array([1623.73691735])
-    >>> phz = np.array([45.])
-    >>> f = np.array ([1014])
+    >>> phz = np.array([45.0])
+    >>> f = np.array([1014])
     >>> rhoa2z(rhoa, phz, f)
-    ... array([[2.54950976+2.54950976j]])
+    ... array([[2.54950976 + 2.54950976j]])
 
     """
 
@@ -465,19 +460,19 @@ def rhophi2z(rho, phi, freq):
     ---------
     >>> import numpy as np
     >>> from watex.utils.exmath import rhophi2z
-    >>> rhophi2z (823 , 25 , 500 )
+    >>> rhophi2z(823, 25, 500)
     array([1300.00682824+606.20313966j])
-    >>> rho = np.array ([[823, 700], [723, 526]] )
-    >>> phi = np.array ([[45, 50], [90, 180]])
-    >>> rhophi2z (rho, phi , freq= 500  )
+    >>> rho = np.array([[823, 700], [723, 526]])
+    >>> phi = np.array([[45, 50], [90, 180]])
+    >>> rhophi2z(rho, phi, freq=500)
     array([[ 1.01427314e+03+1.01427314e+03j,  8.50328081e+02+1.01338154e+03j],
            [ 8.23227764e-14+1.34443297e+03j, -1.14673449e+03+1.40434473e-13j]])
-    >>> rhophi2z (np.array ( [ 823, 700])  , np.array ([45, 50 ])  , [500, 700] )
+    >>> rhophi2z(np.array([823, 700]), np.array([45, 50]), [500, 700])
     array([1014.27313876+1014.27313876j, 1006.12175325+1199.04921402j])
-    >>> rho  = np.abs (np.random.randn (7, 3 ) * 100 )
-    >>> phi = np.abs ( np.random.randn (7, 3 ) *180 % 90 )
-    >>> freq = np.abs ( np.random.randn (7) * 100 )
-    >>> rhophi2z (rho   , phi  , freq )
+    >>> rho = np.abs(np.random.randn(7, 3) * 100)
+    >>> phi = np.abs(np.random.randn(7, 3) * 180 % 90)
+    >>> freq = np.abs(np.random.randn(7) * 100)
+    >>> rhophi2z(rho, phi, freq)
 
     """
 
@@ -488,9 +483,7 @@ def rhophi2z(rho, phi, freq):
             abs_z = np.sqrt(5 * f * r)
         # `f` may arrive as a 1-element array: extract the scalar
         # explicitly (implicit conversion is removed in NumPy >= 2.3)
-        return cmath.rect(
-            np.asarray(abs_z, dtype=float).ravel()[0], radians(p)
-        )
+        return cmath.rect(np.asarray(abs_z, dtype=float).ravel()[0], radians(p))
 
     is_array2x2 = False
 
@@ -562,8 +555,8 @@ def z2rhoa(
 
     :example:
     >>> import numpy as np
-    >>> z = np.array([2 + 1j *3 ])
-    >>> f = np.array ([1014])
+    >>> z = np.array([2 + 1j * 3])
+    >>> f = np.array([1014])
     >>> z2rhoa(z, f)
     ... array([[1623.73691735]])
 
@@ -627,11 +620,11 @@ def savitzky_golay1d(
     >>> import matplotlib.pyplot as plt
     >>> from watex.utils.exmath import savitzky_golay1d
     >>> t = np.linspace(-4, 4, 500)
-    >>> y = np.exp( -t**2 ) + np.random.normal(0, 0.05, t.shape)
+    >>> y = np.exp(-(t**2)) + np.random.normal(0, 0.05, t.shape)
     >>> ysg = savitzky_golay1d(y, window_size=31, order=4)
-    >>> plt.plot(t, y, label='Noisy signal')
-    >>> plt.plot(t, np.exp(-t**2), 'k', lw=1.5, label='Original signal')
-    >>> plt.plot(t, ysg, 'r', label='Filtered signal')
+    >>> plt.plot(t, y, label="Noisy signal")
+    >>> plt.plot(t, np.exp(-(t**2)), "k", lw=1.5, label="Original signal")
+    >>> plt.plot(t, ysg, "r", label="Filtered signal")
     >>> plt.legend()
     >>> plt.show()
 
@@ -662,10 +655,7 @@ def savitzky_golay1d(
     half_window = (window_size - 1) // 2
     # precompute coefficients
     b = np.array(
-        [
-            [k**i for i in order_range]
-            for k in range(-half_window, half_window + 1)
-        ],
+        [[k**i for i in order_range] for k in range(-half_window, half_window + 1)],
         dtype=float,
     )
     m = np.linalg.pinv(b)[deriv] * rate**deriv * factorial(deriv)

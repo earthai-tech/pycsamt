@@ -75,9 +75,10 @@ class PhaseAnalysisAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent  = PhaseAnalysisAgent()
-    >>> result = agent.execute({"path": "/data/L22PLT",
-    ...                         "output_dir": "/out/pt"})
+    >>> agent = PhaseAnalysisAgent()
+    >>> result = agent.execute(
+    ...     {"path": "/data/L22PLT", "output_dir": "/out/pt"}
+    ... )
     >>> result["strike_consensus"]
     42.5
     """
@@ -115,9 +116,7 @@ class PhaseAnalysisAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -215,9 +214,7 @@ class PhaseAnalysisAgent(BaseAgent):
                 figsize=(10.0, 5.5),
                 verbose=0,
             )
-            fig = (
-                ax_pt.get_figure() if hasattr(ax_pt, "get_figure") else ax_pt
-            )
+            fig = ax_pt.get_figure() if hasattr(ax_pt, "get_figure") else ax_pt
             figures["pt_psection"] = fig
             p = self._save_figure(
                 fig, output_dir, "pt_psection", warnings_list=warnings
@@ -284,11 +281,7 @@ class PhaseAnalysisAgent(BaseAgent):
                 ellipt_th=self.ellipt_th,
                 verbose=0,
             )
-            fig = (
-                ax_dim.get_figure()
-                if hasattr(ax_dim, "get_figure")
-                else ax_dim
-            )
+            fig = ax_dim.get_figure() if hasattr(ax_dim, "get_figure") else ax_dim
             if fig is not None:
                 figures["dim_confidence"] = fig
                 p = self._save_figure(

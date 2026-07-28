@@ -96,17 +96,13 @@ def rotate(
         sys.exit(1)
 
     if dry_run:
-        click.echo(
-            f"Dry run — {len(edis)} file(s) would be rotated by {angle_deg}°:"
-        )
+        click.echo(f"Dry run — {len(edis)} file(s) would be rotated by {angle_deg}°:")
         for p in paths:
             click.echo(f"  {p.name}")
         return
 
     if str(output_dir) == ".":
-        raise click.UsageError(
-            "--output-dir is required when not using --dry-run"
-        )
+        raise click.UsageError("--output-dir is required when not using --dry-run")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     written: list[str] = []

@@ -102,9 +102,7 @@ class TestForwardGroup:
 
 class TestForwardModelGeology:
     def test_help(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["forward", "model", "geology", "--help"]
-        )
+        result = runner.invoke(main, ["forward", "model", "geology", "--help"])
         assert result.exit_code == 0
         assert "--name" in result.output
 
@@ -132,9 +130,7 @@ class TestForwardModelGeology:
         assert all("scenario" in row for row in data)
 
     def test_list_all_csv(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["forward", "model", "geology", "--format", "csv"]
-        )
+        result = runner.invoke(main, ["forward", "model", "geology", "--format", "csv"])
         assert result.exit_code == 0
         first_line = result.output.strip().splitlines()[0]
         assert "scenario" in first_line
@@ -188,18 +184,14 @@ class TestForwardRun:
         result = runner.invoke(main, ["forward", "run"])
         assert result.exit_code != 0
 
-    def test_resistivities_without_thicknesses_fails(
-        self, runner: CliRunner
-    ) -> None:
+    def test_resistivities_without_thicknesses_fails(self, runner: CliRunner) -> None:
         result = runner.invoke(
             main,
             ["forward", "run", "--resistivities", "100,10,500"],
         )
         assert result.exit_code != 0
 
-    def test_geology_with_resistivities_fails(
-        self, runner: CliRunner
-    ) -> None:
+    def test_geology_with_resistivities_fails(self, runner: CliRunner) -> None:
         result = runner.invoke(
             main,
             [
@@ -228,9 +220,7 @@ class TestForwardRun:
         assert result.exit_code != 0
 
     def test_unknown_geology_fails(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["forward", "run", "--geology", "atlantis"]
-        )
+        result = runner.invoke(main, ["forward", "run", "--geology", "atlantis"])
         assert result.exit_code != 0
 
     # -- unit tests with mocked solver ----------------------------------------
@@ -399,9 +389,7 @@ class TestForwardGenerate:
         tmp_path: Path,
     ) -> None:
         out = str(tmp_path / "dataset.csv")
-        result, ds = self._invoke_generate_mocked(
-            runner, monkeypatch, output=out
-        )
+        result, ds = self._invoke_generate_mocked(runner, monkeypatch, output=out)
         assert result.exit_code == 0
         assert "Dataset saved" in result.output
         # CSV was written to tmp_path
@@ -434,9 +422,7 @@ class TestForwardGenerate:
     def test_verbose_shows_progress(
         self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        result, _ = self._invoke_generate_mocked(
-            runner, monkeypatch, extra_args=["-v"]
-        )
+        result, _ = self._invoke_generate_mocked(runner, monkeypatch, extra_args=["-v"])
         assert result.exit_code == 0
 
     @pytest.mark.parametrize("solver", ["mt1d", "tem1d", "csamt1d"])

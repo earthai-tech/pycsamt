@@ -139,11 +139,7 @@ class JCollectionMixin(JParseMixin):
             if callable(key):
                 return key(jf)
             if key in {"station", "site", "name"}:
-                return (
-                    getattr(jf, "site", None)
-                    or getattr(jf, "name", None)
-                    or ""
-                )
+                return getattr(jf, "site", None) or getattr(jf, "name", None) or ""
             if key == "n_freq":
                 f = getattr(jf, "freq", None)
                 return int(getattr(f, "size", len(f or [])))
@@ -256,7 +252,9 @@ class JCollection(JCBBase, JCollectionMixin):
     >>> _ = col.parse(["data/j"])
     >>> len(col) >= 1
     True
-    >>> sorted(set(getattr(x, "site", None) for x in col))[:3]  # doctest: +ELLIPSIS
+    >>> sorted(set(getattr(x, "site", None) for x in col))[
+    ...     :3
+    ... ]  # doctest: +ELLIPSIS
     [...]
 
     Filter by station (if ``where`` is provided):
@@ -398,9 +396,7 @@ class JCollection(JCBBase, JCollectionMixin):
         if w == "z":
             return getattr(getattr(jf, "Z", None), "z", None)
         if w in {"zxx", "zxy", "zyx", "zyy"}:
-            m = {"zxx": (0, 0), "zxy": (0, 1), "zyx": (1, 0), "zyy": (1, 1)}[
-                w
-            ]
+            m = {"zxx": (0, 0), "zxy": (0, 1), "zyx": (1, 0), "zyy": (1, 1)}[w]
             z = getattr(getattr(jf, "Z", None), "z", None)
             if z is None:
                 return default
@@ -754,15 +750,11 @@ class JCollection(JCBBase, JCollectionMixin):
         for jf in items_iterator:
             sid = jf.site or "unknown_station"
             try:
-                filename = file_pattern.format(
-                    station=sid, site=sid, name=jf.name
-                )
+                filename = file_pattern.format(station=sid, site=sid, name=jf.name)
                 output_path = out_dir / filename
 
                 # Delegate the actual writing to the JFile instance
-                written_path = jf.write(
-                    new_jfn=str(output_path), **jfile_write_kwargs
-                )
+                written_path = jf.write(new_jfn=str(output_path), **jfile_write_kwargs)
                 successful_paths.append(written_path)
             except Exception as e:
                 failed_items.append((sid, e))
@@ -829,17 +821,13 @@ class JCollection(JCBBase, JCollectionMixin):
         Examples
         --------
         >>> # Fetch a single site by its name
-        >>> jfile_obj = jcollection.fetch(site='S01', first=True)
+        >>> jfile_obj = jcollection.fetch(site="S01", first=True)
 
         >>> # Fetch all sites where the azimuth is 0
         >>> zero_az_files = jcollection.fetch(azimuth=0)
 
         >>> # Fetch all sites within a small geographic area
-        >>> area_files = jcollection.fetch(
-        ...     lat=26.05,
-        ...     lon=-10.33,
-        ...     tol=0.1
-        ... )
+        >>> area_files = jcollection.fetch(lat=26.05, lon=-10.33, tol=0.1)
         """
         matches = []
 
@@ -905,11 +893,7 @@ class JCollection(JCBBase, JCollectionMixin):
         # Get all frequencies from all files to find the true min/max
         all_freqs = (
             np.concatenate(
-                [
-                    jf.freq
-                    for jf in self
-                    if jf.freq is not None and jf.freq.size > 0
-                ]
+                [jf.freq for jf in self if jf.freq is not None and jf.freq.size > 0]
             )
             if total_files > 0
             else np.array([])
@@ -923,12 +907,8 @@ class JCollection(JCBBase, JCollectionMixin):
             if all_freqs.size > 0
             else "N/A"
         )
-        lat_range = (
-            f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
-        )
-        lon_range = (
-            f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
-        )
+        lat_range = f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
+        lon_range = f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
 
         lines = [
             "  " + "-" * 68,
@@ -984,9 +964,7 @@ class JCollection(JCBBase, JCollectionMixin):
             )
 
         details.append("  " + "-" * table_width)
-        details.append(
-            "  *Y = Yes (data present); *N = No (data not present)"
-        )
+        details.append("  *Y = Yes (data present); *N = No (data not present)")
 
         # --- Statistical Summary ---
         stats_str = self._summary_stats(summary_data)

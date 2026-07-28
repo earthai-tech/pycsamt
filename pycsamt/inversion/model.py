@@ -83,11 +83,13 @@ class StartingModel(PyCSAMTObject, MetadataMixin):
         Examples
         --------
         >>> from pycsamt.inversion.model import StartingModel
-        >>> start = StartingModel.from_dict({
-        ...     "resistivity": [100.0, 500.0],
-        ...     "thickness": [250.0],
-        ...     "name": "two_layer",
-        ... })
+        >>> start = StartingModel.from_dict(
+        ...     {
+        ...         "resistivity": [100.0, 500.0],
+        ...         "thickness": [250.0],
+        ...         "name": "two_layer",
+        ...     }
+        ... )
         >>> start.name
         'two_layer'
         """
@@ -123,10 +125,12 @@ class StartingModel(PyCSAMTObject, MetadataMixin):
         >>> from pycsamt.inversion.model import StartingModel
         >>> StartingModel.coerce(None, n_layers=2).n_layers
         2
-        >>> StartingModel.coerce({
-        ...     "resistivities": [80.0, 250.0],
-        ...     "thicknesses": [500.0],
-        ... }).depths.tolist()
+        >>> StartingModel.coerce(
+        ...     {
+        ...         "resistivities": [80.0, 250.0],
+        ...         "thicknesses": [500.0],
+        ...     }
+        ... ).depths.tolist()
         [0.0, 500.0]
         """
         if value is None:

@@ -18,7 +18,6 @@ from pycsamt.app.desktop.widgets.settings_pages.base_page import (
     SettingsPage as BaseSettingsPage,
 )
 
-
 # ── base_page ────────────────────────────────────────────────────────────────
 
 
@@ -85,9 +84,7 @@ def test_color_btn_pick_updates_color(qapp, monkeypatch):
     assert btn._color == "#123456"
 
 
-def test_display_page_populate_and_collect_handle_missing_singleton(
-    qapp, monkeypatch
-):
+def test_display_page_populate_and_collect_handle_missing_singleton(qapp, monkeypatch):
     monkeypatch.delattr("pycsamt.api.style.PYCSAMT_STYLE")
     page = DisplayPage()
     changes = page.collect()
@@ -123,9 +120,7 @@ def test_interpretation_page_builds_and_populates(qapp):
 def test_interpretation_page_collect_and_reset(qapp, monkeypatch):
     import types
 
-    fake_sec = types.SimpleNamespace(
-        cmap="viridis", wt_linestyle="--", alpha=0.85
-    )
+    fake_sec = types.SimpleNamespace(cmap="viridis", wt_linestyle="--", alpha=0.85)
     fake_prof = types.SimpleNamespace(cmap="viridis")
     reset_calls = []
     fake_interp = types.SimpleNamespace(
@@ -147,9 +142,7 @@ def test_interpretation_page_collect_and_reset(qapp, monkeypatch):
     assert reset_calls == [True]
 
 
-def test_interpretation_page_populate_handles_missing_singleton(
-    qapp, monkeypatch
-):
+def test_interpretation_page_populate_handles_missing_singleton(qapp, monkeypatch):
     monkeypatch.delattr("pycsamt.api.interp.PYCSAMT_INTERP")
     page = InterpretationPage()
     # falls back to the hard-coded default when the singleton is unusable
@@ -216,9 +209,7 @@ def test_topography_page_reset(qapp):
     page.reset()
 
 
-def test_topography_page_populate_and_reset_handle_missing_singleton(
-    qapp, monkeypatch
-):
+def test_topography_page_populate_and_reset_handle_missing_singleton(qapp, monkeypatch):
     monkeypatch.delattr("pycsamt.topo.PYCSAMT_TOPO")
     page = TopographyPage()
     assert page._enabled_cb.isChecked() is False

@@ -21,6 +21,7 @@ Examples
 One-liner, LiMS field file to EDI::
 
     from pycsamt.ts import ts_to_edi
+
     out = ts_to_edi(
         "data/MT/TS/kap103as.ts/kap103as.ts",
         savepath="edi_from_ts",
@@ -30,7 +31,8 @@ One-liner, LiMS field file to EDI::
 Remote reference with a second simultaneous record::
 
     from pycsamt.ts import read_ts, ts_to_edi
-    local  = read_ts("kap103as.ts")
+
+    local = read_ts("kap103as.ts")
     remote = read_ts("kap112as.ts")
     out = ts_to_edi(local, remote=remote, estimator="rr")
 
@@ -102,8 +104,7 @@ def _rr_estimate(
     missing = [c for c in need if c not in idx]
     if missing:
         raise EdIDataError(
-            "Remote-reference estimation needs channels "
-            f"{need}; missing {missing}."
+            "Remote-reference estimation needs channels " f"{need}; missing {missing}."
         )
     e = [idx["EX"], idx["EY"]]
     h = [idx["HX"], idx["HY"]]
@@ -144,9 +145,7 @@ def _rr_estimate(
                 ridge=ridge,
             )
 
-    if z_err is not None and not (
-        np.all(np.isfinite(z_err)) and np.all(z_err >= 0)
-    ):
+    if z_err is not None and not (np.all(np.isfinite(z_err)) and np.all(z_err >= 0)):
         z_err = None
 
     freq = np.asarray(sp.freq, float)
@@ -227,9 +226,7 @@ def ts_to_z(
             estimate_error=estimate_error,
         )
     else:
-        raise EdIDataError(
-            f"Unknown estimator {estimator!r}; use 'ls' or 'rr'."
-        )
+        raise EdIDataError(f"Unknown estimator {estimator!r}; use 'ls' or 'rr'.")
     return z_obj, tip, sp
 
 
@@ -303,11 +300,7 @@ def _make_info(ts: TSData, sp, estimator: str):
         f"[{freq.min():.4E}, {freq.max():.4E}] Hz",
         "stacking         : Huber-weighted section averages",
         f"estimator        : {estimator.upper()} "
-        + (
-            "(Z = S_ER inv(S_HR))"
-            if estimator == "rr"
-            else "(Z = S_EH inv(S_HH))"
-        ),
+        + ("(Z = S_ER inv(S_HR))" if estimator == "rr" else "(Z = S_EH inv(S_HH))"),
     ]
     if ts.start or ts.stop:
         lines.insert(3, f"acquisition      : {ts.start} -> {ts.stop}")
@@ -373,9 +366,7 @@ def _make_definemeas(ts: TSData, ids: dict[str, str]):
 def _make_mtsect(station: str, nfreq: int, ids: dict[str, str]):
     from ..seg.mtemap import MTEMAP
 
-    kw = {
-        c.lower(): ids[c] for c in ("HX", "HY", "HZ", "EX", "EY") if c in ids
-    }
+    kw = {c.lower(): ids[c] for c in ("HX", "HY", "HZ", "EX", "EY") if c in ids}
     for c in ("RHX", "RHY"):
         if c in ids:
             kw["r" + c[-1].lower()] = ids[c]
@@ -552,10 +543,11 @@ def ts_to_edi(
     >>> from pycsamt.ts import ts_to_edi
     >>> out = ts_to_edi(
     ...     "data/MT/TS/kap103as.ts/kap103as.ts",
-    ...     savepath="edi_from_ts", nfft=10240,
+    ...     savepath="edi_from_ts",
+    ...     nfft=10240,
     ... )
     >>> from pycsamt.seg.edi import EDIFile
-    >>> ed = EDIFile(out)     # round-trips as regular EDI
+    >>> ed = EDIFile(out)  # round-trips as regular EDI
     >>> ed.Z.n_freq > 0
     True
     """

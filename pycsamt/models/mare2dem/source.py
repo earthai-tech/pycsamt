@@ -58,9 +58,7 @@ __all__ = ["SourceManager"]
 # ---------------------------------------------------------------------------
 
 _REPO_URL = "https://bitbucket.org/mare2dem/mare2dem_source"
-_ARCHIVE_URL = (
-    "https://bitbucket.org/mare2dem/mare2dem_source/get/master.tar.gz"
-)
+_ARCHIVE_URL = "https://bitbucket.org/mare2dem/mare2dem_source/get/master.tar.gz"
 
 # Marker file that proves source tree is populated (not just the .gitkeep)
 _SOURCE_MARKER = "Makefile"
@@ -80,14 +78,10 @@ def _user_data_dir() -> Path:
     if system == "Darwin":
         base = Path.home() / "Library" / "Application Support"
     elif system == "Windows":
-        base = Path(
-            os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
-        )
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     else:
         # Linux, FreeBSD, WSL
-        base = Path(
-            os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
-        )
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     return base / "pycsamt" / "mare2dem"
 
 
@@ -174,11 +168,7 @@ def _generate_inc(
 
     fflags = "-O2 -fpp -fPIC" if intel else "-O2 -cpp -fPIC"
     cflags = "-O2 -fPIC"
-    tricopts = (
-        "-O2 -fp-model precise -fp-model source -fPIC"
-        if intel
-        else "-O2 -fPIC"
-    )
+    tricopts = "-O2 -fp-model precise -fp-model source -fPIC" if intel else "-O2 -fPIC"
 
     arch_tool = "xiar" if intel else "ar"
     ranlib = "ranlib"
@@ -195,9 +185,7 @@ def _generate_inc(
 
     system = platform.system()
     macos_sign = (
-        "codesign --force --deep --sign - ./MARE2DEM"
-        if system == "Darwin"
-        else ""
+        "codesign --force --deep --sign - ./MARE2DEM" if system == "Darwin" else ""
     )
 
     lines = [
@@ -393,9 +381,7 @@ class SourceManager(Mare2DEMBase):
             )
 
         if self.verbose:
-            self.logger.info(
-                "SourceManager: MARE2DEM source ready at %s.", src
-            )
+            self.logger.info("SourceManager: MARE2DEM source ready at %s.", src)
         return src
 
     def _download_git(self, dest: Path) -> None:
@@ -451,9 +437,7 @@ class SourceManager(Mare2DEMBase):
             except ImportError:
                 ctx = None
 
-            with tempfile.NamedTemporaryFile(
-                suffix=".tar.gz", delete=False
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
                 tmp_path = Path(tmp.name)
                 for chunk in resp.iter_content(chunk_size=chunk_size):
                     if chunk:
@@ -551,9 +535,7 @@ class SourceManager(Mare2DEMBase):
         else:
             _inc = _generate_inc(_fc, _cc, mklroot, src / "_pycsamt_build")
             if self.verbose:
-                self.logger.info(
-                    "SourceManager: generated include file at %s", _inc
-                )
+                self.logger.info("SourceManager: generated include file at %s", _inc)
 
         # ---- optional clean ----
         if clean_first:

@@ -15,13 +15,15 @@ Build and run from code::
 
     from pycsamt.pipeline import Pipeline, Step
 
-    pipe = Pipeline([
-        ("notch",      Step("NR001", mains_hz=50)),
-        ("band",       Step("FREQ001")),
-        ("align",      Step("FREQ004")),
-        ("correct_ss", Step("SS001")),
-        ("rotate",     Step("TZ001")),
-    ])
+    pipe = Pipeline(
+        [
+            ("notch", Step("NR001", mains_hz=50)),
+            ("band", Step("FREQ001")),
+            ("align", Step("FREQ004")),
+            ("correct_ss", Step("SS001")),
+            ("rotate", Step("TZ001")),
+        ]
+    )
     print(pipe)
     result = pipe.run(sites, outdir="willy_results/")
 
@@ -36,17 +38,20 @@ Load from a config file::
 Discover available steps and presets::
 
     from pycsamt.pipeline import list_steps, preset_catalogue
-    list_steps()                  # all 33 StepSpec objects
-    list_steps("noise_removal")   # by category
-    print(preset_catalogue())     # named presets
+
+    list_steps()  # all 33 StepSpec objects
+    list_steps("noise_removal")  # by category
+    print(preset_catalogue())  # named presets
 
 Configure pipeline output globally::
 
     from pycsamt.pipeline import configure_pipe
+
     configure_pipe(plot_dpi=300, plot_fmt="pdf", output_root="results/")
 
     # or temporarily with a context manager
     from pycsamt.pipeline import PYCSAMT_PIPE
+
     with PYCSAMT_PIPE.context(show_progress=False):
         result = pipe.run(sites)
 """

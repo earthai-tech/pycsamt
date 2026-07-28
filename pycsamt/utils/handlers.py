@@ -80,16 +80,12 @@ def columns_manager(
     >>> columns_manager("col1, col2, col3", separator=",")
     ['col1', 'col2', 'col3']
 
-    >>> columns_manager(['col1', 'col2', 'col3'], to_upper=True)
+    >>> columns_manager(["col1", "col2", "col3"], to_upper=True)
     ['COL1', 'COL2', 'COL3']
     """
     # Handle None input
     if columns is None:
-        return (
-            default
-            if default is not None
-            else (None if empty_as_none else [])
-        )
+        return default if default is not None else (None if empty_as_none else [])
 
     # Handle case where a single numeric value is passed, convert it to list
     if isinstance(columns, (int, float)):
@@ -119,9 +115,7 @@ def columns_manager(
             if error == "raise":
                 raise ValueError("Error converting columns to list") from e
             elif error == "warn":
-                warnings.warn(
-                    f"Could not convert columns to list: {e}", stacklevel=2
-                )
+                warnings.warn(f"Could not convert columns to list: {e}", stacklevel=2)
             else:
                 pass  # Ignore errors silently
 

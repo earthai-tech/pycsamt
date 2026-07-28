@@ -270,6 +270,4 @@ def _register_crs(app) -> None:
             if mode != "geo"
             else ""
         )
-        return html.Span(
-            [html.I(className="bi bi-info-circle me-1"), text + note]
-        )
+        return html.Span([html.I(className="bi bi-info-circle me-1"), text + note])

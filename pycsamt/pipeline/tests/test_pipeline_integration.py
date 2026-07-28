@@ -111,13 +111,12 @@ class TestPipelineResult:
         assert isinstance(pipeline_result, PipelineResult)
 
     def test_result_ok(self, pipeline_result):
-        assert pipeline_result.ok, (
-            f"Pipeline had {pipeline_result.n_errors} error(s):\n"
-            + "\n".join(
-                f"  [{sr.step_code}] {sr.step_name}: {sr.error}"
-                for sr in pipeline_result.step_results
-                if not sr.ok
-            )
+        assert (
+            pipeline_result.ok
+        ), f"Pipeline had {pipeline_result.n_errors} error(s):\n" + "\n".join(
+            f"  [{sr.step_code}] {sr.step_name}: {sr.error}"
+            for sr in pipeline_result.step_results
+            if not sr.ok
         )
 
     def test_n_errors_zero(self, pipeline_result):
@@ -190,9 +189,7 @@ class TestPlotOutput:
     """Verify QC figures were saved under plots/."""
 
     def test_plots_has_step_subdirs(self, pipeline_result):
-        subdirs = [
-            d for d in (_PIPE_RESULTS / "plots").iterdir() if d.is_dir()
-        ]
+        subdirs = [d for d in (_PIPE_RESULTS / "plots").iterdir() if d.is_dir()]
         assert len(subdirs) > 0, "No step subdirectories in plots/"
 
     def test_step_subdir_names_are_numbered(self, pipeline_result):
@@ -244,9 +241,7 @@ class TestReportContent:
     def test_report_html_contains_all_step_codes(self, pipeline_result):
         html = (_PIPE_RESULTS / "report.html").read_text(encoding="utf-8")
         for code in ("FREQ002", "NR001", "QC001"):
-            assert code in html, (
-                f"Step code {code!r} missing from report.html"
-            )
+            assert code in html, f"Step code {code!r} missing from report.html"
 
 
 class TestPipelineYAML:
@@ -281,9 +276,7 @@ class TestPipelineYAML:
         assert len(reloaded) == 5
         assert reloaded.name == "willy_l22_integration"
 
-    def test_reloaded_pipeline_runs_on_same_data(
-        self, pipeline_result, willy_sites
-    ):
+    def test_reloaded_pipeline_runs_on_same_data(self, pipeline_result, willy_sites):
         """A pipeline reloaded from the saved YAML must run without error."""
         reloaded = Pipeline.from_yaml(_PIPE_RESULTS / "pipeline.yaml")
         result2 = reloaded.run(

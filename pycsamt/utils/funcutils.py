@@ -141,7 +141,7 @@ def to_numeric_dtypes(
         the default is::
 
         >>> import re
-        >>> re.compile (r'[_#&.)(*@!_,;\s-]\s*', flags=re.IGNORECASE)
+        >>> re.compile(r"[_#&.)(*@!_,;\s-]\s*", flags=re.IGNORECASE)
 
        .. versionadded:: 0.1.9
 
@@ -184,8 +184,8 @@ def to_numeric_dtypes(
     ---------
     >>> from watex.datasets.dload import load_bagoue
     >>> from watex.utils.funcutils import to_numeric_dtypes
-    >>> X, y = load_bagoue (as_frame =True )
-    >>> X0 =X[['shape', 'power', 'magnitude']]
+    >>> X, y = load_bagoue(as_frame=True)
+    >>> X0 = X[["shape", "power", "magnitude"]]
     >>> X0.dtypes
     ... shape        object
         power        object
@@ -235,9 +235,7 @@ def to_numeric_dtypes(
         if not _is_numeric_dtype(df.columns, to_array=True):
             # for consistency reconvert to str
             df.columns = df.columns.astype(str)
-            df = sanitize_frame_cols(
-                df, regex=regex, fill_pattern=fill_pattern
-            )
+            df = sanitize_frame_cols(df, regex=regex, fill_pattern=fill_pattern)
 
     # replace empty string by Nan if NaN exist in dataframe
     df = df.replace(r"^\s*$", missing_values, regex=True)
@@ -360,9 +358,7 @@ def listing_items_format(
     lstyle = str(lstyle)
     b = f"{begintext + ':'} "
     if verbose:
-        print(b, end=" ") if inline else (
-            print(b) if begintext != "" else None
-        )
+        print(b, end=" ") if inline else (print(b) if begintext != "" else None)
     out += b + ("\n" if not inline else " ")
     for k, item in enumerate(lst):
         sp = " " * space
@@ -406,8 +402,8 @@ def parse_attrs(attr, /, regex=None):
     Example
     ---------
     >>> from watex.utils.funcutils import parse_attrs
-    >>> parse_attrs('lwi_sub_ohmSmulmagnitude')
-    ... ['lwi', 'ohmS', 'magnitude']
+    >>> parse_attrs("lwi_sub_ohmSmulmagnitude")
+    ... ["lwi", "ohmS", "magnitude"]
 
 
     """
@@ -418,9 +414,7 @@ def parse_attrs(attr, /, regex=None):
     return attr
 
 
-def url_checker(
-    url: str, install: bool = False, raises: str = "ignore"
-) -> bool:
+def url_checker(url: str, install: bool = False, raises: str = "ignore") -> bool:
     """
     check whether the URL is reachable or not.
 
@@ -448,7 +442,7 @@ def url_checker(
     >>> from watex.utils.funcutils import url_checker
     >>> url_checker ("http://www.example.com")
     ...  0 # not reacheable
-    >>> url_checker ("https://watex.readthedocs.io/en/latest/api/watex.html")
+    >>> url_checker("https://watex.readthedocs.io/en/latest/api/watex.html")
     ... 1
 
     """
@@ -474,8 +468,7 @@ def url_checker(
         if not success:
             if raises == "raises":
                 raise ModuleNotFoundError(
-                    "auto-installation of 'requests' failed."
-                    " Install it mannually."
+                    "auto-installation of 'requests' failed." " Install it mannually."
                 )
 
     else:
@@ -532,16 +525,18 @@ def shrunkformat(
 
     >>> import numpy as np
     >>> from watex.utils.funcutils import shrunkformat
-    >>> text=" I'm a long text and I will be shrunked and replaced by ellipsis."
-    >>> shrunkformat (text)
-    ... 'Im a long ... and replaced by ellipsis.'
-    >>> shrunkformat (text, insert_at ='end')
+    >>> text = (
+    ...     " I'm a long text and I will be shrunked and replaced by ellipsis."
+    ... )
+    >>> shrunkformat(text)
+    ... "Im a long ... and replaced by ellipsis."
+    >>> shrunkformat(text, insert_at="end")
     ...'Im a long ... '
     >>> arr = np.arange(30)
-    >>> shrunkformat (arr, chunksize=10 )
-    ... '0 1 2 3 4  ...  25 26 27 28 29'
-    >>> shrunkformat (arr, insert_at ='begin')
-    ... ' ...  26 27 28 29'
+    >>> shrunkformat(arr, chunksize=10)
+    ... "0 1 2 3 4  ...  25 26 27 28 29"
+    >>> shrunkformat(arr, insert_at="begin")
+    ... " ...  26 27 28 29"
 
     """
     is_str = False
@@ -690,9 +685,7 @@ def is_installing(
         )
         if action in (True, "install"):
             # freeze the dependancies
-            reqs = subprocess.check_output(
-                [sys.executable, "-m", "pip", "freeze"]
-            )
+            reqs = subprocess.check_output([sys.executable, "-m", "pip", "freeze"])
             [r.decode().split("==")[0] for r in reqs.split()]
 
         success = True
@@ -746,12 +739,15 @@ def smart_strobj_recognition(
     :Example:
         >>> from watex.utils.funcutils import smart_strobj_recognition
         >>> from watex.methods import ResistivityProfiling
-        >>> rObj = ResistivityProfiling(AB= 200, MN= 20,)
+        >>> rObj = ResistivityProfiling(
+        ...     AB=200,
+        ...     MN=20,
+        ... )
         >>> smart_strobj_recognition ('dip', robj.__dict__))
         ... None
         >>> smart_strobj_recognition ('dipole_', robj.__dict__))
         ... dipole
-        >>> smart_strobj_recognition ('dip', robj.__dict__,deep=True )
+        >>> smart_strobj_recognition("dip", robj.__dict__, deep=True)
         ... dipole
         >>> smart_strobj_recognition (
             '+_dipole___', robj.__dict__,deep=True , stripitems ='+;_')
@@ -822,33 +818,29 @@ def repr_callable_obj(obj: F, skip=None):
     :Examples:
 
     >>> from watex.utils.funcutils import repr_callable_obj
-    >>> from watex.methods.electrical import  ResistivityProfiling
+    >>> from watex.methods.electrical import ResistivityProfiling
     >>> repr_callable_obj(ResistivityProfiling)
     ... 'ResistivityProfiling(station= None, dipole= 10.0,
             auto_station= False, kws= None)'
-    >>> robj= ResistivityProfiling (AB=200, MN=20, station ='S07')
+    >>> robj = ResistivityProfiling(AB=200, MN=20, station="S07")
     >>> repr_callable_obj(robj)
     ... 'ResistivityProfiling(AB= 200, MN= 20, arrangememt= schlumberger, ... ,
         dipole= 10.0, station= S07, auto= False)'
     >>> repr_callable_obj(robj.fit)
-    ... 'fit(data= None, kws= None)'
+    ... "fit(data= None, kws= None)"
 
     """
     regex = re.compile(r"[{'}]")
 
     # inspect.formatargspec(*inspect.getfullargspec(cls_or_func))
     if not callable(obj) and not hasattr(obj, "__dict__"):
-        raise TypeError(
-            f"Format only callabe objects: Got {type(obj).__name__!r}"
-        )
+        raise TypeError(f"Format only callabe objects: Got {type(obj).__name__!r}")
 
     if callable(obj):
         cls_or_func_signature = inspect.signature(obj)
         objname = obj.__name__
         PARAMS_VALUES = {
-            k: None
-            if v.default is (inspect.Parameter.empty or ...)
-            else v.default
+            k: None if v.default is (inspect.Parameter.empty or ...) else v.default
             for k, v in cls_or_func_signature.parameters.items()
             # if v.default is not inspect.Parameter.empty
         }
@@ -886,10 +878,7 @@ def repr_callable_obj(obj: F, skip=None):
         PARAMS_VALUES = str(f) + ", ... , " + str(e)
 
     return (
-        str(objname)
-        + "("
-        + regex.sub("", str(PARAMS_VALUES)).replace(":", "=")
-        + ")"
+        str(objname) + "(" + regex.sub("", str(PARAMS_VALUES)).replace(":", "=") + ")"
     )
 
 
@@ -901,9 +890,10 @@ def accept_types(*objtypes: list, format: bool = False) -> List[str] | str:
     :return: list of object type names or str of object names.
 
     :Example:
-        >>> import numpy as np; import pandas as pd
+        >>> import numpy as np
+        ... import pandas as pd
         >>> from watex.utils.funcutils import accept_types
-        >>> accept_types (pd.Series, pd.DataFrame, tuple, list, str)
+        >>> accept_types(pd.Series, pd.DataFrame, tuple, list, str)
         ... "'Series','DataFrame','tuple','list' and 'str'"
         >>> atypes= accept_types (
             pd.Series, pd.DataFrame,np.ndarray, format=True )
@@ -927,9 +917,7 @@ def read_from_excelsheets(erp_file: str = None) -> List[DataFrame]:
 
     """
 
-    allfls: Dict[str, Dict[T, List[T]]] = pd.read_excel(
-        erp_file, sheet_name=None
-    )
+    allfls: Dict[str, Dict[T, List[T]]] = pd.read_excel(erp_file, sheet_name=None)
 
     list_of_df = [os.path.basename(os.path.splitext(erp_file)[0])]
     for _sheets, values in allfls.items():
@@ -991,8 +979,8 @@ def smart_format(iter_obj, choice="and"):
 
     :Example:
         >>> from watex.utils.funcutils import smart_format
-        >>> smart_format(['model', 'iter', 'mesh', 'data'])
-        ... 'model','iter','mesh' and 'data'
+        >>> smart_format(["model", "iter", "mesh", "data"])
+        ... "model", "iter", "mesh" and "data"
     """
     str_litteral = ""
     try:
@@ -1115,11 +1103,7 @@ def format_notes(text: str, cover_str: str = "~", inline=70, **kws):
             )
         )
 
-    print(
-        "{}{1:>51}".format(
-            " " * (margin - 1), cover_str * (inline - margin + 1)
-        )
-    )
+    print("{}{1:>51}".format(" " * (margin - 1), cover_str * (inline - margin + 1)))
 
 
 def sanitize_fdataset(_df: DataFrame) -> Tuple[DataFrame, int]:
@@ -1249,8 +1233,9 @@ def _remove_str_word(char, word_to_remove, deep_remove=False):
     >>> from watex.utils import funcutils as func
     >>> ch ='AMTAVG 7.76: "K1.fld", Dated 99-01-01,AMTAVG,
     ...    Processed 11 Jul 17 AMTAVG'
-    >>> ss=func._remove_str_word(char=ch, word_to_remove='AMTAVG',
-    ...                             deep_remove=False)
+    >>> ss = func._remove_str_word(
+    ...     char=ch, word_to_remove="AMTAVG", deep_remove=False
+    ... )
     >>> print(ss)
 
     """
@@ -1288,10 +1273,10 @@ def stn_check_split_type(data_lines):
     :rtype: str
 
     :Example:
-        >>> from watex.utils  import funcutils as func
-        >>> path =  data/ K6.stn
-        >>> with open (path, 'r', encoding='utf8') as f :
-        ...                     data= f.readlines()
+        >>> from watex.utils import funcutils as func
+        >>> path = data / K6.stn
+        >>> with open(path, "r", encoding="utf8") as f:
+        ...     data = f.readlines()
         >>>  print(func.stn_check_split_type(data_lines=data))
 
     """
@@ -1426,7 +1411,7 @@ def fr_en_parser(f, delimiter=":"):
         french  and english Input translation.
 
     :Example:
-        >>> file_to_parse = 'pme.parserf.md'
+        >>> file_to_parse = "pme.parserf.md"
         >>> path_pme_data = r'C:/Users\Administrator\Desktop\__elodata
         >>> data =list(BS.fr_en_parser(
             os.path.join(path_pme_data, file_to_parse)))
@@ -1532,9 +1517,7 @@ def convert_csvdata_from_fr_to_en(
 def parse_md_data(pf, delimiter=":"):
 
     if not os.path.isfile(pf):
-        raise OSError(
-            " Unable to detect the parser file. Need a Path-like object "
-        )
+        raise OSError(" Unable to detect the parser file. Need a Path-like object ")
 
     with open(pf, encoding="utf8") as f:
         pdata = f.readlines()
@@ -1561,11 +1544,11 @@ def sanitize_unicode_string(str_):
 
     :Example:
     >>> from watex.utils.funcutils import sanitize_unicode_string
-    >>> sentence ='Nos clients sont extrêmement satisfaits '
+    >>> sentence = "Nos clients sont extrêmement satisfaits "
         'de la qualité du service fourni. En outre Nos clients '
             'rachètent frequemment nos "services".'
-    >>> sanitize_unicode_string  (sentence)
-    ... 'nosclientssontextrmementsatisfaitsdelaqualitduservice'
+    >>> sanitize_unicode_string(sentence)
+    ... "nosclientssontextrmementsatisfaitsdelaqualitduservice"
         'fournienoutrenosclientsrachtentfrequemmentnosservices'
     """
     sp_re = re.compile(r"[.'()-\\/’]")
@@ -1761,9 +1744,7 @@ def drawn_boundaries(erp_data, appRes, index):
     return appRes, index, anomalyBounds
 
 
-def serialize_data(
-    data, filename=None, force=True, savepath=None, verbose: int = 0
-):
+def serialize_data(data, filename=None, force=True, savepath=None, verbose: int = 0):
     """Store a data into a binary file
 
     :param data: Object
@@ -1783,8 +1764,9 @@ def serialize_data(
         >>> import numpy as np
         >>> import watex.utils.coreutils import serialize_data
         >>> data = np.arange(15)
-        >>> file = serialize_data(data, filename=None,  force=True,
-        ...                          savepath =None, verbose =3)
+        >>> file = serialize_data(
+        ...     data, filename=None, force=True, savepath=None, verbose=3
+        ... )
         >>> file
     """
 
@@ -1795,9 +1777,7 @@ def serialize_data(
         if force:
             os.remove(filename)
             if verbose > 2:
-                print(
-                    f" File {os.path.basename(filename)!r} has been removed. "
-                )
+                print(f" File {os.path.basename(filename)!r} has been removed. ")
             return None
         else:
             # that change the name in the realpath
@@ -1827,9 +1807,7 @@ def serialize_data(
         joblib.dump(data, f"{filename}.pkl")
         filename += ".pkl"
         if verbose > 2:
-            print(
-                f"Data dumped in `{filename} using to `~.externals.joblib`!"
-            )
+            print(f"Data dumped in `{filename} using to `~.externals.joblib`!")
     except:
         # Now try to pickle data Serializing data
         with open(filename, "wb") as wfile:
@@ -1850,9 +1828,7 @@ def serialize_data(
         try:
             shutil.move(filename, savepath)
         except:
-            file = _cif(
-                os.path.join(savepath, os.path.basename(filename)), force
-            )
+            file = _cif(os.path.join(savepath, os.path.basename(filename)), force)
             if not force:
                 os.rename(filename, os.path.join(savepath, file))
             if file is None:
@@ -1879,8 +1855,9 @@ def load_serialized_data(filename, verbose=0):
 
         >>> from watex.utils.functils import load_serialized_data
         >>> data = load_serialized_data(
-        ...    filename = '_memory_/__mymemoryfile.2021-10-29_14-49-35.647295__.pkl',
-        ...    verbose =3)
+        ...     filename="_memory_/__mymemoryfile.2021-10-29_14-49-35.647295__.pkl",
+        ...     verbose=3,
+        ... )
 
     """
     if not isinstance(filename, str):
@@ -2070,9 +2047,10 @@ def find_position_from_sa(an_res_range, pos=None, selectedPk=None):
     :Example:
 
         >>> from watex.utils.funcutils import find_positon_from_sa
-        >>> resan = np.array([168,130, 93,146,145])
-        >>> pk= find_pk_from_selectedAn(
-        ...    resan, pos=[90, 13], selectedPk= 'str20')
+        >>> resan = np.array([168, 130, 93, 146, 145])
+        >>> pk = find_pk_from_selectedAn(
+        ...     resan, pos=[90, 13], selectedPk="str20"
+        ... )
         >>> pk
 
     .. |ERP| replace:: Electrical Resistivity Profiling
@@ -2157,7 +2135,7 @@ def fmt_text(anFeatures=None, title=None, **kwargs):
     :Example:
 
         >>> from watex.utils.funcutils import fmt_text
-        >>> fmt_text(anFeatures =[1,130, 93,(146,145, 125)])
+        >>> fmt_text(anFeatures=[1, 130, 93, (146, 145, 125)])
 
     """
     if title is None:
@@ -2302,9 +2280,7 @@ def find_position_bounds(pk, rhoa, rhoa_range, dl=10.0):
     return pk_min, pk_max
 
 
-def wrap_infos(
-    phrase, value="", underline="-", unit="", site_number="", **kws
-):
+def wrap_infos(phrase, value="", underline="-", unit="", site_number="", **kws):
     """Display info from anomaly details."""
 
     repeat = kws.pop("repeat", 77)
@@ -2613,17 +2589,17 @@ def reshape(arr, axis=None):
     :Example:
         >>> import numpy as np
         >>> from watex.utils.funcutils import reshape
-        >>> array = np.random.randn(50 )
+        >>> array = np.random.randn(50)
         >>> array.shape
         ... (50,)
         >>> ar1 = reshape(array, 1)
         >>> ar1.shape
         ... (1, 50)
-        >>> ar2 =reshape(ar1 , 0)
+        >>> ar2 = reshape(ar1, 0)
         >>> ar2.shape
         ... (50, 1)
-        >>> ar3 = reshape(ar2, axis = None)
-        >>> ar3.shape # goes back to the original array
+        >>> ar3 = reshape(ar2, axis=None)
+        >>> ar3.shape  # goes back to the original array
         >>> ar3.shape
         ... (50,)
 
@@ -2689,10 +2665,10 @@ def ismissing(refarr, arr, fill_value=np.nan, return_index=False):
 
     >>> import numpy as np
     >>> from watex.utils.funcutils import ismissing
-    >>> refreq = np.linspace(7e7, 1e0, 20) # 20 frequencies as reference
+    >>> refreq = np.linspace(7e7, 1e0, 20)  # 20 frequencies as reference
     >>> # remove the value between index 7 to 12 and stack again
-    >>> freq = np.hstack ((refreq.copy()[:7], refreq.copy()[12:] ))
-    >>> f, m  = ismissing (refreq, freq)
+    >>> freq = np.hstack((refreq.copy()[:7], refreq.copy()[12:]))
+    >>> f, m = ismissing(refreq, freq)
     >>> f, m
     ...array([7.00000000e+07, 6.63157895e+07, 6.26315791e+07, 5.89473686e+07,
            5.52631581e+07, 5.15789476e+07, 4.78947372e+07,            nan,
@@ -2704,7 +2680,7 @@ def ismissing(refarr, arr, fill_value=np.nan, return_index=False):
            33157895.2631579 , 29473684.78947368])
     >>>  _, m_ix  = ismissing (refreq, freq, return_index =True)
     >>> m_ix
-    ... array([ 7,  8,  9, 10, 11], dtype=int64)
+    ... array([7, 8, 9, 10, 11], dtype=int64)
     >>> # assert the missing values from reference values
     >>> refreq[m_ix ] # is equal to m
     ... array([44210526.68421052, 40526316.21052632, 36842105.73684211,
@@ -2788,20 +2764,21 @@ def make_arr_consistent(
     ----------
     >>> import numpy as np
     >>> from watex.utils.funcutils import make_arr_consistent
-    >>> refarr = np.arange (12)
-    >>> arr = np.arange (7, 10)
-    >>> make_arr_consistent (refarr, arr )
+    >>> refarr = np.arange(12)
+    >>> arr = np.arange(7, 10)
+    >>> make_arr_consistent(refarr, arr)
     Out[84]: array([nan, nan, nan, nan, nan, nan, nan,  7.,  8.,  9., nan, nan])
-    >>> make_arr_consistent (refarr, arr , return_index =True )
+    >>> make_arr_consistent(refarr, arr, return_index=True)
     Out[104]: array([7, 8, 9], dtype=int64)
-    >>> make_arr_consistent (refarr, arr , return_index ="mask" )
+    >>> make_arr_consistent(refarr, arr, return_index="mask")
     Out[105]:
     array([False, False, False, False, False, False, False,  True,  True,
             True, False, False])
-    >>> a = np.arange ( 12 ); b = np.linspace (7, 10 , 7)
-    >>> make_arr_consistent (a, b )
+    >>> a = np.arange(12)
+    ... b = np.linspace(7, 10, 7)
+    >>> make_arr_consistent(a, b)
     Out[112]: array([nan, nan, nan, nan, nan, nan, nan,  7.,  8.,  9., 10., 11.])
-    >>> make_arr_consistent (a, b ,method='strict')
+    >>> make_arr_consistent(a, b, method="strict")
     Out[114]: array([nan, nan, nan, nan, nan, nan, nan,  7.,  8.,  9., 10., nan])
     """
     try:
@@ -2883,7 +2860,7 @@ def fillNaN(arr, method="ff"):
     >>> from from watex.utils.funcutils import fillNaN
     >>> arr2d = np.random.randn(7, 3)
     >>> # change some value into NaN
-    >>> arr2d[[0, 2, 3, 3 ],[0, 2,1, 2]]= np.nan
+    >>> arr2d[[0, 2, 3, 3], [0, 2, 1, 2]] = np.nan
     >>> arr2d
     ... array([[        nan, -0.74636104,  1.12731613],
            [ 0.48178017, -0.18593812, -0.67673698],
@@ -2985,7 +2962,7 @@ def get_params(obj: object) -> Dict:
                 'tol': 1.0
                 }
             )
-        >>> pvalues = get_params( sigmoid)
+        >>> pvalues = get_params(sigmoid)
         >>> {'decision_function_shape': 'ovr',
              'break_ties': False,
              'kernel': 'sigmoid',
@@ -3008,9 +2985,7 @@ def get_params(obj: object) -> Dict:
     if callable(obj):
         cls_or_func_signature = inspect.signature(obj)
         PARAMS_VALUES = {
-            k: None
-            if v.default is (inspect.Parameter.empty or ...)
-            else v.default
+            k: None if v.default is (inspect.Parameter.empty or ...) else v.default
             for k, v in cls_or_func_signature.parameters.items()
             # if v.default is not inspect.Parameter.empty
         }
@@ -3057,12 +3032,11 @@ def fit_ll(ediObjs, by="index", method="strict", distance="cartesian"):
         >>> import numpy as np
         >>> from watex.methods.em import EM
         >>> from watex.utils.funcutils import fit_ll
-        >>> edipath ='data/edi_ss'
-        >>> cediObjs = EM().fit (edipath)
-        >>> ediObjs = np.random.permutation(cediObjs.ediObjs) # shuffle the
+        >>> edipath = "data/edi_ss"
+        >>> cediObjs = EM().fit(edipath)
+        >>> ediObjs = np.random.permutation(cediObjs.ediObjs)  # shuffle the
         ... # the collection of ediObjs
         >>> ediObjs, ediObjbname = fit_by_ll(ediObjs)
-        ...
 
     """
     method = "strict" if str(method).lower() == "strict" else "naive"
@@ -3072,9 +3046,7 @@ def fit_ll(ediObjs, by="index", method="strict", distance="cartesian"):
     # get the ediObjs+ names in ndarray(len(ediObjs), 2)
     objnames = np.c_[
         ediObjs,
-        np.array(
-            list(map(lambda obj: os.path.basename(obj.edifile), ediObjs))
-        ),
+        np.array(list(map(lambda obj: os.path.basename(obj.edifile), ediObjs))),
     ]
     lataddlon = np.array(list(map(lambda obj: obj.lat + obj.lon, ediObjs)))
     if len(np.unique(lataddlon)) < len(ediObjs) // 2:
@@ -3113,13 +3085,9 @@ def _fit_ll(ediObjs, distance="cartes", by="index"):
             "obj": obj,
             "dataid": obj.dataid,
             # compute distance using cartesian or harversine
-            "distance": _compute_haversine_d(
-                ref_lat, ref_lon, obj.lat, obj.lon
-            )
+            "distance": _compute_haversine_d(ref_lat, ref_lon, obj.lat, obj.lon)
             if distance == "harves"
-            else np.sqrt(
-                (obj_init.lon - obj.lon) ** 2 + (obj_init.lat - obj.lat) ** 2
-            ),
+            else np.sqrt((obj_init.lon - obj.lon) ** 2 + (obj_init.lat - obj.lat) ** 2),
             # check wether there is a position number in the data.
             "index": re.search(
                 r"\d+",
@@ -3149,9 +3117,7 @@ def _fit_ll(ediObjs, distance="cartes", by="index"):
     )
 
     objnames = np.array(list(map(lambda o: o["name"], sorted_stations)))
-    ediObjs = np.array(
-        list(map(lambda o: o["obj"], sorted_stations)), dtype=object
-    )
+    ediObjs = np.array(list(map(lambda o: o["obj"], sorted_stations)), dtype=object)
 
     return ediObjs, objnames
 
@@ -3211,14 +3177,14 @@ def make_ids(arr, prefix=None, how="py", skip=False):
     :Example:
         >>> import numpy as np
         >>> from watex.utils.func_utils import make_ids
-        >>> values = ['edi1', 'edi2', 'edi3']
-        >>> make_ids (values, 'ix')
-        ... ['ix0', 'ix1', 'ix2']
+        >>> values = ["edi1", "edi2", "edi3"]
+        >>> make_ids(values, "ix")
+        ... ["ix0", "ix1", "ix2"]
         >>> data = np.random.randn(20)
         >>>  make_ids (data, prefix ='line', how=None)
         ... ['line01','line02','line03', ... , line20]
-        >>> make_ids (data, prefix ='line', how=None, skip =True)
-        ... ['line1','line2','line3',..., line20]
+        >>> make_ids(data, prefix="line", how=None, skip=True)
+        ... ["line1", "line2", "line3", ..., line20]
 
     """
     fm = "{:0" + ("1" if skip else f"{int(np.log10(len(arr))) + 1}") + "}"
@@ -3295,9 +3261,9 @@ def concat_array_from_list(list_of_array, concat_axis=0):
     >>> import numpy as np
     >>> from watex.utils.funcutils import concat_array_from_list
     >>> np.random.seed(0)
-    >>> ass=np.random.randn(10)
-    >>> ass = ass2=np.linspace(0,15,10)
-    >>> concat_array_from_list ([ass, ass])
+    >>> ass = np.random.randn(10)
+    >>> ass = ass2 = np.linspace(0, 15, 10)
+    >>> concat_array_from_list([ass, ass])
 
     """
     concat_axis = int(_assert_all_types(concat_axis, int, float))
@@ -3369,17 +3335,17 @@ def station_id(id_, is_index="index", how=None, **kws):
     :Example:
 
     >>> from watex.utils.funcutils import station_id
-    >>> dat1 = ['S13', 's02', 's85', 'pk20', 'posix1256']
-    >>> station_id (dat1)
+    >>> dat1 = ["S13", "s02", "s85", "pk20", "posix1256"]
+    >>> station_id(dat1)
     ... (13, 2, 85, 20, 1256)
-    >>> station_id (dat1, how='py')
+    >>> station_id(dat1, how="py")
     ... (12, 1, 84, 19, 1255)
-    >>> station_id (dat1, is_index= None, prefix ='site')
-    ... ('site1', 'site2', 'site3', 'site4', 'site5')
+    >>> station_id(dat1, is_index=None, prefix="site")
+    ... ("site1", "site2", "site3", "site4", "site5")
     >>> dat2 = 1
-    >>> station_id (dat2) # return index like it is
+    >>> station_id(dat2)  # return index like it is
     ... 1
-    >>> station_id (dat2, how='py') # considering the index starts from 0
+    >>> station_id(dat2, how="py")  # considering the index starts from 0
     ... 0
 
     """
@@ -3452,8 +3418,7 @@ def assert_doi(doi):
                 doi = float(doi.replace("km", "000"))
             except:
                 TypeError(
-                    " Unrecognized value. Expect value in 'km' "
-                    f"or 'm' not: {doi!r}"
+                    " Unrecognized value. Expect value in 'km' " f"or 'm' not: {doi!r}"
                 )
     try:
         doi = float(doi)
@@ -3486,7 +3451,9 @@ def strip_item(item_to_clean, item=None, multi_space=12):
     :Example:
 
      >>> import numpy as np
-     >>> new_data=_strip_item (item_to_clean=np.array(['      ss_data','    pati   ']))
+     >>> new_data = _strip_item(
+     ...     item_to_clean=np.array(["      ss_data", "    pati   "])
+     ... )
      >>>  print(np.array(['      ss_data','    pati   ']))
      ... print(new_data)
 
@@ -3551,8 +3518,8 @@ def parse_json(
          ...
 
     :Example:
-        >>> PATH = 'data/model'
-        >>> k_ =['model', 'iter', 'mesh', 'data']
+        >>> PATH = "data/model"
+        >>> k_ = ["model", "iter", "mesh", "data"]
         >>> try :
             INVERS_KWS = {
                 s +'_fn':os.path.join(PATH, file)
@@ -3561,7 +3528,7 @@ def parse_json(
                           }
         except :
             INVERS=dict()
-        >>> TRES=[10, 66,  70, 100, 1000, 3000]# 7000]
+        >>> TRES = [10, 66, 70, 100, 1000, 3000]  # 7000]
         >>> LNS =['river water','fracture zone', 'MWG', 'LWG',
               'granite', 'igneous rocks', 'basement rocks']
         >>> import watex.utils.funcutils as FU
@@ -3572,7 +3539,7 @@ def parse_json(
                           data=geo_kws, todo='dump', indent=3,
                           savepath ='data/saveJSON', sort_keys=True)
         # Load data from 'jsontest.json' file.
-        >>> FU.parse_json(json_fn='data/saveJSON/jsontest.json', todo ='load')
+        >>> FU.parse_json(json_fn="data/saveJSON/jsontest.json", todo="load")
 
     """
     todo, domsg = return_ctask(todo)
@@ -3697,8 +3664,8 @@ def parse_csv(
         ...
     :Example:
         >>> import watex.utils.funcutils as FU
-        >>> PATH = 'data/model'
-        >>> k_ =['model', 'iter', 'mesh', 'data']
+        >>> PATH = "data/model"
+        >>> k_ = ["model", "iter", "mesh", "data"]
         >>> try :
             INVERS_KWS = {
                 s +'_fn':os.path.join(PATH, file)
@@ -3707,7 +3674,7 @@ def parse_csv(
                           }
         except :
             INVERS=dict()
-        >>> TRES=[10, 66,  70, 100, 1000, 3000]# 7000]
+        >>> TRES = [10, 66, 70, 100, 1000, 3000]  # 7000]
         >>> LNS =['river water','fracture zone', 'MWG', 'LWG',
               'granite', 'igneous rocks', 'basement rocks']
         >>> geo_kws ={'oc2d': INVERS_KWS,
@@ -3726,9 +3693,7 @@ def parse_csv(
     todo, domsg = return_ctask(todo)
 
     if todo.find("write") >= 0:
-        csv_fn = get_config_fname_from_varname(
-            data, config_fname=csv_fn, config=".csv"
-        )
+        csv_fn = get_config_fname_from_varname(data, config_fname=csv_fn, config=".csv")
     try:
         if todo == "reader":
             with open(csv_fn) as csv_f:
@@ -3737,13 +3702,11 @@ def parse_csv(
 
         elif todo == "writer":
             # write without a blank line, --> new_line =''
-            with open(
-                f"{csv_fn}.csv", "w", newline="", encoding="utf8"
-            ) as new_csvf:
+            with open(f"{csv_fn}.csv", "w", newline="", encoding="utf8") as new_csvf:
                 csv_writer = csv.writer(new_csvf, **csvkws)
-                csv_writer.writerows(data) if len(
+                csv_writer.writerows(data) if len(data) > 1 else csv_writer.writerow(
                     data
-                ) > 1 else csv_writer.writerow(data)
+                )
                 # for row in data:
                 #     csv_writer.writerow(row)
         elif todo == "dictreader":
@@ -3765,9 +3728,7 @@ def parse_csv(
                 ) else csv_writer.writerows(data)
 
     except csv.Error:
-        raise csv.Error(
-            f"Unable {domsg} CSV {csv_fn!r} file. Please check your file."
-        )
+        raise csv.Error(f"Unable {domsg} CSV {csv_fn!r} file. Please check your file.")
     except:
         msg = "".join(
             [
@@ -3807,7 +3768,7 @@ def return_ctask(todo: Optional[str] = None) -> Tuple[str, str]:
 
         :Example:
 
-        >>> todo = 'readingbook'
+        >>> todo = "readingbook"
         >>> p_csv(todo) <=> 'dictreader' if todo.find('dict')>=0 else 'reader'
         """
         return f"{cond}{base}" if v.find(cond) >= 0 else base
@@ -3898,9 +3859,7 @@ def parse_yaml(
         )
     except:
         msg = "".join(
-            [
-                f"{'Unrecognizable file' if todo == 'load' else 'Unable to serialize'}"
-            ]
+            [f"{'Unrecognizable file' if todo == 'load' else 'Unable to serialize'}"]
         )
 
         raise TypeError(
@@ -3942,9 +3901,7 @@ def cparser_manager(
         print_cmsg(yml_fn, todo, **pkws)
 
 
-def get_config_fname_from_varname(
-    data, config_fname=None, config=".yml"
-) -> str:
+def get_config_fname_from_varname(data, config_fname=None, config=".yml") -> str:
     """use the variable name given to data as the config file name.
 
     :param data: Given data to retrieve the variable name
@@ -4180,13 +4137,13 @@ def is_iterable(
 
     :Examples:
     >>> from watex.funcutils.is_iterable
-    >>> is_iterable ('iterable', exclude_string= True )
+    >>> is_iterable("iterable", exclude_string=True)
     Out[28]: False
-    >>> is_iterable ('iterable', exclude_string= True , transform =True)
+    >>> is_iterable("iterable", exclude_string=True, transform=True)
     Out[29]: ['iterable']
-    >>> is_iterable ('iterable', transform =True)
+    >>> is_iterable("iterable", transform=True)
     Out[30]: 'iterable'
-    >>> is_iterable ('iterable', transform =True, parse_string=True)
+    >>> is_iterable("iterable", transform=True, parse_string=True)
     Out[31]: ['iterable']
     >>> is_iterable ('iterable', transform =True, exclude_string =True,
                      parse_string=True)
@@ -4203,11 +4160,7 @@ def is_iterable(
         )
     y = str2columns(y) if isinstance(y, str) and parse_string else y
 
-    isiter = (
-        False
-        if exclude_string and isinstance(y, str)
-        else hasattr(y, "__iter__")
-    )
+    isiter = False if exclude_string and isinstance(y, str) else hasattr(y, "__iter__")
 
     return (y if isiter else [y]) if transform else isiter
 
@@ -4238,7 +4191,7 @@ def str2columns(text, /, regex=None, pattern=None):
     Examples
     ---------
     >>> from watex.utils.funcutils import str2columns
-    >>> text = ('this.is the text to split. It is an: example of; splitting str - to text.')
+    >>> text = "this.is the text to split. It is an: example of; splitting str - to text."
     >>> str2columns (text )
     ... ['this',
          'is',
@@ -4312,12 +4265,12 @@ def sanitize_frame_cols(
     ---------
     >>> from watex.utils.funcutils import sanitize_frame_cols
     >>> from watex.utils.coreutils import read_data
-    >>> h502= read_data ('data/boreholes/H502.xlsx')
-    >>> h502 = sanitize_frame_cols (h502, fill_pattern ='_' )
+    >>> h502 = read_data("data/boreholes/H502.xlsx")
+    >>> h502 = sanitize_frame_cols(h502, fill_pattern="_")
     >>> h502.columns[:3]
-    ... Index(['depth_top', 'depth_bottom', 'strata_name'], dtype='object')
-    >>> f = lambda r : r.replace ('_', "'s ")
-    >>> h502_f= sanitize_frame_cols( h502, func =f )
+    ... Index(["depth_top", "depth_bottom", "strata_name"], dtype="object")
+    >>> f = lambda r: r.replace("_", "'s ")
+    >>> h502_f = sanitize_frame_cols(h502, func=f)
     >>> h502_f.columns [:3]
     ... Index(['depth's top', 'depth's bottom', 'strata's name'], dtype='object')
 
@@ -4421,23 +4374,22 @@ def to_hdf5(d, /, fn, objname=None, close=True, **hdf5_kws):
     >>> import os
     >>> from watex.utils.funcutils import sanitize_frame_cols, to_hdf5
     >>> from watex.utils import read_data
-    >>> data = read_data('data/boreholes/H502.xlsx')
-    >>> sanitize_frame_cols (data, fill_pattern='_', inplace =True )
-    >>> store_path = os.path.join('watex/datasets/data', 'h') # 'h' is the name of the data
-    >>> store = to_hdf5 (data, fn =store_path , objname ='h502' )
+    >>> data = read_data("data/boreholes/H502.xlsx")
+    >>> sanitize_frame_cols(data, fill_pattern="_", inplace=True)
+    >>> store_path = os.path.join(
+    ...     "watex/datasets/data", "h"
+    ... )  # 'h' is the name of the data
+    >>> store = to_hdf5(data, fn=store_path, objname="h502")
     >>> store
-    ...
     >>> # fetch the data
-    >>> h502 = store ['h502']
+    >>> h502 = store["h502"]
     >>> h502.columns[:3]
-    ... Index(['hole_number', 'depth_top', 'depth_bottom'], dtype='object')
+    ... Index(["hole_number", "depth_top", "depth_bottom"], dtype="object")
 
     """
     store = None
     if not hasattr(d, "__array__") or not hasattr(d, "columns"):
-        raise TypeError(
-            f"Expect an array or dataframe, not {type(d).__name__!r}"
-        )
+        raise TypeError(f"Expect an array or dataframe, not {type(d).__name__!r}")
 
     if hasattr(d, "__array__") and hasattr(d, "columns"):
         # assert whether pytables is installed
@@ -4453,9 +4405,7 @@ def to_hdf5(d, /, fn, objname=None, close=True, **hdf5_kws):
         d = np.asarray(d)
 
         store = h5py.File(f"{fn}.hdf5", "w")
-        store.create_dataset(
-            "dataset_01", store.shape, dtype=store.dtype, data=store
-        )
+        store.create_dataset("dataset_01", store.shape, dtype=store.dtype, data=store)
 
     if close:
         store.close()
@@ -4510,13 +4460,13 @@ def find_by_regex(o, /, pattern, func=re.match, **kws):
     --------
     >>> from watex.utils.funcutils import find_by_regex
     >>> from watex.datasets import load_hlogs
-    >>> X0, _= load_hlogs (as_frame =True )
+    >>> X0, _ = load_hlogs(as_frame=True)
     >>> columns = X0.columns
-    >>> str_columns =','.join (columns)
-    >>> find_by_regex (str_columns , pattern='depth', func=re.search)
-    ... ['depth']
-    >>> find_by_regex(columns, pattern ='depth', func=re.search)
-    ... ['depth_top', 'depth_bottom']
+    >>> str_columns = ",".join(columns)
+    >>> find_by_regex(str_columns, pattern="depth", func=re.search)
+    ... ["depth"]
+    >>> find_by_regex(columns, pattern="depth", func=re.search)
+    ... ["depth_top", "depth_bottom"]
 
     """
     om = []
@@ -4575,11 +4525,11 @@ def is_in_if(
     :example:
         >>> from watex.datasets import load_hlogs
         >>> from watex.utils.funcutils import is_in_if
-        >>> X0, _= load_hlogs (as_frame =True )
+        >>> X0, _ = load_hlogs(as_frame=True)
         >>> is_in_if  (X0 , items= ['depth_top', 'top'])
         ... ValueError: Item 'top' is missing in the object
-        >>> is_in_if (X0, ['depth_top', 'top'] , error ='ignore')
-        ... ['depth_top']
+        >>> is_in_if(X0, ["depth_top", "top"], error="ignore")
+        ... ["depth_top"]
         >>> is_in_if (X0, ['depth_top', 'top'] , error ='ignore',
                        return_diff= True)
         ... ['sp',
@@ -4598,16 +4548,12 @@ def is_in_if(
     if isinstance(items, str):
         items = [items]
     elif not is_iterable(o):
-        raise TypeError(
-            f"Expect an iterable object, not {type(o).__name__!r}"
-        )
+        raise TypeError(f"Expect an iterable object, not {type(o).__name__!r}")
     # find intersect object
     s = set(o).intersection(items)
 
     miss_items = (
-        list(s.difference(o))
-        if len(s) > len(items)
-        else list(set(items).difference(s))
+        list(s.difference(o)) if len(s) > len(items) else list(set(items).difference(s))
     )
 
     if return_diff or return_intersect:
@@ -4690,7 +4636,7 @@ def map_specific_columns(
     ---------
     >>> from watex.datasets import load_hlogs
     >>> from watex.utils.plotutils import map_specific_columns
-    >>> X0, _= load_hlogs (as_frame =True )
+    >>> X0, _ = load_hlogs(as_frame=True)
     >>> # let visualize the  first3 values of `sp` and `resistivity` keys
     >>> X0['sp'][:3] , X0['resistivity'][:3]
     ... (0   -1.580000
@@ -4720,9 +4666,7 @@ def map_specific_columns(
     """
     X = _assert_all_types(X, pd.DataFrame)
     if not callable(ufunc):
-        raise TypeError(
-            f"Expect a function for `ufunc`; got {type(ufunc).__name__!r}"
-        )
+        raise TypeError(f"Expect a function for `ufunc`; got {type(ufunc).__name__!r}")
 
     pattern = pattern or r"[#&*@!,;\s]\s*"
     if not is_iterable(columns_to_skip):
@@ -4736,9 +4680,7 @@ def map_specific_columns(
     # assert whether column to skip is in
     if columns_to_skip:
         cskip = copy.deepcopy(columns_to_skip)
-        columns_to_skip = is_in_if(
-            X.columns, columns_to_skip, return_diff=True
-        )
+        columns_to_skip = is_in_if(X.columns, columns_to_skip, return_diff=True)
         if len(columns_to_skip) == len(X.columns):
             warnings.warn("Value(s) to skip are not detected.", stacklevel=2)
     elif columns_to_skip is None:
@@ -4785,8 +4727,7 @@ def is_depth_in(X, name, columns=None, error="ignore"):
         columns = list(columns)
         if not is_iterable(columns):
             raise TypeError(
-                "columns expects an iterable object."
-                f" got {type(columns).__name__!r}"
+                "columns expects an iterable object." f" got {type(columns).__name__!r}"
             )
         if len(columns) != len(X.columns):
             warnings.warn(
@@ -4890,11 +4831,7 @@ def count_func(path, verbose=0):
         #     self.func_count +=1
 
     if os.path.isdir(path):
-        pyfiles = [
-            os.path.join(path, f)
-            for f in os.listdir(path)
-            if f.endswith(".py")
-        ]
+        pyfiles = [os.path.join(path, f) for f in os.listdir(path) if f.endswith(".py")]
     elif os.path.isfile(path):
         pyfiles = [path]
     else:
@@ -4973,23 +4910,23 @@ def smart_label_classifier(
     ----------
     >>> import numpy as np
     >>> from watex.utils.funcutils import smart_label_classifier
-    >>> sc = np.arange (0, 7, .5 )
-    >>> smart_label_classifier (sc, values = [1, 3.2 ])
+    >>> sc = np.arange(0, 7, 0.5)
+    >>> smart_label_classifier(sc, values=[1, 3.2])
     array([0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2], dtype=int64)
     >>> # rename labels <=1 : 'l1', ]1; 3.2]: 'l2' and >3.2 :'l3'
-    >>> smart_label_classifier (sc, values = [1, 3.2 ], labels =['l1', 'l2', 'l3'])
+    >>> smart_label_classifier(sc, values=[1, 3.2], labels=["l1", "l2", "l3"])
     >>> array(['l1', 'l1', 'l1', 'l2', 'l2', 'l2', 'l2', 'l3', 'l3', 'l3', 'l3',
            'l3', 'l3', 'l3'], dtype=object)
     >>> def f (v):
             if v <=1: return 'l1'
             elif 1< v<=3.2: return "l2"
             else : return "l3"
-    >>> smart_label_classifier (sc, func= f )
+    >>> smart_label_classifier(sc, func=f)
     array(['l1', 'l1', 'l1', 'l2', 'l2', 'l2', 'l2', 'l3', 'l3', 'l3', 'l3',
            'l3', 'l3', 'l3'], dtype=object)
-    >>> smart_label_classifier (sc, values = 1.)
+    >>> smart_label_classifier(sc, values=1.0)
     array([0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=int64)
-    >>> smart_label_classifier (sc, values = 1., labels='l1')
+    >>> smart_label_classifier(sc, values=1.0, labels="l1")
     array(['l1', 'l1', 'l1', 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=object)
 
     """
@@ -5003,8 +4940,7 @@ def smart_label_classifier(
 
     if not _is_arraylike_1d(arr):
         raise TypeError(
-            "Expects a one-dimensional array, got array with"
-            f" shape {arr.shape}"
+            "Expects a one-dimensional array, got array with" f" shape {arr.shape}"
         )
 
     if isinstance(values, str):
@@ -5022,9 +4958,7 @@ def smart_label_classifier(
             try:
                 v = float(v)
             except TypeError as type_error:
-                raise TypeError(
-                    f"Value {v} must be a valid number." + str(type_error)
-                )
+                raise TypeError(f"Value {v} must be a valid number." + str(type_error))
             diff_v = np.abs(arr[~np.isnan(arr)] - v)
 
             ix_v = np.argmin(diff_v)
@@ -5053,9 +4987,7 @@ def smart_label_classifier(
 
     ####
     if func is None and values is None:
-        raise TypeError(
-            "'ufunc' cannot be None when the values are not given"
-        )
+        raise TypeError("'ufunc' cannot be None when the values are not given")
 
     dfunc = None
 
@@ -5079,11 +5011,7 @@ def smart_label_classifier(
             arr_, values_, labels, d, raise_warn=raise_warn, order=order
         )
 
-    arr_ = (
-        arr_
-        if labels is None
-        else (pd.Series(arr_, name=name or "tname").map(d))
-    )
+    arr_ = arr_ if labels is None else (pd.Series(arr_, name=name or "tname").map(d))
 
     # if name is None: # for consisteny if labels is None
     arr_ = (
@@ -5147,9 +5075,9 @@ def _smart_mapper(k, /, kr, return_dict_map=False):
 
     :Example:
     >>> from watex.utils.funcutils import _smart_mapper
-    >>> _smart_mapper (10000 , ( 500, 1500, 2000, 3500) )
+    >>> _smart_mapper(10000, (500, 1500, 2000, 3500))
     Out[158]: 4
-    >>> _smart_mapper (10000 , ( 500, 1500, 2000, 3500) , return_dict_map=True)
+    >>> _smart_mapper(10000, (500, 1500, 2000, 3500), return_dict_map=True)
     Out[159]: {0: False, 1: False, 2: False, 3: False, 4: True}
 
     """
@@ -5226,7 +5154,7 @@ def zip_extractor(
         Examples
         ----------
         >>> from watex.utils.funcutils import zip_extractor
-        >>> zip_extractor ('watex/datasets/data/edis/e.E.zip')
+        >>> zip_extractor("watex/datasets/data/edis/e.E.zip")
 
     """
 
@@ -5266,9 +5194,7 @@ def zip_extractor(
         try:
             samples = int(samples)
         except:
-            raise ValueError(
-                f"samples must be an integer value or '*' not {samples}"
-            )
+            raise ValueError(f"samples must be an integer value or '*' not {samples}")
 
     with ZipFile(
         zip_file,
@@ -5401,13 +5327,13 @@ def remove_outliers(
     Examples
     ---------
     >>> import numpy as np
-    >>> np.random.seed (42 )
+    >>> np.random.seed(42)
     >>> from watex.utils.funcutils import remove_outliers
-    >>> data = np.random.randn (7, 3 )
-    >>> data_r = remove_outliers ( data )
-    >>> data.shape , data_r.shape
+    >>> data = np.random.randn(7, 3)
+    >>> data_r = remove_outliers(data)
+    >>> data.shape, data_r.shape
     (7, 3) (5, 3)
-    >>> remove_outliers ( data, fill_value =np.nan )
+    >>> remove_outliers(data, fill_value=np.nan)
     array([[ 0.49671415, -0.1382643 ,  0.64768854],
            [ 1.52302986, -0.23415337, -0.23413696],
            [ 1.57921282,  0.76743473, -0.46947439],
@@ -5416,12 +5342,17 @@ def remove_outliers(
            [-0.56228753, -1.01283112,  0.31424733],
            [-0.90802408,         nan,  1.46564877]])
     >>> # for one dimensional
-    >>> remove_outliers ( data[:, 0] , fill_value =np.nan )
+    >>> remove_outliers(data[:, 0], fill_value=np.nan)
     array([ 0.49671415,  1.52302986,  1.57921282,  0.54256004,  0.24196227,
            -0.56228753,         nan])
-    >>> remove_outliers ( data[:, 0] , fill_value =np.nan, interpolate=True  )
+    >>> remove_outliers(data[:, 0], fill_value=np.nan, interpolate=True)
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot (np.arange (len(data ), data, ))
+    >>> plt.plot(
+    ...     np.arange(
+    ...         len(data),
+    ...         data,
+    ...     )
+    ... )
     """
     method = str(method).lower()
     if hasattr(ar, "__array__") and hasattr(ar, "columns"):
@@ -5456,9 +5387,7 @@ def remove_outliers(
     if fill_value is None:
         # delete nan if fill value is not provided
         arr = (
-            arr[~np.isnan(arr).any(axis=1)]
-            if np.ndim(arr) > 1
-            else arr[~np.isnan(arr)]
+            arr[~np.isnan(arr).any(axis=1)] if np.ndim(arr) > 1 else arr[~np.isnan(arr)]
         )
 
     if interpolate:
@@ -5525,25 +5454,26 @@ def normalizer(arr, /, method="naive"):
     ----------
     >>> import numpy as np
     >>> from watex.utils.funcutils import normalizer
-    >>> np.random.seed (42)
-    >>> arr = np.random.randn (3, 2 )
+    >>> np.random.seed(42)
+    >>> arr = np.random.randn(3, 2)
     array([[ 0.49671415, -0.1382643 ],
            [ 0.64768854,  1.52302986],
            [-0.23415337, -0.23413696]])
-    >>> normalizer (arr )
+    >>> normalizer(arr)
     array([[4.15931313e-01, 5.45697636e-02],
            [5.01849720e-01, 1.00000000e+00],
            [0.00000000e+00, 9.34323403e-06]])
-    >>> normalizer (arr , method ='min-max')  # normalize data along axis=0
+    >>> normalizer(arr, method="min-max")  # normalize data along axis=0
     array([[0.82879654, 0.05456093],
            [1.        , 1.        ],
            [0.        , 0.        ]])
-    >>> arr [0, 1] = np.nan; arr [1, 0] = np.nan
-    >>> normalizer (arr )
+    >>> arr[0, 1] = np.nan
+    ... arr[1, 0] = np.nan
+    >>> normalizer(arr)
     array([[4.15931313e-01,            nan],
            [           nan, 1.00000000e+00],
            [0.00000000e+00, 9.34323403e-06]])
-    >>> normalizer (arr , method ='min-max')
+    >>> normalizer(arr, method="min-max")
     array([[ 1., nan],
            [nan,  1.],
            [ 0.,  0.]])
@@ -5592,14 +5522,16 @@ def _validate_name_in(
     Examples
     -------
     >>> from watex.utils.funcutils import _validate_name_in
-    >>> dnames = ('NAME', 'FIST NAME', 'SUrname')
-    >>> _validate_name_in ('name', defaults=dnames )
+    >>> dnames = ("NAME", "FIST NAME", "SUrname")
+    >>> _validate_name_in("name", defaults=dnames)
     False
-    >>> _validate_name_in ('name', defaults= dnames, deep =True )
+    >>> _validate_name_in("name", defaults=dnames, deep=True)
     True
-    >>> _validate_name_in ('name', defaults=dnames , expect_name ='NAM')
+    >>> _validate_name_in("name", defaults=dnames, expect_name="NAM")
     False
-    >>> _validate_name_in ('name', defaults=dnames , expect_name ='NAM', deep=True)
+    >>> _validate_name_in(
+    ...     "name", defaults=dnames, expect_name="NAM", deep=True
+    ... )
     'NAM'
     """
 
@@ -5611,11 +5543,7 @@ def _validate_name_in(
         defaults = "".join([str(i) for i in defaults])
 
     # if name in defaults:
-    name = (
-        (True if expect_name is None else expect_name)
-        if name in defaults
-        else False
-    )
+    name = (True if expect_name is None else expect_name) if name in defaults else False
 
     # name = True if name in defaults else ( expect_name if expect_name else False )
 
@@ -5661,8 +5589,8 @@ def get_confidence_ratio(
     Examples
     ----------
     >>> import numpy as np
-    >>> np.random.seed (0)
-    >>> test = np.random.randint (1, 20 , 10 ).reshape (5, 2 )
+    >>> np.random.seed(0)
+    >>> test = np.random.randint(1, 20, 10).reshape(5, 2)
     >>> test
     array([[13, 16],
            [ 1,  4],
@@ -5670,13 +5598,13 @@ def get_confidence_ratio(
            [10, 19],
            [ 5,  7]])
     >>> from watex.utils.funcutils import get_confidence_ratio
-    >>> get_confidence_ratio (test)
-    >>> array([1., 1.])
-    >>> get_confidence_ratio (test, invalid= ( 13, 19) )
+    >>> get_confidence_ratio(test)
+    >>> array([1.0, 1.0])
+    >>> get_confidence_ratio(test, invalid=(13, 19))
     array([0.8, 0.8])
-    >>> get_confidence_ratio (test, invalid= ( 13, 19, 4) )
+    >>> get_confidence_ratio(test, invalid=(13, 19, 4))
     array([0.6, 0.6])
-    >>> get_confidence_ratio (test, invalid= ( 13, 19, 4), axis =1 )
+    >>> get_confidence_ratio(test, invalid=(13, 19, 4), axis=1)
     array([0.5, 0.5, 0.5, 0.5, 1. ])
 
     """
@@ -5697,9 +5625,7 @@ def get_confidence_ratio(
         return len(ar[~np.isnan(ar)]) / len(ar)
 
     # validate input axis name
-    axis = _validate_name_in(
-        axis, ("1", "rows", "sites", "stations"), expect_name=1
-    )
+    axis = _validate_name_in(axis, ("1", "rows", "sites", "stations"), expect_name=1)
     if not axis:
         axis = 0
 
@@ -5757,19 +5683,19 @@ def assert_ratio(
     Examples
     ---------
     >>> from watex.utils.funcutils import assert_ratio
-    >>> assert_ratio('2')
+    >>> assert_ratio("2")
     2.0
-    >>> assert_ratio(2 , bounds =(2, 8))
+    >>> assert_ratio(2, bounds=(2, 8))
     2.0
-    >>> assert_ratio(2 , bounds =(4, 8))
+    >>> assert_ratio(2, bounds=(4, 8))
     ValueError:...
-    >>> assert_ratio(2 , bounds =(1, 8), exclude_value =2 )
+    >>> assert_ratio(2, bounds=(1, 8), exclude_value=2)
     ValueError: ...
-    >>> assert_ratio(2 , bounds =(1, 8), exclude_value ='use bounds' )
+    >>> assert_ratio(2, bounds=(1, 8), exclude_value="use bounds")
     2.0
-    >>> assert_ratio(2 , bounds =(0, 1) , in_percent =True )
+    >>> assert_ratio(2, bounds=(0, 1), in_percent=True)
     0.02
-    >>> assert_ratio(2 , bounds =(0, 1) )
+    >>> assert_ratio(2, bounds=(0, 1))
     ValueError:
     >>> assert_ratio(2 , bounds =(0, 1), exclude_value ='use lower bound',
                          name ='tolerance', in_percent =True )
@@ -5784,9 +5710,7 @@ def assert_ratio(
     try:
         v = float(v)
     except TypeError:
-        raise TypeError(
-            f"Unable to convert {type(v).__name__!r} to float: {v}"
-        )
+        raise TypeError(f"Unable to convert {type(v).__name__!r} to float: {v}")
     except ValueError:
         raise ValueError(f"Expects 'float' not {type(v).__name__!r}: {(v)!r}")
     # put value in percentage
@@ -5870,9 +5794,7 @@ def exist_features(df, features, error="raise"):
         )
         nfeat = len(diff)
         if error == "raise":
-            raise ValueError(
-                f"{msg} {smart_format(diff)} not found in the dataframe."
-            )
+            raise ValueError(f"{msg} {smart_format(diff)} not found in the dataframe.")
         isf = False
     else:
         isf = True
@@ -5925,9 +5847,10 @@ def interpolate_grid(
     ---------
     >>> import numpy as np
     >>> from watex.utils.funcutils import interpolate_grid
-    >>> x = [28, np.nan, 50, 60] ; y = [np.nan, 1000, 2000, 3000]
-    >>> xy = np.vstack ((x, y)).T
-    >>> xyi = interpolate_grid (xy, view=True )
+    >>> x = [28, np.nan, 50, 60]
+    ... y = [np.nan, 1000, 2000, 3000]
+    >>> xy = np.vstack((x, y)).T
+    >>> xyi = interpolate_grid(xy, view=True)
     >>> xyi
     array([[  28.        ,   28.        ],
            [  22.78880663, 1000.        ],
@@ -6020,14 +5943,14 @@ def random_selector(
     ----------
     >>> import numpy as np
     >>> from watex.utils.funcutils import random_selector
-    >>> dat= np.arange (42 )
-    >>> random_selector (dat , 7, seed = 42 )
+    >>> dat = np.arange(42)
+    >>> random_selector(dat, 7, seed=42)
     array([0, 1, 2, 3, 4, 5, 6])
-    >>> random_selector ( dat, ( 23, 13 , 7))
+    >>> random_selector(dat, (23, 13, 7))
     array([ 7, 13, 23])
-    >>> random_selector ( dat , "7%", seed =42 )
+    >>> random_selector(dat, "7%", seed=42)
     array([0, 1])
-    >>> random_selector ( dat , "70%", seed =42 , shuffle =True )
+    >>> random_selector(dat, "70%", seed=42, shuffle=True)
     array([ 0,  5, 20, 25, 13,  7, 22, 10, 12, 27, 23, 21, 16,  3,  1, 17,  8,
             6,  4,  2, 19, 11, 18, 24, 14, 15,  9, 28, 26])
     """
@@ -6129,9 +6052,7 @@ def cleaner(
             or None if inplace=True or array is data is passed as an array.
 
     """
-    mode = _validate_name_in(
-        mode, defaults=("drop", "remove"), expect_name="drop"
-    )
+    mode = _validate_name_in(mode, defaults=("drop", "remove"), expect_name="drop")
     if not mode:
         return sanitize_frame_cols(data, inplace=inplace, func=func)
 
@@ -6232,9 +6153,7 @@ def rename_files(
         ldir = os.listdir(src_path)
 
         src_files = (
-            ldir
-            if extension == "none"
-            else [f for f in ldir if f.endswith(extension)]
+            ldir if extension == "none" else [f for f in ldir if f.endswith(extension)]
         )
 
         if sortby:
@@ -6242,9 +6161,7 @@ def rename_files(
                 src_files = sorted(
                     ldir,
                     key=lambda s: (
-                        int(re.search(r"\d+", s).group())
-                        if re.search(r"\d+", s)
-                        else 0
+                        int(re.search(r"\d+", s).group()) if re.search(r"\d+", s) else 0
                     ),
                 )
             else:
@@ -6347,35 +6264,37 @@ def get_xy_coordinates(
     ----------
     >>> import watex as wx
     >>> from watex.utils.funcutils import get_xy_coordinates
-    >>> testdata = wx.make_erp ( n_stations =7, seed =42 ).frame
-    >>> xy, d, xynames = get_xy_coordinates ( testdata,  )
-    >>> xy , xynames
+    >>> testdata = wx.make_erp(n_stations=7, seed=42).frame
+    >>> xy, d, xynames = get_xy_coordinates(
+    ...     testdata,
+    ... )
+    >>> xy, xynames
     ((110.48627946874444, 26.051952363176344), ('longitude', 'latitude'))
-    >>> xy, d, xynames = get_xy_coordinates ( testdata, as_frame =True  )
+    >>> xy, d, xynames = get_xy_coordinates(testdata, as_frame=True)
     >>> xy.head(2)
         longitude   latitude        easting      northing
     0  110.485833  26.051389  448565.380621  2.881476e+06
     1  110.485982  26.051577  448580.339199  2.881497e+06
     >>> # remove longitude and  lat in data
-    >>> testdata = testdata.drop (columns =['longitude', 'latitude'])
-    >>> xy, d, xynames = get_xy_coordinates ( testdata, as_frame =True  )
+    >>> testdata = testdata.drop(columns=["longitude", "latitude"])
+    >>> xy, d, xynames = get_xy_coordinates(testdata, as_frame=True)
     >>> xy.head(2)
              easting      northing
     0  448565.380621  2.881476e+06
     1  448580.339199  2.881497e+06
     >>> # note testdata should be transformed inplace when drop_xy is set to True
-    >>> xy, d, xynames = get_xy_coordinates ( testdata, drop_xy =True)
+    >>> xy, d, xynames = get_xy_coordinates(testdata, drop_xy=True)
     >>> xy, xynames
     ((448610.25612032827, 2881538.4380570543), ('easting', 'northing'))
     >>> d.head(2)
        station  resistivity
     0      0.0          1.0
     1     20.0        167.5
-    >>> testdata.head(2) # coordinates are henceforth been dropped
+    >>> testdata.head(2)  # coordinates are henceforth been dropped
        station  resistivity
     0      0.0          1.0
     1     20.0        167.5
-    >>> xy, d, xynames = get_xy_coordinates ( testdata, drop_xy =True)
+    >>> xy, d, xynames = get_xy_coordinates(testdata, drop_xy=True)
     >>> xy, xynames
     (None, ())
     >>> d.head(2)
@@ -6438,9 +6357,7 @@ def get_xy_coordinates(
     if verbose:
         print(
             "###",
-            "No"
-            if len(xynames) == 0
-            else (tuple(xy.columns) if as_frame else xy),
+            "No" if len(xynames) == 0 else (tuple(xy.columns) if as_frame else xy),
             "coordinates found.",
         )
 
@@ -6508,17 +6425,17 @@ def twinning(
     ----------
     >>> import watex as wx
     >>> from watex.utils.funcutils import twinning
-    >>> data = wx.make_erp (seed =42 , n_stations =12, as_frame =True )
-    >>> table1 = wx.methods.DCProfiling ().fit(data).summary()
+    >>> data = wx.make_erp(seed=42, n_stations=12, as_frame=True)
+    >>> table1 = wx.methods.DCProfiling().fit(data).summary()
     >>> table1
            dipole   longitude  latitude  ...  shape  type       sfi
     line1      10  110.486111  26.05174  ...      C    EC  1.141844
-    >>> data_no_xy = wx.make_ves ( seed=0 , as_frame =True)
+    >>> data_no_xy = wx.make_ves(seed=0, as_frame=True)
     >>> data_no_xy.head(2)
         AB   MN  resistivity
     0  1.0  0.4   448.860148
     1  2.0  0.4   449.060335
-    >>> data_xy = wx.make_ves ( seed =0 , as_frame =True , add_xy =True )
+    >>> data_xy = wx.make_ves(seed=0, as_frame=True, add_xy=True)
     >>> data_xy.head(2)
         AB   MN  resistivity   longitude  latitude
     0  1.0  0.4   448.860148  109.332931  28.41193
@@ -6529,15 +6446,20 @@ def twinning(
              AB    MN   arrangememt  ... nareas   longitude  latitude
     area                             ...
     None  200.0  20.0  schlumberger  ...      1  110.486111  26.05174
-    >>> twinning (table1, table.table_,  )
+    >>> twinning(
+    ...     table1,
+    ...     table.table_,
+    ... )
            dipole   longitude  latitude  ...  nareas   longitude  latitude
     line1    10.0  110.486111  26.05174  ...     NaN         NaN       NaN
     None      NaN         NaN       NaN  ...     1.0  110.486111  26.05174
-    >>> twinning (table1, table.table_, on =['longitude', 'latitude'] )
+    >>> twinning(table1, table.table_, on=["longitude", "latitude"])
     Empty DataFrame
     >>> # comments: Empty dataframe appears because, decimal is too large
     >>> # then it considers values longitude and latitude differents
-    >>> twinning (table1, table.table_, on =['longitude', 'latitude'], decimals =5 )
+    >>> twinning(
+    ...     table1, table.table_, on=["longitude", "latitude"], decimals=5
+    ... )
         dipole  longitude  latitude  ...  max_depth  ohmic_area  nareas
     0      10  110.48611  26.05174  ...      109.0  690.063003       1
     >>> # Now is able to find existing dataframe with identical closer coordinates.
@@ -6546,13 +6468,9 @@ def twinning(
     from .validator import _is_numeric_dtype
 
     if str(mode).lower() == "soft":
-        d = [
-            o for o in d if hasattr(o, "__array__") and hasattr(o, "columns")
-        ]
+        d = [o for o in d if hasattr(o, "__array__") and hasattr(o, "columns")]
 
-    is_same = set(
-        [hasattr(o, "__array__") and hasattr(o, "columns") for o in d]
-    )
+    is_same = set([hasattr(o, "__array__") and hasattr(o, "columns") for o in d])
 
     if len(is_same) != 1 or not list(is_same)[0]:
         types = [type(o).__name__ for o in d]
@@ -6582,9 +6500,7 @@ def twinning(
         return pd.concat(d, axis=1)
 
     # parse string
-    on = is_iterable(
-        on, exclude_string=True, transform=True, parse_string=parse_on
-    )
+    on = is_iterable(on, exclude_string=True, transform=True, parse_string=parse_on)
 
     feature_exist = [exist_features(o, on, error="ignore") for o in d]
 
@@ -6637,9 +6553,7 @@ def twinning(
     # test single data with on
     is_num = _is_numeric_dtype(d[0][on])
     if is_num:
-        decimals = int(
-            _assert_all_types(decimals, int, float, objname="Decimals")
-        )
+        decimals = int(_assert_all_types(decimals, int, float, objname="Decimals"))
         d_ = []
         for o in d:
             a = o.copy()
@@ -6653,9 +6567,7 @@ def twinning(
 
     if len(d[2:]) != 0:
         for ii, o in enumerate(d[2:]):
-            data = pd.merge(
-                *[data, o], on=on, suffixes=(f"_x{ii + 1}", f"_y{ii + 1}")
-            )
+            data = pd.merge(*[data, o], on=on, suffixes=(f"_x{ii + 1}", f"_y{ii + 1}"))
 
     return data
 
@@ -6678,11 +6590,11 @@ def read_worksheets(*data):
     -----------
     >>> import os
     >>> from watex.utils.funcutils import read_worksheets
-    >>> sheet_file= r'F:\repositories\\watex\\data\\erp\\sheets\\gbalo.xlsx'
-    >>> data, snames =  read_worksheets (sheet_file )
+    >>> sheet_file = r"F:\repositories\\watex\\data\\erp\\sheets\\gbalo.xlsx"
+    >>> data, snames = read_worksheets(sheet_file)
     >>> snames
     ['l11', 'l10', 'l02']
-    >>> data, snames =  read_worksheets (os.path.dirname (sheet_file))
+    >>> data, snames = read_worksheets(os.path.dirname(sheet_file))
     >>> snames
     ['l11', 'l10', 'l02', 'l12', 'l13']
 
@@ -6770,15 +6682,15 @@ def key_checker(
     --------
 
     >>> from watex.utils.funcutils import key_checker
-    >>> key_checker('h502', valid_keys= ['h502', 'h253','h2601'])
+    >>> key_checker("h502", valid_keys=["h502", "h253", "h2601"])
     Out[68]: 'h502'
-    >>> key_checker('h502+h2601', valid_keys= ['h502', 'h253','h2601'])
+    >>> key_checker("h502+h2601", valid_keys=["h502", "h253", "h2601"])
     Out[69]: ['h502', 'h2601']
-    >>> key_checker('h502 h2601', valid_keys= ['h502', 'h253','h2601'])
+    >>> key_checker("h502 h2601", valid_keys=["h502", "h253", "h2601"])
     Out[70]: ['h502', 'h2601']
-    >>> key_checker(['h502',  'h2601'], valid_keys= ['h502', 'h253','h2601'])
+    >>> key_checker(["h502", "h2601"], valid_keys=["h502", "h253", "h2601"])
     Out[73]: ['h502', 'h2601']
-    >>> key_checker(['h502',  'h2602'], valid_keys= ['h502', 'h253','h2601'])
+    >>> key_checker(["h502", "h2602"], valid_keys=["h502", "h253", "h2601"])
     UserWarning: key 'h2602' is missing in ['h502', 'h2602']
     Out[82]: 'h502'
     >>> key_checker(['502',  'H2601'], valid_keys= ['h502', 'h253','h2601'],
@@ -6807,9 +6719,7 @@ def key_checker(
         )
         return keys[0] if len(keys) == 1 else keys
     # for consistency
-    keys = [
-        k for k in keys if "".join([str(i) for i in valid_keys]).find(k) >= 0
-    ]
+    keys = [k for k in keys if "".join([str(i) for i in valid_keys]).find(k) >= 0]
     # assertion error if key does not exist.
     if len(keys) == 0:
         verb1, verb2 = ("", "es") if len(kkeys) == 1 else ("s", "")
@@ -6822,9 +6732,7 @@ def key_checker(
     if len(keys) != len(kkeys):
         miss_keys = is_in_if(kkeys, keys, return_diff=True, error="ignore")
         miss_keys, verb = (
-            (miss_keys[0], "is")
-            if len(miss_keys) == 1
-            else (miss_keys, "are")
+            (miss_keys[0], "is") if len(miss_keys) == 1 else (miss_keys, "are")
         )
         warnings.warn(
             f"key{'' if verb == 'is' else 's'} {miss_keys!r} {verb}"
@@ -6909,9 +6817,7 @@ def random_sampling(
             in_percent=True,
         )
 
-        n = int(
-            samples * (d.shape[0] if scipy.sparse.issparse(d) else len(d))
-        )
+        n = int(samples * (d.shape[0] if scipy.sparse.issparse(d) else len(d)))
     else:
         # data frame
         n = int(samples)
@@ -6928,9 +6834,7 @@ def random_sampling(
     if hasattr(d, "columns") or hasattr(d, "name"):
         # data frame
         return (
-            d.sample(
-                n=n, frac=samples, replace=replace, random_state=random_state
-            )
+            d.sample(n=n, frac=samples, replace=replace, random_state=random_state)
             if shuffle
             else d.iloc[:n, ::]
         )
@@ -6957,11 +6861,7 @@ def random_sampling(
     if not hasattr(d, "__array__"):
         d = np.array(d)
 
-    idx = (
-        np.random.randint(len(d), size=n)
-        if shuffle
-        else [i for i in range(n)]
-    )
+    idx = np.random.randint(len(d), size=n) if shuffle else [i for i in range(n)]
     if len(d.shape) == 1:
         d = d[idx]
     else:
@@ -6970,9 +6870,7 @@ def random_sampling(
     return d
 
 
-def make_obj_consistent_if(
-    item=..., default=..., size=None, from_index: bool = True
-):
+def make_obj_consistent_if(item=..., default=..., size=None, from_index: bool = True):
     """Combine default values to item to create default consistent iterable
     objects.
 
@@ -7002,10 +6900,10 @@ def make_obj_consistent_if(
     >>> from watex.utils.funcutils import make_obj_consistent_if
     >>> from watex.exlib import SVC, LogisticRegression, XGBClassifier
     >>> classifiers = ["SVC", "LogisticRegression", "XGBClassifier"]
-    >>> classifier_names = ['SVC', 'LR']
-    >>> make_obj_consistent_if (classifiers, default = classifier_names )
+    >>> classifier_names = ["SVC", "LR"]
+    >>> make_obj_consistent_if(classifiers, default=classifier_names)
     ['SVC', 'LogisticRegression', 'XGBClassifier']
-    >>> make_obj_consistent_if (classifier_names, from_index =False  )
+    >>> make_obj_consistent_if(classifier_names, from_index=False)
     ['SVC', 'LR']
     >>> >>> make_obj_consistent_if ( classifier_names,
                                      default= classifiers, size =3 ,
@@ -7032,9 +6930,7 @@ def make_obj_consistent_if(
     return item
 
 
-def replace_data(
-    X, y=None, n_times: int = 1, axis=0, reset_index: bool = ...
-):
+def replace_data(X, y=None, n_times: int = 1, axis=0, reset_index: bool = ...):
     """Replace items in data :math:`n` times
 
     Parameters
@@ -7060,11 +6956,11 @@ def replace_data(
     ---------
     >>> import numpy as np
     >>> from watex.utils.funcutils import replace_data
-    >>> X, y = np.random.randn ( 7, 2 ), np.arange(7)
+    >>> X, y = np.random.randn(7, 2), np.arange(7)
     >>> X.shape, y.shape
     ((7, 2), (7,))
-    >>> X_new, y_new = replace_data (X, y, n_times =10 )
-    >>> X_new.shape , y_new.shape
+    >>> X_new, y_new = replace_data(X, y, n_times=10)
+    >>> X_new.shape, y_new.shape
     Out[158]: ((70, 2), (70,))
     """
 
@@ -7116,15 +7012,15 @@ def convert_value_in(v, /, unit="m"):
     Examples
     ---------
     >>> from watex.utils.funcutils import convert_value_in
-    >>> convert_value_in (20)
+    >>> convert_value_in(20)
     20.0
-    >>> convert_value_in ('20mm')
+    >>> convert_value_in("20mm")
     0.02
-    >>> convert_value_in ('20kg', unit='g')
+    >>> convert_value_in("20kg", unit="g")
     20000.0
-    >>> convert_value_in ('20')
+    >>> convert_value_in("20")
     20.0
-    >>> convert_value_in ('20m', unit='g')
+    >>> convert_value_in("20m", unit="g")
     ValueError: Unknwon unit 'm'...
     """
     c = {
@@ -7250,7 +7146,7 @@ def key_search(
     Examples
     ---------
     >>> from watex.utils.funcutils import key_search
-    >>> key_search('h502-hh2601', default_keys= ['h502', 'h253','HH2601'])
+    >>> key_search("h502-hh2601", default_keys=["h502", "h253", "HH2601"])
     Out[44]: ['h502']
     >>> key_search('h502-hh2601', default_keys= ['h502', 'h253','HH2601'],
                    deep=True)
@@ -7258,7 +7154,11 @@ def key_search(
     >>> key_search('253', default_keys= ("I m here to find key among h502,
                                              h253 and HH2601"))
     Out[53]: ['h253']
-    >>> key_search ('east', default_keys= ['DH_East', 'DH_North']  , deep =True,)
+    >>> key_search(
+    ...     "east",
+    ...     default_keys=["DH_East", "DH_North"],
+    ...     deep=True,
+    ... )
     Out[37]: ['East']
     key_search ('east', default_keys= ['DH_East', 'DH_North'],
                 deep =True,parse_keys= False)
@@ -7283,9 +7183,7 @@ def key_search(
         default_keys = str2columns(default_keys, regex=regex, pattern=pattern)
     else:
         keys = is_iterable(keys, exclude_string=True, transform=True)
-        default_keys = is_iterable(
-            default_keys, exclude_string=True, transform=True
-        )
+        default_keys = is_iterable(default_keys, exclude_string=True, transform=True)
 
     dk_init = copy.deepcopy(default_keys)
     # if deep convert all keys to lower
@@ -7308,8 +7206,7 @@ def key_search(
     if raise_exception and len(valid_keys) == 0:
         kverb = "s" if len(kinit) > 1 else ""
         raise KeyError(
-            f"key{kverb} {kinit!r} not found."
-            f" Expect {smart_format(dk_init, 'or')}"
+            f"key{kverb} {kinit!r} not found." f" Expect {smart_format(dk_init, 'or')}"
         )
     return None if len(valid_keys) == 0 else valid_keys
 
@@ -7335,14 +7232,14 @@ def repeat_item_insertion(text, /, pos, item="", fill_value=""):
     Examples
     ----------
     >>> from watex.utils.funcutils import repeat_item_insertion
-    >>> repeat_item_insertion ( '0125356.45', pos=2, item=':' )
+    >>> repeat_item_insertion("0125356.45", pos=2, item=":")
     Out[65]: '01:25:35:6.45'
-    >>> repeat_item_insertion ( 'Function inserts car in text.', pos=10, item='TK' )
+    >>> repeat_item_insertion(
+    ...     "Function inserts car in text.", pos=10, item="TK"
+    ... )
     Out[69]: 'Function iTKnserts carTK in text.'
     """
-    pos = _assert_all_types(
-        pos, int, float, objname=f"Position for {item} insertion"
-    )
+    pos = _assert_all_types(pos, int, float, objname=f"Position for {item} insertion")
     # for consistency
     lst = list(str(text))
     # checher whether there is a decimal then remove it
@@ -7421,11 +7318,11 @@ def numstr2dms(
     Examples
     --------
     >>> from watex.utils.funcutils import numstr2dms
-    >>> numstr2dms ("1134132.08")
+    >>> numstr2dms("1134132.08")
     Out[17]: '113:41:32.08
-    >>> numstr2dms ("13'41'32.08")
+    >>> numstr2dms("13'41'32.08")
     Out[18]: '13:41:32.08'
-    >>> numstr2dms ("11:34:13:2.08", return_values=True)
+    >>> numstr2dms("11:34:13:2.08", return_values=True)
     Out[19]: (113.0, 41.0, 32.08)
 
     """
@@ -7456,9 +7353,7 @@ def numstr2dms(
         sdigit, decimal = sdigit_list
 
     if len(sdigit) < 6:
-        raise ValueError(
-            f"DMS expects at list six digits(DD:MM:SS). Got {sdigit!r}"
-        )
+        raise ValueError(f"DMS expects at list six digits(DD:MM:SS). Got {sdigit!r}")
 
     sec, sdigit = sdigit[-2:], sdigit[:-2]
     mm, sdigit = sdigit[-2:], sdigit[:-2]
@@ -7467,9 +7362,7 @@ def numstr2dms(
     sec += f".{decimal}"
 
     return (
-        tuple(map(float, [deg, mm, sec]))
-        if return_values
-        else ":".join([deg, mm, sec])
+        tuple(map(float, [deg, mm, sec])) if return_values else ":".join([deg, mm, sec])
     )
 
 
@@ -7655,8 +7548,7 @@ def storeOrwritehdf5(
 
         if applyto is None:
             raise ValueError(
-                "Need to specify the data column to apply"
-                f"{func.__name__!r} to."
+                "Need to specify the data column to apply" f"{func.__name__!r} to."
             )
 
         applyto = (
@@ -7709,13 +7601,11 @@ def ellipsis2false(*parameters, default_value: Any = False):
 
     :example:
         >>> from watex.utils.funcutils import ellipsis2false
-        >>> var, = ellipsis2false (...)
+        >>> (var,) = ellipsis2false(...)
         >>> var
         False
-        >>> data, sep , verbose = ellipsis2false ([2,3, 4], ',', ...)
+        >>> data, sep, verbose = ellipsis2false([2, 3, 4], ",", ...)
         >>> verbose
         False
     """
-    return tuple(
-        default_value if param is ... else param for param in parameters
-    )
+    return tuple(default_value if param is ... else param for param in parameters)

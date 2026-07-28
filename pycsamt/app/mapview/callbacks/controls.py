@@ -275,9 +275,7 @@ def _register_gather(app) -> None:
             "utm_hem": utm_hem or "N",
             "epsg": epsg,
             "contour_interp": contour_interp or "cubic",
-            "contour_smooth": contour_smooth
-            if contour_smooth is not None
-            else 1.0,
+            "contour_smooth": contour_smooth if contour_smooth is not None else 1.0,
             "contour_res": int(contour_res) if contour_res else 150,
             "aspect": aspect or "data",
             "x_unit": x_unit or "m",

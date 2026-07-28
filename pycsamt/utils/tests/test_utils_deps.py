@@ -48,13 +48,9 @@ def test_ensure_pkg_auto_install_success_retries_and_succeeds(monkeypatch):
         sys.modules["fake_autoinstalled_pkg"] = mod
         return True
 
-    monkeypatch.setattr(
-        "pycsamt.utils.deps.ensure_package", fake_ensure_package
-    )
+    monkeypatch.setattr("pycsamt.utils.deps.ensure_package", fake_ensure_package)
     try:
-        decorator = ensure_pkg(
-            "fake_autoinstalled_pkg", auto_install=True, verbose=2
-        )
+        decorator = ensure_pkg("fake_autoinstalled_pkg", auto_install=True, verbose=2)
         assert calls["dist_name"] == "fake_autoinstalled_pkg"
 
         def func():
@@ -69,9 +65,7 @@ def test_ensure_pkg_auto_install_failure_reraises_original_error(monkeypatch):
     def fake_ensure_package(dist_name, install=True, upgrade=True, verbose=0):
         return False
 
-    monkeypatch.setattr(
-        "pycsamt.utils.deps.ensure_package", fake_ensure_package
-    )
+    monkeypatch.setattr("pycsamt.utils.deps.ensure_package", fake_ensure_package)
     with pytest.raises(ImportError):
         ensure_pkg("no_such_pkg_xyz", auto_install=True)
 
@@ -81,12 +75,8 @@ def test_ensure_pkg_auto_install_still_missing_after_install(monkeypatch):
     def fake_ensure_package(dist_name, install=True, upgrade=True, verbose=0):
         return True
 
-    monkeypatch.setattr(
-        "pycsamt.utils.deps.ensure_package", fake_ensure_package
-    )
-    result_decorator = ensure_pkg(
-        "no_such_pkg_xyz", auto_install=True, errors="ignore"
-    )
+    monkeypatch.setattr("pycsamt.utils.deps.ensure_package", fake_ensure_package)
+    result_decorator = ensure_pkg("no_such_pkg_xyz", auto_install=True, errors="ignore")
 
     def func():
         return "still ok"
@@ -104,9 +94,7 @@ def test_ensure_pkg_auto_install_uses_dist_name_override(monkeypatch):
         sys.modules["fake_pkg_with_dist_name"] = mod
         return True
 
-    monkeypatch.setattr(
-        "pycsamt.utils.deps.ensure_package", fake_ensure_package
-    )
+    monkeypatch.setattr("pycsamt.utils.deps.ensure_package", fake_ensure_package)
     try:
         ensure_pkg(
             "fake_pkg_with_dist_name",
@@ -127,12 +115,8 @@ def test_ensure_pkg_auto_install_min_version_upgrade_path(monkeypatch):
         mod.__version__ = "9.0"
         return True
 
-    monkeypatch.setattr(
-        "pycsamt.utils.deps.ensure_package", fake_ensure_package
-    )
-    decorator = ensure_pkg(
-        "fake_old_version_pkg", min_version="1.0", auto_install=True
-    )
+    monkeypatch.setattr("pycsamt.utils.deps.ensure_package", fake_ensure_package)
+    decorator = ensure_pkg("fake_old_version_pkg", min_version="1.0", auto_install=True)
 
     def func():
         return "upgraded"
@@ -144,9 +128,7 @@ def test_ensure_pkg_auto_install_verbose_zero_no_print(monkeypatch, capsys):
     def fake_ensure_package(dist_name, install=True, upgrade=True, verbose=0):
         return False
 
-    monkeypatch.setattr(
-        "pycsamt.utils.deps.ensure_package", fake_ensure_package
-    )
+    monkeypatch.setattr("pycsamt.utils.deps.ensure_package", fake_ensure_package)
     with pytest.raises(ImportError):
         ensure_pkg("no_such_pkg_xyz", auto_install=True, verbose=0)
     captured = capsys.readouterr()

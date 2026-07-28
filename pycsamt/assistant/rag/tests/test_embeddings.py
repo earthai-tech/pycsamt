@@ -75,9 +75,7 @@ class TestBackendResolution(unittest.TestCase):
         self.assertIsNone(resolve_embedding_backend(api_key=None))
 
     def test_unknown_provider_declines(self):
-        self.assertIsNone(
-            resolve_embedding_backend(api_key="x", provider="nonesuch")
-        )
+        self.assertIsNone(resolve_embedding_backend(api_key="x", provider="nonesuch"))
 
 
 if __name__ == "__main__":

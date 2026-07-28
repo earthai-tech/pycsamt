@@ -185,11 +185,7 @@ def classify(
         if verbose >= 1:
             click.echo(
                 f"Loading Occam2D result from {workdir}/"
-                + (
-                    f"  iteration={iteration}"
-                    if iteration
-                    else "  (last iteration)"
-                ),
+                + (f"  iteration={iteration}" if iteration else "  (last iteration)"),
                 err=True,
             )
 
@@ -253,9 +249,7 @@ def _logs_to_dataframe(logs):
                     "station": log.station_name,
                     "depth_top_m": round(layer.depth_top, 2),
                     "depth_bot_m": round(layer.depth_bot, 2),
-                    "thickness_m": round(
-                        layer.depth_bot - layer.depth_top, 2
-                    ),
+                    "thickness_m": round(layer.depth_bot - layer.depth_top, 2),
                     "rock": layer.rock.name,
                     "rho_min": layer.rock.rho_min,
                     "rho_max": layer.rock.rho_max,
@@ -267,9 +261,7 @@ def _logs_to_dataframe(logs):
 
 def _emit(df, output_format: str) -> None:
     if output_format == "json":
-        click.echo(
-            df.to_json(orient="records", indent=2, default_handler=str)
-        )
+        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:

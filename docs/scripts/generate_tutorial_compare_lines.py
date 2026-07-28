@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = ROOT / "data" / "AMT" / "WILLY_DATA"
 LINES = {
@@ -36,8 +35,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.api import read_edis
-        from pycsamt.emtools.qc import build_qc_table, station_confidence_table
+        pass
 
     return locals()
 
@@ -168,7 +166,13 @@ def _frequency_overlap_plot(summary: pd.DataFrame) -> None:
         )
     shared_min = summary["min_freq_hz"].max()
     shared_max = summary["max_freq_hz"].min()
-    ax.axvspan(shared_min, shared_max, color="#d5962c", alpha=0.18, label="shared band")
+    ax.axvspan(
+        shared_min,
+        shared_max,
+        color="#d5962c",
+        alpha=0.18,
+        label="shared band",
+    )
     ax.set_xscale("log")
     ax.set_yticks(np.arange(len(summary)))
     ax.set_yticklabels(summary["line"])
@@ -181,7 +185,10 @@ def _frequency_overlap_plot(summary: pd.DataFrame) -> None:
 
 def _confidence_plot(records: dict[str, dict]) -> None:
     fig, ax = plt.subplots(figsize=(8.8, 4.4))
-    values = [records[line]["confidence"]["confidence"].to_numpy(dtype=float) for line in records]
+    values = [
+        records[line]["confidence"]["confidence"].to_numpy(dtype=float)
+        for line in records
+    ]
     labels = list(records)
     parts = ax.violinplot(values, showmeans=True, showextrema=True)
     colors = ["#2f6f8f", "#c85745"]
@@ -207,7 +214,10 @@ def _decision_plot(summary: pd.DataFrame) -> None:
     decisions = pd.DataFrame(
         [
             ["Station count close enough for shared review?", "yes"],
-            ["Common frequency band available?", f"yes, {shared_min:.2g}-{shared_max:.2g} Hz"],
+            [
+                "Common frequency band available?",
+                f"yes, {shared_min:.2g}-{shared_max:.2g} Hz",
+            ],
             ["Same first-pass notch settings?", "yes, start with 50 Hz"],
             ["Use identical static-shift factors?", "no, estimate per line"],
             ["Reuse one pipeline config directly?", "yes, after band check"],
@@ -246,8 +256,7 @@ def _decision_plot(summary: pd.DataFrame) -> None:
 def main() -> int:
     functions = _import_pycsamt()
     records = {
-        line: _load_line(functions, line, path)
-        for line, path in LINES.items()
+        line: _load_line(functions, line, path) for line, path in LINES.items()
     }
     summary = _line_summary(records)
 
@@ -281,12 +290,15 @@ def main() -> int:
                 "median_frac_ok",
                 "median_confidence",
             ]
-        ].to_string(index=False, formatters={
-            "min_freq_hz": "{:.3g}".format,
-            "max_freq_hz": "{:.3g}".format,
-            "median_frac_ok": "{:.3f}".format,
-            "median_confidence": "{:.3f}".format,
-        })
+        ].to_string(
+            index=False,
+            formatters={
+                "min_freq_hz": "{:.3g}".format,
+                "max_freq_hz": "{:.3g}".format,
+                "median_frac_ok": "{:.3f}".format,
+                "median_confidence": "{:.3f}".format,
+            },
+        )
     )
     print("inventory_head:")
     print(

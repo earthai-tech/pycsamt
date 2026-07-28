@@ -230,9 +230,7 @@ beta_25 = beam_steer(25.0, d, k_hf)
 pattern_design = pas_pattern(
     theta_b, N=N_design, d=d, k=k_hf, beta=beta_25, l=1000.0
 )
-pattern_single = sdas_element_pattern(
-    90.0 - np.abs(theta_b), l=1000.0, k=k_hf
-)
+pattern_single = sdas_element_pattern(90.0 - np.abs(theta_b), l=1000.0, k=k_hf)
 
 fig = plt.figure(figsize=(12.0, 5.0))
 axp = fig.add_subplot(1, 2, 1, projection="polar")

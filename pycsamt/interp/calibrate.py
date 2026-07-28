@@ -131,13 +131,8 @@ class ModelCalibrator:
         for ix, x_sta in enumerate(model.x_centers):
             bh = self._nearest_borehole(x_sta)
             col_crm = crm[:, ix]
-            if (
-                bh is not None
-                and abs(bh.x - x_sta) <= self.max_borehole_distance
-            ):
-                nm[:, ix] = self._calibrate_column(
-                    col_crm, model.z_centers, bh
-                )
+            if bh is not None and abs(bh.x - x_sta) <= self.max_borehole_distance:
+                nm[:, ix] = self._calibrate_column(col_crm, model.z_centers, bh)
             else:
                 nm[:, ix] = self._autolayer_column(col_crm)
 
@@ -218,9 +213,7 @@ class ModelCalibrator:
         rho_2d = self._nm_rho_2d if model == "nm" else m.rho_2d
 
         logs: list[StratigraphicLog] = []
-        for _i, (sta_x, sta_name) in enumerate(
-            zip(m.station_x, m.station_names)
-        ):
+        for _i, (sta_x, sta_name) in enumerate(zip(m.station_x, m.station_names)):
             ix = int(np.argmin(np.abs(m.x_centers - sta_x)))
             col = rho_2d[:, ix]
             log = StratigraphicLog.from_column(

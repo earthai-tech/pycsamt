@@ -303,9 +303,7 @@ class InterpController:
         return bh.name
 
     def remove_borehole(self, name: str) -> None:
-        self.state.boreholes = [
-            b for b in self.state.boreholes if b.name != name
-        ]
+        self.state.boreholes = [b for b in self.state.boreholes if b.name != name]
 
     def set_rock_db_default(self) -> None:
         from pycsamt.interp.lithology import RockDatabase
@@ -454,9 +452,7 @@ class InterpController:
 
     # ── Plot dispatcher ────────────────────────────────────────────────────────
 
-    def generate(
-        self, method_name: str, **kwargs
-    ) -> matplotlib.figure.Figure:
+    def generate(self, method_name: str, **kwargs) -> matplotlib.figure.Figure:
         """Dispatch to the correct plot method. Returns a Figure."""
         fn = getattr(self, method_name, None)
         if fn is None:
@@ -579,9 +575,7 @@ class InterpController:
                 )
             for bh in bhs:
                 x = getattr(bh, "x", 0)
-                ax.axvline(
-                    x / 1e3, color="#a6e3a1", lw=1.5, ls="--", alpha=0.8
-                )
+                ax.axvline(x / 1e3, color="#a6e3a1", lw=1.5, ls="--", alpha=0.8)
                 ax.text(
                     x / 1e3,
                     0.5,
@@ -609,11 +603,7 @@ class InterpController:
             )
 
             log = next(
-                (
-                    l
-                    for l in self.state.strat_logs
-                    if l.station_name == station
-                ),
+                (l for l in self.state.strat_logs if l.station_name == station),
                 self.state.strat_logs[0],
             )
             plotter = PlotStratigraphicLog(log)
@@ -793,15 +783,9 @@ class InterpController:
                 if hasattr(model, "x_centers")
                 else np.arange(model.n_x)
             )
-            z = (
-                model.z_centers
-                if hasattr(model, "z_centers")
-                else np.arange(model.n_z)
-            )
+            z = model.z_centers if hasattr(model, "z_centers") else np.arange(model.n_z)
             rho = model.rho_2d
-            ax.pcolormesh(
-                x, z, rho, cmap="Greys_r", shading="auto", alpha=0.4
-            )
+            ax.pcolormesh(x, z, rho, cmap="Greys_r", shading="auto", alpha=0.4)
             for zone in zones:
                 xi = float(getattr(zone, "x", 0)) / 1e3
                 top, bot = float(zone.top), float(zone.bottom)
@@ -935,9 +919,7 @@ class InterpController:
         )
 
     def plot_strike_rose(self, **kw):
-        return self._emtools_plot(
-            "plot_strike_rose", "Strike Rose Diagram", polar=True
-        )
+        return self._emtools_plot("plot_strike_rose", "Strike Rose Diagram", polar=True)
 
     def plot_strike_profile(self, **kw):
         return self._emtools_plot("plot_strike_profile", "Strike Profile")
@@ -948,9 +930,7 @@ class InterpController:
         )
 
     def plot_bostick_depths(self, **kw):
-        return self._emtools_plot(
-            "plot_depth_section", "Bostick Depth Coverage"
-        )
+        return self._emtools_plot("plot_depth_section", "Bostick Depth Coverage")
 
     def plot_gradient_section(self, **kw):
         return self._emtools_plot(
@@ -963,9 +943,7 @@ class InterpController:
         )
 
     def plot_induction_arrows(self, **kw):
-        return self._emtools_plot(
-            "plot_induction_section", "Induction Arrows"
-        )
+        return self._emtools_plot("plot_induction_section", "Induction Arrows")
 
     def plot_snr_section(self, **kw):
         return self._emtools_plot("plot_snr_section", "SNR Pseudo-Section")
@@ -980,9 +958,7 @@ class InterpController:
                 PlotUncertaintySection,
             )
 
-            fig = PlotUncertaintySection(
-                self.state.model, self.state.mc_result
-            ).plot()
+            fig = PlotUncertaintySection(self.state.model, self.state.mc_result).plot()
             self._apply_fig_style_minimal(fig)
             return fig
         except Exception as exc:
@@ -996,9 +972,7 @@ class InterpController:
                 PlotUncertaintyProfile,
             )
 
-            fig = PlotUncertaintyProfile(
-                self.state.model, self.state.mc_result
-            ).plot()
+            fig = PlotUncertaintyProfile(self.state.model, self.state.mc_result).plot()
             self._apply_fig_style_minimal(fig)
             return fig
         except Exception as exc:
@@ -1026,9 +1000,7 @@ class InterpController:
         )
 
     def plot_argand(self, **kw):
-        return self._emtools_plot(
-            "plot_zt_argand", "Impedance Argand Diagram"
-        )
+        return self._emtools_plot("plot_zt_argand", "Impedance Argand Diagram")
 
     def plot_pt_ternary(self, **kw):
         return self._emtools_plot(
@@ -1058,9 +1030,7 @@ class InterpController:
         )
 
     def plot_period_clock(self, **kw):
-        return self._emtools_plot(
-            "plot_pt_period_clock", "Phase Tensor Period Clock"
-        )
+        return self._emtools_plot("plot_pt_period_clock", "Phase Tensor Period Clock")
 
     def plot_composite_section(self, **kw):
         return self._emtools_plot(
@@ -1087,9 +1057,7 @@ class InterpController:
 
     def plot_timelapse_change(self, **kw) -> Figure:
         if not self.state.timelapse_surveys:
-            return self._needs_run_fig(
-                "Load at least 2 surveys for time-lapse"
-            )
+            return self._needs_run_fig("Load at least 2 surveys for time-lapse")
         try:
             from pycsamt.interp.timelapse import TimeLapseEM
 
@@ -1101,9 +1069,7 @@ class InterpController:
             if len(changes) == 1:
                 axes = [axes]
             for ax, dc in zip(axes, changes):
-                im = ax.pcolormesh(
-                    dc, cmap="RdBu_r", shading="auto", vmin=-50, vmax=50
-                )
+                im = ax.pcolormesh(dc, cmap="RdBu_r", shading="auto", vmin=-50, vmax=50)
                 ax.invert_yaxis()
                 self._apply_fig_style(fig, ax)
             fig.colorbar(im, ax=axes[-1], label="Δρ (%)").set_label(
@@ -1115,14 +1081,10 @@ class InterpController:
             return self._error_fig(str(exc))
 
     def plot_timelapse_sat(self, **kw) -> Figure:
-        return self._needs_run_fig(
-            "Time-lapse ΔSw — run time-lapse analysis first"
-        )
+        return self._needs_run_fig("Time-lapse ΔSw — run time-lapse analysis first")
 
     def plot_timelapse_wt(self, **kw) -> Figure:
-        return self._needs_run_fig(
-            "Time-lapse WT displacement — run analysis first"
-        )
+        return self._needs_run_fig("Time-lapse WT displacement — run analysis first")
 
     def plot_export_preview(self, **kw) -> Figure:
         import matplotlib.pyplot as plt
@@ -1245,9 +1207,7 @@ class InterpController:
                 elev_m = extract_elevation(self.state.sites)
                 chain = extract_chainage(self.state.sites)
                 if len(chain) > 0 and len(sx_km) > 0:
-                    elev_m = (
-                        interp_elev(chain, elev_m / 1000.0, sx_km) * 1000.0
-                    )
+                    elev_m = interp_elev(chain, elev_m / 1000.0, sx_km) * 1000.0
             if elev_m is None or len(elev_m) == 0:
                 return
             elev_m = np.asarray(elev_m)
@@ -1262,14 +1222,12 @@ class InterpController:
 
     def _no_model_fig(self) -> Figure:
         return self._msg_fig(
-            "No resistivity model loaded.\n"
-            "Load from inversion results or from file."
+            "No resistivity model loaded.\n" "Load from inversion results or from file."
         )
 
     def _no_sites_fig(self) -> Figure:
         return self._msg_fig(
-            "No survey data loaded.\n"
-            "Open EDI files from the main window first."
+            "No survey data loaded.\n" "Open EDI files from the main window first."
         )
 
     def _needs_run_fig(self, msg: str) -> Figure:

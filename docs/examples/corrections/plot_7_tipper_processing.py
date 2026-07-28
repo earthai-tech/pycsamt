@@ -32,9 +32,7 @@ from pycsamt.emtools import (
 from pycsamt.seg.spectra import Spectra
 
 ROOT = Path(os.environ.get("PYCSAMT_DOCS_REPO_ROOT", "."))
-sp = Spectra.from_file(
-    str(ROOT / "data" / "MT" / "SPECTRA" / "spectra01.edi")
-)
+sp = Spectra.from_file(str(ROOT / "data" / "MT" / "SPECTRA" / "spectra01.edi"))
 print("spectra summary:")
 print(spectra_summary(sp))
 _ax = plot_psd(sp)

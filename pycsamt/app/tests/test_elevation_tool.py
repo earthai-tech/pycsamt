@@ -186,9 +186,7 @@ class TestElevWorkerRun:
                 raise RuntimeError("station lookup failed")
             return 111.0
 
-        monkeypatch.setattr(
-            "pycsamt.gis.utils.get_elevation_from_api", fake_api
-        )
+        monkeypatch.setattr("pycsamt.gis.utils.get_elevation_from_api", fake_api)
         stations = [
             ("OK", 10.0, 20.0),
             ("NO_COORDS", None, None),
@@ -212,9 +210,7 @@ class TestElevWorkerRun:
         def always_raises(lat, lon, api_name=None):
             raise ConnectionError("network down")
 
-        monkeypatch.setattr(
-            "pycsamt.gis.utils.get_elevation_from_api", always_raises
-        )
+        monkeypatch.setattr("pycsamt.gis.utils.get_elevation_from_api", always_raises)
         stations = [("S1", 1.0, 1.0), ("S2", 2.0, 2.0)]
         w = _ElevWorker(stations, api="open_meteo")
 
@@ -230,9 +226,7 @@ class TestElevWorkerRun:
         assert all(math.isnan(r[3]) for r in done_results[0])
 
     def test_import_error_emits_error_signal(self, qapp, monkeypatch):
-        monkeypatch.delattr(
-            "pycsamt.gis.utils.get_elevation_from_api", raising=True
-        )
+        monkeypatch.delattr("pycsamt.gis.utils.get_elevation_from_api", raising=True)
         w = _ElevWorker([("S1", 1.0, 1.0)], api="open_meteo")
 
         errors = []
@@ -283,10 +277,7 @@ class TestConstructionNoSites:
 
     def test_api_combo_has_both_apis(self, qapp):
         dlg = ElevationEnrichDialog(sites=None)
-        items = [
-            dlg._api_combo.itemText(i)
-            for i in range(dlg._api_combo.count())
-        ]
+        items = [dlg._api_combo.itemText(i) for i in range(dlg._api_combo.count())]
         assert items == ["open_meteo", "open_topo_data"]
         dlg.close()
 
@@ -310,9 +301,7 @@ class TestPopulateStationsFlatItems:
 
     def test_status_text_reports_counts(self, qapp):
         dlg = ElevationEnrichDialog(sites=_flat_station_list())
-        assert dlg._status_lbl.text() == (
-            "3 stations found, 2 with coordinates."
-        )
+        assert dlg._status_lbl.text() == ("3 stations found, 2 with coordinates.")
         dlg.close()
 
     def test_run_button_enabled_when_some_have_coords(self, qapp):
@@ -440,9 +429,7 @@ class TestOnRun:
         assert dlg._results == done_result
         dlg.close()
 
-    def test_error_flow_reenables_run_button_and_shows_message(
-        self, qapp, monkeypatch
-    ):
+    def test_error_flow_reenables_run_button_and_shows_message(self, qapp, monkeypatch):
         fake_cls = _fake_elev_worker_cls(error_msg="Cannot import gis.utils: x")
         monkeypatch.setattr(elevation_tool, "_ElevWorker", fake_cls)
 

@@ -44,9 +44,7 @@ def test_export_dlg_creates(qapp, simple_fig):
 
 
 def test_format_combo_has_all_formats(dlg):
-    combo_items = [
-        dlg._fmt_combo.itemText(i) for i in range(dlg._fmt_combo.count())
-    ]
+    combo_items = [dlg._fmt_combo.itemText(i) for i in range(dlg._fmt_combo.count())]
     for fmt_key in _FORMATS:
         assert fmt_key in combo_items
 

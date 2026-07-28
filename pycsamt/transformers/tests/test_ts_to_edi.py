@@ -52,21 +52,24 @@ def _synthetic_ts(n=2**14, dt=5.0, seed=7):
     z0 = np.array([[2.0, 12.0], [-10.0, -1.5]])
     hx = rng.standard_normal(n)
     hy = rng.standard_normal(n)
-    return TSData(
-        data={
-            "HX": hx,
-            "HY": hy,
-            "HZ": 0.3 * hx - 0.2 * hy,
-            "EX": z0[0, 0] * hx + z0[0, 1] * hy,
-            "EY": z0[1, 0] * hx + z0[1, 1] * hy,
-        },
-        dt=dt,
-        station="SYN01",
-        lat=-30.5,
-        lon=20.25,
-        azim={"HX": 0.0, "HY": 90.0, "HZ": 0.0, "EX": 0.0, "EY": 90.0},
-        dipole={"EX": 50.0, "EY": 60.0},
-    ), z0
+    return (
+        TSData(
+            data={
+                "HX": hx,
+                "HY": hy,
+                "HZ": 0.3 * hx - 0.2 * hy,
+                "EX": z0[0, 0] * hx + z0[0, 1] * hy,
+                "EY": z0[1, 0] * hx + z0[1, 1] * hy,
+            },
+            dt=dt,
+            station="SYN01",
+            lat=-30.5,
+            lon=20.25,
+            azim={"HX": 0.0, "HY": 90.0, "HZ": 0.0, "EX": 0.0, "EY": 90.0},
+            dipole={"EX": 50.0, "EY": 60.0},
+        ),
+        z0,
+    )
 
 
 @pytest.fixture()
@@ -141,9 +144,7 @@ def test_batch_directory_with_failure(lims_file, tmp_path):
 
     # strict mode raises on the first failure
     with pytest.raises(RuntimeError):
-        TStoEDI(nfft=512, per_decade=4, skip_errors=False).transform(
-            lims_file.parent
-        )
+        TStoEDI(nfft=512, per_decade=4, skip_errors=False).transform(lims_file.parent)
 
 
 def test_resolve_sources_errors(tmp_path):

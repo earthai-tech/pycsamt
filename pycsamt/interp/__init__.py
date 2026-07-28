@@ -16,26 +16,27 @@ Quickstart
 >>> from pycsamt.interp import export, plot as iplot
 >>>
 >>> # Adapt any inversion result
->>> model = ResistivityModel.from_occam2d(result)          # doctest: +SKIP
+>>> model = ResistivityModel.from_occam2d(result)  # doctest: +SKIP
 >>>
 >>> # Optional: calibrate with borehole data
 >>> from pycsamt.interp import Borehole
 >>> bh = Borehole.from_csv("boreholes/Bo.csv", x=1050.0)  # doctest: +SKIP
->>> cal = ModelCalibrator(ptol=0.10).fit(model, [bh])      # doctest: +SKIP
+>>> cal = ModelCalibrator(ptol=0.10).fit(model, [bh])  # doctest: +SKIP
 >>>
 >>> # Build stratigraphic logs
->>> logs = cal.stratigraphic_logs()                        # doctest: +SKIP
+>>> logs = cal.stratigraphic_logs()  # doctest: +SKIP
 >>>
 >>> # Export
->>> export.to_oasis_montaj_xyz(logs, "profile.xyz")        # doctest: +SKIP
->>> export.to_las(logs[0], "S17.las")                      # doctest: +SKIP
->>> export.to_csv(logs, "all_stations.csv")                # doctest: +SKIP
+>>> export.to_oasis_montaj_xyz(logs, "profile.xyz")  # doctest: +SKIP
+>>> export.to_las(logs[0], "S17.las")  # doctest: +SKIP
+>>> export.to_csv(logs, "all_stations.csv")  # doctest: +SKIP
 >>>
 >>> # Plot
->>> fig = iplot.PlotStratigraphicLog(logs[0]).plot()       # doctest: +SKIP
->>> fig = iplot.PlotFenceDiagram(logs).plot()              # doctest: +SKIP
->>> fig = iplot.PlotCalibratedModel(model, cal.calibrated_model(),
-...                                 cal.misfit_map()).plot()  # doctest: +SKIP
+>>> fig = iplot.PlotStratigraphicLog(logs[0]).plot()  # doctest: +SKIP
+>>> fig = iplot.PlotFenceDiagram(logs).plot()  # doctest: +SKIP
+>>> fig = iplot.PlotCalibratedModel(
+...     model, cal.calibrated_model(), cal.misfit_map()
+... ).plot()  # doctest: +SKIP
 
 Package layout
 --------------

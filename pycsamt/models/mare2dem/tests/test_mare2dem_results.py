@@ -160,9 +160,7 @@ class TestDiffResistivity:
         )
         assert out.exists()
 
-    def test_diff_mismatched_regions_raises(
-        self, hill_dir, inversion_dir, tmp_path
-    ):
+    def test_diff_mismatched_regions_raises(self, hill_dir, inversion_dir, tmp_path):
         with pytest.raises(ValueError, match="regions"):
             diff_resistivity(
                 hill_dir / "hill.0.resistivity",

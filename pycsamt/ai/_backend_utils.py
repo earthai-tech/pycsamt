@@ -41,9 +41,7 @@ def get_weights(model: Any) -> dict[str, np.ndarray]:
 
     inst = get_backend_instance()
     if inst is None:
-        raise RuntimeError(
-            "No DL backend available — cannot extract weights."
-        )
+        raise RuntimeError("No DL backend available — cannot extract weights.")
     return inst.get_weights(model)
 
 
@@ -53,9 +51,7 @@ def set_weights(model: Any, weights: dict[str, np.ndarray]) -> None:
 
     inst = get_backend_instance()
     if inst is None:
-        raise RuntimeError(
-            "No DL backend available — cannot restore weights."
-        )
+        raise RuntimeError("No DL backend available — cannot restore weights.")
     inst.set_weights(model, weights)
 
 

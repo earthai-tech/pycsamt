@@ -116,9 +116,7 @@ def build_index(
     embedded, ``embedded``/``embed_model``/``embed_dim``).
     """
     root = Path(root) if root is not None else repo_root()
-    out_dir = (
-        Path(out_dir) if out_dir is not None else default_index_dir(root)
-    )
+    out_dir = Path(out_dir) if out_dir is not None else default_index_dir(root)
 
     chunks = build_chunks(root)
     stats = corpus_stats(chunks)
@@ -162,9 +160,7 @@ def build_index(
                 save_vectors,
             )
 
-            save_vectors(
-                out_dir / VECTOR_FILENAME, [c.id for c in chunks], vectors
-            )
+            save_vectors(out_dir / VECTOR_FILENAME, [c.id for c in chunks], vectors)
         (out_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8"
         )

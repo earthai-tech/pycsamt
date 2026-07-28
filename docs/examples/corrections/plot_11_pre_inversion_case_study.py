@@ -155,9 +155,7 @@ def z_logmag_matrix(sites, component="xy"):
             continue
         labels.append(_name(ed, i))
         grids.append(np.asarray(fr, dtype=float))
-        values.append(
-            np.log10(np.abs(np.asarray(z)[:, ij[0], ij[1]]) + 1e-24)
-        )
+        values.append(np.log10(np.abs(np.asarray(z)[:, ij[0], ij[1]]) + 1e-24))
     if not values:
         return [], np.array([], dtype=float), np.empty((0, 0), dtype=float)
     common = np.sort(np.unique(np.concatenate(grids)))

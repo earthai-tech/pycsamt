@@ -13,22 +13,25 @@ Quick start
 **Apply a named preset**::
 
     from pycsamt.api.style import use_style
-    use_style("publication")          # grayscale publication look
-    use_style("dark")                 # dark-background figures
+
+    use_style("publication")  # grayscale publication look
+    use_style("dark")  # dark-background figures
 
 **Override specific attributes**::
 
     from pycsamt.api.style import configure_style
+
     configure_style(
-        rose__compass_labels = "degrees",   # dotted path: section__attr
-        multiline__mode      = "gradient",
-        multiline__base_color = "red",
-        mt__xy__color        = "#003f88",
+        rose__compass_labels="degrees",  # dotted path: section__attr
+        multiline__mode="gradient",
+        multiline__base_color="red",
+        mt__xy__color="#003f88",
     )
 
 **Temporary changes with a context manager**::
 
     from pycsamt.api.style import PYCSAMT_STYLE
+
     with PYCSAMT_STYLE.context("publication"):
         fig = plot_phase_tensor_rose(sites)
     # reverts to previous state automatically
@@ -36,6 +39,7 @@ Quick start
 **Build a fully custom style and share it**::
 
     from pycsamt.api.style import PyCSAMTStyle, MultilineStyle
+
     s = PyCSAMTStyle()
     s.multiline = MultilineStyle(mode="gradient", base_color="teal")
     s.mt.xy.color = "#004e89"
@@ -175,7 +179,7 @@ class MultilineStyle:
         Examples
         --------
         >>> ms = MultilineStyle(mode="gradient", base_color="red")
-        >>> colors = ms.colors(5)   # 5 shades of red, dark → light
+        >>> colors = ms.colors(5)  # 5 shades of red, dark → light
         """
         if n <= 0:
             return []
@@ -187,9 +191,7 @@ class MultilineStyle:
         # gradient
         import matplotlib.pyplot as plt
 
-        cm_name = self.cmap or _COLOR_TO_CMAP.get(
-            self.base_color.lower(), "Blues_r"
-        )
+        cm_name = self.cmap or _COLOR_TO_CMAP.get(self.base_color.lower(), "Blues_r")
         try:
             cm = plt.get_cmap(cm_name)
         except ValueError:
@@ -199,9 +201,7 @@ class MultilineStyle:
             fracs = fracs[::-1]
         return [cm(float(f)) for f in fracs]
 
-    def line_kwargs(
-        self, idx: int, n: int, **overrides: Any
-    ) -> dict[str, Any]:
+    def line_kwargs(self, idx: int, n: int, **overrides: Any) -> dict[str, Any]:
         """Return ``ax.plot`` keyword arguments for line *idx* of *n*.
 
         Parameters
@@ -310,7 +310,9 @@ class _MTComp:
 
         Examples
         --------
-        >>> ax.errorbar(period, rho_xy, rho_err, **style.mt.xy.errorbar_kwargs())
+        >>> ax.errorbar(
+        ...     period, rho_xy, rho_err, **style.mt.xy.errorbar_kwargs()
+        ... )
         """
         import matplotlib.colors as mc
 
@@ -474,8 +476,7 @@ class MTComponentStyle:
         except AttributeError:
             valid = [f.name for f in dc_fields(self)]
             raise KeyError(
-                f"{key!r} is not a recognised MT component. "
-                f"Valid keys: {valid}"
+                f"{key!r} is not a recognised MT component. " f"Valid keys: {valid}"
             ) from None
 
     def copy(self) -> MTComponentStyle:
@@ -516,7 +517,7 @@ class CorrectionStyle:
 
         cs = PYCSAMT_STYLE.correction
         ax.plot(period, rho_before, **cs.before.plot_kwargs())
-        ax.plot(period, rho_after,  **cs.after.plot_kwargs())
+        ax.plot(period, rho_after, **cs.after.plot_kwargs())
 
     Override just the line-width for one call::
 
@@ -529,8 +530,8 @@ class CorrectionStyle:
     Use dotted-path configure::
 
         configure_style(
-            correction__before__color = "#005a9e",
-            correction__after__color  = "#9b0000",
+            correction__before__color="#005a9e",
+            correction__after__color="#9b0000",
         )
     """
 
@@ -753,6 +754,7 @@ class PhaseTensorEllipseStyle:
     Use the style in a plot call::
 
         from pycsamt.api.style import PYCSAMT_STYLE
+
         es = PYCSAMT_STYLE.pt_ellipse
         plot_phase_tensor_psection(sites, **es.to_kwargs())
 
@@ -766,10 +768,10 @@ class PhaseTensorEllipseStyle:
     Configure package-wide::
 
         configure_style(
-            pt_ellipse__c_by       = "ellipt",
-            pt_ellipse__cmap       = "viridis",
-            pt_ellipse__edgecolor  = "none",
-            pt_ellipse__scale      = 0.80,
+            pt_ellipse__c_by="ellipt",
+            pt_ellipse__cmap="viridis",
+            pt_ellipse__edgecolor="none",
+            pt_ellipse__scale=0.80,
         )
     """
 
@@ -837,7 +839,9 @@ class PhaseTensorEllipseStyle:
 
         Examples
         --------
-        >>> ax = plot_phase_tensor_psection(sites, **PYCSAMT_STYLE.pt_ellipse.to_kwargs())
+        >>> ax = plot_phase_tensor_psection(
+        ...     sites, **PYCSAMT_STYLE.pt_ellipse.to_kwargs()
+        ... )
         """
         return dict(
             normalise_by=self.normalise_by,
@@ -862,7 +866,9 @@ class PhaseTensorEllipseStyle:
 
         Examples
         --------
-        >>> strike_style = PYCSAMT_STYLE.pt_ellipse.copy(c_by="theta", cmap=None)
+        >>> strike_style = PYCSAMT_STYLE.pt_ellipse.copy(
+        ...     c_by="theta", cmap=None
+        ... )
         """
         new = copy.copy(self)
         for k, v in kw.items():
@@ -910,6 +916,7 @@ class PyCSAMTStyle:
     Inspect the current style::
 
         from pycsamt.api.style import PYCSAMT_STYLE
+
         print(PYCSAMT_STYLE)
 
     Apply a named preset::
@@ -967,9 +974,7 @@ class PyCSAMTStyle:
         key = preset.lower().strip()
         if key not in self._PRESETS:
             avail = ", ".join(f"{k!r}" for k in self._PRESETS)
-            raise ValueError(
-                f"Unknown style preset {preset!r}. Available: {avail}"
-            )
+            raise ValueError(f"Unknown style preset {preset!r}. Available: {avail}")
         spec = self._PRESETS[key]
         # rose
         if "rose" in spec:
@@ -1106,17 +1111,11 @@ class PyCSAMTStyle:
         lines = ["PyCSAMTStyle"]
         lines.append(f"  rose.bar_style          = {self.rose.bar_style!r}")
         lines.append(f"  rose.cmap               = {self.rose.cmap!r}")
-        lines.append(
-            f"  rose.compass_labels     = {self.rose.compass_labels!r}"
-        )
+        lines.append(f"  rose.compass_labels     = {self.rose.compass_labels!r}")
         lines.append(f"  rose.show_mean          = {self.rose.show_mean}")
-        lines.append(
-            f"  rose.show_secondary     = {self.rose.show_secondary}"
-        )
+        lines.append(f"  rose.show_secondary     = {self.rose.show_secondary}")
         lines.append(f"  multiline.mode          = {self.multiline.mode!r}")
-        lines.append(
-            f"  multiline.base_color    = {self.multiline.base_color!r}"
-        )
+        lines.append(f"  multiline.base_color    = {self.multiline.base_color!r}")
         lines.append(
             f"  multiline.dark/light    = {self.multiline.dark}/{self.multiline.light}"
         )
@@ -1126,12 +1125,8 @@ class PyCSAMTStyle:
         lines.append(
             f"  mt.yx  color={self.mt.yx.color!r}  marker={self.mt.yx.marker!r}"
         )
-        lines.append(
-            f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}"
-        )
-        lines.append(
-            f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}"
-        )
+        lines.append(f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}")
+        lines.append(f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}")
         b = self.correction.before
         a = self.correction.after
         lines.append(

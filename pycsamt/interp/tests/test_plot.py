@@ -20,15 +20,26 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pytest  # noqa: E402
 
+from pycsamt.interp import plot as ip  # noqa: E402
 from pycsamt.interp._base import ResistivityModel  # noqa: E402
 from pycsamt.interp.borehole import Borehole, Interval  # noqa: E402
-from pycsamt.interp.hydromodel import EMHydroModel, PetrophysicalConfig  # noqa: E402
-from pycsamt.interp.lithology import RockDatabase, StratigraphicLog  # noqa: E402
-from pycsamt.interp.petrophysics import ArchieModel, WaxmanSmitsModel  # noqa: E402
+from pycsamt.interp.hydromodel import (  # noqa: E402
+    EMHydroModel,
+    PetrophysicalConfig,
+)
+from pycsamt.interp.lithology import (  # noqa: E402
+    RockDatabase,
+    StratigraphicLog,
+)
+from pycsamt.interp.petrophysics import (  # noqa: E402
+    ArchieModel,
+    WaxmanSmitsModel,
+)
 from pycsamt.interp.timelapse import TimeLapseEM  # noqa: E402
-from pycsamt.interp.uncertainty import MonteCarloHydro, UncertaintyBounds  # noqa: E402
-from pycsamt.interp import plot as ip  # noqa: E402
-
+from pycsamt.interp.uncertainty import (  # noqa: E402
+    MonteCarloHydro,
+    UncertaintyBounds,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared fixtures
@@ -129,12 +140,8 @@ def _timelapse():
 
     dry = _survey([[800, 800], [700, 800], [600, 800], [500, 800], [400, 800]])
     wet = _survey([[500, 800], [200, 800], [50, 800], [20, 800], [10, 800]])
-    recharge = _survey(
-        [[300, 800], [100, 800], [30, 800], [10, 800], [5, 800]]
-    )
-    return TimeLapseEM(
-        [dry, wet, recharge], labels=["dry", "wet", "recharge"]
-    )
+    recharge = _survey([[300, 800], [100, 800], [30, 800], [10, 800], [5, 800]])
+    return TimeLapseEM([dry, wet, recharge], labels=["dry", "wet", "recharge"])
 
 
 def _borehole():
@@ -144,7 +151,10 @@ def _borehole():
         intervals=[
             Interval(top=0.0, bottom=20.0, lithology="Clay", resistivity=10.0),
             Interval(
-                top=20.0, bottom=100.0, lithology="Sandstone", resistivity=800.0
+                top=20.0,
+                bottom=100.0,
+                lithology="Sandstone",
+                resistivity=800.0,
             ),
         ],
     )
@@ -382,9 +392,7 @@ def test_plot_timelapse_section_saturation_requires_petro():
 
 def test_plot_timelapse_section_survey_idx_out_of_range():
     with pytest.raises(IndexError):
-        ip.PlotTimeLapseSection(
-            _timelapse(), quantity="rho", survey_idx=99
-        ).plot()
+        ip.PlotTimeLapseSection(_timelapse(), quantity="rho", survey_idx=99).plot()
 
 
 def test_plot_timelapse_section_no_water_table_and_custom_vmax():
@@ -416,9 +424,7 @@ def test_plot_timelapse_section_no_stations():
 
 @pytest.mark.parametrize("quantity", ["K", "saturation", "porosity"])
 def test_plot_uncertainty_section_quantities(quantity):
-    fig = ip.PlotUncertaintySection(
-        _uncertainty_result(), quantity=quantity
-    ).plot()
+    fig = ip.PlotUncertaintySection(_uncertainty_result(), quantity=quantity).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
 
 
@@ -515,9 +521,7 @@ def test_plot_crossplot_empty_depth_range_shows_placeholder():
 
 
 def test_plot_crossplot_restricted_depth_range():
-    fig = ip.PlotPetrophysicalCrossPlot(
-        _hydro_result(), depth_range=(0.0, 40.0)
-    ).plot()
+    fig = ip.PlotPetrophysicalCrossPlot(_hydro_result(), depth_range=(0.0, 40.0)).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
 
 
@@ -574,9 +578,7 @@ def test_plot_multi_timelapse_grid_delta_saturation():
 
 
 def test_plot_multi_timelapse_grid_single_panel():
-    fig = ip.PlotMultiTimeLapseGrid(
-        _timelapse(), quantity="rho", surveys=[1]
-    ).plot()
+    fig = ip.PlotMultiTimeLapseGrid(_timelapse(), quantity="rho", surveys=[1]).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
 
 
@@ -725,9 +727,7 @@ def test_plot_uncertainty_histogram_water_table_ensemble_all_nan_hides_axis():
 
 def test_plot_uncertainty_histogram_invalid_quantity_raises():
     with pytest.raises(ValueError, match="quantity must be"):
-        ip.PlotUncertaintyHistogram(
-            _uncertainty_result_wt_detected(), quantity="bogus"
-        )
+        ip.PlotUncertaintyHistogram(_uncertainty_result_wt_detected(), quantity="bogus")
 
 
 def test_plot_uncertainty_histogram_explicit_stations_and_no_kde_no_pct():
@@ -744,9 +744,7 @@ def test_plot_uncertainty_histogram_explicit_stations_and_no_kde_no_pct():
 
 
 def test_plot_uncertainty_histogram_kde_exception_is_swallowed():
-    with mock.patch(
-        "scipy.stats.gaussian_kde", side_effect=RuntimeError("boom")
-    ):
+    with mock.patch("scipy.stats.gaussian_kde", side_effect=RuntimeError("boom")):
         fig = ip.PlotUncertaintyHistogram(
             _uncertainty_result_wt_detected(),
             quantity="water_table",

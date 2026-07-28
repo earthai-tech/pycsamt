@@ -302,14 +302,10 @@ class TestLateTimeTransform:
 
     def test_diffusion_convention(self):
         snd = _synthetic_sounding(n=20)
-        res_sd = LateTimeTransform(freq_convention="skin_depth").transform(
-            snd
-        )
+        res_sd = LateTimeTransform(freq_convention="skin_depth").transform(snd)
         res_df = LateTimeTransform(freq_convention="diffusion").transform(snd)
         # diffusion gives half the frequency of skin_depth
-        np.testing.assert_allclose(
-            res_df["freq"], res_sd["freq"] * 0.5, rtol=1e-6
-        )
+        np.testing.assert_allclose(res_df["freq"], res_sd["freq"] * 0.5, rtol=1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -432,9 +428,7 @@ class TestRhoAInLoop:
         tx_area = loop_side**2
         M = 8.0 * tx_area
         t = np.logspace(-5, -2, n)
-        dBdt = (M * MU0**2.5) / (
-            10.0 * np.sqrt(np.pi) * rho_true**1.5 * t**2.5
-        )
+        dBdt = (M * MU0**2.5) / (10.0 * np.sqrt(np.pi) * rho_true**1.5 * t**2.5)
         return dBdt, t, M
 
     def test_central_equals_late_time(self):
@@ -459,9 +453,7 @@ class TestRhoAInLoop:
 
     def test_rectangular_loop(self):
         dBdt, t, M = self._make_central_snd(loop_side=200.0)
-        rho = _rho_a_in_loop(
-            dBdt, t, M, "rectangular", (200.0, 100.0), 30.0, 0.0
-        )
+        rho = _rho_a_in_loop(dBdt, t, M, "rectangular", (200.0, 100.0), 30.0, 0.0)
         assert np.all(np.isfinite(rho))
 
 
@@ -526,9 +518,7 @@ class TestLateTimeConfigDetection:
         assert LateTimeTransform._detect_config(snd) == "central"
 
     def test_detects_in_loop(self):
-        snd = self._make_snd(
-            offset=30.0, loop_side=100.0
-        )  # 30 < 50 (half-side)
+        snd = self._make_snd(offset=30.0, loop_side=100.0)  # 30 < 50 (half-side)
         assert LateTimeTransform._detect_config(snd) == "in_loop"
 
     def test_detects_offset(self):
@@ -563,9 +553,7 @@ class TestLateTimeConfigDetection:
     def test_in_loop_correction_increases_rho(self):
         """Off-centre Rx (near wire) → η > 1 → ρ_a_corrected > ρ_a_central."""
         snd_central = self._make_snd(offset=0.0)
-        snd_inloop = self._make_snd(
-            offset=40.0
-        )  # close to wire (half-side=50)
+        snd_inloop = self._make_snd(offset=40.0)  # close to wire (half-side=50)
         tr = LateTimeTransform()
         res_c = tr.transform(snd_central)
         res_i = tr.transform(snd_inloop)
@@ -687,9 +675,7 @@ class TestFourierTransform:
     def test_phase_in_range(self):
         """Phase must be in [0°, 90°] after clipping."""
         snd = self._sounding_analytical()
-        res = FourierTransform(
-            n_freq=20, waveform_correction=False
-        ).transform(snd)
+        res = FourierTransform(n_freq=20, waveform_correction=False).transform(snd)
         assert np.all(res["phase_xy"] >= 0.0)
         assert np.all(res["phase_xy"] <= 90.0)
 
@@ -703,9 +689,7 @@ class TestFourierTransform:
         t = snd.time_gates
         dBdt = snd.dBdt()
         omega_test = np.array([1e3])
-        fc = _cosine_transform_1d(
-            dBdt / snd.moment, t, omega_test, n_interp=0
-        )
+        fc = _cosine_transform_1d(dBdt / snd.moment, t, omega_test, n_interp=0)
         # negative dBdt → negative cosine transform → im_k = fc/omega < 0
         assert fc[0] < 0
 
@@ -720,9 +704,7 @@ class TestFourierTransform:
     def test_custom_freq_range_honoured(self):
         snd = self._sounding_late_time()
         f_lo, f_hi = 1.0, 100.0
-        res = FourierTransform(
-            n_freq=20, freq_min=f_lo, freq_max=f_hi
-        ).transform(snd)
+        res = FourierTransform(n_freq=20, freq_min=f_lo, freq_max=f_hi).transform(snd)
         assert res["freq"].min() >= f_lo * 0.99
         assert res["freq"].max() <= f_hi * 1.01
 
@@ -755,12 +737,8 @@ class TestFourierTransform:
             tx_area=np.pi * 50.0**2,
             waveform=RampWaveform(base_frequency=25.0, ramp_off=5e-5),
         )
-        res_no = FourierTransform(
-            n_freq=10, waveform_correction=False
-        ).transform(snd)
-        res_yes = FourierTransform(
-            n_freq=10, waveform_correction=True
-        ).transform(snd)
+        res_no = FourierTransform(n_freq=10, waveform_correction=False).transform(snd)
+        res_yes = FourierTransform(n_freq=10, waveform_correction=True).transform(snd)
         # with ramp correction fewer gates may survive and/or freqs differ
         freqs_differ = not np.allclose(res_yes["freq"], res_no["freq"])
         shape_differs = res_yes["freq"].shape != res_no["freq"].shape
@@ -777,9 +755,7 @@ class TestFourierTransform:
             tx_area=np.pi * 50.0**2,
             waveform=wf,
         )
-        TEMSounding(
-            time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0**2
-        )
+        TEMSounding(time_gates=t, data=dBdt, current=1.0, tx_area=np.pi * 50.0**2)
         # ramp correction drops early gates that fall within the ramp window
         corrected_d, corrected_t, _ = _apply_waveform_correction(dBdt, t, wf)
         assert len(corrected_t) < len(t)
@@ -910,9 +886,7 @@ class TestApplyWaveformCorrection:
         t = self._gates()
         d = self._data(t)
         tau_r = 1e-4
-        dc, tc, _ = _apply_waveform_correction(
-            d, t, RampWaveform(25.0, ramp_off=tau_r)
-        )
+        dc, tc, _ = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r))
         # corrected times must be shifted by tau_r/2 for surviving gates
         surviving = t + tau_r / 2.0 > tau_r
         np.testing.assert_allclose(tc, t[surviving] + tau_r / 2.0)
@@ -921,9 +895,7 @@ class TestApplyWaveformCorrection:
         t = self._gates()
         d = self._data(t)
         tau_r = 1e-4
-        dc, tc, _ = _apply_waveform_correction(
-            d, t, RampWaveform(25.0, ramp_off=tau_r)
-        )
+        dc, tc, _ = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r))
         surviving = t + tau_r / 2.0 > tau_r
         amp = 1.0 + (tau_r / 2.0) / (2.0 * tc)
         np.testing.assert_allclose(dc, d[surviving] * amp, rtol=1e-10)
@@ -932,9 +904,7 @@ class TestApplyWaveformCorrection:
         t = self._gates()
         d = self._data(t)
         tau_r = 5e-4  # large ramp to ensure some gates are rejected
-        dc, tc, _ = _apply_waveform_correction(
-            d, t, RampWaveform(25.0, ramp_off=tau_r)
-        )
+        dc, tc, _ = _apply_waveform_correction(d, t, RampWaveform(25.0, ramp_off=tau_r))
         assert len(tc) < len(t)
         assert np.all(tc > tau_r / 2.0)
 
@@ -983,9 +953,9 @@ class TestLateTimeTransformWaveform:
         res_on = LateTimeTransform(waveform_correction=True).transform(snd)
         res_off = LateTimeTransform(waveform_correction=False).transform(snd)
         # gate rejection changes shape or (if same shape) values differ
-        assert res_on["freq"].shape != res_off[
-            "freq"
-        ].shape or not np.allclose(res_on["freq"], res_off["freq"])
+        assert res_on["freq"].shape != res_off["freq"].shape or not np.allclose(
+            res_on["freq"], res_off["freq"]
+        )
 
     def test_correction_reduces_gate_count(self):
         snd = self._ramp_sounding(tau_r=5e-4)
@@ -1035,16 +1005,12 @@ class TestLateTimeTransformWaveform:
 class TestWaveforms:
     def test_square_off_time(self):
         wf = SquareWaveform(base_frequency=25.0)
-        I = wf.current_at(
-            np.array([0.011])
-        )  # in the off-time of 25 Hz (hp=0.02)
+        I = wf.current_at(np.array([0.011]))  # in the off-time of 25 Hz (hp=0.02)
         assert I[0] == pytest.approx(0.0)
 
     def test_square_on_time(self):
         wf = SquareWaveform(base_frequency=25.0)
-        I = wf.current_at(
-            np.array([0.005])
-        )  # in the on-time (hp=0.02, duty=0.5)
+        I = wf.current_at(np.array([0.005]))  # in the on-time (hp=0.02, duty=0.5)
         assert I[0] == pytest.approx(1.0)
 
     def test_ramp_midpoint(self):
@@ -1069,17 +1035,13 @@ class TestBiotSavartRectHzSegments:
     def test_sum_matches_full_at_centre(self):
         # At the loop centre (0,0), segment sum must equal the static result
         a = b = 50.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
-            0.0, 0.0, a, b
-        )
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(0.0, 0.0, a, b)
         assert pytest.approx(hz_rx.sum(), rel=1e-10) == hz_00.sum()
 
     def test_sum_matches_full_off_centre(self):
         # At (20,10) the segment sums must still equal the full Biot-Savart value
         a = b = 50.0
-        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
-            20.0, 10.0, a, b
-        )
+        hz_rx, hz_00, dist_rx, dist_00 = _biot_savart_rect_hz_segments(20.0, 10.0, a, b)
         full_rx = _biot_savart_rect_hz(20.0, 10.0, a, b)
         full_00 = _biot_savart_rect_hz(0.0, 0.0, a, b)
         assert pytest.approx(hz_rx.sum(), rel=1e-8) == full_rx
@@ -1095,9 +1057,7 @@ class TestBiotSavartRectHzSegments:
     def test_distances_bottom_wire(self):
         # Bottom wire of a 100×100 m loop is at y=-50; receiver at y=10 → dist = 60
         a = b = 50.0
-        _, _, dist_rx, dist_00 = _biot_savart_rect_hz_segments(
-            0.0, 10.0, a, b
-        )
+        _, _, dist_rx, dist_00 = _biot_savart_rect_hz_segments(0.0, 10.0, a, b)
         assert dist_rx[0] == pytest.approx(60.0)  # |ry - (-b)|
         assert dist_00[0] == pytest.approx(50.0)  # b
 
@@ -1130,9 +1090,7 @@ class TestBiotSavartCircleHzSegments:
     def test_sum_matches_full_off_centre(self):
         r = 50.0
         rx, ry = 15.0, 10.0
-        hz_rx, hz_00, _, _ = _biot_savart_circle_hz_segments(
-            rx, ry, r, n_seg=720
-        )
+        hz_rx, hz_00, _, _ = _biot_savart_circle_hz_segments(rx, ry, r, n_seg=720)
         full_rx = _biot_savart_circle_hz(rx, ry, r)
         full_00 = _biot_savart_circle_hz(0.0, 0.0, r)
         assert pytest.approx(hz_rx.sum(), rel=1e-3) == full_rx
@@ -1167,20 +1125,14 @@ class TestInLoopGeometryFactorTD:
         # rx=0, ry=0 must return η=1 for all time gates
         t = np.logspace(-5, -2, 20)
         rho_a = np.full(20, 100.0)
-        eta = _in_loop_geometry_factor_td(
-            0.0, 0.0, "square", [100.0], t, rho_a
-        )
+        eta = _in_loop_geometry_factor_td(0.0, 0.0, "square", [100.0], t, rho_a)
         np.testing.assert_allclose(eta, 1.0)
 
     def test_late_time_converges_to_static(self):
         # At very late time (large ρ_a) w_i → 1 for all segments → η_td → η_static
         t = np.logspace(-5, -2, 20)
-        rho_a = np.full(
-            20, 1e6
-        )  # very high resistivity → large diffusion length
-        eta_td = _in_loop_geometry_factor_td(
-            20.0, 10.0, "square", [100.0], t, rho_a
-        )
+        rho_a = np.full(20, 1e6)  # very high resistivity → large diffusion length
+        eta_td = _in_loop_geometry_factor_td(20.0, 10.0, "square", [100.0], t, rho_a)
         eta_st = _in_loop_geometry_factor(20.0, 10.0, "square", [100.0])
         np.testing.assert_allclose(eta_td, eta_st, rtol=1e-4)
 
@@ -1189,9 +1141,7 @@ class TestInLoopGeometryFactorTD:
         t = np.array([1e-6])  # very early gate
         rho_a = np.array([0.01])  # low resistivity → short diffusion length
         # rx=45 m, 5 m from right wire of 100 m loop (a=50)
-        eta_td = _in_loop_geometry_factor_td(
-            45.0, 0.0, "square", [100.0], t, rho_a
-        )
+        eta_td = _in_loop_geometry_factor_td(45.0, 0.0, "square", [100.0], t, rho_a)
         eta_st = _in_loop_geometry_factor(45.0, 0.0, "square", [100.0])
         assert float(eta_td[0]) > float(eta_st)
 
@@ -1199,9 +1149,7 @@ class TestInLoopGeometryFactorTD:
         n = 15
         t = np.logspace(-5, -2, n)
         rho_a = np.ones(n) * 50.0
-        eta = _in_loop_geometry_factor_td(
-            10.0, 0.0, "square", [100.0], t, rho_a
-        )
+        eta = _in_loop_geometry_factor_td(10.0, 0.0, "square", [100.0], t, rho_a)
         assert eta.shape == (n,)
 
     def test_rectangular_loop_shape(self):
@@ -1210,26 +1158,20 @@ class TestInLoopGeometryFactorTD:
         eta_td = _in_loop_geometry_factor_td(
             10.0, 5.0, "rectangular", [80.0, 120.0], t, rho_a
         )
-        eta_st = _in_loop_geometry_factor(
-            10.0, 5.0, "rectangular", [80.0, 120.0]
-        )
+        eta_st = _in_loop_geometry_factor(10.0, 5.0, "rectangular", [80.0, 120.0])
         np.testing.assert_allclose(eta_td, eta_st, rtol=1e-4)
 
     def test_circle_loop_shape(self):
         t = np.logspace(-5, -2, 10)
         rho_a = np.full(10, 1e6)
-        eta_td = _in_loop_geometry_factor_td(
-            5.0, 0.0, "circle", [50.0], t, rho_a
-        )
+        eta_td = _in_loop_geometry_factor_td(5.0, 0.0, "circle", [50.0], t, rho_a)
         eta_st = _in_loop_geometry_factor(5.0, 0.0, "circle", [50.0])
         np.testing.assert_allclose(eta_td, eta_st, rtol=1e-3)
 
     def test_eta_always_positive(self):
         t = np.logspace(-6, -2, 30)
         rho_a = np.logspace(-2, 4, 30)
-        eta = _in_loop_geometry_factor_td(
-            25.0, 15.0, "square", [100.0], t, rho_a
-        )
+        eta = _in_loop_geometry_factor_td(25.0, 15.0, "square", [100.0], t, rho_a)
         assert np.all(eta > 0.0)
 
 
@@ -1258,9 +1200,7 @@ class TestRhoAInLoopTD:
     def test_n_iter_0_matches_static_only(self):
         # n_iter=0 should give the same result as using only η_static
         dBdt, t, M = self._make_data()
-        r_iter0 = _rho_a_in_loop(
-            dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=0
-        )
+        r_iter0 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=0)
         eta_st = _in_loop_geometry_factor(20.0, 10.0, "square", [100.0])
         r_static = _rho_a_late_time(dBdt, t, M * eta_st)
         np.testing.assert_allclose(r_iter0, r_static, rtol=1e-10)
@@ -1268,20 +1208,14 @@ class TestRhoAInLoopTD:
     def test_n_iter_3_differs_from_static_at_early_time(self):
         # Near a wire, iterative correction should differ from static at early gates
         dBdt, t, M = self._make_data()
-        r0 = _rho_a_in_loop(
-            dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=0
-        )
-        r3 = _rho_a_in_loop(
-            dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=3
-        )
+        r0 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=0)
+        r3 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 45.0, 0.0, n_iter=3)
         # At least some early-time gates should differ
         assert not np.allclose(r0[:5], r3[:5], rtol=1e-4)
 
     def test_output_finite_and_positive(self):
         dBdt, t, M = self._make_data()
-        r = _rho_a_in_loop(
-            dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3
-        )
+        r = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3)
         assert np.all(np.isfinite(r))
         assert np.all(r > 0.0)
 
@@ -1289,9 +1223,7 @@ class TestRhoAInLoopTD:
         # Default n_iter=3 should match explicit n_iter=3
         dBdt, t, M = self._make_data()
         r_default = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0)
-        r3 = _rho_a_in_loop(
-            dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3
-        )
+        r3 = _rho_a_in_loop(dBdt, t, M, "square", [100.0], 20.0, 10.0, n_iter=3)
         np.testing.assert_array_equal(r_default, r3)
 
 
@@ -1328,9 +1260,7 @@ class TestLateTimeTransformInLoopNIter:
         res3 = LateTimeTransform(in_loop_n_iter=3).transform(snd)
         # result dict is sorted by ascending frequency (late→early time)
         # the TD correction affects early-time (high-freq) gates → compare tail
-        assert not np.allclose(
-            res0["rho_a"][-5:], res3["rho_a"][-5:], rtol=1e-4
-        )
+        assert not np.allclose(res0["rho_a"][-5:], res3["rho_a"][-5:], rtol=1e-4)
 
     def test_n_iter_0_vs_3_same_on_centre(self):
         snd = self._sounding_in_loop(rx=0.0, ry=0.0)

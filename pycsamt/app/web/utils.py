@@ -276,9 +276,7 @@ _OVERLAY_LABELS = {
 
 def _colorbar_title(overlay: str) -> str:
     """Return a properly formatted colorbar/hover label for *overlay*."""
-    return _OVERLAY_LABELS.get(
-        overlay, overlay.lstrip("_").replace("_", " ").title()
-    )
+    return _OVERLAY_LABELS.get(overlay, overlay.lstrip("_").replace("_", " ").title())
 
 
 # Per-line colour palette (Catppuccin Mocha accent colours)
@@ -294,9 +292,7 @@ _LINE_COLORS = [
 ]
 
 
-def _auto_zoom(
-    lats: np.ndarray, lons: np.ndarray
-) -> tuple[float, float, float, int]:
+def _auto_zoom(lats: np.ndarray, lons: np.ndarray) -> tuple[float, float, float, int]:
     """Return (center_lat, center_lon, bearing, zoom) for a Scattermap layout."""
     import math
 
@@ -404,9 +400,7 @@ def build_station_map(
 
     # Overlay colour values
     if overlay in df_v.columns:
-        colour_vals = (
-            pd.to_numeric(df_v[overlay], errors="coerce").fillna(0).values
-        )
+        colour_vals = pd.to_numeric(df_v[overlay], errors="coerce").fillna(0).values
     else:
         colour_vals = np.arange(len(df_v), dtype=float)
 
@@ -432,9 +426,7 @@ def build_station_map(
     # ── Survey line polylines (one trace per line) ──────────────────────────
     if show_profiles and "Line" in df_v.columns:
         all_lines_df = df_v.copy()  # includes muted — shown dimmed
-        unique_lines = [
-            ln for ln in all_lines_df["Line"].unique() if ln and ln != "—"
-        ]
+        unique_lines = [ln for ln in all_lines_df["Line"].unique() if ln and ln != "—"]
         for idx, line_name in enumerate(unique_lines):
             is_muted = line_name in _muted
             grp = all_lines_df[all_lines_df["Line"] == line_name].copy()
@@ -442,11 +434,7 @@ def build_station_map(
             lat_span = grp["Latitude"].max() - grp["Latitude"].min()
             sort_col = "Longitude" if lon_span >= lat_span else "Latitude"
             grp = grp.sort_values(sort_col)
-            lcol = (
-                "#45475a"
-                if is_muted
-                else _LINE_COLORS[idx % len(_LINE_COLORS)]
-            )
+            lcol = "#45475a" if is_muted else _LINE_COLORS[idx % len(_LINE_COLORS)]
             lw = 1 if is_muted else 2
             lname = f"{line_name} (muted)" if is_muted else str(line_name)
             fig.add_trace(
@@ -464,17 +452,11 @@ def build_station_map(
 
     # ── Muted station ghost markers ─────────────────────────────────────────
     if _muted and "Line" in df_v.columns:
-        muted_mask = (
-            df_v["Line"].astype(str).isin({str(line) for line in _muted})
-        )
+        muted_mask = df_v["Line"].astype(str).isin({str(line) for line in _muted})
         df_muted = df_v[muted_mask]
         if not df_muted.empty:
-            m_lats = pd.to_numeric(
-                df_muted["Latitude"], errors="coerce"
-            ).values
-            m_lons = pd.to_numeric(
-                df_muted["Longitude"], errors="coerce"
-            ).values
+            m_lats = pd.to_numeric(df_muted["Latitude"], errors="coerce").values
+            m_lons = pd.to_numeric(df_muted["Longitude"], errors="coerce").values
             m_ids = df_muted["ID"].values
             fig.add_trace(
                 go.Scattermap(
@@ -493,9 +475,7 @@ def build_station_map(
         lons = pd.to_numeric(df_v["Longitude"], errors="coerce").values
         ids = df_v["ID"].astype(str).values
         if overlay in df_v.columns:
-            colour_vals = (
-                pd.to_numeric(df_v[overlay], errors="coerce").fillna(0).values
-            )
+            colour_vals = pd.to_numeric(df_v[overlay], errors="coerce").fillna(0).values
         else:
             colour_vals = np.arange(len(df_v), dtype=float)
         sel_size = int(marker_size * 1.8)
@@ -574,11 +554,7 @@ def build_station_map(
         sel_mask = ids == selected_id
         sel_lat = lats[sel_mask]
         sel_lon = lons[sel_mask]
-        if (
-            sel_lat.size > 0
-            and np.isfinite(sel_lat[0])
-            and np.isfinite(sel_lon[0])
-        ):
+        if sel_lat.size > 0 and np.isfinite(sel_lat[0]) and np.isfinite(sel_lon[0]):
             clat = float(sel_lat[0])
             clon = float(sel_lon[0])
             zoom = max(zoom, 10)  # zoom in to the station
@@ -773,9 +749,7 @@ def build_contour_overlay(
     # Fill NaN (outside convex hull) with nearest-neighbour for extrapolation
     nan_mask = np.isnan(grid_z)
     if nan_mask.any():
-        grid_z_nn = griddata(
-            pts, plot_values, (glon_mg, glat_mg), method="nearest"
-        )
+        grid_z_nn = griddata(pts, plot_values, (glon_mg, glat_mg), method="nearest")
         grid_z[nan_mask] = grid_z_nn[nan_mask]
 
     # Gaussian smoothing
@@ -796,9 +770,7 @@ def build_contour_overlay(
     fade_start = station_spacing * 0.8
     fade_end = station_spacing * (2.5 + extra_factor * 6)
     alpha_mask = np.clip(
-        1.0
-        - np.maximum(0.0, dists - fade_start)
-        / max(fade_end - fade_start, 1e-12),
+        1.0 - np.maximum(0.0, dists - fade_start) / max(fade_end - fade_start, 1e-12),
         0.0,
         1.0,
     )
@@ -855,22 +827,16 @@ def build_contour_overlay(
                 def _fmt(v):
                     return f"10^{v:.1f}" if abs(v) < 4 else f"{10**v:.2g}"
 
-                ax.clabel(
-                    cs, fmt=_fmt, fontsize=7, inline=True, inline_spacing=2
-                )
+                ax.clabel(cs, fmt=_fmt, fontsize=7, inline=True, inline_spacing=2)
             else:
-                ax.clabel(
-                    cs, fmt=fmt_str, fontsize=7, inline=True, inline_spacing=2
-                )
+                ax.clabel(cs, fmt=fmt_str, fontsize=7, inline=True, inline_spacing=2)
 
     canvas.draw()
 
     # Extract RGBA from canvas
     w, h = fig_inch * dpi, fig_inch * dpi
     raw = canvas.buffer_rgba()  # RGBA buffer
-    img_arr = (
-        np.frombuffer(raw, dtype=np.uint8).reshape(int(h), int(w), 4).copy()
-    )
+    img_arr = np.frombuffer(raw, dtype=np.uint8).reshape(int(h), int(w), 4).copy()
 
     # Apply opacity * alpha_mask to the A channel
     # Note: matplotlib sets A=0 where there's no artist (transparent bg)
@@ -880,18 +846,14 @@ def build_contour_overlay(
     painted = img_arr[:, :, 3] > 0
     img_arr[:, :, 3] = np.where(
         painted,
-        np.minimum(img_arr[:, :, 3], alpha_combined.astype(np.uint16)).astype(
-            np.uint8
-        ),
+        np.minimum(img_arr[:, :, 3], alpha_combined.astype(np.uint16)).astype(np.uint8),
         0,
     )
 
     pil_img = _PILImage.fromarray(img_arr, "RGBA")
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG", optimize=False)
-    image_b64 = (
-        "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-    )
+    image_b64 = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
     # ── Return dict ───────────────────────────────────────────────────────
     # Mapbox image coordinates: [top-left, top-right, bottom-right, bottom-left]
@@ -1321,9 +1283,7 @@ def build_plotly_pseudosection(
                     )
 
         if not rows:
-            return _empty_plotly_heatmap(
-                dark, f"No valid data for '{quantity}'"
-            )
+            return _empty_plotly_heatmap(dark, f"No valid data for '{quantity}'")
 
         df = pd.DataFrame(rows)
         piv = df.pivot_table(
@@ -1359,14 +1319,8 @@ def build_plotly_pseudosection(
 
     Y_log = np.log10(np.where(Y_periods > 0, Y_periods, np.nan))
 
-    comp_label = (
-        quantity.split("_", 1)[1].upper() if "_" in quantity else "XY"
-    )
-    ps_title = (
-        f"App. Resistivity ({comp_label})"
-        if is_rho
-        else f"Phase ({comp_label})"
-    )
+    comp_label = quantity.split("_", 1)[1].upper() if "_" in quantity else "XY"
+    ps_title = f"App. Resistivity ({comp_label})" if is_rho else f"Phase ({comp_label})"
 
     heatmap_kwargs: dict = dict(
         z=Z_plot,
@@ -1387,10 +1341,7 @@ def build_plotly_pseudosection(
         ),
         hovertemplate=(
             "<b>%{x}</b><br>"
-            "log10(T): %{y:.2f} s<br>"
-            + hover_label
-            + ": %{z:.2f}"
-            + "<extra></extra>"
+            "log10(T): %{y:.2f} s<br>" + hover_label + ": %{z:.2f}" + "<extra></extra>"
         ),
     )
     if zmid is not None:
@@ -1583,9 +1534,7 @@ def build_multi_pseudosection(
             ),
             hovertemplate=(
                 "<b>%{x}</b><br>"
-                "log₁₀(T): %{y:.2f} s<br>"
-                + hover_lbl
-                + ": %{z:.2f}<extra></extra>"
+                "log₁₀(T): %{y:.2f} s<br>" + hover_lbl + ": %{z:.2f}<extra></extra>"
             ),
         )
         if zmid is not None:

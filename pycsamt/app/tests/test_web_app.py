@@ -141,8 +141,7 @@ class TestMapBuilder:
         # tile-based map traces (Scattermap on modern plotly,
         # Scattermapbox on older releases)
         assert any(
-            type(t).__name__ in ("Scattermap", "Scattermapbox")
-            for t in fig.data
+            type(t).__name__ in ("Scattermap", "Scattermapbox") for t in fig.data
         )
 
     def test_map_trace_lat_lon(self, sample_df):
@@ -326,9 +325,7 @@ class TestCallbacks:
         # We verify the logic path without invoking the full Dash machinery
         # by calling equivalent Python logic
         store_data = None
-        records = (
-            [] if not store_data else store_data.get("station_records", [])
-        )
+        records = [] if not store_data else store_data.get("station_records", [])
         assert records == []
 
     def test_station_map_with_valid_df(self):

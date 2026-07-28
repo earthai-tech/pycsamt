@@ -248,9 +248,7 @@ class SiteMixin(CoreObject):
             out["INFO"] = dict(getattr(info, "__dict__", {}))
         return out
 
-    def to_dataframe(
-        self, kind: str = "z", *, api: bool | None = None
-    ) -> Any:
+    def to_dataframe(self, kind: str = "z", *, api: bool | None = None) -> Any:
         r"""
         Export core arrays to a tidy :class:`pandas.DataFrame`.
 
@@ -710,7 +708,7 @@ class Site(SiteMixin):
     Basic construction and inspection
         >>> from pycsamt.seg.edi import EDIFile
         >>> from pycsamt.site.base import Site
-        >>> e = EDIFile("E01.edi")        # parse from disk
+        >>> e = EDIFile("E01.edi")  # parse from disk
         >>> s = Site(e)
         >>> s.name
         'E01'
@@ -729,7 +727,7 @@ class Site(SiteMixin):
         ['rho_zxx', 'rho_zxy']
 
     Rename without mutating the original instance
-        >>> s2 = s.rename("X_E01")   # returns a new Site
+        >>> s2 = s.rename("X_E01")  # returns a new Site
         >>> s2.name
         'X_E01'
         >>> s.name  # original unchanged
@@ -960,7 +958,9 @@ class Sites(CoreObject):
         >>> [s.name for s in subset]
         ['E02']
         >>> # predicate: keep sites with tipper available
-        >>> subset2 = sites.select(predicate=lambda s: s.has_component("tipper"))
+        >>> subset2 = sites.select(
+        ...     predicate=lambda s: s.has_component("tipper")
+        ... )
         >>> isinstance(subset2, Sites)
         True
 
@@ -972,7 +972,9 @@ class Sites(CoreObject):
     Persist to a directory
         >>> import tempfile, pathlib
         >>> tmp = pathlib.Path(tempfile.mkdtemp())
-        >>> out_paths = sites.write(tmp, template="{station}.edi", exist_ok=True)
+        >>> out_paths = sites.write(
+        ...     tmp, template="{station}.edi", exist_ok=True
+        ... )
         >>> all(p.exists() for p in out_paths)
         True
 
@@ -1214,9 +1216,7 @@ class Sites(CoreObject):
 
         requested = str(PYCSAMT_ORDERING.mode if by is None else by).strip().lower()
         min_linearity = float(
-            PYCSAMT_ORDERING.min_linearity
-            if min_linearity is None
-            else min_linearity
+            PYCSAMT_ORDERING.min_linearity if min_linearity is None else min_linearity
         )
         max_cross_track_ratio = float(
             PYCSAMT_ORDERING.max_cross_track_ratio
@@ -1229,7 +1229,14 @@ class Sites(CoreObject):
             else min_coordinate_fraction
         )
         mode = aliases.get(requested, requested)
-        allowed = {"auto", "input", "station", "latitude", "longitude", "chainage"}
+        allowed = {
+            "auto",
+            "input",
+            "station",
+            "latitude",
+            "longitude",
+            "chainage",
+        }
         if mode not in allowed:
             raise ValueError(f"by must be one of {sorted(allowed)}, got {by!r}")
 
@@ -1295,9 +1302,7 @@ class Sites(CoreObject):
         variance = singular * singular
         linearity = float(variance[0] / variance.sum()) if variance.sum() else 0.0
         span = float(np.ptp(along))
-        cross_ratio = (
-            float(np.ptp(across) / span) if span > 0.0 else float("inf")
-        )
+        cross_ratio = float(np.ptp(across) / span) if span > 0.0 else float("inf")
         # A pair of parallel profiles can still have excellent global PCA
         # linearity. Detect a well-populated gap across the fitted axis so
         # such lines are ordered independently instead of interleaved.
@@ -1371,7 +1376,9 @@ class Sites(CoreObject):
             if np.isfinite(corr) and corr < 0:
                 along *= -1.0
                 axis *= -1.0
-            report["station_chainage_correlation"] = abs(corr) if np.isfinite(corr) else None
+            report["station_chainage_correlation"] = (
+                abs(corr) if np.isfinite(corr) else None
+            )
         elif axis[int(np.argmax(np.abs(axis)))] < 0:
             along *= -1.0
             axis *= -1.0
@@ -1631,7 +1638,8 @@ class Sites(CoreObject):
         Examples
         --------
         Rename with a prefix
-            >>> def rnm(n): return "X_" + n
+            >>> def rnm(n):
+            ...     return "X_" + n
             >>> out = sites.edit_all(rename=rnm)
             >>> [s.name for s in out][:2]
             ['X_E01', 'X_E02']
@@ -1723,12 +1731,14 @@ class Sites(CoreObject):
         Examples
         --------
         >>> import pandas as pd
-        >>> df = pd.DataFrame({
-        ...   "station": ["E01", "E02"],
-        ...   "latitude": [10.0, 11.0],
-        ...   "longitude": [20.0, 21.0],
-        ...   "elevation": [100.0, 200.0],
-        ... })
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "station": ["E01", "E02"],
+        ...         "latitude": [10.0, 11.0],
+        ...         "longitude": [20.0, 21.0],
+        ...         "elevation": [100.0, 200.0],
+        ...     }
+        ... )
         >>> out = sites.with_topography(df, inplace=False)
         >>> tuple(round(v, 3) for v in out["E01"].coords)
         (10.0, 20.0, 100.0)
@@ -2219,9 +2229,7 @@ def _is_seq_of_pathlike(x: Any) -> bool:
 
 
 def _is_edi_like(obj: Any) -> bool:
-    return (
-        obj is not None and hasattr(obj, "get_section") and hasattr(obj, "Z")
-    )
+    return obj is not None and hasattr(obj, "get_section") and hasattr(obj, "Z")
 
 
 def _is_single_edi_input(x: Any) -> bool:
@@ -2244,8 +2252,7 @@ def _unwrap_one_edi(x: Any, *, strict: bool = False) -> EDIFile | None:
         return x
     if strict:
         raise TypeError(
-            "Object cannot be unwrapped to an EDI-like item: "
-            f"{type(x).__name__}."
+            "Object cannot be unwrapped to an EDI-like item: " f"{type(x).__name__}."
         )
     return None
 
@@ -2462,9 +2469,7 @@ def _to_sites(
         )
         # If caller asked for 'raise', enforce it now.
         if on_dup.strip().lower() == "raise":
-            coll = _dedup_collection_names(
-                coll, policy="raise", verbose=verbose
-            )
+            coll = _dedup_collection_names(coll, policy="raise", verbose=verbose)
         # Wrap in Sites
         try:
             return Sites(coll)
@@ -2659,10 +2664,7 @@ def _slice_fields(Z: Any, sl: slice) -> None:
 
     # Finalize: compute rho/phi once arrays are consistent
     try:
-        if (
-            getattr(Z, "_z", None) is not None
-            and getattr(Z, "_freq", None) is not None
-        ):
+        if getattr(Z, "_z", None) is not None and getattr(Z, "_freq", None) is not None:
             Z.compute_resistivity_phase()
     except Exception:
         # Be tolerant; tests only require freq slicing to succeed

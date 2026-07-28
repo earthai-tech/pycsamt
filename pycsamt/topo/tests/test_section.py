@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import glob
 import os
-import warnings
 
 import numpy as np
 import pytest
@@ -29,7 +28,12 @@ from pycsamt.inversion.results import InversionResult
 from pycsamt.seg.collection import EDICollection
 from pycsamt.seg.edi import EDIFile
 from pycsamt.topo import build_topo_section, plot_topo_section, reset_topo
-from pycsamt.topo.section import TopoSection, _cell_edges, _extract_grid, _infer_terrain_km
+from pycsamt.topo.section import (
+    TopoSection,
+    _cell_edges,
+    _extract_grid,
+    _infer_terrain_km,
+)
 
 # ---------------------------------------------------------------------------
 # Real WILLY EDI data (shared with the rest of pycsamt/topo/tests/)
@@ -86,9 +90,7 @@ class _FakeOccam2DResult:
     def __init__(self, rho_2d, x_nodes, z_nodes, station_names, final_rms=1.1):
         self.rho_2d = rho_2d
         self.mesh = _FakeMesh(x_nodes, z_nodes)
-        self.data = _FakeOccamData(
-            0.5 * (x_nodes[:-1] + x_nodes[1:]), station_names
-        )
+        self.data = _FakeOccamData(0.5 * (x_nodes[:-1] + x_nodes[1:]), station_names)
         self.final_rms = final_rms
 
 
@@ -185,9 +187,7 @@ class TestExtractGridAdapters:
 
     def test_resistivity_model(self):
         x_c, z_c, rho = _grid()
-        rm = ResistivityModel.from_array(
-            rho, x_c, z_c, method="occam2d", rms=0.9
-        )
+        rm = ResistivityModel.from_array(rho, x_c, z_c, method="occam2d", rms=0.9)
         info = _extract_grid(rm)
         assert info.method == "occam2d"
         assert info.rms == pytest.approx(0.9)
@@ -260,9 +260,7 @@ class TestExtractGridAdapters:
                 "pred_rho": rho.T,
                 "depths_km": z_c,
                 "station_names": [f"S{i}" for i in range(5)],
-                "station_coords": np.column_stack(
-                    [x_c * 1000.0, np.zeros(5)]
-                ),
+                "station_coords": np.column_stack([x_c * 1000.0, np.zeros(5)]),
             },
         )
         info = _extract_grid(result)
@@ -578,7 +576,10 @@ class TestPlotTopoSectionDefaultStyling:
         elev = np.linspace(80.0, 220.0, 8)
         custom = StationMarkerStyle(facecolor="#ff0000", edgecolor="#00ff00")
         ax = plot_topo_section(
-            (x_c, z_c, rho), elevation=elev, chainage=x_c, station_marker=custom
+            (x_c, z_c, rho),
+            elevation=elev,
+            chainage=x_c,
+            station_marker=custom,
         )
         scatter = ax.collections[-1]
         assert tuple(scatter.get_facecolor()[0]) == pytest.approx((1.0, 0.0, 0.0, 1.0))
@@ -590,7 +591,9 @@ class TestPlotTopoSectionDefaultStyling:
         x_c, z_c, rho = _grid(n_x=8, n_z=15)
         elev = np.linspace(80.0, 220.0, 8)
         ax = plot_topo_section(
-            (x_c, z_c, rho), elevation=elev, chainage=x_c,
+            (x_c, z_c, rho),
+            elevation=elev,
+            chainage=x_c,
             topo_cfg=TopoConfig(fill_alpha=0.4),
         )
         alphas = [p.get_alpha() for p in ax.patches]
@@ -603,16 +606,12 @@ class TestPlotTopoSectionDefaultStyling:
 
 
 class TestPlotTopoSectionRealData:
-    @pytest.mark.parametrize(
-        "profile", ["L18PLT", "L22PLT"]
-    )
+    @pytest.mark.parametrize("profile", ["L18PLT", "L22PLT"])
     def test_pcolormesh_all_profiles(self, profile):
         edis = _load(profile)
         n = len(edis)
         x_c, z_c, rho = _grid(n_x=n, n_z=15)
-        ax, data = plot_topo_section(
-            (x_c, z_c, rho), sites=edis, return_data=True
-        )
+        ax, data = plot_topo_section((x_c, z_c, rho), sites=edis, return_data=True)
         assert data.topo_source == "sites"
         assert len(data.station_names) == n
         ax.figure.canvas.draw()
@@ -631,9 +630,7 @@ class TestPlotTopoSectionRealData:
         rm = ResistivityModel.from_array(
             rho, x_c * 1000.0, z_c * 1000.0, method="occam2d", rms=1.05
         )
-        ax, data = plot_topo_section(
-            rm, sites=edis, depth_max=1000.0, return_data=True
-        )
+        ax, data = plot_topo_section(rm, sites=edis, depth_max=1000.0, return_data=True)
         assert data.method == "occam2d"
         assert data.rms == pytest.approx(1.05)
         assert data.z_centers_km.max() <= 1.0 + 1e-6

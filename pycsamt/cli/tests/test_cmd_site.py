@@ -81,9 +81,7 @@ class TestSiteInfo:
         assert "--station" in result.output
         assert "--top" in result.output
 
-    def test_no_source_no_context(
-        self, runner: CliRunner, isolated_home: Path
-    ) -> None:
+    def test_no_source_no_context(self, runner: CliRunner, isolated_home: Path) -> None:
         result = runner.invoke(main, ["site", "info"])
         assert result.exit_code != 0
         assert "No active survey" in result.output
@@ -108,21 +106,15 @@ class TestSiteInfo:
         # invoke with a dummy path (path check is bypassed via _get_sites mock)
         result = runner.invoke(main, ["site", "info", "--survey", "."])
         # Exit code 0 OR the only failure is that the path doesn't exist
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
     # --- live integration tests ---
 
-    def test_live_text_output(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_text_output(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(main, ["site", "info", str(site_edi_dir)])
         assert result.exit_code == 0
 
-    def test_live_json_output(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_json_output(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main, ["site", "info", str(site_edi_dir), "--format", "json"]
         )
@@ -132,9 +124,7 @@ class TestSiteInfo:
         assert len(data) > 0
         assert "name" in data[0]
 
-    def test_live_csv_output(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_csv_output(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main, ["site", "info", str(site_edi_dir), "--format", "csv"]
         )
@@ -142,17 +132,11 @@ class TestSiteInfo:
         lines = [l for l in result.output.splitlines() if l.strip()]
         assert len(lines) >= 2  # header + at least 1 station
 
-    def test_live_top_option(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
-        result = runner.invoke(
-            main, ["site", "info", str(site_edi_dir), "--top", "1"]
-        )
+    def test_live_top_option(self, runner: CliRunner, site_edi_dir: Path) -> None:
+        result = runner.invoke(main, ["site", "info", str(site_edi_dir), "--top", "1"])
         assert result.exit_code == 0
 
-    def test_live_single_station(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_single_station(self, runner: CliRunner, site_edi_dir: Path) -> None:
         edis = sorted(site_edi_dir.glob("*.edi"))
         station_name = edis[0].stem
         result = runner.invoke(
@@ -196,18 +180,14 @@ class TestSiteSelect:
         ):
             assert opt in result.output
 
-    def test_no_source_fails(
-        self, runner: CliRunner, isolated_home: Path
-    ) -> None:
+    def test_no_source_fails(self, runner: CliRunner, isolated_home: Path) -> None:
         result = runner.invoke(main, ["site", "select"])
         assert result.exit_code != 0
 
     # --- live tests ---
 
     def test_dry_run_all(self, runner: CliRunner, site_edi_dir: Path) -> None:
-        result = runner.invoke(
-            main, ["site", "select", str(site_edi_dir), "--dry-run"]
-        )
+        result = runner.invoke(main, ["site", "select", str(site_edi_dir), "--dry-run"])
         assert result.exit_code == 0
         n_edi = len(list(site_edi_dir.glob("*.edi")))
         assert str(n_edi) in result.output
@@ -231,9 +211,7 @@ class TestSiteSelect:
         assert "1/" in result.output  # "1/N station(s) would be selected"
         assert first in result.output
 
-    def test_filter_no_match_fails(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_filter_no_match_fails(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -247,9 +225,7 @@ class TestSiteSelect:
         )
         assert result.exit_code != 0
 
-    def test_dry_run_json(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_dry_run_json(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -288,9 +264,7 @@ class TestSiteSelect:
         assert len(written) == 1
         assert written[0].stem == first
 
-    def test_freq_filter_dry_run(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_freq_filter_dry_run(self, runner: CliRunner, site_edi_dir: Path) -> None:
         # Very wide range — should keep all stations
         result = runner.invoke(
             main,
@@ -304,13 +278,9 @@ class TestSiteSelect:
             ],
         )
         # Just verify no crash and output makes sense
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
-    def test_drop_empty_dry_run(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_drop_empty_dry_run(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -321,9 +291,7 @@ class TestSiteSelect:
                 "--dry-run",
             ],
         )
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
 # ---------------------------------------------------------------------------
@@ -345,16 +313,12 @@ class TestSiteEdit:
         ):
             assert opt in result.output
 
-    def test_no_operation_fails(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_no_operation_fails(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(main, ["site", "edit", str(site_edi_dir)])
         assert result.exit_code != 0
         assert "at least one edit" in result.output.lower()
 
-    def test_no_output_dir_fails(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_no_output_dir_fails(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             ["site", "edit", str(site_edi_dir), "--rotate", "30"],
@@ -362,9 +326,7 @@ class TestSiteEdit:
         assert result.exit_code != 0
         assert "--output-dir" in result.output
 
-    def test_dry_run_rotate(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_dry_run_rotate(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -379,9 +341,7 @@ class TestSiteEdit:
         assert result.exit_code == 0
         assert "rotate" in result.output.lower()
 
-    def test_dry_run_multiple_ops(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_dry_run_multiple_ops(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -419,15 +379,11 @@ class TestSiteEdit:
             ],
         )
         # Acceptable: either succeeds (writes) or gracefully errors
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
         if result.exit_code == 0:
             assert out.exists()
 
-    def test_set_coords_dry_run(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_set_coords_dry_run(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -442,9 +398,7 @@ class TestSiteEdit:
         assert result.exit_code == 0
         assert "set_coords" in result.output
 
-    def test_set_coords_bad_format(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_set_coords_bad_format(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -471,9 +425,7 @@ class TestSiteExport:
         for opt in ("--output-dir", "--zip", "--template", "--manifest"):
             assert opt in result.output
 
-    def test_no_output_dir_fails(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_no_output_dir_fails(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(main, ["site", "export", str(site_edi_dir)])
         assert result.exit_code != 0
         assert "--output-dir" in result.output
@@ -487,9 +439,7 @@ class TestSiteExport:
             main,
             ["site", "export", str(site_edi_dir), "--output-dir", str(out)],
         )
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
         if result.exit_code == 0:
             assert out.exists()
 
@@ -510,9 +460,7 @@ class TestSiteExport:
                 str(out),
             ],
         )
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
     def test_overwrite_protection(
         self, runner: CliRunner, site_edi_dir: Path, tmp_path: Path
@@ -529,9 +477,7 @@ class TestSiteExport:
             main,
             ["site", "export", str(site_edi_dir), "--output-dir", str(out)],
         )
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
 # ---------------------------------------------------------------------------
@@ -553,9 +499,7 @@ class TestSiteRecompute:
         ):
             assert opt in result.output
 
-    def test_no_source_fails(
-        self, runner: CliRunner, isolated_home: Path
-    ) -> None:
+    def test_no_source_fails(self, runner: CliRunner, isolated_home: Path) -> None:
         result = runner.invoke(main, ["site", "recompute"])
         assert result.exit_code != 0
         assert "No EDI source" in result.output
@@ -586,9 +530,7 @@ class TestSiteRecompute:
         assert "Recomputed" in result.output
         outdir = root / "recomputed_edis" / "L18PLT"
         assert outdir.exists()
-        assert len(list(outdir.glob("*.edi"))) == len(
-            list(line.glob("*.edi"))
-        )
+        assert len(list(outdir.glob("*.edi"))) == len(list(line.glob("*.edi")))
         assert (root / "recomputed_edis" / "manifest.csv").exists()
 
     def test_survey_folder_flatten_output(
@@ -648,9 +590,7 @@ class TestSiteRecompute:
 class TestSiteCompute:
     # --- help tests (always run) ---
 
-    @pytest.mark.parametrize(
-        "sub", ["strike", "resistivity", "phase-slope", "tipper"]
-    )
+    @pytest.mark.parametrize("sub", ["strike", "resistivity", "phase-slope", "tipper"])
     def test_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["site", "compute", sub, "--help"])
         assert result.exit_code == 0
@@ -664,21 +604,12 @@ class TestSiteCompute:
 
     # --- live integration tests ---
 
-    def test_live_strike_text(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
-        result = runner.invoke(
-            main, ["site", "compute", "strike", str(site_edi_dir)]
-        )
+    def test_live_strike_text(self, runner: CliRunner, site_edi_dir: Path) -> None:
+        result = runner.invoke(main, ["site", "compute", "strike", str(site_edi_dir)])
         assert result.exit_code == 0
-        assert (
-            "station" in result.output.lower()
-            or "theta" in result.output.lower()
-        )
+        assert "station" in result.output.lower() or "theta" in result.output.lower()
 
-    def test_live_strike_swift(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_strike_swift(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -692,9 +623,7 @@ class TestSiteCompute:
         )
         assert result.exit_code == 0
 
-    def test_live_strike_json(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_strike_json(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -710,9 +639,7 @@ class TestSiteCompute:
         data = json.loads(result.output)
         assert isinstance(data, list)
 
-    def test_live_strike_csv(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_strike_csv(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -728,9 +655,7 @@ class TestSiteCompute:
         lines = [l for l in result.output.splitlines() if l.strip()]
         assert len(lines) >= 2  # header + at least 1 data row
 
-    def test_live_resistivity(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_resistivity(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -763,9 +688,7 @@ class TestSiteCompute:
         )
         assert result.exit_code == 0
 
-    def test_live_resistivity_csv(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_resistivity_csv(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -783,9 +706,7 @@ class TestSiteCompute:
         lines = [l for l in result.output.splitlines() if l.strip()]
         assert len(lines) >= 2
 
-    def test_live_phase_slope(
-        self, runner: CliRunner, site_edi_dir: Path
-    ) -> None:
+    def test_live_phase_slope(self, runner: CliRunner, site_edi_dir: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -800,9 +721,7 @@ class TestSiteCompute:
         assert result.exit_code == 0
 
     def test_live_tipper(self, runner: CliRunner, site_edi_dir: Path) -> None:
-        result = runner.invoke(
-            main, ["site", "compute", "tipper", str(site_edi_dir)]
-        )
+        result = runner.invoke(main, ["site", "compute", "tipper", str(site_edi_dir)])
         assert result.exit_code == 0
 
     def test_no_survey_no_context_fails(
@@ -859,6 +778,4 @@ class TestSiteWorkflow:
             main, ["site", "select", "--output-dir", str(out), "--overwrite"]
         )
         # accept success or graceful failure (e.g. site writer not available)
-        assert r4.exception is None or isinstance(
-            r4.exception, (SystemExit, Exception)
-        )
+        assert r4.exception is None or isinstance(r4.exception, (SystemExit, Exception))

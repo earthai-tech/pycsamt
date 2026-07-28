@@ -29,7 +29,7 @@ The quasi-3D method splits the tensor estimation into two independent
    the NS structure.
 
 The final quasi-3D tensor is the arithmetic average of contributions
-from both profile directions:
+from both profile directi ons:
 
     Z_xy ← ½ (Z_xy_xz + Z_xy_yz)
     Z_yx ← ½ (Z_yx_xz + Z_yx_yz)
@@ -190,9 +190,7 @@ class ForwardResponse3D:
             comp_list = ["xy", "yx", "xx", "yy"]
         else:
             comp_list = [
-                c.strip()
-                for c in components.replace(",", "_").split("_")
-                if c.strip()
+                c.strip() for c in components.replace(",", "_").split("_") if c.strip()
             ]
 
         parts = []
@@ -331,9 +329,7 @@ class MT3DForward:
 
         _valid = {"quasi3d", "fd3d"}
         if self.method not in _valid:
-            raise ValueError(
-                f"method must be one of {_valid!r}, got {method!r}."
-            )
+            raise ValueError(f"method must be one of {_valid!r}, got {method!r}.")
 
     def run(self) -> ForwardResponse3D:
         """Run the forward solver and return the full impedance tensor.
@@ -523,12 +519,8 @@ class MT3DForward:
             A_base = C.T @ C + 1j * omega * MU0 * M_sig  # (n_edges, n_edges)
 
             # ── Solve two polarisations ───────────────────────────────────────
-            E_xpol = self._fd3d_solve(
-                A_base, bc_mask, bc_idx, grid, omega, "x"
-            )
-            E_ypol = self._fd3d_solve(
-                A_base, bc_mask, bc_idx, grid, omega, "y"
-            )
+            E_xpol = self._fd3d_solve(A_base, bc_mask, bc_idx, grid, omega, "x")
+            E_ypol = self._fd3d_solve(A_base, bc_mask, bc_idx, grid, omega, "y")
 
             # ── Extract impedance tensor at surface stations ──────────────────
             zxx, zxy, zyx, zyy = _extract_z_tensor_fd3d(
@@ -743,9 +735,7 @@ def _build_curl_matrix(grid: Grid3D) -> sparse.csr_matrix:
     cols = np.concatenate(col_list)
     vals = np.concatenate(val_list)
 
-    return sparse.coo_matrix(
-        (vals, (rows, cols)), shape=(n_faces, n_edges)
-    ).tocsr()
+    return sparse.coo_matrix((vals, (rows, cols)), shape=(n_faces, n_edges)).tocsr()
 
 
 # ── Edge conductivity (mass matrix diagonal) ─────────────────────────────────

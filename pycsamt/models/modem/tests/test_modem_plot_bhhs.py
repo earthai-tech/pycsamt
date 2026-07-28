@@ -29,17 +29,9 @@ import matplotlib.pyplot as plt
 # Data paths
 # ---------------------------------------------------------------------------
 
-_RERUN_BHS = (
-    Path(__file__).parents[4]
-    / "data"
-    / "modem"
-    / "rerun-amt-bhs"
-)
+_RERUN_BHS = Path(__file__).parents[4] / "data" / "modem" / "rerun-amt-bhs"
 _BUNDLED_SAMPLE = (
-    Path(__file__).parents[4]
-    / "data"
-    / "modem"
-    / "willy_27freq_watex_line02_sample"
+    Path(__file__).parents[4] / "data" / "modem" / "willy_27freq_watex_line02_sample"
 )
 
 
@@ -130,18 +122,14 @@ class TestPlotModel3D:
     def test_returns_figure(self, result):
         from pycsamt.models.modem.plot import PlotModel3D
 
-        fig = PlotModel3D(
-            result=result, section_offset=_LINE_OFFSETS[0]
-        ).plot()
+        fig = PlotModel3D(result=result, section_offset=_LINE_OFFSETS[0]).plot()
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
 
     def test_initial_model(self, result):
         from pycsamt.models.modem.plot import PlotModel3D
 
-        fig = PlotModel3D(
-            result=result, which="initial", section_offset=0.0
-        ).plot()
+        fig = PlotModel3D(result=result, which="initial", section_offset=0.0).plot()
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
 
@@ -162,9 +150,7 @@ class TestPlotModel3D:
 
 
 class TestPlotSectionAxisAligned:
-    @pytest.mark.parametrize(
-        "offset,name", list(zip(_LINE_OFFSETS, _LINE_NAMES))
-    )
+    @pytest.mark.parametrize("offset,name", list(zip(_LINE_OFFSETS, _LINE_NAMES)))
     def test_ns_profile_all_lines(self, result, offset, name):
         from pycsamt.models.modem.plot import PlotSection
 
@@ -177,9 +163,7 @@ class TestPlotSectionAxisAligned:
         ).plot()
         assert isinstance(fig, matplotlib.figure.Figure)
         ax = fig.axes[0]
-        assert (
-            "N-S" in ax.get_xlabel() or "distance" in ax.get_xlabel().lower()
-        )
+        assert "N-S" in ax.get_xlabel() or "distance" in ax.get_xlabel().lower()
         plt.close(fig)
 
     def test_ew_profile_centre(self, result):
@@ -208,9 +192,7 @@ class TestPlotSectionAxisAligned:
         # At least one PathCollection (scatter) should be in the axes
         from matplotlib.collections import PathCollection
 
-        scatters = [
-            c for c in ax.collections if isinstance(c, PathCollection)
-        ]
+        scatters = [c for c in ax.collections if isinstance(c, PathCollection)]
         assert scatters, "No station markers found for L18 profile"
         plt.close(fig)
 
@@ -226,12 +208,8 @@ class TestPlotSectionAxisAligned:
             show_stations=False,
         ).plot()
         ax = fig.axes[0]
-        scatters = [
-            c for c in ax.collections if isinstance(c, PathCollection)
-        ]
-        assert not scatters, (
-            "Station markers present despite show_stations=False"
-        )
+        scatters = [c for c in ax.collections if isinstance(c, PathCollection)]
+        assert not scatters, "Station markers present despite show_stations=False"
         plt.close(fig)
 
 
@@ -344,9 +322,7 @@ class TestPlotSectionArbitrary:
         assert match, f"Azimuth not found in xlabel: {xlabel!r}"
         az = float(match.group(1))
         # North = 0° or South = 180° (depending on point order)
-        assert abs(az) < 5 or abs(az - 180) < 5, (
-            f"Expected ~0° or ~180°, got {az}°"
-        )
+        assert abs(az) < 5 or abs(az - 180) < 5, f"Expected ~0° or ~180°, got {az}°"
         plt.close(fig)
 
 
@@ -459,17 +435,13 @@ class TestPlotAllProfiles:
         axes = [ax for ax in fig.axes if ax.get_title()]
         titles = [ax.get_title() for ax in axes]
         for name in _LINE_NAMES:
-            assert name in titles, (
-                f"Profile {name} title not found; got {titles}"
-            )
+            assert name in titles, f"Profile {name} title not found; got {titles}"
         plt.close(fig)
 
     def test_ew_direction(self, result):
         from pycsamt.models.modem.plot import PlotAllProfiles
 
-        fig = PlotAllProfiles(
-            result=result, n_profiles=3, direction="EW"
-        ).plot()
+        fig = PlotAllProfiles(result=result, n_profiles=3, direction="EW").plot()
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
 
@@ -494,9 +466,7 @@ class TestPlotAllProfiles:
 
         n = 3
         fig = PlotAllProfiles(result=result, n_profiles=n, n_cols=3).plot()
-        visible = [
-            ax for ax in fig.axes if ax.get_visible() and ax.get_title()
-        ]
+        visible = [ax for ax in fig.axes if ax.get_visible() and ax.get_title()]
         assert len(visible) == n
         plt.close(fig)
 
@@ -550,9 +520,7 @@ class TestPlotCovariance:
 
         fig = PlotCovariance(result=result, show_smoothing=False).plot()
         titles = [ax.get_title() for ax in fig.axes if ax.get_title()]
-        assert any("Plan" in t for t in titles), (
-            f"Missing Plan panel: {titles}"
-        )
+        assert any("Plan" in t for t in titles), f"Missing Plan panel: {titles}"
         assert any("N-S" in t for t in titles), f"Missing N-S panel: {titles}"
         assert any("E-W" in t for t in titles), f"Missing E-W panel: {titles}"
         plt.close(fig)
@@ -567,9 +535,10 @@ class TestPlotCovariance:
         images = plan_ax.get_images()
         assert images, "No image in plan-view axes"
         data = images[0].get_array()
-        assert data.shape == (cov.nx_earth, cov.ny_earth), (
-            f"Expected ({cov.nx_earth},{cov.ny_earth}), got {data.shape}"
-        )
+        assert data.shape == (
+            cov.nx_earth,
+            cov.ny_earth,
+        ), f"Expected ({cov.nx_earth},{cov.ny_earth}), got {data.shape}"
         plt.close(fig)
 
     def test_no_covariance_raises(self, tmp_path):
@@ -602,9 +571,7 @@ class TestPlotResponse:
         from pycsamt.models.modem.plot import PlotResponse
 
         station = list(result.data_obs.site_names)[0]
-        fig = PlotResponse(
-            result=result, station=station, component="ZXY"
-        ).plot()
+        fig = PlotResponse(result=result, station=station, component="ZXY").plot()
         assert isinstance(fig, matplotlib.figure.Figure)
         plt.close(fig)
 
@@ -613,12 +580,8 @@ class TestPlotResponse:
 
         station = list(result.data_obs.site_names)[0]
         for comp in ("ZXX", "ZXY", "ZYX", "ZYY"):
-            fig = PlotResponse(
-                result=result, station=station, component=comp
-            ).plot()
-            assert isinstance(fig, matplotlib.figure.Figure), (
-                f"Failed for {comp}"
-            )
+            fig = PlotResponse(result=result, station=station, component=comp).plot()
+            assert isinstance(fig, matplotlib.figure.Figure), f"Failed for {comp}"
             plt.close(fig)
 
     def test_two_axes_rho_phase(self, result):
@@ -626,9 +589,7 @@ class TestPlotResponse:
         from pycsamt.models.modem.plot import PlotResponse
 
         station = list(result.data_obs.site_names)[0]
-        fig = PlotResponse(
-            result=result, station=station, component="ZXY"
-        ).plot()
+        fig = PlotResponse(result=result, station=station, component="ZXY").plot()
         assert len(fig.axes) >= 2
         plt.close(fig)
 

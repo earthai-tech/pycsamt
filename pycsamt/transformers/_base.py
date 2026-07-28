@@ -91,11 +91,11 @@ class TransformerMixin(MTBase):
     >>> class MyX(TransformerMixin):
     ...     def extract(self, source):
     ...         # pull TF data from source into a bundle
-    ...         return TFBundle(freq=[1.0], rho=[100.], phase=[45.])
+    ...         return TFBundle(freq=[1.0], rho=[100.0], phase=[45.0])
+    ...
     ...     def emit_edi(self, bundle):
     ...         # return an EDI-like stub for illustration
-    ...         return {'freq': bundle.freq, 'rho': bundle.rho}
-    ...
+    ...         return {"freq": bundle.freq, "rho": bundle.rho}
     >>> out = MyX().transform(object())
     >>> isinstance(out, dict)
     True
@@ -493,11 +493,12 @@ class TransformerMixin(MTBase):
         >>> class Mini(TransformerMixin):
         ...     def extract(self, s):
         ...         from pycsamt.core.base import TFBundle
-        ...         return TFBundle(freq=[1.], rho=[100.], phase=[45.])
-        ...     def emit_edi(self, b):
-        ...         return {'ok': True, 'n': len(b.freq)}
         ...
-        >>> Mini().transform(object())['ok']
+        ...         return TFBundle(freq=[1.0], rho=[100.0], phase=[45.0])
+        ...
+        ...     def emit_edi(self, b):
+        ...         return {"ok": True, "n": len(b.freq)}
+        >>> Mini().transform(object())["ok"]
         True
         """
 

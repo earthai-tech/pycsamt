@@ -30,9 +30,7 @@ def test_compmeas_defaults_when_missing_column():
     lines = cm.write()
     assert isinstance(lines, list) and len(lines) > 0
     # the CSV header line should include our fields
-    csv_header = next(
-        (ln for ln in lines if "station" in ln and "comp" in ln), ""
-    )
+    csv_header = next((ln for ln in lines if "station" in ln and "comp" in ln), "")
     assert "station" in csv_header and "comp" in csv_header
 
 
@@ -133,9 +131,7 @@ def test_amps_write_emits_csv_with_context():
     lines = amps.write()
     assert isinstance(lines, list) and len(lines) > 0
     # should contain a CSV header with our columns
-    header = next(
-        (ln for ln in lines if "station" in ln and "amps" in ln), ""
-    )
+    header = next((ln for ln in lines if "station" in ln and "amps" in ln), "")
     assert "station" in header and "amps" in header
 
 

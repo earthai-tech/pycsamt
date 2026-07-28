@@ -18,14 +18,15 @@ Usage
     ax = plot_phase_tensor_rose(
         sites,
         style="pycsamt",
-        compass_labels="degrees",   # switch NESW → degree values
-        mean_ls="--",               # dashed mean line
-        show_secondary=False,       # hide conjugate line
+        compass_labels="degrees",  # switch NESW → degree values
+        mean_ls="--",  # dashed mean line
+        show_secondary=False,  # hide conjugate line
     )
 
 **Build a custom style** and reuse it across multiple figures::
 
     from pycsamt.emtools import RoseStyle
+
     my_style = RoseStyle(
         bar_style="solid",
         bar_color="#2c7fb8",
@@ -250,9 +251,7 @@ class RoseStyle:
 
     def __repr__(self) -> str:  # noqa: D105
         pairs = ", ".join(
-            f"{k}={v!r}"
-            for k, v in vars(self).items()
-            if not k.startswith("_")
+            f"{k}={v!r}" for k, v in vars(self).items() if not k.startswith("_")
         )
         return f"RoseStyle({pairs})"
 

@@ -81,9 +81,7 @@ def test_export_elevations_h5_roundtrip(tmp_path):
 
 
 def test_export_elevations_fmt_override(tmp_path):
-    out = export_elevations(
-        _data(), tmp_path / "topo.txt", fmt="csv"
-    )
+    out = export_elevations(_data(), tmp_path / "topo.txt", fmt="csv")
     text = out.read_text(encoding="utf-8")
     assert "station" in text and "S00" in text
 
@@ -185,9 +183,7 @@ def test_equirect_xy_scales_with_latitude():
 def test_fit_strike_recovers_line_direction():
     rng = np.random.default_rng(0)
     t = np.linspace(0.0, 1.0, 12)
-    pts = np.column_stack([t, 0.5 * t]) + rng.normal(
-        0, 1e-4, (12, 2)
-    )
+    pts = np.column_stack([t, 0.5 * t]) + rng.normal(0, 1e-4, (12, 2))
     groups = np.asarray(["L1"] * 12, dtype=object)
     d = fit_strike(pts - pts.mean(axis=0), groups)
     expected = np.array([1.0, 0.5]) / np.hypot(1.0, 0.5)
@@ -223,9 +219,7 @@ def test_survey_uv_projection_and_empty_cases():
     assert all(abs(v[1]) < 1.0 for v in uv.values())
 
     assert survey_uv(["a"], [28.0], [102.0], ["L1"]) == {}
-    assert survey_uv(
-        ["a", "b"], [28.0, 28.0], [102.0, 102.0], ["L1", "L1"]
-    ) == {}
+    assert survey_uv(["a", "b"], [28.0, 28.0], [102.0, 102.0], ["L1", "L1"]) == {}
 
 
 def test_normalize_offsets_and_resolve():
@@ -264,9 +258,7 @@ class _FakeFig:
 def test_write_json_variants(tmp_path):
     fig = _FakeFig()
     out = write_json(fig, tmp_path / "fig.json")
-    assert json.loads(out.read_text(encoding="utf-8"))["layout"][
-        "title"
-    ] == "fake"
+    assert json.loads(out.read_text(encoding="utf-8"))["layout"]["title"] == "fake"
 
 
 def test_write_dict_and_export_figure_dispatch(tmp_path):
@@ -274,14 +266,10 @@ def test_write_dict_and_export_figure_dispatch(tmp_path):
     out = write_dict(fig, tmp_path / "fig.dict")
     assert "layout" in out.read_text(encoding="utf-8")
 
-    via_json = export_figure(
-        fig, ExportOptions(path=tmp_path / "a.json")
-    )
+    via_json = export_figure(fig, ExportOptions(path=tmp_path / "a.json"))
     assert via_json.suffix == ".json"
 
-    via_html = export_figure(
-        fig, ExportOptions(path=tmp_path / "a.html")
-    )
+    via_html = export_figure(fig, ExportOptions(path=tmp_path / "a.html"))
     assert via_html.exists()
 
     with pytest.raises(ValueError, match="extension"):
@@ -338,9 +326,7 @@ def test_station_map_skin_depth_overlay():
     from pycsamt.map.config import StationMapOptions
     from pycsamt.map.station import build_station_map
 
-    opts = StationMapOptions(
-        overlay="skin_depth", frequency=10.0, log_color=True
-    )
+    opts = StationMapOptions(overlay="skin_depth", frequency=10.0, log_color=True)
     fig = build_station_map(_geo_data(), opts)
     assert fig.data
 
@@ -365,9 +351,7 @@ def test_station_map_unknown_overlay_falls_back_to_index():
     from pycsamt.map.config import StationMapOptions
     from pycsamt.map.station import build_station_map
 
-    fig = build_station_map(
-        _geo_data(), StationMapOptions(overlay="not-a-column")
-    )
+    fig = build_station_map(_geo_data(), StationMapOptions(overlay="not-a-column"))
     assert fig.data
 
 

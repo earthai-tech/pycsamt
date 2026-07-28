@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Home-page card image: "Forward modelling".
 
 Builds three :class:`pycsamt.forward.LayeredModel` scenarios, runs the real
@@ -10,6 +9,7 @@ Output: docs/source/_static/images/home/card-forward.png
 Usage (any cwd):
     python scripts/home_card_forward.py
 """
+
 import os
 import sys
 from pathlib import Path
@@ -77,9 +77,7 @@ def step_profile(model):
     rho = list(model.resistivity)
     tops = [0.0] + list(np.cumsum(model.thickness))
     xs, ys = [], []
-    for r, top, bot in zip(
-        rho, tops, tops[1:] + [DEPTH_MAX_KM * 1_000.0 * 2]
-    ):
+    for r, top, bot in zip(rho, tops, tops[1:] + [DEPTH_MAX_KM * 1_000.0 * 2]):
         xs += [r, r]
         ys += [top / 1_000.0, bot / 1_000.0]
     return np.array(xs), np.array(ys)

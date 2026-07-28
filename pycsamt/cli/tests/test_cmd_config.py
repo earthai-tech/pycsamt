@@ -213,51 +213,35 @@ class TestConfigGroup:
 
 
 class TestConfigSetGet:
-    def test_set_plot_dpi(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_set_plot_dpi(self, runner: CliRunner, isolated_toml: Path) -> None:
         result = runner.invoke(main, ["config", "set", "plot.dpi", "250"])
         assert result.exit_code == 0
         assert "250" in result.output
 
-    def test_set_persists_to_toml(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_set_persists_to_toml(self, runner: CliRunner, isolated_toml: Path) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "250"])
         data = _read_toml()
         assert data.get("plot", {}).get("dpi") == 250
 
-    def test_set_string_value(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_set_string_value(self, runner: CliRunner, isolated_toml: Path) -> None:
         result = runner.invoke(main, ["config", "set", "plot.fmt", "pdf"])
         assert result.exit_code == 0
         data = _read_toml()
         assert data["plot"]["fmt"] == "pdf"
 
-    def test_set_bool_value(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
-        result = runner.invoke(
-            main, ["config", "set", "control.phase.wrap", "true"]
-        )
+    def test_set_bool_value(self, runner: CliRunner, isolated_toml: Path) -> None:
+        result = runner.invoke(main, ["config", "set", "control.phase.wrap", "true"])
         assert result.exit_code == 0
         data = _read_toml()
         assert data["control"]["phase__wrap"] is True
 
-    def test_set_dry_run_no_write(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
-        result = runner.invoke(
-            main, ["config", "set", "plot.dpi", "999", "--dry-run"]
-        )
+    def test_set_dry_run_no_write(self, runner: CliRunner, isolated_toml: Path) -> None:
+        result = runner.invoke(main, ["config", "set", "plot.dpi", "999", "--dry-run"])
         assert result.exit_code == 0
         assert "dry-run" in result.output.lower()
         assert not isolated_toml.exists()
 
-    def test_get_existing_key(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_get_existing_key(self, runner: CliRunner, isolated_toml: Path) -> None:
         from pycsamt.api.plot import PLOT_CONFIG
 
         result = runner.invoke(main, ["config", "get", "plot.dpi"])
@@ -265,9 +249,7 @@ class TestConfigSetGet:
         assert str(PLOT_CONFIG.dpi) in result.output
 
     def test_get_json(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["config", "get", "plot.dpi", "--format", "json"]
-        )
+        result = runner.invoke(main, ["config", "get", "plot.dpi", "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "plot.dpi" in data
@@ -277,48 +259,36 @@ class TestConfigSetGet:
         assert result.exit_code != 0
 
     def test_set_unknown_section_fails(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["config", "set", "nosection.key", "val"]
-        )
+        result = runner.invoke(main, ["config", "set", "nosection.key", "val"])
         assert result.exit_code != 0
 
 
 class TestConfigList:
-    def test_list_empty_config(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_list_empty_config(self, runner: CliRunner, isolated_toml: Path) -> None:
         result = runner.invoke(main, ["config", "list"])
         assert result.exit_code == 0
 
-    def test_list_after_set(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_list_after_set(self, runner: CliRunner, isolated_toml: Path) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "list"])
         assert result.exit_code == 0
         assert "dpi" in result.output or "300" in result.output
 
-    def test_list_section_filter(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_list_section_filter(self, runner: CliRunner, isolated_toml: Path) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "list", "plot"])
         assert result.exit_code == 0
 
     def test_list_json(self, runner: CliRunner, isolated_toml: Path) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
-        result = runner.invoke(
-            main, ["config", "list", "plot", "--format", "json"]
-        )
+        result = runner.invoke(main, ["config", "list", "plot", "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "plot" in data
 
 
 class TestConfigUnsetReset:
-    def test_unset_existing_key(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_unset_existing_key(self, runner: CliRunner, isolated_toml: Path) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "unset", "plot.dpi"])
         assert result.exit_code == 0
@@ -332,9 +302,7 @@ class TestConfigUnsetReset:
         # should exit 0 with a warning (not a hard failure)
         assert result.exit_code == 0
 
-    def test_reset_section(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_reset_section(self, runner: CliRunner, isolated_toml: Path) -> None:
         runner.invoke(main, ["config", "set", "plot.dpi", "300"])
         result = runner.invoke(main, ["config", "reset", "plot", "--yes"])
         assert result.exit_code == 0
@@ -358,9 +326,7 @@ class TestConfigShow:
         assert result.exit_code == 0
 
     def test_show_json(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["config", "show", "plot", "--format", "json"]
-        )
+        result = runner.invoke(main, ["config", "show", "plot", "--format", "json"])
         assert result.exit_code == 0
         assert json.loads(result.output)  # valid JSON
 
@@ -374,15 +340,11 @@ class TestConfigEnv:
     def test_env_section_filter(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["config", "env", "--section", "plot"])
         assert result.exit_code == 0
-        assert (
-            "PYCSAMT_DPI" in result.output or "PYCSAMT_FMT" in result.output
-        )
+        assert "PYCSAMT_DPI" in result.output or "PYCSAMT_FMT" in result.output
 
 
 class TestConfigPresets:
-    def test_style_preset(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_style_preset(self, runner: CliRunner, isolated_toml: Path) -> None:
         result = runner.invoke(main, ["config", "style", "publication"])
         assert result.exit_code == 0
         data = _read_toml()
@@ -391,15 +353,11 @@ class TestConfigPresets:
     def test_style_preset_no_persist(
         self, runner: CliRunner, isolated_toml: Path
     ) -> None:
-        result = runner.invoke(
-            main, ["config", "style", "dark", "--no-persist"]
-        )
+        result = runner.invoke(main, ["config", "style", "dark", "--no-persist"])
         assert result.exit_code == 0
         assert not isolated_toml.exists()
 
-    def test_interp_preset(
-        self, runner: CliRunner, isolated_toml: Path
-    ) -> None:
+    def test_interp_preset(self, runner: CliRunner, isolated_toml: Path) -> None:
         result = runner.invoke(main, ["config", "interp", "accessible"])
         assert result.exit_code == 0
         data = _read_toml()
@@ -412,17 +370,13 @@ class TestConfigAgent:
         assert result.exit_code == 0
 
     def test_agent_status_json(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["config", "agent", "status", "--format", "json"]
-        )
+        result = runner.invoke(main, ["config", "agent", "status", "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "provider" in data
 
     @pytest.mark.parametrize("provider", ["claude", "openai", "gemini"])
-    def test_set_key_instructions(
-        self, runner: CliRunner, provider: str
-    ) -> None:
+    def test_set_key_instructions(self, runner: CliRunner, provider: str) -> None:
         result = runner.invoke(main, ["config", "agent", "set-key", provider])
         assert result.exit_code == 0
         # Should show the env var name

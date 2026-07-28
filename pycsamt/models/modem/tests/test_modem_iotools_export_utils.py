@@ -28,9 +28,7 @@ def _model(nx=5, ny=4, nz=6, n_air=2, rho=100.0):
     m = ModEmModel3D()
     m.x_widths = np.full(nx, 2000.0)
     m.y_widths = np.full(ny, 2000.0)
-    m.z_widths = np.concatenate(
-        [np.full(n_air, 50.0), np.full(nz - n_air, 500.0)]
-    )
+    m.z_widths = np.concatenate([np.full(n_air, 50.0), np.full(nz - n_air, 500.0)])
     m.n_air = n_air
     m.rho_loge = np.full((nz, ny, nx), math.log(rho))
     return m
@@ -82,9 +80,7 @@ class TestWriteMeshtools3D:
     def test_con_values_positive(self, tmp_path):
         m = _model(rho=100.0)
         _, con = write_meshtools3d(m, tmp_path / "model")
-        vals = [
-            float(ln) for ln in con.read_text().splitlines() if ln.strip()
-        ]
+        vals = [float(ln) for ln in con.read_text().splitlines() if ln.strip()]
         assert all(v > 0 for v in vals)
 
     def test_con_uniform_rho(self, tmp_path):
@@ -187,9 +183,7 @@ class TestEncodingConversions:
 
     def test_linear_to_loge(self):
         rho = np.array([100.0])
-        np.testing.assert_allclose(
-            linear_to_loge(rho), [np.log(100.0)], rtol=1e-10
-        )
+        np.testing.assert_allclose(linear_to_loge(rho), [np.log(100.0)], rtol=1e-10)
 
     def test_roundtrip_loge_log10(self):
         rho = np.array([1.0, 10.0, 100.0, 1000.0])

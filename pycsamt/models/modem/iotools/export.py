@@ -82,12 +82,8 @@ def write_meshtools3d(
     n_air = model.n_air
     nz_earth = model.nz - n_air
 
-    origin = np.asarray(
-        getattr(model, "origin", [0.0, 0.0, 0.0]), dtype=float
-    )
-    ox, oy, oz = (
-        origin * 1000.0
-    )  # km → m (matches MATLAB: 1000*Cond.grid.origin)
+    origin = np.asarray(getattr(model, "origin", [0.0, 0.0, 0.0]), dtype=float)
+    ox, oy, oz = origin * 1000.0  # km → m (matches MATLAB: 1000*Cond.grid.origin)
 
     dx = model.x_widths
     dy = model.y_widths

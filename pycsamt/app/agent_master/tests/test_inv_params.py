@@ -71,9 +71,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -130,7 +128,21 @@ class TestConfirmInvParams:
 
         fn = self._fn(agent_app)
         with pytest.raises(PreventUpdate):
-            fn(None, "pinn", 1, "mt1d", 10, 2000, 500, 0.01, 0.01, 0.005, 0.005, 5000, "")
+            fn(
+                None,
+                "pinn",
+                1,
+                "mt1d",
+                10,
+                2000,
+                500,
+                0.01,
+                0.01,
+                0.005,
+                0.005,
+                5000,
+                "",
+            )
 
     def test_validation_errors_returned(self, agent_app):
         from dash import no_update
@@ -150,8 +162,19 @@ class TestConfirmInvParams:
     def test_valid_params_saved(self, agent_app):
         fn = self._fn(agent_app)
         cfg, msg, is_open = fn(
-            1, "hybrid", 3, "mt3d", 12, 3000.0, 800, 0.02,
-            0.02, 0.01, 0.01, 6000.0, "ckpt.pt",
+            1,
+            "hybrid",
+            3,
+            "mt3d",
+            12,
+            3000.0,
+            800,
+            0.02,
+            0.02,
+            0.01,
+            0.01,
+            6000.0,
+            "ckpt.pt",
         )
         assert cfg == {
             "mode": "hybrid",
@@ -173,8 +196,19 @@ class TestConfirmInvParams:
     def test_valid_params_apply_defaults(self, agent_app):
         fn = self._fn(agent_app)
         cfg, _msg, _is_open = fn(
-            1, None, None, None, 5, 100.0, 10, 0.001,
-            None, None, None, None, None,
+            1,
+            None,
+            None,
+            None,
+            5,
+            100.0,
+            10,
+            0.001,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
         assert cfg["mode"] == "pinn"
         assert cfg["dim"] == 1
@@ -224,14 +258,34 @@ class TestLoadInvForm:
         }
         result = fn(True, cfg)
         assert result == (
-            "hybrid", 2, "mt2d", 8, 1500.0, 300, 0.005,
-            0.02, 0.01, 0.01, 4000.0, "c.pt",
+            "hybrid",
+            2,
+            "mt2d",
+            8,
+            1500.0,
+            300,
+            0.005,
+            0.02,
+            0.01,
+            0.01,
+            4000.0,
+            "c.pt",
         )
 
     def test_loads_defaults_for_missing_keys(self, agent_app):
         fn = self._fn(agent_app)
         result = fn(True, {"unrelated": True})
         assert result == (
-            "pinn", 1, "mt1d", 10, 2000.0, 500, 0.01,
-            0.01, 0.005, 0.005, 5000.0, "",
+            "pinn",
+            1,
+            "mt1d",
+            10,
+            2000.0,
+            500,
+            0.01,
+            0.01,
+            0.005,
+            0.005,
+            5000.0,
+            "",
         )

@@ -205,9 +205,7 @@ def _errorbar_from_style(
     show_error_bars: bool = True,
 ):
     """Draw a styled errorbar curve."""
-    kwargs = (
-        style.errorbar_kwargs() if hasattr(style, "errorbar_kwargs") else {}
-    )
+    kwargs = style.errorbar_kwargs() if hasattr(style, "errorbar_kwargs") else {}
     if color is not None:
         kwargs["color"] = color
         kwargs["ecolor"] = color
@@ -271,9 +269,7 @@ def _add_raw_group_labels(
     left, right, bottom, top = _axes_group_bounds(ax_rho + ax_phase)
     xmid = 0.5 * (left + right)
     rho_y = 0.5 * (ax_rho[0].get_position().y0 + ax_rho[0].get_position().y1)
-    phase_y = 0.5 * (
-        ax_phase[0].get_position().y0 + ax_phase[0].get_position().y1
-    )
+    phase_y = 0.5 * (ax_phase[0].get_position().y0 + ax_phase[0].get_position().y1)
     fig.text(
         xmid,
         min(top + 0.024, 0.985),
@@ -441,9 +437,7 @@ def plot_sites_panels(
                 ax2.axis("off")
                 axs += [ax1, ax2]
                 continue
-            gs = outer[r, c].subgridspec(
-                2, 1, hspace=0.02, height_ratios=height_ratio
-            )
+            gs = outer[r, c].subgridspec(2, 1, hspace=0.02, height_ratios=height_ratio)
             axR = fig.add_subplot(gs[0])
             axP = fig.add_subplot(gs[1], sharex=axR)
             axs += [axR, axP]
@@ -511,9 +505,7 @@ def plot_sites_panels(
             )
         # cosmetics per panel
         if idx // ncols == nrows - 1:
-            axP.set_xlabel(
-                "Period (s)" if x_axis == "period" else "Freq (Hz)"
-            )
+            axP.set_xlabel("Period (s)" if x_axis == "period" else "Freq (Hz)")
         else:
             axP.set_xlabel("")
         axR.set_ylabel(ylab)
@@ -623,9 +615,7 @@ def plot_raw_sites_1d(
     ncols_groups = max(1, int(ncols_groups))
     nrows = (n + ncols_groups - 1) // ncols_groups
     W, H = figsize_scale
-    axes_given = (
-        _axes_list(axes, n * len(comps) * 2) if axes is not None else None
-    )
+    axes_given = _axes_list(axes, n * len(comps) * 2) if axes is not None else None
     if axes_given is None:
         fig = plt.figure(
             figsize=(W * ncols_groups, H * nrows),
@@ -650,8 +640,7 @@ def plot_raw_sites_1d(
             )
             ax_rho = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
             ax_phase = [
-                fig.add_subplot(gs[1, j], sharex=ax_rho[j])
-                for j in range(len(comps))
+                fig.add_subplot(gs[1, j], sharex=ax_rho[j]) for j in range(len(comps))
             ]
             panel_axes.append((ax_rho, ax_phase))
     else:
@@ -798,9 +787,7 @@ def plot_raw_sites_1d(
         for comp in comps:
             style = _component_style(comp, raw, force_style)
             color = colors.get(comp) if colors else None
-            kwargs = (
-                style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
-            )
+            kwargs = style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
             if color is not None:
                 kwargs["color"] = color
             handles.append(plt.Line2D([], [], **kwargs))
@@ -1112,9 +1099,7 @@ def plot_response_tipper(
     axes_per_group = 2 * len(comps) + (
         len(tips) if tipper_span_group else len(tips) * len(comps)
     )
-    axes_given = (
-        _axes_list(axes, n * axes_per_group) if axes is not None else None
-    )
+    axes_given = _axes_list(axes, n * axes_per_group) if axes is not None else None
     groups: list[dict[str, Any]] = []
     if axes_given is None:
         fig = plt.figure(
@@ -1138,15 +1123,12 @@ def plot_response_tipper(
             )
             ax_rho = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
             ax_phase = [
-                fig.add_subplot(gs[1, j], sharex=ax_rho[j])
-                for j in range(len(comps))
+                fig.add_subplot(gs[1, j], sharex=ax_rho[j]) for j in range(len(comps))
             ]
             tip_axes: dict[str, plt.Axes | list[plt.Axes]] = {}
             for row, tip in enumerate(tips, start=2):
                 if tipper_span_group:
-                    tip_axes[tip] = fig.add_subplot(
-                        gs[row, :], sharex=ax_rho[0]
-                    )
+                    tip_axes[tip] = fig.add_subplot(gs[row, :], sharex=ax_rho[0])
                 else:
                     tip_axes[tip] = [
                         fig.add_subplot(gs[row, j], sharex=ax_rho[j])
@@ -1187,9 +1169,7 @@ def plot_response_tipper(
         if z is None or fr is None:
             flat_tip_axes = []
             for value in tip_axes.values():
-                flat_tip_axes.extend(
-                    value if isinstance(value, list) else [value]
-                )
+                flat_tip_axes.extend(value if isinstance(value, list) else [value])
             for ax in ax_rho + ax_phase + flat_tip_axes:
                 ax.axis("off")
             continue
@@ -1293,9 +1273,7 @@ def plot_response_tipper(
             terr = None
         if tipper is None or tfr is None:
             for tip, axes_obj in tip_axes.items():
-                axes_list = (
-                    axes_obj if isinstance(axes_obj, list) else [axes_obj]
-                )
+                axes_list = axes_obj if isinstance(axes_obj, list) else [axes_obj]
                 for ax in axes_list:
                     ax.text(
                         0.5,
@@ -1315,9 +1293,7 @@ def plot_response_tipper(
             terr_arr = terr if isinstance(terr, np.ndarray) else None
             for tip in tips:
                 axes_obj = tip_axes[tip]
-                axes_list = (
-                    axes_obj if isinstance(axes_obj, list) else [axes_obj]
-                )
+                axes_list = axes_obj if isinstance(axes_obj, list) else [axes_obj]
                 col = 0 if tip == "tx" else 1
                 err = None
                 if terr_arr is not None and terr_arr.shape == tipper.shape:
@@ -1365,13 +1341,9 @@ def plot_response_tipper(
                     fontsize=tick_fontsize,
                 )
                 ax.set_xlabel(x_label, labelpad=2)
-        bottom_axes_obj = (
-            list(tip_axes.values())[-1] if tip_axes else ax_phase
-        )
+        bottom_axes_obj = list(tip_axes.values())[-1] if tip_axes else ax_phase
         bottom_axes = (
-            bottom_axes_obj
-            if isinstance(bottom_axes_obj, list)
-            else [bottom_axes_obj]
+            bottom_axes_obj if isinstance(bottom_axes_obj, list) else [bottom_axes_obj]
         )
         for bottom_ax in bottom_axes:
             _apply_raw_tick_style(
@@ -1388,14 +1360,10 @@ def plot_response_tipper(
             }
             if "tx" in tip_axes:
                 tx_axes = tip_axes["tx"]
-                row_axes["tx"] = (
-                    tx_axes[0] if isinstance(tx_axes, list) else tx_axes
-                )
+                row_axes["tx"] = tx_axes[0] if isinstance(tx_axes, list) else tx_axes
             if "ty" in tip_axes:
                 ty_axes = tip_axes["ty"]
-                row_axes["ty"] = (
-                    ty_axes[0] if isinstance(ty_axes, list) else ty_axes
-                )
+                row_axes["ty"] = ty_axes[0] if isinstance(ty_axes, list) else ty_axes
             _add_response_tipper_group_labels(
                 fig,
                 all_axes,
@@ -1405,8 +1373,7 @@ def plot_response_tipper(
                 phase_label=group_phase_label,
                 x_label=x_label,
                 show_x_label=(
-                    is_bottom_group
-                    and not (label_component_x or label_tipper_x)
+                    is_bottom_group and not (label_component_x or label_tipper_x)
                 ),
                 x_label_pad=shared_x_label_pad,
             )
@@ -1417,9 +1384,7 @@ def plot_response_tipper(
         for comp in comps:
             style = _component_style(comp, raw, force_style)
             color = colors.get(comp) if colors else None
-            kwargs = (
-                style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
-            )
+            kwargs = style.plot_kwargs() if hasattr(style, "plot_kwargs") else {}
             if color is not None:
                 kwargs["color"] = color
             handles.append(plt.Line2D([], [], **kwargs))
@@ -1545,17 +1510,13 @@ def plot_sites_compare(
     # prebuild inner axes
     AxR: list[list[plt.Axes]] = []
     AxP: list[list[plt.Axes]] = []
-    axes_given = (
-        _axes_list(axes, n * cols_per_grp * 2) if axes is not None else None
-    )
+    axes_given = _axes_list(axes, n * cols_per_grp * 2) if axes is not None else None
     if axes_given is None:
         fig = plt.figure(
             figsize=(W * ncols_groups * cols_per_grp, H * nrows),
             constrained_layout=False,
         )
-        outer = fig.add_gridspec(
-            nrows, ncols_groups, wspace=group_gap, hspace=hspace
-        )
+        outer = fig.add_gridspec(nrows, ncols_groups, wspace=group_gap, hspace=hspace)
         for g in range(n):
             r, c = divmod(g, ncols_groups)
             gs = outer[r, c].subgridspec(
@@ -1567,8 +1528,7 @@ def plot_sites_compare(
             )
             axR = [fig.add_subplot(gs[0, j]) for j in range(cols_per_grp)]
             axP = [
-                fig.add_subplot(gs[1, j], sharex=axR[0])
-                for j in range(cols_per_grp)
+                fig.add_subplot(gs[1, j], sharex=axR[0]) for j in range(cols_per_grp)
             ]
             AxR.append(axR)
             AxP.append(axP)
@@ -1577,9 +1537,7 @@ def plot_sites_compare(
         for g in range(n):
             base = g * cols_per_grp * 2
             AxR.append(axes_given[base : base + cols_per_grp])
-            AxP.append(
-                axes_given[base + cols_per_grp : base + 2 * cols_per_grp]
-            )
+            AxP.append(axes_given[base + cols_per_grp : base + 2 * cols_per_grp])
 
     # draw each group
     for g, (st, ed0, ed1) in enumerate(pairs):
@@ -1670,9 +1628,7 @@ def plot_sites_compare(
             elif phase_range is not None:
                 axP.set_ylim(*phase_range)
             if (g // ncols_groups) == (nrows - 1):
-                axP.set_xlabel(
-                    "Period (s)" if x_axis == "period" else "Freq (Hz)"
-                )
+                axP.set_xlabel("Period (s)" if x_axis == "period" else "Freq (Hz)")
             else:
                 axP.set_xlabel("")
             # Only the leftmost column of each raw/after pair gets a
@@ -1725,9 +1681,7 @@ def plot_sites_compare(
 # -------------------- measured vs predicted panels --------------------- #
 
 
-def _pairs_meas_pred(
-    sites: Any, pred_sites: Any
-) -> list[tuple[str, Any, Any]]:
+def _pairs_meas_pred(sites: Any, pred_sites: Any) -> list[tuple[str, Any, Any]]:
     S0 = ensure_sites(sites, recursive=False, strict=False)
     S1 = ensure_sites(pred_sites, recursive=False, strict=False)
     m0 = {_name(ed, i): ed for i, ed in enumerate(_iter_items(S0))}
@@ -1749,9 +1703,7 @@ def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return ix
 
 
-def _align_pred(
-    fr_m: np.ndarray, fr_p: np.ndarray, z_p: np.ndarray
-) -> np.ndarray:
+def _align_pred(fr_m: np.ndarray, fr_p: np.ndarray, z_p: np.ndarray) -> np.ndarray:
     # _nearest_idx requires its reference array ascending; EDI frequency
     # arrays are typically stored descending (high frequency first), so
     # sort fr_p (and z_p with it) before searching.
@@ -1864,17 +1816,13 @@ def plot_sites_fit_grid(
     W, H = figsize_scale
     # build axes per group: 2 x ncomp
     AX = []
-    axes_given = (
-        _axes_list(axes, n * len(comps) * 2) if axes is not None else None
-    )
+    axes_given = _axes_list(axes, n * len(comps) * 2) if axes is not None else None
     if axes_given is None:
         fig = plt.figure(
             figsize=(W * ncols_groups, H * nrows),
             constrained_layout=False,
         )
-        outer = fig.add_gridspec(
-            nrows, ncols_groups, wspace=0.35, hspace=group_hspace
-        )
+        outer = fig.add_gridspec(nrows, ncols_groups, wspace=0.35, hspace=group_hspace)
         for g in range(n):
             r, c = divmod(g, ncols_groups)
             gs = outer[r, c].subgridspec(
@@ -1885,10 +1833,7 @@ def plot_sites_fit_grid(
                 height_ratios=height_ratio,
             )
             axR = [fig.add_subplot(gs[0, j]) for j in range(len(comps))]
-            axP = [
-                fig.add_subplot(gs[1, j], sharex=axR[0])
-                for j in range(len(comps))
-            ]
+            axP = [fig.add_subplot(gs[1, j], sharex=axR[0]) for j in range(len(comps))]
             AX.append((axR, axP))
     else:
         fig = axes_given[0].figure
@@ -2016,9 +1961,7 @@ def plot_sites_fit_grid(
                 aR.set_yticklabels([])
                 aP.set_yticklabels([])
             if (g // ncols_groups) == (nrows - 1):
-                aP.set_xlabel(
-                    "Period (s)" if x_axis == "period" else "Freq (Hz)"
-                )
+                aP.set_xlabel("Period (s)" if x_axis == "period" else "Freq (Hz)")
             else:
                 aP.set_xlabel("")
     # global legend (TE/TM fits)

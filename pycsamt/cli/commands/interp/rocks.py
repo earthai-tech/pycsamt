@@ -136,9 +136,7 @@ def _emit_database(db, output_format: str) -> None:
     df = pd.DataFrame(rows).sort_values("rho_min").reset_index(drop=True)
 
     if output_format == "json":
-        click.echo(
-            df.to_json(orient="records", indent=2, default_handler=str)
-        )
+        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:

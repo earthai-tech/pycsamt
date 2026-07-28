@@ -91,9 +91,7 @@ def _run_agent_fn(web_app):
 
 class TestExecAgentNoData:
     def test_no_cached_sites_returns_warning(self):
-        log, src, summary, err = _exec_agent(
-            "QC Quicklook", {}, "no-such-session"
-        )
+        log, src, summary, err = _exec_agent("QC Quicklook", {}, "no-such-session")
         assert "Load survey data" in log
         assert summary == ""
         assert "Load survey data" in err
@@ -101,17 +99,13 @@ class TestExecAgentNoData:
 
 class TestExecAgentProcessing:
     def test_direct_figure_result(self, cached_session):
-        log, src, summary, err = _exec_agent(
-            "QC Quicklook", {}, cached_session
-        )
+        log, src, summary, err = _exec_agent("QC Quicklook", {}, cached_session)
         assert err == ""
         assert "Completed." in log
         assert summary.startswith("✓")
         assert src != ""
 
-    def test_result_plot_fallback_when_result_not_renderable(
-        self, cached_session
-    ):
+    def test_result_plot_fallback_when_result_not_renderable(self, cached_session):
         """'Dimensionality' returns a classification table (not a figure)
         but declares a separate result_plot -- exercises the fallback
         branch that calls that plot fn instead."""
@@ -130,16 +124,12 @@ class TestExecAgentProcessing:
             raise RuntimeError("plot boom")
 
         monkeypatch.setattr(et, "plot_qc_quicklook", _boom)
-        log, src, summary, err = _exec_agent(
-            "QC Quicklook", {}, cached_session
-        )
+        log, src, summary, err = _exec_agent("QC Quicklook", {}, cached_session)
         assert err == "plot boom"
         assert "✗ Error: plot boom" in log
         assert summary == "Agent failed: plot boom"
 
-    def test_direct_axes_result_uses_get_figure(
-        self, cached_session, monkeypatch
-    ):
+    def test_direct_axes_result_uses_get_figure(self, cached_session, monkeypatch):
         import matplotlib.pyplot as plt
 
         import pycsamt.emtools as et
@@ -150,9 +140,7 @@ class TestExecAgentProcessing:
             return ax  # Axes, not Figure -> exercises get_figure() branch
 
         monkeypatch.setattr(et, "plot_qc_quicklook", _fake_qc)
-        log, src, summary, err = _exec_agent(
-            "QC Quicklook", {}, cached_session
-        )
+        log, src, summary, err = _exec_agent("QC Quicklook", {}, cached_session)
         assert err == ""
         assert src != ""
         plt.close(fig)
@@ -171,9 +159,7 @@ class TestExecAgentProcessing:
             return ax  # Axes -> exercises the nested get_figure() fallback
 
         monkeypatch.setattr(et, "classify_dimensionality", _fake_dim)
-        monkeypatch.setattr(
-            et, "plot_dimensionality_psection", _fake_dim_plot
-        )
+        monkeypatch.setattr(et, "plot_dimensionality_psection", _fake_dim_plot)
         log, src, summary, err = _exec_agent(
             "Dimensionality",
             {"skew_th": 3.0, "ellipt_th": 0.2},
@@ -197,9 +183,7 @@ class TestExecAgentProcessing:
             return fig  # Figure directly -> exercises the savefig() branch
 
         monkeypatch.setattr(et, "classify_dimensionality", _fake_dim)
-        monkeypatch.setattr(
-            et, "plot_dimensionality_psection", _fake_dim_plot
-        )
+        monkeypatch.setattr(et, "plot_dimensionality_psection", _fake_dim_plot)
         log, src, summary, err = _exec_agent(
             "Dimensionality",
             {"skew_th": 3.0, "ellipt_th": 0.2},
@@ -228,15 +212,11 @@ class TestExecAgentProcessing:
         monkeypatch.setattr(
             et, "plot_qc_quicklook", lambda sites, **kw: SimpleNamespace()
         )
-        log, src, summary, err = _exec_agent(
-            "QC Quicklook", {}, cached_session
-        )
+        log, src, summary, err = _exec_agent("QC Quicklook", {}, cached_session)
         assert err == ""
         assert "Completed." in log
 
-    def test_station_filter_forwarded_and_logged(
-        self, cached_session, monkeypatch
-    ):
+    def test_station_filter_forwarded_and_logged(self, cached_session, monkeypatch):
         captured = {}
 
         def _fake_qc(sites, **kw):
@@ -269,9 +249,7 @@ class TestExecAgentLLM:
         assert "⚠ one warning" in log
         assert summary == "Loaded OK" + "\n\n" + "x" * 400
 
-    def test_llm_no_warnings_no_interpretation(
-        self, cached_session, monkeypatch
-    ):
+    def test_llm_no_warnings_no_interpretation(self, cached_session, monkeypatch):
         import pycsamt.agents as ag
 
         class _PlainAgent(_FakeLLMAgent):
@@ -285,9 +263,7 @@ class TestExecAgentLLM:
                 )
 
         monkeypatch.setattr(ag, "MTLoaderAgent", _PlainAgent, raising=False)
-        log, src, summary, err = _exec_agent(
-            "MT Loader", {}, cached_session
-        )
+        log, src, summary, err = _exec_agent("MT Loader", {}, cached_session)
         assert err == ""
         assert "⚠" not in log
         assert summary == ""
@@ -298,12 +274,8 @@ class TestExecAgentLLM:
         import pycsamt.agents as ag
 
         monkeypatch.setattr(ag, "MTLoaderAgent", _FakeLLMAgent, raising=False)
-        _exec_agent(
-            "MT Loader", {}, cached_session, stations=["STA01"]
-        )
-        assert _FakeLLMAgent.last_instance.input_data["station_names"] == [
-            "STA01"
-        ]
+        _exec_agent("MT Loader", {}, cached_session, stations=["STA01"])
+        assert _FakeLLMAgent.last_instance.input_data["station_names"] == ["STA01"]
 
     def test_llm_exception_reported(self, cached_session, monkeypatch):
         import pycsamt.agents as ag
@@ -313,9 +285,7 @@ class TestExecAgentLLM:
                 raise RuntimeError("LLM crashed")
 
         monkeypatch.setattr(ag, "MTLoaderAgent", _BoomAgent, raising=False)
-        log, src, summary, err = _exec_agent(
-            "MT Loader", {}, cached_session
-        )
+        log, src, summary, err = _exec_agent("MT Loader", {}, cached_session)
         assert err == "LLM crashed"
         assert summary == "Agent failed: LLM crashed"
 
@@ -340,9 +310,7 @@ class TestRunAgentCallback:
 
     def test_success_path(self, web_app, cached_session):
         fn = _run_agent_fn(web_app)
-        log, src, summary, is_open, body = fn(
-            1, "QC Quicklook", cached_session
-        )
+        log, src, summary, is_open, body = fn(1, "QC Quicklook", cached_session)
         assert is_open is False
         assert body == ""
         assert "Completed." in log
@@ -355,8 +323,6 @@ class TestRunAgentCallback:
 
         monkeypatch.setattr(et, "plot_qc_quicklook", _boom)
         fn = _run_agent_fn(web_app)
-        log, src, summary, is_open, body = fn(
-            1, "QC Quicklook", cached_session
-        )
+        log, src, summary, is_open, body = fn(1, "QC Quicklook", cached_session)
         assert is_open is True
         assert body == "callback boom"

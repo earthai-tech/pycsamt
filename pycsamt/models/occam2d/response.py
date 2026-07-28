@@ -287,18 +287,14 @@ class OccamResponse(OccamBase):
     def site_indices(self) -> np.ndarray:
         """1-based site indices (int)."""
         return (
-            self.data[:, 0].astype(int)
-            if self.data.size
-            else np.array([], dtype=int)
+            self.data[:, 0].astype(int) if self.data.size else np.array([], dtype=int)
         )
 
     @property
     def freq_indices(self) -> np.ndarray:
         """1-based frequency indices (int)."""
         return (
-            self.data[:, 1].astype(int)
-            if self.data.size
-            else np.array([], dtype=int)
+            self.data[:, 1].astype(int) if self.data.size else np.array([], dtype=int)
         )
 
     @property
@@ -344,9 +340,7 @@ class OccamResponse(OccamBase):
         result: dict[int, float] = {}
         for s in np.unique(self.site_indices):
             mask = self.site_indices == s
-            result[int(s)] = float(
-                np.sqrt(np.mean(self.residuals[mask] ** 2))
-            )
+            result[int(s)] = float(np.sqrt(np.mean(self.residuals[mask] ** 2)))
         return result
 
     def misfit_per_frequency(self) -> dict[int, float]:
@@ -382,7 +376,5 @@ class OccamResponse(OccamBase):
         result: dict[int, float] = {}
         for f in np.unique(self.freq_indices):
             mask = self.freq_indices == f
-            result[int(f)] = float(
-                np.sqrt(np.mean(self.residuals[mask] ** 2))
-            )
+            result[int(f)] = float(np.sqrt(np.mean(self.residuals[mask] ** 2)))
         return result

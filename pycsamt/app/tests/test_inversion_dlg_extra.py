@@ -64,7 +64,10 @@ def _fake_worker_cls():
 @pytest.fixture
 def fake_sites():
     return SimpleNamespace(
-        as_list=lambda: [SimpleNamespace(name="S1"), SimpleNamespace(name="S2")],
+        as_list=lambda: [
+            SimpleNamespace(name="S1"),
+            SimpleNamespace(name="S2"),
+        ],
         select=mock.Mock(return_value="SELECTED_SUBSET"),
     )
 
@@ -189,9 +192,7 @@ def test_selected_sites_select_raises_falls_back(dlg_with_sites, fake_sites):
 
 def test_build_occam_config_reflects_form_values(dlg, monkeypatch):
     fake_cfg_cls = mock.Mock()
-    monkeypatch.setattr(
-        "pycsamt.models.occam2d.OccamConfig", fake_cfg_cls
-    )
+    monkeypatch.setattr("pycsamt.models.occam2d.OccamConfig", fake_cfg_cls)
     dlg._mode_tm.setChecked(False)
     dlg._n_layers.setValue(40)
     dlg._build_occam_config()
@@ -211,15 +212,9 @@ def test_on_launch_no_workdir_logs_error(dlg):
 
 
 def test_on_launch_input_builder_raises_logs_error(dlg, tmp_path, monkeypatch):
-    fake_builder_cls = mock.Mock(
-        side_effect=RuntimeError("bad input")
-    )
-    monkeypatch.setattr(
-        "pycsamt.models.occam2d.InputBuilder", fake_builder_cls
-    )
-    monkeypatch.setattr(
-        "pycsamt.models.occam2d.OccamConfig", mock.Mock()
-    )
+    fake_builder_cls = mock.Mock(side_effect=RuntimeError("bad input"))
+    monkeypatch.setattr("pycsamt.models.occam2d.InputBuilder", fake_builder_cls)
+    monkeypatch.setattr("pycsamt.models.occam2d.OccamConfig", mock.Mock())
     dlg._workdir_edit.setText(str(tmp_path))
     dlg._on_launch()
     assert "InputBuilder error" in dlg._run_log.toPlainText()
@@ -229,12 +224,8 @@ def test_on_launch_input_builder_raises_logs_error(dlg, tmp_path, monkeypatch):
 def test_on_launch_success_starts_worker(dlg, tmp_path, monkeypatch):
     fake_builder_instance = mock.Mock()
     fake_builder_cls = mock.Mock(return_value=fake_builder_instance)
-    monkeypatch.setattr(
-        "pycsamt.models.occam2d.InputBuilder", fake_builder_cls
-    )
-    monkeypatch.setattr(
-        "pycsamt.models.occam2d.OccamConfig", mock.Mock()
-    )
+    monkeypatch.setattr("pycsamt.models.occam2d.InputBuilder", fake_builder_cls)
+    monkeypatch.setattr("pycsamt.models.occam2d.OccamConfig", mock.Mock())
     fake_worker_cls = _fake_worker_cls()
     monkeypatch.setattr(
         "pycsamt.app.desktop.workers.inversion_worker.InversionWorker",
@@ -253,7 +244,8 @@ def test_on_launch_success_starts_worker(dlg, tmp_path, monkeypatch):
 
 def test_on_launch_uses_session_binary(dlg, tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "pycsamt.models.occam2d.InputBuilder", mock.Mock(return_value=mock.Mock())
+        "pycsamt.models.occam2d.InputBuilder",
+        mock.Mock(return_value=mock.Mock()),
     )
     monkeypatch.setattr("pycsamt.models.occam2d.OccamConfig", mock.Mock())
     fake_worker_cls = _fake_worker_cls()
@@ -269,7 +261,8 @@ def test_on_launch_uses_session_binary(dlg, tmp_path, monkeypatch):
 
 def test_on_launch_no_session_binary_is_none(dlg, tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "pycsamt.models.occam2d.InputBuilder", mock.Mock(return_value=mock.Mock())
+        "pycsamt.models.occam2d.InputBuilder",
+        mock.Mock(return_value=mock.Mock()),
     )
     monkeypatch.setattr("pycsamt.models.occam2d.OccamConfig", mock.Mock())
     fake_worker_cls = _fake_worker_cls()
@@ -287,7 +280,8 @@ def test_on_launch_no_session_binary_is_none(dlg, tmp_path, monkeypatch):
 
 def test_on_stop_inversion_with_worker(dlg, tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "pycsamt.models.occam2d.InputBuilder", mock.Mock(return_value=mock.Mock())
+        "pycsamt.models.occam2d.InputBuilder",
+        mock.Mock(return_value=mock.Mock()),
     )
     monkeypatch.setattr("pycsamt.models.occam2d.OccamConfig", mock.Mock())
     fake_worker_cls = _fake_worker_cls()

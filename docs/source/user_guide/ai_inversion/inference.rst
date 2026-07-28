@@ -128,7 +128,7 @@ normalizers, hyperparameters, history, and selected metadata:
 
    >>> from pathlib import Path
    >>> from pycsamt.ai.inversion import EMInverter1D
-   >>> checkpoint = Path("checkpoints/mt1d_resnet_5layer.pkl")
+   >>> checkpoint = Path("checkpoints/mt1d_resnet_5layer.npz")
    >>> inverter = EMInverter1D.load(checkpoint)
    >>> inverter.n_layers, inverter.arch, inverter.log_thickness
    (5, 'resnet', True)
@@ -140,6 +140,15 @@ particular checkpoint was trained on the Willy AMT line's own frequency band
 — 32 log-spaced frequencies from 1.05 to 9500 Hz — which matters for every
 example that follows: the field feature grid must reproduce that exact band,
 not a value copied from a different survey or a different guide page.
+
+.. note::
+
+   The named approved checkpoint and its training-percentile arrays are
+   reference-run artifacts, not files distributed with the source checkout.
+   The recorded outputs and existing figures below may therefore be read as a
+   case study, but reproducing prediction values requires the reviewed model
+   package. WILLY loading, feature-grid, finiteness, and geometry checks use
+   bundled data and are executable directly.
 
 Registry checkpoints can be requested with:
 
@@ -167,7 +176,7 @@ Use the public bridge and the checkpoint's exact grid:
    >>> from pycsamt.ai.inversion import sites_to_features_1d
    >>> from pycsamt.emtools._core import ensure_sites
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
@@ -203,7 +212,7 @@ Check the matrix before prediction:
 ``nan``. That is not a hypothetical edge case: requesting the wider band used
 elsewhere in this guide series (:math:`10^{-4}` to :math:`10^{3}`\ Hz, the
 :class:`~pycsamt.agents.AIInversionAgent` default) against these same 28
-stations leaves 57.5% of every feature row non-finite, because natural-source
+stations leaves 56.25% of every feature row non-finite, because natural-source
 AMT simply has no usable signal down at :math:`10^{-4}`\ Hz. Apply only the
 imputation/mask policy fitted and validated with the checkpoint — the
 inverter's stored normalizer does not define a missing-value policy by
@@ -246,6 +255,17 @@ deployment configuration and may invalidate prior validation.
 Run domain checks before predictions are visible to the interpreter. At
 minimum, compare each field row against training feature percentiles:
 
+.. math::
+   :label: eq-ai-inference-domain-fraction
+
+   g_s = \frac{1}{P}\sum_{j=1}^{P}
+   \mathbf 1\!\left\{x_{sj}<q_{0.01,j}\ \text{or}\
+   x_{sj}>q_{0.99,j}\right\},
+
+where :math:`P` is feature count and the quantiles are fitted on training data
+only. A threshold such as :math:`g_s>0.10` is an operational review rule, not
+the probability that station :math:`s` is wrong.
+
 .. code-block:: pycon
 
    >>> train_low = np.load("model_package/training_p01.npy")
@@ -265,8 +285,8 @@ minimum, compare each field row against training feature percentiles:
    only one falls inside it. A synthetic training envelope built from a
    generic noise model is not automatically wide enough for a real survey.
 
-This result is a feature of the check, not a failure of it: this is only a
-marginal, per-feature gate on the synthetic percentile envelope, and it is
+Equation :eq:`eq-ai-inference-domain-fraction` is only a marginal, per-feature
+gate on the synthetic percentile envelope, and it is
 common for real field data to sit partly outside a generic synthetic prior
 even when the predictions themselves remain usable. Strongly correlated feature
 patterns can also remain out of domain even when every value lies inside its
@@ -383,7 +403,8 @@ channels, so a panel and a training target must agree on that count before
    is not available here. Sixty epochs against 28 stations at once produces
    a noticeably patchier result than the 1-D and hybrid sections elsewhere on
    this page; that is a fast-retrain artefact to weigh against, not evidence
-   the architecture is unsuitable.
+   the architecture is unsuitable. Station names are placed along the top;
+   depth-cell index increases vertically.
 
 The 2-D inverter applies its learned input and target normalization internally.
 The field station count must match the inverter's configured station axis.
@@ -525,7 +546,7 @@ intervals:
 .. code-block:: pycon
 
    >>> cal = np.load("checkpoints/mt1d_ensemble_cal_set.npz")
-   >>> ensemble.calibrate(cal["X_cal"], cal["y_cal"], alpha=0.10)
+   >>> _ = ensemble.calibrate(cal["X_cal"], cal["y_cal"], alpha=0.10)
    >>> mean, std = ensemble.predict_with_uncertainty(X_field)
    >>> std[0, :5].round(3)
    array([0.257, 0.189, 0.05 , 0.081, 0.158])
@@ -545,6 +566,7 @@ intervals:
 shared multiplier :math:`\hat q` applied to every output dimension at once:
 
 .. math::
+   :label: eq-ai-inference-conformal-joint
 
    s_i = \max_j \frac{\lvert y_{ij} - f(\mathbf{x}_i)_j\rvert}{\sigma_j(\mathbf{x}_i)+\varepsilon},
    \qquad
@@ -552,8 +574,9 @@ shared multiplier :math:`\hat q` applied to every output dimension at once:
    \qquad
    \hat{C}_j(\mathbf{x}) = \bigl[f(\mathbf{x})_j - \hat q\,\sigma_j(\mathbf{x}),\ f(\mathbf{x})_j + \hat q\,\sigma_j(\mathbf{x})\bigr].
 
-Taking the *worst* normalised residual across all 9 output dimensions gives a
-valid joint guarantee, but it means one badly scaled dimension inflates every
+Equation :eq:`eq-ai-inference-conformal-joint` takes the *worst* normalised
+residual across all 9 output dimensions and gives a valid joint guarantee, but
+it means one badly scaled dimension inflates every
 other dimension's interval too:
 
 .. code-block:: pycon
@@ -583,9 +606,13 @@ each output dimension by its own residual spread and stay interpretable.
    >>> posterior_draws[:, 0, :5].std(axis=0).round(3)
    array([0.262, 0.178, 0.049, 0.08 , 0.157])
 
-Conformal marginal coverage assumes calibration and deployment examples are
-:term:`exchangeability`-compatible. On this survey's own calibration set,
-empirical coverage came back at 12%, not the nominal 90%:
+Conformal coverage assumes calibration and deployment examples are
+:term:`exchangeability`-compatible. The convenience method below does not
+evaluate the conformal interval from equation
+:eq:`eq-ai-inference-conformal-joint`; it measures how often targets fall
+inside the mean plus or minus the default 1.96 calibrated standard deviations.
+On this reference calibration set that separate Gaussian-style diagnostic was
+only 12.3%:
 
 .. code-block:: pycon
 
@@ -595,8 +622,11 @@ empirical coverage came back at 12%, not the nominal 90%:
 That gap is not uniform across output dimensions — the resistivity
 parameters cover far better than the thickness parameters, which this
 ensemble's raw inter-member spread represents poorly. A single pooled
-coverage number can hide exactly this kind of per-parameter split. Preserve
-the calibration dataset ID and empirical test coverage, broken out by output
+coverage number can hide exactly this kind of per-parameter split. Evaluate
+conformal coverage directly from ``lower <= y <= upper`` when reporting the
+conformal method, and distinguish marginal, simultaneous-vector, and
+per-parameter coverage. Preserve the calibration dataset ID and empirical
+test coverage, broken out by output
 dimension where practical, with the inference output. Do not assume a loaded
 ensemble remains calibrated merely because the ensemble directory was saved
 after calibration.
@@ -616,10 +646,10 @@ models associated with its configured observations:
 
    >>> from pycsamt.ai.inversion import PINNInverter1D
    >>> pinn = PINNInverter1D(
-   ...     "data/AMT/WILLY_DATA/L18PLT", solver="mt1d", n_layers=10,
+   ...     "data/AMT/WILLY_data/L18PLT", solver="mt1d", n_layers=10,
    ...     depth_max=2000.0, smoothness_weight=0.01, lr=1e-2, comp="xy",
    ... )
-   >>> pinn.fit(epochs=400, verbose=False)
+   >>> _ = pinn.fit(epochs=400, verbose=False)
    >>> pinn_models = pinn.predict()
    >>> len(pinn_models), sum(1 for m in pinn_models if m is None)
    (28, 0)
@@ -639,12 +669,12 @@ ten as equally resolved.
 
    >>> from pycsamt.ai.inversion import HybridInverter1D
    >>> hybrid = HybridInverter1D(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
-   ...     ai_inverter="checkpoints/mt1d_resnet_5layer.pkl.npz",
+   ...     "data/AMT/WILLY_data/L18PLT",
+   ...     ai_inverter="checkpoints/mt1d_resnet_5layer.npz",
    ...     solver="mt1d", max_iter=150, smoothness_weight=0.005,
    ...     lr=5e-3, comp="xy", n_freqs=32,
    ... )
-   >>> hybrid.fit(verbose=False)
+   >>> _ = hybrid.fit(verbose=False)
    >>> hybrid_models = hybrid.predict()
    >>> hybrid_models[0].resistivity.round(1)
    array([1.348e+02, 5.770e+02, 3.793e+03, 2.258e+03, 1.117e+05])
@@ -681,6 +711,24 @@ Every exported array needs a schema. Record:
 * masked, rejected, or clipped predictions;
 * model/checkpoint identifier;
 * preprocessing and inference version.
+
+For the five-layer checkpoint, decoding raw row :math:`\mathbf y` is
+
+.. math::
+   :label: eq-ai-inference-decode
+
+   \rho_\ell = 10^{y_\ell},\quad \ell=1,\ldots,5,
+   \qquad
+   h_k =
+   \begin{cases}
+      10^{y_{5+k}}, & \text{if thickness was trained in log space},\\
+      y_{5+k}, & \text{otherwise},
+   \end{cases}
+   \quad k=1,\ldots,4.
+
+Equation :eq:`eq-ai-inference-decode` is model metadata in mathematical form;
+guessing the second branch from numerical magnitude can silently turn metres
+into powers of ten.
 
 Validate decoded properties:
 
@@ -725,6 +773,20 @@ Calculate residuals in a clearly defined space. A robust report states:
 * components included;
 * missing-data mask;
 * global and station/frequency summaries.
+
+When standard deviations :math:`\sigma_i` are available, one comparable
+summary is the normalized RMS
+
+.. math::
+   :label: eq-ai-inference-nrms
+
+   \operatorname{NRMS}
+   = \sqrt{\frac{1}{N}\sum_{i=1}^{N}
+      \left(\frac{d_i^{\mathrm{pred}}-d_i^{\mathrm{obs}}}{\sigma_i}\right)^2}.
+
+Report equation :eq:`eq-ai-inference-nrms` separately by component and useful
+frequency band as well as globally. A single average can still hide where a
+structured residual occurs.
 
 Do not accept a model solely because it resembles expected geology. Conversely,
 response agreement alone cannot establish uniqueness — as the PINN layers in
@@ -823,8 +885,8 @@ Complete 1-D inference example
    >>> from pycsamt.forward import MT1DForward
    >>> root = Path("inference/L18_mt1d_resnet_v001")
    >>> root.mkdir(parents=True, exist_ok=True)
-   >>> inverter = EMInverter1D.load("checkpoints/mt1d_resnet_5layer.pkl.npz")
-   >>> sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True, verbose=0)
+   >>> inverter = EMInverter1D.load("checkpoints/mt1d_resnet_5layer.npz")
+   >>> sites = ensure_sites("data/AMT/WILLY_data/L18PLT", recursive=True, verbose=0)
    >>> X, freqs, names = sites_to_features_1d(
    ...     sites, comp="xy", n_freqs=32, freq_min=1.05, freq_max=9500.0,
    ... )
@@ -857,7 +919,7 @@ Complete 1-D inference example
    ...     accepted=accepted,
    ... )
    >>> manifest = {
-   ...     "checkpoint": "mt1d_resnet_5layer.pkl.npz",
+   ...     "checkpoint": "mt1d_resnet_5layer.npz",
    ...     "component": "xy",
    ...     "n_freqs": 32,
    ...     "freq_min_hz": 1.05,
@@ -866,13 +928,13 @@ Complete 1-D inference example
    ...     "accepted_stations": int(accepted.sum()),
    ...     "rejected_stations": int((~accepted).sum()),
    ... }
-   >>> (root / "manifest.json").write_text(
+   >>> _ = (root / "manifest.json").write_text(
    ...     json.dumps(manifest, indent=2), encoding="utf-8",
    ... )
 
 Because the field query grid was matched to the checkpoint's own training
 band (step 5), every station clears the strict all-finite gate here — a
-direct contrast with the 57.5%-nonfinite result a mismatched grid would have
+direct contrast with the 56.25%-nonfinite result a mismatched grid would have
 produced, and with the 27-of-28 review flags the *percentile* gate in step 7
 raises on the very same stations. A production model may use a different
 approved policy for either gate, but it must not improvise one during

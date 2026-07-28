@@ -90,9 +90,7 @@ def test_count_functions_on_own_module():
 
     n_public = count_functions("pycsamt.utils.generic")
     assert n_public == len(names)
-    n_with_private = count_functions(
-        "pycsamt.utils.generic", include_private=True
-    )
+    n_with_private = count_functions("pycsamt.utils.generic", include_private=True)
     assert n_with_private >= n_public
 
 
@@ -125,9 +123,7 @@ def test_get_valid_kwargs_instance_and_class():
         def __init__(self, alpha=1, beta=2):
             pass
 
-    assert get_valid_kwargs(C, {"alpha": 5, "nope": 0}.copy()).keys() == {
-        "alpha"
-    }
+    assert get_valid_kwargs(C, {"alpha": 5, "nope": 0}.copy()).keys() == {"alpha"}
 
 
 # ------------------------------ error_policy ---------------------------

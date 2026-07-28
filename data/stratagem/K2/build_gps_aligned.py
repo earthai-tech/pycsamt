@@ -63,14 +63,20 @@ def _load_field_report(path: Path) -> pd.DataFrame:
     fr = pd.DataFrame(
         rows,
         columns=[
-            "date", "weather", "fileno", "line", "point",
-            "chainage", "terrain", "notes",
+            "date",
+            "weather",
+            "fileno",
+            "line",
+            "point",
+            "chainage",
+            "terrain",
+            "notes",
         ],
     )
     fr["chainage"] = fr["chainage"].astype(float)
-    fr["is_checkpoint"] = fr["notes"].str.contains(
-        "检查点", na=False
-    ) | fr["terrain"].str.contains("检查点", na=False)
+    fr["is_checkpoint"] = fr["notes"].str.contains("检查点", na=False) | fr[
+        "terrain"
+    ].str.contains("检查点", na=False)
 
     def file_num(s):
         if pd.isna(s) or not str(s).strip():
@@ -100,7 +106,9 @@ def _load_gps(path: Path) -> pd.DataFrame:
     return gps[~bad].reset_index(drop=True)
 
 
-def _lookup(gps_trusted: pd.DataFrame, chain: float) -> tuple[float, float, float, str]:
+def _lookup(
+    gps_trusted: pd.DataFrame, chain: float
+) -> tuple[float, float, float, str]:
     within = gps_trusted[(gps_trusted["step"] - chain).abs() <= 5.0]
     if not within.empty:
         r = within.iloc[(within["step"] - chain).abs().argmin()]

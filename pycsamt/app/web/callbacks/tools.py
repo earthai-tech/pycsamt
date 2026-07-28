@@ -236,9 +236,7 @@ def _restore_from_store(stored: dict | None):
                 className="tool-graph",
             )
         if t == "strike_payload":
-            return _render_strike_result(
-                stored["payload"], stored.get("theme")
-            )
+            return _render_strike_result(stored["payload"], stored.get("theme"))
         if t == "validator_rows":
             rows = stored.get("rows", [])
             cols = stored.get("cols", [])
@@ -248,17 +246,13 @@ def _restore_from_store(stored: dict | None):
             chips = html.Div(
                 [
                     _metric_chip("Scope", summary.get("scope", "—")),
-                    _metric_chip(
-                        "Validated", str(summary.get("total", len(rows)))
-                    ),
+                    _metric_chip("Validated", str(summary.get("total", len(rows)))),
                     _metric_chip("Pass", str(summary.get("pass", 0))),
                     _metric_chip(
                         "Warn / Fail",
                         f"{summary.get('warn', 0)} / {summary.get('fail', 0)}",
                     ),
-                    html.Span(
-                        " (restored)", className="small text-muted ms-2"
-                    ),
+                    html.Span(" (restored)", className="small text-muted ms-2"),
                 ],
                 className="tool-metric-row",
             )
@@ -340,12 +334,8 @@ def _restore_from_store(stored: dict | None):
                     else " ",
                     html.Br(),
                     html.Small(layer_desc or "—", className="text-muted"),
-                    html.Span(
-                        f"  ·  solver: {solver}", className="text-muted small"
-                    ),
-                    html.Span(
-                        " (restored)", className="small text-muted ms-2"
-                    ),
+                    html.Span(f"  ·  solver: {solver}", className="text-muted small"),
+                    html.Span(" (restored)", className="small text-muted ms-2"),
                 ],
                 color="info",
                 className="py-2 px-3 small mb-2",
@@ -543,12 +533,8 @@ def _build_tool_body(
         "batch": lambda: _batch_body(n, nd),
         "elevation": lambda: _elevation_body(n, nd, store_data),
         "response": lambda: _response_body(n, nd, store_data, last_output),
-        "strike-profile": lambda: _strike_profile_body(
-            n, nd, store_data, last_output
-        ),
-        "phase-tensor": lambda: _phase_tensor_body(
-            n, nd, store_data, last_output
-        ),
+        "strike-profile": lambda: _strike_profile_body(n, nd, store_data, last_output),
+        "phase-tensor": lambda: _phase_tensor_body(n, nd, store_data, last_output),
         "layered-model": lambda: _layered_model_body(theme, last_output),
     }
     fn = builders.get(tool_id)
@@ -599,9 +585,7 @@ def _strike_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Station scope", className="ctrl-label"
-                            ),
+                            html.Label("Station scope", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-strike-stations",
                                 options=station_opts,
@@ -621,9 +605,7 @@ def _strike_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "Strike method", className="ctrl-label"
-                            ),
+                            html.Label("Strike method", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-strike-method",
                                 options=[
@@ -643,9 +625,7 @@ def _strike_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Period / frequency", className="ctrl-label"
-                            ),
+                            html.Label("Period / frequency", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-strike-freq",
                                 options=[
@@ -670,9 +650,7 @@ def _strike_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "Angle step (°)", className="ctrl-label"
-                            ),
+                            html.Label("Angle step (°)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-strike-step",
                                 type="number",
@@ -707,9 +685,7 @@ def _strike_body(
             _out_area(
                 "tool-strike-out",
                 min_h=360,
-                children=_render_stored_tool_result(
-                    "strike", run_store, theme
-                ),
+                children=_render_stored_tool_result("strike", run_store, theme),
                 last_output=last_output,
             ),
         ]
@@ -816,9 +792,7 @@ def _validator_body(
                 className="tool-checklist mb-2",
             ),
             _action_bar(
-                _run_btn(
-                    "tool-valid-run", "Run Validation", "clipboard-check"
-                )
+                _run_btn("tool-valid-run", "Run Validation", "clipboard-check")
             ),
             _out_area(
                 "tool-valid-out",
@@ -902,9 +876,7 @@ def _converter_body() -> html.Div:
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "UTM zone", className="ctrl-label"
-                                    ),
+                                    html.Label("UTM zone", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-conv-utm",
                                         placeholder="49N",
@@ -915,9 +887,7 @@ def _converter_body() -> html.Div:
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "EPSG", className="ctrl-label"
-                                    ),
+                                    html.Label("EPSG", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-conv-epsg",
                                         placeholder="32649",
@@ -998,9 +968,7 @@ def _converter_body() -> html.Div:
             ),
             html.Div(
                 [
-                    html.Label(
-                        "Core transform policy", className="ctrl-label"
-                    ),
+                    html.Label("Core transform policy", className="ctrl-label"),
                     dbc.Row(
                         [
                             dbc.Col(
@@ -1061,16 +1029,13 @@ def _converter_body() -> html.Div:
                 ],
                 className="tool-option-box",
             ),
-            _action_bar(
-                _run_btn("tool-conv-run", "Convert to EDI", "download")
-            ),
+            _action_bar(_run_btn("tool-conv-run", "Convert to EDI", "download")),
             _out_area("tool-conv-out", min_h=340, cls="mt-2"),
         ]
     )
 
 
 def _coords_body() -> html.Div:
-
     def _lbl(t):
         return html.Div(t, className="ctrl-label mt-2 mb-1")
 
@@ -1322,18 +1287,14 @@ def _coords_body() -> html.Div:
                     html.Div(
                         [
                             _lbl("Easting col"),
-                            dbc.Select(
-                                id="tool-coord-col-e", options=[], size="sm"
-                            ),
+                            dbc.Select(id="tool-coord-col-e", options=[], size="sm"),
                         ],
                         style={"flex": "1"},
                     ),
                     html.Div(
                         [
                             _lbl("Northing col"),
-                            dbc.Select(
-                                id="tool-coord-col-n", options=[], size="sm"
-                            ),
+                            dbc.Select(id="tool-coord-col-n", options=[], size="sm"),
                         ],
                         style={"flex": "1"},
                     ),
@@ -1500,9 +1461,7 @@ def _dimensionality_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Station scope", className="ctrl-label"
-                            ),
+                            html.Label("Station scope", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-dim-stations",
                                 options=station_opts,
@@ -1523,9 +1482,7 @@ def _dimensionality_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "Skew threshold (°)", className="ctrl-label"
-                            ),
+                            html.Label("Skew threshold (°)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-dim-skew-th",
                                 type="number",
@@ -1560,9 +1517,7 @@ def _dimensionality_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Map period (s)", className="ctrl-label"
-                            ),
+                            html.Label("Map period (s)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-dim-map-period",
                                 type="number",
@@ -1617,9 +1572,7 @@ def _dimensionality_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Occupancy bands", className="ctrl-label"
-                            ),
+                            html.Label("Occupancy bands", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-dim-n-bands",
                                 type="number",
@@ -1758,9 +1711,7 @@ def _freq_editor_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Station scope", className="ctrl-label"
-                            ),
+                            html.Label("Station scope", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-freq-stations",
                                 options=station_opts,
@@ -1800,9 +1751,7 @@ def _freq_editor_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Edit mode", className="ctrl-label"
-                                    ),
+                                    html.Label("Edit mode", className="ctrl-label"),
                                     dbc.RadioItems(
                                         id="tool-freq-mode",
                                         options=[
@@ -1840,9 +1789,7 @@ def _freq_editor_body(
                                         clearable=False,
                                         className="mb-2",
                                     ),
-                                    html.Label(
-                                        "Edit also", className="ctrl-label"
-                                    ),
+                                    html.Label("Edit also", className="ctrl-label"),
                                     dbc.RadioItems(
                                         id="tool-freq-also",
                                         options=[
@@ -2007,9 +1954,7 @@ def _freq_editor_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "fmin (Hz)", className="ctrl-label"
-                                    ),
+                                    html.Label("fmin (Hz)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-freq-fmin",
                                         type="number",
@@ -2023,9 +1968,7 @@ def _freq_editor_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "fmax (Hz)", className="ctrl-label"
-                                    ),
+                                    html.Label("fmax (Hz)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-freq-fmax",
                                         type="number",
@@ -2065,9 +2008,7 @@ def _freq_editor_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "fmin (Hz)", className="ctrl-label"
-                                    ),
+                                    html.Label("fmin (Hz)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-freq-rg-fmin",
                                         type="number",
@@ -2081,9 +2022,7 @@ def _freq_editor_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "fmax (Hz)", className="ctrl-label"
-                                    ),
+                                    html.Label("fmax (Hz)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-freq-rg-fmax",
                                         type="number",
@@ -2209,9 +2148,7 @@ def _freq_editor_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Operation", className="ctrl-label"
-                                    ),
+                                    html.Label("Operation", className="ctrl-label"),
                                     dbc.RadioItems(
                                         id="tool-freq-smooth-op",
                                         options=[
@@ -2278,12 +2215,8 @@ def _freq_editor_body(
             # ── Export ────────────────────────────────────────────────────────
             html.Div(
                 [
-                    html.Hr(
-                        style={"borderColor": "#45475a", "margin": "8px 0"}
-                    ),
-                    html.Label(
-                        "Export edited EDIs to disk", className="ctrl-label"
-                    ),
+                    html.Hr(style={"borderColor": "#45475a", "margin": "8px 0"}),
+                    html.Label("Export edited EDIs to disk", className="ctrl-label"),
                     dbc.Row(
                         [
                             dbc.Col(
@@ -2323,9 +2256,7 @@ def _freq_editor_body(
                             dbc.Col(
                                 dbc.Button(
                                     [
-                                        html.I(
-                                            className="bi bi-download me-1"
-                                        ),
+                                        html.I(className="bi bi-download me-1"),
                                         "Export EDIs",
                                     ],
                                     id="tool-freq-export-btn",
@@ -2459,9 +2390,7 @@ def _batch_body(n: int, no_data: html.Div) -> html.Div:
                 value=["manifest"],
                 className="tool-checklist mb-2",
             ),
-            _action_bar(
-                _run_btn("tool-batch-run", "Export All Figures", "images")
-            ),
+            _action_bar(_run_btn("tool-batch-run", "Export All Figures", "images")),
             _out_area("tool-batch-out", min_h=260, cls="mt-2"),
         ]
     )
@@ -2484,9 +2413,7 @@ def _elevation_body(
         sid = r.get("ID") or r.get("station") or r.get("name")
         if sid:
             ln = r.get("Line", "")
-            sta_opts.append(
-                {"label": f"{sid} · {ln}" if ln else sid, "value": sid}
-            )
+            sta_opts.append({"label": f"{sid} · {ln}" if ln else sid, "value": sid})
 
     # ── Mode pill bar ─────────────────────────────────────────────────────
     mode_bar = html.Div(
@@ -2666,9 +2593,7 @@ def _elevation_body(
                 id="tool-elev-upload-input",
                 children=html.Div(
                     [
-                        html.I(
-                            className="bi bi-file-earmark-spreadsheet me-2"
-                        ),
+                        html.I(className="bi bi-file-earmark-spreadsheet me-2"),
                         "Drag & drop CSV / TXT  or  ",
                         html.A("browse", style={"cursor": "pointer"}),
                     ]
@@ -2676,9 +2601,7 @@ def _elevation_body(
                 accept=".csv,.txt",
                 className="elev-upload-zone mb-2",
             ),
-            html.Div(
-                id="tool-elev-upload-info", className="elev-upload-info mb-2"
-            ),
+            html.Div(id="tool-elev-upload-info", className="elev-upload-info mb-2"),
             html.Div(
                 [
                     html.Div(
@@ -2937,9 +2860,7 @@ def _elevation_body(
                         [
                             dbc.Button(
                                 [
-                                    html.I(
-                                        className="bi bi-filetype-csv me-1"
-                                    ),
+                                    html.I(className="bi bi-filetype-csv me-1"),
                                     "CSV",
                                 ],
                                 id="tool-elev-export-csv",
@@ -2950,9 +2871,7 @@ def _elevation_body(
                             ),
                             dbc.Button(
                                 [
-                                    html.I(
-                                        className="bi bi-file-earmark-binary me-1"
-                                    ),
+                                    html.I(className="bi bi-file-earmark-binary me-1"),
                                     "HDF5 / NPZ",
                                 ],
                                 id="tool-elev-export-h5",
@@ -2963,9 +2882,7 @@ def _elevation_body(
                             ),
                             dbc.Button(
                                 [
-                                    html.I(
-                                        className="bi bi-arrow-repeat me-1"
-                                    ),
+                                    html.I(className="bi bi-arrow-repeat me-1"),
                                     "Update EDI",
                                 ],
                                 id="tool-elev-update-session",
@@ -3087,8 +3004,7 @@ def _response_body(
                             html.Label("Compare", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-resp-station2",
-                                options=[{"label": "— none —", "value": ""}]
-                                + sta_opts,
+                                options=[{"label": "— none —", "value": ""}] + sta_opts,
                                 value="",
                                 clearable=False,
                                 placeholder="optional 2nd station",
@@ -3238,8 +3154,7 @@ def _strike_profile_body(
         return no_data
     line_counts = (store_data or {}).get("line_counts", {})
     line_opts = [
-        {"label": f"{ln}  ({cnt})", "value": ln}
-        for ln, cnt in line_counts.items()
+        {"label": f"{ln}  ({cnt})", "value": ln} for ln, cnt in line_counts.items()
     ]
     if not line_opts:
         line_opts = [{"label": "All stations", "value": "__all__"}]
@@ -3403,9 +3318,7 @@ def _strike_profile_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "IQR flag (°)", className="ctrl-label"
-                            ),
+                            html.Label("IQR flag (°)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-sprof-iqr-thresh",
                                 type="number",
@@ -3453,8 +3366,7 @@ def _phase_tensor_body(
 
     line_counts = (store_data or {}).get("line_counts", {})
     line_opts = [
-        {"label": f"{ln}  ({cnt})", "value": ln}
-        for ln, cnt in line_counts.items()
+        {"label": f"{ln}  ({cnt})", "value": ln} for ln, cnt in line_counts.items()
     ]
     if not line_opts:
         line_opts = [{"label": "All stations", "value": "__all__"}]
@@ -3533,9 +3445,7 @@ def _phase_tensor_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "Target period (s)", className="ctrl-label"
-                            ),
+                            html.Label("Target period (s)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-pt-period",
                                 type="number",
@@ -3555,9 +3465,7 @@ def _phase_tensor_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "Section T min (s)", className="ctrl-label"
-                            ),
+                            html.Label("Section T min (s)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-pt-period-lo",
                                 type="number",
@@ -3571,9 +3479,7 @@ def _phase_tensor_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Section T max (s)", className="ctrl-label"
-                            ),
+                            html.Label("Section T max (s)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-pt-period-hi",
                                 type="number",
@@ -3690,9 +3596,7 @@ def _phase_tensor_body(
                 [
                     dbc.Col(
                         [
-                            html.Label(
-                                "Normalise by", className="ctrl-label"
-                            ),
+                            html.Label("Normalise by", className="ctrl-label"),
                             dcc.Dropdown(
                                 id="tool-pt-norm",
                                 options=[
@@ -3858,9 +3762,7 @@ def _phase_tensor_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Skew thresh.", className="ctrl-label"
-                            ),
+                            html.Label("Skew thresh.", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-pt-skew-thresh",
                                 type="number",
@@ -3984,9 +3886,7 @@ def _layered_model_body(
                         style_data_conditional=[
                             {
                                 "if": {"state": "active"},
-                                "backgroundColor": "#313244"
-                                if dark
-                                else "#ccd0da",
+                                "backgroundColor": "#313244" if dark else "#ccd0da",
                                 "border": "1px solid #89b4fa",
                             }
                         ],
@@ -3996,9 +3896,7 @@ def _layered_model_body(
                             dbc.Col(
                                 html.Button(
                                     [
-                                        html.I(
-                                            className="bi bi-plus-lg me-1"
-                                        ),
+                                        html.I(className="bi bi-plus-lg me-1"),
                                         "Add layer",
                                     ],
                                     id="tool-lm-add",
@@ -4055,9 +3953,7 @@ def _layered_model_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Layers", className="ctrl-label"
-                                    ),
+                                    html.Label("Layers", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-r-nlayers",
                                         type="number",
@@ -4073,9 +3969,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "ρ min (Ω·m)", className="ctrl-label"
-                                    ),
+                                    html.Label("ρ min (Ω·m)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-r-rho-min",
                                         type="number",
@@ -4089,9 +3983,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "ρ max (Ω·m)", className="ctrl-label"
-                                    ),
+                                    html.Label("ρ max (Ω·m)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-r-rho-max",
                                         type="number",
@@ -4153,9 +4045,7 @@ def _layered_model_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Layers", className="ctrl-label"
-                                    ),
+                                    html.Label("Layers", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-b-nlayers",
                                         type="number",
@@ -4248,17 +4138,13 @@ def _layered_model_body(
                                         "Equal thickness",
                                         className="ctrl-label mt-3",
                                     ),
-                                    dbc.Switch(
-                                        id="tool-lm-b-equal-th", value=True
-                                    ),
+                                    dbc.Switch(id="tool-lm-b-equal-th", value=True),
                                 ],
                                 width=3,
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Seed", className="ctrl-label"
-                                    ),
+                                    html.Label("Seed", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-b-seed",
                                         type="number",
@@ -4282,9 +4168,7 @@ def _layered_model_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Layers", className="ctrl-label"
-                                    ),
+                                    html.Label("Layers", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-s-nlayers",
                                         type="number",
@@ -4317,9 +4201,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "ρ deep (Ω·m)", className="ctrl-label"
-                                    ),
+                                    html.Label("ρ deep (Ω·m)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-s-rho-deep",
                                         type="number",
@@ -4373,9 +4255,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Seed", className="ctrl-label"
-                                    ),
+                                    html.Label("Seed", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-s-seed",
                                         type="number",
@@ -4421,9 +4301,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Seed", className="ctrl-label"
-                                    ),
+                                    html.Label("Seed", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-geo-seed",
                                         type="number",
@@ -4462,9 +4340,7 @@ def _layered_model_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "f min (Hz)", className="ctrl-label"
-                                    ),
+                                    html.Label("f min (Hz)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-freq-min",
                                         type="number",
@@ -4478,9 +4354,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "f max (Hz)", className="ctrl-label"
-                                    ),
+                                    html.Label("f max (Hz)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-freq-max",
                                         type="number",
@@ -4546,9 +4420,7 @@ def _layered_model_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "t min (s)", className="ctrl-label"
-                                    ),
+                                    html.Label("t min (s)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-time-min",
                                         type="number",
@@ -4562,9 +4434,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "t max (s)", className="ctrl-label"
-                                    ),
+                                    html.Label("t max (s)", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-time-max",
                                         type="number",
@@ -4578,9 +4448,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "N time gates", className="ctrl-label"
-                                    ),
+                                    html.Label("N time gates", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-n-times",
                                         type="number",
@@ -4696,9 +4564,7 @@ def _layered_model_body(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "Seed", className="ctrl-label"
-                                    ),
+                                    html.Label("Seed", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-noise-seed",
                                         type="number",
@@ -4797,9 +4663,7 @@ def _layered_model_body(
                         [
                             dbc.Col(
                                 [
-                                    html.Label(
-                                        "σ log₁₀ρ", className="ctrl-label"
-                                    ),
+                                    html.Label("σ log₁₀ρ", className="ctrl-label"),
                                     dbc.Input(
                                         id="tool-lm-mult-sigma",
                                         type="number",
@@ -4849,9 +4713,7 @@ def _layered_model_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Depth max plot (m)", className="ctrl-label"
-                            ),
+                            html.Label("Depth max plot (m)", className="ctrl-label"),
                             dbc.Input(
                                 id="tool-lm-depth-plot",
                                 type="number",
@@ -4865,9 +4727,7 @@ def _layered_model_body(
                     ),
                     dbc.Col(
                         [
-                            html.Label(
-                                "Log ρ axis", className="ctrl-label mt-3"
-                            ),
+                            html.Label("Log ρ axis", className="ctrl-label mt-3"),
                             dbc.Switch(id="tool-lm-log-rho", value=True),
                         ],
                         width=2,
@@ -5025,9 +4885,7 @@ def register_tools(app) -> None:
             theme,
             last_output=last_output,
         )
-        _, icon, label, _ = _TOOL_BY_ID.get(
-            tool_id, (tool_id, "tools", "Tools", "")
-        )
+        _, icon, label, _ = _TOOL_BY_ID.get(tool_id, (tool_id, "tools", "Tools", ""))
         title = html.Span(
             [
                 _icon("tools", size=16, cls="menu-item-icon"),
@@ -5113,11 +4971,7 @@ def register_tools(app) -> None:
                         className="tools-path-item",
                     )
                 )
-            elif (
-                mode in ("file", "any")
-                and is_file
-                and _path_file_allowed(entry.name)
-            ):
+            elif mode in ("file", "any") and is_file and _path_file_allowed(entry.name):
                 rows.append(
                     dbc.ListGroupItem(
                         [
@@ -5273,9 +5127,7 @@ def register_tools(app) -> None:
         path = trigger.get("path")
         if not target_id or not path:
             raise PreventUpdate
-        set_props(
-            target_id, {"value": os.path.abspath(os.path.expanduser(path))}
-        )
+        set_props(target_id, {"value": os.path.abspath(os.path.expanduser(path))})
         return False
 
     # ── Tool run callbacks ─────────────────────────────────────────────────────
@@ -5288,9 +5140,7 @@ def register_tools(app) -> None:
         State(IDs.STORE_ACTIVE_LINES, "data"),
         prevent_initial_call=True,
     )
-    def _sync_strike_station_scope(
-        selected_lines, store_data, active_lines_store
-    ):
+    def _sync_strike_station_scope(selected_lines, store_data, active_lines_store):
         opts = _station_options_for_lines(
             store_data, active_lines_store, selected_lines
         )
@@ -5304,9 +5154,7 @@ def register_tools(app) -> None:
         State(IDs.STORE_ACTIVE_LINES, "data"),
         prevent_initial_call=True,
     )
-    def _sync_validator_station_scope(
-        selected_lines, store_data, active_lines_store
-    ):
+    def _sync_validator_station_scope(selected_lines, store_data, active_lines_store):
         opts = _station_options_for_lines(
             store_data, active_lines_store, selected_lines
         )
@@ -5321,14 +5169,10 @@ def register_tools(app) -> None:
     def _sync_converter_options(conv_type):
         text = str(conv_type or "")
         show_avg = (
-            {"display": "block"}
-            if text.startswith("AVG")
-            else {"display": "none"}
+            {"display": "block"} if text.startswith("AVG") else {"display": "none"}
         )
         show_spec = (
-            {"display": "block"}
-            if text.startswith("Spectra")
-            else {"display": "none"}
+            {"display": "block"} if text.startswith("Spectra") else {"display": "none"}
         )
         return show_avg, show_spec
 
@@ -5408,9 +5252,7 @@ def register_tools(app) -> None:
                 if "\t" in raw.split("\n")[0]
                 else None
             )
-            df = pd.read_csv(
-                io.StringIO(raw), sep=sep, engine="python", nrows=5000
-            )
+            df = pd.read_csv(io.StringIO(raw), sep=sep, engine="python", nrows=5000)
             cols = list(df.columns)
             opts = [{"label": c, "value": c} for c in cols]
             id_opts = [{"label": "— none —", "value": ""}] + opts
@@ -5426,9 +5268,7 @@ def register_tools(app) -> None:
             n_guess = _guess(["north", "northing", "y", "lat", "n"])
             info = html.Div(
                 [
-                    html.I(
-                        className="bi bi-check-circle-fill text-success me-1"
-                    ),
+                    html.I(className="bi bi-check-circle-fill text-success me-1"),
                     f"{filename} — {len(df)} rows, {len(cols)} columns",
                 ],
                 className="small",
@@ -5437,14 +5277,8 @@ def register_tools(app) -> None:
             return (
                 df.to_dict("records"),
                 info,
-                [
-                    {"label": c, "value": c, "selected": c == e_guess}
-                    for c in cols
-                ],
-                [
-                    {"label": c, "value": c, "selected": c == n_guess}
-                    for c in cols
-                ],
+                [{"label": c, "value": c, "selected": c == e_guess} for c in cols],
+                [{"label": c, "value": c, "selected": c == n_guess} for c in cols],
                 id_opts,
             )
         except Exception as exc:
@@ -5533,9 +5367,7 @@ def register_tools(app) -> None:
                 [
                     dash_table.DataTable(
                         data=df_out.to_dict("records"),
-                        columns=[
-                            {"name": c, "id": c} for c in df_out.columns
-                        ],
+                        columns=[{"name": c, "id": c} for c in df_out.columns],
                         page_size=10,
                         style_table={"overflowX": "auto", "fontSize": "11px"},
                         style_cell={
@@ -5689,9 +5521,7 @@ def register_tools(app) -> None:
                         return card, result, 100, "Done", show_prog, False
                     except ImportError:
                         return (
-                            _warn(
-                                "pyproj is required for EPSG→EPSG conversion."
-                            ),
+                            _warn("pyproj is required for EPSG→EPSG conversion."),
                             no_update,
                             0,
                             "",
@@ -5722,9 +5552,7 @@ def register_tools(app) -> None:
                 df = pd.DataFrame(csv_data)
                 if col_e not in df.columns or col_n not in df.columns:
                     return (
-                        _warn(
-                            f"Columns '{col_e}' / '{col_n}' not found in data."
-                        ),
+                        _warn(f"Columns '{col_e}' / '{col_n}' not found in data."),
                         no_update,
                         0,
                         "",
@@ -5741,9 +5569,7 @@ def register_tools(app) -> None:
                         e_v = float(row[col_e])
                         n_v = float(row[col_n])
                         if direction == "utm2ll":
-                            zo = z_batch or str(
-                                row.get("zone", row.get("Zone", "49N"))
-                            )
+                            zo = z_batch or str(row.get("zone", row.get("Zone", "49N")))
                             la, lo = project_point_utm2ll(
                                 e_v, n_v, zo, datum=datum or "WGS84"
                             )
@@ -5770,9 +5596,7 @@ def register_tools(app) -> None:
                             }
                         elif direction == "epsg2epsg":
                             if not epsg_src or not epsg_dst:
-                                raise ValueError(
-                                    "Specify source and target EPSG."
-                                )
+                                raise ValueError("Specify source and target EPSG.")
                             from pyproj import Transformer
 
                             tr = Transformer.from_crs(
@@ -5791,9 +5615,7 @@ def register_tools(app) -> None:
                             rec = {"ID": row[col_id], **rec}
                         rows_out.append(rec)
                     except Exception:
-                        rows_out.append(
-                            {"Error": f"row {i}: conversion failed"}
-                        )
+                        rows_out.append({"Error": f"row {i}: conversion failed"})
 
                 pct = 100 if total else 0
                 label = f"{len(rows_out)}/{total} points"
@@ -5826,9 +5648,7 @@ def register_tools(app) -> None:
                     e_v = stn.get("easting") or stn.get("x")
                     n_v = stn.get("northing") or stn.get("y")
                     if e_v is None or n_v is None:
-                        rows_out.append(
-                            {"Station": name, "Error": "no coords"}
-                        )
+                        rows_out.append({"Station": name, "Error": "no coords"})
                         continue
                     try:
                         zo = z_srv or stn.get("zone", "49N")
@@ -5882,9 +5702,7 @@ def register_tools(app) -> None:
             )
         lats = [r["Latitude"] for r in rows]
         lons = [r["Longitude"] for r in rows]
-        names = [
-            str(r.get("Station", r.get("ID", i))) for i, r in enumerate(rows)
-        ]
+        names = [str(r.get("Station", r.get("ID", i))) for i, r in enumerate(rows)]
         fig = go.Figure(
             go.Scattermapbox(
                 lat=lats,
@@ -5899,9 +5717,7 @@ def register_tools(app) -> None:
         fig.update_layout(
             mapbox=dict(
                 style="carto-darkmatter",
-                center=dict(
-                    lat=sum(lats) / len(lats), lon=sum(lons) / len(lons)
-                ),
+                center=dict(lat=sum(lats) / len(lats), lon=sum(lons) / len(lons)),
                 zoom=8,
             ),
             margin=dict(l=0, r=0, t=0, b=0),
@@ -6028,9 +5844,7 @@ def register_tools(app) -> None:
         if not n:
             return no_update
         rows = list(rows or [])
-        rows.append(
-            {"#": len(rows) + 1, "ρ (Ω·m)": 100.0, "Thickness (m)": 100.0}
-        )
+        rows.append({"#": len(rows) + 1, "ρ (Ω·m)": 100.0, "Thickness (m)": 100.0})
         return rows
 
     # Layered model — main forward run
@@ -6270,9 +6084,7 @@ def register_tools(app) -> None:
             elif ctor == "geology":
                 model = LayeredModel.from_geology(
                     geo_name or "sedimentary",
-                    seed=int(geo_seed)
-                    if geo_seed not in (None, "")
-                    else None,
+                    seed=int(geo_seed) if geo_seed not in (None, "") else None,
                 )
 
             else:
@@ -6328,9 +6140,7 @@ def register_tools(app) -> None:
                             phase_level=ph_lvl,
                         )
                         seed_v = (
-                            int(noise_seed)
-                            if noise_seed not in (None, "")
-                            else None
+                            int(noise_seed) if noise_seed not in (None, "") else None
                         )
                         noisy_resp = add_noise(
                             response,
@@ -6342,8 +6152,7 @@ def register_tools(app) -> None:
                         nm = FieldRealisticNoise(
                             base_level=float(field_base or 2.0) / 100.0,
                             powerline_freq=float(field_plfreq or 50.0),
-                            powerline_level=float(field_pllevel or 30.0)
-                            / 100.0,
+                            powerline_level=float(field_pllevel or 30.0) / 100.0,
                             dead_band=bool(field_dead),
                         )
                         noisy_resp = add_noise(
@@ -6355,24 +6164,19 @@ def register_tools(app) -> None:
                         nm = MultiplicativeNoise(
                             sigma_log10=float(mult_sigma or 0.05),
                         )
-                        noisy_resp = add_noise(
-                            response, noise_model=nm, level=0.05
-                        )
+                        noisy_resp = add_noise(response, noise_model=nm, level=0.05)
                 except Exception:
                     noisy_resp = None
 
             # ── 4. PLOT ───────────────────────────────────────────────────
             view = view or "both"
-            depth_max_v = (
-                float(depth_plot) if depth_plot not in (None, "") else None
-            )
+            depth_max_v = float(depth_plot) if depth_plot not in (None, "") else None
             log_rho_v = bool(log_rho)
             children: list = []
 
             # ── model layer summary banner ────────────────────────────────
             layer_desc = "  ·  ".join(
-                f"L{i + 1}: {r:.1f} Ω·m"
-                for i, r in enumerate(model.resistivity)
+                f"L{i + 1}: {r:.1f} Ω·m" for i, r in enumerate(model.resistivity)
             )
             children.append(
                 dbc.Alert(
@@ -6426,9 +6230,7 @@ def register_tools(app) -> None:
                 try:
                     if view == "both":
                         mpl_fig = plot_response_and_model_1d(
-                            noisy_resp
-                            if noisy_resp is not None
-                            else response,
+                            noisy_resp if noisy_resp is not None else response,
                             model=model,
                             title=f"{solver.upper()} synthetic response"
                             + (" + noise" if noisy_resp else ""),
@@ -6438,9 +6240,7 @@ def register_tools(app) -> None:
                         mpl_fig_r, _ = plt.subplots(figsize=(7, 5.5))
                         mpl_fig = plt.gcf()
                         plot_response_1d(
-                            noisy_resp
-                            if noisy_resp is not None
-                            else response,
+                            noisy_resp if noisy_resp is not None else response,
                             axes=None,
                         )
                         mpl_fig = plt.gcf()
@@ -6543,9 +6343,7 @@ def register_tools(app) -> None:
                 )
                 return dcc.send_string(
                     df.to_csv(index=False), filename="layered_model.csv"
-                ), html.Span(
-                    "✓ Model CSV downloaded.", className="text-success"
-                )
+                ), html.Span("✓ Model CSV downloaded.", className="text-success")
 
             elif fmt == "resp_csv":
                 if not resp_d:
@@ -6568,17 +6366,13 @@ def register_tools(app) -> None:
                 df = pd.DataFrame(rows)
                 return dcc.send_string(
                     df.to_csv(index=False), filename="forward_response.csv"
-                ), html.Span(
-                    "✓ Response CSV downloaded.", className="text-success"
-                )
+                ), html.Span("✓ Response CSV downloaded.", className="text-success")
 
             else:
-                blob = json.dumps(
-                    {"model": model_d, "response": resp_d}, indent=2
+                blob = json.dumps({"model": model_d, "response": resp_d}, indent=2)
+                return dcc.send_string(blob, filename="layered_model.json"), html.Span(
+                    "✓ JSON downloaded.", className="text-success"
                 )
-                return dcc.send_string(
-                    blob, filename="layered_model.json"
-                ), html.Span("✓ JSON downloaded.", className="text-success")
 
         except Exception as exc:
             return no_update, _err(exc)
@@ -6671,10 +6465,13 @@ def register_tools(app) -> None:
                 method_label = "Consensus strike"
 
             if df is None or df.empty:
-                return _warn(
-                    "No strike estimates were produced for the selected scope. "
-                    "Check that the selected stations have valid impedance tensors."
-                ), no_update
+                return (
+                    _warn(
+                        "No strike estimates were produced for the selected scope. "
+                        "Check that the selected stations have valid impedance tensors."
+                    ),
+                    no_update,
+                )
 
             line_map = _station_line_map(store_data)
             df = df.copy()
@@ -6682,9 +6479,10 @@ def register_tools(app) -> None:
             df["ang_axial"] = (df["ang"].astype(float) + 180.0) % 180.0
             finite = df[np.isfinite(df["ang_axial"])]
             if finite.empty:
-                return _warn(
-                    "Strike estimates are all non-finite for this scope."
-                ), no_update
+                return (
+                    _warn("Strike estimates are all non-finite for this scope."),
+                    no_update,
+                )
 
             table_df = finite.copy()
             for col in ("ang", "iqr", "lo", "hi"):
@@ -6718,9 +6516,7 @@ def register_tools(app) -> None:
             max_rows = max(5, min(200, max_rows))
             med = float(np.nanmedian(finite["ang_axial"]))
             spread = (
-                float(np.nanmedian(finite["iqr"]))
-                if "iqr" in finite
-                else float("nan")
+                float(np.nanmedian(finite["iqr"])) if "iqr" in finite else float("nan")
             )
             scope_label = _strike_scope_label(
                 store_data,
@@ -6735,12 +6531,8 @@ def register_tools(app) -> None:
                 "n_stations": int(finite["station"].nunique()),
                 "median_strike": med,
                 "median_iqr": spread,
-                "records": finite[["station", "line", "ang_axial"]].to_dict(
-                    "records"
-                ),
-                "table": table_df[keep_cols]
-                .head(max_rows)
-                .to_dict("records"),
+                "records": finite[["station", "line", "ang_axial"]].to_dict("records"),
+                "table": table_df[keep_cols].head(max_rows).to_dict("records"),
                 "columns": keep_cols,
                 "page_size": min(10, max_rows),
             }
@@ -6808,9 +6600,7 @@ def register_tools(app) -> None:
                 min_freq=min_freq,
             )
             if not rows:
-                return _warn(
-                    "No stations were available for validation."
-                ), no_update
+                return _warn("No stations were available for validation."), no_update
 
             df = pd.DataFrame(rows)
             severity = (severity or "all").lower()
@@ -6871,9 +6661,7 @@ def register_tools(app) -> None:
                             _metric_chip("Scope", scope_label),
                             _metric_chip("Validated", str(len(df))),
                             _metric_chip("Pass", str(n_pass)),
-                            _metric_chip(
-                                "Warn / Fail", f"{n_warn} / {n_fail}"
-                            ),
+                            _metric_chip("Warn / Fail", f"{n_warn} / {n_fail}"),
                         ],
                         className="tool-metric-row",
                     ),
@@ -7001,9 +6789,7 @@ def register_tools(app) -> None:
         if not n:
             return no_update, no_update
         if not source_path or not str(source_path).strip():
-            return _warn(
-                "Enter a source AVG/J/Spectra path first."
-            ), no_update
+            return _warn("Enter a source AVG/J/Spectra path first."), no_update
         try:
             from pathlib import Path
 
@@ -7013,9 +6799,7 @@ def register_tools(app) -> None:
 
             source = Path(str(source_path).strip()).expanduser()
             if not source.exists():
-                return _warn(
-                    f"Source path does not exist: {source}"
-                ), no_update
+                return _warn(f"Source path does not exist: {source}"), no_update
             out = str(output_dir or "").strip()
             if out:
                 Path(out).expanduser().mkdir(parents=True, exist_ok=True)
@@ -7060,12 +6844,15 @@ def register_tools(app) -> None:
                     data_dir=str(out or source.parent),
                 )
 
-            return _converter_result_view(
-                stats=stats,
-                failures=failures,
-                output_dir=out,
-                loaded=load_session and new_store is not no_update,
-            ), new_store
+            return (
+                _converter_result_view(
+                    stats=stats,
+                    failures=failures,
+                    output_dir=out,
+                    loaded=load_session and new_store is not no_update,
+                ),
+                new_store,
+            )
         except Exception as exc:
             return _err(exc), no_update
 
@@ -7078,9 +6865,7 @@ def register_tools(app) -> None:
         State(IDs.STORE_ACTIVE_LINES, "data"),
         prevent_initial_call=True,
     )
-    def _sync_dim_station_scope(
-        selected_lines, store_data, active_lines_store
-    ):
+    def _sync_dim_station_scope(selected_lines, store_data, active_lines_store):
         opts = _station_options_for_lines(
             store_data, active_lines_store, selected_lines
         )
@@ -7342,9 +7127,7 @@ def register_tools(app) -> None:
             if view in ("scatter", "all"):
                 try:
                     if df_filt.empty:
-                        children.append(
-                            _warn("No data in selected period range.")
-                        )
+                        children.append(_warn("No data in selected period range."))
                     else:
                         scatter_traces = []
                         for d_val, grp in df_filt.groupby("dim"):
@@ -7363,9 +7146,7 @@ def register_tools(app) -> None:
                                     },
                                     text=grp["station"].tolist(),
                                     customdata=np.log10(
-                                        np.maximum(
-                                            grp["period"].to_numpy(), 1e-9
-                                        )
+                                        np.maximum(grp["period"].to_numpy(), 1e-9)
                                     ).tolist(),
                                     hovertemplate=(
                                         "<b>%{text}</b><br>"
@@ -7377,9 +7158,7 @@ def register_tools(app) -> None:
                             )
                         # threshold reference lines
                         x_max = float(df_filt["beta_abs"].max()) * 1.1 + 1.0
-                        y_max = (
-                            float(df_filt["ellipt_abs"].max()) * 1.1 + 0.05
-                        )
+                        y_max = float(df_filt["ellipt_abs"].max()) * 1.1 + 0.05
                         scatter_traces += [
                             go.Scatter(
                                 x=[skew_th, skew_th],
@@ -7408,9 +7187,7 @@ def register_tools(app) -> None:
                         ]
                         scat_fig = go.Figure(scatter_traces)
                         _style_fig(scat_fig, "Ellipticity ε", height=320)
-                        scat_fig.update_xaxes(
-                            title_text="Phase-sensitive skew β (°)"
-                        )
+                        scat_fig.update_xaxes(title_text="Phase-sensitive skew β (°)")
                         scat_fig.update_yaxes(title_text="Ellipticity ε")
                         p_note = ""
                         if p_lo or p_hi:
@@ -7428,9 +7205,7 @@ def register_tools(app) -> None:
                                     ),
                                     dcc.Graph(
                                         figure=scat_fig,
-                                        config=_plotly_config(
-                                            "pycsamt_dim_scatter"
-                                        ),
+                                        config=_plotly_config("pycsamt_dim_scatter"),
                                         className="tool-graph",
                                     ),
                                 ],
@@ -7444,12 +7219,8 @@ def register_tools(app) -> None:
             try:
                 if not df_filt.empty:
                     counts = df_filt["dim"].value_counts().sort_index()
-                    bar_labels = [
-                        _DIM_LABEL.get(int(i), str(i)) for i in counts.index
-                    ]
-                    bar_colors = [
-                        _DIM_COLOR.get(int(i), "#aaa") for i in counts.index
-                    ]
+                    bar_labels = [_DIM_LABEL.get(int(i), str(i)) for i in counts.index]
+                    bar_colors = [_DIM_COLOR.get(int(i), "#aaa") for i in counts.index]
                     bar_fig = go.Figure(
                         go.Bar(
                             x=bar_labels,
@@ -7487,9 +7258,7 @@ def register_tools(app) -> None:
                                 ),
                                 dcc.Graph(
                                     figure=bar_fig,
-                                    config=_plotly_config(
-                                        "pycsamt_dim_counts"
-                                    ),
+                                    config=_plotly_config("pycsamt_dim_counts"),
                                     className="tool-graph",
                                 ),
                             ],
@@ -7501,9 +7270,7 @@ def register_tools(app) -> None:
 
             if not children:
                 children.append(
-                    _warn(
-                        "No output produced. Check your data and thresholds."
-                    )
+                    _warn("No output produced. Check your data and thresholds.")
                 )
 
             new_saved = dict(saved_outputs or {})
@@ -7522,9 +7289,7 @@ def register_tools(app) -> None:
         State(IDs.STORE_ACTIVE_LINES, "data"),
         prevent_initial_call=True,
     )
-    def _sync_freq_station_scope(
-        selected_lines, store_data, active_lines_store
-    ):
+    def _sync_freq_station_scope(selected_lines, store_data, active_lines_store):
         opts = _station_options_for_lines(
             store_data, active_lines_store, selected_lines
         )
@@ -7537,11 +7302,7 @@ def register_tools(app) -> None:
         prevent_initial_call=False,
     )
     def _sync_freq_source(source):
-        return (
-            {"display": "block"}
-            if source == "folder"
-            else {"display": "none"}
-        )
+        return {"display": "block"} if source == "folder" else {"display": "none"}
 
     # Frequency editor — show/hide param sections per action
     @app.callback(
@@ -7754,9 +7515,7 @@ def register_tools(app) -> None:
                 ax_.xaxis.label.set_color(FG)
                 ax_.yaxis.label.set_color(FG)
 
-            def _mpl_wrap(
-                plot_fn, *args, figsize=(10, 4.2), **kw
-            ) -> html.Img:
+            def _mpl_wrap(plot_fn, *args, figsize=(10, 4.2), **kw) -> html.Img:
                 mpl_fig, ax = plt.subplots(figsize=figsize)
                 _style_ax(ax, mpl_fig)
                 try:
@@ -7938,9 +7697,7 @@ def register_tools(app) -> None:
                     # station report table
                     if not result.report.empty:
                         rpt = result.report.copy()
-                        rpt.columns = [
-                            c.replace("_", " ").title() for c in rpt.columns
-                        ]
+                        rpt.columns = [c.replace("_", " ").title() for c in rpt.columns]
                         rpt_num = rpt.select_dtypes("number")
                         rpt[rpt_num.columns] = rpt_num.round(3)
                         children.append(
@@ -8006,12 +7763,8 @@ def register_tools(app) -> None:
                 try:
                     edited = regrid_logspace(
                         sub,
-                        fmin=float(rg_fmin)
-                        if rg_fmin not in (None, "")
-                        else None,
-                        fmax=float(rg_fmax)
-                        if rg_fmax not in (None, "")
-                        else None,
+                        fmin=float(rg_fmin) if rg_fmin not in (None, "") else None,
+                        fmax=float(rg_fmax) if rg_fmax not in (None, "") else None,
                         per_decade=int(rg_ppd or 6),
                         method=rg_method or "nearest",
                         inplace=False,
@@ -8124,9 +7877,7 @@ def register_tools(app) -> None:
         if not n:
             return no_update
         if not out_path:
-            return html.Span(
-                "⚠ No output folder specified.", className="text-warning"
-            )
+            return html.Span("⚠ No output folder specified.", className="text-warning")
         try:
             import pathlib
 
@@ -8302,9 +8053,7 @@ def register_tools(app) -> None:
                 continue
             if sel_set and ln not in sel_set:
                 continue
-            opts.append(
-                {"label": f"{sid} · {ln}" if ln else sid, "value": sid}
-            )
+            opts.append({"label": f"{sid} · {ln}" if ln else sid, "value": sid})
         return opts
 
     # ── Parse uploaded elevation CSV ───────────────────────────────────────
@@ -8377,9 +8126,7 @@ def register_tools(app) -> None:
                 v_elev,
             )
         except Exception as exc:
-            err = html.Span(
-                f"Parse error: {exc}", className="text-danger small"
-            )
+            err = html.Span(f"Parse error: {exc}", className="text-danger small")
             return None, err, [], [], [], [], None, None, None, None
 
     # ── Load file → push into raw-store ───────────────────────────────────
@@ -8422,9 +8169,7 @@ def register_tools(app) -> None:
             for _, r in df.iterrows():
                 rows.append(
                     {
-                        "station": str(r[cid])
-                        if cid and cid in r
-                        else f"row{_}",
+                        "station": str(r[cid]) if cid and cid in r else f"row{_}",
                         "lat": float(r[clat]) if clat and clat in r else None,
                         "lon": float(r[clon]) if clon and clon in r else None,
                         "elev": float(r[celev]),
@@ -8496,35 +8241,23 @@ def register_tools(app) -> None:
                     hide,
                 )
 
-            records = list(
-                (store_data or {}).get("station_records", []) or []
-            )
+            records = list((store_data or {}).get("station_records", []) or [])
             sel_line_set = set(sel_lines or [])
             sel_sta_set = set(sel_stations or [])
 
             # Filter records by scope
             if scope == "lines" and sel_line_set:
-                records = [
-                    r for r in records if r.get("Line", "") in sel_line_set
-                ]
+                records = [r for r in records if r.get("Line", "") in sel_line_set]
             elif scope == "sel":
                 if sel_sta_set:
                     records = [
                         r
                         for r in records
-                        if (
-                            r.get("ID")
-                            or r.get("station")
-                            or r.get("name", "")
-                        )
+                        if (r.get("ID") or r.get("station") or r.get("name", ""))
                         in sel_sta_set
                     ]
                 elif sel_line_set:
-                    records = [
-                        r
-                        for r in records
-                        if r.get("Line", "") in sel_line_set
-                    ]
+                    records = [r for r in records if r.get("Line", "") in sel_line_set]
 
             if not records:
                 return (
@@ -8567,9 +8300,7 @@ def register_tools(app) -> None:
                         }
                     )
                 n_ok = sum(1 for r in rows_out if r["elev"] is not None)
-                label = (
-                    f"{n_ok}/{total} stations have elevation in EDI headers"
-                )
+                label = f"{n_ok}/{total} stations have elevation in EDI headers"
             else:
                 from pycsamt.gis.utils import (
                     get_elevation_from_api,
@@ -8617,9 +8348,7 @@ def register_tools(app) -> None:
                                 "station": sid,
                                 "lat": lat,
                                 "lon": lon,
-                                "elev": float(elv)
-                                if elv is not None
-                                else None,
+                                "elev": float(elv) if elv is not None else None,
                             }
                         )
                 n_ok = sum(1 for r in rows_out if r.get("elev") is not None)
@@ -8691,9 +8420,7 @@ def register_tools(app) -> None:
                 fill_nan = pd.Series(elev_work, dtype=float)
                 if "zeros" in (fill_zeros or []):
                     fill_nan = fill_nan.replace(0.0, float("nan"))
-                fill_nan = fill_nan.interpolate(
-                    method="linear", limit_direction="both"
-                )
+                fill_nan = fill_nan.interpolate(method="linear", limit_direction="both")
                 elev_work = fill_nan.values.astype(float)
 
             if "outlier" in ops:
@@ -8701,9 +8428,7 @@ def register_tools(app) -> None:
                 med = float(np.nanmedian(elev_work))
                 std = float(np.nanstd(elev_work))
                 mask = np.abs(elev_work - med) > sigma * std
-                elev_work = elev_work.astype(
-                    float
-                )  # ensure float before NaN assign
+                elev_work = elev_work.astype(float)  # ensure float before NaN assign
                 elev_work[mask] = float("nan")
                 s = pd.Series(elev_work, dtype=float)
                 elev_work = s.interpolate(
@@ -8877,9 +8602,7 @@ def register_tools(app) -> None:
             return no_update, no_update
         src = corrected or raw
         if not src:
-            return no_update, _warn(
-                "No elevation data — fetch or load first."
-            )
+            return no_update, _warn("No elevation data — fetch or load first.")
         try:
             df = pd.DataFrame(src)
             col_order = [
@@ -8925,16 +8648,10 @@ def register_tools(app) -> None:
             return no_update, no_update
         src = corrected or raw
         if not src:
-            return no_update, _warn(
-                "No elevation data — fetch or load first."
-            )
+            return no_update, _warn("No elevation data — fetch or load first.")
         try:
             df = pd.DataFrame(src)
-            stations = (
-                df.get("station", pd.Series(range(len(df))))
-                .astype(str)
-                .values
-            )
+            stations = df.get("station", pd.Series(range(len(df)))).astype(str).values
             lats = pd.to_numeric(
                 df.get("lat", pd.Series([None] * len(df))), errors="coerce"
             ).values
@@ -8952,9 +8669,7 @@ def register_tools(app) -> None:
             try:
                 import h5py
 
-                with tempfile.NamedTemporaryFile(
-                    suffix=".h5", delete=False
-                ) as tf:
+                with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tf:
                     tmp_path = tf.name
                 with h5py.File(tmp_path, "w") as hf:
                     grp = hf.create_group("elevation")
@@ -9307,9 +9022,7 @@ def register_tools(app) -> None:
             # ── gather stations ────────────────────────────────────────────
             s1 = sites.get(station)
             if s1 is None:
-                return _warn(
-                    f"Station '{station}' not found in session."
-                ), no_update
+                return _warn(f"Station '{station}' not found in session."), no_update
             f1, T1, z1, ze1, rho1, phi1, tip1 = _extract(s1)
             m1 = _period_mask(T1)
 
@@ -9322,9 +9035,7 @@ def register_tools(app) -> None:
 
             # ── subplot layout ─────────────────────────────────────────────
             want_tip_plot = has_tip_req and tip1 is not None
-            n_imp_rows = {"rho_phi": 2, "reim": 2, "rho": 1, "phi": 1}.get(
-                ytype, 2
-            )
+            n_imp_rows = {"rho_phi": 2, "reim": 2, "rho": 1, "phi": 1}.get(ytype, 2)
             total_rows = n_imp_rows + (1 if want_tip_plot else 0)
 
             row_heights = (
@@ -9354,9 +9065,7 @@ def register_tools(app) -> None:
             )
 
             # ── trace builder ──────────────────────────────────────────────
-            def _add_imp(
-                T, z, ze, rho, phi, freqs, mask, dash="solid", sta_lbl=""
-            ):
+            def _add_imp(T, z, ze, rho, phi, freqs, mask, dash="solid", sta_lbl=""):
                 sfx = f" [{sta_lbl}]" if sta_lbl else ""
                 for c in comps:
                     col = COLORS.get(c, FG)
@@ -9384,9 +9093,7 @@ def register_tools(app) -> None:
                             phi[mask, i, j]
                             if phi is not None
                             else (
-                                np.degrees(np.angle(z_c))
-                                if z_c is not None
-                                else None
+                                np.degrees(np.angle(z_c)) if z_c is not None else None
                             )
                         )
 
@@ -9486,9 +9193,7 @@ def register_tools(app) -> None:
                                 mode="lines+markers",
                                 line={
                                     "color": col,
-                                    "dash": "dot"
-                                    if dash == "solid"
-                                    else dash,
+                                    "dash": "dot" if dash == "solid" else dash,
                                     "width": 1.5,
                                 },
                                 marker={"size": 4},
@@ -9513,8 +9218,7 @@ def register_tools(app) -> None:
                         lbl = f"Re Tzy{sfx}"
                     elif tc == "mag":
                         vals = np.sqrt(
-                            np.abs(tip[mask, 0, 0]) ** 2
-                            + np.abs(tip[mask, 0, 1]) ** 2
+                            np.abs(tip[mask, 0, 0]) ** 2 + np.abs(tip[mask, 0, 1]) ** 2
                         )
                         lbl = f"|T|{sfx}"
                     else:
@@ -9559,9 +9263,7 @@ def register_tools(app) -> None:
                     col=1,
                 )
             if ytype in ("rho_phi", "rho"):
-                fig.update_yaxes(
-                    title_text="ρ (Ω·m)", type="log", row=1, col=1
-                )
+                fig.update_yaxes(title_text="ρ (Ω·m)", type="log", row=1, col=1)
             if ytype in ("rho_phi", "phi"):
                 fig.update_yaxes(
                     title_text="Phase (°)",
@@ -9720,9 +9422,7 @@ def register_tools(app) -> None:
             if band_choice == "custom":
                 lo = float(t_lo) if t_lo is not None else None
                 hi = float(t_hi) if t_hi is not None else None
-                band = (
-                    (lo, hi) if (lo is not None or hi is not None) else None
-                )
+                band = (lo, hi) if (lo is not None or hi is not None) else None
             else:
                 band = _BAND.get(band_choice or "all")
 
@@ -9734,9 +9434,7 @@ def register_tools(app) -> None:
             keep = {
                 r["ID"]
                 for r in records
-                if not lines
-                or "__all__" in lines
-                or r.get("Line", "") in lines
+                if not lines or "__all__" in lines or r.get("Line", "") in lines
             }
             filtered_edis = (
                 [s.edi for s in sites if s.name in keep]
@@ -9788,14 +9486,10 @@ def register_tools(app) -> None:
                         if band:
                             lo_b = band[0] or 0.0
                             hi_b = band[1] or np.inf
-                            m = (adf["period_s"] >= lo_b) & (
-                                adf["period_s"] <= hi_b
-                            )
+                            m = (adf["period_s"] >= lo_b) & (adf["period_s"] <= hi_b)
                             adf = adf[m]
                         skew_map = (
-                            adf.groupby("station")["swift_skew"]
-                            .median()
-                            .to_dict()
+                            adf.groupby("station")["swift_skew"].median().to_dict()
                         )
                 except Exception:
                     skew_map = {}
@@ -9841,10 +9535,7 @@ def register_tools(app) -> None:
                     if band:
                         lo_b = band[0] or 0.0
                         hi_b = band[1] or np.inf
-                        adf = adf[
-                            (adf["period_s"] >= lo_b)
-                            & (adf["period_s"] <= hi_b)
-                        ]
+                        adf = adf[(adf["period_s"] >= lo_b) & (adf["period_s"] <= hi_b)]
                     piv = adf.pivot_table(
                         index="period_s",
                         columns="station",
@@ -9876,9 +9567,7 @@ def register_tools(app) -> None:
                     )
                     heat_fig.update_yaxes(
                         title="log₁₀ Period (s)",
-                        tickvals=np.log10(
-                            [0.001, 0.01, 0.1, 1, 10, 100, 1000]
-                        ),
+                        tickvals=np.log10([0.001, 0.01, 0.1, 1, 10, 100, 1000]),
                         ticktext=[
                             "0.001",
                             "0.01",
@@ -10007,9 +9696,7 @@ def register_tools(app) -> None:
                     },
                     marker=marker_kw,
                     name=f"Strike ({method})",
-                    customdata=list(
-                        zip(stations, iqr_vals, n_vals, skew_vals)
-                    ),
+                    customdata=list(zip(stations, iqr_vals, n_vals, skew_vals)),
                     hovertemplate=(
                         "<b>%{customdata[0]}</b><br>"
                         "Strike: %{y:.1f}°<br>"
@@ -10024,9 +9711,7 @@ def register_tools(app) -> None:
             )
 
             # high-IQR markers — red ring overlay
-            hi_iqr_x = [
-                xi for xi, q in zip(x_idx, iqr_vals) if q > iqr_thresh
-            ]
+            hi_iqr_x = [xi for xi, q in zip(x_idx, iqr_vals) if q > iqr_thresh]
             hi_iqr_y = [a for a, q in zip(angles, iqr_vals) if q > iqr_thresh]
             if hi_iqr_x:
                 fig.add_trace(
@@ -10149,21 +9834,15 @@ def register_tools(app) -> None:
                                     style={
                                         "textAlign": "right",
                                         "fontSize": "11px",
-                                        "color": "#f38ba8"
-                                        if iqr_hi
-                                        else "inherit",
+                                        "color": "#f38ba8" if iqr_hi else "inherit",
                                     },
                                 ),
                                 html.Td(
-                                    f"{sk_v:.3f}"
-                                    if not np.isnan(sk_v)
-                                    else "—",
+                                    f"{sk_v:.3f}" if not np.isnan(sk_v) else "—",
                                     style={
                                         "textAlign": "right",
                                         "fontSize": "11px",
-                                        "color": "#f38ba8"
-                                        if flag3d
-                                        else "inherit",
+                                        "color": "#f38ba8" if flag3d else "inherit",
                                     },
                                 ),
                                 html.Td(
@@ -10362,9 +10041,7 @@ def register_tools(app) -> None:
             keep = {
                 r["ID"]
                 for r in records
-                if not lines
-                or "__all__" in lines
-                or r.get("Line", "") in lines
+                if not lines or "__all__" in lines or r.get("Line", "") in lines
             }
             filtered_edis = (
                 [s.edi for s in sites if s.name in keep]
@@ -10372,9 +10049,7 @@ def register_tools(app) -> None:
                 else [s.edi for s in sites]
             )
             if not filtered_edis:
-                return _warn(
-                    "No stations for the selected line(s)."
-                ), no_update
+                return _warn("No stations for the selected line(s)."), no_update
 
             from pycsamt.site.base import Sites as _Sites
 
@@ -10391,16 +10066,12 @@ def register_tools(app) -> None:
             skew_thr = float(skew_thresh or 5.0)
             show_tip = tipper_mode not in (None, "none", False)
             tip_conv = (
-                tipper_mode
-                if tipper_mode not in (None, "none", False)
-                else "parkinson"
+                tipper_mode if tipper_mode not in (None, "none", False) else "parkinson"
             )
             t_lo_v = float(t_lo) if t_lo is not None else None
             t_hi_v = float(t_hi) if t_hi is not None else None
             p_range = (
-                (t_lo_v, t_hi_v)
-                if (t_lo_v is not None or t_hi_v is not None)
-                else None
+                (t_lo_v, t_hi_v) if (t_lo_v is not None or t_hi_v is not None) else None
             )
             # y-axis decode: "logperiod_up" → axis_y="logperiod", period_up=True
             _ymap = {
@@ -10527,18 +10198,14 @@ def register_tools(app) -> None:
                 df = build_phase_tensor_table(sub)
                 if df.empty:
                     children.append(
-                        _warn(
-                            "No phase tensor data available for these stations."
-                        )
+                        _warn("No phase tensor data available for these stations.")
                     )
                 else:
                     # apply period range filter
                     if p_range:
                         lo_p = p_range[0] or 0.0
                         hi_p = p_range[1] or np.inf
-                        df = df[
-                            (df["period"] >= lo_p) & (df["period"] <= hi_p)
-                        ]
+                        df = df[(df["period"] >= lo_p) & (df["period"] <= hi_p)]
 
                     # choose colour column
                     _COL = {
@@ -10569,13 +10236,9 @@ def register_tools(app) -> None:
 
                     # station order from records (profile order)
                     sta_order = [
-                        r["ID"]
-                        for r in records
-                        if not keep or r["ID"] in keep
+                        r["ID"] for r in records if not keep or r["ID"] in keep
                     ]
-                    sta_order = [
-                        s for s in sta_order if s in df["station"].values
-                    ]
+                    sta_order = [s for s in sta_order if s in df["station"].values]
                     if not sta_order:
                         sta_order = df["station"].unique().tolist()
 
@@ -10591,20 +10254,13 @@ def register_tools(app) -> None:
                     vals = piv.values
                     flat = vals[np.isfinite(vals)]
                     vlo = (
-                        float(np.nanpercentile(flat, clim_pct[0]))
-                        if flat.size
-                        else -10
+                        float(np.nanpercentile(flat, clim_pct[0])) if flat.size else -10
                     )
                     vhi = (
-                        float(np.nanpercentile(flat, clim_pct[1]))
-                        if flat.size
-                        else 10
+                        float(np.nanpercentile(flat, clim_pct[1])) if flat.size else 10
                     )
                     # symmetric for skew-like
-                    if (
-                        col_key in ("skew", "theta", "alpha")
-                        and vlo < 0 < vhi
-                    ):
+                    if col_key in ("skew", "theta", "alpha") and vlo < 0 < vhi:
                         vm = max(abs(vlo), abs(vhi))
                         vlo, vhi = -vm, vm
 
@@ -10720,9 +10376,7 @@ def register_tools(app) -> None:
                                 ),
                                 dcc.Graph(
                                     figure=ps_fig,
-                                    config=_plotly_config(
-                                        "pycsamt_pt_psection"
-                                    ),
+                                    config=_plotly_config("pycsamt_pt_psection"),
                                     className="tool-graph",
                                 ),
                             ]
@@ -10761,9 +10415,7 @@ def register_tools(app) -> None:
                                         "textTransform": "uppercase",
                                         "letterSpacing": "0.05em",
                                         "marginBottom": "4px",
-                                        "marginTop": "10px"
-                                        if view == "all"
-                                        else "0",
+                                        "marginTop": "10px" if view == "all" else "0",
                                     },
                                 ),
                                 _mpl_to_img(mpl_fig),
@@ -10779,9 +10431,7 @@ def register_tools(app) -> None:
                     )
 
             if not children:
-                return _warn(
-                    "Nothing to display — select a view and run."
-                ), no_update
+                return _warn("Nothing to display — select a view and run."), no_update
 
             new_saved = dict(saved_outputs or {})
             new_saved["phase-tensor"] = {"type": "custom"}
@@ -10876,9 +10526,7 @@ def _tool_table_styles(theme: str | None) -> tuple[dict, dict, list]:
 def _safe_stem(label: str) -> str:
     import re
 
-    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(label or "figure")).strip(
-        "._"
-    )
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(label or "figure")).strip("._")
     return stem[:96] or "figure"
 
 
@@ -10891,9 +10539,7 @@ def _station_count(sites) -> int:
         return 0
 
 
-def _save_mpl_figure(
-    fig, path, *, dpi: int, transparent: bool, overwrite: bool
-):
+def _save_mpl_figure(fig, path, *, dpi: int, transparent: bool, overwrite: bool):
     if path.exists() and not overwrite:
         return {
             "Figure": path.stem,
@@ -10916,9 +10562,7 @@ def _save_mpl_figure(
     }
 
 
-def _plot_station_map_mpl(
-    store_data: dict | None, active_lines_store: dict | None
-):
+def _plot_station_map_mpl(store_data: dict | None, active_lines_store: dict | None):
     import matplotlib.pyplot as plt
     import numpy as np
     import pandas as pd
@@ -10935,9 +10579,7 @@ def _plot_station_map_mpl(
     if active and "Line" in df.columns:
         df = df[df["Line"].isin(active)].copy()
     if df.empty:
-        ax.text(
-            0.5, 0.5, "No active station records", ha="center", va="center"
-        )
+        ax.text(0.5, 0.5, "No active station records", ha="center", va="center")
         return fig
 
     x = pd.to_numeric(df.get("Longitude"), errors="coerce")
@@ -10956,9 +10598,7 @@ def _plot_station_map_mpl(
     df["_x"] = x
     df["_y"] = y
     line_col = "Line" if "Line" in df.columns else None
-    groups = (
-        df.groupby(line_col, dropna=False) if line_col else [("Survey", df)]
-    )
+    groups = df.groupby(line_col, dropna=False) if line_col else [("Survey", df)]
     for line, sub in groups:
         sx = pd.to_numeric(sub["_x"], errors="coerce").to_numpy(dtype=float)
         sy = pd.to_numeric(sub["_y"], errors="coerce").to_numpy(dtype=float)
@@ -11179,9 +10819,7 @@ def _batch_result_view(result: dict) -> html.Div:
                     _metric_chip("Saved", str(result.get("saved", 0))),
                     _metric_chip("Skipped", str(result.get("skipped", 0))),
                     _metric_chip("Failed", str(result.get("failed", 0))),
-                    _metric_chip(
-                        "Stations", str(result.get("n_stations", 0))
-                    ),
+                    _metric_chip("Stations", str(result.get("n_stations", 0))),
                 ],
                 className="tool-metric-row",
             ),
@@ -11228,9 +10866,7 @@ def _batch_result_view(result: dict) -> html.Div:
     )
 
 
-def _render_stored_tool_result(
-    tool_id: str, run_store: dict | None, theme: str | None
-):
+def _render_stored_tool_result(tool_id: str, run_store: dict | None, theme: str | None):
     payload = (run_store or {}).get(tool_id)
     if not payload:
         return None
@@ -11245,9 +10881,7 @@ def _render_strike_result(payload: dict, theme: str | None):
 
     records = payload.get("records", [])
     df = pd.DataFrame(records)
-    fig_rose = _strike_rose_figure(
-        df, payload.get("method_label", "Strike"), theme
-    )
+    fig_rose = _strike_rose_figure(df, payload.get("method_label", "Strike"), theme)
     fig_box = _strike_box_figure(df, theme)
     spread = float(payload.get("median_iqr", float("nan")))
     cell, header, conditional = _tool_table_styles(theme)
@@ -11255,21 +10889,15 @@ def _render_strike_result(payload: dict, theme: str | None):
         [
             html.Div(
                 [
-                    _metric_chip(
-                        "Scope", str(payload.get("scope_label", "Selected"))
-                    ),
-                    _metric_chip(
-                        "Stations", str(payload.get("n_stations", 0))
-                    ),
+                    _metric_chip("Scope", str(payload.get("scope_label", "Selected"))),
+                    _metric_chip("Stations", str(payload.get("n_stations", 0))),
                     _metric_chip(
                         "Median strike",
                         f"{float(payload.get('median_strike', 0.0)):.1f}°",
                     ),
                     _metric_chip(
                         "Median IQR",
-                        "n/a"
-                        if not np.isfinite(spread)
-                        else f"{spread:.1f}°",
+                        "n/a" if not np.isfinite(spread) else f"{spread:.1f}°",
                     ),
                 ],
                 className="tool-metric-row",
@@ -11285,9 +10913,7 @@ def _render_strike_result(payload: dict, theme: str | None):
                 className="tool-graph",
             ),
             dash_table.DataTable(
-                columns=[
-                    {"name": c, "id": c} for c in payload.get("columns", [])
-                ],
+                columns=[{"name": c, "id": c} for c in payload.get("columns", [])],
                 data=payload.get("table", []),
                 page_size=int(payload.get("page_size", 10) or 10),
                 sort_action="native",
@@ -11522,9 +11148,7 @@ def _validate_sites_rows(
                     if not (-180.0 <= lon_f <= 180.0):
                         issues.append(f"Longitude out of range: {lon_f}.")
                 except Exception:
-                    warnings.append(
-                        "Latitude/longitude cannot be parsed as numbers."
-                    )
+                    warnings.append("Latitude/longitude cannot be parsed as numbers.")
         elif lat is not None and lon is not None:
             try:
                 row["Lat"] = f"{float(lat):.5f}"
@@ -11540,9 +11164,7 @@ def _validate_sites_rows(
             else:
                 z_arr = np.asarray(z)
                 if z_arr.ndim != 3 or z_arr.shape[1:3] != (2, 2):
-                    issues.append(
-                        f"Z tensor has unexpected shape {z_arr.shape}."
-                    )
+                    issues.append(f"Z tensor has unexpected shape {z_arr.shape}.")
                     row["Z ok"] = "NO"
                 else:
                     xy = np.isfinite(z_arr[:, 0, 1])
@@ -11559,9 +11181,7 @@ def _validate_sites_rows(
                         )
                     else:
                         row["Z ok"] = "NO"
-                        issues.append(
-                            "No finite off-diagonal Zxy/Zyx samples."
-                        )
+                        issues.append("No finite off-diagonal Zxy/Zyx samples.")
 
         if "errors" in checks:
             if ze is None:
@@ -11601,9 +11221,7 @@ def _validate_sites_rows(
                         f"(minimum requested: {int(min_freq)})."
                     )
                 if np.unique(finite_freq).size != finite_freq.size:
-                    warnings.append(
-                        "Frequency vector contains duplicate values."
-                    )
+                    warnings.append("Frequency vector contains duplicate values.")
                 if finite_freq.size > 1:
                     d = np.diff(finite_freq)
                     if not (np.all(d > 0) or np.all(d < 0)):
@@ -11619,14 +11237,10 @@ def _validate_sites_rows(
             z_arr = np.asarray(z)
             if z_arr.ndim == 3 and z_arr.shape[0]:
                 flat = z_arr.reshape(z_arr.shape[0], -1)
-                nan_rows = int(
-                    np.count_nonzero(np.all(~np.isfinite(flat), axis=1))
-                )
+                nan_rows = int(np.count_nonzero(np.all(~np.isfinite(flat), axis=1)))
                 row["NaN rows"] = nan_rows
                 if nan_rows:
-                    warnings.append(
-                        f"{nan_rows} frequency row(s) have all-NaN Z."
-                    )
+                    warnings.append(f"{nan_rows} frequency row(s) have all-NaN Z.")
 
         if "tipper" in checks:
             T, tip, tf = _get_t_block(ed)
@@ -11654,9 +11268,7 @@ def _validate_sites_rows(
                 if row["Station"] in dupes:
                     prefix = "Duplicate station identifier."
                     row["Issues"] = (
-                        prefix
-                        if row["Issues"] == "OK"
-                        else f"{prefix} {row['Issues']}"
+                        prefix if row["Issues"] == "OK" else f"{prefix} {row['Issues']}"
                     )
                     if row["Status"] == "PASS":
                         row["Status"] = "WARN"
@@ -11703,9 +11315,7 @@ def _converter_options_from_values(
     return options
 
 
-def _converted_sites_to_store(
-    sites, *, old_store: dict | None, data_dir: str
-) -> dict:
+def _converted_sites_to_store(sites, *, old_store: dict | None, data_dir: str) -> dict:
     from pycsamt.app.desktop.controllers.data_controller import (
         DataController,
     )
@@ -11715,9 +11325,7 @@ def _converted_sites_to_store(
     if old_store and old_store.get("station_records"):
         records = old_store["station_records"]
         ctrl._station_to_line = {
-            r["ID"]: r.get("Line", "converted")
-            for r in records
-            if r.get("ID")
+            r["ID"]: r.get("Line", "converted") for r in records if r.get("ID")
         }
     ctrl._df = ctrl._build_dataframe()
     df = ctrl.dataframe
@@ -11786,9 +11394,7 @@ def _converter_result_view(
             ),
             html.Div(
                 [
-                    html.Span(
-                        "Conversion complete", className="tool-section-title"
-                    ),
+                    html.Span("Conversion complete", className="tool-section-title"),
                     html.Span(
                         (
                             f"Written to {output_dir}"
@@ -11843,9 +11449,7 @@ def _converter_result_view(
                 [
                     html.Span("Failures", className="tool-section-title"),
                     dash_table.DataTable(
-                        columns=[
-                            {"name": c, "id": c} for c in ("Source", "Error")
-                        ],
+                        columns=[{"name": c, "id": c} for c in ("Source", "Error")],
                         data=fail_rows,
                         page_size=5,
                         style_table={"overflowX": "auto"},
@@ -11924,9 +11528,7 @@ def _extract_lat_lon(raw, wrapped=None):
     try:
         h = getattr(raw, "Head", None) or getattr(raw, "head", None)
         if isinstance(h, dict):
-            return h.get("lat") or h.get("latitude"), h.get("lon") or h.get(
-                "longitude"
-            )
+            return h.get("lat") or h.get("latitude"), h.get("lon") or h.get("longitude")
     except Exception:
         pass
     return None, None
@@ -11953,11 +11555,7 @@ def _warn(msg: str) -> html.Span:
 
 def _dd2dms(dd: float, axis: str = "lat") -> str:
     """Decimal degrees → DMS string, e.g. '40°42′46.80″N'."""
-    hemi = (
-        ("N" if dd >= 0 else "S")
-        if axis == "lat"
-        else ("E" if dd >= 0 else "W")
-    )
+    hemi = ("N" if dd >= 0 else "S") if axis == "lat" else ("E" if dd >= 0 else "W")
     dd = abs(dd)
     d = int(dd)
     m = int((dd - d) * 60)

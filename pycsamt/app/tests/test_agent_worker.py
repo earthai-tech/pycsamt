@@ -71,6 +71,7 @@ class _FakeLLMAgent:
     def query_llm(self, prompt):
         return f"reply to: {prompt}"
 
+
 # ── _SignalLogHandler ─────────────────────────────────────────────────────
 
 
@@ -210,9 +211,7 @@ class TestHasFigureAndSitesLike:
 class TestProcessingModeReal:
     def test_qc_quicklook_success(self, willy_sites):
         results = []
-        w = AgentWorker(
-            agent_name="QC Quicklook", sites=willy_sites, params={}
-        )
+        w = AgentWorker(agent_name="QC Quicklook", sites=willy_sites, params={})
         w.result.connect(results.append)
         w.run()
         assert len(results) == 1
@@ -253,9 +252,7 @@ class TestProcessingModeReal:
         w.run()
         assert len(errors) == 1
 
-    def test_result_plot_failure_logged_and_swallowed(
-        self, willy_sites, monkeypatch
-    ):
+    def test_result_plot_failure_logged_and_swallowed(self, willy_sites, monkeypatch):
         import pycsamt.emtools as et
 
         def _boom(*a, **k):
@@ -275,9 +272,7 @@ class TestProcessingModeReal:
         assert len(results) == 1
         assert any("Plot step failed" in line for line in lines)
 
-    def test_cancelled_before_completion_suppresses_result(
-        self, willy_sites
-    ):
+    def test_cancelled_before_completion_suppresses_result(self, willy_sites):
         w = AgentWorker(agent_name="QC Quicklook", sites=willy_sites, params={})
         w.cancel()
         results = []
@@ -321,9 +316,7 @@ class TestLLMMode:
                 captured.update(input_data)
                 return super().execute(input_data)
 
-        monkeypatch.setattr(
-            ag, "MTLoaderAgent", _CapturingAgent, raising=False
-        )
+        monkeypatch.setattr(ag, "MTLoaderAgent", _CapturingAgent, raising=False)
         w = AgentWorker(
             agent_name="MT Loader",
             sites="the-sites",

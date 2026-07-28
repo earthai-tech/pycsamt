@@ -23,16 +23,16 @@ Quick start
 
     # --- single site ---
     report = SiteReport(site)
-    report.report()                    # prints to terminal
-    d = report.to_dict()               # plain dict
-    df = report.to_dataframe()         # pandas DataFrame (resphase)
+    report.report()  # prints to terminal
+    d = report.to_dict()  # plain dict
+    df = report.to_dataframe()  # pandas DataFrame (resphase)
 
     # --- collection ---
     rep = SitesReport(sites)
-    rep.report()                       # full survey summary
-    rep.report(top=10)                 # first 10 stations only
-    df = rep.to_dataframe()            # one row per station
-    d  = rep.to_dict()                 # list of per-station dicts
+    rep.report()  # full survey summary
+    rep.report(top=10)  # first 10 stations only
+    df = rep.to_dataframe()  # one row per station
+    d = rep.to_dict()  # list of per-station dicts
 
 Notes
 -----
@@ -88,9 +88,9 @@ def _bar(fraction: float, width: int = _BAR_WIDTH) -> str:
 
     Examples
     --------
-    >>> _bar(1.0)   # '██████████'
+    >>> _bar(1.0)  # '██████████'
     >>> _bar(0.75)  # '███████░░░'
-    >>> _bar(0.0)   # '░░░░░░░░░░'
+    >>> _bar(0.0)  # '░░░░░░░░░░'
     """
     fraction = max(0.0, min(1.0, float(fraction)))
     filled = round(fraction * width)
@@ -269,9 +269,10 @@ class SiteReport:
     ::
 
         from pycsamt.site.report import SiteReport
+
         rep = SiteReport(site)
-        rep.report()               # rich terminal output
-        d = rep.to_dict()          # machine-readable dict
+        rep.report()  # rich terminal output
+        d = rep.to_dict()  # machine-readable dict
     """
 
     def __init__(self, site: Any) -> None:
@@ -309,9 +310,7 @@ class SiteReport:
         """Return a plain dict of all computed statistics."""
         return dict(self._stats)
 
-    def to_dataframe(
-        self, kind: str = "resphase", *, api: bool | None = None
-    ) -> Any:
+    def to_dataframe(self, kind: str = "resphase", *, api: bool | None = None) -> Any:
         """Export site arrays to a :class:`pandas.DataFrame`.
 
         Parameters
@@ -429,9 +428,7 @@ class SiteReport:
             f"[green]{c} ✓[/green]" if v else f"[red]{c} ✗[/red]"
             for c, v in s["components"].items()
         )
-        tip_str = (
-            "[green]✓  Tx  Ty[/green]" if s["has_tipper"] else "[dim]—[/dim]"
-        )
+        tip_str = "[green]✓  Tx  Ty[/green]" if s["has_tipper"] else "[dim]—[/dim]"
 
         row("Coordinates", coords)
         row("Frequencies", freq_str)
@@ -524,10 +521,11 @@ class SitesReport:
     ::
 
         from pycsamt.site.report import SitesReport
+
         rep = SitesReport(sites)
-        rep.report()              # full survey panel + per-station table
-        rep.report(top=10)        # first 10 stations only
-        df = rep.to_dataframe()   # one row per station
+        rep.report()  # full survey panel + per-station table
+        rep.report(top=10)  # first 10 stations only
+        df = rep.to_dataframe()  # one row per station
     """
 
     def __init__(self, sites: Any) -> None:
@@ -685,9 +683,7 @@ class SitesReport:
                 f"Lon {sv['lon_min']:.2f}–{sv['lon_max']:.2f}°E"
             )
             if sv["elev_min"] is not None:
-                bbox += (
-                    f"  ·  Elev {sv['elev_min']:.0f}–{sv['elev_max']:.0f} m"
-                )
+                bbox += f"  ·  Elev {sv['elev_min']:.0f}–{sv['elev_max']:.0f} m"
         nf_str = ""
         if sv["nfreq_min"] is not None:
             nf_str = (
@@ -734,14 +730,10 @@ class SitesReport:
 
         for r in records:
             comp_cells = [
-                "[green]✓[/green]"
-                if r["components"].get(c, False)
-                else "[red]✗[/red]"
+                "[green]✓[/green]" if r["components"].get(c, False) else "[red]✗[/red]"
                 for c in _COMPONENTS
             ]
-            tip_cell = (
-                "[green]✓[/green]" if r["has_tipper"] else "[dim]—[/dim]"
-            )
+            tip_cell = "[green]✓[/green]" if r["has_tipper"] else "[dim]—[/dim]"
 
             rho_s = (
                 f"{r['rho_xy_mean']:.0f}±{r['rho_xy_std']:.0f}"
@@ -878,8 +870,6 @@ class SitesReport:
                 comp, sv["tip_count"] if comp == "Tipper" else 0
             )
             frac = cnt / n if n > 0 else 0.0
-            lines.append(
-                f"  {comp:<6}  {_bar(frac, 16)}  {cnt}/{n}  {frac * 100:.0f}%"
-            )
+            lines.append(f"  {comp:<6}  {_bar(frac, 16)}  {cnt}/{n}  {frac * 100:.0f}%")
         lines.append("")
         return lines

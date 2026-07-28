@@ -127,9 +127,7 @@ class ForwardWorker(QThread):
             arho = float(p.get("anom_rho", 10.0))
             xn = np.concatenate([[0], np.cumsum(dx_full)])
             zn = np.concatenate([[0], np.cumsum(dz_full)])
-            ix = np.where((xn[:-1] >= ax - aw / 2) & (xn[1:] <= ax + aw / 2))[
-                0
-            ]
+            ix = np.where((xn[:-1] >= ax - aw / 2) & (xn[1:] <= ax + aw / 2))[0]
             iz = np.where((zn[:-1] >= az) & (zn[1:] <= az + ah))[0]
             if ix.size and iz.size:
                 resistivity[np.ix_(iz, ix)] = arho

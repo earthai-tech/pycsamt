@@ -13,7 +13,6 @@ around every test so state does not leak into other test modules.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest import mock
 
 import pytest

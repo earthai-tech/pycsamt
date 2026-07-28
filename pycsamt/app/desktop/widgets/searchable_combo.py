@@ -44,9 +44,7 @@ class _StationPopup(QFrame):
 
     station_chosen = Signal(str)  # emitted when user confirms a station
 
-    def __init__(
-        self, max_visible: int = 12, parent: QWidget | None = None
-    ) -> None:
+    def __init__(self, max_visible: int = 12, parent: QWidget | None = None) -> None:
         # Qt.WindowType.Popup: auto-closes on Escape / click outside
         super().__init__(parent, Qt.WindowType.Popup)
         self.setObjectName("StationPopupFrame")
@@ -78,16 +76,10 @@ class _StationPopup(QFrame):
         # Station list
         self._list = QListWidget(self)
         self._list.setObjectName("StationList")
-        self._list.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self._list.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
+        self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._list.setEditTriggers(QListWidget.EditTrigger.NoEditTriggers)
-        self._list.itemClicked.connect(
-            lambda it: self.station_chosen.emit(it.text())
-        )
+        self._list.itemClicked.connect(lambda it: self.station_chosen.emit(it.text()))
         lay.addWidget(self._list)
 
     # ── Public API ────────────────────────────────────────────────────
@@ -105,11 +97,7 @@ class _StationPopup(QFrame):
 
     def preferred_height(self) -> int:
         """Height that accommodates the search row + up to max_visible items."""
-        row_h = (
-            max(self._list.sizeHintForRow(0), 24)
-            if self._list.count()
-            else 26
-        )
+        row_h = max(self._list.sizeHintForRow(0), 24) if self._list.count() else 26
         n = min(self._max_visible, max(1, len(self._all_names)))
         return (
             self._search.sizeHint().height()
@@ -130,9 +118,7 @@ class _StationPopup(QFrame):
     def _apply_filter(self, text: str) -> None:
         lo = text.lower().strip()
         filtered = (
-            [n for n in self._all_names if lo in n.lower()]
-            if lo
-            else self._all_names
+            [n for n in self._all_names if lo in n.lower()] if lo else self._all_names
         )
         self._refresh_list(filtered)
         # Auto-highlight first match so Enter immediately confirms it
@@ -208,9 +194,7 @@ class SearchableComboBox(QComboBox):
     def set_names(self, names: list[str]) -> None:
         """Replace the station list.  Resets any current selection."""
         n = len(names)
-        placeholder = (
-            f"— select station ({n}) —" if n > 0 else self._PLACEHOLDER
-        )
+        placeholder = f"— select station ({n}) —" if n > 0 else self._PLACEHOLDER
         self.blockSignals(True)
         self.clear()
         self.addItem(placeholder)  # index 0 — the "nothing selected" state

@@ -92,12 +92,16 @@ class ComponentsMixin:
         class Host(ComponentsMixin):
             def __init__(self):
                 self.sections = {}
+
             def add_section(self, k, v):
                 self.sections[k] = v
+
             def get_section(self, k):
                 return self.sections.get(k)
+
             def has_section(self, k):
                 return k in self.sections
+
 
         h = Host()
         h.cset("HEAD", {"dataid": "S01"})
@@ -113,9 +117,12 @@ class ComponentsMixin:
         class _Head:
             def write(self):
                 return [">HEAD\n", "  DATAID=S01\n"]
+
+
         class _Info:
             def write(self):
                 return ">INFO\n  PROJECT=P\n"
+
 
         h.cset("head", _Head())
         h.cset("info", _Info())
@@ -292,9 +299,7 @@ class ComponentsMixin:
 
     # ---------- composition helpers ----------
 
-    def compose_headers_from(
-        self, keys_order: list[str] | None = None
-    ) -> str:
+    def compose_headers_from(self, keys_order: list[str] | None = None) -> str:
         """
         Compose textual headers by calling ``write()`` on
         registered section objects.  The order can be

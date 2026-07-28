@@ -102,17 +102,21 @@ class ModelZooAgent(BaseAgent):
 
     Download a checkpoint::
 
-        r = agent.execute({"action": "download", "model_name": "mt1d-resnet-5layer-v1"})
+        r = agent.execute(
+            {"action": "download", "model_name": "mt1d-resnet-5layer-v1"}
+        )
         print(r["checkpoint_path"])
 
     Predict on observed sites (fine-tune skipped if weights unavailable)::
 
-        r = agent.execute({
-            "action":     "predict",
-            "model_name": "mt1d-resnet-5layer-v1",
-            "path":       "/data/WILLY_EDIs",
-            "output_dir": "/out/zoo_predict",
-        })
+        r = agent.execute(
+            {
+                "action": "predict",
+                "model_name": "mt1d-resnet-5layer-v1",
+                "path": "/data/WILLY_EDIs",
+                "output_dir": "/out/zoo_predict",
+            }
+        )
         print(r["rms_global"])
     """
 
@@ -161,9 +165,7 @@ class ModelZooAgent(BaseAgent):
             return self._action_download(model_name, t0)
 
         if action == "predict":
-            return self._action_predict(
-                input_data, model_name, output_dir, t0
-            )
+            return self._action_predict(input_data, model_name, output_dir, t0)
 
         return AgentResult.failed(
             f"Unknown action {action!r}. Use 'list', 'download', or 'predict'.",
@@ -189,9 +191,7 @@ class ModelZooAgent(BaseAgent):
                 }
             )
 
-        summary_lines = [
-            f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows
-        ]
+        summary_lines = [f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows]
         (
             f"Model zoo — {len(models)} pre-trained models available:\n"
             + "\n".join(summary_lines)

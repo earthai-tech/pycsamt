@@ -145,7 +145,9 @@ def import_topo(
     Examples
     --------
     >>> from pycsamt.models.mare2dem.import_topo import TopoConfig, import_topo
-    >>> cfg = TopoConfig(topo_file="topo.txt", col_distance_km=1, col_depth_m=2)
+    >>> cfg = TopoConfig(
+    ...     topo_file="topo.txt", col_distance_km=1, col_depth_m=2
+    ... )
     >>> prof = import_topo(cfg, utm_north0=0.0, utm_east0=0.0)
     >>> prof.y_topo
     array([0., ...])

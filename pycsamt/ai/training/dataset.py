@@ -18,7 +18,7 @@ Usage
 >>> from pycsamt.ai.training.dataset import EMDataset, Normalizer
 >>> ds = generate_dataset(n_samples=1000, seed=0, verbose=False)
 >>> train_ds = EMDataset(ds, log_thickness=True)
->>> train_ds.x_norm.mean.shape   # (n_features,)
+>>> train_ds.x_norm.mean.shape  # (n_features,)
 """
 
 from __future__ import annotations
@@ -276,9 +276,7 @@ class EMDataset:
             return ds
 
         train_ds = _subset(train_idx)
-        train_ds.augment_noise = (
-            self.augment_noise
-        )  # keep augmentation on train
+        train_ds.augment_noise = self.augment_noise  # keep augmentation on train
         val_ds = _subset(val_idx)
         val_ds.augment_noise = 0.0  # no augmentation on val
         return train_ds, val_ds

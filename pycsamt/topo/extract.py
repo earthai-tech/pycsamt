@@ -12,8 +12,8 @@ EDI-like items with HEAD lat/lon/elev attributes — including
 Examples
 --------
 >>> from pycsamt.topo.extract import extract_elevation, extract_chainage
->>> elev = extract_elevation(sites)          # (n_stations,)  m a.s.l.
->>> chain = extract_chainage(sites)          # (n_stations,)  km
+>>> elev = extract_elevation(sites)  # (n_stations,)  m a.s.l.
+>>> chain = extract_chainage(sites)  # (n_stations,)  km
 """
 
 from __future__ import annotations
@@ -249,9 +249,7 @@ def _read_latlon(sites: Any) -> list[tuple[float, float]]:
             # seg.edi.EDIFile — Location sub-object
             loc = getattr(h, "Location", None)
             if loc is not None:
-                lat = getattr(loc, "latitude", None) or getattr(
-                    loc, "lat", None
-                )
+                lat = getattr(loc, "latitude", None) or getattr(loc, "lat", None)
                 lon = (
                     getattr(loc, "longitude", None)
                     or getattr(loc, "lon", None)

@@ -66,7 +66,10 @@ def _bh_partial(x=0.0):
             Interval(top=0.0, bottom=50.0, lithology="topsoil", resistivity=105.0),
             Interval(top=50.0, bottom=100.0, lithology="clay", resistivity=None),
             Interval(
-                top=200.0, bottom=400.0, lithology="basement", resistivity=3000.0
+                top=200.0,
+                bottom=400.0,
+                lithology="basement",
+                resistivity=3000.0,
             ),
         ],
     )

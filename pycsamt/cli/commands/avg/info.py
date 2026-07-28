@@ -87,8 +87,7 @@ def _info_rich(obj, stn_file, source, fmt):
         "data_kind": s.data_kind,
         "project": s.project,
         "survey_type": getattr(cfg, "survey_type", None) or s.survey_type,
-        "line_name": getattr(ann, "line_name", None)
-        or getattr(cfg, "line_name", None),
+        "line_name": getattr(ann, "line_name", None) or getattr(cfg, "line_name", None),
         "operator": getattr(ann, "operator", None),
         "n_stations": s.num_stations,
         "n_frequencies": s.num_frequencies,
@@ -126,12 +125,8 @@ def _info_rich(obj, stn_file, source, fmt):
         click.echo(f"Line          : {row['line_name']}")
     if row["operator"]:
         click.echo(f"Operator      : {row['operator']}")
-    click.echo(
-        f"Stations      : {row['n_stations']}  ({row['station_range']})"
-    )
-    click.echo(
-        f"Frequencies   : {row['n_frequencies']}  ({row['frequency_range']})"
-    )
+    click.echo(f"Stations      : {row['n_stations']}  ({row['station_range']})")
+    click.echo(f"Frequencies   : {row['n_frequencies']}  ({row['frequency_range']})")
     if comps:
         click.echo(f"Components    : {', '.join(comps)}")
     click.echo(f"Total rows    : {row['total_rows']}")

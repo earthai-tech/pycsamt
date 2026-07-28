@@ -58,10 +58,18 @@ def test_agent_cache(monkeypatch):
             self.kwargs = kwargs
 
     names = [
-        "AIInversionAgent", "DataQCAgent", "EnsembleAgent",
-        "ForwardModelAgent", "Inv2DAgent", "Inv3DAgent",
-        "JointInversionAgent", "ModelZooAgent", "MTLoaderAgent",
-        "PhaseAnalysisAgent", "ReportAgent", "StaticShiftAgent",
+        "AIInversionAgent",
+        "DataQCAgent",
+        "EnsembleAgent",
+        "ForwardModelAgent",
+        "Inv2DAgent",
+        "Inv3DAgent",
+        "JointInversionAgent",
+        "ModelZooAgent",
+        "MTLoaderAgent",
+        "PhaseAnalysisAgent",
+        "ReportAgent",
+        "StaticShiftAgent",
     ]
     for name in names:
         monkeypatch.setattr(package, name, Stub)
@@ -81,14 +89,19 @@ def test_chat_and_load_qc_callbacks(monkeypatch, tmp_path):
     assert web._load_qc_run("missing", "", "claude")[1:] == (None, None)
     data = tmp_path / "edis"
     data.mkdir()
-    loader = _Agent(_result(
-        sites=["S1"], n_stations=1, summary_stats={"mean_qc_score": 91.0}
-    ))
-    qc = _Agent(_result(
-        n_flagged=1,
-        flagged_stations=["S1"],
-        figures={"confidence_section": _Figure(), "confidence_profile": _Figure()},
-    ))
+    loader = _Agent(
+        _result(sites=["S1"], n_stations=1, summary_stats={"mean_qc_score": 91.0})
+    )
+    qc = _Agent(
+        _result(
+            n_flagged=1,
+            flagged_stations=["S1"],
+            figures={
+                "confidence_section": _Figure(),
+                "confidence_profile": _Figure(),
+            },
+        )
+    )
     monkeypatch.setattr(
         web, "_get_agent", lambda name, *_: loader if name == "loader" else qc
     )
@@ -126,9 +139,17 @@ def test_processing_callbacks(monkeypatch):
         "resistivity_section": _Figure(),
     }
     result = _result(
-        corrected_sites=["S2"], delta_stats={"mean": 1, "max": 2, "n_shifted": 1},
-        strike_consensus=30, strike_iqr=4, n_1d=1, n_2d=2, n_3d=3,
-        rms_global=0.2, coverage=0.9, n_edges=4, figures=figures,
+        corrected_sites=["S2"],
+        delta_stats={"mean": 1, "max": 2, "n_shifted": 1},
+        strike_consensus=30,
+        strike_iqr=4,
+        n_1d=1,
+        n_2d=2,
+        n_3d=3,
+        rms_global=0.2,
+        coverage=0.9,
+        n_edges=4,
+        figures=figures,
     )
     agent = _Agent(result)
     monkeypatch.setattr(web, "_get_agent", lambda *_: agent)
@@ -145,10 +166,19 @@ def test_processing_callbacks(monkeypatch):
 
 
 def test_zoo_and_report_callbacks(monkeypatch):
-    listing = _Agent(_result(details=[{
-        "name": "tiny", "arch": "mlp", "n_layers": 4,
-        "solver": "adam", "description": "A tiny model",
-    }]))
+    listing = _Agent(
+        _result(
+            details=[
+                {
+                    "name": "tiny",
+                    "arch": "mlp",
+                    "n_layers": 4,
+                    "solver": "adam",
+                    "description": "A tiny model",
+                }
+            ]
+        )
+    )
     monkeypatch.setattr(web, "_get_agent", lambda *_: listing)
     assert "`tiny`" in web._zoo_list_run("", "claude")
     assert "Enter a model" in web._zoo_predict_run(" ", "", "claude")[0]

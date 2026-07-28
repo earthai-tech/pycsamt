@@ -135,15 +135,11 @@ class TestDetectLines:
         assert dlg._lines
         dlg.close()
 
-    def test_detect_lines_handles_exception(
-        self, qapp, single_line_sites, monkeypatch
-    ):
+    def test_detect_lines_handles_exception(self, qapp, single_line_sites, monkeypatch):
         def _boom(_names, **_kw):
             raise RuntimeError("kaboom")
 
-        monkeypatch.setattr(
-            "pycsamt.site.lines.detect_lines_from_station_ids", _boom
-        )
+        monkeypatch.setattr("pycsamt.site.lines.detect_lines_from_station_ids", _boom)
         dlg = PhaseTensorStripGridDialog(sites=single_line_sites)
         assert dlg._lines == {}
         assert "failed" in dlg._lines_lbl.text().lower()
@@ -156,11 +152,11 @@ class TestDetectLines:
 
 class TestStripGridWorker:
     def test_run_success_real_data(self, qapp, multi_line_sites):
+        from pycsamt.emtools._core import _iter_items, _unwrap
         from pycsamt.site.lines import (
             detect_lines_from_station_ids,
             pick_representative_stations,
         )
-        from pycsamt.emtools._core import _iter_items, _unwrap
 
         names = []
         for ed in _iter_items(multi_line_sites):
@@ -171,8 +167,7 @@ class TestStripGridWorker:
             names.append(str(getattr(ed, "station", None) or "?"))
         lines = detect_lines_from_station_ids(names)
         profiles = {
-            ln: pick_representative_stations(stns, 3)
-            for ln, stns in lines.items()
+            ln: pick_representative_stations(stns, 3) for ln, stns in lines.items()
         }
 
         done, error = [], []
@@ -229,10 +224,7 @@ class TestDialogConstruction:
 
     def test_cby_combo_has_expected_items(self, qapp):
         dlg = PhaseTensorStripGridDialog(sites=None)
-        items = [
-            dlg._cby_combo.itemText(i)
-            for i in range(dlg._cby_combo.count())
-        ]
+        items = [dlg._cby_combo.itemText(i) for i in range(dlg._cby_combo.count())]
         assert items == tool_mod._COLOR_BY
         dlg.close()
 
@@ -314,7 +306,7 @@ class TestOnPlot:
         assert w.sites is multi_line_sites
         assert w.c_by == "ellipt"
         assert set(w.profiles.keys()) == set(dlg._lines.keys())
-        for ln, stns in w.profiles.items():
+        for _ln, stns in w.profiles.items():
             assert len(stns) <= 3
             assert stns == sorted(stns)
 
@@ -364,9 +356,7 @@ class TestOnPlot:
 
 
 class TestOnDoneOnError:
-    def test_on_done_shows_figure_and_resets_status(
-        self, qapp, multi_line_sites
-    ):
+    def test_on_done_shows_figure_and_resets_status(self, qapp, multi_line_sites):
         dlg = PhaseTensorStripGridDialog(sites=multi_line_sites)
         dlg._run_btn.setEnabled(False)
         fig = plt.figure()
@@ -378,9 +368,7 @@ class TestOnDoneOnError:
         dlg.close()
         _close()
 
-    def test_on_error_sets_message_and_reenables_run(
-        self, qapp, multi_line_sites
-    ):
+    def test_on_error_sets_message_and_reenables_run(self, qapp, multi_line_sites):
         dlg = PhaseTensorStripGridDialog(sites=multi_line_sites)
         dlg._run_btn.setEnabled(False)
         dlg._on_error("something went wrong")

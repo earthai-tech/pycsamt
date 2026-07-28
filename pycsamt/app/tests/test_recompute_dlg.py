@@ -278,9 +278,7 @@ def test_on_run_clicked_no_source_does_not_start_worker(dlg, monkeypatch):
     assert dlg._worker is None
 
 
-def test_on_run_clicked_starts_worker_with_loaded_sites(
-    dlg_with_sites, monkeypatch
-):
+def test_on_run_clicked_starts_worker_with_loaded_sites(dlg_with_sites, monkeypatch):
     fake_cls = _fake_worker_cls(result=_fake_result())
     monkeypatch.setattr(
         "pycsamt.app.desktop.workers.recompute_worker.RecomputeWorker",

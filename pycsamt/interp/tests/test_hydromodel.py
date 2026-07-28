@@ -23,7 +23,6 @@ from pycsamt.interp.hydromodel import (
 )
 from pycsamt.interp.petrophysics import ArchieModel, WaxmanSmitsModel
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
@@ -172,9 +171,7 @@ def test_fit_with_fracture_depth_blends_fracture_K():
     r_no_frac = EMHydroModel(model, cfg_no_frac).fit()
     r_frac = EMHydroModel(model, cfg_frac).fit()
     # deep cells (below fracture_depth_m) should differ once fracture-K blends in
-    assert not np.allclose(
-        r_no_frac.hydraulic_K[3:, 0], r_frac.hydraulic_K[3:, 0]
-    )
+    assert not np.allclose(r_no_frac.hydraulic_K[3:, 0], r_frac.hydraulic_K[3:, 0])
 
 
 def test_fit_skips_nan_and_nonpositive_rho_cells():

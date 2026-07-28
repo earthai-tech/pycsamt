@@ -90,9 +90,7 @@ def _make_edi_dir(tmp_dir: Path, n: int = 3) -> Path:
     d = tmp_dir / "edis"
     d.mkdir()
     for i in range(n):
-        (d / f"Z2HX{i + 1:03d}.edi").write_text(
-            _HEADER.format(sid=i), encoding="utf-8"
-        )
+        (d / f"Z2HX{i + 1:03d}.edi").write_text(_HEADER.format(sid=i), encoding="utf-8")
     return d
 
 

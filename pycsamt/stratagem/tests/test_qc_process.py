@@ -164,14 +164,9 @@ class TestQualityController:
             snr_mask_ = np.ones((2, 8), dtype=bool)
 
             def match_to_edis(self, edi_objects):
-                return {
-                    i: i
-                    for i in range(min(len(edi_objects), self.n_stations_))
-                }
+                return {i: i for i in range(min(len(edi_objects), self.n_stations_))}
 
-        qc = QualityController(include_skew=False).fit(
-            edis, raw_reader=_FakeRaw()
-        )
+        qc = QualityController(include_skew=False).fit(edis, raw_reader=_FakeRaw())
         assert "hw_coverage" in qc.report_.columns
         assert "hw_freqs" in qc.report_.columns
 
@@ -218,16 +213,11 @@ class TestFrequencyFilter:
             snr_mask_ = np.ones((3, 8), dtype=bool)
 
             def match_to_edis(self, edi_objects):
-                return {
-                    i: i
-                    for i in range(min(len(edi_objects), self.n_stations_))
-                }
+                return {i: i for i in range(min(len(edi_objects), self.n_stations_))}
 
         _FakeRaw.snr_mask_[0, :] = False
 
-        ff = FrequencyFilter(use_hardware_mask=True).fit(
-            edis, raw_reader=_FakeRaw()
-        )
+        ff = FrequencyFilter(use_hardware_mask=True).fit(edis, raw_reader=_FakeRaw())
         # station 0 should have more NaN entries after masking
         z0 = ff.edi_objects_[0].Z.z
         if z0 is not None:
@@ -407,9 +397,7 @@ class TestNoiseRemover:
         from pycsamt.stratagem.process import NoiseRemover
 
         edis = _load_edis(tmp_path, n=3)
-        z_snapshots = [
-            e.Z.z.copy() if e.Z.z is not None else None for e in edis
-        ]
+        z_snapshots = [e.Z.z.copy() if e.Z.z is not None else None for e in edis]
         NoiseRemover(mains_hz=50.0).fit(edis, copy=True)
         for edi, snap in zip(edis, z_snapshots):
             if snap is not None and edi.Z.z is not None:

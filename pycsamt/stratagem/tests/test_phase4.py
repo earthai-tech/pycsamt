@@ -335,9 +335,7 @@ class TestFrequencyFilterAlignment:
  1.500e+001 2.930e+000 0.000e+000 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 """
         )
-        (d / "X2HX.001").write_text(
-            all_bad, encoding="utf-8"
-        )  # station 1 - all bad
+        (d / "X2HX.001").write_text(all_bad, encoding="utf-8")  # station 1 - all bad
         (d / "X2HX.002").write_text(
             _RAW_19COL, encoding="utf-8"
         )  # station 2 - has valid data
@@ -354,9 +352,7 @@ class TestFrequencyFilterAlignment:
         # EDI[0] = Z2HX002 (station 2) → raw[1] = X2HX.002 (has valid data)
         # NOT raw[0] = X2HX.001 (all bad)
         mapping = rdr.match_to_edis(edis)
-        assert mapping[0] == 1, (
-            f"EDI[0] should map to raw[1], got {mapping[0]}"
-        )
+        assert mapping[0] == 1, f"EDI[0] should map to raw[1], got {mapping[0]}"
 
         # FrequencyFilter should apply the raw[1] mask to EDI[0].
         # Disable the incoherence step (snr_thresh/min_frac=0) so the test

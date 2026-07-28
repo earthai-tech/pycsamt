@@ -11,6 +11,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from pycsamt.emtools.skew import (
+    _fill_small_gaps,
+    _mask_apply,
+    _runs_bool,
+    _skew_track_for,
     bahr_skewness,
     close_skew_gaps,
     keep_longest_low_skew,
@@ -21,12 +25,6 @@ from pycsamt.emtools.skew import (
     plot_skewness,
     select_low_skew_band,
     skew_table,
-)
-from pycsamt.emtools.skew import (
-    _fill_small_gaps,
-    _mask_apply,
-    _runs_bool,
-    _skew_track_for,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -140,10 +138,7 @@ class TestBahrSkewness:
 
 class TestSkewTable:
     def _sites(self, n_sites=3):
-        return [
-            _site(f"S{i:02d}", _iso_z(_freqs()), _freqs())
-            for i in range(n_sites)
-        ]
+        return [_site(f"S{i:02d}", _iso_z(_freqs()), _freqs()) for i in range(n_sites)]
 
     def test_returns_dataframe(self):
         import pandas as pd
@@ -334,9 +329,7 @@ class TestSkewTrackForInternals:
         frequency grid is still returned but skew is all-NaN."""
         fr = _freqs(6)
         ed = _site("S00", _iso_z(fr), fr)
-        pt = pd.DataFrame(
-            {"station": ["OTHER"], "period": [1.0], "skew": [0.5]}
-        )
+        pt = pd.DataFrame({"station": ["OTHER"], "period": [1.0], "skew": [0.5]})
         fr_out, sk_out = _skew_track_for(ed, pt)
         assert fr_out is not None
         assert fr_out.shape == fr.shape
@@ -626,17 +619,13 @@ class TestKeepLongestLowSkewFallback:
         """thresh below the smallest possible |skew| -> no run at all."""
         fr = _freqs(10)
         site = _site("S00", _3d_z(fr, skew_frac=0.6), fr)
-        result = keep_longest_low_skew(
-            [site], thresh=-1.0, fallback="keep_all"
-        )
+        result = keep_longest_low_skew([site], thresh=-1.0, fallback="keep_all")
         assert sum(1 for _ in result) == 1
 
     def test_no_runs_fallback_drop_all(self):
         fr = _freqs(10)
         site = _site("S00", _3d_z(fr, skew_frac=0.6), fr)
-        result = keep_longest_low_skew(
-            [site], thresh=-1.0, fallback="drop_all"
-        )
+        result = keep_longest_low_skew([site], thresh=-1.0, fallback="drop_all")
         assert sum(1 for _ in result) == 1
 
 
@@ -678,9 +667,7 @@ class TestSelectLowSkewBandBranches:
 
     def test_short_run_below_min_len_keeps_good_mask(self):
         sites = [_short_low_skew_run_site(f"S{i:02d}") for i in range(3)]
-        result = select_low_skew_band(
-            sites, thresh=1.0, min_len=3, frac=0.5
-        )
+        result = select_low_skew_band(sites, thresh=1.0, min_len=3, frac=0.5)
         assert sum(1 for _ in result) == 3
 
 
@@ -767,9 +754,7 @@ class TestPlotSkewPercentileRibbon:
         assert isinstance(ax, plt.Axes)
 
     def test_custom_quantiles_and_bins(self):
-        ax = plot_skew_percentile_ribbon(
-            self._sites(), n_bins=5, q_lo=10.0, q_hi=90.0
-        )
+        ax = plot_skew_percentile_ribbon(self._sites(), n_bins=5, q_lo=10.0, q_hi=90.0)
         plt.close("all")
         assert isinstance(ax, plt.Axes)
 

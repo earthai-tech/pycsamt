@@ -12,10 +12,10 @@ Examples
 --------
 >>> from pycsamt.map import MapView
 >>> mv = MapView.from_folder("data/survey", detect="folder")
->>> mv.lines                                    # doctest: +SKIP
+>>> mv.lines  # doctest: +SKIP
 ('L18PLT', 'L22PLT')
->>> fig = mv.station(overlay="rho", frequency=1024)   # doctest: +SKIP
->>> mv.export("out/station.html")                     # doctest: +SKIP
+>>> fig = mv.station(overlay="rho", frequency=1024)  # doctest: +SKIP
+>>> mv.export("out/station.html")  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -254,8 +254,7 @@ class MapView:
         key = str(view).lower()
         if key not in _VIEW_BUILDERS:
             raise ValueError(
-                f"Unknown view {view!r}. Expected one of "
-                f"{sorted(_VIEW_BUILDERS)}."
+                f"Unknown view {view!r}. Expected one of " f"{sorted(_VIEW_BUILDERS)}."
             )
         return getattr(self, _VIEW_BUILDERS[key])(**overrides)
 

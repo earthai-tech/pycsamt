@@ -20,9 +20,7 @@ import unittest
 
 # Load _markdown.py in isolation (no Dash, no package __init__ chain).
 _MOD_PATH = pathlib.Path(__file__).resolve().parents[1] / "_markdown.py"
-_spec = importlib.util.spec_from_file_location(
-    "am_markdown_under_test", _MOD_PATH
-)
+_spec = importlib.util.spec_from_file_location("am_markdown_under_test", _MOD_PATH)
 md = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(md)  # type: ignore[union-attr]
 

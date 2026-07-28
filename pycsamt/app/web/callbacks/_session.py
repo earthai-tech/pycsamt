@@ -110,9 +110,7 @@ def register_session(app) -> None:
         State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
-    def _auto_snapshot(
-        store_data, elev_raw, elev_corr, active_lines, corr_store, note
-    ):
+    def _auto_snapshot(store_data, elev_raw, elev_corr, active_lines, corr_store, note):
         if not store_data:
             return no_update, no_update
         snapshot = {
@@ -152,9 +150,7 @@ def register_session(app) -> None:
         State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
-    def _session_download(
-        n, store_data, active_lines, corr, elev_raw, elev_corr, note
-    ):
+    def _session_download(n, store_data, active_lines, corr, elev_raw, elev_corr, note):
         if not n:
             return no_update, no_update
         if not store_data:
@@ -171,9 +167,7 @@ def register_session(app) -> None:
             "elevation_corrected": elev_corr,
         }
         n_sta = (store_data or {}).get("n_stations", 0)
-        fname = (
-            f"pycsamt_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        )
+        fname = f"pycsamt_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         return (
             dcc.send_string(json.dumps(snapshot, indent=2), fname),
             _ok_icon(f"Session downloaded  ({n_sta} stations)."),
@@ -212,9 +206,7 @@ def register_session(app) -> None:
                 msg,
             )
         except Exception as exc:
-            return (no_update,) * 5 + (
-                _err_icon(f"Could not parse {filename}: {exc}"),
-            )
+            return (no_update,) * 5 + (_err_icon(f"Could not parse {filename}: {exc}"),)
 
     # ── 6. Restore from localStorage snapshot (BTN_SESSION_RESTORE) ──────────
     @app.callback(
@@ -233,9 +225,7 @@ def register_session(app) -> None:
             return (no_update,) * 6
         if not snap:
             return (no_update,) * 5 + (
-                _err_icon(
-                    "No browser snapshot found — save a session first."
-                ),
+                _err_icon("No browser snapshot found — save a session first."),
             )
         try:
             _validate_snapshot(snap)

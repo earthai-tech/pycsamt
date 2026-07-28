@@ -64,9 +64,7 @@ def test_info_parses_real_files(edi_path: Path, which: str):
     "which",
     _EDI_SAMPLES,
 )
-def test_heads_aggregator_order_and_write(
-    edi_path: Path, which: str, tmp_path: Path
-):
+def test_heads_aggregator_order_and_write(edi_path: Path, which: str, tmp_path: Path):
     p = edi_path / which
     if not p.exists():
         pytest.skip(f"Missing EDI: {p}")

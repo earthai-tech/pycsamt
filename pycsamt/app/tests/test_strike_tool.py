@@ -114,9 +114,7 @@ class TestStrikeWorkerReal:
     def test_run_emits_done_with_dataframe(self, qapp, l18_sites):
         done_calls = []
         error_calls = []
-        w = _StrikeWorker(
-            l18_sites, band=None, w_sweep=0.5, w_pt=0.5
-        )
+        w = _StrikeWorker(l18_sites, band=None, w_sweep=0.5, w_pt=0.5)
         w.done.connect(done_calls.append)
         w.error.connect(error_calls.append)
         w.run()
@@ -131,9 +129,7 @@ class TestStrikeWorkerReal:
 
     def test_run_with_band_restricts_output(self, qapp, l18_sites):
         done_calls = []
-        w = _StrikeWorker(
-            l18_sites, band=(0.001, 1000.0), w_sweep=0.5, w_pt=0.5
-        )
+        w = _StrikeWorker(l18_sites, band=(0.001, 1000.0), w_sweep=0.5, w_pt=0.5)
         w.done.connect(done_calls.append)
         w.error.connect(lambda *_: None)
         w.run()
@@ -145,9 +141,7 @@ class TestStrikeWorkerReal:
         for w_sweep, w_pt in ((1.0, 0.0), (0.0, 1.0)):
             done_calls = []
             error_calls = []
-            w = _StrikeWorker(
-                l18_sites, band=None, w_sweep=w_sweep, w_pt=w_pt
-            )
+            w = _StrikeWorker(l18_sites, band=None, w_sweep=w_sweep, w_pt=w_pt)
             w.done.connect(done_calls.append)
             w.error.connect(error_calls.append)
             w.run()
@@ -162,9 +156,7 @@ class TestStrikeWorkerError:
         def _boom(*a, **k):
             raise RuntimeError("synthetic failure")
 
-        monkeypatch.setattr(
-            strike_mod, "estimate_strike_consensus", _boom
-        )
+        monkeypatch.setattr(strike_mod, "estimate_strike_consensus", _boom)
         done_calls = []
         error_calls = []
         w = _StrikeWorker(object(), band=None, w_sweep=0.5, w_pt=0.5)
@@ -233,9 +225,7 @@ class TestDialogBuild:
         assert dlg._table.columnCount() == 4
 
     def test_table_header_labels(self, dlg):
-        labels = [
-            dlg._table.horizontalHeaderItem(i).text() for i in range(4)
-        ]
+        labels = [dlg._table.horizontalHeaderItem(i).text() for i in range(4)]
         assert labels == ["Station", "Strike (°)", "IQR (°)", "n obs"]
 
     def test_table_initially_empty(self, dlg):
@@ -265,9 +255,7 @@ class TestOnRunNoData:
 
 
 class TestOnRunWithFakeWorker:
-    def test_happy_path_starts_worker_and_populates(
-        self, qapp, monkeypatch
-    ):
+    def test_happy_path_starts_worker_and_populates(self, qapp, monkeypatch):
         df = _sample_df(3)
         fake_cls = _fake_worker_cls(df=df)
         monkeypatch.setattr(
@@ -305,9 +293,7 @@ class TestOnRunWithFakeWorker:
         assert w.sites is d._sites
         d.close()
 
-    def test_error_path_updates_status_and_reenables(
-        self, qapp, monkeypatch
-    ):
+    def test_error_path_updates_status_and_reenables(self, qapp, monkeypatch):
         fake_cls = _fake_worker_cls(error="boom happened")
         monkeypatch.setattr(
             "pycsamt.app.desktop.tools.strike_tool._StrikeWorker",
@@ -338,9 +324,7 @@ class TestOnRunWithFakeWorker:
         assert d._table.rowCount() == 0
         d.close()
 
-    def test_run_button_disabled_during_run_status_running(
-        self, qapp, monkeypatch
-    ):
+    def test_run_button_disabled_during_run_status_running(self, qapp, monkeypatch):
         """The 'Running…' status is set before start(); fake worker resolves
         synchronously so by the time _on_run returns the button is re-enabled
         again — verify the transient text was reachable via a spy worker."""

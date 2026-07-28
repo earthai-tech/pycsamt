@@ -237,12 +237,17 @@ def ensure_head_coords(
     Examples
     --------
     >>> from pycsamt.site.location import ensure_head_coords
-    >>> class H: pass
+    >>> class H:
+    ...     pass
     >>> class EDI:
-    ...     def __init__(self): self._h = H()
-    ...     def get_section(self, k): return self._h if k=='head' else None
-    ...     def set_section(self, k, v): self._h = v
+    ...     def __init__(self):
+    ...         self._h = H()
     ...
+    ...     def get_section(self, k):
+    ...         return self._h if k == "head" else None
+    ...
+    ...     def set_section(self, k, v):
+    ...         self._h = v
     >>> ed = EDI()
     >>> h = ensure_head_coords(ed, lat="12N", lon="3E", elev="10")
     >>> (h.lat, h.lon, h.elev)
@@ -387,10 +392,14 @@ def apply_topography(
     >>> import pandas as pd
     >>> from pycsamt.site.location import apply_topography
     >>> # ed is an EDI-like object with a valid head and dataid
-    >>> df = pd.DataFrame({'station':['S1'],
-    ...                    'latitude':[10.0],
-    ...                    'longitude':[2.0],
-    ...                    'elevation':[100.0]})
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "station": ["S1"],
+    ...         "latitude": [10.0],
+    ...         "longitude": [2.0],
+    ...         "elevation": [100.0],
+    ...     }
+    ... )
     >>> _ = apply_topography(ed, df, inplace=True)  # doctest: +SKIP
     """
 
@@ -480,8 +489,9 @@ def project(
     Examples
     --------
     >>> from pycsamt.site.location import project
-    >>> X, Y = project([(0.0, 0.0)], crs_from="EPSG:4326",
-    ...                crs_to="EPSG:3857")  # doctest: +SKIP
+    >>> X, Y = project(
+    ...     [(0.0, 0.0)], crs_from="EPSG:4326", crs_to="EPSG:3857"
+    ... )  # doctest: +SKIP
 
     See Also
     --------
@@ -606,7 +616,7 @@ def distance(
     Examples
     --------
     >>> from pycsamt.site.location import distance, Coord
-    >>> distance(Coord(0,0,0), Coord(0,1,0), mode='geodetic')
+    >>> distance(Coord(0, 0, 0), Coord(0, 1, 0), mode="geodetic")
     111000.0  # doctest: +ELLIPSIS
 
     See Also
@@ -628,9 +638,7 @@ def distance(
         dlon = _rad(lo2 - lo1)
         A = (
             math.sin(dlat / 2) ** 2
-            + math.cos(_rad(la1))
-            * math.cos(_rad(la2))
-            * math.sin(dlon / 2) ** 2
+            + math.cos(_rad(la1)) * math.cos(_rad(la2)) * math.sin(dlon / 2) ** 2
         )
         return 2.0 * _EARTH_R * math.asin(min(1.0, math.sqrt(A)))
     if m == "flat":
@@ -642,9 +650,7 @@ def distance(
             if crs_to is None
             else crs_to
         )
-        X, Y = project(
-            [(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg
-        )
+        X, Y = project([(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg)
         return float(math.hypot(float(X[1] - X[0]), float(Y[1] - Y[0])))
     raise ValueError("mode must be 'geodetic','flat','utm'")
 
@@ -698,9 +704,9 @@ def bearing(
     Examples
     --------
     >>> from pycsamt.site.location import bearing, Coord
-    >>> bearing(Coord(0,0,0), Coord(1,0,0))
+    >>> bearing(Coord(0, 0, 0), Coord(1, 0, 0))
     0.0
-    >>> bearing(Coord(0,0,0), Coord(0,1,0))
+    >>> bearing(Coord(0, 0, 0), Coord(0, 1, 0))
     90.0
 
     See Also
@@ -737,9 +743,7 @@ def bearing(
             if crs_to is None
             else crs_to
         )
-        X, Y = project(
-            [(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg
-        )
+        X, Y = project([(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg)
         dx = float(X[1] - X[0])
         dy = float(Y[1] - Y[0])
         theta = math.degrees(math.atan2(dx, dy))

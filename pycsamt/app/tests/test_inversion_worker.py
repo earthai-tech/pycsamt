@@ -135,9 +135,7 @@ class TestCancellation:
         w.cancel()
         assert w._cancelled
 
-    def test_cancelled_without_callback_skips_result(
-        self, qapp, workdir, monkeypatch
-    ):
+    def test_cancelled_without_callback_skips_result(self, qapp, workdir, monkeypatch):
         _patch_occam(monkeypatch, _FakeRunnerNoCallback)
         w = InversionWorker(workdir=str(workdir))
         w.cancel()

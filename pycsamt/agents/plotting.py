@@ -231,9 +231,7 @@ class PlotAgent:
         rc = _PUB_RC if pub else {}
         try:
             with plt.rc_context(rc):
-                out = _METHODS[kind](
-                    plt, sites, stations, input_data, warnings
-                )
+                out = _METHODS[kind](plt, sites, stations, input_data, warnings)
         except Exception as exc:  # noqa: BLE001
             return AgentResult.failed(
                 f"Plot failed: {exc}",
@@ -278,9 +276,7 @@ class PlotAgent:
         errorbar = _truthy(d.get("errorbar", True))
         sub = _filter_sites(sites, stations)
         if stations and sub is sites:
-            warnings.append(
-                "Requested stations not found; plotting all stations."
-            )
+            warnings.append("Requested stations not found; plotting all stations.")
         figsize = (8.0, 6.5) if _truthy(d.get("publication")) else (7.5, 6.0)
         fig, (ax_r, ax_p) = plt.subplots(2, 1, figsize=figsize, sharex=True)
         plot_rhoa_phi(
@@ -292,9 +288,7 @@ class PlotAgent:
             ax_p=ax_p,
             verbose=0,
         )
-        ax_r.set_title(
-            "Apparent resistivity & phase  (" + ", ".join(comps) + ")"
-        )
+        ax_r.set_title("Apparent resistivity & phase  (" + ", ".join(comps) + ")")
         return fig, "Rho/Phi sounding curves"
 
     def _phase_psection(self, plt, sites, stations, d, warnings):
@@ -304,11 +298,7 @@ class PlotAgent:
         pr = _period_range(d)
         sub = _filter_sites(sites, stations)
         n = len(comps)
-        figsize = (
-            (9.0, 3.4 * n)
-            if _truthy(d.get("publication"))
-            else (8.0, 3.0 * n)
-        )
+        figsize = (9.0, 3.4 * n) if _truthy(d.get("publication")) else (8.0, 3.0 * n)
         fig, axes = plt.subplots(n, 1, figsize=figsize, squeeze=False)
         for ax, comp in zip(axes[:, 0], comps):
             pseudosection(
@@ -326,9 +316,7 @@ class PlotAgent:
     def _tipper(self, plt, sites, stations, d, warnings):
         sub = _filter_sites(sites, stations)
         if stations and sub is sites:
-            warnings.append(
-                "Requested stations not found; using all stations."
-            )
+            warnings.append("Requested stations not found; using all stations.")
         view = str(d.get("view", "components") or "components").lower()
         pub = _truthy(d.get("publication"))
 
@@ -348,9 +336,7 @@ class PlotAgent:
             plot_induction_arrows(
                 sub, periods=periods, convention=conv, ax=ax, verbose=0
             )
-            ax.set_title(
-                f"Tipper induction arrows  (T≈{periods[0]:g}s, {conv})"
-            )
+            ax.set_title(f"Tipper induction arrows  (T≈{periods[0]:g}s, {conv})")
             return fig, "Tipper induction arrows"
 
         # default: component curves (Tx/Ty, real/imag)
@@ -359,9 +345,7 @@ class PlotAgent:
         parts = _norm_parts(d.get("parts"))
         figsize = (8.0, 4.8) if pub else (7.5, 4.5)
         fig, ax = plt.subplots(figsize=figsize)
-        plot_tipper_components(
-            sub, kind=parts, axis="period", ax=ax, verbose=0
-        )
+        plot_tipper_components(sub, kind=parts, axis="period", ax=ax, verbose=0)
         ax.set_title("Tipper components  (" + ", ".join(parts) + ")")
         return fig, "Tipper components"
 
@@ -372,9 +356,7 @@ class PlotAgent:
         from ..emtools.advanced import plot_rho_phase_bode
 
         comps = [
-            c
-            for c in _norm_components(d.get("components"))
-            if c in ("xy", "yx")
+            c for c in _norm_components(d.get("components")) if c in ("xy", "yx")
         ] or ["xy"]
         station = stations[0] if stations else None
         if station is None:
@@ -382,9 +364,7 @@ class PlotAgent:
             for i, ed in enumerate(_iter_items(sites)):
                 station = _name(ed, i)
                 break
-            warnings.append(
-                f"No station given; showing the first station ({station})."
-            )
+            warnings.append(f"No station given; showing the first station ({station}).")
         pr = _period_range(d)
         figures: dict = {}
         for comp in comps:
@@ -471,9 +451,7 @@ class PlotAgent:
                 kw["scale"] = float(scale)
             except (TypeError, ValueError):
                 pass
-        figsize = (
-            (11.0, 6.0) if _truthy(d.get("publication")) else (10.0, 5.5)
-        )
+        figsize = (11.0, 6.0) if _truthy(d.get("publication")) else (10.0, 5.5)
         fig, ax = plt.subplots(figsize=figsize)
         plot_phase_tensor_psection(
             sites,
@@ -494,9 +472,7 @@ class PlotAgent:
             for i, ed in enumerate(_iter_items(sites)):
                 station = _name(ed, i)
                 break
-            warnings.append(
-                f"No station given; showing the first station ({station})."
-            )
+            warnings.append(f"No station given; showing the first station ({station}).")
         pr = _period_range(d)
         pub = _truthy(d.get("publication"))
         figsize = (7.5, 1.8) if pub else (7.0, 1.6)
@@ -531,10 +507,7 @@ class PlotAgent:
             per_line = 4
 
         profiles = {
-            ln: pick_representative_stations(sts, per_line)
-            for ln, sts in lines.items()
+            ln: pick_representative_stations(sts, per_line) for ln, sts in lines.items()
         }
-        fig = plot_phase_tensor_strip_grid(
-            sites, profiles=profiles, verbose=0
-        )
+        fig = plot_phase_tensor_strip_grid(sites, profiles=profiles, verbose=0)
         return fig, "Phase-tensor ellipse strip grid (by line)"

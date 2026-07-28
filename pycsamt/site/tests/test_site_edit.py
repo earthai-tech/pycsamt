@@ -144,9 +144,7 @@ def test_fill_missing_and_recompute(simulated_edi: Path) -> None:
     # depending on downstream stack. We only assert no exception.
 
 
-def test_rotate_all_and_select_freq_all(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_rotate_all_and_select_freq_all(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "R01", "R02")
     src = [e1, e2]
 
@@ -173,9 +171,7 @@ def test_rotate_all_and_select_freq_all(
     assert 1 <= len(f_after) <= len(f)
 
 
-def test_rename_all_and_set_coords_all(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_rename_all_and_set_coords_all(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2 = _mk_two_edifiles(tmp_path, simulated_edi, "N01", "N02")
     src = [e1, e2]
 

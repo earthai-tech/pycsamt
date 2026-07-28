@@ -240,8 +240,7 @@ def ensure_map_data(
     )
     edis = _as_edi_tuple(sites)
     stations = tuple(
-        _station_record(edi, index=i, line_map=line_map)
-        for i, edi in enumerate(edis)
+        _station_record(edi, index=i, line_map=line_map) for i, edi in enumerate(edis)
     )
     profiles = _build_profiles(stations)
     metadata = {
@@ -296,10 +295,7 @@ def normalize_component(component: str | None) -> str:
     if name in TENSOR_COMPONENTS or name in {"det", "avg"}:
         return name
     choices = sorted([*TENSOR_COMPONENTS, "avg", "det"])
-    msg = (
-        f"Unknown impedance component {component!r}. "
-        f"Expected one of {choices}."
-    )
+    msg = f"Unknown impedance component {component!r}. " f"Expected one of {choices}."
     raise ValueError(msg)
 
 
@@ -318,10 +314,7 @@ def component_index(component: str) -> tuple[int, int]:
     """Return tensor indices for an impedance component."""
     spec = component_spec(component)
     if spec.indices is None:
-        msg = (
-            f"Component {component!r} is derived and has no "
-            "single tensor index."
-        )
+        msg = f"Component {component!r} is derived and has no " "single tensor index."
         raise ValueError(msg)
     return spec.indices
 
@@ -419,10 +412,7 @@ def station_distance_km(data: MapData) -> np.ndarray:
         dtype=float,
     )
     lon = np.array(
-        [
-            s.longitude if s.longitude is not None else np.nan
-            for s in stations
-        ],
+        [s.longitude if s.longitude is not None else np.nan for s in stations],
         dtype=float,
     )
     if not np.isfinite(lat).all() or not np.isfinite(lon).all():
@@ -544,12 +534,9 @@ def pseudosection_table(
     rows: list[dict[str, float | str]] = []
     distances = station_distance_km(data)
     dist_by_id = {
-        station.id: float(distances[i])
-        for i, station in enumerate(data.stations)
+        station.id: float(distances[i]) for i, station in enumerate(data.stations)
     }
-    line_by_id = {
-        station.id: str(station.line or "line") for station in data.stations
-    }
+    line_by_id = {station.id: str(station.line or "line") for station in data.stations}
     for edi in data.iter_edis():
         sid = _station_id_from_edi(edi)
         z_obj = getattr(edi, "Z", None)
@@ -688,14 +675,10 @@ def _metadata_sources(obj: Any) -> tuple[Any, ...]:
             if sec is None:
                 continue
             sources.append(sec)
-            loc = getattr(sec, "Location", None) or getattr(
-                sec, "location", None
-            )
+            loc = getattr(sec, "Location", None) or getattr(sec, "location", None)
             if loc is not None:
                 sources.append(loc)
-    direct_loc = getattr(obj, "Location", None) or getattr(
-        obj, "location", None
-    )
+    direct_loc = getattr(obj, "Location", None) or getattr(obj, "location", None)
     if direct_loc is not None:
         sources.append(direct_loc)
     return tuple(sources)
@@ -772,6 +755,5 @@ def _build_profiles(
         line = station.line or "line"
         grouped.setdefault(line, []).append(station)
     return tuple(
-        ProfileLine(name=name, stations=tuple(items))
-        for name, items in grouped.items()
+        ProfileLine(name=name, stations=tuple(items)) for name, items in grouped.items()
     )

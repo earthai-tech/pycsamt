@@ -171,10 +171,7 @@ def test_detect_powerline_harmonics_flags_mains_tone():
     assert result.dominant.frequency_hz == pytest.approx(50.0)
 
     clean = rng.standard_normal(n)
-    assert (
-        detect_powerline_harmonics(clean, fs, mains_hz=50.0).contaminated
-        is False
-    )
+    assert detect_powerline_harmonics(clean, fs, mains_hz=50.0).contaminated is False
 
 
 def test_channel_snr_orders_clean_above_noisy():
@@ -310,9 +307,7 @@ def test_file_client_round_trip(tmp_path):
 
 def test_dry_run_client_records_without_io(tmp_path):
     path = tmp_path / "should_not_exist.jsonl"
-    client = build_telemetry_client(
-        "file", endpoint=str(path)
-    )  # dry_run=True
+    client = build_telemetry_client("file", endpoint=str(path))  # dry_run=True
     client.send(TelemetryPacket("node-1", 1.0, "t", {}))
     assert len(client.sent) == 1
     assert not path.exists()
@@ -368,9 +363,7 @@ def test_hashing_helpers(tmp_path):
 
 
 def test_manifest_build_write_and_bundle(tmp_path):
-    decision = log_qc_decision(
-        "S01", "Accept", channel="EX", reasons=["snr_ok"]
-    )
+    decision = log_qc_decision("S01", "Accept", channel="EX", reasons=["snr_ok"])
     assert decision["decision"] == "accept"
     manifest = build_acquisition_manifest(
         "SURVEY-1",
@@ -439,9 +432,7 @@ def test_field_session_end_to_end(tmp_path):
 
     session = FieldSession(
         "SSL2026",
-        devices=[
-            DeviceConfig("node-1", station="S01", channels=["ex", "hy"])
-        ],
+        devices=[DeviceConfig("node-1", station="S01", channels=["ex", "hy"])],
         method="amt",
     )
     session.add_station(StationConfig("S01", lat=6.5, lon=3.4, profile="L1"))

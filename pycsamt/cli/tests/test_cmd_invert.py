@@ -50,9 +50,7 @@ class TestInvertBuild:
     ) -> None:
         result = runner.invoke(main, ["invert", "build"])
         assert result.exit_code != 0
-        assert "No active survey" in (
-            result.output + str(result.exception or "")
-        )
+        assert "No active survey" in (result.output + str(result.exception or ""))
 
     def test_build_occam2d_called(
         self,
@@ -89,9 +87,7 @@ class TestInvertBuild:
             )
         # The command may fail because OccamConfig/InputBuilder aren't mocked
         # deeply, but it should not raise a Python exception
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
     def test_explicit_path_takes_priority_over_context(
         self,
@@ -108,16 +104,12 @@ class TestInvertBuild:
         # Set context pointing to edi_dir
         from pycsamt.cli.survey import set_survey
 
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             set_survey(edi_dir)
 
         # Call with explicit alt_dir — resolve_survey should use alt_dir
         resolved_paths = []
-        __import__(
-            "pycsamt.cli.survey", fromlist=["resolve_survey"]
-        ).resolve_survey
+        __import__("pycsamt.cli.survey", fromlist=["resolve_survey"]).resolve_survey
 
         def tracking_resolve(explicit, **kw):
             if explicit is not None:
@@ -152,18 +144,12 @@ class TestInvertStatus:
         result = runner.invoke(main, ["invert", "status", "--help"])
         assert result.exit_code == 0
 
-    def test_occam2d_workdir_text(
-        self, runner: CliRunner, occam_workdir: Path
-    ) -> None:
+    def test_occam2d_workdir_text(self, runner: CliRunner, occam_workdir: Path) -> None:
         result = runner.invoke(main, ["invert", "status", str(occam_workdir)])
         assert result.exit_code == 0
-        assert (
-            "OCCAM2D" in result.output.upper() or "occam2d" in result.output
-        )
+        assert "OCCAM2D" in result.output.upper() or "occam2d" in result.output
 
-    def test_occam2d_workdir_json(
-        self, runner: CliRunner, occam_workdir: Path
-    ) -> None:
+    def test_occam2d_workdir_json(self, runner: CliRunner, occam_workdir: Path) -> None:
         result = runner.invoke(
             main, ["invert", "status", str(occam_workdir), "--format", "json"]
         )
@@ -253,12 +239,8 @@ class TestInvertRun:
         assert "--max-iter" in result.output
         assert "--async" in result.output
 
-    def test_nonexistent_workdir_fails(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
-        result = runner.invoke(
-            main, ["invert", "run", str(tmp_path / "no_such")]
-        )
+    def test_nonexistent_workdir_fails(self, runner: CliRunner, tmp_path: Path) -> None:
+        result = runner.invoke(main, ["invert", "run", str(tmp_path / "no_such")])
         assert result.exit_code != 0
 
     def test_occam2d_runner_called(
@@ -284,9 +266,7 @@ class TestInvertRun:
                 ],
             )
         # OccamRunner may not be importable in test env, but should not traceback
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
 # ---------------------------------------------------------------------------
@@ -303,13 +283,9 @@ class TestInvertResults:
     def test_empty_workdir_fails_gracefully(
         self, runner: CliRunner, occam_workdir: Path
     ) -> None:
-        result = runner.invoke(
-            main, ["invert", "results", str(occam_workdir)]
-        )
+        result = runner.invoke(main, ["invert", "results", str(occam_workdir)])
         # Expected to fail (no iter files) but should not traceback uncontrolled
-        assert result.exception is None or isinstance(
-            result.exception, SystemExit
-        )
+        assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
 # ---------------------------------------------------------------------------
@@ -346,9 +322,7 @@ class TestInvertPlot:
             "grid",
         ],
     )
-    def test_each_subcommand_has_help(
-        self, runner: CliRunner, sub: str
-    ) -> None:
+    def test_each_subcommand_has_help(self, runner: CliRunner, sub: str) -> None:
         result = runner.invoke(main, ["invert", "plot", sub, "--help"])
         assert result.exit_code == 0
         assert "WORKDIR" in result.output

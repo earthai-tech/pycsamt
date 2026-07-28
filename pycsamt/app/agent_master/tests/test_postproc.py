@@ -101,9 +101,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -135,9 +133,7 @@ class TestShowExportPath:
     def _fn(self, agent_app):
         from pycsamt.app.agent_master._ids import IDs
 
-        return _find(
-            agent_app, IDs.BTN_POSTPROC_EXPORT, IDs.POSTPROC_COLLAPSE
-        )
+        return _find(agent_app, IDs.BTN_POSTPROC_EXPORT, IDs.POSTPROC_COLLAPSE)
 
     def test_none_clicks_collapsed(self, agent_app):
         fn = self._fn(agent_app)
@@ -166,8 +162,9 @@ class TestApplyToSession:
             fn(None, {}, {}, {})
 
     def test_sites_not_in_memory_returns_error(self, agent_app, monkeypatch):
-        import pycsamt.app.agent_master.callbacks.chat as chat_mod
         from dash import no_update
+
+        import pycsamt.app.agent_master.callbacks.chat as chat_mod
 
         monkeypatch.setattr(chat_mod, "_CORR_CACHE", {})
         fn = self._fn(agent_app)
@@ -176,26 +173,21 @@ class TestApplyToSession:
         assert is_open is True
         assert "not in memory" in str(status)
 
-    def test_export_exception_returns_error(
-        self, agent_app, monkeypatch, tmp_path
-    ):
-        import pycsamt.app.agent_master.callbacks.chat as chat_mod
-        import pycsamt.app.agent_master.callbacks.postproc as pp_mod
+    def test_export_exception_returns_error(self, agent_app, monkeypatch, tmp_path):
         from dash import no_update
 
+        import pycsamt.app.agent_master.callbacks.chat as chat_mod
+        import pycsamt.app.agent_master.callbacks.postproc as pp_mod
+
         monkeypatch.setattr(chat_mod, "_CORR_CACHE", {"j1": object()})
-        monkeypatch.setattr(
-            pp_mod, "_count_valid_impedance", lambda sites: 2
-        )
+        monkeypatch.setattr(pp_mod, "_count_valid_impedance", lambda sites: 2)
 
         def boom(sites, dest):
             raise RuntimeError("disk full")
 
         monkeypatch.setattr(pp_mod, "_export", boom)
         fn = self._fn(agent_app)
-        edi, status, is_open = fn(
-            1, {"jid": "j1", "output_dir": str(tmp_path)}, {}, {}
-        )
+        edi, status, is_open = fn(1, {"jid": "j1", "output_dir": str(tmp_path)}, {}, {})
         assert edi is no_update
         assert is_open is True
         assert "disk full" in str(status)
@@ -203,17 +195,14 @@ class TestApplyToSession:
     def test_invalid_export_leaves_session_untouched(
         self, agent_app, monkeypatch, tmp_path
     ):
-        import pycsamt.app.agent_master.callbacks.chat as chat_mod
-        import pycsamt.app.agent_master.callbacks.postproc as pp_mod
         from dash import no_update
 
+        import pycsamt.app.agent_master.callbacks.chat as chat_mod
+        import pycsamt.app.agent_master.callbacks.postproc as pp_mod
+
         monkeypatch.setattr(chat_mod, "_CORR_CACHE", {"j1": object()})
-        monkeypatch.setattr(
-            pp_mod, "_count_valid_impedance", lambda sites: 0
-        )
-        monkeypatch.setattr(
-            pp_mod, "_export", lambda sites, dest: ["a.edi"]
-        )
+        monkeypatch.setattr(pp_mod, "_count_valid_impedance", lambda sites: 0)
+        monkeypatch.setattr(pp_mod, "_export", lambda sites, dest: ["a.edi"])
         monkeypatch.setattr(
             pp_mod, "_validate_export", lambda dest: (0, 0, "no Z blocks")
         )
@@ -225,23 +214,15 @@ class TestApplyToSession:
         assert is_open is True
         assert "no Z blocks" in str(status)
 
-    def test_successful_apply_updates_session(
-        self, agent_app, monkeypatch, tmp_path
-    ):
+    def test_successful_apply_updates_session(self, agent_app, monkeypatch, tmp_path):
         import pycsamt.app.agent_master.callbacks.chat as chat_mod
         import pycsamt.app.agent_master.callbacks.postproc as pp_mod
 
         cache = {"j1": object()}
         monkeypatch.setattr(chat_mod, "_CORR_CACHE", cache)
-        monkeypatch.setattr(
-            pp_mod, "_count_valid_impedance", lambda sites: 2
-        )
-        monkeypatch.setattr(
-            pp_mod, "_export", lambda sites, dest: ["a.edi", "b.edi"]
-        )
-        monkeypatch.setattr(
-            pp_mod, "_validate_export", lambda dest: (2, 2, "")
-        )
+        monkeypatch.setattr(pp_mod, "_count_valid_impedance", lambda sites: 2)
+        monkeypatch.setattr(pp_mod, "_export", lambda sites, dest: ["a.edi", "b.edi"])
+        monkeypatch.setattr(pp_mod, "_validate_export", lambda dest: (2, 2, ""))
         fn = self._fn(agent_app)
         edi, status, is_open = fn(
             1,
@@ -277,16 +258,12 @@ class TestConfirmExport:
         assert is_open is True
         assert collapse_open is True
 
-    def test_sites_not_in_memory_returns_error(
-        self, agent_app, monkeypatch, tmp_path
-    ):
+    def test_sites_not_in_memory_returns_error(self, agent_app, monkeypatch, tmp_path):
         import pycsamt.app.agent_master.callbacks.chat as chat_mod
 
         monkeypatch.setattr(chat_mod, "_CORR_CACHE", {})
         fn = self._fn(agent_app)
-        status, is_open, collapse_open = fn(
-            1, str(tmp_path), {"jid": "missing"}
-        )
+        status, is_open, collapse_open = fn(1, str(tmp_path), {"jid": "missing"})
         assert "not in memory" in str(status)
         assert is_open is True
         assert collapse_open is True
@@ -297,19 +274,11 @@ class TestConfirmExport:
 
         cache = {"j1": object()}
         monkeypatch.setattr(chat_mod, "_CORR_CACHE", cache)
-        monkeypatch.setattr(
-            pp_mod, "_count_valid_impedance", lambda sites: 2
-        )
-        monkeypatch.setattr(
-            pp_mod, "_export", lambda sites, dest: ["a.edi", "b.edi"]
-        )
-        monkeypatch.setattr(
-            pp_mod, "_validate_export", lambda dest: (2, 2, "")
-        )
+        monkeypatch.setattr(pp_mod, "_count_valid_impedance", lambda sites: 2)
+        monkeypatch.setattr(pp_mod, "_export", lambda sites, dest: ["a.edi", "b.edi"])
+        monkeypatch.setattr(pp_mod, "_validate_export", lambda dest: (2, 2, ""))
         fn = self._fn(agent_app)
-        status, is_open, collapse_open = fn(
-            1, str(tmp_path), {"jid": "j1"}
-        )
+        status, is_open, collapse_open = fn(1, str(tmp_path), {"jid": "j1"})
         assert "j1" not in cache
         assert "Exported 2/2" in str(status)
         assert is_open is False

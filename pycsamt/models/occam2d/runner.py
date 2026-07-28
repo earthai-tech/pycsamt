@@ -314,9 +314,7 @@ class OccamRunner(OccamBase):
                 f"or pass fc='<compiler>'."
             )
 
-        self.logger.info(
-            "Compiling Occam2D with %s %s in %s", fc, flags, _SOURCE_DIR
-        )
+        self.logger.info("Compiling Occam2D with %s %s in %s", fc, flags, _SOURCE_DIR)
         result = subprocess.run(
             ["make", f"FC90={fc}", f"FCFLAGS={flags}"],
             cwd=_SOURCE_DIR,
@@ -327,9 +325,7 @@ class OccamRunner(OccamBase):
             raise RuntimeError(f"Compilation failed:\n{result.stderr}")
         compiled = _SOURCE_DIR / "Occam2D"
         if not compiled.is_file():
-            raise RuntimeError(
-                "make succeeded but 'Occam2D' binary was not produced."
-            )
+            raise RuntimeError("make succeeded but 'Occam2D' binary was not produced.")
         return compiled
 
     # ------------------------------------------------------------------
@@ -398,9 +394,7 @@ class OccamRunner(OccamBase):
 
         # Optionally patch startup file before running
         if max_iter is not None or target_misfit is not None:
-            self._patch_startup(
-                max_iter=max_iter, target_misfit=target_misfit
-            )
+            self._patch_startup(max_iter=max_iter, target_misfit=target_misfit)
 
         self.logger.info("Running Occam2D in %s", self.workdir)
 
@@ -506,9 +500,7 @@ class OccamRunner(OccamBase):
             :meth:`run_async`.
         """
         if self.process is None:
-            raise RuntimeError(
-                "No async run in progress.  Call run_async() first."
-            )
+            raise RuntimeError("No async run in progress.  Call run_async() first.")
         self.exit_code = self.process.wait()
         return self.exit_code
 

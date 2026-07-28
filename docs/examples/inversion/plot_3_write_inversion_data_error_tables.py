@@ -394,9 +394,7 @@ station_index = {station: i for i, station in enumerate(stations)}
 period_index = {period: i for i, period in enumerate(periods)}
 
 for row in impedance_rows:
-    coverage[
-        period_index[row["period_s"]], station_index[row["station"]]
-    ] += 1
+    coverage[period_index[row["period_s"]], station_index[row["station"]]] += 1
 
 fig, ax = plt.subplots(figsize=(11.0, 5.0))
 im = ax.imshow(

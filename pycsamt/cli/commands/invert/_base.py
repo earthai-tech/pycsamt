@@ -38,9 +38,7 @@ _OCCAM_SIGNATURES = frozenset(
         "Occam2DStartup",
     }
 )
-_MODEM_SIGNATURES = frozenset(
-    {"ModEMData.dat", "ModEM.inv", "Modular_NLCG.log"}
-)
+_MODEM_SIGNATURES = frozenset({"ModEMData.dat", "ModEM.inv", "Modular_NLCG.log"})
 
 
 def _detect_solver(workdir: Path) -> str | None:

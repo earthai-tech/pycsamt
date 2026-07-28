@@ -9,9 +9,9 @@ import urllib.request
 import pytest
 
 from pycsamt.ai._zoo import (
+    _MODEL_ZOO,
     _get_cache_dir,
     _md5_file,
-    _MODEL_ZOO,
     download_checkpoint,
     get_pretrained_info,
     list_pretrained,
@@ -83,9 +83,7 @@ def test_download_checkpoint_uses_cache_when_present(tmp_path, capsys):
     cache.mkdir()
     (cache / fname).write_bytes(b"fake-weights")
 
-    path = download_checkpoint(
-        "mt1d-cnn-5layer-v1", cache_dir=str(cache), verbose=True
-    )
+    path = download_checkpoint("mt1d-cnn-5layer-v1", cache_dir=str(cache), verbose=True)
 
     assert path == cache / fname
     assert path.read_bytes() == b"fake-weights"
@@ -144,9 +142,7 @@ def test_download_checkpoint_download_failure_raises_runtime_error(
     assert not (tmp_path / fname).exists()
 
 
-def test_download_checkpoint_md5_mismatch_raises_runtime_error(
-    monkeypatch, tmp_path
-):
+def test_download_checkpoint_md5_mismatch_raises_runtime_error(monkeypatch, tmp_path):
     import pycsamt.ai._zoo as zoo_mod
 
     monkeypatch.setitem(

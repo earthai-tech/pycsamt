@@ -168,11 +168,14 @@ class XAMixin:
     >>> class MyEDICollection(XAMixin):
     ...     def __init__(self, items):
     ...         self._items = list(items)
+    ...
     ...     def __iter__(self):
     ...         return iter(self._items)
-    ...
     >>> # Assume "site1.edi" and "site2.edi" exist
-    >>> edi_files = [EDIFile("data/edis/S01.edi"), EDIFile("data/edis/S02.edi")]
+    >>> edi_files = [
+    ...     EDIFile("data/edis/S01.edi"),
+    ...     EDIFile("data/edis/S02.edi"),
+    ... ]
     >>> collection = MyEDICollection(edi_files)
     >>>
     >>> # Convert the entire collection to an xarray Dataset
@@ -182,7 +185,7 @@ class XAMixin:
     >>>
     >>> # Get a summary table of just the metadata
     >>> metadata_ds = collection.meta_table()
-    >>> print(metadata_ds[['lat', 'lon']])
+    >>> print(metadata_ds[["lat", "lon"]])
     <xarray.Dataset>
     Dimensions:  (site: 2)
     Coordinates:
@@ -262,13 +265,13 @@ class EDIAcc:
     ['S01', 'S02', 'S03', ...]
     >>>
     >>> # Select data for a single station (case-insensitive)
-    >>> site_data = ds.edi.get('s01')
+    >>> site_data = ds.edi.get("s01")
     >>>
     >>> # Filter the data to a specific frequency band (e.g., 1 to 100 Hz)
     >>> filtered_ds = ds.edi.band(fmin=1.0, fmax=100.0)
     >>>
     >>> # Create a standard plot for a site
-    >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
+    >>> fig, axes = ds.edi.plot_apparent_resistivity(site="S01")
     >>> # fig.show() # Uncomment to display plot
     """
 
@@ -342,22 +345,22 @@ class EDIAcc:
         Examples
         --------
         >>> # Basic plot of off-diagonal components
-        >>> fig, axes = ds.edi.plot_apparent_resistivity(site='S01')
+        >>> fig, axes = ds.edi.plot_apparent_resistivity(site="S01")
         >>> # fig.show()
 
         >>> # Plot all components and save the figure
         >>> fig, axes = ds.edi.plot_apparent_resistivity(
-        ...     site='S01',
-        ...     components=['xy', 'yx', 'xx', 'yy'],
-        ...     savefig='S01_all_components.png'
+        ...     site="S01",
+        ...     components=["xy", "yx", "xx", "yy"],
+        ...     savefig="S01_all_components.png",
         ... )
 
         >>> # Plot with phase wrapped to the first quadrant and custom styling
         >>> fig, axes = ds.edi.plot_apparent_resistivity(
-        ...     site='S01',
+        ...     site="S01",
         ...     phase_mod=90,
-        ...     grid_props={'color': 'red', 'linestyle': ':'},
-        ...     marker='o'  # passed to plot.line
+        ...     grid_props={"color": "red", "linestyle": ":"},
+        ...     marker="o",  # passed to plot.line
         ... )
         """
         import matplotlib.pyplot as plt
@@ -392,9 +395,7 @@ class EDIAcc:
             output_ch, input_ch = comp_map[comp_lower]
 
             # --- Resistivity Plot (Log-Log) ---
-            rho_data = ds_site["rho"].sel(
-                output_ch=output_ch, input_ch=input_ch
-            )
+            rho_data = ds_site["rho"].sel(output_ch=output_ch, input_ch=input_ch)
             rho_data.plot.line(
                 ax=axes[0],
                 xscale="log",
@@ -404,9 +405,7 @@ class EDIAcc:
             )
 
             # --- Phase Plot (Semi-Log) ---
-            phi_data = ds_site["phi"].sel(
-                output_ch=output_ch, input_ch=input_ch
-            )
+            phi_data = ds_site["phi"].sel(output_ch=output_ch, input_ch=input_ch)
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
 
@@ -486,7 +485,9 @@ def _site_id_from_edi(ed: EDIFile) -> str:
     return ed.station or "unknown_site"
 
 
-def _site_location(ed: EDIFile) -> tuple[float | None, float | None, float | None]:
+def _site_location(
+    ed: EDIFile,
+) -> tuple[float | None, float | None, float | None]:
     """Site (lat, lon, elev), falling back to DEFINEMEAS REFLAT/REFLONG/REFELEV
     when the HEAD section carries no LAT/LONG/ELEV (common for BIRRP/JONES
     processed EDI, e.g. kap03lmt)."""
@@ -694,9 +695,7 @@ def _spec_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
             dims=("freq", "sidx"),
             coords={"freq": f, "sidx": sidx},
         ),
-        "spec_len": xr.DataArray(
-            spec_len, dims=("freq",), coords={"freq": f}
-        ),
+        "spec_len": xr.DataArray(spec_len, dims=("freq",), coords={"freq": f}),
     }
 
     # Optional per-freq metadata (only if lengths match)
@@ -759,9 +758,7 @@ def _ts_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
         coords={"sample": np.arange(nmax), "ch": ch},
     )
     out["dt"] = xr.DataArray(dt, dims=("ch",), coords={"ch": ch})
-    out["npts"] = xr.DataArray(
-        np.array(npts, int), dims=("ch",), coords={"ch": ch}
-    )
+    out["npts"] = xr.DataArray(np.array(npts, int), dims=("ch",), coords={"ch": ch})
     return out
 
 
@@ -789,9 +786,7 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
     z_err = _get_tensor_or_zeros(ed.Z, "z_err", n_freq, dtype=float)
     rho = _get_tensor_or_zeros(ed.Z, "resistivity", n_freq, dtype=float)
     phi = _get_tensor_or_zeros(ed.Z, "phase", n_freq, dtype=float)
-    rho_err = _get_tensor_or_zeros(
-        ed.Z, "resistivity_err", n_freq, dtype=float
-    )
+    rho_err = _get_tensor_or_zeros(ed.Z, "resistivity_err", n_freq, dtype=float)
     phi_err = _get_tensor_or_zeros(ed.Z, "phase_err", n_freq, dtype=float)
 
     zrot_val = getattr(ed.Z, "rotation_angle", np.zeros(n_freq))
@@ -875,9 +870,7 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     z = _block_or_zeros(getattr(ed.Z, "z", None), f.size, complex)
     ze = _block_or_zeros(getattr(ed.Z, "z_err", None), f.size, float)
 
-    zrot = np.asarray(
-        getattr(ed.Z, "rotation_angle", np.zeros(f.size))
-    ).astype(float)
+    zrot = np.asarray(getattr(ed.Z, "rotation_angle", np.zeros(f.size))).astype(float)
     if zrot.size != f.size:
         zrot = np.zeros(f.size, float)
 
@@ -892,9 +885,7 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     if terr is None:
         terr = np.zeros_like(tip, float)
     terr = np.asarray(terr)
-    terr_da = (
-        terr[:, 0, :] if terr.ndim == 3 else np.zeros((f.size, 2), float)
-    )
+    terr_da = terr[:, 0, :] if terr.ndim == 3 else np.zeros((f.size, 2), float)
 
     # --- helper: coerce to 1D length-n safely
     def _as1d(v, n: int) -> np.ndarray:

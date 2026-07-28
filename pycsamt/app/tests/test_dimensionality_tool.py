@@ -90,9 +90,7 @@ def _fake_worker_cls(*, done_result=None, error=None):
             self.skew_th = skew_th
             self.ellipt_th = ellipt_th
             self.show_map = show_map
-            _FakeWorker.captured.append(
-                (sites, skew_th, ellipt_th, show_map)
-            )
+            _FakeWorker.captured.append((sites, skew_th, ellipt_th, show_map))
             self.done = _FakeSignal()
             self.error = _FakeSignal()
 
@@ -158,9 +156,7 @@ class TestDimWorkerRealRun:
         # show_map was False → no map figure requested
         assert map_fig is None
 
-    def test_run_show_map_true_still_yields_no_map_figure(
-        self, qapp, tipper_sites
-    ):
+    def test_run_show_map_true_still_yields_no_map_figure(self, qapp, tipper_sites):
         """
         Documents a real bug: the worker imports
         ``pycsamt.emtools.tensor.plot_dim_confidence_grid`` but that
@@ -214,9 +210,7 @@ class TestDimWorkerRealRun:
 
     def test_run_different_thresholds_change_labels(self, qapp, tipper_sites):
         done_calls = []
-        w = _DimWorker(
-            tipper_sites, skew_th=1000.0, ellipt_th=1000.0, show_map=False
-        )
+        w = _DimWorker(tipper_sites, skew_th=1000.0, ellipt_th=1000.0, show_map=False)
         w.done.connect(lambda df, fig: done_calls.append((df, fig)))
         w.run()
         df, _ = done_calls[0]
@@ -239,9 +233,7 @@ class TestDimWorkerErrorPath:
         assert isinstance(error_calls[0], str)
         assert error_calls[0]  # non-empty message
 
-    def test_run_classify_dimensionality_raises_generic_error(
-        self, qapp, monkeypatch
-    ):
+    def test_run_classify_dimensionality_raises_generic_error(self, qapp, monkeypatch):
         import pycsamt.emtools.dimensionality as dim_mod
 
         def _boom(*a, **k):
@@ -329,17 +321,13 @@ class TestDialogConstruction:
     def test_table_headers(self, qapp):
         dlg = DimensionalityDialog(sites=None)
         assert dlg._table.columnCount() == 4
-        labels = [
-            dlg._table.horizontalHeaderItem(i).text() for i in range(4)
-        ]
+        labels = [dlg._table.horizontalHeaderItem(i).text() for i in range(4)]
         assert labels == ["Station", "Period (s)", "Skew β (°)", "Dim"]
         dlg.close()
 
     def test_tabs_present(self, qapp):
         dlg = DimensionalityDialog(sites=None)
-        titles = [
-            dlg._tabs.tabText(i) for i in range(dlg._tabs.count())
-        ]
+        titles = [dlg._tabs.tabText(i) for i in range(dlg._tabs.count())]
         assert titles == [
             "Classification Table",
             "Summary Chart",
@@ -352,9 +340,7 @@ class TestDialogConstruction:
 
 
 class TestOnRun:
-    def test_on_run_disables_button_and_constructs_worker(
-        self, qapp, monkeypatch
-    ):
+    def test_on_run_disables_button_and_constructs_worker(self, qapp, monkeypatch):
         df = _full_df()
         fake_cls = _fake_worker_cls(done_result=(df, None))
         monkeypatch.setattr(
@@ -492,9 +478,7 @@ class TestFillTable:
 
     def test_fill_table_empty_df_yields_zero_rows(self, qapp):
         dlg = DimensionalityDialog(sites=None)
-        empty = pd.DataFrame(
-            columns=["station", "period", "beta_abs", "dim"]
-        )
+        empty = pd.DataFrame(columns=["station", "period", "beta_abs", "dim"])
         dlg._fill_table(empty)
         assert dlg._table.rowCount() == 0
         dlg.close()

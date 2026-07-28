@@ -96,7 +96,5 @@ def build_telemetry_client(
     if cls is None:
         # No real transport (e.g. LoRa): fall back to the recorder so
         # dry-run simulations still work and real sends fail loudly.
-        return TelemetryClient(
-            endpoint, protocol=proto, dry_run=dry_run, **options
-        )
+        return TelemetryClient(endpoint, protocol=proto, dry_run=dry_run, **options)
     return cls(endpoint, dry_run=dry_run, **options)

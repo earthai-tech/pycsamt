@@ -43,9 +43,7 @@ _LINE_TOKEN = re.compile(r"\b([A-Za-z]{1,3}\d{1,3}[A-Za-z]{0,4})\b")
 def _repo_root() -> Path:
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / "pycsamt").is_dir() and (
-            parent / "pyproject.toml"
-        ).exists():
+        if (parent / "pycsamt").is_dir() and (parent / "pyproject.toml").exists():
             return parent
     return here.parents[3]
 
@@ -89,9 +87,7 @@ class ProjectRegistry:
         Defaults to the repository root.
     """
 
-    def __init__(
-        self, path: str | Path, *, root: str | Path | None = None
-    ) -> None:
+    def __init__(self, path: str | Path, *, root: str | Path | None = None) -> None:
         self.path = Path(path)
         self.root = Path(root) if root is not None else _repo_root()
         self.data: dict[str, Any] = (
@@ -149,9 +145,7 @@ class ProjectRegistry:
         canon = self.canonical(line_name)
         if canon is None:
             known = ", ".join(self.lines()) or "(none)"
-            raise KeyError(
-                f"Unknown survey line {line_name!r}. Known lines: {known}"
-            )
+            raise KeyError(f"Unknown survey line {line_name!r}. Known lines: {known}")
 
         line = dict(self._lines[canon])
         project = self.data.get("project", {}) or {}
@@ -177,9 +171,7 @@ class ProjectRegistry:
             "sort_by": line.get("sort_by", "lon"),
             "output_root": output_root,
             "default_workflows": line.get("default_workflows", []),
-            "static_shift": dict(
-                self.data.get("static_shift_defaults", {}) or {}
-            ),
+            "static_shift": dict(self.data.get("static_shift_defaults", {}) or {}),
             "plot": dict(self.data.get("plot_defaults", {}) or {}),
         }
 

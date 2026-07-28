@@ -113,10 +113,7 @@ def _site_lonlat(ed: Any) -> tuple[float | None, float | None]:
             x = (
                 x
                 if x is not None
-                else (
-                    getattr(_head, "long", None)
-                    or getattr(_head, "lon", None)
-                )
+                else (getattr(_head, "long", None) or getattr(_head, "lon", None))
             )
     x = float(x) if x is not None else None
     y = float(y) if y is not None else None
@@ -209,9 +206,7 @@ def estimate_strike_phase_tensor(
         verbose=verbose,
     )
     if df.empty:
-        return pd.DataFrame(
-            columns=["station", "ang", "iqr", "lo", "hi", "n"]
-        )
+        return pd.DataFrame(columns=["station", "ang", "iqr", "lo", "hi", "n"])
     rows: list[dict[str, float]] = []
     for st, sdf in df.groupby("station"):
         p = sdf["period"].to_numpy()
@@ -227,9 +222,7 @@ def estimate_strike_phase_tensor(
         else:
             ang = _wrap90(float(np.nanmean(th)))
             iqr = float(np.nanstd(th))
-        rows.append(
-            dict(station=st, ang=ang, iqr=iqr, lo=lo, hi=hi, n=int(np.sum(m)))
-        )
+        rows.append(dict(station=st, ang=ang, iqr=iqr, lo=lo, hi=hi, n=int(np.sum(m))))
     return pd.DataFrame.from_records(
         rows, columns=["station", "ang", "iqr", "lo", "hi", "n"]
     )
@@ -271,9 +264,7 @@ def estimate_strike_consensus(
         verbose=verbose,
     )
     if t1.empty and t2.empty:
-        return pd.DataFrame(
-            columns=["station", "ang", "iqr", "lo", "hi", "n"]
-        )
+        return pd.DataFrame(columns=["station", "ang", "iqr", "lo", "hi", "n"])
     df = pd.merge(
         t1,
         t2,
@@ -308,20 +299,10 @@ def estimate_strike_consensus(
         i1 = r.get("iqr_sweep", np.nan)
         i2 = r.get("iqr_pt", np.nan)
         iqr.append(float(np.nanmedian([i1, i2])))
-        lo.append(
-            float(
-                np.nanmin([r.get("lo_sweep", np.nan), r.get("lo_pt", np.nan)])
-            )
-        )
-        hi.append(
-            float(
-                np.nanmax([r.get("hi_sweep", np.nan), r.get("hi_pt", np.nan)])
-            )
-        )
+        lo.append(float(np.nanmin([r.get("lo_sweep", np.nan), r.get("lo_pt", np.nan)])))
+        hi.append(float(np.nanmax([r.get("hi_sweep", np.nan), r.get("hi_pt", np.nan)])))
         n.append(int(np.nansum([r.get("n_sweep", 0), r.get("n_pt", 0)])))
-    out = pd.DataFrame(
-        dict(station=df["station"], ang=ang, iqr=iqr, lo=lo, hi=hi, n=n)
-    )
+    out = pd.DataFrame(dict(station=df["station"], ang=ang, iqr=iqr, lo=lo, hi=hi, n=n))
     return out
 
 
@@ -446,9 +427,7 @@ def strike_curve_sweep(
             u = np.convolve(best, w, mode="same")
             best = u
         for f, ang in zip(fr, _wrap90(best)):
-            period = (
-                np.nan if not np.isfinite(f) or f == 0 else 1.0 / float(f)
-            )
+            period = np.nan if not np.isfinite(f) or f == 0 else 1.0 / float(f)
             rows.append(
                 dict(
                     station=st,
@@ -572,11 +551,7 @@ def plot_strike_rose_by_line(
     G = list(groups.keys())
     n = len(G)
     axes_given = _axes_list(axes, n) if axes is not None else None
-    fig = (
-        plt.figure(figsize=figsize)
-        if axes_given is None
-        else axes_given[0].figure
-    )
+    fig = plt.figure(figsize=figsize) if axes_given is None else axes_given[0].figure
     for i, g in enumerate(G, 1):
         ax = (
             axes_given[i - 1]
@@ -943,9 +918,7 @@ def plot_strike_rose(
     TB = TB.copy()
     TB["ang"] = TB["ang"] % 180.0
     TB["w"] = (
-        1.0 / (TB["iqr"].abs() + 1e-6)
-        if weight == "inv_iqr"
-        else np.ones(len(TB))
+        1.0 / (TB["iqr"].abs() + 1e-6) if weight == "inv_iqr" else np.ones(len(TB))
     )
 
     # ---- optional per-band tables (bar_style="bands") ----------------------
@@ -1025,11 +998,7 @@ def plot_strike_rose(
         )
 
     axes_given = _axes_list(axes, n_g) if axes is not None else None
-    fig = (
-        plt.figure(figsize=figsize)
-        if axes_given is None
-        else axes_given[0].figure
-    )
+    fig = plt.figure(figsize=figsize) if axes_given is None else axes_given[0].figure
 
     bins_ = int(max(12, bins))
     edges = np.linspace(0.0, 180.0, bins_ + 1)
@@ -1183,11 +1152,7 @@ def plot_strike_rose(
             r_levels = [float(v) for v in ring_labels]
         else:
             step = rmax / max(1, n_rings)
-            r_levels = (
-                [step * k for k in range(1, n_rings + 1)]
-                if n_rings > 0
-                else []
-            )
+            r_levels = [step * k for k in range(1, n_rings + 1)] if n_rings > 0 else []
         ax.set_yticks(r_levels)
         hide_polar_radius_labels(ax)
 
@@ -1564,9 +1529,7 @@ def plot_strike_mapsticks(
         dx = 0.5 * len_deg * np.sin(th)
         dy = 0.5 * len_deg * np.cos(th)
         segs.append([(lon - dx, lat - dy), (lon + dx, lat + dy)])
-        alphas.append(
-            alpha_scale * np.clip(c / np.nanmax([c, 1.0]), 0.1, 1.0)
-        )
+        alphas.append(alpha_scale * np.clip(c / np.nanmax([c, 1.0]), 0.1, 1.0))
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     lc = LineCollection(
@@ -1730,11 +1693,7 @@ def _draw_rose_on_ax(
             )
             if rs.show_secondary:
                 sc = rs.secondary_color or rs.mean_color
-                sl = (
-                    rs.secondary_lw
-                    if rs.secondary_lw is not None
-                    else rs.mean_lw
-                )
+                sl = rs.secondary_lw if rs.secondary_lw is not None else rs.mean_lw
                 ax.plot(
                     [mu_rad + np.pi, mu_rad + np.pi],
                     [0.0, rline],
@@ -1924,9 +1883,7 @@ def plot_strike_analysis(
             strict=False,
             verbose=verbose,
         )
-    ang_z = (
-        df_z["ang"].to_numpy(float) % 180.0 if not df_z.empty else np.empty(0)
-    )
+    ang_z = df_z["ang"].to_numpy(float) % 180.0 if not df_z.empty else np.empty(0)
 
     # ── 2. PT azimuth angles (per frequency × station) ──────────────────────
     df_pt = build_phase_tensor_table(

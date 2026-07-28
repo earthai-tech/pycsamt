@@ -230,10 +230,12 @@ def sort_edis_by_location(
 
         def key_fun(r):
             return (r["lon"], r["lat"])
+
     elif by == "latlon":
 
         def key_fun(r):
             return (r["lat"], r["lon"])
+
     else:
 
         def key_fun(r):
@@ -283,8 +285,7 @@ def _safe_number(s: str) -> int | float | str:
             # Cast to int if integral
             return (
                 int(f)
-                if f.is_integer()
-                and ("." not in s_norm and "e" not in s_norm.lower())
+                if f.is_integer() and ("." not in s_norm and "e" not in s_norm.lower())
                 else f
             )
         except ValueError:
@@ -327,7 +328,7 @@ def parse_kv_pairs(s: str) -> dict[str, Any]:
 
     Examples
     --------
-    >>> parse_kv_pairs('ID=10011.001 CHTYPE=HX X=0.0 Y=0.0 AZM=0')
+    >>> parse_kv_pairs("ID=10011.001 CHTYPE=HX X=0.0 Y=0.0 AZM=0")
     {'ID': 10011.001, 'CHTYPE': 'HX', 'X': 0.0, 'Y': 0.0, 'AZM': 0}
     """
     out: dict[str, Any] = {}
@@ -376,8 +377,8 @@ def gather_measurement_key_value_with_str_parser(
     Examples
     --------
     >>> src = [
-    ...   '>HMEAS ID=10011.001 CHTYPE=HX X=0.0 Y=0.0 AZM=0',
-    ...   '>EMEAS ID=10014.001 CHTYPE=EX X=-10.0 Y=0.0 X2=10.0 Y2=0.0',
+    ...     ">HMEAS ID=10011.001 CHTYPE=HX X=0.0 Y=0.0 AZM=0",
+    ...     ">EMEAS ID=10014.001 CHTYPE=EX X=-10.0 Y=0.0 X2=10.0 Y2=0.0",
     ... ]
     >>> gather_measurement_key_value_with_str_parser(src)[0]["CHTYPE"]
     'HX'
@@ -436,9 +437,7 @@ def quick_edi_stats(
 
     rate = (ok / total) * 100 if total else 0.0
     print(bar)
-    print(
-        f"{label:<15} read  : {ok:>6d}/{total:<6d}  —  success {rate:6.2f} %"
-    )
+    print(f"{label:<15} read  : {ok:>6d}/{total:<6d}  —  success {rate:6.2f} %")
     print(bar)
 
 
@@ -535,15 +534,23 @@ def minimum_parser_to_write_edi(obj: Mapping[str, Any]) -> str:
 
     Examples
     --------
-    >>> edi_text = minimum_parser_to_write_edi({
-    ...   "head": {"DATAID": "E1_2", "STDVERS": "SEG 1.0", "EMPTY": 1e32},
-    ...   "info": "Processed by pyCSAMT",
-    ...   "definemeas": {"MAXCHAN": 16, "UNITS": "M"},
-    ...   "measurements": [{"KIND": "HMEAS", "ID": 1.001, "CHTYPE": "HX"}],
-    ...   "mtsect": {"SECTID": "E1_2", "NFREQ": 2, "HX": 1.001},
-    ...   "freq": [7e4, 5.88e4],
-    ...   "zrot": [0.0, 0.0],
-    ... })
+    >>> edi_text = minimum_parser_to_write_edi(
+    ...     {
+    ...         "head": {
+    ...             "DATAID": "E1_2",
+    ...             "STDVERS": "SEG 1.0",
+    ...             "EMPTY": 1e32,
+    ...         },
+    ...         "info": "Processed by pyCSAMT",
+    ...         "definemeas": {"MAXCHAN": 16, "UNITS": "M"},
+    ...         "measurements": [
+    ...             {"KIND": "HMEAS", "ID": 1.001, "CHTYPE": "HX"}
+    ...         ],
+    ...         "mtsect": {"SECTID": "E1_2", "NFREQ": 2, "HX": 1.001},
+    ...         "freq": [7e4, 5.88e4],
+    ...         "zrot": [0.0, 0.0],
+    ...     }
+    ... )
     >>> edi_text.startswith(">HEAD")
     True
     """

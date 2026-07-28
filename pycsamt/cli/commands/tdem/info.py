@@ -62,14 +62,9 @@ def info(
     coord_info: dict = {}
     if coord is not None:
         coord_info = {
-            "n_points": len(coord.records)
-            if hasattr(coord, "records")
-            else 0,
+            "n_points": len(coord.records) if hasattr(coord, "records") else 0,
             "has_elevation": (
-                any(
-                    getattr(r, "elevation", None) is not None
-                    for r in coord.records
-                )
+                any(getattr(r, "elevation", None) is not None for r in coord.records)
                 if hasattr(coord, "records")
                 else False
             ),

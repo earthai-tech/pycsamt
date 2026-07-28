@@ -33,7 +33,7 @@ class Banner(JComponentBase):
 
     This helper targets lines such as::
 
-        #WRITTEN BY GEOTOOLS: kb0-s001 10/06/95 RAW RECS
+        # WRITTEN BY GEOTOOLS: kb0-s001 10/06/95 RAW RECS
 
     It extracts the producer software name, an optional station
     hint, a free-form date token, and an optional trailing note.
@@ -102,12 +102,14 @@ class Banner(JComponentBase):
 
     Examples
     --------
-    >>> b = Banner().read([  # doctest: +NORMALIZE_WHITESPACE
-    ...   '#WRITTEN BY GEOTOOLS: kb0-s001 10/06/95 RAW RECS'
-    ... ])
+    >>> b = Banner().read(
+    ...     [  # doctest: +NORMALIZE_WHITESPACE
+    ...         "#WRITTEN BY GEOTOOLS: kb0-s001 10/06/95 RAW RECS"
+    ...     ]
+    ... )
     >>> b.software, b.station_hint, b.date
     ('GEOTOOLS', 'kb0-s001', '10/06/95')
-    >>> Banner().write()[0].startswith('#WRITTEN BY PYSCAMT:')
+    >>> Banner().write()[0].startswith("#WRITTEN BY PYSCAMT:")
     True
 
     See Also
@@ -195,9 +197,7 @@ class Banner(JComponentBase):
 
         if include_origin and self._raw:
             # keep original line verbatim, but mark as provenance
-            lines.append(
-                "#FROM " + self._raw.lstrip("#").strip().lstrip("WRITTEN BY")
-            )
+            lines.append("#FROM " + self._raw.lstrip("#").strip().lstrip("WRITTEN BY"))
 
         return lines
 
@@ -281,7 +281,7 @@ class Info(JComponentBase):
 
     Examples
     --------
-    >>> info = Info.from_file('data/j/kb0-s001.txt')
+    >>> info = Info.from_file("data/j/kb0-s001.txt")
     >>> info.latitude, info.longitude
     (41.9782, 140.8958)
     >>> lines = info.write()
@@ -500,9 +500,9 @@ class Head(JComponentBase):
 
     Examples
     --------
-    >>> Head().read(['KB0001  -30', 'ZXY SI', '29'])
+    >>> Head().read(["KB0001  -30", "ZXY SI", "29"])
     Head(station='KB0001', n=29)
-    >>> h = Head.from_file('data/j/kb0-s001.txt')
+    >>> h = Head.from_file("data/j/kb0-s001.txt")
     >>> h.station
     'KB0001'
 
@@ -598,9 +598,7 @@ class Head(JComponentBase):
         try:
             dtype = parse_datatype_units(j_header_list[i])
         except JParseError as exc:
-            raise ValueError(
-                "expected data-type line in header list"
-            ) from exc
+            raise ValueError("expected data-type line in header list") from exc
         i += 1
         while i < nln and _is_blank(j_header_list[i]):
             i += 1
@@ -611,9 +609,7 @@ class Head(JComponentBase):
         self._mark_read(True)
         return self
 
-    def write(
-        self, head_list_infos: Sequence[str] | None = None
-    ) -> list[str]:
+    def write(self, head_list_infos: Sequence[str] | None = None) -> list[str]:
         if head_list_infos is not None:
             self.read(head_list_infos)
         if self.station is None or self.dtype is None or self.n is None:
@@ -711,7 +707,7 @@ class Heads(JComponentBase):
 
     Examples
     --------
-    >>> h = Heads.from_file('data/j/kb0-s001.txt')
+    >>> h = Heads.from_file("data/j/kb0-s001.txt")
     >>> h.station, h.latitude, h.software
     ('KB0001', 41.9782, 'GEOTOOLS')
 
@@ -794,11 +790,7 @@ class Heads(JComponentBase):
 
     @property
     def azimuth(self) -> float | None:
-        return (
-            self.info.azimuth
-            if self.info.azimuth is not None
-            else self.head.az_hint
-        )
+        return self.info.azimuth if self.info.azimuth is not None else self.head.az_hint
 
     @property
     def software(self) -> str | None:
@@ -838,7 +830,7 @@ class HeadMixin:
     --------
     >>> class Host(HeadMixin):  # doctest: +SKIP
     ...     pass
-    >>> Host.from_file('file.j')  # doctest: +SKIP
+    >>> Host.from_file("file.j")  # doctest: +SKIP
     Head(...)
     """
 
@@ -853,9 +845,7 @@ class HeadMixin:
             self.head = Head()
         return self.head.read(j_header_list)
 
-    def write(
-        self, head_list_infos: Sequence[str] | None = None
-    ) -> list[str]:
+    def write(self, head_list_infos: Sequence[str] | None = None) -> list[str]:
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
         return self.head.write(head_list_infos)
@@ -888,7 +878,7 @@ class InfoMixin:
     --------
     >>> class Host(InfoMixin):  # doctest: +SKIP
     ...     pass
-    >>> Host().read(['>LATITUDE=10'])  # doctest: +SKIP
+    >>> Host().read([">LATITUDE=10"])  # doctest: +SKIP
     Info(items=1)
     """
 

@@ -288,13 +288,10 @@ def write_poly(
     nodes = pf.nodes
     n_nodes = len(nodes)
     has_attr = pf.node_attributes is not None and len(pf.node_attributes) > 0
-    pf.node_attributes.shape[
-        1
-    ] if has_attr and pf.node_attributes.ndim == 2 else 0
+    pf.node_attributes.shape[1] if has_attr and pf.node_attributes.ndim == 2 else 0
     n_bmark = (
         1
-        if pf.node_boundary_markers is not None
-        and len(pf.node_boundary_markers)
+        if pf.node_boundary_markers is not None and len(pf.node_boundary_markers)
         else 0
     )
 
@@ -315,10 +312,7 @@ def write_poly(
         # --- Segments ---
         segs = pf.segments
         n_segs = len(segs)
-        has_smk = (
-            pf.segment_markers is not None
-            and len(pf.segment_markers) == n_segs
-        )
+        has_smk = pf.segment_markers is not None and len(pf.segment_markers) == n_segs
         fh.write(f"{n_segs} {1 if has_smk else 0}\n")
         for i, seg in enumerate(segs):
             row = f"{i + 1} {int(seg[0])} {int(seg[1])}"
@@ -338,8 +332,6 @@ def write_poly(
         n_regions = len(regions)
         fh.write(f"{n_regions}\n")
         for i, reg in enumerate(regions):
-            fh.write(
-                f"{i + 1} {reg[0]:.16g} {reg[1]:.16g} {reg[2]:g} {reg[3]:g}\n"
-            )
+            fh.write(f"{i + 1} {reg[0]:.16g} {reg[1]:.16g} {reg[2]:g} {reg[3]:g}\n")
 
     return dest

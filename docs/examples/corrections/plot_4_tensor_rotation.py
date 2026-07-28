@@ -78,12 +78,8 @@ x = np.arange(len(r_before))
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(figsize=(10, 3.8), constrained_layout=True)
-ax.bar(
-    x - 0.2, r_before, width=0.4, color="#b0b7c3", label="measurement axes"
-)
-ax.bar(
-    x + 0.2, r_after, width=0.4, color="#7c3aed", label="rotated to strike"
-)
+ax.bar(x - 0.2, r_before, width=0.4, color="#b0b7c3", label="measurement axes")
+ax.bar(x + 0.2, r_after, width=0.4, color="#7c3aed", label="rotated to strike")
 ax.set_xticks(x)
 ax.set_xticklabels(stations, rotation=90, fontsize=6)
 ax.set_ylabel(r"median $|Z_{xx}|/|Z_{xy}|$")

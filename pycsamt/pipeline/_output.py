@@ -148,8 +148,7 @@ class OutputDir:
             )
         except Exception as exc:
             warnings.warn(
-                f"EDI export failed: {exc}.  "
-                "Processed EDI files were not written.",
+                f"EDI export failed: {exc}.  " "Processed EDI files were not written.",
                 stacklevel=2,
             )
             return []
@@ -165,9 +164,7 @@ class OutputDir:
             path.write_text(yaml_str, encoding="utf-8")
             return path
         except Exception as exc:
-            warnings.warn(
-                f"Could not save pipeline.yaml: {exc}", stacklevel=2
-            )
+            warnings.warn(f"Could not save pipeline.yaml: {exc}", stacklevel=2)
             return None
 
     def save_text(self, text: str, filename: str) -> Path | None:

@@ -163,11 +163,7 @@ def plot_lcurve(
         Ms = list(misfit)
         Rs = list(rough)  # type: ignore
         Ls = list(lam) if isinstance(lam, (list, tuple)) else [None] * len(Ms)
-        labs = (
-            list(labels)
-            if labels is not None
-            else [f"C{i}" for i in range(len(Ms))]
-        )
+        labs = list(labels) if labels is not None else [f"C{i}" for i in range(len(Ms))]
     else:
         Ms = [misfit]
         Rs = [rough]

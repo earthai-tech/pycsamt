@@ -60,7 +60,12 @@ def test_build_rejects_unknown_arch_without_importing_torch():
     "module_name,class_name,method,spec",
     [
         ("cnn1d", "CNN1DNet", "_build_cnn1d", {"n_features": 4, "n_out": 2}),
-        ("resnet", "ResNet1DNet", "_build_resnet1d", {"n_features": 4, "n_out": 2}),
+        (
+            "resnet",
+            "ResNet1DNet",
+            "_build_resnet1d",
+            {"n_features": 4, "n_out": 2},
+        ),
         ("fcn", "FCN1DNet", "_build_fcn1d", {"n_features": 4, "n_out": 2}),
         ("unet", "UNet2DNet", "_build_unet2d", {"n_in": 1}),
         (

@@ -126,16 +126,12 @@ def test_anomaly_detector_pca_fallback_transform_flags_and_save_load(
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_torch",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
-            ImportError("no torch")
-        ),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no torch")),
     )
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_tensorflow",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
-            ImportError("no tf")
-        ),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no tf")),
     )
     X = np.vstack(
         [
@@ -176,9 +172,7 @@ def test_anomaly_detector_rejects_feature_mismatch(monkeypatch):
     monkeypatch.setattr(
         anomaly_mod.AnomalyDetector,
         "_fit_torch",
-        lambda self, Xn, **kwargs: (_ for _ in ()).throw(
-            ImportError("no torch")
-        ),
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no torch")),
     )
     det = AnomalyDetector(n_features=4)
 

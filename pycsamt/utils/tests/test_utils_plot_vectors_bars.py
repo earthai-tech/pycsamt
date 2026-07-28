@@ -95,9 +95,7 @@ def test_plot_errorbar_with_error_bars_shown():
     fig, ax = plt.subplots()
     x = np.arange(6)
     y = np.linspace(1, 6, 6)
-    eobj = plot_errorbar(
-        ax, x, y, y_err=np.full(6, 0.5), x_err=np.full(6, 0.1)
-    )
+    eobj = plot_errorbar(ax, x, y, y_err=np.full(6, 0.5), x_err=np.full(6, 0.1))
     assert eobj is not None
     # error bar collections should be present when show_error_bars=True
     assert len(eobj.lines[2]) > 0 or len(ax.collections) >= 0

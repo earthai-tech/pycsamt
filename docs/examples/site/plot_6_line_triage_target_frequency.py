@@ -82,9 +82,7 @@ strike = strike_estimate(all_sites, method="phase_diff", api=False)
 
 table = report.merge(rho100, on="station", how="left")
 table = table.merge(slopes, on="station", how="left")
-table = table.merge(
-    strike[["station", "theta_deg"]], on="station", how="left"
-)
+table = table.merge(strike[["station", "theta_deg"]], on="station", how="left")
 
 table["line"] = table["station"].str.split("-", n=1).str[0]
 table["station_number"] = (

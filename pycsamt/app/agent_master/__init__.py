@@ -12,7 +12,8 @@ Launch
 From Python::
 
     from pycsamt.app.agent_master import launch
-    launch()   # opens http://localhost:8765
+
+    launch()  # opens http://localhost:8765
 
 From the CLI::
 

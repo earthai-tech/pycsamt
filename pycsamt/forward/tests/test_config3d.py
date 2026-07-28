@@ -16,7 +16,6 @@ import pytest
 from pycsamt.forward.config3d import ForwardConfig3D
 from pycsamt.forward.grid3d import Grid3D
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Defaults / validate()
 # ─────────────────────────────────────────────────────────────────────────────
@@ -193,9 +192,7 @@ def test_to_grid_block_anomaly_embeds_anomaly_in_background():
 
 
 def test_to_grid_random_layered_is_reproducible_with_seed():
-    cfg = ForwardConfig3D(
-        model_type="random_layered", nx=8, ny=8, nz=6, n_pad=2
-    )
+    cfg = ForwardConfig3D(model_type="random_layered", nx=8, ny=8, nz=6, n_pad=2)
     grid_a = cfg.to_grid(seed=42)
     grid_b = cfg.to_grid(seed=42)
     grid_c = cfg.to_grid(seed=7)
@@ -212,9 +209,7 @@ def test_to_grid_random_layered_is_reproducible_with_seed():
 
 
 def test_to_solver_kwargs_shape():
-    cfg = ForwardConfig3D(
-        freq_min=1e-2, freq_max=1e2, n_freqs=5, verbose=False
-    )
+    cfg = ForwardConfig3D(freq_min=1e-2, freq_max=1e2, n_freqs=5, verbose=False)
     kw = cfg.to_solver_kwargs()
     assert set(kw) == {"freqs", "method", "verbose"}
     assert kw["method"] == "quasi3d"

@@ -79,13 +79,9 @@ class HTTPTelemetryClient(BaseTelemetryClient):
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 status = getattr(response, "status", response.getcode())
         except urllib.error.HTTPError as exc:
-            raise TelemetryError(
-                f"HTTP {exc.code} from {url}: {exc}"
-            ) from exc
+            raise TelemetryError(f"HTTP {exc.code} from {url}: {exc}") from exc
         except urllib.error.URLError as exc:
-            raise TelemetryError(
-                f"HTTP request to {url} failed: {exc}"
-            ) from exc
+            raise TelemetryError(f"HTTP request to {url} failed: {exc}") from exc
         if not 200 <= int(status) < 300:
             raise TelemetryError(f"HTTP endpoint returned status {status}.")
         return f"http {status}"

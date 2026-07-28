@@ -44,16 +44,12 @@ def test_two_layer_asymptotic_limits():
 
 def test_rho_a_consistent_with_impedance():
     freqs = np.logspace(-2, 3, 20)
-    model = LayeredModel(
-        resistivity=[100.0, 10.0, 500.0], thickness=[300.0, 800.0]
-    )
+    model = LayeredModel(resistivity=[100.0, 10.0, 500.0], thickness=[300.0, 800.0])
     resp = MT1DForward(freqs).run(model)
 
     mu0 = 4e-7 * np.pi
     omega = 2 * np.pi * freqs
-    assert np.allclose(
-        resp.rho_a, np.abs(resp.z) ** 2 / (omega * mu0), rtol=1e-12
-    )
+    assert np.allclose(resp.rho_a, np.abs(resp.z) ** 2 / (omega * mu0), rtol=1e-12)
     assert np.allclose(resp.phase, np.angle(resp.z, deg=True))
 
 

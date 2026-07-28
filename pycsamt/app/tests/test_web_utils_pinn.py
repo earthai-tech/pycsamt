@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 # ── decode_npz_checkpoint ────────────────────────────────────────────────────
 
 
@@ -59,9 +58,7 @@ def test_session_to_obs_1d_filters_by_stations():
             "pycsamt.ai.inversion._sites_bridge.sites_to_obs_1d",
             return_value=obs_all,
         ) as mock_bridge:
-            obs = session_to_obs_1d(
-                "sess-1", stations=["S2"], comp="yx"
-            )
+            obs = session_to_obs_1d("sess-1", stations=["S2"], comp="yx")
 
     assert [o.name for o in obs] == ["S2"]
     assert mock_bridge.call_args.kwargs["comp"] == "yx"
@@ -114,9 +111,7 @@ def test_build_pinn_inv_1d_passes_expected_kwargs():
 
     obs = [SimpleNamespace(name="S1")]
     sentinel = MagicMock(name="PINNInverter1D-instance")
-    with patch(
-        "pycsamt.ai.inversion.PINNInverter1D", return_value=sentinel
-    ) as ctor:
+    with patch("pycsamt.ai.inversion.PINNInverter1D", return_value=sentinel) as ctor:
         result = build_pinn_inv(obs, "1d", solver="mt1d", comp="yx")
 
     assert result is sentinel
@@ -132,9 +127,7 @@ def test_build_pinn_inv_2d_passes_expected_kwargs():
 
     obs = [SimpleNamespace(name="S1"), SimpleNamespace(name="S2")]
     sentinel = MagicMock(name="PINNInverter2D-instance")
-    with patch(
-        "pycsamt.ai.inversion.PINNInverter2D", return_value=sentinel
-    ) as ctor:
+    with patch("pycsamt.ai.inversion.PINNInverter2D", return_value=sentinel) as ctor:
         result = build_pinn_inv(obs, "2d", mode="tm", epochs=50)
 
     assert result is sentinel
@@ -148,9 +141,7 @@ def test_build_pinn_inv_3d_builds_station_coords():
 
     obs = [SimpleNamespace(name=f"S{i}") for i in range(4)]
     sentinel = MagicMock(name="PINNInverter3D-instance")
-    with patch(
-        "pycsamt.ai.inversion.PINNInverter3D", return_value=sentinel
-    ) as ctor:
+    with patch("pycsamt.ai.inversion.PINNInverter3D", return_value=sentinel) as ctor:
         result = build_pinn_inv(obs, "3d", station_spacing=250.0)
 
     assert result is sentinel
@@ -164,9 +155,7 @@ def test_build_pinn_inv_device_auto_becomes_none():
     from pycsamt.app.web.utils_pinn import build_pinn_inv
 
     obs = [SimpleNamespace(name="S1")]
-    with patch(
-        "pycsamt.ai.inversion.PINNInverter1D", return_value=MagicMock()
-    ) as ctor:
+    with patch("pycsamt.ai.inversion.PINNInverter1D", return_value=MagicMock()) as ctor:
         build_pinn_inv(obs, "1d", device="auto")
 
     assert ctor.call_args.kwargs["device"] is None
@@ -180,12 +169,8 @@ def test_build_hybrid_inv_1d_passes_checkpoint_and_kwargs():
 
     obs = [SimpleNamespace(name="S1")]
     sentinel = MagicMock(name="HybridInverter1D-instance")
-    with patch(
-        "pycsamt.ai.inversion.HybridInverter1D", return_value=sentinel
-    ) as ctor:
-        result = build_hybrid_inv(
-            obs, "1d", "/tmp/ckpt.npz", max_iter=99
-        )
+    with patch("pycsamt.ai.inversion.HybridInverter1D", return_value=sentinel) as ctor:
+        result = build_hybrid_inv(obs, "1d", "/tmp/ckpt.npz", max_iter=99)
 
     assert result is sentinel
     args, kwargs = ctor.call_args
@@ -200,9 +185,7 @@ def test_build_hybrid_inv_2d_passes_expected_kwargs():
     obs = [SimpleNamespace(name="S1")]
     checkpoint = MagicMock(name="fitted-inverter")
     sentinel = MagicMock(name="HybridInverter2D-instance")
-    with patch(
-        "pycsamt.ai.inversion.HybridInverter2D", return_value=sentinel
-    ) as ctor:
+    with patch("pycsamt.ai.inversion.HybridInverter2D", return_value=sentinel) as ctor:
         result = build_hybrid_inv(obs, "2d", checkpoint, n_layers=7)
 
     assert result is sentinel
@@ -230,12 +213,8 @@ def test_build_hybrid_inv_3d_builds_station_coords():
 
     obs = [SimpleNamespace(name=f"S{i}") for i in range(3)]
     sentinel = MagicMock(name="HybridInverter3D-instance")
-    with patch(
-        "pycsamt.ai.inversion.HybridInverter3D", return_value=sentinel
-    ) as ctor:
-        result = build_hybrid_inv(
-            obs, "3d", "ckpt", station_spacing=100.0
-        )
+    with patch("pycsamt.ai.inversion.HybridInverter3D", return_value=sentinel) as ctor:
+        result = build_hybrid_inv(obs, "3d", "ckpt", station_spacing=100.0)
 
     assert result is sentinel
     coords = ctor.call_args.kwargs["station_coords"]
@@ -322,9 +301,7 @@ def _residuals_df():
 def test_plot_pinn_data_fit_with_df_returns_data_uri():
     from pycsamt.app.web.utils_pinn import plot_pinn_data_fit
 
-    src = plot_pinn_data_fit(
-        None, "S1", dark=True, df=_residuals_df()
-    )
+    src = plot_pinn_data_fit(None, "S1", dark=True, df=_residuals_df())
 
     assert src.startswith("data:image/png;base64,")
     base64.b64decode(src.split(",", 1)[1])
@@ -333,9 +310,7 @@ def test_plot_pinn_data_fit_with_df_returns_data_uri():
 def test_plot_pinn_data_fit_empty_station_returns_placeholder():
     from pycsamt.app.web.utils_pinn import plot_pinn_data_fit
 
-    src = plot_pinn_data_fit(
-        None, "NOPE", dark=False, df=_residuals_df()
-    )
+    src = plot_pinn_data_fit(None, "NOPE", dark=False, df=_residuals_df())
 
     assert src.startswith("data:image/png;base64,")
 
@@ -407,9 +382,7 @@ def test_plot_pinn_section_3d():
 def test_pinn_stats_div_basic_rows():
     from pycsamt.app.web.utils_pinn import pinn_stats_div
 
-    inv = SimpleNamespace(
-        n_sites=12, n_layers=8, depth_max=2000.0, epochs=300, lr=0.01
-    )
+    inv = SimpleNamespace(n_sites=12, n_layers=8, depth_max=2000.0, epochs=300, lr=0.01)
     div = pinn_stats_div(inv, "1d", elapsed_s=12.3, label="PINN")
 
     table = div.children

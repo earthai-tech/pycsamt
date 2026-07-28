@@ -23,9 +23,7 @@ def test_root_sessionfinish_terminates_interface_run(monkeypatch):
 
 def test_root_sessionfinish_ignores_non_interface_run(monkeypatch):
     calls = []
-    session = SimpleNamespace(
-        config=SimpleNamespace(args=["pycsamt/core/tests"])
-    )
+    session = SimpleNamespace(config=SimpleNamespace(args=["pycsamt/core/tests"]))
     monkeypatch.setitem(sys.modules, "PySide6", SimpleNamespace())
     monkeypatch.setattr(
         root_conftest, "_terminate_process", lambda code: calls.append(code)

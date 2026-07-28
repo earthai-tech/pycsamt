@@ -131,8 +131,7 @@ class DataController:
                     "Longitude": s.get("lon", float("nan")),
                     "Elevation": s.get("elev", float("nan")),
                     "N_freq": s.get("nfreq", 0),
-                    "Tipper": bool(s.get("tipper", False))
-                    or bool(edi.has_tipper),
+                    "Tipper": bool(s.get("tipper", False)) or bool(edi.has_tipper),
                 }
             )
 

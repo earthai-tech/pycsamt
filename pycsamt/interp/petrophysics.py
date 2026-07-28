@@ -157,7 +157,7 @@ class ArchieModel(PyCSAMTObject):
     Examples
     --------
     >>> archie = ArchieModel(m=1.8, n=2.0, a=1.0)
-    >>> archie.forward(phi=0.30, Sw=1.0, rho_w=0.025)   # fully saturated
+    >>> archie.forward(phi=0.30, Sw=1.0, rho_w=0.025)  # fully saturated
     0.309...
     >>> archie.saturation(rho=1.2, phi=0.30, rho_w=0.025)
     0.508...
@@ -374,7 +374,7 @@ class WaxmanSmitsModel(PyCSAMTObject):
     Examples
     --------
     >>> ws = WaxmanSmitsModel(m=1.8, n=2.0, sigma_s=0.01)
-    >>> ws.forward(phi=0.30, Sw=0.70, sigma_w=40.0)   # sigma_w in mS/m
+    >>> ws.forward(phi=0.30, Sw=0.70, sigma_w=40.0)  # sigma_w in mS/m
     8.31...  # Ω·m
     """
 
@@ -482,9 +482,7 @@ class WaxmanSmitsModel(PyCSAMTObject):
 
             # Archie initial guess
             if sw_si > 1e-12:
-                S0 = np.clip(
-                    (F_v * sw_si / (sigma_obs * F_v)) ** (1.0 / n), 1e-3, 1.0
-                )
+                S0 = np.clip((F_v * sw_si / (sigma_obs * F_v)) ** (1.0 / n), 1e-3, 1.0)
             else:
                 S0 = 0.5
 
@@ -492,9 +490,7 @@ class WaxmanSmitsModel(PyCSAMTObject):
             try:
                 fa, fb = residual(1e-4), residual(1.0)
                 if fa * fb < 0:
-                    Sw_sol = brentq(
-                        residual, 1e-4, 1.0, xtol=tol, maxiter=max_iter
-                    )
+                    Sw_sol = brentq(residual, 1e-4, 1.0, xtol=tol, maxiter=max_iter)
                 else:
                     Sw_sol = float(np.clip(S0, 0.0, 1.0))
             except Exception:
@@ -643,9 +639,7 @@ class HashinShtrikmanBounds(PyCSAMTObject):
         log_rho = np.log10(np.clip(rho, 1e-4, 1e8))
         log_lower = np.log10(np.clip(lower, 1e-4, 1e8))
         log_upper = np.log10(np.clip(upper, 1e-4, 1e8))
-        return (log_rho >= log_lower - margin) & (
-            log_rho <= log_upper + margin
-        )
+        return (log_rho >= log_lower - margin) & (log_rho <= log_upper + margin)
 
     def __repr__(self) -> str:
         return (
@@ -713,7 +707,7 @@ def kozeny_carman_K(
 
     Examples
     --------
-    >>> kozeny_carman_K(0.30, d50_m=1e-3)   # coarse sand, φ = 0.30
+    >>> kozeny_carman_K(0.30, d50_m=1e-3)  # coarse sand, φ = 0.30
     1.16e-03  # m/s  (within typical coarse-sand range)
     """
     phi = _arr(phi)

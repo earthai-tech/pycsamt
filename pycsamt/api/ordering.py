@@ -4,6 +4,7 @@ Configure once and every loader/processor that normalizes through
 ``ensure_sites`` uses the same policy::
 
     from pycsamt.api import configure_ordering
+
     configure_ordering(mode="auto")
 
 Per-call ``order_by=...`` arguments remain authoritative overrides.
@@ -59,8 +60,14 @@ class SiteOrderingConfig:
         raw_mode = str(values["mode"]).strip().lower()
         mode = _ALIASES.get(raw_mode, raw_mode)
         if mode not in _MODES:
-            raise ValueError(f"mode must be one of {sorted(_MODES)}, got {values['mode']!r}")
-        for key in ("min_linearity", "max_cross_track_ratio", "min_coordinate_fraction"):
+            raise ValueError(
+                f"mode must be one of {sorted(_MODES)}, got {values['mode']!r}"
+            )
+        for key in (
+            "min_linearity",
+            "max_cross_track_ratio",
+            "min_coordinate_fraction",
+        ):
             value = float(values[key])
             if not 0.0 <= value <= 1.0:
                 raise ValueError(f"{key} must be between 0 and 1, got {value}")

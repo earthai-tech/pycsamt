@@ -92,9 +92,7 @@ class MTSurveyConfig:
         Include TE and TM field vectors (Ex, Ey, Ez, Hx, Hy, Hz).
     """
 
-    frequencies: np.ndarray = field(
-        default_factory=lambda: np.empty(0, dtype=float)
-    )
+    frequencies: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=float))
     rx_y: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=float))
     rx_type: str = "marine"
     rx_z: np.ndarray | None = None
@@ -163,9 +161,7 @@ class CSEMSurveyConfig:
     lBz : bool
     """
 
-    frequencies: np.ndarray = field(
-        default_factory=lambda: np.empty(0, dtype=float)
-    )
+    frequencies: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=float))
     tx_y: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=float))
     rx_y: np.ndarray | None = None
     rx_r: np.ndarray | None = None
@@ -323,9 +319,7 @@ def _build_mt_config(
     if mt.rx_type in ("land", "amphibious"):
         tilted = np.where(beta != 0)[0]
         for idx in tilted:
-            hrx = np.array(
-                [x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0]
-            )
+            hrx = np.array([x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0])
             extra_rx.append(hrx)
             base_name = (
                 mt.rx_name[idx]
@@ -395,9 +389,7 @@ def _build_mt_config(
                     else:
                         rows.append([code, ifreq, e_idx, e_idx, 0.0, 0.0])
 
-    data = (
-        np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
-    )
+    data = np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
     return mt_cfg, data
 
 
@@ -437,9 +429,7 @@ def _build_csem_config(
         r_rx = np.asarray(csem.rx_r, dtype=float).ravel()
         n_rx_per_tx = len(r_rx)
         tow_sign = np.sign(np.mean(np.diff(y_tx))) if len(y_tx) > 1 else 1
-        y_rx = np.repeat(y_tx, n_rx_per_tx) - tow_sign * np.tile(
-            r_rx, len(y_tx)
-        )
+        y_rx = np.repeat(y_tx, n_rx_per_tx) - tow_sign * np.tile(r_rx, len(y_tx))
     else:
         y_rx = np.asarray(csem.rx_y, dtype=float).ravel()
 
@@ -460,9 +450,7 @@ def _build_csem_config(
     if has_b and csem.rx_type in ("land", "amphibious"):
         tilted = np.where(beta_rx != 0)[0]
         for idx in tilted:
-            hrx = np.array(
-                [x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0]
-            )
+            hrx = np.array([x_rx[idx], y_rx[idx], z_rx[idx], 0.0, 0.0, 0.0, 0.0, 0.0])
             extra_rx.append(hrx)
             irx_mag[idx] = n_rx + len(extra_rx) - 1
     elif not has_b:
@@ -542,9 +530,7 @@ def _build_csem_config(
                         rows.append([amp_code, ifreq, itx, irx_b, 0.0, 0.0])
                         rows.append([phase_code, ifreq, itx, irx_b, 0.0, 0.0])
 
-    data = (
-        np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
-    )
+    data = np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
 
     csem_cfg = CSEMConfig(
         phase_convention=csem.phase_convention,
@@ -605,10 +591,15 @@ def make_data_file(
     MT forward dataset at 10 frequencies, 20 land stations:
 
     >>> import numpy as np
-    >>> from pycsamt.models.mare2dem.survey import MTSurveyConfig, make_data_file
+    >>> from pycsamt.models.mare2dem.survey import (
+    ...     MTSurveyConfig,
+    ...     make_data_file,
+    ... )
     >>> freqs = np.logspace(-3, 3, 10)
-    >>> rx_y  = np.linspace(-10000, 10000, 20)
-    >>> mt_cfg = MTSurveyConfig(frequencies=freqs, rx_y=rx_y, rx_type="land", lTE=True, lTM=True)
+    >>> rx_y = np.linspace(-10000, 10000, 20)
+    >>> mt_cfg = MTSurveyConfig(
+    ...     frequencies=freqs, rx_y=rx_y, rx_type="land", lTE=True, lTM=True
+    ... )
     >>> em = make_data_file("survey.emdata", topo=0.0, mt=mt_cfg)
     >>> em.n_mt_receivers
     20
@@ -630,9 +621,7 @@ def make_data_file(
         if len(csem_data):
             all_data.append(csem_data)
 
-    em.data = (
-        np.vstack(all_data) if all_data else np.empty((0, 6), dtype=float)
-    )
+    em.data = np.vstack(all_data) if all_data else np.empty((0, 6), dtype=float)
 
     write_emdata(em, out_file)
     return em

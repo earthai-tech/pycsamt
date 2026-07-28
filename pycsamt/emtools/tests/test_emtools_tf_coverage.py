@@ -76,9 +76,7 @@ class _FakeTipper:
 
 
 class _FakeSite:
-    def __init__(
-        self, station, z, freq, *, tipper=None, east=None, north=None
-    ):
+    def __init__(self, station, z, freq, *, tipper=None, east=None, north=None):
         self.station = station
         self.Z = _FakeZ(z, freq)
         self.freq = np.asarray(freq, dtype=float)
@@ -110,9 +108,7 @@ def _tipper_arr(
     """Synthetic, correctly-oriented (n, 2) complex tipper array."""
     t = np.zeros((freqs.size, 2), dtype=complex)
     t[:, 0] = amp * np.exp(1j * np.linspace(0, phase_span, freqs.size))
-    t[:, 1] = (
-        amp * 0.5 * np.exp(1j * np.linspace(0, phase_span * 0.6, freqs.size))
-    )
+    t[:, 1] = amp * 0.5 * np.exp(1j * np.linspace(0, phase_span * 0.6, freqs.size))
     return t
 
 
@@ -229,17 +225,13 @@ class TestPlotInductionMap:
 
     def test_no_arrows_no_legend(self):
         sites = _profile(3)
-        ax = plot_induction_map(
-            sites, period=1.0, show_real=False, show_imag=False
-        )
+        ax = plot_induction_map(sites, period=1.0, show_real=False, show_imag=False)
         plt.close("all")
         assert ax is not None
 
     def test_clim_and_no_colorbar(self):
         sites = _profile(3)
-        ax = plot_induction_map(
-            sites, period=1.0, clim=(0.0, 1.0), show_colorbar=False
-        )
+        ax = plot_induction_map(sites, period=1.0, clim=(0.0, 1.0), show_colorbar=False)
         plt.close("all")
         assert ax is not None
 
@@ -258,17 +250,13 @@ class TestPlotInductionMap:
     def test_external_ax_and_title(self):
         sites = _profile(3)
         fig, ax_in = plt.subplots()
-        ax = plot_induction_map(
-            sites, period=1.0, ax=ax_in, title="Custom title"
-        )
+        ax = plot_induction_map(sites, period=1.0, ax=ax_in, title="Custom title")
         plt.close("all")
         assert ax.get_title() == "Custom title"
 
     def test_explicit_scale_and_reference_arrow(self):
         sites = _profile(3)
-        ax = plot_induction_map(
-            sites, period=1.0, scale=5.0, reference_arrow=0.3
-        )
+        ax = plot_induction_map(sites, period=1.0, scale=5.0, reference_arrow=0.3)
         plt.close("all")
         assert ax is not None
 
@@ -281,10 +269,7 @@ class TestPlotInductionMap:
         ``_station_xy`` limitation documented at the top of this file.
         """
         sites = _profile(4)
-        xy_map = {
-            f"S{i:02d}": (float(i) * 100.0, float(i) * 137.0)
-            for i in range(4)
-        }
+        xy_map = {f"S{i:02d}": (float(i) * 100.0, float(i) * 137.0) for i in range(4)}
 
         def _fake_xy(ed, i):
             from pycsamt.emtools._core import _name
@@ -332,9 +317,7 @@ class TestPlotInductionSection:
 
     def test_custom_clim_and_cmap(self):
         sites = _profile(3, n=16)
-        ax = plot_induction_section(
-            sites, clim=(0.0, 1.0), cmap="viridis"
-        )
+        ax = plot_induction_section(sites, clim=(0.0, 1.0), cmap="viridis")
         plt.close("all")
         assert ax is not None
 
@@ -384,10 +367,7 @@ class TestPlotInductionConventionExtra:
 
     def test_true_2d_map_branch(self, monkeypatch):
         sites = _profile(4)
-        xy_map = {
-            f"S{i:02d}": (float(i) * 50.0, float(i) * 90.0)
-            for i in range(4)
-        }
+        xy_map = {f"S{i:02d}": (float(i) * 50.0, float(i) * 90.0) for i in range(4)}
 
         def _fake_xy(ed, i):
             from pycsamt.emtools._core import _name
@@ -426,9 +406,7 @@ class TestPlotTipperPolarExtra:
 
     def test_custom_style_kwargs(self):
         sites = [_site("S00", n=16)]
-        ax = plot_tipper_polar(
-            sites, cmap="plasma", lw=2.0, alpha=0.5, title="polar"
-        )
+        ax = plot_tipper_polar(sites, cmap="plasma", lw=2.0, alpha=0.5, title="polar")
         plt.close("all")
         assert ax.get_title() == "polar"
 
@@ -531,10 +509,7 @@ class TestPlotInductionArrowsExtra:
 
     def test_true_2d_map_branch(self, monkeypatch):
         sites = _profile(4)
-        xy_map = {
-            f"S{i:02d}": (float(i) * 60.0, float(i) * 45.0)
-            for i in range(4)
-        }
+        xy_map = {f"S{i:02d}": (float(i) * 60.0, float(i) * 45.0) for i in range(4)}
 
         def _fake_xy(ed, i):
             from pycsamt.emtools._core import _name
@@ -556,8 +531,7 @@ class TestPlotInductionMapFromSpectra:
     def test_basic_dict_with_2d_coords(self):
         sp, fr = _spectra_dict(4)
         coords = {
-            name: (float(i) * 100.0, float(i) * 33.0)
-            for i, name in enumerate(sp)
+            name: (float(i) * 100.0, float(i) * 33.0) for i, name in enumerate(sp)
         }
         ax = plot_induction_map_from_spectra(
             sp, period=1.0 / fr[len(fr) // 2], coords=coords
@@ -580,13 +554,9 @@ class TestPlotInductionMapFromSpectra:
 
     def test_show_real_only_and_show_imag_only(self):
         sp, _ = _spectra_dict(3)
-        ax1 = plot_induction_map_from_spectra(
-            sp, period=1.0, show_imag=False
-        )
+        ax1 = plot_induction_map_from_spectra(sp, period=1.0, show_imag=False)
         plt.close("all")
-        ax2 = plot_induction_map_from_spectra(
-            sp, period=1.0, show_real=False
-        )
+        ax2 = plot_induction_map_from_spectra(sp, period=1.0, show_real=False)
         plt.close("all")
         assert ax1 is not None
         assert ax2 is not None
@@ -608,9 +578,7 @@ class TestPlotInductionMapFromSpectra:
 
     def test_custom_title(self):
         sp, _ = _spectra_dict(3)
-        ax = plot_induction_map_from_spectra(
-            sp, period=1.0, title="Spectra map"
-        )
+        ax = plot_induction_map_from_spectra(sp, period=1.0, title="Spectra map")
         plt.close("all")
         assert ax.get_title() == "Spectra map"
 
@@ -738,9 +706,7 @@ class TestThinLabelIndicesViaManyStations:
 class TestPlotInductionMultiperiodMap:
     def test_basic_default_background(self):
         sites = _profile(4)
-        fig, axs = plot_induction_multiperiod_map(
-            sites, periods=[1.0, 10.0]
-        )
+        fig, axs = plot_induction_multiperiod_map(sites, periods=[1.0, 10.0])
         plt.close("all")
         assert len(axs) == 2
 
@@ -772,9 +738,7 @@ class TestPlotInductionMultiperiodMap:
 
     def test_explicit_tipper_data_mismatched_shape_falls_back(self):
         sites = _profile(3)
-        tipper_data = {
-            1.0: np.array([[0.1 + 0.05j, 0.02 + 0.01j]], dtype=complex)
-        }
+        tipper_data = {1.0: np.array([[0.1 + 0.05j, 0.02 + 0.01j]], dtype=complex)}
         fig, axs = plot_induction_multiperiod_map(
             sites, periods=[1.0], tipper_data=tipper_data
         )

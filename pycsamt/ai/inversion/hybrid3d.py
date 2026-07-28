@@ -36,21 +36,22 @@ loss used by
 Example
 -------
 >>> from pycsamt.ai.inversion import (
-...     GCNInverter3D, HybridInverter3D,
+...     GCNInverter3D,
+...     HybridInverter3D,
 ... )
->>> gcn = GCNInverter3D.load(           # doctest: +SKIP
+>>> gcn = GCNInverter3D.load(  # doctest: +SKIP
 ...     "checkpoints/gcn3d.npz"
 ... )
->>> inv = HybridInverter3D(             # doctest: +SKIP
+>>> inv = HybridInverter3D(  # doctest: +SKIP
 ...     "edi/survey/",
 ...     ai_inverter=gcn,
 ...     epochs=150,
 ...     graph_weight=0.003,
 ... )
->>> inv.fit()                           # doctest: +SKIP
+>>> inv.fit()  # doctest: +SKIP
 HybridInverter3D(n_stations=25, fitted)
->>> vol = inv.resistivity_volume()      # doctest: +SKIP
->>> s1 = inv.stage1_volume()            # doctest: +SKIP
+>>> vol = inv.resistivity_volume()  # doctest: +SKIP
+>>> s1 = inv.stage1_volume()  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -149,9 +150,7 @@ class HybridInverter3D(BaseHybridInverter):
         verbose: int = 0,
     ) -> None:
         if mode not in ("te", "tm", "both"):
-            raise ValueError(
-                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
-            )
+            raise ValueError(f"mode must be 'te', 'tm', or 'both'; got {mode!r}.")
         super().__init__(
             depth_max=depth_max,
             device=device,
@@ -168,9 +167,7 @@ class HybridInverter3D(BaseHybridInverter):
         self.verbose = verbose
 
         self._ai_inv = self._load_ai_inverter(ai_inverter)
-        self.n_layers = int(
-            n_layers if n_layers is not None else self._ai_inv.n_layers
-        )
+        self.n_layers = int(n_layers if n_layers is not None else self._ai_inv.n_layers)
 
         self._obs: list[SiteObs2D] = sites_to_obs_2d(
             sites,
@@ -388,12 +385,8 @@ class HybridInverter3D(BaseHybridInverter):
                 rp = np.full_like(obs.freq, np.nan)
                 pp = np.full_like(obs.freq, np.nan)
 
-            rho_obs = (
-                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
-            )
-            ph_obs = (
-                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
-            )
+            rho_obs = obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
+            ph_obs = obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             for k in range(len(obs.freq)):
                 rows.append(
                     {
@@ -435,9 +428,7 @@ class HybridInverter3D(BaseHybridInverter):
 
         if isinstance(ai_inverter, GCNInverter3D):
             if not ai_inverter._is_fitted:
-                raise ValueError(
-                    "ai_inverter must be a fitted GCNInverter3D instance."
-                )
+                raise ValueError("ai_inverter must be a fitted GCNInverter3D instance.")
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
             return GCNInverter3D.load(Path(ai_inverter))

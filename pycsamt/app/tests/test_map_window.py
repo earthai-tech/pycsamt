@@ -241,7 +241,10 @@ class TestViewerFrequencyAndDepth:
     def test_depth_label_with_real_sites(self, win, tipper_sites):
         win.set_sites(tipper_sites)
         win._update_depth_label()
-        assert "T =" in win._lbl_depth_period.text() or "Load data" in win._lbl_depth_period.text()
+        assert (
+            "T =" in win._lbl_depth_period.text()
+            or "Load data" in win._lbl_depth_period.text()
+        )
 
     def test_estimate_median_rho_iteration_exception_not_swallowed(self, win):
         """
@@ -266,31 +269,23 @@ class TestViewerFrequencyAndDepth:
 class TestViewerRefreshAndExport:
     def test_on_refresh_calls_map_panel_redraw(self, win, monkeypatch):
         calls = []
-        monkeypatch.setattr(
-            win._map_panel, "redraw", lambda **kw: calls.append(kw)
-        )
+        monkeypatch.setattr(win._map_panel, "redraw", lambda **kw: calls.append(kw))
         win._on_refresh()
         assert len(calls) == 1
         assert "map_type" in calls[0]
         assert "source_crs" in calls[0]
 
-    def test_on_refresh_falls_back_to_draw_map_on_exception(
-        self, win, monkeypatch
-    ):
+    def test_on_refresh_falls_back_to_draw_map_on_exception(self, win, monkeypatch):
         def _boom(**kw):
             raise RuntimeError("redraw failed")
 
         calls = []
         monkeypatch.setattr(win._map_panel, "redraw", _boom)
-        monkeypatch.setattr(
-            win._map_panel, "_draw_map", lambda: calls.append(1)
-        )
+        monkeypatch.setattr(win._map_panel, "_draw_map", lambda: calls.append(1))
         win._on_refresh()
         assert calls == [1]
 
-    def test_on_refresh_fallback_itself_raising_is_swallowed(
-        self, win, monkeypatch
-    ):
+    def test_on_refresh_fallback_itself_raising_is_swallowed(self, win, monkeypatch):
         def _boom(**kw):
             raise RuntimeError("redraw failed")
 
@@ -337,17 +332,13 @@ class TestViewerRefreshAndExport:
 class TestViewerSetSitesAndDarkMode:
     def test_set_sites_delegates_to_map_panel(self, win, monkeypatch):
         calls = []
-        monkeypatch.setattr(
-            win._map_panel, "set_sites", lambda s: calls.append(s)
-        )
+        monkeypatch.setattr(win._map_panel, "set_sites", lambda s: calls.append(s))
         win.set_sites(["fake"])
         assert calls == [["fake"]]
 
     def test_set_dark_mode_delegates(self, win, monkeypatch):
         calls = []
-        monkeypatch.setattr(
-            win._map_panel, "set_dark_mode", lambda d: calls.append(d)
-        )
+        monkeypatch.setattr(win._map_panel, "set_dark_mode", lambda d: calls.append(d))
         win.set_dark_mode(False)
         assert calls == [False]
 
@@ -535,9 +526,7 @@ class TestDetailRefreshExportSetters:
         self, detail, monkeypatch
     ):
         calls = []
-        monkeypatch.setattr(
-            detail._map_panel, "redraw", lambda **kw: calls.append(kw)
-        )
+        monkeypatch.setattr(detail._map_panel, "redraw", lambda **kw: calls.append(kw))
         detail._on_refresh()
         assert calls[0]["log_scale"] == detail._chk_log.isChecked()
 

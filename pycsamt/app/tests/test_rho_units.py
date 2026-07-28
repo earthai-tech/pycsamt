@@ -110,11 +110,7 @@ class TestControllerRhoMagnitude(unittest.TestCase):
                 a = a[np.isfinite(a)]
                 if a.size:
                     # pseudosections plot log10(ρ); ceil in linear or log space
-                    cap = (
-                        np.log10(_RHO_CEILING)
-                        if np.nanmax(a) < 20
-                        else _RHO_CEILING
-                    )
+                    cap = np.log10(_RHO_CEILING) if np.nanmax(a) < 20 else _RHO_CEILING
                     self.assertLess(np.nanmax(a), cap)
 
 

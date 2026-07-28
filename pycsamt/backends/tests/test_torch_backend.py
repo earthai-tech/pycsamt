@@ -58,12 +58,8 @@ def test_resolve_device_cpu_when_nothing_available(backend):
     import torch
 
     with (
-        mock.patch.object(
-            torch.cuda, "is_available", return_value=False
-        ),
-        mock.patch.object(
-            torch.backends.mps, "is_available", return_value=False
-        ),
+        mock.patch.object(torch.cuda, "is_available", return_value=False),
+        mock.patch.object(torch.backends.mps, "is_available", return_value=False),
     ):
         assert backend.resolve_device(None) == "cpu"
 
@@ -82,9 +78,7 @@ def test_resolve_device_mps_when_no_cuda(backend):
         pytest.skip("torch build has no mps backend attribute")
     with (
         mock.patch.object(torch.cuda, "is_available", return_value=False),
-        mock.patch.object(
-            torch.backends.mps, "is_available", return_value=True
-        ),
+        mock.patch.object(torch.backends.mps, "is_available", return_value=True),
     ):
         assert backend.resolve_device(None) == "mps"
 
@@ -325,7 +319,6 @@ def test_predict_matches_after_weight_transfer(backend):
 
 
 def test_get_loss_fn_mse(backend):
-    import torch
     import torch.nn as nn
 
     fn = backend._get_loss_fn("mse")

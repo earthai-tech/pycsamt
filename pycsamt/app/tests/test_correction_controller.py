@@ -250,9 +250,7 @@ class TestApplyPreviewStateMachine:
 
     def test_apply_pushes_step_with_correct_metadata(self, ctrl, small_sites):
         ctrl.set_raw_sites(small_sites)
-        step = ctrl.apply(
-            "_wrap_rotate", {"angle": 12.5}, label="Rotate 12.5°"
-        )
+        step = ctrl.apply("_wrap_rotate", {"angle": 12.5}, label="Rotate 12.5°")
         assert step is not None
         assert step.label == "Rotate 12.5°"
         assert step.fn_name == "_wrap_rotate"
@@ -313,9 +311,7 @@ class TestApplyPreviewStateMachine:
         ctrl.remove_step(100)
         assert ctrl.n_steps == 1
 
-    def test_remove_step_replays_subsequent_impedance_steps(
-        self, ctrl, small_sites
-    ):
+    def test_remove_step_replays_subsequent_impedance_steps(self, ctrl, small_sites):
         ctrl.set_raw_sites(small_sites)
         ctrl.apply("_wrap_rotate", {"angle": 5.0}, label="rot5")
         ctrl.apply("_wrap_rotate", {"angle": 10.0}, label="rot10")
@@ -330,9 +326,7 @@ class TestApplyPreviewStateMachine:
         # sites_after object identity changed even though the label didn't.
         assert ctrl.stack[-1].sites_after is not last_before
 
-    def test_remove_step_before_coord_step_replays_correctly(
-        self, ctrl, small_sites
-    ):
+    def test_remove_step_before_coord_step_replays_correctly(self, ctrl, small_sites):
         """Coord steps are not replayed (DataFrame-only chain); the impedance
         step after them must still be recomputed against the new base."""
         ctrl.set_raw_sites(small_sites)
@@ -361,9 +355,7 @@ class TestApplyPreviewStateMachine:
 class TestCoordCorrectionStack:
     def test_apply_coord_fn_leaves_sites_unchanged(self, ctrl, small_sites):
         ctrl.set_raw_sites(small_sites)
-        step = ctrl.apply(
-            "_coord_shift", {"delta_lat": 0.001}, label="shift"
-        )
+        step = ctrl.apply("_coord_shift", {"delta_lat": 0.001}, label="shift")
         assert step is not None
         assert step.sites_after is small_sites  # Sites untouched
         assert step.coords_df is not None
@@ -377,24 +369,17 @@ class TestCoordCorrectionStack:
 
     def test_current_coords_df_uses_latest_coord_step(self, ctrl, small_sites):
         ctrl.set_raw_sites(small_sites)
-        step1 = ctrl.apply(
-            "_coord_shift", {"delta_lat": 0.001}, label="shift1"
-        )
-        step2 = ctrl.apply(
-            "_coord_shift", {"delta_lat": -0.002}, label="shift2"
-        )
+        step1 = ctrl.apply("_coord_shift", {"delta_lat": 0.001}, label="shift1")
+        step2 = ctrl.apply("_coord_shift", {"delta_lat": -0.002}, label="shift2")
         assert ctrl.current_coords_df() is step2.coords_df
         assert ctrl.current_coords_df() is not step1.coords_df
 
-    def test_chained_coord_corrections_build_on_previous_df(
-        self, ctrl, small_sites
-    ):
+    def test_chained_coord_corrections_build_on_previous_df(self, ctrl, small_sites):
         ctrl.set_raw_sites(small_sites)
-        ctrl.apply(
-            "_coord_spacing_regularize", {"spacing_m": 150.0}, label="reg"
-        )
+        ctrl.apply("_coord_spacing_regularize", {"spacing_m": 150.0}, label="reg")
         step2 = ctrl.apply(
-            "_coord_elevation_smooth", {"method": "mean", "window": 3},
+            "_coord_elevation_smooth",
+            {"method": "mean", "window": 3},
             label="elev",
         )
         assert step2 is not None
@@ -434,9 +419,7 @@ class TestLoadEdiDir:
         )
 
         ctrl.load_edi_dir(l18_dir)
-        sites = CorrectionController._edi_objects_to_sites(
-            ctrl._strat_edi_objects
-        )
+        sites = CorrectionController._edi_objects_to_sites(ctrl._strat_edi_objects)
         assert sites is not None
 
 
@@ -471,14 +454,14 @@ WRAP_COORD_CASES = [
 
 class TestWrapCoordDispatchSweep:
     @pytest.mark.parametrize(
-        "fn_name,kwargs", WRAP_COORD_CASES, ids=[c[0] for c in WRAP_COORD_CASES]
+        "fn_name,kwargs",
+        WRAP_COORD_CASES,
+        ids=[c[0] for c in WRAP_COORD_CASES],
     )
-    def test_apply_does_not_raise_and_updates_state(
-        self, fn_name, kwargs, small_sites
-    ):
+    def test_apply_does_not_raise_and_updates_state(self, fn_name, kwargs, small_sites):
         from pycsamt.app.desktop.controllers.correction_controller import (
-            CorrectionController,
             _COORD_FN_NAMES,
+            CorrectionController,
         )
 
         c = CorrectionController()
@@ -559,9 +542,7 @@ class TestPreviewWrapCoordSweep:
         ],
         ids=["rotate", "near_field", "coord_shift", "coord_elev_smooth"],
     )
-    def test_preview_does_not_raise_or_push_stack(
-        self, fn_name, kwargs, small_sites
-    ):
+    def test_preview_does_not_raise_or_push_stack(self, fn_name, kwargs, small_sites):
         from pycsamt.app.desktop.controllers.correction_controller import (
             CorrectionController,
         )
@@ -682,9 +663,7 @@ class TestStratagemMethods:
         with pytest.raises(RuntimeError, match="No EDI objects"):
             ctrl.export_stratagem("/tmp/wherever")
 
-    def test_export_stratagem_creates_directory(
-        self, ctrl, l18_dir, tmp_path
-    ):
+    def test_export_stratagem_creates_directory(self, ctrl, l18_dir, tmp_path):
         """
         export_stratagem() must at least create the target directory.
 
@@ -788,18 +767,12 @@ class TestRhoPlots:
         assert len(fig.axes) >= 1
         _close()
 
-    def test_plot_rho_pseudosection_with_affected_stations(
-        self, ctrl, small_sites
-    ):
+    def test_plot_rho_pseudosection_with_affected_stations(self, ctrl, small_sites):
         fig = _fig()
         from pycsamt.emtools._core import _iter_items, _name
 
-        names = [
-            _name(ed, i) for i, ed in enumerate(_iter_items(small_sites))
-        ]
-        ctrl.plot_rho_pseudosection(
-            small_sites, fig, affected_stations=names[:2]
-        )
+        names = [_name(ed, i) for i, ed in enumerate(_iter_items(small_sites))]
+        ctrl.plot_rho_pseudosection(small_sites, fig, affected_stations=names[:2])
         _close()
 
     def test_plot_overlay(self, ctrl, small_sites, rotated_small_sites):
@@ -842,9 +815,7 @@ class TestStationMapPlots:
         ctrl.plot_station_map(None, ax)
         _close()
 
-    def test_plot_station_map_overlay(
-        self, ctrl, small_sites, rotated_small_sites
-    ):
+    def test_plot_station_map_overlay(self, ctrl, small_sites, rotated_small_sites):
         fig = _fig()
         ax = fig.add_subplot(111)
         ctrl.plot_station_map_overlay(small_sites, rotated_small_sites, ax)
@@ -873,9 +844,7 @@ class TestStationMapPlots:
     ):
         fig = _fig()
         ax = fig.add_subplot(111)
-        ctrl.plot_station_elevation_overlay(
-            small_sites, rotated_small_sites, ax
-        )
+        ctrl.plot_station_elevation_overlay(small_sites, rotated_small_sites, ax)
         _close()
 
     def test_plot_station_elevation_overlay_no_data(self, ctrl):
@@ -884,9 +853,7 @@ class TestStationMapPlots:
         ctrl.plot_station_elevation_overlay(None, None, ax)
         _close()
 
-    def test_plot_displacement_diff(
-        self, ctrl, small_sites, rotated_small_sites
-    ):
+    def test_plot_displacement_diff(self, ctrl, small_sites, rotated_small_sites):
         fig = _fig()
         ax = fig.add_subplot(111)
         ctrl.plot_displacement_diff(small_sites, rotated_small_sites, ax)

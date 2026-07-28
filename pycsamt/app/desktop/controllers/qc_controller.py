@@ -372,11 +372,7 @@ class QCController:
         # Filter draw_kwargs to only those the function actually accepts
         try:
             valid = set(inspect.signature(fn).parameters.keys())
-            kw = {
-                k: v
-                for k, v in draw_kwargs.items()
-                if k in valid and v is not None
-            }
+            kw = {k: v for k, v in draw_kwargs.items() if k in valid and v is not None}
         except Exception:
             kw = {}
 
@@ -454,16 +450,12 @@ def _auto_rho_bounds(
                 continue
             try:
                 rho = _rho_a_from_z(z_block, freqs, "xy")
-                rho_vals.extend(
-                    float(r) for r in rho if np.isfinite(r) and r > 0
-                )
+                rho_vals.extend(float(r) for r in rho if np.isfinite(r) and r > 0)
             except Exception:
                 continue
         if rho_vals:
             arr = np.asarray(rho_vals)
-            return float(np.percentile(arr, lo_pct)), float(
-                np.percentile(arr, hi_pct)
-            )
+            return float(np.percentile(arr, lo_pct)), float(np.percentile(arr, hi_pct))
     except Exception:
         pass
     return 0.5, 5000.0

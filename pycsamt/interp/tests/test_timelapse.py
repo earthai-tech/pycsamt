@@ -21,9 +21,7 @@ _X = np.array([0.0, 100.0])
 
 def _survey(rho_linear, method="TDEM"):
     rho = np.log10(np.array(rho_linear))
-    return ResistivityModel.from_array(
-        rho, x_centers=_X, z_centers=_Z, method=method
-    )
+    return ResistivityModel.from_array(rho, x_centers=_X, z_centers=_Z, method=method)
 
 
 def _dry():
@@ -207,9 +205,7 @@ def test_water_table_displacement_multi_survey_stacks_rows():
 
 
 def test_water_table_map_shape_and_nan_where_undetected():
-    resistive_only = _survey(
-        [[5000.0, 5000.0], [4000.0, 4000.0], [3000.0, 3000.0]]
-    )
+    resistive_only = _survey([[5000.0, 5000.0], [4000.0, 4000.0], [3000.0, 3000.0]])
     tl = TimeLapseEM([resistive_only, _wet()])
     wt = tl.water_table_map(ArchieModel(), rho_w=20.0)
     assert wt.shape == (2, 2)

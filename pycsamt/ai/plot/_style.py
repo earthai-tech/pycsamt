@@ -34,8 +34,7 @@ Usage
 Alternatively use as a decorator:
 
 >>> @EMStyle()
-... def make_figure():
-...     ...
+... def make_figure(): ...
 """
 
 from __future__ import annotations
@@ -135,7 +134,7 @@ class EMStyle:
     Examples
     --------
     >>> with EMStyle():
-    ...     fig, ax = plt.subplots(figsize=EM_FIGSIZE['double'])
+    ...     fig, ax = plt.subplots(figsize=EM_FIGSIZE["double"])
     ...     ax.semilogy(period, rho_a)
     """
 
@@ -216,7 +215,7 @@ class StationTickConfig:
 
     Automatic mode (default) chooses the step at render time:
 
-    >>> cfg_auto = StationTickConfig()          # every="auto"
+    >>> cfg_auto = StationTickConfig()  # every="auto"
     >>> cfg_auto.compute_every(128, figwidth_in=11.0)
     5
     """

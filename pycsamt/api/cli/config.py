@@ -12,22 +12,26 @@ Quick start
 **Read the current defaults**::
 
     from pycsamt.api.cli import PYCSAMT_CLI
+
     print(PYCSAMT_CLI)
 
 **Change one setting for the whole session**::
 
     from pycsamt.api.cli import configure_cli
+
     configure_cli(log__level=1, output__format="json")
 
 **Temporarily override, then restore**::
 
     from pycsamt.api.cli import PYCSAMT_CLI
+
     with PYCSAMT_CLI.context(log__level=2):
-        ...   # debug verbosity active here only
+        ...  # debug verbosity active here only
 
 **Reset to package defaults**::
 
     from pycsamt.api.cli import reset_cli
+
     reset_cli()
 """
 
@@ -63,9 +67,7 @@ class LogConfig:
 
     def __post_init__(self) -> None:
         if self.level not in _VERBOSE_LEVELS:
-            raise ValueError(
-                f"log.level must be one of {sorted(_VERBOSE_LEVELS)}."
-            )
+            raise ValueError(f"log.level must be one of {sorted(_VERBOSE_LEVELS)}.")
 
 
 @dataclass
@@ -78,9 +80,7 @@ class OutputConfig:
 
     def __post_init__(self) -> None:
         if self.format not in _OUTPUT_FORMATS:
-            raise ValueError(
-                f"output.format must be one of {sorted(_OUTPUT_FORMATS)}."
-            )
+            raise ValueError(f"output.format must be one of {sorted(_OUTPUT_FORMATS)}.")
         self.dir = Path(self.dir)
 
 

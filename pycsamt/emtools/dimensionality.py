@@ -271,9 +271,7 @@ def pre2d_inversion_assessment(
     )
     if band is not None and not curve.empty:
         lo, hi = float(band[0]), float(band[1])
-        curve = curve[
-            (curve["period"] >= lo) & (curve["period"] <= hi)
-        ].copy()
+        curve = curve[(curve["period"] >= lo) & (curve["period"] <= hi)].copy()
 
     def _by_station(table: pd.DataFrame, station: str, col: str) -> float:
         if table.empty or col not in table.columns:
@@ -282,9 +280,7 @@ def pre2d_inversion_assessment(
         if sub.empty:
             return np.nan
         vals = sub[col].to_numpy(dtype=float)
-        return (
-            float(np.nanmedian(vals)) if np.isfinite(vals).any() else np.nan
-        )
+        return float(np.nanmedian(vals)) if np.isfinite(vals).any() else np.nan
 
     stations = []
     for i, ed in enumerate(_iter_items(S)):
@@ -492,9 +488,7 @@ def _soft(x: np.ndarray, t: float) -> np.ndarray:
     return np.sign(x) * np.maximum(np.abs(x) - t, 0.0)
 
 
-def _ista(
-    D: np.ndarray, x: np.ndarray, lam: float, n_iter: int
-) -> np.ndarray:
+def _ista(D: np.ndarray, x: np.ndarray, lam: float, n_iter: int) -> np.ndarray:
     # min 0.5||x - D a||^2 + lam||a||
     a = np.zeros(D.shape[1], dtype=float)
     smax = np.linalg.svd(D, compute_uv=False)[0]
@@ -869,9 +863,7 @@ def plot_atom_psection(
         Line2D([0], [0], marker="s", ls="", color=cols[j], label=f"a{j}")
         for j in range(max_lab)
     ]
-    ax.legend(
-        handles=h, ncol=min(max_lab, 10), fontsize=7, loc="upper right"
-    )
+    ax.legend(handles=h, ncol=min(max_lab, 10), fontsize=7, loc="upper right")
     return ax
 
 
@@ -956,12 +948,8 @@ def plot_dim_confidence_grid(
         preset="pseudosection",
         xlim=(-0.5, D.shape[1] - 0.5),
     )
-    yt = np.linspace(
-        0, D.shape[0] - 1, num=min(8, D.shape[0])
-    )  # shape[0] = n_logp
-    yv = np.linspace(
-        piv_d.index.min(), piv_d.index.max(), num=min(8, len(piv_d.index))
-    )
+    yt = np.linspace(0, D.shape[0] - 1, num=min(8, D.shape[0]))  # shape[0] = n_logp
+    yv = np.linspace(piv_d.index.min(), piv_d.index.max(), num=min(8, len(piv_d.index)))
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
     if not ax.yaxis_inverted():

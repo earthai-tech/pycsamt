@@ -163,9 +163,7 @@ class TestDimensionality:
         import pycsamt.emtools as et
 
         _, given_ax = plt.subplots()
-        returned = et.plot_dimensionality_psection(
-            willy_sites, ax=given_ax, verbose=0
-        )
+        returned = et.plot_dimensionality_psection(willy_sites, ax=given_ax, verbose=0)
         assert returned is given_ax
 
 
@@ -183,19 +181,13 @@ class TestStaticShift:
 
         result = et.correct_static_shift(willy_sites, verbose=0)
         assert result is not None
-        assert isinstance(result, Sites), (
-            f"Expected a Sites object, got {type(result)}"
-        )
+        assert isinstance(result, Sites), f"Expected a Sites object, got {type(result)}"
 
     def test_correction_not_inplace(self, willy_sites):
         import pycsamt.emtools as et
 
-        corrected = et.correct_static_shift(
-            willy_sites, inplace=False, verbose=0
-        )
-        assert corrected is not willy_sites, (
-            "inplace=False must return a new object"
-        )
+        corrected = et.correct_static_shift(willy_sites, inplace=False, verbose=0)
+        assert corrected is not willy_sites, "inplace=False must return a new object"
 
     def test_correction_tipper(self, tipper_sites):
         import pycsamt.emtools as et
@@ -234,9 +226,7 @@ class TestStaticShift:
         import pycsamt.emtools as et
 
         for comp in ("det", "xy", "yx"):
-            result = et.correct_static_shift(
-                willy_sites, comp=comp, verbose=0
-            )
+            result = et.correct_static_shift(willy_sites, comp=comp, verbose=0)
             assert result is not None, f"comp={comp!r} returned None"
 
     def test_pipeline_correct_then_plot(self, willy_sites):
@@ -349,9 +339,9 @@ class TestAgentWorkerProcessing:
         results, errors, _ = _run_worker("QC Quicklook", willy_sites)
         assert not errors
         res = results[0]
-        assert hasattr(res, "savefig") or hasattr(res, "get_figure"), (
-            f"Expected Figure or Axes, got {type(res)}"
-        )
+        assert hasattr(res, "savefig") or hasattr(
+            res, "get_figure"
+        ), f"Expected Figure or Axes, got {type(res)}"
 
     def test_dimensionality_worker_no_error(self, qapp, willy_sites):
         results, errors, _ = _run_worker("Dimensionality", willy_sites)
@@ -362,9 +352,9 @@ class TestAgentWorkerProcessing:
         results, errors, _ = _run_worker("Dimensionality", willy_sites)
         assert not errors
         res = results[0]
-        assert hasattr(res, "get_figure") or hasattr(res, "savefig"), (
-            f"Expected Figure or Axes from Dimensionality worker, got {type(res)}"
-        )
+        assert hasattr(res, "get_figure") or hasattr(
+            res, "savefig"
+        ), f"Expected Figure or Axes from Dimensionality worker, got {type(res)}"
 
     def test_static_shift_worker_no_error(self, qapp, willy_sites):
         results, errors, _ = _run_worker("Static Shift (fast)", willy_sites)
@@ -376,12 +366,12 @@ class TestAgentWorkerProcessing:
         results, errors, _ = _run_worker("Static Shift (fast)", willy_sites)
         assert not errors
         res = results[0]
-        assert hasattr(res, "savefig") or hasattr(res, "get_figure"), (
-            f"Static Shift result must be Figure/Axes, got {type(res)}"
-        )
+        assert hasattr(res, "savefig") or hasattr(
+            res, "get_figure"
+        ), f"Static Shift result must be Figure/Axes, got {type(res)}"
 
     def test_worker_logs_function_name(self, qapp, tipper_sites):
         _, _, logs = _run_worker("QC Quicklook", tipper_sites)
-        assert any("plot_qc_quicklook" in line for line in logs), (
-            "Worker must log the emtools function name"
-        )
+        assert any(
+            "plot_qc_quicklook" in line for line in logs
+        ), "Worker must log the emtools function name"

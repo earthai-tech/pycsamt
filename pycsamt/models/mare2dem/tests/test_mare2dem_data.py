@@ -211,9 +211,7 @@ class TestMakeDataFileCSEM:
 
     def test_csem_data_codes(self, tmp_path):
         csem = self._basic_csem(lEx=True)
-        em = make_data_file(
-            tmp_path / "csem_codes.emdata", topo=0.0, csem=csem
-        )
+        em = make_data_file(tmp_path / "csem_codes.emdata", topo=0.0, csem=csem)
         codes = em.data[:, 0].astype(int)
         # Ex log10 amplitude=27, phase=22
         assert 27 in codes and 22 in codes
@@ -226,9 +224,7 @@ class TestMakeDataFileCSEM:
             lTM=True,
         )
         csem = self._basic_csem()
-        em = make_data_file(
-            tmp_path / "joint.emdata", topo=0.0, mt=mt, csem=csem
-        )
+        em = make_data_file(tmp_path / "joint.emdata", topo=0.0, mt=mt, csem=csem)
         assert em.mt is not None
         assert em.csem is not None
         codes = em.data[:, 0].astype(int)
@@ -244,9 +240,7 @@ class TestMakeDataFileCSEM:
             min_range=500.0,
             max_range=3000.0,
         )
-        em = make_data_file(
-            tmp_path / "range_filt.emdata", topo=-1000.0, csem=csem
-        )
+        em = make_data_file(tmp_path / "range_filt.emdata", topo=-1000.0, csem=csem)
         # After filtering, some receivers should be excluded
         assert em.n_data < 20 * 2  # 20 rx × 2 codes per rx, but some filtered
 
@@ -298,9 +292,7 @@ class TestMergeDataFiles:
 
     def test_merge_deduplicates_receivers(self, tmp_path):
         em1 = self._make_mt_em([1.0], np.array([0.0, 1000.0]))
-        em2 = self._make_mt_em(
-            [10.0], np.array([0.0, 2000.0])
-        )  # shares rx at y=0
+        em2 = self._make_mt_em([10.0], np.array([0.0, 2000.0]))  # shares rx at y=0
         merged = merge_emdata([em1, em2])
         # 3 unique receivers: 0, 1000, 2000
         assert len(merged.mt.receivers) == 3
@@ -317,12 +309,8 @@ class TestMergeDataFiles:
 
         em1 = self._make_mt_em([1.0], np.array([0.0]))
         em2 = self._make_mt_em([1.0], np.array([0.0]))
-        em1.utm = UTMOrigin(
-            grid=19, hemi="N", north0=1000.0, east0=500000.0, theta=0.0
-        )
-        em2.utm = UTMOrigin(
-            grid=19, hemi="N", north0=2000.0, east0=500000.0, theta=0.0
-        )
+        em1.utm = UTMOrigin(grid=19, hemi="N", north0=1000.0, east0=500000.0, theta=0.0)
+        em2.utm = UTMOrigin(grid=19, hemi="N", north0=2000.0, east0=500000.0, theta=0.0)
         with pytest.raises(ValueError, match="UTM"):
             merge_emdata([em1, em2])
 

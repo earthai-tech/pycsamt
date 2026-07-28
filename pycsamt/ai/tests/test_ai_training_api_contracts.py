@@ -76,9 +76,7 @@ def test_normalizer_unfitted_errors_and_zero_variance_roundtrip():
 
     with pytest.raises(RuntimeError, match=r"fit\(\) before transform"):
         norm.transform(X)
-    with pytest.raises(
-        RuntimeError, match=r"fit\(\) before inverse_transform"
-    ):
+    with pytest.raises(RuntimeError, match=r"fit\(\) before inverse_transform"):
         norm.inverse_transform(X)
 
     Xn = norm.fit_transform(X)
@@ -257,9 +255,7 @@ def test_emtrainer_tiny_torch_fit_and_weight_roundtrip():
             return len(self.X)
 
         def __getitem__(self, idx):
-            return torch.from_numpy(self.X[idx]), torch.from_numpy(
-                self.y[idx]
-            )
+            return torch.from_numpy(self.X[idx]), torch.from_numpy(self.y[idx])
 
     rng = np.random.default_rng(0)
     X = rng.normal(size=(12, 3)).astype(np.float32)

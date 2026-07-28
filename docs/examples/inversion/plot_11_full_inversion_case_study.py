@@ -529,9 +529,7 @@ case_manifest = {
     "memo": str(memo_file),
 }
 manifest_file = report_dir / "case_study_outputs.json"
-manifest_file.write_text(
-    json.dumps(case_manifest, indent=2), encoding="utf-8"
-)
+manifest_file.write_text(json.dumps(case_manifest, indent=2), encoding="utf-8")
 
 print(f"Inventory: {inventory_file}")
 print(f"Convergence summary: {convergence_file}")

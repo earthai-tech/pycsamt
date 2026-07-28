@@ -65,7 +65,7 @@ class Z(TensorBase):
     --------
     >>> from pycsamt.zonge import Z
     >>> from pycsamt.zonge.avg import AVG
-    >>> avg = AVG.from_file('data/avg/K2.avg')
+    >>> avg = AVG.from_file("data/avg/K2.avg")
     >>> z_component = avg.z
     >>> # Get the complex impedance for all measurements
     >>> complex_z_values = z_component.z
@@ -112,9 +112,7 @@ class Z(TensorBase):
             if col not in df.columns:
                 df[col] = np.nan
                 if self.verbose:
-                    self._logger.debug(
-                        f"'{col}' not in source. Creating empty."
-                    )
+                    self._logger.debug(f"'{col}' not in source. Creating empty.")
 
         # Ensure coords exist
         if "station" not in df.columns:
@@ -220,9 +218,7 @@ class Z(TensorBase):
         if not has_rho_err and not has_phi_err:
             return pd.Series(dtype="float64", index=self._frame.index)
 
-        z_mag = np.sqrt(
-            self._frame["rho"] * (2 * PI * self._frame["freq"]) * MU_0
-        )
+        z_mag = np.sqrt(self._frame["rho"] * (2 * PI * self._frame["freq"]) * MU_0)
 
         term_rho_sq = 0.0
         if has_rho_err:
@@ -427,20 +423,10 @@ class Z(TensorBase):
 
         # Safely get unique counts for the summary
         n_st = (
-            self._frame["station"].nunique()
-            if "station" in self._frame.columns
-            else 0
+            self._frame["station"].nunique() if "station" in self._frame.columns else 0
         )
-        n_frq = (
-            self._frame["freq"].nunique()
-            if "freq" in self._frame.columns
-            else 0
-        )
-        n_comp = (
-            self._frame["comp"].nunique()
-            if "comp" in self._frame.columns
-            else 0
-        )
+        n_frq = self._frame["freq"].nunique() if "freq" in self._frame.columns else 0
+        n_comp = self._frame["comp"].nunique() if "comp" in self._frame.columns else 0
 
         return (
             f"Z(rows={len(self._frame)}, "

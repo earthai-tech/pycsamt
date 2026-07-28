@@ -118,8 +118,7 @@ def test_on_log_line_appends(panel):
 def test_on_error_updates_status(panel):
     panel._on_error("something went wrong")
     assert (
-        "Failed" in panel._status_lbl.text()
-        or "ERROR" in panel._log_text.toPlainText()
+        "Failed" in panel._status_lbl.text() or "ERROR" in panel._log_text.toPlainText()
     )
 
 

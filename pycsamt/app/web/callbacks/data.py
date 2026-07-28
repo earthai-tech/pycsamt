@@ -92,12 +92,8 @@ def _register_modal_toggle(app) -> None:
         return (
             True,
             mode,
-            "load-mode-btn active"
-            if mode == _MODE_REPLACE
-            else "load-mode-btn",
-            "load-mode-btn active"
-            if mode == _MODE_APPEND
-            else "load-mode-btn",
+            "load-mode-btn active" if mode == _MODE_REPLACE else "load-mode-btn",
+            "load-mode-btn active" if mode == _MODE_APPEND else "load-mode-btn",
             _modal_title(mode),
             _mode_hint(mode),
         )
@@ -179,9 +175,7 @@ def _sanitize_upload_name(name: str, fallback: str) -> str:
     return "/".join(parts) or fallback
 
 
-def _upload_entries(
-    contents, filenames, *, source: str = "upload"
-) -> list[dict]:
+def _upload_entries(contents, filenames, *, source: str = "upload") -> list[dict]:
     names = _normalise_names(filenames)
     if not contents:
         return []
@@ -195,9 +189,7 @@ def _upload_entries(
                 "id": f"upload-{i}",
                 "source": source,
                 "original": original,
-                "filename": _sanitize_upload_name(
-                    original, f"file_{i + 1}.edi"
-                ),
+                "filename": _sanitize_upload_name(original, f"file_{i + 1}.edi"),
                 "content": content,
             }
         )
@@ -205,9 +197,7 @@ def _upload_entries(
 
 
 def _entry_names(entries: list[dict]) -> list[str]:
-    return [
-        str(e.get("filename") or e.get("original") or "") for e in entries
-    ]
+    return [str(e.get("filename") or e.get("original") or "") for e in entries]
 
 
 def _ext_counts(names: list[str]) -> dict[str, int]:
@@ -267,9 +257,7 @@ def _preflight_children(names: list[str], *, mode: str, source: str):
     shown_lines = list(line_counts.items())[:6]
     hidden = max(0, len(line_counts) - len(shown_lines))
     fmt_badges = [
-        html.Span(
-            f"{label.upper()} {count}", className="load-preflight-badge"
-        )
+        html.Span(f"{label.upper()} {count}", className="load-preflight-badge")
         for label, count in counts.items()
         if count
     ]
@@ -413,37 +401,22 @@ def _register_upload_file_manager(app) -> None:
         # name inputs arrive with their initial filename values — none of these
         # represent real user actions.  We skip them by checking the triggered
         # value: n_clicks=0 means "just rendered", not "clicked".
-        triggered_value = (
-            ctx.triggered[0].get("value") if ctx.triggered else None
-        )
+        triggered_value = ctx.triggered[0].get("value") if ctx.triggered else None
         trigger = ctx.triggered_id
         entries = list(entries or [])
 
-        if (
-            isinstance(trigger, dict)
-            and trigger.get("type") == "load-file-clear"
-        ):
-            if (
-                not triggered_value
-            ):  # n_clicks=0 → initial render, not a click
+        if isinstance(trigger, dict) and trigger.get("type") == "load-file-clear":
+            if not triggered_value:  # n_clicks=0 → initial render, not a click
                 return no_update
             return []
 
-        if (
-            isinstance(trigger, dict)
-            and trigger.get("type") == "load-file-remove"
-        ):
-            if (
-                not triggered_value
-            ):  # n_clicks=0 → initial render, not a click
+        if isinstance(trigger, dict) and trigger.get("type") == "load-file-remove":
+            if not triggered_value:  # n_clicks=0 → initial render, not a click
                 return no_update
             remove_id = trigger.get("index")
             return [e for e in entries if e.get("id") != remove_id]
 
-        if (
-            isinstance(trigger, dict)
-            and trigger.get("type") == "load-file-name"
-        ):
+        if isinstance(trigger, dict) and trigger.get("type") == "load-file-name":
             if not entries:
                 return no_update
             value_by_id = {
@@ -484,15 +457,9 @@ def _register_upload_file_manager(app) -> None:
         rows = []
         for entry in entries:
             eid = entry.get("id")
-            filename = (
-                entry.get("filename") or entry.get("original") or "file.edi"
-            )
+            filename = entry.get("filename") or entry.get("original") or "file.edi"
             original = entry.get("original") or filename
-            ext = (
-                filename.rsplit(".", 1)[-1].upper()
-                if "." in filename
-                else "FILE"
-            )
+            ext = filename.rsplit(".", 1)[-1].upper() if "." in filename else "FILE"
             rows.append(
                 html.Div(
                     [
@@ -658,14 +625,10 @@ def _register_preflight_preview(app) -> None:
         Input("load-mode-store", "data"),
         State("load-source-selection", "data"),
     )
-    def update_preflight(
-        upload_entries, selected_lines, mode, current_source
-    ):
+    def update_preflight(upload_entries, selected_lines, mode, current_source):
         source = current_source or "none"
         if upload_entries:
-            filtered = _filtered_upload_entries(
-                upload_entries, selected_lines
-            )
+            filtered = _filtered_upload_entries(upload_entries, selected_lines)
             source = str(upload_entries[0].get("source") or "upload")
             names = _entry_names(filtered)
             source_label = "folder" if source == "folder" else "file"
@@ -683,9 +646,7 @@ def _register_preflight_preview(app) -> None:
                 source,
             )
         return (
-            _preflight_children(
-                [], mode=mode or _MODE_REPLACE, source="none"
-            ),
+            _preflight_children([], mode=mode or _MODE_REPLACE, source="none"),
             _detected_summary([], mode=mode or _MODE_REPLACE, source="none"),
             "none",
         )
@@ -800,9 +761,7 @@ def _register_load_data(app) -> None:
         # ── Derive source directly from entries — avoids race with the
         #    load-source-selection store (whose value may lag behind the
         #    upload-selection store when the user clicks quickly).
-        upload_entries = _filtered_upload_entries(
-            upload_entries, selected_lines
-        )
+        upload_entries = _filtered_upload_entries(upload_entries, selected_lines)
         usable = [e for e in (upload_entries or []) if e.get("content")]
         if usable:
             selected_source = str(usable[0].get("source") or "upload")
@@ -845,9 +804,7 @@ def _register_load_data(app) -> None:
                     no_update,
                 )
 
-            path_to_line = {
-                p: line for line, plist in line_map.items() for p in plist
-            }
+            path_to_line = {p: line for line, plist in line_map.items() for p in plist}
             n_lines = len(line_map)
 
             try:
@@ -855,9 +812,7 @@ def _register_load_data(app) -> None:
                 sites = ctrl.load(paths, path_to_line=path_to_line)
                 df = ctrl.dataframe
                 new_records = df.to_dict("records")
-                line_counts = {
-                    line: len(plist) for line, plist in line_map.items()
-                }
+                line_counts = {line: len(plist) for line, plist in line_map.items()}
 
                 if mode == _MODE_APPEND and existing_store:
                     store, sites = _merge_store(
@@ -879,9 +834,7 @@ def _register_load_data(app) -> None:
                 else:
                     cache_set(session_id, sites)
                     shown = list(line_counts.items())[:5]
-                    line_summary = ", ".join(
-                        f"{ln}: {cnt}" for ln, cnt in shown
-                    )
+                    line_summary = ", ".join(f"{ln}: {cnt}" for ln, cnt in shown)
                     if n_lines > 5:
                         line_summary += f" … +{n_lines - 5} more"
                     store = {
@@ -915,9 +868,7 @@ def _register_load_data(app) -> None:
         # Individual file upload branch
         upload_contents = [e.get("content") for e in usable]
         upload_filenames = [e.get("filename") for e in usable]
-        paths, tmpdir = decode_upload_to_tempdir(
-            upload_contents, upload_filenames
-        )
+        paths, tmpdir = decode_upload_to_tempdir(upload_contents, upload_filenames)
         if not paths:
             return (
                 no_update,
@@ -962,7 +913,9 @@ def _register_load_data(app) -> None:
                     "n_lines": 1,
                     "line_counts": {"uploaded": len(new_records)},
                 }
-                verb = f"✓ Loaded {len(new_records)} station(s) from {len(paths)} file(s)."
+                verb = (
+                    f"✓ Loaded {len(new_records)} station(s) from {len(paths)} file(s)."
+                )
 
             # Close modal and clear selection
             return (
@@ -1016,9 +969,7 @@ def _merge_store(
     merged_n_lines = len(merged_line_counts)
 
     merged_dir = (
-        existing_dir
-        if existing_dir == new_dir
-        else f"{existing_dir} + {new_dir}"
+        existing_dir if existing_dir == new_dir else f"{existing_dir} + {new_dir}"
     )
 
     merged_store = {
@@ -1066,9 +1017,7 @@ def _register_table_update(app) -> None:
         kpi_stations = str(n) if n else "—"
 
         freq_vals = [r.get("N_freq", 0) for r in records if r.get("N_freq")]
-        kpi_freq = (
-            str(int(statistics.median(freq_vals))) if freq_vals else "—"
-        )
+        kpi_freq = str(int(statistics.median(freq_vals))) if freq_vals else "—"
 
         # Use stored n_lines when available; fall back to distinct lat clusters
         n_lines = store_data.get("n_lines", 0)
@@ -1076,11 +1025,7 @@ def _register_table_update(app) -> None:
             kpi_profiles = str(n_lines)
         else:
             lats = sorted(
-                {
-                    round(r.get("Latitude", 0), 3)
-                    for r in records
-                    if r.get("Latitude")
-                }
+                {round(r.get("Latitude", 0), 3) for r in records if r.get("Latitude")}
             )
             kpi_profiles = str(len(lats)) if lats else "—"
 
@@ -1088,9 +1033,7 @@ def _register_table_update(app) -> None:
         if data_dir == "[uploaded]":
             kpi_survey = "upload"
         elif data_dir:
-            kpi_survey = (
-                os.path.basename(data_dir.rstrip("/\\")) or data_dir[:10]
-            )
+            kpi_survey = os.path.basename(data_dir.rstrip("/\\")) or data_dir[:10]
         else:
             kpi_survey = "—"
 
@@ -1150,9 +1093,7 @@ def _register_station_list(app) -> None:
         Input(IDs.STATION_LINE_FILTER, "data"),
         Input(IDs.STORE_THEME, "data"),
     )
-    def render_station_list(
-        store_data, active_lines, selection, line_filter, theme
-    ):
+    def render_station_list(store_data, active_lines, selection, line_filter, theme):
         dark = (theme or "dark") == "dark"
         palette = _PALETTE_DARK if dark else _PALETTE_LIGHT
 
@@ -1223,17 +1164,11 @@ def _register_station_list(app) -> None:
             sid = rec.get("ID", "")
             line = rec.get("Line", "")
 
-            if (
-                line_filter
-                and line_filter != "__all__"
-                and line != line_filter
-            ):
+            if line_filter and line_filter != "__all__" and line != line_filter:
                 continue
 
             col = line_col.get(line, "#6c7086")
-            r, g, b = (
-                _hex_to_rgb(col) if col.startswith("#") else (108, 112, 134)
-            )
+            r, g, b = _hex_to_rgb(col) if col.startswith("#") else (108, 112, 134)
             is_sel = sid == selected_id
 
             # metadata: use explicit ± format for coords, comma-sep elev

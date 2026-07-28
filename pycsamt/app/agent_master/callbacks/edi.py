@@ -275,9 +275,7 @@ def register_edi(app) -> None:
         else:
             groups = _folder_to_lines(str(p))
         if mode == "auto" and ctx.triggered_id == IDs.BTN_DETECT_LINES:
-            all_ids = [
-                Path(f).stem for files in groups.values() for f in files
-            ]
+            all_ids = [Path(f).stem for files in groups.values() for f in files]
             groups = _detect_from_ids(all_ids)
         panel = _build_lines_panel(
             groups,
@@ -351,9 +349,7 @@ def register_edi(app) -> None:
         if p.is_file():
             groups = {"Default": [str(p)]}
         elif mode == "auto":
-            groups = _detect_lines_to_files(str(p)) or _folder_to_lines(
-                str(p)
-            )
+            groups = _detect_lines_to_files(str(p)) or _folder_to_lines(str(p))
         elif mode == "edit":
             base = _folder_to_lines(str(p))
             names = rename_vals or []

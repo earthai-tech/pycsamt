@@ -118,6 +118,7 @@ corresponding multiplicative physical error is
 mask for the entries included in a metric, the masked RMSE is
 
 .. math::
+   :label: eq-ai-validation-masked-rmse
 
    \operatorname{RMSE}
    =
@@ -127,7 +128,9 @@ mask for the entries included in a metric, the masked RMSE is
      \left(\hat{y}_{ij}-y_{ij}\right)^2
    }.
 
-A trained workflow would call ``inverter.predict(X_test, as_log_rho=True)``.
+Equation :eq:`eq-ai-validation-masked-rmse` is meaningful only with its mask,
+target representation, and units. A trained workflow would call
+``inverter.predict(X_test, as_log_rho=True)``.
 The miniature example below isolates the metric semantics with fixed arrays so
 the reported output is reproducible:
 
@@ -151,13 +154,13 @@ the reported output is reproducible:
    >>> overall = summarise(y_test, y_pred, n_layers=n_layers)
    >>> per_parameter = layer_rmse(y_test, y_pred)
    >>> {name: round(value, 4) for name, value in overall.items()}
-   {'rmse': 5.4778, 'mae': 3.3933, 'r2': 0.9944, 'relative_rmse': 0.0692, 'depth_rmse': 0.0577}
+   {'rmse': 5.0006, 'mae': 2.9214, 'r2': 0.9923, 'relative_rmse': 0.0596, 'depth_rmse': 0.0577}
    >>> print("resistivity RMSE by layer:", np.round(per_parameter[:n_layers], 4))
    resistivity RMSE by layer: [0.1 0.1 0.1]
    >>> print("thickness RMSE by interface:", np.round(per_parameter[n_layers:], 4))
-   thickness RMSE by interface: [ 7.0711 10.    ]
+   thickness RMSE by interface: [7.9057 8.6603]
    >>> print("finite target values:", int(np.isfinite(y_test).sum()))
-   finite target values: 15
+   finite target values: 14
 
 The available metric helpers ignore non-finite entries.  Report how many
 values each metric used; a score based on a small surviving fraction can look
@@ -202,7 +205,7 @@ ohm-m and metres for decision-facing tables:
    >>> print("median rho factor error:", np.round(np.nanmedian(rho_factor_error, axis=0), 3))
    median rho factor error: [1.259 1.259 1.259]
    >>> print("median thickness abs error m:", np.round(np.nanmedian(thickness_abs_error, axis=0), 3))
-   median thickness abs error m: [ 5. 10.]
+   median thickness abs error m: [ 7.5 10. ]
    >>> print("worst rho factor error:", round(float(np.nanmax(rho_factor_error)), 3))
    worst rho factor error: 1.259
 
@@ -242,6 +245,7 @@ model, :math:`\mathbf{d}_i` is the observed response vector, and
 :math:`j`, the normalized residual is
 
 .. math::
+   :label: eq-ai-validation-normalized-residual
 
    r_{ij}
    =
@@ -250,6 +254,7 @@ model, :math:`\mathbf{d}_i` is the observed response vector, and
 The normalized :term:`response-space metric` is then
 
 .. math::
+   :label: eq-ai-validation-response-nrms
 
    \operatorname{NRMS}
    =
@@ -258,7 +263,10 @@ The normalized :term:`response-space metric` is then
      \sum_{(i,j)\in\mathcal{M}} r_{ij}^{2}
    }.
 
-For a trained 1-D MT model, ``inverter.predict_models(X_test)`` can be passed
+Equations :eq:`eq-ai-validation-normalized-residual` and
+:eq:`eq-ai-validation-response-nrms` require observational errors, not a
+generic neural loss scale. For a trained 1-D MT model,
+``inverter.predict_models(X_test)`` can be passed
 to :class:`pycsamt.forward.MT1DForward`.  The compact example below uses
 already reconstructed responses so the residual definition is explicit:
 
@@ -283,11 +291,11 @@ already reconstructed responses so the residual definition is explicit:
    >>> nrms = np.sqrt(np.mean(residual ** 2))
    >>> inside_one_sigma = np.mean(np.abs(residual) <= 1.0)
    >>> print("normalized RMS:", round(float(nrms), 3))
-   normalized RMS: 0.961
+   normalized RMS: 0.442
    >>> print("fraction within 1 sigma:", round(float(inside_one_sigma), 3))
-   fraction within 1 sigma: 0.667
+   fraction within 1 sigma: 1.0
    >>> print("per-feature mean residual:", np.round(residual.mean(axis=0), 3))
-   per-feature mean residual: [ 0.    -0.5    0.    -0.5    0.25   0.167]
+   per-feature mean residual: [ 0.5   -0.5    0.25  -0.5    0.125  0.083]
 
 In the full workflow, ``predict_models`` converts the network output to
 :class:`pycsamt.forward.synthetic.LayeredModel` objects and enforces positive
@@ -372,6 +380,7 @@ cover target entry :math:`y_{ij}` at nominal probability :math:`1-\alpha`, the
 entry-wise empirical coverage is
 
 .. math::
+   :label: eq-ai-validation-coverage
 
    \widehat{C}(\alpha)
    =
@@ -379,7 +388,8 @@ entry-wise empirical coverage is
    \sum_{(i,j)\in\mathcal{M}}
    \mathbf{1}\{L_{ij}(\alpha)\le y_{ij}\le U_{ij}(\alpha)\}.
 
-The mean interval width,
+Equation :eq:`eq-ai-validation-coverage` measures entry-wise coverage. The mean
+interval width,
 :math:`|\mathcal{M}|^{-1}\sum_{(i,j)\in\mathcal{M}}
 \left(U_{ij}(\alpha)-L_{ij}(\alpha)\right)`, must be reported beside
 coverage, because overly wide intervals can cover well while still being
@@ -401,13 +411,18 @@ scientifically unhelpful.
    ...     [2.15, 2.65, 3.15],
    ...     [2.25, 2.75, 3.05],
    ... ])
-   >>> diagnostics = {
-   ...     alpha: float(np.mean((lower <= y_test) & (y_test <= upper)))
-   ...     for alpha in (0.20, 0.10, 0.05)
-   ... }
+   >>> alpha = 0.10
+   >>> entry_coverage = float(np.mean((lower <= y_test) & (y_test <= upper)))
+   >>> sample_coverage = float(np.mean(np.all(
+   ...     (lower <= y_test) & (y_test <= upper), axis=1
+   ... )))
    >>> mean_width = np.mean(upper - lower, axis=0)
-   >>> diagnostics
-   {0.2: 1.0, 0.1: 1.0, 0.05: 1.0}
+   >>> print("nominal coverage:", 1.0 - alpha)
+   nominal coverage: 0.9
+   >>> print("entry coverage:", entry_coverage)
+   entry coverage: 1.0
+   >>> print("simultaneous sample coverage:", sample_coverage)
+   simultaneous sample coverage: 1.0
    >>> print("mean 90% interval width:", np.round(mean_width, 3))
    mean 90% interval width: [0.3 0.3 0.3]
 
@@ -509,6 +524,49 @@ Inspect the worst cases by a metric chosen before opening them.  Avoid deleting
 difficult cases unless a reproducible data-quality rule, independent of model
 error, requires exclusion.
 
+Worked rejection decision
+-------------------------
+
+The small FCN executed in :doc:`training` is useful for demonstrating how
+separate gates combine. Before examining the results, suppose this teaching
+exercise requires log-resistivity MAE no greater than 0.3 in every layer,
+thickness MAE no greater than 100 m at every interface, no more than 10% of a
+field row outside the synthetic P1--P99 envelope, and dimensionality evidence
+compatible with station-wise 1-D interpretation. These are illustrative smoke
+test limits, not universal geophysical thresholds.
+
+.. code-block:: pycon
+
+   >>> print("resistivity layers passing:", 1, "/ 5")
+   resistivity layers passing: 1 / 5
+   >>> print("interfaces passing:", 0, "/ 4")
+   interfaces passing: 0 / 4
+   >>> print("WILLY stations requiring domain review:", 28, "/ 28")
+   WILLY stations requiring domain review: 28 / 28
+   >>> print("WILLY 3-D diagnostic fraction:", 0.856)
+   WILLY 3-D diagnostic fraction: 0.856
+   >>> decision = "rejected"
+   >>> print("validation decision:", decision)
+   validation decision: rejected
+
+.. figure:: ../../images/user_guide/ai_inversion/validation_gate_dashboard.png
+   :alt: Validation dashboard combining synthetic errors, WILLY domain departure, and dimensionality evidence
+   :align: center
+   :width: 96%
+
+   Only the first resistivity layer passes the illustrative error limit, no
+   interface passes, every WILLY station exceeds the marginal domain-review
+   threshold, and most tensor samples classify as 3-D. Checkpoint restoration
+   passed in the training audit, but that operational success cannot override
+   four scientific failures.
+
+The decision is rejection rather than ``conditional`` because failures occur
+inside the synthetic test problem as well as during field transfer. Response
+reconstruction was not supplied for this smoke checkpoint, so that mandatory
+gate is *not evaluated*, never silently counted as a pass. A production study
+would replace the illustrative thresholds, small dataset, and generic prior
+with predeclared project requirements and independent evidence.
+
 Acceptance criteria
 -------------------
 
@@ -592,3 +650,5 @@ Validation is complete when another analyst can reproduce the evidence and
 reach the same promotion decision without relying on undocumented judgment.
 Carry that evidence into :doc:`reporting` and, for field interpretation, the
 broader :doc:`../interpretation/index` workflow.
+
+

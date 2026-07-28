@@ -23,8 +23,8 @@ Quick start
 
     # Access a named scenario
     f = CATALOG.get("sedimentary")
-    print(f.rho_mid)         # geometric-mean resistivity
-    print(f.to_prior())      # dict compatible with LayeredModel.from_geology()
+    print(f.rho_mid)  # geometric-mean resistivity
+    print(f.to_prior())  # dict compatible with LayeredModel.from_geology()
 
     # Fuzzy look-up by resistivity
     matches = CATALOG.lookup_by_resistivity(100.0, n=3)
@@ -33,14 +33,16 @@ Quick start
     print(CATALOG.names())
 
     # Add a custom formation
-    CATALOG.add(Formation(
-        name="custom_ore",
-        resistivity_range=(0.01, 10.0),
-        depth_range=(100, 500),
-        n_layers_range=(2, 4),
-        description="Massive sulphide ore body",
-        rock_types=["massive sulphide", "graphite"],
-    ))
+    CATALOG.add(
+        Formation(
+            name="custom_ore",
+            resistivity_range=(0.01, 10.0),
+            depth_range=(100, 500),
+            n_layers_range=(2, 4),
+            description="Massive sulphide ore body",
+            rock_types=["massive sulphide", "graphite"],
+        )
+    )
 
 Compatibility with forward.synthetic
 -------------------------------------
@@ -48,7 +50,8 @@ Compatibility with forward.synthetic
 ``LayeredModel.from_geology(name)``::
 
     from pycsamt.metadata.geology import geology_prior
-    prior = geology_prior("sedimentary")   # → used by LayeredModel
+
+    prior = geology_prior("sedimentary")  # → used by LayeredModel
 """
 
 from __future__ import annotations
@@ -388,12 +391,14 @@ class GeologyCatalog:
         matches = CATALOG.lookup_by_resistivity(50.0, n=3)
 
         # add a custom formation
-        CATALOG.add(Formation(
-            name="custom",
-            resistivity_range=(5.0, 200.0),
-            depth_range=(100, 500),
-            n_layers_range=(3, 5),
-        ))
+        CATALOG.add(
+            Formation(
+                name="custom",
+                resistivity_range=(5.0, 200.0),
+                depth_range=(100, 500),
+                n_layers_range=(3, 5),
+            )
+        )
 
         # export to a pandas DataFrame
         df = CATALOG.to_dataframe()
@@ -442,9 +447,7 @@ class GeologyCatalog:
         key = name.lower()
         if key not in self._store:
             available = sorted(self._store.keys())
-            raise KeyError(
-                f"Formation {name!r} not found.  Available: {available}"
-            )
+            raise KeyError(f"Formation {name!r} not found.  Available: {available}")
         return self._store[key]
 
     def names(self) -> list[str]:
@@ -560,9 +563,7 @@ class GeologyCatalog:
         try:
             import pandas as pd  # noqa: PLC0415
         except ImportError as exc:
-            raise ImportError(
-                "pandas is required for to_dataframe()"
-            ) from exc
+            raise ImportError("pandas is required for to_dataframe()") from exc
 
         rows = []
         for f in self._store.values():

@@ -39,9 +39,7 @@ def test_sphz_read_legacy_and_write_block_has_unit_meta():
 
     lines = s.write()
     # banner + Unit.Phase meta present
-    assert _has_line(
-        lines, lambda ln: ln.strip().startswith("\\ $Phase-Stdev")
-    )
+    assert _has_line(lines, lambda ln: ln.strip().startswith("\\ $Phase-Stdev"))
     assert _has_line(lines, lambda ln: ln.strip().startswith("$Unit.Phase="))
 
 
@@ -69,9 +67,7 @@ def test_phase_convert_unit_roundtrip_mrad_deg():
     assert s.meta["Unit.Phase"].lower() == "mrad"
 
 
-@pytest.mark.skipif(
-    pytest.importorskip("xarray") is None, reason="xarray required"
-)
+@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
 def test_phase_to_xarray_dims_and_var():
     df = pd.DataFrame(
         {
@@ -161,9 +157,7 @@ def test_pc_hmag_read_legacy_and_to_tensor_like_position():
     assert np.isnan(T[0, 0, 0, 0])
 
 
-@pytest.mark.skipif(
-    pytest.importorskip("xarray") is None, reason="xarray required"
-)
+@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
 def test_pc_rho_to_xarray_dims_and_var():
     df = pd.DataFrame(
         {

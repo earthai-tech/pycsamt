@@ -82,9 +82,7 @@ if not audit_file.exists():
     )
 
 audit = pd.read_csv(audit_file)
-folder_health = (
-    audit.groupby("folder")["exists"].mean().rename("completeness")
-)
+folder_health = audit.groupby("folder")["exists"].mean().rename("completeness")
 print("Run-folder completeness:")
 print(folder_health.to_string())
 

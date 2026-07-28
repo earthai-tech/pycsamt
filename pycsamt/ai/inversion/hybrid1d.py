@@ -43,21 +43,22 @@ from a naive initialisation.
 Example
 -------
 >>> from pycsamt.ai.inversion import (
-...     EMInverter1D, HybridInverter1D,
+...     EMInverter1D,
+...     HybridInverter1D,
 ... )
->>> ai = EMInverter1D.load(             # doctest: +SKIP
+>>> ai = EMInverter1D.load(  # doctest: +SKIP
 ...     "checkpoints/mt1d_resnet.npz"
 ... )
->>> inv = HybridInverter1D(             # doctest: +SKIP
+>>> inv = HybridInverter1D(  # doctest: +SKIP
 ...     "edi/",
 ...     ai_inverter=ai,
 ...     max_iter=200,
 ...     smoothness_weight=0.005,
 ... )
->>> inv.fit()                           # doctest: +SKIP
+>>> inv.fit()  # doctest: +SKIP
 HybridInverter1D(n_stations=5, fitted)
->>> models = inv.predict()              # doctest: +SKIP
->>> df = inv.convergence_curves()       # doctest: +SKIP
+>>> models = inv.predict()  # doctest: +SKIP
+>>> df = inv.convergence_curves()  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -342,9 +343,7 @@ class HybridInverter1D(BaseHybridInverter):
 
         if isinstance(ai_inverter, EMInverter1D):
             if not ai_inverter._is_fitted:
-                raise ValueError(
-                    "ai_inverter must be a fitted EMInverter1D instance."
-                )
+                raise ValueError("ai_inverter must be a fitted EMInverter1D instance.")
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
             return EMInverter1D.load(Path(ai_inverter))
@@ -366,8 +365,7 @@ class HybridInverter1D(BaseHybridInverter):
         n_features = self._ai_inv._n_features
         if n_features is None:
             raise RuntimeError(
-                "ai_inverter._n_features is None. "
-                "Re-fit or reload the checkpoint."
+                "ai_inverter._n_features is None. " "Re-fit or reload the checkpoint."
             )
         # Derive n_freqs for the common grid
         # n_features = 2 * n_freqs (rho block + phase)
@@ -375,8 +373,7 @@ class HybridInverter1D(BaseHybridInverter):
 
         if verbose:
             print(
-                "Stage 1: applying EMInverter1D to "
-                f"{len(self._obs)} station(s) ..."
+                "Stage 1: applying EMInverter1D to " f"{len(self._obs)} station(s) ..."
             )
         # Use obs_to_features_1d to avoid running
         # ensure_sites on SiteObs1D dataclasses.

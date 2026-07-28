@@ -88,15 +88,17 @@ class AgentMaster(PyCSAMTObject):
 
     >>> from pycsamt.agents import AgentMaster
     >>> master = AgentMaster(provider="anthropic")
-    >>> plan = master.plan("QC the EDI files and prepare a short report",
-    ...                    data_path="data/edi/")
-    >>> plan["workflow_type"]          # doctest: +SKIP
+    >>> plan = master.plan(
+    ...     "QC the EDI files and prepare a short report",
+    ...     data_path="data/edi/",
+    ... )
+    >>> plan["workflow_type"]  # doctest: +SKIP
     'qc'
     >>> report = master.run(
     ...     "Load data/edi/, flag stations with RMS > 2, build an Occam2D "
     ...     "input for profile L22, launch inversion, and produce a PDF "
     ...     "report."
-    ... )                              # doctest: +SKIP
+    ... )  # doctest: +SKIP
 
     See Also
     --------
@@ -193,7 +195,14 @@ class AgentMaster(PyCSAMTObject):
         AgentResult
             Status, per-step outputs, reasoning, and cost tracking.
         """
-        from .router import CLARIFY, CODE, META, METRICS, QUESTION, IntentRouter
+        from .router import (
+            CLARIFY,
+            CODE,
+            META,
+            METRICS,
+            QUESTION,
+            IntentRouter,
+        )
 
         text = str(request)
         t0 = time.time()

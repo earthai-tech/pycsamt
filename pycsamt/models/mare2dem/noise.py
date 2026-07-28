@@ -191,7 +191,10 @@ def add_synthetic_noise(
     Examples
     --------
     >>> from pycsamt.models.mare2dem import read_emdata
-    >>> from pycsamt.models.mare2dem.noise import NoiseConfig, add_synthetic_noise
+    >>> from pycsamt.models.mare2dem.noise import (
+    ...     NoiseConfig,
+    ...     add_synthetic_noise,
+    ... )
     >>> resp = read_emdata("forward.EMResp")
     >>> nc = NoiseConfig(mt_rel_noise=0.05)
     >>> noisy = add_synthetic_noise(resp, nc, seed=42)
@@ -337,9 +340,14 @@ def make_synthetic_data(
 
     Examples
     --------
-    >>> from pycsamt.models.mare2dem.noise import NoiseConfig, make_synthetic_data
+    >>> from pycsamt.models.mare2dem.noise import (
+    ...     NoiseConfig,
+    ...     make_synthetic_data,
+    ... )
     >>> nc = NoiseConfig(mt_rel_noise=0.05, csem_rel_noise_e=0.05)
-    >>> em = make_synthetic_data("forward.EMResp", "synthetic.emdata", nc, seed=0)
+    >>> em = make_synthetic_data(
+    ...     "forward.EMResp", "synthetic.emdata", nc, seed=0
+    ... )
     """
     resp = read_emdata(in_file)
     noisy = add_synthetic_noise(resp, noise, seed=seed)

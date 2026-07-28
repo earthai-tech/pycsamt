@@ -103,6 +103,7 @@ law and :math:`p(\boldsymbol\epsilon\mid\mathbf m)` describes the
 :term:`noise model`, each training pair is generated as
 
 .. math::
+   :label: eq-ai-training-pair
 
    \mathbf d_i = F(\mathbf m_i) + \boldsymbol\epsilon_i,
    \qquad
@@ -192,6 +193,72 @@ Select dimension using :term:`strike`, :term:`dimensionality`,
 :term:`tipper` behavior, :term:`survey geometry`, target geometry, station
 spacing, and classical response evidence—not because a higher number sounds
 more advanced.
+
+Depth support is not the model depth
+------------------------------------
+
+An AMT frequency band does not define a sharp maximum depth. For a uniform
+earth, the :term:`skin depth` gives the electromagnetic attenuation scale
+
+.. math::
+   :label: eq-ai-skin-depth
+
+   \delta(f,\rho) = \sqrt{\frac{2\rho}{\mu_0\,2\pi f}}
+   \simeq 503\sqrt{\frac{\rho}{f}}\ \mathrm{m},
+
+where :math:`f` is frequency in hertz, :math:`\rho` is resistivity in ohm
+metres, and :math:`\mu_0` is the free-space magnetic permeability. Equation
+:eq:`eq-ai-skin-depth` describes attenuation in a homogeneous conductor. It is
+not a :term:`depth of investigation`, a vertical-resolution estimate, or
+permission to train an inverter to that depth. In a layered earth, conductive
+cover can screen deeper structure, resistive material can inflate the scale,
+and sensitivity decays gradually rather than stopping at :math:`\delta`.
+
+The bundled WILLY L18 profile makes the difference concrete. The following
+diagnostic reads all 28 stations and deliberately computes only a skin-depth
+scale from the observed XY apparent resistivity. It does not invert the data.
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.ai.inversion import sites_to_obs_1d
+
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_data/L18PLT", recursive=True, verbose=0
+   ... )
+   >>> obs = sites_to_obs_1d(sites, comp="xy")
+   >>> frequency_hz = np.asarray(obs[0].freq)
+   >>> rho_a = np.vstack([item.rho_obs for item in obs])
+   >>> rho_median = np.nanmedian(rho_a, axis=0)
+   >>> delta_m = 503.0 * np.sqrt(rho_median / frequency_hz)
+   >>> print(f"stations={len(obs)}, frequencies={frequency_hz.size}")
+   stations=28, frequencies=53
+   >>> print(f"frequency range={frequency_hz.min():.3f}--{frequency_hz.max():.0f} Hz")
+   frequency range=1.008--10400 Hz
+   >>> i = int(np.nanargmin(frequency_hz))
+   >>> print(f"lowest-frequency skin-depth scale={delta_m[i] / 1000:.1f} km")
+   lowest-frequency skin-depth scale=30.7 km
+
+.. figure:: ../../images/user_guide/ai_inversion/willy_l18_depth_support.png
+   :alt: WILLY L18 apparent-resistivity coverage and skin-depth diagnostic
+   :align: center
+   :width: 94%
+
+   The left panel shows the actual XY apparent-resistivity curves and their
+   station median. The right panel translates them through equation
+   :eq:`eq-ai-skin-depth`; the broad band is variation among stations, not an
+   uncertainty interval. The 2 km line is a conservative modelling target,
+   not a boundary inferred from the crossing.
+
+The 30.7 km value is therefore a warning against equating penetration with
+resolution. For an expected target shallower than 2 km, set the synthetic
+model bottom somewhat below the target so boundary conditions do not control
+it, but report interpretation only where response sensitivity, perturbation or
+Jacobian tests, recovery experiments, error-aware forward reconstruction, and
+independent evidence agree. Training labels below that supported interval
+teach the network a prior; the field data do not turn those labels into
+observations.
 
 Model parameterization
 ----------------------
@@ -368,22 +435,25 @@ Supervised learning objective
 A supervised inverter minimizes a :term:`model-space metric` over examples:
 
 .. math::
+   :label: eq-ai-model-loss
 
    \mathcal L_{\mathrm{model}}(\theta)
    = \frac{1}{N}\sum_i
    \ell\!\left(G_\theta(\mathbf d_i),\mathbf m_i\right).
 
-This rewards resemblance to the selected synthetic target. It does not
-guarantee that the predicted model reconstructs the field response. A stronger
-workflow also evaluates a :term:`response-space metric`:
+Equation :eq:`eq-ai-model-loss` rewards resemblance to the selected synthetic
+target, but does not guarantee that the predicted model reconstructs the field
+response. A stronger workflow also evaluates a :term:`response-space metric`:
 
 .. math::
+   :label: eq-ai-data-loss
 
    \mathcal L_{\mathrm{data}}
    = \left\|\mathbf W_d
      \left(F(\hat{\mathbf m})-\mathbf d_{\mathrm{obs}}\right)\right\|_2^2.
 
-Here :math:`\mathbf W_d` is usually built from data standard deviations or
+In equation :eq:`eq-ai-data-loss`, :math:`\mathbf W_d` is usually built from
+data standard deviations or
 quality weights, so high-uncertainty observations carry less influence than
 well-constrained ones. The forward operator, error weights, components, and
 residual space must be stated. An unweighted :term:`RMS misfit` of log
@@ -396,6 +466,7 @@ Physics-informed objective
 A PINN-style objective can combine data fit and regularization:
 
 .. math::
+   :label: eq-ai-pinn-objective
 
    \mathcal L(\theta)
    = \mathcal L_{\mathrm{data}}(\theta)
@@ -403,7 +474,8 @@ A PINN-style objective can combine data fit and regularization:
    + \lambda_l\mathcal R_l(\mathbf m_\theta)
    + \lambda_g\mathcal R_g(\mathbf m_\theta),
 
-where vertical, lateral, or graph regularizers apply according to dimension.
+In equation :eq:`eq-ai-pinn-objective`, vertical, lateral, or graph
+regularizers apply according to dimension.
 The weights determine the balance between fit and structure. They must be
 treated as inversion parameters and tested, not hidden as neural-network
 details.
@@ -627,7 +699,7 @@ Use the canonical loader and public bridge utilities:
    ... )
 
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )

@@ -26,13 +26,18 @@ rigorous* intervals:
 Typical usage
 -------------
 >>> from pycsamt.ai.inversion import EnsembleInverter
->>> from pycsamt.ai.inversion.calibration import ConformalPredictor, PosteriorCalibrator
+>>> from pycsamt.ai.inversion.calibration import (
+...     ConformalPredictor,
+...     PosteriorCalibrator,
+... )
 >>> ens = EnsembleInverter(base_estimator=inv, n_estimators=5)
->>> ens.fit(ds_train)                                           # doctest: +SKIP
->>> cp = ConformalPredictor(ens).calibrate(X_cal, y_cal)       # doctest: +SKIP
+>>> ens.fit(ds_train)  # doctest: +SKIP
+>>> cp = ConformalPredictor(ens).calibrate(X_cal, y_cal)  # doctest: +SKIP
 >>> center, lo, hi = cp.predict_intervals(X_test, alpha=0.10)  # doctest: +SKIP
->>> pc = PosteriorCalibrator().fit(y_cal, y_pred_cal, sigma_cal) # doctest: +SKIP
->>> samples = pc.predict_posterior(y_pred_test, sigma_test)     # doctest: +SKIP
+>>> pc = PosteriorCalibrator().fit(
+...     y_cal, y_pred_cal, sigma_cal
+... )  # doctest: +SKIP
+>>> samples = pc.predict_posterior(y_pred_test, sigma_test)  # doctest: +SKIP
 
 References
 ----------
@@ -158,8 +163,8 @@ class ConformalPredictor:
 
     Examples
     --------
-    >>> cp = ConformalPredictor(ens_inverter)         # doctest: +SKIP
-    >>> cp.calibrate(X_cal, y_cal)                    # doctest: +SKIP
+    >>> cp = ConformalPredictor(ens_inverter)  # doctest: +SKIP
+    >>> cp.calibrate(X_cal, y_cal)  # doctest: +SKIP
     >>> center, lo, hi = cp.predict_intervals(X_new)  # doctest: +SKIP
     """
 
@@ -209,9 +214,7 @@ class ConformalPredictor:
         sigma = np.asarray(sigma, dtype=float)
 
         # normalised residuals: max over output dimensions
-        scores = np.max(
-            np.abs(y_cal - mean) / (sigma + self.eps), axis=-1
-        )  # (n_cal,)
+        scores = np.max(np.abs(y_cal - mean) / (sigma + self.eps), axis=-1)  # (n_cal,)
 
         self._scores = np.sort(scores)
         self._alpha_fit = alpha
@@ -319,9 +322,7 @@ class ConformalPredictor:
         self._check_calibrated()
         if alphas is None:
             alphas = np.linspace(0.02, 0.50, 25)
-        return {
-            float(a): self.coverage(X_test, y_test, alpha=a) for a in alphas
-        }
+        return {float(a): self.coverage(X_test, y_test, alpha=a) for a in alphas}
 
     # ── misc ─────────────────────────────────────────────────────────────────
 
@@ -394,10 +395,12 @@ class PosteriorCalibrator:
 
     Examples
     --------
-    >>> pc = PosteriorCalibrator()                                  # doctest: +SKIP
-    >>> pc.fit(y_cal, y_pred_cal, sigma_cal)                       # doctest: +SKIP
-    >>> samples = pc.predict_posterior(y_pred_test, sigma_test)    # doctest: +SKIP
-    >>> cal_std = pc.calibrated_std(sigma_raw_test)                # doctest: +SKIP
+    >>> pc = PosteriorCalibrator()  # doctest: +SKIP
+    >>> pc.fit(y_cal, y_pred_cal, sigma_cal)  # doctest: +SKIP
+    >>> samples = pc.predict_posterior(
+    ...     y_pred_test, sigma_test
+    ... )  # doctest: +SKIP
+    >>> cal_std = pc.calibrated_std(sigma_raw_test)  # doctest: +SKIP
 
     References
     ----------
@@ -540,9 +543,9 @@ class PosteriorCalibrator:
         # Sample u ~ U(0,1) then invert the calibration map g^{-1}
         u = rng.uniform(0.0, 1.0, size=(n_samples, n_pts, n_p))
         u_clipped = np.clip(u, 1e-12, 1.0 - 1e-12)
-        p_star = np.interp(
-            u_clipped.ravel(), self._g_inv_x, self._g_inv_y
-        ).reshape(u.shape)
+        p_star = np.interp(u_clipped.ravel(), self._g_inv_x, self._g_inv_y).reshape(
+            u.shape
+        )
         p_star = np.clip(p_star, 1e-12, 1.0 - 1e-12)
 
         # Transform to standardised residual via inverse-normal
@@ -622,9 +625,7 @@ class PosteriorCalibrator:
 
     def _check_fitted(self) -> None:
         if not self._is_fitted:
-            raise RuntimeError(
-                "PosteriorCalibrator is not fitted.  Call fit() first."
-            )
+            raise RuntimeError("PosteriorCalibrator is not fitted.  Call fit() first.")
 
     def __repr__(self) -> str:
         status = "fitted" if self._is_fitted else "unfitted"

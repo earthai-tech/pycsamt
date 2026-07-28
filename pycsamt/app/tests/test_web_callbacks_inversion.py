@@ -95,9 +95,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -127,9 +125,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -287,7 +283,12 @@ class TestGenerate2dDataset:
     def test_real_generation(self):
         freqs = np.logspace(3, -1, 8)
         X, y = inv_mod._generate_2d_dataset(
-            n_profiles=3, n_stations=4, n_layers=3, freqs=freqs, noise=0.05, seed=1
+            n_profiles=3,
+            n_stations=4,
+            n_layers=3,
+            freqs=freqs,
+            noise=0.05,
+            seed=1,
         )
         assert X.shape == (3, 2, 8, 4)
         assert y.shape == (3, 3, 4)
@@ -296,13 +297,23 @@ class TestGenerate2dDataset:
 class TestAiStatsAndPlots:
     def test_ai_stats_div(self):
         div = inv_mod._ai_stats_div(
-            "AI 1-D", solver="MT1D", n_layers=4, n_train=100, epochs=10, n_test=20
+            "AI 1-D",
+            solver="MT1D",
+            n_layers=4,
+            n_train=100,
+            epochs=10,
+            n_test=20,
         )
         assert div.children[0].children == "AI 1-D"
 
     def test_ai_stats_div_with_extra(self):
         div = inv_mod._ai_stats_div(
-            "AI 2-D", solver="MT2D", n_layers=4, n_train=100, epochs=10, n_test=20,
+            "AI 2-D",
+            solver="MT2D",
+            n_layers=4,
+            n_train=100,
+            epochs=10,
+            n_test=20,
             extra=["foo: bar"],
         )
         texts = [c.children for c in div.children[1:]]
@@ -313,7 +324,8 @@ class TestAiStatsAndPlots:
 
     def test_plot_ai_convergence_real(self):
         fig = inv_mod._plot_ai_convergence(
-            {"train_loss": [1.0, 0.5, 0.2], "val_loss": [1.1, 0.6, 0.3]}, dark=True
+            {"train_loss": [1.0, 0.5, 0.2], "val_loss": [1.1, 0.6, 0.3]},
+            dark=True,
         )
         assert fig is not None
 
@@ -361,10 +373,18 @@ class TestTraditionalPlotsAndStats:
             thickness=np.array([100.0, 300.0]),
         )
         resp = MT1DForward(freqs).run(model_true)
-        em_data = EMData(method="mt", frequencies=freqs, rho_a=resp.rho_a, phase=resp.phase)
+        em_data = EMData(
+            method="mt", frequencies=freqs, rho_a=resp.rho_a, phase=resp.phase
+        )
         cfg = InversionConfig(
-            method="mt", dimension="1d", backend="builtin", data=em_data,
-            n_layers=4, regularization="smooth", max_iter=15, error_floor=0.05,
+            method="mt",
+            dimension="1d",
+            backend="builtin",
+            data=em_data,
+            n_layers=4,
+            regularization="smooth",
+            max_iter=15,
+            error_floor=0.05,
             include_phase=True,
         )
         return model_true, InversionWorkflow(cfg).run()
@@ -386,9 +406,7 @@ class TestTraditionalPlotsAndStats:
 
     def test_stats_table(self, result_1d):
         _model_true, result = result_1d
-        table = inv_mod._stats_table(
-            result, "mt", "1d", "builtin", 4, "smooth"
-        )
+        table = inv_mod._stats_table(result, "mt", "1d", "builtin", 4, "smooth")
         assert table is not None
 
 
@@ -430,7 +448,9 @@ class TestLineStationSelectors:
 
     def test_filter_pinn_stations(self, web_app):
         fn = _cb_by_input(
-            web_app, f"{IDs.INV_PINN_STATION_SEL}.options", IDs.INV_PINN_LINE_SEL
+            web_app,
+            f"{IDs.INV_PINN_STATION_SEL}.options",
+            IDs.INV_PINN_LINE_SEL,
         )
         opts = fn(["L1"], {"station_records": self.RECORDS})
         assert {o["value"] for o in opts} == {"S1", "S2"}
@@ -455,7 +475,10 @@ class TestLineStationSelectors:
 
     def test_populate_datafit_lines_with_stations(self, web_app):
         fn = _cb_multi(web_app, f"{IDs.INV_DATAFIT_LINE}.options")
-        sta_opts = [{"label": "S1", "value": "S1"}, {"label": "S3", "value": "S3"}]
+        sta_opts = [
+            {"label": "S1", "value": "S1"},
+            {"label": "S3", "value": "S3"},
+        ]
         lines, sel_style, hint_style = fn(sta_opts, {"station_records": self.RECORDS})
         assert {o["value"] for o in lines} == {"L1", "L2"}
         assert hint_style == {"display": "none"}
@@ -496,7 +519,9 @@ class TestSwitchTrackAndOut:
     def test_switch_inv_out(self, web_app, monkeypatch):
         fn = _cb(web_app, f"{IDs.INV_ACTIVE_OUT}.data")
         monkeypatch.setattr(
-            inv_mod, "ctx", type("C", (), {"triggered_id": "inv-out-tab-conv"})()
+            inv_mod,
+            "ctx",
+            type("C", (), {"triggered_id": "inv-out-tab-conv"})(),
         )
         assert fn(0, 1, 0, 0, 0) == "conv"
 
@@ -598,7 +623,9 @@ class TestAddTrueLayer:
 class TestInstallFlow:
     def test_start_install_no_clicks_prevents_update(self, web_app):
         fn = _cb_by_input(
-            web_app, f"{IDs.INV_INSTALL_INTERVAL}.disabled", IDs.BTN_INV_INSTALL_YES
+            web_app,
+            f"{IDs.INV_INSTALL_INTERVAL}.disabled",
+            IDs.BTN_INV_INSTALL_YES,
         )
         with pytest.raises(PreventUpdate):
             fn(None)
@@ -607,7 +634,9 @@ class TestInstallFlow:
         called = threading.Event()
         monkeypatch.setattr(inv_mod, "_run_pip_install", called.set)
         fn = _cb_by_input(
-            web_app, f"{IDs.INV_INSTALL_INTERVAL}.disabled", IDs.BTN_INV_INSTALL_YES
+            web_app,
+            f"{IDs.INV_INSTALL_INTERVAL}.disabled",
+            IDs.BTN_INV_INSTALL_YES,
         )
         out = fn(1)
         assert called.wait(timeout=2.0)
@@ -640,7 +669,10 @@ class TestInstallFlow:
         from dash import no_update
 
         inv_mod._install_state.update(
-            status="done", progress=100, log_lines=["ok"], done_time=time.time()
+            status="done",
+            progress=100,
+            log_lines=["ok"],
+            done_time=time.time(),
         )
         fn = _cb_multi(web_app, f"{IDs.INV_INSTALL_PROGRESS}.value")
         out = fn(1)
@@ -649,7 +681,9 @@ class TestInstallFlow:
 
     def test_poll_install_done_elapsed(self, web_app):
         inv_mod._install_state.update(
-            status="done", progress=100, log_lines=["ok"],
+            status="done",
+            progress=100,
+            log_lines=["ok"],
             done_time=time.time() - 10,
         )
         fn = _cb_multi(web_app, f"{IDs.INV_INSTALL_PROGRESS}.value")
@@ -684,9 +718,9 @@ class TestHybCheckpointInfo:
 
         buf = io.BytesIO()
         np.savez(buf, weights=np.zeros(3), bias=np.zeros(1))
-        contents = "data:application/npz;base64," + base64.b64encode(
-            buf.getvalue()
-        ).decode()
+        contents = (
+            "data:application/npz;base64," + base64.b64encode(buf.getvalue()).decode()
+        )
         out = self._fn(web_app)(contents, "ckpt.npz")
         assert "keys:" in out.children
 
@@ -784,9 +818,18 @@ class _FakeInv1D:
 
 
 class _FakeInv2D:
-    def __init__(self, n_components=2, n_depth=3, n_stations=4, n_freqs=10,
-                 unet_depth=None, dropout=0.1):
-        self._channels = [8, 16, 32] if unet_depth is None else list(range(unet_depth + 2))
+    def __init__(
+        self,
+        n_components=2,
+        n_depth=3,
+        n_stations=4,
+        n_freqs=10,
+        unet_depth=None,
+        dropout=0.1,
+    ):
+        self._channels = (
+            [8, 16, 32] if unet_depth is None else list(range(unet_depth + 2))
+        )
         self._history = {"train_loss": [1.0, 0.4]}
 
     def fit(self, X, y, **kw):
@@ -823,15 +866,25 @@ class TestRunInversionTraditional:
 
     def test_trad_1d_synthetic_success(self, web_app):
         out = self._fn(web_app)(1, *_default_run_args())
-        src, src_conv, log_spans, stats, spinner, msg, tab, is_open, body, modal, run_msg = out
+        (
+            src,
+            src_conv,
+            log_spans,
+            stats,
+            spinner,
+            msg,
+            tab,
+            is_open,
+            body,
+            modal,
+            run_msg,
+        ) = out
         assert src.startswith("data:image/png")
         assert is_open is False
         assert tab == "result"
 
     def test_trad_2d_synthetic_success(self, web_app):
-        out = self._fn(web_app)(
-            1, *_default_run_args(t_dim="2d", max_iter=5)
-        )
+        out = self._fn(web_app)(1, *_default_run_args(t_dim="2d", max_iter=5))
         assert out[7] is False
 
     def test_trad_non_builtin_backend_warns(self, web_app):
@@ -841,15 +894,17 @@ class TestRunInversionTraditional:
 
     def test_trad_session_source_no_data(self, web_app):
         out = self._fn(web_app)(
-            1, *_default_run_args(data_src="session", session_id="no-such-session")
+            1,
+            *_default_run_args(data_src="session", session_id="no-such-session"),
         )
         assert "No session data" in out[5]
 
     def test_trad_session_source_real_data(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, *_default_run_args(
+            1,
+            *_default_run_args(
                 data_src="session", session_id=cached_session, max_iter=5
-            )
+            ),
         )
         # Either a successful run or a graceful "could not extract" error --
         # both are valid outcomes depending on WILLY's real freq coverage;
@@ -858,7 +913,8 @@ class TestRunInversionTraditional:
 
     def test_trad_invalid_true_table_reports_error(self, web_app):
         out = self._fn(web_app)(
-            1, *_default_run_args(true_table=[{"resistivity": -1, "thickness": 100}])
+            1,
+            *_default_run_args(true_table=[{"resistivity": -1, "thickness": 100}]),
         )
         assert out[7] is True
         assert "Error" in out[5]
@@ -875,30 +931,25 @@ class TestRunInversionAI:
         assert "Install PyTorch" in out[5]
 
     def test_ai_1d_real_dataset_mocked_inverter(self, web_app, monkeypatch):
-        monkeypatch.setattr(
-            "pycsamt.ai.inversion.EMInverter1D", _FakeInv1D
-        )
+        monkeypatch.setattr("pycsamt.ai.inversion.EMInverter1D", _FakeInv1D)
         out = self._fn(web_app)(1, *_default_run_args(track="ai", ai_dim="1d"))
         assert out[7] is False
         assert out[0].startswith("data:image/png")
 
     def test_ai_2d_real_dataset_mocked_inverter(self, web_app, monkeypatch):
-        monkeypatch.setattr(
-            "pycsamt.ai.inversion.EMInverter2D", _FakeInv2D
-        )
+        monkeypatch.setattr("pycsamt.ai.inversion.EMInverter2D", _FakeInv2D)
         out = self._fn(web_app)(
             1, *_default_run_args(track="ai", ai_dim="2d", ai_n_stations=4)
         )
         assert out[7] is False
 
     def test_ai_3d_real_dataset_mocked_inverter(self, web_app, monkeypatch):
-        monkeypatch.setattr(
-            "pycsamt.ai.inversion.GCNInverter3D", _FakeGCN3D
-        )
+        monkeypatch.setattr("pycsamt.ai.inversion.GCNInverter3D", _FakeGCN3D)
         out = self._fn(web_app)(
-            1, *_default_run_args(
+            1,
+            *_default_run_args(
                 track="ai", ai_dim="3d", ai_n_stations_3d=6, ai_n_layers=3
-            )
+            ),
         )
         assert out[7] is False
 
@@ -907,9 +958,7 @@ class TestRunInversionAI:
             def __init__(self, **kw):
                 raise RuntimeError("inverter boom")
 
-        monkeypatch.setattr(
-            "pycsamt.ai.inversion.EMInverter1D", _BoomInverter
-        )
+        monkeypatch.setattr("pycsamt.ai.inversion.EMInverter1D", _BoomInverter)
         out = self._fn(web_app)(1, *_default_run_args(track="ai", ai_dim="1d"))
         assert out[7] is True
         assert "inverter boom" in out[8]
@@ -973,7 +1022,11 @@ class _FakePinnInv:
         import pandas as pd
 
         return pd.DataFrame(
-            {"station": ["S1", "S2"], "freq": [10.0, 10.0], "resid": [0.1, 0.2]}
+            {
+                "station": ["S1", "S2"],
+                "freq": [10.0, 10.0],
+                "resid": [0.1, 0.2],
+            }
         )
 
 
@@ -1011,14 +1064,16 @@ class TestRunPinnHybridInversion:
 
     def test_pinn_session_source_no_session(self, web_app):
         out = self._fn(web_app)(
-            1, *_default_pinn_hyb_args(track="pinn", pinn_src="session", session_id=None)
+            1,
+            *_default_pinn_hyb_args(track="pinn", pinn_src="session", session_id=None),
         )
         assert out[7] is True
         assert "No session" in out[8]
 
     def test_pinn_synthetic_2d_unsupported(self, web_app):
         out = self._fn(web_app)(
-            1, *_default_pinn_hyb_args(track="pinn", pinn_dim="2d", pinn_src="synthetic")
+            1,
+            *_default_pinn_hyb_args(track="pinn", pinn_dim="2d", pinn_src="synthetic"),
         )
         assert out[7] is True
         assert "only" in out[8]
@@ -1029,7 +1084,8 @@ class TestRunPinnHybridInversion:
             lambda obs, dim, **kw: _FakePinnInv(),
         )
         monkeypatch.setattr(
-            "pycsamt.app.web.utils_pinn.plot_pinn_section", _fake_plot_pinn_section
+            "pycsamt.app.web.utils_pinn.plot_pinn_section",
+            _fake_plot_pinn_section,
         )
         monkeypatch.setattr(
             "pycsamt.app.web.utils_pinn.plot_pinn_convergence",
@@ -1074,7 +1130,8 @@ class TestRunPinnHybridInversion:
         monkeypatch.setattr(
             "pycsamt.app.web.utils_pinn.session_to_obs_1d",
             lambda session_id, stations, comp="xy": [
-                SimpleNamespace(name="S1"), SimpleNamespace(name="S2")
+                SimpleNamespace(name="S1"),
+                SimpleNamespace(name="S2"),
             ],
         )
         monkeypatch.setattr(
@@ -1082,7 +1139,8 @@ class TestRunPinnHybridInversion:
             lambda obs, dim, ckpt_path, **kw: _FakePinnInv(),
         )
         monkeypatch.setattr(
-            "pycsamt.app.web.utils_pinn.plot_pinn_section", _fake_plot_pinn_section
+            "pycsamt.app.web.utils_pinn.plot_pinn_section",
+            _fake_plot_pinn_section,
         )
         monkeypatch.setattr(
             "pycsamt.app.web.utils_pinn.plot_pinn_convergence",
@@ -1092,10 +1150,12 @@ class TestRunPinnHybridInversion:
             "pycsamt.app.web.utils_pinn.pinn_stats_div", _fake_pinn_stats_div
         )
         out = self._fn(web_app)(
-            1, *_default_pinn_hyb_args(
-                track="hybrid", hyb_ckpt="data:application/npz;base64,AA==",
+            1,
+            *_default_pinn_hyb_args(
+                track="hybrid",
+                hyb_ckpt="data:application/npz;base64,AA==",
                 session_id=cached_session,
-            )
+            ),
         )
         assert out[7] is False
         hyb_store = out[11]

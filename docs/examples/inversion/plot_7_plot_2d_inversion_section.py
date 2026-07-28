@@ -99,9 +99,7 @@ if result.mode != "3d":
 # as a diagnostic/interpretive product, not as a final truth.
 
 fig_misfit = PlotMisfit(result=result).plot()
-fig_misfit.axes[0].set_title(
-    "ModEM convergence before section interpretation"
-)
+fig_misfit.axes[0].set_title("ModEM convergence before section interpretation")
 misfit_file = figure_dir / "modem_sample_misfit.png"
 fig_misfit.savefig(misfit_file, dpi=120)
 plt.show()

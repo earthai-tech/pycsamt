@@ -141,9 +141,7 @@ class TSect(EDIComponentBase):
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         start = None
         for i, ln in enumerate(lines):
@@ -304,8 +302,7 @@ class TSIO(EDIComponentBase):
     Examples
     --------
     >>> sect = TSect.from_file("sound.edi")
-    >>> io = TSIO.from_file("sound.edi",
-    ...                     start_line=sect.start_data_lines_num)
+    >>> io = TSIO.from_file("sound.edi", start_line=sect.start_data_lines_num)
     >>> len(io.blocks)
     2
     >>> io.blocks[0].id, io.blocks[0].dt
@@ -373,9 +370,7 @@ class TSIO(EDIComponentBase):
                 i += 1
                 continue
 
-            blk, nxt = cls._parse_block(
-                lines, i, verbose=verbose, logger=logger
-            )
+            blk, nxt = cls._parse_block(lines, i, verbose=verbose, logger=logger)
             inst.blocks.append(blk)
             i = nxt
 
@@ -468,11 +463,7 @@ class TSIO(EDIComponentBase):
                 v = blk.options[k]
                 head.append(f"{k.upper()}={v}")
 
-            n_hint = (
-                blk.nvals_hint
-                if blk.nvals_hint is not None
-                else len(blk.values)
-            )
+            n_hint = blk.nvals_hint if blk.nvals_hint is not None else len(blk.values)
             out.append(" ".join(head) + f" // {n_hint}\n")
 
             vals: list[str] = []

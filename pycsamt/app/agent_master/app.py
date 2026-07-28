@@ -6,12 +6,12 @@ pyCSAMT Agent Master — Dash app factory.
 Usage::
 
     from pycsamt.app.agent_master import launch
-    launch()               # http://localhost:8765
+
+    launch()  # http://localhost:8765
 
     # or
-    from pycsamt.app.agent_master.app import (
-        create_app
-    )
+    from pycsamt.app.agent_master.app import create_app
+
     server = create_app().server  # WSGI
 """
 

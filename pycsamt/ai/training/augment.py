@@ -123,18 +123,14 @@ class AugmentNoise(_BaseAugmenter):
         clip: float | None = 3.0,
     ) -> None:
         self.sigma = float(sigma)
-        self.phase_sigma = (
-            float(phase_sigma) if phase_sigma is not None else sigma
-        )
+        self.phase_sigma = float(phase_sigma) if phase_sigma is not None else sigma
         self.clip = clip
 
     def _apply(self, X, y, rng):
         X_out = X.copy()
         noise = rng.normal(0.0, self.sigma, X_out.shape).astype(X_out.dtype)
         if self.clip is not None:
-            noise = np.clip(
-                noise, -self.clip * self.sigma, self.clip * self.sigma
-            )
+            noise = np.clip(noise, -self.clip * self.sigma, self.clip * self.sigma)
         X_out += noise
         return X_out, y
 
@@ -188,9 +184,7 @@ class AugmentStaticShift(_BaseAugmenter):
         lo, hi = self.shift_range
         X_out = X.copy()
         n_feat = X_out.shape[1] if X_out.ndim > 1 else len(X_out)
-        n_amp = (
-            self.n_amp_features if self.n_amp_features is not None else n_feat
-        )
+        n_amp = self.n_amp_features if self.n_amp_features is not None else n_feat
 
         if X_out.ndim == 1:
             shift = rng.uniform(np.log10(lo), np.log10(hi))
@@ -200,9 +194,7 @@ class AugmentStaticShift(_BaseAugmenter):
             if self.per_sample:
                 shifts = rng.uniform(np.log10(lo), np.log10(hi), size=(n, 1))
             else:
-                shifts = np.full(
-                    (n, 1), rng.uniform(np.log10(lo), np.log10(hi))
-                )
+                shifts = np.full((n, 1), rng.uniform(np.log10(lo), np.log10(hi)))
             X_out[:, :n_amp] += shifts.astype(X_out.dtype)
 
         return X_out, y
@@ -340,11 +332,13 @@ class Compose:
 
     Examples
     --------
-    >>> aug = Compose([
-    ...     AugmentStaticShift(shift_range=(0.5, 2.0)),
-    ...     AugmentNoise(sigma=0.03),
-    ...     AugmentFreqDrop(drop_rate=0.05),
-    ... ])
+    >>> aug = Compose(
+    ...     [
+    ...         AugmentStaticShift(shift_range=(0.5, 2.0)),
+    ...         AugmentNoise(sigma=0.03),
+    ...         AugmentFreqDrop(drop_rate=0.05),
+    ...     ]
+    ... )
     >>> X_aug, y_aug = aug(X_train, y_train)
     """
 

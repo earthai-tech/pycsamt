@@ -253,15 +253,11 @@ class MapViewerWindow(PanelWindow):
         layout.addWidget(grp_crs)
 
         # Wire CRS controls
-        self._combo_crs_mode.currentTextChanged.connect(
-            self._on_crs_mode_changed
-        )
+        self._combo_crs_mode.currentTextChanged.connect(self._on_crs_mode_changed)
         self._spin_utm_zone.valueChanged.connect(self._update_crs_info)
         self._radio_utm_n.toggled.connect(self._update_crs_info)
         self._edit_epsg.textChanged.connect(self._update_crs_info)
-        self._on_crs_mode_changed(
-            self._combo_crs_mode.currentText()
-        )  # init visibility
+        self._on_crs_mode_changed(self._combo_crs_mode.currentText())  # init visibility
 
         # ── 5. Display ────────────────────────────────────────────────────────
         grp_disp, lay_disp = make_group("Display")
@@ -448,8 +444,7 @@ class MapViewerWindow(PanelWindow):
             T = depth**2 / (503.0**2 * rho_bar)
             f = 1.0 / T if T > 0 else 0.0
             self._lbl_depth_period.setText(
-                f"≈ T = {T:.4g} s  (f = {f:.4g} Hz)\n"
-                f"using ρ̄ ≈ {rho_bar:.3g} Ω·m"
+                f"≈ T = {T:.4g} s  (f = {f:.4g} Hz)\n" f"using ρ̄ ≈ {rho_bar:.3g} Ω·m"
             )
         else:
             self._lbl_depth_period.setText("Load data for period estimate")
@@ -579,9 +574,7 @@ class MapViewerWindow(PanelWindow):
             "depth": "Depth",
             "resistivity": "Resistivity",
         }
-        idx = self._combo_type.findText(
-            _type_labels.get(panel._map_type, "Station")
-        )
+        idx = self._combo_type.findText(_type_labels.get(panel._map_type, "Station"))
         if idx >= 0:
             self._combo_type.setCurrentIndex(idx)
 
@@ -650,9 +643,7 @@ class MapViewerWindow(PanelWindow):
         # Frequency / component (set text directly; combo may be empty if no
         # sites are loaded yet — redraw() on map_panel handles it gracefully)
         comp_labels = {"xy": "XY", "yx": "YX", "det": "Det"}
-        idx = self._combo_comp.findText(
-            comp_labels.get(panel._component, "XY")
-        )
+        idx = self._combo_comp.findText(comp_labels.get(panel._component, "XY"))
         if idx >= 0:
             self._combo_comp.setCurrentIndex(idx)
         self._spin_depth.setValue(panel._target_depth_m)
@@ -682,9 +673,7 @@ class MapViewerWindow(PanelWindow):
         provider = self._combo_basemap.currentText()
         base_a = self._slider_base_alpha.value() / 100.0
         show_cbar = self._chk_cbar.isChecked()
-        cbar_orient = (
-            "vertical" if self._radio_cbar_v.isChecked() else "horizontal"
-        )
+        cbar_orient = "vertical" if self._radio_cbar_v.isChecked() else "horizontal"
         source_crs = self._resolve_source_crs()
 
         try:
@@ -718,9 +707,7 @@ class MapViewerWindow(PanelWindow):
             ExportDialog,
         )
 
-        ExportDialog(
-            figure=self._map_panel._canvas.figure, parent=self
-        ).exec()
+        ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()
 
 
 # ── MapDetailWindow ───────────────────────────────────────────────────────────
@@ -1010,9 +997,7 @@ class MapDetailWindow(QDialog):
             "depth": "Depth",
             "resistivity": "Resistivity",
         }
-        idx = self._combo_type.findText(
-            _type_labels.get(panel._map_type, "Station")
-        )
+        idx = self._combo_type.findText(_type_labels.get(panel._map_type, "Station"))
         if idx >= 0:
             self._combo_type.setCurrentIndex(idx)
 
@@ -1081,9 +1066,7 @@ class MapDetailWindow(QDialog):
 
         # Component / depth / freq
         _comp_labels = {"xy": "XY", "yx": "YX", "det": "Det"}
-        idx = self._combo_comp.findText(
-            _comp_labels.get(panel._component, "XY")
-        )
+        idx = self._combo_comp.findText(_comp_labels.get(panel._component, "XY"))
         if idx >= 0:
             self._combo_comp.setCurrentIndex(idx)
         self._spin_depth.setValue(panel._target_depth_m)
@@ -1176,9 +1159,7 @@ class MapDetailWindow(QDialog):
             provider=self._combo_basemap.currentText(),
             basemap_alpha=self._slider_base_alpha.value() / 100.0,
             show_cbar=self._chk_cbar.isChecked(),
-            cbar_orient="vertical"
-            if self._radio_cbar_v.isChecked()
-            else "horizontal",
+            cbar_orient="vertical" if self._radio_cbar_v.isChecked() else "horizontal",
             source_crs=self._resolve_crs(),
             log_scale=self._chk_log.isChecked(),
         )
@@ -1188,6 +1169,4 @@ class MapDetailWindow(QDialog):
             ExportDialog,
         )
 
-        ExportDialog(
-            figure=self._map_panel._canvas.figure, parent=self
-        ).exec()
+        ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()

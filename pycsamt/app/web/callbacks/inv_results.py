@@ -215,9 +215,7 @@ def _make_fig_modem(result, tab: str, controls: dict) -> plt.Figure:
     elif which == "iteration" and iteration is not None:
         iter_keys = sorted(
             [k for k in result.models if k.startswith("iter_")],
-            key=lambda k: (
-                int(k.split("_")[-1]) if k.split("_")[-1].isdigit() else 0
-            ),
+            key=lambda k: (int(k.split("_")[-1]) if k.split("_")[-1].isdigit() else 0),
         )
         if iter_keys:
             idx = max(0, min(int(iteration) - 1, len(iter_keys) - 1))
@@ -276,9 +274,7 @@ def _make_fig_modem(result, tab: str, controls: dict) -> plt.Figure:
         ).plot()
 
     if tab == "depthmap":
-        raw = (
-            controls.get("dm_depths", "50,200,500,1000") or "50,200,500,1000"
-        )
+        raw = controls.get("dm_depths", "50,200,500,1000") or "50,200,500,1000"
         depths = [float(v.strip()) for v in raw.split(",") if v.strip()]
         ncols = int(controls.get("dm_ncols", 2) or 2)
         dm_lat = controls.get("dm_lat")
@@ -471,9 +467,7 @@ def _build_info_strip(result, solver: str, path: str) -> list:
 
     items = [
         _badge(solver.upper(), "primary"),
-        html.Span(
-            Path(path).name, className="adv-info-group me-2 text-muted"
-        ),
+        html.Span(Path(path).name, className="adv-info-group me-2 text-muted"),
     ]
     try:
         if solver == "modem":
@@ -868,16 +862,12 @@ def register_inv_results(app) -> None:
                 _spinner_off,
             )
 
-        solver = (
-            solver_hint if solver_hint != "auto" else _detect_solver(path)
-        )
+        solver = solver_hint if solver_hint != "auto" else _detect_solver(path)
         if solver == "unknown" or solver not in _LOADERS:
             return (
                 no_update,
                 [
-                    html.I(
-                        className="bi bi-question-circle me-1 text-warning"
-                    ),
+                    html.I(className="bi bi-question-circle me-1 text-warning"),
                     f"Cannot detect solver in: {path.name}",
                 ],
                 no_update,
@@ -892,9 +882,7 @@ def register_inv_results(app) -> None:
             return (
                 no_update,
                 [
-                    html.I(
-                        className="bi bi-exclamation-triangle me-1 text-danger"
-                    ),
+                    html.I(className="bi bi-exclamation-triangle me-1 text-danger"),
                     f"Load error: {exc}",
                 ],
                 no_update,
@@ -912,24 +900,16 @@ def register_inv_results(app) -> None:
                 data = result.data_obs or result.data_pred
                 if data is not None and hasattr(data, "stations"):
                     station_opts = [
-                        {"label": s, "value": s}
-                        for s in sorted(data.stations)
+                        {"label": s, "value": s} for s in sorted(data.stations)
                     ]
             elif solver == "occam2d":
-                if (
-                    hasattr(result, "response")
-                    and result.response is not None
-                ):
+                if hasattr(result, "response") and result.response is not None:
                     stas = getattr(result.response, "stations", [])
-                    station_opts = [
-                        {"label": s, "value": s} for s in sorted(stas)
-                    ]
+                    station_opts = [{"label": s, "value": s} for s in sorted(stas)]
         except Exception:
             pass
 
-        n_iter = int(
-            getattr(result, "n_iter", getattr(result, "n_iterations", 0)) or 0
-        )
+        n_iter = int(getattr(result, "n_iter", getattr(result, "n_iterations", 0)) or 0)
         rms_val = getattr(result, "final_rms", float("nan"))
         try:
             rms_f = float(rms_val or float("nan"))
@@ -942,9 +922,7 @@ def register_inv_results(app) -> None:
             "n_iter": n_iter,
             "rms": rms_f,
         }
-        rms_str = (
-            f"{rms_f:.3f}" if not __import__("math").isnan(rms_f) else "?"
-        )
+        rms_str = f"{rms_f:.3f}" if not __import__("math").isnan(rms_f) else "?"
         status = [
             html.I(className="bi bi-check-circle me-1 text-success"),
             f"{solver.upper()} loaded · {n_iter} iter · RMS={rms_str}",

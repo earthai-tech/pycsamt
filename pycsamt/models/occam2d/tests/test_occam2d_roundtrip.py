@@ -39,9 +39,7 @@ def test_startup_roundtrip(tmp_path):
     assert back.iteration == 0
     assert back.n_params == orig.n_params
     assert math.isclose(back.target_misfit, orig.target_misfit, rel_tol=1e-5)
-    assert math.isclose(
-        back.lagrange_value, orig.lagrange_value, rel_tol=1e-4
-    )
+    assert math.isclose(back.lagrange_value, orig.lagrange_value, rel_tol=1e-4)
     assert np.allclose(back.param_values, orig.param_values, atol=1e-4)
 
 
@@ -61,12 +59,8 @@ def test_iter_roundtrip(tmp_path):
     assert back.iteration == orig.iteration
     assert back.n_params == orig.n_params
     assert math.isclose(back.misfit_value, orig.misfit_value, rel_tol=1e-4)
-    assert math.isclose(
-        back.lagrange_value, orig.lagrange_value, rel_tol=1e-4
-    )
-    assert math.isclose(
-        back.roughness_value, orig.roughness_value, rel_tol=1e-4
-    )
+    assert math.isclose(back.lagrange_value, orig.lagrange_value, rel_tol=1e-4)
+    assert math.isclose(back.roughness_value, orig.roughness_value, rel_tol=1e-4)
     assert back.misfit_reached == orig.misfit_reached
     assert np.allclose(back.param_values, orig.param_values, atol=1e-4)
 
@@ -109,18 +103,14 @@ def test_model_roundtrip(tmp_path):
     assert back.n_layers == orig.n_layers
     assert back.n_params == orig.n_params
     assert back.n_exceptions == orig.n_exceptions
-    assert math.isclose(
-        back.binding_offset, orig.binding_offset, abs_tol=1e-6
-    )
+    assert math.isclose(back.binding_offset, orig.binding_offset, abs_tol=1e-6)
     assert back.mesh_file == orig.mesh_file
     assert back.mesh_type == orig.mesh_type
     # Verify every layer's params array
     for i, (bl, ol) in enumerate(zip(back.layers, orig.layers)):
         assert bl["n_merge"] == ol["n_merge"], f"layer {i} n_merge mismatch"
         assert bl["n_cols"] == ol["n_cols"], f"layer {i} n_cols mismatch"
-        assert np.array_equal(bl["params"], ol["params"]), (
-            f"layer {i} params mismatch"
-        )
+        assert np.array_equal(bl["params"], ol["params"]), f"layer {i} params mismatch"
 
 
 # -----------------------------------------------------------------------

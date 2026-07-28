@@ -68,9 +68,7 @@ def test_misfit_with_lagrange(result):
 def test_misfit_no_roughness(result):
     from pycsamt.models.occam2d.plot import PlotMisfit
 
-    fig = PlotMisfit(
-        result=result, show_roughness=False, target_line=False
-    ).plot()
+    fig = PlotMisfit(result=result, show_roughness=False, target_line=False).plot()
     assert fig is not None
 
 
@@ -249,9 +247,7 @@ def test_sounding1d_selected_stations(result):
 def test_sounding1d_depth_max(result):
     from pycsamt.models.occam2d.plot import PlotSounding1D
 
-    fig = PlotSounding1D(
-        result=result, depth_max=30000.0, max_stations=4
-    ).plot()
+    fig = PlotSounding1D(result=result, depth_max=30000.0, max_stations=4).plot()
     assert fig is not None
 
 
@@ -349,9 +345,7 @@ def test_response_grid_rms_in_title(result):
 
     fig = PlotResponseGrid(result=result, max_stations=2, n_cols=2).plot()
     titles = [ax.get_title() for ax in fig.axes if ax.get_title()]
-    assert any("[" in t for t in titles), (
-        "expected RMS annotation in panel titles"
-    )
+    assert any("[" in t for t in titles), "expected RMS annotation in panel titles"
 
 
 def test_response_grid_te_only(result):
@@ -365,9 +359,7 @@ def test_response_grid_selected_stations(result):
     from pycsamt.models.occam2d.plot import PlotResponseGrid
 
     stations = result.data.sites[:4]
-    fig = PlotResponseGrid(
-        result=result, stations=list(stations), n_cols=4
-    ).plot()
+    fig = PlotResponseGrid(result=result, stations=list(stations), n_cols=4).plot()
     assert fig is not None
 
 

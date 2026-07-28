@@ -74,12 +74,8 @@ def register_dashboard(app) -> None:
             header = html.Div(
                 [
                     html.Span("Line", className="dlt-col dlt-head"),
-                    html.Span(
-                        "Stations", className="dlt-col dlt-head dlt-num"
-                    ),
-                    html.Span(
-                        "Coverage", className="dlt-col dlt-head dlt-bar"
-                    ),
+                    html.Span("Stations", className="dlt-col dlt-head dlt-num"),
+                    html.Span("Coverage", className="dlt-col dlt-head dlt-bar"),
                 ],
                 className="dlt-row dlt-header",
             )
@@ -115,9 +111,7 @@ def register_dashboard(app) -> None:
 
         # ── Data quality indicators ───────────────────────────────────────
         n_tipper = sum(1 for r in records if r.get("Tipper"))
-        n_valid = sum(
-            1 for r in records if r.get("Latitude") and r.get("Longitude")
-        )
+        n_valid = sum(1 for r in records if r.get("Latitude") and r.get("Longitude"))
         n_nfreq = [r.get("N_freq", 0) for r in records if r.get("N_freq")]
         avg_freq = int(sum(n_nfreq) / len(n_nfreq)) if n_nfreq else 0
 
@@ -134,31 +128,21 @@ def register_dashboard(app) -> None:
             )
 
         quality_content = [
-            _qc_chip(
-                "geo", f"{n_valid}/{n_sta} with coordinates", n_valid == n_sta
-            ),
-            _qc_chip(
-                "freq", f"avg {avg_freq} frequencies/station", avg_freq >= 30
-            ),
+            _qc_chip("geo", f"{n_valid}/{n_sta} with coordinates", n_valid == n_sta),
+            _qc_chip("freq", f"avg {avg_freq} frequencies/station", avg_freq >= 30),
             _qc_chip("tip", f"{n_tipper} stations with tipper", n_tipper > 0),
         ]
 
         # ── Survey name badge ─────────────────────────────────────────────
         import os
 
-        dir_name = (
-            os.path.basename(data_dir.rstrip("/\\")) if data_dir else "survey"
-        )
+        dir_name = os.path.basename(data_dir.rstrip("/\\")) if data_dir else "survey"
         survey_badge = dir_name or "survey"
 
         # ── Health badge ──────────────────────────────────────────────────
         all_ok = (n_valid == n_sta) and (avg_freq >= 30)
-        badge_text = (
-            "✓ All checks passed" if all_ok else "⚠ Review data quality"
-        )
-        badge_cls = (
-            "dash-health-badge good" if all_ok else "dash-health-badge warn"
-        )
+        badge_text = "✓ All checks passed" if all_ok else "⚠ Review data quality"
+        badge_cls = "dash-health-badge good" if all_ok else "dash-health-badge warn"
 
         return (
             _hide,
@@ -241,9 +225,7 @@ def register_dashboard(app) -> None:
 
         sid = (selection or {}).get("station_id", "")
         records = store_data.get("station_records", [])
-        match = next(
-            (r for r in records if str(r.get("ID")) == str(sid)), None
-        )
+        match = next((r for r in records if str(r.get("ID")) == str(sid)), None)
 
         if not match:
             if sid:
@@ -287,8 +269,7 @@ def register_dashboard(app) -> None:
             _html.Span("·", className="prof-info-sep"),
             # Coordinates
             _html.Span(
-                f"{lat_str}, {lon_str}"
-                + (f"  {elev_str}" if elev_str else ""),
+                f"{lat_str}, {lon_str}" + (f"  {elev_str}" if elev_str else ""),
                 className="prof-info-coords",
             ),
             _html.Span("·", className="prof-info-sep"),
@@ -316,9 +297,7 @@ def register_dashboard(app) -> None:
 
         if line is not None:
             children.insert(2, _html.Span("·", className="prof-info-sep"))
-            children.insert(
-                3, _html.Span(f"Line {line}", className="prof-info-coords")
-            )
+            children.insert(3, _html.Span(f"Line {line}", className="prof-info-coords"))
 
         return children
 
@@ -330,18 +309,12 @@ def register_dashboard(app) -> None:
     )
     def update_map_station_info(selection, store_data):
         if not selection:
-            return html.Span(
-                "Click a station on the map", className="text-muted small"
-            )
+            return html.Span("Click a station on the map", className="text-muted small")
         sid = selection.get("station_id", "")
         if not sid or not store_data:
-            return html.Span(
-                "Click a station on the map", className="text-muted small"
-            )
+            return html.Span("Click a station on the map", className="text-muted small")
         records = store_data.get("station_records", [])
-        match = next(
-            (r for r in records if str(r.get("ID")) == str(sid)), None
-        )
+        match = next((r for r in records if str(r.get("ID")) == str(sid)), None)
         if not match:
             return html.Span(sid, className="fw-semibold small")
         lat = match.get("Latitude", "—")
@@ -364,15 +337,11 @@ def register_dashboard(app) -> None:
                     [
                         html.Span("Lat: ", className="map-info-key"),
                         html.Span(
-                            f"{lat:.4f}°"
-                            if isinstance(lat, float)
-                            else str(lat)
+                            f"{lat:.4f}°" if isinstance(lat, float) else str(lat)
                         ),
                         html.Span("  Lon: ", className="map-info-key"),
                         html.Span(
-                            f"{lon:.4f}°"
-                            if isinstance(lon, float)
-                            else str(lon)
+                            f"{lon:.4f}°" if isinstance(lon, float) else str(lon)
                         ),
                     ],
                     className="map-info-row",
@@ -381,9 +350,7 @@ def register_dashboard(app) -> None:
                     [
                         html.Span("Elev: ", className="map-info-key"),
                         html.Span(
-                            f"{elev:.1f} m"
-                            if isinstance(elev, float)
-                            else str(elev)
+                            f"{elev:.1f} m" if isinstance(elev, float) else str(elev)
                         ),
                         html.Span("  N freq: ", className="map-info-key"),
                         html.Span(str(nf)),
@@ -414,8 +381,7 @@ def register_dashboard(app) -> None:
         if not line_counts:
             return [], [], "(all)"
         opts = [
-            {"label": f"{ln} ({cnt})", "value": ln}
-            for ln, cnt in line_counts.items()
+            {"label": f"{ln} ({cnt})", "value": ln} for ln, cnt in line_counts.items()
         ]
         values = [o["value"] for o in opts]
         count_label = f"({len(values)})" if values else "(all)"
@@ -436,9 +402,7 @@ def register_dashboard(app) -> None:
         n_sta = len(records)
         n_lines = len({r.get("Line") for r in records if r.get("Line")})
         n_tip = sum(1 for r in records if r.get("Tipper"))
-        n_geo = sum(
-            1 for r in records if r.get("Latitude") and r.get("Longitude")
-        )
+        n_geo = sum(1 for r in records if r.get("Latitude") and r.get("Longitude"))
 
         def _stat(label, value):
             return html.Div(
@@ -473,9 +437,7 @@ def register_dashboard(app) -> None:
         sc = "#a6adc8" if dark else "#7c7f93"  # subdued text
         gc = "rgba(205,214,244,0.09)" if dark else "rgba(76,79,105,0.11)"
         bg = "rgba(0,0,0,0)"
-        sf = (
-            "rgba(49,50,68,0.55)" if dark else "rgba(220,224,232,0.55)"
-        )  # surface fill
+        sf = "rgba(49,50,68,0.55)" if dark else "rgba(220,224,232,0.55)"  # surface fill
         _e = _empty_analytics_fig(fc, bg)
 
         records = (store_data or {}).get("station_records", [])
@@ -502,8 +464,7 @@ def register_dashboard(app) -> None:
             raw_lines = ["default"] * len(records)
         is_multi = len(line_names) > 1
         line_color = {
-            ln: _LINE_PALETTE[i % len(_LINE_PALETTE)]
-            for i, ln in enumerate(line_names)
+            ln: _LINE_PALETTE[i % len(_LINE_PALETTE)] for i, ln in enumerate(line_names)
         }
         dict(
             zip(
@@ -533,8 +494,7 @@ def register_dashboard(app) -> None:
                 sum(
                     1
                     for r in records
-                    if str(r.get("Line", "") or "").strip() == ln
-                    and r.get("Tipper")
+                    if str(r.get("Line", "") or "").strip() == ln and r.get("Tipper")
                 )
                 for ln in line_names
             ]
@@ -736,9 +696,7 @@ def register_dashboard(app) -> None:
                         "font": {"size": 8},
                         "traceorder": "normal",
                     },
-                    "title": _title(
-                        f"Frequencies / Station  ·  median {med_nf}"
-                    ),
+                    "title": _title(f"Frequencies / Station  ·  median {med_nf}"),
                     "bargap": 0.10,
                     "bargroupgap": 0.05,
                     "annotations": [
@@ -839,17 +797,13 @@ def register_dashboard(app) -> None:
             }
 
         # ══ 3. Survey Geometry — per-line colours ═════════════════════════
-        geo_recs = [
-            r for r in records if r.get("Latitude") and r.get("Longitude")
-        ]
+        geo_recs = [r for r in records if r.get("Latitude") and r.get("Longitude")]
         if geo_recs:
             g_max = max((r.get("N_freq") or 1) for r in geo_recs) or 1
             geo_data = []
             for ln in line_names:
                 ln_geo = [
-                    r
-                    for r in geo_recs
-                    if str(r.get("Line", "") or "").strip() == ln
+                    r for r in geo_recs if str(r.get("Line", "") or "").strip() == ln
                 ]
                 if not ln_geo:
                     continue
@@ -867,9 +821,7 @@ def register_dashboard(app) -> None:
                         "y": lats_l,
                         "mode": "lines",
                         "line": {
-                            "color": col.replace(")", ",0.25)").replace(
-                                "rgb(", "rgba("
-                            )
+                            "color": col.replace(")", ",0.25)").replace("rgb(", "rgba(")
                             if col.startswith("rgb(")
                             else col + "40",
                             "width": 1.2,
@@ -884,9 +836,7 @@ def register_dashboard(app) -> None:
                         "type": "scatter",
                         "x": lons_l,
                         "y": lats_l,
-                        "mode": "markers+text"
-                        if len(ln_geo) <= 15
-                        else "markers",
+                        "mode": "markers+text" if len(ln_geo) <= 15 else "markers",
                         "name": ln,
                         "marker": {
                             "size": g_sz_l,
@@ -894,9 +844,7 @@ def register_dashboard(app) -> None:
                             "opacity": 0.88,
                             "line": {"color": sf, "width": 1},
                         },
-                        "text": [ln] * len(ln_geo)
-                        if len(ln_geo) <= 15
-                        else [],
+                        "text": [ln] * len(ln_geo) if len(ln_geo) <= 15 else [],
                         "textposition": "top center",
                         "textfont": {"size": 7, "color": col},
                         "customdata": g_nf_l,
@@ -987,8 +935,7 @@ def register_dashboard(app) -> None:
         n_rk = len(rk_nf)
         if is_multi:
             rk_col = [
-                line_color.get(id_to_line.get(sid, ""), "#89b4fa")
-                for sid in rk_ids
+                line_color.get(id_to_line.get(sid, ""), "#89b4fa") for sid in rk_ids
             ]
         else:
             rk_col = [
@@ -1068,10 +1015,7 @@ def register_dashboard(app) -> None:
             labels += [""] * (max_sta - len(labels))
             heat_z.append(vals)
             heat_text.append(
-                [
-                    f"{sid}<br>{nf} freqs" if sid else ""
-                    for sid, nf in zip(labels, vals)
-                ]
+                [f"{sid}<br>{nf} freqs" if sid else "" for sid, nf in zip(labels, vals)]
             )
 
         fig_heatmap = {
@@ -1126,9 +1070,7 @@ def register_dashboard(app) -> None:
                     "tickfont": {"size": 9},
                     "automargin": True,
                 },
-                "title": _title(
-                    "Coverage Heatmap  ·  frequency count per station"
-                ),
+                "title": _title("Coverage Heatmap  ·  frequency count per station"),
             },
         }
 
@@ -1229,9 +1171,7 @@ def register_dashboard(app) -> None:
                 "#94e2d5",
                 "#89dceb",
             ]
-            raw_lines_r = [
-                str(r.get("Line", "") or "").strip() for r in records
-            ]
+            raw_lines_r = [str(r.get("Line", "") or "").strip() for r in records]
             line_names_r = list(dict.fromkeys(l for l in raw_lines_r if l))
             is_multi_r = len(line_names_r) > 1
 
@@ -1263,9 +1203,7 @@ def register_dashboard(app) -> None:
                 spider_traces = [_ring(0.33, gc), _ring(0.67, gc)]
                 for idx, ln in enumerate(line_names_r):
                     ln_recs = [
-                        r
-                        for r in records
-                        if str(r.get("Line", "") or "").strip() == ln
+                        r for r in records if str(r.get("Line", "") or "").strip() == ln
                     ]
                     if not ln_recs:
                         continue
@@ -1277,39 +1215,25 @@ def register_dashboard(app) -> None:
                         return sum(v) / len(v) if v else 0
 
                     fs = _avg(
-                        [
-                            min((r.get("N_freq") or 0) / max_nf_all, 1)
-                            for r in ln_recs
-                        ]
+                        [min((r.get("N_freq") or 0) / max_nf_all, 1) for r in ln_recs]
                     )
-                    ts = _avg(
-                        [1.0 if r.get("Tipper") else 0.0 for r in ln_recs]
-                    )
+                    ts = _avg([1.0 if r.get("Tipper") else 0.0 for r in ln_recs])
                     gs = _avg(
                         [
-                            1.0
-                            if (r.get("Latitude") and r.get("Longitude"))
-                            else 0.0
+                            1.0 if (r.get("Latitude") and r.get("Longitude")) else 0.0
                             for r in ln_recs
                         ]
                     )
                     ds = _avg(
-                        [
-                            min((r.get("N_freq") or 0) / med_nf_all, 1)
-                            for r in ln_recs
-                        ]
+                        [min((r.get("N_freq") or 0) / med_nf_all, 1) for r in ln_recs]
                     )
 
-                    elevs_all_s = sorted(
-                        r.get("Elevation") or 0 for r in records
-                    )
+                    elevs_all_s = sorted(r.get("Elevation") or 0 for r in records)
                     n_e = len(elevs_all_s)
                     own_elevs = [r.get("Elevation") or 0 for r in ln_recs]
                     er_vals = []
                     for oe in own_elevs:
-                        ci = min(
-                            range(n_e), key=lambda i: abs(elevs_all_s[i] - oe)
-                        )
+                        ci = min(range(n_e), key=lambda i: abs(elevs_all_s[i] - oe))
                         er_vals.append((ci + 1) / n_e)
                     es = _avg(er_vals)
 
@@ -1434,9 +1358,7 @@ def register_dashboard(app) -> None:
             }
 
         # ── Station selected → 5-axis quality spider ──────────────────────
-        match = next(
-            (r for r in records if str(r.get("ID")) == str(station_id)), None
-        )
+        match = next((r for r in records if str(r.get("ID")) == str(station_id)), None)
         if not match:
             return _empty_analytics_fig(fc, bg)
 
@@ -1447,16 +1369,12 @@ def register_dashboard(app) -> None:
 
         freq_score = min(own_nf / max_nf, 1.0)
         tipper_score = 1.0 if match.get("Tipper") else 0.0
-        geo_score = (
-            1.0 if (match.get("Latitude") and match.get("Longitude")) else 0.0
-        )
+        geo_score = 1.0 if (match.get("Latitude") and match.get("Longitude")) else 0.0
         fill_score = min(own_nf / med_nf, 1.0)
 
         elevs_s = sorted(r.get("Elevation") or 0 for r in records)
         own_e = match.get("Elevation") or 0
-        c_idx = min(
-            range(len(elevs_s)), key=lambda i: abs(elevs_s[i] - own_e)
-        )
+        c_idx = min(range(len(elevs_s)), key=lambda i: abs(elevs_s[i] - own_e))
         elev_rank = (c_idx + 1) / len(elevs_s)
 
         cats = [
@@ -1590,15 +1508,11 @@ def register_dashboard(app) -> None:
         # Per-profile breakdown (up to 4 shown)
         for _i, (line_id, cnt) in enumerate(list(lc.items())[:4]):
             chips.append(
-                html.Span(
-                    f"{line_id}: {cnt}", className="si-chip si-chip-sub"
-                )
+                html.Span(f"{line_id}: {cnt}", className="si-chip si-chip-sub")
             )
         if len(lc) > 4:
             chips.append(
-                html.Span(
-                    f"+{len(lc) - 4} more", className="si-chip si-chip-sub"
-                )
+                html.Span(f"+{len(lc) - 4} more", className="si-chip si-chip-sub")
             )
 
         if data_dir:
@@ -1637,9 +1551,7 @@ def register_dashboard(app) -> None:
             else "bi bi-x-circle-fill si-run-err"
         )
 
-        summ_short = (
-            (summary[:80] + "…") if summary and len(summary) > 80 else summary
-        )
+        summ_short = (summary[:80] + "…") if summary and len(summary) > 80 else summary
 
         return html.Div(
             [

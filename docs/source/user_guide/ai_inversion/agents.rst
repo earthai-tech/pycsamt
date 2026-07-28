@@ -74,7 +74,7 @@ All primary agents use the same call shape:
 .. code-block:: pycon
 
    >>> result = agent.execute({
-   ...     "path": "data/AMT/WILLY_DATA/L18PLT",
+   ...     "path": "data/AMT/WILLY_data/L18PLT",
    ...     "output_dir": "outputs/ai_inversion/L18",
    ... })
 
@@ -139,6 +139,23 @@ The standard fields are:
    Execution duration and estimated LLM cost. Neural-network compute cost is
    not represented by the LLM cost field.
 
+.. figure:: ../../images/user_guide/ai_inversion/agents_execution_contract.png
+   :alt: Reviewed input enters an agent and branches to success, needs-review,
+         or failed results before scientific acceptance.
+   :align: center
+   :width: 100%
+
+   The result status controls software flow. ``success`` and ``needs_review``
+   both continue to residual, uncertainty, and baseline checks; ``failed``
+   stops at remediation. None of the three statuses is itself a geological
+   interpretation.
+
+This separation prevents a common automation error. Because
+``bool(result)`` is true for both ``success`` and ``needs_review``, code such as
+``if result: publish(result)`` is too weak for a controlled release. Test the
+exact status, then apply an independent scientific decision gate whose
+thresholds were declared before viewing the preferred inversion.
+
 Prepare data before running an agent
 ------------------------------------
 
@@ -149,7 +166,7 @@ survey used throughout this page is the bundled Willy AMT line:
 
    >>> from pycsamt.emtools._core import ensure_sites
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
@@ -184,6 +201,36 @@ version, hardware, random seeds where exposed, and numerical precision. Results
 can differ across backends and devices even when high-level parameters match —
 the runs captured on this page used a CPU-only PyTorch 2.5 build, so timings
 will differ on GPU or TensorFlow.
+
+Read every inversion as a contract
+------------------------------------------
+
+An agent-generated section is meaningful only when its axes and transformations
+are explicit. Throughout the newly generated figures in this guide, stations
+are columns labelled along the top. Frequency panels place high frequency at
+the top and low frequency at the bottom; model panels place shallow depth or
+the first layer at the top. Keep this convention when saving custom figures so
+the visual direction does not reverse between data and model space.
+
+Before interpreting color, establish five facts:
+
+* whether the vertical coordinate is layer index, depth below station, or
+  absolute elevation;
+* how thickness predictions were converted to interfaces or a common grid;
+* whether the color represents :math:`\log_{10}\rho`, linear resistivity,
+  residual, or standard deviation;
+* whether compared panels share limits and masks;
+* which response-space diagnostic accompanies the section.
+
+Several archived agent figures on this page use a Bostick-derived display
+depth based on the agent's very broad default :math:`10^{-4}`--:math:`10^3` Hz
+training grid. Their axes can extend to hundreds or thousands of kilometres.
+That plotting scale is neither the WILLY depth of investigation nor permission
+to interpret deep structure. For the expected sub-2-km target, rerun with a
+reviewed AMT frequency contract, reconstruct physical layered responses, and
+clip only the *display* after preserving the complete model array. See
+:doc:`concepts` for the distinction between configured depth, skin-depth scale,
+and defensible interpretation depth.
 
 AIInversionAgent: 1-D workflow
 ------------------------------
@@ -303,6 +350,7 @@ against the forward response of its own predicted model, interpolated onto the
 same periods:
 
 .. math::
+   :label: eq-agents-station-rms
 
    \mathrm{RMS}_s = \sqrt{\frac{1}{N_s}\sum_{i=1}^{N_s}
        \Bigl(\log_{10}\rho_{a,i}^{\mathrm{obs}} -
@@ -315,6 +363,124 @@ It is useful as a response-fit diagnostic, matching the more general
 normalised by measurement error, so it is not a complete impedance likelihood,
 phase fit, or proof of geological correctness.
 
+Executed small-run audit
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The documentation generator also runs a compact CPU example rather than
+asking readers to infer behavior from the longer historical runs above. It
+uses ``AIInversionAgent(arch="fcn", n_layers=5,
+n_train_samples=240, epochs=12)`` on all 28 WILLY L18 stations. The call returns
+``success`` and produces two figures, but repeated executions can differ
+because the agent does not expose every backend determinism control. Preserve
+the actual history and arrays from each run rather than copying one displayed
+RMS into a new report.
+
+.. figure:: ../../images/user_guide/ai_inversion/agents_executed_1d_audit.png
+   :alt: Executed WILLY agent training curves, five-layer station prediction,
+         and station-ranked apparent-resistivity RMS.
+   :align: center
+   :width: 100%
+
+   Executed small-run audit. Stations are columns labelled at the top of the
+   inversion panel. The response panel ranks the same stations by the metric
+   in :eq:`eq-agents-station-rms`; its dashed line is the station mean, not an
+   acceptance threshold.
+
+The section is visually structured, yet the station RMS values span a wide
+range and some predicted log-resistivities approach implausibly extreme
+values. The appropriate outcome is therefore *workflow success, scientific
+review required*. Increasing training budget may help, but the next action is
+not automatically “train longer”: first compare the synthetic resistivity and
+thickness priors with field response support, inspect the worst stations by
+frequency and phase, and reconstruct responses from the physical layered
+models. This is why an inversion plot and its response audit belong together.
+
+Compare CNN1D, ResNet, and FCN under one contract
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``AIInversionAgent`` exposes three 1-D architecture names. They receive the
+same flattened response contract and predict the same layered target, but they
+encode different assumptions:
+
+``cnn1d``
+   Convolutions scan neighbouring feature positions with shared kernels. This
+   can learn local frequency-pattern motifs efficiently, but only when the
+   feature ordering keeps physically neighbouring frequencies together. A
+   block layout that concatenates all resistivities and then all phases creates
+   a boundary where convolutional locality changes meaning.
+
+``resnet``
+   Residual blocks learn corrections around identity paths. Skip connections
+   generally make deeper networks easier to optimize, but they do not prevent
+   overfitting, domain shift, or an unsuitable synthetic prior. Validation
+   behavior still decides whether the added capacity helped.
+
+``fcn``
+   A fully connected network lets every input feature interact immediately
+   with every hidden unit. It does not encode frequency locality, but its
+   simpler inductive structure can be competitive for a small tabular-style
+   response vector and a modest training budget.
+
+A matched smoke-test loop is:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.agents import AIInversionAgent
+   >>> architecture_results = {}
+   >>> for architecture in ("cnn1d", "resnet", "fcn"):
+   ...     result = AIInversionAgent(
+   ...         arch=architecture,
+   ...         n_layers=5,
+   ...         n_train_samples=240,
+   ...         epochs=12,
+   ...     ).execute({"sites": sites})
+   ...     architecture_results[architecture] = result
+   ...     print(
+   ...         architecture,
+   ...         result.status,
+   ...         round(result["rms_global"], 3),
+   ...     )
+   cnn1d success 2.008
+   resnet success 1.094
+   fcn success 1.052
+
+These are captured values for the generated figure, not stable package
+benchmarks. The high-level agent fixes the synthetic generator seed but does
+not expose every backend determinism setting, so rerunning may change the
+numbers. A publishable architecture study must reuse an explicitly persisted
+train/validation/test dataset, match preprocessing and target transforms,
+report parameter counts and compute, and repeat each architecture over several
+training seeds.
+
+.. figure:: ../../images/user_guide/ai_inversion/agents_architecture_comparison.png
+   :alt: Matched CNN1D, ResNet, and FCN WILLY smoke tests showing loss curves,
+         five-layer station models, and per-station response RMS.
+   :align: center
+   :width: 100%
+
+   Executed architecture comparison. Every row uses the same sample, layer,
+   station, and epoch budget. Stations are columns at the top of each model;
+   all three model panels share one color scale, and each response panel shows
+   its station-mean RMS as a dashed line.
+
+In this captured run, CNN1D's validation loss decreases but stays well above
+training loss, its mean RMS is highest, and the shared scale exposes extreme
+values in its deepest layer. That combination suggests under-supported target
+amplitudes rather than a trustworthy deep conductor or resistor. ResNet lowers
+the response RMS substantially, yet its validation curve becomes unstable and
+finishes by rising sharply; accepting it solely because its RMS beats CNN1D
+would ignore an overfitting warning. FCN has the lowest mean RMS and the most
+orderly validation descent here, although several stations remain much worse
+than the mean and its deep-layer amplitudes are still broad.
+
+The correct conclusion is conditional: FCN is the best *small-budget candidate
+for the next controlled experiment*, not the best WILLY inverter. Repeated-seed
+holdout error, phase residuals, response reconstruction, model bounds, depth
+stability, and comparison with classical inversion can reverse the ordering.
+Also compare station-by-station patterns: if all architectures fail at the same
+stations, data quality or domain mismatch is more plausible than an
+architecture-specific problem.
+
 Inv2DAgent: profile workflow
 ----------------------------
 
@@ -324,10 +490,29 @@ predicts the complete profile at once:
 
 .. code-block:: pycon
 
+   >>> import numpy as np
    >>> from pycsamt.agents import Inv2DAgent
+   >>> from pycsamt.ai.inversion import sites_to_features_1d
+   >>> from pycsamt.emtools import frequency_for_depth
+   >>> dense, measured_frequency, _ = sites_to_features_1d(
+   ...     sites, comp="xy", n_freqs=64,
+   ... )
+   >>> rho_reference = float(
+   ...     10.0 ** np.nanmedian(dense[:, :measured_frequency.size])
+   ... )
+   >>> frequency_min = max(
+   ...     float(measured_frequency.min()),
+   ...     float(frequency_for_depth(2000.0, rho_reference)),
+   ... )
+   >>> _, frequency, _ = sites_to_features_1d(
+   ...     sites, comp="xy", n_freqs=24,
+   ...     freq_min=frequency_min,
+   ...     freq_max=float(measured_frequency.max()),
+   ... )
    >>> agent = Inv2DAgent(
    ...     n_depth=40,
-   ...     n_freqs=32,
+   ...     freqs=frequency,
+   ...     depth_max=2000.0,
    ...     n_components=2,
    ...     arch="unet",
    ...     n_train_profiles=500,
@@ -337,14 +522,20 @@ predicts the complete profile at once:
    >>> result = agent.execute({
    ...     "sites": sites,
    ...     "output_dir": "outputs/ai_inversion/L18_2d",
+   ...     "topography": True,
    ... })
    >>> print(result.status, result.summary)
-   success 2-D AI inversion (U-Net): 10 stations x 40 depth cells. RMS=1.780. 1 figures.
+   success 2-D AI inversion (U-Net): 10 stations x 40 depth cells. RMS=1.780. 2 figures.
 
 ``n_components`` is 2 by default — log10 apparent resistivity and phase for
 the ``xy`` component, matching what :func:`~pycsamt.forward.batch.generate_dataset`
 actually produces. It is not four Re/Im tensor channels; keep it at 2 unless a
 custom data pipeline supplies a genuinely wider panel.
+The frequency and depth parameters are explicit for the same reason as in the
+graph example below: leaving the legacy :math:`10^{-4}` Hz default in an AMT
+example would create a hundreds-of-kilometres display grid unrelated to the
+WILLY target. ``depth_max`` controls the output parameterization, not verified
+depth of investigation.
 
 .. figure:: ../../images/user_guide/ai_inversion/agents_inv2d_section.png
    :alt: Predicted 2-D resistivity section from the U-Net inverter.
@@ -366,6 +557,47 @@ resistivity curve at each station using the Bostick depth
 elsewhere in pyCSAMT), and compared against the observed log10 apparent
 resistivity at that station.
 
+With ``topography=True``, the agent extracts elevations and cumulative
+chainage from the same ``Sites`` object, aligns them by the names of the
+stations retained in the U-Net panel, and adds ``topography_section`` to the
+figure dictionary. Explicit terrain remains available when a collection does
+not contain elevations:
+
+.. code-block:: pycon
+
+   >>> terrain_result = agent.execute({
+   ...     "sites": sites,
+   ...     "topography": {
+   ...         "elevation_m": measured_elevation,
+   ...         "chainage_km": measured_chainage,
+   ...         "exaggeration": 1.0,
+   ...     },
+   ... })
+   >>> terrain_result["topography"]["applied"]  # doctest: +SKIP
+   True
+   >>> terrain_result["topography"]["affects_forward_physics"]  # doctest: +SKIP
+   False
+
+.. figure:: ../../images/user_guide/ai_inversion/agents_inv2d_willy_topography.png
+   :alt: Executed WILLY U-Net section draped below station elevations, with
+         station markers and names placed along the profile surface.
+   :align: center
+   :width: 94%
+
+   Executed compact WILLY example using 12 stations, 16 frequency bins, eight
+   depth cells, and measured site topography. The horizontal coordinate is the
+   approximately 1.10 km measured chainage of the retained stations, rather
+   than the legacy assumed 0.5 km spacing. Terrain changes the displayed
+   vertical datum; it does not repair the deliberately small two-epoch
+   training budget or make the U-Net a terrain-aware EM solver.
+
+The absolute-elevation transformation is given later by
+equation :eq:`eq-agents-topographic-drape` and is identical for the 2-D and
+graph outputs. If elevation is missing, non-finite, flat zero, or cannot be
+matched after station filtering, the agent keeps the ordinary section and
+returns a warning instead of presenting artificial flat terrain as measured
+topography.
+
 The learned lateral continuity comes from the training construction and network
 architecture; it is not equivalent to a conventional 2-D EM forward operator
 or proof that the field structure is two-dimensional. Validate the section
@@ -381,6 +613,7 @@ header coordinates and projects them to local metres:
 
 .. code-block:: pycon
 
+   >>> import numpy as np
    >>> from pycsamt.agents import Inv3DAgent
    >>> agent = Inv3DAgent(
    ...     n_layers=5,
@@ -416,6 +649,189 @@ numbers.
    the graph, so the section varies smoothly along the line instead of the
    single flat column produced when every station lands at the same point.
 
+Why the archived section reaches 450 km
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Keep the preceding plot as a parameterization warning, not as WILLY deep
+geology. The archived run used the legacy agent grid
+``np.logspace(-4, 3, 32)``. Its minimum frequency is
+:math:`10^{-4}` Hz, or a 10,000-s period, even though WILLY L18 spans only
+about 1.008--10,400 Hz. The legacy thickness helper takes a 100
+:math:`\Omega\mathrm{m}` reference and computes
+
+.. math::
+   :label: eq-agents-legacy-depth-scale
+
+   d_{\max}
+   =
+   \sqrt{\frac{\rho_{\mathrm{ref}}T_{\max}}
+   {4\pi^2\mu_0}}.
+
+For the archived grid, equation :eq:`eq-agents-legacy-depth-scale` gives a
+355.88 km final thickness. The four finite-layer thicknesses are 3.56, 16.52,
+76.67, and 355.88 km, giving cumulative interfaces at 3.56, 20.08, 96.75, and
+452.63 km. Those numbers explain the axis exactly. They come from the default
+synthetic target and plotting grid, not from measured WILLY sensitivity.
+
+Cropping that image at 2 km would be misleading because the GCN was still
+trained against hundreds-of-kilometres thickness targets. The correction must
+enter before synthetic generation. ``Inv3DAgent`` therefore accepts explicit
+``freqs`` and ``depth_max`` values; with :math:`L-1` finite layers, the revised
+thicknesses use positive geometric weights :math:`w_k` normalized to the
+declared model depth,
+
+.. math::
+   :label: eq-agents-configured-thickness
+
+   h_k = d_{\max}\frac{w_k}{\sum_{j=1}^{L-1}w_j},
+   \qquad
+   \sum_{k=1}^{L-1}h_k=d_{\max}.
+
+For the five-layer WILLY example, ``depth_max=2000`` m produces interfaces at
+0.266, 0.649, 1.202, and 2.000 km. The frequency grid should also come from the
+loaded survey rather than from hard-coded WILLY endpoints. The public
+:func:`pycsamt.ai.inversion.sites_to_features_1d` bridge returns a common
+logarithmic grid constructed from the station observations. A depth-oriented
+lower cutoff can then be estimated with
+:func:`pycsamt.emtools.frequency_for_depth`:
+
+.. math::
+   :label: eq-agents-depth-frequency-design
+
+   \rho_{\mathrm{ref}}
+   =10^{\operatorname{median}(\log_{10}\rho_a)},
+   \qquad
+   f_D=\rho_{\mathrm{ref}}
+   \left(\frac{356}{D}\right)^2,
+   \qquad
+   f_{\min}=\max(f_{\min}^{\mathrm{obs}},f_D).
+
+This is a survey-design heuristic. The apparent-resistivity reference is
+explicit, and changing it changes :math:`f_D`. It does not prove depth of
+investigation, replace sensitivity kernels, or imply that lower measured
+frequencies contain no useful information. Preserve the full-band data and
+compare the depth-targeted run with a full measured-band sensitivity scenario.
+
+For WILLY L18, a 64-point survey-derived grid spans 1.008--10,400 Hz and has
+median XY apparent resistivity :math:`\rho_{\mathrm{ref}}=453.75`
+:math:`\Omega\mathrm{m}`. Equation :eq:`eq-agents-depth-frequency-design`
+gives :math:`f_D=14.38` Hz for :math:`D=2000` m. The executed demonstration
+therefore intersects the observed support with 14.38--10,400 Hz and constructs
+24 logarithmic points inside that interval. This grid and the thickness
+targets are shared by synthetic generation, observed-feature extraction,
+forward RMS, returned metadata, and plotting:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.agents import Inv3DAgent
+   >>> from pycsamt.ai.inversion import sites_to_features_1d
+   >>> from pycsamt.emtools import frequency_for_depth
+   >>>
+   >>> dense_X, measured_frequency, _ = sites_to_features_1d(
+   ...     sites, comp="xy", n_freqs=64,
+   ... )
+   >>> rho_reference = float(
+   ...     10.0 ** np.nanmedian(dense_X[:, :measured_frequency.size])
+   ... )
+   >>> frequency_at_2km = float(frequency_for_depth(2000.0, rho_reference))
+   >>> frequency_min = max(float(measured_frequency.min()), frequency_at_2km)
+   >>> _, willy_frequency, _ = sites_to_features_1d(
+   ...     sites, comp="xy", n_freqs=24,
+   ...     freq_min=frequency_min,
+   ...     freq_max=float(measured_frequency.max()),
+   ... )
+   >>> round(rho_reference, 2), round(frequency_at_2km, 2)
+   (453.75, 14.38)
+   >>> configured = Inv3DAgent(
+   ...     n_layers=5,
+   ...     freqs=willy_frequency,
+   ...     depth_max=2000.0,
+   ...     n_train_profiles=12,
+   ...     epochs=10,
+   ...     radius=250.0,
+   ...     hidden=(64, 32),
+   ...     n_mc=0,
+   ... ).execute({
+   ...     "sites": sites,
+   ...     "topography": {
+   ...         "enabled": True,
+   ...         "exaggeration": 1.0,
+   ...         "interp_method": "linear",
+   ...     },
+   ... })
+   >>> configured.status  # doctest: +SKIP
+   'success'
+   >>> configured["frequency_grid_hz"][[0, -1]]  # doctest: +SKIP
+   array([   14.37653093, 10400.        ])
+   >>> configured["depths_km"].round(3)  # doctest: +SKIP
+   array([0.   , 0.266, 0.649, 1.202, 2.   ])
+   >>> configured["topography"]["source"]  # doctest: +SKIP
+   'sites'
+   >>> configured["topography"]["affects_forward_physics"]  # doctest: +SKIP
+   False
+
+.. figure:: ../../images/user_guide/ai_inversion/agents_inv3d_willy_2km_section.png
+   :alt: Executed WILLY graph inversion limited to a two-kilometre model and
+         using the measured AMT frequency range.
+   :align: center
+   :width: 92%
+
+   Executed small-budget WILLY GCN section using a survey-derived
+   14.38--10,400 Hz grid and a cumulative 2 km model. Station names and markers
+   are at the top. Unlike the archived plot, the bottom axis is a declared
+   parameterization boundary rather than a consequence of a
+   :math:`10^{-4}` Hz synthetic grid.
+
+This corrected scale makes the output appropriate for *review*, not automatic
+acceptance. The run uses only 12 synthetic profiles and 10 epochs, and the GCN
+still relies on station-wise layered MT training responses plus graph context.
+Its forward-audit pass emitted an overflow warning inside the hyperbolic
+tangent recursion, and the plotted predictions reach extreme log-resistivity
+colors. Both are rejection signals for quantitative interpretation, even
+though the agent returned ``success`` and the geometric depth contract is now
+correct. The figure proves the configuration path; it does not certify this
+small-budget model.
+Interpret conductors only where response reconstruction, dimensionality,
+regularization sensitivity, and independent geology agree. Also avoid calling
+2 km the depth of investigation merely because it is now the configured model
+bottom.
+
+The same execution can now obtain elevation and chainage from the supplied
+``Sites`` object. It aligns terrain by station name after unusable stations
+have been removed, rather than truncating the elevation array by position. The
+returned ``station_elevation_m`` values are metres above sea level and
+``station_chainage_km`` is cumulative profile distance. These arrays place
+each station marker on the terrain surface and transform depth below ground
+into absolute elevation,
+
+.. math::
+   :label: eq-agents-topographic-drape
+
+   z_{j,k}^{\mathrm{abs}}
+   = \frac{E_j}{1000} - d_k,
+
+where :math:`E_j` is station elevation in metres above sea level and
+:math:`d_k` is positive-down model depth in kilometres. Equation
+:eq:`eq-agents-topographic-drape` is a coordinate transformation, not a
+topographic correction to the MT equations. The current ``mt1d`` synthetic
+solver and GCN prediction remain unchanged, which is why the result records
+``affects_forward_physics=False``. A true terrain-aware inversion would require
+air cells or a topographic finite-element/finite-difference mesh in both
+training and response reconstruction.
+
+.. figure:: ../../images/user_guide/ai_inversion/agents_inv3d_willy_2km_topography.png
+   :alt: WILLY two-kilometre GCN section draped below measured station
+         elevations, with station names placed on the terrain surface.
+   :align: center
+   :width: 94%
+
+   The 37--144 m WILLY relief is modest compared with the 2 km model, yet its
+   inclusion makes the vertical datum unambiguous. Stations follow the profile
+   surface across 2.42 km of chainage; resistivity cells extend downward from
+   that local surface. Vertical exaggeration should remain at one for depth
+   comparison, and any larger value must be described as a display choice.
+
 Outputs include ``pred_rho`` in log10 resistivity, ``pred_thick`` in log10
 metres, optional ``pred_uncertainty``, ``depths_km``, coordinates, adjacency,
 edge count, global RMS, figures, and the inverter. Internally, the adjacency
@@ -424,6 +840,7 @@ spectral graph convolutions: with :math:`A` the raw within-``radius``
 connectivity, self-loops are added and the result is symmetrically normalised,
 
 .. math::
+   :label: eq-agents-graph-normalization
 
    \tilde{A} = A + I, \qquad
    \hat{A} = \tilde{D}^{-1/2}\,\tilde{A}\,\tilde{D}^{-1/2},
@@ -436,6 +853,7 @@ more distant, possibly unrelated, structure.
 :math:`M` stochastic passes with dropout kept active at inference time,
 
 .. math::
+   :label: eq-agents-mc-dropout
 
    \sigma_\ell = \sqrt{\frac{1}{M}\sum_{m=1}^{M}
        \bigl(\hat y_\ell^{(m)} - \bar y_\ell\bigr)^2},
@@ -504,6 +922,7 @@ per-parameter spread :math:`\sigma_j(\mathbf{x})`, and a held-out
 :term:`calibration set` fixes one quantile of the normalised residuals,
 
 .. math::
+   :label: eq-agents-conformal-score
 
    s_i = \max_j \frac{\lvert y_{ij} - f(\mathbf{x}_i)_j\rvert}{\sigma_j(\mathbf{x}_i) + \varepsilon},
    \qquad
@@ -512,6 +931,7 @@ per-parameter spread :math:`\sigma_j(\mathbf{x})`, and a held-out
 so that a new interval
 
 .. math::
+   :label: eq-agents-conformal-interval
 
    \bigl[f(\mathbf{x})_j - \hat q\,\sigma_j(\mathbf{x}),\;
          f(\mathbf{x})_j + \hat q\,\sigma_j(\mathbf{x})\bigr]
@@ -594,6 +1014,13 @@ available, figures, and the fitted inverter.
    The loss trace above is the same descent printed to the console; reviewing
    both the numbers and the curve catches a run that stopped improving long
    before its epoch budget ran out.
+
+This 300-epoch figure is an archived successful run, whereas the shorter
+executed smoke test in :doc:`pinn_2d` increased its objective and was rejected.
+The two outcomes are not interchangeable evidence. They demonstrate why the
+manifest must preserve initialization, backend, learning rate, epoch count,
+station order, and software revision, and why a stored figure without its
+numeric loss and residual tables is insufficient for reproduction.
 
 Physics-informed does not mean assumption-free. Solver dimension,
 regularization weights, depth parameterization, optimizer, learning rate, and

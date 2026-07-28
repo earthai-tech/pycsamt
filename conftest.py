@@ -34,9 +34,7 @@ def _terminate_process(code: int) -> None:
 def _is_qt_interface_run(config) -> bool:
     """Return whether this pytest invocation owns the desktop Qt tests."""
 
-    args = {
-        str(arg).replace("\\", "/").rstrip("/") for arg in config.args
-    }
+    args = {str(arg).replace("\\", "/").rstrip("/") for arg in config.args}
     return "PySide6" in sys.modules and any(
         arg == "pycsamt/app/tests" or "/pycsamt/app/tests" in arg
         for arg in args
@@ -62,6 +60,7 @@ def pytest_sessionfinish(session, exitstatus):
     # session hook cannot be unregistered with a nested test directory.
     # ``trylast`` lets coverage and terminal reporters persist results first.
     _terminate_process(int(exitstatus))
+
 
 # Root conftest.py is imported during pytest's initial-conftest phase,
 # before pytest-cov's coverage tracer starts (that happens in

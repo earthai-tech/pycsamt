@@ -68,27 +68,36 @@ Quick start
 Step 1 — Download and compile (once per machine)::
 
     from pycsamt.models.mare2dem import SourceManager
+
     sm = SourceManager(verbose=1)
-    sm.download()   # git-clone from Bitbucket
-    sm.build()      # requires Intel oneAPI + MKL
+    sm.download()  # git-clone from Bitbucket
+    sm.build()  # requires Intel oneAPI + MKL
 
 Step 2 — Create a data file from MT survey parameters::
 
     import numpy as np
     from pycsamt.models.mare2dem import MTSurveyConfig, make_data_file
+
     mt = MTSurveyConfig(
         frequencies=np.logspace(-3, 3, 20),
         rx_y=np.linspace(-5000, 5000, 20),
-        rx_type='marine', lTE=True, lTM=True,
+        rx_type="marine",
+        lTE=True,
+        lTM=True,
     )
-    em = make_data_file('survey.emdata', topo=-1000.0, mt=mt)
+    em = make_data_file("survey.emdata", topo=-1000.0, mt=mt)
 
 Step 3 — Prepare a full input set and run::
 
-    from pycsamt.models.mare2dem import Mare2DEMConfig, InputBuilder, Mare2DEMRunner
+    from pycsamt.models.mare2dem import (
+        Mare2DEMConfig,
+        InputBuilder,
+        Mare2DEMRunner,
+    )
+
     cfg = Mare2DEMConfig(initial_rho=1.0, n_procs=8)
-    InputBuilder(cfg).build('survey.emdata', workdir='./run')
-    result = Mare2DEMRunner('./run', cfg).run('mare2dem')
+    InputBuilder(cfg).build("survey.emdata", workdir="./run")
+    result = Mare2DEMRunner("./run", cfg).run("mare2dem")
     result.print_summary()
 
 References

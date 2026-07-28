@@ -76,9 +76,7 @@ class ProjectState:
     def save(self) -> Path:
         self.data["updated"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps(self.data, indent=2), encoding="utf-8"
-        )
+        self.path.write_text(json.dumps(self.data, indent=2), encoding="utf-8")
         return self.path
 
     @classmethod

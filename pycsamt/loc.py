@@ -73,7 +73,6 @@ class BaseLoc(PyCSAMTObject):
     ...         self._utm_zone = None
     ...         self._easting = None
     ...         self._northing = None
-    ...
     >>> s = Station(10.0, 5.0)
     >>> s.has_latlon
     True
@@ -296,7 +295,6 @@ class BaseLoc(PyCSAMTObject):
         ...         self._utm_zone = None
         ...         self._easting = None
         ...         self._northing = None
-        ...
         >>> P(10.0, 5.0).ensure_utm()[0]
         '31N'
         """
@@ -653,9 +651,7 @@ class BaseLoc(PyCSAMTObject):
         if self.has_latlon and other.has_latlon:
             la1, lo1 = self._require_latlon()
             la2, lo2 = other._require_latlon()
-            return round(la1, 7) == round(la2, 7) and round(lo1, 7) == round(
-                lo2, 7
-            )
+            return round(la1, 7) == round(la2, 7) and round(lo1, 7) == round(lo2, 7)
         if self.has_utm and other.has_utm:
             z1, e1, n1 = self._require_utm()
             z2, e2, n2 = other._require_utm()
@@ -736,9 +732,7 @@ class Location(BaseLoc):
 
     Create from UTM:
 
-    >>> loc = Location(utm_zone="31N",
-    ...                easting=500000.0,
-    ...                northing=4649776.0)
+    >>> loc = Location(utm_zone="31N", easting=500000.0, northing=4649776.0)
     >>> la, lo = loc.to_latlon()  # doctest: +ELLIPSIS
     >>> isinstance(la, float) and isinstance(lo, float)
     True
@@ -800,8 +794,7 @@ class Location(BaseLoc):
             self._set_utm(self._utm_zone, easting, northing)
         else:
             logger.debug(
-                "Initialized empty Location; set coordinates "
-                "before converting."
+                "Initialized empty Location; set coordinates " "before converting."
             )
 
     @property
@@ -1005,9 +998,9 @@ class Location(BaseLoc):
 
         Examples
         --------
-        >>> loc = Location(utm_zone="31N",
-        ...                easting=500000.0,
-        ...                northing=4649776.0)
+        >>> loc = Location(
+        ...     utm_zone="31N", easting=500000.0, northing=4649776.0
+        ... )
         >>> la, lo = loc.to_latlon()  # doctest: +ELLIPSIS
         >>> isinstance(la, float) and isinstance(lo, float)
         True
@@ -1193,9 +1186,7 @@ class Location(BaseLoc):
         """
 
         # Keep signature for compatibility. 'datum' unused.
-        if (
-            isinstance(easts, str) or isinstance(norths, str)
-        ) and data is None:
+        if (isinstance(easts, str) or isinstance(norths, str)) and data is None:
             raise TypeError(
                 "Data can't be None when easting or northing "
                 "is a string (column name)."
@@ -1213,9 +1204,7 @@ class Location(BaseLoc):
         norths = np.asarray(norths, dtype=float)
 
         if utm_zone is None:
-            raise LocationError(
-                "utm_zone is required to convert UTM array to lat/lon."
-            )
+            raise LocationError("utm_zone is required to convert UTM array to lat/lon.")
         z = _norm_zone(utm_zone)
 
         lats: list[float] = []
@@ -1530,10 +1519,7 @@ class Bounds(PyCSAMTObject):
 
         la = _lat_ok(lat)
         lo = _lon_ok(lon)
-        return (
-            self.min_lat <= la <= self.max_lat
-            and self.min_lon <= lo <= self.max_lon
-        )
+        return self.min_lat <= la <= self.max_lat and self.min_lon <= lo <= self.max_lon
 
     def buffer_m(self, m: float) -> Bounds:
         r"""
@@ -1728,9 +1714,11 @@ class GeoPath(PyCSAMTObject):
     >>> g = GeoPath([(0.0, 0.0), (0.0, 0.01), (0.01, 0.01)])
     >>> len(g)
     3
-    >>> bb = g.bbox(); bb.to_tuple()  # doctest: +ELLIPSIS
+    >>> bb = g.bbox()
+    ... bb.to_tuple()  # doctest: +ELLIPSIS
     (0.0, 0.0, 0.01, 0.01)
-    >>> L = g.length_m(); L >= 0.0
+    >>> L = g.length_m()
+    ... L >= 0.0
     True
 
     See Also

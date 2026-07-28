@@ -86,9 +86,7 @@ class TestAMTAVG:
 
     def test_compute_resistivity_phase(self, amtavg_instance):
         """Test the calculation of rho and phi from Z."""
-        rho, phi, rho_err, phi_err = (
-            amtavg_instance.compute_resistivity_phase()
-        )
+        rho, phi, rho_err, phi_err = amtavg_instance.compute_resistivity_phase()
         assert isinstance(rho, pd.Series)
         assert len(rho) == 4
         assert np.isclose(rho.iloc[0], 1200, rtol=1e-2)
@@ -108,16 +106,12 @@ class TestAMTAVG:
         assert amtavg_instance.resistivity.frame["rho"].iloc[0] == 999.0
         assert amtavg_instance.phase.frame["phase"].iloc[0] == 100.0
         # Check if Z was recomputed (it will be different now)
-        assert np.isclose(
-            np.abs(amtavg_instance.z.z.iloc[0]), 2.84, rtol=1e-2
-        )
+        assert np.isclose(np.abs(amtavg_instance.z.z.iloc[0]), 2.84, rtol=1e-2)
 
     def test_get_tensor_by_station(self, amtavg_instance):
         """Test fetching a single station's tensor as xarray."""
         station_id = 101
-        station_tensor = amtavg_instance.get_tensor_by_station(
-            station_id, var="rho"
-        )
+        station_tensor = amtavg_instance.get_tensor_by_station(station_id, var="rho")
         assert "xarray.core.dataarray.DataArray" in str(type(station_tensor))
         assert station_tensor.shape == (2, 2, 2)  # (freq, e, h)
         assert "station" not in station_tensor.dims

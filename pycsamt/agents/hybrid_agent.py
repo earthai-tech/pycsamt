@@ -125,13 +125,13 @@ class HybridInversionAgent(BaseAgent):
     --------
     >>> from pycsamt.ai.inversion import EMInverter1D
     >>> ai = EMInverter1D.load("checkpoint.npz")
-    >>> agent = HybridInversionAgent(
-    ...     dim=1, max_iter=100
+    >>> agent = HybridInversionAgent(dim=1, max_iter=100)
+    >>> res = agent.execute(
+    ...     {
+    ...         "path": "/data/L22PLT",
+    ...         "ai_inverter": ai,
+    ...     }
     ... )
-    >>> res = agent.execute({
-    ...     "path":        "/data/L22PLT",
-    ...     "ai_inverter": ai,
-    ... })
     >>> res["rms_global"]
     0.14
     """
@@ -216,9 +216,7 @@ class HybridInversionAgent(BaseAgent):
         )
         output_dir = input_data.get("output_dir")
 
-        ai_inv_raw = input_data.get("ai_inverter") or input_data.get(
-            "checkpoint"
-        )
+        ai_inv_raw = input_data.get("ai_inverter") or input_data.get("checkpoint")
         if ai_inv_raw is None:
             return AgentResult.failed(
                 "No 'ai_inverter' or 'checkpoint' "
@@ -244,14 +242,7 @@ class HybridInversionAgent(BaseAgent):
             )
 
         try:
-            (
-                inv,
-                mat,
-                s1_mat,
-                conv_df,
-                res_df,
-                s1_res_df,
-            ) = self._run(
+            (inv, mat, s1_mat, conv_df, res_df, s1_res_df,) = self._run(
                 dim,
                 sites,
                 ai_inv_raw,
@@ -391,9 +382,7 @@ class HybridInversionAgent(BaseAgent):
                 warns.append(f"stage1_models(): {exc}")
 
         elapsed = time.time() - t0
-        rms_str = (
-            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
-        )
+        rms_str = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
         return AgentResult(
             status=("success" if n_st > 0 else "needs_review"),
             summary=(

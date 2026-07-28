@@ -227,9 +227,9 @@ class TestExtractChainage:
             edis = _load_profile(prof)
             chain = extract_chainage(edis)
             total_km = chain[-1]
-            assert 1.0 < total_km < 15.0, (
-                f"{prof}: total chainage {total_km:.2f} km out of expected range"
-            )
+            assert (
+                1.0 < total_km < 15.0
+            ), f"{prof}: total chainage {total_km:.2f} km out of expected range"
 
     def test_inter_station_spacing_realistic(self):
         """WILLY typical (median) inter-station spacing is ~80–200 m.
@@ -274,9 +274,7 @@ class TestExtractStationNames:
     def test_unique_within_profile(self):
         edis, _ = _get_l18()
         names = extract_station_names(edis)
-        assert len(names) == len(set(names)), (
-            "Duplicate station names in L18PLT"
-        )
+        assert len(names) == len(set(names)), "Duplicate station names in L18PLT"
 
     def test_collection_equals_list(self):
         edis, coll = _get_l18()

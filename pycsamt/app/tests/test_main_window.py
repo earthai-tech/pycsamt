@@ -228,9 +228,7 @@ def test_save_layout_populates_state(window):
 
 def test_close_saves_session(window, tmp_path, monkeypatch):
     target = tmp_path / "session.json"
-    monkeypatch.setattr(
-        "pycsamt.app.desktop.models.session._SESSION_PATH", target
-    )
+    monkeypatch.setattr("pycsamt.app.desktop.models.session._SESSION_PATH", target)
     window.close()
     # Session file should have been written
     assert target.exists()

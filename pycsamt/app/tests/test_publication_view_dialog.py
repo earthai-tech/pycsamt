@@ -60,9 +60,7 @@ def real_controller(willy_sites):
 
 class TestConstruction:
     def test_title_includes_station_name(self, qapp, empty_controller):
-        dlg = PublicationViewDialog(
-            empty_controller, station_name="STA01", parent=None
-        )
+        dlg = PublicationViewDialog(empty_controller, station_name="STA01", parent=None)
         assert "STA01" in dlg.windowTitle()
         dlg.close()
 
@@ -114,7 +112,6 @@ class TestOnExport:
     def test_export_dialog_opened_when_available(
         self, qapp, empty_controller, monkeypatch
     ):
-        import pycsamt.app.desktop.windows.publication_view_dialog as mod
 
         calls = []
 

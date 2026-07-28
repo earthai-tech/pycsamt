@@ -274,8 +274,7 @@ class TestCodeDispatchRAG(unittest.TestCase):
         def step(label, status="done"):
             C._update_job(
                 jid,
-                steps=C._JOBS[jid]["steps"]
-                + [{"label": label, "status": status}],
+                steps=C._JOBS[jid]["steps"] + [{"label": label, "status": status}],
             )
 
         C._dispatch_code(
@@ -379,9 +378,7 @@ class TestNamedLineWorkflow(unittest.TestCase):
                 }
 
         self._orig = pr.ProjectRegistry.from_default
-        pr.ProjectRegistry.from_default = classmethod(
-            lambda cls, root=None: _Reg(edi)
-        )
+        pr.ProjectRegistry.from_default = classmethod(lambda cls, root=None: _Reg(edi))
 
     def tearDown(self):
         import pycsamt.assistant.tools.project_registry as pr
@@ -391,9 +388,7 @@ class TestNamedLineWorkflow(unittest.TestCase):
     def test_names_registry_line(self):
         import pycsamt.app.agent_master.callbacks.chat as C
 
-        self.assertTrue(
-            C._names_registry_line("run static shift on line L22PLT")
-        )
+        self.assertTrue(C._names_registry_line("run static shift on line L22PLT"))
         self.assertFalse(C._names_registry_line("run static shift"))
 
     def test_run_agent_resolves_line_without_edi(self):
@@ -461,9 +456,7 @@ class TestSessionFollowup(unittest.TestCase):
                 }
 
         self._orig = pr.ProjectRegistry.from_default
-        pr.ProjectRegistry.from_default = classmethod(
-            lambda cls, root=None: _Reg()
-        )
+        pr.ProjectRegistry.from_default = classmethod(lambda cls, root=None: _Reg())
         C._reset_session()
 
     def tearDown(self):

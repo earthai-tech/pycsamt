@@ -34,9 +34,7 @@ def test_backend_registry_instantiates_all_adapters():
     assert expected.issubset(set(available_backends()))
     for name in expected:
         backend_cls = get_backend(name)
-        cfg = InversionConfig(
-            backend=name, dimension="3d" if name == "modem" else "1d"
-        )
+        cfg = InversionConfig(backend=name, dimension="3d" if name == "modem" else "1d")
         if name == "occam2d":
             cfg = InversionConfig(backend=name, dimension="2d")
         assert backend_cls(cfg).name == name

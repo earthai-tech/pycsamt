@@ -123,11 +123,7 @@ class PseudosectionsPage(SettingsPage):
             ps = SR.pseudosection
             self._side_combo.setCurrentIndex(
                 next(
-                    (
-                        i
-                        for i, (_, v) in enumerate(_SIDE_CHOICES)
-                        if v == ps.side
-                    ),
+                    (i for i, (_, v) in enumerate(_SIDE_CHOICES) if v == ps.side),
                     0,
                 )
             )
@@ -156,11 +152,7 @@ class PseudosectionsPage(SettingsPage):
             y_dir = SEC.pseudosection.axis.y_direction
             self._ydir_combo.setCurrentIndex(
                 next(
-                    (
-                        i
-                        for i, (_, v) in enumerate(_Y_DIR_CHOICES)
-                        if v == y_dir
-                    ),
+                    (i for i, (_, v) in enumerate(_Y_DIR_CHOICES) if v == y_dir),
                     0,
                 )
             )
@@ -171,9 +163,7 @@ class PseudosectionsPage(SettingsPage):
         station = {
             "side": _SIDE_CHOICES[self._side_combo.currentIndex()][1],
             "show_markers": self._show_cb.isChecked(),
-            "marker_symbol": _MARKER_CHOICES[
-                self._marker_combo.currentIndex()
-            ][1],
+            "marker_symbol": _MARKER_CHOICES[self._marker_combo.currentIndex()][1],
             "marker_size": self._size_spin.value(),
             "marker_offset": self._offset_spin.value(),
             "max_labels": self._maxlbl_spin.value(),

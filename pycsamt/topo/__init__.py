@@ -12,16 +12,19 @@ Quick start
 Enable topography for all 2-D plots in the current session::
 
     from pycsamt.topo import configure_topo
+
     configure_topo(enabled=True)
 
 Disable / reset::
 
     from pycsamt.topo import reset_topo
+
     reset_topo()
 
 Temporarily override with a context manager::
 
     from pycsamt.topo import PYCSAMT_TOPO
+
     with PYCSAMT_TOPO.context(enabled=True, exaggeration=2.0):
         fig = section.plot()
 

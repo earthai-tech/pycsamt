@@ -30,9 +30,7 @@ def test_no_static_shift_for_equal_modes():
 
 
 def test_static_shift_detected():
-    res = estimate_static_shift(
-        BASE * 3.0, BASE, phase_xy=PHASE, phase_yx=PHASE
-    )
+    res = estimate_static_shift(BASE * 3.0, BASE, phase_xy=PHASE, phase_yx=PHASE)
     assert res.static_shift
     assert res.shift_factor == pytest.approx(3.0, rel=1e-6)
     assert res.split_decades == pytest.approx(np.log10(3.0), rel=1e-6)
@@ -49,9 +47,7 @@ def test_frequency_dependent_split_is_not_static():
 
 def test_phase_disagreement_vetoes_static_shift():
     # a persistent resistivity split but disagreeing phases -> anisotropy
-    res = estimate_static_shift(
-        BASE * 3.0, BASE, phase_xy=PHASE + 20.0, phase_yx=PHASE
-    )
+    res = estimate_static_shift(BASE * 3.0, BASE, phase_xy=PHASE + 20.0, phase_yx=PHASE)
     assert res.phase_diff_deg == pytest.approx(20.0, rel=1e-6)
     assert not res.static_shift
 

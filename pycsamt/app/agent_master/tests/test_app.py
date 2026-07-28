@@ -69,9 +69,7 @@ class TestLaunch:
             def run(self, **kwargs):
                 recorded["run_kwargs"] = kwargs
 
-        monkeypatch.setattr(
-            app_mod, "create_app", lambda debug=False: _FakeApp()
-        )
+        monkeypatch.setattr(app_mod, "create_app", lambda debug=False: _FakeApp())
         app_mod.launch(open_browser=False, port=9003)
         assert recorded["run_kwargs"]["host"] == "127.0.0.1"
         assert recorded["run_kwargs"]["port"] == 9003
@@ -85,9 +83,7 @@ class TestLaunch:
             def run(self, **kwargs):
                 pass
 
-        monkeypatch.setattr(
-            app_mod, "create_app", lambda debug=False: _FakeApp()
-        )
+        monkeypatch.setattr(app_mod, "create_app", lambda debug=False: _FakeApp())
         started = {"n": 0}
 
         class _FakeThread:
@@ -106,9 +102,7 @@ def test_ids_unique():
     from pycsamt.app.agent_master._ids import IDs
 
     vals = [
-        v
-        for k, v in vars(IDs).items()
-        if not k.startswith("_") and isinstance(v, str)
+        v for k, v in vars(IDs).items() if not k.startswith("_") and isinstance(v, str)
     ]
     assert len(vals) == len(set(vals)), "Duplicate component IDs detected"
 

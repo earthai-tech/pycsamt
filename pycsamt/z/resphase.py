@@ -327,9 +327,7 @@ class ResPhase(BaseEM):
                     r_rel, ph_err = z_error2r_phi_error(re, im, dz)
                     val = self._resistivity[k, i, j]
                     rho_e[k, i, j] = (
-                        0.0
-                        if (val == 0.0) or (not np.isfinite(r_rel))
-                        else val * r_rel
+                        0.0 if (val == 0.0) or (not np.isfinite(r_rel)) else val * r_rel
                     )
                     phi_e[k, i, j] = ph_err
 
@@ -433,9 +431,7 @@ class ResPhase(BaseEM):
         self.freq = f
 
         self._resistivity_err = (
-            None
-            if res_err_array is None
-            else np.asarray(res_err_array, dtype=float)
+            None if res_err_array is None else np.asarray(res_err_array, dtype=float)
         )
         self._phase_err = (
             None
@@ -460,9 +456,7 @@ class ResPhase(BaseEM):
                 f"{rho_err.shape!r} vs {rho.shape!r}, "
                 f"{phi_err.shape!r} vs {phi.shape!r}"
             )
-        if not np.all(np.isfinite(rho_err)) or not np.all(
-            np.isfinite(phi_err)
-        ):
+        if not np.all(np.isfinite(rho_err)) or not np.all(np.isfinite(phi_err)):
             raise ZError("ρ_err and φ_err must be finite")
         if np.any(rho_err < 0) or np.any(phi_err < 0):
             raise ZError("ρ_err and φ_err must be non-negative")
@@ -595,9 +589,7 @@ class ResPhase(BaseEM):
     @property
     def _zdet_var(self) -> np.ndarray:
         if self._z_err is not None:
-            return np.array(
-                [abs(np.linalg.det(zzv)) ** 0.5 for zzv in self._z_err]
-            )
+            return np.array([abs(np.linalg.det(zzv)) ** 0.5 for zzv in self._z_err])
         return np.ones_like(self._zdet, dtype=float)
 
     @property

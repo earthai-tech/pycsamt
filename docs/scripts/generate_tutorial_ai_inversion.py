@@ -16,7 +16,6 @@ import numpy as np
 import pandas as pd
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 IMAGE_DIR = (
@@ -33,9 +32,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.api.station import PYCSAMT_STATION_RENDERING
-        from pycsamt.api import read_edis
-        from pycsamt.emtools.qc import build_qc_table, station_confidence_table
+        pass
 
     return locals()
 
@@ -60,11 +57,41 @@ def _workflow_plot() -> None:
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     nodes = [
-        (0.10, "Corrected EDIs", "static shift, filters,\nrotation already reviewed", "#eff6ff", "#2563eb"),
-        (0.32, "Coverage Check", "freq band, station count,\ntraining envelope", "#f0fdf4", "#16a34a"),
-        (0.54, "Choose AI Mode", "1-D per station,\n2-D profile, 3-D graph", "#fff7ed", "#d5962c"),
-        (0.76, "Predict + Validate", "sections, residuals,\nuncertainty, flags", "#f5f3ff", "#7c4d79"),
-        (0.93, "Export", "models, tables,\nfigures, report", "#fef2f2", "#c85745"),
+        (
+            0.10,
+            "Corrected EDIs",
+            "static shift, filters,\nrotation already reviewed",
+            "#eff6ff",
+            "#2563eb",
+        ),
+        (
+            0.32,
+            "Coverage Check",
+            "freq band, station count,\ntraining envelope",
+            "#f0fdf4",
+            "#16a34a",
+        ),
+        (
+            0.54,
+            "Choose AI Mode",
+            "1-D per station,\n2-D profile, 3-D graph",
+            "#fff7ed",
+            "#d5962c",
+        ),
+        (
+            0.76,
+            "Predict + Validate",
+            "sections, residuals,\nuncertainty, flags",
+            "#f5f3ff",
+            "#7c4d79",
+        ),
+        (
+            0.93,
+            "Export",
+            "models, tables,\nfigures, report",
+            "#fef2f2",
+            "#c85745",
+        ),
     ]
     for idx, (x, title, body, face, edge) in enumerate(nodes):
         box = FancyBboxPatch(
@@ -77,8 +104,24 @@ def _workflow_plot() -> None:
             facecolor=face,
         )
         ax.add_patch(box)
-        ax.text(x, 0.62, title, ha="center", va="center", fontsize=10, weight="bold")
-        ax.text(x, 0.48, body, ha="center", va="center", fontsize=8.2, linespacing=1.2)
+        ax.text(
+            x,
+            0.62,
+            title,
+            ha="center",
+            va="center",
+            fontsize=10,
+            weight="bold",
+        )
+        ax.text(
+            x,
+            0.48,
+            body,
+            ha="center",
+            va="center",
+            fontsize=8.2,
+            linespacing=1.2,
+        )
         if idx < len(nodes) - 1:
             ax.add_patch(
                 FancyArrowPatch(
@@ -103,9 +146,24 @@ def _workflow_plot() -> None:
 
 def _mode_decision_plot() -> None:
     rows = [
-        ["1-D AI", "single station or quick screening", "fast; independent", "bypass when lateral continuity matters"],
-        ["2-D AI", "profile line with ordered stations", "captures lateral structure", "needs consistent station spacing/order"],
-        ["3-D AI", "grid or multiple profiles", "uses station geometry graph", "needs coordinates and enough stations"],
+        [
+            "1-D AI",
+            "single station or quick screening",
+            "fast; independent",
+            "bypass when lateral continuity matters",
+        ],
+        [
+            "2-D AI",
+            "profile line with ordered stations",
+            "captures lateral structure",
+            "needs consistent station spacing/order",
+        ],
+        [
+            "3-D AI",
+            "grid or multiple profiles",
+            "uses station geometry graph",
+            "needs coordinates and enough stations",
+        ],
     ]
     fig, ax = plt.subplots(figsize=(11.4, 3.4))
     ax.axis("off")
@@ -152,15 +210,31 @@ def _training_coverage_plot(qc: pd.DataFrame) -> None:
         curves.append(
             2.0
             + slope * np.log10(periods)
-            + amp * np.tanh((np.log10(periods) - center) / rng.uniform(0.7, 1.5))
+            + amp
+            * np.tanh((np.log10(periods) - center) / rng.uniform(0.7, 1.5))
             + rng.normal(0, 0.035, periods.size)
         )
     curves = np.vstack(curves)
     p10, p50, p90 = np.percentile(curves, [10, 50, 90], axis=0)
     fig, ax = plt.subplots(figsize=(10.2, 4.4))
-    ax.fill_between(periods, p10, p90, color="#93c5fd", alpha=0.35, label="synthetic envelope")
-    ax.plot(periods, p50, color="#2563eb", linewidth=1.6, label="synthetic median")
-    ax.axvspan(observed_lo, observed_hi, color="#d5962c", alpha=0.18, label="observed EDI period range")
+    ax.fill_between(
+        periods,
+        p10,
+        p90,
+        color="#93c5fd",
+        alpha=0.35,
+        label="synthetic envelope",
+    )
+    ax.plot(
+        periods, p50, color="#2563eb", linewidth=1.6, label="synthetic median"
+    )
+    ax.axvspan(
+        observed_lo,
+        observed_hi,
+        color="#d5962c",
+        alpha=0.18,
+        label="observed EDI period range",
+    )
     ax.set_xscale("log")
     ax.set_xlabel("Period (s)")
     ax.set_ylabel("Training response feature")
@@ -176,10 +250,16 @@ def _predicted_sections() -> None:
     xx, zz = np.meshgrid(stations, depths)
     one_d = 2.15 + 0.45 * np.tanh((zz - 650) / 420)
     one_d += 0.18 * np.sin(stations / 2.8)[None, :]
-    two_d = one_d - 0.72 * np.exp(-((xx - 11) ** 2 / 28 + (zz - 520) ** 2 / 85000))
-    three_d_slice = two_d + 0.30 * np.exp(-((xx - 20) ** 2 / 20 + (zz - 1050) ** 2 / 150000))
+    two_d = one_d - 0.72 * np.exp(
+        -((xx - 11) ** 2 / 28 + (zz - 520) ** 2 / 85000)
+    )
+    three_d_slice = two_d + 0.30 * np.exp(
+        -((xx - 20) ** 2 / 20 + (zz - 1050) ** 2 / 150000)
+    )
 
-    fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.3), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1, 3, figsize=(12.0, 4.3), constrained_layout=True
+    )
     panels = [
         (one_d, "1-D AI stacked profiles"),
         (two_d, "2-D AI profile section"),
@@ -209,7 +289,9 @@ def _observed_pseudosection(sites) -> tuple[np.ndarray, np.ndarray, list[str]]:
     periods_ref = None
     columns = []
     for site in sites:
-        labels.append(str(getattr(site, "station", getattr(site, "id", len(labels)))))
+        labels.append(
+            str(getattr(site, "station", getattr(site, "id", len(labels))))
+        )
         freq = np.asarray(site.Z.freq, dtype=float)
         zxy = np.asarray(site.Z.z, dtype=complex)[:, 0, 1]
         period = 1.0 / np.maximum(freq, 1e-30)
@@ -219,17 +301,29 @@ def _observed_pseudosection(sites) -> tuple[np.ndarray, np.ndarray, list[str]]:
         log_rho = np.log10(np.clip(rho[order], 1e-12, None))
         if periods_ref is None:
             periods_ref = period
-        columns.append(np.interp(np.log10(periods_ref), np.log10(period), log_rho))
-    return np.asarray(columns, dtype=float).T, np.asarray(periods_ref, dtype=float), labels
+        columns.append(
+            np.interp(np.log10(periods_ref), np.log10(period), log_rho)
+        )
+    return (
+        np.asarray(columns, dtype=float).T,
+        np.asarray(periods_ref, dtype=float),
+        labels,
+    )
 
 
-def _synthetic_ai_2d(n_depth: int, n_station: int) -> tuple[np.ndarray, np.ndarray]:
+def _synthetic_ai_2d(
+    n_depth: int, n_station: int
+) -> tuple[np.ndarray, np.ndarray]:
     depths = np.linspace(0, 2200, n_depth)
     x = np.arange(n_station)
     xx, zz = np.meshgrid(x, depths)
     section = 2.22 + 0.48 * np.tanh((zz - 720) / 460)
-    section -= 0.68 * np.exp(-((xx - 11.5) ** 2 / 34 + (zz - 560) ** 2 / 105000))
-    section += 0.22 * np.exp(-((xx - 21.5) ** 2 / 42 + (zz - 1300) ** 2 / 220000))
+    section -= 0.68 * np.exp(
+        -((xx - 11.5) ** 2 / 34 + (zz - 560) ** 2 / 105000)
+    )
+    section += 0.22 * np.exp(
+        -((xx - 21.5) ** 2 / 42 + (zz - 1300) ** 2 / 220000)
+    )
     section += 0.05 * np.sin(xx / 2.7) * np.exp(-zz / 1800)
     return section, depths
 
@@ -240,7 +334,9 @@ def _ai_2d_grid_plot(functions, sites) -> None:
     section, depths = _synthetic_ai_2d(82, len(labels))
     x = np.arange(len(labels), dtype=float)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.8), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1, 2, figsize=(13.2, 5.8), constrained_layout=True
+    )
     im0 = axes[0].imshow(
         pseudo,
         aspect="auto",
@@ -290,7 +386,10 @@ def _ai_2d_grid_plot(functions, sites) -> None:
 
 def _ai_3d_grid_plot(functions, sites) -> None:
     station_api = functions["PYCSAMT_STATION_RENDERING"]
-    labels = [str(getattr(site, "station", getattr(site, "id", i))) for i, site in enumerate(sites)]
+    labels = [
+        str(getattr(site, "station", getattr(site, "id", i)))
+        for i, site in enumerate(sites)
+    ]
     n = len(labels)
     x = np.linspace(0, 13_500, n)
     y = 450 * np.sin(np.linspace(0, 2.6, n))
@@ -303,8 +402,12 @@ def _ai_3d_grid_plot(functions, sites) -> None:
     depths = np.linspace(0, 2600, 90)
     xx, zz = np.meshgrid(np.arange(n), depths)
     slice_y0 = 2.24 + 0.52 * np.tanh((zz - 800) / 520)
-    slice_y0 -= 0.62 * np.exp(-((xx - 12.0) ** 2 / 38 + (zz - 620) ** 2 / 130000))
-    slice_y0 += 0.34 * np.exp(-((xx - 21.0) ** 2 / 28 + (zz - 1550) ** 2 / 210000))
+    slice_y0 -= 0.62 * np.exp(
+        -((xx - 12.0) ** 2 / 38 + (zz - 620) ** 2 / 130000)
+    )
+    slice_y0 += 0.34 * np.exp(
+        -((xx - 21.0) ** 2 / 28 + (zz - 1550) ** 2 / 210000)
+    )
 
     fig = plt.figure(figsize=(13.4, 6.4), constrained_layout=True)
     gs = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.35])
@@ -317,11 +420,28 @@ def _ai_3d_grid_plot(functions, sites) -> None:
         dist = np.hypot(x - x[i], y - y[i])
         for j in np.where((dist > 0) & (dist < 1800))[0]:
             if j > i:
-                ax0.plot([x[i], x[j]], [y[i], y[j]], color="#94a3b8", alpha=0.45, linewidth=0.75)
-    sc = ax0.scatter(x, y, c=response, cmap="viridis", s=62, edgecolor="#27323a", linewidth=0.45, zorder=3)
+                ax0.plot(
+                    [x[i], x[j]],
+                    [y[i], y[j]],
+                    color="#94a3b8",
+                    alpha=0.45,
+                    linewidth=0.75,
+                )
+    sc = ax0.scatter(
+        x,
+        y,
+        c=response,
+        cmap="viridis",
+        s=62,
+        edgecolor="#27323a",
+        linewidth=0.45,
+        zorder=3,
+    )
     step = max(1, n // 10)
     for i in range(0, n, step):
-        ax0.text(x[i], y[i] + 180, labels[i], fontsize=7, rotation=35, ha="center")
+        ax0.text(
+            x[i], y[i] + 180, labels[i], fontsize=7, rotation=35, ha="center"
+        )
     ax0.set_title("3-D AI station graph")
     ax0.set_xlabel("Easting offset (m)")
     ax0.set_ylabel("Northing offset (m)")
@@ -329,7 +449,9 @@ def _ai_3d_grid_plot(functions, sites) -> None:
     cb0.set_label("response feature")
     _style_axis(ax0)
 
-    ax_topo.fill_between(topo_x, topo_m.min() - 70.0, topo_m, color="#d7c8a6", alpha=0.70)
+    ax_topo.fill_between(
+        topo_x, topo_m.min() - 70.0, topo_m, color="#d7c8a6", alpha=0.70
+    )
     ax_topo.plot(topo_x, topo_m, color="#78664a", linewidth=1.7)
     ax_topo.set_ylim(topo_m.min() - 70.0, topo_m.max() + 150.0)
     ax_topo.set_ylabel("Elev. (m)")
@@ -342,7 +464,9 @@ def _ai_3d_grid_plot(functions, sites) -> None:
         topo_elev=topo_m,
     )
     _style_axis(ax_topo)
-    ax_topo.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+    ax_topo.tick_params(
+        axis="x", which="both", bottom=False, labelbottom=False
+    )
 
     im = ax1.imshow(
         slice_y0,
@@ -370,7 +494,10 @@ def _ai_3d_grid_plot(functions, sites) -> None:
 
 def _ai_3d_topography_block_plot(functions, sites) -> None:
     station_api = functions["PYCSAMT_STATION_RENDERING"]
-    labels = [str(getattr(site, "station", getattr(site, "id", i))) for i, site in enumerate(sites)]
+    labels = [
+        str(getattr(site, "station", getattr(site, "id", i)))
+        for i, site in enumerate(sites)
+    ]
     n = len(labels)
     topo_x = np.arange(n, dtype=float)
     topo_m = 420.0 + 95.0 * np.sin(np.linspace(0.15, 2.9, n))
@@ -381,14 +508,18 @@ def _ai_3d_topography_block_plot(functions, sites) -> None:
     xx, zz = np.meshgrid(np.arange(n), depths)
     block = 2.24 + 0.52 * np.tanh((zz - 800) / 520)
     block -= 0.62 * np.exp(-((xx - 12.0) ** 2 / 38 + (zz - 620) ** 2 / 130000))
-    block += 0.34 * np.exp(-((xx - 21.0) ** 2 / 28 + (zz - 1550) ** 2 / 210000))
+    block += 0.34 * np.exp(
+        -((xx - 21.0) ** 2 / 28 + (zz - 1550) ** 2 / 210000)
+    )
     x_grid = np.tile(topo_x[None, :], (depths.size, 1))
     elev_grid = topo_m[None, :] - depths[:, None]
 
     fig, ax1 = plt.subplots(figsize=(12.8, 5.8), constrained_layout=True)
 
     levels = np.linspace(1.35, 3.1, 18)
-    im = ax1.contourf(x_grid, elev_grid, block, levels=levels, cmap="turbo", extend="both")
+    im = ax1.contourf(
+        x_grid, elev_grid, block, levels=levels, cmap="turbo", extend="both"
+    )
     ax1.contour(
         x_grid,
         elev_grid,
@@ -398,7 +529,9 @@ def _ai_3d_topography_block_plot(functions, sites) -> None:
         linewidths=0.28,
         alpha=0.30,
     )
-    ax1.fill_between(topo_x, topo_m, topo_m.max() + 420.0, color="white", zorder=4)
+    ax1.fill_between(
+        topo_x, topo_m, topo_m.max() + 420.0, color="white", zorder=4
+    )
     ax1.plot(topo_x, topo_m, color="#2f2419", linewidth=1.5, zorder=6)
     station_api.style_for("inversion").apply(
         ax1,
@@ -422,12 +555,33 @@ def _validation_plot() -> None:
     rng = np.random.default_rng(7)
     rms_1d = 0.28 + 0.08 * np.sin(x / 3) + rng.normal(0, 0.025, len(x))
     rms_2d = 0.22 + 0.04 * np.sin(x / 4 + 0.5) + rng.normal(0, 0.018, len(x))
-    uncert = 0.08 + 0.06 * np.exp(-((x - 17) ** 2) / 45) + rng.normal(0, 0.008, len(x))
+    uncert = (
+        0.08
+        + 0.06 * np.exp(-((x - 17) ** 2) / 45)
+        + rng.normal(0, 0.008, len(x))
+    )
     fig, ax = plt.subplots(figsize=(11.0, 4.2))
-    ax.plot(x, rms_1d, color="#7c4d79", marker="o", markersize=3, label="1-D RMS")
-    ax.plot(x, rms_2d, color="#2f6f8f", marker="s", markersize=3, label="2-D RMS")
-    ax.fill_between(x, rms_2d - uncert, rms_2d + uncert, color="#2f6f8f", alpha=0.16, label="prediction interval")
-    ax.axhline(0.35, color="#c85745", linestyle="--", linewidth=1.0, label="review threshold")
+    ax.plot(
+        x, rms_1d, color="#7c4d79", marker="o", markersize=3, label="1-D RMS"
+    )
+    ax.plot(
+        x, rms_2d, color="#2f6f8f", marker="s", markersize=3, label="2-D RMS"
+    )
+    ax.fill_between(
+        x,
+        rms_2d - uncert,
+        rms_2d + uncert,
+        color="#2f6f8f",
+        alpha=0.16,
+        label="prediction interval",
+    )
+    ax.axhline(
+        0.35,
+        color="#c85745",
+        linestyle="--",
+        linewidth=1.0,
+        label="review threshold",
+    )
     ax.set_xticks(x[::3])
     ax.set_xticklabels(stations[::3], rotation=45, ha="right")
     ax.set_ylabel("RMS in log10 apparent resistivity")
@@ -447,8 +601,23 @@ def _graph_context_plot() -> None:
         dist = np.hypot(x - x[i], y - y[i])
         for j in np.where((dist > 0) & (dist < 1800))[0]:
             if j > i:
-                ax.plot([x[i], x[j]], [y[i], y[j]], color="#94a3b8", alpha=0.45, linewidth=0.8)
-    sc = ax.scatter(x, y, c=response, cmap="viridis", s=70, edgecolor="#27323a", linewidth=0.5, zorder=3)
+                ax.plot(
+                    [x[i], x[j]],
+                    [y[i], y[j]],
+                    color="#94a3b8",
+                    alpha=0.45,
+                    linewidth=0.8,
+                )
+    sc = ax.scatter(
+        x,
+        y,
+        c=response,
+        cmap="viridis",
+        s=70,
+        edgecolor="#27323a",
+        linewidth=0.5,
+        zorder=3,
+    )
     ax.set_xlabel("Profile easting (m)")
     ax.set_ylabel("Profile northing (m)")
     ax.set_title("3-D/graph AI uses station geometry")
@@ -495,7 +664,11 @@ def main() -> int:
     print("survey_summary:")
     print(survey.summary())
     print("inventory:")
-    print(inventory[["station", "n_freq", "tipper", "spectra"]].head(5).to_string(index=False))
+    print(
+        inventory[["station", "n_freq", "tipper", "spectra"]]
+        .head(5)
+        .to_string(index=False)
+    )
     print("qc_ready:")
     print(
         qc[["station", "n_freq", "frac_ok", "snr_med", "pmin", "pmax"]]

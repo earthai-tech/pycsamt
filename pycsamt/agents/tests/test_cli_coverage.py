@@ -37,21 +37,21 @@ def test_zoo_list_download_and_errors(monkeypatch, capsys):
     import pycsamt.ai._zoo as zoo
 
     monkeypatch.setattr(zoo, "list_pretrained", lambda: {"tiny": "Tiny model"})
-    monkeypatch.setattr(
-        zoo, "download_checkpoint", lambda *a, **k: "/tmp/tiny.ckpt"
-    )
+    monkeypatch.setattr(zoo, "download_checkpoint", lambda *a, **k: "/tmp/tiny.ckpt")
     cli.main(["zoo"])
     cli.main(["zoo", "tiny", "--force"])
     assert "Tiny model" in capsys.readouterr().out
 
     monkeypatch.setattr(
-        zoo, "download_checkpoint",
+        zoo,
+        "download_checkpoint",
         lambda *a, **k: (_ for _ in ()).throw(KeyError("missing")),
     )
     with pytest.raises(SystemExit):
         cli.main(["zoo", "missing"])
     monkeypatch.setattr(
-        zoo, "download_checkpoint",
+        zoo,
+        "download_checkpoint",
         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")),
     )
     with pytest.raises(SystemExit):

@@ -229,9 +229,7 @@ def _build_occam2d(
     if cell_size is not None:
         cfg.cell_size_horizontal = cell_size
 
-    InputBuilder(
-        source=sites, workdir=workdir, config=cfg, verbose=verbose
-    ).build()
+    InputBuilder(source=sites, workdir=workdir, config=cfg, verbose=verbose).build()
 
 
 def _build_modem(

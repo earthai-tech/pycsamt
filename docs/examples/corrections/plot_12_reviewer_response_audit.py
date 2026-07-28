@@ -39,7 +39,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 try:
     EXAMPLE_DIR = Path(__file__).resolve().parent
 except NameError:
@@ -229,7 +228,9 @@ for line, edi_dir in LINES.items():
         window=5,
     )
     write_table(emap.report, line_out / "confidence_gated_emap_report.csv")
-    write_table(emap.decisions, line_out / "confidence_gated_emap_decisions.csv")
+    write_table(
+        emap.decisions, line_out / "confidence_gated_emap_decisions.csv"
+    )
 
     safe = int((freq_conf["confidence"] >= CI_HI).sum())
     recoverable = int(
@@ -374,7 +375,9 @@ for line, sites in sites_by_line.items():
                 }
             )
     sensitivity = pd.DataFrame(rows)
-    sensitivity.to_csv(OUT / line / "ss_ama_window_sensitivity.csv", index=False)
+    sensitivity.to_csv(
+        OUT / line / "ss_ama_window_sensitivity.csv", index=False
+    )
 
     fig, ax = plt.subplots(figsize=(10.0, 4.3))
     for half_window, sub in sensitivity.groupby("half_window"):
@@ -388,9 +391,9 @@ for line, sites in sites_by_line.items():
             label=f"half_window={half_window}",
         )
     ax.axhline(1.0, color="0.5", lw=1.0)
-    labels = sensitivity[sensitivity["half_window"] == STATIC_SHIFT_WINDOWS[0]][
-        "station"
-    ].astype(str)
+    labels = sensitivity[
+        sensitivity["half_window"] == STATIC_SHIFT_WINDOWS[0]
+    ]["station"].astype(str)
     ax.set_xticks(np.arange(len(labels)))
     ax.set_xticklabels(labels, rotation=90, fontsize=7)
     ax.set_ylabel(r"$F_\rho$")
@@ -398,7 +401,9 @@ for line, sites in sites_by_line.items():
     ax.grid(True, axis="y", ls=":", alpha=0.5)
     ax.legend(fontsize=8, ncol=2)
     fig.tight_layout()
-    save_current_figure(OUT / line / "figures" / "ss_ama_window_sensitivity.png")
+    save_current_figure(
+        OUT / line / "figures" / "ss_ama_window_sensitivity.png"
+    )
 
     corrected = correct_ss_ama(
         sites,

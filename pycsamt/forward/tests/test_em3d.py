@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from scipy import sparse
 
 from pycsamt.forward.em3d import (
-    MT3DForward,
     ForwardResponse3D,
+    MT3DForward,
     _apply_dirichlet_3d,
     _bc_vector_3d,
     _boundary_edge_mask,
@@ -32,8 +33,6 @@ from pycsamt.forward.em3d import (
     _fd3d_face_counts,
 )
 from pycsamt.forward.grid3d import Grid3D
-from scipy import sparse
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Pure helpers: edge / face counts
@@ -206,13 +205,9 @@ def test_forward_response3d_to_feature_array_shapes_and_values():
     default_feat = resp.to_feature_array()  # "xy_yx", log_rho, phase
     assert default_feat.shape == (4, 2 * 2 * 6)
 
-    xy_only_no_phase = resp.to_feature_array(
-        components="xy", include_phase=False
-    )
+    xy_only_no_phase = resp.to_feature_array(components="xy", include_phase=False)
     assert xy_only_no_phase.shape == (4, 6)
-    assert np.allclose(
-        xy_only_no_phase, np.log10(np.maximum(resp.rho_a_xy, 1e-12)).T
-    )
+    assert np.allclose(xy_only_no_phase, np.log10(np.maximum(resp.rho_a_xy, 1e-12)).T)
 
     all_feat = resp.to_feature_array(components="all")
     assert all_feat.shape == (4, 4 * 2 * 6)
@@ -544,9 +539,7 @@ def test_bc_vector_3d_e_decay_is_monotonically_decaying_with_depth():
 
     # Side boundary j=0, i=0, over k=0..nz: values are E_decay(z_nodes[k])
     # except k=0 which is fixed to 1 (same starting point anyway).
-    mags = np.abs(
-        [b[_ex_idx(0, 0, k, g.ny, g.nz)] for k in range(g.nz + 1)]
-    )
+    mags = np.abs([b[_ex_idx(0, 0, k, g.ny, g.nz)] for k in range(g.nz + 1)])
     assert np.all(np.diff(mags) < 0.0)  # strictly decaying with depth
     assert mags[0] == pytest.approx(1.0)
 

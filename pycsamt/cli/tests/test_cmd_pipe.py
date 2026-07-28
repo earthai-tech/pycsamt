@@ -40,9 +40,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DATA_WILLY = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
 
 
-def _patch_resolve_sites(
-    monkeypatch: pytest.MonkeyPatch, sites: _FakeSites
-) -> None:
+def _patch_resolve_sites(monkeypatch: pytest.MonkeyPatch, sites: _FakeSites) -> None:
     """Replace ``_resolve_sites`` in the run sub-module with a lambda."""
     monkeypatch.setattr(
         f"{_RUN_MOD}._resolve_sites",
@@ -150,9 +148,7 @@ class TestPipeGroup:
             "--plot-fmt",
             "--out",
         ):
-            assert opt in r.output, (
-                f"Missing option {opt!r} in pipe run --help"
-            )
+            assert opt in r.output, f"Missing option {opt!r} in pipe run --help"
 
 
 # ============================================================================
@@ -170,9 +166,7 @@ class TestPipeStepList:
     def test_valid_names_resolved_to_codes(self) -> None:
         from pycsamt.api.cli.params import PipeStepList
 
-        result = PipeStepList().convert(
-            "notch_powerline,drop_duplicates", None, None
-        )
+        result = PipeStepList().convert("notch_powerline,drop_duplicates", None, None)
         assert result == ["NR001", "FREQ002"]
 
     def test_mixed_codes_and_names(self) -> None:
@@ -233,14 +227,10 @@ class TestPipeSteps:
             "SOURCE_EFFECTS",
             "QC",
         ):
-            assert cat in r.output.upper(), (
-                f"Category {cat} missing from steps output"
-            )
+            assert cat in r.output.upper(), f"Category {cat} missing from steps output"
 
     def test_category_filter_noise_removal(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "steps", "--category", "noise_removal"]
-        )
+        r = runner.invoke(main, ["pipe", "steps", "--category", "noise_removal"])
         assert r.exit_code == 0
         for code in ("NR001", "NR004", "NR010"):
             assert code in r.output
@@ -256,9 +246,7 @@ class TestPipeSteps:
         assert "nr_qc_harmonic_waterfall" in r.output
 
     def test_info_by_name(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "steps", "--info", "notch_powerline"]
-        )
+        r = runner.invoke(main, ["pipe", "steps", "--info", "notch_powerline"])
         assert r.exit_code == 0
         assert "NR001" in r.output
 
@@ -270,17 +258,13 @@ class TestPipeSteps:
     def test_codes_only_text(self, runner: CliRunner) -> None:
         r = runner.invoke(main, ["pipe", "steps", "--codes-only"])
         assert r.exit_code == 0
-        codes = [
-            line.strip() for line in r.output.splitlines() if line.strip()
-        ]
+        codes = [line.strip() for line in r.output.splitlines() if line.strip()]
         assert "NR001" in codes
         assert "SS001" in codes
         assert len(codes) == 47
 
     def test_codes_only_json(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "steps", "--codes-only", "--format", "json"]
-        )
+        r = runner.invoke(main, ["pipe", "steps", "--codes-only", "--format", "json"])
         assert r.exit_code == 0
         data = json.loads(r.output)
         assert isinstance(data, list)
@@ -379,9 +363,7 @@ class TestPipePresets:
         assert "SS001" in codes
 
     def test_expand_unknown_preset_error(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "presets", "--expand", "nonexistent_preset"]
-        )
+        r = runner.invoke(main, ["pipe", "presets", "--expand", "nonexistent_preset"])
         assert r.exit_code != 0
         assert "Unknown preset" in r.output or "Error" in r.output
 
@@ -399,9 +381,7 @@ class TestPipeInit:
         assert "steps:" in r.output
 
     def test_print_json(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "init", "--print", "--format", "json"]
-        )
+        r = runner.invoke(main, ["pipe", "init", "--print", "--format", "json"])
         assert r.exit_code == 0
         data = json.loads(r.output)
         assert "name" in data
@@ -424,9 +404,7 @@ class TestPipeInit:
         # Tensor preset codes should be active (uncommented)
         assert "TZ001" in r.output
 
-    def test_write_default_yaml(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_write_default_yaml(self, runner: CliRunner, tmp_path: Path) -> None:
         out = tmp_path / "my_workflow.yaml"
         r = runner.invoke(main, ["pipe", "init", "-o", str(out)])
         assert r.exit_code == 0
@@ -524,9 +502,7 @@ class TestPipeInit:
         assert "TZ001" in codes
 
     def test_invalid_format_raises(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "init", "--print", "--format", "xml"]
-        )
+        r = runner.invoke(main, ["pipe", "init", "--print", "--format", "xml"])
         assert r.exit_code != 0
 
 
@@ -537,9 +513,7 @@ class TestPipeInit:
 
 class TestPipeShow:
     def test_show_preset_text(self, runner: CliRunner) -> None:
-        r = runner.invoke(
-            main, ["pipe", "show", "--preset", "tensor_analysis"]
-        )
+        r = runner.invoke(main, ["pipe", "show", "--preset", "tensor_analysis"])
         assert r.exit_code == 0
         for code in ("TZ001", "TZ002", "TZ003", "TZ004"):
             assert code in r.output
@@ -566,9 +540,7 @@ class TestPipeShow:
         assert lines[0].startswith("idx,")
         assert any("NR001" in l for l in lines)
 
-    def test_show_from_file(
-        self, runner: CliRunner, yaml_config_file: Path
-    ) -> None:
+    def test_show_from_file(self, runner: CliRunner, yaml_config_file: Path) -> None:
         r = runner.invoke(main, ["pipe", "show", str(yaml_config_file)])
         assert r.exit_code == 0
         assert "NR001" in r.output
@@ -775,11 +747,7 @@ class TestPipeRunUnit:
         _patch_resolve_sites(monkeypatch, fake_sites)
         r = runner.invoke(main, ["pipe", "run", "--survey", "."])
         assert r.exit_code != 0
-        assert (
-            "--config" in r.output
-            or "--preset" in r.output
-            or "--steps" in r.output
-        )
+        assert "--config" in r.output or "--preset" in r.output or "--steps" in r.output
 
     def test_unknown_preset_raises(
         self,
@@ -971,9 +939,7 @@ class TestPipeRunUnit:
             processed_paths=[],
             pipeline_name="err_pipe",
         )
-        monkeypatch.setattr(
-            Pipeline, "run", lambda self, *a, **kw: bad_result
-        )
+        monkeypatch.setattr(Pipeline, "run", lambda self, *a, **kw: bad_result)
 
         r = runner.invoke(
             main,
@@ -1042,9 +1008,7 @@ class TestPipeRunIntegration:
         # Exit 0 means all 5 steps completed without error
         assert r.exit_code == 0, r.output
 
-    def test_run_writes_pipe_results(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_run_writes_pipe_results(self, runner: CliRunner, tmp_path: Path) -> None:
         """End-to-end: run + write processed EDIs and reports."""
         out = tmp_path / "pipe_results_cli_test"
         r = runner.invoke(
@@ -1066,8 +1030,6 @@ class TestPipeRunIntegration:
         )
         assert r.exit_code == 0, r.output
         assert (out / "processed").is_dir()
-        assert list((out / "processed").glob("*.edi")), (
-            "No EDIs in processed/"
-        )
+        assert list((out / "processed").glob("*.edi")), "No EDIs in processed/"
         assert (out / "pipeline.yaml").exists()
         assert (out / "summary.txt").exists()

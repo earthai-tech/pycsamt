@@ -53,9 +53,7 @@ table = skew_table(survey)
 abs_skew = table["skew"].abs()
 print(abs_skew.describe())
 
-by_station = table.groupby("station")["skew"].apply(
-    lambda s: s.abs().median()
-)
+by_station = table.groupby("station")["skew"].apply(lambda s: s.abs().median())
 print("lowest-skew stations:\n", by_station.sort_values().head(3))
 print("highest-skew stations:\n", by_station.sort_values().tail(3))
 
@@ -190,9 +188,7 @@ logging.disable(logging.NOTSET)
 
 logging.disable(logging.ERROR)
 for name in ("18-001A", "18-016A", "18-018A"):
-    k0, total = n_finite(
-        close_skew_gaps(survey, thresh=25.0, max_gap=0), name
-    )
+    k0, total = n_finite(close_skew_gaps(survey, thresh=25.0, max_gap=0), name)
     k3, _ = n_finite(close_skew_gaps(survey, thresh=25.0, max_gap=3), name)
     print(
         f"{name}: max_gap=0 keeps {k0}/{total};  max_gap=3 keeps {k3}/{total}"

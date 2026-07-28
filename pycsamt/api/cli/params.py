@@ -16,12 +16,12 @@ Examples
     import click
     from pycsamt.api.cli.params import EDIPath, FreqRange, StationList
 
+
     @click.command()
     @click.argument("edi", type=EDIPath())
     @click.option("--freq", type=FreqRange(), default=None)
     @click.option("--stations", type=StationList(), default=None)
-    def my_command(edi, freq, stations):
-        ...
+    def my_command(edi, freq, stations): ...
 """
 
 from __future__ import annotations

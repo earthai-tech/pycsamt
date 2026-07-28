@@ -303,9 +303,7 @@ class QualityController(PyCSAMTObject, MetadataMixin):
                 f"  snr_med  : {r['snr_med'].median():.1f} median",
             ]
             if "skew_med" in r.columns:
-                lines.append(
-                    f"  skew_med : {r['skew_med'].median():.1f}° median"
-                )
+                lines.append(f"  skew_med : {r['skew_med'].median():.1f}° median")
 
         # flag breakdown
         all_flags: dict[str, int] = {}
@@ -476,11 +474,7 @@ class FrequencyFilter(PyCSAMTObject):
         # ── 2. band selection ─────────────────────────────────────────
         if self.fmin is not None or self.fmax is not None:
             before_counts = [
-                int(
-                    np.sum(
-                        np.isfinite(getattr(e.Z, "z", np.array([])).ravel())
-                    )
-                )
+                int(np.sum(np.isfinite(getattr(e.Z, "z", np.array([])).ravel())))
                 for e in edi_objects
             ]
             select_band(
@@ -491,11 +485,7 @@ class FrequencyFilter(PyCSAMTObject):
                 verbose=0,
             )
             after_counts = [
-                int(
-                    np.sum(
-                        np.isfinite(getattr(e.Z, "z", np.array([])).ravel())
-                    )
-                )
+                int(np.sum(np.isfinite(getattr(e.Z, "z", np.array([])).ravel())))
                 for e in edi_objects
             ]
             self.n_dropped_band_ = sum(

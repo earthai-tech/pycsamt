@@ -25,7 +25,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from PySide6.QtWidgets import QFileDialog
 
 from pycsamt.app.desktop.tools.batch_export_tool import (
@@ -33,7 +32,6 @@ from pycsamt.app.desktop.tools.batch_export_tool import (
     BatchExportDialog,
     _ExportWorker,
 )
-
 
 # ── fixtures ─────────────────────────────────────────────────────────────
 
@@ -139,9 +137,7 @@ def test_worker_run_saves_files_for_each_format(tmp_path, fmt):
 def test_worker_run_creates_out_dir_if_missing(tmp_path):
     out_dir = tmp_path / "does" / "not" / "exist"
     assert not out_dir.exists()
-    worker = _ExportWorker(
-        [("Station A", _FakeFigure())], out_dir, "png", 150, False
-    )
+    worker = _ExportWorker([("Station A", _FakeFigure())], out_dir, "png", 150, False)
     worker.run()
     assert out_dir.exists()
     assert (out_dir / "Station_A.png").exists()
@@ -178,13 +174,13 @@ def test_worker_run_empty_figures_emits_done_zero(tmp_path):
     assert tmp_path.exists()
 
 
-def test_worker_run_savefig_error_is_caught_and_reported_via_progress(tmp_path):
+def test_worker_run_savefig_error_is_caught_and_reported_via_progress(
+    tmp_path,
+):
     fig1 = _FakeFigure(RuntimeError("disk full"))
     fig2 = _FakeFigure()
 
-    worker = _ExportWorker(
-        [("Bad", fig1), ("Good", fig2)], tmp_path, "png", 150, False
-    )
+    worker = _ExportWorker([("Bad", fig1), ("Good", fig2)], tmp_path, "png", 150, False)
     progress_calls = []
     done_calls = []
     worker.progress.connect(lambda *a: progress_calls.append(a))
@@ -305,12 +301,10 @@ def test_on_run_constructs_worker_with_current_state(dlg, tmp_path, monkeypatch)
     assert store["started"] is True
     assert not dlg._run_btn.isEnabled()
     assert dlg._progress.value() == 0
-    assert f"Exporting 2 figures" in dlg._log.toPlainText()
+    assert "Exporting 2 figures" in dlg._log.toPlainText()
 
 
-def test_on_run_connects_worker_signals_to_dialog_slots(
-    dlg, tmp_path, monkeypatch
-):
+def test_on_run_connects_worker_signals_to_dialog_slots(dlg, tmp_path, monkeypatch):
     store = {}
     monkeypatch.setattr(
         "pycsamt.app.desktop.tools.batch_export_tool._ExportWorker",
@@ -370,14 +364,12 @@ def test_run_button_triggers_on_run(dlg):
 
 def test_browse_button_triggers_pick_dir(dlg):
     with mock.patch.object(dlg, "_pick_dir") as m:
-        btn = dlg.findChild(type(dlg._run_btn), None)
+        dlg.findChild(type(dlg._run_btn), None)
         # locate the "Browse…" button explicitly among children
         from PySide6.QtWidgets import QPushButton
 
         browse_btns = [
-            b
-            for b in dlg.findChildren(QPushButton)
-            if b.text() == "Browse…"
+            b for b in dlg.findChildren(QPushButton) if b.text() == "Browse…"
         ]
         assert len(browse_btns) == 1
         browse_btns[0].click()
@@ -385,7 +377,7 @@ def test_browse_button_triggers_pick_dir(dlg):
 
 
 def test_close_button_rejects_dialog(dlg):
-    from PySide6.QtWidgets import QDialogButtonBox, QDialog
+    from PySide6.QtWidgets import QDialog, QDialogButtonBox
 
     box = dlg.findChild(QDialogButtonBox)
     box.rejected.emit()

@@ -114,9 +114,7 @@ ax_m.grid(True, which="both", ls=":", alpha=0.5)
 # ── sounding curves ──
 for label, _model, res, color in models:
     period = 1.0 / np.asarray(res.get("freqs"))
-    ax_r.loglog(
-        period, res.get("rho_a"), "-o", ms=3, color=color, label=label
-    )
+    ax_r.loglog(period, res.get("rho_a"), "-o", ms=3, color=color, label=label)
     ax_p.semilogx(period, res.get("phase"), "-o", ms=3, color=color)
 
 ax_r.set_ylabel(r"$\rho_a$  ($\Omega\cdot$m)")

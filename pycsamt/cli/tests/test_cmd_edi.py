@@ -77,16 +77,12 @@ class TestEdiInfo:
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
         result = runner.invoke(main, ["edi", "info", str(edi_path)])
         assert result.exit_code == 0
-        assert (
-            "Station" in result.output or "station" in result.output.lower()
-        )
+        assert "Station" in result.output or "station" in result.output.lower()
         assert "n_freq" in result.output
 
     def test_single_file_json(self, runner: CliRunner) -> None:
         edi_path = sorted(_EDI_3EDIS.glob("*.edi"))[0]
-        result = runner.invoke(
-            main, ["edi", "info", str(edi_path), "--format", "json"]
-        )
+        result = runner.invoke(main, ["edi", "info", str(edi_path), "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "n_freq" in data
@@ -164,9 +160,7 @@ class TestEdiValidate:
         assert result.exit_code == 0
 
     def test_no_deep_mode(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["edi", "validate", str(_EDI_3EDIS), "--no-deep"]
-        )
+        result = runner.invoke(main, ["edi", "validate", str(_EDI_3EDIS), "--no-deep"])
         assert result.exit_code == 0
 
     def test_nonexistent_exits_nonzero(self, runner: CliRunner) -> None:
@@ -258,9 +252,7 @@ class TestEdiProfile:
     def test_text_output(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["edi", "profile", str(_EDI_WILLY)])
         assert result.exit_code == 0
-        assert (
-            "Bearing" in result.output or "bearing" in result.output.lower()
-        )
+        assert "Bearing" in result.output or "bearing" in result.output.lower()
 
     def test_json_output(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -322,9 +314,7 @@ class TestEdiRotate:
         assert result.exit_code == 0
         assert "dry" in result.output.lower()
 
-    def test_rotate_writes_edis(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_rotate_writes_edis(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -385,14 +375,9 @@ class TestEdiSelect:
             pytest.skip("data/3edis/ not found")
 
     def test_dry_run_all(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["edi", "select", str(_EDI_3EDIS), "--dry-run"]
-        )
+        result = runner.invoke(main, ["edi", "select", str(_EDI_3EDIS), "--dry-run"])
         assert result.exit_code == 0
-        assert (
-            "match" in result.output.lower()
-            or "station" in result.output.lower()
-        )
+        assert "match" in result.output.lower() or "station" in result.output.lower()
 
     def test_dry_run_json(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -409,9 +394,7 @@ class TestEdiSelect:
         assert result.exit_code == 0
         assert "n_selected" in json.loads(result.output)
 
-    def test_select_by_station(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_select_by_station(self, runner: CliRunner, tmp_path: Path) -> None:
         from pycsamt.seg.collection import EDICollection
 
         coll = EDICollection.from_sources(_EDI_3EDIS)
@@ -433,9 +416,7 @@ class TestEdiSelect:
         assert result.exit_code == 0
         assert len(list(tmp_path.glob("*.edi"))) >= 1
 
-    def test_select_json_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_select_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [

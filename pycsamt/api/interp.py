@@ -18,12 +18,14 @@ Quick start
 Apply a named preset globally::
 
     from pycsamt.api import use_interp
-    use_interp("publication")           # all subsequent interp plots use it
-    use_interp("accessible")            # colorblind-safe palette
+
+    use_interp("publication")  # all subsequent interp plots use it
+    use_interp("accessible")  # colorblind-safe palette
 
 Temporarily override for one block::
 
     from pycsamt.api.interp import PYCSAMT_INTERP
+
     with PYCSAMT_INTERP.context("dark"):
         PlotHydroSection(result).plot()
         PlotTimeLapseSection(tl).plot()
@@ -32,6 +34,7 @@ Temporarily override for one block::
 Fine-tune one field::
 
     from pycsamt.api import configure_interp
+
     configure_interp(
         section__cmap_K="plasma",
         section__wt_color="white",
@@ -41,8 +44,8 @@ Fine-tune one field::
 Pass a style directly to one plot (overrides global state)::
 
     from pycsamt.api.interp import PYCSAMT_INTERP
-    fig = PlotHydroSection(result,
-                           style=PYCSAMT_INTERP.publication).plot()
+
+    fig = PlotHydroSection(result, style=PYCSAMT_INTERP.publication).plot()
 """
 
 from __future__ import annotations
@@ -768,8 +771,7 @@ class PyCSAMTInterp:
         key = str(preset).lower().strip()
         if key not in _PRESETS:
             raise ValueError(
-                f"interp preset must be one of {sorted(_PRESETS)}, "
-                f"got {preset!r}."
+                f"interp preset must be one of {sorted(_PRESETS)}, " f"got {preset!r}."
             )
         return getattr(self, key)
 
@@ -831,8 +833,7 @@ class PyCSAMTInterp:
 
         Examples
         --------
-        >>> with PYCSAMT_INTERP.context("publication",
-        ...                             section__wt_lw=0.8):
+        >>> with PYCSAMT_INTERP.context("publication", section__wt_lw=0.8):
         ...     fig = PlotHydroSection(result).plot()
         """
         snapshot = copy.deepcopy(self.default)
@@ -869,9 +870,7 @@ class PyCSAMTInterp:
     # ── snapshot / restore helpers ─────────────────────────────────────────
 
     def _snapshot(self) -> dict[str, InterpStyle]:
-        return {
-            name: copy.deepcopy(self.style_for(name)) for name in _PRESETS
-        }
+        return {name: copy.deepcopy(self.style_for(name)) for name in _PRESETS}
 
     def _restore(self, snapshot: dict[str, InterpStyle]) -> None:
         for name, value in snapshot.items():

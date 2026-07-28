@@ -77,9 +77,7 @@ class TerminalSize:
             The size of the terminal as (columns, rows).
         """
         try:
-            size = shutil.get_terminal_size(
-                fallback=TerminalSize.DEFAULT_SIZE
-            )
+            size = shutil.get_terminal_size(fallback=TerminalSize.DEFAULT_SIZE)
             return size.columns, size.lines
         except Exception:
             pass  # Ignore and try other methods
@@ -109,8 +107,8 @@ class TerminalSize:
             csbi = create_string_buffer(22)
             res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
             if res:
-                (_, _, _, _, _, left, top, right, bottom, _, _) = (
-                    struct.unpack("hhhhHhhhhhh", csbi.raw)
+                (_, _, _, _, _, left, top, right, bottom, _, _) = struct.unpack(
+                    "hhhhHhhhhhh", csbi.raw
                 )
                 sizex = right - left + 1
                 sizey = bottom - top + 1
@@ -136,9 +134,7 @@ class TerminalSize:
 
         def ioctl_GWINSZ(fd):
             try:
-                return struct.unpack(
-                    "hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234")
-                )
+                return struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
             except Exception:
                 return None
 
@@ -270,7 +266,7 @@ def validate_precision(precision, /):
     Traceback (most recent call last):
         ...
     ValueError: Precision must be a non-negative integer.
-    >>> validate_precision('three')
+    >>> validate_precision("three")
     Traceback (most recent call last):
         ...
     ValueError: Precision must be a non-negative integer.
@@ -323,10 +319,10 @@ def parse_component_kind(pc_list, kind):
     --------
     >>> from fusionlab.api.extension import parse_component_kind
     >>> pc_list = [
-    ...     ('pc1', ['feature1', 'feature2', 'feature3'], [0.8, 0.5, 0.3]),
-    ...     ('pc2', ['feature1', 'feature2', 'feature3'], [0.6, 0.4, 0.2])
+    ...     ("pc1", ["feature1", "feature2", "feature3"], [0.8, 0.5, 0.3]),
+    ...     ("pc2", ["feature1", "feature2", "feature3"], [0.6, 0.4, 0.2]),
     ... ]
-    >>> feature_names, importances = parse_component_kind(pc_list, 'pc1')
+    >>> feature_names, importances = parse_component_kind(pc_list, "pc1")
     >>> print(feature_names)
     ['feature1', 'feature2', 'feature3']
     >>> print(importances)
@@ -494,9 +490,7 @@ def format_text(
 
     # Adjust max_char_text based on the length of the key part: +3 for " : ".
     effective_max_char_text = (
-        max_char_text - len(key_str) + buffer_space
-        if key_str
-        else max_char_text
+        max_char_text - len(key_str) + buffer_space if key_str else max_char_text
     )
     formatted_text = ""
     text = str(text)
@@ -509,9 +503,7 @@ def format_text(
         else:
             # Find the space to break the line, ensuring it doesn't
             # exceed effective_max_char_text
-            break_point = text.rfind(
-                " ", 0, effective_max_char_text - buffer_space
-            )
+            break_point = text.rfind(" ", 0, effective_max_char_text - buffer_space)
 
             if break_point == -1:  # No spaces found, force break
                 break_point = effective_max_char_text - buffer_space
@@ -524,12 +516,8 @@ def format_text(
             key_str = " " * len(key_str)
 
     if add_frame_lines:
-        frame_lines = (
-            border_line * max_char_text
-        )  # (effective_max_char_text + 1 )
-        formatted_text = (
-            frame_lines + "\n" + formatted_text + "\n" + frame_lines
-        )
+        frame_lines = border_line * max_char_text  # (effective_max_char_text + 1 )
+        formatted_text = frame_lines + "\n" + formatted_text + "\n" + frame_lines
 
     return formatted_text
 
@@ -552,9 +540,9 @@ def get_frame_chars(frame_char):
     Examples
     --------
     >>> from fusionlab.api.util import get_frame_chars
-    >>> get_frame_chars('[')
+    >>> get_frame_chars("[")
     (']', '[', ']')
-    >>> get_frame_chars('{')
+    >>> get_frame_chars("{")
     ('}', '{', '}')
     """
     pairs = {
@@ -659,7 +647,7 @@ def get_table_width_from(
     7
 
     >>> formatted_str = "=====\n| C |\n=====\n"
-    >>> get_table_width_from(formatted_str, border_char='=')
+    >>> get_table_width_from(formatted_str, border_char="=")
     5
 
     See Also
@@ -672,9 +660,7 @@ def get_table_width_from(
     .. [1] McKinney, Wes. "Data Structures for Statistical Computing in Python."
            Proceedings of the 9th Python in Science Conference. 2010.
     """
-    border_lines = [
-        line for line in formatted_str.splitlines() if border_char in line
-    ]
+    border_lines = [line for line in formatted_str.splitlines() if border_char in line]
 
     if not border_lines:
         if error == "warn":
@@ -682,9 +668,7 @@ def get_table_width_from(
                 " No border line found in the formatted string.", stacklevel=2
             )
         elif error == "raise":
-            raise ValueError(
-                "Error: No border line found in the formatted string."
-            )
+            raise ValueError("Error: No border line found in the formatted string.")
         return None
 
     if not deep_check:
@@ -766,9 +750,12 @@ def generate_legend(
              -+: Moderate, o: Diagonal
     ......................................................................
     >>> custom_markers = {"++": "Highly positive", "--": "Highly negative"}
-    >>> legend = generate_legend(custom_markers=custom_markers,
-    ...                          no_corr_placeholder='N/A', hide_diag=False,
-    ...                          border_line ='=')
+    >>> legend = generate_legend(
+    ...     custom_markers=custom_markers,
+    ...     no_corr_placeholder="N/A",
+    ...     hide_diag=False,
+    ...     border_line="=",
+    ... )
 
     >>> print(legend)
 
@@ -841,9 +828,7 @@ def to_snake_case(name, mode="standard"):
     if mode == "soft":
         # Convert to lowercase and replace multiple spaces
         # or non-word characters with a single underscore
-        name = re.sub(
-            r"\W+", " ", name
-        )  # Replace non-word characters with spaces
+        name = re.sub(r"\W+", " ", name)  # Replace non-word characters with spaces
         name = re.sub(r"\s+", " ", name).strip()  # Normalize whitespace
         name = name.lower().replace(" ", "_")  # Convert spaces to underscores
 
@@ -852,9 +837,7 @@ def to_snake_case(name, mode="standard"):
         name = re.sub(
             r"(?<!^)(?=[A-Z])", "_", name
         ).lower()  # Convert CamelCase to snake_case
-        name = re.sub(
-            r"\W+", "_", name
-        )  # Replace non-word characters with '_'
+        name = re.sub(r"\W+", "_", name)  # Replace non-word characters with '_'
         name = re.sub(
             r"_+", "_", name
         )  # Replace multiple underscores with a single '_'
@@ -905,7 +888,7 @@ def series_to_dataframe(series):
     --------
     >>> import pandas as pd
     >>> from fusionlab.api.util import series_to_dataframe
-    >>> series = pd.Series(data=[1, 2, 3], index=['a', 'b', 'c'])
+    >>> series = pd.Series(data=[1, 2, 3], index=["a", "b", "c"])
     >>> df = series_to_dataframe(series)
     >>> print(df)
        a  b  c
@@ -1054,31 +1037,31 @@ def to_camel_case(text, delimiter=None, use_regex=False):
     Examples
     --------
     >>> from fusionlab.api.util import to_camel_case
-    >>> to_camel_case('outlier_results', '_')
+    >>> to_camel_case("outlier_results", "_")
     'OutlierResults'
 
-    >>> to_camel_case('outlier results', ' ')
+    >>> to_camel_case("outlier results", " ")
     'OutlierResults'
 
-    >>> to_camel_case('outlierresults')
+    >>> to_camel_case("outlierresults")
     'Outlierresults'
 
-    >>> to_camel_case('data science rocks')
+    >>> to_camel_case("data science rocks")
     'DataScienceRocks'
 
-    >>> to_camel_case('data_science_rocks')
+    >>> to_camel_case("data_science_rocks")
     'DataScienceRocks'
 
-    >>> to_camel_case('multi@var_analysis', use_regex=True)
+    >>> to_camel_case("multi@var_analysis", use_regex=True)
     'MultiVarAnalysis'
 
-    >>> to_camel_case('OutlierResults')
+    >>> to_camel_case("OutlierResults")
     'OutlierResults'
 
-    >>> to_camel_case('BoxFormatter')
+    >>> to_camel_case("BoxFormatter")
     'BoxFormatter'
 
-    >>> to_camel_case('MultiFrameFormatter')
+    >>> to_camel_case("MultiFrameFormatter")
     'MultiFrameFormatter'
     """
     # Remove any leading/trailing whitespace
@@ -1136,19 +1119,18 @@ def beautify_dict(d, space=4, key=None, max_char=None):
     --------
     >>> from fusionlab.api.util import beautify_dict
     >>> dictionary = {
-    ...     3: 'Home & Garden',
-    ...     2: 'Health & Beauty',
-    ...     4: 'Sports',
-    ...     0: 'Electronics',
-    ...     1: 'Fashion'
+    ...     3: "Home & Garden",
+    ...     2: "Health & Beauty",
+    ...     4: "Sports",
+    ...     0: "Electronics",
+    ...     1: "Fashion",
     ... }
     >>> print(beautify_dict(dictionary, space=4))
     """
 
     if not isinstance(d, dict):
         raise TypeError(
-            "Expected input to be a 'dict',"
-            f" received '{type(d).__name__}' instead."
+            "Expected input to be a 'dict'," f" received '{type(d).__name__}' instead."
         )
 
     if max_char is None:
@@ -1244,23 +1226,15 @@ def format_iterable(attr):
 
     def _format_ndarray(array):
         stats = (
-            _numeric_stats(array.flat)
-            if np.issubdtype(array.dtype, np.number)
-            else {}
+            _numeric_stats(array.flat) if np.issubdtype(array.dtype, np.number) else {}
         )
-        details = ", ".join(
-            [f"{key}={value}" for key, value in stats.items()]
-        )
-        return (
-            f"ndarray ({details}, shape={array.shape}, dtype={array.dtype})"
-        )
+        details = ", ".join([f"{key}={value}" for key, value in stats.items()])
+        return f"ndarray ({details}, shape={array.shape}, dtype={array.dtype})"
 
     def _format_pandas_object(obj):
         if isinstance(obj, pd.Series):
             stats = _numeric_stats(obj) if obj.dtype != "object" else {}
-            details = ", ".join(
-                [f"{key}={value}" for key, value in stats.items()]
-            )
+            details = ", ".join([f"{key}={value}" for key, value in stats.items()])
             if details:
                 details += ", "
             return f"Series ({details}len={obj.size}, dtype={obj.dtype})"
@@ -1271,9 +1245,7 @@ def format_iterable(attr):
                 if not numeric_cols.empty
                 else {}
             )
-            details = ", ".join(
-                [f"{key}={value}" for key, value in stats.items()]
-            )
+            details = ", ".join([f"{key}={value}" for key, value in stats.items()])
             if details:
                 details += ", "
             return (
@@ -1319,12 +1291,16 @@ def format_dict_result(
     Examples
     --------
     >>> example_dict = {
-    ...     'key1': 'short value',
-    ...     'key2': 'a much longer value that should be truncated for readability purposes',
-    ...     'key3': 'another short value',
-    ...     'key4': 'value'
+    ...     "key1": "short value",
+    ...     "key2": "a much longer value that should be truncated for readability purposes",
+    ...     "key3": "another short value",
+    ...     "key4": "value",
     ... }
-    >>> print(format_dict_result(example_dict, dict_name='ExampleDict', max_char=30))
+    >>> print(
+    ...     format_dict_result(
+    ...         example_dict, dict_name="ExampleDict", max_char=30
+    ...     )
+    ... )
     ExampleDict({
         key1: short value,
         key2: a much longer value that s...,

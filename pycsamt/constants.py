@@ -9,9 +9,9 @@ Fundamental mathematical & physical constants for EM geophysics
 Examples
 --------
 >>> from pycsamt.constants import MU_0, RHO_FACTOR, DEG2RAD
->>> Z_mod  = 1.20           # |Z| [V A⁻¹]
->>> freq   = 1_000.0        # 1 kHz
->>> rho_a  = (Z_mod**2) * RHO_FACTOR / freq    # apparent ρ [Ω·m]
+>>> Z_mod = 1.20  # |Z| [V A⁻¹]
+>>> freq = 1_000.0  # 1 kHz
+>>> rho_a = (Z_mod**2) * RHO_FACTOR / freq  # apparent ρ [Ω·m]
 """
 
 from __future__ import annotations

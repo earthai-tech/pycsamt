@@ -179,9 +179,7 @@ def register_session(app) -> None:
             note,
         )
         n_sta = store_data.get("n_stations", 0)
-        fname = (
-            f"mapview_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        )
+        fname = f"mapview_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         return (
             dcc.send_string(json.dumps(snap, indent=2), fname),
             _ok_icon(f"Session downloaded  ({n_sta} stations)."),
@@ -222,9 +220,7 @@ def register_session(app) -> None:
                 msg,
             )
         except Exception as exc:
-            return (no_update,) * 6 + (
-                _err_icon(f"Could not parse {filename}: {exc}"),
-            )
+            return (no_update,) * 6 + (_err_icon(f"Could not parse {filename}: {exc}"),)
 
     # ── 5. Restore from the browser's localStorage snapshot ───────────────
     @app.callback(
@@ -244,9 +240,7 @@ def register_session(app) -> None:
             return (no_update,) * 7
         if not snap:
             return (no_update,) * 6 + (
-                _err_icon(
-                    "No browser snapshot found — save a session first."
-                ),
+                _err_icon("No browser snapshot found — save a session first."),
             )
         try:
             _validate_snapshot(snap)

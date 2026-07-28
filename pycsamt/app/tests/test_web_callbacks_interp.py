@@ -68,9 +68,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -89,9 +87,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -154,9 +150,7 @@ class TestUpdateInterpCtxBar:
 
     def test_known_slug_shows_count(self, web_app):
         out = self._fn(web_app)("geo")
-        texts = [
-            getattr(c, "children", c) for c in out.children
-        ]
+        texts = [getattr(c, "children", c) for c in out.children]
         assert any("plot" in str(t) for t in texts)
 
 
@@ -184,9 +178,7 @@ class TestSyncPlots:
 
 class TestUpdateDesc:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.INTERP_DESC}.children", IDs.INTERP_PLOT
-        )
+        return _cb_by_input(web_app, f"{IDs.INTERP_DESC}.children", IDs.INTERP_PLOT)
 
     def test_no_fn_name_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -310,9 +302,7 @@ class TestBuildFigureHelpers:
                 "label": "AMA",
             }
         ]
-        out = interp_mod._get_corrected_sites(
-            cached_session, {"steps": steps}, True
-        )
+        out = interp_mod._get_corrected_sites(cached_session, {"steps": steps}, True)
         assert out is not None
 
     def test_get_corrected_sites_bad_step_swallowed(
@@ -320,31 +310,59 @@ class TestBuildFigureHelpers:
     ):
         monkeypatch.setattr(interp_mod, "cache_get", lambda _key: willy_sites)
         steps = [{"fn_name": "not-a-real-fn", "kwargs": {}, "label": "bad"}]
-        out = interp_mod._get_corrected_sites(
-            cached_session, {"steps": steps}, True
-        )
+        out = interp_mod._get_corrected_sites(cached_session, {"steps": steps}, True)
         assert out is willy_sites
 
     def test_build_figure_no_data_raises_value_error(self):
         with pytest.raises(ValueError, match="no-data"):
             interp_mod._build_figure(
-                "plot_depth_coverage", "setup", "raw", "auto", None,
-                None, None, None, "no-such-session", None, None, None,
+                "plot_depth_coverage",
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                "no-such-session",
+                None,
+                None,
+                None,
                 "dark",
             )
 
     def test_build_figure_unknown_method_raises(self, cached_session):
         with pytest.raises(ValueError, match="unknown-method"):
             interp_mod._build_figure(
-                "not_a_real_method", "setup", "raw", "auto", None,
-                None, None, None, cached_session, None, None, None,
+                "not_a_real_method",
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                cached_session,
+                None,
+                None,
+                None,
                 "dark",
             )
 
     def test_build_figure_success_real_render(self, cached_session):
         fig, label, cat = interp_mod._build_figure(
-            "plot_depth_coverage", "setup", "raw", "auto", None,
-            None, None, None, cached_session, None, None, None,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
             "dark",
         )
         assert fig is not None
@@ -356,28 +374,56 @@ class TestBuildFigureHelpers:
         # resolve any ids -> filter_sites_by_lines leaves sites unchanged.
         store_data = {"station_records": []}
         fig, label, cat = interp_mod._build_figure(
-            "plot_depth_coverage", "setup", "raw", "auto", None,
-            None, None, None, cached_session, {"active": ["L1"]}, store_data,
-            None, "dark",
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            {"active": ["L1"]},
+            store_data,
+            None,
+            "dark",
         )
         assert fig is not None
 
     def test_build_figure_custom_figsize(self, cached_session):
         fig, _label, _cat = interp_mod._build_figure(
-            "plot_depth_coverage", "setup", "raw", "wide", None,
-            None, None, None, cached_session, None, None, None,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "wide",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
             "dark",
         )
         assert tuple(fig.get_size_inches()) == interp_mod._FIGSIZES["wide"]
 
     def test_build_figure_no_figure_raises(self, cached_session, monkeypatch):
-        monkeypatch.setattr(
-            interp_mod._CTRL, "generate", lambda *a, **k: None
-        )
+        monkeypatch.setattr(interp_mod._CTRL, "generate", lambda *a, **k: None)
         with pytest.raises(ValueError, match="no-figure"):
             interp_mod._build_figure(
-                "plot_depth_coverage", "setup", "raw", "auto", None,
-                None, None, None, cached_session, None, None, None,
+                "plot_depth_coverage",
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                cached_session,
+                None,
+                None,
+                None,
                 "dark",
             )
 
@@ -395,16 +441,37 @@ class TestBuildFigureHelpers:
             }
         ]
         fig, _label, _cat = interp_mod._build_figure(
-            "plot_depth_coverage", "setup", "corrected", "auto", None,
-            None, None, None, cached_session, None, None, {"steps": steps},
+            "plot_depth_coverage",
+            "setup",
+            "corrected",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            {"steps": steps},
             "dark",
         )
         assert fig is not None
 
     def test_build_figure_extra_kwargs_forwarded(self, cached_session):
         fig, _label, _cat = interp_mod._build_figure(
-            "plot_depth_coverage", "setup", "raw", "auto", "viridis",
-            500, 0.1, 100.0, cached_session, None, None, None, "dark",
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            "viridis",
+            500,
+            0.1,
+            100.0,
+            cached_session,
+            None,
+            None,
+            None,
+            "dark",
         )
         assert fig is not None
 
@@ -414,35 +481,81 @@ class TestBuildFigureHelpers:
 
 class TestRunInterp:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "img-interp-setup.src", IDs.BTN_INTERP_RUN
-        )
+        return _cb_by_input(web_app, "img-interp-setup.src", IDs.BTN_INTERP_RUN)
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                None, "plot_depth_coverage", "setup", "raw", "auto", None,
-                None, None, None, "s", None, None, None, "dark",
+                None,
+                "plot_depth_coverage",
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                "s",
+                None,
+                None,
+                None,
+                "dark",
             )
 
     def test_no_fn_name_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, None, "setup", "raw", "auto", None, None, None, None,
-                "s", None, None, None, "dark",
+                1,
+                None,
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                "s",
+                None,
+                None,
+                None,
+                "dark",
             )
 
     def test_no_data_loaded(self, web_app):
         out = self._fn(web_app)(
-            1, "plot_depth_coverage", "setup", "raw", "auto", None, None,
-            None, None, "no-such-session", None, None, None, "dark",
+            1,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            "no-such-session",
+            None,
+            None,
+            None,
+            "dark",
         )
         assert "No data loaded" in out[10].children
 
     def test_success_path(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, "plot_depth_coverage", "setup", "raw", "auto", None, None,
-            None, None, cached_session, None, None, None, "dark",
+            1,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
+            "dark",
         )
         imgs = out[:9]
         assert imgs[0] is not None and imgs[0] != ""
@@ -451,19 +564,41 @@ class TestRunInterp:
 
     def test_unknown_method_reports_error(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, "not_a_real_method", "setup", "raw", "auto", None, None,
-            None, None, cached_session, None, None, None, "dark",
+            1,
+            "not_a_real_method",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
+            "dark",
         )
         assert out[12] is True
         assert "Unknown method" in out[13]
 
     def test_no_figure_reports_error(self, web_app, cached_session, monkeypatch):
-        monkeypatch.setattr(
-            interp_mod._CTRL, "generate", lambda *a, **k: None
-        )
+        monkeypatch.setattr(interp_mod._CTRL, "generate", lambda *a, **k: None)
         out = self._fn(web_app)(
-            1, "plot_depth_coverage", "setup", "raw", "auto", None, None,
-            None, None, cached_session, None, None, None, "dark",
+            1,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
+            "dark",
         )
         assert out[12] is True
         assert "no figure" in out[13].lower()
@@ -476,15 +611,25 @@ class TestRunInterp:
 
         monkeypatch.setattr(interp_mod._CTRL, "set_sites", _boom)
         out = self._fn(web_app)(
-            1, "plot_depth_coverage", "setup", "raw", "auto", None, None,
-            None, None, cached_session, None, None, None, "dark",
+            1,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
+            "dark",
         )
         assert out[12] is True
         assert "set_sites boom" in out[13]
 
-    def test_corrected_source_with_steps_tags_corrected(
-        self, web_app, cached_session
-    ):
+    def test_corrected_source_with_steps_tags_corrected(self, web_app, cached_session):
         steps = [
             {
                 "fn_name": "correct_ss_ama",
@@ -498,13 +643,22 @@ class TestRunInterp:
             }
         ]
         out = self._fn(web_app)(
-            1, "plot_depth_coverage", "setup", "corrected", "auto", None,
-            None, None, None, cached_session, None, None,
-            {"steps": steps}, "dark",
+            1,
+            "plot_depth_coverage",
+            "setup",
+            "corrected",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            {"steps": steps},
+            "dark",
         )
-        strip_texts = [
-            getattr(c, "children", "") for c in out[10].children
-        ]
+        strip_texts = [getattr(c, "children", "") for c in out[10].children]
         assert any("corrected" in str(t) for t in strip_texts)
 
 
@@ -518,40 +672,105 @@ class TestExportPlot:
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                None, "png", None, "plot_depth_coverage", "setup", "raw",
-                "auto", None, None, None, None, "s", None, None, None,
+                None,
+                "png",
+                None,
+                "plot_depth_coverage",
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                "s",
+                None,
+                None,
+                None,
                 "dark",
             )
 
     def test_no_fn_name_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, "png", None, None, "setup", "raw", "auto", None, None,
-                None, None, "s", None, None, None, "dark",
+                1,
+                "png",
+                None,
+                None,
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                "s",
+                None,
+                None,
+                None,
+                "dark",
             )
 
     def test_png_fast_path_uses_last_src(self, web_app):
         last_src = "data:image/png;base64,aGVsbG8="
         out = self._fn(web_app)(
-            1, "png", last_src, "plot_depth_coverage", "setup", "raw",
-            "auto", None, None, None, None, "s", None, None, None, "dark",
+            1,
+            "png",
+            last_src,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            "s",
+            None,
+            None,
+            None,
+            "dark",
         )
         assert out["filename"] == "plot_depth_coverage.png"
 
-    def test_png_fast_path_falls_through_on_bad_src(
-        self, web_app, cached_session
-    ):
+    def test_png_fast_path_falls_through_on_bad_src(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, "png", "not-a-valid-data-uri", "plot_depth_coverage",
-            "setup", "raw", "auto", None, None, None, None,
-            cached_session, None, None, None, "dark",
+            1,
+            "png",
+            "not-a-valid-data-uri",
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
+            "dark",
         )
         assert out["filename"] == "plot_depth_coverage.png"
 
     def test_svg_regenerates_figure(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, "svg", None, "plot_depth_coverage", "setup", "raw", "auto",
-            None, None, None, None, cached_session, None, None, None,
+            1,
+            "svg",
+            None,
+            "plot_depth_coverage",
+            "setup",
+            "raw",
+            "auto",
+            None,
+            None,
+            None,
+            None,
+            cached_session,
+            None,
+            None,
+            None,
             "dark",
         )
         assert out["filename"] == "plot_depth_coverage.svg"
@@ -559,7 +778,20 @@ class TestExportPlot:
     def test_regenerate_exception_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, "svg", None, "plot_depth_coverage", "setup", "raw",
-                "auto", None, None, None, None, "no-such-session", None,
-                None, None, "dark",
+                1,
+                "svg",
+                None,
+                "plot_depth_coverage",
+                "setup",
+                "raw",
+                "auto",
+                None,
+                None,
+                None,
+                None,
+                "no-such-session",
+                None,
+                None,
+                None,
+                "dark",
             )

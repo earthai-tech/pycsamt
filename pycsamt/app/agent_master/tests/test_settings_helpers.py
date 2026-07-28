@@ -193,9 +193,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -205,9 +203,7 @@ class TestInitSettings:
     def _fn(self, agent_app):
         return _find(agent_app, "am-root", "am-store-settings.data")
 
-    def test_returns_no_update_when_no_cfg(
-        self, agent_app, monkeypatch, tmp_path
-    ):
+    def test_returns_no_update_when_no_cfg(self, agent_app, monkeypatch, tmp_path):
         from dash import no_update
 
         from pycsamt.app.agent_master.callbacks import settings as st_mod
@@ -305,9 +301,7 @@ class TestStashDraft:
         with pytest.raises(PreventUpdate):
             fn("some-key", "some-model", "offline", {})
 
-    def test_stashes_key_and_model_draft(
-        self, agent_app, monkeypatch, tmp_path
-    ):
+    def test_stashes_key_and_model_draft(self, agent_app, monkeypatch, tmp_path):
         from pycsamt.app.agent_master.callbacks import settings as st_mod
 
         monkeypatch.setattr(st_mod, "_CFG_FILE", tmp_path / "nope.json")
@@ -357,11 +351,9 @@ class TestLoadPrefs:
         with pytest.raises(PreventUpdate):
             fn(False)
 
-    def test_returns_defaults_without_cfg(
-        self, agent_app, monkeypatch, tmp_path
-    ):
-        from pycsamt.app.agent_master.callbacks import settings as st_mod
+    def test_returns_defaults_without_cfg(self, agent_app, monkeypatch, tmp_path):
         from pycsamt.app.agent_master._providers import OFFLINE
+        from pycsamt.app.agent_master.callbacks import settings as st_mod
 
         monkeypatch.setattr(st_mod, "_CFG_FILE", tmp_path / "nope.json")
         fn = self._fn(agent_app)
@@ -402,9 +394,7 @@ class TestSaveSettings:
         with pytest.raises(PreventUpdate):
             fn(None, "offline", "", None, "png", "", "", {})
 
-    def test_saves_llm_provider_key_and_model(
-        self, agent_app, monkeypatch, tmp_path
-    ):
+    def test_saves_llm_provider_key_and_model(self, agent_app, monkeypatch, tmp_path):
         from pycsamt.app.agent_master.callbacks import settings as st_mod
 
         cfg_file = tmp_path / "am.json"
@@ -434,9 +424,7 @@ class TestSaveSettings:
 
         fn = self._fn(agent_app)
         drafts = {"key_openai": "other-provider-key"}
-        cfg, _status, _badge = fn(
-            1, "offline", "", None, "png", "", "", drafts
-        )
+        cfg, _status, _badge = fn(1, "offline", "", None, "png", "", "", drafts)
         assert cfg["key_openai"] == "other-provider-key"
         assert cfg["provider"] == "offline"
 

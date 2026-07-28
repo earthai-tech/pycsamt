@@ -80,9 +80,7 @@ class StationDetailCard(QWidget):
 
     def _build_ui(self) -> None:
         self.setObjectName("StationDetailCard")
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -92,12 +90,8 @@ class StationDetailCard(QWidget):
         scroll = QScrollArea(self)
         scroll.setObjectName("DetailScrollArea")
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        scroll.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
 
         body = QWidget()
@@ -125,9 +119,7 @@ class StationDetailCard(QWidget):
         def row(r: int, key: str, obj: str = "DetailValue") -> QLabel:
             k = _lbl(key, "DetailKey")
             v = _lbl("—", obj)
-            v.setTextInteractionFlags(
-                Qt.TextInteractionFlag.TextSelectableByMouse
-            )
+            v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             v.setWordWrap(True)
             grid.addWidget(
                 k,

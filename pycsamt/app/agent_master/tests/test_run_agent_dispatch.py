@@ -21,7 +21,14 @@ import pycsamt.agents.orchestrator as orch_mod
 import pycsamt.agents.router as router_mod
 import pycsamt.app.agent_master.callbacks.chat as C
 from pycsamt.agents._base import AgentResult
-from pycsamt.agents.router import CLARIFY, CODE, META, METRICS, QUESTION, WORKFLOW
+from pycsamt.agents.router import (
+    CLARIFY,
+    CODE,
+    META,
+    METRICS,
+    QUESTION,
+    WORKFLOW,
+)
 
 
 def _patch_router(monkeypatch, intent, workflow=None, clarification=None):
@@ -44,9 +51,7 @@ def _patch_context(monkeypatch, config=None, status="success"):
     monkeypatch.setattr(
         context_mod.ContextInputAgent,
         "execute",
-        lambda self, input_data: AgentResult(
-            status, "ctx", {"config": config or {}}
-        ),
+        lambda self, input_data: AgentResult(status, "ctx", {"config": config or {}}),
     )
 
 
@@ -67,9 +72,7 @@ def test_data_read_text_dispatches_to_overview(monkeypatch):
     monkeypatch.setattr(
         C,
         "_dispatch_data_overview",
-        lambda jid, text, edi_store, settings, step: called.setdefault(
-            "hit", True
-        ),
+        lambda jid, text, edi_store, settings, step: called.setdefault("hit", True),
     )
     jid = _new_job()
     C._run_agent(jid, "read the loaded data", {}, {"provider": "offline"})
@@ -105,9 +108,7 @@ class TestIntentRouting:
         monkeypatch.setattr(
             C,
             "_dispatch_metrics",
-            lambda jid, text, edi_store, settings, step: called.setdefault(
-                "hit", True
-            ),
+            lambda jid, text, edi_store, settings, step: called.setdefault("hit", True),
         )
         _patch_router(monkeypatch, METRICS)
         jid = _new_job()
@@ -129,9 +130,7 @@ class TestIntentRouting:
         )
         _patch_router(monkeypatch, QUESTION)
         jid = _new_job()
-        C._run_agent(
-            jid, "what does StaticShiftAgent do", {}, {"provider": "offline"}
-        )
+        C._run_agent(jid, "what does StaticShiftAgent do", {}, {"provider": "offline"})
         assert called.get("hit") is True
 
     def test_code_intent_dispatches(self, monkeypatch):
@@ -139,15 +138,11 @@ class TestIntentRouting:
         monkeypatch.setattr(
             C,
             "_dispatch_code",
-            lambda jid, text, edi_store, settings, **kw: called.setdefault(
-                "hit", True
-            ),
+            lambda jid, text, edi_store, settings, **kw: called.setdefault("hit", True),
         )
         _patch_router(monkeypatch, CODE)
         jid = _new_job()
-        C._run_agent(
-            jid, "generate code for static shift", {}, {"provider": "offline"}
-        )
+        C._run_agent(jid, "generate code for static shift", {}, {"provider": "offline"})
         assert called.get("hit") is True
 
 
@@ -165,15 +160,24 @@ class TestContextClassificationFailure:
 class TestWorkflowResolutionAuthority:
     """explicit (param modal) > keyword registry > router slot > ctx classification."""
 
-    def _run(self, monkeypatch, *, inv_config=None, router_wf=None, ctx_wf=None,
-              kw_wf_return="_UNSET_"):
+    def _run(
+        self,
+        monkeypatch,
+        *,
+        inv_config=None,
+        router_wf=None,
+        ctx_wf=None,
+        kw_wf_return="_UNSET_",
+    ):
         _patch_router(monkeypatch, WORKFLOW, workflow=router_wf)
         _patch_context(monkeypatch, config=({"workflow": ctx_wf} if ctx_wf else {}))
         if kw_wf_return != "_UNSET_":
             import pycsamt.agents._workflows as wf_mod
 
             monkeypatch.setattr(
-                wf_mod, "classify_workflow", lambda text, default=None: kw_wf_return
+                wf_mod,
+                "classify_workflow",
+                lambda text, default=None: kw_wf_return,
             )
         captured = {}
         _patch_orchestrator(
@@ -266,7 +270,10 @@ class TestUnknownWorkflow:
         )
         jid = _new_job()
         C._run_agent(
-            jid, "asdkjfhaslkdjfh gibberish nonsense", {}, {"provider": "offline"}
+            jid,
+            "asdkjfhaslkdjfh gibberish nonsense",
+            {},
+            {"provider": "offline"},
         )
         job = C._get_job(jid)
         assert job["status"] == "done"
@@ -400,9 +407,7 @@ class TestParamInjection:
             {"provider": "offline"},
             {"step_params": {"load": {"period_min": 0.01}}},
         )
-        assert captured["cfg"]["step_params"] == {
-            "load": {"period_min": 0.01}
-        }
+        assert captured["cfg"]["step_params"] == {"load": {"period_min": 0.01}}
 
 
 class TestEdiPathResolution:
@@ -506,8 +511,8 @@ class TestPlotAndToolDispatchRouting:
         monkeypatch.setattr(
             C,
             "_dispatch_plot",
-            lambda jid, edi_path, *, kind, params, step, label="": called.update(
-                kind=kind, edi_path=edi_path
+            lambda jid, edi_path, *, kind, params, step, label="": (
+                called.update(kind=kind, edi_path=edi_path)
             ),
         )
         jid = _new_job()
@@ -532,8 +537,8 @@ class TestPlotAndToolDispatchRouting:
         monkeypatch.setattr(
             C,
             "_dispatch_tool",
-            lambda jid, edi_path, *, kind, params, step, label="": called.update(
-                kind=kind, params=params
+            lambda jid, edi_path, *, kind, params, step, label="": (
+                called.update(kind=kind, params=params)
             ),
         )
         jid = _new_job()
@@ -560,8 +565,8 @@ class TestPlotAndToolDispatchRouting:
         monkeypatch.setattr(
             C,
             "_dispatch_tool",
-            lambda jid, edi_path, *, kind, params, step, label="": called.update(
-                kind=kind, params=params
+            lambda jid, edi_path, *, kind, params, step, label="": (
+                called.update(kind=kind, params=params)
             ),
         )
         jid = _new_job()
@@ -595,9 +600,7 @@ class TestOrchestratorResultHandling:
             "ok",
             {"figures": {"qc_summary": fig}},
         )
-        code_result = AgentResult(
-            "success", "ok", {"code": "print('hi')"}
-        )
+        code_result = AgentResult("success", "ok", {"code": "print('hi')"})
         outer = AgentResult(
             "success",
             "All good",
@@ -611,9 +614,7 @@ class TestOrchestratorResultHandling:
         )
         _patch_orchestrator(monkeypatch, outer)
         jid = _new_job()
-        C._run_agent(
-            jid, "run qc", {"path": "/tmp/edis"}, {"provider": "offline"}
-        )
+        C._run_agent(jid, "run qc", {"path": "/tmp/edis"}, {"provider": "offline"})
         job = C._get_job(jid)
         assert job["status"] == "done"
         assert job["kind"] == C.KIND_WORKFLOW
@@ -628,13 +629,9 @@ class TestOrchestratorResultHandling:
         monkeypatch.setattr(
             wf_mod, "classify_workflow", lambda text, default=None: "qc"
         )
-        _patch_orchestrator(
-            monkeypatch, AgentResult("failed", "", {}, error="boom")
-        )
+        _patch_orchestrator(monkeypatch, AgentResult("failed", "", {}, error="boom"))
         jid = _new_job()
-        C._run_agent(
-            jid, "run qc", {"path": "/tmp/edis"}, {"provider": "offline"}
-        )
+        C._run_agent(jid, "run qc", {"path": "/tmp/edis"}, {"provider": "offline"})
         job = C._get_job(jid)
         assert job["kind"] == C.KIND_ERROR
         assert job["result"] == "boom"
@@ -650,9 +647,7 @@ class TestOrchestratorResultHandling:
             lambda text, default=None: "static_shift",
         )
         sentinel_sites = object()
-        step_result = AgentResult(
-            "success", "ok", {"corrected_sites": sentinel_sites}
-        )
+        step_result = AgentResult("success", "ok", {"corrected_sites": sentinel_sites})
         outer = AgentResult(
             "success",
             "Corrected.",

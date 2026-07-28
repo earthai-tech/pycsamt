@@ -113,9 +113,7 @@ def select_anomaly_peak(
         # determine positions
         if positions is None:
             if dipole is None:
-                raise ValueError(
-                    "Either positions or dipole must be provided"
-                )
+                raise ValueError("Either positions or dipole must be provided")
             positions = np.arange(n) * dipole
         else:
             positions = np.asarray(positions, float)
@@ -210,9 +208,7 @@ def find_position_bounds(
     if positions is not None:
         pos_arr = np.asarray(positions, dtype=float)
         if pos_arr.size != n:
-            raise ValueError(
-                f"positions length {pos_arr.size} != rho_range length {n}"
-            )
+            raise ValueError(f"positions length {pos_arr.size} != rho_range length {n}")
     else:
         # generate centered positions
         offsets = (np.arange(n) - idx) * dipole
@@ -310,9 +306,9 @@ def find_nearest_indices(
     >>> ref = [0, 10, 20, 30]
     >>> find_nearest_indices(ref, [12, -5, 25])
     [1, 0, 2]
-    >>> find_nearest_indices(ref, [12, -5], side='left')
+    >>> find_nearest_indices(ref, [12, -5], side="left")
     [1, 0]
-    >>> find_nearest_indices(ref, [12, 35], side='right', return_values=True)
+    >>> find_nearest_indices(ref, [12, 35], side="right", return_values=True)
     ([2, 3], [20.0, 30.0])
     """
 

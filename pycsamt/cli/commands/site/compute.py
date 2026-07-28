@@ -94,9 +94,7 @@ def _emit(data: object, output_format: str) -> None:
         df = pd.DataFrame(data)
 
     if output_format == "json":
-        click.echo(
-            df.to_json(orient="records", indent=2, default_handler=str)
-        )
+        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:

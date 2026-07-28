@@ -33,9 +33,7 @@ class WorkflowRun:
     output_dir: str | None = None
     summary: str = ""
     n_figures: int = 0
-    timestamp: str = field(
-        default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%S")
-    )
+    timestamp: str = field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%S"))
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

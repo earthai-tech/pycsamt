@@ -321,9 +321,7 @@ def _trad_controls():
                                                 [
                                                     html.I(
                                                         className=(
-                                                            "bi "
-                                                            "bi-infinity"
-                                                            " me-1"
+                                                            "bi " "bi-infinity" " me-1"
                                                         )
                                                     ),
                                                     "Halfspace",
@@ -430,8 +428,7 @@ def _trad_controls():
                                 className="inv-sub-hint",
                             ),
                             html.Div(
-                                "Load EDI files first if"
-                                " no session data available.",
+                                "Load EDI files first if" " no session data available.",
                                 className="inv-sub-hint mt-1",
                                 style={"color": "var(--sub0)"},
                             ),
@@ -1647,9 +1644,7 @@ def _install_modal() -> dbc.Modal:
                 [
                     dbc.Alert(
                         [
-                            html.I(
-                                className="bi bi-exclamation-triangle-fill me-2"
-                            ),
+                            html.I(className="bi bi-exclamation-triangle-fill me-2"),
                             "PyTorch is required for AI inversion but is not installed "
                             "in the current Python environment.",
                         ],
@@ -1907,12 +1902,8 @@ def layout() -> html.Div:
             _clabel("Frequency range [log₁₀ Hz]"),
             dbc.Row(
                 [
-                    dbc.Col(
-                        [_lbl("Min"), _num(IDs.INV_FREQ_MIN, -3, step=0.5)]
-                    ),
-                    dbc.Col(
-                        [_lbl("Max"), _num(IDs.INV_FREQ_MAX, 4, step=0.5)]
-                    ),
+                    dbc.Col([_lbl("Min"), _num(IDs.INV_FREQ_MIN, -3, step=0.5)]),
+                    dbc.Col([_lbl("Max"), _num(IDs.INV_FREQ_MAX, 4, step=0.5)]),
                     dbc.Col(
                         [
                             _lbl("N pts"),
@@ -1975,9 +1966,7 @@ def layout() -> html.Div:
     )
 
     # Per-tab output panels
-    def _fig_panel(
-        panel_id: str, img_id: str, visible: bool = False
-    ) -> html.Div:
+    def _fig_panel(panel_id: str, img_id: str, visible: bool = False) -> html.Div:
         return html.Div(
             html.Div(
                 html.Img(id=img_id, src=empty_src(), style=_IMG_STYLE),
@@ -2034,19 +2023,13 @@ def layout() -> html.Div:
                                     html.Div(
                                         [
                                             html.I(
-                                                className=(
-                                                    "bi bi-reception-4 me-1"
-                                                ),
-                                                style={
-                                                    "color": "var(--mauve)"
-                                                },
+                                                className=("bi bi-reception-4 me-1"),
+                                                style={"color": "var(--mauve)"},
                                             ),
                                             _lbl("Line"),
                                         ],
                                         className=(
-                                            "d-flex"
-                                            " align-items-center"
-                                            " gap-1 mb-1"
+                                            "d-flex" " align-items-center" " gap-1 mb-1"
                                         ),
                                     ),
                                     dcc.Dropdown(
@@ -2063,19 +2046,13 @@ def layout() -> html.Div:
                                     html.Div(
                                         [
                                             html.I(
-                                                className=(
-                                                    "bi bi-geo-alt me-1"
-                                                ),
-                                                style={
-                                                    "color": "var(--blue)"
-                                                },
+                                                className=("bi bi-geo-alt me-1"),
+                                                style={"color": "var(--blue)"},
                                             ),
                                             _lbl("Station"),
                                         ],
                                         className=(
-                                            "d-flex"
-                                            " align-items-center"
-                                            " gap-1 mb-1"
+                                            "d-flex" " align-items-center" " gap-1 mb-1"
                                         ),
                                     ),
                                     dcc.Dropdown(

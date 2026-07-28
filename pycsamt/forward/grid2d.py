@@ -335,9 +335,7 @@ class Grid2D:
         indices : ndarray of int, shape (n_stations,)
         """
         xn = self.x_nodes
-        return np.argmin(
-            np.abs(xn[:, None] - self.x_stations[None, :]), axis=0
-        )
+        return np.argmin(np.abs(xn[:, None] - self.x_stations[None, :]), axis=0)
 
     # ─── conductivity helpers ─────────────────────────────────────────────
 
@@ -425,11 +423,7 @@ class Grid2D:
             if clip_core
             else self.x_nodes
         )
-        zn = (
-            self.z_nodes[: self.nz + 1 - self.n_pad]
-            if clip_core
-            else self.z_nodes
-        )
+        zn = self.z_nodes[: self.nz + 1 - self.n_pad] if clip_core else self.z_nodes
 
         if log_scale:
             pc = ax.pcolormesh(
@@ -448,9 +442,7 @@ class Grid2D:
                 vmin=vmin or rho.min(),
                 vmax=vmax or rho.max(),
             )
-            pc = ax.pcolormesh(
-                xn, zn, rho, cmap=cmap, norm=norm, shading="flat"
-            )
+            pc = ax.pcolormesh(xn, zn, rho, cmap=cmap, norm=norm, shading="flat")
             cbar = ax.get_figure().colorbar(pc, ax=ax, pad=0.02)
             cbar.set_label("ρ  [Ω·m]", fontsize=8)
 

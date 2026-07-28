@@ -119,6 +119,18 @@ Fixed
   :meth:`pycsamt.ai.inversion.inv2d.EMInverter2D.fit`'s PyTorch training
   loop now drops a trailing size-1 batch instead of crashing with "Expected
   more than 1 value per channel when training".
+* |Fix| **TM-mode interface averaging** --
+  :func:`pycsamt.forward.em2d._assemble_tm` now uses a thickness-weighted
+  harmonic mean, not an arithmetic one, for the resistivity coefficient at
+  a cell interface, matching the parallel-current-path physics there.
+  ``Maxwell2DDatasetConfig`` generates and trains on both the TE-mode
+  (``zxy``) and TM-mode (``zyx``) response by default again.
+* |Fix| **Field-survey impedance units** --
+  :func:`pycsamt.ai.domain_gap.survey_fit.survey_data_from_sites` now
+  converts :attr:`~pycsamt.site.base.Site.z` from the EDI-native
+  ``[mV/km]/[nT]`` field convention to the SI convention
+  :class:`~pycsamt.ai.data.contracts.SurveyData` declares, instead of
+  copying it unconverted.
 
 Changed
 ~~~~~~~
@@ -152,19 +164,29 @@ Docs & tooling
   Netlify build hook), rather than on every commit to ``master``. The
   previous per-commit pattern exhausted the hosting team's free-plan
   credits and suspended the site.
-* |Docs| **AI-inversion user guide stubs** -- added
+* |Docs| **AI-inversion user guide, written in full** --
   :doc:`/user_guide/ai_inversion/roadmap`,
   :doc:`/user_guide/ai_inversion/data_contracts`,
-  :doc:`/user_guide/ai_inversion/geology_priors`,
+  :doc:`/user_guide/ai_inversion/experiments`,
   :doc:`/user_guide/ai_inversion/forward_physics`,
-  :doc:`/user_guide/ai_inversion/losses`,
-  :doc:`/user_guide/ai_inversion/scientific_validation`, and
-  :doc:`/user_guide/ai_inversion/experiments`, to be filled in gradually.
+  :doc:`/user_guide/ai_inversion/dataset2d`,
+  :doc:`/user_guide/ai_inversion/domain_gap`,
+  :doc:`/user_guide/ai_inversion/losses`, and
+  :doc:`/user_guide/ai_inversion/scientific_validation` are now complete
+  guides covering :mod:`pycsamt.ai.data`, :mod:`pycsamt.ai.domain_gap`,
+  :mod:`pycsamt.ai.experiments`, :mod:`pycsamt.ai.geology`,
+  :mod:`pycsamt.ai.losses`, :mod:`pycsamt.ai.training.dataset2d`,
+  :mod:`pycsamt.ai.validation`, and :mod:`pycsamt.forward.maxwell`
+  end to end, with real, externally captured code output, generated
+  figures, and labeled equations throughout.
+  :doc:`/user_guide/ai_inversion/geology_priors` remains a stub.
 * |Tests| **AI-inversion regression coverage** -- added tests for
   :mod:`pycsamt.ai.losses`, :mod:`pycsamt.ai.validation`,
-  :mod:`pycsamt.ai.training.dataset2d` (including a TE-mode analytic
-  half-space regression check), the staged-loss ``EMInverter2D`` fit path,
-  and the ``Inv2DAgent`` ``physics="mt2d"`` end-to-end path.
+  :mod:`pycsamt.ai.training.dataset2d` (including analytic half-space
+  regression checks for both the TE- and TM-mode response),
+  :func:`pycsamt.forward.em2d._assemble_tm`'s interface-averaging
+  coefficients, the staged-loss ``EMInverter2D`` fit path, and the
+  ``Inv2DAgent`` ``physics="mt2d"`` end-to-end path.
 
 ----
 

@@ -231,21 +231,33 @@ unchanged default.
    >>> result.data["mt2d_recovery"]  # doctest: +SKIP
    {'rmse': 0.31, 'mae': 0.22, 'r2': 0.71, 'n_samples': 4}
 
-.. admonition:: Known limitation: TM mode is not yet available
-   :class: warning
-
-   Only the TE-mode (``zxy``) response is generated and trained on. The
-   TM-mode (``zyx``) response has an unresolved 30-65% accuracy problem in
-   the underlying finite-difference solver for laterally fine 2-D
-   structure, found and documented while building this dataset pipeline
-   (see :mod:`pycsamt.ai.training.dataset2d`'s module docstring). Requesting
-   ``"zyx"`` explicitly raises a runtime warning rather than silently
-   training on unvalidated data.
+:func:`~pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` now
+generates and validates both the TE-mode (``zxy``) and TM-mode (``zyx``)
+response by default. An earlier finite-difference interface-averaging bug in
+the TM-mode assembly (:func:`pycsamt.forward.em2d._assemble_tm`) has been
+found and fixed — the coefficient at a resistivity interface now uses a
+thickness-weighted harmonic mean instead of an arithmetic one, matching the
+parallel-current-path physics at that interface — and both modes now match
+the analytic half-space benchmark to within a few percent under mesh
+refinement (see :doc:`/user_guide/ai_inversion/dataset2d`).
+:class:`~pycsamt.agents.Inv2DAgent`'s ``physics="mt2d"`` mode still trains
+on the TE-mode response only, since its U-Net input layout is fixed at two
+channels (apparent resistivity and phase); this is an architectural choice,
+not an accuracy limitation, and requesting the TM-mode response no longer
+raises a warning.
 
 :mod:`pycsamt.ai.domain_gap.willy_fit` is renamed to
 :mod:`pycsamt.ai.domain_gap.survey_fit`: the bridge between a real field
 survey and the domain-gap noise simulator works for any AMT, CSAMT, or MT
 survey, not only the bundled WILLY line.
+:func:`~pycsamt.ai.domain_gap.survey_fit.survey_data_from_sites` also had a
+real unit-conversion bug — it copied :attr:`~pycsamt.site.base.Site.z`
+straight into :class:`~pycsamt.ai.data.contracts.SurveyData` without
+converting from the EDI-native ``[mV/km]/[nT]`` field convention to the SI
+convention ``SurveyData`` declares, off by a factor of :math:`4\pi\times
+10^{-4}` in impedance magnitude. It is now converted, confirmed against
+:attr:`Site.rho`'s own field-convention apparent-resistivity formula to
+floating-point precision.
 
 Fixed
 ~~~~~

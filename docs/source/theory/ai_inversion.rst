@@ -1,7 +1,7 @@
 .. _theory_ai_inversion:
 
-Scientific Foundations of AI Inversion
-=======================================
+Foundations of AI Inversion
+==============================
 
 :term:`AI inversion` does not remove the electromagnetic inverse problem.  It
 changes how candidate earth models are proposed.  A classical optimizer updates

@@ -53,10 +53,17 @@ from each subpackage's current public exports, including the IoT field stack.
    pycsamt.tdem
    pycsamt.utils
    pycsamt.forward
+   pycsamt.forward.maxwell
    pycsamt.inversion
    pycsamt.models
    pycsamt.backends
    pycsamt.ai
+   pycsamt.ai.data
+   pycsamt.ai.geology
+   pycsamt.ai.losses
+   pycsamt.ai.domain_gap
+   pycsamt.ai.experiments
+   pycsamt.ai.validation
    pycsamt.agents
    pycsamt.pipeline
    pycsamt.session
@@ -87,10 +94,17 @@ from each subpackage's current public exports, including the IoT field stack.
    tdem
    utils
    forward
+   forward_maxwell
    inversion
    models
    backends
    ai
+   ai_data
+   ai_geology
+   ai_losses
+   ai_domain_gap
+   ai_experiments
+   ai_validation
    agents
    pipeline
    session

@@ -485,8 +485,17 @@ Inv2DAgent: profile workflow
 ----------------------------
 
 :class:`pycsamt.agents.Inv2DAgent` assembles a station–frequency input panel,
-generates synthetic profile examples, trains a U-Net-style inverter, and
-predicts the complete profile at once:
+trains a U-Net-style inverter, and predicts the complete profile at once. Its
+``physics`` argument now separates two scientifically different training
+contracts. The default ``"mt1d"`` path tiles independent layered responses
+into profile-shaped examples; it is a :term:`pseudo-2-D training model`, not a
+2-D electromagnetic simulation. The ``"mt2d"`` path draws laterally
+correlated resistivity fields and computes their TE responses with the
+:term:`2-D Maxwell training model`. Choosing between them changes the training
+distribution and forward physics, not merely runtime.
+
+The lightweight, tiled path remains useful for smoke tests and is the path
+used by the captured WILLY example below:
 
 .. code-block:: pycon
 
@@ -518,6 +527,7 @@ predicts the complete profile at once:
    ...     n_train_profiles=500,
    ...     n_stations_per_profile=10,
    ...     epochs=80,
+   ...     physics="mt1d",
    ... )
    >>> result = agent.execute({
    ...     "sites": sites,
@@ -537,6 +547,86 @@ example would create a hundreds-of-kilometres display grid unrelated to the
 WILLY target. ``depth_max`` controls the output parameterization, not verified
 depth of investigation.
 
+For a physics-coupled training set, request the 2-D Maxwell path explicitly:
+
+.. code-block:: pycon
+
+   >>> maxwell_agent = Inv2DAgent(
+   ...     n_depth=24,
+   ...     freqs=frequency,
+   ...     depth_max=2000.0,
+   ...     n_train_profiles=100,
+   ...     n_stations_per_profile=10,
+   ...     epochs=80,
+   ...     physics="mt2d",
+   ...     station_spacing_m=125.0,
+   ...     correlation_length_x_m=(250.0, 1000.0),
+   ...     correlation_length_z_m=(75.0, 350.0),
+   ...     lambda_x=1e-3,
+   ...     lambda_z=5e-4,
+   ...     lambda_tv=1e-4,
+   ... )
+   >>> print(maxwell_agent.physics, maxwell_agent.n_depth)
+   mt2d 24
+
+This constructor example is intentionally non-executing beyond configuration:
+a hundred finite-difference realizations are a real training workload, not a
+documentation smoke test. During ``execute``, each realization uses a regular
+synthetic grid with ``n_stations_per_profile`` columns, ``n_depth`` cells, and
+the declared ``station_spacing_m``. The field survey's irregular coordinates
+are not used to generate those synthetic models. Correlation-length ranges,
+the log-resistivity mean and spread, mesh limits, frequency grid, and depth
+must therefore be recorded as training provenance.
+
+Only the TE ``zxy`` response is requested by this agent because its two input
+channels are :math:`\log_{10}\rho_a^{xy}` and :math:`\phi^{xy}`. The lower-level
+2-D dataset machinery can validate TM ``zyx`` responses as well, but computing
+an unused TM solve here would not add a feature to the U-Net. For angular
+frequency :math:`\omega=2\pi f`, the complex TE impedance is converted using
+
+.. math::
+   :label: eq-agents-inv2d-response-channels
+
+   \rho_a^{xy}(f,x) = \frac{|Z_{xy}(f,x)|^2}{\mu_0\omega},
+   \qquad
+   \phi^{xy}(f,x) = \operatorname{atan2}
+   \bigl(\Im Z_{xy},\Re Z_{xy}\bigr),
+
+which is also the conversion applied by the implementation to the canonical
+SI impedance returned by the Maxwell adapter. These arrays are transposed into
+``(channel, frequency, station)`` order, while the target is
+:math:`m=\log_{10}\rho` in ``(depth, station)`` order.
+
+On PyTorch, optional spatial penalties augment the normalized target-space
+mean-squared error. With batch index :math:`b`, depth cell :math:`k`, station
+:math:`j`, prediction :math:`\hat m`, and target :math:`m`, the implemented
+objective is
+
+.. math::
+   :label: eq-agents-inv2d-staged-loss
+
+   \begin{aligned}
+   \mathcal L ={}& \frac{1}{N}\sum_{b,k,j}
+      (\hat m_{bkj}-m_{bkj})^2 \\
+   &+\lambda_x\,\operatorname{mean}
+      (\hat m_{b,k,j+1}-\hat m_{b,k,j})^2 \\
+   &+\lambda_z\,\operatorname{mean}
+      (\hat m_{b,k+1,j}-\hat m_{b,k,j})^2 \\
+   &+\lambda_{\mathrm{TV}}\left[
+      \operatorname{mean}|\hat m_{b,k,j+1}-\hat m_{b,k,j}|
+      +\operatorname{mean}|\hat m_{b,k+1,j}-\hat m_{b,k,j}|
+      \right].
+   \end{aligned}
+
+All three weights default to zero, in which case
+:eq:`eq-agents-inv2d-staged-loss` reduces exactly to target-space MSE. The
+quadratic terms suppress sharp gradients increasingly strongly, whereas total
+variation permits sharper boundaries but can produce blocky sections. These
+are learned-model regularizers; they do not turn the inference pass into a
+classical response-space inversion. TensorFlow currently accepts the plain MSE
+path only and rejects non-zero spatial weights rather than silently ignoring
+them.
+
 .. figure:: ../../images/user_guide/ai_inversion/agents_inv2d_section.png
    :alt: Predicted 2-D resistivity section from the U-Net inverter.
    :align: center
@@ -550,7 +640,14 @@ depth of investigation.
 
 Important outputs are ``pred_section`` with shape
 ``(n_depth, n_stations)``, ``depths_km``, ``station_names``, ``rms_global``,
-the fitted ``inverter``, and figure dictionaries. The reported RMS is a
+``physics``, ``mt2d_recovery``, the fitted ``inverter``, and figure
+dictionaries. ``mt2d_recovery`` is ``None`` on the tiled path. On the Maxwell
+path it averages RMSE, MAE, and :math:`R^2` over the held-out test split, or
+the validation split when no test sample exists. Those scores compare
+predicted and known synthetic :math:`\log_{10}\rho`; they are a domain-specific
+recovery audit, not field ground truth.
+
+The reported field RMS is a
 data-space check: the predicted section is mapped back to an apparent
 resistivity curve at each station using the Bostick depth
 :math:`d_B = 503\sqrt{\rho_a T}` (the same :term:`skin depth` relation used
@@ -598,10 +695,14 @@ matched after station filtering, the agent keeps the ordinary section and
 returns a warning instead of presenting artificial flat terrain as measured
 topography.
 
-The learned lateral continuity comes from the training construction and network
-architecture; it is not equivalent to a conventional 2-D EM forward operator
-or proof that the field structure is two-dimensional. Validate the section
-against dimensionality evidence and classical 2-D inversion where feasible.
+Under ``physics="mt1d"``, learned lateral continuity comes from the assembled
+profile and network architecture rather than a 2-D forward operator. Under
+``physics="mt2d"``, the synthetic responses do contain lateral EM coupling,
+but the trained U-Net remains an amortized predictor whose field result can be
+out of distribution. Neither mode proves that the field structure is
+two-dimensional. Validate the section against dimensionality evidence,
+held-out recovery, reconstructed field responses, and classical 2-D inversion
+where feasible.
 
 Inv3DAgent: spatial graph workflow
 ----------------------------------
@@ -1235,8 +1336,9 @@ Avoid these errors:
   known survey geometry, especially for CRS or projection assumptions the
   fallback does not know about;
 * assuming ``period_range`` narrows the frequency grid on ``Inv2DAgent`` or
-  ``Inv3DAgent`` — confirm which runtime overrides an agent actually reads
-  before depending on one;
+  ``Inv3DAgent`` — these implementations currently read the explicit ``freqs``
+  override instead, so convert a reviewed period band to frequencies before
+  constructing or executing the agent;
 * treating MC dropout or ensemble spread as total uncertainty, especially
   when a calibration check has not been run against it;
 * claiming pretrained inference after a fallback training run;

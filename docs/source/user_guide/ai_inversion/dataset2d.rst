@@ -19,6 +19,14 @@ realization-level train/validation/test split and a
 whose solve does not converge is recorded and excluded, never
 silently included.
 
+The generator is best understood as four linked contracts rather than one
+large function call: a geological field defines the target, a solver mesh and
+receiver layout define the forward problem, canonical
+:class:`~pycsamt.ai.data.contracts.SurveyData` defines the response axes, and
+the split plus manifest define which accepted realizations may be used for
+each statistical role. A dataset is ready for training only when all four
+contracts have been reviewed.
+
 Configuring one coherent dataset
 ------------------------------------
 
@@ -54,6 +62,10 @@ seeds are derived deterministically:
    ... )
    >>> config.components
    ('zxy', 'zyx')
+   >>> config.grid.shape, config.station_x_m.shape
+   ((4, 6), (3,))
+   >>> config.to_dict()["schema_version"]
+   1
 
    >>> dataset = generate_2d_maxwell_dataset(config)
    >>> len(dataset.samples), dataset.rejected
@@ -75,18 +87,22 @@ converged:
    >>> sample.resistivity_ohm_m.shape
    (4, 6)
    >>> sample.mesh_cells, round(sample.relative_residual, 6)
-   (11492, 0.0)
+   (8650, 0.0)
+   >>> f"{sample.relative_residual:.3e}"
+   '2.290e-17'
 
 Two realizations, three stations, two frequencies, and both impedance
-components finish in under a second here because the mesh and
-realization count are kept deliberately small for the documentation
-build; the mesh alone uses 11,492 padded cells even at this scale,
+components finish quickly here because the mesh and realization count are
+kept deliberately small for the documentation build; the mesh alone uses
+8,650 padded cells even at this scale,
 which is why :doc:`forward_physics`'s cache and batch runner, not a
 plain loop, are what make a production-sized version of this call
-tractable. The ``relative_residual`` of ``0.0`` and the empty
-``rejected`` tuple are the honest signal to check before trusting a
-generated dataset at all — a nonzero, unexcluded residual would mean
-a realization entered training on an unconverged solve.
+tractable. Rounding the residual to six decimals hides its magnitude, which is
+why the scientific-notation output is also captured. The
+:math:`2.290\times10^{-17}` residual shows an accurate solution of the
+discretized linear system; it does not prove that the mesh is sufficiently
+refined or that its boundaries are far enough away. The empty ``rejected``
+tuple shows that neither attempted realization was excluded.
 
 .. figure:: ../../images/user_guide/ai_inversion/dataset2d_realization_gallery.png
    :alt: Three independent resistivity-field realizations from one Maxwell2DDatasetConfig
@@ -101,6 +117,63 @@ a realization entered training on an unconverged solve.
    side by side; that lateral continuity is the entire reason this
    module exists rather than reusing :doc:`../forward/index`'s
    station-wise 1-D batch generator.
+
+The gallery should be read horizontally. All panels share one color scale, so
+the purple shallow resistor in the left realization is genuinely more
+resistive than the green material in the right panel rather than an artifact
+of independently stretched color limits. The correlation ranges impose broad
+smooth bodies; they do not create discrete contacts or faults. A network
+trained only on this family will therefore be biased toward smooth recovery
+even if its architecture contains no explicit smoothness penalty.
+
+From complex impedance to network channels
+-------------------------------------------
+
+The solver returns SI impedance in V/A with canonical shape
+``(station, frequency, component)``. Apparent resistivity and phase are derived
+without changing that provenance:
+
+.. math::
+   :label: eq-ai-dataset2d-response-transform
+
+   \rho_a^{(c)}(s,f)=
+   \frac{|Z_c(s,f)|^2}{\mu_0\,2\pi f},
+   \qquad
+   \phi^{(c)}(s,f)=\operatorname{atan2}
+   \left(\Im Z_c,\Re Z_c\right).
+
+Equation :eq:`eq-ai-dataset2d-response-transform` is the SI conversion. The
+legacy :math:`0.2|Z|^2/f` factor belongs to impedance expressed in
+mV/km/nT and must not be applied directly to the Maxwell adapter's V/A output.
+For U-Net training, pyCSAMT uses
+:math:`\log_{10}\rho_a^{xy}` and :math:`\phi^{xy}` as its current two-channel
+layout, then transposes the arrays to
+``(realization, channel, frequency, station)``.
+
+.. figure:: ../../images/user_guide/ai_inversion/dataset2d_response_anatomy.png
+   :alt: Known 2-D resistivity target with TE and TM apparent-resistivity
+         curves and adjusted phase responses at seven stations.
+   :align: center
+   :width: 98%
+
+   One accepted deterministic realization. White triangles identify the seven
+   receiver positions. The upper-right and lower-left panels use identical
+   station colors, letting a reader trace how the same lateral location differs
+   between TE and TM. The phase panel plots :math:`-Z_{yx}` for TM so its
+   half-space reference is near :math:`+45^\circ`, consistent with the standard
+   :math:`Z_{yx}=-Z_{xy}` convention.
+
+The target contains a shallow resistive zone on the left and a deeper
+conductive region toward the right. TE apparent resistivity varies moderately
+among most stations but rises most strongly at the leftmost receiver, which is
+consistent with its proximity to the shallow resistor. TM shows a larger
+separation at the same receiver because lateral conductivity enters its
+governing diffusion coefficient. This is a qualitative consistency check, not
+an inversion: the plotted response is still influenced by the full model,
+frequency-dependent sensitivity, mesh, and boundary conditions. Notice also
+that four frequencies cannot resolve every one of the 96 target cells; the
+target grid describes what was generated, not what those responses uniquely
+identify.
 
 Two impedance modes, and why one needed more care than the other
 ------------------------------------------------------------------------
@@ -195,6 +268,58 @@ module's own default mesh construction rather than a specially tuned
 one — the same order of accuracy for both, not TE working and TM
 silently failing next to it.
 
+.. figure:: ../../images/user_guide/ai_inversion/forward_physics_halfspace_benchmark.png
+   :alt: Numerical 2-D TE apparent resistivity and phase compared with the
+         analytic 100 ohm metre half-space response.
+   :align: center
+   :width: 88%
+
+   The numerical curve remains close to the analytic 100 :math:`\Omega\,m`
+   response and :math:`45^\circ` phase over frequency. This panel displays TE;
+   the captured numbers above provide the corresponding TM error check. A
+   half-space benchmark detects unit, sign, boundary, and gross discretization
+   faults, but heterogeneous refinement tests are still required because a
+   uniform earth cannot exercise interface averaging.
+
+Fail fast before an impractical mesh
+------------------------------------
+
+The lateral mesh remains uniform because graded lateral cells were found to
+damage TM accuracy. Consequently a low frequency, high resistivity, fine
+``dx_m``, or large ``mesh_safety_factor`` can request too many cells. The
+``max_mesh_cells`` guard reports the required domain instead of silently
+coarsening the physics:
+
+.. code-block:: pycon
+
+   >>> guard_grid = GeologyGrid.regular_2d(
+   ...     nx=6, nz=4, dx_m=300.0, dz_m=150.0
+   ... )
+   >>> guarded = Maxwell2DDatasetConfig(
+   ...     dataset_id="guard-demo",
+   ...     grid=guard_grid,
+   ...     correlation_length_x_m=(600.0, 900.0),
+   ...     correlation_length_z_m=(150.0, 300.0),
+   ...     frequencies_hz=[10.0, 3.0],
+   ...     station_x_m=[600.0, 900.0, 1200.0],
+   ...     n_realizations=1,
+   ...     seed=0,
+   ...     max_mesh_cells=2,
+   ...     validation_fraction=0.0,
+   ...     test_fraction=0.0,
+   ... )
+   >>> try:
+   ...     generate_2d_maxwell_dataset(guarded)
+   ... except ValueError as exc:
+   ...     print(str(exc).split(". ", 1)[0] + ".")
+   requested configuration needs 312 uniform x-cells (lateral extent 93415 m at 300 m resolution), exceeding max_mesh_cells=2.
+
+Do not respond automatically by raising the cap. First decide whether the
+frequency band, resistivity prior, spatial resolution, and safety factor are
+scientifically required. If they are, estimate memory and runtime explicitly;
+if they are not, revise the configuration and record why. Coarsening ``dx_m``
+changes both the geological target and the numerical approximation.
+
 Handing this to noise, or to training
 -----------------------------------------
 
@@ -211,3 +336,37 @@ inputs :doc:`losses` trains against and :doc:`scientific_validation`
 reports evidence from — the realization-level split guarding against
 the same leakage :doc:`data_contracts` already enforces for any other
 kind of split.
+
+The two-realization example deliberately has no held-out samples. A training
+corpus should make the partition sizes explicit before any solve budget is
+committed:
+
+.. code-block:: pycon
+
+   >>> plan_grid = GeologyGrid.regular_2d(
+   ...     nx=8, nz=8, dx_m=300.0, dz_m=150.0
+   ... )
+   >>> production_plan = Maxwell2DDatasetConfig(
+   ...     dataset_id="profile-2d-v2",
+   ...     grid=plan_grid,
+   ...     correlation_length_x_m=(600.0, 1500.0),
+   ...     correlation_length_z_m=(150.0, 450.0),
+   ...     frequencies_hz=[30.0, 10.0, 3.0, 1.0],
+   ...     station_x_m=[300.0, 600.0, 900.0, 1200.0],
+   ...     n_realizations=100,
+   ...     seed=42,
+   ...     validation_fraction=0.15,
+   ...     test_fraction=0.15,
+   ... )
+   >>> production_plan.n_realizations
+   100
+   >>> production_plan.validation_fraction, production_plan.test_fraction
+   (0.15, 0.15)
+
+This is a configuration example, not a claim that 100 realizations are
+adequate. Adequacy depends on geological diversity, target dimension,
+rejection rate, nuisance variants, and the precision required for scenario-
+specific validation. After generation, inspect ``dataset.split.sizes`` rather
+than inferring counts from fractions, because rejected solves are removed
+before splitting. Persist ``dataset.manifest`` and link later noise variants
+to each clean ``realization_id`` so no parent model crosses partitions.

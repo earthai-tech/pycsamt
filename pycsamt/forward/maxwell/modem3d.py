@@ -2,7 +2,8 @@
 # License: LGPL-3.0
 """External ModEM adapter: the trusted production 3-D backend.
 
-Per ``AI-INVERSION-M6-3D-ADR.md`` (Decision 1), ModEM — not an
+Per ``docs/source/development/adr/AI-INVERSION-M6-3D-ADR.md`` (Decision 1),
+ModEM — not an
 in-house solver — is the recommended path for genuine 3-D production
 forward modeling. :class:`ModEm3DAdapter` bridges the solver-neutral
 :class:`~pycsamt.forward.maxwell.contracts.MaxwellProblem` /

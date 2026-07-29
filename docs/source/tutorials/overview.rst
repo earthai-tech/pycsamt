@@ -44,14 +44,16 @@ task you need.
      - Occam2D data, model, startup, and run-directory files.
    * - :doc:`ai_inversion_from_corrected_edis`
      - You have corrected EDIs and want to use AI inversion instead of, or
-       alongside, classical inversion.
-     - AI-mode decision table, training coverage check, 1-D/2-D/3-D code
-       paths, prediction and validation figures.
+       alongside, classical inversion, and want to know whether to trust
+       the result before you do.
+     - Survey audit (dimensionality, strike, duplicate stations), a
+       site-grounded geological prior, 2-D and 3-D AI inversion with real
+       topography draping, and an out-of-distribution screen.
    * - :doc:`essential_3d_ai_inversion`
-     - You want a focused L18PLT 3-D AI inversion workflow using real station
-       geometry, real EDI topography, and agent-returned depth layers.
-     - L18 station-topography profile and embedded-topography 3-D AI inversion
-       block.
+     - You want to construct a genuine 3-D geology/topography hypothesis and
+       Maxwell mesh, and determine whether the available backend may invert it.
+     - Reproducible 3-D prior slices, padded terrain-aware Maxwell mesh, and an
+       explicit backend acceptance gate; no unsupported inversion block.
    * - :doc:`map_porphyry_mineralization_from_noisy_amt`
      - You have a genuinely noisy, infrastructure-affected AMT survey and
        need the full correction-to-inversion chain, on two lines at once,
@@ -104,13 +106,16 @@ Recommended Learning Path
 
 7. Use :doc:`ai_inversion_from_corrected_edis` when choosing AI inversion.
 
-   This page starts from corrected EDIs and explains when to use 1-D AI, when
-   to bypass it for 2-D profile inversion, and when 3-D graph AI is justified.
+   This page runs a real corrected survey through an audit, a 2-D Maxwell AI
+   inversion, and a graph-based 3-D AI inversion, then shows how to catch a
+   confidently wrong prediction before trusting it.
 
-8. Use :doc:`essential_3d_ai_inversion` for a focused real-topography 3-D AI run.
+8. Use :doc:`essential_3d_ai_inversion` to prepare and gate a topographic 3-D
+   AI inversion problem.
 
-   This page treats L18PLT as corrected EDI, runs 3-D AI, and drapes the result
-   on package-extracted station topography.
+   This page separates a reproducible geological prior from an inferred model,
+   constructs the current 3-D Maxwell mesh, and stops honestly when the bundled
+   research backend cannot support its topography and size.
 
 9. Use :doc:`map_porphyry_mineralization_from_noisy_amt` for a real,
    infrastructure-noisy field case study.

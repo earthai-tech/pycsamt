@@ -124,6 +124,45 @@ does not establish a geophysical depth of investigation. The defensible
 interpretation depth must come from bandwidth, sensitivity, response fit, and
 scenario stability.
 
+The physics enters through a differentiable Wait recursion. For angular
+frequency :math:`\omega=2\pi f`, magnetic permeability :math:`\mu_0`, and
+layer :math:`\ell`, define the propagation constant and intrinsic impedance
+
+.. math::
+   :label: eq-pinn2d-layer-wave-quantities
+
+   k_\ell=\sqrt{\frac{i\omega\mu_0}{\rho_\ell}},
+   \qquad
+   \eta_\ell=\frac{i\omega\mu_0}{k_\ell}.
+
+Starting in the basement with :math:`Z_L=\eta_L`, the implementation moves
+upward through each finite layer:
+
+.. math::
+   :label: eq-pinn2d-wait-recursion
+
+   Z_\ell
+   =
+   \eta_\ell
+   \frac{Z_{\ell+1}+\eta_\ell\tanh(i k_\ell h_\ell)}
+        {\eta_\ell+Z_{\ell+1}\tanh(i k_\ell h_\ell)}.
+
+The surface impedance gives the predicted observables
+
+.. math::
+   :label: eq-pinn2d-observables
+
+   \rho_a(\omega)=\frac{|Z_1|^2}{\mu_0\omega},
+   \qquad
+   \phi(\omega)=\arg Z_1\frac{180}{\pi}.
+
+Equations :eq:`eq-pinn2d-layer-wave-quantities` through
+:eq:`eq-pinn2d-observables` are evaluated for all stations as one differentiable
+batch. Automatic differentiation therefore supplies gradients with respect to
+both :math:`u_{s\ell}` and :math:`q_{s\ell}`. The batch dimension improves
+execution efficiency; it does not couple electromagnetic fields between
+stations. Only :math:`\mathcal R_x` supplies lateral coupling.
+
 2. Understand the loss function
 -------------------------------
 
@@ -190,6 +229,7 @@ In station-layer notation, a representative vertical penalty is
    :label: eq-pinn2d-vertical-roughness
 
    \mathcal R_z =
+   \frac{1}{S(L-1)}
    \sum_{s=1}^{S}\sum_{\ell=1}^{L-1}
    \left(u_{s,\ell+1}-u_{s,\ell}\right)^2.
 
@@ -206,6 +246,7 @@ The corresponding chain penalty is
    :label: eq-pinn2d-lateral-roughness
 
    \mathcal R_x =
+   \frac{1}{(S-1)L}
    \sum_{s=1}^{S-1}\sum_{\ell=1}^{L}
    \left(u_{s+1,\ell}-u_{s,\ell}\right)^2.
 
@@ -222,6 +263,13 @@ thicknesses are optimized in log space, but the same lateral/vertical
 regularization description should not be assumed to apply to them unless
 confirmed in the backend kernel. Audit thickness stability separately.
 
+The backend confirms two further details. Thickness is not included in either
+roughness term, and after every optimizer update its log10 value is clipped to
+``[0, 5]``. Thus each finite-layer thickness is constrained to
+:math:`1\le h\le100{,}000` m. Resistivity has no analogous explicit clamp.
+These are numerical constraints, not geological bounds; project-specific
+plausibility still needs an external acceptance check.
+
 3. Prepare and order profile data
 ---------------------------------
 
@@ -237,6 +285,28 @@ inverter:
    ...     recursive=True,
    ...     verbose=0,
    ... )
+
+The public observation bridge can then be inspected without starting an
+optimizer. On the bundled line it produces 28 station records with aligned TE
+and TM arrays at each station:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.inversion import sites_to_obs_2d
+   >>> observations = sites_to_obs_2d(
+   ...     "data/AMT/WILLY_data/L18PLT", verbose=0
+   ... )
+   >>> len(observations)
+   28
+   >>> first = observations[0]
+   >>> first.name, first.freq.shape, first.rho_te.shape, first.rho_tm.shape
+   ('18-001A', (53,), (53,), (53,))
+   >>> coverage = (
+   ...     min(float(item.freq.min()) for item in observations),
+   ...     max(float(item.freq.max()) for item in observations),
+   ... )
+   >>> coverage
+   (1.008, 10400.0)
 
 The inverter uses :func:`pycsamt.ai.inversion.sites_to_obs_2d` internally and
 preserves the order returned by the input. It does not sort stations by
@@ -314,6 +384,30 @@ Inspect coverage per station. A station constrained by only a small subset of
 the common grid can borrow visual smoothness from neighbors without having the
 same depth sensitivity.
 
+The public :func:`pycsamt.ai.inversion.sites_to_obs_2d` bridge makes the
+pre-fit inspection reproducible. The following code extracts the actual WILLY
+L18 TE/TM arrays, constructs a display grid without extrapolation, and compares
+mode support and disagreement before any model is optimized.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_pinn2d_input_diagnostic
+   :linenos:
+   :title: View PINN 2-D input-diagnostic source code
+
+.. figure:: ../../images/user_guide/ai_inversion/pinn2d_input_diagnostic.png
+   :alt: WILLY L18 common-frequency support and TE versus TM disagreement
+   :align: center
+   :width: 98%
+
+   WILLY stations cover almost the same displayed frequency range, so the
+   common-grid mask alone looks reassuring. The mode panels tell a different
+   story: TE and TM apparent resistivity separate strongly over important
+   bands, and the phase convention creates large systematic differences.
+   Averaging these modes would erase evidence rather than resolve it. Separate
+   TE and TM runs, dimensionality review, and component-aware residuals are
+   required before choosing a preferred section.
+
 6. Choose layer count and depth
 -------------------------------
 
@@ -381,6 +475,32 @@ Avoid choosing weights solely for a visually smooth section. Excessive lateral
 smoothing can smear faults, isolated conductors, or station-specific problems.
 Insufficient smoothing can fit noise with alternating layers.
 
+The next controlled example isolates the geometry of the two penalties. It
+solves a quadratic denoising analogue with the same vertical and lateral
+first-difference operators; it does **not** claim to be an electromagnetic
+inversion benchmark. That separation is useful because it shows what each
+regularizer is capable of suppressing before forward-physics complexity is
+introduced.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_pinn2d_regularization_anatomy
+   :linenos:
+   :title: View regularization-anatomy source code
+
+.. figure:: ../../images/user_guide/ai_inversion/pinn2d_regularization_anatomy.png
+   :alt: Controlled comparison of vertical, lateral, and balanced smoothing
+   :align: center
+   :width: 98%
+
+   Vertical smoothing blends layer boundaries within each station but leaves
+   lateral noise; lateral smoothing preserves sharper vertical changes while
+   spreading anomalies along the profile. Balanced smoothing suppresses both
+   kinds of roughness but rounds the known conductor and resistor boundaries.
+   The trade-off panel confirms that roughness reduction is purchased with
+   departure from the data-fit proxy. In a real inversion the selected point
+   must also pass response reconstruction and target-stability tests.
+
 8. Select optimizer controls
 ----------------------------
 
@@ -394,9 +514,19 @@ Insufficient smoothing can fit noise with alternating layers.
    PyTorch/TensorFlow device resolved through the active backend.
 
 The current high-level ``fit()`` does not expose early stopping, validation
-data, learning-rate scheduling, or gradient clipping. It runs the requested
-optimization iterations through the backend kernel. Monitor the curve and run
-repeat configurations rather than assuming the final epoch is optimal.
+data, or learning-rate scheduling. Gradient clipping is active inside both
+backends at norm 5, but its threshold is not a public option. The implementation
+runs the requested optimization iterations through the backend kernel. Monitor
+the curve and run repeat configurations rather than assuming the final epoch
+is optimal.
+
+Unless a hybrid workflow supplies an initial model to the lower-level kernel,
+all stations and layers start at the global mean observed
+:math:`\log_{10}\rho_a`; each finite thickness starts at
+:math:`\max(d_{max}/L,1)` m. This laterally uniform initialization is another
+prior. Repeated runs from the same inputs are not a meaningful initialization
+ensemble unless initialization is deliberately changed through a supported
+workflow.
 
 A large learning rate can oscillate or diverge; a very small rate may appear
 stable without reaching an adequate fit. Compare final sections across epochs
@@ -470,6 +600,15 @@ required diagnostic and the topographic display transformation.
    the same resistivity values; only their vertical coordinates differ.  The
    title records the rejection so that the terrain rendering cannot be
    mistaken for a validated inversion result.
+
+The complete executed plotting and audit code is available without interrupting
+the interpretation flow:
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_pinn2d_willy_topography_audit
+   :linenos:
+   :title: View executed WILLY PINN 2-D audit source code
 
 The loss panel overrides the visual appeal of the section.  In particular,
 terrain following does not repair the increasing objective or the large phase
@@ -782,13 +921,12 @@ refinement:
 The hybrid is justified only if Stage 2 improves response fit or scientific
 stability without introducing unsupported structure. Preserve both stages.
 
-.. warning::
-
-   ``HybridInverter2D`` accepts an inverter object or a checkpoint path, but
-   the current ``EMInverter2D`` class does not expose the explicit public
-   ``save()/load()`` pair shown by some older examples/docstrings. Prefer a
-   fitted in-memory object or a project-tested persistence mechanism; do not
-   assume arbitrary ``.npz`` restoration works without verification.
+``HybridInverter2D`` accepts an inverter object or a checkpoint path, and
+``EMInverter2D`` inherits public ``save()``/``load()`` support from
+:class:`pycsamt.ai.BaseEMNet`. Availability of those methods is not sufficient
+validation: round-trip the exact checkpoint in the target environment and
+compare Stage-1 predictions, normalization state, dimensions, and versions
+before using it to initialize physics refinement.
 
 18. Assess uncertainty
 ----------------------
@@ -973,8 +1111,8 @@ Avoid these errors:
 * discarding thickness outputs when plotting resistivity;
 * draping a section on elevation and claiming topography was included in the
   forward physics;
-* relying on outdated Hybrid/EMInverter2D checkpoint examples without testing
-  persistence.
+* treating the inherited Hybrid/EMInverter2D persistence API as evidence that
+  an untested checkpoint will reproduce Stage 1.
 
 Next steps
 ----------

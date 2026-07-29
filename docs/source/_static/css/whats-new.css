@@ -1,0 +1,87 @@
+/* pyCSAMT v2 — "What's new" badge + release banner.
+ * Injected by js/whats-new.js only when a dated release is inside its
+ * TTL window and the visitor has not dismissed it. Base rules use the
+ * light-mode brand accent; the dark-theme block overrides for contrast.
+ */
+
+.pyc-badge-new {
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  margin-left: 0.15em;
+  border-radius: 999px;
+  font-size: 0.7em;
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--pst-color-primary, #f15a29);
+  vertical-align: 0.15em;
+}
+
+.pyc-whats-new-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75em;
+  padding: 0.55em 1em;
+  background: #fff4ec;
+  border-bottom: 1px solid #f6c9a8;
+  font-size: 0.92em;
+}
+
+.pyc-whats-new-link {
+  color: #7a3110;
+  text-decoration: none;
+}
+
+.pyc-whats-new-link:hover {
+  text-decoration: underline;
+}
+
+.pyc-whats-new-dismiss {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: #7a3110;
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.pyc-whats-new-dismiss:hover {
+  background: rgba(122, 49, 16, 0.12);
+}
+
+html[data-theme="dark"] .pyc-whats-new-banner {
+  background: #3a2416;
+  border-bottom-color: #6b4425;
+}
+
+html[data-theme="dark"] .pyc-whats-new-link,
+html[data-theme="dark"] .pyc-whats-new-dismiss {
+  color: #f4d9c2;
+}
+
+html[data-theme="dark"] .pyc-whats-new-dismiss:hover {
+  background: rgba(244, 217, 194, 0.15);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pyc-whats-new-banner {
+    animation: pyc-whats-new-in 0.2s ease-out;
+  }
+}
+
+@keyframes pyc-whats-new-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

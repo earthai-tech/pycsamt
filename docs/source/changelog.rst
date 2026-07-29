@@ -20,6 +20,13 @@ carries a colour-coded badge so the log can be scanned at a glance:
 * |Breaking| |Security| — read carefully before upgrading
 * |Docs| |Build| |Tests| — documentation and project tooling
 
+.. When cutting a release, add a "*Released YYYY-MM-DD.*" line directly
+   under that version's title (before the summary paragraph). It is the
+   single source of truth the "New" badge on the site navbar reads at
+   build time (see conf.py: _write_whats_new_json) -- an entry with no
+   such line is treated as unreleased and never shows a badge. See the
+   Pre-release checklist in development/documentation_build.rst.
+
 ----
 
 .. _changelog-2-0-1:

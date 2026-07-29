@@ -13,10 +13,13 @@ being used outside its evidence base.
 This page explains the uncertainty tools currently available in pyCSAMT and
 the limits of their interpretation. It assumes that training and model
 selection have already followed :doc:`training` and :doc:`model_selection`.
-Every example below runs against the same :class:`~pycsamt.ai.inversion.EnsembleInverter`
-checkpoint used in :doc:`inference` — five resnet members trained on the
-Willy AMT line's own frequency band — so the numbers here are directly
-comparable to that page rather than a fresh, disconnected illustration.
+The Willy examples below use the same
+:class:`~pycsamt.ai.inversion.EnsembleInverter` checkpoint discussed in
+:doc:`inference`: five ResNet members trained on that AMT line's frequency
+band. New calibration and propagation audits are deliberately self-contained,
+seeded method checks executed with the current public validation APIs. Their
+role is to teach the calculation without presenting simulated values as Willy
+field evidence.
 
 .. note::
 
@@ -97,6 +100,75 @@ only when the model was designed to predict it. An ordinary deep ensemble
 mainly estimates the second, epistemic term through variation among fitted
 members. Equation :eq:`eq-ai-uncertainty-total-variance` still omits an
 unmodelled forward solver, wrong dimensionality, and field-domain shift.
+
+Calibration and sharpness must be read together
+------------------------------------------------
+
+:func:`~pycsamt.ai.validation.reliability_curve` evaluates Gaussian predictive
+intervals at several nominal levels and returns empirical coverage, a
+calibration penalty, :term:`sharpness`, the valid-cell count, and the evaluated
+shape. For confidence level :math:`p`, a cell is covered when
+
+.. math::
+   :label: eq-ai-uncertainty-gaussian-coverage
+
+   \left|y_i-\mu_i\right|
+   \le \Phi^{-1}\!\left(\frac{1+p}{2}\right)\sigma_i,
+
+where :math:`\Phi^{-1}` is the standard-normal quantile. Equation
+:eq:`eq-ai-uncertainty-gaussian-coverage` is a diagnostic, not an assumption
+that every EM parameter error is Gaussian. Its value is empirical: the
+observed fraction is compared with :math:`p` on held-out data.
+
+The following calculation keeps the prediction errors fixed while changing
+only the reported standard deviation:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.validation import reliability_curve
+   >>> rng = np.random.default_rng(8128)
+   >>> truth = rng.normal(size=(5000, 5))
+   >>> mean = np.zeros_like(truth)
+   >>> levels = [0.50, 0.68, 0.80, 0.90, 0.95, 0.99]
+   >>> for label, sigma in [("narrow", 0.55), ("calibrated", 1.0), ("broad", 1.8)]:
+   ...     report = reliability_curve(
+   ...         truth, mean, np.full_like(truth, sigma),
+   ...         levels=levels, kind="l1",
+   ...     )
+   ...     print(
+   ...         label,
+   ...         "MACE=", round(report.calibration.value, 4),
+   ...         "sharpness=", round(report.sharpness, 2),
+   ...         "coverage@95%=", round(float(report.coverage[-2]), 4),
+   ...     )
+   narrow MACE= 0.2341 sharpness= 0.55 coverage@95%= 0.7157
+   calibrated MACE= 0.0009 sharpness= 1.0 coverage@95%= 0.9507
+   broad MACE= 0.1429 sharpness= 1.8 coverage@95%= 0.9996
+
+.. figure:: ../../images/user_guide/ai_inversion/uncertainty_calibration_regimes.png
+   :alt: Reliability, calibration-sharpness tradeoff, and standardized residual distributions for narrow, calibrated, and broad predictive standard deviations
+   :align: center
+   :width: 100%
+
+   An executed comparison in which all three predictors have identical point
+   errors and differ only in their declared uncertainty scale.
+
+The red predictor looks best if only width is rewarded, yet its nominal 95%
+interval covers just 71.6% of held-out cells. The blue predictor reaches
+almost 100% coverage by becoming 80% broader than the calibrated green one;
+that is conservative but less informative. Only the green curve follows the
+diagonal while retaining the narrowest width compatible with its errors. The
+standardized-residual panel explains the mechanism: dividing the same errors
+by a small :math:`\sigma` pushes too much mass beyond the Gaussian 1.96
+threshold, while an excessive :math:`\sigma` compresses nearly everything
+inside it. Report calibration and sharpness together.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_uncertainty_calibration_regimes
+   :linenos:
+   :title: View and copy the executed calibration-regime audit
 
 Deep ensembles
 --------------
@@ -333,16 +405,11 @@ use ``X_test`` and ``y_test``, not the calibration arrays:
    >>> diagnostics = ensemble.coverage_diagnostics(
    ...     X_test, y_test, alphas=(0.50, 0.30, 0.20, 0.10, 0.05),
    ... )
-   >>> for alpha, actual in diagnostics.items():
-   ...     print(f"nominal={1 - alpha:.2f}, actual={actual:.3f}")
-   nominal=0.50, actual=<captured test coverage>
-   nominal=0.70, actual=<captured test coverage>
-   nominal=0.80, actual=<captured test coverage>
-   nominal=0.90, actual=<captured test coverage>
-   nominal=0.95, actual=<captured test coverage>
+   >>> table = [(1.0 - alpha, actual) for alpha, actual in diagnostics.items()]
 
-Replace the placeholders with captured results from the restored model
-package. ``coverage_diagnostics`` checks *joint* coverage—every one of the 9
+The archived model package is required before ``table`` can be reported; the
+page deliberately does not substitute invented values.
+``coverage_diagnostics`` checks *joint* coverage—every one of the 9
 parameters inside its band at once—so split the untouched-test calculation by
 parameter group before drawing a conclusion. The controlled plot below uses
 independent calibration and test samples; it is a method check, not coverage
@@ -360,6 +427,15 @@ evidence for the unavailable trained model.
    does not replace evaluation on the restored model's untouched ``X_test``
    and ``y_test`` arrays.
 
+The executed nominal levels were ``[0.50, 0.70, 0.80, 0.90, 0.95]`` and the
+independent-test outputs were:
+
+.. code-block:: text
+
+   resistivity dimensions: [0.478, 0.687, 0.787, 0.895, 0.941]
+   thickness dimensions:   [0.508, 0.701, 0.807, 0.899, 0.949]
+   joint nine dimensions:  [0.494, 0.691, 0.796, 0.888, 0.951]
+
 Plot nominal coverage against empirical coverage, but do it per parameter
 group before trusting one pooled number. Values below the diagonal indicate
 under-coverage; values far above it can indicate unnecessarily broad intervals
@@ -368,6 +444,12 @@ at one or zero, mixed a failed calibration-set diagnostic with reliability
 language and has therefore been replaced rather than presented as an
 acceptable result.
 
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_uncertainty_coverage_reliability
+   :linenos:
+   :title: View and copy the independent-test reliability audit
+
 The convenience method ``ensemble.coverage(X, y, n_sigma=1.96)`` measures the
 fraction of individual finite target entries within ``mean +/- 1.96 * std``
 — an *elementwise* check, not the joint one above:
@@ -375,7 +457,6 @@ fraction of individual finite target entries within ``mean +/- 1.96 * std``
 .. code-block:: pycon
 
    >>> ensemble.coverage(X_test, y_test, n_sigma=1.96)
-   <captured test coverage>
 
 This is different from conformal simultaneous sample coverage and should be
 labelled explicitly. The familiar 95% interpretation of ``1.96`` assumes an
@@ -388,8 +469,7 @@ per-parameter split:
 
    >>> mean, std = ensemble.predict_with_uncertainty(X_test)
    >>> within = np.abs(y_test - mean) <= 1.96 * std
-   >>> within.mean(axis=0).round(3)
-   <captured per-parameter test coverage>
+   >>> coverage_by_parameter = within.mean(axis=0)
 
 Go beyond one aggregate number. Calculate coverage and interval width by:
 
@@ -449,22 +529,58 @@ each draw to cumulative interface depths *before* summarizing, not after:
 
 .. code-block:: pycon
 
-   >>> mean, std = ensemble.predict_with_uncertainty(X_field, _use_calibrated=False)
-   >>> log_h_mean, log_h_std = mean[0, 5:], std[0, 5:]
-   >>> draws = rng.normal(log_h_mean, log_h_std, size=(2000, 4))
-   >>> h_draws = 10.0 ** draws
-   >>> wrong = np.cumsum(np.quantile(h_draws, [0.05, 0.5, 0.95], axis=0), axis=1)
-   >>> right = np.quantile(np.cumsum(h_draws, axis=1), [0.05, 0.5, 0.95], axis=0)
-   >>> wrong[:, -1].round(0)   # thickness quantiles, then cumsum
-   array([ 722., 1045., 1537.])
-   >>> right[:, -1].round(0)   # cumsum, then depth quantiles
-   array([ 873., 1066., 1322.])
+   >>> rng = np.random.default_rng(2718)
+   >>> mean_log_h = np.log10([110.0, 180.0, 290.0, 430.0])
+   >>> sigma_log_h = np.array([0.10, 0.12, 0.14, 0.16])
+   >>> correlation = np.array([
+   ...     [1.00, -0.55, 0.20, 0.00],
+   ...     [-0.55, 1.00, -0.45, 0.15],
+   ...     [0.20, -0.45, 1.00, -0.35],
+   ...     [0.00, 0.15, -0.35, 1.00],
+   ... ])
+   >>> covariance = correlation * np.outer(sigma_log_h, sigma_log_h)
+   >>> log_h_draws = rng.multivariate_normal(
+   ...     mean_log_h, covariance, size=6000
+   ... )
+   >>> h_draws = 10.0 ** log_h_draws
+   >>> probability = [0.05, 0.50, 0.95]
+   >>> wrong = np.cumsum(
+   ...     np.quantile(h_draws, probability, axis=0), axis=1
+   ... )
+   >>> right = np.quantile(
+   ...     np.cumsum(h_draws, axis=1), probability, axis=0
+   ... )
+   >>> wrong[:, -1].round(1)   # thickness quantiles, then cumsum
+   array([ 590.6, 1011.2, 1721.3])
+   >>> right[:, -1].round(1)   # cumsum every draw, then depth quantiles
+   array([ 820.4, 1044.9, 1377.2])
 
-Taking quantiles of thickness first and then accumulating them gives a
-noticeably wider, differently centred final-interface band (722–1537 m) than
-accumulating every joint draw first and then taking depth quantiles
-(873–1322 m). The two are not the same calculation, and only the second
-preserves the layer-to-layer correlation in the draws.
+Taking thickness quantiles first and then accumulating them gives a
+590.6--1721.3 m final-interface band. Propagating every correlated draw first
+gives 820.4--1377.2 m. The first construction combines marginal lower tails
+that do not occur together because adjacent thicknesses are negatively
+correlated; it therefore manufactures an unrealistically wide depth band.
+
+.. figure:: ../../images/user_guide/ai_inversion/uncertainty_depth_propagation.png
+   :alt: Thickness correlation matrix, correct and incorrect cumulative interface-depth bands, and propagated final-interface depth distribution
+   :align: center
+   :width: 100%
+
+   Six thousand correlated log-thickness draws propagated to interface depth
+   before summarization.
+
+The correlation panel is not optional metadata: its negative adjacent-layer
+terms are exactly why marginal thickness limits cannot be stacked as if they
+were one realizable earth. In the middle panel, the red dashed construction
+widens rapidly with depth, while the blue band follows the actual joint draws.
+The final histogram retains skew introduced by exponentiating log-thickness;
+a symmetric error bar around its median would discard that feature.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_uncertainty_depth_propagation
+   :linenos:
+   :title: View and copy the correlated depth-propagation audit
 
 In general, for quantile level :math:`p`,
 

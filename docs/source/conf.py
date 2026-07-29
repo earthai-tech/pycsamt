@@ -15,7 +15,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
 
 # Keep package imports side-effect-light during documentation builds.
@@ -74,6 +76,7 @@ extensions = [
     # Local (docs/source/_ext)
     "gallery_hub",  # compact animated-card landing page for examples/
     "public_api_catalog",  # grouped public modules/classes/functions tables
+    "code_dropdown",  # accessible collapsible long-source listings
 ]
 
 # -- sphinx-copybutton -----------------------------------------------------
@@ -329,15 +332,19 @@ html_css_files = [
     "css/gallery.css",
     "css/gallery-hub.css",
     "css/code-action.css",
+    "css/code-dropdown.css",
     "css/hosted-preview.css",
+    "css/whats-new.css",
 ]
 html_js_files = [
     ("js/pycsamt-home.js", {"defer": "defer"}),
     ("js/mega-menu.js", {"defer": "defer"}),
     ("js/gallery-hub.js", {"defer": "defer"}),
     ("js/code-action.js", {"defer": "defer"}),
+    ("js/code-dropdown.js", {"defer": "defer"}),
     ("js/api-search.js", {"defer": "defer"}),
     ("js/hosted-preview.js", {"defer": "defer"}),
+    ("js/whats-new.js", {"defer": "defer"}),
 ]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).
@@ -422,10 +429,67 @@ def _configure_secondary_sidebar(
     )
 
 
+# "What's new" badge (see _static/js/whats-new.js): changelog.rst is the
+# single source of truth for the latest released version and its date, so
+# the badge data is derived from it at build time rather than hand-kept in
+# a separate JSON file that could go stale. A version section only counts
+# once it carries a "*Released YYYY-MM-DD.*" line -- see the Pre-release
+# checklist in development/documentation_build.rst.
+_CHANGELOG_PATH = os.path.join(os.path.dirname(__file__), "changelog.rst")
+_CHANGELOG_VERSION_RE = re.compile(
+    r"^(?P<version>\d+\.\d+\.\d+)\s+(?:\|[^|]+\|\s*)+$", re.MULTILINE
+)
+_CHANGELOG_RELEASED_RE = re.compile(
+    r"^\*Released (?P<date>\d{4}-\d{2}-\d{2})\.\*\s*$", re.MULTILINE
+)
+
+
+def _latest_release_info():
+    try:
+        with open(_CHANGELOG_PATH, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return None
+
+    version_match = _CHANGELOG_VERSION_RE.search(text)
+    if not version_match:
+        return None
+
+    # The release date, if present, immediately follows the version
+    # heading -- search only that window so an older section's date can
+    # never be mistaken for the latest one.
+    window = text[version_match.end() : version_match.end() + 500]
+    released_match = _CHANGELOG_RELEASED_RE.search(window)
+    if not released_match:
+        return None
+
+    version = version_match.group("version")
+    return {
+        "version": version,
+        "date": released_match.group("date"),
+        "url": f"release_notes/v{version}.html",
+    }
+
+
+def _write_whats_new_json(app, exception):
+    if exception is not None:
+        return
+    info = _latest_release_info()
+    if info is None:
+        return
+    out_dir = os.path.join(app.outdir, "_static", "data")
+    os.makedirs(out_dir, exist_ok=True)
+    with open(
+        os.path.join(out_dir, "whats_new.json"), "w", encoding="utf-8"
+    ) as fh:
+        json.dump(info, fh, indent=2)
+
+
 def setup(app):
     app.connect(
         "html-page-context", _configure_secondary_sidebar, priority=400
     )
+    app.connect("build-finished", _write_whats_new_json)
 
 
 # -- LaTeX / PDF ---------------------------------------------------------------

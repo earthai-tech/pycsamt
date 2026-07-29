@@ -47,7 +47,7 @@ domain.  A Stage-2 optimizer can reduce response misfit while keeping the
 inversion trapped near a poor starting model, especially when bandwidth,
 :term:`dimensionality`, or data quality differs strongly from the training
 distribution.  This is one expression of :term:`non-uniqueness`: many earth
-models can fit the same response within error, and a warm start can decide
+models can fit the same response within error, and a :term:`warm start` can decide
 which basin the optimizer explores first.  In that situation the hybrid result
 should be reported as a stress test or conditional interpretation, not as a
 promoted model.
@@ -140,6 +140,53 @@ roughness across graph edges.  The weights therefore have scientific meaning:
 they decide how much misfit reduction is worth compared with added structure.
 Thus :eq:`eq-hybrid-objective` is not reproducible unless the residual
 definition in :eq:`eq-hybrid-data-term` and every active weight are reported.
+
+The current :class:`~pycsamt.ai.inversion.HybridInverter1D`,
+:class:`~pycsamt.ai.inversion.HybridInverter2D`, and
+:class:`~pycsamt.ai.inversion.HybridInverter3D` kernels use the more specific
+unweighted objective
+
+.. math::
+   :label: eq-hybrid-implemented-data-term
+
+   \mathcal J_{\mathrm{data}}=
+   \frac{1}{N_v}\sum_{(s,f)\in\mathcal M}
+   \left[
+      \left(\log_{10}\rho^a_{sf,\mathrm{pred}}
+            -\log_{10}\rho^a_{sf,\mathrm{obs}}\right)^2
+      +\left(\frac{\phi_{sf,\mathrm{pred}}-
+                         \phi_{sf,\mathrm{obs}}}{90}\right)^2
+   \right],
+
+where a cell enters :math:`\mathcal M` only when both apparent resistivity and
+phase are finite. Observational errors and error floors are not consumed by
+this kernel, so equation :eq:`eq-hybrid-normalized-residual` is a recommended
+external validation metric, not a description of the implemented optimizer.
+The phase subtraction is direct rather than circular; normalize phase branches
+before fitting so values near a wrapping boundary do not create an artificial
+large residual.
+
+The code uses means, not raw sums, for vertical and lateral differences. For
+an :math:`S\times L` station-by-layer log-resistivity matrix :math:`U`,
+
+.. math::
+   :label: eq-hybrid-implemented-regularization
+
+   \mathcal J_z=\frac{1}{S(L-1)}\sum_{s,\ell}
+      (U_{s,\ell+1}-U_{s,\ell})^2,
+   \qquad
+   \mathcal J_x=\frac{1}{(S-1)L}\sum_{s,\ell}
+      (U_{s+1,\ell}-U_{s,\ell})^2.
+
+For the quasi-3-D path, :math:`\mathcal J_g=\operatorname{tr}
+(U^T(D-A)U)/(SL)`. These normalizations matter when comparing runs with
+different station or layer counts. Adam optimizes log-resistivity and
+log-thickness through a :term:`differentiable forward model` implementing a
+1-D MT recursion. PyTorch and
+TensorFlow clip gradient norm to 5; log-thickness is clamped after every update
+to :math:`[0,5]`, corresponding to 1--100,000 m. Log-resistivity has no
+equivalent hard clamp, so inspect it for implausible values rather than
+assuming positivity conversion alone makes the model geological.
 
 The mask and weights deserve the same care as the network architecture.  A
 typical normalized residual can be written
@@ -386,6 +433,15 @@ resistivity, component rotation, or a local dimensionality problem.  If most
 stations fail to improve, the issue is more likely to be the AI starting
 model, the solver assumption, or the weighting of the Stage-2 objective.
 
+There is a current solver-selection limitation worth making explicit:
+``solver="csamt1d"`` changes the public residual reconstruction to
+:class:`~pycsamt.forward.em1d.CSAMT1DForward`, but the differentiable
+``fit_station`` kernel receives no solver argument and always optimizes its MT
+1-D recursion. Until those paths are unified, ``csamt1d`` is not evidence of a
+CSAMT-specific Stage-2 objective. Treat such a run as experimental and verify
+it with an independent CSAMT forward response; use ``solver="mt1d"`` for the
+documented internally consistent path.
+
 2-D hybrid refinement
 ---------------------
 
@@ -395,12 +451,12 @@ then jointly refines all stations.  The method is especially useful when a
 U-Net-like section captures large-scale structure but needs explicit response
 checking station by station.
 
-Unlike :class:`~pycsamt.ai.inversion.EMInverter1D`, the current
-:class:`~pycsamt.ai.inversion.EMInverter2D` API has no ``load`` method.  Pass a
-fitted object directly and retain the training script and weights as part of
-the run record.  The placeholder below deliberately starts at that supported
-boundary; ``ai2d`` means the fitted and validated object created in
-:doc:`training`, not a filename silently loaded here.
+:class:`~pycsamt.ai.inversion.EMInverter2D` can be supplied as a fitted object
+or as a saved checkpoint path; :class:`HybridInverter2D` calls its inherited
+``load`` implementation for the latter. Retain the training configuration and
+normalization state in either case--loading network weights does not by itself
+reconstruct the scientific feature contract. The placeholder below uses the
+fitted-object route so that dependency remains visible.
 
 .. code-block:: pycon
 
@@ -430,6 +486,58 @@ inside a laterally coupled section, say so directly in the report.  Lateral
 smoothness can make neighbouring stations look geologically coherent, but it
 does not turn a pseudo-2-D response check into a full 2-D electromagnetic
 solver.
+
+That is exactly what the current implementation does: every station is passed
+through the differentiable layered 1-D MT recursion, while
+:math:`\mathcal J_x` couples adjacent station models. ``mode="te"`` selects
+``xy`` observations and ``mode="tm"`` selects ``yx``. ``mode="both"`` does
+*not* create two independent TE/TM residual blocks; it arithmetically averages
+TE and TM apparent resistivity and phase before interpolation to the common
+frequency grid. Use that mode only when this averaging is scientifically
+defensible. For a genuine joint-mode or full 2-D response test, evaluate the
+final model externally with the verified path in :doc:`forward_physics`.
+Also note that ``residuals(stage=...)`` currently reports TE observations when
+``mode="both"`` because its diagnostic branch treats ``both`` like ``te``;
+those rows therefore do not reconstruct the averaged target optimized in
+Stage 2. Compute the averaged-target residual explicitly or report separate
+TE/TM external residuals rather than labelling that table as the training
+objective.
+
+Stage 1 may also be resampled along the station axis when the field profile
+has a different station count from the network's fixed input shape. Missing
+panel values are filled by each channel/station frequency-column mean (or zero
+when the entire column is missing), the panel is linearly resized for the AI
+call, and the predicted section is resized back. Preserve both shapes and the
+missingness mask: interpolation can make an initializer visually smooth
+without adding observational support.
+
+The controlled execution below isolates Stage 2 on seven synthetic stations.
+The known response is generated independently with the public
+:class:`~pycsamt.forward.em1d.MT1DForward`; a deliberately biased warm start
+is then refined for 140 Adam iterations by the same differentiable
+``fit_2d_joint`` kernel used by :class:`HybridInverter2D`. The internal total
+objective falls from above 1.3 to about 0.25, but the independently recomputed
+response RMS changes from 0.549 to 0.575 and model RMSE from 0.377 to 0.638.
+In other words, this run *converges numerically while becoming less accurate*
+under two external checks.
+
+.. figure:: ../../images/user_guide/ai_inversion/hybrid_physics_refinement_audit.png
+   :alt: Known layered truth, warm start, physics-refined model, and decreasing Adam objective.
+   :align: center
+   :width: 100%
+
+   Executed pseudo-2-D refinement with a shared colour scale. Response RMS is
+   recomputed with the public forward solver rather than read from the
+   optimizer's own loss history.
+
+The mismatch does not mean every hybrid run must worsen. It demonstrates that
+an internal differentiable recursion, its regularization, and an independent
+forward implementation are distinct numerical claims. A falling loss proves
+only that Adam is reducing the implemented objective. Require an external
+response reconstruction on the same frequencies and units before promoting
+Stage 2; where synthetic truth exists, retain model-space metrics as well.
+This diagnostic is especially important after either forward implementation
+changes.
 
 The useful diagnostic is the difference between Stage 1 and Stage 2:
 
@@ -475,6 +583,11 @@ system, and station exclusions.  Stratify diagnostics by node degree and survey
 edge position because graph models often look best in dense interior regions
 and weakest near sparse boundaries.
 
+The 2-D mode semantics carry into this path: ``mode="both"`` averages TE and
+TM observables before optimization, and the built-in residual table does not
+reconstruct that averaged target. Report separate externally recomputed TE and
+TM residuals when both modes are part of the scientific claim.
+
 When the field setting is not demonstrably 3-D, a 3-D hybrid result can still
 be useful as a consistency check.  Report that narrower role.  Do not promote a
 3-D interpretation simply because the model class can output a volume.
@@ -512,7 +625,7 @@ figures, and Stage-1 versus Stage-2 summaries.
    ...     "output_dir": "outputs/hybrid/L18_1d",
    ... })
    >>> result.status  # doctest: +SKIP
-   'ok'
+   'success'
    >>> sorted(result.data)[:5]  # doctest: +SKIP
    ['convergence_df', 'figure_paths', 'figures', 'inverter', 'models']
 
@@ -520,6 +633,14 @@ Use the agent when standardized packaging is more important than exposing
 every low-level constructor option.  Use the inverter classes directly when
 component choice, mode, depth grid, graph geometry, or persistence behavior
 must be controlled exactly.
+
+At the current API boundary, use the agent's executed path for 1-D only. Its
+2-D and 3-D private dispatch still forwards legacy ``solver``/``max_iter``
+arguments and requests legacy stage-selecting output signatures that the
+current :class:`HybridInverter2D` and :class:`HybridInverter3D` constructors
+do not accept. Those dimensions should be run through the inverter classes
+directly until the convenience wrapper is updated and integration-tested.
+An agent returning ``failed`` is not a scientific Stage-2 result.
 
 The agent result should be treated as a convenience layer, not as the only
 scientific record.  Keep the underlying fitted inverter when the analysis may

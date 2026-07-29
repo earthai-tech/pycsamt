@@ -137,12 +137,12 @@ def _write_run_py(
         ]
         + inv_block
     )
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _read_run_py(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``FORWARD`` and ``INVERSION`` dicts from a Python run file."""
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     results: dict[str, dict] = {}
     for node in tree.body:
         if isinstance(node, ast.Assign):
@@ -204,12 +204,15 @@ def _write_run_json(
         "forward": fwd_vals,
         "inversion": inv_vals,
     }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=False, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _read_run_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``forward`` and ``inversion`` from a JSON run file."""
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     for key in ("forward", "inversion"):
         if key not in data or not isinstance(data[key], dict):
             raise ValueError(f"JSON run config {path} must contain a '{key}' mapping.")
@@ -266,7 +269,7 @@ def _write_run_yaml(
     inv_lines = _section("inversion", inv_vals, by_i, "Inversion")
 
     lines = header + fwd_lines + ["", ""] + inv_lines
-    path.write_text("\n".join(lines).rstrip() + "\n")
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -275,7 +278,7 @@ def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         import yaml
     except ImportError as exc:
         raise ImportError("Reading YAML run config files requires PyYAML.") from exc
-    data = yaml.safe_load(path.read_text())
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"YAML run config {path} must contain a mapping.")
     for key in ("forward", "inversion"):

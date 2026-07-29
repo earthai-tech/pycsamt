@@ -61,6 +61,15 @@ A two-column ``coordinates_m`` is accepted and silently expanded with
 an unknown (``NaN``) elevation column, so callers who genuinely have
 no elevation are not forced to invent one.
 
+Optional tipper data follow a separate but equally explicit contract:
+``tipper``, ``tipper_error``, and ``tipper_valid`` have shape
+``(station, frequency, 2)``, with the last axis ordered as :math:`T_x,T_y`.
+Tipper errors or masks cannot be supplied without tipper values. As with
+impedance, non-finite values and non-positive declared errors invalidate an
+observation; they are never converted into zero induction arrows. Keeping
+tipper outside the impedance component axis prevents a four-component tensor
+from being confused with two magnetic transfer functions.
+
 Real field data rarely arrives already shaped this way. The practical
 entry point is
 :func:`pycsamt.ai.domain_gap.survey_fit.survey_data_from_sites`,
@@ -117,6 +126,22 @@ than a landmine waiting in a mean or a loss term.
 mask into a :class:`~pycsamt.ai.data.contracts.SurveyCoverage`
 summary along every axis, which is the first thing worth checking
 after loading any real survey:
+
+.. math::
+   :label: eq-ai-datacontracts-coverage
+
+   C_{\mathrm{all}}=
+   \frac{1}{N_sN_fN_c}\sum_{s=1}^{N_s}\sum_{q=1}^{N_f}
+   \sum_{c=1}^{N_c}v_{sqc},
+   \qquad
+   C_s=\frac{1}{N_fN_c}\sum_{q,c}v_{sqc},
+
+where :math:`v_{sqc}\in\{0,1\}` is the authoritative :term:`validity mask`,
+and :math:`N_s`, :math:`N_f`, and :math:`N_c` are station, frequency, and
+component counts. Frequency and component coverage are the analogous means
+over their complementary axes. Equation :eq:`eq-ai-datacontracts-coverage`
+counts declared observations, not independent information: four complete
+tensor components can still be strongly correlated or physically unsuitable.
 
 .. code-block:: pycon
 
@@ -299,6 +324,75 @@ network was actually trained to see. This is one instance of the
 broader :term:`Feature contract` this whole package exists to fix in
 place.
 
+For training code, keeping values and masks as unrelated arrays is still an
+easy way to lose their alignment. ``transform_survey`` binds them in a
+:class:`~pycsamt.ai.data.normalization.NormalizedSurvey`, carries propagated
+errors when the source survey has them, labels every axis, and records the
+:term:`normalization state` hash that produced the features:
+
+.. code-block:: pycon
+
+   >>> normalized = state.transform_survey(field)
+   >>> normalized.shape
+   (28, 53, 4, 2)
+   >>> normalized.n_valid_observations
+   5936
+   >>> flat, flat_valid = normalized.flatten()
+   >>> flat.shape, flat_valid.shape
+   ((28, 424), (28, 424))
+   >>> normalized.errors is not None
+   True
+   >>> normalized.state_hash == state.state_hash
+   True
+
+The final normalized axis is ``(real, imaginary)``, hence
+:math:`424=53\times4\times2`; ``n_valid_observations`` counts complex
+impedances once rather than counting both channels. Invalid entries receive a
+finite fill value for numerical execution, but ``flat_valid`` remains the
+authority for excluding them from a loss. A fill value of zero means “the
+training mean after normalization,” not “measured zero impedance,” and must
+never be used without its mask.
+
+If :math:`\sigma_{Z,sqc}` is the declared absolute complex-impedance error and
+:math:`a\in\{\Re,\Im\}` identifies the channel, error propagation uses
+
+.. math::
+   :label: eq-ai-datacontracts-normalized-error
+
+   \sigma^{\prime}_{sqca}=
+   \frac{\sigma_{Z,sqc}}{s_{qca}},
+
+with :math:`s_{qca}` the fitted scale from
+:eq:`eq-ai-datacontracts-zscore`. The same scalar source error is divided by
+different real and imaginary scales; it is not a covariance model and does
+not represent correlation between channels. Downstream likelihoods that need
+a full complex covariance must preserve that richer error model separately.
+
+The hash is useful only if the state itself is saved. The schema-versioned
+dictionary is JSON serializable and round-trips to the identical digest:
+
+.. code-block:: pycon
+
+   >>> import json
+   >>> from pathlib import Path
+   >>> from tempfile import TemporaryDirectory
+
+   >>> with TemporaryDirectory() as directory:
+   ...     path = Path(directory) / "normalizer.json"
+   ...     _ = path.write_text(
+   ...         json.dumps(state.to_dict(), indent=2), encoding="utf-8"
+   ...     )
+   ...     restored_state = ComplexZScore.from_dict(
+   ...         json.loads(path.read_text(encoding="utf-8"))
+   ...     )
+   ...     print(restored_state.state_hash == state.state_hash)
+   True
+
+Store this file beside the checkpoint and record it as an artifact in the
+dataset or model manifest. A matching hash proves identity of the serialized
+normalizer; it does not prove that the normalizer was fitted only on the
+training partition, so split provenance remains necessary.
+
 Splitting realizations without leaking
 -----------------------------------------
 
@@ -334,8 +428,8 @@ in the same partition, checked automatically on construction by
    >>> first.sizes
    {'train': 6, 'validation': 2, 'test': 2}
 
-Splitting is deterministic in the input order for a fixed
-:term:`Random seed`, which matters in practice: a dataset regenerated
+Splitting is deterministic for a fixed :term:`Random seed` and invariant to
+input enumeration, which matters in practice: a dataset regenerated
 in a different enumeration order — a different filesystem walk, a
 reshuffled manifest — must still land every realization in the same
 partition it did before, or a "held-out" test set silently stops
@@ -361,6 +455,35 @@ plain random split could easily put one in training and the other in
 test, which would let the network partly memorize that one earth
 model's response rather than generalize.
 
+When model selection requires cross-validation rather than one holdout,
+:func:`~pycsamt.ai.data.splits.realization_folds` applies the same lineage rule
+to every test fold. Each independent lineage appears in test exactly once,
+while related variants remain together:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.data.splits import realization_folds
+
+   >>> lineage = {
+   ...     "a-clean": "a", "a-noisy": "a", "b": "b", "c": "c", "d": "d"
+   ... }
+   >>> folds = realization_folds(
+   ...     list(lineage), n_splits=3, seed=7, lineage=lineage
+   ... )
+   >>> [fold.sizes for fold in folds]
+   [{'train': 3, 'validation': 0, 'test': 2}, {'train': 3, 'validation': 0, 'test': 2}, {'train': 4, 'validation': 0, 'test': 1}]
+   >>> [fold.test for fold in folds]
+   [('a-clean', 'a-noisy'), ('c', 'd'), ('b',)]
+   >>> sorted(item for fold in folds for item in fold.test)
+   ['a-clean', 'a-noisy', 'b', 'c', 'd']
+
+Unequal fold sizes are expected when lineage groups have unequal membership;
+splitting ``a-clean`` from ``a-noisy`` merely to balance row counts would
+create :term:`lineage leakage`. These folds intentionally leave validation
+empty. If early stopping or hyperparameter selection is performed inside each
+fold, create a second lineage-safe split within its training members rather
+than selecting on the outer test fold.
+
 Recording what actually produced a dataset
 ---------------------------------------------
 
@@ -376,6 +499,22 @@ configuration hash together with the exact
 :class:`~pycsamt.ai.data.manifest.ArtifactRecord` per output file, so
 a manifest alone is enough to detect a silently regenerated dataset,
 a swapped split file, or a corrupted archive:
+
+.. math::
+   :label: eq-ai-datacontracts-manifest-hash
+
+   h_{\mathrm{cfg}}=
+   \operatorname{SHA256}\!\left(
+   \operatorname{UTF8}\left[J_{\mathrm{canonical}}(\mathcal C)\right]
+   \right),
+
+where :math:`\mathcal C` is the finite JSON-serializable configuration and
+:math:`J_{\mathrm{canonical}}` recursively sorts mapping keys, removes
+insignificant whitespace, retains Unicode, and rejects NaN and infinity. This
+:term:`canonical hash` makes mapping insertion order irrelevant. It does not
+make two scientifically equivalent configurations equal when they use
+different units or parameterizations; canonicalization is syntactic, not
+semantic.
 
 .. code-block:: pycon
 

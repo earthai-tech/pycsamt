@@ -598,23 +598,123 @@ but the full generator configuration still requires a companion manifest.
 11. Prepare 2-D training profiles
 ---------------------------------
 
-The public 1-D and pseudo-3-D batch generators do not by themselves create a
-complete, physically simulated 2-D U-Net training corpus matching arbitrary
-field geometry. A 2-D training dataset must define:
+The current package has two deliberately distinct ways to prepare a profile
+inverter. Tiling or correlating station-wise 1-D responses remains the cheap
+:term:`pseudo-2-D training model` used by the default ``Inv2DAgent`` path. For
+lateral electromagnetic coupling,
+:func:`pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` now generates
+:term:`2-D Maxwell training model` realizations with the verified
+:class:`pycsamt.forward.maxwell.mt2d.MT2DAdapter`.
 
-* input shape ``(n_profiles, n_components, n_freqs, n_stations)``;
-* target shape ``(n_profiles, n_depth, n_stations)``;
-* fixed station and depth axes;
-* lateral structural generator;
-* forward-physics fidelity;
-* component convention;
-* missing-station and missing-frequency policy;
-* topography and profile-distance treatment.
+The Maxwell route begins from one shared :class:`pycsamt.ai.geology.GeologyGrid`.
+For realization :math:`r`, a seeded standardized Gaussian field
+:math:`g_r(z,x)` is converted to resistivity by
 
-Tiling or correlating independent 1-D responses can produce useful screening
-examples, but it is not equivalent to 2-D forward physics. Label the dataset
-accordingly and include classical or numerical 2-D simulations when the model
-will be described as a 2-D EM inverter.
+.. math::
+   :label: eq-ai-data-maxwell2d-prior
+
+   \rho_r(z,x)=10^{\mu_{\log\rho}+\sigma_{\log\rho}g_r(z,x)}
+   \quad [\Omega\,\mathrm m],
+
+where the horizontal and vertical correlation lengths are independently drawn
+from the configured ranges. Equation :eq:`eq-ai-data-maxwell2d-prior` is a
+statistical field prior, not a lithological model: it produces smooth,
+correlated heterogeneity but does not create faults, contacts, or facies unless
+those structures are supplied by a different geological generator.
+
+A small fully executed example is:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.geology import GeologyGrid
+   >>> from pycsamt.ai.training.dataset2d import (
+   ...     Maxwell2DDatasetConfig,
+   ...     generate_2d_maxwell_dataset,
+   ... )
+
+   >>> grid = GeologyGrid.regular_2d(
+   ...     nx=6, nz=4, dx_m=300.0, dz_m=150.0
+   ... )
+   >>> config = Maxwell2DDatasetConfig(
+   ...     dataset_id="guide-2d-v1",
+   ...     grid=grid,
+   ...     correlation_length_x_m=(600.0, 900.0),
+   ...     correlation_length_z_m=(150.0, 300.0),
+   ...     frequencies_hz=[10.0, 3.0],
+   ...     station_x_m=[600.0, 900.0, 1200.0],
+   ...     n_realizations=2,
+   ...     seed=0,
+   ...     validation_fraction=0.0,
+   ...     test_fraction=0.0,
+   ... )
+   >>> maxwell_2d = generate_2d_maxwell_dataset(config)
+   >>> first_2d = maxwell_2d.samples[0]
+   >>> len(maxwell_2d.samples), maxwell_2d.rejected
+   (2, ())
+   >>> first_2d.resistivity_ohm_m.shape, first_2d.survey.shape
+   ((4, 6), (3, 2, 2))
+   >>> first_2d.survey.components
+   ('zxy', 'zyx')
+   >>> first_2d.mesh_cells, f"{first_2d.relative_residual:.3e}"
+   (8650, '2.290e-17')
+   >>> maxwell_2d.split.sizes
+   {'train': 2, 'validation': 0, 'test': 0}
+   >>> maxwell_2d.manifest.dataset_id, maxwell_2d.manifest.sample_count
+   ('guide-2d-v1', 2)
+   >>> len(maxwell_2d.manifest.configuration_hash)
+   64
+
+The target has shape ``(depth, x)=(4, 6)`` on the geological grid. The input
+is a canonical :class:`~pycsamt.ai.data.contracts.SurveyData` with shape
+``(station, frequency, component)=(3, 2, 2)``; its component order is the
+requested TE ``zxy`` followed by TM ``zyx``. A U-Net adapter must explicitly
+convert each complex impedance to its declared channels and transpose the
+batch to ``(realization, channel, frequency, station)``. A compatible target
+batch is ``(realization, depth, x)``. Never infer these transformations merely
+from equal axis lengths.
+
+Each finite-difference solve records the linear-system :term:`solver residual`
+
+.. math::
+   :label: eq-ai-data-maxwell2d-residual
+
+   r_{\mathrm{lin}}=
+   \frac{\lVert A\mathbf u-\mathbf b\rVert_2}
+        {\max(\lVert\mathbf b\rVert_2,10^{-300})},
+
+and the sample stores the maximum over simulated frequencies. The
+:math:`2.290\times10^{-17}` value above shows that the discrete linear systems
+were solved accurately; it does **not** establish mesh convergence, correct
+boundary placement, or geological realism. Those require half-space and
+layered benchmarks plus grid-refinement tests. The mesh uses uniform lateral
+spacing and a continuously graded depth progression, with its extent tied to
+skin depth and ``mesh_safety_factor``. ``max_mesh_cells`` raises before an
+intractably wide uniform mesh is launched rather than silently coarsening it.
+
+Only converged results become samples. Failed or non-converged realization IDs
+are retained in ``rejected``; if every realization fails, generation raises
+instead of returning an empty training set. A :term:`rejection policy` is part
+of the distribution because solver failures can cluster around conductive,
+resistive, or geometrically difficult cases. Report rejection rate and target
+statistics for rejected attempts so the accepted corpus is not mistaken for
+the originally requested prior.
+
+The example disables validation and test partitions only to keep two attempted
+solves meaningful. A real corpus must request enough independent realizations
+for non-empty, realization-level splits. The generated
+:class:`~pycsamt.ai.data.manifest.DatasetManifest` records the complete config
+and split, while an optional :class:`~pycsamt.forward.maxwell.MaxwellResultCache`
+makes problem-hash-identical solves resumable. Cache reuse changes execution
+cost, not the required manifest or acceptance checks.
+
+These responses are deliberately clean and noiseless. Apply field-matched
+dropout, static shift, distortion, and noise afterward with
+:mod:`pycsamt.ai.domain_gap.simulator`, preserving the clean realization ID as
+lineage so its corrupted variants cannot leak across dataset partitions.
+Topography is also not implicit: this generator places receivers on the flat
+surface of the configured grid. A field workflow that claims terrain-aware
+physics needs a solver mesh and receiver geometry that encode terrain, not a
+post-hoc drape of the target image.
 
 12. Add realistic observation effects
 -------------------------------------
@@ -719,6 +819,12 @@ Prefer group-based splitting when examples are related:
 
 ``SurveyDataset3D.split`` correctly splits along the synthetic survey axis,
 but scenario-aware grouping may still require custom indices.
+
+For 2-D Maxwell data, use the dataset's existing ``RealizationSplit`` rather
+than applying ``ForwardDataset.split`` to converted U-Net rows. If one clean
+realization later produces several noise or dropout variants, bind all of them
+to the clean realization ID and regenerate a lineage-aware split as documented
+in :doc:`data_contracts`.
 
 Never choose hyperparameters on the test set. Once a test result changes model
 or data preparation decisions, that set has become validation data.
@@ -1012,6 +1118,10 @@ Avoid these errors:
 * training fixed-output networks on NaN-padded variable-layer targets without
   a tested mask-aware loss;
 * calling correlated 1-D graph examples full 3-D EM simulations;
+* calling tiled 1-D profile responses 2-D Maxwell training data, or treating a
+  small linear-system residual as evidence of mesh convergence;
+* discarding failed 2-D forward realizations without auditing how rejection
+  changed the requested geological distribution;
 * splitting noise realizations of the same earth model across train and test;
 * fitting normalization on the complete dataset or field observations;
 * relying on NPZ alone to preserve generator provenance;

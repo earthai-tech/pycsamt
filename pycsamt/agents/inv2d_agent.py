@@ -726,7 +726,8 @@ def _maxwell_samples_to_unet_arrays(
     for i, sample in enumerate(samples):
         zxy = sample.survey.impedance[:, :, 0]  # (n_sta, n_freq)
         f = sample.survey.frequencies_hz[None, :]
-        rho_a = (0.2 / f) * np.abs(zxy) ** 2
+        mu0 = 4.0e-7 * np.pi
+        rho_a = np.abs(zxy) ** 2 / (2.0 * np.pi * f * mu0)
         phase = np.degrees(np.angle(zxy))
         X[i, 0] = np.log10(np.clip(rho_a, 1e-12, None)).T
         X[i, 1] = phase.T

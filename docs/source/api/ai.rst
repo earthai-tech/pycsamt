@@ -11,6 +11,19 @@ model-zoo utilities, and diagnostic plotting.
 AI Modules
 ----------
 
+The newer data contracts, geological priors, objective functions, domain-gap
+tools, experiment records, and validation gates have dedicated references:
+
+.. toctree::
+   :maxdepth: 1
+
+   ai_data
+   ai_geology
+   ai_losses
+   ai_domain_gap
+   ai_experiments
+   ai_validation
+
 .. autosummary::
    :toctree: generated
 

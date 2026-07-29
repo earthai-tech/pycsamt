@@ -276,6 +276,24 @@ the probability that station :math:`s` is wrong.
    >>> int(review_mask.sum())
    27
 
+The plotting code is intentionally explicit so the threshold and review
+classification remain visible when this diagnostic is adapted:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> fig, ax = plt.subplots(figsize=(10.5, 4.2))
+   >>> colors = np.where(review_mask, "#dc2626", "#16a34a")
+   >>> _ = ax.bar(np.arange(len(station_names)), outside_fraction, color=colors)
+   >>> _ = ax.axhline(0.10, color="black", linestyle="--",
+   ...                label="10% review threshold")
+   >>> _ = ax.set(
+   ...     xlabel="Station index", ylabel="Fraction outside training envelope"
+   ... )
+   >>> _ = ax.legend()
+   >>> fig.tight_layout()
+   >>> plt.show()
+
 .. figure:: ../../images/user_guide/ai_inversion/inference_domain_gate.png
    :alt: Bar chart of the fraction of field features outside the training 1st-99th percentile envelope, per station.
    :align: center
@@ -293,6 +311,29 @@ patterns can also remain out of domain even when every value lies inside its
 individual range. Where available, also apply multivariate distance,
 latent-space, density, ensemble disagreement, missingness, and geometry
 checks — this bar chart is a first screen, not the final word.
+
+The package supplies multivariate screens through
+:func:`~pycsamt.ai.validation.flag_out_of_distribution`. Apply them in the
+same feature representation used to define the reference set:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.validation import flag_out_of_distribution
+   >>> training_features = np.load(  # doctest: +SKIP
+   ...     "model_package/training_features_pre_normalization.npy"
+   ... )
+   >>> ood = flag_out_of_distribution(  # doctest: +SKIP
+   ...     X_field, training_features, method="knn", k=5, quantile=0.99
+   ... )
+   >>> ood.scores.shape, round(ood.fraction_flagged, 3)  # doctest: +SKIP
+   ((28,), 0.964)
+
+``knn`` uses distance to the :math:`k`-th training neighbour and derives its
+threshold from leave-one-out training distances. ``mahalanobis`` measures
+distance in the training covariance geometry and requires more reference rows
+than features plus a nonsingular covariance. Neither score is a probability;
+feature scaling, reference selection, :math:`k`, method, and threshold are
+part of the approved gate.
 
 Define actions in advance:
 
@@ -385,6 +426,24 @@ Create the field panel with the contract used during training:
    >>> X_profile.shape, section.shape
    ((1, 2, 32, 28), (1, 40, 28))
 
+Plot the returned section with one declared transformation and fixed limits;
+letting each deployment choose its own colour range makes comparisons
+misleading:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> fig, ax = plt.subplots(figsize=(11.0, 5.0))
+   >>> image = ax.imshow(section[0], aspect="auto", origin="upper",
+   ...                   cmap="turbo", vmin=0.0, vmax=4.0)
+   >>> _ = ax.set(
+   ...     xlabel="Station index", ylabel="Depth-cell index",
+   ...     title="Predicted 2-D log-resistivity section",
+   ... )
+   >>> _ = fig.colorbar(image, ax=ax, label="log10 resistivity [ohm m]")
+   >>> fig.tight_layout()
+   >>> plt.show()
+
 The input shape is ``(n_profiles, n_components, n_freqs, n_stations)``. The
 output shape is ``(n_profiles, n_depth, n_stations)``. ``n_components=2`` is
 deliberate here, not a shortcut: the public 2-D synthetic generator behind a
@@ -411,18 +470,36 @@ The field station count must match the inverter's configured station axis.
 Station ordering is preserved by the bridge and must already follow reviewed
 profile chainage.
 
+In the current implementation, each of ``_x_mean``, ``_x_std``, ``_y_mean``,
+and ``_y_std`` is one scalar computed over the complete training tensor, not a
+per-channel or per-frequency array. ``predict`` reuses those saved scalars.
+Although fitting computes them with ``nanmean``/``nanstd``, normalization does
+not remove missing cells: a ``nan`` remains ``nan`` and propagates through the
+network. A finite-value or validated imputation gate is therefore required
+before both fitting and inference.
+
 Use ``as_log_rho=False`` for linear ohm metres. Retain the fixed depth grid
 from model metadata; the predicted array alone does not contain depth
 coordinates.
 
-.. warning::
+The fitted 2-D model can be persisted through the ``BaseEMNet`` interface inherited by
+:class:`~pycsamt.ai.inversion.EMInverter2D`:
 
-   The current :class:`~pycsamt.ai.inversion.EMInverter2D` class exposes fit
-   and predict behavior but does not provide the same explicit public
-   ``save()/load()`` pair as ``EMInverter1D``. Preserve and restore 2-D fitted
-   models only through a project-tested mechanism, and document backend and
-   normalization state. Do not imply portable checkpoint support that the
-   class does not expose.
+.. code-block:: pycon
+
+   >>> inverter_2d.save("checkpoints/line2d_unet.npz")  # doctest: +SKIP
+   >>> restored_2d = type(inverter_2d).load(  # doctest: +SKIP
+   ...     "checkpoints/line2d_unet.npz"
+   ... )
+   >>> restored_2d.n_depth, restored_2d.n_stations, restored_2d.n_freqs  # doctest: +SKIP
+   (40, 28, 32)
+
+The checkpoint carries architecture parameters, backend weights, channel
+selection, and fitted scalar input/target normalization. It does not turn the
+frequency values, station identities, profile chainage, component convention,
+depth coordinates, training distribution, or validation decision into an
+inference manifest. Preserve those scientific contracts beside the checkpoint
+and check them before calling ``predict``.
 
 .. _ai_inversion_inference_3d:
 
@@ -462,6 +539,13 @@ not assume a fallback layout is in effect just because the numbers look
 large, since the projection here is an absolute equirectangular approximation
 rather than one centred on a local origin.
 
+Like the 2-D estimator, the current GCN stores one global scalar mean and
+standard deviation for all input values and another pair for all target
+values. This is the implemented contract, even when feature blocks have
+different physical meanings. Do not replace it at inference with per-feature
+standardization unless the model is retrained and revalidated with that new
+contract.
+
 Like the 1-D raw vector in step 8, ``graph_prediction`` concatenates
 resistivity first and thickness second — ``(n_stations, 2 * n_layers - 1)``,
 9 columns for these 5-layer models. Split it explicitly before treating any
@@ -489,10 +573,25 @@ adjacency explicitly:
 Inspect graph degree and disconnected nodes. Changing ``radius`` changes the
 model context and is not a harmless inference option.
 
-As with the 2-D class, the current graph inverter does not expose the explicit
-public ``save()/load()`` pair provided by ``EMInverter1D``. Deployment requires
-a tested project persistence mechanism that preserves weights, normalizers,
-adjacency policy, backend, and configuration.
+The graph inverter also inherits ``save()/load()``. Its checkpoint includes
+network weights, fitted scalar normalization, backend, and the adjacency stored
+during ``fit`` when one exists:
+
+.. code-block:: pycon
+
+   >>> inverter_3d.save("checkpoints/survey_gcn.npz")  # doctest: +SKIP
+   >>> restored_3d = type(inverter_3d).load(  # doctest: +SKIP
+   ...     "checkpoints/survey_gcn.npz"
+   ... )
+   >>> restored_3d.n_features, restored_3d.n_layers  # doctest: +SKIP
+   (64, 5)
+
+Coordinates, station names, coordinate reference system, radius-based graph
+construction policy, and the meaning of every feature and output column still
+belong in the external deployment record. When a stored adjacency is reused,
+verify its shape and station ordering against the inference survey; a valid
+matrix attached to the wrong node order is scientifically invalid without
+raising a shape error.
 
 11. Predict graph uncertainty
 -----------------------------
@@ -551,6 +650,28 @@ intervals:
    >>> std[0, :5].round(3)
    array([0.257, 0.189, 0.05 , 0.081, 0.158])
 
+For a single station, plot interval bounds against layer index without first
+converting only the mean to linear resistivity:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> station_index = 0
+   >>> layer = np.arange(1, inverter.n_layers + 1)
+   >>> center = mean[station_index, :inverter.n_layers]
+   >>> spread = std[station_index, :inverter.n_layers]
+   >>> lower90 = center - 1.645 * spread
+   >>> upper90 = center + 1.645 * spread
+   >>> fig, ax = plt.subplots(figsize=(5.4, 5.0))
+   >>> _ = ax.errorbar(
+   ...     center, layer, xerr=[center - lower90, upper90 - center],
+   ...     fmt="o-", capsize=3,
+   ... )
+   >>> ax.invert_yaxis()
+   >>> _ = ax.set(xlabel="log10 resistivity [ohm m]", ylabel="Layer index")
+   >>> fig.tight_layout()
+   >>> plt.show()
+
 .. figure:: ../../images/user_guide/ai_inversion/inference_ensemble_interval.png
    :alt: Calibrated ensemble mean and 90% interval by layer for one station.
    :align: center
@@ -570,7 +691,11 @@ shared multiplier :math:`\hat q` applied to every output dimension at once:
 
    s_i = \max_j \frac{\lvert y_{ij} - f(\mathbf{x}_i)_j\rvert}{\sigma_j(\mathbf{x}_i)+\varepsilon},
    \qquad
-   \hat q = \operatorname{Quantile}_{1-\alpha+\frac{1}{n_{\rm cal}+1}}(s_1,\dots,s_{n_{\rm cal}}),
+   \hat q = \operatorname{Quantile}_{q_n}(s_1,\dots,s_{n_{\rm cal}}),
+   \qquad
+   q_n=\min\!\left(1,
+      \frac{\left\lceil(n_{\rm cal}+1)(1-\alpha)\right\rceil}{n_{\rm cal}}
+   \right),
    \qquad
    \hat{C}_j(\mathbf{x}) = \bigl[f(\mathbf{x})_j - \hat q\,\sigma_j(\mathbf{x}),\ f(\mathbf{x})_j + \hat q\,\sigma_j(\mathbf{x})\bigr].
 
@@ -630,6 +755,66 @@ test coverage, broken out by output
 dimension where practical, with the inference output. Do not assume a loaded
 ensemble remains calibrated merely because the ensemble directory was saved
 after calibration.
+
+Reliability and sharpness answer different questions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For Gaussian predictive summaries, a nominal central interval of level
+:math:`c` is
+
+.. math::
+   :label: eq-ai-inference-gaussian-interval
+
+   I_c(\mathbf x)=\left[
+      \mu(\mathbf x)-\Phi^{-1}\!\left(\frac{1+c}{2}\right)\sigma(\mathbf x),
+      \mu(\mathbf x)+\Phi^{-1}\!\left(\frac{1+c}{2}\right)\sigma(\mathbf x)
+   \right],
+
+where :math:`\Phi^{-1}` is the standard-normal quantile. On an independent
+held-out set with validity mask :math:`M`, empirical coverage is
+
+.. math::
+   :label: eq-ai-inference-empirical-coverage
+
+   \widehat C(c)=\frac{1}{|M|}\sum_{i\in M}
+      \mathbf 1\{y_i\in I_c(\mathbf x_i)\}.
+
+A reliable predictor follows :math:`\widehat C(c)\approx c` over several
+levels. :term:`Sharpness` measures interval concentration--implemented by
+:func:`~pycsamt.ai.validation.predictive_sharpness` as mean predictive
+standard deviation--and is useful only after reliability is acceptable. An
+arbitrarily tiny standard deviation is very sharp and very wrong whenever it
+fails to cover held-out truth.
+
+The executed diagnostic below uses
+:func:`~pycsamt.ai.validation.reliability_curve` on 720 synthetic held-out
+layer parameters. Both candidates have the same predictive mean. One reports
+the data-generating uncertainty scale; the other reports only 45% of it. The
+exact figure code is exposed so the arrays can be replaced with calibration or
+test outputs from a real model package.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_inference_calibration_diagnostic
+   :linenos:
+   :title: View calibration-diagnostic source code
+
+.. figure:: ../../images/user_guide/ai_inversion/inference_calibration_diagnostic.png
+   :alt: Reliability curves, one held-out layered interval, and calibration-error versus sharpness comparison.
+   :align: center
+   :width: 100%
+
+   Executed comparison of a calibrated uncertainty scale and an overconfident
+   scale for identical predictive means.
+
+The calibrated curve stays close to the diagonal, with mean absolute coverage
+error 0.009 and mean standard deviation 0.193 log10 ohm metres. Shrinking the
+standard deviations makes the result look sharper (0.087) but raises coverage
+error to 0.245; even the nominal 99% intervals cover only 76.7% of held-out
+parameters. The middle panel also shows why one station is not a calibration
+test: a few truths can fall inside or outside by chance. Reliability is an
+ensemble property measured on untouched examples, then stratified by layer,
+parameter type, domain status, and decision-relevant subgroup.
 
 13. PINN and hybrid inference
 -----------------------------
@@ -992,8 +1177,8 @@ Avoid these errors:
 * claiming conformal field coverage from synthetic calibration alone;
 * accepting geological-looking models without response reconstruction;
 * exporting predictions without rejected-input records;
-* implying portable 2-D/3-D checkpoint support that the public classes do not
-  currently expose.
+* loading a 2-D or 3-D checkpoint without restoring its external frequency,
+  station, coordinate, graph, depth, and feature contracts.
 
 Next steps
 ----------

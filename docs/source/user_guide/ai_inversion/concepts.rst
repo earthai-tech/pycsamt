@@ -56,7 +56,9 @@ Classical inversion
 
 :term:`Supervised AI inversion`
    Learns an approximation :math:`G_\theta` to the inverse relationship from
-   examples and predicts :math:`\hat{\mathbf m}=G_\theta(\mathbf d)`.
+   examples and predicts :math:`\hat{\mathbf m}=G_\theta(\mathbf d)`. Training
+   pays the repeated optimization cost in advance, so applying the fitted map
+   to another compatible observation is an :term:`amortized inversion`.
 
 :term:`Physics-informed inversion`
    Uses differentiable physics during optimization, often minimizing
@@ -177,7 +179,8 @@ the shape of an output array.
      - A depth–station section predicted from an ordered profile panel.
      - A line survey whose strike and dimensionality evidence support a 2-D
        approximation.
-     - Learned lateral continuity is confused with 2-D EM physics.
+     - A tiled 1-D training set, a genuine 2-D Maxwell training set, and a
+       classical 2-D field inversion are treated as interchangeable.
    * - Graph 3-D
      - Layered station parameters share information through a spatial graph.
      - Multi-line or areal surveys with reviewed coordinates and meaningful
@@ -290,7 +293,13 @@ Fixed-grid 2-D target
 A profile inverter may predict ``log10(rho)`` on a fixed
 ``(n_depth, n_stations)`` grid. Depth discretization is then part of the model
 prior. A visually sharp boundary cannot be more resolved than the information
-in the responses and training examples.
+in the responses and training examples. pyCSAMT's 2-D U-Net can be trained
+either on a :term:`pseudo-2-D training model` made by tiling independent 1-D
+responses or on :term:`2-D Maxwell training model` realizations containing
+lateral TE coupling. Both produce the same target-array shape; the shape alone
+does not disclose which physics generated it. Preserve ``physics``, solver
+identity, mesh controls, components, and spatial correlation parameters with
+the checkpoint.
 
 Graph target
 ~~~~~~~~~~~~
@@ -346,6 +355,31 @@ feature helpers:
 These utilities help enforce the contract between :class:`pycsamt.site.Sites`
 and AI arrays. Their outputs still need review for station order, component,
 frequency coverage, masking, and finite values.
+
+For the 1-D bridge, the common grid contains :math:`n_f` logarithmically
+spaced frequencies between either the observed extrema or explicit
+``freq_min`` and ``freq_max``. At each station, interpolation is linear in
+log-frequency; log apparent resistivity and phase are interpolated separately,
+
+.. math::
+   :label: eq-ai-feature-interpolation
+
+   x_{s,q} =
+   \begin{cases}
+   \mathcal I_{\log f}\!\left[\log_{10}\rho_{a,s}\right](f_q),
+      &0\le q<n_f,\\
+   \mathcal I_{\log f}\!\left[\phi_s\right](f_{q-n_f}),
+      &n_f\le q<2n_f,
+   \end{cases}
+
+where :math:`s` identifies the station and :math:`\mathcal I_{\log f}` is
+piecewise-linear interpolation on :math:`\log_{10}f`. Values outside a
+station's own measured interval are ``NaN`` rather than extrapolated. Thus a
+grid lying inside the survey-wide range can still contain missing values for
+stations with narrower coverage. ``sites_to_features_1d`` preserves those
+``NaN`` values, while ``obs_to_features_1d`` currently replaces missing log
+resistivity by 2 and missing phase by 45 degrees. These two helpers are not
+semantically interchangeable merely because their returned shapes match.
 
 The feature contract
 --------------------
@@ -497,8 +531,10 @@ Residual network
 
 U-Net
    Combines local convolution and multiscale skip connections for profile
-   panels. Its receptive field encourages lateral continuity but does not
-   implement a classical 2-D EM solver.
+   panels. Its receptive field encourages lateral continuity. The network is
+   not itself a classical 2-D EM solver, although its synthetic training
+   responses may now be generated with the 2-D Maxwell adapter rather than
+   tiled 1-D columns.
 
 Graph convolutional network
    Propagates information along an adjacency graph. Radius, coordinate system,
@@ -638,7 +674,7 @@ state:
 
    >>> from pycsamt.ai.inversion import RunConfig
 
-   >>> RunConfig.write_template("ai_inversion.py")
+   >>> _ = RunConfig.write_template("ai_inversion.py")
    >>> config = RunConfig.from_file("ai_inversion.py")
    >>> config.validate()
    >>> print(config.summary())
@@ -649,9 +685,9 @@ state:
        freq_min             = 0.0001 Hz
        freq_max             = 1e+04 Hz
        n_freqs              = 30
-       n_layers             = 3-7
-       rho_min              = 1 Ohm m
-       rho_max              = 1e+04 Ohm m
+       n_layers             = 3–7
+       rho_min              = 1 Ω·m
+       rho_max              = 1e+04 Ω·m
        depth_max            = 2e+03 m
        n_samples            = 10,000
        noise_level          = 0.05  (gaussian)
@@ -660,15 +696,15 @@ state:
        output               = ./forward_dataset.npz
 
      InversionConfig
-       -- Architecture --
+       ── Architecture ──
        arch                   = 'resnet'
        n_layers               = 5
        solver                 = 'mt1d'
-       device                 = None  (None -> auto)
+       device                 = None  (None → auto)
        include_phase          = yes
        log_thickness          = yes
        augment_noise          = 0.02
-       -- Training --
+       ── Training ──
        epochs                 = 100
        batch_size             = 256
        lr                     = 0.001
@@ -677,13 +713,14 @@ state:
        val_frac               = 0.1
        grad_clip              = 1.0
        seed                   = None
-       -- Checkpointing --
+       ── Checkpointing ──
        checkpoint             = checkpoints\em_inverter.npz
        save_best              = True
 
 Validation checks internal configuration consistency. It cannot establish that
 the selected ranges, noise, physics, or architecture represent a particular
-field survey.
+field survey. Template files are written and read as UTF-8 so the scientific
+units and comments above round-trip consistently across operating systems.
 
 The Sites bridge
 ----------------
@@ -835,7 +872,8 @@ Avoid these misunderstandings:
 * treating a neural network as free of regularization or prior assumptions;
 * equating training interpolation with field generalization;
 * selecting 2-D or 3-D solely for visual sophistication;
-* confusing U-Net continuity or graph smoothing with numerical EM physics;
+* inferring forward physics from the U-Net output shape instead of recording
+  whether training used tiled 1-D or 2-D Maxwell responses;
 * checking array shape but not feature semantics;
 * using random splits that leak related synthetic profiles;
 * selecting a checkpoint on the test set;

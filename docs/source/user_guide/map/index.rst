@@ -28,4 +28,3 @@ UI state and callbacks do not live here.
    overlays
    export
    mapview
-   api

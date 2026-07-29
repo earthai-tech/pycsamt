@@ -130,9 +130,19 @@ def _yaml_value(value: Any) -> str:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int):
         return repr(value)
-    return json.dumps(value)
+    if isinstance(value, float):
+        rendered = repr(value)
+        # YAML 1.1 parsers, including PyYAML, require a decimal point in an
+        # exponent-form float; otherwise values such as ``1e-05`` become text.
+        if "e" in rendered.lower():
+            mantissa, exponent = rendered.lower().split("e", 1)
+            if "." not in mantissa:
+                mantissa += ".0"
+            rendered = f"{mantissa}e{exponent}"
+        return rendered
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _write_python(

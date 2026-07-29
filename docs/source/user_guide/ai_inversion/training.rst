@@ -271,6 +271,103 @@ Understanding the training arguments
    Constructor setting that perturbs training inputs.  Match it to plausible
    measurement uncertainty; excessive augmentation erases useful structure.
 
+Augmentation is a scientific nuisance model
+--------------------------------------------
+
+:mod:`pycsamt.ai.training` now exposes
+:class:`~pycsamt.ai.training.AugmentNoise`,
+:class:`~pycsamt.ai.training.AugmentStaticShift`,
+:class:`~pycsamt.ai.training.AugmentFreqDrop`,
+:class:`~pycsamt.ai.training.AugmentMixup`,
+:class:`~pycsamt.ai.training.Compose`, and
+:class:`~pycsamt.ai.training.RandomApply`. These are not interchangeable ways
+to make a dataset larger. Each :term:`data augmentation` operator asserts that
+a particular variation may occur at inference time without invalidating the
+target.
+
+For an amplitude feature vector :math:`\mathbf{x}`, static shift adds one
+sample-level offset :math:`s`, frequency dropout applies a binary mask
+:math:`\mathbf{m}`, and :term:`mixup` combines both the response and earth
+model:
+
+.. math::
+   :label: eq-ai-training-augmentation-contracts
+
+   \begin{aligned}
+   \mathbf{x}_{\mathrm{shift}} &= \mathbf{x} + s\mathbf{1},
+      &s &\sim \mathcal{U}(\log_{10}g_{\min},\log_{10}g_{\max}),\\
+   \mathbf{x}_{\mathrm{drop}} &=
+      \mathbf{m}\odot\mathbf{x}+(1-\mathbf{m})c,\\
+   (\tilde{\mathbf{x}},\tilde{\mathbf{y}}) &=
+      \lambda(\mathbf{x}_i,\mathbf{y}_i)
+      +(1-\lambda)(\mathbf{x}_j,\mathbf{y}_j),
+      &\lambda &\sim \operatorname{Beta}(\alpha,\alpha).
+   \end{aligned}
+
+Equation :eq:`eq-ai-training-augmentation-contracts` makes two easy mistakes
+visible. Static shift belongs only on amplitude channels, not phase, and
+mixup must transform the target with the same :math:`\lambda`. For
+:term:`frequency dropout`, a fill value of zero is safe only when zero already
+means missing after preprocessing; otherwise supply a mask channel or a fill
+value consistent with the :term:`feature contract`.
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.training import (
+   ...     AugmentFreqDrop, AugmentNoise, AugmentStaticShift,
+   ... )
+   >>> X_demo = np.tile(np.linspace(1.5, 2.5, 24), (8, 1)).astype("float32")
+   >>> y_demo = np.tile(np.linspace(1.0, 3.0, 5), (8, 1)).astype("float32")
+   >>> noisy, _ = AugmentNoise(0.06)(
+   ...     X_demo, y_demo, rng=np.random.default_rng(11)
+   ... )
+   >>> shifted, _ = AugmentStaticShift(
+   ...     (0.5, 2.0), n_amp_features=24
+   ... )(X_demo, y_demo, rng=np.random.default_rng(12))
+   >>> dropped, _ = AugmentFreqDrop(
+   ...     0.25, contiguous=True, fill_value=np.nan
+   ... )(X_demo, y_demo, rng=np.random.default_rng(13))
+   >>> print("noise standard deviation:", round(float(np.std(noisy-X_demo)), 3))
+   noise standard deviation: 0.055
+   >>> print("sample-1 shift (decades):", round(float(np.mean(shifted[0]-X_demo[0])), 3))
+   sample-1 shift (decades): -0.15
+   >>> print("sample-1 dropped channels:", int(np.isnan(dropped[0]).sum()))
+   sample-1 dropped channels: 6
+
+.. figure:: ../../images/user_guide/ai_inversion/training_augmentation_audit.png
+   :alt: Four panels comparing an original response-like curve with noise, static-shift, contiguous-frequency-drop, and mixup augmentations executed by pyCSAMT
+   :align: center
+   :width: 96%
+
+   The public augmentation operators executed with fixed random generators.
+   The panels show feature consequences rather than generic icons.
+
+Noise perturbs individual channels, whereas static shift translates the
+entire apparent-resistivity curve by one offset. The contiguous dropout panel
+preserves the location of a dead band instead of inventing measurements
+inside it. Mixup gives a smooth-looking curve, but its annotation confirms
+that the model target moved too; mixing only ``X`` would train against a false
+earth. Fit augmentation magnitudes from survey QC or a declared challenge
+model, and compare an unaugmented baseline through an :term:`ablation study`.
+
+The ``np.nan`` fill in this visual audit exists only to draw an obvious gap.
+Do not pass that array directly to a network: the current masked loss ignores
+non-finite *targets*, not non-finite inputs. For fitting, use a declared finite
+fill plus an explicit mask channel, or apply the same frozen imputation rule
+used at inference. Also note that ``AugmentNoise.phase_sigma`` is accepted by
+the current constructor but the implementation presently applies ``sigma``
+to every feature. Until channel-specific noise is implemented and tested,
+split amplitude and phase arrays explicitly if they require different noise
+levels. ``Compose(seed=...)`` provides a shared repeatable random stream;
+record its seed separately from the train/validation split seed.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_training_augmentation_audit
+   :linenos:
+   :title: View and copy the executed augmentation audit
+
 Monitor more than one loss
 --------------------------
 
@@ -320,6 +417,62 @@ Interpret the curves jointly:
   invalid values, and gradient magnitude;
 * a low normalized loss can still hide large errors in a scientifically
   important layer, so inspect per-parameter errors in physical units.
+
+The trainer is a validation-controlled state machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`~pycsamt.ai.training.EMTrainer` performs more than repeated gradient
+updates. It sends training batches through Adam, evaluates validation data
+without gradients or augmentation, passes validation loss to a
+:term:`learning-rate scheduler`, increments the :term:`early stopping`
+counter, and copies every genuinely improved state to CPU memory. After the
+loop, the copied best state replaces the last state. Consequently, the
+learning rate and the selected epoch are part of the result, not incidental
+console information.
+
+The executed control audit below uses 360 training examples and 120
+validation examples with four targets. Extra noise is deliberately added to
+the validation acquisition to create an irreducible floor; this is a
+controlled illustration of scheduler behavior, not a recommendation to
+corrupt validation data in a real experiment.
+
+.. code-block:: text
+
+   epochs completed: 120
+   restored best epoch: 108
+   best validation loss: 0.09802
+   initial / final learning rate: 0.003 / 0.0015
+   validation target RMSE: [0.320, 0.301, 0.280, 0.329]
+
+.. figure:: ../../images/user_guide/ai_inversion/training_trainer_controls.png
+   :alt: Executed EMTrainer audit showing training and validation losses, restored epoch, learning-rate reduction, CPU epoch timing, and per-target validation errors
+   :align: center
+   :width: 96%
+
+   One real :class:`~pycsamt.ai.training.EMTrainer` run, including the
+   validation decision variables that are often omitted from a loss plot.
+
+The validation curve reaches its useful floor while training loss continues
+to fall. The plateau scheduler halves the learning rate from
+:math:`3\times10^{-3}` to :math:`1.5\times10^{-3}`, but the best state occurs
+at epoch 108 rather than at the final update. The timing panel also shows why
+runtime should be summarized by a median and spread rather than one unusually
+slow initialization epoch. Finally, the four target RMSE values differ even
+though optimization sees one scalar loss. For an earth model, replace those
+anonymous targets with layer resistivity, interface thickness, boundary
+depth, and response-space diagnostics in their physical units.
+
+:term:`gradient clipping` at norm 1.0 is active in this run. It limits an
+individual update; the history does not currently record how often clipping
+occurred, so a stable loss curve must not be interpreted as proof that the
+threshold was inactive. If clipping frequency matters to an experiment,
+instrument and archive it explicitly.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_training_trainer_controls
+   :linenos:
+   :title: View and copy the executed trainer-control audit
 
 An executed CPU training audit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -690,7 +843,7 @@ Training is complete only when the artifact and the evidence needed to reject
 or trust it are both reproducible.  Continue with :doc:`inference`,
 :doc:`uncertainty`, and :doc:`reporting`.
 
-The executed audit figure is reproduced by
+The executed audit figures are reproduced by
 ``docs/scripts/generate_ai_inversion_figures.py`` using deterministic synthetic
 generation and a CPU PyTorch run. Small numerical differences may occur across
 backend and library versions; the scientific conclusion depends on the loss

@@ -30,16 +30,36 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 from pycsamt.agents import AIInversionAgent, Inv2DAgent, Inv3DAgent
 from pycsamt.ai.data.normalization import ComplexZScore
-from pycsamt.ai.domain_gap import survey_data_from_sites
+from pycsamt.ai.domain_gap import (
+    CorruptionConfig,
+    apply_corruption_suite,
+    compare_survey_distributions,
+    survey_data_from_sites,
+)
+from pycsamt.ai.data.contracts import SurveyData
 from pycsamt.ai.inversion import (
     EMInverter1D,
     PINNInverter2D,
     sites_to_features_1d,
     sites_to_obs_1d,
+    sites_to_obs_2d,
+)
+from pycsamt.ai.nets import build_adjacency
+from pycsamt.ai.experiments import (
+    AcceptanceCriterion,
+    DatasetReference,
+    ExperimentConfig,
+    SeedPlan,
 )
 from pycsamt.ai.training.dataset2d import (
     Maxwell2DDatasetConfig,
     generate_2d_maxwell_dataset,
+)
+from pycsamt.ai.validation import (
+    flag_out_of_distribution,
+    recovery_report,
+    reliability_curve,
+    response_residual_report,
 )
 from pycsamt.forward.maxwell import MaxwellMesh, MaxwellProblem, ReceiverSet
 from pycsamt.forward.maxwell.benchmarks import half_space_impedance
@@ -522,6 +542,752 @@ def make_forward_physics_halfspace_benchmark() -> None:
     _save(fig, "forward_physics_halfspace_benchmark.png")
 
 
+def make_forward_physics_mesh_sensitivity() -> None:
+    """Measure half-space error as lateral domain width changes."""
+    dz = 25.0 * 1.22 ** np.arange(34)
+    z_edges = np.concatenate([[0.0], np.cumsum(dz)])
+    frequencies = np.logspace(-1, 2, 10)
+    analytic = half_space_impedance(100.0, frequencies)
+    widths_km = (20, 40, 80, 240)
+    errors = []
+    rho_curves = []
+    mu0 = 4.0e-7 * np.pi
+
+    for width_km in widths_km:
+        width_m = width_km * 1000.0
+        mesh = MaxwellMesh(np.linspace(0.0, width_m, 25), z_edges)
+        receiver = ReceiverSet([[width_m / 2.0, 0.0]], ["S00"])
+        problem = MaxwellProblem(
+            mesh,
+            np.full(mesh.shape, 0.01),
+            frequencies,
+            receiver,
+            ("zxy",),
+        )
+        predicted = MT2DAdapter(verbose=False).solve(problem).impedance_v_a[0, :, 0]
+        errors.append(np.abs(np.abs(predicted) - np.abs(analytic)) / np.abs(analytic))
+        rho_curves.append(
+            np.abs(predicted) ** 2 / (2.0 * np.pi * frequencies * mu0)
+        )
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.4))
+    colors = plt.cm.viridis(np.linspace(0.08, 0.92, len(widths_km)))
+    for width, error, rho, color in zip(widths_km, errors, rho_curves, colors):
+        axes[0].plot(frequencies, 100.0 * error, "o-", color=color,
+                     label=f"{width} km")
+        axes[1].plot(frequencies, rho, "o-", color=color, label=f"{width} km")
+    axes[0].axhline(5.0, color="#dc2626", ls="--", lw=1.2,
+                    label="5% benchmark limit")
+    axes[0].set(
+        xscale="log", yscale="log", xlabel="Frequency (Hz)",
+        ylabel="Impedance-amplitude error (%)",
+        title="Boundary sensitivity is frequency dependent",
+    )
+    axes[1].axhline(100.0, color="#111827", ls="--", lw=1.2,
+                    label="analytic half-space")
+    axes[1].set(
+        xscale="log", xlabel="Frequency (Hz)",
+        ylabel=r"Apparent resistivity ($\Omega\cdot$m)",
+        title="The same error biases the observable response",
+    )
+    for ax in axes:
+        ax.grid(alpha=0.25, which="both")
+        ax.legend(fontsize=8, ncol=2)
+    fig.suptitle(
+        "MT2D half-space verification across lateral mesh widths "
+        "(fixed vertical mesh)", fontsize=12,
+    )
+    fig.tight_layout()
+    _save(fig, "forward_physics_mesh_sensitivity.png")
+
+
+def make_geology_prior_diagnostic() -> None:
+    """Visualise correlation recovery and compositional geological priors."""
+    from pycsamt.ai.geology import (
+        ElectricalLayer,
+        EllipsoidalLens,
+        GaussianCorrelation,
+        GeologyGrid,
+        directional_variogram,
+        generate_gaussian_field,
+        generate_layered_geology,
+        insert_lenses,
+        interpolate_topography,
+    )
+
+    grid = GeologyGrid.regular_2d(nx=64, nz=32, dx_m=100, dz_m=50)
+    correlation = GaussianCorrelation(length_x_m=700, length_z_m=150)
+    example = generate_gaussian_field(grid, correlation, seed=12)
+
+    variograms_x = []
+    variograms_z = []
+    for seed in range(32):
+        realization = generate_gaussian_field(grid, correlation, seed=seed)
+        variograms_x.append(
+            directional_variogram(realization, "x", max_lag_cells=21).semivariance
+        )
+        variograms_z.append(
+            directional_variogram(realization, "z", max_lag_cells=15).semivariance
+        )
+    variograms_x = np.asarray(variograms_x)
+    variograms_z = np.asarray(variograms_z)
+    lag_x = np.arange(1, 22) * 100.0
+    lag_z = np.arange(1, 16) * 50.0
+
+    layers = (
+        ElectricalLayer(
+            "weathered cover", 30.0, log10_std=0.10,
+            heterogeneity=GaussianCorrelation(500, 120),
+            resistivity_bounds_ohm_m=(8.0, 120.0),
+        ),
+        ElectricalLayer("sedimentary unit", 180.0),
+        ElectricalLayer(
+            "basement", 1200.0, log10_std=0.12,
+            heterogeneity=GaussianCorrelation(900, 180),
+            resistivity_bounds_ohm_m=(300.0, 4000.0),
+        ),
+    )
+    layered = generate_layered_geology(
+        grid,
+        layers,
+        [350.0, 950.0],
+        seed=24,
+        interface_relief_std_m=[60.0, 110.0],
+        interface_correlation=GaussianCorrelation(850, 150),
+        minimum_thickness_m=100.0,
+    )
+    lenses = (
+        EllipsoidalLens(
+            "conductor", 2100.0, 650.0, 650.0, 170.0, 6.0,
+            dip_deg=12.0, transition_fraction=0.25,
+        ),
+        EllipsoidalLens(
+            "resistor", 4700.0, 1150.0, 520.0, 210.0, 3500.0,
+            dip_deg=-18.0, transition_fraction=0.20,
+        ),
+    )
+    composed = insert_lenses(layered, lenses, conflict_policy="error")
+    topo_x = np.linspace(0.0, 6400.0, 9)
+    topo_elevation = 420.0 + 70.0 * np.sin(topo_x / 900.0) + 25.0 * np.cos(
+        topo_x / 430.0
+    )
+    surface = interpolate_topography(
+        grid, topo_x, topo_elevation, source="synthetic survey",
+        interpolation_method="cubic",
+    )
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.2, 8.4))
+    extent = [0.0, 6.4, 1.6, 0.0]
+    image = axes[0, 0].imshow(
+        example.values, extent=extent, aspect="auto", cmap="RdBu_r",
+        vmin=-2.5, vmax=2.5,
+    )
+    axes[0, 0].set(
+        title="One standardized anisotropic Gaussian field",
+        xlabel="Profile distance (km)", ylabel="Depth (km)",
+    )
+    fig.colorbar(image, ax=axes[0, 0], label="Standard deviations")
+
+    ax = axes[0, 1]
+    for lag, values, length, label, color in (
+        (lag_x, variograms_x, 700.0, "x direction", "#2563eb"),
+        (lag_z, variograms_z, 150.0, "z direction", "#dc2626"),
+    ):
+        normalized_lag = lag / length
+        median = np.median(values, axis=0)
+        lower, upper = np.percentile(values, [10, 90], axis=0)
+        ax.plot(normalized_lag, median, "o-", color=color, label=f"{label}: median")
+        ax.fill_between(normalized_lag, lower, upper, color=color, alpha=0.16)
+    theory_lag = np.linspace(0.0, 3.1, 180)
+    ax.plot(
+        theory_lag, 1.0 - np.exp(-0.5 * theory_lag**2),
+        "k--", lw=1.5, label="requested Gaussian model",
+    )
+    ax.set(
+        title="32-realization directional variogram audit",
+        xlabel="Lag / requested correlation length", ylabel="Semivariance",
+        xlim=(0, 3.1), ylim=(0, 1.65),
+    )
+    ax.grid(alpha=0.25)
+    ax.legend(fontsize=8)
+
+    for ax, values, title in (
+        (axes[1, 0], layered.resistivity_ohm_m, "Correlated interfaces + within-unit variability"),
+        (axes[1, 1], composed.resistivity_ohm_m, "Lenses + interpolated topographic mask"),
+    ):
+        display = np.log10(values)
+        if ax is axes[1, 1]:
+            display = np.where(surface.earth_mask(), display, np.nan)
+        image = ax.imshow(
+            display, extent=extent, aspect="auto", cmap="viridis_r",
+            vmin=0.6, vmax=3.7,
+        )
+        for interface in layered.interface_depth_m:
+            ax.plot(grid.x_m / 1000.0, interface / 1000.0,
+                    color="white", lw=0.9, alpha=0.75)
+        if ax is axes[1, 1]:
+            ax.plot(
+                grid.x_m / 1000.0, surface.surface_depth_m / 1000.0,
+                color="#111827", lw=1.4, label="terrain",
+            )
+            ax.legend(fontsize=8, loc="lower left")
+        ax.set(title=title, xlabel="Profile distance (km)", ylabel="Depth (km)")
+        fig.colorbar(image, ax=ax, label=r"$\log_{10}\rho$ [$\Omega\cdot$m]")
+
+    fig.suptitle(
+        "A geological prior is audited statistically, then composed geometrically",
+        fontsize=13,
+    )
+    fig.tight_layout()
+    _save(fig, "geology_prior_diagnostic.png")
+
+
+def make_geology_topographic_surface() -> None:
+    """Exercise terrain interpolation, masks, local depth, and slope."""
+    from pycsamt.ai.geology import GeologyGrid, interpolate_topography
+
+    grid = GeologyGrid.regular_2d(nx=80, nz=36, dx_m=100, dz_m=35)
+    sample_x = np.array([0, 700, 1450, 2300, 3200, 4100, 5050, 6100, 7000, 8000])
+    sample_z = np.array([418, 455, 438, 510, 487, 552, 515, 575, 548, 590], dtype=float)
+    surfaces = {
+        method: interpolate_topography(
+            grid,
+            sample_x,
+            sample_z,
+            interpolation_method=method,
+            source="surveyed benchmarks",
+            station_names=tuple(f"T{i:02d}" for i in range(sample_x.size)),
+        )
+        for method in ("nearest", "linear", "cubic")
+    }
+    surface = surfaces["cubic"]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.4, 8.0))
+    ax = axes[0, 0]
+    for method, item in surfaces.items():
+        ax.plot(grid.x_m / 1000, item.elevation_m, lw=1.8, label=method)
+    ax.scatter(sample_x / 1000, sample_z, c="black", marker="v", zorder=4,
+               label="input samples")
+    ax.set(title="Interpolation is an explicit modelling choice",
+           xlabel="Profile distance (km)", ylabel="Elevation (m)")
+    ax.grid(alpha=0.25)
+    ax.legend(ncol=2, fontsize=8)
+
+    local_depth = surface.local_depth_m()
+    image = axes[0, 1].imshow(
+        local_depth,
+        extent=(0, 8.0, 1.26, 0),
+        aspect="auto",
+        cmap="coolwarm",
+        vmin=-160,
+        vmax=1100,
+    )
+    axes[0, 1].contour(
+        grid.x_m / 1000,
+        grid.z_m / 1000,
+        local_depth,
+        levels=[0],
+        colors="black",
+        linewidths=1.4,
+    )
+    axes[0, 1].set(title="Signed depth below local terrain",
+                   xlabel="Profile distance (km)", ylabel="Grid depth (km)")
+    fig.colorbar(image, ax=axes[0, 1], label="local depth (m)")
+
+    mask_image = axes[1, 0].imshow(
+        surface.earth_mask(),
+        extent=(0, 8.0, 1.26, 0),
+        aspect="auto",
+        cmap="Greys",
+        vmin=0,
+        vmax=1,
+    )
+    axes[1, 0].set(title="Physics-facing mask: white air, black earth",
+                   xlabel="Profile distance (km)", ylabel="Grid depth (km)")
+    fig.colorbar(mask_image, ax=axes[1, 0], ticks=[0, 1], label="earth mask")
+
+    slope = surface.slope_degrees()
+    axes[1, 1].plot(grid.x_m / 1000, slope, color="#dc2626", lw=1.8)
+    axes[1, 1].fill_between(grid.x_m / 1000, 0, slope, color="#fecaca")
+    axes[1, 1].set(title="Slope is derived on the raster grid",
+                   xlabel="Profile distance (km)", ylabel="Slope (degrees)")
+    axes[1, 1].grid(alpha=0.25)
+    fig.suptitle(
+        f"TopographicSurface audit: relief={surface.relief_m:.1f} m, "
+        f"air fraction={surface.summary()['air_cell_fraction']:.3f}",
+        fontsize=13,
+    )
+    fig.tight_layout()
+    _save(fig, "geology_topographic_surface.png")
+
+
+def make_geology_3d_composition() -> None:
+    """Build and inspect a correlated layered 3-D volume with a body."""
+    from pycsamt.ai.geology import (
+        ElectricalLayer,
+        EllipsoidalLens,
+        GaussianCorrelation,
+        GeologyGrid,
+        generate_layered_geology,
+        insert_lenses,
+        interpolate_topography,
+    )
+
+    grid = GeologyGrid.regular_3d(
+        nx=42, ny=30, nz=24, dx_m=150, dy_m=150, dz_m=60
+    )
+    correlation = GaussianCorrelation(900, 240, length_y_m=600, azimuth_deg=30)
+    layers = (
+        ElectricalLayer("cover", 35, log10_std=0.08, heterogeneity=correlation),
+        ElectricalLayer("host", 420),
+        ElectricalLayer("basement", 1800, log10_std=0.10, heterogeneity=correlation),
+    )
+    layered = generate_layered_geology(
+        grid,
+        layers,
+        [360, 900],
+        seed=31,
+        interface_relief_std_m=[70, 120],
+        interface_correlation=correlation,
+        minimum_thickness_m=120,
+    )
+    body = EllipsoidalLens(
+        "dipping conductor",
+        center_x_m=3300,
+        center_y_m=2250,
+        center_z_m=690,
+        radius_x_m=1150,
+        radius_y_m=650,
+        radius_z_m=260,
+        resistivity_ohm_m=8,
+        azimuth_deg=35,
+        dip_deg=18,
+        transition_fraction=0.22,
+    )
+    volume = insert_lenses(layered, [body], conflict_policy="error")
+    samples_xy = np.array([
+        [0, 0], [6300, 0], [0, 4500], [6300, 4500], [3150, 2250],
+        [1575, 1125], [4725, 3375],
+    ])
+    samples_elevation = 510 + 0.018 * samples_xy[:, 0] - 0.012 * samples_xy[:, 1]
+    topography = interpolate_topography(
+        grid, samples_xy, samples_elevation, source="projected control points"
+    )
+
+    iy = grid.shape[1] // 2
+    ix = grid.shape[2] // 2
+    iz = int(np.argmin(np.abs(grid.z_m - body.center_z_m)))
+    log_rho = np.log10(volume.resistivity_ohm_m)
+    earth = topography.earth_mask()
+    fig, axes = plt.subplots(1, 3, figsize=(13.8, 4.8))
+    views = (
+        (np.where(earth[:, iy, :], log_rho[:, iy, :], np.nan),
+         [0, 6.3, 1.44, 0], "Vertical x-z slice", "x (km)", "depth (km)"),
+        (np.where(earth[:, :, ix], log_rho[:, :, ix], np.nan),
+         [0, 4.5, 1.44, 0], "Vertical y-z slice", "y (km)", "depth (km)"),
+        (log_rho[iz], [0, 6.3, 4.5, 0],
+         f"Horizontal slice at {grid.z_m[iz]:.0f} m", "x (km)", "y (km)"),
+    )
+    for ax, (values, extent, title, xlabel, ylabel) in zip(axes, views):
+        image = ax.imshow(values, extent=extent, aspect="auto", cmap="viridis_r",
+                          vmin=0.7, vmax=3.4)
+        ax.set(title=title, xlabel=xlabel, ylabel=ylabel)
+    colorbar_axis = fig.add_axes([0.925, 0.19, 0.015, 0.60])
+    fig.colorbar(
+        image,
+        cax=colorbar_axis,
+        label=r"$\log_{10}\rho$ [$\Omega\cdot$m]",
+    )
+    fig.suptitle(
+        "One immutable 3-D prior: correlated stratigraphy, oriented lens, and terrain mask",
+        fontsize=12.5,
+    )
+    fig.subplots_adjust(left=0.06, right=0.90, bottom=0.13, top=0.82, wspace=0.32)
+    _save(fig, "geology_3d_composition.png")
+
+
+def make_inference_calibration_diagnostic() -> None:
+    """Compare calibrated and overconfident predictive distributions."""
+    from scipy.stats import norm
+
+    from pycsamt.ai.validation import reliability_curve
+
+    rng = np.random.default_rng(2026)
+    n_station, n_layer = 120, 6
+    depth = np.arange(1, n_layer + 1)
+    mean = 1.55 + 0.27 * depth[None, :] + rng.normal(
+        0.0, 0.08, size=(n_station, 1)
+    )
+    true_sigma = 0.07 + 0.035 * depth[None, :]
+    true_sigma = np.broadcast_to(true_sigma, mean.shape)
+    truth = mean + rng.normal(size=mean.shape) * true_sigma
+    calibrated_std = true_sigma.copy()
+    overconfident_std = 0.45 * true_sigma
+    levels = np.linspace(0.10, 0.99, 18)
+    calibrated = reliability_curve(
+        truth, mean, calibrated_std, levels=levels, kind="l1"
+    )
+    overconfident = reliability_curve(
+        truth, mean, overconfident_std, levels=levels, kind="l1"
+    )
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.3))
+    axes[0].plot(levels, levels, "k--", label="ideal")
+    axes[0].plot(
+        calibrated.levels, calibrated.coverage, "o-", label="calibrated scale"
+    )
+    axes[0].plot(
+        overconfident.levels,
+        overconfident.coverage,
+        "s-",
+        label="45% uncertainty scale",
+    )
+    axes[0].set(
+        xlabel="Nominal coverage",
+        ylabel="Empirical coverage",
+        title="Reliability is measured against truth",
+        xlim=(0, 1),
+        ylim=(0, 1),
+    )
+    axes[0].grid(alpha=0.25)
+    axes[0].legend(fontsize=8)
+
+    station = 7
+    z90 = norm.ppf(0.95)
+    axes[1].plot(mean[station], depth, "ko-", label="predictive mean")
+    axes[1].fill_betweenx(
+        depth,
+        mean[station] - z90 * calibrated_std[station],
+        mean[station] + z90 * calibrated_std[station],
+        alpha=0.25,
+        label="calibrated 90% interval",
+    )
+    axes[1].scatter(truth[station], depth, c="#dc2626", zorder=3, label="truth")
+    axes[1].invert_yaxis()
+    axes[1].set(
+        xlabel=r"$\log_{10}\rho$ [$\Omega\cdot$m]",
+        ylabel="Layer index",
+        title="One synthetic held-out station",
+    )
+    axes[1].grid(alpha=0.25)
+    axes[1].legend(fontsize=8)
+
+    labels = ["calibrated\nscale", "overconfident\nscale"]
+    calibration_error = [
+        calibrated.calibration.value,
+        overconfident.calibration.value,
+    ]
+    sharpness = [calibrated.sharpness, overconfident.sharpness]
+    x = np.arange(2)
+    axes[2].bar(x - 0.18, calibration_error, 0.36, label="mean |coverage error|")
+    axes[2].bar(x + 0.18, sharpness, 0.36, label="sharpness (mean std)")
+    axes[2].set_xticks(x, labels)
+    axes[2].set(
+        ylabel="Diagnostic value",
+        title="Sharper is not better when miscalibrated",
+    )
+    axes[2].grid(alpha=0.25, axis="y")
+    axes[2].legend(fontsize=8)
+    fig.suptitle(
+        "Inference uncertainty audit on 720 held-out layer parameters",
+        fontsize=13,
+    )
+    fig.tight_layout()
+    _save(fig, "inference_calibration_diagnostic.png")
+
+
+def make_losses_penalty_anatomy() -> None:
+    """Visualize robust, probabilistic, and response-space loss behavior."""
+    from pycsamt.ai.losses import (
+        gaussian_nll_loss,
+        model_huber_loss,
+        model_l1_loss,
+        model_l2_loss,
+        response_residual_loss,
+    )
+
+    residual = np.linspace(-4.0, 4.0, 401)
+    zeros = np.zeros_like(residual)
+    l1 = np.array([model_l1_loss([r], [0]).value for r in residual])
+    l2 = np.array([model_l2_loss([r], [0]).value for r in residual])
+    huber = np.array([
+        model_huber_loss([r], [0], delta=1.0).value for r in residual
+    ])
+
+    sigma = np.logspace(-2.2, 0.7, 260)
+    nll = {}
+    for error in (0.1, 0.5, 1.0):
+        nll[error] = np.array([
+            gaussian_nll_loss([error], [0.0], [np.log(s**2)]).value
+            for s in sigma
+        ])
+
+    frequency = np.logspace(-1, 3, 18)
+    observed = (1.0 + 0.5j) * np.sqrt(frequency / frequency.max())
+    predicted = observed + (0.035 + 0.025j)
+    errors = np.linspace(0.015, 0.12, frequency.size)
+    raw_cell = np.abs(predicted - observed) ** 2
+    normalized_cell = np.abs((predicted - observed) / errors) ** 2
+    raw = response_residual_loss(predicted, observed, kind="l2")
+    normalized = response_residual_loss(
+        predicted, observed, errors=errors, kind="l2"
+    )
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.0, 8.2))
+    axes[0, 0].plot(residual, l1, label="L1")
+    axes[0, 0].plot(residual, l2, label="L2")
+    axes[0, 0].plot(residual, huber, label=r"Huber $\delta=1$")
+    axes[0, 0].set(
+        xlabel="Residual", ylabel="Per-cell penalty",
+        title="Large residuals dominate L2",
+    )
+    axes[0, 0].set_ylim(0, 8)
+    axes[0, 0].grid(alpha=0.25)
+    axes[0, 0].legend()
+
+    axes[0, 1].plot(residual, np.sign(residual), label="L1 influence")
+    axes[0, 1].plot(residual, 2 * residual, label="L2 influence")
+    axes[0, 1].plot(
+        residual, np.clip(residual, -1, 1), label="Huber influence"
+    )
+    axes[0, 1].set(
+        xlabel="Residual", ylabel="Derivative with respect to residual",
+        title="Influence controls optimization pressure",
+    )
+    axes[0, 1].set_ylim(-4.5, 4.5)
+    axes[0, 1].grid(alpha=0.25)
+    axes[0, 1].legend()
+
+    for error, values in nll.items():
+        axes[1, 0].plot(sigma, values, label=f"|residual|={error}")
+        axes[1, 0].axvline(error, color="grey", lw=0.7, alpha=0.4)
+    axes[1, 0].set_xscale("log")
+    axes[1, 0].set(
+        xlabel="Predicted standard deviation",
+        ylabel="Gaussian NLL",
+        title="NLL penalizes both over- and under-confidence",
+    )
+    axes[1, 0].set_ylim(-2.0, 15.0)
+    axes[1, 0].grid(alpha=0.25, which="both")
+    axes[1, 0].legend(fontsize=8)
+
+    axes[1, 1].plot(frequency, raw_cell, "o-", label="raw contribution")
+    axes[1, 1].plot(
+        frequency, normalized_cell, "s-", label="error-normalized contribution"
+    )
+    axes[1, 1].set_xscale("log")
+    axes[1, 1].set_yscale("log")
+    axes[1, 1].set(
+        xlabel="Frequency (Hz)", ylabel="Per-cell L2 contribution",
+        title=f"Same residual: mean raw={raw.value:.3g}, normalized={normalized.value:.2f}",
+    )
+    axes[1, 1].grid(alpha=0.25, which="both")
+    axes[1, 1].legend(fontsize=8)
+    fig.suptitle("Loss choice changes which errors drive an inversion", fontsize=13)
+    fig.tight_layout()
+    _save(fig, "losses_penalty_anatomy.png")
+
+
+def make_losses_regularization_tradeoff() -> None:
+    """Demonstrate data-fit versus spatial regularization on a known model."""
+    from scipy.ndimage import gaussian_filter
+
+    from pycsamt.ai.losses import (
+        boundary_condition_loss,
+        model_l2_loss,
+        total_variation_loss,
+    )
+
+    rng = np.random.default_rng(44)
+    nz, nx = 44, 76
+    truth = np.full((nz, nx), 2.65)
+    truth[:9] = 1.45
+    truth[9:25] = 2.15
+    z, x = np.mgrid[:nz, :nx]
+    conductor = ((x - 38) / 15) ** 2 + ((z - 24) / 7) ** 2 <= 1
+    truth[conductor] = 0.75
+    noisy = truth + rng.normal(0, 0.30, truth.shape)
+    air = z < (3 + 1.8 * np.sin(x / 8.0))
+    noisy[air] = rng.normal(0.2, 0.35, air.sum())
+    valid_earth = ~air
+
+    scales = np.linspace(0.0, 4.0, 25)
+    candidates = [noisy if scale == 0 else gaussian_filter(noisy, scale) for scale in scales]
+    model_loss = np.array([
+        model_l2_loss(item, truth, valid=valid_earth).value for item in candidates
+    ])
+    tv_loss = np.array([
+        total_variation_loss(item, valid=valid_earth).value for item in candidates
+    ])
+    boundary_loss = np.array([
+        boundary_condition_loss(item, boundary_mask=air, target=0.0).value
+        for item in candidates
+    ])
+    lambda_tv, lambda_boundary = 0.35, 0.20
+    objective = model_loss + lambda_tv * tv_loss + lambda_boundary * boundary_loss
+    selected = int(np.argmin(objective))
+
+    fig, axes = plt.subplots(2, 3, figsize=(13.2, 8.0))
+    extent = [0, 7.6, 2.2, 0]
+    for ax, values, title in (
+        (axes[0, 0], truth, "Known blocky truth"),
+        (axes[0, 1], noisy, "Noisy prediction"),
+        (axes[0, 2], candidates[selected],
+         f"Selected smoothing scale = {scales[selected]:.2f}"),
+    ):
+        image = ax.imshow(values, extent=extent, aspect="auto", cmap="turbo",
+                          vmin=0.3, vmax=3.1)
+        ax.contour(
+            x / 10.0,
+            z * (2.2 / nz),
+            air,
+            levels=[0.5],
+            colors="white",
+            linewidths=0.8,
+        )
+        ax.set(xlabel="Profile distance (km)", ylabel="Depth (km)", title=title)
+    colorbar_axis = fig.add_axes([0.925, 0.57, 0.014, 0.29])
+    fig.colorbar(image, cax=colorbar_axis,
+                 label=r"$\log_{10}\rho$ [$\Omega\cdot$m]")
+
+    axes[1, 0].plot(scales, model_loss, "o-", label=r"$L_{model}$")
+    axes[1, 0].plot(scales, tv_loss, "s-", label=r"$L_{TV}$")
+    axes[1, 0].plot(scales, boundary_loss, "^-", label=r"$L_{boundary}$")
+    axes[1, 0].set(
+        xlabel="Gaussian smoothing scale (cells)", ylabel="Mean loss",
+        title="Terms prefer different models",
+    )
+    axes[1, 0].grid(alpha=0.25)
+    axes[1, 0].legend(fontsize=8)
+
+    axes[1, 1].plot(scales, objective, "o-", color="#7c3aed")
+    axes[1, 1].axvline(scales[selected], color="#111827", ls="--")
+    axes[1, 1].set(
+        xlabel="Gaussian smoothing scale (cells)", ylabel="Combined objective",
+        title=rf"$L_m+{lambda_tv}L_{{TV}}+{lambda_boundary}L_b$",
+    )
+    axes[1, 1].grid(alpha=0.25)
+
+    scatter = axes[1, 2].scatter(
+        tv_loss, model_loss, c=scales, cmap="viridis", s=55
+    )
+    axes[1, 2].scatter(tv_loss[selected], model_loss[selected], marker="*",
+                       s=180, c="#dc2626", label="selected")
+    axes[1, 2].set(
+        xlabel=r"$L_{TV}$", ylabel=r"$L_{model}$",
+        title="Regularity has a model-fit cost",
+    )
+    axes[1, 2].grid(alpha=0.25)
+    axes[1, 2].legend(fontsize=8)
+    fig.colorbar(scatter, ax=axes[1, 2], label="smoothing scale")
+    fig.suptitle("A regularization weight selects a trade-off, not a true model", fontsize=13)
+    fig.subplots_adjust(left=0.06, right=0.90, bottom=0.08, top=0.90,
+                        hspace=0.34, wspace=0.31)
+    _save(fig, "losses_regularization_tradeoff.png")
+
+
+def make_hybrid_physics_refinement_audit() -> None:
+    """Run the differentiable pseudo-2-D refinement on a controlled model."""
+    from pycsamt.ai.inversion._pinn_ops import fit_2d_joint
+    from pycsamt.forward.em1d import MT1DForward
+    from pycsamt.forward.synthetic import LayeredModel
+
+    frequencies = np.logspace(-1, 2, 18)
+    n_station, n_layer = 7, 5
+    station = np.linspace(-1.0, 1.0, n_station)
+    depth_pattern = np.array([1.35, 2.05, 2.65, 3.05, 3.25])
+    true_log_rho = np.tile(depth_pattern, (n_station, 1))
+    true_log_rho[:, 1] -= 0.55 * np.exp(-(station / 0.48) ** 2)
+    true_log_rho[:, 2] += 0.35 * station
+    true_log_thick = np.tile(np.log10([120.0, 210.0, 360.0, 600.0]),
+                             (n_station, 1))
+
+    observed_log_rho = np.empty((n_station, frequencies.size))
+    observed_phase = np.empty_like(observed_log_rho)
+    for index in range(n_station):
+        model = LayeredModel(
+            resistivity=10.0 ** true_log_rho[index],
+            thickness=10.0 ** true_log_thick[index],
+        )
+        response = MT1DForward(frequencies).run(model)
+        observed_log_rho[index] = np.log10(response.rho_a)
+        observed_phase[index] = response.phase
+
+    initial_log_rho = true_log_rho + 0.30
+    initial_log_rho[:, 1] += 0.28
+    initial_log_rho[:, 3] -= 0.18 * station
+    result = fit_2d_joint(
+        observed_log_rho,
+        observed_phase,
+        frequencies,
+        n_layers=n_layer,
+        depth_max=1800.0,
+        lam_z=0.002,
+        lam_x=0.003,
+        lr=0.025,
+        epochs=140,
+        device="cpu",
+        log_every=0,
+        init_log_rho=initial_log_rho,
+        init_log_thick=true_log_thick,
+        backend="torch",
+    )
+    refined = result["log_rho"]
+    initial_rmse = np.sqrt(np.mean((initial_log_rho - true_log_rho) ** 2))
+    refined_rmse = np.sqrt(np.mean((refined - true_log_rho) ** 2))
+
+    def response_rms(log_rho, log_thick):
+        residuals = []
+        for index in range(n_station):
+            model = LayeredModel(
+                resistivity=10.0 ** log_rho[index],
+                thickness=10.0 ** log_thick[index],
+            )
+            response = MT1DForward(frequencies).run(model)
+            residuals.extend(
+                (np.log10(response.rho_a) - observed_log_rho[index]) ** 2
+                + ((response.phase - observed_phase[index]) / 90.0) ** 2
+            )
+        return float(np.sqrt(np.mean(residuals)))
+
+    initial_response_rms = response_rms(initial_log_rho, true_log_thick)
+    refined_response_rms = response_rms(refined, result["log_thick"])
+
+    fig, axes = plt.subplots(1, 4, figsize=(13.4, 5.4))
+    extent = [1, n_station, n_layer, 0]
+    for ax, values, title in (
+        (axes[0], true_log_rho.T, "Known layered truth"),
+        (axes[1], initial_log_rho.T,
+         f"Warm start\nmodel RMSE = {initial_rmse:.3f}\nresponse RMS = {initial_response_rms:.3f}"),
+        (axes[2], refined.T,
+         f"Physics-refined\nmodel RMSE = {refined_rmse:.3f}\nresponse RMS = {refined_response_rms:.3f}"),
+    ):
+        image = ax.imshow(values, extent=extent, aspect="auto", cmap="viridis",
+                          vmin=0.8, vmax=3.6)
+        ax.set(xlabel="Station", ylabel="Layer index", title=title)
+        ax.set_xticks(range(1, n_station + 1))
+    fig.colorbar(
+        image,
+        ax=axes[:3],
+        orientation="horizontal",
+        fraction=0.055,
+        pad=0.22,
+        label=r"$\log_{10}\rho$ [$\Omega\cdot$m]",
+    )
+    axes[3].plot(np.arange(1, 141), result["history"], color="#7c3aed", lw=1.8)
+    axes[3].set_yscale("log")
+    axes[3].set(
+        xlabel="Adam iteration", ylabel="Total objective", title="Stage-2 convergence"
+    )
+    axes[3].grid(alpha=0.25, which="both")
+    fig.suptitle(
+        "Executed hybrid Stage 2: differentiable 1-D responses with lateral coupling",
+        fontsize=12.5,
+    )
+    fig.subplots_adjust(left=0.06, right=0.98, bottom=0.27, top=0.72, wspace=0.38)
+    _save(fig, "hybrid_physics_refinement_audit.png")
+
+
 def make_dataset2d_realization_gallery() -> None:
     from pycsamt.ai.geology import GeologyGrid
 
@@ -584,6 +1350,94 @@ def make_dataset2d_realization_gallery() -> None:
         fontsize=12,
     )
     _save(fig, "dataset2d_realization_gallery.png")
+
+
+def make_dataset2d_response_anatomy() -> None:
+    """Plot one generated model beside its canonical TE/TM responses."""
+    from pycsamt.ai.geology import GeologyGrid
+
+    grid = GeologyGrid.regular_2d(nx=12, nz=8, dx_m=300, dz_m=150)
+    station_x = np.linspace(450.0, 3150.0, 7)
+    frequencies = np.array([30.0, 10.0, 3.0, 1.0])
+    config = Maxwell2DDatasetConfig(
+        dataset_id="response-anatomy",
+        grid=grid,
+        correlation_length_x_m=(600.0, 1200.0),
+        correlation_length_z_m=(180.0, 450.0),
+        frequencies_hz=frequencies,
+        station_x_m=station_x,
+        n_realizations=1,
+        seed=11,
+        log_resistivity_mean=2.0,
+        log_resistivity_std=0.35,
+        mesh_safety_factor=2.0,
+        validation_fraction=0.0,
+        test_fraction=0.0,
+    )
+    sample = generate_2d_maxwell_dataset(config).samples[0]
+    impedance = sample.survey.impedance
+    mu0 = 4.0e-7 * np.pi
+    omega = 2.0 * np.pi * frequencies
+    rho_a = np.abs(impedance) ** 2 / (omega[None, :, None] * mu0)
+    phase = np.degrees(np.angle(impedance))
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.5, 8.2))
+    ax = axes[0, 0]
+    dx = grid.spacing_m[1]
+    dz = grid.spacing_m[0]
+    image = ax.imshow(
+        np.log10(sample.resistivity_ohm_m),
+        extent=(0, grid.shape[1] * dx, grid.shape[0] * dz, 0),
+        aspect="auto",
+        cmap="viridis_r",
+    )
+    ax.scatter(station_x, np.zeros_like(station_x), marker="v", c="white",
+               edgecolor="black", s=42, clip_on=False)
+    ax.set(title="Known target model", xlabel="x (m)", ylabel="depth (m)")
+    fig.colorbar(image, ax=ax, label=r"$\log_{10}(\rho)$ [$\Omega\cdot$m]")
+
+    colors = plt.cm.plasma(np.linspace(0.08, 0.92, len(station_x)))
+    for station, color, x_value in zip(range(len(station_x)), colors, station_x):
+        axes[0, 1].plot(
+            frequencies, rho_a[station, :, 0], "o-", color=color,
+            label=f"x={x_value:.0f} m",
+        )
+        axes[1, 0].plot(
+            frequencies, rho_a[station, :, 1], "o-", color=color
+        )
+    for ax, title in zip(
+        (axes[0, 1], axes[1, 0]),
+        (r"TE $Z_{xy}$ apparent resistivity", r"TM $Z_{yx}$ apparent resistivity"),
+    ):
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set(title=title, xlabel="frequency (Hz)", ylabel=r"$\rho_a$ [$\Omega\cdot$m]")
+        ax.grid(alpha=0.25, which="both")
+    axes[0, 1].legend(frameon=False, fontsize=7, ncol=2)
+
+    axes[1, 1].plot(
+        frequencies, np.median(phase[:, :, 0], axis=0), "o-",
+        label=r"median TE $Z_{xy}$",
+    )
+    tm_phase_adjusted = np.degrees(np.angle(-impedance[:, :, 1]))
+    axes[1, 1].plot(
+        frequencies, np.median(tm_phase_adjusted, axis=0), "s--",
+        label=r"median adjusted TM $-Z_{yx}$",
+    )
+    axes[1, 1].set_xscale("log")
+    axes[1, 1].set(
+        title="Median phase response",
+        xlabel="frequency (Hz)",
+        ylabel="phase magnitude (degrees)",
+    )
+    axes[1, 1].grid(alpha=0.25, which="both")
+    axes[1, 1].legend(frameon=False)
+    fig.suptitle(
+        "One accepted 2-D realization: target and canonical response channels",
+        fontsize=13,
+    )
+    fig.tight_layout()
+    _save(fig, "dataset2d_response_anatomy.png")
 
 
 def make_data_preparation_contract() -> None:
@@ -745,6 +1599,118 @@ def make_model_selection_willy_dimension() -> None:
     _save(fig, "model_selection_willy_dimension.png")
 
 
+def make_model_selection_graph_radius() -> None:
+    """Show how radius changes graph topology and normalized GCN weights."""
+    coords = np.array(
+        [
+            [0, 0], [310, 90], [690, -35], [1080, 115], [1530, 30],
+            [2050, 160], [190, 760], [610, 680], [1040, 850],
+            [1510, 710], [2160, 900], [2860, 390],
+        ],
+        dtype=float,
+    )
+    radii = (450.0, 900.0, 1300.0)
+    fig = plt.figure(figsize=(13.2, 4.3))
+    grid = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1, 0.045], wspace=0.18)
+    axes = [fig.add_subplot(grid[0, i]) for i in range(3)]
+    cax = fig.add_subplot(grid[0, 3])
+    for ax, radius in zip(axes, radii):
+        raw = build_adjacency(
+            coords, radius, self_loops=False, normalise=False
+        )
+        normalized = build_adjacency(coords, radius)
+        degree = raw.sum(axis=1).astype(int)
+        for i in range(len(coords)):
+            for j in range(i + 1, len(coords)):
+                if raw[i, j] > 0:
+                    ax.plot(
+                        coords[[i, j], 0], coords[[i, j], 1],
+                        color="#94a3b8", lw=0.8 + 2.8 * normalized[i, j],
+                        zorder=1,
+                    )
+        points = ax.scatter(
+            coords[:, 0], coords[:, 1], c=degree, cmap="viridis",
+            vmin=0, vmax=max(1, int(degree.max())), s=80,
+            edgecolor="white", linewidth=0.8, zorder=2,
+        )
+        isolated = int(np.sum(degree == 0))
+        edges = int(raw.sum() // 2)
+        ax.set_title(
+            f"r = {radius:.0f} m\n{edges} edges; {isolated} isolated"
+        )
+        ax.set_aspect("equal", adjustable="box")
+        ax.grid(alpha=0.18)
+        ax.set_xlabel("Easting offset (m)")
+    axes[0].set_ylabel("Northing offset (m)")
+    colorbar = fig.colorbar(points, cax=cax)
+    colorbar.set_label("Node degree (self-loop excluded)")
+    fig.suptitle("Graph radius is a spatial prior, not a cosmetic setting")
+    fig.subplots_adjust(left=0.06, right=0.94, bottom=0.16, top=0.78)
+    _save(fig, "model_selection_graph_radius.png")
+
+
+def make_model_selection_tradeoff() -> None:
+    """Illustrate gates, Pareto trade-offs, and score-weight sensitivity."""
+    names = np.array(["FCN", "CNN1D", "ResNet", "U-Net2D", "GCN"])
+    metrics = np.array(
+        [
+            [1.00, 1.00, 1.00, 1.00],
+            [0.91, 0.95, 0.93, 1.25],
+            [0.76, 0.80, 0.78, 1.70],
+            [0.69, 0.73, 1.31, 3.10],
+            [0.72, 0.76, 0.89, 2.45],
+        ]
+    )
+    gate_pass = np.array([True, True, True, False, True])
+    rng = np.random.default_rng(42)
+    seed_scores = np.clip(
+        metrics[:, 1, None] * rng.normal(1.0, 0.045, (5, 12)), 0, None
+    )
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.4))
+    ax_heat, ax_seed, ax_sensitivity = axes
+    image = ax_heat.imshow(metrics, cmap="YlGnBu_r", vmin=0.65, vmax=3.1)
+    ax_heat.set_xticks(range(4), ["model", "response", "calibration", "runtime"], rotation=28, ha="right")
+    ax_heat.set_yticks(range(5), names)
+    for i in range(5):
+        for j in range(4):
+            ax_heat.text(j, i, f"{metrics[i, j]:.2f}", ha="center", va="center", fontsize=8)
+    ax_heat.set_title("Baseline-normalized costs")
+    fig.colorbar(image, ax=ax_heat, shrink=0.75, label="lower is better")
+
+    parts = ax_seed.violinplot(seed_scores.T, showmeans=True, showextrema=False)
+    for body in parts["bodies"]:
+        body.set_facecolor("#60a5fa")
+        body.set_edgecolor("#1d4ed8")
+        body.set_alpha(0.68)
+    parts["cmeans"].set_color("#111827")
+    ax_seed.set_xticks(range(1, 6), names, rotation=28, ha="right")
+    ax_seed.set_ylabel("Response NRMS / FCN mean")
+    ax_seed.set_title("Twelve repeated-seed outcomes")
+    ax_seed.grid(axis="y", alpha=0.22)
+
+    response_weights = np.linspace(0.10, 0.70, 121)
+    fixed_calibration, fixed_runtime = 0.20, 0.10
+    for i, name in enumerate(names):
+        model_weights = 1.0 - response_weights - fixed_calibration - fixed_runtime
+        scores = (
+            model_weights * metrics[i, 0]
+            + response_weights * metrics[i, 1]
+            + fixed_calibration * metrics[i, 2]
+            + fixed_runtime * metrics[i, 3]
+        )
+        style = "--" if not gate_pass[i] else "-"
+        ax_sensitivity.plot(response_weights, scores, ls=style, lw=1.8, label=name)
+    ax_sensitivity.axvspan(0.10, 0.70, color="#f8fafc", zorder=-2)
+    ax_sensitivity.set(xlabel="Response-error weight", ylabel="Composite score")
+    ax_sensitivity.set_title("Scores depend on declared weights")
+    ax_sensitivity.grid(alpha=0.22)
+    ax_sensitivity.legend(frameon=False, fontsize=8, ncol=2)
+    fig.suptitle("A controlled selection illustration: evidence before one score")
+    fig.tight_layout()
+    _save(fig, "model_selection_tradeoff.png")
+
+
 def make_training_executed_audit() -> None:
     frequency = np.logspace(np.log10(1.01), 4, 24)
     samples = generate_dataset(
@@ -828,6 +1794,133 @@ def make_training_executed_audit() -> None:
     )
     fig.tight_layout()
     _save(fig, "training_executed_audit.png")
+
+
+def make_training_augmentation_audit() -> None:
+    """Execute the public augmenters on response-like feature curves."""
+    from pycsamt.ai.training import (
+        AugmentFreqDrop,
+        AugmentMixup,
+        AugmentNoise,
+        AugmentStaticShift,
+    )
+
+    frequency = np.logspace(-1, 4, 24)
+    log_frequency = np.log10(frequency)
+    x = np.stack(
+        [
+            1.8 + 0.32 * np.tanh(log_frequency - centre)
+            + 0.08 * np.sin(1.8 * log_frequency + phase)
+            for centre, phase in zip(np.linspace(0.4, 2.0, 8), np.linspace(0, 2, 8))
+        ]
+    ).astype(np.float32)
+    y = np.stack([np.linspace(1.2 + 0.08 * i, 3.1 - 0.04 * i, 5)
+                  for i in range(len(x))]).astype(np.float32)
+
+    noisy, _ = AugmentNoise(sigma=0.06)(x, y, rng=np.random.default_rng(11))
+    shifted, _ = AugmentStaticShift(
+        shift_range=(0.5, 2.0), n_amp_features=24
+    )(x, y, rng=np.random.default_rng(12))
+    dropped, _ = AugmentFreqDrop(
+        drop_rate=0.25, contiguous=True, fill_value=np.nan
+    )(x, y, rng=np.random.default_rng(13))
+    mixed, y_mixed = AugmentMixup(alpha=0.4)(
+        x, y, rng=np.random.default_rng(14)
+    )
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.2, 7.2), sharex=True)
+    panels = [
+        (noisy, "Additive feature noise", "local scatter; target unchanged"),
+        (shifted, "Static shift", "whole amplitude curve translated"),
+        (dropped, "Contiguous frequency drop", "dead band is explicit, not interpolated"),
+        (mixed, "Mixup", "response and target move together"),
+    ]
+    for ax, (changed, title, subtitle) in zip(axes.flat, panels):
+        ax.semilogx(frequency, x[0], color="#0f172a", lw=2.1, label="original")
+        ax.semilogx(frequency, changed[0], color="#f15a29", lw=1.8,
+                    marker="o", ms=3, label="augmented")
+        ax.set(title=f"{title}\n{subtitle}", ylabel=r"feature $\log_{10}\rho_a$")
+        ax.grid(alpha=0.22)
+        ax.legend(frameon=False, fontsize=8)
+    for ax in axes[-1]:
+        ax.set_xlabel("Frequency (Hz)")
+    axes[1, 1].text(
+        0.03, 0.06,
+        f"target change (sample 1): {np.linalg.norm(y_mixed[0] - y[0]):.3f}",
+        transform=axes[1, 1].transAxes, fontsize=8.5,
+        bbox={"boxstyle": "round,pad=0.3", "fc": "white", "ec": "#94a3b8"},
+    )
+    fig.suptitle("Executed training augmentations: each encodes a different nuisance model")
+    fig.tight_layout()
+    _save(fig, "training_augmentation_audit.png")
+
+
+def make_training_trainer_controls() -> None:
+    """Run EMTrainer and expose validation control, LR, timing, and recovery."""
+    import torch
+    from torch import nn
+    from torch.utils.data import TensorDataset
+
+    from pycsamt.ai.training import EMTrainer
+
+    torch.manual_seed(29)
+    rng = np.random.default_rng(29)
+    x = rng.normal(size=(480, 12)).astype(np.float32)
+    weights = rng.normal(scale=0.35, size=(12, 4)).astype(np.float32)
+    y = (x @ weights + 0.18 * np.sin(x[:, :4])).astype(np.float32)
+    y += rng.normal(scale=0.08, size=y.shape).astype(np.float32)
+    # A noisier validation acquisition creates an honest irreducible floor,
+    # making the scheduler and best-weight restoration visible in a short run.
+    y[360:] += rng.normal(scale=0.30, size=y[360:].shape).astype(np.float32)
+    train = TensorDataset(torch.from_numpy(x[:360]), torch.from_numpy(y[:360]))
+    validation = TensorDataset(torch.from_numpy(x[360:]), torch.from_numpy(y[360:]))
+    model = nn.Sequential(nn.Linear(12, 24), nn.ReLU(), nn.Linear(24, 4))
+    trainer = EMTrainer(
+        model, lr=3e-3, weight_decay=1e-5, patience=30,
+        min_delta=1e-5, batch_size=48, device="cpu", grad_clip=1.0,
+        verbose=False,
+    ).fit(train, validation, epochs=120)
+    history = trainer.history
+    epoch = np.arange(1, len(history["train_loss"]) + 1)
+    with torch.no_grad():
+        predicted = trainer.model(torch.from_numpy(x[360:])).numpy()
+    per_target_rmse = np.sqrt(np.mean((predicted - y[360:]) ** 2, axis=0))
+
+    fig, axes = plt.subplots(2, 2, figsize=(10.8, 7.0))
+    axes[0, 0].plot(epoch, history["train_loss"], color="#2563eb", label="training")
+    axes[0, 0].plot(epoch, history["val_loss"], color="#dc2626", label="validation")
+    axes[0, 0].axvline(trainer.best_epoch, color="#111827", ls="--",
+                       label=f"restored epoch {trainer.best_epoch}")
+    axes[0, 0].set(xlabel="Epoch", ylabel="Masked MSE", title="Validation selects weights")
+    axes[0, 0].legend(frameon=False, fontsize=8)
+    axes[0, 0].grid(alpha=0.22)
+    axes[0, 1].step(epoch, history["lr"], where="post", color="#7c3aed")
+    axes[0, 1].set(xlabel="Epoch", ylabel="Learning rate", title="Plateau scheduler state",
+                   yscale="log")
+    axes[0, 1].grid(alpha=0.22)
+    axes[1, 0].plot(epoch, 1000 * np.asarray(history["epoch_time"]),
+                    color="#0f766e", marker="o", ms=3)
+    axes[1, 0].axhline(1000 * np.median(history["epoch_time"]), color="#f15a29",
+                       ls="--", label="median")
+    axes[1, 0].set(xlabel="Epoch", ylabel="CPU time (ms)", title="Runtime is part of the record")
+    axes[1, 0].legend(frameon=False, fontsize=8)
+    axes[1, 0].grid(alpha=0.22)
+    axes[1, 1].bar(np.arange(1, 5), per_target_rmse, color="#60a5fa",
+                   edgecolor="#1d4ed8")
+    axes[1, 1].set(xlabel="Target parameter", ylabel="Validation RMSE",
+                   title="Aggregate loss can hide target differences")
+    axes[1, 1].set_xticks(np.arange(1, 5))
+    axes[1, 1].grid(alpha=0.22, axis="y")
+    fig.suptitle("Executed EMTrainer control audit")
+    fig.tight_layout()
+    _save(fig, "training_trainer_controls.png")
+    print(
+        "training controls:",
+        {"epochs": len(epoch), "best_epoch": trainer.best_epoch,
+         "best_val_loss": trainer.best_val_loss,
+         "final_lr": history["lr"][-1],
+         "target_rmse": per_target_rmse.tolist()},
+    )
 
 
 def make_hybrid_paired_diagnostic() -> None:
@@ -955,6 +2048,132 @@ def make_uncertainty_coverage_reliability() -> None:
     ax.legend(frameon=True, fontsize=8, loc="lower right")
     fig.tight_layout()
     _save(fig, "uncertainty_coverage_reliability.png")
+
+
+def make_uncertainty_calibration_regimes() -> None:
+    """Execute reliability_curve for sharp, calibrated, and broad scales."""
+    from pycsamt.ai.validation import reliability_curve
+
+    rng = np.random.default_rng(8128)
+    truth = rng.normal(size=(5000, 5))
+    mean = np.zeros_like(truth)
+    levels = np.array([0.50, 0.68, 0.80, 0.90, 0.95, 0.99])
+    regimes = {
+        "too narrow (sigma=0.55)": np.full_like(truth, 0.55),
+        "calibrated (sigma=1.00)": np.full_like(truth, 1.00),
+        "too broad (sigma=1.80)": np.full_like(truth, 1.80),
+    }
+    colors = ["#dc2626", "#16a34a", "#2563eb"]
+    reports = {
+        name: reliability_curve(truth, mean, std, levels=levels, kind="l1")
+        for name, std in regimes.items()
+    }
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.0, 4.3))
+    ax_rel, ax_trade, ax_res = axes
+    ax_rel.plot([0, 1], [0, 1], "--", color="#111827", label="ideal")
+    for (name, report), color in zip(reports.items(), colors):
+        ax_rel.plot(report.levels, report.coverage, "o-", color=color, label=name)
+    ax_rel.set(xlabel="Nominal coverage", ylabel="Empirical coverage",
+               title="Reliability distinguishes scale errors", xlim=(0.45, 1.0),
+               ylim=(0.35, 1.02))
+    ax_rel.legend(frameon=False, fontsize=8)
+    ax_rel.grid(alpha=0.22)
+
+    names = list(reports)
+    calibration_error = [reports[name].calibration.value for name in names]
+    sharpness = [reports[name].sharpness for name in names]
+    xpos = np.arange(3)
+    width = 0.36
+    ax_trade.bar(xpos - width / 2, calibration_error, width, color="#f15a29",
+                 label="mean |coverage - nominal|")
+    ax_trade.bar(xpos + width / 2, sharpness, width, color="#60a5fa",
+                 label="sharpness (mean sigma)")
+    ax_trade.set_xticks(xpos, ["narrow", "calibrated", "broad"], rotation=18)
+    ax_trade.set(ylabel="Metric value", title="Sharpness alone rewards overconfidence")
+    ax_trade.legend(frameon=False, fontsize=8)
+    ax_trade.grid(alpha=0.22, axis="y")
+
+    absolute_error = np.abs(truth - mean).ravel()
+    for (name, std), color in zip(regimes.items(), colors):
+        z = np.sort(absolute_error / std.ravel())
+        probability = np.arange(1, len(z) + 1) / len(z)
+        ax_res.plot(z, probability, color=color, label=name)
+    ax_res.axvline(1.96, color="#111827", ls="--", label="Gaussian 95% z=1.96")
+    ax_res.set(xlabel=r"Absolute standardized residual $|y-\mu|/\sigma$",
+               ylabel="Empirical cumulative fraction",
+               title="Why the same errors imply different coverage", xlim=(0, 4))
+    ax_res.legend(frameon=False, fontsize=7.5)
+    ax_res.grid(alpha=0.22)
+    fig.suptitle("Executed Gaussian uncertainty audit: calibration and sharpness are paired")
+    fig.tight_layout()
+    _save(fig, "uncertainty_calibration_regimes.png")
+    print(
+        "uncertainty regimes:",
+        {name: {"mace": round(report.calibration.value, 4),
+                "sharpness": round(report.sharpness, 2),
+                "coverage_95": round(float(report.coverage[-2]), 4)}
+         for name, report in reports.items()},
+    )
+
+
+def make_uncertainty_depth_propagation() -> None:
+    """Propagate correlated thickness draws before taking depth quantiles."""
+    rng = np.random.default_rng(2718)
+    mean_log_h = np.log10([110.0, 180.0, 290.0, 430.0])
+    sigma = np.array([0.10, 0.12, 0.14, 0.16])
+    correlation = np.array(
+        [[1.00, -0.55, 0.20, 0.00],
+         [-0.55, 1.00, -0.45, 0.15],
+         [0.20, -0.45, 1.00, -0.35],
+         [0.00, 0.15, -0.35, 1.00]]
+    )
+    covariance = correlation * np.outer(sigma, sigma)
+    log_h = rng.multivariate_normal(mean_log_h, covariance, size=6000)
+    thickness = 10.0 ** log_h
+    interface_depth = np.cumsum(thickness, axis=1)
+    probability = np.array([0.05, 0.50, 0.95])
+    correct = np.quantile(interface_depth, probability, axis=0)
+    wrong = np.cumsum(np.quantile(thickness, probability, axis=0), axis=1)
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.0, 4.4))
+    image = axes[0].imshow(correlation, vmin=-1, vmax=1, cmap="coolwarm")
+    axes[0].set_xticks(range(4), ["h1", "h2", "h3", "h4"])
+    axes[0].set_yticks(range(4), ["h1", "h2", "h3", "h4"])
+    axes[0].set_title("Declared log-thickness correlation")
+    fig.colorbar(image, ax=axes[0], label="correlation")
+
+    interface = np.arange(1, 5)
+    axes[1].fill_between(interface, correct[0], correct[2], color="#93c5fd",
+                         alpha=0.65, label="draws -> cumsum -> quantiles")
+    axes[1].plot(interface, correct[1], "o-", color="#1d4ed8", label="median")
+    axes[1].plot(interface, wrong[0], "--", color="#dc2626")
+    axes[1].plot(interface, wrong[2], "--", color="#dc2626",
+                 label="quantiles -> cumsum (wrong)")
+    axes[1].set(xlabel="Interface", ylabel="Cumulative depth (m)",
+                title="Nonlinear propagation changes the band")
+    axes[1].set_xticks(interface)
+    axes[1].legend(frameon=False, fontsize=7.5)
+    axes[1].grid(alpha=0.22)
+
+    axes[2].hist(interface_depth[:, -1], bins=45, density=True,
+                 color="#bfdbfe", edgecolor="white")
+    for value, label, color in zip(correct[:, -1], ["5%", "median", "95%"],
+                                   ["#2563eb", "#111827", "#2563eb"]):
+        axes[2].axvline(value, color=color, ls="--" if label != "median" else "-",
+                        label=f"{label}: {value:.0f} m")
+    axes[2].set(xlabel="Fourth-interface depth (m)", ylabel="Density",
+                title="Preserve the propagated draw distribution")
+    axes[2].legend(frameon=False, fontsize=8)
+    axes[2].grid(alpha=0.18)
+    fig.suptitle("Executed propagation of correlated layer-thickness uncertainty")
+    fig.tight_layout()
+    _save(fig, "uncertainty_depth_propagation.png")
+    print(
+        "depth propagation:",
+        {"correct_final_m": np.round(correct[:, -1], 1).tolist(),
+         "wrong_final_m": np.round(wrong[:, -1], 1).tolist()},
+    )
 
 
 def make_agents_execution_contract() -> None:
@@ -1492,6 +2711,578 @@ def make_pinn2d_willy_topography_audit() -> None:
     _save(fig, "pinn2d_willy_topography_audit.png")
 
 
+def make_pinn2d_input_diagnostic() -> None:
+    """Inspect WILLY frequency support and TE/TM disagreement before fitting."""
+    line = PROJECT_ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT"
+    observations = sites_to_obs_2d(line, comp_te="xy", comp_tm="yx")
+    frequency = np.logspace(
+        np.log10(min(o.freq.min() for o in observations)),
+        np.log10(max(o.freq.max() for o in observations)),
+        48,
+    )
+
+    def interpolate(obs, values):
+        order = np.argsort(obs.freq)
+        result = np.interp(
+            np.log10(frequency), np.log10(obs.freq[order]), values[order]
+        )
+        outside = ((frequency < obs.freq.min() * (1.0 - 1e-12)) |
+                   (frequency > obs.freq.max() * (1.0 + 1e-12)))
+        result[outside] = np.nan
+        return result
+
+    te_rho = np.vstack(
+        [interpolate(o, np.log10(o.rho_te)) for o in observations]
+    )
+    tm_rho = np.vstack(
+        [interpolate(o, np.log10(o.rho_tm)) for o in observations]
+    )
+    te_phase = np.vstack([interpolate(o, o.phase_te) for o in observations])
+    tm_phase = np.vstack([interpolate(o, o.phase_tm) for o in observations])
+    valid = np.isfinite(te_rho) & np.isfinite(te_phase)
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.2, 8.0))
+    ax_coverage, ax_rho, ax_phase, ax_count = axes.ravel()
+    coverage = ax_coverage.pcolormesh(
+        frequency, np.arange(len(observations)), valid,
+        cmap="Blues", shading="nearest", vmin=0, vmax=1,
+    )
+    ax_coverage.set_xscale("log")
+    ax_coverage.set(
+        xlabel="Frequency (Hz)", ylabel="Station index",
+        title="Common-grid support (blue = valid)",
+    )
+
+    ax_rho.plot(
+        frequency, np.nanmedian(te_rho, axis=0), color="#2563eb",
+        lw=2, label="TE / xy",
+    )
+    ax_rho.plot(
+        frequency, np.nanmedian(tm_rho, axis=0), color="#f15a29",
+        lw=2, label="TM / |yx|",
+    )
+    ax_rho.set_xscale("log")
+    ax_rho.set(
+        xlabel="Frequency (Hz)", ylabel=r"Median $\log_{10}\rho_a$",
+        title="Modes are not interchangeable",
+    )
+    ax_rho.grid(alpha=0.22, which="both")
+    ax_rho.legend(frameon=False)
+
+    phase_difference = te_phase - tm_phase
+    phase_image = ax_phase.pcolormesh(
+        frequency, np.arange(len(observations)),
+        phase_difference, cmap="coolwarm", shading="nearest", vmin=-180, vmax=180,
+    )
+    ax_phase.set_xscale("log")
+    ax_phase.set(
+        xlabel="Frequency (Hz)", ylabel="Station index",
+        title="TE minus TM phase (degrees)",
+    )
+    fig.colorbar(phase_image, ax=ax_phase, shrink=0.86, label="Phase difference (°)")
+
+    phase_rms = np.sqrt(np.nanmean(phase_difference**2, axis=1))
+    rho_rms = np.sqrt(np.nanmean((te_rho - tm_rho) ** 2, axis=1))
+    station_index = np.arange(len(observations))
+    ax_count.bar(station_index, phase_rms, color="#3e65b0", alpha=0.78)
+    ax_count.set(
+        xlabel="Station index", ylabel="TE–TM phase RMS (degrees)",
+        title="Mode disagreement by station",
+    )
+    ax_rho_rms = ax_count.twinx()
+    ax_rho_rms.plot(station_index, rho_rms, color="#f15a29", marker="o", ms=3)
+    ax_rho_rms.set_ylabel(r"TE–TM $\log_{10}\rho_a$ RMS", color="#f15a29")
+    ax_count.grid(axis="y", alpha=0.22)
+    fig.suptitle("WILLY L18 inputs to PINNInverter2D — inspect before optimization")
+    fig.tight_layout()
+    _save(fig, "pinn2d_input_diagnostic.png")
+
+
+def make_pinn2d_regularization_anatomy() -> None:
+    """Visualize the separate effects of vertical and lateral roughness."""
+    stations, layers = 30, 12
+    x = np.linspace(0, 1, stations)
+    truth = np.full((stations, layers), 2.5)
+    truth[:, :3] = 2.0
+    truth[(x > 0.28) & (x < 0.68), 4:8] = 0.8
+    truth[x > 0.76, 6:10] = 3.5
+    rng = np.random.default_rng(27)
+    proxy = truth + rng.normal(0, 0.42, truth.shape)
+
+    dz = np.eye(layers, k=1) - np.eye(layers)
+    dz = dz[:-1]
+    dx = np.eye(stations, k=1) - np.eye(stations)
+    dx = dx[:-1]
+    identity = np.eye(stations * layers)
+    pz = np.kron(np.eye(stations), dz.T @ dz)
+    px = np.kron(dx.T @ dx, np.eye(layers))
+
+    settings = [(0.0, 0.0), (3.0, 0.0), (0.0, 3.0), (1.2, 1.2)]
+    estimates = []
+    diagnostics = []
+    vector = proxy.ravel()
+    for lam_z, lam_x in settings:
+        estimate = np.linalg.solve(identity + lam_z * pz + lam_x * px, vector)
+        estimate = estimate.reshape(stations, layers)
+        estimates.append(estimate)
+        data = np.mean((estimate - proxy) ** 2)
+        vertical = np.mean(np.diff(estimate, axis=1) ** 2)
+        lateral = np.mean(np.diff(estimate, axis=0) ** 2)
+        diagnostics.append((data, vertical + lateral))
+
+    fig, axes = plt.subplots(2, 3, figsize=(12.8, 7.7))
+    panels = [truth, proxy, estimates[1], estimates[2], estimates[3]]
+    titles = [
+        "Known log-resistivity", "Noisy data-fit proxy",
+        r"Vertical only: $\lambda_z=3$", r"Lateral only: $\lambda_x=3$",
+        r"Balanced: $\lambda_z=\lambda_x=1.2$",
+    ]
+    for ax, values, title in zip(axes.ravel()[:5], panels, titles):
+        image = ax.imshow(
+            values.T, origin="upper", aspect="auto", cmap="turbo",
+            vmin=0.5, vmax=3.8,
+        )
+        ax.set(title=title, xlabel="Station index", ylabel="Layer index")
+
+    ax_trade = axes.ravel()[5]
+    for (data, roughness), (lam_z, lam_x) in zip(diagnostics, settings):
+        ax_trade.scatter(data, roughness, s=65)
+        ax_trade.annotate(
+            f"({lam_z:g}, {lam_x:g})", (data, roughness),
+            xytext=(5, 5), textcoords="offset points", fontsize=8,
+        )
+    ax_trade.set(
+        xlabel="Data-proxy MSE", ylabel="Vertical + lateral roughness",
+        title=r"Trade-off labels: $(\lambda_z,\lambda_x)$",
+    )
+    ax_trade.grid(alpha=0.22)
+    color_axis = fig.add_axes([0.92, 0.18, 0.012, 0.64])
+    fig.colorbar(image, cax=color_axis, label=r"$\log_{10}\rho$ ($\Omega$ m)")
+    fig.suptitle("Regularization changes what the pseudo-2-D model is allowed to express")
+    fig.subplots_adjust(left=0.07, right=0.89, bottom=0.09, top=0.88, hspace=0.36, wspace=0.30)
+    _save(fig, "pinn2d_regularization_anatomy.png")
+
+
+def make_reporting_validation_dashboard() -> None:
+    """Build one dashboard entirely from structured validation reports."""
+    rng = np.random.default_rng(73)
+
+    depth = np.linspace(0, 1800, 24)
+    x = np.linspace(0, 1, 32)
+    truth = 2.5 + 0.8 * np.exp(-((depth[:, None] - 850) / 260) ** 2)
+    truth = truth - 1.5 * np.exp(-((x[None, :] - 0.55) / 0.16) ** 2) * np.exp(
+        -((depth[:, None] - 650) / 330) ** 2
+    )
+    prediction = truth + rng.normal(0, 0.08 + depth[:, None] / 9000, truth.shape)
+    recovery = recovery_report(prediction, truth, depth_axis=0)
+
+    n_station, n_frequency, n_component = 12, 18, 2
+    observed = rng.normal(size=(n_station, n_frequency, n_component)) + 1j * rng.normal(
+        size=(n_station, n_frequency, n_component)
+    )
+    error = np.full(observed.shape, 0.12)
+    bias = np.linspace(0.02, 0.22, n_station)[:, None, None]
+    predicted = observed + bias + 1j * rng.normal(0, 0.06, observed.shape)
+    residual = response_residual_report(
+        predicted, observed, errors=error, kind="l2",
+        station_names=[f"S{i:02d}" for i in range(n_station)],
+        frequencies_hz=np.logspace(3, -1, n_frequency),
+        components=("zxy", "zyx"),
+    )
+
+    reference = rng.normal(0, 1, (160, 2))
+    field = np.vstack([rng.normal(0, 0.8, (8, 2)), [[3.4, 3.0], [-3.2, 2.8]]])
+    ood = flag_out_of_distribution(
+        field, reference, method="mahalanobis", quantile=0.95
+    )
+
+    y_true = rng.normal(size=500)
+    y_mean = y_true + rng.normal(0, 0.45, y_true.shape)
+    y_std = np.full(y_true.shape, 0.38)
+    calibration = reliability_curve(y_true, y_mean, y_std)
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.2, 8.0))
+    ax_depth, ax_residual, ax_ood, ax_calibration = axes.ravel()
+    ax_depth.plot(recovery.depth_rmse, depth, color="#f15a29", lw=2, label="RMSE")
+    ax_depth.plot(recovery.depth_mae, depth, color="#3e65b0", lw=2, label="MAE")
+    ax_depth.invert_yaxis()
+    ax_depth.set(
+        xlabel=r"Log-resistivity error ($\log_{10}\Omega$ m)",
+        ylabel="Depth (m)", title="Synthetic recovery by depth",
+    )
+    ax_depth.grid(alpha=0.22)
+    ax_depth.legend(frameon=False)
+
+    ax_residual.bar(
+        np.arange(n_station), residual.by_station,
+        color="#3e65b0", alpha=0.82,
+    )
+    ax_residual.set(
+        xlabel="Station index", ylabel="Mean squared normalized residual",
+        title="Response residuals retain axis structure",
+    )
+    ax_residual.grid(axis="y", alpha=0.22)
+
+    colors = np.where(ood.flagged, "#f15a29", "#3e65b0")
+    ax_ood.bar(np.arange(len(ood.scores)), ood.scores, color=colors)
+    ax_ood.axhline(
+        ood.threshold, color="#111827", ls="--", lw=1.4,
+        label=f"95% reference threshold = {ood.threshold:.2f}",
+    )
+    ax_ood.set(
+        xlabel="Field sample", ylabel="Mahalanobis score",
+        title="Domain gate preserves rejected rows",
+    )
+    ax_ood.legend(frameon=False, fontsize=8)
+    ax_ood.grid(axis="y", alpha=0.22)
+
+    ax_calibration.plot([0, 1], [0, 1], color="#111827", ls="--", label="ideal")
+    ax_calibration.plot(
+        calibration.levels, calibration.coverage,
+        color="#f15a29", marker="o", lw=2, label="empirical",
+    )
+    ax_calibration.set(
+        xlim=(0.45, 1.0), ylim=(0.45, 1.0),
+        xlabel="Nominal coverage", ylabel="Empirical coverage",
+        title=f"Calibration and sharpness ({calibration.sharpness:.2f})",
+    )
+    ax_calibration.grid(alpha=0.22)
+    ax_calibration.legend(frameon=False)
+
+    fig.suptitle("Machine-readable evidence behind an AI inversion report")
+    fig.tight_layout()
+    _save(fig, "reporting_validation_dashboard.png")
+
+
+def make_scientific_validation_anatomy() -> None:
+    """Compare the four independent validation views on one synthetic audit."""
+    from scipy.ndimage import gaussian_filter
+
+    rng = np.random.default_rng(314)
+    nz, nx = 28, 48
+    z = np.linspace(0.0, 1.0, nz)[:, None]
+    x = np.linspace(-1.0, 1.0, nx)[None, :]
+    truth = 2.25 + 0.55 * z
+    truth = truth - 1.15 * np.exp(-((x + 0.20) / 0.24) ** 2
+                                  - ((z - 0.58) / 0.16) ** 2)
+    truth = truth + 0.45 * np.exp(-((x - 0.55) / 0.20) ** 2
+                                  - ((z - 0.30) / 0.12) ** 2)
+    prediction = gaussian_filter(truth, sigma=(1.1, 1.6))
+    prediction += rng.normal(0.0, 0.035, truth.shape)
+    prediction[z[:, 0] > 0.78] += 0.18
+    recovery = recovery_report(prediction, truth, ssim_window=7)
+
+    n_station, n_frequency = 14, 20
+    frequency = np.logspace(-1, 3, n_frequency)
+    observed = np.ones((n_station, n_frequency, 2), dtype=complex) * (70 + 45j)
+    predicted = observed.copy()
+    predicted[8:12, 6:14, 1] += 9 + 7j
+    predicted[:, :3, :] += 3 + 2j
+    error = np.full(observed.shape, 5.0)
+    residual = response_residual_report(
+        predicted, observed, errors=error, kind="l2",
+        station_names=[f"S{i + 1:02d}" for i in range(n_station)],
+        frequencies_hz=frequency, components=("zxy", "zyx"),
+    )
+    _finish_scientific_validation_anatomy(
+        rng, nz, n_station, frequency, observed, predicted, error,
+        recovery, residual,
+    )
+
+
+def make_validation_aggregation_trap() -> None:
+    """Show why equal global RMSE does not imply equal earth recovery."""
+    from scipy.ndimage import gaussian_filter
+
+    from pycsamt.ai.validation import recovery_report
+
+    rng = np.random.default_rng(90210)
+    nz, nx = 42, 72
+    z = np.linspace(0, 1, nz)[:, None]
+    x = np.linspace(-1, 1, nx)[None, :]
+    truth = 2.7 + 0.35 * z + 0.10 * np.sin(2 * np.pi * x)
+    conductor = ((x + 0.18) / 0.34) ** 2 + ((z - 0.43) / 0.17) ** 2 <= 1
+    truth = np.where(conductor, 1.35, truth)
+
+    shifted_mask = ((x + 0.04) / 0.34) ** 2 + ((z - 0.50) / 0.17) ** 2 <= 1
+    localized = np.where(shifted_mask, 1.35, 2.7 + 0.35 * z + 0.10 * np.sin(2 * np.pi * x))
+    localized += gaussian_filter(rng.normal(scale=0.015, size=(nz, nx)), 1.2)
+    localized_rmse = float(np.sqrt(np.mean((localized - truth) ** 2)))
+
+    diffuse_noise = gaussian_filter(rng.normal(size=(nz, nx)), sigma=1.6)
+    diffuse_noise -= diffuse_noise.mean()
+    diffuse_noise *= localized_rmse / np.sqrt(np.mean(diffuse_noise**2))
+    diffuse = truth + diffuse_noise
+
+    report_local = recovery_report(localized, truth)
+    report_diffuse = recovery_report(diffuse, truth)
+    depth = np.linspace(0, 1800, nz)
+
+    fig, axes = plt.subplots(2, 3, figsize=(13.0, 7.2))
+    extent = (0, 3.5, 1.8, 0)
+    panels = [truth, localized, diffuse]
+    titles = ["Known truth", "Shifted conductor", "Diffuse correlated error"]
+    for ax, panel, title in zip(axes[0], panels, titles):
+        image = ax.imshow(panel, aspect="auto", extent=extent, cmap="turbo",
+                          vmin=1.2, vmax=3.2)
+        ax.set(title=title, xlabel="Distance (km)", ylabel="Depth (km)")
+    fig.colorbar(image, ax=axes[0, 2], label=r"$\log_{10}\rho$ ($\Omega\cdot$m)",
+                 fraction=0.046, pad=0.04)
+
+    error_local = localized - truth
+    error_diffuse = diffuse - truth
+    vmax = max(np.max(np.abs(error_local)), np.max(np.abs(error_diffuse)))
+    axes[1, 0].imshow(error_local, aspect="auto", extent=extent, cmap="coolwarm",
+                      vmin=-vmax, vmax=vmax)
+    axes[1, 0].set(title="Localized signed error", xlabel="Distance (km)",
+                   ylabel="Depth (km)")
+    axes[1, 1].imshow(error_diffuse, aspect="auto", extent=extent, cmap="coolwarm",
+                      vmin=-vmax, vmax=vmax)
+    axes[1, 1].set(title="Diffuse signed error", xlabel="Distance (km)",
+                   ylabel="Depth (km)")
+    axes[1, 2].plot(report_local.depth_rmse, depth, color="#dc2626",
+                    label=f"shifted, SSIM={report_local.ssim:.3f}")
+    axes[1, 2].plot(report_diffuse.depth_rmse, depth, color="#2563eb",
+                    label=f"diffuse, SSIM={report_diffuse.ssim:.3f}")
+    axes[1, 2].invert_yaxis()
+    axes[1, 2].set(xlabel=r"Depth-row RMSE in $\log_{10}\rho$", ylabel="Depth (m)",
+                   title="The error location changes the verdict")
+    axes[1, 2].legend(frameon=False, fontsize=8)
+    axes[1, 2].grid(alpha=0.22)
+    fig.suptitle("Equal global RMSE, unequal geological recovery")
+    fig.subplots_adjust(left=0.06, right=0.94, bottom=0.08, top=0.88,
+                        wspace=0.28, hspace=0.30)
+    _save(fig, "validation_aggregation_trap.png")
+    print(
+        "validation aggregation:",
+        {"shifted": {"rmse": report_local.rmse, "mae": report_local.mae,
+                     "ssim": report_local.ssim},
+         "diffuse": {"rmse": report_diffuse.rmse, "mae": report_diffuse.mae,
+                     "ssim": report_diffuse.ssim}},
+    )
+
+
+def make_validation_paired_bootstrap() -> None:
+    """Compare row and parent-survey bootstrap uncertainty for a baseline delta."""
+    rng = np.random.default_rng(440)
+    n_survey, rows_per_survey = 18, 8
+    survey_effect = rng.normal(0.0, 0.055, n_survey)
+    improvement = 0.035 + survey_effect
+    row_delta = np.repeat(improvement, rows_per_survey)
+    row_delta += rng.normal(0.0, 0.012, row_delta.size)
+    survey_id = np.repeat(np.arange(n_survey), rows_per_survey)
+    survey_delta = np.array([row_delta[survey_id == i].mean() for i in range(n_survey)])
+
+    n_boot = 8000
+    row_boot = row_delta[rng.integers(0, len(row_delta), (n_boot, len(row_delta)))].mean(1)
+    group_boot = survey_delta[
+        rng.integers(0, n_survey, (n_boot, n_survey))
+    ].mean(1)
+    row_ci = np.quantile(row_boot, [0.025, 0.975])
+    group_ci = np.quantile(group_boot, [0.025, 0.975])
+
+    fig, axes = plt.subplots(1, 3, figsize=(12.6, 4.2))
+    axes[0].bar(np.arange(1, n_survey + 1), survey_delta,
+                color=np.where(survey_delta >= 0, "#2563eb", "#dc2626"))
+    axes[0].axhline(0, color="#111827", lw=1)
+    axes[0].set(xlabel="Parent survey", ylabel="Baseline RMSE - AI RMSE",
+                title="Improvement is heterogeneous")
+    axes[0].grid(alpha=0.22, axis="y")
+
+    axes[1].hist(row_boot, bins=55, density=True, alpha=0.62, color="#f59e0b",
+                 label="resample 144 rows")
+    axes[1].hist(group_boot, bins=55, density=True, alpha=0.55, color="#2563eb",
+                 label="resample 18 surveys")
+    axes[1].axvline(0, color="#111827", ls="--")
+    axes[1].set(xlabel="Mean paired RMSE improvement", ylabel="Bootstrap density",
+                title="Rows understate sampling uncertainty")
+    axes[1].legend(frameon=False, fontsize=8)
+    axes[1].grid(alpha=0.2)
+
+    means = [row_boot.mean(), group_boot.mean()]
+    lows = [row_ci[0], group_ci[0]]
+    highs = [row_ci[1], group_ci[1]]
+    axes[2].errorbar([0, 1], means,
+                     yerr=[np.array(means) - lows, highs - np.array(means)],
+                     fmt="o", color="#1d4ed8", capsize=6, lw=2)
+    axes[2].axhline(0, color="#dc2626", ls="--", label="no improvement")
+    axes[2].set_xticks([0, 1], ["row bootstrap", "survey bootstrap"], rotation=15)
+    axes[2].set(ylabel="Mean improvement with 95% interval",
+                title="Inference follows the independent unit")
+    axes[2].legend(frameon=False, fontsize=8)
+    axes[2].grid(alpha=0.22, axis="y")
+    fig.suptitle("Paired baseline validation must preserve parent-survey dependence")
+    fig.tight_layout()
+    _save(fig, "validation_paired_bootstrap.png")
+    print(
+        "validation bootstrap:",
+        {"mean": float(group_boot.mean()),
+         "row_ci": np.round(row_ci, 4).tolist(),
+         "survey_ci": np.round(group_ci, 4).tolist(),
+         "surveys_improved": int(np.sum(survey_delta > 0)),
+         "n_surveys": n_survey},
+    )
+
+
+def _finish_scientific_validation_anatomy(
+    rng, nz, n_station, frequency, observed, predicted, error,
+    recovery, residual,
+) -> None:
+    residual_cells = np.mean(np.abs((predicted - observed) / error) ** 2, axis=2).T
+
+    true_u = rng.normal(size=1800)
+    levels = np.linspace(0.1, 0.99, 16)
+    calibrated = reliability_curve(true_u, np.zeros_like(true_u),
+                                   np.ones_like(true_u), levels=levels)
+    narrow = reliability_curve(true_u, np.zeros_like(true_u),
+                               np.full_like(true_u, 0.55), levels=levels)
+
+    reference = rng.multivariate_normal([0.0, 0.0], [[1.0, 0.55], [0.55, 0.8]], 260)
+    field = np.vstack([rng.multivariate_normal([0.1, -0.1], [[0.8, 0.4], [0.4, 0.7]], 24),
+                       [[3.2, 3.0], [-3.1, 1.8], [2.8, -2.5]]])
+    ood = flag_out_of_distribution(field, reference, quantile=0.975)
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.0, 8.6))
+    ax = axes[0, 0]
+    depth = np.linspace(0, 2.1, nz)
+    ax.plot(recovery.depth_rmse, depth, "o-", color="#2563eb", label="RMSE")
+    ax.plot(recovery.depth_mae, depth, "s-", color="#f15a29", label="MAE")
+    ax.invert_yaxis()
+    ax.set(xlabel=r"Error in $\log_{10}\rho$", ylabel="Depth (km)",
+           title=f"Recovery: RMSE={recovery.rmse:.3f}, SSIM={recovery.ssim:.3f}")
+    ax.grid(alpha=0.22)
+    ax.legend(frameon=False)
+
+    ax = axes[0, 1]
+    image = ax.imshow(residual_cells, origin="lower", aspect="auto",
+                      extent=(0.5, n_station + 0.5, np.log10(frequency[0]),
+                              np.log10(frequency[-1])), cmap="magma")
+    ax.set(xlabel="Station", ylabel=r"$\log_{10}$ frequency (Hz)",
+           title=f"Response: mean normalized squared residual={residual.overall.value:.2f}")
+    fig.colorbar(image, ax=ax, label="component-mean squared residual")
+
+    ax = axes[1, 0]
+    ax.plot(levels, levels, "k--", label="ideal")
+    ax.plot(calibrated.levels, calibrated.coverage, "o-", color="#2563eb",
+            label=f"calibrated (sharpness={calibrated.sharpness:.2f})")
+    ax.plot(narrow.levels, narrow.coverage, "s-", color="#dc2626",
+            label=f"overconfident (sharpness={narrow.sharpness:.2f})")
+    ax.set(xlim=(0, 1), ylim=(0, 1), xlabel="Nominal coverage",
+           ylabel="Empirical coverage", title="Uncertainty: coverage before sharpness")
+    ax.grid(alpha=0.22)
+    ax.legend(frameon=False, fontsize=8)
+
+    ax = axes[1, 1]
+    ax.scatter(reference[:, 0], reference[:, 1], s=14, alpha=0.25,
+               color="#64748b", label="training reference")
+    colors = np.where(ood.flagged, "#dc2626", "#16a34a")
+    ax.scatter(field[:, 0], field[:, 1], s=45, c=colors, edgecolor="white",
+               linewidth=0.5, label="field samples")
+    ax.set(xlabel="Standardized feature 1", ylabel="Standardized feature 2",
+           title=f"Domain support: {ood.flagged.sum()}/{len(field)} flagged")
+    ax.grid(alpha=0.22)
+    ax.legend(frameon=False, fontsize=8)
+
+    fig.suptitle("Four diagnostics answer four different scientific questions", fontsize=13)
+    fig.tight_layout()
+    _save(fig, "scientific_validation_anatomy.png")
+    print(
+        "validation anatomy:",
+        {"recovery_rmse": recovery.rmse, "recovery_ssim": recovery.ssim,
+         "response_loss": residual.overall.value,
+         "calibration_mace": calibrated.calibration.value,
+         "overconfident_mace": narrow.calibration.value,
+         "ood_flagged": int(ood.flagged.sum()), "ood_total": len(field)},
+    )
+
+
+def make_validation_stress_envelope() -> None:
+    """Execute all validation reports across one declared stress axis."""
+    from scipy.ndimage import gaussian_filter
+
+    rng = np.random.default_rng(1618)
+    severity = np.linspace(0.0, 1.5, 13)
+    nz, nx = 24, 36
+    z = np.linspace(0, 1, nz)[:, None]
+    x = np.linspace(-1, 1, nx)[None, :]
+    truth = 2.4 + 0.45 * z - 1.0 * np.exp(
+        -((x + 0.15) / 0.24) ** 2 - ((z - 0.52) / 0.17) ** 2
+    )
+    observed = np.ones((10, 18, 2), dtype=complex) * (60.0 + 35.0j)
+    errors = np.full(observed.shape, 5.0)
+    reference = rng.normal(size=(500, 4))
+
+    recovery_rmse, response_loss, coverage, flagged = [], [], [], []
+    for value in severity:
+        prediction = gaussian_filter(truth, sigma=(0.35 + value, 0.5 + value))
+        prediction = prediction + value * 0.13 * z
+        recovery_rmse.append(recovery_report(prediction, truth).rmse)
+
+        response_prediction = observed + value * (4.0 + 2.5j)
+        report = response_residual_report(
+            response_prediction, observed, errors=errors, kind="l2"
+        )
+        response_loss.append(report.overall.value)
+
+        true_u = rng.normal(size=2400)
+        mean_u = true_u + rng.normal(scale=0.25 + 0.24 * value, size=true_u.shape)
+        std_u = np.full_like(true_u, 0.32)
+        curve = reliability_curve(true_u, mean_u, std_u, levels=[0.90])
+        coverage.append(curve.coverage[0])
+
+        field = rng.normal(loc=value * 0.95, size=(120, 4))
+        domain = flag_out_of_distribution(
+            field, reference, method="mahalanobis", quantile=0.975
+        )
+        flagged.append(domain.fraction_flagged)
+
+    recovery_rmse = np.asarray(recovery_rmse)
+    response_loss = np.asarray(response_loss)
+    coverage = np.asarray(coverage)
+    flagged = np.asarray(flagged)
+    thresholds = {"recovery": 0.10, "response": 1.0,
+                  "coverage_low": 0.85, "ood_fraction": 0.10}
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.2, 7.5), sharex=True)
+    panels = [
+        (recovery_rmse, thresholds["recovery"], "Synthetic recovery RMSE",
+         r"RMSE in $\log_{10}\rho$", False),
+        (response_loss, thresholds["response"], "Normalized response loss",
+         "Mean squared normalized residual", False),
+        (coverage, thresholds["coverage_low"], "Nominal 90% interval coverage",
+         "Empirical coverage", True),
+        (flagged, thresholds["ood_fraction"], "Domain-support failures",
+         "Fraction flagged OOD", False),
+    ]
+    for ax, (values, gate, title, ylabel, pass_above) in zip(axes.flat, panels):
+        ax.plot(severity, values, "o-", color="#2563eb", lw=2)
+        ax.axhline(gate, color="#dc2626", ls="--", label=f"gate={gate:g}")
+        failed = values < gate if pass_above else values > gate
+        ax.scatter(severity[failed], values[failed], color="#dc2626", zorder=4,
+                   label="failed")
+        ax.set(title=title, ylabel=ylabel)
+        ax.grid(alpha=0.22)
+        ax.legend(frameon=False, fontsize=8)
+    for ax in axes[-1]:
+        ax.set_xlabel("Declared stress severity")
+    fig.suptitle("Executed challenge sweep: the operating envelope ends at the first mandatory gate")
+    fig.tight_layout()
+    _save(fig, "validation_stress_envelope.png")
+
+    first_failures = {}
+    for name, values, gate, pass_above in [
+        ("recovery", recovery_rmse, thresholds["recovery"], False),
+        ("response", response_loss, thresholds["response"], False),
+        ("coverage", coverage, thresholds["coverage_low"], True),
+        ("ood", flagged, thresholds["ood_fraction"], False),
+    ]:
+        failed = values < gate if pass_above else values > gate
+        first_failures[name] = (
+            None if not np.any(failed) else float(severity[np.flatnonzero(failed)[0]])
+        )
+    print("validation stress first failures:", first_failures)
+
+
 def make_validation_gate_dashboard() -> None:
     frequency = np.logspace(np.log10(1.01), 4, 24)
     samples = generate_dataset(
@@ -1660,6 +3451,254 @@ def make_gcn_3d_context() -> None:
     _save(fig, "gcn_3d_context.png")
 
 
+def make_domain_gap_corruption_diagnostic() -> None:
+    """Show signal corruption, missingness, and distribution diagnostics."""
+    rng = np.random.default_rng(8)
+    n_station, n_frequency = 18, 28
+    frequencies = np.logspace(3.5, -1.0, n_frequency)
+    station_x = np.linspace(0.0, 5100.0, n_station)
+    log_f = np.log10(frequencies)[None, :]
+    lateral = np.sin(station_x[:, None] / 850.0)
+    log_mag = 1.85 - 0.22 * log_f + 0.18 * lateral
+    phase = 43.0 + 8.0 * np.tanh(log_f - 1.0) + 5.0 * lateral
+    impedance = 10.0**log_mag * np.exp(1j * np.deg2rad(phase))
+    clean = SurveyData(
+        impedance[:, :, None],
+        frequencies,
+        [f"S{i:02d}" for i in range(n_station)],
+        ["xy"],
+        np.column_stack([station_x, np.zeros(n_station)]),
+    )
+    config = CorruptionConfig(
+        noise_level_range=(0.04, 0.12),
+        error_floor_fraction=0.03,
+        static_shift_log10_sigma=0.12,
+        distortion_gain_log10_sigma=0.06,
+        distortion_twist_deg_sigma=4.0,
+        station_dropout_rate=0.06,
+        frequency_dropout_rate=0.04,
+        random_dropout_rate=0.06,
+        outlier_rate=0.025,
+        coordinate_sigma_m=8.0,
+    )
+    corrupted, _ = apply_corruption_suite(clean, config=config, seed=19)
+
+    field_like_z = np.array(corrupted.impedance)
+    valid = np.isfinite(field_like_z)
+    field_like_z[valid] *= np.exp(
+        1j * np.deg2rad(rng.normal(6.0, 4.0, valid.sum()))
+    )
+    field_like = SurveyData(
+        field_like_z,
+        frequencies,
+        clean.station_names,
+        clean.components,
+        clean.coordinates_m,
+        impedance_error=corrupted.impedance_error,
+    )
+    report = compare_survey_distributions(corrupted, field_like)
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.0, 7.2))
+    extent = [station_x[0] / 1000, station_x[-1] / 1000,
+              np.log10(frequencies[-1]), np.log10(frequencies[0])]
+    panels = [
+        (np.log10(np.abs(clean.impedance[:, :, 0])).T, "Clean log$_{10}|Z|$"),
+        (np.log10(np.abs(corrupted.impedance[:, :, 0])).T,
+         "Corrupted log$_{10}|Z|$ (white = dropout)"),
+    ]
+    for ax, (values, title) in zip(axes[0], panels):
+        image = ax.imshow(
+            values,
+            origin="lower",
+            aspect="auto",
+            extent=extent,
+            cmap="viridis",
+            vmin=1.0,
+            vmax=2.8,
+        )
+        ax.set_title(title)
+        ax.set_xlabel("Profile distance (km)")
+        ax.set_ylabel("log$_{10}$ frequency (Hz)")
+        fig.colorbar(image, ax=ax, label="log$_{10}|Z|$")
+
+    feature_specs = [
+        ("log_impedance_magnitude", r"$\log_{10}|Z|$"),
+        ("phase_deg", "Phase (degrees)"),
+    ]
+    for ax, (feature, label) in zip(axes[1], feature_specs):
+        if feature == "log_impedance_magnitude":
+            sim = np.log10(np.abs(corrupted.impedance[corrupted.valid]))
+            fld = np.log10(np.abs(field_like.impedance[field_like.valid]))
+        else:
+            sim = np.angle(corrupted.impedance[corrupted.valid], deg=True)
+            fld = np.angle(field_like.impedance[field_like.valid], deg=True)
+        for values, name, color in (
+            (sim, "corrupted synthetic", "#2563eb"),
+            (fld, "field-like target", "#dc2626"),
+        ):
+            values = np.sort(values)
+            ax.step(values, np.arange(1, values.size + 1) / values.size,
+                    where="post", label=name, color=color, lw=1.8)
+        comparison = report.comparisons[feature]
+        ax.set_title(
+            f"Empirical CDF: KS = {comparison.ks_statistic:.3f}, "
+            f"mean difference = {comparison.mean_difference:.2f}"
+        )
+        ax.set_xlabel(label)
+        ax.set_ylabel("Cumulative probability")
+        ax.grid(alpha=0.25)
+        ax.legend(fontsize=8)
+
+    fig.suptitle("A domain-gap audit separates corrupted appearance from statistical match")
+    fig.tight_layout()
+    _save(fig, "domain_gap_corruption_diagnostic.png")
+
+
+def make_experiment_gate_diagnostic() -> None:
+    """Visualise pinned provenance and multi-seed gate outcomes."""
+    reference = DatasetReference("demo-v1", "a" * 64, "b" * 64, "c" * 64)
+    criteria = (
+        AcceptanceCriterion("test.nrms", "<=", 2.0),
+        AcceptanceCriterion("test.rmse", "<=", 0.50),
+        AcceptanceCriterion("test.coverage", ">=", 0.90),
+    )
+    config = ExperimentConfig(
+        "multi-seed-demo",
+        "learning_2d",
+        reference,
+        SeedPlan(42, "docs/experiments"),
+        {"architecture": "unet"},
+        {"epochs": 80},
+        {"solver": "mt2d"},
+        criteria,
+    )
+    run_ids = np.arange(1, 13)
+    nrms = np.array([1.52, 1.78, 1.91, 2.08, 1.67, 1.86,
+                     1.73, 2.16, 1.95, 1.81, 1.69, 1.88])
+    rmse = np.array([0.39, 0.44, 0.47, 0.46, 0.51, 0.43,
+                     0.41, 0.48, 0.45, 0.42, 0.38, 0.46])
+    coverage = np.array([0.93, 0.91, 0.90, 0.92, 0.94, 0.89,
+                         0.91, 0.93, 0.88, 0.92, 0.95, 0.91])
+    evaluations = [
+        config.evaluate_gate(
+            {"test.nrms": a, "test.rmse": b, "test.coverage": c}
+        )
+        for a, b, c in zip(nrms, rmse, coverage)
+    ]
+    passed = np.array([item.passed for item in evaluations])
+
+    fig = plt.figure(figsize=(11.2, 7.1))
+    grid = fig.add_gridspec(2, 1, height_ratios=[0.75, 1.8], hspace=0.32)
+    ax_flow = fig.add_subplot(grid[0])
+    ax_flow.set_axis_off()
+    labels = [
+        ("Dataset", "manifest + split +\nnormalizer hashes"),
+        ("Configuration", "model + training +\nphysics + seed plan"),
+        ("Execution", "derived run seed +\nobserved metrics"),
+        ("Decision", "all predeclared\ncriteria must pass"),
+    ]
+    xs = np.linspace(0.1, 0.9, len(labels))
+    for index, (x, (title, body)) in enumerate(zip(xs, labels)):
+        box = FancyBboxPatch(
+            (x - 0.095, 0.28), 0.19, 0.47,
+            boxstyle="round,pad=0.015", facecolor="#eff6ff",
+            edgecolor="#2563eb", linewidth=1.3,
+        )
+        ax_flow.add_patch(box)
+        ax_flow.text(x, 0.62, title, ha="center", weight="bold")
+        ax_flow.text(x, 0.43, body, ha="center", va="center", fontsize=8.5)
+        if index < len(labels) - 1:
+            ax_flow.add_patch(FancyArrowPatch(
+                (x + 0.1, 0.51), (xs[index + 1] - 0.1, 0.51),
+                arrowstyle="-|>", mutation_scale=13, color="#475569",
+            ))
+    ax_flow.set_xlim(0, 1)
+    ax_flow.set_ylim(0, 1)
+
+    subgrid = grid[1].subgridspec(3, 1, hspace=0.12)
+    series = [
+        (nrms, 2.0, "NRMS", "lower"),
+        (rmse, 0.50, "Recovery RMSE", "lower"),
+        (coverage, 0.90, "Coverage", "higher"),
+    ]
+    for row, (values, threshold, label, direction) in enumerate(series):
+        ax = fig.add_subplot(subgrid[row])
+        colors = np.where(passed, "#16a34a", "#dc2626")
+        ax.scatter(run_ids, values, c=colors, s=58, zorder=3,
+                   edgecolor="white", linewidth=0.6)
+        ax.axhline(threshold, color="#111827", ls="--", lw=1.2,
+                   label=f"threshold = {threshold:.2f}")
+        if direction == "lower":
+            ax.axhspan(threshold, max(values.max(), threshold) * 1.04,
+                       color="#fee2e2", alpha=0.45)
+        else:
+            ax.axhspan(min(values.min(), threshold) * 0.99, threshold,
+                       color="#fee2e2", alpha=0.45)
+        ax.set_ylabel(label)
+        ax.set_xlim(0.4, 12.6)
+        ax.grid(axis="x", alpha=0.2)
+        ax.legend(loc="upper right", fontsize=8)
+        if row < 2:
+            ax.tick_params(labelbottom=False)
+        else:
+            ax.set_xlabel("Independent network-seed run")
+            ax.set_xticks(run_ids)
+    fig.suptitle(
+        f"One frozen experiment, twelve seeds: {passed.sum()} complete gate passes",
+        fontsize=13,
+    )
+    fig.subplots_adjust(left=0.08, right=0.98, bottom=0.08, top=0.91)
+    _save(fig, "experiment_gate_diagnostic.png")
+
+
+def make_roadmap_capability_matrix() -> None:
+    """Show implementation maturity without conflating it with release readiness."""
+    milestones = [f"M{i}" for i in range(11)]
+    levels = [1, 1, 1, 1, 2, 2, 1, 0, -1, 2, -1]
+    labels = ["Implemented", "Verified", "Wired", "Gated", "Released"]
+    colors = ["#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa", "#2563eb"]
+
+    fig, (ax, ax_key) = plt.subplots(
+        2, 1, figsize=(11.2, 5.8), gridspec_kw={"height_ratios": [4.4, 1.0]}
+    )
+    for row, label in enumerate(labels):
+        ax.axhspan(row - 0.5, row + 0.5, color=colors[row], alpha=0.30)
+        ax.axhline(row + 0.5, color="white", lw=1.5)
+    ax.bar(
+        milestones, np.asarray(levels) + 1, width=0.68,
+        color="#2563eb", edgecolor="#1e3a8a", linewidth=0.8,
+    )
+    for index, level in enumerate(levels):
+        status = "Planned" if level < 0 else labels[level]
+        ax.text(index, max(level + 0.72, 0.18), status, ha="center", va="bottom",
+                fontsize=8, rotation=35)
+    ax.set_ylim(0, 5.55)
+    ax.set_yticks(np.arange(5) + 0.5, labels)
+    ax.set_ylabel("Highest demonstrated readiness level")
+    ax.set_title("AI inversion roadmap: evidence reached by each milestone")
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.grid(axis="x", alpha=0.12)
+
+    ax_key.set_axis_off()
+    ax_key.text(0.01, 0.72, "A milestone advances only when evidence accumulates:",
+                weight="bold", color="#0f172a")
+    stages = ["implementation", "tests/benchmarks", "workflow wiring",
+              "automatic gate", "blind release"]
+    xs = np.linspace(0.08, 0.92, len(stages))
+    for i, (x, stage) in enumerate(zip(xs, stages)):
+        ax_key.text(x, 0.28, stage, ha="center", va="center", fontsize=8.5,
+                    bbox={"boxstyle": "round,pad=0.32", "fc": colors[i],
+                          "ec": "#2563eb", "lw": 0.8})
+        if i < len(stages) - 1:
+            ax_key.add_patch(FancyArrowPatch(
+                (x + 0.075, 0.28), (xs[i + 1] - 0.075, 0.28),
+                arrowstyle="-|>", mutation_scale=11, color="#475569",
+                transform=ax_key.transAxes,
+            ))
+    fig.subplots_adjust(left=0.13, right=0.98, bottom=0.06, top=0.90, hspace=0.22)
+    _save(fig, "roadmap_capability_matrix.png")
+
+
 def main() -> None:
     make_workflow()
     make_training_distribution()
@@ -1669,21 +3708,46 @@ def main() -> None:
     make_willy_depth_support()
     make_data_contracts_normalization()
     make_forward_physics_halfspace_benchmark()
+    make_forward_physics_mesh_sensitivity()
+    make_geology_prior_diagnostic()
+    make_geology_topographic_surface()
+    make_geology_3d_composition()
+    make_inference_calibration_diagnostic()
+    make_losses_penalty_anatomy()
+    make_losses_regularization_tradeoff()
+    make_hybrid_physics_refinement_audit()
     make_dataset2d_realization_gallery()
+    make_dataset2d_response_anatomy()
     make_data_preparation_contract()
     make_data_preparation_coverage()
     make_model_selection_willy_dimension()
+    make_model_selection_graph_radius()
+    make_model_selection_tradeoff()
     make_training_executed_audit()
+    make_training_augmentation_audit()
+    make_training_trainer_controls()
     make_hybrid_paired_diagnostic()
     make_uncertainty_coverage_reliability()
+    make_uncertainty_calibration_regimes()
+    make_uncertainty_depth_propagation()
     make_agents_execution_contract()
     make_agents_executed_1d_audit()
     make_agents_architecture_comparison()
     make_agents_inv2d_willy_topography()
     make_agents_inv3d_willy_2km()
     make_pinn2d_willy_topography_audit()
+    make_pinn2d_input_diagnostic()
+    make_pinn2d_regularization_anatomy()
+    make_reporting_validation_dashboard()
+    make_scientific_validation_anatomy()
+    make_validation_aggregation_trap()
+    make_validation_paired_bootstrap()
+    make_validation_stress_envelope()
     make_validation_gate_dashboard()
     make_gcn_3d_context()
+    make_domain_gap_corruption_diagnostic()
+    make_experiment_gate_diagnostic()
+    make_roadmap_capability_matrix()
     print(f"Wrote AI inversion documentation figures to {OUT}")
 
 

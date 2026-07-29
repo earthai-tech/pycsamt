@@ -3,7 +3,8 @@
 """Research-only, small-grid 3-D MT finite-difference adapter.
 
 **Status: research-only, not for production use.** Per
-``AI-INVERSION-M6-3D-ADR.md`` (the M6 architecture-decision record),
+``docs/source/development/adr/AI-INVERSION-M6-3D-ADR.md`` (the M6
+architecture-decision record),
 an in-house 3-D Maxwell solver failed the feasibility gate for
 production training: direct sparse solves do not scale to realistic
 3-D mesh sizes (empirically confirmed there; extrapolates to tens of
@@ -430,7 +431,8 @@ class MT3DAdapter(BaseMaxwellAdapter):
         (:attr:`~pycsamt.forward.maxwell.backends.BackendCapabilities.maximum_cells`).
         A direct sparse solve becomes impractically slow well before
         typical production 3-D mesh sizes; see
-        ``AI-INVERSION-M6-3D-ADR.md``. Raise this only if you have
+        ``docs/source/development/adr/AI-INVERSION-M6-3D-ADR.md``. Raise this
+        only if you have
         confirmed the resulting solve time is acceptable for your use.
 
     Examples

@@ -17,8 +17,8 @@ criteria — without importing a machine-learning framework or
 constructing a Maxwell solver. A config object here is a record, not
 a runner.
 
-Deriving seeds without collisions
-------------------------------------
+Deriving stable, order-independent seeds
+------------------------------------------
 
 A single global ``seed=42`` sounds reproducible until two subsystems
 happen to draw from the same generator in a different order between
@@ -43,6 +43,23 @@ inputs, which is exactly what makes it useful: the same label always
 derives the same seed from the same plan, regardless of how many
 other labels were requested first or in what order.
 
+The 32-bit result is compatible with NumPy and common learning frameworks,
+but it is not a mathematical guarantee of uniqueness. If :math:`k` distinct
+labels behave like independent hash inputs, the birthday approximation gives
+
+.. math::
+   :label: eq-ai-experiments-seed-collision
+
+   P(\text{at least one collision}) \approx
+   1-\exp\!\left[-\frac{k(k-1)}{2^{33}}\right].
+
+For 100 labels this is about :math:`1.15\times10^{-6}`; for 1,000 labels it
+is about :math:`1.16\times10^{-4}`. Ordinary experiments are therefore very
+unlikely to collide, but a large sweep should derive all labels once with
+:meth:`~pycsamt.ai.experiments.config.SeedPlan.derive_many` and assert that
+the returned *values* are unique. The namespace is a domain separator, not
+extra entropy: changing it intentionally creates a different seed lineage.
+
 .. code-block:: pycon
 
    >>> from pycsamt.ai.experiments.config import SeedPlan
@@ -54,6 +71,9 @@ other labels were requested first or in what order.
    False
    >>> plan.derive("network")
    2959107669
+   >>> children = plan.derive_many(["geology", "network", "shuffle"])
+   >>> len(children) == len(set(children.values()))
+   True
 
 This is not a hypothetical convenience: :doc:`dataset2d`'s
 :func:`~pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset`
@@ -122,6 +142,15 @@ bookkeeping scheme, it is those hashes read back into a record that
 names which dataset, which split, and which fitted normalizer an
 experiment actually used.
 
+These digests provide :term:`content integrity`, not storage or automatic
+verification. :class:`DatasetReference` checks that each supplied digest has
+the syntax of a SHA-256 value; it does not open ``manifest_uri`` and prove
+that the object currently stored there has that digest. At the execution
+boundary, load the manifest, split, and normalizer, recompute their hashes,
+and refuse the run if any value differs from the reference. A URI answers
+"where might I retrieve it?" while the digest answers "is this the object I
+approved?" Neither substitutes for the other.
+
 Fixing acceptance criteria before looking at results
 ----------------------------------------------------------
 
@@ -155,6 +184,22 @@ checks all of them together as one
 metric an experiment forgot to compute is not silently skipped — it
 counts as an incomplete, failing gate rather than a passing one by
 omission:
+
+With criteria :math:`C_j(m_j)` evaluated on observed metrics :math:`m_j`,
+the final decision is the logical conjunction
+
+.. math::
+   :label: eq-ai-experiments-gate
+
+   G = \left(\bigwedge_{j=1}^{J} C_j(m_j)\right)
+       \land \left(\mathcal M = \varnothing\right),
+
+where :math:`\mathcal M` is the set of missing required metrics. Thus one
+failure or one missing value makes :math:`G` false. NaN and infinity are
+rejected rather than compared, and duplicate metric names are forbidden.
+Avoid ``==`` for floating-point scientific metrics unless exact equality is
+truly meaningful; a tolerance expressed with ``<=`` or ``>=`` is normally
+the defensible choice.
 
 .. code-block:: pycon
 
@@ -280,3 +325,65 @@ audit reports:
 A ``config_hash`` mismatch after that round trip would mean the
 configuration was not actually reproduced — reloading it and getting
 the same digest back is the check, not an assumption.
+
+The digest is computed from canonical JSON over every serialized field,
+including ``created_utc``. Mapping key order does not affect it, while a
+changed threshold, tag, timestamp, dataset hash, or nested model value does.
+Consequently, two scientifically identical configurations created with
+different timestamps have different hashes. If the hash is intended to
+identify a protocol rather than an individual record, either hold
+``created_utc`` fixed or leave it ``None`` and timestamp the execution record
+instead. The in-memory mappings and sequences are recursively frozen, which
+prevents accidental mutation after the hash has been reviewed.
+
+One frozen protocol still needs repeated runs
+------------------------------------------------
+
+Neural optimisation is stochastic even when the dataset and protocol are
+fixed. A result from one favourable network seed estimates neither central
+performance nor run-to-run instability. Keep one :class:`ExperimentConfig`
+and derive labels such as ``network/run-000`` through ``network/run-011``;
+then report every run, the aggregate distribution, and the fraction satisfying
+the complete gate. Do not alter ``experiment_id`` or thresholds after seeing
+which seeds fail.
+
+The diagnostic below makes that distinction concrete. Every point belongs to
+the same frozen configuration and dataset; colour indicates the *joint* gate,
+not whether the point passes the panel in which it appears. Run 4, for
+example, has acceptable recovery RMSE and coverage but fails because NRMS is
+above 2.0. Run 5 fails only the RMSE threshold, while run 6 fails coverage.
+Seven of twelve runs pass all three criteria. Reporting only their mean would
+hide both the failure modes and the probability of obtaining an acceptable
+training outcome.
+
+.. figure:: ../../images/user_guide/ai_inversion/experiment_gate_diagnostic.png
+   :alt: Provenance flow and three acceptance metrics across twelve independently seeded runs.
+   :align: center
+   :width: 100%
+
+   A pinned experiment protocol followed by per-seed joint-gate evaluation.
+   Dashed lines are thresholds fixed before the metrics were generated.
+
+What the configuration does not prove
+----------------------------------------
+
+An :class:`ExperimentConfig` is deliberately a source-of-truth *input*, not
+an experiment tracker or execution attestation. Its hash does not prove that
+the declared solver, dataset, or seed was actually used, and the current
+:mod:`pycsamt.ai.experiments` package does not automatically capture runtime
+artifacts. A reproducible hand-off must therefore pair the configuration JSON
+and its hash with, at minimum:
+
+* the observed metrics and serialized
+  :class:`~pycsamt.ai.experiments.config.GateEvaluation` state;
+* derived seed labels and values for every stochastic subsystem;
+* source revision, pyCSAMT and dependency versions, solver backend, numerical
+  precision, device, and deterministic-runtime settings;
+* checkpoint, prediction, log, and report checksums; and
+* start/end timestamps plus termination status.
+
+Those are execution evidence, whereas the configuration is the approved
+protocol. Keeping the two roles separate prevents a common provenance error:
+a perfectly hashed declaration being mistaken for proof that the declared
+computation took place. The broader packaging workflow in
+:doc:`reproducibility` supplies the natural home for that evidence.

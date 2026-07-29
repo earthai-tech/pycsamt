@@ -242,6 +242,15 @@ rather than tuned until a preferred dimension appears.
    distortion, source assumptions, and neighboring lines before a physical
    dimension is accepted.
 
+The plotting code is intentionally part of the example so the thresholds,
+period binning, and class counts can be inspected and adapted:
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_model_selection_willy_dimension
+   :linenos:
+   :title: View WILLY dimensionality source code
+
 This result does not automatically select
 :class:`~pycsamt.ai.inversion.GCNInverter3D`: that class shares node context
 but may be trained from 1-D forward responses. Nor does it make the L18 line
@@ -275,8 +284,8 @@ adds, and the failure it may hide.
    * - Supervised U-Net 2-D
      - Labelled profile panels and fixed section targets.
      - Learns multiscale lateral patterns over a complete line.
-     - Continuity is architectural; current class lacks explicit public
-       save/load parity with the 1-D class.
+     - Continuity is architectural and does not by itself establish 2-D
+       electromagnetic validity.
    * - Supervised GCN
      - Labelled multi-station surveys and fixed graph convention.
      - Uses irregular spatial relationships and supports dropout spread.
@@ -596,6 +605,48 @@ much information crosses geological boundaries.  Report the degree
 distribution for every candidate radius.  If the graph has many isolated
 nodes, the architecture is not using the intended spatial context.
 
+The binary matrix in equation :eq:`eq-ai-radius-adjacency` is only the first
+stage. With the defaults of :func:`pycsamt.ai.nets.build_adjacency`, self loops
+are retained and the matrix supplied to message passing is
+
+.. math::
+   :label: eq-ai-normalized-adjacency
+
+   \widehat{\mathbf A}
+   =
+   \widetilde{\mathbf D}^{-1/2}
+   \widetilde{\mathbf A}
+   \widetilde{\mathbf D}^{-1/2},
+   \qquad
+   \widetilde{\mathbf A}=\mathbf A+\mathbf I,
+   \qquad
+   \widetilde D_{ii}=\sum_j\widetilde A_{ij}.
+
+This normalization prevents a high-degree station from contributing simply
+because it has more neighbours. It does not remove the spatial prior: the
+radius still decides which stations may exchange information. The following
+reproducible diagnostic uses the public builder twice—once without loops or
+normalization to count physical neighbour edges, and once with defaults to
+scale the plotted edge weights.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_model_selection_graph_radius
+   :linenos:
+   :title: View graph-radius diagnostic source code
+
+.. figure:: ../../images/user_guide/ai_inversion/model_selection_graph_radius.png
+   :alt: Effect of three radius choices on an irregular station graph
+   :align: center
+   :width: 96%
+
+   At 450 m, disconnected nodes cannot receive spatial context; at 900 m the
+   survey is connected mainly through local neighbours; at 1300 m many
+   long-range edges blur the meaning of locality. The middle value is not
+   automatically correct—the appropriate radius must also survive held-out
+   geology, coordinate perturbation, and response-space tests—but this view
+   exposes topology that a validation-loss table would conceal.
+
 9. Decide whether joint inversion is justified
 ----------------------------------------------
 
@@ -823,24 +874,57 @@ quantities are defined that way.
 
 The score does not replace scientific review.  In this toy example, the 2-D
 candidate has strong model and response errors but receives a gate penalty,
-which might represent unresolved profile-width handling, missing persistence,
-or unacceptable field residuals.  Without that penalty, the ranking would
+which might represent unresolved profile-width handling, failed dimensionality
+evidence, or unacceptable field residuals. Without that penalty, the ranking would
 silently ignore a deployment or validation failure.
+
+More importantly, a single score hides run-to-run dispersion and weight
+sensitivity. The controlled illustration below uses explicit synthetic
+candidate metrics—it is a decision-analysis example, not a pyCSAMT benchmark.
+All costs are normalized to the FCN baseline, twelve seeded perturbations show
+why a mean is insufficient, and the dashed U-Net curve denotes a candidate
+that failed a mandatory gate.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_model_selection_tradeoff
+   :linenos:
+   :title: View selection-trade-off source code
+
+.. figure:: ../../images/user_guide/ai_inversion/model_selection_tradeoff.png
+   :alt: Normalized candidate metrics, repeated seed outcomes, and score sensitivity
+   :align: center
+   :width: 98%
+
+   ResNet and GCN improve the model and response columns in this constructed
+   study, but cost more to run; U-Net has low errors but fails its external
+   gate and is therefore ineligible. The seed distributions overlap, so a
+   small difference between means should not be treated as decisive. The
+   right panel makes the governance issue visible: changing the declared
+   response weight changes relative scores. Weights and gates must therefore
+   be fixed before inspecting final test results, with the non-dominated
+   alternatives retained when no stable winner exists.
 
 15. Consider persistence and deployment
 ---------------------------------------
 
-Current public persistence support differs among classes:
+The main supervised classes share public persistence support, but artifact
+contents and surrounding state still differ:
 
-* :class:`~pycsamt.ai.inversion.EMInverter1D` exposes ``save()`` and ``load()``;
+* :class:`~pycsamt.ai.inversion.EMInverter1D` has its specialized
+  ``save()``/``load()`` implementation;
+* :class:`~pycsamt.ai.inversion.EMInverter2D`,
+  :class:`~pycsamt.ai.inversion.GCNInverter3D`, and
+  :class:`~pycsamt.ai.inversion.JointInverter` inherit the public pair from
+  :class:`pycsamt.ai.BaseEMNet`;
 * :class:`~pycsamt.ai.inversion.EnsembleInverter` saves and loads member
-  checkpoints and ensemble metadata, but not attached uncertainty calibrators;
-* the 2-D and graph inverter classes do not currently expose the same explicit
-  public persistence pair.
+  checkpoints and ensemble metadata, but not attached uncertainty calibrators.
 
-If deployment requires a portable approved checkpoint, this can favor 1-D or a
-project-tested persistence implementation. Do not select a model that cannot be
-reliably restored in the target environment.
+Availability of a method is not deployment evidence. Round-trip every final
+artifact in a clean target environment and compare predictions, normalization
+state, feature contract, graph construction, and software versions. A graph
+checkpoint, for example, does not make an unrecorded coordinate projection or
+radius reproducible.
 
 Also evaluate:
 
@@ -892,7 +976,24 @@ ranges. It does not evaluate scientific suitability.
 ``weight_decay`` and ``min_delta`` are stored in the configuration for
 documentation but are not currently included by ``to_fit_kwargs()`` because
 ``EMInverter1D.fit`` does not expose them. Do not assume every configuration
-field affects training.
+field affects training. Likewise, ``save_best``, ``checkpoint_dir``, and
+``checkpoint_name`` do not make ``to_inverter()`` or ``to_fit_kwargs()`` save
+automatically. The caller must save the fitted inverter explicitly. Calling
+``checkpoint_path()`` resolves the configured filename and creates its parent
+directory, so use it only when that filesystem side effect is intended:
+
+.. code-block:: pycon
+
+   >>> path = config.checkpoint_path()
+   >>> path.as_posix().endswith("checkpoints/mt1d_resnet_5l.npz")
+   True
+   >>> # After fitting and acceptance testing:
+   >>> # inverter.save(path)
+
+``from_inverter()`` reconstructs architectural fields that are present on an
+inverter; it cannot recover a past optimizer schedule or split policy that the
+inverter does not retain. Preserve the original configuration and selection
+record beside the checkpoint.
 
 17. Record the selection decision
 ---------------------------------

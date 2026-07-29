@@ -26,3 +26,11 @@ Forward Modules
    pycsamt.forward.noise
    pycsamt.forward.batch
    pycsamt.forward.plot
+
+Specialized References
+----------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   forward_maxwell

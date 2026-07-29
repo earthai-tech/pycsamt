@@ -15,10 +15,13 @@ from __future__ import annotations
 
 import os
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 
 from pycsamt.agents.ai_inversion import _z_to_features
+from pycsamt.agents.inv2d_agent import _maxwell_samples_to_unet_arrays
+from pycsamt.ai.data import SurveyData
 from pycsamt.ai._base import _z_list_to_array
 
 
@@ -69,6 +72,33 @@ class TestFeatureLayout(unittest.TestCase):
             self.freqs_target,
         )
         self.assertIsNone(feat)
+
+    def test_maxwell_si_impedance_converts_to_apparent_resistivity(self):
+        frequencies = np.array([10.0, 1.0])
+        rho = 100.0
+        mu0 = 4.0e-7 * np.pi
+        impedance = np.sqrt(
+            1j * 2.0 * np.pi * frequencies * mu0 * rho
+        )[None, :, None]
+        survey = SurveyData(
+            impedance,
+            frequencies,
+            ["S"],
+            ["zxy"],
+            [[0.0, 0.0]],
+        )
+        sample = SimpleNamespace(
+            survey=survey,
+            resistivity_ohm_m=np.full((2, 1), rho),
+        )
+
+        features, target = _maxwell_samples_to_unet_arrays(
+            [sample], frequencies
+        )
+
+        np.testing.assert_allclose(features[0, 0, :, 0], 2.0)
+        np.testing.assert_allclose(features[0, 1, :, 0], 45.0)
+        np.testing.assert_allclose(target, 2.0)
 
     def test_fallback_from_impedance_when_no_rho(self):
         # Z object without resistivity_xy → compute from the tensor.

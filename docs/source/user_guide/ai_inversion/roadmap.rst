@@ -48,6 +48,26 @@ and validated recovery/uncertainty evidence, in that order. The
 package map below is that architecture; the sections after it report,
 honestly, how much of it is verified today rather than only planned.
 
+Roadmap language is deliberately cumulative. **Implemented** means that a
+public API exists. **Verified** adds focused tests or physical benchmarks.
+**Wired** means that an agent or dataset workflow actually consumes the API.
+**Gated** adds a predeclared, automatically evaluated acceptance criterion,
+and **released** adds a blind field evaluation with archived artifacts. Thus,
+an implemented solver is not automatically a verified solver, and a verified
+loss function is not automatically part of an accepted inversion workflow.
+For milestone :math:`m`, the release condition can be written compactly as
+
+.. math::
+   :label: eq-ai-roadmap-readiness
+
+   R_m = I_m \land V_m \land W_m \land G_m \land B_m,
+
+where :math:`I_m`, :math:`V_m`, :math:`W_m`, :math:`G_m`, and :math:`B_m`
+denote implementation, verification, workflow wiring, automatic gate, and
+blind-evaluation evidence. Equation :eq:`eq-ai-roadmap-readiness` is a logical
+contract, not a numerical score: one missing condition prevents a release
+claim even when the other four are satisfied.
+
 Package map
 -----------
 
@@ -267,6 +287,27 @@ through M10, each gated by an explicit acceptance criterion before it
 can be called complete. The table below reports where each stage
 genuinely stands today.
 
+.. figure:: ../../images/user_guide/ai_inversion/roadmap_capability_matrix.png
+   :alt: Readiness level reached by AI inversion milestones M0 through M10
+   :align: center
+   :width: 100%
+
+   The highest demonstrated readiness level for each milestone. Bars stop at
+   the available evidence; they do not estimate percentage completion.
+
+The concentration of blue bars at **verified** and **wired** is informative.
+The reusable 2-D components are no longer merely proposals, but automatic
+acceptance and blind release remain the bottleneck. M7 is different: its
+production adapter is implemented, yet verification cannot advance until a
+compiled ModEM executable is available. M8 and M10 are shown as planned, so
+their zero-height bars must not be read as failed experiments.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_roadmap_capability_matrix
+   :linenos:
+   :title: View roadmap-figure source code
+
 .. list-table::
    :header-rows: 1
    :widths: 8 24 68
@@ -276,31 +317,38 @@ genuinely stands today.
      - Status
    * - M0
      - Baseline freeze and reproducibility
-     - Done. Experiment configuration and seed/split manifests exist
-       in :doc:`experiments`.
+     - Verified. Experiment configuration and seed/split manifests exist
+       and have focused tests; see :doc:`experiments`. They support later
+       gates, but do not themselves constitute a field release.
    * - M1
      - Survey data contract and WILLY audit
-     - Partial. :class:`~pycsamt.ai.data.contracts.SurveyData` (see
-       :doc:`data_contracts`) is solid; a dedicated WILLY frequency
-       coverage/dimensionality/static-shift audit report is not
-       built.
+     - Verified. :class:`~pycsamt.ai.data.contracts.SurveyData` is exercised
+       on WILLY in :doc:`data_contracts`; frequency coverage, dimensionality,
+       and static-shift/domain-fit evidence are reported across
+       :doc:`data_contracts`, :doc:`model_selection`, and :doc:`domain_gap`.
+       These checks are documented and reproducible, although they are not
+       yet exported as one signed release artifact.
    * - M2
      - Correlated geological priors
-     - Done as a library (:doc:`geology_priors`). The gate's broader
-       diagnostic gallery across many realizations is not assembled.
+     - Verified as a library. :doc:`geology_priors` exercises correlated
+       fields, layers, faults, lenses, topographic surfaces, and 3-D
+       composition with reproducible diagnostic figures. Ensemble ranges
+       still need to be frozen for each survey-specific experiment rather
+       than treated as universal geological assumptions.
    * - M3
      - Domain-gap and noise simulator
-     - Done. :mod:`pycsamt.ai.domain_gap` fits noise, dropout, and
+     - Verified. :mod:`pycsamt.ai.domain_gap` fits noise, dropout, and
        distortion ranges from real WILLY QC diagnostics and is tested
        against that survey, not only against synthetic self-tests.
    * - M4
      - Genuine 2-D electromagnetic forward path
-     - Done. :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter` passes
+     - Wired. :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter` passes
        both analytic benchmarks; contracts, mesh, cache, batching, and
-       the external-adapter base are all tested (:doc:`forward_physics`).
+       the external-adapter base are tested, and :doc:`dataset2d` consumes
+       the backend to generate training pairs (:doc:`forward_physics`).
    * - M5
      - Response-aware 2-D learning
-     - Partial. The staged loss and validation libraries are done;
+     - Wired, not gated. The staged loss and validation libraries exist;
        ``Inv2DAgent(physics="mt2d")`` wires them together end-to-end
        (:ref:`ai_inversion_roadmap_wiring`); the gate's own held-out
        normalized-RMS threshold is not yet evaluated automatically.
@@ -323,17 +371,22 @@ genuinely stands today.
        verified first.
    * - M9
      - Hybrid inversion and uncertainty, on this architecture
-     - Not started. :doc:`hybrid` documents hybrid refinement on the
-       earlier agent architecture; it has not yet been rebuilt on
-       :mod:`pycsamt.ai.losses`/:mod:`pycsamt.ai.validation`.
+     - Wired on the earlier architecture. The 1-D, 2-D, and 3-D hybrid
+       classes perform staged AI initialization and physics refinement, and
+       :doc:`hybrid` documents their outputs and uncertainty checks. They do
+       not yet consume the complete :mod:`pycsamt.ai.losses`,
+       :mod:`pycsamt.ai.validation`, and :mod:`pycsamt.ai.experiments`
+       acceptance stack, so M9 is not gated or release-ready.
    * - M10
      - WILLY blind evaluation and release
      - Not started; depends on M5 through M9.
 
-Read this table together with each package page's own ``Status``
-admonition, which is usually more specific about exactly what is and
-is not tested for that one package. Where the two disagree, trust the
-package page and treat this table as the cross-package summary of it.
+Read this table with the linked package pages and the running APIs. Those
+pages describe limitations beside the affected operation, where they are less
+likely to be separated from the example than in a generic status box. If a
+future implementation changes before this summary does, the executable
+examples, backend capability declarations, and tests are the authoritative
+evidence.
 
 Next steps
 ----------

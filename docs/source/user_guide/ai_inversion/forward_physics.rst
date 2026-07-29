@@ -78,6 +78,47 @@ canonical ``(station, frequency, component)`` order
 of convergence and residuals — never a bare array a caller has to
 trust blindly.
 
+The contract stores SI impedance in volts per ampere. For angular frequency
+:math:`\omega=2\pi f` and magnetic permeability :math:`\mu`, the observable
+quantities normally inspected by an MT user, :term:`apparent resistivity` and
+:term:`phase`, are
+
+.. math::
+   :label: eq-ai-forwardphysics-observables
+
+   \rho_a(f)=\frac{|Z(f)|^2}{\omega\mu},
+   \qquad
+   \phi(f)=\operatorname{atan2}(\Im Z(f),\Re Z(f)).
+
+Equation :eq:`eq-ai-forwardphysics-observables` is also an immediate unit
+check: substituting EDI field units directly would produce the wrong apparent
+resistivity scale. Under the package's ``exp(+iwt)`` convention, the analytic
+``zxy`` half-space response has positive 45-degree phase:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.forward.maxwell.benchmarks import half_space_impedance
+
+   >>> frequency = np.array([100.0, 10.0, 1.0, 0.1])
+   >>> impedance = half_space_impedance(100.0, frequency)
+   >>> np.round(impedance, 6)
+   array([0.198692+0.198692j, 0.062832+0.062832j,
+          0.019869+0.019869j, 0.006283+0.006283j])
+   >>> mu0 = 4e-7 * np.pi
+   >>> rho_a = np.abs(impedance) ** 2 / (2 * np.pi * frequency * mu0)
+   >>> np.round(rho_a, 6)
+   array([100., 100., 100., 100.])
+   >>> np.round(np.angle(impedance, deg=True), 3)
+   array([45., 45., 45., 45.])
+
+Do not infer a component convention from phase alone. Reversing electric or
+magnetic field orientation changes an impedance sign and can shift the raw
+phase by 180 degrees without changing :math:`\rho_a`. Compare components only
+after matching axis orientation, Fourier convention, and any phase wrapping;
+the canonical names preserve order, but they cannot repair incompatible input
+conventions.
+
 A validated execution path, not just an interface
 -------------------------------------------------------
 
@@ -233,19 +274,32 @@ An empty tuple from ``assess_receivers`` means no error was found;
 would have raised on exactly the same check if a receiver had been
 placed below the surface or outside the padded mesh.
 
-Padding enough is not automatic. Calibrating
-:class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter` against the
-benchmarks below surfaced a real, non-obvious failure mode: this
-solver applies its boundary condition at the lateral mesh edges from
-the exact 1-D response of those edge columns, so accuracy on an
-otherwise laterally uniform model depends on the *lateral* domain
-extent relative to skin depth, not only on vertical padding or
-resolution. A mesh deep enough but too narrow produced 25-45%
-amplitude errors at the lowest benchmark frequency; only widening the
-domain itself, well beyond ``MeshQuality``'s own default advisory
-ratios, made both benchmarks below actually pass. Advisory mesh
-warnings are a floor to check, not a guarantee that a specific
-solver's boundary assumptions are satisfied.
+Padding enough is not automatic, and neither is knowing which boundary
+controls the error. The executed width study below holds the vertical mesh
+fixed and changes the lateral extent from 20 to 240 km. For a uniform
+half-space the four curves nearly coincide: the adapter supplies the exact
+1-D edge-column boundary response, and there is no lateral conductivity
+gradient for a side boundary to truncate. The growing high-frequency error
+is instead shared by every width and follows the fixed near-surface vertical
+resolution becoming coarse relative to the shrinking skin depth.
+
+.. figure:: ../../images/user_guide/ai_inversion/forward_physics_mesh_sensitivity.png
+   :alt: Half-space impedance error and apparent resistivity across four lateral mesh widths.
+   :align: center
+   :width: 100%
+
+   An executed MT2D mesh sensitivity study with an identical vertical mesh.
+   Overlapping width curves rule out lateral extent as the dominant error in
+   this controlled half-space case.
+
+The result must not be generalized into "width never matters." A laterally
+uniform analytic benchmark cannot exercise reflections or truncation caused
+by a 2-D conductivity contrast near a side boundary. For heterogeneous
+models, repeat the solve after independently enlarging lateral padding,
+bottom padding, and near-surface resolution, and require the response change
+to fall below a declared tolerance. :attr:`MeshQuality.acceptable` is an
+advisory geometric gate; :term:`mesh convergence` of the requested observables is the
+numerical evidence.
 
 Proven against physics, not asserted
 ------------------------------------------
@@ -287,6 +341,29 @@ package them into a :class:`~pycsamt.forward.maxwell.benchmarks.MaxwellBenchmark
 that any conforming adapter can run against. Against the mesh
 calibrated above, :class:`MT2DAdapter` genuinely passes both:
 
+For valid predicted and reference values :math:`Z_i` and
+:math:`Z_i^{\mathrm{ref}}`, the benchmark reports three complementary errors,
+
+.. math::
+   :label: eq-ai-forwardphysics-benchmark-metrics
+
+   \begin{aligned}
+   E_{\mathrm{NRMS}}
+      &= \sqrt{\frac{\sum_i|Z_i-Z_i^{\mathrm{ref}}|^2}
+                       {\sum_i|Z_i^{\mathrm{ref}}|^2}},\\
+   E_A &= \max_i
+      \frac{\bigl||Z_i|-|Z_i^{\mathrm{ref}}|\bigr|}
+           {|Z_i^{\mathrm{ref}}|},\\
+   E_\phi &= \max_i
+      \left|\arg\!\left(\frac{Z_i}{Z_i^{\mathrm{ref}}}\right)\right|.
+   \end{aligned}
+
+The ratio inside :math:`E_\phi` gives a circular phase difference, avoiding a
+false 358-degree error across the :math:`-180/180` branch cut. Default limits
+are 0.05 for :math:`E_{\mathrm{NRMS}}`, 0.05 for :math:`E_A`, 2 degrees for
+:math:`E_\phi`, complete validity, and successful solver diagnostics. Passing
+only one of these checks is not a benchmark pass.
+
 .. code-block:: pycon
 
    >>> from pycsamt.forward.maxwell.benchmarks import (
@@ -316,6 +393,31 @@ calibrated above, :class:`MT2DAdapter` genuinely passes both:
    ... )
    >>> layered.run(adapter).passed
    True
+
+The same API preserves a failed outcome and explains every violated limit.
+Using the earlier shallow 10-by-5 km mesh across 10 to 0.1 Hz gives:
+
+.. code-block:: pycon
+
+   >>> shallow = half_space_benchmark(
+   ...     mesh, ReceiverSet([[5_000.0, 0.0]], ["S00"]),
+   ...     [10.0, 1.0, 0.1], resistivity_ohm_m=100.0,
+   ... )
+   >>> failed = shallow.run(adapter)
+   >>> failed.passed
+   False
+   >>> (round(failed.metrics.normalized_rms, 4),
+   ...  round(failed.metrics.maximum_amplitude_relative_error, 4),
+   ...  round(failed.metrics.maximum_phase_error_deg, 3))
+   (0.0707, 0.0538, 2.997)
+   >>> failed.failures
+   ('normalized RMS 0.0706959 exceeds 0.05',
+    'maximum amplitude relative error 0.0538247 exceeds 0.05',
+    'maximum phase error 2.99718 deg exceeds 2 deg')
+
+This is useful evidence, not an exception to suppress: all values are finite
+and the solver ran, yet the discretized problem is not accurate enough for the
+declared scientific tolerance.
 
 A 0.86% normalized RMS error, well inside the default 5% threshold, is
 :class:`MT2DAdapter`'s genuine accuracy on this mesh over the
@@ -396,6 +498,17 @@ archive instead of invoking the solver again — the point is not raw
 speed on one small problem, but that regenerating the same dataset
 twice, or resuming after a crash partway through, never silently
 redoes work or drifts from what was already computed.
+
+The cache key is the ``problem_hash``; it does **not** include backend name,
+backend version, adapter policy, or software revision. The stored
+:class:`~pycsamt.forward.maxwell.contracts.ForwardResult` retains its backend
+identity and is checksum-verified,
+but ``get_or_solve(problem, another_adapter)`` can still return the existing
+result because the physical problem key matches. Use a separate cache root per
+backend/version when comparing solvers, and record both the problem hash and
+the returned backend identity. Cache integrity means the archived result was
+not corrupted; it does not mean every backend would produce the same result.
+
 :func:`~pycsamt.forward.maxwell.batch.solve_batch` builds on this
 cache to solve many problems at once, retrying only the exceptions a
 :class:`~pycsamt.forward.maxwell.batch.BatchPolicy` marks transient

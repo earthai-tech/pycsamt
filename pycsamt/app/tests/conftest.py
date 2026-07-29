@@ -121,6 +121,25 @@ def qapp():
     yield app
 
 
+@pytest.fixture(autouse=True)
+def _settle_qt_gc_after_test():
+    """Reclaim cyclic Qt garbage right after each test, not mid the next.
+
+    Left to Python's automatic collector, the cyclic garbage from a
+    closed widget (matplotlib canvases in particular) can get reclaimed
+    at any later allocation -- including inside an unrelated widget's
+    ``__init__`` several tests later -- which has been observed to
+    segfault under Python 3.9 (see ``pycsamt.compat.qt.settle_qt_gc``).
+    Autouse and undependent so it tears down last, after every widget
+    fixture in this file has already closed its widgets.
+    """
+    yield
+    if _qt_active:
+        from pycsamt.compat.qt import settle_qt_gc
+
+        settle_qt_gc()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _stub_mpl_qt_toolbar():
     """

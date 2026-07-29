@@ -144,7 +144,11 @@ class JParseMixin:
             if p.exists() and p.is_dir():
                 it = p.rglob("*") if getattr(self, "recursive", True) else p.glob("*")
                 any_yielded = False
-                for m in it:
+                # Directory enumeration order (os.scandir/readdir) is
+                # filesystem-defined, not insertion order -- sort so
+                # discovery is reproducible across platforms instead of
+                # an accident of the OS.
+                for m in sorted(it):
                     if self._is_j_path(m):
                         any_yielded = True
                         yield m
@@ -161,7 +165,7 @@ class JParseMixin:
                     pat = str(p)
                     it = base.rglob(pat) if "**" in pat else base.glob(pat)
                 any_yielded = False
-                for m in it:
+                for m in sorted(it):
                     if self._is_j_path(m):
                         any_yielded = True
                         yield m

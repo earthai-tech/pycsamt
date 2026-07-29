@@ -149,7 +149,12 @@ class ParseMixin:
                     if getattr(self, "recursive", True)
                     else p.glob("*.edi")
                 )
-                for m in it:
+                # Directory enumeration order (os.scandir/readdir) is
+                # filesystem-defined, not insertion order -- ext4 (CI) and
+                # NTFS (dev boxes) return different orders for the same
+                # file set. Sort so "input" ordering is reproducible
+                # across platforms instead of an accident of the OS.
+                for m in sorted(it):
                     if m.is_file():
                         yield m
                 continue
@@ -163,7 +168,7 @@ class ParseMixin:
                     pat = str(p)
                     it = base.rglob(pat) if "**" in pat else base.glob(pat)
                 any_yielded = False
-                for m in it:
+                for m in sorted(it):
                     if m.is_file():
                         any_yielded = True
                         yield m

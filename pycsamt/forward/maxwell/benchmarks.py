@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
@@ -360,7 +360,9 @@ class MaxwellBenchmark:
     reference_impedance_v_a: np.ndarray
     thresholds: BenchmarkThresholds = BenchmarkThresholds()
     tags: tuple[str, ...] = ()
-    metadata: Mapping[str, Any] = MappingProxyType({})
+    metadata: Mapping[str, Any] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
 
     def __post_init__(self) -> None:
         name = str(self.name).strip().lower().replace("_", "-")

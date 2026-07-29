@@ -56,7 +56,9 @@ Classical inversion
 
 :term:`Supervised AI inversion`
    Learns an approximation :math:`G_\theta` to the inverse relationship from
-   examples and predicts :math:`\hat{\mathbf m}=G_\theta(\mathbf d)`.
+   examples and predicts :math:`\hat{\mathbf m}=G_\theta(\mathbf d)`. Training
+   pays the repeated optimization cost in advance, so applying the fitted map
+   to another compatible observation is an :term:`amortized inversion`.
 
 :term:`Physics-informed inversion`
    Uses differentiable physics during optimization, often minimizing
@@ -103,6 +105,7 @@ law and :math:`p(\boldsymbol\epsilon\mid\mathbf m)` describes the
 :term:`noise model`, each training pair is generated as
 
 .. math::
+   :label: eq-ai-training-pair
 
    \mathbf d_i = F(\mathbf m_i) + \boldsymbol\epsilon_i,
    \qquad
@@ -176,7 +179,8 @@ the shape of an output array.
      - A depth–station section predicted from an ordered profile panel.
      - A line survey whose strike and dimensionality evidence support a 2-D
        approximation.
-     - Learned lateral continuity is confused with 2-D EM physics.
+     - A tiled 1-D training set, a genuine 2-D Maxwell training set, and a
+       classical 2-D field inversion are treated as interchangeable.
    * - Graph 3-D
      - Layered station parameters share information through a spatial graph.
      - Multi-line or areal surveys with reviewed coordinates and meaningful
@@ -192,6 +196,72 @@ Select dimension using :term:`strike`, :term:`dimensionality`,
 :term:`tipper` behavior, :term:`survey geometry`, target geometry, station
 spacing, and classical response evidence—not because a higher number sounds
 more advanced.
+
+Depth support is not the model depth
+------------------------------------
+
+An AMT frequency band does not define a sharp maximum depth. For a uniform
+earth, the :term:`skin depth` gives the electromagnetic attenuation scale
+
+.. math::
+   :label: eq-ai-skin-depth
+
+   \delta(f,\rho) = \sqrt{\frac{2\rho}{\mu_0\,2\pi f}}
+   \simeq 503\sqrt{\frac{\rho}{f}}\ \mathrm{m},
+
+where :math:`f` is frequency in hertz, :math:`\rho` is resistivity in ohm
+metres, and :math:`\mu_0` is the free-space magnetic permeability. Equation
+:eq:`eq-ai-skin-depth` describes attenuation in a homogeneous conductor. It is
+not a :term:`depth of investigation`, a vertical-resolution estimate, or
+permission to train an inverter to that depth. In a layered earth, conductive
+cover can screen deeper structure, resistive material can inflate the scale,
+and sensitivity decays gradually rather than stopping at :math:`\delta`.
+
+The bundled WILLY L18 profile makes the difference concrete. The following
+diagnostic reads all 28 stations and deliberately computes only a skin-depth
+scale from the observed XY apparent resistivity. It does not invert the data.
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.ai.inversion import sites_to_obs_1d
+
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_data/L18PLT", recursive=True, verbose=0
+   ... )
+   >>> obs = sites_to_obs_1d(sites, comp="xy")
+   >>> frequency_hz = np.asarray(obs[0].freq)
+   >>> rho_a = np.vstack([item.rho_obs for item in obs])
+   >>> rho_median = np.nanmedian(rho_a, axis=0)
+   >>> delta_m = 503.0 * np.sqrt(rho_median / frequency_hz)
+   >>> print(f"stations={len(obs)}, frequencies={frequency_hz.size}")
+   stations=28, frequencies=53
+   >>> print(f"frequency range={frequency_hz.min():.3f}--{frequency_hz.max():.0f} Hz")
+   frequency range=1.008--10400 Hz
+   >>> i = int(np.nanargmin(frequency_hz))
+   >>> print(f"lowest-frequency skin-depth scale={delta_m[i] / 1000:.1f} km")
+   lowest-frequency skin-depth scale=30.7 km
+
+.. figure:: ../../images/user_guide/ai_inversion/willy_l18_depth_support.png
+   :alt: WILLY L18 apparent-resistivity coverage and skin-depth diagnostic
+   :align: center
+   :width: 94%
+
+   The left panel shows the actual XY apparent-resistivity curves and their
+   station median. The right panel translates them through equation
+   :eq:`eq-ai-skin-depth`; the broad band is variation among stations, not an
+   uncertainty interval. The 2 km line is a conservative modelling target,
+   not a boundary inferred from the crossing.
+
+The 30.7 km value is therefore a warning against equating penetration with
+resolution. For an expected target shallower than 2 km, set the synthetic
+model bottom somewhat below the target so boundary conditions do not control
+it, but report interpretation only where response sensitivity, perturbation or
+Jacobian tests, recovery experiments, error-aware forward reconstruction, and
+independent evidence agree. Training labels below that supported interval
+teach the network a prior; the field data do not turn those labels into
+observations.
 
 Model parameterization
 ----------------------
@@ -223,7 +293,13 @@ Fixed-grid 2-D target
 A profile inverter may predict ``log10(rho)`` on a fixed
 ``(n_depth, n_stations)`` grid. Depth discretization is then part of the model
 prior. A visually sharp boundary cannot be more resolved than the information
-in the responses and training examples.
+in the responses and training examples. pyCSAMT's 2-D U-Net can be trained
+either on a :term:`pseudo-2-D training model` made by tiling independent 1-D
+responses or on :term:`2-D Maxwell training model` realizations containing
+lateral TE coupling. Both produce the same target-array shape; the shape alone
+does not disclose which physics generated it. Preserve ``physics``, solver
+identity, mesh controls, components, and spatial correlation parameters with
+the checkpoint.
 
 Graph target
 ~~~~~~~~~~~~
@@ -279,6 +355,31 @@ feature helpers:
 These utilities help enforce the contract between :class:`pycsamt.site.Sites`
 and AI arrays. Their outputs still need review for station order, component,
 frequency coverage, masking, and finite values.
+
+For the 1-D bridge, the common grid contains :math:`n_f` logarithmically
+spaced frequencies between either the observed extrema or explicit
+``freq_min`` and ``freq_max``. At each station, interpolation is linear in
+log-frequency; log apparent resistivity and phase are interpolated separately,
+
+.. math::
+   :label: eq-ai-feature-interpolation
+
+   x_{s,q} =
+   \begin{cases}
+   \mathcal I_{\log f}\!\left[\log_{10}\rho_{a,s}\right](f_q),
+      &0\le q<n_f,\\
+   \mathcal I_{\log f}\!\left[\phi_s\right](f_{q-n_f}),
+      &n_f\le q<2n_f,
+   \end{cases}
+
+where :math:`s` identifies the station and :math:`\mathcal I_{\log f}` is
+piecewise-linear interpolation on :math:`\log_{10}f`. Values outside a
+station's own measured interval are ``NaN`` rather than extrapolated. Thus a
+grid lying inside the survey-wide range can still contain missing values for
+stations with narrower coverage. ``sites_to_features_1d`` preserves those
+``NaN`` values, while ``obs_to_features_1d`` currently replaces missing log
+resistivity by 2 and missing phase by 45 degrees. These two helpers are not
+semantically interchangeable merely because their returned shapes match.
 
 The feature contract
 --------------------
@@ -368,22 +469,25 @@ Supervised learning objective
 A supervised inverter minimizes a :term:`model-space metric` over examples:
 
 .. math::
+   :label: eq-ai-model-loss
 
    \mathcal L_{\mathrm{model}}(\theta)
    = \frac{1}{N}\sum_i
    \ell\!\left(G_\theta(\mathbf d_i),\mathbf m_i\right).
 
-This rewards resemblance to the selected synthetic target. It does not
-guarantee that the predicted model reconstructs the field response. A stronger
-workflow also evaluates a :term:`response-space metric`:
+Equation :eq:`eq-ai-model-loss` rewards resemblance to the selected synthetic
+target, but does not guarantee that the predicted model reconstructs the field
+response. A stronger workflow also evaluates a :term:`response-space metric`:
 
 .. math::
+   :label: eq-ai-data-loss
 
    \mathcal L_{\mathrm{data}}
    = \left\|\mathbf W_d
      \left(F(\hat{\mathbf m})-\mathbf d_{\mathrm{obs}}\right)\right\|_2^2.
 
-Here :math:`\mathbf W_d` is usually built from data standard deviations or
+In equation :eq:`eq-ai-data-loss`, :math:`\mathbf W_d` is usually built from
+data standard deviations or
 quality weights, so high-uncertainty observations carry less influence than
 well-constrained ones. The forward operator, error weights, components, and
 residual space must be stated. An unweighted :term:`RMS misfit` of log
@@ -396,6 +500,7 @@ Physics-informed objective
 A PINN-style objective can combine data fit and regularization:
 
 .. math::
+   :label: eq-ai-pinn-objective
 
    \mathcal L(\theta)
    = \mathcal L_{\mathrm{data}}(\theta)
@@ -403,7 +508,8 @@ A PINN-style objective can combine data fit and regularization:
    + \lambda_l\mathcal R_l(\mathbf m_\theta)
    + \lambda_g\mathcal R_g(\mathbf m_\theta),
 
-where vertical, lateral, or graph regularizers apply according to dimension.
+In equation :eq:`eq-ai-pinn-objective`, vertical, lateral, or graph
+regularizers apply according to dimension.
 The weights determine the balance between fit and structure. They must be
 treated as inversion parameters and tested, not hidden as neural-network
 details.
@@ -425,8 +531,10 @@ Residual network
 
 U-Net
    Combines local convolution and multiscale skip connections for profile
-   panels. Its receptive field encourages lateral continuity but does not
-   implement a classical 2-D EM solver.
+   panels. Its receptive field encourages lateral continuity. The network is
+   not itself a classical 2-D EM solver, although its synthetic training
+   responses may now be generated with the 2-D Maxwell adapter rather than
+   tiled 1-D columns.
 
 Graph convolutional network
    Propagates information along an adjacency graph. Radius, coordinate system,
@@ -566,7 +674,7 @@ state:
 
    >>> from pycsamt.ai.inversion import RunConfig
 
-   >>> RunConfig.write_template("ai_inversion.py")
+   >>> _ = RunConfig.write_template("ai_inversion.py")
    >>> config = RunConfig.from_file("ai_inversion.py")
    >>> config.validate()
    >>> print(config.summary())
@@ -577,9 +685,9 @@ state:
        freq_min             = 0.0001 Hz
        freq_max             = 1e+04 Hz
        n_freqs              = 30
-       n_layers             = 3-7
-       rho_min              = 1 Ohm m
-       rho_max              = 1e+04 Ohm m
+       n_layers             = 3–7
+       rho_min              = 1 Ω·m
+       rho_max              = 1e+04 Ω·m
        depth_max            = 2e+03 m
        n_samples            = 10,000
        noise_level          = 0.05  (gaussian)
@@ -588,15 +696,15 @@ state:
        output               = ./forward_dataset.npz
 
      InversionConfig
-       -- Architecture --
+       ── Architecture ──
        arch                   = 'resnet'
        n_layers               = 5
        solver                 = 'mt1d'
-       device                 = None  (None -> auto)
+       device                 = None  (None → auto)
        include_phase          = yes
        log_thickness          = yes
        augment_noise          = 0.02
-       -- Training --
+       ── Training ──
        epochs                 = 100
        batch_size             = 256
        lr                     = 0.001
@@ -605,13 +713,14 @@ state:
        val_frac               = 0.1
        grad_clip              = 1.0
        seed                   = None
-       -- Checkpointing --
+       ── Checkpointing ──
        checkpoint             = checkpoints\em_inverter.npz
        save_best              = True
 
 Validation checks internal configuration consistency. It cannot establish that
 the selected ranges, noise, physics, or architecture represent a particular
-field survey.
+field survey. Template files are written and read as UTF-8 so the scientific
+units and comments above round-trip consistently across operating systems.
 
 The Sites bridge
 ----------------
@@ -627,7 +736,7 @@ Use the canonical loader and public bridge utilities:
    ... )
 
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
@@ -763,7 +872,8 @@ Avoid these misunderstandings:
 * treating a neural network as free of regularization or prior assumptions;
 * equating training interpolation with field generalization;
 * selecting 2-D or 3-D solely for visual sophistication;
-* confusing U-Net continuity or graph smoothing with numerical EM physics;
+* inferring forward physics from the U-Net output shape instead of recording
+  whether training used tiled 1-D or 2-D Maxwell responses;
 * checking array shape but not feature semantics;
 * using random splits that leak related synthetic profiles;
 * selecting a checkpoint on the test set;

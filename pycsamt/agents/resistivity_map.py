@@ -152,9 +152,7 @@ class ResistivityMapAgent(BaseAgent):
             depth_indices = list(
                 np.linspace(0, n_layers - 1, min(3, n_layers), dtype=int)
             )
-        depth_indices = [
-            int(d) for d in depth_indices if 0 <= int(d) < n_layers
-        ]
+        depth_indices = [int(d) for d in depth_indices if 0 <= int(d) < n_layers]
 
         if not depth_indices:
             return AgentResult.failed(
@@ -233,9 +231,7 @@ class ResistivityMapAgent(BaseAgent):
         interp: str | None = None
         if self.api_key:
             depth_levels = [dm["depth_km"] for dm in depth_maps]
-            mean_rhos = [
-                float(np.nanmean(dm["grid_rho"])) for dm in depth_maps
-            ]
+            mean_rhos = [float(np.nanmean(dm["grid_rho"])) for dm in depth_maps]
             prompt = (
                 f"Resistivity depth maps:\n"
                 f"  Stations: {len(present)}\n"
@@ -378,14 +374,10 @@ def _plot_depth_maps(depth_maps: list[dict], station_names: list[str]) -> Any:
         ax.set_xlabel("E–W (km)", fontsize=8)
         ax.set_ylabel("N–S (km)", fontsize=8)
         ax.tick_params(labelsize=7)
-        ax.set_title(
-            f"Depth  {dm['depth_km']:.2f} km", fontsize=8, fontweight="bold"
-        )
+        ax.set_title(f"Depth  {dm['depth_km']:.2f} km", fontsize=8, fontweight="bold")
         ax.set_aspect("equal")
 
-    fig.suptitle(
-        "Pseudo-3D resistivity depth maps", fontsize=10, fontweight="bold"
-    )
+    fig.suptitle("Pseudo-3D resistivity depth maps", fontsize=10, fontweight="bold")
     fig.tight_layout()
     return fig
 

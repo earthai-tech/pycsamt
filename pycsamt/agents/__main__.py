@@ -43,10 +43,7 @@ def print(*args, **kwargs):  # noqa: A001 — module-local shadow
         builtins.print(*args, **kwargs)
     except UnicodeEncodeError:
         enc = getattr(sys.stdout, "encoding", None) or "ascii"
-        cleaned = [
-            str(a).encode(enc, errors="replace").decode(enc)
-            for a in args
-        ]
+        cleaned = [str(a).encode(enc, errors="replace").decode(enc) for a in args]
         builtins.print(*cleaned, **kwargs)
 
 
@@ -131,13 +128,9 @@ def _cmd_list() -> None:
         "InversionBackendAgent": "Drive pycsamt.inversion physics backends",
     }
     ordered = ["BaseAgent", "AgentResult", "AgentCoordinator"] + [
-        a
-        for a in agents
-        if a not in {"BaseAgent", "AgentResult", "AgentCoordinator"}
+        a for a in agents if a not in {"BaseAgent", "AgentResult", "AgentCoordinator"}
     ]
-    print(
-        "\n── pycsamt.agents — full catalogue ───────────────────────────────"
-    )
+    print("\n── pycsamt.agents — full catalogue ───────────────────────────────")
     for name in ordered:
         desc = descriptions.get(name, "")
         if desc:

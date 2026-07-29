@@ -6,20 +6,10 @@ import pytest
 
 _SOURCE = Path(__file__).parents[1] / "_source"
 _EXAMPLES_2D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "2D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
 )
 _EXAMPLES_3D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "3D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "3D_MT" / "BLOCK2"
 )
 
 pytestmark_examples = pytest.mark.skipif(
@@ -224,9 +214,7 @@ class TestValidationWithExamples:
             detect_file_type,
         )
 
-        assert (
-            detect_file_type(_EXAMPLES_3D / "m0.ws") == ModEmFileType.MODEL_3D
-        )
+        assert detect_file_type(_EXAMPLES_3D / "m0.ws") == ModEmFileType.MODEL_3D
 
     def test_detect_file_type_model_2d(self):
         from pycsamt.models.modem.validation import (
@@ -234,10 +222,7 @@ class TestValidationWithExamples:
             detect_file_type,
         )
 
-        assert (
-            detect_file_type(_EXAMPLES_2D / "m0.rho")
-            == ModEmFileType.MODEL_2D
-        )
+        assert detect_file_type(_EXAMPLES_2D / "m0.rho") == ModEmFileType.MODEL_2D
 
     def test_detect_file_type_covariance(self):
         from pycsamt.models.modem.validation import (
@@ -246,8 +231,7 @@ class TestValidationWithExamples:
         )
 
         assert (
-            detect_file_type(_EXAMPLES_3D / "example.cov")
-            == ModEmFileType.COVARIANCE
+            detect_file_type(_EXAMPLES_3D / "example.cov") == ModEmFileType.COVARIANCE
         )
 
     def test_detect_file_type_control(self):
@@ -256,10 +240,7 @@ class TestValidationWithExamples:
             detect_file_type,
         )
 
-        assert (
-            detect_file_type(_EXAMPLES_3D / "block2.inv")
-            == ModEmFileType.CONTROL
-        )
+        assert detect_file_type(_EXAMPLES_3D / "block2.inv") == ModEmFileType.CONTROL
 
     def test_detect_file_type_log(self):
         from pycsamt.models.modem.validation import (
@@ -267,10 +248,7 @@ class TestValidationWithExamples:
             detect_file_type,
         )
 
-        assert (
-            detect_file_type(_EXAMPLES_2D / "Modular_NLCG.log")
-            == ModEmFileType.LOG
-        )
+        assert detect_file_type(_EXAMPLES_2D / "Modular_NLCG.log") == ModEmFileType.LOG
 
 
 class TestValidationMissingFile:

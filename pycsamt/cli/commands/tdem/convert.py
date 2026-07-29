@@ -149,9 +149,7 @@ def convert(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    stems_list = (
-        [s.strip() for s in stems.split(",") if s.strip()] if stems else None
-    )
+    stems_list = [s.strip() for s in stems.split(",") if s.strip()] if stems else None
 
     if dry_run:
         from pycsamt.tdem.workflow import (
@@ -166,9 +164,7 @@ def convert(
             component=component,
             verbose=verbose,
         )
-        click.echo(
-            f"Dry run — {len(soundings)} sounding(s) would be converted:"
-        )
+        click.echo(f"Dry run — {len(soundings)} sounding(s) would be converted:")
         for snd in soundings:
             click.echo(f"  {snd.station_name}")
         return

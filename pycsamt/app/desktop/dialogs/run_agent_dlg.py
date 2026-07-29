@@ -190,9 +190,7 @@ class RunAgentDialog(QDialog):
         self._populate_agents()
 
         # ── Geological context (LLM agents only) ──────────────────
-        self._grp_context = QGroupBox(
-            "Geological Context  (optional — sent to LLM)"
-        )
+        self._grp_context = QGroupBox("Geological Context  (optional — sent to LLM)")
         self._grp_context.setVisible(False)
         ctx_lay = QVBoxLayout(self._grp_context)
         ctx_lay.setContentsMargins(8, 6, 8, 6)
@@ -224,8 +222,7 @@ class RunAgentDialog(QDialog):
 
         # ── OK / Cancel ────────────────────────────────────────────
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.accepted.connect(self._on_accepted)
         buttons.rejected.connect(self.reject)

@@ -13,10 +13,21 @@ being used outside its evidence base.
 This page explains the uncertainty tools currently available in pyCSAMT and
 the limits of their interpretation. It assumes that training and model
 selection have already followed :doc:`training` and :doc:`model_selection`.
-Every example below runs against the same :class:`~pycsamt.ai.inversion.EnsembleInverter`
-checkpoint used in :doc:`inference` — five resnet members trained on the
-Willy AMT line's own frequency band — so the numbers here are directly
-comparable to that page rather than a fresh, disconnected illustration.
+The Willy examples below use the same
+:class:`~pycsamt.ai.inversion.EnsembleInverter` checkpoint discussed in
+:doc:`inference`: five ResNet members trained on that AMT line's frequency
+band. New calibration and propagation audits are deliberately self-contained,
+seeded method checks executed with the current public validation APIs. Their
+role is to teach the calculation without presenting simulated values as Willy
+field evidence.
+
+.. note::
+
+   The five-member checkpoint, calibration arrays, and numerical outputs in
+   the reference case study are not distributed with the source checkout.
+   Existing outputs and figures are retained as recorded evidence, but exact
+   reproduction requires that versioned model package. The self-contained
+   calculations and bundled-WILLY diagnostics remain directly executable.
 
 What uncertainty should answer
 ------------------------------
@@ -72,6 +83,93 @@ Domain-shift uncertainty
 Use a source register in the final report. For each source, state whether it
 was quantified, tested qualitatively, assumed negligible, or left unresolved.
 
+The law of total variance clarifies why one spread cannot represent every
+source. For learned parameters :math:`\Theta`,
+
+.. math::
+   :label: eq-ai-uncertainty-total-variance
+
+   \operatorname{Var}(Y\mid\mathbf x)
+   = \mathbb E_{\Theta}
+      [\operatorname{Var}(Y\mid\mathbf x,\Theta)]
+   + \operatorname{Var}_{\Theta}
+      [\mathbb E(Y\mid\mathbf x,\Theta)].
+
+The first term can represent observation-conditioned or aleatoric variability
+only when the model was designed to predict it. An ordinary deep ensemble
+mainly estimates the second, epistemic term through variation among fitted
+members. Equation :eq:`eq-ai-uncertainty-total-variance` still omits an
+unmodelled forward solver, wrong dimensionality, and field-domain shift.
+
+Calibration and sharpness must be read together
+------------------------------------------------
+
+:func:`~pycsamt.ai.validation.reliability_curve` evaluates Gaussian predictive
+intervals at several nominal levels and returns empirical coverage, a
+calibration penalty, :term:`sharpness`, the valid-cell count, and the evaluated
+shape. For confidence level :math:`p`, a cell is covered when
+
+.. math::
+   :label: eq-ai-uncertainty-gaussian-coverage
+
+   \left|y_i-\mu_i\right|
+   \le \Phi^{-1}\!\left(\frac{1+p}{2}\right)\sigma_i,
+
+where :math:`\Phi^{-1}` is the standard-normal quantile. Equation
+:eq:`eq-ai-uncertainty-gaussian-coverage` is a diagnostic, not an assumption
+that every EM parameter error is Gaussian. Its value is empirical: the
+observed fraction is compared with :math:`p` on held-out data.
+
+The following calculation keeps the prediction errors fixed while changing
+only the reported standard deviation:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.validation import reliability_curve
+   >>> rng = np.random.default_rng(8128)
+   >>> truth = rng.normal(size=(5000, 5))
+   >>> mean = np.zeros_like(truth)
+   >>> levels = [0.50, 0.68, 0.80, 0.90, 0.95, 0.99]
+   >>> for label, sigma in [("narrow", 0.55), ("calibrated", 1.0), ("broad", 1.8)]:
+   ...     report = reliability_curve(
+   ...         truth, mean, np.full_like(truth, sigma),
+   ...         levels=levels, kind="l1",
+   ...     )
+   ...     print(
+   ...         label,
+   ...         "MACE=", round(report.calibration.value, 4),
+   ...         "sharpness=", round(report.sharpness, 2),
+   ...         "coverage@95%=", round(float(report.coverage[-2]), 4),
+   ...     )
+   narrow MACE= 0.2341 sharpness= 0.55 coverage@95%= 0.7157
+   calibrated MACE= 0.0009 sharpness= 1.0 coverage@95%= 0.9507
+   broad MACE= 0.1429 sharpness= 1.8 coverage@95%= 0.9996
+
+.. figure:: ../../images/user_guide/ai_inversion/uncertainty_calibration_regimes.png
+   :alt: Reliability, calibration-sharpness tradeoff, and standardized residual distributions for narrow, calibrated, and broad predictive standard deviations
+   :align: center
+   :width: 100%
+
+   An executed comparison in which all three predictors have identical point
+   errors and differ only in their declared uncertainty scale.
+
+The red predictor looks best if only width is rewarded, yet its nominal 95%
+interval covers just 71.6% of held-out cells. The blue predictor reaches
+almost 100% coverage by becoming 80% broader than the calibrated green one;
+that is conservative but less informative. Only the green curve follows the
+diagonal while retaining the narrowest width compatible with its errors. The
+standardized-residual panel explains the mechanism: dividing the same errors
+by a small :math:`\sigma` pushes too much mass beyond the Gaussian 1.96
+threshold, while an excessive :math:`\sigma` compresses nearly everything
+inside it. Report calibration and sharpness together.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_uncertainty_calibration_regimes
+   :linenos:
+   :title: View and copy the executed calibration-regime audit
+
 Deep ensembles
 --------------
 
@@ -80,12 +178,26 @@ compatible base inverter — a :term:`deep ensemble`. Its mean is the point
 prediction and its inter-member standard deviation measures disagreement
 among the members:
 
+.. math::
+   :label: eq-ai-uncertainty-ensemble-moments
+
+   \bar{m}_j(\mathbf x)=\frac{1}{K}\sum_{k=1}^{K}m_{kj}(\mathbf x),
+   \qquad
+   s_j(\mathbf x)=
+   \sqrt{\frac{1}{K-1}\sum_{k=1}^{K}
+      \left(m_{kj}(\mathbf x)-\bar m_j(\mathbf x)\right)^2}.
+
+Equation :eq:`eq-ai-uncertainty-ensemble-moments` uses the sample standard
+deviation returned by the implementation before calibration. With small
+:math:`K`, both the magnitude and tail quantiles of this empirical distribution
+are themselves unstable.
+
 .. code-block:: pycon
 
    >>> from pycsamt.ai.inversion import EMInverter1D, EnsembleInverter
    >>> base = EMInverter1D(arch="resnet", n_layers=5, solver="mt1d")
    >>> ensemble = EnsembleInverter(base_estimator=base, n_estimators=5)
-   >>> ensemble.fit(
+   >>> _ = ensemble.fit(
    ...     X_train, y_train,
    ...     epochs=25, batch_size=256, patience=8, val_frac=0.15, verbose=True,
    ... )
@@ -208,7 +320,7 @@ attaches a split-:term:`conformal prediction` predictor and a posterior calibrat
 
 .. code-block:: pycon
 
-   >>> ensemble.calibrate(X_cal, y_cal, alpha=0.10)
+   >>> _ = ensemble.calibrate(X_cal, y_cal, alpha=0.10)
    >>> center, lower, upper = ensemble.predict_intervals(X_field, alpha=0.10)
    >>> center[0, :5].round(2)
    array([2.32, 2.48, 3.34, 3.5 , 5.22])
@@ -222,12 +334,14 @@ a finite-sample corrected quantile :math:`\hat q` to scale ensemble standard
 deviations:
 
 .. math::
+   :label: eq-ai-uncertainty-conformal-score
 
    s_i = \max_j \frac{\lvert y_{ij}-f(\mathbf{x}_i)_j\rvert}{\sigma_j(\mathbf{x}_i)+\varepsilon},
    \qquad
    \hat q = \operatorname{Quantile}_{1-\alpha+\frac{1}{n_{\rm cal}+1}}(s_1,\dots,s_{n_{\rm cal}}).
 
-pyCSAMT takes the *maximum* normalized residual across all 9 output
+Equation :eq:`eq-ai-uncertainty-conformal-score` takes the *maximum* normalized
+residual across all 9 output
 parameters for each calibration sample, so :math:`\hat q` is set entirely by
 whichever parameter is hardest to calibrate. On this checkpoint that is
 linear-metre thickness, two to three orders of magnitude larger in scale than
@@ -262,7 +376,7 @@ can wrap any fitted predictor exposing
 
    >>> from pycsamt.ai.inversion.calibration import ConformalPredictor
    >>> conformal = ConformalPredictor(ensemble, alpha=0.10)
-   >>> conformal.calibrate(X_cal, y_cal)
+   >>> _ = conformal.calibrate(X_cal, y_cal)
    >>> center, lower, upper = conformal.predict_intervals(X_field)
    >>> conformal._q_hat(0.10)
    32040.681353112046
@@ -283,44 +397,58 @@ object.
 Coverage diagnostics
 --------------------
 
-Evaluate calibration on the untouched test set:
+Evaluate calibration on the untouched test set. The executable pattern must
+use ``X_test`` and ``y_test``, not the calibration arrays:
 
 .. code-block:: pycon
 
    >>> diagnostics = ensemble.coverage_diagnostics(
-   ...     X_cal, y_cal, alphas=(0.50, 0.30, 0.20, 0.10, 0.05),
+   ...     X_test, y_test, alphas=(0.50, 0.30, 0.20, 0.10, 0.05),
    ... )
-   >>> for alpha, actual in diagnostics.items():
-   ...     print(f"nominal={1 - alpha:.2f}, actual={actual:.3f}")
-   nominal=0.50, actual=0.000
-   nominal=0.70, actual=0.000
-   nominal=0.80, actual=0.000
-   nominal=0.90, actual=0.000
-   nominal=0.95, actual=0.000
+   >>> table = [(1.0 - alpha, actual) for alpha, actual in diagnostics.items()]
 
-Reading this as "the model is uncalibrated at every level" would be too
-coarse a conclusion. ``coverage_diagnostics`` checks *joint* coverage — every
-one of the 9 parameters inside its band at once — and with the shared
-:math:`\hat q` from the previous section, the resistivity parameters are so
-over-covered and the thickness parameters so under-covered that splitting the
-same check by parameter group tells a completely different story:
+The archived model package is required before ``table`` can be reported; the
+page deliberately does not substitute invented values.
+``coverage_diagnostics`` checks *joint* coverage—every one of the 9
+parameters inside its band at once—so split the untouched-test calculation by
+parameter group before drawing a conclusion. The controlled plot below uses
+independent calibration and test samples; it is a method check, not coverage
+evidence for the unavailable trained model.
 
 .. figure:: ../../images/user_guide/ai_inversion/uncertainty_coverage_reliability.png
    :alt: Reliability diagram comparing joint, resistivity-only, and thickness-only empirical coverage against nominal coverage.
    :align: center
    :width: 75%
 
-   Resistivity parameters sit at 100% coverage regardless of the nominal
-   level requested — intervals so wide they cannot fail to contain the
-   truth — while thickness parameters sit near 0% at every level. The flat
-   lines, not their position relative to the diagonal, are the finding: the
-   joint-max design transmits one parameter's miscalibration to every other
-   parameter's reported coverage.
+   Deterministic split-conformal method check using 1,200 calibration samples
+   and 4,000 independent test samples. Resistivity-only, thickness-only, and
+   joint maximum scores are calibrated separately, so empirical simultaneous
+   coverage follows the nominal diagonal within finite-sample variation. This
+   does not replace evaluation on the restored model's untouched ``X_test``
+   and ``y_test`` arrays.
+
+The executed nominal levels were ``[0.50, 0.70, 0.80, 0.90, 0.95]`` and the
+independent-test outputs were:
+
+.. code-block:: text
+
+   resistivity dimensions: [0.478, 0.687, 0.787, 0.895, 0.941]
+   thickness dimensions:   [0.508, 0.701, 0.807, 0.899, 0.949]
+   joint nine dimensions:  [0.494, 0.691, 0.796, 0.888, 0.951]
 
 Plot nominal coverage against empirical coverage, but do it per parameter
 group before trusting one pooled number. Values below the diagonal indicate
-under-coverage; values far above it, as with the resistivity line here, can
-indicate unnecessarily broad intervals rather than good calibration.
+under-coverage; values far above it can indicate unnecessarily broad intervals
+rather than good calibration. The earlier figure, whose three curves were flat
+at one or zero, mixed a failed calibration-set diagnostic with reliability
+language and has therefore been replaced rather than presented as an
+acceptable result.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_uncertainty_coverage_reliability
+   :linenos:
+   :title: View and copy the independent-test reliability audit
 
 The convenience method ``ensemble.coverage(X, y, n_sigma=1.96)`` measures the
 fraction of individual finite target entries within ``mean +/- 1.96 * std``
@@ -328,21 +456,20 @@ fraction of individual finite target entries within ``mean +/- 1.96 * std``
 
 .. code-block:: pycon
 
-   >>> ensemble.coverage(X_cal, y_cal, n_sigma=1.96)
-   0.12319444444444444
+   >>> ensemble.coverage(X_test, y_test, n_sigma=1.96)
 
 This is different from conformal simultaneous sample coverage and should be
 labelled explicitly. The familiar 95% interpretation of ``1.96`` assumes an
 appropriate Gaussian error model; check it empirically rather than assuming
-it — here elementwise coverage lands at 12%, not 95%, once the same
-per-parameter split is applied:
+it. The archived calibration-set calculation landed at 12%, not 95%; the
+acceptance value must be recomputed on the untouched test set, with the same
+per-parameter split:
 
 .. code-block:: pycon
 
-   >>> mean, std = ensemble.predict_with_uncertainty(X_cal)
-   >>> within = np.abs(y_cal - mean) <= 1.96 * std
-   >>> within.mean(axis=0).round(3)
-   array([0.696, 0.158, 0.014, 0.038, 0.204, 0.   , 0.   , 0.   , 0.   ])
+   >>> mean, std = ensemble.predict_with_uncertainty(X_test)
+   >>> within = np.abs(y_test - mean) <= 1.96 * std
+   >>> coverage_by_parameter = within.mean(axis=0)
 
 Go beyond one aggregate number. Calculate coverage and interval width by:
 
@@ -402,22 +529,70 @@ each draw to cumulative interface depths *before* summarizing, not after:
 
 .. code-block:: pycon
 
-   >>> mean, std = ensemble.predict_with_uncertainty(X_field, _use_calibrated=False)
-   >>> log_h_mean, log_h_std = mean[0, 5:], std[0, 5:]
-   >>> draws = rng.normal(log_h_mean, log_h_std, size=(2000, 4))
-   >>> h_draws = 10.0 ** draws
-   >>> wrong = np.cumsum(np.quantile(h_draws, [0.05, 0.5, 0.95], axis=0), axis=1)
-   >>> right = np.quantile(np.cumsum(h_draws, axis=1), [0.05, 0.5, 0.95], axis=0)
-   >>> wrong[:, -1].round(0)   # thickness quantiles, then cumsum
-   array([ 722., 1045., 1537.])
-   >>> right[:, -1].round(0)   # cumsum, then depth quantiles
-   array([ 873., 1066., 1322.])
+   >>> rng = np.random.default_rng(2718)
+   >>> mean_log_h = np.log10([110.0, 180.0, 290.0, 430.0])
+   >>> sigma_log_h = np.array([0.10, 0.12, 0.14, 0.16])
+   >>> correlation = np.array([
+   ...     [1.00, -0.55, 0.20, 0.00],
+   ...     [-0.55, 1.00, -0.45, 0.15],
+   ...     [0.20, -0.45, 1.00, -0.35],
+   ...     [0.00, 0.15, -0.35, 1.00],
+   ... ])
+   >>> covariance = correlation * np.outer(sigma_log_h, sigma_log_h)
+   >>> log_h_draws = rng.multivariate_normal(
+   ...     mean_log_h, covariance, size=6000
+   ... )
+   >>> h_draws = 10.0 ** log_h_draws
+   >>> probability = [0.05, 0.50, 0.95]
+   >>> wrong = np.cumsum(
+   ...     np.quantile(h_draws, probability, axis=0), axis=1
+   ... )
+   >>> right = np.quantile(
+   ...     np.cumsum(h_draws, axis=1), probability, axis=0
+   ... )
+   >>> wrong[:, -1].round(1)   # thickness quantiles, then cumsum
+   array([ 590.6, 1011.2, 1721.3])
+   >>> right[:, -1].round(1)   # cumsum every draw, then depth quantiles
+   array([ 820.4, 1044.9, 1377.2])
 
-Taking quantiles of thickness first and then accumulating them gives a
-noticeably wider, differently centred final-interface band (722–1537 m) than
-accumulating every joint draw first and then taking depth quantiles
-(873–1322 m). The two are not the same calculation, and only the second
-preserves the layer-to-layer correlation in the draws.
+Taking thickness quantiles first and then accumulating them gives a
+590.6--1721.3 m final-interface band. Propagating every correlated draw first
+gives 820.4--1377.2 m. The first construction combines marginal lower tails
+that do not occur together because adjacent thicknesses are negatively
+correlated; it therefore manufactures an unrealistically wide depth band.
+
+.. figure:: ../../images/user_guide/ai_inversion/uncertainty_depth_propagation.png
+   :alt: Thickness correlation matrix, correct and incorrect cumulative interface-depth bands, and propagated final-interface depth distribution
+   :align: center
+   :width: 100%
+
+   Six thousand correlated log-thickness draws propagated to interface depth
+   before summarization.
+
+The correlation panel is not optional metadata: its negative adjacent-layer
+terms are exactly why marginal thickness limits cannot be stacked as if they
+were one realizable earth. In the middle panel, the red dashed construction
+widens rapidly with depth, while the blue band follows the actual joint draws.
+The final histogram retains skew introduced by exponentiating log-thickness;
+a symmetric error bar around its median would discard that feature.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_uncertainty_depth_propagation
+   :linenos:
+   :title: View and copy the correlated depth-propagation audit
+
+In general, for quantile level :math:`p`,
+
+.. math::
+   :label: eq-ai-uncertainty-depth-quantile
+
+   Q_p\!\left(\sum_{\ell=1}^{k}H_\ell\right)
+   \ne \sum_{\ell=1}^{k}Q_p(H_\ell),
+
+especially when layer thicknesses are correlated. Equation
+:eq:`eq-ai-uncertainty-depth-quantile` is why complete joint draws, rather than
+independent error bars, are the reproducibility object for interface depth.
 
 Preserve complete draws so correlations between parameters are retained.
 Independent error bars lose trade-offs such as a conductive layer becoming
@@ -476,10 +651,12 @@ spread and should normally be reported separately. Combining sources by
 root-sum-of-squares,
 
 .. math::
+   :label: eq-ai-uncertainty-rss
 
    \sigma_{\text{total}} = \sqrt{\sigma_{\text{ensemble}}^2 + \sigma_{\text{workflow}}^2 + \cdots},
 
-is justified only when the sources are independent and each :math:`\sigma`
+Equation :eq:`eq-ai-uncertainty-rss` is justified only when the sources are
+independent and each :math:`\sigma`
 is on a comparable, correctly transformed scale — the same scale-mixing
 caveat that makes the shared conformal :math:`\hat q` above misbehave applies
 just as much to summing unlike uncertainty sources by hand.

@@ -120,9 +120,9 @@ class TestZ:
         # normalized to uppercase tokens during the read process.
         # This is the likely root cause of the original failure.
         expected_comps = ["EXHY", "EYHX", "EXHY", "EYHX", "EXHY", "EYHX"]
-        assert z_comp.frame["comp"].tolist() == expected_comps, (
-            "Component normalization in Z.read() failed."
-        )
+        assert (
+            z_comp.frame["comp"].tolist() == expected_comps
+        ), "Component normalization in Z.read() failed."
 
         # Now, test the properties which depend on this
         # Z_xy corresponds to EXHY

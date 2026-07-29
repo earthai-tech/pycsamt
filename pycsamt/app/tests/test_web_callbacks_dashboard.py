@@ -35,9 +35,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -64,9 +62,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -313,13 +309,8 @@ class TestUpdateProfInfoBar:
         fn = self._fn(web_app)
         out = fn({"station_id": "A1"}, MULTI_LINE_STORE)
         # station span, sep, coords, sep, line inserted, freq badge, tipper badge
-        texts = [
-            getattr(c, "children", None)
-            for c in out
-        ]
-        assert any(
-            isinstance(t, str) and "Line L1" in t for t in texts
-        )
+        texts = [getattr(c, "children", None) for c in out]
+        assert any(isinstance(t, str) and "Line L1" in t for t in texts)
         # tipper badge present since A1 has Tipper=True
         tip_badge = out[-1]
         assert "prof-badge-tipper" in tip_badge.className

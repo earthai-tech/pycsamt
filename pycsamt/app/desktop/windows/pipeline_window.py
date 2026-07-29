@@ -199,9 +199,7 @@ class PipelineWindow(QWidget):
         self._btn_run = _btn(
             "▶  Run All", "processing", "Run all pending steps sequentially"
         )
-        self._btn_stop = _btn(
-            "⏹  Stop", "", "Interrupt after the current step"
-        )
+        self._btn_stop = _btn("⏹  Stop", "", "Interrupt after the current step")
         self._btn_reset = _btn("↺  Reset", "", "Reset all steps to Pending")
         self._btn_save = _btn(
             "💾  Save config", "save", "Save pipeline configuration to JSON"
@@ -285,9 +283,7 @@ class PipelineWindow(QWidget):
 
         # Run / Skip buttons
         btn_row = QHBoxLayout()
-        self._btn_run_step = _btn(
-            "▶  Run step", "processing", "Execute only this step"
-        )
+        self._btn_run_step = _btn("▶  Run step", "processing", "Execute only this step")
         self._btn_skip = _btn("⏭  Skip", "", "Mark this step as skipped")
         btn_row.addWidget(self._btn_run_step)
         btn_row.addWidget(self._btn_skip)
@@ -343,9 +339,7 @@ class PipelineWindow(QWidget):
 
         # Summary tab (HTML)
         self._summary_browser = QTextBrowser()
-        self._summary_browser.setPlaceholderText(
-            "Pipeline summary will appear here…"
-        )
+        self._summary_browser.setPlaceholderText("Pipeline summary will appear here…")
         tabs.addTab(self._summary_browser, "Summary")
 
         v.addWidget(tabs)
@@ -401,9 +395,7 @@ class PipelineWindow(QWidget):
 
         pct = int(done / len(self._ctrl.steps) * 100)
         self._overall_progress.setValue(pct)
-        self._progress_lbl.setText(
-            f"{done} / {len(self._ctrl.steps)} steps done"
-        )
+        self._progress_lbl.setText(f"{done} / {len(self._ctrl.steps)} steps done")
 
     # ── Step selection ────────────────────────────────────────────────────────
 
@@ -434,9 +426,7 @@ class PipelineWindow(QWidget):
         # Result info
         if step.status in (StepStatus.DONE, StepStatus.ERROR):
             self._grp_result.setVisible(True)
-            self._result_lbl.setText(
-                step.result_info or step.error_msg or "—"
-            )
+            self._result_lbl.setText(step.result_info or step.error_msg or "—")
             if step.elapsed_s > 0:
                 self._elapsed_lbl.setText(f"Time: {step.elapsed_s:.2f}s")
             # Show preview if available
@@ -477,9 +467,7 @@ class PipelineWindow(QWidget):
 
         self._grp_params.setVisible(True)
         for param_name, ps in spec.params.items():
-            w = self._make_param_widget(
-                ps, step.params.get(param_name, ps.default)
-            )
+            w = self._make_param_widget(ps, step.params.get(param_name, ps.default))
             # Wire change → save to step.params
             self._connect_param_widget(w, ps, param_name, step)
             self._form_params.addRow(f"{ps.label}:", w)
@@ -563,14 +551,10 @@ class PipelineWindow(QWidget):
             step0.active_method = "current"
             step0.status = StepStatus.DONE
             step0.output_sites = self._ctrl._sites_input
-            step0.result_info = (
-                f"{self._ctrl._n(self._ctrl._sites_input)} stations"
-            )
+            step0.result_info = f"{self._ctrl._n(self._ctrl._sites_input)} stations"
             self._ctrl._sites_chain[0] = self._ctrl._sites_input
         self._refresh_stepper()
-        self._log(
-            "⚡ Quick Pipeline — running all steps with default parameters."
-        )
+        self._log("⚡ Quick Pipeline — running all steps with default parameters.")
         self._start_worker(list(range(len(self._ctrl.steps))))
 
     def _on_run_all(self) -> None:
@@ -595,9 +579,7 @@ class PipelineWindow(QWidget):
         step.result_info = "Skipped by user."
         self._refresh_stepper()
         self._select_step(self._selected_step)
-        self._log(
-            f"Step {self._selected_step + 1} ({step.name}) marked as skipped."
-        )
+        self._log(f"Step {self._selected_step + 1} ({step.name}) marked as skipped.")
 
     def _on_stop(self) -> None:
         if self._worker and self._worker.isRunning():

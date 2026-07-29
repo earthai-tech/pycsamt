@@ -77,9 +77,7 @@ def test_ensure_sites_forwards_default_global_order(monkeypatch):
 
 def test_qc_table_has_stable_columns_and_skips_invalid_z(monkeypatch):
     valid = _site("S01")
-    invalid = SimpleNamespace(
-        station="BAD", Z=SimpleNamespace(z=np.ones((2, 3)))
-    )
+    invalid = SimpleNamespace(station="BAD", Z=SimpleNamespace(z=np.ones((2, 3))))
     skew = pd.DataFrame(
         {
             "station": ["S01", "S01"],

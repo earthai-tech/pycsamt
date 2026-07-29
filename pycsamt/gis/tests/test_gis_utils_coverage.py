@@ -35,6 +35,11 @@ import pytest
 
 from pycsamt.gis.config import GDALMissingError, GisError
 from pycsamt.gis.utils import (
+    _assert_minutes,
+    _assert_seconds,
+    _extract_value_from_nested_dict,
+    _resolve_api_name,
+    _rollover_dms,
     assert_lat_value,
     assert_lon_value,
     assert_xy_coordinate_system,
@@ -56,13 +61,6 @@ from pycsamt.gis.utils import (
     transform_utm_to_ll,
     utm_wgs84_conv,
     utm_zone_to_epsg,
-)
-from pycsamt.gis.utils import (
-    _extract_value_from_nested_dict,
-    _resolve_api_name,
-    _assert_minutes,
-    _assert_seconds,
-    _rollover_dms,
 )
 
 WGS84 = 23  # ELLIPSOIDS id used across the code base
@@ -398,9 +396,7 @@ def test_project_point_ll2utm_explicit_zone_letter_n_is_northern():
     lat, lon = 4.0, 10.0
     e_auto, n_auto, z_auto = project_point_ll2utm(lat, lon)
     assert z_auto.endswith("N")
-    e_explicit, n_explicit, z_explicit = project_point_ll2utm(
-        lat, lon, utm_zone=z_auto
-    )
+    e_explicit, n_explicit, z_explicit = project_point_ll2utm(lat, lon, utm_zone=z_auto)
     assert e_explicit == pytest.approx(e_auto)
     assert n_explicit == pytest.approx(n_auto)
 
@@ -736,9 +732,7 @@ def test_extract_value_from_nested_dict_real_opentopodata_shape():
         "results": [{"elevation": 611.0, "location": {"lat": 1, "lng": 2}}],
         "status": "OK",
     }
-    assert _extract_value_from_nested_dict(single, "results.elevation") == [
-        611.0
-    ]
+    assert _extract_value_from_nested_dict(single, "results.elevation") == [611.0]
 
     batch = {
         "results": [

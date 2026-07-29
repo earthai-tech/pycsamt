@@ -106,9 +106,7 @@ class TestSetSites:
         win.set_sites(_Bad())  # must not raise
         assert win._combo_station.count() == 1  # just the placeholder
 
-    def test_set_station_selects_and_updates_label(
-        self, win_with_sites, willy_sites
-    ):
+    def test_set_station_selects_and_updates_label(self, win_with_sites, willy_sites):
         name = willy_sites[0].name
         win_with_sites.set_station(name)
         assert win_with_sites._info_lbl.text() == f"Station: {name}"
@@ -118,9 +116,7 @@ class TestSetSites:
         win_with_sites.set_station("")
         assert win_with_sites._info_lbl.text() == "unchanged"
 
-    def test_on_station_picked_applies_station(
-        self, win_with_sites, willy_sites
-    ):
+    def test_on_station_picked_applies_station(self, win_with_sites, willy_sites):
         name = willy_sites[1].name
         win_with_sites._on_station_picked(name)
         assert win_with_sites._profile_panel._ctrl._station_id == name
@@ -139,9 +135,7 @@ class TestComponentToggles:
             "xx",
         )
 
-    def test_apply_components_falls_back_to_xy_when_none_checked(
-        self, win_with_sites
-    ):
+    def test_apply_components_falls_back_to_xy_when_none_checked(self, win_with_sites):
         win_with_sites._chk_xy.setChecked(False)
         win_with_sites._chk_yx.setChecked(False)
         win_with_sites._apply_components()
@@ -152,9 +146,7 @@ class TestComponentToggles:
         win_with_sites._profile_panel._tabs.setCurrentIndex(0)
         win_with_sites._on_component_changed()  # must not raise
 
-    def test_component_changed_redraws_on_pseudosection_tab(
-        self, win_with_sites
-    ):
+    def test_component_changed_redraws_on_pseudosection_tab(self, win_with_sites):
         win_with_sites._profile_panel._tabs.setCurrentIndex(1)
         win_with_sites._on_component_changed()  # must not raise
 

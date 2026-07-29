@@ -101,22 +101,30 @@ def cached_inv_result():
 
 
 @pytest.fixture
-def cached_session_with_inv_result(cached_session):
+def cached_session_with_inv_result(willy_sites):
     """A session id with BOTH raw Sites and an inversion result cached.
 
     ``generate_grid`` always requires real Sites to be cached (via
     ``cache_get``) as its precondition regardless of the chosen data
     source -- even the "inversion" source needs it, since in normal usage
     a survey is always loaded before an inversion is run against it.
+
+    Uses its own session id rather than layering onto ``cached_session``:
+    the backing cache is disk-based with a 24h TTL and has no per-test
+    teardown, so a shared id would leak the inversion result into any
+    other test -- e.g. ``test_inversion_source_without_result`` -- that
+    expects a session with Sites but no inversion result yet.
     """
+    session_id = "test-map3d-session-with-inv"
+    cache_set(session_id, willy_sites)
     n_x, n_z = 10, 6
     rho_2d = np.random.default_rng(0).uniform(1.0, 1000.0, size=(n_z, n_x))
     z_centers = np.linspace(10, 1000, n_z)
     x_centers = np.linspace(0, 5000, n_x)
     station_names = [f"S{i:03d}" for i in range(n_x)]
     model = _FakeResModel(rho_2d, z_centers, x_centers, station_names)
-    cache_set_inversion_result(cached_session, _FakeInvResult(model))
-    return cached_session
+    cache_set_inversion_result(session_id, _FakeInvResult(model))
+    return session_id
 
 
 def _synthetic_profiles(n_lines=3, n_x=8, n_z=6):
@@ -150,9 +158,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -171,9 +177,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -243,7 +247,9 @@ class TestInterpFinite1d:
 
     def test_single_valid_point(self):
         out = map3d_mod._interp_finite_1d(
-            np.array([0, 1, 2]), np.array([0, 1, 2]), np.array([np.nan, 5, np.nan])
+            np.array([0, 1, 2]),
+            np.array([0, 1, 2]),
+            np.array([np.nan, 5, np.nan]),
         )
         assert np.all(out == 5.0)
 
@@ -260,9 +266,7 @@ class TestLineRealOffsets:
         assert map3d_mod._line_real_offsets(profiles) is None
 
     def test_mismatched_lengths_returns_none(self):
-        profiles = {
-            "L1": {"sta_lat": [1.0], "sta_lon": [], "sta_names": ["a"]}
-        }
+        profiles = {"L1": {"sta_lat": [1.0], "sta_lon": [], "sta_names": ["a"]}}
         assert map3d_mod._line_real_offsets(profiles) is None
 
     def test_real_offsets_computed(self):
@@ -309,7 +313,7 @@ class TestRhoXyFromSite:
         class _S:
             freq = np.array([1.0, 10.0])
             rho = None
-            z = (np.ones((2, 2, 2)) * (1 + 1j))
+            z = np.ones((2, 2, 2)) * (1 + 1j)
 
         freq, rho_xy = map3d_mod._rho_xy_from_site(_S())
         assert freq is not None
@@ -355,7 +359,9 @@ class TestSafeElev:
 
 class TestElevAlongLine:
     def test_empty_sta_returns_zeros(self):
-        out = map3d_mod._elev_along_line(np.array([0, 1, 2]), np.array([]), np.array([]))
+        out = map3d_mod._elev_along_line(
+            np.array([0, 1, 2]), np.array([]), np.array([])
+        )
         assert np.all(out == 0.0)
 
     def test_interpolates(self):
@@ -407,10 +413,7 @@ class TestHasSurveyLineProfiles:
         assert map3d_mod._has_survey_line_profiles(None) is False
 
     def test_one_line_false(self):
-        assert (
-            map3d_mod._has_survey_line_profiles({"line_counts": {"L1": 5}})
-            is False
-        )
+        assert map3d_mod._has_survey_line_profiles({"line_counts": {"L1": 5}}) is False
 
     def test_two_lines_true(self):
         store = {"line_counts": {"L1": 5, "L2": 3}}
@@ -499,9 +502,7 @@ class TestProfilesFromPseudo:
         for p in profiles.values():
             assert p["rho"].shape[0] == len(p["z"])
 
-    def test_require_line_metadata_with_lines(
-        self, willy_sites, store_data_willy
-    ):
+    def test_require_line_metadata_with_lines(self, willy_sites, store_data_willy):
         profiles = map3d_mod._profiles_from_pseudo(
             willy_sites,
             store_data=store_data_willy,
@@ -509,9 +510,7 @@ class TestProfilesFromPseudo:
         )
         assert set(profiles.keys()) <= {"L1", "L2"}
 
-    def test_require_line_metadata_without_store_data_empty(
-        self, willy_sites
-    ):
+    def test_require_line_metadata_without_store_data_empty(self, willy_sites):
         profiles = map3d_mod._profiles_from_pseudo(
             willy_sites, store_data=None, require_line_metadata=True
         )
@@ -647,9 +646,7 @@ class TestBuildBlockFig:
             contours=False,
             title="",
         )
-        assert any(
-            "Not enough visible cells" in a.text for a in fig.layout.annotations
-        )
+        assert any("Not enough visible cells" in a.text for a in fig.layout.annotations)
 
 
 class TestBuildDepthSlicesFig:
@@ -770,9 +767,9 @@ class TestParseTopoUpload:
             station=np.array(["S1", "S2"]),
             elev=np.array([11.0, 22.0]),
         )
-        contents = "data:application/npz;base64," + base64.b64encode(
-            buf.getvalue()
-        ).decode()
+        contents = (
+            "data:application/npz;base64," + base64.b64encode(buf.getvalue()).decode()
+        )
         records = map3d_mod._parse_topo_upload(contents, "topo.npz")
         assert records == [
             {"station": "S1", "elev": 11.0},
@@ -823,16 +820,12 @@ class TestUpdateSourceOptions:
         prof_opt = next(o for o in opts if o["value"] == "profiles")
         assert prof_opt["disabled"] is False
 
-    def test_with_inversion_result_enables_inversion(
-        self, web_app, cached_inv_result
-    ):
+    def test_with_inversion_result_enables_inversion(self, web_app, cached_inv_result):
         opts, value = self._fn(web_app)(None, cached_inv_result, None)
         inv_opt = next(o for o in opts if o["value"] == "inversion")
         assert inv_opt["disabled"] is False
 
-    def test_current_value_kept_if_still_enabled(
-        self, web_app, store_data_willy
-    ):
+    def test_current_value_kept_if_still_enabled(self, web_app, store_data_willy):
         opts, value = self._fn(web_app)(store_data_willy, None, "pseudo")
         assert value == "pseudo"
 
@@ -882,14 +875,10 @@ class TestGenerateGrid:
             self._fn(web_app)(None, "pseudo", "s", None, None, None, None)
 
     def test_no_cached_sites(self, web_app):
-        out = self._fn(web_app)(
-            1, "pseudo", "no-such-session", None, None, None, None
-        )
+        out = self._fn(web_app)(1, "pseudo", "no-such-session", None, None, None, None)
         assert "Load survey data first." in out[4]
 
-    def test_pseudo_source_real_data(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_pseudo_source_real_data(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
             1, "pseudo", cached_session, store_data_willy, None, None, None
         )
@@ -897,12 +886,15 @@ class TestGenerateGrid:
         assert store["n_profiles"] > 0
         assert is_open is False
 
-    def test_profiles_source_requires_two_lines(
-        self, web_app, cached_session
-    ):
+    def test_profiles_source_requires_two_lines(self, web_app, cached_session):
         out = self._fn(web_app)(
-            1, "profiles", cached_session, {"station_records": []},
-            None, None, None,
+            1,
+            "profiles",
+            cached_session,
+            {"station_records": []},
+            None,
+            None,
+            None,
         )
         assert "at least two named lines" in out[1]
 
@@ -916,29 +908,42 @@ class TestGenerateGrid:
         assert store["n_profiles"] >= 1
 
     def test_inversion_source_without_result(self, web_app, cached_session):
-        out = self._fn(web_app)(
-            1, "inversion", cached_session, None, None, None, None
-        )
+        out = self._fn(web_app)(1, "inversion", cached_session, None, None, None, None)
         assert "Run an inversion first" in out[1]
 
     def test_inversion_source_with_result(
         self, web_app, cached_session_with_inv_result
     ):
         out = self._fn(web_app)(
-            1, "inversion", cached_session_with_inv_result, None, None,
-            None, None,
+            1,
+            "inversion",
+            cached_session_with_inv_result,
+            None,
+            None,
+            None,
+            None,
         )
         store = out[0]
         assert store["n_profiles"] == 1
         assert store["src"] == "inversion"
 
-    def test_with_elevation_stores(
-        self, web_app, cached_session, store_data_willy
-    ):
-        elev_corr = [{"station": r["ID"], "elev_corrected": 50.0} for r in store_data_willy["station_records"][:2]]
-        elev_raw = [{"station": r["ID"], "elev": 40.0} for r in store_data_willy["station_records"][:2]]
+    def test_with_elevation_stores(self, web_app, cached_session, store_data_willy):
+        elev_corr = [
+            {"station": r["ID"], "elev_corrected": 50.0}
+            for r in store_data_willy["station_records"][:2]
+        ]
+        elev_raw = [
+            {"station": r["ID"], "elev": 40.0}
+            for r in store_data_willy["station_records"][:2]
+        ]
         out = self._fn(web_app)(
-            1, "pseudo", cached_session, store_data_willy, elev_corr, elev_raw, None
+            1,
+            "pseudo",
+            cached_session,
+            store_data_willy,
+            elev_corr,
+            elev_raw,
+            None,
         )
         assert out[0]["n_profiles"] > 0
 
@@ -1025,7 +1030,9 @@ class TestDisplay3d:
         return args
 
     def _grid_store_from(self, profiles, src="pseudo"):
-        all_rho = np.concatenate([np.asarray(p["rho"]).ravel() for p in profiles.values()])
+        all_rho = np.concatenate(
+            [np.asarray(p["rho"]).ravel() for p in profiles.values()]
+        )
         all_rho = all_rho[np.isfinite(all_rho) & (all_rho > 0)]
         return {
             "profiles": {
@@ -1106,9 +1113,7 @@ class TestDisplay3d:
         )
         assert is_open is False
 
-    def test_real_pseudo_end_to_end(
-        self, web_app, cached_session, store_data_willy
-    ):
+    def test_real_pseudo_end_to_end(self, web_app, cached_session, store_data_willy):
         gen_fn = _cb_multi(web_app, f"{IDs.MAP3D_GRID_STORE}.data")
         grid, hint, spinner, err_open, err_body = gen_fn(
             1, "pseudo", cached_session, store_data_willy, None, None, None
@@ -1134,7 +1139,10 @@ class TestExportHtml:
             self._fn(web_app)(1, None, "t")
 
     def test_real_export(self, web_app):
-        fig_dict = {"data": [{"type": "scatter3d", "x": [1], "y": [1], "z": [1]}], "layout": {}}
+        fig_dict = {
+            "data": [{"type": "scatter3d", "x": [1], "y": [1], "z": [1]}],
+            "layout": {},
+        }
         out = self._fn(web_app)(1, fig_dict, "My Title")
         assert out["filename"] == "My_Title.html"
 

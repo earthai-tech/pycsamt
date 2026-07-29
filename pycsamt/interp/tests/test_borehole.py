@@ -9,7 +9,6 @@ import pytest
 
 from pycsamt.interp.borehole import Borehole, Interval
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Interval
 # ─────────────────────────────────────────────────────────────────────────────
@@ -243,8 +242,7 @@ def test_from_las_null_value_masked_to_nan(tmp_path):
 def test_from_las_null_header_line_overrides_default(tmp_path):
     las = _LAS_BASIC.replace(
         " COMP.           pycsamt:  COMPANY\n",
-        " COMP.           pycsamt:  COMPANY\n"
-        " NULL.           -999:  NULL VALUE\n",
+        " COMP.           pycsamt:  COMPANY\n" " NULL.           -999:  NULL VALUE\n",
     ).replace("-9999.25", "-999.00")
     p = tmp_path / "well2.las"
     p.write_text(las)
@@ -262,9 +260,7 @@ def test_from_las_no_lithology_curve_single_group(tmp_path):
 
 
 def test_from_las_missing_resistivity_curve_all_nan(tmp_path):
-    las = _LAS_BASIC.replace(
-        " RESD.OHMM              :  RESISTIVITY\n", ""
-    )
+    las = _LAS_BASIC.replace(" RESD.OHMM              :  RESISTIVITY\n", "")
     p = tmp_path / "well4.las"
     p.write_text(las)
     bh = Borehole.from_las(p, resistivity_curve="RESD")

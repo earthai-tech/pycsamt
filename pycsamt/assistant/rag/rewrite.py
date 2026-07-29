@@ -78,11 +78,7 @@ def is_follow_up(query: str) -> bool:
     words = _WORD.findall(ql)
     # A short message that is essentially just an anaphor ("that", "it too").
     content = [w for w in words if w not in _ANAPHORA]
-    return (
-        bool(words)
-        and len(content) <= 1
-        and any(w in _ANAPHORA for w in words)
-    )
+    return bool(words) and len(content) <= 1 and any(w in _ANAPHORA for w in words)
 
 
 def _workflow_terms(workflow: str) -> str:
@@ -124,11 +120,7 @@ def rewrite_query(
         terms = _workflow_terms(wf)
         if terms:
             extra.append(terms)
-    if (
-        last_line
-        and _LINE_REF.search(q)
-        and last_line.lower() not in q.lower()
-    ):
+    if last_line and _LINE_REF.search(q) and last_line.lower() not in q.lower():
         extra.append(last_line)
 
     return f"{q} {' '.join(extra)}".strip() if extra else q

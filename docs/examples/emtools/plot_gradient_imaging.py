@@ -42,9 +42,7 @@ spatial = rho_spatial_gradient(survey)
 pair = spatial[spatial["station_a"] == "18-001A"].sort_values("period_s")
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
-ax.semilogx(
-    pair["period_s"], pair["delta_rho_x"], "o-", ms=3, color="#1f77b4"
-)
+ax.semilogx(pair["period_s"], pair["delta_rho_x"], "o-", ms=3, color="#1f77b4")
 ax.axhline(0.0, color="0.3", lw=0.8)
 ax.set_xlabel("Period (s)")
 ax.set_ylabel(r"$\Delta\rho_a^x$ ($\Omega\cdot$m)")

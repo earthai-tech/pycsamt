@@ -63,9 +63,7 @@ class SyncConfig(PyCSAMTObject):
     def validate(self) -> None:
         """Validate and normalise sync tolerances."""
         self.tolerance_ms = _c.as_positive(self.tolerance_ms, "tolerance_ms")
-        self.reference = _c.as_nonempty_str(
-            self.reference, "reference"
-        ).lower()
+        self.reference = _c.as_nonempty_str(self.reference, "reference").lower()
         self.max_drift_ppm = _c.as_optional_positive(
             self.max_drift_ppm, "max_drift_ppm"
         )
@@ -290,9 +288,7 @@ def batch_assess_sync(
     for device_id, spec in dict(references).items():
         local, reference, gps_lock = _unpack_reference_spec(spec)
         statuses.append(
-            synchronizer.assess(
-                device_id, local, reference, gps_lock=gps_lock
-            )
+            synchronizer.assess(device_id, local, reference, gps_lock=gps_lock)
         )
     return sync_status_table(statuses, api=api)
 
@@ -313,9 +309,7 @@ def _unpack_reference_spec(
             )
         gps = items[2] if len(items) > 2 else None
         return items[0], items[1], (None if gps is None else _c.as_bool(gps))
-    raise TypeError(
-        "reference spec must be a (local, reference) pair or a mapping."
-    )
+    raise TypeError("reference spec must be a (local, reference) pair or a mapping.")
 
 
 def detect_gps_dropout(
@@ -351,9 +345,7 @@ def detect_gps_dropout(
         except ValueError:
             flags.append(False)
     n = len(flags)
-    min_lock_fraction = _c.as_probability(
-        min_lock_fraction, "min_lock_fraction"
-    )
+    min_lock_fraction = _c.as_probability(min_lock_fraction, "min_lock_fraction")
     if n == 0:
         return dict(
             n_samples=0,

@@ -114,9 +114,7 @@ def _fake_worker_cls(*, fig=None, error=None):
 class TestProfileWorkerReal:
     @pytest.mark.parametrize("method", _METHODS)
     @pytest.mark.parametrize("sort_by", _SORT_BY)
-    def test_run_emits_done_with_real_figure(
-        self, willy_sites, method, sort_by
-    ):
+    def test_run_emits_done_with_real_figure(self, willy_sites, method, sort_by):
         w = _ProfileWorker(willy_sites, method, None, sort_by)
         done, err = [], []
         w.done.connect(done.append)
@@ -242,8 +240,7 @@ class TestDialogConstruction:
         dlg = StrikeProfileDialog(sites=None)
         try:
             items = [
-                dlg._method_combo.itemText(i)
-                for i in range(dlg._method_combo.count())
+                dlg._method_combo.itemText(i) for i in range(dlg._method_combo.count())
             ]
             assert items == _METHODS
         finally:
@@ -253,8 +250,7 @@ class TestDialogConstruction:
         dlg = StrikeProfileDialog(sites=None)
         try:
             items = [
-                dlg._sort_combo.itemText(i)
-                for i in range(dlg._sort_combo.count())
+                dlg._sort_combo.itemText(i) for i in range(dlg._sort_combo.count())
             ]
             assert items == _SORT_BY
         finally:
@@ -323,9 +319,7 @@ class TestOnPlot:
             def start(self):
                 # Capture dialog state exactly as _on_plot leaves it
                 # before this start() call returns control.
-                seen_states.append(
-                    (dlg._run_btn.isEnabled(), dlg._status_lbl.text())
-                )
+                seen_states.append((dlg._run_btn.isEnabled(), dlg._status_lbl.text()))
 
         monkeypatch.setattr(mod, "_ProfileWorker", _ObservingWorker)
         dlg = StrikeProfileDialog(sites=willy_sites)
@@ -335,9 +329,7 @@ class TestOnPlot:
         finally:
             dlg.close()
 
-    def test_on_plot_valid_band_passed_through(
-        self, qapp, willy_sites, monkeypatch
-    ):
+    def test_on_plot_valid_band_passed_through(self, qapp, willy_sites, monkeypatch):
         import pycsamt.app.desktop.tools.strike_profile_tool as mod
 
         fake_cls = _fake_worker_cls(fig=plt.figure())
@@ -375,9 +367,7 @@ class TestOnPlot:
             dlg.close()
             _close()
 
-    def test_on_plot_error_path_sets_status(
-        self, qapp, willy_sites, monkeypatch
-    ):
+    def test_on_plot_error_path_sets_status(self, qapp, willy_sites, monkeypatch):
         import pycsamt.app.desktop.tools.strike_profile_tool as mod
 
         fake_cls = _fake_worker_cls(error="synthetic worker failure")
@@ -430,9 +420,7 @@ class TestEndToEndRealWorker:
     ):
         """Exercise the dialog's real _ProfileWorker wiring (not the fake),
         by forcing QThread.start() to run synchronously in-process."""
-        monkeypatch.setattr(
-            _ProfileWorker, "start", _ProfileWorker.run, raising=False
-        )
+        monkeypatch.setattr(_ProfileWorker, "start", _ProfileWorker.run, raising=False)
 
         dlg = StrikeProfileDialog(sites=willy_sites)
         try:

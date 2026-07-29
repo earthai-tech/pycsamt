@@ -62,9 +62,7 @@ def get_most_recent(
         return Path(file_or_keyword)
 
     search = Path(search_dir)
-    candidates = [
-        p for p in search.glob(pattern) if not p.name.startswith(".")
-    ]
+    candidates = [p for p in search.glob(pattern) if not p.name.startswith(".")]
     if not candidates:
         return None
 

@@ -180,9 +180,7 @@ def register_settings(app) -> None:
         provider = triggered["index"]
         providers = ["claude", "openai", "gemini", "deepseek"]
         classes = [
-            "settings-provider-btn active"
-            if p == provider
-            else "settings-provider-btn"
+            "settings-provider-btn active" if p == provider else "settings-provider-btn"
             for p in providers
         ]
         opts = _MODEL_OPTIONS.get(provider, _MODEL_OPTIONS["claude"])
@@ -208,9 +206,7 @@ def register_settings(app) -> None:
         provider = provider or "claude"
         providers = ["claude", "openai", "gemini", "deepseek"]
         classes = [
-            "settings-provider-btn active"
-            if p == provider
-            else "settings-provider-btn"
+            "settings-provider-btn active" if p == provider else "settings-provider-btn"
             for p in providers
         ]
         return (

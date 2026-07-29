@@ -134,9 +134,7 @@ def test_on_apply_no_fields_emits_nothing(dlg):
 
 def test_on_apply_touches_matching_method(dlg):
     dlg._pages = [_StubPage() for _ in range(5)]
-    dlg._pages[1] = _StubPage(
-        collect_return={"view_controls": {"some_flag": True}}
-    )
+    dlg._pages[1] = _StubPage(collect_return={"view_controls": {"some_flag": True}})
     dlg._ctrl.apply_view_controls = mock.Mock()
     spy = mock.Mock()
     dlg.settings_changed.connect(spy)

@@ -463,14 +463,10 @@ def _run_3d(
 
     elif plot3 == "section":
         fig, ax = plt.subplots(figsize=(11, 5))
-        plot_response_section_3d(
-            resp3d, component=comp3, quantity="rho_a", ax=ax
-        )
+        plot_response_section_3d(resp3d, component=comp3, quantity="rho_a", ax=ax)
 
     elif plot3 == "tensor":
-        axes = plot_tensor_components_3d(
-            resp3d, freq_idx=freq3idx, quantity="rho_a"
-        )
+        axes = plot_tensor_components_3d(resp3d, freq_idx=freq3idx, quantity="rho_a")
         fig = np.asarray(axes).flat[0].figure
 
     else:

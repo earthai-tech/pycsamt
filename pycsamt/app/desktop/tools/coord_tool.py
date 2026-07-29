@@ -51,9 +51,7 @@ _DATUMS = ["WGS84", "NAD83", "GRS80"]
 # ── Coordinate math ───────────────────────────────────────────────────────────
 
 
-def _ll_to_utm(
-    lat: float, lon: float, zone: int | None, hem: str, datum: str
-):
+def _ll_to_utm(lat: float, lon: float, zone: int | None, hem: str, datum: str):
     """Return (easting, northing, zone) via pyproj or fallback."""
     try:
         from pyproj import Proj
@@ -80,9 +78,7 @@ def _ll_to_utm(
         )
 
 
-def _utm_to_ll(
-    easting: float, northing: float, zone: int, hem: str, datum: str
-):
+def _utm_to_ll(easting: float, northing: float, zone: int, hem: str, datum: str):
     """Return (lat, lon) via pyproj or fallback."""
     try:
         from pyproj import Proj
@@ -243,9 +239,7 @@ class CoordTransformDialog(QDialog):
         self._surv_table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.Stretch
         )
-        self._surv_table.setEditTriggers(
-            QTableWidget.EditTrigger.NoEditTriggers
-        )
+        self._surv_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._surv_table.setMaximumHeight(140)
         vlay.addWidget(self._surv_table)
         root.addWidget(grp)
@@ -280,18 +274,10 @@ class CoordTransformDialog(QDialog):
                 try:
                     la, lo = float(lat), float(lon)
                     e, n, z = _ll_to_utm(la, lo, None, hem, datum)
-                    self._surv_table.setItem(
-                        r, 1, QTableWidgetItem(f"{la:.6f}")
-                    )
-                    self._surv_table.setItem(
-                        r, 2, QTableWidgetItem(f"{lo:.6f}")
-                    )
-                    self._surv_table.setItem(
-                        r, 3, QTableWidgetItem(f"{e:.1f}")
-                    )
-                    self._surv_table.setItem(
-                        r, 4, QTableWidgetItem(f"{n:.1f}")
-                    )
+                    self._surv_table.setItem(r, 1, QTableWidgetItem(f"{la:.6f}"))
+                    self._surv_table.setItem(r, 2, QTableWidgetItem(f"{lo:.6f}"))
+                    self._surv_table.setItem(r, 3, QTableWidgetItem(f"{e:.1f}"))
+                    self._surv_table.setItem(r, 4, QTableWidgetItem(f"{n:.1f}"))
                 except Exception:
                     pass
             else:

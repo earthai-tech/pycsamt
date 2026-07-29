@@ -445,12 +445,8 @@ def test_joint_nonzero_when_both_vary():
         return z
 
     sites = [
-        _FakeSite(
-            "A", _z_for_rho_f(rho_j[0], freqs), freqs, east=0.0, north=0.0
-        ),
-        _FakeSite(
-            "B", _z_for_rho_f(rho_j[1], freqs), freqs, east=200.0, north=0.0
-        ),
+        _FakeSite("A", _z_for_rho_f(rho_j[0], freqs), freqs, east=0.0, north=0.0),
+        _FakeSite("B", _z_for_rho_f(rho_j[1], freqs), freqs, east=200.0, north=0.0),
     ]
     df = rho_joint_gradient(sites)
     assert not np.allclose(df["delta_rho_zx"].values, 0.0, atol=1e-3)

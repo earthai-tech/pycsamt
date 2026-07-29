@@ -1,558 +1,309 @@
 .. _tutorial_essential_3d_ai_inversion:
 
-Essential 3-D AI Inversion With Embedded Topography
-===================================================
+Building a Defensible 3-D AI Inversion Problem
+===============================================
 
-This tutorial uses one corrected EDI line: ``L18PLT``.
+A 3-D resistivity array is not automatically a 3-D inversion.  A defensible
+result needs three connected objects: a geological volume, a Maxwell mesh that
+honours the acquisition and topography, and an optimizer whose predicted
+impedances reproduce observations not used to construct the model.  This
+tutorial builds and inspects the first two with the current ``pycsamt.ai`` and
+``pycsamt.forward.maxwell`` APIs, then applies the solver gate before training.
 
-``data/AMT/WILLY_DATA/L18PLT``
+The distinction matters for the bundled ``L18PLT`` example.  It is one profile,
+so all receiver coordinates lie close to a line.  It can constrain an
+along-line section, but it cannot by itself identify arbitrary cross-line
+structure.  Moreover, :class:`pycsamt.agents.Inv3DAgent` currently returns a
+``(station, layer)`` graph prediction.  That object is useful for research and
+workflow testing; it is **not** a voxelwise, topographic 3-D Maxwell inversion.
+Consequently this page does not publish the former synthetic
+``l18_ai3d_topography_block.png`` as an inversion result.
 
-The line has close station spacing, valid impedance data, and real station
-elevation in the EDI headers. The workflow is deliberately ordered like a
-field-processing notebook: inspect the curves, review static shift, check
-phase tensor and strike behaviour, plot the corrected pseudosection, and only
-then run the 3-D AI inversion.
-
-No fake topography is used here. No fake depth vector is used either:
-
-- profile distance comes from :func:`pycsamt.topo.extract_chainage`;
-- station elevation comes from :func:`pycsamt.topo.extract_elevation`;
-- model depths come from ``result.data["depths_km"]`` returned by the 3-D AI
-  inversion;
-- the terrain-following model grid is built with
-  :func:`pycsamt.topo.drape_section`.
-
-Load L18PLT as Corrected EDI
-----------------------------
-
-In a real project, replace this path with the folder where you exported your
-corrected EDI files.
-
-.. code-block:: python
-   :linenos:
-
-   from pathlib import Path
-
-   import numpy as np
-
-   from pycsamt.api import read_edis
-   from pycsamt.topo import (
-       extract_chainage,
-       extract_elevation,
-       extract_station_names,
-       has_elevation,
-   )
-
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-   survey = read_edis(
-       edi_dir,
-       recursive=False,
-       strict=False,
-       on_dup="replace",
-       progress=False,
-   )
-   sites = survey.collection
-
-   chain_km = extract_chainage(sites)
-   elev_m = extract_elevation(sites)
-   station_names = extract_station_names(sites)
-
-   if not has_elevation(sites):
-       raise RuntimeError("This 3-D topography plot requires real elevation.")
-
-   print("stations:", len(station_names))
-   print("profile length (km):", chain_km[-1])
-   print("elevation range (m):", elev_m.min(), elev_m.max())
-
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_station_topography.png
-   :alt: L18PLT station spacing and real topography from EDI headers
-   :width: 100%
-
-Inspect Three Stations
-----------------------
-
-Before trusting any inversion, plot raw apparent resistivity and phase at a
-few stations. The purpose is not to make a final interpretation yet; it is to
-catch obvious jumps, phase wrapping, dead bands, or inconsistent components.
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-   import numpy as np
-
-   def get_site(sites, station):
-       for site in sites:
-           names = [
-               getattr(site, "station", None),
-               getattr(site, "id", None),
-               getattr(getattr(site, "edi", None), "station", None),
-           ]
-           if station in {str(name) for name in names if name is not None}:
-               return site
-       raise KeyError(station)
-
-   def rho_phase(site, comp):
-       z_obj = getattr(site, "edi", site).Z
-       freq = np.asarray(z_obj.freq, dtype=float)
-       z = np.asarray(z_obj.z, dtype=complex)[:, comp[0], comp[1]]
-       rho = 0.2 * np.abs(z) ** 2 / np.maximum(freq, 1e-30)
-       phase = np.angle(z, deg=True)
-       return freq, rho, phase
-
-   stations = ["18-001A", "18-013U", "18-025A"]
-   fig, axes = plt.subplots(2, 3, figsize=(13.4, 6.7), sharex="col")
-   for col, station in enumerate(stations):
-       site = get_site(sites, station)
-       for label, comp in {"xy": (0, 1), "yx": (1, 0)}.items():
-           freq, rho, phase = rho_phase(site, comp)
-           period = 1.0 / np.maximum(freq, 1e-30)
-           axes[0, col].plot(period, rho, marker="o", label=label)
-           axes[1, col].plot(period, phase, marker="s", label=label)
-       axes[0, col].set_xscale("log")
-       axes[0, col].set_yscale("log")
-       axes[1, col].set_xscale("log")
-       axes[1, col].invert_xaxis()
-       axes[0, col].set_title(station)
-   axes[0, 0].set_ylabel("App. resistivity (ohm m)")
-   axes[1, 0].set_ylabel("Phase (deg)")
-   fig.savefig("l18_rho_phase_three_stations.png", dpi=190)
-
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_rho_phase_three_stations.png
-   :alt: L18PLT apparent resistivity and phase at three stations
-   :width: 100%
-
-Review Static Shift
--------------------
-
-Here the L18 EDIs are treated as already corrected, so we do not suppress
-frequencies blindly. We still estimate AMA static-shift factors, review them,
-clip only extreme impedance scalers, and compare the pseudosection before and
-after the correction. With a real survey, do the same step after your own QC
-flags and frequency filtering.
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import (
-       apply_ss_factors,
-       estimate_ss_ama,
-       pseudosection,
-   )
-
-   def rho_xy_values(site_collection):
-       values = []
-       for site in site_collection:
-           z_obj = getattr(site, "edi", site).Z
-           freq = np.asarray(z_obj.freq, dtype=float)
-           zxy = np.asarray(z_obj.z, dtype=complex)[:, 0, 1]
-           rho = 0.2 * np.abs(zxy) ** 2 / np.maximum(freq, 1e-30)
-           values.append(rho[np.isfinite(rho)])
-       return np.concatenate(values)
-
-   factors = estimate_ss_ama(
-       sites,
-       sort_by="name",
-       half_window=3,
-       max_skew=None,
-       recursive=False,
-       api=True,
-   ).to_pandas(copy=True)
-
-   if factors.empty:
-       corrected_sites = sites
-   else:
-       factors["fac_z_reviewed"] = factors["fac_z"].clip(
-           lower=0.35,
-           upper=2.85,
-       )
-       reviewed = factors[["station", "fac_z_reviewed"]].rename(
-           columns={"fac_z_reviewed": "fac_z"}
-       )
-       corrected_sites = apply_ss_factors(
-           sites,
-           reviewed,
-           key="fac_z",
-           inplace=False,
-           recursive=False,
-       )
-
-   rho = np.concatenate(
-       [
-           rho_xy_values(sites),
-           rho_xy_values(corrected_sites),
-       ]
-   )
-   rho = rho[np.isfinite(rho) & (rho > 0.0)]
-   vmin = float(np.nanpercentile(rho, 3))
-   vmax = float(np.nanpercentile(rho, 97))
-
-   fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.1))
-   pseudosection(
-       sites,
-       quantity="rho_xy",
-       recursive=False,
-       ax=axes[0],
-       topo=True,
-       vmin=vmin,
-       vmax=vmax,
-   )
-   pseudosection(
-       corrected_sites,
-       quantity="rho_xy",
-       recursive=False,
-       ax=axes[1],
-       topo=True,
-       vmin=vmin,
-       vmax=vmax,
-   )
-   axes[0].set_title("Before static-shift review")
-   axes[1].set_title("After static-shift review")
-   fig.savefig("l18_static_shift_before_after_grid.png", dpi=190)
-
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_static_shift_before_after_grid.png
-   :alt: L18PLT rho_xy pseudosection before and after static-shift review
-   :width: 100%
-
-Check Strike and Phase Tensors
+Start with the survey geometry
 ------------------------------
 
-The tensor plots help decide whether a 2-D or 3-D interpretation is reasonable
-and whether the line needs rotation before inversion. The rose diagram gives a
-compact strike summary, while the phase tensor grid shows period-by-station
-changes in dimensionality.
+Load corrected EDIs through the canonical site contract and retain every
+station.  Down-sampling may be useful for a quick software test, but station
+markers on a scientific figure must describe the data actually inverted.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-   import numpy as np
-   from matplotlib.patches import Ellipse
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools import ensure_sites
+   >>> from pycsamt.topo import extract_chainage, extract_elevation
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = ensure_sites(edi_dir, recursive=False, verbose=0).ordered()
+   >>> chain_km = extract_chainage(sites)
+   >>> elevation_m = extract_elevation(sites)
+   >>> len(sites), round(float(chain_km[-1]), 3)
+   (25, 4.029)
+   >>> (round(float(elevation_m.min()), 1), round(float(elevation_m.max()), 1))
+   (224.0, 274.0)
 
-   from pycsamt.emtools import build_phase_tensor_table, plot_strike_rose
-
-   fig = plot_strike_rose(
-       corrected_sites,
-       method="consensus",
-       recursive=False,
-       suptitle="L18PLT consensus strike rose",
-       subplot_size=4.4,
-   )
-   fig.savefig("l18_strike_rose.png", dpi=190, bbox_inches="tight")
-
-   pt = build_phase_tensor_table(corrected_sites, recursive=False)
-   stations = list(dict.fromkeys(pt["station"]))
-   periods = np.array(sorted(pt["period"].unique()))
-   selected = periods[
-       np.linspace(0, len(periods) - 1, min(9, len(periods))).astype(int)
-   ]
-
-   fig, ax = plt.subplots(figsize=(13.2, 5.9))
-   max_s1 = np.nanpercentile(pt["s1"], 85)
-   for ix, station in enumerate(stations):
-       station_rows = pt[pt["station"] == station]
-       for iy, period in enumerate(selected):
-           row = station_rows.iloc[
-               (station_rows["period"] - period).abs().argsort()[:1]
-           ]
-           if row.empty:
-               continue
-           r = row.iloc[0]
-           width = 0.58 * min(float(r["s1"]) / max(max_s1, 1e-9), 1.0)
-           ratio = max(float(r["s2"]) / max(float(r["s1"]), 1e-9), 0.08)
-           ellipse = Ellipse(
-               (ix, iy),
-               width=width,
-               height=min(0.58, max(0.08, width * ratio)),
-               angle=float(r["theta"]),
-               facecolor=plt.cm.RdBu_r(
-                   np.clip((float(r["beta"]) + 20.0) / 40.0, 0.0, 1.0)
-               ),
-               edgecolor="0.2",
-               linewidth=0.35,
-           )
-           ax.add_patch(ellipse)
-   ax.set_xticks(np.arange(len(stations)))
-   ax.set_xticklabels(stations, rotation=90, fontsize=6.6)
-   ax.set_yticks(np.arange(len(selected)))
-   ax.set_yticklabels([f"{period:.3g}" for period in selected])
-   ax.set_ylabel("Period (s)")
-   ax.set_title("L18PLT phase tensor grid, color by beta")
-   fig.savefig("l18_phase_tensor_grid.png", dpi=190, bbox_inches="tight")
-
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_strike_rose.png
-   :alt: L18PLT consensus strike rose diagram
-   :width: 55%
-
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_phase_tensor_grid.png
-   :alt: L18PLT phase tensor grid
+.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_station_topography.png
+   :alt: L18 station positions and elevations read from EDI headers
    :width: 100%
 
-Plot the Corrected Pseudosection
---------------------------------
+The clustered but nonuniform station spacing controls lateral resolution.  The
+50 m elevation range is also large enough that replacing the surface by a flat
+datum can move near-surface cells and receivers into the wrong physical region.
+Before attempting 3-D work, inspect the response curves, static-shift review,
+phase tensors, and corrected pseudosection exactly as described in
+:doc:`ai_inversion_from_corrected_edis`.  Those diagnostics decide whether the
+data justify a 2-D approximation and reveal errors that no neural network can
+repair.
 
-The corrected pseudosection is the last visual checkpoint before inversion. If
-the inversion later shows suspicious resistivity values, come back here first:
-bad scaling, dead frequencies, or station ordering issues usually appear in
-this plot.
+Define the 3-D geological hypothesis
+------------------------------------
 
-.. code-block:: python
-   :linenos:
+The model below is a **prior realization**, not an inferred image of L18.  It
+shows how the updated geology package expresses reproducible stratigraphy,
+spatially correlated heterogeneity, a dipping conductive body, and a terrain
+surface on one canonical ``(nz, ny, nx)`` grid.
 
-   import matplotlib.pyplot as plt
+.. code-block:: pycon
 
-   from pycsamt.emtools import pseudosection
+   >>> from pycsamt.ai.geology import (
+   ...     ElectricalLayer, EllipsoidalLens, GaussianCorrelation,
+   ...     GeologyGrid, TopographicSurface,
+   ...     generate_layered_geology, insert_lenses,
+   ... )
+   >>> grid = GeologyGrid.regular_3d(
+   ...     nx=36, ny=24, nz=24,
+   ...     dx_m=200, dy_m=200, dz_m=100,
+   ...     x_origin_m=-3600, y_origin_m=-2400,
+   ... )
+   >>> correlation = GaussianCorrelation(
+   ...     1200, 180, length_y_m=800, azimuth_deg=25,
+   ... )
+   >>> units = [
+   ...     ElectricalLayer("weathered cover", 35, .10, correlation),
+   ...     ElectricalLayer("resistive host", 900, .12, correlation),
+   ...     ElectricalLayer("deep basement", 2200, .08, correlation),
+   ... ]
+   >>> base = generate_layered_geology(
+   ...     grid, units, [450, 1350], seed=41,
+   ...     interface_relief_std_m=[70, 130],
+   ...     interface_correlation=correlation,
+   ...     minimum_thickness_m=150,
+   ... )
+   >>> conductor = EllipsoidalLens(
+   ...     "dipping conductor", 400, 900, 1100, 300, 8,
+   ...     center_y_m=-100, radius_y_m=650,
+   ...     azimuth_deg=30, dip_deg=18, transition_fraction=.20,
+   ... )
+   >>> geology = insert_lenses(base, [conductor])
+   >>> grid.shape
+   (24, 24, 36)
+   >>> tuple(round(v, 1) for v in (
+   ...     geology.resistivity_ohm_m.min(),
+   ...     geology.resistivity_ohm_m.max(),
+   ... ))
+   (8.0, 3878.7)
 
-   fig, ax = plt.subplots(figsize=(12.6, 5.2))
-   pseudosection(
-       corrected_sites,
-       quantity="rho_xy",
-       recursive=False,
-       ax=ax,
-       topo=True,
-       dark=False,
-   )
-   ax.set_title("L18PLT corrected apparent-resistivity pseudosection")
-   fig.savefig("l18_corrected_pseudosection.png", dpi=190)
+With :math:`\mathbf{x}=(x,y,z)` and unit index :math:`k(\mathbf{x})`, the
+layer field is sampled in log-resistivity space,
 
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_corrected_pseudosection.png
-   :alt: L18PLT corrected apparent-resistivity pseudosection
+.. math::
+   :label: tutorial-3d-layer-prior
+
+   \log_{10}\rho(\mathbf{x}) =
+   \log_{10}\bar{\rho}_{k(\mathbf{x})}
+   + \sigma_{k(\mathbf{x})}\,g_{k(\mathbf{x})}(\mathbf{x}),
+   \qquad
+   C(\mathbf{h})=
+   \exp\!\left[-\frac{1}{2}\sum_{q\in\{x,y,z\}}
+   \left(\frac{h_q}{\ell_q}\right)^2\right].
+
+Here the seed fixes each correlated field, while the correlation lengths
+:math:`\ell_q` encode continuity rather than certainty.  The lens then replaces
+or blends cells inside its rotated ellipsoidal support.  Different plausible
+seeds, interfaces, and bodies should become an ensemble of priors; selecting
+only the realization that resembles the desired answer would bias validation.
+
+.. figure:: ../images/tutorials/essential_3d_ai_inversion/essential3d_geology_volume_slices.png
+   :alt: Horizontal, along-line, and cross-line slices of the seeded 3-D geological prior
    :width: 100%
 
-Run the 3-D AI Inversion
-------------------------
+The central panel shows the expected along-line conductor, while the horizontal
+and cross-line panels expose information a single profile cannot determine.
+That unobserved cross-line extent is a prior assumption and must be reported as
+such.  The black curves are the terrain depth relative to the highest surface
+point; cells above them belong to air, not geology.
 
-The high-level workflow uses :class:`pycsamt.agents.inv3d_agent.Inv3DAgent`.
-Internally, the agent wraps the graph-convolutional 3-D inverter from
-``pycsamt.ai.inversion``. In this teaching example, the training settings are
-kept small so the script runs quickly, but the random seeds are fixed so the
-documentation figure is reproducible. For publication work, increase the
-training profiles, epochs, uncertainty runs, and compare with a classical
-inversion.
+The complete figure generator is exposed in the reproducibility section at the
+end of this tutorial, where it can be opened, copied, and run as one script.
 
-.. code-block:: python
-   :linenos:
+Build the terrain-aware Maxwell mesh
+------------------------------------
 
-   import numpy as np
+The geology grid describes the core hypothesis.  A forward solver additionally
+needs air cells, lateral and basal padding, conductivity, frequencies, and a
+terrain mask.  :func:`pycsamt.forward.maxwell.build_solver_mesh` constructs
+that numerical model without silently changing the canonical array order.
 
-   np.random.seed(7)
-   try:
-       import torch
+.. code-block:: pycon
 
-       torch.manual_seed(7)
-   except Exception:
-       pass
+   >>> import numpy as np
+   >>> from pycsamt.forward.maxwell import MeshDesign, build_solver_mesh
+   >>> xx, yy = np.meshgrid(grid.x_m, grid.y_m)
+   >>> elevation = (
+   ...     620 + 85 * np.exp(-((xx + 900) / 1500) ** 2
+   ...                       - ((yy - 300) / 1100) ** 2)
+   ...     - 45 * np.exp(-((xx - 1500) / 900) ** 2
+   ...                       - ((yy + 500) / 700) ** 2)
+   ...     + 18 * np.sin(xx / 1200)
+   ... )
+   >>> topography = TopographicSurface(
+   ...     grid, elevation, float(elevation.max()),
+   ...     source="deterministic tutorial surface",
+   ... )
+   >>> design = MeshDesign(
+   ...     horizontal_padding_cells=4,
+   ...     bottom_padding_cells=5,
+   ...     air_layers=4,
+   ...     padding_expansion=1.35,
+   ... )
+   >>> solver_model = build_solver_mesh(
+   ...     grid,
+   ...     resistivity_ohm_m=geology.resistivity_ohm_m,
+   ...     frequencies_hz=[100, 10, 1, .1],
+   ...     topography=topography,
+   ...     design=design,
+   ... )
+   >>> solver_model.mesh.shape
+   (33, 32, 44)
+   >>> solver_model.quality.cell_count
+   46464
+   >>> len(solver_model.quality.warnings)
+   1
 
-   from pycsamt.agents.inv3d_agent import Inv3DAgent
-   from pycsamt.topo import extract_chainage
+The executed topographic relief is ``97.6 m``.  The mesh quality
+diagnostic uses the electromagnetic skin depth
 
-   chain_km = extract_chainage(corrected_sites)
-   coords_m = np.column_stack(
-       [
-           chain_km * 1000.0,
-           np.zeros_like(chain_km),
-       ]
-   )
+.. math::
+   :label: tutorial-3d-skin-depth
 
-   agent = Inv3DAgent(
-       n_layers=5,
-       n_freqs=16,
-       n_train_profiles=10,
-       epochs=3,
-       n_mc=0,
-       radius=450.0,
-   )
+   \delta(\rho,f)=\sqrt{\frac{\rho}{\pi\mu_0 f}},
 
-   result = agent.execute(
-       {
-           "sites": corrected_sites,
-           "coords": coords_m,
-           "output_dir": "results/L18PLT_ai3d",
-       }
-   )
+and compares the smallest :math:`\delta` over the requested frequency/model
+range with the largest core-cell width.  A warning is not a cosmetic message:
+refine the affected direction or justify a backend-specific convergence study.
 
-   if result.status != "success":
-       raise RuntimeError(result.summary)
-
-   pred_rho = result.data["pred_rho"]      # stations x layers, log10 rho
-   depths_km = result.data["depths_km"]    # depth axis returned by the agent
-
-   print(result.summary)
-   print("pred_rho:", pred_rho.shape)
-   print("depths_km:", depths_km)
-
-Embed Real Topography in the 3-D Model
---------------------------------------
-
-The raw 3-D GCN result is station-centred and deliberately low-dimensional
-(``stations x layers``). If that coarse matrix is plotted directly, a short
-teaching run can look like a nearly uniform color ramp. For a report-style
-profile image, build a dense block from the corrected L18 resistivity
-structure, use the 3-D AI output as the station-wise trend constraint, and
-drape that block onto the real station topography.
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-
-   from pycsamt.topo import (
-       drape_section,
-       extract_chainage,
-       extract_elevation,
-       extract_station_names,
-       interp_elev,
-   )
-
-   def cell_edges(centres):
-       centres = np.asarray(centres, dtype=float).ravel()
-       if centres.size == 1:
-           width = max(float(centres[0]), 0.05)
-           return np.asarray([0.0, centres[0] + width])
-       edges = np.empty(centres.size + 1, dtype=float)
-       edges[1:-1] = 0.5 * (centres[:-1] + centres[1:])
-       edges[0] = max(0.0, centres[0] - (edges[1] - centres[0]))
-       edges[-1] = centres[-1] + (centres[-1] - edges[-2])
-       return edges
-
-   chain_km = extract_chainage(corrected_sites)
-   elev_m = extract_elevation(corrected_sites)
-   labels = [name.replace("23-", "") for name in extract_station_names(corrected_sites)]
-   def rho_phase(site, comp=(0, 1)):
-       z_obj = getattr(site, "edi", site).Z
-       freq = np.asarray(z_obj.freq, dtype=float)
-       z = np.asarray(z_obj.z, dtype=complex)[:, comp[0], comp[1]]
-       rho = 0.2 * np.abs(z) ** 2 / np.maximum(freq, 1e-30)
-       phase = np.angle(z, deg=True)
-       return freq, rho, phase
-
-   pred_rho = np.asarray(result.data["pred_rho"], dtype=float)
-   periods = []
-   log_rho_cols = []
-   for site in corrected_sites:
-       freq, rho, _ = rho_phase(site, (0, 1))
-       period = 1.0 / np.maximum(freq, 1e-30)
-       mask = np.isfinite(period) & np.isfinite(rho) & (rho > 0.0)
-       periods.append(period[mask])
-       log_rho_cols.append(np.log10(rho[mask]))
-
-   common_periods = np.geomspace(
-       max(np.nanmin(period) for period in periods),
-       min(np.nanmax(period) for period in periods),
-       90,
-   )
-   pseudo = []
-   for period, log_rho in zip(periods, log_rho_cols):
-       order = np.argsort(period)
-       pseudo.append(
-           np.interp(
-               np.log10(common_periods),
-               np.log10(period[order]),
-               log_rho[order],
-           )
-       )
-   pseudo = np.asarray(pseudo, dtype=float).T
-
-   depth_centres_km = np.linspace(0.03, 1.5, pseudo.shape[0])
-   ai_trend = np.nanmedian(pred_rho, axis=1)
-   ai_trend = ai_trend - np.nanmedian(ai_trend)
-   pseudo = pseudo + 0.20 * ai_trend[None, :]
-   pseudo = np.clip(pseudo, 0.2, 5.2)
-   try:
-       from scipy.ndimage import gaussian_filter
-
-       pseudo = gaussian_filter(pseudo, sigma=(1.25, 0.65))
-   except Exception:
-       pass
-
-   depth_edges_km = cell_edges(depth_centres_km)
-   log_rho_cells = 0.5 * (pseudo[:, :-1] + pseudo[:, 1:])
-   x_nodes = chain_km
-   x_centres = 0.5 * (x_nodes[:-1] + x_nodes[1:])
-   elev_centres_km = interp_elev(chain_km, elev_m / 1000.0, x_centres)
-
-   x_nodes, z_draped, log_rho_cells = drape_section(
-       x_nodes,
-       depth_edges_km,
-       log_rho_cells,
-       elev_centres_km,
-   )
-   surface_km = interp_elev(chain_km, elev_m / 1000.0, x_nodes)
-
-   display_depth_km = min(1.5, float(depth_edges_km[-1]))
-   visible_rows = depth_edges_km[:-1] <= display_depth_km
-   display_values = log_rho_cells[visible_rows, :]
-   if not np.any(np.isfinite(display_values)):
-       display_values = log_rho_cells
-
-   fig, ax = plt.subplots(figsize=(13.0, 5.8), constrained_layout=True)
-   vmin = max(float(np.nanpercentile(display_values, 4)), -0.5)
-   vmax = min(float(np.nanpercentile(display_values, 96)), 5.0)
-   im = ax.pcolormesh(
-       x_nodes,
-       z_draped,
-       log_rho_cells,
-       shading="auto",
-       cmap="jet",
-       vmin=vmin,
-       vmax=vmax,
-   )
-   ax.plot(x_nodes, surface_km, color="#211813", linewidth=1.8, zorder=8)
-
-   marker_y = elev_m / 1000.0 + 0.035
-   ax.scatter(chain_km, marker_y, marker="v", s=36, color="black", zorder=10)
-   for i, label in enumerate(labels):
-       ax.text(
-           chain_km[i],
-           marker_y[i] + 0.055,
-           label,
-           rotation=90,
-           ha="center",
-           va="bottom",
-           fontsize=6.8,
-       )
-
-   ax.set_ylim(
-       float(surface_km.min() - display_depth_km),
-       float(surface_km.max() + 0.38),
-   )
-   ax.set_xlim(float(chain_km.min()), float(chain_km.max()))
-   ax.set_xlabel("Profile distance (km)")
-   ax.set_ylabel("Elevation (km)")
-   ax.set_title("L18PLT AI-constrained 3-D block with embedded real topography")
-   fig.colorbar(im, ax=ax, label="log10 rho")
-   fig.savefig("l18_ai3d_topography_block.png", dpi=190, bbox_inches="tight")
-
-.. figure:: ../images/tutorials/essential_3d_ai_inversion/l18_ai3d_topography_block.png
-   :alt: L18PLT 3-D AI inversion block embedded in real EDI topography
+.. figure:: ../images/tutorials/essential_3d_ai_inversion/essential3d_maxwell_mesh.png
+   :alt: Central slice of the padded 3-D Maxwell mesh and its terrain air-earth mask
    :width: 100%
 
-Interpret the Section
----------------------
+The left panel makes padding and highly resistive numerical air visible.  The
+right panel verifies that the irregular surface becomes an explicit earth/air
+classification.  Receivers must be placed consistently with that same datum;
+merely draping a finished image after inversion does not include topography in
+Maxwell's equations.
 
-Read the plot from the surface downward:
+Apply the backend gate before inversion
+---------------------------------------
 
-- station triangles must sit on the real topographic surface;
-- the model top must follow terrain, not a flat datum;
-- lateral changes should be supported by several neighbouring stations;
-- features near sharp topography or sparse station intervals need lower
-  confidence;
-- resistivity values from the quick tutorial run are diagnostic, not final;
-- compare the AI result with QC, phase tensor/strike analysis, and a classical
-  inversion check before publication.
+Compatibility is checked before expensive training because a physics loss is
+meaningful only if its forward operator supports the proposed problem.  The
+bundled :class:`pycsamt.forward.maxwell.MT3DAdapter` is deliberately labelled
+research-only.  It supports a small uniform 3-D domain, but not nonuniform
+padding, inactive terrain cells, or this mesh size.
 
-See Also
---------
+.. code-block:: pycon
 
-:doc:`ai_inversion_from_corrected_edis`
-    Broader 1-D, 2-D, and 3-D AI inversion workflow.
+   >>> from pycsamt.forward.maxwell import MT3DAdapter
+   >>> capability = MT3DAdapter().capabilities
+   >>> capability.dimensions
+   (3,)
+   >>> capability.maximum_cells
+   6000
+   >>> capability.supports_nonuniform_mesh, capability.supports_topography
+   (False, False)
+   >>> solver_model.quality.cell_count <= capability.maximum_cells
+   False
 
-:doc:`prepare_occam2d_inversion`
-    Classical inversion preparation for comparison.
+.. figure:: ../images/tutorials/essential_3d_ai_inversion/essential3d_backend_gate.png
+   :alt: Pass and stop checks for the bundled research MT3D backend
+   :width: 82%
+   :align: center
 
-:doc:`condition_mt_line_with_tipper_and_rotation`
-    Advanced MT conditioning workflow before inversion.
+Only dimensionality passes for the proposed problem.  Red ``STOP`` bars mean
+the solver must not be run by deleting padding, flattening terrain, or shrinking
+the mesh until it happens to fit.  Instead, connect a validated external 3-D
+backend through :class:`pycsamt.forward.maxwell.ModEm3DAdapter`, assess the
+exact :class:`pycsamt.forward.maxwell.MaxwellProblem`, and preserve the
+compatibility report with the experiment.
+
+What a complete external run must demonstrate
+---------------------------------------------
+
+For observed impedance vector :math:`\mathbf{d}_{obs}`, model parameters
+:math:`\mathbf{m}` (normally log conductivity), and a validated 3-D forward
+operator :math:`\mathcal{F}_{3D}`, training should minimize a declared objective
+such as
+
+.. math::
+   :label: tutorial-3d-objective
+
+   \mathcal{J}(\mathbf{m}) =
+   \left\|\mathbf{W}_d
+   \left[\mathcal{F}_{3D}(\mathbf{m})-\mathbf{d}_{obs}\right]\right\|_2^2
+   +\lambda_s\|\mathbf{W}_s(\mathbf{m}-\mathbf{m}_{ref})\|_2^2
+   +\lambda_g\,\Phi_g(\mathbf{m}).
+
+The first term is complex-impedance data misfit weighted by reported errors;
+the second controls spatial/model-reference departure; and
+:math:`\Phi_g` expresses geological information without overriding data.  A
+neural parameterization changes how :math:`\mathbf{m}` is represented, not the
+need to evaluate :math:`\mathcal{F}_{3D}` and its residuals.
+
+Before promoting a volume, save and review all of the following:
+
+* backend name/version, capability report, mesh and topography hashes;
+* observed versus predicted impedance by station, frequency, and component;
+* convergence histories for total and individual loss terms;
+* synthetic recovery on held-out geological realizations;
+* sensitivity or uncertainty maps, especially off the receiver line;
+* comparison with a simpler 2-D/classical result and explicit failure cases.
+
+The experimental graph command remains available in
+``docs/scripts/run_ai_inv3d_candidate.py`` for software research.  Run it in a
+separate output directory and treat ``pred_rho`` as a station-by-layer candidate,
+not as the geological volume built above.  No candidate should be plotted as a
+3-D inversion until the Maxwell and validation gates pass.
+
+Reproduce the tutorial assets
+-----------------------------
+
+Open the complete generator below to inspect or copy every operation used to
+construct the geology, topography, Maxwell mesh, capability gate, and figures.
+The panel is collapsed initially so the scientific narrative remains readable.
+
+.. code-dropdown:: ../../scripts/generate_tutorial_essential_3d_ai_inversion.py
+   :language: python
+   :linenos:
+   :title: View and copy the complete tutorial-asset generator
+
+Run the copied repository script from the project root:
+
+.. code-block:: console
+
+   python docs/scripts/generate_tutorial_essential_3d_ai_inversion.py
+
+Executed output:
+
+.. code-block:: text
+
+   geology shape: (24, 24, 36)
+   resistivity range (ohm m): 8.0 3878.7
+   topographic relief (m): 97.6
+   Maxwell mesh shape: (33, 32, 44)
+   Maxwell cells: 46464
+   mesh warnings: 1
+   mt3d maximum cells: 6000
+
+Continue with :doc:`../user_guide/ai_inversion/forward_physics` for backend
+contracts, :doc:`../user_guide/ai_inversion/geology_priors` for richer prior
+ensembles, :doc:`../user_guide/ai_inversion/training` for experiment control,
+and :doc:`../user_guide/ai_inversion/scientific_validation` before reporting a
+scientific inversion.

@@ -564,7 +564,10 @@ def test_plot_model_3d_basic(small_grid3d):
 
 def test_plot_model_3d_no_clip_no_stations_linear(small_grid3d):
     axs = plot_model_3d(
-        small_grid3d, clip_core=False, show_stations=False, log_scale=False,
+        small_grid3d,
+        clip_core=False,
+        show_stations=False,
+        log_scale=False,
         title="linear view",
     )
     assert axs.shape == (3,)

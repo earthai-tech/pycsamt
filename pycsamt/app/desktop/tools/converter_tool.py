@@ -90,9 +90,7 @@ class _ConvertWorker(QThread):
                 pass
 
             # Collect metadata
-            name = getattr(ed, "station", None) or getattr(
-                ed, "id", f"S{idx:03d}"
-            )
+            name = getattr(ed, "station", None) or getattr(ed, "id", f"S{idx:03d}")
             lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
             lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
             try:
@@ -154,9 +152,7 @@ class _ConvertWorker(QThread):
 
                 out_path = self._out_dir / "survey_stations.csv"
                 with open(out_path, "w", newline="", encoding="utf-8") as fh:
-                    writer = csv.DictWriter(
-                        fh, fieldnames=list(rows[0].keys())
-                    )
+                    writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
                     writer.writeheader()
                     writer.writerows(rows)
             elif "JSON" in self._fmt:

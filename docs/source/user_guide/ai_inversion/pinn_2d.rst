@@ -82,6 +82,7 @@ in log10 metres and converted back for output.
 The optimized station model is therefore
 
 .. math::
+   :label: eq-pinn2d-station-model
 
    \mathbf{m}_s =
    \left[
@@ -110,6 +111,7 @@ stations.
 For each station, cumulative interface depth is
 
 .. math::
+   :label: eq-pinn2d-interface-depth
 
    z_{sk}=\sum_{\ell=1}^{k}10^{q_{s\ell}}.
 
@@ -122,6 +124,45 @@ does not establish a geophysical depth of investigation. The defensible
 interpretation depth must come from bandwidth, sensitivity, response fit, and
 scenario stability.
 
+The physics enters through a differentiable Wait recursion. For angular
+frequency :math:`\omega=2\pi f`, magnetic permeability :math:`\mu_0`, and
+layer :math:`\ell`, define the propagation constant and intrinsic impedance
+
+.. math::
+   :label: eq-pinn2d-layer-wave-quantities
+
+   k_\ell=\sqrt{\frac{i\omega\mu_0}{\rho_\ell}},
+   \qquad
+   \eta_\ell=\frac{i\omega\mu_0}{k_\ell}.
+
+Starting in the basement with :math:`Z_L=\eta_L`, the implementation moves
+upward through each finite layer:
+
+.. math::
+   :label: eq-pinn2d-wait-recursion
+
+   Z_\ell
+   =
+   \eta_\ell
+   \frac{Z_{\ell+1}+\eta_\ell\tanh(i k_\ell h_\ell)}
+        {\eta_\ell+Z_{\ell+1}\tanh(i k_\ell h_\ell)}.
+
+The surface impedance gives the predicted observables
+
+.. math::
+   :label: eq-pinn2d-observables
+
+   \rho_a(\omega)=\frac{|Z_1|^2}{\mu_0\omega},
+   \qquad
+   \phi(\omega)=\arg Z_1\frac{180}{\pi}.
+
+Equations :eq:`eq-pinn2d-layer-wave-quantities` through
+:eq:`eq-pinn2d-observables` are evaluated for all stations as one differentiable
+batch. Automatic differentiation therefore supplies gradients with respect to
+both :math:`u_{s\ell}` and :math:`q_{s\ell}`. The batch dimension improves
+execution efficiency; it does not couple electromagnetic fields between
+stations. Only :math:`\mathcal R_x` supplies lateral coupling.
+
 2. Understand the loss function
 -------------------------------
 
@@ -129,6 +170,7 @@ The implemented objective combines data fit, vertical smoothing, and lateral
 smoothing:
 
 .. math::
+   :label: eq-pinn2d-objective
 
    \mathcal L = \mathcal L_{data}
    + \lambda_z\mathcal R_z
@@ -141,6 +183,7 @@ For valid station–frequency cells, the data term combines squared differences
 in log10 apparent resistivity and normalized phase:
 
 .. math::
+   :label: eq-pinn2d-data-loss
 
    \mathcal L_{data} = \frac{1}{N_v}\sum_{s,f}
    \left[
@@ -154,6 +197,7 @@ Missing cells are excluded from the data term.
 Equivalently, with finite-data mask :math:`M_{sf}`,
 
 .. math::
+   :label: eq-pinn2d-valid-count
 
    N_v = \sum_{s,f} M_{sf}.
 
@@ -182,8 +226,10 @@ instability.
 In station-layer notation, a representative vertical penalty is
 
 .. math::
+   :label: eq-pinn2d-vertical-roughness
 
    \mathcal R_z =
+   \frac{1}{S(L-1)}
    \sum_{s=1}^{S}\sum_{\ell=1}^{L-1}
    \left(u_{s,\ell+1}-u_{s,\ell}\right)^2.
 
@@ -197,8 +243,10 @@ input station order represents profile adjacency.
 The corresponding chain penalty is
 
 .. math::
+   :label: eq-pinn2d-lateral-roughness
 
    \mathcal R_x =
+   \frac{1}{(S-1)L}
    \sum_{s=1}^{S-1}\sum_{\ell=1}^{L}
    \left(u_{s+1,\ell}-u_{s,\ell}\right)^2.
 
@@ -215,6 +263,13 @@ thicknesses are optimized in log space, but the same lateral/vertical
 regularization description should not be assumed to apply to them unless
 confirmed in the backend kernel. Audit thickness stability separately.
 
+The backend confirms two further details. Thickness is not included in either
+roughness term, and after every optimizer update its log10 value is clipped to
+``[0, 5]``. Thus each finite-layer thickness is constrained to
+:math:`1\le h\le100{,}000` m. Resistivity has no analogous explicit clamp.
+These are numerical constraints, not geological bounds; project-specific
+plausibility still needs an external acceptance check.
+
 3. Prepare and order profile data
 ---------------------------------
 
@@ -226,10 +281,32 @@ inverter:
    >>> from pycsamt.emtools import ensure_sites
    >>>
    >>> sites = ensure_sites(  # doctest: +SKIP
-   ...     "data/AMT/WILLY_DATA/L18",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
+
+The public observation bridge can then be inspected without starting an
+optimizer. On the bundled line it produces 28 station records with aligned TE
+and TM arrays at each station:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.inversion import sites_to_obs_2d
+   >>> observations = sites_to_obs_2d(
+   ...     "data/AMT/WILLY_data/L18PLT", verbose=0
+   ... )
+   >>> len(observations)
+   28
+   >>> first = observations[0]
+   >>> first.name, first.freq.shape, first.rho_te.shape, first.rho_tm.shape
+   ('18-001A', (53,), (53,), (53,))
+   >>> coverage = (
+   ...     min(float(item.freq.min()) for item in observations),
+   ...     max(float(item.freq.max()) for item in observations),
+   ... )
+   >>> coverage
+   (1.008, 10400.0)
 
 The inverter uses :func:`pycsamt.ai.inversion.sites_to_obs_2d` internally and
 preserves the order returned by the input. It does not sort stations by
@@ -307,6 +384,30 @@ Inspect coverage per station. A station constrained by only a small subset of
 the common grid can borrow visual smoothness from neighbors without having the
 same depth sensitivity.
 
+The public :func:`pycsamt.ai.inversion.sites_to_obs_2d` bridge makes the
+pre-fit inspection reproducible. The following code extracts the actual WILLY
+L18 TE/TM arrays, constructs a display grid without extrapolation, and compares
+mode support and disagreement before any model is optimized.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_pinn2d_input_diagnostic
+   :linenos:
+   :title: View PINN 2-D input-diagnostic source code
+
+.. figure:: ../../images/user_guide/ai_inversion/pinn2d_input_diagnostic.png
+   :alt: WILLY L18 common-frequency support and TE versus TM disagreement
+   :align: center
+   :width: 98%
+
+   WILLY stations cover almost the same displayed frequency range, so the
+   common-grid mask alone looks reassuring. The mode panels tell a different
+   story: TE and TM apparent resistivity separate strongly over important
+   bands, and the phase convention creates large systematic differences.
+   Averaging these modes would erase evidence rather than resolve it. Separate
+   TE and TM runs, dimensionality review, and component-aware residuals are
+   required before choosing a preferred section.
+
 6. Choose layer count and depth
 -------------------------------
 
@@ -374,6 +475,32 @@ Avoid choosing weights solely for a visually smooth section. Excessive lateral
 smoothing can smear faults, isolated conductors, or station-specific problems.
 Insufficient smoothing can fit noise with alternating layers.
 
+The next controlled example isolates the geometry of the two penalties. It
+solves a quadratic denoising analogue with the same vertical and lateral
+first-difference operators; it does **not** claim to be an electromagnetic
+inversion benchmark. That separation is useful because it shows what each
+regularizer is capable of suppressing before forward-physics complexity is
+introduced.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_pinn2d_regularization_anatomy
+   :linenos:
+   :title: View regularization-anatomy source code
+
+.. figure:: ../../images/user_guide/ai_inversion/pinn2d_regularization_anatomy.png
+   :alt: Controlled comparison of vertical, lateral, and balanced smoothing
+   :align: center
+   :width: 98%
+
+   Vertical smoothing blends layer boundaries within each station but leaves
+   lateral noise; lateral smoothing preserves sharper vertical changes while
+   spreading anomalies along the profile. Balanced smoothing suppresses both
+   kinds of roughness but rounds the known conductor and resistor boundaries.
+   The trade-off panel confirms that roughness reduction is purchased with
+   departure from the data-fit proxy. In a real inversion the selected point
+   must also pass response reconstruction and target-stability tests.
+
 8. Select optimizer controls
 ----------------------------
 
@@ -387,9 +514,19 @@ Insufficient smoothing can fit noise with alternating layers.
    PyTorch/TensorFlow device resolved through the active backend.
 
 The current high-level ``fit()`` does not expose early stopping, validation
-data, learning-rate scheduling, or gradient clipping. It runs the requested
-optimization iterations through the backend kernel. Monitor the curve and run
-repeat configurations rather than assuming the final epoch is optimal.
+data, or learning-rate scheduling. Gradient clipping is active inside both
+backends at norm 5, but its threshold is not a public option. The implementation
+runs the requested optimization iterations through the backend kernel. Monitor
+the curve and run repeat configurations rather than assuming the final epoch
+is optimal.
+
+Unless a hybrid workflow supplies an initial model to the lower-level kernel,
+all stations and layers start at the global mean observed
+:math:`\log_{10}\rho_a`; each finite thickness starts at
+:math:`\max(d_{max}/L,1)` m. This laterally uniform initialization is another
+prior. Repeated runs from the same inputs are not a meaningful initialization
+ensemble unless initialization is deliberately changed through a supported
+workflow.
 
 A large learning rate can oscillate or diverge; a very small rate may appear
 stable without reaching an adequate fit. Compare final sections across epochs
@@ -425,6 +562,59 @@ and learning rates.
 The constructor performs data extraction immediately and can raise before
 ``fit()`` when no valid observations survive. The deep-learning backend is
 required when fitting.
+
+Executed WILLY smoke test
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The documentation generator executed a deliberately short CPU run on the 28
+EDI files in ``data/AMT/WILLY_data/L18PLT`` using eight layers, 24 common
+frequencies, TE/``xy``, 2 km configured depth, 20 epochs, and the constructor's
+default-scale learning rate of :math:`10^{-2}`.  The captured audit is:
+
+.. code-block:: text
+
+   stations=28
+   section_shape=(8, 28)
+   thickness_shape=(7, 28)
+   loss_first=0.955507
+   loss_final=1.788527
+   minimum_loss=0.955507 at epoch 1
+   log10_apparent_resistivity_RMSE=0.805332
+   phase_RMSE_deg=40.579903
+   finite_residual_rows=1484 of 1484
+
+This run fails the convergence gate: its final objective is 87.2% larger than
+the first recorded value, and the minimum occurs at epoch 1.  Smaller smoke-test
+learning rates of ``3e-3`` and ``1e-3`` also failed to improve the first loss.
+The resulting colors must therefore not be interpreted as WILLY geology.  They
+are retained below because a failed run is useful for demonstrating both the
+required diagnostic and the topographic display transformation.
+
+.. figure:: ../../images/user_guide/ai_inversion/pinn2d_willy_topography_audit.png
+   :alt: Increasing WILLY PINN2D loss, a flat depth section, and the same
+         rejected section draped below station elevations.
+   :align: center
+   :width: 100%
+
+   Executed WILLY L18 smoke-test audit.  The middle and right panels contain
+   the same resistivity values; only their vertical coordinates differ.  The
+   title records the rejection so that the terrain rendering cannot be
+   mistaken for a validated inversion result.
+
+The complete executed plotting and audit code is available without interrupting
+the interpretation flow:
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_pinn2d_willy_topography_audit
+   :linenos:
+   :title: View executed WILLY PINN 2-D audit source code
+
+The loss panel overrides the visual appeal of the section.  In particular,
+terrain following does not repair the increasing objective or the large phase
+residual.  Before a scientific run, investigate initialization, objective
+scaling, component conventions, learning rate, and backend gradients; then
+repeat the gate with longer controlled runs and an independent response check.
 
 10. Extract resistivity and thickness
 -------------------------------------
@@ -565,6 +755,51 @@ outputs alongside any resampled image.
 Do not connect layer boundaries as geological horizons without checking their
 meaning and stability.
 
+Add topography without changing the physics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``PINNInverter2D`` does not accept elevation or a topographic mesh and its
+station-wise MT recursion assumes a flat layered half-space.  Topography can be
+added honestly to the *display* by converting depth below each station to
+absolute elevation.  For station elevation :math:`e_s` and resampled depth
+:math:`z_k`, plot the model at
+
+.. math::
+   :label: eq-pinn2d-topographic-coordinate
+
+   y_{ks}=e_s-z_k.
+
+Equation :eq:`eq-pinn2d-topographic-coordinate` drapes each column beneath its
+surveyed surface.  It changes coordinates only: it does not introduce terrain
+into :eq:`eq-pinn2d-data-loss`, alter electromagnetic boundary conditions, or
+remove topographic distortion from the observations.
+
+The WILLY EDI records expose coordinates as ``(latitude, longitude,
+elevation)`` through each ``Site.coords`` tuple.  A minimal extraction is:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> station_list = list(sites)  # doctest: +SKIP
+   >>> elevation_m = np.array([s.coords[2] for s in station_list])  # doctest: +SKIP
+   >>> print(float(elevation_m.min()), float(elevation_m.max()))  # doctest: +SKIP
+   37.0 144.0
+   >>> depth_m = np.linspace(0.0, 2000.0, 201)
+   >>> plot_elevation_m = elevation_m[None, :] - depth_m[:, None]  # doctest: +SKIP
+   >>> print(plot_elevation_m.shape)  # doctest: +SKIP
+   (201, 28)
+
+Compute profile chainage from projected survey coordinates when available. If
+only latitude and longitude are available, use a documented geodesic distance
+rather than treating angular degrees as metres. Preserve an undraped
+depth-below-station panel beside the elevation panel, as in the figure, because
+the former is the natural coordinate of the layered forward models.
+
+Do not use vertical exaggeration for quantitative depth picking. If it is used
+for presentation, label the factor prominently. Strong relief is also a reason
+to compare against a solver whose forward mesh actually includes topography;
+terrain draping alone is not a topographic correction.
+
 14. Run TE/TM and regularization scenarios
 ------------------------------------------
 
@@ -686,13 +921,12 @@ refinement:
 The hybrid is justified only if Stage 2 improves response fit or scientific
 stability without introducing unsupported structure. Preserve both stages.
 
-.. warning::
-
-   ``HybridInverter2D`` accepts an inverter object or a checkpoint path, but
-   the current ``EMInverter2D`` class does not expose the explicit public
-   ``save()/load()`` pair shown by some older examples/docstrings. Prefer a
-   fitted in-memory object or a project-tested persistence mechanism; do not
-   assume arbitrary ``.npz`` restoration works without verification.
+``HybridInverter2D`` accepts an inverter object or a checkpoint path, and
+``EMInverter2D`` inherits public ``save()``/``load()`` support from
+:class:`pycsamt.ai.BaseEMNet`. Availability of those methods is not sufficient
+validation: round-trip the exact checkpoint in the target environment and
+compare Stage-1 predictions, normalization state, dimensions, and versions
+before using it to initialize physics refinement.
 
 18. Assess uncertainty
 ----------------------
@@ -720,6 +954,7 @@ for interpretation. For example, if :math:`u_c(z,x)` is the log-resistivity
 section for scenario :math:`c`, a simple scenario standard deviation is
 
 .. math::
+   :label: eq-pinn2d-scenario-spread
 
    \sigma_u(z,x)
    =
@@ -776,7 +1011,7 @@ Complete example
    >>> output = Path("pinn2d/L18_te_r001")  # doctest: +SKIP
    >>> (output / "outputs").mkdir(parents=True, exist_ok=True)  # doctest: +SKIP
    >>> sites = ensure_sites(  # doctest: +SKIP
-   ...     "data/AMT/WILLY_DATA/L18",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
@@ -874,8 +1109,10 @@ Avoid these errors:
 * comparing PINN loss directly with a differently weighted classical RMS;
 * assuming a single optimized solution provides uncertainty;
 * discarding thickness outputs when plotting resistivity;
-* relying on outdated Hybrid/EMInverter2D checkpoint examples without testing
-  persistence.
+* draping a section on elevation and claiming topography was included in the
+  forward physics;
+* treating the inherited Hybrid/EMInverter2D persistence API as evidence that
+  an untested checkpoint will reproduce Stage 1.
 
 Next steps
 ----------

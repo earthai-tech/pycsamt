@@ -155,9 +155,7 @@ def get_pretrained_info(name: str) -> dict[str, Any]:
     """
     if name not in _MODEL_ZOO:
         available = ", ".join(sorted(_MODEL_ZOO))
-        raise KeyError(
-            f"Unknown model {name!r}.  Available models: {available}"
-        )
+        raise KeyError(f"Unknown model {name!r}.  Available models: {available}")
     return dict(_MODEL_ZOO[name])
 
 
@@ -250,8 +248,7 @@ def download_checkpoint(
         if actual != expected_md5:
             fpath.unlink()
             raise RuntimeError(
-                f"MD5 mismatch for {fname}: "
-                f"expected {expected_md5}, got {actual}."
+                f"MD5 mismatch for {fname}: " f"expected {expected_md5}, got {actual}."
             )
 
     if verbose:

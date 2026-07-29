@@ -20,12 +20,16 @@ Quick start
 -----------
 ::
 
-    from pycsamt.metadata.frequency import MT_BANDS, band_for_frequency, REGISTRY
+    from pycsamt.metadata.frequency import (
+        MT_BANDS,
+        band_for_frequency,
+        REGISTRY,
+    )
 
     b = MT_BANDS["AMT"]
-    print(b.f_min, b.f_max)         # 10.0  100000.0
+    print(b.f_min, b.f_max)  # 10.0  100000.0
     print(b.period_min, b.period_max)
-    print(b.doi_range_m(rho=100.0)) # DOI estimate at 100 Ω·m
+    print(b.doi_range_m(rho=100.0))  # DOI estimate at 100 Ω·m
 
     # generate log-spaced frequencies inside the band
     freqs = b.logspace(n=30)
@@ -102,10 +106,10 @@ class FrequencyBand:
     ::
 
         b = MT_BANDS["AMT"]
-        print(b.f_min, b.f_max)          # 10.0  100000.0
-        print(b.period_range)            # (1e-5, 0.1) s
-        print(b.doi_range_m())           # DOI at 100 Ω·m
-        print(b.doi_range_m(rho=10.0))   # DOI at 10 Ω·m
+        print(b.f_min, b.f_max)  # 10.0  100000.0
+        print(b.period_range)  # (1e-5, 0.1) s
+        print(b.doi_range_m())  # DOI at 100 Ω·m
+        print(b.doi_range_m(rho=10.0))  # DOI at 10 Ω·m
 
         # log-spaced frequencies
         freqs = b.logspace(30)
@@ -220,9 +224,7 @@ class FrequencyBand:
         """Return True when *self* and *other* share any frequency."""
         return self.f_min <= other.f_max and other.f_min <= self.f_max
 
-    def intersection(
-        self, other: FrequencyBand
-    ) -> tuple[float, float] | None:
+    def intersection(self, other: FrequencyBand) -> tuple[float, float] | None:
         """Return the (f_min, f_max) intersection with *other*, or None."""
         lo = max(self.f_min, other.f_min)
         hi = min(self.f_max, other.f_max)

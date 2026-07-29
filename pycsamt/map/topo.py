@@ -192,9 +192,7 @@ def export_elevations(
             fh.create_dataset(
                 "station", data=np.asarray(ids, dtype=object), dtype=str_dtype
             )
-            fh.create_dataset(
-                "elevation", data=np.asarray(elevs, dtype=float)
-            )
+            fh.create_dataset("elevation", data=np.asarray(elevs, dtype=float))
             fh.create_dataset(
                 "latitude",
                 data=np.asarray(
@@ -213,9 +211,7 @@ def export_elevations(
                 "line", data=np.asarray(lines, dtype=object), dtype=str_dtype
             )
     else:
-        msg = (
-            f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
-        )
+        msg = f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
         raise ValueError(msg)
     return path
 

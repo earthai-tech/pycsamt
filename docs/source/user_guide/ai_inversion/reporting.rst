@@ -352,6 +352,7 @@ response reconstructed from the prediction is
 :math:`F(\hat{\mathbf m})`, a weighted residual should state the weighting:
 
 .. math::
+   :label: eq-ai-report-weighted-response-rms
 
    r_j = w_j\left(F_j(\hat{\mathbf m}) - d_{\mathrm{obs},j}\right),
    \qquad
@@ -360,6 +361,85 @@ response reconstructed from the prediction is
 
 Do not label an unweighted log-:term:`apparent resistivity`
 :term:`RMS misfit` as a full :term:`impedance tensor` RMS.
+
+Build structured evidence
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The current :mod:`pycsamt.ai.validation` package turns several required report
+tables into immutable, labeled result objects. This is preferable to copying a
+number from a plotting function because the aggregation, valid count, shape,
+and axis breakdowns remain available for serialization and review.
+
+``response_residual_report``
+   Accepts canonical complex impedance arrays with shape ``(station,
+   frequency, component)`` and reports the same L1/L2 penalty overall and by
+   each axis. Positive errors normalize the complex residual before reduction.
+
+``response_residual_report_from_contracts``
+   Applies the same calculation directly to an aligned
+   :class:`pycsamt.forward.maxwell.ForwardResult` and
+   :class:`pycsamt.ai.data.SurveyData`, retaining station, frequency, and
+   component labels.
+
+``recovery_report``
+   Reports masked RMSE, MAE, :math:`R^2`, optional structural similarity, and
+   recovery by depth for a known-truth 2-D or 3-D synthetic grid. It is not a
+   field-truth metric.
+
+``flag_out_of_distribution``
+   Returns per-input Mahalanobis or k-nearest-neighbour scores, the declared or
+   reference-derived threshold, and the complete flag vector. Flagged rows are
+   retained rather than deleted.
+
+The following small example captures the exact public outputs:
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.validation import (
+   ...     flag_out_of_distribution,
+   ...     recovery_report,
+   ...     response_residual_report,
+   ... )
+   >>> predicted = np.array([[[1 + 0j], [2 + 0j]], [[0j], [0j]]])
+   >>> observed = np.array([[[1 + 0j], [0j]], [[0j], [3 + 0j]]])
+   >>> residual = response_residual_report(
+   ...     predicted,
+   ...     observed,
+   ...     station_names=("S1", "S2"),
+   ...     frequencies_hz=(10.0, 1.0),
+   ...     components=("zxy",),
+   ... )
+   >>> residual.shape, residual.overall.value, residual.overall.n_valid
+   ((2, 2, 1), 3.25, 4)
+   >>> residual.by_station.tolist(), residual.by_frequency.tolist()
+   ([2.0, 4.5], [0.0, 6.5])
+
+   >>> true_model = np.array([[1.0, 2.0], [3.0, 6.0]])
+   >>> predicted_model = np.array([[1.0, 2.0], [3.0, 4.0]])
+   >>> recovery = recovery_report(
+   ...     predicted_model, true_model, compute_ssim=False
+   ... )
+   >>> round(recovery.rmse, 3), round(recovery.mae, 3)
+   (1.0, 0.5)
+   >>> recovery.depth_rmse.round(3).tolist()
+   [0.0, 1.414]
+
+   >>> reference = np.array([
+   ...     [0.0, 0.0], [1.0, 0.0], [0.0, 1.0],
+   ...     [-1.0, 0.0], [0.0, -1.0], [0.5, 0.5],
+   ... ])
+   >>> field = np.array([[0.0, 0.0], [50.0, 50.0]])
+   >>> domain = flag_out_of_distribution(
+   ...     field, reference, method="knn", k=2, quantile=0.5
+   ... )
+   >>> domain.flagged.tolist(), domain.threshold, domain.fraction_flagged
+   ([False, True], 1.0, 0.5)
+
+For ``kind="l2"``, the response report axis arrays contain mean squared
+normalized residuals, not their square roots. If a report presents RMS, take
+the square root explicitly and preserve the original penalty table so equation
+:eq:`eq-ai-report-weighted-response-rms` remains auditable.
 
 Structural and decision metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -490,6 +570,33 @@ under field domain shift.
    must reference the calibration dataset and restoration procedure separately;
    loading the ensemble alone does not restore calibrated inference.
 
+The following controlled dashboard is generated entirely from
+:class:`~pycsamt.ai.validation.RecoveryReport`,
+:class:`~pycsamt.ai.validation.ResponseResidualReport`,
+:class:`~pycsamt.ai.validation.OODReport`, and
+:class:`~pycsamt.ai.validation.ReliabilityCurve`. Its arrays are synthetic and
+illustrative; the figure demonstrates report composition, not pyCSAMT model
+performance.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_reporting_validation_dashboard
+   :linenos:
+   :title: View structured reporting-dashboard source code
+
+.. figure:: ../../images/user_guide/ai_inversion/reporting_validation_dashboard.png
+   :alt: Dashboard of recovery by depth, response residuals, OOD flags, and calibration
+   :align: center
+   :width: 98%
+
+   Recovery degrades with depth in this constructed case, while the response
+   panel exposes a station-dependent bias that one global mean would hide. The
+   domain panel keeps two rejected samples visible above the predeclared
+   threshold. The reliability curve lies below the ideal diagonal, revealing
+   under-coverage; its sharpness value cannot compensate for that calibration
+   failure. A defensible report preserves these numerical objects alongside
+   the rendered dashboard.
+
 13. Report classical and independent validation
 -----------------------------------------------
 
@@ -608,6 +715,13 @@ The ``api_key=""`` argument keeps this example offline and deterministic. Use
 ``ReportAgent`` as a draft survey-report assembler, not as the complete AI
 governance package described on this page.
 
+The offline fallback recommendation text is generic: it can recommend
+profile-oriented 2-D inversion and static-shift correction even when the input
+results do not establish those choices. Treat it as drafting text only. Replace
+or approve every recommendation from structured dimensionality, correction,
+inversion, and validation evidence; successful report generation is not
+scientific approval.
+
 16. Handle optional LLM narrative
 ---------------------------------
 
@@ -702,7 +816,7 @@ Conclusions and recommendations
      thickness_unit: m
      accepted_stations: 24
      needs_review_stations: 3
-     rejected_stations: 2
+     rejected_stations: 1
    uncertainty:
      method: ensemble_conformal
      interval: P05_P95

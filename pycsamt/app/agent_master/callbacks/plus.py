@@ -11,7 +11,6 @@ from .._ids import IDs
 
 
 def register_plus(app) -> None:
-
     @app.callback(
         Output(
             IDs.CANVAS_EDI,

@@ -100,9 +100,7 @@ class TestIntentRouterOffline(unittest.TestCase):
             [],
             msg=(
                 f"Intent {expected!r}: {len(wrong)}/{len(cases)} wrong\n"
-                + "\n".join(
-                    f"  got [{c['got']}] for: {c['text']!r}" for c in wrong
-                )
+                + "\n".join(f"  got [{c['got']}] for: {c['text']!r}" for c in wrong)
             ),
         )
 
@@ -131,8 +129,7 @@ class TestIntentRouterOffline(unittest.TestCase):
             msg=(
                 f"Intent accuracy {acc:.1%} < {_MIN_ACCURACY:.0%}\n"
                 + "\n".join(
-                    f"  [{r['got']} != {r['expected']}] {r['text']!r}"
-                    for r in wrong
+                    f"  [{r['got']} != {r['expected']}] {r['text']!r}" for r in wrong
                 )
             ),
         )

@@ -26,6 +26,7 @@ Generate a default template, edit it, run::
     run.validate()
 
     from pycsamt.forward.batch import generate_dataset
+
     ds = generate_dataset(**run.to_dataset_kwargs())
 
     inv = run.to_inverter()
@@ -136,12 +137,12 @@ def _write_run_py(
         ]
         + inv_block
     )
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _read_run_py(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``FORWARD`` and ``INVERSION`` dicts from a Python run file."""
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     results: dict[str, dict] = {}
     for node in tree.body:
         if isinstance(node, ast.Assign):
@@ -180,9 +181,7 @@ def _write_run_json(
         return {
             nm: {
                 "group": by_name[nm].group if nm in by_name else "General",
-                "description": by_name[nm].description
-                if nm in by_name
-                else "",
+                "description": by_name[nm].description if nm in by_name else "",
             }
             for nm in vals
         }
@@ -205,17 +204,18 @@ def _write_run_json(
         "forward": fwd_vals,
         "inversion": inv_vals,
     }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=False, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _read_run_json(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read ``forward`` and ``inversion`` from a JSON run file."""
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     for key in ("forward", "inversion"):
         if key not in data or not isinstance(data[key], dict):
-            raise ValueError(
-                f"JSON run config {path} must contain a '{key}' mapping."
-            )
+            raise ValueError(f"JSON run config {path} must contain a '{key}' mapping.")
     return data["forward"], data["inversion"]
 
 
@@ -234,9 +234,7 @@ def _write_run_yaml(
     by_f = _schema_map(_FORWARD_CONFIG_SCHEMA)
     by_i = _schema_map(_INVERSION_CONFIG_SCHEMA)
 
-    def _section(
-        section_key: str, vals, by_name, section_title: str
-    ) -> list[str]:
+    def _section(section_key: str, vals, by_name, section_title: str) -> list[str]:
         lines = [
             f"# ── {section_title} {'─' * max(0, 54 - len(section_title))}",
             f"{section_key}:",
@@ -271,7 +269,7 @@ def _write_run_yaml(
     inv_lines = _section("inversion", inv_vals, by_i, "Inversion")
 
     lines = header + fwd_lines + ["", ""] + inv_lines
-    path.write_text("\n".join(lines).rstrip() + "\n")
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -279,17 +277,13 @@ def _read_run_yaml(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     try:
         import yaml
     except ImportError as exc:
-        raise ImportError(
-            "Reading YAML run config files requires PyYAML."
-        ) from exc
-    data = yaml.safe_load(path.read_text())
+        raise ImportError("Reading YAML run config files requires PyYAML.") from exc
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"YAML run config {path} must contain a mapping.")
     for key in ("forward", "inversion"):
         if key not in data or not isinstance(data[key], dict):
-            raise ValueError(
-                f"YAML run config {path} must contain a '{key}' mapping."
-            )
+            raise ValueError(f"YAML run config {path} must contain a '{key}' mapping.")
     return data["forward"], data["inversion"]
 
 
@@ -338,8 +332,7 @@ def _read_run(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     if suffix in {".yml", ".yaml"}:
         return _read_run_yaml(path)
     raise ValueError(
-        f"Unsupported run config suffix {suffix!r}. "
-        "Use .py, .json, .yml, or .yaml."
+        f"Unsupported run config suffix {suffix!r}. " "Use .py, .json, .yml, or .yaml."
     )
 
 
@@ -350,13 +343,9 @@ def _safe_fields(cls, raw: dict[str, Any], strict: bool) -> dict[str, Any]:
     from dataclasses import fields as dc_fields
 
     allowed = {f.name for f in dc_fields(cls)}
-    unknown = sorted(
-        set(raw) - allowed - {k for k in raw if k.startswith("_")}
-    )
+    unknown = sorted(set(raw) - allowed - {k for k in raw if k.startswith("_")})
     if unknown and strict:
-        raise ValueError(
-            f"Unknown {cls.__name__} parameter(s): {', '.join(unknown)}"
-        )
+        raise ValueError(f"Unknown {cls.__name__} parameter(s): {', '.join(unknown)}")
     return {k: v for k, v in raw.items() if k in allowed}
 
 
@@ -575,9 +564,7 @@ class RunConfig:
         >>> path.suffix
         '.yml'
         """
-        return cls(name=name, description=description).to_template(
-            path, fmt=fmt
-        )
+        return cls(name=name, description=description).to_template(path, fmt=fmt)
 
     @classmethod
     def from_file(
@@ -614,9 +601,7 @@ class RunConfig:
         p = Path(path)
         raw_fwd, raw_inv = _read_run(p)
         fwd = ForwardConfig(**_safe_fields(ForwardConfig, raw_fwd, strict))
-        inv = InversionConfig(
-            **_safe_fields(InversionConfig, raw_inv, strict)
-        )
+        inv = InversionConfig(**_safe_fields(InversionConfig, raw_inv, strict))
         return cls(forward=fwd, inversion=inv)
 
     #: Alias — matches the convention used by ModEmConfig, OccamConfig, ForwardConfig.

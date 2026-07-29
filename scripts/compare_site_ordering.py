@@ -20,7 +20,9 @@ def _dms(value: str) -> float:
 
 
 def _natural_key(value: str) -> tuple:
-    return tuple(int(p) if p.isdigit() else p.lower() for p in re.split(r"(\d+)", value))
+    return tuple(
+        int(p) if p.isdigit() else p.lower() for p in re.split(r"(\d+)", value)
+    )
 
 
 def _read_head(path: Path) -> dict[str, object]:
@@ -56,7 +58,9 @@ def main() -> None:
     _, _, vh = np.linalg.svd(xy - xy.mean(axis=0), full_matrices=False)
     axis = vh[0]
     # Fix PCA's arbitrary sign so the smallest natural filename starts the line.
-    ref = min(range(len(rows)), key=lambda i: _natural_key(str(rows[i]["file"])))
+    ref = min(
+        range(len(rows)), key=lambda i: _natural_key(str(rows[i]["file"]))
+    )
     chainage = xy @ axis
     if chainage[ref] > np.median(chainage):
         axis *= -1
@@ -69,14 +73,20 @@ def main() -> None:
         row["chainage_m"] = chainage[i]
 
     strategies = {
-        "Input / filename lexical": sorted(range(len(rows)), key=lambda i: str(rows[i]["file"])),
-        "Station name lexical": sorted(range(len(rows)), key=lambda i: str(rows[i]["station"])),
+        "Input / filename lexical": sorted(
+            range(len(rows)), key=lambda i: str(rows[i]["file"])
+        ),
+        "Station name lexical": sorted(
+            range(len(rows)), key=lambda i: str(rows[i]["station"])
+        ),
         "Filename natural numeric": sorted(
             range(len(rows)), key=lambda i: _natural_key(str(rows[i]["file"]))
         ),
         "Longitude": sorted(range(len(rows)), key=lambda i: lon[i]),
         "Latitude": sorted(range(len(rows)), key=lambda i: lat[i]),
-        "Profile chainage (PCA)": sorted(range(len(rows)), key=lambda i: chainage[i]),
+        "Profile chainage (PCA)": sorted(
+            range(len(rows)), key=lambda i: chainage[i]
+        ),
     }
 
     def metrics(order: list[int]) -> tuple[float, int]:
@@ -86,9 +96,18 @@ def main() -> None:
         reversals = int(np.sum(dc < -1e-9))
         return length, reversals
 
-    with (args.output / "ordering_summary.csv").open("w", newline="", encoding="utf-8") as stream:
+    with (args.output / "ordering_summary.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as stream:
         writer = csv.writer(stream)
-        writer.writerow(["strategy", "path_length_m", "chainage_reversals", "station_sequence"])
+        writer.writerow(
+            [
+                "strategy",
+                "path_length_m",
+                "chainage_reversals",
+                "station_sequence",
+            ]
+        )
         for name, order in strategies.items():
             length, reversals = metrics(order)
             writer.writerow(
@@ -112,14 +131,23 @@ def main() -> None:
         pts = xy[order]
         ax.plot(pts[:, 0], pts[:, 1], "-o", ms=4, lw=1.2)
         for step, idx in enumerate(order, 1):
-            ax.annotate(str(step), xy[idx], xytext=(3, 3), textcoords="offset points", fontsize=7)
+            ax.annotate(
+                str(step),
+                xy[idx],
+                xytext=(3, 3),
+                textcoords="offset points",
+                fontsize=7,
+            )
         length, reversals = metrics(order)
         ax.set_title(f"{name}\npath={length:.0f} m; reversals={reversals}")
         ax.set_xlabel("East offset (m)")
         ax.set_ylabel("North offset (m)")
         ax.axis("equal")
         ax.grid(alpha=0.25)
-    fig.suptitle(f"L22PLT station ordering comparison — PCA azimuth {azimuth:.1f}°", fontsize=15)
+    fig.suptitle(
+        f"L22PLT station ordering comparison — PCA azimuth {azimuth:.1f}°",
+        fontsize=15,
+    )
     fig.savefig(args.output / "site_ordering_comparison.png", dpi=180)
     print(f"stations={len(rows)} azimuth={azimuth:.3f} output={args.output}")
 

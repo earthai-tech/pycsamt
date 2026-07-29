@@ -44,14 +44,14 @@ data-misfit and vertical-smoothness terms used in
 Example
 -------
 >>> from pycsamt.ai.inversion import PINNInverter3D
->>> inv = PINNInverter3D(        # doctest: +SKIP
+>>> inv = PINNInverter3D(  # doctest: +SKIP
 ...     "edi/survey/",
 ...     n_layers=10,
 ...     depth_max=3000.0,
 ...     radius=3000.0,
 ...     epochs=300,
 ... )
->>> inv.fit()                    # doctest: +SKIP
+>>> inv.fit()  # doctest: +SKIP
 PINNInverter3D(n_stations=25, fitted)
 >>> vol = inv.resistivity_volume()  # doctest: +SKIP
 """
@@ -153,9 +153,7 @@ class PINNInverter3D(BasePINNInverter):
         verbose: int = 0,
     ) -> None:
         if mode not in ("te", "tm", "both"):
-            raise ValueError(
-                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
-            )
+            raise ValueError(f"mode must be 'te', 'tm', or 'both'; got {mode!r}.")
         super().__init__(
             n_layers=n_layers,
             depth_max=depth_max,
@@ -351,12 +349,8 @@ class PINNInverter3D(BasePINNInverter):
                 rp = np.full_like(obs.freq, np.nan)
                 pp = np.full_like(obs.freq, np.nan)
 
-            rho_obs = (
-                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
-            )
-            ph_obs = (
-                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
-            )
+            rho_obs = obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
+            ph_obs = obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             for k in range(len(obs.freq)):
                 rows.append(
                     {

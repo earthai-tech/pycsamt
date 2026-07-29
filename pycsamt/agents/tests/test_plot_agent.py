@@ -28,8 +28,7 @@ _DATA = os.path.join("data", "3edis")
 _HAS_DATA = os.path.isdir(_DATA)
 _TIP = "edi_out"
 _HAS_TIP = (
-    os.path.isdir(_TIP)
-    and _has_tipper(ensure_sites(_TIP, recursive=True, verbose=0))
+    os.path.isdir(_TIP) and _has_tipper(ensure_sites(_TIP, recursive=True, verbose=0))
     if os.path.isdir(_TIP)
     else False
 )

@@ -42,9 +42,7 @@ class TestSessionState(unittest.TestCase):
         self.assertEqual(s.recent_turns(3)[-1]["content"], "9")
 
     def test_unique_ids(self):
-        self.assertNotEqual(
-            SessionState().session_id, SessionState().session_id
-        )
+        self.assertNotEqual(SessionState().session_id, SessionState().session_id)
 
 
 class TestProjectState(unittest.TestCase):
@@ -94,9 +92,7 @@ class TestWorkflowHistory(unittest.TestCase):
         )
         h.record({"workflow": "qc", "status": "success"})
         runs = h.all()
-        self.assertEqual(
-            [r["workflow"] for r in runs], ["static_shift", "qc"]
-        )
+        self.assertEqual([r["workflow"] for r in runs], ["static_shift", "qc"])
         self.assertEqual(runs[0]["line"], "L22PLT")
         self.assertIn("timestamp", runs[0])
 

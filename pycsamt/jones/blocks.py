@@ -129,7 +129,7 @@ class JBlock(JComponentBase):
     Examples
     --------
     >>> # Pseudocode; subclass chosen from header
-    >>> blk = JBlock.from_lines(['S01', 'RXY', '1', '...'])
+    >>> blk = JBlock.from_lines(["S01", "RXY", "1", "..."])
     >>> blk.station, blk.nrows
     ('S01', 1)
 
@@ -210,9 +210,7 @@ class JBlock(JComponentBase):
         try:
             import pandas as pd  # type: ignore
         except Exception as exc:  # pragma: no cover
-            raise ImportError(
-                "pandas is required for to_dataframe()"
-            ) from exc
+            raise ImportError("pandas is required for to_dataframe()") from exc
         data = self.to_numpy()
         return pd.DataFrame(data)
 
@@ -303,15 +301,17 @@ class RBlock(JBlock):
     Examples
     --------
     >>> lines = [
-    ...   'S01', 'RXY', '2',
-    ...   '-1.0 100 45 110 90 50 40 1 1',
-    ...   ' 2.0 -5  30  35 25 40 20 1 1',
+    ...     "S01",
+    ...     "RXY",
+    ...     "2",
+    ...     "-1.0 100 45 110 90 50 40 1 1",
+    ...     " 2.0 -5  30  35 25 40 20 1 1",
     ... ]
     >>> blk = RBlock.from_lines(lines)
     >>> a = blk.to_numpy()
-    >>> a['period'][0]  # 1/Hz -> s
+    >>> a["period"][0]  # 1/Hz -> s
     1.0
-    >>> a['rej'][1]     # rho < 0
+    >>> a["rej"][1]  # rho < 0
     True
 
     See Also
@@ -500,15 +500,17 @@ class TFBlock(JBlock):
     Examples
     --------
     >>> lines = [
-    ...   'S02', 'ZXY SI', '2',
-    ...   '-1.0e+1 1.0 -2.0 0.1 1.0',
-    ...   ' 5.0    -999 3.0 -999 -1.0',
+    ...     "S02",
+    ...     "ZXY SI",
+    ...     "2",
+    ...     "-1.0e+1 1.0 -2.0 0.1 1.0",
+    ...     " 5.0    -999 3.0 -999 -1.0",
     ... ]
     >>> blk = TFBlock.from_lines(lines)
     >>> a = blk.to_numpy()
-    >>> round(a['period'][0], 3)
+    >>> round(a["period"][0], 3)
     0.1
-    >>> a['rej'][1]     # weight < 0
+    >>> a["rej"][1]  # weight < 0
     True
 
     See Also
@@ -685,10 +687,10 @@ class JBlocks(JComponentBase):
 
     Examples
     --------
-    >>> col = JBlocks.from_file('data/j/kb0-s001.txt')
+    >>> col = JBlocks.from_file("data/j/kb0-s001.txt")
     >>> col.n >= 1
     True
-    >>> [b.station for b in col.select(kind='R')]
+    >>> [b.station for b in col.select(kind="R")]
     ['KB0001', ...]
 
     See Also
@@ -764,9 +766,7 @@ class JBlocks(JComponentBase):
         try:
             import pandas as pd  # type: ignore
         except Exception as exc:  # pragma: no cover
-            raise ImportError(
-                "pandas is required for to_dataframe()"
-            ) from exc
+            raise ImportError("pandas is required for to_dataframe()") from exc
         dfs = [b.to_dataframe() for b in self.blocks]
         if not dfs:
             return pd.DataFrame()
@@ -885,9 +885,7 @@ def _extract_first_head_and_body(
     return h, seq[start:]
 
 
-def _extract_all_blocks(
-    lines: Sequence[str], *, verbose: int = 0
-) -> list[JBlock]:
+def _extract_all_blocks(lines: Sequence[str], *, verbose: int = 0) -> list[JBlock]:
     """
     Robustly parse all data blocks from a J-file for
     a single station.
@@ -905,11 +903,7 @@ def _extract_all_blocks(
     first_data_line_index = 0
     for i, line in enumerate(seq):
         # Skip over the initial comment and info blocks
-        if (
-            RE_COMMENT.match(line)
-            or RE_INFO.match(line)
-            or RE_BLANK.match(line)
-        ):
+        if RE_COMMENT.match(line) or RE_INFO.match(line) or RE_BLANK.match(line):
             continue
         # The first non-header line must be the station
         if RE_STATION.match(line):
@@ -1010,9 +1004,7 @@ def _locate_header_indices(
 
     # skip comments/info/blank first
     while i < n and (
-        RE_COMMENT.match(seq[i])
-        or RE_INFO.match(seq[i])
-        or RE_BLANK.match(seq[i])
+        RE_COMMENT.match(seq[i]) or RE_INFO.match(seq[i]) or RE_BLANK.match(seq[i])
     ):
         i += 1
 

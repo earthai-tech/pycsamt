@@ -17,7 +17,6 @@ from pycsamt.decorators import (
     noop,
 )
 
-
 # --------------------------------------------------------------------------
 # has_fit
 # --------------------------------------------------------------------------
@@ -165,9 +164,7 @@ def test_gdal_data_check_locates_via_gdal_config(monkeypatch, tmp_path):
     monkeypatch.delenv("GDAL_DATA", raising=False)
 
     def fake_run(*a, **k):
-        return subprocess.CompletedProcess(
-            args=a, returncode=0, stdout=str(tmp_path)
-        )
+        return subprocess.CompletedProcess(args=a, returncode=0, stdout=str(tmp_path))
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -182,9 +179,7 @@ def test_gdal_data_check_locates_via_gdal_config(monkeypatch, tmp_path):
     assert os.environ.get("GDAL_DATA") == str(tmp_path)
 
 
-def test_gdal_data_check_missing_raises_when_configured(
-    monkeypatch, tmp_path
-):
+def test_gdal_data_check_missing_raises_when_configured(monkeypatch, tmp_path):
     monkeypatch.delenv("GDAL_DATA", raising=False)
     monkeypatch.delenv("PYCSAMT_DOCS_BUILD", raising=False)
 
@@ -201,9 +196,7 @@ def test_gdal_data_check_missing_raises_when_configured(
         fn()
 
 
-def test_gdal_data_check_second_instantiation_skips_relookup(
-    monkeypatch, tmp_path
-):
+def test_gdal_data_check_second_instantiation_skips_relookup(monkeypatch, tmp_path):
     monkeypatch.setenv("GDAL_DATA", str(tmp_path))
     GdalDataCheck()
     assert GdalDataCheck._checked is True

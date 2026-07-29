@@ -15,9 +15,7 @@ _U = TypeVar("_U")
 
 if PY310_PLUS:
 
-    def zip_strict(
-        a: Iterable[_T], b: Iterable[_U]
-    ) -> Iterator[tuple[_T, _U]]:
+    def zip_strict(a: Iterable[_T], b: Iterable[_U]) -> Iterator[tuple[_T, _U]]:
         """``zip(a, b, strict=True)``, back-ported for Python 3.9
         (which raises ``TypeError: zip() takes no keyword arguments``
         for the ``strict`` kwarg)."""
@@ -25,19 +23,16 @@ if PY310_PLUS:
 
 else:
 
-    def zip_strict(
-        a: Iterable[_T], b: Iterable[_U]
-    ) -> Iterator[tuple[_T, _U]]:
+    def zip_strict(a: Iterable[_T], b: Iterable[_U]) -> Iterator[tuple[_T, _U]]:
         """``zip(a, b, strict=True)``, back-ported for Python 3.9
         (which raises ``TypeError: zip() takes no keyword arguments``
         for the ``strict`` kwarg)."""
         sentinel = object()
         for x, y in _zip_longest(a, b, fillvalue=sentinel):
             if x is sentinel or y is sentinel:
-                raise ValueError(
-                    "zip_strict() argument lengths did not match."
-                )
+                raise ValueError("zip_strict() argument lengths did not match.")
             yield x, y
+
 
 # Convenience dict for the SO-style decorator usage:
 #   @dataclasses.dataclass(**DATACLASS_SLOTS)

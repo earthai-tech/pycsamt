@@ -27,7 +27,6 @@ from pathlib import Path
 
 import pytest
 from dash import no_update
-from dash.exceptions import PreventUpdate
 
 from pycsamt.app.web.callbacks.profile import _SKIP, _comp_bar, _draw_section
 from pycsamt.app.web.layout import IDs
@@ -50,9 +49,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -196,9 +193,7 @@ class TestSwitchTab:
 
 class TestPubBack:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.PROF_ACTIVE_TAB}.data", "prof-pub-back-btn"
-        )
+        return _cb_by_input(web_app, f"{IDs.PROF_ACTIVE_TAB}.data", "prof-pub-back-btn")
 
     def test_no_clicks_no_update(self, web_app):
         assert self._fn(web_app)(None) is no_update
@@ -216,8 +211,17 @@ class TestUpdateProfile:
 
     def test_missing_store_data_returns_skip(self, web_app):
         out = self._fn(web_app)(
-            "rho-phi", {}, None, "dark", False, ["xy", "yx"], 0, "auto", None,
-            "sid", None,
+            "rho-phi",
+            {},
+            None,
+            "dark",
+            False,
+            ["xy", "yx"],
+            0,
+            "auto",
+            None,
+            "sid",
+            None,
         )
         assert out == _SKIP
 
@@ -473,9 +477,7 @@ class TestUpdateProfile:
 
 class TestNavigateStation:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "store-selection.data", IDs.PROFILE_PAGE_PREV
-        )
+        return _cb_by_input(web_app, "store-selection.data", IDs.PROFILE_PAGE_PREV)
 
     def _ctx(self, monkeypatch, triggered_id):
         import pycsamt.app.web.callbacks.profile as profile_mod
@@ -491,30 +493,22 @@ class TestNavigateStation:
 
     def test_no_trigger_no_update(self, web_app, monkeypatch):
         self._ctx(monkeypatch, None)
-        out = self._fn(web_app)(
-            None, None, "A", [{"value": "A"}, {"value": "B"}]
-        )
+        out = self._fn(web_app)(None, None, "A", [{"value": "A"}, {"value": "B"}])
         assert out is no_update
 
     def test_current_id_not_in_options_no_update(self, web_app, monkeypatch):
         self._ctx(monkeypatch, IDs.PROFILE_PAGE_PREV)
-        out = self._fn(web_app)(
-            1, None, "ZZZ", [{"value": "A"}, {"value": "B"}]
-        )
+        out = self._fn(web_app)(1, None, "ZZZ", [{"value": "A"}, {"value": "B"}])
         assert out is no_update
 
     def test_prev_wraps_around_to_last(self, web_app, monkeypatch):
         self._ctx(monkeypatch, IDs.PROFILE_PAGE_PREV)
-        out = self._fn(web_app)(
-            1, None, "A", [{"value": "A"}, {"value": "B"}]
-        )
+        out = self._fn(web_app)(1, None, "A", [{"value": "A"}, {"value": "B"}])
         assert out == {"station_id": "B"}
 
     def test_next_advances(self, web_app, monkeypatch):
         self._ctx(monkeypatch, IDs.PROFILE_PAGE_NEXT)
-        out = self._fn(web_app)(
-            None, 1, "A", [{"value": "A"}, {"value": "B"}]
-        )
+        out = self._fn(web_app)(None, 1, "A", [{"value": "A"}, {"value": "B"}])
         assert out == {"station_id": "B"}
 
 

@@ -80,9 +80,7 @@ class TestConfig(unittest.TestCase):
             config.infer_workflow("pycsamt/emtools/ss.py", "correct_ss_ama"),
             "static_shift",
         )
-        self.assertEqual(
-            config.infer_workflow("phase tensor strike"), "phase_analysis"
-        )
+        self.assertEqual(config.infer_workflow("phase tensor strike"), "phase_analysis")
         self.assertIsNone(config.infer_workflow("nothing relevant here"))
 
 
@@ -95,12 +93,8 @@ class TestAstIndexer(unittest.TestCase):
         self.f.write_text(_PY_SRC, encoding="utf-8")
 
     def test_module_name(self):
-        self.assertEqual(
-            module_name("pycsamt/emtools/ss.py"), "pycsamt.emtools.ss"
-        )
-        self.assertEqual(
-            module_name("pycsamt/emtools/__init__.py"), "pycsamt.emtools"
-        )
+        self.assertEqual(module_name("pycsamt/emtools/ss.py"), "pycsamt.emtools.ss")
+        self.assertEqual(module_name("pycsamt/emtools/__init__.py"), "pycsamt.emtools")
 
     def test_symbols_and_methods(self):
         chunks = index_python_file(self.f, self.tmp)
@@ -113,17 +107,11 @@ class TestAstIndexer(unittest.TestCase):
         self.assertIn("pycsamt.emtools.ss.StaticShiftAgent.__init__", symbols)
         # private symbols excluded
         self.assertNotIn("pycsamt.emtools.ss._private_helper", symbols)
-        self.assertNotIn(
-            "pycsamt.emtools.ss.StaticShiftAgent._hidden", symbols
-        )
+        self.assertNotIn("pycsamt.emtools.ss.StaticShiftAgent._hidden", symbols)
 
     def test_signature_and_workflow_captured(self):
         chunks = index_python_file(self.f, self.tmp)
-        fn = next(
-            c
-            for c in chunks
-            if c.symbol == "pycsamt.emtools.ss.estimate_ss_ama"
-        )
+        fn = next(c for c in chunks if c.symbol == "pycsamt.emtools.ss.estimate_ss_ama")
         self.assertIn("half_window", fn.metadata["signature"])
         self.assertEqual(fn.workflow, "static_shift")
         self.assertEqual(fn.kind, "python_symbol")
@@ -167,14 +155,10 @@ class TestIngest(unittest.TestCase):
     def _make_tree(self) -> Path:
         tmp = Path(tempfile.mkdtemp())
         (tmp / "pycsamt" / "emtools").mkdir(parents=True)
-        (tmp / "pycsamt" / "emtools" / "ss.py").write_text(
-            _PY_SRC, encoding="utf-8"
-        )
+        (tmp / "pycsamt" / "emtools" / "ss.py").write_text(_PY_SRC, encoding="utf-8")
         # excluded: app + pyc
         (tmp / "pycsamt" / "app").mkdir(parents=True)
-        (tmp / "pycsamt" / "app" / "ui.py").write_text(
-            "x = 1\n", encoding="utf-8"
-        )
+        (tmp / "pycsamt" / "app" / "ui.py").write_text("x = 1\n", encoding="utf-8")
         (tmp / "README.md").write_text(
             "# pyCSAMT\nProcessing suite.\n", encoding="utf-8"
         )

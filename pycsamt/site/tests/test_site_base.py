@@ -38,9 +38,7 @@ def _mk_two_sites(
     return s1, s2
 
 
-def test_sites_container_index_get(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_sites_container_index_get(tmp_path: Path, simulated_edi: Path) -> None:
     s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "A01", "A02")
     sites = Sites([s1.edi, s2.edi])
     assert len(sites) == 2
@@ -121,9 +119,7 @@ def test_to_edis_mixed_inputs_and_strict(
         to_edis([s1, object()], strict=True)
 
 
-def test_site_coords_set_and_summary(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_site_coords_set_and_summary(tmp_path: Path, simulated_edi: Path) -> None:
     s1, _ = _mk_two_sites(tmp_path, simulated_edi, "C01", "C02")
     # in-place update
     s1.set_coords(10.0, 20.0, 100.0, inplace=True)
@@ -164,8 +160,18 @@ def test_sites_ordered_auto_uses_validated_chainage(
     original = Sites(made)
     ordered = original.ordered("auto")
 
-    assert [s.name for s in ordered] == ["LINE01", "LINE02", "LINE03", "LINE04"]
-    assert [s.name for s in original] == ["LINE03", "LINE01", "LINE04", "LINE02"]
+    assert [s.name for s in ordered] == [
+        "LINE01",
+        "LINE02",
+        "LINE03",
+        "LINE04",
+    ]
+    assert [s.name for s in original] == [
+        "LINE03",
+        "LINE01",
+        "LINE04",
+        "LINE02",
+    ]
     assert ordered.ordering["applied"] == "chainage"
     assert ordered.ordering["linearity"] >= 0.95
 
@@ -207,9 +213,7 @@ def test_sites_ordered_chainage_retains_missing_coordinates(
     assert ordered.ordering["applied"] == "chainage"
 
 
-def test_sites_edit_all_rename_and_slice(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_sites_edit_all_rename_and_slice(tmp_path: Path, simulated_edi: Path) -> None:
     s1, s2 = _mk_two_sites(tmp_path, simulated_edi, "E01", "E02")
     sites = Sites([s1.edi, s2.edi])
 
@@ -255,9 +259,7 @@ def test_sites_edit_all_mask(tmp_path: Path, simulated_edi: Path) -> None:
     assert np.all(np.isnan(first_row.values))
 
 
-def test_site_to_dataframe_api_flag(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_site_to_dataframe_api_flag(tmp_path: Path, simulated_edi: Path) -> None:
     import pandas as pd
 
     s1, _ = _mk_two_sites(tmp_path, simulated_edi, "V01", "V02")

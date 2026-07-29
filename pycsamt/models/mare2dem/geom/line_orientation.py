@@ -48,10 +48,12 @@ def get_line_orientation(
     Examples
     --------
     >>> import numpy as np
-    >>> from pycsamt.models.mare2dem.geom.line_orientation import get_line_orientation
+    >>> from pycsamt.models.mare2dem.geom.line_orientation import (
+    ...     get_line_orientation,
+    ... )
     >>> northings = np.array([0.0, 1000.0, 2000.0])
-    >>> eastings  = np.array([0.0, 0.0, 0.0])
-    >>> get_line_orientation(northings, eastings)   # N-S profile
+    >>> eastings = np.array([0.0, 0.0, 0.0])
+    >>> get_line_orientation(northings, eastings)  # N-S profile
     0.0
     """
     n = np.asarray(northings, dtype=float).ravel()

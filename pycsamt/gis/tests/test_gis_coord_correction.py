@@ -19,6 +19,7 @@ import pandas as pd
 import pytest
 
 from pycsamt.gis.coord_correction import (
+    _get_coords_df,
     _loess_smooth,
     _pca_azimuth,
     _to_ll_arrays,
@@ -37,7 +38,6 @@ from pycsamt.gis.coord_correction import (
     df_profile_projection,
     df_shift,
     df_spacing_regularize,
-    _get_coords_df,
 )
 from pycsamt.seg.edi import EDIFile
 from pycsamt.site.base import Sites
@@ -224,9 +224,7 @@ def test_df_spacing_regularize_preserve_extent(profile_df):
 
 
 def test_df_spacing_regularize_strict_spacing(profile_df):
-    out = df_spacing_regularize(
-        profile_df, spacing_m=50.0, preserve_extent=False
-    )
+    out = df_spacing_regularize(profile_df, spacing_m=50.0, preserve_extent=False)
     assert len(out) == len(profile_df)
 
 
@@ -246,9 +244,7 @@ def test_df_outlier_snap_moves_only_outliers(profile_df):
 
 def test_df_outlier_snap_high_threshold_no_change(profile_df):
     out = df_outlier_snap(profile_df, threshold_m=10_000.0)
-    pd.testing.assert_frame_equal(
-        out[["lat", "lon"]], profile_df[["lat", "lon"]]
-    )
+    pd.testing.assert_frame_equal(out[["lat", "lon"]], profile_df[["lat", "lon"]])
 
 
 def test_df_outlier_snap_too_few_points_returns_copy():
@@ -270,7 +266,12 @@ def test_df_elevation_smooth_mean(profile_df):
 
 def test_df_elevation_smooth_too_few_points_returns_copy():
     df = pd.DataFrame(
-        {"station": ["A", "B"], "lat": [1.0, 2.0], "lon": [3.0, 4.0], "elev": [0.0, 1.0]}
+        {
+            "station": ["A", "B"],
+            "lat": [1.0, 2.0],
+            "lon": [3.0, 4.0],
+            "elev": [0.0, 1.0],
+        }
     )
     out = df_elevation_smooth(df)
     pd.testing.assert_frame_equal(out, df)
@@ -278,15 +279,9 @@ def test_df_elevation_smooth_too_few_points_returns_copy():
 
 def test_df_shift(profile_df):
     out = df_shift(profile_df, delta_lat=0.5, delta_lon=-0.25, delta_elev=10.0)
-    assert out["lat"].to_numpy() == pytest.approx(
-        profile_df["lat"].to_numpy() + 0.5
-    )
-    assert out["lon"].to_numpy() == pytest.approx(
-        profile_df["lon"].to_numpy() - 0.25
-    )
-    assert out["elev"].to_numpy() == pytest.approx(
-        profile_df["elev"].to_numpy() + 10.0
-    )
+    assert out["lat"].to_numpy() == pytest.approx(profile_df["lat"].to_numpy() + 0.5)
+    assert out["lon"].to_numpy() == pytest.approx(profile_df["lon"].to_numpy() - 0.25)
+    assert out["elev"].to_numpy() == pytest.approx(profile_df["elev"].to_numpy() + 10.0)
 
 
 def test_df_interpolate_missing_nan_only():
@@ -324,11 +319,13 @@ def test_df_interpolate_missing_treats_zero_as_missing():
 
 def test_apply_coord_correction_to_df_dispatch(profile_df):
     out = apply_coord_correction_to_df(
-        "_coord_shift", profile_df, delta_lat=1.0, delta_lon=0.0, delta_elev=0.0
+        "_coord_shift",
+        profile_df,
+        delta_lat=1.0,
+        delta_lon=0.0,
+        delta_elev=0.0,
     )
-    assert out["lat"].to_numpy() == pytest.approx(
-        profile_df["lat"].to_numpy() + 1.0
-    )
+    assert out["lat"].to_numpy() == pytest.approx(profile_df["lat"].to_numpy() + 1.0)
 
 
 def test_apply_coord_correction_to_df_unknown_name_returns_copy(profile_df):
@@ -363,15 +360,9 @@ def test_correct_coordinate_shift_sites(profile_sites):
     )
     before = _get_coords_df(profile_sites)
     after = _get_coords_df(shifted)
-    assert after["lat"].to_numpy() == pytest.approx(
-        before["lat"].to_numpy() + 0.001
-    )
-    assert after["lon"].to_numpy() == pytest.approx(
-        before["lon"].to_numpy() + 0.002
-    )
-    assert after["elev"].to_numpy() == pytest.approx(
-        before["elev"].to_numpy() + 5.0
-    )
+    assert after["lat"].to_numpy() == pytest.approx(before["lat"].to_numpy() + 0.001)
+    assert after["lon"].to_numpy() == pytest.approx(before["lon"].to_numpy() + 0.002)
+    assert after["elev"].to_numpy() == pytest.approx(before["elev"].to_numpy() + 5.0)
     # inplace=False (default): original Sites is untouched.
     assert _get_coords_df(profile_sites)["lat"].to_numpy() == pytest.approx(
         before["lat"].to_numpy()
@@ -382,9 +373,7 @@ def test_correct_coordinate_shift_inplace(profile_sites):
     before = _get_coords_df(profile_sites)
     result = correct_coordinate_shift(profile_sites, delta_elev=1.0, inplace=True)
     after = _get_coords_df(result)
-    assert after["elev"].to_numpy() == pytest.approx(
-        before["elev"].to_numpy() + 1.0
-    )
+    assert after["elev"].to_numpy() == pytest.approx(before["elev"].to_numpy() + 1.0)
     # Same object mutated.
     assert _get_coords_df(profile_sites)["elev"].to_numpy() == pytest.approx(
         after["elev"].to_numpy()
@@ -458,9 +447,7 @@ def test_apply_coords_df_to_sites_mutates_in_place(profile_sites):
     coords_df["lat"] = coords_df["lat"] + 2.0
     apply_coords_df_to_sites(profile_sites, coords_df)
     after = _get_coords_df(profile_sites)
-    assert after["lat"].to_numpy() == pytest.approx(
-        coords_df["lat"].to_numpy()
-    )
+    assert after["lat"].to_numpy() == pytest.approx(coords_df["lat"].to_numpy())
 
 
 def test_apply_coords_df_to_sites_skips_non_finite(profile_sites):
@@ -529,9 +516,7 @@ def test_correct_elevation_smooth_too_few_sites_is_noop(tmp_path):
     assert after["elev"].to_numpy() == pytest.approx(before["elev"].to_numpy())
 
 
-def test_correct_coordinate_shift_all_missing_coords_is_noop(
-    monkeypatch, tmp_path
-):
+def test_correct_coordinate_shift_all_missing_coords_is_noop(monkeypatch, tmp_path):
     # correct_coordinate_shift builds its coords dict by filtering out
     # rows with nan lat/lon; when every row is nan the dict is empty and
     # the function must return the input sites unchanged. Force that via
@@ -590,15 +575,11 @@ def test_correct_elevation_smooth_mean_scipy_import_error_fallback_sites(
 def test_df_spacing_regularize_pads_when_arange_too_short(profile_df):
     # A spacing far larger than the profile extent leaves fewer than n
     # points from np.arange(...), exercising the linspace padding fallback.
-    out = df_spacing_regularize(
-        profile_df, spacing_m=10_000.0, preserve_extent=False
-    )
+    out = df_spacing_regularize(profile_df, spacing_m=10_000.0, preserve_extent=False)
     assert len(out) == len(profile_df)
 
 
-def test_df_elevation_smooth_mean_scipy_import_error_fallback(
-    monkeypatch, profile_df
-):
+def test_df_elevation_smooth_mean_scipy_import_error_fallback(monkeypatch, profile_df):
     import sys
 
     monkeypatch.setitem(sys.modules, "scipy.ndimage", None)

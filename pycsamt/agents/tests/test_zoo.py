@@ -48,9 +48,7 @@ class TestModelZooAgentDownload(unittest.TestCase):
         from pycsamt.agents import ModelZooAgent
 
         ag = ModelZooAgent()
-        r = ag.execute(
-            {"action": "download", "model_name": "nonexistent-model-v99"}
-        )
+        r = ag.execute({"action": "download", "model_name": "nonexistent-model-v99"})
         self.assertEqual(r.status, "failed")
 
     def test_download_without_model_name_fails(self):
@@ -65,9 +63,7 @@ class TestModelZooAgentDownload(unittest.TestCase):
         from pycsamt.agents import ModelZooAgent
 
         ag = ModelZooAgent()
-        r = ag.execute(
-            {"action": "download", "model_name": "mt1d-resnet-5layer-v1"}
-        )
+        r = ag.execute({"action": "download", "model_name": "mt1d-resnet-5layer-v1"})
         self.assertIn(r.status, ("success", "needs_review"))
         self.assertIn("model_info", r.data)
         self.assertEqual(r.data["model_info"]["arch"], "resnet")
@@ -115,9 +111,7 @@ class TestModelZooRegistry(unittest.TestCase):
         from pycsamt.agents import ModelZooAgent
 
         ag = ModelZooAgent()
-        r = ag.execute(
-            {"action": "teleport", "model_name": "mt1d-resnet-5layer-v1"}
-        )
+        r = ag.execute({"action": "teleport", "model_name": "mt1d-resnet-5layer-v1"})
         self.assertEqual(r.status, "failed")
 
 

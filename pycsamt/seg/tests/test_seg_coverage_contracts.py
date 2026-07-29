@@ -8,28 +8,18 @@ import numpy as np
 import pytest
 
 from pycsamt.exceptions import FileHandlingError
-from pycsamt.seg import schema
 from pycsamt.seg import base as base_module
+from pycsamt.seg import schema
 from pycsamt.seg.base import Base, EDIComponentBase, EdiFileBase, SurveyBase
-from pycsamt.seg.config import SEGConfig, _Facade, _import_first, discover_mixins
 from pycsamt.seg.collection import EDICollection
+from pycsamt.seg.config import (
+    SEGConfig,
+    _Facade,
+    _import_first,
+    discover_mixins,
+)
 from pycsamt.seg.edi import EDIFile
 from pycsamt.seg.survey import EDIProfile, Stations, Topography
-from pycsamt.seg.validation import (
-    IsEdi,
-    _count_freq_values,
-    _expected_nfreq_from_header,
-    _extract_tag,
-    _extract_tag_in,
-    _has_any_data_block,
-    _is_tag,
-    _iter_blocks,
-    _norm_str,
-    _split_comment,
-    _strip_norm,
-    _to_float_or_none,
-    _to_int_or_none,
-)
 from pycsamt.seg.utils import (
     _dms_to_deg,
     _format_block_numbers,
@@ -45,6 +35,21 @@ from pycsamt.seg.utils import (
     show_edi_stats,
     sort_edis_by_location,
     strip_item,
+)
+from pycsamt.seg.validation import (
+    IsEdi,
+    _count_freq_values,
+    _expected_nfreq_from_header,
+    _extract_tag,
+    _extract_tag_in,
+    _has_any_data_block,
+    _is_tag,
+    _iter_blocks,
+    _norm_str,
+    _split_comment,
+    _strip_norm,
+    _to_float_or_none,
+    _to_int_or_none,
 )
 
 
@@ -283,15 +288,32 @@ def test_minimum_writer_covers_all_optional_blocks() -> None:
             "impedance": {
                 key: [1.0, 2.0]
                 for key in (
-                    "ZXXR", "ZXXI", "ZXX.VAR", "ZXYR", "ZXYI", "ZXY.VAR",
-                    "ZYXR", "ZYXI", "ZYX.VAR", "ZYYR", "ZYYI", "ZYY.VAR",
+                    "ZXXR",
+                    "ZXXI",
+                    "ZXX.VAR",
+                    "ZXYR",
+                    "ZXYI",
+                    "ZXY.VAR",
+                    "ZYXR",
+                    "ZYXI",
+                    "ZYX.VAR",
+                    "ZYYR",
+                    "ZYYI",
+                    "ZYY.VAR",
                 )
             },
             "resistivity": {
                 key: [1.0, 2.0]
                 for key in (
-                    "RHOROT", "RHOXY", "RHOXY.ERR", "RHOYX", "RHOYX.ERR",
-                    "PHSXY", "PHSXY.ERR", "PHSYX", "PHSYX.ERR",
+                    "RHOROT",
+                    "RHOXY",
+                    "RHOXY.ERR",
+                    "RHOYX",
+                    "RHOYX.ERR",
+                    "PHSXY",
+                    "PHSXY.ERR",
+                    "PHSYX",
+                    "PHSYX.ERR",
                 )
             },
             "coherence": [
@@ -361,9 +383,7 @@ def _write_collection_edi(
 
 
 def test_collection_get_set_adjust_fetch_export(tmp_path: Path) -> None:
-    p1 = _write_collection_edi(
-        tmp_path / "S10.edi", "S10", "10:00:00N", "020:00:00E"
-    )
+    p1 = _write_collection_edi(tmp_path / "S10.edi", "S10", "10:00:00N", "020:00:00E")
     p2 = _write_collection_edi(
         tmp_path / "S20.edi", "S20", "11:00:00N", "021:00:00E", 200
     )
@@ -441,14 +461,10 @@ def test_collection_get_set_adjust_fetch_export(tmp_path: Path) -> None:
 
 def test_collection_merge_validation_and_replacement(tmp_path: Path) -> None:
     one = EDIFile(
-        _write_collection_edi(
-            tmp_path / "A1.edi", "A1", "1:00:00N", "001:00:00E"
-        )
+        _write_collection_edi(tmp_path / "A1.edi", "A1", "1:00:00N", "001:00:00E")
     )
     two = EDIFile(
-        _write_collection_edi(
-            tmp_path / "A2.edi", "A2", "2:00:00N", "002:00:00E"
-        )
+        _write_collection_edi(tmp_path / "A2.edi", "A2", "2:00:00N", "002:00:00E")
     )
     col = EDICollection([one])
     with pytest.raises(ValueError):

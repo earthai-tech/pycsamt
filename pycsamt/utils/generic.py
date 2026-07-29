@@ -94,9 +94,7 @@ def make_ids(  # noqa: D401
 
     # build ids
     tmpl = f"{{:0{width}d}}" if width else "{:d}"
-    ids = [
-        f"{prefix}{tmpl.format(idx)}" for idx in range(start, start + count)
-    ]
+    ids = [f"{prefix}{tmpl.format(idx)}" for idx in range(start, start + count)]
     return ids
 
 
@@ -176,17 +174,13 @@ def ensure_package(  # noqa: D401
         print("[pip]", " ".join(cmd), file=sys.stderr)
 
     stdout = (
-        subprocess.DEVNULL
-        if silent
-        else (subprocess.PIPE if capture_output else None)
+        subprocess.DEVNULL if silent else (subprocess.PIPE if capture_output else None)
     )
     stderr = subprocess.DEVNULL if silent else subprocess.STDOUT
 
     t0 = time.perf_counter()
     try:
-        subprocess.check_call(
-            cmd, stdout=stdout, stderr=stderr, timeout=timeout
-        )
+        subprocess.check_call(cmd, stdout=stdout, stderr=stderr, timeout=timeout)
         ok = True
     except subprocess.SubprocessError as exc:
         ok = False
@@ -488,10 +482,7 @@ def get_valid_kwargs(
         return {}
 
     # If **kwargs present, all keys are valid
-    if any(
-        p.kind is inspect.Parameter.VAR_KEYWORD
-        for p in sig.parameters.values()
-    ):
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
         return dict(kwargs)
 
     # Eligible names: POSITIONAL_OR_KEYWORD and KEYWORD_ONLY

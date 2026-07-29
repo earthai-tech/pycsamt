@@ -41,9 +41,7 @@ class TestContextInputAgentRegex(unittest.TestCase):
         self.assertIn("qc", wf)
 
     def test_workflow_type_detected_phase_analysis(self):
-        r = self.agent.execute(
-            {"request": "Run phase tensor analysis on /data/WILLY"}
-        )
+        r = self.agent.execute({"request": "Run phase tensor analysis on /data/WILLY"})
         cfg = r.get("config") or {}
         wf = str(cfg.get("workflow", "")).lower()
         self.assertTrue(

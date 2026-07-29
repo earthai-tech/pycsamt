@@ -6,14 +6,17 @@ pyCSAMT Map View — Dash app factory.
 Usage::
 
     from pycsamt.app.mapview import launch
-    launch()                       # http://localhost:8770
+
+    launch()  # http://localhost:8770
 
     # or, from a script with data already in hand:
     from pycsamt.map import MapView
+
     MapView.from_folder("data/survey").launch()
 
     # WSGI server object:
     from pycsamt.app.mapview.app import create_app
+
     server = create_app().server
 """
 

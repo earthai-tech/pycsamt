@@ -72,9 +72,13 @@ def test_update_one_site_copy_and_metadata(simulated_edi: Path) -> None:
     assert "REVIEWED_BY=operator" in info.info_text
 
 
-def test_dictionary_rename_preserves_order_and_audits(tmp_path: Path, simulated_edi: Path) -> None:
+def test_dictionary_rename_preserves_order_and_audits(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     sites = _sites(tmp_path, simulated_edi)
-    editor = SiteMetadataEditor({"A01": {"name": "L22_010"}, "A02": {"name": "L22_011"}})
+    editor = SiteMetadataEditor(
+        {"A01": {"name": "L22_010"}, "A02": {"name": "L22_011"}}
+    )
 
     renamed = editor.apply(sites)
 
@@ -110,7 +114,9 @@ def test_missing_and_duplicate_names_are_validated_before_mutation(
     assert [site.name for site in sites] == ["A01", "A02"]
 
 
-def test_sites_convenience_methods_and_inplace(tmp_path: Path, simulated_edi: Path) -> None:
+def test_sites_convenience_methods_and_inplace(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     sites = _sites(tmp_path, simulated_edi)
     returned = sites.rename({"A01": "B01", "A02": "B02"}, inplace=True)
     updated = returned.update_metadata({"B01": {"elev": 101.0}, "B02": {"elev": 102.0}})
@@ -120,7 +126,9 @@ def test_sites_convenience_methods_and_inplace(tmp_path: Path, simulated_edi: Pa
     assert [float(site.coords[2]) for site in updated] == [101.0, 102.0]
 
 
-def test_apply_and_write_uses_updated_station_names(tmp_path: Path, simulated_edi: Path) -> None:
+def test_apply_and_write_uses_updated_station_names(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     sites = _sites(tmp_path, simulated_edi)
     editor = SiteMetadataEditor({"A01": "E01", "A02": "E02"})
     manifest = tmp_path / "manifest.csv"
@@ -132,7 +140,10 @@ def test_apply_and_write_uses_updated_station_names(tmp_path: Path, simulated_ed
     )
 
     assert isinstance(result, Sites)
-    assert [path.name for path in editor.output_paths_] == ["E01.edi", "E02.edi"]
+    assert [path.name for path in editor.output_paths_] == [
+        "E01.edi",
+        "E02.edi",
+    ]
     assert all(path.exists() for path in editor.output_paths_)
     assert pd.read_csv(manifest)["station"].tolist() == ["E01", "E02"]
 
@@ -188,7 +199,9 @@ def test_dataframe_and_csv_sources_resolve_aliases_and_dotted_fields(
         assert result[0].edi.get_section("info").Processing.processingtag == "checked"
 
 
-def test_set_unset_transform_and_callable_values(tmp_path: Path, simulated_edi: Path) -> None:
+def test_set_unset_transform_and_callable_values(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     sites = _sites(tmp_path, simulated_edi)
     sites[0].edi.get_section("head").project = "old"
     sites[0].edi.get_section("head").county = "remove-me"
@@ -217,7 +230,9 @@ def test_set_unset_transform_and_callable_values(tmp_path: Path, simulated_edi: 
     assert first.edi.get_section("head").county is None
     assert float(first.coords[2]) == old_elevation + 2.5
     assert first.edi.review_state == "approved"
-    assert first.edi.get_section("info").Processing.ProcessingSoftware.name == "META-TEST"
+    assert (
+        first.edi.get_section("info").Processing.ProcessingSoftware.name == "META-TEST"
+    )
     assert set(editor.records_[0].changed_fields) >= {
         "name",
         "head.project",
@@ -228,7 +243,9 @@ def test_set_unset_transform_and_callable_values(tmp_path: Path, simulated_edi: 
     }
 
 
-def test_coords_mapping_partial_update_and_validation(tmp_path: Path, simulated_edi: Path) -> None:
+def test_coords_mapping_partial_update_and_validation(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     site = _sites(tmp_path, simulated_edi)[0]
     original = site.coords
 
@@ -264,7 +281,9 @@ def test_arbitrary_sections_case_insensitive_paths_and_sectid_sync(
 
     assert updated.edi.get_section("definemeas").custom.review == "accepted"
     assert updated.edi.get_section("quality").score == 0.95
-    assert updated.edi.get_section("info").Processing.ProcessingSoftware.name == "REVIEWER"
+    assert (
+        updated.edi.get_section("info").Processing.ProcessingSoftware.name == "REVIEWER"
+    )
     assert updated.edi.get_section("mtsect").sectid == "SYNC01"
 
 
@@ -278,11 +297,21 @@ def test_custom_info_is_added_replaced_and_removed(
 
     assert "REVIEWED_BY=alice" in added.edi.get_section("info").info_text
     assert "REVIEWED_BY=bob" in replaced.edi.get_section("info").info_text
-    assert sum("REVIEWED_BY=" in line for line in replaced.edi.get_section("info").info_text) == 1
-    assert not any("REVIEWED_BY=" in line for line in removed.edi.get_section("info").info_text)
+    assert (
+        sum(
+            "REVIEWED_BY=" in line
+            for line in replaced.edi.get_section("info").info_text
+        )
+        == 1
+    )
+    assert not any(
+        "REVIEWED_BY=" in line for line in removed.edi.get_section("info").info_text
+    )
 
 
-def test_error_policies_and_atomic_inplace_commit(tmp_path: Path, simulated_edi: Path) -> None:
+def test_error_policies_and_atomic_inplace_commit(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     sites = _sites(tmp_path, simulated_edi)
     first_edi = sites[0].edi
     editor = SiteMetadataEditor({"A01": {"name": "B01"}, "A02": {"lat": 100.0}})
@@ -307,7 +336,9 @@ def test_error_policies_and_atomic_inplace_commit(tmp_path: Path, simulated_edi:
     ]
 
 
-def test_custom_validators_and_missing_policies(tmp_path: Path, simulated_edi: Path) -> None:
+def test_custom_validators_and_missing_policies(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
     sites = _sites(tmp_path, simulated_edi)
 
     def reject(edi: EDIFile) -> bool:
@@ -321,7 +352,9 @@ def test_custom_validators_and_missing_policies(tmp_path: Path, simulated_edi: P
         ).apply(sites)
 
     with pytest.warns(UserWarning, match="UNKNOWN"):
-        unchanged = SiteMetadataEditor({"UNKNOWN": {"name": "X"}}, missing="warn").apply(sites)
+        unchanged = SiteMetadataEditor(
+            {"UNKNOWN": {"name": "X"}}, missing="warn"
+        ).apply(sites)
     assert [site.name for site in unchanged] == ["A01", "A02"]
 
 
@@ -366,7 +399,9 @@ def test_real_l18_full_line_rename_preserves_data_and_source() -> None:
     sites = Sites([EDIFile(path) for path in paths])
     original_names = [site.name for site in sites]
     original_freq = [np.array(site.freq, copy=True) for site in sites]
-    mapping = {name: f"L18_{index + 1:03d}" for index, name in enumerate(original_names)}
+    mapping = {
+        name: f"L18_{index + 1:03d}" for index, name in enumerate(original_names)
+    }
 
     editor = SiteMetadataEditor(
         {
@@ -389,14 +424,17 @@ def test_real_l18_full_line_rename_preserves_data_and_source() -> None:
         for site in updated
     )
     assert all(
-        np.array_equal(site.freq, expected) for site, expected in zip(updated, original_freq)
+        np.array_equal(site.freq, expected)
+        for site, expected in zip(updated, original_freq)
     )
     assert all(site.edi.get_section("mtsect").sectid == site.name for site in updated)
     assert editor.audit()["status"].eq("updated").all()
 
 
 @pytest.mark.integration
-def test_real_l22_dataframe_plan_apply_export_and_reload(tmp_path: Path) -> None:
+def test_real_l22_dataframe_plan_apply_export_and_reload(
+    tmp_path: Path,
+) -> None:
     paths = _real_line("L22PLT")
     # Three differently named stations are enough to exercise real headers,
     # INFO nesting, transfer-function sections, writer, and parser round-trip.

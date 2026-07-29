@@ -85,11 +85,7 @@ def _normalize_sites(
 def _extract_rho_phase(
     site: Any,
     comp: str,
-) -> tuple[
-    np.ndarray | None,
-    np.ndarray | None,
-    np.ndarray | None,
-]:
+) -> tuple[np.ndarray | None, np.ndarray | None, np.ndarray | None,]:
     """
     Return (freq, rho_c, phase_c) for one site.
 
@@ -228,9 +224,7 @@ def sites_to_obs_1d(
     if isinstance(sites, list) and sites and isinstance(sites[0], SiteObs1D):
         return sites
     if comp not in _COMP_IDX:
-        raise ValueError(
-            f"comp must be one of {list(_COMP_IDX)}; got {comp!r}."
-        )
+        raise ValueError(f"comp must be one of {list(_COMP_IDX)}; got {comp!r}.")
     S = _normalize_sites(
         sites,
         recursive=recursive,
@@ -286,8 +280,7 @@ def sites_to_features_1d(
     so the result is directly compatible with a fitted
     :class:`~pycsamt.ai.inversion.inv1d.EMInverter1D`::
 
-        X = [log10(rho_f1), ..., log10(rho_fn),
-             phase_f1,      ..., phase_fn]
+        X = [log10(rho_f1), ..., log10(rho_fn), phase_f1, ..., phase_fn]
 
     Parameters
     ----------
@@ -327,9 +320,7 @@ def sites_to_features_1d(
     rows: list[np.ndarray] = []
     names: list[str] = []
     for o in obs:
-        log_rho_g, ph_g = _interp_to_grid(
-            o.freq, o.rho_obs, o.phase_obs, freqs_grid
-        )
+        log_rho_g, ph_g = _interp_to_grid(o.freq, o.rho_obs, o.phase_obs, freqs_grid)
         # Block layout: rho block then phase block
         feat = np.empty(2 * n_freqs, dtype=np.float32)
         feat[:n_freqs] = log_rho_g.astype(np.float32)
@@ -548,9 +539,7 @@ def sites_to_obs_2d(
         return sites
     for comp in (comp_te, comp_tm):
         if comp not in _COMP_IDX:
-            raise ValueError(
-                f"comp must be one of {list(_COMP_IDX)}; got {comp!r}."
-            )
+            raise ValueError(f"comp must be one of {list(_COMP_IDX)}; got {comp!r}.")
     S = _normalize_sites(
         sites,
         recursive=recursive,
@@ -649,12 +638,8 @@ def sites_to_panel_2d(
     )
     names: list[str] = []
     for k, o in enumerate(obs):
-        log_rho_te, ph_te = _interp_to_grid(
-            o.freq, o.rho_te, o.phase_te, freqs_grid
-        )
-        log_rho_tm, ph_tm = _interp_to_grid(
-            o.freq, o.rho_tm, o.phase_tm, freqs_grid
-        )
+        log_rho_te, ph_te = _interp_to_grid(o.freq, o.rho_te, o.phase_te, freqs_grid)
+        log_rho_tm, ph_tm = _interp_to_grid(o.freq, o.rho_tm, o.phase_tm, freqs_grid)
         # freqs_grid is low-to-high from logspace;
         # panel freq axis = high-to-low
         lr_te = log_rho_te[::-1].astype(np.float32)
@@ -724,16 +709,8 @@ def sites_to_coords_3d(
     lat_ok = np.isfinite(lats)
     lon_ok = np.isfinite(lons)
     all_ok = lat_ok & lon_ok
-    lat_rng = (
-        float(lats[all_ok].max() - lats[all_ok].min())
-        if all_ok.any()
-        else 0.0
-    )
-    lon_rng = (
-        float(lons[all_ok].max() - lons[all_ok].min())
-        if all_ok.any()
-        else 0.0
-    )
+    lat_rng = float(lats[all_ok].max() - lats[all_ok].min()) if all_ok.any() else 0.0
+    lon_rng = float(lons[all_ok].max() - lons[all_ok].min()) if all_ok.any() else 0.0
     _DEG_THRESH = 1e-5  # ~1 m
 
     if all_ok.sum() >= 2 and (lat_rng > _DEG_THRESH or lon_rng > _DEG_THRESH):

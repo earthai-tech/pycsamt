@@ -46,7 +46,9 @@ class TestDialogBuild:
         assert dlg.model is None
 
     def test_preset_combo_items(self, dlg):
-        items = [dlg._preset_combo.itemText(i) for i in range(dlg._preset_combo.count())]
+        items = [
+            dlg._preset_combo.itemText(i) for i in range(dlg._preset_combo.count())
+        ]
         assert items == _PRESETS
 
     def test_n_spin_default_and_range(self, dlg):
@@ -58,9 +60,7 @@ class TestDialogBuild:
         assert dlg._table.columnCount() == 3
 
     def test_table_header_labels(self, dlg):
-        labels = [
-            dlg._table.horizontalHeaderItem(i).text() for i in range(3)
-        ]
+        labels = [dlg._table.horizontalHeaderItem(i).text() for i in range(3)]
         assert labels == ["Layer", "ρ (Ω·m)", "Thickness (m)"]
 
     def test_default_layers_populate_table(self, dlg):

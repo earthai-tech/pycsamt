@@ -231,11 +231,7 @@ def register_tdem(app) -> None:
     def update_ctx_bar(active_tab, class_name, tdem_loaded):
         group = _TAB_TO_GROUP.get(active_tab or "decay", "Decay / Rho")
         icon = _TAB_ICONS.get(active_tab or "decay", "bi-activity")
-        label = (
-            _TDEM_META.get(class_name, (None, None, ""))[2]
-            if class_name
-            else ""
-        )
+        label = _TDEM_META.get(class_name, (None, None, ""))[2] if class_name else ""
         parts = [
             html.Span(
                 [html.I(className=f"bi {icon} me-1"), group],
@@ -337,9 +333,7 @@ def register_tdem(app) -> None:
         if not _CTRL.is_loaded():
             _e = empty_src()
             return _e, _e, _e, _e, "", True, "TDEM: load a folder first"
-        has_ax, data_key, _ = _TDEM_META.get(
-            class_name, (True, "survey", class_name)
-        )
+        has_ax, data_key, _ = _TDEM_META.get(class_name, (True, "survey", class_name))
         if dark:
             apply_web_dark_theme()
         else:

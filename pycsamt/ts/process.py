@@ -165,9 +165,7 @@ def target_frequencies(
     lo = float(fmin) if fmin else 4.0 / (nfft * float(dt))
     hi = float(fmax) if fmax else fs / 4.0
     if not (0.0 < lo < hi <= fs / 2.0):
-        raise EdIDataError(
-            f"Invalid frequency range [{lo}, {hi}] for fs={fs} Hz."
-        )
+        raise EdIDataError(f"Invalid frequency range [{lo}, {hi}] for fs={fs} Hz.")
     ndec = np.log10(hi / lo)
     n = max(2, int(round(ndec * per_decade)) + 1)
     freqs = np.geomspace(hi, lo, n)  # descending
@@ -454,10 +452,7 @@ def cross_spectra(
     nb = np.array([b.size for b in band_bins], float)
     segnum = np.maximum(1, np.rint(neff * nb)).astype(int)
     bw = np.array(
-        [
-            fbin[b].max() - fbin[b].min() + (fbin[1] - fbin[0])
-            for b in band_bins
-        ],
+        [fbin[b].max() - fbin[b].min() + (fbin[1] - fbin[0]) for b in band_bins],
         float,
     )
     avgt = np.full(nf, n_seg * nfft * dt, float)

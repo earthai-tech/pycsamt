@@ -172,9 +172,7 @@ def test_build_dataframe_converts_via_to_sites_when_no_as_list(kap03_paths):
     assert len(df) == 2
 
 
-def test_build_dataframe_to_sites_failure_returns_empty_frame(
-    monkeypatch, kap03_paths
-):
+def test_build_dataframe_to_sites_failure_returns_empty_frame(monkeypatch, kap03_paths):
     def boom(*_a, **_k):
         raise RuntimeError("cannot coerce")
 
@@ -211,9 +209,7 @@ def test_build_dataframe_summary_fallback_hits_location_attribute_bug(
         ctrl.load(willy_paths[:1])
 
 
-def test_build_dataframe_double_fallback_yields_nan_row(
-    monkeypatch, willy_paths
-):
+def test_build_dataframe_double_fallback_yields_nan_row(monkeypatch, willy_paths):
     """
     When *both* site.summary() and the Location lookup fail (header
     section present but its cached ``.Location`` missing), the code

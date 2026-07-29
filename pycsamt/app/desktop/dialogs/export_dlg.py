@@ -73,9 +73,7 @@ class ExportDialog(QDialog):
         # Format
         self._fmt_combo = QComboBox()
         self._fmt_combo.addItems(list(_FORMATS.keys()))
-        self._fmt_combo.currentTextChanged.connect(
-            self._update_path_extension
-        )
+        self._fmt_combo.currentTextChanged.connect(self._update_path_extension)
         form.addRow("Format:", self._fmt_combo)
 
         # DPI
@@ -136,9 +134,7 @@ class ExportDialog(QDialog):
         path = self._path_edit.text().strip()
 
         if not path:
-            QMessageBox.warning(
-                self, "Export", "Please specify a destination path."
-            )
+            QMessageBox.warning(self, "Export", "Please specify a destination path.")
             return
 
         try:

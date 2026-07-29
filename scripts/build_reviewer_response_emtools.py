@@ -43,7 +43,6 @@ from pycsamt.emtools import (
 )
 from pycsamt.emtools.remove_noise import snr_table
 
-
 DEFAULT_LINES = {
     "L18PLT": ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT",
     "L22PLT": ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT",
@@ -70,7 +69,9 @@ def _save_plot(result: Any, path: Path) -> None:
     plt.close(fig)
 
 
-def _safe_plot(label: str, func: Any, path: Path, *args: Any, **kwargs: Any) -> None:
+def _safe_plot(
+    label: str, func: Any, path: Path, *args: Any, **kwargs: Any
+) -> None:
     error_path = path.with_suffix(".error.txt")
     if error_path.exists():
         error_path.unlink()

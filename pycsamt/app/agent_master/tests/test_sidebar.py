@@ -16,9 +16,7 @@ class TestRestoreBubble:
             _restore_bubble,
         )
 
-        div = _restore_bubble(
-            {"role": "user", "content": "hi there", "ts": "10:00"}
-        )
+        div = _restore_bubble({"role": "user", "content": "hi there", "ts": "10:00"})
         text = str(div)
         assert "am-msg-row user" in div.className
         assert "hi there" in text
@@ -72,9 +70,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -109,7 +105,6 @@ class TestNewChat:
     def test_resets_stores_and_returns_welcome(self, agent_app, monkeypatch):
         from pycsamt.app.agent_master.callbacks import sidebar as sidebar_mod
 
-        called = {}
         monkeypatch.setattr(
             sidebar_mod,
             "_chat_welcome",
@@ -186,9 +181,7 @@ class TestAutoSave:
 
 class TestSaveHistory:
     def _fn(self, agent_app):
-        return _find(
-            agent_app, "am-btn-save-session", "am-store-history.data"
-        )
+        return _find(agent_app, "am-btn-save-session", "am-store-history.data")
 
     def test_prevent_update_without_click(self, agent_app):
         from dash.exceptions import PreventUpdate
@@ -217,9 +210,7 @@ class TestRestoreSession:
         _clear_trigger()
 
     def _fn(self, agent_app):
-        return _find(
-            agent_app, '{"index":["ALL"],"type":"am-hist-item"}', ""
-        )
+        return _find(agent_app, '{"index":["ALL"],"type":"am-hist-item"}', "")
 
     def test_prevent_update_without_clicks(self, agent_app):
         from dash.exceptions import PreventUpdate
@@ -255,9 +246,7 @@ class TestDeleteEntry:
         _clear_trigger()
 
     def _fn(self, agent_app):
-        return _find(
-            agent_app, '{"index":["ALL"],"type":"am-hist-del"}', ""
-        )
+        return _find(agent_app, '{"index":["ALL"],"type":"am-hist-del"}', "")
 
     def test_prevent_update_without_clicks(self, agent_app):
         from dash.exceptions import PreventUpdate

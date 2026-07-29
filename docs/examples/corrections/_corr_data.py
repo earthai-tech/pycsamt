@@ -27,9 +27,7 @@ def demo_line(line: str = "L18PLT"):
     """Load one WILLY_DATA line as ``Sites`` (L18PLT carries real error tensors,
     which the static-shift and QC steps need)."""
     root = os.environ.get("PYCSAMT_DOCS_REPO_ROOT", ".")
-    return ensure_sites(
-        str(Path(root) / "data" / "AMT" / "WILLY_DATA" / line)
-    )
+    return ensure_sites(str(Path(root) / "data" / "AMT" / "WILLY_DATA" / line))
 
 
 def curves(sites, quantity: str = "rho", component: str = "xy"):

@@ -192,9 +192,7 @@ class TDEMController:
                 if data_key == "dashboard":
                     # Dashboard always uses has_ax=False in the catalogue, but
                     # guard here defensively.
-                    plot_obj = cls(
-                        self._survey, self._survey, self._soundings
-                    )
+                    plot_obj = cls(self._survey, self._survey, self._soundings)
                 else:
                     plot_obj = cls(data)
                 import inspect
@@ -244,9 +242,7 @@ class TDEMController:
             else:
                 # PlotTEMDashboard(avg, zplot, soundings)
                 # Pass survey for both avg and zplot — both accept TEMSurvey.
-                result = cls(
-                    self._survey, self._survey, self._soundings
-                ).plot()
+                result = cls(self._survey, self._survey, self._soundings).plot()
         except Exception:
             return None
         after = set(plt.get_fignums())

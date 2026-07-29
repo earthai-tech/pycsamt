@@ -53,9 +53,7 @@ class TestIoTFieldAgentFromPackets(unittest.TestCase):
     def test_monitoring_status_and_level(self):
         status = self.result.get("status")
         self.assertIsNotNone(status)
-        self.assertIn(
-            self.result.get("level"), ("ok", "warn", "critical", "unknown")
-        )
+        self.assertIn(self.result.get("level"), ("ok", "warn", "critical", "unknown"))
         self.assertIsInstance(self.result.get("issues"), list)
 
     def test_tables_present(self):

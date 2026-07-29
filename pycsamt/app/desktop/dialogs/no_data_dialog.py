@@ -44,9 +44,7 @@ class NoDataDialog(QDialog):
     parent : QWidget, optional
     """
 
-    def __init__(
-        self, tool_name: str = "", parent: QWidget | None = None
-    ) -> None:
+    def __init__(self, tool_name: str = "", parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("No Survey Data Loaded")
         self.setFixedWidth(420)
@@ -130,6 +128,6 @@ class NoDataDialog(QDialog):
         Typical caller pattern in MainWindow::
 
             if NoDataDialog.require(self, "Strike Analyzer"):
-                self._act_open.trigger()   # open the file-load dialog
+                self._act_open.trigger()  # open the file-load dialog
         """
         return cls(tool_name, parent).exec() == QDialog.DialogCode.Accepted

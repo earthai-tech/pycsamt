@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 from pycsamt.forward.grid2d import Grid2D, make_padding
 from pycsamt.forward.synthetic import LayeredModel
 
-
 # ─────────────────────────────────────────────────────────────────────────
 # make_padding
 # ─────────────────────────────────────────────────────────────────────────
@@ -277,9 +276,7 @@ def test_halfspace_uniform_resistivity_and_shape():
 
 
 def test_halfspace_core_region_matches_requested_extent():
-    g = Grid2D.halfspace(
-        rho=50.0, nx=10, nz=8, x_max=1000.0, z_max=500.0, n_pad=4
-    )
+    g = Grid2D.halfspace(rho=50.0, nx=10, nz=8, x_max=1000.0, z_max=500.0, n_pad=4)
     core_dx = g.dx[g.core_x_slice]
     core_dz = g.dz[g.core_z_slice]
     assert core_dx.sum() == pytest.approx(1000.0)
@@ -406,9 +403,7 @@ def test_from_1d_layers_default_name_and_layer_count():
 
 def test_from_1d_layers_respects_dz_min():
     model = LayeredModel(resistivity=[100.0, 10.0], thickness=[1.0])
-    g = Grid2D.from_1d_layers(
-        model, nx=10, n_pad=4, n_stations=4, dz_min=50.0
-    )
+    g = Grid2D.from_1d_layers(model, nx=10, n_pad=4, n_stations=4, dz_min=50.0)
     # the (tiny) 1 m layer thickness must be floored to dz_min
     assert g.dz[0] == pytest.approx(50.0)
 
@@ -503,7 +498,9 @@ def test_plot_with_vmin_vmax_and_custom_cmap():
 
 
 def test_plot_uses_name_as_title():
-    g = Grid2D.halfspace(rho=100.0, nx=8, nz=6, n_pad=3, n_stations=4, name="test-model")
+    g = Grid2D.halfspace(
+        rho=100.0, nx=8, nz=6, n_pad=3, n_stations=4, name="test-model"
+    )
     ax = g.plot()
     assert ax.get_title() == "test-model"
     plt.close(ax.get_figure())

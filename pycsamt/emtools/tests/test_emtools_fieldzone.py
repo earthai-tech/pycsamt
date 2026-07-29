@@ -89,9 +89,7 @@ def test_classify_row_count():
 def test_classify_two_sites():
     s1 = _one_site("A", offset=1000.0)
     s2 = _one_site("B", offset=8000.0)
-    df = classify_field_zones(
-        [s1, s2], source_offset={"A": 1000.0, "B": 8000.0}
-    )
+    df = classify_field_zones([s1, s2], source_offset={"A": 1000.0, "B": 8000.0})
     assert set(df["station"].unique()) == {"A", "B"}
 
 
@@ -119,9 +117,7 @@ def test_classify_kr_monotone_with_offset():
     """Higher offset → higher |kr| at same frequency."""
     s1 = _one_site("near", offset=100.0)
     s2 = _one_site("far", offset=50_000.0)
-    df = classify_field_zones(
-        [s1, s2], source_offset={"near": 100.0, "far": 50_000.0}
-    )
+    df = classify_field_zones([s1, s2], source_offset={"near": 100.0, "far": 50_000.0})
     kr_near = df[df.station == "near"]["kr"].values
     kr_far = df[df.station == "far"]["kr"].values
     assert (kr_far > kr_near).all()
@@ -210,9 +206,7 @@ def test_nf_factor_far_field_near_unity():
     df = near_field_factor([site], source_offset=500_000.0)
     # In the far field |F| → 1; allow generous tolerance because ρ_a is
     # itself estimated from the synthetic Z (not exactly rho)
-    assert np.allclose(df["nf_factor"].values, 1.0, atol=0.15), df[
-        ["kr", "nf_factor"]
-    ]
+    assert np.allclose(df["nf_factor"].values, 1.0, atol=0.15), df[["kr", "nf_factor"]]
 
 
 def test_nf_factor_near_field_deviates():

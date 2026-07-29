@@ -45,12 +45,8 @@ Given a joint MT inversion result, write 4-5 sentences that:
 Reply in plain scientific English.
 """
 
-_DEFAULT_FREQS_MT = np.logspace(
-    -4, 3, 40
-)  # primary:  1e-4 – 1e3 Hz  (40 pts)
-_DEFAULT_FREQS_SEC = np.logspace(
-    -4, 1, 20
-)  # secondary: 1e-4 – 10 Hz (20 pts)
+_DEFAULT_FREQS_MT = np.logspace(-4, 3, 40)  # primary:  1e-4 – 1e3 Hz  (40 pts)
+_DEFAULT_FREQS_SEC = np.logspace(-4, 1, 20)  # secondary: 1e-4 – 10 Hz (20 pts)
 _N_COMP_MT = 4  # Re/Im of Zxy + Zyx
 _N_COMP_SEC = 2  # |Z| + phase for one component
 
@@ -97,7 +93,9 @@ class JointInversionAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent = JointInversionAgent(modalities=["mt", "tem"], n_layers=5, epochs=20)
+    >>> agent = JointInversionAgent(
+    ...     modalities=["mt", "tem"], n_layers=5, epochs=20
+    ... )
     >>> result = agent.execute({"path": "/data/L22PLT"})
     >>> result["rms_global"]
     0.31
@@ -166,9 +164,7 @@ class JointInversionAgent(BaseAgent):
         # ── load primary MT sites ─────────────────────────────────────────────
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -330,15 +326,11 @@ class JointInversionAgent(BaseAgent):
         for si, nm in enumerate(station_names):
             log_rho = y_pred_all[si]
             predictions[nm] = log_rho
-            rms = _forward_rms_joint(
-                sites, nm, si, log_rho, freqs_mt, self.n_layers
-            )
+            rms = _forward_rms_joint(sites, nm, si, log_rho, freqs_mt, self.n_layers)
             if rms is not None:
                 rms_per[nm] = rms
 
-        rms_global = (
-            float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
-        )
+        rms_global = float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
         n_pred = len(predictions)
 
         # ── figures ───────────────────────────────────────────────────────────
@@ -369,9 +361,7 @@ class JointInversionAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and n_pred:
-            rms_str = (
-                f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
-            )
+            rms_str = f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
             prompt = (
                 f"Joint inversion summary:\n"
                 f"  Modalities: {' + '.join(self.modalities)}\n"
@@ -386,9 +376,7 @@ class JointInversionAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=250)
 
         elapsed = time.time() - t0
-        rms_disp = (
-            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
-        )
+        rms_disp = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
         return AgentResult(
             status="success" if n_pred > 0 else "needs_review",
             summary=(
@@ -550,8 +538,7 @@ def _forward_rms_joint(
             rho_obs = (
                 rho_raw[:, 0, 1]
                 if rho_raw is not None
-                else (0.2 / np.where(fr == 0, np.nan, fr))
-                * np.abs(z[:, 0, 1]) ** 2
+                else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1]) ** 2
             )
             per = 1.0 / np.where(fr == 0, np.nan, fr)
             per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)

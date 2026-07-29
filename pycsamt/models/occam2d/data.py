@@ -58,28 +58,29 @@ _FORMAT_TAG = "OCCAM2MTDATA_1.0"
 
 # Data-type codes used in the OCCAM2MTDATA format
 DATA_TYPE_CODES = {
-    "RhoTE":   1,
-    "PhsTE":   2,
-    "RhoTM":   5,
-    "PhsTM":   6,
-    "ReZXX":   11,
-    "ImZXX":   12,
-    "ReZXY":   13,
-    "ImZXY":   14,
-    "ReZYX":   15,
-    "ImZYX":   16,
-    "ReZYY":   17,
-    "ImZYY":   18,
-    "ReTZX":   3,
-    "ImTZX":   4,
-    "ReTZY":   7,
-    "ImTZY":   8,
+    "RhoTE": 1,
+    "PhsTE": 2,
+    "RhoTM": 5,
+    "PhsTM": 6,
+    "ReZXX": 11,
+    "ImZXX": 12,
+    "ReZXY": 13,
+    "ImZXY": 14,
+    "ReZYX": 15,
+    "ImZYX": 16,
+    "ReZYY": 17,
+    "ImZYY": 18,
+    "ReTZX": 3,
+    "ImTZX": 4,
+    "ReTZY": 7,
+    "ImTZY": 8,
 }
 
 
 # -----------------------------------------------------------------------
 # Helpers for from_edi
 # -----------------------------------------------------------------------
+
 
 def _site_attr(site, *names):
     """Return the first non-None attribute from *names* on *site*."""
@@ -123,6 +124,7 @@ def _normalise_source(source) -> list:
     if hasattr(source, "edic"):
         try:
             from pycsamt.site.base import Site
+
             return [Site(e) for e in source.edic]
         except Exception:
             return list(source.edic)
@@ -146,6 +148,7 @@ def _compute_offsets(items: list):
     # Try full Profile machinery
     try:
         from pycsamt.site.profile import Profile
+
         prof = Profile.from_sites(items)
         offsets = [float(prof.chainages.get(n, float("nan"))) for n in names]
         if all(np.isfinite(offsets)):
@@ -176,7 +179,7 @@ def _compute_offsets(items: list):
             dy = (lat - lat0) * _M_PER_DEG
             offsets.append(float(np.sqrt(dx * dx + dy * dy)) * np.sign(dx + dy))
         else:
-            offsets.append(float(len(offsets)) * 1000.0)   # 1 km spacing
+            offsets.append(float(len(offsets)) * 1000.0)  # 1 km spacing
 
     return names, offsets
 
@@ -184,6 +187,7 @@ def _compute_offsets(items: list):
 # -----------------------------------------------------------------------
 # Low-level parser
 # -----------------------------------------------------------------------
+
 
 def _parse_data(path: Path) -> dict:
     """Parse an OCCAM2MTDATA_1.0 file.
@@ -208,23 +212,23 @@ def _parse_data(path: Path) -> dict:
         lines = [line.rstrip("\n") for line in fh]
 
     result: dict = {
-        "format_str":  None,
-        "title":       "",
-        "sites":       [],
-        "offsets":     [],
+        "format_str": None,
+        "title": "",
+        "sites": [],
+        "offsets": [],
         "frequencies": [],
-        "data_rows":   [],
+        "data_rows": [],
     }
 
     i = 0
     N = len(lines)
     n_sites = 0
-    n_freq  = 0
+    n_freq = 0
 
     while i < N:
-        raw     = lines[i]
+        raw = lines[i]
         stripped = raw.strip()
-        i       += 1
+        i += 1
 
         if not stripped:
             continue
@@ -234,7 +238,7 @@ def _parse_data(path: Path) -> dict:
 
         raw_key, _, raw_val = stripped.partition(":")
         key_up = raw_key.strip().upper()
-        val    = raw_val.strip()
+        val = raw_val.strip()
 
         if key_up == "FORMAT":
             result["format_str"] = val
@@ -266,7 +270,7 @@ def _parse_data(path: Path) -> dict:
                 try:
                     offsets.append(float(s))
                 except ValueError:
-                    i -= 1   # not a float → put line back
+                    i -= 1  # not a float → put line back
                     break
             result["offsets"] = offsets
 
@@ -302,10 +306,15 @@ def _parse_data(path: Path) -> dict:
                 tokens = s.split()
                 if len(tokens) == 5:
                     try:
-                        data_rows.append([
-                            int(tokens[0]), int(tokens[1]), int(tokens[2]),
-                            float(tokens[3]), float(tokens[4]),
-                        ])
+                        data_rows.append(
+                            [
+                                int(tokens[0]),
+                                int(tokens[1]),
+                                int(tokens[2]),
+                                float(tokens[3]),
+                                float(tokens[4]),
+                            ]
+                        )
                     except ValueError:
                         pass
             result["data_rows"] = data_rows
@@ -322,6 +331,7 @@ def _parse_data(path: Path) -> dict:
 # OccamData
 # -----------------------------------------------------------------------
 
+
 class OccamData(OccamBase):
     def __init__(
         self,
@@ -330,13 +340,13 @@ class OccamData(OccamBase):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.format_str:  str          = _FORMAT_TAG
-        self.title:       str          = title
-        self.config:      OccamConfig  = config or OccamConfig()
-        self.sites:       list[str]    = []
-        self.offsets:     np.ndarray   = np.array([])
-        self.frequencies: np.ndarray   = np.array([])
-        self.data_blocks: np.ndarray   = np.empty((0, 5))
+        self.format_str: str = _FORMAT_TAG
+        self.title: str = title
+        self.config: OccamConfig = config or OccamConfig()
+        self.sites: list[str] = []
+        self.offsets: np.ndarray = np.array([])
+        self.frequencies: np.ndarray = np.array([])
+        self.data_blocks: np.ndarray = np.empty((0, 5))
 
     # ------------------------------------------------------------------
     # Construction from EDI
@@ -350,7 +360,7 @@ class OccamData(OccamBase):
         title: str = "pycsamt Occam2D data file",
         **kwargs,
     ) -> OccamData:
-        cfg   = config or OccamConfig()
+        cfg = config or OccamConfig()
         modes = modes or cfg.modes
 
         # ---- normalise source to a list of duck-typed site items ---------
@@ -363,9 +373,9 @@ class OccamData(OccamBase):
 
         # sort by chainage
         order = np.argsort(offsets)
-        names   = [names[i]   for i in order]
+        names = [names[i] for i in order]
         offsets = [offsets[i] for i in order]
-        items   = [items[i]   for i in order]
+        items = [items[i] for i in order]
 
         # ---- global frequency list ---------------------------------------
         all_freqs: list[float] = []
@@ -382,7 +392,7 @@ class OccamData(OccamBase):
             freqs = freqs[freqs >= cfg.freq_min]
         if cfg.freq_max is not None:
             freqs = freqs[freqs <= cfg.freq_max]
-        freqs = np.sort(freqs)[::-1]   # descending (Occam convention)
+        freqs = np.sort(freqs)[::-1]  # descending (Occam convention)
 
         if freqs.size == 0:
             raise ValueError(
@@ -404,9 +414,9 @@ class OccamData(OccamBase):
         data_rows: list[list] = []
 
         for si, (_name, site) in enumerate(zip(names, items)):
-            s_freq    = _site_attr(site, "freq")
-            s_rho     = _site_attr(site, "rho")
-            s_phs     = _site_attr(site, "phase")
+            s_freq = _site_attr(site, "freq")
+            s_rho = _site_attr(site, "rho")
+            s_phs = _site_attr(site, "phase")
             s_rho_err = _site_attr(site, "rho_err", "z_err")
             s_phs_err = _site_attr(site, "phase_err")
 
@@ -414,22 +424,39 @@ class OccamData(OccamBase):
                 continue
 
             s_freq = np.asarray(s_freq, dtype=float)
-            s_rho  = np.asarray(s_rho,  dtype=float)
-            s_phs  = np.asarray(s_phs,  dtype=float)
+            s_rho = np.asarray(s_rho, dtype=float)
+            s_phs = np.asarray(s_phs, dtype=float)
 
-            rho_err_arr = np.asarray(s_rho_err, dtype=float) if s_rho_err is not None else None
-            phs_err_arr = np.asarray(s_phs_err, dtype=float) if s_phs_err is not None else None
+            rho_err_arr = (
+                np.asarray(s_rho_err, dtype=float) if s_rho_err is not None else None
+            )
+            phs_err_arr = (
+                np.asarray(s_phs_err, dtype=float) if s_phs_err is not None else None
+            )
 
             for fi, f in enumerate(freqs):
                 # Match global frequency within 1 % tolerance
                 fdiff = np.abs(s_freq - f) / np.maximum(np.abs(s_freq), np.abs(f))
-                mi    = int(np.argmin(fdiff))
+                mi = int(np.argmin(fdiff))
                 if fdiff[mi] > 0.01:
                     continue
 
-                for _mode_name, (ri, ci, rho_code, phs_code) in mode_spec.items():
-                    rho_val = float(s_rho[mi, ri, ci]) if s_rho.ndim == 3 else float(s_rho[mi])
-                    phs_val = float(s_phs[mi, ri, ci]) if s_phs.ndim == 3 else float(s_phs[mi])
+                for _mode_name, (
+                    ri,
+                    ci,
+                    rho_code,
+                    phs_code,
+                ) in mode_spec.items():
+                    rho_val = (
+                        float(s_rho[mi, ri, ci])
+                        if s_rho.ndim == 3
+                        else float(s_rho[mi])
+                    )
+                    phs_val = (
+                        float(s_phs[mi, ri, ci])
+                        if s_phs.ndim == 3
+                        else float(s_phs[mi])
+                    )
 
                     if not (np.isfinite(rho_val) and rho_val > 0):
                         continue
@@ -445,7 +472,11 @@ class OccamData(OccamBase):
                     # Rho error (stored as delta_log10_rho)
                     if rho_err_arr is not None and rho_err_arr.ndim == 3:
                         re = float(rho_err_arr[mi, ri, ci])
-                        rel_err = (re / rho_val) if (np.isfinite(re) and re > 0) else cfg.error_floor_rho
+                        rel_err = (
+                            (re / rho_val)
+                            if (np.isfinite(re) and re > 0)
+                            else cfg.error_floor_rho
+                        )
                     else:
                         rel_err = cfg.error_floor_rho
                     rho_err = max(rel_err, cfg.error_floor_rho) / _ln10
@@ -453,7 +484,11 @@ class OccamData(OccamBase):
                     # Phase error (stored in degrees)
                     if phs_err_arr is not None and phs_err_arr.ndim == 3:
                         pe = float(phs_err_arr[mi, ri, ci])
-                        phs_err = max(abs(pe), cfg.error_floor_phase) if np.isfinite(pe) else cfg.error_floor_phase
+                        phs_err = (
+                            max(abs(pe), cfg.error_floor_phase)
+                            if np.isfinite(pe)
+                            else cfg.error_floor_phase
+                        )
                     else:
                         phs_err = cfg.error_floor_phase
 
@@ -461,8 +496,8 @@ class OccamData(OccamBase):
                     data_rows.append([si + 1, fi + 1, phs_code, phs_val, phs_err])
 
         obj = cls(title=title, config=cfg, **kwargs)
-        obj.sites       = names
-        obj.offsets     = np.array(offsets, dtype=float)
+        obj.sites = names
+        obj.offsets = np.array(offsets, dtype=float)
         obj.frequencies = freqs
         if data_rows:
             obj.data_blocks = np.array(data_rows, dtype=float)
@@ -470,7 +505,9 @@ class OccamData(OccamBase):
         if obj.verbose:
             obj.logger.info(
                 "OccamData.from_edi: %d sites, %d freqs, %d data blocks",
-                obj.n_sites, obj.n_frequencies, obj.n_data,
+                obj.n_sites,
+                obj.n_frequencies,
+                obj.n_data,
             )
         return obj
 
@@ -479,14 +516,14 @@ class OccamData(OccamBase):
     # ------------------------------------------------------------------
     @classmethod
     def read(cls, path: PathLike, **kwargs) -> OccamData:
-        p      = Path(path)
+        p = Path(path)
         parsed = _parse_data(p)
-        obj    = cls(**kwargs)
+        obj = cls(**kwargs)
 
-        obj.format_str  = parsed["format_str"]
-        obj.title       = parsed["title"]
-        obj.sites       = parsed["sites"]
-        obj.offsets     = np.array(parsed["offsets"], dtype=float)
+        obj.format_str = parsed["format_str"]
+        obj.title = parsed["title"]
+        obj.sites = parsed["sites"]
+        obj.offsets = np.array(parsed["offsets"], dtype=float)
         obj.frequencies = np.array(parsed["frequencies"], dtype=float)
 
         rows = parsed["data_rows"]
@@ -498,7 +535,10 @@ class OccamData(OccamBase):
         if obj.verbose:
             obj.logger.info(
                 "OccamData.read: %d sites, %d freqs, %d data blocks from %s",
-                obj.n_sites, obj.n_frequencies, obj.n_data, p,
+                obj.n_sites,
+                obj.n_frequencies,
+                obj.n_data,
+                p,
             )
         return obj
 

@@ -44,6 +44,7 @@ from typing import Any
 import numpy as np
 
 from ._base import AgentResult, BaseAgent
+from ._topography import resolve_agent_topography
 from .ai_inversion import _default_thicknesses, _z_to_features
 
 _SYSTEM_PROMPT = """\
@@ -71,6 +72,13 @@ class Inv3DAgent(BaseAgent):
         Number of depth layers per station (default 5).
     n_freqs : int
         Number of frequencies used for feature extraction (default 32).
+    freqs : array-like or None
+        Explicit positive frequency grid in hertz. When supplied, it replaces
+        the legacy ``10^-4``--``10^3`` Hz grid and determines ``n_freqs``.
+    depth_max : float or None
+        Maximum cumulative model depth in metres. When supplied, layer
+        thicknesses are geometrically graded and normalized to this depth.
+        ``None`` preserves the legacy Bostick-derived display parameterization.
     n_train_profiles : int
         Number of synthetic 3-D training profiles (default 150).
     epochs : int
@@ -95,6 +103,15 @@ class Inv3DAgent(BaseAgent):
     ``adjacency`` : ndarray (n_stations, n_stations), optional — pre-computed
         normalised adjacency; overrides *radius* when supplied.
     ``output_dir`` : str, optional
+    ``freqs`` : array-like, optional — execution-time frequency-grid override.
+    ``depth_max`` : float, optional — cumulative finite-layer depth in metres.
+    ``topography`` : bool or dict, optional
+        ``True`` extracts elevation and chainage from ``sites`` and adds a
+        terrain-draped section.  A mapping may instead provide
+        ``elevation_m`` and optionally ``chainage_km``, plus
+        ``exaggeration`` and ``interp_method`` rendering options.  This is a
+        geometry/visualisation contract; it does not alter the MT forward
+        solver or GCN prediction.
     ``period_range`` : [T_min, T_max], optional
 
     Output data keys
@@ -103,6 +120,9 @@ class Inv3DAgent(BaseAgent):
     ``pred_thick``        ndarray (n_sta, n_layers-1) — log₁₀h (metres)
     ``pred_uncertainty``  ndarray (n_sta, n_layers) or None  — MC-dropout std
     ``depths_km``         ndarray — depth axis at station midpoints (km)
+    ``frequency_grid_hz`` ndarray — effective feature/forward frequency grid
+    ``configured_depth_max_m`` float or None — explicit depth contract
+    ``topography``       dict or None — resolved terrain metadata
     ``station_names``     list[str]
     ``station_coords``    ndarray (n_sta, 2)  — metres
     ``adjacency``         ndarray (n_sta, n_sta)
@@ -114,10 +134,12 @@ class Inv3DAgent(BaseAgent):
     Examples
     --------
     >>> agent = Inv3DAgent(n_layers=5, epochs=20, n_mc=10)
-    >>> result = agent.execute({
-    ...     "path":       "/data/WILLY_EDIs",
-    ...     "output_dir": "/out/inv3d",
-    ... })
+    >>> result = agent.execute(
+    ...     {
+    ...         "path": "/data/WILLY_EDIs",
+    ...         "output_dir": "/out/inv3d",
+    ...     }
+    ... )
     >>> result["rms_global"]
     0.28
     """
@@ -132,6 +154,8 @@ class Inv3DAgent(BaseAgent):
         llm_provider: str = "claude",
         n_layers: int = 5,
         n_freqs: int = 32,
+        freqs: Any = None,
+        depth_max: float | None = None,
         n_train_profiles: int = 150,
         epochs: int = 30,
         radius: float = 5_000.0,
@@ -148,6 +172,8 @@ class Inv3DAgent(BaseAgent):
         )
         self.n_layers = n_layers
         self.n_freqs = n_freqs
+        self.freqs = None if freqs is None else np.asarray(freqs, dtype=float)
+        self.depth_max = None if depth_max is None else float(depth_max)
         self.n_train_profiles = n_train_profiles
         self.epochs = epochs
         self.radius = radius
@@ -188,9 +214,7 @@ class Inv3DAgent(BaseAgent):
         # ── load sites ────────────────────────────────────────────────────────
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -202,9 +226,31 @@ class Inv3DAgent(BaseAgent):
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
 
-        freqs = _DEFAULT_FREQS[: self.n_freqs]
-        n_features = self.n_freqs * _N_COMP  # flat feature vector per station
+        freqs_cfg = input_data.get("freqs", self.freqs)
+        if freqs_cfg is None:
+            freqs = _DEFAULT_FREQS[: self.n_freqs]
+        else:
+            freqs = np.asarray(freqs_cfg, dtype=float).reshape(-1)
+            if freqs.size < 2 or not np.all(np.isfinite(freqs)) or np.any(freqs <= 0):
+                return AgentResult.failed(
+                    "'freqs' must contain at least two finite positive values.",
+                    elapsed=time.time() - t0,
+                )
+            freqs = np.unique(freqs)
+        n_freqs = int(freqs.size)
+        n_features = n_freqs * _N_COMP  # flat feature vector per station
         n_out = 2 * self.n_layers - 1  # log10(ρ) layers + log10(h) interfaces
+        depth_max_cfg = input_data.get("depth_max", self.depth_max)
+        if depth_max_cfg is not None and float(depth_max_cfg) <= 0:
+            return AgentResult.failed(
+                "'depth_max' must be positive when supplied.",
+                elapsed=time.time() - t0,
+            )
+        ths = _agent_thicknesses(
+            self.n_layers,
+            freqs,
+            None if depth_max_cfg is None else float(depth_max_cfg),
+        )
 
         # ── collect observed features + station coordinates ────────────────────
         station_names: list[str] = []
@@ -238,9 +284,7 @@ class Inv3DAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        X_obs = np.stack(feat_list, axis=0).astype(
-            np.float32
-        )  # (n_sta, n_feat)
+        X_obs = np.stack(feat_list, axis=0).astype(np.float32)  # (n_sta, n_feat)
         X_obs = _pad_or_trim(X_obs, n_features)
 
         # station coordinates (metres)
@@ -297,25 +341,16 @@ class Inv3DAgent(BaseAgent):
             # y_1d: (n_1d, n_layers) — log10(ρ) only
             # y target for GCN: (n_1d, 2*n_layers-1) = log10(ρ) + log10(h)
             y_log_rho = ds.y[:, : self.n_layers].astype(np.float32)
-            ths = _default_thicknesses(self.n_layers, freqs)  # (n_layers-1,)
             log_h = np.log10(np.clip(ths, 1.0, None)).astype(np.float32)
-            log_h_tile = np.tile(
-                log_h[None, :], (n_1d_total, 1)
-            )  # (n_1d, n_layers-1)
-            y_1d = np.concatenate(
-                [y_log_rho, log_h_tile], axis=1
-            )  # (n_1d, n_out)
+            log_h_tile = np.tile(log_h[None, :], (n_1d_total, 1))  # (n_1d, n_layers-1)
+            y_1d = np.concatenate([y_log_rho, log_h_tile], axis=1)  # (n_1d, n_out)
 
             # reshape into 3-D profile tensors
             n_samp = n_1d_total // n_sta
             X_1d = X_1d[: n_samp * n_sta]
             y_1d = y_1d[: n_samp * n_sta]
-            X_3d = X_1d.reshape(
-                n_samp, n_sta, n_features
-            )  # (n_samp, n_sta, n_feat)
-            y_3d = y_1d.reshape(
-                n_samp, n_sta, n_out
-            )  # (n_samp, n_sta, n_out)
+            X_3d = X_1d.reshape(n_samp, n_sta, n_features)  # (n_samp, n_sta, n_feat)
+            y_3d = y_1d.reshape(n_samp, n_sta, n_out)  # (n_samp, n_sta, n_out)
 
             # synthetic adjacency: same A for all profiles
             # (GCNInverter3D uses one A across the mini-batch)
@@ -375,21 +410,16 @@ class Inv3DAgent(BaseAgent):
                     adjacency=A,
                     n_mc=self.n_mc,
                 )
-                pred_uncertainty = sigma[
-                    :, : self.n_layers
-                ]  # (n_sta, n_layers)
+                pred_uncertainty = sigma[:, : self.n_layers]  # (n_sta, n_layers)
             except Exception as exc:
                 warnings.append(f"MC-dropout uncertainty failed: {exc}")
 
         # ── depth axis (in km) ────────────────────────────────────────────────
-        ths = _default_thicknesses(self.n_layers, freqs)
         depths = np.concatenate([[0.0], np.cumsum(ths)]) / 1000.0  # km
 
         # ── per-station forward RMS ────────────────────────────────────────────
         rms_list: list[float] = []
-        for si, (nm, ed) in enumerate(
-            _iter_station_items(sites, station_names)
-        ):
+        for si, (nm, ed) in enumerate(_iter_station_items(sites, station_names)):
             rms = _forward_rms_3d(ed, pred_rho[si], ths, freqs)
             if rms is not None:
                 rms_list.append(rms)
@@ -461,24 +491,67 @@ class Inv3DAgent(BaseAgent):
             except Exception as exc:
                 warnings.append(f"Uncertainty map figure: {exc}")
 
+        # Topography is deliberately applied after inversion.  The current
+        # mt1d synthetic forward solver has no terrain-aware mesh, so changing
+        # the predicted resistivity here would imply physics that was never
+        # solved.  Instead, resolve station elevations and return/render the
+        # model in an absolute-elevation coordinate system.
+        topography = resolve_agent_topography(
+            input_data.get("topography", False),
+            sites=sites,
+            station_names=station_names,
+            coords_m=coords_m,
+            warnings_list=warnings,
+        )
+        if topography is not None and topography["applied"]:
+            try:
+                from ..topo import plot_topo_section
+
+                topo_model = {
+                    "pred_rho": pred_rho,
+                    "depths_km": depths,
+                    "station_names": station_names,
+                    "station_coords": coords_m,
+                    "rms_global": rms_global,
+                }
+                ax = plot_topo_section(
+                    topo_model,
+                    elevation=topography["elevation_m"],
+                    chainage=topography["chainage_km"],
+                    station_names=station_names,
+                    station_x=topography["chainage_km"],
+                    topo_source="array",
+                    model_unit="km",
+                    depth_max=float(depths[-1]),
+                    exaggeration=topography["exaggeration"],
+                    interp_method=topography["interp_method"],
+                    title="GCN inversion draped below station topography",
+                )
+                fig_topo = ax.get_figure()
+                figures["topography_section"] = fig_topo
+                p = self._save_figure(
+                    fig_topo,
+                    output_dir,
+                    "inv3d_topography_section",
+                    warnings_list=warnings,
+                )
+                if p:
+                    fig_paths["topography_section"] = p
+                topography["rendered"] = True
+            except Exception as exc:
+                topography["rendered"] = False
+                warnings.append(f"Topography section: {exc}")
+
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
         if self.api_key:
             rho_mean = float(np.nanmean(10**pred_rho))
             rho_std = float(np.nanstd(10**pred_rho))
             extent_km = (
-                float(
-                    np.max(
-                        np.linalg.norm(
-                            coords_m - coords_m.mean(axis=0), axis=1
-                        )
-                    )
-                )
+                float(np.max(np.linalg.norm(coords_m - coords_m.mean(axis=0), axis=1)))
                 / 1000.0
             )
-            rms_str = (
-                f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
-            )
+            rms_str = f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
             prompt = (
                 f"3-D GCN inversion summary:\n"
                 f"  Stations: {n_sta}, extent: ~{extent_km:.1f} km\n"
@@ -494,9 +567,7 @@ class Inv3DAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=280)
 
         elapsed = time.time() - t0
-        rms_disp = (
-            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
-        )
+        rms_disp = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
         unc_disp = ", MC σ computed" if pred_uncertainty is not None else ""
         return AgentResult(
             status="success",
@@ -509,6 +580,15 @@ class Inv3DAgent(BaseAgent):
                 "pred_thick": pred_thick,
                 "pred_uncertainty": pred_uncertainty,
                 "depths_km": depths,
+                "frequency_grid_hz": freqs,
+                "configured_depth_max_m": depth_max_cfg,
+                "topography": topography,
+                "station_elevation_m": (
+                    None if topography is None else topography["elevation_m"]
+                ),
+                "station_chainage_km": (
+                    None if topography is None else topography["chainage_km"]
+                ),
                 "station_names": station_names,
                 "station_coords": coords_m,
                 "adjacency": A,
@@ -528,6 +608,151 @@ class Inv3DAgent(BaseAgent):
 # ── private helpers ───────────────────────────────────────────────────────────
 
 
+def _agent_thicknesses(
+    n_layers: int,
+    freqs: np.ndarray,
+    depth_max: float | None,
+) -> np.ndarray:
+    """Return legacy or explicitly depth-limited interface thicknesses."""
+    if depth_max is None:
+        return _default_thicknesses(n_layers, freqs)
+    n_finite = max(int(n_layers) - 1, 1)
+    weights = np.geomspace(1.0, 3.0, n_finite)
+    return (float(depth_max) * weights / weights.sum()).astype(float)
+
+
+def _resolve_agent_topography(
+    config: Any,
+    *,
+    sites: Any,
+    station_names: list[str],
+    coords_m: np.ndarray,
+    warnings_list: list[str],
+) -> dict[str, Any] | None:
+    """Resolve and align optional terrain data to usable inversion stations."""
+    if config is None or config is False:
+        return None
+    if config is True:
+        cfg: dict[str, Any] = {}
+    elif isinstance(config, dict):
+        cfg = dict(config)
+        if not cfg.get("enabled", True):
+            return None
+    else:
+        warnings_list.append("'topography' must be a bool or mapping; ignored.")
+        return None
+
+    exaggeration = float(cfg.get("exaggeration", 1.0))
+    if not np.isfinite(exaggeration) or exaggeration <= 0:
+        warnings_list.append(
+            "Topography exaggeration must be finite and positive; ignored."
+        )
+        return None
+    interp_method = str(cfg.get("interp_method", "linear")).lower()
+    if interp_method not in {"linear", "nearest", "cubic"}:
+        warnings_list.append(
+            "Topography interp_method must be linear, nearest, or cubic; ignored."
+        )
+        return None
+
+    explicit_elev = cfg.get("elevation_m")
+    explicit_chain = cfg.get("chainage_km")
+    source = "array" if explicit_elev is not None else "sites"
+    if explicit_elev is None:
+        from ..topo.extract import (
+            extract_chainage,
+            extract_elevation,
+            extract_station_names,
+        )
+
+        all_names = extract_station_names(sites)
+        all_elev = extract_elevation(sites)
+        all_chain = extract_chainage(sites)
+        # Name alignment is essential because stations without impedance data
+        # may have been skipped above.  Positional truncation would attach the
+        # wrong hill/valley to every following station.
+        lookup: dict[str, int] = {}
+        for i, name in enumerate(all_names):
+            lookup.setdefault(str(name).strip().casefold(), i)
+        missing = [n for n in station_names if str(n).strip().casefold() not in lookup]
+        if missing:
+            warnings_list.append(
+                "Topography station-name alignment failed for: "
+                + ", ".join(missing[:5])
+                + (" ..." if len(missing) > 5 else "")
+            )
+            return {
+                "requested": True,
+                "applied": False,
+                "rendered": False,
+                "source": source,
+                "affects_forward_physics": False,
+                "vertical_datum": "metres above sea level",
+                "elevation_m": None,
+                "chainage_km": None,
+                "exaggeration": exaggeration,
+                "interp_method": interp_method,
+            }
+        idx = np.asarray([lookup[str(n).strip().casefold()] for n in station_names])
+        elevation = np.asarray(all_elev, dtype=float)[idx]
+        chainage = np.asarray(all_chain, dtype=float)[idx]
+        chainage = chainage - chainage[0]
+    else:
+        elevation = np.asarray(explicit_elev, dtype=float).reshape(-1)
+        if elevation.size != len(station_names):
+            warnings_list.append(
+                "Explicit elevation_m length must equal the usable station count; "
+                "topography ignored."
+            )
+            return None
+        if explicit_chain is None:
+            xy = np.asarray(coords_m, dtype=float)
+            seg = np.sqrt((np.diff(xy, axis=0) ** 2).sum(axis=1))
+            chainage = np.concatenate([[0.0], np.cumsum(seg)]) / 1000.0
+        else:
+            chainage = np.asarray(explicit_chain, dtype=float).reshape(-1)
+
+    if chainage.size != elevation.size or not np.all(np.isfinite(chainage)):
+        warnings_list.append("Topography chainage is invalid; topography ignored.")
+        return None
+    if not np.all(np.isfinite(elevation)) or not np.any(elevation != 0.0):
+        warnings_list.append(
+            "No finite, non-zero station elevations were available; "
+            "topography was not applied."
+        )
+        return {
+            "requested": True,
+            "applied": False,
+            "rendered": False,
+            "source": source,
+            "affects_forward_physics": False,
+            "vertical_datum": "metres above sea level",
+            "elevation_m": elevation,
+            "chainage_km": chainage,
+            "exaggeration": exaggeration,
+            "interp_method": interp_method,
+        }
+    if np.any(np.diff(chainage) <= 0):
+        warnings_list.append(
+            "Topography chainage must increase in station order; topography ignored."
+        )
+        return None
+
+    return {
+        "requested": True,
+        "applied": True,
+        "rendered": False,
+        "source": source,
+        "affects_forward_physics": False,
+        "vertical_datum": "metres above sea level",
+        "station_names": list(station_names),
+        "elevation_m": elevation,
+        "chainage_km": chainage,
+        "exaggeration": exaggeration,
+        "interp_method": interp_method,
+    }
+
+
 def _extract_station_xy(ed: Any, idx: int) -> np.ndarray:
     """Return (x_m, y_m) for one station from EDI header lat/lon."""
     try:
@@ -535,12 +760,8 @@ def _extract_station_xy(ed: Any, idx: int) -> np.ndarray:
         if coords is not None and len(coords) >= 2:
             lat, lon = float(coords[0]), float(coords[1])
         else:
-            lat = float(
-                getattr(ed, "lat", None) or getattr(ed, "latitude", 0.0)
-            )
-            lon = float(
-                getattr(ed, "lon", None) or getattr(ed, "longitude", 0.0)
-            )
+            lat = float(getattr(ed, "lat", None) or getattr(ed, "latitude", 0.0))
+            lon = float(getattr(ed, "lon", None) or getattr(ed, "longitude", 0.0))
     except Exception:
         lat, lon = 0.0, 0.0
     if lat == 0.0 and lon == 0.0:
@@ -603,8 +824,7 @@ def _forward_rms_3d(
         rho_obs = (
             rho_raw[:, 0, 1]
             if rho_raw is not None
-            else (0.2 / np.where(fr == 0, np.nan, fr))
-            * np.abs(z[:, 0, 1]) ** 2
+            else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1]) ** 2
         )
         per = 1.0 / np.where(fr == 0, np.nan, fr)
         per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
@@ -715,9 +935,7 @@ def _plot_depth_slices(
         ax.set_xlabel("E–W (km)", fontsize=8)
         ax.set_ylabel("N–S (km)", fontsize=8)
         ax.tick_params(labelsize=7)
-        ax.set_title(
-            f"Depth slice  {depth_km:.2f} km", fontsize=8, fontweight="bold"
-        )
+        ax.set_title(f"Depth slice  {depth_km:.2f} km", fontsize=8, fontweight="bold")
         ax.set_aspect("equal")
 
     fig.suptitle(
@@ -753,10 +971,7 @@ def _plot_resistivity_section(
         vec_len = np.linalg.norm(vec) + 1e-9
         vec /= vec_len
         dist = np.array(
-            [
-                np.dot([cx[i] - cx[0], cy[i] - cy[0]], vec)
-                for i in range(n_sta)
-            ]
+            [np.dot([cx[i] - cx[0], cy[i] - cy[0]], vec) for i in range(n_sta)]
         )
     else:
         dist = np.zeros(1)
@@ -876,9 +1091,7 @@ def _plot_uncertainty_depth_map(
         ax.set_xlabel("E–W (km)", fontsize=8)
         ax.set_ylabel("N–S (km)", fontsize=8)
         ax.tick_params(labelsize=7)
-        ax.set_title(
-            f"{title}  ({depth_km:.2f} km)", fontsize=8, fontweight="bold"
-        )
+        ax.set_title(f"{title}  ({depth_km:.2f} km)", fontsize=8, fontweight="bold")
         ax.set_aspect("equal")
 
     fig.suptitle(

@@ -93,8 +93,8 @@ class TestCoordinateFields:
         assert len(rows) == 2
 
     def test_utm_mode_appends_easting_northing(self, monkeypatch):
-        import pycsamt.app.mapview.callbacks.lines as lines_mod
         import pycsamt.app.mapview._render as render_mod
+        import pycsamt.app.mapview.callbacks.lines as lines_mod
 
         def fake_project(lons, lats, mode, zone, hem, epsg):
             return [500000.0], [5370000.0], 32632
@@ -114,8 +114,8 @@ class TestCoordinateFields:
 
 class TestAddProjectedColumns:
     def test_appends_easting_northing_columns(self, monkeypatch):
-        import pycsamt.app.mapview.callbacks.lines as lines_mod
         import pycsamt.app.mapview._render as render_mod
+        import pycsamt.app.mapview.callbacks.lines as lines_mod
 
         def fake_project(lons, lats, mode, zone, hem, epsg):
             return [1.0, 2.0], [3.0, 4.0], 32632
@@ -142,8 +142,8 @@ class TestAddProjectedColumns:
         assert {"name": "N", "id": "N"} in new_cols
 
     def test_projection_failure_returns_records_unchanged(self, monkeypatch):
-        import pycsamt.app.mapview.callbacks.lines as lines_mod
         import pycsamt.app.mapview._render as render_mod
+        import pycsamt.app.mapview.callbacks.lines as lines_mod
 
         monkeypatch.setattr(
             render_mod, "project_to_crs", lambda *a, **k: (None, None, 4326)

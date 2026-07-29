@@ -69,9 +69,7 @@ def test_require_does_not_raise(backend):
 def test_require_raises_when_unavailable():
     from pycsamt.backends._tensorflow import TensorFlowBackend
 
-    with mock.patch.object(
-        TensorFlowBackend, "is_available", return_value=False
-    ):
+    with mock.patch.object(TensorFlowBackend, "is_available", return_value=False):
         with pytest.raises(ImportError, match="pip install tensorflow"):
             TensorFlowBackend.require()
 
@@ -86,18 +84,14 @@ def test_resolve_device_explicit_passthrough(backend):
 def test_resolve_device_cpu_when_no_gpu(backend):
     import tensorflow as tf
 
-    with mock.patch.object(
-        tf.config, "list_physical_devices", return_value=[]
-    ):
+    with mock.patch.object(tf.config, "list_physical_devices", return_value=[]):
         assert backend.resolve_device(None) == "/CPU:0"
 
 
 def test_resolve_device_gpu_when_available(backend):
     import tensorflow as tf
 
-    with mock.patch.object(
-        tf.config, "list_physical_devices", return_value=["GPU:0"]
-    ):
+    with mock.patch.object(tf.config, "list_physical_devices", return_value=["GPU:0"]):
         assert backend.resolve_device(None) == "/GPU:0"
 
 
@@ -148,9 +142,7 @@ def test_build_resnet1d_multi_stage_hits_projection_and_identity_shortcut(
     """Default channels=(64,128,256) exercise both the identity shortcut
     (first block, matching channel count) and the projected shortcut
     (stage transitions with stride=2 / channel change)."""
-    model = backend.build(
-        {"arch": "resnet1d", "n_features": 20, "n_out": 4}
-    )
+    model = backend.build({"arch": "resnet1d", "n_features": 20, "n_out": 4})
     out = model(np.zeros((2, 20), dtype=np.float32))
     assert out.shape == (2, 4)
 
@@ -163,9 +155,7 @@ def test_build_unet2d_default_input_shape(backend):
 
 def test_build_drcnn_single_modality(backend):
     """len(encoded) == 1 skips the multi-modality Concatenate branch."""
-    model = backend.build(
-        {"arch": "drcnn", "n_features_list": (10,), "n_out": 3}
-    )
+    model = backend.build({"arch": "drcnn", "n_features_list": (10,), "n_out": 3})
     out = model(np.zeros((2, 10), dtype=np.float32))
     assert out.shape == (2, 3)
 
@@ -230,9 +220,7 @@ def test_train_default_device(backend, small_data):
     model = backend.build(
         {"arch": "cnn1d", "n_features": 6, "n_out": 2, "channels": (4,)}
     )
-    hist = backend.train(
-        model, X_train, y_train, X_val, y_val, epochs=1, batch_size=4
-    )
+    hist = backend.train(model, X_train, y_train, X_val, y_val, epochs=1, batch_size=4)
     assert len(hist["train_loss"]) == 1
 
 
@@ -301,10 +289,7 @@ def test_get_loss_fn_masked_mse_maps_to_mse(backend):
 
 
 def test_get_loss_fn_cross_entropy(backend):
-    assert (
-        backend._get_loss_fn("cross_entropy")
-        == "sparse_categorical_crossentropy"
-    )
+    assert backend._get_loss_fn("cross_entropy") == "sparse_categorical_crossentropy"
 
 
 def test_get_loss_fn_passthrough_for_custom_loss(backend):

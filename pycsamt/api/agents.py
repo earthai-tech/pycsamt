@@ -16,12 +16,14 @@ Quick start
     AGENT_CONFIG.configure(provider="claude", api_key="sk-ant-…")
 
     from pycsamt.agents import DataQCAgent, PhaseAnalysisAgent
-    qc = DataQCAgent()          # inherits provider + key automatically
-    pt = PhaseAnalysisAgent()   # same
+
+    qc = DataQCAgent()  # inherits provider + key automatically
+    pt = PhaseAnalysisAgent()  # same
 
 Or use the top-level convenience function::
 
     from pycsamt.agents import configure_agents
+
     configure_agents(provider="openai", api_key="sk-…")
 
 Multi-provider workflow
@@ -32,9 +34,9 @@ Store keys for several providers upfront, then switch freely::
     AGENT_CONFIG.set_key("openai", "sk-…")
     AGENT_CONFIG.set_key("gemini", "AIza…")
 
-    AGENT_CONFIG.switch("claude")      # all agents use Claude
+    AGENT_CONFIG.switch("claude")  # all agents use Claude
     # … some work …
-    AGENT_CONFIG.switch("openai")      # now all agents use OpenAI, no re-supply
+    AGENT_CONFIG.switch("openai")  # now all agents use OpenAI, no re-supply
 
 Temporary override (context manager)
 -------------------------------------
@@ -62,12 +64,12 @@ Pricing — session budget cap
 ------------------------------
 ::
 
-    AGENT_CONFIG.set_budget(usd=2.0)   # raise BudgetExceededError above $2
+    AGENT_CONFIG.set_budget(usd=2.0)  # raise BudgetExceededError above $2
 
-    AGENT_CONFIG.spent_usd             # float — accumulated so far
-    AGENT_CONFIG.remaining_usd         # float or None (None = no cap)
+    AGENT_CONFIG.spent_usd  # float — accumulated so far
+    AGENT_CONFIG.remaining_usd  # float or None (None = no cap)
 
-    AGENT_CONFIG.reset_budget()        # zero the spend counter; keeps the cap
+    AGENT_CONFIG.reset_budget()  # zero the spend counter; keeps the cap
     AGENT_CONFIG.reset_budget(cap=True)  # also remove the cap
 
 Environment-variable fallback
@@ -304,15 +306,16 @@ class AgentConfig:
         AGENT_CONFIG.configure(provider="claude", api_key="sk-ant-…")
 
         # pricing — override a rate (USD / 1 M tokens)
-        AGENT_CONFIG.set_rate("claude", "claude-opus-4-8",
-                              input=12.0, output=60.0)
+        AGENT_CONFIG.set_rate(
+            "claude", "claude-opus-4-8", input=12.0, output=60.0
+        )
 
         # pricing — add a model not in the built-in table
         AGENT_CONFIG.set_rate("openai", "gpt-5-turbo", input=5.0, output=20.0)
 
         # budget cap
         AGENT_CONFIG.set_budget(usd=5.0)
-        print(AGENT_CONFIG.remaining_usd)   # 5.0
+        print(AGENT_CONFIG.remaining_usd)  # 5.0
 
         # inspect
         print(AGENT_CONFIG.info())
@@ -513,12 +516,14 @@ class AgentConfig:
         ::
 
             # provider lowered their price
-            AGENT_CONFIG.set_rate("claude", "claude-opus-4-8",
-                                  input=12.0, output=60.0)
+            AGENT_CONFIG.set_rate(
+                "claude", "claude-opus-4-8", input=12.0, output=60.0
+            )
 
             # a new model not yet in the built-in table
-            AGENT_CONFIG.set_rate("openai", "gpt-5-turbo",
-                                  input=5.0, output=20.0)
+            AGENT_CONFIG.set_rate(
+                "openai", "gpt-5-turbo", input=5.0, output=20.0
+            )
         """
         self._validate_provider(provider)
         if input < 0 or output < 0:
@@ -624,6 +629,7 @@ class AgentConfig:
         ::
 
             import pprint
+
             pprint.pprint(AGENT_CONFIG.list_rates("claude"))
         """
         providers = [provider.lower()] if provider else list(_BUILTIN_RATES)
@@ -660,8 +666,10 @@ class AgentConfig:
 
             AGENT_CONFIG.set_budget(usd=2.0)
             # … after several agent calls …
-            print(f"${AGENT_CONFIG.spent_usd:.4f} used, "
-                  f"${AGENT_CONFIG.remaining_usd:.4f} left")
+            print(
+                f"${AGENT_CONFIG.spent_usd:.4f} used, "
+                f"${AGENT_CONFIG.remaining_usd:.4f} left"
+            )
         """
         if usd <= 0:
             raise ValueError("Budget cap must be a positive USD amount.")
@@ -687,7 +695,7 @@ class AgentConfig:
         --------
         ::
 
-            AGENT_CONFIG.reset_budget()          # zero counter, keep cap
+            AGENT_CONFIG.reset_budget()  # zero counter, keep cap
             AGENT_CONFIG.reset_budget(cap=True)  # zero counter and remove cap
         """
         self._spent_usd = 0.0
@@ -721,10 +729,7 @@ class AgentConfig:
         Called internally by :meth:`~pycsamt.agents.BaseAgent.query_llm`
         *before* each API call.
         """
-        if (
-            self._budget_usd is not None
-            and self._spent_usd >= self._budget_usd
-        ):
+        if self._budget_usd is not None and self._spent_usd >= self._budget_usd:
             raise BudgetExceededError(self._spent_usd, self._budget_usd)
 
     # ------------------------------------------------------------------
@@ -843,9 +848,7 @@ class AgentConfig:
             "budget_usd": self._budget_usd,
             "spent_usd": round(self._spent_usd, 6),
             "remaining_usd": (
-                round(self.remaining_usd, 6)
-                if self.remaining_usd is not None
-                else None
+                round(self.remaining_usd, 6) if self.remaining_usd is not None else None
             ),
         }
 
@@ -890,9 +893,7 @@ class AgentConfig:
             "_provider": self._provider,
             "_model": self._model,
             "_keys": dict(self._keys),
-            "_custom_rates": {
-                p: dict(m) for p, m in self._custom_rates.items()
-            },
+            "_custom_rates": {p: dict(m) for p, m in self._custom_rates.items()},
             "_budget_usd": self._budget_usd,
             "_spent_usd": self._spent_usd,
         }
@@ -1033,11 +1034,10 @@ def configure_agents(
     ::
 
         from pycsamt.agents import configure_agents
+
         configure_agents(provider="claude", api_key="sk-ant-…")
     """
-    return AGENT_CONFIG.configure(
-        provider=provider, api_key=api_key, model=model
-    )
+    return AGENT_CONFIG.configure(provider=provider, api_key=api_key, model=model)
 
 
 def reset_agents(*, keys: bool = True) -> AgentConfig:

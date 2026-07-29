@@ -20,9 +20,11 @@ Examples
 ...     method="mt",
 ...     dimension="1d",
 ...     backend="builtin",
-...     data={"freqs": [1.0, 10.0],
-...           "rho_a": [100.0, 120.0],
-...           "phase": [45.0, 47.0]},
+...     data={
+...         "freqs": [1.0, 10.0],
+...         "rho_a": [100.0, 120.0],
+...         "phase": [45.0, 47.0],
+...     },
 ...     max_iter=4,
 ... )  # doctest: +SKIP
 
@@ -79,9 +81,7 @@ class InversionWorkflow(PyCSAMTObject):
         ...     method="mt",
         ...     dimension="1d",
         ...     backend="builtin",
-        ...     data={"freqs": [1.0],
-        ...           "rho_a": [100.0],
-        ...           "phase": [45.0]},
+        ...     data={"freqs": [1.0], "rho_a": [100.0], "phase": [45.0]},
         ... )
         >>> workflow.config.backend
         'builtin'
@@ -123,11 +123,13 @@ class InversionWorkflow(PyCSAMTObject):
         ...     backend="builtin",
         ...     max_iter=4,
         ... )
-        >>> result = workflow.run({
-        ...     "freqs": [1.0, 10.0],
-        ...     "rho_a": [100.0, 120.0],
-        ...     "phase": [45.0, 47.0],
-        ... })  # doctest: +SKIP
+        >>> result = workflow.run(
+        ...     {
+        ...         "freqs": [1.0, 10.0],
+        ...         "rho_a": [100.0, 120.0],
+        ...         "phase": [45.0, 47.0],
+        ...     }
+        ... )  # doctest: +SKIP
         """
         return self.backend.run(data=data)
 
@@ -163,9 +165,11 @@ def run_inversion(
     ...     method="mt",
     ...     dimension="1d",
     ...     backend="builtin",
-    ...     data={"freqs": [1.0, 10.0],
-    ...           "rho_a": [100.0, 120.0],
-    ...           "phase": [45.0, 47.0]},
+    ...     data={
+    ...         "freqs": [1.0, 10.0],
+    ...         "rho_a": [100.0, 120.0],
+    ...         "phase": [45.0, 47.0],
+    ...     },
     ...     max_iter=4,
     ... )  # doctest: +SKIP
     """

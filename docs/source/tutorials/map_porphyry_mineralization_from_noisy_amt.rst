@@ -46,10 +46,10 @@ After this tutorial you should be able to:
   how well a single rotation angle actually works;
 - prepare both a classical 2-D (:term:`Occam2D`) and a classical 3-D
   (:term:`ModEM`) inversion input set from the same corrected survey;
-- run 2-D and 3-D AI inversion and quantify, with real RMS numbers, what the
-  correction chain bought you;
-- drape the resulting resistivity structure on each line's real topography
-  and read it as a porphyry exploration target.
+- construct a separate geological prior and terrain-aware Maxwell mesh for
+  each line, then train the 2-D network with genuine Maxwell responses;
+- distinguish a successful software run from a model that passes response-
+  and structure-recovery gates, and prepare an external 3-D continuation.
 
 Recommended Order
 -----------------
@@ -78,10 +78,10 @@ has removed a confound. The order used here, and why:
    and rotate;
 10. prepare Occam2D (2-D, rotated) and ModEM (3-D, unrotated) inversion
     inputs;
-11. run AI inversion in 2-D and 3-D, compare corrected-versus-raw RMS, and
-    report the correction parameters;
-12. drape both lines' AI-3-D resistivity on real topography and read the
-    section for a porphyry-style resistivity contrast.
+11. build the L26 and L30 geology/topography problems, inspect their padded
+    Maxwell meshes, and run independent ``physics="mt2d"`` AI inversions;
+12. test observed-response fit and held-out geological recovery before any
+    interpretation, then report correction and inversion provenance.
 
 Load Both Lines
 ---------------
@@ -1066,8 +1066,303 @@ it with :class:`pycsamt.models.modem.PlotModel3D`. :doc:`../user_guide/models/mo
 covers the full ModEM workflow -- configuration, native files, the runner, and
 diagnostics -- against a bundled, already-converged sample run.
 
-2-D And 3-D AI Inversion
-------------------------
+Maxwell-Trained 2-D AI Inversion of Both Lines
+----------------------------------------------
+
+The corrected EDI folders are now the input boundary for AI inversion.  Keep
+the two profiles separate: a 2-D forward operator assumes invariance normal to
+one profile, and concatenating L26 and L30 would create a fictitious connection
+between their end stations.  Each line therefore receives its own geological
+hypothesis, topographic surface, padded Maxwell mesh, training dataset, model,
+and validation record.
+
+The geology is a seeded **prior**, not an interpretation of these data.  For
+line :math:`l`, its cell model is
+
+.. math::
+   :label: willy-two-line-prior
+
+   \log_{10}\rho_l(x,z)=
+   \log_{10}\bar{\rho}_{k_l(x,z)}+
+   \sigma_{k_l(x,z)}g_l(x,z),
+
+where :math:`k_l` is the stratigraphic unit, :math:`g_l` is a correlated
+Gaussian field, and an optional ellipsoid represents a conductive target
+hypothesis.  Seeds ``2601`` and ``3001`` make the two realizations repeatable
+without forcing them to be identical.  In a real study, train over an ensemble
+of plausible interfaces, correlations, bodies, and resistivities rather than
+selecting the realization that most resembles the expected target.
+
+The following short excerpt shows the public objects.  The complete two-line
+implementation—including loading, model construction, inversion, validation,
+and plotting—is exposed as a copyable accordion below.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.geology import (
+   ...     ElectricalLayer, EllipsoidalLens, GaussianCorrelation,
+   ...     GeologyGrid, generate_layered_geology, insert_lenses,
+   ...     topography_from_sites,
+   ... )
+   >>> from pycsamt.forward.maxwell import MeshDesign, build_solver_mesh
+   >>> grid26 = GeologyGrid.regular_2d(
+   ...     nx=30, nz=24, dx_m=100, dz_m=75, x_origin_m=-250,
+   ... )
+   >>> topography26 = topography_from_sites(
+   ...     corr26, grid26, profile_origin_m=-250,
+   ... )
+   >>> grid26.shape, round(topography26.relief_m, 1)
+   ((24, 30), 162.0)
+
+The terrain object is supplied to :func:`pycsamt.forward.maxwell.build_solver_mesh`,
+which classifies earth and air before solving.  Topography is therefore part of
+the numerical domain; it is not painted onto a flat result afterward.  Padding
+keeps artificial boundaries away from the receiver footprint, while the
+quality record checks cell ratios and resolution against skin depth.
+
+.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai2d_geology_maxwell_both_lines.png
+   :alt: Seeded geological priors and terrain-aware Maxwell meshes for L26 and L30
+   :width: 100%
+
+   The left column contains two different, explicitly hypothetical geology
+   realizations.  The right column shows how each becomes a solver model:
+   resistive numerical air occupies the cells above terrain and geometrically
+   growing padding surrounds the 2.4 km receiver footprint.  Both resulting
+   meshes have ``33 x 38 = 1254`` cells.  Similar geometry does not imply the
+   same geology; it only reflects the shared discretization policy.
+
+Run genuine 2-D training physics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Set ``physics="mt2d"`` explicitly.  Omitting it selects the legacy ``mt1d``
+mode, which tiles independent 1-D responses and cannot validate lateral
+Maxwell physics.  Matching ``n_stations_per_profile`` to all 25 field stations
+also prevents silent truncation.
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.agents import Inv2DAgent
+   >>> frequencies_hz = np.geomspace(1.0, 1000.0, 8)
+   >>> agent26 = Inv2DAgent(
+   ...     physics="mt2d", n_depth=24, depth_max=1800,
+   ...     n_freqs=8, freqs=frequencies_hz,
+   ...     n_train_profiles=10, n_stations_per_profile=25,
+   ...     station_spacing_m=101.5, epochs=30,
+   ...     correlation_length_x_m=(350, 1000),
+   ...     correlation_length_z_m=(90, 300),
+   ...     lambda_x=.02, lambda_z=.01, lambda_tv=.005,
+   ... )
+   >>> result26 = agent26.execute({
+   ...     "sites": corr26,
+   ...     "topography": True,
+   ...     "output_dir": "runs/L26PLT_ai2d_maxwell",
+   ... })
+   >>> result26.status, result26.data["physics"]
+   ('success', 'mt2d')
+   >>> result26.data["pred_section"].shape
+   (24, 25)
+
+Instantiate a second agent with the L30 median station spacing and write to a
+different output directory.  Do not reuse a trained L26 network as though it
+were an independent L30 inversion: that would couple experiments without
+recording the dependency.
+
+The training objective combines supervised model recovery with declared
+spatial penalties,
+
+.. math::
+   :label: willy-mt2d-ai-objective
+
+   \mathcal{J}(\theta)=
+   \frac{1}{N}\sum_{i=1}^{N}
+   \left\|f_\theta(\mathbf d_i)-\mathbf m_i\right\|_2^2
+   +\lambda_x\|D_x\hat{\mathbf m}_i\|_2^2
+   +\lambda_z\|D_z\hat{\mathbf m}_i\|_2^2
+   +\lambda_{TV}\operatorname{TV}(\hat{\mathbf m}_i),
+
+where every :math:`\mathbf d_i` is generated by the verified 2-D Maxwell
+adapter from known model :math:`\mathbf m_i`.  Regularization discourages
+unsupported oscillation; it does not prove that a recovered feature is real.
+
+.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai2d_maxwell_predictions_both_lines.png
+   :alt: Direct Maxwell-trained AI predictions for L26 and L30 on real topography
+   :width: 100%
+
+   These are the direct ``pred_section`` arrays on the agent-returned 1.8 km
+   depth axis—no pseudosection blending, trend injection, smoothing, or invented
+   depth conversion is used.  The stronger rerun gives L26 modest vertical and
+   lateral variation, including a weakly more resistive pattern near
+   ``1.9--2.4 km`` chainage.  L30 remains close to the mean prediction near
+   :math:`\log_{10}\rho\simeq2.1`.  The contrast demonstrates what the model
+   actually learned, but it is not sufficient evidence to label either pattern
+   as alteration or mineralization.
+
+Gate the result before interpretation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Global RMS tests response consistency, whereas held-out recovery tests whether
+the network reconstructs known geological models outside its fitting subset.
+They answer different questions and both must pass a threshold chosen before
+viewing the field model.
+
+.. code-block:: pycon
+
+   >>> round(result26.data["rms_global"], 3)
+   1.012
+   >>> recovery26 = result26.data["mt2d_recovery"]
+   >>> round(recovery26["rmse"], 3), recovery26["n_samples"]
+   (0.501, 1)
+
+.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai2d_maxwell_validation_both_lines.png
+   :alt: Observed-response RMS and held-out geological recovery for both lines
+   :width: 90%
+   :align: center
+
+   L26 and L30 reach response RMS ``1.012`` and ``1.168``, respectively, but
+   recovery RMSE is ``0.501`` and ``0.505`` log10 ohm m.  With only one held-out
+   sample per line, those errors have high sampling uncertainty.  L26's added
+   structure makes the figure more useful pedagogically, whereas L30's mean
+   collapse exposes the remaining limitation.  Both still fail the structural-
+   recovery gate and therefore do not support a drilling interpretation.
+
+The next correct step is to strengthen the training dataset and rerun both
+lines, publishing replacement sections only after structural recovery passes.
+For this survey, a meaningful rerun should use ``200--500+`` Maxwell geology
+realizations, ``16--32`` retained frequencies, and an upper limit of ``30--100``
+epochs with validation-based early stopping.  It should also cover broader
+layered, lens, fault/contact, and correlated-field priors; repeat multiple
+seeds; evaluate recovery by depth and target; and verify that the synthetic
+response distribution overlaps the L26/L30 observations.
+
+The following project-scale agent configuration makes the changes that the
+current convenience API exposes directly:
+
+.. code-block:: pycon
+
+   >>> project_frequencies = np.geomspace(1.0, 10_000.0, 24)
+   >>> production_agent = Inv2DAgent(
+   ...     physics="mt2d",
+   ...     n_depth=32,
+   ...     depth_max=2200.0,
+   ...     n_freqs=len(project_frequencies),
+   ...     freqs=project_frequencies,
+   ...     n_train_profiles=256,
+   ...     n_stations_per_profile=25,
+   ...     station_spacing_m=101.5,
+   ...     epochs=80,
+   ...     correlation_length_x_m=(250.0, 1600.0),
+   ...     correlation_length_z_m=(60.0, 450.0),
+   ...     log_resistivity_mean=2.1,
+   ...     log_resistivity_std=0.75,
+   ...     lambda_x=0.01,
+   ...     lambda_z=0.005,
+   ...     lambda_tv=0.002,
+   ...     mesh_safety_factor=8.0,
+   ...     max_mesh_cells=300_000,
+   ... )
+
+``n_train_profiles=256`` replaces ten examples by enough realizations to
+populate training, validation, and test partitions.  It does not guarantee
+coverage, so inspect the split counts and response distributions.  The 24
+frequencies sample four decades instead of four isolated values; for another
+survey, derive this vector from the frequencies that survived QC rather than
+copying the bounds blindly.  Increasing ``n_depth`` to 32 gives the network
+more vertical degrees of freedom, while ``depth_max=2200`` keeps them within the
+survey's intended investigation range.
+
+``epochs=80`` is a ceiling, not a requirement to train for all 80 epochs.
+:class:`pycsamt.agents.Inv2DAgent` automatically uses validation patience
+``max(5, epochs // 5)``—16 epochs here—and restores the best state.  The wider
+correlation-length and log-resistivity distributions expose the network to
+compact and regional structures and a substantially broader resistivity range.
+Because the standardized Gaussian field is not hard bounded, inspect empirical
+quantiles and impose scientifically justified limits in a custom dataset when
+extreme resistivities would be implausible.  The smaller regularization weights
+still suppress isolated pixels but are less likely to erase a recovered body;
+choose them from validation sweeps, not from the field image.
+
+The convenience ``Inv2DAgent`` currently generates correlated-field geology.
+It does **not** yet turn the separately constructed ``LayeredGeology`` and
+``EllipsoidalLens`` objects above into its training ensemble.  To include
+layered, lens, fault/contact, and multiple-body families, generate those
+realizations explicitly with :mod:`pycsamt.ai.geology`, solve every one through
+:mod:`pycsamt.forward.maxwell`, preserve their models/responses in the dataset
+contract, and fit :class:`pycsamt.ai.inversion.EMInverter2D` directly.  Merely
+raising ``n_train_profiles`` repeats the configured correlated-field family; it
+does not broaden geological support.
+
+Repeat the complete experiment with independent root seeds, for example
+``[17, 29, 43, 71, 101]``.  A feature is unstable when its position or amplitude
+changes materially between accepted seeds.  Do not average failed runs into an
+apparently smooth final section.
+
+Before promotion, require all predeclared checks—not just low field RMS:
+
+.. code-block:: pycon
+
+   >>> recovery = result26.data["mt2d_recovery"]
+   >>> response_pass = result26.data["rms_global"] <= 1.2
+   >>> recovery_pass = recovery["rmse"] <= 0.25 and recovery["r2"] >= 0.60
+   >>> enough_test_models = recovery["n_samples"] >= 20
+   >>> promote = response_pass and recovery_pass and enough_test_models
+   >>> promote
+   False
+
+The numerical thresholds are an example acceptance policy and must be fixed
+before inspecting the field result.  Add depth-resolved RMSE, conductor-boundary
+overlap, anomaly-centroid error, predicted-versus-observed response panels, and
+out-of-distribution tests.  Better agreement between training and observations
+means overlap in frequency/component availability, apparent-resistivity and
+phase ranges, noise/error distributions, station spacing, topographic relief,
+and expected geological scales—not merely similar global means.
+
+Keep the middle configuration above as an approximately fourteen-minute CPU
+integration and teaching run.  On the documentation machine, 20 total Maxwell
+realizations at eight frequencies required ``813.8 s``; 256 per line can
+therefore take several hours on the same CPU.  Record the dataset configuration, split
+manifest, seeds, mesh diagnostics, loss curves, held-out metrics, and
+observed-response residuals for each line.
+
+.. code-dropdown:: ../../scripts/generate_tutorial_porphyry_ai_workflow.py
+   :language: python
+   :linenos:
+   :title: View and copy the complete L26/L30 Maxwell-AI workflow
+
+Run it after the corrected EDI export step:
+
+.. code-block:: console
+
+   python docs/scripts/generate_tutorial_porphyry_ai_workflow.py
+
+Executed output:
+
+.. code-block:: text
+
+   L26PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.012 recovery_RMSE 0.501
+   L30PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.168 recovery_RMSE 0.505
+
+Continue to validated 3-D externally
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ModEM problem prepared immediately above is the correct continuation for
+a joint L26/L30 3-D inversion.  Run ``Mod3DMT`` externally, reload its predicted
+responses and model, and apply the same residual, sensitivity, uncertainty,
+and synthetic-recovery gates.  The current :class:`pycsamt.agents.Inv3DAgent`
+returns a station-by-layer graph candidate; it is not a voxelwise topographic
+Maxwell inversion and is therefore not substituted for that solve here.
+
+Rejected Legacy AI Construction
+-------------------------------
+
+.. warning::
+
+   The material below records the former tutorial construction for audit while
+   it is being removed from downstream citations.  It uses legacy tiled-1D
+   training, blends an AI trend into an apparent-resistivity pseudosection,
+   invents a shallow display-depth axis, and treats a station-by-layer graph as
+   3-D inversion.  Do not copy, run, or interpret it.  Use the complete
+   Maxwell-AI workflow above.
 
 :class:`pycsamt.agents.inv2d_agent.Inv2DAgent` inverts each rotated,
 corrected line in 2-D; :class:`pycsamt.agents.inv3d_agent.Inv3DAgent`
@@ -1274,19 +1569,11 @@ both AI inversions on the untouched raw EDIs and compare RMS directly.
    >>> round(res2d_26_raw.data["rms_global"], 4), round(res2d_30_raw.data["rms_global"], 4), round(res3d_raw.data["rms_global"], 4)
    (1.7334, 1.6443, 8.4667)
 
-AI training is stochastic -- rerunning this exact cell can shift these
-numbers by more than a few percent even with the seeds set above, because
-synthetic training-profile sampling and layer initialization are not fully
-pinned down across platforms. The 3-D result was the robust one across
-every rerun performed while writing this tutorial: the combined graph
-always fit the corrected data noticeably better than the raw data, by
-roughly a fifth to over half depending on the run. The 2-D result is
-noisier at this teaching-scale training budget (``n_train_profiles=60``,
-``epochs=8``) -- it usually favours the corrected line too, but a single
-quick run occasionally reverses for one line, which is a training-budget
-artefact, not evidence that the correction chain failed. Raise
-``n_train_profiles`` and ``epochs`` before trusting a 2-D comparison in a
-real project; the 3-D result is the one to lean on here.
+These historical values are not comparable validation evidence.  They came
+from different stochastic, legacy-physics models, and the graph RMS does not
+establish voxelwise 3-D recovery.  A smaller scalar RMS cannot rescue a model
+that fails known-truth recovery or backend compatibility.  Use the paired
+Maxwell-trained experiments and gates above instead.
 
 For the seeded run reported by this page, the comparison is:
 
@@ -1327,12 +1614,9 @@ For the seeded run reported by this page, the comparison is:
    :alt: AI-inversion RMS, raw versus corrected, for both 2-D lines and the combined 3-D run
    :width: 80%
 
-   The 3-D combined run improves the most (28 percent), which makes sense:
-   it is the run most exposed to exactly the noise the correction chain
-   targets -- both lines' incoherent, distortion-heavy stations feeding one
-   shared graph. The improvement is real in every case, not marginal, which
-   is the concrete answer to whether this correction chain was worth running
-   at all.
+   This chart is retained only to identify the withdrawn comparison.  It mixes
+   incompatible objectives and must not be used to claim that correction
+   improved a validated 3-D inversion.
 
 Correction Parameter Report
 ---------------------------
@@ -1388,10 +1672,10 @@ received without re-deriving it:
    >>> report26.to_csv("runs/L26PLT_correction_report.csv", index=False)
    >>> report30.to_csv("runs/L30PLT_correction_report.csv", index=False)
 
-Final Topographic Sections
---------------------------
+Rejected Legacy Topographic Sections
+------------------------------------
 
-The closing step drapes each line's AI 3-D resistivity trend onto its real
+The former closing step draped each line's graph trend onto its real
 station topography, following the same dense-block construction as
 :doc:`essential_3d_ai_inversion`: use the coarse GCN output as a station-wise
 trend constraint on a dense image built from the real pseudosection, then
@@ -1438,20 +1722,11 @@ above for the AI-2D sections -- no need to redefine them, only to call
    :alt: AI 3-D resistivity sections for L26PLT and L30PLT with real topography
    :width: 100%
 
-   Both lines show the same two-part structure: a shallow, moderately
-   conductive zone in the upper few hundred metres -- consistent with
-   weathered cover and near-surface alteration close to the mining and
-   railway infrastructure already flagged throughout this tutorial -- giving
-   way with depth to a substantially more resistive body, in the range
-   expected for the fresh granodiorite or quartz-diorite host of a Cu-Mo
-   :term:`porphyry` system. The patchier, alternating resistive-conductive
-   pattern on the right-hand third of each line, roughly stations
-   ``26-018`` to ``26-025`` and their ``L30PLT`` counterparts, is where the
-   alteration/mineralization contact is the more plausible read: it is
-   exactly the kind of target a follow-up drill program would want to test,
-   not an artefact this tutorial can resolve from AMT alone. Cross-check it
-   against the classical Occam2D and ModEM inversions prepared above before
-   committing to that interpretation.
+   This image is withdrawn as an inversion result.  Its apparent shallow
+   conductor, resistive basement, and patchy right-hand contact are dominated
+   by the measured pseudosection and plotting construction; they cannot be
+   attributed to the graph candidate.  Use the direct Maxwell-trained models
+   and validation gates above, or a completed external ModEM inversion.
 
 Adapting This Tutorial
 ----------------------
@@ -1470,8 +1745,9 @@ Then rerun the same sequence. If your survey has tipper, add it to the
 strike and rotation sections following
 :doc:`condition_mt_line_with_tipper_and_rotation`. If the strike rose is
 tight rather than broad, trust the rotation more; if it is broad like both
-lines here, keep the rotation-free 3-D AI inversion as the primary
-cross-check rather than an afterthought. If neither line is near
+lines here, retain the full tensor for an external 3-D Maxwell inversion
+rather than treating the station-graph candidate as a physical cross-check.
+If neither line is near
 controlled-source infrastructure, the near-field and source-overprint
 sections can be skipped outright rather than run as a negative control.
 
@@ -1495,8 +1771,8 @@ See Also
     prepared above, and load the results.
 
 :doc:`essential_3d_ai_inversion`
-    The topography-draped AI 3-D construction reused in the closing
-    section.
+    Construction and capability gating for a genuine topographic 3-D geology
+    and Maxwell problem.
 
 :doc:`../theory/field_zones`
     The full near-field and source-overprint theory behind the diagnostic

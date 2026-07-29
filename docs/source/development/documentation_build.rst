@@ -178,6 +178,47 @@ When editing one page, use a selected-page build for faster feedback.
 This still loads project configuration and may still trigger some autosummary
 work, but it is faster than a full rebuild and good for checking reST syntax.
 
+
+Long source-code examples
+-------------------------
+
+Keep short interactive examples visible with ``code-block:: pycon`` so readers
+can see the input and captured output together. For a long, reusable function
+stored in a project script, use the local ``code-dropdown`` directive instead
+of exposing a full ``literalinclude`` unconditionally:
+
+.. code-block:: rst
+
+   .. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+      :language: python
+      :pyobject: make_losses_penalty_anatomy
+      :linenos:
+      :title: View penalty-anatomy source code
+
+The HTML presentation is collapsed initially and uses native
+``details``/``summary`` elements. It therefore remains keyboard accessible and
+operates without JavaScript. The complete highlighted source stays in the page
+for copying, searching, and printing; non-HTML builders display the source
+normally rather than hiding it.
+
+``code-dropdown`` delegates source handling to Sphinx's ``literalinclude``
+implementation. It accepts the normal extraction options, including
+``language``, ``pyobject``, ``lines``, ``start-after``, ``end-before``,
+``linenos``, ``lineno-start``, ``emphasize-lines``, ``caption``, and ``name``.
+It adds two presentation options:
+
+``title``
+   Replaces the default ``View source code`` label with a concise description.
+
+``open``
+   Expands the panel initially. Reserve this for code that must be visible on
+   first reading; long supporting scripts should normally remain collapsed.
+
+Do not use the dropdown to conceal required outputs, warnings, equations, or
+the few lines a reader must understand before continuing. It is intended for
+complete plotting functions and extended workflows that support the nearby
+explanation but would otherwise interrupt its flow.
+
 After a selected-page build, inspect the rendered file:
 
 .. code-block:: bash
@@ -481,6 +522,9 @@ Before publishing documentation:
    [ ] No unresolved internal references remain.
    [ ] Strict Sphinx build passes in CI.
    [ ] The generated homepage opens at docs/build/html/index.html.
+   [ ] The newest changelog.rst version section has a
+       "*Released YYYY-MM-DD.*" line (drives the site's "New" badge --
+       an entry without one is treated as unreleased).
 
 
 Troubleshooting

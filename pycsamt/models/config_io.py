@@ -130,9 +130,19 @@ def _yaml_value(value: Any) -> str:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int):
         return repr(value)
-    return json.dumps(value)
+    if isinstance(value, float):
+        rendered = repr(value)
+        # YAML 1.1 parsers, including PyYAML, require a decimal point in an
+        # exponent-form float; otherwise values such as ``1e-05`` become text.
+        if "e" in rendered.lower():
+            mantissa, exponent = rendered.lower().split("e", 1)
+            if "." not in mantissa:
+                mantissa += ".0"
+            rendered = f"{mantissa}e{exponent}"
+        return rendered
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _write_python(
@@ -185,9 +195,7 @@ def _write_json(
             ),
             "parameters": {
                 name: {
-                    "group": by_name.get(name).group
-                    if name in by_name
-                    else "General",
+                    "group": by_name.get(name).group if name in by_name else "General",
                     "description": by_name.get(name).description
                     if name in by_name
                     else "",
@@ -276,9 +284,7 @@ def _read_python(path: Path) -> dict[str, Any]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                is_config = (
-                    isinstance(target, ast.Name) and target.id == "CONFIG"
-                )
+                is_config = isinstance(target, ast.Name) and target.id == "CONFIG"
                 if is_config:
                     data = ast.literal_eval(node.value)
                     if isinstance(data, dict):

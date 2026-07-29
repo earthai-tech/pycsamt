@@ -202,9 +202,7 @@ class ForwardModelAgent(BaseAgent):
         component = str(inp.get("component", "xy")).lower()
         ri, ci = (0, 1) if component == "xy" else (1, 0)
 
-        layered = _build_layered_model(
-            inp.get("model"), LayeredModel, warnings
-        )
+        layered = _build_layered_model(inp.get("model"), LayeredModel, warnings)
         if isinstance(layered, AgentResult):
             return layered
 
@@ -232,9 +230,7 @@ class ForwardModelAgent(BaseAgent):
             except Exception as exc:
                 warnings.append(f"RMS computation failed: {exc}")
 
-        figures, fig_paths = self._plot_1d(
-            response, layered, output_dir, warnings
-        )
+        figures, fig_paths = self._plot_1d(response, layered, output_dir, warnings)
 
         interp = self._llm_1d(layered, freqs, rms) if self.api_key else None
 
@@ -293,9 +289,7 @@ class ForwardModelAgent(BaseAgent):
                 f"2-D forward failed: {exc}", elapsed=time.time() - t0
             )
 
-        figures, fig_paths = self._plot_2d(
-            grid, response, output_dir, warnings
-        )
+        figures, fig_paths = self._plot_2d(grid, response, output_dir, warnings)
         interp = self._llm_2d(grid, response, freqs) if self.api_key else None
 
         ns = response.rho_a_te.shape[1]
@@ -330,31 +324,21 @@ class ForwardModelAgent(BaseAgent):
 
     # ── 3-D ──────────────────────────────────────────────────────────────────
 
-    def _execute_3d(
-        self, inp, freqs, t0, warnings, MT3DForward, Grid3D, output_dir
-    ):
+    def _execute_3d(self, inp, freqs, t0, warnings, MT3DForward, Grid3D, output_dir):
         method = str(inp.get("method", "quasi3d")).lower()
         grid = _build_grid_3d(inp, Grid3D, warnings)
         if isinstance(grid, AgentResult):
             return grid
 
         try:
-            response = MT3DForward(
-                freqs, grid, method=method, verbose=False
-            ).run()
+            response = MT3DForward(freqs, grid, method=method, verbose=False).run()
         except Exception as exc:
             return AgentResult.failed(
                 f"3-D forward failed: {exc}", elapsed=time.time() - t0
             )
 
-        figures, fig_paths = self._plot_3d(
-            grid, response, output_dir, warnings
-        )
-        interp = (
-            self._llm_3d(grid, response, freqs, method)
-            if self.api_key
-            else None
-        )
+        figures, fig_paths = self._plot_3d(grid, response, output_dir, warnings)
+        interp = self._llm_3d(grid, response, freqs, method) if self.api_key else None
 
         ns = response.n_stations
         nf = len(freqs)
@@ -420,9 +404,7 @@ class ForwardModelAgent(BaseAgent):
                 (plot_model_1d, "model", "fwd1d_model"),
             ]:
                 try:
-                    f = _unwrap_fig(
-                        fn(response if key == "response" else layered)
-                    )
+                    f = _unwrap_fig(fn(response if key == "response" else layered))
                     if f is not None:
                         figures[key] = f
                         p = self._save_figure(
@@ -476,9 +458,7 @@ class ForwardModelAgent(BaseAgent):
                     f = result.get_figure()
                 if f is not None:
                     figures[key] = f
-                    p = self._save_figure(
-                        f, output_dir, tag, warnings_list=warnings
-                    )
+                    p = self._save_figure(f, output_dir, tag, warnings_list=warnings)
                     if p:
                         fig_paths[key] = p
             except Exception as exc:
@@ -506,9 +486,7 @@ class ForwardModelAgent(BaseAgent):
                 arg = grid if key == "model_3d" else response
                 result = fn(arg, **kwargs)
                 # plot_model_3d returns ndarray of Axes; get figure from first
-                if hasattr(result, "__iter__") and not hasattr(
-                    result, "savefig"
-                ):
+                if hasattr(result, "__iter__") and not hasattr(result, "savefig"):
                     axes = list(result)
                     f = (
                         axes[0].get_figure()
@@ -519,9 +497,7 @@ class ForwardModelAgent(BaseAgent):
                     f = _unwrap_fig(result)
                 if f is not None:
                     figures[key] = f
-                    p = self._save_figure(
-                        f, output_dir, tag, warnings_list=warnings
-                    )
+                    p = self._save_figure(f, output_dir, tag, warnings_list=warnings)
                     if p:
                         fig_paths[key] = p
             except Exception as exc:
@@ -715,9 +691,7 @@ def _build_grid_2d(inp, LayeredModel, Grid2D, warnings):
 
         else:
             # fallback: 100 Ω·m halfspace
-            warnings.append(
-                f"Unknown model type {mtype!r}; using 100 Ω·m halfspace."
-            )
+            warnings.append(f"Unknown model type {mtype!r}; using 100 Ω·m halfspace.")
             grid = Grid2D.halfspace(
                 rho=100.0,
                 nx=nx,
@@ -728,11 +702,14 @@ def _build_grid_2d(inp, LayeredModel, Grid2D, warnings):
             )
 
     except Exception as exc:
-        return AgentResult.failed(
-            f"Grid2D construction failed: {exc}",
-            hint="Check nx, nz, x_max, z_max, n_stations in input_data.",
-            elapsed=0.0,
-        ), None
+        return (
+            AgentResult.failed(
+                f"Grid2D construction failed: {exc}",
+                hint="Check nx, nz, x_max, z_max, n_stations in input_data.",
+                elapsed=0.0,
+            ),
+            None,
+        )
 
     return grid, layered
 
@@ -784,9 +761,7 @@ def _build_grid_3d(inp, Grid3D, warnings):
             )
 
         else:
-            warnings.append(
-                f"Unknown 3-D model type {mtype!r}; using halfspace."
-            )
+            warnings.append(f"Unknown 3-D model type {mtype!r}; using halfspace.")
             grid = Grid3D.halfspace(
                 rho=100.0,
                 nx=nx,
@@ -845,8 +820,7 @@ def _compute_rms_1d(sites_raw, response, freqs_fwd, ri, ci):
         rho_obs = (
             rho_raw[:, ri, ci]
             if rho_raw is not None
-            else (0.2 / np.where(fr == 0, np.nan, fr))
-            * np.abs(z[:, ri, ci]) ** 2
+            else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, ri, ci]) ** 2
         )
         per_obs = 1.0 / np.where(fr == 0, np.nan, fr)
         per_fwd = 1.0 / np.where(freqs_fwd == 0, np.nan, freqs_fwd)

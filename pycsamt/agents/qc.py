@@ -74,9 +74,10 @@ class DataQCAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent  = DataQCAgent()
-    >>> result = agent.execute({"path": "/data/L22PLT",
-    ...                         "output_dir": "/out/qc"})
+    >>> agent = DataQCAgent()
+    >>> result = agent.execute(
+    ...     {"path": "/data/L22PLT", "output_dir": "/out/qc"}
+    ... )
     >>> result["n_flagged"]
     2
     >>> result["figures"]["confidence_section"]
@@ -158,16 +159,12 @@ class DataQCAgent(BaseAgent):
             warnings.append(f"qc_flags: {exc}")
 
         try:
-            conf_table = station_confidence_table(
-                sites, method=self.method, verbose=0
-            )
+            conf_table = station_confidence_table(sites, method=self.method, verbose=0)
         except Exception as exc:
             warnings.append(f"station_confidence_table: {exc}")
 
         try:
-            freq_conf = frequency_confidence_table(
-                sites, method=self.method, verbose=0
-            )
+            freq_conf = frequency_confidence_table(sites, method=self.method, verbose=0)
         except Exception as exc:
             warnings.append(f"frequency_confidence_table: {exc}")
 
@@ -191,11 +188,7 @@ class DataQCAgent(BaseAgent):
                 section="pseudosection",
                 verbose=0,
             )
-            fig = (
-                ax_conf.get_figure()
-                if hasattr(ax_conf, "get_figure")
-                else ax_conf
-            )
+            fig = ax_conf.get_figure() if hasattr(ax_conf, "get_figure") else ax_conf
             figures["confidence_section"] = fig
             p = self._save_figure(
                 fig,
@@ -210,14 +203,8 @@ class DataQCAgent(BaseAgent):
 
         # confidence profile (per-station score bar)
         try:
-            ax_prof = plot_confidence_profile(
-                sites, method=self.method, verbose=0
-            )
-            fig = (
-                ax_prof.get_figure()
-                if hasattr(ax_prof, "get_figure")
-                else ax_prof
-            )
+            ax_prof = plot_confidence_profile(sites, method=self.method, verbose=0)
+            fig = ax_prof.get_figure() if hasattr(ax_prof, "get_figure") else ax_prof
             figures["confidence_profile"] = fig
             p = self._save_figure(
                 fig,

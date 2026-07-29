@@ -119,54 +119,36 @@ def test_emdata_public_docstrings_describe_coercion_contracts():
     assert "from pycsamt.inversion.data import EMData" in EMData.__doc__
     assert "References" in EMData.__doc__
     assert "periods" in EMData.from_dict.__doc__
-    assert (
-        "from pycsamt.inversion.data import EMData"
-        in EMData.from_dict.__doc__
-    )
+    assert "from pycsamt.inversion.data import EMData" in EMData.from_dict.__doc__
     assert "to_soundings()" in EMData.coerce.__doc__
     assert "class Response" in EMData.coerce.__doc__
 
 
 def test_export_public_docstrings_include_examples_and_references():
-    assert (
-        "from pycsamt.inversion.export import to_csv" in export.to_csv.__doc__
-    )
+    assert "from pycsamt.inversion.export import to_csv" in export.to_csv.__doc__
     assert "RFC 4180" in export.to_csv.__doc__
-    assert (
-        "from pycsamt.inversion.export import to_npz" in export.to_npz.__doc__
-    )
+    assert "from pycsamt.inversion.export import to_npz" in export.to_npz.__doc__
     assert "numpy.savez_compressed" in export.to_npz.__doc__
     assert (
-        "from pycsamt.inversion.export import to_geojson"
-        in export.to_geojson.__doc__
+        "from pycsamt.inversion.export import to_geojson" in export.to_geojson.__doc__
     )
     assert "RFC 7946" in export.to_geojson.__doc__
-    assert (
-        "from pycsamt.inversion.export import to_vtk" in export.to_vtk.__doc__
-    )
+    assert "from pycsamt.inversion.export import to_vtk" in export.to_vtk.__doc__
     assert "Visualization Toolkit" in export.to_vtk.__doc__
     assert (
-        "from pycsamt.inversion.export import to_geotiff"
-        in export.to_geotiff.__doc__
+        "from pycsamt.inversion.export import to_geotiff" in export.to_geotiff.__doc__
     )
     assert "GeoTIFF" in export.to_geotiff.__doc__
     assert (
-        "from pycsamt.inversion.export import to_archive"
-        in export.to_archive.__doc__
+        "from pycsamt.inversion.export import to_archive" in export.to_archive.__doc__
     )
     assert "metadata.json" in export.to_archive.__doc__
 
 
 def test_mesh_public_docstrings_include_examples_and_references():
-    assert (
-        "from pycsamt.inversion.mesh import InversionMesh"
-        in InversionMesh.__doc__
-    )
+    assert "from pycsamt.inversion.mesh import InversionMesh" in InversionMesh.__doc__
     assert "Oldenburg" in InversionMesh.__doc__
-    assert (
-        "from pycsamt.inversion.mesh import depth_widths"
-        in depth_widths.__doc__
-    )
+    assert "from pycsamt.inversion.mesh import depth_widths" in depth_widths.__doc__
     assert "Ward" in depth_widths.__doc__
     assert (
         "from pycsamt.inversion.mesh import build_1d_tensor_mesh"
@@ -177,8 +159,7 @@ def test_mesh_public_docstrings_include_examples_and_references():
         in build_3d_tensor_mesh.__doc__
     )
     assert (
-        "from pycsamt.inversion.mesh import build_fd2d_grid"
-        in build_fd2d_grid.__doc__
+        "from pycsamt.inversion.mesh import build_fd2d_grid" in build_fd2d_grid.__doc__
     )
     assert (
         "from pycsamt.inversion.mesh import core_rho_from_start"
@@ -187,10 +168,7 @@ def test_mesh_public_docstrings_include_examples_and_references():
 
 
 def test_model_public_docstrings_include_examples_and_references():
-    assert (
-        "from pycsamt.inversion.model import StartingModel"
-        in StartingModel.__doc__
-    )
+    assert "from pycsamt.inversion.model import StartingModel" in StartingModel.__doc__
     assert "ReferenceModel" in StartingModel.__doc__
     assert "Constable" in StartingModel.__doc__
     assert (
@@ -212,18 +190,14 @@ def test_model_public_docstrings_include_examples_and_references():
 
 
 def test_objective_public_docstrings_include_examples_and_references():
-    assert (
-        "from pycsamt.inversion.objective import ErrorModel"
-        in ErrorModel.__doc__
-    )
+    assert "from pycsamt.inversion.objective import ErrorModel" in ErrorModel.__doc__
     assert "Tarantola" in ErrorModel.__doc__
     assert (
         "from pycsamt.inversion.objective import ErrorModel"
         in ErrorModel.errors.__doc__
     )
     assert (
-        "from pycsamt.inversion.objective import ErrorModel"
-        in ErrorModel.mask.__doc__
+        "from pycsamt.inversion.objective import ErrorModel" in ErrorModel.mask.__doc__
     )
     assert (
         "from pycsamt.inversion.objective import relative_errors"
@@ -242,8 +216,7 @@ def test_objective_public_docstrings_include_examples_and_references():
         in component_mask.__doc__
     )
     assert (
-        "from pycsamt.inversion.objective import weighted_rms"
-        in weighted_rms.__doc__
+        "from pycsamt.inversion.objective import weighted_rms" in weighted_rms.__doc__
     )
 
 
@@ -312,15 +285,10 @@ def test_results_public_docstrings_include_examples_and_references():
 def test_plot_public_docstrings_include_examples_and_references():
     assert "Available plots" in plot.__doc__
     assert "from pycsamt.inversion.plot import plot_model" in plot.__doc__
-    assert (
-        "from pycsamt.inversion.plot import plot_model"
-        in plot.plot_model.__doc__
-    )
+    assert "from pycsamt.inversion.plot import plot_model" in plot.plot_model.__doc__
     assert "to_resistivity_model" in plot.plot_model.__doc__
     assert "Tufte" in plot.plot_model.__doc__
-    assert (
-        "from pycsamt.inversion.plot import plot_rms" in plot.plot_rms.__doc__
-    )
+    assert "from pycsamt.inversion.plot import plot_rms" in plot.plot_rms.__doc__
     assert "station_rms" in plot.plot_rms.__doc__
     assert "Aster" in plot.plot_rms.__doc__
 
@@ -344,8 +312,7 @@ def test_workflow_public_docstrings_include_examples_and_references():
         in InversionWorkflow.run.__doc__
     )
     assert (
-        "from pycsamt.inversion.workflow import run_inversion"
-        in run_inversion.__doc__
+        "from pycsamt.inversion.workflow import run_inversion" in run_inversion.__doc__
     )
 
 
@@ -518,9 +485,7 @@ def test_backend_registry():
 
 def test_simpeg_backend_missing_dependency_is_clear():
     if importlib.util.find_spec("simpeg") is not None:
-        pytest.skip(
-            "SimPEG is installed; missing-dependency path not applicable."
-        )
+        pytest.skip("SimPEG is installed; missing-dependency path not applicable.")
     cfg = InversionConfig(
         method="mt",
         dimension="1d",
@@ -561,13 +526,9 @@ def test_simpeg_3d_observation_packing_and_station_locations():
         values,
         [100.0, 110.0, 45.0, 46.0, 200.0, 210.0, 50.0, 51.0],
     )
-    np.testing.assert_allclose(
-        errors, [5.0, 5.5, 2.0, 2.0, 10.0, 10.5, 2.0, 2.0]
-    )
+    np.testing.assert_allclose(errors, [5.0, 5.5, 2.0, 2.0, 10.0, 10.5, 2.0, 2.0])
     locations = simpeg_backend._station_locations(data)
-    np.testing.assert_allclose(
-        locations, [[0.0, 10.0, 0.0], [500.0, 20.0, 0.0]]
-    )
+    np.testing.assert_allclose(locations, [[0.0, 10.0, 0.0], [500.0, 20.0, 0.0]])
 
 
 def test_simpeg_3d_model_reshape_helper():
@@ -592,9 +553,7 @@ def test_mesh_builders_centralize_tensor_mesh_setup():
             self.shape_cells = tuple(w.size for w in self.widths)
 
     start = StartingModel([100.0, 200.0], [50.0])
-    widths = depth_widths(
-        100.0, 4, {"min_cell_size": 5.0, "growth_factor": 1.0}
-    )
+    widths = depth_widths(100.0, 4, {"min_cell_size": 5.0, "growth_factor": 1.0})
     np.testing.assert_allclose(widths, [25.0, 25.0, 25.0, 25.0])
 
     mesh_1d, z = build_1d_tensor_mesh(
@@ -777,9 +736,7 @@ def test_simpeg_regularization_helper_uses_shared_alphas():
 
 def test_builtin_1d_regularization_metadata_smoke(tmp_path):
     freqs = np.logspace(-1, 1, 5)
-    response = MT1DForward(freqs=freqs).run(
-        LayeredModel([100.0, 300.0], [500.0])
-    )
+    response = MT1DForward(freqs=freqs).run(LayeredModel([100.0, 300.0], [500.0]))
     cfg = InversionConfig(
         data={
             "freqs": freqs,
@@ -921,17 +878,12 @@ def test_occam2d_file_validation_helpers(tmp_path):
         f"mesh={tmp_path / 'Occam2DMesh'}",
         f"model={tmp_path / 'Occam2DModel'}",
     ]
-    assert (
-        occam2d_backend._command_string("Occam2D", "Startup")
-        == "Occam2D Startup"
-    )
+    assert occam2d_backend._command_string("Occam2D", "Startup") == "Occam2D Startup"
 
 
 def test_pygimli_backend_missing_dependency_is_clear():
     if importlib.util.find_spec("pygimli") is not None:
-        pytest.skip(
-            "pyGIMLi is installed; missing-dependency path not applicable."
-        )
+        pytest.skip("pyGIMLi is installed; missing-dependency path not applicable.")
     cfg = InversionConfig(
         method="tdem",
         dimension="1d",
@@ -969,20 +921,21 @@ def test_pygimli_mt_operator_fallbacks_select_block_model():
                 self.kwargs = kwargs
 
     start = StartingModel([100.0, 200.0, 300.0], [50.0, 150.0])
-    fop, start_model, operator_name, parameterization = (
-        pygimli_backend._make_mt_forward_operator(
-            FakeEM,
-            np.array([1.0, 0.1]),
-            start,
-            {"mt_operator": ["Missing", "MT1dBlockModelling"]},
-        )
+    (
+        fop,
+        start_model,
+        operator_name,
+        parameterization,
+    ) = pygimli_backend._make_mt_forward_operator(
+        FakeEM,
+        np.array([1.0, 0.1]),
+        start,
+        {"mt_operator": ["Missing", "MT1dBlockModelling"]},
     )
     assert operator_name == "MT1dBlockModelling"
     assert parameterization == "thickness_resistivity"
     assert fop.kwargs["nLayers"] == 3
-    np.testing.assert_allclose(
-        start_model, [50.0, 150.0, 100.0, 200.0, 300.0]
-    )
+    np.testing.assert_allclose(start_model, [50.0, 150.0, 100.0, 200.0, 300.0])
 
 
 def test_pygimli_tdem_operator_constructor_fallback():
@@ -1097,9 +1050,7 @@ def test_builtin_1d_inversion_smoke(tmp_path):
 
 def test_mt_convenience_wrapper(tmp_path):
     freqs = np.logspace(-1, 1, 5)
-    response = MT1DForward(freqs=freqs).run(
-        LayeredModel([100.0, 300.0], [500.0])
-    )
+    response = MT1DForward(freqs=freqs).run(LayeredModel([100.0, 300.0], [500.0]))
     inv = MT1DInversion(
         {"freqs": freqs, "rho_a": response.rho_a, "phase": response.phase},
         n_layers=2,
@@ -1197,9 +1148,7 @@ def test_builtin_2d_stitched_profile_and_exports(tmp_path):
     assert "RECTILINEAR_GRID" in vtk_text
     assert "SCALARS rho_log10_ohm_m" in vtk_text
     with zipfile.ZipFile(archive_path) as zf:
-        assert {"metadata.json", "result.npz", "model.csv"}.issubset(
-            set(zf.namelist())
-        )
+        assert {"metadata.json", "result.npz", "model.csv"}.issubset(set(zf.namelist()))
 
     ax_model = plot.plot_model(result, section="compact", colorbar=False)
     ax_rms = plot.plot_rms(result)

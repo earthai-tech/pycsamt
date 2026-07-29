@@ -46,9 +46,7 @@ def _exec_agent(
     # picks it up automatically when the function signature accepts it.
     if stations:
         params = {**params, "station_names": stations}
-        log_lines.append(
-            f"Station filter: {len(stations)} station(s) selected."
-        )
+        log_lines.append(f"Station filter: {len(stations)} station(s) selected.")
 
     try:
         import inspect
@@ -64,9 +62,7 @@ def _exec_agent(
             fn = getattr(et, fn_name)
             accepted = set(inspect.signature(fn).parameters.keys())
             kwargs = {
-                k: v
-                for k, v in params.items()
-                if k in accepted and v is not None
+                k: v for k, v in params.items() if k in accepted and v is not None
             }
             log_lines.append(f"et.{fn_name}(sites, **params)…")
             result = fn(sites, **kwargs, verbose=0)
@@ -95,8 +91,7 @@ def _exec_agent(
                 **{
                     k: v
                     for k, v in params.items()
-                    if k in cls.__init__.__code__.co_varnames
-                    and v is not None
+                    if k in cls.__init__.__code__.co_varnames and v is not None
                 }
             )
             log_lines.append("Executing LLM agent…")

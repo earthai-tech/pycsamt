@@ -160,3 +160,33 @@ Modules
    pycsamt.map.export
    pycsamt.map.inversion
    pycsamt.map.topo
+
+Detailed Module API
+-------------------
+
+.. automodule:: pycsamt.map._core
+   :members:
+
+.. automodule:: pycsamt.map.loader
+   :members:
+
+.. automodule:: pycsamt.map.view
+   :members:
+
+.. automodule:: pycsamt.map.station
+   :members:
+
+.. automodule:: pycsamt.map.profile
+   :members:
+
+.. automodule:: pycsamt.map.volume
+   :members:
+
+.. automodule:: pycsamt.map.config
+   :members:
+
+.. automodule:: pycsamt.map.overlays
+   :members:
+
+.. automodule:: pycsamt.map.export
+   :members:

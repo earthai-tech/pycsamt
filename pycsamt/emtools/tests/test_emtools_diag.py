@@ -68,17 +68,13 @@ def _wide_bounds(station: str, n: int = 10) -> tuple:
     return {station: np.full(n, 1.0)}, {station: np.full(n, 1e15)}
 
 
-def _tight_above(
-    station: str, freqs: np.ndarray, rho: float = 100.0
-) -> tuple:
+def _tight_above(station: str, freqs: np.ndarray, rho: float = 100.0) -> tuple:
     """Bounds placed above rho_obs → 0 % coverage."""
     r = _rho_obs_from_z(freqs, rho)
     return {station: r * 1.5}, {station: r * 3.0}
 
 
-def _covering_bounds(
-    station: str, freqs: np.ndarray, rho: float = 100.0
-) -> tuple:
+def _covering_bounds(station: str, freqs: np.ndarray, rho: float = 100.0) -> tuple:
     """Bounds that bracket rho_obs → 100 % coverage."""
     r = _rho_obs_from_z(freqs, rho)
     return {station: r * 0.5}, {station: r * 2.0}
@@ -130,11 +126,7 @@ def test_cs_returns_float():
 
 def test_cs_empty():
     score = coverage_score([], [], [])
-    assert (
-        np.isnan(score)
-        or score == pytest.approx(0.0)
-        or score == pytest.approx(1.0)
-    )
+    assert np.isnan(score) or score == pytest.approx(0.0) or score == pytest.approx(1.0)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,9 +210,7 @@ def test_rc_multiple_sites():
 def test_rc_missing_station_skipped():
     s = _site("S00")
     # lo/hi have no key for "S00"
-    df = rho_coverage(
-        [s], {"OTHER": np.ones(10)}, {"OTHER": np.ones(10) * 1e15}
-    )
+    df = rho_coverage([s], {"OTHER": np.ones(10)}, {"OTHER": np.ones(10) * 1e15})
     assert df.empty
 
 

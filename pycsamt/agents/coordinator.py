@@ -87,9 +87,12 @@ class AgentCoordinator:
         from pycsamt.agents import AgentCoordinator, MTLoaderAgent, DataQCAgent
 
         coord = AgentCoordinator("mt_qc")
-        coord.add_step("load",  MTLoaderAgent(...))
-        coord.add_step("qc",    DataQCAgent(...),
-                       input_fn=lambda r: {"sites": r["load"]["sites"]})
+        coord.add_step("load", MTLoaderAgent(...))
+        coord.add_step(
+            "qc",
+            DataQCAgent(...),
+            input_fn=lambda r: {"sites": r["load"]["sites"]},
+        )
 
         result = coord.execute({"path": "/data/EDIs"})
         print(result.summary)
@@ -113,14 +116,10 @@ class AgentCoordinator:
         self._agents: dict[str, BaseAgent] = {}
 
         if checkpoint_dir is None:
-            checkpoint_dir = Path(
-                f"pycsamt_agent_checkpoints/{workflow_name}"
-            )
+            checkpoint_dir = Path(f"pycsamt_agent_checkpoints/{workflow_name}")
         self._ckpt_dir = Path(checkpoint_dir)
 
-        self._log = logging.getLogger(
-            f"pycsamt.agents.coordinator.{workflow_name}"
-        )
+        self._log = logging.getLogger(f"pycsamt.agents.coordinator.{workflow_name}")
 
     # ── step registration ─────────────────────────────────────────────────────
 
@@ -192,9 +191,7 @@ class AgentCoordinator:
         for i, step in enumerate(self._steps, 1):
             agent = step.agent
             llm_str = (
-                f"{agent.llm_provider}/{agent.model}"
-                if agent.api_key
-                else "no-LLM"
+                f"{agent.llm_provider}/{agent.model}" if agent.api_key else "no-LLM"
             )
             req_str = "" if step.required else " [optional]"
             lines.append(
@@ -287,9 +284,7 @@ class AgentCoordinator:
                 msg = f"input_fn for step {step.name!r} raised: {exc}"
                 self._log.error(msg)
                 if step.required:
-                    return AgentResult.failed(
-                        msg, elapsed=time.time() - t_workflow
-                    )
+                    return AgentResult.failed(msg, elapsed=time.time() - t_workflow)
                 all_warnings.append(msg)
                 continue
 
@@ -385,9 +380,7 @@ class AgentCoordinator:
                 return any(isinstance(x, Figure) for x in v)
             return False
 
-        safe_data = {
-            k: v for k, v in (result.data or {}).items() if not _has_fig(v)
-        }
+        safe_data = {k: v for k, v in (result.data or {}).items() if not _has_fig(v)}
         return replace(result, data=safe_data)
 
     def _save_checkpoint(self, step_name: str, result: AgentResult) -> None:
@@ -409,9 +402,7 @@ class AgentCoordinator:
                 json.dump(meta, f, indent=2)
         except Exception as exc:
             # Best-effort: checkpoints are an optimisation, never fatal.
-            self._log.debug(
-                "Could not save checkpoint for %r: %s", step_name, exc
-            )
+            self._log.debug("Could not save checkpoint for %r: %s", step_name, exc)
 
     def _load_checkpoint(self, step_name: str) -> AgentResult:
         path = self._ckpt_dir / f"{step_name}.pkl"
@@ -463,9 +454,7 @@ class AgentCoordinator:
             import shutil
 
             shutil.rmtree(self._ckpt_dir)
-            self._log.info(
-                "Checkpoints cleared for workflow %r", self.workflow_name
-            )
+            self._log.info("Checkpoints cleared for workflow %r", self.workflow_name)
 
     def __repr__(self) -> str:
         return (

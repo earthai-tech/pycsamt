@@ -325,9 +325,7 @@ class TestRunStop:
         win._on_run()
         assert calls == [1]
 
-    def test_run_occam2d_builds_and_starts_worker(
-        self, win, monkeypatch, tmp_path
-    ):
+    def test_run_occam2d_builds_and_starts_worker(self, win, monkeypatch, tmp_path):
         import pycsamt.models.occam2d as occam2d_mod
 
         class _FakeInputBuilder:
@@ -351,9 +349,7 @@ class TestRunStop:
         assert not win._btn_run.isEnabled()
         assert win._btn_stop.isEnabled()
 
-    def test_run_occam2d_input_builder_failure_logged(
-        self, win, monkeypatch, tmp_path
-    ):
+    def test_run_occam2d_input_builder_failure_logged(self, win, monkeypatch, tmp_path):
         import pycsamt.models.occam2d as occam2d_mod
 
         class _BoomBuilder:
@@ -371,9 +367,7 @@ class TestRunStop:
         assert "InputBuilder error" in win._log_edit.toPlainText()
         assert win._worker is None
 
-    def test_run_modem_2d_builds_and_starts_worker(
-        self, win, monkeypatch, tmp_path
-    ):
+    def test_run_modem_2d_builds_and_starts_worker(self, win, monkeypatch, tmp_path):
         import pycsamt.models.modem as modem_mod
 
         class _FakeInputBuilder:
@@ -394,9 +388,7 @@ class TestRunStop:
         win._on_run()
         assert len(fake_cls.instances) == 1
 
-    def test_run_mare2dem_builds_and_starts_worker(
-        self, win, monkeypatch, tmp_path
-    ):
+    def test_run_mare2dem_builds_and_starts_worker(self, win, monkeypatch, tmp_path):
         import pycsamt.models.mare2dem as m2d_mod
 
         class _FakeInputBuilder:
@@ -575,9 +567,7 @@ class TestResultHandlersAndPlotting:
     def test_on_ai_finished_1d(self, win):
         received = []
         win.result_ready.connect(lambda p: received.append(p))
-        y_pred = np.tile(
-            np.concatenate([np.log10([100.0, 200.0]), [50.0]]), (3, 1)
-        )
+        y_pred = np.tile(np.concatenate([np.log10([100.0, 200.0]), [50.0]]), (3, 1))
         result = {
             "dim": "1D",
             "y_pred": y_pred,
@@ -632,9 +622,7 @@ class TestResultHandlersAndPlotting:
         n_freq = 8
         freqs = np.logspace(2, -1, n_freq)
         X_obs = np.tile(
-            np.concatenate(
-                [np.log10(np.full(n_freq, 50.0)), np.full(n_freq, 45.0)]
-            ),
+            np.concatenate([np.log10(np.full(n_freq, 50.0)), np.full(n_freq, 45.0)]),
             (2, 1),
         )
         result = {"X_obs": X_obs}
@@ -646,9 +634,7 @@ class TestResultHandlersAndPlotting:
         assert "No observed" in ax.get_title()
 
     def test_on_error_shows_message_and_resets_ui(self, win, monkeypatch):
-        monkeypatch.setattr(
-            QMessageBox, "critical", staticmethod(lambda *a, **k: None)
-        )
+        monkeypatch.setattr(QMessageBox, "critical", staticmethod(lambda *a, **k: None))
         win._on_error("solver crashed")
         assert win._run_status.text() == "Error."
         assert "ERROR: solver crashed" in win._log_edit.toPlainText()

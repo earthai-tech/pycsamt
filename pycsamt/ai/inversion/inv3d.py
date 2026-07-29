@@ -114,9 +114,7 @@ class GCNInverter3D(BaseEMNet):
         device: str | None = None,
         **net_kwargs,
     ) -> None:
-        super().__init__(
-            arch="gcn", n_layers=n_layers, solver="mt3d", device=device
-        )
+        super().__init__(arch="gcn", n_layers=n_layers, solver="mt3d", device=device)
         self.n_features = int(n_features)
         self.n_out = 2 * n_layers - 1
         self.hidden = tuple(int(h) for h in hidden)
@@ -344,9 +342,7 @@ class GCNInverter3D(BaseEMNet):
             self._network.train()
             ep_loss = 0.0
 
-            for xb, yb in DataLoader(
-                tr_ds, batch_size=batch_size, shuffle=True
-            ):
+            for xb, yb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
                 xb, yb = xb.to(dev), yb.to(dev)  # (b, n_sta, n_feat/n_out)
                 b = xb.shape[0]
                 # Process each survey in the mini-batch; n_sta is typically
@@ -358,9 +354,7 @@ class GCNInverter3D(BaseEMNet):
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
-                    )
+                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
                 opt.step()
                 ep_loss += loss.item() * b
 
@@ -422,10 +416,7 @@ class GCNInverter3D(BaseEMNet):
         def _forward_batch(X_batch, A_c, training):
             b = X_batch.shape[0]
             return tf.stack(
-                [
-                    self._network([X_batch[i], A_c], training=training)
-                    for i in range(b)
-                ],
+                [self._network([X_batch[i], A_c], training=training) for i in range(b)],
                 axis=0,
             )
 
@@ -453,9 +444,7 @@ class GCNInverter3D(BaseEMNet):
                     preds = _forward_batch(xb, A_t, training=True)
                     loss = mse(yb, preds)
                 grads = tape.gradient(loss, self._network.trainable_variables)
-                opt.apply_gradients(
-                    zip(grads, self._network.trainable_variables)
-                )
+                opt.apply_gradients(zip(grads, self._network.trainable_variables))
                 ep_loss += float(loss)
                 n_batches += 1
             ep_loss /= max(n_batches, 1)
@@ -607,9 +596,7 @@ class GCNInverter3D(BaseEMNet):
         std  : ndarray — same shape
         """
         if not self._is_fitted:
-            raise RuntimeError(
-                "Call fit() before predict_with_uncertainty()."
-            )
+            raise RuntimeError("Call fit() before predict_with_uncertainty().")
 
         X = np.asarray(X, dtype=np.float32)
         squeeze = X.ndim == 2
@@ -650,9 +637,7 @@ class GCNInverter3D(BaseEMNet):
                 for _ in range(n_mc):
                     out = np.stack(
                         [
-                            self._network(
-                                torch.from_numpy(Xn[i]).to(dev), A_t
-                            )
+                            self._network(torch.from_numpy(Xn[i]).to(dev), A_t)
                             .cpu()
                             .numpy()
                             for i in range(n_samples)
@@ -662,9 +647,7 @@ class GCNInverter3D(BaseEMNet):
                     mc_samples.append(out * self._y_std + self._y_mean)
             self._network.eval()
 
-        stacked = np.stack(
-            mc_samples, axis=0
-        )  # (n_mc, n_samples, n_sta, n_out)
+        stacked = np.stack(mc_samples, axis=0)  # (n_mc, n_samples, n_sta, n_out)
         mean = stacked.mean(axis=0)
         std = stacked.std(axis=0)
 

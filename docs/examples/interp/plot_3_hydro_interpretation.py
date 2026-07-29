@@ -53,9 +53,7 @@ units = hydro.unit_map
 names = sorted(np.unique(units))
 code = {n: i for i, n in enumerate(names)}
 coded = np.vectorize(code.get)(units)
-palette = ["#f4a259", "#4c8bf5", "#7d5a3c", "#c44536", "#9aa0a6"][
-    : len(names)
-]
+palette = ["#f4a259", "#4c8bf5", "#7d5a3c", "#c44536", "#9aa0a6"][: len(names)]
 cmap = ListedColormap(palette)
 
 fig, ax = plt.subplots(figsize=(10, 4.2), constrained_layout=True)

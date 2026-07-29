@@ -186,9 +186,7 @@ def no_global_restyle(monkeypatch):
         yield
         return
 
-    monkeypatch.setattr(
-        QApplication, "setStyleSheet", lambda self, *_a, **_k: None
-    )
+    monkeypatch.setattr(QApplication, "setStyleSheet", lambda self, *_a, **_k: None)
     yield
 
 

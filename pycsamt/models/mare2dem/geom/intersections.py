@@ -56,10 +56,7 @@ def do_rects_overlap(
     by2 = np.maximum(b[:, 2], b[:, 3])
 
     no_overlap = (
-        (ax1 - bx2 > tol)
-        | (bx1 - ax2 > tol)
-        | (ay1 - by2 > tol)
-        | (by1 - ay2 > tol)
+        (ax1 - bx2 > tol) | (bx1 - ax2 > tol) | (ay1 - by2 > tol) | (by1 - ay2 > tol)
     )
     return np.where(~no_overlap)[0]
 
@@ -102,9 +99,11 @@ def get_intersections(
     Examples
     --------
     >>> import numpy as np
-    >>> from pycsamt.models.mare2dem.geom.intersections import get_intersections
-    >>> segs_a = np.array([[0.0, 2.0, 1.0, 1.0]])   # horizontal segment
-    >>> seg_b  = np.array([1.0, 1.0, 0.0, 2.0])     # vertical segment
+    >>> from pycsamt.models.mare2dem.geom.intersections import (
+    ...     get_intersections,
+    ... )
+    >>> segs_a = np.array([[0.0, 2.0, 1.0, 1.0]])  # horizontal segment
+    >>> seg_b = np.array([1.0, 1.0, 0.0, 2.0])  # vertical segment
     >>> inter, xi, yi, pa, pb = get_intersections(segs_a, seg_b)
     >>> xi
     array([1.])

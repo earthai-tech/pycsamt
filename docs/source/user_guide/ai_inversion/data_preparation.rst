@@ -79,7 +79,7 @@ directories, and existing site containers follow the same validation path:
    >>> from pycsamt.emtools._core import ensure_sites
 
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     strict=False,
    ...     on_dup="replace",
@@ -194,8 +194,8 @@ feature matrix:
    ...     sites,
    ...     comp="xy",
    ...     n_freqs=32,
-   ...     freq_min=1e-3,
-   ...     freq_max=1e3,
+   ...     freq_min=1.01,
+   ...     freq_max=1e4,
    ... )
 
    >>> print(X_field.shape)
@@ -214,6 +214,7 @@ Equivalently, for station :math:`s` and a common frequency grid
 :math:`\{f_j\}_{j=1}^{n_f}`, the row is
 
 .. math::
+   :label: eq-ai-data-feature-row
 
    \mathbf x_s =
    \left[
@@ -224,6 +225,24 @@ Equivalently, for station :math:`s` and a common frequency grid
 The common grid is logarithmically spaced. Interpolation occurs in
 :math:`\log_{10}f`; :term:`apparent resistivity` is interpolated in
 :math:`\log_{10}\rho_a` space and :term:`phase` in linear degrees.
+
+For WILLY L18, ``1.01`` and ``10_000`` Hz lie just inside the measured
+1.008--10,400 Hz endpoints. This small inward margin avoids treating floating
+point endpoint comparisons as missing observations. It also keeps the field
+and synthetic grids identical; widening the synthetic grid would not create
+field information outside the acquired band.
+
+.. figure:: ../../images/user_guide/ai_inversion/data_preparation_contract.png
+   :alt: WILLY L18 feature contract showing resistivity, phase, and finite-value coverage
+   :align: center
+   :width: 94%
+
+   The two feature blocks in equation :eq:`eq-ai-data-feature-row` retain
+   frequency structure across all 28 stations. Stations are columns labelled
+   along the top, while frequency increases vertically on the logarithmic
+   axis. The finite-value panel is a required audit: a correctly shaped matrix
+   can still be unusable when its requested grid extends beyond measured
+   support.
 
 .. warning::
 
@@ -249,8 +268,8 @@ Record the contract as machine-readable metadata:
    frequency_unit: Hz
    frequency_order: low_to_high
    n_frequencies: 32
-   frequency_min: 0.001
-   frequency_max: 1000.0
+   frequency_min: 1.01
+   frequency_max: 10000.0
    feature_layout: [log10_rho_block, phase_deg_block]
    missing_policy: explicit_mask_and_training_median
 
@@ -270,8 +289,8 @@ field profile:
    ...     n_components=4,
    ...     comp_te="xy",
    ...     comp_tm="yx",
-   ...     freq_min=1e-3,
-   ...     freq_max=1e3,
+   ...     freq_min=1.01,
+   ...     freq_max=1e4,
    ... )
 
    >>> print(X_profile.shape)
@@ -302,10 +321,10 @@ Inspect missingness by channel and station:
    (28,)
    >>> for name, fraction in list(zip(station_names, missing_fraction))[:4]:
    ...     print(name, round(float(fraction), 3))
-   18-001A 0.5
-   18-002U 0.5
-   18-003A 0.5
-   18-004A 0.5
+   18-001A 0.0
+   18-002U 0.0
+   18-003A 0.0
+   18-004A 0.0
 
 Do not fill all missing values with a smooth interpolation unless training
 contains the same pattern. Interpolation can manufacture lateral continuity.
@@ -380,6 +399,7 @@ configuration rather than assuming all target blocks use the same scaling.
 For a fixed :math:`L`-layer target, a common supervised target is
 
 .. math::
+   :label: eq-ai-data-target-vector
 
    \mathbf y =
    \left[
@@ -387,8 +407,9 @@ For a fixed :math:`L`-layer target, a common supervised target is
    h_1,\ldots,h_{L-1}
    \right],
 
-where :math:`\rho_\ell` is resistivity in ohm metres and :math:`h_\ell` is
-the finite layer thickness in metres. If ``log_thickness=True`` is used later
+In equation :eq:`eq-ai-data-target-vector`, :math:`\rho_\ell` is resistivity
+in ohm metres and :math:`h_\ell` is the finite layer thickness in metres. If
+``log_thickness=True`` is used later
 by an inverter, record whether thickness was transformed during dataset
 generation, target preprocessing, or model training; mixing those locations is
 an easy way to make a checkpoint unreproducible.
@@ -410,7 +431,7 @@ strategy.
    >>> import numpy as np
    >>> from pycsamt.forward.batch import generate_dataset
 
-   >>> frequencies_hz = np.logspace(-3, 3, 32)
+   >>> frequencies_hz = np.logspace(np.log10(1.01), 4, 32)
 
    >>> dataset = generate_dataset(
    ...     solver="mt1d",
@@ -549,6 +570,7 @@ layered station models for :class:`pycsamt.ai.inversion.GCNInverter3D`:
    ...     seed=42,
    ...     n_jobs=1,
    ...     output=None,
+   ...     verbose=False,
    ... )
 
    >>> print(surveys.X.shape)
@@ -576,23 +598,123 @@ but the full generator configuration still requires a companion manifest.
 11. Prepare 2-D training profiles
 ---------------------------------
 
-The public 1-D and pseudo-3-D batch generators do not by themselves create a
-complete, physically simulated 2-D U-Net training corpus matching arbitrary
-field geometry. A 2-D training dataset must define:
+The current package has two deliberately distinct ways to prepare a profile
+inverter. Tiling or correlating station-wise 1-D responses remains the cheap
+:term:`pseudo-2-D training model` used by the default ``Inv2DAgent`` path. For
+lateral electromagnetic coupling,
+:func:`pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` now generates
+:term:`2-D Maxwell training model` realizations with the verified
+:class:`pycsamt.forward.maxwell.mt2d.MT2DAdapter`.
 
-* input shape ``(n_profiles, n_components, n_freqs, n_stations)``;
-* target shape ``(n_profiles, n_depth, n_stations)``;
-* fixed station and depth axes;
-* lateral structural generator;
-* forward-physics fidelity;
-* component convention;
-* missing-station and missing-frequency policy;
-* topography and profile-distance treatment.
+The Maxwell route begins from one shared :class:`pycsamt.ai.geology.GeologyGrid`.
+For realization :math:`r`, a seeded standardized Gaussian field
+:math:`g_r(z,x)` is converted to resistivity by
 
-Tiling or correlating independent 1-D responses can produce useful screening
-examples, but it is not equivalent to 2-D forward physics. Label the dataset
-accordingly and include classical or numerical 2-D simulations when the model
-will be described as a 2-D EM inverter.
+.. math::
+   :label: eq-ai-data-maxwell2d-prior
+
+   \rho_r(z,x)=10^{\mu_{\log\rho}+\sigma_{\log\rho}g_r(z,x)}
+   \quad [\Omega\,\mathrm m],
+
+where the horizontal and vertical correlation lengths are independently drawn
+from the configured ranges. Equation :eq:`eq-ai-data-maxwell2d-prior` is a
+statistical field prior, not a lithological model: it produces smooth,
+correlated heterogeneity but does not create faults, contacts, or facies unless
+those structures are supplied by a different geological generator.
+
+A small fully executed example is:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.geology import GeologyGrid
+   >>> from pycsamt.ai.training.dataset2d import (
+   ...     Maxwell2DDatasetConfig,
+   ...     generate_2d_maxwell_dataset,
+   ... )
+
+   >>> grid = GeologyGrid.regular_2d(
+   ...     nx=6, nz=4, dx_m=300.0, dz_m=150.0
+   ... )
+   >>> config = Maxwell2DDatasetConfig(
+   ...     dataset_id="guide-2d-v1",
+   ...     grid=grid,
+   ...     correlation_length_x_m=(600.0, 900.0),
+   ...     correlation_length_z_m=(150.0, 300.0),
+   ...     frequencies_hz=[10.0, 3.0],
+   ...     station_x_m=[600.0, 900.0, 1200.0],
+   ...     n_realizations=2,
+   ...     seed=0,
+   ...     validation_fraction=0.0,
+   ...     test_fraction=0.0,
+   ... )
+   >>> maxwell_2d = generate_2d_maxwell_dataset(config)
+   >>> first_2d = maxwell_2d.samples[0]
+   >>> len(maxwell_2d.samples), maxwell_2d.rejected
+   (2, ())
+   >>> first_2d.resistivity_ohm_m.shape, first_2d.survey.shape
+   ((4, 6), (3, 2, 2))
+   >>> first_2d.survey.components
+   ('zxy', 'zyx')
+   >>> first_2d.mesh_cells, f"{first_2d.relative_residual:.3e}"
+   (8650, '2.290e-17')
+   >>> maxwell_2d.split.sizes
+   {'train': 2, 'validation': 0, 'test': 0}
+   >>> maxwell_2d.manifest.dataset_id, maxwell_2d.manifest.sample_count
+   ('guide-2d-v1', 2)
+   >>> len(maxwell_2d.manifest.configuration_hash)
+   64
+
+The target has shape ``(depth, x)=(4, 6)`` on the geological grid. The input
+is a canonical :class:`~pycsamt.ai.data.contracts.SurveyData` with shape
+``(station, frequency, component)=(3, 2, 2)``; its component order is the
+requested TE ``zxy`` followed by TM ``zyx``. A U-Net adapter must explicitly
+convert each complex impedance to its declared channels and transpose the
+batch to ``(realization, channel, frequency, station)``. A compatible target
+batch is ``(realization, depth, x)``. Never infer these transformations merely
+from equal axis lengths.
+
+Each finite-difference solve records the linear-system :term:`solver residual`
+
+.. math::
+   :label: eq-ai-data-maxwell2d-residual
+
+   r_{\mathrm{lin}}=
+   \frac{\lVert A\mathbf u-\mathbf b\rVert_2}
+        {\max(\lVert\mathbf b\rVert_2,10^{-300})},
+
+and the sample stores the maximum over simulated frequencies. The
+:math:`2.290\times10^{-17}` value above shows that the discrete linear systems
+were solved accurately; it does **not** establish mesh convergence, correct
+boundary placement, or geological realism. Those require half-space and
+layered benchmarks plus grid-refinement tests. The mesh uses uniform lateral
+spacing and a continuously graded depth progression, with its extent tied to
+skin depth and ``mesh_safety_factor``. ``max_mesh_cells`` raises before an
+intractably wide uniform mesh is launched rather than silently coarsening it.
+
+Only converged results become samples. Failed or non-converged realization IDs
+are retained in ``rejected``; if every realization fails, generation raises
+instead of returning an empty training set. A :term:`rejection policy` is part
+of the distribution because solver failures can cluster around conductive,
+resistive, or geometrically difficult cases. Report rejection rate and target
+statistics for rejected attempts so the accepted corpus is not mistaken for
+the originally requested prior.
+
+The example disables validation and test partitions only to keep two attempted
+solves meaningful. A real corpus must request enough independent realizations
+for non-empty, realization-level splits. The generated
+:class:`~pycsamt.ai.data.manifest.DatasetManifest` records the complete config
+and split, while an optional :class:`~pycsamt.forward.maxwell.MaxwellResultCache`
+makes problem-hash-identical solves resumable. Cache reuse changes execution
+cost, not the required manifest or acceptance checks.
+
+These responses are deliberately clean and noiseless. Apply field-matched
+dropout, static shift, distortion, and noise afterward with
+:mod:`pycsamt.ai.domain_gap.simulator`, preserving the clean realization ID as
+lineage so its corrupted variants cannot leak across dataset partitions.
+Topography is also not implicit: this generator places receivers on the flat
+surface of the configured grid. A field workflow that claims terrain-aware
+physics needs a solver mesh and receiver geometry that encode terrain, not a
+post-hoc drape of the target image.
 
 12. Add realistic observation effects
 -------------------------------------
@@ -642,7 +764,7 @@ Run structural and numerical checks immediately after generation:
    ...     "Feature percentiles:",
    ...     np.round(np.nanpercentile(dataset.X, [0, 1, 50, 99, 100]), 3),
    ... )
-   Feature percentiles: [4.8000e-02 3.4500e-01 3.9080e+00 8.2043e+01 8.9931e+01]
+   Feature percentiles: [-0.098  0.317 10.157 84.282 96.21 ]
    >>> print(
    ...     "Target percentiles:",
    ...     np.round(np.nanpercentile(dataset.y, [0, 1, 50, 99, 100]), 3),
@@ -698,6 +820,12 @@ Prefer group-based splitting when examples are related:
 ``SurveyDataset3D.split`` correctly splits along the synthetic survey axis,
 but scenario-aware grouping may still require custom indices.
 
+For 2-D Maxwell data, use the dataset's existing ``RealizationSplit`` rather
+than applying ``ForwardDataset.split`` to converted U-Net rows. If one clean
+realization later produces several noise or dropout variants, bind all of them
+to the clean realization ID and regenerate a lineage-aware split as documented
+in :doc:`data_contracts`.
+
 Never choose hyperparameters on the test set. Once a test result changes model
 or data preparation decisions, that set has become validation data.
 
@@ -706,6 +834,21 @@ or data preparation decisions, that set has become validation data.
 
 If features or targets are standardized, compute statistics from the training
 set only:
+
+.. math::
+   :label: eq-ai-data-standardization
+
+   \mu_j = \frac{1}{N_{\mathrm{tr}}}\sum_{i\in\mathrm{train}}X_{ij},
+   \qquad
+   \sigma_j = \sqrt{\frac{1}{N_{\mathrm{tr}}}
+      \sum_{i\in\mathrm{train}}(X_{ij}-\mu_j)^2},
+   \qquad
+   \widetilde X_{ij}=\frac{X_{ij}-\mu_j}{\sigma_j}.
+
+The index :math:`j` identifies one fixed frequency-channel feature. Equation
+:eq:`eq-ai-data-standardization` must use the same saved :math:`\mu_j` and
+:math:`\sigma_j` for validation, test, calibration, and WILLY field rows;
+estimating them again on any of those sets changes the transformation.
 
 .. code-block:: pycon
 
@@ -750,15 +893,25 @@ training data:
 
    >>> for name, fraction in list(zip(station_names, outside_fraction))[:4]:
    ...     print(name, round(float(fraction), 3))
-   18-001A 0.375
-   18-002U 0.375
-   18-003A 0.375
-   18-004A 0.391
+   18-001A 0.688
+   18-002U 0.703
+   18-003A 0.703
+   18-004A 0.719
 
 This per-feature envelope is only a basic diagnostic. It ignores feature
 correlation and does not prove in-distribution status; with only 40 synthetic
 examples it is intentionally a smoke test, not acceptance evidence. Add
 multivariate or latent-distance diagnostics where appropriate.
+
+.. figure:: ../../images/user_guide/ai_inversion/data_preparation_coverage.png
+   :alt: Comparison of WILLY L18 field features with the synthetic training envelope
+   :align: center
+   :width: 94%
+
+   Much of the WILLY median response lies outside the central synthetic
+   envelope generated by the deliberately small, generic model prior. The
+   mismatch is evidence to redesign the prior and nuisance effects before
+   training; it is not evidence that the field curve is erroneous.
 
 Review domain coverage by:
 
@@ -833,7 +986,7 @@ Complete 1-D preparation example
    >>> root = Path("datasets/mt1d_5layer_v001")
    >>> root.mkdir(parents=True, exist_ok=True)
 
-   >>> frequencies_hz = np.logspace(-3, 3, 32)
+   >>> frequencies_hz = np.logspace(np.log10(1.01), 4, 32)
 
    >>> dataset = generate_dataset(
    ...     solver="mt1d",
@@ -861,7 +1014,7 @@ Complete 1-D preparation example
    >>> test.save(root / "test.npz")
 
    >>> sites = ensure_sites(
-   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     "data/AMT/WILLY_data/L18PLT",
    ...     recursive=True,
    ...     verbose=0,
    ... )
@@ -965,6 +1118,10 @@ Avoid these errors:
 * training fixed-output networks on NaN-padded variable-layer targets without
   a tested mask-aware loss;
 * calling correlated 1-D graph examples full 3-D EM simulations;
+* calling tiled 1-D profile responses 2-D Maxwell training data, or treating a
+  small linear-system residual as evidence of mesh convergence;
+* discarding failed 2-D forward realizations without auditing how rejection
+  changed the requested geological distribution;
 * splitting noise realizations of the same earth model across train and test;
 * fitting normalization on the complete dataset or field observations;
 * relying on NPZ alone to preserve generator provenance;
@@ -984,3 +1141,8 @@ Continue with:
 * :doc:`inference` to apply the exact field transformation at deployment;
 * :doc:`uncertainty` to assess calibration and distribution shift;
 * :doc:`reporting` to publish dataset and model provenance.
+
+The two diagnostic figures on this page are reproduced by
+``docs/scripts/generate_ai_inversion_figures.py``. They use the bundled WILLY
+L18 observations; the synthetic envelope is deterministic teaching data from
+seed 42, not an accepted training distribution or inversion result.

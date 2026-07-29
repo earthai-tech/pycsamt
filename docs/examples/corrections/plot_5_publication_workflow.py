@@ -32,9 +32,7 @@ step2 = smooth_rho_phase(
 )  # denoise
 final = rotate_to_strike(step2, recursive=False)  # rotate
 
-print(
-    "workflow: raw -> static shift -> rho/phi smoothing -> rotate to strike"
-)
+print("workflow: raw -> static shift -> rho/phi smoothing -> rotate to strike")
 raw = curves(raw_sites, "rho")
 fin = curves(final, "rho")
 print(f"{len(raw)} stations processed")

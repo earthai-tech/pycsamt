@@ -85,9 +85,7 @@ def test_path_row_includes_file_and_folder_buttons_when_requested():
         file_btn_id="file-btn",
         folder_btn_id="folder-btn",
     )
-    child_ids = [
-        getattr(c, "id", None) for c in row.children if hasattr(c, "id")
-    ]
+    child_ids = [getattr(c, "id", None) for c in row.children if hasattr(c, "id")]
     assert "input-1" in child_ids
     assert "file-btn" in child_ids
     assert "folder-btn" in child_ids
@@ -225,9 +223,7 @@ def test_filter_sites_by_station_ids_falls_back_on_error():
 def test_scoped_sites_reports_expired_session():
     from pycsamt.app.web.callbacks.tools import _scoped_sites
 
-    with patch(
-        "pycsamt.app.web.cache.cache_get", return_value=None
-    ):
+    with patch("pycsamt.app.web.cache.cache_get", return_value=None):
         sites, err = _scoped_sites("sess-1", {}, {})
     assert sites is None
     assert "expired" in err.lower()
@@ -382,15 +378,13 @@ def test_strike_scope_label_prioritises_stations_then_lines_then_active():
     from pycsamt.app.web.callbacks.tools import _strike_scope_label
 
     assert (
-        _strike_scope_label(None, None, None, ["S1", "S2"])
-        == "2 selected station(s)"
+        _strike_scope_label(None, None, None, ["S1", "S2"]) == "2 selected station(s)"
     )
+    assert _strike_scope_label(None, None, ["L1", "L2"], None) == "L1, L2"
     assert (
-        _strike_scope_label(None, None, ["L1", "L2"], None) == "L1, L2"
+        _strike_scope_label(None, None, ["L1", "L2", "L3", "L4"], None)
+        == "L1, L2, L3 +1"
     )
-    assert _strike_scope_label(
-        None, None, ["L1", "L2", "L3", "L4"], None
-    ) == "L1, L2, L3 +1"
 
     store = {"station_records": [{"Line": "L1"}, {"Line": "L2"}]}
     assert (

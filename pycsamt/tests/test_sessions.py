@@ -65,9 +65,7 @@ def _install_stubs(monkeypatch):
         def __init__(self, items, verbose: int = 0):
             super().__init__(items)
 
-    monkeypatch.setattr(
-        seg_coll, "EDICollection", EDICollection, raising=False
-    )
+    monkeypatch.setattr(seg_coll, "EDICollection", EDICollection, raising=False)
 
     # Zonge: AVG stub
     zavg = sys.modules["pycsamt.zonge.avg"]
@@ -219,9 +217,7 @@ def test_normalize_routes_j_path(env, tmp_path, monkeypatch):
     assert hasattr(out[0], "Z")  # EDI-like
 
 
-def test_normalize_with_avg_object_and_topo_injection(
-    env, tmp_path, monkeypatch
-):
+def test_normalize_with_avg_object_and_topo_injection(env, tmp_path, monkeypatch):
     ctx = _import_ctx()
     seg_edi = sys.modules["pycsamt.seg.edi"]
     seg_coll = sys.modules["pycsamt.seg.collection"]

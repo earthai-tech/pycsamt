@@ -168,15 +168,9 @@ def _read_lines(path: Path) -> list[str]:
         return [ln.rstrip("\n") for ln in fh]
 
 
-def _parse_header_3line(
-    lines: list[str], i: int
-) -> tuple[str, str, int, int]:
+def _parse_header_3line(lines: list[str], i: int) -> tuple[str, str, int, int]:
     """Parse the 3-line old-format header.  Returns (info, units, isign, next_i)."""
-    info = (
-        lines[i].split(":", 1)[1].strip()
-        if ":" in lines[i]
-        else lines[i].strip()
-    )
+    info = lines[i].split(":", 1)[1].strip() if ":" in lines[i] else lines[i].strip()
     units = (
         lines[i + 1].split(":", 1)[1].strip()
         if ":" in lines[i + 1]
@@ -200,9 +194,7 @@ def _skip_blank(lines: list[str], i: int) -> int:
     return i
 
 
-def _read_n_floats(
-    lines: list[str], i: int, n: int
-) -> tuple[list[float], int]:
+def _read_n_floats(lines: list[str], i: int, n: int) -> tuple[list[float], int]:
     """Collect exactly *n* float tokens from consecutive lines starting at *i*."""
     vals: list[float] = []
     while len(vals) < n and i < len(lines):
@@ -251,9 +243,7 @@ def _parse_z3d_old_block(lines: list[str], i: int) -> tuple[ZBlock, int]:
     i = _skip_blank(lines, i)
     comp_tokens = lines[i].split()
     i += 1
-    comp_names = [
-        comp_tokens[k] for k in range(0, min(len(comp_tokens), n_comp), 2)
-    ]
+    comp_names = [comp_tokens[k] for k in range(0, min(len(comp_tokens), n_comp), 2)]
 
     # data: n_sites × 2 lines (data + error)
     site_names: list[str] = []
@@ -266,23 +256,24 @@ def _parse_z3d_old_block(lines: list[str], i: int) -> tuple[ZBlock, int]:
         i += 1
         site_names.append(data_line[0])
         d_vals = [float(v) for v in data_line[1:]]
-        Z[k, :] = [
-            d_vals[2 * c] + 1j * d_vals[2 * c + 1] for c in range(n_cplx)
-        ]
+        Z[k, :] = [d_vals[2 * c] + 1j * d_vals[2 * c + 1] for c in range(n_cplx)]
         # error line (may start with whitespace-only padding)
         i = _skip_blank(lines, i)
         err_vals = [float(v) for v in lines[i].split()]
         i += 1
         Zerr[k, :] = [err_vals[2 * c] for c in range(n_cplx)]
 
-    return ZBlock(
-        period=period,
-        site_names=site_names,
-        site_loc=site_loc,
-        comp_names=comp_names,
-        Z=Z,
-        Zerr=Zerr,
-    ), i
+    return (
+        ZBlock(
+            period=period,
+            site_names=site_names,
+            site_loc=site_loc,
+            comp_names=comp_names,
+            Z=Z,
+            Zerr=Zerr,
+        ),
+        i,
+    )
 
 
 def read_z3d_old(path: PathLike) -> ImpedanceFile:
@@ -361,33 +352,25 @@ def write_z3d_old(imp: ImpedanceFile, path: PathLike) -> Path:
 
         for blk in imp.blocks:
             n_comp_total = blk.n_comp * 2  # real components
-            fh.write(
-                f"{blk.period:12.6E} {n_comp_total:5d} {blk.n_sites:5d}\n"
-            )
+            fh.write(f"{blk.period:12.6E} {n_comp_total:5d} {blk.n_sites:5d}\n")
             # site locations: 3 rows (X, Y, Z)
             for col in range(3):
                 row = " ".join(f"{v:12.3f}" for v in blk.site_loc[:, col])
                 fh.write(row + "\n")
             # component header: each name repeated twice (Re Im pair)
-            comp_hdr = "".join(
-                f"{'':>10s} {c}{'':>10s} {c}" for c in blk.comp_names
-            )
+            comp_hdr = "".join(f"{'':>10s} {c}{'':>10s} {c}" for c in blk.comp_names)
             fh.write(comp_hdr.rstrip() + "\n")
             # data and errors
             for k in range(blk.n_sites):
                 # data line
                 data_str = f"{blk.site_names[k]:>10s}"
                 for c in range(blk.n_comp):
-                    data_str += (
-                        f"{blk.Z[k, c].real:15.6E} {blk.Z[k, c].imag:15.6E}"
-                    )
+                    data_str += f"{blk.Z[k, c].real:15.6E} {blk.Z[k, c].imag:15.6E}"
                 fh.write(data_str + "\n")
                 # error line
                 err_str = " " * 10
                 for c in range(blk.n_comp):
-                    err_str += (
-                        f"{blk.Zerr[k, c]:15.6E} {blk.Zerr[k, c]:15.6E}"
-                    )
+                    err_str += f"{blk.Zerr[k, c]:15.6E} {blk.Zerr[k, c]:15.6E}"
                 fh.write(err_str + "\n")
 
         ox, oy, oz = imp.origin
@@ -439,15 +422,18 @@ def _parse_z2d_old_block(lines: list[str], i: int) -> tuple[ZBlock, int]:
         Zerr[k, 0] = err_vals[0] if err_vals else np.nan
 
     comp = ["ZTE"] if mode == "TE" else ["ZTM"]
-    return ZBlock(
-        period=period,
-        site_names=site_names,
-        site_loc=site_loc,
-        comp_names=comp,
-        Z=Z,
-        Zerr=Zerr,
-        mode=mode,
-    ), i
+    return (
+        ZBlock(
+            period=period,
+            site_names=site_names,
+            site_loc=site_loc,
+            comp_names=comp,
+            Z=Z,
+            Zerr=Zerr,
+            mode=mode,
+        ),
+        i,
+    )
 
 
 def read_z2d_old(path: PathLike) -> ImpedanceFile:
@@ -478,9 +464,7 @@ def read_z2d_old(path: PathLike) -> ImpedanceFile:
         block, i = _parse_z2d_old_block(lines, i)
         blocks.append(block)
 
-    return ImpedanceFile(
-        description=info, units=units, sign=isign, blocks=blocks
-    )
+    return ImpedanceFile(description=info, units=units, sign=isign, blocks=blocks)
 
 
 def write_z2d_old(imp: ImpedanceFile, path: PathLike) -> Path:
@@ -507,24 +491,18 @@ def write_z2d_old(imp: ImpedanceFile, path: PathLike) -> Path:
             fh.write(f"{blk.period:12.6E} {mode:>5s} {blk.n_sites:5d}\n")
             # 2-column locations (Y, Z)
             fh.write(
-                " ".join(
-                    f"{blk.site_loc[k, 1]:12.3f}" for k in range(blk.n_sites)
-                )
+                " ".join(f"{blk.site_loc[k, 1]:12.3f}" for k in range(blk.n_sites))
                 + "\n"
             )
             fh.write(
-                " ".join(
-                    f"{blk.site_loc[k, 2]:12.3f}" for k in range(blk.n_sites)
-                )
+                " ".join(f"{blk.site_loc[k, 2]:12.3f}" for k in range(blk.n_sites))
                 + "\n"
             )
             # generic component header
             fh.write(f"{'':>12s} Re {'':>12s} Im\n")
             for k in range(blk.n_sites):
                 data_str = f"{blk.site_names[k]:>10s}"
-                data_str += (
-                    f"{blk.Z[k, 0].real:15.6E} {blk.Z[k, 0].imag:15.6E}"
-                )
+                data_str += f"{blk.Z[k, 0].real:15.6E} {blk.Z[k, 0].imag:15.6E}"
                 fh.write(data_str + "\n")
                 err_str = " " * 10
                 err_str += f"{blk.Zerr[k, 0]:15.6E} {blk.Zerr[k, 0]:15.6E}"
@@ -586,12 +564,8 @@ def write_z3d_list(imp: ImpedanceFile, path: PathLike) -> Path:
 
         for blk in imp.blocks:
             T = blk.period
-            lat_arr = (
-                blk.lat if blk.lat is not None else np.zeros(blk.n_sites)
-            )
-            lon_arr = (
-                blk.lon if blk.lon is not None else np.zeros(blk.n_sites)
-            )
+            lat_arr = blk.lat if blk.lat is not None else np.zeros(blk.n_sites)
+            lon_arr = blk.lon if blk.lon is not None else np.zeros(blk.n_sites)
             for k in range(blk.n_sites):
                 code = blk.site_names[k]
                 lat = float(lat_arr[k])
@@ -649,12 +623,8 @@ def write_z2d_list(imp: ImpedanceFile, path: PathLike) -> Path:
         fh.write(f"> {n_tx} {n_sites}\n")
         for blk in blocks:
             T = blk.period
-            lat_arr = (
-                blk.lat if blk.lat is not None else np.zeros(blk.n_sites)
-            )
-            lon_arr = (
-                blk.lon if blk.lon is not None else np.zeros(blk.n_sites)
-            )
+            lat_arr = blk.lat if blk.lat is not None else np.zeros(blk.n_sites)
+            lon_arr = blk.lon if blk.lon is not None else np.zeros(blk.n_sites)
             for k in range(blk.n_sites):
                 code = blk.site_names[k]
                 lat = float(lat_arr[k])

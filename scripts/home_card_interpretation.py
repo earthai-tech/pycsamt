@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Home-page card image: "Interpretation & mapping".
 
 Left panel: an apparent-resistivity pseudosection of the real L18PLT demo
@@ -14,6 +13,7 @@ Output: docs/source/_static/images/home/card-interpretation.png
 Usage (any cwd):
     python scripts/home_card_interpretation.py
 """
+
 import os
 import sys
 from collections import defaultdict
@@ -163,8 +163,7 @@ def main():
     )[:4]
     ax_r.legend(
         handles=[
-            mpatches.Patch(color=color_by_lith[t], label=t)
-            for t in top_liths
+            mpatches.Patch(color=color_by_lith[t], label=t) for t in top_liths
         ],
         fontsize=6.2,
         loc="lower right",

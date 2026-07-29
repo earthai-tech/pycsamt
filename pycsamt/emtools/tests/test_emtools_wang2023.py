@@ -237,9 +237,7 @@ def test_normalize_response_invalid_comp():
 def test_normalize_response_dict_offset():
     s1 = _site_no_off("A")
     s2 = _site_no_off("B")
-    df = normalize_response(
-        [s1, s2], source_offset={"A": 2000.0, "B": 8000.0}
-    )
+    df = normalize_response([s1, s2], source_offset={"A": 2000.0, "B": 8000.0})
     assert not df[df.station == "A"]["kr"].isna().any()
     assert not df[df.station == "B"]["kr"].isna().any()
 
@@ -302,9 +300,9 @@ def test_correct_near_field_far_field_near_identity():
     assert len(tensors) == 1
     z_after = tensors[0]
     # Far-field correction leaves Z unchanged to within 2 %
-    assert np.allclose(z_after, z_before, rtol=0.02), (
-        f"max rel diff = {np.max(np.abs(z_after - z_before) / (np.abs(z_before) + 1e-30)):.4f}"
-    )
+    assert np.allclose(
+        z_after, z_before, rtol=0.02
+    ), f"max rel diff = {np.max(np.abs(z_after - z_before) / (np.abs(z_before) + 1e-30)):.4f}"
 
 
 def test_correct_near_field_near_field_modifies_z():
@@ -317,9 +315,9 @@ def test_correct_near_field_near_field_modifies_z():
     tensors = _z_from_sites(result)
     assert len(tensors) == 1
     z_after = tensors[0]
-    assert not np.allclose(z_after, z_before, rtol=0.01), (
-        "Near-field correction should change Z"
-    )
+    assert not np.allclose(
+        z_after, z_before, rtol=0.01
+    ), "Near-field correction should change Z"
 
 
 def test_correct_near_field_inplace_modifies_original():
@@ -334,9 +332,9 @@ def test_correct_near_field_inplace_modifies_original():
     # from what they would be without correction (which we can check via
     # a fresh uncorrected site with the same rho)
     s2 = _site("S01", rho=1000.0, n=4, offset=offset)
-    assert not np.allclose(s.Z.z, s2.Z.z, rtol=0.01), (
-        "inplace=True should have modified Z.z"
-    )
+    assert not np.allclose(
+        s.Z.z, s2.Z.z, rtol=0.01
+    ), "inplace=True should have modified Z.z"
 
 
 def test_correct_near_field_dict_offset():
@@ -441,9 +439,7 @@ def test_plot_normalized_response_custom_cmaps():
     import matplotlib.pyplot as plt
 
     sites = [_site(f"S{i:02d}") for i in range(2)]
-    ax1, ax2 = plot_normalized_response(
-        sites, cmap_rho="viridis", cmap_phi="plasma"
-    )
+    ax1, ax2 = plot_normalized_response(sites, cmap_rho="viridis", cmap_phi="plasma")
     assert ax1 is not None
     plt.close("all")
 

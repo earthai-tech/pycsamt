@@ -140,7 +140,7 @@ class StationNamePolicy:
         --------
         >>> StationNamePolicy().synthesize(12)
         'S012'
-        >>> StationNamePolicy(prefix='X').synthesize('AB-01')
+        >>> StationNamePolicy(prefix="X").synthesize("AB-01")
         'AB01'
         """
         if station_id is None:
@@ -215,9 +215,7 @@ class CoreConfig:
     compute_z_from_res: bool = True
     load_spectra: bool = True
     load_time_series: bool = False
-    station_policy: StationNamePolicy = field(
-        default_factory=StationNamePolicy
-    )
+    station_policy: StationNamePolicy = field(default_factory=StationNamePolicy)
     error_fill_value: float = float("nan")
     infer_errors: bool = True
     encoding: str = "utf-8"
@@ -275,7 +273,7 @@ def to_dict() -> dict[str, Any]:
     --------
     >>> from pycsamt.core.config import to_dict
     >>> d = to_dict()
-    >>> 'freq_order' in d
+    >>> "freq_order" in d
     True
     """
     return asdict(_CFG)
@@ -310,7 +308,7 @@ def configure(**kwargs: Any) -> CoreConfig:
     Examples
     --------
     >>> from pycsamt.core.config import configure
-    >>> _ = configure(freq_order='asc', infer_errors=False)
+    >>> _ = configure(freq_order="asc", infer_errors=False)
     """
     global _CFG
     for key, value in kwargs.items():
@@ -322,15 +320,12 @@ def configure(**kwargs: Any) -> CoreConfig:
             "error",
         }:
             raise ValueError(
-                "on_duplicate_station must be one of "
-                "'replace', 'keep', 'error'"
+                "on_duplicate_station must be one of " "'replace', 'keep', 'error'"
             )
         if key == "freq_order" and value not in {"asc", "desc"}:
             raise ValueError("freq_order must be 'asc' or 'desc'")
         if key == "target_format" and value != "edi":
-            warnings.warn(
-                "Only 'edi' is supported as target_format", stacklevel=2
-            )
+            warnings.warn("Only 'edi' is supported as target_format", stacklevel=2)
         setattr(_CFG, key, value)
 
     try:
@@ -520,9 +515,7 @@ def _load_user_config() -> None:
                         configure(**dict(payload))
                 return
             except Exception as exc:
-                warnings.warn(
-                    f"Failed to load config from {p}: {exc}", stacklevel=2
-                )
+                warnings.warn(f"Failed to load config from {p}: {exc}", stacklevel=2)
                 return
 
 

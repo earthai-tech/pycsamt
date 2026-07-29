@@ -122,9 +122,7 @@ screen = screen.merge(slopes, on="station", how="left")
 screen = screen.merge(
     strike[["station", "theta_deg"]], on="station", how="left"
 )
-screen["phase_slope_abs"] = (
-    screen[["slope_xy", "slope_yx"]].abs().mean(axis=1)
-)
+screen["phase_slope_abs"] = screen[["slope_xy", "slope_yx"]].abs().mean(axis=1)
 
 print("Screening table preview:")
 print(

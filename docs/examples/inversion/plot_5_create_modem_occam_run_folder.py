@@ -168,18 +168,14 @@ modem_config = ModEmConfig(
 )
 
 modem_control = ModEmControl.from_config(modem_config)
-modem_control_path = modem_control.write(
-    modem_dir / modem_config.control_file
-)
+modem_control_path = modem_control.write(modem_dir / modem_config.control_file)
 
 modem_data = modem_dir / modem_config.data_file
 modem_model = modem_dir / modem_config.model_file
 modem_x_edges = modem_dir / "x_edges_m.csv"
 modem_z_edges = modem_dir / "z_edges_m.csv"
 
-copy_required(
-    table_dir / "backend_modem_style_impedance_long.csv", modem_data
-)
+copy_required(table_dir / "backend_modem_style_impedance_long.csv", modem_data)
 copy_required(model_dir / "starting_resistivity_ohmm.csv", modem_model)
 copy_required(model_dir / "x_edges_m.csv", modem_x_edges)
 copy_required(model_dir / "z_edges_m.csv", modem_z_edges)

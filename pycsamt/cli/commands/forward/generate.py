@@ -205,9 +205,7 @@ def generate(
         n_freqs,
     )
 
-    noise_type_arg = (
-        None if noise_type.lower() == "none" else noise_type.lower()
-    )
+    noise_type_arg = None if noise_type.lower() == "none" else noise_type.lower()
     save_path = output if output.endswith(".npz") else None
 
     if verbose >= 1:
@@ -250,6 +248,4 @@ def generate(
         )
         df.to_csv(output, index=False)
 
-    click.echo(
-        f"Dataset saved → {output}  (X: {ds.X.shape}, y: {ds.y.shape})"
-    )
+    click.echo(f"Dataset saved → {output}  (X: {ds.X.shape}, y: {ds.y.shape})")

@@ -23,8 +23,7 @@ Quick start
         project="Copper-gold exploration",
         operator="EarthAI-Tech",
         method="AMT",
-        bbox=BBox(lat_min=27.8, lat_max=28.9,
-                  lon_min=101.5, lon_max=103.2),
+        bbox=BBox(lat_min=27.8, lat_max=28.9, lon_min=101.5, lon_max=103.2),
     )
 
     # build from a Sites collection
@@ -45,9 +44,7 @@ from typing import Any
 
 __all__ = ["BBox", "SurveyMeta"]
 
-_VALID_METHODS = frozenset(
-    {"MT", "AMT", "CSAMT", "CSEM", "TEM", "BBMT", "LAMT", "LMT"}
-)
+_VALID_METHODS = frozenset({"MT", "AMT", "CSAMT", "CSEM", "TEM", "BBMT", "LAMT", "LMT"})
 
 
 # ---------------------------------------------------------------------------
@@ -71,9 +68,9 @@ class BBox:
     ::
 
         bbox = BBox(27.8, 28.9, 101.5, 103.2)
-        assert 28.0 in bbox           # latitude membership test
-        print(bbox.centre)            # (28.35, 102.35)
-        print(bbox.area_deg2)         # 1.1 × 1.7 ≈ 1.87 deg²
+        assert 28.0 in bbox  # latitude membership test
+        print(bbox.centre)  # (28.35, 102.35)
+        print(bbox.area_deg2)  # 1.1 × 1.7 ≈ 1.87 deg²
     """
 
     lat_min: float
@@ -111,8 +108,7 @@ class BBox:
     def contains(self, lat: float, lon: float) -> bool:
         """Return True when *(lat, lon)* lies inside or on the boundary."""
         return (
-            self.lat_min <= lat <= self.lat_max
-            and self.lon_min <= lon <= self.lon_max
+            self.lat_min <= lat <= self.lat_max and self.lon_min <= lon <= self.lon_max
         )
 
     def __contains__(self, latlon: Any) -> bool:
@@ -202,7 +198,7 @@ class SurveyMeta:
             bbox=BBox(27.8, 28.9, 101.5, 103.2),
             n_stations=128,
         )
-        print(meta.duration_days)   # None (no dates set)
+        print(meta.duration_days)  # None (no dates set)
 
         # build from a Sites collection:
         meta2 = SurveyMeta.from_sites(sites, name="survey_A")
@@ -228,8 +224,7 @@ class SurveyMeta:
         m = self.method.upper()
         if m not in _VALID_METHODS:
             raise ValueError(
-                f"method {self.method!r} is not one of "
-                f"{sorted(_VALID_METHODS)}."
+                f"method {self.method!r} is not one of " f"{sorted(_VALID_METHODS)}."
             )
         self.method = m
         if self.date_start and self.date_end:
@@ -340,9 +335,7 @@ class SurveyMeta:
             "operator": self.operator,
             "method": self.method,
             "bbox": self.bbox.to_dict() if self.bbox else None,
-            "date_start": self.date_start.isoformat()
-            if self.date_start
-            else None,
+            "date_start": self.date_start.isoformat() if self.date_start else None,
             "date_end": self.date_end.isoformat() if self.date_end else None,
             "crs": self.crs,
             "n_stations": self.n_stations,
@@ -409,9 +402,7 @@ class SurveyMeta:
         try:
             import yaml  # noqa: PLC0415
         except ImportError as exc:
-            raise ImportError(
-                "PyYAML is required for YAML serialisation."
-            ) from exc
+            raise ImportError("PyYAML is required for YAML serialisation.") from exc
         text = yaml.safe_dump(
             self.to_dict(), default_flow_style=False, allow_unicode=True
         )
@@ -425,9 +416,7 @@ class SurveyMeta:
         try:
             import yaml  # noqa: PLC0415
         except ImportError as exc:
-            raise ImportError(
-                "PyYAML is required for YAML deserialisation."
-            ) from exc
+            raise ImportError("PyYAML is required for YAML deserialisation.") from exc
         data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         return cls.from_dict(data)
 
@@ -450,11 +439,7 @@ class SurveyMeta:
         if self.date_start:
             parts.append(
                 f"  Dates   : {self.date_start} → {self.date_end or '?'}"
-                + (
-                    f"  ({self.duration_days} days)"
-                    if self.duration_days
-                    else ""
-                )
+                + (f"  ({self.duration_days} days)" if self.duration_days else "")
             )
         if self.notes:
             parts.append(f"  Notes   : {self.notes}")

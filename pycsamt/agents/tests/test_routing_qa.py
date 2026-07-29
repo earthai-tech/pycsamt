@@ -31,8 +31,7 @@ _QA_PATTERNS = [
 ]
 
 _WORKFLOW_PATTERNS = [
-    r"\b(run|load|process|apply|correct|invert"
-    r"|compute|generate|perform|execute)\b",
+    r"\b(run|load|process|apply|correct|invert" r"|compute|generate|perform|execute)\b",
 ]
 
 

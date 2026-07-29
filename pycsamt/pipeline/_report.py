@@ -119,9 +119,7 @@ def _plot_thumbs(plots: list[Path], outdir: Path | None) -> str:
             rel = p.relative_to(outdir)
         except ValueError:
             rel = p
-        tags.append(
-            f'<a href="{rel}" target="_blank"><img src="{rel}" /></a>'
-        )
+        tags.append(f'<a href="{rel}" target="_blank"><img src="{rel}" /></a>')
     return f'<div class="plots">{"".join(tags)}</div>'
 
 
@@ -158,16 +156,12 @@ def make_html_report(
         status_icon = "&#10003;" if sr.ok else "&#10007;"
         status_c = "ok" if sr.ok else "err"
         params_str = (
-            ", ".join(f"{k}={v!r}" for k, v in sr.params.items())
-            if sr.params
-            else "—"
+            ", ".join(f"{k}={v!r}" for k, v in sr.params.items()) if sr.params else "—"
         )
         thumbs = _plot_thumbs(sr.plots, outdir)
         err_html = ""
         if not sr.ok:
-            err_html = (
-                f'<div class="error-box"><b>Error:</b> {sr.error}</div>'
-            )
+            err_html = f'<div class="error-box"><b>Error:</b> {sr.error}</div>'
         card = (
             f'<div class="step-card">'
             f'<h3><span class="{status_c}">{status_icon}</span> '
@@ -189,8 +183,7 @@ def make_html_report(
     yaml_block = ""
     if pipeline_yaml:
         yaml_block = (
-            "<h2>Pipeline configuration</h2>"
-            f"<pre><code>{pipeline_yaml}</code></pre>"
+            "<h2>Pipeline configuration</h2>" f"<pre><code>{pipeline_yaml}</code></pre>"
         )
 
     # ── Assemble ──────────────────────────────────────────────────────

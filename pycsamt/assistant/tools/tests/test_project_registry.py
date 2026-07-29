@@ -104,9 +104,7 @@ class TestProjectRegistry(unittest.TestCase):
             ),
             "L22PLT",
         )
-        self.assertIsNone(
-            self.reg.find_line_in_text("just a general question")
-        )
+        self.assertIsNone(self.reg.find_line_in_text("just a general question"))
 
     def test_contains(self):
         self.assertIn("L22PLT", self.reg)
@@ -115,9 +113,7 @@ class TestProjectRegistry(unittest.TestCase):
 
     def test_relative_edi_dir_resolved_against_root(self):
         r = self.reg.resolve_line("L22PLT")
-        self.assertTrue(
-            r["edi_dir"].endswith("L22PLT") and "SURVEY" in r["edi_dir"]
-        )
+        self.assertTrue(r["edi_dir"].endswith("L22PLT") and "SURVEY" in r["edi_dir"])
 
     def test_resolve_line_convenience(self):
         r = resolve_line("L22PLT", registry_path=self.reg_path, root=self.tmp)

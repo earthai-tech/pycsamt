@@ -67,11 +67,11 @@ def validate_generated_code(code: str) -> dict[str, Any]:
     Returns a report dict::
 
         {
-          "ok": bool,            # no syntax errors and no missing symbols
-          "syntax_ok": bool,
-          "errors": [...],       # hard problems (syntax, missing symbols)
-          "warnings": [...],     # unverifiable imports
-          "checked": [...],      # pycsamt symbols verified present
+            "ok": bool,  # no syntax errors and no missing symbols
+            "syntax_ok": bool,
+            "errors": [...],  # hard problems (syntax, missing symbols)
+            "warnings": [...],  # unverifiable imports
+            "checked": [...],  # pycsamt symbols verified present
         }
     """
     report: dict[str, Any] = {
@@ -100,9 +100,7 @@ def validate_generated_code(code: str) -> dict[str, Any]:
                 importlib.import_module(module)
                 report["checked"].append(module)
             except Exception as exc:  # noqa: BLE001
-                report["warnings"].append(
-                    f"could not import {module!r}: {exc}"
-                )
+                report["warnings"].append(f"could not import {module!r}: {exc}")
             continue
         for name in names:
             err = _check_symbol(module, name)

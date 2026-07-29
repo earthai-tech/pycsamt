@@ -56,9 +56,7 @@ class DataGroupFile:
     path: Path | None = None
     comment: str = ""
     group_names: list[str] = field(default_factory=list)
-    group_indices: np.ndarray = field(
-        default_factory=lambda: np.empty(0, dtype=int)
-    )
+    group_indices: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=int))
 
     @property
     def n_groups(self) -> int:
@@ -69,9 +67,7 @@ class DataGroupFile:
         return len(self.group_indices)
 
     def __repr__(self) -> str:
-        return (
-            f"DataGroupFile(n_groups={self.n_groups}, n_data={self.n_data})"
-        )
+        return f"DataGroupFile(n_groups={self.n_groups}, n_data={self.n_data})"
 
 
 def read_data_group(path: str | Path) -> DataGroupFile:
@@ -146,9 +142,7 @@ def read_data_group(path: str | Path) -> DataGroupFile:
         elif code in ("# data", "#data"):
             n_data = int(value)
             remaining = "\n".join(lines[i:])
-            vals = np.fromstring(
-                remaining.replace("\n", " "), sep=" ", dtype=int
-            )
+            vals = np.fromstring(remaining.replace("\n", " "), sep=" ", dtype=int)
             dg.group_indices = vals[:n_data]
             break
 
@@ -180,10 +174,14 @@ def write_data_group(dg: DataGroupFile, path: str | Path) -> Path:
 
     Examples
     --------
-    >>> from pycsamt.models.mare2dem.iotools.data_group import DataGroupFile, write_data_group
+    >>> from pycsamt.models.mare2dem.iotools.data_group import (
+    ...     DataGroupFile,
+    ...     write_data_group,
+    ... )
     >>> import numpy as np
-    >>> dg = DataGroupFile(group_names=["MT", "CSEM"],
-    ...                    group_indices=np.array([1, 1, 2, 2]))
+    >>> dg = DataGroupFile(
+    ...     group_names=["MT", "CSEM"], group_indices=np.array([1, 1, 2, 2])
+    ... )
     >>> write_data_group(dg, "survey.emdata_group")
     PosixPath('survey.emdata_group')
     """

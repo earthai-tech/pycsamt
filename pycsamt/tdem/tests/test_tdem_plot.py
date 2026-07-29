@@ -92,9 +92,7 @@ def test_plot_transformed_rho_returns_figure_by_default():
     fig2 = plot_transformed_rho(_sounding(), show_phase=False)
 
     assert len(fig.axes) == 2
-    assert (
-        fig.axes[0].get_position().height > fig.axes[1].get_position().height
-    )
+    assert fig.axes[0].get_position().height > fig.axes[1].get_position().height
     assert len(fig2.axes) == 1
     plt.close(fig)
     plt.close(fig2)

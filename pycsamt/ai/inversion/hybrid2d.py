@@ -35,21 +35,22 @@ than a randomly initialised PINN.
 Example
 -------
 >>> from pycsamt.ai.inversion import (
-...     EMInverter2D, HybridInverter2D,
+...     EMInverter2D,
+...     HybridInverter2D,
 ... )
->>> ai2d = EMInverter2D.load(            # doctest: +SKIP
+>>> ai2d = EMInverter2D.load(  # doctest: +SKIP
 ...     "checkpoints/unet2d.npz"
 ... )
->>> inv = HybridInverter2D(              # doctest: +SKIP
+>>> inv = HybridInverter2D(  # doctest: +SKIP
 ...     "edi/profile1/",
 ...     ai_inverter=ai2d,
 ...     epochs=150,
 ...     smoothness_weight=0.005,
 ... )
->>> inv.fit()                            # doctest: +SKIP
+>>> inv.fit()  # doctest: +SKIP
 HybridInverter2D(n_stations=20, fitted)
 >>> section = inv.resistivity_section()  # doctest: +SKIP
->>> s1 = inv.stage1_section()           # doctest: +SKIP
+>>> s1 = inv.stage1_section()  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -136,9 +137,7 @@ class HybridInverter2D(BaseHybridInverter):
         verbose: int = 0,
     ) -> None:
         if mode not in ("te", "tm", "both"):
-            raise ValueError(
-                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
-            )
+            raise ValueError(f"mode must be 'te', 'tm', or 'both'; got {mode!r}.")
         super().__init__(
             depth_max=depth_max,
             device=device,
@@ -154,9 +153,7 @@ class HybridInverter2D(BaseHybridInverter):
         self.verbose = verbose
 
         self._ai_inv = self._load_ai_inverter(ai_inverter)
-        self.n_layers = int(
-            n_layers if n_layers is not None else self._ai_inv.n_depth
-        )
+        self.n_layers = int(n_layers if n_layers is not None else self._ai_inv.n_depth)
 
         self._obs: list[SiteObs2D] = sites_to_obs_2d(
             sites,
@@ -361,12 +358,8 @@ class HybridInverter2D(BaseHybridInverter):
                 rp = np.full_like(obs.freq, np.nan)
                 pp = np.full_like(obs.freq, np.nan)
 
-            rho_obs = (
-                obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
-            )
-            ph_obs = (
-                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
-            )
+            rho_obs = obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
+            ph_obs = obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
             for k in range(len(obs.freq)):
                 rows.append(
                     {
@@ -400,9 +393,7 @@ class HybridInverter2D(BaseHybridInverter):
 
         if isinstance(ai_inverter, EMInverter2D):
             if not ai_inverter._is_fitted:
-                raise ValueError(
-                    "ai_inverter must be a fitted EMInverter2D instance."
-                )
+                raise ValueError("ai_inverter must be a fitted EMInverter2D instance.")
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
             return EMInverter2D.load(Path(ai_inverter))

@@ -318,25 +318,21 @@ class TestDescribePlot:
         import pycsamt.emtools as et
 
         for _, fn_name, _ in ALL_PLOTS:
-            assert getattr(et, fn_name, None) is not None, (
-                f"{fn_name} not found in pycsamt.emtools"
-            )
+            assert (
+                getattr(et, fn_name, None) is not None
+            ), f"{fn_name} not found in pycsamt.emtools"
 
 
 # ── _auto_rho_bounds ────────────────────────────────────────────────────────────
 
 
 class TestAutoRhoBounds:
-    def test_with_real_tipper_sites_returns_finite_ordered_bounds(
-        self, tipper_sites
-    ):
+    def test_with_real_tipper_sites_returns_finite_ordered_bounds(self, tipper_sites):
         lo, hi = _auto_rho_bounds(tipper_sites)
         assert np.isfinite(lo) and np.isfinite(hi)
         assert lo <= hi
 
-    def test_with_real_willy_sites_returns_finite_ordered_bounds(
-        self, willy_sites
-    ):
+    def test_with_real_willy_sites_returns_finite_ordered_bounds(self, willy_sites):
         lo, hi = _auto_rho_bounds(willy_sites)
         assert np.isfinite(lo) and np.isfinite(hi)
         assert lo <= hi
@@ -502,7 +498,7 @@ class TestCallFigureFn:
         def does_nothing(sites, verbose=0, **kw):
             return "not-a-figure"
 
-        before = set(plt.get_fignums())
+        set(plt.get_fignums())
         result = ctrl._call_figure_fn(does_nothing)
         assert result is None
         _close()

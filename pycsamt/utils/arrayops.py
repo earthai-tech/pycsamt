@@ -307,7 +307,7 @@ def frameify(
         the default is::
 
         >>> import re
-        >>> re.compile (r'[_#&.)(*@!_,;\s-]\s*', flags=re.IGNORECASE)
+        >>> re.compile(r"[_#&.)(*@!_,;\s-]\s*", flags=re.IGNORECASE)
 
        .. versionadded:: 0.1.9
 
@@ -350,8 +350,8 @@ def frameify(
     ---------
     >>> from watex.datasets.dload import load_bagoue
     >>> from watex.utils.funcutils import to_numeric_dtypes
-    >>> X, y = load_bagoue (as_frame =True )
-    >>> X0 =X[['shape', 'power', 'magnitude']]
+    >>> X, y = load_bagoue(as_frame=True)
+    >>> X0 = X[["shape", "power", "magnitude"]]
     >>> X0.dtypes
     ... shape        object
         power        object
@@ -387,9 +387,7 @@ def frameify(
         if not _is_numeric_dtype(df.columns, to_array=True):
             # for consistency reconvert to str
             df.columns = df.columns.astype(str)
-            df = sanitize_frame_cols(
-                df, regex=regex, fill_pattern=fill_pattern
-            )
+            df = sanitize_frame_cols(df, regex=regex, fill_pattern=fill_pattern)
 
     # replace empty string by Nan if NaN exist in dataframe
     df = df.replace(r"^\s*$", missing_values, regex=True)
@@ -501,9 +499,7 @@ def assert_xy_in(
         # If name given, fetch from DataFrame
         if isinstance(val, str):
             if data is None or not hasattr(data, "columns"):
-                raise TypeError(
-                    "`data` DataFrame required when x or y is string name"
-                )
+                raise TypeError("`data` DataFrame required when x or y is string name")
             if val not in data.columns:
                 raise KeyError(f"Column {val!r} not in DataFrame")
             return data[val]
@@ -527,9 +523,7 @@ def assert_xy_in(
 
     # Ensure lengths match
     if len(x_ser) != len(y_ser):
-        raise ValueError(
-            f"Length mismatch: x has {len(x_ser)}, y has {len(y_ser)}"
-        )
+        raise ValueError(f"Length mismatch: x has {len(x_ser)}, y has {len(y_ser)}")
 
     # Optionally coerce to numeric dtype
     if xy_numeric:
@@ -595,9 +589,10 @@ def interpolate_grid(
     ---------
     >>> import numpy as np
     >>> from watex.utils.funcutils import interpolate_grid
-    >>> x = [28, np.nan, 50, 60] ; y = [np.nan, 1000, 2000, 3000]
-    >>> xy = np.vstack ((x, y)).T
-    >>> xyi = interpolate_grid (xy, view=True )
+    >>> x = [28, np.nan, 50, 60]
+    ... y = [np.nan, 1000, 2000, 3000]
+    >>> xy = np.vstack((x, y)).T
+    >>> xyi = interpolate_grid(xy, view=True)
     >>> xyi
     array([[  28.        ,   28.        ],
            [  22.78880663, 1000.        ],
@@ -635,9 +630,7 @@ def interpolate_grid(
             arri = _fill_nan(arri, method="both ")
         else:
             arri[np.isnan(arri)] = float(
-                _assert_all_types(
-                    fill_value, float, int, objname="'fill_value'"
-                )
+                _assert_all_types(fill_value, float, int, objname="'fill_value'")
             )
         if not is2d:
             arri = arri[0]
@@ -672,9 +665,7 @@ def interpolate_grid(
     return arri
 
 
-def _fill_nan(
-    arr: Sequence[Any] | np.ndarray, *, method: str = "ff"
-) -> np.ndarray:
+def _fill_nan(arr: Sequence[Any] | np.ndarray, *, method: str = "ff") -> np.ndarray:
     """
     Efficiently forward/backward fill NaNs in array.
 
@@ -701,10 +692,10 @@ def _fill_nan(
     --------
     >>> import numpy as np
     >>> from pycsamt.utils.arrayops import fill_nan
-    >>> a = np.array([np.nan,1,np.nan,2])
-    >>> fill_nan(a, method='ff')
+    >>> a = np.array([np.nan, 1, np.nan, 2])
+    >>> fill_nan(a, method="ff")
     array([nan, 1., 1., 2.])
-    >>> fill_nan(a, method='both')
+    >>> fill_nan(a, method="both")
     array([1., 1., 1., 2.])
     """
 
@@ -726,9 +717,7 @@ def _fill_nan(
     elif m in ("both", "fb", "bff", "ffbf"):
         m = "both"
     else:
-        raise ValueError(
-            f"Unknown method {method!r}; choose 'ff','bf', or 'both'"
-        )
+        raise ValueError(f"Unknown method {method!r}; choose 'ff','bf', or 'both'")
 
     # define forward fill
     def _ffill(a):
@@ -791,13 +780,12 @@ def fill_nan(
     >>> import numpy as np
     >>> from pycsamt.utils.arrayops import fill_nan
     >>> a = np.array([np.nan, 1, np.nan, 2])
-    >>> fill_nan(a, method='ff')
+    >>> fill_nan(a, method="ff")
     array([nan, 1., 1., 2.])
-    >>> fill_nan(a, method='bf')
+    >>> fill_nan(a, method="bf")
     array([1., 1., 2., 2.])
-    >>> M = np.array([[1, np.nan, 3],
-    ...               [np.nan, 5, np.nan]])
-    >>> fill_nan(M, method='both', axis=0)
+    >>> M = np.array([[1, np.nan, 3], [np.nan, 5, np.nan]])
+    >>> fill_nan(M, method="both", axis=0)
     array([[1., 5., 3.],
            [1., 5., 3.]])
     """
@@ -827,9 +815,7 @@ def fill_nan(
     elif m in ("both", "fb", "bff", "ffbf"):
         m = "both"
     else:
-        raise ValueError(
-            f"method must be 'ff', 'bf', or 'both'; got {method!r}"
-        )
+        raise ValueError(f"method must be 'ff', 'bf', or 'both'; got {method!r}")
 
     def _ffill_row(row: np.ndarray) -> np.ndarray:
         """Forward-fill a single 1D array of length N."""
@@ -853,6 +839,7 @@ def fill_nan(
 
         def filler(mat, fn):
             return np.vstack([fn(row) for row in mat])
+
     else:
         # for axis=0, transpose, fill, then transpose back
         def filler(mat, fn):
@@ -912,7 +899,7 @@ def drop_nan_in(
 
     Examples
     --------
-    >>> yt = np.array([1., 2., np.nan, 4.])
+    >>> yt = np.array([1.0, 2.0, np.nan, 4.0])
     >>> yp = np.array([0.9, 1.8, 3.1, 4.2])
     >>> drop_nan_in(yt, yp, error="warn")
     (array([1., 2., 4.]), array([0.9, 1.8, 4.2]))
@@ -924,9 +911,7 @@ def drop_nan_in(
     # shape checks
     for i, p in enumerate(preds):
         if p.shape != yt.shape:
-            raise ValueError(
-                f"y_pred #{i} shape {p.shape} != y_true {yt.shape}"
-            )
+            raise ValueError(f"y_pred #{i} shape {p.shape} != y_true {yt.shape}")
 
     has_nan = np.isnan(yt)
     any_nan = bool(np.any(has_nan))
@@ -938,9 +923,7 @@ def drop_nan_in(
         if nan_policy == "propagate":
             return yt, *preds
         if nan_policy != "omit" and nan_policy != "raise":
-            raise ValueError(
-                "nan_policy must be one of {'raise','propagate','omit'}."
-            )
+            raise ValueError("nan_policy must be one of {'raise','propagate','omit'}.")
         # fall through to omit
 
     else:
@@ -951,9 +934,7 @@ def drop_nan_in(
             if error == "warn":
                 warnings.warn("NaNs in y_true; dropping rows.", stacklevel=2)
             elif error != "ignore":
-                raise ValueError(
-                    "error must be one of {'raise','warn','ignore'}."
-                )
+                raise ValueError("error must be one of {'raise','warn','ignore'}.")
 
     # build mask (omit or ignore/warn path)
     mask = ~has_nan

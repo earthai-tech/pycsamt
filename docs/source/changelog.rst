@@ -20,20 +20,55 @@ carries a colour-coded badge so the log can be scanned at a glance:
 * |Breaking| |Security| — read carefully before upgrading
 * |Docs| |Build| |Tests| — documentation and project tooling
 
+.. When cutting a release, add a "*Released YYYY-MM-DD.*" line directly
+   under that version's title (before the summary paragraph). It is the
+   single source of truth the "New" badge on the site navbar reads at
+   build time (see conf.py: _write_whats_new_json) -- an entry with no
+   such line is treated as unreleased and never shows a badge. See the
+   Pre-release checklist in development/documentation_build.rst.
+
 ----
 
-.. _changelog-2-0-1:
+.. _changelog-2-1-0:
 
-2.0.1 |Fix| |API Change| |Docs| |Tests|
------------------------------------------
+2.1.0 |Feature| |Fix| |API Change| |Docs| |Tests|
+-------------------------------------------------
 
-*Maintenance release for deterministic, spatially correct station ordering
-and validated, auditable station-metadata editing. See*
-:ref:`release_v2_0_1` *for upgrade guidance and migration examples.*
+*Released 2026-07-29.*
+
+*Feature release adding deterministic, spatially correct station ordering,
+validated auditable station-metadata editing, and the first
+physics-grounded building blocks of AI inversion. See*
+:ref:`release_v2_1_0` *for upgrade guidance and migration examples.*
 
 Added
 ~~~~~
 
+* |Feature| **Staged inversion loss package** -- added
+  :mod:`pycsamt.ai.losses` (:mod:`~pycsamt.ai.losses.model`,
+  :mod:`~pycsamt.ai.losses.spatial`, :mod:`~pycsamt.ai.losses.response`,
+  :mod:`~pycsamt.ai.losses.boundary`, :mod:`~pycsamt.ai.losses.uncertainty`)
+  implementing the staged objective ``L = w_m*L_model + lambda_x*L_grad_x +
+  lambda_z*L_grad_z + lambda_tv*L_TV + lambda_d*L_response``.
+* |Feature| **Scientific validation package** -- added
+  :mod:`pycsamt.ai.validation` (:mod:`~pycsamt.ai.validation.recovery`,
+  :mod:`~pycsamt.ai.validation.residuals`,
+  :mod:`~pycsamt.ai.validation.calibration`,
+  :mod:`~pycsamt.ai.validation.ood`) for recovery metrics, response
+  residuals, predictive calibration, and out-of-distribution screening.
+* |Feature| **2-D Maxwell training-data pipeline** -- added
+  :func:`pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` and
+  :class:`~pycsamt.ai.training.dataset2d.Maxwell2DDatasetConfig`, generating
+  spatially correlated 2-D geological realizations and solving them with
+  :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter` into a versioned,
+  realization-split, resumable-cache dataset.
+* |API Change| **Inv2DAgent physics mode** -- added ``physics="mt2d"`` to
+  :class:`pycsamt.agents.Inv2DAgent`, training on the new dataset generator
+  with the staged spatial-regularization loss and reporting a held-out
+  recovery check. ``physics="mt1d"`` (tiled 1-D forward models) remains the
+  unchanged default. :meth:`pycsamt.ai.inversion.inv2d.EMInverter2D.fit`
+  gained ``lambda_x``, ``lambda_z``, and ``lambda_tv`` staged-loss weights
+  (PyTorch backend only).
 * |API Change| **Global station-ordering policy** -- added
   :func:`pycsamt.api.configure_ordering`,
   :func:`pycsamt.api.reset_ordering`, ``PYCSAMT_ORDERING``, and
@@ -80,10 +115,39 @@ Fixed
 * |Fix| **Processing consistency** -- static-shift and near-surface methods,
   field-zone and CS/AMT sections, strike profiles, and pipeline presets now
   inherit the shared ordering strategy by default.
+* |Fix| **2-D mesh/receiver air-layer mismatch** -- the 2-D training-data
+  mesh builder no longer relies on ``build_solver_mesh``'s air layers, which
+  were incompatible with :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter`
+  (receivers must sit exactly at ``z=0``) and produced spurious 393x errors
+  despite an apparently converged solve.
+* |Fix| **Depth-zero float precision** -- ``Maxwell2DDatasetConfig``'s
+  surface-depth check now uses a numerical tolerance instead of strict
+  equality, so floating-point-derived grid spacings no longer raise
+  spuriously.
+* |Fix| **BatchNorm crash on a trailing batch of size 1** --
+  :meth:`pycsamt.ai.inversion.inv2d.EMInverter2D.fit`'s PyTorch training
+  loop now drops a trailing size-1 batch instead of crashing with "Expected
+  more than 1 value per channel when training".
+* |Fix| **TM-mode interface averaging** --
+  :func:`pycsamt.forward.em2d._assemble_tm` now uses a thickness-weighted
+  harmonic mean, not an arithmetic one, for the resistivity coefficient at
+  a cell interface, matching the parallel-current-path physics there.
+  ``Maxwell2DDatasetConfig`` generates and trains on both the TE-mode
+  (``zxy``) and TM-mode (``zyx``) response by default again.
+* |Fix| **Field-survey impedance units** --
+  :func:`pycsamt.ai.domain_gap.survey_fit.survey_data_from_sites` now
+  converts :attr:`~pycsamt.site.base.Site.z` from the EDI-native
+  ``[mV/km]/[nT]`` field convention to the SI convention
+  :class:`~pycsamt.ai.data.contracts.SurveyData` declares, instead of
+  copying it unconverted.
 
 Changed
 ~~~~~~~
 
+* |API Change| :mod:`pycsamt.ai.domain_gap.willy_fit` is renamed to
+  :mod:`pycsamt.ai.domain_gap.survey_fit` -- the field-survey-to-domain-gap
+  bridge works for any AMT, CSAMT, or MT survey, not only the bundled WILLY
+  line.
 * |API Change| Processing ``sort_by=None`` and
   :func:`pycsamt.emtools.ensure_sites` ``order_by=None`` now mean "use the
   global policy". Explicit arguments still override it; select ``input`` to
@@ -109,6 +173,29 @@ Docs & tooling
   Netlify build hook), rather than on every commit to ``master``. The
   previous per-commit pattern exhausted the hosting team's free-plan
   credits and suspended the site.
+* |Docs| **AI-inversion user guide, written in full** --
+  :doc:`/user_guide/ai_inversion/roadmap`,
+  :doc:`/user_guide/ai_inversion/data_contracts`,
+  :doc:`/user_guide/ai_inversion/experiments`,
+  :doc:`/user_guide/ai_inversion/forward_physics`,
+  :doc:`/user_guide/ai_inversion/dataset2d`,
+  :doc:`/user_guide/ai_inversion/domain_gap`,
+  :doc:`/user_guide/ai_inversion/losses`, and
+  :doc:`/user_guide/ai_inversion/scientific_validation` are now complete
+  guides covering :mod:`pycsamt.ai.data`, :mod:`pycsamt.ai.domain_gap`,
+  :mod:`pycsamt.ai.experiments`, :mod:`pycsamt.ai.geology`,
+  :mod:`pycsamt.ai.losses`, :mod:`pycsamt.ai.training.dataset2d`,
+  :mod:`pycsamt.ai.validation`, and :mod:`pycsamt.forward.maxwell`
+  end to end, with real, externally captured code output, generated
+  figures, and labeled equations throughout.
+  :doc:`/user_guide/ai_inversion/geology_priors` remains a stub.
+* |Tests| **AI-inversion regression coverage** -- added tests for
+  :mod:`pycsamt.ai.losses`, :mod:`pycsamt.ai.validation`,
+  :mod:`pycsamt.ai.training.dataset2d` (including analytic half-space
+  regression checks for both the TE- and TM-mode response),
+  :func:`pycsamt.forward.em2d._assemble_tm`'s interface-averaging
+  coefficients, the staged-loss ``EMInverter2D`` fit path, and the
+  ``Inv2DAgent`` ``physics="mt2d"`` end-to-end path.
 
 ----
 

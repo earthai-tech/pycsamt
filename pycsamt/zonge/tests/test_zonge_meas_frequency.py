@@ -67,9 +67,7 @@ def test_frequency_unique_and_by_station_tolerant_dedup():
     assert np.allclose(per_stn[150.0], [1.0, 2.0, 4.0])
 
 
-@pytest.mark.skipif(
-    pytest.importorskip("xarray") is None, reason="xarray required"
-)
+@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
 def test_frequency_to_xarray_shapes_and_values():
     # full grid: 2 stations × 3 freqs × 1 comp
     df = pd.DataFrame(
@@ -107,9 +105,7 @@ def test_frequency_write_emits_csv_with_context_and_meta():
     lines = f.write()
 
     # Title banner present
-    assert _has_line(
-        lines, lambda ln: ln.strip().startswith("\\ $Frequency Block")
-    )
+    assert _has_line(lines, lambda ln: ln.strip().startswith("\\ $Frequency Block"))
 
     # Default meta exported
     assert _has_line(lines, lambda ln: ln.strip().startswith("$Unit.Freq=Hz"))
@@ -124,9 +120,7 @@ def test_frequency_write_emits_csv_with_context_and_meta():
     # find header index and count subsequent rows
     try:
         header_idx = next(
-            i
-            for i, ln in enumerate(lines)
-            if ln.strip() == "station,freq,comp"
+            i for i, ln in enumerate(lines) if ln.strip() == "station,freq,comp"
         )
     except StopIteration:
         pytest.fail("CSV header not found in Frequency.write() output")
@@ -135,9 +129,7 @@ def test_frequency_write_emits_csv_with_context_and_meta():
     assert len(csv_rows) == len(df)
 
     # spot-check one row content (tolerant on float formatting)
-    assert any(
-        re.match(r"^100(\.0)?,1(\.0)?,ExHy$", ln.strip()) for ln in csv_rows
-    )
+    assert any(re.match(r"^100(\.0)?,1(\.0)?,ExHy$", ln.strip()) for ln in csv_rows)
 
 
 if __name__ == "__main__":  # pragma: no-cover

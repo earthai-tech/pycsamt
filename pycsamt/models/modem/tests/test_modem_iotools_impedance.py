@@ -57,9 +57,7 @@ def _z2d_imp(n_sites=4, periods_te=(10.0,), periods_tm=(10.0,)):
     rng = np.random.default_rng(13)
     blocks = []
     for T in periods_te:
-        Z = rng.standard_normal((n_sites, 1)) + 1j * rng.standard_normal(
-            (n_sites, 1)
-        )
+        Z = rng.standard_normal((n_sites, 1)) + 1j * rng.standard_normal((n_sites, 1))
         Zerr = np.abs(rng.standard_normal((n_sites, 1))) * 0.05
         ys = np.linspace(-10000, 10000, n_sites)
         loc = np.column_stack([np.zeros(n_sites), ys, np.zeros(n_sites)])
@@ -75,9 +73,7 @@ def _z2d_imp(n_sites=4, periods_te=(10.0,), periods_tm=(10.0,)):
             )
         )
     for T in periods_tm:
-        Z = rng.standard_normal((n_sites, 1)) + 1j * rng.standard_normal(
-            (n_sites, 1)
-        )
+        Z = rng.standard_normal((n_sites, 1)) + 1j * rng.standard_normal((n_sites, 1))
         Zerr = np.abs(rng.standard_normal((n_sites, 1))) * 0.05
         ys = np.linspace(-10000, 10000, n_sites)
         loc = np.column_stack([np.zeros(n_sites), ys, np.zeros(n_sites)])
@@ -181,9 +177,7 @@ class TestZ3dOld:
         imp = _z3d_imp(n_sites=3, n_comp=4, periods=(10.0,))
         write_z3d_old(imp, tmp_path / "z3d.imp")
         back = read_z3d_old(tmp_path / "z3d.imp")
-        np.testing.assert_allclose(
-            back.blocks[0].Zerr, imp.blocks[0].Zerr, rtol=1e-5
-        )
+        np.testing.assert_allclose(back.blocks[0].Zerr, imp.blocks[0].Zerr, rtol=1e-5)
 
     def test_roundtrip_site_loc(self, tmp_path):
         imp = _z3d_imp(n_sites=3, periods=(10.0,))
@@ -265,9 +259,7 @@ class TestZ2dOld:
         imp = _z2d_imp(n_sites=4, periods_te=(5.0,), periods_tm=(5.0,))
         write_z2d_old(imp, tmp_path / "z2d.imp")
         back = read_z2d_old(tmp_path / "z2d.imp")
-        np.testing.assert_allclose(
-            back.blocks[0].Zerr, imp.blocks[0].Zerr, rtol=1e-5
-        )
+        np.testing.assert_allclose(back.blocks[0].Zerr, imp.blocks[0].Zerr, rtol=1e-5)
 
     def test_missing_file_raises(self):
         with pytest.raises(FileNotFoundError):
@@ -350,6 +342,6 @@ class TestConvert:
         text = new.read_text()
         for T in [7.0, 70.0, 700.0]:
             # period appears as %12.6E in each data line
-            assert any(f"{T:.6E}" in ln for ln in text.splitlines()), (
-                f"Period {T} not found in output"
-            )
+            assert any(
+                f"{T:.6E}" in ln for ln in text.splitlines()
+            ), f"Period {T} not found in output"

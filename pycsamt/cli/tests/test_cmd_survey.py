@@ -30,9 +30,7 @@ class _FakeSites:
         return iter(self._items)
 
 
-def _make_fake_sites(
-    n: int = 5, names: list[str] | None = None
-) -> _FakeSites:
+def _make_fake_sites(n: int = 5, names: list[str] | None = None) -> _FakeSites:
     names = names or [f"S{i:02d}" for i in range(1, n + 1)]
     return _FakeSites(names)
 
@@ -47,9 +45,7 @@ class TestSurveySet:
         self, runner: CliRunner, isolated_home: Path, edi_dir: Path
     ) -> None:
         fake_sites = _make_fake_sites(3)
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             result = runner.invoke(main, ["survey", "set", str(edi_dir)])
         assert result.exit_code == 0
         ctx = SurveyContext.load()
@@ -73,13 +69,9 @@ class TestSurveySet:
             call_count["n"] += 1
             return fake_sites
 
-        with patch(
-            "pycsamt.cli.survey._build_sites", side_effect=counting_build
-        ):
+        with patch("pycsamt.cli.survey._build_sites", side_effect=counting_build):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
-            runner.invoke(
-                main, ["survey", "set", str(edi_dir)]
-            )  # should use cache
+            runner.invoke(main, ["survey", "set", str(edi_dir)])  # should use cache
             runner.invoke(
                 main, ["survey", "set", str(edi_dir), "--force"]
             )  # force rebuild
@@ -88,9 +80,7 @@ class TestSurveySet:
 
 
 class TestSurveyShow:
-    def test_show_no_context(
-        self, runner: CliRunner, isolated_home: Path
-    ) -> None:
+    def test_show_no_context(self, runner: CliRunner, isolated_home: Path) -> None:
         result = runner.invoke(main, ["survey", "show"])
         assert result.exit_code == 0
         assert "No active survey" in result.output
@@ -99,9 +89,7 @@ class TestSurveyShow:
         self, runner: CliRunner, isolated_home: Path, edi_dir: Path
     ) -> None:
         fake_sites = _make_fake_sites(4, ["A1", "A2", "A3", "A4"])
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
 
         result = runner.invoke(main, ["survey", "show"])
@@ -111,9 +99,7 @@ class TestSurveyShow:
         self, runner: CliRunner, isolated_home: Path, edi_dir: Path
     ) -> None:
         fake_sites = _make_fake_sites(2)
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
 
         result = runner.invoke(main, ["survey", "show", "--format", "json"])
@@ -124,9 +110,7 @@ class TestSurveyShow:
 
 
 class TestSurveyClear:
-    def test_clear_no_context(
-        self, runner: CliRunner, isolated_home: Path
-    ) -> None:
+    def test_clear_no_context(self, runner: CliRunner, isolated_home: Path) -> None:
         result = runner.invoke(main, ["survey", "clear", "--yes"])
         assert result.exit_code == 0
         assert "nothing to clear" in result.output.lower()
@@ -135,9 +119,7 @@ class TestSurveyClear:
         self, runner: CliRunner, isolated_home: Path, edi_dir: Path
     ) -> None:
         fake_sites = _make_fake_sites(3)
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
 
         assert SurveyContext.load() is not None
@@ -163,9 +145,7 @@ class TestSurveyRebuild:
             call_count["n"] += 1
             return fake_sites
 
-        with patch(
-            "pycsamt.cli.survey._build_sites", side_effect=counting_build
-        ):
+        with patch("pycsamt.cli.survey._build_sites", side_effect=counting_build):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
             runner.invoke(main, ["survey", "rebuild", "--force"])
 
@@ -174,9 +154,7 @@ class TestSurveyRebuild:
 
 
 class TestSurveyCache:
-    def test_cache_list_empty(
-        self, runner: CliRunner, isolated_home: Path
-    ) -> None:
+    def test_cache_list_empty(self, runner: CliRunner, isolated_home: Path) -> None:
         result = runner.invoke(main, ["survey", "cache", "list"])
         assert result.exit_code == 0
         assert "empty" in result.output.lower() or "No cache" in result.output
@@ -185,9 +163,7 @@ class TestSurveyCache:
         self, runner: CliRunner, isolated_home: Path, edi_dir: Path
     ) -> None:
         fake_sites = _make_fake_sites(2)
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
 
         result = runner.invoke(main, ["survey", "cache", "list"])
@@ -197,9 +173,7 @@ class TestSurveyCache:
         self, runner: CliRunner, isolated_home: Path, edi_dir: Path
     ) -> None:
         fake_sites = _make_fake_sites(2)
-        with patch(
-            "pycsamt.cli.survey._build_sites", return_value=fake_sites
-        ):
+        with patch("pycsamt.cli.survey._build_sites", return_value=fake_sites):
             runner.invoke(main, ["survey", "set", str(edi_dir)])
 
         result = runner.invoke(main, ["survey", "cache", "purge", "--yes"])

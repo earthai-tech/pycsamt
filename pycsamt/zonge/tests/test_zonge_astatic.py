@@ -62,9 +62,7 @@ class TestASTATIC:
         unloaded_avg = ASTATIC()
         with pytest.raises(NotReadError):
             # let try to apply correction statistic shift
-            unloaded_avg.correct_static_shift(
-                reference_freq=10.24, dipole_length=20
-            )
+            unloaded_avg.correct_static_shift(reference_freq=10.24, dipole_length=20)
 
     def test_read_with_filepath(self, modern_data_file):
         """Test the read method with a direct file path."""

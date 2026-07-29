@@ -348,9 +348,7 @@ def convert(
         return
 
     if verbose >= 1:
-        click.echo(
-            f"Converting {len(inputs)} file(s) → {output_dir}/", err=True
-        )
+        click.echo(f"Converting {len(inputs)} file(s) → {output_dir}/", err=True)
 
     results: list[dict[str, Any]] = []
     for src in inputs:

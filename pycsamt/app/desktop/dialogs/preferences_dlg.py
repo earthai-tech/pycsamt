@@ -58,9 +58,7 @@ _TILE_PROVIDERS = [
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _path_row(
-    label: str, default: str, parent
-) -> tuple[QHBoxLayout, QLineEdit]:
+def _path_row(label: str, default: str, parent) -> tuple[QHBoxLayout, QLineEdit]:
     """Return (layout, line_edit) for a path + Browse button."""
     row = QHBoxLayout()
     edit = QLineEdit(default)
@@ -70,13 +68,9 @@ def _path_row(
 
     def _browse() -> None:
         if "directory" in label.lower() or "workdir" in label.lower():
-            p = QFileDialog.getExistingDirectory(
-                parent, f"Select {label}", default
-            )
+            p = QFileDialog.getExistingDirectory(parent, f"Select {label}", default)
         else:
-            p, _ = QFileDialog.getOpenFileName(
-                parent, f"Select {label}", default
-            )
+            p, _ = QFileDialog.getOpenFileName(parent, f"Select {label}", default)
         if p:
             edit.setText(p)
 
@@ -124,8 +118,7 @@ class PreferencesDialog(QDialog):
         self._build_advanced_tab()
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.accepted.connect(self._on_accepted)
         buttons.rejected.connect(self.reject)
@@ -202,9 +195,7 @@ class PreferencesDialog(QDialog):
 
         self._provider_combo = QComboBox()
         self._provider_combo.addItems(_LLM_PROVIDERS)
-        self._provider_combo.currentTextChanged.connect(
-            self._on_provider_changed
-        )
+        self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
         form.addRow("Provider:", self._provider_combo)
 
         self._model_combo = QComboBox()
@@ -279,8 +270,6 @@ class PreferencesDialog(QDialog):
         # Apply log level immediately
         import logging
 
-        logging.getLogger().setLevel(
-            getattr(logging, s.log_level, logging.WARNING)
-        )
+        logging.getLogger().setLevel(getattr(logging, s.log_level, logging.WARNING))
 
         self.accept()

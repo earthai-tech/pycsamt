@@ -137,9 +137,7 @@ class TestErrorHandling:
 
 
 class TestInterruption:
-    def test_interruption_requested_stops_before_first_step(
-        self, qapp, monkeypatch
-    ):
+    def test_interruption_requested_stops_before_first_step(self, qapp, monkeypatch):
         steps = [_FakeStep("A"), _FakeStep("B")]
         ctrl = _FakeController(steps)
         w = PipelineWorker(ctrl, [0, 1])

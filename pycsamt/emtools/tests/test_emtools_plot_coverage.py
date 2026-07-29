@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 
 from pycsamt.api.control import PYCSAMT_CONTROL
+from pycsamt.emtools import plot as plotmod
 from pycsamt.emtools import (
     plot_raw_sites_1d,
     plot_response_tipper,
@@ -26,7 +27,6 @@ from pycsamt.emtools import (
     plot_sites_fit_grid,
     plot_sites_panels,
 )
-from pycsamt.emtools import plot as plotmod
 
 # --------------------------------------------------------------------- #
 # Shared synthetic fixtures
@@ -38,9 +38,7 @@ class _FakeZ:
 
     def __init__(self, z, freq, z_err=None):
         self.z = np.asarray(z, dtype=complex) if z is not None else None
-        self.freq = (
-            np.asarray(freq, dtype=float) if freq is not None else None
-        )
+        self.freq = np.asarray(freq, dtype=float) if freq is not None else None
         self.z_err = z_err
 
 
@@ -71,7 +69,8 @@ class _FakeSite:
         self.freq = np.asarray(freq, dtype=float) if freq is not None else None
         if tipper is not None:
             self.Tipper = _FakeTipper(
-                tipper, tipper_freq if tipper_freq is not None else freq,
+                tipper,
+                tipper_freq if tipper_freq is not None else freq,
                 tipper_err=tipper_err,
             )
 
@@ -114,9 +113,7 @@ def _site(
     z_err = np.full_like(z.real, 0.01) if with_err else None
     tipper = _tipper_arr(fr) if with_tipper else None
     tipper_err = (
-        np.full_like(tipper.real, 0.005)
-        if (with_tipper and with_err)
-        else None
+        np.full_like(tipper.real, 0.005) if (with_tipper and with_err) else None
     )
     return _FakeSite(
         station,
@@ -290,9 +287,7 @@ def test_plot_response_tipper_no_stations_new_and_external_axes():
 
 def test_plot_response_tipper_broken_site_and_missing_tipper():
     sites = [_broken_site("BAD"), _site("K0", with_tipper=False)]
-    fig = plot_response_tipper(
-        sites, components=("xy",), tipper_span_group=True
-    )
+    fig = plot_response_tipper(sites, components=("xy",), tipper_span_group=True)
     texts = [t.get_text() for ax in fig.axes for t in ax.texts]
     assert "no tipper" in texts
     plt.close(fig)
@@ -469,9 +464,7 @@ def test_plot_sites_compare_external_axes_dual():
     gs = outer[0, 0].subgridspec(2, 2)
     axR = [fig0.add_subplot(gs[0, j]) for j in range(2)]
     axP = [fig0.add_subplot(gs[1, j]) for j in range(2)]
-    fig = plot_sites_compare(
-        sites, new_sites, components=("xy",), axes=axR + axP
-    )
+    fig = plot_sites_compare(sites, new_sites, components=("xy",), axes=axR + axP)
     assert fig is fig0
     plt.close(fig0)
 

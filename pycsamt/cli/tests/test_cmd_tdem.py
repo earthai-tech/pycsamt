@@ -113,15 +113,11 @@ class TestTdemConvert:
             pytest.skip("data/TEMAVG/JIANGSU/ not found")
 
     def test_dry_run_lists_soundings(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["tdem", "convert", str(_TEMAVG_DIR), "--dry-run"]
-        )
+        result = runner.invoke(main, ["tdem", "convert", str(_TEMAVG_DIR), "--dry-run"])
         assert result.exit_code == 0
         assert "sounding" in result.output.lower()
 
-    def test_convert_text_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_convert_text_output(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -135,9 +131,7 @@ class TestTdemConvert:
         assert result.exit_code == 0
         assert "Soundings" in result.output
 
-    def test_convert_json_output(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_convert_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [

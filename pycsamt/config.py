@@ -39,14 +39,10 @@ def get_data_home(data_home: str = None) -> str:
     >>> # Use default location
     >>> path = get_data_home()
     >>> # Override with explicit path
-    >>> path2 = get_data_home(
-    ...     "D:/my_pycsamt_data"
-    ... )
+    >>> path2 = get_data_home("D:/my_pycsamt_data")
     """
     if data_home is None:
-        data_home = os.environ.get(
-            "PYCSAMT_DATA", os.path.join("~", "pycsamt_data")
-        )
+        data_home = os.environ.get("PYCSAMT_DATA", os.path.join("~", "pycsamt_data"))
     data_home = os.path.expanduser(data_home)
     try:
         os.makedirs(data_home, exist_ok=True)
@@ -87,9 +83,7 @@ def remove_data(data_home: str = None) -> None:
     if os.path.exists(data_dir):
         shutil.rmtree(data_dir)
     else:
-        warnings.warn(
-            f"pycsamt data directory not found: {data_dir}", stacklevel=2
-        )
+        warnings.warn(f"pycsamt data directory not found: {data_dir}", stacklevel=2)
 
 
 def get_config_home(config_home: str = None) -> str:
@@ -123,16 +117,12 @@ def get_config_home(config_home: str = None) -> str:
     """
     if config_home is None:
         base = get_data_home()
-        config_home = os.environ.get(
-            "PYCSAMT_CONFIG", os.path.join(base, "config")
-        )
+        config_home = os.environ.get("PYCSAMT_CONFIG", os.path.join(base, "config"))
     config_home = os.path.expanduser(config_home)
     try:
         os.makedirs(config_home, exist_ok=True)
     except OSError as e:
-        warnings.warn(
-            f"Could not create config home {config_home}: {e}", stacklevel=2
-        )
+        warnings.warn(f"Could not create config home {config_home}: {e}", stacklevel=2)
     return config_home
 
 

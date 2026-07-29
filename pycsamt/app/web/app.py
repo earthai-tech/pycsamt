@@ -71,9 +71,7 @@ def _browser_url(host: str, port: int) -> str:
 
 def _open_browser_later(url: str, delay: float) -> None:
     """Open *url* in the default browser after a short delay."""
-    timer = threading.Timer(
-        max(0.0, float(delay)), lambda: webbrowser.open(url)
-    )
+    timer = threading.Timer(max(0.0, float(delay)), lambda: webbrowser.open(url))
     timer.daemon = True
     timer.start()
 

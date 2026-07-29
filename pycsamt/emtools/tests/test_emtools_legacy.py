@@ -107,9 +107,9 @@ def test_deprecated_aliases_emit_future_warning():
         zs = _z_list(2)
         leg.get_full_frequency(zs)
     categories = [str(x.category) for x in w]
-    assert any("FutureWarning" in c for c in categories), (
-        "No FutureWarning raised for deprecated alias"
-    )
+    assert any(
+        "FutureWarning" in c for c in categories
+    ), "No FutureWarning raised for deprecated alias"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

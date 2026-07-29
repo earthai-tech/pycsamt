@@ -19,8 +19,7 @@ Example
 >>> db.classify(250.0)
 RockEntry(name='Sandstone', rho_min=50, rho_max=5000, ...)
 >>> log = StratigraphicLog.from_column(
-...     "S17", x=1050.0,
-...     z_centers=z, rho_log10=col, db=db
+...     "S17", x=1050.0, z_centers=z, rho_log10=col, db=db
 ... )
 """
 
@@ -449,9 +448,7 @@ class StratigraphicLog:
         entries = db.classify_column(rho)
 
         dz = np.diff(z)
-        half_dz = (
-            np.append(dz / 2, dz[-1] / 2) if len(dz) else np.array([1.0])
-        )
+        half_dz = np.append(dz / 2, dz[-1] / 2) if len(dz) else np.array([1.0])
 
         layers: list[Layer] = []
         i = 0
@@ -467,9 +464,7 @@ class StratigraphicLog:
             top = float(z[i] - half_dz[i])
             bottom = float(z[j - 1] + half_dz[j - 1])
             rho_rep = float(np.nanmean(rho[i:j]))
-            n_match = sum(
-                1 for k in range(i, j) if entries[k].name == e0.name
-            )
+            n_match = sum(1 for k in range(i, j) if entries[k].name == e0.name)
             conf = n_match / max(j - i, 1)
             layers.append(
                 Layer(

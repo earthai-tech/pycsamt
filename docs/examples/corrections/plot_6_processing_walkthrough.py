@@ -166,9 +166,7 @@ from pathlib import Path
 
 outdir = Path(tempfile.mkdtemp(prefix="sanitised_L18_"))
 paths = write_sites(final, outdir, exist_ok=True)
-print(
-    f"wrote {len(paths)} sanitised EDIs, e.g. {[p.name for p in paths[:3]]}"
-)
+print(f"wrote {len(paths)} sanitised EDIs, e.g. {[p.name for p in paths[:3]]}")
 
 # round-trip: the output is real, re-loadable EDI data
 from pycsamt.emtools._core import ensure_sites

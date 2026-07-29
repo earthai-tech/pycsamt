@@ -81,9 +81,11 @@ class EnsembleAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent  = EnsembleAgent(n_estimators=3, epochs=20)
-    >>> result = agent.execute({"path": "/data/L22PLT", "output_dir": "/out/ens"})
-    >>> result["coverage"]   # should be ≈ 0.90 after calibration
+    >>> agent = EnsembleAgent(n_estimators=3, epochs=20)
+    >>> result = agent.execute(
+    ...     {"path": "/data/L22PLT", "output_dir": "/out/ens"}
+    ... )
+    >>> result["coverage"]  # should be ≈ 0.90 after calibration
     0.88
     """
 
@@ -148,9 +150,7 @@ class EnsembleAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -165,9 +165,7 @@ class EnsembleAgent(BaseAgent):
         freqs = np.logspace(-4, 3, 40)
 
         # ── generate synthetic dataset ────────────────────────────────────────
-        self._log.info(
-            "Generating %d synthetic samples…", self.n_train_samples
-        )
+        self._log.info("Generating %d synthetic samples…", self.n_train_samples)
         try:
             dataset = generate_dataset(
                 solver="mt1d",
@@ -427,8 +425,7 @@ def _forward_rms(
         rho_obs = (
             rho_raw[:, 0, 1]
             if rho_raw is not None
-            else (0.2 / np.where(fr == 0, np.nan, fr))
-            * np.abs(z[:, 0, 1]) ** 2
+            else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1]) ** 2
         )
         per = 1.0 / np.where(fr == 0, np.nan, fr)
         per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
@@ -495,9 +492,7 @@ def _plot_uncertainty_section(
         vmax=vmax,
         interpolation="nearest",
     )
-    axes[0].set_title(
-        "Ensemble mean  $\\log_{10}\\rho$", fontsize=9, fontweight="bold"
-    )
+    axes[0].set_title("Ensemble mean  $\\log_{10}\\rho$", fontsize=9, fontweight="bold")
 
     sv = mat_std[np.isfinite(mat_std)]
     s_vmax = float(np.percentile(sv, 95)) if sv.size else 0.5

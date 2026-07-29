@@ -135,7 +135,9 @@ def test_import_optional_dependency_no_min_version_registered(monkeypatch):
     assert result is mod
 
 
-def test_import_optional_dependency_submodule_uses_parent_for_version(monkeypatch):
+def test_import_optional_dependency_submodule_uses_parent_for_version(
+    monkeypatch,
+):
     result = import_optional_dependency("os.path")
     assert result is sys.modules.get("ntpath") or result is sys.modules.get("posixpath")
 

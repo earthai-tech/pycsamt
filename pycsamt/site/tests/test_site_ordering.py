@@ -157,7 +157,13 @@ def test_forced_chainage_retains_missing_sites_stably(
 
     ordered = sites.ordered("chainage")
 
-    assert [s.name for s in ordered] == ["S01", "S02", "S03", "MISS_B", "MISS_A"]
+    assert [s.name for s in ordered] == [
+        "S01",
+        "S02",
+        "S03",
+        "MISS_B",
+        "MISS_A",
+    ]
     assert ordered.ordering["n_coordinates"] == 3
 
 
@@ -241,9 +247,7 @@ def test_invalid_order_mode_has_actionable_error(
         sites.ordered("random_guess")
 
 
-def test_empty_and_single_site_are_safe(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_empty_and_single_site_are_safe(tmp_path: Path, simulated_edi: Path) -> None:
     assert Sites([]).ordered("auto").ordering["applied"] == "input"
     one = _make_sites(tmp_path, simulated_edi, [("ONLY", 35.0, -117.0)])
     ordered = one.ordered("auto")
@@ -302,7 +306,7 @@ def test_real_l22plt_directory_orders_by_chainage() -> None:
     assert sites.ordering["cross_track_ratio"] < 0.02
 
 
-def test_real_parallel_l18_and_l22_are_kept_as_separate_ordered_lines() -> None:
+def test_real_parallel_l18_and_l22_are_kept_as_separate_ordered_lines() -> (None):
     """A combined load must not interleave two nearby parallel profiles."""
 
     data = Path(__file__).parents[3] / "data" / "AMT" / "WILLY_DATA"

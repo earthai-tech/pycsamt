@@ -15,9 +15,7 @@ FS = 2048.0
 def _contaminated_signal(mains_hz: float = 50.0, seed: int = 0) -> np.ndarray:
     t = np.arange(0, 4, 1.0 / FS)
     rng = np.random.default_rng(seed)
-    return 0.5 * np.sin(2 * np.pi * mains_hz * t) + rng.standard_normal(
-        t.size
-    )
+    return 0.5 * np.sin(2 * np.pi * mains_hz * t) + rng.standard_normal(t.size)
 
 
 # ---------------------------------------------------------------------------

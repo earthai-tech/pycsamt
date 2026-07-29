@@ -114,9 +114,7 @@ def profile(
     if output_format == "csv":
         rows = tbl if tbl else []
         if rows:
-            cols = [
-                c for c in rows[0].keys() if c not in ("easting", "northing")
-            ]
+            cols = [c for c in rows[0].keys() if c not in ("easting", "northing")]
             click.echo(",".join(cols))
             for r in rows:
                 click.echo(",".join(str(r.get(c, "")) for c in cols))

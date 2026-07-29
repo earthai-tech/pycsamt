@@ -9,11 +9,12 @@ library, so code and GUI stay in sync.
 Entry points
 ------------
 >>> from pycsamt.app.mapview import launch
->>> launch()                                   # doctest: +SKIP
+>>> launch()  # doctest: +SKIP
 
 or seed it with data already loaded in code::
 
     from pycsamt.map import MapView
+
     MapView.from_folder("data/survey").launch()
 """
 

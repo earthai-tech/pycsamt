@@ -72,9 +72,7 @@ class InversionWorker(QThread):
         )
 
         if not self._workdir.exists():
-            raise FileNotFoundError(
-                f"Working directory not found: {self._workdir}"
-            )
+            raise FileNotFoundError(f"Working directory not found: {self._workdir}")
 
         # Check binary accessibility
         binary = self._binary_path
@@ -85,12 +83,9 @@ class InversionWorker(QThread):
             )
 
         self.stdout_line.emit(f"Working directory: {self._workdir}")
+        self.stdout_line.emit(f"Binary: {binary or '(auto-detect / compile)'}")
         self.stdout_line.emit(
-            f"Binary: {binary or '(auto-detect / compile)'}"
-        )
-        self.stdout_line.emit(
-            f"Max iterations: {self._max_iter}  "
-            f"Target RMS: {self._target_misfit}"
+            f"Max iterations: {self._max_iter}  " f"Target RMS: {self._target_misfit}"
         )
         self.progress.emit(5)
 
@@ -111,9 +106,7 @@ class InversionWorker(QThread):
 
             runner.iter_callback = _cb
         else:
-            self.stdout_line.emit(
-                "Running Occam2D…  (output after completion)"
-            )
+            self.stdout_line.emit("Running Occam2D…  (output after completion)")
 
         exit_code = runner.run(
             max_iter=self._max_iter,

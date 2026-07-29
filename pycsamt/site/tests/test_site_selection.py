@@ -63,9 +63,7 @@ def test_by_names_exact_wildcard_regex_callable(
     assert got == ["A01", "B01"]
 
 
-def test_by_index_positive_and_negative(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_by_index_positive_and_negative(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi, "I01", "I02", "I03")
     s = Sites([e1, e2, e3])
 
@@ -99,9 +97,7 @@ def test_by_chainage_head_and_fallback_attr(
     assert len(out) == 1 and out.by_index(0).name == "C02"
 
 
-def test_by_freq_range_intersection(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_by_freq_range_intersection(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "F01", "F02")
     s = Sites([e1, e2])
 
@@ -113,9 +109,7 @@ def test_by_freq_range_intersection(
     assert len(out) == 0
 
 
-def test_by_bbox_with_coordinate_update(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_by_bbox_with_coordinate_update(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "B01", "B02")
     # move stations apart
     e1 = ed.set_coords(e1, lat=0.0, lon=0.0, elev=0.0, inplace=False)
@@ -133,9 +127,7 @@ def test_by_predicate_lambda(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2, e3 = _mk_edifiles(tmp_path, simulated_edi, "P01", "Q02", "P03")
     s = Sites([e1, e2, e3])
 
-    out = sel.by_predicate(
-        s, lambda edf: ed.station_name(edf).startswith("P")
-    )
+    out = sel.by_predicate(s, lambda edf: ed.station_name(edf).startswith("P"))
     # Note: station_name is also in utils; we reuse bound
     # from selection's import through the Sites wrapper at
     # call time.
@@ -144,9 +136,7 @@ def test_by_predicate_lambda(tmp_path: Path, simulated_edi: Path) -> None:
     assert got == ["P01", "P03"]
 
 
-def test_keep_finite_z_and_drop_empty(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_keep_finite_z_and_drop_empty(tmp_path: Path, simulated_edi: Path) -> None:
     e1, e2 = _mk_edifiles(tmp_path, simulated_edi, "Z01", "Z02")
     # Make Z01 have finite z; Z02 becomes empty
     e1 = ed.fill_missing(e1, how="zero", components=("Z",), inplace=False)

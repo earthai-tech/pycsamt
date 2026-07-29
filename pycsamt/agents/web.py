@@ -9,7 +9,8 @@ Launch
 From Python::
 
     from pycsamt.agents.web import launch
-    launch()                      # opens http://localhost:7860
+
+    launch()  # opens http://localhost:7860
 
 From the CLI::
 
@@ -130,9 +131,7 @@ def _get_agent(name: str, api_key: str = "", llm_provider: str = "claude"):
             "zoo": ModelZooAgent(**kw),
             "report": ReportAgent(**kw),
         }
-        _SESSION.update(
-            {f"{n}_{llm_provider}": v for n, v in registry.items()}
-        )
+        _SESSION.update({f"{n}_{llm_provider}": v for n, v in registry.items()})
         _SESSION[f"{key}_key"] = api_key
     return _SESSION.get(key)
 
@@ -163,11 +162,7 @@ def _chat_run(
         f"**Summary:** {r.summary}\n\n"
     )
     if r.warnings:
-        log += (
-            "**Warnings:**\n"
-            + "\n".join(f"- {w}" for w in r.warnings[:5])
-            + "\n\n"
-        )
+        log += "**Warnings:**\n" + "\n".join(f"- {w}" for w in r.warnings[:5]) + "\n\n"
     if r.llm_interpretation:
         log += f"**LLM Interpretation:**\n{r.llm_interpretation}\n"
     return log
@@ -356,9 +351,9 @@ def _ai_inv_run(arch: str, epochs: int, api_key: str, llm_provider: str):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get(
-        "corrected_sites"
-    ) or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first.", None
 
@@ -401,9 +396,9 @@ def _inv2d_run(epochs: int, api_key: str, llm_provider: str):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get(
-        "corrected_sites"
-    ) or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first (Load & QC tab).", None
 
@@ -431,18 +426,16 @@ def _inv2d_run(epochs: int, api_key: str, llm_provider: str):
     return txt, fig_path
 
 
-def _ensemble_run(
-    n_estimators: int, epochs: int, api_key: str, llm_provider: str
-):
+def _ensemble_run(n_estimators: int, epochs: int, api_key: str, llm_provider: str):
     """Ensemble inversion tab."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get(
-        "corrected_sites"
-    ) or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first.", None, None
 
@@ -488,9 +481,9 @@ def _joint_run(modality: str, epochs: int, api_key: str, llm_provider: str):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get(
-        "corrected_sites"
-    ) or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first.", None
 
@@ -525,9 +518,9 @@ def _inv3d_run(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get(
-        "corrected_sites"
-    ) or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first (Load & QC tab).", None, None
 
@@ -590,9 +583,9 @@ def _zoo_predict_run(model_name: str, api_key: str, llm_provider: str):
     if not model_name.strip():
         return "⚠ Enter a model name (from the table above).", None
 
-    sites = (_SESSION.get("_last_ss", {}) or {}).get(
-        "corrected_sites"
-    ) or _SESSION.get("_last_sites")
+    sites = (_SESSION.get("_last_ss", {}) or {}).get("corrected_sites") or _SESSION.get(
+        "_last_sites"
+    )
     if sites is None:
         return "⚠ Load data first (Load & QC tab).", None
 
@@ -666,9 +659,7 @@ def build_app():
     _LOGO = "# 🌐 pycsamt — AI-assisted MT/AMT Processing"
     _LLM_HINT = "Leave blank to run without LLM (regex-only mode)."
 
-    with gr.Blocks(
-        title="pycsamt Agent System", theme=gr.themes.Soft()
-    ) as app:
+    with gr.Blocks(title="pycsamt Agent System", theme=gr.themes.Soft()) as app:
         gr.Markdown(_LOGO)
 
         # ── shared LLM config (sidebar-style row) ─────────────────────────────
@@ -706,9 +697,7 @@ def build_app():
                     "run QC and phase tensor analysis…",
                 )
                 dp_box = gr.Textbox(label="Data path (optional override)")
-                out_box = gr.Textbox(
-                    label="Output directory", value="pycsamt_output"
-                )
+                out_box = gr.Textbox(label="Output directory", value="pycsamt_output")
                 chat_btn = gr.Button("Run workflow", variant="primary")
                 chat_out = gr.Markdown()
 
@@ -752,9 +741,7 @@ def build_app():
                 )
                 ss_btn = gr.Button("Correct", variant="primary")
                 ss_txt = gr.Markdown()
-                ss_fig = gr.Image(
-                    label="Before / after comparison", type="filepath"
-                )
+                ss_fig = gr.Image(label="Before / after comparison", type="filepath")
 
                 ss_btn.click(
                     fn=_ss_run,
@@ -820,9 +807,7 @@ def build_app():
                 )
                 ai_btn = gr.Button("Train + Predict", variant="primary")
                 ai_txt = gr.Markdown()
-                ai_fig = gr.Image(
-                    label="Predicted model section", type="filepath"
-                )
+                ai_fig = gr.Image(label="Predicted model section", type="filepath")
 
                 ai_btn.click(
                     fn=_ai_inv_run,
@@ -839,13 +824,9 @@ def build_app():
                 inv2d_epochs = gr.Slider(
                     10, 100, value=30, step=5, label="Training epochs"
                 )
-                inv2d_btn = gr.Button(
-                    "Run U-Net inversion", variant="primary"
-                )
+                inv2d_btn = gr.Button("Run U-Net inversion", variant="primary")
                 inv2d_txt = gr.Markdown()
-                inv2d_fig = gr.Image(
-                    label="2-D resistivity section", type="filepath"
-                )
+                inv2d_fig = gr.Image(label="2-D resistivity section", type="filepath")
 
                 inv2d_btn.click(
                     fn=_inv2d_run,
@@ -902,17 +883,13 @@ def build_app():
                     "Train *N* independent 1-D inverters and report mean ± σ "
                     "uncertainty bands with conformal calibration."
                 )
-                ens_n = gr.Slider(
-                    2, 10, value=3, step=1, label="Number of estimators"
-                )
+                ens_n = gr.Slider(2, 10, value=3, step=1, label="Number of estimators")
                 ens_ep = gr.Slider(
                     10, 100, value=20, step=5, label="Epochs per estimator"
                 )
                 ens_btn = gr.Button("Train ensemble", variant="primary")
                 ens_txt = gr.Markdown()
-                ens_f1 = gr.Image(
-                    label="Mean + uncertainty section", type="filepath"
-                )
+                ens_f1 = gr.Image(label="Mean + uncertainty section", type="filepath")
                 ens_f2 = gr.Image(
                     label="Uncertainty profile (first station)",
                     type="filepath",
@@ -935,16 +912,10 @@ def build_app():
                     value="tem",
                     label="Secondary modality",
                 )
-                joint_ep = gr.Slider(
-                    10, 100, value=20, step=5, label="Training epochs"
-                )
-                joint_btn = gr.Button(
-                    "Run joint inversion", variant="primary"
-                )
+                joint_ep = gr.Slider(10, 100, value=20, step=5, label="Training epochs")
+                joint_btn = gr.Button("Run joint inversion", variant="primary")
                 joint_txt = gr.Markdown()
-                joint_fig = gr.Image(
-                    label="Joint resistivity section", type="filepath"
-                )
+                joint_fig = gr.Image(label="Joint resistivity section", type="filepath")
 
                 joint_btn.click(
                     fn=_joint_run,
@@ -959,9 +930,7 @@ def build_app():
                     "**earthai-tech** model zoo.  "
                     "Weights are cached in `~/.pycsamt/model_zoo/`."
                 )
-                zoo_list_btn = gr.Button(
-                    "Refresh model list", variant="secondary"
-                )
+                zoo_list_btn = gr.Button("Refresh model list", variant="secondary")
                 zoo_table = gr.Markdown()
 
                 gr.Markdown("---")
@@ -973,13 +942,9 @@ def build_app():
                     label="Model name",
                     placeholder="mt1d-resnet-5layer-v1",
                 )
-                zoo_pred_btn = gr.Button(
-                    "Download + Predict", variant="primary"
-                )
+                zoo_pred_btn = gr.Button("Download + Predict", variant="primary")
                 zoo_txt = gr.Markdown()
-                zoo_fig = gr.Image(
-                    label="Predicted model section", type="filepath"
-                )
+                zoo_fig = gr.Image(label="Predicted model section", type="filepath")
 
                 zoo_list_btn.click(
                     fn=_zoo_list_run,
@@ -994,12 +959,8 @@ def build_app():
 
             # ── Tab 12: Report ─────────────────────────────────────────────────
             with gr.TabItem("📄 Report"):
-                gr.Markdown(
-                    "Assemble all results into a markdown / HTML report."
-                )
-                rep_title = gr.Textbox(
-                    label="Report title", value="MT Survey Report"
-                )
+                gr.Markdown("Assemble all results into a markdown / HTML report.")
+                rep_title = gr.Textbox(label="Report title", value="MT Survey Report")
                 rep_btn = gr.Button("Generate report", variant="primary")
                 rep_txt = gr.Markdown()
                 rep_file = gr.File(label="Download report (.md)")

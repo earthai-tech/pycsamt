@@ -98,9 +98,7 @@ def _guess_kind(line: str) -> str | None:
     return m.group("kind").upper()
 
 
-def _has_at_least_one_row(
-    lines: list[str], count_idx: int, kind: str
-) -> bool:
+def _has_at_least_one_row(lines: list[str], count_idx: int, kind: str) -> bool:
     n = len(lines)
     # next non-blank after count is the first row
     i = _first_nonblank(lines, count_idx + 1)

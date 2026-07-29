@@ -14,12 +14,8 @@ FREQ = np.logspace(4, 0, 10)
 
 def _session():
     session = FieldSession("SURV1", method="amt")
-    session.add_station(
-        StationConfig("S01", lat=6.5, lon=3.4, elevation=120.0)
-    )
-    session.add_station(
-        StationConfig("S02", lat=6.6, lon=3.5, elevation=130.0)
-    )
+    session.add_station(StationConfig("S01", lat=6.5, lon=3.4, elevation=120.0))
+    session.add_station(StationConfig("S02", lat=6.6, lon=3.5, elevation=130.0))
     return session
 
 

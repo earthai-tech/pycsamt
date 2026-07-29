@@ -52,9 +52,7 @@ class StationPanel(QWidget):
     def set_dataframe(self, df: pd.DataFrame) -> None:
         self._table.set_dataframe(df)
         n = len(df)
-        self._summary_lbl.setText(
-            f"{n} station{'s' if n != 1 else ''} loaded"
-        )
+        self._summary_lbl.setText(f"{n} station{'s' if n != 1 else ''} loaded")
 
     def clear(self) -> None:
         self._table.clear()

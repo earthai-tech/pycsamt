@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Home-page card image: "Pipelines, agents & apps".
 
 Left panel: a real :class:`pycsamt.pipeline.Pipeline` run (the same 5-step
@@ -15,6 +14,7 @@ Output: docs/source/_static/images/home/card-pipeline.png
 Usage (any cwd):
     python scripts/home_card_pipeline.py
 """
+
 import os
 import sys
 from pathlib import Path
@@ -90,9 +90,7 @@ def agent_preview():
             "load",
             MTLoaderAgent(),
             input_fn=lambda r: {
-                "path": (r["context"].get("config") or {}).get(
-                    "data_path", ""
-                )
+                "path": (r["context"].get("config") or {}).get("data_path", "")
             },
             description="load the survey",
         )
@@ -143,8 +141,7 @@ def main():
     ax_l.set_xlim(0, times.max() * 1.45)
     ax_l.set_xlabel("elapsed (s)", fontsize=8.5)
     ax_l.set_title(
-        f"Pipeline.run — {len(steps)} steps · "
-        f"{result.elapsed_sec:.1f}s",
+        f"Pipeline.run — {len(steps)} steps · {result.elapsed_sec:.1f}s",
         pad=6,
     )
     ax_l.grid(True, axis="x", ls=":", lw=0.4, color="#c8d0dc", alpha=0.7)

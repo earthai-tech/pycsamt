@@ -144,9 +144,7 @@ class ElevationAPIConfig:
         "usgs_ned": {
             "url": "https://nationalmap.gov/epqs/pqs.php",
             "params_format": "individual",
-            "response_key": (
-                "USGS_Elevation_Point_Query_Service.Elevation_Query"
-            ),
+            "response_key": ("USGS_Elevation_Point_Query_Service.Elevation_Query"),
         },
     }
 

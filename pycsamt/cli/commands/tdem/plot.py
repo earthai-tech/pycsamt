@@ -158,9 +158,7 @@ def plot(
         matplotlib.use("Agg")
     import matplotlib.pyplot as plt  # noqa: PLC0415
 
-    stems_list = (
-        [s.strip() for s in stems.split(",") if s.strip()] if stems else None
-    )
+    stems_list = [s.strip() for s in stems.split(",") if s.strip()] if stems else None
 
     survey = _get_survey(survey_dir, pattern=pattern, verbose=verbose)
 
@@ -202,29 +200,19 @@ def plot(
 
         elif kind == "section":
             avg_data = (
-                {
-                    s: survey.avg_files[s]
-                    for s in stems_list
-                    if s in survey.avg_files
-                }
+                {s: survey.avg_files[s] for s in stems_list if s in survey.avg_files}
                 if stems_list
                 else survey.avg_files
             )
             if not avg_data:
-                click.echo(
-                    "No AVG data available for section plot.", err=True
-                )
+                click.echo("No AVG data available for section plot.", err=True)
                 sys.exit(1)
             first_avg = next(iter(avg_data.values()))
             ax_or_axes = _tdem_plot.plot_temavg_section(first_avg)
 
         elif kind == "z-section":
             z_data = (
-                {
-                    s: survey.z_files[s]
-                    for s in stems_list
-                    if s in survey.z_files
-                }
+                {s: survey.z_files[s] for s in stems_list if s in survey.z_files}
                 if stems_list
                 else survey.z_files
             )
@@ -246,11 +234,7 @@ def plot(
 
         elif kind == "gate-profile":
             avg_data = (
-                {
-                    s: survey.avg_files[s]
-                    for s in stems_list
-                    if s in survey.avg_files
-                }
+                {s: survey.avg_files[s] for s in stems_list if s in survey.avg_files}
                 if stems_list
                 else survey.avg_files
             )
@@ -268,20 +252,12 @@ def plot(
 
         elif kind == "dashboard":
             avg_data = (
-                {
-                    s: survey.avg_files[s]
-                    for s in stems_list
-                    if s in survey.avg_files
-                }
+                {s: survey.avg_files[s] for s in stems_list if s in survey.avg_files}
                 if stems_list
                 else survey.avg_files
             )
             z_data = (
-                {
-                    s: survey.z_files[s]
-                    for s in stems_list
-                    if s in survey.z_files
-                }
+                {s: survey.z_files[s] for s in stems_list if s in survey.z_files}
                 if stems_list
                 else survey.z_files
             )
@@ -290,9 +266,7 @@ def plot(
             )
             first_avg = next(iter(avg_data.values()), None)
             first_z = next(iter(z_data.values()), None)
-            ax_or_axes = _tdem_plot.plot_tem_dashboard(
-                first_avg, first_z, soundings
-            )
+            ax_or_axes = _tdem_plot.plot_tem_dashboard(first_avg, first_z, soundings)
 
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Plot failed ({kind}): {exc}", err=True)

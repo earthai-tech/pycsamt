@@ -155,8 +155,6 @@ def steps(
     elif output_format == "csv":
         click.echo("code,name,label,category,returns_sites")
         for s in list_steps(category):
-            click.echo(
-                f"{s.code},{s.name},{s.label},{s.category},{s.returns_sites}"
-            )
+            click.echo(f"{s.code},{s.name},{s.label},{s.category},{s.returns_sites}")
     else:
         click.echo(Pipeline.catalogue(category))

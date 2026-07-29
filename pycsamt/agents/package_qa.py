@@ -225,8 +225,7 @@ def _workflow_lines() -> list[str]:
     return [
         ln
         for ln in PACKAGE_CONTEXT.split("\n")
-        if ln.strip()
-        and any(ln.strip().startswith(k) for k in _WORKFLOW_PREFIXES)
+        if ln.strip() and any(ln.strip().startswith(k) for k in _WORKFLOW_PREFIXES)
     ]
 
 
@@ -244,9 +243,8 @@ def _offline_answer(question: str) -> dict:
     # workflow-listing shortcut
     if kw & _WORKFLOW_TRIGGERS:
         lines = _workflow_lines()
-        answer = (
-            "pycsamt v2 supports the following"
-            " workflows:\n\n" + "\n".join("  " + ln for ln in lines)
+        answer = "pycsamt v2 supports the following" " workflows:\n\n" + "\n".join(
+            "  " + ln for ln in lines
         )
         return {
             "answer": answer,
@@ -330,11 +328,7 @@ class PackageQAAgent(BaseAgent):
     Offline (no LLM)::
 
         agent = PackageQAAgent()
-        r = agent.execute({
-            "question": (
-                "What does StaticShiftAgent do?"
-            )
-        })
+        r = agent.execute({"question": ("What does StaticShiftAgent do?")})
         print(r["answer"])
 
     Online (Claude)::
@@ -343,11 +337,7 @@ class PackageQAAgent(BaseAgent):
             api_key="sk-ant-...",
             llm_provider="claude",
         )
-        r = agent.execute({
-            "question": (
-                "How do I access impedance Z?"
-            )
-        })
+        r = agent.execute({"question": ("How do I access impedance Z?")})
         print(r["answer"])
     """
 

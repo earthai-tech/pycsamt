@@ -232,9 +232,7 @@ ax.set_title("Transport capability matrix (all support offline dry-run)")
 
 security = SecurityConfig(
     tls=TLSConfig(enabled=True),
-    credential=Credential(
-        scheme=AuthScheme.BEARER, token="tok-SECRET-abc123"
-    ),
+    credential=Credential(scheme=AuthScheme.BEARER, token="tok-SECRET-abc123"),
     require_tls=True,
 )
 print("repr (safe):     ", repr(security.credential))

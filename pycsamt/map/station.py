@@ -394,9 +394,7 @@ def _profile_station_map(df, opts, colors):
                 showscale=True,
                 cmin=_cmin(opts),
                 cmax=_cmax(opts),
-                colorbar=dict(
-                    title=dict(text=_color_title(df, opts), side="right")
-                ),
+                colorbar=dict(title=dict(text=_color_title(df, opts), side="right")),
             ),
         )
     )
@@ -490,9 +488,7 @@ def _add_density_layer(fig, group, opts) -> None:
 def _marker_sizes(ids, opts) -> list[int]:
     selected = str(opts.selected_id) if opts.selected_id else None
     return [
-        int(opts.marker_size * 1.8)
-        if selected == str(sid)
-        else int(opts.marker_size)
+        int(opts.marker_size * 1.8) if selected == str(sid) else int(opts.marker_size)
         for sid in ids
     ]
 

@@ -17,6 +17,7 @@ import pytest
 # Root of the example data directory
 # ---------------------------------------------------------------------------
 
+
 def _find_repo_root() -> Path:
     """Find the checkout root that owns the bundled Mare2DEM examples."""
     here = Path(__file__).resolve()

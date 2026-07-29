@@ -111,9 +111,7 @@ class TestPlotLcurve:
     def test_multiple_curves(self):
         m1, r1, l1 = _ldata(15)
         m2, r2, l2 = _ldata(20)
-        ax = plot_lcurve(
-            [m1, m2], [r1, r2], [l1, l2], labels=["run-A", "run-B"]
-        )
+        ax = plot_lcurve([m1, m2], [r1, r2], [l1, l2], labels=["run-A", "run-B"])
         plt.close("all")
         assert ax is not None
 

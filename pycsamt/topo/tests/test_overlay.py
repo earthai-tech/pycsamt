@@ -328,9 +328,7 @@ class TestAddStationLabels:
 
     def test_no_labels_for_empty_names(self):
         _, ax = _make_section_axes()
-        add_station_labels(
-            ax, np.array([]), np.array([]), [], color="#ffffff"
-        )
+        add_station_labels(ax, np.array([]), np.array([]), [], color="#ffffff")
         assert len(ax.texts) == 0
 
     def test_label_positions(self):
@@ -403,7 +401,9 @@ class TestMarkerStyleOverride:
         scatter = ax_strip.collections[-1]
         assert tuple(scatter.get_facecolor()[0]) == (1.0, 1.0, 1.0, 1.0)
 
-    def test_draw_topo_strip_light_mode_background_is_transparent_by_default(self):
+    def test_draw_topo_strip_light_mode_background_is_transparent_by_default(
+        self,
+    ):
         chain, elev, names = _simple_inputs()
         fig, ax = _make_ps_axes()
         ax_strip = draw_topo_strip(fig, ax, chain, elev, names, dark=False)

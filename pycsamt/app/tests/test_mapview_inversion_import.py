@@ -43,9 +43,7 @@ class TestDecodeToTempdir:
             _decode_to_tempdir,
         )
 
-        tmpdir = _decode_to_tempdir(
-            ["sub/dir/c.dat"], [_b64_payload("nested")]
-        )
+        tmpdir = _decode_to_tempdir(["sub/dir/c.dat"], [_b64_payload("nested")])
         try:
             assert os.path.isfile(os.path.join(tmpdir, "c.dat"))
             assert not os.path.isdir(os.path.join(tmpdir, "sub"))

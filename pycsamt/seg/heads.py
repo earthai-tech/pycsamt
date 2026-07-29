@@ -126,9 +126,7 @@ def _slice_section(
 
     if i_stop is None:
         i_stop = i_start + 1
-        while i_stop < len(lines) and not lines[i_stop].lstrip().startswith(
-            ">"
-        ):
+        while i_stop < len(lines) and not lines[i_stop].lstrip().startswith(">"):
             i_stop += 1
 
     payload = [ln.strip() for ln in lines[i_start + 1 : i_stop]]
@@ -397,9 +395,7 @@ class Head(EDIComponentBase):
         # Validate EDI (deep check)
         IsEdi._assert_edi(edi_path, deep=True)
 
-        lines = edi_path.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = edi_path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
         payload, _, _ = _slice_section(
             lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"]
         )
@@ -472,9 +468,7 @@ class Head(EDIComponentBase):
                 if key in self._quoted_keys:
                     out_val = f'"{val}"'
                 else:
-                    out_val = (
-                        val.upper() if key not in {"lat", "long"} else val
-                    )
+                    out_val = val.upper() if key not in {"lat", "long"} else val
                 cleaned.append(f"  {key.upper()}={out_val}\n")
             lines.extend(cleaned)
             lines.append("\n")
@@ -593,9 +587,7 @@ class Head(EDIComponentBase):
         return float(ch)
 
     def __repr__(self) -> str:  # compact identity for debugging
-        return (
-            f"<Head dataid={self.dataid!r} lat={self.lat} long={self.long}>"
-        )
+        return f"<Head dataid={self.dataid!r} lat={self.lat} long={self.long}>"
 
 
 class Info(EDIComponentBase):
@@ -719,15 +711,11 @@ class Info(EDIComponentBase):
         super().__init__(verbose=verbose, logger=logger)
 
         # Raw KV lines we could parse (normalized later)
-        self.ediinfo: list[str] | None = (
-            list(edi_info_list) if edi_info_list else None
-        )
+        self.ediinfo: list[str] | None = list(edi_info_list) if edi_info_list else None
         # Free-text payload (lines that are *not* KEY=VALUE)
         self.info_text: list[str] = list(info_text) if info_text else []
 
-        self.filter: str | None = (
-            None  # used in some EMAP/processing contexts
-        )
+        self.filter: str | None = None  # used in some EMAP/processing contexts
         self.maxinfo: int = 999
 
         # nested containers
@@ -758,9 +746,7 @@ class Info(EDIComponentBase):
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         # Slice INFO payload until next section (>=DEFINEMEAS, >=MTSECT, or any '>' tag)
         start, stop = None, None
@@ -772,9 +758,7 @@ class Info(EDIComponentBase):
             raise EdIDataError("INFO block not found in EDI file.")
 
         for j in range(start + 1, len(lines)):
-            if _is_tag(lines[j], ">=DEFINEMEAS") or _is_tag(
-                lines[j], ">=MTSECT"
-            ):
+            if _is_tag(lines[j], ">=DEFINEMEAS") or _is_tag(lines[j], ">=MTSECT"):
                 stop = j
                 break
             if lines[j].lstrip().startswith(">"):
@@ -782,9 +766,7 @@ class Info(EDIComponentBase):
                 break
         if stop is None:
             stop = start + 1
-            while stop < len(lines) and not lines[stop].lstrip().startswith(
-                ">"
-            ):
+            while stop < len(lines) and not lines[stop].lstrip().startswith(">"):
                 stop += 1
 
         payload = lines[start + 1 : stop]
@@ -918,9 +900,7 @@ class Info(EDIComponentBase):
             if key in {"project", "survey", "creationdate", "sitename"}:
                 val = getattr(self.Source, key, None)
             elif key == "processingsoftware":
-                val = getattr(
-                    self.Processing.ProcessingSoftware, "name", None
-                )
+                val = getattr(self.Processing.ProcessingSoftware, "name", None)
             elif key in {
                 "processedby",
                 "processingtag",
@@ -1082,9 +1062,7 @@ class Heads(EDIComponentBase):
             raise FileHandlingError("No EDI path provided.")
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         # HEAD
         head_payload, _, stop_h = _slice_section(
@@ -1190,6 +1168,7 @@ class HeadMixin:
         class Host(HeadMixin):
             pass
 
+
         h = Host.from_file("E01.edi")
         print(h.dataid)
 
@@ -1213,9 +1192,7 @@ class HeadMixin:
             self.head = Head()
         return self.head.read(edi_header_list)
 
-    def write(
-        self, head_list_infos: Sequence[str] | None = None
-    ) -> list[str]:
+    def write(self, head_list_infos: Sequence[str] | None = None) -> list[str]:
         """Serialize the host's `head` as >HEAD lines."""
         if not hasattr(self, "head") or self.head is None:
             self.head = Head()
@@ -1252,6 +1229,7 @@ class InfoMixin:
 
         class Host(InfoMixin):
             pass
+
 
         info = Host.from_file("15125A_spe.edi")
         len(info.info_text)  # preserved text lines

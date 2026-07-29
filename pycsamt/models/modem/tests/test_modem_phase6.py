@@ -8,26 +8,13 @@ matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
 
 _EX2D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "2D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
 )
 _EX3D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "3D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "3D_MT" / "BLOCK2"
 )
 _BUNDLED_3D = (
-    Path(__file__).parents[4]
-    / "data"
-    / "modem"
-    / "willy_27freq_watex_line02_sample"
+    Path(__file__).parents[4] / "data" / "modem" / "willy_27freq_watex_line02_sample"
 )
 
 _RESULT_3D = _BUNDLED_3D if _BUNDLED_3D.exists() else _EX3D
@@ -111,9 +98,7 @@ def test_plot_model2d_dynamic_section(result_2d):
 def test_plot_model2d_initial(result_2d):
     from pycsamt.models.modem.plot import PlotModel2D
 
-    fig = PlotModel2D(
-        result=result_2d, which="initial", depth_max=5000.0
-    ).plot()
+    fig = PlotModel2D(result=result_2d, which="initial", depth_max=5000.0).plot()
     assert fig is not None
     matplotlib.pyplot.close(fig)
 
@@ -186,11 +171,7 @@ def test_plot_pseudo_returns_figure(result_3d):
     from pycsamt.models.modem.plot import PlotPseudo
 
     # discover available component from first block
-    comp = (
-        result_3d.data_obs.blocks[0]["rows"][0][5]
-        if result_3d.data_obs
-        else "TE"
-    )
+    comp = result_3d.data_obs.blocks[0]["rows"][0][5] if result_3d.data_obs else "TE"
     fig = PlotPseudo(result=result_3d, component=comp).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
     matplotlib.pyplot.close(fig)

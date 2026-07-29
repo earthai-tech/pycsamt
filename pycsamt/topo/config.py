@@ -16,11 +16,13 @@ Examples
 Enable topography globally (applies to every 2-D plot until reset)::
 
     from pycsamt.topo import configure_topo
+
     configure_topo(enabled=True)
 
 Temporarily override inside a ``with`` block::
 
     from pycsamt.topo import PYCSAMT_TOPO
+
     with PYCSAMT_TOPO.context(enabled=True, exaggeration=3.0):
         fig = section.plot()
 """

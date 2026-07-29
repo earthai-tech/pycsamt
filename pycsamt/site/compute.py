@@ -94,8 +94,9 @@ def strike_estimate(
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
-    >>> edf = ed.fill_missing(edf, how="zero",
-    ...                       components=("Z",), inplace=False)
+    >>> edf = ed.fill_missing(
+    ...     edf, how="zero", components=("Z",), inplace=False
+    ... )
     >>> ang = cmp.strike_estimate(edf, method="swift")  # doctest: +SKIP
     >>> 0.0 <= ang < 180.0  # doctest: +SKIP
     True
@@ -223,8 +224,9 @@ def res_at_freq(
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
-    >>> edf = ed.fill_missing(edf, how="zero",
-    ...                       components=("Z",), inplace=False)
+    >>> edf = ed.fill_missing(
+    ...     edf, how="zero", components=("Z",), inplace=False
+    ... )
     >>> out = cmp.res_at_freq(edf, 150.0, how="nearest")
     ... # doctest: +SKIP
     >>> set(out.keys()) == {"res_xy", "res_yx", "f_used"}
@@ -365,8 +367,9 @@ def phase_slope(
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
-    >>> edf = ed.fill_missing(edf, how="zero",
-    ...                       components=("Z",), inplace=False)
+    >>> edf = ed.fill_missing(
+    ...     edf, how="zero", components=("Z",), inplace=False
+    ... )
     >>> out = cmp.phase_slope(edf, band=(1.0, 1000.0))
     ... # doctest: +SKIP
     >>> set(out.keys()) == {"slope_xy", "slope_yx"}
@@ -504,8 +507,9 @@ def tipper_magnitude(
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site import compute as cmp, edit as ed
     >>> edf = EDIFile("S01.edi")  # doctest: +SKIP
-    >>> edf = ed.fill_missing(edf, how="zero",
-    ...                       components=("Tip",), inplace=False)
+    >>> edf = ed.fill_missing(
+    ...     edf, how="zero", components=("Tip",), inplace=False
+    ... )
     >>> s = cmp.tipper_magnitude(edf, per_freq=False)
     ... # doctest: +SKIP
     >>> set(s.keys()) == {"mean", "median", "max"}

@@ -114,9 +114,7 @@ def _parse_mesh(path: Path) -> dict:
                 pass
 
     x_widths = np.array(float_tokens[:n_xcells], dtype=float)
-    z_widths = np.array(
-        float_tokens[n_xcells : n_xcells + n_zcells], dtype=float
-    )
+    z_widths = np.array(float_tokens[n_xcells : n_xcells + n_zcells], dtype=float)
 
     x_nodes = np.concatenate([[0.0], np.cumsum(x_widths)])
     z_nodes = np.concatenate([[0.0], np.cumsum(z_widths)])
@@ -330,9 +328,7 @@ class OccamMesh(OccamBase):
 
         offsets = np.sort(np.asarray(data.offsets, dtype=float))
         if offsets.size == 0:
-            raise ValueError(
-                "OccamMesh.from_data: data has no station offsets"
-            )
+            raise ValueError("OccamMesh.from_data: data has no station offsets")
 
         cell_h = cfg.cell_size_horizontal
         n_pad = 7  # fixed: matches boundary code 7 in OccamModel.from_mesh
@@ -350,18 +346,14 @@ class OccamMesh(OccamBase):
 
         # Ensure even count so that (n_xcells - 14) is even for code-2 interior cols
         if len(station_widths) % 2 != 0:
-            station_widths.append(
-                station_widths[-1] if station_widths else cell_h
-            )
+            station_widths.append(station_widths[-1] if station_widths else cell_h)
 
         # ---- horizontal padding (7 cells each side, geometrically expanding)
         pad = [cell_h * float(2 ** (k + 1)) for k in range(n_pad)]
         left_pad = list(reversed(pad))  # widest cell at outer edge
         right_pad = pad
 
-        x_widths = np.array(
-            left_pad + station_widths + right_pad, dtype=float
-        )
+        x_widths = np.array(left_pad + station_widths + right_pad, dtype=float)
 
         # ---- vertical cells ----------------------------------------------
         n_air = cfg.n_airlayers
@@ -518,9 +510,7 @@ class OccamMesh(OccamBase):
         def _write_floats(vals: np.ndarray, per_row: int = 8) -> None:
             for i in range(0, len(vals), per_row):
                 chunk = vals[i : i + per_row]
-                lines.append(
-                    "  " + "  ".join(f"{v:10.4f}" for v in chunk) + "\n"
-                )
+                lines.append("  " + "  ".join(f"{v:10.4f}" for v in chunk) + "\n")
 
         _write_floats(self.x_widths)
         lines.append("\n")

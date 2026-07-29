@@ -145,9 +145,7 @@ def test_open_files_rejected_dialog_does_nothing(window, monkeypatch):
 
 
 def test_open_files_accepted_empty_paths_does_nothing(window, monkeypatch):
-    fake = _make_dialog(
-        exec_return=_DialogCode.Accepted, selected_paths=[]
-    )
+    fake = _make_dialog(exec_return=_DialogCode.Accepted, selected_paths=[])
     monkeypatch.setattr(
         "pycsamt.app.desktop.dialogs.load_data_dlg.LoadDataDialog", fake
     )
@@ -261,9 +259,7 @@ def test_open_agent_master_handles_exception(window, monkeypatch):
     def _raise(open_browser=True):
         raise RuntimeError("no port")
 
-    monkeypatch.setattr(
-        "pycsamt.app.desktop.main_window.launch_agent_master", _raise
-    )
+    monkeypatch.setattr("pycsamt.app.desktop.main_window.launch_agent_master", _raise)
     window._open_agent_master()
     assert "Could not launch Agent Master" in window._log_panel._text.toPlainText()
 
@@ -368,9 +364,7 @@ def test_open_preferences_rejected_does_nothing(window, monkeypatch):
 
 
 def test_open_api_config(window, monkeypatch):
-    fake = _make_dialog(
-        exec_return=_DialogCode.Accepted, settings_changed="signal"
-    )
+    fake = _make_dialog(exec_return=_DialogCode.Accepted, settings_changed="signal")
     monkeypatch.setattr(
         "pycsamt.app.desktop.dialogs.settings_dialog.APIConfigDialog", fake
     )
@@ -424,7 +418,7 @@ def test_save_settings_profile(window, monkeypatch, tmp_path):
     )
     window._save_settings_profile()
     assert target.exists()
-    assert f"Settings profile saved" in window._log_panel._text.toPlainText()
+    assert "Settings profile saved" in window._log_panel._text.toPlainText()
 
 
 def test_save_settings_profile_cancelled(window, monkeypatch):
@@ -612,9 +606,7 @@ def test_edi_validator_applies_modified_sites(window, monkeypatch, loaded_data):
         "pycsamt.app.desktop.tools.validator_tool.EDIValidatorDialog", fake
     )
     window._open_edi_validator()
-    assert (
-        "EDI Validator" in window._log_panel._text.toPlainText()
-    )
+    assert "EDI Validator" in window._log_panel._text.toPlainText()
 
 
 def test_edi_validator_no_modification_noop(window, monkeypatch, loaded_data):
@@ -747,9 +739,7 @@ def test_open_github_opens_url(window, monkeypatch):
 
 def test_open_about(window, monkeypatch):
     fake = _make_dialog()
-    monkeypatch.setattr(
-        "pycsamt.app.desktop.dialogs.about_dialog.AboutDialog", fake
-    )
+    monkeypatch.setattr("pycsamt.app.desktop.dialogs.about_dialog.AboutDialog", fake)
     window._open_about()
     assert fake.captured
 
@@ -773,9 +763,7 @@ def test_rebuild_recent_menu_triggers_load(window, monkeypatch):
     assert [a.text() for a in actions] == ["/data/A.edi", "/data/B.edi"]
 
     called = []
-    monkeypatch.setattr(
-        window, "_start_loading", lambda paths: called.append(paths)
-    )
+    monkeypatch.setattr(window, "_start_loading", lambda paths: called.append(paths))
     actions[0].trigger()
     assert called == [["/data/A.edi"]]
 
@@ -910,18 +898,14 @@ def test_on_data_loaded_panel_window_failure_does_not_block_others(
     """One panel-window setter raising must not stop the others from
     being fed, nor block the final status-bar update."""
     sites, df = loaded_data
-    window._loader = SimpleNamespace(
-        data_controller=SimpleNamespace(dataframe=df)
-    )
+    window._loader = SimpleNamespace(data_controller=SimpleNamespace(dataframe=df))
 
     def _boom(_sites):
         raise RuntimeError("panel boom")
 
     monkeypatch.setattr(window._profile_win, "set_sites", _boom)
     calls = []
-    monkeypatch.setattr(
-        window._map_win, "set_sites", lambda s: calls.append(s)
-    )
+    monkeypatch.setattr(window._map_win, "set_sites", lambda s: calls.append(s))
     # set_sites() on the controller is what actually fires _on_data_loaded
     # (wired via ctrl.on_data_loaded in __init__); calling the handler
     # directly would leave ctrl.n_stations at 0 for the final assertion.
@@ -939,9 +923,7 @@ def test_apply_theme_panel_window_failure_swallowed(window, monkeypatch):
     assert window._session.theme == "dark"
 
 
-def test_on_station_selected_propagates_to_visible_windows(
-    window, loaded_data
-):
+def test_on_station_selected_propagates_to_visible_windows(window, loaded_data):
     sites, df = loaded_data
     window._controller.sites = sites
     station_id = df["ID"].iloc[0]
@@ -960,9 +942,7 @@ def test_on_settings_changed_refreshes_visible_profile_and_qc_windows(
     monkeypatch.setattr(
         window._profile_win, "_on_refresh", lambda: profile_calls.append(1)
     )
-    monkeypatch.setattr(
-        window._qc_win, "_on_run", lambda: qc_calls.append(1)
-    )
+    monkeypatch.setattr(window._qc_win, "_on_run", lambda: qc_calls.append(1))
     window._on_settings_changed(["station", "section"])
     assert profile_calls == [1]
     assert qc_calls == [1]
@@ -971,9 +951,7 @@ def test_on_settings_changed_refreshes_visible_profile_and_qc_windows(
 def test_on_settings_changed_swallows_refresh_exceptions(window):
     window._profile_win.show()
     window._qc_win.show()
-    window._profile_win._on_refresh = mock.Mock(
-        side_effect=RuntimeError("boom")
-    )
+    window._profile_win._on_refresh = mock.Mock(side_effect=RuntimeError("boom"))
     window._qc_win._on_run = mock.Mock(side_effect=RuntimeError("boom"))
     window._on_settings_changed(["station", "section"])  # must not raise
 

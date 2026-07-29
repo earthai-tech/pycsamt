@@ -114,9 +114,7 @@ class ModEMBackend(BaseInversionBackend):
         try:
             from ...models import modem
         except ImportError as exc:
-            raise ImportError(
-                "ModEM backend requires pycsamt.models.modem."
-            ) from exc
+            raise ImportError("ModEM backend requires pycsamt.models.modem.") from exc
 
         modem_cfg = _modem_config(modem, cfg)
         builder_cls = getattr(modem, "InputBuilder", None)
@@ -124,9 +122,7 @@ class ModEMBackend(BaseInversionBackend):
             try:
                 builder = builder_cls(config=modem_cfg)
                 build_options = _build_options(cfg.backend_options)
-                files = builder.build(
-                    source, workdir=workdir, **build_options
-                )
+                files = builder.build(source, workdir=workdir, **build_options)
                 native = builder
                 file_map = {key: str(value) for key, value in files.items()}
                 status = "prepared"
@@ -134,9 +130,7 @@ class ModEMBackend(BaseInversionBackend):
                 warnings.append(f"ModEM preparation failed: {exc}")
                 status = "needs_review"
         else:
-            file_map = _configured_files(
-                workdir, modem_cfg, cfg.backend_options
-            )
+            file_map = _configured_files(workdir, modem_cfg, cfg.backend_options)
             warnings.append(
                 "ModEM InputBuilder is not available; created workdir only."
             )
@@ -152,8 +146,7 @@ class ModEMBackend(BaseInversionBackend):
             )
             if missing:
                 warnings.append(
-                    "ModEM runner not ready; missing files: "
-                    + ", ".join(missing)
+                    "ModEM runner not ready; missing files: " + ", ".join(missing)
                 )
             else:
                 command = runner.command(
@@ -175,13 +168,9 @@ class ModEMBackend(BaseInversionBackend):
                         loaded = runner.run(
                             _relative_to_workdir(file_map["model"], workdir),
                             _relative_to_workdir(file_map["data"], workdir),
-                            _relative_to_workdir(
-                                file_map["control"], workdir
-                            ),
+                            _relative_to_workdir(file_map["control"], workdir),
                             covariance=(
-                                _relative_to_workdir(
-                                    file_map["covariance"], workdir
-                                )
+                                _relative_to_workdir(file_map["covariance"], workdir)
                                 if "covariance" in file_map
                                 else None
                             ),
@@ -190,22 +179,16 @@ class ModEMBackend(BaseInversionBackend):
                             n_procs=runner_options.get("n_procs", None),
                             extra_args=runner_options.get("extra_args", None),
                             timeout=runner_options.get("timeout", None),
-                            load_result=bool(
-                                runner_options.get("load_result", True)
-                            ),
+                            load_result=bool(runner_options.get("load_result", True)),
                         )
                         native = loaded or runner
                         executed = True
-                        status = (
-                            "loaded" if loaded is not None else "executed"
-                        )
+                        status = "loaded" if loaded is not None else "executed"
                     except Exception as exc:
                         warnings.append(f"ModEM runner failed: {exc}")
                         status = "needs_review"
         else:
-            warnings.append(
-                "ModEM ModEmRunner is not available; execution disabled."
-            )
+            warnings.append("ModEM ModEmRunner is not available; execution disabled.")
 
         result_cls = getattr(modem, "InversionResult", None)
         rms = float("nan")
@@ -313,8 +296,7 @@ def _configured_files(
     for role, name in defaults.items():
         raw.setdefault(role, name)
     return {
-        role: str(_resolve_workdir_path(path, workdir))
-        for role, path in raw.items()
+        role: str(_resolve_workdir_path(path, workdir)) for role, path in raw.items()
     }
 
 

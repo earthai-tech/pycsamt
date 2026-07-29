@@ -349,9 +349,7 @@ def _ctx_depthmap() -> html.Div:
                     dbc.Col(
                         [
                             _lbl("Lon °E"),
-                            _num(
-                                IDs.INVR_DM_LON, None, placeholder="119.125"
-                            ),
+                            _num(IDs.INVR_DM_LON, None, placeholder="119.125"),
                         ]
                     ),
                 ],
@@ -532,9 +530,7 @@ def _ctx_respgrid() -> html.Div:
     return html.Div(
         [
             _clabel("Component"),
-            dbc.Select(
-                id="invr-rg-comp", options=_COMP_OPTS, value="ZXY", size="sm"
-            ),
+            dbc.Select(id="invr-rg-comp", options=_COMP_OPTS, value="ZXY", size="sm"),
         ],
         id="invr-ctx-respgrid",
         style={"display": "none"},
@@ -602,9 +598,7 @@ def _acc_display() -> list:
         dbc.Row(
             [
                 dbc.Col([_lbl("min"), _num(IDs.INVR_RHO_MIN, 1, min=0.001)]),
-                dbc.Col(
-                    [_lbl("max"), _num(IDs.INVR_RHO_MAX, 1000, min=0.01)]
-                ),
+                dbc.Col([_lbl("max"), _num(IDs.INVR_RHO_MAX, 1000, min=0.01)]),
             ],
             className="g-1",
         ),
@@ -820,9 +814,7 @@ def _sidebar() -> html.Div:
                 *_acc_solver(),
                 start_open=True,
             ),
-            _acc_item(
-                "invr-acc-display", "bi-sliders", "Display", *_acc_display()
-            ),
+            _acc_item("invr-acc-display", "bi-sliders", "Display", *_acc_display()),
             # Solver-specific extras — hidden/shown by clientside callback
             html.Div(
                 _acc_item(
@@ -860,9 +852,7 @@ def _sidebar() -> html.Div:
                 "View Controls",
                 html.Div(_acc_view_controls(), id=IDs.INVR_CTX_PANEL),
             ),
-            _acc_item(
-                "invr-acc-sta", "bi-pin-map", "Stations", *_acc_stations()
-            ),
+            _acc_item("invr-acc-sta", "bi-pin-map", "Stations", *_acc_stations()),
         ],
         id="invr-accordion",
         always_open=True,
@@ -909,9 +899,7 @@ def _sidebar() -> html.Div:
 # ── Main view area ────────────────────────────────────────────────────────────
 
 
-def _tab_button(
-    slug: str, label: str, icon: str, active: bool = False
-) -> html.Button:
+def _tab_button(slug: str, label: str, icon: str, active: bool = False) -> html.Button:
     cls = f"prof-tab-btn{' active' if active else ''}"
     return html.Button(
         [html.I(className=f"bi {icon} me-1"), label],
@@ -923,10 +911,7 @@ def _tab_button(
 
 def _view_area() -> html.Div:
     tab_bar = html.Div(
-        [
-            _tab_button(s, l, i, active=(s == _DEFAULT_TAB))
-            for s, l, i, _ in _ALL_TABS
-        ],
+        [_tab_button(s, l, i, active=(s == _DEFAULT_TAB)) for s, l, i, _ in _ALL_TABS],
         id=IDs.INVR_TAB_BAR,
         className="prof-tab-bar",
     )

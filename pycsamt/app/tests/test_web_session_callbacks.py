@@ -192,9 +192,7 @@ def test_session_upload_restore_success(web_app):
     contents = f"data:application/json;base64,{encoded}"
 
     result = fn(contents, "session.json")
-    store_data, active_lines, corr_store, elev_raw, elev_corr, feedback = (
-        result
-    )
+    store_data, active_lines, corr_store, elev_raw, elev_corr, feedback = result
     assert store_data == snap["store_data"]
     assert active_lines == ["L1"]
     assert feedback is not None
@@ -202,9 +200,9 @@ def test_session_upload_restore_success(web_app):
 
 def test_session_upload_restore_handles_bad_payload(web_app):
     fn = _upload_restore_fn(web_app)
-    contents = "data:application/json;base64," + base64.b64encode(
-        b"not valid json"
-    ).decode()
+    contents = (
+        "data:application/json;base64," + base64.b64encode(b"not valid json").decode()
+    )
     result = fn(contents, "broken.json")
     from dash import no_update
 
@@ -223,8 +221,7 @@ def _browser_restore_fn(web_app):
         and "tool-elev-raw-store" in k
         and "session-feedback" in k
         and web_app.callback_map[k]["inputs"]
-        and web_app.callback_map[k]["inputs"][0]["id"]
-        == IDs.BTN_SESSION_RESTORE
+        and web_app.callback_map[k]["inputs"][0]["id"] == IDs.BTN_SESSION_RESTORE
     ]
     assert len(matches) == 1, matches
     return _unwrap(web_app.callback_map[matches[0]])
@@ -270,9 +267,11 @@ def test_session_browser_restore_success(web_app):
 
 
 def _clear_fn(web_app):
-    matches = [k for k in web_app.callback_map if "btn-session-clear" in str(
-        web_app.callback_map[k].get("inputs")
-    )]
+    matches = [
+        k
+        for k in web_app.callback_map
+        if "btn-session-clear" in str(web_app.callback_map[k].get("inputs"))
+    ]
     assert len(matches) == 1, matches
     return _unwrap(web_app.callback_map[matches[0]])
 

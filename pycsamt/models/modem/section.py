@@ -60,11 +60,7 @@ def _nearest_index(centers: np.ndarray, value: float) -> int:
         return 0
     if idx >= centers.size:
         return centers.size - 1
-    return (
-        idx
-        if abs(centers[idx] - value) < abs(centers[idx - 1] - value)
-        else idx - 1
-    )
+    return idx if abs(centers[idx] - value) < abs(centers[idx - 1] - value) else idx - 1
 
 
 def _grid_offset(widths: np.ndarray, coords: np.ndarray) -> float:

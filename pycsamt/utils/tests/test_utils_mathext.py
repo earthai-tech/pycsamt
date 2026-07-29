@@ -121,9 +121,7 @@ def test_d_hanning_window_center_and_outside():
 
 
 def test_betaj_reference_value():
-    assert betaj(xj=2, L=1, W=5) == pytest.approx(
-        0.35136534572813144, rel=1e-9
-    )
+    assert betaj(xj=2, L=1, W=5) == pytest.approx(0.35136534572813144, rel=1e-9)
 
 
 def test_betaj_window_smaller_than_dipole_raises():
@@ -172,9 +170,7 @@ def test_rhophi2z_2x2_with_scalar_freq():
     phi = np.array([[45.0, 50.0], [90.0, 180.0]])
     z = rhophi2z(rho, phi, 500.0)
     assert z.shape == (2, 2)
-    assert np.abs(z[0, 0]) == pytest.approx(
-        math.sqrt(5 * 500 * 823), rel=1e-9
-    )
+    assert np.abs(z[0, 0]) == pytest.approx(math.sqrt(5 * 500 * 823), rel=1e-9)
 
 
 def test_rhophi2z_grid_matches_freq_rows():

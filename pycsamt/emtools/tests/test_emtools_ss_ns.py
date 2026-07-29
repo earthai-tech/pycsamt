@@ -275,9 +275,9 @@ def test_detect_ns_near_surface_detected():
     )
     ns_row = df[df["station"] == "NS"]
     assert len(ns_row) == 1
-    assert ns_row["ns_flag"].iloc[0] or ns_row["ns_index"].iloc[0] > 1.0, (
-        ns_row[["ns_index", "distortion_type"]]
-    )
+    assert ns_row["ns_flag"].iloc[0] or ns_row["ns_index"].iloc[0] > 1.0, ns_row[
+        ["ns_index", "distortion_type"]
+    ]
 
 
 def test_detect_ns_static_detected():

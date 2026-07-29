@@ -15,7 +15,9 @@ def passing_report(path: Path) -> bool:
     except (OSError, ET.ParseError):
         return False
 
-    suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+    suites = (
+        [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+    )
     if not suites:
         return False
     tests = sum(int(suite.get("tests", "0")) for suite in suites)
@@ -31,7 +33,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     report = Path(args[0])
     if not passing_report(report):
-        print(f"incomplete or failing pytest report: {report}", file=sys.stderr)
+        print(
+            f"incomplete or failing pytest report: {report}", file=sys.stderr
+        )
         return 1
     print(f"verified complete passing pytest report: {report}")
     return 0

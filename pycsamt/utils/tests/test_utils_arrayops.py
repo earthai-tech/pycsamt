@@ -104,9 +104,7 @@ def test_reshape_invalid_inputs():
 
 def test_frameify_array_with_columns_and_types():
     arr = np.array([[1.0, "x"], [2.0, "y"]], dtype=object)
-    df, nf, cf = frameify(
-        arr, columns=["num", "cat"], return_feature_types=True
-    )
+    df, nf, cf = frameify(arr, columns=["num", "cat"], return_feature_types=True)
     assert list(df.columns) == ["num", "cat"]
     assert nf == ["num"]
     assert cf == ["cat"]
@@ -163,9 +161,7 @@ def test_assert_xy_in_from_dataframe_columns():
 def test_assert_xy_in_series_output_and_frame():
     x, y = assert_xy_in([1, 2], [3, 4], asarray=False)
     assert isinstance(x, pd.Series)
-    df = assert_xy_in(
-        [1, 2], [3, 4], to_frame=True, columns=["east", "north"]
-    )
+    df = assert_xy_in([1, 2], [3, 4], to_frame=True, columns=["east", "north"])
     assert list(df.columns) == ["east", "north"]
 
 

@@ -119,9 +119,7 @@ class EMInverter1D(BaseEMNet):
         augment_noise: float = 0.02,
         **net_kwargs,
     ):
-        super().__init__(
-            arch=arch, n_layers=n_layers, solver=solver, device=device
-        )
+        super().__init__(arch=arch, n_layers=n_layers, solver=solver, device=device)
         self.log_thickness = log_thickness
         self.include_phase = include_phase
         self.augment_noise = augment_noise
@@ -274,9 +272,7 @@ class EMInverter1D(BaseEMNet):
         self._check_fitted()
         backend_name = self._meta.get("backend", "torch")
 
-        X_arr = self._coerce_input(
-            X, include_phase=self.include_phase, log_rho=True
-        )
+        X_arr = self._coerce_input(X, include_phase=self.include_phase, log_rho=True)
         X_norm = self._em_dataset.x_norm.transform(X_arr)
 
         if backend_name == "torch":
@@ -332,9 +328,7 @@ class EMInverter1D(BaseEMNet):
         :class:`~pycsamt.forward.em1d.ForwardResponse` and return the
         predicted :class:`~pycsamt.forward.synthetic.LayeredModel`.
         """
-        X = self._coerce_input(
-            response, include_phase=self.include_phase, log_rho=True
-        )
+        X = self._coerce_input(response, include_phase=self.include_phase, log_rho=True)
         models = self.predict_models(X)
         return models[0]
 
@@ -389,9 +383,7 @@ class EMInverter1D(BaseEMNet):
             obj._em_dataset.x_norm = Normalizer.from_dict(ckpt.meta["x_norm"])
             obj._em_dataset.y_norm = Normalizer.from_dict(ckpt.meta["y_norm"])
             obj._em_dataset._n_layers = ckpt.meta.get("n_layers_ds")
-            obj._em_dataset._log_thickness = ckpt.meta.get(
-                "log_thickness", True
-            )
+            obj._em_dataset._log_thickness = ckpt.meta.get("log_thickness", True)
 
         # Restore backend, rebuild network, and load weights
         backend_name = ckpt.meta.get("backend", "torch")
@@ -442,7 +434,9 @@ class EMInverter1D(BaseEMNet):
         Examples
         --------
         >>> from pycsamt.ai.inversion import EMInverter1D
-        >>> inv = EMInverter1D.from_pretrained("mt1d-resnet-5layer-v1")  # doctest: +SKIP
+        >>> inv = EMInverter1D.from_pretrained(
+        ...     "mt1d-resnet-5layer-v1"
+        ... )  # doctest: +SKIP
         """
         return _load_pretrained(name, cache_dir=cache_dir)
 
@@ -484,13 +478,9 @@ class EMInverter1D(BaseEMNet):
             return ForwardDataset.load(str(X))
         if isinstance(X, np.ndarray):
             if y is None:
-                raise ValueError(
-                    "When X is a numpy array, y must also be provided."
-                )
+                raise ValueError("When X is a numpy array, y must also be provided.")
             n = len(X)
-            meta = np.zeros(
-                n, dtype=[("n_layers", "i4"), ("noise_level", "f4")]
-            )
+            meta = np.zeros(n, dtype=[("n_layers", "i4"), ("noise_level", "f4")])
             meta["n_layers"] = self.n_layers
             return ForwardDataset(
                 X=X.astype(np.float32),

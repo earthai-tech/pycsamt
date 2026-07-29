@@ -49,9 +49,7 @@ def _fake_model(n_x: int = 5, n_z: int = 10) -> MagicMock:
     return m
 
 
-def _fake_layer(
-    depth_top: float, depth_bot: float, rock_name: str
-) -> MagicMock:
+def _fake_layer(depth_top: float, depth_bot: float, rock_name: str) -> MagicMock:
     layer = MagicMock()
     layer.depth_top = depth_top
     layer.depth_bot = depth_bot
@@ -68,15 +66,12 @@ def _fake_log(station_name: str, n_layers: int = 3) -> MagicMock:
     log.station_name = station_name
     log.station_x = 0.0
     log.layers = [
-        _fake_layer(i * 50, (i + 1) * 50, f"Rock_{i}")
-        for i in range(n_layers)
+        _fake_layer(i * 50, (i + 1) * 50, f"Rock_{i}") for i in range(n_layers)
     ]
     return log
 
 
-def _patch_classify(
-    monkeypatch: pytest.MonkeyPatch, n_stations: int = 3
-) -> None:
+def _patch_classify(monkeypatch: pytest.MonkeyPatch, n_stations: int = 3) -> None:
     """Monkeypatch InversionResult + ResistivityModel + ModelCalibrator."""
     model = _fake_model(n_x=n_stations)
     logs = [_fake_log(f"S{i:02d}") for i in range(n_stations)]
@@ -298,14 +293,10 @@ class TestInterpRocks:
 
 class TestInterpClassify:
     def test_nonexistent_workdir_fails(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["interp", "classify", "/nonexistent/path"]
-        )
+        result = runner.invoke(main, ["interp", "classify", "/nonexistent/path"])
         assert result.exit_code != 0
 
-    def test_unknown_solver_fails(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_unknown_solver_fails(self, runner: CliRunner, tmp_path: Path) -> None:
         """A directory without Occam2D files and --solver auto should error."""
         result = runner.invoke(main, ["interp", "classify", str(tmp_path)])
         assert result.exit_code != 0
@@ -456,16 +447,12 @@ class TestInterpExport:
         )
         assert result.exit_code != 0
 
-    def test_missing_format_fails(
-        self, runner: CliRunner, occam_workdir: Path
-    ) -> None:
+    def test_missing_format_fails(self, runner: CliRunner, occam_workdir: Path) -> None:
         """--format is required; omitting it must fail."""
         result = runner.invoke(main, ["interp", "export", str(occam_workdir)])
         assert result.exit_code != 0
 
-    def test_unknown_solver_fails(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_unknown_solver_fails(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             ["interp", "export", str(tmp_path), "--format", "csv"],
@@ -490,9 +477,7 @@ class TestInterpExport:
         # `from ....interp import export as _export` picks them up.
         import pycsamt.interp.export as _exp
 
-        monkeypatch.setattr(
-            _exp, "to_oasis_montaj_xyz", lambda logs, path: None
-        )
+        monkeypatch.setattr(_exp, "to_oasis_montaj_xyz", lambda logs, path: None)
         monkeypatch.setattr(_exp, "to_las", lambda log, path: None)
         monkeypatch.setattr(_exp, "to_csv", lambda logs, path: None)
         monkeypatch.setattr(_exp, "to_vtk", lambda model, path: None)
@@ -537,9 +522,7 @@ class TestInterpExport:
         """Second run with --overwrite must succeed even if file exists."""
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        (
-            out_dir / "layers.csv"
-        ).touch()  # pre-create to trigger overwrite logic
+        (out_dir / "layers.csv").touch()  # pre-create to trigger overwrite logic
 
         result = self._invoke_export(
             runner,

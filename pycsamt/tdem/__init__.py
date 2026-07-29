@@ -24,15 +24,19 @@ Quick example
 >>> import numpy as np
 >>> from pycsamt.tdem import TEMSounding, TEMtoEDI
 >>> t = np.logspace(-5, -2, 30)
->>> dBdt = 5e-5 * t ** (-5.0 / 2.0)           # synthetic decay
+>>> dBdt = 5e-5 * t ** (-5.0 / 2.0)  # synthetic decay
 >>> snd = TEMSounding(
-...     t, dBdt,
-...     current=8.0, tx_area=100.0 ** 2,
+...     t,
+...     dBdt,
+...     current=8.0,
+...     tx_area=100.0**2,
 ...     data_type="dBdt",
-...     station_name="S01", x=1000.0, y=500.0,
+...     station_name="S01",
+...     x=1000.0,
+...     y=500.0,
 ... )
 >>> conv = TEMtoEDI(method="late_time", phase_mode="weidelt")
->>> coll = conv.transform(snd)                 # EDICollection (1 site)
+>>> coll = conv.transform(snd)  # EDICollection (1 site)
 """
 
 from . import io, plot

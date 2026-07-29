@@ -115,9 +115,7 @@ def _results_dict(
         best = result.best_iter
         if best is not None:
             info["iteration"] = getattr(best, "iteration", None)
-            info["rms"] = getattr(best, "misfit", None) or getattr(
-                best, "rms", None
-            )
+            info["rms"] = getattr(best, "misfit", None) or getattr(best, "rms", None)
     except AttributeError:
         pass
 

@@ -507,9 +507,9 @@ class AVGtoEDI(TransformerMixin):
             f = np.asarray(ed.Z._freq, dtype=float)
 
             # 1) keep only rows that have at least one finite component
-            keep = np.isfinite(z.real).any(axis=(1, 2)) | np.isfinite(
-                z.imag
-            ).any(axis=(1, 2))
+            keep = np.isfinite(z.real).any(axis=(1, 2)) | np.isfinite(z.imag).any(
+                axis=(1, 2)
+            )
             if keep.ndim:  # guard for scalar shapes
                 z = z[keep]
                 f = f[keep]
@@ -560,9 +560,7 @@ class AVGtoEDI(TransformerMixin):
             ed.Tip._freq = ed.Z._freq
             ed.Tip._tipper = np.asarray(bundle.tipper, dtype=complex)
             if bundle.tipper_err is not None:
-                ed.Tip._tipper_err = np.asarray(
-                    bundle.tipper_err, dtype=float
-                )
+                ed.Tip._tipper_err = np.asarray(bundle.tipper_err, dtype=float)
             try:
                 ed.Tip.compute_amp_phase()
                 ed.Tip.compute_mag_direction()
@@ -742,9 +740,7 @@ class AVGtoEDI(TransformerMixin):
         if v:
             add.append(f"AREA:{v}")
         # keep ROTATION and SURVEY ID if already present
-        have_sid = any(
-            s.strip().upper().startswith("SURVEY ID:") for s in txt
-        )
+        have_sid = any(s.strip().upper().startswith("SURVEY ID:") for s in txt)
         if not have_sid:
             sid = getattr(ed, "station", "") or ""
             add.insert(0, _infoln(f"SURVEY ID:{sid}"))
@@ -1312,9 +1308,7 @@ class JtoEDI(TransformerMixin):
         nfreq = int(f.size) if f is not None else 0
 
         tip = getattr(ed, "Tip", None)
-        has_tip = bool(
-            tip is not None and getattr(tip, "tipper", None) is not None
-        )
+        has_tip = bool(tip is not None and getattr(tip, "tipper", None) is not None)
 
         have_xy = have_yx = False
         if z is not None and np.size(z) > 0:

@@ -63,18 +63,14 @@ class TestLaunch:
             def run(self, **kwargs):
                 recorded["run_kwargs"] = kwargs
 
-        monkeypatch.setattr(
-            app_mod, "create_app", lambda debug=False: _FakeApp()
-        )
+        monkeypatch.setattr(app_mod, "create_app", lambda debug=False: _FakeApp())
 
         seeded = {}
 
         def fake_set_seed(view):
             seeded["view"] = view
 
-        monkeypatch.setattr(
-            "pycsamt.app.mapview.cache.set_seed", fake_set_seed
-        )
+        monkeypatch.setattr("pycsamt.app.mapview.cache.set_seed", fake_set_seed)
 
         sentinel = object()
         app_mod.launch(open_browser=False, view=sentinel)
@@ -90,9 +86,7 @@ class TestLaunch:
             def run(self, **kwargs):
                 pass
 
-        monkeypatch.setattr(
-            app_mod, "create_app", lambda debug=False: _FakeApp()
-        )
+        monkeypatch.setattr(app_mod, "create_app", lambda debug=False: _FakeApp())
 
         called = {"n": 0}
         monkeypatch.setattr(
@@ -110,9 +104,7 @@ class TestLaunch:
             def run(self, **kwargs):
                 pass
 
-        monkeypatch.setattr(
-            app_mod, "create_app", lambda debug=False: _FakeApp()
-        )
+        monkeypatch.setattr(app_mod, "create_app", lambda debug=False: _FakeApp())
 
         started = {"n": 0}
 

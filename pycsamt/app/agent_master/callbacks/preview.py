@@ -81,7 +81,6 @@ _MIME = {
 
 
 def register_preview(app) -> None:
-
     @app.callback(
         Output(IDs.EXPORT_DL, "data"),
         Input(

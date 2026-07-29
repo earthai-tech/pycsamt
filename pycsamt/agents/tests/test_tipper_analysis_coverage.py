@@ -26,14 +26,14 @@ def _station(tipper, freqs=(10.0, 1.0)):
 def test_synthetic_tipper_execute(monkeypatch, tmp_path):
     import pycsamt.emtools._core as core
 
-    tipper = np.array([[[0.1 + 0.2j, 0.3 + 0.1j]],
-                       [[0.2 + 0.1j, 0.1 + 0.4j]]])
+    tipper = np.array([[[0.1 + 0.2j, 0.3 + 0.1j]], [[0.2 + 0.1j, 0.1 + 0.4j]]])
     station = _station(tipper)
     monkeypatch.setattr(core, "ensure_sites", lambda value, **_: value)
     monkeypatch.setattr(core, "_iter_items", lambda sites: iter(sites))
     monkeypatch.setattr(core, "_name", lambda ed, _i: ed.station)
     monkeypatch.setattr(
-        core, "_get_z_block",
+        core,
+        "_get_z_block",
         lambda ed: (None, np.ones((2, 2, 2), dtype=complex), ed.freqs),
     )
 
@@ -57,7 +57,8 @@ def test_tipper_skips_bad_stations(monkeypatch):
     monkeypatch.setattr(core, "_iter_items", lambda sites: iter(sites))
     monkeypatch.setattr(core, "_name", lambda ed, i: f"S{i}")
     monkeypatch.setattr(
-        core, "_get_z_block",
+        core,
+        "_get_z_block",
         lambda ed: (None, np.empty((len(ed.freqs), 2, 2)), ed.freqs),
     )
     result = TipperAnalysisAgent().execute({"sites": stations})
@@ -70,10 +71,20 @@ def test_plot_helpers_empty_and_populated():
     assert _plot_induction_arrows([], None, "parkinson") is None
     assert _plot_tipper_pseudosection([], []) is None
     rows = [
-        {"station": "A", "period_s": 1.0, "amplitude": 0.2,
-         "arrow_x": 0.1, "arrow_y": -0.1},
-        {"station": "A", "period_s": 10.0, "amplitude": 0.4,
-         "arrow_x": 0.2, "arrow_y": 0.1},
+        {
+            "station": "A",
+            "period_s": 1.0,
+            "amplitude": 0.2,
+            "arrow_x": 0.1,
+            "arrow_y": -0.1,
+        },
+        {
+            "station": "A",
+            "period_s": 10.0,
+            "amplitude": 0.4,
+            "arrow_x": 0.2,
+            "arrow_y": 0.1,
+        },
     ]
     figs = [
         _plot_tipper_amplitude(rows, ["A", "missing"]),

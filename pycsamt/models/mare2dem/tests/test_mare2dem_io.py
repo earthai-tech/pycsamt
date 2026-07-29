@@ -82,9 +82,7 @@ class TestEMDataMT:
         # First receiver is always MT001
         assert em.mt.receiver_name[0] == "MT001"
         # Last sequential receiver before any extra H-field (_B) duplicates
-        assert (
-            "MT228" in em.mt.receiver_name or "MT001" in em.mt.receiver_name
-        )
+        assert "MT228" in em.mt.receiver_name or "MT001" in em.mt.receiver_name
 
     def test_read_response_file(self, hill_dir):
         resp = read_emdata(hill_dir / "hill.0.resp")
@@ -114,14 +112,8 @@ class TestEMDataMT:
         assert is_emdata_file(hill_dir / "hill.emdata")
         assert is_response_file(hill_dir / "hill.0.resp")
         assert not is_emdata_file(hill_dir / "hill.0.resp")
-        assert (
-            detect_file_type(hill_dir / "hill.0.resp")
-            == Mare2DEMFileType.RESPONSE
-        )
-        assert (
-            detect_file_type(hill_dir / "hill.emdata")
-            == Mare2DEMFileType.EMDATA
-        )
+        assert detect_file_type(hill_dir / "hill.0.resp") == Mare2DEMFileType.RESPONSE
+        assert detect_file_type(hill_dir / "hill.emdata") == Mare2DEMFileType.EMDATA
 
 
 # ==========================================================================
@@ -290,9 +282,7 @@ class TestPolyIO:
         assert pf.n_nodes > 100  # larger mesh
 
     def test_poly_file_type(self, hill_dir):
-        assert (
-            detect_file_type(hill_dir / "hill.poly") == Mare2DEMFileType.POLY
-        )
+        assert detect_file_type(hill_dir / "hill.poly") == Mare2DEMFileType.POLY
 
 
 # ==========================================================================
@@ -308,9 +298,7 @@ class TestSettingsIO:
         assert "Transmitters per group" in text or "tolerance" in text.lower()
 
     def test_write_settings_roundtrip(self, tmp_path):
-        sf = SettingsFile(
-            tolerance=2.0, csem_rx_per_group=30, mt_rx_per_group=25
-        )
+        sf = SettingsFile(tolerance=2.0, csem_rx_per_group=30, mt_rx_per_group=25)
         p = write_settings(sf, tmp_path / "test.settings")
         assert p.exists()
         text = p.read_text()
@@ -337,9 +325,7 @@ class TestGroupRMSLog:
         log = read_group_rms_log(csem_mt_dir / "demo.group_rms.log")
         assert log.n_groups >= 2
         assert log.n_iterations > 0
-        assert "CSEM" in " ".join(log.headers) or "MT" in " ".join(
-            log.headers
-        )
+        assert "CSEM" in " ".join(log.headers) or "MT" in " ".join(log.headers)
 
     def test_group_rms_values_decreasing(self, csem_mt_dir):
         log = read_group_rms_log(csem_mt_dir / "demo.group_rms.log")
@@ -396,9 +382,7 @@ class TestGetMostRecent:
         assert str(p) == "some_file.resistivity"
 
     def test_keyword_newest(self, inversion_dir):
-        p = get_most_recent(
-            "newest", "*.resistivity", search_dir=inversion_dir
-        )
+        p = get_most_recent("newest", "*.resistivity", search_dir=inversion_dir)
         assert p is not None
         assert p.suffix == ".resistivity"
 

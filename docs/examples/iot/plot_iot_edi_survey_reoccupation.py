@@ -183,12 +183,8 @@ def _skew_for(station: str) -> float:
 # quick data-density proxy); the right panel shows the re-occupation
 # sample-rate hint per station. Together they are the re-survey brief.
 
-lat = np.array(
-    [r["lat"] if r["lat"] is not None else np.nan for r in records]
-)
-lon = np.array(
-    [r["lon"] if r["lon"] is not None else np.nan for r in records]
-)
+lat = np.array([r["lat"] if r["lat"] is not None else np.nan for r in records])
+lon = np.array([r["lon"] if r["lon"] is not None else np.nan for r in records])
 nfreq = np.array([r["n_freq"] for r in records], dtype=float)
 skew = np.array([_skew_for(r["station"]) for r in records])
 have_xy = np.isfinite(lat) & np.isfinite(lon)

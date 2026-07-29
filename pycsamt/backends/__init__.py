@@ -21,7 +21,7 @@ Quick start
 >>> import pycsamt
 >>> pycsamt.list_backends()
 {'torch': True, 'tensorflow': False}
->>> pycsamt.set_backend('torch')      # or 'tensorflow' / 'auto'
+>>> pycsamt.set_backend("torch")  # or 'tensorflow' / 'auto'
 >>> pycsamt.get_backend()
 'torch'
 
@@ -104,8 +104,8 @@ def set_backend(name: str, *, persist: bool = False) -> None:
     Examples
     --------
     >>> from pycsamt.backends import set_backend
-    >>> set_backend('torch')
-    >>> set_backend('tensorflow', persist=True)   # saves to config file
+    >>> set_backend("torch")
+    >>> set_backend("tensorflow", persist=True)  # saves to config file
     """
     _CFG.set(name)
     if persist:

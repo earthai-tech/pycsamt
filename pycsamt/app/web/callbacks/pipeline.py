@@ -203,9 +203,7 @@ def register_pipeline(app) -> None:
         step_id = int(step_id)
         step = _STEPS[step_id]
         opts = [{"label": m.label, "value": m.name} for m in step.methods]
-        export_style = (
-            {"display": "block"} if step_id == 7 else {"display": "none"}
-        )
+        export_style = {"display": "block"} if step_id == 7 else {"display": "none"}
         return step.description, opts, step.default_method, export_style
 
     # ── 2. Run a single step ──────────────────────────────────────────────
@@ -289,11 +287,7 @@ def register_pipeline(app) -> None:
             store[str(step_id)] = src
 
             # Auto-advance to next step (stay on last step)
-            next_step = (
-                str(step_id + 1)
-                if step_id < len(_STEPS) - 1
-                else str(step_id)
-            )
+            next_step = str(step_id + 1) if step_id < len(_STEPS) - 1 else str(step_id)
 
             return (
                 "\n".join(log_lines),
@@ -377,9 +371,7 @@ def register_pipeline(app) -> None:
                     step.reset_params()
                     step.params["folder"] = export_folder.strip()
                 try:
-                    _CTRL.execute_step(
-                        i, log_cb=lambda m: log_lines.append(m)
-                    )
+                    _CTRL.execute_step(i, log_cb=lambda m: log_lines.append(m))
                     log_lines.append(f"── Step {i + 1} done ──")
                     # Cache preview for each step
                     result_sites = _CTRL._sites_chain[i]
@@ -483,9 +475,7 @@ def register_pipeline(app) -> None:
                             style={"color": colour, "fontSize": "10px"},
                         ),
                         html.Span(
-                            f"  {step.elapsed_s:.2f}s"
-                            if step.elapsed_s
-                            else "",
+                            f"  {step.elapsed_s:.2f}s" if step.elapsed_s else "",
                             style={"color": "#585b70", "fontSize": "10px"},
                         ),
                     ],
@@ -504,8 +494,7 @@ def register_pipeline(app) -> None:
             entries = sorted(
                 e
                 for e in os.listdir(path)
-                if not e.startswith(".")
-                and os.path.isdir(os.path.join(path, e))
+                if not e.startswith(".") and os.path.isdir(os.path.join(path, e))
             )
         except PermissionError:
             return []

@@ -118,6 +118,7 @@ corresponding multiplicative physical error is
 mask for the entries included in a metric, the masked RMSE is
 
 .. math::
+   :label: eq-ai-validation-masked-rmse
 
    \operatorname{RMSE}
    =
@@ -127,7 +128,9 @@ mask for the entries included in a metric, the masked RMSE is
      \left(\hat{y}_{ij}-y_{ij}\right)^2
    }.
 
-A trained workflow would call ``inverter.predict(X_test, as_log_rho=True)``.
+Equation :eq:`eq-ai-validation-masked-rmse` is meaningful only with its mask,
+target representation, and units. A trained workflow would call
+``inverter.predict(X_test, as_log_rho=True)``.
 The miniature example below isolates the metric semantics with fixed arrays so
 the reported output is reproducible:
 
@@ -151,13 +154,13 @@ the reported output is reproducible:
    >>> overall = summarise(y_test, y_pred, n_layers=n_layers)
    >>> per_parameter = layer_rmse(y_test, y_pred)
    >>> {name: round(value, 4) for name, value in overall.items()}
-   {'rmse': 5.4778, 'mae': 3.3933, 'r2': 0.9944, 'relative_rmse': 0.0692, 'depth_rmse': 0.0577}
+   {'rmse': 5.0006, 'mae': 2.9214, 'r2': 0.9923, 'relative_rmse': 0.0596, 'depth_rmse': 0.0577}
    >>> print("resistivity RMSE by layer:", np.round(per_parameter[:n_layers], 4))
    resistivity RMSE by layer: [0.1 0.1 0.1]
    >>> print("thickness RMSE by interface:", np.round(per_parameter[n_layers:], 4))
-   thickness RMSE by interface: [ 7.0711 10.    ]
+   thickness RMSE by interface: [7.9057 8.6603]
    >>> print("finite target values:", int(np.isfinite(y_test).sum()))
-   finite target values: 15
+   finite target values: 14
 
 The available metric helpers ignore non-finite entries.  Report how many
 values each metric used; a score based on a small surviving fraction can look
@@ -202,7 +205,7 @@ ohm-m and metres for decision-facing tables:
    >>> print("median rho factor error:", np.round(np.nanmedian(rho_factor_error, axis=0), 3))
    median rho factor error: [1.259 1.259 1.259]
    >>> print("median thickness abs error m:", np.round(np.nanmedian(thickness_abs_error, axis=0), 3))
-   median thickness abs error m: [ 5. 10.]
+   median thickness abs error m: [ 7.5 10. ]
    >>> print("worst rho factor error:", round(float(np.nanmax(rho_factor_error)), 3))
    worst rho factor error: 1.259
 
@@ -231,6 +234,42 @@ measures: lateral boundary position, depth extent, connected-body recovery,
 and smoothing or edge artifacts.  A low image RMSE can coexist with a badly
 placed target boundary.
 
+The aggregation trap is observable, not theoretical
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The next audit constructs two 2-D predictions with the same global RMSE. One
+misplaces the target conductor; the other adds spatially correlated error
+throughout the section. Both are evaluated by
+:func:`~pycsamt.ai.validation.recovery_report` without post-processing:
+
+.. code-block:: text
+
+   shifted conductor: RMSE=0.3832  MAE=0.1001  SSIM=0.7683
+   diffuse error:     RMSE=0.3832  MAE=0.2995  SSIM=0.3265
+
+.. figure:: ../../images/user_guide/ai_inversion/validation_aggregation_trap.png
+   :alt: Known resistivity truth compared with a shifted conductor and diffuse correlated error having equal global RMSE, followed by signed errors and depth-resolved RMSE
+   :align: center
+   :width: 100%
+
+   Equal global RMSE engineered to machine precision, then assessed through
+   structure and depth rather than accepted as equivalent.
+
+The shifted-conductor prediction concentrates a large signed error around one
+geological boundary, yet its low-error background yields much lower MAE and
+higher structural similarity than the diffuse prediction. Whether that is the
+better model depends on intended use: it may be preferable for regional
+background resistivity but unacceptable if locating the conductor is the
+decision. The depth curves reveal where each failure occurs. A scalar gate
+cannot encode that distinction, so pair global recovery with target-boundary,
+depth-resolved, and response-space gates chosen before testing.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_validation_aggregation_trap
+   :linenos:
+   :title: View and copy the equal-RMSE recovery audit
+
 Response-space validation
 -------------------------
 
@@ -242,6 +281,7 @@ model, :math:`\mathbf{d}_i` is the observed response vector, and
 :math:`j`, the normalized residual is
 
 .. math::
+   :label: eq-ai-validation-normalized-residual
 
    r_{ij}
    =
@@ -250,6 +290,7 @@ model, :math:`\mathbf{d}_i` is the observed response vector, and
 The normalized :term:`response-space metric` is then
 
 .. math::
+   :label: eq-ai-validation-response-nrms
 
    \operatorname{NRMS}
    =
@@ -258,7 +299,10 @@ The normalized :term:`response-space metric` is then
      \sum_{(i,j)\in\mathcal{M}} r_{ij}^{2}
    }.
 
-For a trained 1-D MT model, ``inverter.predict_models(X_test)`` can be passed
+Equations :eq:`eq-ai-validation-normalized-residual` and
+:eq:`eq-ai-validation-response-nrms` require observational errors, not a
+generic neural loss scale. For a trained 1-D MT model,
+``inverter.predict_models(X_test)`` can be passed
 to :class:`pycsamt.forward.MT1DForward`.  The compact example below uses
 already reconstructed responses so the residual definition is explicit:
 
@@ -283,11 +327,11 @@ already reconstructed responses so the residual definition is explicit:
    >>> nrms = np.sqrt(np.mean(residual ** 2))
    >>> inside_one_sigma = np.mean(np.abs(residual) <= 1.0)
    >>> print("normalized RMS:", round(float(nrms), 3))
-   normalized RMS: 0.961
+   normalized RMS: 0.442
    >>> print("fraction within 1 sigma:", round(float(inside_one_sigma), 3))
-   fraction within 1 sigma: 0.667
+   fraction within 1 sigma: 1.0
    >>> print("per-feature mean residual:", np.round(residual.mean(axis=0), 3))
-   per-feature mean residual: [ 0.    -0.5    0.    -0.5    0.25   0.167]
+   per-feature mean residual: [ 0.5   -0.5    0.25  -0.5    0.125  0.083]
 
 In the full workflow, ``predict_models`` converts the network output to
 :class:`pycsamt.forward.synthetic.LayeredModel` objects and enforces positive
@@ -309,6 +353,56 @@ When training and validation use one forward solver, repeat a subset with an
 independent trusted implementation if possible; otherwise the neural model and
 its validation can share the same simulator bias.
 
+The reports answer different questions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The current validation package returns immutable report objects rather than
+only scalar values:
+
+* :func:`~pycsamt.ai.validation.recovery_report` preserves global recovery,
+  structural similarity, depth profiles, valid-cell count, and grid shape;
+* :func:`~pycsamt.ai.validation.response_residual_report` preserves the
+  overall response loss and station-, frequency-, and component-wise views;
+* :func:`~pycsamt.ai.validation.reliability_curve` preserves coverage,
+  calibration loss, sharpness, valid count, and evaluated shape;
+* :func:`~pycsamt.ai.validation.flag_out_of_distribution` preserves every
+  score, its reference-derived threshold, flags, method, and reference size.
+
+The controlled audit below executes all four APIs on one synthetic case:
+
+.. code-block:: text
+
+   recovery RMSE: 0.0893 log10(ohm.m)
+   structural similarity: 0.8438
+   mean normalized squared response residual: 0.3751
+   calibrated mean coverage error: 0.0001
+   overconfident mean coverage error: 0.0425
+   samples flagged OOD: 5 / 27
+
+.. figure:: ../../images/user_guide/ai_inversion/scientific_validation_anatomy.png
+   :alt: Four-panel executed validation audit showing depth recovery, station-frequency response residuals, uncertainty reliability, and out-of-distribution samples
+   :align: center
+   :width: 100%
+
+   Four reports generated from the current recovery, residual, calibration,
+   and OOD APIs. Each panel retains the axis on which failure occurs.
+
+The recovery panel shows error increasing at depth even though the global
+RMSE remains below 0.09. The response heatmap localizes a component-specific
+misfit to stations 9--12 and a separate high-frequency edge effect; a global
+value of 0.375 would hide both structures. The reliability curves distinguish
+a correctly scaled predictor from a sharper but overconfident one. Finally,
+the domain panel retains five flagged samples rather than removing them before
+computing a reassuring average. Agreement in one panel cannot override a
+failure in another because model truth, response fit, uncertainty honesty, and
+deployment support are different validation claims.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_scientific_validation_anatomy
+   :linenos:
+   :title: View and copy the four-report validation audit
+
 Baselines and ablations
 -----------------------
 
@@ -327,6 +421,55 @@ Compare accuracy, forward misfit, uncertainty calibration, runtime, memory,
 failure rate, and analyst effort.  A model that is faster but less accurate may
 still be valuable as an initializer; state that narrower role rather than
 claiming replacement of classical inversion.
+
+Because candidate and baseline are evaluated on the same held-out parents,
+compare them through paired differences. If :math:`E_{A,g}` and
+:math:`E_{B,g}` are errors for the AI model and baseline on independent parent
+survey :math:`g`, define improvement as
+
+.. math::
+   :label: eq-ai-validation-paired-improvement
+
+   \Delta_g = E_{B,g}-E_{A,g},
+   \qquad
+   \bar{\Delta}=\frac{1}{G}\sum_{g=1}^{G}\Delta_g.
+
+Positive :math:`\Delta_g` favors the AI model. Confidence limits for
+:math:`\bar{\Delta}` must resample the independent parent surveys, not every
+correlated station window as though it were a new experiment.
+
+The executed illustration contains 18 parent surveys with eight correlated
+rows each:
+
+.. code-block:: text
+
+   mean paired RMSE improvement: 0.0367
+   surveys favoring AI: 14 / 18
+   row-bootstrap 95% interval:    [0.0295, 0.0437]
+   survey-bootstrap 95% interval: [0.0173, 0.0561]
+
+.. figure:: ../../images/user_guide/ai_inversion/validation_paired_bootstrap.png
+   :alt: Per-survey paired improvements, row-level and survey-level bootstrap distributions, and their 95 percent intervals
+   :align: center
+   :width: 100%
+
+   The point estimate is unchanged, but uncertainty expands when resampling
+   follows the actual independent unit.
+
+Four surveys favor the baseline, so the positive mean is not a universal-win
+claim. Treating 144 rows as independent produces a much tighter interval than
+resampling 18 surveys and overstates the precision of deployment-level
+improvement. The group interval remains positive in this controlled example,
+but the wider range is the defensible evidence. Stratify the paired deltas by
+geology, noise, dimensionality, and acquisition regime to learn where either
+method wins; do not select only the favorable strata after seeing the test
+result.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_validation_paired_bootstrap
+   :linenos:
+   :title: View and copy the parent-survey bootstrap audit
 
 :term:`Ablation study` results determine which inputs and mechanisms matter.
 Repeat evaluation after removing :term:`phase`, individual components,
@@ -354,6 +497,55 @@ envelope` at the point where error, coverage, or failure rate crosses a
 predeclared limit.  Stress tests are not expected to all pass; their purpose is
 to reveal when the model should abstain.
 
+If :math:`s` denotes an ordered stress level and gate :math:`q` passes when
+:math:`G_q(s)=1`, the supported boundary is
+
+.. math::
+   :label: eq-ai-validation-operating-boundary
+
+   s_{\max}
+   = \sup\left\{s:\prod_{q\in\mathcal{Q}}G_q(s)=1\right\}.
+
+Equation :eq:`eq-ai-validation-operating-boundary` uses the intersection of
+mandatory gates. Averaging them into one composite score would allow strong
+performance on an easy metric to compensate for a critical physical failure.
+The executed sweep below increases one declared severity variable and applies
+fixed teaching thresholds: recovery RMSE at most 0.10, normalized response
+loss at most 1.0, nominal-90% coverage at least 0.85, and OOD fraction at most
+0.10.
+
+.. code-block:: text
+
+   first coverage failure severity: 0.625
+   first OOD-fraction failure severity: 0.750
+   first response-loss failure severity: 1.125
+   first recovery-RMSE failure severity: 1.375
+   joint operating boundary: below 0.625
+
+.. figure:: ../../images/user_guide/ai_inversion/validation_stress_envelope.png
+   :alt: Four challenge-sweep curves showing recovery error, response residual, interval coverage, and OOD fraction crossing separate validation gates
+   :align: center
+   :width: 100%
+
+   A deterministic challenge sweep evaluated with the current recovery,
+   response-residual, reliability, and OOD report functions.
+
+Parameter recovery is the last panel to fail, not the first. If this experiment
+reported only synthetic RMSE, it would claim support through severity 1.25;
+coverage has already failed at 0.625 and domain support at 0.75. The correct
+operating boundary therefore lies below 0.625. The ordering is itself useful:
+uncertainty becomes dishonest before the point estimate visibly collapses,
+then the input leaves reference support, followed by response and model-space
+failure. A real challenge axis should correspond to a physical quantity such
+as missing-frequency fraction, impedance noise, static-shift magnitude, or
+distance beyond the training resistivity range.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_validation_stress_envelope
+   :linenos:
+   :title: View and copy the executed operating-envelope sweep
+
 Uncertainty validation
 ----------------------
 
@@ -372,6 +564,7 @@ cover target entry :math:`y_{ij}` at nominal probability :math:`1-\alpha`, the
 entry-wise empirical coverage is
 
 .. math::
+   :label: eq-ai-validation-coverage
 
    \widehat{C}(\alpha)
    =
@@ -379,7 +572,8 @@ entry-wise empirical coverage is
    \sum_{(i,j)\in\mathcal{M}}
    \mathbf{1}\{L_{ij}(\alpha)\le y_{ij}\le U_{ij}(\alpha)\}.
 
-The mean interval width,
+Equation :eq:`eq-ai-validation-coverage` measures entry-wise coverage. The mean
+interval width,
 :math:`|\mathcal{M}|^{-1}\sum_{(i,j)\in\mathcal{M}}
 \left(U_{ij}(\alpha)-L_{ij}(\alpha)\right)`, must be reported beside
 coverage, because overly wide intervals can cover well while still being
@@ -401,13 +595,18 @@ scientifically unhelpful.
    ...     [2.15, 2.65, 3.15],
    ...     [2.25, 2.75, 3.05],
    ... ])
-   >>> diagnostics = {
-   ...     alpha: float(np.mean((lower <= y_test) & (y_test <= upper)))
-   ...     for alpha in (0.20, 0.10, 0.05)
-   ... }
+   >>> alpha = 0.10
+   >>> entry_coverage = float(np.mean((lower <= y_test) & (y_test <= upper)))
+   >>> sample_coverage = float(np.mean(np.all(
+   ...     (lower <= y_test) & (y_test <= upper), axis=1
+   ... )))
    >>> mean_width = np.mean(upper - lower, axis=0)
-   >>> diagnostics
-   {0.2: 1.0, 0.1: 1.0, 0.05: 1.0}
+   >>> print("nominal coverage:", 1.0 - alpha)
+   nominal coverage: 0.9
+   >>> print("entry coverage:", entry_coverage)
+   entry coverage: 1.0
+   >>> print("simultaneous sample coverage:", sample_coverage)
+   simultaneous sample coverage: 1.0
    >>> print("mean 90% interval width:", np.round(mean_width, 3))
    mean 90% interval width: [0.3 0.3 0.3]
 
@@ -509,6 +708,55 @@ Inspect the worst cases by a metric chosen before opening them.  Avoid deleting
 difficult cases unless a reproducible data-quality rule, independent of model
 error, requires exclusion.
 
+Worked rejection decision
+-------------------------
+
+The small FCN executed in :doc:`training` is useful for demonstrating how
+separate gates combine. Before examining the results, suppose this teaching
+exercise requires log-resistivity MAE no greater than 0.3 in every layer,
+thickness MAE no greater than 100 m at every interface, no more than 10% of a
+field row outside the synthetic P1--P99 envelope, and dimensionality evidence
+compatible with station-wise 1-D interpretation. These are illustrative smoke
+test limits, not universal geophysical thresholds.
+
+.. code-block:: pycon
+
+   >>> print("resistivity layers passing:", 1, "/ 5")
+   resistivity layers passing: 1 / 5
+   >>> print("interfaces passing:", 0, "/ 4")
+   interfaces passing: 0 / 4
+   >>> print("WILLY stations requiring domain review:", 28, "/ 28")
+   WILLY stations requiring domain review: 28 / 28
+   >>> print("WILLY 3-D diagnostic fraction:", 0.856)
+   WILLY 3-D diagnostic fraction: 0.856
+   >>> decision = "rejected"
+   >>> print("validation decision:", decision)
+   validation decision: rejected
+
+.. figure:: ../../images/user_guide/ai_inversion/validation_gate_dashboard.png
+   :alt: Validation dashboard combining synthetic errors, WILLY domain departure, and dimensionality evidence
+   :align: center
+   :width: 96%
+
+   Only the first resistivity layer passes the illustrative error limit, no
+   interface passes, every WILLY station exceeds the marginal domain-review
+   threshold, and most tensor samples classify as 3-D. Checkpoint restoration
+   passed in the training audit, but that operational success cannot override
+   four scientific failures.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_validation_gate_dashboard
+   :linenos:
+   :title: View and copy the executed rejection-dashboard code
+
+The decision is rejection rather than ``conditional`` because failures occur
+inside the synthetic test problem as well as during field transfer. Response
+reconstruction was not supplied for this smoke checkpoint, so that mandatory
+gate is *not evaluated*, never silently counted as a pass. A production study
+would replace the illustrative thresholds, small dataset, and generic prior
+with predeclared project requirements and independent evidence.
+
 Acceptance criteria
 -------------------
 
@@ -592,3 +840,5 @@ Validation is complete when another analyst can reproduce the evidence and
 reach the same promotion decision without relying on undocumented judgment.
 Carry that evidence into :doc:`reporting` and, for field interpretation, the
 broader :doc:`../interpretation/index` workflow.
+
+

@@ -98,8 +98,7 @@ def _register_render_panel(app) -> None:
                 html.Span(
                     ["● ", ln],
                     id={"type": "mv-pill", "index": ln},
-                    className="mv-pill"
-                    + ("" if is_active else " mv-pill-off"),
+                    className="mv-pill" + ("" if is_active else " mv-pill-off"),
                     n_clicks=0,
                     style={"color": col, "borderColor": col},
                 )
@@ -242,9 +241,7 @@ def _register_inspector(app) -> None:
     def inspect(selection, controls, store):
         sid = (selection or {}).get("station_id")
         if not sid or not store:
-            return html.Div(
-                "Click a station on the map.", className="mv-empty"
-            )
+            return html.Div("Click a station on the map.", className="mv-empty")
         rec = next(
             (
                 r

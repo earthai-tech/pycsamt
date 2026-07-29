@@ -39,10 +39,10 @@ Example
 ...     n_layers=10,
 ...     depth_max=2000.0,
 ...     smoothness_weight=0.01,
-... )                                   # doctest: +SKIP
->>> inv.fit(epochs=500)                 # doctest: +SKIP
+... )  # doctest: +SKIP
+>>> inv.fit(epochs=500)  # doctest: +SKIP
 PINNInverter1D(n_stations=5, fitted)
->>> models = inv.predict()              # doctest: +SKIP
+>>> models = inv.predict()  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -128,9 +128,7 @@ class PINNInverter1D(BasePINNInverter):
         verbose: int = 0,
     ) -> None:
         if solver not in ("mt1d", "csamt1d"):
-            raise ValueError(
-                f"solver must be 'mt1d' or 'csamt1d'; got {solver!r}."
-            )
+            raise ValueError(f"solver must be 'mt1d' or 'csamt1d'; got {solver!r}.")
         super().__init__(
             n_layers=n_layers,
             depth_max=depth_max,

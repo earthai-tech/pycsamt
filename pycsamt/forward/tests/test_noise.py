@@ -30,7 +30,6 @@ from pycsamt.forward.noise import (
 )
 from pycsamt.forward.synthetic import LayeredModel
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared fixtures (plain helper functions, no fixture machinery needed)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -92,9 +91,9 @@ def test_gaussian_noise_mt_statistics_match_level():
 def test_gaussian_noise_mt_phase_only():
     resp = _mt_response(n=4000)
     phase_level = 3.0
-    noisy = GaussianNoise(
-        level=0.05, apply_to="phase", phase_level=phase_level
-    ).apply(resp, seed=2)
+    noisy = GaussianNoise(level=0.05, apply_to="phase", phase_level=phase_level).apply(
+        resp, seed=2
+    )
 
     assert np.array_equal(noisy.rho_a, resp.rho_a)
     diff = noisy.phase - resp.phase
@@ -209,9 +208,7 @@ def test_multiplicative_noise_manual_reproduction():
 
     rng = np.random.default_rng(123)
     log_rho = np.log10(np.maximum(resp.rho_a, 1e-12))
-    expected_rho = 10.0 ** (
-        log_rho + rng.normal(0.0, sigma, log_rho.shape)
-    )
+    expected_rho = 10.0 ** (log_rho + rng.normal(0.0, sigma, log_rho.shape))
     assert np.allclose(noisy.rho_a, expected_rho)
 
 
@@ -251,30 +248,34 @@ def test_multiplicative_noise_call_delegates_to_apply():
 
 def test_field_realistic_noise_profile_powerline_harmonics():
     model = FieldRealisticNoise(
-        base_level=0.02, powerline_freq=50.0, powerline_level=0.30,
+        base_level=0.02,
+        powerline_freq=50.0,
+        powerline_level=0.30,
         dead_band=False,
     )
     freqs = np.array([50.0, 100.0, 150.0, 200.0, 10.0])
     sigma = model.noise_profile(freqs)
 
     assert sigma.shape == freqs.shape
-    assert sigma[0] == pytest.approx(0.30)       # k=1
-    assert sigma[1] == pytest.approx(0.15)       # k=2
-    assert sigma[2] == pytest.approx(0.10)       # k=3
-    assert sigma[3] == pytest.approx(0.075)      # k=4
-    assert sigma[4] == pytest.approx(0.02)       # untouched baseline
+    assert sigma[0] == pytest.approx(0.30)  # k=1
+    assert sigma[1] == pytest.approx(0.15)  # k=2
+    assert sigma[2] == pytest.approx(0.10)  # k=3
+    assert sigma[3] == pytest.approx(0.075)  # k=4
+    assert sigma[4] == pytest.approx(0.02)  # untouched baseline
 
 
 def test_field_realistic_noise_profile_dead_band():
     model = FieldRealisticNoise(
-        base_level=0.02, dead_band=True, dead_band_level=0.15,
+        base_level=0.02,
+        dead_band=True,
+        dead_band_level=0.15,
         dead_band_freq_range=(3e-4, 1e-3),
     )
     freqs = np.array([5e-4, 10.0])
     sigma = model.noise_profile(freqs)
 
-    assert sigma[0] == pytest.approx(0.15)   # inside dead band
-    assert sigma[1] == pytest.approx(0.02)   # far from any harmonic
+    assert sigma[0] == pytest.approx(0.15)  # inside dead band
+    assert sigma[1] == pytest.approx(0.02)  # far from any harmonic
 
     # disabling the dead band drops back to the base level
     model_no_db = FieldRealisticNoise(base_level=0.02, dead_band=False)

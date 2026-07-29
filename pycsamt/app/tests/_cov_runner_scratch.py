@@ -10,15 +10,15 @@ tests). Pre-importing torch before coverage.start() avoids the crash since
 the C extension is then already resident in sys.modules by the time
 tracing begins.
 """
+
 import os
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
-import torch  # noqa: F401  (pre-load before coverage tracing starts)
-
 import coverage
+import torch  # noqa: F401  (pre-load before coverage tracing starts)
 
 cov = coverage.Coverage(
     source=[

@@ -165,9 +165,7 @@ def register_settings(app) -> None:
         drafts = drafts or {}
         # A key typed this session (not yet saved) wins over disk/env.
         draft_key = drafts.get(f"key_{provider}")
-        key = (
-            draft_key if draft_key is not None else _stored_key(provider, cfg)
-        )
+        key = draft_key if draft_key is not None else _stored_key(provider, cfg)
 
         models = models_for(provider)
         model = (
@@ -210,9 +208,7 @@ def register_settings(app) -> None:
         drafts[f"key_{provider}"] = key or ""
         if model:
             drafts[f"model_{provider}"] = model
-        badge = _status_badge(
-            provider, _source_for(provider, key, _load_cfg())
-        )
+        badge = _status_badge(provider, _source_for(provider, key, _load_cfg()))
         return drafts, badge
 
     # Show / hide the key (a password field you can never read back is a
@@ -302,9 +298,7 @@ def register_settings(app) -> None:
         cfg["line_registry"] = line_registry or ""
         _save_cfg(cfg)
 
-        source = (
-            _source_for(provider, key, cfg) if is_llm(provider) else "none"
-        )
+        source = _source_for(provider, key, cfg) if is_llm(provider) else "none"
         summary = f"Saved — {label_for(provider)}"
         if source == "saved":
             summary += f" · {cfg[f'model_{provider}']}"

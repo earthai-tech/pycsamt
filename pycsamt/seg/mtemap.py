@@ -228,9 +228,7 @@ class MTEMAP(EDIComponentBase):
         IsEdi._assert_edi(p, deep=True)
 
         # Read once; later slices will reuse these lines.
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         # Capture DATAID early for fallback SECTID.
         dataid = None
@@ -556,6 +554,7 @@ class EMAPMixin:
 
         class Host(EMAPMixin):
             pass
+
 
         hdr = Host.from_file("site.edi")
         assert hdr.nfreq is not None

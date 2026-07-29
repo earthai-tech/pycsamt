@@ -22,13 +22,15 @@ Build and run from code::
 
     from pycsamt.emtools.pipe import Pipeline, Step
 
-    pipe = Pipeline([
-        ("notch",      Step("NR001", mains_hz=50)),
-        ("band",       Step("FREQ001")),
-        ("align",      Step("FREQ004")),
-        ("correct_ss", Step("SS001")),
-        ("rotate",     Step("TZ001")),
-    ])
+    pipe = Pipeline(
+        [
+            ("notch", Step("NR001", mains_hz=50)),
+            ("band", Step("FREQ001")),
+            ("align", Step("FREQ004")),
+            ("correct_ss", Step("SS001")),
+            ("rotate", Step("TZ001")),
+        ]
+    )
     print(pipe)
     result = pipe.run(sites, outdir="willy_results/")
 
@@ -161,11 +163,13 @@ class Pipeline(PipelineBase):
     Examples
     --------
     >>> from pycsamt.emtools.pipe import Pipeline, Step
-    >>> pipe = Pipeline([
-    ...     ("notch",    Step("NR001")),
-    ...     ("band",     Step("FREQ001", band_hz=(0.001, 10000))),
-    ...     ("align",    Step("FREQ004")),
-    ... ])
+    >>> pipe = Pipeline(
+    ...     [
+    ...         ("notch", Step("NR001")),
+    ...         ("band", Step("FREQ001", band_hz=(0.001, 10000))),
+    ...         ("align", Step("FREQ004")),
+    ...     ]
+    ... )
     >>> print(pipe)
     """
 
@@ -309,9 +313,7 @@ class Pipeline(PipelineBase):
 
             # Progress output
             if cfg.show_progress and cfg.progress_style != "silent":
-                _print_step_start(
-                    step_idx, len(self._steps), label, step.spec.code
-                )
+                _print_step_start(step_idx, len(self._steps), label, step.spec.code)
 
             # --- Transform -------------------------------------------
             try:
@@ -334,9 +336,7 @@ class Pipeline(PipelineBase):
             # --- QC plots -------------------------------------------
             if save_plots and out is not None and error is None:
                 for fn_name, fig in step.generate_qc_plots(sites_after):
-                    p = out.save_figure(
-                        fig, fn_name, step_idx, label, api=cfg
-                    )
+                    p = out.save_figure(fig, fn_name, step_idx, label, api=cfg)
                     if p is not None:
                         plot_paths.append(p)
                     try:
@@ -566,9 +566,7 @@ class Pipeline(PipelineBase):
 
     def steps_in_category(self, category: str) -> list[tuple[str, Step]]:
         """Return steps belonging to *category*."""
-        return [
-            (lbl, s) for lbl, s in self._steps if s.spec.category == category
-        ]
+        return [(lbl, s) for lbl, s in self._steps if s.spec.category == category]
 
     # ------------------------------------------------------------------
     # Display
@@ -606,9 +604,7 @@ class Pipeline(PipelineBase):
             if isinstance(item, tuple) and len(item) == 2:
                 label, step = item
                 if not isinstance(step, Step):
-                    raise TypeError(
-                        f"Expected (str, Step) tuple, got {type(step)}"
-                    )
+                    raise TypeError(f"Expected (str, Step) tuple, got {type(step)}")
                 normalised.append((str(label), step))
             elif isinstance(item, Step):
                 normalised.append((item.spec.name, item))
@@ -621,9 +617,7 @@ class Pipeline(PipelineBase):
 
     def _check_mutable(self, op: str) -> None:
         if self._running:
-            raise RuntimeError(
-                f"Cannot {op!r} a pipeline that is currently running."
-            )
+            raise RuntimeError(f"Cannot {op!r} a pipeline that is currently running.")
 
 
 # ---------------------------------------------------------------------------

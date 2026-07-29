@@ -47,9 +47,7 @@ def test_apply_elevations_overrides_by_id() -> None:
 
 
 def test_apply_elevations_ignores_unknown_and_nonfinite() -> None:
-    out = apply_elevations(
-        _data(), {"A0": 500.0, "ZZ": 9.0, "A1": float("nan")}
-    )
+    out = apply_elevations(_data(), {"A0": 500.0, "ZZ": 9.0, "A1": float("nan")})
     elevs = [s.elevation for s in out.stations]
     assert elevs == [500.0, None]
 

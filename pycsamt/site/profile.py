@@ -77,16 +77,13 @@ class Profile:
     >>> class Head:
     ...     def __init__(self, lat, lon, name):
     ...         self.lat, self.lon, self.dataid = lat, lon, name
-    ...
     >>> class EDI:
     ...     def __init__(self, name, lat, lon):
     ...         self._h = Head(lat, lon, name)
+    ...
     ...     def get_section(self, key):
     ...         return self._h if key == "head" else None
-    ...
-    >>> sites = [EDI("A", 0.0, 0.00),
-    ...          EDI("B", 0.0, 0.01),
-    ...          EDI("C", 0.0, 0.02)]
+    >>> sites = [EDI("A", 0.0, 0.00), EDI("B", 0.0, 0.01), EDI("C", 0.0, 0.02)]
     >>> prof = Profile.from_sites(sites)
     >>> round(prof.azimuth) in (89, 90, 91)
     True
@@ -273,7 +270,7 @@ class Profile:
         Examples
         --------
         >>> grid = prof.resample(250.0)
-        >>> (grid.ndim, grid.dtype.kind) == (1, 'f')
+        >>> (grid.ndim, grid.dtype.kind) == (1, "f")
         True
         """
 
@@ -376,9 +373,7 @@ def _iter_sites(sites: Iterable[Any]) -> list[tuple[str, float, float, Any]]:
     return out
 
 
-def _xy_local(
-    lats: np.ndarray, lons: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+def _xy_local(lats: np.ndarray, lons: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     la0 = float(np.nanmean(lats))
     lo0 = float(np.nanmean(lons))
     dy = (lats - la0) * _M_PER_DEG
@@ -433,14 +428,13 @@ def infer_line_orientation(sites: Iterable[Any]) -> float:
     >>> class Head:
     ...     def __init__(self, lat, lon, name):
     ...         self.lat, self.lon, self.dataid = lat, lon, name
-    ...
     >>> class EDI:
     ...     def __init__(self, name, lat, lon):
     ...         self._h = Head(lat, lon, name)
+    ...
     ...     def get_section(self, key):
     ...         return self._h if key == "head" else None
-    ...
-    >>> east = [EDI(f"S{i}", 0.0, i*0.01) for i in range(5)]
+    >>> east = [EDI(f"S{i}", 0.0, i * 0.01) for i in range(5)]
     >>> az = infer_line_orientation(east)
     >>> 80.0 <= az <= 100.0
     True

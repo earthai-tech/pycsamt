@@ -126,9 +126,7 @@ def config(ctx: click.Context) -> None:
     show_default=True,
 )
 @click.pass_context
-def list_cmd(
-    ctx: click.Context, section: str | None, output_format: str
-) -> None:
+def list_cmd(ctx: click.Context, section: str | None, output_format: str) -> None:
     """Show all persisted keys in ``~/.pycsamt.toml``.
 
     With no SECTION argument all sections are shown.  Pass a section name
@@ -413,9 +411,7 @@ def reset_cmd(section: str | None, yes: bool) -> None:
     else:
         if _TOML_PATH().exists():
             _TOML_PATH().unlink()
-        click.echo(
-            f"Removed {_TOML_PATH()}  (all settings reset to defaults)"
-        )
+        click.echo(f"Removed {_TOML_PATH()}  (all settings reset to defaults)")
 
 
 # ---------------------------------------------------------------------------
@@ -556,9 +552,7 @@ def env_cmd(section: str | None) -> None:
                 f"[yellow]{var}[/yellow]",
                 f"[dim]{sec}[/dim]",
                 desc,
-                f"[green]{masked}[/green]"
-                if value
-                else "[dim](not set)[/dim]",
+                f"[green]{masked}[/green]" if value else "[dim](not set)[/dim]",
             )
         console.print()
         console.print(tbl)
@@ -569,9 +563,7 @@ def env_cmd(section: str | None) -> None:
         )
         console.print()
     else:
-        click.echo(
-            f"\n{'Variable':<40}  {'Section':<12}  {'Set?':<6}  Description"
-        )
+        click.echo(f"\n{'Variable':<40}  {'Section':<12}  {'Set?':<6}  Description")
         click.echo("-" * 100)
         for var, sec, desc in rows:
             value = os.environ.get(var, "")
@@ -630,9 +622,7 @@ def style_cmd(preset: str, no_persist: bool) -> None:
         data = _read_toml()
         data.setdefault("style", {})["preset"] = preset
         _write_toml(data)
-        click.echo(
-            f"Style preset set to {preset!r}  (saved to {_TOML_PATH()})"
-        )
+        click.echo(f"Style preset set to {preset!r}  (saved to {_TOML_PATH()})")
     else:
         click.echo(f"Style preset set to {preset!r}  (session only)")
 
@@ -680,9 +670,7 @@ def interp_cmd(preset: str, no_persist: bool) -> None:
         data = _read_toml()
         data.setdefault("interp", {})["preset"] = preset
         _write_toml(data)
-        click.echo(
-            f"Interp preset set to {preset!r}  (saved to {_TOML_PATH()})"
-        )
+        click.echo(f"Interp preset set to {preset!r}  (saved to {_TOML_PATH()})")
     else:
         click.echo(f"Interp preset set to {preset!r}  (session only)")
 
@@ -739,9 +727,7 @@ def agent_status(output_format: str) -> None:
         tbl.add_column(style="cyan", no_wrap=True)
         tbl.add_column(style="green")
         for k, v in rows.items():
-            tbl.add_row(
-                k, str(v) if v is not None else "[dim](not set)[/dim]"
-            )
+            tbl.add_row(k, str(v) if v is not None else "[dim](not set)[/dim]")
         console.print(
             Panel(
                 tbl,

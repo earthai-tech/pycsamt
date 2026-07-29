@@ -55,14 +55,30 @@ def _write_station_table(lines: dict[str, object], output: Path) -> None:
     with output.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         writer.writerow(
-            ["line", "order", "station", "latitude", "longitude", "elevation_m", "chainage_km"]
+            [
+                "line",
+                "order",
+                "station",
+                "latitude",
+                "longitude",
+                "elevation_m",
+                "chainage_km",
+            ]
         )
         for line_name, sites in lines.items():
             chain = extract_chainage(sites)
             for index, (site, chain_km) in enumerate(zip(sites, chain), 1):
                 lat, lon, elev = site.coords
                 writer.writerow(
-                    [line_name, index, site.name, lat, lon, elev, float(chain_km)]
+                    [
+                        line_name,
+                        index,
+                        site.name,
+                        lat,
+                        lon,
+                        elev,
+                        float(chain_km),
+                    ]
                 )
 
 
@@ -72,10 +88,12 @@ def plot_all_lines(lines: dict[str, object], output: Path) -> None:
     fig, ax = plt.subplots(figsize=(12.8, 8.0), constrained_layout=True)
     colors = plt.cm.tab10(np.linspace(0.0, 1.0, max(len(lines), 1)))
     all_lat = np.asarray(
-        [site.coords[0] for sites in lines.values() for site in sites], dtype=float
+        [site.coords[0] for sites in lines.values() for site in sites],
+        dtype=float,
     )
     all_lon = np.asarray(
-        [site.coords[1] for sites in lines.values() for site in sites], dtype=float
+        [site.coords[1] for sites in lines.values() for site in sites],
+        dtype=float,
     )
     lat0, lon0 = float(np.mean(all_lat)), float(np.mean(all_lon))
     for color, (line_name, sites) in zip(colors, lines.items()):
@@ -135,12 +153,19 @@ def _rho_phase(
     return freq, rho, phase
 
 
-def _l22_grids(sites, n_periods: int = 90) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _l22_grids(
+    sites, n_periods: int = 90
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     columns = []
     for site in sites:
         freq, rho, phase = _rho_phase(site)
         period = 1.0 / np.maximum(freq, 1e-30)
-        valid = np.isfinite(period) & np.isfinite(rho) & np.isfinite(phase) & (rho > 0.0)
+        valid = (
+            np.isfinite(period)
+            & np.isfinite(rho)
+            & np.isfinite(phase)
+            & (rho > 0.0)
+        )
         columns.append((period[valid], rho[valid], phase[valid]))
     period_min = max(float(np.min(col[0])) for col in columns)
     period_max = min(float(np.max(col[0])) for col in columns)
@@ -162,11 +187,17 @@ def plot_l22_pseudosections(sites, output: Path) -> None:
     periods, log_rho, phase = _l22_grids(sites)
     chain = extract_chainage(sites)
     names = extract_station_names(sites)
-    fig, axes = plt.subplots(2, 1, figsize=(14.0, 9.0), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(
+        2, 1, figsize=(14.0, 9.0), sharex=True, constrained_layout=True
+    )
     x, y = np.meshgrid(chain, np.log10(periods))
     im_rho = axes[0].pcolormesh(x, y, log_rho, shading="auto", cmap="turbo")
-    im_phi = axes[1].pcolormesh(x, y, phase, shading="auto", cmap="twilight_shifted")
-    fig.colorbar(im_rho, ax=axes[0], label=r"$\log_{10}\rho_{a,xy}$ ($\Omega$ m)")
+    im_phi = axes[1].pcolormesh(
+        x, y, phase, shading="auto", cmap="twilight_shifted"
+    )
+    fig.colorbar(
+        im_rho, ax=axes[0], label=r"$\log_{10}\rho_{a,xy}$ ($\Omega$ m)"
+    )
     fig.colorbar(im_phi, ax=axes[1], label=r"Phase $\phi_{xy}$ (degrees)")
     axes[0].set_title("L22PLT Zxy apparent-resistivity pseudosection")
     axes[1].set_title("L22PLT Zxy phase pseudosection")

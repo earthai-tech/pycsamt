@@ -146,9 +146,7 @@ def test_extract_all_renderables_from_data_dict():
 
 def test_extract_all_renderables_nested_figures_dict():
     fig1, fig2 = plt.figure(), plt.figure()
-    result = SimpleNamespace(
-        data={"figures": {"a_plot": fig1, "b_plot": fig2}}
-    )
+    result = SimpleNamespace(data={"figures": {"a_plot": fig1, "b_plot": fig2}})
     found = _extract_all_renderables(result)
     assert found == [("A Plot", fig1), ("B Plot", fig2)]
     plt.close(fig1)

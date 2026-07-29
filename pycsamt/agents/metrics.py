@@ -302,9 +302,7 @@ class MetricsAgent:
         self._last_cost = 0.0
 
         kinds = input_data.get("kinds") or [input_data.get("kind", "summary")]
-        kinds = [
-            str(k).strip() for k in kinds if str(k).strip() in METRIC_KINDS
-        ]
+        kinds = [str(k).strip() for k in kinds if str(k).strip() in METRIC_KINDS]
         if not kinds:
             kinds = ["summary"]
 
@@ -378,9 +376,7 @@ class MetricsAgent:
         band = None
         res = estimate_strike_consensus(sites, band=band, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
-        reg = (
-            _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
-        )
+        reg = _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
         import numpy as np
 
         if not np.isfinite(reg):
@@ -427,8 +423,7 @@ class MetricsAgent:
         counts = df["dim"].value_counts().to_dict()
         total = int(sum(counts.values())) or 1
         dist = ", ".join(
-            f"{lbl.get(k, k)} {100 * v / total:.0f}%"
-            for k, v in sorted(counts.items())
+            f"{lbl.get(k, k)} {100 * v / total:.0f}%" for k, v in sorted(counts.items())
         )
         dom = max(counts, key=counts.get)
         return (
@@ -457,9 +452,7 @@ class MetricsAgent:
         head = ", ".join(str(n) for n in names[:6])
         more = f" … (+{len(names) - 6} more)" if len(names) > 6 else ""
         return (
-            f"{len(names)} station(s): {head}{more}"
-            if names
-            else "no stations found"
+            f"{len(names)} station(s): {head}{more}" if names else "no stations found"
         )
 
     def _m_periods(self, sites, warnings) -> str:
@@ -506,16 +499,11 @@ class MetricsAgent:
                 ns.append(n)
             es, ns = np.asarray(es), np.asarray(ns)
             length_km = (
-                float(np.hypot(es.max() - es.min(), ns.max() - ns.min()))
-                / 1000.0
+                float(np.hypot(es.max() - es.min(), ns.max() - ns.min())) / 1000.0
             )
         except Exception:  # noqa: BLE001
             pass
-        span = (
-            f", profile span ≈ {length_km:.1f} km"
-            if np.isfinite(length_km)
-            else ""
-        )
+        span = f", profile span ≈ {length_km:.1f} km" if np.isfinite(length_km) else ""
         return (
             f"spans lat {lats.min():.4f}–{lats.max():.4f}°, "
             f"lon {lons.min():.4f}–{lons.max():.4f}°{span} "

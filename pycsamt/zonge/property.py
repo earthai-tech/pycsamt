@@ -161,14 +161,10 @@ class Hardware:
 
         if "tma_points" in m:
             tp = _to_number(m["tma_points"])
-            self.tma_points = (
-                int(tp) if isinstance(tp, (int, float)) else None
-            )
+            self.tma_points = int(tp) if isinstance(tp, (int, float)) else None
         if "tma_freq" in m:
             tf = _to_number(m["tma_freq"])
-            self.tma_freq = (
-                float(tf) if isinstance(tf, (int, float)) else None
-            )
+            self.tma_freq = float(tf) if isinstance(tf, (int, float)) else None
 
     def to_keywords(self) -> dict[str, Any]:
         """
@@ -263,10 +259,7 @@ class Receiver:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
                 self.hpr = tuple(float(_to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
             else:
-                parts = [
-                    p.strip()
-                    for p in str(hpr_raw).replace(";", ",").split(",")
-                ]
+                parts = [p.strip() for p in str(hpr_raw).replace(";", ",").split(",")]
                 if len(parts) >= 3:
                     self.hpr = (
                         float(_to_number(parts[0]) or 0.0),
@@ -379,9 +372,7 @@ class Transmitter:
             try:
                 self.gdp_station = int(norm["XMTR"])  # type: ignore[arg-type]
             except Exception:
-                self.gdp_station = norm[
-                    "XMTR"
-                ]  # leave as string if truly odd
+                self.gdp_station = norm["XMTR"]  # leave as string if truly odd
 
         length, _ = _parse_length(norm.get("Tx.Length"), "m")
         if length is not None:
@@ -399,9 +390,7 @@ class Transmitter:
                     float(_to_number(cen[2]) or 0.0),
                 )
             else:
-                parts = [
-                    p.strip() for p in str(cen).replace(";", ",").split(",")
-                ]
+                parts = [p.strip() for p in str(cen).replace(";", ",").split(",")]
                 if len(parts) >= 3:
                     self.center = (
                         float(_to_number(parts[0]) or 0.0),
@@ -414,10 +403,7 @@ class Transmitter:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
                 self.hpr = tuple(float(_to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
             else:
-                parts = [
-                    p.strip()
-                    for p in str(hpr_raw).replace(";", ",").split(",")
-                ]
+                parts = [p.strip() for p in str(hpr_raw).replace(";", ",").split(",")]
                 if len(parts) >= 3:
                     self.hpr = (
                         float(_to_number(parts[0]) or 0.0),

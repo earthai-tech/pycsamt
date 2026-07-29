@@ -82,9 +82,7 @@ def plot_convergence(
         # architectures trained for different epoch counts). Align every run to
         # the shortest series so the per-epoch mean/std are well-defined and
         # np.array() gets a rectangular (non-ragged) input.
-        min_len = min(
-            min(len(h["train_loss"]), len(h["val_loss"])) for h in histories
-        )
+        min_len = min(min(len(h["train_loss"]), len(h["val_loss"])) for h in histories)
         epochs = np.arange(1, min_len + 1)
 
         train_mat = np.array([h["train_loss"][:min_len] for h in histories])

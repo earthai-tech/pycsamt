@@ -38,9 +38,7 @@ def _parse_model3d(path: Path) -> dict:
     N = len(lines)
     i = 0
     # skip blank / comment lines before the control line
-    while i < N and (
-        not lines[i].strip() or lines[i].strip().startswith("#")
-    ):
+    while i < N and (not lines[i].strip() or lines[i].strip().startswith("#")):
         i += 1
 
     ctrl = lines[i].split()
@@ -84,9 +82,13 @@ def _parse_model3d(path: Path) -> dict:
         i += 1
         if not ln or ln.startswith("#"):
             continue
-        # Stop at possible centre coordinates or rotation lines.
+        # Stop at possible centre coordinates or rotation lines. A
+        # genuine resistivity row always has exactly nx values, so a
+        # shorter line is the only reliable "not a data row" signal;
+        # a fixed small threshold (e.g. "<=3") misfires whenever the
+        # grid itself has nx<=3 and discards real trailing rows.
         parts = ln.split()
-        if len(parts) <= 3 and all(_is_simple_numeric(p) for p in parts):
+        if len(parts) < nx and all(_is_simple_numeric(p) for p in parts):
             # Could be trailing centre/rotation. Stop only if we have
             # most of the data we need
             if len(rho_flat) >= total - nx:
@@ -424,16 +426,12 @@ class ModEmModel3D(ModEmBase):
             rows = []
             for i in range(0, len(arr), per_row):
                 rows.append(
-                    "  "
-                    + "  ".join(f"{v:>12.4f}" for v in arr[i : i + per_row])
+                    "  " + "  ".join(f"{v:>12.4f}" for v in arr[i : i + per_row])
                 )
             return "\n".join(rows) + "\n"
 
         lines: list[str] = [
-            (
-                f"  {self.nx}  {self.ny}  {self.nz}  "
-                f"{self.n_air}  {self.log_type}\n"
-            ),
+            (f"  {self.nx}  {self.ny}  {self.nz}  " f"{self.n_air}  {self.log_type}\n"),
         ]
         lines.append(_floats(self.x_widths))
         lines.append(_floats(self.y_widths))
@@ -444,9 +442,7 @@ class ModEmModel3D(ModEmBase):
             for iy in range(self.ny):
                 lines.append(
                     "  "
-                    + "  ".join(
-                        f"{v:>12.5E}" for v in self.rho_loge[iz, iy, :]
-                    )
+                    + "  ".join(f"{v:>12.5E}" for v in self.rho_loge[iz, iy, :])
                     + "\n"
                 )
 

@@ -82,9 +82,7 @@ def make_plot(
     when the resolved EDI directory is missing.
     """
     if kind not in PLOTTERS:
-        raise ValueError(
-            f"Unknown plot kind {kind!r}. Available: {list_plots()}"
-        )
+        raise ValueError(f"Unknown plot kind {kind!r}. Available: {list_plots()}")
 
     # headless: never open a window
     import matplotlib

@@ -182,10 +182,10 @@ def get_azimuth(
     >>> import watex as wx
     >>> from watex.utils.exmath import get_azimuth
     >>> # generate a data from ERP
-    >>> data = wx.make_erp (n_stations =7 ).frame
-    >>> get_azimuth ( data.longitude, data.latitude)
+    >>> data = wx.make_erp(n_stations=7).frame
+    >>> get_azimuth(data.longitude, data.latitude)
     array([54.575, 54.575, 54.575, 54.575, 54.575, 54.575])
-    >>> get_azimuth ( data.longitude, data.latitude, view =True, extrapolate=True)
+    >>> get_azimuth(data.longitude, data.latitude, view=True, extrapolate=True)
     array([54.57500007, 54.575     , 54.575     , 54.575     , 54.575     ,
            54.575     , 54.575     ])
 
@@ -233,9 +233,7 @@ def get_azimuth(
     dx = map(
         lambda ii: (
             np.cos(ylat[ii]) * np.sin(ylat[ii + 1])
-            - np.sin(ylat[ii])
-            * np.cos(ylat[ii + 1])
-            * np.cos(xlon[ii + 1] - xlon[ii])
+            - np.sin(ylat[ii]) * np.cos(ylat[ii + 1]) * np.cos(xlon[ii + 1] - xlon[ii])
         ),
         range(len(xlon) - 1),
     )
@@ -473,9 +471,7 @@ def linkage_matrix(
                 "distance",
                 "no. of items in clust.",
             ],
-            index=[
-                "cluster %d" % (i + 1) for i in range(row_clusters.shape[0])
-            ],
+            index=["cluster %d" % (i + 1) for i in range(row_clusters.shape[0])],
         )
     return row_clusters
 
@@ -516,20 +512,17 @@ def betaj(xj: int, L: int, W: int, **kws) -> float:
     :example:
         >>> from watex.exmath import betaj
         >>> # compute the weight point for window-size = 5 at position j =2
-        >>> L= 1 ; W=5
-        >>> betaj (xj = 2 , L=L, W=W )
+        >>> L = 1
+        ... W = 5
+        >>> betaj(xj=2, L=L, W=W)
         ... 0.35136534572813144
     """
     if W < L:
-        raise ValueError(
-            "Window-size must be greater than the dipole length."
-        )
+        raise ValueError("Window-size must be greater than the dipole length.")
 
     xk = W / 2
     # vec_betaj = np.vectorize( betaj ) ; vec_betaj(0, 1, 5)
-    return quad(
-        d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws
-    )[0]
+    return quad(d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws)[0]
 
 
 def rhoa2z(
@@ -551,10 +544,10 @@ def rhoa2z(
     :example:
     >>> import numpy as np
     >>> rhoa = np.array([1623.73691735])
-    >>> phz = np.array([45.])
-    >>> f = np.array ([1014])
+    >>> phz = np.array([45.0])
+    >>> f = np.array([1014])
     >>> rhoa2z(rhoa, phz, f)
-    ... array([[2.54950976+2.54950976j]])
+    ... array([[2.54950976 + 2.54950976j]])
 
     """
 
@@ -610,19 +603,19 @@ def rhophi2z(rho, phi, freq):
     ---------
     >>> import numpy as np
     >>> from watex.utils.exmath import rhophi2z
-    >>> rhophi2z (823 , 25 , 500 )
+    >>> rhophi2z(823, 25, 500)
     array([1300.00682824+606.20313966j])
-    >>> rho = np.array ([[823, 700], [723, 526]] )
-    >>> phi = np.array ([[45, 50], [90, 180]])
-    >>> rhophi2z (rho, phi , freq= 500  )
+    >>> rho = np.array([[823, 700], [723, 526]])
+    >>> phi = np.array([[45, 50], [90, 180]])
+    >>> rhophi2z(rho, phi, freq=500)
     array([[ 1.01427314e+03+1.01427314e+03j,  8.50328081e+02+1.01338154e+03j],
            [ 8.23227764e-14+1.34443297e+03j, -1.14673449e+03+1.40434473e-13j]])
-    >>> rhophi2z (np.array ( [ 823, 700])  , np.array ([45, 50 ])  , [500, 700] )
+    >>> rhophi2z(np.array([823, 700]), np.array([45, 50]), [500, 700])
     array([1014.27313876+1014.27313876j, 1006.12175325+1199.04921402j])
-    >>> rho  = np.abs (np.random.randn (7, 3 ) * 100 )
-    >>> phi = np.abs ( np.random.randn (7, 3 ) *180 % 90 )
-    >>> freq = np.abs ( np.random.randn (7) * 100 )
-    >>> rhophi2z (rho   , phi  , freq )
+    >>> rho = np.abs(np.random.randn(7, 3) * 100)
+    >>> phi = np.abs(np.random.randn(7, 3) * 180 % 90)
+    >>> freq = np.abs(np.random.randn(7) * 100)
+    >>> rhophi2z(rho, phi, freq)
 
     """
 
@@ -703,8 +696,8 @@ def z2rhoa(
 
     :example:
     >>> import numpy as np
-    >>> z = np.array([2 + 1j *3 ])
-    >>> f = np.array ([1014])
+    >>> z = np.array([2 + 1j * 3])
+    >>> f = np.array([1014])
     >>> z2rhoa(z, f)
     ... array([[1623.73691735]])
 
@@ -768,11 +761,11 @@ def savitzky_golay1d(
     >>> import matplotlib.pyplot as plt
     >>> from watex.utils.exmath import savitzky_golay1d
     >>> t = np.linspace(-4, 4, 500)
-    >>> y = np.exp( -t**2 ) + np.random.normal(0, 0.05, t.shape)
+    >>> y = np.exp(-(t**2)) + np.random.normal(0, 0.05, t.shape)
     >>> ysg = savitzky_golay1d(y, window_size=31, order=4)
-    >>> plt.plot(t, y, label='Noisy signal')
-    >>> plt.plot(t, np.exp(-t**2), 'k', lw=1.5, label='Original signal')
-    >>> plt.plot(t, ysg, 'r', label='Filtered signal')
+    >>> plt.plot(t, y, label="Noisy signal")
+    >>> plt.plot(t, np.exp(-(t**2)), "k", lw=1.5, label="Original signal")
+    >>> plt.plot(t, ysg, "r", label="Filtered signal")
     >>> plt.legend()
     >>> plt.show()
 
@@ -803,10 +796,7 @@ def savitzky_golay1d(
     half_window = (window_size - 1) // 2
     # precompute coefficients
     b = np.mat(
-        [
-            [k**i for i in order_range]
-            for k in range(-half_window, half_window + 1)
-        ]
+        [[k**i for i in order_range] for k in range(-half_window, half_window + 1)]
     )
     m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
     # pad the signal at the extremes with
@@ -844,9 +834,9 @@ def interpolate2d(arr2d: NDArray[float], method: str = "slinear", **kws):
     >>> from watex.methods.em import EM
     >>> from watex.utils.exmath import interpolate2d
     >>> # make 2d matrix of frequency
-    >>> emObj = EM().fit(r'data/edis')
-    >>> freq2d = emObj.make2d (out = 'freq')
-    >>> freq2d_i = interpolate2d(freq2d )
+    >>> emObj = EM().fit(r"data/edis")
+    >>> freq2d = emObj.make2d(out="freq")
+    >>> freq2d_i = interpolate2d(freq2d)
     >>> freq2d.shape
     ...(55, 3)
     >>> freq2d
@@ -1001,11 +991,7 @@ def find_bound_for_integration(
     # now take the max index and add +1 and start by this part
     # retreived the values
     array_init = ix_arr[int(max(index)) + 1 :]
-    return (
-        b0
-        if len(array_init) == 0
-        else find_bound_for_integration(array_init, b0)
-    )
+    return b0 if len(array_init) == 0 else find_bound_for_integration(array_init, b0)
 
 
 def fitfunc(
@@ -1111,13 +1097,13 @@ def vesDataOperator2(
     ---------
     >>> from watex.utils.exmath import vesDataOperator
     >>> from watex.utils.coreutils import vesSelector
-    >>> data = vesSelector ('data/ves/ves_gbalo.xlsx')
+    >>> data = vesSelector("data/ves/ves_gbalo.xlsx")
     >>> len(data)
-    ... (32, 3) # include the potentiel electrode values `MN`
+    ... (32, 3)  # include the potentiel electrode values `MN`
     >>> df= vesDataOperator(data.AB, data.resistivity,
                             typeofop='leaveOneOut', outdf =True)
     >>> df.shape
-    ... (26, 2) # exclude `MN` values and reduce(-6) the duplicated values.
+    ... (26, 2)  # exclude `MN` values and reduce(-6) the duplicated values.
     """
     op = copy.deepcopy(typeofop)
     typeofop = str(typeofop).lower()
@@ -1223,15 +1209,15 @@ def vesDataOperator(
     >>> AB = np.array([10, 10, 20, 30, 30])
     >>> rhoa = np.array([100, 105, 150, 200, 195])
     >>> # Processing with mean operation
-    >>> AB_proc, rhoa_proc = vesDataOperator(AB, rhoa, typeofop='mean')
+    >>> AB_proc, rhoa_proc = vesDataOperator(AB, rhoa, typeofop="mean")
     >>> print(AB_proc)
     [10 20 30]
     >>> print(rhoa_proc)
     [102.5 150 197.5]
 
     >>> # Using DataFrame input and median operation
-    >>> data = pd.DataFrame({'AB': AB, 'rhoa': rhoa})
-    >>> df_proc = vesDataOperator(data=data, typeofop='median', outdf=True)
+    >>> data = pd.DataFrame({"AB": AB, "rhoa": rhoa})
+    >>> df_proc = vesDataOperator(data=data, typeofop="median", outdf=True)
     >>> print(df_proc)
          AB  rhoa
     0  10  102.5
@@ -1247,9 +1233,7 @@ def vesDataOperator(
         raise ValueError("Lengths of AB and rhoa must be equal.")
 
     # Prepare output arrays
-    AB_unique, indices, counts = np.unique(
-        AB, return_inverse=True, return_counts=True
-    )
+    AB_unique, indices, counts = np.unique(AB, return_inverse=True, return_counts=True)
     rhoa_processed = np.zeros_like(AB_unique, dtype=float)
 
     # Apply specified operation on duplicated AB values
@@ -1445,9 +1429,7 @@ def bnn_inversion(AB, rhoa, rho0, h0, **kwargs):
     import theano.tensor as tt
 
     # Define the BNN architecture
-    n_hidden = kwargs.get(
-        "n_hidden", 10
-    )  # Number of neurons in the hidden layer
+    n_hidden = kwargs.get("n_hidden", 10)  # Number of neurons in the hidden layer
 
     # Initialize the PyMC3 model
     with pm.Model() as neural_network:  # noqa
@@ -1727,9 +1709,7 @@ def ohmicArea(
     roots = xx[ib_indexes]
 
     pairwise_r = (
-        np.split(roots, len(roots) // 2)
-        if len(roots) > 2
-        else [np.array(roots)]
+        np.split(roots, len(roots) // 2) if len(roots) > 2 else [np.array(roots)]
     )
     ohmS = np.zeros(
         len(
@@ -1785,9 +1765,9 @@ def _type_mechanism(
         >>> import numpy as np
         >>> from watex.utils.exmath import _type_mechanism
         >>> rang = random.RandomState(42)
-        >>> test_array2 = rang.randn (7)
+        >>> test_array2 = rang.randn(7)
         >>> _type_mechanism(np.abs(test_array2))
-        ... ('yes', 60.0)
+        ... ("yes", 60.0)
 
     """
     s_index = np.argmin(cz)
@@ -1835,12 +1815,12 @@ def type_(erp: ArrayLike[DType[float]]) -> str:
         >>> import numpy as np
         >>> from watex.utils.exmath import type_
         >>> rang = np.random.RandomState(42)
-        >>> test_array2 = rang.randn (7)
+        >>> test_array2 = rang.randn(7)
         >>> type_(np.abs(test_array2))
-        ... 'EC'
-        >>> long_array = np.abs (rang.randn(71))
+        ... "EC"
+        >>> long_array = np.abs(rang.randn(71))
         >>> type(long_array)
-        ... 'PC'
+        ... "PC"
 
 
     References
@@ -1884,9 +1864,7 @@ def type_(erp: ArrayLike[DType[float]]) -> str:
             ssets = [erp]
         else:
             remains = len(erp) % anomaly_length
-            indices = np.arange(
-                anomaly_length, len(erp) - remains, anomaly_length
-            )
+            indices = np.arange(anomaly_length, len(erp) - remains, anomaly_length)
             ssets = np.split(erp, indices)
 
     status = list()
@@ -1905,24 +1883,13 @@ def type_(erp: ArrayLike[DType[float]]) -> str:
         # no_ix = np.array (status)[len(yes_ix):]
         (no_ix,) = np.where(np.array(status) == "no")
         # check whether all indexes are sorted
-        sort_ix_yes = all(
-            yes_ix[i] < yes_ix[i + 1] for i in range(len(yes_ix) - 1)
-        )
-        sort_ix_no = all(
-            no_ix[i] < no_ix[i + 1] for i in range(len(no_ix) - 1)
-        )
+        sort_ix_yes = all(yes_ix[i] < yes_ix[i + 1] for i in range(len(yes_ix) - 1))
+        sort_ix_no = all(no_ix[i] < no_ix[i + 1] for i in range(len(no_ix) - 1))
 
         # check whether their difference is 1 even sorted
         if sort_ix_no == sort_ix_yes is True:
-            yes = set(
-                [
-                    abs(yes_ix[i] - yes_ix[i + 1])
-                    for i in range(len(yes_ix) - 1)
-                ]
-            )
-            no = set(
-                [abs(no_ix[i] - no_ix[i + 1]) for i in range(len(no_ix) - 1)]
-            )
+            yes = set([abs(yes_ix[i] - yes_ix[i + 1]) for i in range(len(yes_ix) - 1)])
+            no = set([abs(no_ix[i] - no_ix[i + 1]) for i in range(len(no_ix) - 1)])
             if (
                 yes == no == {1}
                 or
@@ -1970,12 +1937,12 @@ def shape(
         >>> test_array1 = np.arange(10)
         >>> shape (test_array1)
         ...  'C'
-        >>> test_array2 = rang.randn (7)
+        >>> test_array2 = rang.randn(7)
         >>> shape(test_array2)
-        ... 'H'
-        >>> test_array3 = np.power(10, test_array2 , dtype =np.float32)
-        >>> shape (test_array3)
-        ... 'H'   # does not change whatever the resistivity values.
+        ... "H"
+        >>> test_array3 = np.power(10, test_array2, dtype=np.float32)
+        >>> shape(test_array3)
+        ... "H"  # does not change whatever the resistivity values.
 
     References
     ----------
@@ -2020,9 +1987,7 @@ def shape(
             s_index = _assert_all_types(s, int)
 
     if s_index >= len(cz):
-        raise StationError(
-            f"Position should be less than '7': got '{s_index}'"
-        )
+        raise StationError(f"Position should be less than '7': got '{s_index}'")
     lbound, rbound = cz[: s_index + 1], cz[s_index:]
     ls, rs = lbound[0], rbound[-1]  # left side and right side (s)
     (lminls,) = argrelextrema(lbound, np.less)
@@ -2116,7 +2081,7 @@ def scalePosition(
     Examples
     --------
     >>> from watex.utils import erpSelector, scalePosition
-    >>> df = erpSelector('data/erp/l10_gbalo.xlsx')
+    >>> df = erpSelector("data/erp/l10_gbalo.xlsx")
     >>> df.columns
     ... Index(['station', 'resistivity', 'longitude', 'latitude', 'easting',
            'northing'],
@@ -2124,22 +2089,63 @@ def scalePosition(
     >>> # correcting northing coordinates from easting data
     >>> northing_corrected, popt, pcov = scalePosition(ydata =df.northing ,
                                                xdata = df.easting, show=True)
-    >>> len(df.northing.values) , len(northing_corrected)
+    >>> len(df.northing.values), len(northing_corrected)
     ... (20, 20)
     >>> popt  # by default popt =(slope:a ,intercept: b)
     ...  array([1.01151734e+00, 2.93731377e+05])
     >>> # corrected easting coordinates using the default x.
-    >>> easting_corrected, *_= scalePosition(ydata =df.easting , show=True)
+    >>> easting_corrected, *_ = scalePosition(ydata=df.easting, show=True)
     >>> df.easting.values
-    ... array([790284, 790281, 790277, 790270, 790265, 790260, 790254, 790248,
-    ...       790243, 790237, 790231, 790224, 790218, 790211, 790206, 790200,
-    ...       790194, 790187, 790181, 790175], dtype=int64)
+    ... array(
+    ...     [
+    ...         790284,
+    ...         790281,
+    ...         790277,
+    ...         790270,
+    ...         790265,
+    ...         790260,
+    ...         790254,
+    ...         790248,
+    ...         790243,
+    ...         790237,
+    ...         790231,
+    ...         790224,
+    ...         790218,
+    ...         790211,
+    ...         790206,
+    ...         790200,
+    ...         790194,
+    ...         790187,
+    ...         790181,
+    ...         790175,
+    ...     ],
+    ...     dtype=int64,
+    ... )
     >>> easting_corrected
-    ... array([790288.18571705, 790282.30300999, 790276.42030293, 790270.53759587,
-    ...       790264.6548888 , 790258.77218174, 790252.88947468, 790247.00676762,
-    ...       790241.12406056, 790235.2413535 , 790229.35864644, 790223.47593938,
-    ...       790217.59323232, 790211.71052526, 790205.8278182 , 790199.94511114,
-    ...       790194.06240407, 790188.17969701, 790182.29698995, 790176.41428289])
+    ... array(
+    ...     [
+    ...         790288.18571705,
+    ...         790282.30300999,
+    ...         790276.42030293,
+    ...         790270.53759587,
+    ...         790264.6548888,
+    ...         790258.77218174,
+    ...         790252.88947468,
+    ...         790247.00676762,
+    ...         790241.12406056,
+    ...         790235.2413535,
+    ...         790229.35864644,
+    ...         790223.47593938,
+    ...         790217.59323232,
+    ...         790211.71052526,
+    ...         790205.8278182,
+    ...         790199.94511114,
+    ...         790194.06240407,
+    ...         790188.17969701,
+    ...         790182.29698995,
+    ...         790176.41428289,
+    ...     ]
+    ... )
 
     """
 
@@ -2150,13 +2156,9 @@ def scalePosition(
     if str(func).lower() in ("none", "linear"):
         func = linfunc
     elif not callable(func) or not inspect.isfunction(func):
-        raise TypeError(
-            f"`func` argument is a callable not {type(func).__name__!r}"
-        )
+        raise TypeError(f"`func` argument is a callable not {type(func).__name__!r}")
 
-    ydata = _assert_all_types(
-        ydata, list, tuple, np.ndarray, pd.Series, pd.DataFrame
-    )
+    ydata = _assert_all_types(ydata, list, tuple, np.ndarray, pd.Series, pd.DataFrame)
     c_order = _assert_all_types(c_order, int, float, str)
     try:
         c_order = int(c_order)
@@ -2178,18 +2180,14 @@ def scalePosition(
             )
         if isinstance(c_order, str):
             # check whether the value is on the column name
-            if c_order.lower() not in list(
-                map(lambda x: x.lower(), ydata.columns)
-            ):
+            if c_order.lower() not in list(map(lambda x: x.lower(), ydata.columns)):
                 raise ValueError(
                     f"c_order {c_order!r} not found in {list(ydata.columns)}"
                     " Use the index instead."
                 )
                 # if c_order exists find the index and get the
                 # right column name
-            ix_c = list(map(lambda x: x.lower(), ydata.columns)).index(
-                c_order.lower()
-            )
+            ix_c = list(map(lambda x: x.lower(), ydata.columns)).index(c_order.lower())
             ydata = ydata.iloc[:, ix_c]  # series
         elif isinstance(c_order, (int, float)):
             c_order = int(c_order)
@@ -2254,9 +2252,7 @@ def __sves__(
     try:
         s_index = int(s_index)
     except:
-        raise TypeError(
-            f"Expected integer value not {type(s_index).__name__}"
-        )
+        raise TypeError(f"Expected integer value not {type(s_index).__name__}")
 
     s_index = _assert_all_types(s_index, int)
     cz = _assert_all_types(cz, np.ndarray, pd.Series, list, tuple)
@@ -2327,9 +2323,7 @@ def detect_station_position(
         if s > len(p):  # consider this as the dipole length position:
             # now let check whether the given value is module of the station
             if s % dl != 0:
-                raise StationError(
-                    f"Unable to detect the station position {S}"
-                )
+                raise StationError(f"Unable to detect the station position {S}")
             elif s % dl == 0 and s <= p.max():
                 # take the index
                 s_index = s // dl
@@ -2418,10 +2412,10 @@ def sfi(
     >>> import numpy as np
     >>> from watex.property import P
     >>> from watex.utils.exmath import sfi
-    >>> rang = np.random.RandomState (42)
-    >>> condzone = np.abs(rang.randn (7))
+    >>> rang = np.random.RandomState(42)
+    >>> condzone = np.abs(rang.randn(7))
     >>> # no visualization and default value `s` with global minimal rho
-    >>> pfi = sfi (condzone)
+    >>> pfi = sfi(condzone)
     ... 3.35110143
     >>> # visualize fitting curve
     >>> plotkws  = dict (rlabel = 'Conductive zone (cz)',
@@ -2515,9 +2509,7 @@ def sfi(
         # $\sqrt2# is the threshold
         sfi_ = np.sqrt((pw_star / pw) ** 2 + (ma_star / ma) ** 2) % np.sqrt(2)
         if sfi_ == np.inf:
-            sfi_ = np.sqrt(
-                (pw / pw_star) ** 2 + (ma / ma_star) ** 2
-            ) % np.sqrt(2)
+            sfi_ = np.sqrt((pw / pw_star) ** 2 + (ma / ma_star) ** 2) % np.sqrt(2)
 
     components = cz, p, xn, yn
 
@@ -2559,12 +2551,12 @@ def plot_sfi(
     ---------
     >>> import numpy as np
     >>> from watex.utils.exmath import plot_sfi
-    >>> rang = np.random.RandomState (42)
-    >>> condzone = np.abs(rang.randn (7))*1e2
+    >>> rang = np.random.RandomState(42)
+    >>> condzone = np.abs(rang.randn(7)) * 1e2
     >>> plotkws  = dict (rlabel = 'Selected conductive zone (cz)',
                          color=f'{P().frcolortags.get("fr3")}',
                          )
-    >>> plot_sfi (condzone, **plotkws)
+    >>> plot_sfi(condzone, **plotkws)
     """
 
     pfi, comps = sfi(
@@ -2585,9 +2577,7 @@ def plot_sfi(
         x=p.min(),
         y=cz.max(),
         s=f"sfi={np.around(pfi, 3)}",
-        fontdict=dict(
-            style="italic", bbox=dict(boxstyle="round", facecolor="orange")
-        ),
+        fontdict=dict(style="italic", bbox=dict(boxstyle="round", facecolor="orange")),
     )
 
     plt.legend()
@@ -2633,9 +2623,7 @@ def plot_sfi(
         (p.min() - min(xax)) / (max(xax) - min(xax)),
         (p.max() - min(xax)) / (max(xax) - min(xax)),
     ]
-    plt.axhline(
-        y=0, xmin=xlims[0], xmax=xlims[1], color="m", label="power", lw=4.0
-    )
+    plt.axhline(y=0, xmin=xlims[0], xmax=xlims[1], color="m", label="power", lw=4.0)
 
     plt.legend()
 
@@ -2702,8 +2690,8 @@ def plotOhmicArea(
     ----------
     >>> from watex.datasets import load_semien
     >>> from watex.utils.exmath import plotOhmicArea
-    >>> ves_data = load_semien ()
-    >>> plotOhmicArea (ves_data)
+    >>> ves_data = load_semien()
+    >>> plotOhmicArea(ves_data)
     """
 
     if not pre_computed:
@@ -2806,7 +2794,7 @@ def plot_(
     :Example:
         >>> import numpy as np
         >>> from watex.utils.exmath import plot_
-        >>> x, y = np.arange(0 , 60, 10) ,np.abs( np.random.randn (6))
+        >>> x, y = np.arange(0, 60, 10), np.abs(np.random.randn(6))
         >>> KWS = dict (xlabel ='Stations positions', ylabel= 'resistivity(ohm.m)',
                     rlabel = 'raw cuve', rotate = 45 )
         >>> plot_(x, y, '-ok', raw = True , style = 'seaborn-whitegrid',
@@ -2901,9 +2889,7 @@ def plot_(
     ax.set_xlabel(
         "AB/2 (m)" if dtype == "ves" else "Stations"
     ) if xlabel is None else plt.xlabel(xlabel)
-    ax.set_ylabel("Resistivity (Ω.m)") if ylabel is None else plt.ylabel(
-        ylabel
-    )
+    ax.set_ylabel("Resistivity (Ω.m)") if ylabel is None else plt.ylabel(ylabel)
 
     t0 = {
         "erp": "Plot Electrical Resistivity Profiling",
@@ -3018,9 +3004,7 @@ def _find_cz_bound_indexes(
     return cz_indexes[0], cz_indexes[-1]
 
 
-def convert_distance_to_m(
-    value: T, converter: float = 1e3, unit: str = "km"
-) -> float:
+def convert_distance_to_m(value: T, converter: float = 1e3, unit: str = "km") -> float:
     """Convert distance from `km` to `m` or vice versa even a string
     value is given.
 
@@ -3116,9 +3100,7 @@ def define_conductive_zone(
     try:
         iter(erp)
     except:
-        raise ERPError(
-            f"`erp` must be a sequence of values not {type(erp)!r}"
-        )
+        raise ERPError(f"`erp` must be a sequence of values not {type(erp)!r}")
     finally:
         erp = np.array(erp)
 
@@ -3199,9 +3181,9 @@ def shortPlot(erp, cz=None):
     :Example:
     >>> import numpy as np
     >>> from watex.utils.exmath import shortPlot, define_conductive_zone
-    >>> test_array = np.random.randn (10)
-    >>> selected_cz ,*_ = define_conductive_zone(test_array, 7)
-    >>> shortPlot(test_array, selected_cz )
+    >>> test_array = np.random.randn(10)
+    >>> selected_cz, *_ = define_conductive_zone(test_array, 7)
+    >>> shortPlot(test_array, selected_cz)
 
     """
     erp = check_y(erp, input_name="sample of ERP data")
@@ -3287,12 +3269,14 @@ def compute_sfi(
     :Example:
 
         >>> from watex.utils.exmath import compute_sfi
-        >>> sfi = compute_sfi(pk_min = 90,
-        ...                      pk_max=130,
-        ...                      rhoa_min=175,
-        ...                      rhoa_max=170,
-        ...                      rhoa=132,
-        ...                      pk=110)
+        >>> sfi = compute_sfi(
+        ...     pk_min=90,
+        ...     pk_max=130,
+        ...     rhoa_min=175,
+        ...     rhoa_max=170,
+        ...     rhoa=132,
+        ...     pk=110,
+        ... )
         >>> sfi
 
     """
@@ -3317,9 +3301,7 @@ def compute_sfi(
                 sfi = -np.sqrt(2)
 
     try:
-        if (rhoa == rhoa_min and pk == pk_min) or (
-            rhoa == rhoa_max and pk == pk_max
-        ):
+        if (rhoa == rhoa_min and pk == pk_min) or (rhoa == rhoa_max and pk == pk_max):
             ma = max([rhoa_min, rhoa_max])
             ma_star = min([rhoa_min, rhoa_max])
             pa = max([pk_min, pk_max])
@@ -3419,12 +3401,12 @@ def get_anomaly_ratio(
     --------
     >>> from watex.datasets import make_erp
     >>> from watex.utils.exmath import get_anomaly_ratio
-    >>>  # for data reproducibility seed to 123
-    >>> d = make_erp (n_stations =70, min_rho =10 , max_rho =1e4 , seed =123 )
-    >>> selected_cz,* _= defineConductiveZone (d.resistivity , auto=True)
-    >>> ANR = get_anomaly_ratio (d.resistivity, cz= selected_cz , e_spacing =10)
+    >>> # for data reproducibility seed to 123
+    >>> d = make_erp(n_stations=70, min_rho=10, max_rho=1e4, seed=123)
+    >>> selected_cz, *_ = defineConductiveZone(d.resistivity, auto=True)
+    >>> ANR = get_anomaly_ratio(d.resistivity, cz=selected_cz, e_spacing=10)
     >>> print(ANR)
-    ... 0.06 #6%
+    ... 0.06  # 6%
 
     """
     pcz = None
@@ -3487,9 +3469,7 @@ def get_anomaly_ratio(
             f" Got {len(czposix)} index{'' if len(czposix) <= 1 else 'es'}."
         )
     if len(set(czposix)) != 2:
-        raise TypeError(
-            f"'czposix' indexes must be differents. Got {czposix}"
-        )
+        raise TypeError(f"'czposix' indexes must be differents. Got {czposix}")
 
     std = (erp - erp.mean() / np.std(erp))[czposix[0] : czposix[-1]]
     std = ((std - std.min()) / (std.max() - std.min())).sum()
@@ -3594,10 +3574,15 @@ def get_type(
     :Example:
 
         >>> from watex.utils.exmath import get_type
-        >>> x = [60, 61, 62, 63, 68, 65, 80,  90, 100, 80, 100, 80]
-        >>> pos= np.arange(0, len(x)*10, 10)
-        >>> ano_type= get_type(erp_array= np.array(x),
-        ...            posMinMax=(10,90), pk=50, pos_array=pos, dl=10)
+        >>> x = [60, 61, 62, 63, 68, 65, 80, 90, 100, 80, 100, 80]
+        >>> pos = np.arange(0, len(x) * 10, 10)
+        >>> ano_type = get_type(
+        ...     erp_array=np.array(x),
+        ...     posMinMax=(10, 90),
+        ...     pk=50,
+        ...     pos_array=pos,
+        ...     dl=10,
+        ... )
         >>> ano_type
         ...CB2P
 
@@ -3614,9 +3599,9 @@ def get_type(
     ].mean() < np.median(erp_array):
         anom_type = "CB2P"
 
-    elif erp_array[: index_pos + 1].mean() >= np.median(
-        erp_array
-    ) and erp_array[index_pos:].mean() >= np.median(erp_array):
+    elif erp_array[: index_pos + 1].mean() >= np.median(erp_array) and erp_array[
+        index_pos:
+    ].mean() >= np.median(erp_array):
         if dl <= (max(posMinMax) - min(posMinMax)) <= 5 * dl:
             anom_type = "NC"
 
@@ -3652,7 +3637,7 @@ def get_shape(rhoa_range: ArrayLike | List[float]) -> str:
 
         >>> from watex.utils.exmath import get_shape
         >>> x = [60, 70, 65, 40, 30, 31, 34, 40, 38, 50, 61, 90]
-        >>> shape = get_shape (rhoa_range= np.array(x))
+        >>> shape = get_shape(rhoa_range=np.array(x))
         ... U
 
     """
@@ -3662,9 +3647,7 @@ def get_shape(rhoa_range: ArrayLike | List[float]) -> str:
     if len(minlocals[0]) > 1:
         shape = "W"
         average_curve = rhoa_range.mean()
-        minlocals_slices = rhoa_range[
-            int(minlocals[0][0]) : int(minlocals[0][-1]) + 1
-        ]
+        minlocals_slices = rhoa_range[int(minlocals[0][0]) : int(minlocals[0][-1]) + 1]
         average_minlocals_slices = minlocals_slices.mean()
 
         if average_curve >= 1.2 * average_minlocals_slices:
@@ -3719,10 +3702,15 @@ def gettype(erp_array, posMinMax, pk, pos_array, dl):
     :Example:
 
         >>> from watex.methods.erp import get_type
-        >>> x = [60, 61, 62, 63, 68, 65, 80,  90, 100, 80, 100, 80]
-        >>> pos= np.arange(0, len(x)*10, 10)
-        >>> ano_type= get_type(erp_array= np.array(x),
-        ...            posMinMax=(10,90), pk=50, pos_array=pos, dl=10)
+        >>> x = [60, 61, 62, 63, 68, 65, 80, 90, 100, 80, 100, 80]
+        >>> pos = np.arange(0, len(x) * 10, 10)
+        >>> ano_type = get_type(
+        ...     erp_array=np.array(x),
+        ...     posMinMax=(10, 90),
+        ...     pk=50,
+        ...     pos_array=pos,
+        ...     dl=10,
+        ... )
         >>> ano_type
         ...CB2P
 
@@ -3738,9 +3726,9 @@ def gettype(erp_array, posMinMax, pk, pos_array, dl):
     ].mean() < np.median(erp_array):
         anom_type = "CB2P"
 
-    elif erp_array[: index_pos + 1].mean() >= np.median(
-        erp_array
-    ) and erp_array[index_pos:].mean() >= np.median(erp_array):
+    elif erp_array[: index_pos + 1].mean() >= np.median(erp_array) and erp_array[
+        index_pos:
+    ].mean() >= np.median(erp_array):
         if dl <= (max(posMinMax) - min(posMinMax)) <= 5 * dl:
             anom_type = "NC"
 
@@ -3772,7 +3760,7 @@ def getshape(rhoa_range):
 
         >>> from watex.core.erp import get_shape
         >>> x = [60, 70, 65, 40, 30, 31, 34, 40, 38, 50, 61, 90]
-        >>> shape = get_shape (rhoa_range= np.array(x))
+        >>> shape = get_shape(rhoa_range=np.array(x))
         ...U
 
     """
@@ -3862,10 +3850,15 @@ def get_type2(erp_array, posMinMax, pk, pos_array, dl=None):
     :Example:
 
         >>> from watex.core.erp import get_type
-        >>> x = [60, 61, 62, 63, 68, 65, 80,  90, 100, 80, 100, 80]
-        >>> pos= np.arange(0, len(x)*10, 10)
-        >>> ano_type= get_type(erp_array= np.array(x),
-        ...            posMinMax=(10,90), pk=50, pos_array=pos, dl=10)
+        >>> x = [60, 61, 62, 63, 68, 65, 80, 90, 100, 80, 100, 80]
+        >>> pos = np.arange(0, len(x) * 10, 10)
+        >>> ano_type = get_type(
+        ...     erp_array=np.array(x),
+        ...     posMinMax=(10, 90),
+        ...     pk=50,
+        ...     pos_array=pos,
+        ...     dl=10,
+        ... )
         >>> ano_type
         ...CB2P
 
@@ -3923,7 +3916,7 @@ def compute_power(
     :Example:
 
         >>> from watex.utils.exmath import compute_power
-        >>> power= compute_power(80, 130)
+        >>> power = compute_power(80, 130)
 
 
     """
@@ -3961,7 +3954,7 @@ def compute_magnitude(
     :Example:
 
         >>> from watex.utils.exmath import compute_power
-        >>> power= compute_power(80, 130)
+        >>> power = compute_power(80, 130)
 
     """
     if rhoaMinMax is not None:
@@ -4045,9 +4038,7 @@ def compute_lower_anomaly(
     station_position: SP[float] = None,
     step: Optional[int] = None,
     **kws,
-) -> Tuple[
-    Dict[str, Any], ArrayLike, List[ArrayLike], List[Tuple[int, float]]
-]:
+) -> Tuple[Dict[str, Any], ArrayLike, List[ArrayLike], List[Tuple[int, float]]]:
     """
     Function to get the minimum value on the ERP array.
 
@@ -4076,9 +4067,9 @@ def compute_lower_anomaly(
 
         >>> from watex.utils.exmath import compute_lower_anolamy
         >>> import pandas as pd
-        >>> erp_data= 'data/l10_gbalo.xlsx'
-        >>> dataRes=pd.read_excel(erp_data).to_numpy()[:,-1]
-        >>> anomaly, *_ =  compute_lower_anomaly(erp_array=data, step =10)
+        >>> erp_data = "data/l10_gbalo.xlsx"
+        >>> dataRes = pd.read_excel(erp_data).to_numpy()[:, -1]
+        >>> anomaly, *_ = compute_lower_anomaly(erp_array=data, step=10)
         >>> anomaly
 
     """
@@ -4094,9 +4085,7 @@ def compute_lower_anomaly(
     # compute new_pjk
     # find differents anomlies boundaries
     for ii, (rho, index) in enumerate(min_pks):
-        _, _, anlyBounds = drawn_boundaries(
-            erp_data=erp_array, appRes=rho, index=index
-        )
+        _, _, anlyBounds = drawn_boundaries(erp_data=erp_array, appRes=rho, index=index)
 
         collectanlyBounds.append(anlyBounds)
 
@@ -4121,10 +4110,7 @@ def compute_lower_anomaly(
     return bestSelectedDICT, anpks, collectanlyBounds, min_pks
 
 
-@deprecated(
-    "Autodetection is instable, it should be modified for "
-    "the future realease."
-)
+@deprecated("Autodetection is instable, it should be modified for the future realease.")
 def select_anomaly(
     rhoa_array: ArrayLike,
     pos_array: SP = None,
@@ -4198,9 +4184,7 @@ def select_anomaly(
         pos_min, pos_max = pos_bounds.min(), pos_bounds.max()
 
         # get the res from array
-        dl_station_loc = np.arange(
-            0, dipole_length * len(rhoa_array), dipole_length
-        )
+        dl_station_loc = np.arange(0, dipole_length * len(rhoa_array), dipole_length)
         # then select rho range
         ind_pk_min = int(np.where(dl_station_loc == pos_min)[0])
         ind_pk_max = int(np.where(dl_station_loc == pos_max)[0])
@@ -4218,13 +4202,11 @@ def select_anomaly(
         return {f"1_pk{pk}": (pk, rhoa, pos_bounds, rhoa_bounds, res)}
 
     if auto:
-        bestSelectedDICT, anpks, collectanlyBounds, min_pks = (
-            compute_lower_anomaly(
-                erp_array=rhoa_array,
-                station_position=pos_array,
-                step=dipole_length,
-                display_infos=display_infos,
-            )
+        bestSelectedDICT, anpks, collectanlyBounds, min_pks = compute_lower_anomaly(
+            erp_array=rhoa_array,
+            station_position=pos_array,
+            step=dipole_length,
+            display_infos=display_infos,
         )
 
         return {
@@ -4275,9 +4257,7 @@ def define_anomaly(
             len(station_position - 1)
         )
     if station_position is None:
-        station_position = np.arange(
-            0, dipole_length * len(erp_data), dipole_length
-        )
+        station_position = np.arange(0, dipole_length * len(erp_data), dipole_length)
 
     def get_bound(pksbounds):
         """
@@ -4369,10 +4349,10 @@ def scaley(
         >>> import matplotlib.pyplot as plt
         >>> from watex.exmath import scale_values
         >>> rdn = np.random.RandomState(42)
-        >>> x0 =10 * rdn.rand(50)
-        >>> y = 2 * x0  +  rnd.randn(50) -1
+        >>> x0 = 10 * rdn.rand(50)
+        >>> y = 2 * x0 + rnd.randn(50) - 1
         >>> plt.scatter(x0, y)
-        >>> yc, x , f = scale_values(y)
+        >>> yc, x, f = scale_values(y)
         >>> plt.plot(x, y, x, yc)
 
     """
@@ -4467,16 +4447,16 @@ def smooth1d(
     >>> import numpy as np
     >>> from watex.utils.exmath import smooth1d
     >>> # add Guassian Noise
-    >>> np.random.seed (42)
-    >>> ar = np.random.randn (20 ) * 20 + np.random.normal ( 20 )
-    >>> ar [:7 ]
+    >>> np.random.seed(42)
+    >>> ar = np.random.randn(20) * 20 + np.random.normal(20)
+    >>> ar[:7]
     array([6.42891445e+00, 3.75072493e-02, 1.82905357e+01, 2.92957265e+01,
            6.20589038e+01, 2.26399535e+01, 1.12596434e+01])
-    >>> arc = smooth1d (ar, view =True , ma =False )
-    >>> arc [:7 ]
+    >>> arc = smooth1d(ar, view=True, ma=False)
+    >>> arc[:7]
     array([12.08603102, 15.29819907, 18.017749  , 20.27968322, 22.11900412,
            23.5707141 , 24.66981557])
-    >>> arc = smooth1d (ar, view =True )# ma=True by default
+    >>> arc = smooth1d(ar, view=True)  # ma=True by default
     array([ 5.0071604 ,  5.90839339,  9.6264018 , 13.94679804, 17.67369252,
            20.34922943, 22.00836725])
     """
@@ -4489,9 +4469,7 @@ def smooth1d(
             " for handling two-dimensional array."
         )
     if not _is_numeric_dtype(ar):
-        raise ValueError(
-            f"{ar.dtype.name!r} is not allowed. Expect a numeric array"
-        )
+        raise ValueError(f"{ar.dtype.name!r} is not allowed. Expect a numeric array")
 
     arr = ar.copy()
     if drop_outliers:
@@ -4594,33 +4572,30 @@ def smoothing(
     >>> import numpy as np
     >>> from watex.utils.exmath import smoothing
     >>> # add Guassian Noises
-    >>> np.random.seed (42)
-    >>> ar = np.random.randn (20, 7 ) * 20 + np.random.normal ( 20, 7 )
-    >>> ar [:3, :3 ]
+    >>> np.random.seed(42)
+    >>> ar = np.random.randn(20, 7) * 20 + np.random.normal(20, 7)
+    >>> ar[:3, :3]
     array([[ 31.5265026 ,  18.82693352,  34.5459903 ],
            [ 36.94091413,  12.20273182,  32.44342041],
            [-12.90613711,  10.34646896,   1.33559714]])
-    >>> arc = smoothing (ar, view =True , ma =False )
-    >>> arc [:3, :3 ]
+    >>> arc = smoothing(ar, view=True, ma=False)
+    >>> arc[:3, :3]
     array([[32.20356863, 17.18624398, 41.22258603],
            [33.46353806, 15.56839464, 19.20963317],
            [23.22466498, 13.8985316 ,  5.04748584]])
-    >>> arcma = smoothing (ar, view =True )# ma=True by default
-    >>> arcma [:3, :3 ]
+    >>> arcma = smoothing(ar, view=True)  # ma=True by default
+    >>> arcma[:3, :3]
     array([[23.96547827,  8.48064226, 31.81490918],
            [26.21374675, 13.33233065, 12.29345026],
            [22.60143346, 16.77242118,  2.07931194]])
-    >>> arcma_1 = smoothing (ar, view =True, axis =1 )
-    >>> arcma_1 [:3, :3 ]
+    >>> arcma_1 = smoothing(ar, view=True, axis=1)
+    >>> arcma_1[:3, :3]
     array([[18.74017857, 26.91532187, 32.02914421],
            [18.4056216 , 21.81293014, 21.98535213],
            [-1.44359989,  3.49228057,  7.51734762]])
     """
     ar = np.array(is_iterable(ar, exclude_string=True, transform=True))
-    if (
-        str(axis).lower().find("1") >= 0
-        or str(axis).lower().find("column") >= 0
-    ):
+    if str(axis).lower().find("1") >= 0 or str(axis).lower().find("column") >= 0:
         axis = 1
     else:
         axis = 0
@@ -4647,15 +4622,9 @@ def smoothing(
             arr0[ix, :] = yc
 
     if view:
-        fig, ax = plt.subplots(
-            nrows=1, ncols=2, sharey=True, figsize=fig_size
-        )
-        ax[0].imshow(
-            arr, interpolation="nearest", label="Raw Grid", cmap=cmap
-        )
-        ax[1].imshow(
-            arr0, interpolation="nearest", label="Smooth Grid", cmap=cmap
-        )
+        fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=fig_size)
+        ax[0].imshow(arr, interpolation="nearest", label="Raw Grid", cmap=cmap)
+        ax[1].imshow(arr0, interpolation="nearest", label="Smooth Grid", cmap=cmap)
 
         ax[0].set_title("Raw Grid")
         ax[0].set_xlabel(xlabel or "")
@@ -4714,12 +4683,12 @@ def fittensor(
     ---------
     >>> import numpy as np
     >>> from watex.utils.exmath import fittensor
-    >>> refreq = np.linspace(7e7, 1e0, 20) # 20 frequencies as reference
-    >>> freq_ = np.hstack ((refreq.copy()[:7], refreq.copy()[12:] ))
-    >>> z = np.random.randn(len(freq_)) *10 # assume length of  freq as
-    ...                 # the same like the tensor Z value
-    >>> zn  = fittensor (refreq, freq_, z)
-    >>> z # some frequency values are missing but not visible.
+    >>> refreq = np.linspace(7e7, 1e0, 20)  # 20 frequencies as reference
+    >>> freq_ = np.hstack((refreq.copy()[:7], refreq.copy()[12:]))
+    >>> z = np.random.randn(len(freq_)) * 10  # assume length of  freq as
+    ... # the same like the tensor Z value
+    >>> zn = fittensor(refreq, freq_, z)
+    >>> z  # some frequency values are missing but not visible.
     ...array([-23.23448367,   2.93185982,  10.81194723, -12.46326732,
              1.57312908,   7.23926576, -14.65645799,   9.85956253,
              3.96269863, -10.38325124,  -4.29739755,  -8.2591703 ,
@@ -4865,9 +4834,11 @@ def interpolate1d(
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
     >>> from watex.utils.exmath  import interpolate1d,
-    >>> z = np.random.randn(17) *10 # assume 17 freq for 17 values of tensor Z
-    >>> z [[7, 10, 16]] =np.nan # replace some indexes by NaN values
-    >>> zit = interpolate1d (z, kind ='linear')
+    >>> z = (
+    ...     np.random.randn(17) * 10
+    ... )  # assume 17 freq for 17 values of tensor Z
+    >>> z[[7, 10, 16]] = np.nan  # replace some indexes by NaN values
+    >>> zit = interpolate1d(z, kind="linear")
     >>> z
     ... array([ -1.97732415, -16.5883156 ,   8.44484348,   0.24032979,
               8.30863276,   4.76437029, -15.45780568,          nan,
@@ -4880,9 +4851,9 @@ def interpolate1d(
            -10.94003412,   9.22228383, -15.40298253,  -7.24575491,
             -7.15149205, -20.9592011 , -34.76691014, -48.57461918,
            -62.38232823])
-    >>> zmean = interpolate1d (z,  method ='mean')
-    >>> zbff = interpolate1d (z, method ='bff')
-    >>> zpd = interpolate1d (z,  method ='pd')
+    >>> zmean = interpolate1d(z, method="mean")
+    >>> zbff = interpolate1d(z, method="bff")
+    >>> zpd = interpolate1d(z, method="pd")
     >>> plt.plot( np.arange (len(z)),  zit, 'v--',
               np.arange (len(z)), zmean, 'ok-',
               np.arange (len(z)), zbff, '^g:',
@@ -4939,9 +4910,7 @@ def interpolate1d(
 
     if method == "pd":
         t_arr = pd.Series(t_arr, dtype=t_arr.dtype)
-        t_arr = np.array(
-            t_arr.interpolate(method=kind, order=order, limit=limit)
-        )
+        t_arr = np.array(t_arr.interpolate(method=kind, order=order, limit=limit))
         arr_new = reshape(fillNaN(t_arr, method="bff"))  # for consistency
 
     return arr_new
@@ -5000,19 +4969,20 @@ def moving_average(
 
     Examples
     ---------
-    >>> import numpy as np ; import matplotlib.pyplot as plt
-    >>> from watex.utils.exmath  import moving_average
-    >>> data = np.random.randn (37)
+    >>> import numpy as np
+    ... import matplotlib.pyplot as plt
+    >>> from watex.utils.exmath import moving_average
+    >>> data = np.random.randn(37)
     >>> # add gaussion noise to the data
-    >>> data = 2 * np.sin( data)  + np.random.normal (0, 1 , len(data))
+    >>> data = 2 * np.sin(data) + np.random.normal(0, 1, len(data))
     >>> window = 5  # fixed size to 5
     >>> sma = moving_average(data, window)
-    >>> cma = moving_average(data, window, method ='cma' )
-    >>> wma = moving_average(data, window, method ='wma' )
-    >>> ema = moving_average(data, window, method ='ema' , alpha =0.6)
+    >>> cma = moving_average(data, window, method="cma")
+    >>> wma = moving_average(data, window, method="wma")
+    >>> ema = moving_average(data, window, method="ema", alpha=0.6)
     >>> x = np.arange(len(data))
-    >>> plt.plot (x, data, 'o', x, sma , 'ok--', x, cma, 'g-.', x, wma, 'b:')
-    >>> plt.legend (['data', 'sma', 'cma', 'wma'])
+    >>> plt.plot(x, data, "o", x, sma, "ok--", x, cma, "g-.", x, wma, "b:")
+    >>> plt.legend(["data", "sma", "cma", "wma"])
 
     References
     ----------
@@ -5165,8 +5135,7 @@ def get_strike(
 
     if profile_angle is None and easting is None and northing is None:
         _logger.debug(
-            "NoneType is given. Use 'gstrike' to recompute the "
-            "geoelectrical strike"
+            "NoneType is given. Use 'gstrike' to recompute the " "geoelectrical strike"
         )
         if gstrike is None:
             raise TypeError("Could not compute geo-electrike strike!")
@@ -5203,15 +5172,11 @@ def get_strike(
 
     geo_electric_strike = np.floor(geo_electric_strike)
     if msg == "raises":
-        print(
-            f"+++ -> Profile angle is {geo_electric_strike:+.2f} degrees E of N"
-        )
+        print(f"+++ -> Profile angle is {geo_electric_strike:+.2f} degrees E of N")
     return geo_electric_strike, profile_angle
 
 
-def savgol_coeffs(
-    window_length, polyorder, deriv=0, delta=1.0, pos=None, use="conv"
-):
+def savgol_coeffs(window_length, polyorder, deriv=0, delta=1.0, pos=None, use="conv"):
     """Compute the coefficients for a 1-D Savitzky-Golay FIR filter.
 
     Parameters
@@ -5267,7 +5232,7 @@ def savgol_coeffs(
 
     >>> savgol_coeffs(5, 2, pos=3)
     array([ 0.25714286,  0.37142857,  0.34285714,  0.17142857, -0.14285714])
-    >>> savgol_coeffs(5, 2, pos=3, use='dot')
+    >>> savgol_coeffs(5, 2, pos=3, use="dot")
     array([-0.14285714,  0.17142857,  0.34285714,  0.37142857,  0.25714286])
 
     `x` contains data from the parabola x = t**2, sampled at
@@ -5276,7 +5241,7 @@ def savgol_coeffs(
     be 6.
 
     >>> x = np.array([1, 0, 1, 4, 9])
-    >>> c = savgol_coeffs(5, 2, pos=4, deriv=1, use='dot')
+    >>> c = savgol_coeffs(5, 2, pos=4, deriv=1, use="dot")
     >>> c.dot(x)
     6.0
     """
@@ -5305,9 +5270,7 @@ def savgol_coeffs(
         pos = halflen
 
     if not (0 <= pos < window_length):
-        raise ValueError(
-            "pos must be nonnegative and less than window_length."
-        )
+        raise ValueError("pos must be nonnegative and less than window_length.")
 
     if use not in ["conv", "dot"]:
         raise ValueError("`use` must be 'conv' or 'dot'")
@@ -5427,9 +5390,7 @@ def _fit_edges_polyfit(x, window_length, polyorder, deriv, delta, axis, y):
     This function just calls _fit_edge twice, once for each end of the axis.
     """
     halflen = window_length // 2
-    _fit_edge(
-        x, 0, window_length, 0, halflen, axis, polyorder, deriv, delta, y
-    )
+    _fit_edge(x, 0, window_length, 0, halflen, axis, polyorder, deriv, delta, y)
     n = x.shape[axis]
     _fit_edge(
         x,
@@ -5550,7 +5511,7 @@ def savgol_filter(
     three values are unchanged. Compare that to, for example,
     `mode='nearest'`:
 
-    >>> savgol_filter(x, 5, 2, mode='nearest')
+    >>> savgol_filter(x, 5, 2, mode="nearest")
     array([1.74, 3.03, 3.54, 2.86, 0.66, 0.17, 1.  , 4.6 , 7.97])
 
     """
@@ -5687,9 +5648,7 @@ def get2dtensor(
     }
 
     zl = [
-        getattr(ediObj.Z if obj_type == "EDI" else ediObj, f"{name}")[
-            tuple(_c.get(m2))
-        ]
+        getattr(ediObj.Z if obj_type == "EDI" else ediObj, f"{name}")[tuple(_c.get(m2))]
         for ediObj in z_or_edis_obj_list
     ]
 
@@ -5697,9 +5656,7 @@ def get2dtensor(
         mat2d = np.vstack(zl).T
     except:
         zl = [
-            fittensor(
-                freqs, ediObj.Z._freq if obj_type == "EDI" else ediObj.freq, v
-            )
+            fittensor(freqs, ediObj.Z._freq if obj_type == "EDI" else ediObj.freq, v)
             for ediObj, v in zip(z_or_edis_obj_list, zl)
         ]
         # stacked the z values alomx axis=1.
@@ -5846,14 +5803,14 @@ def compute_errors(arr, /, error="std", axis=0, return_confidence=False):
     ---------
     >>> from watex.datasets import load_huayuan
     >>> from watex.utils.exmath import compute_errors
-    >>> emobj=load_huayuan ().emo
-    >>> compute_errors (emobj.freqs_ )
+    >>> emobj = load_huayuan().emo
+    >>> compute_errors(emobj.freqs_)
     .. Out[104]: 14397.794665683341
-    >>> freq2d = emobj.make2d ('freq')
-    >>> compute_errors (freq2d ) [:7]
+    >>> freq2d = emobj.make2d("freq")
+    >>> compute_errors(freq2d)[:7]
     array([14397.79466568, 14397.79466568, 14397.79466568, 14397.79466568,
            14397.79466568, 14397.79466568, 14397.79466568])
-    >>> compute_errors (freq2d , error ='se') [:7]
+    >>> compute_errors(freq2d, error="se")[:7]
     array([1959.29168624, 1959.29168624, 1959.29168624, 1959.29168624,
            1959.29168624, 1959.29168624, 1959.29168624])
 
@@ -5989,9 +5946,7 @@ def plot_confidence_in(
     tensor = str(tensor).lower()
     view = str(view).lower()
     tensor = tensor + "_err" if tensor in "resistivityphase" else tensor
-    rerr, freqs = get2dtensor(
-        z_or_edis_obj_list, tensor=tensor, return_freqs=True
-    )
+    rerr, freqs = get2dtensor(z_or_edis_obj_list, tensor=tensor, return_freqs=True)
     ratio_0 = get_confidence_ratio(rerr)  # alongside columns (stations )
     # ratio_1 = get_confidence_ratio(rerr , axis =1 ) # along freq
     # make confidencity properties ( index, colors, labels )
@@ -6023,11 +5978,7 @@ def plot_confidence_in(
     if view == "2d":
         import matplotlib.pyplot as _plt
 
-        ar2d = (
-            remove_outliers(rerr, fill_value=np.nan)
-            if drop_outliers
-            else rerr
-        )
+        ar2d = remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
         x2d = np.arange(ar2d.shape[1]) * convert_value_in(distance)
         y2d = np.log10(freqs)
         fig, ax = _plt.subplots(figsize=figsize, dpi=dpi)
@@ -6328,9 +6279,9 @@ def qc(
     invalid_freqs = f[~np.isin(f, new_f)]
 
     if interpolate_freq:
-        new_f = np.logspace(
-            np.log10(new_f.min()), np.log10(new_f.max()), len(new_f)
-        )[::-1]
+        new_f = np.logspace(np.log10(new_f.min()), np.log10(new_f.max()), len(new_f))[
+            ::-1
+        ]
         # since interpolation is already made in
         # log10, getback to normal by default
         # and set off to False
@@ -6414,12 +6365,12 @@ def get_distance(
     ---------
     >>> import numpy as np
     >>> from watex.utils.exmath import get_distance
-    >>> x = np.random.rand (7) *10
-    >>> y = np.abs ( np.random.randn (7) * 12 )
-    >>> get_distance (x, y)
+    >>> x = np.random.rand(7) * 10
+    >>> y = np.abs(np.random.randn(7) * 12)
+    >>> get_distance(x, y)
     array([ 8.7665511 , 12.47545656,  8.53730212, 13.54998351, 14.0419387 ,
            20.12086781])
-    >>> get_distance (x, y, return_mean_dist= True)
+    >>> get_distance(x, y, return_mean_dist=True)
     12.91534996818084
     """
     x, y = _assert_x_y_positions(x, y, is_latlon, **kws)
@@ -6495,8 +6446,8 @@ def scale_positions(
     >>> from watex.utils.exmath import scale_positions
     >>> east = [336698.731, 336714.574, 336730.305]
     >>> north = [3143970.128, 3143957.934, 3143945.76]
-    >>> east_c , north_c= scale_positions (east, north, step =20, view =True  )
-    >>> east_c , north_c
+    >>> east_c, north_c = scale_positions(east, north, step=20, view=True)
+    >>> east_c, north_c
     (array([336686.69198337, 336702.53498337, 336718.26598337]),
      array([3143986.09866306, 3143973.90466306, 3143961.73066306]))
     """
@@ -6640,8 +6591,7 @@ def get_bearing(latlon1, latlon2, to_deg=True):
 
     b = np.arctan2(
         np.sin(lon2 - lon1) * np.cos(lat2),
-        np.cos(lat1) * np.sin(lat2)
-        - np.sin(lat1) * np.cos(lat2) * np.cos(lon2 - lon1),
+        np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(lon2 - lon1),
     )
     if to_deg:
         # convert bearing to degree and make sure it
@@ -6669,9 +6619,9 @@ def find_closest(arr, /, values):
     -----------
     >>> import numpy as np
     >>> from watex.utils.exmath import find_closest
-    >>> find_closest (  [ 2 , 3, 4, 5] , ( 2.6 , 5.6 )  )
+    >>> find_closest([2, 3, 4, 5], (2.6, 5.6))
     array([3., 5.])
-    >>> find_closest (  np.array ([[2 , 3], [ 4, 5]]), ( 2.6 , 5.6 ) )
+    >>> find_closest(np.array([[2, 3], [4, 5]]), (2.6, 5.6))
     array([3., 5.])
     array([3., 5.])
     """
@@ -6745,7 +6695,7 @@ def gradient_descent(
     >>> fz, weights, cost_history = gradient_descent(
         z=z, s=res,n_epochs=10,alpha=1e-8,degree=2)
     >>> import matplotlib.pyplot as plt
-    >>> plt.scatter (z, res)
+    >>> plt.scatter(z, res)
     >>> plt.plot(z, fz)
     """
 
@@ -6781,15 +6731,11 @@ def gradient_descent(
         with np.errstate(all="ignore"):  # rather than divide='warn'
             # https://numpy.org/devdocs/reference/generated/numpy.errstate.html
             W = W - (Z.T.dot(Z.dot(W) - s) / Z.shape[0]) * alpha
-            cost_history[ii] = (1 / 2 * Z.shape[0]) * np.sum(
-                (Z.dot(W) - s) ** 2
-            )
+            cost_history[ii] = (1 / 2 * Z.shape[0]) * np.sum((Z.dot(W) - s) ** 2)
 
     # Model function F= Z.W where `Z` id composed of vertical nodes
     # values and `bias` columns and `W` is weights numbers.
-    F = Z.dot(
-        W
-    )  # model(Z=Z, W=W)     # generate the new model with the best weights
+    F = Z.dot(W)  # model(Z=Z, W=W)     # generate the new model with the best weights
 
     return F, W, cost_history
 
@@ -6858,19 +6804,23 @@ def adaptive_moving_average(data, /, window_size_factor=0.1):
     >>> # Sample magnetotelluric data (replace this with your own data)
     >>> # Example data: a sine wave with noise
     >>> time = np.linspace(0, 10, 1000)  # Replace with your actual time values
-    >>> mt_data = np.sin(2 * np.pi * 1 * time) + 0.2 * np.random.randn(1000)  # Example data
+    >>> mt_data = np.sin(2 * np.pi * 1 * time) + 0.2 * np.random.randn(
+    ...     1000
+    ... )  # Example data
     >>> # Function to calculate the adaptive moving average
     >>> # Define the window size factor (adjust as needed)
-    >>> window_size_factor = 0.1  # Adjust this value based on your data characteristics
+    >>> window_size_factor = (
+    ...     0.1  # Adjust this value based on your data characteristics
+    ... )
     >>> # Apply adaptive moving average to the magnetotelluric data
     >>> smoothed_data = adaptive_moving_average(mt_data, window_size_factor)
     >>> # Plot the original and smoothed data
     >>> plt.figure(figsize=(10, 6))
-    >>> plt.plot(time, mt_data, 'b-', label='Original Data')
-    >>> plt.plot(time, smoothed_data, 'r-', label='Smoothed Data (AMA)')
-    >>> plt.xlabel('Time')
-    >>> plt.ylabel('Amplitude')
-    >>> plt.title('Adaptive Moving Average (AMA) Smoothing')
+    >>> plt.plot(time, mt_data, "b-", label="Original Data")
+    >>> plt.plot(time, smoothed_data, "r-", label="Smoothed Data (AMA)")
+    >>> plt.xlabel("Time")
+    >>> plt.ylabel("Amplitude")
+    >>> plt.title("Adaptive Moving Average (AMA) Smoothing")
     >>> plt.legend()
     >>> plt.grid(True)
     >>> plt.show()
@@ -6936,18 +6886,18 @@ def torres_verdin_filter(
     >>> from watex.utils.exmath import torres_verdin_filter
     >>> data = np.random.randn(100)
     >>> ama = torres_verdin_filter(data)
-    >>> plt.plot (range (len(data)), data, 'k', range(len(data)), ama, '-or')
+    >>> plt.plot(range(len(data)), data, "k", range(len(data)), ama, "-or")
     >>> # apply on two dimensional array
     >>> data2d = np.random.randn(7, 10)
-    >>> ama2d = torres_verdin_filter ( data2d, axis =0)
+    >>> ama2d = torres_verdin_filter(data2d, axis=0)
     >>> fig, ax  = plt.subplots (nrows = 1, ncols = 2 , sharey= True,
                              figsize = (7,7) )
-    >>> ax[0].imshow(data2d , label ='Raw data', cmap = 'binary' )
-    >>> ax[1].imshow (ama2d,  label = 'AMA data', cmap ='binary' )
-    >>> ax[0].set_title ('Raw data')
-    >>> ax[1].set_title ('AMA data')
+    >>> ax[0].imshow(data2d, label="Raw data", cmap="binary")
+    >>> ax[1].imshow(ama2d, label="AMA data", cmap="binary")
+    >>> ax[0].set_title("Raw data")
+    >>> ax[1].set_title("AMA data")
     >>> plt.legend
-    >>> plt.show ()
+    >>> plt.show()
 
     """
     arr = is_iterable(arr, exclude_string=True, transform=True)
@@ -7041,9 +6991,11 @@ def butterworth_filter(
     >>> import numpy as np
     >>> from watex.utils.exmath import butterworth_filter
     >>> time = np.linspace(0, 1, 1000)  # Replace with your actual time values
-    >>> freqs = np.linspace ( 1, 1000, 500)
-    >>> data = np.sin(2 * np.pi * 10 *freqs) + 0.5 * np.sin(2 * np.pi * 50 *freqs)
-    >>> _=butterworth_filter (data , freqs , fs = 1000, frange=( 5, 20), plot=True )
+    >>> freqs = np.linspace(1, 1000, 500)
+    >>> data = np.sin(2 * np.pi * 10 * freqs) + 0.5 * np.sin(
+    ...     2 * np.pi * 50 * freqs
+    ... )
+    >>> _ = butterworth_filter(data, freqs, fs=1000, frange=(5, 20), plot=True)
 
     """
     data = is_iterable(data, exclude_string=True, transform=True)
@@ -7095,9 +7047,7 @@ def butterworth_filter(
     return y
 
 
-def exportEDIs(
-    ediObjs: List[EDIO], new_Z: List[ZO], savepath: str = None, **kws
-):
+def exportEDIs(ediObjs: List[EDIO], new_Z: List[ZO], savepath: str = None, **kws):
     """Export EDI files from multiples EDI or z objects
 
     Export new EDI files from the former object with  a given new

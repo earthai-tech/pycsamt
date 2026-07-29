@@ -61,9 +61,7 @@ def _extract_qc_features(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     # SNR from error array
     if ze is not None and ze.shape == z.shape:
         amp = np.sqrt(0.5 * (np.abs(zxy) ** 2 + np.abs(zyx) ** 2))
-        err = np.sqrt(
-            0.5 * (np.abs(ze[:, 0, 1]) ** 2 + np.abs(ze[:, 1, 0]) ** 2)
-        )
+        err = np.sqrt(0.5 * (np.abs(ze[:, 0, 1]) ** 2 + np.abs(ze[:, 1, 0]) ** 2))
         F[:, 0] = amp / (err + 1e-24)
     else:
         # Estimate SNR from local spectral smoothness
@@ -83,9 +81,7 @@ def _extract_qc_features(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
     F[:, 1] = swift
 
     # Off-diagonal amplitude asymmetry
-    F[:, 2] = np.log10(
-        np.maximum(np.abs(zxy), 1e-24) / np.maximum(np.abs(zyx), 1e-24)
-    )
+    F[:, 2] = np.log10(np.maximum(np.abs(zxy), 1e-24) / np.maximum(np.abs(zyx), 1e-24))
 
     # Phase (degrees)
     F[:, 3] = np.degrees(np.angle(zxy))
@@ -106,9 +102,7 @@ def _sites_to_feature_df(sites: Any) -> pd.DataFrame:
             ensure_sites,
         )
     except ImportError as exc:
-        raise ImportError(
-            "emtools is required for site-based QC scoring"
-        ) from exc
+        raise ImportError("emtools is required for site-based QC scoring") from exc
 
     S = ensure_sites(sites, recursive=True, on_dup="replace")
     rows: list[dict[str, Any]] = []
@@ -176,9 +170,9 @@ class EMQCScorer(BaseEMProcessor):
     --------
     >>> from pycsamt.ai.processing import EMQCScorer
     >>> scorer = EMQCScorer(snr_threshold=5.0, use_ml=False)
-    >>> scorer.fit(sites)                           # doctest: +SKIP
+    >>> scorer.fit(sites)  # doctest: +SKIP
     EMQCScorer(rule_only)
-    >>> tbl = scorer.score_table(sites)             # doctest: +SKIP
+    >>> tbl = scorer.score_table(sites)  # doctest: +SKIP
     """
 
     def __init__(
@@ -240,9 +234,7 @@ class EMQCScorer(BaseEMProcessor):
         valid = np.all(np.isfinite(feat), axis=1)
         feat_clean = feat[valid]
         if len(feat_clean) == 0:
-            raise ValueError(
-                "No valid (finite) feature rows found in training data."
-            )
+            raise ValueError("No valid (finite) feature rows found in training data.")
 
         self._model = IsolationForest(
             n_estimators=self.n_estimators,
@@ -356,9 +348,7 @@ class EMQCScorer(BaseEMProcessor):
 
             buf = io.BytesIO()
             pickle.dump(self._model, buf)
-            return {
-                "_iso_model": np.frombuffer(buf.getvalue(), dtype=np.uint8)
-            }
+            return {"_iso_model": np.frombuffer(buf.getvalue(), dtype=np.uint8)}
         except Exception:
             return {}
 

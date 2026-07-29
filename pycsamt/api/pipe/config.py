@@ -9,12 +9,14 @@ Examples
 Override output format temporarily::
 
     from pycsamt.api.pipe import PYCSAMT_PIPE
+
     with PYCSAMT_PIPE.context(plot_dpi=300, plot_fmt="pdf"):
         result = pipeline.run(sites)
 
 Change global defaults::
 
     from pycsamt.api.pipe import configure_pipe
+
     configure_pipe(output_root="my_project/results", show_progress=False)
 """
 

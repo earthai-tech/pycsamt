@@ -15,7 +15,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 IMAGE_DIR = (
@@ -33,10 +32,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.api import read_edis
-        from pycsamt.emtools.qc import station_confidence_table
-        from pycsamt.models.occam2d import InputBuilder, OccamConfig
-        from pycsamt.models.occam2d.validation import detect_file_type
+        pass
 
     return locals()
 
@@ -85,7 +81,9 @@ def _data_coverage_plot(builder) -> None:
             alpha=0.88,
         )
     ax.set_xticks(x[::2])
-    ax.set_xticklabels([s.replace("23-", "") for s in sites[::2]], rotation=45, ha="right")
+    ax.set_xticklabels(
+        [s.replace("23-", "") for s in sites[::2]], rotation=45, ha="right"
+    )
     ax.set_ylabel("Rows written per station")
     ax.set_xlabel("Station")
     ax.set_title("OccamDataFile rows by station and data type")
@@ -97,7 +95,9 @@ def _data_coverage_plot(builder) -> None:
 def _frequency_mesh_plot(builder) -> None:
     data = builder.data
     mesh = builder.mesh
-    fig, axes = plt.subplots(1, 2, figsize=(11.3, 4.4), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1, 2, figsize=(11.3, 4.4), constrained_layout=True
+    )
 
     freqs = np.asarray(data.frequencies, dtype=float)
     periods = 1.0 / freqs
@@ -118,13 +118,19 @@ def _frequency_mesh_plot(builder) -> None:
     x_nodes = np.asarray(mesh.x_nodes, dtype=float)
     z_nodes = np.asarray(mesh.z_nodes, dtype=float)
     for x in x_nodes:
-        axes[1].plot([x, x], [z_nodes[0], z_nodes[-1]], color="#7e8b93", linewidth=0.35)
+        axes[1].plot(
+            [x, x], [z_nodes[0], z_nodes[-1]], color="#7e8b93", linewidth=0.35
+        )
     for z in z_nodes:
-        axes[1].plot([x_nodes[0], x_nodes[-1]], [z, z], color="#7e8b93", linewidth=0.35)
+        axes[1].plot(
+            [x_nodes[0], x_nodes[-1]], [z, z], color="#7e8b93", linewidth=0.35
+        )
     axes[1].invert_yaxis()
     axes[1].set_xlabel("Profile mesh coordinate (m)")
     axes[1].set_ylabel("Depth mesh coordinate (m)")
-    axes[1].set_title(f"Mesh skeleton: {mesh.n_xcells} x {mesh.n_zcells} cells")
+    axes[1].set_title(
+        f"Mesh skeleton: {mesh.n_xcells} x {mesh.n_zcells} cells"
+    )
     axes[1].grid(False)
     axes[1].set_facecolor("#fbfbf7")
     for spine in axes[1].spines.values():
@@ -215,7 +221,11 @@ def main() -> int:
     _file_size_plot(workdir, cfg)
 
     print("confidence_head:")
-    print(confidence[["station", "confidence", "coverage"]].head(5).to_string(index=False))
+    print(
+        confidence[["station", "confidence", "coverage"]]
+        .head(5)
+        .to_string(index=False)
+    )
     print("builder_summary:")
     print(builder.summary())
     print("object_counts:")
@@ -225,7 +235,12 @@ def main() -> int:
         f"parameters={builder.model.n_params} startup={cfg.startup_file}"
     )
     print("file_types:")
-    for filename in (cfg.data_file, cfg.mesh_file, cfg.model_file, cfg.startup_file):
+    for filename in (
+        cfg.data_file,
+        cfg.mesh_file,
+        cfg.model_file,
+        cfg.startup_file,
+    ):
         path = workdir / filename
         kind = functions["detect_file_type"](path)
         print(f"{path.name:18s} -> {kind:7s} {path.stat().st_size:7d} bytes")

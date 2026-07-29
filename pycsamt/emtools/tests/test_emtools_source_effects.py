@@ -61,9 +61,7 @@ def _site(
     return _FakeSite(station, _make_z(fr, rho), fr, offset=offset)
 
 
-def _site_no_offset(
-    station: str, rho: float = 100.0, n: int = 8
-) -> _FakeSite:
+def _site_no_offset(station: str, rho: float = 100.0, n: int = 8) -> _FakeSite:
     fr = np.logspace(0, 4, n)
     return _FakeSite(station, _make_z(fr, rho), fr)
 
@@ -82,18 +80,14 @@ def test_beta_decreases_with_frequency():
     """Higher frequency → farther from source in wavelengths → lower β."""
     b_lo = float(overprint_beta(100.0, 1.0, 5000.0))
     b_hi = float(overprint_beta(100.0, 1000.0, 5000.0))
-    assert b_lo > b_hi, (
-        f"β at 1 Hz={b_lo:.2f} should exceed β at 1 kHz={b_hi:.2f}"
-    )
+    assert b_lo > b_hi, f"β at 1 Hz={b_lo:.2f} should exceed β at 1 kHz={b_hi:.2f}"
 
 
 def test_beta_decreases_with_offset():
     """Larger offset → smaller ground-wave contamination."""
     b_near = float(overprint_beta(100.0, 10.0, 2000.0))
     b_far = float(overprint_beta(100.0, 10.0, 10_000.0))
-    assert b_near > b_far, (
-        f"near β={b_near:.2f} should exceed far β={b_far:.2f}"
-    )
+    assert b_near > b_far, f"near β={b_near:.2f} should exceed far β={b_far:.2f}"
 
 
 def test_beta_array_shape():
@@ -201,9 +195,7 @@ def test_detect_no_offset_nan_beta():
 
 def test_detect_offset_dict():
     sites = [_site_no_offset("S00", n=6), _site_no_offset("S01", n=6)]
-    df = detect_source_overprint(
-        sites, source_offset={"S00": 3000.0, "S01": 8000.0}
-    )
+    df = detect_source_overprint(sites, source_offset={"S00": 3000.0, "S01": 8000.0})
     grp = df.groupby("station")["beta_pct"]
     beta_near = grp.mean()["S00"]
     beta_far = grp.mean()["S01"]

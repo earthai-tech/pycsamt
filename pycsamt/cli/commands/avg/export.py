@@ -139,6 +139,5 @@ def export(
     else:
         sz = summary["size_kb"]
         click.echo(
-            f"Exported  {export_format}  →  {out_path}"
-            + (f"  ({sz} KB)" if sz else "")
+            f"Exported  {export_format}  →  {out_path}" + (f"  ({sz} KB)" if sz else "")
         )

@@ -172,12 +172,8 @@ def stations_from_edi(
 
             if ze is not None:
                 ze_s = np.asarray(ze)[order]
-                rel_te = np.abs(ze_s[:, 0, 1]) / np.maximum(
-                    np.abs(zxy), 1e-30
-                )
-                rel_tm = np.abs(ze_s[:, 1, 0]) / np.maximum(
-                    np.abs(zyx), 1e-30
-                )
+                rel_te = np.abs(ze_s[:, 0, 1]) / np.maximum(np.abs(zxy), 1e-30)
+                rel_tm = np.abs(ze_s[:, 1, 0]) / np.maximum(np.abs(zyx), 1e-30)
             else:
                 rel_te = np.full(per.shape, default_rel_error)
                 rel_tm = np.full(per.shape, default_rel_error)
@@ -346,7 +342,8 @@ def make_mt_data_from_edi(
     >>> em = make_mt_data_from_edi(
     ...     "data/AMT/WILLY_DATA/L22PLT",
     ...     "run/mare2dem.emdata",
-    ...     error_floor_te=0.05, error_floor_tm=0.05,
+    ...     error_floor_te=0.05,
+    ...     error_floor_tm=0.05,
     ... )
     >>> em.n_mt_receivers
     25

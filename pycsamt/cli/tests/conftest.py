@@ -142,9 +142,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     pycsamt_dir.mkdir()
 
     monkeypatch.setattr(_survey, "_PYCSAMT_DIR", pycsamt_dir)
-    monkeypatch.setattr(
-        _survey, "_CONTEXT_FILE", pycsamt_dir / "context.json"
-    )
+    monkeypatch.setattr(_survey, "_CONTEXT_FILE", pycsamt_dir / "context.json")
     monkeypatch.setattr(_survey, "_CACHE_ROOT", cache_root)
     monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT", cache_root)
     monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR", pycsamt_dir)
@@ -184,8 +182,7 @@ class _FakeSites:
 
     def __init__(self, names: list[str]) -> None:
         self._items = [
-            _FakeSite(n, lat=float(i), lon=float(i + 100))
-            for i, n in enumerate(names)
+            _FakeSite(n, lat=float(i), lon=float(i + 100)) for i, n in enumerate(names)
         ]
 
     def __len__(self) -> int:
@@ -243,17 +240,13 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     # patch the core module
     monkeypatch.setattr(_survey, "_PYCSAMT_DIR", pycsamt_dir)
-    monkeypatch.setattr(
-        _survey, "_CONTEXT_FILE", pycsamt_dir / "context.json"
-    )
+    monkeypatch.setattr(_survey, "_CONTEXT_FILE", pycsamt_dir / "context.json")
     monkeypatch.setattr(_survey, "_CACHE_ROOT", cache_root)
 
     # patch the command module; raising=False because it only imports a
     # subset of these names (e.g. _PYCSAMT_DIR is no longer re-exported)
     monkeypatch.setattr(_cmd_survey, "_CACHE_ROOT", cache_root, raising=False)
-    monkeypatch.setattr(
-        _cmd_survey, "_PYCSAMT_DIR", pycsamt_dir, raising=False
-    )
+    monkeypatch.setattr(_cmd_survey, "_PYCSAMT_DIR", pycsamt_dir, raising=False)
 
     return fake_home
 

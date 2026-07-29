@@ -33,9 +33,7 @@ def _tree() -> Path:
     tmp = Path(mkdtemp())
     (tmp / "pycsamt" / "emtools").mkdir(parents=True)
     (tmp / "pycsamt" / "emtools" / "ss.py").write_text(_PY, encoding="utf-8")
-    (tmp / "README.md").write_text(
-        "# pyCSAMT\nProcessing suite.\n", encoding="utf-8"
-    )
+    (tmp / "README.md").write_text("# pyCSAMT\nProcessing suite.\n", encoding="utf-8")
     return tmp
 
 
@@ -49,9 +47,7 @@ class TestIndexStore(unittest.TestCase):
         self.assertTrue(index_exists(root=self.root))
         chunks = load_index(root=self.root)
         self.assertEqual(len(chunks), mf["n_chunks"])
-        self.assertTrue(
-            any("estimate_ss_ama" in (c.symbol or "") for c in chunks)
-        )
+        self.assertTrue(any("estimate_ss_ama" in (c.symbol or "") for c in chunks))
 
     def test_manifest(self):
         build_index(root=self.root)
@@ -80,9 +76,7 @@ class TestIndexStore(unittest.TestCase):
 
     def test_retriever_fresh_ingest_when_disabled(self):
         # no index built; prefer_persisted ignored → fresh ingest
-        r = build_retriever(
-            self.root, use_cache=False, prefer_persisted=False
-        )
+        r = build_retriever(self.root, use_cache=False, prefer_persisted=False)
         self.assertGreater(len(r.chunks), 0)
 
 
@@ -109,9 +103,7 @@ class TestFreshness(unittest.TestCase):
 
     def test_content_change_invalidates(self):
         f = self.root / "pycsamt" / "emtools" / "ss.py"
-        f.write_text(
-            f.read_text(encoding="utf-8") + "\n# edited\n", encoding="utf-8"
-        )
+        f.write_text(f.read_text(encoding="utf-8") + "\n# edited\n", encoding="utf-8")
         self.assertTrue(index_is_stale(root=self.root))
 
     def test_new_indexed_file_invalidates(self):
@@ -142,9 +134,7 @@ class TestCli(unittest.TestCase):
 
     def test_query(self):
         root = _tree()
-        rc = cli.main(
-            ["--root", str(root), "query", "static shift", "-k", "3"]
-        )
+        rc = cli.main(["--root", str(root), "query", "static shift", "-k", "3"])
         self.assertEqual(rc, 0)
 
 

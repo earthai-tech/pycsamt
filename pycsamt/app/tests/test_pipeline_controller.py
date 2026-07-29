@@ -174,9 +174,7 @@ class TestParamSpec:
         assert p2.options == []
 
     def test_bounds_and_decimals(self):
-        p = ParamSpec(
-            "float", "L", 0.5, min_val=0.0, max_val=1.0, decimals=2
-        )
+        p = ParamSpec("float", "L", 0.5, min_val=0.0, max_val=1.0, decimals=2)
         assert p.min_val == 0.0
         assert p.max_val == 1.0
         assert p.decimals == 2
@@ -193,9 +191,7 @@ class TestMethodSpec:
         assert m.params == {}
 
     def test_with_params(self):
-        m = MethodSpec(
-            "foo", "Foo", params={"x": ParamSpec("int", "X", 1)}
-        )
+        m = MethodSpec("foo", "Foo", params={"x": ParamSpec("int", "X", 1)})
         assert "x" in m.params
         assert m.params["x"].default == 1
 
@@ -211,12 +207,8 @@ class TestMethodSpec:
 
 def _make_step(active_method: str = "") -> PipelineStep:
     methods = [
-        MethodSpec(
-            "a", "Method A", params={"x": ParamSpec("int", "X", 5)}
-        ),
-        MethodSpec(
-            "b", "Method B", params={"y": ParamSpec("float", "Y", 1.5)}
-        ),
+        MethodSpec("a", "Method A", params={"x": ParamSpec("int", "X", 5)}),
+        MethodSpec("b", "Method B", params={"y": ParamSpec("float", "Y", 1.5)}),
     ]
     return PipelineStep(
         id=0,
@@ -418,9 +410,7 @@ class TestSetInputSites:
         assert "Ready" in controller.steps[0].result_info
         assert "stations" in controller.steps[0].result_info
 
-    def test_no_prefill_when_step0_method_not_current(
-        self, controller, willy_subset
-    ):
+    def test_no_prefill_when_step0_method_not_current(self, controller, willy_subset):
         controller.steps[0].active_method = "folder"
         controller.set_input_sites(willy_subset)
         assert controller.steps[0].result_info == ""
@@ -437,9 +427,7 @@ class TestReset:
     def test_reset_clears_status_for_all_steps(self, ready_controller):
         ready_controller.execute_step(0)
         ready_controller.reset()
-        assert all(
-            s.status == StepStatus.PENDING for s in ready_controller.steps
-        )
+        assert all(s.status == StepStatus.PENDING for s in ready_controller.steps)
 
     def test_reset_clears_sites_chain(self, ready_controller):
         ready_controller.execute_step(0)
@@ -538,9 +526,7 @@ class TestConfigRoundTrip:
             "max_skew": 6.0,
         }
 
-    def test_round_trip_all_steps_active_method_always_restored(
-        self, controller
-    ):
+    def test_round_trip_all_steps_active_method_always_restored(self, controller):
         """active_method is always restored correctly regardless of the
         params bug above."""
         controller.steps[1].active_method = "flag_only"
@@ -555,11 +541,7 @@ class TestConfigRoundTrip:
             assert a.active_method == b.active_method
 
     def test_from_config_ignores_unknown_param_keys(self, controller):
-        cfg = {
-            "steps": [
-                {"id": 0, "method": "current", "params": {"bogus": 1}}
-            ]
-        }
+        cfg = {"steps": [{"id": 0, "method": "current", "params": {"bogus": 1}}]}
         controller.from_config(cfg)
         assert "bogus" not in controller.steps[0].params
 
@@ -571,15 +553,11 @@ class TestConfigRoundTrip:
         cfg = {"steps": [{"method": "x", "params": {}}]}
         controller.from_config(cfg)  # id is None -> skipped, must not raise
 
-    def test_from_config_defaults_missing_method_to_default_method(
-        self, controller
-    ):
+    def test_from_config_defaults_missing_method_to_default_method(self, controller):
         controller.steps[3].active_method = "loess"  # perturb first
         cfg = {"steps": [{"id": 3, "params": {}}]}
         controller.from_config(cfg)
-        assert controller.steps[3].active_method == (
-            controller.steps[3].default_method
-        )
+        assert controller.steps[3].active_method == (controller.steps[3].default_method)
 
     def test_from_config_empty_steps_list_is_noop(self, controller):
         before = controller.to_config()
@@ -646,65 +624,44 @@ class TestCoerceSitesStaticmethod:
 
     def test_sites_like_result_returned_as_is(self, willy_subset):
         fallback = object()
-        assert (
-            PipelineController._coerce_sites(willy_subset, fallback)
-            is willy_subset
-        )
+        assert PipelineController._coerce_sites(willy_subset, fallback) is willy_subset
 
     def test_plain_list_result_falls_back(self):
         fallback = object()
-        assert (
-            PipelineController._coerce_sites([1, 2, 3], fallback)
-            is fallback
-        )
+        assert PipelineController._coerce_sites([1, 2, 3], fallback) is fallback
 
     def test_result_wrapped_in_sites_attr(self, willy_subset):
         class Wrapper:
             sites = willy_subset
 
-        assert (
-            PipelineController._coerce_sites(Wrapper(), "fb")
-            is willy_subset
-        )
+        assert PipelineController._coerce_sites(Wrapper(), "fb") is willy_subset
 
     def test_result_wrapped_in_data_attr(self, willy_subset):
         class Wrapper:
             data = willy_subset
 
-        assert (
-            PipelineController._coerce_sites(Wrapper(), "fb")
-            is willy_subset
-        )
+        assert PipelineController._coerce_sites(Wrapper(), "fb") is willy_subset
 
     def test_sites_attr_none_falls_through_to_data_attr(self, willy_subset):
         class Wrapper:
             sites = None
             data = willy_subset
 
-        assert (
-            PipelineController._coerce_sites(Wrapper(), "fb")
-            is willy_subset
-        )
+        assert PipelineController._coerce_sites(Wrapper(), "fb") is willy_subset
 
     def test_wrapped_attr_not_sites_like_falls_back(self):
         class Wrapper:
             sites = "not-sites-like"
 
         fallback = object()
-        assert (
-            PipelineController._coerce_sites(Wrapper(), fallback)
-            is fallback
-        )
+        assert PipelineController._coerce_sites(Wrapper(), fallback) is fallback
 
     def test_no_relevant_attrs_falls_back(self):
         class Wrapper:
             pass
 
         fallback = object()
-        assert (
-            PipelineController._coerce_sites(Wrapper(), fallback)
-            is fallback
-        )
+        assert PipelineController._coerce_sites(Wrapper(), fallback) is fallback
 
 
 # ── execute_step(): Load (step 0) ────────────────────────────────────────────
@@ -733,9 +690,7 @@ class TestExecuteStepLoad:
         assert controller.steps[0].status == StepStatus.ERROR
         assert controller.steps[0].error_msg
 
-    def test_folder_method_empty_folder_raises_no_edi_files(
-        self, controller, tmp_path
-    ):
+    def test_folder_method_empty_folder_raises_no_edi_files(self, controller, tmp_path):
         controller.steps[0].active_method = "folder"
         controller.steps[0].reset_params()
         controller.steps[0].params["folder"] = str(tmp_path)
@@ -765,18 +720,14 @@ class TestExecuteStepQC:
         assert ready_controller.steps[1].status == StepStatus.DONE
         assert "stations after QC" in ready_controller.steps[1].result_info
 
-    def test_flag_only_returns_input_unchanged(
-        self, ready_controller, willy_subset
-    ):
+    def test_flag_only_returns_input_unchanged(self, ready_controller, willy_subset):
         ready_controller.steps[1].active_method = "flag_only"
         ready_controller.steps[1].reset_params()
         result = ready_controller.execute_step(1)
         assert result is willy_subset
         assert "unchanged" in ready_controller.steps[1].result_info
 
-    def test_qc_score_method_param_never_forwarded(
-        self, ready_controller, monkeypatch
-    ):
+    def test_qc_score_method_param_never_forwarded(self, ready_controller, monkeypatch):
         """KNOWN BUG #4 — see module docstring: the 'method' ParamSpec is
         defined in the catalogue but silently dropped before calling
         drop_low_confidence_frequencies()."""
@@ -853,16 +804,12 @@ class TestExecuteStepFrequencyEdit:
         to accept the n_freq kwarg the controller actually passes."""
         import pycsamt.emtools as et
 
-        monkeypatch.setattr(
-            et, "regrid_logspace", lambda sites, n_freq=30, **kw: sites
-        )
+        monkeypatch.setattr(et, "regrid_logspace", lambda sites, n_freq=30, **kw: sites)
         ready_controller.steps[2].active_method = "regrid"
         ready_controller.steps[2].reset_params()
         result = ready_controller.execute_step(2)
         assert result is willy_subset
-        assert ready_controller.steps[2].result_info == (
-            "Regridded to 30 frequencies."
-        )
+        assert ready_controller.steps[2].result_info == ("Regridded to 30 frequencies.")
         assert ready_controller.steps[2].status == StepStatus.DONE
 
 
@@ -871,9 +818,7 @@ class TestExecuteStepFrequencyEdit:
 
 class TestExecuteStepStaticShift:
     @pytest.mark.parametrize("method", ["ama", "loess", "bilateral", "refmedian"])
-    def test_variant_does_not_raise_and_marks_done(
-        self, ready_controller, method
-    ):
+    def test_variant_does_not_raise_and_marks_done(self, ready_controller, method):
         ready_controller.steps[3].active_method = method
         ready_controller.steps[3].reset_params()
         result = ready_controller.execute_step(3)
@@ -920,9 +865,7 @@ class TestExecuteStepNoiseRemoval:
         assert any("RPCA failed" in m for m in logs)
 
     @pytest.mark.parametrize("method", ["median", "mean", "gaussian"])
-    def test_emap_options_all_raise_value_error(
-        self, ready_controller, method
-    ):
+    def test_emap_options_all_raise_value_error(self, ready_controller, method):
         """KNOWN BUG #2 — see module docstring: every UI-offered 'method'
         option for the EMAP filter is invalid; apply_emap_filter() only
         accepts 'ama'/'flma'/'tma'."""
@@ -938,9 +881,7 @@ class TestExecuteStepNoiseRemoval:
 
 
 class TestExecuteStepStrike:
-    @pytest.mark.parametrize(
-        "method", ["consensus", "phase_tensor", "sweep"]
-    )
+    @pytest.mark.parametrize("method", ["consensus", "phase_tensor", "sweep"])
     def test_variant_does_not_raise_and_returns_input_unchanged(
         self, ready_controller, willy_subset, method
     ):
@@ -957,9 +898,7 @@ class TestExecuteStepStrike:
         the real strike tables use column name 'ang', so the angle is
         never rendered into result_info."""
         ready_controller.execute_step(5)
-        assert (
-            ready_controller.steps[5].result_info == "Strike table computed."
-        )
+        assert ready_controller.steps[5].result_info == "Strike table computed."
 
     def test_result_info_shows_angle_when_column_name_matches(
         self, ready_controller, monkeypatch
@@ -968,13 +907,12 @@ class TestExecuteStepStrike:
         success branch directly: if the strike table did carry a
         recognised angle column, result_info would render the median
         angle."""
-        import pycsamt.emtools as et
         import pandas as pd
 
+        import pycsamt.emtools as et
+
         fake_tbl = pd.DataFrame({"station": ["s1", "s2"], "strike": [10.0, 20.0]})
-        monkeypatch.setattr(
-            et, "estimate_strike_consensus", lambda *a, **kw: fake_tbl
-        )
+        monkeypatch.setattr(et, "estimate_strike_consensus", lambda *a, **kw: fake_tbl)
         ready_controller.execute_step(5)
         assert "Strike" in ready_controller.steps[5].result_info
         assert "15.0" in ready_controller.steps[5].result_info
@@ -985,14 +923,9 @@ class TestExecuteStepStrike:
         """Covers the 'tbl is empty / not a DataFrame' branch."""
         import pycsamt.emtools as et
 
-        monkeypatch.setattr(
-            et, "estimate_strike_consensus", lambda *a, **kw: None
-        )
+        monkeypatch.setattr(et, "estimate_strike_consensus", lambda *a, **kw: None)
         ready_controller.execute_step(5)
-        assert (
-            ready_controller.steps[5].result_info
-            == "Strike analysis complete."
-        )
+        assert ready_controller.steps[5].result_info == "Strike analysis complete."
 
 
 # ── execute_step(): Rotation (step 6) — every method variant ────────────────
@@ -1178,9 +1111,7 @@ class TestSitesChainWalking:
         ready_controller.execute_step(3)
         assert ready_controller.steps[3].status == StepStatus.DONE
 
-    def test_falls_back_to_sites_input_when_chain_entirely_none(
-        self, ready_controller
-    ):
+    def test_falls_back_to_sites_input_when_chain_entirely_none(self, ready_controller):
         """Running a mid-pipeline step directly (nothing executed yet)
         must fall back to the raw input sites."""
         ready_controller.execute_step(3)
@@ -1214,9 +1145,7 @@ class TestExecuteStepErrorHandling:
     def test_no_log_callback_does_not_raise(self, ready_controller):
         ready_controller.execute_step(0)  # log_cb defaults to None
 
-    def test_successful_step_marks_done_with_elapsed_time(
-        self, ready_controller
-    ):
+    def test_successful_step_marks_done_with_elapsed_time(self, ready_controller):
         ready_controller.execute_step(0)
         step0 = ready_controller.steps[0]
         assert step0.status == StepStatus.DONE

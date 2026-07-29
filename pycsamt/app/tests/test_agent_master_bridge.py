@@ -35,9 +35,7 @@ def test_agent_master_url_defaults():
 
 
 def test_agent_master_url_custom_host_port():
-    assert (
-        bridge.agent_master_url("0.0.0.0", 9000) == "http://0.0.0.0:9000"
-    )
+    assert bridge.agent_master_url("0.0.0.0", 9000) == "http://0.0.0.0:9000"
 
 
 def test_agent_master_url_coerces_port_to_int():
@@ -230,7 +228,9 @@ def test_launch_no_browser_skips_open_when_ready_thread(monkeypatch):
     monkeypatch.setattr(bridge, "is_agent_master_running", lambda h, p: False)
     bridge._PROCESS = None
     monkeypatch.setattr(
-        bridge.subprocess, "Popen", mock.MagicMock(return_value=mock.MagicMock())
+        bridge.subprocess,
+        "Popen",
+        mock.MagicMock(return_value=mock.MagicMock()),
     )
     fake_thread_cls = mock.MagicMock()
     monkeypatch.setattr(bridge.threading, "Thread", fake_thread_cls)

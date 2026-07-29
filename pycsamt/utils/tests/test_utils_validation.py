@@ -202,14 +202,10 @@ def test_isin_equal_nan_handling():
     # regression: equal_nan used to be forwarded to np.isin,
     # which does not accept it (TypeError on every call)
     assert isin([1.0, np.nan], [np.nan], match="all", equal_nan=True) is True
-    assert (
-        isin([1.0, np.nan], [np.nan], match="all", equal_nan=False) is False
-    )
+    assert isin([1.0, np.nan], [np.nan], match="all", equal_nan=False) is False
     mask = isin([1.0, np.nan], [np.nan], return_mask=True, equal_nan=True)
     assert mask.tolist() == [False, True]
-    inv = isin(
-        [1.0, np.nan], [np.nan], return_mask=True, equal_nan=True, invert=True
-    )
+    inv = isin([1.0, np.nan], [np.nan], return_mask=True, equal_nan=True, invert=True)
     assert inv.tolist() == [True, False]
 
     result, missing = isin([1, 2, 3], [2, 5], return_missing=True)
@@ -261,10 +257,7 @@ def test_assert_ratio_errors():
 
 def test_validate_name_in_modes():
     assert _validate_name_in("east", ("east", "north")) is True
-    assert (
-        _validate_name_in("EAST ", ("east",), expect_name="easting")
-        == "easting"
-    )
+    assert _validate_name_in("EAST ", ("east",), expect_name="easting") == "easting"
     assert _validate_name_in("no", ("east",)) is False
     assert _validate_name_in("ast", "east", deep=True) is True
     with pytest.raises(KeyError):

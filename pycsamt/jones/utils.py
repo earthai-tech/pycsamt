@@ -196,9 +196,7 @@ def parse_datatype_units(line: str, *, lineno: int | None = None) -> DataType:
     if comp in TE_TM_TO_TENSOR:
         tensor_hint = TE_TM_TO_TENSOR[comp]
 
-    return DataType(
-        kind=kind, comp=comp, units=units, tensor_hint=tensor_hint
-    )
+    return DataType(kind=kind, comp=comp, units=units, tensor_hint=tensor_hint)
 
 
 def parse_npoints(line: str, *, lineno: int | None = None) -> int:
@@ -209,9 +207,7 @@ def parse_npoints(line: str, *, lineno: int | None = None) -> int:
     return int(m.group("n"))
 
 
-def parse_row(
-    kind: str, line: str, *, lineno: int | None = None
-) -> ParsedRow:
+def parse_row(kind: str, line: str, *, lineno: int | None = None) -> ParsedRow:
     """Parse a single data row for ``kind``.
 
     Handles R/S (rho‑phi) and complex TF kinds (Z/Q/C/T). Returns a
@@ -292,9 +288,7 @@ def _to_float(s: str, name: str, lineno: int | None) -> float:
     try:
         return float(s)
     except Exception as exc:  # noqa: BLE001
-        raise JParseError(
-            _fmt_err(f"Bad float for '{name}'", lineno, s)
-        ) from exc
+        raise JParseError(_fmt_err(f"Bad float for '{name}'", lineno, s)) from exc
 
 
 def _fmt_err(msg: str, lineno: int | None, frag: str | None = None) -> str:

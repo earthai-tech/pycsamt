@@ -99,9 +99,7 @@ class TestWorkflowTools(unittest.TestCase):
             run_workflow("static_shift", "/no/such/dir", registry=_FakeReg())
 
 
-@unittest.skipUnless(
-    Path("data/3edis").is_dir(), "bundled 3edis data not present"
-)
+@unittest.skipUnless(Path("data/3edis").is_dir(), "bundled 3edis data not present")
 class TestRunStaticShiftBundled(unittest.TestCase):
     def test_run_on_bundled_data(self):
         import tempfile

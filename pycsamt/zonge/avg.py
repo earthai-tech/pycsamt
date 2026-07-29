@@ -87,8 +87,8 @@ class BaseAVG(Zonge):
 
     >>> from pycsamt.zonge.avg import BaseAVG
     >>> avg_processor = BaseAVG(verbose=True)
-    >>> avg_processor.read('path/to/your/data.avg')
-    >>> avg_processor.write('path/to/output.avg', fmt='modern')
+    >>> avg_processor.read("path/to/your/data.avg")
+    >>> avg_processor.write("path/to/output.avg", fmt="modern")
 
     See Also
     --------
@@ -176,14 +176,14 @@ class BaseAVG(Zonge):
         --------
         >>> from pycsamt.zonge import AVG
         >>> # Read from a modern file
-        >>> avg = AVG().read('data/avg/K2.avg')
+        >>> avg = AVG().read("data/avg/K2.avg")
         >>>
         >>> # Read from a legacy file (will be auto-transformed)
-        >>> avg_legacy = AVG().read('data/avg/K1.avg')
+        >>> avg_legacy = AVG().read("data/avg/K1.avg")
         >>>
         >>> # Read from an in-memory DataFrame
         >>> import pandas as pd
-        >>> df = pd.DataFrame({'Freq': [1024], 'Resistivity': [100]})
+        >>> df = pd.DataFrame({"Freq": [1024], "Resistivity": [100]})
         >>> avg_from_df = AVG().read(df)
         """
         df: pd.DataFrame
@@ -270,9 +270,9 @@ class BaseAVG(Zonge):
             self._logger.info(f"Reading topography from: {stn_file}")
 
         # Create and read the Topography component
-        self.topo = Topography(
-            verbose=self.verbose, utm_zone=utm_zone, epsg=epsg
-        ).read(stn_file)
+        self.topo = Topography(verbose=self.verbose, utm_zone=utm_zone, epsg=epsg).read(
+            stn_file
+        )
 
         # XXX TODO: Optional: add logic here to merge elevation
         # into the main df if needed for specific calculations,
@@ -576,7 +576,7 @@ class BaseAVG(Zonge):
         Examples
         --------
         >>> from pycsamt.zonge import AVG
-        >>> avg = AVG.from_file('data/avg/K2.avg')
+        >>> avg = AVG.from_file("data/avg/K2.avg")
         >>> print(avg.summary)
         <Bunch object with keys: source_file, data_kind, project, ...>
         >>> avg.summary.num_stations
@@ -594,9 +594,7 @@ class BaseAVG(Zonge):
 
         # Smartly select useful information
         info_dict = {
-            "source_file": (
-                self._source_path.name if self._source_path else "N/A"
-            ),
+            "source_file": (self._source_path.name if self._source_path else "N/A"),
             "data_kind": f"Kind-{self._kind}" if self._kind else "N/A",
             "project": hdr.annotation.project_name or "N/A",
             "survey_type": hdr.config.survey_type or "N/A",
@@ -604,9 +602,7 @@ class BaseAVG(Zonge):
             "num_stations": st.n_unique if st else 0,
             "num_frequencies": frq.n_unique if frq else 0,
             "station_range": (
-                f"{st.span[0]} - {st.span[1]} {st.unit}"
-                if st and st.span
-                else "N/A"
+                f"{st.span[0]} - {st.span[1]} {st.unit}" if st and st.span else "N/A"
             ),
             "frequency_range": (
                 f"{frq.unique().min():.4g} - {frq.unique().max():.4g} Hz"
@@ -650,9 +646,7 @@ class BaseAVG(Zonge):
 
     def __repr__(self) -> str:
         """Provide an unambiguous developer representation."""
-        path_repr = (
-            f"Path('{self._source_path}')" if self._source_path else "None"
-        )
+        path_repr = f"Path('{self._source_path}')" if self._source_path else "None"
         return (
             f"{self.__class__.__name__}.from_file("
             f"path={path_repr}, "
@@ -722,11 +716,7 @@ class BaseAVG(Zonge):
     def __str__(self) -> str:  # pragma: no cover
         """Provides a detailed, robust summary of the AVG data."""
         if not self.__has_read__():
-            src = (
-                f"'{self._source_path.name}'"
-                if self._source_path
-                else "Not Loaded"
-            )
+            src = f"'{self._source_path.name}'" if self._source_path else "Not Loaded"
             return f"{self.__class__.__name__}(source={src}, status=empty)"
 
         # --- Header ---
@@ -835,8 +825,7 @@ class BaseAVG(Zonge):
 
             details.append(separator)
             details.append(
-                f"  | {header1.ljust(col1_width)} | "
-                f"{header2.ljust(col2_width)} |"
+                f"  | {header1.ljust(col1_width)} | " f"{header2.ljust(col2_width)} |"
             )
             details.append(separator)
 
@@ -860,8 +849,7 @@ class BaseAVG(Zonge):
         # 2. FIX: Robustly flatten the MultiIndex columns into strings
         # This is the most important change. It turns ('rho','min') into 'rho_min'
         summary_df.columns = [
-            "_".join(filter(None, col)).strip()
-            for col in summary_df.columns.values
+            "_".join(filter(None, col)).strip() for col in summary_df.columns.values
         ]
         summary_df.reset_index(inplace=True)
 
@@ -900,10 +888,7 @@ class BaseAVG(Zonge):
 
         # 4. Build the table strings
         header_row = " | ".join(
-            [
-                headers[col].center(col_widths[col])
-                for col in display_df.columns
-            ]
+            [headers[col].center(col_widths[col]) for col in display_df.columns]
         )
         separator_row = "-+-".join(
             ["-" * col_widths[col] for col in display_df.columns]
@@ -1018,17 +1003,15 @@ class AVG(BaseAVG):
     Load a file, access a component, and write back:
 
     >>> from pycsamt.zonge import AVG
-    >>> avg = AVG.from_file('LCS01.avg', verbose=True)
+    >>> avg = AVG.from_file("LCS01.avg", verbose=True)
     >>> # Access resistivity for a specific component
-    >>> rho_xy = avg.resistivity.frame[
-    ...     avg.resistivity.frame.comp == 'ExHy'
-    ... ]
-    >>> avg.write('LCS01_clean.avg')
+    >>> rho_xy = avg.resistivity.frame[avg.resistivity.frame.comp == "ExHy"]
+    >>> avg.write("LCS01_clean.avg")
 
     Build from an in-memory DataFrame:
 
     >>> from pycsamt.zonge.utils import load_avg
-    >>> df, meta = load_avg('raw.avg')
+    >>> df, meta = load_avg("raw.avg")
     >>> avg = AVG()
     >>> avg.read(df, meta=meta)
     >>> print(avg.station.span)
@@ -1082,7 +1065,7 @@ class AVG(BaseAVG):
         --------
         >>> from pycsamt.zonge import AVG
         >>> # Load a modern AVG file
-        >>> avg = AVG.from_file('data/avg/K2.avg', verbose=True)
+        >>> avg = AVG.from_file("data/avg/K2.avg", verbose=True)
         >>> print(avg.summary)
 
         See Also
@@ -1139,7 +1122,7 @@ class AVG(BaseAVG):
         Examples
         --------
         >>> from pycsamt.zonge import AVG
-        >>> avg = AVG.from_file('data/avg/K2.avg')
+        >>> avg = AVG.from_file("data/avg/K2.avg")
         >>> # Export all available data
         >>> ds = avg.to_xarray()
         >>> print(ds.data_vars)
@@ -1178,9 +1161,7 @@ class AVG(BaseAVG):
                 ds = ds.merge(z_err)
             except Exception as e:
                 if self.verbose:
-                    self._logger.warning(
-                        f"Could not compute impedance Z: {e}"
-                    )
+                    self._logger.warning(f"Could not compute impedance Z: {e}")
 
         # Optionally merge all available QC metrics
         if include_qc:
@@ -1201,8 +1182,7 @@ class AVG(BaseAVG):
                 except Exception:
                     if self.verbose:
                         self._logger.info(
-                            f"Skipping QC component '{name}': "
-                            "data not available."
+                            f"Skipping QC component '{name}': " "data not available."
                         )
 
         # Attach comprehensive header metadata
@@ -1391,7 +1371,7 @@ class AMTAVG(AVG):
     Examples
     --------
     >>> from pycsamt.zonge import AMTAVG
-    >>> amt_avg = AMTAVG.from_file('data/avg/K2.avg')
+    >>> amt_avg = AMTAVG.from_file("data/avg/K2.avg")
     >>> # Rotate the data by 30 degrees clockwise
     >>> amt_avg.rotate(30)
     >>> # Access the newly rotated Z_xy component
@@ -1586,9 +1566,9 @@ class AMTAVG(AVG):
         Examples
         --------
         >>> from pycsamt.zonge import AMTAVG
-        >>> avg = AMTAVG.from_file('data/avg/K2.avg')
+        >>> avg = AMTAVG.from_file("data/avg/K2.avg")
         >>> # Get the resistivity tensor for station 25.0
-        >>> rho_tensor_25 = avg.get_tensor_by_station(25.0, var='rho')
+        >>> rho_tensor_25 = avg.get_tensor_by_station(25.0, var="rho")
         >>> print(rho_tensor_25.shape)
         (28, 2, 2)
         """
@@ -1684,8 +1664,7 @@ class AMTAVG(AVG):
         # Ensure all required columns are present
         if not all(col in df.columns for col in agg_cols):
             raise ValueError(
-                "DataFrame must contain 'rho', 'phase', "
-                "'emag', and 'hmag' columns."
+                "DataFrame must contain 'rho', 'phase', " "'emag', and 'hmag' columns."
             )
 
         # Group by station and frequency to find repeated measurements
@@ -1695,15 +1674,9 @@ class AMTAVG(AVG):
         stats = grouped[agg_cols].agg(["mean", "std"])
 
         # Calculate Coefficient of Variation where applicable
-        stats[("rho", "cvar")] = (
-            100 * stats[("rho", "std")] / stats[("rho", "mean")]
-        )
-        stats[("emag", "cvar")] = (
-            100 * stats[("emag", "std")] / stats[("emag", "mean")]
-        )
-        stats[("hmag", "cvar")] = (
-            100 * stats[("hmag", "std")] / stats[("hmag", "mean")]
-        )
+        stats[("rho", "cvar")] = 100 * stats[("rho", "std")] / stats[("rho", "mean")]
+        stats[("emag", "cvar")] = 100 * stats[("emag", "std")] / stats[("emag", "mean")]
+        stats[("hmag", "cvar")] = 100 * stats[("hmag", "std")] / stats[("hmag", "mean")]
 
         # Flatten the multi-level column index
         stats.columns = ["_".join(col) for col in stats.columns]
@@ -1736,9 +1709,9 @@ class AMTAVG(AVG):
                     if stat_col in merged_df.columns:
                         # Use combine_first to fill NaNs in the original
                         # column with new values from the stats column
-                        self.info.df[canon_col] = merged_df[
-                            canon_col
-                        ].combine_first(merged_df[stat_col])
+                        self.info.df[canon_col] = merged_df[canon_col].combine_first(
+                            merged_df[stat_col]
+                        )
                 elif self.verbose:
                     self._logger.info(
                         f"Skipping update for '{canon_col}': "
@@ -1797,7 +1770,7 @@ class AMTAVG(AVG):
         Examples
         --------
         >>> from pycsamt.zonge import AMTAVG
-        >>> avg = AMTAVG.from_file('data/avg/K2.avg')
+        >>> avg = AMTAVG.from_file("data/avg/K2.avg")
         >>> # Unwrap phase and update the object in place
         >>> avg.unwrap_phase()
         >>> # Get the unwrapped phase for the xy component
@@ -2080,9 +2053,7 @@ class AMTAVG(AVG):
                     )
 
         if not tipper_results:
-            warnings.warn(
-                "Tipper calculation resulted in no data.", stacklevel=2
-            )
+            warnings.warn("Tipper calculation resulted in no data.", stacklevel=2)
             return pd.DataFrame()
 
         tipper_df = pd.DataFrame(tipper_results)

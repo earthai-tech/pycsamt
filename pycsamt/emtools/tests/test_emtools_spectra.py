@@ -50,9 +50,7 @@ def _no_api_view():
 class _FakeSpectra:
     """Minimal Spectra duck-type with 3 channels and N frequencies."""
 
-    def __init__(
-        self, n_freq: int = 8, n_chan: int = 3, name: str = "STA01"
-    ) -> None:
+    def __init__(self, n_freq: int = 8, n_chan: int = 3, name: str = "STA01") -> None:
         self.name = name
         fr = np.logspace(0, 3, n_freq)
         self.freq = fr
@@ -69,9 +67,9 @@ class _FakeSpectra:
         rng = np.random.default_rng(42)
         S = np.zeros((n_freq, n_chan, n_chan), dtype=complex)
         for k in range(n_freq):
-            A = rng.standard_normal(
+            A = rng.standard_normal((n_chan, n_chan)) + 1j * rng.standard_normal(
                 (n_chan, n_chan)
-            ) + 1j * rng.standard_normal((n_chan, n_chan))
+            )
             S[k] = A @ A.conj().T + np.eye(n_chan) * 2.0
         self._S = S
 
@@ -136,9 +134,7 @@ class _FakeZTSpectra:
     def to_Z(self, *, e_labels=None, h_labels=None, ridge=None, estimate_error=False):
         nf = self.n_freq
         rng = np.random.default_rng(9)
-        z = rng.standard_normal((nf, 2, 2)) + 1j * rng.standard_normal(
-            (nf, 2, 2)
-        )
+        z = rng.standard_normal((nf, 2, 2)) + 1j * rng.standard_normal((nf, 2, 2))
         rho = np.abs(z) ** 2 + 1.0
         phase = np.angle(z, deg=True)
         z_err = np.abs(z) * 0.05 if estimate_error else None
@@ -147,17 +143,11 @@ class _FakeZTSpectra:
         )
         tip = None
         if self._with_tipper:
-            t = rng.standard_normal((nf, 1, 2)) + 1j * rng.standard_normal(
-                (nf, 1, 2)
-            )
+            t = rng.standard_normal((nf, 1, 2)) + 1j * rng.standard_normal((nf, 1, 2))
             t_err = (
-                np.abs(t) * 0.05
-                if (estimate_error and self._with_tipper_err)
-                else None
+                np.abs(t) * 0.05 if (estimate_error and self._with_tipper_err) else None
             )
-            tip = SimpleNamespace(
-                freq=self._freq, tipper=t, tipper_err=t_err
-            )
+            tip = SimpleNamespace(freq=self._freq, tipper=t, tipper_err=t_err)
         return z_obj, tip
 
 
@@ -187,9 +177,7 @@ class TestCoherenceMatrix:
     def test_symmetric(self):
         sp = _sp(8, 3)
         coh = coherence_matrix(sp)
-        np.testing.assert_allclose(
-            coh, np.transpose(coh, (0, 2, 1)), atol=1e-10
-        )
+        np.testing.assert_allclose(coh, np.transpose(coh, (0, 2, 1)), atol=1e-10)
 
     def test_single_channel_raises(self):
         sp = _sp(8, 1)
@@ -860,18 +848,14 @@ class TestRemainingBranchCoverage:
 
     def test_plot_coherence_explicit_lw_alpha_figsize(self):
         sp = _sp(8, 3)
-        axs = plot_coherence(
-            sp, pairs=[(0, 1)], lw=1.5, alpha=0.4, figsize=(6.0, 4.0)
-        )
+        axs = plot_coherence(sp, pairs=[(0, 1)], lw=1.5, alpha=0.4, figsize=(6.0, 4.0))
         assert len(axs) == 1
         plt.close("all")
 
     def test_plot_coherence_surplus_axes_hidden(self):
         """4 pairs on a 3-col grid leaves 2 surplus axes to hide."""
         sp = _sp(8, 4)
-        axs = plot_coherence(
-            sp, pairs=[(0, 1), (0, 2), (0, 3), (1, 2)]
-        )
+        axs = plot_coherence(sp, pairs=[(0, 1), (0, 2), (0, 3), (1, 2)])
         assert len(axs) == 4
         fig = axs[0].figure
         assert len(fig.axes) == 6

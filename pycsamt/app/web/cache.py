@@ -9,8 +9,9 @@ session ID so that each tab gets its own isolated data context.
 Usage::
 
     from pycsamt.app.web.cache import cache, SESSION_TTL
+
     cache.set(session_id, sites, expire=SESSION_TTL)
-    sites = cache.get(session_id)   # None if expired or not yet loaded
+    sites = cache.get(session_id)  # None if expired or not yet loaded
 """
 
 from __future__ import annotations

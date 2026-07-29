@@ -26,9 +26,7 @@ def _find(agent_app, input_id, output_hint):
     matches = [
         k
         for k, entry in agent_app.callback_map.items()
-        if entry["inputs"]
-        and entry["inputs"][0]["id"] == input_id
-        and output_hint in k
+        if entry["inputs"] and entry["inputs"][0]["id"] == input_id and output_hint in k
     ]
     assert len(matches) == 1, (input_id, output_hint, matches)
     return _unwrap(agent_app.callback_map[matches[0]])
@@ -40,9 +38,7 @@ def _set_pattern_trigger(component_id_dict, value=1, prop="n_clicks"):
 
     prop_id = json.dumps(component_id_dict, sort_keys=True) + f".{prop}"
     cc.context_value.set(
-        AttributeDict(
-            triggered_inputs=[{"prop_id": prop_id, "value": value}]
-        )
+        AttributeDict(triggered_inputs=[{"prop_id": prop_id, "value": value}])
     )
 
 
@@ -52,9 +48,7 @@ def _set_plain_trigger(component_id, value=1, prop="n_clicks"):
 
     prop_id = f"{component_id}.{prop}"
     cc.context_value.set(
-        AttributeDict(
-            triggered_inputs=[{"prop_id": prop_id, "value": value}]
-        )
+        AttributeDict(triggered_inputs=[{"prop_id": prop_id, "value": value}])
     )
 
 
@@ -100,9 +94,7 @@ def _send_fn(agent_app):
 class TestSendMessageStopMode:
     def test_poll_disabled_false_stops_job(self, agent_app):
         fn = _send_fn(agent_app)
-        result = fn(
-            1, [None], "hi", [], {}, {}, {}, [], False, {"jid": "job-1"}
-        )
+        result = fn(1, [None], "hi", [], {}, {}, {}, [], False, {"jid": "job-1"})
         msgs, job, disabled, value, stored, pending = result
         assert disabled is True
         assert job == {}
@@ -163,24 +155,16 @@ class TestSendMessageAppLaunch:
         assert _FakeThread.last_started is None  # no job thread spawned
 
     def test_mapview_launch(self, agent_app, monkeypatch):
-        monkeypatch.setattr(
-            C, "_ensure_mapview", lambda: "http://127.0.0.1:8770"
-        )
+        monkeypatch.setattr(C, "_ensure_mapview", lambda: "http://127.0.0.1:8770")
         fn = _send_fn(agent_app)
-        result = fn(
-            1, [None], "open the map", [], {}, {}, {}, [], True, {}
-        )
+        result = fn(1, [None], "open the map", [], {}, {}, {}, [], True, {})
         _msgs, _job, _disabled, _value, stored, _pending = result
         assert "MapView" in stored[-1]["content"]
 
     def test_web_app_launch(self, agent_app, monkeypatch):
-        monkeypatch.setattr(
-            C, "_ensure_web_app", lambda: "http://127.0.0.1:8051"
-        )
+        monkeypatch.setattr(C, "_ensure_web_app", lambda: "http://127.0.0.1:8051")
         fn = _send_fn(agent_app)
-        result = fn(
-            1, [None], "open web app", [], {}, {}, {}, [], True, {}
-        )
+        result = fn(1, [None], "open web app", [], {}, {}, {}, [], True, {})
         _msgs, _job, _disabled, _value, stored, _pending = result
         assert "Redirecting to web app" in stored[-1]["content"]
 
@@ -212,9 +196,7 @@ class TestSendMessageNoEdiGuard:
         monkeypatch.setattr(C, "_names_registry_line", lambda text: False)
         monkeypatch.setattr(C, "_session_has_data", lambda: False)
         fn = _send_fn(agent_app)
-        result = fn(
-            1, [None], "run qc pipeline", [], {}, {}, {}, [], True, {}
-        )
+        result = fn(1, [None], "run qc pipeline", [], {}, {}, {}, [], True, {})
         msgs, job, disabled, value, stored, pending = result
         assert disabled is True
         assert "No EDI dataset is loaded" in stored[-1]["content"]
@@ -244,9 +226,7 @@ class TestSendMessageNoEdiGuard:
         _msgs, _job, _disabled, _value, stored, _pending = result
         assert "No EDI dataset is loaded" not in stored[-1]["content"]
 
-    def test_guard_skipped_when_registry_names_line(
-        self, agent_app, monkeypatch
-    ):
+    def test_guard_skipped_when_registry_names_line(self, agent_app, monkeypatch):
         monkeypatch.setattr(C, "_names_registry_line", lambda text: True)
         fn = _send_fn(agent_app)
         result = fn(
@@ -311,7 +291,10 @@ class TestSendMessageLineDisambiguation:
             [None],
             "run qc on line L22PLT",
             [],
-            {"path": "/x", "groups": {"L22PLT": ["a.edi"], "L18PLT": ["b.edi"]}},
+            {
+                "path": "/x",
+                "groups": {"L22PLT": ["a.edi"], "L18PLT": ["b.edi"]},
+            },
             {"provider": "offline"},
             {},
             [],
@@ -327,9 +310,7 @@ class TestSendMessageLineDisambiguation:
 
         monkeypatch_target = wf_mod.classify_workflow
         try:
-            wf_mod.classify_workflow = (
-                lambda text, default=None: "pre_inversion"
-            )
+            wf_mod.classify_workflow = lambda text, default=None: ("pre_inversion")
             fn = _send_fn(agent_app)
             result = fn(
                 1,
@@ -461,9 +442,7 @@ class TestPollJob:
 
     def test_running_job_updates_thinking_bubble(self, agent_app):
         jid = C._new_job()
-        C._update_job(
-            jid, steps=[{"label": "Loading", "status": "running"}]
-        )
+        C._update_job(jid, steps=[{"label": "Loading", "status": "running"}])
         # Dash serializes children to dicts over the wire; poll_job's
         # bubble-matching relies on that dict shape (`isinstance(child,
         # dict)`), not a live component object.
@@ -477,9 +456,7 @@ class TestPollJob:
 
     def test_running_job_without_thinking_bubble_leaves_msgs(self, agent_app):
         jid = C._new_job()
-        C._update_job(
-            jid, steps=[{"label": "Loading", "status": "running"}]
-        )
+        C._update_job(jid, steps=[{"label": "Loading", "status": "running"}])
         fn = _poll_fn(agent_app)
         msgs, disabled, _figs, _stored, _postproc = fn(
             1, {"jid": jid}, ["unrelated"], {}, []
@@ -497,9 +474,7 @@ class TestPollJob:
             kind=C.KIND_WORKFLOW,
         )
         fn = _poll_fn(agent_app)
-        msgs, disabled, fig_store, stored, postproc = fn(
-            1, {"jid": jid}, [], {}, []
-        )
+        msgs, disabled, fig_store, stored, postproc = fn(1, {"jid": jid}, [], {}, [])
         assert disabled is True
         assert "f1" in fig_store
         assert stored[-1]["content"] == "All good"
@@ -515,20 +490,14 @@ class TestPollJob:
             postproc={"jid": jid, "workflow": "static_shift"},
         )
         fn = _poll_fn(agent_app)
-        _msgs, _disabled, _figs, _stored, postproc = fn(
-            1, {"jid": jid}, [], {}, []
-        )
+        _msgs, _disabled, _figs, _stored, postproc = fn(1, {"jid": jid}, [], {}, [])
         assert postproc["workflow"] == "static_shift"
 
     def test_error_job_uses_error_text_as_result(self, agent_app):
         jid = C._new_job()
-        C._update_job(
-            jid, status="error", error="boom", result=None, steps=[]
-        )
+        C._update_job(jid, status="error", error="boom", result=None, steps=[])
         fn = _poll_fn(agent_app)
-        _msgs, _disabled, _figs, stored, _postproc = fn(
-            1, {"jid": jid}, [], {}, []
-        )
+        _msgs, _disabled, _figs, stored, _postproc = fn(1, {"jid": jid}, [], {}, [])
         assert stored[-1]["content"] == "boom"
 
 
@@ -563,17 +532,15 @@ class TestOpenFigModal:
         matches = [
             k
             for k, entry in agent_app.callback_map.items()
-            if entry["inputs"]
-            and "am-fig-open" in entry["inputs"][0]["id"]
+            if entry["inputs"] and "am-fig-open" in entry["inputs"][0]["id"]
         ]
         assert len(matches) == 1, matches
         return _unwrap(agent_app.callback_map[matches[0]])
 
     def test_prevent_update_without_trigger(self, agent_app):
-        from dash.exceptions import PreventUpdate
-
         import dash._callback_context as cc
         from dash._utils import AttributeDict
+        from dash.exceptions import PreventUpdate
 
         cc.context_value.set(AttributeDict(triggered_inputs=[]))
         fn = self._fn(agent_app)
@@ -591,9 +558,7 @@ class TestOpenFigModal:
     def test_opens_with_figure_data(self, agent_app):
         _set_pattern_trigger({"key": "f1", "type": "am-fig-open"})
         fn = self._fn(agent_app)
-        is_open, src, title, key = fn(
-            [1], {"f1": {"b64": "aaa", "title": "My Fig"}}
-        )
+        is_open, src, title, key = fn([1], {"f1": {"b64": "aaa", "title": "My Fig"}})
         assert is_open is True
         assert src == "data:image/png;base64,aaa"
         assert title == "My Fig"
@@ -611,17 +576,15 @@ class TestTogglePin:
         matches = [
             k
             for k, entry in agent_app.callback_map.items()
-            if entry["inputs"]
-            and "am-pin-btn" in entry["inputs"][0]["id"]
+            if entry["inputs"] and "am-pin-btn" in entry["inputs"][0]["id"]
         ]
         assert len(matches) == 1, matches
         return _unwrap(agent_app.callback_map[matches[0]])
 
     def test_prevent_update_without_trigger(self, agent_app):
-        from dash.exceptions import PreventUpdate
-
         import dash._callback_context as cc
         from dash._utils import AttributeDict
+        from dash.exceptions import PreventUpdate
 
         cc.context_value.set(AttributeDict(triggered_inputs=[]))
         fn = self._fn(agent_app)
@@ -639,9 +602,7 @@ class TestTogglePin:
     def test_pins_a_known_message(self, agent_app):
         _set_pattern_trigger({"mid": "am-msg-1", "type": "am-pin-btn"})
         fn = self._fn(agent_app)
-        messages = [
-            {"mid": "am-msg-1", "role": "user", "content": "hi", "ts": "t"}
-        ]
+        messages = [{"mid": "am-msg-1", "role": "user", "content": "hi", "ts": "t"}]
         pins = fn([1], [], messages)
         assert pins[0]["mid"] == "am-msg-1"
 
@@ -654,17 +615,15 @@ class TestUnpin:
         matches = [
             k
             for k, entry in agent_app.callback_map.items()
-            if entry["inputs"]
-            and "am-unpin" in entry["inputs"][0]["id"]
+            if entry["inputs"] and "am-unpin" in entry["inputs"][0]["id"]
         ]
         assert len(matches) == 1, matches
         return _unwrap(agent_app.callback_map[matches[0]])
 
     def test_prevent_update_without_trigger(self, agent_app):
-        from dash.exceptions import PreventUpdate
-
         import dash._callback_context as cc
         from dash._utils import AttributeDict
+        from dash.exceptions import PreventUpdate
 
         cc.context_value.set(AttributeDict(triggered_inputs=[]))
         fn = self._fn(agent_app)
@@ -693,9 +652,7 @@ class TestRenderPins:
 
     def test_renders_items(self, agent_app):
         fn = self._fn(agent_app)
-        result = fn(
-            [{"mid": "m1", "role": "user", "snippet": "hi", "ts": "t"}]
-        )
+        result = fn([{"mid": "m1", "role": "user", "snippet": "hi", "ts": "t"}])
         assert len(result) == 1
 
 

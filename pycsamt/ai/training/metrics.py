@@ -87,9 +87,7 @@ def relative_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
     Useful when comparing models with very different resistivity ranges.
     """
-    mask = (
-        np.isfinite(y_true) & np.isfinite(y_pred) & (np.abs(y_true) > 1e-12)
-    )
+    mask = np.isfinite(y_true) & np.isfinite(y_pred) & (np.abs(y_true) > 1e-12)
     if mask.sum() == 0:
         return float("nan")
     yt, yp = y_true[mask], y_pred[mask]

@@ -26,5 +26,7 @@ diagnostic plot.
    impedance_tensor
    dimensionality
    static_shift
+   maxwell_forward
    inversion_concepts
+   ai_inversion
    tdem_basics

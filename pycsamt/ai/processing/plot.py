@@ -75,8 +75,7 @@ def _resolve_profile_colors(
         }
     if isinstance(user_colors, (list, tuple)):
         return {
-            p: user_colors[i % len(user_colors)]
-            for i, p in enumerate(profile_names)
+            p: user_colors[i % len(user_colors)] for i, p in enumerate(profile_names)
         }
     return {
         p: _PROFILE_COLORS[i % len(_PROFILE_COLORS)]
@@ -102,9 +101,7 @@ def _normalise_qc_input(
         return {"_": scores.ravel().astype(float)}, {"_": station_labels}
 
     if isinstance(scores, dict):
-        pscores = {
-            k: np.asarray(v, dtype=float).ravel() for k, v in scores.items()
-        }
+        pscores = {k: np.asarray(v, dtype=float).ravel() for k, v in scores.items()}
         return pscores, {k: None for k in pscores}
 
     if isinstance(scores, pd.DataFrame):
@@ -152,9 +149,7 @@ def _make_tick_config(
     """Build a StationTickConfig from individual params or use *override*."""
     if override is not None:
         return override
-    return StationTickConfig(
-        every=every, rotation=rotation, fontsize=fontsize
-    )
+    return StationTickConfig(every=every, rotation=rotation, fontsize=fontsize)
 
 
 def _logT_grid_from_df(
@@ -355,9 +350,7 @@ def _render_bar_chart(
     ax.set_ylim(0, 1.15)
     ax.set_ylabel("QC score", fontsize=9)
     if show_grid:
-        ax.grid(
-            True, axis="y", ls=":", lw=0.4, color="gray", alpha=0.5, zorder=0
-        )
+        ax.grid(True, axis="y", ls=":", lw=0.4, color="gray", alpha=0.5, zorder=0)
     ax.set_axisbelow(True)
 
 
@@ -538,9 +531,7 @@ def plot_qc_scores(
                 label=f"Review threshold ({score_threshold:.2f})",
             )
         )
-        ax.legend(
-            handles=handles, loc="lower right", fontsize=7.5, framealpha=0.9
-        )
+        ax.legend(handles=handles, loc="lower right", fontsize=7.5, framealpha=0.9)
 
     return ax
 
@@ -609,9 +600,7 @@ def plot_qc_heatmap(
             "'station', 'freq', 'score' (from EMQCScorer.score_table())."
         )
     if not {"station", "freq", "score"}.issubset(scores.columns):
-        raise ValueError(
-            "DataFrame must have columns 'station', 'freq', 'score'."
-        )
+        raise ValueError("DataFrame must have columns 'station', 'freq', 'score'.")
 
     tick_cfg = _make_tick_config(
         tick_every, tick_label_rotation, tick_fontsize, station_tick_config
@@ -632,9 +621,7 @@ def plot_qc_heatmap(
     y_edge = np.empty(n_f + 1)
     y_edge[0] = log_T[0] - 0.5 * abs(d_lT[0]) if n_f > 1 else log_T[0] - 0.5
     y_edge[1:-1] = log_T[:-1] + 0.5 * d_lT if n_f > 1 else np.array([])
-    y_edge[-1] = (
-        log_T[-1] + 0.5 * abs(d_lT[-1]) if n_f > 1 else log_T[-1] + 0.5
-    )
+    y_edge[-1] = log_T[-1] + 0.5 * abs(d_lT[-1]) if n_f > 1 else log_T[-1] + 0.5
     x_edge = (
         np.concatenate(
             [
@@ -690,17 +677,13 @@ def plot_qc_heatmap(
     labs = []
     for v in pos:
         r = round(v)
-        labs.append(
-            f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
-        )
+        labs.append(f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$")
     ax.set_yticks(pos)
     ax.set_yticklabels(labs, fontsize=tick_fontsize)
     ax.set_ylabel(ylabel, fontsize=8)
 
     # x-axis via StationTickConfig
-    tick_cfg.apply(
-        ax, x_cents, st_order, xlabel=xlabel, xlim=(x_edge[0], x_edge[-1])
-    )
+    tick_cfg.apply(ax, x_cents, st_order, xlabel=xlabel, xlim=(x_edge[0], x_edge[-1]))
 
     if title:
         ax.set_title(title, fontsize=9, fontweight="bold")
@@ -782,9 +765,7 @@ def plot_qc_feature_heatmap(
     if station_labels is not None:
         st_order = station_labels
     else:
-        st_order = sorted(
-            df["station"].unique(), key=lambda x: (str(x).isdigit(), x)
-        )
+        st_order = sorted(df["station"].unique(), key=lambda x: (str(x).isdigit(), x))
 
     n_feat = len(features)
     n_st = len(st_order)
@@ -870,17 +851,13 @@ def plot_qc_feature_heatmap(
         ylab = []
         for v in pos:
             r = round(v)
-            ylab.append(
-                f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
-            )
+            ylab.append(f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$")
         ax.set_yticks(pos)
         ax.set_yticklabels(ylab, fontsize=tick_fontsize)
         ax.set_ylabel("Period (s)", fontsize=7)
 
     # bottom x-axis via StationTickConfig
-    tick_cfg.apply(
-        axes[-1], x_cents, st_order, xlabel="Station", xlim=(xe[0], xe[-1])
-    )
+    tick_cfg.apply(axes[-1], x_cents, st_order, xlabel="Station", xlim=(xe[0], xe[-1]))
 
     if title:
         fig.suptitle(title, fontsize=10, fontweight="bold", y=1.01)
@@ -1238,9 +1215,7 @@ def plot_qc_summary(
         tick_cfg=tick_cfg,
         show_zone_labels=True,
     )
-    ax_bar.set_title(
-        "(a) Per-station QC scores", fontsize=9, fontweight="bold"
-    )
+    ax_bar.set_title("(a) Per-station QC scores", fontsize=9, fontweight="bold")
 
     # ── (b) score distribution ─────────────────────────────────────────────
     plot_qc_score_distribution.__wrapped__(

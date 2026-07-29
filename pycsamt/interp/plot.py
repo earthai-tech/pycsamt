@@ -36,9 +36,7 @@ from ._base import ResistivityModel
 from .lithology import StratigraphicLog
 
 # Type alias accepted by the style= parameter of every hydro plot class.
-_StyleArg = Optional[
-    Union[str, InterpStyle, HydroSectionStyle, HydroProfileStyle]
-]
+_StyleArg = Optional[Union[str, InterpStyle, HydroSectionStyle, HydroProfileStyle]]
 
 __all__ = [
     "PlotStratigraphicLog",
@@ -72,9 +70,7 @@ def _require_mpl():
 
         return matplotlib, plt
     except ImportError as exc:
-        raise ImportError(
-            "matplotlib is required for pycsamt.interp.plot"
-        ) from exc
+        raise ImportError("matplotlib is required for pycsamt.interp.plot") from exc
 
 
 def _cmap_with_bad(name: str, nan_color: str):
@@ -215,9 +211,7 @@ class PlotStratigraphicLog:
         )
 
         for layer in log.layers:
-            ax_rho.axhline(
-                layer.top, color="0.55", linewidth=0.6, linestyle="--"
-            )
+            ax_rho.axhline(layer.top, color="0.55", linewidth=0.6, linestyle="--")
 
         ax_rho.set_xlabel(r"$\log_{10}(\rho\ /\ \Omega\mathrm{m})$")
         ax_rho.set_title("Resistivity", fontsize=9)
@@ -369,9 +363,7 @@ class PlotCalibratedModel:
             diff = nm.rho_2d - crm.rho_2d
             with np.errstate(divide="ignore", invalid="ignore"):
                 self._misfit = (
-                    100.0
-                    * np.abs(diff)
-                    / np.maximum(np.abs(crm.rho_2d), 1e-12)
+                    100.0 * np.abs(diff) / np.maximum(np.abs(crm.rho_2d), 1e-12)
                 )
         self.figsize = figsize
         self.cmap_rho = cmap_rho
@@ -403,9 +395,7 @@ class PlotCalibratedModel:
             )
             ax.set_ylabel("Depth (m)")
             ax.set_title(label, fontsize=9)
-            plt.colorbar(
-                im, ax=ax, label=r"$\log_{10}(\rho)$", fraction=0.03, pad=0.01
-            )
+            plt.colorbar(im, ax=ax, label=r"$\log_{10}(\rho)$", fraction=0.03, pad=0.01)
 
         _rho_im(ax_crm, self.crm.rho_2d, "CRM — Inversion result")
         _rho_im(ax_nm, self.nm.rho_2d, "NM — Calibrated model")
@@ -478,9 +468,10 @@ class PlotHydroSection:
 
     Examples
     --------
-    >>> fig = PlotHydroSection(result, quantity='K').plot()
-    >>> fig = PlotHydroSection(result, quantity='saturation',
-    ...                        cmap='Blues', vmin=0, vmax=1).plot()
+    >>> fig = PlotHydroSection(result, quantity="K").plot()
+    >>> fig = PlotHydroSection(
+    ...     result, quantity="saturation", cmap="Blues", vmin=0, vmax=1
+    ... ).plot()
     """
 
     _LABELS: dict = {
@@ -553,9 +544,7 @@ class PlotHydroSection:
             else float(np.nanpercentile(data_plot, 98))
         )
         cmap = _cmap_with_bad(
-            self.cmap
-            if self.cmap is not None
-            else sty.cmap_for(self.quantity),
+            self.cmap if self.cmap is not None else sty.cmap_for(self.quantity),
             sty.nan_color,
         )
         fsz = resolve_figsize(self.figsize, self.style, "section")
@@ -593,8 +582,7 @@ class PlotHydroSection:
         ax.set_xlabel("Profile distance (m)")
         ax.set_ylabel("Depth (m)")
         ax.set_title(
-            self.title
-            or f"Hydro section — {self.quantity}  [{result.method_tag}]",
+            self.title or f"Hydro section — {self.quantity}  [{result.method_tag}]",
             fontsize=10,
         )
         return fig
@@ -687,9 +675,7 @@ class PlotWaterTableProfile:
             alpha=0.75,
             edgecolor="none",
         )
-        ax_wt.scatter(
-            x[valid_wt], wt[valid_wt], **sty.scatter_kwargs(cwt, s=18)
-        )
+        ax_wt.scatter(x[valid_wt], wt[valid_wt], **sty.scatter_kwargs(cwt, s=18))
 
         if self.reference_depth is not None:
             ax_wt.axhline(
@@ -703,8 +689,7 @@ class PlotWaterTableProfile:
         ax_wt.invert_yaxis()
         ax_wt.grid(**sty.grid_kwargs())
         ax_wt.set_title(
-            self.title
-            or f"Water table & transmissivity [{result.method_tag}]",
+            self.title or f"Water table & transmissivity [{result.method_tag}]",
             fontsize=10,
         )
 
@@ -719,9 +704,7 @@ class PlotWaterTableProfile:
             edgecolor="none",
             bottom=T_log[valid_T].min() - 0.5 if valid_T.any() else 0,
         )
-        ax_T.scatter(
-            x[valid_T], T_log[valid_T], **sty.scatter_kwargs(cT, s=18)
-        )
+        ax_T.scatter(x[valid_T], T_log[valid_T], **sty.scatter_kwargs(cT, s=18))
         ax_T.set_ylabel(r"$\log_{10}(T\ /\ \mathrm{m^2\,s^{-1}})$")
         ax_T.set_xlabel("Profile distance (m)")
         ax_T.grid(**sty.grid_kwargs())
@@ -780,11 +763,10 @@ class PlotTimeLapseSection:
     Examples
     --------
     >>> from pycsamt.interp.timelapse import TimeLapseEM
-    >>> tl  = TimeLapseEM([model_dry, model_wet], labels=['dry', 'wet'])
-    >>> fig = PlotTimeLapseSection(tl, quantity='rho').plot()
+    >>> tl = TimeLapseEM([model_dry, model_wet], labels=["dry", "wet"])
+    >>> fig = PlotTimeLapseSection(tl, quantity="rho").plot()
     >>> fig = PlotTimeLapseSection(
-    ...     tl, quantity='saturation',
-    ...     petro=ArchieModel(), rho_w=20.0
+    ...     tl, quantity="saturation", petro=ArchieModel(), rho_w=20.0
     ... ).plot()
     """
 
@@ -963,9 +945,10 @@ class PlotUncertaintySection:
 
     Examples
     --------
-    >>> fig = PlotUncertaintySection(unc_result, quantity='K').plot()
-    >>> fig = PlotUncertaintySection(unc_result, quantity='saturation',
-    ...                              depth_max=200.0).plot()
+    >>> fig = PlotUncertaintySection(unc_result, quantity="K").plot()
+    >>> fig = PlotUncertaintySection(
+    ...     unc_result, quantity="saturation", depth_max=200.0
+    ... ).plot()
     """
 
     _META = {
@@ -1035,9 +1018,7 @@ class PlotUncertaintySection:
         cmap_p50 = _cmap_with_bad(
             self.cmap_p50 or sty.cmap_for(self.quantity), sty.nan_color
         )
-        cmap_spread = _cmap_with_bad(
-            self.cmap_spread or sty.cmap_spread, sty.nan_color
-        )
+        cmap_spread = _cmap_with_bad(self.cmap_spread or sty.cmap_spread, sty.nan_color)
         fsz = resolve_figsize(self.figsize, self.style, "uncertainty")
 
         if self.quantity == "K":
@@ -1086,9 +1067,7 @@ class PlotUncertaintySection:
             vmax=vmax_p,
             origin="upper",
         )
-        cb1 = fig.colorbar(
-            im1, ax=ax_p50, label=meta["p50_label"], **sty.cb_kwargs()
-        )
+        cb1 = fig.colorbar(im1, ax=ax_p50, label=meta["p50_label"], **sty.cb_kwargs())
         cb1.ax.tick_params(labelsize=sty.cb_fontsize)
         ax_p50.set_ylabel("Depth (m)")
         ax_p50.set_title("P50 estimate", fontsize=9)
@@ -1102,9 +1081,7 @@ class PlotUncertaintySection:
             vmax=vmax_sp,
             origin="upper",
         )
-        cb2 = fig.colorbar(
-            im2, ax=ax_sp, label=meta["spread_label"], **sty.cb_kwargs()
-        )
+        cb2 = fig.colorbar(im2, ax=ax_sp, label=meta["spread_label"], **sty.cb_kwargs())
         cb2.ax.tick_params(labelsize=sty.cb_fontsize)
         ax_sp.set_ylabel("Depth (m)")
         ax_sp.set_xlabel("Profile distance (m)")
@@ -1232,16 +1209,13 @@ class PlotUncertaintyProfile:
         ax_wt.set_title(
             self.title
             or (
-                f"WT & T uncertainty profile  "
-                f"[{unc.method_tag}  N={unc.n_samples}]"
+                f"WT & T uncertainty profile  " f"[{unc.method_tag}  N={unc.n_samples}]"
             ),
             fontsize=10,
         )
 
         # ── T panel ───────────────────────────────────────────────────────
-        ax_T.fill_between(
-            x, p10_T, p90_T, **sty.envelope_kwargs(cT), label="P10–P90"
-        )
+        ax_T.fill_between(x, p10_T, p90_T, **sty.envelope_kwargs(cT), label="P10–P90")
         ax_T.plot(x, p50_T, **sty.line_kwargs(cT), label="P50")
         ax_T.scatter(x, p50_T, **sty.scatter_kwargs(cT))
 
@@ -1336,9 +1310,7 @@ class PlotPetrophysicalCrossPlot:
         fsz = resolve_figsize(self.figsize, self.style, "crossplot")
 
         rho_lin = 10.0**model.rho_2d
-        z_2d = np.broadcast_to(
-            model.z_centers[:, np.newaxis], rho_lin.shape
-        ).copy()
+        z_2d = np.broadcast_to(model.z_centers[:, np.newaxis], rho_lin.shape).copy()
 
         mask = np.ones(rho_lin.shape, dtype=bool)
         if self.depth_range is not None:
@@ -1350,12 +1322,7 @@ class PlotPetrophysicalCrossPlot:
         Sw_f = res.saturation[mask].ravel()
         z_f = z_2d[mask].ravel()
 
-        ok = (
-            np.isfinite(rho_f)
-            & np.isfinite(phi_f)
-            & (rho_f > 0)
-            & (phi_f > 0)
-        )
+        ok = np.isfinite(rho_f) & np.isfinite(phi_f) & (rho_f > 0) & (phi_f > 0)
         phi_f, rho_f, Sw_f, z_f = phi_f[ok], rho_f[ok], Sw_f[ok], z_f[ok]
 
         c_vals = Sw_f if self.color_by == "saturation" else z_f
@@ -1394,9 +1361,7 @@ class PlotPetrophysicalCrossPlot:
                 min(float(phi_f.max()), 0.70),
                 120,
             )
-            hs = HashinShtrikmanBounds(
-                rho_matrix=self.rho_matrix, rho_fluid=rho_w
-            )
+            hs = HashinShtrikmanBounds(rho_matrix=self.rho_matrix, rho_fluid=rho_w)
             r_lo, r_hi = hs.bounds(phi_r)
             y_lo = np.log10(r_lo) if self.log_rho else r_lo
             y_hi = np.log10(r_hi) if self.log_rho else r_hi
@@ -1404,9 +1369,7 @@ class PlotPetrophysicalCrossPlot:
                 phi_r, y_lo, y_hi, label="HS bounds", **sty.hs_fill_kwargs()
             )
 
-        sc = ax.scatter(
-            phi_f, y_vals, c=c_vals, **sty.crossplot_scatter_kwargs()
-        )
+        sc = ax.scatter(phi_f, y_vals, c=c_vals, **sty.crossplot_scatter_kwargs())
         cb = fig.colorbar(sc, ax=ax, label=c_label, **sty.cb_kwargs())
         cb.ax.tick_params(labelsize=sty.cb_fontsize)
 
@@ -1564,12 +1527,8 @@ class PlotAquiferCharacterization:
         # 3 — Water Table
         wt = result.water_table
         valid = np.isfinite(wt)
-        ax_wt.bar(
-            x[valid], wt[valid], width=bar_w, **sty.bar_kwargs(sty.color_wt)
-        )
-        ax_wt.scatter(
-            x[valid], wt[valid], **sty.scatter_kwargs(sty.color_wt, s=16)
-        )
+        ax_wt.bar(x[valid], wt[valid], width=bar_w, **sty.bar_kwargs(sty.color_wt))
+        ax_wt.scatter(x[valid], wt[valid], **sty.scatter_kwargs(sty.color_wt, s=16))
         if self.reference_depth is not None:
             ax_wt.axhline(
                 self.reference_depth,
@@ -1584,17 +1543,11 @@ class PlotAquiferCharacterization:
         # 4 — Transmissivity
         if ax_T is not None:
             T_log = np.log10(
-                np.where(
-                    result.transmissivity > 0, result.transmissivity, np.nan
-                )
+                np.where(result.transmissivity > 0, result.transmissivity, np.nan)
             )
             vld = np.isfinite(T_log)
-            ax_T.bar(
-                x[vld], T_log[vld], width=bar_w, **sty.bar_kwargs(sty.color_T)
-            )
-            ax_T.scatter(
-                x[vld], T_log[vld], **sty.scatter_kwargs(sty.color_T, s=16)
-            )
+            ax_T.bar(x[vld], T_log[vld], width=bar_w, **sty.bar_kwargs(sty.color_T))
+            ax_T.scatter(x[vld], T_log[vld], **sty.scatter_kwargs(sty.color_T, s=16))
             ax_T.set_ylabel(r"$\log_{10}(T)$")
             ax_T.set_xlabel("Profile distance (m)")
             ax_T.grid(**sty.grid_kwargs())
@@ -1661,9 +1614,7 @@ class PlotMultiTimeLapseGrid:
                 "quantity must be 'rho', 'delta_rho', or 'delta_saturation'."
             )
         if quantity == "delta_saturation" and petro is None:
-            raise ValueError(
-                "petro (ArchieModel) required for 'delta_saturation'."
-            )
+            raise ValueError("petro (ArchieModel) required for 'delta_saturation'.")
         self.timelapse = timelapse
         self.quantity = quantity
         self.style = style
@@ -1685,9 +1636,7 @@ class PlotMultiTimeLapseGrid:
         sty = resolve_section_style(self.style)
         tl = self.timelapse
         idx_list = (
-            self.surveys
-            if self.surveys is not None
-            else list(range(tl.n_surveys))
+            self.surveys if self.surveys is not None else list(range(tl.n_surveys))
         )
         n_panels = len(idx_list)
         if not n_panels:
@@ -1721,9 +1670,7 @@ class PlotMultiTimeLapseGrid:
                 archie = self.petro if self.petro is not None else _Archie()
                 data = (
                     archie.saturation(10.0**surv.rho_2d, self.phi, self.rho_w)
-                    - archie.saturation(
-                        10.0**ref_m.rho_2d, self.phi, self.rho_w
-                    )
+                    - archie.saturation(10.0**ref_m.rho_2d, self.phi, self.rho_w)
                 )[z_mask, :]
             panels.append(data)
 
@@ -1780,9 +1727,7 @@ class PlotMultiTimeLapseGrid:
             "delta_rho": r"$\Delta\log_{10}(\rho)$",
             "delta_saturation": r"$\Delta S_w$",
         }[self.quantity]
-        fig.colorbar(
-            im_last, ax=axes, label=cb_label, fraction=0.015, pad=0.01
-        )
+        fig.colorbar(im_last, ax=axes, label=cb_label, fraction=0.015, pad=0.01)
 
         if len(ref_m.station_x):
             for ax in axes:
@@ -1891,9 +1836,7 @@ class PlotResistivityDepthProfile:
         )
 
         z_all = model.z_centers
-        dz = (
-            self.depth_max if self.depth_max is not None else float(z_all[-1])
-        )
+        dz = self.depth_max if self.depth_max is not None else float(z_all[-1])
         z_mask = z_all <= dz
         z = z_all[z_mask]
         rho_l = model.rho_2d[z_mask, ix]
@@ -1909,16 +1852,12 @@ class PlotResistivityDepthProfile:
                     color = self._ZONE_COLORS["resistive basement"]
                 else:
                     color = self._ZONE_COLORS["vadose/weathered"]
-                ax.axhspan(
-                    z[iz], z[iz + 1], color=color, alpha=0.28, zorder=0
-                )
+                ax.axhspan(z[iz], z[iz + 1], color=color, alpha=0.28, zorder=0)
 
         # ── ρ curve ────────────────────────────────────────────────
         x_vals = rho_l if self.log_rho else 10.0**rho_l
         ax.plot(x_vals, z, **sty.rho_curve_kwargs())
-        ax.fill_betweenx(
-            z, x_vals, color=sty.rho_fill_color, alpha=sty.rho_fill_alpha
-        )
+        ax.fill_betweenx(z, x_vals, color=sty.rho_fill_color, alpha=sty.rho_fill_alpha)
 
         ax.invert_yaxis()
         ax.set_xlabel(
@@ -2010,9 +1949,7 @@ class PlotUncertaintyHistogram:
         title: str | None = None,
     ) -> None:
         if quantity not in ("water_table", "transmissivity"):
-            raise ValueError(
-                "quantity must be 'water_table' or 'transmissivity'."
-            )
+            raise ValueError("quantity must be 'water_table' or 'transmissivity'.")
         self.unc = unc
         self.quantity = quantity
         self.style = style
@@ -2045,8 +1982,7 @@ class PlotUncertaintyHistogram:
             idx_list = list(range(0, n_x, step))[:6]
         else:
             idx_list = [
-                names.index(s) if isinstance(s, str) else int(s)
-                for s in self.stations
+                names.index(s) if isinstance(s, str) else int(s) for s in self.stations
             ]
 
         n_sta = len(idx_list)
@@ -2054,9 +1990,7 @@ class PlotUncertaintyHistogram:
         n_rows = int(np.ceil(n_sta / n_cols))
         fsz = self.figsize or (4.0 * n_cols, 3.5 * n_rows)
 
-        fig, axes = plt.subplots(
-            n_rows, n_cols, figsize=fsz, layout="constrained"
-        )
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=fsz, layout="constrained")
         axes_flat = np.array(axes).ravel() if n_sta > 1 else [axes]
 
         is_T = self.quantity == "transmissivity"
@@ -2079,9 +2013,7 @@ class PlotUncertaintyHistogram:
                     raw = np.log10(np.where(raw > 0, raw, np.nan))
                     raw = raw[np.isfinite(raw)]
             else:
-                mu = (
-                    np.log10(max(mean_a[ix], 1e-20)) if is_log else mean_a[ix]
-                )
+                mu = np.log10(max(mean_a[ix], 1e-20)) if is_log else mean_a[ix]
                 sig = max(std_a[ix], 1e-12)
                 raw = np.random.default_rng(42 + ix).normal(mu, sig, 500)
 
@@ -2109,9 +2041,7 @@ class PlotUncertaintyHistogram:
                 ]:
                     v = np.log10(max(val, 1e-20)) if is_log else val
                     if np.isfinite(v):
-                        ax.axvline(
-                            v, color=sty.ref_color, lw=1.0, ls=ls, label=lbl
-                        )
+                        ax.axvline(v, color=sty.ref_color, lw=1.0, ls=ls, label=lbl)
                 if plot_i == 0:
                     ax.legend(fontsize=6)
 

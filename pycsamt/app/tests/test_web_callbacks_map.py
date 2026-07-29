@@ -116,9 +116,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -137,9 +135,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -173,9 +169,7 @@ class TestStationDataframe:
 
     def test_numeric_coercion(self):
         store = {
-            "station_records": [
-                {"ID": "S1", "Latitude": "bad", "Longitude": "1.5"}
-            ]
+            "station_records": [{"ID": "S1", "Latitude": "bad", "Longitude": "1.5"}]
         }
         df = map_mod._station_dataframe(store)
         assert pd.isna(df["Latitude"].iloc[0])
@@ -318,9 +312,7 @@ class TestHomeMap:
         assert fig is not None
 
     def test_empty_records(self, home_map_app):
-        fig = self._fn(home_map_app)(
-            {"station_records": []}, "Index", None, "dark"
-        )
+        fig = self._fn(home_map_app)({"station_records": []}, "Index", None, "dark")
         assert fig is not None
 
     def test_real_data(self, home_map_app, store_data_willy):
@@ -386,9 +378,7 @@ class TestUpdateMap:
             _clear_triggered()
 
     def test_nav_skip_when_leaving_map(self, web_app):
-        out = self._call(
-            web_app, trigger=f"{IDs.NAV_SECTION}.data", nav_section="home"
-        )
+        out = self._call(web_app, trigger=f"{IDs.NAV_SECTION}.data", nav_section="home")
         assert out is no_update
 
     def test_no_store_data(self, web_app):
@@ -404,9 +394,7 @@ class TestUpdateMap:
         assert fig is not None
 
     def test_elevation_type(self, web_app, store_data_willy):
-        fig = self._call(
-            web_app, store_data=store_data_willy, map_type="elevation"
-        )
+        fig = self._call(web_app, store_data=store_data_willy, map_type="elevation")
         assert fig is not None
 
     def test_resistivity_type(
@@ -424,9 +412,7 @@ class TestUpdateMap:
         )
         assert fig is not None
 
-    def test_depth_type(
-        self, web_app, store_data_willy, cached_session, willy_sites
-    ):
+    def test_depth_type(self, web_app, store_data_willy, cached_session, willy_sites):
         ed = willy_sites.as_list()[0]
         f0 = str(float(np.asarray(ed.Z.freq, float)[0]))
         fig = self._call(
@@ -440,9 +426,7 @@ class TestUpdateMap:
         )
         assert fig is not None
 
-    def test_resistivity_type_no_session_falls_back(
-        self, web_app, store_data_willy
-    ):
+    def test_resistivity_type_no_session_falls_back(self, web_app, store_data_willy):
         fig = self._call(
             web_app,
             store_data=store_data_willy,
@@ -452,9 +436,7 @@ class TestUpdateMap:
         )
         assert fig is not None
 
-    def test_inv_profile_type(
-        self, web_app, store_data_willy, cached_inv_result
-    ):
+    def test_inv_profile_type(self, web_app, store_data_willy, cached_inv_result):
         fig = self._call(
             web_app,
             store_data=store_data_willy,
@@ -557,9 +539,7 @@ class TestPopulateFreqOptions:
         assert "Hz" in opts[0]["label"]
 
     def test_period_units(self, web_app, store_data_willy, cached_session):
-        opts, val = self._fn(web_app)(
-            store_data_willy, "period", cached_session
-        )
+        opts, val = self._fn(web_app)(store_data_willy, "period", cached_session)
         assert opts
         assert "s" in opts[0]["label"]
 
@@ -631,9 +611,7 @@ class TestUpdateCrsInfo:
 
 class TestSelectionSync:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.STORE_SELECTION}.data", IDs.MAP_GRAPH
-        )
+        return _cb_by_input(web_app, f"{IDs.STORE_SELECTION}.data", IDs.MAP_GRAPH)
 
     # NOTE: the real app registers ``sync_selection`` with
     # ``include_home_map=False`` (the home mini-map isn't in the current

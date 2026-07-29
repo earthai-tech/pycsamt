@@ -98,9 +98,7 @@ def bostick_depth_from_rho(
     """
     rho = np.asarray(rho, dtype=float)
     freq = np.asarray(freq, dtype=float)
-    return BOSTICK_CONST * np.sqrt(
-        np.maximum(rho, 0.0) / np.maximum(freq, 1e-24)
-    )
+    return BOSTICK_CONST * np.sqrt(np.maximum(rho, 0.0) / np.maximum(freq, 1e-24))
 
 
 def vertical_resolution_pair(
@@ -134,11 +132,7 @@ def vertical_resolution_pair(
     rho = max(float(rho), 0.0)
     f_lo = max(float(f_lo), 1e-24)
     f_hi = max(float(f_hi), 1e-24)
-    return (
-        BOSTICK_CONST
-        * np.sqrt(rho)
-        * (1.0 / np.sqrt(f_lo) - 1.0 / np.sqrt(f_hi))
-    )
+    return BOSTICK_CONST * np.sqrt(rho) * (1.0 / np.sqrt(f_lo) - 1.0 / np.sqrt(f_hi))
 
 
 def frequency_for_depth(

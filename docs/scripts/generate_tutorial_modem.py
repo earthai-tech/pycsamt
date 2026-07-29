@@ -26,9 +26,16 @@ import matplotlib
 matplotlib.use("Agg")
 
 ROOT = Path(__file__).resolve().parents[2]
-RST_PATH = ROOT / "docs" / "source" / "tutorials" / "prepare_modem_inversion.rst"
+RST_PATH = (
+    ROOT / "docs" / "source" / "tutorials" / "prepare_modem_inversion.rst"
+)
 IMAGE_DIR = (
-    ROOT / "docs" / "source" / "images" / "tutorials" / "prepare_modem_inversion"
+    ROOT
+    / "docs"
+    / "source"
+    / "images"
+    / "tutorials"
+    / "prepare_modem_inversion"
 )
 
 _BLOCK_RE = re.compile(
@@ -48,7 +55,9 @@ def _extract_blocks(text: str) -> list[str]:
     for m in _BLOCK_RE.finditer(text):
         body = m.group("body")
         # Strip the fixed 3-space code-block indentation.
-        lines = [ln[3:] if ln.startswith("   ") else ln for ln in body.splitlines()]
+        lines = [
+            ln[3:] if ln.startswith("   ") else ln for ln in body.splitlines()
+        ]
         blocks.append("\n".join(lines))
     return blocks
 
@@ -75,20 +84,29 @@ def main() -> int:
             buf = io.StringIO()
             try:
                 with redirect_stdout(buf):
-                    exec(compile(example.source, "<tutorial>", "single"), namespace)
+                    exec(
+                        compile(example.source, "<tutorial>", "single"),
+                        namespace,
+                    )
             except Exception as exc:  # noqa: BLE001
                 failures += 1
-                print(f"[block {block_idx}] EXCEPTION for: {example.source.strip()!r}")
+                print(
+                    f"[block {block_idx}] EXCEPTION for: {example.source.strip()!r}"
+                )
                 print(f"    -> {type(exc).__name__}: {exc}")
                 continue
             got = buf.getvalue()
             if example.want and got != example.want:
                 failures += 1
-                print(f"[block {block_idx}] MISMATCH for: {example.source.strip()!r}")
+                print(
+                    f"[block {block_idx}] MISMATCH for: {example.source.strip()!r}"
+                )
                 print(f"    expected: {example.want!r}")
                 print(f"    got     : {got!r}")
 
-    print(f"Executed {total_examples} examples, {failures} mismatches/exceptions")
+    print(
+        f"Executed {total_examples} examples, {failures} mismatches/exceptions"
+    )
 
     figures_dir = namespace["figure_dir"]
     IMAGE_DIR.mkdir(parents=True, exist_ok=True)

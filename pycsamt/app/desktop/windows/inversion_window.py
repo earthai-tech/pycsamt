@@ -183,9 +183,7 @@ class InversionWindow(PanelWindow):
     # ── Engine selectors (Traditional + AI) ────────────────────────────────
 
     def _build_engine_selector(self, layout: QVBoxLayout) -> None:
-        self._engine_group = QButtonGroup(
-            self
-        )  # global: only one engine active
+        self._engine_group = QButtonGroup(self)  # global: only one engine active
 
         # ── Block A: Traditional ──────────────────────────────────────
         grp_a, lay_a = make_group("Traditional Solvers")
@@ -673,9 +671,7 @@ class InversionWindow(PanelWindow):
 
         workdir = self._workdir_edit.text().strip()
         if not workdir:
-            QMessageBox.warning(
-                self, "No workdir", "Please set an output directory."
-            )
+            QMessageBox.warning(self, "No workdir", "Please set an output directory.")
             return
         Path(workdir).mkdir(parents=True, exist_ok=True)
 
@@ -768,9 +764,7 @@ class InversionWindow(PanelWindow):
             return False
 
         binary = self._mod_binary.text().strip() or (
-            cfg.binary_2d
-            if mode_str == "2d"
-            else getattr(cfg, "binary_3d", None)
+            cfg.binary_2d if mode_str == "2d" else getattr(cfg, "binary_3d", None)
         )
         worker = InversionWorker(
             workdir=workdir,
@@ -881,9 +875,7 @@ class InversionWindow(PanelWindow):
         else:
             hidden_txt = self._ai3_hidden.text().strip()
             try:
-                hidden = [
-                    int(x.strip()) for x in hidden_txt.split(",") if x.strip()
-                ]
+                hidden = [int(x.strip()) for x in hidden_txt.split(",") if x.strip()]
             except ValueError:
                 hidden = [256, 128, 64]
             p.update(
@@ -958,9 +950,7 @@ class InversionWindow(PanelWindow):
             self._plot_trad_result(result)
         except Exception as exc:
             self._log(f"Plot error: {exc}")
-        self.result_ready.emit(
-            {"engine": self._current_engine(), "result": result}
-        )
+        self.result_ready.emit({"engine": self._current_engine(), "result": result})
 
     def _on_ai_finished(self, result: dict) -> None:
         self._finish_run()
@@ -970,9 +960,7 @@ class InversionWindow(PanelWindow):
             self._plot_ai_result(result)
         except Exception as exc:
             self._log(f"Plot error: {exc}")
-        self.result_ready.emit(
-            {"engine": self._current_engine(), "result": result}
-        )
+        self.result_ready.emit({"engine": self._current_engine(), "result": result})
 
     def _on_error(self, msg: str) -> None:
         self._finish_run()
@@ -1081,9 +1069,7 @@ class InversionWindow(PanelWindow):
             for i, row in enumerate(y_pred[: min(5, len(y_pred))]):
                 rho = 10.0 ** row[:n_layers]
                 thick = row[n_layers:]
-                depths = np.concatenate(
-                    [[0], np.cumsum(thick), [np.sum(thick) * 1.5]]
-                )
+                depths = np.concatenate([[0], np.cumsum(thick), [np.sum(thick) * 1.5]])
                 ax.step(
                     np.append(rho, rho[-1]),
                     depths,
@@ -1123,12 +1109,8 @@ class InversionWindow(PanelWindow):
             mid_col = n_params // 2
             vals = y_pred[:, mid_col] if y_pred.ndim > 1 else y_pred
             if coords is not None and len(coords) == len(vals):
-                sc = ax.scatter(
-                    coords[:, 0], coords[:, 1], c=vals, cmap="jet_r", s=60
-                )
-                self._tab_model.figure.colorbar(
-                    sc, ax=ax, label="log₁₀ ρ mid-depth"
-                )
+                sc = ax.scatter(coords[:, 0], coords[:, 1], c=vals, cmap="jet_r", s=60)
+                self._tab_model.figure.colorbar(sc, ax=ax, label="log₁₀ ρ mid-depth")
                 ax.set_xlabel("X (m)")
                 ax.set_ylabel("Y (m)")
             else:
@@ -1161,9 +1143,7 @@ class InversionWindow(PanelWindow):
     def _selected_sites(self):
         if self._sites is None:
             return None
-        selected_names = {
-            item.text() for item in self._station_list.selectedItems()
-        }
+        selected_names = {item.text() for item in self._station_list.selectedItems()}
         if not selected_names:
             return self._sites
         try:
@@ -1192,9 +1172,7 @@ class InversionWindow(PanelWindow):
             self._workdir_edit.setText(d)
 
     def _browse_binary(self, line_edit: QLineEdit) -> None:
-        p, _ = QFileDialog.getOpenFileName(
-            self, "Select binary", str(Path.home())
-        )
+        p, _ = QFileDialog.getOpenFileName(self, "Select binary", str(Path.home()))
         if p:
             line_edit.setText(p)
 

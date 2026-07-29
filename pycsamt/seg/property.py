@@ -227,9 +227,7 @@ class PropertiesMixin:
             self.Processing, Processing
         ):
             self.Processing = Processing()
-        if not hasattr(self, "Copyright") or not isinstance(
-            self.Copyright, Copyright
-        ):
+        if not hasattr(self, "Copyright") or not isinstance(self.Copyright, Copyright):
             self.Copyright = Copyright()
 
     # ----------------------------
@@ -353,11 +351,7 @@ class PropertiesMixin:
                 f"sitename={s.sitename!r})"
             )
         if p.processedby or p.processingtag:
-            parts.append(
-                f"Processing(by={p.processedby!r}, tag={p.processingtag!r})"
-            )
+            parts.append(f"Processing(by={p.processedby!r}, tag={p.processingtag!r})")
         if c.release_status or c.owner:
-            parts.append(
-                f"Copyright(status={c.release_status!r}, owner={c.owner!r})"
-            )
+            parts.append(f"Copyright(status={c.release_status!r}, owner={c.owner!r})")
         return "; ".join(parts) if parts else "no properties"

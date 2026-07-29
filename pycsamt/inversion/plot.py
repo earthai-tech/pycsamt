@@ -247,9 +247,7 @@ def plot_model(
         if show_stations:
             station_x = np.asarray(model.station_x, dtype=float)
             if station_x.size:
-                station_labels = labels or [
-                    f"S{i:03d}" for i in range(station_x.size)
-                ]
+                station_labels = labels or [f"S{i:03d}" for i in range(station_x.size)]
                 section_style.apply_stations(
                     ax,
                     station_x,
@@ -368,9 +366,7 @@ def _resolve_section_style(section: str | SectionStyle) -> SectionStyle:
 def _title(result: InversionResult, title: str | None) -> str | None:
     if title is not None:
         return title
-    return (
-        f"{result.backend} {result.method.upper()} {result.dimension} model"
-    )
+    return f"{result.backend} {result.method.upper()} {result.dimension} model"
 
 
 def _model_line_kwargs() -> dict[str, Any]:

@@ -89,21 +89,15 @@ def amtavg_for_methods(analytical_avg_data):
 class TestAMTAVGMethods:
     def test_calculate_statistics(self, amtavg_for_methods):
         """Test the calculation of statistical QC metrics."""
-        stats_df = amtavg_for_methods.calculate_statistics(
-            update_components=True
-        )
+        stats_df = amtavg_for_methods.calculate_statistics(update_components=True)
         assert not stats_df.empty
         assert "rho_mean" in stats_df.columns
         assert "rho_std" in stats_df.columns
         assert "rho_cvar" in stats_df.columns
 
-        st100_f1024 = stats_df[
-            (stats_df.station == 100) & (stats_df.freq == 1024)
-        ]
+        st100_f1024 = stats_df[(stats_df.station == 100) & (stats_df.freq == 1024)]
         assert np.isclose(st100_f1024["rho_mean"].iloc[0], 51.0)
-        assert np.isclose(
-            st100_f1024["rho_cvar"].iloc[0], 100 * (2**0.5) / 51.0
-        )
+        assert np.isclose(st100_f1024["rho_cvar"].iloc[0], 100 * (2**0.5) / 51.0)
 
         main_df = amtavg_for_methods.info.df
         assert "pc_rho" in main_df.columns
@@ -167,9 +161,9 @@ class TestAMTAVGMethods:
         after["comp"] = after["comp"].str.upper()
         key = ["station", "freq"]
         for (st, fr), grp in after.groupby(key):
-            orig = before[
-                (before["station"] == st) & (before["freq"] == fr)
-            ].set_index("comp")["rho"]
+            orig = before[(before["station"] == st) & (before["freq"] == fr)].set_index(
+                "comp"
+            )["rho"]
             new = grp.set_index("comp")["rho"]
             # |Z| is sign-insensitive: rho swaps between XY and YX
             assert np.isclose(new["EXHY"], orig["EYHX"])

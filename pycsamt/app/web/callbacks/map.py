@@ -49,9 +49,7 @@ def _station_dataframe(store_data) -> pd.DataFrame:
         df["ID"] = df["ID"].astype(str)
     if "Line" in df.columns:
         df["Line"] = df["Line"].map(
-            lambda v: (
-                str(v).strip() if pd.notna(v) and str(v).strip() else "—"
-            )
+            lambda v: str(v).strip() if pd.notna(v) and str(v).strip() else "—"
         )
     for col in ("Latitude", "Longitude", "Elevation"):
         if col in df.columns:
@@ -93,9 +91,7 @@ def _resolve_crs_info(
         return "EPSG:4326  Geographic lat/lon (WGS 84)"
     if mode == "utm":
         code = (
-            32600 + int(zone or 50)
-            if (hem or "N") == "N"
-            else 32700 + int(zone or 50)
+            32600 + int(zone or 50) if (hem or "N") == "N" else 32700 + int(zone or 50)
         )
         return f"EPSG:{code}  UTM Zone {zone}{hem} (WGS 84)"
     # custom
@@ -111,9 +107,7 @@ def _resolve_crs_info(
 # ── Resistivity / depth helpers ───────────────────────────────────────────────
 
 
-def _extract_rho_at_freq(
-    sites, freq_hz: float, comp: str
-) -> dict[str, float]:
+def _extract_rho_at_freq(sites, freq_hz: float, comp: str) -> dict[str, float]:
     """
     Return {station_id: rho_at_freq} for the closest frequency to *freq_hz*.
     comp must be one of "xy", "yx", "det".
@@ -128,10 +122,7 @@ def _extract_rho_at_freq(
                 continue
             i = int(np.argmin(np.abs(freq - freq_hz)))
             if comp == "det":
-                rho = (
-                    float(Z.resistivity[i, 0, 1] * Z.resistivity[i, 1, 0])
-                    ** 0.5
-                )
+                rho = float(Z.resistivity[i, 0, 1] * Z.resistivity[i, 1, 0]) ** 0.5
             else:
                 r, c = _IDX.get(comp, (0, 1))
                 rho = float(Z.resistivity[i, r, c])
@@ -154,16 +145,11 @@ def _extract_depth_at_freq(
         result = {}
         for sid, rho in rho_map.items():
             # T = (depth / 503)^2 / rho
-            T = (
-                (target_depth_m / 503.0) ** 2 / rho
-                if rho > 0
-                else float("nan")
-            )
+            T = (target_depth_m / 503.0) ** 2 / rho if rho > 0 else float("nan")
             result[sid] = T if np.isfinite(T) else float("nan")
         return result
     return {
-        sid: 503.0 * np.sqrt(rho / max(freq_hz, 1e-9))
-        for sid, rho in rho_map.items()
+        sid: 503.0 * np.sqrt(rho / max(freq_hz, 1e-9)) for sid, rho in rho_map.items()
     }
 
 
@@ -171,9 +157,9 @@ def _extract_depth_at_freq(
 
 
 def register_map(app) -> None:
-    has_home_map = _layout_has_id(
-        app.layout, IDs.HOME_MAP_GRAPH
-    ) and _layout_has_id(app.layout, IDs.HOME_MAP_OVERLAY)
+    has_home_map = _layout_has_id(app.layout, IDs.HOME_MAP_GRAPH) and _layout_has_id(
+        app.layout, IDs.HOME_MAP_OVERLAY
+    )
     if has_home_map:
         _register_home_map(app)
     _register_map_update(app)
@@ -325,11 +311,7 @@ def _register_map_update(app) -> None:
         # ── CRS projection ───────────────────────────────────────────────────
         # If the user specified a non-geographic CRS, reproject X/Y → lat/lon.
         crs_mode = crs_mode or "geo"
-        if (
-            crs_mode != "geo"
-            and "Latitude" in df.columns
-            and "Longitude" in df.columns
-        ):
+        if crs_mode != "geo" and "Latitude" in df.columns and "Longitude" in df.columns:
             xs = pd.to_numeric(df["Longitude"], errors="coerce").values
             ys = pd.to_numeric(df["Latitude"], errors="coerce").values
             valid_crs = np.isfinite(xs) & np.isfinite(ys)
@@ -340,9 +322,7 @@ def _register_map_update(app) -> None:
                     if crs_mode == "utm":
                         zone = int(utm_zone or 50)
                         hem = (utm_hem or "N").upper()
-                        epsg_code = (
-                            (32600 + zone) if hem == "N" else (32700 + zone)
-                        )
+                        epsg_code = (32600 + zone) if hem == "N" else (32700 + zone)
                     else:
                         epsg_code = int(epsg or 4326)
                     transformer = Transformer.from_crs(
@@ -358,9 +338,7 @@ def _register_map_update(app) -> None:
                     pass  # keep original coordinates on pyproj error
 
         # ── uirevision — "fit" click resets zoom; all other triggers preserve it
-        _fit_rev = (
-            f"fit-{_fit}" if ctx.triggered_id == "map-tb-fit" else "map"
-        )
+        _fit_rev = f"fit-{_fit}" if ctx.triggered_id == "map-tb-fit" else "map"
 
         # ── Map type processing ──────────────────────────────────────────────
         sites = None
@@ -374,14 +352,11 @@ def _register_map_update(app) -> None:
             if sites:
                 freq_hz = float(freq_sel)
                 if mtype == "resistivity":
-                    rho_map = _extract_rho_at_freq(
-                        sites, freq_hz, comp or "xy"
-                    )
+                    rho_map = _extract_rho_at_freq(sites, freq_hz, comp or "xy")
                     if rho_map:
                         # Store as log10 for sensible colour stretch
                         log_rho = {
-                            k: float(np.log10(max(v, 1e-9)))
-                            for k, v in rho_map.items()
+                            k: float(np.log10(max(v, 1e-9))) for k, v in rho_map.items()
                         }
                         df["_rho_map"] = df["ID"].map(log_rho)
                         overlay = "_rho_map"
@@ -407,12 +382,8 @@ def _register_map_update(app) -> None:
             if result is not None:
                 try:
                     model = result.to_resistivity_model()
-                    rho_2d = np.asarray(
-                        model.rho_2d, float
-                    )  # (n_z, n_x) log10 or Ω·m
-                    z_arr = np.asarray(
-                        model.z_centers, float
-                    )  # depth centres (m)
+                    rho_2d = np.asarray(model.rho_2d, float)  # (n_z, n_x) log10 or Ω·m
+                    z_arr = np.asarray(model.z_centers, float)  # depth centres (m)
                     # Normalise to Ω·m if stored in log10 scale (max < 12)
                     finite = rho_2d[np.isfinite(rho_2d)]
                     if finite.size and float(np.nanmax(finite)) <= 12.0:
@@ -527,15 +498,9 @@ def _register_freq_options(app) -> None:
         sorted_freqs = sorted(freqs, reverse=True)
         use_period = (freq_unit or "hz") == "period"
         if use_period:
-            opts = [
-                {"label": f"{1 / f:.5g} s", "value": str(f)}
-                for f in sorted_freqs
-            ]
+            opts = [{"label": f"{1 / f:.5g} s", "value": str(f)} for f in sorted_freqs]
         else:
-            opts = [
-                {"label": f"{f:.5g} Hz", "value": str(f)}
-                for f in sorted_freqs
-            ]
+            opts = [{"label": f"{f:.5g} Hz", "value": str(f)} for f in sorted_freqs]
         return opts, opts[0]["value"] if opts else None
 
 
@@ -558,9 +523,7 @@ def _register_depth_info(app) -> None:
             # Rough estimate: δ = 503 * sqrt(ρ/f) → ρ ≈ (d/503)² * f
             rho = (d / 503.0) ** 2 * f
             T = 1.0 / f
-            return (
-                f"≈ {f:.4g} Hz / T={T:.4g} s  (ρ̄≈{rho:.3g} Ω·m → δ≈{d:.0f} m)"
-            )
+            return f"≈ {f:.4g} Hz / T={T:.4g} s  (ρ̄≈{rho:.3g} Ω·m → δ≈{d:.0f} m)"
         except Exception:
             return ""
 
@@ -789,12 +752,8 @@ def _inject_contour(
     import numpy as np
 
     # Resolve the value array for each station
-    lats = pd.to_numeric(
-        df.get("Latitude", pd.Series()), errors="coerce"
-    ).values
-    lons = pd.to_numeric(
-        df.get("Longitude", pd.Series()), errors="coerce"
-    ).values
+    lats = pd.to_numeric(df.get("Latitude", pd.Series()), errors="coerce").values
+    lons = pd.to_numeric(df.get("Longitude", pd.Series()), errors="coerce").values
     ids = df["ID"].values if "ID" in df.columns else np.array([])
 
     # Prefer the pre-computed value_map (resistivity/depth), else use the
@@ -924,9 +883,7 @@ def _register_status_station(app) -> None:
                 lat = match.get("Latitude", "")
                 lon = match.get("Longitude", "")
                 if lat and lon:
-                    label = (
-                        f"Station: {station_id}  ({lat:.4f}°N, {lon:.4f}°E)"
-                    )
+                    label = f"Station: {station_id}  ({lat:.4f}°N, {lon:.4f}°E)"
         return label
 
 

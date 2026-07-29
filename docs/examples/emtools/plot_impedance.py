@@ -78,9 +78,7 @@ fig.tight_layout()
 # the diagonal shows how it compares to the off-diagonal that carries
 # the main 1-D/2-D signal.
 
-plot_phasor_wheel(
-    survey, station=STATION, components=("xy", "yx", "xx", "yy")
-)
+plot_phasor_wheel(survey, station=STATION, components=("xy", "yx", "xx", "yy"))
 
 d = ensure_sites(survey, recursive=False)
 _, z0, fr0 = _get_z_block(next(_iter_items(d)))

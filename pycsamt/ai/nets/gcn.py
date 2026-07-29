@@ -134,9 +134,7 @@ class GCNNet:
                 self.W = nn.Linear(in_f, out_f, bias=True)
                 self.bn = nn.BatchNorm1d(out_f)
 
-            def forward(
-                self, H: torch.Tensor, A: torch.Tensor
-            ) -> torch.Tensor:
+            def forward(self, H: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
                 # H : (n_nodes, in_f)   A : (n_nodes, n_nodes)
                 agg = A @ H  # (n_nodes, in_f)
                 out = self.W(agg)  # (n_nodes, out_f)
@@ -148,10 +146,7 @@ class GCNNet:
                 super().__init__()
                 dims = [n_in] + list(hidden)
                 self.layers = nn.ModuleList(
-                    [
-                        _GCNLayer(dims[i], dims[i + 1])
-                        for i in range(len(dims) - 1)
-                    ]
+                    [_GCNLayer(dims[i], dims[i + 1]) for i in range(len(dims) - 1)]
                 )
                 self.drop = nn.Dropout(dropout)
                 self.head = nn.Linear(dims[-1], n_out)

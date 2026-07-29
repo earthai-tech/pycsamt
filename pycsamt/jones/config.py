@@ -78,9 +78,7 @@ KIND_GDS_TF: Final[str] = "T"  # GDS transfer functions (complex TF)
 KIND_COMPLEX_TF: Final[frozenset[str]] = frozenset(
     {KIND_IMPEDANCE, KIND_IMPEDANCE_UP, KIND_SCHMUCKER, KIND_GDS_TF}
 )
-KIND_RHO_PHI: Final[frozenset[str]] = frozenset(
-    {KIND_RESISTIVITY, KIND_RESISTIVITY_UP}
-)
+KIND_RHO_PHI: Final[frozenset[str]] = frozenset({KIND_RESISTIVITY, KIND_RESISTIVITY_UP})
 
 # Second/third characters denote the *component* or aggregation
 COMPONENT_CODES: Final[frozenset[str]] = frozenset(
@@ -112,9 +110,7 @@ UNITS_CANONICAL: Final[Mapping[str, str]] = {
 }
 
 # Liberal matcher to normalize unit tokens ("S.I.", "si", "FIELD UNITS", ...)
-_RE_UNIT_TOKEN = (
-    r"(?P<unit>SI|S\.?I\.?|FIELD)"  # captured group name is 'unit'
-)
+_RE_UNIT_TOKEN = r"(?P<unit>SI|S\.?I\.?|FIELD)"  # captured group name is 'unit'
 
 # Column layouts for data rows
 

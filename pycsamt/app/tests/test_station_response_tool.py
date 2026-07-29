@@ -263,9 +263,7 @@ class TestResponseWorkerError:
         def _boom(*a, **k):
             raise RuntimeError("synthetic failure")
 
-        monkeypatch.setattr(
-            inspect_mod, "plot_station_response", _boom
-        )
+        monkeypatch.setattr(inspect_mod, "plot_station_response", _boom)
         done_calls = []
         error_calls = []
         w = _ResponseWorker(
@@ -487,9 +485,7 @@ class TestOnPlotWithFakeWorker:
         class _SpyWorker(_fake_worker_cls(fig=_sample_fig())):
             def start(self):
                 _SpyWorker.status_during_run = self._dlg_ref._status_lbl.text()
-                _SpyWorker.btn_enabled_during_run = (
-                    self._dlg_ref._run_btn.isEnabled()
-                )
+                _SpyWorker.btn_enabled_during_run = self._dlg_ref._run_btn.isEnabled()
                 super().start()
 
         monkeypatch.setattr(

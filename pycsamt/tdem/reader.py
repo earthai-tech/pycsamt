@@ -35,13 +35,14 @@ Quick start
     )
 
     # auto-detect format
-    soundings = reader.read("survey.dat")           # Geosoft DAT
-    soundings = reader.read("profile.tem")          # AMIRA or WalkTEM
-    soundings = reader.read("sounding.avg")         # Zonge GDP
+    soundings = reader.read("survey.dat")  # Geosoft DAT
+    soundings = reader.read("profile.tem")  # AMIRA or WalkTEM
+    soundings = reader.read("sounding.avg")  # Zonge GDP
 
     # explicit format
-    soundings = reader.read("myfile.txt", fmt="xyz",
-                             time_unit="ms", data_unit="nT/s")
+    soundings = reader.read(
+        "myfile.txt", fmt="xyz", time_unit="ms", data_unit="nT/s"
+    )
 
     # named method (same as read with fmt="geosoft")
     soundings = reader.read_geosoft_dat("survey.dat")
@@ -248,8 +249,8 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
     --------
     >>> from pycsamt.tdem import TEMReader
     >>> reader = TEMReader(current=8.0, loop_side=200.0, verbose=1)
-    >>> soundings = reader.read("survey.dat")     # Geosoft DAT
-    >>> soundings = reader.read("profile.tem")    # AMIRA / WalkTEM
+    >>> soundings = reader.read("survey.dat")  # Geosoft DAT
+    >>> soundings = reader.read("profile.tem")  # AMIRA / WalkTEM
     >>> soundings = reader.read_zonge("run.avg")  # explicit format
     """
 
@@ -327,11 +328,7 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
             "data_type",
             "gate_times_unit",
         )
-        return {
-            k: getattr(self, k)
-            for k in keys
-            if getattr(self, k, None) is not None
-        }
+        return {k: getattr(self, k) for k in keys if getattr(self, k, None) is not None}
 
     def _merge(self, **call_kwargs: Any) -> dict[str, Any]:
         """Merge instance defaults with per-call kwargs.
@@ -404,9 +401,7 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
             raise FileNotFoundError(f"File not found: {p}")
 
         if fmt is not None and fmt not in _REGISTRY:
-            raise ValueError(
-                f"Unknown format {fmt!r}.  Valid formats: {self.formats}"
-            )
+            raise ValueError(f"Unknown format {fmt!r}.  Valid formats: {self.formats}")
 
         resolved_fmt = fmt or _detect_format(p)
         reader_fn, _ = _REGISTRY[resolved_fmt]
@@ -422,13 +417,10 @@ class TEMReader(PyCSAMTObject, MetadataMixin):
         try:
             params = _inspect.signature(reader_fn).parameters
             has_var_kw = any(
-                sp.kind is _inspect.Parameter.VAR_KEYWORD
-                for sp in params.values()
+                sp.kind is _inspect.Parameter.VAR_KEYWORD for sp in params.values()
             )
             if not has_var_kw:
-                merged = {
-                    k: v for k, v in merged.items() if k in params
-                }
+                merged = {k: v for k, v in merged.items() if k in params}
         except (TypeError, ValueError):  # pragma: no cover
             pass
 

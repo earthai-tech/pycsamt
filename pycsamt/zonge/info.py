@@ -94,7 +94,7 @@ class DataInfo(Zonge):
 
     >>> from pycsamt.zonge.info import DataInfo
     >>> from pycsamt.zonge.utils import load_avg
-    >>> df, meta = load_avg('data/avg/K2.avg')
+    >>> df, meta = load_avg("data/avg/K2.avg")
     >>> data_info = DataInfo()
     >>> data_info.read(df, meta)
     >>> print(data_info.station)
@@ -160,8 +160,7 @@ class DataInfo(Zonge):
             frame = AVGFrame(avg, dict(meta or {}))
         else:
             raise TypeError(
-                "from_avg expects Path|AVGFrame|DataFrame|"
-                "(DataFrame, meta) tuple."
+                "from_avg expects Path|AVGFrame|DataFrame|" "(DataFrame, meta) tuple."
             )
 
         obj = cls()
@@ -232,11 +231,7 @@ class DataInfo(Zonge):
         if self.df is None:
             return "DataInfo(empty)"
 
-        n_st = (
-            self.df["station"].nunique()
-            if "station" in self.df.columns
-            else 0
-        )
+        n_st = self.df["station"].nunique() if "station" in self.df.columns else 0
         n_f = self.df["freq"].nunique() if "freq" in self.df.columns else 0
         return f"DataInfo(stations={n_st}, freqs={n_f}, rows={len(self.df)})"
 

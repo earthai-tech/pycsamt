@@ -63,9 +63,7 @@ _ALSOS = ["both", "z", "tipper"]
 _C_KEEP = QColor("#c8e6c9")
 _C_RECOVER = QColor("#fff9c4")
 _C_DROP = QColor("#ffcdd2")
-_FG_DARK = QColor(
-    "#1a1a1a"
-)  # forced dark text so pastels stay readable in dark mode
+_FG_DARK = QColor("#1a1a1a")  # forced dark text so pastels stay readable in dark mode
 _ACTION_COLOR = {
     "kept": _C_KEEP,
     "recovered": _C_RECOVER,
@@ -373,9 +371,7 @@ class FrequencyEditorDialog(QDialog):
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 return it
 
-            self._table.setItem(
-                r, 0, _item(row[station_col] if station_col else "—")
-            )
+            self._table.setItem(r, 0, _item(row[station_col] if station_col else "—"))
             self._table.setItem(
                 r, 1, _item(f"{row[period_col]:.4g}" if period_col else "—")
             )
@@ -387,7 +383,5 @@ class FrequencyEditorDialog(QDialog):
     # ── Apply ─────────────────────────────────────────────────────────────────
 
     def _on_apply(self) -> None:
-        self._status_lbl.setText(
-            "Edited sites ready — close this dialog to continue."
-        )
+        self._status_lbl.setText("Edited sites ready — close this dialog to continue.")
         self.accept()

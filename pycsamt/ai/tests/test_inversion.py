@@ -221,12 +221,12 @@ class TestGCNInverter3DWithBackend(unittest.TestCase):
         cls.n_samples = 50
         coords = rng.uniform(0, 5000, (cls.n_sta, 2))
         cls.A = build_adjacency(coords, radius=2000)
-        cls.X = rng.standard_normal(
-            (cls.n_samples, cls.n_sta, cls.n_feat)
-        ).astype(np.float32)
-        cls.y = rng.standard_normal(
-            (cls.n_samples, cls.n_sta, cls.n_out)
-        ).astype(np.float32)
+        cls.X = rng.standard_normal((cls.n_samples, cls.n_sta, cls.n_feat)).astype(
+            np.float32
+        )
+        cls.y = rng.standard_normal((cls.n_samples, cls.n_sta, cls.n_out)).astype(
+            np.float32
+        )
 
     def _make_inv(self):
         from pycsamt.ai.inversion.inv3d import GCNInverter3D
@@ -595,9 +595,7 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(0)
         X_cal = rng.standard_normal((80, 6))
-        mean, sigma = ens.predict_with_uncertainty(
-            X_cal, _use_calibrated=False
-        )
+        mean, sigma = ens.predict_with_uncertainty(X_cal, _use_calibrated=False)
         y_cal = mean + sigma * rng.standard_normal((80, n_p))
         ens.calibrate(X_cal, y_cal)
         self.assertIsInstance(ens._conformal, ConformalPredictor)
@@ -610,9 +608,7 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(1)
         X_cal = rng.standard_normal((80, 6))
-        mean, sigma = ens.predict_with_uncertainty(
-            X_cal, _use_calibrated=False
-        )
+        mean, sigma = ens.predict_with_uncertainty(X_cal, _use_calibrated=False)
         y_cal = mean + sigma * rng.standard_normal((80, n_p))
         ens.calibrate(X_cal, y_cal)
         self.assertIsInstance(ens._posterior_cal, PosteriorCalibrator)
@@ -621,9 +617,7 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(2)
         X_cal = rng.standard_normal((80, 6))
-        mean, sigma = ens.predict_with_uncertainty(
-            X_cal, _use_calibrated=False
-        )
+        mean, sigma = ens.predict_with_uncertainty(X_cal, _use_calibrated=False)
         y_cal = mean + sigma * rng.standard_normal((80, n_p))
         ens.calibrate(X_cal, y_cal)
         X_t = rng.standard_normal((25, 6))
@@ -636,9 +630,7 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(3)
         X_cal = rng.standard_normal((80, 6))
-        mean, sigma = ens.predict_with_uncertainty(
-            X_cal, _use_calibrated=False
-        )
+        mean, sigma = ens.predict_with_uncertainty(X_cal, _use_calibrated=False)
         y_cal = mean + sigma * rng.standard_normal((80, n_p))
         ens.calibrate(X_cal, y_cal)
         X_t = rng.standard_normal((10, 6))
@@ -649,16 +641,12 @@ class TestEnsembleInverterCalibrate(unittest.TestCase):
         ens, n_p = self._make_ensemble_stub()
         rng = np.random.default_rng(4)
         X_cal = rng.standard_normal((80, 6))
-        mean0, sigma0 = ens.predict_with_uncertainty(
-            X_cal, _use_calibrated=False
-        )
+        mean0, sigma0 = ens.predict_with_uncertainty(X_cal, _use_calibrated=False)
         y_cal = mean0 + sigma0 * rng.standard_normal((80, n_p))
         ens.calibrate(X_cal, y_cal)
         X_t = rng.standard_normal((20, 6))
         _, sigma_cal = ens.predict_with_uncertainty(X_t)
-        _, sigma_raw = ens.predict_with_uncertainty(
-            X_t, _use_calibrated=False
-        )
+        _, sigma_raw = ens.predict_with_uncertainty(X_t, _use_calibrated=False)
         # After calibration, sigma_cal != sigma_raw (unless scale=1 exactly)
         # At minimum both should be positive and finite
         self.assertTrue(np.all(sigma_cal > 0))
@@ -693,9 +681,7 @@ class TestEMCheckpoint(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "ckpt.npz")
-            ckpt = EMCheckpoint(
-                params=params, weights=weights, history=history
-            )
+            ckpt = EMCheckpoint(params=params, weights=weights, history=history)
             ckpt.save(path)
             ckpt2 = EMCheckpoint.load(path)
 

@@ -110,8 +110,8 @@ def is_edi_file(x: Any) -> bool:
     --------
     >>> class Dummy:
     ...     def get_section(self, *_): ...
-    ...     Z = object()
     ...
+    ...     Z = object()
     >>> from pycsamt.site.utils import is_edi_file
     >>> is_edi_file(Dummy())
     True
@@ -154,8 +154,8 @@ def is_edi_collection(x: Any) -> bool:
     >>> from pycsamt.site.utils import is_edi_collection, is_edi_file
     >>> class E:
     ...     def get_section(self, *_): ...
-    ...     Z = object()
     ...
+    ...     Z = object()
     >>> is_edi_collection([E(), E()])
     True
     >>> is_edi_collection("folder/*.edi")
@@ -203,8 +203,8 @@ def iter_edifiles(edic: Any) -> Iterator[EDIFile]:
     >>> from pycsamt.site.utils import iter_edifiles
     >>> class E:
     ...     def get_section(self, *_): ...
-    ...     Z = object()
     ...
+    ...     Z = object()
     >>> list(iter_edifiles(E()))
     [<E object at ...>]
     >>> lst = [E(), object(), E()]
@@ -290,8 +290,8 @@ def as_edicollection(
     >>>
     >>> class E:
     ...     def get_section(self, *_): ...
-    ...     Z = object()
     ...
+    ...     Z = object()
     >>> coll = as_edicollection([E(), E()])
     >>> coll is not None
     True
@@ -679,7 +679,6 @@ def apply_inplace(
     >>> def inc(d):
     ...     d["n"] = d.get("n", 0) + 1
     ...     return d
-    ...
     >>> data = {}
     >>> r1 = apply_inplace(data, inc, inplace=False)
     >>> r1 is data
@@ -932,9 +931,7 @@ def match_name(
         # glob-like?
         if any(c in pat for c in ("*", "?", "[")):
             rx = re.compile(
-                "^"
-                + re.escape(pat).replace("\\*", ".*").replace("\\?", ".")
-                + "$",
+                "^" + re.escape(pat).replace("\\*", ".*").replace("\\?", ".") + "$",
                 flags=re.IGNORECASE,
             )
             return bool(rx.match(name))
@@ -972,8 +969,7 @@ def select_by_name(
     --------
     >>> from types import SimpleNamespace
     >>> from pycsamt.site.utils import select_by_name
-    >>> eds = [SimpleNamespace(station="E01"),
-    ...        SimpleNamespace(station="N10")]
+    >>> eds = [SimpleNamespace(station="E01"), SimpleNamespace(station="N10")]
     >>> keep = select_by_name(eds, "E*")
     >>> [getattr(x, "station") for x in keep]
     ['E01']

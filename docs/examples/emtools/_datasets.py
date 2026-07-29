@@ -70,9 +70,7 @@ def load_survey(name: str, **kwargs):
 
 def load_sites(name: str, recursive: bool = False, **kwargs):
     """Read a bundled dataset into a ready-to-plot ``Sites`` object."""
-    return ensure_sites(
-        str(dataset_path(name)), recursive=recursive, **kwargs
-    )
+    return ensure_sites(str(dataset_path(name)), recursive=recursive, **kwargs)
 
 
 def line_groups(sites):

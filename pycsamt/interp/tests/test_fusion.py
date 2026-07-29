@@ -139,7 +139,6 @@ def test_merge_rms_weighted_constant_in_overlap():
     m = MultiMethodEMModel(p, s, blend="rms_weighted")
     m.merge()
     w = m.diagnostics_.blend_weights
-    z = m.diagnostics_
     expected_w = 4.0 / (2.0 + 4.0)
     # cells strictly inside the overlap [60,70) should carry the constant weight
     z_out = np.array(
@@ -182,9 +181,7 @@ def test_merge_rms_weighted_falls_back_when_sum_zero():
 def test_merge_no_overlap_hard_boundary():
     p = _primary()
     s = _secondary()
-    m = MultiMethodEMModel(
-        p, s, primary_max_depth=50.0, secondary_min_depth=100.0
-    )
+    m = MultiMethodEMModel(p, s, primary_max_depth=50.0, secondary_min_depth=100.0)
     fused = m.merge()
     assert m.diagnostics_.has_overlap is False
     w = m.diagnostics_.blend_weights
@@ -203,8 +200,9 @@ def test_merge_no_overlap_hard_boundary():
 def test_merge_blend_overlap_narrows_window():
     m = MultiMethodEMModel(_primary(), _secondary(), blend_overlap=2.0)
     m.merge()
-    assert m.diagnostics_.z_overlap_end - m.diagnostics_.z_overlap_start == pytest.approx(
-        2.0
+    assert (
+        m.diagnostics_.z_overlap_end - m.diagnostics_.z_overlap_start
+        == pytest.approx(2.0)
     )
 
 

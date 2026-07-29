@@ -73,9 +73,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -227,9 +225,7 @@ class TestGeneratePreview:
         step = pipeline_mod._CTRL.steps[1]
         assert _generate_preview(step, None, True) == empty_src()
 
-    def test_step_without_diag_fn_hits_missing_pseudosection_bug(
-        self, willy_subset
-    ):
+    def test_step_without_diag_fn_hits_missing_pseudosection_bug(self, willy_subset):
         """See bug #1 in the module docstring above."""
         import pycsamt.app.web.callbacks.pipeline as pipeline_mod
 
@@ -259,8 +255,8 @@ class TestGeneratePreview:
     def test_diag_fn_raising_falls_back_to_broken_pseudosection(
         self, willy_subset, monkeypatch
     ):
-        import pycsamt.emtools as et
         import pycsamt.app.web.callbacks.pipeline as pipeline_mod
+        import pycsamt.emtools as et
 
         step = pipeline_mod._CTRL.steps[1]
         monkeypatch.setattr(
@@ -271,11 +267,9 @@ class TestGeneratePreview:
         out = _generate_preview(step, willy_subset, True)
         assert out == empty_src()
 
-    def test_diag_fn_returning_non_figure_falls_back(
-        self, willy_subset, monkeypatch
-    ):
-        import pycsamt.emtools as et
+    def test_diag_fn_returning_non_figure_falls_back(self, willy_subset, monkeypatch):
         import pycsamt.app.web.callbacks.pipeline as pipeline_mod
+        import pycsamt.emtools as et
 
         step = pipeline_mod._CTRL.steps[1]
         monkeypatch.setattr(et, step.diag_fn, lambda sites: "not-a-figure")
@@ -306,9 +300,7 @@ class TestFilterByActiveLines:
         """See bug #2 in the module docstring above."""
         store_data = {"station_records": willy_subset_records}
         als = {"active": [], "all": ["L1", "L2"]}
-        out_sites, all_muted = _filter_by_active_lines(
-            willy_subset, store_data, als
-        )
+        out_sites, all_muted = _filter_by_active_lines(willy_subset, store_data, als)
         assert all_muted is False
         assert out_sites is willy_subset
 
@@ -317,9 +309,7 @@ class TestFilterByActiveLines:
     ):
         store_data = {"station_records": willy_subset_records}
         als = {"active": ["L1"], "all": ["L1", "L2"]}
-        out_sites, all_muted = _filter_by_active_lines(
-            willy_subset, store_data, als
-        )
+        out_sites, all_muted = _filter_by_active_lines(willy_subset, store_data, als)
         assert all_muted is False
         assert out_sites is not None
         assert len(out_sites.as_list()) < len(willy_subset.as_list())
@@ -329,9 +319,7 @@ class TestFilterByActiveLines:
     ):
         store_data = {"station_records": willy_subset_records}
         als = {"active": ["GhostLine"], "all": ["GhostLine", "L1"]}
-        out_sites, all_muted = _filter_by_active_lines(
-            willy_subset, store_data, als
-        )
+        out_sites, all_muted = _filter_by_active_lines(willy_subset, store_data, als)
         assert out_sites is None
         assert all_muted is True
 
@@ -375,9 +363,7 @@ class TestRunStep:
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
-            self._fn(web_app)(
-                None, "0", "current", "", "sid", None, None, None, "dark"
-            )
+            self._fn(web_app)(None, "0", "current", "", "sid", None, None, None, "dark")
 
     def test_all_muted_returns_warning(self, web_app, willy_subset_records):
         store_data = {"station_records": willy_subset_records}
@@ -473,9 +459,7 @@ class TestRunStep:
         assert view_val is no_update
         assert step_val is no_update
 
-    def test_cache_get_failure_hits_outer_exception_handler(
-        self, web_app, monkeypatch
-    ):
+    def test_cache_get_failure_hits_outer_exception_handler(self, web_app, monkeypatch):
         import pycsamt.app.web.callbacks.pipeline as pipeline_mod
 
         monkeypatch.setattr(
@@ -483,9 +467,7 @@ class TestRunStep:
             "cache_get",
             lambda sid: (_ for _ in ()).throw(RuntimeError("boom")),
         )
-        out = self._fn(web_app)(
-            1, "0", "current", "", "sid", None, None, None, "light"
-        )
+        out = self._fn(web_app)(1, "0", "current", "", "sid", None, None, None, "light")
         *_, toast, body = out
         assert toast is True
         assert "boom" in body
@@ -496,9 +478,7 @@ class TestRunStep:
 
 class TestRunAll:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.PIPE_SPINNER}.children", IDs.BTN_PIPE_ALL
-        )
+        return _cb_by_input(web_app, f"{IDs.PIPE_SPINNER}.children", IDs.BTN_PIPE_ALL)
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -507,9 +487,7 @@ class TestRunAll:
     def test_all_muted_returns_warning(self, web_app, willy_subset_records):
         store_data = {"station_records": willy_subset_records}
         als = {"active": ["Ghost"], "all": ["Ghost", "L1", "L2"]}
-        out = self._fn(web_app)(
-            1, "", "no-session", None, als, store_data, "dark"
-        )
+        out = self._fn(web_app)(1, "", "no-session", None, als, store_data, "dark")
         log, store, spinner, toast, body = out
         assert "No active lines" in log
         assert toast is False
@@ -529,9 +507,7 @@ class TestRunAll:
         monkeypatch.setattr(
             pipeline_mod, "_generate_preview", lambda *_a, **_k: empty_src()
         )
-        out = self._fn(web_app)(
-            1, "", cached_session, None, None, None, "dark"
-        )
+        out = self._fn(web_app)(1, "", cached_session, None, None, None, "dark")
         log, store, spinner, toast, body = out
         assert toast is False
         for i in range(1, 8):
@@ -584,9 +560,7 @@ class TestRunAll:
 
 class TestViewStepPreview:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.IMG_PIPE}.src", IDs.PIPE_VIEW_STEP
-        )
+        return _cb_by_input(web_app, f"{IDs.IMG_PIPE}.src", IDs.PIPE_VIEW_STEP)
 
     def test_none_or_empty_step_id_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -599,9 +573,7 @@ class TestViewStepPreview:
         assert out == empty_src()
 
     def test_returns_cached_preview(self, web_app):
-        out = self._fn(web_app)(
-            "2", {"2": "data:image/png;base64,XYZ"}, "light"
-        )
+        out = self._fn(web_app)("2", {"2": "data:image/png;base64,XYZ"}, "light")
         assert out == "data:image/png;base64,XYZ"
 
 
@@ -629,9 +601,7 @@ class TestSkipStep:
 
 class TestResetPipeline:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.PIPE_STATUS}.children", IDs.BTN_PIPE_RESET
-        )
+        return _cb_by_input(web_app, f"{IDs.PIPE_STATUS}.children", IDs.BTN_PIPE_RESET)
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -683,7 +653,9 @@ class TestToggleBrowseModal:
         import pycsamt.app.web.callbacks.pipeline as pipeline_mod
 
         monkeypatch.setattr(
-            pipeline_mod, "ctx", type("C", (), {"triggered_id": triggered_id})()
+            pipeline_mod,
+            "ctx",
+            type("C", (), {"triggered_id": triggered_id})(),
         )
 
     def test_cancel_closes(self, web_app, monkeypatch):
@@ -709,9 +681,7 @@ class TestToggleBrowseModal:
         assert is_open is True
         assert path == str(sub)
 
-    def test_open_with_missing_folder_falls_back_to_home(
-        self, web_app, monkeypatch
-    ):
+    def test_open_with_missing_folder_falls_back_to_home(self, web_app, monkeypatch):
         self._ctx(monkeypatch, IDs.BTN_PIPE_BROWSE)
         is_open, path = self._fn(web_app)(
             1, None, "Z:/definitely/not/a/real/path", False
@@ -719,9 +689,7 @@ class TestToggleBrowseModal:
         assert is_open is True
         assert path == os.path.expanduser("~")
 
-    def test_open_with_no_current_folder_defaults_to_home(
-        self, web_app, monkeypatch
-    ):
+    def test_open_with_no_current_folder_defaults_to_home(self, web_app, monkeypatch):
         self._ctx(monkeypatch, IDs.BTN_PIPE_BROWSE)
         is_open, path = self._fn(web_app)(1, None, "", False)
         assert is_open is True
@@ -730,9 +698,7 @@ class TestToggleBrowseModal:
 
 class TestNavigateInto:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.PIPE_BROWSE_PATH}.data", "pipe-dir-item"
-        )
+        return _cb_by_input(web_app, f"{IDs.PIPE_BROWSE_PATH}.data", "pipe-dir-item")
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):

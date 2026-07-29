@@ -127,10 +127,9 @@ def _mt1d_tf_batch(freqs_t, log_rho, log_thick):
     omega = 2.0 * _PI * freqs_t  # (F,)
 
     # j_mu_w shape (1, F) — broadcasts over stations
-    j_mu_w = tf.complex(
-        tf.zeros_like(omega),
-        tf.cast(_MU0 * omega, tf.float64),
-    )[tf.newaxis, :]  # (1, F)
+    j_mu_w = tf.complex(tf.zeros_like(omega), tf.cast(_MU0 * omega, tf.float64),)[
+        tf.newaxis, :
+    ]  # (1, F)
 
     rho_c = tf.cast(rho, tf.complex128)  # (S, L)
 
@@ -164,9 +163,7 @@ def _clip_grads_tf(grads, max_norm: float = 5.0):
     """Clip a list of TF gradients by global norm."""
     import tensorflow as tf
 
-    return [
-        tf.clip_by_norm(g, max_norm) if g is not None else g for g in grads
-    ]
+    return [tf.clip_by_norm(g, max_norm) if g is not None else g for g in grads]
 
 
 # ── 1-D per-station optimisation ───────────────────
@@ -247,8 +244,7 @@ def _fit_station_tf(
             )
             data_loss = (
                 tf.reduce_sum(
-                    (lr_pred - lr_safe) ** 2
-                    + ((ph_pred - ph_safe) / 90.0) ** 2
+                    (lr_pred - lr_safe) ** 2 + ((ph_pred - ph_safe) / 90.0) ** 2
                 )
                 / n_v
             )
@@ -330,9 +326,7 @@ def _fit_2d_joint_tf(
 
     for ep in range(1, epochs + 1):
         with tf.GradientTape() as tape:
-            lr_pred, ph_pred = _mt1d_tf_batch(
-                freqs_c, log_rho_var, log_thick_var
-            )
+            lr_pred, ph_pred = _mt1d_tf_batch(freqs_c, log_rho_var, log_thick_var)
             lr_safe = tf.where(
                 valid,
                 lr_obs_t,
@@ -349,20 +343,15 @@ def _fit_2d_joint_tf(
             )
             data_loss = (
                 tf.reduce_sum(
-                    (lr_pred - lr_safe) ** 2
-                    + ((ph_pred - ph_safe) / 90.0) ** 2
+                    (lr_pred - lr_safe) ** 2 + ((ph_pred - ph_safe) / 90.0) ** 2
                 )
                 / n_v
             )
 
-            vert = tf.reduce_mean(
-                (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
-            )
+            vert = tf.reduce_mean((log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2)
 
             if S > 1:
-                lat = tf.reduce_mean(
-                    (log_rho_var[1:, :] - log_rho_var[:-1, :]) ** 2
-                )
+                lat = tf.reduce_mean((log_rho_var[1:, :] - log_rho_var[:-1, :]) ** 2)
             else:
                 lat = tf.constant(0.0, dtype=tf.float64)
 
@@ -446,9 +435,7 @@ def _fit_3d_joint_tf(
 
     for ep in range(1, epochs + 1):
         with tf.GradientTape() as tape:
-            lr_pred, ph_pred = _mt1d_tf_batch(
-                freqs_c, log_rho_var, log_thick_var
-            )
+            lr_pred, ph_pred = _mt1d_tf_batch(freqs_c, log_rho_var, log_thick_var)
             lr_safe = tf.where(
                 valid,
                 lr_obs_t,
@@ -465,15 +452,12 @@ def _fit_3d_joint_tf(
             )
             data_loss = (
                 tf.reduce_sum(
-                    (lr_pred - lr_safe) ** 2
-                    + ((ph_pred - ph_safe) / 90.0) ** 2
+                    (lr_pred - lr_safe) ** 2 + ((ph_pred - ph_safe) / 90.0) ** 2
                 )
                 / n_v
             )
 
-            vert = tf.reduce_mean(
-                (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
-            )
+            vert = tf.reduce_mean((log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2)
 
             # Graph Laplacian: L = D - A
             # d_vec: (S,); log_rho_var: (S,L)

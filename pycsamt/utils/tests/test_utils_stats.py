@@ -90,9 +90,7 @@ def test_remove_outliers_fill_value_nan_and_interpolate():
     assert np.isnan(filled[-1])
     assert filled.size == arr.size
 
-    interp = remove_outliers(
-        arr.reshape(1, -1), fill_value=np.nan, interpolate=True
-    )
+    interp = remove_outliers(arr.reshape(1, -1), fill_value=np.nan, interpolate=True)
     assert not np.isnan(interp).any()
 
 

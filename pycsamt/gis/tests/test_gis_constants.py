@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 
 from pycsamt.gis.constants import (
+    _ECC_SQUARED_IDX,
+    _EQUATORIAL_RADIUS_IDX,
     DEG2RAD,
     ELLIPSOIDS,
     EPSG_PROJ4,
     RAD2DEG,
     UTM_ZONE_DESIGNATOR,
-    _ECC_SQUARED_IDX,
-    _EQUATORIAL_RADIUS_IDX,
     utm_letter_designator,
 )
 

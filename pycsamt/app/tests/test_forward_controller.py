@@ -259,9 +259,7 @@ def test_rename_model_to_duplicate_name_creates_two_entries_with_same_name():
 def test_model_to_record_serialises_arrays_to_lists():
     resistivity = np.array([100.0, 10.0, 500.0])
     thickness = np.array([300.0, 800.0])
-    record = ForwardController.model_to_record(
-        "m1", "1d", resistivity, thickness
-    )
+    record = ForwardController.model_to_record("m1", "1d", resistivity, thickness)
     assert record == {
         "name": "m1",
         "dim": "1d",
@@ -293,9 +291,7 @@ def test_record_to_arrays_returns_float_ndarrays():
 def test_model_to_record_and_record_to_arrays_round_trip():
     resistivity = np.array([50.0, 250.0, 1000.0, 5.0])
     thickness = np.array([100.0, 200.0, 300.0])
-    record = ForwardController.model_to_record(
-        "rt", "1d", resistivity, thickness
-    )
+    record = ForwardController.model_to_record("rt", "1d", resistivity, thickness)
     res2, thick2 = ForwardController.record_to_arrays(record)
     np.testing.assert_array_equal(res2, resistivity)
     np.testing.assert_array_equal(thick2, thickness)
@@ -319,9 +315,7 @@ def test_model_to_record_works_via_save_and_get(isolated_library):
 # ── build_preset_1d ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize(
-    "name", ["sedimentary", "porphyry", "mineralized", "marine"]
-)
+@pytest.mark.parametrize("name", ["sedimentary", "porphyry", "mineralized", "marine"])
 def test_build_preset_1d_returns_resistivity_and_thickness(name):
     preset = ForwardController.build_preset_1d(name, seed=42)
     assert set(preset.keys()) == {"resistivity", "thickness"}

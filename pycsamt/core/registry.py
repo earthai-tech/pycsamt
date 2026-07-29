@@ -59,8 +59,10 @@ def register_packer(kind: str, packer: Packer) -> None:
 
     Examples
     --------
-    >>> def pack(x): return {"v": x}
-    >>> def unpack(d): return d["v"]
+    >>> def pack(x):
+    ...     return {"v": x}
+    >>> def unpack(d):
+    ...     return d["v"]
     >>> register_packer("toy", (pack, unpack))
     >>> get_packer("toy") is not None
     True
@@ -580,8 +582,7 @@ class RegistryAPI(CoreObject):
         --------
         >>> from pycsamt.core.registry import RegistryAPI
         >>> api = RegistryAPI("data")
-        >>> rec = api.add_file("site001.edi",
-        ...                    kind="edi", fmt="edi")
+        >>> rec = api.add_file("site001.edi", kind="edi", fmt="edi")
         >>> rec.kind, rec.fmt
         ('edi', 'edi')
         """
@@ -645,7 +646,9 @@ class RegistryAPI(CoreObject):
         --------
         >>> from pycsamt.core.registry import RegistryAPI
         >>> api = RegistryAPI("data")
-        >>> class Obj: station="S02"; station_id=2
+        >>> class Obj:
+        ...     station = "S02"
+        ...     station_id = 2
         >>> rec = api.add_object(Obj(), tags=["demo"])
         >>> isinstance(rec.rid, str)
         True

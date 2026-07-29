@@ -77,9 +77,9 @@ class TestAdvancedProcUtils:
         zyx, zyy = 8 + 3j, 1.5 + 1j
         expected_skew = np.abs(zxx + zyy) / np.abs(zxy - zyx)
 
-        calculated_skew = skew_df[
-            (skew_df.station == 100) & (skew_df.freq == 1024)
-        ]["skew"].iloc[0]
+        calculated_skew = skew_df[(skew_df.station == 100) & (skew_df.freq == 1024)][
+            "skew"
+        ].iloc[0]
 
         assert pd.notna(calculated_skew)
         assert np.isclose(calculated_skew, expected_skew)
@@ -96,9 +96,7 @@ class TestAdvancedProcUtils:
         # Manual calculation for station 100, freq 1024
         zxx, zxy = 1 + 1j, 10 + 2j
         zyx, zyy = 8 + 3j, 1.5 + 1j
-        expected_strike_rad = 0.5 * np.arctan2(
-            (zxy + zyx).real, (zxx - zyy).real
-        )
+        expected_strike_rad = 0.5 * np.arctan2((zxy + zyx).real, (zxx - zyy).real)
         expected_strike_deg = np.rad2deg(expected_strike_rad)
 
         calculated_strike = strike_df[

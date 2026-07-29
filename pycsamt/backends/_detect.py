@@ -60,7 +60,7 @@ def detect_available_backends() -> list[str]:
     --------
     >>> from pycsamt.backends._detect import detect_available_backends
     >>> available = detect_available_backends()
-    >>> print(available)          # e.g. ['torch'] or ['torch', 'tensorflow']
+    >>> print(available)  # e.g. ['torch'] or ['torch', 'tensorflow']
     """
     found: list[str] = []
     if probe_backend("torch"):

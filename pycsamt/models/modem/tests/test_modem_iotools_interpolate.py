@@ -41,9 +41,7 @@ def _gradient_model(nx=8, ny=6, nz=5, n_air=1):
     m = ModEmModel3D()
     m.x_widths = np.full(nx, 1000.0)
     m.y_widths = np.full(ny, 1000.0)
-    m.z_widths = np.concatenate(
-        [np.full(n_air, 50.0), np.full(nz - n_air, 500.0)]
-    )
+    m.z_widths = np.concatenate([np.full(n_air, 50.0), np.full(nz - n_air, 500.0)])
     m.n_air = n_air
     # Linear rho gradient 100 → 1000 Ω·m along z-axis
     rho_vals = np.linspace(100.0, 1000.0, nz)
@@ -57,16 +55,12 @@ def _z3d_imp_on_grid(n_pts_per_dim=4, periods=(10.0, 100.0)):
     xs = np.linspace(-5000, 5000, n_pts_per_dim)
     ys = np.linspace(-5000, 5000, n_pts_per_dim)
     xx, yy = np.meshgrid(xs, ys)
-    site_loc = np.column_stack(
-        [xx.ravel(), yy.ravel(), np.zeros(n_pts_per_dim**2)]
-    )
+    site_loc = np.column_stack([xx.ravel(), yy.ravel(), np.zeros(n_pts_per_dim**2)])
     n_sites = len(site_loc)
     comps = ["ZXX", "ZXY", "ZYX", "ZYY"]
     blocks = []
     for T in periods:
-        Z = rng.standard_normal((n_sites, 4)) + 1j * rng.standard_normal(
-            (n_sites, 4)
-        )
+        Z = rng.standard_normal((n_sites, 4)) + 1j * rng.standard_normal((n_sites, 4))
         Zerr = np.abs(rng.standard_normal((n_sites, 4))) * 0.1 + 1e-3
         blocks.append(
             ZBlock(
@@ -104,9 +98,7 @@ class TestInterpModel3D:
     def test_uniform_model_roundtrip(self):
         """Interpolating a uniform model preserves the value."""
         src = _uniform_model(rho=200.0)
-        tgt = _uniform_model(
-            nx=4, ny=4, nz=4, rho=1.0
-        )  # different initial rho
+        tgt = _uniform_model(nx=4, ny=4, nz=4, rho=1.0)  # different initial rho
         result = interp_model3d(src, tgt, bg_rho=200.0)
         # Interior points should be ≈ ln(200)
         np.testing.assert_allclose(result.rho_loge, np.log(200.0), atol=0.05)
@@ -248,9 +240,7 @@ class TestInterpZ3D:
         target_loc = blk.site_loc[:1, :]  # just one site
         result = interp_z3d(imp, target_loc)
         # Interpolated value should be close to original for point exactly on the grid
-        np.testing.assert_allclose(
-            result.blocks[0].Z[0].real, blk.Z[0].real, rtol=0.01
-        )
+        np.testing.assert_allclose(result.blocks[0].Z[0].real, blk.Z[0].real, rtol=0.01)
 
     def test_z_shape_correct(self):
         imp = _z3d_imp_on_grid(n_pts_per_dim=4)

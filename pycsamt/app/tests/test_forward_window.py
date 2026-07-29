@@ -371,9 +371,7 @@ class TestCompute:
         assert "Plot error" in win._compute_label.text()
 
     def test_on_error_shows_message_box(self, win, monkeypatch):
-        monkeypatch.setattr(
-            QMessageBox, "critical", staticmethod(lambda *a, **k: None)
-        )
+        monkeypatch.setattr(QMessageBox, "critical", staticmethod(lambda *a, **k: None))
         win._on_error("solver failed")
         assert "solver failed" in win._compute_label.text()
         assert win._btn_compute.isEnabled()
@@ -391,9 +389,7 @@ class TestPlotting:
         win._axis_combo.setCurrentIndex(1)  # Frequency
         win._plot_1d(_resp_1d())
 
-    def test_plot_1d_model_plot_fallback_on_import_failure(
-        self, win, monkeypatch
-    ):
+    def test_plot_1d_model_plot_fallback_on_import_failure(self, win, monkeypatch):
         import pycsamt.forward.plot as fp
 
         def _boom(*a, **k):
@@ -404,9 +400,9 @@ class TestPlotting:
 
     def test_plot_1d_sensitivity_failure_swallowed(self, win, monkeypatch):
         monkeypatch.setattr(
-            win, "_plot_1d_sensitivity", lambda r: (_ for _ in ()).throw(
-                RuntimeError("boom")
-            )
+            win,
+            "_plot_1d_sensitivity",
+            lambda r: (_ for _ in ()).throw(RuntimeError("boom")),
         )
         win._plot_1d(_resp_1d())  # sensitivity failure must not propagate
 
@@ -450,9 +446,7 @@ class TestPlotting:
         win._plot_3d(resp)
         matplotlib.pyplot.close(fig)
 
-    def test_plot_3d_render_own_figure_failure_swallowed(
-        self, win, monkeypatch
-    ):
+    def test_plot_3d_render_own_figure_failure_swallowed(self, win, monkeypatch):
         import pycsamt.forward.plot as fp
 
         def _boom(*a, **k):
@@ -537,9 +531,7 @@ class TestLibraryActions:
         monkeypatch.setattr(
             QMessageBox,
             "question",
-            staticmethod(
-                lambda *a, **k: QMessageBox.StandardButton.Yes
-            ),
+            staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes),
         )
         win._delete_selected_model()
         assert win._ctrl.model_names == []
@@ -566,9 +558,7 @@ class TestLibraryActions:
     def test_load_selected_model_no_selection_noop(self, win):
         win._load_selected_model()  # must not raise
 
-    def test_load_model_by_name_1d_switches_and_sets_model(
-        self, win, monkeypatch
-    ):
+    def test_load_model_by_name_1d_switches_and_sets_model(self, win, monkeypatch):
         monkeypatch.setattr(
             QInputDialog,
             "getText",
@@ -631,9 +621,7 @@ class TestPresets:
         def _boom(name, seed=None):
             raise RuntimeError("no such geology")
 
-        monkeypatch.setattr(
-            ForwardController, "build_preset_1d", staticmethod(_boom)
-        )
+        monkeypatch.setattr(ForwardController, "build_preset_1d", staticmethod(_boom))
         calls = []
         monkeypatch.setattr(
             QMessageBox,

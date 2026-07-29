@@ -274,9 +274,9 @@ class Record(CoreObject):
     Create a record with a checksum::
 
         from pathlib import Path
+
         p = Path("data/site001.edi")
-        r = Record(rid=_uuid(), kind="edi", path=str(p),
-                   checksum=_sha256(p))
+        r = Record(rid=_uuid(), kind="edi", path=str(p), checksum=_sha256(p))
 
     See Also
     --------
@@ -412,9 +412,7 @@ class Manifest(CoreObject):
             New manifest with :class:`Record` instances rebuilt.
         """
 
-        recs = {
-            k: Record.from_dict(v) for k, v in d.get("records", {}).items()
-        }
+        recs = {k: Record.from_dict(v) for k, v in d.get("records", {}).items()}
         return cls(
             root=d.get("root", "."),
             version=int(d.get("version", 1)),
@@ -489,13 +487,15 @@ class FileManifestStore(ManifestStore):
     --------
     >>> from pathlib import Path
     >>> from pycsamt.core._registry import (  # doctest: +SKIP
-    ...     FileManifestStore, Manifest)
-    >>> store = FileManifestStore()            # doctest: +SKIP
-    >>> mpath = Path("manifest.json")          # doctest: +SKIP
-    >>> man = store.load(mpath)                # doctest: +SKIP
-    >>> isinstance(man, Manifest)              # doctest: +SKIP
+    ...     FileManifestStore,
+    ...     Manifest,
+    ... )
+    >>> store = FileManifestStore()  # doctest: +SKIP
+    >>> mpath = Path("manifest.json")  # doctest: +SKIP
+    >>> man = store.load(mpath)  # doctest: +SKIP
+    >>> isinstance(man, Manifest)  # doctest: +SKIP
     True
-    >>> store.save(man, mpath)                 # doctest: +SKIP
+    >>> store.save(man, mpath)  # doctest: +SKIP
 
     See Also
     --------
@@ -733,8 +733,8 @@ class Registry(CoreObject):
         Examples
         --------
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
-        >>> reg = Registry("data")                       # doctest: +SKIP
-        >>> rec = reg.add_path("a.edi", kind="edi")     # doctest: +SKIP
+        >>> reg = Registry("data")  # doctest: +SKIP
+        >>> rec = reg.add_path("a.edi", kind="edi")  # doctest: +SKIP
         """
 
         pth = Path(p)
@@ -801,10 +801,11 @@ class Registry(CoreObject):
         Examples
         --------
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
-        >>> reg = Registry("data")                       # doctest: +SKIP
-        >>> class Obj:                                   # doctest: +SKIP
-        ...     station = "S02"; station_id = 2
-        >>> rec = reg.add_obj(Obj(), tags=["x"])        # doctest: +SKIP
+        >>> reg = Registry("data")  # doctest: +SKIP
+        >>> class Obj:  # doctest: +SKIP
+        ...     station = "S02"
+        ...     station_id = 2
+        >>> rec = reg.add_obj(Obj(), tags=["x"])  # doctest: +SKIP
         """
 
         rid = rid or _uuid()
@@ -881,8 +882,8 @@ class Registry(CoreObject):
         Examples
         --------
         >>> from pycsamt.core._registry import Registry  # doctest: +SKIP
-        >>> reg = Registry("data")                       # doctest: +SKIP
-        >>> reg.find(kind="edi")                         # doctest: +SKIP
+        >>> reg = Registry("data")  # doctest: +SKIP
+        >>> reg.find(kind="edi")  # doctest: +SKIP
         """
 
         out: list[Record] = []

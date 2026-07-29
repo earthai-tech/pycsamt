@@ -65,7 +65,7 @@ class JMixin:
     Examples
     --------
     >>> jm = JMixin()
-    >>> jm._complex([1, -2], [0.5, 3]).dtype.kind == 'c'
+    >>> jm._complex([1, -2], [0.5, 3]).dtype.kind == "c"
     True
     >>> jm._deg2rad(180.0)
     3.141592653589793
@@ -342,9 +342,7 @@ class JIOMixin(JMixin):
 
         # Z from R/phi (fallback)
         if z_out is None and r_parts:
-            have_keys = [
-                k for k in ("RXX", "RXY", "RYX", "RYY") if k in r_parts
-            ]
+            have_keys = [k for k in ("RXX", "RXY", "RYX", "RYY") if k in r_parts]
             if not have_keys:
                 have_keys = list(r_parts.keys())
             k0 = have_keys[0]
@@ -511,8 +509,7 @@ class JFile(JIOMixin):
     >>> jf = JFile.from_file("data/j/kb0-s001.txt", verbose=0)
     >>> jf.n_freq > 0
     True
-    >>> out = jf.write(new_jfn="out.j", datatype="ZR",
-    ...                overwrite=True)
+    >>> out = jf.write(new_jfn="out.j", datatype="ZR", overwrite=True)
     >>> isinstance(out, str)
     True
     >>> jf.lat, jf.lon  # site coordinates if present
@@ -762,8 +759,7 @@ class JFile(JIOMixin):
         Examples
         --------
         >>> jf = JFile.from_file("data/j/kb0-s001.txt")
-        >>> out = jf.write(new_jfn="site_out.j",
-        ...                datatype="ZR", overwrite=True)
+        >>> out = jf.write(new_jfn="site_out.j", datatype="ZR", overwrite=True)
         >>> isinstance(out, str)
         True
 
@@ -805,9 +801,7 @@ class JFile(JIOMixin):
 
         # --- 2. Write Main Headers (Banner & Info) ---
         if self.heads:
-            lines.extend(
-                self.heads.banner.write(new=True, include_origin=True)
-            )
+            lines.extend(self.heads.banner.write(new=True, include_origin=True))
             lines.extend(self.heads.info.write())
 
         # --- 3. Prepare to Write Data Blocks ---
@@ -877,9 +871,7 @@ class JFile(JIOMixin):
                 lines.append(f"T{code}")
                 lines.append(str(self.n_freq))
                 err = self.Tip.tipper_err
-                t_err = (
-                    err[:, 0, k] if err is not None else np.zeros(self.n_freq)
-                )
+                t_err = err[:, 0, k] if err is not None else np.zeros(self.n_freq)
 
                 for l_idx in range(self.n_freq):
                     p, t, e = (
@@ -914,9 +906,7 @@ class JFile(JIOMixin):
                 lines.append(f"Z{comp_code} SI")
                 lines.append(str(self.n_freq))
                 err = self.Z.z_err
-                z_err = (
-                    err[:, i, j] if err is not None else np.zeros(self.n_freq)
-                )
+                z_err = err[:, i, j] if err is not None else np.zeros(self.n_freq)
 
                 for k in range(self.n_freq):
                     p, z, e = (self.periods[k], z_comp[k], z_err[k])
@@ -933,8 +923,7 @@ class JFile(JIOMixin):
         path = self.path
         base = Path(new_jfn or j_fn or (path.name if path else "out.j"))
         folder = Path(
-            savepath
-            or (path.parent if path and path.parent.exists() else ".")
+            savepath or (path.parent if path and path.parent.exists() else ".")
         )
         out_path = folder / base
 

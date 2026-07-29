@@ -18,8 +18,8 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.transforms as transforms
-from matplotlib.colors import BoundaryNorm
 import numpy as np
+from matplotlib.colors import BoundaryNorm
 from matplotlib.patches import Ellipse
 
 try:
@@ -108,11 +108,7 @@ def plot2d(
         if y is not None:
             y = np.log10(np.asarray(y, dtype=float))
 
-    y_vec = (
-        np.arange(n_rows, dtype=float)
-        if y is None
-        else np.asarray(y, dtype=float)
-    )
+    y_vec = np.arange(n_rows, dtype=float) if y is None else np.asarray(y, dtype=float)
     x_vec = (
         (np.arange(n_cols) * float(distance))
         if x is None
@@ -144,9 +140,7 @@ def plot2d(
 
         if plot_contours:
             levels = mticker.MaxNLocator(nbins=15).tick_values(vmin, vmax)
-            norm = BoundaryNorm(
-                levels, ncolors=plt.get_cmap(cmap).N, clip=True
-            )
+            norm = BoundaryNorm(levels, ncolors=plt.get_cmap(cmap).N, clip=True)
             mappable = axe.pcolormesh(
                 X, Y, np.flipud(ar), cmap=cmap, norm=norm, shading="auto"
             )
@@ -204,9 +198,7 @@ def plot2d(
     return axe
 
 
-def set_axis_grid(
-    ax, show_grid: bool = True, grid_props: dict = None
-) -> None:
+def set_axis_grid(ax, show_grid: bool = True, grid_props: dict = None) -> None:
     """Robustly set grid properties on one or more matplotlib axes."""
     # Ensure grid_props is a dictionary.
     grid_props = (
@@ -339,18 +331,15 @@ def is_valid_kind(
         # Check matches against original valid kinds or their normalized forms
         valid_match = False
         for valid_norm, orig_kind in valid_normalized.items():
-            if (
-                final_normalized == valid_norm
-                or final_normalized == normalize(orig_kind)
+            if final_normalized == valid_norm or final_normalized == normalize(
+                orig_kind
             ):
                 valid_match = True
                 break
 
         if not valid_match and error == "raise":
             allowed = ", ".join(f"'{k}'" for k in valid_kinds)
-            raise ValueError(
-                f"Invalid plot type '{kind}'. Allowed: {allowed}"
-            )
+            raise ValueError(f"Invalid plot type '{kind}'. Allowed: {allowed}")
 
     return final_kind
 
@@ -404,16 +393,16 @@ def make_plot_colors(
     --------
     >>> import numpy as np
     >>> from watex.utils.plotutils import make_plot_colors
-    >>> ar = np.random.randn (7, 2)
-    >>> make_plot_colors (ar )
+    >>> ar = np.random.randn(7, 2)
+    >>> make_plot_colors(ar)
     ['g', 'gray', 'y', 'blue', 'orange', 'purple', 'lime']
-    >>> make_plot_colors (ar , axis =1 )
+    >>> make_plot_colors(ar, axis=1)
     Out[6]: ['g', 'gray']
-    >>> make_plot_colors (ar , axis =1 , colors ='cs4')
+    >>> make_plot_colors(ar, axis=1, colors="cs4")
     ['#F0F8FF', '#FAEBD7']
-    >>> len(make_plot_colors (ar , axis =1 , colors ='cs4', chunk=False))
+    >>> len(make_plot_colors(ar, axis=1, colors="cs4", chunk=False))
     150
-    >>> make_plot_colors (ar , axis =1 , colors ='cs4:4')
+    >>> make_plot_colors(ar, axis=1, colors="cs4:4")
     ['#F0FFFF', '#F5F5DC']
     """
 
@@ -447,10 +436,7 @@ def make_plot_colors(
         else:
             # remake the dcolors my removing the xkcd: in the keys:
             DCOLORS = dict(
-                (
-                    (k.replace("xkcd:", ""), c)
-                    for k, c in mcolors.XKCD_COLORS.items()
-                )
+                ((k.replace("xkcd:", ""), c) for k, c in mcolors.XKCD_COLORS.items())
             )
 
         key_colors = list(DCOLORS.keys())
@@ -519,8 +505,7 @@ def savefigure(fig: object, figname: str = None, ext: str = ".png", **skws):
             + ext
         )
         warnings.warn(
-            "No name of figure is given. Figure should be renamed as "
-            f"{figname!r}",
+            "No name of figure is given. Figure should be renamed as " f"{figname!r}",
             stacklevel=2,
         )
 
@@ -547,8 +532,7 @@ def resetting_ticks(get_xyticks, number_of_ticks=None):
     """
     if not isinstance(get_xyticks, (list, np.ndarray)):
         warnings.warn(
-            "Arguments get_xyticks must be a list"
-            f" not <{type(get_xyticks)}>.",
+            f"Arguments get_xyticks must be a list not <{type(get_xyticks)}>.",
             stacklevel=2,
         )
         raise PlotError(
@@ -573,8 +557,7 @@ def resetting_ticks(get_xyticks, number_of_ticks=None):
                 stacklevel=2,
             )
             raise PlotError(
-                f"<{type(number_of_ticks).__name__}> detected."
-                " Must be integer."
+                f"<{type(number_of_ticks).__name__}> detected." " Must be integer."
             )
 
     number_of_ticks = int(number_of_ticks)
@@ -585,9 +568,7 @@ def resetting_ticks(get_xyticks, number_of_ticks=None):
         if get_xyticks[-2] % 10 != 0:
             get_xyticks[-2] = get_xyticks[-2] - get_xyticks[-2] % 10
 
-        new_array = np.linspace(
-            get_xyticks[1], get_xyticks[-2], number_of_ticks
-        )
+        new_array = np.linspace(get_xyticks[1], get_xyticks[-2], number_of_ticks)
     else:
         new_array = np.array(get_xyticks)
 
@@ -660,9 +641,7 @@ def make_mpl_properties(n, prop="color"):
             props = d_colors
         else:
             rcolors = list(
-                itertools.repeat(
-                    d_colors, (n + len(d_colors)) // len(d_colors)
-                )
+                itertools.repeat(d_colors, (n + len(d_colors)) // len(d_colors))
             )
 
             props = list(itertools.chain(*rcolors))
@@ -670,18 +649,14 @@ def make_mpl_properties(n, prop="color"):
     if prop == "marker":
         d_markers = D_MARKERS + list(mpl.lines.Line2D.markers.keys())
         rmarkers = list(
-            itertools.repeat(
-                d_markers, (n + len(d_markers)) // len(d_markers)
-            )
+            itertools.repeat(d_markers, (n + len(d_markers)) // len(d_markers))
         )
 
         props = list(itertools.chain(*rmarkers))
     # repeat the lines to meet the number of cv_size
     if prop == "line":
         d_lines = D_STYLES
-        rlines = list(
-            itertools.repeat(d_lines, (n + len(d_lines)) // len(d_lines))
-        )
+        rlines = list(itertools.repeat(d_lines, (n + len(d_lines)) // len(d_lines)))
         # combine all repeatlines
         props = list(itertools.chain(*rlines))
 
@@ -788,9 +763,7 @@ def controle_delineate_curve(res_deline=None, phase_deline=None):
                 xx_deline = list(xx_deline)
                 try:
                     if ii == 0:
-                        xx_deline = [
-                            np.ceil(np.log10(float(xx))) for xx in xx_deline
-                        ]
+                        xx_deline = [np.ceil(np.log10(float(xx))) for xx in xx_deline]
                     elif ii == 1:
                         xx_deline = [np.ceil(float(xx)) for xx in xx_deline]
 
@@ -897,10 +870,10 @@ def plotvec2(a, b):
 
         >>> import numpy as np
         >>> from watex.utils.plotutils import plotvec2
-        >>> a=np.array([1,0])
-        >>> b=np.array([0,1])
-        >>> Plotvec2(a,b)
-        >>> print('the product a to b is =', np.dot(a,b))
+        >>> a = np.array([1, 0])
+        >>> b = np.array([0, 1])
+        >>> Plotvec2(a, b)
+        >>> print("the product a to b is =", np.dot(a, b))
 
     """
     ax = plt.axes()
@@ -1113,7 +1086,7 @@ def get_color_palette(RGB_color_palette):
     :Example:
 
         >>> from watex.utils.plotutils import get_color_palette
-        >>> get_color_palette (RGB_color_palette ='R128B128')
+        >>> get_color_palette(RGB_color_palette="R128B128")
     """
 
     def ascertain_cp(cp):
@@ -1156,9 +1129,7 @@ def get_color_palette(RGB_color_palette):
             rgba[0] = _knae / 255.0
 
     if "g" in RGB_color_palette:
-        knae = (
-            RGB_color_palette.replace("g", "/").replace("b", "/").split("/")
-        )
+        knae = RGB_color_palette.replace("g", "/").replace("b", "/").split("/")
         try:
             _knae = ascertain_cp(float(knae[1]))
         except:
@@ -1245,9 +1216,9 @@ def _get_xticks_formatage(
         # ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks_loc))
         # ax.set_xticklabels([fmt.format(x) for x in ticks_loc])
         tlst = [fmt.format(item) for item in xtick_range]
-        ax.set_yticklabels(
+        ax.set_yticklabels(tlst, **xlkws) if ticks == "y" else ax.set_xticklabels(
             tlst, **xlkws
-        ) if ticks == "y" else ax.set_xticklabels(tlst, **xlkws)
+        )
 
 
 def _set_sns_style(s, /):
@@ -1312,14 +1283,8 @@ def plot_bar(
             :func:`~matplotlib.pyplot.bar` or :func:`~matplotlib.pyplot.barh`.
     """
 
-    assert str(kind).lower().strip() in (
-        "vertical",
-        "v",
-        "horizontal",
-        "h",
-    ), (
-        "Support only the horizontal 'h' and vertical 'v' bar plots."
-        " Got {kind!r}"
+    assert str(kind).lower().strip() in ("vertical", "v", "horizontal", "h",), (
+        "Support only the horizontal 'h' and vertical 'v' bar plots." " Got {kind!r}"
     )
     kind = str(kind).lower().strip()
 
@@ -1672,13 +1637,13 @@ def plot_text(
     Examples
     --------
     >>> import watex as wx
-    >>> data =wx.make_erp (as_frame =True, n_stations= 7 )
-    >>> x , y =[ 0, 1, 3 ], [2, 3, 6]
-    >>> texto = ['AMT-E1147', 'AMT-E1148',  'AMT-E180']
-    >>> plot_text (x, y , text = texto)# no need to set  coerce, same length
-    >>> data =wx.make_erp (as_frame =True, n_stations= 20 )
-    >>> x , y = data.easting, data.northing
-    >>> text1 = ['AMT-E1147', 'AMT-E1148',  'AMT-E180']
+    >>> data = wx.make_erp(as_frame=True, n_stations=7)
+    >>> x, y = [0, 1, 3], [2, 3, 6]
+    >>> texto = ["AMT-E1147", "AMT-E1148", "AMT-E180"]
+    >>> plot_text(x, y, text=texto)  # no need to set  coerce, same length
+    >>> data = wx.make_erp(as_frame=True, n_stations=20)
+    >>> x, y = data.easting, data.northing
+    >>> text1 = ["AMT-E1147", "AMT-E1148", "AMT-E180"]
     >>> plot_text (x, y , coerce =True , text = text1 , show_leg= True,
                    show_line=True, linelabel='E1-line', markerlabel= 'Site',
                basename ='AMT-E0'
@@ -1692,9 +1657,7 @@ def plot_text(
         ylabel = y if isinstance(y, str) else y.name
 
     if x is None and y is None:
-        raise TypeError(
-            "x and y are needed for text plot. NoneType cannot be plotted."
-        )
+        raise TypeError("x and y are needed for text plot. NoneType cannot be plotted.")
 
     x, y = assert_xy_in(x, y, data=data)
 

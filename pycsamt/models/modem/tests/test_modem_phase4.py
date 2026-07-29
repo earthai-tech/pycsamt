@@ -6,20 +6,10 @@ import numpy as np
 import pytest
 
 _EX2D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "2D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
 )
 _EX3D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "3D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "3D_MT" / "BLOCK2"
 )
 
 pytestmark = pytest.mark.skipif(

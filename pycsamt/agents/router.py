@@ -133,8 +133,7 @@ _META_PHRASES = (
 # the static-shift agent do") stays a QUESTION; only a plural list ("agents",
 # "tasks", "workflows") trips the capability route.
 _CAP_NOUN = (
-    r"(agents|tasks|workflows|pipelines|capabilities|"
-    r"commands|features|functions)\b"
+    r"(agents|tasks|workflows|pipelines|capabilities|" r"commands|features|functions)\b"
 )
 _CAPABILITY_RE = re.compile(
     r"\b(list|show|give|get|enumerate|provide|display|see)\b.{0,30}"
@@ -442,14 +441,14 @@ class IntentRouter(BaseAgent):
 
         router = IntentRouter()
         d = router.route("what does StaticShiftAgent do?")
-        d.intent          # 'question'
-        d.needs_data      # False
+        d.intent  # 'question'
+        d.needs_data  # False
 
     Online::
 
         router = IntentRouter(api_key="sk-ant-...", llm_provider="claude")
         d = router.route("run QC on /data/willy")
-        d.intent          # 'workflow'
+        d.intent  # 'workflow'
     """
 
     SYSTEM_PROMPT = _ROUTER_SYSTEM
@@ -485,11 +484,7 @@ class IntentRouter(BaseAgent):
             status="success",
             summary=(
                 f"intent={decision.intent}"
-                + (
-                    f", workflow={decision.workflow}"
-                    if decision.workflow
-                    else ""
-                )
+                + (f", workflow={decision.workflow}" if decision.workflow else "")
             ),
             data={"decision": decision},
             elapsed_seconds=time.time() - t0,
@@ -526,12 +521,9 @@ class IntentRouter(BaseAgent):
         if history:
             recent = history[-6:]
             convo = "\n".join(
-                f"{m.get('role', 'user')}: {m.get('content', '')}"
-                for m in recent
+                f"{m.get('role', 'user')}: {m.get('content', '')}" for m in recent
             )
-            user_msg = (
-                f"Recent conversation:\n{convo}\n\nCurrent message: {text}"
-            )
+            user_msg = f"Recent conversation:\n{convo}\n\nCurrent message: {text}"
         try:
             raw = self.query_llm(
                 user_msg,

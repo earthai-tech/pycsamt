@@ -118,9 +118,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(
-            self._on_category_changed
-        )
+        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
         lay_cat.addWidget(self._combo_category)
         layout.addWidget(grp_cat)
 
@@ -205,9 +203,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._btn_run = icon_button(
             "↻  Run / Refresh", "advanced-tools", "Render selected plot"
         )
-        self._btn_export = icon_button(
-            "⬆  Export…", "export", "Save figure to file"
-        )
+        self._btn_export = icon_button("⬆  Export…", "export", "Save figure to file")
         self._btn_run.clicked.connect(self._on_run)
         self._btn_export.clicked.connect(self._on_export)
         lay_act.addWidget(self._btn_run)
@@ -243,9 +239,7 @@ class AdvancedToolsWindow(PanelWindow):
         h_src.addWidget(QLabel("Source"))
         self._combo_topo_source = QComboBox()
         self._combo_topo_source.addItems(["sites", "file", "array"])
-        self._combo_topo_source.currentTextChanged.connect(
-            self._on_topo_source_changed
-        )
+        self._combo_topo_source.currentTextChanged.connect(self._on_topo_source_changed)
         h_src.addWidget(self._combo_topo_source)
         lay_cfg.addWidget(row_src)
 
@@ -294,12 +288,8 @@ class AdvancedToolsWindow(PanelWindow):
         h_fc.addWidget(QLabel("Fill color"))
         self._btn_topo_fill_color = QPushButton()
         self._btn_topo_fill_color.setFixedWidth(36)
-        self._apply_topo_btn_color(
-            self._btn_topo_fill_color, self._topo_fill_color
-        )
-        self._btn_topo_fill_color.clicked.connect(
-            lambda: self._pick_color("fill")
-        )
+        self._apply_topo_btn_color(self._btn_topo_fill_color, self._topo_fill_color)
+        self._btn_topo_fill_color.clicked.connect(lambda: self._pick_color("fill"))
         h_fc.addWidget(self._btn_topo_fill_color)
         lay_style.addWidget(row_fc)
 
@@ -320,12 +310,8 @@ class AdvancedToolsWindow(PanelWindow):
         h_lc.addWidget(QLabel("Line color"))
         self._btn_topo_line_color = QPushButton()
         self._btn_topo_line_color.setFixedWidth(36)
-        self._apply_topo_btn_color(
-            self._btn_topo_line_color, self._topo_line_color
-        )
-        self._btn_topo_line_color.clicked.connect(
-            lambda: self._pick_color("line")
-        )
+        self._apply_topo_btn_color(self._btn_topo_line_color, self._topo_line_color)
+        self._btn_topo_line_color.clicked.connect(lambda: self._pick_color("line"))
         h_lc.addWidget(self._btn_topo_line_color)
         lay_style.addWidget(row_lc)
 
@@ -417,12 +403,8 @@ class AdvancedToolsWindow(PanelWindow):
         h_type.setContentsMargins(0, 0, 0, 0)
         h_type.addWidget(QLabel("Type"))
         self._combo_conv_type = QComboBox()
-        self._combo_conv_type.addItems(
-            ["AVG → EDI", "J → EDI", "Spectra → EDI"]
-        )
-        self._combo_conv_type.currentIndexChanged.connect(
-            self._on_conv_type_changed
-        )
+        self._combo_conv_type.addItems(["AVG → EDI", "J → EDI", "Spectra → EDI"])
+        self._combo_conv_type.currentIndexChanged.connect(self._on_conv_type_changed)
         h_type.addWidget(self._combo_conv_type)
         lay_inp.addWidget(row_type)
 
@@ -476,9 +458,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._j_freq_order.addItems(["ascending", "descending"])
         j_form.addRow("Freq order:", self._j_freq_order)
         self._j_station_name = QLineEdit()
-        self._j_station_name.setPlaceholderText(
-            "Optional single-station name"
-        )
+        self._j_station_name.setPlaceholderText("Optional single-station name")
         j_form.addRow("Station name:", self._j_station_name)
         self._conv_opts_stack.addWidget(j_page)
 
@@ -521,9 +501,7 @@ class AdvancedToolsWindow(PanelWindow):
         h_stn.setContentsMargins(0, 0, 0, 0)
         h_stn.addWidget(QLabel("File"))
         self._avg_stn_path = QLineEdit()
-        self._avg_stn_path.setPlaceholderText(
-            "K1.stn or station profile file..."
-        )
+        self._avg_stn_path.setPlaceholderText("K1.stn or station profile file...")
         btn_stn = QPushButton("Browse...")
         btn_stn.setFixedWidth(76)
         btn_stn.clicked.connect(self._browse_avg_stn_path)
@@ -535,9 +513,7 @@ class AdvancedToolsWindow(PanelWindow):
         avg_topo_form.setSpacing(5)
         self._avg_convert_coords = QCheckBox()
         self._avg_convert_coords.setChecked(True)
-        avg_topo_form.addRow(
-            "Convert UTM → lat/lon:", self._avg_convert_coords
-        )
+        avg_topo_form.addRow("Convert UTM → lat/lon:", self._avg_convert_coords)
         self._avg_epsg = QLineEdit()
         self._avg_epsg.setPlaceholderText("EPSG code, e.g. 32650")
         avg_topo_form.addRow("EPSG:", self._avg_epsg)
@@ -576,9 +552,7 @@ class AdvancedToolsWindow(PanelWindow):
         # ── Actions group ─────────────────────────────────────────────
         grp_ca, lay_ca = make_group("Actions")
 
-        self._btn_conv_run = icon_button(
-            "▶▶  Run Transform", "", "Run the conversion"
-        )
+        self._btn_conv_run = icon_button("▶▶  Run Transform", "", "Run the conversion")
         self._btn_conv_run.setObjectName("CommitButton")
         self._btn_conv_run.clicked.connect(self._on_conv_run)
 
@@ -597,9 +571,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._btn_conv_export.setEnabled(False)
         self._btn_conv_export.clicked.connect(self._on_conv_export)
 
-        self._btn_conv_clear = icon_button(
-            "✗  Clear", "", "Clear conversion result"
-        )
+        self._btn_conv_clear = icon_button("✗  Clear", "", "Clear conversion result")
         self._btn_conv_clear.clicked.connect(self._on_conv_clear)
 
         lay_ca.addWidget(self._btn_conv_run)
@@ -650,9 +622,7 @@ class AdvancedToolsWindow(PanelWindow):
                 "Elevation Histogram",
             ]
         )
-        self._combo_topo_view.currentIndexChanged.connect(
-            self._on_topo_view_changed
-        )
+        self._combo_topo_view.currentIndexChanged.connect(self._on_topo_view_changed)
         bar1.addWidget(self._combo_topo_view)
         bar1.addStretch()
         self._topo_stats_lbl = QLabel("")
@@ -680,9 +650,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._conv_table = QTableWidget()
         self._conv_table.setAlternatingRowColors(True)
         self._conv_table.horizontalHeader().setStretchLastSection(True)
-        self._conv_table.setEditTriggers(
-            QTableWidget.EditTrigger.NoEditTriggers
-        )
+        self._conv_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         rp_v.addWidget(self._conv_table)
         self._conv_tabs.addTab(results_page, "Results")
 
@@ -851,9 +819,7 @@ class AdvancedToolsWindow(PanelWindow):
         meta = model.get("meta", {})
         n_atoms = model["D"].shape[1] if model.get("D") is not None else "?"
         n_samples = meta.get("samples", "?")
-        self._model_status_lbl.setText(
-            f"Ready: {n_atoms} atoms · {n_samples} samples"
-        )
+        self._model_status_lbl.setText(f"Ready: {n_atoms} atoms · {n_samples} samples")
         self._status_lbl.setText("Model trained. Click Run to plot.")
 
     def _on_model_train_error(self, msg: str) -> None:
@@ -876,24 +842,16 @@ class AdvancedToolsWindow(PanelWindow):
             self._edit_topo_file.setText(path)
 
     def _pick_color(self, which: str) -> None:
-        current = (
-            self._topo_fill_color
-            if which == "fill"
-            else self._topo_line_color
-        )
+        current = self._topo_fill_color if which == "fill" else self._topo_line_color
         color = QColorDialog.getColor(current, self, f"Choose {which} color")
         if color.isValid():
             hex_color = color.name()
             if which == "fill":
                 self._topo_fill_color = hex_color
-                self._apply_topo_btn_color(
-                    self._btn_topo_fill_color, hex_color
-                )
+                self._apply_topo_btn_color(self._btn_topo_fill_color, hex_color)
             else:
                 self._topo_line_color = hex_color
-                self._apply_topo_btn_color(
-                    self._btn_topo_line_color, hex_color
-                )
+                self._apply_topo_btn_color(self._btn_topo_line_color, hex_color)
 
     def _apply_topo_btn_color(self, btn: QPushButton, hex_color: str) -> None:
         btn.setStyleSheet(f"background:{hex_color}; border:1px solid #888")
@@ -954,14 +912,10 @@ class AdvancedToolsWindow(PanelWindow):
                 self._combo_topo_interp.setCurrentIndex(idx_interp)
             self._spin_topo_exag.setValue(T.exaggeration)
             self._topo_fill_color = T.fill_color
-            self._apply_topo_btn_color(
-                self._btn_topo_fill_color, T.fill_color
-            )
+            self._apply_topo_btn_color(self._btn_topo_fill_color, T.fill_color)
             self._spin_topo_fill_alpha.setValue(T.fill_alpha)
             self._topo_line_color = T.line_color
-            self._apply_topo_btn_color(
-                self._btn_topo_line_color, T.line_color
-            )
+            self._apply_topo_btn_color(self._btn_topo_line_color, T.line_color)
             self._spin_topo_line_w.setValue(T.line_width)
             self._chk_surface_line.setChecked(T.show_surface_line)
             self._chk_clip_below.setChecked(T.clip_below_surface)
@@ -1035,16 +989,12 @@ class AdvancedToolsWindow(PanelWindow):
         )
         if not path:
             # fallback to directory
-            path = QFileDialog.getExistingDirectory(
-                self, "Select input directory", ""
-            )
+            path = QFileDialog.getExistingDirectory(self, "Select input directory", "")
         if path:
             self._edit_conv_path.setText(path)
 
     def _browse_out_dir(self) -> None:
-        path = QFileDialog.getExistingDirectory(
-            self, "Select output directory", ""
-        )
+        path = QFileDialog.getExistingDirectory(self, "Select output directory", "")
         if path:
             self._edit_out_dir.setText(path)
 
@@ -1061,9 +1011,7 @@ class AdvancedToolsWindow(PanelWindow):
     def _on_conv_run(self) -> None:
         path = self._edit_conv_path.text().strip()
         if not path:
-            self._conv_status.setText(
-                "Please provide an input file/directory."
-            )
+            self._conv_status.setText("Please provide an input file/directory.")
             return
 
         type_str = self._combo_conv_type.currentText()
@@ -1083,9 +1031,7 @@ class AdvancedToolsWindow(PanelWindow):
                 stn_path = self._avg_stn_path.text().strip()
                 if stn_path:
                     options["stn_path"] = stn_path
-                    options["convert_stn_coords"] = (
-                        self._avg_convert_coords.isChecked()
-                    )
+                    options["convert_stn_coords"] = self._avg_convert_coords.isChecked()
                 epsg = self._avg_epsg.text().strip()
                 if epsg:
                     options["epsg"] = epsg
@@ -1100,9 +1046,7 @@ class AdvancedToolsWindow(PanelWindow):
             elif idx == 2:  # Spectra
                 options["e_labels"] = self._sp_e_labels.text()
                 options["h_labels"] = self._sp_h_labels.text()
-                options["estimate_error"] = (
-                    self._sp_estimate_errors.isChecked()
-                )
+                options["estimate_error"] = self._sp_estimate_errors.isChecked()
                 options["use_remote"] = self._sp_remote_ref.isChecked()
                 suf = self._sp_station_suffix.text().strip()
                 if suf:
@@ -1164,33 +1108,23 @@ class AdvancedToolsWindow(PanelWindow):
 
         for r, row in enumerate(rows_data):
             self._conv_table.setItem(r, 0, QTableWidgetItem(row["station"]))
-            self._conv_table.setItem(
-                r, 1, QTableWidgetItem(str(row["n_freqs"]))
-            )
+            self._conv_table.setItem(r, 1, QTableWidgetItem(str(row["n_freqs"])))
             self._conv_table.setItem(
                 r,
                 2,
                 QTableWidgetItem(
-                    f"{row['f_min']:.4g}"
-                    if row["f_min"] == row["f_min"]
-                    else "—"
+                    f"{row['f_min']:.4g}" if row["f_min"] == row["f_min"] else "—"
                 ),
             )
             self._conv_table.setItem(
                 r,
                 3,
                 QTableWidgetItem(
-                    f"{row['f_max']:.4g}"
-                    if row["f_max"] == row["f_max"]
-                    else "—"
+                    f"{row['f_max']:.4g}" if row["f_max"] == row["f_max"] else "—"
                 ),
             )
-            self._conv_table.setItem(
-                r, 4, QTableWidgetItem(_fmt_coord(row.get("lat")))
-            )
-            self._conv_table.setItem(
-                r, 5, QTableWidgetItem(_fmt_coord(row.get("lon")))
-            )
+            self._conv_table.setItem(r, 4, QTableWidgetItem(_fmt_coord(row.get("lat"))))
+            self._conv_table.setItem(r, 5, QTableWidgetItem(_fmt_coord(row.get("lon"))))
             self._conv_table.setItem(
                 r, 6, QTableWidgetItem(_fmt_coord(row.get("elev"), digits=2))
             )
@@ -1210,8 +1144,7 @@ class AdvancedToolsWindow(PanelWindow):
         n_ok = stats.get("n_total", 0)
         n_fail = stats.get("n_failures", 0)
         self._conv_status.setText(
-            f"Done: {n_ok} stations"
-            + (f", {n_fail} failures" if n_fail else "")
+            f"Done: {n_ok} stations" + (f", {n_fail} failures" if n_fail else "")
         )
         self._btn_conv_commit.setEnabled(True)
         self._btn_conv_export.setEnabled(True)
@@ -1248,9 +1181,7 @@ class AdvancedToolsWindow(PanelWindow):
                         written += 1
                 except Exception:
                     pass
-            self._conv_status.setText(
-                f"Exported {written} EDI files to {out_dir}"
-            )
+            self._conv_status.setText(f"Exported {written} EDI files to {out_dir}")
         except Exception as exc:
             self._conv_status.setText(f"Export error: {exc}")
 
@@ -1276,9 +1207,7 @@ class AdvancedToolsWindow(PanelWindow):
     def _populate_category_combo(self) -> None:
         self._combo_category.blockSignals(True)
         for group_label, _plots in ADVANCED_GROUPS:
-            icon_name = ADVANCED_GROUP_ICONS.get(
-                group_label, "advanced-tools"
-            )
+            icon_name = ADVANCED_GROUP_ICONS.get(group_label, "advanced-tools")
             icon = _icon(icon_name)
             if icon.isNull():
                 self._combo_category.addItem(group_label)

@@ -1,0 +1,179 @@
+/* pyCSAMT long-source disclosure panel.
+ * Native <details>/<summary> keeps it keyboard accessible and functional
+ * without JavaScript. Brand variables come from css/custom.css.
+ */
+.pyc-code-dropdown {
+  --pyc-cd-blue: var(--pycsamt-blue, #3e65b0);
+  --pyc-cd-blue-dark: var(--pycsamt-blue-dark, #1f4490);
+  --pyc-cd-orange: var(--pycsamt-orange, #f15a29);
+  --pyc-cd-gold: var(--pycsamt-gold, #fbb040);
+  margin: 1.15rem 0 1.4rem;
+  overflow: clip;
+  border: 1px solid color-mix(in srgb, var(--pyc-cd-blue) 38%, var(--pst-color-border));
+  border-radius: 0.7rem;
+  background: var(--pycsamt-surface, var(--pst-color-background));
+  box-shadow: 0 0.18rem 0.65rem color-mix(in srgb, var(--pyc-cd-blue) 10%, transparent);
+}
+
+.pyc-code-dropdown[open] {
+  border-color: color-mix(in srgb, var(--pyc-cd-blue) 68%, var(--pst-color-border));
+  box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--pyc-cd-blue) 15%, transparent);
+}
+
+.pyc-code-dropdown__summary {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr) 1.25rem;
+  gap: 0.7rem;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  list-style: none;
+  color: var(--pycsamt-ink, var(--pst-color-text-base));
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--pyc-cd-blue) 10%, transparent),
+      color-mix(in srgb, var(--pyc-cd-gold) 7%, transparent));
+  user-select: none;
+}
+
+.pyc-code-dropdown__summary::-webkit-details-marker { display: none; }
+.pyc-code-dropdown__summary::marker { content: ""; }
+
+.pyc-code-dropdown__summary:hover {
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--pyc-cd-blue) 15%, transparent),
+      color-mix(in srgb, var(--pyc-cd-orange) 8%, transparent));
+}
+
+.pyc-code-dropdown__summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--pyc-cd-orange) 65%, transparent);
+  outline-offset: -3px;
+}
+
+.pyc-code-dropdown__icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.55rem;
+  color: #fff;
+  background: linear-gradient(145deg, var(--pyc-cd-blue-dark), var(--pyc-cd-blue));
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, #000 18%, transparent);
+  font-family: var(--pst-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pyc-code-dropdown__labels {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.pyc-code-dropdown__title {
+  overflow: hidden;
+  color: var(--pyc-cd-blue-dark);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pyc-code-dropdown__hint {
+  color: var(--pycsamt-muted, var(--pst-color-text-muted));
+  font-size: 0.76rem;
+  font-weight: 450;
+  line-height: 1.3;
+}
+
+.pyc-code-dropdown__chevron {
+  width: 0.68rem;
+  height: 0.68rem;
+  border-right: 2px solid var(--pyc-cd-orange);
+  border-bottom: 2px solid var(--pyc-cd-orange);
+  transform: rotate(45deg) translate(-0.1rem, -0.1rem);
+  transition: transform 180ms ease;
+}
+
+.pyc-code-dropdown[open] > .pyc-code-dropdown__summary .pyc-code-dropdown__chevron {
+  transform: rotate(225deg) translate(-0.1rem, -0.1rem);
+}
+
+.pyc-code-dropdown > .literal-block-wrapper,
+.pyc-code-dropdown > [class^="highlight-"],
+.pyc-code-dropdown > [class*=" highlight-"] {
+  margin: 0;
+  border-top: 1px solid color-mix(in srgb, var(--pyc-cd-blue) 28%, var(--pst-color-border));
+  border-radius: 0;
+}
+
+.pyc-code-dropdown > .literal-block-wrapper .code-block-caption {
+  margin: 0;
+  border-radius: 0;
+}
+
+.pyc-code-dropdown > [class^="highlight-"] > .highlight,
+.pyc-code-dropdown > [class*=" highlight-"] > .highlight {
+  margin: 0;
+  border-radius: 0;
+}
+
+.pyc-code-dropdown pre {
+  max-height: min(68vh, 46rem);
+  margin: 0;
+  overflow: auto;
+}
+
+.pyc-code-dropdown__collapse {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+  border: 0;
+  border-top: 1px solid var(--pst-color-border);
+  color: var(--pyc-cd-blue-dark);
+  background: color-mix(in srgb, var(--pyc-cd-blue) 7%, var(--pycsamt-surface, #fff));
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.pyc-code-dropdown__collapse:hover { color: var(--pyc-cd-orange); }
+.pyc-code-dropdown__collapse:focus-visible {
+  outline: 2px solid var(--pyc-cd-orange);
+  outline-offset: -3px;
+}
+
+html[data-theme="dark"] .pyc-code-dropdown__title,
+html[data-theme="dark"] .pyc-code-dropdown__collapse { color: #b9cdf3; }
+
+@media (max-width: 576px) {
+  .pyc-code-dropdown__summary {
+    grid-template-columns: 2.1rem minmax(0, 1fr) 1rem;
+    gap: 0.55rem;
+    padding-inline: 0.7rem;
+  }
+  .pyc-code-dropdown__icon { width: 2rem; height: 2rem; }
+  .pyc-code-dropdown pre { max-height: 62vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pyc-code-dropdown__chevron { transition: none; }
+}
+
+@media print {
+  .pyc-code-dropdown { overflow: visible; box-shadow: none; }
+  .pyc-code-dropdown > * { display: block !important; }
+  .pyc-code-dropdown__summary { min-height: 0; }
+  .pyc-code-dropdown__hint,
+  .pyc-code-dropdown__chevron,
+  .pyc-code-dropdown__collapse { display: none !important; }
+  .pyc-code-dropdown pre { max-height: none; overflow: visible; }
+}

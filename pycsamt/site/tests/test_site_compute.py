@@ -37,9 +37,7 @@ def _mk_two_edifiles(
     return _load_edi(p1), _load_edi(p2)
 
 
-def test_strike_estimate_single_and_multi(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_strike_estimate_single_and_multi(tmp_path: Path, simulated_edi: Path) -> None:
     ed1 = _load_edi(simulated_edi)
     # Ensure Z has the right shape for deterministic result
     ed1 = ed.fill_missing(ed1, how="zero", components=("Z",), inplace=False)
@@ -95,9 +93,7 @@ def test_compute_dataframe_results_can_return_api_frame(
     assert tipper.kind == "site.compute.tipper"
 
 
-def test_res_at_freq_nearest_and_interp(
-    tmp_path: Path, simulated_edi: Path
-) -> None:
+def test_res_at_freq_nearest_and_interp(tmp_path: Path, simulated_edi: Path) -> None:
     ed1 = _load_edi(simulated_edi)
     # Fill Z so Zxy, Zyx exist and are zeros
     ed1 = ed.fill_missing(ed1, how="zero", components=("Z",), inplace=False)

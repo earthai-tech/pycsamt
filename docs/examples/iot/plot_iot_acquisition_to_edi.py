@@ -250,9 +250,7 @@ print(
     f"(wrong key: {verify_manifest(signed, 'nope')})"
 )
 
-reoccupy = field_session_from_edis(
-    edi_path, survey_id="REOCCUPY", method="mt"
-)
+reoccupy = field_session_from_edis(edi_path, survey_id="REOCCUPY", method="mt")
 print(
     f"re-occupation session: {reoccupy.n_stations} station(s), "
     f"{reoccupy.n_devices} node(s)"

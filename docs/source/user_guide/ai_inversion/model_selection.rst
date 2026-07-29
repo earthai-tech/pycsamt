@@ -15,13 +15,15 @@ question and encodes different :term:`model prior` assumptions.  The selection
 task is therefore a constrained decision:
 
 .. math::
+   :label: eq-ai-selection-rule
 
    c^\star
    =
    \operatorname*{arg\,min}_{c\in\mathcal{C}_{\mathrm{valid}}}
    S(c),
 
-where :math:`c` is a candidate workflow and architecture, :math:`S(c)` is the
+In equation :eq:`eq-ai-selection-rule`, :math:`c` is a candidate workflow and
+architecture, :math:`S(c)` is the
 predeclared selection score, and :math:`\mathcal{C}_{\mathrm{valid}}` contains
 only candidates that satisfy the survey physics, data contract, validation,
 deployment, and reproducibility constraints.  A model with the smallest
@@ -71,6 +73,7 @@ best after training.  A compact decision score can be useful when it is
 declared before results are inspected:
 
 .. math::
+   :label: eq-ai-selection-score
 
    S(c)
    =
@@ -79,8 +82,9 @@ declared before results are inspected:
    + \beta\,\operatorname{Cost}(c)
    + \gamma\,\operatorname{Risk}(c).
 
-The weights :math:`\alpha`, :math:`\beta`, and :math:`\gamma` do not make the
-decision objective; the scientific decision makes the weights.  For example,
+In equation :eq:`eq-ai-selection-score`, the weights :math:`\alpha`,
+:math:`\beta`, and :math:`\gamma` do not make the decision objective; the
+scientific decision makes the weights. For example,
 a screening tool may tolerate larger model-space error if it is fast and
 well-calibrated, while a drill-target interpretation may give much more weight
 to conductor-top depth, response reconstruction, and failure visibility.
@@ -93,6 +97,7 @@ candidate's output shape should follow the survey evidence.  A useful mental
 model is
 
 .. math::
+   :label: eq-ai-dimension-model
 
    \rho(\mathbf{x}) =
    \begin{cases}
@@ -101,7 +106,8 @@ model is
       \rho(x,y,z), & \text{3-D volume or graph-context setting}.
    \end{cases}
 
-The selected dimension controls what the model can represent and what it is
+The alternatives in equation :eq:`eq-ai-dimension-model` control what the
+model can represent and what it is
 allowed to ignore.  A 1-D model is transparent but cannot represent lateral
 boundaries.  A 2-D profile can represent lateral structure but assumes the line
 and strike convention are meaningful.  A graph-context 3-D model can borrow
@@ -164,6 +170,97 @@ criterion enough to justify its stronger assumptions.  If the improvement is
 only cosmetic in section images and not visible in response fit, field
 evidence, or decision stability, keep the simpler model.
 
+What WILLY L18 permits
+~~~~~~~~~~~~~~~~~~~~~~
+
+The dimension decision can be exercised on the bundled line before choosing a
+network. :func:`pycsamt.emtools.dimensionality.classify_dimensionality` uses
+phase-tensor skew and ellipticity to classify each usable station-frequency
+sample. The labels are a diagnostic under explicit thresholds, not geological
+truth, but they reveal whether a layered or strike-invariant assumption is
+consistent with the measured tensor.
+
+Writing the complex impedance as :math:`\mathbf Z=\mathbf X+i\mathbf Y`, the
+phase tensor and the two plotted invariants are
+
+.. math::
+   :label: eq-ai-phase-tensor-dimension
+
+   \boldsymbol\Phi=\mathbf X^{-1}\mathbf Y,
+   \qquad
+   \beta=\frac{1}{2}\operatorname{atan2}
+      (\Phi_{12}-\Phi_{21},\Phi_{11}+\Phi_{22}),
+   \qquad
+   e=\frac{s_1-s_2}{s_1+s_2},
+
+where :math:`s_1\ge s_2` are singular values of
+:math:`\boldsymbol\Phi`. The implementation expresses :math:`\beta` in
+degrees and applies the rule
+
+.. math::
+   :label: eq-ai-dimension-classifier
+
+   D(\beta,e)=
+   \begin{cases}
+      \text{1-D}, & |\beta|\le 3^\circ\ \text{and}\ |e|\le0.2,\\
+      \text{2-D}, & |\beta|\le 3^\circ\ \text{and}\ |e|>0.2,\\
+      \text{3-D}, & |\beta|>3^\circ.
+   \end{cases}
+
+Equations :eq:`eq-ai-phase-tensor-dimension` and
+:eq:`eq-ai-dimension-classifier` make the assumptions behind the labels
+auditable. Changing the thresholds changes the counts and must be justified
+rather than tuned until a preferred dimension appears.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.emtools.dimensionality import classify_dimensionality
+
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_data/L18PLT", recursive=True, verbose=0
+   ... )
+   >>> dimensionality = classify_dimensionality(sites)
+   >>> counts = dimensionality["dim"].value_counts().sort_index()
+   >>> print("station-frequency samples:", len(dimensionality))
+   station-frequency samples: 1484
+   >>> print({"1-D": int(counts.get(0, 0)),
+   ...        "2-D": int(counts.get(1, 0)),
+   ...        "3-D": int(counts.get(2, 0))})
+   {'1-D': 58, '2-D': 155, '3-D': 1271}
+   >>> print("3-D fraction:", round(float((dimensionality["dim"] == 2).mean()), 3))
+   3-D fraction: 0.856
+
+.. figure:: ../../images/user_guide/ai_inversion/model_selection_willy_dimension.png
+   :alt: Phase-tensor dimensionality evidence for WILLY L18
+   :align: center
+   :width: 94%
+
+   Most samples lie beyond the default 3-degree skew boundary and classify as
+   3-D. The period-binned panel shows that this is not confined to one narrow
+   band. These labels should be reviewed with strike stability, errors,
+   distortion, source assumptions, and neighboring lines before a physical
+   dimension is accepted.
+
+The plotting code is intentionally part of the example so the thresholds,
+period binning, and class counts can be inspected and adapted:
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_model_selection_willy_dimension
+   :linenos:
+   :title: View WILLY dimensionality source code
+
+This result does not automatically select
+:class:`~pycsamt.ai.inversion.GCNInverter3D`: that class shares node context
+but may be trained from 1-D forward responses. Nor does it make the L18 line
+useless. A station-wise 1-D model remains valuable as a deliberately limited
+screening baseline. A profile 2-D result may be tested as an approximation,
+but it should not be presented as the unique or fully supported physical
+interpretation when 85.6% of the diagnostic samples reject the assumed 1-D/2-D
+regime. For an interpretation decision, retain a true 3-D physics baseline or
+state that the current AI candidate is exploratory.
+
 3. Compare model families
 -------------------------
 
@@ -187,8 +284,8 @@ adds, and the failure it may hide.
    * - Supervised U-Net 2-D
      - Labelled profile panels and fixed section targets.
      - Learns multiscale lateral patterns over a complete line.
-     - Continuity is architectural; current class lacks explicit public
-       save/load parity with the 1-D class.
+     - Continuity is architectural and does not by itself establish 2-D
+       electromagnetic validity.
    * - Supervised GCN
      - Labelled multi-station surveys and fixed graph convention.
      - Uses irregular spatial relationships and supports dropout spread.
@@ -291,6 +388,7 @@ For a layered model, output size is commonly ``2 * n_layers - 1``. Increasing
 For :math:`L` layers, the target vector is commonly
 
 .. math::
+   :label: eq-ai-layer-target
 
    \mathbf{y}
    =
@@ -301,15 +399,18 @@ For :math:`L` layers, the target vector is commonly
    \qquad
    \dim(\mathbf{y})=2L-1,
 
-where :math:`\tau_\ell` is either thickness :math:`h_\ell` or
+In equation :eq:`eq-ai-layer-target`, :math:`\tau_\ell` is either thickness
+:math:`h_\ell` or
 :math:`\log_{10}h_\ell`, depending on the target transform.  Interface depths
 are derived quantities,
 
 .. math::
+   :label: eq-ai-interface-depth
 
    z_k = \sum_{\ell=1}^{k} h_\ell,
 
-so thickness errors accumulate with depth.  This is why layer-count selection
+Equation :eq:`eq-ai-interface-depth` shows why thickness errors accumulate
+with depth. This is why layer-count selection
 should include interface-depth diagnostics, not only per-entry target loss.
 
 Select layer count using:
@@ -385,12 +486,14 @@ length matches.
 ``(n_depth, n_stations)`` sections.  The shape is part of the model contract:
 
 .. math::
+   :label: eq-ai-2d-shape
 
    \mathbf{X}\in\mathbb{R}^{C\times F\times S}
    \longmapsto
    \hat{\mathbf{U}}\in\mathbb{R}^{D\times S},
 
-where :math:`C` is component count, :math:`F` is frequency count, :math:`S` is
+In equation :eq:`eq-ai-2d-shape`, :math:`C` is component count, :math:`F` is
+frequency count, :math:`S` is
 station count, and :math:`D` is depth-cell count.
 
 .. code-block:: pycon
@@ -489,16 +592,60 @@ hyperparameter.
 For a radius graph, the adjacency can be written
 
 .. math::
+   :label: eq-ai-radius-adjacency
 
    A_{ij}
    =
    \mathbf{1}\{\|\mathbf{s}_i-\mathbf{s}_j\|_2 \le r\},
 
-where :math:`\mathbf{s}_i` is station coordinate and :math:`r` is the selected
+In equation :eq:`eq-ai-radius-adjacency`, :math:`\mathbf{s}_i` is station
+coordinate and :math:`r` is the selected
 radius.  That one number controls node degree, connected components, and how
 much information crosses geological boundaries.  Report the degree
 distribution for every candidate radius.  If the graph has many isolated
 nodes, the architecture is not using the intended spatial context.
+
+The binary matrix in equation :eq:`eq-ai-radius-adjacency` is only the first
+stage. With the defaults of :func:`pycsamt.ai.nets.build_adjacency`, self loops
+are retained and the matrix supplied to message passing is
+
+.. math::
+   :label: eq-ai-normalized-adjacency
+
+   \widehat{\mathbf A}
+   =
+   \widetilde{\mathbf D}^{-1/2}
+   \widetilde{\mathbf A}
+   \widetilde{\mathbf D}^{-1/2},
+   \qquad
+   \widetilde{\mathbf A}=\mathbf A+\mathbf I,
+   \qquad
+   \widetilde D_{ii}=\sum_j\widetilde A_{ij}.
+
+This normalization prevents a high-degree station from contributing simply
+because it has more neighbours. It does not remove the spatial prior: the
+radius still decides which stations may exchange information. The following
+reproducible diagnostic uses the public builder twice—once without loops or
+normalization to count physical neighbour edges, and once with defaults to
+scale the plotted edge weights.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_model_selection_graph_radius
+   :linenos:
+   :title: View graph-radius diagnostic source code
+
+.. figure:: ../../images/user_guide/ai_inversion/model_selection_graph_radius.png
+   :alt: Effect of three radius choices on an irregular station graph
+   :align: center
+   :width: 96%
+
+   At 450 m, disconnected nodes cannot receive spatial context; at 900 m the
+   survey is connected mainly through local neighbours; at 1300 m many
+   long-range edges blur the meaning of locality. The middle value is not
+   automatically correct—the appropriate radius must also survive held-out
+   geology, coordinate perturbation, and response-space tests—but this view
+   exposes topology that a validation-loss table would conceal.
 
 9. Decide whether joint inversion is justified
 ----------------------------------------------
@@ -684,6 +831,7 @@ When a scalar ranking is required, normalize each metric against an agreed
 reference before combining it.  One defensible pattern is
 
 .. math::
+   :label: eq-ai-normalized-selection-score
 
    S_c
    =
@@ -697,7 +845,8 @@ reference before combining it.  One defensible pattern is
    +
    P_c,
 
-where :math:`M_c` is a model-space error, :math:`R_c` is a response-space
+In equation :eq:`eq-ai-normalized-selection-score`, :math:`M_c` is a
+model-space error, :math:`R_c` is a response-space
 error, :math:`U_c` is an uncertainty penalty, :math:`T_c` is runtime or
 resource cost, subscript :math:`b` denotes the baseline, and :math:`P_c` is a
 hard penalty for failing mandatory gates.  Lower is better only if all
@@ -725,24 +874,57 @@ quantities are defined that way.
 
 The score does not replace scientific review.  In this toy example, the 2-D
 candidate has strong model and response errors but receives a gate penalty,
-which might represent unresolved profile-width handling, missing persistence,
-or unacceptable field residuals.  Without that penalty, the ranking would
+which might represent unresolved profile-width handling, failed dimensionality
+evidence, or unacceptable field residuals. Without that penalty, the ranking would
 silently ignore a deployment or validation failure.
+
+More importantly, a single score hides run-to-run dispersion and weight
+sensitivity. The controlled illustration below uses explicit synthetic
+candidate metrics—it is a decision-analysis example, not a pyCSAMT benchmark.
+All costs are normalized to the FCN baseline, twelve seeded perturbations show
+why a mean is insufficient, and the dashed U-Net curve denotes a candidate
+that failed a mandatory gate.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_model_selection_tradeoff
+   :linenos:
+   :title: View selection-trade-off source code
+
+.. figure:: ../../images/user_guide/ai_inversion/model_selection_tradeoff.png
+   :alt: Normalized candidate metrics, repeated seed outcomes, and score sensitivity
+   :align: center
+   :width: 98%
+
+   ResNet and GCN improve the model and response columns in this constructed
+   study, but cost more to run; U-Net has low errors but fails its external
+   gate and is therefore ineligible. The seed distributions overlap, so a
+   small difference between means should not be treated as decisive. The
+   right panel makes the governance issue visible: changing the declared
+   response weight changes relative scores. Weights and gates must therefore
+   be fixed before inspecting final test results, with the non-dominated
+   alternatives retained when no stable winner exists.
 
 15. Consider persistence and deployment
 ---------------------------------------
 
-Current public persistence support differs among classes:
+The main supervised classes share public persistence support, but artifact
+contents and surrounding state still differ:
 
-* :class:`~pycsamt.ai.inversion.EMInverter1D` exposes ``save()`` and ``load()``;
+* :class:`~pycsamt.ai.inversion.EMInverter1D` has its specialized
+  ``save()``/``load()`` implementation;
+* :class:`~pycsamt.ai.inversion.EMInverter2D`,
+  :class:`~pycsamt.ai.inversion.GCNInverter3D`, and
+  :class:`~pycsamt.ai.inversion.JointInverter` inherit the public pair from
+  :class:`pycsamt.ai.BaseEMNet`;
 * :class:`~pycsamt.ai.inversion.EnsembleInverter` saves and loads member
-  checkpoints and ensemble metadata, but not attached uncertainty calibrators;
-* the 2-D and graph inverter classes do not currently expose the same explicit
-  public persistence pair.
+  checkpoints and ensemble metadata, but not attached uncertainty calibrators.
 
-If deployment requires a portable approved checkpoint, this can favor 1-D or a
-project-tested persistence implementation. Do not select a model that cannot be
-reliably restored in the target environment.
+Availability of a method is not deployment evidence. Round-trip every final
+artifact in a clean target environment and compare predictions, normalization
+state, feature contract, graph construction, and software versions. A graph
+checkpoint, for example, does not make an unrecorded coordinate projection or
+radius reproducible.
 
 Also evaluate:
 
@@ -794,7 +976,24 @@ ranges. It does not evaluate scientific suitability.
 ``weight_decay`` and ``min_delta`` are stored in the configuration for
 documentation but are not currently included by ``to_fit_kwargs()`` because
 ``EMInverter1D.fit`` does not expose them. Do not assume every configuration
-field affects training.
+field affects training. Likewise, ``save_best``, ``checkpoint_dir``, and
+``checkpoint_name`` do not make ``to_inverter()`` or ``to_fit_kwargs()`` save
+automatically. The caller must save the fitted inverter explicitly. Calling
+``checkpoint_path()`` resolves the configured filename and creates its parent
+directory, so use it only when that filesystem side effect is intended:
+
+.. code-block:: pycon
+
+   >>> path = config.checkpoint_path()
+   >>> path.as_posix().endswith("checkpoints/mt1d_resnet_5l.npz")
+   True
+   >>> # After fitting and acceptance testing:
+   >>> # inverter.save(path)
+
+``from_inverter()`` reconstructs architectural fields that are present on an
+inverter; it cannot recover a past optimizer schedule or split policy that the
+inverter does not retain. Preserve the original configuration and selection
+record beside the checkpoint.
 
 17. Record the selection decision
 ---------------------------------
@@ -939,3 +1138,8 @@ Continue with:
 * :doc:`hybrid` for AI warm-start plus physics refinement choices;
 * :doc:`pinn_2d` for detailed physics-informed profile choices;
 * :doc:`reporting` for the model-selection record and model card.
+
+The WILLY dimensionality figure is reproduced by
+``docs/scripts/generate_ai_inversion_figures.py`` from the bundled L18 EDI
+files. It is a deterministic diagnostic of the documented classification
+rule, not an AI prediction or an accepted inversion model.

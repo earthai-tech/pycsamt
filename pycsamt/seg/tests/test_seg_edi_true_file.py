@@ -80,9 +80,7 @@ def test_write_roundtrip_generic(any_edi_file: Path, tmp_path: Path) -> None:
         assert _non_empty(ed2.Z.freq)
 
 
-def test_interpolate_and_write_new(
-    edi_imp_file: Path, tmp_path: Path
-) -> None:
+def test_interpolate_and_write_new(edi_imp_file: Path, tmp_path: Path) -> None:
     ed = EDIFile(edi_imp_file)
     if not ed.has_section("mtsect"):
         pytest.skip("no MT/EMAP in this sample")
@@ -125,9 +123,7 @@ def test_repr_str_do_not_crash(any_edi_file: Path) -> None:
     assert isinstance(r, str) and len(r) > 0
 
 
-def test_spectra_roundtrip_if_present(
-    edi_spe_file: Path, tmp_path: Path
-) -> None:
+def test_spectra_roundtrip_if_present(edi_spe_file: Path, tmp_path: Path) -> None:
     ed = EDIFile(edi_spe_file)
     if not (_has(ed, "spectra") or _has(ed, "spectra_sect")):
         pytest.skip("no spectra section in sample")
@@ -143,9 +139,7 @@ def test_spectra_roundtrip_if_present(
     assert (">=SPECTRASECT" in txt) or (">SPECTRA" in txt)
 
 
-def test_timeseries_presence_if_any(
-    edi_csamt_file: Path, tmp_path: Path
-) -> None:
+def test_timeseries_presence_if_any(edi_csamt_file: Path, tmp_path: Path) -> None:
     ed = EDIFile(edi_csamt_file)
     ts = ed.get_section("timeseries")
     # not all files will have TS; this is a soft check

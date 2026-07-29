@@ -47,7 +47,9 @@ def estimate_area_of_interest(
     Examples
     --------
     >>> from pycsamt.models.mare2dem import read_emdata
-    >>> from pycsamt.models.mare2dem.geom.area_of_interest import estimate_area_of_interest
+    >>> from pycsamt.models.mare2dem.geom.area_of_interest import (
+    ...     estimate_area_of_interest,
+    ... )
     >>> em = read_emdata("survey.emdata")
     >>> ylim, zlim = estimate_area_of_interest(em)
     >>> ylim
@@ -106,9 +108,7 @@ def estimate_area_of_interest(
                     irx = em.data[csem_mask, 3].astype(int) - 1
                     n_tx = len(em.csem.transmitters)
                     n_rx = len(em.csem.receivers)
-                    valid = (
-                        (itx >= 0) & (itx < n_tx) & (irx >= 0) & (irx < n_rx)
-                    )
+                    valid = (itx >= 0) & (itx < n_tx) & (irx >= 0) & (irx < n_rx)
                     if valid.any():
                         r = np.abs(
                             em.csem.receivers[irx[valid], 1]
@@ -121,14 +121,10 @@ def estimate_area_of_interest(
         if dy > dz:
             ylim = np.array([ymin - dr / 10, ymax + dr / 10])
             dd = dy - dz
-            zlim = np.array(
-                [zmin - dd / 2 - dr / 10, zmax + dd / 2 + dr / 10]
-            )
+            zlim = np.array([zmin - dd / 2 - dr / 10, zmax + dd / 2 + dr / 10])
         else:
             zlim = np.array([zmin - dr / 10, zmax + dr / 10])
             dd = dz - dy
-            ylim = np.array(
-                [ymin - dd / 2 - dr / 10, ymax + dd / 2 + dr / 10]
-            )
+            ylim = np.array([ymin - dd / 2 - dr / 10, ymax + dd / 2 + dr / 10])
 
     return ylim, zlim

@@ -122,9 +122,7 @@ class Hmeasurement(EDIComponentBase):
         self.filter: str | None = None
         self.sensor: str | None = None
         self.gain: float | None = None
-        self.measdate: str | None = datetime.utcnow().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        self.measdate: str | None = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         if kws:
             self.update_from_dict(kws)
 
@@ -194,9 +192,7 @@ class Emeasurement(EDIComponentBase):
         self.filter: str | None = None
         self.sensor: str | None = None
         self.gain: float | None = None
-        self.measdate: str | None = datetime.utcnow().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        self.measdate: str | None = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         if kws:
             self.update_from_dict(kws)
 
@@ -265,9 +261,7 @@ class DefineMeas(EDIComponentBase):
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
 
         payload, _, _ = _slice_section(
             lines, ">=DEFINEMEAS", after_tags=[">=MTSECT", ">=SPECTRASECT"]

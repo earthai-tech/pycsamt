@@ -71,9 +71,7 @@ from pycsamt.app.web.utils import (
 
 
 def _get_specs(cat: str, method: str) -> list:
-    return (
-        CATALOGUE.get(cat or "", {}).get(method or "", {}).get("params", [])
-    )
+    return CATALOGUE.get(cat or "", {}).get(method or "", {}).get("params", [])
 
 
 def _get_fn_name(cat: str, method: str) -> str | None:
@@ -182,18 +180,12 @@ def _filter_display_sites(sites, sel_lines, sel_stations, records):
 
             df = pd.DataFrame(records)
             if "Line" in df.columns and "ID" in df.columns:
-                target_ids = set(
-                    df[df["Line"].isin(sel_lines)]["ID"].tolist()
-                )
+                target_ids = set(df[df["Line"].isin(sel_lines)]["ID"].tolist())
         if sel_stations:
             stn_set = set(sel_stations)
-            target_ids = (
-                (target_ids & stn_set) if target_ids is not None else stn_set
-            )
+            target_ids = (target_ids & stn_set) if target_ids is not None else stn_set
 
-        if (
-            not target_ids
-        ):  # empty intersection → show nothing, fall back to all
+        if not target_ids:  # empty intersection → show nothing, fall back to all
             return sites
 
         from pycsamt.emtools._core import ensure_sites
@@ -211,9 +203,7 @@ def _filter_display_sites(sites, sel_lines, sel_stations, records):
 # ── Pseudosection rendering ───────────────────────────────────────────────────
 
 
-def _render_ps(
-    ctrl: CorrectionController, sites, title: str, dark: bool
-) -> str:
+def _render_ps(ctrl: CorrectionController, sites, title: str, dark: bool) -> str:
     """ρ_a pseudosection as a data-URI PNG."""
     if sites is None:
         return empty_src(dark=dark)
@@ -248,9 +238,7 @@ def _interp_to_grid(freq, values, grid):
     """Log-linear interpolation of (freq, values) onto grid; NaN outside range."""
     freq = np.asarray(freq, float)
     values = np.asarray(values, float)
-    valid = (
-        np.isfinite(freq) & np.isfinite(values) & (freq > 0) & (values > 0)
-    )
+    valid = np.isfinite(freq) & np.isfinite(values) & (freq > 0) & (values > 0)
     if valid.sum() < 2:
         return np.full(len(grid), np.nan)
     log_f = np.log10(freq[valid])
@@ -299,11 +287,7 @@ def _collect_rho_phase_edi(edis, comp):
         yield (
             freq,
             np.asarray(rho, float),
-            (
-                np.asarray(phi, float)
-                if phi is not None
-                else np.full(freq.size, np.nan)
-            ),
+            (np.asarray(phi, float) if phi is not None else np.full(freq.size, np.nan)),
         )
 
 
@@ -359,9 +343,7 @@ def _render_overlay_median_band(raw_sites, cur_sites, dark, comp="both"):
     fig, (ax_rho, ax_phi) = plt.subplots(
         2, 1, figsize=(9, 6), sharex=True, facecolor=bg
     )
-    fig.subplots_adjust(
-        hspace=0.07, left=0.10, right=0.97, top=0.92, bottom=0.10
-    )
+    fig.subplots_adjust(hspace=0.07, left=0.10, right=0.97, top=0.92, bottom=0.10)
 
     any_data = False
     for c in comps:
@@ -473,9 +455,7 @@ def _render_overlay_median_band(raw_sites, cur_sites, dark, comp="both"):
     return src
 
 
-def _render_overlay_spaghetti(
-    raw_sites, cur_sites, dark, comp="both", n_max=40
-):
+def _render_overlay_spaghetti(raw_sites, cur_sites, dark, comp="both", n_max=40):
     """Individual station curves (thin, semi-transparent) + thick median line."""
     edis_raw = list(_iter_edi(raw_sites))
     edis_cur = list(_iter_edi(cur_sites)) if cur_sites is not None else []
@@ -490,9 +470,7 @@ def _render_overlay_spaghetti(
     fig, (ax_rho, ax_phi) = plt.subplots(
         2, 1, figsize=(9, 6), sharex=True, facecolor=bg
     )
-    fig.subplots_adjust(
-        hspace=0.07, left=0.10, right=0.97, top=0.92, bottom=0.10
-    )
+    fig.subplots_adjust(hspace=0.07, left=0.10, right=0.97, top=0.92, bottom=0.10)
 
     for c in comps:
         col, _ = _COMP_STYLE[c]
@@ -569,9 +547,7 @@ def _render_overlay_spaghetti(
             med_p, _, _ = _band_stats_phi(cur_trips, grid)
             okp = np.isfinite(med_p)
             if okp.any():
-                ax_phi.plot(
-                    T[okp], med_p[okp], ls="-", color=col, lw=2.5, zorder=6
-                )
+                ax_phi.plot(T[okp], med_p[okp], ls="-", color=col, lw=2.5, zorder=6)
 
     _ovl_ax_style(ax_rho, ax_bg, txt_col, grid_col, log_y=True)
     _ovl_ax_style(ax_phi, ax_bg, txt_col, grid_col, log_y=False)
@@ -598,9 +574,7 @@ def _render_overlay_spaghetti(
     return src
 
 
-def _render_overlay_per_line(
-    raw_sites, cur_sites, dark, comp="both", records=None
-):
+def _render_overlay_per_line(raw_sites, cur_sites, dark, comp="both", records=None):
     """One column per survey line, 2 rows (ρ_a, φ) — median before/after per line."""
     edis_raw = list(_iter_edi(raw_sites))
     edis_cur = list(_iter_edi(cur_sites)) if cur_sites is not None else []
@@ -614,11 +588,7 @@ def _render_overlay_per_line(
     # Group EDI indices by line (fallback: all in one group)
     line_groups: dict[str, list[int]] = {}
     for i, ed in enumerate(edis_raw):
-        stn = (
-            getattr(ed, "station", None)
-            or getattr(ed, "dataid", None)
-            or f"S{i + 1}"
-        )
+        stn = getattr(ed, "station", None) or getattr(ed, "dataid", None) or f"S{i + 1}"
         line = stn_to_line.get(stn, stn_to_line.get(stn.strip(), "All"))
         line_groups.setdefault(line, []).append(i)
 
@@ -633,9 +603,7 @@ def _render_overlay_per_line(
     grid_col = "#313244" if dark else "#dce0e8"
 
     fig_w = max(5.0, 3.8 * n_lines)
-    fig, axes = plt.subplots(
-        2, n_lines, figsize=(fig_w, 6), sharex=False, facecolor=bg
-    )
+    fig, axes = plt.subplots(2, n_lines, figsize=(fig_w, 6), sharex=False, facecolor=bg)
     fig.subplots_adjust(
         hspace=0.08, wspace=0.38, left=0.09, right=0.97, top=0.92, bottom=0.10
     )
@@ -701,9 +669,7 @@ def _render_overlay_per_line(
                         color="gray",
                         where=np.isfinite(p25_p) & np.isfinite(p75_p),
                     )
-                    ax_phi.plot(
-                        T[okp], med_p[okp], ls="--", color="gray", lw=1.5
-                    )
+                    ax_phi.plot(T[okp], med_p[okp], ls="--", color="gray", lw=1.5)
             if cur_trips:
                 med, p25, p75 = _band_stats_rho(cur_trips, grid)
                 ok = np.isfinite(med) & (med > 0)
@@ -735,9 +701,7 @@ def _render_overlay_per_line(
                         color=col_c,
                         where=np.isfinite(p25_p) & np.isfinite(p75_p),
                     )
-                    ax_phi.plot(
-                        T[okp], med_p[okp], ls="-", color=col_c, lw=1.8
-                    )
+                    ax_phi.plot(T[okp], med_p[okp], ls="-", color=col_c, lw=1.8)
 
         if col_i == 0:
             ax_rho.legend(
@@ -778,9 +742,7 @@ def _render_overlay(
         return empty_src(dark=dark)
 
 
-def _render_diff(
-    ctrl: CorrectionController, before, after, dark: bool
-) -> str:
+def _render_diff(ctrl: CorrectionController, before, after, dark: bool) -> str:
     try:
         fig, ax = plt.subplots(figsize=(9, 4))
         ctrl.plot_diff(before, after, ax)
@@ -973,9 +935,7 @@ def _render_rho_phi_grid(
     comps = ["xy", "yx"] if comp == "both" else [comp]
 
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor=bg)
-    outer = gridspec.GridSpec(
-        nrows, ncols, figure=fig, hspace=0.60, wspace=0.42
-    )
+    outer = gridspec.GridSpec(nrows, ncols, figure=fig, hspace=0.60, wspace=0.42)
 
     for idx in range(n):
         row_g = idx // ncols
@@ -1140,8 +1100,7 @@ def _render_paired_stations(
 
         # Station title spanning both sub-cols
         mid_x = (
-            inner[0, 0].get_position(fig).x0
-            + inner[0, 1].get_position(fig).x1
+            inner[0, 0].get_position(fig).x0 + inner[0, 1].get_position(fig).x1
         ) / 2
         top_y = inner[0, 0].get_position(fig).y1 + 0.026
         fig.text(
@@ -1197,11 +1156,7 @@ def _render_paired_stations(
             plt.setp([ax_rr, ax_cr], xticklabels=[])
             continue
 
-        z_cur = (
-            getattr(edis_cur[s_idx], "Z", None)
-            if s_idx < len(edis_cur)
-            else None
-        )
+        z_cur = getattr(edis_cur[s_idx], "Z", None) if s_idx < len(edis_cur) else None
 
         # Draw raw panel
         for c in comps:
@@ -1313,9 +1268,7 @@ def _removed_periods(ed_raw, ed_cur, tol_rel: float = 0.02):
     for f in freq_raw:
         if f <= 0:
             continue
-        if freq_cur.size == 0 or np.all(
-            np.abs(freq_cur - f) / (f + 1e-12) > tol_rel
-        ):
+        if freq_cur.size == 0 or np.all(np.abs(freq_cur - f) / (f + 1e-12) > tol_rel):
             removed.append(1.0 / f)
     return np.asarray(removed)
 
@@ -1356,9 +1309,7 @@ def _render_freq_bands(
     drop_col = "#f38ba8" if dark else "#d20f39"
 
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor=bg)
-    outer = gridspec.GridSpec(
-        nrows, ncols, figure=fig, hspace=0.60, wspace=0.42
-    )
+    outer = gridspec.GridSpec(nrows, ncols, figure=fig, hspace=0.60, wspace=0.42)
 
     for idx in range(n):
         row_g = idx // ncols
@@ -1386,23 +1337,15 @@ def _render_freq_bands(
         # Removed periods: use explicit list when provided (manual drop),
         # otherwise auto-detect from raw vs cur freq array comparison.
         if dropped_freqs is not None:
-            drop_arr = np.asarray(
-                [float(f) for f in dropped_freqs if f > 0], float
-            )
-            T_removed = (
-                (1.0 / drop_arr) if drop_arr.size > 0 else np.array([])
-            )
+            drop_arr = np.asarray([float(f) for f in dropped_freqs if f > 0], float)
+            T_removed = (1.0 / drop_arr) if drop_arr.size > 0 else np.array([])
         else:
             T_removed = _removed_periods(ed_raw, ed_cur)
 
         # Shade removed bands
         for T_r in np.sort(T_removed):
-            ax_rho.axvspan(
-                T_r * 0.70, T_r * 1.43, alpha=0.18, color=drop_col, zorder=1
-            )
-            ax_phi.axvspan(
-                T_r * 0.70, T_r * 1.43, alpha=0.18, color=drop_col, zorder=1
-            )
+            ax_rho.axvspan(T_r * 0.70, T_r * 1.43, alpha=0.18, color=drop_col, zorder=1)
+            ax_phi.axvspan(T_r * 0.70, T_r * 1.43, alpha=0.18, color=drop_col, zorder=1)
 
         for c in comps:
             col, mrk = _COMP_STYLE[c]
@@ -1658,9 +1601,7 @@ def _diff_stats_strip(mn, mx, mu, sd, n_neg, n_pos):
 
 def _stack_el(steps: list):
     if not steps:
-        return html.Span(
-            "No corrections applied yet.", className="text-muted small"
-        )
+        return html.Span("No corrections applied yet.", className="text-muted small")
     items = []
     for i, s in enumerate(steps):
         label = s.get("label", s["fn_name"])
@@ -1708,9 +1649,7 @@ def _ctx_bar_content(steps: list) -> list:
         ]
     last = steps[-1].get("label", steps[-1]["fn_name"])
     return [
-        html.I(
-            className="bi bi-layers me-1", style={"color": "var(--green)"}
-        ),
+        html.I(className="bi bi-layers me-1", style={"color": "var(--green)"}),
         html.Span(
             f"{n} correction{'s' if n != 1 else ''} applied",
             style={"fontWeight": "600", "color": "var(--green)"},
@@ -1784,9 +1723,7 @@ def _params_panel(cat: str, method: str):
         )
     rows = []
     for spec in specs:
-        lbl = html.Div(
-            spec.label, className="param-label", title=(spec.tip or "")
-        )
+        lbl = html.Div(spec.label, className="param-label", title=(spec.tip or ""))
         if spec.kind in ("spin", "dspin"):
             lo, hi, step_ = spec.opts
             widget = dbc.Input(
@@ -1939,9 +1876,7 @@ def register_correction(app) -> None:
     def sync_params_panel(cat, method):
         desc = _get_desc(cat or "", method or "")
         panel = _params_panel(cat or "", method or "")
-        desc_el = (
-            html.Div(desc, className="corr-desc-text") if desc else html.Div()
-        )
+        desc_el = html.Div(desc, className="corr-desc-text") if desc else html.Div()
         return panel, desc_el
 
     # ── 3. Auto-render: fires on nav, data load, store change, tab switch ──
@@ -1998,9 +1933,7 @@ def register_correction(app) -> None:
         else:
             apply_web_light_theme()
 
-        raw_sites, err = _apply_line_filter(
-            session_id, active_lines_store, store_data
-        )
+        raw_sites, err = _apply_line_filter(session_id, active_lines_store, store_data)
         if err == "muted":
             w = no_active_lines_src(dark)
             msg = "All lines muted — enable at least one line."
@@ -2099,12 +2032,8 @@ def register_correction(app) -> None:
                 dark,
             )
         elif tab == "rho-phi":
-            rho_raw = _filter_display_sites(
-                raw, sel_lines, sel_stations, records
-            )
-            rho_cur = _filter_display_sites(
-                cur, sel_lines, sel_stations, records
-            )
+            rho_raw = _filter_display_sites(raw, sel_lines, sel_stations, records)
+            rho_cur = _filter_display_sites(cur, sel_lines, sel_stations, records)
             n_shown = len(list(_iter_edi(rho_raw)))
             if (sel_lines or sel_stations) and n_shown:
                 sel_desc = []
@@ -2116,18 +2045,16 @@ def register_correction(app) -> None:
                     sel_desc.append(
                         f"{len(sel_stations)} station{'s' if len(sel_stations) != 1 else ''}"
                     )
-                rho_hint = f"Showing {n_shown} stations from {', '.join(sel_desc)}. {rho_hint}"
+                rho_hint = (
+                    f"Showing {n_shown} stations from {', '.join(sel_desc)}. {rho_hint}"
+                )
             kw = dict(mode=mode, n_max=n_max, dark=dark, comp=comp)
             if style == "pairs":
-                rho_phi_src = _render_paired_stations(
-                    ctrl, rho_raw, rho_cur, **kw
-                )
+                rho_phi_src = _render_paired_stations(ctrl, rho_raw, rho_cur, **kw)
             elif style == "freq-bands":
                 rho_phi_src = _render_freq_bands(ctrl, rho_raw, rho_cur, **kw)
             else:
-                rho_phi_src = _render_rho_phi_grid(
-                    ctrl, rho_raw, rho_cur, **kw
-                )
+                rho_phi_src = _render_rho_phi_grid(ctrl, rho_raw, rho_cur, **kw)
         elif tab == "overlay":
             ovl_src = _render_overlay(
                 ctrl,
@@ -2196,9 +2123,7 @@ def register_correction(app) -> None:
         else:
             apply_web_light_theme()
 
-        raw_sites, err = _apply_line_filter(
-            session_id, active_lines_store, store_data
-        )
+        raw_sites, err = _apply_line_filter(session_id, active_lines_store, store_data)
         if err == "muted":
             w = no_active_lines_src(dark)
             return (
@@ -2487,9 +2412,7 @@ def register_correction(app) -> None:
         else:
             apply_web_light_theme()
 
-        raw_sites, err = _apply_line_filter(
-            session_id, active_lines_store, store_data
-        )
+        raw_sites, err = _apply_line_filter(session_id, active_lines_store, store_data)
         if err == "muted":
             return (
                 empty_src(dark=dark),
@@ -2581,9 +2504,7 @@ def register_correction(app) -> None:
         State(IDs.SESSION_ID, "data"),
         prevent_initial_call=True,
     )
-    def smooth_apply(
-        n, degree, blend, comp_val, robust_val, corr_store, session_id
-    ):
+    def smooth_apply(n, degree, blend, comp_val, robust_val, corr_store, session_id):
         if not n:
             raise PreventUpdate
         if cache_get(session_id) is None:
@@ -2622,9 +2543,7 @@ def register_correction(app) -> None:
                 str(exc),
             )
 
-        steps.append(
-            {"fn_name": "smooth_rho_phase", "kwargs": kwargs, "label": label}
-        )
+        steps.append({"fn_name": "smooth_rho_phase", "kwargs": kwargs, "label": label})
         n_s = len(steps)
         return (
             {"steps": steps},
@@ -2649,9 +2568,7 @@ def register_correction(app) -> None:
     def mfreq_load(n, session_id, active_lines_store, store_data):
         if not n:
             raise PreventUpdate
-        raw_sites, err = _apply_line_filter(
-            session_id, active_lines_store, store_data
-        )
+        raw_sites, err = _apply_line_filter(session_id, active_lines_store, store_data)
         sites = raw_sites if raw_sites is not None else cache_get(session_id)
         if sites is None:
             return [], [], "No data loaded — load a survey first."
@@ -2763,9 +2680,7 @@ def register_correction(app) -> None:
                 "",
             )
 
-        raw_sites, err = _apply_line_filter(
-            session_id, active_lines_store, store_data
-        )
+        raw_sites, err = _apply_line_filter(session_id, active_lines_store, store_data)
         if err == "muted":
             return (
                 empty_src(dark=dark),
@@ -2886,9 +2801,7 @@ def register_correction(app) -> None:
                 str(exc),
             )
 
-        steps.append(
-            {"fn_name": "drop_freqs_manual", "kwargs": kwargs, "label": label}
-        )
+        steps.append({"fn_name": "drop_freqs_manual", "kwargs": kwargs, "label": label})
         n_s = len(steps)
         return (
             {"steps": steps},
@@ -2939,9 +2852,7 @@ def register_correction(app) -> None:
             raise PreventUpdate
         return (
             {"steps": []},
-            html.Span(
-                "No corrections applied yet.", className="text-muted small"
-            ),
+            html.Span("No corrections applied yet.", className="text-muted small"),
             "",
             "Reset to raw — all corrections cleared.",
         )
@@ -3003,9 +2914,7 @@ def register_correction(app) -> None:
             rho_raw = _collect_rho(ctrl.raw_sites)
             rho_cur = _collect_rho(ctrl.current_sites)
             if rho_raw is None or rho_cur is None or rho_raw.size == 0:
-                return html.Span(
-                    "No data for stats.", className="text-muted small"
-                )
+                return html.Span("No data for stats.", className="text-muted small")
             delta = np.log10(rho_cur + 1e-12) - np.log10(rho_raw + 1e-12)
             mn, mx = float(delta.min()), float(delta.max())
             mu, sd = float(delta.mean()), float(delta.std())
@@ -3044,9 +2953,7 @@ def register_correction(app) -> None:
                 raise PreventUpdate
             df = pd.DataFrame(rows)
             if fmt == "csv":
-                return dcc.send_data_frame(
-                    df.to_csv, "corrected_data.csv", index=False
-                )
+                return dcc.send_data_frame(df.to_csv, "corrected_data.csv", index=False)
             elif fmt == "xyz":
                 cols = [
                     c
@@ -3060,8 +2967,6 @@ def register_correction(app) -> None:
                     sep="\t",
                 )
             else:
-                return dcc.send_data_frame(
-                    df.to_csv, "corrected_edi.csv", index=False
-                )
+                return dcc.send_data_frame(df.to_csv, "corrected_edi.csv", index=False)
         except Exception:
             raise PreventUpdate

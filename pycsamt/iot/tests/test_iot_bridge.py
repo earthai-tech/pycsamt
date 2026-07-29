@@ -177,12 +177,8 @@ def test_field_session_to_edifiles_uses_geometry(tmp_path):
     z1 = impedance_to_z(_scalar_zxy(), FREQ, station="S01")
     z2 = impedance_to_z(_scalar_zxy() * 2, FREQ, station="S02")
     session = FieldSession("SURV1", method="amt")
-    session.add_station(
-        StationConfig("S01", lat=6.5, lon=3.4, elevation=120.0)
-    )
-    session.add_station(
-        StationConfig("S02", lat=6.6, lon=3.5, elevation=130.0)
-    )
+    session.add_station(StationConfig("S01", lat=6.5, lon=3.4, elevation=120.0))
+    session.add_station(StationConfig("S02", lat=6.6, lon=3.5, elevation=130.0))
     paths = field_session_to_edifiles(
         session, {"S01": z1, "S02": z2}, write=True, savepath=str(tmp_path)
     )

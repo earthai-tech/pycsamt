@@ -457,12 +457,14 @@ class CodeGenerationAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent  = CodeGenerationAgent()
-    >>> result = agent.execute({
-    ...     "workflow_config": cfg,
-    ...     "results":         coord_results,
-    ...     "output_dir":      "/out",
-    ... })
+    >>> agent = CodeGenerationAgent()
+    >>> result = agent.execute(
+    ...     {
+    ...         "workflow_config": cfg,
+    ...         "results": coord_results,
+    ...         "output_dir": "/out",
+    ...     }
+    ... )
     >>> print(result["script_path"])
     /out/workflow_script.py
     """
@@ -523,10 +525,7 @@ class CodeGenerationAgent(BaseAgent):
         else:
             code += "sites_corr = sites  # no static-shift correction\n\n"
 
-        if (
-            workflow in ("phase_analysis", "full")
-            or "phase_analysis" in results
-        ):
+        if workflow in ("phase_analysis", "full") or "phase_analysis" in results:
             results.get("phase_analysis")
             skew_th = 5.0
             ellipt_th = 0.1

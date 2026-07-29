@@ -23,9 +23,7 @@ class TestParamLineStation(unittest.TestCase):
             "L18": ["/d/22-001A.edi", "/d/22-002A.edi"],
             "L22": ["/d/x1.edi", "/d/x2.edi", "/d/x3.edi"],
         }
-        line_opts, station_opts, line_to_st = p._line_station_options(
-            groups, ""
-        )
+        line_opts, station_opts, line_to_st = p._line_station_options(groups, "")
         self.assertEqual([o["value"] for o in line_opts], ["L18", "L22"])
         self.assertEqual(len(station_opts), 5)
         self.assertEqual(set(line_to_st), {"L18", "L22"})
@@ -39,9 +37,7 @@ class TestParamLineStation(unittest.TestCase):
         )
         self.assertEqual([f["key"] for f in multi], ["lines", "stations"])
         # single line → no line selector
-        one, _ = p._prepare_dynamic_fields(
-            fields, {"A": ["/d/a.edi"]}, "", []
-        )
+        one, _ = p._prepare_dynamic_fields(fields, {"A": ["/d/a.edi"]}, "", [])
         self.assertEqual([f["key"] for f in one], ["stations"])
 
     def test_stations_depend_on_selected_lines(self):

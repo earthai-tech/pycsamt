@@ -73,11 +73,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k
-        for k in web_app.callback_map
-        if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -160,9 +156,7 @@ class TestFilterSites:
 
 class TestPtGridProfiles:
     def test_groups_by_line(self, willy_records):
-        result = _pt_grid_profiles(
-            {"station_records": willy_records}, None, per_line=2
-        )
+        result = _pt_grid_profiles({"station_records": willy_records}, None, per_line=2)
         assert set(result.keys()) == {"L1", "L2"}
         assert all(len(v) <= 2 for v in result.values())
 
@@ -177,9 +171,7 @@ class TestPtGridProfiles:
 
     def test_records_without_line_are_skipped(self):
         records = [{"ID": "STA1", "Line": ""}]
-        assert _pt_grid_profiles(
-            {"station_records": records}, None, per_line=2
-        ) == {}
+        assert _pt_grid_profiles({"station_records": records}, None, per_line=2) == {}
 
 
 # ── switch_adv_tab ───────────────────────────────────────────────────────────
@@ -204,9 +196,7 @@ class TestSwitchAdvTab:
 
         fn = _cb(web_app, f"{IDs.ADV_ACTIVE_TAB}.data")
         cc.context_value.set(
-            AttributeDict(
-                triggered_inputs=[{"prop_id": "adv-tab-pt.n_clicks"}]
-            )
+            AttributeDict(triggered_inputs=[{"prop_id": "adv-tab-pt.n_clicks"}])
         )
         try:
             result = fn(*([1] * 6))
@@ -247,9 +237,7 @@ class TestSyncPlots:
 
 class TestUpdateParamPanel:
     def _fn(self, web_app):
-        return _cb_multi(
-            web_app, f"{IDs.ADV_DESCRIPTION}.children", "adv-atom-section"
-        )
+        return _cb_multi(web_app, f"{IDs.ADV_DESCRIPTION}.children", "adv-atom-section")
 
     def test_no_fn_name(self, web_app):
         desc, period, atom, pt_sta, pt_grid = self._fn(web_app)(None)
@@ -257,9 +245,7 @@ class TestUpdateParamPanel:
         assert period["display"] == "none"
 
     def test_period_fn_shows_period_section(self, web_app):
-        desc, period, atom, pt_sta, pt_grid = self._fn(web_app)(
-            "plot_phase_tensor_map"
-        )
+        desc, period, atom, pt_sta, pt_grid = self._fn(web_app)("plot_phase_tensor_map")
         assert period["display"] == "block"
         assert atom["display"] == "none"
 
@@ -275,15 +261,11 @@ class TestUpdateParamPanel:
         assert pt_grid["display"] == "none"
 
     def test_pt_strip_grid_fn_shows_pt_grid_section(self, web_app):
-        *_rest, pt_sta, pt_grid = self._fn(web_app)(
-            "plot_phase_tensor_strip_grid"
-        )
+        *_rest, pt_sta, pt_grid = self._fn(web_app)("plot_phase_tensor_strip_grid")
         assert pt_grid["display"] == "block"
 
     def test_other_fn_hides_all_sections(self, web_app):
-        _desc, period, atom, pt_sta, pt_grid = self._fn(web_app)(
-            "plot_strike_rose"
-        )
+        _desc, period, atom, pt_sta, pt_grid = self._fn(web_app)("plot_strike_rose")
         assert period["display"] == "none"
         assert atom["display"] == "none"
         assert pt_sta["display"] == "none"
@@ -302,9 +284,7 @@ class TestUpdateInfoBar:
         assert len(parts) >= 1
 
     def test_includes_label_and_station_count(self, web_app):
-        parts = self._fn(web_app)(
-            "strike", "plot_strike_rose", {"n_stations": 5}
-        )
+        parts = self._fn(web_app)("strike", "plot_strike_rose", {"n_stations": 5})
         text_dump = str(parts)
         assert "5 station" in text_dump
 
@@ -315,7 +295,9 @@ class TestUpdateInfoBar:
 class TestUpdateFilters:
     def _fn(self, web_app):
         return _cb_multi(
-            web_app, f"{IDs.ADV_LINE_FILTER}.options", f"{IDs.ADV_DATA_BAR}.children"
+            web_app,
+            f"{IDs.ADV_LINE_FILTER}.options",
+            f"{IDs.ADV_DATA_BAR}.children",
         )
 
     def test_no_store_data_shows_empty_bar(self, web_app):
@@ -323,11 +305,12 @@ class TestUpdateFilters:
         assert line_opts == []
         assert stn_opts == []
 
-    def test_with_records_and_no_active_lines_derives_all(
-        self, web_app, willy_records
-    ):
+    def test_with_records_and_no_active_lines_derives_all(self, web_app, willy_records):
         line_opts, stn_opts, bar = self._fn(web_app)(
-            {"n_stations": len(willy_records), "station_records": willy_records},
+            {
+                "n_stations": len(willy_records),
+                "station_records": willy_records,
+            },
             None,
         )
         assert {o["value"] for o in line_opts} == {"L1", "L2"}
@@ -335,12 +318,13 @@ class TestUpdateFilters:
 
     def test_with_explicit_active_lines(self, web_app, willy_records):
         line_opts, stn_opts, bar = self._fn(web_app)(
-            {"n_stations": len(willy_records), "station_records": willy_records},
+            {
+                "n_stations": len(willy_records),
+                "station_records": willy_records,
+            },
             {"active": ["L1"]},
         )
-        assert len(stn_opts) == sum(
-            1 for r in willy_records if r["Line"] == "L1"
-        )
+        assert len(stn_opts) == sum(1 for r in willy_records if r["Line"] == "L1")
 
 
 # ── line_to_stations ─────────────────────────────────────────────────────────
@@ -359,12 +343,8 @@ class TestLineToStations:
         assert value is no_update
         assert opts is no_update
 
-    def test_no_selection_returns_none_with_all_options(
-        self, web_app, willy_records
-    ):
-        value, opts = self._fn(web_app)(
-            None, {"station_records": willy_records}, None
-        )
+    def test_no_selection_returns_none_with_all_options(self, web_app, willy_records):
+        value, opts = self._fn(web_app)(None, {"station_records": willy_records}, None)
         assert value is None
         assert len(opts) == len(willy_records)
 
@@ -391,9 +371,7 @@ class TestUpdatePtStationOptions:
         assert len(opts) == len(willy_records)
 
     def test_with_active_lines_filter(self, web_app, willy_records):
-        opts = self._fn(web_app)(
-            {"station_records": willy_records}, {"active": ["L2"]}
-        )
+        opts = self._fn(web_app)({"station_records": willy_records}, {"active": ["L2"]})
         expected = {r["ID"] for r in willy_records if r["Line"] == "L2"}
         assert {o["value"] for o in opts} == expected
 
@@ -403,14 +381,10 @@ class TestUpdatePtStationOptions:
 
 class TestStationAllNone:
     def _select_all_fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.ADV_STN_FILTER}.value", IDs.ADV_STN_ALL
-        )
+        return _cb_by_input(web_app, f"{IDs.ADV_STN_FILTER}.value", IDs.ADV_STN_ALL)
 
     def _deselect_all_fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.ADV_STN_FILTER}.value", IDs.ADV_STN_NONE
-        )
+        return _cb_by_input(web_app, f"{IDs.ADV_STN_FILTER}.value", IDs.ADV_STN_NONE)
 
     def test_select_all_no_click_returns_no_update(self, web_app):
         fn = self._select_all_fn(web_app)
@@ -457,9 +431,7 @@ class TestTrainAtom:
         )
         assert "No data loaded" in str(status)
 
-    def test_success_trains_and_reports(
-        self, web_app, cached_session, monkeypatch
-    ):
+    def test_success_trains_and_reports(self, web_app, cached_session, monkeypatch):
         monkeypatch.setattr(
             adv_mod._CTRL,
             "train_dim_model",
@@ -470,9 +442,7 @@ class TestTrainAtom:
         )
         assert "Trained" in str(status)
 
-    def test_exception_reports_warning(
-        self, web_app, cached_session, monkeypatch
-    ):
+    def test_exception_reports_warning(self, web_app, cached_session, monkeypatch):
         def _boom(n_atoms, n_iter):
             raise RuntimeError("training failed")
 
@@ -499,8 +469,17 @@ class TestRunAdvanced:
 
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                0, "strike", "plot_strike_rose", "s", None, None, None,
-                None, None, None, None,
+                0,
+                "strike",
+                "plot_strike_rose",
+                "s",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
             )
 
     def test_no_fn_name_raises_prevent_update(self, web_app):
@@ -508,16 +487,32 @@ class TestRunAdvanced:
 
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, "strike", None, "s", None, None, None,
-                None, None, None, None,
+                1,
+                "strike",
+                None,
+                "s",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
             )
 
-    def test_generic_plot_success_writes_active_tab_only(
-        self, web_app, cached_session
-    ):
+    def test_generic_plot_success_writes_active_tab_only(self, web_app, cached_session):
         result = self._fn(web_app)(
-            1, "strike", "plot_strike_rose", cached_session, None, None,
-            None, None, "10x6", None, None,
+            1,
+            "strike",
+            "plot_strike_rose",
+            cached_session,
+            None,
+            None,
+            None,
+            None,
+            "10x6",
+            None,
+            None,
         )
         *imgs, spinner, is_open, body = result
         assert is_open is False
@@ -533,19 +528,35 @@ class TestRunAdvanced:
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("draw boom")),
         )
         result = self._fn(web_app)(
-            1, "strike", "plot_strike_rose", cached_session, None, None,
-            None, None, "10x6", None, None,
+            1,
+            "strike",
+            "plot_strike_rose",
+            cached_session,
+            None,
+            None,
+            None,
+            None,
+            "10x6",
+            None,
+            None,
         )
         *imgs, spinner, is_open, body = result
         assert is_open is True
         assert "draw boom" in body
 
-    def test_pt_strip_without_station_returns_warning(
-        self, web_app, cached_session
-    ):
+    def test_pt_strip_without_station_returns_warning(self, web_app, cached_session):
         result = self._fn(web_app)(
-            1, "pt", "plot_phase_tensor_strip", cached_session, None, None,
-            None, None, "10x6", None, None,
+            1,
+            "pt",
+            "plot_phase_tensor_strip",
+            cached_session,
+            None,
+            None,
+            None,
+            None,
+            "10x6",
+            None,
+            None,
         )
         *imgs, spinner, is_open, body = result
         assert is_open is True
@@ -556,9 +567,17 @@ class TestRunAdvanced:
     ):
         station = willy_records[0]["ID"]
         result = self._fn(web_app)(
-            1, "pt", "plot_phase_tensor_strip", cached_session,
-            {"station_records": willy_records}, None, None, None, "10x6",
-            station, None,
+            1,
+            "pt",
+            "plot_phase_tensor_strip",
+            cached_session,
+            {"station_records": willy_records},
+            None,
+            None,
+            None,
+            "10x6",
+            station,
+            None,
         )
         *imgs, spinner, is_open, body = result
         assert is_open is False
@@ -568,8 +587,17 @@ class TestRunAdvanced:
         self, web_app, cached_session
     ):
         result = self._fn(web_app)(
-            1, "pt", "plot_phase_tensor_strip_grid", cached_session,
-            {"station_records": []}, None, None, None, "10x6", None, 4,
+            1,
+            "pt",
+            "plot_phase_tensor_strip_grid",
+            cached_session,
+            {"station_records": []},
+            None,
+            None,
+            None,
+            "10x6",
+            None,
+            4,
         )
         *imgs, spinner, is_open, body = result
         assert is_open is True
@@ -579,15 +607,21 @@ class TestRunAdvanced:
         self, web_app, cached_session, willy_records
     ):
         result = self._fn(web_app)(
-            1, "pt", "plot_phase_tensor_strip_grid", cached_session,
-            {"station_records": willy_records}, None, None, None, "10x6",
-            None, 4,
+            1,
+            "pt",
+            "plot_phase_tensor_strip_grid",
+            cached_session,
+            {"station_records": willy_records},
+            None,
+            None,
+            None,
+            "10x6",
+            None,
+            4,
         )
         *imgs, spinner, is_open, body = result
         assert is_open is False
 
 
 def _adv_tab_index(tab: str) -> int:
-    return ["strike", "pt", "induction", "impedance", "depth", "survey"].index(
-        tab
-    )
+    return ["strike", "pt", "induction", "impedance", "depth", "survey"].index(tab)

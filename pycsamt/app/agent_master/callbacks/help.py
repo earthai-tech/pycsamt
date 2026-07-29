@@ -11,7 +11,6 @@ from .._ids import IDs
 
 
 def register_help(app) -> None:
-
     @app.callback(
         Output(IDs.MODAL_HELP, "is_open"),
         Input(IDs.BTN_HELP, "n_clicks"),

@@ -32,10 +32,15 @@ Example
 >>> import numpy as np
 >>> from pycsamt.iot.bridge import impedance_to_z, z_to_edi
 >>> freq = np.logspace(4, 0, 12)
->>> zxy = (1 + 1j) * np.sqrt(freq)          # one scalar sounding
+>>> zxy = (1 + 1j) * np.sqrt(freq)  # one scalar sounding
 >>> z = impedance_to_z(zxy, freq, station="S01")
->>> path = z_to_edi(z, station="S01", lat=6.5, lon=3.4,   # doctest: +SKIP
-...                 savepath="edi_out")
+>>> path = z_to_edi(
+...     z,
+...     station="S01",
+...     lat=6.5,
+...     lon=3.4,  # doctest: +SKIP
+...     savepath="edi_out",
+... )
 """
 
 from __future__ import annotations
@@ -70,9 +75,7 @@ _DEFAULT_CHANNELS = ("ex", "ey", "hx", "hy")
 # ---------------------------------------------------------------------------
 # forward: impedance -> Z
 # ---------------------------------------------------------------------------
-def _aggregate_windows(
-    arr: np.ndarray, how: str
-) -> tuple[np.ndarray, np.ndarray]:
+def _aggregate_windows(arr: np.ndarray, how: str) -> tuple[np.ndarray, np.ndarray]:
     """Collapse a window axis (axis 0), returning ``(value, std_error)``.
 
     The standard deviation across windows is a natural absolute error for
@@ -189,9 +192,7 @@ def impedance_to_z(
 
     if arr.ndim == 4:
         if arr.shape[1:] != (n, 2, 2):
-            raise ValueError(
-                f"4-D impedance must have shape (n_windows, {n}, 2, 2)."
-            )
+            raise ValueError(f"4-D impedance must have shape (n_windows, {n}, 2, 2).")
         z_stack, z_err = _aggregate_windows(arr, aggregate)
     elif arr.ndim == 3:
         if arr.shape != (n, 2, 2):
@@ -220,14 +221,10 @@ def impedance_to_z(
         if supplied.shape == z_stack.shape:
             z_err = supplied
         elif supplied.ndim == 1 and supplied.shape[0] == n:
-            z_err, _ = _scalar_to_tensor(
-                supplied.astype(complex), None, component
-            )
+            z_err, _ = _scalar_to_tensor(supplied.astype(complex), None, component)
             z_err = np.abs(z_err).astype(float)
         else:
-            raise ValueError(
-                "impedance_err shape is incompatible with the impedance."
-            )
+            raise ValueError("impedance_err shape is incompatible with the impedance.")
 
     meta: dict[str, Any] = {}
     if method is not None:
@@ -385,9 +382,7 @@ def _normalise_impedance_map(
             out[key] = impedance_to_z(arr, f, station=key)
         else:
             if freq is None:
-                raise ValueError(
-                    f"freq is required to build Z for station {key!r}."
-                )
+                raise ValueError(f"freq is required to build Z for station {key!r}.")
             out[key] = impedance_to_z(value, freq, station=key)
     return out
 
@@ -516,9 +511,7 @@ def _resolve_sites(
         return source
     if hasattr(source, "to_sites_collection"):
         if impedance is None:
-            raise ValueError(
-                "impedance is required when source is a FieldSession."
-            )
+            raise ValueError("impedance is required when source is a FieldSession.")
         return source.to_sites_collection(impedance, freq, method=method)
     # Otherwise treat *source* as an EDI source (paths, dir, EDIFile, ...).
     edifiles = list(_iter_edifiles(source))

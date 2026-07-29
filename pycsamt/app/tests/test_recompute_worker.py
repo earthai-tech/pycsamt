@@ -39,9 +39,7 @@ def _fake_recomputer_cls(n_stations=2, raise_exc=None):
                 raise raise_exc
             if self._progress_callback:
                 for i in range(1, n_stations + 1):
-                    self._progress_callback(
-                        i, n_stations, f"STA{i}", "ok", ""
-                    )
+                    self._progress_callback(i, n_stations, f"STA{i}", "ok", "")
             return _FakeResult()
 
     return _FakeRecomputer
@@ -60,9 +58,7 @@ class TestSuccess:
         results = []
         station_events = []
         w.finished.connect(results.append)
-        w.station_done.connect(
-            lambda *a: station_events.append(a)
-        )
+        w.station_done.connect(lambda *a: station_events.append(a))
         w.run()
         assert len(results) == 1
         assert w.result is results[0]
@@ -95,9 +91,7 @@ class TestSuccess:
 
 
 class TestInterruption:
-    def test_interruption_during_progress_callback_emits_error(
-        self, qapp, monkeypatch
-    ):
+    def test_interruption_during_progress_callback_emits_error(self, qapp, monkeypatch):
         _patch(monkeypatch, _fake_recomputer_cls(n_stations=5))
         w = RecomputeWorker(source=["fake"])
         monkeypatch.setattr(w, "isInterruptionRequested", lambda: True)
@@ -127,9 +121,7 @@ class TestExceptions:
         assert errors == ["recompute failed"]
         assert w.result is None
 
-    def test_recomputer_construction_exception_emits_error(
-        self, qapp, monkeypatch
-    ):
+    def test_recomputer_construction_exception_emits_error(self, qapp, monkeypatch):
         import pycsamt.site.recompute as recompute_mod
 
         def _boom(**kw):

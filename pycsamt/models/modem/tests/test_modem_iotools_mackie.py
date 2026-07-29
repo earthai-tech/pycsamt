@@ -11,12 +11,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _EX2D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "2D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
 )
 _SKIP_REAL = pytest.mark.skipif(
     not _EX2D.exists(), reason="ModEMv626 example data not available"
@@ -132,9 +127,7 @@ class TestMackie2DRoundtrip:
         m = _make_model2d(nx=5, nz_earth=3)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
-        np.testing.assert_allclose(
-            back.z_widths[_N_AIR_2D:], m.z_widths, rtol=1e-4
-        )
+        np.testing.assert_allclose(back.z_widths[_N_AIR_2D:], m.z_widths, rtol=1e-4)
 
     def test_roundtrip_rho_values(self, tmp_path):
         from pycsamt.models.modem.iotools.mackie import (
@@ -146,9 +139,7 @@ class TestMackie2DRoundtrip:
         m = _make_model2d(nx=5, nz_earth=3, rho_val=50.0)
         write_mackie2d(m, tmp_path / "m.rho")
         back = read_mackie2d(tmp_path / "m.rho")
-        np.testing.assert_allclose(
-            back.rho_loge[_N_AIR_2D:], m.rho_loge, rtol=1e-5
-        )
+        np.testing.assert_allclose(back.rho_loge[_N_AIR_2D:], m.rho_loge, rtol=1e-5)
 
     def test_air_layers_have_high_rho(self, tmp_path):
         from pycsamt.models.modem.iotools.mackie import (
@@ -359,9 +350,7 @@ class TestMackie3DRoundtrip:
         m = _make_model3d(nx=4, ny=3, nz=5, n_air=2, rho_val=200.0)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
-        np.testing.assert_allclose(
-            back.rho_loge[2:], m.rho_loge[2:], rtol=1e-5
-        )
+        np.testing.assert_allclose(back.rho_loge[2:], m.rho_loge[2:], rtol=1e-5)
 
     def test_roundtrip_rho_air(self, tmp_path):
         from pycsamt.models.modem.iotools.mackie import (
@@ -372,9 +361,7 @@ class TestMackie3DRoundtrip:
         m = _make_model3d(n_air=2)
         write_mackie3d(m, tmp_path / "m.mac")
         back = read_mackie3d(tmp_path / "m.mac")
-        np.testing.assert_allclose(
-            back.rho_loge[:2], m.rho_loge[:2], rtol=1e-5
-        )
+        np.testing.assert_allclose(back.rho_loge[:2], m.rho_loge[:2], rtol=1e-5)
 
     def test_winglink_footer_present(self, tmp_path):
         from pycsamt.models.modem.iotools.mackie import (
@@ -394,9 +381,7 @@ class TestMackie3DRoundtrip:
         m = _make_model3d()
         write_mackie3d(m, tmp_path / "m.mac", origin=(1000.0, 2000.0, 0.0))
         back = read_mackie3d(tmp_path / "m.mac")
-        np.testing.assert_allclose(
-            back.origin[:2], [1000.0, 2000.0], atol=1.0
-        )
+        np.testing.assert_allclose(back.origin[:2], [1000.0, 2000.0], atol=1.0)
 
     def test_non_uniform_rho_roundtrip(self, tmp_path):
         """Heterogeneous rho grid survives write–read cycle."""

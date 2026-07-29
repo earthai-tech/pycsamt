@@ -294,9 +294,7 @@ def run(
 
     # ── 6. Output ─────────────────────────────────────────────────────────
     if not result.ok and verbose >= 1:
-        click.echo(
-            f"  Warning: {result.n_errors} step(s) raised errors.", err=True
-        )
+        click.echo(f"  Warning: {result.n_errors} step(s) raised errors.", err=True)
 
     summary_text = _format_run_result(result, output_format)
     click.echo(summary_text)

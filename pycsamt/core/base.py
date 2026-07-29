@@ -53,7 +53,6 @@ class CoreObject(PyCSAMTObject):
     ...     def __init__(self):
     ...         self.name = "S001"
     ...         self.data = [1, 2, 3]
-    ...
     >>> P()  # doctest: +ELLIPSIS
     P(name='S001', data=[len=3])
 
@@ -376,7 +375,8 @@ class SupportsToBundle(Protocol):
     avoiding a hard dependency on specific backends.
     """
 
-    def to_bundle(self) -> TFBundle: ...  # noqa: E701
+    def to_bundle(self) -> TFBundle:
+        ...  # noqa: E701
 
 
 class SupportsFromBundle(Protocol):
@@ -393,7 +393,8 @@ class SupportsFromBundle(Protocol):
     """
 
     @classmethod
-    def from_bundle(cls, bundle: TFBundle): ...  # noqa: E701
+    def from_bundle(cls, bundle: TFBundle):
+        ...  # noqa: E701
 
 
 def ensure_station(
@@ -470,8 +471,9 @@ def pick_adapter_key(
 
     Examples
     --------
-    >>> class X: pass
-    >>> X.__module__ = 'pycsamt.zonge.avg'
+    >>> class X:
+    ...     pass
+    >>> X.__module__ = "pycsamt.zonge.avg"
     >>> pick_adapter_key(X())  # zonge path
     'avg'
     """
@@ -541,9 +543,10 @@ def to_edi(
     Register a trivial adapter and convert an object:
 
     >>> from pycsamt.core.config import register_adapter
-    >>> class Dummy: pass
-    >>> Dummy.__module__ = 'pycsamt.zonge.avg'
-    >>> register_adapter('avg', lambda src, **k: {'edi': True})
+    >>> class Dummy:
+    ...     pass
+    >>> Dummy.__module__ = "pycsamt.zonge.avg"
+    >>> register_adapter("avg", lambda src, **k: {"edi": True})
     >>> to_edi(Dummy())
     {'edi': True}
     """
@@ -1063,7 +1066,7 @@ class MTBase(CoreObject):
         --------
         >>> from pycsamt.core.base import MTBase
         >>> import numpy as np
-        >>> Z = np.array([[[0+1j, 2+3j],[4+5j, 6+7j]]], dtype=complex)
+        >>> Z = np.array([[[0 + 1j, 2 + 3j], [4 + 5j, 6 + 7j]]], dtype=complex)
         >>> Phi = MTBase().phase_tensor(Z)
         >>> Phi.shape
         (1, 2, 2)
@@ -1235,7 +1238,7 @@ class MTBase(CoreObject):
         --------
         >>> from pycsamt.core.base import MTBase
         >>> import numpy as np
-        >>> T = np.array([[0.2+0.1j, -0.1+0.3j]])
+        >>> T = np.array([[0.2 + 0.1j, -0.1 + 0.3j]])
         >>> MTBase.tipper_rotate(T, 30.0).shape
         (1, 2)
 
@@ -1292,8 +1295,8 @@ class MTBase(CoreObject):
         --------
         >>> from pycsamt.core.base import MTBase
         >>> import numpy as np
-        >>> T = np.array([[0.2+0.1j, -0.1+0.3j]])
-        >>> ax, ay = MTBase.induction_arrows(T, convention='wiese')
+        >>> T = np.array([[0.2 + 0.1j, -0.1 + 0.3j]])
+        >>> ax, ay = MTBase.induction_arrows(T, convention="wiese")
         >>> ax.shape == ay.shape
         True
 
@@ -1400,8 +1403,8 @@ class MTBase(CoreObject):
         --------
         >>> from pycsamt.core.base import MTBase
         >>> import numpy as np
-        >>> Z = np.array([5.0, 10.0])       # Ω
-        >>> f = np.array([1.0, 0.1])        # Hz
+        >>> Z = np.array([5.0, 10.0])  # Ω
+        >>> f = np.array([1.0, 0.1])  # Hz
         >>> MTBase().apparent_conductivity_from_z(Z, f).shape
         (2,)
 

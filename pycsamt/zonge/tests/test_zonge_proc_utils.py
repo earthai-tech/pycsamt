@@ -88,9 +88,7 @@ class TestProcessingUtils:
     def test_interpolate_to_log_space(self, processing_data_fixture):
         """Test interpolation to a regular frequency grid."""
         df = processing_data_fixture
-        interp_df = interpolate_to_log_space(
-            df, num_points=10, interp_kind="slinear"
-        )
+        interp_df = interpolate_to_log_space(df, num_points=10, interp_kind="slinear")
         assert isinstance(interp_df, pd.DataFrame)
         # 3 stations * 10 frequencies = 30 rows
         assert len(interp_df) == 30
@@ -106,9 +104,7 @@ class TestProcessingUtils:
         assert "rho_smoothed" in smoothed_df.columns
         # With 5 points per station, the result should be valid
         assert pd.notna(smoothed_df["rho_smoothed"]).all()
-        assert not np.allclose(
-            smoothed_df["rho"], smoothed_df["rho_smoothed"]
-        )
+        assert not np.allclose(smoothed_df["rho"], smoothed_df["rho_smoothed"])
 
 
 if __name__ == "__main__":  # pragma: no-cover

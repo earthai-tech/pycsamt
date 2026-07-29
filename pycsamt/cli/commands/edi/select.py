@@ -159,11 +159,7 @@ def select(
 
         def _fmin(e) -> float:
             freq = getattr(e.Z, "freq", None)
-            return (
-                float(freq.min())
-                if freq is not None and freq.size
-                else float("inf")
-            )
+            return float(freq.min()) if freq is not None and freq.size else float("inf")
 
         keep = [e for e in keep if _fmin(e) <= min_freq]
 
@@ -172,27 +168,19 @@ def select(
         def _fmax(e) -> float:
             freq = getattr(e.Z, "freq", None)
             return (
-                float(freq.max())
-                if freq is not None and freq.size
-                else float("-inf")
+                float(freq.max()) if freq is not None and freq.size else float("-inf")
             )
 
         keep = [e for e in keep if _fmax(e) >= max_freq]
 
     if min_nfreq is not None:
-        keep = [
-            e
-            for e in keep
-            if int(getattr(e.Z, "n_freq", 0) or 0) >= min_nfreq
-        ]
+        keep = [e for e in keep if int(getattr(e.Z, "n_freq", 0) or 0) >= min_nfreq]
 
     n_selected = len(keep)
     selected_names = [e.station or "?" for e in keep]
 
     if dry_run:
-        msg = (
-            f"Dry run — {n_selected}/{len(coll)} station(s) match the filter:"
-        )
+        msg = f"Dry run — {n_selected}/{len(coll)} station(s) match the filter:"
         if output_format == "json":
             click.echo(
                 json.dumps(
@@ -211,14 +199,10 @@ def select(
         return
 
     if str(output_dir) == ".":
-        raise click.UsageError(
-            "--output-dir is required (use --dry-run to preview)"
-        )
+        raise click.UsageError("--output-dir is required (use --dry-run to preview)")
 
     if n_selected == 0:
-        click.echo(
-            "No stations match the filter — nothing to export.", err=True
-        )
+        click.echo("No stations match the filter — nothing to export.", err=True)
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -258,8 +242,7 @@ def select(
         "selected": selected_names,
         "written": result.get("successful", []),
         "failed": [
-            {"station": s, "error": str(e)}
-            for s, e in result.get("failed", [])
+            {"station": s, "error": str(e)} for s, e in result.get("failed", [])
         ],
     }
 

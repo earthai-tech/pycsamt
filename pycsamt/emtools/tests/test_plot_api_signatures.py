@@ -26,9 +26,7 @@ def test_all_public_plot_functions_accept_axes_parameter():
 
             params = inspect.signature(obj).parameters
             if not any(
-                param == "ax"
-                or param.startswith("ax_")
-                or param in {"axes", "axs"}
+                param == "ax" or param.startswith("ax_") or param in {"axes", "axs"}
                 for param in params
             ):
                 missing.append(f"{module_name}.{name}")

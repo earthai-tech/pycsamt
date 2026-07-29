@@ -14,16 +14,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 IMAGE_DIR = (
-    ROOT
-    / "docs"
-    / "source"
-    / "images"
-    / "tutorials"
-    / "correct_static_shift"
+    ROOT / "docs" / "source" / "images" / "tutorials" / "correct_static_shift"
 )
 
 
@@ -31,20 +25,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.api import read_edis
-        from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-        from pycsamt.emtools.ss import (
-            _rho_det_from_z,
-            apply_ss_factors,
-            correct_ss_ama,
-            estimate_ss_ama,
-            estimate_ss_bilateral,
-            estimate_ss_loess,
-            estimate_ss_refmedian,
-            plot_ss_delta_profile,
-            plot_ss_delta_psection,
-            plot_ss_station_curves,
-        )
+        pass
 
     return locals()
 
@@ -113,7 +94,9 @@ def _method_comparison_plot(tables) -> None:
     ax.axhline(1.0, color="#27323a", linewidth=1.0)
     ax.axhspan(0.5, 2.0, color="#89b58a", alpha=0.14)
     ax.set_xticks(np.arange(0, len(tables["AMA"]), 2))
-    ax.set_xticklabels(tables["AMA"]["station"].iloc[::2], rotation=45, ha="right")
+    ax.set_xticklabels(
+        tables["AMA"]["station"].iloc[::2], rotation=45, ha="right"
+    )
     ax.set_ylabel("Impedance scale factor")
     ax.set_xlabel("Station")
     ax.set_title("Estimator comparison for the same period band")
@@ -135,7 +118,11 @@ def _logrho_matrix(functions, sites):
         if freqs_ref is None:
             freqs_ref = np.asarray(fr, dtype=float)
         rows.append(np.log10(np.maximum(rho, 1e-24)))
-    return np.asarray(rows, dtype=float), np.asarray(freqs_ref, dtype=float), labels
+    return (
+        np.asarray(rows, dtype=float),
+        np.asarray(freqs_ref, dtype=float),
+        labels,
+    )
 
 
 def _compare_plots(functions, sites, corrected, factors) -> None:
@@ -145,7 +132,9 @@ def _compare_plots(functions, sites, corrected, factors) -> None:
     periods = 1.0 / freqs
     order = np.argsort(np.log10(periods))
 
-    fig, axes = plt.subplots(2, 1, figsize=(11.2, 8.4), constrained_layout=True)
+    fig, axes = plt.subplots(
+        2, 1, figsize=(11.2, 8.4), constrained_layout=True
+    )
     ax = axes[0]
     x = np.arange(len(labels))
     station_delta = np.nanmedian(delta, axis=1)
@@ -182,9 +171,9 @@ def _compare_plots(functions, sites, corrected, factors) -> None:
     _save(fig, "before_after_delta_grid.png")
 
     station = str(
-        factors.reindex(factors["delta_log10_rho"].abs().sort_values(ascending=False).index)
-        ["station"]
-        .iloc[0]
+        factors.reindex(
+            factors["delta_log10_rho"].abs().sort_values(ascending=False).index
+        )["station"].iloc[0]
     )
     ax = functions["plot_ss_station_curves"](
         sites,
@@ -313,9 +302,15 @@ def main() -> int:
     print(f"one_step_sites_type: {type(one_step).__name__}")
     print("method_head_fac_z:")
     joined = factors[["station", "fac_z"]].rename(columns={"fac_z": "ama"})
-    joined = joined.merge(loess[["station", "fac_z"]].rename(columns={"fac_z": "loess"}))
-    joined = joined.merge(refmedian[["station", "fac_z"]].rename(columns={"fac_z": "refmedian"}))
-    joined = joined.merge(bilateral[["station", "fac_z"]].rename(columns={"fac_z": "bilateral"}))
+    joined = joined.merge(
+        loess[["station", "fac_z"]].rename(columns={"fac_z": "loess"})
+    )
+    joined = joined.merge(
+        refmedian[["station", "fac_z"]].rename(columns={"fac_z": "refmedian"})
+    )
+    joined = joined.merge(
+        bilateral[["station", "fac_z"]].rename(columns={"fac_z": "bilateral"})
+    )
     print(joined.head(6).to_string(index=False))
     print(f"images: {IMAGE_DIR.relative_to(ROOT)}")
     return 0

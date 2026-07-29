@@ -125,9 +125,7 @@ def test_detect_transmitter_frequencies_finds_present_lines():
 
 def test_detect_transmitter_frequencies_above_nyquist_undetected():
     fs = 256.0
-    comb = detect_transmitter_frequencies(
-        _comb_signal(fs, [16.0]), fs, [16.0, 200.0]
-    )
+    comb = detect_transmitter_frequencies(_comb_signal(fs, [16.0]), fs, [16.0, 200.0])
     line = next(ln for ln in comb.lines if ln.frequency_hz == 200.0)
     assert not line.detected  # above Nyquist (128 Hz)
 
@@ -161,9 +159,7 @@ def test_assess_source_stability_flags_unstable():
 
 def test_assess_source_stability_on_off_keying():
     # on/off-keyed source: on-state statistics ignore the off samples
-    current = np.concatenate(
-        [np.full(100, 10.0), np.zeros(40), np.full(100, 10.0)]
-    )
+    current = np.concatenate([np.full(100, 10.0), np.zeros(40), np.full(100, 10.0)])
     st = assess_source_stability(current)
     assert st.on_fraction == pytest.approx(200 / 240, abs=1e-6)
     assert st.stable  # on-state current is steady

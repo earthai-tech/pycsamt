@@ -34,7 +34,7 @@ Single 1-D sounding::
     import numpy as np
 
     model = LayeredModel([100, 10, 500], [300, 800])
-    resp  = MT1DForward(np.logspace(-3, 3, 30)).run(model)
+    resp = MT1DForward(np.logspace(-3, 3, 30)).run(model)
 
     fig = plot_response_and_model_1d(resp, model, title="My 1-D model")
     fig.savefig("model_1d.png", dpi=150, bbox_inches="tight")
@@ -352,9 +352,7 @@ def plot_model_1d(
         thick = model.thickness
         depth_top = np.concatenate([[0.0], np.cumsum(thick)])
         d_max = depth_max or (
-            float(depth_top[-1] + thick[-1]) * 1.2
-            if len(thick)
-            else float(rho[0]) * 2
+            float(depth_top[-1] + thick[-1]) * 1.2 if len(thick) else float(rho[0]) * 2
         )
 
         depth_bot = np.concatenate([depth_top[1:], [d_max]])
@@ -364,9 +362,7 @@ def plot_model_1d(
         ys[1::2] = depth_bot
 
         lab = (
-            labels[k]
-            if labels and k < len(labels)
-            else model.name or f"model {k + 1}"
+            labels[k] if labels and k < len(labels) else model.name or f"model {k + 1}"
         )
         ax.plot(
             xs,
@@ -532,16 +528,8 @@ def plot_model_2d(
     xs = grid.core_x_slice if clip_core else slice(None)
     zs = grid.core_z_slice if clip_core else slice(None)
     rho = grid.resistivity[zs, xs]
-    xn = (
-        grid.x_nodes[p : grid.nx + 1 - p]
-        if clip_core and p > 0
-        else grid.x_nodes
-    )
-    zn = (
-        grid.z_nodes[: grid.nz + 1 - p]
-        if clip_core and p > 0
-        else grid.z_nodes
-    )
+    xn = grid.x_nodes[p : grid.nx + 1 - p] if clip_core and p > 0 else grid.x_nodes
+    zn = grid.z_nodes[: grid.nz + 1 - p] if clip_core and p > 0 else grid.z_nodes
 
     if log_scale:
         data = np.log10(np.maximum(rho, 1e-12))
@@ -646,9 +634,7 @@ def plot_pseudosection_2d(
     if quantity == "rho_a":
         data_c = np.log10(np.maximum(data_raw, 1e-12))
         default_cmap = "jet_r"
-        cb_label = (
-            r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  " + f"[{mode.upper()}]"
-        )
+        cb_label = r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  " + f"[{mode.upper()}]"
     else:
         data_c = _phase_vals(data_raw)
         default_cmap = "RdBu_r"
@@ -671,9 +657,7 @@ def plot_pseudosection_2d(
             [x_vals[-1] + dx_half[-1]],
         ]
     )
-    dy_half = (
-        np.abs(np.diff(y_vals)) / 2.0 if len(y_vals) > 1 else np.array([0.2])
-    )
+    dy_half = np.abs(np.diff(y_vals)) / 2.0 if len(y_vals) > 1 else np.array([0.2])
     y_edges = np.concatenate(
         [
             [y_vals[0] - dy_half[0]],
@@ -708,9 +692,7 @@ def plot_pseudosection_2d(
     ax.set_ylabel(r"$\log_{10}T$  (s)", fontsize=9)
     # Make sure higher periods (deeper) are at top (reversed y-axis is NOT
     # standard for pseudo-sections — low period = shallow = top)
-    if (
-        y_vals[0] > y_vals[-1]
-    ):  # frequencies sorted high → low → periods low→high
+    if y_vals[0] > y_vals[-1]:  # frequencies sorted high → low → periods low→high
         ax.invert_yaxis()
 
     # Station axis via PYCSAMT_STATION_RENDERING
@@ -785,20 +767,16 @@ def plot_response_profiles(
     if alpha is _UNSET:
         alpha = _ml.alpha
 
-    attr = (
-        f"rho_a_{mode.lower()}"
-        if quantity == "rho_a"
-        else f"phase_{mode.lower()}"
-    )
+    attr = f"rho_a_{mode.lower()}" if quantity == "rho_a" else f"phase_{mode.lower()}"
     data = getattr(response, attr)  # (n_freqs, n_stations)
     freqs = response.freqs
     st_x = response.stations_x
 
     nf = len(freqs)
     if freq_indices is None:
-        freq_indices = np.round(
-            np.linspace(0, nf - 1, min(n_freqs_shown, nf))
-        ).astype(int)
+        freq_indices = np.round(np.linspace(0, nf - 1, min(n_freqs_shown, nf))).astype(
+            int
+        )
     freq_indices = list(freq_indices)
 
     colors = _ml.colors(len(freq_indices))
@@ -884,21 +862,9 @@ def plot_model_3d(
     cy = slice(p, grid3d.ny - p) if (clip_core and p) else slice(None)
     cz = slice(None, grid3d.nz - p) if (clip_core and p) else slice(None)
 
-    xn = (
-        grid3d.x_nodes[p : grid3d.nx + 1 - p]
-        if (clip_core and p)
-        else grid3d.x_nodes
-    )
-    yn = (
-        grid3d.y_nodes[p : grid3d.ny + 1 - p]
-        if (clip_core and p)
-        else grid3d.y_nodes
-    )
-    zn = (
-        grid3d.z_nodes[: grid3d.nz + 1 - p]
-        if (clip_core and p)
-        else grid3d.z_nodes
-    )
+    xn = grid3d.x_nodes[p : grid3d.nx + 1 - p] if (clip_core and p) else grid3d.x_nodes
+    yn = grid3d.y_nodes[p : grid3d.ny + 1 - p] if (clip_core and p) else grid3d.y_nodes
+    zn = grid3d.z_nodes[: grid3d.nz + 1 - p] if (clip_core and p) else grid3d.z_nodes
 
     mid_y = p + (grid3d.ny - 2 * p) // 2 if p else grid3d.ny // 2
     mid_x = p + (grid3d.nx - 2 * p) // 2 if p else grid3d.nx // 2
@@ -954,9 +920,7 @@ def plot_model_3d(
             vmin=vmin,
             vmax=vmax,
         )
-        _add_colorbar(
-            fig, ax, pc, clabel, fontsize=7.5, pad=0.02, shrink=0.92
-        )
+        _add_colorbar(fig, ax, pc, clabel, fontsize=7.5, pad=0.02, shrink=0.92)
         if ylb == "z (m)":
             ax.invert_yaxis()
         ax.set_xlabel(xlb, fontsize=8)
@@ -976,9 +940,7 @@ def plot_model_3d(
         )
         axs[2].legend(fontsize=7, framealpha=0.7, loc="upper right")
 
-    fig.suptitle(
-        title or (grid3d.name or "3-D resistivity model"), fontsize=10, y=1.01
-    )
+    fig.suptitle(title or (grid3d.name or "3-D resistivity model"), fontsize=10, y=1.01)
     return np.array(axs)
 
 
@@ -1034,10 +996,7 @@ def plot_response_map_3d(
     if quantity == "rho_a":
         data_c = np.log10(np.maximum(raw, 1e-12))
         default_cmap = "jet_r"
-        cb_label = (
-            r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  "
-            f"[Z_{comp.upper()}]"
-        )
+        cb_label = r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  " f"[Z_{comp.upper()}]"
     else:
         data_c = _phase_vals(raw)
         default_cmap = "RdBu_r"
@@ -1066,9 +1025,7 @@ def plot_response_map_3d(
         linewidths=0.6,
         zorder=4,
     )
-    _add_cb(
-        sc, ax, label=cb_label, side="right", size="4%", pad=0.06, max_ticks=6
-    )
+    _add_cb(sc, ax, label=cb_label, side="right", size="4%", pad=0.06, max_ticks=6)
 
     if show_labels:
         for i, (xi, yi) in enumerate(zip(x_st, y_st)):
@@ -1087,8 +1044,7 @@ def plot_response_map_3d(
     ax.set_ylabel("y  (m)", fontsize=9)
     ax.set_aspect("equal")
     ax.set_title(
-        title
-        or (f"Map view — {quantity}  [Z_{comp.upper()}]  T = {per:.3g} s"),
+        title or (f"Map view — {quantity}  [Z_{comp.upper()}]  T = {per:.3g} s"),
         fontsize=10,
         pad=6,
     )
@@ -1166,10 +1122,7 @@ def plot_response_section_3d(
     if quantity == "rho_a":
         data_c = np.log10(np.maximum(data_s, 1e-12))
         default_cmap = "jet_r"
-        cb_label = (
-            r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  "
-            f"[Z_{comp.upper()}]"
-        )
+        cb_label = r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  " f"[Z_{comp.upper()}]"
     else:
         data_c = _phase_vals(data_s)
         default_cmap = "RdBu_r"

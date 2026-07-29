@@ -23,9 +23,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -59,17 +57,13 @@ class TestToggleTheme:
         assert new_theme == "dark"
         assert label == "☾ Theme"
 
-    def test_none_current_theme_defaults_to_dark_then_toggles_light(
-        self, web_app
-    ):
+    def test_none_current_theme_defaults_to_dark_then_toggles_light(self, web_app):
         # current_theme=None -> treated as "dark" -> toggles to "light"
         new_theme, label = self._fn(web_app)(1, None)
         assert new_theme == "light"
         assert label == "☀ Theme"
 
-    def test_unknown_current_theme_treated_as_light_toggles_dark(
-        self, web_app
-    ):
+    def test_unknown_current_theme_treated_as_light_toggles_dark(self, web_app):
         # Any value other than "dark" is treated as "light" by the ternary,
         # so an unrecognised string still toggles deterministically to dark.
         new_theme, label = self._fn(web_app)(1, "sepia")

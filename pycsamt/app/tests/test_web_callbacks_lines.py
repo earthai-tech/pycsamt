@@ -29,9 +29,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -83,9 +81,7 @@ class TestInitActiveLines:
         out = self._fn(web_app)(STORE_TWO_LINES, prev, "replace")
         assert out == {"active": ["L1", "L2"], "all": ["L1", "L2"]}
 
-    def test_append_mode_preserves_prior_choices_new_lines_active(
-        self, web_app
-    ):
+    def test_append_mode_preserves_prior_choices_new_lines_active(self, web_app):
         prev = {"active": ["L1"], "all": ["L1", "L2"]}
         store = {
             "station_records": _records(
@@ -101,9 +97,7 @@ class TestInitActiveLines:
         assert set(out["active"]) == {"L1", "L3"}
         assert set(out["all"]) == {"L1", "L2", "L3"}
 
-    def test_append_mode_without_prior_all_falls_back_to_replace(
-        self, web_app
-    ):
+    def test_append_mode_without_prior_all_falls_back_to_replace(self, web_app):
         out = self._fn(web_app)(STORE_TWO_LINES, {"active": [], "all": []}, "append")
         assert out == {"active": ["L1", "L2"], "all": ["L1", "L2"]}
 
@@ -154,9 +148,7 @@ class TestSyncModeUi:
 
 class TestDetectLinesAuto:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.STORE_DATA}.data", IDs.BTN_LINES_DETECT
-        )
+        return _cb_by_input(web_app, f"{IDs.STORE_DATA}.data", IDs.BTN_LINES_DETECT)
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest_raises_prevent_update():
@@ -216,7 +208,9 @@ class TestApplyRenames:
         # new name equals original -> no rename recorded -> PreventUpdate
         with pytest_raises_prevent_update():
             self._fn(web_app)(
-                1, ["L1", "L2"], [{"index": "L1"}, {"index": "L2"}],
+                1,
+                ["L1", "L2"],
+                [{"index": "L1"}, {"index": "L2"}],
                 STORE_TWO_LINES,
             )
 
@@ -257,24 +251,28 @@ class TestBuildLinesPanel:
         assert "Detect Lines" in out.children
 
     def test_builds_rows_for_each_line(self, web_app):
-        out = self._fn(web_app)(
-            True, STORE_TWO_LINES, "folder", None, "dark"
-        )
+        out = self._fn(web_app)(True, STORE_TWO_LINES, "folder", None, "dark")
         rows_container = out[0]
         assert len(rows_container.children) == 2
 
     def test_edit_mode_shows_rename_inputs_and_footer(self, web_app):
         out = self._fn(web_app)(
-            True, STORE_TWO_LINES, "edit",
-            {"active": ["L1", "L2"]}, "dark",
+            True,
+            STORE_TWO_LINES,
+            "edit",
+            {"active": ["L1", "L2"]},
+            "dark",
         )
         assert len(out) == 2  # rows container + footer hint
         assert "Apply Renames" in out[1].children
 
     def test_auto_mode_shows_detected_footer(self, web_app):
         out = self._fn(web_app)(
-            True, STORE_TWO_LINES, "auto",
-            {"active": ["L1", "L2"]}, "dark",
+            True,
+            STORE_TWO_LINES,
+            "auto",
+            {"active": ["L1", "L2"]},
+            "dark",
         )
         assert "detected from station ID prefixes" in out[1].children
 
@@ -284,9 +282,7 @@ class TestBuildLinesPanel:
 
 class TestSyncActiveLines:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.STORE_ACTIVE_LINES}.data", "line-switch"
-        )
+        return _cb_by_input(web_app, f"{IDs.STORE_ACTIVE_LINES}.data", "line-switch")
 
     def test_no_trigger_no_update(self, monkeypatch, web_app):
         import pycsamt.app.web.callbacks.lines as lines_mod
@@ -304,8 +300,14 @@ class TestSyncActiveLines:
         class _FakeCtx:
             inputs_list = [
                 [
-                    {"id": {"type": "line-switch", "index": "L1"}, "value": True},
-                    {"id": {"type": "line-switch", "index": "L2"}, "value": False},
+                    {
+                        "id": {"type": "line-switch", "index": "L1"},
+                        "value": True,
+                    },
+                    {
+                        "id": {"type": "line-switch", "index": "L2"},
+                        "value": False,
+                    },
                 ]
             ]
 
@@ -321,14 +323,16 @@ class TestSyncActiveLines:
 
 class TestAllOrNone:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "line-switch", IDs.BTN_LINES_ALL
-        )
+        return _cb_by_input(web_app, "line-switch", IDs.BTN_LINES_ALL)
 
     def test_no_switch_ids_no_update(self, monkeypatch, web_app):
         import pycsamt.app.web.callbacks.lines as lines_mod
 
-        monkeypatch.setattr(lines_mod, "ctx", type("C", (), {"triggered_id": IDs.BTN_LINES_ALL})())
+        monkeypatch.setattr(
+            lines_mod,
+            "ctx",
+            type("C", (), {"triggered_id": IDs.BTN_LINES_ALL})(),
+        )
         out = self._fn(web_app)(1, None, [])
         assert out is no_update
 
@@ -336,10 +340,17 @@ class TestAllOrNone:
         import pycsamt.app.web.callbacks.lines as lines_mod
 
         monkeypatch.setattr(
-            lines_mod, "ctx", type("C", (), {"triggered_id": IDs.BTN_LINES_ALL})()
+            lines_mod,
+            "ctx",
+            type("C", (), {"triggered_id": IDs.BTN_LINES_ALL})(),
         )
         out = self._fn(web_app)(
-            1, None, [{"type": "line-switch", "index": "L1"}, {"type": "line-switch", "index": "L2"}]
+            1,
+            None,
+            [
+                {"type": "line-switch", "index": "L1"},
+                {"type": "line-switch", "index": "L2"},
+            ],
         )
         assert out == [True, True]
 
@@ -347,20 +358,20 @@ class TestAllOrNone:
         import pycsamt.app.web.callbacks.lines as lines_mod
 
         monkeypatch.setattr(
-            lines_mod, "ctx", type("C", (), {"triggered_id": IDs.BTN_LINES_NONE})()
+            lines_mod,
+            "ctx",
+            type("C", (), {"triggered_id": IDs.BTN_LINES_NONE})(),
         )
-        out = self._fn(web_app)(
-            None, 1, [{"type": "line-switch", "index": "L1"}]
-        )
+        out = self._fn(web_app)(None, 1, [{"type": "line-switch", "index": "L1"}])
         assert out == [False]
 
     def test_unrelated_trigger_no_update(self, monkeypatch, web_app):
         import pycsamt.app.web.callbacks.lines as lines_mod
 
         monkeypatch.setattr(
-            lines_mod, "ctx", type("C", (), {"triggered_id": "something-else"})()
+            lines_mod,
+            "ctx",
+            type("C", (), {"triggered_id": "something-else"})(),
         )
-        out = self._fn(web_app)(
-            1, 1, [{"type": "line-switch", "index": "L1"}]
-        )
+        out = self._fn(web_app)(1, 1, [{"type": "line-switch", "index": "L1"}])
         assert out is no_update

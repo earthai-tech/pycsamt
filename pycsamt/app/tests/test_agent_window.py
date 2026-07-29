@@ -321,7 +321,9 @@ class TestFormatResultHtml:
         assert "Warnings (2)" in html
 
     def test_error_status_badge(self):
-        result = SimpleNamespace(status="error", elapsed_seconds=None, cost_estimate_usd=None)
+        result = SimpleNamespace(
+            status="error", elapsed_seconds=None, cost_estimate_usd=None
+        )
         html = _format_result_html(result)
         assert "ERROR" in html
 
@@ -387,9 +389,7 @@ class TestAgentSelection:
     def test_select_llm_agent_shows_context_and_apikey(self, win):
         from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY
 
-        llm_name = next(
-            n for n, e in AGENT_REGISTRY.items() if e["type"] == "llm"
-        )
+        llm_name = next(n for n, e in AGENT_REGISTRY.items() if e["type"] == "llm")
         win._on_agent_selected(llm_name)
         assert win._grp_context.isVisible()
         assert win._grp_apikey.isVisible()
@@ -415,11 +415,7 @@ class TestParamForm:
     def test_rebuild_form_with_params(self, win):
         from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY
 
-        name = next(
-            n
-            for n, e in AGENT_REGISTRY.items()
-            if e.get("params")
-        )
+        name = next(n for n, e in AGENT_REGISTRY.items() if e.get("params"))
         win._rebuild_params_form(name)
         assert win._grp_params.isVisible()
         assert len(win._params_widgets) == len(AGENT_REGISTRY[name]["params"])
@@ -440,9 +436,7 @@ class TestParamForm:
         )
         assert fl.value() == pytest.approx(3.5)
 
-        it = win._make_param_widget(
-            {"type": "int", "range": (0, 100), "default": 7}
-        )
+        it = win._make_param_widget({"type": "int", "range": (0, 100), "default": 7})
         assert it.value() == 7
 
         bl = win._make_param_widget({"type": "bool", "default": True})
@@ -454,9 +448,7 @@ class TestParamForm:
     def test_collect_params_includes_context(self, win):
         from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY
 
-        name = next(
-            n for n, e in AGENT_REGISTRY.items() if e.get("params")
-        )
+        name = next(n for n, e in AGENT_REGISTRY.items() if e.get("params"))
         win._current_agent = name
         win._rebuild_params_form(name)
         win._ctx_edit.setPlainText("semi-arid terrain")
@@ -467,9 +459,7 @@ class TestParamForm:
     def test_collect_params_no_context(self, win):
         from pycsamt.app.desktop.agent_registry import AGENT_REGISTRY
 
-        name = next(
-            n for n, e in AGENT_REGISTRY.items() if e.get("params")
-        )
+        name = next(n for n, e in AGENT_REGISTRY.items() if e.get("params"))
         win._current_agent = name
         win._rebuild_params_form(name)
         vals = win._collect_params()
@@ -694,8 +684,6 @@ class TestChat:
 class TestSetDarkMode:
     def test_set_dark_mode_applies_theme_to_browser(self, win, monkeypatch):
         calls = []
-        monkeypatch.setattr(
-            win._browser, "apply_theme", lambda d: calls.append(d)
-        )
+        monkeypatch.setattr(win._browser, "apply_theme", lambda d: calls.append(d))
         win.set_dark_mode(False)
         assert calls == [False]

@@ -149,9 +149,7 @@ plot_frequency_edit_decisions(
     ci_lo=ci_lo,
     ax=axs[1],
 )
-fig.suptitle(
-    "Policy A: permissive drop of clearly rejected rows", fontsize=12
-)
+fig.suptitle("Policy A: permissive drop of clearly rejected rows", fontsize=12)
 fig.tight_layout()
 
 # %%

@@ -105,12 +105,8 @@ class PINNInversionAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent = PINNInversionAgent(
-    ...     dim=1, n_layers=10, epochs=200
-    ... )
-    >>> res = agent.execute(
-    ...     {"path": "/data/L22PLT"}
-    ... )
+    >>> agent = PINNInversionAgent(dim=1, n_layers=10, epochs=200)
+    >>> res = agent.execute({"path": "/data/L22PLT"})
     >>> res["rms_global"]
     0.18
     """
@@ -178,9 +174,7 @@ class PINNInversionAgent(BaseAgent):
         dim = int(input_data.get("dim", self.dim))
         n_layers = int(input_data.get("n_layers", self.n_layers))
         depth_max = float(input_data.get("depth_max", self.depth_max))
-        epochs = int(
-            input_data.get("epochs", self.epochs) or _DEF_EPOCHS.get(dim, 300)
-        )
+        epochs = int(input_data.get("epochs", self.epochs) or _DEF_EPOCHS.get(dim, 300))
         output_dir = input_data.get("output_dir")
 
         sites_raw = input_data.get("sites") or input_data.get("path")
@@ -296,9 +290,7 @@ class PINNInversionAgent(BaseAgent):
                 warns.append(f"predict(): {exc}")
 
         elapsed = time.time() - t0
-        rms_str = (
-            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
-        )
+        rms_str = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
         return AgentResult(
             status=("success" if n_st > 0 else "needs_review"),
             summary=(

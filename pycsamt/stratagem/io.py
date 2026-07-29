@@ -224,9 +224,9 @@ class StratagemRawReader(PyCSAMTObject):
     Examples
     --------
     >>> rdr = StratagemRawReader("原始数据/2HX").fit()
-    >>> rdr.snr_mask_.shape   # (n_stations, n_freqs)
+    >>> rdr.snr_mask_.shape  # (n_stations, n_freqs)
     (87, 292)
-    >>> good = rdr.snr_mask_.sum(axis=1)   # usable freqs per station
+    >>> good = rdr.snr_mask_.sum(axis=1)  # usable freqs per station
     """
 
     __repr_fields__ = ("station_dir", "component", "n_stations_", "n_freqs_")
@@ -267,9 +267,7 @@ class StratagemRawReader(PyCSAMTObject):
         if not d.is_dir():
             raise FileHandlingError(f"Directory not found: {d}")
 
-        components = (
-            ["X", "Y", "Z"] if self.component == "ALL" else [self.component]
-        )
+        components = ["X", "Y", "Z"] if self.component == "ALL" else [self.component]
 
         # collect station files for the primary component (always X-first)
         # Note: Stratagem uses the extension as the station number (X2HX.001,
@@ -311,9 +309,7 @@ class StratagemRawReader(PyCSAMTObject):
                     d.glob(f"{comp}*.*"),
                     key=lambda p: _station_number(p.name),
                 )
-                comp_files = [
-                    f for f in comp_files if _station_number(f.name) > 0
-                ]
+                comp_files = [f for f in comp_files if _station_number(f.name) > 0]
                 if comp_files:
                     _, cm, cs = _build_masks(comp_files)
                     self.component_masks_[comp] = (cm, cs)
@@ -379,7 +375,7 @@ class StratagemRawReader(PyCSAMTObject):
         Examples
         --------
         >>> mapping = rdr.match_to_edis(batch.edi_objects_)
-        >>> mapping[0]   # raw index for the first EDI station
+        >>> mapping[0]  # raw index for the first EDI station
         1
         """
         if not hasattr(self, "station_numbers_"):
@@ -420,9 +416,7 @@ class StratagemRawReader(PyCSAMTObject):
             raise NotFittedError("Call fit() first.")
 
         usable = self.snr_mask_.sum(axis=1)
-        valid_stacks = np.where(
-            self.stack_counts_ > 0, self.stack_counts_, np.nan
-        )
+        valid_stacks = np.where(self.stack_counts_ > 0, self.stack_counts_, np.nan)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             med_stacks = np.nanmedian(valid_stacks, axis=1)
@@ -457,9 +451,7 @@ class StratagemRawReader(PyCSAMTObject):
             raise NotFittedError("Call fit() first.")
 
         stations_ok = self.snr_mask_.sum(axis=0)
-        valid_stacks = np.where(
-            self.stack_counts_ > 0, self.stack_counts_, np.nan
-        )
+        valid_stacks = np.where(self.stack_counts_ > 0, self.stack_counts_, np.nan)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             med_stacks = np.nanmedian(valid_stacks, axis=0)
@@ -486,7 +478,7 @@ class StratagemRawReader(PyCSAMTObject):
         Examples
         --------
         >>> audit = rdr.stack_audit()
-        >>> audit.loc["X2HX.005"]          # one station across all freqs
+        >>> audit.loc["X2HX.005"]  # one station across all freqs
         >>> (audit > 0).sum(axis=1).plot()  # usable freqs per station
         """
         if not hasattr(self, "stack_counts_"):
@@ -532,11 +524,7 @@ class StratagemRawReader(PyCSAMTObject):
 
         import matplotlib.pyplot as plt  # noqa: PLC0415 – optional dep
 
-        data = (
-            self.snr_mask_.astype(float)
-            if kind == "snr"
-            else self.stack_counts_
-        )
+        data = self.snr_mask_.astype(float) if kind == "snr" else self.stack_counts_
 
         fig, ax = plt.subplots(figsize=figsize or (12, 5))
 
@@ -555,9 +543,7 @@ class StratagemRawReader(PyCSAMTObject):
         )
         fig.colorbar(im, ax=ax, label="Valid" if kind == "snr" else "Stacks")
 
-        ax.set_xlabel(
-            "log₁₀ Frequency (Hz)" if log_freq else "Frequency (Hz)"
-        )
+        ax.set_xlabel("log₁₀ Frequency (Hz)" if log_freq else "Frequency (Hz)")
         ax.set_ylabel("Station index")
         ax.set_title(
             title
@@ -603,7 +589,7 @@ class EDIBatch(PyCSAMTObject):
     >>> batch = EDIBatch("2/2EDI").fit()
     >>> len(batch)
     87
-    >>> batch[0].station          # DATAID from >HEAD
+    >>> batch[0].station  # DATAID from >HEAD
     'S00'
     >>> for edi in batch:
     ...     print(edi.station)
@@ -649,9 +635,7 @@ class EDIBatch(PyCSAMTObject):
 
         paths = sorted(d.glob(self.pattern), key=_edi_sort_key)
         if not paths:
-            raise FileHandlingError(
-                f"No EDI files matching '{self.pattern}' in {d}"
-            )
+            raise FileHandlingError(f"No EDI files matching '{self.pattern}' in {d}")
 
         self.edi_paths_: list[Path] = paths
         self.edi_objects_: list[EDIFile] = []

@@ -139,11 +139,7 @@ def register_line_sel(app) -> None:
         # Replace line-waiting bubble if present
         _replaced = False
         for i, c in enumerate(msgs):
-            cid = (
-                c.get("props", {}).get("id", "")
-                if isinstance(c, dict)
-                else ""
-            )
+            cid = c.get("props", {}).get("id", "") if isinstance(c, dict) else ""
             if cid == "am-line-waiting-bubble":
                 _replaced = True
                 # Check if param modal needed

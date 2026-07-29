@@ -260,6 +260,21 @@ def test_run_config_json_strict_unknown_keys(tmp_path):
     assert loaded.inversion.solver == "mt1d"
 
 
+@pytest.mark.parametrize("suffix", [".py", ".json", ".yml"])
+def test_run_config_templates_are_utf8_roundtrips(tmp_path, suffix):
+    path = tmp_path / f"unicode_run{suffix}"
+    written = RunConfig.write_template(
+        path,
+        name="résistivité",
+        description="Frequency–depth contract in Ω·m",
+    )
+
+    text = written.read_text(encoding="utf-8")
+    assert "résistivité" in text
+    loaded = RunConfig.from_file(written)
+    loaded.validate()
+
+
 def test_em_inverter_2d_interface_without_backend():
     inv = EMInverter2D(
         n_components=3,

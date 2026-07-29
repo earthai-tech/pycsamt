@@ -21,8 +21,11 @@ mesh cells drape over the terrain.
 Typical usage::
 
     from pycsamt.topo.drape import interp_elev, drape_section
+
     elev_at_x = interp_elev(chain_km, elev_km, x_centres_km)
-    x_nodes, z_draped, data = drape_section(x_nodes, z_nodes, rho_2d, elev_at_x)
+    x_nodes, z_draped, data = drape_section(
+        x_nodes, z_nodes, rho_2d, elev_at_x
+    )
     ax.pcolormesh(x_nodes, z_draped, data, ...)
 """
 
@@ -101,9 +104,7 @@ def interp_elev(
 
     # numpy linear / nearest
     if method == "nearest":
-        idx = np.argmin(
-            np.abs(x_query_km[:, np.newaxis] - c[np.newaxis, :]), axis=1
-        )
+        idx = np.argmin(np.abs(x_query_km[:, np.newaxis] - c[np.newaxis, :]), axis=1)
         return e[idx]
 
     # default: linear with clamped extrapolation
@@ -188,8 +189,7 @@ def drape_section(
     # Build 2-D draped z grid  (nz+1, nx+1)
     # Broadcasting: rows = depth nodes, cols = x nodes
     z_draped = (
-        elev_nodes[np.newaxis, :]  # (1, nx+1)
-        - z_nodes[:, np.newaxis] * exaggeration
+        elev_nodes[np.newaxis, :] - z_nodes[:, np.newaxis] * exaggeration  # (1, nx+1)
     )  # (nz+1, 1)
 
     data_out = data.copy()

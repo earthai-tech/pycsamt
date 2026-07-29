@@ -113,9 +113,7 @@ def test_get_period_list_inside_range_stays_within_bounds():
     assert periods[-1] <= 50.0
 
 
-@pytest.mark.parametrize(
-    "pmin, pmax", [(-1.0, 10.0), (0.0, 10.0), (10.0, 1.0)]
-)
+@pytest.mark.parametrize("pmin, pmax", [(-1.0, 10.0), (0.0, 10.0), (10.0, 1.0)])
 def test_get_period_list_invalid_bounds_raise(pmin, pmax):
     with pytest.raises(PeriodListError):
         get_period_list(pmin, pmax, 4)
@@ -153,9 +151,7 @@ def test_make_log_increasing_array_contract():
         dict(z1_layer=-1.0, target_depth=10.0, n_layers=5),
         dict(z1_layer=1.0, target_depth=0.0, n_layers=5),
         dict(z1_layer=1.0, target_depth=10.0, n_layers=0),
-        dict(
-            z1_layer=1.0, target_depth=10.0, n_layers=5, increment_factor=1.5
-        ),
+        dict(z1_layer=1.0, target_depth=10.0, n_layers=5, increment_factor=1.5),
     ],
 )
 def test_make_log_increasing_array_invalid_inputs(kwargs):
@@ -232,9 +228,7 @@ def test_compute_determinant_error_stochastic_finite():
         np.random.seed(0)
         z = np.array([[1 + 1j, 2 + 0j], [0 + 1j, 3 + 3j]])
         err = np.full((2, 2), 0.05)
-        error, _ = compute_determinant_error(
-            z, err, method="stochastic", repeats=200
-        )
+        error, _ = compute_determinant_error(z, err, method="stochastic", repeats=200)
         assert np.isfinite(error)
         assert error > 0
     finally:
@@ -360,9 +354,7 @@ def test_multiplymatrices_bad_inputs_raise():
     with pytest.raises(MatrixMultiplyError):
         multiplymatrices_incl_errors(np.eye(2), np.ones((2, 3)))
     with pytest.raises(MatrixMultiplyError):
-        multiplymatrices_incl_errors(
-            np.eye(2), np.eye(2), np.ones((3, 3)), np.eye(2)
-        )
+        multiplymatrices_incl_errors(np.eye(2), np.eye(2), np.ones((3, 3)), np.eye(2))
 
 
 # ---------------------------- reorient_data2D -------------------------
@@ -436,9 +428,7 @@ def test_rhophi_to_z_missing_inputs_raise():
     with pytest.raises(ImpedanceConversionError):
         rhophi_to_z(np.array([0.1]), np.array([1.0]))
     with pytest.raises(EmptyArrayError):
-        rhophi_to_z(
-            np.array([]), np.array([1.0]), resistivity=np.array([1.0])
-        )
+        rhophi_to_z(np.array([]), np.array([1.0]), resistivity=np.array([1.0]))
 
 
 # ---------------------------- z_err_to_rphi_err -----------------------

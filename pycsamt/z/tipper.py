@@ -113,8 +113,8 @@ class Tipper(BaseEM):
 
     >>> import numpy as np
     >>> from pycsamt.z.tipper import Tipper
-    >>> T = np.array([[1+1j, 0+1j]])
-    >>> tip = Tipper(tipper_array=T)          # (1, 2)
+    >>> T = np.array([[1 + 1j, 0 + 1j]])
+    >>> tip = Tipper(tipper_array=T)  # (1, 2)
     >>> tip.amplitude.shape, tip.phase.shape
     ((1, 1, 2), (1, 1, 2))
 
@@ -125,9 +125,9 @@ class Tipper(BaseEM):
     >>> Tarr[0, 0, 0] = -np.cos(th) + 0j
     >>> Tarr[0, 0, 1] = -np.sin(th) + 0j
     >>> tip = Tipper(tipper_array=Tarr)
-    >>> float(tip.mag_real[0])                # doctest: +ELLIPSIS
+    >>> float(tip.mag_real[0])  # doctest: +ELLIPSIS
     1.0
-    >>> float(tip.angle_real[0])              # doctest: +ELLIPSIS
+    >>> float(tip.angle_real[0])  # doctest: +ELLIPSIS
     30.0
 
     See Also
@@ -182,9 +182,7 @@ class Tipper(BaseEM):
         if freq is not None:
             self.freq = freq
 
-        if self._tipper is not None and isinstance(
-            self.rotation_angle, float
-        ):
+        if self._tipper is not None and isinstance(self.rotation_angle, float):
             self.rotation_angle = np.zeros(self._tipper.shape[0], dtype=float)
 
         if self._tipper is not None:
@@ -208,14 +206,12 @@ class Tipper(BaseEM):
                 t = t[:, None, :]
             else:
                 raise ZError(
-                    "Tipper shape (n, 2) or (1, 2) expected; "
-                    f"got {t.shape!r}."
+                    f"Tipper shape (n, 2) or (1, 2) expected; got {t.shape!r}."
                 )
         elif t.ndim == 3:
             if t.shape[1:] != (1, 2):
                 raise ZError(
-                    "Tipper 3-D shape must be (n_freq, 1, 2); "
-                    f"got {t.shape!r}."
+                    "Tipper 3-D shape must be (n_freq, 1, 2); " f"got {t.shape!r}."
                 )
         else:
             raise ZError(f"Unsupported tipper shape: {t.shape!r}.")
@@ -246,8 +242,7 @@ class Tipper(BaseEM):
                 e = e[:, None, :]
             else:
                 raise ZError(
-                    "Tipper error shape (n, 2) or (1, 2) "
-                    f"expected; got {e.shape!r}."
+                    "Tipper error shape (n, 2) or (1, 2) " f"expected; got {e.shape!r}."
                 )
         elif e.ndim == 3:
             if e.shape[1:] != (1, 2):
@@ -319,7 +314,7 @@ class Tipper(BaseEM):
         --------
         >>> import numpy as np
         >>> from pycsamt.z.tipper import Tipper
-        >>> T = np.array([[[1+1j, 0+1j]]])
+        >>> T = np.array([[[1 + 1j, 0 + 1j]]])
         >>> tip = Tipper(tipper_array=T)
         >>> tip.compute_amp_phase()
         >>> tip.amplitude.shape, tip.phase.shape
@@ -399,10 +394,10 @@ class Tipper(BaseEM):
         >>> from pycsamt.z.tipper import Tipper
         >>> th = np.deg2rad(60.0)
         >>> Tarr = np.zeros((1, 1, 2), complex)
-        >>> Tarr[0, 0, 0] = 0.0 + 1j*(-np.cos(th))
-        >>> Tarr[0, 0, 1] = 0.0 + 1j*(-np.sin(th))
+        >>> Tarr[0, 0, 0] = 0.0 + 1j * (-np.cos(th))
+        >>> Tarr[0, 0, 1] = 0.0 + 1j * (-np.sin(th))
         >>> tip = Tipper(tipper_array=Tarr)
-        >>> float(tip.angle_imag[0])              # doctest: +ELLIPSIS
+        >>> float(tip.angle_imag[0])  # doctest: +ELLIPSIS
         60.0
         """
 
@@ -545,14 +540,12 @@ class Tipper(BaseEM):
                     x = x[:, None, :]
                 else:
                     raise ZError(
-                        f"{name} shape must be (n, 2) or (1, 2); "
-                        f"got {x.shape!r}."
+                        f"{name} shape must be (n, 2) or (1, 2); " f"got {x.shape!r}."
                     )
             elif x.ndim == 3:
                 if x.shape[1:] != (1, 2):
                     raise ZError(
-                        f"{name} 3-D shape must be (n, 1, 2); "
-                        f"got {x.shape!r}."
+                        f"{name} 3-D shape must be (n, 1, 2); got {x.shape!r}."
                     )
             else:
                 raise ZError(f"Unsupported {name} shape: {x.shape!r}.")
@@ -568,8 +561,7 @@ class Tipper(BaseEM):
             )
         if r.shape != phi.shape:
             raise ZError(
-                'Shapes of "r" and "phi" must match: '
-                f"{r.shape!r} vs {phi.shape!r}."
+                'Shapes of "r" and "phi" must match: ' f"{r.shape!r} vs {phi.shape!r}."
             )
 
         tip_new = r * np.exp(1j * np.deg2rad(phi))
@@ -634,8 +626,7 @@ class Tipper(BaseEM):
 
         if self._tipper is None:
             raise ZError(
-                "Tipper must be initialized before setting from "
-                "magnitude/direction."
+                "Tipper must be initialized before setting from " "magnitude/direction."
             )
 
         n = self._tipper.shape[0]
@@ -657,12 +648,12 @@ class Tipper(BaseEM):
         Tx = self._tipper[:, 0, 0].copy()
         Ty = self._tipper[:, 0, 1].copy()
 
-        Tx = (-Mr * np.cos(th_r)).astype(float) + 1j * (
-            -Mi * np.cos(th_i)
-        ).astype(float)
-        Ty = (-Mr * np.sin(th_r)).astype(float) + 1j * (
-            -Mi * np.sin(th_i)
-        ).astype(float)
+        Tx = (-Mr * np.cos(th_r)).astype(float) + 1j * (-Mi * np.cos(th_i)).astype(
+            float
+        )
+        Ty = (-Mr * np.sin(th_r)).astype(float) + 1j * (-Mi * np.sin(th_i)).astype(
+            float
+        )
 
         self._tipper[:, 0, 0] = Tx
         self._tipper[:, 0, 1] = Ty
@@ -708,7 +699,7 @@ class Tipper(BaseEM):
         --------
         >>> import numpy as np
         >>> from pycsamt.z.tipper import Tipper
-        >>> T = np.array([[[1.0+0.0j, 0.0+0.0j]]])
+        >>> T = np.array([[[1.0 + 0.0j, 0.0 + 0.0j]]])
         >>> tip = Tipper(tipper_array=T)
         >>> tip.rotate(90.0)
         >>> np.allclose(tip.rotation_angle, 90.0)
@@ -720,9 +711,7 @@ class Tipper(BaseEM):
 
         n = self._tipper.shape[0]
 
-        if np.isscalar(alpha) or (
-            isinstance(alpha, (list, tuple)) and len(alpha) == 1
-        ):
+        if np.isscalar(alpha) or (isinstance(alpha, (list, tuple)) and len(alpha) == 1):
             ang = float(np.asarray(alpha).ravel()[0]) % 360.0
             alphas = np.full(n, ang, dtype=float)
         else:
@@ -736,18 +725,12 @@ class Tipper(BaseEM):
         self.rotation_angle = (self.rotation_angle + alphas) % 360.0
 
         T_rot = np.empty_like(self._tipper, dtype=complex)
-        Terr_rot = (
-            None
-            if self._tipper_err is None
-            else np.empty_like(self._tipper_err)
-        )
+        Terr_rot = None if self._tipper_err is None else np.empty_like(self._tipper_err)
 
         for k in range(n):
             ang = 0.0 if np.isnan(alphas[k]) else float(alphas[k])
             if self._tipper_err is None:
-                T_rot[k], _ = rotatevector_incl_errors(
-                    self._tipper[k, :, :], ang
-                )
+                T_rot[k], _ = rotatevector_incl_errors(self._tipper[k, :, :], ang)
             else:
                 T_rot[k], Terr_rot[k] = rotatevector_incl_errors(
                     self._tipper[k, :, :],

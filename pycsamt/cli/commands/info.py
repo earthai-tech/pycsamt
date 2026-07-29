@@ -314,9 +314,7 @@ def info(
         station_set = {s.upper() for s in stations}
         edi_paths = [p for p in edi_paths if p.stem.upper() in station_set]
         if not edi_paths:
-            click.echo(
-                f"No files matched stations: {', '.join(stations)}", err=True
-            )
+            click.echo(f"No files matched stations: {', '.join(stations)}", err=True)
             sys.exit(1)
 
     if verbose >= 1:

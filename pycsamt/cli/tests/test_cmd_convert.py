@@ -27,9 +27,7 @@ class TestConvertCommand:
     # Missing source → non-zero exit
     # ------------------------------------------------------------------
 
-    def test_missing_source_fails(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_missing_source_fails(self, runner: CliRunner, tmp_path: Path) -> None:
         missing = tmp_path / "no_such"
         result = runner.invoke(main, ["convert", str(missing)])
         assert result.exit_code != 0
@@ -154,9 +152,7 @@ class TestConvertCommand:
         assert isinstance(data, list)
         assert all("status" in r for r in data)
 
-    def test_csv_format(
-        self, runner: CliRunner, edi_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_csv_format(self, runner: CliRunner, edi_dir: Path, tmp_path: Path) -> None:
         out = tmp_path / "out"
         result = runner.invoke(
             main,

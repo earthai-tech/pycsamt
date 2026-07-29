@@ -105,7 +105,11 @@ def test_ensure_sites_uses_global_policy_when_unspecified(l22: Path) -> None:
     configure_ordering(mode="input")
     sites = ensure_sites(l22)
     assert sites.ordering["requested"] == "input"
-    assert [site.name for site in sites][:3] == ["22-013VF", "22-025AF", "22-10U"]
+    assert [site.name for site in sites][:3] == [
+        "22-013VF",
+        "22-025AF",
+        "22-10U",
+    ]
 
 
 def test_explicit_per_call_policy_overrides_global(l22: Path) -> None:

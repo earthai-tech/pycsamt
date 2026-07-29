@@ -77,9 +77,7 @@ def _try_griddata():
 # ── coordinate helpers ────────────────────────────────────────────────────────
 
 
-def _project_to_merc(
-    xs: np.ndarray, ys: np.ndarray, source_crs: str = "EPSG:4326"
-):
+def _project_to_merc(xs: np.ndarray, ys: np.ndarray, source_crs: str = "EPSG:4326"):
     """
     Project coordinates from *source_crs* to Web Mercator (EPSG:3857).
 
@@ -325,9 +323,7 @@ class MapPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._dark: bool = True
-        self._df: pd.DataFrame = pd.DataFrame(
-            columns=["ID", "Latitude", "Longitude"]
-        )
+        self._df: pd.DataFrame = pd.DataFrame(columns=["ID", "Latitude", "Longitude"])
         self._sites = None
         self._selected_id: str | None = None
         self._scatter = None
@@ -362,9 +358,7 @@ class MapPanel(QWidget):
 
         # Connect once — survive fig.clf() because they're on the canvas object
         self._canvas.figure.canvas.mpl_connect("pick_event", self._on_pick)
-        self._canvas.figure.canvas.mpl_connect(
-            "button_press_event", self._on_click
-        )
+        self._canvas.figure.canvas.mpl_connect("button_press_event", self._on_click)
 
     # ── public API ────────────────────────────────────────────────────────────
 
@@ -432,9 +426,7 @@ class MapPanel(QWidget):
         except Exception:
             return None, None
 
-    def _rho_comp(
-        self, z3d: np.ndarray, freqs: np.ndarray, comp: str
-    ) -> np.ndarray:
+    def _rho_comp(self, z3d: np.ndarray, freqs: np.ndarray, comp: str) -> np.ndarray:
         if comp == "det":
             zc = np.sqrt(np.abs(z3d[:, 0, 1] * z3d[:, 1, 0]))
         else:
@@ -466,9 +458,7 @@ class MapPanel(QWidget):
                 continue
             try:
                 rho = self._rho_comp(z3d, freqs, comp)
-                skin = 503.0 * np.sqrt(
-                    np.maximum(rho, 1e-10) / (freqs + 1e-24)
-                )
+                skin = 503.0 * np.sqrt(np.maximum(rho, 1e-10) / (freqs + 1e-24))
                 idx = int(np.argmin(np.abs(skin - target_m)))
                 val = float(rho[idx])
                 if np.isfinite(val) and val > 0:
@@ -627,9 +617,7 @@ class MapPanel(QWidget):
         log_scale: bool = False,
     ) -> None:
 
-        raw = np.array(
-            [value_map.get(str(sid), np.nan) for sid in ids], float
-        )
+        raw = np.array([value_map.get(str(sid), np.nan) for sid in ids], float)
         finite = np.isfinite(raw)
 
         if not finite.any():
@@ -648,20 +636,10 @@ class MapPanel(QWidget):
             finite = np.isfinite(plot_vals)
 
         # Contour under scatter
-        self._add_contour(
-            ax, xs[finite], ys[finite], plot_vals[finite], log_scale
-        )
+        self._add_contour(ax, xs[finite], ys[finite], plot_vals[finite], log_scale)
 
-        vmin = (
-            float(np.nanpercentile(plot_vals, 5))
-            if finite.sum() > 2
-            else None
-        )
-        vmax = (
-            float(np.nanpercentile(plot_vals, 95))
-            if finite.sum() > 2
-            else None
-        )
+        vmin = float(np.nanpercentile(plot_vals, 5)) if finite.sum() > 2 else None
+        vmax = float(np.nanpercentile(plot_vals, 95)) if finite.sum() > 2 else None
 
         self._scatter = ax.scatter(
             xs,
@@ -691,9 +669,7 @@ class MapPanel(QWidget):
 
     # ── colourbar — always an inset (never resizes the map) ──────────────────
 
-    def _add_colorbar(
-        self, ax, mappable, label: str, log_scale: bool
-    ) -> None:
+    def _add_colorbar(self, ax, mappable, label: str, log_scale: bool) -> None:
         if not self._show_cbar:
             return
         fig = self._canvas.figure
@@ -737,9 +713,7 @@ class MapPanel(QWidget):
             return
         griddata = _try_griddata()
         if griddata is None:
-            self._info_label.setText(
-                "Install scipy for contour interpolation"
-            )
+            self._info_label.setText("Install scipy for contour interpolation")
             return
         self._info_label.setText("")
 
@@ -763,13 +737,9 @@ class MapPanel(QWidget):
 
         try:
             if mode == "lines":
-                ax.contour(
-                    Xi, Yi, Zi, levels=lvl, cmap=cmap, alpha=0.85, zorder=2
-                )
+                ax.contour(Xi, Yi, Zi, levels=lvl, cmap=cmap, alpha=0.85, zorder=2)
             elif mode == "filled":
-                ax.contourf(
-                    Xi, Yi, Zi, levels=lvl, cmap=cmap, alpha=0.55, zorder=1
-                )
+                ax.contourf(Xi, Yi, Zi, levels=lvl, cmap=cmap, alpha=0.55, zorder=1)
                 ax.contour(
                     Xi,
                     Yi,
@@ -781,9 +751,7 @@ class MapPanel(QWidget):
                     zorder=2,
                 )
             elif mode == "filled_labels":
-                ax.contourf(
-                    Xi, Yi, Zi, levels=lvl, cmap=cmap, alpha=0.55, zorder=1
-                )
+                ax.contourf(Xi, Yi, Zi, levels=lvl, cmap=cmap, alpha=0.55, zorder=1)
                 cs = ax.contour(
                     Xi,
                     Yi,
@@ -818,9 +786,7 @@ class MapPanel(QWidget):
         lc = "#bbbbbb" if self._dark else "#555555"
         ax.plot(xs, ys, "-", color=lc, linewidth=0.9, alpha=0.5, zorder=2)
 
-    def _add_labels(
-        self, ax, xs: np.ndarray, ys: np.ndarray, ids: np.ndarray
-    ) -> None:
+    def _add_labels(self, ax, xs: np.ndarray, ys: np.ndarray, ids: np.ndarray) -> None:
         tc = "white" if self._dark else "#222222"
         for x, y, sid in zip(xs, ys, ids):
             self._annots[str(sid)] = ax.annotate(
@@ -921,15 +887,11 @@ class MapPanel(QWidget):
                     f"pip install contextily failed:\n{res.stderr[-600:]}",
                 )
         except Exception as exc:
-            QMessageBox.warning(
-                self, "Install error", f"Could not run pip:\n{exc}"
-            )
+            QMessageBox.warning(self, "Install error", f"Could not run pip:\n{exc}")
 
     # ── axes styling ──────────────────────────────────────────────────────────
 
-    def _style_axes(
-        self, ax, is_geo: bool = True, use_merc: bool = False
-    ) -> None:
+    def _style_axes(self, ax, is_geo: bool = True, use_merc: bool = False) -> None:
         bg = "#181825" if self._dark else "#eff1f5"
         fbg = "#1e1e2e" if self._dark else "#e6e9ef"
         tc = "white" if self._dark else "#222222"
@@ -945,9 +907,7 @@ class MapPanel(QWidget):
             ax.set_xlabel("Longitude", fontsize=9, color=tc)
             ax.set_ylabel("Latitude", fontsize=9, color=tc)
         else:
-            ax.set_xlabel(
-                f"Easting (m)  [{self._source_crs}]", fontsize=8, color=tc
-            )
+            ax.set_xlabel(f"Easting (m)  [{self._source_crs}]", fontsize=8, color=tc)
             ax.set_ylabel("Northing (m)", fontsize=9, color=tc)
 
         ax.tick_params(labelsize=8, colors=tc)

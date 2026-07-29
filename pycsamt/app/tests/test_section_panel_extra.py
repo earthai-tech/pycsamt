@@ -139,9 +139,7 @@ def test_load_from_workdir_bad_result_shows_error(panel, tmp_path, monkeypatch):
     def _raise(workdir):
         raise RuntimeError("bad dir")
 
-    monkeypatch.setattr(
-        "pycsamt.models.occam2d.InversionResult", _raise
-    )
+    monkeypatch.setattr("pycsamt.models.occam2d.InversionResult", _raise)
     panel._load_from_workdir(str(tmp_path), is_reference=False)
     assert "Failed to load" in panel._summary.toPlainText()
     assert panel._result is None
@@ -281,14 +279,12 @@ def test_draw_section_topo_enabled_with_elevation(panel, monkeypatch):
     )
 
     def _fake_drape(xn_c, zn_km, rho_lin, elev, exaggeration, clip_above_surface):
-        nz = len(zn_km)
+        len(zn_km)
         nx = len(xn_c)
         return xn_c, np.tile(zn_km[:, None], (1, nx)), rho_lin
 
     monkeypatch.setattr("pycsamt.topo.drape.drape_section", _fake_drape)
-    monkeypatch.setattr(
-        "pycsamt.topo.overlay.draw_topo_section", lambda *a, **k: None
-    )
+    monkeypatch.setattr("pycsamt.topo.overlay.draw_topo_section", lambda *a, **k: None)
 
     panel.set_result(_Result())  # must not raise through the topo path
 

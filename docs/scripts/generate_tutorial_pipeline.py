@@ -15,7 +15,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
 IMAGE_DIR = (
@@ -61,8 +60,7 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        from pycsamt.api import read_edis
-        from pycsamt.pipeline import Pipeline, configure_pipe
+        pass
 
     return locals()
 
@@ -83,8 +81,12 @@ def _save(fig: plt.Figure, name: str) -> None:
 
 def _step_status_plot(result) -> None:
     labels = [sr.step_name for sr in result.step_results]
-    elapsed = np.asarray([sr.elapsed_sec for sr in result.step_results], dtype=float)
-    plots = np.asarray([len(sr.plots) for sr in result.step_results], dtype=float)
+    elapsed = np.asarray(
+        [sr.elapsed_sec for sr in result.step_results], dtype=float
+    )
+    plots = np.asarray(
+        [len(sr.plots) for sr in result.step_results], dtype=float
+    )
     colors = ["#2f6f8f" if sr.ok else "#c85745" for sr in result.step_results]
     y = np.arange(len(labels))
 
@@ -144,12 +146,33 @@ def _workflow_plot(pipe) -> None:
 
     fig, ax = plt.subplots(figsize=(10.8, 2.8))
     ax.set_axis_off()
-    for idx, (label, code, category) in enumerate(zip(labels, codes, categories)):
+    for idx, (label, code, category) in enumerate(
+        zip(labels, codes, categories)
+    ):
         x = idx / max(len(labels) - 1, 1)
         color = palette.get(category, "#7c4d79")
-        ax.scatter(x, 0.56, s=900, color=color, edgecolor="#27323a", linewidth=1.0)
-        ax.text(x, 0.56, code, color="white", ha="center", va="center", fontsize=9, weight="bold")
-        ax.text(x, 0.18, label, ha="center", va="center", fontsize=9, color="#27323a")
+        ax.scatter(
+            x, 0.56, s=900, color=color, edgecolor="#27323a", linewidth=1.0
+        )
+        ax.text(
+            x,
+            0.56,
+            code,
+            color="white",
+            ha="center",
+            va="center",
+            fontsize=9,
+            weight="bold",
+        )
+        ax.text(
+            x,
+            0.18,
+            label,
+            ha="center",
+            va="center",
+            fontsize=9,
+            color="#27323a",
+        )
         if idx < len(labels) - 1:
             ax.annotate(
                 "",

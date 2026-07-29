@@ -158,7 +158,7 @@ class TestStepSelectionAndParams:
 
     def test_param_form_shown_for_folder_method(self, win):
         win._select_step(0)
-        step = win._ctrl.steps[0]
+        win._ctrl.steps[0]
         for i in range(win._combo_method.count()):
             if win._combo_method.itemData(i) == "folder":
                 win._combo_method.setCurrentIndex(i)
@@ -334,9 +334,7 @@ class TestPipelineExecution:
         )
         win._on_run_step()  # must not raise
 
-    def test_quick_pipeline_preloads_step0_and_starts_worker(
-        self, win, monkeypatch
-    ):
+    def test_quick_pipeline_preloads_step0_and_starts_worker(self, win, monkeypatch):
         win._ctrl._sites_input = ["s1", "s2", "s3"]
         started = []
         fake_cls = _fake_worker_cls(lambda w: started.append(w))

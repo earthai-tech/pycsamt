@@ -56,9 +56,7 @@ class TestParseTopo:
 
     def test_linear_topo_slope(self):
         # 45-degree slope: dz/dy = 1 → slope_angle = 45°
-        topo = np.column_stack(
-            [np.array([0.0, 1000.0]), np.array([0.0, 1000.0])]
-        )
+        topo = np.column_stack([np.array([0.0, 1000.0]), np.array([0.0, 1000.0])])
         y = np.array([500.0])
         z, slope, on_node = parse_topo(topo, y)
         assert abs(z[0] - 500.0) < 1.0
@@ -202,9 +200,7 @@ class TestCentroids:
         np.testing.assert_allclose(c[0, 2], 1.0)  # total area = 0.5 + 0.5
 
     def test_get_centroids_two_regions(self):
-        nodes = np.array(
-            [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [0.0, 1.0], [2.0, 1.0]]
-        )
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [0.0, 1.0], [2.0, 1.0]])
         elems = np.array([[1, 2, 4], [2, 3, 5]])
         tri_idx = np.array([1, 2])
         c = get_centroids(nodes, elems, tri_idx)
@@ -245,9 +241,7 @@ class TestUTM:
         assert sh
 
     def test_forced_zone(self):
-        _, _, zone, _ = lonlat_to_utm(
-            np.array([10.0]), np.array([50.0]), zone=32
-        )
+        _, _, zone, _ = lonlat_to_utm(np.array([10.0]), np.array([50.0]), zone=32)
         assert zone == 32
 
 

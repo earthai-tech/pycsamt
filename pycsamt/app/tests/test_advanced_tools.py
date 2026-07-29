@@ -179,9 +179,7 @@ class TestDrawNoData:
         fig = _fig()
         ctrl.draw("no_such_fn", False, fig)
         texts = [t.get_text() for ax in fig.axes for t in ax.texts]
-        assert any(
-            "not" in t.lower() or "function" in t.lower() for t in texts
-        )
+        assert any("not" in t.lower() or "function" in t.lower() for t in texts)
         _close()
 
     def test_no_sites_shows_load_message(self, adv_ctrl):
@@ -225,9 +223,7 @@ class TestStrikePlots:
         _catalogue_params(STRIKE_PLOTS),
         ids=_catalogue_ids(STRIKE_PLOTS),
     )
-    def test_draw_does_not_raise(
-        self, fn_name, has_ax, adv_ctrl, willy_sites
-    ):
+    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
@@ -257,9 +253,7 @@ class TestPhaseTensorPlots:
         _catalogue_params(PHASE_TENSOR_PLOTS),
         ids=_catalogue_ids(PHASE_TENSOR_PLOTS),
     )
-    def test_draw_does_not_raise(
-        self, fn_name, has_ax, adv_ctrl, willy_sites
-    ):
+    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
@@ -289,9 +283,7 @@ class TestInductionPlots:
         _catalogue_params(INDUCTION_PLOTS),
         ids=_catalogue_ids(INDUCTION_PLOTS),
     )
-    def test_draw_does_not_raise(
-        self, fn_name, has_ax, adv_ctrl, tipper_sites
-    ):
+    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, tipper_sites):
         adv_ctrl.set_sites(tipper_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
@@ -302,9 +294,7 @@ class TestInductionPlots:
         _catalogue_params(INDUCTION_PLOTS),
         ids=_catalogue_ids(INDUCTION_PLOTS),
     )
-    def test_draw_produces_axes(
-        self, fn_name, has_ax, adv_ctrl, tipper_sites
-    ):
+    def test_draw_produces_axes(self, fn_name, has_ax, adv_ctrl, tipper_sites):
         adv_ctrl.set_sites(tipper_sites)
         fig = _fig()
         ret = adv_ctrl.draw(fn_name, has_ax, fig)
@@ -323,9 +313,7 @@ class TestImpedancePlots:
         _catalogue_params(IMPEDANCE_PLOTS),
         ids=_catalogue_ids(IMPEDANCE_PLOTS),
     )
-    def test_draw_does_not_raise(
-        self, fn_name, has_ax, adv_ctrl, willy_sites
-    ):
+    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
@@ -355,9 +343,7 @@ class TestDepthPlots:
         _catalogue_params(DEPTH_PLOTS),
         ids=_catalogue_ids(DEPTH_PLOTS),
     )
-    def test_draw_does_not_raise(
-        self, fn_name, has_ax, adv_ctrl, willy_sites
-    ):
+    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)  # must never raise
@@ -387,9 +373,7 @@ class TestSurveyPlots:
         _catalogue_params(SURVEY_PLOTS),
         ids=_catalogue_ids(SURVEY_PLOTS),
     )
-    def test_draw_does_not_raise(
-        self, fn_name, has_ax, adv_ctrl, willy_sites
-    ):
+    def test_draw_does_not_raise(self, fn_name, has_ax, adv_ctrl, willy_sites):
         adv_ctrl.set_sites(willy_sites)
         fig = _fig()
         adv_ctrl.draw(fn_name, has_ax, fig)
@@ -699,9 +683,7 @@ class TestEmtoolsDirectDepth:
         ctrl.set_sites(willy_sites)
         fig = _fig()
         ctrl.draw("plot_atom_psection", True, fig)
-        texts = " ".join(
-            t.get_text() for ax in fig.axes for t in ax.texts
-        ).lower()
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
         assert "model" in texts or "train" in texts or "trained" in texts
         _close()
 
@@ -741,9 +723,7 @@ class TestEmtoolsDirectDepth:
         ctrl.draw("plot_atom_psection", True, fig)
         assert len(fig.axes) >= 1
         # Must not be a pure error annotation
-        texts = " ".join(
-            t.get_text() for ax in fig.axes for t in ax.texts
-        ).lower()
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
         assert "train" not in texts and "no dictionary" not in texts
         _close()
 
@@ -854,9 +834,7 @@ class TestTopoPreviewController:
         assert "n_stations" in stats
         assert stats["n_stations"] == 0
 
-    def test_fill_preview_with_sites_does_not_raise(
-        self, topo_ctrl, willy_sites
-    ):
+    def test_fill_preview_with_sites_does_not_raise(self, topo_ctrl, willy_sites):
         topo_ctrl.set_sites(willy_sites)
         fig = _fig()
         topo_ctrl.plot_fill_preview(fig)
@@ -870,9 +848,7 @@ class TestTopoPreviewController:
         topo_ctrl.plot_elevation_histogram(fig)
         _close()
 
-    def test_get_stats_with_sites_returns_n_stations(
-        self, topo_ctrl, willy_sites
-    ):
+    def test_get_stats_with_sites_returns_n_stations(self, topo_ctrl, willy_sites):
         topo_ctrl.set_sites(willy_sites)
         stats = topo_ctrl.get_stats()
         assert stats["n_stations"] > 0
@@ -1048,9 +1024,7 @@ class TestConversionController:
         assert calls["compute_z"] is True
         assert calls["compute_rho_phi"] is True
 
-    def test_avg_run_with_real_stn_utm_populates_edi_coordinates(
-        self, conv_ctrl
-    ):
+    def test_avg_run_with_real_stn_utm_populates_edi_coordinates(self, conv_ctrl):
         avg_path = _ROOT / "data" / "avg" / "K1.AVG"
         stn_path = _ROOT / "data" / "avg" / "K1.stn"
         if not avg_path.exists() or not stn_path.exists():

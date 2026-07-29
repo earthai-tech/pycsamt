@@ -75,9 +75,7 @@ class TestEvalSuiteGate(unittest.TestCase):
         )
 
     def test_no_hallucination_violations(self):
-        self.assertEqual(
-            self.report.violations, [], msg=str(self.report.violations)
-        )
+        self.assertEqual(self.report.violations, [], msg=str(self.report.violations))
 
     def test_no_test_file_pollution(self):
         # Tier 0/2 guard: a unit-test module must never be retrieved.

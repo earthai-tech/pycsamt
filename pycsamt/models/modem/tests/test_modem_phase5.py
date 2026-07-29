@@ -5,12 +5,7 @@ from pathlib import Path
 import pytest
 
 _EX3D = (
-    Path(__file__).parents[4]
-    / "ModEMv626"
-    / "ModEM"
-    / "examples"
-    / "3D_MT"
-    / "BLOCK2"
+    Path(__file__).parents[4] / "ModEMv626" / "ModEM" / "examples" / "3D_MT" / "BLOCK2"
 )
 
 

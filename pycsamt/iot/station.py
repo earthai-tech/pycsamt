@@ -91,9 +91,7 @@ class StationConfig(PyCSAMTObject, MetadataMixin):
         self.lon = _c.as_longitude(self.lon)
         self.elevation = _c.as_elevation(self.elevation)
         self.profile = _c.as_optional_str(self.profile, "profile")
-        self.position_m = _c.as_optional_finite_float(
-            self.position_m, "position_m"
-        )
+        self.position_m = _c.as_optional_finite_float(self.position_m, "position_m")
         self.channels = _c.as_channel_list(self.channels)
         self.dipole_length_m = _c.as_optional_positive(
             self.dipole_length_m, "dipole_length_m"
@@ -169,9 +167,7 @@ def station_table(
     api: bool | None = None,
 ) -> Any:
     """Return one row per station describing its acquisition metadata."""
-    items = (
-        [stations] if isinstance(stations, StationConfig) else list(stations)
-    )
+    items = [stations] if isinstance(stations, StationConfig) else list(stations)
     rows: list[dict[str, Any]] = []
     for station in items:
         station.validate()

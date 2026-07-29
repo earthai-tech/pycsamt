@@ -164,9 +164,7 @@ def ensure_n_items(
             if isinstance(x, (str, bytes, bytearray)):
                 out.append(str(x))
             else:
-                msg = (
-                    f"{label}[{i}] must be string; got {type(x).__name__!r}."
-                )
+                msg = f"{label}[{i}] must be string; got {type(x).__name__!r}."
                 if error == "raise":
                     raise TypeError(msg)
                 if error == "warn":
@@ -177,9 +175,7 @@ def ensure_n_items(
         # policy: numeric
         if expect == "numeric":
             try:
-                v = (
-                    _to_float(x) if coerce else float(x)  # may raise
-                )
+                v = _to_float(x) if coerce else float(x)  # may raise
             except Exception as exc:
                 msg = f"{label}[{i}] not numeric: {x!r}."
                 if error == "raise":
@@ -316,12 +312,13 @@ def has_read(
     >>> class MyReader:
     ...     def __init__(self):
     ...         self.data = None
+    ...
     ...     def read_data(self):
     ...         self.data = [1, 2, 3]
-    ...     def process(self):
-    ...         has_read(self, attributes='data')
-    ...         return sum(self.data)
     ...
+    ...     def process(self):
+    ...         has_read(self, attributes="data")
+    ...         return sum(self.data)
     >>> reader = MyReader()
     >>> try:
     ...     reader.process()
@@ -342,16 +339,13 @@ def has_read(
         if frame and frame.f_back:
             obj = frame.f_back.f_locals.get("self")
         if obj is None:
-            raise ValueError(
-                "No object provided or found as 'self' to check."
-            )
+            raise ValueError("No object provided or found as 'self' to check.")
 
     # 1) Custom __has_read__ method
     if hasattr(obj, "__has_read__") and callable(obj.__has_read__):
         if not obj.__has_read__():
             custom_msg = msg or (
-                f"'{obj.__class__.__name__}' reports not read via "
-                "__has_read__()."
+                f"'{obj.__class__.__name__}' reports not read via " "__has_read__()."
             )
             raise NotReadError(custom_msg)
         return True
@@ -361,8 +355,7 @@ def has_read(
         flag = obj._has_read
         if flag is False:
             custom_msg = msg or (
-                f"'{obj.__class__.__name__}' has `_has_read` "
-                "flag set to False."
+                f"'{obj.__class__.__name__}' has `_has_read` " "flag set to False."
             )
             raise NotReadError(custom_msg)
         if flag is True:
@@ -433,13 +426,14 @@ def check_has_read(
     >>> class MyDataLoader:
     ...     def __init__(self):
     ...         self.df = None
+    ...
     ...     def load(self):
     ...         # In a real scenario, this would load data.
     ...         self.df = "some data"
+    ...
     ...     @check_has_read(attributes="df")
     ...     def get_data(self):
     ...         return self.df
-    ...
     >>> loader = MyDataLoader()
     >>> try:
     ...     loader.get_data()
@@ -467,9 +461,7 @@ def check_has_read(
     return decorator
 
 
-def check_is_fitted(
-    obj: Any = None, attributes: list[str] | None = None
-) -> bool:
+def check_is_fitted(obj: Any = None, attributes: list[str] | None = None) -> bool:
     r"""
     Validate that an object is "fitted" before use.
 
@@ -498,24 +490,19 @@ def check_is_fitted(
         frame = inspect.currentframe().f_back
         obj = frame.f_locals.get("self")  # type: ignore
     if obj is None:
-        raise ValueError(
-            "No object provided or found as 'self' to check fitting."
-        )
+        raise ValueError("No object provided or found as 'self' to check fitting.")
 
     # 1) Custom __is_fitted__ method
     if hasattr(obj, "__is_fitted__") and callable(obj.__is_fitted__):
         if not obj.__is_fitted__():
             raise NotFittedError(
-                f"{obj.__class__.__name__} reports"
-                f" not fitted via __is_fitted__()."
+                f"{obj.__class__.__name__} reports" f" not fitted via __is_fitted__()."
             )
         return True
 
     # 2) Explicit attribute presence
     if attributes:
-        missing = [
-            attr for attr in attributes if getattr(obj, attr, None) is None
-        ]
+        missing = [attr for attr in attributes if getattr(obj, attr, None) is None]
         if missing:
             raise NotFittedError(
                 f"{obj.__class__.__name__} missing required"
@@ -532,9 +519,7 @@ def check_is_fitted(
 
     if isinstance(flag, bool):
         if not flag:
-            raise NotFittedError(
-                f"{obj.__class__.__name__}._fitted flag is False."
-            )
+            raise NotFittedError(f"{obj.__class__.__name__}._fitted flag is False.")
         return True
 
     # No fitting indicator found
@@ -543,9 +528,7 @@ def check_is_fitted(
     )
 
 
-def _assert_all_types(
-    obj: Any, *expected_types: type, objname: str = None
-) -> Any:
+def _assert_all_types(obj: Any, *expected_types: type, objname: str = None) -> Any:
     """
     Assert that an object is an instance of the given types.
 
@@ -582,8 +565,7 @@ def _assert_all_types(
         prefix = f"'{objname}' " if objname else ""
         plural = "s" if len(types_tuple) > 1 else ""
         raise TypeError(
-            f"{prefix}expected type{plural} {type_names}, "
-            f"got {type(obj).__name__}"
+            f"{prefix}expected type{plural} {type_names}, " f"got {type(obj).__name__}"
         )
     return obj
 
@@ -760,9 +742,7 @@ def isin(
         try:
             s_uniq = np.unique(s1)
         except Exception:
-            s_uniq = np.asarray(
-                list(dict.fromkeys(s1.tolist())), dtype=object
-            )
+            s_uniq = np.asarray(list(dict.fromkeys(s1.tolist())), dtype=object)
         result = int(np.count_nonzero(_isin_with_nan(s_uniq, a, False)))
 
     # optional extras
@@ -907,9 +887,7 @@ def assert_ratio(
     try:
         val = float(v)
     except Exception:
-        raise TypeError(
-            f"Unable to convert {type(v).__name__!r} to float: {v!r}"
-        )
+        raise TypeError(f"Unable to convert {type(v).__name__!r} to float: {v!r}")
     # percent conversion
     if in_percent:
         if 1 < val <= 100:
@@ -918,15 +896,11 @@ def assert_ratio(
     low = up = None
     if bounds is not None:
         if len(bounds) != 2:
-            raise ValueError(
-                f"`bounds` must have two elements, got {bounds!r}"
-            )
+            raise ValueError(f"`bounds` must have two elements, got {bounds!r}")
         low, up = bounds
         if low is not None and up is not None:
             if not (low <= val <= up):
-                raise ValueError(
-                    f"{name} must be between {low} and {up}, got {val}"
-                )
+                raise ValueError(f"{name} must be between {low} and {up}, got {val}")
     # handle exclusion
     if exclude_value is not None:
         try:
@@ -934,9 +908,7 @@ def assert_ratio(
         except Exception:
             excl = low
             if excl is None:
-                warnings.warn(
-                    "Cannot exclude value without valid bounds", stacklevel=2
-                )
+                warnings.warn("Cannot exclude value without valid bounds", stacklevel=2)
         if val == excl:
             raise ValueError(f"{name} excluding {excl}, got {val}")
     # post-check for percent
@@ -1154,9 +1126,7 @@ def check_consistency_size(*arrays) -> None:
     lengths = [len(X) for X in arrays if X is not None]
     uniques = np.unique(lengths)
     if len(uniques) > 1:
-        raise ValueError(
-            f"Inconsistent sample sizes: {[int(l) for l in lengths]}"
-        )
+        raise ValueError(f"Inconsistent sample sizes: {[int(l) for l in lengths]}")
 
 
 def _is_arraylike_1d(x) -> bool:
@@ -1188,11 +1158,7 @@ def _is_arraylike(x) -> bool:
     r"""
     Return whether the input is array-like.
     """
-    return (
-        hasattr(x, "__len__")
-        or hasattr(x, "shape")
-        or hasattr(x, "__array__")
-    )
+    return hasattr(x, "__len__") or hasattr(x, "shape") or hasattr(x, "__array__")
 
 
 def _is_arraylike_not_scalar(array) -> bool:

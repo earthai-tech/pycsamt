@@ -54,9 +54,7 @@ class Reference:
     doi: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
-    DOI_PATTERN = re.compile(
-        r"^10\.\d{4,9}/[-._;()/:A-Z0-9]+$", re.IGNORECASE
-    )
+    DOI_PATTERN = re.compile(r"^10\.\d{4,9}/[-._;()/:A-Z0-9]+$", re.IGNORECASE)
 
     def __post_init__(self):
         if self.year is not None:

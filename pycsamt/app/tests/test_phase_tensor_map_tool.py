@@ -66,9 +66,7 @@ def _close():
 
 
 class TestMapWorkerRealComputation:
-    def test_run_in_range_period_emits_done_with_real_figure(
-        self, willy_sites
-    ):
+    def test_run_in_range_period_emits_done_with_real_figure(self, willy_sites):
         done, err = [], []
         w = _MapWorker(
             willy_sites,
@@ -130,9 +128,7 @@ class TestMapWorkerRealComputation:
         assert len(done) == 1
         _close()
 
-    def test_run_period_far_outside_data_range_still_renders(
-        self, willy_sites
-    ):
+    def test_run_period_far_outside_data_range_still_renders(self, willy_sites):
         """A period way beyond the survey's frequency range (sparse/edge
         case: nearest available period is used per-station) must still
         complete and emit a figure, not raise/error."""
@@ -154,9 +150,7 @@ class TestMapWorkerRealComputation:
         assert len(done) == 1
         _close()
 
-    def test_run_period_far_below_data_range_still_renders(
-        self, willy_sites
-    ):
+    def test_run_period_far_below_data_range_still_renders(self, willy_sites):
         done, err = [], []
         w = _MapWorker(
             willy_sites,
@@ -246,10 +240,7 @@ class TestDialogConstruction:
 
     def test_cby_combo_populated(self, qapp, willy_sites):
         dlg = PhaseTensorMapDialog(sites=willy_sites)
-        items = [
-            dlg._cby_combo.itemText(i)
-            for i in range(dlg._cby_combo.count())
-        ]
+        items = [dlg._cby_combo.itemText(i) for i in range(dlg._cby_combo.count())]
         assert items == ["skew", "ellipt", "theta", "alpha", "s1", "s2"]
         dlg.close()
 
@@ -316,8 +307,16 @@ def _fake_worker_cls(*, fig=None, error=None, captured=None):
                 fn(*a, **k)
 
     class _FakeWorker:
-        def __init__(self, sites, period, c_by, show_tipper,
-                     tipper_conv, tipper_comp, station_labels):
+        def __init__(
+            self,
+            sites,
+            period,
+            c_by,
+            show_tipper,
+            tipper_conv,
+            tipper_comp,
+            station_labels,
+        ):
             self.done = _FakeSignal()
             self.error = _FakeSignal()
             self._args = dict(

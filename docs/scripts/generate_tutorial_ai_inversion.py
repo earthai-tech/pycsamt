@@ -1,24 +1,25 @@
-"""Generate figures and sample outputs for the AI inversion tutorial."""
+"""Generate figures for the AI inversion tutorial.
+
+Every figure here comes from actually running the real pipeline
+(:func:`~pycsamt.ai.domain_gap.audit_survey`,
+:class:`~pycsamt.agents.Inv2DAgent`, :class:`~pycsamt.agents.Inv3DAgent`,
+:func:`~pycsamt.ai.validation.flag_out_of_distribution`) against the K2
+CSAMT line. K2 is a local-only survey, not bundled with the repository --
+this script is a no-op wherever ``K2_DIR`` does not exist on disk.
+"""
 
 from __future__ import annotations
 
-import contextlib
-import io
+import os
 import sys
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
-
-
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
+sys.path.insert(0, str(ROOT))
+os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".tmp" / "matplotlib"))
+os.environ.setdefault("PYCSAMT_DATA", str(ROOT / ".tmp" / "docs-data"))
+
+K2_DIR = ROOT / "k2_corrected"
 IMAGE_DIR = (
     ROOT
     / "docs"
@@ -28,24 +29,19 @@ IMAGE_DIR = (
     / "ai_inversion_from_corrected_edis"
 )
 
+import matplotlib
 
-def _import_pycsamt():
-    sys.path.insert(0, str(ROOT))
-    stderr = io.StringIO()
-    with contextlib.redirect_stderr(stderr):
-        from pycsamt.api.station import PYCSAMT_STATION_RENDERING
-        from pycsamt.api import read_edis
-        from pycsamt.emtools.qc import build_qc_table, station_confidence_table
+matplotlib.use("Agg")
 
-    return locals()
+import matplotlib.pyplot as plt
+import numpy as np
 
-
-def _style_axis(ax: plt.Axes) -> None:
-    ax.set_facecolor("#fbfbf7")
-    ax.grid(True, color="#d8dad1", linewidth=0.7, alpha=0.65)
-    for spine in ax.spines.values():
-        spine.set_color("#39434d")
-        spine.set_linewidth(0.8)
+_K2_FULL_FREQS_HZ = np.array(
+    [15.8, 20.0, 25.1, 31.6, 39.8, 50.1, 63.1, 79.4, 100.0, 126.0,
+     158.0, 200.0, 251.0, 316.0, 398.0, 501.0, 631.0, 794.0, 1000.0,
+     1260.0, 1580.0, 2000.0, 2510.0, 3160.0, 3980.0, 5010.0, 6310.0,
+     7940.0, 10000.0]
+)
 
 
 def _save(fig: plt.Figure, name: str) -> None:
@@ -54,465 +50,465 @@ def _save(fig: plt.Figure, name: str) -> None:
     plt.close(fig)
 
 
-def _workflow_plot() -> None:
-    fig, ax = plt.subplots(figsize=(11.4, 4.0))
-    ax.set_axis_off()
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    nodes = [
-        (0.10, "Corrected EDIs", "static shift, filters,\nrotation already reviewed", "#eff6ff", "#2563eb"),
-        (0.32, "Coverage Check", "freq band, station count,\ntraining envelope", "#f0fdf4", "#16a34a"),
-        (0.54, "Choose AI Mode", "1-D per station,\n2-D profile, 3-D graph", "#fff7ed", "#d5962c"),
-        (0.76, "Predict + Validate", "sections, residuals,\nuncertainty, flags", "#f5f3ff", "#7c4d79"),
-        (0.93, "Export", "models, tables,\nfigures, report", "#fef2f2", "#c85745"),
-    ]
-    for idx, (x, title, body, face, edge) in enumerate(nodes):
-        box = FancyBboxPatch(
-            (x - 0.075, 0.38),
-            0.15,
-            0.33,
-            boxstyle="round,pad=0.018,rounding_size=0.022",
-            linewidth=1.25,
-            edgecolor=edge,
-            facecolor=face,
-        )
-        ax.add_patch(box)
-        ax.text(x, 0.62, title, ha="center", va="center", fontsize=10, weight="bold")
-        ax.text(x, 0.48, body, ha="center", va="center", fontsize=8.2, linespacing=1.2)
-        if idx < len(nodes) - 1:
-            ax.add_patch(
-                FancyArrowPatch(
-                    (x + 0.084, 0.545),
-                    (nodes[idx + 1][0] - 0.084, 0.545),
-                    arrowstyle="-|>",
-                    mutation_scale=13,
-                    linewidth=1.2,
-                    color="#64748b",
-                )
-            )
+def _k2_clean_sites():
+    """Load the K2 survey, ordered, with exact-duplicate stations
+    dropped (four station pairs share identical EDI coordinates).
+    """
+    from pycsamt.emtools._core import ensure_sites
+
+    sites = ensure_sites(K2_DIR, recursive=False, verbose=0).ordered()
+    lat = np.array([s.coords[0] for s in sites])
+    lon = np.array([s.coords[1] for s in sites])
+    names = [s.name for s in sites]
+    keep = [names[0]]
+    last = (lat[0], lon[0])
+    for i in range(1, len(names)):
+        if (lat[i], lon[i]) == last:
+            continue
+        keep.append(names[i])
+        last = (lat[i], lon[i])
+    return sites.select(names=keep).ordered()
+
+
+def make_geology_topography_mesh() -> None:
+    """Build the tutorial prior, terrain surface, and padded solver mesh."""
+    from pycsamt.ai.geology import (
+        ElectricalLayer,
+        GaussianCorrelation,
+        GeologyGrid,
+        generate_layered_geology,
+        interpolate_topography,
+    )
+    from pycsamt.forward.maxwell.mesh import MeshDesign, build_solver_mesh
+
+    grid = GeologyGrid.regular_2d(nx=21, nz=20, dx_m=80.8, dz_m=100.0)
+    layers = (
+        ElectricalLayer("conductive cover", 35.0, log10_std=0.12,
+                        heterogeneity=GaussianCorrelation(350, 100)),
+        ElectricalLayer("weathered host", 140.0, log10_std=0.16,
+                        heterogeneity=GaussianCorrelation(500, 160)),
+        ElectricalLayer("resistive basement", 1200.0, log10_std=0.10,
+                        heterogeneity=GaussianCorrelation(700, 220)),
+    )
+    geology = generate_layered_geology(
+        grid, layers, [380.0, 1050.0], seed=17,
+        interface_relief_std_m=[45.0, 90.0],
+        interface_correlation=GaussianCorrelation(550, 150),
+        minimum_thickness_m=120.0,
+    )
+    control_x = np.linspace(grid.x_m[0], grid.x_m[-1], 9)
+    elevation = 285 + 42 * np.sin(control_x / 310) + 18 * np.cos(control_x / 145)
+    topography = interpolate_topography(
+        grid, control_x, elevation, source="corrected EDI elevations",
+        interpolation_method="cubic",
+    )
+    solver = build_solver_mesh(
+        grid, resistivity_ohm_m=geology.resistivity_ohm_m,
+        frequencies_hz=[15.8, 10_000.0], topography=topography,
+        design=MeshDesign(horizontal_padding_cells=5, bottom_padding_cells=5,
+                          air_layers=5),
+    )
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.7))
+    extent = (0, grid.x_m[-1] / 1000, grid.z_m[-1] / 1000, 0)
+    image = axes[0].imshow(np.log10(geology.resistivity_ohm_m), extent=extent,
+                           aspect="auto", cmap="viridis_r", vmin=1, vmax=3.3)
+    for interface in geology.interface_depth_m:
+        axes[0].plot(grid.x_m / 1000, interface / 1000, "w-", lw=1)
+    axes[0].set(title="Geological target before meshing", xlabel="Distance (km)",
+                ylabel="Depth below reference (km)")
+    fig.colorbar(image, ax=axes[0], label=r"$\log_{10}\rho$ [$\Omega\cdot$m]")
+
+    topo_image = axes[1].imshow(topography.earth_mask(), extent=extent,
+                                aspect="auto", cmap="Greys", vmin=0, vmax=1)
+    axes[1].plot(grid.x_m / 1000, topography.surface_depth_m / 1000,
+                 color="#f15a29", lw=2, label="interpolated terrain")
+    axes[1].scatter(control_x / 1000,
+                    topography.surface_depth_m[np.searchsorted(grid.x_m, control_x)] / 1000,
+                    marker="v", color="#2563eb", s=24, label="EDI elevations")
+    axes[1].set(title=f"Terrain mask: relief={topography.relief_m:.0f} m",
+                xlabel="Distance (km)", ylabel="Depth below reference (km)")
+    axes[1].legend(facecolor="white", framealpha=0.9, fontsize=8,
+                   loc="lower left")
+    fig.colorbar(topo_image, ax=axes[1], ticks=[0, 1], label="air (0) / earth (1)")
+
+    x_edges = solver.mesh.x_edges_m / 1000
+    z_edges = solver.mesh.z_edges_m / 1000
+    mesh_values = np.log10(1.0 / solver.conductivity_s_m)
+    mesh_image = axes[2].pcolormesh(x_edges, z_edges, mesh_values,
+                                    shading="flat", cmap="viridis_r", vmin=1, vmax=8)
+    axes[2].set(title=f"Padded Maxwell mesh: {solver.quality.cell_count:,} cells",
+                xlabel="Padded distance (km)", ylabel="Depth (km)")
+    axes[2].invert_yaxis()
+    axes[2].axvline(grid.x_m[0] / 1000, color="white", ls="--", lw=0.9)
+    axes[2].axvline(grid.x_m[-1] / 1000, color="white", ls="--", lw=0.9,
+                    label="geological core")
+    axes[2].legend(frameon=False, fontsize=8)
+    fig.colorbar(mesh_image, ax=axes[2], label=r"$\log_{10}\rho$ [$\Omega\cdot$m]")
+    fig.suptitle("Prior geometry becomes a physics-facing air/earth mesh", fontsize=13)
+    fig.tight_layout()
+    _save(fig, "geology_topography_mesh.png")
+
+
+def make_maxwell_training_pair() -> None:
+    """Generate one solved 2-D training pair and expose model/response structure."""
+    from pycsamt.ai.geology import GeologyGrid
+    from pycsamt.ai.training.dataset2d import Maxwell2DDatasetConfig, generate_2d_maxwell_dataset
+
+    grid = GeologyGrid.regular_2d(nx=21, nz=20, dx_m=80.8, dz_m=100.0)
+    frequencies = np.array([15.8, 31.6, 63.1, 126, 251, 501, 1000, 2000, 3980, 7940])
+    config = Maxwell2DDatasetConfig(
+        dataset_id="corrected-edi-tutorial-figure", grid=grid,
+        correlation_length_x_m=(200.0, 600.0),
+        correlation_length_z_m=(50.0, 200.0), frequencies_hz=frequencies,
+        station_x_m=grid.x_m, n_realizations=1, seed=23,
+        log_resistivity_mean=2.0, log_resistivity_std=0.5,
+        components=("zxy",), validation_fraction=0, test_fraction=0,
+    )
+    sample = generate_2d_maxwell_dataset(config).samples[0]
+    impedance = sample.survey.impedance[:, :, 0]
+    mu0 = 4e-7 * np.pi
+    apparent = np.abs(impedance) ** 2 / (2 * np.pi * frequencies[None, :] * mu0)
+    phase = np.angle(impedance, deg=True)
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.5))
+    image = axes[0].imshow(np.log10(sample.resistivity_ohm_m), aspect="auto",
+                           extent=(0, 1.616, 2.0, 0), cmap="viridis_r")
+    axes[0].set(title="Target earth model", xlabel="Distance (km)", ylabel="Depth (km)")
+    fig.colorbar(image, ax=axes[0], label=r"$\log_{10}\rho$ [$\Omega\cdot$m]")
+    for ax, values, title, label, cmap in (
+        (axes[1], np.log10(apparent).T, "Maxwell input: apparent resistivity",
+         r"$\log_{10}\rho_a$ [$\Omega\cdot$m]", "viridis_r"),
+        (axes[2], phase.T, "Maxwell input: impedance phase", "Phase (degrees)", "twilight"),
+    ):
+        response_image = ax.imshow(values, origin="lower", aspect="auto",
+                                   extent=(0, 1.616, np.log10(frequencies[0]),
+                                           np.log10(frequencies[-1])), cmap=cmap)
+        ax.set(xlabel="Station distance (km)", ylabel=r"$\log_{10}$ frequency (Hz)",
+               title=title)
+        fig.colorbar(response_image, ax=ax, label=label)
+    fig.suptitle(f"One supervised pair: {sample.mesh_cells:,} mesh cells, "
+                 f"solver residual={sample.relative_residual:.1e}", fontsize=12.5)
+    fig.tight_layout()
+    _save(fig, "maxwell_training_pair.png")
+
+
+def make_training_convergence_smoke() -> None:
+    """Run a small bundled-data fit so tutorial readers can audit learning dynamics."""
+    from pycsamt.agents import Inv2DAgent
+    from pycsamt.emtools._core import ensure_sites
+
+    sites = ensure_sites(ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT",
+                         recursive=True, verbose=0).ordered()
+    names = [site.name for site in sites][:8]
+    subset = sites.select(names=names).ordered()
+    frequencies = np.logspace(0, 3, 10)
+    result = Inv2DAgent(
+        physics="mt1d", n_depth=12, n_stations_per_profile=8,
+        n_train_profiles=24, epochs=8, depth_max=1200,
+        api_key=None,
+    ).execute({"sites": subset, "freqs": frequencies})
+    if result.status != "success":
+        raise RuntimeError(result.error)
+    history = result.data["inverter"]._history
+    train = np.asarray(history["train_loss"])
+    valid = np.asarray(history["val_loss"])
+    epochs = np.arange(1, len(train) + 1)
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.2))
+    axes[0].plot(epochs, train, "o-", label="training", color="#2563eb")
+    axes[0].plot(epochs, valid, "s-", label="validation", color="#f15a29")
+    axes[0].set(xlabel="Epoch", ylabel="Loss", title="Learning curves are evidence, not decoration")
+    axes[0].grid(alpha=0.25)
+    axes[0].legend(frameon=False)
+    gap = valid - train
+    axes[1].bar(epochs, gap, color=np.where(gap > 0, "#dc2626", "#16a34a"))
+    axes[1].axhline(0, color="#111827", lw=1)
+    axes[1].set(xlabel="Epoch", ylabel="Validation - training loss",
+                title=f"Generalization gap; field RMS={result.data['rms_global']:.2f}")
+    axes[1].grid(alpha=0.25, axis="y")
+    fig.suptitle("Bundled WILLY smoke run (24 profiles, 8 epochs): dynamics, not acceptance", fontsize=12)
+    fig.tight_layout()
+    _save(fig, "training_convergence_smoke.png")
+
+
+def make_inv2d_topography() -> None:
+    """Real physics="mt2d" Inv2DAgent run on all 82 unique K2 stations."""
+    from pycsamt.agents import Inv2DAgent
+
+    clean = _k2_clean_sites()
+    freqs = _K2_FULL_FREQS_HZ[::3]
+    agent = Inv2DAgent(
+        physics="mt2d",
+        n_depth=20,
+        n_stations_per_profile=len(clean),
+        n_train_profiles=24,
+        epochs=30,
+        depth_max=2000.0,
+        station_spacing_m=20.2,
+        correlation_length_x_m=(200.0, 600.0),
+        correlation_length_z_m=(50.0, 200.0),
+        log_resistivity_mean=2.0,
+        log_resistivity_std=0.5,
+        lambda_x=0.01,
+        lambda_z=0.005,
+        lambda_tv=0.002,
+        mesh_safety_factor=4.0,
+    )
+    result = agent.execute({"sites": clean, "freqs": freqs, "topography": True})
+    if result.status == "failed":
+        raise RuntimeError(result.error)
+    fig = result["figures"]["topography_section"]
+    _save(fig, "inv2d_topography_section.png")
+    print(
+        "K2 2-D:",
+        {"rms_global": result.data["rms_global"],
+         "recovery": result.data.get("mt2d_recovery"),
+         "log10_rho_range": (
+             float(np.nanmin(result.data["pred_section"])),
+             float(np.nanmax(result.data["pred_section"])),
+         )},
+    )
+    history = result.data["inverter"]._history
+    train = np.asarray(history["train_loss"])
+    valid = np.asarray(history["val_loss"])
+    epoch = np.arange(1, len(train) + 1)
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.2))
+    axes[0].plot(epoch, train, "o-", color="#2563eb", label="training")
+    axes[0].plot(epoch, valid, "s-", color="#f15a29", label="validation")
+    axes[0].set(xlabel="Epoch", ylabel="Loss", title="K2 Maxwell-trained U-Net history")
+    axes[0].grid(alpha=0.25)
+    axes[0].legend(frameon=False)
+    recovery = result.data.get("mt2d_recovery") or {}
+    metric_names = ["rmse", "mae", "r2"]
+    metric_values = [float(recovery.get(name, np.nan)) for name in metric_names]
+    axes[1].bar(metric_names, metric_values,
+                color=["#2563eb", "#60a5fa", "#dc2626"])
+    axes[1].axhline(0, color="#111827", lw=1)
+    axes[1].set(ylabel="Metric value", title="Held-out synthetic recovery")
+    axes[1].grid(alpha=0.25, axis="y")
+    fig.suptitle("Training fit and recovery skill must be read together", fontsize=12.5)
+    fig.tight_layout()
+    _save(fig, "inv2d_training_and_recovery.png")
+
+
+def make_survey_audit() -> None:
+    """Visualize the K2 geometry, frequency coverage, and dimensionality gate."""
+    from pycsamt.ai.domain_gap import audit_survey
+
+    sites = _k2_clean_sites()
+    report = audit_survey(sites, verbose=0)
+    names = [site.name for site in sites]
+    elevations = np.array([site.coords[2] for site in sites], dtype=float)
+    counts = np.array([len(site.freq) for site in sites], dtype=int)
+    dim = report.dimensionality
+    fractions = np.array([dim.frac_1d, dim.frac_2d, dim.frac_3d])
+    lat = np.array([site.coords[0] for site in sites], dtype=float)
+    lon = np.array([site.coords[1] for site in sites], dtype=float)
+    lat0 = np.radians(np.nanmean(lat))
+    dx = np.diff(lon) * 111_320.0 * np.cos(lat0)
+    dy = np.diff(lat) * 110_574.0
+    spacing = np.sqrt(dx**2 + dy**2)
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.5, 7.4))
+    index = np.arange(len(sites))
+    axes[0, 0].plot(index, elevations, color="#2563eb", lw=1.8)
+    axes[0, 0].fill_between(index, elevations.min(), elevations,
+                            color="#bfdbfe", alpha=0.7)
+    axes[0, 0].set(xlabel="Ordered station index", ylabel="Elevation (m)",
+                   title="Terrain carried by corrected EDI headers")
+    axes[0, 0].grid(alpha=0.2)
+    axes[0, 1].bar(index, counts, color=np.where(counts == counts.max(), "#16a34a", "#f59e0b"))
+    axes[0, 1].set(xlabel="Ordered station index", ylabel="Available frequencies",
+                   title="Frequency support is not uniform")
+    axes[0, 1].grid(alpha=0.2, axis="y")
+    axes[1, 0].bar(["1-D", "2-D", "3-D"], fractions,
+                   color=["#16a34a", "#2563eb", "#dc2626"])
+    axes[1, 0].set(ylim=(0, 1), ylabel="Fraction of station-period samples",
+                   title="Tensor dimensionality controls model choice")
+    for i, value in enumerate(fractions):
+        axes[1, 0].text(i, value + 0.025, f"{value:.1%}", ha="center")
+    axes[1, 0].grid(alpha=0.2, axis="y")
+    axes[1, 1].hist(spacing[np.isfinite(spacing)], bins=18, color="#64748b",
+                    edgecolor="white")
+    axes[1, 1].axvline(report.station_spacing_m["median"], color="#f15a29",
+                       ls="--", label=f"median={report.station_spacing_m['median']:.1f} m")
+    axes[1, 1].set(xlabel="Adjacent spacing (m)", ylabel="Count",
+                   title="Geometry audit precedes meshing")
+    axes[1, 1].legend(frameon=False)
+    fig.suptitle("Corrected does not mean inversion-ready: audit K2 before training", fontsize=13)
+    fig.tight_layout()
+    _save(fig, "survey_audit.png")
+
+
+def make_inv3d_graph_diagnostic() -> None:
+    """Real Inv3DAgent (GCN) run on the full 82-station clean K2 line."""
+    from pycsamt.agents import Inv3DAgent
+
+    clean = _k2_clean_sites()
+    lat = np.array([s.coords[0] for s in clean])
+    lon = np.array([s.coords[1] for s in clean])
+    elev = np.array([s.coords[2] for s in clean])
+    lat0 = np.radians(lat[0])
+    x_m = (lon - lon[0]) * 111_320.0 * np.cos(lat0)
+    y_m = (lat - lat[0]) * 110_574.0
+    chain_km = np.concatenate(
+        [[0.0], np.cumsum(np.sqrt(np.diff(x_m) ** 2 + np.diff(y_m) ** 2))]
+    ) / 1000.0
+    agent = Inv3DAgent(
+        n_layers=6, epochs=30, n_train_profiles=150, n_mc=20,
+        radius=300.0, depth_max=2000.0,
+    )
+    result = agent.execute({
+        "sites": clean,
+        "freqs": _K2_FULL_FREQS_HZ,
+        "topography": {"elevation_m": elev, "chainage_km": chain_km},
+    })
+    if result.status == "failed":
+        raise RuntimeError(result.error)
+    raw_log_rho = np.asarray(result.data["pred_rho"])
+    physical = np.isfinite(raw_log_rho) & (raw_log_rho >= 0.0) & (raw_log_rho <= 5.0)
+    bounded_log_rho = np.where(physical, raw_log_rho, np.nan)
+    from pycsamt.topo import plot_topo_section
+
+    rejected_model = {
+        "pred_rho": bounded_log_rho,
+        "depths_km": result.data["depths_km"],
+        "station_names": result.data["station_names"],
+        "rms_global": result.data["rms_global"],
+    }
+    ax = plot_topo_section(
+        rejected_model,
+        elevation=elev,
+        chainage=chain_km,
+        station_names=result.data["station_names"],
+        station_x=chain_km,
+        topo_source="array",
+        model_unit="km",
+        depth_max=2.0,
+        title="Rejected GCN candidate: only physically bounded cells are shown",
+    )
     ax.text(
-        0.5,
-        0.19,
-        "AI inversion is a fast surrogate workflow; every prediction still needs data-space validation and uncertainty review.",
-        ha="center",
-        fontsize=9.2,
-        color="#475569",
+        0.5, 0.96,
+        f"REJECTED — {100 * (1 - physical.mean()):.1f}% of cells outside "
+        r"$1$–$10^5\ \Omega\,\mathrm{m}$ display bounds",
+        transform=ax.transAxes, ha="center", va="top", color="white",
+        fontsize=10, fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.35", "facecolor": "#b91c1c",
+              "edgecolor": "white", "alpha": 0.94},
     )
-    _save(fig, "ai_inversion_workflow.png")
-
-
-def _mode_decision_plot() -> None:
-    rows = [
-        ["1-D AI", "single station or quick screening", "fast; independent", "bypass when lateral continuity matters"],
-        ["2-D AI", "profile line with ordered stations", "captures lateral structure", "needs consistent station spacing/order"],
-        ["3-D AI", "grid or multiple profiles", "uses station geometry graph", "needs coordinates and enough stations"],
-    ]
-    fig, ax = plt.subplots(figsize=(11.4, 3.4))
-    ax.axis("off")
-    table = ax.table(
-        cellText=rows,
-        colLabels=["mode", "use when", "strength", "watch"],
-        cellLoc="left",
-        colLoc="left",
-        loc="center",
-        colWidths=[0.12, 0.31, 0.25, 0.32],
+    # Deliberately do not publish a subsurface section from a rejected
+    # candidate.  The raw values are retained below for gate diagnostics.
+    plt.close(ax.get_figure())
+    print(
+        "K2 graph candidate:",
+        {"rms_global": result.data["rms_global"],
+         "log10_rho_range": (float(np.nanmin(raw_log_rho)),
+                              float(np.nanmax(raw_log_rho))),
+         "uncertainty_range": (
+             float(np.nanmin(result.data["pred_uncertainty"])),
+             float(np.nanmax(result.data["pred_uncertainty"])),
+         ),
+         "fraction_outside_display_bounds": float(1 - physical.mean())},
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8.8)
-    table.scale(1.0, 1.55)
-    for (row, col), cell in table.get_celld().items():
-        cell.set_edgecolor("#39434d")
-        cell.set_linewidth(0.5)
-        if row == 0:
-            cell.set_facecolor("#2f6f8f")
-            cell.get_text().set_color("white")
-            cell.get_text().set_weight("bold")
-        elif col == 0:
-            cell.set_facecolor("#eef4ed")
-            cell.get_text().set_weight("bold")
-        else:
-            cell.set_facecolor("#fbfbf7")
-    ax.set_title("Choosing 1-D, 2-D, or 3-D AI inversion", pad=12)
-    _save(fig, "ai_mode_decision_table.png")
+    adjacency = np.asarray(result.data["adjacency"])
+    uncertainty = np.asarray(result.data["pred_uncertainty"])
+    neighbours = (adjacency > 0).sum(axis=1) - 1
+    fig, axes = plt.subplots(1, 3, figsize=(13.0, 4.3))
+    axes[0].imshow(adjacency, origin="lower", aspect="auto", cmap="Blues")
+    axes[0].set(xlabel="Station node", ylabel="Station node",
+                title="Radius graph adjacency")
+    axes[1].plot(np.arange(len(neighbours)), neighbours, color="#2563eb")
+    axes[1].axhline(neighbours.mean(), color="#f15a29", ls="--",
+                    label=f"mean={neighbours.mean():.1f}")
+    axes[1].set(xlabel="Station node", ylabel="Connected neighbours",
+                title="Spatial context varies at line ends")
+    axes[1].legend(frameon=False)
+    axes[1].grid(alpha=0.2)
+    image = axes[2].imshow(uncertainty.T, origin="upper", aspect="auto",
+                           extent=(0, uncertainty.shape[0] - 1, 2.0, 0), cmap="magma")
+    axes[2].set(xlabel="Station node", ylabel="Depth (km)",
+                title="MC-dropout spread")
+    fig.colorbar(image, ax=axes[2], label=r"$\sigma(\log_{10}\rho)$")
+    fig.suptitle("The 3-D-labelled workflow is a graph model, not a 3-D Maxwell solve",
+                 fontsize=12.5)
+    fig.tight_layout()
+    _save(fig, "inv3d_graph_uncertainty.png")
 
 
-def _training_coverage_plot(qc: pd.DataFrame) -> None:
-    rng = np.random.default_rng(42)
-    periods = np.logspace(-3, 4.2, 80)
-    station_period_min = qc["pmin"].to_numpy(dtype=float)
-    station_period_max = qc["pmax"].to_numpy(dtype=float)
-    observed_lo = np.nanmin(station_period_min)
-    observed_hi = np.nanmax(station_period_max)
+def make_ood_scores() -> None:
+    """Mahalanobis OOD score of every clean K2 station against the
+    per-station synthetic 1-D feature distribution :class:`Inv3DAgent`
+    trains on -- the finding that explains the previous figure.
+    """
+    from pycsamt.agents.ai_inversion import _z_to_features
+    from pycsamt.ai.validation import flag_out_of_distribution
+    from pycsamt.emtools._core import _get_z_block
+    from pycsamt.forward.batch import generate_dataset
 
-    curves = []
-    for _ in range(120):
-        center = rng.uniform(-0.5, 2.2)
-        amp = rng.uniform(0.15, 0.55)
-        slope = rng.uniform(-0.10, 0.24)
-        curves.append(
-            2.0
-            + slope * np.log10(periods)
-            + amp * np.tanh((np.log10(periods) - center) / rng.uniform(0.7, 1.5))
-            + rng.normal(0, 0.035, periods.size)
+    clean = _k2_clean_sites()
+    freqs = _K2_FULL_FREQS_HZ
+    n = freqs.size
+
+    def summarize(X: np.ndarray) -> np.ndarray:
+        rho, pha = X[:, :n], X[:, n : 2 * n]
+        return np.stack(
+            [rho.mean(1), rho.std(1), pha.mean(1), pha.std(1)], axis=1
         )
-    curves = np.vstack(curves)
-    p10, p50, p90 = np.percentile(curves, [10, 50, 90], axis=0)
-    fig, ax = plt.subplots(figsize=(10.2, 4.4))
-    ax.fill_between(periods, p10, p90, color="#93c5fd", alpha=0.35, label="synthetic envelope")
-    ax.plot(periods, p50, color="#2563eb", linewidth=1.6, label="synthetic median")
-    ax.axvspan(observed_lo, observed_hi, color="#d5962c", alpha=0.18, label="observed EDI period range")
-    ax.set_xscale("log")
-    ax.set_xlabel("Period (s)")
-    ax.set_ylabel("Training response feature")
-    ax.set_title("Training coverage check before AI inversion")
-    ax.legend(fontsize=8)
-    _style_axis(ax)
-    _save(fig, "ai_training_coverage.png")
 
+    x_obs = []
+    for s in clean:
+        z_obj, z, fr = _get_z_block(s)
+        feat = _z_to_features(z_obj, z, fr, freqs)
+        x_obs.append(feat[: 2 * n])
+    feat_obs = summarize(np.array(x_obs))
 
-def _predicted_sections() -> None:
-    stations = np.arange(28)
-    depths = np.linspace(0, 1800, 80)
-    xx, zz = np.meshgrid(stations, depths)
-    one_d = 2.15 + 0.45 * np.tanh((zz - 650) / 420)
-    one_d += 0.18 * np.sin(stations / 2.8)[None, :]
-    two_d = one_d - 0.72 * np.exp(-((xx - 11) ** 2 / 28 + (zz - 520) ** 2 / 85000))
-    three_d_slice = two_d + 0.30 * np.exp(-((xx - 20) ** 2 / 20 + (zz - 1050) ** 2 / 150000))
-
-    fig, axes = plt.subplots(1, 3, figsize=(12.0, 4.3), constrained_layout=True)
-    panels = [
-        (one_d, "1-D AI stacked profiles"),
-        (two_d, "2-D AI profile section"),
-        (three_d_slice, "3-D AI graph slice"),
-    ]
-    for ax, (mat, title) in zip(axes, panels):
-        im = ax.imshow(
-            mat,
-            aspect="auto",
-            origin="upper",
-            extent=(stations.min(), stations.max(), depths.max() / 1000, 0),
-            cmap="turbo",
-            vmin=1.4,
-            vmax=3.0,
-        )
-        ax.set_title(title)
-        ax.set_xlabel("Station index")
-        ax.set_ylabel("Depth (km)")
-        _style_axis(ax)
-    cb = fig.colorbar(im, ax=axes, shrink=0.82, pad=0.015)
-    cb.set_label("log10 resistivity")
-    _save(fig, "ai_prediction_modes.png")
-
-
-def _observed_pseudosection(sites) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    labels = []
-    periods_ref = None
-    columns = []
-    for site in sites:
-        labels.append(str(getattr(site, "station", getattr(site, "id", len(labels)))))
-        freq = np.asarray(site.Z.freq, dtype=float)
-        zxy = np.asarray(site.Z.z, dtype=complex)[:, 0, 1]
-        period = 1.0 / np.maximum(freq, 1e-30)
-        rho = 0.2 * np.abs(zxy) ** 2 / np.maximum(freq, 1e-30)
-        order = np.argsort(period)
-        period = period[order]
-        log_rho = np.log10(np.clip(rho[order], 1e-12, None))
-        if periods_ref is None:
-            periods_ref = period
-        columns.append(np.interp(np.log10(periods_ref), np.log10(period), log_rho))
-    return np.asarray(columns, dtype=float).T, np.asarray(periods_ref, dtype=float), labels
-
-
-def _synthetic_ai_2d(n_depth: int, n_station: int) -> tuple[np.ndarray, np.ndarray]:
-    depths = np.linspace(0, 2200, n_depth)
-    x = np.arange(n_station)
-    xx, zz = np.meshgrid(x, depths)
-    section = 2.22 + 0.48 * np.tanh((zz - 720) / 460)
-    section -= 0.68 * np.exp(-((xx - 11.5) ** 2 / 34 + (zz - 560) ** 2 / 105000))
-    section += 0.22 * np.exp(-((xx - 21.5) ** 2 / 42 + (zz - 1300) ** 2 / 220000))
-    section += 0.05 * np.sin(xx / 2.7) * np.exp(-zz / 1800)
-    return section, depths
-
-
-def _ai_2d_grid_plot(functions, sites) -> None:
-    station_api = functions["PYCSAMT_STATION_RENDERING"]
-    pseudo, periods, labels = _observed_pseudosection(sites)
-    section, depths = _synthetic_ai_2d(82, len(labels))
-    x = np.arange(len(labels), dtype=float)
-
-    fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.8), constrained_layout=True)
-    im0 = axes[0].imshow(
-        pseudo,
-        aspect="auto",
-        origin="lower",
-        extent=(-0.5, len(labels) - 0.5, periods.min(), periods.max()),
-        cmap="viridis",
-        vmin=np.nanpercentile(pseudo, 5),
-        vmax=np.nanpercentile(pseudo, 95),
+    ds = generate_dataset(
+        solver="mt1d", n_samples=300, freqs=freqs, n_layers=6,
+        noise_level=0.03, seed=1, n_jobs=1, verbose=False,
     )
-    axes[0].set_yscale("log")
-    axes[0].set_ylabel("Period (s)")
-    axes[0].set_title("Observed apparent-resistivity pseudosection")
-    station_api.apply(
-        axes[0],
-        x,
-        labels,
-        preset="pseudosection",
-        xlim=(-0.5, len(labels) - 0.5),
+    feat_train = summarize(ds.X[:, : 2 * n])
+
+    report = flag_out_of_distribution(
+        feat_obs, feat_train, method="mahalanobis", quantile=0.95
     )
-    cb0 = fig.colorbar(im0, ax=axes[0], pad=0.015, shrink=0.82)
-    cb0.set_label("log10 rho_a xy")
+    order = np.argsort(report.scores)
+    scores = report.scores[order]
+    flagged = report.flagged[order]
 
-    im1 = axes[1].imshow(
-        section,
-        aspect="auto",
-        origin="upper",
-        extent=(-0.5, len(labels) - 0.5, depths.max() / 1000.0, 0.0),
-        cmap="turbo",
-        vmin=1.35,
-        vmax=3.05,
+    fig, ax = plt.subplots(figsize=(11.0, 4.6), constrained_layout=True)
+    colors = np.where(flagged, "#dc2626", "#16a34a")
+    ax.bar(np.arange(scores.size), scores, color=colors, width=0.85)
+    ax.axhline(
+        report.threshold, color="#111827", ls="--", lw=1.3,
+        label=f"threshold (95th pct. of training self-scores) = "
+        f"{report.threshold:.2f}",
     )
-    axes[1].set_ylabel("Depth (km)")
-    axes[1].set_title("AI 2-D predicted resistivity section")
-    station_api.apply(
-        axes[1],
-        x,
-        labels,
-        preset="inversion",
-        xlim=(-0.5, len(labels) - 0.5),
+    ax.set_yscale("log")
+    ax.set_xlabel("K2 station, sorted by OOD score")
+    ax.set_ylabel("Mahalanobis distance (log scale)")
+    ax.set_xlim(-0.6, scores.size - 0.4)
+    ax.legend(loc="upper left", fontsize=9)
+    n_flagged = int(flagged.sum())
+    ax.set_title(
+        f"{n_flagged}/{scores.size} K2 stations flagged out-of-distribution "
+        "against the GCN's synthetic 1-D training features",
+        fontsize=11,
     )
-    cb1 = fig.colorbar(im1, ax=axes[1], pad=0.015, shrink=0.82)
-    cb1.set_label("log10 rho")
-    for ax in axes:
-        _style_axis(ax)
-    _save(fig, "ai_2d_pseudosection_model_grid.png")
-
-
-def _ai_3d_grid_plot(functions, sites) -> None:
-    station_api = functions["PYCSAMT_STATION_RENDERING"]
-    labels = [str(getattr(site, "station", getattr(site, "id", i))) for i, site in enumerate(sites)]
-    n = len(labels)
-    x = np.linspace(0, 13_500, n)
-    y = 450 * np.sin(np.linspace(0, 2.6, n))
-    response = 0.45 + 0.40 * np.exp(-((x - 7200) ** 2 / 1.2e7 + y**2 / 8e5))
-    topo_x = np.arange(n, dtype=float)
-    topo_m = 420.0 + 95.0 * np.sin(np.linspace(0.15, 2.9, n))
-    topo_m += 42.0 * np.exp(-((topo_x - 18.0) ** 2) / 42.0)
-    topo_m -= 26.0 * np.exp(-((topo_x - 6.0) ** 2) / 18.0)
-
-    depths = np.linspace(0, 2600, 90)
-    xx, zz = np.meshgrid(np.arange(n), depths)
-    slice_y0 = 2.24 + 0.52 * np.tanh((zz - 800) / 520)
-    slice_y0 -= 0.62 * np.exp(-((xx - 12.0) ** 2 / 38 + (zz - 620) ** 2 / 130000))
-    slice_y0 += 0.34 * np.exp(-((xx - 21.0) ** 2 / 28 + (zz - 1550) ** 2 / 210000))
-
-    fig = plt.figure(figsize=(13.4, 6.4), constrained_layout=True)
-    gs = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.35])
-    ax0 = fig.add_subplot(gs[0, 0])
-    right = gs[0, 1].subgridspec(2, 1, height_ratios=[0.38, 1.0], hspace=0.04)
-    ax_topo = fig.add_subplot(right[0, 0])
-    ax1 = fig.add_subplot(right[1, 0], sharex=ax_topo)
-
-    for i in range(n):
-        dist = np.hypot(x - x[i], y - y[i])
-        for j in np.where((dist > 0) & (dist < 1800))[0]:
-            if j > i:
-                ax0.plot([x[i], x[j]], [y[i], y[j]], color="#94a3b8", alpha=0.45, linewidth=0.75)
-    sc = ax0.scatter(x, y, c=response, cmap="viridis", s=62, edgecolor="#27323a", linewidth=0.45, zorder=3)
-    step = max(1, n // 10)
-    for i in range(0, n, step):
-        ax0.text(x[i], y[i] + 180, labels[i], fontsize=7, rotation=35, ha="center")
-    ax0.set_title("3-D AI station graph")
-    ax0.set_xlabel("Easting offset (m)")
-    ax0.set_ylabel("Northing offset (m)")
-    cb0 = fig.colorbar(sc, ax=ax0, pad=0.015, shrink=0.82)
-    cb0.set_label("response feature")
-    _style_axis(ax0)
-
-    ax_topo.fill_between(topo_x, topo_m.min() - 70.0, topo_m, color="#d7c8a6", alpha=0.70)
-    ax_topo.plot(topo_x, topo_m, color="#78664a", linewidth=1.7)
-    ax_topo.set_ylim(topo_m.min() - 70.0, topo_m.max() + 150.0)
-    ax_topo.set_ylabel("Elev. (m)")
-    ax_topo.set_title("Topography and station positions along the 3-D slice")
-    station_api.style_for("inversion").apply(
-        ax_topo,
-        topo_x,
-        labels,
-        xlim=(-0.5, n - 0.5),
-        topo_elev=topo_m,
-    )
-    _style_axis(ax_topo)
-    ax_topo.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
-
-    im = ax1.imshow(
-        slice_y0,
-        aspect="auto",
-        origin="upper",
-        extent=(-0.5, n - 0.5, depths.max() / 1000.0, 0.0),
-        cmap="turbo",
-        vmin=1.35,
-        vmax=3.1,
-    )
-    station_api.apply(
-        ax1,
-        topo_x,
-        labels,
-        preset="inversion",
-        xlim=(-0.5, n - 0.5),
-    )
-    ax1.set_ylabel("Depth (km)")
-    ax1.set_title("3-D AI vertical slice through profile")
-    cb1 = fig.colorbar(im, ax=ax1, pad=0.015, shrink=0.82)
-    cb1.set_label("log10 rho")
-    _style_axis(ax1)
-    _save(fig, "ai_3d_graph_slice_grid.png")
-
-
-def _ai_3d_topography_block_plot(functions, sites) -> None:
-    station_api = functions["PYCSAMT_STATION_RENDERING"]
-    labels = [str(getattr(site, "station", getattr(site, "id", i))) for i, site in enumerate(sites)]
-    n = len(labels)
-    topo_x = np.arange(n, dtype=float)
-    topo_m = 420.0 + 95.0 * np.sin(np.linspace(0.15, 2.9, n))
-    topo_m += 42.0 * np.exp(-((topo_x - 18.0) ** 2) / 42.0)
-    topo_m -= 26.0 * np.exp(-((topo_x - 6.0) ** 2) / 18.0)
-
-    depths = np.linspace(0, 2600, 90)
-    xx, zz = np.meshgrid(np.arange(n), depths)
-    block = 2.24 + 0.52 * np.tanh((zz - 800) / 520)
-    block -= 0.62 * np.exp(-((xx - 12.0) ** 2 / 38 + (zz - 620) ** 2 / 130000))
-    block += 0.34 * np.exp(-((xx - 21.0) ** 2 / 28 + (zz - 1550) ** 2 / 210000))
-    x_grid = np.tile(topo_x[None, :], (depths.size, 1))
-    elev_grid = topo_m[None, :] - depths[:, None]
-
-    fig, ax1 = plt.subplots(figsize=(12.8, 5.8), constrained_layout=True)
-
-    levels = np.linspace(1.35, 3.1, 18)
-    im = ax1.contourf(x_grid, elev_grid, block, levels=levels, cmap="turbo", extend="both")
-    ax1.contour(
-        x_grid,
-        elev_grid,
-        block,
-        levels=levels[::2],
-        colors="k",
-        linewidths=0.28,
-        alpha=0.30,
-    )
-    ax1.fill_between(topo_x, topo_m, topo_m.max() + 420.0, color="white", zorder=4)
-    ax1.plot(topo_x, topo_m, color="#2f2419", linewidth=1.5, zorder=6)
-    station_api.style_for("inversion").apply(
-        ax1,
-        topo_x,
-        labels,
-        xlim=(-0.5, n - 0.5),
-        topo_elev=topo_m,
-    )
-    ax1.set_ylim(topo_m.min() - depths.max(), topo_m.max() + 420.0)
-    ax1.set_ylabel("Elevation (m)")
-    ax1.set_title("3-D AI inversion block with topography", pad=16)
-    cb1 = fig.colorbar(im, ax=ax1, pad=0.015, shrink=0.82)
-    cb1.set_label("log10 rho")
-    _style_axis(ax1)
-    _save(fig, "ai_3d_topography_inversion_block.png")
-
-
-def _validation_plot() -> None:
-    stations = [f"18-{i:03d}" for i in range(1, 29)]
-    x = np.arange(len(stations))
-    rng = np.random.default_rng(7)
-    rms_1d = 0.28 + 0.08 * np.sin(x / 3) + rng.normal(0, 0.025, len(x))
-    rms_2d = 0.22 + 0.04 * np.sin(x / 4 + 0.5) + rng.normal(0, 0.018, len(x))
-    uncert = 0.08 + 0.06 * np.exp(-((x - 17) ** 2) / 45) + rng.normal(0, 0.008, len(x))
-    fig, ax = plt.subplots(figsize=(11.0, 4.2))
-    ax.plot(x, rms_1d, color="#7c4d79", marker="o", markersize=3, label="1-D RMS")
-    ax.plot(x, rms_2d, color="#2f6f8f", marker="s", markersize=3, label="2-D RMS")
-    ax.fill_between(x, rms_2d - uncert, rms_2d + uncert, color="#2f6f8f", alpha=0.16, label="prediction interval")
-    ax.axhline(0.35, color="#c85745", linestyle="--", linewidth=1.0, label="review threshold")
-    ax.set_xticks(x[::3])
-    ax.set_xticklabels(stations[::3], rotation=45, ha="right")
-    ax.set_ylabel("RMS in log10 apparent resistivity")
-    ax.set_title("Post-prediction validation by station")
-    ax.legend(fontsize=8, ncol=4, loc="upper right")
-    _style_axis(ax)
-    _save(fig, "ai_validation_residuals.png")
-
-
-def _graph_context_plot() -> None:
-    rng = np.random.default_rng(11)
-    x = np.linspace(0, 13_500, 28) + rng.normal(0, 120, 28)
-    y = 500 * np.sin(np.linspace(0, 2.4, 28)) + rng.normal(0, 80, 28)
-    response = 0.45 + 0.35 * np.exp(-((x - 7200) ** 2 / 9e6 + y**2 / 6e5))
-    fig, ax = plt.subplots(figsize=(9.2, 4.8))
-    for i in range(len(x)):
-        dist = np.hypot(x - x[i], y - y[i])
-        for j in np.where((dist > 0) & (dist < 1800))[0]:
-            if j > i:
-                ax.plot([x[i], x[j]], [y[i], y[j]], color="#94a3b8", alpha=0.45, linewidth=0.8)
-    sc = ax.scatter(x, y, c=response, cmap="viridis", s=70, edgecolor="#27323a", linewidth=0.5, zorder=3)
-    ax.set_xlabel("Profile easting (m)")
-    ax.set_ylabel("Profile northing (m)")
-    ax.set_title("3-D/graph AI uses station geometry")
-    cb = fig.colorbar(sc, ax=ax, pad=0.015)
-    cb.set_label("Normalised response feature")
-    _style_axis(ax)
-    _save(fig, "ai_3d_graph_context.png")
+    _save(fig, "ood_scores.png")
 
 
 def main() -> int:
-    functions = _import_pycsamt()
-    survey = functions["read_edis"](
-        DATA_DIR,
-        recursive=False,
-        strict=False,
-        on_dup="replace",
-        progress=False,
-    )
-    sites = survey.collection
-    inventory = survey.summary().to_pandas(copy=True)
-    qc = functions["build_qc_table"](
-        sites,
-        include_skew=True,
-        recursive=False,
-        api=True,
-    ).to_pandas(copy=True)
-    confidence = functions["station_confidence_table"](
-        sites,
-        method="composite",
-        recursive=False,
-        api=True,
-    ).to_pandas(copy=True)
-
-    _workflow_plot()
-    _mode_decision_plot()
-    _training_coverage_plot(qc)
-    _predicted_sections()
-    _ai_2d_grid_plot(functions, sites)
-    _validation_plot()
-    _graph_context_plot()
-    _ai_3d_grid_plot(functions, sites)
-    _ai_3d_topography_block_plot(functions, sites)
-
-    print("survey_summary:")
-    print(survey.summary())
-    print("inventory:")
-    print(inventory[["station", "n_freq", "tipper", "spectra"]].head(5).to_string(index=False))
-    print("qc_ready:")
-    print(
-        qc[["station", "n_freq", "frac_ok", "snr_med", "pmin", "pmax"]]
-        .head(5)
-        .to_string(index=False, float_format=lambda value: f"{value:.3g}")
-    )
-    print("confidence:")
-    print(
-        confidence[["station", "confidence", "coverage", "offdiag", "phase"]]
-        .head(5)
-        .to_string(index=False, float_format=lambda value: f"{value:.3f}")
-    )
-    print("decision:")
-    print("corrected_edis=data/AMT/WILLY_DATA/L18PLT")
-    print("1d_ai=optional_screening")
-    print("2d_ai=recommended_for_profile")
-    print("3d_ai=use_when_coordinates_or_multiple_lines_exist")
+    make_geology_topography_mesh()
+    make_maxwell_training_pair()
+    make_training_convergence_smoke()
+    if not K2_DIR.is_dir():
+        print(f"skip K2-only figures: {K2_DIR} not found (local-only dataset)")
+        print(f"images: {IMAGE_DIR.relative_to(ROOT)}")
+        return 0
+    make_survey_audit()
+    make_inv2d_topography()
+    make_inv3d_graph_diagnostic()
+    make_ood_scores()
     print(f"images: {IMAGE_DIR.relative_to(ROOT)}")
     return 0
 

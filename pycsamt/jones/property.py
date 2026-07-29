@@ -236,9 +236,7 @@ class JSiteProperty:
                     lat = _parse_latitude(val, strict=strict, verbose=verbose)
                     props["latitude"] = lat
                 elif key_up == "LONGITUDE":
-                    lon = _parse_longitude(
-                        val, strict=strict, verbose=verbose
-                    )
+                    lon = _parse_longitude(val, strict=strict, verbose=verbose)
                     props["longitude"] = lon
                 elif key_up == "ELEVATION":
                     el = _maybe_missing_float(val)
@@ -367,9 +365,7 @@ def _maybe_missing_float(value: str) -> float | None:
     return v
 
 
-def _parse_latitude(
-    value: str, *, strict: bool, verbose: int | bool
-) -> float | None:
+def _parse_latitude(value: str, *, strict: bool, verbose: int | bool) -> float | None:
     """Parse latitude using GIS utilities.
 
     - In ``strict`` mode, delegate to :func:`assert_lat_value` which
@@ -393,9 +389,7 @@ def _parse_latitude(
     return lat
 
 
-def _parse_longitude(
-    value: str, *, strict: bool, verbose: int | bool
-) -> float | None:
+def _parse_longitude(value: str, *, strict: bool, verbose: int | bool) -> float | None:
     """Parse longitude using GIS utilities.
 
     - In ``strict`` mode, delegate to :func:`assert_lon_value` which

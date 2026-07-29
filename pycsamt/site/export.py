@@ -62,7 +62,6 @@ def write_site(site: Any, path: str | Path) -> Path:
     >>> class Dummy:
     ...     def to_file(self, p):  # minimal writer
     ...         Path(p).write_text("# dummy edi\\n", encoding="utf-8")
-    ...
     >>> out = write_site(Dummy(), Path("out") / "S01.edi")
     >>> out.name
     'S01.edi'
@@ -151,17 +150,19 @@ def write_sites(
     >>> from pathlib import Path
     >>> from pycsamt.site.export import write_sites
     >>> class EdiToFile:
-    ...     def __init__(self, name): self._n = name
+    ...     def __init__(self, name):
+    ...         self._n = name
+    ...
     ...     def to_file(self, p):
     ...         Path(p).write_text(f"# {self._n}\\n", encoding="utf-8")
+    ...
     ...     # station name is taken from header helpers when present,
     ...     # but the template can still use {index}.
-    ...
     >>> outdir = Path("eds_out")
     >>> paths = write_sites(
     ...     [EdiToFile("S01"), EdiToFile("S02")],
     ...     outdir,
-    ...     template="{index:03d}_{station}"
+    ...     template="{index:03d}_{station}",
     ... )
     >>> [p.exists() for p in paths]
     [True, True]
@@ -278,10 +279,11 @@ def pack_zip(
     >>> from zipfile import ZipFile
     >>> from pycsamt.site.export import pack_zip
     >>> class EdiSave:
-    ...     def __init__(self, name): self._n = name
+    ...     def __init__(self, name):
+    ...         self._n = name
+    ...
     ...     def to_file(self, p):
     ...         Path(p).write_text(f"# {self._n}\\n", encoding="utf-8")
-    ...
     >>> zpath = Path("out_bundle") / "sites.zip"
     >>> out = pack_zip(
     ...     [EdiSave("A01"), EdiSave("A02")],
@@ -336,9 +338,7 @@ def pack_zip(
                 }
             )
 
-        with zipfile.ZipFile(
-            out_zip, "w", compression=zipfile.ZIP_DEFLATED
-        ) as zf:
+        with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             for fp, arcname in file_map:
                 zf.write(fp, arcname)
 

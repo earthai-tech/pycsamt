@@ -79,9 +79,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -100,9 +98,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _set_no_trigger():
@@ -527,9 +523,7 @@ class TestRunQcOverview:
         assert out is no_update
 
     def test_real_sites_dark(self, web_app, cached_session, store_data_willy):
-        out = self._fn(web_app)(
-            "qc", store_data_willy, "dark", cached_session, None
-        )
+        out = self._fn(web_app)("qc", store_data_willy, "dark", cached_session, None)
         assert out.startswith("data:image")
 
     def test_real_sites_light_with_active_lines(
@@ -563,7 +557,5 @@ class TestRunQcOverview:
             raise RuntimeError("boom")
 
         monkeypatch.setattr(qc_mod, "fig_to_src", _boom)
-        out = self._fn(web_app)(
-            "qc", store_data_willy, "dark", cached_session, None
-        )
+        out = self._fn(web_app)("qc", store_data_willy, "dark", cached_session, None)
         assert out is no_update

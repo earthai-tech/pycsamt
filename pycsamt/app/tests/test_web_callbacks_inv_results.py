@@ -28,9 +28,7 @@ from pycsamt.app.web.layout import IDs
 _ROOT = Path(__file__).parents[3]
 _OCCAM_DIR = _ROOT / "data" / "occam2D"
 _MARE_DIR = _ROOT / "data" / "mare2dem" / "demo_mt_inversion"
-_MODEM_DIR = (
-    _ROOT / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
-)
+_MODEM_DIR = _ROOT / "ModEMv626" / "ModEM" / "examples" / "2D_MT" / "BLOCK2"
 
 _HAS_OCCAM = _OCCAM_DIR.exists()
 _HAS_MARE = _MARE_DIR.exists()
@@ -111,9 +109,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -249,9 +245,7 @@ class TestMakeFigMare2dem:
             fig = ivr._make_fig_mare2dem(mare_result, tab, {})
             assert fig is not None
 
-    def test_survey_tab_is_broken_for_plain_inversion_result(
-        self, mare_result
-    ):
+    def test_survey_tab_is_broken_for_plain_inversion_result(self, mare_result):
         """Real bug: the "survey" tab does
         ``em_arg = result.em if hasattr(result, "em") else result`` then
         ``PlotSurveyLayout(em_arg).plot(...)``. A plain
@@ -280,14 +274,22 @@ class TestBrowserToggle:
     def test_browse_opens_at_home_by_default(self, web_app, monkeypatch):
         import pycsamt.app.web.callbacks.inv_results as ivr_mod
 
-        monkeypatch.setattr(ivr_mod, "ctx", type("C", (), {"triggered_id": "btn-invr-browse"})())
+        monkeypatch.setattr(
+            ivr_mod,
+            "ctx",
+            type("C", (), {"triggered_id": "btn-invr-browse"})(),
+        )
         is_open, path = self._fn(web_app)(1, 0, False, None, None)
         assert is_open is True
 
     def test_browse_uses_typed_path_dir(self, web_app, monkeypatch, tmp_path):
         import pycsamt.app.web.callbacks.inv_results as ivr_mod
 
-        monkeypatch.setattr(ivr_mod, "ctx", type("C", (), {"triggered_id": "btn-invr-browse"})())
+        monkeypatch.setattr(
+            ivr_mod,
+            "ctx",
+            type("C", (), {"triggered_id": "btn-invr-browse"})(),
+        )
         is_open, path = self._fn(web_app)(1, 0, False, None, str(tmp_path))
         assert is_open is True
         assert path == str(tmp_path)
@@ -296,7 +298,9 @@ class TestBrowserToggle:
         import pycsamt.app.web.callbacks.inv_results as ivr_mod
 
         monkeypatch.setattr(
-            ivr_mod, "ctx", type("C", (), {"triggered_id": "btn-invr-browser-cancel"})()
+            ivr_mod,
+            "ctx",
+            type("C", (), {"triggered_id": "btn-invr-browser-cancel"})(),
         )
         is_open, path = self._fn(web_app)(0, 1, True, "/some/path", None)
         assert is_open is False
@@ -305,9 +309,7 @@ class TestBrowserToggle:
 
 class TestBrowserNavigate:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "invr-browser-path.data", "invr-dir-item"
-        )
+        return _cb_by_input(web_app, "invr-browser-path.data", "invr-dir-item")
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -321,7 +323,11 @@ class TestBrowserNavigate:
         monkeypatch.setattr(
             ivr_mod,
             "ctx",
-            type("C", (), {"triggered_id": {"type": "invr-dir-item", "index": str(sub)}})(),
+            type(
+                "C",
+                (),
+                {"triggered_id": {"type": "invr-dir-item", "index": str(sub)}},
+            )(),
         )
         out = self._fn(web_app)([1])
         assert out == str(sub)
@@ -335,7 +341,12 @@ class TestBrowserNavigate:
             type(
                 "C",
                 (),
-                {"triggered_id": {"type": "invr-dir-item", "index": "/no/such/dir"}},
+                {
+                    "triggered_id": {
+                        "type": "invr-dir-item",
+                        "index": "/no/such/dir",
+                    }
+                },
             )(),
         )
         with pytest.raises(PreventUpdate):
@@ -344,9 +355,7 @@ class TestBrowserNavigate:
 
 class TestBrowserUp:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, "invr-browser-path.data", "btn-invr-browser-up"
-        )
+        return _cb_by_input(web_app, "invr-browser-path.data", "btn-invr-browser-up")
 
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -460,7 +469,10 @@ class TestGeneratePlot:
     def test_no_cached_result_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, "conv", {"solver": "occam2d"}, "no-such-session",
+                1,
+                "conv",
+                {"solver": "occam2d"},
+                "no-such-session",
                 *_default_ctrl_args(),
             )
 
@@ -468,7 +480,10 @@ class TestGeneratePlot:
         ivr._store_result("s1", object())
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, "conv", {"solver": "no-such-solver"}, "s1",
+                1,
+                "conv",
+                {"solver": "no-such-solver"},
+                "s1",
                 *_default_ctrl_args(),
             )
 
@@ -476,18 +491,22 @@ class TestGeneratePlot:
     def test_real_occam2d_render(self, web_app, occam_result):
         ivr._store_result("s-occam", occam_result)
         src = self._fn(web_app)(
-            1, "model", {"solver": "occam2d"}, "s-occam",
+            1,
+            "model",
+            {"solver": "occam2d"},
+            "s-occam",
             *_default_ctrl_args(),
         )
         assert src.startswith("data:image/png")
 
     @pytest.mark.skipif(not _HAS_OCCAM, reason="occam2D data not available")
-    def test_plot_exception_falls_back_to_error_fig(
-        self, web_app, occam_result
-    ):
+    def test_plot_exception_falls_back_to_error_fig(self, web_app, occam_result):
         ivr._store_result("s-occam-err", occam_result)
         src = self._fn(web_app)(
-            1, "not-a-real-tab", {"solver": "occam2d"}, "s-occam-err",
+            1,
+            "not-a-real-tab",
+            {"solver": "occam2d"},
+            "s-occam-err",
             *_default_ctrl_args(),
         )
         assert src.startswith("data:image/png")
@@ -503,7 +522,10 @@ class TestExportPlot:
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                None, {"solver": "occam2d"}, "conv", "s",
+                None,
+                {"solver": "occam2d"},
+                "conv",
+                "s",
                 *_default_ctrl_args(),
             )
 
@@ -514,7 +536,10 @@ class TestExportPlot:
     def test_no_cached_result_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, {"solver": "occam2d"}, "conv", "no-such-session",
+                1,
+                {"solver": "occam2d"},
+                "conv",
+                "no-such-session",
                 *_default_ctrl_args(),
             )
 
@@ -522,7 +547,10 @@ class TestExportPlot:
         ivr._store_result("s2", object())
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, {"solver": "no-such-solver"}, "conv", "s2",
+                1,
+                {"solver": "no-such-solver"},
+                "conv",
+                "s2",
                 *_default_ctrl_args(),
             )
 
@@ -530,7 +558,10 @@ class TestExportPlot:
     def test_real_export(self, web_app, occam_result):
         ivr._store_result("s-exp", occam_result)
         out = self._fn(web_app)(
-            1, {"solver": "occam2d"}, "model", "s-exp",
+            1,
+            {"solver": "occam2d"},
+            "model",
+            "s-exp",
             *_default_ctrl_args(),
         )
         assert out["filename"] == "invr_occam2d_model.png"
@@ -541,6 +572,9 @@ class TestExportPlot:
         ivr._store_result("s-exp-err", occam_result)
         with pytest.raises(PreventUpdate):
             self._fn(web_app)(
-                1, {"solver": "occam2d"}, "not-a-real-tab", "s-exp-err",
+                1,
+                {"solver": "occam2d"},
+                "not-a-real-tab",
+                "s-exp-err",
                 *_default_ctrl_args(),
             )

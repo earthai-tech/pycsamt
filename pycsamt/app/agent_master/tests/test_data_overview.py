@@ -188,9 +188,7 @@ class TestSmartUnknownReply(unittest.TestCase):
         self.assertIn("plot the phase pseudosection", out)
 
     def test_non_plot_request_returns_none(self):
-        self.assertIsNone(
-            C._smart_unknown_reply("make me a coffee", self.STORE)
-        )
+        self.assertIsNone(C._smart_unknown_reply("make me a coffee", self.STORE))
 
     def test_numeric_line_ref_matches_group(self):
         # "line 22" resolves to L22PLT via the embedded number —

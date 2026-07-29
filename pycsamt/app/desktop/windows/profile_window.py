@@ -130,9 +130,7 @@ class ProfileViewerWindow(PanelWindow):
         ]
         for label, _, _ in self._PHASE_RANGES:
             self._combo_phase.addItem(label)
-        self._combo_phase.currentIndexChanged.connect(
-            self._on_phase_range_changed
-        )
+        self._combo_phase.currentIndexChanged.connect(self._on_phase_range_changed)
         lay_phase.addWidget(self._combo_phase)
         layout.addWidget(grp_phase)
 
@@ -190,9 +188,7 @@ class ProfileViewerWindow(PanelWindow):
             "↻  Refresh", "profile-view", "Redraw current tab"
         )
         self._btn_refresh.clicked.connect(self._on_refresh)
-        self._btn_export = icon_button(
-            "⬆  Export…", "export", "Export figure to file"
-        )
+        self._btn_export = icon_button("⬆  Export…", "export", "Export figure to file")
         self._btn_export.clicked.connect(self._on_export)
         self._btn_pub = icon_button(
             "📐  Publication…",
@@ -375,9 +371,7 @@ class ProfileViewerWindow(PanelWindow):
         ctrl = self._profile_panel._ctrl
         name = self._combo_station.current_station()
         if not name:
-            self._info_lbl.setText(
-                "Select a station before opening Publication View."
-            )
+            self._info_lbl.setText("Select a station before opening Publication View.")
             return
         # Push current component / errbar state
         self._apply_components()

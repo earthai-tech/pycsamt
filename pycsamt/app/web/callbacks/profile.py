@@ -240,9 +240,7 @@ def register_profile(app) -> None:
         try:
             # ── Plotly pseudosection tabs ──────────────────────────────────────
             if idx == 1:
-                fig = build_multi_pseudosection(
-                    sites, list(comps), "rho", dark
-                )
+                fig = build_multi_pseudosection(sites, list(comps), "rho", dark)
                 hdr = _comp_bar(comps, "rho")
                 return (
                     _NO_SRC,
@@ -259,9 +257,7 @@ def register_profile(app) -> None:
                 )
 
             if idx == 2:
-                fig = build_multi_pseudosection(
-                    sites, list(comps), "phi", dark
-                )
+                fig = build_multi_pseudosection(sites, list(comps), "phi", dark)
                 hdr = _comp_bar(comps, "phi")
                 return (
                     _NO_SRC,
@@ -419,9 +415,9 @@ def register_profile(app) -> None:
             i = ids.index(current_id)
         except ValueError:
             return no_update
-        new_idx = (
-            i - 1 if ctx.triggered_id == IDs.PROFILE_PAGE_PREV else i + 1
-        ) % len(ids)
+        new_idx = (i - 1 if ctx.triggered_id == IDs.PROFILE_PAGE_PREV else i + 1) % len(
+            ids
+        )
         return {"station_id": ids[new_idx]}
 
     # ── 6. Export current tab figure ──────────────────────────────────────────
@@ -454,9 +450,7 @@ def register_profile(app) -> None:
         if not src or not src.startswith("data:image"):
             return no_update
         _, b64 = src.split(",", 1)
-        return dict(
-            content=b64, filename=filename, base64=True, type="image/png"
-        )
+        return dict(content=b64, filename=filename, base64=True, type="image/png")
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────

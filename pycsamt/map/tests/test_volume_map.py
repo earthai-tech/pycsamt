@@ -201,15 +201,11 @@ def _var_data() -> MapData:
 def test_log_vs_linear_colorbar_range() -> None:
     log = build_3d_map(
         _var_data(),
-        VolumeMapOptions(
-            mode="fence", log_color=True, value_range=(10.0, 1000.0)
-        ),
+        VolumeMapOptions(mode="fence", log_color=True, value_range=(10.0, 1000.0)),
     )
     lin = build_3d_map(
         _var_data(),
-        VolumeMapOptions(
-            mode="fence", log_color=False, value_range=(10.0, 1000.0)
-        ),
+        VolumeMapOptions(mode="fence", log_color=False, value_range=(10.0, 1000.0)),
     )
     assert np.isclose(log.data[0].cmin, 1.0)
     assert np.isclose(log.data[0].cmax, 3.0)

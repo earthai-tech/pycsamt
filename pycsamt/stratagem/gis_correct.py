@@ -144,11 +144,7 @@ def _detect_coord_cols(
             f"after exclusion: {numeric_cols}.  Pass explicit easting_col and "
             "northing_col to CoordinateInjector.fit()."
         )
-    if (
-        len(numeric_cols) > 2
-        and easting_col is None
-        and northing_col is None
-    ):
+    if len(numeric_cols) > 2 and easting_col is None and northing_col is None:
         raise ValidationError(
             f"Cannot auto-detect easting/northing unambiguously: "
             f"{len(numeric_cols)} numeric candidate columns remain after "
@@ -315,9 +311,7 @@ class StationLocator(PyCSAMTObject):
         # as the safe default and document that the user should verify.
         reversed_ = False
 
-        self.index_map_ = (
-            list(range(n - 1, -1, -1)) if reversed_ else list(range(n))
-        )
+        self.index_map_ = list(range(n - 1, -1, -1)) if reversed_ else list(range(n))
         self.reversed_ = reversed_
 
         if self.verbose:
@@ -507,9 +501,7 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
             "alt",
             "altitude",
         }
-        e_col, n_col = _detect_coord_cols(
-            df, easting_col, northing_col, _exclude
-        )
+        e_col, n_col = _detect_coord_cols(df, easting_col, northing_col, _exclude)
 
         if self.verbose:
             print(
@@ -559,9 +551,7 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
         # ── inject into EDI HEAD sections (in-memory) ─────────────────
         self.edi_objects_: list = []
         for edi_idx, coord_idx in enumerate(self._index_map):
-            edi = (
-                _copy(edi_objects[edi_idx]) if copy else edi_objects[edi_idx]
-            )
+            edi = _copy(edi_objects[edi_idx]) if copy else edi_objects[edi_idx]
             head = edi.get_section("head")
             if head is not None:
                 head.lat = float(self.latitudes_[coord_idx])
@@ -573,14 +563,8 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
             self.edi_objects_.append(edi)
 
         if self.verbose:
-            ok = sum(
-                1
-                for e in self.edi_objects_
-                if e.get_section("head") is not None
-            )
-            print(
-                f"[CoordinateInjector] injected coordinates into {ok}/{n_edi} EDIs"
-            )
+            ok = sum(1 for e in self.edi_objects_ if e.get_section("head") is not None)
+            print(f"[CoordinateInjector] injected coordinates into {ok}/{n_edi} EDIs")
 
         return self
 
@@ -639,14 +623,10 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
                 written.append(out_path)
             except Exception as exc:
                 if self.verbose:
-                    print(
-                        f"[CoordinateInjector] failed to write {fname}: {exc}"
-                    )
+                    print(f"[CoordinateInjector] failed to write {fname}: {exc}")
 
         if self.verbose:
-            print(
-                f"[CoordinateInjector] exported {len(written)} files → {out_dir}"
-            )
+            print(f"[CoordinateInjector] exported {len(written)} files → {out_dir}")
 
         return written
 

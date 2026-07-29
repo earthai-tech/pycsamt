@@ -81,15 +81,11 @@ def validate(
         files = [source]
     else:
         files = sorted(
-            f
-            for f in source.rglob("*")
-            if f.suffix.lower() in _J_EXTS and f.is_file()
+            f for f in source.rglob("*") if f.suffix.lower() in _J_EXTS and f.is_file()
         )
 
     if not files:
-        click.echo(
-            f"No J-files (.j / .dat / .txt) found in {source}.", err=True
-        )
+        click.echo(f"No J-files (.j / .dat / .txt) found in {source}.", err=True)
         sys.exit(1)
 
     results: list[dict] = []
@@ -98,9 +94,7 @@ def validate(
             is_j_file(f, deep=deep)
             results.append({"path": str(f), "valid": True, "error": None})
         except Exception as exc:  # noqa: BLE001
-            results.append(
-                {"path": str(f), "valid": False, "error": str(exc)}
-            )
+            results.append({"path": str(f), "valid": False, "error": str(exc)})
 
     n_ok = sum(1 for r in results if r["valid"])
     n_fail = len(results) - n_ok
@@ -130,9 +124,7 @@ def validate(
                 if not r["valid"]:
                     click.echo(f"  ✗  {r['path']}")
                     if r["error"]:
-                        click.echo(
-                            f"       {r['error'].splitlines()[0]}", err=True
-                        )
+                        click.echo(f"       {r['error'].splitlines()[0]}", err=True)
         elif len(results) <= 10:
             for r in results:
                 click.echo(f"  ✓  {r['path']}")

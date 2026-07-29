@@ -96,9 +96,7 @@ def test_spectra_related_tables_return_api_frame():
 
 def test_classify_dimensionality_api_flag_overrides_global(monkeypatch):
     reset_api_view()
-    monkeypatch.setattr(
-        dim, "phase_features_table", lambda *a, **k: _feature_table()
-    )
+    monkeypatch.setattr(dim, "phase_features_table", lambda *a, **k: _feature_table())
 
     plain = dim.classify_dimensionality(["S1"], api=False)
     viewed = dim.classify_dimensionality(["S1"], api=True)

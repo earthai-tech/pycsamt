@@ -43,9 +43,7 @@ def _cb(web_app, output_id_prop):
 
 
 def _cb_multi(web_app, *substrings):
-    key = next(
-        k for k in web_app.callback_map if all(s in k for s in substrings)
-    )
+    key = next(k for k in web_app.callback_map if all(s in k for s in substrings))
     return _unwrap(web_app.callback_map[key])
 
 
@@ -64,9 +62,7 @@ def _set_triggered(prop_id):
     import dash._callback_context as cc
     from dash._utils import AttributeDict
 
-    cc.context_value.set(
-        AttributeDict(triggered_inputs=[{"prop_id": prop_id}])
-    )
+    cc.context_value.set(AttributeDict(triggered_inputs=[{"prop_id": prop_id}]))
 
 
 def _clear_triggered():
@@ -80,9 +76,7 @@ def _clear_triggered():
 
 class TestTabSwitching:
     def test_switch_dim_no_trigger_returns_no_update(self, web_app):
-        fn = _cb_by_input(
-            web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-dim-btn-1d"
-        )
+        fn = _cb_by_input(web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-dim-btn-1d")
         _set_triggered("")
         try:
             assert fn(1, 0, 0) is no_update
@@ -90,9 +84,7 @@ class TestTabSwitching:
             _clear_triggered()
 
     def test_switch_dim_returns_tab_key(self, web_app):
-        fn = _cb_by_input(
-            web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-dim-btn-2d"
-        )
+        fn = _cb_by_input(web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-dim-btn-2d")
         _set_triggered("fwd-dim-btn-2d.n_clicks")
         try:
             assert fn(0, 1, 0) == "fwd-tab-2d"
@@ -100,9 +92,7 @@ class TestTabSwitching:
             _clear_triggered()
 
     def test_switch_view_tab_returns_tab_key(self, web_app):
-        fn = _cb_by_input(
-            web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-view-tab-3d"
-        )
+        fn = _cb_by_input(web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-view-tab-3d")
         _set_triggered("fwd-view-tab-3d.n_clicks")
         try:
             assert fn(0, 0, 1) == "fwd-tab-3d"
@@ -110,9 +100,7 @@ class TestTabSwitching:
             _clear_triggered()
 
     def test_switch_view_tab_no_trigger_returns_no_update(self, web_app):
-        fn = _cb_by_input(
-            web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-view-tab-1d"
-        )
+        fn = _cb_by_input(web_app, f"{IDs.FWD_ACTIVE_TAB}.data", "fwd-view-tab-1d")
         _set_triggered("")
         try:
             assert fn(0, 0, 0) is no_update
@@ -146,9 +134,7 @@ class TestUpdateCtxBar:
 
 class TestSyncMethodUi:
     def _fn(self, web_app):
-        return _cb_multi(
-            web_app, f"{IDs.FWD_CSAMT_CARD}.style", f"{IDs.FWD_DIM}.data"
-        )
+        return _cb_multi(web_app, f"{IDs.FWD_CSAMT_CARD}.style", f"{IDs.FWD_DIM}.data")
 
     def test_default_mt1d(self, web_app):
         csamt, tem, label, fmin, fmax, dim = self._fn(web_app)(None)
@@ -250,9 +236,7 @@ class TestAddLayer:
 
 class TestRenumberLayers:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.FWD_LAYER_TABLE}.data", IDs.FWD_LAYER_TABLE
-        )
+        return _cb_by_input(web_app, f"{IDs.FWD_LAYER_TABLE}.data", IDs.FWD_LAYER_TABLE)
 
     def test_no_data_raises_prevent_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -349,35 +333,27 @@ class TestRunForward:
         assert "MT1D done" in feedback
 
     def test_run_1d_csamt_success(self, web_app):
-        result = self._fn(web_app)(
-            *_run_forward_args(method="CSAMT1D")
-        )
+        result = self._fn(web_app)(*_run_forward_args(method="CSAMT1D"))
         *_imgs, feedback, is_open, _body = result
         assert is_open is False
         assert "CSAMT1D done" in feedback
 
     def test_run_1d_tem_success(self, web_app):
         result = self._fn(web_app)(
-            *_run_forward_args(
-                method="TEM1D", freq_min=-6, freq_max=-4, n_freq=5
-            )
+            *_run_forward_args(method="TEM1D", freq_min=-6, freq_max=-4, n_freq=5)
         )
         *_imgs, feedback, is_open, _body = result
         assert is_open is False
         assert "TEM1D done" in feedback
 
     def test_run_1d_missing_layers_reports_error(self, web_app):
-        result = self._fn(web_app)(
-            *_run_forward_args(table_data=[])
-        )
+        result = self._fn(web_app)(*_run_forward_args(table_data=[]))
         img1d, img2d, img3d, spinner, feedback, is_open, body = result
         assert is_open is True
         assert "at least one finite layer" in body
 
     def test_run_2d_halfspace_success(self, web_app):
-        result = self._fn(web_app)(
-            *_run_forward_args(dimension="fwd-tab-2d")
-        )
+        result = self._fn(web_app)(*_run_forward_args(dimension="fwd-tab-2d"))
         img1d, img2d, img3d, spinner, feedback, is_open, body = result
         assert is_open is False
         assert img1d is no_update
@@ -425,9 +401,7 @@ class TestRunForward:
         assert is_open is False
 
     def test_run_3d_halfspace_success(self, web_app):
-        result = self._fn(web_app)(
-            *_run_forward_args(dimension="fwd-tab-3d")
-        )
+        result = self._fn(web_app)(*_run_forward_args(dimension="fwd-tab-3d"))
         img1d, img2d, img3d, spinner, feedback, is_open, body = result
         assert is_open is False
         assert img3d != no_update
@@ -435,9 +409,7 @@ class TestRunForward:
 
     def test_run_3d_block_model_map_plot(self, web_app):
         result = self._fn(web_app)(
-            *_run_forward_args(
-                dimension="fwd-tab-3d", m3d_type="block", plot3="map"
-            )
+            *_run_forward_args(dimension="fwd-tab-3d", m3d_type="block", plot3="map")
         )
         *_imgs, feedback, is_open, _body = result
         assert is_open is False
@@ -509,9 +481,7 @@ class TestRunForward:
 
 class TestSaveModel:
     def _fn(self, web_app):
-        return _cb_by_input(
-            web_app, f"{IDs.FWD_FEEDBACK}.children", IDs.BTN_FWD_SAVE
-        )
+        return _cb_by_input(web_app, f"{IDs.FWD_FEEDBACK}.children", IDs.BTN_FWD_SAVE)
 
     def test_no_clicks_raises_prevent_update(self, web_app):
         with pytest.raises(PreventUpdate):
@@ -522,9 +492,7 @@ class TestSaveModel:
         assert "Enter a model name" in msg
 
     def test_success_saves_and_reports(self, web_app):
-        table_data = [
-            {"layer": 1, "resistivity": 100.0, "thickness": 300.0}
-        ]
+        table_data = [{"layer": 1, "resistivity": 100.0, "thickness": 300.0}]
         msg = self._fn(web_app)(1, "MyModel", table_data, 1000.0, "MT1D")
         assert "Saved 'MyModel'" in msg
         assert "MyModel" in fwd_mod._CTRL.model_names

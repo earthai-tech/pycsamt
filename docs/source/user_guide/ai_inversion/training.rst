@@ -84,6 +84,7 @@ For a masked target matrix :math:`\mathbf{Y}` and prediction
 as a finite-entry objective,
 
 .. math::
+   :label: eq-ai-training-masked-loss
 
    \mathcal{L}_{\mathrm{sup}}
    =
@@ -95,7 +96,8 @@ as a finite-entry objective,
    \qquad
    M_{ij}=\mathbf{1}\{Y_{ij}\ \mathrm{is\ finite}\}.
 
-The denominator matters.  A batch with many masked target entries contributes
+In equation :eq:`eq-ai-training-masked-loss`, the denominator matters. A batch
+with many masked target entries contributes
 less information than a complete batch; it should not accidentally dominate
 training because missing values were filled with zeros.
 
@@ -124,10 +126,12 @@ Let :math:`p(i)` be the parent earth, profile, or survey identifier for sample
 :math:`i`.  A leakage-resistant split requires
 
 .. math::
+   :label: eq-ai-training-group-split
 
    p(i)=p(k) \Longrightarrow s_i=s_k,
 
-where :math:`s_i` is the assigned split.  If this condition is violated, the
+In equation :eq:`eq-ai-training-group-split`, :math:`s_i` is the assigned
+split. If this condition is violated, the
 validation curve may look good because the model has already seen siblings of
 the validation case during training.  That is :term:`validation leakage`, even
 when no literal validation row was passed as a training row.
@@ -164,7 +168,7 @@ notebook cell whose state may be unclear.
    >>> run.validate()  # doctest: +SKIP
    >>> inverter = run.to_inverter()  # doctest: +SKIP
    >>> inverter.fit(dataset, **run.to_fit_kwargs())  # doctest: +SKIP
-   >>> inverter.save("checkpoints/mt1d_final")  # doctest: +SKIP
+   >>> inverter.save("checkpoints/mt1d_final.npz")  # doctest: +SKIP
 
 ``RunConfig.validate()`` checks configuration consistency; it cannot prove
 that the frequency coverage, parameter bounds, noise model, or synthetic
@@ -177,6 +181,10 @@ geology are adequate for the field problem.
    ``min_delta`` are not forwarded by the current
    ``RunConfig.to_fit_kwargs()`` adapter; the high-level PyTorch trainer uses
    its own defaults for those values.
+
+   Use an explicit ``.npz`` suffix for a 1-D checkpoint. ``save("model")`` is
+   handled by NumPy as ``model.npz``, whereas ``load("model")`` checks the
+   literal unsuffixed path and raises ``FileNotFoundError``.
 
 Direct 1-D fitting
 ------------------
@@ -211,7 +219,7 @@ must match the selected architecture names described in :doc:`model_selection`:
    ...     seed=42,
    ...     verbose=True,
    ... )
-   >>> inverter.save("checkpoints/mt1d_seed42")  # doctest: +SKIP
+   >>> inverter.save("checkpoints/mt1d_seed42.npz")  # doctest: +SKIP
 
 ``X_train_pool`` excludes the external test set.  When a forward dataset is
 passed instead of arrays, its metadata and model layout are used by the
@@ -263,6 +271,103 @@ Understanding the training arguments
    Constructor setting that perturbs training inputs.  Match it to plausible
    measurement uncertainty; excessive augmentation erases useful structure.
 
+Augmentation is a scientific nuisance model
+--------------------------------------------
+
+:mod:`pycsamt.ai.training` now exposes
+:class:`~pycsamt.ai.training.AugmentNoise`,
+:class:`~pycsamt.ai.training.AugmentStaticShift`,
+:class:`~pycsamt.ai.training.AugmentFreqDrop`,
+:class:`~pycsamt.ai.training.AugmentMixup`,
+:class:`~pycsamt.ai.training.Compose`, and
+:class:`~pycsamt.ai.training.RandomApply`. These are not interchangeable ways
+to make a dataset larger. Each :term:`data augmentation` operator asserts that
+a particular variation may occur at inference time without invalidating the
+target.
+
+For an amplitude feature vector :math:`\mathbf{x}`, static shift adds one
+sample-level offset :math:`s`, frequency dropout applies a binary mask
+:math:`\mathbf{m}`, and :term:`mixup` combines both the response and earth
+model:
+
+.. math::
+   :label: eq-ai-training-augmentation-contracts
+
+   \begin{aligned}
+   \mathbf{x}_{\mathrm{shift}} &= \mathbf{x} + s\mathbf{1},
+      &s &\sim \mathcal{U}(\log_{10}g_{\min},\log_{10}g_{\max}),\\
+   \mathbf{x}_{\mathrm{drop}} &=
+      \mathbf{m}\odot\mathbf{x}+(1-\mathbf{m})c,\\
+   (\tilde{\mathbf{x}},\tilde{\mathbf{y}}) &=
+      \lambda(\mathbf{x}_i,\mathbf{y}_i)
+      +(1-\lambda)(\mathbf{x}_j,\mathbf{y}_j),
+      &\lambda &\sim \operatorname{Beta}(\alpha,\alpha).
+   \end{aligned}
+
+Equation :eq:`eq-ai-training-augmentation-contracts` makes two easy mistakes
+visible. Static shift belongs only on amplitude channels, not phase, and
+mixup must transform the target with the same :math:`\lambda`. For
+:term:`frequency dropout`, a fill value of zero is safe only when zero already
+means missing after preprocessing; otherwise supply a mask channel or a fill
+value consistent with the :term:`feature contract`.
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.training import (
+   ...     AugmentFreqDrop, AugmentNoise, AugmentStaticShift,
+   ... )
+   >>> X_demo = np.tile(np.linspace(1.5, 2.5, 24), (8, 1)).astype("float32")
+   >>> y_demo = np.tile(np.linspace(1.0, 3.0, 5), (8, 1)).astype("float32")
+   >>> noisy, _ = AugmentNoise(0.06)(
+   ...     X_demo, y_demo, rng=np.random.default_rng(11)
+   ... )
+   >>> shifted, _ = AugmentStaticShift(
+   ...     (0.5, 2.0), n_amp_features=24
+   ... )(X_demo, y_demo, rng=np.random.default_rng(12))
+   >>> dropped, _ = AugmentFreqDrop(
+   ...     0.25, contiguous=True, fill_value=np.nan
+   ... )(X_demo, y_demo, rng=np.random.default_rng(13))
+   >>> print("noise standard deviation:", round(float(np.std(noisy-X_demo)), 3))
+   noise standard deviation: 0.055
+   >>> print("sample-1 shift (decades):", round(float(np.mean(shifted[0]-X_demo[0])), 3))
+   sample-1 shift (decades): -0.15
+   >>> print("sample-1 dropped channels:", int(np.isnan(dropped[0]).sum()))
+   sample-1 dropped channels: 6
+
+.. figure:: ../../images/user_guide/ai_inversion/training_augmentation_audit.png
+   :alt: Four panels comparing an original response-like curve with noise, static-shift, contiguous-frequency-drop, and mixup augmentations executed by pyCSAMT
+   :align: center
+   :width: 96%
+
+   The public augmentation operators executed with fixed random generators.
+   The panels show feature consequences rather than generic icons.
+
+Noise perturbs individual channels, whereas static shift translates the
+entire apparent-resistivity curve by one offset. The contiguous dropout panel
+preserves the location of a dead band instead of inventing measurements
+inside it. Mixup gives a smooth-looking curve, but its annotation confirms
+that the model target moved too; mixing only ``X`` would train against a false
+earth. Fit augmentation magnitudes from survey QC or a declared challenge
+model, and compare an unaugmented baseline through an :term:`ablation study`.
+
+The ``np.nan`` fill in this visual audit exists only to draw an obvious gap.
+Do not pass that array directly to a network: the current masked loss ignores
+non-finite *targets*, not non-finite inputs. For fitting, use a declared finite
+fill plus an explicit mask channel, or apply the same frozen imputation rule
+used at inference. Also note that ``AugmentNoise.phase_sigma`` is accepted by
+the current constructor but the implementation presently applies ``sigma``
+to every feature. Until channel-specific noise is implemented and tested,
+split amplitude and phase arrays explicitly if they require different noise
+levels. ``Compose(seed=...)`` provides a shared repeatable random stream;
+record its seed separately from the train/validation split seed.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_training_augmentation_audit
+   :linenos:
+   :title: View and copy the executed augmentation audit
+
 Monitor more than one loss
 --------------------------
 
@@ -313,15 +418,149 @@ Interpret the curves jointly:
 * a low normalized loss can still hide large errors in a scientifically
   important layer, so inspect per-parameter errors in physical units.
 
+The trainer is a validation-controlled state machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`~pycsamt.ai.training.EMTrainer` performs more than repeated gradient
+updates. It sends training batches through Adam, evaluates validation data
+without gradients or augmentation, passes validation loss to a
+:term:`learning-rate scheduler`, increments the :term:`early stopping`
+counter, and copies every genuinely improved state to CPU memory. After the
+loop, the copied best state replaces the last state. Consequently, the
+learning rate and the selected epoch are part of the result, not incidental
+console information.
+
+The executed control audit below uses 360 training examples and 120
+validation examples with four targets. Extra noise is deliberately added to
+the validation acquisition to create an irreducible floor; this is a
+controlled illustration of scheduler behavior, not a recommendation to
+corrupt validation data in a real experiment.
+
+.. code-block:: text
+
+   epochs completed: 120
+   restored best epoch: 108
+   best validation loss: 0.09802
+   initial / final learning rate: 0.003 / 0.0015
+   validation target RMSE: [0.320, 0.301, 0.280, 0.329]
+
+.. figure:: ../../images/user_guide/ai_inversion/training_trainer_controls.png
+   :alt: Executed EMTrainer audit showing training and validation losses, restored epoch, learning-rate reduction, CPU epoch timing, and per-target validation errors
+   :align: center
+   :width: 96%
+
+   One real :class:`~pycsamt.ai.training.EMTrainer` run, including the
+   validation decision variables that are often omitted from a loss plot.
+
+The validation curve reaches its useful floor while training loss continues
+to fall. The plateau scheduler halves the learning rate from
+:math:`3\times10^{-3}` to :math:`1.5\times10^{-3}`, but the best state occurs
+at epoch 108 rather than at the final update. The timing panel also shows why
+runtime should be summarized by a median and spread rather than one unusually
+slow initialization epoch. Finally, the four target RMSE values differ even
+though optimization sees one scalar loss. For an earth model, replace those
+anonymous targets with layer resistivity, interface thickness, boundary
+depth, and response-space diagnostics in their physical units.
+
+:term:`gradient clipping` at norm 1.0 is active in this run. It limits an
+individual update; the history does not currently record how often clipping
+occurred, so a stable loss curve must not be interpreted as proof that the
+threshold was inactive. If clipping frequency matters to an experiment,
+instrument and archive it explicitly.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_training_trainer_controls
+   :linenos:
+   :title: View and copy the executed trainer-control audit
+
+An executed CPU training audit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following small run is deliberately an execution and persistence test,
+not a production model. It keeps 15% of 240 synthetic examples completely
+outside ``fit``, trains a compact FCN for at most 25 epochs, and reloads the
+checkpoint using the exact filename written by ``save``.
+
+.. code-block:: pycon
+
+   >>> from pathlib import Path
+   >>> from tempfile import TemporaryDirectory
+   >>> import numpy as np
+   >>> from pycsamt.ai.inversion import EMInverter1D
+   >>> from pycsamt.forward.batch import generate_dataset
+
+   >>> frequency_hz = np.logspace(np.log10(1.01), 4, 24)
+   >>> samples = generate_dataset(
+   ...     solver="mt1d", n_samples=240, freqs=frequency_hz,
+   ...     n_layers=5, rho_range=(1.0, 10_000.0), depth_max=2000.0,
+   ...     noise_level=0.05, noise_type="field", include_phase=True,
+   ...     seed=137, n_jobs=1, output=None, verbose=False,
+   ... )
+   >>> train, validation, external_test = samples.split(
+   ...     val_frac=0.15, test_frac=0.15, seed=137
+   ... )
+   >>> X_pool = np.vstack([train.X, validation.X])
+   >>> y_pool = np.vstack([train.y, validation.y])
+   >>> fitted = EMInverter1D(
+   ...     n_features=48, n_layers=5, arch="fcn", solver="mt1d",
+   ...     device="cpu", log_thickness=False, augment_noise=0.01,
+   ... )
+   >>> _ = fitted.fit(
+   ...     X_pool, y_pool, epochs=25, batch_size=64, lr=1e-3,
+   ...     patience=7, val_frac=0.15, grad_clip=1.0, seed=137,
+   ...     verbose=False,
+   ... )
+   >>> predicted = fitted.predict(external_test.X)
+   >>> print("external test shape:", predicted.shape)
+   external test shape: (36, 9)
+   >>> print("stopped within budget:", len(fitted._history["train_loss"]) <= 25)
+   stopped within budget: True
+   >>> with TemporaryDirectory() as folder:
+   ...     checkpoint = Path(folder) / "training_smoke.npz"
+   ...     fitted.save(checkpoint)
+   ...     restored = EMInverter1D.load(checkpoint)
+   ...     restored_prediction = restored.predict(external_test.X)
+   ...     print("checkpoint exists:", checkpoint.exists())
+   ...     print("reload close:", np.allclose(
+   ...         predicted, restored_prediction, rtol=1e-5, atol=1e-3
+   ...     ))
+   checkpoint exists: True
+   reload close: True
+
+.. figure:: ../../images/user_guide/ai_inversion/training_executed_audit.png
+   :alt: Executed FCN training convergence and physical-unit test errors
+   :align: center
+   :width: 94%
+
+   The validation minimum selects the restored epoch, whereas the right panel
+   converts external-test errors back to target units. The run can converge in
+   normalized space while deep interface-thickness errors remain hundreds of
+   metres. This is why a checkpoint smoke test is necessary but insufficient
+   for scientific acceptance.
+
+The widening train-validation gap and large held-out errors mean this small
+model should be rejected, even though fitting completed and restoration
+succeeded. Its value is to verify the mechanics and expose underpowered data
+and training choices before a costly production run.
+
+The private ``_history`` access above is acceptable for this version-specific
+documentation audit, but production reporting should export a supported
+history artifact. The reload comparison uses a declared numerical tolerance;
+requiring bitwise equality across restored backends or hardware is generally
+too strict.
+
 For reproducibility, the early-stopping rule can be written as a selection of
 the epoch
 
 .. math::
+   :label: eq-ai-training-best-epoch
 
    e^\star = \operatorname*{arg\,min}_{e\le E}
    \mathcal{L}_{\mathrm{val}}(e),
 
-subject to the patience rule.  The final weights should be those from
+Equation :eq:`eq-ai-training-best-epoch` is subject to the patience rule. The
+final weights should be those from
 :math:`e^\star`, not necessarily the last epoch.  Record both the last epoch
 and the selected epoch because a long tail of non-improving epochs can reveal
 optimizer instability or an overly patient run.
@@ -373,6 +612,7 @@ section.  If :math:`U_{bzk}` is log-resistivity for batch item :math:`b`, depth
 cell :math:`z`, and station :math:`k`, a masked section loss is
 
 .. math::
+   :label: eq-ai-training-2d-loss
 
    \mathcal{L}_{2D}
    =
@@ -383,7 +623,8 @@ cell :math:`z`, and station :math:`k`, a masked section loss is
       \sum_{b,z,k} M_{bzk}
    }.
 
-Pair this with boundary and response diagnostics.  A visually smooth section
+Pair equation :eq:`eq-ai-training-2d-loss` with boundary and response
+diagnostics. A visually smooth section
 can have low pixel loss while placing a conductor top at the wrong depth.
 
 Training a graph model
@@ -431,10 +672,12 @@ For graph training, write the graph construction rule beside the loss.  If
 the GCN update is conditioned on a neighborhood aggregation of the form
 
 .. math::
+   :label: eq-ai-training-gcn-update
 
    H^{(t+1)} = \sigma\!\left(\tilde{A}H^{(t)}W^{(t)}\right),
 
-where :math:`\tilde{A}` is the normalized adjacency used by the implementation.
+In equation :eq:`eq-ai-training-gcn-update`, :math:`\tilde{A}` is the
+normalized adjacency used by the implementation.
 Changing coordinate units, edge radius, or node order changes
 :math:`\tilde{A}` and therefore changes the model being trained.
 
@@ -475,6 +718,7 @@ Joint training is vulnerable to row-alignment errors because all modalities
 share a target.  A safe pre-fit invariant is
 
 .. math::
+   :label: eq-ai-training-joint-alignment
 
    \operatorname{id}^{(1)}_i
    =
@@ -483,7 +727,8 @@ share a target.  A safe pre-fit invariant is
    \operatorname{id}^{(y)}_i
    \quad \text{for every row } i.
 
-Do not rely on array length alone.  Equal lengths can still describe different
+Equation :eq:`eq-ai-training-joint-alignment` must be checked explicitly. Do
+not rely on array length alone. Equal lengths can still describe different
 stations, times, or synthetic parent models if the join order was lost.
 
 :class:`~pycsamt.ai.inversion.EnsembleInverter` deep-copies and trains the
@@ -597,3 +842,9 @@ Before promoting a model to inference, confirm that:
 Training is complete only when the artifact and the evidence needed to reject
 or trust it are both reproducible.  Continue with :doc:`inference`,
 :doc:`uncertainty`, and :doc:`reporting`.
+
+The executed audit figures are reproduced by
+``docs/scripts/generate_ai_inversion_figures.py`` using deterministic synthetic
+generation and a CPU PyTorch run. Small numerical differences may occur across
+backend and library versions; the scientific conclusion depends on the loss
+separation and physical-unit errors, not identical pixels or last decimals.

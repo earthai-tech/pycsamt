@@ -17,7 +17,6 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from pycsamt.ai.plot._style import (
-    EM_COLORS,
     EMStyle,
     StationTickConfig,
     add_colorbar,
@@ -140,7 +139,7 @@ def test_station_tick_config_apply_no_xlim_no_xlabel():
     n = 8
     positions = np.arange(n)
     labels = [str(i) for i in range(n)]
-    prior_xlim = ax.get_xlim()
+    ax.get_xlim()
     cfg = StationTickConfig(every=2)
     cfg.apply(ax, positions, labels, xlabel="", xlim=None)
     assert ax.get_xlabel() == ""
@@ -392,7 +391,9 @@ def test_plot_confusion_matrix_normalised():
 def test_plot_confusion_matrix_raw_counts():
     y_true = np.array([0, 1, 2, 0, 1, 2, 1, 0, 2])
     y_pred = np.array([0, 1, 1, 0, 1, 2, 2, 0, 2])
-    fig = plot_confusion_matrix(y_true, y_pred, normalise=False, class_names=["A", "B", "C"])
+    fig = plot_confusion_matrix(
+        y_true, y_pred, normalise=False, class_names=["A", "B", "C"]
+    )
     assert isinstance(fig, Figure)
     plt.close(fig)
 
@@ -472,8 +473,15 @@ def test_plot_uncertainty_bands_with_y_true_and_ax():
     y_lower = y_pred - 0.1
     fig0, ax0 = plt.subplots()
     fig = plot_uncertainty_bands(
-        x, y_pred, y_upper, y_lower, y_true=y_true, ax=ax0,
-        xlabel="rho", ylabel="depth", title="unc",
+        x,
+        y_pred,
+        y_upper,
+        y_lower,
+        y_true=y_true,
+        ax=ax0,
+        xlabel="rho",
+        ylabel="depth",
+        title="unc",
     )
     assert fig is fig0
     plt.close(fig0)
@@ -529,8 +537,13 @@ def test_plot_section_explicit_depths_stations_and_ax():
     stations = np.arange(n_sta) * 2.0
     fig0, ax0 = plt.subplots(figsize=(10, 4))
     fig = plot_section(
-        rho_2d, depths=depths, stations=stations, ax=ax0,
-        title="section", vmin=1.0, vmax=3.0,
+        rho_2d,
+        depths=depths,
+        stations=stations,
+        ax=ax0,
+        title="section",
+        vmin=1.0,
+        vmax=3.0,
     )
     assert fig is fig0
     plt.close(fig0)
@@ -637,7 +650,10 @@ def test_plot_inversion_result_2d_toggle_show_flags_off():
     plt.close(fig1)
 
     fig2 = plot_inversion_result_2d(
-        log_pred, log_true=log_true, train_loss=train_loss, show_convergence=False
+        log_pred,
+        log_true=log_true,
+        train_loss=train_loss,
+        show_convergence=False,
     )
     assert isinstance(fig2, Figure)
     plt.close(fig2)
@@ -655,7 +671,11 @@ def test_plot_inversion_result_2d_external_axes():
     fig, ax0 = plt.subplots()
     axes = {"pred": ax0}
     result = plot_inversion_result_2d(
-        log_pred, axes=axes, show_misfit=False, show_convergence=False, show_rmse=False
+        log_pred,
+        axes=axes,
+        show_misfit=False,
+        show_convergence=False,
+        show_rmse=False,
     )
     assert result is fig
     plt.close(fig)

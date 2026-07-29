@@ -59,9 +59,7 @@ class TestLayeredModel(unittest.TestCase):
 
     def test_depth_property(self):
         m = self._make_model(3)
-        self.assertEqual(
-            len(m.depth), 4
-        )  # n_layers = 4, depth for each layer top
+        self.assertEqual(len(m.depth), 4)  # n_layers = 4, depth for each layer top
         self.assertEqual(m.depth[0], 0.0)
 
 
@@ -157,9 +155,7 @@ class TestCSAMT1DForward(unittest.TestCase):
         mt_resp = MT1DForward(freqs).run(model)
         csamt_resp = CSAMT1DForward(freqs, source_offset=1e8).run(model)
         if mt_resp.rho_a is not None and csamt_resp.rho_a is not None:
-            np.testing.assert_allclose(
-                csamt_resp.rho_a, mt_resp.rho_a, rtol=0.05
-            )
+            np.testing.assert_allclose(csamt_resp.rho_a, mt_resp.rho_a, rtol=0.05)
 
 
 class TestTEM1DForward(unittest.TestCase):

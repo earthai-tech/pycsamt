@@ -90,7 +90,7 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
     >>> from pycsamt.seg.edi import EDIFile
     >>> from pycsamt.site.edit import rotate
     >>> ed = EDIFile("path/to/station.edi")
-    >>> ed_rot = rotate(ed, 30.0)       # copy by default
+    >>> ed_rot = rotate(ed, 30.0)  # copy by default
     >>> ed_rot2 = rotate(ed, -45.0, inplace=True)
 
     See Also
@@ -118,9 +118,7 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
             if a.ndim == 3 and a.shape[-2:] == (2, 2):
                 newz = r[None, :, :] @ a @ rinv[None, :, :]
                 _set_attr_first(z, ("z", "impedance", "_z"), newz)
-            ze = _get_attr_any(
-                z, "z_error", "z_err", "impedance_err", "_z_err"
-            )
+            ze = _get_attr_any(z, "z_error", "z_err", "impedance_err", "_z_err")
             if ze is not None:
                 ar = np.abs(r)
                 ari = np.abs(rinv)
@@ -535,8 +533,7 @@ def fill_missing(
 
     Fill only Z with NaNs, in place:
 
-    >>> _ = fill_missing(ed, how="nan", components=("Z",),
-    ...                  inplace=True)
+    >>> _ = fill_missing(ed, how="nan", components=("Z",), inplace=True)
 
     See Also
     --------
@@ -570,9 +567,7 @@ def fill_missing(
             )
             _set_attr_first(z, ("z", "impedance", "_z"), znew)
 
-            ze = _get_attr_any(
-                z, "z_error", "z_err", "impedance_err", "_z_err"
-            )
+            ze = _get_attr_any(z, "z_error", "z_err", "impedance_err", "_z_err")
             if ze is not None:
                 _set_attr_first(
                     z,
@@ -836,7 +831,7 @@ def rename_all(
     >>> from pathlib import Path
     >>> out = rename_all(
     ...     eds,
-    ...     name_fn=lambda e: f"X_{Path(getattr(e,'path','')).stem}",
+    ...     name_fn=lambda e: f"X_{Path(getattr(e, 'path', '')).stem}",
     ... )
 
     See Also
@@ -952,11 +947,7 @@ def set_coords_all(
             row = fr[fr[col] == name]
             if row is None or len(row) == 0:
                 return None
-            la = float(
-                row["lat"].iloc[0]
-                if "lat" in row
-                else row["latitude"].iloc[0]
-            )
+            la = float(row["lat"].iloc[0] if "lat" in row else row["latitude"].iloc[0])
             if "lon" in row:
                 lo = float(row["lon"].iloc[0])
             else:
@@ -1428,9 +1419,7 @@ def _maybe_df(table: Any, columns: dict | None = None):
         try:
             df = pd.DataFrame(table)
         except Exception as exc:
-            raise TypeError(
-                "Unsupported table-like input for coordinates."
-            ) from exc
+            raise TypeError("Unsupported table-like input for coordinates.") from exc
 
     # normalize column names to lower for matching
     df.columns = [str(c).strip() for c in df.columns]

@@ -155,9 +155,7 @@ def test_is_valid_kind_validates_against_allowed_and_raises():
 
 
 def test_is_valid_kind_error_not_raise_returns_normalized():
-    out = is_valid_kind(
-        "scatterplot", valid_kinds=["bar", "line"], error="ignore"
-    )
+    out = is_valid_kind("scatterplot", valid_kinds=["bar", "line"], error="ignore")
     assert out == "scatter"
 
 

@@ -21,9 +21,7 @@ from .utils import AvgDataError, load_avg
 try:
     from .utils import to_xarray
 except ImportError:  # pragma: no cover
-    warnings.warn(
-        "xarray is required for transferring legacy AVG.", stacklevel=2
-    )
+    warnings.warn("xarray is required for transferring legacy AVG.", stacklevel=2)
 logger = get_logger(__name__)
 
 __all__ = ["LegacyAVGBase"]
@@ -167,8 +165,7 @@ class LegacyAVGBase:
         # Use a case-insensitive match against the global map
         lower_to_canon = {k.lower(): v for k, v in _CANONICAL_MAP.items()}
         rename_dict = {
-            c: lower_to_canon.get(str(c).lower(), str(c).lower())
-            for c in df.columns
+            c: lower_to_canon.get(str(c).lower(), str(c).lower()) for c in df.columns
         }
         out = df.rename(columns=rename_dict).copy()
         out.columns = [str(c).strip() for c in out.columns]
@@ -405,8 +402,7 @@ class LegacyAVGBase:
             )
 
         raise TypeError(
-            "to_xarray expects a pandas.DataFrame or a file path; "
-            f"got {type(obj)!r}"
+            "to_xarray expects a pandas.DataFrame or a file path; " f"got {type(obj)!r}"
         )
 
     def transform(

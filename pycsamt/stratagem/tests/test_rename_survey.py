@@ -175,9 +175,7 @@ class TestEDIRenamer:
         _make_edi_dir(tmp_path, n=2)
         out = tmp_path / "renamed"
         EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
-        rn2 = EDIRenamer(basename="T.", overwrite=False).fit(
-            tmp_path / "edis", out
-        )
+        rn2 = EDIRenamer(basename="T.", overwrite=False).fit(tmp_path / "edis", out)
         assert len(rn2.skipped_) == 2
 
     def test_overwrite_replaces(self, tmp_path):
@@ -186,9 +184,7 @@ class TestEDIRenamer:
         _make_edi_dir(tmp_path, n=2)
         out = tmp_path / "renamed"
         EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
-        rn = EDIRenamer(basename="T.", overwrite=True).fit(
-            tmp_path / "edis", out
-        )
+        rn = EDIRenamer(basename="T.", overwrite=True).fit(tmp_path / "edis", out)
         assert len(rn.skipped_) == 0
 
     def test_missing_source_raises(self, tmp_path):
@@ -284,11 +280,7 @@ class TestStratagemSurvey:
         from pycsamt.stratagem.survey import StratagemSurvey
 
         edi_dir, csv = self._setup(tmp_path)
-        sv = (
-            StratagemSurvey(edi_dir, csv, epsg=32649)
-            .fit()
-            .run_qc(include_skew=False)
-        )
+        sv = StratagemSurvey(edi_dir, csv, epsg=32649).fit().run_qc(include_skew=False)
         assert sv.qc_ is not None
         assert len(sv.qc_.report_) == 5
 

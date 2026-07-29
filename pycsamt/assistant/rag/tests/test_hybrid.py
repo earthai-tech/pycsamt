@@ -92,30 +92,22 @@ class TestDenseFusion(unittest.TestCase):
 
     def test_dense_enabled_flag(self):
         self.assertFalse(Retriever(self.chunks).dense_enabled)
-        r = Retriever(
-            self.chunks, vectors=self.mat, embed_backend=_StubBackend()
-        )
+        r = Retriever(self.chunks, vectors=self.mat, embed_backend=_StubBackend())
         self.assertTrue(r.dense_enabled)
 
     def test_fusion_returns_relevant_first(self):
-        r = Retriever(
-            self.chunks, vectors=self.mat, embed_backend=_StubBackend()
-        )
+        r = Retriever(self.chunks, vectors=self.mat, embed_backend=_StubBackend())
         ctx = r.search("galvanic static shift correction", k=2)
         self.assertEqual(ctx.chunks[0].id, "ss")
 
     def test_kind_filter_respected_under_fusion(self):
-        r = Retriever(
-            self.chunks, vectors=self.mat, embed_backend=_StubBackend()
-        )
+        r = Retriever(self.chunks, vectors=self.mat, embed_backend=_StubBackend())
         ctx = r.search("phase tensor", k=3, kinds={"python_symbol"})
         self.assertTrue(all(c.kind == "python_symbol" for c in ctx.chunks))
 
     def test_embedding_failure_falls_back_to_lexical(self):
         # A broken backend must not break search — lexical order survives.
-        r = Retriever(
-            self.chunks, vectors=self.mat, embed_backend=_BoomBackend()
-        )
+        r = Retriever(self.chunks, vectors=self.mat, embed_backend=_BoomBackend())
         ctx = r.search("galvanic static shift", k=2)
         self.assertTrue(ctx.chunks)
         self.assertEqual(ctx.chunks[0].id, "ss")

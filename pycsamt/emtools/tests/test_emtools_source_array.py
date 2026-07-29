@@ -196,9 +196,9 @@ def test_pas_steered_peak():
     peak_u = float(theta[P_unsteered.argmax()])
     peak_s = float(theta[P_steered.argmax()])
     # Steered peak must be closer to θ_m than unsteered peak
-    assert abs(peak_s - theta_m) <= abs(peak_u - theta_m) + 1.0, (
-        f"steered peak {peak_s:.1f}° not shifted toward {theta_m}° (unsteered={peak_u:.1f}°)"
-    )
+    assert (
+        abs(peak_s - theta_m) <= abs(peak_u - theta_m) + 1.0
+    ), f"steered peak {peak_s:.1f}° not shifted toward {theta_m}° (unsteered={peak_u:.1f}°)"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -230,9 +230,9 @@ def test_beam_steer_roundtrip():
     d = 150.0
     beta = beam_steer(theta_m, d, k)
     angles = steering_angles(3, d, k, beta)
-    assert any(abs(a - theta_m) < 1.0 for a in angles), (
-        f"Expected ~{theta_m}° in {angles}"
-    )
+    assert any(
+        abs(a - theta_m) < 1.0 for a in angles
+    ), f"Expected ~{theta_m}° in {angles}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

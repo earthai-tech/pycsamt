@@ -116,9 +116,7 @@ def _merge_mt(
         out.mt = src.mt
         # remap DATA rows: trivial since indices already 1-based from source
         out.data[:, 0].astype(int)
-        out.data = (
-            np.vstack([out.data, mt_data]) if len(out.data) else mt_data
-        )
+        out.data = np.vstack([out.data, mt_data]) if len(out.data) else mt_data
         return out
 
     # merge frequencies
@@ -134,14 +132,10 @@ def _merge_mt(
     rx_combined, irx_map = _merge_arrays(out.mt.receivers, src.mt.receivers)
     out.mt.receivers = rx_combined
     mt_data[:, 3] = irx_map[mt_data[:, 3].astype(int) - 1]
-    mt_data[:, 2] = irx_map[
-        mt_data[:, 2].astype(int) - 1
-    ]  # Tx#==H-rx# for MT
+    mt_data[:, 2] = irx_map[mt_data[:, 2].astype(int) - 1]  # Tx#==H-rx# for MT
 
     # merge receiver names
-    names_combined, _ = _merge_lists(
-        out.mt.receiver_name, src.mt.receiver_name
-    )
+    names_combined, _ = _merge_lists(out.mt.receiver_name, src.mt.receiver_name)
     out.mt.receiver_name = names_combined
 
     out.data = np.vstack([out.data, mt_data]) if len(out.data) else mt_data
@@ -160,15 +154,11 @@ def _merge_csem(
 
     if out.csem is None:
         out.csem = src.csem
-        out.data = (
-            np.vstack([out.data, csem_data]) if len(out.data) else csem_data
-        )
+        out.data = np.vstack([out.data, csem_data]) if len(out.data) else csem_data
         return out
 
     if out.csem.phase_convention.lower() != src.csem.phase_convention.lower():
-        raise ValueError(
-            "Cannot merge CSEM sections with different phase conventions."
-        )
+        raise ValueError("Cannot merge CSEM sections with different phase conventions.")
 
     # frequencies
     freq_combined, ifreq_map = _merge_arrays(
@@ -183,10 +173,7 @@ def _merge_csem(
     def _tx_with_type(csem_cfg: CSEMConfig) -> np.ndarray:
         txs = csem_cfg.transmitters.copy()
         e_flags = np.array(
-            [
-                1 if t.lower() == "edipole" else 0
-                for t in csem_cfg.transmitter_type
-            ],
+            [1 if t.lower() == "edipole" else 0 for t in csem_cfg.transmitter_type],
             dtype=float,
         ).reshape(-1, 1)
         return np.hstack([txs, e_flags])
@@ -209,22 +196,16 @@ def _merge_csem(
     # receivers
     if keep_duplicate_rx:
         n_existing = len(out.csem.receivers)
-        out.csem.receivers = np.vstack(
-            [out.csem.receivers, src.csem.receivers]
-        )
+        out.csem.receivers = np.vstack([out.csem.receivers, src.csem.receivers])
         irx_map = np.arange(
             n_existing + 1,
             n_existing + 1 + len(src.csem.receivers),
             dtype=int,
         )
-        out.csem.receiver_name = (
-            out.csem.receiver_name + src.csem.receiver_name
-        )
+        out.csem.receiver_name = out.csem.receiver_name + src.csem.receiver_name
         csem_data[:, 3] = irx_map[csem_data[:, 3].astype(int) - 1]
     else:
-        rx_combined, irx_map = _merge_arrays(
-            out.csem.receivers, src.csem.receivers
-        )
+        rx_combined, irx_map = _merge_arrays(out.csem.receivers, src.csem.receivers)
         out.csem.receivers = rx_combined
         names_combined_rx, _ = _merge_lists(
             out.csem.receiver_name, src.csem.receiver_name
@@ -232,9 +213,7 @@ def _merge_csem(
         out.csem.receiver_name = names_combined_rx
         csem_data[:, 3] = irx_map[csem_data[:, 3].astype(int) - 1]
 
-    out.data = (
-        np.vstack([out.data, csem_data]) if len(out.data) else csem_data
-    )
+    out.data = np.vstack([out.data, csem_data]) if len(out.data) else csem_data
     return out
 
 
@@ -304,9 +283,7 @@ def merge_emdata(
             out = _merge_mt(out, src, src.data[mt_mask])
 
         if csem_mask.any():
-            out = _merge_csem(
-                out, src, src.data[csem_mask], keep_duplicate_rx
-            )
+            out = _merge_csem(out, src, src.data[csem_mask], keep_duplicate_rx)
 
     return out
 

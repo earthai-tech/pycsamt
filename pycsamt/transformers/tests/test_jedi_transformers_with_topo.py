@@ -52,7 +52,6 @@ def test_avg_with_topo_injection_adds_head(
     modern_data_file: Path,
     stn_file_k2: Path,
 ):
-
     def _read_stn(p: Path):
         try:
             df = pd.read_csv(

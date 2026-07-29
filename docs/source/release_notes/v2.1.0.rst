@@ -1,0 +1,350 @@
+.. _release_v2_1_0:
+
+-------------
+Version 2.1.0
+-------------
+
+pyCSAMT 2.1.0 |Feature| |Fix| |API Change| |Docs| |Tests|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-07-29.*
+
+This release fixes incorrect station placement along survey profiles,
+introduces validated, auditable station-metadata editing, and adds the
+first physics-grounded building blocks of AI inversion: a staged loss
+package, synthetic-recovery and response-residual validation, and a
+genuine 2-D Maxwell training-data pipeline.
+
+Processing and plotting no longer have to infer profile order from station
+names, longitude alone, or latitude alone. A shared spatial-ordering policy
+now follows the two-dimensional station geometry and is used consistently
+throughout pyCSAMT. Metadata changes can likewise be planned, validated, and
+reviewed before edited EDI files are delivered.
+
+Why this fix matters
+~~~~~~~~~~~~~~~~~~~~
+
+Earlier workflows could arrange stations lexically (for example ``S1``,
+``S10``, ``S2``) or sort on only longitude or latitude.  Those approaches can
+reverse, interleave, or distort an oblique field line.  The error then
+propagates into neighbour-based static-shift corrections, pseudosections,
+strike profiles, field-zone sections, and inversion input or result plots.
+
+The new ``auto`` strategy converts both latitude and longitude to local metre
+coordinates, estimates the survey direction, and sorts by projected profile
+chainage.  It uses the spatial order only when the coordinates pass
+conservative coverage, linearity, and cross-track checks.  Otherwise it keeps
+the input order rather than inventing an unreliable geometry.  Parallel lines
+detected in one collection are kept as separate profiles instead of being
+interleaved.
+
+Fix existing workflows
+~~~~~~~~~~~~~~~~~~~~~~
+
+Upgrade pyCSAMT, then configure station ordering once near the beginning of
+the script or notebook:
+
+.. code-block:: bash
+
+   pip install --upgrade pycsamt
+
+.. code-block:: pycon
+
+   >>> from pycsamt.api import configure_ordering
+
+   >>> _ = configure_ordering(mode="auto")
+
+   >>> # Existing processing calls now inherit the same spatial order.
+   >>> from pycsamt.emtools import ensure_sites
+
+   >>> sites = ensure_sites("data/AMT/WILLY_DATA/L22PLT")
+   >>> print(sites.ordering["requested"])
+   auto
+   >>> print(sites.ordering["applied"])
+   chainage
+   >>> print(sites.ordering["n_sites"])
+   25
+
+That single call fixes the ordering for APIs that normalize data through
+:func:`pycsamt.emtools.ensure_sites`, including the affected static-shift,
+near-surface, field-zone, CS/AMT depth-section, strike-profile, and
+pseudosection workflows.  :meth:`pycsamt.site.Sites.ordered` also uses the
+global strategy when called without an explicit ``by`` argument.
+
+The configuration is process-local.  Put it in each application startup,
+batch worker, or new notebook kernel that should use the policy.
+
+Before and after
+~~~~~~~~~~~~~~~~
+
+Old code often selected one coordinate axis manually:
+
+.. code-block:: pycon
+
+   >>> edi_path = "data/AMT/WILLY_DATA/L22PLT"
+   >>> corrected = correct_ss_ama(  # doctest: +SKIP
+   ...     edi_path, sort_by="lon"
+   ... )
+   >>> section = plot_field_zones(  # doctest: +SKIP
+   ...     edi_path, sort_by="name"
+   ... )
+
+The recommended replacement configures the geometry policy once and lets all
+participating tools inherit it:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.api import configure_ordering
+   >>> from pycsamt.emtools import correct_ss_ama, plot_field_zones
+
+   >>> _ = configure_ordering(mode="auto")
+
+   >>> corrected = correct_ss_ama(edi_path)  # doctest: +SKIP
+   >>> section = plot_field_zones(edi_path)  # doctest: +SKIP
+
+Explicit per-call choices still override the global setting without changing
+it:
+
+.. code-block:: pycon
+
+   >>> original_order = ensure_sites(  # doctest: +SKIP
+   ...     edi_path, order_by="input"
+   ... )
+   >>> forced_profile = ensure_sites(  # doctest: +SKIP
+   ...     edi_path, order_by="chainage"
+   ... )
+   >>> station_order = ensure_sites(  # doctest: +SKIP
+   ...     edi_path, order_by="station"
+   ... )
+
+Use ``chainage`` only when spatial projection must be forced even if the
+automatic geometry checks reject the line.  Use ``input`` when an external
+file or acquisition system already provides an authoritative order.
+
+For unusual field geometry, tune the automatic acceptance thresholds once:
+
+.. code-block:: pycon
+
+   >>> _ = configure_ordering(
+   ...     mode="auto",
+   ...     min_linearity=0.95,
+   ...     max_cross_track_ratio=0.15,
+   ...     min_coordinate_fraction=0.60,
+   ... )
+
+Inspect ``sites.ordering`` to see the requested and applied strategies, the
+number of usable coordinates, and the geometry diagnostics used by ``auto``.
+
+Auditable station metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Version 2.1.0 adds :mod:`pycsamt.site.metadata` for changes that must remain
+consistent across a station wrapper, the underlying EDI object, ``HEAD``, and
+linked section identifiers. It supports a single site or a collection and
+accepts station-keyed mappings, order-aligned sequences, callables,
+:class:`pandas.DataFrame` objects, and CSV files.
+
+The public entry points are
+:class:`~pycsamt.site.metadata.SiteMetadataEditor`,
+:class:`~pycsamt.site.metadata.MetadataChange`,
+:func:`~pycsamt.site.metadata.rename_sites`,
+:func:`~pycsamt.site.metadata.update_metadata`, and
+:func:`~pycsamt.site.metadata.update_metadata_all`. Convenience methods are
+also available as :meth:`pycsamt.site.Site.update_metadata`,
+:meth:`pycsamt.site.Sites.update_metadata`, and
+:meth:`pycsamt.site.Sites.rename`.
+
+Metadata operations use copy-on-write behavior by default. Before committing,
+the editor resolves the complete batch and checks missing station keys, empty
+identities, case-insensitive duplicate names, coordinate bounds, and optional
+user validators. ``plan()`` exposes the proposed before-and-after state without
+changing the source, while ``audit()`` records requested fields, changed
+fields, status, and any captured error for every station. With the default
+``on_error="raise"`` policy, in-place changes are committed atomically only
+after all staged stations pass validation.
+
+Renaming deliberately does not reorder a collection or move a station. This
+separation matters for field lines such as the bundled L22PLT data, whose raw
+station identifiers are not in profile order. When sequential names are meant
+to encode position along a line, order by accepted chainage first and rename
+second. See :ref:`site_metadata` for the complete workflow and the four-panel
+L22PLT comparison.
+
+AI inversion: losses, validation, and 2-D training data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Version 2.1.0 lands the first working slice of the project's AI-inversion
+implementation plan: the staged training objective, the diagnostics that
+score whether a trained model deserves trust, and a genuine 2-D forward-
+physics dataset generator, wired into :class:`~pycsamt.agents.Inv2DAgent`
+as an opt-in mode. See :doc:`/user_guide/ai_inversion/roadmap` for why this
+work started and how the pieces fit together.
+
+:mod:`pycsamt.ai.losses` implements the staged objective
+``L = w_m*L_model + lambda_x*L_grad_x + lambda_z*L_grad_z + lambda_tv*L_TV
++ lambda_d*L_response`` as five independent, NumPy-only submodules: masked
+L1/L2/Huber data fit (:mod:`~pycsamt.ai.losses.model`), gradient/total-
+variation spatial regularization (:mod:`~pycsamt.ai.losses.spatial`),
+uncertainty-normalized complex-impedance residuals
+(:mod:`~pycsamt.ai.losses.response`), masked-target boundary constraints
+(:mod:`~pycsamt.ai.losses.boundary`), and heteroscedastic Gaussian
+negative-log-likelihood plus calibration penalties
+(:mod:`~pycsamt.ai.losses.uncertainty`):
+
+.. code-block:: pycon
+
+   >>> import numpy as np
+   >>> from pycsamt.ai.losses import model_l2_loss
+   >>> model_l2_loss(np.array([1.0, 2.0]), np.array([1.0, 0.0]))
+   ModelLossResult(value=2.0, kind='l2', reduction='mean', n_valid=2, weight_sum=2.0)
+
+:mod:`pycsamt.ai.validation` turns those losses into decision evidence:
+known-truth recovery metrics including a windowed structural-similarity
+index (:mod:`~pycsamt.ai.validation.recovery`), response residuals broken
+down by station, frequency, and component
+(:mod:`~pycsamt.ai.validation.residuals`), Gaussian reliability curves with
+coverage and sharpness (:mod:`~pycsamt.ai.validation.calibration`), and
+Mahalanobis/k-nearest-neighbour out-of-distribution screening
+(:mod:`~pycsamt.ai.validation.ood`).
+
+:func:`pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` generates
+spatially correlated 2-D geological realizations
+(:mod:`pycsamt.ai.geology`), solves each one with the analytically verified
+:class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter`, and packages the
+results into a versioned, realization-split, resumable-cache training
+dataset — replacing ad hoc tiling of independent 1-D forward models with
+genuine 2-D physics.
+
+:class:`~pycsamt.agents.Inv2DAgent` gained an opt-in ``physics="mt2d"``
+mode built on top of these three pieces: it trains on the new dataset
+generator with the staged spatial-regularization loss
+(:meth:`~pycsamt.ai.inversion.inv2d.EMInverter2D.fit`'s new
+``lambda_x``/``lambda_z``/``lambda_tv``), and reports a genuine held-out
+recovery check in the returned result, since — unlike a field survey — the
+synthetic dataset's true resistivity is known. The prior behaviour,
+``physics="mt1d"`` (tiling independent 1-D forward models), remains the
+unchanged default.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.agents import Inv2DAgent  # doctest: +SKIP
+   >>> agent = Inv2DAgent(physics="mt2d", lambda_x=0.05, lambda_z=0.05)  # doctest: +SKIP
+   >>> result = agent.execute({"sites": sites})  # doctest: +SKIP
+   >>> result.data["mt2d_recovery"]  # doctest: +SKIP
+   {'rmse': 0.31, 'mae': 0.22, 'r2': 0.71, 'n_samples': 4}
+
+:func:`~pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset` now
+generates and validates both the TE-mode (``zxy``) and TM-mode (``zyx``)
+response by default. An earlier finite-difference interface-averaging bug in
+the TM-mode assembly (:func:`pycsamt.forward.em2d._assemble_tm`) has been
+found and fixed — the coefficient at a resistivity interface now uses a
+thickness-weighted harmonic mean instead of an arithmetic one, matching the
+parallel-current-path physics at that interface — and both modes now match
+the analytic half-space benchmark to within a few percent under mesh
+refinement (see :doc:`/user_guide/ai_inversion/dataset2d`).
+:class:`~pycsamt.agents.Inv2DAgent`'s ``physics="mt2d"`` mode still trains
+on the TE-mode response only, since its U-Net input layout is fixed at two
+channels (apparent resistivity and phase); this is an architectural choice,
+not an accuracy limitation, and requesting the TM-mode response no longer
+raises a warning.
+
+:mod:`pycsamt.ai.domain_gap.willy_fit` is renamed to
+:mod:`pycsamt.ai.domain_gap.survey_fit`: the bridge between a real field
+survey and the domain-gap noise simulator works for any AMT, CSAMT, or MT
+survey, not only the bundled WILLY line.
+:func:`~pycsamt.ai.domain_gap.survey_fit.survey_data_from_sites` also had a
+real unit-conversion bug — it copied :attr:`~pycsamt.site.base.Site.z`
+straight into :class:`~pycsamt.ai.data.contracts.SurveyData` without
+converting from the EDI-native ``[mV/km]/[nT]`` field convention to the SI
+convention ``SurveyData`` declares, off by a factor of :math:`4\pi\times
+10^{-4}` in impedance magnitude. It is now converted, confirmed against
+:attr:`Site.rho`'s own field-convention apparent-resistivity formula to
+floating-point precision.
+
+Fixed
+~~~~~
+
+* |Fix| **Profile station order** -- added coordinate-derived chainage based
+  on a local-metre principal profile axis instead of relying on station names
+  or a single geographic coordinate.
+* |Fix| **Safe automatic fallback** -- malformed, sparse, or non-linear
+  coordinates preserve input order when they cannot support a credible line.
+* |Fix| **Multiple survey lines** -- spatially separated parallel profiles are
+  detected and ordered independently rather than interleaved.
+* |Fix| **Pseudosection columns** -- station columns retain the canonical
+  :class:`~pycsamt.site.Sites` order instead of being lexically resorted by a
+  dataframe pivot.
+* |Fix| **Processing consistency** -- static-shift, near-surface, field-zone,
+  CS/AMT depth-section, strike-profile, and pipeline preset paths inherit the
+  same site order.
+
+Added
+~~~~~
+
+* |API Change| :func:`pycsamt.api.configure_ordering`,
+  :func:`pycsamt.api.reset_ordering`,
+  :class:`pycsamt.api.SiteOrderingConfig`, and the live
+  :data:`pycsamt.api.PYCSAMT_ORDERING` configuration.
+* |API Change| :meth:`pycsamt.site.Sites.ordered` and
+  :attr:`pycsamt.site.Sites.ordering` for deterministic ordering and decision
+  diagnostics.
+* |API Change| :mod:`pycsamt.site.metadata` with declarative station renaming,
+  coordinate correction, nested ``HEAD``/``INFO`` updates, set/unset/transform
+  actions, custom validators, dry-run planning, audit records, and validated
+  edit-and-write delivery.
+* |API Change| :meth:`pycsamt.site.Site.update_metadata`,
+  :meth:`pycsamt.site.Sites.update_metadata`, and
+  :meth:`pycsamt.site.Sites.rename` as container-level metadata conveniences.
+* |Tests| Coverage for reordered and reversed inputs, missing or invalid
+  coordinates, oblique lines, multiple lines, per-call overrides, temporary
+  configuration, and the bundled L18PLT and L22PLT field data.
+* |Tests| Metadata coverage for mapping, sequence, callable, DataFrame, and CSV
+  inputs; duplicate and missing-name policies; coordinate validation; nested
+  sections; ``INFO`` updates; custom validators; atomic commits; audit schemas;
+  export and reload; and real L18PLT and L22PLT data.
+* |Docs| A package-wide ordering configuration guide with modes, thresholds,
+  contexts, reset behaviour, and migration examples, plus a rewritten site
+  guide covering containers, metadata, location and profile ordering,
+  selection, editing, recomputation, diagnostics, export/reporting, and
+  low-level utilities. Executable examples use interactive ``pycon`` output,
+  and scientific equations and generated figures are explained in context.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| Added a project `Code of Conduct
+  <https://github.com/earthai-tech/pycsamt/blob/master/CODE_OF_CONDUCT.md>`__
+  and a "powered by Netlify" attribution link in the footer of every
+  documentation page.
+* |Build| Documentation deploys are now release-gated -- ``pycsamt.org``
+  rebuilds only when a ``vX.Y.Z`` tag is pushed, through a GitHub Actions
+  workflow that calls a Netlify build hook, instead of on every commit to
+  ``master``. The previous per-commit pattern had exhausted the hosting
+  team's free-plan credits and suspended the site.
+
+Compatibility
+~~~~~~~~~~~~~
+
+The default processing order now comes from ``PYCSAMT_ORDERING`` and defaults
+to ``auto``.  Code that requires the exact loader order should opt out
+explicitly:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.api import configure_ordering
+
+   >>> _ = configure_ordering(mode="input")
+
+Or preserve input order for only one call with ``order_by="input"`` or the
+tool's corresponding ``sort_by="input"`` argument.  Existing explicit
+``sort_by`` and ``order_by`` arguments remain authoritative.
+
+Metadata edits are non-mutating unless ``inplace=True`` is requested. Code
+that previously used :meth:`pycsamt.site.Sites.map` with a callable continues
+to behave as before; ``Sites.map`` has not become a dictionary-based rename
+operation. Use :meth:`pycsamt.site.Sites.rename` or
+:func:`pycsamt.site.metadata.rename_sites` for explicit rename tables.
+
+See :ref:`api-configuration` for the complete ordering configuration reference
+and :ref:`site_metadata` for metadata planning, validation, auditing, ordering,
+and export guidance.

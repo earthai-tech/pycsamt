@@ -38,9 +38,7 @@ def _parse_model2d(path: Path) -> dict:
     # Skip blank / comment lines to find control line
     i = 0
     N = len(lines)
-    while i < N and (
-        not lines[i].strip() or lines[i].strip().startswith("#")
-    ):
+    while i < N and (not lines[i].strip() or lines[i].strip().startswith("#")):
         i += 1
 
     ctrl = lines[i].split()
@@ -221,9 +219,7 @@ class ModEmModel2D(ModEmBase):
                 n_cell = max(1, round(gap / cell_h))
                 station_widths.extend([gap / n_cell] * n_cell)
         if len(station_widths) % 2 != 0:
-            station_widths.append(
-                station_widths[-1] if station_widths else cell_h
-            )
+            station_widths.append(station_widths[-1] if station_widths else cell_h)
 
         # padding
         pad = [cell_h * float(2 ** (k + 1)) for k in range(n_pad)]
@@ -358,8 +354,7 @@ class ModEmModel2D(ModEmBase):
             rows = []
             for i in range(0, len(arr), per_row):
                 rows.append(
-                    "  "
-                    + "  ".join(f"{v:>10.4f}" for v in arr[i : i + per_row])
+                    "  " + "  ".join(f"{v:>10.4f}" for v in arr[i : i + per_row])
                 )
             return "\n".join(rows) + "\n"
 
@@ -372,9 +367,7 @@ class ModEmModel2D(ModEmBase):
 
         for iz in range(self.nz):
             lines.append(
-                "  "
-                + "  ".join(f"{v:>12.5E}" for v in self.rho_loge[iz, :])
-                + "\n"
+                "  " + "  ".join(f"{v:>12.5E}" for v in self.rho_loge[iz, :]) + "\n"
             )
 
         with p.open("w") as fh:

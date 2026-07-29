@@ -71,7 +71,7 @@ class TipperAnalysisAgent(BaseAgent):
 
     Examples
     --------
-    >>> agent = TipperAnalysisAgent(convention='wiese')
+    >>> agent = TipperAnalysisAgent(convention="wiese")
     >>> r = agent.execute({"path": "/data/WILLY_EDIs"})
     >>> r["n_stations_with_tipper"]
     12
@@ -122,17 +122,13 @@ class TipperAnalysisAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        convention = str(
-            input_data.get("convention", self.convention)
-        ).lower()
+        convention = str(input_data.get("convention", self.convention)).lower()
         use_imag = bool(input_data.get("use_imag", self.use_imag))
         output_dir = input_data.get("output_dir")
 
@@ -165,9 +161,7 @@ class TipperAnalysisAgent(BaseAgent):
                 if t_arr.ndim == 3 and t_arr.shape[1] == 1:
                     t_arr = t_arr[:, 0, :]  # → (n_freq, 2)
                 if t_arr.shape != (len(fr), 2):
-                    warnings.append(
-                        f"{nm}: unexpected tipper shape {t_arr.shape}."
-                    )
+                    warnings.append(f"{nm}: unexpected tipper shape {t_arr.shape}.")
                     continue
 
                 per = 1.0 / np.where(fr == 0, np.nan, fr)
@@ -316,9 +310,7 @@ class TipperAnalysisAgent(BaseAgent):
             warnings.append(f"Induction arrow figure: {exc}")
 
         try:
-            fig_pseudo = _plot_tipper_pseudosection(
-                rows, station_names_ordered
-            )
+            fig_pseudo = _plot_tipper_pseudosection(rows, station_names_ordered)
             if fig_pseudo is not None:
                 figures["tipper_pseudosection"] = fig_pseudo
                 p = self._save_figure(
@@ -335,14 +327,12 @@ class TipperAnalysisAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and records:
-            amps = [
-                r["amplitude"] for r in records if np.isfinite(r["amplitude"])
-            ]
+            amps = [r["amplitude"] for r in records if np.isfinite(r["amplitude"])]
             mean_amp = float(np.mean(amps)) if amps else float("nan")
             max_tip = (
-                max(
-                    arrow_records, key=lambda r: r["amplitude"], default={}
-                ).get("station", "?")
+                max(arrow_records, key=lambda r: r["amplitude"], default={}).get(
+                    "station", "?"
+                )
                 if arrow_records
                 else "?"
             )
@@ -427,9 +417,7 @@ def _plot_induction_arrows(
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    xs = [
-        i for i in range(len(arrow_records))
-    ]  # use station index as x-position
+    xs = [i for i in range(len(arrow_records))]  # use station index as x-position
     [0.0] * len(arrow_records)
 
     for xi, rec in zip(xs, arrow_records):
@@ -458,8 +446,7 @@ def _plot_induction_arrows(
     ax.set_ylabel("Tipper (normalised)", fontsize=9)
     per_str = f"{period_ref:.3f} s" if period_ref is not None else "?"
     ax.set_title(
-        f"Induction arrows — {convention.capitalize()} convention  "
-        f"(T = {per_str})",
+        f"Induction arrows — {convention.capitalize()} convention  " f"(T = {per_str})",
         fontsize=10,
         fontweight="bold",
     )
@@ -478,9 +465,7 @@ def _plot_tipper_pseudosection(
     if not rows or not station_order:
         return None
 
-    periods = sorted(
-        {r["period_s"] for r in rows if np.isfinite(r["period_s"])}
-    )
+    periods = sorted({r["period_s"] for r in rows if np.isfinite(r["period_s"])})
     if not periods:
         return None
 
@@ -513,9 +498,7 @@ def _plot_tipper_pseudosection(
     ax.set_xticks(range(len(station_order)))
     ax.set_xticklabels(station_order, rotation=90, fontsize=6.5)
     ax.set_ylabel("log₁₀ Period (s)", fontsize=9)
-    ax.set_title(
-        "Tipper amplitude pseudosection", fontsize=10, fontweight="bold"
-    )
+    ax.set_title("Tipper amplitude pseudosection", fontsize=10, fontweight="bold")
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     div = make_axes_locatable(ax)

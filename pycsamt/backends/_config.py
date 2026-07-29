@@ -37,9 +37,7 @@ class BackendConfig:
         with _LOCK:
             if cls._instance is None:
                 obj = object.__new__(cls)
-                obj._backend_name: str | None = (
-                    None  # None = not yet resolved
-                )
+                obj._backend_name: str | None = None  # None = not yet resolved
                 cls._instance = obj
         return cls._instance
 
@@ -73,8 +71,7 @@ class BackendConfig:
         name = name.lower().strip()
         if name not in _VALID_NAMES:
             raise ValueError(
-                f"Unknown backend {name!r}.  "
-                f"Choose from: {sorted(_VALID_NAMES)}"
+                f"Unknown backend {name!r}.  " f"Choose from: {sorted(_VALID_NAMES)}"
             )
         with _LOCK:
             if name == "auto":

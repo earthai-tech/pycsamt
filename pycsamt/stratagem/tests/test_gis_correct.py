@@ -172,9 +172,7 @@ class TestDetectCoordCols:
                 "elev": [261.9, 262.0, 262.1],
             }
         )
-        e, n = _detect_coord_cols(
-            df, "latitude", "longitude", exclude={"elev"}
-        )
+        e, n = _detect_coord_cols(df, "latitude", "longitude", exclude={"elev"})
         assert e == "latitude" and n == "longitude"
 
 
@@ -196,9 +194,7 @@ class TestStationLocator:
         n = 5
         lats = np.linspace(25.0, 25.5, n)
         lons = np.linspace(109.5, 110.0, n)
-        loc = StationLocator(order="forward").fit(
-            self._dummy_edis(n), lats, lons
-        )
+        loc = StationLocator(order="forward").fit(self._dummy_edis(n), lats, lons)
         assert loc.index_map_ == list(range(n))
         assert loc.reversed_ is False
 
@@ -206,9 +202,7 @@ class TestStationLocator:
         n = 5
         lats = np.linspace(25.0, 25.5, n)
         lons = np.linspace(109.5, 110.0, n)
-        loc = StationLocator(order="reversed").fit(
-            self._dummy_edis(n), lats, lons
-        )
+        loc = StationLocator(order="reversed").fit(self._dummy_edis(n), lats, lons)
         assert loc.index_map_ == list(range(n - 1, -1, -1))
         assert loc.reversed_ is True
 
@@ -235,9 +229,7 @@ class TestStationLocator:
         n = 5
         lats = np.linspace(25.0, 25.5, n)
         lons = np.zeros(n)
-        loc = StationLocator(order="auto").fit(
-            self._dummy_edis(n), lats, lons
-        )
+        loc = StationLocator(order="auto").fit(self._dummy_edis(n), lats, lons)
         assert len(loc.index_map_) == n
         assert set(loc.index_map_) == set(range(n))
 

@@ -122,9 +122,7 @@ class AnomalyDetectionAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
-            )
+            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -236,9 +234,7 @@ class AnomalyDetectionAgent(BaseAgent):
             ax1.set_xticks(range(n_sta))
             ax1.set_xticklabels(station_names, rotation=90, fontsize=6.5)
             ax1.set_ylabel("Reconstruction error", fontsize=9)
-            ax1.set_title(
-                "Anomaly scores per station", fontsize=9, fontweight="bold"
-            )
+            ax1.set_title("Anomaly scores per station", fontsize=9, fontweight="bold")
             ax1.legend(fontsize=8)
             ax1.tick_params(labelsize=8)
 

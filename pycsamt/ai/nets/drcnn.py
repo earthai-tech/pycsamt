@@ -182,7 +182,7 @@ class DRCNNNet:
     --------
     >>> # MT (120 features) + TEM (48 features)
     >>> drcnn = DRCNNNet((120, 48), n_out=9)
-    >>> model = drcnn.build()   # doctest: +SKIP
+    >>> model = drcnn.build()  # doctest: +SKIP
     """
 
     def __init__(
@@ -235,8 +235,7 @@ def _dense_block_1d(
     """Return a 1-D dense block as an ``nn.Module``."""
     if "_DenseBlock" not in globals():
         raise ImportError(
-            "PyTorch is required for DRCNNNet. "
-            "Install with: pip install torch"
+            "PyTorch is required for DRCNNNet. Install with: pip install torch"
         )
     return _DenseBlock(
         in_features,
@@ -258,8 +257,7 @@ def _build_drcnn(
     """Build the full multi-modal DRCNN."""
     if "_DRCNN" not in globals():
         raise ImportError(
-            "PyTorch is required for DRCNNNet. "
-            "Install with: pip install torch"
+            "PyTorch is required for DRCNNNet. Install with: pip install torch"
         )
     return _DRCNN(
         tuple(n_features_list),

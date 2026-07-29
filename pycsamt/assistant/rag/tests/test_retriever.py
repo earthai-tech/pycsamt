@@ -109,9 +109,7 @@ class TestRetriever(unittest.TestCase):
 
     def test_symbol_boost(self):
         ctx = self.r.search("how do I use ensure_sites", k=2)
-        self.assertEqual(
-            ctx.chunks[0].symbol, "pycsamt.emtools._core.ensure_sites"
-        )
+        self.assertEqual(ctx.chunks[0].symbol, "pycsamt.emtools._core.ensure_sites")
 
     def test_kinds_filter(self):
         ctx = self.r.search("static shift", k=5, kinds={"recipe"})

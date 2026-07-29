@@ -101,9 +101,7 @@ class RockProperties:
         """
         return self._ranges[rock]
 
-    def get_pattern(
-        self, rock: str
-    ) -> tuple[str, tuple[float, float, float]]:
+    def get_pattern(self, rock: str) -> tuple[str, tuple[float, float, float]]:
         """
         Return (hatch, color) tuple for a given rock.
 

@@ -204,9 +204,7 @@ class PowerlineHarmonics(PyCSAMTObject):
             total_ratio=self.total_ratio,
             contaminated=self.contaminated,
             n_flagged=sum(1 for p in self.peaks if p.flagged),
-            dominant_hz=(
-                self.dominant.frequency_hz if self.dominant else None
-            ),
+            dominant_hz=(self.dominant.frequency_hz if self.dominant else None),
             peaks=[p.as_dict() for p in self.peaks],
         )
 
@@ -351,9 +349,7 @@ def check_channel_saturation(
             saturated=False,
             limit=limit,
         )
-    max_clip_fraction = _c.as_probability(
-        max_clip_fraction, "max_clip_fraction"
-    )
+    max_clip_fraction = _c.as_probability(max_clip_fraction, "max_clip_fraction")
     if limit is not None:
         limit = _c.as_positive(limit, "limit")
         clipped = np.abs(finite) >= limit
@@ -501,9 +497,7 @@ def estimate_frequency_coverage(
     coverage.f_low_hz = f_lo
     coverage.f_high_hz = f_hi
     coverage.n_decades = (
-        float(np.log10(f_hi / f_lo))
-        if f_lo > 0 and f_hi > 0
-        else float("nan")
+        float(np.log10(f_hi / f_lo)) if f_lo > 0 and f_hi > 0 else float("nan")
     )
     if target_bands is not None:
         bands = [
@@ -588,9 +582,7 @@ def assess_impedance_stability(
     with np.errstate(divide="ignore", invalid="ignore"):
         mean_mag = np.mean(mag, axis=0)
         cv = np.where(mean_mag > 0, np.std(mag, axis=0) / mean_mag, np.nan)
-    cv_magnitude = (
-        float(np.nanmean(cv)) if np.any(np.isfinite(cv)) else float("nan")
-    )
+    cv_magnitude = float(np.nanmean(cv)) if np.any(np.isfinite(cv)) else float("nan")
     phase_std = float(np.nanmean(np.std(phase, axis=0)))
     stable = bool(
         np.isfinite(cv_magnitude)
@@ -668,13 +660,9 @@ def estimate_static_shift(
     -------
     StaticShift
     """
-    min_split_decades = _c.as_nonnegative(
-        min_split_decades, "min_split_decades"
-    )
+    min_split_decades = _c.as_nonnegative(min_split_decades, "min_split_decades")
     max_log_std = _c.as_nonnegative(max_log_std, "max_log_std")
-    max_phase_diff_deg = _c.as_nonnegative(
-        max_phase_diff_deg, "max_phase_diff_deg"
-    )
+    max_phase_diff_deg = _c.as_nonnegative(max_phase_diff_deg, "max_phase_diff_deg")
     xy = np.asarray(res_xy, dtype=float).ravel()
     yx = np.asarray(res_yx, dtype=float).ravel()
     n = min(xy.size, yx.size)
@@ -826,20 +814,14 @@ def amt_edge_report(
     """
     powerline_applicable, target_bands = _method_qc_context(method)
     powerline = (
-        detect_powerline_harmonics(
-            data, sample_rate, mains_hz=mains_hz
-        ).as_dict()
+        detect_powerline_harmonics(data, sample_rate, mains_hz=mains_hz).as_dict()
         if powerline_applicable
         else None
     )
-    coverage = estimate_frequency_coverage(
-        data, sample_rate, target_bands=target_bands
-    )
+    coverage = estimate_frequency_coverage(data, sample_rate, target_bands=target_bands)
     return dict(
         method=(str(method) if method is not None else None),
-        snr_db=estimate_channel_snr(
-            data, sample_rate, signal_band_hz=signal_band_hz
-        ),
+        snr_db=estimate_channel_snr(data, sample_rate, signal_band_hz=signal_band_hz),
         powerline_applicable=powerline_applicable,
         powerline=powerline,
         saturation=check_channel_saturation(data),
@@ -858,9 +840,7 @@ def amt_edge_table(
     Accepts a ``{channel: report}`` mapping (or ``(channel, report)``
     pairs) and returns one row per channel with the headline metrics.
     """
-    items = (
-        list(reports.items()) if isinstance(reports, dict) else list(reports)
-    )
+    items = list(reports.items()) if isinstance(reports, dict) else list(reports)
     rows: list[dict[str, Any]] = []
     for channel, report in items:
         # ``powerline`` is None when the method is not powerline-sensitive.

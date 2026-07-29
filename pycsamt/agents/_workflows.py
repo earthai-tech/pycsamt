@@ -838,7 +838,8 @@ def classify_workflow(
     'inv3d'
     >>> classify_workflow(
     ...     "run quality control, prepare the inversion, run the AI "
-    ...     "inversion and generate a report")
+    ...     "inversion and generate a report"
+    ... )
     'full'
     >>> classify_workflow("xyzzy", default="qc")
     'qc'
@@ -847,9 +848,7 @@ def classify_workflow(
     """
     t = (text or "").lower()
     matched = [
-        wf
-        for wf, kws in WORKFLOW_KEYWORDS.items()
-        if any(kw in t for kw in kws)
+        wf for wf, kws in WORKFLOW_KEYWORDS.items() if any(kw in t for kw in kws)
     ]
     if not matched:
         return default

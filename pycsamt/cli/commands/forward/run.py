@@ -183,8 +183,7 @@ def run(
     try:
         if geology is not None and (resistivities or thicknesses):
             raise click.UsageError(
-                "--geology cannot be combined with "
-                "--resistivities / --thicknesses."
+                "--geology cannot be combined with " "--resistivities / --thicknesses."
             )
 
         if geology is not None:
@@ -192,8 +191,7 @@ def run(
             if key not in GEOLOGY_PRIORS:
                 available = ", ".join(sorted(GEOLOGY_PRIORS))
                 raise click.BadParameter(
-                    f"{geology!r} is not a known scenario.  "
-                    f"Available: {available}",
+                    f"{geology!r} is not a known scenario.  " f"Available: {available}",
                     param_hint="--geology",
                 )
             model = LayeredModel.from_geology(key, seed=seed)
@@ -287,9 +285,7 @@ def _emit(resp: Any, freqs: Any, solver: str, output_format: str) -> None:
         )
 
     if output_format == "json":
-        click.echo(
-            df.to_json(orient="records", indent=2, default_handler=str)
-        )
+        click.echo(df.to_json(orient="records", indent=2, default_handler=str))
     elif output_format == "csv":
         click.echo(df.to_csv(index=False))
     else:

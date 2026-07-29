@@ -136,17 +136,13 @@ def test_legacyavgbase_minimal_contract():
     # The class should be instantiable without exploding.
     obj = LegacyAVGBase()  # type: ignore[operator]
     # It should expose at least one of common transformation hooks.
-    has_api = any(
-        hasattr(obj, name) for name in ("to_xarray", "transform", "__call__")
-    )
+    has_api = any(hasattr(obj, name) for name in ("to_xarray", "transform", "__call__"))
     assert has_api
 
     # And if it advertises to_xarray/transform, calling them should
     # either return something xarray-like or raise NotImplementedError.
     if hasattr(obj, "to_xarray"):
-        with pytest.raises(
-            AvgDataError, match=re.escape("Empty legacy table.")
-        ):
+        with pytest.raises(AvgDataError, match=re.escape("Empty legacy table.")):
             # try:
             out = obj.to_xarray(pd.DataFrame())
             # duck-type check for xarray.Dataset (no hard import)
@@ -155,9 +151,7 @@ def test_legacyavgbase_minimal_contract():
             #     pass
 
     if hasattr(obj, "transform"):
-        with pytest.raises(
-            AvgDataError, match=re.escape("Empty legacy table.")
-        ):
+        with pytest.raises(AvgDataError, match=re.escape("Empty legacy table.")):
             # try:
             out = obj.transform(pd.DataFrame(), meta={})
             assert isinstance(out, (pd.DataFrame, dict))

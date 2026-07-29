@@ -110,9 +110,7 @@ def test_vr_pair_positive():
 def test_vr_pair_formula():
     rho, f_lo, f_hi = 100.0, 100.0, 1000.0
     expected = (
-        BOSTICK_CONST
-        * np.sqrt(rho)
-        * (1.0 / np.sqrt(f_lo) - 1.0 / np.sqrt(f_hi))
+        BOSTICK_CONST * np.sqrt(rho) * (1.0 / np.sqrt(f_lo) - 1.0 / np.sqrt(f_hi))
     )
     assert np.isclose(vertical_resolution_pair(rho, f_lo, f_hi), expected)
 
@@ -180,9 +178,7 @@ def test_schedule_returns_array():
 
 def test_schedule_within_bounds():
     depths = np.linspace(5, 30, 8)
-    freqs = frequency_schedule(
-        depths, 100.0, f_min=F_MIN_CSUMT, f_max=F_MAX_CSUMT
-    )
+    freqs = frequency_schedule(depths, 100.0, f_min=F_MIN_CSUMT, f_max=F_MAX_CSUMT)
     assert (freqs >= F_MIN_CSUMT).all()
     assert (freqs <= F_MAX_CSUMT).all()
 
@@ -195,9 +191,7 @@ def test_schedule_sorted():
 def test_schedule_empty_out_of_range():
     """Target depths that map to frequencies outside [f_min, f_max] → empty."""
     very_deep = np.array([10_000.0])  # f ≪ 9.6 kHz for any reasonable rho
-    freqs = frequency_schedule(
-        very_deep, 100.0, f_min=F_MIN_CSUMT, f_max=F_MAX_CSUMT
-    )
+    freqs = frequency_schedule(very_deep, 100.0, f_min=F_MIN_CSUMT, f_max=F_MAX_CSUMT)
     assert freqs.size == 0
 
 
@@ -219,9 +213,7 @@ def test_schedule_min_resolution_inserts_freqs():
 def test_schedule_fill_decades():
     depths = [5.0, 30.0]
     f_plain = frequency_schedule(depths, 100.0, fill_decades=False)
-    f_fill = frequency_schedule(
-        depths, 100.0, fill_decades=True, per_decade=4
-    )
+    f_fill = frequency_schedule(depths, 100.0, fill_decades=True, per_decade=4)
     assert f_fill.size >= f_plain.size
 
 

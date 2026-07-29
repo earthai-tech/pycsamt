@@ -6,8 +6,6 @@ test_chat_ui.py / test_data_overview.py / test_metric_line_resolution.py."""
 
 from __future__ import annotations
 
-import io
-
 import pytest
 
 pytest.importorskip("dash", reason="dash required")
@@ -188,9 +186,7 @@ class TestExtractLineRefOrdinals:
         )
 
         assert _extract_line_ref("run qc on the first line", {}) == "1"
-        assert (
-            _extract_line_ref("plot the second profile", {}) == "2"
-        )
+        assert _extract_line_ref("plot the second profile", {}) == "2"
 
     def test_no_match_returns_none(self):
         from pycsamt.app.agent_master.callbacks.chat import (
@@ -221,16 +217,12 @@ class TestMatchGroup:
     def test_numeric_ref_unique_embedded_number(self):
         from pycsamt.app.agent_master.callbacks.chat import _match_group
 
-        assert (
-            _match_group("22", {"L22PLT": [], "L18PLT": []}) == "L22PLT"
-        )
+        assert _match_group("22", {"L22PLT": [], "L18PLT": []}) == "L22PLT"
 
     def test_numeric_ref_ambiguous_returns_none(self):
         from pycsamt.app.agent_master.callbacks.chat import _match_group
 
-        assert (
-            _match_group("1", {"L1A": [], "L1B": []}) is None
-        )
+        assert _match_group("1", {"L1A": [], "L1B": []}) is None
 
     def test_named_substring_match(self):
         from pycsamt.app.agent_master.callbacks.chat import _match_group
@@ -281,8 +273,8 @@ class TestDetectAppRequest:
 
     def test_mapview_viz_redirect(self):
         from pycsamt.app.agent_master.callbacks.chat import (
-            _detect_app_request,
             _VIZ_REDIRECT_REASON,
+            _detect_app_request,
         )
 
         assert _detect_app_request("show a 3d map") == (
@@ -299,8 +291,8 @@ class TestDetectAppRequest:
 
     def test_complex_viz_redirect(self):
         from pycsamt.app.agent_master.callbacks.chat import (
-            _detect_app_request,
             _VIZ_REDIRECT_REASON,
+            _detect_app_request,
         )
 
         assert _detect_app_request("browse edis") == (
@@ -512,9 +504,7 @@ class TestEnsureWebApp:
     def test_starts_new_server_thread(self, monkeypatch):
         from pycsamt.app.agent_master.callbacks import chat as chat_mod
 
-        monkeypatch.setattr(
-            chat_mod, "_webapp_state", {"running": False, "url": None}
-        )
+        monkeypatch.setattr(chat_mod, "_webapp_state", {"running": False, "url": None})
         monkeypatch.setattr(chat_mod, "_free_port", lambda preferred: 8199)
 
         started = {}
@@ -795,9 +785,7 @@ def test_record_run_swallows_import_errors(monkeypatch):
 
     from pycsamt.app.agent_master.callbacks.chat import _record_run
 
-    monkeypatch.setitem(
-        sys.modules, "pycsamt.assistant.memory.workflow_history", None
-    )
+    monkeypatch.setitem(sys.modules, "pycsamt.assistant.memory.workflow_history", None)
     _record_run(
         workflow="qc",
         path="/x",

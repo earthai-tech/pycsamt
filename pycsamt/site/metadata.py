@@ -201,25 +201,29 @@ class SiteMetadataEditor:
     Rename stations and update acquisition metadata:
 
     >>> from pycsamt.site import SiteMetadataEditor
-    >>> editor = SiteMetadataEditor({
-    ...     "18-012A": {
-    ...         "name": "L01_012",
-    ...         "coords": (5.25, -3.75, 120.0),
-    ...         "head": {"project": "LINE_01"},
+    >>> editor = SiteMetadataEditor(
+    ...     {
+    ...         "18-012A": {
+    ...             "name": "L01_012",
+    ...             "coords": (5.25, -3.75, 120.0),
+    ...             "head": {"project": "LINE_01"},
+    ...         }
     ...     }
-    ... })
+    ... )
     >>> # updated = editor.apply(sites)
     >>> # editor.audit()[["old_name", "new_name", "status"]]
 
     Generic actions can address nested fields:
 
-    >>> editor = SiteMetadataEditor({
-    ...     "18-012A": {
-    ...         "set": {"info.processingtag": "reviewed"},
-    ...         "transform": {"head.elev": lambda value: value + 1.5},
-    ...         "unset": ["head.county"],
+    >>> editor = SiteMetadataEditor(
+    ...     {
+    ...         "18-012A": {
+    ...             "set": {"info.processingtag": "reviewed"},
+    ...             "transform": {"head.elev": lambda value: value + 1.5},
+    ...             "unset": ["head.county"],
+    ...         }
     ...     }
-    ... })
+    ... )
 
     See Also
     --------
@@ -562,7 +566,9 @@ class SiteMetadataEditor:
         apply : Populate the audit while applying updates.
         """
         columns = [field.name for field in MetadataChange.__dataclass_fields__.values()]
-        frame = pd.DataFrame([record.to_dict() for record in self.records_], columns=columns)
+        frame = pd.DataFrame(
+            [record.to_dict() for record in self.records_], columns=columns
+        )
         return maybe_wrap_frame(
             frame,
             api=api,
@@ -797,6 +803,7 @@ def rename_sites(
 
         def updates(site: Any, index: int) -> dict[str, str]:
             return {"name": str(_call(names, site, index))}
+
     else:
         updates = [{"name": str(name)} for name in names]
     return update_metadata_all(
@@ -814,7 +821,9 @@ def _resolve_specs(
 ) -> tuple[list[dict[str, Any] | None], set[str]]:
     updates = _coerce_update_source(updates)
     if callable(updates):
-        return [_normalize_spec(_call(updates, ed, i)) for i, ed in enumerate(items)], set()
+        return [
+            _normalize_spec(_call(updates, ed, i)) for i, ed in enumerate(items)
+        ], set()
 
     if isinstance(updates, Mapping):
         if _is_spec(updates):
@@ -841,7 +850,9 @@ def _resolve_specs(
 
     if isinstance(updates, Sequence) and not isinstance(updates, (str, bytes)):
         if len(updates) != len(items):
-            raise ValueError(f"expected {len(items)} metadata specifications, got {len(updates)}")
+            raise ValueError(
+                f"expected {len(items)} metadata specifications, got {len(updates)}"
+            )
         return [_normalize_spec(value) for value in updates], set()
     raise TypeError("updates must be a mapping, sequence, or callable")
 
@@ -856,7 +867,10 @@ def _coerce_update_source(updates: Any) -> Any:
 
     if hasattr(updates, "to_dict") and hasattr(updates, "columns"):
         columns = {str(column).casefold(): column for column in updates.columns}
-        station_column = next((columns[name] for name in _STATION_COLUMNS if name in columns), None)
+        station_column = next(
+            (columns[name] for name in _STATION_COLUMNS if name in columns),
+            None,
+        )
         if station_column is None:
             raise ValueError(
                 "metadata table needs a station column; accepted names are: "
@@ -876,7 +890,9 @@ def _coerce_update_source(updates: Any) -> Any:
             name = str(station)
             folded_name = name.casefold()
             if folded_name in seen:
-                raise ValueError(f"metadata table contains duplicate station row: {name!r}")
+                raise ValueError(
+                    f"metadata table contains duplicate station row: {name!r}"
+                )
             seen.add(folded_name)
             result[name] = spec
         return result
@@ -886,7 +902,12 @@ def _coerce_update_source(updates: Any) -> Any:
 def _assign_table_field(spec: dict[str, Any], key: str, value: Any) -> None:
     normalized = key.strip()
     folded = normalized.casefold()
-    aliases = {"new_name": "name", "latitude": "lat", "longitude": "lon", "elevation": "elev"}
+    aliases = {
+        "new_name": "name",
+        "latitude": "lat",
+        "longitude": "lon",
+        "elevation": "elev",
+    }
     if folded in aliases:
         spec[aliases[folded]] = value
     elif folded in _SPEC_KEYS:
@@ -937,7 +958,9 @@ def _is_spec(value: Mapping[Any, Any]) -> bool:
         return False
     # A real station may itself be named "station" or "name". A nested
     # mapping at either key is therefore a keyed batch, not one specification.
-    return not any(key in value and isinstance(value[key], Mapping) for key in ("station", "name"))
+    return not any(
+        key in value and isinstance(value[key], Mapping) for key in ("station", "name")
+    )
 
 
 def _apply_spec(
@@ -996,7 +1019,8 @@ def _apply_spec(
                 before = _info_value(info, key)
                 updater(**{key: value})
                 known = {
-                    str(item).replace("_", "").casefold() for item in getattr(info, "infokeys", ())
+                    str(item).replace("_", "").casefold()
+                    for item in getattr(info, "infokeys", ())
                 }
                 if value is not None and key.replace("_", "").casefold() not in known:
                     _upsert_info_text(info, key, value)
@@ -1014,7 +1038,9 @@ def _apply_spec(
             raise TypeError("sections action must map section names to fields")
         for section_name, values in section_values.items():
             if not isinstance(values, Mapping):
-                raise TypeError(f"metadata for section {section_name!r} must be a mapping")
+                raise TypeError(
+                    f"metadata for section {section_name!r} must be a mapping"
+                )
             section = _ensure_section(ed, str(section_name))
             for key, value in values.items():
                 key = str(key)
@@ -1162,7 +1188,11 @@ def _split_field(ed: Any, path: str) -> tuple[Any, str, str]:
         if "." not in remainder:
             raise ValueError("section paths use 'section.<name>.<field>' syntax")
         section_name, field = remainder.split(".", 1)
-        return _ensure_section(ed, section_name), field, f"section.{section_name}"
+        return (
+            _ensure_section(ed, section_name),
+            field,
+            f"section.{section_name}",
+        )
     # Unrecognized prefixes are ordinary nested HEAD paths.
     return _ensure_head(ed), text, "head"
 
@@ -1194,7 +1224,8 @@ def _set_field(ed: Any, path: str, value: Any) -> bool:
         if callable(updater):
             updater(**{remainder: value})
             known = {
-                str(item).replace("_", "").casefold() for item in getattr(root, "infokeys", ())
+                str(item).replace("_", "").casefold()
+                for item in getattr(root, "infokeys", ())
             }
             if value is not None and remainder.replace("_", "").casefold() not in known:
                 _upsert_info_text(root, remainder, value)
@@ -1213,7 +1244,11 @@ def _unset_field(ed: Any, path: str) -> bool:
     }:
         raise ValueError("station identity cannot be unset; rename it explicitly")
     root, remainder, section = _split_field(ed, path)
-    current = _get_info_path(root, remainder) if section == "info" else _get_path(root, remainder)
+    current = (
+        _get_info_path(root, remainder)
+        if section == "info"
+        else _get_path(root, remainder)
+    )
     if current is None:
         return False
     if section == "info" and "." not in remainder:
@@ -1385,13 +1420,17 @@ def _requested_fields(spec: Mapping[str, Any]) -> list[str]:
     for key, value in spec.items():
         if key in {"head", "info", "set", "transform"} and isinstance(value, Mapping):
             fields.extend(
-                f"{key}.{field}" if key in {"head", "info"} else _canonical_path(str(field))
+                f"{key}.{field}"
+                if key in {"head", "info"}
+                else _canonical_path(str(field))
                 for field in value
             )
         elif key == "sections" and isinstance(value, Mapping):
             for section, section_fields in value.items():
                 if isinstance(section_fields, Mapping):
-                    fields.extend(f"section.{section}.{field}" for field in section_fields)
+                    fields.extend(
+                        f"section.{section}.{field}" for field in section_fields
+                    )
         elif key == "unset":
             values = [value] if isinstance(value, str) else list(value)
             fields.extend(_canonical_path(str(field)) for field in values)

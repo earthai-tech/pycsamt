@@ -252,9 +252,7 @@ class TestAugmentMixup(unittest.TestCase):
     def test_output_in_convex_hull(self):
         from pycsamt.ai.training.augment import AugmentMixup
 
-        X = np.vstack([np.zeros((25, 10)), np.ones((25, 10))]).astype(
-            np.float32
-        )
+        X = np.vstack([np.zeros((25, 10)), np.ones((25, 10))]).astype(np.float32)
         y = X.copy()
         aug = AugmentMixup(alpha=1.0)
         Xa, ya = aug(X, y)
@@ -336,9 +334,9 @@ class TestMetrics(unittest.TestCase):
     def setUp(self):
         self.rng = np.random.default_rng(99)
         self.y_true = self.rng.standard_normal((50, 8)).astype(np.float32)
-        self.y_pred = self.y_true + 0.01 * self.rng.standard_normal(
-            (50, 8)
-        ).astype(np.float32)
+        self.y_pred = self.y_true + 0.01 * self.rng.standard_normal((50, 8)).astype(
+            np.float32
+        )
 
     def test_rmse_near_zero(self):
         from pycsamt.ai.training.metrics import rmse
@@ -400,14 +398,10 @@ class TestMetrics(unittest.TestCase):
         from pycsamt.forward import LayeredModel, MT1DForward
         from pycsamt.forward.noise import add_noise
 
-        model = LayeredModel(
-            resistivity=[100.0, 10.0, 500.0], thickness=[30.0, 200.0]
-        )
+        model = LayeredModel(resistivity=[100.0, 10.0, 500.0], thickness=[30.0, 200.0])
         freqs = np.logspace(0, 3, 20)
         resp = MT1DForward(freqs).run(model)
-        resp_noisy = add_noise(
-            resp, noise_model="gaussian", level=0.1, seed=0
-        )
+        resp_noisy = add_noise(resp, noise_model="gaussian", level=0.1, seed=0)
         self.assertIsNotNone(resp_noisy.rho_a)
         # Noisy response should differ from clean
         self.assertFalse(np.allclose(resp_noisy.rho_a, resp.rho_a))

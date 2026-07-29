@@ -78,8 +78,7 @@ def session_to_obs_1d(
         obs = [o for o in obs if o.name in keep]
         if not obs:
             raise ValueError(
-                "None of the selected stations were"
-                " found in the session data."
+                "None of the selected stations were found in the session data."
             )
     return obs
 
@@ -129,8 +128,7 @@ def session_to_obs_2d(
         obs = [o for o in obs if o.name in keep]
         if not obs:
             raise ValueError(
-                "None of the selected stations were"
-                " found in the session data."
+                "None of the selected stations were found in the session data."
             )
     return obs
 

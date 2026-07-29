@@ -15,7 +15,6 @@ import pytest
 
 from pycsamt.backends import _detect
 
-
 # ─── probe_backend ──────────────────────────────────────────────────────────
 
 
@@ -32,9 +31,7 @@ from pycsamt.backends import _detect
     ],
 )
 def test_probe_backend_resolves_alias(alias, resolved_pkg):
-    with mock.patch.object(
-        _detect.importlib.util, "find_spec"
-    ) as m_find_spec:
+    with mock.patch.object(_detect.importlib.util, "find_spec") as m_find_spec:
         m_find_spec.return_value = object()  # any non-None spec
         result = _detect.probe_backend(alias)
         m_find_spec.assert_called_once_with(resolved_pkg)
@@ -43,9 +40,7 @@ def test_probe_backend_resolves_alias(alias, resolved_pkg):
 
 def test_probe_backend_unknown_name_passthrough():
     """Names without an alias entry are looked up as-is."""
-    with mock.patch.object(
-        _detect.importlib.util, "find_spec"
-    ) as m_find_spec:
+    with mock.patch.object(_detect.importlib.util, "find_spec") as m_find_spec:
         m_find_spec.return_value = None
         result = _detect.probe_backend("some_unrelated_package")
         m_find_spec.assert_called_once_with("some_unrelated_package")

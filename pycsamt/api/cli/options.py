@@ -17,11 +17,11 @@ Usage
     import click
     from pycsamt.api.cli.options import verbose_option, output_dir_option
 
+
     @click.command()
     @verbose_option
     @output_dir_option
-    def my_command(verbose, output_dir):
-        ...
+    def my_command(verbose, output_dir): ...
 """
 
 from __future__ import annotations
@@ -151,9 +151,7 @@ overwrite_option.__doc__ = (
 n_jobs_option.__doc__ = (
     "Add the positive ``--jobs`` parallel-worker option to a Click command."
 )
-no_cache_option.__doc__ = (
-    "Add the ``--no-cache`` processing option to a Click command."
-)
+no_cache_option.__doc__ = "Add the ``--no-cache`` processing option to a Click command."
 
 # ---------------------------------------------------------------------------
 # Convenience bundle: options attached to nearly every command

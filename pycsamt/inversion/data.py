@@ -72,13 +72,15 @@ class EMData(PyCSAMTObject, MetadataMixin):
         Examples
         --------
         >>> from pycsamt.inversion.data import EMData
-        >>> data = EMData.from_dict({
-        ...     "method": "mt",
-        ...     "freqs": [1.0, 10.0],
-        ...     "rho_a": [100.0, 120.0],
-        ...     "phase": [45.0, 47.0],
-        ...     "stations": ["S01"],
-        ... })
+        >>> data = EMData.from_dict(
+        ...     {
+        ...         "method": "mt",
+        ...         "freqs": [1.0, 10.0],
+        ...         "rho_a": [100.0, 120.0],
+        ...         "phase": [45.0, 47.0],
+        ...         "stations": ["S01"],
+        ...     }
+        ... )
         >>> data.frequencies.tolist()
         [1.0, 10.0]
         >>> data.station_names
@@ -218,9 +220,7 @@ class EMData(PyCSAMTObject, MetadataMixin):
             if n is None:
                 n = int(arr.shape[-1])
             elif int(arr.shape[-1]) != n:
-                raise ValueError(
-                    "rho_a, phase, and errors must share sample length."
-                )
+                raise ValueError("rho_a, phase, and errors must share sample length.")
         if self.frequencies is not None and n is not None:
             if int(self.frequencies.size) != n:
                 raise ValueError("frequencies must match data sample length.")
@@ -308,18 +308,14 @@ def _coerce_object(data: Any, *, method: str) -> EMData | None:
         if all(_is_tdem_sounding(item) for item in items):
             return _from_tdem_soundings(items, method="tdem", source=data)
         if all(_looks_like_response(item) for item in items):
-            return _from_response_collection(
-                items, method=method, source=data
-            )
+            return _from_response_collection(items, method=method, source=data)
     return None
 
 
 def _from_response_object(obj: Any, *, method: str, source: Any) -> EMData:
     freqs = _frequencies(obj)
     rho, phase = _rho_phase(obj)
-    errors = _attr(
-        obj, ("errors", "error", "rho_error", "std", "standard_deviation")
-    )
+    errors = _attr(obj, ("errors", "error", "rho_error", "std", "standard_deviation"))
     station_names = _station_names_from_response(
         obj, _n_stations_from_arrays(rho, phase)
     )
@@ -339,9 +335,7 @@ def _from_response_object(obj: Any, *, method: str, source: Any) -> EMData:
     )
 
 
-def _from_response_collection(
-    items: list[Any], *, method: str, source: Any
-) -> EMData:
+def _from_response_collection(items: list[Any], *, method: str, source: Any) -> EMData:
     freqs = _frequencies(items[0])
     rho_rows = []
     phase_rows = []
@@ -387,9 +381,7 @@ def _from_response_collection(
     )
 
 
-def _from_tdem_soundings(
-    items: Iterable[Any], *, method: str, source: Any
-) -> EMData:
+def _from_tdem_soundings(items: Iterable[Any], *, method: str, source: Any) -> EMData:
     soundings = list(items)
     if not soundings:
         return EMData(method="tdem", source=source)
@@ -408,9 +400,7 @@ def _from_tdem_soundings(
             raise ValueError("all TEM soundings must share time gates.")
         values = _tdem_values(sounding)
         rows.append(np.asarray(values, dtype=float).reshape(-1))
-        err = _attr(
-            sounding, ("error", "errors", "std", "standard_deviation")
-        )
+        err = _attr(sounding, ("error", "errors", "std", "standard_deviation"))
         if err is not None:
             errors.append(np.asarray(err, dtype=float).reshape(-1))
         names.append(_station_name(sounding, idx))
@@ -516,9 +506,7 @@ def _station_names_from_response(obj: Any, n_stations: int) -> list[str]:
 
 
 def _station_x_from_response(obj: Any, n_stations: int) -> np.ndarray | None:
-    raw = _attr(
-        obj, ("station_x", "stations_x", "x_stations", "x", "easting")
-    )
+    raw = _attr(obj, ("station_x", "stations_x", "x_stations", "x", "easting"))
     if raw is None:
         return None if n_stations <= 1 else np.arange(n_stations, dtype=float)
     arr = np.asarray(raw, dtype=float)
@@ -528,9 +516,7 @@ def _station_x_from_response(obj: Any, n_stations: int) -> np.ndarray | None:
 
 
 def _station_name(obj: Any, idx: int) -> str:
-    raw = _attr(
-        obj, ("station_name", "station", "name", "id", "site", "site_id")
-    )
+    raw = _attr(obj, ("station_name", "station", "name", "id", "site", "site_id"))
     if raw is None or isinstance(raw, (list, tuple, np.ndarray, dict)):
         return f"S{idx:03d}"
     return str(raw)
@@ -551,9 +537,7 @@ def _tdem_values(obj: Any) -> np.ndarray:
             return np.asarray(dbdt(), dtype=float)
         except Exception:
             pass
-    return np.asarray(
-        _attr(obj, ("dBz_dt", "dbdt", "data", "values")), dtype=float
-    )
+    return np.asarray(_attr(obj, ("dBz_dt", "dbdt", "data", "values")), dtype=float)
 
 
 def _method_from_source(obj: Any, fallback: str) -> str:
@@ -585,8 +569,6 @@ def _attr(obj: Any, names: tuple[str, ...]) -> Any:
         if hasattr(obj, name):
             value = getattr(obj, name)
             return (
-                value()
-                if callable(value) and name in {"metadata", "meta"}
-                else value
+                value() if callable(value) and name in {"metadata", "meta"} else value
             )
     return None

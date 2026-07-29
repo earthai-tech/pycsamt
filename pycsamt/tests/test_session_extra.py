@@ -124,9 +124,7 @@ def test_wrap_transformers_tag_fallback_on_class_access_error(
     def fake_transform(self, *a, **k):
         return "result"
 
-    monkeypatch.setattr(
-        tr.AVGtoEDI, "transform", fake_transform, raising=False
-    )
+    monkeypatch.setattr(tr.AVGtoEDI, "transform", fake_transform, raising=False)
 
     ses = smod.Session(tmp_path)
     ses._wrap_transformers()
@@ -226,9 +224,7 @@ def test_try_topo_add_topography_raises_falls_back_to_frame(env, tmp_path):
     assert avg.topo is topo
 
 
-def test_try_topo_no_add_topography_falls_to_frame_assignment(
-    env, tmp_path
-):
+def test_try_topo_no_add_topography_falls_to_frame_assignment(env, tmp_path):
     smod = _smod()
     topo = SimpleNamespace(frame="df")
     nz = smod.Normalize(tmp_path, topo_src=topo)
@@ -354,9 +350,7 @@ def test_to_j_path_jones_suffix_from_file_raises_returns_none(
     assert nz._to_j(str(p)) is None
 
 
-def test_to_j_folder_glob_uses_jcollection_from_sources(
-    env, tmp_path, monkeypatch
-):
+def test_to_j_folder_glob_uses_jcollection_from_sources(env, tmp_path, monkeypatch):
     smod = _smod()
     jcoll = sys.modules["pycsamt.jones.collection"]
     nz = smod.Normalize(tmp_path)
@@ -376,9 +370,7 @@ def test_to_j_folder_glob_uses_jcollection_from_sources(
     assert len(out) == 1
 
 
-def test_to_j_folder_glob_from_sources_raises_returns_none(
-    env, tmp_path, monkeypatch
-):
+def test_to_j_folder_glob_from_sources_raises_returns_none(env, tmp_path, monkeypatch):
     smod = _smod()
     jcoll = sys.modules["pycsamt.jones.collection"]
     nz = smod.Normalize(tmp_path)
@@ -411,9 +403,7 @@ def test_to_j_raw_list_of_jfile_normalizes(env, tmp_path, monkeypatch):
     assert len(out) == 2
 
 
-def test_to_j_raw_list_construction_type_error_returns_none(
-    env, tmp_path, monkeypatch
-):
+def test_to_j_raw_list_construction_type_error_returns_none(env, tmp_path, monkeypatch):
     smod = _smod()
     jj = sys.modules["pycsamt.jones.j"]
     jcoll = sys.modules["pycsamt.jones.collection"]
@@ -464,9 +454,7 @@ def test_normalize_ultimate_fallback_uses_to_edi(env, tmp_path, monkeypatch):
     assert out is sentinel
 
 
-def test_normalize_j_suffix_returns_none_falls_through(
-    env, tmp_path, monkeypatch
-):
+def test_normalize_j_suffix_returns_none_falls_through(env, tmp_path, monkeypatch):
     smod = _smod()
     nz = smod.Normalize(tmp_path)
     monkeypatch.setattr(nz, "_to_j", lambda src: None)
@@ -480,9 +468,7 @@ def test_normalize_j_suffix_returns_none_falls_through(
     assert out is sentinel
 
 
-def test_normalize_avg_suffix_to_avg_none_falls_through(
-    env, tmp_path, monkeypatch
-):
+def test_normalize_avg_suffix_to_avg_none_falls_through(env, tmp_path, monkeypatch):
     smod = _smod()
     nz = smod.Normalize(tmp_path)
     monkeypatch.setattr(nz, "_to_avg", lambda src: None)
@@ -604,9 +590,7 @@ def test_normalize_step3_jones_instance_returns_collection_directly(
     seg_coll = sys.modules["pycsamt.seg.collection"]
 
     coll = seg_coll.EDICollection([])
-    monkeypatch.setattr(
-        tr.JtoEDI, "transform", lambda self, j: coll, raising=False
-    )
+    monkeypatch.setattr(tr.JtoEDI, "transform", lambda self, j: coll, raising=False)
 
     nz = smod.Normalize(tmp_path)
     j = jj.JFile()
@@ -627,15 +611,11 @@ def test_normalize_exit_reg_save_exception_ignored(env, tmp_path):
         pass  # __exit__ must swallow the save() exception
 
 
-def test_normalize_load_auto_register_exception_ignored(
-    env, tmp_path, monkeypatch
-):
+def test_normalize_load_auto_register_exception_ignored(env, tmp_path, monkeypatch):
     smod = _smod()
     nz = smod.Normalize(tmp_path, auto_register=True)
     monkeypatch.setattr(nz, "_normalize", lambda source: "result")
-    nz.reg.add_object = lambda obj, tags=None: (_ for _ in ()).throw(
-        RuntimeError("no")
-    )
+    nz.reg.add_object = lambda obj, tags=None: (_ for _ in ()).throw(RuntimeError("no"))
     out = nz.load("anything")
     assert out == "result"
 

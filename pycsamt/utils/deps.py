@@ -79,6 +79,7 @@ def ensure_pkg(  # noqa: D401
     >>> @ensure_pkg("tqdm", auto_install=True, verbose=1)
     ... def progress_bar(seq):
     ...     from tqdm import tqdm
+    ...
     ...     for item in tqdm(seq):
     ...         yield item
     """

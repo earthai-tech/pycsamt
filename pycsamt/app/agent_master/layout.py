@@ -497,8 +497,7 @@ def _chat_welcome() -> html.Div:
             ),
             html.H3("pyCSAMT Agent Master"),
             html.P(
-                "Load an EDI dataset and describe "
-                "your workflow in natural language."
+                "Load an EDI dataset and describe " "your workflow in natural language."
             ),
             html.Div(
                 chips,
@@ -512,7 +511,6 @@ def _chat_welcome() -> html.Div:
 
 
 def _plus_menu() -> html.Div:
-
     def _ext(icon, label, href):
         return html.A(
             [
@@ -728,9 +726,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             ),
             dbc.Input(
                 id=IDs.EDI_PATH_INPUT,
-                placeholder=(
-                    "Path appears here after browsing — or type one"
-                ),
+                placeholder=("Path appears here after browsing — or type one"),
                 size="sm",
                 className="mb-3",
                 style={
@@ -990,9 +986,7 @@ def _settings_canvas() -> dbc.Offcanvas:
             ),
             dbc.Textarea(
                 id=IDs.LINE_REGISTRY,
-                placeholder=(
-                    "L22PLT: /data/willy/L22PLT\nL18PLT: /data/willy/L18PLT"
-                ),
+                placeholder=("L22PLT: /data/willy/L22PLT\nL18PLT: /data/willy/L18PLT"),
                 rows=4,
                 style={
                     "fontSize": "11px",
@@ -1242,9 +1236,7 @@ def _output_browse_modal() -> dbc.Modal:
                             ),
                             dbc.Button(
                                 [
-                                    html.I(
-                                        className=("bi bi-folder-plus me-1")
-                                    ),
+                                    html.I(className=("bi bi-folder-plus me-1")),
                                     "Create",
                                 ],
                                 id=IDs.BTN_OUTPUT_MKDIR,

@@ -9,12 +9,12 @@ Score the assistant against JSONL eval suites.
 Each record (one JSON object per line) may contain::
 
     {
-      "query": "...",                       # required
-      "expected_intent": "code"|"question"|"workflow"|"meta"|null,
-      "expected_workflow": "static_shift"|...|null,
-      "expected_line": "L22PLT"|null,
-      "expected_symbols": ["pycsamt.emtools.ss.estimate_ss_ama", ...],
-      "must_not_contain": ["from pycsamt import static_shift", ...]
+        "query": "...",  # required
+        "expected_intent": "code" | "question" | "workflow" | "meta" | null,
+        "expected_workflow": "static_shift" | ... | null,
+        "expected_line": "L22PLT" | null,
+        "expected_symbols": ["pycsamt.emtools.ss.estimate_ss_ama", ...],
+        "must_not_contain": ["from pycsamt import static_shift", ...],
     }
 
 Metrics reported: intent / workflow / line accuracy, mean symbol recall,
@@ -79,13 +79,9 @@ class EvalReport:
         for k in sorted(self.metrics):
             lines.append(f"  {k}: {self.metrics[k]:.1%}")
         if self.violations:
-            lines.append(
-                f"  hallucination violations: {len(self.violations)}"
-            )
+            lines.append(f"  hallucination violations: {len(self.violations)}")
         if self.test_pollution:
-            lines.append(
-                f"  test-file pollution: {len(self.test_pollution)} record(s)"
-            )
+            lines.append(f"  test-file pollution: {len(self.test_pollution)} record(s)")
         return "\n".join(lines)
 
 
@@ -198,25 +194,19 @@ def evaluate(
         ctx = retriever.search(q, k=k)
         got_syms = {c.symbol for c in ctx.chunks if c.symbol}
         exp_syms = set(rec.get("expected_symbols", []))
-        recall = (
-            len(exp_syms & got_syms) / len(exp_syms) if exp_syms else None
-        )
+        recall = len(exp_syms & got_syms) / len(exp_syms) if exp_syms else None
         if recall is not None:
             recalls.append(recall)
 
         # ── retrieval-quality guards ────────────────────────────────────
         nonempty.append(bool(ctx.chunks))
-        polluted = [
-            c.source_path for c in ctx.chunks if _is_test_path(c.source_path)
-        ]
+        polluted = [c.source_path for c in ctx.chunks if _is_test_path(c.source_path)]
         if polluted:
             test_pollution.append({"query": q, "paths": polluted})
         # Retrieval target: an explicit retrieval expectation (adversarial
         # paraphrases the keyword classifier can't label) or, failing that,
         # the classifier's expected_workflow.
-        exp_wf = rec.get("expected_retrieval_workflow") or rec.get(
-            "expected_workflow"
-        )
+        exp_wf = rec.get("expected_retrieval_workflow") or rec.get("expected_workflow")
         retrieved_wfs = {c.workflow for c in ctx.chunks if c.workflow}
         if exp_wf:
             wf_in_topk.append(exp_wf in retrieved_wfs)

@@ -48,9 +48,7 @@ def test_select_anomaly_peak_rank_greater_than_one():
 
 def test_select_anomaly_peak_anomaly_infos_matching_key():
     infos = {"1_pk_a": np.array([50.0, 20.0, 60.0])}
-    out = select_anomaly_peak(
-        [1, 2, 3], [0, 1, 2], rank=1, anomaly_infos=infos
-    )
+    out = select_anomaly_peak([1, 2, 3], [0, 1, 2], rank=1, anomaly_infos=infos)
     assert out["rho_peak"] == 20.0
     assert out["peak_pos"] == 1.0
 
@@ -137,9 +135,7 @@ def test_find_position_bounds_peak_string_parse_failure():
 
 
 def test_find_position_bounds_positions_given():
-    out = find_position_bounds(
-        1.0, 80, [100, 80, 90], positions=[10, 20, 30]
-    )
+    out = find_position_bounds(1.0, 80, [100, 80, 90], positions=[10, 20, 30])
     assert out["pos_min"] == 10.0
     assert out["pos_max"] == 30.0
 
@@ -202,9 +198,7 @@ def test_find_nearest_indices_side_left():
 
 def test_find_nearest_indices_side_right_return_values():
     ref = [0, 10, 20, 30]
-    idxs, vals = find_nearest_indices(
-        ref, [12, 35], side="right", return_values=True
-    )
+    idxs, vals = find_nearest_indices(ref, [12, 35], side="right", return_values=True)
     assert idxs == [2, 3]
     assert vals == [20.0, 30.0]
 

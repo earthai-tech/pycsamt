@@ -65,9 +65,7 @@ class PlotConvergence(Mare2DEMBase):
         elif isinstance(log_or_result, InversionResult):
             self._log = log_or_result.log
         else:
-            raise TypeError(
-                "log_or_result must be a Mare2DEMLog or InversionResult."
-            )
+            raise TypeError("log_or_result must be a Mare2DEMLog or InversionResult.")
 
     def plot(
         self,
@@ -173,9 +171,7 @@ class PlotSurveyLayout(Mare2DEMBase):
         cc = np.cos(np.radians(theta))
         ss = np.sin(np.radians(theta))
 
-        def _to_map(
-            x: np.ndarray, y: np.ndarray
-        ) -> tuple[np.ndarray, np.ndarray]:
+        def _to_map(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             """Project profile (x, y) to UTM (E, N)."""
             N = cc * x + (-ss) * y + n0
             E = ss * x + cc * y + e0
@@ -190,19 +186,13 @@ class PlotSurveyLayout(Mare2DEMBase):
 
         if em.csem is not None:
             if len(em.csem.receivers):
-                E, N = _to_map(
-                    em.csem.receivers[:, 0], em.csem.receivers[:, 1]
-                )
+                E, N = _to_map(em.csem.receivers[:, 0], em.csem.receivers[:, 1])
                 h = ax.plot(E, N, "bo", ms=4, label="CSEM Receivers")[0]
                 handles.append(h)
                 labels.append("CSEM Receivers")
             if len(em.csem.transmitters):
-                E, N = _to_map(
-                    em.csem.transmitters[:, 0], em.csem.transmitters[:, 1]
-                )
-                h = ax.plot(E, N, "rx", ms=8, mew=1.5, label="Transmitters")[
-                    0
-                ]
+                E, N = _to_map(em.csem.transmitters[:, 0], em.csem.transmitters[:, 1])
+                h = ax.plot(E, N, "rx", ms=8, mew=1.5, label="Transmitters")[0]
                 handles.append(h)
                 labels.append("Transmitters")
 
@@ -215,9 +205,7 @@ class PlotSurveyLayout(Mare2DEMBase):
         ax.set_xlabel(f"Easting ({label})")
         ax.set_ylabel(f"Northing ({label})")
         title = getattr(em, "path", None)
-        ax.set_title(
-            str(title) if title else "MARE2DEM Survey Layout", fontsize=9
-        )
+        ax.set_title(str(title) if title else "MARE2DEM Survey Layout", fontsize=9)
         ax.legend(handles, labels, fontsize=8)
         ax.grid(True, alpha=0.3)
         ax.set_aspect("equal")
@@ -286,9 +274,7 @@ class PlotRxParams(Mare2DEMBase):
         n_panels = 6
 
         if fig is None:
-            fig, axes = plt.subplots(
-                n_panels, 1, figsize=(8, 12), sharex=True
-            )
+            fig, axes = plt.subplots(n_panels, 1, figsize=(8, 12), sharex=True)
         else:
             axes = fig.axes
 
@@ -354,9 +340,7 @@ class PlotTxParams(Mare2DEMBase):
         param_labels = ["x", "y", "z", "Azimuth (deg)", "Dip (deg)"]
 
         if fig is None:
-            fig, axes = plt.subplots(
-                n_panels, 1, figsize=(8, 10), sharex=True
-            )
+            fig, axes = plt.subplots(n_panels, 1, figsize=(8, 10), sharex=True)
         else:
             axes = fig.axes
 
@@ -511,8 +495,7 @@ class PlotModel(Mare2DEMBase):
             self._workdir = model_or_result.workdir
         else:
             raise TypeError(
-                "model_or_result must be a "
-                "ResistivityModel or InversionResult."
+                "model_or_result must be a " "ResistivityModel or InversionResult."
             )
 
     # -------------------------------------------------------
@@ -700,16 +683,8 @@ class PlotModel(Mare2DEMBase):
             if (rf is not None and rf.global_bounds is not None)
             else None
         )
-        _vmin = (
-            vmin
-            if vmin is not None
-            else (float(gb[0]) if gb is not None else None)
-        )
-        _vmax = (
-            vmax
-            if vmax is not None
-            else (float(gb[1]) if gb is not None else None)
-        )
+        _vmin = vmin if vmin is not None else (float(gb[0]) if gb is not None else None)
+        _vmax = vmax if vmax is not None else (float(gb[1]) if gb is not None else None)
 
         tc = ax.tripcolor(
             y,

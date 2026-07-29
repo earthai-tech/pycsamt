@@ -707,6 +707,20 @@ definitions here are the single source of truth.
       for example by using the learned prediction as a starting model, prior,
       or proposal before iterative inversion.
 
+   Warm start
+      An initial parameter estimate obtained from an earlier calculation, such
+      as a trained inverse model, and supplied to a subsequent optimizer. It
+      can reduce iteration cost or steer the optimizer toward a useful basin,
+      but it is an initialization choice rather than independent evidence that
+      the final model is correct.
+
+   Differentiable forward model
+      A mapping from model parameters to predicted observations whose
+      derivatives can be evaluated by automatic differentiation or an
+      equivalent derivative method. It may reproduce a trusted forward solver
+      exactly or approximate it; agreement must therefore be benchmarked in
+      response space before its optimization loss is treated as physical fit.
+
    Feature contract
       The complete agreement between training and inference arrays: feature
       names, order, units, transformations, frequency or period grid, masking,
@@ -724,16 +738,74 @@ definitions here are the single source of truth.
       noise, survey geometry, processing, dimensionality, or geology outside
       the synthetic prior.
 
+   Geological prior
+      A probability model for subsurface structures and electrical properties
+      before field observations are fitted. In AI inversion it determines
+      which layer arrangements, bodies, spatial scales, resistivities, and
+      topographies can occur in synthetic training data, so it acts as a
+      scientific restriction on what the trained model can learn. See
+      :doc:`user_guide/ai_inversion/geology_priors`.
+
+   Correlation length
+      A scale parameter controlling how rapidly spatial covariance decreases
+      with separation. For the Gaussian model used by the geology generator,
+      correlation at one requested length is :math:`e^{-1/2}`, not zero; see
+      :eq:`eq-ai-geology-gaussian-covariance`.
+
+   Variogram
+   Semivariogram
+      Half the mean squared difference between values separated by a given lag.
+      Its directional empirical form diagnoses spatial continuity and
+      anisotropy; for a unit-variance stationary field it approaches a sill of
+      one as covariance vanishes. See :eq:`eq-ai-geology-variogram`.
+
+   Content integrity
+      Evidence that serialized content has not changed, commonly established
+      by recomputing a cryptographic digest and comparing it with a previously
+      approved value. Integrity identifies exact bytes or canonical state; it
+      does not prove that a computation was executed correctly or that an
+      artifact remains available. See
+      :doc:`user_guide/ai_inversion/experiments`.
+
+   Heteroscedastic noise
+      Noise whose variance changes with the observation rather than remaining
+      constant. In the AI inversion corruption simulator, a relative standard
+      deviation is sampled per station--frequency pair and scaled by impedance
+      magnitude, so larger responses receive proportionally larger absolute
+      perturbations; see :eq:`eq-ai-domaingap-noise`.
+
+   Kolmogorov--Smirnov statistic
+      The largest absolute separation between two empirical cumulative
+      distribution functions. It measures marginal distribution mismatch on
+      a scale from zero to one, without identifying its physical cause; see
+      :eq:`eq-ai-domaingap-ks` and :doc:`user_guide/ai_inversion/domain_gap`.
+
    Non-uniqueness
       The property that more than one earth model can fit the same
       electromagnetic observations within uncertainty. It is a physical
       limitation of the inverse problem, not a limitation that disappears
       because a neural network predicts one model quickly.
 
+   Checkpoint
+      A serialized model state containing parameters needed to reconstruct a
+      fitted estimator, typically architecture settings, learned weights,
+      normalization state, and training history. A checkpoint is executable
+      model content, not a complete scientific deployment package unless its
+      feature, target, geometry, provenance, and validation contracts are also
+      preserved.
+
    Calibration set
       Held-out data used to calibrate uncertainty or interval coverage after a
       base model has been trained. It should not be reused for fitting network
       weights or selecting the final test result.
+
+   Sharpness
+      Concentration of a predictive distribution, commonly summarized by mean
+      predictive standard deviation or interval width. Smaller values indicate
+      narrower predictions but are desirable only when empirical coverage is
+      calibrated; an overconfident model can be sharp and unreliable. See
+      :eq:`eq-ai-inference-gaussian-interval` and
+      :doc:`user_guide/ai_inversion/inference`.
 
    Exchangeability
       The assumption that calibration examples and future examples are drawn in
@@ -909,6 +981,39 @@ definitions here are the single source of truth.
       or challenge data influences model fitting, preprocessing, model
       selection, thresholds, or interpretation before those data are formally
       evaluated.
+
+   Data augmentation
+      A stochastic transformation applied only to training examples to model
+      plausible nuisance variation while preserving, or consistently
+      transforming, the target. In EM inversion this may represent measurement
+      noise, static shift, missing frequencies, or mixtures of synthetic
+      response--model pairs.
+
+   Early stopping
+      Termination of optimization after validation loss has failed to improve
+      by a declared minimum amount for a declared number of epochs. The model
+      normally restores the weights from the best validation epoch rather than
+      retaining the final update.
+
+   Gradient clipping
+      A numerical safeguard that rescales an optimizer update when its gradient
+      norm exceeds a threshold. It can contain isolated unstable steps but does
+      not repair invalid scaling, targets, or loss formulation.
+
+   Learning-rate scheduler
+      A rule that changes the optimizer step size during training. A plateau
+      scheduler reduces it after validation loss stops improving for a declared
+      interval.
+
+   Frequency dropout
+      A training augmentation that masks individual or contiguous frequency
+      channels to represent missing periods or a dead band. The mask or fill
+      convention must remain compatible with the model's feature contract.
+
+   Mixup
+      A training augmentation that forms a convex combination of two inputs
+      and applies the same mixing coefficient to their targets. It assumes the
+      interpolated response--model pair is meaningful for the intended task.
 
    Challenge set
       A held-out validation set deliberately shifted toward difficult or
@@ -1710,7 +1815,24 @@ definitions here are the single source of truth.
    Skin depth
       The depth at which an EM field attenuates to :math:`1/e` of its surface
       amplitude, :math:`\delta \approx 503\,\sqrt{\rho / f}` metres. It sets the
-      depth of investigation for a given period and resistivity.
+      attenuation scale for a given frequency and resistivity, but is not by
+      itself a recoverable-depth or vertical-resolution estimate.
+
+   Mesh convergence
+      Demonstrated stability of selected numerical observables as a solver
+      mesh is refined or enlarged. For a forward EM response, near-surface
+      resolution, bottom padding, and lateral padding should be varied
+      independently until impedance, apparent resistivity, or phase changes by
+      less than a predeclared tolerance. A solver convergence flag alone does
+      not establish mesh convergence; see
+      :doc:`user_guide/ai_inversion/forward_physics`.
+
+   Depth of investigation
+      The depth interval over which the measured data provide useful
+      sensitivity to model changes under a stated survey, error model,
+      parameterization, and regularization. It must be appraised with
+      sensitivity, perturbation or recovery tests and response fit; it is not
+      identical to :term:`skin depth` or to the bottom of an inversion mesh.
 
    Bostick depth
       An empirical depth estimate,
@@ -2326,3 +2448,67 @@ definitions here are the single source of truth.
       every region regardless of type, so filtering to free parameters only
       is often necessary before a resistivity histogram or summary statistic
       is meaningful.
+
+   Pseudo-2-D training model
+      A profile-shaped machine-learning example assembled from independent
+      1-D forward responses at neighbouring columns. It lets a network learn
+      lateral patterns in the assembled image, but the synthetic responses do
+      not contain electromagnetic coupling between columns and therefore are
+      not the output of a 2-D Maxwell solver.
+
+   2-D Maxwell training model
+      A laterally varying resistivity section whose synthetic TE or TM
+      responses are computed by a two-dimensional Maxwell solver before the
+      response–model pair enters a machine-learning dataset. It contains
+      lateral electromagnetic coupling for the assumed mesh, boundary
+      conditions, and mode, but remains synthetic evidence rather than proof
+      that a field survey is two-dimensional or in distribution.
+
+   Amortized inversion
+      An inversion strategy that pays an initial training cost to learn a
+      reusable map from observations to model parameters, after which each
+      compatible prediction requires only a forward pass through the learned
+      model. It reduces the marginal computational cost of repeated inversion
+      but does not increase the information in the observations or remove
+      non-uniqueness.
+
+   Validity mask
+      A Boolean array aligned exactly with a scientific data array, where true
+      marks observations permitted to enter computation and false marks
+      missing, non-finite, rejected, or otherwise unusable entries. A finite
+      fill value does not replace the mask or turn an invalid observation into
+      a measurement.
+
+   Normalization state
+      The fitted means, scales, axis labels, weighting policy, counts, and
+      convention needed to reproduce a feature transformation. It is learned
+      from the training partition and reused unchanged for validation, test,
+      and field inputs; refitting it on those inputs is data leakage.
+
+   Lineage leakage
+      Leakage caused when samples derived from the same parent realization,
+      survey, site, or geological scenario occur in both fitting and held-out
+      partitions. Different noise draws or augmentations do not make those
+      samples independent, so lineage-aware splitting keeps them together.
+
+   Canonical hash
+      A cryptographic digest computed after serializing structured state with
+      deterministic key ordering, encoding, and whitespace rules. Equal
+      canonical hashes establish byte-level identity under that serialization
+      contract, not scientific validity, provenance truth, or equivalence of
+      differently parameterized configurations.
+
+   Solver residual
+      A numerical measure of how closely a computed field satisfies the
+      discretized linear system, commonly
+      :math:`\lVert A\mathbf u-\mathbf b\rVert_2/\lVert\mathbf b\rVert_2`.
+      A small value indicates an accurate solve of that discrete system; it
+      does not establish mesh convergence, correct boundary conditions, or
+      fidelity of the discretization to the continuous physics.
+
+   Rejection policy
+      The explicit rules deciding which generated, processed, or predicted
+      samples are excluded and how those exclusions are recorded. Because
+      failures may concentrate in particular geological or noise regimes,
+      rejection changes the effective dataset distribution and must be
+      audited rather than treated as an implementation detail.

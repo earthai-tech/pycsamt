@@ -106,11 +106,7 @@ def validate(
         sys.exit(1)
 
     if comp is not None:
-        mask = (
-            df["comp"].str.upper() == comp.upper()
-            if "comp" in df.columns
-            else True
-        )
+        mask = df["comp"].str.upper() == comp.upper() if "comp" in df.columns else True
         df = df[mask]
         if df.empty:
             click.echo(f"No rows match component {comp!r}.", err=True)
@@ -118,9 +114,7 @@ def validate(
 
     # Find which QC columns are present
     present = [
-        (col, lbl, unit, thr)
-        for col, lbl, unit, thr in _QC_COLS
-        if col in df.columns
+        (col, lbl, unit, thr) for col, lbl, unit, thr in _QC_COLS if col in df.columns
     ]
 
     if not present:
@@ -132,11 +126,7 @@ def validate(
 
     # Per-station aggregation
 
-    gb = (
-        df.groupby("station")
-        if "station" in df.columns
-        else df.groupby(df.index)
-    )
+    gb = df.groupby("station") if "station" in df.columns else df.groupby(df.index)
     agg = gb[[c for c, *_ in present]].agg(["mean", "max"]).round(3)
     agg.columns = ["_".join(c) for c in agg.columns]
 
@@ -145,9 +135,7 @@ def validate(
         entry = {"station": str(stn)}
         flagged = False
         for col, lbl, unit, default_thr in present:
-            thr = (
-                warn_threshold if warn_threshold is not None else default_thr
-            )
+            thr = warn_threshold if warn_threshold is not None else default_thr
             mean_ = float(row.get(f"{col}_mean", float("nan")))
             max_ = float(row.get(f"{col}_max", float("nan")))
             entry[f"{col}_mean"] = mean_
@@ -187,9 +175,7 @@ def validate(
         return
 
     if output_format == "csv":
-        cols = (
-            ["station"] + [f"{col}_mean" for col, *_ in present] + ["flagged"]
-        )
+        cols = ["station"] + [f"{col}_mean" for col, *_ in present] + ["flagged"]
         click.echo(",".join(cols))
         for r in rows:
             click.echo(",".join(str(r.get(c, "")) for c in cols))
@@ -216,9 +202,7 @@ def validate(
                 t = warn_threshold if warn_threshold is not None else thr
                 color = "red" if v > t else "green"
                 vals.append(f"[{color}]{v:.3f}[/{color}]")
-            vals.append(
-                "[red]✗[/red]" if r["flagged"] else "[green]✓[/green]"
-            )
+            vals.append("[red]✗[/red]" if r["flagged"] else "[green]✓[/green]")
             tbl.add_row(*vals)
         Console().print(tbl)
     except ImportError:

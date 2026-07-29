@@ -511,9 +511,7 @@ class ForwardModelWindow(PanelWindow):
         self._mode_combo.addItems(["MT", "CSAMT", "TEM"])
 
         self._noise_combo = QComboBox()
-        self._noise_combo.addItems(
-            ["None", "Gaussian 5%", "Multiplicative 5%"]
-        )
+        self._noise_combo.addItems(["None", "Gaussian 5%", "Multiplicative 5%"])
 
         form.addRow("n_freq:", self._nfreq)
         form.addRow("f_min (Hz):", self._fmin)
@@ -529,9 +527,7 @@ class ForwardModelWindow(PanelWindow):
             "▶  Compute", "results", "Run the forward solver"
         )
         self._btn_compute.setObjectName("ComputeButton")
-        self._btn_export = icon_button(
-            "⬆  Export", "export", "Export current figure"
-        )
+        self._btn_export = icon_button("⬆  Export", "export", "Export current figure")
         layout.addWidget(self._btn_compute)
         layout.addWidget(self._btn_export)
         self._btn_compute.clicked.connect(self._on_compute)
@@ -612,9 +608,7 @@ class ForwardModelWindow(PanelWindow):
         btn_delete = QPushButton("Delete")
         btn_load = QPushButton("Load →")
         for b in (btn_save, btn_rename, btn_delete, btn_load):
-            b.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-            )
+            b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             saved_lay.addWidget(b)
         btn_save.clicked.connect(self._save_current_model)
         btn_rename.clicked.connect(self._rename_selected_model)
@@ -633,18 +627,14 @@ class ForwardModelWindow(PanelWindow):
         for name in GEOLOGY_PRESET_NAMES:
             btn = QPushButton(name.capitalize())
             btn.setToolTip(f"Load {name} geological prior")
-            btn.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-            )
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             btn.clicked.connect(lambda _, n=name: self._load_preset(n))
             scroll_v.addWidget(btn)
         scroll_v.addStretch(1)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         scroll.setWidget(scroll_inner)
         scroll.setMaximumHeight(240)
@@ -867,9 +857,7 @@ class ForwardModelWindow(PanelWindow):
             interpolation="nearest",
             extent=[0, n_freq, n_layers, 0],
         )
-        self._c1d_sensitivity.figure.colorbar(
-            im, ax=ax, label="d ln ρₐ / d ln ρ"
-        )
+        self._c1d_sensitivity.figure.colorbar(im, ax=ax, label="d ln ρₐ / d ln ρ")
         ax.set_xlabel("Frequency index (low → high)")
         ax.set_ylabel("Layer index (top → bottom)")
         ax.set_title("Jacobian sensitivity")
@@ -939,9 +927,7 @@ class ForwardModelWindow(PanelWindow):
                 else:
                     src_fig = result.figure
                 buf = io.BytesIO()
-                src_fig.savefig(
-                    buf, format="png", dpi=110, bbox_inches="tight"
-                )
+                src_fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
                 plt.close(src_fig)
                 buf.seek(0)
                 img = _imread(buf)
@@ -1131,6 +1117,4 @@ class ForwardModelWindow(PanelWindow):
                 if btn.property("dim") == "1D":
                     btn.setChecked(True)
             self._on_dim_changed()
-            self._set_1d_model(
-                payload["resistivity"], payload.get("thickness", [])
-            )
+            self._set_1d_model(payload["resistivity"], payload.get("thickness", []))

@@ -91,9 +91,7 @@ class IDs:
 
     # Profile tabs
     PROFILE_TABS = "profile-tabs"  # dbc.Tabs on home page mini-preview
-    PROF_ACTIVE_TAB = (
-        "prof-active-tab"  # dcc.Store: active tab on full Profile page
-    )
+    PROF_ACTIVE_TAB = "prof-active-tab"  # dcc.Store: active tab on full Profile page
     IMG_RHO_PHI = "img-rho-phi"
     IMG_RHO_PS = "img-rho-ps"
     IMG_PHASE_PS = "img-phase-ps"
@@ -249,26 +247,18 @@ class IDs:
     CORR_SCOPE_FREQ_LO = "corr-scope-freq-lo"  # frequency scope low
     CORR_SCOPE_FREQ_HI = "corr-scope-freq-hi"  # frequency scope high
     # v2 redesign additions
-    CORR_ACTIVE_TAB = (
-        "corr-active-tab"  # dcc.Store: "ba"|"rho-phi"|"overlay"|"diff"
-    )
+    CORR_ACTIVE_TAB = "corr-active-tab"  # dcc.Store: "ba"|"rho-phi"|"overlay"|"diff"
     IMG_CORR_RHO_PHI = "img-corr-rho-phi"  # per-station ρ/φ grid figure
     CORR_RHO_PHI_MODE = "corr-rho-phi-mode"  # RadioItems: raw|corrected|both
     CORR_RHO_PHI_STN = "corr-rho-phi-stn"  # max station count for ρ/φ grid
-    CORR_RHO_PHI_STYLE = (
-        "corr-rho-phi-style"  # view style: grid|pairs|freq-bands
-    )
-    BTN_CORR_DROP_FREQ = (
-        "btn-corr-drop-freq"  # quick-apply drop bad frequencies
-    )
+    CORR_RHO_PHI_STYLE = "corr-rho-phi-style"  # view style: grid|pairs|freq-bands
+    BTN_CORR_DROP_FREQ = "btn-corr-drop-freq"  # quick-apply drop bad frequencies
     CORR_SNR_THRESH = "corr-snr-thresh"  # SNR threshold for drop-freq
     CORR_MIN_FRAC = "corr-min-frac"  # min station fraction for drop-freq
     CORR_LINE_SEL = "corr-line-sel"  # Dropdown: lines to display in ρ/φ view
     CORR_STN_SEL = "corr-stn-sel"  # Dropdown: stations to display in ρ/φ view
     CORR_COMP_SEL = "corr-comp-sel"  # RadioItems: xy | yx | both
-    CORR_OVERLAY_STYLE = (
-        "corr-overlay-style"  # Select: median-band|spaghetti|per-line
-    )
+    CORR_OVERLAY_STYLE = "corr-overlay-style"  # Select: median-band|spaghetti|per-line
     BTN_CORR_SMOOTH_PREVIEW = "btn-corr-smooth-preview"
     BTN_CORR_SMOOTH_APPLY = "btn-corr-smooth-apply"
     CORR_SMOOTH_DEGREE = "corr-smooth-degree"  # poly degree (0–8)
@@ -276,9 +266,7 @@ class IDs:
     CORR_SMOOTH_COMP = "corr-smooth-comp"  # components combo
     CORR_SMOOTH_ROBUST = "corr-smooth-robust"  # robust checkbox
     # Manual frequency picker
-    BTN_CORR_MFREQ_LOAD = (
-        "btn-corr-mfreq-load"  # load freq table from session
-    )
+    BTN_CORR_MFREQ_LOAD = "btn-corr-mfreq-load"  # load freq table from session
     BTN_CORR_MFREQ_ALL = "btn-corr-mfreq-all"  # select all
     BTN_CORR_MFREQ_NONE = "btn-corr-mfreq-none"  # deselect all
     BTN_CORR_MFREQ_PREVIEW = "btn-corr-mfreq-preview"
@@ -337,9 +325,7 @@ class IDs:
     FWD_CSAMT_CARD = "fwd-csamt-card"  # show/hide CSAMT params
     FWD_TEM_CARD = "fwd-tem-card"  # show/hide TEM params
     FWD_FREQ_LABEL = "fwd-freq-label"  # "Frequency [Hz]" vs "Time [s]" label
-    FWD_DIMENSION = (
-        "fwd-dimension"  # kept for legacy compat (unused in new layout)
-    )
+    FWD_DIMENSION = "fwd-dimension"  # kept for legacy compat (unused in new layout)
     FWD_ACTIVE_TAB = "fwd-active-tab"  # dcc.Store: fwd-tab-1d / 2d / 3d
     FWD_CTX_BAR = "fwd-ctx-bar"  # context info bar in view area
     IMG_FWD_1D = "img-fwd-1d"  # per-tab persistent figures
@@ -349,9 +335,7 @@ class IDs:
     FWD_2D_PANEL = "fwd-2d-panel"  # view panel: 2D figure
     FWD_3D_PANEL = "fwd-3d-panel"  # view panel: 3D figure
     # 2D MT config
-    FWD2_MODEL_TYPE = (
-        "fwd2-model-type"  # halfspace | anomaly | from_layers | random
-    )
+    FWD2_MODEL_TYPE = "fwd2-model-type"  # halfspace | anomaly | from_layers | random
     FWD2_BG_RHO = "fwd2-bg-rho"
     FWD2_NX = "fwd2-nx"
     FWD2_NZ = "fwd2-nz"
@@ -451,9 +435,7 @@ class IDs:
     INV_STATS = "inv-stats"
     # New fixed-tab system
     INV_ACTIVE_TRACK = "inv-active-track"  # dcc.Store: "trad" | "ai"
-    INV_ACTIVE_OUT = (
-        "inv-active-out"  # dcc.Store: "result"|"conv"|"stats"|"log"
-    )
+    INV_ACTIVE_OUT = "inv-active-out"  # dcc.Store: "result"|"conv"|"stats"|"log"
     INV_CTX_BAR = "inv-ctx-bar"  # context info bar (right panel)
 
     # ── PINN inversion controls ──────────────────────────────────────────
@@ -535,9 +517,7 @@ class IDs:
     # ── 3D Map page ──────────────────────────────────────────────────────────
     MAP3D_GRAPH = "map3d-graph"  # dcc.Graph Plotly 3D
     MAP3D_MODE = "map3d-mode"  # fence | block | depth (legacy)
-    MAP3D_ACTIVE_MODE = (
-        "map3d-active-mode"  # dcc.Store: "fence"|"block"|"depth"
-    )
+    MAP3D_ACTIVE_MODE = "map3d-active-mode"  # dcc.Store: "fence"|"block"|"depth"
     MAP3D_DATA_SRC = "map3d-data-src"  # inversion | pseudo | profiles
     MAP3D_CMAP = "map3d-cmap"
     MAP3D_SCALE = "map3d-scale"  # log | linear
@@ -574,29 +554,19 @@ class IDs:
     MAP3D_DOWNLOAD = "map3d-download"
     MAP3D_INFO = "map3d-info"  # status strip
     MAP3D_SPINNER = "map3d-spinner"
-    MAP3D_GRID_STORE = (
-        "map3d-grid-store"  # serialised profiles for dynamic re-render
-    )
-    MAP3D_RANGE_HINT = (
-        "map3d-range-hint"  # data-range text shown under iso sliders
-    )
+    MAP3D_GRID_STORE = "map3d-grid-store"  # serialised profiles for dynamic re-render
+    MAP3D_RANGE_HINT = "map3d-range-hint"  # data-range text shown under iso sliders
     # Topography controls
     MAP3D_TOPO_SRC = (
         "map3d-topo-src"  # "none"|"stations"|"elev-corr"|"elev-raw"|"upload"
     )
-    MAP3D_TOPO_OPACITY = (
-        "map3d-topo-opacity"  # 0.0 – 1.0 terrain surface opacity
-    )
+    MAP3D_TOPO_OPACITY = "map3d-topo-opacity"  # 0.0 – 1.0 terrain surface opacity
     MAP3D_TOPO_STATIONS = (
         "map3d-topo-stations"  # bool — show station markers on terrain
     )
-    MAP3D_TOPO_APPLY = (
-        "map3d-topo-apply"  # bool — shift model cells to follow topo
-    )
+    MAP3D_TOPO_APPLY = "map3d-topo-apply"  # bool — shift model cells to follow topo
     MAP3D_TOPO_UPLOAD = "map3d-topo-upload"  # dcc.Upload for topo file
-    MAP3D_TOPO_UPLOAD_STORE = (
-        "map3d-topo-upload-store"  # parsed topo upload records
-    )
+    MAP3D_TOPO_UPLOAD_STORE = "map3d-topo-upload-store"  # parsed topo upload records
     MAP3D_TOPO_UPLOAD_INFO = "map3d-topo-upload-info"  # upload status label
     # Station marker style (within topography/annotation controls)
     MAP3D_STA_SYMBOL = "map3d-sta-symbol"  # Plotly 3D marker symbol or "auto"
@@ -714,9 +684,7 @@ class IDs:
     # ── Home dashboard ────────────────────────────────────────────────────
     DASH_LINE_TABLE = "dash-line-table"
     DASH_QUALITY = "dash-quality-area"
-    DASH_LAUNCH_MAP = (
-        "dash-launch-map"  # kept for back-compat; no longer in layout
-    )
+    DASH_LAUNCH_MAP = "dash-launch-map"  # kept for back-compat; no longer in layout
     DASH_LAUNCH_PROFILE = (
         "dash-launch-profile"  # kept for back-compat; no longer in layout
     )
@@ -725,12 +693,8 @@ class IDs:
     DASH_CHART_RADAR = "dash-chart-radar"
     DASH_CHART_GEO = "dash-chart-geo"
     DASH_CHART_RANK = "dash-chart-rank"
-    DASH_CHART_HEATMAP = (
-        "dash-chart-heatmap"  # slide 6: line × station coverage grid
-    )
-    DASH_CHART_VIOLIN = (
-        "dash-chart-violin"  # slide 7: per-line freq distribution
-    )
+    DASH_CHART_HEATMAP = "dash-chart-heatmap"  # slide 6: line × station coverage grid
+    DASH_CHART_VIOLIN = "dash-chart-violin"  # slide 7: per-line freq distribution
 
     # ── Home-page mini map (separate ID to avoid duplicate-ID bug) ───────────
     HOME_MAP_GRAPH = "home-map-graph"
@@ -771,9 +735,7 @@ class IDs:
     MAP_PAGE_INV_SEC = "map-page-inv-section"
     MAP_PAGE_INV_DEPTH_M = "map-page-inv-depth-m"
     MAP_PAGE_INV_LINE_SEL = "map-page-inv-line-sel"
-    MAP_PAGE_INV_DEPTHS = (
-        "map-page-inv-depths"  # dropdown of available depths
-    )
+    MAP_PAGE_INV_DEPTHS = "map-page-inv-depths"  # dropdown of available depths
     # Rotation / bearing
     MAP_PAGE_BEARING = "map-page-bearing"
 
@@ -903,9 +865,7 @@ def _command_bar(
 
 
 def _kpi_strip() -> html.Div:
-    def _card(
-        bi_icon: str, label: str, value_id: str, default: str, color: str
-    ):
+    def _card(bi_icon: str, label: str, value_id: str, default: str, color: str):
         return html.Div(
             [
                 html.I(
@@ -914,9 +874,7 @@ def _kpi_strip() -> html.Div:
                 ),
                 html.Div(
                     [
-                        html.Span(
-                            default, id=value_id, className="kpi-value"
-                        ),
+                        html.Span(default, id=value_id, className="kpi-value"),
                         html.Span(label, className="kpi-label"),
                     ],
                     className="kpi-text",
@@ -927,9 +885,7 @@ def _kpi_strip() -> html.Div:
 
     return html.Div(
         [
-            _card(
-                "broadcast", "Stations", IDs.KPI_STATIONS, "0 sites", "blue"
-            ),
+            _card("broadcast", "Stations", IDs.KPI_STATIONS, "0 sites", "blue"),
             _card("activity", "Frequency", IDs.KPI_FREQ, "—", "sapphire"),
             _card(
                 "layout-three-columns",
@@ -938,9 +894,7 @@ def _kpi_strip() -> html.Div:
                 "0 profiles",
                 "teal",
             ),
-            _card(
-                "geo-alt-fill", "Survey", IDs.KPI_SURVEY, "No survey", "peach"
-            ),
+            _card("geo-alt-fill", "Survey", IDs.KPI_SURVEY, "No survey", "peach"),
         ],
         className="kpi-strip",
     )
@@ -1191,9 +1145,7 @@ def _load_modal() -> dbc.Modal:
                             "verticalAlign": "middle",
                         },
                     ),
-                    html.Span(
-                        "Browse folder", className="load-section-title"
-                    ),
+                    html.Span("Browse folder", className="load-section-title"),
                     html.Span(
                         " · selects all .edi / .avg / .j files recursively",
                         className="load-section-hint",
@@ -1321,9 +1273,7 @@ def _load_modal() -> dbc.Modal:
                 className="file-loading-overlay",
             ),
             dcc.Store(id="load-upload-selection", data=[]),
-            html.Div(
-                id="load-upload-file-manager", className="load-file-manager"
-            ),
+            html.Div(id="load-upload-file-manager", className="load-file-manager"),
             html.Div(
                 [
                     html.Div(
@@ -1352,9 +1302,7 @@ def _load_modal() -> dbc.Modal:
                 className="load-folder-filter",
                 style={"display": "none"},
             ),
-            html.Div(
-                id=IDs.UPLOAD_FILELIST, className="mt-1 text-muted small"
-            ),
+            html.Div(id=IDs.UPLOAD_FILELIST, className="mt-1 text-muted small"),
         ],
         className="load-section load-choice-card",
     )
@@ -1541,9 +1489,7 @@ def _load_modal() -> dbc.Modal:
                                 [
                                     html.Span(
                                         [
-                                            html.I(
-                                                className="bi bi-cpu-fill me-1"
-                                            ),
+                                            html.I(className="bi bi-cpu-fill me-1"),
                                             html.Span(
                                                 id="load-prog-label",
                                                 children="Processing stations…",
@@ -1646,9 +1592,7 @@ def _station_panel() -> html.Div:
             # ── scrollable station list ────────────────────────────
             html.Div(
                 [
-                    html.Div(
-                        id=IDs.STATION_LIST_BODY, className="sta-list-body"
-                    ),
+                    html.Div(id=IDs.STATION_LIST_BODY, className="sta-list-body"),
                     # Lemniscate spinner — shown while station list is being built
                     html.Div(
                         [
@@ -1794,9 +1738,7 @@ def _profile_panel() -> html.Div:
                         className="freq-range-label",
                         style={"fontSize": "10px", "whiteSpace": "nowrap"},
                     ),
-                    html.Div(
-                        _freq_slider, style={"flex": "1", "minWidth": "80px"}
-                    ),
+                    html.Div(_freq_slider, style={"flex": "1", "minWidth": "80px"}),
                 ],
                 className="panel-card-header",
             ),
@@ -1924,12 +1866,8 @@ def _agent_panel() -> html.Div:
                 value=_names[0] if _names else None,
                 size="sm",
             ),
-            dbc.Button(
-                "Run", id=IDs.BTN_RUN_AGENT, color="success", size="sm"
-            ),
-            dbc.Spinner(
-                html.Div(id=IDs.AGENT_SPINNER), size="sm", color="success"
-            ),
+            dbc.Button("Run", id=IDs.BTN_RUN_AGENT, color="success", size="sm"),
+            dbc.Spinner(html.Div(id=IDs.AGENT_SPINNER), size="sm", color="success"),
             html.Pre("", id=IDs.AGENT_LOG),
             html.Img(id=IDs.AGENT_RESULT, src=empty_src(dark=True)),
             html.Div("", id=IDs.AGENT_SUMMARY),
@@ -1944,9 +1882,7 @@ def _agent_panel() -> html.Div:
             html.Div(
                 [
                     html.I(className="bi bi-stars me-2 si-header-icon"),
-                    html.Span(
-                        "Survey Insights", className="panel-card-title"
-                    ),
+                    html.Span("Survey Insights", className="panel-card-title"),
                     html.Button(
                         [
                             html.I(className="bi bi-arrow-right-circle"),
@@ -2002,13 +1938,9 @@ def _agent_panel() -> html.Div:
                     # ── 3. Last run ────────────────────────────────────────────
                     html.Div(
                         [
-                            html.Span(
-                                "LAST RUN", className="si-section-label"
-                            ),
+                            html.Span("LAST RUN", className="si-section-label"),
                             html.Div(
-                                html.Span(
-                                    "No runs yet", className="si-no-run"
-                                ),
+                                html.Span("No runs yet", className="si-no-run"),
                                 id="si-last-run",
                                 className="si-last-run-body",
                             ),
@@ -2067,9 +1999,7 @@ def _status_footer() -> html.Div:
     return html.Div(
         [
             html.Span(className="status-dot"),
-            html.Span(
-                "Ready", id=IDs.STATUS_LABEL, style={"fontSize": "11px"}
-            ),
+            html.Span("Ready", id=IDs.STATUS_LABEL, style={"fontSize": "11px"}),
             html.Span("|", className="status-sep"),
             html.Span("", id=IDs.STATUS_STATION, style={"fontSize": "11px"}),
             html.Span("|", className="status-sep"),
@@ -2176,8 +2106,7 @@ def _sidebar() -> html.Div:
                         html.Span(label, className="nav-btn-label"),
                     ],
                     id=f"nav-btn-{page_id}",
-                    className="nav-btn"
-                    + (" active" if page_id == "home" else ""),
+                    className="nav-btn" + (" active" if page_id == "home" else ""),
                     n_clicks=0,
                     title=label,
                 )
@@ -2219,18 +2148,12 @@ def _survey_dashboard() -> html.Div:
         [
             html.Div(
                 [
-                    html.Span(
-                        "Per-Line Summary", className="dash-section-label"
-                    ),
-                    html.Span(
-                        id="dash-survey-name", className="dash-survey-badge"
-                    ),
+                    html.Span("Per-Line Summary", className="dash-section-label"),
+                    html.Span(id="dash-survey-name", className="dash-survey-badge"),
                 ],
                 className="dash-section-head",
             ),
-            html.Div(
-                id=IDs.DASH_LINE_TABLE, className="dash-line-table-wrap"
-            ),
+            html.Div(id=IDs.DASH_LINE_TABLE, className="dash-line-table-wrap"),
         ],
         id="dash-data-state",
         style={"display": "none"},
@@ -2254,9 +2177,7 @@ def _survey_dashboard() -> html.Div:
             # Header: title + clickable dot indicators (1 per slide)
             html.Div(
                 [
-                    html.Span(
-                        "Station Analytics", className="dash-section-label"
-                    ),
+                    html.Span("Station Analytics", className="dash-section-label"),
                     html.Div(
                         [
                             html.Span(
@@ -2404,9 +2325,7 @@ def _survey_dashboard() -> html.Div:
                         ],
                         className="panel-card-title",
                     ),
-                    html.Span(
-                        id="dash-health-badge", className="dash-health-badge"
-                    ),
+                    html.Span(id="dash-health-badge", className="dash-health-badge"),
                 ],
                 className="panel-card-header",
             ),
@@ -2548,9 +2467,7 @@ def _map_page_content() -> html.Div:
                         [
                             html.Div(
                                 [
-                                    html.I(
-                                        className="bi bi-geo-alt-fill me-1"
-                                    ),
+                                    html.I(className="bi bi-geo-alt-fill me-1"),
                                     "Selected Station",
                                 ],
                                 className="ctrl-label",
@@ -2741,8 +2658,7 @@ def _map_page_content() -> html.Div:
                                     dbc.Select(
                                         id=IDs.MAP_PAGE_CMAP,
                                         options=[
-                                            {"label": c, "value": c}
-                                            for c in _MAP_CMAPS
+                                            {"label": c, "value": c} for c in _MAP_CMAPS
                                         ],
                                         value="plasma",
                                         size="sm",
@@ -2842,9 +2758,7 @@ def _map_page_content() -> html.Div:
                                 ],
                                 title=html.Span(
                                     [
-                                        html.I(
-                                            className="bi bi-sliders me-2"
-                                        ),
+                                        html.I(className="bi bi-sliders me-2"),
                                         "Display",
                                     ],
                                     className="map3d-settings-title",
@@ -2880,9 +2794,7 @@ def _map_page_content() -> html.Div:
                                             [
                                                 dbc.InputGroup(
                                                     [
-                                                        dbc.InputGroupText(
-                                                            "Zone"
-                                                        ),
+                                                        dbc.InputGroupText("Zone"),
                                                         dbc.Input(
                                                             id=IDs.MAP_PAGE_UTM_ZONE,
                                                             type="number",
@@ -3074,9 +2986,7 @@ def _map_page_content() -> html.Div:
                                                 [
                                                     html.Div(
                                                         [
-                                                            _lbl(
-                                                                "Interpolation"
-                                                            ),
+                                                            _lbl("Interpolation"),
                                                             dbc.Select(
                                                                 id=IDs.MAP_PAGE_CONTOUR_INTERP,
                                                                 options=[
@@ -3101,9 +3011,7 @@ def _map_page_content() -> html.Div:
                                                     ),
                                                     html.Div(
                                                         [
-                                                            _lbl(
-                                                                "Extrapolate"
-                                                            ),
+                                                            _lbl("Extrapolate"),
                                                             dbc.Select(
                                                                 id=IDs.MAP_PAGE_CONTOUR_EXTRA,
                                                                 options=[
@@ -3133,9 +3041,7 @@ def _map_page_content() -> html.Div:
                                                 [
                                                     html.Div(
                                                         [
-                                                            _lbl(
-                                                                "Smoothing σ"
-                                                            ),
+                                                            _lbl("Smoothing σ"),
                                                             dbc.Input(
                                                                 id=IDs.MAP_PAGE_CONTOUR_SMOOTH,
                                                                 type="number",
@@ -3150,9 +3056,7 @@ def _map_page_content() -> html.Div:
                                                     ),
                                                     html.Div(
                                                         [
-                                                            _lbl(
-                                                                "Line width"
-                                                            ),
+                                                            _lbl("Line width"),
                                                             dbc.Input(
                                                                 id=IDs.MAP_PAGE_CONTOUR_LWIDTH,
                                                                 type="number",
@@ -3214,9 +3118,7 @@ def _map_page_content() -> html.Div:
                                 ],
                                 title=html.Span(
                                     [
-                                        html.I(
-                                            className="bi bi-bezier2 me-2"
-                                        ),
+                                        html.I(className="bi bi-bezier2 me-2"),
                                         "Contour Overlay",
                                     ],
                                     className="map3d-settings-title",
@@ -3251,9 +3153,7 @@ def _map_page_content() -> html.Div:
                                 ],
                                 title=html.Span(
                                     [
-                                        html.I(
-                                            className="bi bi-list-ul me-2"
-                                        ),
+                                        html.I(className="bi bi-list-ul me-2"),
                                         "Survey Lines",
                                     ],
                                     className="map3d-settings-title",
@@ -3280,9 +3180,7 @@ def _map_page_content() -> html.Div:
         inner = [html.I(className=f"bi {icon}")]
         if label:
             inner += [html.Span(label, className="map-tb-label")]
-        return html.Button(
-            inner, id=btn_id, n_clicks=0, className=cls, title=title
-        )
+        return html.Button(inner, id=btn_id, n_clicks=0, className=cls, title=title)
 
     map_area = html.Div(
         [
@@ -3342,9 +3240,7 @@ def _map_page_content() -> html.Div:
                         "map-tb-bm-dark",
                         "Dark  (Carto)",
                     ),
-                    _tb_btn(
-                        "bi-sun-fill", "", "map-tb-bm-light", "Light (Carto)"
-                    ),
+                    _tb_btn("bi-sun-fill", "", "map-tb-bm-light", "Light (Carto)"),
                     _tb_btn(
                         "bi-globe-americas",
                         "",
@@ -3644,9 +3540,7 @@ def _profile_page_content() -> html.Div:
     def _img_panel(panel_id, img_id, visible=False):
         return html.Div(
             html.Div(
-                html.Img(
-                    id=img_id, src=empty_src(dark=True), style=_img_style
-                ),
+                html.Img(id=img_id, src=empty_src(dark=True), style=_img_style),
                 className="fig-img-wrap profile-page-fig",
             ),
             id=panel_id,
@@ -3688,9 +3582,7 @@ def _profile_page_content() -> html.Div:
                 visible=True,
             ),
             # 2  φ pseudosection
-            _ps_panel(
-                "prof-panel-phi-ps", IDs.IMG_PHASE_PS, "prof-ps-phi-header"
-            ),
+            _ps_panel("prof-panel-phi-ps", IDs.IMG_PHASE_PS, "prof-ps-phi-header"),
             # 3  Phase Tensor
             _img_panel("prof-panel-pt", IDs.IMG_PT),
             # 4  Tipper
@@ -3764,9 +3656,7 @@ def _lightbox() -> html.Div:
                     [
                         html.Span(
                             [
-                                html.I(
-                                    className="bi bi-arrows-fullscreen me-1"
-                                ),
+                                html.I(className="bi bi-arrows-fullscreen me-1"),
                                 "Esc  to redock",
                             ],
                             className="lb-hint",
@@ -3783,9 +3673,7 @@ def _lightbox() -> html.Div:
                         ),
                         html.Button(
                             [
-                                html.I(
-                                    className="bi bi-arrows-angle-contract me-1"
-                                ),
+                                html.I(className="bi bi-arrows-angle-contract me-1"),
                                 "Redock",
                             ],
                             id="lightbox-close",
@@ -3894,9 +3782,7 @@ def _welcome_overlay() -> html.Div:
                         style={"color": "var(--mauve)"},
                     ),
                     html.Div("AI Agents", className="wlc-card-title"),
-                    html.Div(
-                        "ML · DL · LLM solvers", className="wlc-card-desc"
-                    ),
+                    html.Div("ML · DL · LLM solvers", className="wlc-card-desc"),
                 ],
                 className="wlc-card",
                 id=IDs.WELCOME_CARD_AGENTS,
@@ -3909,9 +3795,7 @@ def _welcome_overlay() -> html.Div:
                         style={"color": "var(--teal)"},
                     ),
                     html.Div("Visualize", className="wlc-card-title"),
-                    html.Div(
-                        "25 QC · 16 advanced plots", className="wlc-card-desc"
-                    ),
+                    html.Div("25 QC · 16 advanced plots", className="wlc-card-desc"),
                 ],
                 className="wlc-card",
                 id=IDs.WELCOME_CARD_VIZ,
@@ -4065,9 +3949,7 @@ def _tool_panel(tool_id: str, body=None) -> html.Div:
         when omitted the inner div is left empty (populated later by a callback).
     """
     if tool_id not in _TOOL_BY_ID:
-        return html.Div(
-            "Select a tool from the menu.", className="tool-empty"
-        )
+        return html.Div("Select a tool from the menu.", className="tool-empty")
 
     tid, icon, label, desc = _TOOL_BY_ID[tool_id]
 
@@ -4100,9 +3982,7 @@ def _tools_offcanvas() -> dbc.Offcanvas:
             # Tool picker: compact icon buttons for quick switching
             html.Div(
                 [
-                    html.Span(
-                        "Available tools", className="offcanvas-section-lbl"
-                    ),
+                    html.Span("Available tools", className="offcanvas-section-lbl"),
                     html.Div(
                         [
                             html.Button(
@@ -4142,9 +4022,7 @@ def _tools_path_browser_modal() -> dbc.Modal:
                 dbc.ModalTitle(
                     [
                         html.I(className="bi bi-folder2-open me-2"),
-                        html.Span(
-                            "Browse Server Path", id="tools-path-title"
-                        ),
+                        html.Span("Browse Server Path", id="tools-path-title"),
                     ]
                 ),
                 close_button=True,
@@ -4181,9 +4059,7 @@ def _tools_path_browser_modal() -> dbc.Modal:
                         size="sm",
                         className="mb-2",
                     ),
-                    html.Div(
-                        id="tools-path-list", className="tools-path-list"
-                    ),
+                    html.Div(id="tools-path-list", className="tools-path-list"),
                     html.Hr(className="tool-sep"),
                     html.Div(
                         [
@@ -4201,9 +4077,7 @@ def _tools_path_browser_modal() -> dbc.Modal:
                                     ),
                                     dbc.Button(
                                         [
-                                            html.I(
-                                                className="bi bi-folder-plus me-1"
-                                            ),
+                                            html.I(className="bi bi-folder-plus me-1"),
                                             "Create",
                                         ],
                                         id="tools-path-mkdir",
@@ -4252,7 +4126,6 @@ def _tools_path_browser_modal() -> dbc.Modal:
 
 
 def _settings_offcanvas() -> dbc.Offcanvas:
-
     def _sec_hdr(icon_cls: str, title: str) -> html.Div:
         return html.Div(
             [
@@ -4330,9 +4203,7 @@ def _settings_offcanvas() -> dbc.Offcanvas:
                         autoComplete="new-password",
                     ),
                     dbc.Button(
-                        html.I(
-                            className="bi bi-eye", id="settings-ai-eye-icon"
-                        ),
+                        html.I(className="bi bi-eye", id="settings-ai-eye-icon"),
                         id=IDs.SETTINGS_AI_KEY_SHOW,
                         color="secondary",
                         size="sm",
@@ -4380,9 +4251,7 @@ def _settings_offcanvas() -> dbc.Offcanvas:
                 className="w-100 mb-2",
                 n_clicks=0,
             ),
-            html.Div(
-                id=IDs.SETTINGS_AI_STATUS, className="settings-ai-status"
-            ),
+            html.Div(id=IDs.SETTINGS_AI_STATUS, className="settings-ai-status"),
             # Hidden store for selected provider
             dcc.Store(id=IDs.SETTINGS_AI_PROVIDER, data="claude"),
         ],
@@ -4545,9 +4414,7 @@ def _lines_offcanvas() -> dbc.Offcanvas:
                                     "fontSize": "16px",
                                 },
                             ),
-                            html.Span(
-                                "Survey Lines", className="rcp-canvas-title"
-                            ),
+                            html.Span("Survey Lines", className="rcp-canvas-title"),
                         ],
                         className="d-flex align-items-center",
                     ),
@@ -4800,9 +4667,7 @@ def _recompute_offcanvas() -> dbc.Offcanvas:
                     ),
                     html.Div(
                         [
-                            html.Label(
-                                "Rotate components", className="recompute-lbl"
-                            ),
+                            html.Label("Rotate components", className="recompute-lbl"),
                             dbc.Checklist(
                                 id=IDs.RECOMPUTE_COMPS,
                                 options=[
@@ -4821,9 +4686,7 @@ def _recompute_offcanvas() -> dbc.Offcanvas:
             ),
             html.Div(
                 [
-                    html.Label(
-                        "Frequency band (Hz)", className="recompute-lbl"
-                    ),
+                    html.Label("Frequency band (Hz)", className="recompute-lbl"),
                     html.Div(
                         [
                             dbc.Input(
@@ -4857,9 +4720,7 @@ def _recompute_offcanvas() -> dbc.Offcanvas:
             ),
             html.Div(
                 [
-                    html.Label(
-                        "Fill missing values", className="recompute-lbl"
-                    ),
+                    html.Label("Fill missing values", className="recompute-lbl"),
                     dbc.Select(
                         id=IDs.RECOMPUTE_FILL,
                         options=[
@@ -4932,9 +4793,7 @@ def _recompute_offcanvas() -> dbc.Offcanvas:
                             ),
                             dbc.Button(
                                 [
-                                    html.I(
-                                        className="bi bi-arrow-repeat me-1"
-                                    ),
+                                    html.I(className="bi bi-arrow-repeat me-1"),
                                     "Yes, recompute again",
                                 ],
                                 id=IDs.BTN_RECOMPUTE_YES,
@@ -5137,9 +4996,7 @@ def _about_modal() -> dbc.Modal:
                         [
                             html.Div(
                                 [
-                                    html.Span(
-                                        "Author", className="about-key"
-                                    ),
+                                    html.Span("Author", className="about-key"),
                                     html.Span(
                                         "L. Kouadio  ·  etanoyau@gmail.com",
                                         className="about-val",
@@ -5149,20 +5006,14 @@ def _about_modal() -> dbc.Modal:
                             ),
                             html.Div(
                                 [
-                                    html.Span(
-                                        "License", className="about-key"
-                                    ),
-                                    html.Span(
-                                        "LGPL-3.0", className="about-val"
-                                    ),
+                                    html.Span("License", className="about-key"),
+                                    html.Span("LGPL-3.0", className="about-val"),
                                 ],
                                 className="about-row",
                             ),
                             html.Div(
                                 [
-                                    html.Span(
-                                        "Framework", className="about-key"
-                                    ),
+                                    html.Span("Framework", className="about-key"),
                                     html.Span(
                                         "Dash 4  ·  DBC 2  ·  Plotly 6",
                                         className="about-val",
@@ -5331,9 +5182,7 @@ def _session_offcanvas() -> dbc.Offcanvas:
                     id=IDs.SESSION_UL,
                     children=html.Div(
                         [
-                            html.I(
-                                className="bi bi-file-earmark-arrow-up me-2"
-                            ),
+                            html.I(className="bi bi-file-earmark-arrow-up me-2"),
                             "Drop session JSON here or ",
                             html.A("browse"),
                         ]
@@ -5448,27 +5297,19 @@ def layout() -> html.Div:
             dcc.Store(id=IDs.STORE_DATA, storage_type="memory"),
             dcc.Store(id=IDs.STORE_SELECTION, storage_type="memory"),
             dcc.Store(id=IDs.STORE_THEME, storage_type="local", data="dark"),
-            dcc.Store(
-                id=IDs.STORE_SIDEBAR, storage_type="local", data="expanded"
-            ),
+            dcc.Store(id=IDs.STORE_SIDEBAR, storage_type="local", data="expanded"),
             dcc.Store(id=IDs.NAV_SECTION, storage_type="memory", data="home"),
             # Folder-browse store — written by JS via set_props
             dcc.Store(id=IDs.FOLDER_UPLOAD_STORE, storage_type="memory"),
             # Recompute — background-job polling state
             dcc.Store(id=IDs.RECOMPUTE_STORE, storage_type="memory"),
             # Correction page — applied-step list (JSON-serialisable)
-            dcc.Store(
-                id=IDs.CORR_STORE, data={"steps": []}, storage_type="memory"
-            ),
+            dcc.Store(id=IDs.CORR_STORE, data={"steps": []}, storage_type="memory"),
             # Active lines filter — {"active": [...], "all": [...]}
             dcc.Store(id=IDs.STORE_ACTIVE_LINES, storage_type="memory"),
             # Station-panel local line filter — None means "show all"
-            dcc.Store(
-                id=IDs.STATION_LINE_FILTER, storage_type="memory", data=None
-            ),
-            dcc.Store(
-                id=IDs.STORE_TDEM_LOADED, storage_type="memory", data=False
-            ),
+            dcc.Store(id=IDs.STATION_LINE_FILTER, storage_type="memory", data=None),
+            dcc.Store(id=IDs.STORE_TDEM_LOADED, storage_type="memory", data=False),
             dcc.Interval(
                 id=IDs.RECOMPUTE_INTERVAL,
                 interval=450,
@@ -5476,9 +5317,7 @@ def layout() -> html.Div:
                 disabled=True,
             ),
             # Polling interval (agent result streaming)
-            dcc.Interval(
-                id=IDs.INTERVAL, interval=2000, n_intervals=0, disabled=True
-            ),
+            dcc.Interval(id=IDs.INTERVAL, interval=2000, n_intervals=0, disabled=True),
             # Download triggers
             dcc.Download(id="settings-download"),
             dcc.Download(id=IDs.INTERP_DOWNLOAD),
@@ -5488,9 +5327,7 @@ def layout() -> html.Div:
             # These live here (not inside tool bodies) so they survive tool
             # tab switches.  storage_type="session" keeps them within the
             # browser tab but clears on full page refresh.
-            dcc.Store(
-                id="tool-elev-raw-store", storage_type="session", data=None
-            ),
+            dcc.Store(id="tool-elev-raw-store", storage_type="session", data=None),
             dcc.Store(
                 id="tool-elev-corrected-store",
                 storage_type="session",
@@ -5501,12 +5338,8 @@ def layout() -> html.Div:
                 storage_type="session",
                 data="fetch",
             ),
-            dcc.Store(
-                id="tool-elev-scope-store", storage_type="session", data="all"
-            ),
-            dcc.Store(
-                id="tool-elev-upload-store", storage_type="session", data=None
-            ),
+            dcc.Store(id="tool-elev-scope-store", storage_type="session", data="all"),
+            dcc.Store(id="tool-elev-upload-store", storage_type="session", data=None),
             dcc.Store(
                 id="tool-coord-mode-store",
                 storage_type="session",
@@ -5523,9 +5356,7 @@ def layout() -> html.Div:
                 data=None,
             ),
             # Generic per-tool last-run output cache (all tools write here after a run)
-            dcc.Store(
-                id="tool-outputs-store", storage_type="session", data={}
-            ),
+            dcc.Store(id="tool-outputs-store", storage_type="session", data={}),
             # Topography file upload (map 3D)
             dcc.Store(
                 id=IDs.MAP3D_TOPO_UPLOAD_STORE,
@@ -5536,9 +5367,7 @@ def layout() -> html.Div:
             dcc.Download(id="tool-elev-dl-h5"),
             dcc.Download(id="tool-coord-download"),
             # ── Session snapshot (localStorage — survives page refresh) ───
-            dcc.Store(
-                id=IDs.SESSION_SNAPSHOT, storage_type="local", data=None
-            ),
+            dcc.Store(id=IDs.SESSION_SNAPSHOT, storage_type="local", data=None),
             # Navbar
             _navbar(),
             # Load data modal

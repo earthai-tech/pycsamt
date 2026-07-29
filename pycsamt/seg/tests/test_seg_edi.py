@@ -40,9 +40,7 @@ def _mk_freq_block(freq: list[float]) -> str:
 
 def _mk_z_blocks(n: int, rot: str = "ROT=ZROT") -> str:
     # only ZXX* to keep tiny; parser fills zeros for rest
-    zr = "  " + "  ".join(
-        f"{v: .6E}".upper() for v in np.linspace(1e-3, 2e-3, n)
-    )
+    zr = "  " + "  ".join(f"{v: .6E}".upper() for v in np.linspace(1e-3, 2e-3, n))
     zi = "  " + "  ".join(f"{0.0: .6E}".upper() for _ in range(n))
     zv = "  " + "  ".join(f"{1e-6: .6E}".upper() for _ in range(n))
     return (
@@ -54,9 +52,7 @@ def _mk_z_blocks(n: int, rot: str = "ROT=ZROT") -> str:
 
 
 def _mk_tipper_blocks(n: int) -> str:
-    txr = "  " + "  ".join(
-        f"{v: .6E}".upper() for v in np.linspace(0.1, 0.2, n)
-    )
+    txr = "  " + "  ".join(f"{v: .6E}".upper() for v in np.linspace(0.1, 0.2, n))
     txi = "  " + "  ".join(f"{0.0: .6E}".upper() for _ in range(n))
     tvr = "  " + "  ".join(f"{1e-4: .6E}".upper() for _ in range(n))
     tyr = txr
@@ -79,19 +75,13 @@ def _mk_tipper_blocks(n: int) -> str:
 def _mk_spectra_section() -> str:
     # one spectra block with 3 values
     head = ">=SPECTRASECT\n  SECTID=SP1\n"
-    blk = (
-        ">SPECTRA FREQ=10 BW=1 ROTSPEC=0 // 3\n"
-        "  1.0E+00  2.0E+00\n"
-        "  3.0E+00\n"
-    )
+    blk = ">SPECTRA FREQ=10 BW=1 ROTSPEC=0 // 3\n  1.0E+00  2.0E+00\n  3.0E+00\n"
     return head + blk
 
 
 def _mk_tseries_section() -> str:
     head = ">=TSERIESSECT\n  SECTID=TSA\n  NCHAN=2\n  DT=0.5\n"
-    blk1 = (
-        ">TSERIES ID=HX NPTS=3 DT=0.1 // 3\n  1.0E+00  2.0E+00\n  3.0E+00\n"
-    )
+    blk1 = ">TSERIES ID=HX NPTS=3 DT=0.1 // 3\n  1.0E+00  2.0E+00\n  3.0E+00\n"
     blk2 = ">TSERIES ID=HY NPTS=2 DT=0.2 // 2\n  1.0E+00  0.0E+00\n"
     return head + blk1 + blk2
 

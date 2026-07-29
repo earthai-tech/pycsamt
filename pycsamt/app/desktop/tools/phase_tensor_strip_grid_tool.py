@@ -185,16 +185,10 @@ class PhaseTensorStripGridDialog(QDialog):
                     ed = _unwrap(ed)
                 except Exception:
                     pass
-                nm = (
-                    getattr(ed, "station", None)
-                    or getattr(ed, "id", None)
-                    or "?"
-                )
+                nm = getattr(ed, "station", None) or getattr(ed, "id", None) or "?"
                 names.append(str(nm))
             self._lines = detect_lines_from_station_ids(names)
-            summary = ", ".join(
-                f"{k} ({len(v)})" for k, v in self._lines.items()
-            )
+            summary = ", ".join(f"{k} ({len(v)})" for k, v in self._lines.items())
             self._lines_lbl.setText(summary or "No stations found.")
         except Exception as exc:
             self._lines_lbl.setText(f"Line detection failed: {exc}")

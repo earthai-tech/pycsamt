@@ -91,9 +91,7 @@ def _install_fake_main_window(monkeypatch):
 
     fake_module = types.ModuleType("pycsamt.app.desktop.main_window")
     fake_module.MainWindow = _FakeMainWindow
-    monkeypatch.setitem(
-        sys.modules, "pycsamt.app.desktop.main_window", fake_module
-    )
+    monkeypatch.setitem(sys.modules, "pycsamt.app.desktop.main_window", fake_module)
     return shown
 
 
@@ -121,9 +119,7 @@ def test_main_skips_icon_when_missing(monkeypatch):
     app_calls = _install_fake_pyside6(monkeypatch)
     _install_fake_main_window(monkeypatch)
     monkeypatch.setattr(sys, "argv", ["pycsamt-desktop"])
-    monkeypatch.setattr(
-        desktop_main.Path, "exists", lambda self: False
-    )
+    monkeypatch.setattr(desktop_main.Path, "exists", lambda self: False)
 
     with pytest.raises(SystemExit):
         desktop_main.main()
@@ -142,7 +138,5 @@ def test_module_run_as_script_invokes_main(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["pycsamt-desktop"])
 
     with pytest.raises(SystemExit) as exc:
-        runpy.run_module(
-            "pycsamt.app.desktop.__main__", run_name="__main__"
-        )
+        runpy.run_module("pycsamt.app.desktop.__main__", run_name="__main__")
     assert exc.value.code == 0

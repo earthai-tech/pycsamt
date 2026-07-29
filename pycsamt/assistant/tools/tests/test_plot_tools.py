@@ -43,9 +43,7 @@ class TestPlotToolsUnit(unittest.TestCase):
         plt.close(fig)
 
 
-@unittest.skipUnless(
-    Path("data/3edis").is_dir(), "bundled 3edis data not present"
-)
+@unittest.skipUnless(Path("data/3edis").is_dir(), "bundled 3edis data not present")
 class TestPlotToolsBundled(unittest.TestCase):
     def test_make_plot_saves_figure(self):
         out = tempfile.mkdtemp()

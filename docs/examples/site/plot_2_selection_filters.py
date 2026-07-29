@@ -87,11 +87,7 @@ print(
 # quick grouped count makes that convention visible.
 
 line_counts = (
-    all_table["station"]
-    .str.split("-", n=1)
-    .str[0]
-    .value_counts()
-    .sort_index()
+    all_table["station"].str.split("-", n=1).str[0].value_counts().sort_index()
 )
 print("Stations by line prefix:")
 print(line_counts.to_string())

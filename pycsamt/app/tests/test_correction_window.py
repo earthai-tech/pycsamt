@@ -93,9 +93,7 @@ class TestConstruction:
         assert win._combo_mode.currentText() == "2D Section"
         assert win._view_stack.currentIndex() == 3
 
-    def test_stratagem_hidden_groups_by_default_for_other_categories(
-        self, win
-    ):
+    def test_stratagem_hidden_groups_by_default_for_other_categories(self, win):
         _select_category(win, "Noise Removal")
         assert not win._grp_strat.isVisible()
         assert not win._grp_ss_affected.isVisible()
@@ -130,9 +128,7 @@ class TestCategoryNavigation:
         _select_category(win, "Tensor Rotation")
         assert win._view_stack.currentIndex() in (0, 1)
 
-    def test_switching_away_from_static_shift_resets_2d_section_mode(
-        self, win
-    ):
+    def test_switching_away_from_static_shift_resets_2d_section_mode(self, win):
         _select_category(win, "Static Shift")
         assert win._combo_mode.currentText() == "2D Section"
         _select_category(win, "Noise Removal")
@@ -141,7 +137,6 @@ class TestCategoryNavigation:
     def test_correction_combo_populated_per_category(self, win):
         from pycsamt.app.desktop.controllers.correction_controller import (
             CATALOGUE,
-            CATEGORIES,
         )
 
         _select_category(win, "Static Shift")
@@ -225,8 +220,13 @@ class TestParamWidgets:
         assert win._no_params_lbl.isVisible()
 
     def test_get_param_values_collects_all_kinds(self, win):
-        from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit
-        from PySide6.QtWidgets import QDoubleSpinBox, QSpinBox
+        from PySide6.QtWidgets import (
+            QCheckBox,
+            QComboBox,
+            QDoubleSpinBox,
+            QLineEdit,
+            QSpinBox,
+        )
 
         win._param_widgets = {}
         sp = QSpinBox()
@@ -255,9 +255,7 @@ class TestParamWidgets:
         assert vals["le_num"] == pytest.approx(3.14)
         assert vals["le_txt"] == "abc"
 
-    def test_get_param_values_includes_affected_stations_for_static_shift(
-        self, win
-    ):
+    def test_get_param_values_includes_affected_stations_for_static_shift(self, win):
         _select_category(win, "Static Shift")
         win._txt_ss_stations.setPlainText("S001, S002")
         vals = win._get_param_values()
@@ -334,9 +332,7 @@ class TestPreviewApplyRealData:
         win._on_clear_stack()
         assert win._stack_list.count() == 0
 
-    def test_ama_correction_broken_via_affected_stations_kwarg(
-        self, win, willy_sites
-    ):
+    def test_ama_correction_broken_via_affected_stations_kwarg(self, win, willy_sites):
         """
         Real bug: every Static Shift correction's param values include an
         ``affected_stations`` kwarg (added unconditionally in
@@ -381,18 +377,14 @@ class TestPreviewApplyRealData:
         win._on_apply()
         assert "Error: apply boom" in win._action_status.text()
 
-    def test_apply_returns_none_reports_failure(
-        self, win, willy_sites, monkeypatch
-    ):
+    def test_apply_returns_none_reports_failure(self, win, willy_sites, monkeypatch):
         win.set_sites(willy_sites)
         _select_category(win, "Static Shift")
         monkeypatch.setattr(win._ctrl, "apply", lambda *a, **k: None)
         win._on_apply()
         assert "Apply failed" in win._action_status.text()
 
-    def test_preview_returns_none_reports_failure(
-        self, win, willy_sites, monkeypatch
-    ):
+    def test_preview_returns_none_reports_failure(self, win, willy_sites, monkeypatch):
         win.set_sites(willy_sites)
         _select_category(win, "Static Shift")
         monkeypatch.setattr(win._ctrl, "preview", lambda *a, **k: None)
@@ -431,9 +423,7 @@ class TestStackContextMenu:
         win._on_stack_ctx_menu(rect.center())
         assert win._stack_list.count() == 0
 
-    def test_view_after_for_step_via_context_menu(
-        self, win, willy_sites, monkeypatch
-    ):
+    def test_view_after_for_step_via_context_menu(self, win, willy_sites, monkeypatch):
         win.set_sites(willy_sites)
         _select_category(win, "Static Shift")
         _select_correction(win, "LOESS")
@@ -508,9 +498,7 @@ class TestStratagem:
             CATEGORIES,
         )
 
-        assert win._combo_category.currentIndex() == CATEGORIES.index(
-            "Stratagem"
-        )
+        assert win._combo_category.currentIndex() == CATEGORIES.index("Stratagem")
 
     def test_load_edi_dir_singular_station(self, win, monkeypatch):
         win._edi_dir_label.setText("/fake/dir")
@@ -642,9 +630,7 @@ class TestViewModeAndRefresh:
         win._combo_mode.setCurrentText("Diff")
         win._refresh_plots()
 
-    def test_refresh_with_preview_sites_shows_preview_label(
-        self, win, willy_sites
-    ):
+    def test_refresh_with_preview_sites_shows_preview_label(self, win, willy_sites):
         win.set_sites(willy_sites)
         _select_category(win, "Noise Removal")
         win._on_preview()

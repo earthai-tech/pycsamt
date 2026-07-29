@@ -258,33 +258,23 @@ class TestDialogConstructionNoSites:
 
     def test_datum_combo_contains_expected_datums(self, qapp):
         dlg = CoordTransformDialog(sites=None)
-        items = [
-            dlg._datum_combo.itemText(i)
-            for i in range(dlg._datum_combo.count())
-        ]
+        items = [dlg._datum_combo.itemText(i) for i in range(dlg._datum_combo.count())]
         assert items == ["WGS84", "NAD83", "GRS80"]
 
 
 class TestDialogConstructionWithRealSites:
-    def test_survey_table_built_when_sites_given(
-        self, qapp, willy_subset_sites
-    ):
+    def test_survey_table_built_when_sites_given(self, qapp, willy_subset_sites):
         dlg = CoordTransformDialog(sites=willy_subset_sites)
         assert hasattr(dlg, "_surv_table")
 
-    def test_survey_table_row_count_matches_sites(
-        self, qapp, willy_subset_sites
-    ):
+    def test_survey_table_row_count_matches_sites(self, qapp, willy_subset_sites):
         dlg = CoordTransformDialog(sites=willy_subset_sites)
         assert dlg._surv_table.rowCount() == len(willy_subset_sites)
 
-    def test_survey_table_station_names_populated(
-        self, qapp, willy_subset_sites
-    ):
+    def test_survey_table_station_names_populated(self, qapp, willy_subset_sites):
         dlg = CoordTransformDialog(sites=willy_subset_sites)
         names = [
-            dlg._surv_table.item(r, 0).text()
-            for r in range(dlg._surv_table.rowCount())
+            dlg._surv_table.item(r, 0).text() for r in range(dlg._surv_table.rowCount())
         ]
         assert all(n and n != "?" for n in names)
 
@@ -294,7 +284,13 @@ class TestDialogConstructionWithRealSites:
             dlg._surv_table.horizontalHeaderItem(c).text()
             for c in range(dlg._surv_table.columnCount())
         ]
-        assert headers == ["Station", "Lat (°)", "Lon (°)", "UTM E (m)", "UTM N (m)"]
+        assert headers == [
+            "Station",
+            "Lat (°)",
+            "Lon (°)",
+            "UTM E (m)",
+            "UTM N (m)",
+        ]
 
     def test_survey_table_real_edi_coords_fall_through_to_dash(
         self, qapp, willy_subset_sites

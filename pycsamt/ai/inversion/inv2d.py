@@ -30,9 +30,9 @@ Example
 -------
 >>> from pycsamt.ai.inversion import EMInverter2D
 >>> inv = EMInverter2D(n_components=4, n_depth=40, n_stations=20, n_freqs=32)
->>> inv.fit(X_train, y_train, epochs=30)              # doctest: +SKIP
+>>> inv.fit(X_train, y_train, epochs=30)  # doctest: +SKIP
 EMInverter2D(arch='unet', fitted)
->>> rho_pred = inv.predict(X_test)                    # doctest: +SKIP
+>>> rho_pred = inv.predict(X_test)  # doctest: +SKIP
 """
 
 from __future__ import annotations
@@ -51,6 +51,34 @@ from .._backend_utils import (
 from .._base import BaseEMNet
 
 __all__ = ["EMInverter2D"]
+
+
+def _staged_torch_loss(
+    pred, target, *, lambda_x=0.0, lambda_z=0.0, lambda_tv=0.0
+):
+    """Mean-squared data fit plus optional spatial regularization.
+
+    ``pred``/``target`` are normalized ``(N, 1, H, W)`` torch tensors
+    with ``H`` the depth-like axis and ``W`` the station/lateral
+    axis. Mirrors :mod:`pycsamt.ai.losses.model`/``spatial``'s L2/L1
+    math (``L_model``/``L_grad_x``/``L_grad_z``/``L_TV``) but stays
+    differentiable by operating on torch tensors directly — those
+    NumPy implementations cannot participate in backpropagation.
+    With ``lambda_x = lambda_z = lambda_tv = 0`` this is exactly
+    ``nn.MSELoss()(pred, target)``.
+    """
+    loss = ((pred - target) ** 2).mean()
+    if lambda_x:
+        grad_x = pred[..., 1:] - pred[..., :-1]
+        loss = loss + lambda_x * (grad_x**2).mean()
+    if lambda_z:
+        grad_z = pred[..., 1:, :] - pred[..., :-1, :]
+        loss = loss + lambda_z * (grad_z**2).mean()
+    if lambda_tv:
+        tv_x = (pred[..., 1:] - pred[..., :-1]).abs().mean()
+        tv_z = (pred[..., 1:, :] - pred[..., :-1, :]).abs().mean()
+        loss = loss + lambda_tv * (tv_x + tv_z)
+    return loss
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -102,9 +130,7 @@ class EMInverter2D(BaseEMNet):
         log_rho_out: bool = True,
         **net_kwargs,
     ) -> None:
-        super().__init__(
-            arch=arch, n_layers=n_depth, solver="mt2d", device=device
-        )
+        super().__init__(arch=arch, n_layers=n_depth, solver="mt2d", device=device)
         self.n_components = int(n_components)
         self.n_depth = int(n_depth)
         self.n_stations = int(n_stations)
@@ -171,6 +197,9 @@ class EMInverter2D(BaseEMNet):
         grad_clip: float | None = 1.0,
         seed: int | None = None,
         verbose: bool = True,
+        lambda_x: float = 0.0,
+        lambda_z: float = 0.0,
+        lambda_tv: float = 0.0,
     ) -> EMInverter2D:
         """
         Train the 2-D inversion network.
@@ -183,11 +212,33 @@ class EMInverter2D(BaseEMNet):
             Target 2-D log₁₀(ρ) sections.
         epochs, batch_size, lr, patience, val_frac, grad_clip, seed, verbose
             Standard training hyper-parameters.
+        lambda_x, lambda_z, lambda_tv : float, default 0.0
+            Weights for lateral-gradient, depth-gradient, and total-
+            variation spatial regularization terms added to the plain
+            data-fit MSE, matching the staged objective in
+            :mod:`pycsamt.ai.losses` (``L_grad_x``/``L_grad_z``/
+            ``L_TV``) but computed directly on normalized torch
+            tensors so the combined loss stays differentiable — the
+            NumPy implementations in :mod:`pycsamt.ai.losses` cannot
+            participate in backpropagation. All zero (the default)
+            reproduces the exact plain-MSE behaviour of earlier
+            versions. Only supported on the PyTorch backend: passing
+            a nonzero value while TensorFlow is active raises
+            :class:`NotImplementedError`.
 
         Returns
         -------
         self
         """
+        self._backend_name = active_backend()
+        if self._backend_name == "tensorflow" and (
+            lambda_x or lambda_z or lambda_tv
+        ):
+            raise NotImplementedError(
+                "lambda_x/lambda_z/lambda_tv staged regularization is "
+                "only implemented for the PyTorch backend; the "
+                "TensorFlow path still trains with plain MSE."
+            )
         X = np.asarray(X, dtype=np.float32)
         y = np.asarray(y, dtype=np.float32)
 
@@ -205,7 +256,6 @@ class EMInverter2D(BaseEMNet):
         n_val = max(1, int(n * val_frac))
         vi, ti = idx[:n_val], idx[n_val:]
 
-        self._backend_name = active_backend()
         self._network = self._build_network()
 
         if self._backend_name == "tensorflow":
@@ -232,10 +282,18 @@ class EMInverter2D(BaseEMNet):
                 patience=patience,
                 grad_clip=grad_clip,
                 verbose=verbose,
+                lambda_x=lambda_x,
+                lambda_z=lambda_z,
+                lambda_tv=lambda_tv,
             )
 
         self._history = hist
         self._meta["best_val_loss"] = float(best_val)
+        self._meta["loss_weights"] = {
+            "lambda_x": lambda_x,
+            "lambda_z": lambda_z,
+            "lambda_tv": lambda_tv,
+        }
         self._is_fitted = True
         return self
 
@@ -248,9 +306,7 @@ class EMInverter2D(BaseEMNet):
 
         if pred.shape[-2:] == target_hw:
             return pred
-        return F.interpolate(
-            pred, size=target_hw, mode="bilinear", align_corners=False
-        )
+        return F.interpolate(pred, size=target_hw, mode="bilinear", align_corners=False)
 
     def _fit_torch(
         self,
@@ -265,6 +321,9 @@ class EMInverter2D(BaseEMNet):
         patience,
         grad_clip,
         verbose,
+        lambda_x=0.0,
+        lambda_z=0.0,
+        lambda_tv=0.0,
     ):
         import torch
         import torch.nn as nn
@@ -283,38 +342,49 @@ class EMInverter2D(BaseEMNet):
         sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
             opt, factor=0.5, patience=max(5, patience // 3), min_lr=1e-6
         )
-        mse = nn.MSELoss()
+
+        def loss_fn(pred, target):
+            return _staged_torch_loss(
+                pred,
+                target,
+                lambda_x=lambda_x,
+                lambda_z=lambda_z,
+                lambda_tv=lambda_tv,
+            )
 
         tr_ds = TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr))
+        # Drop a trailing batch of size 1: BatchNorm layers cannot
+        # compute per-channel statistics from a single sample.
+        drop_last = len(tr_ds) > batch_size and len(tr_ds) % batch_size == 1
         Xva_t = torch.from_numpy(Xva).to(dev)
         yva_t = torch.from_numpy(yva).to(dev)
 
         best_val, best_state, no_improve = np.inf, None, 0
         train_losses, val_losses = [], []
 
+        loader = DataLoader(
+            tr_ds, batch_size=batch_size, shuffle=True, drop_last=drop_last
+        )
+        n_seen = len(tr_ds) - (1 if drop_last else 0)
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for xb, yb in DataLoader(
-                tr_ds, batch_size=batch_size, shuffle=True
-            ):
+            for xb, yb in loader:
                 xb, yb = xb.to(dev), yb.to(dev)
                 pred = self._resize(self._network(xb), yb.shape[-2:])
-                loss = mse(pred, yb)
+                loss = loss_fn(pred, yb)
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
-                    )
+                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
                 opt.step()
                 ep_loss += loss.item() * len(xb)
-            ep_loss /= len(Xtr)
+            ep_loss /= n_seen
 
             self._network.eval()
             with torch.no_grad():
                 v_pred = self._resize(self._network(Xva_t), target_hw)
-                v_loss = mse(v_pred, yva_t).item()
+                v_loss = loss_fn(v_pred, yva_t).item()
 
             sched.step(v_loss)
             train_losses.append(ep_loss)
@@ -356,9 +426,7 @@ class EMInverter2D(BaseEMNet):
         ytr_up = tf.image.resize(
             ytr[:, :, :, np.newaxis], target_size
         ).numpy()  # (n, n_freqs, n_sta, 1)
-        yva_up = tf.image.resize(
-            yva[:, :, :, np.newaxis], target_size
-        ).numpy()
+        yva_up = tf.image.resize(yva[:, :, :, np.newaxis], target_size).numpy()
 
         dev = resolve_device(self.device)
         with tf.device(dev):
@@ -427,9 +495,7 @@ class EMInverter2D(BaseEMNet):
 
             # channels-last: (n, n_freqs, n_sta, n_comp) → (n, n_depth, n_sta, 1)
             Xn_tf = Xn.transpose(0, 2, 3, 1)
-            out_tf = self._network.predict(
-                Xn_tf, verbose=0
-            )  # (n, ?, n_sta, 1)
+            out_tf = self._network.predict(Xn_tf, verbose=0)  # (n, ?, n_sta, 1)
             y_norm = out_tf.squeeze(-1)  # (n, ?, n_sta)
             # Resize depth axis if UNet output height != n_depth
             if y_norm.shape[1] != self.n_depth:
@@ -504,9 +570,7 @@ class EMInverter2D(BaseEMNet):
         set_backend(backend_name)
 
         if "_channels" in weights:
-            self._channels = tuple(
-                int(c) for c in weights.pop("_channels").tolist()
-            )
+            self._channels = tuple(int(c) for c in weights.pop("_channels").tolist())
 
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
             if attr in weights:

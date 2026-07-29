@@ -142,16 +142,12 @@ def select(
     if stations is not None:
         result = sel.by_names(result, stations)
         if verbose >= 1:
-            click.echo(
-                f"  → {len(result)} station(s) after name filter", err=True
-            )
+            click.echo(f"  → {len(result)} station(s) after name filter", err=True)
 
     if freq_range is not None:
         result = sel.by_freq(result, freq_range[0], freq_range[1])
         if verbose >= 1:
-            click.echo(
-                f"  → {len(result)} station(s) after freq filter", err=True
-            )
+            click.echo(f"  → {len(result)} station(s) after freq filter", err=True)
 
     if bbox is not None:
         try:
@@ -164,38 +160,29 @@ def select(
             )
         result = sel.by_bbox(result, lat_min, lon_min, lat_max, lon_max)
         if verbose >= 1:
-            click.echo(
-                f"  → {len(result)} station(s) after bbox filter", err=True
-            )
+            click.echo(f"  → {len(result)} station(s) after bbox filter", err=True)
 
     if drop_empty:
         result = sel.drop_empty(result)
         if verbose >= 1:
-            click.echo(
-                f"  → {len(result)} station(s) after drop_empty", err=True
-            )
+            click.echo(f"  → {len(result)} station(s) after drop_empty", err=True)
 
     if keep_finite:
         result = sel.keep_finite_z(result)
         if verbose >= 1:
-            click.echo(
-                f"  → {len(result)} station(s) after keep_finite", err=True
-            )
+            click.echo(f"  → {len(result)} station(s) after keep_finite", err=True)
 
     if phase_err_thresh is not None:
         result = sel.mask_large_phase_err(result, phase_err_thresh)
         if verbose >= 1:
-            click.echo(
-                f"  → {len(result)} station(s) after phase-err mask", err=True
-            )
+            click.echo(f"  → {len(result)} station(s) after phase-err mask", err=True)
 
     n_out = len(result)
     n_in = len(sites_obj)
 
     if n_out == 0:
         click.echo(
-            "No stations remain after filtering.  "
-            "Review your filter criteria.",
+            "No stations remain after filtering.  " "Review your filter criteria.",
             err=True,
         )
         sys.exit(1)
@@ -212,9 +199,7 @@ def select(
         if output_format == "json":
             click.echo(json.dumps(summary, indent=2))
         else:
-            click.echo(
-                f"Dry run — {n_out}/{n_in} station(s) would be selected:"
-            )
+            click.echo(f"Dry run — {n_out}/{n_in} station(s) would be selected:")
             for nm in names:
                 click.echo(f"  {nm}")
         return

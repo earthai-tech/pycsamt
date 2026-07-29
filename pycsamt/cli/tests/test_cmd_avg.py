@@ -79,15 +79,11 @@ class TestAvgInfo:
     def test_text_output(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["avg", "info", str(_K2_AVG)])
         assert result.exit_code == 0
-        assert (
-            "Station" in result.output or "station" in result.output.lower()
-        )
+        assert "Station" in result.output or "station" in result.output.lower()
         assert "Frequenc" in result.output or "freq" in result.output.lower()
 
     def test_json_output(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["avg", "info", str(_K2_AVG), "--format", "json"]
-        )
+        result = runner.invoke(main, ["avg", "info", str(_K2_AVG), "--format", "json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["n_stations"] > 0
@@ -95,19 +91,13 @@ class TestAvgInfo:
         assert "frequency_range" in data
 
     def test_csv_output(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["avg", "info", str(_K2_AVG), "--format", "csv"]
-        )
+        result = runner.invoke(main, ["avg", "info", str(_K2_AVG), "--format", "csv"])
         assert result.exit_code == 0
         lines = [ln for ln in result.output.strip().splitlines() if ln]
-        assert (
-            "project" in lines[0].lower() or "n_stations" in lines[0].lower()
-        )
+        assert "project" in lines[0].lower() or "n_stations" in lines[0].lower()
 
     def test_project_in_output(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["avg", "info", str(_K2_AVG), "--format", "json"]
-        )
+        result = runner.invoke(main, ["avg", "info", str(_K2_AVG), "--format", "json"])
         data = json.loads(result.output)
         assert data["project"]  # non-empty project name
 
@@ -294,18 +284,11 @@ class TestAvgCorrect:
             pytest.skip("data/avg/K2.AVG not found")
 
     def test_dry_run(self, runner: CliRunner) -> None:
-        result = runner.invoke(
-            main, ["avg", "correct", str(_K2_AVG), "--dry-run"]
-        )
+        result = runner.invoke(main, ["avg", "correct", str(_K2_AVG), "--dry-run"])
         assert result.exit_code == 0
-        assert (
-            "dry" in result.output.lower()
-            or "method" in result.output.lower()
-        )
+        assert "dry" in result.output.lower() or "method" in result.output.lower()
 
-    def test_static_shift_text(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_static_shift_text(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -322,9 +305,7 @@ class TestAvgCorrect:
         written = list(tmp_path.glob("*.avg"))
         assert len(written) == 1
 
-    def test_static_shift_json(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_static_shift_json(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -343,13 +324,9 @@ class TestAvgCorrect:
         data = json.loads(result.output)
         assert "output" in data
         assert "corrections" in data
-        assert any(
-            c["correction"] == "static_shift" for c in data["corrections"]
-        )
+        assert any(c["correction"] == "static_shift" for c in data["corrections"])
 
-    def test_shift_factors_reasonable(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_shift_factors_reasonable(self, runner: CliRunner, tmp_path: Path) -> None:
         result = runner.invoke(
             main,
             [
@@ -365,11 +342,7 @@ class TestAvgCorrect:
             ],
         )
         data = json.loads(result.output)
-        ss = next(
-            c
-            for c in data["corrections"]
-            if c["correction"] == "static_shift"
-        )
+        ss = next(c for c in data["corrections"] if c["correction"] == "static_shift")
         # Shift factors should be finite and in a reasonable range
         assert ss["shift_min"] > 0
         assert ss["shift_max"] < 1e6
@@ -391,9 +364,7 @@ class TestAvgCorrect:
 
     def test_no_output_dir_uses_dot(self, runner: CliRunner) -> None:
         # Default output_dir is "." — should still work
-        result = runner.invoke(
-            main, ["avg", "correct", str(_K2_AVG), "--dry-run"]
-        )
+        result = runner.invoke(main, ["avg", "correct", str(_K2_AVG), "--dry-run"])
         assert result.exit_code == 0
 
 
@@ -544,11 +515,7 @@ class TestAvgHelpers:
         from pycsamt.cli.commands.avg._base import _get_avg
 
         obj = _get_avg(_K2_AVG)
-        qc = [
-            c
-            for c in obj.df.columns
-            if c.startswith("pc_") or c.startswith("s_")
-        ]
+        qc = [c for c in obj.df.columns if c.startswith("pc_") or c.startswith("s_")]
         assert len(qc) > 0
 
     def test_k2_summary_fields(self) -> None:

@@ -50,9 +50,7 @@ def test_parse_lat_lon_elev_variants():
     assert parse_lat("45.5") == pytest.approx(45.5)
     assert parse_lat("45 30 0 S") == pytest.approx(-45.5)
     assert parse_lon("123W") == pytest.approx(-123.0)
-    assert parse_lon("123 15 30 E") == pytest.approx(
-        123 + 15 / 60 + 30 / 3600
-    )
+    assert parse_lon("123 15 30 E") == pytest.approx(123 + 15 / 60 + 30 / 3600)
 
     assert parse_elev("1200") == 1200.0
     assert math.isnan(parse_elev("oops"))

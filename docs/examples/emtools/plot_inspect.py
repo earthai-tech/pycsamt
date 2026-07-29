@@ -182,9 +182,7 @@ plot_station_response(surveys["KAP03"], station="kap151")
 from pycsamt.emtools import smooth_mavg  # noqa: E402
 
 smoothed = smooth_mavg(surveys["KAP03"], k=5)
-plot_station_response(
-    surveys["KAP03"], station="kap151", sites_model=smoothed
-)
+plot_station_response(surveys["KAP03"], station="kap151", sites_model=smoothed)
 
 # %%
 # **Reading this figure.** The dashed "model" line tracks the solid

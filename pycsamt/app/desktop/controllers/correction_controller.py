@@ -86,9 +86,7 @@ CATALOGUE: dict[str, dict[str, dict]] = {
             "to estimate the underlying smooth ρ_a trend and derives the "
             "static-shift factor per station.",
             "params": [
-                ParamSpec(
-                    "half_window", "Half window", "spin", 3, (1, 20, 1)
-                ),
+                ParamSpec("half_window", "Half window", "spin", 3, (1, 20, 1)),
                 ParamSpec("poly", "Poly degree", "spin", 1, (1, 3, 1)),
                 ParamSpec(
                     "it",
@@ -98,9 +96,7 @@ CATALOGUE: dict[str, dict[str, dict]] = {
                     (1, 10, 1),
                     "Robust re-weighting iterations.",
                 ),
-                ParamSpec(
-                    "max_skew", "Max skew (°)", "dspin", 6.0, (0.5, 45.0, 0.5)
-                ),
+                ParamSpec("max_skew", "Max skew (°)", "dspin", 6.0, (0.5, 45.0, 0.5)),
             ],
         },
         "Bilateral filter": {
@@ -109,12 +105,8 @@ CATALOGUE: dict[str, dict[str, dict]] = {
             "kernels so that sharp lateral ρ_a contrasts (geology) are "
             "preserved while smoothing the static contribution.",
             "params": [
-                ParamSpec(
-                    "half_window", "Half window", "spin", 4, (1, 20, 1)
-                ),
-                ParamSpec(
-                    "max_skew", "Max skew (°)", "dspin", 6.0, (0.5, 45.0, 0.5)
-                ),
+                ParamSpec("half_window", "Half window", "spin", 4, (1, 20, 1)),
+                ParamSpec("max_skew", "Max skew (°)", "dspin", 6.0, (0.5, 45.0, 0.5)),
             ],
         },
         "Reference median": {
@@ -131,9 +123,7 @@ CATALOGUE: dict[str, dict[str, dict]] = {
                     (0, 5, 1),
                     "Optional pre-smoothing iterations (0 = none).",
                 ),
-                ParamSpec(
-                    "max_skew", "Max skew (°)", "dspin", 6.0, (0.5, 45.0, 0.5)
-                ),
+                ParamSpec("max_skew", "Max skew (°)", "dspin", 6.0, (0.5, 45.0, 0.5)),
             ],
         },
         "Hanning EMAP (Torres-Verdín)": {
@@ -156,9 +146,7 @@ CATALOGUE: dict[str, dict[str, dict]] = {
                     200.0,
                     (10.0, 2000.0, 10.0),
                 ),
-                ParamSpec(
-                    "comp", "Component", "combo", "det", ["det", "xy", "yx"]
-                ),
+                ParamSpec("comp", "Component", "combo", "det", ["det", "xy", "yx"]),
             ],
         },
     },
@@ -169,9 +157,7 @@ CATALOGUE: dict[str, dict[str, dict]] = {
             "from the impedance tensor via masking or linear interpolation "
             "over affected frequency bins.",
             "params": [
-                ParamSpec(
-                    "mains_hz", "Mains (Hz)", "dspin", 50.0, (40.0, 70.0, 1.0)
-                ),
+                ParamSpec("mains_hz", "Mains (Hz)", "dspin", 50.0, (40.0, 70.0, 1.0)),
                 ParamSpec(
                     "n_harm",
                     "Harmonics",
@@ -836,9 +822,7 @@ class CorrectionStep:
     fn_name: str
     kwargs: dict[str, Any]
     sites_after: Any  # Sites — result (unchanged for coord steps)
-    coords_df: Any = field(
-        default=None
-    )  # pd.DataFrame — only for coord corrections
+    coords_df: Any = field(default=None)  # pd.DataFrame — only for coord corrections
     index: int = field(default=0)
 
 
@@ -857,9 +841,7 @@ class CorrectionController:
     def __init__(self) -> None:
         self._raw_sites = None
         self._raw_coords_df = None  # snapshot taken at set_raw_sites
-        self._preview_coords_df = (
-            None  # result of last Preview for coord corrections
-        )
+        self._preview_coords_df = None  # result of last Preview for coord corrections
         self._stack: list[CorrectionStep] = []
         self.dark: bool = True
 
@@ -963,12 +945,8 @@ class CorrectionController:
                 )
 
                 _cdf = self.current_coords_df()
-                base_df = (
-                    _cdf if _cdf is not None else self._raw_coords_df
-                ).copy()
-                corrected_df = apply_coord_correction_to_df(
-                    fn_name, base_df, **kwargs
-                )
+                base_df = (_cdf if _cdf is not None else self._raw_coords_df).copy()
+                corrected_df = apply_coord_correction_to_df(fn_name, base_df, **kwargs)
                 self._preview_coords_df = corrected_df
                 return corrected_df  # window uses this as the "after" df
             except Exception:
@@ -982,9 +960,7 @@ class CorrectionController:
             self._preview_coords_df = None
             raise  # re-raise so window can show the message
 
-    def apply(
-        self, fn_name: str, kwargs: dict, label: str
-    ) -> CorrectionStep | None:
+    def apply(self, fn_name: str, kwargs: dict, label: str) -> CorrectionStep | None:
         """Compute correction and push it to the stack. Returns the new step."""
         if fn_name in _STRAT_FN_NAMES:
             try:
@@ -998,9 +974,7 @@ class CorrectionController:
                     index=len(self._stack),
                 )
                 self._stack.append(step)
-                self._raw_sites = (
-                    self._raw_sites or result
-                )  # bootstrap if needed
+                self._raw_sites = self._raw_sites or result  # bootstrap if needed
                 return step
             except Exception:
                 raise
@@ -1013,12 +987,8 @@ class CorrectionController:
                 )
 
                 _cdf = self.current_coords_df()
-                base_df = (
-                    _cdf if _cdf is not None else self._raw_coords_df
-                ).copy()
-                corrected_df = apply_coord_correction_to_df(
-                    fn_name, base_df, **kwargs
-                )
+                base_df = (_cdf if _cdf is not None else self._raw_coords_df).copy()
+                corrected_df = apply_coord_correction_to_df(fn_name, base_df, **kwargs)
                 step = CorrectionStep(
                     label=label,
                     fn_name=fn_name,
@@ -1118,9 +1088,7 @@ class CorrectionController:
     ):
         """Run QualityController; stores report_; returns corrected Sites."""
         if not self._strat_edi_objects:
-            raise RuntimeError(
-                "No EDI directory loaded — use 'Load EDI Dir' first."
-            )
+            raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         from pycsamt.stratagem.qc import QualityController
 
         qc = QualityController(
@@ -1145,9 +1113,7 @@ class CorrectionController:
     ):
         """Apply StaticShiftCorrector; stores factors_; returns corrected Sites."""
         if not self._strat_edi_objects:
-            raise RuntimeError(
-                "No EDI directory loaded — use 'Load EDI Dir' first."
-            )
+            raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
 
         from pycsamt.stratagem.process import (
@@ -1184,9 +1150,7 @@ class CorrectionController:
     ):
         """Apply NoiseRemover (notch + Hampel + optional smoothing)."""
         if not self._strat_edi_objects:
-            raise RuntimeError(
-                "No EDI directory loaded — use 'Load EDI Dir' first."
-            )
+            raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
 
         from pycsamt.stratagem.process import NoiseRemover
@@ -1206,14 +1170,10 @@ class CorrectionController:
         self._strat_edi_objects = remover.edi_objects_
         return self._edi_objects_to_sites(self._strat_edi_objects)
 
-    def _strat_freq_filter(
-        self, fmin=0.0, fmax=0.0, snr_thresh=2.5, min_frac=0.4, **_
-    ):
+    def _strat_freq_filter(self, fmin=0.0, fmax=0.0, snr_thresh=2.5, min_frac=0.4, **_):
         """Apply FrequencyFilter (band limits + incoherence mask)."""
         if not self._strat_edi_objects:
-            raise RuntimeError(
-                "No EDI directory loaded — use 'Load EDI Dir' first."
-            )
+            raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
 
         from pycsamt.stratagem.qc import FrequencyFilter
@@ -1229,14 +1189,10 @@ class CorrectionController:
         self._strat_edi_objects = ff.edi_objects_
         return self._edi_objects_to_sites(self._strat_edi_objects)
 
-    def _strat_full_pipeline(
-        self, mains_hz=50.0, half_window=3, max_skew=6.0, **_
-    ):
+    def _strat_full_pipeline(self, mains_hz=50.0, half_window=3, max_skew=6.0, **_):
         """Run the complete Stratagem pipeline: QC → filter → SS → noise."""
         if not self._strat_edi_objects:
-            raise RuntimeError(
-                "No EDI directory loaded — use 'Load EDI Dir' first."
-            )
+            raise RuntimeError("No EDI directory loaded — use 'Load EDI Dir' first.")
         import copy
 
         from pycsamt.stratagem.process import (
@@ -1303,9 +1259,7 @@ class CorrectionController:
                 dest = out_path / f"{name}.edi"
                 if dest.exists() and not overwrite:
                     dest = out_path / f"{name}_corr.edi"
-                edi.write_edifile(
-                    savepath=str(out_path), new_edifilename=dest.stem
-                )
+                edi.write_edifile(savepath=str(out_path), new_edifilename=dest.stem)
                 written += 1
             except Exception:
                 pass
@@ -1335,9 +1289,7 @@ class CorrectionController:
             return
         df = self._strat_qc_report
         stations = (
-            df["station"].values
-            if "station" in df.columns
-            else np.arange(len(df))
+            df["station"].values if "station" in df.columns else np.arange(len(df))
         )
         n = len(stations)
         from pycsamt.compat.matplotlib import get_cmap
@@ -1364,9 +1316,7 @@ class CorrectionController:
             ax.barh(
                 np.arange(n),
                 vals,
-                color=get_cmap(cmaps[col])(
-                    vals / (np.nanmax(vals) + 1e-12)
-                ),
+                color=get_cmap(cmaps[col])(vals / (np.nanmax(vals) + 1e-12)),
                 edgecolor=s["spine"],
                 lw=0.5,
             )
@@ -1378,9 +1328,7 @@ class CorrectionController:
                 sp.set_edgecolor(s["spine"])
             # Flag markers
             if "flagged" in df.columns:
-                for i, (flag, v) in enumerate(
-                    zip(df["flagged"].values, vals)
-                ):
+                for i, (flag, v) in enumerate(zip(df["flagged"].values, vals)):
                     if flag:
                         ax.text(
                             v,
@@ -1418,11 +1366,7 @@ class CorrectionController:
             return
         df = self._strat_ss_factors
         x = np.arange(len(df))
-        key = (
-            "delta_log10_rho"
-            if "delta_log10_rho" in df.columns
-            else df.columns[1]
-        )
+        key = "delta_log10_rho" if "delta_log10_rho" in df.columns else df.columns[1]
         vals = df[key].values.astype(float)
         colors = ["#f38ba8" if v < 0 else "#a6e3a1" for v in vals]
         ax.bar(x, vals, color=colors, edgecolor=s["spine"], linewidth=0.5)
@@ -1439,19 +1383,13 @@ class CorrectionController:
     def _replay_from(self, index: int) -> None:
         # Coord steps don't need replay (they use cumulative DataFrame ops)
         # Only replay impedance/rotation steps
-        base = (
-            self._stack[index - 1].sites_after
-            if index > 0
-            else self._raw_sites
-        )
+        base = self._stack[index - 1].sites_after if index > 0 else self._raw_sites
         for step in self._stack[index:]:
             if step.fn_name in _COORD_FN_NAMES:
                 step.sites_after = base  # sites unchanged for coord steps
                 continue
             try:
-                step.sites_after = self._call_fn(
-                    step.fn_name, base, **step.kwargs
-                )
+                step.sites_after = self._call_fn(step.fn_name, base, **step.kwargs)
             except Exception:
                 step.sites_after = base
             base = step.sites_after
@@ -1504,9 +1442,7 @@ class CorrectionController:
             max_skew=max_skew,
             verbose=0,
         )
-        return et.apply_ss_factors(
-            sites, tbl, key="fac_z", inplace=False, verbose=0
-        )
+        return et.apply_ss_factors(sites, tbl, key="fac_z", inplace=False, verbose=0)
 
     @staticmethod
     def _wrap_ss_bilateral(sites, half_window=4, max_skew=6.0, **_):
@@ -1518,9 +1454,7 @@ class CorrectionController:
             max_skew=max_skew,
             verbose=0,
         )
-        return et.apply_ss_factors(
-            sites, tbl, key="fac_z", inplace=False, verbose=0
-        )
+        return et.apply_ss_factors(sites, tbl, key="fac_z", inplace=False, verbose=0)
 
     @staticmethod
     def _wrap_ss_refmedian(sites, smooth_sites=0, max_skew=6.0, **_):
@@ -1532,17 +1466,13 @@ class CorrectionController:
             max_skew=max_skew,
             verbose=0,
         )
-        return et.apply_ss_factors(
-            sites, tbl, key="fac_z", inplace=False, verbose=0
-        )
+        return et.apply_ss_factors(sites, tbl, key="fac_z", inplace=False, verbose=0)
 
     @staticmethod
     def _wrap_near_field(sites, source_offset=500.0, **_):
         import pycsamt.emtools as et
 
-        return et.correct_near_field(
-            sites, source_offset, inplace=False, verbose=0
-        )
+        return et.correct_near_field(sites, source_offset, inplace=False, verbose=0)
 
     # ── Tensor rotation wrappers ──────────────────────────────────────────────
 
@@ -1574,9 +1504,7 @@ class CorrectionController:
         )
         rotated_items = []
         for _i, ed in enumerate(_iter_items(S)):
-            Si = ensure_sites(
-                [getattr(ed, "edi", ed)], recursive=False, strict=False
-            )
+            Si = ensure_sites([getattr(ed, "edi", ed)], recursive=False, strict=False)
             ang = 0.0
             try:
                 r = _compute.strike_estimate(Si, method=method)
@@ -1603,9 +1531,7 @@ class CorrectionController:
             return Sites(edic=EDICollection(items=raw_edis))
 
     @staticmethod
-    def _wrap_rotate_pt_strike(
-        sites, band_lo=0.001, band_hi=1000.0, robust=True, **_
-    ):
+    def _wrap_rotate_pt_strike(sites, band_lo=0.001, band_hi=1000.0, robust=True, **_):
         import pycsamt.emtools as et
         from pycsamt.emtools._core import (
             _iter_items,
@@ -1631,9 +1557,7 @@ class CorrectionController:
         for i, ed in enumerate(_iter_items(S)):
             st = _name(ed, i)
             ang = float(angle_map.get(st, 0.0))
-            Si = ensure_sites(
-                [getattr(ed, "edi", ed)], recursive=False, strict=False
-            )
+            Si = ensure_sites([getattr(ed, "edi", ed)], recursive=False, strict=False)
             ri = _edit.rotate_all(Si, ang, inplace=False)
             rotated_items.extend(list(_iter_items(ri)))
 
@@ -1660,9 +1584,7 @@ class CorrectionController:
             df = _get_coords_df(S)
             v = df.dropna(subset=["lat", "lon"])
             if len(v) >= 2:
-                east, north, _ = _to_utm_arrays(
-                    v["lat"].values, v["lon"].values
-                )
+                east, north, _ = _to_utm_arrays(v["lat"].values, v["lon"].values)
                 azimuth = _pca_azimuth(east, north)
             else:
                 azimuth = 0.0
@@ -1671,9 +1593,7 @@ class CorrectionController:
     # ── Coordinate correction wrappers ────────────────────────────────────────
 
     @staticmethod
-    def _coord_profile_projection(
-        sites, azimuth=-1.0, keep_elevation=True, **_
-    ):
+    def _coord_profile_projection(sites, azimuth=-1.0, keep_elevation=True, **_):
         from pycsamt.gis.coord_correction import (
             correct_profile_projection,
         )
@@ -1725,9 +1645,7 @@ class CorrectionController:
         )
 
     @staticmethod
-    def _coord_shift(
-        sites, delta_lat=0.0, delta_lon=0.0, delta_elev=0.0, **_
-    ):
+    def _coord_shift(sites, delta_lat=0.0, delta_lon=0.0, delta_elev=0.0, **_):
         from pycsamt.gis.coord_correction import (
             correct_coordinate_shift,
         )
@@ -1814,9 +1732,7 @@ class CorrectionController:
         ax.tick_params(colors=s["tick"], labelsize=7)
         for sp in ax.spines.values():
             sp.set_edgecolor(s["spine"])
-        ax.grid(
-            True, which="both", color=s["grid"], alpha=0.25, ls="--", lw=0.5
-        )
+        ax.grid(True, which="both", color=s["grid"], alpha=0.25, ls="--", lw=0.5)
 
     def plot_rho_pseudosection(
         self,
@@ -2103,12 +2019,8 @@ class CorrectionController:
 
             ax.legend(
                 [
-                    Line2D(
-                        [0], [0], color="white", ls="--", lw=0.8, alpha=0.6
-                    ),
-                    Line2D(
-                        [0], [0], color="white", ls="-", lw=1.1, alpha=0.9
-                    ),
+                    Line2D([0], [0], color="white", ls="--", lw=0.8, alpha=0.6),
+                    Line2D([0], [0], color="white", ls="-", lw=1.1, alpha=0.9),
                 ],
                 ["Before", "After"],
                 fontsize=7,
@@ -2123,15 +2035,11 @@ class CorrectionController:
 
         ax.set_xlabel("Period (s)", fontsize=8, color=s["fg"])
         ax.set_ylabel("ρ_a  [Ω·m]", fontsize=8, color=s["fg"])
-        ax.set_title(
-            "Before / After overlay", fontsize=9, color=s["title"], pad=5
-        )
+        ax.set_title("Before / After overlay", fontsize=9, color=s["title"], pad=5)
         ax.tick_params(colors=s["tick"], labelsize=7)
         for sp in ax.spines.values():
             sp.set_edgecolor(s["spine"])
-        ax.grid(
-            True, which="both", color=s["grid"], alpha=0.25, ls="--", lw=0.5
-        )
+        ax.grid(True, which="both", color=s["grid"], alpha=0.25, ls="--", lw=0.5)
 
     def plot_diff(self, before, after, ax) -> None:
         """Relative change (ρ_after − ρ_before) / ρ_before × 100 % per station."""
@@ -2168,9 +2076,7 @@ class CorrectionController:
                     continue
                 # field-unit ρ_a = 0.2·|Z|²/f (see plot_rho_curves note)
                 rho_b = 0.2 * np.abs(zb[:, 0, 1]) ** 2 / np.maximum(fb, 1e-30)
-                rho_a_arr = (
-                    0.2 * np.abs(za[:, 0, 1]) ** 2 / np.maximum(fa, 1e-30)
-                )
+                rho_a_arr = 0.2 * np.abs(za[:, 0, 1]) ** 2 / np.maximum(fa, 1e-30)
                 T = 1.0 / np.maximum(fb, 1e-30)
                 ok = np.isfinite(rho_b) & (rho_b > 0) & np.isfinite(rho_a_arr)
                 if ok.sum() < 2:
@@ -2416,9 +2322,7 @@ class CorrectionController:
         )
         ax.set_xlabel("Easting (m)", fontsize=8, color=s["fg"])
         ax.set_ylabel("Northing (m)", fontsize=8, color=s["fg"])
-        ax.set_title(
-            "Station positions — overlay", fontsize=9, color=s["title"], pad=5
-        )
+        ax.set_title("Station positions — overlay", fontsize=9, color=s["title"], pad=5)
         ax.tick_params(colors=s["tick"], labelsize=7)
         for sp in ax.spines.values():
             sp.set_edgecolor(s["spine"])
@@ -2445,9 +2349,7 @@ class CorrectionController:
             return
 
         try:
-            east, north, _ = _to_utm_arrays(
-                valid["lat"].values, valid["lon"].values
-            )
+            east, north, _ = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
             az_rad = np.radians(_pca_azimuth(east, north))
             ue, un = np.sin(az_rad), np.cos(az_rad)
             oe, on_ = east.mean(), north.mean()
@@ -2517,9 +2419,7 @@ class CorrectionController:
 
         ax.set_xlabel("Profile distance (km)", fontsize=8, color=s["fg"])
         ax.set_ylabel("Elevation (m)", fontsize=8, color=s["fg"])
-        ax.set_title(
-            title or "Elevation profile", fontsize=9, color=s["title"], pad=5
-        )
+        ax.set_title(title or "Elevation profile", fontsize=9, color=s["title"], pad=5)
         ax.tick_params(colors=s["tick"], labelsize=7)
         for sp in ax.spines.values():
             sp.set_edgecolor(s["spine"])
@@ -2527,9 +2427,7 @@ class CorrectionController:
 
     # ── Elevation overlay (before + after on one axis) ───────────────────────
 
-    def plot_station_elevation_overlay(
-        self, before_data, after_data, ax
-    ) -> None:
+    def plot_station_elevation_overlay(self, before_data, after_data, ax) -> None:
         """
         Plot both the before and after elevation profiles on a single axis.
 
@@ -2779,9 +2677,7 @@ class CorrectionController:
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)  # clockwise = geographic convention
         ax.set_xticks(np.radians([0, 45, 90, 135]))
-        ax.set_xticklabels(
-            ["N", "NE", "E", "SE"], fontsize=6, color=s["tick"]
-        )
+        ax.set_xticklabels(["N", "NE", "E", "SE"], fontsize=6, color=s["tick"])
         ax.yaxis.set_tick_params(labelsize=5, colors=s["tick"])
         ax.grid(True, color=s["grid"], alpha=0.3, lw=0.5)
 
@@ -2810,19 +2706,13 @@ class CorrectionController:
             if merged.empty:
                 _empty(ax, "No matching stations", s)
                 return
-            merged = merged.dropna(
-                subset=["lat_b", "lon_b", "lat_a", "lon_a"]
-            )
+            merged = merged.dropna(subset=["lat_b", "lon_b", "lat_a", "lon_a"])
             if merged.empty:
                 _empty(ax, "No valid coordinates to compare", s)
                 return
 
-            eb, nb, _ = _to_utm_arrays(
-                merged["lat_b"].values, merged["lon_b"].values
-            )
-            ea, na, _ = _to_utm_arrays(
-                merged["lat_a"].values, merged["lon_a"].values
-            )
+            eb, nb, _ = _to_utm_arrays(merged["lat_b"].values, merged["lon_b"].values)
+            ea, na, _ = _to_utm_arrays(merged["lat_a"].values, merged["lon_a"].values)
             horiz_disp = np.sqrt((ea - eb) ** 2 + (na - nb) ** 2)
             elev_disp = merged["elev_a"].values - merged["elev_b"].values
 
@@ -2856,9 +2746,7 @@ class CorrectionController:
             return
 
         ax.set_xlabel("Displacement (m)", fontsize=8, color=s["fg"])
-        ax.set_title(
-            "Position change per station", fontsize=9, color=s["title"], pad=5
-        )
+        ax.set_title("Position change per station", fontsize=9, color=s["title"], pad=5)
         ax.tick_params(colors=s["tick"], labelsize=7)
         for sp in ax.spines.values():
             sp.set_edgecolor(s["spine"])

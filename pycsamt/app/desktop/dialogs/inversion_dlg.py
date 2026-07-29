@@ -127,17 +127,13 @@ class InversionWizardDialog(QDialog):
         layout = QVBoxLayout(w)
 
         layout.addWidget(
-            QLabel(
-                "Select the stations / profile to invert and the output directory."
-            )
+            QLabel("Select the stations / profile to invert and the output directory.")
         )
 
         # Station list
         layout.addWidget(QLabel("Available stations:"))
         self._station_list = QListWidget()
-        self._station_list.setSelectionMode(
-            QListWidget.SelectionMode.ExtendedSelection
-        )
+        self._station_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         if self._sites is not None:
             for site in self._sites.as_list():
                 self._station_list.addItem(QListWidgetItem(site.name))
@@ -350,9 +346,7 @@ class InversionWizardDialog(QDialog):
 
         workdir = self._workdir_edit.text().strip()
         if not workdir:
-            self._run_log.appendPlainText(
-                "ERROR: no working directory specified."
-            )
+            self._run_log.appendPlainText("ERROR: no working directory specified.")
             return
 
         Path(workdir).mkdir(parents=True, exist_ok=True)
@@ -381,9 +375,7 @@ class InversionWizardDialog(QDialog):
         selected = self._selected_sites()
         try:
             self._run_log.appendPlainText("Building Occam2D input files…")
-            builder = InputBuilder(
-                source=selected, workdir=workdir, config=config
-            )
+            builder = InputBuilder(source=selected, workdir=workdir, config=config)
             builder.build()
             self._run_log.appendPlainText("Input files written.")
         except Exception as exc:
@@ -434,9 +426,7 @@ class InversionWizardDialog(QDialog):
         try:
             self._result_text.setPlainText(result.summary)
         except Exception:
-            self._result_text.setPlainText(
-                "Inversion completed successfully."
-            )
+            self._result_text.setPlainText("Inversion completed successfully.")
         self._btn_open_viewer.setEnabled(True)
 
     @Slot(str)
@@ -452,9 +442,7 @@ class InversionWizardDialog(QDialog):
         """Return a Sites subset from the list selection, or all sites."""
         if self._sites is None:
             return None
-        selected_names = {
-            item.text() for item in self._station_list.selectedItems()
-        }
+        selected_names = {item.text() for item in self._station_list.selectedItems()}
         if not selected_names:
             return self._sites
         try:

@@ -99,11 +99,11 @@ class AVGFrame:
     --------
     >>> import pandas as pd
     >>> from pycsamt.zonge.base import AVGFrame
-    >>> df = pd.DataFrame({'Resistivity': [100], 'Freq': [1024]})
-    >>> frame = AVGFrame(data=df, meta={'Survey.Type': 'CSAMT'})
+    >>> df = pd.DataFrame({"Resistivity": [100], "Freq": [1024]})
+    >>> frame = AVGFrame(data=df, meta={"Survey.Type": "CSAMT"})
     >>> print(frame.data.columns)
     Index(['rho', 'freq'], dtype='object')
-    >>> print(frame.meta['Survey.Type'])
+    >>> print(frame.meta["Survey.Type"])
     CSAMT
 
     See Also
@@ -160,8 +160,7 @@ class AVGFrame:
         cols = ", ".join(self.columns[:6])
         tail = "…" if len(self.columns) > 6 else ""
         return (
-            f"AVGFrame[{self.nrows}×{len(self.columns)}]"
-            f"{src} cols=[{cols}{tail}]"
+            f"AVGFrame[{self.nrows}×{len(self.columns)}]" f"{src} cols=[{cols}{tail}]"
         )
 
     def __repr__(self) -> str:
@@ -429,8 +428,7 @@ class AVGComponentBase(ABC):
             frame = AVGFrame(avg, dict(meta or {}))
         else:
             raise TypeError(
-                "from_avg expects Path|AVGFrame|DataFrame|"
-                "(DataFrame, meta) tuple."
+                "from_avg expects Path|AVGFrame|DataFrame|" "(DataFrame, meta) tuple."
             )
 
         obj = cls()
@@ -684,9 +682,7 @@ def guess_kind_from_df(
             if error == "raise":
                 raise AvgDataError(msg)
             elif error == "warn":
-                warnings.warn(
-                    msg + " Defaulting to modern (kind-2).", stacklevel=2
-                )
+                warnings.warn(msg + " Defaulting to modern (kind-2).", stacklevel=2)
                 kind = 2
             # 'ignore'
 

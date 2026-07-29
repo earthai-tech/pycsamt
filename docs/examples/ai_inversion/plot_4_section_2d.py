@@ -44,9 +44,7 @@ def make_section(seed):
     )
     # resistive blob (high rho)
     rx, rz = r.uniform(0.55, 0.85), r.uniform(0.35, 0.75)
-    section += 0.7 * np.exp(
-        -(((s - rx) ** 2) / 0.02 + ((z - rz) ** 2) / 0.04)
-    )
+    section += 0.7 * np.exp(-(((s - rx) ** 2) / 0.02 + ((z - rz) ** 2) / 0.04))
     return section.astype(np.float32)
 
 
@@ -110,9 +108,7 @@ print("predicted sections:", pred.shape)
 
 from pycsamt.ai.plot import plot_section, plot_section_pair
 
-fig = plot_section_pair(
-    Yte[0], pred[0], depth_max=1500.0, station_spacing=1.0
-)
+fig = plot_section_pair(Yte[0], pred[0], depth_max=1500.0, station_spacing=1.0)
 
 # %%
 # The prediction on its own

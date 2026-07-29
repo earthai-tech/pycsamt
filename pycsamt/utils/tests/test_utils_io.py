@@ -90,11 +90,7 @@ def test_parse_stn_profile_comment_lines_skipped(tmp_path):
 
 
 def test_parse_stn_profile_custom_delimiter(tmp_path):
-    content = (
-        "dot,east,north,elev\n"
-        "0,100.0,200.0,10.0\n"
-        "1,110.0,210.0,11.0\n"
-    )
+    content = "dot,east,north,elev\n0,100.0,200.0,10.0\n1,110.0,210.0,11.0\n"
     path = _write(tmp_path, "delim.stn", content)
     result = parse_stn_profile(path, delimiter=",")
     assert result["easting"].tolist() == [100.0, 110.0]
@@ -132,11 +128,7 @@ def test_parse_stn_profile_no_data_after_stripping_comments_raises(tmp_path):
 
 
 def test_parse_stn_profile_alternate_column_name_aliases(tmp_path):
-    content = (
-        "station e n h\n"
-        "0 100.0 200.0 10.0\n"
-        "1 110.0 210.0 11.0\n"
-    )
+    content = "station e n h\n0 100.0 200.0 10.0\n1 110.0 210.0 11.0\n"
     path = _write(tmp_path, "aliases.stn", content)
     result = parse_stn_profile(path)
     assert result["position"].tolist() == [0.0, 1.0]

@@ -72,9 +72,7 @@ class TestPackageQAOffline(unittest.TestCase):
     # ── basic contract ────────────────────────────
 
     def test_execute_returns_success(self):
-        r = self.agent.execute(
-            {"question": ("What does StaticShiftAgent do?")}
-        )
+        r = self.agent.execute({"question": ("What does StaticShiftAgent do?")})
         self.assertEqual(r.status, "success")
 
     def test_answer_key_present(self):
@@ -105,17 +103,13 @@ class TestPackageQAOffline(unittest.TestCase):
         self.assertIn("question", r.error.lower())
 
     def test_uses_request_key_as_fallback(self):
-        r = self.agent.execute(
-            {"request": ("Tell me about StaticShiftAgent")}
-        )
+        r = self.agent.execute({"request": ("Tell me about StaticShiftAgent")})
         self.assertEqual(r.status, "success")
 
     # ── content correctness (offline) ────────────
 
     def test_static_shift_mentions_correction(self):
-        r = self.agent.execute(
-            {"question": ("What does StaticShiftAgent do?")}
-        )
+        r = self.agent.execute({"question": ("What does StaticShiftAgent do?")})
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
@@ -131,9 +125,7 @@ class TestPackageQAOffline(unittest.TestCase):
         )
 
     def test_qc_mentions_quality(self):
-        r = self.agent.execute(
-            {"question": ("What is DataQCAgent used for?")}
-        )
+        r = self.agent.execute({"question": ("What is DataQCAgent used for?")})
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
@@ -167,9 +159,7 @@ class TestPackageQAOffline(unittest.TestCase):
         )
 
     def test_loader_question(self):
-        r = self.agent.execute(
-            {"question": ("How do I load EDI files in pycsamt?")}
-        )
+        r = self.agent.execute({"question": ("How do I load EDI files in pycsamt?")})
         ans = r.data.get("answer", "").lower()
         self.assertTrue(
             any(
@@ -185,9 +175,7 @@ class TestPackageQAOffline(unittest.TestCase):
         )
 
     def test_workflow_question_mentions_workflow(self):
-        r = self.agent.execute(
-            {"question": ("What workflows does pycsamt support?")}
-        )
+        r = self.agent.execute({"question": ("What workflows does pycsamt support?")})
         ans = r.data.get("answer", "").lower()
         # at least one workflow keyword present
         self.assertTrue(
@@ -239,16 +227,12 @@ class TestPackageQAOffline(unittest.TestCase):
         )
 
     def test_excerpts_returned(self):
-        r = self.agent.execute(
-            {"question": ("What does StaticShiftAgent do?")}
-        )
+        r = self.agent.execute({"question": ("What does StaticShiftAgent do?")})
         excerpts = r.data.get("excerpts", [])
         self.assertIsInstance(excerpts, list)
 
     def test_unknown_question_graceful(self):
-        r = self.agent.execute(
-            {"question": ("How do I order pizza with pycsamt?")}
-        )
+        r = self.agent.execute({"question": ("How do I order pizza with pycsamt?")})
         # Should not crash; returns success with
         # a fallback answer
         self.assertEqual(r.status, "success")
@@ -357,8 +341,7 @@ class TestPackageQALive(unittest.TestCase):
 
     def test_sites_class_described_correctly(self):
         ans = self._ask(
-            "What is the Sites class and how do"
-            " I access impedance data from it?"
+            "What is the Sites class and how do" " I access impedance data from it?"
         )
         ans_lower = ans.lower()
         self.assertTrue(
@@ -432,8 +415,12 @@ class TestPackageQALive(unittest.TestCase):
         )
 
     def test_source_is_llm(self):
+        # "llm+rag" is expected whenever retrieval finds relevant context
+        # (the normal case); "llm" is the fallback with no RAG corpus hit.
+        # Either confirms a real LLM call was made, as opposed to an
+        # offline/docstring-only answer.
         r = self.agent.execute({"question": ("What is StaticShiftAgent?")})
-        self.assertEqual(r.data.get("source"), "llm")
+        self.assertIn(r.data.get("source"), ("llm", "llm+rag"))
 
     def test_answer_references_pycsamt(self):
         ans = self._ask("How does pycsamt handle phase tensor analysis?")

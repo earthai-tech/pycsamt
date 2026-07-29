@@ -110,8 +110,7 @@ def check_em_kind(objs, /) -> str:  # _assert_z_or_edi_objs
     # Basic iterable validation (exclude str/bytes).
     if isinstance(objs, (str, bytes)):
         raise TypeError(
-            "Input must be an iterable of Edi or Z objects; "
-            "got 'str'/'bytes'."
+            "Input must be an iterable of Edi or Z objects; got 'str'/'bytes'."
         )
     if not hasattr(objs, "__iter__"):
         raise TypeError("Input must be an iterable of Edi or Z objects.")
@@ -171,8 +170,8 @@ def extract_z_list(objs, /):  # get_z_from
 
     Examples
     --------
-    >>> zs = extract_z_list(list_of_edi)   # from EDI inputs
-    >>> zs = extract_z_list(list_of_z)     # already Z
+    >>> zs = extract_z_list(list_of_edi)  # from EDI inputs
+    >>> zs = extract_z_list(list_of_z)  # already Z
     """
     kind = check_em_kind(objs)
     items = list(objs)
@@ -244,13 +243,13 @@ def parse_tensor(  # validate_tensor
 
     Examples
     --------
-    >>> parse_tensor('zxy')
+    >>> parse_tensor("zxy")
     ('z', 'xy')
-    >>> parse_tensor(tensor='res', component='yx')
+    >>> parse_tensor(tensor="res", component="yx")
     ('resistivity', 'yx')
-    >>> parse_tensor('freq')
+    >>> parse_tensor("freq")
     ('_freq', None)
-    >>> parse_tensor('resx')
+    >>> parse_tensor("resx")
     Traceback (most recent call last):
         ...
     ValueError: 'Resistivity' component is missing...
@@ -392,7 +391,7 @@ def align_tensor(  # fittensor
     --------
     >>> ref_freq = np.linspace(7e7, 1.0, 20)
     >>> site_freq = np.hstack([ref_freq[:7], ref_freq[12:]])
-    >>> z = np.random.randn(len(site_freq)) + 1j*np.random.randn(
+    >>> z = np.random.randn(len(site_freq)) + 1j * np.random.randn(
     ...     len(site_freq)
     ... )
     >>> z_aligned = align_tensor(ref_freq, site_freq, z)
@@ -493,9 +492,7 @@ def export_edis(  # exportEDIS
     # Ensure we truly have EDI objects (no Z objects mixed in).
     kind = check_em_kind(edi_objs)
     if kind != "EDI":
-        raise EdIDataError(
-            "Expected a collection of EDI objects; got non-EDI items."
-        )
+        raise EdIDataError("Expected a collection of EDI objects; got non-EDI items.")
 
     # Normalize containers (accept tuples/generators, exclude strings).
     edi_objs = is_iterable(
@@ -609,12 +606,10 @@ def plot_confidence(  # plot_confidence_in
     Examples
     --------
     >>> ax = plot_confidence(
-    ...     emobj.ediObjs_, distance=20, view='2d',
-    ...     figsize=(6, 2)
+    ...     emobj.ediObjs_, distance=20, view="2d", figsize=(6, 2)
     ... )
     >>> ax = plot_confidence(
-    ...     emobj.ediObjs_, distance=20, view='1d',
-    ...     figsize=(6, 3), fontsize=5
+    ...     emobj.ediObjs_, distance=20, view="1d", figsize=(6, 3), fontsize=5
     ... )
     """
     # Lazy import shared by 1D path only; 2D plot2d imported inside block.
@@ -682,11 +677,7 @@ def plot_confidence(  # plot_confidence_in
         )
 
         # Optional outlier removal for cleaner 2-D maps.
-        ar2d = (
-            remove_outliers(rerr, fill_value=np.nan)
-            if drop_outliers
-            else rerr
-        )
+        ar2d = remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
 
         ax = plot2d(
             ar2d,
@@ -899,7 +890,7 @@ def tensor2d(  # get2dtensor
 
     Examples
     --------
-    >>> phase_yx = tensor2d(data, tensor='phase', component='yx')
+    >>> phase_yx = tensor2d(data, tensor="phase", component="yx")
     >>> phase_yx.shape
     (56, 7)
     """
@@ -916,9 +907,7 @@ def tensor2d(  # get2dtensor
             "Use a dedicated frequency-to-2D helper instead."
         )
     if z_or_edis_obj_list is None:
-        raise EMError(
-            f"Cannot build {name!r} 2D matrix from a missing collection."
-        )
+        raise EMError(f"Cannot build {name!r} 2D matrix from a missing collection.")
 
     # Ensure the collection is homogeneous (all EDI or all Z).
     kind_in = check_em_kind(z_or_edis_obj_list)
@@ -1074,7 +1063,7 @@ def compute_qc(
 
     Examples
     --------
-    >>> rate, = compute_qc(data)
+    >>> (rate,) = compute_qc(data)
     >>> rate, freqs = compute_qc(data, return_freq=True)
     >>> rep = compute_qc(data, return_qco=True)
     >>> rep.rate_, rep.component_, rep.freqs_.shape
@@ -1361,8 +1350,11 @@ def plot_station_tensors(  # plot_tensors2
     --------
     >>> z = plot_station_tensors(edi_list, station=3)
     >>> z = plot_station_tensors(
-    ...     edi_list, station="S00", plot_z=True,
-    ...     show_error_bars=False, color_mode="bw"
+    ...     edi_list,
+    ...     station="S00",
+    ...     plot_z=True,
+    ...     show_error_bars=False,
+    ...     color_mode="bw",
     ... )
     """
     # Some code paths historically used `zplot=...`; accept alias.
@@ -1421,8 +1413,7 @@ def _parse_station_index(station: int | str) -> int:
     m = re.search(r"\\d+", str(station), flags=re.IGNORECASE)
     if m is None:
         raise TypeError(
-            "Station should be an integer or include a position "
-            "number, e.g., 'S00'."
+            "Station should be an integer or include a position " "number, e.g., 'S00'."
         )
     return int(m.group())
 
@@ -1510,8 +1501,7 @@ def _apply_filters(
     # If both are provided, prefer freq limits.
     if freq_limits is not None and period_limits is not None:
         print(
-            "Both 'freq_limits' and 'period_limits' provided. "
-            "Using 'freq_limits'."
+            "Both 'freq_limits' and 'period_limits' provided. " "Using 'freq_limits'."
         )
         period_limits = None
 
@@ -1522,9 +1512,7 @@ def _apply_filters(
             or len(period_limits) != 2
             or not all(isinstance(x, (int, float)) for x in period_limits)
         ):
-            raise ValueError(
-                "period_limits must be (min_period, max_period)."
-            )
+            raise ValueError("period_limits must be (min_period, max_period).")
         p_min, p_max = sorted(period_limits)
         # f = 1 / T
         freq_limits = (1.0 / p_max, 1.0 / p_min)
@@ -1731,12 +1719,8 @@ def _draw_station_panels(
         ax_r.set_xscale("log")
         ax_r.set_yscale("log")
         ax_p.set_xscale("log")
-        ax_r.grid(
-            True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5
-        )
-        ax_p.grid(
-            True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5
-        )
+        ax_r.grid(True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5)
+        ax_p.grid(True, which="both", ls="--", lw=0.5, color="gray", alpha=0.5)
 
         # Data-driven y limits (guard against non-finite).
         def _finite_min_max(a: np.ndarray) -> tuple[float, float]:
@@ -1765,9 +1749,7 @@ def _draw_station_panels(
 
         if i == 0:
             ax_r.set_ylabel(
-                "Re[Z] (mV/km·nT)"
-                if plot_z
-                else r"App. Res. ($\Omega\cdot m$)",
+                "Re[Z] (mV/km·nT)" if plot_z else r"App. Res. ($\Omega\cdot m$)",
                 fontsize=kwargs.get("font_size", font_size),
             )
             ax_p.set_ylabel(
@@ -1878,7 +1860,7 @@ def wrap_phase(
 
     Examples
     --------
-    >>> x = np.array([-540, -180,   0, 180, 360, 540])
+    >>> x = np.array([-540, -180, 0, 180, 360, 540])
     >>> # Default: [0, 360)
     >>> wrap_phase(x, mod_base=360)
     array([180., 180.,   0., 180.,   0., 180.])
@@ -1909,10 +1891,7 @@ def wrap_phase(
     if np.isscalar(value_range):
         vmin, vmax = 0.0, float(value_range)
     else:
-        if (
-            not isinstance(value_range, (tuple, list))
-            or len(value_range) != 2
-        ):
+        if not isinstance(value_range, (tuple, list)) or len(value_range) != 2:
             raise ValueError(
                 "value_range must be None, a scalar, or a tuple/list "
                 "of two values (min, max)."
@@ -1980,7 +1959,7 @@ def plot_tensors(
 
     Examples
     --------
-    >>> z = plot_tensors(edi_list, station='S03', zplot=True)
+    >>> z = plot_tensors(edi_list, station="S03", zplot=True)
     >>> z = plot_tensors(edi_list, station=0, show_error_bars=True)
     """
     # Reuse the modern implementation; keep legacy param names.
@@ -2218,17 +2197,12 @@ def plot_lcurve(
             hansen_point = _hansen_knee(rough_arr, rms_arr)
 
         if hansen_point is not None:
-            if not (
-                isinstance(hansen_point, (tuple, list))
-                and len(hansen_point) == 2
-            ):
+            if not (isinstance(hansen_point, (tuple, list)) and len(hansen_point) == 2):
                 raise ValueError(
                     "Hansen knee point must be a tuple '(roughness, rms)'."
                 )
             hx, hy = float(hansen_point[0]), float(hansen_point[1])
-            hpoint_kws = _merge_plot_kws(
-                hpoint_kws, {"marker": "o", "color": "red"}
-            )
+            hpoint_kws = _merge_plot_kws(hpoint_kws, {"marker": "o", "color": "red"})
             ax.plot(hx, hy, **hpoint_kws)
             ax.annotate(
                 f"{hx:g}",
@@ -2240,9 +2214,7 @@ def plot_lcurve(
 
         # Annotate tau values at each point (skip the highlighted knee).
         if tau is not None:
-            tau_arr = np.asarray(
-                is_iterable(tau, exclude_string=True, transform=True)
-            )
+            tau_arr = np.asarray(is_iterable(tau, exclude_string=True, transform=True))
             if tau_arr.shape[0] != rms_arr.shape[0]:
                 raise ValueError(
                     "'tau' must have the same length as 'rms' and "
@@ -2251,9 +2223,7 @@ def plot_lcurve(
             # Column-stack roughness and rms into point coordinates.
             pts = np.column_stack([rough_arr, rms_arr])
             for (x, y), tval in zip(pts, tau_arr):
-                if hansen_point is not None and np.allclose(
-                    [x, y], hansen_point
-                ):
+                if hansen_point is not None and np.allclose([x, y], hansen_point):
                     continue
                 ax.annotate(
                     str(tval),

@@ -126,12 +126,8 @@ def test_to_tensor_multi_station_union_and_intersection():
     # Both stations have ExHy at freq=2
     i_st100 = int(np.where(st_u == 100.0)[0][0])
     i_st150 = int(np.where(st_u == 150.0)[0][0])
-    assert np.isclose(
-        T_u[i_st100, int(np.where(f_u == 2.0)[0][0]), 0, 1], 20.0
-    )
-    assert np.isclose(
-        T_u[i_st150, int(np.where(f_u == 2.0)[0][0]), 0, 1], 200.0
-    )
+    assert np.isclose(T_u[i_st100, int(np.where(f_u == 2.0)[0][0]), 0, 1], 20.0)
+    assert np.isclose(T_u[i_st150, int(np.where(f_u == 2.0)[0][0]), 0, 1], 200.0)
 
 
 def test_to_tensor_invalid_align_raises():
@@ -182,9 +178,7 @@ def test_from_tensor_roundtrip_single_station_csamt():
     assert np.isclose(v22, 2.4)
 
 
-@pytest.mark.skipif(
-    pytest.importorskip("xarray") is None, reason="xarray required"
-)
+@pytest.mark.skipif(pytest.importorskip("xarray") is None, reason="xarray required")
 def test_to_xarray_tensor_dims_and_coords_single_and_multi():
     df = _df_single_station_csamt()
     obj = DummyTensor.from_avg((df, {}))

@@ -58,7 +58,6 @@ def bundle_from_edi(obj: Any) -> TFBundle:
     ...         self.freq = [1.0, 2.0]
     ...         self.phase = [45.0, 50.0]
     ...         self.rho = [100.0, 120.0]
-    ...
     >>> b = bundle_from_edi(E())
     >>> b.freq, b.phase[0]
     ([1.0, 2.0], 45.0)
@@ -153,12 +152,16 @@ class BundleMixin(CoreObject):
     >>> from pycsamt.core.base import TFBundle
     >>>
     >>> class Item(BundleMixin):
-    ...     def __init__(self, b): self._b = b
-    ...     def to_bundle(self): return self._b
-    ...     @classmethod
-    ...     def from_bundle(cls, b): return cls(b)
+    ...     def __init__(self, b):
+    ...         self._b = b
     ...
-    >>> b = TFBundle(freq=[1.0], rho=[100.], phase=[45.])
+    ...     def to_bundle(self):
+    ...         return self._b
+    ...
+    ...     @classmethod
+    ...     def from_bundle(cls, b):
+    ...         return cls(b)
+    >>> b = TFBundle(freq=[1.0], rho=[100.0], phase=[45.0])
     >>> it = Item.from_bundle(b)
     >>> isinstance(it.to_bundle(), TFBundle)
     True
@@ -259,12 +262,18 @@ class BundleMixin(CoreObject):
         --------
         >>> from pycsamt.core.mixins import BundleMixin, bundle_from_edi
         >>> class I(BundleMixin):
-        ...     def __init__(self, b): self._b = b
-        ...     def to_bundle(self): return self._b
-        ...     @classmethod
-        ...     def from_bundle(cls, b): return cls(b)
+        ...     def __init__(self, b):
+        ...         self._b = b
         ...
-        >>> e = type('E', (), {'freq':[1.0], 'rho':[100.], 'phase':[45.]})()
+        ...     def to_bundle(self):
+        ...         return self._b
+        ...
+        ...     @classmethod
+        ...     def from_bundle(cls, b):
+        ...         return cls(b)
+        >>> e = type(
+        ...     "E", (), {"freq": [1.0], "rho": [100.0], "phase": [45.0]}
+        ... )()
         >>> obj = I.from_edi(e)  # doctest: +SKIP
         """
 
@@ -299,8 +308,7 @@ class BundleContainerMixin(BundleMixin):
     >>>
     >>> class Bag(dict, BundleContainerMixin):
     ...     pass
-    ...
-    >>> _ = Bag({0: type('X',(),{'to_bundle':lambda s: TFBundle()})()})
+    >>> _ = Bag({0: type("X", (), {"to_bundle": lambda s: TFBundle()})()})
     >>> list(_.iter_bundles())[0].__class__.__name__
     'TFBundle'
     """

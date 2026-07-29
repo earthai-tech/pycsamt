@@ -57,7 +57,7 @@ def skin_depth(
 
     Examples
     --------
-    >>> skin_depth(1.0)          # 1 s period, 100 Ω·m
+    >>> skin_depth(1.0)  # 1 s period, 100 Ω·m
     503.292...
     >>> skin_depth([1.0, 10.0, 100.0], rho=10.0)
     array([159.154..., 503.292..., 1591.549...])

@@ -23,8 +23,7 @@ def write_html(
     out = _prepare_output_path(path)
     if not hasattr(fig, "write_html"):
         raise TypeError(
-            "HTML export requires a Plotly-like figure with "
-            "a write_html method."
+            "HTML export requires a Plotly-like figure with " "a write_html method."
         )
     fig.write_html(str(out), **kwargs)
     return out
@@ -160,9 +159,7 @@ def _matplotlib_kwargs(
     kwargs: dict[str, Any],
 ) -> dict[str, Any]:
     return {
-        key: value
-        for key, value in kwargs.items()
-        if key not in PLOTLY_IMAGE_KWARGS
+        key: value for key, value in kwargs.items() if key not in PLOTLY_IMAGE_KWARGS
     }
 
 

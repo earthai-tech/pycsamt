@@ -87,9 +87,7 @@ def validate(
             IsEdi._assert_edi(f, deep=deep)
             results.append({"path": str(f), "valid": True, "error": None})
         except Exception as exc:  # noqa: BLE001
-            results.append(
-                {"path": str(f), "valid": False, "error": str(exc)}
-            )
+            results.append({"path": str(f), "valid": False, "error": str(exc)})
 
     n_ok = sum(1 for r in results if r["valid"])
     n_fail = len(results) - n_ok
@@ -113,9 +111,7 @@ def validate(
         sys.exit(1)
 
 
-def _print_text(
-    results: list[dict], n_ok: int, n_fail: int, deep: bool
-) -> None:
+def _print_text(results: list[dict], n_ok: int, n_fail: int, deep: bool) -> None:
     mode = "deep" if deep else "extension-only"
     click.echo(
         f"Validated {len(results)} file(s)  [{mode}]  "

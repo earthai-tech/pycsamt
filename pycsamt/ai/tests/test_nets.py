@@ -84,9 +84,7 @@ class TestBuildAdjacency(unittest.TestCase):
         from pycsamt.ai.nets.gcn import build_adjacency
 
         coords = self._grid_coords(4)
-        A = build_adjacency(
-            coords, radius=1500.0, self_loops=False, normalise=False
-        )
+        A = build_adjacency(coords, radius=1500.0, self_loops=False, normalise=False)
         np.testing.assert_array_equal(np.diag(A), np.zeros(16))
 
     def test_normalised_row_sums_leq_one(self):
@@ -96,17 +94,13 @@ class TestBuildAdjacency(unittest.TestCase):
         coords = self._grid_coords(4)
         A = build_adjacency(coords, radius=1500.0, normalise=True)
         self.assertTrue(np.all(A >= 0), "Negative entry after normalisation")
-        self.assertTrue(
-            np.all(A <= 1.0 + 1e-6), "Entry > 1 after normalisation"
-        )
+        self.assertTrue(np.all(A <= 1.0 + 1e-6), "Entry > 1 after normalisation")
 
     def test_unnormalised_binary(self):
         from pycsamt.ai.nets.gcn import build_adjacency
 
         coords = self._grid_coords(4)
-        A = build_adjacency(
-            coords, radius=1500.0, self_loops=False, normalise=False
-        )
+        A = build_adjacency(coords, radius=1500.0, self_loops=False, normalise=False)
         unique_vals = np.unique(A)
         np.testing.assert_array_equal(unique_vals, [0.0, 1.0])
 
@@ -115,18 +109,14 @@ class TestBuildAdjacency(unittest.TestCase):
         from pycsamt.ai.nets.gcn import build_adjacency
 
         coords = self._grid_coords(3)
-        A = build_adjacency(
-            coords, radius=0.0, self_loops=True, normalise=False
-        )
+        A = build_adjacency(coords, radius=0.0, self_loops=True, normalise=False)
         np.testing.assert_array_equal(A, np.eye(9, dtype=np.float32))
 
     def test_large_radius_fully_connected(self):
         from pycsamt.ai.nets.gcn import build_adjacency
 
         coords = self._grid_coords(4)
-        A = build_adjacency(
-            coords, radius=1e9, self_loops=False, normalise=False
-        )
+        A = build_adjacency(coords, radius=1e9, self_loops=False, normalise=False)
         # Every off-diagonal entry should be 1 (fully connected)
         self.assertTrue(np.all(A[~np.eye(16, dtype=bool)] == 1.0))
 
@@ -713,9 +703,7 @@ class TestGCNNetBuild(unittest.TestCase):
             H = torch.randn(self._N_NODES, self._N_FEAT)
             y = self.net(H, self.A)
             results.append(y.shape)
-        self.assertTrue(
-            all(s == (self._N_NODES, self._N_OUT) for s in results)
-        )
+        self.assertTrue(all(s == (self._N_NODES, self._N_OUT) for s in results))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

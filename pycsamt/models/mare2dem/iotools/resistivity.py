@@ -161,12 +161,8 @@ class ResistivityFile:
     free_parameter: np.ndarray = field(
         default_factory=lambda: np.empty((0, 1), dtype=float)
     )
-    bounds: np.ndarray = field(
-        default_factory=lambda: np.empty((0, 2), dtype=float)
-    )
-    prejudice: np.ndarray = field(
-        default_factory=lambda: np.empty((0, 2), dtype=float)
-    )
+    bounds: np.ndarray = field(default_factory=lambda: np.empty((0, 2), dtype=float))
+    prejudice: np.ndarray = field(default_factory=lambda: np.empty((0, 2), dtype=float))
 
     # ---- misc optional fields ----
     data_group_file: str = ""
@@ -231,7 +227,9 @@ def read_resistivity(
 
     Examples
     --------
-    >>> from pycsamt.models.mare2dem.iotools.resistivity import read_resistivity
+    >>> from pycsamt.models.mare2dem.iotools.resistivity import (
+    ...     read_resistivity,
+    ... )
     >>> rf = read_resistivity("mare2dem.resistivity")
     >>> rf.num_regions
     1234
@@ -278,18 +276,14 @@ def read_resistivity(
             value = value.replace(",", " ")
             parts = value.split()
             if len(parts) >= 2:
-                rf.global_bounds = np.array(
-                    [float(parts[0]), float(parts[1])]
-                )
+                rf.global_bounds = np.array([float(parts[0]), float(parts[1])])
         elif code == "roughness penalty method":
             rf.roughness_penalty_method = value.strip()
         elif code == "roughness weights (y,z)":
             value = value.replace(",", " ")
             parts = value.split()
             if len(parts) >= 2:
-                rf.yz_penalty_weights = np.array(
-                    [float(parts[0]), float(parts[1])]
-                )
+                rf.yz_penalty_weights = np.array([float(parts[0]), float(parts[1])])
         elif code == "penalty cut weight":
             try:
                 rf.penalty_cut_weight = float(value)
@@ -424,9 +418,7 @@ def read_resistivity(
 # ---------------------------------------------------------------------------
 
 
-def write_resistivity(
-    rf: ResistivityFile, path: str | Path | None = None
-) -> Path:
+def write_resistivity(rf: ResistivityFile, path: str | Path | None = None) -> Path:
     """Write a :class:`ResistivityFile` to *path*.
 
     Port of ``m2d_writeResistivity.m``.
@@ -445,7 +437,9 @@ def write_resistivity(
 
     Examples
     --------
-    >>> from pycsamt.models.mare2dem.iotools.resistivity import write_resistivity
+    >>> from pycsamt.models.mare2dem.iotools.resistivity import (
+    ...     write_resistivity,
+    ... )
     >>> write_resistivity(rf, "mare2dem_iter10.resistivity")
     PosixPath('mare2dem_iter10.resistivity')
     """
@@ -478,21 +472,14 @@ def write_resistivity(
     )
     weights_str = (
         f"{rf.yz_penalty_weights[0]:.10g}, {rf.yz_penalty_weights[1]:.10g}"
-        if rf.yz_penalty_weights is not None
-        and len(rf.yz_penalty_weights) >= 2
+        if rf.yz_penalty_weights is not None and len(rf.yz_penalty_weights) >= 2
         else "1.0, 1.0"
     )
 
     with dest.open("w") as fh:
-        fh.write(
-            f"Format:                         {'mare2dem_1.1':<32s} ! input \n"
-        )
-        fh.write(
-            f"Model File:                     {rf.poly_file:<32s} ! input \n"
-        )
-        fh.write(
-            f"Data File:                      {rf.data_file:<32s} ! input \n"
-        )
+        fh.write(f"Format:                         {'mare2dem_1.1':<32s} ! input \n")
+        fh.write(f"Model File:                     {rf.poly_file:<32s} ! input \n")
+        fh.write(f"Data File:                      {rf.data_file:<32s} ! input \n")
         if rf.data_group_file:
             fh.write(
                 f"Data Group File:                {rf.data_group_file:<32s} ! opt. input \n"
@@ -501,34 +488,22 @@ def write_resistivity(
             fh.write(
                 f"Joint inversion weight:         {rf.joint_inv_weight_type:<32s} ! opt. input\n"
             )
-        fh.write(
-            f"Settings File:                  {rf.settings_file:<32s} ! input \n"
-        )
+        fh.write(f"Settings File:                  {rf.settings_file:<32s} ! input \n")
         fh.write(
             f"Maximum Iterations:             {rf.max_iterations:<32d} ! opt. input \n"
         )
-        fh.write(
-            f"Bounds Transform:               {'bandpass':<32s} ! opt. input \n"
-        )
-        fh.write(
-            f"Global Bounds:                  {bounds_str:<32s} ! opt. input \n"
-        )
+        fh.write(f"Bounds Transform:               {'bandpass':<32s} ! opt. input \n")
+        fh.write(f"Global Bounds:                  {bounds_str:<32s} ! opt. input \n")
         fh.write(
             f"Roughness Penalty Method:       {rf.roughness_penalty_method:<32s} ! opt. input \n"
         )
-        fh.write(
-            f"Roughness Weights (y,z):        {weights_str:<32s} ! opt. input \n"
-        )
+        fh.write(f"Roughness Weights (y,z):        {weights_str:<32s} ! opt. input \n")
         fh.write(
             f"Penalty Cut Weight:             {rf.penalty_cut_weight:<32g} ! opt. input \n"
         )
         prej_str = "yes" if rf.roughness_with_prejudice else "no"
-        fh.write(
-            f"Roughness With Prejudice:       {prej_str:<32s} ! opt. input \n"
-        )
-        fh.write(
-            f"Min. Gradient Support Weight:   {rf.beta_mgs:<32g} ! opt. input \n"
-        )
+        fh.write(f"Roughness With Prejudice:       {prej_str:<32s} ! opt. input \n")
+        fh.write(f"Min. Gradient Support Weight:   {rf.beta_mgs:<32g} ! opt. input \n")
         if aniso not in ("isotropic", "isotropic_ip", "isotropic_complex"):
             if rf.anisotropy_penalty_weight is not None:
                 fh.write(
@@ -553,9 +528,7 @@ def write_resistivity(
         fh.write(
             f"Log10 Lagrange Value:           {rf.log10_lagrange:<32g} ! input/output\n"
         )
-        roughness_str = (
-            f"{rf.roughness:.10g}" if rf.roughness is not None else " "
-        )
+        roughness_str = f"{rf.roughness:.10g}" if rf.roughness is not None else " "
         misfit_str = f"{rf.misfit:.10g}" if rf.misfit is not None else " "
         fh.write(
             f"Model Roughness:                {roughness_str:<32s} ! output from inversion\n"
@@ -566,20 +539,15 @@ def write_resistivity(
         fh.write(
             f"Date/Time:                      {date_str:<32s} ! output from inversion\n"
         )
-        fh.write(
-            f"Anisotropy:                     {rf.anisotropy:<32s} ! input \n"
-        )
+        fh.write(f"Anisotropy:                     {rf.anisotropy:<32s} ! input \n")
 
         n_regions = rf.num_regions
-        fh.write(
-            f"Number of regions:              {n_regions:<32d} ! input \n"
-        )
+        fh.write(f"Number of regions:              {n_regions:<32d} ! input \n")
 
         # column header
         rho_hdr = " ".join(f"{'%-13s' % lb}" for lb in rho_labels)
         param_hdr = " ".join(
-            f"{'%-10s' % ('Param ' + lb.split('-')[-1][:3])}"
-            for lb in rho_labels
+            f"{'%-10s' % ('Param ' + lb.split('-')[-1][:3])}" for lb in rho_labels
         )
         lower_upper = " ".join(
             f"{'%-13s' % ('Lower' + lb.split('-')[-1][:3])} {'%-13s' % ('Upper' + lb.split('-')[-1][:3])}"
@@ -588,9 +556,7 @@ def write_resistivity(
         prej_hdr = " ".join(
             f"{'%-13s' % 'Prej'} {'%-13s' % 'Weight'}" for _ in rho_labels
         )
-        fh.write(
-            f"{'!#':<8s} {rho_hdr} {param_hdr} {lower_upper} {prej_hdr}\n"
-        )
+        fh.write(f"{'!#':<8s} {rho_hdr} {param_hdr} {lower_upper} {prej_hdr}\n")
 
         # update free_parameter numbering
         if rf.free_parameter is not None and len(rf.free_parameter):
@@ -620,8 +586,6 @@ def write_resistivity(
                 else np.zeros(2 * nrho)
             )
             prej_str = " ".join(f"{v:<13.7g}" for v in prej)
-            fh.write(
-                f"{ii + 1:<9d} {rho_str} {fp_str} {bnds_str} {prej_str}\n"
-            )
+            fh.write(f"{ii + 1:<9d} {rho_str} {fp_str} {bnds_str} {prej_str}\n")
 
     return dest

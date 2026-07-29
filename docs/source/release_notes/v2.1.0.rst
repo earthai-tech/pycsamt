@@ -1,11 +1,13 @@
-.. _release_v2_0_1:
+.. _release_v2_1_0:
 
 -------------
-Version 2.0.1
+Version 2.1.0
 -------------
 
-pyCSAMT 2.0.1 |Feature| |Fix| |API Change| |Docs| |Tests|
+pyCSAMT 2.1.0 |Feature| |Fix| |API Change| |Docs| |Tests|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-07-29.*
 
 This release fixes incorrect station placement along survey profiles,
 introduces validated, auditable station-metadata editing, and adds the
@@ -136,7 +138,7 @@ number of usable coordinates, and the geometry diagnostics used by ``auto``.
 Auditable station metadata
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Version 2.0.1 adds :mod:`pycsamt.site.metadata` for changes that must remain
+Version 2.1.0 adds :mod:`pycsamt.site.metadata` for changes that must remain
 consistent across a station wrapper, the underlying EDI object, ``HEAD``, and
 linked section identifiers. It supports a single site or a collection and
 accepts station-keyed mappings, order-aligned sequences, callables,
@@ -171,7 +173,7 @@ L22PLT comparison.
 AI inversion: losses, validation, and 2-D training data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Version 2.0.1 lands the first working slice of the project's AI-inversion
+Version 2.1.0 lands the first working slice of the project's AI-inversion
 implementation plan: the staged training objective, the diagnostics that
 score whether a trained model deserves trust, and a genuine 2-D forward-
 physics dataset generator, wired into :class:`~pycsamt.agents.Inv2DAgent`

@@ -415,8 +415,12 @@ class TestPackageQALive(unittest.TestCase):
         )
 
     def test_source_is_llm(self):
+        # "llm+rag" is expected whenever retrieval finds relevant context
+        # (the normal case); "llm" is the fallback with no RAG corpus hit.
+        # Either confirms a real LLM call was made, as opposed to an
+        # offline/docstring-only answer.
         r = self.agent.execute({"question": ("What is StaticShiftAgent?")})
-        self.assertEqual(r.data.get("source"), "llm")
+        self.assertIn(r.data.get("source"), ("llm", "llm+rag"))
 
     def test_answer_references_pycsamt(self):
         ans = self._ask("How does pycsamt handle phase tensor analysis?")

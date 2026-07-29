@@ -29,15 +29,17 @@ carries a colour-coded badge so the log can be scanned at a glance:
 
 ----
 
-.. _changelog-2-0-1:
+.. _changelog-2-1-0:
 
-2.0.1 |Feature| |Fix| |API Change| |Docs| |Tests|
+2.1.0 |Feature| |Fix| |API Change| |Docs| |Tests|
 -------------------------------------------------
 
-*Maintenance release for deterministic, spatially correct station ordering
-and validated, auditable station-metadata editing, plus the first
+*Released 2026-07-29.*
+
+*Feature release adding deterministic, spatially correct station ordering,
+validated auditable station-metadata editing, and the first
 physics-grounded building blocks of AI inversion. See*
-:ref:`release_v2_0_1` *for upgrade guidance and migration examples.*
+:ref:`release_v2_1_0` *for upgrade guidance and migration examples.*
 
 Added
 ~~~~~

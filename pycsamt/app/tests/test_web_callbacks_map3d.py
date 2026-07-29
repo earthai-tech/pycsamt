@@ -101,22 +101,30 @@ def cached_inv_result():
 
 
 @pytest.fixture
-def cached_session_with_inv_result(cached_session):
+def cached_session_with_inv_result(willy_sites):
     """A session id with BOTH raw Sites and an inversion result cached.
 
     ``generate_grid`` always requires real Sites to be cached (via
     ``cache_get``) as its precondition regardless of the chosen data
     source -- even the "inversion" source needs it, since in normal usage
     a survey is always loaded before an inversion is run against it.
+
+    Uses its own session id rather than layering onto ``cached_session``:
+    the backing cache is disk-based with a 24h TTL and has no per-test
+    teardown, so a shared id would leak the inversion result into any
+    other test -- e.g. ``test_inversion_source_without_result`` -- that
+    expects a session with Sites but no inversion result yet.
     """
+    session_id = "test-map3d-session-with-inv"
+    cache_set(session_id, willy_sites)
     n_x, n_z = 10, 6
     rho_2d = np.random.default_rng(0).uniform(1.0, 1000.0, size=(n_z, n_x))
     z_centers = np.linspace(10, 1000, n_z)
     x_centers = np.linspace(0, 5000, n_x)
     station_names = [f"S{i:03d}" for i in range(n_x)]
     model = _FakeResModel(rho_2d, z_centers, x_centers, station_names)
-    cache_set_inversion_result(cached_session, _FakeInvResult(model))
-    return cached_session
+    cache_set_inversion_result(session_id, _FakeInvResult(model))
+    return session_id
 
 
 def _synthetic_profiles(n_lines=3, n_x=8, n_z=6):

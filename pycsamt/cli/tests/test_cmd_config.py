@@ -45,6 +45,41 @@ def isolated_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return fake_toml
 
 
+@pytest.fixture(autouse=True)
+def _isolate_config_singletons() -> None:
+    """Restore every ``_SINGLETON_MAP`` singleton pyCSAMT config sections
+    resolve to, after each test.
+
+    ``config set`` / ``config style`` / ``config interp`` etc. run through
+    Click's ``CliRunner``, i.e. in-process -- so they mutate pyCSAMT's real
+    global config singletons (``PLOT_CONFIG``, ``PYCSAMT_STYLE``, ...), not
+    a subprocess-local copy. In real CLI usage each invocation is its own
+    short-lived process and this never matters; here, left unrestored, a
+    value set by one test (e.g. ``config set plot.fmt pdf``, or
+    ``config style dark``) leaks into every unrelated test that runs later
+    in the same pytest session -- ``isolated_toml`` above only isolates the
+    TOML file, not this in-memory state. Snapshot and restore every
+    singleton ``apply_section`` can reach, regardless of which subcommand a
+    given test invokes.
+    """
+    import copy
+
+    from pycsamt.cli.commands.config._base import (
+        _SINGLETON_MAP,
+        get_singleton,
+    )
+
+    snapshots = {
+        section: copy.deepcopy(vars(get_singleton(section)))
+        for section in _SINGLETON_MAP
+    }
+    yield
+    for section, snapshot in snapshots.items():
+        obj = get_singleton(section)
+        vars(obj).clear()
+        vars(obj).update(snapshot)
+
+
 # ---------------------------------------------------------------------------
 # Unit tests for helpers
 # ---------------------------------------------------------------------------

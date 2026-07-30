@@ -181,12 +181,21 @@ class TestTdemConvert:
         assert data["n_soundings"] >= 1
 
     def test_method_fourier(self, runner: CliRunner, tmp_path: Path) -> None:
+        # Fourier's per-sounding cosine-transform + Kramers-Kronig
+        # reconstruction is Python-loop-heavy (unlike late_time, which
+        # is fully vectorized): the full JIANGSU survey is 2790
+        # soundings, taking ~2 minutes even outside CI and far longer
+        # under --cov-branch instrumentation. This test only needs to
+        # prove --method fourier is wired correctly, so restrict to a
+        # single stem like test_stems_filter does.
         result = runner.invoke(
             main,
             [
                 "tdem",
                 "convert",
                 str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100",
                 "--method",
                 "fourier",
                 "--output-dir",
@@ -217,12 +226,18 @@ class TestTdemPlot:
     def test_plot_saves_file(
         self, runner: CliRunner, tmp_path: Path, kind: str
     ) -> None:
+        # Restrict to one stem: the full JIANGSU survey is 2790
+        # soundings, and per-sounding plot styling (e.g. a matplotlib
+        # colormap call per line) over the whole thing is far slower
+        # than what this wiring/smoke test needs.
         result = runner.invoke(
             main,
             [
                 "tdem",
                 "plot",
                 str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100",
                 "--kind",
                 kind,
                 "--output-dir",

@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        test-shard: [science, workflows, formats-models, interfaces, support]
+        test-shard: [science, workflows, formats-models, interfaces-desktop, interfaces-cli, support]
         include:
           - test-shard: science
             test-paths: >-
@@ -44,11 +44,13 @@ jobs:
               pycsamt/inversion/tests
               pycsamt/zonge/tests
               pycsamt/jones/tests
-          - test-shard: interfaces
+          - test-shard: interfaces-desktop
             test-paths: >-
-              pycsamt/cli/tests
               pycsamt/app/tests
               pycsamt/app/agent_master/tests
+          - test-shard: interfaces-cli
+            test-paths: >-
+              pycsamt/cli/tests
               pycsamt/map/tests
               pycsamt/iot/tests
               pycsamt/tdem/tests
@@ -79,7 +81,7 @@ jobs:
           cache: pip
 
       - name: Install Qt runtime libraries
-        if: matrix.test-shard == 'workflows' || matrix.test-shard == 'interfaces'
+        if: matrix.test-shard == 'workflows' || matrix.test-shard == 'interfaces-desktop'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -105,7 +107,7 @@ jobs:
       # --timeout keeps a single hung test (e.g. an unexpected modal
       # dialog) from stalling the shard until the job-level timeout.
       - name: Test
-        if: matrix.test-shard != 'interfaces'
+        if: matrix.test-shard != 'interfaces-desktop'
         env:
           QT_QPA_PLATFORM: offscreen
           MPLBACKEND: Agg
@@ -125,8 +127,8 @@ jobs:
       # Accept that native teardown defect only when a complete JUnit report
       # independently proves the suite was non-empty and fully passing. A
       # mid-run crash, malformed report, or real test failure remains fatal.
-      - name: Test interfaces
-        if: matrix.test-shard == 'interfaces'
+      - name: Test interfaces-desktop
+        if: matrix.test-shard == 'interfaces-desktop'
         env:
           QT_QPA_PLATFORM: offscreen
           MPLBACKEND: Agg

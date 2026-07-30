@@ -251,7 +251,9 @@ class RoseStyle:
 
     def __repr__(self) -> str:  # noqa: D105
         pairs = ", ".join(
-            f"{k}={v!r}" for k, v in vars(self).items() if not k.startswith("_")
+            f"{k}={v!r}"
+            for k, v in vars(self).items()
+            if not k.startswith("_")
         )
         return f"RoseStyle({pairs})"
 

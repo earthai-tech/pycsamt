@@ -41,9 +41,9 @@ _REDUCTIONS = ("mean", "sum")
 def _boundary_target(target: Any, shape: tuple[int, ...]) -> np.ndarray:
     """Broadcast a scalar or array boundary target to *shape*."""
     try:
-        array = np.broadcast_to(
-            np.asarray(target, dtype=float), shape
-        ).astype(float)
+        array = np.broadcast_to(np.asarray(target, dtype=float), shape).astype(
+            float
+        )
     except ValueError as error:
         raise ValueError(
             f"target must be broadcastable to shape {shape}."
@@ -109,9 +109,7 @@ def boundary_condition_loss(
     array = np.asarray(y_pred, dtype=float)
     mask = np.asarray(boundary_mask, dtype=bool)
     if mask.shape != array.shape:
-        raise ValueError(
-            "boundary_mask must have the same shape as y_pred."
-        )
+        raise ValueError("boundary_mask must have the same shape as y_pred.")
     if not np.any(mask):
         raise ValueError("boundary_mask must select at least one cell.")
     if valid is not None:

@@ -209,8 +209,12 @@ class Topography(AVGComponentBase):
         self._frame = self._normalize_stn_columns(df)
 
         # initialize longitude and latitude
-        self._longitude = pd.Series(np.zeros((self._frame.shape[0],), dtype=float))
-        self._latitude = pd.Series(np.zeros((self._frame.shape[0],), dtype=float))
+        self._longitude = pd.Series(
+            np.zeros((self._frame.shape[0],), dtype=float)
+        )
+        self._latitude = pd.Series(
+            np.zeros((self._frame.shape[0],), dtype=float)
+        )
 
         # reset the cache when new data is loaded
         self._azimuths = None
@@ -247,7 +251,9 @@ class Topography(AVGComponentBase):
         required = ["station", "easting", "northing", "elevation"]
         missing = [c for c in required if c not in df.columns]
         if missing:
-            raise ProcessingError(f"STN data is missing required columns: {missing}")
+            raise ProcessingError(
+                f"STN data is missing required columns: {missing}"
+            )
         return df.dropna(subset=required)
 
     def convert_coords(
@@ -362,7 +368,8 @@ class Topography(AVGComponentBase):
 
         else:
             raise ValueError(
-                f"Invalid target system '{to}'. Must be " "'utm', 'll', or 'auto'."
+                f"Invalid target system '{to}'. Must be "
+                "'utm', 'll', or 'auto'."
             )
 
         if inplace:
@@ -530,7 +537,9 @@ class Topography(AVGComponentBase):
             average station spacing.
         """
         if self._frame.empty or len(self._frame) < 2:
-            warnings.warn("Not enough data to correct coordinates.", stacklevel=2)
+            warnings.warn(
+                "Not enough data to correct coordinates.", stacklevel=2
+            )
             return
 
         x = self.easting
@@ -543,7 +552,9 @@ class Topography(AVGComponentBase):
         if step is None:
             step = self.get_step().mean()
             if self.verbose:
-                self._logger.info(f"Using auto-detected average step of {step:.2f} m.")
+                self._logger.info(
+                    f"Using auto-detected average step of {step:.2f} m."
+                )
 
         # 3. Project the first station onto the line
         x0, y0 = x[0], y[0]
@@ -649,12 +660,16 @@ class Topography(AVGComponentBase):
         if coord_type == "ll":
             import_optional_dependency(
                 "geopy",
-                extra=("'geopy' is required for geodetectic position calculations"),
+                extra=(
+                    "'geopy' is required for geodetectic position calculations"
+                ),
             )
             # For lat/lon, we must calculate geodetic positions
             from geopy.distance import geodesic
 
-            start_lat, start_lon = normalize_lat_lon(*start_coord, assume="latlon")
+            start_lat, start_lon = normalize_lat_lon(
+                *start_coord, assume="latlon"
+            )
             # start_lat, start_lon = start_coord
 
             points = [start_coord]
@@ -789,7 +804,8 @@ class Topography(AVGComponentBase):
         # Ensure the topography data frame has been loaded first
         if self._frame.empty:
             raise ProcessingError(
-                "Topography data has not been loaded. " "Call the .read() method first."
+                "Topography data has not been loaded. "
+                "Call the .read() method first."
             )
 
         elevations = np.array([], dtype=float)
@@ -798,7 +814,9 @@ class Topography(AVGComponentBase):
         if from_ == "utm":
             # The UTM zone is required for this operation
             if zone is None:
-                raise ValueError("A UTM 'zone' must be provided when from_='utm'.")
+                raise ValueError(
+                    "A UTM 'zone' must be provided when from_='utm'."
+                )
             # Fetch elevations using existing easting/northing
             elevations = get_elevation_from_utm(
                 easting=self.easting,
@@ -1068,7 +1086,9 @@ class Station(AVGComponentBase):
         munit = (meta or {}).get("Unit.Length") if meta else None
         unit = (unit or munit or self.unit or "m").lower()
         normalize = self.normalize if normalize is None else normalize
-        allow_ragged = self.allow_ragged if allow_ragged is None else allow_ragged
+        allow_ragged = (
+            self.allow_ragged if allow_ragged is None else allow_ragged
+        )
 
         # build a minimal frame with a numeric 'station' column
         if isinstance(source, pd.DataFrame):
@@ -1133,7 +1153,9 @@ class Station(AVGComponentBase):
         # station names (one per unique position)
         if names is not None:
             if len(names) != self.values.size:
-                raise StationError("`names` length must match unique station count")
+                raise StationError(
+                    "`names` length must match unique station count"
+                )
             self.names = list(names)
         else:
             ids, _ = number_stations(self.values.size, 1, prefix="S")

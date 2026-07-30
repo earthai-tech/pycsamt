@@ -32,13 +32,16 @@ class StationMapOptions:
     log_color: bool = False
     opacity: float = 0.92
     show_labels: bool = True
+    label_fontsize: float = 8.0
+    label_rotation: float = 0.0
     show_profiles: bool = True
+    elevation_mode: Literal["markers", "contours"] = "markers"
     show_contours: bool = False
     contour_image: bool = False
     contour_mode: str = "filled+lines"
     contour_levels: int = 12
     contour_opacity: float = 0.55
-    contour_interp: str = "cubic"
+    contour_interp: str = "linear"
     contour_smooth: float = 1.0
     contour_grid_res: int = 150
     bearing: float = 0.0

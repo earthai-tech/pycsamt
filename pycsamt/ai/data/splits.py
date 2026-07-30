@@ -81,7 +81,9 @@ def _groups(
         return {realization_id: (realization_id,) for realization_id in ids}
     result: dict[str, list[str]] = {}
     for realization_id in sorted(ids):
-        result.setdefault(str(lineage[realization_id]), []).append(realization_id)
+        result.setdefault(str(lineage[realization_id]), []).append(
+            realization_id
+        )
     return {name: tuple(members) for name, members in result.items()}
 
 
@@ -244,7 +246,9 @@ class RealizationSplit:
         >>> len(RealizationSplit(("a",), (), ()).split_hash)
         64
         """
-        payload = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
+        payload = json.dumps(
+            self.to_dict(), sort_keys=True, separators=(",", ":")
+        )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def partition(self, realization_id: str) -> str:
@@ -341,7 +345,9 @@ class RealizationSplit:
             missing = sorted(set(values) - set(self.all_ids))
             if missing:
                 raise KeyError(f"unknown realization IDs: {missing}.")
-        result = np.asarray([value in selected for value in values], dtype=bool)
+        result = np.asarray(
+            [value in selected for value in values], dtype=bool
+        )
         result.setflags(write=False)
         return result
 
@@ -408,7 +414,9 @@ class RealizationSplit:
         True
         """
         mapping = (
-            self.lineage if lineage is None else _lineage_map(self.all_ids, lineage)
+            self.lineage
+            if lineage is None
+            else _lineage_map(self.all_ids, lineage)
         )
         if not mapping:
             return
@@ -461,17 +469,23 @@ class RealizationSplit:
             raise KeyError(f"unknown realization IDs: {unknown}.")
         if self.lineage:
             parents = {self.lineage[item] for item in moving}
-            required = {item for item in self.all_ids if self.lineage[item] in parents}
+            required = {
+                item for item in self.all_ids if self.lineage[item] in parents
+            }
             if set(moving) != required:
                 raise ValueError(
                     "all members of an affected lineage must be reassigned together."
                 )
         moved = set(moving)
         values = {
-            name: tuple(item for item in getattr(self, name) if item not in moved)
+            name: tuple(
+                item for item in getattr(self, name) if item not in moved
+            )
             for name in _PARTITIONS
         }
-        values[partition] = tuple(item for item in target if item not in moved) + moving
+        values[partition] = (
+            tuple(item for item in target if item not in moved) + moving
+        )
         return replace(
             self,
             train=values["train"],
@@ -537,7 +551,9 @@ class RealizationSplit:
             tuple(data["test"]),
             data.get("seed"),
             lineage={} if version == 1 else data.get("lineage", {}),
-            strategy="random" if version == 1 else data.get("strategy", "random"),
+            strategy="random"
+            if version == 1
+            else data.get("strategy", "random"),
         )
 
 
@@ -607,13 +623,19 @@ def split_realizations(
     validation_fraction = _fraction(validation_fraction, "validation_fraction")
     test_fraction = _fraction(test_fraction, "test_fraction")
     if validation_fraction + test_fraction >= 1:
-        raise ValueError("validation_fraction + test_fraction must be less than 1.")
+        raise ValueError(
+            "validation_fraction + test_fraction must be less than 1."
+        )
     seed = _seed(seed)
     lineage_state = (
-        _lineage_map(ids, lineage) if lineage is not None else MappingProxyType({})
+        _lineage_map(ids, lineage)
+        if lineage is not None
+        else MappingProxyType({})
     )
     grouped = _groups(ids, lineage_state if lineage_state else None)
-    required_partitions = 1 + int(validation_fraction > 0) + int(test_fraction > 0)
+    required_partitions = (
+        1 + int(validation_fraction > 0) + int(test_fraction > 0)
+    )
     if len(grouped) < required_partitions:
         raise ValueError(
             "too few independent lineages for requested non-empty partitions."
@@ -692,11 +714,17 @@ def realization_folds(
     ids = _ids(realization_ids, "realization_ids")
     if not ids:
         raise ValueError("realization_ids cannot be empty.")
-    if not isinstance(n_splits, int) or isinstance(n_splits, bool) or n_splits < 2:
+    if (
+        not isinstance(n_splits, int)
+        or isinstance(n_splits, bool)
+        or n_splits < 2
+    ):
         raise ValueError("n_splits must be an integer of at least two.")
     seed = _seed(seed)
     lineage_state = (
-        _lineage_map(ids, lineage) if lineage is not None else MappingProxyType({})
+        _lineage_map(ids, lineage)
+        if lineage is not None
+        else MappingProxyType({})
     )
     grouped = _groups(ids, lineage_state if lineage_state else None)
     if n_splits > len(grouped):
@@ -706,7 +734,9 @@ def realization_folds(
     shuffled = [str(names[index]) for index in order]
     buckets: list[list[str]] = [[] for _ in range(n_splits)]
     loads = [0] * n_splits
-    for name in sorted(shuffled, key=lambda item: len(grouped[item]), reverse=True):
+    for name in sorted(
+        shuffled, key=lambda item: len(grouped[item]), reverse=True
+    ):
         index = min(range(n_splits), key=lambda fold: (loads[fold], fold))
         buckets[index].append(name)
         loads[index] += len(grouped[name])

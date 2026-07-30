@@ -124,7 +124,9 @@ class DisplayPage(SettingsPage):
                 if comp is None:
                     continue
                 color = getattr(comp, "color", "#1e66f5") or "#1e66f5"
-                cbtn.setStyleSheet(f"background-color:{color}; border:1px solid #666;")
+                cbtn.setStyleSheet(
+                    f"background-color:{color}; border:1px solid #666;"
+                )
                 cbtn._color = color
                 lw_spin.setValue(getattr(comp, "lw", 1.5) or 1.5)
         except Exception:

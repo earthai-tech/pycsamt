@@ -162,12 +162,15 @@ def _view_rail() -> html.Div:
         children=[
             html.Button(
                 [
-                    html.Img(src=f"/mv-icons/{icon}.svg", className="mv-rail-icon"),
+                    html.Img(
+                        src=f"/mv-icons/{icon}.svg", className="mv-rail-icon"
+                    ),
                     html.Span(label),
                 ],
                 id=btn_id,
                 className=(
-                    "mv-rail-btn" + (" mv-rail-active" if view == "map" else "")
+                    "mv-rail-btn"
+                    + (" mv-rail-active" if view == "map" else "")
                 ),
                 n_clicks=0,
                 title=label,
@@ -212,7 +215,9 @@ def _ctl_row(label, comp):
 
 
 def _num(id_, value, **kw):
-    return dbc.Input(id=id_, type="number", value=value, size="sm", debounce=True, **kw)
+    return dbc.Input(
+        id=id_, type="number", value=value, size="sm", debounce=True, **kw
+    )
 
 
 def _coord_system() -> html.Div:
@@ -296,7 +301,9 @@ def _map_controls() -> html.Div:
                 "Colour by",
                 dbc.Select(
                     id=IDs.CTL_OVERLAY,
-                    options=[{"label": lbl, "value": val} for val, lbl in _OVERLAYS],
+                    options=[
+                        {"label": lbl, "value": val} for val, lbl in _OVERLAYS
+                    ],
                     value="index",
                     size="sm",
                 ),
@@ -331,7 +338,8 @@ def _map_controls() -> html.Div:
                 dbc.Select(
                     id=IDs.CTL_BASEMAP,
                     options=[
-                        {"label": lbl, "value": val} for val, lbl in BASEMAP_STYLES
+                        {"label": lbl, "value": val}
+                        for val, lbl in BASEMAP_STYLES
                     ],
                     value="esri-satellite",
                     size="sm",
@@ -342,8 +350,12 @@ def _map_controls() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Label("Marker size", className="mv-field-lbl"),
-                            _num(IDs.CTL_MARKER_SIZE, 10, min=4, max=24, step=1),
+                            html.Label(
+                                "Marker size", className="mv-field-lbl"
+                            ),
+                            _num(
+                                IDs.CTL_MARKER_SIZE, 10, min=4, max=24, step=1
+                            ),
                         ],
                         className="mv-col",
                     ),
@@ -411,7 +423,9 @@ def _map_controls() -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Label("Smoothing σ", className="mv-field-lbl"),
+                            html.Label(
+                                "Smoothing σ", className="mv-field-lbl"
+                            ),
                             _num(
                                 IDs.CTL_CONTOUR_SMOOTH,
                                 1.0,
@@ -545,7 +559,9 @@ def _three_d_group() -> html.Div:
                 "Mode",
                 dbc.Select(
                     id=IDs.CTL_MODE3D,
-                    options=[{"label": lbl, "value": val} for val, lbl in _MODES_3D],
+                    options=[
+                        {"label": lbl, "value": val} for val, lbl in _MODES_3D
+                    ],
                     value="fence",
                     size="sm",
                 ),
@@ -570,7 +586,9 @@ def _three_d_group() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Label("Profile unit", className="mv-field-lbl"),
+                            html.Label(
+                                "Profile unit", className="mv-field-lbl"
+                            ),
                             dbc.Select(
                                 id=IDs.CTL_X_UNIT,
                                 options=[
@@ -625,14 +643,18 @@ def _three_d_group() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Label("Depth slices", className="mv-field-lbl"),
+                            html.Label(
+                                "Depth slices", className="mv-field-lbl"
+                            ),
                             _num(IDs.CTL_NSLICES, 8, min=2, max=40, step=1),
                         ],
                         className="mv-col",
                     ),
                     html.Div(
                         [
-                            html.Label("Iso-surfaces", className="mv-field-lbl"),
+                            html.Label(
+                                "Iso-surfaces", className="mv-field-lbl"
+                            ),
                             _num(IDs.CTL_SURFACES, 12, min=2, max=50, step=1),
                         ],
                         className="mv-col",
@@ -684,13 +706,17 @@ def _three_d_group() -> html.Div:
                     html.Div(
                         [
                             html.Label("Azimuth °", className="mv-field-lbl"),
-                            _num(IDs.CTL_AZIMUTH, 0, min=-180, max=180, step=5),
+                            _num(
+                                IDs.CTL_AZIMUTH, 0, min=-180, max=180, step=5
+                            ),
                         ],
                         className="mv-col",
                     ),
                     html.Div(
                         [
-                            html.Label("Line spacing", className="mv-field-lbl"),
+                            html.Label(
+                                "Line spacing", className="mv-field-lbl"
+                            ),
                             _num(IDs.CTL_SPACING, 1.0, min=0.1, step=0.1),
                         ],
                         className="mv-col",
@@ -991,7 +1017,9 @@ def _inspector() -> html.Div:
                 "Component",
                 dbc.Select(
                     id=IDs.CTL_COMPONENT,
-                    options=[{"label": c.upper(), "value": c} for c in _COMPONENTS],
+                    options=[
+                        {"label": c.upper(), "value": c} for c in _COMPONENTS
+                    ],
                     value="xy",
                     size="sm",
                 ),
@@ -1056,7 +1084,9 @@ def _canvas_toolbar() -> html.Div:
     ``callbacks.toolbar._register_view_visibility``)."""
     return html.Div(
         [
-            html.Span("Map view", id=IDs.CANVAS_TITLE, className="mv-canvas-title"),
+            html.Span(
+                "Map view", id=IDs.CANVAS_TITLE, className="mv-canvas-title"
+            ),
             html.Span(id=IDs.TB_INFO, className="mv-tb-info"),
             html.Div(className="mv-tb-sep"),
             _tb_btn(
@@ -1088,8 +1118,12 @@ def _canvas_toolbar() -> html.Div:
             html.Span("Basemap", className="mv-tb-grp"),
             _tb_btn("bi-moon-stars-fill", "", IDs.TB_BM_DARK, "Dark (Carto)"),
             _tb_btn("bi-sun-fill", "", IDs.TB_BM_LIGHT, "Light (Carto)"),
-            _tb_btn("bi-globe-americas", "", IDs.TB_BM_SAT, "Satellite (ESRI)"),
-            _tb_btn("bi-signpost-split", "", IDs.TB_BM_STREET, "Street (ESRI)"),
+            _tb_btn(
+                "bi-globe-americas", "", IDs.TB_BM_SAT, "Satellite (ESRI)"
+            ),
+            _tb_btn(
+                "bi-signpost-split", "", IDs.TB_BM_STREET, "Street (ESRI)"
+            ),
             _tb_btn("bi-map-fill", "", IDs.TB_BM_TOPO, "Topographic (ESRI)"),
             html.Div(className="mv-tb-sep"),
             html.Span("Markers", className="mv-tb-grp"),
@@ -1126,7 +1160,9 @@ def _canvas_toolbar_3d() -> html.Div:
                 IDs.TB3D_MODE_FENCE,
                 "Vertical fence sections",
             ),
-            _tb_btn("bi-box", "Block", IDs.TB3D_MODE_BLOCK, "Solid block volume"),
+            _tb_btn(
+                "bi-box", "Block", IDs.TB3D_MODE_BLOCK, "Solid block volume"
+            ),
             _tb_btn(
                 "bi-layers-half",
                 "Depth",
@@ -1147,11 +1183,19 @@ def _canvas_toolbar_3d() -> html.Div:
                 IDs.TB3D_DEPTH_FULL,
                 "Full depth range",
             ),
-            _tb_btn("bi-arrows-vertical", "500 m", IDs.TB3D_DEPTH_500, "0 - 500 m"),
-            _tb_btn("bi-arrows-vertical", "1 km", IDs.TB3D_DEPTH_1K, "0 - 1000 m"),
-            _tb_btn("bi-arrows-vertical", "2 km", IDs.TB3D_DEPTH_2K, "0 - 2000 m"),
+            _tb_btn(
+                "bi-arrows-vertical", "500 m", IDs.TB3D_DEPTH_500, "0 - 500 m"
+            ),
+            _tb_btn(
+                "bi-arrows-vertical", "1 km", IDs.TB3D_DEPTH_1K, "0 - 1000 m"
+            ),
+            _tb_btn(
+                "bi-arrows-vertical", "2 km", IDs.TB3D_DEPTH_2K, "0 - 2000 m"
+            ),
             html.Div(className="mv-tb-sep"),
-            _tb_btn("bi-geo-alt", "Topo", IDs.TB3D_TOPO, "Toggle topography drape"),
+            _tb_btn(
+                "bi-geo-alt", "Topo", IDs.TB3D_TOPO, "Toggle topography drape"
+            ),
         ],
         id=IDs.TOOLBAR_3D,
         className="mv-toolbar",
@@ -1175,7 +1219,10 @@ def _welcome_card(icon, title, desc, tone) -> html.Div:
 
 def _welcome() -> html.Div:
     particles = html.Div(
-        [html.Span(className=f"mv-welcome-particle p{i}") for i in range(1, 10)],
+        [
+            html.Span(className=f"mv-welcome-particle p{i}")
+            for i in range(1, 10)
+        ],
         className="mv-welcome-particles",
     )
     return html.Div(
@@ -1325,7 +1372,9 @@ def _dock() -> html.Div:
                             ),
                             html.Button(
                                 [
-                                    html.I(className="bi bi-chevron-down me-1"),
+                                    html.I(
+                                        className="bi bi-chevron-down me-1"
+                                    ),
                                     "Hide",
                                 ],
                                 id=IDs.DOCK_CLOSE,
@@ -1501,7 +1550,9 @@ def _load_modal_edi_body() -> html.Div:
                         id=IDs.UPLOAD,
                         children=html.Div(
                             [
-                                html.I(className="bi bi-file-earmark-plus me-2"),
+                                html.I(
+                                    className="bi bi-file-earmark-plus me-2"
+                                ),
                                 "Drop EDI files or click to pick",
                             ],
                         ),
@@ -1516,7 +1567,9 @@ def _load_modal_edi_body() -> html.Div:
             html.Div(
                 [
                     dbc.Spinner(size="sm", color="primary"),
-                    html.Span("Reading files…", id=IDs.LOADER_MSG, className="ms-2"),
+                    html.Span(
+                        "Reading files…", id=IDs.LOADER_MSG, className="ms-2"
+                    ),
                 ],
                 id=IDs.LOADER_OVERLAY,
                 className="mv-loader-overlay",
@@ -1524,8 +1577,12 @@ def _load_modal_edi_body() -> html.Div:
             ),
             html.Div(
                 [
-                    html.Span("", id=IDs.FILE_COUNT, className="mv-file-count"),
-                    html.Span("", id=IDs.BROWSE_STATUS, className="mv-browse-status"),
+                    html.Span(
+                        "", id=IDs.FILE_COUNT, className="mv-file-count"
+                    ),
+                    html.Span(
+                        "", id=IDs.BROWSE_STATUS, className="mv-browse-status"
+                    ),
                 ],
                 className="d-flex align-items-center gap-2 mt-1",
             ),
@@ -1634,7 +1691,9 @@ def _load_modal_inversion_body() -> html.Div:
             ),
             html.Div(
                 [
-                    html.Span("", id=IDs.INV_FILE_COUNT, className="mv-file-count"),
+                    html.Span(
+                        "", id=IDs.INV_FILE_COUNT, className="mv-file-count"
+                    ),
                     html.Span(
                         "",
                         id=IDs.INV_BROWSE_STATUS,
@@ -1667,7 +1726,9 @@ def _load_modal_inversion_body() -> html.Div:
 def _help_cap(icon, title, desc) -> html.Div:
     return html.Div(
         [
-            html.Div(html.I(className=f"bi {icon}"), className="mv-help-cap-icon"),
+            html.Div(
+                html.I(className=f"bi {icon}"), className="mv-help-cap-icon"
+            ),
             html.Div(
                 [
                     html.Div(title, className="mv-help-cap-title"),
@@ -1696,7 +1757,8 @@ def _settings_canvas() -> dbc.Offcanvas:
             html.Div(id=IDs.SET_SUMMARY, className="mv-set-summary"),
             html.Div("Active lines", className="mv-panel-lbl mt-2"),
             html.Div(
-                "Toggle whole survey lines on/off across the map, " "3-D and table.",
+                "Toggle whole survey lines on/off across the map, "
+                "3-D and table.",
                 className="mv-crs-info",
             ),
             dbc.Checklist(
@@ -1792,7 +1854,9 @@ def _session_canvas() -> dbc.Offcanvas:
                         size="sm",
                         n_clicks=0,
                     ),
-                    html.Div(id=IDs.SESSION_AUTOSAVE, className="mv-topo-status"),
+                    html.Div(
+                        id=IDs.SESSION_AUTOSAVE, className="mv-topo-status"
+                    ),
                 ],
                 className="d-flex align-items-center gap-2 mb-2",
             ),
@@ -1887,7 +1951,9 @@ def _help_modal() -> dbc.Modal:
                             [
                                 html.Span("py", className="mv-brand-py"),
                                 html.Span("CSAMT", className="mv-brand-csamt"),
-                                html.Span(" Map View", className="mv-brand-sub"),
+                                html.Span(
+                                    " Map View", className="mv-brand-sub"
+                                ),
                             ],
                             className="mv-help-title",
                         ),

@@ -73,7 +73,9 @@ class _ElevWorker(QThread):
                 if lat is None or lon is None:
                     raise ValueError("no coordinates")
                 elev = float(
-                    get_elevation_from_api(float(lat), float(lon), api_name=self._api)
+                    get_elevation_from_api(
+                        float(lat), float(lon), api_name=self._api
+                    )
                 )
                 self.progress.emit(idx + 1, total, str(name), elev)
                 results.append((str(name), lat, lon, elev))
@@ -178,7 +180,9 @@ class ElevationEnrichDialog(QDialog):
                         break
                 name = getattr(ed, "station", None) or getattr(ed, "id", "?")
                 lat = getattr(ed, "lat", None) or getattr(ed, "latitude", None)
-                lon = getattr(ed, "lon", None) or getattr(ed, "longitude", None)
+                lon = getattr(ed, "lon", None) or getattr(
+                    ed, "longitude", None
+                )
                 try:
                     lat = float(lat) if lat is not None else None
                     lon = float(lon) if lon is not None else None
@@ -191,7 +195,9 @@ class ElevationEnrichDialog(QDialog):
             return
 
         n_with_coords = sum(
-            1 for _, la, lo in self._station_list if la is not None and lo is not None
+            1
+            for _, la, lo in self._station_list
+            if la is not None and lo is not None
         )
         self._status_lbl.setText(
             f"{len(self._station_list)} stations found, "
@@ -219,7 +225,9 @@ class ElevationEnrichDialog(QDialog):
         self._worker.error.connect(self._on_error)
         self._worker.start()
 
-    def _on_progress(self, cur: int, total: int, name: str, elev: float) -> None:
+    def _on_progress(
+        self, cur: int, total: int, name: str, elev: float
+    ) -> None:
         self._progress.setMaximum(total)
         self._progress.setValue(cur)
         import math
@@ -229,7 +237,9 @@ class ElevationEnrichDialog(QDialog):
         self._table.insertRow(r)
         bg = _C_OK if ok else _C_ERR
 
-        for col, val in enumerate((name, "—", "—", f"{elev:.1f}" if ok else "ERROR")):
+        for col, val in enumerate(
+            (name, "—", "—", f"{elev:.1f}" if ok else "ERROR")
+        ):
             it = QTableWidgetItem(val)
             it.setBackground(bg)
             it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -242,7 +252,9 @@ class ElevationEnrichDialog(QDialog):
 
         n_ok = sum(1 for _, _, _, e in results if not math.isnan(e))
         n_err = len(results) - n_ok
-        self._status_lbl.setText(f"Done — {n_ok} elevations fetched, {n_err} errors.")
+        self._status_lbl.setText(
+            f"Done — {n_ok} elevations fetched, {n_err} errors."
+        )
         self._export_btn.setEnabled(bool(self._results))
         # Fill lat/lon columns from station list
         for r, (_name, lat, lon, _) in enumerate(results):

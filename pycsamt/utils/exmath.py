@@ -233,7 +233,9 @@ def get_azimuth(
     dx = map(
         lambda ii: (
             np.cos(ylat[ii]) * np.sin(ylat[ii + 1])
-            - np.sin(ylat[ii]) * np.cos(ylat[ii + 1]) * np.cos(xlon[ii + 1] - xlon[ii])
+            - np.sin(ylat[ii])
+            * np.cos(ylat[ii + 1])
+            * np.cos(xlon[ii + 1] - xlon[ii])
         ),
         range(len(xlon) - 1),
     )
@@ -471,7 +473,9 @@ def linkage_matrix(
                 "distance",
                 "no. of items in clust.",
             ],
-            index=["cluster %d" % (i + 1) for i in range(row_clusters.shape[0])],
+            index=[
+                "cluster %d" % (i + 1) for i in range(row_clusters.shape[0])
+            ],
         )
     return row_clusters
 
@@ -522,7 +526,9 @@ def betaj(xj: int, L: int, W: int, **kws) -> float:
 
     xk = W / 2
     # vec_betaj = np.vectorize( betaj ) ; vec_betaj(0, 1, 5)
-    return quad(d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws)[0]
+    return quad(d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws)[
+        0
+    ]
 
 
 def rhoa2z(
@@ -796,7 +802,10 @@ def savitzky_golay1d(
     half_window = (window_size - 1) // 2
     # precompute coefficients
     b = np.mat(
-        [[k**i for i in order_range] for k in range(-half_window, half_window + 1)]
+        [
+            [k**i for i in order_range]
+            for k in range(-half_window, half_window + 1)
+        ]
     )
     m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
     # pad the signal at the extremes with
@@ -991,7 +1000,11 @@ def find_bound_for_integration(
     # now take the max index and add +1 and start by this part
     # retreived the values
     array_init = ix_arr[int(max(index)) + 1 :]
-    return b0 if len(array_init) == 0 else find_bound_for_integration(array_init, b0)
+    return (
+        b0
+        if len(array_init) == 0
+        else find_bound_for_integration(array_init, b0)
+    )
 
 
 def fitfunc(
@@ -1233,7 +1246,9 @@ def vesDataOperator(
         raise ValueError("Lengths of AB and rhoa must be equal.")
 
     # Prepare output arrays
-    AB_unique, indices, counts = np.unique(AB, return_inverse=True, return_counts=True)
+    AB_unique, indices, counts = np.unique(
+        AB, return_inverse=True, return_counts=True
+    )
     rhoa_processed = np.zeros_like(AB_unique, dtype=float)
 
     # Apply specified operation on duplicated AB values
@@ -1429,7 +1444,9 @@ def bnn_inversion(AB, rhoa, rho0, h0, **kwargs):
     import theano.tensor as tt
 
     # Define the BNN architecture
-    n_hidden = kwargs.get("n_hidden", 10)  # Number of neurons in the hidden layer
+    n_hidden = kwargs.get(
+        "n_hidden", 10
+    )  # Number of neurons in the hidden layer
 
     # Initialize the PyMC3 model
     with pm.Model() as neural_network:  # noqa
@@ -1709,7 +1726,9 @@ def ohmicArea(
     roots = xx[ib_indexes]
 
     pairwise_r = (
-        np.split(roots, len(roots) // 2) if len(roots) > 2 else [np.array(roots)]
+        np.split(roots, len(roots) // 2)
+        if len(roots) > 2
+        else [np.array(roots)]
     )
     ohmS = np.zeros(
         len(
@@ -1864,7 +1883,9 @@ def type_(erp: ArrayLike[DType[float]]) -> str:
             ssets = [erp]
         else:
             remains = len(erp) % anomaly_length
-            indices = np.arange(anomaly_length, len(erp) - remains, anomaly_length)
+            indices = np.arange(
+                anomaly_length, len(erp) - remains, anomaly_length
+            )
             ssets = np.split(erp, indices)
 
     status = list()
@@ -1883,13 +1904,24 @@ def type_(erp: ArrayLike[DType[float]]) -> str:
         # no_ix = np.array (status)[len(yes_ix):]
         (no_ix,) = np.where(np.array(status) == "no")
         # check whether all indexes are sorted
-        sort_ix_yes = all(yes_ix[i] < yes_ix[i + 1] for i in range(len(yes_ix) - 1))
-        sort_ix_no = all(no_ix[i] < no_ix[i + 1] for i in range(len(no_ix) - 1))
+        sort_ix_yes = all(
+            yes_ix[i] < yes_ix[i + 1] for i in range(len(yes_ix) - 1)
+        )
+        sort_ix_no = all(
+            no_ix[i] < no_ix[i + 1] for i in range(len(no_ix) - 1)
+        )
 
         # check whether their difference is 1 even sorted
         if sort_ix_no == sort_ix_yes is True:
-            yes = set([abs(yes_ix[i] - yes_ix[i + 1]) for i in range(len(yes_ix) - 1)])
-            no = set([abs(no_ix[i] - no_ix[i + 1]) for i in range(len(no_ix) - 1)])
+            yes = set(
+                [
+                    abs(yes_ix[i] - yes_ix[i + 1])
+                    for i in range(len(yes_ix) - 1)
+                ]
+            )
+            no = set(
+                [abs(no_ix[i] - no_ix[i + 1]) for i in range(len(no_ix) - 1)]
+            )
             if (
                 yes == no == {1}
                 or
@@ -1987,7 +2019,9 @@ def shape(
             s_index = _assert_all_types(s, int)
 
     if s_index >= len(cz):
-        raise StationError(f"Position should be less than '7': got '{s_index}'")
+        raise StationError(
+            f"Position should be less than '7': got '{s_index}'"
+        )
     lbound, rbound = cz[: s_index + 1], cz[s_index:]
     ls, rs = lbound[0], rbound[-1]  # left side and right side (s)
     (lminls,) = argrelextrema(lbound, np.less)
@@ -2156,9 +2190,13 @@ def scalePosition(
     if str(func).lower() in ("none", "linear"):
         func = linfunc
     elif not callable(func) or not inspect.isfunction(func):
-        raise TypeError(f"`func` argument is a callable not {type(func).__name__!r}")
+        raise TypeError(
+            f"`func` argument is a callable not {type(func).__name__!r}"
+        )
 
-    ydata = _assert_all_types(ydata, list, tuple, np.ndarray, pd.Series, pd.DataFrame)
+    ydata = _assert_all_types(
+        ydata, list, tuple, np.ndarray, pd.Series, pd.DataFrame
+    )
     c_order = _assert_all_types(c_order, int, float, str)
     try:
         c_order = int(c_order)
@@ -2180,14 +2218,18 @@ def scalePosition(
             )
         if isinstance(c_order, str):
             # check whether the value is on the column name
-            if c_order.lower() not in list(map(lambda x: x.lower(), ydata.columns)):
+            if c_order.lower() not in list(
+                map(lambda x: x.lower(), ydata.columns)
+            ):
                 raise ValueError(
                     f"c_order {c_order!r} not found in {list(ydata.columns)}"
                     " Use the index instead."
                 )
                 # if c_order exists find the index and get the
                 # right column name
-            ix_c = list(map(lambda x: x.lower(), ydata.columns)).index(c_order.lower())
+            ix_c = list(map(lambda x: x.lower(), ydata.columns)).index(
+                c_order.lower()
+            )
             ydata = ydata.iloc[:, ix_c]  # series
         elif isinstance(c_order, (int, float)):
             c_order = int(c_order)
@@ -2323,7 +2365,9 @@ def detect_station_position(
         if s > len(p):  # consider this as the dipole length position:
             # now let check whether the given value is module of the station
             if s % dl != 0:
-                raise StationError(f"Unable to detect the station position {S}")
+                raise StationError(
+                    f"Unable to detect the station position {S}"
+                )
             elif s % dl == 0 and s <= p.max():
                 # take the index
                 s_index = s // dl
@@ -2509,7 +2553,9 @@ def sfi(
         # $\sqrt2# is the threshold
         sfi_ = np.sqrt((pw_star / pw) ** 2 + (ma_star / ma) ** 2) % np.sqrt(2)
         if sfi_ == np.inf:
-            sfi_ = np.sqrt((pw / pw_star) ** 2 + (ma / ma_star) ** 2) % np.sqrt(2)
+            sfi_ = np.sqrt(
+                (pw / pw_star) ** 2 + (ma / ma_star) ** 2
+            ) % np.sqrt(2)
 
     components = cz, p, xn, yn
 
@@ -2577,7 +2623,9 @@ def plot_sfi(
         x=p.min(),
         y=cz.max(),
         s=f"sfi={np.around(pfi, 3)}",
-        fontdict=dict(style="italic", bbox=dict(boxstyle="round", facecolor="orange")),
+        fontdict=dict(
+            style="italic", bbox=dict(boxstyle="round", facecolor="orange")
+        ),
     )
 
     plt.legend()
@@ -2623,7 +2671,9 @@ def plot_sfi(
         (p.min() - min(xax)) / (max(xax) - min(xax)),
         (p.max() - min(xax)) / (max(xax) - min(xax)),
     ]
-    plt.axhline(y=0, xmin=xlims[0], xmax=xlims[1], color="m", label="power", lw=4.0)
+    plt.axhline(
+        y=0, xmin=xlims[0], xmax=xlims[1], color="m", label="power", lw=4.0
+    )
 
     plt.legend()
 
@@ -2889,7 +2939,9 @@ def plot_(
     ax.set_xlabel(
         "AB/2 (m)" if dtype == "ves" else "Stations"
     ) if xlabel is None else plt.xlabel(xlabel)
-    ax.set_ylabel("Resistivity (Ω.m)") if ylabel is None else plt.ylabel(ylabel)
+    ax.set_ylabel("Resistivity (Ω.m)") if ylabel is None else plt.ylabel(
+        ylabel
+    )
 
     t0 = {
         "erp": "Plot Electrical Resistivity Profiling",
@@ -3004,7 +3056,9 @@ def _find_cz_bound_indexes(
     return cz_indexes[0], cz_indexes[-1]
 
 
-def convert_distance_to_m(value: T, converter: float = 1e3, unit: str = "km") -> float:
+def convert_distance_to_m(
+    value: T, converter: float = 1e3, unit: str = "km"
+) -> float:
     """Convert distance from `km` to `m` or vice versa even a string
     value is given.
 
@@ -3301,7 +3355,9 @@ def compute_sfi(
                 sfi = -np.sqrt(2)
 
     try:
-        if (rhoa == rhoa_min and pk == pk_min) or (rhoa == rhoa_max and pk == pk_max):
+        if (rhoa == rhoa_min and pk == pk_min) or (
+            rhoa == rhoa_max and pk == pk_max
+        ):
             ma = max([rhoa_min, rhoa_max])
             ma_star = min([rhoa_min, rhoa_max])
             pa = max([pk_min, pk_max])
@@ -3599,9 +3655,9 @@ def get_type(
     ].mean() < np.median(erp_array):
         anom_type = "CB2P"
 
-    elif erp_array[: index_pos + 1].mean() >= np.median(erp_array) and erp_array[
-        index_pos:
-    ].mean() >= np.median(erp_array):
+    elif erp_array[: index_pos + 1].mean() >= np.median(
+        erp_array
+    ) and erp_array[index_pos:].mean() >= np.median(erp_array):
         if dl <= (max(posMinMax) - min(posMinMax)) <= 5 * dl:
             anom_type = "NC"
 
@@ -3647,7 +3703,9 @@ def get_shape(rhoa_range: ArrayLike | List[float]) -> str:
     if len(minlocals[0]) > 1:
         shape = "W"
         average_curve = rhoa_range.mean()
-        minlocals_slices = rhoa_range[int(minlocals[0][0]) : int(minlocals[0][-1]) + 1]
+        minlocals_slices = rhoa_range[
+            int(minlocals[0][0]) : int(minlocals[0][-1]) + 1
+        ]
         average_minlocals_slices = minlocals_slices.mean()
 
         if average_curve >= 1.2 * average_minlocals_slices:
@@ -3726,9 +3784,9 @@ def gettype(erp_array, posMinMax, pk, pos_array, dl):
     ].mean() < np.median(erp_array):
         anom_type = "CB2P"
 
-    elif erp_array[: index_pos + 1].mean() >= np.median(erp_array) and erp_array[
-        index_pos:
-    ].mean() >= np.median(erp_array):
+    elif erp_array[: index_pos + 1].mean() >= np.median(
+        erp_array
+    ) and erp_array[index_pos:].mean() >= np.median(erp_array):
         if dl <= (max(posMinMax) - min(posMinMax)) <= 5 * dl:
             anom_type = "NC"
 
@@ -4038,7 +4096,9 @@ def compute_lower_anomaly(
     station_position: SP[float] = None,
     step: Optional[int] = None,
     **kws,
-) -> Tuple[Dict[str, Any], ArrayLike, List[ArrayLike], List[Tuple[int, float]]]:
+) -> Tuple[
+    Dict[str, Any], ArrayLike, List[ArrayLike], List[Tuple[int, float]]
+]:
     """
     Function to get the minimum value on the ERP array.
 
@@ -4085,7 +4145,9 @@ def compute_lower_anomaly(
     # compute new_pjk
     # find differents anomlies boundaries
     for ii, (rho, index) in enumerate(min_pks):
-        _, _, anlyBounds = drawn_boundaries(erp_data=erp_array, appRes=rho, index=index)
+        _, _, anlyBounds = drawn_boundaries(
+            erp_data=erp_array, appRes=rho, index=index
+        )
 
         collectanlyBounds.append(anlyBounds)
 
@@ -4110,7 +4172,9 @@ def compute_lower_anomaly(
     return bestSelectedDICT, anpks, collectanlyBounds, min_pks
 
 
-@deprecated("Autodetection is instable, it should be modified for the future realease.")
+@deprecated(
+    "Autodetection is instable, it should be modified for the future realease."
+)
 def select_anomaly(
     rhoa_array: ArrayLike,
     pos_array: SP = None,
@@ -4184,7 +4248,9 @@ def select_anomaly(
         pos_min, pos_max = pos_bounds.min(), pos_bounds.max()
 
         # get the res from array
-        dl_station_loc = np.arange(0, dipole_length * len(rhoa_array), dipole_length)
+        dl_station_loc = np.arange(
+            0, dipole_length * len(rhoa_array), dipole_length
+        )
         # then select rho range
         ind_pk_min = int(np.where(dl_station_loc == pos_min)[0])
         ind_pk_max = int(np.where(dl_station_loc == pos_max)[0])
@@ -4202,11 +4268,13 @@ def select_anomaly(
         return {f"1_pk{pk}": (pk, rhoa, pos_bounds, rhoa_bounds, res)}
 
     if auto:
-        bestSelectedDICT, anpks, collectanlyBounds, min_pks = compute_lower_anomaly(
-            erp_array=rhoa_array,
-            station_position=pos_array,
-            step=dipole_length,
-            display_infos=display_infos,
+        bestSelectedDICT, anpks, collectanlyBounds, min_pks = (
+            compute_lower_anomaly(
+                erp_array=rhoa_array,
+                station_position=pos_array,
+                step=dipole_length,
+                display_infos=display_infos,
+            )
         )
 
         return {
@@ -4257,7 +4325,9 @@ def define_anomaly(
             len(station_position - 1)
         )
     if station_position is None:
-        station_position = np.arange(0, dipole_length * len(erp_data), dipole_length)
+        station_position = np.arange(
+            0, dipole_length * len(erp_data), dipole_length
+        )
 
     def get_bound(pksbounds):
         """
@@ -4469,7 +4539,9 @@ def smooth1d(
             " for handling two-dimensional array."
         )
     if not _is_numeric_dtype(ar):
-        raise ValueError(f"{ar.dtype.name!r} is not allowed. Expect a numeric array")
+        raise ValueError(
+            f"{ar.dtype.name!r} is not allowed. Expect a numeric array"
+        )
 
     arr = ar.copy()
     if drop_outliers:
@@ -4595,7 +4667,10 @@ def smoothing(
            [-1.44359989,  3.49228057,  7.51734762]])
     """
     ar = np.array(is_iterable(ar, exclude_string=True, transform=True))
-    if str(axis).lower().find("1") >= 0 or str(axis).lower().find("column") >= 0:
+    if (
+        str(axis).lower().find("1") >= 0
+        or str(axis).lower().find("column") >= 0
+    ):
         axis = 1
     else:
         axis = 0
@@ -4624,7 +4699,9 @@ def smoothing(
     if view:
         fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=fig_size)
         ax[0].imshow(arr, interpolation="nearest", label="Raw Grid", cmap=cmap)
-        ax[1].imshow(arr0, interpolation="nearest", label="Smooth Grid", cmap=cmap)
+        ax[1].imshow(
+            arr0, interpolation="nearest", label="Smooth Grid", cmap=cmap
+        )
 
         ax[0].set_title("Raw Grid")
         ax[0].set_xlabel(xlabel or "")
@@ -4910,7 +4987,9 @@ def interpolate1d(
 
     if method == "pd":
         t_arr = pd.Series(t_arr, dtype=t_arr.dtype)
-        t_arr = np.array(t_arr.interpolate(method=kind, order=order, limit=limit))
+        t_arr = np.array(
+            t_arr.interpolate(method=kind, order=order, limit=limit)
+        )
         arr_new = reshape(fillNaN(t_arr, method="bff"))  # for consistency
 
     return arr_new
@@ -5135,7 +5214,8 @@ def get_strike(
 
     if profile_angle is None and easting is None and northing is None:
         _logger.debug(
-            "NoneType is given. Use 'gstrike' to recompute the " "geoelectrical strike"
+            "NoneType is given. Use 'gstrike' to recompute the "
+            "geoelectrical strike"
         )
         if gstrike is None:
             raise TypeError("Could not compute geo-electrike strike!")
@@ -5172,11 +5252,15 @@ def get_strike(
 
     geo_electric_strike = np.floor(geo_electric_strike)
     if msg == "raises":
-        print(f"+++ -> Profile angle is {geo_electric_strike:+.2f} degrees E of N")
+        print(
+            f"+++ -> Profile angle is {geo_electric_strike:+.2f} degrees E of N"
+        )
     return geo_electric_strike, profile_angle
 
 
-def savgol_coeffs(window_length, polyorder, deriv=0, delta=1.0, pos=None, use="conv"):
+def savgol_coeffs(
+    window_length, polyorder, deriv=0, delta=1.0, pos=None, use="conv"
+):
     """Compute the coefficients for a 1-D Savitzky-Golay FIR filter.
 
     Parameters
@@ -5270,7 +5354,9 @@ def savgol_coeffs(window_length, polyorder, deriv=0, delta=1.0, pos=None, use="c
         pos = halflen
 
     if not (0 <= pos < window_length):
-        raise ValueError("pos must be nonnegative and less than window_length.")
+        raise ValueError(
+            "pos must be nonnegative and less than window_length."
+        )
 
     if use not in ["conv", "dot"]:
         raise ValueError("`use` must be 'conv' or 'dot'")
@@ -5390,7 +5476,9 @@ def _fit_edges_polyfit(x, window_length, polyorder, deriv, delta, axis, y):
     This function just calls _fit_edge twice, once for each end of the axis.
     """
     halflen = window_length // 2
-    _fit_edge(x, 0, window_length, 0, halflen, axis, polyorder, deriv, delta, y)
+    _fit_edge(
+        x, 0, window_length, 0, halflen, axis, polyorder, deriv, delta, y
+    )
     n = x.shape[axis]
     _fit_edge(
         x,
@@ -5648,7 +5736,9 @@ def get2dtensor(
     }
 
     zl = [
-        getattr(ediObj.Z if obj_type == "EDI" else ediObj, f"{name}")[tuple(_c.get(m2))]
+        getattr(ediObj.Z if obj_type == "EDI" else ediObj, f"{name}")[
+            tuple(_c.get(m2))
+        ]
         for ediObj in z_or_edis_obj_list
     ]
 
@@ -5656,7 +5746,9 @@ def get2dtensor(
         mat2d = np.vstack(zl).T
     except:
         zl = [
-            fittensor(freqs, ediObj.Z._freq if obj_type == "EDI" else ediObj.freq, v)
+            fittensor(
+                freqs, ediObj.Z._freq if obj_type == "EDI" else ediObj.freq, v
+            )
             for ediObj, v in zip(z_or_edis_obj_list, zl)
         ]
         # stacked the z values alomx axis=1.
@@ -5946,7 +6038,9 @@ def plot_confidence_in(
     tensor = str(tensor).lower()
     view = str(view).lower()
     tensor = tensor + "_err" if tensor in "resistivityphase" else tensor
-    rerr, freqs = get2dtensor(z_or_edis_obj_list, tensor=tensor, return_freqs=True)
+    rerr, freqs = get2dtensor(
+        z_or_edis_obj_list, tensor=tensor, return_freqs=True
+    )
     ratio_0 = get_confidence_ratio(rerr)  # alongside columns (stations )
     # ratio_1 = get_confidence_ratio(rerr , axis =1 ) # along freq
     # make confidencity properties ( index, colors, labels )
@@ -5978,7 +6072,9 @@ def plot_confidence_in(
     if view == "2d":
         import matplotlib.pyplot as _plt
 
-        ar2d = remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
+        ar2d = (
+            remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
+        )
         x2d = np.arange(ar2d.shape[1]) * convert_value_in(distance)
         y2d = np.log10(freqs)
         fig, ax = _plt.subplots(figsize=figsize, dpi=dpi)
@@ -6279,9 +6375,9 @@ def qc(
     invalid_freqs = f[~np.isin(f, new_f)]
 
     if interpolate_freq:
-        new_f = np.logspace(np.log10(new_f.min()), np.log10(new_f.max()), len(new_f))[
-            ::-1
-        ]
+        new_f = np.logspace(
+            np.log10(new_f.min()), np.log10(new_f.max()), len(new_f)
+        )[::-1]
         # since interpolation is already made in
         # log10, getback to normal by default
         # and set off to False
@@ -6591,7 +6687,8 @@ def get_bearing(latlon1, latlon2, to_deg=True):
 
     b = np.arctan2(
         np.sin(lon2 - lon1) * np.cos(lat2),
-        np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(lon2 - lon1),
+        np.cos(lat1) * np.sin(lat2)
+        - np.sin(lat1) * np.cos(lat2) * np.cos(lon2 - lon1),
     )
     if to_deg:
         # convert bearing to degree and make sure it
@@ -6731,11 +6828,15 @@ def gradient_descent(
         with np.errstate(all="ignore"):  # rather than divide='warn'
             # https://numpy.org/devdocs/reference/generated/numpy.errstate.html
             W = W - (Z.T.dot(Z.dot(W) - s) / Z.shape[0]) * alpha
-            cost_history[ii] = (1 / 2 * Z.shape[0]) * np.sum((Z.dot(W) - s) ** 2)
+            cost_history[ii] = (1 / 2 * Z.shape[0]) * np.sum(
+                (Z.dot(W) - s) ** 2
+            )
 
     # Model function F= Z.W where `Z` id composed of vertical nodes
     # values and `bias` columns and `W` is weights numbers.
-    F = Z.dot(W)  # model(Z=Z, W=W)     # generate the new model with the best weights
+    F = Z.dot(
+        W
+    )  # model(Z=Z, W=W)     # generate the new model with the best weights
 
     return F, W, cost_history
 
@@ -7047,7 +7148,9 @@ def butterworth_filter(
     return y
 
 
-def exportEDIs(ediObjs: List[EDIO], new_Z: List[ZO], savepath: str = None, **kws):
+def exportEDIs(
+    ediObjs: List[EDIO], new_Z: List[ZO], savepath: str = None, **kws
+):
     """Export EDI files from multiples EDI or z objects
 
     Export new EDI files from the former object with  a given new

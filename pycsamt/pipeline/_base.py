@@ -120,7 +120,9 @@ class PipelineBase:
         >>> print(Pipeline.step_info("correct_ss_ama"))
         """
         spec = lookup_step(code_or_name)
-        qc_names = [fn_name for _, fn_name in spec.qc_defs] if spec.qc_defs else []
+        qc_names = (
+            [fn_name for _, fn_name in spec.qc_defs] if spec.qc_defs else []
+        )
         defs_str = (
             "  ".join(f"{k}={v!r}" for k, v in spec.defaults.items())
             if spec.defaults
@@ -147,7 +149,9 @@ class PipelineBase:
         ]
         if spec.defaults:
             first_k, first_v = next(iter(spec.defaults.items()))
-            lines.append(f'    Step("{spec.code}", {first_k}={first_v!r})   # override')
+            lines.append(
+                f'    Step("{spec.code}", {first_k}={first_v!r})   # override'
+            )
         lines.append(f'    Step("{spec.name}")              # by name')
         lines.append(_SEP)
         return "\n".join(lines)
@@ -253,9 +257,13 @@ class PipelineBase:
         for label, step in steps:
             cat = step.spec.category
             if cat != current_cat:
-                lines.append(f"        # ── {cat} {'─' * max(0, 56 - len(cat))}")
+                lines.append(
+                    f"        # ── {cat} {'─' * max(0, 56 - len(cat))}"
+                )
                 current_cat = cat
-            params_part = f", params={_params_repr(step.params)}" if step.params else ""
+            params_part = (
+                f", params={_params_repr(step.params)}" if step.params else ""
+            )
             lines.append(
                 f'        dict(name={label!r:<22}, code="{step.spec.code}"'
                 f"{params_part}),"
@@ -324,7 +332,9 @@ class PipelineBase:
         """
         fmt = fmt.lower()
         if fmt not in {"yaml", "json", "py"}:
-            raise ValueError(f"fmt must be 'yaml', 'json', or 'py'.  Got {fmt!r}")
+            raise ValueError(
+                f"fmt must be 'yaml', 'json', or 'py'.  Got {fmt!r}"
+            )
 
         # Resolve active steps from preset or default
         active_steps = _resolve_scaffold_steps(preset)
@@ -374,7 +384,8 @@ def _step_to_dict(label: str, spec: Any, params: dict) -> dict:
     if params:
         # convert tuples → lists for JSON/YAML safety
         safe_params = {
-            k: list(v) if isinstance(v, tuple) else v for k, v in params.items()
+            k: list(v) if isinstance(v, tuple) else v
+            for k, v in params.items()
         }
         d["params"] = safe_params
     return d
@@ -436,10 +447,14 @@ def _scaffold_yaml(name: str, outdir: str, active: list) -> str:
 def _scaffold_json(name: str, outdir: str, active: list) -> str:
     """Generate the JSON scaffold."""
     data = {
-        "_comment": (f"pyCSAMT Pipeline — {name}. Load: Pipeline.from_json(path)"),
+        "_comment": (
+            f"pyCSAMT Pipeline — {name}. Load: Pipeline.from_json(path)"
+        ),
         "name": name,
         "output_dir": outdir,
-        "steps": [_step_to_dict(lbl, spec, params) for lbl, spec, params in active],
+        "steps": [
+            _step_to_dict(lbl, spec, params) for lbl, spec, params in active
+        ],
         "_available_steps_hint": (
             "Run Pipeline.catalogue() to see all 33 available steps."
         ),
@@ -482,11 +497,15 @@ def _scaffold_py(
         specs = list_steps(cat)
         for sp in specs:
             if cat != current_cat:
-                body_lines.append(f"        # ── {cat} {'─' * max(0, 52 - len(cat))}")
+                body_lines.append(
+                    f"        # ── {cat} {'─' * max(0, 52 - len(cat))}"
+                )
                 current_cat = cat
 
             use_params = sp.defaults
-            params_part = f", params={_params_repr(use_params)}" if use_params else ""
+            params_part = (
+                f", params={_params_repr(use_params)}" if use_params else ""
+            )
             entry = (
                 f'        dict(name={sp.name!r:<24}, code="{sp.code}"{params_part}),'
                 f"  # {sp.label}"

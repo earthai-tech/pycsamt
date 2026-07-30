@@ -104,7 +104,9 @@ def _channel_names(
         return [f"ch{i}" for i in range(n_channel)]
     names = [str(name).strip().lower() for name in provided]
     if len(names) != n_channel:
-        raise ValueError("channel_names length must match the number of channels.")
+        raise ValueError(
+            "channel_names length must match the number of channels."
+        )
     if any(not name for name in names):
         raise ValueError("channel_names cannot contain empty labels.")
     return names
@@ -162,14 +164,18 @@ class EdgeProcessingConfig(PyCSAMTObject):
                 "warn_finite_threshold",
             )
             if self.warn_finite_threshold < self.finite_threshold:
-                raise ValueError("warn_finite_threshold must be >= finite_threshold.")
+                raise ValueError(
+                    "warn_finite_threshold must be >= finite_threshold."
+                )
         if self.warn_spike_fraction is not None:
             self.warn_spike_fraction = _as_probability(
                 self.warn_spike_fraction,
                 "warn_spike_fraction",
             )
             if self.warn_spike_fraction > self.max_spike_fraction:
-                raise ValueError("warn_spike_fraction must be <= max_spike_fraction.")
+                raise ValueError(
+                    "warn_spike_fraction must be <= max_spike_fraction."
+                )
         self.retain_payload_samples = _as_bool(self.retain_payload_samples)
         if not isinstance(self.metadata, dict):
             self.metadata = dict(self.metadata or {})
@@ -256,7 +262,9 @@ class EdgeProcessingResult(PyCSAMTObject):
         self.accepted = bool(self.accepted)
         self.reasons = [str(reason) for reason in list(self.reasons or [])]
         self.channels = [
-            ch if isinstance(ch, EdgeChannelSummary) else EdgeChannelSummary(**dict(ch))
+            ch
+            if isinstance(ch, EdgeChannelSummary)
+            else EdgeChannelSummary(**dict(ch))
             for ch in list(self.channels or [])
         ]
         if self.decision_override is not None:
@@ -384,7 +392,9 @@ class EdgeProcessor(PyCSAMTObject):
             accepted=bool(accepted),
             reasons=reasons,
             channels=summaries,
-            decision_override=(decision if decision is EdgeDecision.WARNING else None),
+            decision_override=(
+                decision if decision is EdgeDecision.WARNING else None
+            ),
         )
 
     def _warning_reasons(
@@ -418,7 +428,9 @@ class EdgeProcessor(PyCSAMTObject):
         sample_axis: int,
         channel_names: Iterable[str] | None,
     ) -> list[EdgeChannelSummary]:
-        sample_first = np.moveaxis(np.asarray(data, dtype=float), sample_axis, 0)
+        sample_first = np.moveaxis(
+            np.asarray(data, dtype=float), sample_axis, 0
+        )
         if sample_first.ndim == 1:
             matrix = sample_first.reshape(sample_first.shape[0], 1)
         else:
@@ -493,7 +505,9 @@ def edge_summary_table(
     api: bool | None = None,
 ) -> Any:
     """Return one row per channel from edge-processing results."""
-    results = [result] if isinstance(result, EdgeProcessingResult) else list(result)
+    results = (
+        [result] if isinstance(result, EdgeProcessingResult) else list(result)
+    )
     rows: list[Mapping[str, Any]] = []
     for idx, item in enumerate(results):
         item.validate()

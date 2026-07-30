@@ -85,7 +85,10 @@ def _plot_counts(result: PipelineResult) -> np.ndarray:
 
 
 def _status_colors(result: PipelineResult) -> list[str]:
-    return [_OK if getattr(sr, "ok", False) else _ERR for sr in _step_results(result)]
+    return [
+        _OK if getattr(sr, "ok", False) else _ERR
+        for sr in _step_results(result)
+    ]
 
 
 def _style_axis(ax: Any, *, xgrid: bool = False, ygrid: bool = True) -> None:
@@ -265,7 +268,9 @@ def plot_site_count_flow(
 
     labels = _step_labels(result)
     if not labels:
-        return _empty_axis(ax, f"Pipeline station flow: {result.pipeline_name}")
+        return _empty_axis(
+            ax, f"Pipeline station flow: {result.pipeline_name}"
+        )
 
     x = np.arange(len(labels))
     n_in, n_out = _site_counts(result)
@@ -356,7 +361,9 @@ def _plot_summary_cards(result: PipelineResult, *, ax: Any) -> Any:
     return ax
 
 
-def plt_rectangle(ax: Any, x: float, y: float, w: float, h: float, color: str) -> Any:
+def plt_rectangle(
+    ax: Any, x: float, y: float, w: float, h: float, color: str
+) -> Any:
     from matplotlib.patches import FancyBboxPatch
 
     return FancyBboxPatch(

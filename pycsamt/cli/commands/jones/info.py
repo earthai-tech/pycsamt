@@ -75,8 +75,12 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
 
     freq = jf.freq
     n_freq = int(jf.n_freq or 0)
-    freq_min = float(freq.min()) if freq is not None and freq.size else float("nan")
-    freq_max = float(freq.max()) if freq is not None and freq.size else float("nan")
+    freq_min = (
+        float(freq.min()) if freq is not None and freq.size else float("nan")
+    )
+    freq_max = (
+        float(freq.max()) if freq is not None and freq.size else float("nan")
+    )
 
     banner = getattr(getattr(jf, "heads", None), "banner", None)
     software = getattr(banner, "software", None) if banner else None
@@ -136,7 +140,9 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
     click.echo(f"n_freq    : {n_freq}")
     if n_freq > 0:
         click.echo(f"Freq range: {freq_min:.4g} – {freq_max:.4g} Hz")
-    click.echo(f"Data      : Z={row['has_z']}  R/φ={row['has_r']}  T={row['has_t']}")
+    click.echo(
+        f"Data      : Z={row['has_z']}  R/φ={row['has_r']}  T={row['has_t']}"
+    )
     if row["lat"] is not None:
         click.echo(f"Lat / Lon : {row['lat']:.6f}  /  {row['lon']:.6f}")
     if row["elev"] is not None:
@@ -157,7 +163,9 @@ def _info_single(path: Path, fmt: str, verbose: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _info_collection(path: Path, top: int | None, fmt: str, verbose: int) -> None:
+def _info_collection(
+    path: Path, top: int | None, fmt: str, verbose: int
+) -> None:
     coll = _get_collection(path, verbose=verbose)
     if len(coll) == 0:
         click.echo(f"No J-files found in {path}.", err=True)

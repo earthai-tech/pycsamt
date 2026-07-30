@@ -108,7 +108,9 @@ def estimate_area_of_interest(
                     irx = em.data[csem_mask, 3].astype(int) - 1
                     n_tx = len(em.csem.transmitters)
                     n_rx = len(em.csem.receivers)
-                    valid = (itx >= 0) & (itx < n_tx) & (irx >= 0) & (irx < n_rx)
+                    valid = (
+                        (itx >= 0) & (itx < n_tx) & (irx >= 0) & (irx < n_rx)
+                    )
                     if valid.any():
                         r = np.abs(
                             em.csem.receivers[irx[valid], 1]

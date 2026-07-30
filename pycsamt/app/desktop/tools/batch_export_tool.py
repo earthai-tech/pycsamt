@@ -72,7 +72,9 @@ class _ExportWorker(QThread):
         total = len(self._figures)
         saved = 0
         for idx, (label, fig) in enumerate(self._figures):
-            safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in label)
+            safe = "".join(
+                c if c.isalnum() or c in "-_ " else "_" for c in label
+            )
             safe = safe.strip().replace(" ", "_")
             out_path = self._out_dir / f"{safe}.{self._fmt}"
             try:
@@ -125,7 +127,9 @@ class BatchExportDialog(QDialog):
         grp_src = QGroupBox("Source")
         form_src = QFormLayout(grp_src)
         n = len(self._figures)
-        self._src_lbl = QLabel(f"{n} canvas figure{'s' if n != 1 else ''} found")
+        self._src_lbl = QLabel(
+            f"{n} canvas figure{'s' if n != 1 else ''} found"
+        )
         form_src.addRow("Figures:", self._src_lbl)
         if self._figures:
             names = ", ".join(lbl for lbl, _ in self._figures[:5])

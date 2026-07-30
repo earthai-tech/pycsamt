@@ -49,8 +49,7 @@ def tma(
     data: pd.DataFrame,
     window_size: int = 5,
     trim_proportion: float = 0.2,
-) -> pd.DataFrame:
-    ...
+) -> pd.DataFrame: ...
 
 
 @overload
@@ -60,8 +59,7 @@ def tma(
     data: None = None,
     window_size: int = 5,
     trim_proportion: float = 0.2,
-) -> np.ndarray:
-    ...
+) -> np.ndarray: ...
 
 
 @overload
@@ -71,8 +69,7 @@ def tma(
     data: None = None,
     window_size: int = 5,
     trim_proportion: float = 0.2,
-) -> pd.Series:
-    ...
+) -> pd.Series: ...
 
 
 def tma(
@@ -164,8 +161,7 @@ def flma(
     *,
     data: pd.DataFrame,
     filter_width_dipoles: float = 5.0,
-) -> pd.DataFrame:
-    ...
+) -> pd.DataFrame: ...
 
 
 @overload
@@ -176,8 +172,7 @@ def flma(
     *,
     data: None = None,
     filter_width_dipoles: float = 5.0,
-) -> np.ndarray:
-    ...
+) -> np.ndarray: ...
 
 
 @overload
@@ -188,8 +183,7 @@ def flma(
     *,
     data: None = None,
     filter_width_dipoles: float = 5.0,
-) -> pd.Series:
-    ...
+) -> pd.Series: ...
 
 
 def flma(
@@ -296,8 +290,7 @@ def ama(
     data: pd.DataFrame,
     skin_depth_factor: float = 2.0,
     iterations: int = 3,
-) -> pd.DataFrame:
-    ...
+) -> pd.DataFrame: ...
 
 
 @overload
@@ -310,8 +303,7 @@ def ama(
     data: None = None,
     skin_depth_factor: float = 2.0,
     iterations: int = 3,
-) -> np.ndarray:
-    ...
+) -> np.ndarray: ...
 
 
 @overload
@@ -324,8 +316,7 @@ def ama(
     data: None = None,
     skin_depth_factor: float = 2.0,
     iterations: int = 3,
-) -> pd.Series:
-    ...
+) -> pd.Series: ...
 
 
 def ama(
@@ -407,7 +398,9 @@ def ama(
             window_min = stn_center - radius
             window_max = stn_center + radius
 
-            window_mask = (stn_series >= window_min) & (stn_series <= window_max)
+            window_mask = (stn_series >= window_min) & (
+                stn_series <= window_max
+            )
             z_in_window = smoothed_z[window_mask]
 
             if z_in_window.empty or z_in_window.isnull().all():
@@ -415,7 +408,9 @@ def ama(
                 continue
 
             weights = hann(len(z_in_window))
-            current_pass_z.iloc[i] = np.average(z_in_window.dropna(), weights=weights)
+            current_pass_z.iloc[i] = np.average(
+                z_in_window.dropna(), weights=weights
+            )
         smoothed_z = current_pass_z
 
     # --- Return data in the original format ---

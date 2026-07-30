@@ -297,7 +297,9 @@ def groom_bailey_table(
                 n_freq=int(z_fit.shape[0]),
                 period_min_s=float(np.nanmin(1.0 / fr_fit)),
                 period_max_s=float(np.nanmax(1.0 / fr_fit)),
-                rotate_deg=(float(rotate_deg) if rotate_deg is not None else np.nan),
+                rotate_deg=(
+                    float(rotate_deg) if rotate_deg is not None else np.nan
+                ),
                 distortion_xx=float(D[0, 0]),
                 distortion_xy=float(D[0, 1]),
                 distortion_yx=float(D[1, 0]),

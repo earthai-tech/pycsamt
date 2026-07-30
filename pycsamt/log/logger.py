@@ -23,7 +23,9 @@ def get_data_home(data_home: str = None) -> str:
       3) ~/pycsamt_data
     """
     if data_home is None:
-        data_home = os.environ.get("PYCSAMT_DATA", os.path.join("~", "pycsamt_data"))
+        data_home = os.environ.get(
+            "PYCSAMT_DATA", os.path.join("~", "pycsamt_data")
+        )
     data_home = os.path.expanduser(data_home)
     try:
         os.makedirs(data_home, exist_ok=True)
@@ -35,7 +37,9 @@ def get_data_home(data_home: str = None) -> str:
     return data_home
 
 
-def configure_logging(config_path: str = None, use_default: bool = False) -> None:
+def configure_logging(
+    config_path: str = None, use_default: bool = False
+) -> None:
     """
     Configure logging, but if any handler has a *relative* filename,
     remap it into <data_home>/logs/<that-filename>.
@@ -53,7 +57,9 @@ def configure_logging(config_path: str = None, use_default: bool = False) -> Non
             format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
             datefmt="%Y-%m-%dT %H:%M:%S %z",
         )
-        logging.getLogger(__name__).info("Logging configured with default/basicConfig")
+        logging.getLogger(__name__).info(
+            "Logging configured with default/basicConfig"
+        )
         return
 
     # 1) find YAML...
@@ -98,7 +104,9 @@ def configure_logging(config_path: str = None, use_default: bool = False) -> Non
 
     # 5) apply the dictConfig
     logging.config.dictConfig(cfg)
-    logging.getLogger(__name__).info(f"Loaded logging configuration from {config_path}")
+    logging.getLogger(__name__).info(
+        f"Loaded logging configuration from {config_path}"
+    )
 
 
 def get_logger(name: str = None) -> logging.Logger:

@@ -89,7 +89,9 @@ def prepare_z_features(
             ensure_sites,
         )
     except ImportError as exc:
-        raise ImportError("emtools is required for prepare_z_features") from exc
+        raise ImportError(
+            "emtools is required for prepare_z_features"
+        ) from exc
 
     S = ensure_sites(sites, recursive=True, on_dup="replace")
     rows: list[np.ndarray] = []
@@ -142,7 +144,9 @@ def prepare_z_features(
     if not rows:
         raise ValueError("No valid Z data found in the provided sites.")
 
-    return np.stack(rows, axis=0).astype(np.float32)  # (n_sites, n_comp, n_freqs)
+    return np.stack(rows, axis=0).astype(
+        np.float32
+    )  # (n_sites, n_comp, n_freqs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -215,7 +219,9 @@ def _build_cae_tf(
         import tensorflow as tf
         from tensorflow.keras import Model, layers
     except ImportError as exc:
-        raise ImportError("TensorFlow is required for EMDenoiser (TF backend)") from exc
+        raise ImportError(
+            "TensorFlow is required for EMDenoiser (TF backend)"
+        ) from exc
 
     ch = list(channels)
     # pool_size ≈ n_freqs//(n_freqs//4) = 4; safe default for common grid sizes
@@ -373,7 +379,9 @@ class EMDenoiser(BaseEMProcessor):
         if self.n_freqs is None:
             self.n_freqs = X.shape[2]
         elif X.shape[2] != self.n_freqs:
-            raise ValueError(f"Expected n_freqs={self.n_freqs}, got {X.shape[2]}")
+            raise ValueError(
+                f"Expected n_freqs={self.n_freqs}, got {X.shape[2]}"
+            )
 
         self._x_mean = X.mean(axis=(0, 2), keepdims=True)
         self._x_std = X.std(axis=(0, 2), keepdims=True) + 1e-8
@@ -416,7 +424,9 @@ class EMDenoiser(BaseEMProcessor):
             self._backend_name = "numpy"
             self._use_numpy = True
             if verbose:
-                print("  EMDenoiser (scipy Gaussian fallback) — no DL backend found.")
+                print(
+                    "  EMDenoiser (scipy Gaussian fallback) — no DL backend found."
+                )
 
         self._is_fitted = True
         return self
@@ -492,7 +502,9 @@ class EMDenoiser(BaseEMProcessor):
         per_ch_std = Xtr.std(axis=(0, 2), keepdims=True)
 
         def _make_noisy(batch: np.ndarray) -> torch.Tensor:
-            noise = rng.normal(0.0, noise_level, batch.shape).astype(np.float32)
+            noise = rng.normal(0.0, noise_level, batch.shape).astype(
+                np.float32
+            )
             noise *= per_ch_std
             return torch.from_numpy(batch + noise).to(dev)
 
@@ -503,7 +515,9 @@ class EMDenoiser(BaseEMProcessor):
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for (xb,) in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
+            for (xb,) in DataLoader(
+                tr_ds, batch_size=batch_size, shuffle=True
+            ):
                 xb = xb.to(dev)
                 noisy = _make_noisy(xb.cpu().numpy())
                 pred = self._network(noisy)
@@ -558,7 +572,9 @@ class EMDenoiser(BaseEMProcessor):
         per_ch_std = Xtr.std(axis=(0, 2), keepdims=True)  # (1, n_comp, 1)
 
         def _add_noise(X_chlast: np.ndarray) -> np.ndarray:
-            noise = rng.normal(0.0, noise_level, X_chlast.shape).astype(np.float32)
+            noise = rng.normal(0.0, noise_level, X_chlast.shape).astype(
+                np.float32
+            )
             # per_ch_std is (1, n_comp, 1); transpose to (1, 1, n_comp) for channels-last
             noise *= per_ch_std.transpose(0, 2, 1)
             return X_chlast + noise
@@ -627,7 +643,9 @@ class EMDenoiser(BaseEMProcessor):
         self._x_mean = weights.pop("_x_mean", None)
         self._x_std = weights.pop("_x_std", None)
         backend_blob = weights.pop("_backend", None)
-        self._backend_name = str(backend_blob) if backend_blob is not None else "torch"
+        self._backend_name = (
+            str(backend_blob) if backend_blob is not None else "torch"
+        )
 
         if self._backend_name == "tensorflow":
             self._network = _build_cae_tf(

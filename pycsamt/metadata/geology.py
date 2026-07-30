@@ -447,7 +447,9 @@ class GeologyCatalog:
         key = name.lower()
         if key not in self._store:
             available = sorted(self._store.keys())
-            raise KeyError(f"Formation {name!r} not found.  Available: {available}")
+            raise KeyError(
+                f"Formation {name!r} not found.  Available: {available}"
+            )
         return self._store[key]
 
     def names(self) -> list[str]:

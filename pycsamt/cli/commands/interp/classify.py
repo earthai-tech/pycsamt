@@ -185,7 +185,11 @@ def classify(
         if verbose >= 1:
             click.echo(
                 f"Loading Occam2D result from {workdir}/"
-                + (f"  iteration={iteration}" if iteration else "  (last iteration)"),
+                + (
+                    f"  iteration={iteration}"
+                    if iteration
+                    else "  (last iteration)"
+                ),
                 err=True,
             )
 

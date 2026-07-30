@@ -885,7 +885,9 @@ def _extract_first_head_and_body(
     return h, seq[start:]
 
 
-def _extract_all_blocks(lines: Sequence[str], *, verbose: int = 0) -> list[JBlock]:
+def _extract_all_blocks(
+    lines: Sequence[str], *, verbose: int = 0
+) -> list[JBlock]:
     """
     Robustly parse all data blocks from a J-file for
     a single station.
@@ -903,7 +905,11 @@ def _extract_all_blocks(lines: Sequence[str], *, verbose: int = 0) -> list[JBloc
     first_data_line_index = 0
     for i, line in enumerate(seq):
         # Skip over the initial comment and info blocks
-        if RE_COMMENT.match(line) or RE_INFO.match(line) or RE_BLANK.match(line):
+        if (
+            RE_COMMENT.match(line)
+            or RE_INFO.match(line)
+            or RE_BLANK.match(line)
+        ):
             continue
         # The first non-header line must be the station
         if RE_STATION.match(line):
@@ -1004,7 +1010,9 @@ def _locate_header_indices(
 
     # skip comments/info/blank first
     while i < n and (
-        RE_COMMENT.match(seq[i]) or RE_INFO.match(seq[i]) or RE_BLANK.match(seq[i])
+        RE_COMMENT.match(seq[i])
+        or RE_INFO.match(seq[i])
+        or RE_BLANK.match(seq[i])
     ):
         i += 1
 

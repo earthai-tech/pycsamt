@@ -29,7 +29,9 @@ _HYBRID_KWS = {
 
 def _is_pinn_or_hybrid(text: str) -> bool:
     t = text.lower()
-    return any(kw in t for kw in _PINN_KWS) or any(kw in t for kw in _HYBRID_KWS)
+    return any(kw in t for kw in _PINN_KWS) or any(
+        kw in t for kw in _HYBRID_KWS
+    )
 
 
 def register_inv_params(app) -> None:

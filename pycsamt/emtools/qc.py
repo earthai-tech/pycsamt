@@ -121,7 +121,9 @@ def _clip01(x: Any) -> float:
     return float(np.clip(value, 0.0, 1.0))
 
 
-def _weighted_nanmean(values: dict[str, float], weights: dict[str, float]) -> float:
+def _weighted_nanmean(
+    values: dict[str, float], weights: dict[str, float]
+) -> float:
     """Return weighted mean ignoring unavailable metrics."""
     total = 0.0
     weight = 0.0
@@ -186,7 +188,9 @@ def confidence_ratio(
     return cr
 
 
-def _relerr_score(z: np.ndarray, ze: np.ndarray | None, threshold: float) -> float:
+def _relerr_score(
+    z: np.ndarray, ze: np.ndarray | None, threshold: float
+) -> float:
     """Score tensor uncertainty from median relative error."""
     if ze is None:
         return np.nan
@@ -481,7 +485,10 @@ def qc_flags(
             f.append("low_coverage")
         if np.isfinite(r["snr_med"]) and r["snr_med"] < min_snr_med:
             f.append("low_snr")
-        if np.isfinite(r.get("skew_med", np.nan)) and r["skew_med"] > max_skew_med:
+        if (
+            np.isfinite(r.get("skew_med", np.nan))
+            and r["skew_med"] > max_skew_med
+        ):
             f.append("high_skew")
         flags.append(",".join(f))
     out = tb.copy()
@@ -572,7 +579,9 @@ def station_confidence_table(
         rows.append(
             dict(
                 station=st,
-                distance_m=float(positions[i]) if i < positions.size else np.nan,
+                distance_m=float(positions[i])
+                if i < positions.size
+                else np.nan,
                 confidence=float(confidence),
                 confidence_err=float(confidence_err),
                 method=method,
@@ -727,7 +736,8 @@ def frequency_confidence_table(
         offdiag = np.asarray(
             [
                 _clip01(
-                    1.0 - abs(value) / max(float(offdiag_tolerance_log10), 1e-12),
+                    1.0
+                    - abs(value) / max(float(offdiag_tolerance_log10), 1e-12),
                 )
                 for value in ratio
             ],
@@ -778,7 +788,9 @@ def frequency_confidence_table(
                 ),
                 frequency_hz=float(freq),
                 period_s=float(1.0 / freq) if freq else np.nan,
-                log10_period=(float(np.log10(1.0 / freq)) if freq > 0 else np.nan),
+                log10_period=(
+                    float(np.log10(1.0 / freq)) if freq > 0 else np.nan
+                ),
                 confidence=float(confidence),
                 confidence_err=_confidence_error(error_parts, 1, confidence),
                 method=method,
@@ -1159,7 +1171,9 @@ def plot_confidence_profile(
         low = min(0.0, np.nanmin(ys) - 0.05)
         ax.set_ylim(max(-0.03, low), 1.08)
     ticks = sorted({0.0, ci_lo, ci_hi, 1.0})
-    ticks = [tick for tick in ticks if ax.get_ylim()[0] <= tick <= ax.get_ylim()[1]]
+    ticks = [
+        tick for tick in ticks if ax.get_ylim()[0] <= tick <= ax.get_ylim()[1]
+    ]
     if ticks:
         ax.set_yticks(ticks)
     ax.set_xlabel("Distance along profile (m)")
@@ -1368,7 +1382,9 @@ def plot_station_confidence_spectrum(
     return ax
 
 
-def _confidence_panel_background(ax: plt.Axes, ci_hi: float, ci_lo: float) -> None:
+def _confidence_panel_background(
+    ax: plt.Axes, ci_hi: float, ci_lo: float
+) -> None:
     """Draw confidence threshold bands for one dashboard axis."""
     ax.axhspan(0.0, ci_lo, color="#d62728", alpha=0.06, lw=0)
     ax.axhspan(ci_lo, ci_hi, color="#f3a6c9", alpha=0.10, lw=0)
@@ -1590,7 +1606,8 @@ def plot_confidence_band_summary(
     bands = (
         tb.assign(
             safe=tb["confidence"] >= ci_hi,
-            recoverable=(tb["confidence"] >= ci_lo) & (tb["confidence"] < ci_hi),
+            recoverable=(tb["confidence"] >= ci_lo)
+            & (tb["confidence"] < ci_hi),
             reject=tb["confidence"] < ci_lo,
         )
         .groupby("log10_period")[["safe", "recoverable", "reject"]]
@@ -1907,7 +1924,9 @@ def _zblk(ed: Any, need_err: bool = False):
 # ----------------------- rho_a + error propagation ---------------------- #
 
 
-def _rhoa_xy_yx(z: np.ndarray, fr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _rhoa_xy_yx(
+    z: np.ndarray, fr: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     c = 0.2 / (fr + 1e-24)
     rxy = c * (np.abs(z[:, 0, 1]) ** 2)
     ryx = c * (np.abs(z[:, 1, 0]) ** 2)
@@ -1941,9 +1960,9 @@ def _rhoa_ci(
     nf = zz.size
     n = int(max(16, n_draws))
     # complex Gaussian, σ equals |ze|
-    E = (rng.standard_normal((n, nf)) + 1j * rng.standard_normal((n, nf))) / np.sqrt(
-        2.0
-    )
+    E = (
+        rng.standard_normal((n, nf)) + 1j * rng.standard_normal((n, nf))
+    ) / np.sqrt(2.0)
     E = E * ee[None, :]
     Zs = zz[None, :] + E
     c = 0.2 / (fr + 1e-24)
@@ -2042,9 +2061,13 @@ def plot_consistency_fan(
             x2 = 1.0 / fr2
             rxy2, ryx2 = _rhoa_xy_yx(z2, fr2)
             if "xy" in comps:
-                ax.plot(x2, rxy2, "--", lw=1.2, color=cols["xy"], label="after xy")
+                ax.plot(
+                    x2, rxy2, "--", lw=1.2, color=cols["xy"], label="after xy"
+                )
             if "yx" in comps:
-                ax.plot(x2, ryx2, "--", lw=1.2, color=cols["yx"], label="after yx")
+                ax.plot(
+                    x2, ryx2, "--", lw=1.2, color=cols["yx"], label="after yx"
+                )
             break
     ax.set_xlabel("Period (s)")
     ax.set_ylabel("ρa (Ω·m)")

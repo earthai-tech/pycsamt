@@ -72,7 +72,11 @@ def sanitize_frame_cols(
     if isinstance(regex, re.Pattern):
         splitter = regex
     else:
-        pat = regex if isinstance(regex, str) else (pattern or r"[_#&.\)\(*@!_,;\s-]+")
+        pat = (
+            regex
+            if isinstance(regex, str)
+            else (pattern or r"[_#&.\)\(*@!_,;\s-]+")
+        )
         splitter = re.compile(pat)
 
     def _clean(name: Any) -> str:
@@ -193,7 +197,8 @@ def drop_constant_columns(
         # Identify rows to drop
         mask = df2.apply(
             lambda row: (
-                row.value_counts(normalize=True, dropna=False).iloc[0] >= threshold
+                row.value_counts(normalize=True, dropna=False).iloc[0]
+                >= threshold
             ),
             axis=1,
         )

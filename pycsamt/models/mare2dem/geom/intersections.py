@@ -56,7 +56,10 @@ def do_rects_overlap(
     by2 = np.maximum(b[:, 2], b[:, 3])
 
     no_overlap = (
-        (ax1 - bx2 > tol) | (bx1 - ax2 > tol) | (ay1 - by2 > tol) | (by1 - ay2 > tol)
+        (ax1 - bx2 > tol)
+        | (bx1 - ax2 > tol)
+        | (ay1 - by2 > tol)
+        | (by1 - ay2 > tol)
     )
     return np.where(~no_overlap)[0]
 

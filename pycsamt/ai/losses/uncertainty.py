@@ -140,9 +140,7 @@ def gaussian_nll_loss(
             "y_pred, y_true, and log_variance must share one shape."
         )
     if pred.size == 0:
-        raise ValueError(
-            "y_pred, y_true, and log_variance must not be empty."
-        )
+        raise ValueError("y_pred, y_true, and log_variance must not be empty.")
     mask = np.isfinite(pred) & np.isfinite(true) & np.isfinite(log_var)
     if valid is not None:
         supplied = np.asarray(valid, dtype=bool)
@@ -217,9 +215,7 @@ def calibration_loss(
     cov = np.asarray(coverage, dtype=float)
     nominal = np.asarray(nominal_levels, dtype=float)
     if cov.shape != nominal.shape:
-        raise ValueError(
-            "coverage and nominal_levels must share one shape."
-        )
+        raise ValueError("coverage and nominal_levels must share one shape.")
     if cov.size == 0:
         raise ValueError("coverage and nominal_levels must not be empty.")
     if np.any((cov[np.isfinite(cov)] < 0.0) | (cov[np.isfinite(cov)] > 1.0)):
@@ -231,14 +227,10 @@ def calibration_loss(
     if valid is not None:
         supplied = np.asarray(valid, dtype=bool)
         if supplied.shape != cov.shape:
-            raise ValueError(
-                "valid must have the same shape as coverage."
-            )
+            raise ValueError("valid must have the same shape as coverage.")
         mask &= supplied
     difference = np.where(mask, cov - nominal, 0.0)
-    per_cell = (
-        np.abs(difference) if kind == "l1" else np.square(difference)
-    )
+    per_cell = np.abs(difference) if kind == "l1" else np.square(difference)
     weight_array = _weight_array(weights, cov.shape, "weights")
     active_weights = (
         mask.astype(float) if weight_array is None else weight_array * mask

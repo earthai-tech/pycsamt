@@ -260,7 +260,9 @@ def psd_table(
                         "psd": float(psd[fi]),
                     }
                 )
-    df = pd.DataFrame(rows, columns=["station", "freq", "period", "channel", "psd"])
+    df = pd.DataFrame(
+        rows, columns=["station", "freq", "period", "channel", "psd"]
+    )
 
     return maybe_wrap_frame(
         df,
@@ -493,7 +495,9 @@ def spectra_summary(sp: Any, *, api: bool | None = None) -> Any:
         # mean coherence over all pairs at this frequency
         nc = sp.n_chan
         if nc > 1:
-            pairs_val = [coh[fi, i, j] for i in range(nc) for j in range(i + 1, nc)]
+            pairs_val = [
+                coh[fi, i, j] for i in range(nc) for j in range(i + 1, nc)
+            ]
             row["mean_coherence"] = float(np.nanmean(pairs_val))
         rows.append(row)
 
@@ -852,7 +856,9 @@ def plot_z_from_spectra(
 
     axes_given = _axes_list(axes, 2)
     if axes_given is None:
-        fig, (ax_r, ax_p) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+        fig, (ax_r, ax_p) = plt.subplots(
+            1, 2, figsize=figsize, constrained_layout=True
+        )
     else:
         ax_r, ax_p = axes_given
         fig = ax_r.figure
@@ -946,7 +952,9 @@ def plot_tipper_from_spectra(
     if tip is None:
         axes_given = _axes_list(axes, 2) if axes is not None else None
         if axes_given is None:
-            _, axs = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+            _, axs = plt.subplots(
+                1, 2, figsize=figsize, constrained_layout=True
+            )
         else:
             axs = axes_given
         for ax in axs:
@@ -969,7 +977,9 @@ def plot_tipper_from_spectra(
 
     axes_given = _axes_list(axes, 2)
     if axes_given is None:
-        fig, (ax_a, ax_p) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+        fig, (ax_a, ax_p) = plt.subplots(
+            1, 2, figsize=figsize, constrained_layout=True
+        )
     else:
         ax_a, ax_p = axes_given
         fig = ax_a.figure
@@ -1095,7 +1105,9 @@ def plot_psd_section(
     if len(y) > 1:
         dy = np.abs(np.diff(y)) / 2.0
         sgn = np.sign(np.diff(y))
-        y_edges = np.r_[y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]]
+        y_edges = np.r_[
+            y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]
+        ]
     else:
         y_edges = np.r_[y[0] - 0.2, y[0] + 0.2]
 
@@ -1207,7 +1219,9 @@ def plot_coherence_section(
     if len(y) > 1:
         dy = np.abs(np.diff(y)) / 2.0
         sgn = np.sign(np.diff(y))
-        y_edges = np.r_[y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]]
+        y_edges = np.r_[
+            y[0] - dy[0], y[:-1] + sgn * dy, y[-1] + sgn[-1] * dy[-1]
+        ]
     else:
         y_edges = np.r_[y[0] - 0.2, y[0] + 0.2]
 
@@ -1239,7 +1253,9 @@ def plot_coherence_section(
 
     sty.apply_stations(ax, st_x, names)
 
-    pair_str = f"ch{pair[0]}-ch{pair[1]}" if pair is not None else "mean all pairs"
+    pair_str = (
+        f"ch{pair[0]}-ch{pair[1]}" if pair is not None else "mean all pairs"
+    )
     ax.set_title(
         title or f"Coherence pseudo-section  —  {pair_str}",
         fontsize=10,

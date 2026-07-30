@@ -177,7 +177,9 @@ def _compute_offsets(items: list):
         if np.isfinite(lat) and np.isfinite(lon):
             dx = (lon - lon0) * _M_PER_DEG * np.cos(np.radians(lat0))
             dy = (lat - lat0) * _M_PER_DEG
-            offsets.append(float(np.sqrt(dx * dx + dy * dy)) * np.sign(dx + dy))
+            offsets.append(
+                float(np.sqrt(dx * dx + dy * dy)) * np.sign(dx + dy)
+            )
         else:
             offsets.append(float(len(offsets)) * 1000.0)  # 1 km spacing
 
@@ -385,7 +387,9 @@ class OccamData(OccamBase):
                 all_freqs.extend(np.asarray(f, dtype=float).ravel().tolist())
 
         if not all_freqs:
-            raise ValueError("OccamData.from_edi: no frequency data found in source")
+            raise ValueError(
+                "OccamData.from_edi: no frequency data found in source"
+            )
 
         freqs = _unique_freqs(all_freqs)
         if cfg.freq_min is not None:
@@ -428,15 +432,21 @@ class OccamData(OccamBase):
             s_phs = np.asarray(s_phs, dtype=float)
 
             rho_err_arr = (
-                np.asarray(s_rho_err, dtype=float) if s_rho_err is not None else None
+                np.asarray(s_rho_err, dtype=float)
+                if s_rho_err is not None
+                else None
             )
             phs_err_arr = (
-                np.asarray(s_phs_err, dtype=float) if s_phs_err is not None else None
+                np.asarray(s_phs_err, dtype=float)
+                if s_phs_err is not None
+                else None
             )
 
             for fi, f in enumerate(freqs):
                 # Match global frequency within 1 % tolerance
-                fdiff = np.abs(s_freq - f) / np.maximum(np.abs(s_freq), np.abs(f))
+                fdiff = np.abs(s_freq - f) / np.maximum(
+                    np.abs(s_freq), np.abs(f)
+                )
                 mi = int(np.argmin(fdiff))
                 if fdiff[mi] > 0.01:
                     continue
@@ -492,8 +502,12 @@ class OccamData(OccamBase):
                     else:
                         phs_err = cfg.error_floor_phase
 
-                    data_rows.append([si + 1, fi + 1, rho_code, log_rho, rho_err])
-                    data_rows.append([si + 1, fi + 1, phs_code, phs_val, phs_err])
+                    data_rows.append(
+                        [si + 1, fi + 1, rho_code, log_rho, rho_err]
+                    )
+                    data_rows.append(
+                        [si + 1, fi + 1, phs_code, phs_val, phs_err]
+                    )
 
         obj = cls(title=title, config=cfg, **kwargs)
         obj.sites = names
@@ -570,7 +584,9 @@ class OccamData(OccamBase):
             t_c = int(row[2])
             dat = row[3]
             err = row[4]
-            lines.append(f"{s_i:5d} {f_i:5d} {t_c:5d} {dat:12.4f} {err:12.4f}\n")
+            lines.append(
+                f"{s_i:5d} {f_i:5d} {t_c:5d} {dat:12.4f} {err:12.4f}\n"
+            )
 
         with p.open("w") as fh:
             fh.writelines(lines)

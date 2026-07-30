@@ -401,7 +401,9 @@ def plot_determinant_track(
         fig = ax1.figure
     ax1.set_xscale("log")
     ax2.set_xscale("log")
-    ax1.fill_between(x, band[:, 0], band[:, 1], color=color_mag, alpha=fill_alpha)
+    ax1.fill_between(
+        x, band[:, 0], band[:, 1], color=color_mag, alpha=fill_alpha
+    )
     ax1.plot(x, mag, "-", color=color_mag, lw=1.6)
     ax2.plot(x, ph, "-", color=color_phase, lw=1.6)
     ax1.grid(True, alpha=0.25, which="both")

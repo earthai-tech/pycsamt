@@ -269,7 +269,8 @@ class Z(ResPhase):
 
         if self._z is not None and f.size != self._z.shape[0]:
             raise ZError(
-                "Length of 'freq' does not match Z: " f"{f.size} vs {self._z.shape[0]}."
+                "Length of 'freq' does not match Z: "
+                f"{f.size} vs {self._z.shape[0]}."
             )
 
         self._freq = f
@@ -314,7 +315,9 @@ class Z(ResPhase):
     @staticmethod
     def _check_tensor_shape(arr: np.ndarray, *, name: str) -> None:
         if arr.ndim != 3 or arr.shape[1:] != (2, 2):
-            raise ZError(f"'{name}' must have shape (n_freq, 2, 2); got {arr.shape!r}.")
+            raise ZError(
+                f"'{name}' must have shape (n_freq, 2, 2); got {arr.shape!r}."
+            )
 
     @property
     def z_err(self) -> np.ndarray | None:
@@ -338,7 +341,8 @@ class Z(ResPhase):
 
         if self._z is not None and zerr.shape != self._z.shape:
             raise ZError(
-                "'z_err' shape must match 'z': " f"{zerr.shape!r} vs {self._z.shape!r}."
+                "'z_err' shape must match 'z': "
+                f"{zerr.shape!r} vs {self._z.shape!r}."
             )
 
         self._z_err = zerr.astype(float, copy=False)
@@ -430,7 +434,9 @@ class Z(ResPhase):
             raise ZError("Z is not set; cannot rotate.")
 
         n = self._z.shape[0]
-        if np.isscalar(alpha) or (isinstance(alpha, (list, tuple)) and len(alpha) == 1):
+        if np.isscalar(alpha) or (
+            isinstance(alpha, (list, tuple)) and len(alpha) == 1
+        ):
             ang = float(np.asarray(alpha).ravel()[0]) % 360.0
             alphas = np.full(n, ang, dtype=float)
         else:
@@ -520,7 +526,9 @@ class Z(ResPhase):
         n = self._z.shape[0]
 
         # Normalize factors to vectors of length n.
-        def _normalize_factor(v: float | Sequence[float], name: str) -> np.ndarray:
+        def _normalize_factor(
+            v: float | Sequence[float], name: str
+        ) -> np.ndarray:
             vv = np.asarray(v, dtype=float).ravel()
             if vv.size == 1:
                 out = np.full(n, vv[0], dtype=float)
@@ -621,7 +629,9 @@ class Z(ResPhase):
         # --- Normalize distortion tensors to single 2×2 real arrays --------
         D = np.asarray(distortion_tensor, dtype=float)
         if D.ndim == 3:
-            logger.info("Distortion provided as a stack; using the first slice.")
+            logger.info(
+                "Distortion provided as a stack; using the first slice."
+            )
             D = D[0]
         if D.shape != (2, 2):
             raise ZError(
@@ -634,7 +644,9 @@ class Z(ResPhase):
         else:
             D_err = np.asarray(distortion_err_tensor, dtype=float)
             if D_err.ndim == 3:
-                logger.info("Distortion error provided as a stack; using first slice.")
+                logger.info(
+                    "Distortion error provided as a stack; using first slice."
+                )
                 D_err = D_err[0]
             if D_err.shape != (2, 2):
                 raise ZError(
@@ -646,7 +658,9 @@ class Z(ResPhase):
         try:
             DI, DI_err = invertmatrix_incl_errors(D, D_err)
         except np.linalg.LinAlgError as exc:
-            raise ZError("Distortion tensor is singular; cannot invert.") from exc
+            raise ZError(
+                "Distortion tensor is singular; cannot invert."
+            ) from exc
         except Exception as exc:  # pragma: no cover
             raise ZError(f"Failed to invert distortion tensor: {exc}") from exc
 

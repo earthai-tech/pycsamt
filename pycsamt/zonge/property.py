@@ -259,7 +259,10 @@ class Receiver:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
                 self.hpr = tuple(float(_to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
             else:
-                parts = [p.strip() for p in str(hpr_raw).replace(";", ",").split(",")]
+                parts = [
+                    p.strip()
+                    for p in str(hpr_raw).replace(";", ",").split(",")
+                ]
                 if len(parts) >= 3:
                     self.hpr = (
                         float(_to_number(parts[0]) or 0.0),
@@ -390,7 +393,9 @@ class Transmitter:
                     float(_to_number(cen[2]) or 0.0),
                 )
             else:
-                parts = [p.strip() for p in str(cen).replace(";", ",").split(",")]
+                parts = [
+                    p.strip() for p in str(cen).replace(";", ",").split(",")
+                ]
                 if len(parts) >= 3:
                     self.center = (
                         float(_to_number(parts[0]) or 0.0),
@@ -403,7 +408,10 @@ class Transmitter:
             if isinstance(hpr_raw, (tuple, list)) and len(hpr_raw) == 3:
                 self.hpr = tuple(float(_to_number(v) or 0.0) for v in hpr_raw)  # type: ignore
             else:
-                parts = [p.strip() for p in str(hpr_raw).replace(";", ",").split(",")]
+                parts = [
+                    p.strip()
+                    for p in str(hpr_raw).replace(";", ",").split(",")
+                ]
                 if len(parts) >= 3:
                     self.hpr = (
                         float(_to_number(parts[0]) or 0.0),

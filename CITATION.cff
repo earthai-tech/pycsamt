@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: >-
+  If you use pyCSAMT in your research, please cite the released software using
+  the metadata below. The related 2022 article may also be cited for the
+  original pyCSAMT methodology.
+title: "pyCSAMT: Scientific Python for electromagnetic geophysics"
+type: software
+authors:
+  - family-names: Kouadio
+    given-names: Kouao Laurent
+    orcid: "https://orcid.org/0000-0001-7259-7254"
+    email: etanoyau@gmail.com
+  - family-names: Liu
+    given-names: Rong
+    orcid: "https://orcid.org/0000-0003-2937-4658"
+    email: liurongkaoyang@csu.edu.cn
+version: 2.1.0
+date-released: 2026-07-29
+url: "https://pycsamt.org"
+repository-code: "https://github.com/earthai-tech/pycsamt"
+license: LGPL-3.0-or-later
+keywords:
+  - electromagnetic geophysics
+  - controlled-source audio-frequency magnetotellurics
+  - magnetotellurics
+  - time-domain electromagnetics
+  - inversion
+  - Python

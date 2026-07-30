@@ -59,7 +59,8 @@ PROVIDER_META: dict[str, tuple[str, str]] = {
 }
 
 PROVIDER_OPTIONS: list[dict[str, str]] = [
-    {"label": label, "value": key} for key, (label, _env) in PROVIDER_META.items()
+    {"label": label, "value": key}
+    for key, (label, _env) in PROVIDER_META.items()
 ] + [{"label": "Offline (rule-based, no key)", "value": OFFLINE}]
 
 

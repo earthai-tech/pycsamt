@@ -366,8 +366,12 @@ class EDIOMixin(CoreObject):
                 rho[:, ij[0], ij[1]] = _get2("rho", suf)
                 phi[:, ij[0], ij[1]] = _get2("phs", suf)
 
-            re = sum(np.any(_gete2("rho", s)) for s in ("xx", "xy", "yx", "yy"))
-            pe = sum(np.any(_gete2("phs", s)) for s in ("xx", "xy", "yx", "yy"))
+            re = sum(
+                np.any(_gete2("rho", s)) for s in ("xx", "xy", "yx", "yy")
+            )
+            pe = sum(
+                np.any(_gete2("phs", s)) for s in ("xx", "xy", "yx", "yy")
+            )
 
             if re or pe:
                 rho_e = np.zeros_like(rho)
@@ -697,7 +701,9 @@ class EDIFile(EDIMixin, EDIOMixin):
                 # --- FALLBACK: build Z/Tipper from Spectra if no MT blocks
                 if (not has_tf) and getattr(spec_obj, "n_freq", 0) > 0:
                     try:
-                        z_from_sp, tip_from_sp = spec_obj.to_Z(estimate_error=False)
+                        z_from_sp, tip_from_sp = spec_obj.to_Z(
+                            estimate_error=False
+                        )
                         if z_from_sp is not None:
                             self.Z = z_from_sp
                             # ensure rho/phi are available downstream
@@ -784,7 +790,9 @@ class EDIFile(EDIMixin, EDIOMixin):
         # After Z is built, create and populate
         # the ResPhase object for API consistency.
         if self.Z.freq is not None and self.Z.z is not None:
-            station_name = getattr(head, "dataid", None) if head else self.station
+            station_name = (
+                getattr(head, "dataid", None) if head else self.station
+            )
 
             # Instantiate and populate the ResPhase container
             self.Res = ResPhase(freq=self.Z.freq, name=station_name)
@@ -796,7 +804,8 @@ class EDIFile(EDIMixin, EDIOMixin):
                 )
             except Exception as e:
                 logger.warning(
-                    f"Could not compute resistivity/phase" f" for {station_name}: {e}"
+                    f"Could not compute resistivity/phase"
+                    f" for {station_name}: {e}"
                 )
 
         return self
@@ -908,7 +917,9 @@ class EDIFile(EDIMixin, EDIOMixin):
                 lines.extend(b)
 
         # helper: emit >FREQ and get ZROT/TROT & tipper flag
-        def _emit_freq_and_rot() -> tuple[np.ndarray, np.ndarray, np.ndarray, bool]:
+        def _emit_freq_and_rot() -> tuple[
+            np.ndarray, np.ndarray, np.ndarray, bool
+        ]:
             if self.Z.freq is None or self.Z.n_freq == 0:
                 raise EdIDataError("no frequency vector for MT/EMAP")
             f = np.asarray(self.Z.freq, float)
@@ -950,7 +961,9 @@ class EDIFile(EDIMixin, EDIOMixin):
             )
 
             if dtype == "mt":
-                _append(self.header_tpl.format(title="IMPEDANCE ROTATION ANGLES"))
+                _append(
+                    self.header_tpl.format(title="IMPEDANCE ROTATION ANGLES")
+                )
                 _append(self._emit_block("ZROT", zrot))
 
             _append(self.header_tpl.format(title="IMPEDANCES"))
@@ -985,7 +998,9 @@ class EDIFile(EDIMixin, EDIOMixin):
                 )
 
             if dtype == "emap" or dtype == "mt":
-                _append(self.header_tpl.format(title="RESISTIVITIES AND PHASES"))
+                _append(
+                    self.header_tpl.format(title="RESISTIVITIES AND PHASES")
+                )
 
                 def _rho_phi(
                     tag: str,
@@ -1048,7 +1063,11 @@ class EDIFile(EDIMixin, EDIOMixin):
                 _append(self.header_tpl.format(title="TIPPER PARAMETERS"))
                 tip = np.asarray(self.Tip.tipper)
                 terr = getattr(self.Tip, "_tipper_err", None)
-                tvar = np.square(terr) if terr is not None else np.zeros_like(tip.real)
+                tvar = (
+                    np.square(terr)
+                    if terr is not None
+                    else np.zeros_like(tip.real)
+                )
                 for idx, tag in enumerate(("TX", "TY")):
                     _append(
                         self._emit_block(

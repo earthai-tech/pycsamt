@@ -285,7 +285,8 @@ def _safe_number(s: str) -> int | float | str:
             # Cast to int if integral
             return (
                 int(f)
-                if f.is_integer() and ("." not in s_norm and "e" not in s_norm.lower())
+                if f.is_integer()
+                and ("." not in s_norm and "e" not in s_norm.lower())
                 else f
             )
         except ValueError:
@@ -437,7 +438,9 @@ def quick_edi_stats(
 
     rate = (ok / total) * 100 if total else 0.0
     print(bar)
-    print(f"{label:<15} read  : {ok:>6d}/{total:<6d}  —  success {rate:6.2f} %")
+    print(
+        f"{label:<15} read  : {ok:>6d}/{total:<6d}  —  success {rate:6.2f} %"
+    )
     print(bar)
 
 

@@ -804,6 +804,8 @@ def run_stratagem_preset(
             if method is not None:
                 method(**kw)
             elif verbose:
-                print(f"[run_stratagem_preset] unknown step {method_name!r}, skip")
+                print(
+                    f"[run_stratagem_preset] unknown step {method_name!r}, skip"
+                )
 
     return sv

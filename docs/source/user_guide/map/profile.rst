@@ -4,8 +4,11 @@ Profile Maps And Pseudosections
 Profile maps show :term:`apparent resistivity` or :term:`phase` as a
 function of station position and period. They are quick-look data
 :term:`pseudosection`\ s, not inversion sections: every panel below is
-built straight from measured :term:`impedance tensor` values, gridded
-for display, with no forward model or regularization involved.
+built from responses derived from the measured :term:`impedance tensor`,
+pivoted onto station--period cells for display, with no forward model or
+regularization involved.  The renderer does not spatially interpolate
+the heatmap cells, so a smooth-looking color transition must not be
+mistaken for an inverted resistivity boundary.
 :mod:`pycsamt.map.profile` is also what :doc:`mapview`'s
 ``MapView.pseudosection`` and ``MapView.profile`` call underneath, and
 what :func:`pycsamt.map.plot_profile_map` and
@@ -22,45 +25,59 @@ Use :func:`pycsamt.map.plot_pseudosection` for one-shot scripts and
 notebooks. Rendering options are passed with
 :class:`pycsamt.map.ProfileMapOptions`.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ProfileMapOptions, plot_pseudosection
+   >>> from pycsamt.map import ProfileMapOptions, plot_pseudosection
 
-   fig = plot_pseudosection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=ProfileMapOptions(
-           quantity="rho",
-           components=("xy", "yx"),
-           period_range=(0.001, 10.0),
-           x_axis="distance",
-       ),
-   )
-   print("panels:", len(fig.data))
-   print(
-       "x range (km):",
-       round(float(min(fig.data[0].x)), 2),
-       "-",
-       round(float(max(fig.data[0].x)), 2),
-   )
-   print("period rows:", len(fig.data[0].y))
-
-Output:
-
-.. code-block:: text
-
+   >>> fig = plot_pseudosection(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     options=ProfileMapOptions(
+   ...         quantity="rho",
+   ...         components=("xy", "yx"),
+   ...         period_range=(0.001, 10.0),
+   ...         x_axis="distance",
+   ...     ),
+   ... )
+   >>> print("panels:", len(fig.data))
    panels: 2
+   >>> print(
+   ...     "x range (km):",
+   ...     round(float(min(fig.data[0].x)), 2),
+   ...     "-",
+   ...     round(float(max(fig.data[0].x)), 2),
+   ... )
    x range (km): 0.0 - 2.41
+   >>> print("period rows:", len(fig.data[0].y))
    period rows: 39
 
-.. image:: ../../images/user_guide/map/user-guide-map-profile-01.png
+.. figure:: ../../images/user_guide/map/user-guide-map-profile-01.png
    :width: 100%
+
+   The two off-diagonal apparent-resistivity pseudosections use the
+   same v2.1 chainage order and period window.  Coherent colors that
+   persist across adjacent stations identify lateral response trends;
+   isolated cells or abrupt component disagreement should first be
+   checked against data quality and strike orientation rather than
+   interpreted immediately as geology.
 
 Passing ``components=("xy", "yx")`` builds two stacked heatmap panels
 -- one per component -- through the same multi-component path used
 whenever more than one component is requested. Because
 ``period_range=(0.001, 10.0)`` keeps only periods inside that window,
 the pseudosection has 39 period rows here instead of every period
-present in the raw EDI files.
+present in the raw EDI files.  The plotted vertical coordinate is not
+depth; for frequency :math:`f_j` it is
+
+.. math::
+   :label: profile-map-period-coordinate
+
+   T_j = \frac{1}{f_j},
+   \qquad
+   y_j = \log_{10}\!\left(\frac{T_j}{1\ \mathrm{s}}\right).
+
+The axis is reversed so short periods appear at the top.  Equation
+:eq:`profile-map-period-coordinate` orders the response by scale, but
+it supplies no one-to-one conversion from period to geological depth.
 
 Builder API
 -----------
@@ -69,30 +86,30 @@ Use :class:`pycsamt.map.ProfileMap` when you want an immutable builder
 style. ``with_quantity``, ``with_component``, and ``with_components``
 return new builders that reuse the same normalized data.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ProfileMap
+   >>> from pycsamt.map import ProfileMap
 
-   fig = (
-       ProfileMap("data/AMT/WILLY_DATA/L18PLT")
-       .with_quantity("phase")
-       .with_component("xy")
-       .pseudosection()
-   )
-   print("panels:", len(fig.data))
-   print("stations:", len(fig.data[0].x))
-   print("period rows:", len(fig.data[0].y))
-
-Output:
-
-.. code-block:: text
-
+   >>> fig = (
+   ...     ProfileMap("data/AMT/WILLY_DATA/L18PLT")
+   ...     .with_quantity("phase")
+   ...     .with_component("xy")
+   ...     .pseudosection()
+   ... )
+   >>> print("panels:", len(fig.data))
    panels: 1
+   >>> print("stations:", len(fig.data[0].x))
    stations: 28
+   >>> print("period rows:", len(fig.data[0].y))
    period rows: 53
 
-.. image:: ../../images/user_guide/map/user-guide-map-profile-02.png
+.. figure:: ../../images/user_guide/map/user-guide-map-profile-02.png
    :width: 100%
+
+   The phase panel retains all 53 recorded period rows.  Broad,
+   laterally persistent bands are more defensible than single-station
+   extremes, although even coherent phase structure remains a measured
+   response pattern rather than a depth-calibrated interface.
 
 ``with_component("xy")`` sets both ``component`` and ``components`` to
 a single-element tuple, so this always renders one panel -- unlike
@@ -118,36 +135,49 @@ elements :math:`Z_{xy}` and :math:`Z_{yx}`:
 
 ``det``
    A :term:`determinant response`-style summary. For phase it is
-   identical to ``avg`` -- :math:`\varphi_{\det}=\bar\varphi`. For
-   resistivity it is the *geometric* mean instead,
-   :math:`\rho_{\det}=\sqrt{|\rho_{xy}\,\rho_{yx}|}`, which is closer
-   in spirit to a true rotation-invariant determinant response than a
-   plain average, without requiring the full complex
-   :math:`\det(\mathbf{Z})` computation.
+   identical to ``avg``.  For resistivity it is the *geometric* mean,
+   which is closer in spirit to a rotation-robust determinant response
+   than a plain average, without evaluating the full complex
+   :math:`\det(\mathbf{Z})`.
+
+For a station--period cell, the implemented summaries are
+
+.. math::
+   :label: profile-map-derived-components
+
+   \rho_{\mathrm{avg}}
+      = \frac{\rho_{xy}+\rho_{yx}}{2},
+   \qquad
+   \rho_{\mathrm{det}}
+      = \sqrt{|\rho_{xy}\rho_{yx}|},
+   \qquad
+   \varphi_{\mathrm{avg}}
+      = \varphi_{\mathrm{det}}
+      = \frac{\varphi_{xy}+\varphi_{yx}}{2}.
+
+The name ``det`` in :eq:`profile-map-derived-components` therefore
+describes this package-specific derived summary.  It should not be
+reported as the complex tensor determinant
+:math:`Z_{xx}Z_{yy}-Z_{xy}Z_{yx}`.
 
 The difference is visible directly on ``L18PLT``, comparing the median
 value each mode produces over the same stations and periods:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.map import ProfileMapOptions, plot_pseudosection
+   >>> from pycsamt.map import ProfileMapOptions, plot_pseudosection
 
-   for comp in ("xy", "yx", "det", "avg"):
-       fig = plot_pseudosection(
-           "data/AMT/WILLY_DATA/L18PLT",
-           options=ProfileMapOptions(
-               component=comp, components=(comp,), log_rho=False
-           ),
-       )
-       z = np.asarray(fig.data[0].z, dtype=float)
-       print(f"{comp}: median rho = {np.nanmedian(z):.1f} ohm.m")
-
-Output:
-
-.. code-block:: text
-
+   >>> for comp in ("xy", "yx", "det", "avg"):
+   ...     fig = plot_pseudosection(
+   ...         "data/AMT/WILLY_DATA/L18PLT",
+   ...         options=ProfileMapOptions(
+   ...             component=comp, components=(comp,), log_rho=False
+   ...         ),
+   ...     )
+   ...     z = np.asarray(fig.data[0].z, dtype=float)
+   ...     print(f"{comp}: median rho = {np.nanmedian(z):.1f} ohm.m")
    xy: median rho = 435.8 ohm.m
    yx: median rho = 225.6 ohm.m
    det: median rho = 317.9 ohm.m
@@ -157,12 +187,20 @@ Output:
 -- the small gap is expected, since the code takes the median of the
 per-period geometric means rather than the geometric mean of the two
 medians. ``avg`` (440.2) is pulled toward the larger ``xy`` value
-instead, as an arithmetic mean would. Repeating the same loop with
-``quantity="phase"`` shows the ``det`` == ``avg`` equivalence for
-phase directly:
+instead, as an arithmetic mean would.  Repeating the loop for phase
+shows the ``det`` and ``avg`` equivalence directly:
 
-.. code-block:: text
+.. code-block:: pycon
 
+   >>> for comp in ("xy", "yx", "det", "avg"):
+   ...     fig = plot_pseudosection(
+   ...         "data/AMT/WILLY_DATA/L18PLT",
+   ...         options=ProfileMapOptions(
+   ...             quantity="phase", component=comp, components=(comp,)
+   ...         ),
+   ...     )
+   ...     z = np.asarray(fig.data[0].z, dtype=float)
+   ...     print(f"{comp}: median phase = {np.nanmedian(z):.1f} deg")
    xy: median phase = 13.6 deg
    yx: median phase = -153.4 deg
    det: median phase = -64.5 deg
@@ -179,33 +217,28 @@ Axes
    unevenly spaced stations are positioned proportionally rather than
    at equal ticks.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ProfileMapOptions, plot_pseudosection
+   >>> from pycsamt.map import ProfileMapOptions, plot_pseudosection
 
-   fig_station = plot_pseudosection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=ProfileMapOptions(
-           component="xy", components=("xy",), x_axis="station"
-       ),
-   )
-   fig_distance = plot_pseudosection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=ProfileMapOptions(
-           component="xy", components=("xy",), x_axis="distance"
-       ),
-   )
-   print("station x (first 5):", list(fig_station.data[0].x[:5]))
-   print(
-       "distance x km (first 5):",
-       [round(v, 3) for v in fig_distance.data[0].x[:5]],
-   )
-
-Output:
-
-.. code-block:: text
-
+   >>> fig_station = plot_pseudosection(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     options=ProfileMapOptions(
+   ...         component="xy", components=("xy",), x_axis="station"
+   ...     ),
+   ... )
+   >>> fig_distance = plot_pseudosection(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     options=ProfileMapOptions(
+   ...         component="xy", components=("xy",), x_axis="distance"
+   ...     ),
+   ... )
+   >>> print("station x (first 5):", list(fig_station.data[0].x[:5]))
    station x (first 5): ['18-001A', '18-002U', '18-003A', '18-004A', '18-005U']
+   >>> print(
+   ...     "distance x km (first 5):",
+   ...     [round(v, 3) for v in fig_distance.data[0].x[:5]],
+   ... )
    distance x km (first 5): [0.0, 0.092, 0.198, 0.336, 0.398]
 
 The uneven gaps between ``0.0``, ``0.092``, ``0.198``, ... already show
@@ -215,6 +248,26 @@ discards. If any station in the survey is missing a finite coordinate,
 :term:`station distance` falls back to station order instead of
 raising, so a distance axis degrades gracefully rather than silently
 lying about spacing.
+
+With v2.1, ``ensure_sites`` first applies its validated automatic
+ordering.  The L18 coordinates pass the straight-profile checks, so
+chainage order is used before cumulative distance is evaluated.  For
+successive finite longitude/latitude pairs, the map helper uses the
+local kilometre approximation
+
+.. math::
+   :label: profile-map-cumulative-distance
+
+   x_i = 111.320\,\lambda_i\cos\bar\phi,
+   \qquad
+   y_i = 110.574\,\phi_i,
+   \qquad
+   d_i = \sum_{n=1}^{i}
+   \sqrt{(x_n-x_{n-1})^2+(y_n-y_{n-1})^2},
+
+where angles are expressed in degrees and :math:`d_i` is in kilometres.
+This approximation is appropriate for a compact survey line; it is not
+a replacement for geodesic distance across regional or global extents.
 
 By-Line Grids
 -------------
@@ -228,30 +281,33 @@ unrelated traverses. Set ``by_line=True`` to render one panel per line
 instead, arranged in a grid with ``line_cols`` columns (3 by default)
 and one shared color scale so panels stay comparable to each other:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ProfileMapOptions, load_lines, plot_pseudosection
+   >>> from pycsamt.map import ProfileMapOptions, load_lines, plot_pseudosection
 
-   data = load_lines("data/AMT/WILLY_DATA", detect="folder")
-   print("lines:", data.lines)
-
-   fig = plot_pseudosection(
-       data,
-       options=ProfileMapOptions(component="xy", by_line=True, line_cols=3),
-   )
-   print("panels:", len(fig.data))
-   print("titles:", [a.text for a in fig.layout.annotations])
-
-Output:
-
-.. code-block:: text
-
+   >>> data = load_lines("data/AMT/WILLY_DATA", detect="folder")
+   >>> print("lines:", data.lines)
    lines: ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
+
+   >>> fig = plot_pseudosection(
+   ...     data,
+   ...     options=ProfileMapOptions(
+   ...         component="xy", by_line=True, line_cols=3
+   ...     ),
+   ... )
+   >>> print("panels:", len(fig.data))
    panels: 5
+   >>> print("titles:", [a.text for a in fig.layout.annotations])
    titles: ['L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT']
 
-.. image:: ../../images/user_guide/map/user-guide-map-profile-03.png
+.. figure:: ../../images/user_guide/map/user-guide-map-profile-03.png
    :width: 100%
+
+   Each line retains its own station axis while all five panels share
+   one resistivity scale.  A color that recurs at similar periods on
+   several lines can motivate a cross-line comparison, but differing
+   station spacing and orientation still prevent these panels from
+   constituting a 3-D volume.
 
 ``by_line`` only has line names to split on when the input ``MapData``
 actually carries them. Passing a bare parent folder such as
@@ -264,17 +320,26 @@ first, then pass the resulting :class:`pycsamt.map.MapData` through, as
 above. The same option works with ``backend="matplotlib"`` for static
 report figures:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   mpl_fig = plot_pseudosection(
-       data,
-       options=ProfileMapOptions(
-           component="xy", by_line=True, line_cols=3, backend="matplotlib"
-       ),
-   )
+   >>> mpl_fig = plot_pseudosection(
+   ...     data,
+   ...     options=ProfileMapOptions(
+   ...         component="xy",
+   ...         by_line=True,
+   ...         line_cols=3,
+   ...         backend="matplotlib",
+   ...     ),
+   ... )
+   >>> type(mpl_fig).__name__
+   'Figure'
 
-.. image:: ../../images/user_guide/map/user-guide-map-profile-04.png
+.. figure:: ../../images/user_guide/map/user-guide-map-profile-04.png
    :width: 100%
+
+   The Matplotlib backend renders the same v2.1-normalized five-line
+   comparison for static reports.  Blank grid space is layout padding,
+   not missing survey data.
 
 Filtering And Value Ranges
 ---------------------------
@@ -288,43 +353,40 @@ much data reaches the figure rather than just how it is colored.
 quantity and also becomes the heatmap's ``zmin``/``zmax`` (converted to
 :math:`\log_{10}` first when ``log_rho=True``).
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ProfileMapOptions, plot_pseudosection
+   >>> from pycsamt.map import ProfileMapOptions, plot_pseudosection
 
-   fig_all = plot_pseudosection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=ProfileMapOptions(component="xy", components=("xy",)),
-   )
-   fig_period = plot_pseudosection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=ProfileMapOptions(
-           component="xy", components=("xy",), period_range=(0.001, 1.0)
-       ),
-   )
-   fig_value = plot_pseudosection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=ProfileMapOptions(
-           component="xy",
-           components=("xy",),
-           value_range=(10.0, 5000.0),
-           log_rho=False,
-       ),
-   )
-   print("unfiltered period rows:", len(fig_all.data[0].y))
-   print("period_range=(0.001, 1.0) rows:", len(fig_period.data[0].y))
-   print(
-       "value_range colorbar zmin/zmax:",
-       fig_value.data[0].zmin,
-       fig_value.data[0].zmax,
-   )
-
-Output:
-
-.. code-block:: text
-
+   >>> one_component = ProfileMapOptions(component="xy", components=("xy",))
+   >>> fig_all = plot_pseudosection(
+   ...     "data/AMT/WILLY_DATA/L18PLT", options=one_component
+   ... )
+   >>> fig_period = plot_pseudosection(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     options=ProfileMapOptions(
+   ...         component="xy",
+   ...         components=("xy",),
+   ...         period_range=(0.001, 1.0),
+   ...     ),
+   ... )
+   >>> fig_value = plot_pseudosection(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     options=ProfileMapOptions(
+   ...         component="xy",
+   ...         components=("xy",),
+   ...         value_range=(10.0, 5000.0),
+   ...         log_rho=False,
+   ...     ),
+   ... )
+   >>> print("unfiltered period rows:", len(fig_all.data[0].y))
    unfiltered period rows: 53
+   >>> print("period_range=(0.001, 1.0) rows:", len(fig_period.data[0].y))
    period_range=(0.001, 1.0) rows: 39
+   >>> print(
+   ...     "value_range colorbar zmin/zmax:",
+   ...     fig_value.data[0].zmin,
+   ...     fig_value.data[0].zmax,
+   ... )
    value_range colorbar zmin/zmax: 10.0 5000.0
 
 With ``log_rho=True`` (the default), passing ``value_range=(10.0,

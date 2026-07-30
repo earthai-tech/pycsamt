@@ -191,7 +191,9 @@ class MultilineStyle:
         # gradient
         import matplotlib.pyplot as plt
 
-        cm_name = self.cmap or _COLOR_TO_CMAP.get(self.base_color.lower(), "Blues_r")
+        cm_name = self.cmap or _COLOR_TO_CMAP.get(
+            self.base_color.lower(), "Blues_r"
+        )
         try:
             cm = plt.get_cmap(cm_name)
         except ValueError:
@@ -201,7 +203,9 @@ class MultilineStyle:
             fracs = fracs[::-1]
         return [cm(float(f)) for f in fracs]
 
-    def line_kwargs(self, idx: int, n: int, **overrides: Any) -> dict[str, Any]:
+    def line_kwargs(
+        self, idx: int, n: int, **overrides: Any
+    ) -> dict[str, Any]:
         """Return ``ax.plot`` keyword arguments for line *idx* of *n*.
 
         Parameters
@@ -476,7 +480,8 @@ class MTComponentStyle:
         except AttributeError:
             valid = [f.name for f in dc_fields(self)]
             raise KeyError(
-                f"{key!r} is not a recognised MT component. " f"Valid keys: {valid}"
+                f"{key!r} is not a recognised MT component. "
+                f"Valid keys: {valid}"
             ) from None
 
     def copy(self) -> MTComponentStyle:
@@ -974,7 +979,9 @@ class PyCSAMTStyle:
         key = preset.lower().strip()
         if key not in self._PRESETS:
             avail = ", ".join(f"{k!r}" for k in self._PRESETS)
-            raise ValueError(f"Unknown style preset {preset!r}. Available: {avail}")
+            raise ValueError(
+                f"Unknown style preset {preset!r}. Available: {avail}"
+            )
         spec = self._PRESETS[key]
         # rose
         if "rose" in spec:
@@ -1111,11 +1118,15 @@ class PyCSAMTStyle:
         lines = ["PyCSAMTStyle"]
         lines.append(f"  rose.bar_style          = {self.rose.bar_style!r}")
         lines.append(f"  rose.cmap               = {self.rose.cmap!r}")
-        lines.append(f"  rose.compass_labels     = {self.rose.compass_labels!r}")
+        lines.append(
+            f"  rose.compass_labels     = {self.rose.compass_labels!r}"
+        )
         lines.append(f"  rose.show_mean          = {self.rose.show_mean}")
         lines.append(f"  rose.show_secondary     = {self.rose.show_secondary}")
         lines.append(f"  multiline.mode          = {self.multiline.mode!r}")
-        lines.append(f"  multiline.base_color    = {self.multiline.base_color!r}")
+        lines.append(
+            f"  multiline.base_color    = {self.multiline.base_color!r}"
+        )
         lines.append(
             f"  multiline.dark/light    = {self.multiline.dark}/{self.multiline.light}"
         )
@@ -1125,8 +1136,12 @@ class PyCSAMTStyle:
         lines.append(
             f"  mt.yx  color={self.mt.yx.color!r}  marker={self.mt.yx.marker!r}"
         )
-        lines.append(f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}")
-        lines.append(f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}")
+        lines.append(
+            f"  mt.te  color={self.mt.te.color!r}  ls={self.mt.te.ls!r}"
+        )
+        lines.append(
+            f"  mt.tm  color={self.mt.tm.color!r}  ls={self.mt.tm.ls!r}"
+        )
         b = self.correction.before
         a = self.correction.after
         lines.append(

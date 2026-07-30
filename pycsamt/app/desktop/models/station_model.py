@@ -77,7 +77,9 @@ class StationModel(QAbstractTableModel):
             return 0
         return len(_COLUMNS)
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+    def data(
+        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> Any:
         if not index.isValid():
             return None
         col_name = _COLUMNS[index.column()]
@@ -107,13 +109,19 @@ class StationModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.ToolTipRole:
             if col_name == "ID" and str(value) in self._recomputed_ids:
-                return "This station has been recomputed with EDIRecomputer (◈)"
+                return (
+                    "This station has been recomputed with EDIRecomputer (◈)"
+                )
             return None
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
             if col_name == "ID":
-                return int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                return int(
+                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+                )
+            return int(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
 
         return None
 

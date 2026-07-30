@@ -133,7 +133,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         self.survey_id = _c.as_nonempty_str(self.survey_id, "survey_id")
 
     # -- registration ------------------------------------------------------
-    def add_device(self, device: DeviceConfig | Mapping[str, Any]) -> DeviceConfig:
+    def add_device(
+        self, device: DeviceConfig | Mapping[str, Any]
+    ) -> DeviceConfig:
         """Register a device, auto-creating its station when named."""
         cfg = (
             device
@@ -157,7 +159,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
                         station.channels.append(channel)
         return cfg
 
-    def add_station(self, station: StationConfig | Mapping[str, Any]) -> StationConfig:
+    def add_station(
+        self, station: StationConfig | Mapping[str, Any]
+    ) -> StationConfig:
         """Register (or merge into) a station."""
         cfg = (
             station
@@ -228,7 +232,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
     # -- assessment --------------------------------------------------------
     def assess(self, *, now: float | None = None) -> MonitoringStatus:
         """Assess telemetry quality with the session monitoring config."""
-        return TelemetryMonitor(self.monitoring_config).assess(self.packets, now=now)
+        return TelemetryMonitor(self.monitoring_config).assess(
+            self.packets, now=now
+        )
 
     def station_table(self, *, api: bool | None = None) -> Any:
         """Return the registered stations as a pyCSAMT table."""
@@ -349,7 +355,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
         :meth:`pycsamt.pipeline.Pipeline.run`. Requires the optional
         geospatial stack (``pyproj``).
         """
-        edifiles = self.to_edifiles(impedance, freq, method=method, write=False)
+        edifiles = self.to_edifiles(
+            impedance, freq, method=method, write=False
+        )
         try:
             from ..site.base import Sites
         except ImportError as exc:  # pragma: no cover - optional dependency
@@ -506,7 +514,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             agg = aggregates.setdefault(sid, _StationAggregate(station_id=sid))
             agg.n_packets += 1
             ts = float(packet.timestamp)
-            agg.first_ts = ts if agg.first_ts is None else min(agg.first_ts, ts)
+            agg.first_ts = (
+                ts if agg.first_ts is None else min(agg.first_ts, ts)
+            )
             agg.last_ts = ts if agg.last_ts is None else max(agg.last_ts, ts)
             parsed = parse_payload(packet.kind, packet.payload)
             self._fold_payload(agg, packet.kind, parsed)
@@ -548,7 +558,9 @@ class FieldSession(PyCSAMTObject, MetadataMixin):
             agg.qc_decisions.append(
                 log_qc_decision(
                     station=agg.station_id,
-                    decision=(decision or ("accept" if accepted else "reject")),
+                    decision=(
+                        decision or ("accept" if accepted else "reject")
+                    ),
                     reasons=getattr(parsed, "reasons", None),
                     operator=self.operator,
                 )

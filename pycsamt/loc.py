@@ -651,7 +651,9 @@ class BaseLoc(PyCSAMTObject):
         if self.has_latlon and other.has_latlon:
             la1, lo1 = self._require_latlon()
             la2, lo2 = other._require_latlon()
-            return round(la1, 7) == round(la2, 7) and round(lo1, 7) == round(lo2, 7)
+            return round(la1, 7) == round(la2, 7) and round(lo1, 7) == round(
+                lo2, 7
+            )
         if self.has_utm and other.has_utm:
             z1, e1, n1 = self._require_utm()
             z2, e2, n2 = other._require_utm()
@@ -794,7 +796,8 @@ class Location(BaseLoc):
             self._set_utm(self._utm_zone, easting, northing)
         else:
             logger.debug(
-                "Initialized empty Location; set coordinates " "before converting."
+                "Initialized empty Location; set coordinates "
+                "before converting."
             )
 
     @property
@@ -1186,7 +1189,9 @@ class Location(BaseLoc):
         """
 
         # Keep signature for compatibility. 'datum' unused.
-        if (isinstance(easts, str) or isinstance(norths, str)) and data is None:
+        if (
+            isinstance(easts, str) or isinstance(norths, str)
+        ) and data is None:
             raise TypeError(
                 "Data can't be None when easting or northing "
                 "is a string (column name)."
@@ -1204,7 +1209,9 @@ class Location(BaseLoc):
         norths = np.asarray(norths, dtype=float)
 
         if utm_zone is None:
-            raise LocationError("utm_zone is required to convert UTM array to lat/lon.")
+            raise LocationError(
+                "utm_zone is required to convert UTM array to lat/lon."
+            )
         z = _norm_zone(utm_zone)
 
         lats: list[float] = []
@@ -1519,7 +1526,10 @@ class Bounds(PyCSAMTObject):
 
         la = _lat_ok(lat)
         lo = _lon_ok(lon)
-        return self.min_lat <= la <= self.max_lat and self.min_lon <= lo <= self.max_lon
+        return (
+            self.min_lat <= la <= self.max_lat
+            and self.min_lon <= lo <= self.max_lon
+        )
 
     def buffer_m(self, m: float) -> Bounds:
         r"""

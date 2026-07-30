@@ -84,6 +84,8 @@ generates, so regenerating realization 47 alone, on a different
 machine, still draws the exact field and correlation-length values
 realization 47 drew the first time — no realization's randomness
 depends on how many realizations were requested before it.
+:doc:`dataset3d`'s generator follows the identical seed-derivation
+pattern for its own correlation/field/split seeds.
 
 Pinning a dataset by hash, not by path
 -------------------------------------------
@@ -386,4 +388,4 @@ Those are execution evidence, whereas the configuration is the approved
 protocol. Keeping the two roles separate prevents a common provenance error:
 a perfectly hashed declaration being mistaken for proof that the declared
 computation took place. The broader packaging workflow in
-:doc:`reproducibility` supplies the natural home for that evidence.
+:doc:`reporting` supplies the natural home for that evidence.

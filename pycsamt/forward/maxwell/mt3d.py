@@ -21,15 +21,19 @@ Physics
 
     \\nabla \\times \\nabla \\times E + i \\omega \\mu_0 \\sigma E = 0
 
-on a uniform Cartesian Yee (staggered edge/face) grid, with E on cell
-edges and H on cell faces. The discrete curl operators
-(:func:`_curl_e2h`, :func:`_curl_h2e`) are built and verified
-independently of the physics: applying :func:`_curl_e2h` to a uniform
-field gives exactly zero, to a linear field gives the exact analytic
-curl, and ``face_divergence @ curl_e2h`` is the exact zero matrix (the
-topological identity ``div(curl(E)) = 0``) — see
-``pycsamt/forward/tests/test_maxwell_mt3d.py``. The overall sign
-convention (``H = -curl(E) / (i omega mu0)``, assembled as
+on a Cartesian Yee (staggered edge/face) grid, with E on cell edges
+and H on cell faces. Cell widths may be non-uniform per axis (a
+padded/graded tensor mesh, like
+:mod:`pycsamt.forward.maxwell.mt2d` already uses) — see "Non-uniform
+mesh support" below. The discrete curl operators (:func:`_curl_e2h`,
+:func:`_curl_h2e`) are built and verified independently of the
+physics: applying :func:`_curl_e2h` to a uniform field gives exactly
+zero, to a linear field gives the exact analytic curl, and
+``face_divergence @ curl_e2h`` is the exact zero matrix (the
+topological identity ``div(curl(E)) = 0``), on both uniform and
+non-uniform grids — see ``pycsamt/forward/tests/test_maxwell_mt3d.py``.
+The overall sign convention (``H = -curl(E) / (i omega mu0)``,
+assembled as
 ``(curl_h2e @ curl_e2h + i*omega*mu0*diag(sigma_edge)) @ E = 0``) was
 anchored empirically against the analytic half-space limit, not
 assumed from a textbook derivation, because this codebase's
@@ -39,18 +43,51 @@ polarizations are solved per frequency (boundary ``Ex`` driven and
 boundary ``Ey`` driven); receivers combine both to recover the full
 impedance tensor.
 
+Non-uniform mesh support
+-------------------------
+``supports_nonuniform_mesh=True``. Earlier versions of this module
+supported uniform cell spacing only, and the *documented* consequence
+was that :func:`~pycsamt.forward.maxwell.benchmarks.layered_earth_benchmark`
+failed by 30-45% even after mesh refinement. Investigating that
+failure (see git history / the AI-inversion project memory for the
+session this was diagnosed in) found it was **not** a physics defect
+in the boundary-condition approximation itself: the per-column
+decay in :func:`_column_decay` is exact for a laterally uniform
+half-space regardless of domain size (that is why the half-space
+benchmark always passed), and for a genuinely layered earth its error
+stays negligible wherever the field has already decayed close to zero
+by the domain edge — the same "boundary far enough away" argument
+:mod:`pycsamt.forward.maxwell.mt2d` documents for its own boundary
+treatment. The real problem was that a *uniform*-only mesh cannot
+reach several skin depths of lateral/vertical extent **and** resolve
+a few-hundred-metre layer interface within the ``maximum_cells``
+budget at the same time, because 3-D cell count scales as the cube of
+resolution — refining resolution while keeping the same small domain
+does not help, which is exactly the "refining the mesh does not
+reduce them" symptom that was previously (incorrectly) attributed to
+the boundary approximation. Generalizing the curl operators
+(:func:`_curl_e2h`, :func:`_curl_h2e`) and edge-conductivity averaging
+(:func:`_sigma_on_edges`) to per-axis, non-uniform cell widths lets a
+padded mesh (fine cells near the receiver/structure, geometrically
+growing cells outward) reach the same physical extent at a fraction
+of the cell cost, matching what :mod:`pycsamt.forward.maxwell.mt2d`
+already does. :func:`_curl_h2e` in particular must divide by the
+*dual*-grid spacing (the average of the two neighbouring primal cell
+widths) rather than either cell's own width — the two coincide on a
+uniform mesh, which is why the uniform-only implementation could get
+away without this distinction.
+
 Deliberate scope reductions (all enforced, not just documented)
 -----------------------------------------------------------------
 
-* **Uniform cell spacing only.** ``supports_nonuniform_mesh=False``
-  rejects any :class:`~pycsamt.forward.maxwell.contracts.MaxwellProblem`
-  whose mesh has non-uniform cell widths, via the existing
-  :meth:`~pycsamt.forward.maxwell.backends.BackendCapabilities.assess`
-  machinery. Non-uniform mimetic metric weighting is future work.
 * **Small grids only.** ``maximum_cells`` (default 6,000, overridable)
   rejects larger problems outright rather than silently taking an
   impractical amount of time, operationalizing the ADR's feasibility
-  finding directly in code.
+  finding directly in code. A padded, non-uniform mesh (see above)
+  substantially relaxes what this budget can achieve, but the ADR's
+  underlying conclusion — that a direct solve does not scale to
+  realistic production 3-D mesh sizes — is unaffected: this module
+  remains research/small-grid only.
 * **Direct sparse solve only** (:func:`scipy.sparse.linalg.spsolve`);
   no iterative solver or preconditioner, per the ADR's conclusion that
   a real one is a research problem in itself.
@@ -60,30 +97,30 @@ Deliberate scope reductions (all enforced, not just documented)
   (:func:`_column_decay`, the same level of rigor as
   :mod:`pycsamt.forward.em2d`'s own ``_ey_1d_profile``): each boundary
   edge uses the exponential decay implied by its nearest cell column's
-  *single local layer*, not a full multi-layer recursion. ``Ez`` is
-  fixed at zero on every boundary (plane-wave incidence has no driven
-  vertical field far from the domain interior).
+  *single local layer*, not a full multi-layer recursion. As described
+  above, this is exact for a half-space and negligible-error elsewhere
+  once the domain is wide/deep enough, not a source of the previously
+  measured layered-earth bias. ``Ez`` is fixed at zero on every
+  boundary (plane-wave incidence has no driven vertical field far from
+  the domain interior).
 * Isotropic conductivity, vacuum permeability, ``exp(+iwt)`` only, no
   inactive-cell/topography support — same restrictions as
   :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter`.
 
 Measured accuracy
 ------------------
-Against :func:`~pycsamt.forward.maxwell.benchmarks.half_space_benchmark`
-(a single, laterally uniform layer, where the boundary approximation
-above is exact), this adapter passes the default
-:class:`~pycsamt.forward.maxwell.benchmarks.BenchmarkThresholds` with
-real margin (~3% normalized RMS, ~1.5 degree phase error on a coarse
-6x6x10 research-scale grid). Against
+On a padded, non-uniform 16x16x16 (4,096-cell) research-scale grid —
+fine (150 m / 120 m) core cells near the receiver and shallow
+interfaces, geometrically padded out to ~30 km laterally and ~8 km
+vertically, comfortably beyond the deepest layer's skin depth at the
+lowest benchmark frequency — this adapter passes the default
+:class:`~pycsamt.forward.maxwell.benchmarks.BenchmarkThresholds` for
+**both** :func:`~pycsamt.forward.maxwell.benchmarks.half_space_benchmark`
+(~1.9% normalized RMS, ~1.3 degree phase error) **and**
 :func:`~pycsamt.forward.maxwell.benchmarks.layered_earth_benchmark`
-(multiple layers), it currently does **not** pass: errors of
-30-45% were measured, and — checked explicitly — refining the mesh
-does not reduce them, showing this is a systematic bias from the
-single-layer boundary approximation rather than discretization error.
-Do not trust this adapter for models with strong vertical layering
-until that boundary treatment is replaced with a genuine multi-layer
-recursion; :data:`_VERIFIED_BENCHMARKS` reflects only what is
-currently confirmed (half-space).
+(~3.5% normalized RMS, ~4.5% amplitude error, <1 degree phase error);
+see ``pycsamt/forward/tests/test_maxwell_mt3d.py``.
+:data:`_VERIFIED_BENCHMARKS` now includes both.
 """
 
 from __future__ import annotations
@@ -105,11 +142,10 @@ _SURFACE_TOLERANCE_M = 1e-6
 _PERMEABILITY_RTOL = 1e-9
 _DEFAULT_MAX_CELLS = 6_000
 
-# Only "half-space" is claimed: it genuinely passes
-# pycsamt/forward/tests/test_maxwell_mt3d.py's real benchmark run.
-# layered-earth does not pass (see "Measured accuracy" above) and is
-# deliberately excluded, not silently rounded up.
-_VERIFIED_BENCHMARKS: tuple[str, ...] = ("half-space",)
+# Both benchmarks genuinely pass pycsamt/forward/tests/test_maxwell_mt3d.py's
+# real benchmark run, on the padded/non-uniform calibrated mesh there
+# (see "Measured accuracy" above) -- not silently rounded up.
+_VERIFIED_BENCHMARKS: tuple[str, ...] = ("half-space", "layered-earth")
 
 
 def _edge_shapes(nx: int, ny: int, nz: int) -> dict[str, tuple[int, ...]]:
@@ -123,9 +159,37 @@ def _edge_shapes(nx: int, ny: int, nz: int) -> dict[str, tuple[int, ...]]:
     }
 
 
+def _dual_widths(h: np.ndarray) -> np.ndarray:
+    """Return node-centred dual-grid spacings, length ``len(h) + 1``.
+
+    Entry ``i`` (for ``1 <= i <= len(h) - 1``) is the distance between
+    the centres of primal cells ``i - 1`` and ``i``, i.e.
+    ``0.5 * (h[i - 1] + h[i])``. Entries 0 and ``len(h)`` are unused
+    (those nodes are mesh boundaries, handled separately) and left as
+    zero so an accidental use fails loudly (division by zero) rather
+    than silently.
+    """
+    n = len(h)
+    dual = np.zeros(n + 1)
+    dual[1:n] = 0.5 * (h[:-1] + h[1:])
+    return dual
+
+
 def _curl_e2h(
-    nx: int, ny: int, nz: int, hx: float, hy: float, hz: float
+    nx: int,
+    ny: int,
+    nz: int,
+    hx: np.ndarray,
+    hy: np.ndarray,
+    hz: np.ndarray,
 ) -> sparse.csr_matrix:
+    """Discrete curl E -> H on a (possibly non-uniform) tensor grid.
+
+    ``hx``/``hy``/``hz`` are the primal cell widths along each axis
+    (length ``nx``/``ny``/``nz``). Each finite difference here spans
+    exactly one primal cell, so it is divided by that cell's own
+    width at the relevant index -- no averaging needed.
+    """
     s = _edge_shapes(nx, ny, nz)
     n_ex, n_ey, n_ez = (int(np.prod(s[k])) for k in ("ex", "ey", "ez"))
     n_hx, n_hy, n_hz = (int(np.prod(s[k])) for k in ("hx", "hy", "hz"))
@@ -154,28 +218,28 @@ def _curl_e2h(
         for j in range(ny):
             for k in range(nz):
                 r = int(np.ravel_multi_index((i, j, k), s["hx"]))
-                add(r, off_ez + ez_idx(i, j + 1, k), 1.0 / hy)
-                add(r, off_ez + ez_idx(i, j, k), -1.0 / hy)
-                add(r, off_ey + ey_idx(i, j, k + 1), -1.0 / hz)
-                add(r, off_ey + ey_idx(i, j, k), 1.0 / hz)
+                add(r, off_ez + ez_idx(i, j + 1, k), 1.0 / hy[j])
+                add(r, off_ez + ez_idx(i, j, k), -1.0 / hy[j])
+                add(r, off_ey + ey_idx(i, j, k + 1), -1.0 / hz[k])
+                add(r, off_ey + ey_idx(i, j, k), 1.0 / hz[k])
 
     for i in range(nx):
         for j in range(ny + 1):
             for k in range(nz):
                 r = off_hy + int(np.ravel_multi_index((i, j, k), s["hy"]))
-                add(r, ex_idx(i, j, k + 1), 1.0 / hz)
-                add(r, ex_idx(i, j, k), -1.0 / hz)
-                add(r, off_ez + ez_idx(i + 1, j, k), -1.0 / hx)
-                add(r, off_ez + ez_idx(i, j, k), 1.0 / hx)
+                add(r, ex_idx(i, j, k + 1), 1.0 / hz[k])
+                add(r, ex_idx(i, j, k), -1.0 / hz[k])
+                add(r, off_ez + ez_idx(i + 1, j, k), -1.0 / hx[i])
+                add(r, off_ez + ez_idx(i, j, k), 1.0 / hx[i])
 
     for i in range(nx):
         for j in range(ny):
             for k in range(nz + 1):
                 r = off_hz + int(np.ravel_multi_index((i, j, k), s["hz"]))
-                add(r, off_ey + ey_idx(i + 1, j, k), 1.0 / hx)
-                add(r, off_ey + ey_idx(i, j, k), -1.0 / hx)
-                add(r, ex_idx(i, j + 1, k), -1.0 / hy)
-                add(r, ex_idx(i, j, k), 1.0 / hy)
+                add(r, off_ey + ey_idx(i + 1, j, k), 1.0 / hx[i])
+                add(r, off_ey + ey_idx(i, j, k), -1.0 / hx[i])
+                add(r, ex_idx(i, j + 1, k), -1.0 / hy[j])
+                add(r, ex_idx(i, j, k), 1.0 / hy[j])
 
     n_e = n_ex + n_ey + n_ez
     n_h = n_hx + n_hy + n_hz
@@ -183,13 +247,35 @@ def _curl_e2h(
 
 
 def _curl_h2e(
-    nx: int, ny: int, nz: int, hx: float, hy: float, hz: float
+    nx: int,
+    ny: int,
+    nz: int,
+    hx: np.ndarray,
+    hy: np.ndarray,
+    hz: np.ndarray,
 ) -> sparse.csr_matrix:
+    """Discrete curl H -> E on a (possibly non-uniform) tensor grid.
+
+    Each finite difference here connects two H values that straddle
+    an E edge from *opposite* primal cells (e.g. ``Hz`` at cell
+    centres ``j - 1`` and ``j``), so the correct denominator is the
+    *dual*-grid spacing between those two cell centres --
+    ``0.5 * (h[j - 1] + h[j])`` -- not either cell's own width. Using
+    the primal width here (as a uniform-only implementation legitimately
+    can, since dual and primal spacing coincide when all cells are the
+    same size) silently double-counts curvature on a padded mesh.
+    """
     s = _edge_shapes(nx, ny, nz)
     n_ex, n_ey, n_ez = (int(np.prod(s[k])) for k in ("ex", "ey", "ez"))
     n_hx, n_hy, n_hz = (int(np.prod(s[k])) for k in ("hx", "hy", "hz"))
     off_ey, off_ez = n_ex, n_ex + n_ey
     off_hy, off_hz = n_hx, n_hx + n_hy
+
+    dual_x, dual_y, dual_z = (
+        _dual_widths(hx),
+        _dual_widths(hy),
+        _dual_widths(hz),
+    )
 
     rows: list[int] = []
     cols: list[int] = []
@@ -213,28 +299,28 @@ def _curl_h2e(
         for j in range(1, ny):
             for k in range(1, nz):
                 r = int(np.ravel_multi_index((i, j, k), s["ex"]))
-                add(r, off_hz + hz_idx(i, j, k), 1.0 / hy)
-                add(r, off_hz + hz_idx(i, j - 1, k), -1.0 / hy)
-                add(r, off_hy + hy_idx(i, j, k), -1.0 / hz)
-                add(r, off_hy + hy_idx(i, j, k - 1), 1.0 / hz)
+                add(r, off_hz + hz_idx(i, j, k), 1.0 / dual_y[j])
+                add(r, off_hz + hz_idx(i, j - 1, k), -1.0 / dual_y[j])
+                add(r, off_hy + hy_idx(i, j, k), -1.0 / dual_z[k])
+                add(r, off_hy + hy_idx(i, j, k - 1), 1.0 / dual_z[k])
 
     for i in range(1, nx):
         for j in range(ny):
             for k in range(1, nz):
                 r = off_ey + int(np.ravel_multi_index((i, j, k), s["ey"]))
-                add(r, hx_idx(i, j, k), 1.0 / hz)
-                add(r, hx_idx(i, j, k - 1), -1.0 / hz)
-                add(r, off_hz + hz_idx(i, j, k), -1.0 / hx)
-                add(r, off_hz + hz_idx(i - 1, j, k), 1.0 / hx)
+                add(r, hx_idx(i, j, k), 1.0 / dual_z[k])
+                add(r, hx_idx(i, j, k - 1), -1.0 / dual_z[k])
+                add(r, off_hz + hz_idx(i, j, k), -1.0 / dual_x[i])
+                add(r, off_hz + hz_idx(i - 1, j, k), 1.0 / dual_x[i])
 
     for i in range(1, nx):
         for j in range(1, ny):
             for k in range(nz):
                 r = off_ez + int(np.ravel_multi_index((i, j, k), s["ez"]))
-                add(r, off_hy + hy_idx(i, j, k), 1.0 / hx)
-                add(r, off_hy + hy_idx(i - 1, j, k), -1.0 / hx)
-                add(r, hx_idx(i, j, k), -1.0 / hy)
-                add(r, hx_idx(i, j - 1, k), 1.0 / hy)
+                add(r, off_hy + hy_idx(i, j, k), 1.0 / dual_x[i])
+                add(r, off_hy + hy_idx(i - 1, j, k), -1.0 / dual_x[i])
+                add(r, hx_idx(i, j, k), -1.0 / dual_y[j])
+                add(r, hx_idx(i, j - 1, k), 1.0 / dual_y[j])
 
     n_e = n_ex + n_ey + n_ez
     n_h = n_hx + n_hy + n_hz
@@ -258,29 +344,62 @@ def _boundary_masks(
 
 
 def _sigma_on_edges(
-    sigma_xyz: np.ndarray, nx: int, ny: int, nz: int
+    sigma_xyz: np.ndarray,
+    hx: np.ndarray,
+    hy: np.ndarray,
+    hz: np.ndarray,
+    nx: int,
+    ny: int,
+    nz: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Average cell conductivity onto edges, weighted by transverse area.
+
+    Each interior edge is surrounded by 4 cells in the plane
+    perpendicular to it; a plain 1/4-1/4-1/4-1/4 average (correct only
+    when all 4 cells have equal cross-section) silently mis-weights a
+    padded/non-uniform mesh in favour of whichever neighbour happens to
+    come first in memory. Weighting by each cell's transverse
+    cross-sectional area is the same convention already used by
+    :func:`pycsamt.forward.em2d._assemble_te`'s nodal average.
+    """
     sx = np.zeros((nx, ny + 1, nz + 1))
-    sx[:, 1:ny, 1:nz] = 0.25 * (
-        sigma_xyz[:, 0 : ny - 1, 0 : nz - 1]
-        + sigma_xyz[:, 1:ny, 0 : nz - 1]
-        + sigma_xyz[:, 0 : ny - 1, 1:nz]
-        + sigma_xyz[:, 1:ny, 1:nz]
-    )
+    wy_l, wy_r = hy[: ny - 1, None], hy[1:ny, None]
+    wz_l, wz_r = hz[None, : nz - 1], hz[None, 1:nz]
+    w_tl, w_tr = wy_l * wz_l, wy_r * wz_l
+    w_bl, w_br = wy_l * wz_r, wy_r * wz_r
+    w_sum = w_tl + w_tr + w_bl + w_br
+    sx[:, 1:ny, 1:nz] = (
+        w_tl * sigma_xyz[:, 0 : ny - 1, 0 : nz - 1]
+        + w_tr * sigma_xyz[:, 1:ny, 0 : nz - 1]
+        + w_bl * sigma_xyz[:, 0 : ny - 1, 1:nz]
+        + w_br * sigma_xyz[:, 1:ny, 1:nz]
+    ) / w_sum
+
     sy = np.zeros((nx + 1, ny, nz + 1))
-    sy[1:nx, :, 1:nz] = 0.25 * (
-        sigma_xyz[0 : nx - 1, :, 0 : nz - 1]
-        + sigma_xyz[1:nx, :, 0 : nz - 1]
-        + sigma_xyz[0 : nx - 1, :, 1:nz]
-        + sigma_xyz[1:nx, :, 1:nz]
-    )
+    wx_l, wx_r = hx[: nx - 1, None, None], hx[1:nx, None, None]
+    wz_l, wz_r = hz[None, None, : nz - 1], hz[None, None, 1:nz]
+    w_tl, w_tr = wx_l * wz_l, wx_r * wz_l
+    w_bl, w_br = wx_l * wz_r, wx_r * wz_r
+    w_sum = w_tl + w_tr + w_bl + w_br
+    sy[1:nx, :, 1:nz] = (
+        w_tl * sigma_xyz[0 : nx - 1, :, 0 : nz - 1]
+        + w_tr * sigma_xyz[1:nx, :, 0 : nz - 1]
+        + w_bl * sigma_xyz[0 : nx - 1, :, 1:nz]
+        + w_br * sigma_xyz[1:nx, :, 1:nz]
+    ) / w_sum
+
     sz = np.zeros((nx + 1, ny + 1, nz))
-    sz[1:nx, 1:ny, :] = 0.25 * (
-        sigma_xyz[0 : nx - 1, 0 : ny - 1, :]
-        + sigma_xyz[1:nx, 0 : ny - 1, :]
-        + sigma_xyz[0 : nx - 1, 1:ny, :]
-        + sigma_xyz[1:nx, 1:ny, :]
-    )
+    wx_l, wx_r = hx[: nx - 1, None, None], hx[1:nx, None, None]
+    wy_l, wy_r = hy[None, : ny - 1, None], hy[None, 1:ny, None]
+    w_tl, w_tr = wx_l * wy_l, wx_r * wy_l
+    w_bl, w_br = wx_l * wy_r, wx_r * wy_r
+    w_sum = w_tl + w_tr + w_bl + w_br
+    sz[1:nx, 1:ny, :] = (
+        w_tl * sigma_xyz[0 : nx - 1, 0 : ny - 1, :]
+        + w_tr * sigma_xyz[1:nx, 0 : ny - 1, :]
+        + w_bl * sigma_xyz[0 : nx - 1, 1:ny, :]
+        + w_br * sigma_xyz[1:nx, 1:ny, :]
+    ) / w_sum
     return sx, sy, sz
 
 
@@ -311,14 +430,14 @@ def _boundary_fields(
     nx: int,
     ny: int,
     nz: int,
-    hz: float,
+    hz: np.ndarray,
     sigma_xyz: np.ndarray,
     omega: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Dirichlet boundary values for one polarization ("x" or "y")."""
     s = _edge_shapes(nx, ny, nz)
-    dz_profile = np.full(nz - 1, hz) if nz > 1 else np.zeros(0)
-    z_ex = np.arange(nz + 1) * hz
+    dz_profile = hz[:-1] if nz > 1 else np.zeros(0)
+    z_ex = np.concatenate([[0.0], np.cumsum(hz)])
 
     bc_ex = np.zeros(s["ex"], dtype=complex)
     bc_ey = np.zeros(s["ey"], dtype=complex)
@@ -337,15 +456,15 @@ def _assemble(
     nx: int,
     ny: int,
     nz: int,
-    hx: float,
-    hy: float,
-    hz: float,
+    hx: np.ndarray,
+    hy: np.ndarray,
+    hz: np.ndarray,
     sigma_xyz: np.ndarray,
     omega: float,
 ) -> tuple[sparse.csr_matrix, sparse.csr_matrix, np.ndarray]:
     c1 = _curl_e2h(nx, ny, nz, hx, hy, hz)
     c2 = _curl_h2e(nx, ny, nz, hx, hy, hz)
-    sx, sy, sz = _sigma_on_edges(sigma_xyz, nx, ny, nz)
+    sx, sy, sz = _sigma_on_edges(sigma_xyz, hx, hy, hz, nx, ny, nz)
     sigma_edge = np.concatenate([sx.ravel(), sy.ravel(), sz.ravel()])
 
     a = (c2 @ c1) + sparse.diags(1j * omega * _MU0 * sigma_edge)
@@ -473,7 +592,7 @@ class MT3DAdapter(BaseMaxwellAdapter):
             dimensions=(3,),
             components=("zxx", "zxy", "zyx", "zyy"),
             time_conventions=("exp(+iwt)",),
-            supports_nonuniform_mesh=False,
+            supports_nonuniform_mesh=True,
             supports_inactive_cells=False,
             supports_topography=False,
             supports_anisotropy=False,
@@ -541,11 +660,7 @@ class MT3DAdapter(BaseMaxwellAdapter):
         mesh = problem.mesh
         nz, ny, nx = mesh.shape
         widths = mesh.cell_widths_m
-        hx, hy, hz = (
-            float(widths["x"][0]),
-            float(widths["y"][0]),
-            float(widths["z"][0]),
-        )
+        hx, hy, hz = widths["x"], widths["y"], widths["z"]
         sigma_xyz = np.transpose(problem.conductivity_s_m, (2, 1, 0))
         x_centers = mesh.cell_centres_m["x"]
         y_centers = mesh.cell_centres_m["y"]

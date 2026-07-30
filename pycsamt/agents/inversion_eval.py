@@ -99,7 +99,9 @@ class InversionEvaluationAgent(BaseAgent):
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         if mod_raw is None:
-            warnings.append("No model response provided; RMS cannot be computed.")
+            warnings.append(
+                "No model response provided; RMS cannot be computed."
+            )
             sites_mod = None
         else:
             try:
@@ -111,7 +113,9 @@ class InversionEvaluationAgent(BaseAgent):
         # ── per-station RMS ───────────────────────────────────────────────────
         rms_per: dict[str, float] = {}
         if sites_mod is not None:
-            obs_dict = {_name(ed, i): ed for i, ed in enumerate(_iter_items(sites_obs))}
+            obs_dict = {
+                _name(ed, i): ed for i, ed in enumerate(_iter_items(sites_obs))
+            }
             for i, ed_m in enumerate(_iter_items(sites_mod)):
                 nm = _name(ed_m, i)
                 ed_o = obs_dict.get(nm)
@@ -142,7 +146,9 @@ class InversionEvaluationAgent(BaseAgent):
                 except Exception as exc:
                     warnings.append(f"RMS for {nm}: {exc}")
 
-        rms_global = float(np.mean(list(rms_per.values()))) if rms_per else np.nan
+        rms_global = (
+            float(np.mean(list(rms_per.values()))) if rms_per else np.nan
+        )
 
         # ── residual PT ───────────────────────────────────────────────────────
         residual_pt = None

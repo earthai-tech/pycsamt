@@ -180,10 +180,14 @@ def _edi_profile_grids(
     )
     if value_table.empty or rho_table.empty:
         return {}
-    station_line = {station.id: station.line or "line" for station in data.stations}
+    station_line = {
+        station.id: station.line or "line" for station in data.stations
+    }
     station_elev = {
         station.id: (
-            float(station.elevation) if station.elevation is not None else np.nan
+            float(station.elevation)
+            if station.elevation is not None
+            else np.nan
         )
         for station in data.stations
     }
@@ -280,7 +284,9 @@ def _inversion_profile_grids(
     # section's own snapshot for stations no longer present there) so
     # MapView.with_elevations()/the topo-apply flow — which only update
     # station records, not the precomputed sections — still take effect.
-    station_elev = {s.id: s.elevation for s in data.stations if s.elevation is not None}
+    station_elev = {
+        s.id: s.elevation for s in data.stations if s.elevation is not None
+    }
     quantity = _volume_quantity(options.quantity)
     out: dict[str, dict[str, np.ndarray]] = {}
     for line, section in sections.items():
@@ -353,7 +359,9 @@ def _fence_figure(profiles, options, colors):
                 opacity=float(options.opacity),
                 name=name,
                 showscale=idx == 0,
-                colorbar=dict(title=dict(text=_colorbar_title(options), side="right")),
+                colorbar=dict(
+                    title=dict(text=_colorbar_title(options), side="right")
+                ),
                 contours=_surface_contours(options),
             )
         )
@@ -546,7 +554,9 @@ def _depth_figure(profiles, options, colors):
                 cmax=cmax,
                 opacity=float(options.opacity),
                 showscale=True,
-                colorbar=dict(title=dict(text=_colorbar_title(options), side="right")),
+                colorbar=dict(
+                    title=dict(text=_colorbar_title(options), side="right")
+                ),
                 contours=_surface_contours(options),
             )
         )
@@ -716,7 +726,9 @@ def _line_real_offsets(profiles) -> dict[str, float] | None:
 def _line_offset(name, idx, real_offsets, unit, options) -> float:
     """Cross-strike placement for one line, in metres — see
     :func:`geometry.resolve_offset`."""
-    return resolve_offset(name, idx, real_offsets, unit, float(options.line_spacing))
+    return resolve_offset(
+        name, idx, real_offsets, unit, float(options.line_spacing)
+    )
 
 
 def _filtered_values(grid, options):

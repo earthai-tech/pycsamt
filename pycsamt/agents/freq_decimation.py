@@ -113,14 +113,18 @@ class FrequencyDecimationAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         n_per_decade = int(input_data.get("n_per_decade", self.n_per_decade))
-        snr_threshold = float(input_data.get("snr_threshold", self.snr_threshold))
+        snr_threshold = float(
+            input_data.get("snr_threshold", self.snr_threshold)
+        )
         period_range = input_data.get("period_range") or self.period_range
         component = str(input_data.get("component", self.component)).lower()
         output_dir = input_data.get("output_dir")
@@ -178,7 +182,9 @@ class FrequencyDecimationAgent(BaseAgent):
             n_original += int(valid.sum())
 
             if not good.any():
-                warnings.append(f"{nm}: no frequencies pass SNR threshold — skipped.")
+                warnings.append(
+                    f"{nm}: no frequencies pass SNR threshold — skipped."
+                )
                 selected_periods[nm] = np.array([])
                 continue
 

@@ -395,7 +395,9 @@ class EDIAcc:
             output_ch, input_ch = comp_map[comp_lower]
 
             # --- Resistivity Plot (Log-Log) ---
-            rho_data = ds_site["rho"].sel(output_ch=output_ch, input_ch=input_ch)
+            rho_data = ds_site["rho"].sel(
+                output_ch=output_ch, input_ch=input_ch
+            )
             rho_data.plot.line(
                 ax=axes[0],
                 xscale="log",
@@ -405,7 +407,9 @@ class EDIAcc:
             )
 
             # --- Phase Plot (Semi-Log) ---
-            phi_data = ds_site["phi"].sel(output_ch=output_ch, input_ch=input_ch)
+            phi_data = ds_site["phi"].sel(
+                output_ch=output_ch, input_ch=input_ch
+            )
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
 
@@ -758,7 +762,9 @@ def _ts_pack(ed: EDIFile) -> dict[str, xr.DataArray]:
         coords={"sample": np.arange(nmax), "ch": ch},
     )
     out["dt"] = xr.DataArray(dt, dims=("ch",), coords={"ch": ch})
-    out["npts"] = xr.DataArray(np.array(npts, int), dims=("ch",), coords={"ch": ch})
+    out["npts"] = xr.DataArray(
+        np.array(npts, int), dims=("ch",), coords={"ch": ch}
+    )
     return out
 
 
@@ -786,7 +792,9 @@ def _ds_from_edi(ed: EDIFile) -> xr.Dataset:
     z_err = _get_tensor_or_zeros(ed.Z, "z_err", n_freq, dtype=float)
     rho = _get_tensor_or_zeros(ed.Z, "resistivity", n_freq, dtype=float)
     phi = _get_tensor_or_zeros(ed.Z, "phase", n_freq, dtype=float)
-    rho_err = _get_tensor_or_zeros(ed.Z, "resistivity_err", n_freq, dtype=float)
+    rho_err = _get_tensor_or_zeros(
+        ed.Z, "resistivity_err", n_freq, dtype=float
+    )
     phi_err = _get_tensor_or_zeros(ed.Z, "phase_err", n_freq, dtype=float)
 
     zrot_val = getattr(ed.Z, "rotation_angle", np.zeros(n_freq))
@@ -870,7 +878,9 @@ def _ds_from_edi_v1(ed: EDIFile) -> xr.Dataset:
     z = _block_or_zeros(getattr(ed.Z, "z", None), f.size, complex)
     ze = _block_or_zeros(getattr(ed.Z, "z_err", None), f.size, float)
 
-    zrot = np.asarray(getattr(ed.Z, "rotation_angle", np.zeros(f.size))).astype(float)
+    zrot = np.asarray(
+        getattr(ed.Z, "rotation_angle", np.zeros(f.size))
+    ).astype(float)
     if zrot.size != f.size:
         zrot = np.zeros(f.size, float)
 

@@ -525,7 +525,10 @@ class CodeGenerationAgent(BaseAgent):
         else:
             code += "sites_corr = sites  # no static-shift correction\n\n"
 
-        if workflow in ("phase_analysis", "full") or "phase_analysis" in results:
+        if (
+            workflow in ("phase_analysis", "full")
+            or "phase_analysis" in results
+        ):
             results.get("phase_analysis")
             skew_th = 5.0
             ellipt_th = 0.1
@@ -558,7 +561,10 @@ class CodeGenerationAgent(BaseAgent):
                     )
             code += _FWD_BLOCK.format(rhos=rhos, ths=ths, out=out_dir)
 
-        if workflow in ("pre_inversion", "occam2d") or "pre_inversion" in results:
+        if (
+            workflow in ("pre_inversion", "occam2d")
+            or "pre_inversion" in results
+        ):
             code += _PRE_INV_BLOCK.format(out=out_dir)
 
         if workflow in ("tipper", "tipper_plot") or "tipper" in results:

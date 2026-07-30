@@ -316,19 +316,26 @@ class SiteMetadataEditor:
         specs, unused = _resolve_specs(self.updates, items, original_names)
         specs = [
             _materialize_identity(spec, ed, index, old)
-            for index, (spec, ed, old) in enumerate(zip(specs, items, original_names))
+            for index, (spec, ed, old) in enumerate(
+                zip(specs, items, original_names)
+            )
         ]
         if unused:
             self._handle_missing(
-                "metadata keys did not match any station: " + ", ".join(sorted(unused))
+                "metadata keys did not match any station: "
+                + ", ".join(sorted(unused))
             )
 
         desired = [
             _desired_name(spec, ed, i, old)
-            for i, (spec, ed, old) in enumerate(zip(specs, items, original_names))
+            for i, (spec, ed, old) in enumerate(
+                zip(specs, items, original_names)
+            )
         ]
         if not self.allow_empty_names:
-            empty = [str(i) for i, name in enumerate(desired) if not name.strip()]
+            empty = [
+                str(i) for i, name in enumerate(desired) if not name.strip()
+            ]
             if empty:
                 raise ValueError(
                     "metadata update would create empty station names at indices: "
@@ -346,7 +353,9 @@ class SiteMetadataEditor:
         # the same atomic failure semantics.
         targets = [_clone(ed) for ed in items]
         records: list[MetadataChange] = []
-        for index, (ed, old, spec) in enumerate(zip(targets, original_names, specs)):
+        for index, (ed, old, spec) in enumerate(
+            zip(targets, original_names, specs)
+        ):
             if spec is None:
                 snapshot = _snapshot(ed)
                 records.append(
@@ -373,7 +382,9 @@ class SiteMetadataEditor:
                 for validator in self.validators:
                     verdict = _call_validator(validator, ed, index)
                     if verdict is False:
-                        raise ValueError(f"metadata validator rejected station {old!r}")
+                        raise ValueError(
+                            f"metadata validator rejected station {old!r}"
+                        )
                 new = station_name(ed)
                 after = _snapshot(ed, spec)
                 records.append(
@@ -412,7 +423,9 @@ class SiteMetadataEditor:
 
         self.records_ = records
         final_names = [station_name(ed) for ed in targets]
-        if not self.allow_empty_names and any(not name.strip() for name in final_names):
+        if not self.allow_empty_names and any(
+            not name.strip() for name in final_names
+        ):
             raise ValueError("metadata actions produced an empty station name")
         if not self.allow_duplicates:
             duplicates = _duplicates(final_names)
@@ -565,7 +578,10 @@ class SiteMetadataEditor:
         plan : Populate the audit through a non-mutating preview.
         apply : Populate the audit while applying updates.
         """
-        columns = [field.name for field in MetadataChange.__dataclass_fields__.values()]
+        columns = [
+            field.name
+            for field in MetadataChange.__dataclass_fields__.values()
+        ]
         frame = pd.DataFrame(
             [record.to_dict() for record in self.records_], columns=columns
         )
@@ -822,7 +838,8 @@ def _resolve_specs(
     updates = _coerce_update_source(updates)
     if callable(updates):
         return [
-            _normalize_spec(_call(updates, ed, i)) for i, ed in enumerate(items)
+            _normalize_spec(_call(updates, ed, i))
+            for i, ed in enumerate(items)
         ], set()
 
     if isinstance(updates, Mapping):
@@ -866,7 +883,9 @@ def _coerce_update_source(updates: Any) -> Any:
         updates = pd.read_csv(path)
 
     if hasattr(updates, "to_dict") and hasattr(updates, "columns"):
-        columns = {str(column).casefold(): column for column in updates.columns}
+        columns = {
+            str(column).casefold(): column for column in updates.columns
+        }
         station_column = next(
             (columns[name] for name in _STATION_COLUMNS if name in columns),
             None,
@@ -881,7 +900,9 @@ def _coerce_update_source(updates: Any) -> Any:
         for row in updates.to_dict(orient="records"):
             station = row.pop(station_column)
             if _is_missing(station):
-                raise ValueError("metadata table contains an empty station key")
+                raise ValueError(
+                    "metadata table contains an empty station key"
+                )
             spec: dict[str, Any] = {}
             for key, value in row.items():
                 if _is_missing(value):
@@ -937,7 +958,9 @@ def _values_equal(left: Any, right: Any) -> bool:
         return True
     try:
         result = left == right
-        return bool(result) if not hasattr(result, "all") else bool(result.all())
+        return (
+            bool(result) if not hasattr(result, "all") else bool(result.all())
+        )
     except Exception:
         return False
 
@@ -946,10 +969,14 @@ def _normalize_spec(value: Any) -> dict[str, Any]:
     if isinstance(value, str):
         return {"name": value}
     if not isinstance(value, Mapping):
-        raise TypeError("each metadata specification must be a mapping or name")
+        raise TypeError(
+            "each metadata specification must be a mapping or name"
+        )
     unknown = set(value) - _SPEC_KEYS
     if unknown:
-        raise ValueError("unknown metadata fields: " + ", ".join(sorted(unknown)))
+        raise ValueError(
+            "unknown metadata fields: " + ", ".join(sorted(unknown))
+        )
     return dict(value)
 
 
@@ -959,7 +986,8 @@ def _is_spec(value: Mapping[Any, Any]) -> bool:
     # A real station may itself be named "station" or "name". A nested
     # mapping at either key is therefore a keyed batch, not one specification.
     return not any(
-        key in value and isinstance(value[key], Mapping) for key in ("station", "name")
+        key in value and isinstance(value[key], Mapping)
+        for key in ("station", "name")
     )
 
 
@@ -980,7 +1008,9 @@ def _apply_spec(
 
     before = get_coords(ed)
     coords = spec.get("coords")
-    coord_values = _normalize_coords(coords, ed, index) if coords is not None else {}
+    coord_values = (
+        _normalize_coords(coords, ed, index) if coords is not None else {}
+    )
     lat = spec.get("lat", coord_values.get("lat"))
     lon = spec.get("lon", spec.get("long", coord_values.get("lon")))
     elev = spec.get("elev", coord_values.get("elev"))
@@ -993,7 +1023,9 @@ def _apply_spec(
         set_coords(ed, lat=lat, lon=lon, elev=elev, inplace=True)
         after = get_coords(ed)
         for field in ("lat", "lon", "elev"):
-            if not _values_equal(getattr(before, field), getattr(after, field)):
+            if not _values_equal(
+                getattr(before, field), getattr(after, field)
+            ):
                 changed.append(field)
 
     head_values = spec.get("head")
@@ -1022,7 +1054,10 @@ def _apply_spec(
                     str(item).replace("_", "").casefold()
                     for item in getattr(info, "infokeys", ())
                 }
-                if value is not None and key.replace("_", "").casefold() not in known:
+                if (
+                    value is not None
+                    and key.replace("_", "").casefold() not in known
+                ):
                     _upsert_info_text(info, key, value)
                 elif value is None:
                     _remove_info_text(info, key)
@@ -1044,7 +1079,9 @@ def _apply_spec(
             section = _ensure_section(ed, str(section_name))
             for key, value in values.items():
                 key = str(key)
-                value = _resolve_value(value, ed, index, _get_path(section, key))
+                value = _resolve_value(
+                    value, ed, index, _get_path(section, key)
+                )
                 if _set_path(section, key, value):
                     changed.append(f"section.{section_name}.{key}")
 
@@ -1062,7 +1099,9 @@ def _apply_spec(
     transforms = spec.get("transform")
     if transforms is not None:
         if not isinstance(transforms, Mapping):
-            raise TypeError("transform action must be a mapping of path to callable")
+            raise TypeError(
+                "transform action must be a mapping of path to callable"
+            )
         for path, transform in transforms.items():
             if not callable(transform):
                 raise TypeError(f"transform for {path!r} must be callable")
@@ -1104,7 +1143,13 @@ def _materialize_identity(
     if spec is None:
         return None
     result = dict(spec)
-    key = "name" if "name" in result else "station" if "station" in result else None
+    key = (
+        "name"
+        if "name" in result
+        else "station"
+        if "station" in result
+        else None
+    )
     if key is not None and callable(result[key]):
         result[key] = _resolve_value(result[key], ed, index, old)
     return result
@@ -1115,12 +1160,16 @@ def _normalize_coords(coords: Any, ed: Any, index: int) -> dict[str, Any]:
     if isinstance(coords, Mapping):
         return {
             "lat": coords.get("lat", coords.get("latitude")),
-            "lon": coords.get("lon", coords.get("long", coords.get("longitude"))),
+            "lon": coords.get(
+                "lon", coords.get("long", coords.get("longitude"))
+            ),
             "elev": coords.get("elev", coords.get("elevation")),
         }
     if isinstance(coords, Sequence) and not isinstance(coords, (str, bytes)):
         if len(coords) not in {2, 3}:
-            raise ValueError("coords must contain (lat, lon) or (lat, lon, elev)")
+            raise ValueError(
+                "coords must contain (lat, lon) or (lat, lon, elev)"
+            )
         return {
             "lat": coords[0],
             "lon": coords[1],
@@ -1138,7 +1187,9 @@ def _validate_coords(*, lat: Any, lon: Any, elev: Any) -> None:
             continue
         number = float(value)
         if not math.isfinite(number) or not lower <= number <= upper:
-            raise ValueError(f"{label} must be finite and in [{lower}, {upper}]")
+            raise ValueError(
+                f"{label} must be finite and in [{lower}, {upper}]"
+            )
     if elev is not None and not math.isfinite(float(elev)):
         raise ValueError("elevation must be finite when supplied")
 
@@ -1149,7 +1200,9 @@ def _resolve_value(value: Any, ed: Any, index: int, current: Any) -> Any:
     return _call_value(value, current, ed, index)
 
 
-def _call_value(fn: Callable[..., Any], current: Any, ed: Any, index: int) -> Any:
+def _call_value(
+    fn: Callable[..., Any], current: Any, ed: Any, index: int
+) -> Any:
     count = _parameter_count(fn)
     if count >= 3:
         return fn(current, ed, index)
@@ -1160,13 +1213,19 @@ def _call_value(fn: Callable[..., Any], current: Any, ed: Any, index: int) -> An
     return fn()
 
 
-def _call_transform(fn: Callable[..., Any], current: Any, ed: Any, index: int) -> Any:
+def _call_transform(
+    fn: Callable[..., Any], current: Any, ed: Any, index: int
+) -> Any:
     return _call_value(fn, current, ed, index)
 
 
 def _canonical_path(path: str) -> str:
     prefix = path.split(".", 1)[0].casefold()
-    return path if prefix in {"head", "info", "edi", "section"} else f"head.{path}"
+    return (
+        path
+        if prefix in {"head", "info", "edi", "section"}
+        else f"head.{path}"
+    )
 
 
 def _split_field(ed: Any, path: str) -> tuple[Any, str, str]:
@@ -1186,7 +1245,9 @@ def _split_field(ed: Any, path: str) -> tuple[Any, str, str]:
         return ed, remainder, "edi"
     if prefix == "section":
         if "." not in remainder:
-            raise ValueError("section paths use 'section.<name>.<field>' syntax")
+            raise ValueError(
+                "section paths use 'section.<name>.<field>' syntax"
+            )
         section_name, field = remainder.split(".", 1)
         return (
             _ensure_section(ed, section_name),
@@ -1227,7 +1288,10 @@ def _set_field(ed: Any, path: str, value: Any) -> bool:
                 str(item).replace("_", "").casefold()
                 for item in getattr(root, "infokeys", ())
             }
-            if value is not None and remainder.replace("_", "").casefold() not in known:
+            if (
+                value is not None
+                and remainder.replace("_", "").casefold() not in known
+            ):
                 _upsert_info_text(root, remainder, value)
             return before != _info_value(root, remainder)
     return _set_path(root, remainder, value)
@@ -1242,7 +1306,9 @@ def _unset_field(ed: Any, path: str) -> bool:
         "head.sitename",
         "head.name",
     }:
-        raise ValueError("station identity cannot be unset; rename it explicitly")
+        raise ValueError(
+            "station identity cannot be unset; rename it explicitly"
+        )
     root, remainder, section = _split_field(ed, path)
     current = (
         _get_info_path(root, remainder)
@@ -1265,14 +1331,18 @@ def _get_path(root: Any, path: str) -> Any:
             target = target.get(actual) if actual is not None else None
         else:
             actual = _attribute_name(target, part)
-            target = getattr(target, actual, None) if actual is not None else None
+            target = (
+                getattr(target, actual, None) if actual is not None else None
+            )
         if target is None:
             break
     return target
 
 
 def _get_info_path(info: Any, path: str) -> Any:
-    return _info_value(info, path) if "." not in path else _get_path(info, path)
+    return (
+        _info_value(info, path) if "." not in path else _get_path(info, path)
+    )
 
 
 def _set_identity(ed: Any, name: str) -> None:
@@ -1313,7 +1383,9 @@ def _ensure_section(ed: Any, key: str) -> Any:
         section = getter(key)
     if section is None:
         attribute = _attribute_name(ed, key)
-        section = getattr(ed, attribute, None) if attribute is not None else None
+        section = (
+            getattr(ed, attribute, None) if attribute is not None else None
+        )
     if section is None:
         if key == "info":
             section = Info()
@@ -1341,7 +1413,9 @@ def _set_path(root: Any, path: str, value: Any) -> bool:
             child = target.get(actual) if actual is not None else None
         else:
             actual = _attribute_name(target, part)
-            child = getattr(target, actual, None) if actual is not None else None
+            child = (
+                getattr(target, actual, None) if actual is not None else None
+            )
         if child is None:
             child = SimpleNamespace()
             if isinstance(target, dict):
@@ -1418,7 +1492,9 @@ def _remove_info_text(info: Any, key: str) -> None:
 def _requested_fields(spec: Mapping[str, Any]) -> list[str]:
     fields: list[str] = []
     for key, value in spec.items():
-        if key in {"head", "info", "set", "transform"} and isinstance(value, Mapping):
+        if key in {"head", "info", "set", "transform"} and isinstance(
+            value, Mapping
+        ):
             fields.extend(
                 f"{key}.{field}"
                 if key in {"head", "info"}
@@ -1429,7 +1505,8 @@ def _requested_fields(spec: Mapping[str, Any]) -> list[str]:
             for section, section_fields in value.items():
                 if isinstance(section_fields, Mapping):
                     fields.extend(
-                        f"section.{section}.{field}" for field in section_fields
+                        f"section.{section}.{field}"
+                        for field in section_fields
                     )
         elif key == "unset":
             values = [value] if isinstance(value, str) else list(value)
@@ -1441,7 +1518,9 @@ def _requested_fields(spec: Mapping[str, Any]) -> list[str]:
     return list(dict.fromkeys(fields))
 
 
-def _snapshot(ed: Any, spec: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def _snapshot(
+    ed: Any, spec: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
     coords = get_coords(ed)
     snapshot: dict[str, Any] = {
         "name": station_name(ed),
@@ -1465,7 +1544,9 @@ def _safe_audit_value(value: Any) -> Any:
     if isinstance(value, (str, int, float, bool, type(None))):
         return value
     if isinstance(value, Mapping):
-        return {str(key): _safe_audit_value(item) for key, item in value.items()}
+        return {
+            str(key): _safe_audit_value(item) for key, item in value.items()
+        }
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         return [_safe_audit_value(item) for item in value]
     return repr(value)
@@ -1506,7 +1587,9 @@ def _unpack(source: Any) -> tuple[list[Any], str]:
     if hasattr(source, "get_section") or hasattr(source, "Z"):
         return [source], "edi"
     values = list(source)
-    return [value.edi if isinstance(value, Site) else value for value in values], "many"
+    return [
+        value.edi if isinstance(value, Site) else value for value in values
+    ], "many"
 
 
 def _repack(source: Any, items: list[Any], kind: str, *, inplace: bool) -> Any:
@@ -1533,7 +1616,9 @@ def _repack(source: Any, items: list[Any], kind: str, *, inplace: bool) -> Any:
                 "or EDI object; one-shot iterables cannot be committed safely"
             )
         originals = list(source)
-        raw = [item.edi if isinstance(item, Site) else item for item in originals]
+        raw = [
+            item.edi if isinstance(item, Site) else item for item in originals
+        ]
         for original, staged in zip(raw, items):
             _replace_state(original, staged)
         return Sites(raw)

@@ -116,7 +116,9 @@ class PhaseAnalysisAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -281,7 +283,11 @@ class PhaseAnalysisAgent(BaseAgent):
                 ellipt_th=self.ellipt_th,
                 verbose=0,
             )
-            fig = ax_dim.get_figure() if hasattr(ax_dim, "get_figure") else ax_dim
+            fig = (
+                ax_dim.get_figure()
+                if hasattr(ax_dim, "get_figure")
+                else ax_dim
+            )
             if fig is not None:
                 figures["dim_confidence"] = fig
                 p = self._save_figure(

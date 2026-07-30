@@ -370,9 +370,7 @@ class Maxwell2DDatasetConfig:
                 f"vector within the grid's x extent {(x_min, x_max)}."
             )
         components = tuple(str(c).strip().lower() for c in self.components)
-        if not components or any(
-            c not in ("zxy", "zyx") for c in components
-        ):
+        if not components or any(c not in ("zxy", "zyx") for c in components):
             raise ValueError(
                 "components must be a non-empty subset of "
                 "('zxy', 'zyx') for a 2-D problem."
@@ -398,9 +396,7 @@ class Maxwell2DDatasetConfig:
         if not np.isfinite(self.mesh_safety_factor) or (
             self.mesh_safety_factor <= 0
         ):
-            raise ValueError(
-                "mesh_safety_factor must be finite and positive."
-            )
+            raise ValueError("mesh_safety_factor must be finite and positive.")
         if (
             not isinstance(self.max_mesh_cells, int)
             or isinstance(self.max_mesh_cells, bool)
@@ -430,8 +426,14 @@ class Maxwell2DDatasetConfig:
         >>> from pycsamt.ai.geology import GeologyGrid
         >>> grid = GeologyGrid.regular_2d(nx=4, nz=4, dx_m=1, dz_m=1)
         >>> config = Maxwell2DDatasetConfig(
-        ...     "d", grid, (1.0, 2.0), (1.0, 2.0), [1.0],
-        ...     [1.0, 2.0], 1, 0,
+        ...     "d",
+        ...     grid,
+        ...     (1.0, 2.0),
+        ...     (1.0, 2.0),
+        ...     [1.0],
+        ...     [1.0, 2.0],
+        ...     1,
+        ...     0,
         ... )
         >>> config.to_dict()["dataset_id"]
         'd'
@@ -498,15 +500,11 @@ class Maxwell2DSample:
         if not isinstance(self.survey, SurveyData):
             raise TypeError("survey must be a SurveyData.")
         resistivity = np.asarray(self.resistivity_ohm_m, dtype=float)
-        if not np.all(np.isfinite(resistivity)) or np.any(
-            resistivity <= 0
-        ):
+        if not np.all(np.isfinite(resistivity)) or np.any(resistivity <= 0):
             raise ValueError("resistivity_ohm_m must be positive and finite.")
         object.__setattr__(self, "realization_id", realization_id)
         object.__setattr__(self, "seed", int(self.seed))
-        object.__setattr__(
-            self, "resistivity_ohm_m", _readonly(resistivity)
-        )
+        object.__setattr__(self, "resistivity_ohm_m", _readonly(resistivity))
         object.__setattr__(self, "mesh_cells", int(self.mesh_cells))
         object.__setattr__(
             self, "relative_residual", float(self.relative_residual)
@@ -640,9 +638,7 @@ def generate_2d_maxwell_dataset(
     """
     plan = SeedPlan(config.seed, namespace=config.namespace)
     grid = config.grid
-    station_names = tuple(
-        f"S{i:04d}" for i in range(len(config.station_x_m))
-    )
+    station_names = tuple(f"S{i:04d}" for i in range(len(config.station_x_m)))
     receivers = ReceiverSet(
         [[float(x), 0.0] for x in config.station_x_m], station_names
     )

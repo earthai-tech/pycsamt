@@ -270,7 +270,9 @@ def plot_section_pair(
         ["True model", "Predicted model"],
     ):
         X, Y = np.meshgrid(stations, depths[:n_depth])
-        im = ax.pcolormesh(X, Y, data, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto")
+        im = ax.pcolormesh(
+            X, Y, data, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto"
+        )
         ax.invert_yaxis()
         ax.set_title(ttl, fontsize=9)
         ax.set_xlabel("Station")
@@ -383,7 +385,9 @@ def plot_pseudo_section(
         fig = ax.get_figure()
 
     X, Y = np.meshgrid(stations, y_axis)
-    im = ax.pcolormesh(X, Y, data, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto")
+    im = ax.pcolormesh(
+        X, Y, data, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto"
+    )
 
     ax.set_xlabel("Station")
     ax.set_ylabel(r"$\log_{10}(T)$ (s)" if log_freq else "Frequency (Hz)")

@@ -95,7 +95,9 @@ class TDEMWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_cat.addWidget(self._combo_category)
         layout.addWidget(grp_cat)
 
@@ -120,7 +122,9 @@ class TDEMWindow(PanelWindow):
         self._btn_run = icon_button(
             "↻  Run / Refresh", "tdem", "Render the selected TDEM plot"
         )
-        self._btn_export = icon_button("⬆  Export…", "export", "Save figure to file")
+        self._btn_export = icon_button(
+            "⬆  Export…", "export", "Save figure to file"
+        )
         self._btn_run.clicked.connect(self._on_run)
         self._btn_export.clicked.connect(self._on_export)
         lay_act.addWidget(self._btn_run)
@@ -161,7 +165,9 @@ class TDEMWindow(PanelWindow):
         self._load_progress.setValue(0)
         self._btn_run.setEnabled(False)
 
-        ok = self._ctrl.load_folder(folder, progress_cb=self._load_progress.setValue)
+        ok = self._ctrl.load_folder(
+            folder, progress_cb=self._load_progress.setValue
+        )
 
         self._load_progress.setVisible(False)
         self._btn_run.setEnabled(True)
@@ -170,7 +176,9 @@ class TDEMWindow(PanelWindow):
             self._info_lbl.setText(self._ctrl.summary)
             self._status_lbl.setText("Data loaded — click Run to render.")
         else:
-            self._info_lbl.setText(self._ctrl.summary or "No TDEM files found.")
+            self._info_lbl.setText(
+                self._ctrl.summary or "No TDEM files found."
+            )
             self._status_lbl.setText("Load failed.")
 
     def _on_category_changed(self, row: int) -> None:
@@ -198,7 +206,9 @@ class TDEMWindow(PanelWindow):
         self._status_lbl.setText(f"Running {class_name}…")
         self._btn_run.setEnabled(False)
         try:
-            new_fig = self._ctrl.draw(class_name, has_ax, data_key, self._canvas.figure)
+            new_fig = self._ctrl.draw(
+                class_name, has_ax, data_key, self._canvas.figure
+            )
             if new_fig is not None:
                 self._canvas.show_figure(new_fig)
             else:

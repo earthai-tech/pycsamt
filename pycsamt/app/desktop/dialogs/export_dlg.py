@@ -134,7 +134,9 @@ class ExportDialog(QDialog):
         path = self._path_edit.text().strip()
 
         if not path:
-            QMessageBox.warning(self, "Export", "Please specify a destination path.")
+            QMessageBox.warning(
+                self, "Export", "Please specify a destination path."
+            )
             return
 
         try:

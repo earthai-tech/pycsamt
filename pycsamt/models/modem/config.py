@@ -155,12 +155,14 @@ _MODEM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "smooth_x",
-        "Covariance smoothing weight in the x direction for 3-D " "regularization.",
+        "Covariance smoothing weight in the x direction for 3-D "
+        "regularization.",
         "Covariance",
     ),
     ConfigParameter(
         "smooth_y",
-        "Covariance smoothing weight in the y direction for 3-D " "regularization.",
+        "Covariance smoothing weight in the y direction for 3-D "
+        "regularization.",
         "Covariance",
     ),
     ConfigParameter(

@@ -140,4 +140,6 @@ def presets(
         click.echo(
             "  Tip: pycsamt pipe presets --expand <name>  to see a preset's steps."
         )
-        click.echo("       pycsamt pipe run --preset <name>       to run a preset.")
+        click.echo(
+            "       pycsamt pipe run --preset <name>       to run a preset."
+        )

@@ -92,7 +92,9 @@ def _iter_blocks(lines: Sequence[str]) -> list[str]:
     return tags
 
 
-def _count_freq_values(lines: Sequence[str], start_idx: int) -> tuple[int, int]:
+def _count_freq_values(
+    lines: Sequence[str], start_idx: int
+) -> tuple[int, int]:
     n = 0
     i = start_idx + 1
     N = len(lines)
@@ -232,7 +234,9 @@ class IsEdi(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def _assert_edi(file: str | os.PathLike | IsEdi, *, deep: bool = True) -> bool:
+    def _assert_edi(
+        file: str | os.PathLike | IsEdi, *, deep: bool = True
+    ) -> bool:
         r"""
         Validate that ``file`` is a SEG-EDI file (or object).
 
@@ -372,11 +376,15 @@ class IsEdi(ABC):
         # You can be permissive and accept header-only OTHER
         valid_other = have_other_sect
 
-        valid_impedance = have_freq and (have_meas_section or have_spectra_sect)
+        valid_impedance = have_freq and (
+            have_meas_section or have_spectra_sect
+        )
         valid_spectra = have_spectra_sect or have_spectra_blocks
         valid_tseries = have_tseries_sect or have_tseries_blocks
 
-        if not (valid_impedance or valid_spectra or valid_tseries or valid_other):
+        if not (
+            valid_impedance or valid_spectra or valid_tseries or valid_other
+        ):
             raise EdIDataError(
                 f"{base_msg} (need >FREQ+section OR "
                 f">=SPECTRASECT/>SPECTRA OR "

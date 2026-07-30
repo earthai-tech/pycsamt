@@ -229,7 +229,9 @@ def _corr_coord_figure(raw_sites, corrected_sites, label: str):
         label="Before",
         zorder=3,
     )
-    ax.scatter(df1["lon"], df1["lat"], s=14, color="#e74c3c", label="After", zorder=4)
+    ax.scatter(
+        df1["lon"], df1["lat"], s=14, color="#e74c3c", label="After", zorder=4
+    )
     # connect each station's old → new position
     for (_, r0), (_, r1) in zip(df0.iterrows(), df1.iterrows()):
         ax.plot(
@@ -286,7 +288,9 @@ class ToolAgent:
         if kind in _DATALESS_KINDS:
             warnings: list[str] = []
             try:
-                summary, table, figs = self._layered_model(input_data, warnings)
+                summary, table, figs = self._layered_model(
+                    input_data, warnings
+                )
             except Exception as exc:  # noqa: BLE001
                 return AgentResult.failed(
                     f"{kind} failed: {exc}",
@@ -334,21 +338,35 @@ class ToolAgent:
             if kind == "strike":
                 summary, table, figs = self._strike(sub, input_data, warnings)
             elif kind == "dimensionality":
-                summary, table, figs = self._dimensionality(sub, input_data, warnings)
+                summary, table, figs = self._dimensionality(
+                    sub, input_data, warnings
+                )
             elif kind == "coords":
                 summary, table, figs = self._coords(sub, input_data, warnings)
             elif kind == "elevation":
-                summary, table, figs = self._elevation(sub, input_data, warnings)
+                summary, table, figs = self._elevation(
+                    sub, input_data, warnings
+                )
             elif kind == "converter":
-                summary, table, figs = self._converter(sub, input_data, warnings)
+                summary, table, figs = self._converter(
+                    sub, input_data, warnings
+                )
             elif kind == "batch_export":
-                summary, table, figs = self._batch_export(sub, input_data, warnings)
+                summary, table, figs = self._batch_export(
+                    sub, input_data, warnings
+                )
             elif kind == "freq_editor":
-                summary, table, figs = self._freq_editor(sub, input_data, warnings)
+                summary, table, figs = self._freq_editor(
+                    sub, input_data, warnings
+                )
             elif kind == "correction":
-                summary, table, figs = self._correction(sub, input_data, warnings)
+                summary, table, figs = self._correction(
+                    sub, input_data, warnings
+                )
             else:  # validator
-                summary, table, figs = self._validator(sub, input_data, warnings)
+                summary, table, figs = self._validator(
+                    sub, input_data, warnings
+                )
         except Exception as exc:  # noqa: BLE001
             return AgentResult.failed(
                 f"{kind} analysis failed: {exc}",
@@ -390,7 +408,9 @@ class ToolAgent:
         res = fn(sites, band=band, verbose=0)
         df = res.frame if hasattr(res, "frame") else res
 
-        regional = _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
+        regional = (
+            _circular_strike_mean(df["ang"]) if "ang" in df else float("nan")
+        )
         summary = (
             f"**Geoelectric strike ({method})** — regional ≈ "
             f"{regional:.1f}° (N{regional:+.0f}°E) across {len(df)} station(s). "
@@ -402,7 +422,9 @@ class ToolAgent:
         try:
             fmethod = "pt" if method == "pt" else "sweep"
             fig = _as_fig(
-                plot_strike_analysis(sites, method=fmethod, band=band, verbose=0)
+                plot_strike_analysis(
+                    sites, method=fmethod, band=band, verbose=0
+                )
             )
             if fig is not None:
                 figs["Strike analysis"] = fig
@@ -445,7 +467,11 @@ class ToolAgent:
         if "station" in df and "dim" in df:
             agg = (
                 df.groupby("station")["dim"]
-                .agg(lambda s: (int(s.mode().iloc[0]) if not s.mode().empty else 0))
+                .agg(
+                    lambda s: (
+                        int(s.mode().iloc[0]) if not s.mode().empty else 0
+                    )
+                )
                 .reset_index()
             )
             agg["class"] = agg["dim"].map(_LBL)
@@ -574,7 +600,9 @@ class ToolAgent:
         api = str(d.get("api", "open_meteo") or "open_meteo")
         coords = _station_coords(sites)
         with_coords = [
-            (n, la, lo) for n, la, lo in coords if la is not None and lo is not None
+            (n, la, lo)
+            for n, la, lo in coords
+            if la is not None and lo is not None
         ]
         if not with_coords:
             return (
@@ -879,13 +907,18 @@ class ToolAgent:
         )
 
         table = "(no per-row decisions returned)"
-        if decisions is not None and getattr(decisions, "empty", True) is False:
+        if (
+            decisions is not None
+            and getattr(decisions, "empty", True) is False
+        ):
             cols = [
                 c
                 for c in ("station", "period", "confidence", "action")
                 if c in decisions.columns
             ]
-            table = _df_to_text(decisions, columns=cols or None, max_rows=40, ndigits=4)
+            table = _df_to_text(
+                decisions, columns=cols or None, max_rows=40, ndigits=4
+            )
 
         figs = {}
         try:
@@ -939,7 +972,9 @@ class ToolAgent:
             meta, kwargs, label = {}, {}, fn_name
             category = "Correction"
         else:
-            raise ValueError("no correction selected (missing 'corr_wf' / 'fn_name').")
+            raise ValueError(
+                "no correction selected (missing 'corr_wf' / 'fn_name')."
+            )
 
         ctrl = CorrectionController()
         ctrl.dark = False
@@ -977,7 +1012,9 @@ class ToolAgent:
         self._corrected = None if diagnostic else corrected
 
         n_sta = len(list(_iter_items(corrected)))
-        param_txt = ", ".join(f"{k}={v}" for k, v in kwargs.items()) or "defaults"
+        param_txt = (
+            ", ".join(f"{k}={v}" for k, v in kwargs.items()) or "defaults"
+        )
         if diagnostic:
             summary = (
                 f"**{category} — {label}** over {n_sta} station(s) "
@@ -1058,7 +1095,9 @@ class ToolAgent:
             except (TypeError, ValueError):
                 depth_max = 2000.0
             if preset == "random":
-                model = LayeredModel.random(n_layers, depth_max=depth_max, seed=0)
+                model = LayeredModel.random(
+                    n_layers, depth_max=depth_max, seed=0
+                )
             elif preset == "blocky":
                 model = LayeredModel.blocky(n_layers)
             else:

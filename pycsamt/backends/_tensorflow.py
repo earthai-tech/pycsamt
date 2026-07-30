@@ -138,13 +138,17 @@ class TensorFlowBackend(NeuralBackend):
             )(x)
             x = layers.BatchNormalization(name=f"{name}_bn1")(x)
             x = layers.ReLU()(x)
-            x = layers.Conv1D(out_ch, 3, padding="same", name=f"{name}_conv2")(x)
+            x = layers.Conv1D(out_ch, 3, padding="same", name=f"{name}_conv2")(
+                x
+            )
             x = layers.BatchNormalization(name=f"{name}_bn2")(x)
             if shortcut.shape[-1] != out_ch or stride > 1:
                 shortcut = layers.Conv1D(
                     out_ch, 1, strides=stride, name=f"{name}_proj"
                 )(shortcut)
-                shortcut = layers.BatchNormalization(name=f"{name}_proj_bn")(shortcut)
+                shortcut = layers.BatchNormalization(name=f"{name}_proj_bn")(
+                    shortcut
+                )
             return layers.ReLU()(layers.Add()([x, shortcut]))
 
         inp = tf.keras.Input(shape=(n_features,), name="input")
@@ -285,7 +289,9 @@ class TensorFlowBackend(NeuralBackend):
         ]
         encoded = [_dense_block(inp, hidden_dim) for inp in inputs]
 
-        fused = layers.Concatenate()(encoded) if len(encoded) > 1 else encoded[0]
+        fused = (
+            layers.Concatenate()(encoded) if len(encoded) > 1 else encoded[0]
+        )
         fused = _dense_block(fused, hidden_dim)
 
         out = layers.Dense(hidden_dim // 2, activation="relu")(fused)

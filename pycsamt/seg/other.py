@@ -136,7 +136,9 @@ class OtherSECT(EDIComponentBase):
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
 
         start = None
         for i, ln in enumerate(lines):
@@ -342,7 +344,9 @@ class OtherIO(EDIComponentBase):
         p = Path(edi_path)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+        lines = p.read_text(
+            encoding="utf-8-sig", errors="replace"
+        ).splitlines()
 
         if start_line is None:
             for i, ln in enumerate(lines):
@@ -370,7 +374,9 @@ class OtherIO(EDIComponentBase):
                 i += 1
                 continue
 
-            blk, nxt = cls._parse_block(lines, i, verbose=verbose, logger=logger)
+            blk, nxt = cls._parse_block(
+                lines, i, verbose=verbose, logger=logger
+            )
             inst.blocks.append(blk)
             i = nxt
 

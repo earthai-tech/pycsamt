@@ -248,7 +248,9 @@ def read_xyz(
         try:
             return np.array([float(r[idx]) for r in rows])
         except (IndexError, ValueError) as exc:
-            raise ValueError(f"Cannot read column {idx} from {path}: {exc}") from exc
+            raise ValueError(
+                f"Cannot read column {idx} from {path}: {exc}"
+            ) from exc
 
     t = _col(rows, time_col)
     d = _col(rows, data_col)
@@ -257,7 +259,9 @@ def read_xyz(
     # unit conversions
     _time_scale = {"s": 1.0, "ms": 1e-3, "us": 1e-6, "\u00b5s": 1e-6}
     if time_unit not in _time_scale:
-        msg = f"time_unit must be one of {list(_time_scale)}, got {time_unit!r}"
+        msg = (
+            f"time_unit must be one of {list(_time_scale)}, got {time_unit!r}"
+        )
         raise ValueError(msg)
     t = t * _time_scale[time_unit]
 
@@ -269,7 +273,9 @@ def read_xyz(
         "uV/Am2": 1e-6,
     }
     if data_unit not in _data_scale:
-        msg = f"data_unit must be one of {list(_data_scale)}, got {data_unit!r}"
+        msg = (
+            f"data_unit must be one of {list(_data_scale)}, got {data_unit!r}"
+        )
         raise ValueError(msg)
     scale = _data_scale[data_unit]
     d = d * scale
@@ -363,7 +369,9 @@ def _gate_times_to_seconds(times: list[float], unit: str) -> np.ndarray:
     """Convert a list of gate-centre times to seconds."""
     scale = {"s": 1.0, "ms": 1e-3, "us": 1e-6, "µs": 1e-6}
     if unit not in scale:
-        raise ValueError(f"gate time unit must be one of {list(scale)}, got {unit!r}")
+        raise ValueError(
+            f"gate time unit must be one of {list(scale)}, got {unit!r}"
+        )
     return np.array(times, dtype=float) * scale[unit]
 
 
@@ -385,7 +393,9 @@ def _data_to_si(data: np.ndarray, unit: str) -> np.ndarray:
         "SI": 1.0,
     }
     if unit not in scale:
-        raise ValueError(f"data unit must be one of {list(scale)}, got {unit!r}")
+        raise ValueError(
+            f"data unit must be one of {list(scale)}, got {unit!r}"
+        )
     return data * scale[unit]
 
 
@@ -541,7 +551,9 @@ def read_geosoft_dat(
         if m_gt:
             unit_tag = m_gt.group(1) or gate_times_unit
             gate_times_unit = unit_tag.lower()
-            _gate_times_f = [_to_float(v) for v in m_gt.group(2).split() if v.strip()]
+            _gate_times_f = [
+                _to_float(v) for v in m_gt.group(2).split() if v.strip()
+            ]
             continue
 
         # DataUnit: nV/Am2
@@ -663,9 +675,17 @@ def read_geosoft_dat(
     soundings: list[TEMSounding] = []
     for row_i, row in enumerate(data_rows):
         try:
-            x_val = _to_float(row[xi]) if xi is not None and xi < len(row) else 0.0
-            y_val = _to_float(row[yi]) if yi is not None and yi < len(row) else 0.0
-            el_val = _to_float(row[eli]) if eli is not None and eli < len(row) else 0.0
+            x_val = (
+                _to_float(row[xi]) if xi is not None and xi < len(row) else 0.0
+            )
+            y_val = (
+                _to_float(row[yi]) if yi is not None and yi < len(row) else 0.0
+            )
+            el_val = (
+                _to_float(row[eli])
+                if eli is not None and eli < len(row)
+                else 0.0
+            )
             st_name = (
                 str(row[sti])
                 if sti is not None and sti < len(row)
@@ -795,7 +815,9 @@ def read_amira(
     in_data = False
 
     _DATA_START = _re.compile(r"^\s*(DATA|DATASETS|\[DATA\])", _re.IGNORECASE)
-    _DATA_END = _re.compile(r"^\s*(END\s*DATA|END\s*DATASETS|\[END\])", _re.IGNORECASE)
+    _DATA_END = _re.compile(
+        r"^\s*(END\s*DATA|END\s*DATASETS|\[END\])", _re.IGNORECASE
+    )
 
     for ln in lines:
         stripped = ln.strip()
@@ -838,7 +860,9 @@ def read_amira(
         )
     if tx_area is None:
         tx_area = (
-            _kv_float("TRANSMITTER_AREA") or _kv_float("TXAREA") or _kv_float("TX_AREA")
+            _kv_float("TRANSMITTER_AREA")
+            or _kv_float("TXAREA")
+            or _kv_float("TX_AREA")
         )
     if loop_side is None:
         loop_side = _kv_float("LOOP_SIDE") or _kv_float("LOOPSIDE")
@@ -865,14 +889,18 @@ def read_amira(
         data_unit = _file_du.strip()
 
     if current is None:
-        raise ValueError("Transmitter current not found in AMIRA file or arguments.")
+        raise ValueError(
+            "Transmitter current not found in AMIRA file or arguments."
+        )
     if tx_area is None and loop_side is None and loop_radius is None:
         raise ValueError(
             "Transmitter geometry not found.  "
             "Pass tx_area, loop_side, or loop_radius."
         )
     if gate_times is None:
-        raise ValueError("GATE_TIMES not found in AMIRA file.  Pass gate_times=[...].")
+        raise ValueError(
+            "GATE_TIMES not found in AMIRA file.  Pass gate_times=[...]."
+        )
     t_s = _gate_times_to_seconds(gate_times, gate_times_unit)
 
     # ── Parse data block ───────────────────────────────────────────────────────
@@ -1027,9 +1055,13 @@ def read_zonge(
             _re.IGNORECASE,
         )
         if m_gt:
-            unit_tag = (m_gt.group(1) or state.get("gt_unit", gate_times_unit)).lower()
+            unit_tag = (
+                m_gt.group(1) or state.get("gt_unit", gate_times_unit)
+            ).lower()
             state["gt_unit"] = unit_tag
-            state["gt_raw"] = [_to_float(v) for v in m_gt.group(2).split() if v.strip()]
+            state["gt_raw"] = [
+                _to_float(v) for v in m_gt.group(2).split() if v.strip()
+            ]
             return
 
         for kw, key in (
@@ -1054,7 +1086,9 @@ def read_zonge(
             state["station_name"] = m_st.group(1)
             return
         for coord, key in (("X", "x"), ("Y", "y"), ("Elev", "elevation")):
-            m_c = _re.match(rf"{coord}\s*[:=]\s*([0-9.eEdD+\-]+)", body, _re.IGNORECASE)
+            m_c = _re.match(
+                rf"{coord}\s*[:=]\s*([0-9.eEdD+\-]+)", body, _re.IGNORECASE
+            )
             if m_c:
                 state[key] = float(_to_float(m_c.group(1)))
 
@@ -1126,9 +1160,17 @@ def read_zonge(
         blk_el = state.get("elevation", 0.0)
 
         if blk_current is None:
-            raise ValueError(f"Transmitter current not found for block {blk_i + 1}.")
-        if blk_tx_area is None and blk_loop_side is None and blk_loop_radius is None:
-            raise ValueError(f"Transmitter geometry not found for block {blk_i + 1}.")
+            raise ValueError(
+                f"Transmitter current not found for block {blk_i + 1}."
+            )
+        if (
+            blk_tx_area is None
+            and blk_loop_side is None
+            and blk_loop_radius is None
+        ):
+            raise ValueError(
+                f"Transmitter geometry not found for block {blk_i + 1}."
+            )
 
         # Determine time / data columns dynamically from rows
         # Expected columns: Win  Time(ms)  Data  [Error]
@@ -1180,7 +1222,9 @@ def read_zonge(
         if not t_list:
             continue
 
-        t_arr = _gate_times_to_seconds(t_list, gt_unit if gt_raw else gate_times_unit)
+        t_arr = _gate_times_to_seconds(
+            t_list, gt_unit if gt_raw else gate_times_unit
+        )
         d_arr = _data_to_si(np.array(d_list, dtype=float), blk_du)
         err = np.array(e_list, dtype=float) if e_list else None
         if err is not None:
@@ -1356,7 +1400,9 @@ def read_walkttem(
     def _sect_float(section: str, *keys) -> float | None:
         for ln in _sections.get(section.upper(), []):
             parts = ln.split()
-            if len(parts) >= 2 and parts[0].lower() in [k.lower() for k in keys]:
+            if len(parts) >= 2 and parts[0].lower() in [
+                k.lower() for k in keys
+            ]:
                 try:
                     return _to_float(parts[1])
                 except ValueError:
@@ -1372,7 +1418,11 @@ def read_walkttem(
         val = parts[1] if len(parts) >= 2 else None
         if val is None:
             continue
-        if kl in ("loopsize", "loopside") and loop_side is None and tx_area is None:
+        if (
+            kl in ("loopsize", "loopside")
+            and loop_side is None
+            and tx_area is None
+        ):
             loop_side = _to_float(val)
         elif kl in ("loopradius",) and loop_radius is None and tx_area is None:
             loop_radius = _to_float(val)
@@ -1414,14 +1464,18 @@ def read_walkttem(
         gate_times_unit = _file_gt_unit
 
     if current is None:
-        raise ValueError("Transmitter current not found in WalkTEM file or arguments.")
+        raise ValueError(
+            "Transmitter current not found in WalkTEM file or arguments."
+        )
     if tx_area is None and loop_side is None and loop_radius is None:
         raise ValueError(
             "Transmitter geometry not found.  "
             "Pass tx_area, loop_side, or loop_radius."
         )
     if gate_times is None:
-        raise ValueError("Gate times not found in WalkTEM GATESET block or arguments.")
+        raise ValueError(
+            "Gate times not found in WalkTEM GATESET block or arguments."
+        )
 
     t_s = _gate_times_to_seconds(gate_times, gate_times_unit)
     n_gates = len(t_s)

@@ -184,13 +184,17 @@ class TEMSounding(PyCSAMTObject):
                 f"data shape {self.data.shape} must match "
                 f"time_gates shape {self.time_gates.shape}"
             )
-        if self.error is not None and self.error.shape != self.time_gates.shape:
+        if (
+            self.error is not None
+            and self.error.shape != self.time_gates.shape
+        ):
             raise ValueError("error shape must match time_gates shape")
 
         valid_dtypes = {"dBdt", "dHdt", "voltage", "normalized_voltage"}
         if self.data_type not in valid_dtypes:
             raise ValueError(
-                f"data_type must be one of {valid_dtypes}, " f"got '{self.data_type}'"
+                f"data_type must be one of {valid_dtypes}, "
+                f"got '{self.data_type}'"
             )
 
     @property
@@ -256,7 +260,9 @@ class TEMSounding(PyCSAMTObject):
                 kwargs.setdefault("loop_shape", "circle")
                 kwargs.setdefault("loop_dims", (float(loop_radius),))
             else:
-                raise ValueError("Supply one of loop_side, loop_radius, or tx_area")
+                raise ValueError(
+                    "Supply one of loop_side, loop_radius, or tx_area"
+                )
         return cls(
             time_gates=np.asarray(time_gates, float),
             data=np.asarray(data, float),

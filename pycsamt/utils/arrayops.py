@@ -387,7 +387,9 @@ def frameify(
         if not _is_numeric_dtype(df.columns, to_array=True):
             # for consistency reconvert to str
             df.columns = df.columns.astype(str)
-            df = sanitize_frame_cols(df, regex=regex, fill_pattern=fill_pattern)
+            df = sanitize_frame_cols(
+                df, regex=regex, fill_pattern=fill_pattern
+            )
 
     # replace empty string by Nan if NaN exist in dataframe
     df = df.replace(r"^\s*$", missing_values, regex=True)
@@ -499,7 +501,9 @@ def assert_xy_in(
         # If name given, fetch from DataFrame
         if isinstance(val, str):
             if data is None or not hasattr(data, "columns"):
-                raise TypeError("`data` DataFrame required when x or y is string name")
+                raise TypeError(
+                    "`data` DataFrame required when x or y is string name"
+                )
             if val not in data.columns:
                 raise KeyError(f"Column {val!r} not in DataFrame")
             return data[val]
@@ -523,7 +527,9 @@ def assert_xy_in(
 
     # Ensure lengths match
     if len(x_ser) != len(y_ser):
-        raise ValueError(f"Length mismatch: x has {len(x_ser)}, y has {len(y_ser)}")
+        raise ValueError(
+            f"Length mismatch: x has {len(x_ser)}, y has {len(y_ser)}"
+        )
 
     # Optionally coerce to numeric dtype
     if xy_numeric:
@@ -630,7 +636,9 @@ def interpolate_grid(
             arri = _fill_nan(arri, method="both ")
         else:
             arri[np.isnan(arri)] = float(
-                _assert_all_types(fill_value, float, int, objname="'fill_value'")
+                _assert_all_types(
+                    fill_value, float, int, objname="'fill_value'"
+                )
             )
         if not is2d:
             arri = arri[0]
@@ -665,7 +673,9 @@ def interpolate_grid(
     return arri
 
 
-def _fill_nan(arr: Sequence[Any] | np.ndarray, *, method: str = "ff") -> np.ndarray:
+def _fill_nan(
+    arr: Sequence[Any] | np.ndarray, *, method: str = "ff"
+) -> np.ndarray:
     """
     Efficiently forward/backward fill NaNs in array.
 
@@ -717,7 +727,9 @@ def _fill_nan(arr: Sequence[Any] | np.ndarray, *, method: str = "ff") -> np.ndar
     elif m in ("both", "fb", "bff", "ffbf"):
         m = "both"
     else:
-        raise ValueError(f"Unknown method {method!r}; choose 'ff','bf', or 'both'")
+        raise ValueError(
+            f"Unknown method {method!r}; choose 'ff','bf', or 'both'"
+        )
 
     # define forward fill
     def _ffill(a):
@@ -815,7 +827,9 @@ def fill_nan(
     elif m in ("both", "fb", "bff", "ffbf"):
         m = "both"
     else:
-        raise ValueError(f"method must be 'ff', 'bf', or 'both'; got {method!r}")
+        raise ValueError(
+            f"method must be 'ff', 'bf', or 'both'; got {method!r}"
+        )
 
     def _ffill_row(row: np.ndarray) -> np.ndarray:
         """Forward-fill a single 1D array of length N."""
@@ -911,7 +925,9 @@ def drop_nan_in(
     # shape checks
     for i, p in enumerate(preds):
         if p.shape != yt.shape:
-            raise ValueError(f"y_pred #{i} shape {p.shape} != y_true {yt.shape}")
+            raise ValueError(
+                f"y_pred #{i} shape {p.shape} != y_true {yt.shape}"
+            )
 
     has_nan = np.isnan(yt)
     any_nan = bool(np.any(has_nan))
@@ -923,7 +939,9 @@ def drop_nan_in(
         if nan_policy == "propagate":
             return yt, *preds
         if nan_policy != "omit" and nan_policy != "raise":
-            raise ValueError("nan_policy must be one of {'raise','propagate','omit'}.")
+            raise ValueError(
+                "nan_policy must be one of {'raise','propagate','omit'}."
+            )
         # fall through to omit
 
     else:
@@ -934,7 +952,9 @@ def drop_nan_in(
             if error == "warn":
                 warnings.warn("NaNs in y_true; dropping rows.", stacklevel=2)
             elif error != "ignore":
-                raise ValueError("error must be one of {'raise','warn','ignore'}.")
+                raise ValueError(
+                    "error must be one of {'raise','warn','ignore'}."
+                )
 
     # build mask (omit or ignore/warn path)
     mask = ~has_nan

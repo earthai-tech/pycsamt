@@ -53,8 +53,7 @@ def _validate_inputs(
     std = np.asarray(y_pred_std, dtype=float)
     if true.shape != mean.shape or true.shape != std.shape:
         raise ValueError(
-            "y_true, y_pred_mean, and y_pred_std must share one "
-            "shape."
+            "y_true, y_pred_mean, and y_pred_std must share one shape."
         )
     if true.size == 0:
         raise ValueError(
@@ -87,10 +86,7 @@ def _coverage_mask(
 ) -> np.ndarray:
     """Combine finite/positive-std masking with an optional mask."""
     mask = (
-        np.isfinite(true)
-        & np.isfinite(mean)
-        & np.isfinite(std)
-        & (std > 0.0)
+        np.isfinite(true) & np.isfinite(mean) & np.isfinite(std) & (std > 0.0)
     )
     if valid is not None:
         supplied = np.asarray(valid, dtype=bool)
@@ -147,9 +143,7 @@ class ReliabilityCurve:
         if levels.shape != coverage.shape:
             raise ValueError("levels and coverage must share one shape.")
         if not isinstance(self.calibration, UncertaintyLossResult):
-            raise TypeError(
-                "calibration must be an UncertaintyLossResult."
-            )
+            raise TypeError("calibration must be an UncertaintyLossResult.")
         object.__setattr__(self, "levels", _readonly(levels))
         object.__setattr__(self, "coverage", _readonly(coverage))
         object.__setattr__(self, "sharpness", float(self.sharpness))
@@ -255,9 +249,7 @@ def predictive_sharpness(
     if valid is not None:
         supplied = np.asarray(valid, dtype=bool)
         if supplied.shape != std.shape:
-            raise ValueError(
-                "valid must have the same shape as y_pred_std."
-            )
+            raise ValueError("valid must have the same shape as y_pred_std.")
         mask &= supplied
     if not np.any(mask):
         raise ValueError("no valid cell to evaluate.")

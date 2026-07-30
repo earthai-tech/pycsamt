@@ -48,7 +48,9 @@ def repo_root() -> Path:
     """
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / "pycsamt").is_dir() and (parent / "pyproject.toml").exists():
+        if (parent / "pycsamt").is_dir() and (
+            parent / "pyproject.toml"
+        ).exists():
             return parent
     return here.parents[3]
 
@@ -107,7 +109,9 @@ def build_chunks(
             elif suffix in (".rst", ".md"):
                 rel = path.relative_to(root).as_posix()
                 kind = (
-                    "recipe" if rel.startswith("assistant_recipes/") else "doc_section"
+                    "recipe"
+                    if rel.startswith("assistant_recipes/")
+                    else "doc_section"
                 )
                 chunks.extend(index_doc_file(path, root, kind=kind))
         except Exception:  # noqa: BLE001 — ingestion is best-effort
@@ -166,7 +170,9 @@ def source_fingerprint(
     import hashlib
 
     root = Path(root) if root is not None else repo_root()
-    paths = sorted(files) if files is not None else sorted(iter_index_files(root))
+    paths = (
+        sorted(files) if files is not None else sorted(iter_index_files(root))
+    )
     h = hashlib.sha256()
     for p in paths:
         try:

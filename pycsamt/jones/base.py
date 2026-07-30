@@ -56,10 +56,14 @@ class BaseJones:
         verbose: int | bool = 0,
         **kws: Any,
     ) -> BaseJones:
-        raise NotImplementedError(f"{cls.__name__}.from_lines() not implemented")
+        raise NotImplementedError(
+            f"{cls.__name__}.from_lines() not implemented"
+        )
 
     def read(self, *args: Any, **kws: Any) -> BaseJones:
-        raise NotImplementedError(f"{self.__class__.__name__}.read() not implemented")
+        raise NotImplementedError(
+            f"{self.__class__.__name__}.read() not implemented"
+        )
 
     def write(
         self,
@@ -68,7 +72,9 @@ class BaseJones:
         encoding: str | None = None,
         **kws: Any,
     ) -> None:
-        raise NotImplementedError(f"{self.__class__.__name__}.write() not implemented")
+        raise NotImplementedError(
+            f"{self.__class__.__name__}.write() not implemented"
+        )
 
     def __has_read__(self) -> bool:
         return bool(self._has_read)

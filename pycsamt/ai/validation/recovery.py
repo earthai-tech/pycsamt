@@ -148,9 +148,7 @@ class RecoveryReport:
         object.__setattr__(
             self, "depth_rmse", _readonly(self.depth_rmse, float)
         )
-        object.__setattr__(
-            self, "depth_mae", _readonly(self.depth_mae, float)
-        )
+        object.__setattr__(self, "depth_mae", _readonly(self.depth_mae, float))
 
 
 def structural_similarity(
@@ -206,8 +204,7 @@ def structural_similarity(
         raise ValueError("window must be a positive odd integer.")
     if window > min(pred.shape):
         raise ValueError(
-            "window must not exceed the smallest grid axis "
-            f"{min(pred.shape)}."
+            f"window must not exceed the smallest grid axis {min(pred.shape)}."
         )
     span = data_range
     if span is None:
@@ -225,9 +222,7 @@ def structural_similarity(
     denominator = (mu_x**2 + mu_y**2 + c1) * (sigma_x2 + sigma_y2 + c2)
     ssim_map = numerator / denominator
     crop = window // 2
-    interior = tuple(
-        slice(crop, size - crop) for size in ssim_map.shape
-    )
+    interior = tuple(slice(crop, size - crop) for size in ssim_map.shape)
     cropped = ssim_map[interior]
     if cropped.size == 0:
         raise ValueError("window is too large for this grid shape.")

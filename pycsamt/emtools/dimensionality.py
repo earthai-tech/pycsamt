@@ -948,8 +948,12 @@ def plot_dim_confidence_grid(
         preset="pseudosection",
         xlim=(-0.5, D.shape[1] - 0.5),
     )
-    yt = np.linspace(0, D.shape[0] - 1, num=min(8, D.shape[0]))  # shape[0] = n_logp
-    yv = np.linspace(piv_d.index.min(), piv_d.index.max(), num=min(8, len(piv_d.index)))
+    yt = np.linspace(
+        0, D.shape[0] - 1, num=min(8, D.shape[0])
+    )  # shape[0] = n_logp
+    yv = np.linspace(
+        piv_d.index.min(), piv_d.index.max(), num=min(8, len(piv_d.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yv])
     if not ax.yaxis_inverted():

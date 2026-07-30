@@ -89,7 +89,9 @@ class EnsembleInverter:
     ) -> None:
         self.base_estimator = base_estimator
         self.n_estimators = int(n_estimators)
-        self.seeds = list(seeds) if seeds is not None else list(range(n_estimators))
+        self.seeds = (
+            list(seeds) if seeds is not None else list(range(n_estimators))
+        )
         if len(self.seeds) < self.n_estimators:
             extra = range(len(self.seeds), n_estimators)
             self.seeds += list(extra)
@@ -274,7 +276,9 @@ class EnsembleInverter:
         cp.calibrate(X_cal, y_cal)
         self._conformal = cp
 
-        mean, sigma = self.predict_with_uncertainty(X_cal, _use_calibrated=False)
+        mean, sigma = self.predict_with_uncertainty(
+            X_cal, _use_calibrated=False
+        )
         pc = PosteriorCalibrator()
         pc.fit(y_cal, mean, sigma)
         self._posterior_cal = pc
@@ -369,7 +373,9 @@ class EnsembleInverter:
             raise RuntimeError(
                 "Conformal predictor not attached.  Call calibrate() first."
             )
-        return self._conformal.coverage_diagnostics(X_test, y_test, alphas=alphas)
+        return self._conformal.coverage_diagnostics(
+            X_test, y_test, alphas=alphas
+        )
 
     def score(
         self,
@@ -496,7 +502,9 @@ class EnsembleInverter:
 
     def _check_fitted(self) -> None:
         if not self._is_fitted or not self._members:
-            raise RuntimeError("EnsembleInverter is not fitted.  Call fit() first.")
+            raise RuntimeError(
+                "EnsembleInverter is not fitted.  Call fit() first."
+            )
 
     def _all_predictions(self, X: np.ndarray, **kwargs) -> np.ndarray:
         self._check_fitted()

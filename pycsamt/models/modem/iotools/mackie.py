@@ -110,7 +110,9 @@ def _detect_air_layers(rho_loge: np.ndarray) -> int:
     return n
 
 
-def _write_widths(fh, widths: np.ndarray, per_line: int = _VALUES_WRAP_WIDTH) -> None:
+def _write_widths(
+    fh, widths: np.ndarray, per_line: int = _VALUES_WRAP_WIDTH
+) -> None:
     """Write a sequence of widths, *per_line* per row, ``%11.4G`` format."""
     for j, v in enumerate(widths, 1):
         fh.write(f"{v:11.4G}")
@@ -151,13 +153,19 @@ def _parse_mackie2d(path: Path) -> dict:
         all_tokens.extend(stripped.split())
 
     t = 0
-    y_widths = np.array([float(all_tokens[t + k]) for k in range(ny)], dtype=float)
+    y_widths = np.array(
+        [float(all_tokens[t + k]) for k in range(ny)], dtype=float
+    )
     t += ny
-    z_earth = np.array([float(all_tokens[t + k]) for k in range(nz)], dtype=float)
+    z_earth = np.array(
+        [float(all_tokens[t + k]) for k in range(nz)], dtype=float
+    )
     t += nz
     t += 1  # skip sentinel integer
 
-    rho_flat = np.array([float(all_tokens[t + k]) for k in range(ny * nz)], dtype=float)
+    rho_flat = np.array(
+        [float(all_tokens[t + k]) for k in range(ny * nz)], dtype=float
+    )
     # file layout: z outer, y inner → shape (nz, ny)
     rho_arr = rho_flat.reshape(nz, ny)
     rho_loge_earth = _to_loge(rho_arr, log_type)

@@ -343,8 +343,14 @@ class BaseEMNet(ABC):
 
             if isinstance(X, ZClass):
                 X = [X]
-            if isinstance(X, (list, tuple)) and len(X) > 0 and isinstance(X[0], ZClass):
-                return _z_list_to_array(X, include_phase=include_phase, log_rho=log_rho)
+            if (
+                isinstance(X, (list, tuple))
+                and len(X) > 0
+                and isinstance(X[0], ZClass)
+            ):
+                return _z_list_to_array(
+                    X, include_phase=include_phase, log_rho=log_rho
+                )
         except ImportError:
             pass
 
@@ -674,7 +680,8 @@ def _compute_metric(
         rel = (yt - yp) / (np.abs(yt) + 1e-12)
         return float(np.sqrt(np.mean(rel**2)))
     raise ValueError(
-        f"Unknown metric {metric!r}. " "Use 'rmse', 'mae', 'r2', or 'relative_rmse'."
+        f"Unknown metric {metric!r}. "
+        "Use 'rmse', 'mae', 'r2', or 'relative_rmse'."
     )
 
 

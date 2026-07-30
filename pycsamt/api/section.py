@@ -127,7 +127,9 @@ class SectionAxisStyle:
         """Apply axis labels, direction, aspect, and grid state."""
         y_direction = self.y_direction.lower()
         if y_direction not in _Y_DIRECTIONS:
-            msg = f"section y_direction must be one of {sorted(_Y_DIRECTIONS)}."
+            msg = (
+                f"section y_direction must be one of {sorted(_Y_DIRECTIONS)}."
+            )
             raise ValueError(msg)
         if isinstance(self.aspect, str) and self.aspect not in _ASPECTS:
             msg = "section aspect must be 'auto', 'equal', or a number."
@@ -230,7 +232,9 @@ class SectionStyle:
         """Return a concrete figure size for this section."""
         max_label_len = None
         if labels is not None:
-            max_label_len = max((len(str(label)) for label in labels), default=4)
+            max_label_len = max(
+                (len(str(label)) for label in labels), default=4
+            )
         return self.figure.resolve(
             n_stations=n_stations,
             n_y=n_y,
@@ -264,7 +268,8 @@ class SectionStyle:
     ) -> Any:
         """Apply station rendering for this section style."""
         style = copy.deepcopy(
-            station_style or PYCSAMT_STATION_RENDERING.style_for(self.station_preset),
+            station_style
+            or PYCSAMT_STATION_RENDERING.style_for(self.station_preset),
         )
         style.side = self.axis.station_side
         style.xlabel = self.axis.xlabel

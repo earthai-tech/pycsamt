@@ -108,7 +108,9 @@ class PyGIMLiBackend(BaseInversionBackend):
         em_data = self.prepare_data(data)
         if self.config.method == "tdem":
             if not em_data.has_tdem_response:
-                raise ValueError("pyGIMLi TDEM backend requires times plus values.")
+                raise ValueError(
+                    "pyGIMLi TDEM backend requires times plus values."
+                )
         elif not em_data.has_mt_response:
             raise ValueError(
                 "pyGIMLi MT backend requires frequencies plus rho_a and/or phase."
@@ -136,7 +138,9 @@ class PyGIMLiBackend(BaseInversionBackend):
                     _station_data(em_data, idx), modules, station_index=idx
                 )
             except Exception as exc:
-                warnings.append(f"{names[idx]}: pyGIMLi inversion failed: {exc}")
+                warnings.append(
+                    f"{names[idx]}: pyGIMLi inversion failed: {exc}"
+                )
                 continue
             station_results.append(result)
             used.append(idx)
@@ -199,7 +203,9 @@ class PyGIMLiBackend(BaseInversionBackend):
             return self._run_tdem_sounding(
                 em_data, modules, station_index=station_index
             )
-        return self._run_mt_sounding(em_data, modules, station_index=station_index)
+        return self._run_mt_sounding(
+            em_data, modules, station_index=station_index
+        )
 
     def _run_mt_sounding(
         self,
@@ -219,11 +225,13 @@ class PyGIMLiBackend(BaseInversionBackend):
 
         opts = cfg.backend_options
         verbose = bool(opts.get("verbose", False))
-        fop, start_model, operator_name, parameterization = _make_mt_forward_operator(
-            em,
-            periods,
-            start,
-            opts,
+        fop, start_model, operator_name, parameterization = (
+            _make_mt_forward_operator(
+                em,
+                periods,
+                start,
+                opts,
+            )
         )
 
         inv = _make_inversion(pg, fop, verbose=verbose)
@@ -276,7 +284,9 @@ class PyGIMLiBackend(BaseInversionBackend):
         values = np.asarray(em_data.values, dtype=float)
         errors = _tdem_errors(em_data, cfg)
         opts = cfg.backend_options
-        tx_area = float(opts.get("tx_area", opts.get("txArea", np.pi * 50.0**2)))
+        tx_area = float(
+            opts.get("tx_area", opts.get("txArea", np.pi * 50.0**2))
+        )
         rx_area = opts.get("rx_area", opts.get("rxArea", None))
 
         verbose = bool(opts.get("verbose", False))
@@ -477,7 +487,8 @@ def _resolve_operator(
     available = sorted(
         name
         for name in dir(em)
-        if "modelling" in name.lower() or name.lower().startswith(("mt", "tdem"))
+        if "modelling" in name.lower()
+        or name.lower().startswith(("mt", "tdem"))
     )
     raise NotImplementedError(
         f"pyGIMLi does not expose a supported {label} modelling operator. "
@@ -486,10 +497,14 @@ def _resolve_operator(
     )
 
 
-def _construct_operator(cls: Any, attempts: list[dict[str, Any]], name: str) -> Any:
+def _construct_operator(
+    cls: Any, attempts: list[dict[str, Any]], name: str
+) -> Any:
     errors = []
     for kwargs in attempts:
-        clean = {key: value for key, value in kwargs.items() if value is not None}
+        clean = {
+            key: value for key, value in kwargs.items() if value is not None
+        }
         try:
             return cls(**clean)
         except TypeError as exc:
@@ -507,7 +522,9 @@ def _make_inversion(pg: Any, fop: Any, *, verbose: bool) -> Any:
         return pg.Inversion(fop, verbose=verbose)
 
 
-def _run_inversion(inv: Any, observed: np.ndarray, **kwargs: Any) -> np.ndarray:
+def _run_inversion(
+    inv: Any, observed: np.ndarray, **kwargs: Any
+) -> np.ndarray:
     try:
         return np.asarray(inv.run(observed, **kwargs), dtype=float)
     except TypeError:
@@ -552,7 +569,9 @@ def _pack_mt_errors(em_data: EMData, cfg: Any) -> np.ndarray:
         # pyGIMLi inversion error values are relative, so convert degrees
         # to a conservative relative phase error.
         errors.extend(
-            component_errors(phase, cfg, component="phase", relative=True).tolist()
+            component_errors(
+                phase, cfg, component="phase", relative=True
+            ).tolist()
         )
     return np.asarray(errors, dtype=float)
 
@@ -638,7 +657,9 @@ def _station_data(em_data: EMData, idx: int) -> EMData:
         values=None if em_data.values is None else _row(em_data.values, idx),
         errors=None if em_data.errors is None else _row(em_data.errors, idx),
         station_names=[_station_names(em_data, em_data.n_stations)[idx]],
-        station_x=np.array([_station_x(em_data, em_data.n_stations)[idx]], dtype=float),
+        station_x=np.array(
+            [_station_x(em_data, em_data.n_stations)[idx]], dtype=float
+        ),
         source=em_data.source,
         metadata=em_data.metadata_dict(),
     )

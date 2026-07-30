@@ -108,7 +108,9 @@ class LayeredModelDialog(QDialog):
 
         # Layer table: columns = [Layer, ρ (Ω·m), Thickness (m)]
         self._table = QTableWidget(0, 3)
-        self._table.setHorizontalHeaderLabels(["Layer", "ρ (Ω·m)", "Thickness (m)"])
+        self._table.setHorizontalHeaderLabels(
+            ["Layer", "ρ (Ω·m)", "Thickness (m)"]
+        )
         self._table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents
         )
@@ -118,7 +120,9 @@ class LayeredModelDialog(QDialog):
         self._table.horizontalHeader().setSectionResizeMode(
             2, QHeaderView.ResizeMode.Stretch
         )
-        self._table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self._table.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
         left_lay.addWidget(self._table)
 
         # Add / Remove row buttons
@@ -151,7 +155,8 @@ class LayeredModelDialog(QDialog):
         root.addWidget(splitter, stretch=1)
 
         box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Close
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Close
         )
         box.accepted.connect(self._on_ok)
         box.rejected.connect(self.reject)

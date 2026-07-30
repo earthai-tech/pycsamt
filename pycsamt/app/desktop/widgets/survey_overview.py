@@ -41,7 +41,9 @@ class SurveyOverviewWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("SurveyOverview")
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self._build_ui()
         self.clear()
 
@@ -92,7 +94,9 @@ class SurveyOverviewWidget(QWidget):
             k.setObjectName("SurveyStatKey")
             v = QLabel("—")
             v.setObjectName("SurveyStatValue")
-            v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            v.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+            )
             v.setWordWrap(True)
             grid.addWidget(
                 k,

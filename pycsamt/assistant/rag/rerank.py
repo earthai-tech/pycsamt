@@ -57,7 +57,9 @@ def build_rerank_prompt(query: str, chunks: list[RAGChunk]) -> str:
         snippet = " ".join((c.text or "").split())[:_SNIPPET_CHARS]
         lines.append(f"[{i}] ({c.kind}) {_label(c)} — {snippet}")
     lines.append("")
-    lines.append("Return the candidate numbers, most relevant first, comma-separated.")
+    lines.append(
+        "Return the candidate numbers, most relevant first, comma-separated."
+    )
     return "\n".join(lines)
 
 

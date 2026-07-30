@@ -276,7 +276,9 @@ class EMDataset:
             return ds
 
         train_ds = _subset(train_idx)
-        train_ds.augment_noise = self.augment_noise  # keep augmentation on train
+        train_ds.augment_noise = (
+            self.augment_noise
+        )  # keep augmentation on train
         val_ds = _subset(val_idx)
         val_ds.augment_noise = 0.0  # no augmentation on val
         return train_ds, val_ds

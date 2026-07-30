@@ -233,7 +233,9 @@ def _draw_pair(
                 va="top",
                 fontsize=7.5,
                 color=colors["error"],
-                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", pad=1),
+                bbox=dict(
+                    facecolor="white", alpha=0.7, edgecolor="none", pad=1
+                ),
             )
     if legend:
         ax.legend(fontsize=8, loc="lower left")
@@ -250,7 +252,9 @@ def _shade_diff(ax, true_m, pred_m):
     rho_t, depth = _staircase(true_m)
     rho_p, _ = _staircase(pred_m)
     n = min(len(rho_t), len(rho_p))
-    ax.fill_betweenx(depth[:n], rho_t[:n], rho_p[:n], alpha=0.12, color="#762a83")
+    ax.fill_betweenx(
+        depth[:n], rho_t[:n], rho_p[:n], alpha=0.12, color="#762a83"
+    )
 
 
 def _staircase(model):
@@ -293,7 +297,9 @@ def _rmse_log_rho(true_m, pred_m):
     rho_t, _ = _model_arrays(true_m)
     rho_p, _ = _model_arrays(pred_m)
     n = min(len(rho_t), len(rho_p))
-    diff = np.log10(np.maximum(rho_t[:n], 1e-6)) - np.log10(np.maximum(rho_p[:n], 1e-6))
+    diff = np.log10(np.maximum(rho_t[:n], 1e-6)) - np.log10(
+        np.maximum(rho_p[:n], 1e-6)
+    )
     return float(np.sqrt(np.mean(diff**2)))
 
 

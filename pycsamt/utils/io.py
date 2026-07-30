@@ -157,6 +157,8 @@ def parse_stn_profile(
     # Ensure required keys
     for req in ("position", "easting", "northing", "elevation"):
         if req not in result:
-            raise PycsamtError(f"Missing required column '{req}' in {file_path}")
+            raise PycsamtError(
+                f"Missing required column '{req}' in {file_path}"
+            )
 
     return result

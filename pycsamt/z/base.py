@@ -287,7 +287,8 @@ class EMBase:
                 bad.append(f"{name}:{tuple(value.shape)}")
         if bad:
             raise ZError(
-                "freq-aligned arrays mismatch n_freq. " f"n={n}; bad={', '.join(bad)}"
+                "freq-aligned arrays mismatch n_freq. "
+                f"n={n}; bad={', '.join(bad)}"
             )
 
     def _array_sig(self) -> tuple[_StrSeq, _StrSeq]:

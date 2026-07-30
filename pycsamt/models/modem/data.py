@@ -120,7 +120,9 @@ def _parse_data(path: Path) -> dict:
             data_rows: list[tuple] = []
             rows_read = 0
             expected = (
-                n_periods * n_sites * len(_KNOWN_COMPONENTS.get(comp_type, ("Z",)))
+                n_periods
+                * n_sites
+                * len(_KNOWN_COMPONENTS.get(comp_type, ("Z",)))
             )
             # read until we have all rows or hit next header
             while i < N and (expected == 0 or rows_read < expected):
@@ -240,7 +242,10 @@ class ModEmData(ModEmBase):
     def offsets(self) -> np.ndarray:
         """Return station easting offsets in metres."""
         return np.array(
-            [self.site_coords.get(n, (0.0, 0.0, 0.0))[1] for n in self.site_names],
+            [
+                self.site_coords.get(n, (0.0, 0.0, 0.0))[1]
+                for n in self.site_names
+            ],
             dtype=float,
         )
 
@@ -248,7 +253,10 @@ class ModEmData(ModEmBase):
     def x_coords(self) -> np.ndarray:
         """Return station northing coordinates in metres."""
         return np.array(
-            [self.site_coords.get(n, (0.0, 0.0, 0.0))[0] for n in self.site_names],
+            [
+                self.site_coords.get(n, (0.0, 0.0, 0.0))[0]
+                for n in self.site_names
+            ],
             dtype=float,
         )
 
@@ -698,7 +706,9 @@ class _EDISiteView:
         )
         self.z = np.asarray(z, dtype=complex) if z is not None else None
         z_err = getattr(getattr(ed, "Z", None), "z_err", None)
-        self.z_err = np.asarray(z_err, dtype=float) if z_err is not None else None
+        self.z_err = (
+            np.asarray(z_err, dtype=float) if z_err is not None else None
+        )
         latlon = _read_latlon([ed])
         elev = _read_elev(ed)
         lat, lon = latlon[0] if latlon else (0.0, 0.0)

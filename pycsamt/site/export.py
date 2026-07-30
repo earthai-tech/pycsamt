@@ -338,7 +338,9 @@ def pack_zip(
                 }
             )
 
-        with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(
+            out_zip, "w", compression=zipfile.ZIP_DEFLATED
+        ) as zf:
             for fp, arcname in file_map:
                 zf.write(fp, arcname)
 

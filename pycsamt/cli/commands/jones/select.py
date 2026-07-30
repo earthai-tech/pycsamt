@@ -141,7 +141,9 @@ def select(
 
     if has_z:
         keep = [
-            j for j in keep if j.Z is not None and getattr(j.Z, "z", None) is not None
+            j
+            for j in keep
+            if j.Z is not None and getattr(j.Z, "z", None) is not None
         ]
 
     if has_r:
@@ -176,10 +178,14 @@ def select(
         return
 
     if str(output_dir) == ".":
-        raise click.UsageError("--output-dir is required (use --dry-run to preview)")
+        raise click.UsageError(
+            "--output-dir is required (use --dry-run to preview)"
+        )
 
     if n_selected == 0:
-        click.echo("No stations match the filter — nothing to export.", err=True)
+        click.echo(
+            "No stations match the filter — nothing to export.", err=True
+        )
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -219,7 +225,8 @@ def select(
         "selected": selected_names,
         "written": result.get("successful", []),
         "failed": [
-            {"station": s, "error": str(e)} for s, e in result.get("failed", [])
+            {"station": s, "error": str(e)}
+            for s, e in result.get("failed", [])
         ],
     }
 

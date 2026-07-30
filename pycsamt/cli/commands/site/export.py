@@ -143,13 +143,17 @@ def export(
             output_dir,
             template=template,
             exist_ok=overwrite,
-            manifest_csv=str(output_dir / "manifest.csv") if manifest else None,
+            manifest_csv=str(output_dir / "manifest.csv")
+            if manifest
+            else None,
         )
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error exporting sites: {exc}", err=True)
         sys.exit(1)
 
-    click.echo(f"Exported {len(written)} / {len(sites_obj)} station(s) → {output_dir}/")
+    click.echo(
+        f"Exported {len(written)} / {len(sites_obj)} station(s) → {output_dir}/"
+    )
     if verbose >= 1:
         for p in written:
             click.echo(f"  {p.name}", err=True)

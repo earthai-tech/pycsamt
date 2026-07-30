@@ -1,8 +1,10 @@
 """Tests for the external ModEM 3-D adapter.
 
-No compiled ``Mod3DMT`` binary exists in this environment (see the
-module docstring), so these tests validate everything that does not
-require genuine Maxwell physics from a real binary:
+A compiled ``Mod3DMT`` binary is *not* guaranteed to exist in any
+given environment (it is a local build artifact, gitignored -- see
+``pycsamt/models/modem/_source/README``), so most of these tests
+validate everything that does not require genuine Maxwell physics
+from a real binary:
 
 * input-file generation, round-tripped through the real
   :class:`~pycsamt.models.modem.data.ModEmData`/
@@ -15,10 +17,21 @@ require genuine Maxwell physics from a real binary:
   unit-conversion and column-mapping logic is genuinely exercised;
 * preflight rejections and the missing-executable path, which is the
   common case for anyone using this adapter without a compiled binary.
+
+A separate ``requires_real_modem``-gated section near the bottom runs
+the project's own analytic benchmarks against a *real* compiled
+``Mod3DMT``, when one is found via the same default search path the
+adapter itself uses (``pycsamt/models/modem/_source/3D``). These are
+skipped, not failed, when no binary is present -- confirming this
+adapter's physics is the responsibility of whoever builds ModEM
+locally (see the vendored README's build instructions) and runs these
+tests afterward; it was confirmed exactly this way on 2026-07-29 with
+a MinGW-w64 gfortran/OpenBLAS build.
 """
 
 from __future__ import annotations
 
+import shutil
 import sys
 import textwrap
 from pathlib import Path
@@ -34,21 +47,44 @@ from pycsamt.forward.maxwell import (
     MaxwellProblem,
     ReceiverSet,
     create_backend,
+    half_space_benchmark,
+    layered_earth_benchmark,
     list_backends,
 )
 from pycsamt.forward.maxwell.modem3d import (
+    _MIN_EARTH_Z_CELLS,
     _MU0,
     ModEm3DAdapter,
     _unit_conversion_to_si,
     register_modem3d_backend,
 )
 from pycsamt.models.modem.config import ModEmConfig
+
+_MODEM3D_SOURCE_DIR = (
+    Path(__file__).resolve().parents[2] / "models" / "modem" / "_source" / "3D"
+)
+_HAS_MOD3DMT = (
+    shutil.which("Mod3DMT", path=str(_MODEM3D_SOURCE_DIR)) is not None
+)
+requires_real_modem = pytest.mark.skipif(
+    not _HAS_MOD3DMT,
+    reason=(
+        "no compiled Mod3DMT binary found in "
+        f"{_MODEM3D_SOURCE_DIR}; see its README to build one locally"
+    ),
+)
 from pycsamt.models.modem.data import ModEmData
 from pycsamt.models.modem.model3d import ModEmModel3D
 
 
 def _problem(**changes):
-    mesh = MaxwellMesh([0, 1000, 2000], [0, 500, 1000], [0, 1000, 2000])
+    # 10 earth z-cells: the minimum modem3d requires (see
+    # _MIN_EARTH_Z_CELLS's docstring) to avoid ModEM's hardcoded
+    # 10-air-layer "mirror" sizing reading past the end of the earth
+    # Dz array.
+    mesh = MaxwellMesh(
+        [0, 1000, 2000], list(range(0, 1100, 100)), [0, 1000, 2000]
+    )
     values = dict(
         mesh=mesh,
         conductivity_s_m=np.full(mesh.shape, 0.01),
@@ -92,7 +128,7 @@ def test_capabilities_declare_3d_full_tensor_and_nonuniform_support():
     assert cap.dimensions == (3,)
     assert set(cap.components) == {"zxx", "zxy", "zyx", "zyy"}
     assert cap.supports_nonuniform_mesh is True
-    assert cap.verified_benchmarks == ()
+    assert cap.verified_benchmarks == ("half-space", "layered-earth")
 
 
 def test_assess_rejects_buried_receivers():
@@ -150,7 +186,9 @@ def test_nonuniform_mesh_is_accepted_unlike_mt3d():
     adapter = ModEm3DAdapter(
         run_policy=ExternalRunPolicy("does-not-exist-xyz")
     )
-    mesh = MaxwellMesh([0, 500, 2000], [0, 500, 1000], [0, 800, 2000])
+    # Non-uniform z edges, but still >= _MIN_EARTH_Z_CELLS (10) cells.
+    z_edges = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250]
+    mesh = MaxwellMesh([0, 500, 2000], z_edges, [0, 800, 2000])
     problem = _problem(
         mesh=mesh, conductivity_s_m=np.full(mesh.shape, 0.01)
     )
@@ -250,11 +288,15 @@ def test_build_command_without_mpi():
     adapter = ModEm3DAdapter(
         run_policy=ExternalRunPolicy("does-not-exist-xyz")
     )
-    context = {"model_path": Path("model.ws"), "data_path": Path("data.dat")}
+    context = {
+        "model_path": Path("model.ws"),
+        "data_path": Path("data.dat"),
+        "predicted_path": Path("pred.dat"),
+    }
     command = adapter._build_command(
         None, Path("."), Path("Mod3DMT"), context
     )
-    assert command == ["Mod3DMT", "-F", "model.ws", "data.dat"]
+    assert command == ["Mod3DMT", "-F", "model.ws", "data.dat", "pred.dat"]
 
 
 def test_build_command_with_mpi_resolves_the_modem_binary(tmp_path):
@@ -267,13 +309,17 @@ def test_build_command_with_mpi_resolves_the_modem_binary(tmp_path):
             "mpirun", search_paths=(str(tmp_path),)
         ),
     )
-    context = {"model_path": Path("model.ws"), "data_path": Path("data.dat")}
+    context = {
+        "model_path": Path("model.ws"),
+        "data_path": Path("data.dat"),
+        "predicted_path": Path("pred.dat"),
+    }
     command = adapter._build_command(
         None, tmp_path, Path("mpirun"), context
     )
     assert command[:3] == ["mpirun", "-np", "4"]
     assert command[3] == str(binary)
-    assert command[4:] == ["-F", "model.ws", "data.dat"]
+    assert command[4:] == ["-F", "model.ws", "data.dat", "pred.dat"]
 
 
 # --------------------------------------------------------------------------- #
@@ -366,7 +412,9 @@ def test_solve_end_to_end_against_a_scripted_stand_in(tmp_path):
         context["data_path"].name,
     ]
 
-    mesh = MaxwellMesh([0, 1000, 2000], [0, 1000, 2000], [0, 1000, 2000])
+    mesh = MaxwellMesh(
+        [0, 1000, 2000], list(range(0, 1100, 100)), [0, 1000, 2000]
+    )
     problem = MaxwellProblem(
         mesh,
         np.full(mesh.shape, 1.0 / rho),
@@ -441,3 +489,109 @@ def test_register_modem3d_backend_is_creatable_once_available(tmp_path):
     assert list_backends()["modem3d"]["available"] is True
     backend = create_backend("modem3d")
     assert isinstance(backend, ModEm3DAdapter)
+
+
+# --------------------------------------------------------------------------- #
+# Minimum earth z-cell preflight (no binary required)
+# --------------------------------------------------------------------------- #
+
+
+def test_assess_rejects_too_few_earth_z_cells():
+    """ModEM's WS-format reader hardcodes 10 air layers and its
+    "mirror" air-layer sizing reads that many earth-layer widths with
+    no bounds check against the actual earth cell count -- fewer than
+    that reads past the end of the array (confirmed empirically: a
+    real compiled Mod3DMT crashes with "b in QMR contains NaNs" from
+    the resulting garbage values). This adapter must reject such
+    problems before ever writing a file or launching a process.
+    """
+    adapter = ModEm3DAdapter(
+        run_policy=ExternalRunPolicy("does-not-exist-xyz")
+    )
+    assert _MIN_EARTH_Z_CELLS == 10
+    problem = _problem()  # 10 earth z-cells, exactly at the minimum
+    assert adapter.assess(problem).compatible
+
+    too_few = MaxwellMesh([0, 1000, 2000], [0, 500, 1000], [0, 1000, 2000])
+    problem = _problem(
+        mesh=too_few, conductivity_s_m=np.full(too_few.shape, 0.01)
+    )
+    report = adapter.assess(problem)
+    assert not report.compatible
+    assert any("earth z-cells" in message for message in report.errors)
+
+
+# --------------------------------------------------------------------------- #
+# Real compiled Mod3DMT (skipped when no binary is present)
+# --------------------------------------------------------------------------- #
+
+
+def _calibrated_real_mesh():
+    """10 uniform 300 m earth z-cells; 8x8 uniform 300 m lateral
+    cells; receiver at the centre. Deliberately simple (uniform, no
+    padding) since ModEM synthesizes its own air layers and a real
+    compiled solver -- unlike this project's own small-grid research
+    solvers -- has no cell-budget pressure motivating a padded mesh
+    here.
+    """
+    n, h = 8, 300.0
+    nz = _MIN_EARTH_Z_CELLS
+    x_edges = np.arange(n + 1) * h
+    y_edges = np.arange(n + 1) * h
+    z_edges = np.arange(nz + 1) * h
+    mesh = MaxwellMesh(x_edges, z_edges, y_edges)
+    receivers = ReceiverSet([[n * h / 2, n * h / 2, 0.0]], ["S00"])
+    return mesh, receivers, z_edges
+
+
+@requires_real_modem
+def test_real_modem_passes_half_space_benchmark():
+    mesh, receivers, _ = _calibrated_real_mesh()
+    benchmark = half_space_benchmark(
+        mesh, receivers, [1.0, 0.5], resistivity_ohm_m=100.0
+    )
+    adapter = ModEm3DAdapter()
+    outcome = benchmark.run(adapter)
+    assert outcome.passed, outcome.failures
+    assert outcome.metrics.normalized_rms < 0.05
+
+
+@requires_real_modem
+def test_real_modem_passes_layered_earth_benchmark():
+    mesh, receivers, z_edges = _calibrated_real_mesh()
+    interface1, interface2 = z_edges[3], z_edges[7]
+    benchmark = layered_earth_benchmark(
+        mesh,
+        receivers,
+        [1.0, 0.5],
+        [100.0, 30.0, 500.0],
+        [interface1, interface2 - interface1],
+    )
+    adapter = ModEm3DAdapter()
+    outcome = benchmark.run(adapter)
+    assert outcome.passed, outcome.failures
+    assert outcome.metrics.normalized_rms < 0.05
+
+
+@requires_real_modem
+def test_real_modem_rejects_too_few_earth_z_cells_before_running():
+    """The same _MIN_EARTH_Z_CELLS preflight check, confirmed here to
+    actually prevent the crash it documents (rather than merely
+    asserting the error message, as
+    test_assess_rejects_too_few_earth_z_cells does without a binary).
+    """
+    n, h = 8, 300.0
+    mesh = MaxwellMesh(
+        np.arange(n + 1) * h, np.arange(3) * h, np.arange(n + 1) * h
+    )
+    receivers = ReceiverSet([[n * h / 2, n * h / 2, 0.0]], ["S00"])
+    problem = MaxwellProblem(
+        mesh,
+        np.full(mesh.shape, 0.01),
+        [1.0],
+        receivers,
+        ("zxy", "zyx"),
+    )
+    adapter = ModEm3DAdapter()
+    with pytest.raises(IncompatibleProblemError, match="earth z-cells"):
+        adapter.solve(problem)

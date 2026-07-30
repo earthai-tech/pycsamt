@@ -217,8 +217,11 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
                 rho,
                 x,
                 z,
-                station_x=np.asarray(self.model.get("station_x", x), dtype=float),
-                station_names=list(self.model.get("station_names", [])) or None,
+                station_x=np.asarray(
+                    self.model.get("station_x", x), dtype=float
+                ),
+                station_names=list(self.model.get("station_names", []))
+                or None,
                 method=f"{self.backend}:{self.method}",
                 rms=self.rms,
             )

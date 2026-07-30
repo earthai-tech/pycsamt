@@ -48,7 +48,9 @@ def _identifier(value: str, label: str) -> str:
     if not result or any(
         not (character.isalnum() or character in "-.") for character in result
     ):
-        raise ValueError(f"{label} must use letters, numbers, hyphens, or dots.")
+        raise ValueError(
+            f"{label} must use letters, numbers, hyphens, or dots."
+        )
     return result
 
 
@@ -98,7 +100,9 @@ class CompatibilityReport:
         if any(not value for value in errors + warnings):
             raise ValueError("compatibility messages cannot be empty.")
         if bool(self.compatible) == bool(errors):
-            raise ValueError("compatible must be true exactly when errors is empty.")
+            raise ValueError(
+                "compatible must be true exactly when errors is empty."
+            )
         object.__setattr__(self, "backend_name", name)
         object.__setattr__(self, "compatible", bool(self.compatible))
         object.__setattr__(self, "errors", errors)
@@ -201,8 +205,12 @@ class BackendCapabilities:
             or len(set(dimensions)) != len(dimensions)
             or any(value not in (2, 3) for value in dimensions)
         ):
-            raise ValueError("dimensions must contain unique values drawn from (2, 3).")
-        components = tuple(str(value).strip().lower() for value in self.components)
+            raise ValueError(
+                "dimensions must contain unique values drawn from (2, 3)."
+            )
+        components = tuple(
+            str(value).strip().lower() for value in self.components
+        )
         if (
             not components
             or len(set(components)) != len(components)
@@ -211,7 +219,9 @@ class BackendCapabilities:
             raise ValueError(
                 f"components must contain unique values drawn from {_COMPONENTS}."
             )
-        conventions = tuple(str(value).strip() for value in self.time_conventions)
+        conventions = tuple(
+            str(value).strip() for value in self.time_conventions
+        )
         if (
             not conventions
             or len(set(conventions)) != len(conventions)
@@ -220,11 +230,15 @@ class BackendCapabilities:
             raise ValueError(
                 f"time_conventions must contain values drawn from {_TIME_CONVENTIONS}."
             )
-        benchmarks = tuple(str(value).strip() for value in self.verified_benchmarks)
+        benchmarks = tuple(
+            str(value).strip() for value in self.verified_benchmarks
+        )
         if len(set(benchmarks)) != len(benchmarks) or any(
             not value for value in benchmarks
         ):
-            raise ValueError("verified_benchmarks must contain unique non-empty names.")
+            raise ValueError(
+                "verified_benchmarks must contain unique non-empty names."
+            )
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "version", version)
         object.__setattr__(self, "dimensions", dimensions)
@@ -314,16 +328,24 @@ class BackendCapabilities:
         errors: list[str] = []
         warnings: list[str] = []
         if problem.mesh.dimension not in self.dimensions:
-            errors.append(f"{problem.mesh.dimension}-D problems are unsupported")
+            errors.append(
+                f"{problem.mesh.dimension}-D problems are unsupported"
+            )
         missing = [
-            value for value in problem.components if value not in self.components
+            value
+            for value in problem.components
+            if value not in self.components
         ]
         if missing:
             errors.append(f"unsupported impedance components: {missing}")
         if problem.time_dependence not in self.time_conventions:
-            errors.append(f"time convention {problem.time_dependence!r} is unsupported")
+            errors.append(
+                f"time convention {problem.time_dependence!r} is unsupported"
+            )
         widths = problem.mesh.cell_widths_m
-        nonuniform = any(not np.allclose(value, value[0]) for value in widths.values())
+        nonuniform = any(
+            not np.allclose(value, value[0]) for value in widths.values()
+        )
         if nonuniform and not self.supports_nonuniform_mesh:
             errors.append("nonuniform meshes are unsupported")
         inactive = ~problem.active_cells
@@ -347,7 +369,9 @@ class BackendCapabilities:
                 )
         cell_count = int(np.prod(problem.mesh.shape))
         if self.maximum_cells is not None and cell_count > self.maximum_cells:
-            errors.append(f"cell count {cell_count} exceeds limit {self.maximum_cells}")
+            errors.append(
+                f"cell count {cell_count} exceeds limit {self.maximum_cells}"
+            )
         if (
             self.maximum_frequencies is not None
             and len(problem.frequencies_hz) > self.maximum_frequencies
@@ -485,10 +509,12 @@ class BackendRegistration:
     availability_probe: AvailabilityProbe | None = None
 
     def __post_init__(self) -> None:
-        if not isinstance(self.capabilities, BackendCapabilities) or not callable(
-            self.factory
-        ):
-            raise TypeError("capabilities and a callable factory are required.")
+        if not isinstance(
+            self.capabilities, BackendCapabilities
+        ) or not callable(self.factory):
+            raise TypeError(
+                "capabilities and a callable factory are required."
+            )
         if self.availability_probe is not None and not callable(
             self.availability_probe
         ):
@@ -518,7 +544,9 @@ class BackendRegistration:
             available, reason = self.availability_probe()
         except Exception as exc:
             return False, f"availability probe failed: {exc}"
-        normalized_reason = None if reason is None else str(reason).strip() or None
+        normalized_reason = (
+            None if reason is None else str(reason).strip() or None
+        )
         if not available and normalized_reason is None:
             normalized_reason = "backend reported itself unavailable"
         return bool(available), normalized_reason
@@ -815,7 +843,9 @@ def create_backend(name: str, **options: Any) -> MaxwellBackend:
     return backend_registry.create(name, **options)
 
 
-def list_backends(*, available_only: bool = False) -> Mapping[str, Mapping[str, Any]]:
+def list_backends(
+    *, available_only: bool = False
+) -> Mapping[str, Mapping[str, Any]]:
     """Describe registered Maxwell backends without creating them.
 
     Parameters
@@ -837,5 +867,9 @@ def list_backends(*, available_only: bool = False) -> Mapping[str, Mapping[str, 
     if not available_only:
         return descriptions
     return MappingProxyType(
-        {name: value for name, value in descriptions.items() if value["available"]}
+        {
+            name: value
+            for name, value in descriptions.items()
+            if value["available"]
+        }
     )

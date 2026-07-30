@@ -183,7 +183,8 @@ def run(
     try:
         if geology is not None and (resistivities or thicknesses):
             raise click.UsageError(
-                "--geology cannot be combined with " "--resistivities / --thicknesses."
+                "--geology cannot be combined with "
+                "--resistivities / --thicknesses."
             )
 
         if geology is not None:
@@ -191,7 +192,8 @@ def run(
             if key not in GEOLOGY_PRIORS:
                 available = ", ".join(sorted(GEOLOGY_PRIORS))
                 raise click.BadParameter(
-                    f"{geology!r} is not a known scenario.  " f"Available: {available}",
+                    f"{geology!r} is not a known scenario.  "
+                    f"Available: {available}",
                     param_hint="--geology",
                 )
             model = LayeredModel.from_geology(key, seed=seed)

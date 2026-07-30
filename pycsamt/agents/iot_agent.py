@@ -259,12 +259,16 @@ class IoTFieldAgent(BaseAgent):
         self._try(
             warnings,
             "station_table",
-            lambda: data.__setitem__("station_table", session.station_table(api=api)),
+            lambda: data.__setitem__(
+                "station_table", session.station_table(api=api)
+            ),
         )
         self._try(
             warnings,
             "to_pipeline_input",
-            lambda: data.__setitem__("pipeline_input", session.to_pipeline_input()),
+            lambda: data.__setitem__(
+                "pipeline_input", session.to_pipeline_input()
+            ),
         )
 
         # ── optional deployment capability table ──────────────────────────────
@@ -290,7 +294,9 @@ class IoTFieldAgent(BaseAgent):
                 "batch_assess_sync",
                 lambda: data.__setitem__(
                     "sync_table",
-                    batch_assess_sync(sync_refs, config=session.sync_config, api=api),
+                    batch_assess_sync(
+                        sync_refs, config=session.sync_config, api=api
+                    ),
                 ),
             )
 
@@ -386,7 +392,9 @@ class IoTFieldAgent(BaseAgent):
 
         # 3. an EDI survey to re-occupy → seeded session (no live packets)
         edis = (
-            input_data.get("edis") or input_data.get("path") or input_data.get("sites")
+            input_data.get("edis")
+            or input_data.get("path")
+            or input_data.get("sites")
         )
         if edis is not None:
             from ..iot import field_session_from_edis

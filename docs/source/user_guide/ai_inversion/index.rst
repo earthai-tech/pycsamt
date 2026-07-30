@@ -34,6 +34,7 @@ requirements remain distinct.
    domain_gap
    forward_physics
    dataset2d
+   dataset3d
    losses
    scientific_validation
    experiments

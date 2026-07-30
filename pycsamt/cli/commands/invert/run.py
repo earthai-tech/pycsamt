@@ -109,12 +109,15 @@ def _run_occam2d(
     runner = OccamRunner(workdir=workdir, verbose=verbose)
     if run_async:
         pid = runner.run_async(max_iter=max_iter, target_misfit=target_misfit)
-        click.echo(f"Occam2D started (PID {pid}).  Logs: {workdir}/occam_stdout.log")
+        click.echo(
+            f"Occam2D started (PID {pid}).  Logs: {workdir}/occam_stdout.log"
+        )
     else:
         code = runner.run(max_iter=max_iter, target_misfit=target_misfit)
         if code != 0:
             click.echo(
-                f"Occam2D exited with code {code}.  " f"See {workdir}/occam_stderr.log",
+                f"Occam2D exited with code {code}.  "
+                f"See {workdir}/occam_stderr.log",
                 err=True,
             )
             sys.exit(code)
@@ -137,12 +140,15 @@ def _run_modem(
         pid = runner.run(
             run_async=True, max_iterations=max_iter, target_rms=target_misfit
         )
-        click.echo(f"ModEM started (PID {pid}).  Logs: {workdir}/modem_stdout.log")
+        click.echo(
+            f"ModEM started (PID {pid}).  Logs: {workdir}/modem_stdout.log"
+        )
     else:
         code = runner.run(max_iterations=max_iter, target_rms=target_misfit)
         if code != 0:
             click.echo(
-                f"ModEM exited with code {code}.  " f"See {workdir}/modem_stderr.log",
+                f"ModEM exited with code {code}.  "
+                f"See {workdir}/modem_stderr.log",
                 err=True,
             )
             sys.exit(code)

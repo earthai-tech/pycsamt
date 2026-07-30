@@ -113,7 +113,11 @@ class FieldZoneCoverage(PyCSAMTObject):
 
     def first_far_field_hz(self) -> float | None:
         """Lowest frequency that reaches the far field, if any."""
-        far = [f for f, z in zip(self.freq_hz, self.zones) if z == FieldZone.FAR.value]
+        far = [
+            f
+            for f, z in zip(self.freq_hz, self.zones)
+            if z == FieldZone.FAR.value
+        ]
         return min(far) if far else None
 
     def as_dict(self) -> dict[str, Any]:
@@ -179,7 +183,9 @@ def classify_field_zones(
     if rho.size == 1:
         rho = np.full(f.shape, float(rho.item()))
     elif rho.shape != f.shape:
-        raise ValueError("resistivity must be a scalar or match the length of freq.")
+        raise ValueError(
+            "resistivity must be a scalar or match the length of freq."
+        )
 
     delta = skin_depth_m(rho, f)
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -196,8 +202,12 @@ def classify_field_zones(
         else:
             zone = FieldZone.TRANSITION
         coverage.freq_hz.append(float(fi))
-        coverage.skin_depth_m.append(float(di) if np.isfinite(di) else float("nan"))
-        coverage.offset_ratio.append(float(ri) if np.isfinite(ri) else float("nan"))
+        coverage.skin_depth_m.append(
+            float(di) if np.isfinite(di) else float("nan")
+        )
+        coverage.offset_ratio.append(
+            float(ri) if np.isfinite(ri) else float("nan")
+        )
         coverage.zones.append(zone.value)
         if zone is FieldZone.FAR:
             coverage.n_far += 1
@@ -245,7 +255,9 @@ class TransmitterComb(PyCSAMTObject):
 
     @property
     def detection_fraction(self) -> float:
-        return (self.n_detected / self.n_expected) if self.lines else float("nan")
+        return (
+            (self.n_detected / self.n_expected) if self.lines else float("nan")
+        )
 
     def missing(self) -> list[float]:
         """Expected frequencies whose energy was not resolvable."""
@@ -302,7 +314,9 @@ def detect_transmitter_frequencies(
     nyquist = fs / 2.0
     if freqs.size == 0:
         for fc in lines_hz:
-            comb.lines.append(SourceLine(fc, float("nan"), float("nan"), False))
+            comb.lines.append(
+                SourceLine(fc, float("nan"), float("nan"), False)
+            )
         return comb
 
     df = float(freqs[1] - freqs[0]) if freqs.size >= 2 else float("nan")
@@ -391,7 +405,9 @@ def assess_source_stability(
     SourceStability
     """
     max_cv = _c.as_positive(max_cv, "max_cv")
-    on_threshold_frac = _c.as_probability(on_threshold_frac, "on_threshold_frac")
+    on_threshold_frac = _c.as_probability(
+        on_threshold_frac, "on_threshold_frac"
+    )
     x = _prep_signal(tx_current)
     flags: list[str] = []
     if x.size < 3:
@@ -487,7 +503,9 @@ def csamt_edge_table(
     api: bool | None = None,
 ) -> Any:
     """Flatten one or more :func:`csamt_edge_report` results into a table."""
-    items = list(reports.items()) if isinstance(reports, dict) else list(reports)
+    items = (
+        list(reports.items()) if isinstance(reports, dict) else list(reports)
+    )
     rows: list[dict[str, Any]] = []
     for channel, report in items:
         comb = report.get("transmitter", {})

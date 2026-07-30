@@ -161,7 +161,9 @@ class _RangeSlider(QWidget):
         for decade in _LOG_DECADES:
             if self._f_min <= decade <= self._f_max:
                 tx = self._px(decade)
-                p.drawLine(tx, mid_y + _TRACK_H, tx, mid_y + _TRACK_H + _TICK_H)
+                p.drawLine(
+                    tx, mid_y + _TRACK_H, tx, mid_y + _TRACK_H + _TICK_H
+                )
 
         # Handles
         for px in (lo_px, hi_px):

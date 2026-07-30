@@ -169,19 +169,23 @@ def emi_mitigation_report(
             "rr_processed",
         )
         rr_available = any(
-            getattr(ed, key, None) not in (None, "", False) for key in rr_fields
+            getattr(ed, key, None) not in (None, "", False)
+            for key in rr_fields
         )
         if not rr_available:
             edi = getattr(ed, "edi", None)
             rr_available = edi is not None and any(
-                getattr(edi, key, None) not in (None, "", False) for key in rr_fields
+                getattr(edi, key, None) not in (None, "", False)
+                for key in rr_fields
             )
         harm_z = 0
         n_freq = 0
         if Z is not None and fr is not None:
             fr = np.asarray(fr, dtype=float).ravel()
             n_freq = int(fr.size)
-            harm_z = int(np.count_nonzero(_harm_mask(fr, mains_hz, n_harm, tol_hz)))
+            harm_z = int(
+                np.count_nonzero(_harm_mask(fr, mains_hz, n_harm, tol_hz))
+            )
         harm_tipper = 0
         if T is not None and ft is not None:
             ft = np.asarray(ft, dtype=float).ravel()
@@ -211,7 +215,9 @@ def emi_mitigation_report(
 # --------------------------- power-line notching ------------------------- #
 
 
-def _harm_mask(fr: np.ndarray, mains: float, n_harm: int, tol_hz: float) -> np.ndarray:
+def _harm_mask(
+    fr: np.ndarray, mains: float, n_harm: int, tol_hz: float
+) -> np.ndarray:
     kk = np.arange(1, int(n_harm) + 1, dtype=float)
     fH = kk * float(mains)
     m = np.zeros(fr.size, dtype=bool)
@@ -927,7 +933,10 @@ def hampel_filter_freq(
                     [_hampel_1d(r[:, j], win, nsig) for j in range(r.shape[1])]
                 ).T
                 i2 = np.vstack(
-                    [_hampel_1d(im[:, j], win, nsig) for j in range(im.shape[1])]
+                    [
+                        _hampel_1d(im[:, j], win, nsig)
+                        for j in range(im.shape[1])
+                    ]
                 ).T
                 T.tipper = r2 + 1j * i2
         return Si
@@ -1018,7 +1027,9 @@ def spatial_median_filter(
                             pass
                         if Tj is None:
                             continue
-                        jj = np.clip(np.searchsorted(ftj, ft[k]), 0, ftj.size - 1)
+                        jj = np.clip(
+                            np.searchsorted(ftj, ft[k]), 0, ftj.size - 1
+                        )
                         pool.append(tj[jj])
                     if pool:
                         med = np.nanmedian(np.asarray(pool), axis=0)
@@ -1603,7 +1614,10 @@ def _emap_component_indices(component: str) -> tuple[tuple[int, int], ...]:
         "all": ((0, 0), (0, 1), (1, 0), (1, 1)),
     }
     if component not in mapping:
-        msg = "component must be one of 'all', 'offdiag', " "'xx', 'xy', 'yx', or 'yy'."
+        msg = (
+            "component must be one of 'all', 'offdiag', "
+            "'xx', 'xy', 'yx', or 'yy'."
+        )
         raise ValueError(msg)
     return mapping[component]
 
@@ -1989,7 +2003,9 @@ def confidence_gated_emap_filter(
             if fr0.size == 0:
                 continue
             idx0 = int(np.nanargmin(np.abs(fr0 - freq)))
-            if not np.isclose(fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12):
+            if not np.isclose(
+                fr0[idx0], freq, rtol=frequency_rtol, atol=1e-12
+            ):
                 continue
             ci = conf[idx0]
             if not np.isfinite(ci):
@@ -2013,7 +2029,9 @@ def confidence_gated_emap_filter(
             for a, b in comps:
                 original = z0[idx0, a, b]
                 filtered_value = zf[j, a, b]
-                znew[j, a, b] = (1.0 - alpha) * original + alpha * filtered_value
+                znew[j, a, b] = (
+                    1.0 - alpha
+                ) * original + alpha * filtered_value
                 before_mag.append(abs(original))
                 after_mag.append(abs(znew[j, a, b]))
             before_ref = float(np.nanmedian(before_mag))
@@ -2023,12 +2041,15 @@ def confidence_gated_emap_filter(
                     station=station,
                     frequency_hz=float(freq),
                     period_s=float(1.0 / freq) if freq else np.nan,
-                    log10_period=(float(np.log10(1.0 / freq)) if freq > 0 else np.nan),
+                    log10_period=(
+                        float(np.log10(1.0 / freq)) if freq > 0 else np.nan
+                    ),
                     confidence=float(ci) if np.isfinite(ci) else np.nan,
                     blend_weight=float(alpha),
                     action=action,
                     delta_log10_abs_z=float(
-                        np.log10(after_ref + 1e-24) - np.log10(before_ref + 1e-24)
+                        np.log10(after_ref + 1e-24)
+                        - np.log10(before_ref + 1e-24)
                     ),
                 )
             )
@@ -2193,7 +2214,9 @@ def _component_index(component: str) -> tuple[int, int]:
     return mapping[component]
 
 
-def _paired_z_items(before_sites: Any, after_sites: Any) -> list[tuple[str, Any, Any]]:
+def _paired_z_items(
+    before_sites: Any, after_sites: Any
+) -> list[tuple[str, Any, Any]]:
     """Pair before/after Z-bearing items by station name."""
     before = ensure_sites(before_sites, recursive=False, strict=False)
     after = ensure_sites(after_sites, recursive=False, strict=False)
@@ -2256,7 +2279,8 @@ def emap_filter_report(
             after = z1[idx, a, b]
             if np.isfinite(before) and np.isfinite(after):
                 vals.append(
-                    np.log10(np.abs(after) + 1e-24) - np.log10(np.abs(before) + 1e-24)
+                    np.log10(np.abs(after) + 1e-24)
+                    - np.log10(np.abs(before) + 1e-24)
                 )
         vals_arr = np.asarray(vals, dtype=float)
         row = dict(
@@ -2267,7 +2291,9 @@ def emap_filter_report(
                 float(np.nanmedian(vals_arr)) if vals_arr.size else np.nan
             ),
             rms_delta_log10_abs_z=(
-                float(np.sqrt(np.nanmean(vals_arr**2))) if vals_arr.size else np.nan
+                float(np.sqrt(np.nanmean(vals_arr**2)))
+                if vals_arr.size
+                else np.nan
             ),
         )
         if ref_freq is not None:
@@ -2459,7 +2485,9 @@ def plot_emap_filter_psection(
     if delta_vlim is None:
         dvals = np.abs(delta[np.isfinite(delta)])
         delta_vlim = (
-            float(np.nanpercentile(dvals, delta_vlim_pct)) if dvals.size else 0.25
+            float(np.nanpercentile(dvals, delta_vlim_pct))
+            if dvals.size
+            else 0.25
         )
         delta_vlim = max(delta_vlim, 1e-6)
 

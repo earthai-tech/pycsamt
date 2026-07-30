@@ -28,7 +28,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
-from pycsamt.agents import AIInversionAgent, Inv2DAgent, Inv3DAgent
+from pycsamt.agents import (
+    AIInversionAgent,
+    EnsembleAgent,
+    Inv2DAgent,
+    Inv3DAgent,
+    PINNInversionAgent,
+)
 from pycsamt.ai.data.normalization import ComplexZScore
 from pycsamt.ai.domain_gap import (
     CorruptionConfig,
@@ -54,6 +60,10 @@ from pycsamt.ai.experiments import (
 from pycsamt.ai.training.dataset2d import (
     Maxwell2DDatasetConfig,
     generate_2d_maxwell_dataset,
+)
+from pycsamt.ai.training.dataset3d import (
+    Maxwell3DDatasetConfig,
+    generate_3d_maxwell_dataset,
 )
 from pycsamt.ai.validation import (
     flag_out_of_distribution,
@@ -1440,6 +1450,188 @@ def make_dataset2d_response_anatomy() -> None:
     _save(fig, "dataset2d_response_anatomy.png")
 
 
+def make_dataset3d_realization_gallery() -> None:
+    """Three independent 3-D realizations, each shown as two orthogonal
+    slices, to demonstrate genuine (not extruded-2-D) 3-D structure.
+    """
+    from pycsamt.ai.geology import GeologyGrid
+
+    grid = GeologyGrid.regular_3d(nx=10, ny=10, nz=8, dx_m=200, dy_m=200, dz_m=120)
+    config = Maxwell3DDatasetConfig(
+        dataset_id="gallery-demo",
+        grid=grid,
+        correlation_length_x_m=(400.0, 800.0),
+        correlation_length_y_m=(400.0, 800.0),
+        correlation_length_z_m=(120.0, 280.0),
+        frequencies_hz=[50.0, 20.0],
+        station_xy_m=[[700.0, 700.0], [700.0, 1100.0], [1100.0, 700.0], [1100.0, 1100.0]],
+        n_realizations=3,
+        seed=7,
+        log_resistivity_mean=2.0,
+        log_resistivity_std=0.4,
+        mesh_safety_factor=2.0,
+        max_mesh_cells=10_000,
+        validation_fraction=0.0,
+        test_fraction=0.0,
+    )
+    dataset = generate_3d_maxwell_dataset(config)
+    station_xy = config.station_xy_m
+
+    nz, ny, nx = dataset.samples[0].resistivity_ohm_m.shape
+    dz, dy, dx = grid.spacing_m
+    x_edges = np.linspace(0, grid.x_m[-1] + dx / 2, nx + 1)
+    y_edges = np.linspace(0, grid.y_m[-1] + dy / 2, ny + 1)
+    z_edges = np.linspace(0, grid.z_m[-1] + dz / 2, nz + 1)
+    z_shallow_idx = 1
+    y_mid_idx = ny // 2
+
+    fig, axes = plt.subplots(2, 3, figsize=(13.5, 7.6))
+    vmin = min(np.log10(s.resistivity_ohm_m).min() for s in dataset.samples)
+    vmax = max(np.log10(s.resistivity_ohm_m).max() for s in dataset.samples)
+    mesh = None
+    for col, sample in enumerate(dataset.samples):
+        log_rho = np.log10(sample.resistivity_ohm_m)
+
+        ax_top = axes[0, col]
+        mesh = ax_top.pcolormesh(
+            x_edges, y_edges, log_rho[z_shallow_idx],
+            cmap="viridis_r", vmin=vmin, vmax=vmax, shading="flat",
+        )
+        ax_top.scatter(
+            station_xy[:, 0], station_xy[:, 1], marker="v", color="white",
+            edgecolor="black", s=45, zorder=3,
+        )
+        ax_top.set_title(
+            f"{sample.realization_id.split('-')[-1]}  "
+            f"(z={grid.z_m[z_shallow_idx]:.0f} m)"
+        )
+        ax_top.set_xlabel("x (m)")
+        ax_top.set_aspect("equal")
+
+        ax_bottom = axes[1, col]
+        mesh = ax_bottom.pcolormesh(
+            x_edges, z_edges, log_rho[:, y_mid_idx, :],
+            cmap="viridis_r", vmin=vmin, vmax=vmax, shading="flat",
+        )
+        ax_bottom.scatter(
+            station_xy[:, 0], np.zeros(station_xy.shape[0]), marker="v",
+            color="white", edgecolor="black", s=45, zorder=3,
+        )
+        ax_bottom.invert_yaxis()
+        ax_bottom.set_xlabel("x (m)")
+    axes[0, 0].set_ylabel("y (m)")
+    axes[1, 0].set_ylabel("depth (m)")
+    fig.colorbar(
+        mesh, ax=axes, shrink=0.85, pad=0.02, label=r"$\log_{10}(\rho)$ [Ohm.m]"
+    )
+    fig.suptitle(
+        "Three independent realizations from one Maxwell3DDatasetConfig "
+        f"(top: horizontal slice at z={grid.z_m[z_shallow_idx]:.0f} m; "
+        f"bottom: vertical slice at y={grid.y_m[y_mid_idx]:.0f} m; "
+        "triangles: receivers)",
+        fontsize=11,
+    )
+    _save(fig, "dataset3d_realization_gallery.png")
+
+
+def make_dataset3d_response_anatomy() -> None:
+    """Plot one generated 3-D model beside its full-tensor response."""
+    from pycsamt.ai.geology import GeologyGrid
+
+    grid = GeologyGrid.regular_3d(nx=6, ny=6, nz=6, dx_m=250, dy_m=250, dz_m=150)
+    station_xy = [
+        [500.0, 500.0], [500.0, 1000.0], [1000.0, 500.0],
+        [1000.0, 1000.0], [750.0, 750.0],
+    ]
+    frequencies = np.array([2.0, 1.0, 0.5, 0.2])
+    config = Maxwell3DDatasetConfig(
+        dataset_id="response-anatomy-3d",
+        grid=grid,
+        correlation_length_x_m=(500.0, 900.0),
+        correlation_length_y_m=(500.0, 900.0),
+        correlation_length_z_m=(150.0, 350.0),
+        frequencies_hz=frequencies,
+        station_xy_m=station_xy,
+        n_realizations=1,
+        seed=13,
+        log_resistivity_mean=2.0,
+        log_resistivity_std=0.35,
+        components=("zxx", "zxy", "zyx", "zyy"),
+        mesh_safety_factor=2.0,
+        max_mesh_cells=10_000,
+        validation_fraction=0.0,
+        test_fraction=0.0,
+    )
+    sample = generate_3d_maxwell_dataset(config).samples[0]
+    impedance = sample.survey.impedance
+    mu0 = 4.0e-7 * np.pi
+    omega = 2.0 * np.pi * frequencies
+    rho_a = np.abs(impedance) ** 2 / (omega[None, :, None] * mu0)
+
+    fig, axes = plt.subplots(2, 2, figsize=(12.2, 8.6))
+    ax = axes[0, 0]
+    dz_, dy_, dx_ = grid.spacing_m
+    z_shallow_idx = 1
+    x_edges = np.linspace(0, grid.x_m[-1] + dx_ / 2, grid.shape[2] + 1)
+    y_edges = np.linspace(0, grid.y_m[-1] + dy_ / 2, grid.shape[1] + 1)
+    image = ax.pcolormesh(
+        x_edges, y_edges, np.log10(sample.resistivity_ohm_m[z_shallow_idx]),
+        cmap="viridis_r", shading="flat",
+    )
+    station_arr = np.asarray(station_xy)
+    ax.scatter(
+        station_arr[:, 0], station_arr[:, 1], marker="v", c="white",
+        edgecolor="black", s=55, clip_on=False, zorder=3,
+    )
+    ax.set(
+        title=f"Target model, z={grid.z_m[z_shallow_idx]:.0f} m",
+        xlabel="x (m)", ylabel="y (m)",
+    )
+    ax.set_aspect("equal")
+    fig.colorbar(image, ax=ax, label=r"$\log_{10}(\rho)$ [$\Omega\cdot$m]")
+
+    colors = plt.cm.plasma(np.linspace(0.08, 0.92, station_arr.shape[0]))
+    for s_idx, color in enumerate(colors):
+        axes[0, 1].plot(
+            frequencies, rho_a[s_idx, :, 1], "o-", color=color,
+            label=f"S{s_idx}",
+        )
+        axes[1, 0].plot(frequencies, rho_a[s_idx, :, 2], "o-", color=color)
+    for ax_, title in zip(
+        (axes[0, 1], axes[1, 0]),
+        (r"$Z_{xy}$ apparent resistivity", r"$Z_{yx}$ apparent resistivity"),
+    ):
+        ax_.set_xscale("log")
+        ax_.set_yscale("log")
+        ax_.set(title=title, xlabel="frequency (Hz)", ylabel=r"$\rho_a$ [$\Omega\cdot$m]")
+        ax_.grid(alpha=0.25, which="both")
+    axes[0, 1].legend(frameon=False, fontsize=7, ncol=2)
+
+    median_zxx = np.median(np.abs(impedance[:, :, 0]), axis=0)
+    median_zxy = np.median(np.abs(impedance[:, :, 1]), axis=0)
+    median_zyx = np.median(np.abs(impedance[:, :, 2]), axis=0)
+    median_zyy = np.median(np.abs(impedance[:, :, 3]), axis=0)
+    axes[1, 1].plot(frequencies, median_zxy, "o-", label=r"median $|Z_{xy}|$")
+    axes[1, 1].plot(frequencies, median_zyx, "s-", label=r"median $|Z_{yx}|$")
+    axes[1, 1].plot(frequencies, median_zxx, "^--", label=r"median $|Z_{xx}|$")
+    axes[1, 1].plot(frequencies, median_zyy, "d--", label=r"median $|Z_{yy}|$")
+    axes[1, 1].set_xscale("log")
+    axes[1, 1].set_yscale("log")
+    axes[1, 1].set(
+        title="Full tensor magnitude", xlabel="frequency (Hz)",
+        ylabel=r"$|Z|$ [V/A]",
+    )
+    axes[1, 1].grid(alpha=0.25, which="both")
+    axes[1, 1].legend(frameon=False, fontsize=8)
+    fig.suptitle(
+        "One accepted 3-D realization: target volume and full-tensor "
+        "response channels",
+        fontsize=13,
+    )
+    fig.tight_layout()
+    _save(fig, "dataset3d_response_anatomy.png")
+
+
 def make_data_preparation_contract() -> None:
     features, frequency, station_names = _willy_features()
     n_freq = frequency.size
@@ -2368,6 +2560,50 @@ def make_agents_executed_1d_audit() -> None:
     _save(fig, "agents_executed_1d_audit.png")
 
 
+def make_agents_real_data_sections(names: set[str] | None = None) -> None:
+    """Regenerate legacy-named sections from current WILLY agents."""
+    line = PROJECT_ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT"
+    sites = ensure_sites(line, recursive=True, verbose=0)
+    runs = (
+        (
+            "agents_ai1d_section.png",
+            AIInversionAgent(
+                arch="resnet", n_layers=5,
+                n_train_samples=10_000, epochs=100,
+            ),
+            "ai_section",
+        ),
+        (
+            "agents_ensemble_section.png",
+            EnsembleAgent(
+                n_estimators=5, arch="resnet", n_layers=5,
+                n_train_samples=2_000, epochs=30, calibrate=True,
+            ),
+            "uncertainty_section",
+        ),
+        (
+            "agents_pinn2d_section.png",
+            PINNInversionAgent(
+                dim=2, n_layers=10, depth_max=2000.0,
+                smoothness_weight=0.01, lateral_weight=0.005,
+                epochs=300, lr=1e-2, solver="mt1d",
+            ),
+            "section",
+        ),
+    )
+    for filename, agent, figure_key in runs:
+        if names is not None and filename not in names:
+            continue
+        result = agent.execute({"sites": sites})
+        if result.status == "failed":
+            raise RuntimeError(f"{filename}: {result.error}")
+        figure = result["figures"].get(figure_key)
+        if figure is None:
+            raise RuntimeError(f"{filename}: missing figure {figure_key!r}")
+        _save(figure, filename)
+        print(filename, result.summary)
+
+
 def make_agents_architecture_comparison() -> None:
     """Execute matched CNN1D, ResNet, and FCN agent smoke runs."""
     line = PROJECT_ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT"
@@ -2486,7 +2722,7 @@ def make_agents_architecture_comparison() -> None:
 
 
 def make_agents_inv3d_willy_2km() -> None:
-    """Execute the AMT-band, 2-km Inv3DAgent configuration."""
+    """Execute genuine 3-D Maxwell training on the real WILLY geometry."""
     try:
         import torch
 
@@ -2508,12 +2744,12 @@ def make_agents_inv3d_willy_2km() -> None:
         10.0 ** np.nanmedian(dense_features[:, : measured_frequency.size])
     )
     depth_frequency = float(frequency_for_depth(2000.0, rho_reference))
-    frequency_min = max(float(measured_frequency.min()), depth_frequency)
-    frequency_max = float(measured_frequency.max())
+    frequency_min = float(measured_frequency.min())
+    frequency_max = min(float(measured_frequency.max()), depth_frequency)
     _, frequency, _ = sites_to_features_1d(
         sites,
         comp="xy",
-        n_freqs=24,
+        n_freqs=3,
         freq_min=frequency_min,
         freq_max=frequency_max,
     )
@@ -2521,20 +2757,30 @@ def make_agents_inv3d_willy_2km() -> None:
         n_layers=5,
         freqs=frequency,
         depth_max=2000.0,
-        n_train_profiles=12,
+        n_train_profiles=4,
         epochs=10,
         radius=250.0,
         hidden=(64, 32),
         dropout=0.1,
         n_mc=0,
+        physics="mt3d",
+        geology_grid_nx_ny=4,
+        geology_grid_nz=4,
+        max_mesh_cells=60_000,
     ).execute({"sites": sites, "topography": True})
     if result.status == "failed":
         raise RuntimeError(result.error)
+    print(
+        "agents_inv3d_willy_2km.png",
+        ascii(result.summary),
+        "recovery=",
+        ascii(result.get("mt3d_recovery")),
+    )
     fig = result["figures"]["resistivity_section"]
     ax = fig.axes[0]
     ax.set_title(
-        f"WILLY-derived GCN section — {frequency[0]:.2f}–"
-        f"{frequency[-1]:,.0f} Hz, 2 km model",
+        f"WILLY MT3D-trained GCN — {frequency[0]:.2f}–"
+        f"{frequency[-1]:.2f} Hz, 2 km model",
         fontsize=10,
         fontweight="bold",
     )
@@ -3718,6 +3964,8 @@ def main() -> None:
     make_hybrid_physics_refinement_audit()
     make_dataset2d_realization_gallery()
     make_dataset2d_response_anatomy()
+    make_dataset3d_realization_gallery()
+    make_dataset3d_response_anatomy()
     make_data_preparation_contract()
     make_data_preparation_coverage()
     make_model_selection_willy_dimension()
@@ -3731,6 +3979,7 @@ def main() -> None:
     make_uncertainty_calibration_regimes()
     make_uncertainty_depth_propagation()
     make_agents_execution_contract()
+    make_agents_real_data_sections()
     make_agents_executed_1d_audit()
     make_agents_architecture_comparison()
     make_agents_inv2d_willy_topography()

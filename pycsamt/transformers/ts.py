@@ -259,7 +259,9 @@ class TStoEDI(TransformerMixin):
             station_name=station_name,
         )
         if result.n_fail and not self.skip_errors:
-            msgs = "\n  ".join(f"{r.source}: {r.error}" for r in result.failures)
+            msgs = "\n  ".join(
+                f"{r.source}: {r.error}" for r in result.failures
+            )
             raise RuntimeError(
                 f"{result.n_fail} record(s) failed to convert:\n  {msgs}"
             )
@@ -320,7 +322,9 @@ class TStoEDI(TransformerMixin):
                 msg = str(exc)
                 failures.append(_FailRecord(source=label, error=msg))
                 if not self.skip_errors:
-                    raise RuntimeError(f"Conversion failed for {label}: {msg}") from exc
+                    raise RuntimeError(
+                        f"Conversion failed for {label}: {msg}"
+                    ) from exc
                 _log.warning("Skipping %s — %s", label, msg)
 
         return TransformResult(
@@ -382,7 +386,10 @@ class TStoEDI(TransformerMixin):
         """Human-readable identifier for logs/failures."""
         if isinstance(record, TSData):
             return str(
-                record.station or record.name or record.meta.get("source") or "TSData"
+                record.station
+                or record.name
+                or record.meta.get("source")
+                or "TSData"
             )
         return str(record)
 

@@ -174,7 +174,9 @@ class PINNInversionAgent(BaseAgent):
         dim = int(input_data.get("dim", self.dim))
         n_layers = int(input_data.get("n_layers", self.n_layers))
         depth_max = float(input_data.get("depth_max", self.depth_max))
-        epochs = int(input_data.get("epochs", self.epochs) or _DEF_EPOCHS.get(dim, 300))
+        epochs = int(
+            input_data.get("epochs", self.epochs) or _DEF_EPOCHS.get(dim, 300)
+        )
         output_dir = input_data.get("output_dir")
 
         sites_raw = input_data.get("sites") or input_data.get("path")
@@ -219,11 +221,12 @@ class PINNInversionAgent(BaseAgent):
 
         if mat is not None and n_st > 0:
             try:
-                ths = np.logspace(
-                    np.log10(max(depth_max / 100, 50)),
-                    np.log10(depth_max),
-                    n_layers - 1,
-                )
+                # Plot the declared model parameterization.  The previous
+                # logspace treated ``depth_max`` as the *last layer
+                # thickness*, so cumulative depth exceeded the requested
+                # model bottom (2 km became about 5.3 km for ten layers).
+                weights = np.geomspace(1.0, 3.0, n_layers - 1)
+                ths = depth_max * weights / weights.sum()
                 depths_km = np.concatenate([[0.0], np.cumsum(ths)]) / 1000.0
                 fig_s = _plot_pinn_section(
                     mat,
@@ -290,7 +293,9 @@ class PINNInversionAgent(BaseAgent):
                 warns.append(f"predict(): {exc}")
 
         elapsed = time.time() - t0
-        rms_str = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        rms_str = (
+            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        )
         return AgentResult(
             status=("success" if n_st > 0 else "needs_review"),
             summary=(

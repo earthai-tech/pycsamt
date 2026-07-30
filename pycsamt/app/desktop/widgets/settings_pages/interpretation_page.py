@@ -111,7 +111,9 @@ class InterpretationPage(SettingsPage):
                 self._sec_cmap.setCurrentText(sec_cmap)
 
             wt_ls = getattr(sec, "wt_linestyle", "--") or "--"
-            idx = next((i for i, (_, v) in enumerate(_WT_MARKERS) if v == wt_ls), 1)
+            idx = next(
+                (i for i, (_, v) in enumerate(_WT_MARKERS) if v == wt_ls), 1
+            )
             self._wt_combo.setCurrentIndex(idx)
 
             alpha = getattr(sec, "alpha", 0.85) or 0.85

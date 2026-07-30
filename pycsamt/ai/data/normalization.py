@@ -95,27 +95,43 @@ class NormalizedSurvey:
             )
         n_station, n_frequency, n_component, _ = values.shape
         frequencies = np.asarray(self.frequencies_hz, dtype=float)
-        if frequencies.shape != (n_frequency,) or not np.all(np.isfinite(frequencies)):
+        if frequencies.shape != (n_frequency,) or not np.all(
+            np.isfinite(frequencies)
+        ):
             raise ValueError(
                 "frequencies_hz does not match the normalized frequency axis."
             )
         station_names = tuple(str(name) for name in self.station_names)
         components = tuple(str(name) for name in self.components)
-        if len(station_names) != n_station or len(set(station_names)) != n_station:
-            raise ValueError("station_names must uniquely label the station axis.")
-        if len(components) != n_component or len(set(components)) != n_component:
-            raise ValueError("components must uniquely label the component axis.")
+        if (
+            len(station_names) != n_station
+            or len(set(station_names)) != n_station
+        ):
+            raise ValueError(
+                "station_names must uniquely label the station axis."
+            )
+        if (
+            len(components) != n_component
+            or len(set(components)) != n_component
+        ):
+            raise ValueError(
+                "components must uniquely label the component axis."
+            )
         errors = None
         if self.errors is not None:
             errors = np.asarray(self.errors, dtype=float)
             if errors.shape != values.shape:
                 raise ValueError("errors must have the same shape as values.")
             if np.any(valid & (~np.isfinite(errors) | (errors <= 0))):
-                raise ValueError("valid normalized errors must be finite and positive.")
+                raise ValueError(
+                    "valid normalized errors must be finite and positive."
+                )
         state_hash = None if self.state_hash is None else str(self.state_hash)
         if state_hash is not None and (
             len(state_hash) != 64
-            or any(character not in "0123456789abcdef" for character in state_hash)
+            or any(
+                character not in "0123456789abcdef" for character in state_hash
+            )
         ):
             raise ValueError("state_hash must be a lowercase SHA-256 digest.")
         object.__setattr__(self, "values", _readonly(values))
@@ -272,12 +288,16 @@ class ComplexZScore:
             or not np.all(np.isfinite(frequencies))
             or np.any(frequencies <= 0)
         ):
-            raise ValueError("frequencies_hz must be a finite positive 1-D array.")
+            raise ValueError(
+                "frequencies_hz must be a finite positive 1-D array."
+            )
         differences = np.diff(frequencies)
         if differences.size and not (
             np.all(differences > 0) or np.all(differences < 0)
         ):
-            raise ValueError("frequencies_hz must be strictly monotonic and unique.")
+            raise ValueError(
+                "frequencies_hz must be strictly monotonic and unique."
+            )
         if (
             not components
             or any(not name for name in components)
@@ -285,7 +305,9 @@ class ComplexZScore:
         ):
             raise ValueError("components must be non-empty and unique.")
         if self.weighting not in {"uniform", "inverse_variance"}:
-            raise ValueError("weighting must be 'uniform' or 'inverse_variance'.")
+            raise ValueError(
+                "weighting must be 'uniform' or 'inverse_variance'."
+            )
         if (
             not isinstance(self.ddof, int)
             or isinstance(self.ddof, bool)
@@ -293,7 +315,9 @@ class ComplexZScore:
         ):
             raise ValueError("ddof must be a non-negative integer.")
         if self.weighting != "uniform" and self.ddof != 0:
-            raise ValueError("ddof must be zero for inverse-variance weighting.")
+            raise ValueError(
+                "ddof must be zero for inverse-variance weighting."
+            )
         count = (
             np.ones(expected, dtype=np.int64)
             if self.count is None
@@ -323,14 +347,20 @@ class ComplexZScore:
         convention = self.convention
         if isinstance(convention, Mapping):
             convention = ImpedanceConvention.from_dict(convention)
-        if convention is not None and not isinstance(convention, ImpedanceConvention):
-            raise TypeError("convention must be an ImpedanceConvention or None.")
+        if convention is not None and not isinstance(
+            convention, ImpedanceConvention
+        ):
+            raise TypeError(
+                "convention must be an ImpedanceConvention or None."
+            )
         for name, value in (
             ("training_survey_count", self.training_survey_count),
             ("training_station_count", self.training_station_count),
         ):
             if value is not None and (
-                not isinstance(value, int) or isinstance(value, bool) or value <= 0
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value <= 0
             ):
                 raise ValueError(f"{name} must be a positive integer or None.")
         if (
@@ -405,11 +435,15 @@ class ComplexZScore:
         """
         items = _surveys(surveys)
         if weighting not in {"uniform", "inverse_variance"}:
-            raise ValueError("weighting must be 'uniform' or 'inverse_variance'.")
+            raise ValueError(
+                "weighting must be 'uniform' or 'inverse_variance'."
+            )
         if not isinstance(ddof, int) or isinstance(ddof, bool) or ddof < 0:
             raise ValueError("ddof must be a non-negative integer.")
         if weighting != "uniform" and ddof != 0:
-            raise ValueError("ddof must be zero for inverse-variance weighting.")
+            raise ValueError(
+                "ddof must be zero for inverse-variance weighting."
+            )
         reference = items[0]
         values = []
         masks = []
@@ -417,7 +451,9 @@ class ComplexZScore:
         for survey in items:
             reference.assert_compatible(survey, require_crs=False)
             values.append(
-                np.stack([survey.impedance.real, survey.impedance.imag], axis=-1)
+                np.stack(
+                    [survey.impedance.real, survey.impedance.imag], axis=-1
+                )
             )
             mask = np.repeat(survey.valid[..., None], 2, axis=-1)
             masks.append(mask)
@@ -426,7 +462,9 @@ class ComplexZScore:
                     raise ValueError(
                         "inverse-variance weighting requires impedance_error on every survey."
                     )
-                error = np.repeat(survey.impedance_error[..., None], 2, axis=-1)
+                error = np.repeat(
+                    survey.impedance_error[..., None], 2, axis=-1
+                )
                 weights.append(np.where(mask, 1.0 / np.square(error), 0.0))
             else:
                 weights.append(mask.astype(float))
@@ -542,11 +580,20 @@ class ComplexZScore:
         if not isinstance(survey, SurveyData):
             raise TypeError("survey must be a SurveyData instance.")
         if not np.array_equal(survey.frequencies_hz, self.frequencies_hz):
-            raise ValueError("survey frequency grid/order differs from fitted state.")
+            raise ValueError(
+                "survey frequency grid/order differs from fitted state."
+            )
         if survey.components != self.components:
-            raise ValueError("survey component order differs from fitted state.")
-        if self.convention is not None and survey.convention != self.convention:
-            raise ValueError("survey impedance convention differs from fitted state.")
+            raise ValueError(
+                "survey component order differs from fitted state."
+            )
+        if (
+            self.convention is not None
+            and survey.convention != self.convention
+        ):
+            raise ValueError(
+                "survey impedance convention differs from fitted state."
+            )
 
     def transform(
         self,
@@ -643,7 +690,10 @@ class ComplexZScore:
         fill = float(fill_value)
         if not np.isfinite(fill) or fill <= 0:
             raise ValueError("fill_value must be finite and positive.")
-        error = np.repeat(survey.impedance_error[..., None], 2, axis=-1) / self.scale
+        error = (
+            np.repeat(survey.impedance_error[..., None], 2, axis=-1)
+            / self.scale
+        )
         mask = np.repeat(survey.valid[..., None], 2, axis=-1)
         return np.where(mask, error, fill), mask
 
@@ -679,10 +729,14 @@ class ComplexZScore:
         >>> result.station_names
         ('A', 'B')
         """
-        features, mask = self.transform(survey, fill_value=fill_value, clip=clip)
+        features, mask = self.transform(
+            survey, fill_value=fill_value, clip=clip
+        )
         errors = None
         if survey.impedance_error is not None:
-            errors, _ = self.transform_errors(survey, fill_value=error_fill_value)
+            errors, _ = self.transform_errors(
+                survey, fill_value=error_fill_value
+            )
         return NormalizedSurvey(
             values=features,
             valid=mask,
@@ -742,8 +796,12 @@ class ComplexZScore:
             try:
                 invalid = complex(invalid_value)
             except (TypeError, ValueError) as exc:
-                raise ValueError("invalid_value must be complex-compatible.") from exc
-            complex_values = np.where(np.all(mask, axis=-1), complex_values, invalid)
+                raise ValueError(
+                    "invalid_value must be complex-compatible."
+                ) from exc
+            complex_values = np.where(
+                np.all(mask, axis=-1), complex_values, invalid
+            )
         return complex_values
 
     def to_dict(self) -> dict[str, Any]:
@@ -813,7 +871,10 @@ class ComplexZScore:
         True
         """
         version = data.get("schema_version")
-        if version not in {1, 2} or data.get("kind") != "complex_cartesian_zscore":
+        if (
+            version not in {1, 2}
+            or data.get("kind") != "complex_cartesian_zscore"
+        ):
             raise ValueError("unsupported ComplexZScore state.")
         if version == 1:
             mean = np.asarray(data["mean"], dtype=float)

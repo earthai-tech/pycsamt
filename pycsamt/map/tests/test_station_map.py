@@ -34,6 +34,7 @@ def test_station_map_options_defaults() -> None:
     assert opts.overlay == "index"
     assert opts.backend == "plotly"
     assert opts.show_profiles is True
+    assert opts.elevation_mode == "markers"
 
 
 def test_station_map_builds_plotly_figure() -> None:
@@ -73,3 +74,42 @@ def test_station_map_matplotlib_backend() -> None:
     opts = StationMapOptions(backend="matplotlib")
     fig = build_station_map(data, opts)
     assert hasattr(fig, "savefig")
+
+
+def test_station_elevation_contour_mode() -> None:
+    data = MapData(
+        sites=_Sites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+            StationRecord("S02", 1.0, 2.2, 30.0, "L1", 2),
+        ),
+    )
+    opts = StationMapOptions(
+        overlay="elevation",
+        elevation_mode="contours",
+        backend="matplotlib",
+        contour_interp="linear",
+    )
+    fig = build_station_map(data, opts)
+    assert len(fig.axes[0].collections) > 1
+
+    plotly = build_station_map(
+        data,
+        StationMapOptions(
+            overlay="elevation",
+            elevation_mode="contours",
+            contour_interp="linear",
+        ),
+    )
+    assert len(plotly.layout.map.layers) == 1
+
+
+def test_station_elevation_mode_rejects_unknown_value() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="elevation_mode"):
+        build_station_map(
+            MapData(sites=None),
+            StationMapOptions(elevation_mode="raster"),
+        )

@@ -414,31 +414,64 @@ Run Occam2D
 ``OccamRunner`` executes a prepared native directory. It does not build input
 files; use ``InputBuilder`` first when starting from EDI data.
 
+Occam2D is an external Fortran program, and pyCSAMT does not ship a
+pre-compiled executable. Build it first by following
+:ref:`occam2d_compilation`. The recommended command is:
+
+.. code-block:: bash
+
+   pycsamt build occam2d --auto-install
+
+After a successful build, pass the executable path printed by that command to
+the runner. This example finds the packaged source directory and handles the
+Windows ``.exe`` suffix:
+
 .. code-block:: pycon
    :linenos:
 
+   >>> import os
+   >>> from pathlib import Path
+
+   >>> import pycsamt.models.occam2d as occam2d
    >>> from pycsamt.models.occam2d import OccamRunner
+
+   >>> binary_name = "Occam2D.exe" if os.name == "nt" else "Occam2D"
+   >>> binary = Path(occam2d.__file__).resolve().parent / "_source" / binary_name
+   >>> if not binary.is_file():
+   ...     raise FileNotFoundError(
+   ...         f"{binary} was not built; see the Occam2D compilation guide"
+   ...     )
 
    >>> runner = OccamRunner(
    ...     workdir="runs/profile_a_occam2d_v01/native",
-   ...     binary_path="/usr/local/bin/Occam2D",
+   ...     binary_path=binary,
    ...     startup_file="Startup",
    ...     verbose=1,
    ... )
+   >>> print(runner.discover_binary(auto_compile=False))
+   .../pycsamt/models/occam2d/_source/Occam2D
 
-   >>> try:
-   ...     runner.discover_binary(auto_compile=False)
-   ... except FileNotFoundError as exc:
-   ...     print(str(exc).splitlines()[0])
-   Occam2D binary not found.  Compile it manually:
+Run only after the native input directory and startup file have been checked:
 
-   >>> # Run only when the executable and native files are ready.
-   >>> # exit_code = runner.run(max_iter=80, target_misfit=1.0)
+.. code-block:: python
+   :linenos:
 
-There is no bundled, pre-compiled ``Occam2D`` binary -- that is the honest
-result of ``discover_binary`` above whenever ``/usr/local/bin/Occam2D`` does
-not exist on the current machine, and it is exactly the failure mode this
-step is meant to catch *before* a long run is queued rather than after.
+   exit_code = runner.run(
+       max_iter=80,
+       target_misfit=1.0,
+       auto_compile=False,
+   )
+   if exit_code != 0:
+       raise RuntimeError(
+           f"Occam2D failed with exit code {exit_code}; "
+           f"see {runner.stderr_log}"
+       )
+
+The run block is intentionally not a doctest: it launches the external solver
+and writes ``occam_stdout.log`` and ``occam_stderr.log`` in the run directory.
+Passing ``auto_compile=False`` makes the documented build step explicit and
+prevents an unexpected compilation attempt when a queued run starts.
+
 Binary discovery follows this order:
 
 1. explicit ``binary_path``;
@@ -448,8 +481,10 @@ Binary discovery follows this order:
 
 Automatic compilation uses the bundled Fortran source under
 ``pycsamt/models/occam2d/_source`` and a compiler such as ``gfortran`` through
-``make``. For reproducible production work, prefer an explicit binary path and
-record compiler provenance separately.
+``make``. The dedicated :ref:`occam2d_compilation` workflow provides the
+scripted, cross-platform build and clearer toolchain diagnostics. For
+reproducible production work, prefer an explicit binary path and record
+compiler provenance separately.
 
 ``run`` can patch the startup file in place when ``max_iter`` or
 ``target_misfit`` is supplied. Archive the startup file that was actually run,
@@ -939,6 +974,8 @@ Next Steps
 
 * :doc:`configuration_and_io` for source-of-truth configuration and native file
   archive practice.
+* :doc:`compilation` builds ``Occam2D`` from the vendored source, on
+  Windows, Linux, or macOS.
 * :doc:`choosing_backend` for deciding when Occam2D is the right model
   integration.
 * :doc:`../../tutorials/prepare_occam2d_inversion` for a practical Occam2D

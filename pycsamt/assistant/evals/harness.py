@@ -81,7 +81,9 @@ class EvalReport:
         if self.violations:
             lines.append(f"  hallucination violations: {len(self.violations)}")
         if self.test_pollution:
-            lines.append(f"  test-file pollution: {len(self.test_pollution)} record(s)")
+            lines.append(
+                f"  test-file pollution: {len(self.test_pollution)} record(s)"
+            )
         return "\n".join(lines)
 
 
@@ -200,13 +202,17 @@ def evaluate(
 
         # ── retrieval-quality guards ────────────────────────────────────
         nonempty.append(bool(ctx.chunks))
-        polluted = [c.source_path for c in ctx.chunks if _is_test_path(c.source_path)]
+        polluted = [
+            c.source_path for c in ctx.chunks if _is_test_path(c.source_path)
+        ]
         if polluted:
             test_pollution.append({"query": q, "paths": polluted})
         # Retrieval target: an explicit retrieval expectation (adversarial
         # paraphrases the keyword classifier can't label) or, failing that,
         # the classifier's expected_workflow.
-        exp_wf = rec.get("expected_retrieval_workflow") or rec.get("expected_workflow")
+        exp_wf = rec.get("expected_retrieval_workflow") or rec.get(
+            "expected_workflow"
+        )
         retrieved_wfs = {c.workflow for c in ctx.chunks if c.workflow}
         if exp_wf:
             wf_in_topk.append(exp_wf in retrieved_wfs)

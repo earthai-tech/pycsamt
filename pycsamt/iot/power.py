@@ -327,7 +327,9 @@ def estimate_energy_budget(config: EnergyConfig) -> EnergyEstimate:
     else:
         runtime_hours = 24.0 * config.usable_battery_wh / net_daily
     no_harvest_days = (
-        config.usable_battery_wh / load_daily if load_daily > 0 else float("inf")
+        config.usable_battery_wh / load_daily
+        if load_daily > 0
+        else float("inf")
     )
     issues = _estimate_issues(config, runtime_hours, net_daily)
     state = _estimate_state(config, runtime_hours, net_daily, issues)
@@ -396,7 +398,11 @@ def power_summary_table(
     api: bool | None = None,
 ) -> Any:
     """Return energy estimates as a pyCSAMT table."""
-    items = [estimates] if isinstance(estimates, EnergyEstimate) else (list(estimates))
+    items = (
+        [estimates]
+        if isinstance(estimates, EnergyEstimate)
+        else (list(estimates))
+    )
     ids = list(device_ids or [])
     rows = []
     for idx, estimate in enumerate(items):

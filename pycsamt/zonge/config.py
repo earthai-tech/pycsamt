@@ -126,7 +126,9 @@ class Zonge:
 
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""
-        attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        attrs = {
+            k: v for k, v in self.__dict__.items() if not k.startswith("_")
+        }
         attrs_str = ", ".join(f"{k}={v!r}" for k, v in attrs.items())
         return f"<{self.__class__.__name__}({attrs_str})>"
 

@@ -398,7 +398,9 @@ class ForwardConfig:
             if self.freq_min <= 0.0:
                 raise ValueError("freq_min must be strictly positive.")
             if self.freq_max <= self.freq_min:
-                raise ValueError("freq_max must be strictly greater than freq_min.")
+                raise ValueError(
+                    "freq_max must be strictly greater than freq_min."
+                )
             if self.n_freqs < 4:
                 raise ValueError("n_freqs must be at least 4.")
 
@@ -406,7 +408,9 @@ class ForwardConfig:
             if self.time_min <= 0.0:
                 raise ValueError("time_min must be strictly positive.")
             if self.time_max <= self.time_min:
-                raise ValueError("time_max must be strictly greater than time_min.")
+                raise ValueError(
+                    "time_max must be strictly greater than time_min."
+                )
             if self.n_times < 4:
                 raise ValueError("n_times must be at least 4.")
             if self.loop_radius <= 0.0:
@@ -423,7 +427,9 @@ class ForwardConfig:
             if self.rho_min <= 0.0:
                 raise ValueError("rho_min must be strictly positive.")
             if self.rho_max <= self.rho_min:
-                raise ValueError("rho_max must be strictly greater than rho_min.")
+                raise ValueError(
+                    "rho_max must be strictly greater than rho_min."
+                )
             if self.depth_max <= 0.0:
                 raise ValueError("depth_max must be strictly positive.")
 

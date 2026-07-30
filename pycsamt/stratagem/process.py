@@ -209,7 +209,9 @@ class StaticShiftCorrector(PyCSAMTObject, MetadataMixin):
                 f"that Z data is complete during spatial averaging.\n"
                 f"  No static-shift correction applied."
             )
-            stations = [edi.station or f"S{i:03d}" for i, edi in enumerate(edi_objects)]
+            stations = [
+                edi.station or f"S{i:03d}" for i, edi in enumerate(edi_objects)
+            ]
             self.factors_ = pd.DataFrame(
                 {
                     "station": stations,

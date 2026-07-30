@@ -131,7 +131,9 @@ class TimeLapseEM(PyCSAMTObject):
             raise ValueError("At least two surveys are required.")
         assert_compatible_grids(surveys)
         self.surveys = list(surveys)
-        self.times = list(times) if times is not None else list(range(len(surveys)))
+        self.times = (
+            list(times) if times is not None else list(range(len(surveys)))
+        )
         self.labels = (
             list(labels)
             if labels is not None
@@ -182,7 +184,9 @@ class TimeLapseEM(PyCSAMTObject):
         """
         base = self.surveys[baseline_idx].rho_2d
         return [
-            s.rho_2d - base for i, s in enumerate(self.surveys) if i != baseline_idx
+            s.rho_2d - base
+            for i, s in enumerate(self.surveys)
+            if i != baseline_idx
         ]
 
     # ── saturation change ──────────────────────────────────────────────────
@@ -313,7 +317,9 @@ class TimeLapseEM(PyCSAMTObject):
         others = [s for i, s in enumerate(self.surveys) if i != baseline_idx]
         rows = []
         for s in others:
-            wt_i = self._water_table_map(s, archie, rho_w, Sw_threshold, min_depth)
+            wt_i = self._water_table_map(
+                s, archie, rho_w, Sw_threshold, min_depth
+            )
             rows.append(wt_i - base_wt)
 
         return np.vstack(rows) if len(rows) > 1 else rows[0]
@@ -409,4 +415,6 @@ def _to_archie(petro: _PetroModel) -> ArchieModel:
         return petro
     if isinstance(petro, WaxmanSmitsModel):
         return ArchieModel(m=petro.m, n=petro.n, a=petro.a)
-    raise TypeError(f"petro must be ArchieModel or WaxmanSmitsModel, got {type(petro)}")
+    raise TypeError(
+        f"petro must be ArchieModel or WaxmanSmitsModel, got {type(petro)}"
+    )

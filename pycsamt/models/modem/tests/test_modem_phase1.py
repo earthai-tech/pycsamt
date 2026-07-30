@@ -307,7 +307,10 @@ class TestSourceLayout:
         assert (_SOURCE / "install_sources.sh").exists()
 
     def test_readme_exists(self):
-        assert (_SOURCE / "README.txt").exists()
+        # Merged from README.txt into an extension-less README
+        # (consolidating ModEM's upstream README with pycsamt's own
+        # build-instructions addendum into one file).
+        assert (_SOURCE / "README").exists()
 
     def test_makefile_2d_has_gfortran(self):
         # bundled Makefiles contain bytes outside cp1252: decode leniently

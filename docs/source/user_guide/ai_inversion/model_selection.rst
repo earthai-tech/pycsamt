@@ -161,7 +161,12 @@ Use :class:`pycsamt.ai.inversion.GCNInverter3D`,
 
 The GCN shares information among station nodes. It does not automatically mean
 that supervised examples were generated with a full numerical 3-D EM solver.
-Do not select it merely to label the product "3-D."
+Do not select it merely to label the product "3-D." ``Inv3DAgent(physics="mt1d")``
+(the default) trains on tiled 1-D columns; ``Inv3DAgent(physics="mt3d")``
+(:doc:`dataset3d`) trains on :term:`Genuine 3-D Maxwell training` volumes
+instead, at substantially higher cost per profile and still only as a
+research-stage slice, not a gated production path -- see :doc:`roadmap`'s M8
+entry before treating either mode's output as more validated than it is.
 
 When dimension is uncertain, compare conservative alternatives.  A common
 selection record includes a 1-D baseline, a 2-D or graph candidate, and a note

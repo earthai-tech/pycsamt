@@ -63,7 +63,9 @@ def _build_fc_ae_torch(
     try:
         import torch.nn as nn
     except ImportError as exc:
-        raise ImportError("PyTorch is required to build the FC autoencoder") from exc
+        raise ImportError(
+            "PyTorch is required to build the FC autoencoder"
+        ) from exc
 
     def _block(in_d: int, out_d: int, activation: bool = True):
         layers: list = [nn.Linear(in_d, out_d), nn.BatchNorm1d(out_d)]
@@ -248,7 +250,9 @@ class AnomalyDetector(BaseEMProcessor):
         if self.n_features is None:
             self.n_features = X.shape[1]
         elif X.shape[1] != self.n_features:
-            raise ValueError(f"Expected n_features={self.n_features}, got {X.shape[1]}")
+            raise ValueError(
+                f"Expected n_features={self.n_features}, got {X.shape[1]}"
+            )
 
         self._x_mean = X.mean(axis=0, keepdims=True)
         self._x_std = X.std(axis=0, keepdims=True) + 1e-8
@@ -366,7 +370,9 @@ class AnomalyDetector(BaseEMProcessor):
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for (xb,) in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
+            for (xb,) in DataLoader(
+                tr_ds, batch_size=batch_size, shuffle=True
+            ):
                 xb = xb.to(dev)
                 loss = mse(self._network(xb), xb)
                 opt.zero_grad()
@@ -519,7 +525,9 @@ class AnomalyDetector(BaseEMProcessor):
 
                 buf = io.BytesIO()
                 pickle.dump(self._pca, buf)
-                out["_pca_pickle"] = np.frombuffer(buf.getvalue(), dtype=np.uint8)
+                out["_pca_pickle"] = np.frombuffer(
+                    buf.getvalue(), dtype=np.uint8
+                )
             except Exception:
                 pass
         return out
@@ -530,7 +538,9 @@ class AnomalyDetector(BaseEMProcessor):
         thr = weights.pop("_threshold", None)
         self._threshold = float(thr[0]) if thr is not None else None
         backend_blob = weights.pop("_backend", None)
-        self._backend_name = str(backend_blob) if backend_blob is not None else "torch"
+        self._backend_name = (
+            str(backend_blob) if backend_blob is not None else "torch"
+        )
 
         pca_blob = weights.pop("_pca_pickle", None)
         if pca_blob is not None:

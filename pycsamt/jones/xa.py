@@ -396,7 +396,9 @@ class JFileAcc:
             output_ch, input_ch = comp_map[comp_lower]
 
             # --- Resistivity Plot (Log-Log) ---
-            rho_data = ds_site["rho"].sel(output_ch=output_ch, input_ch=input_ch)
+            rho_data = ds_site["rho"].sel(
+                output_ch=output_ch, input_ch=input_ch
+            )
             rho_data.plot.line(
                 ax=axes[0],
                 xscale="log",
@@ -406,7 +408,9 @@ class JFileAcc:
             )
 
             # --- Phase Plot (Semi-Log) ---
-            phi_data = ds_site["phi"].sel(output_ch=output_ch, input_ch=input_ch)
+            phi_data = ds_site["phi"].sel(
+                output_ch=output_ch, input_ch=input_ch
+            )
             if phase_mod is not None and isinstance(phase_mod, int):
                 phi_data = phi_data % phase_mod
 
@@ -509,7 +513,9 @@ def _ds_from_jfile(jf: JFile) -> xr.Dataset:
     # --- Resistivity and Phase Data (R/S) ---
     rho = _get_tensor_or_zeros(jf.Res, "resistivity", n_freq, np.float64)
     phi = _get_tensor_or_zeros(jf.Res, "phase", n_freq, np.float64)
-    rho_err = _get_tensor_or_zeros(jf.Res, "resistivity_err", n_freq, np.float64)
+    rho_err = _get_tensor_or_zeros(
+        jf.Res, "resistivity_err", n_freq, np.float64
+    )
     phi_err = _get_tensor_or_zeros(jf.Res, "phase_err", n_freq, np.float64)
     rho_rej = _get_rejection_flags(jf, "R", n_freq)
 
@@ -581,7 +587,9 @@ def _get_tensor_or_zeros(
     return np.zeros((n_freq, 2, 2), dtype=dtype)
 
 
-def _get_rejection_flags(jf: JFile, kind_prefix: str, n_freq: int) -> np.ndarray:
+def _get_rejection_flags(
+    jf: JFile, kind_prefix: str, n_freq: int
+) -> np.ndarray:
     """
     Extracts rejection flags from the original JBlocks for a given kind.
 

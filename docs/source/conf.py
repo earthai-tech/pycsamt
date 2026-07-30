@@ -335,6 +335,7 @@ html_css_files = [
     "css/code-dropdown.css",
     "css/hosted-preview.css",
     "css/whats-new.css",
+    "css/faq.css",
 ]
 html_js_files = [
     ("js/pycsamt-home.js", {"defer": "defer"}),
@@ -345,6 +346,7 @@ html_js_files = [
     ("js/api-search.js", {"defer": "defer"}),
     ("js/hosted-preview.js", {"defer": "defer"}),
     ("js/whats-new.js", {"defer": "defer"}),
+    ("js/faq.js", {"defer": "defer"}),
 ]
 # The landing page is a full-width, hand-designed layout: no primary sidebar
 # (the secondary one is removed via file metadata in index.rst).
@@ -357,7 +359,7 @@ html_copy_source = False
 # Pages that render full-width, with no secondary ("On this page") sidebar at
 # all: the hand-designed home page, the API reference whose object table needs
 # every pixel, and the generated examples-gallery grids (matched by pattern).
-_NO_SECONDARY_SIDEBAR = {"index", "api/index"}
+_NO_SECONDARY_SIDEBAR = {"index", "api/index", "faq"}
 
 # The support card is a site-wide appeal, not page content: it belongs on the
 # section landings people arrive at, not on all ~300 leaf pages.
@@ -429,13 +431,16 @@ def _configure_secondary_sidebar(
     )
 
 
-# "What's new" badge (see _static/js/whats-new.js): changelog.rst is the
-# single source of truth for the latest released version and its date, so
-# the badge data is derived from it at build time rather than hand-kept in
-# a separate JSON file that could go stale. A version section only counts
-# once it carries a "*Released YYYY-MM-DD.*" line -- see the Pre-release
-# checklist in development/documentation_build.rst.
-_CHANGELOG_PATH = os.path.join(os.path.dirname(__file__), "changelog.rst")
+# "What's new" badge (see _static/js/whats-new.js): docs/source/changelog/
+# (one file per major-version series, e.g. v2.rst) is the single source of
+# truth for the latest released version and its date, so the badge data is
+# derived from it at build time rather than hand-kept in a separate JSON
+# file that could go stale. A version section only counts once it carries a
+# "*Released YYYY-MM-DD.*" line -- see the Pre-release checklist in
+# development/documentation_build.rst. Every series file is scanned (not
+# just the current one) and the highest released version wins, so this
+# logic needs no manual update when a new series file appears.
+_CHANGELOG_DIR = os.path.join(os.path.dirname(__file__), "changelog")
 _CHANGELOG_VERSION_RE = re.compile(
     r"^(?P<version>\d+\.\d+\.\d+)\s+(?:\|[^|]+\|\s*)+$", re.MULTILINE
 )
@@ -444,31 +449,48 @@ _CHANGELOG_RELEASED_RE = re.compile(
 )
 
 
+def _version_key(version):
+    # _CHANGELOG_VERSION_RE only ever captures a plain "\d+.\d+.\d+" (an
+    # rc-suffixed heading like "2.0.0rc1 |Feature|" never matches -- there's
+    # no whitespace between the digits and "rc1"), so a plain numeric tuple
+    # is all that's needed here.
+    return tuple(int(part) for part in version.split("."))
+
+
 def _latest_release_info():
     try:
-        with open(_CHANGELOG_PATH, encoding="utf-8") as fh:
-            text = fh.read()
+        paths = sorted(os.listdir(_CHANGELOG_DIR))
     except OSError:
         return None
 
-    version_match = _CHANGELOG_VERSION_RE.search(text)
-    if not version_match:
-        return None
+    best = None
+    for name in paths:
+        if not name.endswith(".rst"):
+            continue
+        try:
+            with open(os.path.join(_CHANGELOG_DIR, name), encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            continue
 
-    # The release date, if present, immediately follows the version
-    # heading -- search only that window so an older section's date can
-    # never be mistaken for the latest one.
-    window = text[version_match.end() : version_match.end() + 500]
-    released_match = _CHANGELOG_RELEASED_RE.search(window)
-    if not released_match:
-        return None
+        for version_match in _CHANGELOG_VERSION_RE.finditer(text):
+            # The release date, if present, immediately follows the version
+            # heading -- search only that window so an older section's date
+            # can never be mistaken for this one's.
+            window = text[version_match.end() : version_match.end() + 500]
+            released_match = _CHANGELOG_RELEASED_RE.search(window)
+            if not released_match:
+                continue
 
-    version = version_match.group("version")
-    return {
-        "version": version,
-        "date": released_match.group("date"),
-        "url": f"release_notes/v{version}.html",
-    }
+            version = version_match.group("version")
+            if best is None or _version_key(version) > _version_key(best["version"]):
+                best = {
+                    "version": version,
+                    "date": released_match.group("date"),
+                    "url": f"release_notes/v{version}.html",
+                }
+
+    return best
 
 
 def _write_whats_new_json(app, exception):

@@ -108,7 +108,11 @@ def plot2d(
         if y is not None:
             y = np.log10(np.asarray(y, dtype=float))
 
-    y_vec = np.arange(n_rows, dtype=float) if y is None else np.asarray(y, dtype=float)
+    y_vec = (
+        np.arange(n_rows, dtype=float)
+        if y is None
+        else np.asarray(y, dtype=float)
+    )
     x_vec = (
         (np.arange(n_cols) * float(distance))
         if x is None
@@ -140,7 +144,9 @@ def plot2d(
 
         if plot_contours:
             levels = mticker.MaxNLocator(nbins=15).tick_values(vmin, vmax)
-            norm = BoundaryNorm(levels, ncolors=plt.get_cmap(cmap).N, clip=True)
+            norm = BoundaryNorm(
+                levels, ncolors=plt.get_cmap(cmap).N, clip=True
+            )
             mappable = axe.pcolormesh(
                 X, Y, np.flipud(ar), cmap=cmap, norm=norm, shading="auto"
             )
@@ -436,7 +442,10 @@ def make_plot_colors(
         else:
             # remake the dcolors my removing the xkcd: in the keys:
             DCOLORS = dict(
-                ((k.replace("xkcd:", ""), c) for k, c in mcolors.XKCD_COLORS.items())
+                (
+                    (k.replace("xkcd:", ""), c)
+                    for k, c in mcolors.XKCD_COLORS.items()
+                )
             )
 
         key_colors = list(DCOLORS.keys())
@@ -505,7 +514,8 @@ def savefigure(fig: object, figname: str = None, ext: str = ".png", **skws):
             + ext
         )
         warnings.warn(
-            "No name of figure is given. Figure should be renamed as " f"{figname!r}",
+            "No name of figure is given. Figure should be renamed as "
+            f"{figname!r}",
             stacklevel=2,
         )
 
@@ -557,7 +567,8 @@ def resetting_ticks(get_xyticks, number_of_ticks=None):
                 stacklevel=2,
             )
             raise PlotError(
-                f"<{type(number_of_ticks).__name__}> detected." " Must be integer."
+                f"<{type(number_of_ticks).__name__}> detected."
+                " Must be integer."
             )
 
     number_of_ticks = int(number_of_ticks)
@@ -568,7 +579,9 @@ def resetting_ticks(get_xyticks, number_of_ticks=None):
         if get_xyticks[-2] % 10 != 0:
             get_xyticks[-2] = get_xyticks[-2] - get_xyticks[-2] % 10
 
-        new_array = np.linspace(get_xyticks[1], get_xyticks[-2], number_of_ticks)
+        new_array = np.linspace(
+            get_xyticks[1], get_xyticks[-2], number_of_ticks
+        )
     else:
         new_array = np.array(get_xyticks)
 
@@ -641,7 +654,9 @@ def make_mpl_properties(n, prop="color"):
             props = d_colors
         else:
             rcolors = list(
-                itertools.repeat(d_colors, (n + len(d_colors)) // len(d_colors))
+                itertools.repeat(
+                    d_colors, (n + len(d_colors)) // len(d_colors)
+                )
             )
 
             props = list(itertools.chain(*rcolors))
@@ -656,7 +671,9 @@ def make_mpl_properties(n, prop="color"):
     # repeat the lines to meet the number of cv_size
     if prop == "line":
         d_lines = D_STYLES
-        rlines = list(itertools.repeat(d_lines, (n + len(d_lines)) // len(d_lines)))
+        rlines = list(
+            itertools.repeat(d_lines, (n + len(d_lines)) // len(d_lines))
+        )
         # combine all repeatlines
         props = list(itertools.chain(*rlines))
 
@@ -763,7 +780,9 @@ def controle_delineate_curve(res_deline=None, phase_deline=None):
                 xx_deline = list(xx_deline)
                 try:
                     if ii == 0:
-                        xx_deline = [np.ceil(np.log10(float(xx))) for xx in xx_deline]
+                        xx_deline = [
+                            np.ceil(np.log10(float(xx))) for xx in xx_deline
+                        ]
                     elif ii == 1:
                         xx_deline = [np.ceil(float(xx)) for xx in xx_deline]
 
@@ -1216,9 +1235,9 @@ def _get_xticks_formatage(
         # ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks_loc))
         # ax.set_xticklabels([fmt.format(x) for x in ticks_loc])
         tlst = [fmt.format(item) for item in xtick_range]
-        ax.set_yticklabels(tlst, **xlkws) if ticks == "y" else ax.set_xticklabels(
+        ax.set_yticklabels(
             tlst, **xlkws
-        )
+        ) if ticks == "y" else ax.set_xticklabels(tlst, **xlkws)
 
 
 def _set_sns_style(s, /):
@@ -1283,8 +1302,14 @@ def plot_bar(
             :func:`~matplotlib.pyplot.bar` or :func:`~matplotlib.pyplot.barh`.
     """
 
-    assert str(kind).lower().strip() in ("vertical", "v", "horizontal", "h",), (
-        "Support only the horizontal 'h' and vertical 'v' bar plots." " Got {kind!r}"
+    assert str(kind).lower().strip() in (
+        "vertical",
+        "v",
+        "horizontal",
+        "h",
+    ), (
+        "Support only the horizontal 'h' and vertical 'v' bar plots."
+        " Got {kind!r}"
     )
     kind = str(kind).lower().strip()
 
@@ -1657,7 +1682,9 @@ def plot_text(
         ylabel = y if isinstance(y, str) else y.name
 
     if x is None and y is None:
-        raise TypeError("x and y are needed for text plot. NoneType cannot be plotted.")
+        raise TypeError(
+            "x and y are needed for text plot. NoneType cannot be plotted."
+        )
 
     x, y = assert_xy_in(x, y, data=data)
 

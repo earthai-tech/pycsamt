@@ -55,7 +55,9 @@ class Regularization(PyCSAMTObject, MetadataMixin):
         True
         """
         if self.kind not in {"none", "smooth", "damped", "blocky"}:
-            raise ValueError("regularization kind must be none/smooth/damped/blocky.")
+            raise ValueError(
+                "regularization kind must be none/smooth/damped/blocky."
+            )
         for name in ("alpha_s", "alpha_x", "alpha_z", "reference_weight"):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative.")
@@ -170,7 +172,9 @@ def regularization_weight(cfg: Any, *, default: float = 0.0) -> float:
     3.0
     """
     opts = dict(getattr(cfg, "backend_options", {}) or {})
-    return float(opts.get("regularization_weight", opts.get("reg_weight", default)))
+    return float(
+        opts.get("regularization_weight", opts.get("reg_weight", default))
+    )
 
 
 def pygimli_lambda(cfg: Any, *, default: float = 20.0) -> float:
@@ -281,7 +285,9 @@ def regularization_residual(
         ref_weight = max(
             float(reg.reference_weight), 1.0 if reference is not None else 0.0
         )
-        scale = np.sqrt(alpha_s * max(ref_weight, 1.0 if reg.kind == "damped" else 0.0))
+        scale = np.sqrt(
+            alpha_s * max(ref_weight, 1.0 if reg.kind == "damped" else 0.0)
+        )
         if scale > 0.0:
             parts.append(scale * (arr - ref).reshape(-1))
 

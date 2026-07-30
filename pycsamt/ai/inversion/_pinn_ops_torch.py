@@ -113,9 +113,10 @@ def _mt1d_torch_batch(freqs_t, log_rho, log_thick):
     thick = 10.0**log_thick
     omega = 2.0 * _PI * freqs_t
 
-    j_mu_w = torch.complex(torch.zeros_like(omega), _MU0 * omega,).unsqueeze(
-        0
-    )  # (1, F)
+    j_mu_w = torch.complex(
+        torch.zeros_like(omega),
+        _MU0 * omega,
+    ).unsqueeze(0)  # (1, F)
 
     rho_c = rho.to(torch.cdouble)
 
@@ -259,7 +260,9 @@ def _fit_station_torch(
         history.append(loss.detach().item())
 
         if log_every > 0 and (ep == 1 or ep % log_every == 0):
-            print(f"  {obs.name}  ep {ep:>5d}/{epochs}  loss={loss.item():.5f}")
+            print(
+                f"  {obs.name}  ep {ep:>5d}/{epochs}  loss={loss.item():.5f}"
+            )
 
     return {
         "log_rho": (log_rho.detach().cpu().numpy()),

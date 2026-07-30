@@ -492,7 +492,9 @@ def export_edis(  # exportEDIS
     # Ensure we truly have EDI objects (no Z objects mixed in).
     kind = check_em_kind(edi_objs)
     if kind != "EDI":
-        raise EdIDataError("Expected a collection of EDI objects; got non-EDI items.")
+        raise EdIDataError(
+            "Expected a collection of EDI objects; got non-EDI items."
+        )
 
     # Normalize containers (accept tuples/generators, exclude strings).
     edi_objs = is_iterable(
@@ -677,7 +679,9 @@ def plot_confidence(  # plot_confidence_in
         )
 
         # Optional outlier removal for cleaner 2-D maps.
-        ar2d = remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
+        ar2d = (
+            remove_outliers(rerr, fill_value=np.nan) if drop_outliers else rerr
+        )
 
         ax = plot2d(
             ar2d,
@@ -907,7 +911,9 @@ def tensor2d(  # get2dtensor
             "Use a dedicated frequency-to-2D helper instead."
         )
     if z_or_edis_obj_list is None:
-        raise EMError(f"Cannot build {name!r} 2D matrix from a missing collection.")
+        raise EMError(
+            f"Cannot build {name!r} 2D matrix from a missing collection."
+        )
 
     # Ensure the collection is homogeneous (all EDI or all Z).
     kind_in = check_em_kind(z_or_edis_obj_list)
@@ -1413,7 +1419,8 @@ def _parse_station_index(station: int | str) -> int:
     m = re.search(r"\\d+", str(station), flags=re.IGNORECASE)
     if m is None:
         raise TypeError(
-            "Station should be an integer or include a position " "number, e.g., 'S00'."
+            "Station should be an integer or include a position "
+            "number, e.g., 'S00'."
         )
     return int(m.group())
 
@@ -1501,7 +1508,8 @@ def _apply_filters(
     # If both are provided, prefer freq limits.
     if freq_limits is not None and period_limits is not None:
         print(
-            "Both 'freq_limits' and 'period_limits' provided. " "Using 'freq_limits'."
+            "Both 'freq_limits' and 'period_limits' provided. "
+            "Using 'freq_limits'."
         )
         period_limits = None
 
@@ -1749,7 +1757,9 @@ def _draw_station_panels(
 
         if i == 0:
             ax_r.set_ylabel(
-                "Re[Z] (mV/km·nT)" if plot_z else r"App. Res. ($\Omega\cdot m$)",
+                "Re[Z] (mV/km·nT)"
+                if plot_z
+                else r"App. Res. ($\Omega\cdot m$)",
                 fontsize=kwargs.get("font_size", font_size),
             )
             ax_p.set_ylabel(
@@ -2197,12 +2207,17 @@ def plot_lcurve(
             hansen_point = _hansen_knee(rough_arr, rms_arr)
 
         if hansen_point is not None:
-            if not (isinstance(hansen_point, (tuple, list)) and len(hansen_point) == 2):
+            if not (
+                isinstance(hansen_point, (tuple, list))
+                and len(hansen_point) == 2
+            ):
                 raise ValueError(
                     "Hansen knee point must be a tuple '(roughness, rms)'."
                 )
             hx, hy = float(hansen_point[0]), float(hansen_point[1])
-            hpoint_kws = _merge_plot_kws(hpoint_kws, {"marker": "o", "color": "red"})
+            hpoint_kws = _merge_plot_kws(
+                hpoint_kws, {"marker": "o", "color": "red"}
+            )
             ax.plot(hx, hy, **hpoint_kws)
             ax.annotate(
                 f"{hx:g}",
@@ -2214,7 +2229,9 @@ def plot_lcurve(
 
         # Annotate tau values at each point (skip the highlighted knee).
         if tau is not None:
-            tau_arr = np.asarray(is_iterable(tau, exclude_string=True, transform=True))
+            tau_arr = np.asarray(
+                is_iterable(tau, exclude_string=True, transform=True)
+            )
             if tau_arr.shape[0] != rms_arr.shape[0]:
                 raise ValueError(
                     "'tau' must have the same length as 'rms' and "
@@ -2223,7 +2240,9 @@ def plot_lcurve(
             # Column-stack roughness and rms into point coordinates.
             pts = np.column_stack([rough_arr, rms_arr])
             for (x, y), tval in zip(pts, tau_arr):
-                if hansen_point is not None and np.allclose([x, y], hansen_point):
+                if hansen_point is not None and np.allclose(
+                    [x, y], hansen_point
+                ):
                     continue
                 ax.annotate(
                     str(tval),

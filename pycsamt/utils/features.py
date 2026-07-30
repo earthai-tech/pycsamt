@@ -208,7 +208,9 @@ def find_position_bounds(
     if positions is not None:
         pos_arr = np.asarray(positions, dtype=float)
         if pos_arr.size != n:
-            raise ValueError(f"positions length {pos_arr.size} != rho_range length {n}")
+            raise ValueError(
+                f"positions length {pos_arr.size} != rho_range length {n}"
+            )
     else:
         # generate centered positions
         offsets = (np.arange(n) - idx) * dipole

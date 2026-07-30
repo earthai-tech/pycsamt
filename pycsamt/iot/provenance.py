@@ -292,13 +292,17 @@ class ProvenanceRecord(PyCSAMTObject):
         self.lon = _c.as_longitude(self.lon)
         self.elevation = _c.as_elevation(self.elevation)
         if self.sample_rate_hz is not None:
-            self.sample_rate_hz = _c.as_positive(self.sample_rate_hz, "sample_rate_hz")
+            self.sample_rate_hz = _c.as_positive(
+                self.sample_rate_hz, "sample_rate_hz"
+            )
         if self.occupation_start is not None:
             self.occupation_start = _c.as_timestamp(
                 self.occupation_start, "occupation_start"
             )
         if self.occupation_end is not None:
-            self.occupation_end = _c.as_timestamp(self.occupation_end, "occupation_end")
+            self.occupation_end = _c.as_timestamp(
+                self.occupation_end, "occupation_end"
+            )
 
     @property
     def occupation_seconds(self) -> float | None:
@@ -307,7 +311,9 @@ class ProvenanceRecord(PyCSAMTObject):
             return None
         return float(self.occupation_end - self.occupation_start)
 
-    def add_raw_file(self, path: str, *, algo: str = "sha256") -> dict[str, Any]:
+    def add_raw_file(
+        self, path: str, *, algo: str = "sha256"
+    ) -> dict[str, Any]:
         """Hash *path* and attach the integrity record."""
         record = hash_raw_file(path, algo=algo)
         self.raw_files.append(record)
@@ -367,7 +373,9 @@ class AcquisitionManifest(PyCSAMTObject):
     def validate(self) -> None:
         self.survey_id = _c.as_nonempty_str(self.survey_id, "survey_id")
         self.records = [
-            r if isinstance(r, ProvenanceRecord) else ProvenanceRecord(**dict(r))
+            r
+            if isinstance(r, ProvenanceRecord)
+            else ProvenanceRecord(**dict(r))
             for r in list(self.records or [])
         ]
         if not self.environment:
@@ -427,7 +435,9 @@ class AcquisitionManifest(PyCSAMTObject):
         """Return the QC decisions as a tamper-evident hash chain."""
         return hash_chain(self.qc_decisions)
 
-    def sign(self, key: str | bytes, *, algo: str = "sha256") -> dict[str, Any]:
+    def sign(
+        self, key: str | bytes, *, algo: str = "sha256"
+    ) -> dict[str, Any]:
         """Return an HMAC-signed envelope around the manifest.
 
         The result wraps the manifest payload under ``manifest`` alongside
@@ -454,7 +464,9 @@ class AcquisitionManifest(PyCSAMTObject):
         if parent:
             os.makedirs(parent, exist_ok=True)
         with open(path, "w", encoding="utf-8") as handle:
-            json.dump(self.sign(key, algo=algo), handle, indent=indent, default=str)
+            json.dump(
+                self.sign(key, algo=algo), handle, indent=indent, default=str
+            )
         return os.path.abspath(path)
 
 
@@ -483,7 +495,9 @@ def build_acquisition_manifest(
         method=method,
         operator=operator,
         records=[
-            r if isinstance(r, ProvenanceRecord) else ProvenanceRecord(**dict(r))
+            r
+            if isinstance(r, ProvenanceRecord)
+            else ProvenanceRecord(**dict(r))
             for r in list(records or [])
         ],
         devices=[dict(d) for d in list(devices or [])],

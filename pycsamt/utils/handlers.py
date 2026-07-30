@@ -85,7 +85,9 @@ def columns_manager(
     """
     # Handle None input
     if columns is None:
-        return default if default is not None else (None if empty_as_none else [])
+        return (
+            default if default is not None else (None if empty_as_none else [])
+        )
 
     # Handle case where a single numeric value is passed, convert it to list
     if isinstance(columns, (int, float)):
@@ -115,7 +117,9 @@ def columns_manager(
             if error == "raise":
                 raise ValueError("Error converting columns to list") from e
             elif error == "warn":
-                warnings.warn(f"Could not convert columns to list: {e}", stacklevel=2)
+                warnings.warn(
+                    f"Could not convert columns to list: {e}", stacklevel=2
+                )
             else:
                 pass  # Ignore errors silently
 

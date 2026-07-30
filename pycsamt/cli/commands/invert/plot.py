@@ -609,14 +609,18 @@ def plot_1d(
             "For ModEM depth slices use 'pycsamt invert plot section'."
         )
     result = _load_inversion_result(workdir, solver_name, iteration, verbose)
-    station_list = [s.strip() for s in stations.split(",")] if stations else None
+    station_list = (
+        [s.strip() for s in stations.split(",")] if stations else None
+    )
 
     try:
         from pycsamt.models.occam2d.plot import (
             PlotSounding1D,  # noqa: PLC0415
         )
 
-        fig = PlotSounding1D(result, stations=station_list, cmap=cmap, dpi=dpi).plot()
+        fig = PlotSounding1D(
+            result, stations=station_list, cmap=cmap, dpi=dpi
+        ).plot()
     except Exception as exc:  # noqa: BLE001
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)

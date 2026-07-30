@@ -34,7 +34,9 @@ class GroupRMSLog:
 
     path: Path | None = None
     headers: list[str] = field(default_factory=list)
-    rms_log: np.ndarray = field(default_factory=lambda: np.empty((0, 0), dtype=float))
+    rms_log: np.ndarray = field(
+        default_factory=lambda: np.empty((0, 0), dtype=float)
+    )
 
     @property
     def n_iterations(self) -> int:
@@ -93,7 +95,9 @@ def read_group_rms_log(path: str | Path) -> GroupRMSLog:
     remaining = "\n".join(lines[1:])
     n_cols = len(result.headers)
     if n_cols > 0 and remaining.strip():
-        vals = np.fromstring(remaining.replace("\n", " "), sep=" ", dtype=float)
+        vals = np.fromstring(
+            remaining.replace("\n", " "), sep=" ", dtype=float
+        )
         n_rows = len(vals) // n_cols
         if n_rows > 0:
             result.rms_log = vals[: n_rows * n_cols].reshape(n_rows, n_cols)

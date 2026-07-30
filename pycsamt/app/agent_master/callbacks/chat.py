@@ -334,7 +334,9 @@ def _fig_accordion(figs: dict) -> html.Div:
     Collapsed by default to save space.
     """
     n = len(figs)
-    thumbs = [_fig_thumb_item(k, v["title"], v["b64"]) for k, v in figs.items()]
+    thumbs = [
+        _fig_thumb_item(k, v["title"], v["b64"]) for k, v in figs.items()
+    ]
     header = html.Span(
         [
             html.I(
@@ -663,7 +665,11 @@ def _code_block(code: str) -> html.Div:
                 [
                     html.Summary(
                         [
-                            html.I(className=("bi bi-chevron-right am-code-chevron")),
+                            html.I(
+                                className=(
+                                    "bi bi-chevron-right am-code-chevron"
+                                )
+                            ),
                             html.I(
                                 className=("bi bi-code-slash me-1"),
                                 style={"color": "#61afef"},
@@ -807,7 +813,9 @@ def _agent_bubble(
                             html.Summary(
                                 [
                                     html.I(
-                                        className=("bi bi-check2-circle am-trace-tick")
+                                        className=(
+                                            "bi bi-check2-circle am-trace-tick"
+                                        )
                                     ),
                                     html.Span(
                                         f"{n_steps} step"
@@ -819,7 +827,9 @@ def _agent_bubble(
                                         className="am-trace-label",
                                     ),
                                     html.I(
-                                        className=("bi bi-chevron-right am-trace-chev")
+                                        className=(
+                                            "bi bi-chevron-right am-trace-chev"
+                                        )
                                     ),
                                 ],
                                 className="am-trace-summary",
@@ -1118,7 +1128,9 @@ def _waiting_bubble(wf: str) -> html.Div:
                                 className=("bi bi-sliders2 me-2"),
                                 style={"color": ("var(--blue)")},
                             ),
-                            html.Span(f"To run {label}, I need a few parameters."),
+                            html.Span(
+                                f"To run {label}, I need a few parameters."
+                            ),
                             html.Span(
                                 " Please fill in"
                                 " the form above"
@@ -1232,7 +1244,9 @@ def _match_group(ref: str, groups: dict) -> str | None:
     if ref_l.isdigit():
         n = int(ref_l)
         hits = [
-            key for key in groups if n in [int(run) for run in re.findall(r"\d+", key)]
+            key
+            for key in groups
+            if n in [int(run) for run in re.findall(r"\d+", key)]
         ]
     else:
         hits = [key for key in groups if ref_l in key.lower()]
@@ -1266,7 +1280,9 @@ _HYBRID_KWS = frozenset(
 
 def _is_pinn_or_hybrid(text: str) -> bool:
     t = text.lower()
-    return any(kw in t for kw in _PINN_KWS) or any(kw in t for kw in _HYBRID_KWS)
+    return any(kw in t for kw in _PINN_KWS) or any(
+        kw in t for kw in _HYBRID_KWS
+    )
 
 
 # ── Application launchers (web / mapview / desktop) ──────────────
@@ -1583,7 +1599,9 @@ def _launch_bubble(
                     style={"color": ("var(--green)" if ok else "var(--red)")},
                 ),
                 html.Strong(
-                    title if ok else title.replace("Launching", "Could not launch")
+                    title
+                    if ok
+                    else title.replace("Launching", "Could not launch")
                 ),
             ],
             className="am-webapp-hdr",
@@ -1604,7 +1622,9 @@ def _launch_bubble(
             )
         )
     default_note = (
-        "Server is starting — the link will be ready in a few seconds." if url else ""
+        "Server is starting — the link will be ready in a few seconds."
+        if url
+        else ""
     )
     note = note or default_note
     if note:
@@ -1744,7 +1764,8 @@ def _capability_text() -> str:
         " pseudosections, 3-D quick looks);\n"
         "- *“open the web app”* — the full web application (visual pipeline"
         " editor, inversion pages);\n"
-        "- *“open the desktop app”* — the native desktop GUI.\n\n" + _api_key_hint()
+        "- *“open the desktop app”* — the native desktop GUI.\n\n"
+        + _api_key_hint()
     )
 
 
@@ -1862,7 +1883,9 @@ def _smart_unknown_reply(text: str, edi_store: dict) -> str | None:
 
     where = f" for **{line_lbl}**{ordinal_note}" if line_lbl else ""
     suffix = f" of {line_lbl}" if line_lbl else ""
-    menu = "\n".join(f"- **{lbl}** — *“{ex}{suffix}”*" for lbl, ex in _PLOT_MENU)
+    menu = "\n".join(
+        f"- **{lbl}** — *“{ex}{suffix}”*" for lbl, ex in _PLOT_MENU
+    )
     return (
         f"Happy to plot something{where} — which figure would "
         "you like?\n\n"
@@ -1892,7 +1915,8 @@ def _dispatch_question(
     ctx_str = ""
     if history:
         recent = [
-            f"{m.get('role', 'user')}: {m.get('content', '')}" for m in history[-4:]
+            f"{m.get('role', 'user')}: {m.get('content', '')}"
+            for m in history[-4:]
         ]
         ctx_str = "\n".join(recent)
 
@@ -1900,7 +1924,9 @@ def _dispatch_question(
     # "same for line 3") inherits the active workflow / line for retrieval.
     sess = _session()
     session_ctx = {
-        "last_workflow": getattr(sess, "last_workflow", None) if sess else None,
+        "last_workflow": getattr(sess, "last_workflow", None)
+        if sess
+        else None,
         "last_line": getattr(sess, "line", None) if sess else None,
         "recent_turns": history[-6:] if history else None,
     }
@@ -1911,7 +1937,9 @@ def _dispatch_question(
             api_key=api_key,
             model=sel_model,
         )
-        res = qa.execute({"question": text, "context": ctx_str, "session": session_ctx})
+        res = qa.execute(
+            {"question": text, "context": ctx_str, "session": session_ctx}
+        )
 
     answer = (
         res.get("answer")
@@ -1925,7 +1953,8 @@ def _dispatch_question(
         offline or (res.get("source") == "rag_offline")
     ):
         answer = (
-            answer + "\n\n---\n*Offline answer composed from the pyCSAMT reference."
+            answer
+            + "\n\n---\n*Offline answer composed from the pyCSAMT reference."
             " For a fuller, synthesised response, add an API key (Claude,"
             " OpenAI, Gemini, DeepSeek or MiniMax) in **Settings**.*"
         )
@@ -1982,7 +2011,9 @@ def _dispatch_plot(
             )
         else:
             msg = res.summary + (
-                "\n\nHint: " + (res.get("hint") or "") if res.get("hint") else ""
+                "\n\nHint: " + (res.get("hint") or "")
+                if res.get("hint")
+                else ""
             )
         _update_job(
             jid,
@@ -2057,7 +2088,9 @@ def _dispatch_tool(
     where = f" for {label}" if label else ""
     step(f"Running {_labels.get(kind, kind)}...", "running")
 
-    res = ToolAgent().execute({"path": edi_path, "kind": kind, **(params or {})})
+    res = ToolAgent().execute(
+        {"path": edi_path, "kind": kind, **(params or {})}
+    )
     if res.status == "failed":
         step("Analysis failed", "done")
         _update_job(
@@ -2225,14 +2258,18 @@ def _dispatch_metrics(
     warnings: list[str] = []
     if len(targets) == 1:
         label, src = targets[0]
-        res = MetricsAgent().execute({"sites": src, "kinds": kinds, "label": label})
+        res = MetricsAgent().execute(
+            {"sites": src, "kinds": kinds, "label": label}
+        )
         result_text = res.summary
         warnings = list(res.warnings or [])
     else:
         # All lines: one compact line per survey line.
         out_lines = []
         for label, src in targets:
-            res = MetricsAgent().execute({"sites": src, "kinds": kinds, "label": label})
+            res = MetricsAgent().execute(
+                {"sites": src, "kinds": kinds, "label": label}
+            )
             if res.status != "success":
                 out_lines.append(f"- **{label}**: {res.summary}")
                 continue
@@ -2374,7 +2411,9 @@ def _collect_prep_files(result, prep_step: str):
     import os
 
     exec_res = (result.data or {}).get("result")
-    step_results = exec_res.data if exec_res is not None and exec_res.data else {}
+    step_results = (
+        exec_res.data if exec_res is not None and exec_res.data else {}
+    )
     sres = step_results.get(prep_step)
     d = getattr(sres, "data", None) or {}
     files = []
@@ -2387,7 +2426,9 @@ def _collect_prep_files(result, prep_step: str):
                 files.append(str(p))
         except (OSError, ValueError):
             continue
-    stats = {k: d.get(k) for k in ("n_stations", "n_periods", "n_data") if d.get(k)}
+    stats = {
+        k: d.get(k) for k in ("n_stations", "n_periods", "n_data") if d.get(k)
+    }
     warns = list(getattr(sres, "warnings", None) or [])
     return files, stats, warns, step_results
 
@@ -2484,7 +2525,9 @@ def _dispatch_inversion_prep(
         if _ic.get(k) not in (None, "", [])
     }
     if prep_params:
-        cfg.setdefault("step_params", {}).setdefault(prep_step, {}).update(prep_params)
+        cfg.setdefault("step_params", {}).setdefault(prep_step, {}).update(
+            prep_params
+        )
 
     multi = len(targets) > 1
     figs: dict = {}
@@ -2515,12 +2558,16 @@ def _dispatch_inversion_prep(
             continue
 
         ok = result.status != "failed"
-        files, stats, warns, step_results = _collect_prep_files(result, prep_step)
+        files, stats, warns, step_results = _collect_prep_files(
+            result, prep_step
+        )
 
         # keep only the prep/report step figures, labelled per line
         _fig_steps = _WORKFLOW_FIGURE_STEPS.get(wtype) or set()
         for sname, sres in step_results.items():
-            sfigs = (getattr(sres, "data", None) or {}).get("figures", {}) or {}
+            sfigs = (getattr(sres, "data", None) or {}).get(
+                "figures", {}
+            ) or {}
             for fname, fig in sfigs.items():
                 if not isinstance(fig, plt.Figure):
                     continue
@@ -2726,7 +2773,9 @@ def _line_stats(label: str, sites, warnings: list[str]) -> dict:
     if tmins and tmaxs:
         freq = (1.0 / max(tmaxs), 1.0 / min(tmins))
 
-    scores = [float(r["qc_score"]) for r in rows if r.get("qc_score") is not None]
+    scores = [
+        float(r["qc_score"]) for r in rows if r.get("qc_score") is not None
+    ]
     qc = float(np.nanmean(scores)) if scores else None
     flagged = sum(
         1
@@ -2756,7 +2805,8 @@ def _line_stats(label: str, sites, warnings: list[str]) -> dict:
                 ns.append(n)
             es, ns = np.asarray(es), np.asarray(ns)
             length_km = (
-                float(np.hypot(es.max() - es.min(), ns.max() - ns.min())) / 1000.0
+                float(np.hypot(es.max() - es.min(), ns.max() - ns.min()))
+                / 1000.0
             )
     except Exception:  # noqa: BLE001
         pass
@@ -2828,7 +2878,11 @@ def _overview_payload(lines: list[dict], warnings: list[str]) -> dict:
                 "label": ln["label"],
                 "n_stations": ln["n_stations"],
                 "freq": _fmt_freq(ln.get("freq")),
-                "qc": (f"{ln['qc']:.0f}/100" if ln.get("qc") is not None else "n/a"),
+                "qc": (
+                    f"{ln['qc']:.0f}/100"
+                    if ln.get("qc") is not None
+                    else "n/a"
+                ),
                 "flagged": ln.get("flagged", 0),
             }
             for ln in lines
@@ -2994,7 +3048,8 @@ def _dispatch_data_overview(
             import os as _os
 
             label = (
-                _os.path.basename(str(edi_store["path"]).rstrip("/\\")) or "the survey"
+                _os.path.basename(str(edi_store["path"]).rstrip("/\\"))
+                or "the survey"
             )
             result = (
                 f"One dataset is loaded (**{label}**) with no "
@@ -3164,11 +3219,15 @@ def _dispatch_code(
     # script is immediately runnable; otherwise code_gen inserts a
     # /path/to/EDIs placeholder.
     if not resolved_line:
-        edi_path = (edi_store or {}).get("path", "") or cfg.get("data_path", "")
+        edi_path = (edi_store or {}).get("path", "") or cfg.get(
+            "data_path", ""
+        )
         if edi_path:
             cfg["data_path"] = edi_path
 
-    output_dir = (settings.get("output_dir") or "").strip() or "pycsamt_workflow_output"
+    output_dir = (
+        settings.get("output_dir") or ""
+    ).strip() or "pycsamt_workflow_output"
 
     _update_job(jid, workflow="code_gen")
     step("Generating code...", "running")
@@ -3460,7 +3519,10 @@ def _run_agent(
         _kw_wf = _cwf(text, default=None)
         _router_wf = (
             decision.workflow
-            if (decision.workflow in _WF_STEPS or decision.workflow in _PLOT_WORKFLOWS)
+            if (
+                decision.workflow in _WF_STEPS
+                or decision.workflow in _PLOT_WORKFLOWS
+            )
             else None
         )
         _ctx_wf = cfg.get("workflow")
@@ -3480,7 +3542,10 @@ def _run_agent(
         if (
             _resolved_wf is None
             and _GENERIC_ANALYSIS_RE.search(text or "")
-            and ((edi_store or {}).get("path") or (edi_store or {}).get("groups"))
+            and (
+                (edi_store or {}).get("path")
+                or (edi_store or {}).get("groups")
+            )
         ):
             _resolved_wf = "phase_analysis"
         _known_wf = (
@@ -3669,9 +3734,7 @@ def _run_agent(
                 "batch_export",
                 "freq_editor",  # layered_model is synthetic → no data needed
             }
-        ) | frozenset(
-            _CORR_METHODS
-        )  # all correction methods need data
+        ) | frozenset(_CORR_METHODS)  # all correction methods need data
         if wtype in _EDI_REQUIRED and not edi_path:
             _update_job(
                 jid,
@@ -3690,7 +3753,9 @@ def _run_agent(
         # Friendly label for plot / tool messages (line, selected lines, dir).
         import os as _os
 
-        _task_label = _resolved_line or (", ".join(sel_lines) if sel_lines else "")
+        _task_label = _resolved_line or (
+            ", ".join(sel_lines) if sel_lines else ""
+        )
         if not _task_label and isinstance(edi_path, str) and edi_path:
             _task_label = _os.path.basename(edi_path.rstrip("/\\"))
 
@@ -4155,7 +4220,10 @@ def register_chat(app) -> None:
         msgs = [
             c
             for c in (current_msgs or [])
-            if not (isinstance(c, dict) and c.get("props", {}).get("id") == IDs.WELCOME)
+            if not (
+                isinstance(c, dict)
+                and c.get("props", {}).get("id") == IDs.WELCOME
+            )
         ]
         msgs.append(_user_bubble(text, mid=_user_mid))
 

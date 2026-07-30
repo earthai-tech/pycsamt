@@ -123,7 +123,9 @@ class TensorRotationAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -179,7 +181,9 @@ class TensorRotationAgent(BaseAgent):
 
             if mask.any():
                 ratio_a = float(
-                    np.nanmean(np.abs(z_rot[mask, 0, 0]) / np.abs(z_rot[mask, 0, 1]))
+                    np.nanmean(
+                        np.abs(z_rot[mask, 0, 0]) / np.abs(z_rot[mask, 0, 1])
+                    )
                 )
                 diag_ratios_after.append(ratio_a)
 
@@ -247,7 +251,11 @@ class TensorRotationAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
         if self.api_key and n_written:
-            dr_str = f"{diag_reduction:+.3f}" if not np.isnan(diag_reduction) else "N/A"
+            dr_str = (
+                f"{diag_reduction:+.3f}"
+                if not np.isnan(diag_reduction)
+                else "N/A"
+            )
             prompt = (
                 f"Tensor rotation summary:\n"
                 f"  Rotation angle: {theta:.1f}°\n"
@@ -260,7 +268,9 @@ class TensorRotationAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0
-        dr_disp = f"{diag_reduction:+.3f}" if not np.isnan(diag_reduction) else "N/A"
+        dr_disp = (
+            f"{diag_reduction:+.3f}" if not np.isnan(diag_reduction) else "N/A"
+        )
         return AgentResult(
             status="success" if n_written > 0 else "needs_review",
             summary=(
@@ -300,19 +310,27 @@ def _write_rotated_edi(
     try:
         # Site wrappers have no writer of their own: materialise the
         # underlying EDIFile (which has write/write_new_edi)
-        if not (hasattr(ed, "write") or hasattr(ed, "write_new_edi")) and callable(
-            getattr(ed, "to_edi", None)
-        ):
+        if not (
+            hasattr(ed, "write") or hasattr(ed, "write_new_edi")
+        ) and callable(getattr(ed, "to_edi", None)):
             ed = ed.to_edi()
 
         # Try write_new_edi if the EDI object supports it
-        if hasattr(ed, "write_new_edi") and hasattr(ed, "Z") and ed.Z is not None:
+        if (
+            hasattr(ed, "write_new_edi")
+            and hasattr(ed, "Z")
+            and ed.Z is not None
+        ):
             import copy
 
             Z_copy = copy.deepcopy(ed.Z)
             Z_copy.z = z_rot
             Tip_copy = None
-            if tip_rot is not None and hasattr(ed, "Tip") and ed.Tip is not None:
+            if (
+                tip_rot is not None
+                and hasattr(ed, "Tip")
+                and ed.Tip is not None
+            ):
                 Tip_copy = copy.deepcopy(ed.Tip)
                 if hasattr(Tip_copy, "tipper"):
                     Tip_copy.tipper = tip_rot[:, np.newaxis, :]
@@ -353,7 +371,9 @@ def _write_rotated_edi(
         return None
 
 
-def _plot_rotation_summary(sites: Any, theta: float, warnings: list[str]) -> Any:
+def _plot_rotation_summary(
+    sites: Any, theta: float, warnings: list[str]
+) -> Any:
     """Simple bar chart: mean |Zxx/Zxy| per station before rotation."""
     import matplotlib.pyplot as plt
 
@@ -375,11 +395,15 @@ def _plot_rotation_summary(sites: Any, theta: float, warnings: list[str]) -> Any
             mask = np.isfinite(z[:, 0, 0]) & (np.abs(z[:, 0, 1]) > 1e-30)
             if not mask.any():
                 continue
-            rb = float(np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1])))
+            rb = float(
+                np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1]))
+            )
             z_r = rotate_impedance(z, theta)
             if z_r.ndim == 2:
                 z_r = z_r[np.newaxis]
-            ra = float(np.nanmean(np.abs(z_r[mask, 0, 0]) / np.abs(z_r[mask, 0, 1])))
+            ra = float(
+                np.nanmean(np.abs(z_r[mask, 0, 0]) / np.abs(z_r[mask, 0, 1]))
+            )
             station_names.append(nm)
             ratios_before.append(rb)
             ratios_after.append(ra)

@@ -420,7 +420,9 @@ def scale_position(
     return pd.Series(y_fit, index=y.index), popt, pcov
 
 
-def drawn_boundaries(profile: Any, peak_value: float, peak_index: int) -> tuple:
+def drawn_boundaries(
+    profile: Any, peak_value: float, peak_index: int
+) -> tuple:
     """
     Identify anomaly boundaries around a peak in a 1D profile.
 
@@ -445,7 +447,9 @@ def drawn_boundaries(profile: Any, peak_value: float, peak_index: int) -> tuple:
     arr = np.asarray(profile, dtype=float)
     n = arr.size
     if not (0 <= peak_index < n):
-        raise StatsError(f"Peak index {peak_index} out of bounds for length {n}")
+        raise StatsError(
+            f"Peak index {peak_index} out of bounds for length {n}"
+        )
     peak = float(peak_value)
     # search left boundary
     left_vals = []

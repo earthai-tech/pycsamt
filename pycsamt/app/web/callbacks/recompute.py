@@ -77,9 +77,9 @@ def _worker(session_id: str, sites_or_path, opts: dict) -> None:
             if not edi_paths:
                 with _LOCK:
                     _JOBS[session_id]["status"] = "error"
-                    _JOBS[session_id][
-                        "err_msg"
-                    ] = f"No EDI files found in: {sites_or_path}"
+                    _JOBS[session_id]["err_msg"] = (
+                        f"No EDI files found in: {sites_or_path}"
+                    )
                 return
 
             sites = Sites(edi_paths)
@@ -189,7 +189,9 @@ def _sites_to_store(sites, old_store: dict | None = None) -> dict:
     df = ctrl.dataframe
 
     n_lines = df["Line"].nunique() if "Line" in df.columns else 1
-    line_counts = df.groupby("Line").size().to_dict() if "Line" in df.columns else {}
+    line_counts = (
+        df.groupby("Line").size().to_dict() if "Line" in df.columns else {}
+    )
 
     return {
         "station_records": df.to_dict("records"),
@@ -454,7 +456,9 @@ def _register_run(app) -> None:
 
         opts = {
             "resphase": resphase,
-            "rotate_angle": float(rotate_ang) if rotate_ang is not None else None,
+            "rotate_angle": float(rotate_ang)
+            if rotate_ang is not None
+            else None,
             "comps": comps or ["Z", "Tip"],
             "fmin": float(fmin) if fmin is not None else None,
             "fmax": float(fmax) if fmax is not None else None,
@@ -545,7 +549,9 @@ def _register_poll(app) -> None:
                 pct = 0
             else:
                 if total > 0:
-                    eta_s = (elapsed / done * (total - done)) if done > 0 else 0
+                    eta_s = (
+                        (elapsed / done * (total - done)) if done > 0 else 0
+                    )
                     eta = f"  ·  ETA {eta_s:.0f} s" if eta_s > 0 else ""
                     ticker = (
                         f"⟳  {current}  ·  {done} / {total}"

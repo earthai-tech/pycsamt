@@ -75,7 +75,9 @@ class Base:  # picked by seg.config (mixin discovery)
 
         self.verbose: int = int(verbose)
         name = f"{self.__class__.__module__}.{self.__class__.__name__}"
-        self._logger = logger if logger is not None else self._logger_factory(name)
+        self._logger = (
+            logger if logger is not None else self._logger_factory(name)
+        )
 
     @staticmethod
     def _logger_factory(name: str):
@@ -260,7 +262,8 @@ class EDIComponentBase(Base):
             return f"{value:.6g}"
         if isinstance(value, (list, tuple)):
             prev = ", ".join(
-                (f"{x:.6g}" if isinstance(x, float) else repr(x)) for x in value[:4]
+                (f"{x:.6g}" if isinstance(x, float) else repr(x))
+                for x in value[:4]
             )
             if len(value) > 4:
                 prev += ", …"
@@ -320,12 +323,10 @@ class EdiFileBase(EDIComponentBase, ABC):
         return target
 
     @abstractmethod
-    def read(self) -> EdiFileBase:
-        ...
+    def read(self) -> EdiFileBase: ...
 
     @abstractmethod
-    def compose(self) -> str | list[str]:
-        ...
+    def compose(self) -> str | list[str]: ...
 
     # ------- registry ----------
     def add_section(self, name: str, s: EDIComponentBase) -> None:
@@ -389,7 +390,9 @@ class EdiFileBase(EDIComponentBase, ABC):
         return t.lstrip(">").upper()
 
     def format_block_header(self, title: str) -> str:
-        return self.data_header_tpl.format(title=self.normalize_section_title(title))
+        return self.data_header_tpl.format(
+            title=self.normalize_section_title(title)
+        )
 
     @staticmethod
     def format_section_head(head: str) -> str:
@@ -480,7 +483,9 @@ class EdiFileBase(EDIComponentBase, ABC):
         )
         inst.block_size = int(data.get("block_size", inst.block_size))
         inst.number_fmt = str(data.get("number_fmt", inst.number_fmt))
-        inst.data_header_tpl = str(data.get("data_header_tpl", inst.data_header_tpl))
+        inst.data_header_tpl = str(
+            data.get("data_header_tpl", inst.data_header_tpl)
+        )
         for k, v in (data.get("sections") or {}).items():
             comp = (
                 EDIComponentBase.from_dict(v)
@@ -512,7 +517,10 @@ class EdiFileBase(EDIComponentBase, ABC):
 
     def __repr__(self) -> str:  # pragma: no cover
         cls = self.__class__.__name__
-        return f"<{cls} path={self.path!r} " f"sections={list(self.sections.keys())!r}>"
+        return (
+            f"<{cls} path={self.path!r} "
+            f"sections={list(self.sections.keys())!r}>"
+        )
 
     @staticmethod
     def _normalize_section_name(name: str) -> str:

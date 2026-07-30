@@ -167,7 +167,9 @@ class StationAxisStyle:
 
             # Suppress axis ticklabels — labels are drawn inline instead
             ax.set_xticks(x, minor=True)
-            ax.tick_params(axis="x", which="minor", length=self.tick_length, top=True)
+            ax.tick_params(
+                axis="x", which="minor", length=self.tick_length, top=True
+            )
             ax.set_xticks([])
             ax.set_xticklabels([])
 

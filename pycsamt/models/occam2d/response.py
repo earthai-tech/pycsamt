@@ -287,14 +287,18 @@ class OccamResponse(OccamBase):
     def site_indices(self) -> np.ndarray:
         """1-based site indices (int)."""
         return (
-            self.data[:, 0].astype(int) if self.data.size else np.array([], dtype=int)
+            self.data[:, 0].astype(int)
+            if self.data.size
+            else np.array([], dtype=int)
         )
 
     @property
     def freq_indices(self) -> np.ndarray:
         """1-based frequency indices (int)."""
         return (
-            self.data[:, 1].astype(int) if self.data.size else np.array([], dtype=int)
+            self.data[:, 1].astype(int)
+            if self.data.size
+            else np.array([], dtype=int)
         )
 
     @property

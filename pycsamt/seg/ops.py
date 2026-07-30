@@ -397,7 +397,9 @@ def synthesize_spectra_from_z(
 
     # E/H and E/E
     S_EH = np.einsum("fij,fjk->fik", Zm, S_HH)  # Z S_HH
-    S_EE = np.einsum("fij,fjk,flk->fil", Zm, S_HH, np.conjugate(Zm))  # Z S_HH Z^H
+    S_EE = np.einsum(
+        "fij,fjk,flk->fil", Zm, S_HH, np.conjugate(Zm)
+    )  # Z S_HH Z^H
     _add_diag_noise(S_EE, e_noise)
     _add_diag_noise(S_HH, h_noise)
 
@@ -412,7 +414,9 @@ def synthesize_spectra_from_z(
         if T.shape != (nf, 1, 2):
             raise ValueError("tipper must have shape (nf,1,2) or (nf,2)")
         S_ZH = np.einsum("fik,fkj->fij", T, S_HH)  # (nf,1,2)
-        S_ZZ = np.einsum("fik,fkj,flk->fil", T, S_HH, np.conjugate(T))  # (nf,1,1)
+        S_ZZ = np.einsum(
+            "fik,fkj,flk->fil", T, S_HH, np.conjugate(T)
+        )  # (nf,1,1)
         S_EZ = np.einsum("fij,fkj->fik", Zm, np.conjugate(S_ZH))  # (nf,2,1)
 
     order = [s.upper() for s in chan_order]
@@ -449,7 +453,9 @@ def synthesize_spectra_from_z(
     # Z blocks if requested
     if "HZ" in order:
         if T is None:
-            raise ValueError("HZ requested in chan_order but no tipper provided.")
+            raise ValueError(
+                "HZ requested in chan_order but no tipper provided."
+            )
         _put("HZ", "HX", S_ZH[:, 0, 0])
         _put("HZ", "HY", S_ZH[:, 0, 1])
         _put("HX", "HZ", np.conjugate(S_ZH[:, 0, 0]))

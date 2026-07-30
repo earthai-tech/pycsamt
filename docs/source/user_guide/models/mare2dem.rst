@@ -181,11 +181,36 @@ directory in this order:
    editable development installs;
 5. a platform user-data directory.
 
-Unlike :doc:`occam2d`, pyCSAMT does not bundle MARE2DEM's Fortran source, so
-step 4 never actually resolves anything for MARE2DEM -- there is no compiled
-binary to discover on a typical machine, and none is bundled for this
-documentation build either. Use ``status`` first, before trying to download
-or build anything:
+Unlike :doc:`occam2d`, pyCSAMT does not bundle MARE2DEM's Fortran source. The
+package ``_source/`` directory may exist as an empty download destination,
+but it is not a populated source tree until :meth:`SourceManager.download
+<pycsamt.models.mare2dem.SourceManager.download>` succeeds. There is no
+compiled binary to discover on a typical machine, and none is bundled for
+this documentation build either.
+
+The complete supported build procedure, including Intel oneAPI, MKL, WSL,
+download behavior, and the ``pycsamt build`` wrapper, is documented at
+:ref:`mare2dem_compilation`. In a Linux or WSL installation that uses the
+standard oneAPI location, the short form is:
+
+.. code-block:: bash
+
+   source /opt/intel/oneapi/setvars.sh
+   pycsamt build mare2dem --auto-install -y \
+       --source-dir /opt/mare2dem/source
+
+On macOS or a non-standard Linux installation, source the corresponding
+``setvars.sh`` path for that oneAPI installation before running the same
+``pycsamt build`` command. Choose a writable ``--source-dir`` and reuse that
+exact path as ``Mare2DEMConfig.source_dir``; ``/opt/mare2dem/source`` is only
+an example and may require administrator-created directory permissions.
+
+Do not run that command from native Windows PowerShell or ``cmd.exe``;
+MARE2DEM cannot be compiled natively on Windows. Enter WSL first and keep the
+source, build, and run paths visible inside that WSL environment.
+
+Use ``status`` before downloading or building, and again afterward to record
+the resolved source and executable paths:
 
 .. code-block:: pycon
    :linenos:
@@ -208,7 +233,9 @@ or build anything:
 
 When source code is not present, ``download`` can use Git or a source archive.
 When source code is present but the binary is missing, ``build`` compiles the
-external code.
+external code. These direct Python calls are equivalent to the lifecycle
+managed by the build wrapper and are useful when a cluster needs a custom
+Make include file:
 
 .. code-block:: pycon
    :linenos:
@@ -219,29 +246,39 @@ external code.
 
    >>> # Network access and compiler availability are environment-dependent.
    >>> # source.download(method="auto")
-   >>> # source.build(clean_first=False)
+   >>> # binary = source.build(clean_first=False)
+   >>> # print(binary)
 
-Compilation is system-dependent. In many environments MARE2DEM requires MPI
-Fortran/C tooling and Intel MKL/ScaLAPACK/BLACS support -- the missing
-``MKLROOT`` in the status above is exactly that requirement showing up before
-a build is even attempted. On Windows, build from WSL or another Unix-like
-environment rather than a native Windows shell.
+MARE2DEM requires an MPI Fortran/C toolchain and Intel MKL for
+ScaLAPACK/BLACS. Prefer Intel ``mpiifort``/``mpiicc`` with oneAPI initialized;
+generic ``mpifort``/``mpicc`` may be detected by ``SourceManager`` but do not
+remove the MKL requirement and are not a guarantee of a usable build. The
+missing ``MKLROOT`` in the status above is that prerequisite being detected
+before compilation.
 
 Binary Resolution
 --------------------
 
 ``Mare2DEMRunner`` resolves the executable through:
 
-1. ``Mare2DEMConfig.binary`` on ``PATH``;
+1. ``Mare2DEMConfig.binary`` on ``PATH`` (an explicit executable path is also
+   accepted by ``shutil.which``);
 2. ``<source_dir>/<binary>``;
 3. the platform user-data binary location.
 
 Use ``runner.command`` as a dry-run check before launching an inversion.
+Note that ``command()`` formats the configured command but does not prove that
+the executable or MPI launcher exists. Use ``SourceManager.resolve_binary``
+for the executable preflight performed by ``run()``:
 
 .. code-block:: pycon
    :linenos:
 
-   >>> from pycsamt.models.mare2dem import Mare2DEMConfig, Mare2DEMRunner
+   >>> from pycsamt.models.mare2dem import (
+   ...     Mare2DEMConfig,
+   ...     Mare2DEMRunner,
+   ...     SourceManager,
+   ... )
 
    >>> cfg = Mare2DEMConfig(
    ...     binary="MARE2DEM",
@@ -252,6 +289,13 @@ Use ``runner.command`` as a dry-run check before launching an inversion.
    ... )
 
    >>> runner = Mare2DEMRunner("runs/line12_mare2dem_v01/native", config=cfg)
+   >>> binary = SourceManager(config=cfg).resolve_binary()
+   >>> if binary is None:
+   ...     raise FileNotFoundError(
+   ...         "MARE2DEM was not built; see the MARE2DEM compilation guide"
+   ...     )
+   >>> print(binary)
+   /opt/mare2dem/source/MARE2DEM
    >>> print(runner.command("line12"))
    mpirun -np 8 MARE2DEM line12
 
@@ -615,45 +659,70 @@ Run MARE2DEM
 --------------
 
 Once native files are prepared and the executable is available, use
-``Mare2DEMRunner`` to launch the run.
+``Mare2DEMRunner`` to launch the run. Keep ``source_dir`` in the saved
+configuration pointed at the same source tree used by
+:ref:`mare2dem_compilation`; otherwise the runner cannot find a locally built
+binary that is not also on ``PATH``.
 
 .. code-block:: pycon
    :linenos:
 
-   >>> from pycsamt.models.mare2dem import Mare2DEMConfig, Mare2DEMRunner
+   >>> from pycsamt.models.mare2dem import (
+   ...     Mare2DEMConfig,
+   ...     Mare2DEMRunner,
+   ...     SourceManager,
+   ... )
 
    >>> cfg = Mare2DEMConfig.from_file("runs/line12_mare2dem_v01/mare2dem.yml")
    >>> runner = Mare2DEMRunner("runs/line12_mare2dem_v01/native", config=cfg, verbose=1)
 
-   >>> # Check the command before running it.
+   >>> # Resolve the binary before submitting a long job.
+   >>> source = SourceManager(config=cfg)
+   >>> binary = source.resolve_binary()
+   >>> if binary is None:
+   ...     raise FileNotFoundError(
+   ...         "MARE2DEM was not built; see the MARE2DEM compilation guide"
+   ...     )
+   >>> print(binary)
+   /opt/mare2dem/source/MARE2DEM
+
+   >>> # Inspect the logical command before running it.
    >>> print(runner.command(cfg.resistivity_stem))
    mpirun -np 16 MARE2DEM line12
 
-   >>> # Run locally only once the binary above actually resolves.
-   >>> try:
-   ...     runner.run(cfg.resistivity_stem, timeout=5)
-   ... except FileNotFoundError as exc:
-   ...     print(exc)
-   MARE2DEM binary 'MARE2DEM' not found on PATH or in the source directory. Build it first:  SourceManager().download(); SourceManager().build()
+``command()`` deliberately shows ``cfg.binary`` rather than the absolute path
+resolved above. During execution, ``run()`` resolves that name through
+``SourceManager`` and launches the resulting executable.
 
-There is no pre-compiled MARE2DEM binary bundled with pyCSAMT -- like
-:doc:`occam2d` and :doc:`modem`, it must be built locally, and this
-documentation build has no binary either. ``run`` returns an
-``InversionResult`` by default once a real run finishes. Set
-``load_result=False`` if you only want process execution and will load
-results later.
+Run only after confirming that the resistivity stem names matching native
+files in ``runner.workdir``. Pass the stem (``"line12"``), not a path to a
+file in another directory; the runner intentionally strips directory and
+suffix components and executes from ``workdir``:
 
-.. code-block:: pycon
+.. code-block:: python
    :linenos:
 
-   >>> # result = runner.run(
-   >>> #     cfg.resistivity_stem,
-   >>> #     use_mpi=True,
-   >>> #     n_procs=16,
-   >>> #     extra_args=None,
-   >>> #     timeout=None,
-   >>> #     load_result=True,
-   >>> # )
+   result = runner.run(
+       cfg.resistivity_stem,
+       use_mpi=True,
+       n_procs=16,
+       extra_args=None,
+       timeout=None,
+       load_result=True,
+   )
+
+The run block is intentionally not a doctest: it launches an MPI inversion
+that may run for hours. A non-zero solver exit raises
+:exc:`subprocess.CalledProcessError`; a configured timeout raises
+:exc:`subprocess.TimeoutExpired`. With ``load_result=True``, a successful run
+returns :class:`~pycsamt.models.mare2dem.InversionResult`. Set it to ``False``
+when a scheduler or a later process will load the completed directory.
+
+MARE2DEM is normally an MPI program. Before local execution, verify that
+``cfg.mpi_command`` resolves in the same shell environment as Python and that
+``cfg.n_procs`` is appropriate for the allocation. Do not set
+``use_mpi=False`` unless the executable was specifically built for
+single-process operation.
 
 For long inversions, prefer scheduler-managed execution. Build the native
 directory with pyCSAMT, submit the command on the cluster, then use
@@ -1074,6 +1143,8 @@ Next Steps
   the ``.poly`` triangulation boundary.
 * :doc:`configuration_and_io` for source-of-truth configuration and archive
   practice.
+* :doc:`compilation` downloads and builds ``MARE2DEM`` (Linux/macOS/WSL
+  only) via :class:`~pycsamt.models.mare2dem.SourceManager`.
 * :doc:`choosing_backend` for deciding when MARE2DEM is the right integration.
 * :ref:`inversion_concepts` for regularized inversion and misfit concepts.
 * :doc:`../../api/models` for generated API reference pages.

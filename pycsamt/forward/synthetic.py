@@ -122,7 +122,9 @@ class LayeredModel:
         if np.any(self.resistivity <= 0.0):
             raise ValueError("All resistivities must be strictly positive.")
         if np.any(self.thickness <= 0.0):
-            raise ValueError("All layer thicknesses must be strictly positive.")
+            raise ValueError(
+                "All layer thicknesses must be strictly positive."
+            )
         if self.depth is None:
             self.depth = np.concatenate([[0.0], np.cumsum(self.thickness)])
 
@@ -158,7 +160,9 @@ class LayeredModel:
         -------
         v : ndarray, shape (2 * n_layers - 1,)
         """
-        rho = np.log10(self.resistivity) if log_rho else self.resistivity.copy()
+        rho = (
+            np.log10(self.resistivity) if log_rho else self.resistivity.copy()
+        )
         return np.concatenate([rho, self.thickness])
 
     @classmethod
@@ -267,7 +271,9 @@ class LayeredModel:
         if equal_thickness:
             thick = np.full(n_layers - 1, depth_max / (n_layers - 1))
         else:
-            thick = cls.random(n_layers, depth_max=depth_max, seed=rng).thickness
+            thick = cls.random(
+                n_layers, depth_max=depth_max, seed=rng
+            ).thickness
 
         return cls(resistivity=rho, thickness=thick, name=name)
 
@@ -298,7 +304,9 @@ class LayeredModel:
             the gradient.  0 = pure gradient.
         """
         rng = _ensure_rng(seed)
-        log_rho = np.linspace(np.log10(rho_surface), np.log10(rho_deep), n_layers)
+        log_rho = np.linspace(
+            np.log10(rho_surface), np.log10(rho_deep), n_layers
+        )
         log_rho += rng.normal(0.0, perturbation, n_layers)
         rho = 10.0**log_rho
         rho = np.maximum(rho, 0.01)
@@ -425,8 +433,12 @@ class LayeredModel:
     # ─── repr ─────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        rho_str = np.array2string(self.resistivity, precision=1, max_line_width=60)
-        thick_str = np.array2string(self.thickness, precision=1, max_line_width=60)
+        rho_str = np.array2string(
+            self.resistivity, precision=1, max_line_width=60
+        )
+        thick_str = np.array2string(
+            self.thickness, precision=1, max_line_width=60
+        )
         return (
             f"LayeredModel(n_layers={self.n_layers}, "
             f"rho={rho_str}, thick={thick_str})"

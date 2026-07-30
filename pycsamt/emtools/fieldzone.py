@@ -152,7 +152,9 @@ def _unwrap(ed: Any) -> Any:
     return ed
 
 
-def _sorted_stations(stations: list[str], S: Any, sort_by: str | None) -> list[str]:
+def _sorted_stations(
+    stations: list[str], S: Any, sort_by: str | None
+) -> list[str]:
     if sort_by in (None, "auto", "chainage", "profile", "spatial", "input"):
         available = set(stations)
         return [
@@ -513,7 +515,9 @@ def plot_field_zones(
     )
     xs = np.arange(len(stations) + 1) - 0.5
     ys = np.arange(len(all_y) + 1) - 0.5
-    ax.pcolormesh(xs, ys, grid_zone, cmap=cmap, vmin=-0.5, vmax=2.5, shading="auto")
+    ax.pcolormesh(
+        xs, ys, grid_zone, cmap=cmap, vmin=-0.5, vmax=2.5, shading="auto"
+    )
 
     if (
         contour_kr

@@ -329,7 +329,9 @@ def propagate_resistivity_error(rho, e_avg, h_avg, sigma_e, sigma_h):
             text{ are the standard deviations of E-field and H-field.}
     """
     e_h_ratio = (e_avg / h_avg) * 1e6  # noqa
-    error_in_rho = rho * np.sqrt((sigma_e / e_avg) ** 2 + (sigma_h / h_avg) ** 2)
+    error_in_rho = rho * np.sqrt(
+        (sigma_e / e_avg) ** 2 + (sigma_h / h_avg) ** 2
+    )
     return error_in_rho
 
 
@@ -492,7 +494,9 @@ def calculate_conductivity(rho):
     return 1 / rho
 
 
-def calculate_error_propagation_amplitude(e_std, h_std, rho_std, e_avg, h_avg, rho):
+def calculate_error_propagation_amplitude(
+    e_std, h_std, rho_std, e_avg, h_avg, rho
+):
     """
     Propagates error for the amplitude based on the standard deviations
     of the E-field, H-field, and resistivity.
@@ -517,7 +521,9 @@ def calculate_error_propagation_amplitude(e_std, h_std, rho_std, e_avg, h_avg, r
         \\sigma_{\rho}\text{ are the standard deviations\\
                            for E-field, H-field, and resistivity.}
     """
-    return np.sqrt((e_std / e_avg) ** 2 + (h_std / h_avg) ** 2 + (rho_std / rho) ** 2)
+    return np.sqrt(
+        (e_std / e_avg) ** 2 + (h_std / h_avg) ** 2 + (rho_std / rho) ** 2
+    )
 
 
 def calculate_e_field_error(e_vals, asp, current):

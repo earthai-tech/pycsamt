@@ -38,7 +38,9 @@ __all__ = ["EDIRenamer", "EDIWriter"]
 # ---------------------------------------------------------------------------
 
 
-def _make_new_name(basename: str, idx: int, zero_pad: int, trailer: str) -> str:
+def _make_new_name(
+    basename: str, idx: int, zero_pad: int, trailer: str
+) -> str:
     """Build a new EDI filename from parts.
 
     Parameters
@@ -163,13 +165,17 @@ class EDIRenamer(PyCSAMTObject):
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # resolve inputs to a list of (EDIFile | None, src_path | None)
-        entries: list[tuple[EDIFile | None, Path | None]] = self._resolve_source(source)
+        entries: list[tuple[EDIFile | None, Path | None]] = (
+            self._resolve_source(source)
+        )
 
         self.renamed_pairs_: list[tuple[Path, Path]] = []
         self.skipped_: list[Path] = []
 
         for i, (edi_obj, src_path) in enumerate(entries):
-            new_fname = _make_new_name(self.basename, i, self.zero_pad, self.trailer)
+            new_fname = _make_new_name(
+                self.basename, i, self.zero_pad, self.trailer
+            )
             dst_file = out_dir / new_fname
 
             if dst_file.exists() and not self.overwrite:
@@ -184,7 +190,9 @@ class EDIRenamer(PyCSAMTObject):
                     edi_obj = EDIFile(src_path, verbose=0)
                 except Exception as exc:
                     if self.verbose:
-                        print(f"[EDIRenamer] load failed {src_path.name}: {exc}")
+                        print(
+                            f"[EDIRenamer] load failed {src_path.name}: {exc}"
+                        )
                     continue
 
             if edi_obj is None:
@@ -192,7 +200,9 @@ class EDIRenamer(PyCSAMTObject):
 
             # update DATAID / SECTID
             if self.update_dataid:
-                new_id = _new_dataid(self.basename, i, self.zero_pad, self.trailer)
+                new_id = _new_dataid(
+                    self.basename, i, self.zero_pad, self.trailer
+                )
                 try:
                     edi_obj.station = new_id
                 except Exception:

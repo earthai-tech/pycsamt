@@ -12,9 +12,9 @@ Wraps :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`:
   3-D resistivity volume is spatially coherent — artefacts from
   station-by-station 1-D inversion are suppressed.
 
-* Trains on **synthetic 3-D profiles** assembled by tiling independent
-  1-D forward models across a virtual station grid, then predicts on the
-  observed :class:`~pycsamt.site.Sites` dataset.
+* Trains on synthetic 3-D profiles, using one of two ``physics`` modes
+  (see below), then predicts on the observed
+  :class:`~pycsamt.site.Sites` dataset.
 
 * Outputs log₁₀ρ per depth layer **and** log₁₀h per interface for every
   station, giving a full layered earth model that can be gridded into a
@@ -22,6 +22,56 @@ Wraps :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`:
 
 * Optionally runs **MC-dropout uncertainty** (``n_mc`` stochastic passes)
   to produce depth-resolved confidence maps alongside the main prediction.
+
+Physics modes
+-------------
+``physics="mt1d"`` (default)
+    Tiles independent 1-D forward models across the real station
+    positions (:func:`~pycsamt.forward.batch.generate_dataset`). This
+    is the original smoke/demo path from the AI-inversion
+    implementation plan: nothing enforces genuine lateral/3-D coupling
+    between the tiled 1-D columns beyond what the GCN's spatial
+    smoothing adds after the fact, so the plan explicitly does not
+    call this genuine 3-D inversion. Kept unconditionally as the
+    default and as an explicit fallback, per the plan's requirement.
+``physics="mt3d"``
+    Generates genuinely 3-D correlated geological volumes at the
+    survey's own real station ``(x, y)`` positions and solves them
+    with the research-only, small-grid
+    :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter`
+    (:func:`~pycsamt.ai.training.dataset3d.generate_3d_maxwell_dataset`).
+    Unlike ``Inv2DAgent(physics="mt2d")``, this uses the survey's
+    *actual* station geometry rather than a synthetic uniform
+    spacing, since the real coordinates are already needed to build
+    the GCN adjacency graph. Each training profile's per-station
+    target is the true 3-D volume's own vertical resistivity column
+    at that station, resampled onto the agent's display depth grid
+    (nearest-cell; the geological grid's own resolution is coarser
+    than most production sections, per :class:`MT3DAdapter`'s
+    small-cell-budget research-only status). Only the TE-like
+    ``zxy`` response is requested and used, matching the observed
+    feature pipeline (:func:`~pycsamt.agents.ai_inversion._z_to_features`,
+    which is ``[log10(rho_a_xy), phase_xy]`` only, zero-padded to this
+    agent's 4-wide feature slot — using the unused ``zyx``/diagonal
+    slots for synthetic data would create a train/observation
+    distribution mismatch, not add information). When a held-out
+    synthetic split is available, a genuine (non-fabricated) recovery
+    check against known-truth resistivity is added to the result via
+    :func:`~pycsamt.ai.validation.recovery_report`, since the field
+    survey has no ground truth to check against. This mode is far
+    more expensive per training profile than ``"mt1d"`` (a real 3-D
+    Maxwell solve vs. an independent 1-D solve per station) — lower
+    ``n_train_profiles`` accordingly. Mesh accuracy degrades at higher
+    frequencies (~10% error by 20-50 Hz vs ~1-2% at 1-2 Hz, at this
+    agent's default ``cells_per_skin_depth=None``); passing an
+    explicit ``cells_per_skin_depth`` (e.g. 8.0) narrows this to
+    ~5-9% at the same cell budget but does not fully close it — see
+    :mod:`~pycsamt.ai.training.dataset3d`'s module docstring for
+    measured numbers and the cost/accuracy trade-off raising it
+    together with ``max_mesh_cells`` buys. Prefer a ``freqs`` grid
+    concentrated in the low-frequency range this solver's own
+    benchmark validates when accuracy matters more
+    than matching a specific field acquisition band.
 
 Requires PyTorch **or** TensorFlow.
 
@@ -80,7 +130,10 @@ class Inv3DAgent(BaseAgent):
         thicknesses are geometrically graded and normalized to this depth.
         ``None`` preserves the legacy Bostick-derived display parameterization.
     n_train_profiles : int
-        Number of synthetic 3-D training profiles (default 150).
+        Number of synthetic 3-D training profiles (default 150). With
+        ``physics="mt3d"``, each profile costs a real 3-D Maxwell
+        solve, not a cheap independent 1-D solve — lower this
+        substantially (e.g. 20-40) for that mode.
     epochs : int
         Training epochs (default 30).
     radius : float
@@ -94,6 +147,38 @@ class Inv3DAgent(BaseAgent):
     n_mc : int
         Number of Monte-Carlo dropout passes for uncertainty estimation.
         Set to 0 to skip uncertainty (faster, default 20).
+    physics : {"mt1d", "mt3d"}, default "mt1d"
+        Synthetic training-data physics; see the module docstring.
+    correlation_length_x_m, correlation_length_y_m, correlation_length_z_m
+        : (float, float)
+        ``physics="mt3d"`` only: horizontal/horizontal/vertical
+        correlation length ranges forwarded to
+        :class:`~pycsamt.ai.training.dataset3d.Maxwell3DDatasetConfig`.
+    log_resistivity_mean, log_resistivity_std : float
+        ``physics="mt3d"`` only: affine map from the standardized
+        correlated field to ``log10(resistivity_ohm_m)``.
+    mesh_safety_factor, max_mesh_cells : float, int
+        ``physics="mt3d"`` only: forwarded to
+        ``Maxwell3DDatasetConfig``. ``max_mesh_cells`` also builds the
+        matching ``MT3DAdapter(max_cells=...)`` used to solve.
+    cells_per_skin_depth : float or None, default None
+        ``physics="mt3d"`` only: opt-in frequency-aware solver core
+        resolution, forwarded to ``Maxwell3DDatasetConfig`` — see its
+        docstring for the accuracy-vs-cell-cost trade-off this exists
+        to address. ``None`` (the default) preserves this agent's
+        original behavior (core resolution = the geological grid's
+        own spacing); this agent's default ``freqs`` grid spans up to
+        ~1000 Hz (``_DEFAULT_FREQS``), so enabling this without also
+        raising ``max_mesh_cells`` and/or narrowing ``freqs`` risks a
+        "needs N solver cells" error at high frequencies.
+    geology_grid_nx_ny, geology_grid_nz : int, int or None
+        ``physics="mt3d"`` only: resolution of the *geological*
+        training grid (how finely the true 3-D resistivity volumes
+        are drawn), independent of the solver mesh's own
+        frequency-aware resolution above. ``geology_grid_nz=None``
+        (default) uses ``min(max(n_layers, 4), 8)``. Raising these
+        increases realism at the cost of more solver cells per
+        realization; see ``max_mesh_cells`` for the resulting budget.
 
     Input keys
     ----------
@@ -130,6 +215,9 @@ class Inv3DAgent(BaseAgent):
     ``inverter``          GCNInverter3D
     ``figures``           dict
     ``figure_paths``      dict
+    ``physics``           str — ``"mt1d"`` or ``"mt3d"``, mode used
+    ``mt3d_recovery``     dict or None — held-out known-truth
+                           recovery metrics (``physics="mt3d"`` only)
 
     Examples
     --------
@@ -162,7 +250,20 @@ class Inv3DAgent(BaseAgent):
         hidden: tuple[int, ...] = (256, 128, 64),
         dropout: float = 0.1,
         n_mc: int = 20,
+        physics: str = "mt1d",
+        correlation_length_x_m: tuple[float, float] = (500.0, 2000.0),
+        correlation_length_y_m: tuple[float, float] = (500.0, 2000.0),
+        correlation_length_z_m: tuple[float, float] = (100.0, 500.0),
+        log_resistivity_mean: float = 2.0,
+        log_resistivity_std: float = 0.5,
+        mesh_safety_factor: float = 3.0,
+        max_mesh_cells: int = 6_000,
+        cells_per_skin_depth: float | None = None,
+        geology_grid_nx_ny: int = 6,
+        geology_grid_nz: int | None = None,
     ) -> None:
+        if physics not in ("mt1d", "mt3d"):
+            raise ValueError("physics must be 'mt1d' or 'mt3d'.")
         super().__init__(
             "Inv3DAgent",
             api_key=api_key,
@@ -180,6 +281,23 @@ class Inv3DAgent(BaseAgent):
         self.hidden = tuple(hidden)
         self.dropout = dropout
         self.n_mc = n_mc
+        self.physics = physics
+        self.correlation_length_x_m = correlation_length_x_m
+        self.correlation_length_y_m = correlation_length_y_m
+        self.correlation_length_z_m = correlation_length_z_m
+        self.log_resistivity_mean = float(log_resistivity_mean)
+        self.log_resistivity_std = float(log_resistivity_std)
+        self.mesh_safety_factor = float(mesh_safety_factor)
+        self.max_mesh_cells = int(max_mesh_cells)
+        self.cells_per_skin_depth = (
+            None
+            if cells_per_skin_depth is None
+            else float(cells_per_skin_depth)
+        )
+        self.geology_grid_nx_ny = int(geology_grid_nx_ny)
+        self.geology_grid_nz = (
+            None if geology_grid_nz is None else int(geology_grid_nz)
+        )
 
     # ── public ────────────────────────────────────────────────────────────────
 
@@ -214,7 +332,9 @@ class Inv3DAgent(BaseAgent):
         # ── load sites ────────────────────────────────────────────────────────
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -231,7 +351,11 @@ class Inv3DAgent(BaseAgent):
             freqs = _DEFAULT_FREQS[: self.n_freqs]
         else:
             freqs = np.asarray(freqs_cfg, dtype=float).reshape(-1)
-            if freqs.size < 2 or not np.all(np.isfinite(freqs)) or np.any(freqs <= 0):
+            if (
+                freqs.size < 2
+                or not np.all(np.isfinite(freqs))
+                or np.any(freqs <= 0)
+            ):
                 return AgentResult.failed(
                     "'freqs' must contain at least two finite positive values.",
                     elapsed=time.time() - t0,
@@ -284,7 +408,9 @@ class Inv3DAgent(BaseAgent):
                 elapsed=time.time() - t0,
             )
 
-        X_obs = np.stack(feat_list, axis=0).astype(np.float32)  # (n_sta, n_feat)
+        X_obs = np.stack(feat_list, axis=0).astype(
+            np.float32
+        )  # (n_sta, n_feat)
         X_obs = _pad_or_trim(X_obs, n_features)
 
         # station coordinates (metres)
@@ -316,50 +442,95 @@ class Inv3DAgent(BaseAgent):
             )
 
         # ── generate synthetic 3-D training data ───────────────────────────────
-        n_1d_total = self.n_train_profiles * n_sta
-        self._log.info(
-            "Generating %d synthetic profiles (%d×%d) for 3-D GCN training…",
-            n_1d_total,
-            self.n_train_profiles,
-            n_sta,
-        )
-        try:
-            ds = generate_dataset(
-                solver="mt1d",
-                n_samples=n_1d_total,
-                freqs=freqs,
-                n_layers=self.n_layers,
-                noise_level=0.03,
-                seed=42,
-                n_jobs=1,
-                verbose=False,
+        mt3d_dataset = None
+        if self.physics == "mt3d":
+            self._log.info(
+                "Generating %d synthetic 3-D Maxwell realizations "
+                "(%d stations × %d freqs)…",
+                self.n_train_profiles,
+                n_sta,
+                n_freqs,
             )
-            # X_1d: (n_1d, n_freqs, 4) → flatten → (n_1d, n_features)
-            X_1d = ds.X.reshape(n_1d_total, -1).astype(np.float32)
-            X_1d = _pad_or_trim(X_1d, n_features)
-
-            # y_1d: (n_1d, n_layers) — log10(ρ) only
-            # y target for GCN: (n_1d, 2*n_layers-1) = log10(ρ) + log10(h)
-            y_log_rho = ds.y[:, : self.n_layers].astype(np.float32)
-            log_h = np.log10(np.clip(ths, 1.0, None)).astype(np.float32)
-            log_h_tile = np.tile(log_h[None, :], (n_1d_total, 1))  # (n_1d, n_layers-1)
-            y_1d = np.concatenate([y_log_rho, log_h_tile], axis=1)  # (n_1d, n_out)
-
-            # reshape into 3-D profile tensors
-            n_samp = n_1d_total // n_sta
-            X_1d = X_1d[: n_samp * n_sta]
-            y_1d = y_1d[: n_samp * n_sta]
-            X_3d = X_1d.reshape(n_samp, n_sta, n_features)  # (n_samp, n_sta, n_feat)
-            y_3d = y_1d.reshape(n_samp, n_sta, n_out)  # (n_samp, n_sta, n_out)
-
-            # synthetic adjacency: same A for all profiles
-            # (GCNInverter3D uses one A across the mini-batch)
-
-        except Exception as exc:
-            return AgentResult.failed(
-                f"Synthetic dataset generation failed: {exc}",
-                elapsed=time.time() - t0,
+            try:
+                mt3d_dataset, X_3d, y_3d = _generate_mt3d_training_data(
+                    station_names=station_names,
+                    coords_m=coords_m,
+                    freqs=freqs,
+                    n_layers=self.n_layers,
+                    ths=ths,
+                    depth_max_m=depth_max_cfg,
+                    correlation_length_x_m=self.correlation_length_x_m,
+                    correlation_length_y_m=self.correlation_length_y_m,
+                    correlation_length_z_m=self.correlation_length_z_m,
+                    log_resistivity_mean=self.log_resistivity_mean,
+                    log_resistivity_std=self.log_resistivity_std,
+                    mesh_safety_factor=self.mesh_safety_factor,
+                    max_mesh_cells=self.max_mesh_cells,
+                    n_realizations=self.n_train_profiles,
+                    n_features=n_features,
+                    geology_grid_nx_ny=self.geology_grid_nx_ny,
+                    geology_grid_nz=self.geology_grid_nz,
+                    cells_per_skin_depth=self.cells_per_skin_depth,
+                )
+                n_samp = len(mt3d_dataset.select("train"))
+            except Exception as exc:
+                return AgentResult.failed(
+                    f"3-D Maxwell dataset assembly failed: {exc}",
+                    elapsed=time.time() - t0,
+                )
+        else:
+            n_1d_total = self.n_train_profiles * n_sta
+            self._log.info(
+                "Generating %d synthetic profiles (%d×%d) for 3-D GCN training…",
+                n_1d_total,
+                self.n_train_profiles,
+                n_sta,
             )
+            try:
+                ds = generate_dataset(
+                    solver="mt1d",
+                    n_samples=n_1d_total,
+                    freqs=freqs,
+                    n_layers=self.n_layers,
+                    noise_level=0.03,
+                    seed=42,
+                    n_jobs=1,
+                    verbose=False,
+                )
+                # X_1d: (n_1d, n_freqs, 4) → flatten → (n_1d, n_features)
+                X_1d = ds.X.reshape(n_1d_total, -1).astype(np.float32)
+                X_1d = _pad_or_trim(X_1d, n_features)
+
+                # y_1d: (n_1d, n_layers) — log10(ρ) only
+                # y target for GCN: (n_1d, 2*n_layers-1) = log10(ρ) + log10(h)
+                y_log_rho = ds.y[:, : self.n_layers].astype(np.float32)
+                log_h = np.log10(np.clip(ths, 1.0, None)).astype(np.float32)
+                log_h_tile = np.tile(
+                    log_h[None, :], (n_1d_total, 1)
+                )  # (n_1d, n_layers-1)
+                y_1d = np.concatenate(
+                    [y_log_rho, log_h_tile], axis=1
+                )  # (n_1d, n_out)
+
+                # reshape into 3-D profile tensors
+                n_samp = n_1d_total // n_sta
+                X_1d = X_1d[: n_samp * n_sta]
+                y_1d = y_1d[: n_samp * n_sta]
+                X_3d = X_1d.reshape(
+                    n_samp, n_sta, n_features
+                )  # (n_samp, n_sta, n_feat)
+                y_3d = y_1d.reshape(
+                    n_samp, n_sta, n_out
+                )  # (n_samp, n_sta, n_out)
+
+                # synthetic adjacency: same A for all profiles
+                # (GCNInverter3D uses one A across the mini-batch)
+
+            except Exception as exc:
+                return AgentResult.failed(
+                    f"Synthetic dataset generation failed: {exc}",
+                    elapsed=time.time() - t0,
+                )
 
         # ── train GCNInverter3D ───────────────────────────────────────────────
         self._log.info(
@@ -410,16 +581,34 @@ class Inv3DAgent(BaseAgent):
                     adjacency=A,
                     n_mc=self.n_mc,
                 )
-                pred_uncertainty = sigma[:, : self.n_layers]  # (n_sta, n_layers)
+                pred_uncertainty = sigma[
+                    :, : self.n_layers
+                ]  # (n_sta, n_layers)
             except Exception as exc:
                 warnings.append(f"MC-dropout uncertainty failed: {exc}")
+
+        # ── known-truth recovery check (physics="mt3d" only) ────────────────
+        # The field survey has no ground truth; this instead checks the
+        # trained network against held-out synthetic realizations whose
+        # true resistivity is known, per the AI-inversion plan's M0
+        # baseline-metrics requirement.
+        mt3d_recovery: dict[str, Any] | None = None
+        if mt3d_dataset is not None:
+            try:
+                mt3d_recovery = _mt3d_recovery_check(
+                    inverter, mt3d_dataset, A, self.n_layers, ths, n_features
+                )
+            except Exception as exc:
+                warnings.append(f"mt3d recovery check failed: {exc}")
 
         # ── depth axis (in km) ────────────────────────────────────────────────
         depths = np.concatenate([[0.0], np.cumsum(ths)]) / 1000.0  # km
 
         # ── per-station forward RMS ────────────────────────────────────────────
         rms_list: list[float] = []
-        for si, (nm, ed) in enumerate(_iter_station_items(sites, station_names)):
+        for si, (nm, ed) in enumerate(
+            _iter_station_items(sites, station_names)
+        ):
             rms = _forward_rms_3d(ed, pred_rho[si], ths, freqs)
             if rms is not None:
                 rms_list.append(rms)
@@ -548,10 +737,18 @@ class Inv3DAgent(BaseAgent):
             rho_mean = float(np.nanmean(10**pred_rho))
             rho_std = float(np.nanstd(10**pred_rho))
             extent_km = (
-                float(np.max(np.linalg.norm(coords_m - coords_m.mean(axis=0), axis=1)))
+                float(
+                    np.max(
+                        np.linalg.norm(
+                            coords_m - coords_m.mean(axis=0), axis=1
+                        )
+                    )
+                )
                 / 1000.0
             )
-            rms_str = f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
+            rms_str = (
+                f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
+            )
             prompt = (
                 f"3-D GCN inversion summary:\n"
                 f"  Stations: {n_sta}, extent: ~{extent_km:.1f} km\n"
@@ -567,13 +764,23 @@ class Inv3DAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=280)
 
         elapsed = time.time() - t0
-        rms_disp = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        rms_disp = (
+            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        )
         unc_disp = ", MC σ computed" if pred_uncertainty is not None else ""
+        recovery_note = ""
+        if mt3d_recovery is not None:
+            recovery_note = (
+                f" Held-out recovery RMSE={mt3d_recovery['rmse']:.3f} "
+                f"(log10 Ω·m, n={mt3d_recovery['n_samples']})."
+            )
         return AgentResult(
             status="success",
             summary=(
-                f"3-D GCN inversion: {n_sta} stations × {self.n_layers} layers. "
+                f"3-D GCN inversion (physics={self.physics}): "
+                f"{n_sta} stations × {self.n_layers} layers. "
                 f"{rms_disp}{unc_disp}. {len(figures)} figures."
+                f"{recovery_note}"
             ),
             data={
                 "pred_rho": pred_rho,
@@ -597,6 +804,8 @@ class Inv3DAgent(BaseAgent):
                 "n_edges": off_diag_edges,
                 "figures": figures,
                 "figure_paths": fig_paths,
+                "physics": self.physics,
+                "mt3d_recovery": mt3d_recovery,
             },
             warnings=warnings,
             llm_interpretation=interp,
@@ -639,7 +848,9 @@ def _resolve_agent_topography(
         if not cfg.get("enabled", True):
             return None
     else:
-        warnings_list.append("'topography' must be a bool or mapping; ignored.")
+        warnings_list.append(
+            "'topography' must be a bool or mapping; ignored."
+        )
         return None
 
     exaggeration = float(cfg.get("exaggeration", 1.0))
@@ -674,7 +885,9 @@ def _resolve_agent_topography(
         lookup: dict[str, int] = {}
         for i, name in enumerate(all_names):
             lookup.setdefault(str(name).strip().casefold(), i)
-        missing = [n for n in station_names if str(n).strip().casefold() not in lookup]
+        missing = [
+            n for n in station_names if str(n).strip().casefold() not in lookup
+        ]
         if missing:
             warnings_list.append(
                 "Topography station-name alignment failed for: "
@@ -693,7 +906,9 @@ def _resolve_agent_topography(
                 "exaggeration": exaggeration,
                 "interp_method": interp_method,
             }
-        idx = np.asarray([lookup[str(n).strip().casefold()] for n in station_names])
+        idx = np.asarray(
+            [lookup[str(n).strip().casefold()] for n in station_names]
+        )
         elevation = np.asarray(all_elev, dtype=float)[idx]
         chainage = np.asarray(all_chain, dtype=float)[idx]
         chainage = chainage - chainage[0]
@@ -713,7 +928,9 @@ def _resolve_agent_topography(
             chainage = np.asarray(explicit_chain, dtype=float).reshape(-1)
 
     if chainage.size != elevation.size or not np.all(np.isfinite(chainage)):
-        warnings_list.append("Topography chainage is invalid; topography ignored.")
+        warnings_list.append(
+            "Topography chainage is invalid; topography ignored."
+        )
         return None
     if not np.all(np.isfinite(elevation)) or not np.any(elevation != 0.0):
         warnings_list.append(
@@ -760,8 +977,12 @@ def _extract_station_xy(ed: Any, idx: int) -> np.ndarray:
         if coords is not None and len(coords) >= 2:
             lat, lon = float(coords[0]), float(coords[1])
         else:
-            lat = float(getattr(ed, "lat", None) or getattr(ed, "latitude", 0.0))
-            lon = float(getattr(ed, "lon", None) or getattr(ed, "longitude", 0.0))
+            lat = float(
+                getattr(ed, "lat", None) or getattr(ed, "latitude", 0.0)
+            )
+            lon = float(
+                getattr(ed, "lon", None) or getattr(ed, "longitude", 0.0)
+            )
     except Exception:
         lat, lon = 0.0, 0.0
     if lat == 0.0 and lon == 0.0:
@@ -824,7 +1045,8 @@ def _forward_rms_3d(
         rho_obs = (
             rho_raw[:, 0, 1]
             if rho_raw is not None
-            else (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1]) ** 2
+            else (0.2 / np.where(fr == 0, np.nan, fr))
+            * np.abs(z[:, 0, 1]) ** 2
         )
         per = 1.0 / np.where(fr == 0, np.nan, fr)
         per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
@@ -840,6 +1062,231 @@ def _forward_rms_3d(
         return float(np.sqrt(np.mean((obs_log - interp) ** 2)))
     except Exception:
         return None
+
+
+def _generate_mt3d_training_data(
+    *,
+    station_names: list[str],
+    coords_m: np.ndarray,
+    freqs: np.ndarray,
+    n_layers: int,
+    ths: np.ndarray,
+    depth_max_m: float | None,
+    correlation_length_x_m: tuple[float, float],
+    correlation_length_y_m: tuple[float, float],
+    correlation_length_z_m: tuple[float, float],
+    log_resistivity_mean: float,
+    log_resistivity_std: float,
+    mesh_safety_factor: float,
+    max_mesh_cells: int,
+    n_realizations: int,
+    n_features: int,
+    geology_grid_nx_ny: int,
+    geology_grid_nz: int | None,
+    cells_per_skin_depth: float | None,
+):
+    """Build a genuinely 3-D correlated training set at the survey's
+    own real station positions and convert it to
+    :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`'s tensors.
+
+    Unlike ``Inv2DAgent(physics="mt2d")``'s synthetic uniform station
+    spacing, this reuses *coords_m* directly (already needed for the
+    GCN adjacency graph), so training profiles share the real
+    station geometry.
+
+    Returns
+    -------
+    dataset : Maxwell3DDataset
+        Full dataset (train/validation/test), kept for a later
+        known-truth recovery check.
+    X : ndarray (n_train, n_stations, n_features)
+    y : ndarray (n_train, n_stations, 2*n_layers-1)
+    """
+    from ..ai.geology import GeologyGrid
+    from ..ai.training.dataset3d import (
+        Maxwell3DDatasetConfig,
+        generate_3d_maxwell_dataset,
+    )
+
+    xs, ys = coords_m[:, 0], coords_m[:, 1]
+    x_span = max(float(xs.max() - xs.min()), 1.0)
+    y_span = max(float(ys.max() - ys.min()), 1.0)
+    margin_x = max(0.25 * x_span, 300.0)
+    margin_y = max(0.25 * y_span, 300.0)
+    x_lo, x_hi = float(xs.min()) - margin_x, float(xs.max()) + margin_x
+    y_lo, y_hi = float(ys.min()) - margin_y, float(ys.max()) + margin_y
+
+    depth_total_m = (
+        float(depth_max_m) if depth_max_m is not None else float(np.sum(ths))
+    )
+    n_core_xy = int(geology_grid_nx_ny)
+    n_core_z = (
+        min(max(n_layers, 4), 8)
+        if geology_grid_nz is None
+        else int(geology_grid_nz)
+    )
+    grid = GeologyGrid.regular_3d(
+        nx=n_core_xy,
+        ny=n_core_xy,
+        nz=n_core_z,
+        dx_m=(x_hi - x_lo) / n_core_xy,
+        dy_m=(y_hi - y_lo) / n_core_xy,
+        dz_m=depth_total_m / n_core_z,
+        x_origin_m=x_lo,
+        y_origin_m=y_lo,
+    )
+    config = Maxwell3DDatasetConfig(
+        dataset_id="inv3dagent-mt3d",
+        grid=grid,
+        correlation_length_x_m=correlation_length_x_m,
+        correlation_length_y_m=correlation_length_y_m,
+        correlation_length_z_m=correlation_length_z_m,
+        frequencies_hz=freqs,
+        station_xy_m=coords_m,
+        n_realizations=n_realizations,
+        seed=0,
+        log_resistivity_mean=log_resistivity_mean,
+        log_resistivity_std=log_resistivity_std,
+        components=("zxy",),
+        mesh_safety_factor=mesh_safety_factor,
+        max_mesh_cells=max_mesh_cells,
+        cells_per_skin_depth=cells_per_skin_depth,
+        validation_fraction=0.1,
+        test_fraction=0.1,
+    )
+    dataset = generate_3d_maxwell_dataset(config)
+    X, y = _maxwell3d_samples_to_gcn_arrays(
+        dataset.select("train"),
+        dataset.grid,
+        coords_m,
+        freqs,
+        n_layers,
+        ths,
+        n_features,
+    )
+    return dataset, X, y
+
+
+def _nearest_index(axis: np.ndarray, value: float) -> int:
+    """Return the index of *axis*'s entry closest to *value*."""
+    return int(np.argmin(np.abs(axis - value)))
+
+
+def _maxwell3d_samples_to_gcn_arrays(
+    samples,
+    grid,
+    coords_m: np.ndarray,
+    freqs: np.ndarray,
+    n_layers: int,
+    ths: np.ndarray,
+    n_features: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Convert ``Maxwell3DSample`` objects into
+    ``GCNInverter3D``'s ``(X, y)`` convention.
+
+    ``X`` uses the same ``[log10(rho_a_xy), phase_xy]`` layout as
+    :func:`~pycsamt.agents.ai_inversion._z_to_features` (zero-padded
+    to *n_features*), so synthetic training data and the observed
+    features share one convention. ``y``'s resistivity half is each
+    station's true vertical column, nearest-cell resampled from the
+    3-D volume's own (coarser) depth grid onto the agent's display
+    depth grid (*ths*); the thickness half is the fixed display grid
+    itself, exactly as the ``physics="mt1d"`` path already uses.
+    """
+    if not samples:
+        raise ValueError("samples must contain at least one entry.")
+    n_sta = coords_m.shape[0]
+    n_freq = len(freqs)
+    mu0 = 4.0e-7 * np.pi
+    log_h = np.log10(np.clip(ths, 1.0, None)).astype(np.float32)
+    layer_depths_m = np.concatenate([[0.0], np.cumsum(ths)])[:n_layers]
+
+    x_idx = np.asarray([_nearest_index(grid.x_m, x) for x in coords_m[:, 0]])
+    y_idx = np.asarray([_nearest_index(grid.y_m, y) for y in coords_m[:, 1]])
+    z_idx = np.asarray(
+        [_nearest_index(grid.z_m, d) for d in layer_depths_m]
+    )  # (n_layers,)
+
+    n_out = 2 * n_layers - 1
+    X = np.zeros((len(samples), n_sta, n_features), dtype=np.float32)
+    y = np.empty((len(samples), n_sta, n_out), dtype=np.float32)
+    for i, sample in enumerate(samples):
+        zxy = sample.survey.impedance[:, :, 0]  # (n_sta, n_freq)
+        f = sample.survey.frequencies_hz[None, :]
+        rho_a = np.abs(zxy) ** 2 / (2.0 * np.pi * f * mu0)
+        phase = np.degrees(np.angle(zxy))
+        feat = np.concatenate(
+            [
+                np.log10(np.clip(rho_a, 1e-12, None)),
+                phase,
+            ],
+            axis=1,
+        ).astype(np.float32)  # (n_sta, 2 * n_freq)
+        X[i, :, : min(2 * n_freq, n_features)] = feat[
+            :, : min(2 * n_freq, n_features)
+        ]
+
+        columns = sample.resistivity_ohm_m[:, y_idx, x_idx]  # (nz, n_sta)
+        log_rho_cols = np.log10(columns[z_idx, :]).T  # (n_sta, n_layers)
+        y[i, :, :n_layers] = log_rho_cols
+        y[i, :, n_layers:] = log_h[None, :]
+    return X, y
+
+
+def _mt3d_recovery_check(
+    inverter,
+    dataset,
+    adjacency: np.ndarray,
+    n_layers: int,
+    ths: np.ndarray,
+    n_features: int,
+) -> dict[str, Any] | None:
+    """Evaluate known-truth recovery on a held-out dataset partition.
+
+    Prefers the ``test`` partition, falling back to ``validation``;
+    returns ``None`` when neither has samples (e.g. too few
+    realizations were requested to split three ways).
+    """
+    from ..ai.validation import recovery_report
+
+    held_out = dataset.select("test") or dataset.select("validation")
+    if not held_out:
+        return None
+    coords_m = np.asarray(held_out[0].survey.coordinates_m)[:, :2]
+    freqs = held_out[0].survey.frequencies_hz
+    rmse_vals, mae_vals, r2_vals = [], [], []
+    for sample in held_out:
+        X_i, _ = _maxwell3d_samples_to_gcn_arrays(
+            [sample], dataset.grid, coords_m, freqs, n_layers, ths, n_features
+        )
+        pred = inverter.predict(X_i[0], adjacency=adjacency)  # (n_sta, n_out)
+        pred_log_rho = pred[:, :n_layers]
+
+        x_idx = np.asarray(
+            [_nearest_index(dataset.grid.x_m, x) for x in coords_m[:, 0]]
+        )
+        y_idx = np.asarray(
+            [_nearest_index(dataset.grid.y_m, y) for y in coords_m[:, 1]]
+        )
+        layer_depths_m = np.concatenate([[0.0], np.cumsum(ths)])[:n_layers]
+        z_idx = np.asarray(
+            [_nearest_index(dataset.grid.z_m, d) for d in layer_depths_m]
+        )
+        columns = sample.resistivity_ohm_m[:, y_idx, x_idx]
+        true_log_rho = np.log10(columns[z_idx, :]).T  # (n_sta, n_layers)
+
+        report = recovery_report(
+            pred_log_rho, true_log_rho, compute_ssim=False
+        )
+        rmse_vals.append(report.rmse)
+        mae_vals.append(report.mae)
+        r2_vals.append(report.r2)
+    return {
+        "rmse": float(np.mean(rmse_vals)),
+        "mae": float(np.mean(mae_vals)),
+        "r2": float(np.nanmean(r2_vals)),
+        "n_samples": len(held_out),
+    }
 
 
 def _plot_depth_slices(
@@ -935,7 +1382,9 @@ def _plot_depth_slices(
         ax.set_xlabel("E–W (km)", fontsize=8)
         ax.set_ylabel("N–S (km)", fontsize=8)
         ax.tick_params(labelsize=7)
-        ax.set_title(f"Depth slice  {depth_km:.2f} km", fontsize=8, fontweight="bold")
+        ax.set_title(
+            f"Depth slice  {depth_km:.2f} km", fontsize=8, fontweight="bold"
+        )
         ax.set_aspect("equal")
 
     fig.suptitle(
@@ -1091,7 +1540,9 @@ def _plot_uncertainty_depth_map(
         ax.set_xlabel("E–W (km)", fontsize=8)
         ax.set_ylabel("N–S (km)", fontsize=8)
         ax.tick_params(labelsize=7)
-        ax.set_title(f"{title}  ({depth_km:.2f} km)", fontsize=8, fontweight="bold")
+        ax.set_title(
+            f"{title}  ({depth_km:.2f} km)", fontsize=8, fontweight="bold"
+        )
         ax.set_aspect("equal")
 
     fig.suptitle(

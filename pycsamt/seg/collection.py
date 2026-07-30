@@ -682,7 +682,9 @@ class EDICollection(CBBase, CollectionMixin):
                 output_path = out_dir / filename
 
                 # Delegate the actual writing to the EDIFile instance
-                written_path = ed.write(new_edifn=str(output_path), **edi_write_kwargs)
+                written_path = ed.write(
+                    new_edifn=str(output_path), **edi_write_kwargs
+                )
                 successful_paths.append(written_path)
             except Exception as e:
                 failed_items.append((sid, e))
@@ -816,7 +818,9 @@ class EDICollection(CBBase, CollectionMixin):
 
         matches: list[EDIFile] = []
 
-        site_cands = set(_site_candidates(site, policy)) if site is not None else set()
+        site_cands = (
+            set(_site_candidates(site, policy)) if site is not None else set()
+        )
 
         for edi in self:
             head = edi.get_section("head")
@@ -963,8 +967,12 @@ class EDICollection(CBBase, CollectionMixin):
             if all_freqs.size > 0
             else "N/A"
         )
-        lat_range = f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
-        lon_range = f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
+        lat_range = (
+            f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
+        )
+        lon_range = (
+            f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
+        )
 
         lines = [
             "  " + "-" * 65,

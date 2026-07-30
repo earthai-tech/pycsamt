@@ -142,7 +142,9 @@ class BenchmarkThresholds:
         return {
             "schema_version": 1,
             "maximum_normalized_rms": self.maximum_normalized_rms,
-            "maximum_amplitude_relative_error": (self.maximum_amplitude_relative_error),
+            "maximum_amplitude_relative_error": (
+                self.maximum_amplitude_relative_error
+            ),
             "maximum_phase_error_deg": self.maximum_phase_error_deg,
             "minimum_valid_fraction": self.minimum_valid_fraction,
             "require_convergence": self.require_convergence,
@@ -234,7 +236,9 @@ class BenchmarkMetrics:
         """
         return {
             "normalized_rms": self.normalized_rms,
-            "maximum_amplitude_relative_error": (self.maximum_amplitude_relative_error),
+            "maximum_amplitude_relative_error": (
+                self.maximum_amplitude_relative_error
+            ),
             "maximum_phase_error_deg": self.maximum_phase_error_deg,
             "valid_fraction": self.valid_fraction,
             "converged": self.converged,
@@ -293,7 +297,9 @@ class BenchmarkOutcome:
         if any(not value for value in failures):
             raise ValueError("failures cannot contain empty messages.")
         if bool(self.passed) == bool(failures):
-            raise ValueError("passed must be true exactly when failures is empty.")
+            raise ValueError(
+                "passed must be true exactly when failures is empty."
+            )
         object.__setattr__(self, "benchmark_name", name)
         object.__setattr__(self, "benchmark_hash", digest)
         object.__setattr__(self, "backend_name", backend)
@@ -380,7 +386,9 @@ class MaxwellBenchmark:
             len(self.problem.components),
         )
         if reference.shape != expected:
-            raise ValueError(f"reference_impedance_v_a must have shape {expected}.")
+            raise ValueError(
+                f"reference_impedance_v_a must have shape {expected}."
+            )
         if not np.all(np.isfinite(reference)):
             raise ValueError("reference_impedance_v_a must be finite.")
         if np.any(np.abs(reference) == 0):
@@ -390,7 +398,9 @@ class MaxwellBenchmark:
             raise ValueError("tags must contain unique non-empty values.")
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "description", description)
-        object.__setattr__(self, "reference_impedance_v_a", _readonly(reference))
+        object.__setattr__(
+            self, "reference_impedance_v_a", _readonly(reference)
+        )
         object.__setattr__(self, "tags", tags)
         object.__setattr__(self, "metadata", _json_mapping(self.metadata))
 
@@ -590,7 +600,9 @@ class BenchmarkReport:
             not isinstance(value, BenchmarkOutcome) for value in outcomes
         ):
             raise ValueError("outcomes must contain BenchmarkOutcome values.")
-        identities = {(value.backend_name, value.backend_version) for value in outcomes}
+        identities = {
+            (value.backend_name, value.backend_version) for value in outcomes
+        }
         if len(identities) != 1:
             raise ValueError("all outcomes must use one backend version.")
         names = [value.benchmark_name for value in outcomes]
@@ -626,7 +638,9 @@ class BenchmarkReport:
         --------
         The value lies in the closed interval ``[0, 1]``.
         """
-        return sum(value.passed for value in self.outcomes) / len(self.outcomes)
+        return sum(value.passed for value in self.outcomes) / len(
+            self.outcomes
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-compatible benchmark report.
@@ -795,8 +809,8 @@ def half_space_benchmark(
 
     Examples
     --------
-    >>> mesh = MaxwellMesh([0,1,2], [0,1,2])
-    >>> receivers = ReceiverSet([[0.5,0]], ["S"])
+    >>> mesh = MaxwellMesh([0, 1, 2], [0, 1, 2])
+    >>> receivers = ReceiverSet([[0.5, 0]], ["S"])
     >>> half_space_benchmark(mesh, receivers, [1]).name
     'half-space'
     """
@@ -860,11 +874,9 @@ def layered_earth_benchmark(
 
     Examples
     --------
-    >>> mesh = MaxwellMesh([0,1,2], [0,1,2])
-    >>> receivers = ReceiverSet([[0.5,0]], ["S"])
-    >>> case = layered_earth_benchmark(
-    ...     mesh, receivers, [1], [10, 100], [1]
-    ... )
+    >>> mesh = MaxwellMesh([0, 1, 2], [0, 1, 2])
+    >>> receivers = ReceiverSet([[0.5, 0]], ["S"])
+    >>> case = layered_earth_benchmark(mesh, receivers, [1], [10, 100], [1])
     >>> case.name
     'layered-earth'
     """
@@ -882,7 +894,9 @@ def layered_earth_benchmark(
     for interface in interfaces:
         tolerance = max(1e-10, abs(interface) * 1e-10)
         if not np.any(np.isclose(mesh.z_edges_m, interface, atol=tolerance)):
-            raise ValueError(f"layer interface {interface:g} m is not a mesh z edge.")
+            raise ValueError(
+                f"layer interface {interface:g} m is not a mesh z edge."
+            )
     layer_index = np.searchsorted(
         interfaces,
         mesh.cell_centres_m["z"],
@@ -942,7 +956,9 @@ def run_benchmarks(
     if not isinstance(backend, MaxwellBackend):
         raise TypeError("backend must implement MaxwellBackend.")
     cases = tuple(benchmarks)
-    if not cases or any(not isinstance(value, MaxwellBenchmark) for value in cases):
+    if not cases or any(
+        not isinstance(value, MaxwellBenchmark) for value in cases
+    ):
         raise ValueError("benchmarks must contain MaxwellBenchmark values.")
     names = [value.name for value in cases]
     if len(set(names)) != len(names):

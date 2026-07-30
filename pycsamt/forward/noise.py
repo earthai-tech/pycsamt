@@ -139,7 +139,9 @@ class GaussianNoise(_BaseNoiseModel):
             raise ValueError(f"level must be in (0, 1), got {level}")
         self.level = level
         self.apply_to = apply_to
-        self.phase_level = phase_level if phase_level is not None else level * 45.0
+        self.phase_level = (
+            phase_level if phase_level is not None else level * 45.0
+        )
 
     def apply(
         self,
@@ -344,7 +346,8 @@ class FieldRealisticNoise(_BaseNoiseModel):
 
         if response.phase is not None:
             out.phase = (
-                response.phase + rng.normal(0.0, 1.0, sigma.shape) * sigma * 45.0
+                response.phase
+                + rng.normal(0.0, 1.0, sigma.shape) * sigma * 45.0
             )
 
         if out.rho_a is not None and out.phase is not None:

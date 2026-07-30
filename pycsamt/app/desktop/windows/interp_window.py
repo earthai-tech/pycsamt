@@ -85,7 +85,9 @@ class _GeneratePlotWorker(QThread):
     finished = Signal(object, str)  # (Figure, label)
     failed = Signal(str)
 
-    def __init__(self, ctrl, method_name: str, label: str, kwargs: dict, parent=None):
+    def __init__(
+        self, ctrl, method_name: str, label: str, kwargs: dict, parent=None
+    ):
         super().__init__(parent)
         self._ctrl = ctrl
         self._method_name = method_name
@@ -160,7 +162,9 @@ class InterpretationWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_nav.addWidget(self._combo_category)
 
         self._combo_plot = QComboBox()
@@ -330,8 +334,12 @@ class InterpretationWindow(PanelWindow):
         self._gallery.setIconSize(QSize(80, 56))
         self._gallery.setSpacing(3)
         self._gallery.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self._gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self._gallery.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._gallery.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+        )
+        self._gallery.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self._gallery.itemClicked.connect(self._on_gallery_click)
         gallery_lay.addWidget(self._gallery)
         studio_splitter.addWidget(gallery_frame)
@@ -388,7 +396,9 @@ class InterpretationWindow(PanelWindow):
         try:
             cat = CATEGORIES[cat_row]
             label, fn, desc = WORKFLOW_CATALOGUE[cat][plot_idx]
-            self._plot_desc.setText(f"<small style='color:#888'>{desc}</small>")
+            self._plot_desc.setText(
+                f"<small style='color:#888'>{desc}</small>"
+            )
         except (IndexError, KeyError):
             self._plot_desc.setText("")
 
@@ -451,7 +461,9 @@ class InterpretationWindow(PanelWindow):
                 v = widget.currentText()
                 kwargs[key] = "" if v == "(all)" else v
             else:
-                kwargs[key] = widget.text() if hasattr(widget, "text") else None
+                kwargs[key] = (
+                    widget.text() if hasattr(widget, "text") else None
+                )
 
         self._btn_generate.setEnabled(False)
         self._run_status.setText(f"Generating {label}…")
@@ -545,7 +557,9 @@ class InterpretationWindow(PanelWindow):
         from PySide6.QtWidgets import QInputDialog
 
         current = self._tab_widget.tabText(idx).strip()
-        name, ok = QInputDialog.getText(self, "Rename Tab", "New name:", text=current)
+        name, ok = QInputDialog.getText(
+            self, "Rename Tab", "New name:", text=current
+        )
         if ok and name:
             self._tab_widget.setTabText(idx, f"  {name}  ")
 
@@ -565,7 +579,9 @@ class InterpretationWindow(PanelWindow):
 
         self._worker = _RunWorker(_fn, parent=self)
         self._worker.finished.connect(self._on_run_finished)
-        self._worker.finished.connect(lambda _: self._btn_run_geo.setEnabled(True))
+        self._worker.finished.connect(
+            lambda _: self._btn_run_geo.setEnabled(True)
+        )
         self._worker.start()
 
     def _on_run_hydro(self) -> None:
@@ -580,7 +596,9 @@ class InterpretationWindow(PanelWindow):
         self._btn_run_hydro.setEnabled(False)
         self._worker = _RunWorker(self._ctrl.run_hydro, parent=self)
         self._worker.finished.connect(self._on_run_finished)
-        self._worker.finished.connect(lambda _: self._btn_run_hydro.setEnabled(True))
+        self._worker.finished.connect(
+            lambda _: self._btn_run_hydro.setEnabled(True)
+        )
         self._worker.start()
 
     def _on_run_mc(self) -> None:
@@ -594,7 +612,9 @@ class InterpretationWindow(PanelWindow):
 
         self._worker = _RunWorker(_fn, parent=self)
         self._worker.finished.connect(self._on_run_finished)
-        self._worker.finished.connect(lambda _: self._btn_run_mc.setEnabled(True))
+        self._worker.finished.connect(
+            lambda _: self._btn_run_mc.setEnabled(True)
+        )
         self._worker.start()
 
     def _on_run_finished(self, msg: str) -> None:
@@ -616,7 +636,9 @@ class InterpretationWindow(PanelWindow):
         self._run_status.setText("No model available from Inversion window.")
 
     def _load_occam2d(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Select Occam2D result directory")
+        path = QFileDialog.getExistingDirectory(
+            self, "Select Occam2D result directory"
+        )
         if not path:
             return
         try:
@@ -677,7 +699,9 @@ class InterpretationWindow(PanelWindow):
             w = getattr(self, "_param_widgets", {}).get("station")
             if w and isinstance(w, QComboBox):
                 station = w.currentText()
-            self._run_status.setText(self._ctrl.export_las(path, station=station))
+            self._run_status.setText(
+                self._ctrl.export_las(path, station=station)
+            )
 
     def _export_csv(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
@@ -728,7 +752,9 @@ class InterpretationWindow(PanelWindow):
                         _iter_items,
                     )
 
-                    n_st = f"  {len(list(_iter_items(sites)))} stations loaded\n"
+                    n_st = (
+                        f"  {len(list(_iter_items(sites)))} stations loaded\n"
+                    )
                 except Exception:
                     pass
             self._status_card.setText(
@@ -757,7 +783,9 @@ class InterpretationWindow(PanelWindow):
                     _name,
                 )
 
-                return [_name(ed, i) for i, ed in enumerate(_iter_items(sites))]
+                return [
+                    _name(ed, i) for i, ed in enumerate(_iter_items(sites))
+                ]
             except Exception:
                 pass
         return []

@@ -139,7 +139,11 @@ class JCollectionMixin(JParseMixin):
             if callable(key):
                 return key(jf)
             if key in {"station", "site", "name"}:
-                return getattr(jf, "site", None) or getattr(jf, "name", None) or ""
+                return (
+                    getattr(jf, "site", None)
+                    or getattr(jf, "name", None)
+                    or ""
+                )
             if key == "n_freq":
                 f = getattr(jf, "freq", None)
                 return int(getattr(f, "size", len(f or [])))
@@ -750,11 +754,15 @@ class JCollection(JCBBase, JCollectionMixin):
         for jf in items_iterator:
             sid = jf.site or "unknown_station"
             try:
-                filename = file_pattern.format(station=sid, site=sid, name=jf.name)
+                filename = file_pattern.format(
+                    station=sid, site=sid, name=jf.name
+                )
                 output_path = out_dir / filename
 
                 # Delegate the actual writing to the JFile instance
-                written_path = jf.write(new_jfn=str(output_path), **jfile_write_kwargs)
+                written_path = jf.write(
+                    new_jfn=str(output_path), **jfile_write_kwargs
+                )
                 successful_paths.append(written_path)
             except Exception as e:
                 failed_items.append((sid, e))
@@ -893,7 +901,11 @@ class JCollection(JCBBase, JCollectionMixin):
         # Get all frequencies from all files to find the true min/max
         all_freqs = (
             np.concatenate(
-                [jf.freq for jf in self if jf.freq is not None and jf.freq.size > 0]
+                [
+                    jf.freq
+                    for jf in self
+                    if jf.freq is not None and jf.freq.size > 0
+                ]
             )
             if total_files > 0
             else np.array([])
@@ -907,8 +919,12 @@ class JCollection(JCBBase, JCollectionMixin):
             if all_freqs.size > 0
             else "N/A"
         )
-        lat_range = f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
-        lon_range = f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
+        lat_range = (
+            f"{min(lats):.4f} to {max(lats):.4f}" if len(lats) > 0 else "N/A"
+        )
+        lon_range = (
+            f"{min(lons):.4f} to {max(lons):.4f}" if len(lons) > 0 else "N/A"
+        )
 
         lines = [
             "  " + "-" * 68,

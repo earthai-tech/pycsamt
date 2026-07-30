@@ -159,7 +159,9 @@ def resolve_line_groups(
             return {Path(str(it)).name: str(it) for it in items}
         return {"line": items}
 
-    raise TypeError(f"Unsupported EDI source for load_lines: {type(source)!r}.")
+    raise TypeError(
+        f"Unsupported EDI source for load_lines: {type(source)!r}."
+    )
 
 
 # ── directory grouping helpers ─────────────────────────
@@ -179,7 +181,8 @@ def _detect_dir_groups(
     if mode == "folder":
         return _group_by_subfolder(path, recursive)
     raise ValueError(
-        f"Unknown detect mode {detect!r}. " "Expected 'folder', 'auto', or 'flat'."
+        f"Unknown detect mode {detect!r}. "
+        "Expected 'folder', 'auto', or 'flat'."
     )
 
 

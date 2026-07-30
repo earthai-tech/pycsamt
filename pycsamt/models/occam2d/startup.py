@@ -171,18 +171,24 @@ def _parse_iter_flex(path: Path) -> dict:
                 try:
                     result[attr] = float(val)
                 except ValueError:
-                    result[attr] = val  # store as string (description, filenames…)
+                    result[attr] = (
+                        val  # store as string (description, filenames…)
+                    )
 
             if attr == "n_params":
                 n_params = result["n_params"] or 0
                 reading_params = True
 
     if result["format_str"] is None:
-        raise ValueError(f"File does not contain a valid OCCAMITER_FLEX header: {path}")
+        raise ValueError(
+            f"File does not contain a valid OCCAMITER_FLEX header: {path}"
+        )
 
     # Parse parameter vector
     try:
-        arr = np.array([float(t) for t in param_tokens[:n_params]], dtype=float)
+        arr = np.array(
+            [float(t) for t in param_tokens[:n_params]], dtype=float
+        )
     except ValueError:
         arr = np.array([], dtype=float)
 
@@ -429,7 +435,9 @@ class OccamStartup(OccamBase):
 
         n = model.n_params
         if n <= 0:
-            raise ValueError("OccamStartup.from_model: model has no parameters")
+            raise ValueError(
+                "OccamStartup.from_model: model has no parameters"
+            )
 
         obj.n_params = n
         obj.param_values = np.full(n, np.log10(cfg.initial_rho), dtype=float)

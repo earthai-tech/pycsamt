@@ -287,8 +287,12 @@ class SpectraToEDI(TransformerMixin):
             station_name=station_name,
         )
         if result.n_fail and not self.skip_errors:
-            msgs = "\n  ".join(f"{r.source}: {r.error}" for r in result.failures)
-            raise RuntimeError(f"{result.n_fail} file(s) failed to convert:\n  {msgs}")
+            msgs = "\n  ".join(
+                f"{r.source}: {r.error}" for r in result.failures
+            )
+            raise RuntimeError(
+                f"{result.n_fail} file(s) failed to convert:\n  {msgs}"
+            )
         return result.collection
 
     def transform_batch(
@@ -346,7 +350,9 @@ class SpectraToEDI(TransformerMixin):
                 msg = str(exc)
                 failures.append(_FailRecord(source=str(path), error=msg))
                 if not self.skip_errors:
-                    raise RuntimeError(f"Conversion failed for {path}: {msg}") from exc
+                    raise RuntimeError(
+                        f"Conversion failed for {path}: {msg}"
+                    ) from exc
                 _log.warning("Skipping %s — %s", path.name, msg)
 
         return TransformResult(
@@ -438,7 +444,9 @@ class SpectraToEDI(TransformerMixin):
         if isinstance(source, EDIFile):
             if source.path:
                 return [Path(source.path).resolve()]
-            raise TypeError("EDIFile has no path; pass the file path directly.")
+            raise TypeError(
+                "EDIFile has no path; pass the file path directly."
+            )
 
         if isinstance(source, EDICollection):
             paths = []
@@ -483,7 +491,9 @@ class SpectraToEDI(TransformerMixin):
                 _log.info("  -> wrote %s", Path(out).name if out else out_dir)
             return Path(out) if out else out_dir
         except Exception as exc:  # noqa: BLE001
-            _log.warning("write failed for %s: %s", getattr(ed, "station", "?"), exc)
+            _log.warning(
+                "write failed for %s: %s", getattr(ed, "station", "?"), exc
+            )
             raise
 
     # ------------------------------------------------------------------

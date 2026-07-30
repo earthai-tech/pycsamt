@@ -115,7 +115,9 @@ class UncertaintyBounds(PyCSAMTObject):
 
     def __post_init__(self) -> None:
         if self.dist not in _DIST_MODES:
-            raise ValueError(f"dist must be one of {_DIST_MODES}, got {self.dist!r}.")
+            raise ValueError(
+                f"dist must be one of {_DIST_MODES}, got {self.dist!r}."
+            )
         if self.n_free == 0:
             raise ValueError("At least one *_range parameter must be set.")
 
@@ -167,7 +169,9 @@ class UncertaintyBounds(PyCSAMTObject):
         -------
         list of PetrophysicalConfig, length *n*
         """
-        rho_w_vals = _draw(self.rho_w_range, cfg.rho_w, n, rng, self.dist, (1e-3, 1e4))
+        rho_w_vals = _draw(
+            self.rho_w_range, cfg.rho_w, n, rng, self.dist, (1e-3, 1e4)
+        )
         m_vals = _draw(
             self.m_range,
             cfg.petro.m if hasattr(cfg.petro, "m") else 1.8,
@@ -324,7 +328,9 @@ class UncertaintyResult(PyCSAMTObject):
 
         p = np.zeros_like(self.mean_wt)
         valid = self.std_wt > 0
-        p[valid] = _norm.cdf(depth_m, loc=self.mean_wt[valid], scale=self.std_wt[valid])
+        p[valid] = _norm.cdf(
+            depth_m, loc=self.mean_wt[valid], scale=self.std_wt[valid]
+        )
         mask_fixed = ~valid & np.isfinite(self.mean_wt)
         p[mask_fixed] = (self.mean_wt[mask_fixed] < depth_m).astype(float)
         return p
@@ -348,7 +354,9 @@ class UncertaintyResult(PyCSAMTObject):
                     "p10_wt_m": float(self.p10_wt[ix]),
                     "p90_wt_m": float(self.p90_wt[ix]),
                     "wt_range_m": float(self.p90_wt[ix] - self.p10_wt[ix]),
-                    "wt_detection_pct": float(self.wt_detection_rate[ix] * 100),
+                    "wt_detection_pct": float(
+                        self.wt_detection_rate[ix] * 100
+                    ),
                     "mean_T_m2s": float(self.mean_T[ix]),
                     "std_T_m2s": float(self.std_T[ix]),
                     "p10_T_m2s": float(self.p10_T[ix]),
@@ -601,7 +609,8 @@ class MonteCarloHydro(PyCSAMTObject):
             p90_K=np.nanpercentile(K_ens, 90, axis=0),
             cv_K=np.where(
                 mean_K > 0,
-                np.nanstd(K_ens, axis=0) / np.where(mean_K > 0, mean_K, np.nan),
+                np.nanstd(K_ens, axis=0)
+                / np.where(mean_K > 0, mean_K, np.nan),
                 np.nan,
             ),
             mean_Sw=np.nanmean(Sw_ens, axis=0),

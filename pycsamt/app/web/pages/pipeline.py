@@ -40,7 +40,9 @@ from pycsamt.app.web.utils import empty_src
 PAGE_ID = "pipeline"
 
 _STEPS = _build_steps()
-_STEP_OPTS = [{"label": f"{s.id + 1}. {s.name}", "value": str(s.id)} for s in _STEPS]
+_STEP_OPTS = [
+    {"label": f"{s.id + 1}. {s.name}", "value": str(s.id)} for s in _STEPS
+]
 
 
 # ── Folder-browser modal ──────────────────────────────────────────────────────
@@ -126,7 +128,9 @@ def _browse_modal() -> dbc.Modal:
                                     ),
                                     dbc.Button(
                                         [
-                                            html.I(className="bi bi-folder-plus me-1"),
+                                            html.I(
+                                                className="bi bi-folder-plus me-1"
+                                            ),
                                             "Create",
                                         ],
                                         id=IDs.BTN_PIPE_BROWSE_MK,
@@ -252,7 +256,9 @@ def layout() -> html.Div:
                             ),
                             dbc.Button(
                                 [
-                                    html.I(className="bi bi-fast-forward-fill me-1"),
+                                    html.I(
+                                        className="bi bi-fast-forward-fill me-1"
+                                    ),
                                     "Run All",
                                 ],
                                 id=IDs.BTN_PIPE_ALL,
@@ -268,7 +274,9 @@ def layout() -> html.Div:
                         [
                             dbc.Button(
                                 [
-                                    html.I(className="bi bi-skip-forward me-1"),
+                                    html.I(
+                                        className="bi bi-skip-forward me-1"
+                                    ),
                                     "Skip",
                                 ],
                                 id=IDs.BTN_PIPE_SKIP,
@@ -297,7 +305,9 @@ def layout() -> html.Div:
                         size="sm",
                         color="success",
                     ),
-                    html.Div(id=IDs.PIPE_FEEDBACK, className="pipe-feedback-txt"),
+                    html.Div(
+                        id=IDs.PIPE_FEEDBACK, className="pipe-feedback-txt"
+                    ),
                 ],
                 className="pipe-run-bar",
             ),
@@ -390,7 +400,9 @@ def layout() -> html.Div:
                         className="ctrl-card",
                     ),
                     # Stores live here (non-visible)
-                    dcc.Store(id=IDs.PIPE_STORE, storage_type="memory", data={}),
+                    dcc.Store(
+                        id=IDs.PIPE_STORE, storage_type="memory", data={}
+                    ),
                     dcc.Store(id=IDs.PIPE_ACTIVE_TAB, data="log"),
                 ],
                 className="pipe-ctrl-scroll",

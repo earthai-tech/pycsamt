@@ -152,7 +152,9 @@ def _filter_sites(sites, station_filter, store_data, active_lines_store):
     try:
         from pycsamt.site.base import Sites
 
-        filtered = [e for e in sites.edic if getattr(e, "station", None) in wanted]
+        filtered = [
+            e for e in sites.edic if getattr(e, "station", None) in wanted
+        ]
         return Sites(filtered) if filtered else sites
     except Exception:
         return sites
@@ -176,7 +178,8 @@ def _pt_grid_profiles(store_data, active_lines_store, per_line: int) -> dict:
             continue
         lines.setdefault(ln, []).append(r["ID"])
     return {
-        ln: pick_representative_stations(names, per_line) for ln, names in lines.items()
+        ln: pick_representative_stations(names, per_line)
+        for ln, names in lines.items()
     }
 
 
@@ -255,8 +258,12 @@ def register_advanced(app) -> None:
         desc = ADVANCED_PLOT_DESCRIPTIONS.get(fn_name, "")
         period_style = _shown if fn_name in _PERIOD_FNS else _hidden
         atom_style = _shown if fn_name == "plot_atom_psection" else _hidden
-        pt_sta_style = _shown if fn_name == "plot_phase_tensor_strip" else _hidden
-        pt_grid_style = _shown if fn_name == "plot_phase_tensor_strip_grid" else _hidden
+        pt_sta_style = (
+            _shown if fn_name == "plot_phase_tensor_strip" else _hidden
+        )
+        pt_grid_style = (
+            _shown if fn_name == "plot_phase_tensor_strip_grid" else _hidden
+        )
         return desc, period_style, atom_style, pt_sta_style, pt_grid_style
 
     # ── 5. Context info bar ───────────────────────────────────────────────────
@@ -318,7 +325,9 @@ def register_advanced(app) -> None:
         records = store_data.get("station_records", [])
         active_lines = (active_lines_store or {}).get("active", [])
         if not active_lines:
-            active_lines = list({r.get("Line", "") for r in records if r.get("Line")})
+            active_lines = list(
+                {r.get("Line", "") for r in records if r.get("Line")}
+            )
 
         line_opts = [{"label": ln, "value": ln} for ln in active_lines if ln]
 
@@ -361,7 +370,9 @@ def register_advanced(app) -> None:
         records = store_data.get("station_records", [])
         active_lines = (active_lines_store or {}).get("active", [])
         if not active_lines:
-            active_lines = list({r.get("Line", "") for r in records if r.get("Line")})
+            active_lines = list(
+                {r.get("Line", "") for r in records if r.get("Line")}
+            )
         active_set = set(active_lines)
         stn_opts = [
             {"label": r["ID"], "value": r["ID"]}
@@ -445,7 +456,9 @@ def register_advanced(app) -> None:
                 sites, station_filter, store_data, active_lines_store
             )
             if filtered is None:
-                return "", html.Span("⚠ No data loaded", className="adv-train-warn")
+                return "", html.Span(
+                    "⚠ No data loaded", className="adv-train-warn"
+                )
             _CTRL.set_sites(filtered)
             _CTRL.train_dim_model(
                 n_atoms=int(n_atoms or 6),

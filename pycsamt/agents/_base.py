@@ -116,7 +116,11 @@ class AgentResult:
 
     def __repr__(self) -> str:
         warn_str = f", {len(self.warnings)} warnings" if self.warnings else ""
-        cost_str = f", ${self.cost_estimate_usd:.4f}" if self.cost_estimate_usd else ""
+        cost_str = (
+            f", ${self.cost_estimate_usd:.4f}"
+            if self.cost_estimate_usd
+            else ""
+        )
         return (
             f"AgentResult(status={self.status!r}, "
             f"elapsed={self.elapsed_seconds:.1f}s{cost_str}{warn_str})"
@@ -389,7 +393,9 @@ class BaseAgent(ABC):
         # Gemini doesn't expose exact token counts via the basic API; estimate
         n_in = len(prompt.split()) * 4 // 3
         n_out = len(text.split()) * 4 // 3
-        cost = AGENT_CONFIG.estimate_cost(self.llm_provider, self.model, n_in, n_out)
+        cost = AGENT_CONFIG.estimate_cost(
+            self.llm_provider, self.model, n_in, n_out
+        )
         return text, cost
 
     def _query_deepseek(

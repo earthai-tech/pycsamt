@@ -259,7 +259,8 @@ class Retriever:
                 "source_path": c.source_path,
             }
             for c in top
-            if c.symbol and c.kind in ("python_symbol", "python_method", "module_doc")
+            if c.symbol
+            and c.kind in ("python_symbol", "python_method", "module_doc")
         ]
         return RetrievedContext(
             query=query,

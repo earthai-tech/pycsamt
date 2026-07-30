@@ -212,6 +212,7 @@ exclude = ["*.tests", "*.tests.*", "tests", "tests.*"]
     "app/mapview/assets/*",
     "models/occam2d/_source/*",
     "models/modem/_source/**/*",
+    "models/_solver_build/**/*",
     "data/occam2d/*",
     "data/3edis/*.edi",
     "data/inversionFiles/*",
@@ -234,7 +235,7 @@ markers    = [
 ]
 
 [tool.ruff]
-line-length = 97
+line-length = 79
 target-version = "py39"
 force-exclude = true
 exclude = [

@@ -53,7 +53,9 @@ def _cache_key(value: str) -> str:
     key = str(value).strip().lower()
     hexadecimal = set("0123456789abcdef")
     if len(key) != 64 or any(char not in hexadecimal for char in key):
-        raise ValueError("cache key must be a 64-character hexadecimal SHA-256 digest.")
+        raise ValueError(
+            "cache key must be a 64-character hexadecimal SHA-256 digest."
+        )
     return key
 
 
@@ -81,7 +83,9 @@ class _KeyLock:
 
     def __enter__(self) -> _KeyLock:
         deadline = time.monotonic() + self.timeout_s
-        payload = f"pid={os.getpid()} created={time.time():.6f}\n".encode("ascii")
+        payload = f"pid={os.getpid()} created={time.time():.6f}\n".encode(
+            "ascii"
+        )
         while True:
             try:
                 descriptor = os.open(
@@ -158,7 +162,9 @@ class CacheEntry:
             raise ValueError("size_bytes must be a non-negative integer.")
         modified = float(self.modified_time_s)
         if not modified >= 0 or not modified < float("inf"):
-            raise ValueError("modified_time_s must be finite and non-negative.")
+            raise ValueError(
+                "modified_time_s must be finite and non-negative."
+            )
         object.__setattr__(self, "key", key)
         object.__setattr__(self, "archive_path", path)
         object.__setattr__(self, "modified_time_s", modified)
@@ -507,7 +513,9 @@ class MaxwellResultCache:
         normalized = _cache_key(key)
         archive, checksum = self._paths(normalized)
         if not archive.is_file() or not checksum.is_file():
-            raise KeyError(f"cache entry {normalized!r} is incomplete or missing.")
+            raise KeyError(
+                f"cache entry {normalized!r} is incomplete or missing."
+            )
         size = archive.stat().st_size + checksum.stat().st_size
         return CacheEntry(
             normalized,
@@ -660,7 +668,9 @@ class MaxwellResultCache:
         try:
             expected = checksum.read_text(encoding="ascii").strip().lower()
         except OSError as exc:
-            raise CacheCorruptionError("cannot read checksum sidecar.") from exc
+            raise CacheCorruptionError(
+                "cannot read checksum sidecar."
+            ) from exc
         try:
             expected = _cache_key(expected)
         except ValueError as exc:

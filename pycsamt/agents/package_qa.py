@@ -225,7 +225,8 @@ def _workflow_lines() -> list[str]:
     return [
         ln
         for ln in PACKAGE_CONTEXT.split("\n")
-        if ln.strip() and any(ln.strip().startswith(k) for k in _WORKFLOW_PREFIXES)
+        if ln.strip()
+        and any(ln.strip().startswith(k) for k in _WORKFLOW_PREFIXES)
     ]
 
 
@@ -243,8 +244,9 @@ def _offline_answer(question: str) -> dict:
     # workflow-listing shortcut
     if kw & _WORKFLOW_TRIGGERS:
         lines = _workflow_lines()
-        answer = "pycsamt v2 supports the following" " workflows:\n\n" + "\n".join(
-            "  " + ln for ln in lines
+        answer = (
+            "pycsamt v2 supports the following"
+            " workflows:\n\n" + "\n".join("  " + ln for ln in lines)
         )
         return {
             "answer": answer,

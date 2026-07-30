@@ -106,7 +106,11 @@ def validate(
         sys.exit(1)
 
     if comp is not None:
-        mask = df["comp"].str.upper() == comp.upper() if "comp" in df.columns else True
+        mask = (
+            df["comp"].str.upper() == comp.upper()
+            if "comp" in df.columns
+            else True
+        )
         df = df[mask]
         if df.empty:
             click.echo(f"No rows match component {comp!r}.", err=True)
@@ -114,7 +118,9 @@ def validate(
 
     # Find which QC columns are present
     present = [
-        (col, lbl, unit, thr) for col, lbl, unit, thr in _QC_COLS if col in df.columns
+        (col, lbl, unit, thr)
+        for col, lbl, unit, thr in _QC_COLS
+        if col in df.columns
     ]
 
     if not present:
@@ -126,7 +132,11 @@ def validate(
 
     # Per-station aggregation
 
-    gb = df.groupby("station") if "station" in df.columns else df.groupby(df.index)
+    gb = (
+        df.groupby("station")
+        if "station" in df.columns
+        else df.groupby(df.index)
+    )
     agg = gb[[c for c, *_ in present]].agg(["mean", "max"]).round(3)
     agg.columns = ["_".join(c) for c in agg.columns]
 
@@ -175,7 +185,9 @@ def validate(
         return
 
     if output_format == "csv":
-        cols = ["station"] + [f"{col}_mean" for col, *_ in present] + ["flagged"]
+        cols = (
+            ["station"] + [f"{col}_mean" for col, *_ in present] + ["flagged"]
+        )
         click.echo(",".join(cols))
         for r in rows:
             click.echo(",".join(str(r.get(c, "")) for c in cols))

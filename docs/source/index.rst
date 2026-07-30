@@ -688,6 +688,7 @@
              <li><a href="changelog.html">Changelog</a></li>
              <li><a href="contributing.html">Contributing</a></li>
              <li><a href="development/index.html">Development</a></li>
+             <li><a href="faq.html">FAQ &amp; help</a></li>
            </ul>
          </div>
        </div>
@@ -755,3 +756,10 @@
    release_notes/index
    changelog
    resources
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Help
+
+   FAQ <faq>

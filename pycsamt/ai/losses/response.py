@@ -259,15 +259,20 @@ def response_loss_from_contracts(
     --------
     >>> import numpy as np
     >>> from pycsamt.ai.data import SurveyData
-    >>> from pycsamt.forward.maxwell import (
-    ...     ForwardResult, SolverDiagnostics
-    ... )
+    >>> from pycsamt.forward.maxwell import ForwardResult, SolverDiagnostics
     >>> z = np.array([[[1 + 1j]]])
     >>> observed = SurveyData(z, [10.0], ["S1"], ["zxy"], [[0, 0]])
     >>> diagnostics = SolverDiagnostics([[True]], [[1]], [[0.0]], 0.01)
     >>> forward = ForwardResult(
-    ...     "a" * 64, [10.0], ["S1"], ["zxy"], z, None,
-    ...     "demo", "1", diagnostics,
+    ...     "a" * 64,
+    ...     [10.0],
+    ...     ["S1"],
+    ...     ["zxy"],
+    ...     z,
+    ...     None,
+    ...     "demo",
+    ...     "1",
+    ...     diagnostics,
     ... )
     >>> response_loss_from_contracts(forward, observed).value
     0.0

@@ -38,10 +38,14 @@ def _readonly(array: Any, dtype: Any | None = None) -> np.ndarray:
     return out
 
 
-def _names(values: Sequence[str], expected: int, label: str) -> tuple[str, ...]:
+def _names(
+    values: Sequence[str], expected: int, label: str
+) -> tuple[str, ...]:
     result = tuple(str(value).strip() for value in values)
     if len(result) != expected:
-        raise ValueError(f"{label} must contain {expected} entries; got {len(result)}.")
+        raise ValueError(
+            f"{label} must contain {expected} entries; got {len(result)}."
+        )
     if any(not value for value in result):
         raise ValueError(f"{label} cannot contain empty names.")
     if len(set(result)) != len(result):
@@ -102,7 +106,9 @@ class ImpedanceConvention:
 
     def __post_init__(self) -> None:
         if self.time_dependence not in {"exp(+iwt)", "exp(-iwt)"}:
-            raise ValueError("time_dependence must be 'exp(+iwt)' or 'exp(-iwt)'.")
+            raise ValueError(
+                "time_dependence must be 'exp(+iwt)' or 'exp(-iwt)'."
+            )
         if self.units != "V/A":
             raise ValueError("units must be 'V/A' for canonical impedance.")
         rotation = float(self.rotation_deg)
@@ -205,7 +211,9 @@ class SurveyCoverage:
 
     def __post_init__(self) -> None:
         overall = float(self.overall)
-        tipper = None if self.tipper_overall is None else float(self.tipper_overall)
+        tipper = (
+            None if self.tipper_overall is None else float(self.tipper_overall)
+        )
         values = [overall] + ([] if tipper is None else [tipper])
         arrays = {}
         for name in ("by_station", "by_frequency", "by_component"):
@@ -217,7 +225,9 @@ class SurveyCoverage:
         if not np.all(np.isfinite(values)) or np.any(
             (np.asarray(values) < 0) | (np.asarray(values) > 1)
         ):
-            raise ValueError("coverage fractions must be finite and in [0, 1].")
+            raise ValueError(
+                "coverage fractions must be finite and in [0, 1]."
+            )
         object.__setattr__(self, "overall", overall)
         object.__setattr__(self, "tipper_overall", tipper)
         for name, array in arrays.items():
@@ -319,7 +329,9 @@ class SurveyData:
     tipper_valid: np.ndarray | None = None
     crs: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
-    convention: ImpedanceConvention = field(default_factory=ImpedanceConvention)
+    convention: ImpedanceConvention = field(
+        default_factory=ImpedanceConvention
+    )
 
     def __post_init__(self) -> None:
         z = np.asarray(self.impedance)
@@ -335,22 +347,30 @@ class SurveyData:
 
         frequencies = np.asarray(self.frequencies_hz, dtype=float)
         if frequencies.shape != (n_frequency,):
-            raise ValueError(f"frequencies_hz must have shape ({n_frequency},).")
+            raise ValueError(
+                f"frequencies_hz must have shape ({n_frequency},)."
+            )
         if not np.all(np.isfinite(frequencies)) or np.any(frequencies <= 0):
             raise ValueError("frequencies_hz must be finite and positive.")
         differences = np.diff(frequencies)
         if differences.size and not (
             np.all(differences > 0) or np.all(differences < 0)
         ):
-            raise ValueError("frequencies_hz must be strictly monotonic and unique.")
+            raise ValueError(
+                "frequencies_hz must be strictly monotonic and unique."
+            )
 
         station_names = _names(self.station_names, n_station, "station_names")
         components = _names(self.components, n_component, "components")
         coordinates = np.asarray(self.coordinates_m, dtype=float)
         if coordinates.shape == (n_station, 2):
-            coordinates = np.column_stack([coordinates, np.full(n_station, np.nan)])
+            coordinates = np.column_stack(
+                [coordinates, np.full(n_station, np.nan)]
+            )
         if coordinates.shape != (n_station, 3):
-            raise ValueError(f"coordinates_m must have shape ({n_station}, 2 or 3).")
+            raise ValueError(
+                f"coordinates_m must have shape ({n_station}, 2 or 3)."
+            )
         if not np.all(np.isfinite(coordinates[:, :2])):
             raise ValueError("coordinate x/y values must be finite.")
 
@@ -404,7 +424,9 @@ class SurveyData:
     def _validate_tipper(self, n_station: int, n_frequency: int):
         if self.tipper is None:
             if self.tipper_error is not None or self.tipper_valid is not None:
-                raise ValueError("tipper_error/tipper_valid require tipper data.")
+                raise ValueError(
+                    "tipper_error/tipper_valid require tipper data."
+                )
             return None, None, None
         t = np.asarray(self.tipper)
         expected = (n_station, n_frequency, 2)
@@ -702,7 +724,9 @@ class SurveyData:
         """
         index = self.component_index(name)
         errors = (
-            None if self.impedance_error is None else self.impedance_error[:, :, index]
+            None
+            if self.impedance_error is None
+            else self.impedance_error[:, :, index]
         )
         return self.impedance[:, :, index], errors, self.valid[:, :, index]
 
@@ -839,11 +863,17 @@ class SurveyData:
         low = -np.inf if frequency_min_hz is None else float(frequency_min_hz)
         high = np.inf if frequency_max_hz is None else float(frequency_max_hz)
         if np.isnan(low) or np.isnan(high) or low <= 0 and np.isfinite(low):
-            raise ValueError("frequency bounds must be positive when supplied.")
+            raise ValueError(
+                "frequency bounds must be positive when supplied."
+            )
         if np.isfinite(high) and high <= 0:
-            raise ValueError("frequency bounds must be positive when supplied.")
+            raise ValueError(
+                "frequency bounds must be positive when supplied."
+            )
         if low > high:
-            raise ValueError("frequency_min_hz cannot exceed frequency_max_hz.")
+            raise ValueError(
+                "frequency_min_hz cannot exceed frequency_max_hz."
+            )
         fi = np.flatnonzero(
             (self.frequencies_hz >= low) & (self.frequencies_hz <= high)
         )
@@ -1022,7 +1052,9 @@ class SurveyData:
             "coordinates_m": self.coordinates_m,
             "valid": self.valid,
             "crs": np.array(self.crs or ""),
-            "metadata_json": np.array(json.dumps(dict(self.metadata), sort_keys=True)),
+            "metadata_json": np.array(
+                json.dumps(dict(self.metadata), sort_keys=True)
+            ),
             "convention_json": np.array(
                 json.dumps(self.convention.to_dict(), sort_keys=True)
             ),
@@ -1081,7 +1113,9 @@ class SurveyData:
         with np.load(Path(path), allow_pickle=False) as data:
             version = str(data["schema_version"].item())
             if version not in {"1", "2"}:
-                raise ValueError(f"Unsupported SurveyData schema version {version!r}.")
+                raise ValueError(
+                    f"Unsupported SurveyData schema version {version!r}."
+                )
 
             def optional(name):
                 return data[name].copy() if name in data.files else None
@@ -1171,8 +1205,12 @@ def merge_surveys(
     for name in attributes:
         availability = [getattr(survey, name) is not None for survey in items]
         if any(availability) and not all(availability):
-            raise ValueError(f"all surveys must have consistent {name} availability.")
-    station_names = tuple(name for survey in items for name in survey.station_names)
+            raise ValueError(
+                f"all surveys must have consistent {name} availability."
+            )
+    station_names = tuple(
+        name for survey in items for name in survey.station_names
+    )
     if len(set(station_names)) != len(station_names):
         raise ValueError("station names must be unique across merged surveys.")
 
@@ -1180,7 +1218,9 @@ def merge_surveys(
         first = getattr(reference, name)
         if first is None:
             return None
-        return np.concatenate([getattr(survey, name) for survey in items], axis=0)
+        return np.concatenate(
+            [getattr(survey, name) for survey in items], axis=0
+        )
 
     return SurveyData(
         impedance=_concatenate("impedance"),
@@ -1194,6 +1234,8 @@ def merge_surveys(
         tipper_error=_concatenate("tipper_error"),
         tipper_valid=_concatenate("tipper_valid"),
         crs=reference.crs,
-        metadata={"source_survey_count": len(items)} if metadata is None else metadata,
+        metadata={"source_survey_count": len(items)}
+        if metadata is None
+        else metadata,
         convention=reference.convention,
     )

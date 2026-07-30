@@ -319,7 +319,9 @@ class ForwardConfig3D:
                 (self.anomaly_z_lo, self.anomaly_z_hi, "z"),
             ):
                 if lo >= hi:
-                    raise ValueError(f"anomaly_{ax}_lo must be < anomaly_{ax}_hi.")
+                    raise ValueError(
+                        f"anomaly_{ax}_lo must be < anomaly_{ax}_hi."
+                    )
         if self.nx_stations < 1 or self.ny_stations < 1:
             raise ValueError("nx_stations and ny_stations must be ≥ 1.")
 

@@ -369,21 +369,27 @@ class InversionConfig:
         """
         _VALID_ARCH = {"resnet", "cnn1d", "fcn"}
         if self.arch not in _VALID_ARCH:
-            raise ValueError(f"arch must be one of {_VALID_ARCH!r}, got {self.arch!r}.")
+            raise ValueError(
+                f"arch must be one of {_VALID_ARCH!r}, got {self.arch!r}."
+            )
 
         _VALID_SOLVERS = {"mt1d", "csamt1d", "tem1d"}
         if self.solver not in _VALID_SOLVERS:
             raise ValueError(
-                f"solver must be one of {_VALID_SOLVERS!r}, " f"got {self.solver!r}."
+                f"solver must be one of {_VALID_SOLVERS!r}, "
+                f"got {self.solver!r}."
             )
 
         if self.n_layers < 2:
-            raise ValueError("n_layers must be at least 2 (1 layer + halfspace).")
+            raise ValueError(
+                "n_layers must be at least 2 (1 layer + halfspace)."
+            )
 
         if self.device is not None:
             _VALID_DEVICES = {"cpu", "cuda", "mps"}
-            if self.device not in _VALID_DEVICES and not self.device.startswith(
-                "cuda:"
+            if (
+                self.device not in _VALID_DEVICES
+                and not self.device.startswith("cuda:")
             ):
                 raise ValueError(
                     f"device must be one of {_VALID_DEVICES!r} or 'cuda:N', "
@@ -635,7 +641,11 @@ class InversionConfig:
         phase_s = "yes" if self.include_phase else "no"
         log_th_s = "yes" if self.log_thickness else "no"
         clip_s = str(self.grad_clip) if self.grad_clip is not None else "off"
-        ckpt = str(self.checkpoint_path()) if self.checkpoint_path() else "disabled"
+        ckpt = (
+            str(self.checkpoint_path())
+            if self.checkpoint_path()
+            else "disabled"
+        )
         lines = [
             "InversionConfig",
             "  ── Architecture ──",

@@ -473,7 +473,9 @@ class PlotConfig:
         # resolve per-call overrides
         _dpi = dpi if dpi is not None else self.dpi
         _bbox = bbox_inches if bbox_inches is not None else self.bbox_inches
-        _transparent = transparent if transparent is not None else self.transparent
+        _transparent = (
+            transparent if transparent is not None else self.transparent
+        )
         _facecolor = facecolor if facecolor is not None else self.facecolor
 
         fmts = self.resolve_formats(fmt)

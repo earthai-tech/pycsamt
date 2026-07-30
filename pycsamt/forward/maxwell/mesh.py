@@ -78,7 +78,9 @@ def _nearest_indices(source: np.ndarray, target: np.ndarray) -> np.ndarray:
     insertion = np.searchsorted(source, target)
     insertion = np.clip(insertion, 1, len(source) - 1)
     left = insertion - 1
-    choose_right = np.abs(target - source[insertion]) < np.abs(target - source[left])
+    choose_right = np.abs(target - source[insertion]) < np.abs(
+        target - source[left]
+    )
     return np.where(choose_right, insertion, left)
 
 
@@ -131,7 +133,9 @@ class MeshDesign:
 
     def __post_init__(self) -> None:
         padding = self.horizontal_padding_cells
-        if isinstance(padding, (int, np.integer)) and not isinstance(padding, bool):
+        if isinstance(padding, (int, np.integer)) and not isinstance(
+            padding, bool
+        ):
             normalized = (_count(padding, "horizontal_padding_cells"),) * 2
         else:
             try:
@@ -141,7 +145,9 @@ class MeshDesign:
                     "horizontal_padding_cells must be an integer or pair."
                 ) from exc
             if len(normalized) != 2:
-                raise ValueError("horizontal_padding_cells must contain two values.")
+                raise ValueError(
+                    "horizontal_padding_cells must contain two values."
+                )
             normalized = (
                 _count(normalized[0], "horizontal_padding_cells[0]"),
                 _count(normalized[1], "horizontal_padding_cells[1]"),
@@ -152,7 +158,9 @@ class MeshDesign:
             "bottom_padding_cells",
             _count(self.bottom_padding_cells, "bottom_padding_cells"),
         )
-        object.__setattr__(self, "air_layers", _count(self.air_layers, "air_layers"))
+        object.__setattr__(
+            self, "air_layers", _count(self.air_layers, "air_layers")
+        )
         object.__setattr__(
             self,
             "padding_expansion",
@@ -165,7 +173,9 @@ class MeshDesign:
         object.__setattr__(
             self,
             "air_expansion",
-            _positive(self.air_expansion, "air_expansion", minimum=1.0 - 1e-15),
+            _positive(
+                self.air_expansion, "air_expansion", minimum=1.0 - 1e-15
+            ),
         )
         object.__setattr__(
             self,
@@ -265,7 +275,9 @@ class MeshDesign:
             raise ValueError("unsupported MeshDesign schema version.")
         values = dict(data)
         values.pop("schema_version")
-        values["horizontal_padding_cells"] = tuple(values["horizontal_padding_cells"])
+        values["horizontal_padding_cells"] = tuple(
+            values["horizontal_padding_cells"]
+        )
         return cls(**values)
 
 
@@ -318,7 +330,10 @@ class MeshQuality:
             "minimum_skin_depth_m",
             "cells_per_minimum_skin_depth",
         )
-        values = {name: _positive(getattr(self, name), name) for name in numeric_names}
+        values = {
+            name: _positive(getattr(self, name), name)
+            for name in numeric_names
+        }
         if values["maximum_cell_width_m"] < values["minimum_cell_width_m"]:
             raise ValueError(
                 "maximum_cell_width_m cannot be smaller than minimum_cell_width_m."
@@ -418,8 +433,13 @@ class SolverMeshModel:
             )
         conductivity = np.asarray(self.conductivity_s_m, dtype=float)
         earth = np.asarray(self.earth_mask, dtype=bool)
-        if conductivity.shape != self.mesh.shape or earth.shape != self.mesh.shape:
-            raise ValueError("conductivity_s_m and earth_mask must have mesh shape.")
+        if (
+            conductivity.shape != self.mesh.shape
+            or earth.shape != self.mesh.shape
+        ):
+            raise ValueError(
+                "conductivity_s_m and earth_mask must have mesh shape."
+            )
         if not np.all(np.isfinite(conductivity)) or np.any(conductivity <= 0):
             raise ValueError("conductivity_s_m must be positive and finite.")
         if len(self.core_slices) != self.mesh.dimension or tuple(
@@ -467,11 +487,13 @@ class SolverMeshModel:
         digest.update(
             np.ascontiguousarray(self.conductivity_s_m, dtype="<f8").tobytes()
         )
-        digest.update(np.ascontiguousarray(self.earth_mask, dtype=np.uint8).tobytes())
         digest.update(
-            json.dumps(self.provenance(), sort_keys=True, separators=(",", ":")).encode(
-                "utf-8"
-            )
+            np.ascontiguousarray(self.earth_mask, dtype=np.uint8).tobytes()
+        )
+        digest.update(
+            json.dumps(
+                self.provenance(), sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
         )
         return digest.hexdigest()
 
@@ -501,16 +523,22 @@ class SolverMeshModel:
         errors = []
         coordinates = receivers.coordinates_m
         x = coordinates[:, 0]
-        if np.any((x < self.mesh.x_edges_m[0]) | (x > self.mesh.x_edges_m[-1])):
+        if np.any(
+            (x < self.mesh.x_edges_m[0]) | (x > self.mesh.x_edges_m[-1])
+        ):
             errors.append("receiver x coordinates fall outside the mesh")
         if self.mesh.dimension == 3:
             y = coordinates[:, 1]
             z = coordinates[:, 2]
-            if np.any((y < self.mesh.y_edges_m[0]) | (y > self.mesh.y_edges_m[-1])):
+            if np.any(
+                (y < self.mesh.y_edges_m[0]) | (y > self.mesh.y_edges_m[-1])
+            ):
                 errors.append("receiver y coordinates fall outside the mesh")
         else:
             z = coordinates[:, 1]
-        if np.any((z < self.mesh.z_edges_m[0]) | (z > self.mesh.z_edges_m[-1])):
+        if np.any(
+            (z < self.mesh.z_edges_m[0]) | (z > self.mesh.z_edges_m[-1])
+        ):
             errors.append("receiver z coordinates fall outside the mesh")
         if not errors:
             ix = np.clip(
@@ -530,10 +558,14 @@ class SolverMeshModel:
             first_earth = np.argmax(columns, axis=0)
             surface_depth = self.mesh.z_edges_m[first_earth]
             tolerance = (
-                np.finfo(float).eps * np.maximum(1.0, np.abs(surface_depth)) * 16
+                np.finfo(float).eps
+                * np.maximum(1.0, np.abs(surface_depth))
+                * 16
             )
             if np.any(z > surface_depth + tolerance):
-                errors.append("receiver z coordinates fall below local terrain")
+                errors.append(
+                    "receiver z coordinates fall below local terrain"
+                )
         return tuple(errors)
 
     def to_problem(
@@ -581,14 +613,18 @@ class SolverMeshModel:
             raise ValueError("; ".join(errors))
         provenance = {} if metadata is None else dict(metadata)
         provenance["mesh_model_hash"] = self.model_hash
-        provenance["air_treatment"] = "inactive" if mark_air_inactive else "conductive"
+        provenance["air_treatment"] = (
+            "inactive" if mark_air_inactive else "conductive"
+        )
         return MaxwellProblem(
             self.mesh,
             self.conductivity_s_m,
             frequencies_hz,
             receivers,
             tuple(components),
-            self.earth_mask if mark_air_inactive else np.ones(self.mesh.shape, bool),
+            self.earth_mask
+            if mark_air_inactive
+            else np.ones(self.mesh.shape, bool),
             time_dependence,
             magnetic_permeability_h_m,
             provenance,
@@ -637,7 +673,9 @@ class SolverMeshModel:
             target,
             conductivity_s_m=self.conductivity_s_m,
             earth_mask=self.earth_mask,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 
@@ -664,7 +702,9 @@ class SolverMeshModel:
             if state.get("schema_version") != 1:
                 raise ValueError("unsupported SolverMeshModel schema version.")
             quality_state = dict(state["quality"])
-            quality_state["warnings"] = tuple(quality_state.get("warnings", ()))
+            quality_state["warnings"] = tuple(
+                quality_state.get("warnings", ())
+            )
             return cls(
                 MaxwellMesh.from_dict(state["mesh"]),
                 archive["conductivity_s_m"],
@@ -758,9 +798,13 @@ def build_solver_mesh(
     if not isinstance(grid, GeologyGrid):
         raise TypeError("grid must be a GeologyGrid.")
     if (conductivity_s_m is None) == (resistivity_ohm_m is None):
-        raise ValueError("supply exactly one of conductivity_s_m or resistivity_ohm_m.")
+        raise ValueError(
+            "supply exactly one of conductivity_s_m or resistivity_ohm_m."
+        )
     source = np.asarray(
-        conductivity_s_m if conductivity_s_m is not None else resistivity_ohm_m,
+        conductivity_s_m
+        if conductivity_s_m is not None
+        else resistivity_ohm_m,
         dtype=float,
     )
     if (
@@ -771,7 +815,9 @@ def build_solver_mesh(
         raise ValueError(
             f"the source property must be positive, finite, and shaped {grid.shape}."
         )
-    source_conductivity = source if conductivity_s_m is not None else 1.0 / source
+    source_conductivity = (
+        source if conductivity_s_m is not None else 1.0 / source
+    )
     frequencies = np.asarray(frequencies_hz, dtype=float)
     if (
         frequencies.ndim != 1
@@ -779,7 +825,9 @@ def build_solver_mesh(
         or not np.all(np.isfinite(frequencies))
         or np.any(frequencies <= 0)
     ):
-        raise ValueError("frequencies_hz must be a non-empty positive finite vector.")
+        raise ValueError(
+            "frequencies_hz must be a non-empty positive finite vector."
+        )
     configuration = MeshDesign() if design is None else design
     if not isinstance(configuration, MeshDesign):
         raise TypeError("design must be a MeshDesign or None.")
@@ -794,11 +842,15 @@ def build_solver_mesh(
         )
     )
     if topography is not None and not aligned_topography:
-        raise ValueError("topography must be a TopographicSurface aligned to grid.")
+        raise ValueError(
+            "topography must be a TopographicSurface aligned to grid."
+        )
 
     before, after = configuration.horizontal_padding
     x_core_edges = _centres_to_edges(grid.x_m, "grid.x_m")
-    x_edges = _pad_axis(x_core_edges, before, after, configuration.padding_expansion)
+    x_edges = _pad_axis(
+        x_core_edges, before, after, configuration.padding_expansion
+    )
     z_core_edges = _centres_to_edges(grid.z_m, "grid.z_m")
     if not np.isclose(
         z_core_edges[0],
@@ -865,7 +917,9 @@ def build_solver_mesh(
         )
         surface_x = np.vstack(
             [
-                np.interp(centres["x"], grid.x_m, row, left=row[0], right=row[-1])
+                np.interp(
+                    centres["x"], grid.x_m, row, left=row[0], right=row[-1]
+                )
                 for row in surface_core
             ]
         )

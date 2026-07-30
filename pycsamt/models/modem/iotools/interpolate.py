@@ -105,16 +105,22 @@ def interp_model3d(
     try:
         from scipy.interpolate import RegularGridInterpolator
     except ImportError as exc:
-        raise ImportError("interp_model3d requires SciPy: pip install scipy") from exc
+        raise ImportError(
+            "interp_model3d requires SciPy: pip install scipy"
+        ) from exc
 
     # Source cell centres (include optional origin offset)
-    origin_s = np.asarray(getattr(source, "origin", [0.0, 0.0, 0.0]), dtype=float)
+    origin_s = np.asarray(
+        getattr(source, "origin", [0.0, 0.0, 0.0]), dtype=float
+    )
     zc_s = _cell_centers(source.z_widths, origin_s[2])
     yc_s = _cell_centers(source.y_widths, origin_s[1])
     xc_s = _cell_centers(source.x_widths, origin_s[0])
 
     # Target cell centres
-    origin_t = np.asarray(getattr(target, "origin", [0.0, 0.0, 0.0]), dtype=float)
+    origin_t = np.asarray(
+        getattr(target, "origin", [0.0, 0.0, 0.0]), dtype=float
+    )
     zc_t = _cell_centers(target.z_widths, origin_t[2])
     yc_t = _cell_centers(target.y_widths, origin_t[1])
     xc_t = _cell_centers(target.x_widths, origin_t[0])
@@ -191,7 +197,9 @@ def interp_z3d(
     try:
         from scipy.interpolate import griddata
     except ImportError as exc:
-        raise ImportError("interp_z3d requires SciPy: pip install scipy") from exc
+        raise ImportError(
+            "interp_z3d requires SciPy: pip install scipy"
+        ) from exc
 
     new_site_loc = np.asarray(new_site_loc, dtype=float)
     if new_site_loc.ndim == 1:
@@ -218,8 +226,12 @@ def interp_z3d(
         for j in range(blk.n_comp):
             new_Z[:, j] = griddata(
                 old_pts, blk.Z[:, j].real, new_pts, method="cubic"
-            ) + 1j * griddata(old_pts, blk.Z[:, j].imag, new_pts, method="cubic")
-            new_Zerr[:, j] = griddata(old_pts, blk.Zerr[:, j], new_pts, method="cubic")
+            ) + 1j * griddata(
+                old_pts, blk.Z[:, j].imag, new_pts, method="cubic"
+            )
+            new_Zerr[:, j] = griddata(
+                old_pts, blk.Zerr[:, j], new_pts, method="cubic"
+            )
 
         new_imp.blocks[i] = ZBlock(
             period=blk.period,

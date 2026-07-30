@@ -151,7 +151,9 @@ def edit(
 
     # Require output-dir unless dry-run
     if not dry_run and str(output_dir) == ".":
-        raise click.UsageError("--output-dir is required when not using --dry-run")
+        raise click.UsageError(
+            "--output-dir is required when not using --dry-run"
+        )
 
     sites_obj = _get_sites(edi_source, survey_path, fresh, verbose)
 
@@ -168,7 +170,9 @@ def edit(
     if freq_range is not None:
         ops_applied.append(f"select_freq({freq_range[0]}–{freq_range[1]} Hz)")
         if not dry_run:
-            result = edit_mod.select_freq_all(result, freq_range[0], freq_range[1])
+            result = edit_mod.select_freq_all(
+                result, freq_range[0], freq_range[1]
+            )
 
     if fill_missing:
         ops_applied.append("fill_missing")

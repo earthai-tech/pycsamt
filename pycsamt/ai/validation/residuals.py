@@ -162,9 +162,7 @@ class ResponseResidualReport:
             raise TypeError("overall must be a ResponseLossResult.")
         shape = tuple(int(size) for size in self.shape)
         if len(shape) != 3:
-            raise ValueError(
-                "shape must be (station, frequency, component)."
-            )
+            raise ValueError("shape must be (station, frequency, component).")
         object.__setattr__(self, "shape", shape)
         axes = {
             "by_station": (self.by_station, shape[0]),
@@ -174,9 +172,7 @@ class ResponseResidualReport:
         for name, (array, expected_len) in axes.items():
             array = np.asarray(array, dtype=float)
             if array.shape != (expected_len,):
-                raise ValueError(
-                    f"{name} must have shape ({expected_len},)."
-                )
+                raise ValueError(f"{name} must have shape ({expected_len},).")
             object.__setattr__(self, name, _readonly(array))
         if (
             self.station_names is not None
@@ -192,16 +188,9 @@ class ResponseResidualReport:
         if self.frequencies_hz is not None:
             frequencies = np.asarray(self.frequencies_hz, dtype=float)
             if frequencies.shape != (shape[1],):
-                raise ValueError(
-                    "frequencies_hz must have shape (shape[1],)."
-                )
-            object.__setattr__(
-                self, "frequencies_hz", _readonly(frequencies)
-            )
-        if (
-            self.components is not None
-            and len(self.components) != shape[2]
-        ):
+                raise ValueError("frequencies_hz must have shape (shape[1],).")
+            object.__setattr__(self, "frequencies_hz", _readonly(frequencies))
+        if self.components is not None and len(self.components) != shape[2]:
             raise ValueError("components must have length shape[2].")
         if self.components is not None:
             object.__setattr__(

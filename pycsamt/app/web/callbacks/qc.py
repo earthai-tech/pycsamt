@@ -151,7 +151,9 @@ def register_qc(app) -> None:
         records = (store_data or {}).get("station_records", [])
         if sel_lines:
             records = [r for r in records if r.get("line") in sel_lines]
-        stns = sorted({r.get("station", "") for r in records if r.get("station")})
+        stns = sorted(
+            {r.get("station", "") for r in records if r.get("station")}
+        )
         return [{"label": s, "value": s} for s in stns]
 
     # ── 6. Main QC render ─────────────────────────────────────────────────────
@@ -326,7 +328,9 @@ def register_qc(app) -> None:
         State(IDs.STORE_ACTIVE_LINES, "data"),
         prevent_initial_call=True,
     )
-    def run_qc_overview(nav_section, store_data, theme, session_id, active_lines_store):
+    def run_qc_overview(
+        nav_section, store_data, theme, session_id, active_lines_store
+    ):
         if nav_section != "qc":
             return no_update
 

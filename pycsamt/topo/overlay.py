@@ -108,7 +108,9 @@ def draw_topo_section(
     cfg = _get_cfg(cfg)
     chain = np.asarray(chainage_km, dtype=float)
     elev = np.asarray(elev_m, dtype=float) / 1000.0  # → km
-    sx = np.asarray(station_x_km if station_x_km is not None else chain, dtype=float)
+    sx = np.asarray(
+        station_x_km if station_x_km is not None else chain, dtype=float
+    )
 
     if len(chain) == 0:
         return
@@ -354,7 +356,9 @@ def draw_topo_strip(
     # Station name labels — smart thinning: markers always visible, labels subset
     if station_names and len(station_names) == n:
         _dummy = StationAxisStyle()
-        figwidth = ax_s.figure.get_figwidth() if ax_s.figure is not None else 10.0
+        figwidth = (
+            ax_s.figure.get_figwidth() if ax_s.figure is not None else 10.0
+        )
         visible_idx = _dummy.label_indices(station_names, figwidth)
         for i in visible_idx:
             ax_s.text(

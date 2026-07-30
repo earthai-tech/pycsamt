@@ -309,7 +309,9 @@ class InversionResult(OccamBase):
 
         # --- matching response file ---
         iter_n = _iter_number(iter_p)
-        resp_matches = [p for p in self.resp_files if _iter_number(p) == iter_n]
+        resp_matches = [
+            p for p in self.resp_files if _iter_number(p) == iter_n
+        ]
         resp_p = (
             resp_matches[0]
             if resp_matches
@@ -323,7 +325,9 @@ class InversionResult(OccamBase):
 
         # --- data file ---
         data_p = None
-        if self.best_iter is not None and getattr(self.best_iter, "data_file", None):
+        if self.best_iter is not None and getattr(
+            self.best_iter, "data_file", None
+        ):
             candidate = wd / self.best_iter.data_file
             if candidate.exists():
                 data_p = candidate
@@ -439,7 +443,9 @@ class InversionResult(OccamBase):
             fh.writelines(lines)
 
         if self.verbose:
-            self.logger.info("iter2dat: %d cells written to %s", len(lines), out)
+            self.logger.info(
+                "iter2dat: %d cells written to %s", len(lines), out
+            )
         return out
 
     # ------------------------------------------------------------------

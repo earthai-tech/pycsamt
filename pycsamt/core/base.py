@@ -375,8 +375,7 @@ class SupportsToBundle(Protocol):
     avoiding a hard dependency on specific backends.
     """
 
-    def to_bundle(self) -> TFBundle:
-        ...  # noqa: E701
+    def to_bundle(self) -> TFBundle: ...  # noqa: E701
 
 
 class SupportsFromBundle(Protocol):
@@ -393,8 +392,7 @@ class SupportsFromBundle(Protocol):
     """
 
     @classmethod
-    def from_bundle(cls, bundle: TFBundle):
-        ...  # noqa: E701
+    def from_bundle(cls, bundle: TFBundle): ...  # noqa: E701
 
 
 def ensure_station(

@@ -64,9 +64,7 @@ class ModelLossResult:
     Examples
     --------
     >>> import numpy as np
-    >>> result = model_l2_loss(
-    ...     np.array([1.0, 2.0]), np.array([1.0, 0.0])
-    ... )
+    >>> result = model_l2_loss(np.array([1.0, 2.0]), np.array([1.0, 0.0]))
     >>> result.value, result.n_valid
     (2.0, 2)
     """
@@ -162,9 +160,7 @@ def model_l1_loss(
     Examples
     --------
     >>> import numpy as np
-    >>> model_l1_loss(
-    ...     np.array([1.0, 3.0]), np.array([1.0, 1.0])
-    ... ).value
+    >>> model_l1_loss(np.array([1.0, 3.0]), np.array([1.0, 1.0])).value
     1.0
     """
     return _model_loss(
@@ -208,9 +204,7 @@ def model_l2_loss(
     Examples
     --------
     >>> import numpy as np
-    >>> model_l2_loss(
-    ...     np.array([1.0, 3.0]), np.array([1.0, 1.0])
-    ... ).value
+    >>> model_l2_loss(np.array([1.0, 3.0]), np.array([1.0, 1.0])).value
     2.0
     """
     return _model_loss(
@@ -354,9 +348,7 @@ class ModelLoss:
         if self.weights is not None:
             weights = np.asarray(self.weights, dtype=float)
             if not np.all(np.isfinite(weights)) or np.any(weights < 0):
-                raise ValueError(
-                    "weights must be finite and non-negative."
-                )
+                raise ValueError("weights must be finite and non-negative.")
             object.__setattr__(self, "weights", weights)
 
     def __call__(

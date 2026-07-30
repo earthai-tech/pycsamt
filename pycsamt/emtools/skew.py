@@ -192,7 +192,11 @@ def mask_by_skew(
         elif mode == "abs_lt":
             keep = a >= thresh
         else:
-            keep = a <= thresh if np.isfinite(thresh) else np.ones(sk.size, dtype=bool)
+            keep = (
+                a <= thresh
+                if np.isfinite(thresh)
+                else np.ones(sk.size, dtype=bool)
+            )
         _mask_apply(ed, keep, also=also)
         return Si
 
@@ -626,7 +630,9 @@ def plot_skewness(f_hz, Z, *, threshold=0.4, ax=None, title=None):
     eta = bahr_skewness(Z)
 
     ax.plot(x, eta, "+", ms=3, mew=0.9, color="0.35", label=None)
-    ax.axhline(threshold, color="red", lw=1.5, label=f"Threshold: η = {threshold:g}")
+    ax.axhline(
+        threshold, color="red", lw=1.5, label=f"Threshold: η = {threshold:g}"
+    )
 
     # Average skewness annotation
     avg_eta = float(np.nanmean(eta))
@@ -653,7 +659,9 @@ def plot_skewness(f_hz, Z, *, threshold=0.4, ax=None, title=None):
     ax.plot([xmax, xmax], [0, threshold], color="tab:blue")
     ax.plot([xmax, xmax], [threshold, ymax], color="tab:orange")
     ax.text(xr, 0.5 * threshold, "2D", va="center", color="tab:blue")
-    ax.text(xr, 0.5 * (threshold + ymax), "3D", va="center", color="tab:orange")
+    ax.text(
+        xr, 0.5 * (threshold + ymax), "3D", va="center", color="tab:orange"
+    )
     ax.legend(loc="upper right", frameon=True)
     ax.grid(True, alpha=0.25)
     return ax

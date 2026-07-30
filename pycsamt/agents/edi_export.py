@@ -101,7 +101,9 @@ class EDIExportAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
 
         output_dir = input_data.get("output_dir")
         if output_dir is None:
@@ -224,7 +226,9 @@ def _per_item_export(
         out_path = os.path.join(out_dir_abs, filename)
 
         if os.path.exists(out_path) and not overwrite:
-            warnings.append(f"{nm}: {out_path} exists — skipped (set overwrite=True).")
+            warnings.append(
+                f"{nm}: {out_path} exists — skipped (set overwrite=True)."
+            )
             failed.append((nm, "file exists"))
             continue
 
@@ -238,7 +242,9 @@ def _per_item_export(
                 target = target.to_edi()
 
             if hasattr(target, "write_new_edi"):
-                path = target.write_new_edi(edi_fn=filename, savepath=out_dir_abs)
+                path = target.write_new_edi(
+                    edi_fn=filename, savepath=out_dir_abs
+                )
                 written.append(str(path or out_path))
             elif hasattr(target, "write"):
                 path = target.write(savepath=out_dir_abs, new_edifn=filename)

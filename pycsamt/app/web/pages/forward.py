@@ -36,7 +36,8 @@ _METHOD_OPTS = [
     {"label": "TEM 1-D", "value": "TEM1D"},
 ]
 _PRESET_OPTS = [
-    {"label": p.replace("_", " ").title(), "value": p} for p in GEOLOGY_PRESET_NAMES
+    {"label": p.replace("_", " ").title(), "value": p}
+    for p in GEOLOGY_PRESET_NAMES
 ]
 
 _DEFAULT_LAYERS = [
@@ -209,7 +210,9 @@ def _1d_controls():
                                 [
                                     html.Span(
                                         [
-                                            html.I(className="bi bi-infinity me-1"),
+                                            html.I(
+                                                className="bi bi-infinity me-1"
+                                            ),
                                             "Halfspace",
                                         ],
                                         className="fwd-hs-label",
@@ -226,7 +229,9 @@ def _1d_controls():
                             ),
                             dbc.InputGroup(
                                 [
-                                    dbc.InputGroupText("ρ", style={"fontSize": "11px"}),
+                                    dbc.InputGroupText(
+                                        "ρ", style={"fontSize": "11px"}
+                                    ),
                                     _num(
                                         IDs.FWD_HALFSPACE_RHO,
                                         1000,
@@ -252,7 +257,9 @@ def _1d_controls():
                     dbc.InputGroup(
                         [
                             _num(IDs.FWD_OFFSET, 5000, min=100, step=100),
-                            dbc.InputGroupText("m", style={"fontSize": "11px"}),
+                            dbc.InputGroupText(
+                                "m", style={"fontSize": "11px"}
+                            ),
                         ],
                         size="sm",
                     ),
@@ -268,7 +275,9 @@ def _1d_controls():
                     dbc.InputGroup(
                         [
                             _num(IDs.FWD_LOOP_R, 50, min=5, step=5),
-                            dbc.InputGroupText("m", style={"fontSize": "11px"}),
+                            dbc.InputGroupText(
+                                "m", style={"fontSize": "11px"}
+                            ),
                         ],
                         size="sm",
                     ),
@@ -459,7 +468,9 @@ def _2d_controls():
                                     ),
                                 ]
                             ),
-                            dbc.Col([_lbl("Seed"), _num(IDs.FWD2_SEED, 42, min=0)]),
+                            dbc.Col(
+                                [_lbl("Seed"), _num(IDs.FWD2_SEED, 42, min=0)]
+                            ),
                         ],
                         className="g-1",
                     ),
@@ -539,19 +550,25 @@ def _3d_controls():
                             dbc.Col(
                                 [
                                     _lbl("Nx"),
-                                    _num(IDs.FWD3_NX, 15, min=8, max=40, step=5),
+                                    _num(
+                                        IDs.FWD3_NX, 15, min=8, max=40, step=5
+                                    ),
                                 ]
                             ),
                             dbc.Col(
                                 [
                                     _lbl("Ny"),
-                                    _num(IDs.FWD3_NY, 15, min=8, max=40, step=5),
+                                    _num(
+                                        IDs.FWD3_NY, 15, min=8, max=40, step=5
+                                    ),
                                 ]
                             ),
                             dbc.Col(
                                 [
                                     _lbl("Nz"),
-                                    _num(IDs.FWD3_NZ, 12, min=6, max=30, step=3),
+                                    _num(
+                                        IDs.FWD3_NZ, 12, min=6, max=30, step=3
+                                    ),
                                 ]
                             ),
                         ],
@@ -690,7 +707,9 @@ def _3d_controls():
                                     ),
                                 ]
                             ),
-                            dbc.Col([_lbl("Seed"), _num(IDs.FWD3_SEED, 42, min=0)]),
+                            dbc.Col(
+                                [_lbl("Seed"), _num(IDs.FWD3_SEED, 42, min=0)]
+                            ),
                         ],
                         className="g-1",
                     ),
@@ -828,7 +847,9 @@ def layout() -> html.Div:
                 className="w-100 mb-1",
                 n_clicks=0,
             ),
-            dbc.Spinner(html.Div(id=IDs.FWD_SPINNER), size="sm", color="primary"),
+            dbc.Spinner(
+                html.Div(id=IDs.FWD_SPINNER), size="sm", color="primary"
+            ),
             html.Div(id=IDs.FWD_FEEDBACK, className="fwd-feedback-mini"),
         ],
         className="fwd-run-bar",
@@ -858,8 +879,12 @@ def layout() -> html.Div:
             ),
             dbc.Row(
                 [
-                    dbc.Col([_lbl("Min"), _num(IDs.FWD_FREQ_MIN, -3, step=0.5)]),
-                    dbc.Col([_lbl("Max"), _num(IDs.FWD_FREQ_MAX, 4, step=0.5)]),
+                    dbc.Col(
+                        [_lbl("Min"), _num(IDs.FWD_FREQ_MIN, -3, step=0.5)]
+                    ),
+                    dbc.Col(
+                        [_lbl("Max"), _num(IDs.FWD_FREQ_MAX, 4, step=0.5)]
+                    ),
                     dbc.Col(
                         [
                             _lbl("N pts"),

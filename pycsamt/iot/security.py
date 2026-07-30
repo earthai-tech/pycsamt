@@ -116,10 +116,14 @@ class Credential(PyCSAMTObject):
         self.username = _c.as_optional_str(self.username, "username")
         self.password = _c.as_optional_str(self.password, "password")
         self.api_key = _c.as_optional_str(self.api_key, "api_key")
-        self.api_key_header = _c.as_nonempty_str(self.api_key_header, "api_key_header")
+        self.api_key_header = _c.as_nonempty_str(
+            self.api_key_header, "api_key_header"
+        )
         if self.scheme is AuthScheme.BEARER and not self.token:
             raise ValueError("bearer scheme requires a token.")
-        if self.scheme is AuthScheme.BASIC and not (self.username and self.password):
+        if self.scheme is AuthScheme.BASIC and not (
+            self.username and self.password
+        ):
             raise ValueError("basic scheme requires username and password.")
         if self.scheme is AuthScheme.API_KEY and not self.api_key:
             raise ValueError("api_key scheme requires an api_key.")

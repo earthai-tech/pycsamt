@@ -83,16 +83,24 @@ try:
             n_stages = len(ch) - 1
             in_chs = [n_in] + ch[:-1]
             self.encoders = nn.ModuleList(
-                [_conv_block(in_chs[i], ch[i], dropout) for i in range(n_stages)]
+                [
+                    _conv_block(in_chs[i], ch[i], dropout)
+                    for i in range(n_stages)
+                ]
             )
-            self.pools = nn.ModuleList([nn.MaxPool2d(2) for _ in range(n_stages)])
+            self.pools = nn.ModuleList(
+                [nn.MaxPool2d(2) for _ in range(n_stages)]
+            )
             self.bridge = _conv_block(ch[n_stages - 1], ch[-1], dropout)
             dec_out = [ch[i] for i in range(n_stages - 1, -1, -1)]
             prev_ch = [ch[-1]] + dec_out[:-1]
             skip_ch = dec_out
             dec_in = [prev_ch[j] + skip_ch[j] for j in range(n_stages)]
             self.decoders = nn.ModuleList(
-                [_conv_block(dec_in[i], dec_out[i], dropout) for i in range(n_stages)]
+                [
+                    _conv_block(dec_in[i], dec_out[i], dropout)
+                    for i in range(n_stages)
+                ]
             )
             self.out_conv = nn.Conv2d(ch[0], n_out, 1)
 
@@ -195,6 +203,7 @@ def _build_unet2d(
     """Return an ``nn.Module`` implementing 2-D U-Net."""
     if "_UNet2D" not in globals():
         raise ImportError(
-            "PyTorch is required for UNet2DNet. " "Install with: pip install torch"
+            "PyTorch is required for UNet2DNet. "
+            "Install with: pip install torch"
         )
     return _UNet2D(n_in, n_out, tuple(channels), dropout)

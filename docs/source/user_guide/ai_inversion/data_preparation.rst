@@ -109,7 +109,7 @@ Preserve the original EDI inventory and QC results. AI preparation should
 create derived arrays rather than overwrite source impedance.
 
 3. Use observation containers before features
-----------------------------------------------
+---------------------------------------------
 
 Observation containers retain scientific meaning and are useful for auditing
 before interpolation.
@@ -716,7 +716,103 @@ surface of the configured grid. A field workflow that claims terrain-aware
 physics needs a solver mesh and receiver geometry that encode terrain, not a
 post-hoc drape of the target image.
 
-12. Add realistic observation effects
+12. Prepare 3-D training profiles
+---------------------------------
+
+Section 10's pseudo-3-D graph data and :doc:`agents`'s default
+``Inv3DAgent(physics="mt1d")`` both still tile independent 1-D columns
+under a graph-smoothing network; nothing in that training data ever shows
+the network a laterally *and* vertically coupled response. For
+:term:`Genuine 3-D Maxwell training`,
+:func:`pycsamt.ai.training.dataset3d.generate_3d_maxwell_dataset` generates
+correlated 3-D resistivity volumes and solves each one with the
+research-only :class:`pycsamt.forward.maxwell.mt3d.MT3DAdapter`, the same
+role :func:`~pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset`
+plays for profile data. ``Inv3DAgent(physics="mt3d")`` is the agent that
+consumes it.
+
+The same log-resistivity construction as equation
+:eq:`eq-ai-data-maxwell2d-prior` applies unchanged with a third spatial
+argument, :math:`\rho_r(z,y,x)=10^{\mu_{\log\rho}+\sigma_{\log\rho}g_r(z,y,x)}`,
+once the correlated field itself is drawn from a 3-D
+:class:`~pycsamt.ai.geology.GaussianCorrelation` supplying ``length_y_m``.
+A small fully executed example, matching section 11's scale:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.geology import GeologyGrid
+   >>> from pycsamt.ai.training.dataset3d import (
+   ...     Maxwell3DDatasetConfig,
+   ...     generate_3d_maxwell_dataset,
+   ... )
+
+   >>> grid3 = GeologyGrid.regular_3d(
+   ...     nx=4, ny=4, nz=6, dx_m=200.0, dy_m=200.0, dz_m=100.0
+   ... )
+   >>> config3 = Maxwell3DDatasetConfig(
+   ...     dataset_id="guide-3d-v1",
+   ...     grid=grid3,
+   ...     correlation_length_x_m=(400.0, 800.0),
+   ...     correlation_length_y_m=(400.0, 800.0),
+   ...     correlation_length_z_m=(100.0, 200.0),
+   ...     frequencies_hz=[50.0, 20.0],
+   ...     station_xy_m=[[400.0, 400.0], [600.0, 600.0]],
+   ...     n_realizations=2,
+   ...     seed=0,
+   ...     validation_fraction=0.0,
+   ...     test_fraction=0.0,
+   ... )
+   >>> maxwell_3d = generate_3d_maxwell_dataset(config3)
+   >>> first_3d = maxwell_3d.samples[0]
+   >>> len(maxwell_3d.samples), maxwell_3d.rejected
+   (2, ())
+   >>> first_3d.resistivity_ohm_m.shape, first_3d.survey.shape
+   ((6, 4, 4), (2, 2, 2))
+   >>> first_3d.survey.components
+   ('zxy', 'zyx')
+   >>> first_3d.mesh_cells, f"{first_3d.relative_residual:.3e}"
+   (3584, '2.197e-19')
+   >>> maxwell_3d.split.sizes
+   {'train': 2, 'validation': 0, 'test': 0}
+   >>> maxwell_3d.manifest.dataset_id, maxwell_3d.manifest.sample_count
+   ('guide-3d-v1', 2)
+   >>> len(maxwell_3d.manifest.configuration_hash)
+   64
+
+The target is a volume of shape ``(z, y, x)=(6, 4, 4)`` on the geological
+grid, not a profile section. ``GCNInverter3D`` does not consume it as a
+dense image the way a U-Net consumes section 11's 2-D target: each real
+station's true vertical resistivity column is resampled out of the volume
+at that station's own ``(x, y)`` position onto the agent's display depth
+grid, so the geological grid's own resolution need not match the number of
+output layers. Equation :eq:`eq-ai-data-maxwell2d-residual` -- the linear
+solver residual -- applies unchanged to this solve; the
+:math:`2.197\times10^{-19}` value above again shows an accurate linear
+solve, not mesh convergence or geological realism.
+
+Unlike section 11's uniform lateral mesh, the 3-D solver mesh is padded
+and non-uniform, because 3-D cell count scales as the *cube* of resolution
+rather than its square -- a uniform mesh both fine enough for the
+structure and extensive enough for :term:`skin depth` in three directions
+at once rarely fits ``max_mesh_cells``. See :doc:`dataset3d` for the full
+mesh construction, the ``cells_per_skin_depth`` frequency-aware core
+resolution knob, and its own realization-gallery and full-tensor-response
+figures -- this section deliberately does not repeat them. As with the
+2-D route, only converged realizations become samples,
+:attr:`~pycsamt.ai.training.dataset3d.Maxwell3DDataset.rejected` records
+the rest, and :mod:`pycsamt.ai.domain_gap.simulator`'s noise, dropout, and
+distortion apply identically afterward, since it operates on the shared
+:class:`~pycsamt.ai.data.contracts.SurveyData` contract without any notion
+of how many spatial dimensions produced it.
+
+A genuine 3-D solve costs far more per realization than a 2-D one --
+seconds to tens of seconds even at this documentation scale, against a
+2-D realization's fraction of a second -- so budget ``n_realizations``
+deliberately rather than reusing a 2-D-sized default, and prefer
+:class:`~pycsamt.forward.maxwell.MaxwellResultCache` so an interrupted
+generation run resumes instead of restarting.
+
+13. Add realistic observation effects
 -------------------------------------
 
 White Gaussian noise alone rarely represents field data. Consider controlled
@@ -743,7 +839,7 @@ Do not augment validation and test sets by copying training examples with new
 noise. That tests denoising around known models rather than generalization to
 new earth structures.
 
-13. Audit synthetic arrays
+14. Audit synthetic arrays
 --------------------------
 
 Run structural and numerical checks immediately after generation:
@@ -787,7 +883,7 @@ Also inspect:
 Plot distributions by split and scenario. Aggregate percentiles can hide a
 missing rare target class.
 
-14. Split without leakage
+15. Split without leakage
 -------------------------
 
 ``ForwardDataset.split`` provides a random row split:
@@ -829,7 +925,7 @@ in :doc:`data_contracts`.
 Never choose hyperparameters on the test set. Once a test result changes model
 or data preparation decisions, that set has become validation data.
 
-15. Fit preprocessing on training only
+16. Fit preprocessing on training only
 --------------------------------------
 
 If features or targets are standardized, compute statistics from the training
@@ -877,7 +973,7 @@ data changes the model and leaks the deployment distribution into inference.
 For target scaling, preserve inverse-transform code and units. Validate that a
 round trip returns the original target within numerical tolerance.
 
-16. Compare field and synthetic domains
+17. Compare field and synthetic domains
 ---------------------------------------
 
 Before training acceptance or field inference, compare ``X_field`` with
@@ -927,7 +1023,7 @@ Define operational thresholds before reviewing target predictions. Stations
 outside the supported domain should be flagged, withheld, or handled by a
 separate validated model—not silently extrapolated.
 
-17. Store datasets with provenance
+18. Store datasets with provenance
 ----------------------------------
 
 A useful dataset record is:
@@ -1118,6 +1214,9 @@ Avoid these errors:
 * training fixed-output networks on NaN-padded variable-layer targets without
   a tested mask-aware loss;
 * calling correlated 1-D graph examples full 3-D EM simulations;
+* treating ``Inv3DAgent(physics="mt3d")``'s genuine 3-D Maxwell training as
+  a gated production result rather than the research-stage slice
+  :doc:`roadmap`'s M8 entry describes it as;
 * calling tiled 1-D profile responses 2-D Maxwell training data, or treating a
   small linear-system residual as evidence of mesh convergence;
 * discarding failed 2-D forward realizations without auditing how rejection

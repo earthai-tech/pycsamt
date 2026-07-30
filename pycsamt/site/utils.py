@@ -931,7 +931,9 @@ def match_name(
         # glob-like?
         if any(c in pat for c in ("*", "?", "[")):
             rx = re.compile(
-                "^" + re.escape(pat).replace("\\*", ".*").replace("\\?", ".") + "$",
+                "^"
+                + re.escape(pat).replace("\\*", ".*").replace("\\?", ".")
+                + "$",
                 flags=re.IGNORECASE,
             )
             return bool(rx.match(name))

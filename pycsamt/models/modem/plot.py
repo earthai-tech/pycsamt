@@ -51,7 +51,9 @@ class _ModEmPlotBase(ModEmBase):
     def _check_result(self) -> InversionResult:
         """Return the attached result or raise a clear error."""
         if self.result is None:
-            msg = "No InversionResult attached. Pass result= to the constructor."
+            msg = (
+                "No InversionResult attached. Pass result= to the constructor."
+            )
             raise ValueError(msg)
         return self.result
 
@@ -615,10 +617,14 @@ class PlotSection(_ModEmPlotBase):
         self.profile_offset = float(profile_offset)
         self.direction = direction.upper()
         self.start_point = (
-            tuple(float(v) for v in start_point) if start_point is not None else None
+            tuple(float(v) for v in start_point)
+            if start_point is not None
+            else None
         )
         self.end_point = (
-            tuple(float(v) for v in end_point) if end_point is not None else None
+            tuple(float(v) for v in end_point)
+            if end_point is not None
+            else None
         )
         self.use_latlon = bool(use_latlon)
         self.origin_lat = origin_lat
@@ -731,7 +737,10 @@ class PlotSection(_ModEmPlotBase):
 
         # Terrain profile in elevation (km)
         terrain_elev_km = np.array(
-            [float(elev_km[terrain_idx[j]]) for j in range(rho_2d_crop.shape[1])]
+            [
+                float(elev_km[terrain_idx[j]])
+                for j in range(rho_2d_crop.shape[1])
+            ]
         )
 
         # ------------------------------------------------------------------
@@ -753,9 +762,13 @@ class PlotSection(_ModEmPlotBase):
         cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
         cb.set_label("Resistivity (Ω·m)", fontsize=9)
         ticks = [1, 10, 100, 1000]
-        tick_vals = [np.log10(t) for t in ticks if self.rho_min <= t <= self.rho_max]
+        tick_vals = [
+            np.log10(t) for t in ticks if self.rho_min <= t <= self.rho_max
+        ]
         cb.set_ticks(tick_vals)
-        cb.set_ticklabels([str(t) for t in ticks if self.rho_min <= t <= self.rho_max])
+        cb.set_ticklabels(
+            [str(t) for t in ticks if self.rho_min <= t <= self.rho_max]
+        )
 
         # Terrain fill (white = air zone above terrain surface)
         if self.show_terrain and terrain_idx.any():
@@ -881,7 +894,8 @@ class PlotSection(_ModEmPlotBase):
         if self.use_latlon:
             if self.origin_lat is None or self.origin_lon is None:
                 raise ValueError(
-                    "origin_lat and origin_lon are required " "when use_latlon=True."
+                    "origin_lat and origin_lon are required "
+                    "when use_latlon=True."
                 )
             x1, y1 = _latlon_to_model_xy(
                 self.start_point[0],
@@ -998,7 +1012,9 @@ class PlotSection(_ModEmPlotBase):
         cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.85)
         cb.set_label("Resistivity (Ω·m)", fontsize=9)
         ticks = [1, 10, 100, 1000]
-        tick_vals = [np.log10(tv) for tv in ticks if self.rho_min <= tv <= self.rho_max]
+        tick_vals = [
+            np.log10(tv) for tv in ticks if self.rho_min <= tv <= self.rho_max
+        ]
         cb.set_ticks(tick_vals)
         cb.set_ticklabels(
             [str(tv) for tv in ticks if self.rho_min <= tv <= self.rho_max]
@@ -1012,7 +1028,9 @@ class PlotSection(_ModEmPlotBase):
                 terrain_elev_km,
                 top_y,
             )
-            terrain_x = np.concatenate([[dist_edges[0]], dist_c, [dist_edges[-1]]])
+            terrain_x = np.concatenate(
+                [[dist_edges[0]], dist_c, [dist_edges[-1]]]
+            )
             terrain_y = np.concatenate([[top_y], terrain_plot, [top_y]])
             ax.fill_between(
                 terrain_x,
@@ -1039,7 +1057,11 @@ class PlotSection(_ModEmPlotBase):
                 dys = yme - y1e
                 along_m = dxs * ux + dys * uy
                 perp = abs(dys * ux - dxs * uy)
-                if perp > self.station_tol or along_m < 0.0 or along_m > total_m:
+                if (
+                    perp > self.station_tol
+                    or along_m < 0.0
+                    or along_m > total_m
+                ):
                     continue
                 col_j = int(np.argmin(np.abs(t - along_m)))
                 col_j = max(0, min(col_j, len(terrain_elev_km) - 1))
@@ -1330,7 +1352,9 @@ class PlotResponse(_ModEmPlotBase):
                     cstyle = getattr(mt, _RESP_STYLE_KEY[comp])
                     obs_rows = _collect_z_rows(data_obs, name, comp)
                     prd_rows = (
-                        _collect_z_rows(data_pred, name, comp, filter_masked=False)
+                        _collect_z_rows(
+                            data_pred, name, comp, filter_masked=False
+                        )
                         if data_pred
                         else []
                     )
@@ -1410,12 +1434,16 @@ class PlotResponse(_ModEmPlotBase):
                         )
 
                     # ── Titles / axes ─────────────────────────────────────
-                    ax_r.set_title(_RESP_LATEX[comp] + rms_str, fontsize=8, pad=3)
+                    ax_r.set_title(
+                        _RESP_LATEX[comp] + rms_str, fontsize=8, pad=3
+                    )
                     ax_r.set_xscale("log")
                     ax_r.set_yscale("log")
                     ax_p.set_xscale("log")
                     if ci == 0:
-                        ax_r.set_ylabel(r"$\rho_a\ (\Omega{\cdot}m)$", fontsize=8)
+                        ax_r.set_ylabel(
+                            r"$\rho_a\ (\Omega{\cdot}m)$", fontsize=8
+                        )
                         ax_p.set_ylabel(r"$\phi\ (°)$", fontsize=8)
                     else:
                         ax_r.tick_params(labelleft=False)
@@ -1598,7 +1626,9 @@ def _latlon_to_model_xy(lat, lon, origin_lat, origin_lon):
     return x_m, y_m
 
 
-def _calibrate_z_ref_arbitrary(model, x1e, y1e, ux, uy, site_coords, station_tol):
+def _calibrate_z_ref_arbitrary(
+    model, x1e, y1e, ux, uy, site_coords, station_tol
+):
     """Estimate the elevation reference for an arbitrary-azimuth profile.
 
     Projects each station onto the profile line and uses the model cell
@@ -1989,7 +2019,9 @@ class PlotAllProfiles(_ModEmPlotBase):
         self.profile_offsets = (
             list(profile_offsets) if profile_offsets is not None else None
         )
-        self.profile_names = list(profile_names) if profile_names is not None else None
+        self.profile_names = (
+            list(profile_names) if profile_names is not None else None
+        )
         self.n_profiles = int(n_profiles)
         self.direction = direction.upper()
         self.which = which
@@ -2022,7 +2054,9 @@ class PlotAllProfiles(_ModEmPlotBase):
         n = len(offsets)
         names = list(self.profile_names or [])
         while len(names) < n:
-            names.append(f"{self.direction} offset {offsets[len(names)]:+.0f} m")
+            names.append(
+                f"{self.direction} offset {offsets[len(names)]:+.0f} m"
+            )
 
         n_cols = min(self.n_cols, n)
         n_rows = int(np.ceil(n / n_cols))
@@ -2062,7 +2096,9 @@ class PlotAllProfiles(_ModEmPlotBase):
                 col_idx = int(np.argmin(np.abs(x_nodes - target)))
                 col_idx = max(0, min(col_idx, model.nx - 1))
 
-            rho_2d, z_nodes, prof_nodes = _section_slice(model, col_idx, self.direction)
+            rho_2d, z_nodes, prof_nodes = _section_slice(
+                model, col_idx, self.direction
+            )
             prof_km = prof_nodes / 1e3
 
             iz_max = int(np.searchsorted(z_nodes, self.depth_max))
@@ -2096,7 +2132,9 @@ class PlotAllProfiles(_ModEmPlotBase):
                         for j in range(rho_crop.shape[1])
                     ]
                 )
-                terrain_x = np.concatenate([[prof_km[0]], prof_c, [prof_km[-1]]])
+                terrain_x = np.concatenate(
+                    [[prof_km[0]], prof_c, [prof_km[-1]]]
+                )
                 terrain_y = np.concatenate([[top_y], terrain_d, [top_y]])
                 ax.fill_between(
                     terrain_x,
@@ -2339,7 +2377,9 @@ class PlotCovariance(_ModEmPlotBase):
             if sx is not None and len(sx) == nz_e:
                 ax.plot(sx, z_plot, "b-o", ms=3, lw=1.2, label="smooth_x (NS)")
             if sy is not None and len(sy) == nz_e:
-                ax.plot(sy, z_plot, "r--s", ms=3, lw=1.2, label="smooth_y (EW)")
+                ax.plot(
+                    sy, z_plot, "r--s", ms=3, lw=1.2, label="smooth_y (EW)"
+                )
             if sz is not None:
                 ax.axvline(
                     float(sz),

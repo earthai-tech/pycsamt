@@ -83,7 +83,9 @@ def _json_section(value: Mapping[str, Any], name: str) -> Mapping[str, Any]:
     return _freeze(json.loads(json.dumps(plain, allow_nan=False)))
 
 
-def _digest(value: str | None, name: str, *, required: bool = False) -> str | None:
+def _digest(
+    value: str | None, name: str, *, required: bool = False
+) -> str | None:
     if value is None:
         if required:
             raise ValueError(f"{name} is required.")
@@ -286,7 +288,11 @@ class DatasetReference:
         dataset_id = str(self.dataset_id).strip()
         if not _PORTABLE_ID.fullmatch(dataset_id):
             raise ValueError("dataset_id must be a portable identifier.")
-        uri = None if self.manifest_uri is None else str(self.manifest_uri).strip()
+        uri = (
+            None
+            if self.manifest_uri is None
+            else str(self.manifest_uri).strip()
+        )
         if self.manifest_uri is not None and not uri:
             raise ValueError("manifest_uri cannot be empty.")
         object.__setattr__(self, "dataset_id", dataset_id)
@@ -516,13 +522,21 @@ class GateEvaluation:
     complete: bool = True
 
     def __post_init__(self) -> None:
-        criteria = {str(key): bool(value) for key, value in self.criteria.items()}
-        observed = {str(key): float(value) for key, value in self.observed.items()}
+        criteria = {
+            str(key): bool(value) for key, value in self.criteria.items()
+        }
+        observed = {
+            str(key): float(value) for key, value in self.observed.items()
+        }
         if any(not np.isfinite(value) for value in observed.values()):
             raise ValueError("observed gate metrics must be finite.")
         missing = tuple(str(value) for value in self.missing)
-        if len(set(missing)) != len(missing) or any(not value for value in missing):
-            raise ValueError("missing metric names must be non-empty and unique.")
+        if len(set(missing)) != len(missing) or any(
+            not value for value in missing
+        ):
+            raise ValueError(
+                "missing metric names must be non-empty and unique."
+            )
         complete = bool(self.complete)
         expected_passed = complete and not missing and all(criteria.values())
         if bool(self.passed) != expected_passed:
@@ -549,7 +563,9 @@ class GateEvaluation:
         >>> GateEvaluation(False, {"x": False}, {"x": 2.0}).failed_metrics
         ('x',)
         """
-        return tuple(key for key, passed in self.criteria.items() if not passed)
+        return tuple(
+            key for key, passed in self.criteria.items() if not passed
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable gate result.
@@ -649,8 +665,12 @@ class ExperimentConfig:
         if not isinstance(self.seeds, SeedPlan):
             raise TypeError("seeds must be a SeedPlan.")
         acceptance = tuple(self.acceptance)
-        if any(not isinstance(item, AcceptanceCriterion) for item in acceptance):
-            raise TypeError("acceptance entries must be AcceptanceCriterion objects.")
+        if any(
+            not isinstance(item, AcceptanceCriterion) for item in acceptance
+        ):
+            raise TypeError(
+                "acceptance entries must be AcceptanceCriterion objects."
+            )
         metrics = [item.metric for item in acceptance]
         if len(set(metrics)) != len(metrics):
             raise ValueError("acceptance metric names must be unique.")
@@ -660,8 +680,12 @@ class ExperimentConfig:
         object.__setattr__(self, "experiment_id", experiment_id)
         object.__setattr__(self, "stage", stage)
         object.__setattr__(self, "model", _json_section(self.model, "model"))
-        object.__setattr__(self, "training", _json_section(self.training, "training"))
-        object.__setattr__(self, "physics", _json_section(self.physics, "physics"))
+        object.__setattr__(
+            self, "training", _json_section(self.training, "training")
+        )
+        object.__setattr__(
+            self, "physics", _json_section(self.physics, "physics")
+        )
         object.__setattr__(self, "acceptance", acceptance)
         object.__setattr__(self, "description", str(self.description).strip())
         object.__setattr__(self, "tags", tags)
@@ -826,7 +850,9 @@ class ExperimentConfig:
         """
         target = Path(path)
         if target.exists() and not overwrite:
-            raise FileExistsError(f"experiment configuration already exists: {target}")
+            raise FileExistsError(
+                f"experiment configuration already exists: {target}"
+            )
         target.write_text(
             json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -901,4 +927,6 @@ class ExperimentConfig:
         >>> loaded.experiment_id
         'e'
         """
-        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        return cls.from_dict(
+            json.loads(Path(path).read_text(encoding="utf-8"))
+        )

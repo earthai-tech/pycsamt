@@ -343,7 +343,9 @@ class HybridInverter1D(BaseHybridInverter):
 
         if isinstance(ai_inverter, EMInverter1D):
             if not ai_inverter._is_fitted:
-                raise ValueError("ai_inverter must be a fitted EMInverter1D instance.")
+                raise ValueError(
+                    "ai_inverter must be a fitted EMInverter1D instance."
+                )
             return ai_inverter
         if isinstance(ai_inverter, (str, Path)):
             return EMInverter1D.load(Path(ai_inverter))
@@ -365,7 +367,8 @@ class HybridInverter1D(BaseHybridInverter):
         n_features = self._ai_inv._n_features
         if n_features is None:
             raise RuntimeError(
-                "ai_inverter._n_features is None. " "Re-fit or reload the checkpoint."
+                "ai_inverter._n_features is None. "
+                "Re-fit or reload the checkpoint."
             )
         # Derive n_freqs for the common grid
         # n_features = 2 * n_freqs (rho block + phase)
@@ -373,7 +376,8 @@ class HybridInverter1D(BaseHybridInverter):
 
         if verbose:
             print(
-                "Stage 1: applying EMInverter1D to " f"{len(self._obs)} station(s) ..."
+                "Stage 1: applying EMInverter1D to "
+                f"{len(self._obs)} station(s) ..."
             )
         # Use obs_to_features_1d to avoid running
         # ensure_sites on SiteObs1D dataclasses.

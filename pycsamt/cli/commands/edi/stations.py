@@ -90,7 +90,11 @@ def stations(
 
     # Filter by pattern
     if pattern is not None:
-        rows = [r for r in rows if fnmatch.fnmatch(str(r.get("station", "")), pattern)]
+        rows = [
+            r
+            for r in rows
+            if fnmatch.fnmatch(str(r.get("station", "")), pattern)
+        ]
 
     # Sort
     _sort_key = {
@@ -142,7 +146,9 @@ def stations(
             )
         Console().print(tbl)
     except ImportError:
-        hdr = f"{'Station':<22} {'Lat':>12} {'Lon':>12} {'Elev':>8} {'Zone':<6}"
+        hdr = (
+            f"{'Station':<22} {'Lat':>12} {'Lon':>12} {'Elev':>8} {'Zone':<6}"
+        )
         click.echo(hdr)
         click.echo("-" * len(hdr))
         for r in rows:

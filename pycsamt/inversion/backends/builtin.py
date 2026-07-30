@@ -113,7 +113,9 @@ class Builtin1DBackend(BaseInversionBackend):
         em_data = self.prepare_data(data)
         if cfg.method == "tdem":
             if not em_data.has_tdem_response:
-                raise ValueError("builtin TDEM backend requires times plus values.")
+                raise ValueError(
+                    "builtin TDEM backend requires times plus values."
+                )
         elif not em_data.has_mt_response:
             raise ValueError(
                 "builtin backend requires frequencies plus rho_a and/or phase."
@@ -142,7 +144,9 @@ class Builtin1DBackend(BaseInversionBackend):
             try:
                 result = self._run_sounding(sounding, station_index=idx)
             except Exception as exc:
-                warnings.append(f"{station_names[idx]}: inversion failed: {exc}")
+                warnings.append(
+                    f"{station_names[idx]}: inversion failed: {exc}"
+                )
                 continue
             station_results.append(result)
             used_indices.append(idx)
@@ -171,7 +175,9 @@ class Builtin1DBackend(BaseInversionBackend):
             z_centers=z_centers,
         )
         rms_values = np.asarray([r.rms for r in station_results], dtype=float)
-        rms = float(np.nanmean(rms_values)) if rms_values.size else float("nan")
+        rms = (
+            float(np.nanmean(rms_values)) if rms_values.size else float("nan")
+        )
         uncertainty = _profile_uncertainty(station_results)
         history = _profile_history(station_results)
         status = "success" if not warnings else "needs_review"
@@ -208,7 +214,9 @@ class Builtin1DBackend(BaseInversionBackend):
         cfg = self.config
 
         if cfg.method == "tdem":
-            return self._run_tdem_sounding(em_data, station_index=station_index)
+            return self._run_tdem_sounding(
+                em_data, station_index=station_index
+            )
         return self._run_mt_sounding(em_data, station_index=station_index)
 
     def _run_mt_2d_physics(self, em_data) -> InversionResult:
@@ -218,7 +226,9 @@ class Builtin1DBackend(BaseInversionBackend):
         try:
             from scipy.optimize import least_squares
         except ImportError as exc:
-            raise ImportError("builtin 2-D inversion requires scipy.optimize.") from exc
+            raise ImportError(
+                "builtin 2-D inversion requires scipy.optimize."
+            ) from exc
 
         from ...forward import (
             Grid2D,
@@ -247,7 +257,9 @@ class Builtin1DBackend(BaseInversionBackend):
         history = _HistoryRecorder(reg_weight=reg_weight)
 
         def residual(params: np.ndarray) -> np.ndarray:
-            grid = _grid_with_core_model(base_grid, params.reshape(nz_core, nx_core))
+            grid = _grid_with_core_model(
+                base_grid, params.reshape(nz_core, nx_core)
+            )
             response = MT2DForward(
                 np.asarray(em_data.frequencies, dtype=float),
                 grid,
@@ -362,7 +374,9 @@ class Builtin1DBackend(BaseInversionBackend):
         try:
             from scipy.optimize import least_squares
         except ImportError as exc:
-            raise ImportError("builtin inversion requires scipy.optimize.") from exc
+            raise ImportError(
+                "builtin inversion requires scipy.optimize."
+            ) from exc
 
         from ...forward import MT1DForward
 
@@ -393,7 +407,9 @@ class Builtin1DBackend(BaseInversionBackend):
             )
         if cfg.include_phase and em_data.phase is not None:
             obs_parts.append(np.asarray(em_data.phase, dtype=float))
-            err_parts.append(component_errors(em_data.phase, cfg, component="phase"))
+            err_parts.append(
+                component_errors(em_data.phase, cfg, component="phase")
+            )
 
         observed = np.concatenate(obs_parts)
         errors = np.concatenate(err_parts)
@@ -494,7 +510,9 @@ class Builtin1DBackend(BaseInversionBackend):
         try:
             from scipy.optimize import least_squares
         except ImportError as exc:
-            raise ImportError("builtin inversion requires scipy.optimize.") from exc
+            raise ImportError(
+                "builtin inversion requires scipy.optimize."
+            ) from exc
 
         from ...forward import TEM1DForward
 
@@ -623,7 +641,9 @@ def _unpack(params: np.ndarray, n_layers: int) -> StartingModel:
 def _reference_log10_rho(cfg: Any, start: StartingModel) -> np.ndarray:
     if cfg.reference_model is None:
         return np.log10(start.resistivities)
-    reference = StartingModel.coerce(cfg.reference_model, n_layers=start.n_layers)
+    reference = StartingModel.coerce(
+        cfg.reference_model, n_layers=start.n_layers
+    )
     if reference.n_layers != start.n_layers:
         reference = start
     return np.log10(reference.resistivities)
@@ -686,7 +706,9 @@ def _uncertainty_from_lsq(
     )
 
 
-def _confidence_from_std(std: np.ndarray, sensitivity: np.ndarray) -> np.ndarray:
+def _confidence_from_std(
+    std: np.ndarray, sensitivity: np.ndarray
+) -> np.ndarray:
     std = np.asarray(std, dtype=float)
     sensitivity = np.asarray(sensitivity, dtype=float)
     if not np.any(np.isfinite(std)):
@@ -700,7 +722,9 @@ def _confidence_from_std(std: np.ndarray, sensitivity: np.ndarray) -> np.ndarray
         sens_score = np.ones_like(sensitivity, dtype=float)
     else:
         sens_score = sensitivity / np.nanmax(sensitivity)
-    confidence = np.sqrt(np.clip(std_score, 0.0, 1.0) * np.clip(sens_score, 0.0, 1.0))
+    confidence = np.sqrt(
+        np.clip(std_score, 0.0, 1.0) * np.clip(sens_score, 0.0, 1.0)
+    )
     return np.clip(confidence, 0.0, 1.0)
 
 
@@ -758,7 +782,9 @@ def _profile_history(
     )
 
 
-def _bounds(bounds: dict[str, Any], n_layers: int) -> tuple[np.ndarray, np.ndarray]:
+def _bounds(
+    bounds: dict[str, Any], n_layers: int
+) -> tuple[np.ndarray, np.ndarray]:
     rho_bounds = bounds.get("log10_rho", (-1.0, 6.0))
     thick_bounds = bounds.get("log10_thickness", (0.0, 5.0))
     lower = np.r_[
@@ -802,7 +828,9 @@ class _HistoryRecorder:
             }
         )
 
-    def to_history(self, *, metadata: dict[str, Any] | None = None) -> InversionHistory:
+    def to_history(
+        self, *, metadata: dict[str, Any] | None = None
+    ) -> InversionHistory:
         return InversionHistory(
             records=self.records,
             metadata={
@@ -840,7 +868,9 @@ def _grid_with_core_model(base_grid: Any, log10_core_rho: np.ndarray) -> Any:
         n_pad=pad,
         name="builtin_fd2d",
     )
-    grid._pycsamt_x_offset = float(getattr(base_grid, "_pycsamt_x_offset", 0.0))
+    grid._pycsamt_x_offset = float(
+        getattr(base_grid, "_pycsamt_x_offset", 0.0)
+    )
     return grid
 
 
@@ -860,10 +890,16 @@ def _pack_2d_observed(
     obs_parts: list[np.ndarray] = []
     err_parts: list[np.ndarray] = []
     fields: list[str] = []
-    rho = None if em_data.rho_a is None else _station_freq_matrix(em_data.rho_a)
-    phase = None if em_data.phase is None else _station_freq_matrix(em_data.phase)
+    rho = (
+        None if em_data.rho_a is None else _station_freq_matrix(em_data.rho_a)
+    )
+    phase = (
+        None if em_data.phase is None else _station_freq_matrix(em_data.phase)
+    )
     explicit_err = (
-        None if em_data.errors is None else _station_freq_matrix(em_data.errors)
+        None
+        if em_data.errors is None
+        else _station_freq_matrix(em_data.errors)
     )
     for component in modes:
         if rho is not None:
@@ -880,9 +916,9 @@ def _pack_2d_observed(
                 err_parts.append(rel.reshape(-1))
             else:
                 err_parts.append(
-                    component_errors(rho, cfg, component="rho", relative=True).reshape(
-                        -1
-                    )
+                    component_errors(
+                        rho, cfg, component="rho", relative=True
+                    ).reshape(-1)
                 )
             fields.append(f"{component}_rho")
             if not np.all(mask):
@@ -911,14 +947,18 @@ def _pack_2d_observed(
     )
 
 
-def _pack_2d_predicted(response: Any, components: tuple[str, ...]) -> np.ndarray:
+def _pack_2d_predicted(
+    response: Any, components: tuple[str, ...]
+) -> np.ndarray:
     parts: list[np.ndarray] = []
     for component in components:
         mode, field = component.split("_", 1)
         if field == "rho":
             rho = getattr(response, f"rho_a_{mode}")
             parts.append(
-                np.log10(np.maximum(np.asarray(rho, dtype=float).T, 1e-12)).reshape(-1)
+                np.log10(
+                    np.maximum(np.asarray(rho, dtype=float).T, 1e-12)
+                ).reshape(-1)
             )
         elif field == "phase":
             phase = getattr(response, f"phase_{mode}")

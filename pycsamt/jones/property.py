@@ -365,7 +365,9 @@ def _maybe_missing_float(value: str) -> float | None:
     return v
 
 
-def _parse_latitude(value: str, *, strict: bool, verbose: int | bool) -> float | None:
+def _parse_latitude(
+    value: str, *, strict: bool, verbose: int | bool
+) -> float | None:
     """Parse latitude using GIS utilities.
 
     - In ``strict`` mode, delegate to :func:`assert_lat_value` which
@@ -389,7 +391,9 @@ def _parse_latitude(value: str, *, strict: bool, verbose: int | bool) -> float |
     return lat
 
 
-def _parse_longitude(value: str, *, strict: bool, verbose: int | bool) -> float | None:
+def _parse_longitude(
+    value: str, *, strict: bool, verbose: int | bool
+) -> float | None:
     """Parse longitude using GIS utilities.
 
     - In ``strict`` mode, delegate to :func:`assert_lon_value` which

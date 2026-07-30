@@ -74,7 +74,9 @@ from ..survey import (
 # ---------------------------------------------------------------------------
 
 
-def _rich_kv(title: str, rows: list[tuple[str, str]], style: str = "cyan") -> None:
+def _rich_kv(
+    title: str, rows: list[tuple[str, str]], style: str = "cyan"
+) -> None:
     try:
         from rich.console import Console  # noqa: PLC0415
         from rich.table import Table  # noqa: PLC0415
@@ -145,7 +147,9 @@ def survey(ctx: click.Context) -> None:
 
 
 @survey.command("set")
-@click.argument("path", type=click.Path(exists=True, path_type=Path), metavar="EDI_DIR")
+@click.argument(
+    "path", type=click.Path(exists=True, path_type=Path), metavar="EDI_DIR"
+)
 @click.option(
     "--force",
     is_flag=True,
@@ -222,7 +226,9 @@ def survey_show(
         return
 
     cache_status = (
-        "[green]valid[/green]" if summary["cache_valid"] else "[red]stale[/red]"
+        "[green]valid[/green]"
+        if summary["cache_valid"]
+        else "[red]stale[/red]"
     )
     try:
         from rich.markup import escape  # noqa: PLC0415
@@ -326,7 +332,8 @@ def survey_rebuild(
     active = SurveyContext.load()
     if active is None:
         raise click.UsageError(
-            "No active survey to rebuild.\n" "  Run:  pycsamt survey set <edi_dir>"
+            "No active survey to rebuild.\n"
+            "  Run:  pycsamt survey set <edi_dir>"
         )
 
     click.echo(f"Rebuilding cache for {active.survey_path} …")
@@ -381,7 +388,9 @@ def cache_list(ctx: click.Context, output_format: str) -> None:
             except Exception:  # noqa: BLE001
                 pass
         entry["pkl_size_kb"] = (
-            round(pkl_path.stat().st_size / 1024, 1) if pkl_path.exists() else 0
+            round(pkl_path.stat().st_size / 1024, 1)
+            if pkl_path.exists()
+            else 0
         )
         entries.append(entry)
 
@@ -404,7 +413,9 @@ def cache_list(ctx: click.Context, output_format: str) -> None:
         n = str(e.get("n_stations", "?"))
         size = f"{e['pkl_size_kb']} KB"
         cached = e.get("cached_at", "—")
-        rows.append((e["key"] + marker, f"{path}  ({n} stations, {size}, {cached})"))
+        rows.append(
+            (e["key"] + marker, f"{path}  ({n} stations, {size}, {cached})")
+        )
 
     _rich_kv("Cached Surveys", rows, style="blue")
 

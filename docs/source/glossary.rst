@@ -275,6 +275,15 @@ definitions here are the single source of truth.
       site-level :term:`dimensionality` classification used when interpreting
       recorded MT data.
 
+   Genuine 3-D Maxwell training
+      Supervised inversion training in which each synthetic example is a
+      spatially varying three-dimensional conductivity volume and its response
+      is computed by solving the coupled 3-D Maxwell system. It differs from
+      tiling independent 1-D columns or combining 2-D slices: lateral and
+      vertical conductivity contrasts enter the same forward solve. The phrase
+      describes the dimensionality of the training operator, not production
+      mesh accuracy or validation of a field interpretation.
+
    Feature array
       A flattened numeric array built from a forward response's apparent
       resistivity and phase, produced by a response object's ``to_array`` or

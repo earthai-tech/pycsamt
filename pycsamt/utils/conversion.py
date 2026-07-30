@@ -37,7 +37,9 @@ _PREFIXES = {
 }
 
 
-def convert_value(value: Union[str, float, int], /, target_unit: str = "m") -> float:
+def convert_value(
+    value: Union[str, float, int], /, target_unit: str = "m"
+) -> float:
     """
     Convert a numeric value with unit suffix to specified unit.
 
@@ -217,7 +219,9 @@ def convert_time(
     120.0
     """
     s = str(value).strip()
-    m = re.fullmatch(r"([+-]?\d+(?:\.\d+)?)(?:\s*(s|min|h|d))?", s, flags=re.IGNORECASE)
+    m = re.fullmatch(
+        r"([+-]?\d+(?:\.\d+)?)(?:\s*(s|min|h|d))?", s, flags=re.IGNORECASE
+    )
     if not m:
         raise ValueError(f"Cannot parse time {value!r}")
     num, suf = m.groups()
@@ -307,7 +311,8 @@ def convert(
         res = convert_temperature(value, uf, ut)
     # time
     elif cat == "time" or (
-        uf.lower() in ("s", "min", "h", "d") and ut.lower() in ("s", "min", "h", "d")
+        uf.lower() in ("s", "min", "h", "d")
+        and ut.lower() in ("s", "min", "h", "d")
     ):
         res = convert_time(value, uf, ut)
     # metric

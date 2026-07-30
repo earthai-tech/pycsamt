@@ -37,9 +37,13 @@ class SessionState:
     # ── updates ─────────────────────────────────────────────────────────────
     def record_turn(self, role: str, content: str) -> None:
         """Append a chat turn (``role`` = user/assistant)."""
-        self.turns.append({"role": role, "content": content, "ts": time.time()})
+        self.turns.append(
+            {"role": role, "content": content, "ts": time.time()}
+        )
 
-    def set_data(self, *, edi_path: str | None = None, line: str | None = None) -> None:
+    def set_data(
+        self, *, edi_path: str | None = None, line: str | None = None
+    ) -> None:
         """Update the active EDI path / survey line."""
         if edi_path is not None:
             self.edi_path = edi_path

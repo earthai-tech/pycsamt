@@ -46,7 +46,9 @@ def read_edis(
     )
     paths = list(
         parser._iter_edi_files(  # noqa: SLF001 - public facade over parser
-            sources if isinstance(sources, list) else list(parser._iter_paths(sources))
+            sources
+            if isinstance(sources, list)
+            else list(parser._iter_paths(sources))
         )
     )
     items: list[Any] = []

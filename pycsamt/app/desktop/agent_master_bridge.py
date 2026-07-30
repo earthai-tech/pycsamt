@@ -99,7 +99,8 @@ def launch_agent_master(
         }
         if os.name == "nt":
             kwargs["creationflags"] = (
-                subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+                subprocess.CREATE_NO_WINDOW
+                | subprocess.CREATE_NEW_PROCESS_GROUP
             )
         else:
             kwargs["start_new_session"] = True

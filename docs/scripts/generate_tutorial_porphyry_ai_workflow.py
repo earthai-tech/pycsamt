@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import random
 import sys
+import time
 from pathlib import Path
 
 import matplotlib
@@ -32,6 +35,7 @@ from pycsamt.topo import extract_chainage, extract_elevation  # noqa: E402
 IMAGE_DIR = ROOT / "docs/source/images/tutorials/map_porphyry_mineralization_from_noisy_amt"
 RUN_DIR = ROOT / "runs"
 FREQUENCIES_HZ = np.geomspace(1.0, 1000.0, 8)
+PRODUCTION_FREQUENCIES_HZ = np.geomspace(1.0, 10_000.0, 24)
 
 
 def save(fig: plt.Figure, name: str) -> None:
@@ -148,7 +152,13 @@ def plot_priors_and_meshes(problems) -> None:
     save(fig, "willy_ai2d_geology_maxwell_both_lines.png")
 
 
-def run_inversions(problems):
+def run_inversions(
+    problems,
+    *,
+    production: bool = False,
+    n_train_profiles: int | None = None,
+    epochs: int | None = None,
+):
     np.random.seed(17)
     random.seed(17)
     try:
@@ -161,31 +171,85 @@ def run_inversions(problems):
     for problem in problems:
         chain = problem["chain_m"]
         spacing = float(np.median(np.diff(chain)))
+        frequencies = (
+            PRODUCTION_FREQUENCIES_HZ if production else FREQUENCIES_HZ
+        )
+        profiles = int(
+            n_train_profiles
+            if n_train_profiles is not None
+            else (256 if production else 10)
+        )
+        epoch_budget = int(
+            epochs if epochs is not None else (80 if production else 30)
+        )
+        line_output = RUN_DIR / (
+            f"{problem['name']}_ai2d_maxwell_production"
+            if production
+            else f"{problem['name']}_ai2d_maxwell"
+        )
+        line_output.mkdir(parents=True, exist_ok=True)
+        started = time.time()
         agent = Inv2DAgent(
             physics="mt2d",
-            n_depth=24,
-            n_freqs=len(FREQUENCIES_HZ),
-            freqs=FREQUENCIES_HZ,
-            depth_max=1800.0,
-            n_train_profiles=10,
+            n_depth=32 if production else 24,
+            n_freqs=len(frequencies),
+            freqs=frequencies,
+            depth_max=2200.0 if production else 1800.0,
+            n_train_profiles=profiles,
             n_stations_per_profile=len(problem["sites"]),
             station_spacing_m=spacing,
-            epochs=30,
-            correlation_length_x_m=(350.0, 1000.0),
-            correlation_length_z_m=(90.0, 300.0),
-            lambda_x=0.02,
-            lambda_z=0.01,
-            lambda_tv=0.005,
+            epochs=epoch_budget,
+            correlation_length_x_m=(250.0, 1600.0) if production else (350.0, 1000.0),
+            correlation_length_z_m=(60.0, 450.0) if production else (90.0, 300.0),
+            log_resistivity_mean=2.1,
+            log_resistivity_std=0.75 if production else 0.5,
+            lambda_x=0.01 if production else 0.02,
+            lambda_z=0.005 if production else 0.01,
+            lambda_tv=0.002 if production else 0.005,
+            mesh_safety_factor=8.0 if production else 6.0,
+            max_mesh_cells=300_000 if production else 200_000,
         )
         result = agent.execute(
             {
                 "sites": problem["sites"],
-                "output_dir": str(RUN_DIR / f"{problem['name']}_ai2d_maxwell"),
+                "output_dir": str(line_output),
                 "topography": True,
             }
         )
         if result.status != "success":
             raise RuntimeError(f"{problem['name']}: {result.summary}")
+        checkpoint = line_output / "em_inverter_2d_maxwell.npz"
+        result.data["inverter"].save(checkpoint)
+        np.savez_compressed(
+            line_output / "field_prediction.npz",
+            pred_section=np.asarray(result.data["pred_section"]),
+            depths_km=np.asarray(result.data["depths_km"]),
+            frequency_grid_hz=np.asarray(result.data["frequency_grid_hz"]),
+            station_names=np.asarray(result.data["station_names"]),
+            chainage_km=np.asarray(problem["chain_m"]) / 1000.0,
+            elevation_m=extract_elevation(problem["sites"]),
+        )
+        recovery = result.data.get("mt2d_recovery") or {}
+        manifest = {
+            "line": problem["name"],
+            "status": result.status,
+            "summary": result.summary,
+            "production": production,
+            "seed": 17,
+            "n_train_profiles": profiles,
+            "epochs_requested": epoch_budget,
+            "n_depth": 32 if production else 24,
+            "depth_max_m": 2200.0 if production else 1800.0,
+            "frequencies_hz": frequencies.tolist(),
+            "rms_global": float(result.data["rms_global"]),
+            "mt2d_recovery": recovery,
+            "elapsed_seconds": time.time() - started,
+            "checkpoint": checkpoint.name,
+        }
+        (line_output / "run_manifest.json").write_text(
+            json.dumps(manifest, indent=2, default=float), encoding="utf-8"
+        )
+        print(json.dumps(manifest, default=float), flush=True)
         results.append(result)
     return results
 
@@ -235,14 +299,24 @@ def plot_validation(problems, results) -> None:
     save(fig, "willy_ai2d_maxwell_validation_both_lines.png")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--production", action="store_true")
+    parser.add_argument("--n-train-profiles", type=int)
+    parser.add_argument("--epochs", type=int)
+    args = parser.parse_args(argv)
     lines = load_lines()
     problems = [
         build_line_problem("L26PLT", lines["L26PLT"], seed=2601, lens_x_m=1550.0),
         build_line_problem("L30PLT", lines["L30PLT"], seed=3001, lens_x_m=1450.0),
     ]
     plot_priors_and_meshes(problems)
-    results = run_inversions(problems)
+    results = run_inversions(
+        problems,
+        production=args.production,
+        n_train_profiles=args.n_train_profiles,
+        epochs=args.epochs,
+    )
     plot_inversions(problems, results)
     plot_validation(problems, results)
     for problem, result in zip(problems, results):

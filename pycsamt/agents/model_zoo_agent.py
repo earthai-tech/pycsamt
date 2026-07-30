@@ -191,7 +191,9 @@ class ModelZooAgent(BaseAgent):
                 }
             )
 
-        summary_lines = [f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows]
+        summary_lines = [
+            f"  {r['name']:<35s}  {r['description'][:60]}" for r in rows
+        ]
         (
             f"Model zoo — {len(models)} pre-trained models available:\n"
             + "\n".join(summary_lines)

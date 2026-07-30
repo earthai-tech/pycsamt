@@ -195,7 +195,10 @@ def plot_tipper_hodograms(
         U = np.real(ty)
         V = np.imag(ty)
         if normalize:
-            s = np.nanpercentile(np.hypot(np.r_[X, U], np.r_[Y, V]), 95) + 1e-24
+            s = (
+                np.nanpercentile(np.hypot(np.r_[X, U], np.r_[Y, V]), 95)
+                + 1e-24
+            )
             X, Y, U, V = X / s, Y / s, U / s, V / s
         col = cols[k]
         axX.plot(X, Y, ls=ls, lw=lw, color=col)
@@ -276,7 +279,9 @@ def plot_induction_arrows(
             per = 1.0 / fr
             j = _nearest_idx(per, np.array([p], float))
             tx = t[j[0]]
-            vec = _arrow_from_tipper(np.asarray([tx]), convention=convention)[0]
+            vec = _arrow_from_tipper(np.asarray([tx]), convention=convention)[
+                0
+            ]
             x, y = _station_xy(ed, i)
             xs.append(x)
             ys.append(y)
@@ -287,7 +292,9 @@ def plot_induction_arrows(
         per_layers.append(
             (
                 p,
-                np.vstack([np.array(xs), np.array(ys), np.array(u), np.array(v)]),
+                np.vstack(
+                    [np.array(xs), np.array(ys), np.array(u), np.array(v)]
+                ),
             )
         )
     if not per_layers:
@@ -434,7 +441,9 @@ def _set_map_aspect(ax, y_values: np.ndarray, scale: float) -> None:
         y_values = np.asarray(y_values, dtype=float)
         y_values = y_values[np.isfinite(y_values)]
         y_ctr = 0.5 * (ylim[0] + ylim[1])
-        data_half = float(np.max(np.abs(y_values - y_ctr))) if y_values.size else 0.0
+        data_half = (
+            float(np.max(np.abs(y_values - y_ctr))) if y_values.size else 0.0
+        )
         margin = max(data_half * 1.25, xspan * 0.04, scale * 0.1, 1e-6)
         ax.set_ylim(y_ctr - margin, y_ctr + margin)
         ax.set_aspect("auto")
@@ -499,7 +508,8 @@ def _tipper_from_spectra(
         items = sp_input
     elif isinstance(sp_input, (list, tuple)):
         items = {
-            getattr(s, "name", None) or f"site{k}": s for k, s in enumerate(sp_input)
+            getattr(s, "name", None) or f"site{k}": s
+            for k, s in enumerate(sp_input)
         }
     else:
         raise TypeError(type(sp_input))
@@ -612,7 +622,9 @@ def plot_induction_map(
 
     if scale is _UNSET:
         dist = (
-            (np.diff(xs) ** 2 + np.diff(ys) ** 2).mean() ** 0.5 if len(xs) > 1 else 1.0
+            (np.diff(xs) ** 2 + np.diff(ys) ** 2).mean() ** 0.5
+            if len(xs) > 1
+            else 1.0
         )
         scale = float(dist * 0.4)
 
@@ -634,7 +646,11 @@ def plot_induction_map(
         fig = ax.get_figure()
 
     label_idx = (
-        set(_thin_label_indices(len(names), width_in=fig.get_figwidth()).tolist())
+        set(
+            _thin_label_indices(
+                len(names), width_in=fig.get_figwidth()
+            ).tolist()
+        )
         if station_labels
         else set()
     )
@@ -646,7 +662,9 @@ def plot_induction_map(
                 "",
                 xy=(xs[k] + re[k, 0] * scale, ys[k] + re[k, 1] * scale),
                 xytext=(xs[k], ys[k]),
-                arrowprops=dict(arrowstyle="-|>", color=c, lw=1.8, mutation_scale=10),
+                arrowprops=dict(
+                    arrowstyle="-|>", color=c, lw=1.8, mutation_scale=10
+                ),
             )
         if show_imag:
             ax.annotate(
@@ -679,7 +697,9 @@ def plot_induction_map(
         "",
         xy=(x0 + reference_arrow * scale, y0),
         xytext=(x0, y0),
-        arrowprops=dict(arrowstyle="-|>", color="0.2", lw=1.8, mutation_scale=10),
+        arrowprops=dict(
+            arrowstyle="-|>", color="0.2", lw=1.8, mutation_scale=10
+        ),
     )
     ax.text(
         x0 + 0.5 * reference_arrow * scale,
@@ -700,11 +720,17 @@ def plot_induction_map(
 
     handles = []
     if show_real:
-        handles.append(Line2D([], [], color="0.4", lw=1.8, label="Real (Parkinson)"))
+        handles.append(
+            Line2D([], [], color="0.4", lw=1.8, label="Real (Parkinson)")
+        )
     if show_imag:
-        handles.append(Line2D([], [], color="0.4", lw=1.2, ls="--", label="Imaginary"))
+        handles.append(
+            Line2D([], [], color="0.4", lw=1.2, ls="--", label="Imaginary")
+        )
     if handles:
-        ax.legend(handles=handles, fontsize=8, framealpha=0.8, loc="upper right")
+        ax.legend(
+            handles=handles, fontsize=8, framealpha=0.8, loc="upper right"
+        )
 
     y_extent = [ys, [y0]]
     if show_real:
@@ -832,7 +858,9 @@ def plot_induction_section(
     else:
         y_edges = np.r_[y_log[0] - 0.2, y_log[0] + 0.2]
 
-    vmin, vmax = clim if clim else (0.0, float(np.nanpercentile(mat, 95)) + 1e-12)
+    vmin, vmax = (
+        clim if clim else (0.0, float(np.nanpercentile(mat, 95)) + 1e-12)
+    )
     pc = ax.pcolormesh(
         x_edges,
         y_edges,
@@ -939,7 +967,9 @@ def plot_induction_convention(
 
     if scale is _UNSET:
         dist = (
-            (np.diff(xs) ** 2 + np.diff(ys) ** 2).mean() ** 0.5 if len(xs) > 1 else 1.0
+            (np.diff(xs) ** 2 + np.diff(ys) ** 2).mean() ** 0.5
+            if len(xs) > 1
+            else 1.0
         )
         scale = float(dist * 0.4)
 
@@ -951,7 +981,9 @@ def plot_induction_convention(
     # 2x2 grid: each panel is roughly half the figure width, so thin
     # more aggressively than a single full-width map would.
     label_idx = (
-        set(_thin_label_indices(len(names), width_in=figsize[0] / 2.0).tolist())
+        set(
+            _thin_label_indices(len(names), width_in=figsize[0] / 2.0).tolist()
+        )
         if station_labels
         else set()
     )
@@ -967,7 +999,9 @@ def plot_induction_convention(
                 "",
                 xy=(xs[k] + u[k], ys[k] + v[k]),
                 xytext=(xs[k], ys[k]),
-                arrowprops=dict(arrowstyle="-|>", color=c, lw=1.6, mutation_scale=10),
+                arrowprops=dict(
+                    arrowstyle="-|>", color=c, lw=1.6, mutation_scale=10
+                ),
             )
             ax.plot(xs[k], ys[k], "v", ms=5, color="0.3", zorder=5)
             if k in label_idx:
@@ -1116,7 +1150,9 @@ def plot_tipper_polar(
     ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.3)
     hide_polar_radius_labels(ax)
-    ax.set_title(title or f"{st} — tipper polar [{component}]", fontsize=10, pad=10)
+    ax.set_title(
+        title or f"{st} — tipper polar [{component}]", fontsize=10, pad=10
+    )
     cbar = add_polar_colorbar(
         sc,
         ax,
@@ -1165,7 +1201,11 @@ def plot_induction_rose(
     -------
     ax : polar Axes
     """
-    rs = PYCSAMT_STYLE.rose.copy() if style is _UNSET else resolve_rose_style(style)
+    rs = (
+        PYCSAMT_STYLE.rose.copy()
+        if style is _UNSET
+        else resolve_rose_style(style)
+    )
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -1241,7 +1281,9 @@ def plot_induction_rose(
     if rs.show_mean and az.size > 0:
         mean_az = (
             np.degrees(
-                np.arctan2(np.sin(np.radians(az)).sum(), np.cos(np.radians(az)).sum())
+                np.arctan2(
+                    np.sin(np.radians(az)).sum(), np.cos(np.radians(az)).sum()
+                )
             )
             % 360.0
         )
@@ -1259,7 +1301,9 @@ def plot_induction_rose(
     ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.25)
     hide_polar_radius_labels(ax)
-    ax.set_title(title or f"Induction arrow rose [{component}]", fontsize=10, pad=12)
+    ax.set_title(
+        title or f"Induction arrow rose [{component}]", fontsize=10, pad=12
+    )
     return ax
 
 
@@ -1315,8 +1359,12 @@ def plot_induction_map_from_spectra(
     if coords is None:
         coords = {n: (float(i), 0.0) for i, n in enumerate(names)}
 
-    xs = np.array([coords.get(n, (i, 0.0))[0] for i, n in enumerate(names)], float)
-    ys = np.array([coords.get(n, (i, 0.0))[1] for i, n in enumerate(names)], float)
+    xs = np.array(
+        [coords.get(n, (i, 0.0))[0] for i, n in enumerate(names)], float
+    )
+    ys = np.array(
+        [coords.get(n, (i, 0.0))[1] for i, n in enumerate(names)], float
+    )
 
     re_list, im_list = [], []
     for name in names:
@@ -1348,7 +1396,11 @@ def plot_induction_map_from_spectra(
         fig = ax.get_figure()
 
     label_idx = (
-        set(_thin_label_indices(len(names), width_in=fig.get_figwidth()).tolist())
+        set(
+            _thin_label_indices(
+                len(names), width_in=fig.get_figwidth()
+            ).tolist()
+        )
         if station_labels
         else set()
     )
@@ -1360,7 +1412,9 @@ def plot_induction_map_from_spectra(
                 "",
                 xy=(xs[k] + re[k, 0] * scale, ys[k] + re[k, 1] * scale),
                 xytext=(xs[k], ys[k]),
-                arrowprops=dict(arrowstyle="-|>", color=c, lw=1.8, mutation_scale=10),
+                arrowprops=dict(
+                    arrowstyle="-|>", color=c, lw=1.8, mutation_scale=10
+                ),
             )
         if show_imag:
             ax.annotate(
@@ -1395,7 +1449,9 @@ def plot_induction_map_from_spectra(
     if show_real:
         handles.append(Line2D([], [], color="0.4", lw=1.8, label="Real"))
     if show_imag:
-        handles.append(Line2D([], [], color="0.4", lw=1.2, ls="--", label="Imaginary"))
+        handles.append(
+            Line2D([], [], color="0.4", lw=1.2, ls="--", label="Imaginary")
+        )
     if handles:
         ax.legend(handles=handles, fontsize=8, framealpha=0.8)
     y_extent = [ys]
@@ -1487,7 +1543,9 @@ def plot_tipper_polar_from_spectra(
     ax.set_theta_direction(-1)
     ax.grid(True, alpha=0.3)
     hide_polar_radius_labels(ax)
-    ax.set_title(title or f"{name} — polar tipper [{component}]", fontsize=10, pad=10)
+    ax.set_title(
+        title or f"{name} — polar tipper [{component}]", fontsize=10, pad=10
+    )
     add_polar_colorbar(
         sc,
         ax,
@@ -1526,7 +1584,11 @@ def plot_induction_rose_from_spectra(
     -------
     ax : polar Axes
     """
-    rs = PYCSAMT_STYLE.rose.copy() if style is _UNSET else resolve_rose_style(style)
+    rs = (
+        PYCSAMT_STYLE.rose.copy()
+        if style is _UNSET
+        else resolve_rose_style(style)
+    )
     tip_dict, freq_dict = _tipper_from_spectra(sp_input)
 
     azimuths: list[float] = []
@@ -1594,7 +1656,9 @@ def plot_induction_rose_from_spectra(
     if rs.show_mean and az.size > 0:
         mean_az = (
             np.degrees(
-                np.arctan2(np.sin(np.radians(az)).sum(), np.cos(np.radians(az)).sum())
+                np.arctan2(
+                    np.sin(np.radians(az)).sum(), np.cos(np.radians(az)).sum()
+                )
             )
             % 360.0
         )
@@ -1848,7 +1912,11 @@ def plot_induction_multiperiod_map(
     if arrow_scale is _UNSET:
         if n_st > 1:
             dists = np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2)
-            med = np.median(dists[dists > 1e-9]) if dists[dists > 1e-9].size else 1.0
+            med = (
+                np.median(dists[dists > 1e-9])
+                if dists[dists > 1e-9].size
+                else 1.0
+            )
         else:
             med = 1.0
         arrow_scale = float(med * 0.35)
@@ -1890,7 +1958,9 @@ def plot_induction_multiperiod_map(
     n_per = len(periods)
     letters = list(string.ascii_uppercase)
     if panel_labels is None:
-        panel_labels = [f"({letters[k]}) {p:g} s" for k, p in enumerate(periods)]
+        panel_labels = [
+            f"({letters[k]}) {p:g} s" for k, p in enumerate(periods)
+        ]
 
     # ── Reference label ───────────────────────────────────────────────────
     if reference_label is _UNSET:
@@ -1967,7 +2037,9 @@ def plot_induction_multiperiod_map(
 
         # station markers
         if show_stations:
-            ax.scatter(xs, ys, marker="v", s=18, color="0.15", zorder=4, linewidths=0)
+            ax.scatter(
+                xs, ys, marker="v", s=18, color="0.15", zorder=4, linewidths=0
+            )
             if station_labels:
                 for ki, (xi, yi) in enumerate(zip(xs, ys)):
                     ax.annotate(
@@ -2049,7 +2121,11 @@ def plot_induction_multiperiod_map(
             for label, info in annotations.items():
                 if isinstance(info, (list, tuple)) and len(info) >= 2:
                     ax_x, ax_y = float(info[0]), float(info[1])
-                    kw = info[2] if len(info) > 2 and isinstance(info[2], dict) else {}
+                    kw = (
+                        info[2]
+                        if len(info) > 2 and isinstance(info[2], dict)
+                        else {}
+                    )
                     fc = kw.pop("color", annotation_color)
                     fs = kw.pop("fontsize", annotation_fontsize)
                     fw = kw.pop("fontweight", "bold")
@@ -2078,7 +2154,9 @@ def plot_induction_multiperiod_map(
             va="bottom",
             ha="left",
             zorder=8,
-            bbox=dict(boxstyle="round,pad=0.2", fc="black", alpha=0.55, ec="none"),
+            bbox=dict(
+                boxstyle="round,pad=0.2", fc="black", alpha=0.55, ec="none"
+            ),
         )
 
         # clean ticks: only bottom panel keeps x labels
@@ -2097,7 +2175,9 @@ def plot_induction_multiperiod_map(
     if show_background_cbar and im_handle is not None:
         bg_colorbar_side = str(bg_colorbar_side).lower()
         if bg_colorbar_side not in {"right", "left", "top", "bottom"}:
-            msg = "bg_colorbar_side must be 'right', 'left', 'top', or 'bottom'."
+            msg = (
+                "bg_colorbar_side must be 'right', 'left', 'top', or 'bottom'."
+            )
             raise ValueError(msg)
         vertical = bg_colorbar_side in {"right", "left"}
         cbar = fig.colorbar(

@@ -190,7 +190,11 @@ class StationResponseDialog(QDialog):
                     ed = _unwrap(ed)
                 except Exception:
                     pass
-                name = getattr(ed, "station", None) or getattr(ed, "id", None) or "?"
+                name = (
+                    getattr(ed, "station", None)
+                    or getattr(ed, "id", None)
+                    or "?"
+                )
                 self._station_names.append(str(name))
         except Exception as exc:
             self._status_lbl.setText(f"Cannot read stations: {exc}")
@@ -199,7 +203,9 @@ class StationResponseDialog(QDialog):
 
         self._station_combo.addItems(self._station_names)
         if self._station_names:
-            self._status_lbl.setText(f"{len(self._station_names)} stations loaded.")
+            self._status_lbl.setText(
+                f"{len(self._station_names)} stations loaded."
+            )
 
     # ── Plot ──────────────────────────────────────────────────────────────────
 

@@ -37,8 +37,20 @@ def _parse_model3d(path: Path) -> dict:
 
     N = len(lines)
     i = 0
-    # skip blank / comment lines before the control line
-    while i < N and (not lines[i].strip() or lines[i].strip().startswith("#")):
+    # ModEM's WS-format Fortran reader (read_modelParam_ws in
+    # WS.inc) unconditionally reads and discards exactly one line as
+    # a comment/header *before* the dimensions line -- not an
+    # optional, hash-prefixed comment. Skipping it unconditionally
+    # here (rather than only skipping blank/"#" lines) is required to
+    # parse genuine ModEM-written files, whose header line is normally
+    # plain descriptive text with no "#" -- confirmed by reading
+    # WS.inc directly and by round-tripping a real compiled Mod3DMT
+    # binary, which rejected this module's own (header-less) writer
+    # output with a Fortran runtime error at exactly this read.
+    if i < N:
+        i += 1
+    # tolerate any additional blank lines before the control line
+    while i < N and not lines[i].strip():
         i += 1
 
     ctrl = lines[i].split()
@@ -405,11 +417,15 @@ class ModEmModel3D(ModEmBase):
 
         Notes
         -----
-        The writer emits the WinGLink/ModEM ``.ws`` style grid:
-        header, x widths, y widths, z widths, then
-        ``nz * ny`` rows of ``nx`` resistivity values. It writes
-        the values stored in ``rho_loge`` and the encoding label
-        stored in ``log_type``.
+        The writer emits the WinGLink/ModEM ``.ws`` style grid: a
+        mandatory leading comment line (ModEM's WS-format Fortran
+        reader, ``read_modelParam_ws`` in ``WS.inc``, unconditionally
+        reads and discards exactly one line before the dimensions
+        line -- a real compiled ``Mod3DMT`` binary rejects a file
+        missing it with a Fortran runtime error), dimensions/log-type
+        header, x widths, y widths, z widths, then ``nz * ny`` rows of
+        ``nx`` resistivity values. It writes the values stored in
+        ``rho_loge`` and the encoding label stored in ``log_type``.
 
         Examples
         --------
@@ -426,12 +442,17 @@ class ModEmModel3D(ModEmBase):
             rows = []
             for i in range(0, len(arr), per_row):
                 rows.append(
-                    "  " + "  ".join(f"{v:>12.4f}" for v in arr[i : i + per_row])
+                    "  "
+                    + "  ".join(f"{v:>12.4f}" for v in arr[i : i + per_row])
                 )
             return "\n".join(rows) + "\n"
 
         lines: list[str] = [
-            (f"  {self.nx}  {self.ny}  {self.nz}  " f"{self.n_air}  {self.log_type}\n"),
+            "# 3D MT model written by pycsamt.models.modem.model3d\n",
+            (
+                f"  {self.nx}  {self.ny}  {self.nz}  "
+                f"{self.n_air}  {self.log_type}\n"
+            ),
         ]
         lines.append(_floats(self.x_widths))
         lines.append(_floats(self.y_widths))
@@ -442,7 +463,9 @@ class ModEmModel3D(ModEmBase):
             for iy in range(self.ny):
                 lines.append(
                     "  "
-                    + "  ".join(f"{v:>12.5E}" for v in self.rho_loge[iz, iy, :])
+                    + "  ".join(
+                        f"{v:>12.5E}" for v in self.rho_loge[iz, iy, :]
+                    )
                     + "\n"
                 )
 

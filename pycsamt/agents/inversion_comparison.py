@@ -109,8 +109,12 @@ class InversionComparisonAgent(BaseAgent):
         output_dir = input_data.get("output_dir")
 
         # ── extract sections ──────────────────────────────────────────────
-        mat_a, stations_a, depths_a = _extract_section(result_a, warnings, label_a)
-        mat_b, stations_b, depths_b = _extract_section(result_b, warnings, label_b)
+        mat_a, stations_a, depths_a = _extract_section(
+            result_a, warnings, label_a
+        )
+        mat_b, stations_b, depths_b = _extract_section(
+            result_b, warnings, label_b
+        )
 
         if mat_a is None:
             return AgentResult.failed(
@@ -144,7 +148,9 @@ class InversionComparisonAgent(BaseAgent):
         # ── station names ─────────────────────────────────────────────────
         station_names = input_data.get("station_names")
         if station_names is None:
-            station_names = stations_a or stations_b or [f"S{i}" for i in range(n_sta)]
+            station_names = (
+                stations_a or stations_b or [f"S{i}" for i in range(n_sta)]
+            )
         station_names = list(station_names)[:n_sta]
 
         # ── statistics ────────────────────────────────────────────────────
@@ -253,7 +259,11 @@ def _extract_section(
         return None, None, None
 
     # dict/AgentResult accessors
-    get = result.get if hasattr(result, "get") else lambda k, d=None: result.get(k, d)
+    get = (
+        result.get
+        if hasattr(result, "get")
+        else lambda k, d=None: result.get(k, d)
+    )
 
     # ── 2-D section: (n_layers, n_stations) ──────────────────────────────
     for key in (

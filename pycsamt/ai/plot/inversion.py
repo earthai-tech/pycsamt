@@ -464,7 +464,9 @@ def plot_inversion_result_2d(
         misfit_cmap = EM_CMAPS["misfit"]
     if _show_misfit:
         if misfit_vlim is None:
-            misfit_vlim = float(np.nanpercentile(np.abs(misfit), misfit_percentile))
+            misfit_vlim = float(
+                np.nanpercentile(np.abs(misfit), misfit_percentile)
+            )
 
     # ── RMSE ─────────────────────────────────────────────────────────────────
     _show_rmse = show_rmse and (
@@ -565,7 +567,9 @@ def plot_inversion_result_2d(
         if gs_bot is not None:
             n_bot = len(panels_bot)
             if n_bot == 2:
-                ax["convergence"] = fig.add_subplot(gs_bot[0, : max(1, n_top - 1)])
+                ax["convergence"] = fig.add_subplot(
+                    gs_bot[0, : max(1, n_top - 1)]
+                )
                 ax["rmse"] = fig.add_subplot(gs_bot[0, n_top - 1])
             elif n_bot == 1:
                 ax[panels_bot[0]] = fig.add_subplot(gs_bot[0, :])
@@ -716,7 +720,8 @@ def plot_inversion_result_2d(
     if "rmse" in ax and rmse is not None:
         ax_r = ax["rmse"]
         bar_c = [
-            rmse_error_color if v > rmse_threshold else rmse_bar_color for v in rmse
+            rmse_error_color if v > rmse_threshold else rmse_bar_color
+            for v in rmse
         ]
         dx = float(np.diff(s_edges).mean())
         ax_r.bar(
@@ -776,7 +781,9 @@ def _per_station_to_volume(
     for d in range(n_depth):
         vals = station_models[:, d]
         try:
-            layer = griddata(pts, vals, (XX, YY), method=method, fill_value=np.nan)
+            layer = griddata(
+                pts, vals, (XX, YY), method=method, fill_value=np.nan
+            )
         except Exception:
             layer = griddata(pts, vals, (XX, YY), method="nearest")
         volume[d] = layer
@@ -1387,14 +1394,18 @@ def plot_inversion_result_3d(
         if misfit_cmap is None:
             misfit_cmap = EM_CMAPS["misfit"]
         if misfit_vlim is None:
-            misfit_vlim = float(np.nanpercentile(np.abs(misfit_3d), misfit_percentile))
+            misfit_vlim = float(
+                np.nanpercentile(np.abs(misfit_3d), misfit_percentile)
+            )
     else:
         misfit_cmap = misfit_cmap or EM_CMAPS["misfit"]
 
     # ── 6. RMSE scatter ───────────────────────────────────────────────────────
     if station_xy is not None:
         station_xy = np.asarray(station_xy, dtype=float)
-    _show_rmse = show_rmse_map and station_xy is not None and station_rmse is not None
+    _show_rmse = (
+        show_rmse_map and station_xy is not None and station_rmse is not None
+    )
     if station_rmse is not None:
         station_rmse = np.asarray(station_rmse, dtype=float)
         if rmse_vmax is None:
@@ -1477,7 +1488,9 @@ def plot_inversion_result_3d(
         fig = plt.figure(figsize=figsize)
 
         if comparison_mode:
-            gs_outer = fig.add_gridspec(n_rows, 1, height_ratios=hr, hspace=hspace)
+            gs_outer = fig.add_gridspec(
+                n_rows, 1, height_ratios=hr, hspace=hspace
+            )
             gs_top = gs_outer[0].subgridspec(1, 3, wspace=wspace)
             gs_mid = gs_outer[1].subgridspec(1, 3, wspace=wspace)
             ax["map_true"] = fig.add_subplot(gs_top[0, 0])
@@ -1489,14 +1502,18 @@ def plot_inversion_result_3d(
             if _show_conv:
                 ax["convergence"] = fig.add_subplot(gs_outer[2])
         else:
-            gs_outer = fig.add_gridspec(n_rows, 1, height_ratios=hr, hspace=hspace)
+            gs_outer = fig.add_gridspec(
+                n_rows, 1, height_ratios=hr, hspace=hspace
+            )
             gs_top = gs_outer[0].subgridspec(1, n_top, wspace=wspace)
             for i, key in enumerate(top_keys):
                 ax[key] = fig.add_subplot(gs_top[0, i])
             if has_bot:
                 gs_bot = gs_outer[1].subgridspec(1, n_top, wspace=wspace)
                 if _show_conv and _show_rmse:
-                    ax["convergence"] = fig.add_subplot(gs_bot[0, : max(1, n_top - 1)])
+                    ax["convergence"] = fig.add_subplot(
+                        gs_bot[0, : max(1, n_top - 1)]
+                    )
                     ax["rmse_map"] = fig.add_subplot(gs_bot[0, n_top - 1])
                 elif _show_conv:
                     ax["convergence"] = fig.add_subplot(gs_bot[0, :])
@@ -1537,7 +1554,9 @@ def plot_inversion_result_3d(
         _v0 = -misfit_vlim if key == "map_misfit" else vmin
         _v1 = misfit_vlim if key == "map_misfit" else vmax
         _cm = misfit_cmap if key == "map_misfit" else cmap
-        _ttl = (ttl or "").replace("depth slice", f"depth slice  ({depth_label_str})")
+        _ttl = (ttl or "").replace(
+            "depth slice", f"depth slice  ({depth_label_str})"
+        )
         im = _draw_map_panel(
             ax[key],
             slc,
@@ -1611,7 +1630,9 @@ def plot_inversion_result_3d(
                 )
 
     if annotations_map:
-        leftmost_map = next((k for k in ("map_true", "map_pred") if k in ax), None)
+        leftmost_map = next(
+            (k for k in ("map_true", "map_pred") if k in ax), None
+        )
         if leftmost_map:
             _add_annotations(ax[leftmost_map], annotations_map)
 

@@ -2,8 +2,7 @@
 # License: LGPL-3.0
 """External ModEM adapter: the trusted production 3-D backend.
 
-Per ``docs/source/development/adr/AI-INVERSION-M6-3D-ADR.md`` (Decision 1),
-ModEM — not an
+Per ``AI-INVERSION`` (Decision 1), ModEM — not an
 in-house solver — is the recommended path for genuine 3-D production
 forward modeling. :class:`ModEm3DAdapter` bridges the solver-neutral
 :class:`~pycsamt.forward.maxwell.contracts.MaxwellProblem` /
@@ -17,25 +16,62 @@ reusing the file I/O already built in :mod:`pycsamt.models.modem`
 :class:`~pycsamt.models.modem.model3d.ModEmModel3D`) rather than a
 second, competing implementation of the ModEM file formats.
 
-**Status: input/output plumbing only, not physics-validated.** No
-compiled ``Mod3DMT``/``Mod2DMT`` binary exists in the development
-environment this adapter was written in (the Fortran source is
-vendored but must be built separately — see
-``pycsamt/models/modem/_source/README.txt``), so unlike
-:class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter` and
-:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter`, this adapter's
-generated files could not be validated end-to-end against a live
-ModEM run. Its input-file generation and output-file parsing are
-tested against the real, existing
-:class:`~pycsamt.models.modem.data.ModEmData`/
-:class:`~pycsamt.models.modem.model3d.ModEmModel3D` reader/writer code
-and against a scripted stand-in executable (see
-``pycsamt/forward/tests/test_maxwell_modem3d.py``), which exercises
-every step except genuine Maxwell physics.
-:attr:`~pycsamt.forward.maxwell.backends.BackendCapabilities.verified_benchmarks`
-is therefore empty — nobody should read this module as claiming
-numerical validation it does not have. Run it against your own
-compiled binary and an analytic benchmark before trusting it.
+**Status: physics-validated against a real compiled binary (2026-07-29).**
+No compiled ``Mod3DMT`` binary is committed to this repository (it is
+a local build artifact, gitignored — see
+``pycsamt/models/modem/_source/README`` for build instructions), but
+one *was* built here with a MinGW-w64 gfortran/OpenBLAS toolchain and
+used to run this project's own analytic benchmarks end-to-end. Doing
+so surfaced and fixed several real, previously-latent bugs — this
+adapter's generated files, and the vendored Fortran source itself,
+had never actually been exercised against a live ModEM run before:
+
+* the vendored ``Makefile`` was missing a build rule for
+  ``sg_spherical.f90`` (`use`d directly by ``GridCalc.f90``) and never
+  compiled ``Declaration_MPI``/``Sub_MPI``/``Main_MPI.f90`` (whose
+  ``#ifdef MPI``-guarded bodies are unconditionally `use`d by several
+  files regardless of MPI) nor passed ``-cpp`` to strip those guards
+  for a serial build — all reproduce identically on Linux/Mac, not
+  Windows-specific;
+* :func:`~pycsamt.forward.maxwell.external.resolve_executable`'s
+  ``search_paths`` fallback checked a literal
+  ``Path(directory) / name`` rather than applying ``PATHEXT`` the way
+  its own ``PATH`` lookup (via :func:`shutil.which`) already did, so a
+  bare name like ``"Mod3DMT"`` never resolved to ``"Mod3DMT.exe"`` on
+  Windows;
+* :meth:`ModEm3DAdapter._build_command` omitted the third positional
+  argument ModEM's own ``-F`` forward-mode requires (the predicted-data
+  output filename), so it printed its own usage banner and exited 0
+  having written nothing, indistinguishable from success until
+  :meth:`ModEm3DAdapter._locate_predicted_file` found no output file;
+* :class:`~pycsamt.models.modem.model3d.ModEmModel3D`'s WS-format
+  reader/writer were missing a mandatory leading comment line ModEM's
+  Fortran ``read_modelParam_ws`` (``WS.inc``) unconditionally reads
+  and discards before the dimensions line — a real compiled binary
+  immediately rejected the header-less file with a Fortran runtime
+  error;
+* ModEM's own ``setup_airlayers`` (``GridDef.f90``) hardcodes 10 air
+  layers and its default "mirror" sizing method reads that many
+  earth-layer widths with **no bounds check** against the actual
+  earth cell count — fewer than 10 earth z-cells reads past the end
+  of the array, producing garbage/NaN values that crash the solver
+  with "b in QMR contains NaNs". :meth:`ModEm3DAdapter.assess` now
+  rejects this before ever writing a file (see
+  :data:`_MIN_EARTH_Z_CELLS`); this is a real latent bug in the
+  vendored ModEM source itself, worked around here rather than patched
+  there (patching unfamiliar, decades-old numerical Fortran to add a
+  defensive bounds check was judged riskier than simply requiring
+  enough earth cells).
+
+With those fixed and at least :data:`_MIN_EARTH_Z_CELLS` earth
+z-cells, this adapter passes both
+:func:`~pycsamt.forward.maxwell.benchmarks.half_space_benchmark` and
+:func:`~pycsamt.forward.maxwell.benchmarks.layered_earth_benchmark`
+with real margin — see "Measured accuracy" below and
+``pycsamt/forward/tests/test_maxwell_modem3d.py``'s
+``requires_real_modem``-gated tests, which are skipped (not failed)
+when no local binary is present, and were confirmed passing against
+the real one built for this validation.
 
 Scope and mapping decisions
 ----------------------------
@@ -49,9 +85,10 @@ Scope and mapping decisions
   limitation (ModEM supports real air/topography), a deliberate v1
   scope reduction for consistency and lower risk. Topography support
   is future work.
-* **Non-uniform meshes are supported** (unlike ``mt3d.py``): ModEM's
-  own solver has no uniform-grid restriction, so
-  ``supports_nonuniform_mesh=True``.
+* **Non-uniform meshes are supported**: ModEM's own solver has no
+  uniform-grid restriction, so ``supports_nonuniform_mesh=True`` (as
+  of 2026-07-29, ``mt3d.py`` also supports non-uniform meshes, so this
+  is no longer a point of difference between the two adapters).
 * **Station and model coordinates are shifted** so the mesh's own
   minimum x/y edge maps to ModEM-local ``(0, 0)`` — the vendored
   :class:`~pycsamt.models.modem.data.ModEmData`/
@@ -74,6 +111,23 @@ Scope and mapping decisions
   documented placeholder, not a claim of exact agreement). Only
   ``runtime_s`` (the external process's real wall-clock time) is a
   genuine measurement.
+
+Measured accuracy
+------------------
+On a small uniform 8x8x10 grid (300 m cells, 10 earth z-cells — the
+minimum :data:`_MIN_EARTH_Z_CELLS` requires), against a real compiled
+``Mod3DMT``: :func:`~pycsamt.forward.maxwell.benchmarks.half_space_benchmark`
+and :func:`~pycsamt.forward.maxwell.benchmarks.layered_earth_benchmark`
+both pass the default
+:class:`~pycsamt.forward.maxwell.benchmarks.BenchmarkThresholds` with
+real margin (normalized RMS under 5%). Unlike
+:mod:`~pycsamt.forward.maxwell.mt3d`'s research-only solver, no padded
+mesh was needed here — ModEM synthesizes its own air layers and, as
+an iterative-solver production code, does not carry this project's
+own small-grid cell-budget restriction, so a plain uniform mesh
+sufficed for this validation. This does not by itself validate every
+mesh configuration (e.g. non-uniform meshes, receivers off-centre) --
+only what the cited benchmarks actually exercise.
 """
 
 from __future__ import annotations
@@ -109,9 +163,25 @@ _PERMEABILITY_RTOL = 1e-9
 _FIELD_UNITS_TO_SI = 4.0e-4 * np.pi  # [mV/km]/[nT] -> V/A (Ohm)
 _FULL_TENSOR = ("ZXX", "ZXY", "ZYX", "ZYY")
 
-# Never claimed until a real Mod3DMT run has been checked against an
-# independent analytic benchmark; see the module docstring.
-_VERIFIED_BENCHMARKS: tuple[str, ...] = ()
+# ModEM's WS-format model reader hardcodes exactly 10 air layers
+# (`nzAir = 10` in read_modelParam_ws, WS.inc) regardless of what
+# n_air this adapter requests, and its "mirror" air-layer sizing
+# (setup_airlayers, GridDef.f90) reads that many earth-layer widths
+# without checking there are actually that many -- with fewer earth
+# z-cells than this, it silently reads past the end of the array.
+# Confirmed empirically (not just inferred from source) against a
+# real compiled Mod3DMT binary: fewer than 10 earth z-cells produces
+# a "b in QMR contains NaNs" crash from garbage memory; 10 or more
+# solves correctly. See the module docstring's "Measured accuracy".
+_MIN_EARTH_Z_CELLS = 10
+
+# Confirmed 2026-07-29 against a real compiled Mod3DMT binary (built
+# from the vendored source with a MinGW-w64 gfortran/OpenBLAS
+# toolchain) -- not asserted from source reading alone. See the
+# module docstring's "Measured accuracy" section for the actual
+# numbers and the mesh constraint (_MIN_EARTH_Z_CELLS) required to
+# reach them.
+_VERIFIED_BENCHMARKS: tuple[str, ...] = ("half-space", "layered-earth")
 
 
 def _default_search_paths() -> tuple[str, ...]:
@@ -260,6 +330,20 @@ class ModEm3DAdapter(BaseExternalMaxwellAdapter):
                     "(no separate air layers are written; see the "
                     "module docstring)"
                 )
+            n_earth_z = problem.mesh.shape[0]
+            if n_earth_z < _MIN_EARTH_Z_CELLS:
+                errors.append(
+                    f"modem3d requires at least {_MIN_EARTH_Z_CELLS} earth "
+                    f"z-cells (got {n_earth_z}); ModEM's WS-format reader "
+                    "hardcodes 10 air layers and its 'mirror' air-layer "
+                    "sizing reads that many earth-layer widths without "
+                    "bounds-checking against the actual earth cell count, "
+                    "silently reading past the end of the array (undefined "
+                    "values, observed as a 'b in QMR contains NaNs' crash) "
+                    "when there are fewer earth cells than air layers -- "
+                    "confirmed empirically with a real compiled Mod3DMT "
+                    "binary, not merely inferred from source."
+                )
         if not np.isclose(
             problem.magnetic_permeability_h_m,
             _MU0,
@@ -334,11 +418,25 @@ class ModEm3DAdapter(BaseExternalMaxwellAdapter):
             }
         ]
         data_path = data.write(workdir / "data.dat")
-        return {"model_path": model_path, "data_path": data_path}
+        predicted_path = workdir / "pred.dat"
+        return {
+            "model_path": model_path,
+            "data_path": data_path,
+            "predicted_path": predicted_path,
+        }
 
     def _build_command(self, problem, workdir, executable, context):
         model_name = context["model_path"].name
         data_name = context["data_path"].name
+        # ModEM's "-F" forward mode requires a third positional
+        # argument naming the predicted-data output file
+        # (usage: "-F rFile_Model rFile_Data wFile_Data [...]");
+        # omitting it (as this adapter originally did) makes Mod3DMT
+        # print its own usage banner (a "success", exit code 0) and
+        # write nothing, which _locate_predicted_file then reports as
+        # a generic "no predicted-data file was found" -- confirmed
+        # against a real compiled Mod3DMT binary.
+        predicted_name = context["predicted_path"].name
         if self._config.use_mpi:
             binary = resolve_executable(
                 self._config.binary_3d,
@@ -352,8 +450,9 @@ class ModEm3DAdapter(BaseExternalMaxwellAdapter):
                 "-F",
                 model_name,
                 data_name,
+                predicted_name,
             ]
-        return [str(executable), "-F", model_name, data_name]
+        return [str(executable), "-F", model_name, data_name, predicted_name]
 
     def _locate_predicted_file(self, workdir: Path, data_path: Path) -> Path:
         if self._predicted_data_filename is not None:

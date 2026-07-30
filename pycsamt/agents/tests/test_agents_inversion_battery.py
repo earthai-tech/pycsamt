@@ -219,6 +219,51 @@ def test_inv3d_agent_tiny_training(sites3):
     assert result.status in {"success", "failed"}
     if result.status == "success":
         assert result.summary
+        assert result.data["physics"] == "mt1d"
+        assert result.data["mt3d_recovery"] is None
+
+
+@requires_dl
+def test_inv3d_agent_mt3d_physics_end_to_end(sites3):
+    """physics='mt3d' trains on real 3-D Maxwell solves (MT3DAdapter,
+    the research-only small-grid solver) at the survey's own real
+    station positions, not tiled independent 1-D models, per the
+    AI-inversion plan's M8 slice. Kept tiny (few realizations, one
+    epoch, a low mesh_safety_factor) since each realization costs a
+    genuine 3-D solve, not a cheap 1-D one.
+    """
+    import numpy as np
+
+    from pycsamt.agents import Inv3DAgent
+
+    ag = mk(
+        Inv3DAgent,
+        epochs=1,
+        n_layers=4,
+        n_freqs=3,
+        n_train_profiles=6,
+        physics="mt3d",
+        mesh_safety_factor=2.0,
+    )
+    result = ag.execute({"sites": sites3, "freqs": [100.0, 30.0, 10.0]})
+    assert result.status == "success", result.error
+    assert result.data["physics"] == "mt3d"
+    assert result.data["pred_rho"].shape == (3, 4)
+    assert np.all(np.isfinite(result.data["pred_rho"]))
+
+    recovery = result.data["mt3d_recovery"]
+    assert recovery is not None
+    assert recovery["n_samples"] >= 1
+    assert np.isfinite(recovery["rmse"])
+    assert np.isfinite(recovery["mae"])
+
+
+@requires_dl
+def test_inv3d_agent_rejects_bad_physics():
+    from pycsamt.agents import Inv3DAgent
+
+    with pytest.raises(ValueError, match="physics"):
+        mk(Inv3DAgent, physics="mt2d")
 
 
 @requires_dl

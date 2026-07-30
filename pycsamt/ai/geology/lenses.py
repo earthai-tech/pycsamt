@@ -117,16 +117,25 @@ class EllipsoidalLens:
                 raise ValueError(f"{field} must be positive.")
         if values["dip_deg"] < -90 or values["dip_deg"] > 90:
             raise ValueError("dip_deg must lie in [-90, 90].")
-        if values["transition_fraction"] < 0 or values["transition_fraction"] >= 1:
+        if (
+            values["transition_fraction"] < 0
+            or values["transition_fraction"] >= 1
+        ):
             raise ValueError("transition_fraction must lie in [0, 1).")
         if (self.center_y_m is None) != (self.radius_y_m is None):
-            raise ValueError("center_y_m and radius_y_m must be supplied together.")
+            raise ValueError(
+                "center_y_m and radius_y_m must be supplied together."
+            )
         center_y = None
         radius_y = None
         if self.center_y_m is not None:
             center_y = float(self.center_y_m)
             radius_y = float(self.radius_y_m)
-            if not np.isfinite(center_y) or not np.isfinite(radius_y) or radius_y <= 0:
+            if (
+                not np.isfinite(center_y)
+                or not np.isfinite(radius_y)
+                or radius_y <= 0
+            ):
                 raise ValueError(
                     "center_y_m must be finite and radius_y_m finite and positive."
                 )
@@ -188,7 +197,9 @@ class EllipsoidalLens:
             raise ValueError("lens and grid dimensions differ.")
         if grid.dimension == 2 and self.azimuth_deg != 0.0:
             raise ValueError("azimuth_deg must be zero for a 2-D lens.")
-        if require_intersection and not np.any(self.normalized_radius(grid) <= 1.0):
+        if require_intersection and not np.any(
+            self.normalized_radius(grid) <= 1.0
+        ):
             raise ValueError(
                 f"lens {self.name!r} does not intersect any grid cell centre."
             )
@@ -358,7 +369,9 @@ def _compose_lenses(
         weights.append(lens.blend_weight(base.grid))
     overlap = np.sum(np.stack(masks), axis=0, dtype=np.int16)
     if conflict_policy == "error" and np.any(overlap > 1):
-        raise ValueError("lens envelopes overlap under the 'error' conflict policy.")
+        raise ValueError(
+            "lens envelopes overlap under the 'error' conflict policy."
+        )
     result = np.array(base.resistivity_ohm_m, copy=True)
     indices = np.full(base.grid.shape, -1, dtype=np.int16)
     for index, (lens, mask, weight) in enumerate(zip(bodies, masks, weights)):
@@ -425,8 +438,12 @@ class LensGeology:
         if not isinstance(self.base, LayeredGeology):
             raise TypeError("base must be a LayeredGeology.")
         lenses = tuple(self.lenses)
-        if not lenses or any(not isinstance(lens, EllipsoidalLens) for lens in lenses):
-            raise ValueError("lenses must contain at least one EllipsoidalLens.")
+        if not lenses or any(
+            not isinstance(lens, EllipsoidalLens) for lens in lenses
+        ):
+            raise ValueError(
+                "lenses must contain at least one EllipsoidalLens."
+            )
         if len({lens.name for lens in lenses}) != len(lenses):
             raise ValueError("lens names must be unique.")
         for lens in lenses:
@@ -472,11 +489,17 @@ class LensGeology:
         for lens in lenses:
             expected_overlap += lens.normalized_radius(self.base.grid) <= 1.0
         if not np.array_equal(overlap, expected_overlap):
-            raise ValueError("overlap_count is inconsistent with lens geometry.")
+            raise ValueError(
+                "overlap_count is inconsistent with lens geometry."
+            )
         if np.any((indices >= 0) & (overlap == 0)):
-            raise ValueError("lens_index assigns cells outside all lens envelopes.")
+            raise ValueError(
+                "lens_index assigns cells outside all lens envelopes."
+            )
         if self.conflict_policy == "error" and np.any(overlap > 1):
-            raise ValueError("error conflict policy cannot contain overlapping lenses.")
+            raise ValueError(
+                "error conflict policy cannot contain overlapping lenses."
+            )
         expected_resistivity, expected_indices, _ = _compose_lenses(
             self.base, lenses, self.conflict_policy
         )
@@ -484,7 +507,9 @@ class LensGeology:
             raise ValueError(
                 "lens_index is inconsistent with geometry and conflict policy."
             )
-        if not np.allclose(resistivity, expected_resistivity, rtol=1e-12, atol=0.0):
+        if not np.allclose(
+            resistivity, expected_resistivity, rtol=1e-12, atol=0.0
+        ):
             raise ValueError(
                 "resistivity_ohm_m is inconsistent with base, lenses, and conflict policy."
             )
@@ -520,8 +545,12 @@ class LensGeology:
         digest.update(
             np.ascontiguousarray(self.resistivity_ohm_m, dtype="<f8").tobytes()
         )
-        digest.update(np.ascontiguousarray(self.lens_index, dtype="<i2").tobytes())
-        digest.update(np.ascontiguousarray(self.overlap_count, dtype="<i2").tobytes())
+        digest.update(
+            np.ascontiguousarray(self.lens_index, dtype="<i2").tobytes()
+        )
+        digest.update(
+            np.ascontiguousarray(self.overlap_count, dtype="<i2").tobytes()
+        )
         digest.update(canonical_hash(self.provenance()).encode("ascii"))
         return digest.hexdigest()
 
@@ -559,7 +588,9 @@ class LensGeology:
             except ValueError as exc:
                 raise KeyError(f"unknown lens {lens!r}.") from exc
         else:
-            if not isinstance(lens, (int, np.integer)) or isinstance(lens, bool):
+            if not isinstance(lens, (int, np.integer)) or isinstance(
+                lens, bool
+            ):
                 raise TypeError("lens must be an integer index or exact name.")
             index = int(lens)
             if index < 0 or index >= len(self.lenses):
@@ -677,7 +708,9 @@ class LensGeology:
             resistivity_ohm_m=self.resistivity_ohm_m,
             lens_index=self.lens_index,
             overlap_count=self.overlap_count,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 
@@ -721,7 +754,10 @@ class LensGeology:
             base_state = state["base"]
             base = LayeredGeology(
                 GeologyGrid.from_dict(base_state["grid"]),
-                tuple(ElectricalLayer.from_dict(item) for item in base_state["layers"]),
+                tuple(
+                    ElectricalLayer.from_dict(item)
+                    for item in base_state["layers"]
+                ),
                 archive["base_interface_depth_m"],
                 archive["base_layer_index"],
                 archive["base_resistivity_ohm_m"],
@@ -733,10 +769,14 @@ class LensGeology:
                 base_state.get("generation_config", {}),
             )
             if base.model_hash != state["base_model_hash"]:
-                raise ValueError("restored base model hash does not match provenance.")
+                raise ValueError(
+                    "restored base model hash does not match provenance."
+                )
             return cls(
                 base,
-                tuple(EllipsoidalLens.from_dict(item) for item in state["lenses"]),
+                tuple(
+                    EllipsoidalLens.from_dict(item) for item in state["lenses"]
+                ),
                 archive["resistivity_ohm_m"],
                 archive["lens_index"],
                 archive["overlap_count"],
@@ -793,7 +833,9 @@ def insert_lenses(
     if not isinstance(base, LayeredGeology):
         raise TypeError("base must be a LayeredGeology.")
     bodies = tuple(lenses)
-    if not bodies or any(not isinstance(lens, EllipsoidalLens) for lens in bodies):
+    if not bodies or any(
+        not isinstance(lens, EllipsoidalLens) for lens in bodies
+    ):
         raise ValueError("lenses must contain at least one EllipsoidalLens.")
     if len({lens.name for lens in bodies}) != len(bodies):
         raise ValueError("lens names must be unique.")

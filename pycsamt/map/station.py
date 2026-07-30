@@ -96,6 +96,18 @@ def build_station_map(
 ) -> Any:
     """Build a Plotly 2-D station map."""
     opts = options or StationMapOptions()
+    elevation_mode = str(opts.elevation_mode).lower().strip()
+    if elevation_mode not in {"markers", "contours"}:
+        raise ValueError(
+            "Unknown elevation_mode "
+            f"{opts.elevation_mode!r}. Expected 'markers' or 'contours'."
+        )
+    if opts.overlay.lower() == "elevation" and elevation_mode == "contours":
+        # ``contour_image`` remains the generic switch for any scalar
+        # overlay. ``elevation_mode`` is the clearer public shorthand for
+        # the common topographic use case and keeps ``markers`` backward
+        # compatible.
+        opts = replace(opts, contour_image=True)
     df = _station_values(data, opts)
     colors = theme_colors(opts.theme)
     if opts.backend == "matplotlib":
@@ -338,6 +350,56 @@ def _matplotlib_station_map(df, opts, colors):
         )
         ** 2
     )
+    contour = None
+    if (
+        opts.overlay.lower() == "elevation"
+        and opts.elevation_mode == "contours"
+        and _has_geo(df)
+    ):
+        from .overlays import interpolate_overlay_grid
+
+        xi, yi, zi = interpolate_overlay_grid(
+            np.asarray(df["Longitude"], dtype=float),
+            np.asarray(df["Latitude"], dtype=float),
+            np.asarray(df["_plot_value"], dtype=float),
+            grid_size=int(opts.contour_grid_res),
+            method=str(opts.contour_interp),
+        )
+        if opts.contour_smooth and opts.contour_smooth > 0:
+            try:
+                from scipy.ndimage import gaussian_filter
+
+                valid = np.isfinite(zi)
+                filled = np.where(valid, zi, np.nanmean(zi[valid]))
+                zi = gaussian_filter(filled, sigma=float(opts.contour_smooth))
+                zi[~valid] = np.nan
+            except Exception:
+                pass
+        observed = np.asarray(df["_plot_value"], dtype=float)
+        observed = observed[np.isfinite(observed)]
+        if observed.size:
+            zi = np.clip(zi, float(observed.min()), float(observed.max()))
+        if opts.contour_mode in {"filled", "filled+lines"}:
+            contour = ax.contourf(
+                xi,
+                yi,
+                zi,
+                levels=max(2, int(opts.contour_levels)),
+                cmap=opts.cmap,
+                alpha=float(opts.contour_opacity),
+                vmin=_cmin(opts),
+                vmax=_cmax(opts),
+            )
+        if opts.contour_mode in {"lines", "filled+lines"}:
+            ax.contour(
+                xi,
+                yi,
+                zi,
+                levels=max(2, int(opts.contour_levels)),
+                colors=colors["text"],
+                linewidths=0.6,
+                alpha=0.5,
+            )
     sc = ax.scatter(
         df[x_col],
         df[y_col],
@@ -349,29 +411,42 @@ def _matplotlib_station_map(df, opts, colors):
         vmax=_cmax(opts),
     )
     if opts.show_labels:
-        for _, row in df.iterrows():
-            ax.text(
-                row[x_col],
-                row[y_col],
+        for label_index, (_, row) in enumerate(df.iterrows()):
+            direction = 1 if label_index % 2 == 0 else -1
+            ax.annotate(
                 str(row["ID"]),
+                xy=(row[x_col], row[y_col]),
+                xytext=(3 * direction, 3),
+                textcoords="offset points",
+                ha="left" if direction > 0 else "right",
+                va="bottom",
                 color=colors["text"],
-                fontsize=8,
+                fontsize=float(opts.label_fontsize),
+                rotation=float(opts.label_rotation),
+                rotation_mode="anchor",
             )
     if opts.show_profiles and _has_geo(df):
-        for _, group in df.groupby("Line", dropna=False):
+        groups = list(df.groupby("Line", dropna=False))
+        profile_cmap = plt.get_cmap("tab10")
+        for line_index, (line, group) in enumerate(groups):
             ax.plot(
                 group["Longitude"],
                 group["Latitude"],
-                color=colors["accent"],
-                linewidth=1.2,
+                color=profile_cmap(line_index % 10),
+                linewidth=1.35,
+                label=str(line or "line"),
             )
-    cbar = fig.colorbar(sc, ax=ax)
+        if len(groups) > 1:
+            ax.legend(loc="upper left", ncol=min(3, len(groups)))
+    cbar = fig.colorbar(contour if contour is not None else sc, ax=ax)
     cbar.set_label(
         _color_title(df, opts),
         color=colors["text"],
     )
     ax.set_xlabel(x_col, color=colors["text"])
     ax.set_ylabel(y_col, color=colors["text"])
+    if _has_geo(df):
+        ax.ticklabel_format(style="plain", axis="x", useOffset=False)
     if opts.title:
         ax.set_title(opts.title, color=colors["text"])
     return fig
@@ -394,7 +469,9 @@ def _profile_station_map(df, opts, colors):
                 showscale=True,
                 cmin=_cmin(opts),
                 cmax=_cmax(opts),
-                colorbar=dict(title=dict(text=_color_title(df, opts), side="right")),
+                colorbar=dict(
+                    title=dict(text=_color_title(df, opts), side="right")
+                ),
             ),
         )
     )
@@ -488,7 +565,9 @@ def _add_density_layer(fig, group, opts) -> None:
 def _marker_sizes(ids, opts) -> list[int]:
     selected = str(opts.selected_id) if opts.selected_id else None
     return [
-        int(opts.marker_size * 1.8) if selected == str(sid) else int(opts.marker_size)
+        int(opts.marker_size * 1.8)
+        if selected == str(sid)
+        else int(opts.marker_size)
         for sid in ids
     ]
 

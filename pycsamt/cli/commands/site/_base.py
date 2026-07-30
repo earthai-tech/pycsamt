@@ -40,7 +40,9 @@ def _get_sites(
         resolve_survey,  # noqa: PLC0415
     )
 
-    return resolve_survey(explicit or survey_path, fresh=fresh, verbose=verbose)
+    return resolve_survey(
+        explicit or survey_path, fresh=fresh, verbose=verbose
+    )
 
 
 def _unwrap_edis(sites: Any) -> list:

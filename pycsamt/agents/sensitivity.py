@@ -119,7 +119,9 @@ class SensitivityAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -156,7 +158,9 @@ class SensitivityAgent(BaseAgent):
 
         mean_doi_km = float("nan")
         if doi_per_station:
-            mean_doi_km = float(np.mean(list(doi_per_station.values()))) / 1000.0
+            mean_doi_km = (
+                float(np.mean(list(doi_per_station.values()))) / 1000.0
+            )
 
         # ── figures ───────────────────────────────────────────────────────
         figures: dict[str, Any] = {}
@@ -227,7 +231,9 @@ class SensitivityAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=220)
 
         elapsed = time.time() - t0
-        doi_str = f"{mean_doi_km:.2f} km" if not np.isnan(mean_doi_km) else "N/A"
+        doi_str = (
+            f"{mean_doi_km:.2f} km" if not np.isnan(mean_doi_km) else "N/A"
+        )
         return AgentResult(
             status="success",
             summary=(

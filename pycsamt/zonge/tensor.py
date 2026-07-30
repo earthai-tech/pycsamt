@@ -179,7 +179,9 @@ class TensorBase(AVGComponentBase):
                 # tolerant numeric compare
                 st_mask = (
                     np.isclose(
-                        pd.to_numeric(work.get("station", np.nan), errors="coerce"),
+                        pd.to_numeric(
+                            work.get("station", np.nan), errors="coerce"
+                        ),
                         float(station),
                         equal_nan=False,
                     )

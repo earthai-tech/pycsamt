@@ -100,7 +100,9 @@ def validate_generated_code(code: str) -> dict[str, Any]:
                 importlib.import_module(module)
                 report["checked"].append(module)
             except Exception as exc:  # noqa: BLE001
-                report["warnings"].append(f"could not import {module!r}: {exc}")
+                report["warnings"].append(
+                    f"could not import {module!r}: {exc}"
+                )
             continue
         for name in names:
             err = _check_symbol(module, name)

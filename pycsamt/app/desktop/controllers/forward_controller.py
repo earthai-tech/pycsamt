@@ -54,7 +54,9 @@ class ForwardController:
                 data = json.loads(_LIBRARY_PATH.read_text(encoding="utf-8"))
                 self._library = data.get("models", [])
             except Exception:
-                logger.warning("Could not load forward model library; starting empty.")
+                logger.warning(
+                    "Could not load forward model library; starting empty."
+                )
                 self._library = []
 
     def save_library(self) -> None:

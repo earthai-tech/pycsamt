@@ -45,7 +45,9 @@ class SymbolGraph:
             if not c.symbol or c.kind not in _CODE_KINDS:
                 continue
             self._known.add(c.symbol)
-            self._by_leaf.setdefault(c.symbol.rsplit(".", 1)[-1], []).append(c.symbol)
+            self._by_leaf.setdefault(c.symbol.rsplit(".", 1)[-1], []).append(
+                c.symbol
+            )
             refs = c.metadata.get("refs") or []
             if refs:
                 self._refs[c.symbol] = list(refs)

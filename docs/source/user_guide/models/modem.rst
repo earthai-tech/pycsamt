@@ -619,19 +619,41 @@ can execute it with :func:`subprocess.run`. The executable is resolved from
 ``PATH`` or from the run directory and local ``_source/2D`` or ``_source/3D``
 subdirectories.
 
+ModEM is not a Python dependency and pyCSAMT does not ship a pre-compiled
+executable. Build it first by following :ref:`modem_compilation`. For the
+standard serial 3-D build, the short form is:
+
+.. code-block:: bash
+
+   pycsamt build modem3d --auto-install
+
+After a successful build, configure the runner with the executable path that
+the build command prints. The following finds that executable in pyCSAMT's
+ModEM source tree, works with editable and regular installations, and handles
+the Windows ``.exe`` suffix:
+
 Always inspect the command first:
 
 .. code-block:: pycon
    :linenos:
 
+   >>> import os
+   >>> from pathlib import Path
+
+   >>> import pycsamt.models.modem as modem
    >>> from pycsamt.models.modem import ModEmConfig, ModEmRunner
+
+   >>> binary_name = "Mod3DMT.exe" if os.name == "nt" else "Mod3DMT"
+   >>> binary = Path(modem.__file__).resolve().parent / "_source" / "3D" / binary_name
+   >>> if not binary.is_file():
+   ...     raise FileNotFoundError(
+   ...         f"{binary} was not built; see the ModEM compilation guide"
+   ...     )
 
    >>> cfg = ModEmConfig(
    ...     mode="3d",
-   ...     binary_3d="Mod3DMT",
-   ...     use_mpi=True,
-   ...     n_procs=16,
-   ...     mpi_command="mpirun",
+   ...     binary_3d=str(binary),
+   ...     use_mpi=False,
    ... )
 
    >>> runner = ModEmRunner("runs/modem_3d_v01/native", config=cfg)
@@ -642,27 +664,32 @@ Always inspect the command first:
    ...     covariance="ModEM.cov",
    ... )
    >>> print(command)
-   mpirun -np 16 Mod3DMT -I NLCG m0.ws ModEMData.dat ModEM.inv ModEM.cov
+   ...Mod3DMT -I NLCG m0.ws ModEMData.dat ModEM.inv ModEM.cov
 
 Run the inversion only after file paths, executable names, and MPI settings
 are correct:
 
-.. code-block:: pycon
+.. code-block:: python
    :linenos:
 
-   >>> # result = runner.run(
-   >>> #     "m0.ws",
-   >>> #     "ModEMData.dat",
-   >>> #     "ModEM.inv",
-   >>> #     covariance="ModEM.cov",
-   >>> #     timeout=24 * 3600,
-   >>> #     load_result=True,
-   >>> # )
+   result = runner.run(
+       "m0.ws",
+       "ModEMData.dat",
+       "ModEM.inv",
+       covariance="ModEM.cov",
+       timeout=24 * 3600,
+       load_result=True,
+   )
 
-There is no bundled, pre-compiled ``Mod3DMT`` binary -- like :doc:`occam2d`'s
-Fortran executable, ModEM must be compiled locally, so ``runner.run`` stays
-commented out here rather than showing a fabricated result. ``command()``
-above is exactly what would be launched, and inspecting it costs nothing.
+The code block is intentionally not a doctest: it launches the external
+solver and may run for hours. When ``load_result=True``, a successful process
+returns an :class:`~pycsamt.models.modem.InversionResult` populated from the
+run directory.
+
+For MPI, compile the MPI variant as described in :ref:`modem_compilation`,
+then set ``use_mpi=True``, ``n_procs`` to the desired process count, and
+``mpi_command`` to the launcher available on the system. Do not enable MPI
+for the standard serial build.
 
 For a forward response check, call ``run_forward``:
 
@@ -1107,6 +1134,8 @@ Next Steps
 * :doc:`../../tutorials/prepare_modem_inversion` walks through preparing a
   real 3-D ModEM run end to end, including horizontal and vertical mesh
   design.
+* :doc:`compilation` builds ``Mod2DMT``/``Mod3DMT`` from the vendored
+  source, on Windows, Linux, or macOS.
 * :doc:`choosing_backend` explains when ModEM is preferable to other model
   backends.
 * :doc:`configuration_and_io` gives the shared model-backend configuration

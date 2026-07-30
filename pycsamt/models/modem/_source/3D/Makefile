@@ -15,8 +15,14 @@
 # Output:  ./Mod3DMT
 
 # ---- compiler settings ----
+# -cpp is required even for the serial build: Declaration_MPI.f90,
+# Sub_MPI.f90, and Main_MPI.f90 are unconditionally `use`d by several
+# files below (e.g. INVcore.f90, DCG.f90, Mod3DMT.f90) but their
+# entire module body is wrapped in #ifdef MPI / #endif; without -cpp,
+# gfortran does not strip that and fails on the raw preprocessor
+# directives / the unconditional `include 'mpif.h'` inside.
 F90      ?= gfortran
-FFLAGS   ?= -O3 -ffree-line-length-none
+FFLAGS   ?= -O3 -ffree-line-length-none -cpp
 MPIFLAGS ?= -x f95-cpp-input
 LIBS     ?= -llapack -lblas
 
@@ -41,9 +47,13 @@ OBJ = \
   $(OBJDIR)/file_units.o \
   $(OBJDIR)/polpak.o \
   $(OBJDIR)/elements.o \
+  $(OBJDIR)/declaration_mpi.o \
+  $(OBJDIR)/sub_mpi.o \
+  $(OBJDIR)/main_mpi.o \
   $(OBJDIR)/sg_scalar.o \
   $(OBJDIR)/sg_sparse_vector.o \
   $(OBJDIR)/sg_vector.o \
+  $(OBJDIR)/sg_spherical.o \
   $(OBJDIR)/sg_boundary.o \
   $(OBJDIR)/sg_diff_oper.o \
   $(OBJDIR)/DataSpace.o \
@@ -106,6 +116,19 @@ $(OBJDIR)/polpak.o: $(UTILS)/polpak.f90
 $(OBJDIR)/elements.o: $(UTILS)/elements.f90
 	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
 
+# ---- MPI stubs (module body is entirely #ifdef MPI / #endif; -cpp
+# strips it to an empty module for the serial build, matching how
+# INVcore.f90/DCG.f90/Mod3DMT.f90/SymmetryTest.f90/ModelSpace.f90
+# unconditionally `use` these regardless of MPI) ----
+$(OBJDIR)/declaration_mpi.o: $(MPI)/Declaration_MPI.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
+$(OBJDIR)/sub_mpi.o: $(SRC3D)/Sub_MPI.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
+$(OBJDIR)/main_mpi.o: $(MPI)/Main_MPI.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
 # ---- FIELDS ----
 $(OBJDIR)/sg_scalar.o: $(FIELDS)/FiniteDiff3D/sg_scalar.f90
 	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
@@ -114,6 +137,12 @@ $(OBJDIR)/sg_sparse_vector.o: $(FIELDS)/FiniteDiff3D/sg_sparse_vector.f90
 	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
 
 $(OBJDIR)/sg_vector.o: $(FIELDS)/FiniteDiff3D/sg_vector.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
+# sg_spherical.f90 is `use`d directly by GridCalc.f90 -- this rule
+# and OBJ entry were both missing from this Makefile (a real, non-
+# platform-specific bug: the same error reproduces on Linux/Mac).
+$(OBJDIR)/sg_spherical.o: $(FIELDS)/FiniteDiff3D/sg_spherical.f90
 	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
 
 $(OBJDIR)/sg_boundary.o: $(FIELDS)/FiniteDiff3D/sg_boundary.f90

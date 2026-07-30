@@ -15,6 +15,17 @@ loops, loss functions, checkpoints, or research experiments. Use agents when
 the built-in workflow matches the task and a consistent result contract is
 valuable.
 
+The figures on this page are executable records of the current agents. The
+source below reruns the named WILLY sections from the bundled EDI files, so a
+changed solver, training contract, or plotting path can be reviewed in the
+same place as its documentation output.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_agents_real_data_sections
+   :linenos:
+   :title: View the real-data section regeneration source
+
 .. admonition:: Human review remains required
    :class: important
 
@@ -47,7 +58,9 @@ Agent map
    * - :class:`pycsamt.agents.Inv3DAgent`
      - :class:`pycsamt.ai.inversion.GCNInverter3D`
      - Graph-based multi-station prediction using coordinates and spatial
-       adjacency, with optional :term:`Monte Carlo dropout` spread.
+       adjacency, with optional :term:`Monte Carlo dropout` spread. Training
+       physics is either tiled MT1D or genuine small-grid MT3D; these are not
+       scientifically interchangeable.
    * - :class:`pycsamt.agents.EnsembleAgent`
      - :class:`pycsamt.ai.inversion.EnsembleInverter`
      - :term:`Ensemble inversion`, prediction intervals, and optional
@@ -264,7 +277,7 @@ Train from synthetic data
    ...     "output_dir": "outputs/ai_inversion/L18_1d",
    ... })
    >>> print(result.status, result.summary)
-   success AI inversion (resnet, 5 layers): 28 stations predicted. RMS 1.669. 2 figure(s).
+   success AI inversion (resnet, 5 layers): 28 stations predicted. RMS 1.135. 2 figure(s).
 
 Supported architecture names are ``"resnet"``, ``"cnn1d"``, and ``"fcn"``.
 The default workflow uses 40 log-spaced frequencies from :math:`10^{-4}` to
@@ -272,7 +285,7 @@ The default workflow uses 40 log-spaced frequencies from :math:`10^{-4}` to
 defaults are convenient workflow settings, not evidence of production
 adequacy: running the same survey with the constructor defaults instead of the
 values above still completes in about a minute, but the fitted network only
-reaches RMS ≈ 3.9 — more than twice as bad as the 10,000-sample, 100-epoch run
+reaches RMS ≈ 3.9 — more than three times the 10,000-sample, 100-epoch run
 captured above, which took about fourteen minutes on a single CPU core.
 Sample count and epoch budget are part of the scientific configuration, not
 incidental performance knobs.
@@ -298,6 +311,11 @@ incidental performance knobs.
    is no lateral continuity constraint between neighbours here, which is the
    gap :class:`~pycsamt.agents.Inv2DAgent` and
    :class:`~pycsamt.agents.Inv3DAgent` are built to close.
+
+The regenerated section also exposes a physically implausible cumulative
+depth exceeding 450 km. That scale comes from unconstrained predicted layer
+thicknesses; the improved response RMS does not rescue it. Treat this run as a
+rejected field model and constrain thickness/depth priors before retraining.
 
 The generated training set currently uses the MT 1-D solver, 3% noise, seed
 42, and one generation job. If a project requires different priors, correlated
@@ -396,7 +414,7 @@ frequency and phase, and reconstruct responses from the physical layered
 models. This is why an inversion plot and its response audit belong together.
 
 Compare CNN1D, ResNet, and FCN under one contract
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``AIInversionAgent`` exposes three 1-D architecture names. They receive the
 same flattened response contract and predict the same layered target, but they
@@ -717,6 +735,7 @@ header coordinates and projects them to local metres:
    >>> import numpy as np
    >>> from pycsamt.agents import Inv3DAgent
    >>> agent = Inv3DAgent(
+   ...     physics="mt1d",
    ...     n_layers=5,
    ...     n_freqs=32,
    ...     n_train_profiles=300,
@@ -731,7 +750,12 @@ header coordinates and projects them to local metres:
    ...     "output_dir": "outputs/ai_inversion/survey_3d",
    ... })
    >>> print(result.status, result.summary)
-   success 3-D GCN inversion: 28 stations × 5 layers. RMS 7.770, MC σ computed. 3 figures.
+   success 3-D GCN inversion (physics=mt1d): 28 stations × 5 layers. RMS 7.770, MC σ computed. 3 figures.
+
+This first call is retained to explain the historical figure below. Explicit
+``physics="mt1d"`` makes its limitation visible: the GCN sees graph context,
+but its synthetic responses are independent layered-earth columns. It is not
+the new 3-D Maxwell workflow.
 
 Pass projected coordinates in metres explicitly whenever a project's own
 survey geometry or CRS is authoritative; only fall back to the auto-derived
@@ -749,6 +773,79 @@ numbers.
    Real station spacing lets adjacent stations exchange information through
    the graph, so the section varies smoothly along the line instead of the
    single flat column produced when every station lands at the same point.
+
+What ``physics="mt3d"`` now executes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The current MT3D route changes the forward physics, not merely the plot label.
+For each realization, :class:`~pycsamt.ai.geology.GeologyGrid` spans the real
+station footprint and carries a correlated three-dimensional resistivity field
+:math:`\rho_r(x,y,z)`. The dataset builder embeds that core into a padded,
+non-uniform :class:`~pycsamt.forward.maxwell.contracts.MaxwellMesh` and solves
+the frequency-domain curl--curl system
+
+.. math::
+   :label: eq-agents-mt3d-forward-system
+
+   \nabla\times\nabla\times\mathbf E_r(\omega)
+   + i\omega\mu_0\sigma_r\mathbf E_r(\omega)=0,
+   \qquad
+   \sigma_r=\rho_r^{-1}.
+
+:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` evaluates equation
+:eq:`eq-agents-mt3d-forward-system` for two horizontal source polarizations.
+The training feature at station :math:`s` retains the TE-like ``zxy`` response
+on the declared frequency grid,
+
+.. math::
+   :label: eq-agents-mt3d-feature-target
+
+   \mathbf x_{r,s}
+   =\left[\log_{10}\boldsymbol\rho_{a,xy},
+          \boldsymbol\phi_{xy},\mathbf 0\right],
+   \qquad
+   \mathbf y_{r,s}
+   =\left[\log_{10}\rho_r(x_s,y_s,z_1),\ldots,
+          \log_{10}\rho_r(x_s,y_s,z_L)\right].
+
+Here the zero block pads the two populated ``zxy`` channels to the GCN's
+four-channel slot. The resistivity part of the label in equation
+:eq:`eq-agents-mt3d-feature-target` is sampled from the same 3-D volume that
+generated the response, while its interface-thickness part is the fixed
+declared display grid. It is not a tiled 1-D resistivity target.
+The realization ID remains intact through the train/validation/test split, so
+different samples from one earth model cannot leak across partitions. Failed
+Maxwell solves are rejected rather than silently entering training.
+
+The built-in generator samples correlated Gaussian fields controlled by
+horizontal and vertical correlation-length ranges, log-resistivity mean and
+spread, and grid resolution. It does not yet draw explicit stratigraphic
+interfaces, ellipsoidal lenses, faults, or petrophysical classes. Those richer
+:mod:`pycsamt.ai.geology` objects can define an external training corpus, but
+raising ``n_train_profiles`` alone only adds realizations of the configured
+Gaussian-field family. Geological diversity and realization count are separate
+parts of the prior.
+
+The two 3-D forward backends have different roles. The in-process
+:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` now supports padded
+non-uniform meshes and passes the small-grid half-space and layered-earth
+benchmarks, but its direct sparse solve remains research-scale. The compiled
+:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` is the validated
+production forward backend and supports larger non-uniform models. The current
+:class:`~pycsamt.ai.training.dataset3d.Maxwell3DDatasetConfig` is wired to the
+in-process adapter, however; setting ``physics="mt3d"`` does **not** silently
+invoke ModEM. A production ModEM training corpus must be generated explicitly
+through the solver-neutral Maxwell problem/result contract and then supplied
+to :class:`~pycsamt.ai.inversion.GCNInverter3D`.
+
+Both adapters currently expose a surface-at-mesh-top contract in this API.
+Although ModEM itself can represent air and topography, the present
+``ModEm3DAdapter`` deliberately does not map them. Consequently a topographic
+display from ``Inv3DAgent`` is still a coordinate transformation, not evidence
+that terrain entered equation :eq:`eq-agents-mt3d-forward-system`. See
+:doc:`../forward/solvers_and_grids`, :doc:`../../theory/maxwell_forward`, and
+:doc:`../models/modem` before moving from the executable research example to a
+production 3-D study.
 
 Why the archived section reaches 450 km
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -793,7 +890,7 @@ For the five-layer WILLY example, ``depth_max=2000`` m produces interfaces at
 loaded survey rather than from hard-coded WILLY endpoints. The public
 :func:`pycsamt.ai.inversion.sites_to_features_1d` bridge returns a common
 logarithmic grid constructed from the station observations. A depth-oriented
-lower cutoff can then be estimated with
+frequency associated with the target depth can then be estimated with
 :func:`pycsamt.emtools.frequency_for_depth`:
 
 .. math::
@@ -805,20 +902,25 @@ lower cutoff can then be estimated with
    f_D=\rho_{\mathrm{ref}}
    \left(\frac{356}{D}\right)^2,
    \qquad
-   f_{\min}=\max(f_{\min}^{\mathrm{obs}},f_D).
+   f_{\min}=f_{\min}^{\mathrm{obs}},
+   \qquad
+   f_{\max}=\min(f_{\max}^{\mathrm{obs}},f_D).
 
 This is a survey-design heuristic. The apparent-resistivity reference is
-explicit, and changing it changes :math:`f_D`. It does not prove depth of
-investigation, replace sensitivity kernels, or imply that lower measured
-frequencies contain no useful information. Preserve the full-band data and
-compare the depth-targeted run with a full measured-band sensitivity scenario.
+explicit, and changing it changes :math:`f_D`. Lower frequencies carry the
+deeper sensitivity, so the smoke-scale MT3D example retains the lowest
+measured frequencies and uses :math:`f_D` as its upper bound. This choice does
+not prove a depth of investigation or replace sensitivity kernels. Preserve
+the full-band data and compare targeted, full-band, and alternative-mesh
+scenarios before interpretation.
 
 For WILLY L18, a 64-point survey-derived grid spans 1.008--10,400 Hz and has
 median XY apparent resistivity :math:`\rho_{\mathrm{ref}}=453.75`
 :math:`\Omega\mathrm{m}`. Equation :eq:`eq-agents-depth-frequency-design`
 gives :math:`f_D=14.38` Hz for :math:`D=2000` m. The executed demonstration
-therefore intersects the observed support with 14.38--10,400 Hz and constructs
-24 logarithmic points inside that interval. This grid and the thickness
+therefore intersects the observed support with 1.008--14.38 Hz and constructs
+three logarithmic points inside that interval. This deliberately small grid
+keeps the genuine 3-D Maxwell example reproducible on a CPU. The grid and thickness
 targets are shared by synthetic generation, observed-feature extraction,
 forward RMS, returned metadata, and plotting:
 
@@ -836,11 +938,12 @@ forward RMS, returned metadata, and plotting:
    ...     10.0 ** np.nanmedian(dense_X[:, :measured_frequency.size])
    ... )
    >>> frequency_at_2km = float(frequency_for_depth(2000.0, rho_reference))
-   >>> frequency_min = max(float(measured_frequency.min()), frequency_at_2km)
+   >>> frequency_min = float(measured_frequency.min())
+   >>> frequency_max = min(float(measured_frequency.max()), frequency_at_2km)
    >>> _, willy_frequency, _ = sites_to_features_1d(
-   ...     sites, comp="xy", n_freqs=24,
+   ...     sites, comp="xy", n_freqs=3,
    ...     freq_min=frequency_min,
-   ...     freq_max=float(measured_frequency.max()),
+   ...     freq_max=frequency_max,
    ... )
    >>> round(rho_reference, 2), round(frequency_at_2km, 2)
    (453.75, 14.38)
@@ -848,11 +951,15 @@ forward RMS, returned metadata, and plotting:
    ...     n_layers=5,
    ...     freqs=willy_frequency,
    ...     depth_max=2000.0,
-   ...     n_train_profiles=12,
+   ...     n_train_profiles=4,
    ...     epochs=10,
    ...     radius=250.0,
    ...     hidden=(64, 32),
    ...     n_mc=0,
+   ...     physics="mt3d",
+   ...     geology_grid_nx_ny=4,
+   ...     geology_grid_nz=4,
+   ...     max_mesh_cells=60_000,
    ... ).execute({
    ...     "sites": sites,
    ...     "topography": {
@@ -863,14 +970,18 @@ forward RMS, returned metadata, and plotting:
    ... })
    >>> configured.status  # doctest: +SKIP
    'success'
+   >>> configured.summary  # doctest: +SKIP
+   '3-D GCN inversion (physics=mt3d): 28 stations × 5 layers. RMS 0.981. 3 figures. Held-out recovery RMSE=0.565 (log10 Ω·m, n=1).'
    >>> configured["frequency_grid_hz"][[0, -1]]  # doctest: +SKIP
-   array([   14.37653093, 10400.        ])
+   array([ 1.008, 14.37653093])
    >>> configured["depths_km"].round(3)  # doctest: +SKIP
    array([0.   , 0.266, 0.649, 1.202, 2.   ])
    >>> configured["topography"]["source"]  # doctest: +SKIP
    'sites'
    >>> configured["topography"]["affects_forward_physics"]  # doctest: +SKIP
    False
+   >>> configured["mt3d_recovery"] is not None  # doctest: +SKIP
+   True
 
 .. figure:: ../../images/user_guide/ai_inversion/agents_inv3d_willy_2km_section.png
    :alt: Executed WILLY graph inversion limited to a two-kilometre model and
@@ -878,21 +989,44 @@ forward RMS, returned metadata, and plotting:
    :align: center
    :width: 92%
 
-   Executed small-budget WILLY GCN section using a survey-derived
-   14.38--10,400 Hz grid and a cumulative 2 km model. Station names and markers
-   are at the top. Unlike the archived plot, the bottom axis is a declared
-   parameterization boundary rather than a consequence of a
-   :math:`10^{-4}` Hz synthetic grid.
+   Executed WILLY GCN section trained by :term:`Genuine 3-D Maxwell training`
+   on
+   the real station geometry. The 1.008--14.38 Hz grid samples the deep end of
+   the measured band and the cumulative 2 km bottom is an explicit model
+   boundary, not a claimed depth of investigation.
 
 This corrected scale makes the output appropriate for *review*, not automatic
-acceptance. The run uses only 12 synthetic profiles and 10 epochs, and the GCN
-still relies on station-wise layered MT training responses plus graph context.
-Its forward-audit pass emitted an overflow warning inside the hyperbolic
-tangent recursion, and the plotted predictions reach extreme log-resistivity
-colors. Both are rejection signals for quantitative interpretation, even
-though the agent returned ``success`` and the geometric depth contract is now
-correct. The figure proves the configuration path; it does not certify this
-small-budget model.
+acceptance. The run uses only four correlated geological volumes, three
+frequencies, a :math:`4\times4\times4` geology grid, and 10 epochs. Unlike the
+archived result, every training example is passed through
+:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter`; the agent then samples the
+true volume beneath each real station to form the supervised target. The
+returned ``mt3d_recovery`` report measures held-out error against known
+synthetic truth. For held-out log-resistivities :math:`y_i`, predictions
+:math:`\hat y_i`, and their target mean :math:`\bar y`, the report uses
+
+.. math::
+   :label: eq-agents-mt3d-recovery
+
+   \mathrm{RMSE}=\sqrt{\frac{1}{N}\sum_{i=1}^{N}(\hat y_i-y_i)^2},
+   \qquad
+   \mathrm{MAE}=\frac{1}{N}\sum_{i=1}^{N}|\hat y_i-y_i|,
+   \qquad
+   R^2=1-\frac{\sum_i(\hat y_i-y_i)^2}
+                   {\sum_i(y_i-\bar y)^2}.
+
+Equation :eq:`eq-agents-mt3d-recovery` gives RMSE 0.565, MAE 0.436, and
+:math:`R^2=-0.082` on the single held-out volume. The negative coefficient of
+determination is a rejection signal, not evidence of useful recovery. These
+settings prove the end-to-end configuration and expose failure modes cheaply;
+they do not certify the field model.
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_agents_inv3d_willy_2km
+   :linenos:
+   :title: View the WILLY MT3D inversion and topography source
+
 Interpret conductors only where response reconstruction, dimensionality,
 regularization sensitivity, and independent geology agree. Also avoid calling
 2 km the depth of investigation merely because it is now the configured model
@@ -915,9 +1049,10 @@ into absolute elevation,
 where :math:`E_j` is station elevation in metres above sea level and
 :math:`d_k` is positive-down model depth in kilometres. Equation
 :eq:`eq-agents-topographic-drape` is a coordinate transformation, not a
-topographic correction to the MT equations. The current ``mt1d`` synthetic
-solver and GCN prediction remain unchanged, which is why the result records
-``affects_forward_physics=False``. A true terrain-aware inversion would require
+topographic correction to the MT equations. The training responses now come
+from the 3-D Maxwell solver, but terrain is still applied only when the
+predicted section is rendered, which is why the result records
+``affects_forward_physics=False``. A terrain-aware inversion would require
 air cells or a topographic finite-element/finite-difference mesh in both
 training and response reconstruction.
 
@@ -949,6 +1084,37 @@ connectivity, self-loops are added and the result is symmetrically normalised,
 where :math:`\tilde D` is the diagonal degree matrix of :math:`\tilde A`. A
 larger ``radius`` densifies :math:`\hat A` and lets the network average over
 more distant, possibly unrelated, structure.
+
+The reported ``rms_global`` needs a precise boundary. Even when training uses
+``physics="mt3d"``, the current field-response audit converts each predicted
+station column to a :class:`~pycsamt.forward.LayeredModel` and evaluates it with
+:class:`~pycsamt.forward.MT1DForward`. It is therefore the mean of station-wise
+1-D apparent-resistivity residuals, not a coupled 3-D reconstruction through
+``MT3DAdapter`` or ModEM. Use it as a quick inconsistency screen. A production
+release still requires a full 3-D forward reconstruction of the assembled
+volume on the same stations, components, frequencies, error floors, and mesh
+policy used by the declared validation protocol.
+
+``output_dir`` writes generated figures but does not currently serialize the
+fitted GCN automatically. Save it explicitly while the returned inverter is
+still available, then verify a fresh-process reload before treating it as a
+checkpoint:
+
+.. code-block:: pycon
+
+   >>> from pathlib import Path
+   >>> from pycsamt.ai.inversion import GCNInverter3D
+   >>> checkpoint = Path("outputs/ai_inversion/survey_3d/gcn_mt3d.npz")
+   >>> configured["inverter"].save(checkpoint)  # doctest: +SKIP
+   >>> restored = GCNInverter3D.load(checkpoint)  # doctest: +SKIP
+   >>> checkpoint.exists()  # doctest: +SKIP
+   True
+
+The checkpoint preserves network parameters and fitted weights. Preserve the
+frequency grid, station order, coordinate reference, adjacency radius or
+matrix, depth parameterization, geology/dataset manifest, solver identity,
+mesh policy, split IDs, and normalization metadata beside it; the weight file
+alone cannot reconstruct the scientific experiment.
 
 ``pred_uncertainty`` is :term:`Monte Carlo dropout` standard deviation across
 :math:`M` stochastic passes with dropout kept active at inference time,
@@ -1014,7 +1180,7 @@ different seeds and returns prediction intervals:
    ...     "output_dir": "outputs/ai_inversion/L18_ensemble",
    ... })
    >>> print(result.status, result.summary)
-   success Ensemble inversion (5× resnet): 28 stations. RMS=2.042. 90% coverage=0.0%. 2 figures.
+   success Ensemble inversion (5× resnet): 28 stations. RMS=2.149. 90% coverage=6.2%. 2 figures.
 
 Inspect ``pred_mean``, ``pred_std``, ``pred_lo``, ``pred_hi``, ``coverage``,
 and ``rms_global``. Calibration follows split conformal prediction (Vovk et
@@ -1046,15 +1212,14 @@ applied to.
    :align: center
    :width: 100%
 
-   The uncertainty panel's colour scale tops out at about
-   :math:`\sigma \approx 2.5\times10^{-4}` — the five quick estimators barely
-   disagree with each other at all.
+   The current uncertainty panel reaches approximately
+   :math:`\sigma=0.67` in shallow cells. That visible spread is still poorly
+   calibrated: the nominal 90% interval covers only 6.2% of the held-out
+   synthetic targets.
 
 That last point is not a footnote. This five-member, 30-epoch-per-member
-ensemble reached 0% empirical coverage on its own calibration set: the members
-converge to nearly identical predictions (hence the vanishing :math:`\sigma`
-above), so the conformal quantile :math:`\hat q` stays small while the actual
-errors do not. Bounds represent the agent's ensemble and optional calibration
+ensemble remains far below its nominal coverage, and its predicted cumulative
+depth again extends beyond 400 km. Bounds represent the agent's ensemble and optional calibration
 procedure, conditional on its synthetic distribution — empirical coverage on
 held-out synthetic examples is not automatically field coverage, and this run
 is a direct demonstration of that gap rather than a hypothetical one. More
@@ -1086,14 +1251,14 @@ targets:
    ...     "output_dir": "outputs/ai_inversion/L18_pinn2d",
    ... })
    PINNInverter2D: optimising 28 stations x 10 layers (300 epochs) ...
-     epoch    50/300  loss=1.23267
-     epoch   100/300  loss=1.05405
-     epoch   150/300  loss=0.94284
-     epoch   200/300  loss=0.80728
-     epoch   250/300  loss=0.73361
-     epoch   300/300  loss=0.70606
+     epoch    50/300  loss=1.22558
+     epoch   100/300  loss=1.05607
+     epoch   150/300  loss=0.93819
+     epoch   200/300  loss=0.83882
+     epoch   250/300  loss=0.77421
+     epoch   300/300  loss=0.74359
    >>> print(result.status, result.summary)
-   success PINN-2D: 28 stations, 10 layers. RMS 0.713. 2 figure(s).
+   success PINN-2D: 28 stations, 10 layers. RMS 0.693. 2 figure(s).
 
 Outputs include ``section``, optional layered ``models`` for 1-D,
 ``rms_per_station``, ``rms_global``, loss and residual dataframes when

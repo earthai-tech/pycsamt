@@ -104,8 +104,7 @@ def normalize_lat_lon(
     assume: Literal["lonlat", "latlon", "auto"] = ...,
     error: Literal["ignore", "raise"] = ...,
     clip: bool = ...,
-) -> tuple[float, float]:
-    ...
+) -> tuple[float, float]: ...
 
 
 @overload
@@ -116,8 +115,7 @@ def normalize_lat_lon(
     assume: Literal["lonlat", "latlon", "auto"] = ...,
     error: Literal["ignore", "raise"] = ...,
     clip: bool = ...,
-) -> tuple[np.ndarray, np.ndarray]:
-    ...
+) -> tuple[np.ndarray, np.ndarray]: ...
 
 
 def normalize_lat_lon(
@@ -972,8 +970,7 @@ def to_ll(
     datum: str = ...,
     epsg: int | None = ...,
     as_frame: Literal[True],
-) -> pd.DataFrame:
-    ...
+) -> pd.DataFrame: ...
 
 
 @overload
@@ -986,8 +983,7 @@ def to_ll(
     datum: str = ...,
     epsg: int | None = ...,
     as_frame: Literal[False] = ...,
-) -> tuple[float, float]:
-    ...
+) -> tuple[float, float]: ...
 
 
 @overload
@@ -1000,8 +996,7 @@ def to_ll(
     datum: str = ...,
     epsg: int | None = ...,
     as_frame: Literal[False] = ...,
-) -> tuple[Arr1D, Arr1D]:
-    ...
+) -> tuple[Arr1D, Arr1D]: ...
 
 
 def to_ll(
@@ -1101,7 +1096,8 @@ def to_ll(
 
     if e_arr.shape != n_arr.shape:
         raise ValueError(
-            "easting and northing shapes differ: " f"{e_arr.shape} != {n_arr.shape}"
+            "easting and northing shapes differ: "
+            f"{e_arr.shape} != {n_arr.shape}"
         )
 
     if zone is not None:
@@ -1120,7 +1116,9 @@ def to_ll(
         if z_arr.size == 1 and e_arr.size > 1:
             z_arr = np.full(e_arr.shape, z_arr.item(), dtype=object)
         if z_arr.shape != e_arr.shape:
-            raise ValueError("zone shape must match easting/northing or be scalar.")
+            raise ValueError(
+                "zone shape must match easting/northing or be scalar."
+            )
     else:
         # allow None when epsg is provided
         z_arr = np.full(e_arr.shape, None, dtype=object)
@@ -1217,8 +1215,7 @@ def to_utm(
     utm_zone: str | None = ...,
     epsg: int | None = ...,
     as_frame: Literal[True],
-) -> pd.DataFrame:
-    ...
+) -> pd.DataFrame: ...
 
 
 @overload
@@ -1231,8 +1228,7 @@ def to_utm(
     utm_zone: str | None = ...,
     epsg: int | None = ...,
     as_frame: Literal[False] = ...,
-) -> tuple[float, float, str | None]:
-    ...
+) -> tuple[float, float, str | None]: ...
 
 
 @overload
@@ -1245,8 +1241,7 @@ def to_utm(
     utm_zone: str | None = ...,
     epsg: int | None = ...,
     as_frame: Literal[False] = ...,
-) -> tuple[Arr1D, Arr1D, Obj1D]:
-    ...
+) -> tuple[Arr1D, Arr1D, Obj1D]: ...
 
 
 def to_utm(
@@ -1721,7 +1716,9 @@ def project_point_utm2ll(
             zone_number = int(utm_zone[:-1])
             zone_letter = utm_zone[-1]
         except ValueError as exc:
-            raise ValueError(f"Zone number '{utm_zone[:-1]}' is not a number") from exc
+            raise ValueError(
+                f"Zone number '{utm_zone[:-1]}' is not a number"
+            ) from exc
         is_northern = zone_letter.lower() >= "n"
     elif isinstance(utm_zone, int):
         is_northern = utm_zone >= 0
@@ -1852,7 +1849,9 @@ def project_points_ll2utm(
     lon = np.array(lon)
 
     if np.shape(lat) != np.shape(lon):
-        raise ValueError("latitude and longitude arrays are of different lengths")
+        raise ValueError(
+            "latitude and longitude arrays are of different lengths"
+        )
 
     flattened = False
     llshape = np.shape(lat)
@@ -2091,7 +2090,14 @@ def utm_to_ll(
     lat_rad = phi1_rad - (n1 * np.tan(phi1_rad) / r1) * (
         d**2 / 2
         - (5 + 3 * t1 + 10 * c1 - 4 * c1**2 - 9 * ecc_prime_sq) * d**4 / 24
-        + (61 + 90 * t1 + 298 * c1 + 45 * t1**2 - 252 * ecc_prime_sq - 3 * c1**2)
+        + (
+            61
+            + 90 * t1
+            + 298 * c1
+            + 45 * t1**2
+            - 252 * ecc_prime_sq
+            - 3 * c1**2
+        )
         * d**6
         / 720
     )
@@ -2172,7 +2178,9 @@ def epsg_project(
         src = pyproj.CRS.from_user_input(EPSG_DICT[epsg_from])
         dst = pyproj.CRS.from_user_input(EPSG_DICT[epsg_to])
     except KeyError:
-        logger.warning("EPSG code not in EPSG_DICT: from=%r to=%r", epsg_from, epsg_to)
+        logger.warning(
+            "EPSG code not in EPSG_DICT: from=%r to=%r", epsg_from, epsg_to
+        )
         return None
 
     transformer = pyproj.Transformer.from_crs(
@@ -2462,7 +2470,8 @@ def _extract_value_from_nested_dict(data: dict, key_path: str) -> Any:
                 # remaining key over each element so a path like
                 # "results.elevation" yields one value per point.
                 value = [
-                    item.get(key) if isinstance(item, dict) else None for item in value
+                    item.get(key) if isinstance(item, dict) else None
+                    for item in value
                 ]
                 if all(v is None for v in value):
                     # Nothing resolved for any element -> genuinely
@@ -2485,8 +2494,7 @@ def _extract_value_from_nested_dict(data: dict, key_path: str) -> Any:
 @overload
 def get_elevation_from_api(
     latitude: float, longitude: float, api_name: str | None = None
-) -> float:
-    ...
+) -> float: ...
 
 
 @overload
@@ -2494,8 +2502,7 @@ def get_elevation_from_api(
     latitude: Sequence[float] | np.ndarray,
     longitude: Sequence[float] | np.ndarray,
     api_name: str | None = None,
-) -> np.ndarray:
-    ...
+) -> np.ndarray: ...
 
 
 def get_elevation_from_api(
@@ -2608,8 +2615,12 @@ def get_elevation_from_api(
     # Prepare parameters based on the API's required format.
     if params_format == "comma_separated":
         params = {
-            "latitude": (latitude if is_scalar else ",".join(map(str, latitude))),
-            "longitude": (longitude if is_scalar else ",".join(map(str, longitude))),
+            "latitude": (
+                latitude if is_scalar else ",".join(map(str, latitude))
+            ),
+            "longitude": (
+                longitude if is_scalar else ",".join(map(str, longitude))
+            ),
         }
     elif params_format == "pipe_separated":
         if is_scalar:
@@ -2637,7 +2648,9 @@ def get_elevation_from_api(
 
         if is_scalar:
             # Return a single float for scalar input.
-            return float(elevations[0] if isinstance(elevations, list) else elevations)
+            return float(
+                elevations[0] if isinstance(elevations, list) else elevations
+            )
         else:
             # Return a NumPy array for array input.
             return np.array(elevations, dtype=float)
@@ -2646,7 +2659,9 @@ def get_elevation_from_api(
         logger.error(f"API request to {resolved_api_name} failed: {e}")
         # If the failed API was not the default, try fallback.
         if resolved_api_name != ElevationAPIConfig.DEFAULT_API:
-            logger.info(f"Trying fallback API: {ElevationAPIConfig.DEFAULT_API}")
+            logger.info(
+                f"Trying fallback API: {ElevationAPIConfig.DEFAULT_API}"
+            )
             return get_elevation_from_api(
                 latitude, longitude, ElevationAPIConfig.DEFAULT_API
             )
@@ -2658,8 +2673,7 @@ def get_elevation_from_api(
 @overload
 def get_elevation_from_utm(
     easting: float, northing: float, zone: str, datum: str = "WGS84", **kws
-) -> float:
-    ...
+) -> float: ...
 
 
 @overload
@@ -2669,8 +2683,7 @@ def get_elevation_from_utm(
     zone: str,
     datum: str = "WGS84",
     **kws,
-) -> np.ndarray:
-    ...
+) -> np.ndarray: ...
 
 
 def get_elevation_from_utm(
@@ -2747,7 +2760,9 @@ def get_elevation_from_utm(
         # Catch any error from conversion or the API call.
         logger.error(f"Failed to get elevation from UTM coordinates: {e}")
         # Raise a specific error for better error handling.
-        raise GisError("Could not process UTM coordinates to get elevation") from e
+        raise GisError(
+            "Could not process UTM coordinates to get elevation"
+        ) from e
 
 
 def calculate_azimuth(

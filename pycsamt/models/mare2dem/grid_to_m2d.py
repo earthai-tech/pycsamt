@@ -77,12 +77,16 @@ def _make_nodes_segs_regions(
 
     # horizontal segments: row iz, columns iy..iy+1
     segs_h = [
-        [nidx(iz, iy), nidx(iz, iy + 1), 1] for iz in range(nZ) for iy in range(nY - 1)
+        [nidx(iz, iy), nidx(iz, iy + 1), 1]
+        for iz in range(nZ)
+        for iy in range(nY - 1)
     ]
 
     # vertical segments: column iy, rows iz..iz+1
     segs_v = [
-        [nidx(iz, iy), nidx(iz + 1, iy), 1] for iz in range(nZ - 1) for iy in range(nY)
+        [nidx(iz, iy), nidx(iz + 1, iy), 1]
+        for iz in range(nZ - 1)
+        for iy in range(nY)
     ]
 
     segs_grid = np.array(segs_h + segs_v, dtype=int)

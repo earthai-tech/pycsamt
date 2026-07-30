@@ -50,7 +50,8 @@ sequence of paths
    as one line per directory by :func:`pycsamt.map.load_lines`.
 
 EDI-like iterable
-   Objects with station metadata and a ``Z`` attribute, including
+   :term:`EDI-like object` instances with station metadata and a ``Z``
+   attribute, including
    objects already loaded elsewhere in pyCSAMT.
 
 ``Sites``-like container
@@ -74,29 +75,36 @@ Single-Line Loading
 For one profile line, call :func:`pycsamt.map.ensure_map_data`
 directly or pass the source to a plotting helper.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ensure_map_data, plot_station_map
+   >>> from pycsamt.map import (
+   ...     StationMapOptions,
+   ...     ensure_map_data,
+   ...     plot_station_map,
+   ... )
 
-   source = "data/AMT/WILLY_DATA/L18PLT"
+   >>> source = "data/AMT/WILLY_DATA/L18PLT"
 
-   data = ensure_map_data(source, recursive=True)
-   print(data.station_ids)
-   print(data.lines)
-   print(data.has_geo)
-
-   fig = plot_station_map(data, frequency=100.0)
-
-Captured output from the sample ``WILLY_DATA/L18PLT`` folder:
-
-.. code-block:: text
-
-   ('18-001A', '18-002U', '18-003A', '18-004A', '18-005U', '18-006A', '18-007U', '18-008U', '18-009A', '18-010U', '18-011A', '18-012A', '18-013U', '18-014A', '18-015U', '18-016A', '18-017U', '18-018A', '18-019U', '18-020A', '18-021B', '18-021U', '18-022U', '18-022V', '18-023A', '18-023V', '18-024U', '18-025A')
+   >>> data = ensure_map_data(source, recursive=True)
+   >>> print(data.station_ids)
+   ('18-001A', '18-002U', '18-003A', '18-004A', '18-005U', '18-006A', '18-007U', '18-008U', '18-009A', '18-010U', '18-011A', '18-012A', '18-013U', '18-014A', '18-015U', '18-016A', '18-017U', '18-018A', '18-019U', '18-020A', '18-021U', '18-021B', '18-022U', '18-022V', '18-023A', '18-023V', '18-024U', '18-025A')
+   >>> print(data.lines)
    ('line',)
+   >>> print(data.has_geo)
    True
 
-The figure returned by ``plot_station_map`` can also be rendered with a
-static backend for reports:
+   >>> options = StationMapOptions(
+   ...     backend="matplotlib",
+   ...     overlay="elevation",
+   ...     title="L18 station map",
+   ... )
+   >>> fig = plot_station_map(data, options=options)
+
+The three printed values confirm that station order, line membership,
+and geographic coverage survived normalization.  The same normalized
+records produce the static map below; explicitly setting the overlay is
+important because the default color variable is station index, not
+elevation.
 
 .. figure:: ../../images/user_guide/map/map_loading_station_map.png
    :alt: Station map for the L18 sample line colored by elevation.
@@ -104,7 +112,11 @@ static backend for reports:
    :width: 85%
 
    Station locations loaded from ``data/AMT/WILLY_DATA/L18PLT`` and
-   colored by elevation.
+   colored by elevation.  The line doubles back near its northern end,
+   and several labels overlap there; both features come from the survey
+   geometry rather than from loading errors.  The elevation colors vary
+   independently of that geometry, with the highest part of the line
+   concentrated around stations ``18-011A`` to ``18-014A``.
 
 ``ensure_map_data`` does not force every station to have geographic
 coordinates.  ``data.has_geo`` tells you whether all normalized
@@ -123,26 +135,21 @@ Use :func:`pycsamt.map.load_lines` when a survey is split across
 several folders or when you want one combined object for 3-D fence,
 block, or depth-slice views.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import load_lines
+   >>> from pycsamt.map import load_lines
 
-   data = load_lines(
-       "data/AMT/WILLY_DATA",
-       detect="folder",
-       recursive=True,
-   )
+   >>> data = load_lines(
+   ...     "data/AMT/WILLY_DATA",
+   ...     detect="folder",
+   ...     recursive=True,
+   ... )
 
-   print(data.lines)
-   print(data.metadata["n_lines"])
-   print(data.station_ids[:5])
-
-Captured output:
-
-.. code-block:: text
-
+   >>> print(data.lines)
    ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
+   >>> print(data.metadata["n_lines"])
    5
+   >>> print(data.station_ids[:5])
    ('18-001A', '18-002U', '18-003A', '18-004A', '18-005U')
 
 Each station is re-indexed across the combined survey and tagged with
@@ -179,22 +186,17 @@ decides how files become lines.
 You can inspect the grouping without loading impedance data by calling
 :func:`pycsamt.map.resolve_line_groups`.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import resolve_line_groups
+   >>> from pycsamt.map import resolve_line_groups
 
-   groups = resolve_line_groups(
-       "data/AMT/WILLY_DATA",
-       detect="folder",
-   )
+   >>> groups = resolve_line_groups(
+   ...     "data/AMT/WILLY_DATA",
+   ...     detect="folder",
+   ... )
 
-   for line, source in groups.items():
-       print(line, len(source))
-
-Captured output:
-
-.. code-block:: text
-
+   >>> for line, source in groups.items():
+   ...     print(line, len(source))
    L18PLT 28
    L22PLT 25
    L26PLT 25
@@ -215,15 +217,19 @@ Explicit Line Mapping
 
 The most reproducible multi-line workflow is an explicit mapping:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import load_lines
+   >>> from pycsamt.map import load_lines
 
-   data = load_lines({
-       "L18": "data/AMT/WILLY_DATA/L18PLT",
-       "L22": "data/AMT/WILLY_DATA/L22PLT",
-       "L26": "data/AMT/WILLY_DATA/L26PLT",
-   })
+   >>> data = load_lines({
+   ...     "L18": "data/AMT/WILLY_DATA/L18PLT",
+   ...     "L22": "data/AMT/WILLY_DATA/L22PLT",
+   ...     "L26": "data/AMT/WILLY_DATA/L26PLT",
+   ... })
+   >>> print(data.lines)
+   ('L18', 'L22', 'L26')
+   >>> print(len(data.stations))
+   78
 
 Mapping values may be directories, file lists, or EDI-like iterables.
 This is useful in notebooks and scripts where line names should be
@@ -235,17 +241,17 @@ If your EDI-like objects do not carry line metadata, but you already
 know station membership, pass ``line_map`` to
 :func:`pycsamt.map.ensure_map_data`.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ensure_map_data
+   >>> from pycsamt.map import ensure_map_data
 
-   data = ensure_map_data(
-       edis,
-       line_map={
-           "L18": ["S001", "S002", "S003"],
-           "L22": ["S101", "S102", "S103"],
-       },
-   )
+   >>> data = ensure_map_data(
+   ...     edis,
+   ...     line_map={
+   ...         "L18": ["S001", "S002", "S003"],
+   ...         "L22": ["S101", "S102", "S103"],
+   ...     },
+   ... )
 
 Line metadata embedded on the EDI object takes priority.  The fallback
 order is:
@@ -265,30 +271,29 @@ line label is stored on each :term:`station record`.
 Normalized Contract
 -------------------
 
-:term:`MapData` exposes the surface that all map renderers share:
+:term:`MapData` exposes the surface that all map renderers share.  A
+compact inspection avoids printing the full EDI objects:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   data.station_ids      # tuple[str, ...]
-   data.lines            # tuple[str, ...]
-   data.has_geo          # bool
-   data.iter_edis()      # tuple of original EDI-like objects
-   data.stations         # tuple[StationRecord, ...]
-   data.profiles         # tuple[ProfileLine, ...]
-   data.metadata         # counts and loader metadata
+   >>> print(type(data.station_ids).__name__, len(data.station_ids))
+   tuple 78
+   >>> print(data.lines, data.has_geo)
+   ('L18', 'L22', 'L26') True
+   >>> print(len(data.iter_edis()), len(data.stations), len(data.profiles))
+   78 78 3
 
 Each :class:`pycsamt.map.StationRecord` contains one
 :term:`station record`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   station.id
-   station.latitude
-   station.longitude
-   station.elevation
-   station.line
-   station.index
-   station.source
+   >>> station = data.stations[0]
+   >>> print(
+   ...     station.id, station.latitude, station.longitude,
+   ...     station.elevation, station.line, station.index,
+   ... )
+   18-001A 32.1203 119.12883333333333 99.0 L18 0
 
 ``station.source`` is the original EDI-like object.  Keep it when you
 need to inspect impedance arrays, frequencies, or file-level metadata
@@ -305,41 +310,36 @@ Pre-Flight Checks
 
 A good loading workflow checks the normalized survey before plotting:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import (
-       ensure_map_data,
-       select_frequency,
-       value_at_frequency_details,
-   )
+   >>> from pycsamt.map import (
+   ...     ensure_map_data,
+   ...     select_frequency,
+   ...     value_at_frequency_details,
+   ... )
 
-   data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
-   first_edi = data.iter_edis()[0]
-   freq = first_edi.Z.freq
-   selection = select_frequency(freq, requested=100.0)
+   >>> data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
+   >>> first_edi = data.iter_edis()[0]
+   >>> freq = first_edi.Z.freq
+   >>> selection = select_frequency(freq, requested=100.0)
 
-   if selection is None:
-       raise RuntimeError("No finite positive frequency was found.")
+   >>> if selection is None:
+   ...     raise RuntimeError("No finite positive frequency was found.")
 
-   print("requested:", selection.requested)
-   print("actual:", selection.actual)
-   print("relative delta:", selection.relative_delta)
-
-   values = value_at_frequency_details(
-       data,
-       frequency=selection.actual,
-       quantity="rho",
-       component="xy",
-   )
-   print("stations with values:", len(values))
-
-Captured output:
-
-.. code-block:: text
-
+   >>> print("requested:", selection.requested)
    requested: 100.0
+   >>> print("actual:", selection.actual)
    actual: 102.4
+   >>> print("relative delta:", selection.relative_delta)
    relative delta: 0.024000000000000056
+
+   >>> values = value_at_frequency_details(
+   ...     data,
+   ...     frequency=selection.actual,
+   ...     quantity="rho",
+   ...     component="xy",
+   ... )
+   >>> print("stations with values:", len(values))
    stations with values: 28
 
 This is especially helpful when different stations have slightly
@@ -350,17 +350,21 @@ tolerance when you need a strict match.  For a requested frequency
 :math:`F_i=\{f_{i0},\ldots,f_{im}\}`, the selected sample is
 
 .. math::
+   :label: map-loading-nearest-frequency
 
    k_i = \operatorname*{arg\,min}_k |f_{ik}-f_r|,
    \qquad
    f_i^\* = f_{ik_i}.
 
-The reported relative delta is
-:math:`|f_i^\*-f_r|/|f_r|` when :math:`f_r` is positive.  Once the
+Equation :eq:`map-loading-nearest-frequency` makes the selection
+deterministic; if two samples are equally near, NumPy's first-minimum
+rule selects the first one in the recorded array.  The reported relative
+delta is :math:`|f_i^\*-f_r|/|f_r|` when :math:`f_r` is positive.  Once the
 frequency index is selected, the requested :term:`impedance tensor`
 component is read from
 
 .. math::
+   :label: map-loading-impedance-tensor
 
    \mathbf{Z}(f_i^\*) =
    \begin{bmatrix}
@@ -368,13 +372,23 @@ component is read from
    Z_{yx}(f_i^\*) & Z_{yy}(f_i^\*)
    \end{bmatrix}.
 
-For apparent resistivity maps, pyCSAMT then uses the same field-unit
-convention as the rest of the package,
-:math:`\rho_a = 0.2 |Z_{ab}|^2/f_i^\*`, where ``component="xy"``
-selects :math:`Z_{xy}`.  For phase maps, the plotted value is the phase
-angle of the selected complex component.  Keeping :math:`f_r`,
-:math:`f_i^\*`, the component name, and the tolerance in the script is
-therefore enough for another user to reproduce the extraction.
+where ``component="xy"`` selects :math:`Z_{xy}` in
+:eq:`map-loading-impedance-tensor`.  EDI parsing has already converted
+that component into apparent resistivity and phase arrays.  Their field-unit
+convention is
+
+.. math::
+   :label: map-loading-rho-phase
+
+   \rho_{a,ab}(f) = 0.2\,\frac{|Z_{ab}(f)|^2}{f},
+   \qquad
+   \varphi_{ab}(f) = \operatorname{atan2}
+   \left(\Im Z_{ab}(f),\Re Z_{ab}(f)\right)\frac{180}{\pi}.
+
+The map extractor reads the stored :math:`\rho_{a,ab}` or
+:math:`\varphi_{ab}` at index :math:`k_i`; it does not recompute them.
+Consequently, another user needs the same input EDI files, requested
+:math:`f_r`, component, quantity, and tolerance to reproduce the values.
 
 Handling Missing or Partial Data
 --------------------------------
@@ -392,46 +406,39 @@ perfect.
 
 For strict workflows, validate the counts yourself:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   data = load_lines("data/AMT/WILLY_DATA", detect="folder")
+   >>> data = load_lines("data/AMT/WILLY_DATA", detect="folder")
 
-   if not data.stations:
-       raise RuntimeError("No stations were loaded.")
-   if not data.has_geo:
-       raise RuntimeError("Station map requires geographic coordinates.")
-   if len(data.lines) < 2:
-       raise RuntimeError("Expected a multi-line survey.")
+   >>> if not data.stations:
+   ...     raise RuntimeError("No stations were loaded.")
+   >>> if not data.has_geo:
+   ...     raise RuntimeError("Station map requires geographic coordinates.")
+   >>> if len(data.lines) < 2:
+   ...     raise RuntimeError("Expected a multi-line survey.")
+   >>> print(f"ready: {len(data.stations)} stations on {len(data.lines)} lines")
+   ready: 128 stations on 5 lines
 
 Using Loaded Data
 -----------------
 
 Once loaded, pass the same ``MapData`` object to station, profile, and
 3-D builders.  This avoids re-reading files and keeps grouping
-consistent across views.
-
-.. code-block:: python
-
-   from pycsamt.map import (
-       load_lines,
-       plot_station_map,
-       plot_pseudosection,
-       plot_volume_map,
-   )
-
-   data = load_lines("data/AMT/WILLY_DATA", detect="folder")
-
-   station_fig = plot_station_map(data, frequency=100.0)
-   section_fig = plot_pseudosection(data, component="xy")
-   volume_fig = plot_volume_map(data, mode="fence")
+consistent across views.  The station-map example earlier on this page
+shows that hand-off and its rendered result; :doc:`station`,
+:doc:`profile`, and :doc:`volume` develop the corresponding views
+without repeating their figures here.
 
 Use the export helpers to save any resulting figure:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_html
+   >>> from pycsamt.map import write_html
 
-   write_html(station_fig, "outputs/stations.html")
+   >>> write_html(station_fig, "outputs/stations.html")
+
+``write_html`` returns ``None``, so a successful call has no terminal
+output.  Its observable result is ``outputs/stations.html``.
 
 Troubleshooting
 ---------------

@@ -211,7 +211,8 @@ class Tipper(BaseEM):
         elif t.ndim == 3:
             if t.shape[1:] != (1, 2):
                 raise ZError(
-                    "Tipper 3-D shape must be (n_freq, 1, 2); " f"got {t.shape!r}."
+                    "Tipper 3-D shape must be (n_freq, 1, 2); "
+                    f"got {t.shape!r}."
                 )
         else:
             raise ZError(f"Unsupported tipper shape: {t.shape!r}.")
@@ -242,7 +243,8 @@ class Tipper(BaseEM):
                 e = e[:, None, :]
             else:
                 raise ZError(
-                    "Tipper error shape (n, 2) or (1, 2) " f"expected; got {e.shape!r}."
+                    "Tipper error shape (n, 2) or (1, 2) "
+                    f"expected; got {e.shape!r}."
                 )
         elif e.ndim == 3:
             if e.shape[1:] != (1, 2):
@@ -540,7 +542,8 @@ class Tipper(BaseEM):
                     x = x[:, None, :]
                 else:
                     raise ZError(
-                        f"{name} shape must be (n, 2) or (1, 2); " f"got {x.shape!r}."
+                        f"{name} shape must be (n, 2) or (1, 2); "
+                        f"got {x.shape!r}."
                     )
             elif x.ndim == 3:
                 if x.shape[1:] != (1, 2):
@@ -561,7 +564,8 @@ class Tipper(BaseEM):
             )
         if r.shape != phi.shape:
             raise ZError(
-                'Shapes of "r" and "phi" must match: ' f"{r.shape!r} vs {phi.shape!r}."
+                'Shapes of "r" and "phi" must match: '
+                f"{r.shape!r} vs {phi.shape!r}."
             )
 
         tip_new = r * np.exp(1j * np.deg2rad(phi))
@@ -626,7 +630,8 @@ class Tipper(BaseEM):
 
         if self._tipper is None:
             raise ZError(
-                "Tipper must be initialized before setting from " "magnitude/direction."
+                "Tipper must be initialized before setting from "
+                "magnitude/direction."
             )
 
         n = self._tipper.shape[0]
@@ -648,12 +653,12 @@ class Tipper(BaseEM):
         Tx = self._tipper[:, 0, 0].copy()
         Ty = self._tipper[:, 0, 1].copy()
 
-        Tx = (-Mr * np.cos(th_r)).astype(float) + 1j * (-Mi * np.cos(th_i)).astype(
-            float
-        )
-        Ty = (-Mr * np.sin(th_r)).astype(float) + 1j * (-Mi * np.sin(th_i)).astype(
-            float
-        )
+        Tx = (-Mr * np.cos(th_r)).astype(float) + 1j * (
+            -Mi * np.cos(th_i)
+        ).astype(float)
+        Ty = (-Mr * np.sin(th_r)).astype(float) + 1j * (
+            -Mi * np.sin(th_i)
+        ).astype(float)
 
         self._tipper[:, 0, 0] = Tx
         self._tipper[:, 0, 1] = Ty
@@ -711,7 +716,9 @@ class Tipper(BaseEM):
 
         n = self._tipper.shape[0]
 
-        if np.isscalar(alpha) or (isinstance(alpha, (list, tuple)) and len(alpha) == 1):
+        if np.isscalar(alpha) or (
+            isinstance(alpha, (list, tuple)) and len(alpha) == 1
+        ):
             ang = float(np.asarray(alpha).ravel()[0]) % 360.0
             alphas = np.full(n, ang, dtype=float)
         else:
@@ -725,12 +732,18 @@ class Tipper(BaseEM):
         self.rotation_angle = (self.rotation_angle + alphas) % 360.0
 
         T_rot = np.empty_like(self._tipper, dtype=complex)
-        Terr_rot = None if self._tipper_err is None else np.empty_like(self._tipper_err)
+        Terr_rot = (
+            None
+            if self._tipper_err is None
+            else np.empty_like(self._tipper_err)
+        )
 
         for k in range(n):
             ang = 0.0 if np.isnan(alphas[k]) else float(alphas[k])
             if self._tipper_err is None:
-                T_rot[k], _ = rotatevector_incl_errors(self._tipper[k, :, :], ang)
+                T_rot[k], _ = rotatevector_incl_errors(
+                    self._tipper[k, :, :], ang
+                )
             else:
                 T_rot[k], Terr_rot[k] = rotatevector_incl_errors(
                     self._tipper[k, :, :],

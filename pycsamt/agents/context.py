@@ -367,7 +367,9 @@ def _regex_extract(text: str) -> dict[str, Any]:
     m = comp_pat.search(text)
     if m:
         raw = m.group(1).lower().replace(" ", "_").replace("-", "_")
-        cfg["component"] = "off_diagonal" if "diagonal" in raw else raw.split("_")[0]
+        cfg["component"] = (
+            "off_diagonal" if "diagonal" in raw else raw.split("_")[0]
+        )
 
     # ── inversion code ────────────────────────────────────────────────────────
     for code in _KNOWN_INVERSION_CODES:
@@ -403,7 +405,9 @@ def _regex_extract(text: str) -> dict[str, Any]:
 # (single source of truth, shared with the orchestrator).
 
 
-def _normalise_config(cfg: dict[str, Any], original_text: str) -> dict[str, Any]:
+def _normalise_config(
+    cfg: dict[str, Any], original_text: str
+) -> dict[str, Any]:
     """Fill defaults, normalise aliases, clean up types."""
     # workflow alias normalisation (shared registry)
     cfg["workflow"] = _normalise_workflow(cfg.get("workflow", ""))
@@ -467,7 +471,9 @@ def _validate_config(cfg: dict[str, Any]) -> list[str]:
         if lo <= 0:
             warnings.append(f"period_range lower bound must be > 0; got {lo}.")
         if hi <= lo:
-            warnings.append(f"period_range upper bound {hi} ≤ lower bound {lo}.")
+            warnings.append(
+                f"period_range upper bound {hi} ≤ lower bound {lo}."
+            )
 
     return warnings
 

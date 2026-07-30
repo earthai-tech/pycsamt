@@ -111,7 +111,9 @@ def validate(
         sys.exit(1)
 
 
-def _print_text(results: list[dict], n_ok: int, n_fail: int, deep: bool) -> None:
+def _print_text(
+    results: list[dict], n_ok: int, n_fail: int, deep: bool
+) -> None:
     mode = "deep" if deep else "extension-only"
     click.echo(
         f"Validated {len(results)} file(s)  [{mode}]  "

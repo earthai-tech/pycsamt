@@ -146,7 +146,9 @@ class Stations(SurveyBase):
                 }
             )
         # project to UTM if possible (skip None coords)
-        good = [r for r in rows if r["lat"] is not None and r["lon"] is not None]
+        good = [
+            r for r in rows if r["lat"] is not None and r["lon"] is not None
+        ]
         if good:
             lat = np.array([r["lat"] for r in good], float)
             lon = np.array([r["lon"] for r in good], float)
@@ -563,7 +565,11 @@ class Topography(SurveyBase):
 
     def __init__(
         self,
-        items: EDIFile | Iterable[EDIFile] | EDICollection | EDIProfile | Stations,
+        items: EDIFile
+        | Iterable[EDIFile]
+        | EDICollection
+        | EDIProfile
+        | Stations,
         *,
         use_profile_step: bool = True,
         verbose: int = 0,
@@ -590,8 +596,14 @@ class Topography(SurveyBase):
             # 1) distance
             if use_profile_step:
                 d = getattr(profile, "distance", None)
-                d = np.asarray(d, float) if d is not None else np.array([], float)
-                if d.size == 0 and hasattr(profile, "_ensure_distance_bearing"):
+                d = (
+                    np.asarray(d, float)
+                    if d is not None
+                    else np.array([], float)
+                )
+                if d.size == 0 and hasattr(
+                    profile, "_ensure_distance_bearing"
+                ):
                     # compute lazily if profile hasn't adjusted yet
                     profile._ensure_distance_bearing()
                     d = np.asarray(profile.distance, float)
@@ -957,7 +969,9 @@ class EDIProfile(SurveyBase):
                 }
             )
         # keep only rows with valid lat/lon
-        rows = [r for r in rows if (r["lat"] is not None and r["lon"] is not None)]
+        rows = [
+            r for r in rows if (r["lat"] is not None and r["lon"] is not None)
+        ]
         self._rows = rows
         if not rows:
             self._e = self._n = None
@@ -971,7 +985,9 @@ class EDIProfile(SurveyBase):
         if np.isscalar(z):
             self._zone = [str(z)] * self._e.size
         else:
-            self._zone = [str(a) if a is not None else None for a in np.asarray(z)]
+            self._zone = [
+                str(a) if a is not None else None for a in np.asarray(z)
+            ]
 
     @property
     def stations(self) -> list[str]:
@@ -1281,7 +1297,9 @@ class EDIProfile(SurveyBase):
         if not self._rows:
             return self
         use_adj = bool(
-            use_adjusted and self._adj_lat is not None and self._adj_lon is not None
+            use_adjusted
+            and self._adj_lat is not None
+            and self._adj_lon is not None
         )
         for i, r in enumerate(self._rows):
             ed: EDIFile = r["ed"]  # type: ignore[assignment]

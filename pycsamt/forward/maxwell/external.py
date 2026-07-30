@@ -375,6 +375,19 @@ def resolve_executable(
     if found:
         return Path(found)
     for directory in search_paths:
+        # Try shutil.which first so a bare name like "Mod3DMT" also
+        # resolves to "Mod3DMT.exe" via PATHEXT on Windows, exactly as
+        # the PATH lookup above already does -- a real, previously-
+        # untested gap in this fallback loop (only surfaced once a
+        # real Windows ModEM build existed to exercise it). Windows'
+        # shutil.which only tries PATHEXT-suffixed candidates when the
+        # name has no recognized extension already, so it will *not*
+        # match an extension-less file some other platform's
+        # executable (or a test double) legitimately uses -- fall
+        # back to the original literal-path check for that case.
+        found = shutil.which(str(name_or_path), path=str(directory))
+        if found:
+            return Path(found)
         candidate = Path(directory) / str(name_or_path)
         if candidate.is_file():
             return candidate

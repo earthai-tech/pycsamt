@@ -110,7 +110,9 @@ class ModEmAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -142,7 +144,11 @@ class ModEmAgent(BaseAgent):
             }
             if comp_types:
                 # accept list or single string; ModEmConfig takes a single string
-                ct = comp_types[0] if isinstance(comp_types, list) else str(comp_types)
+                ct = (
+                    comp_types[0]
+                    if isinstance(comp_types, list)
+                    else str(comp_types)
+                )
                 cfg_kwargs["component_type"] = ct
 
             cfg = ModEmConfig(**cfg_kwargs)
@@ -199,14 +205,20 @@ class ModEmAgent(BaseAgent):
                 output_dir,
             )
         except Exception as exc:  # noqa: BLE001
-            warnings.append(f"Starting model / covariance / control not written: {exc}")
+            warnings.append(
+                f"Starting model / covariance / control not written: {exc}"
+            )
 
         # ── validate ──────────────────────────────────────────────────────────
         if data_path.exists():
             size_kb = data_path.stat().st_size // 1024
-            self._log.info("ModEM data file: %s (%d KB)", data_path.name, size_kb)
+            self._log.info(
+                "ModEM data file: %s (%d KB)", data_path.name, size_kb
+            )
         else:
-            warnings.append(f"ModEM data file not found after write: {data_path}")
+            warnings.append(
+                f"ModEM data file not found after write: {data_path}"
+            )
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
@@ -228,7 +240,9 @@ class ModEmAgent(BaseAgent):
             if p is not None and Path(p).exists()
         )
         return AgentResult(
-            status="success" if data_path and data_path.exists() else "needs_review",
+            status="success"
+            if data_path and data_path.exists()
+            else "needs_review",
             summary=(
                 f"ModEM3D prep: {n_stations} stations × {n_periods} periods. "
                 f"{n_files} file(s) written to {output_dir}."

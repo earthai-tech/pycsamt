@@ -120,9 +120,13 @@ class InterpretationAgent(BaseAgent):
         # ── extract resistivities and thicknesses ─────────────────────────────
         if isinstance(model_raw, dict):
             rhos = list(
-                model_raw.get("resistivity", model_raw.get("resistivities", []))
+                model_raw.get(
+                    "resistivity", model_raw.get("resistivities", [])
+                )
             )
-            ths = list(model_raw.get("thickness", model_raw.get("thicknesses", [])))
+            ths = list(
+                model_raw.get("thickness", model_raw.get("thicknesses", []))
+            )
         else:
             rhos = list(
                 getattr(
@@ -169,9 +173,9 @@ class InterpretationAgent(BaseAgent):
                 }
             )
 
-        dominant = max(layer_interps, key=lambda d: d.get("thickness_m") or 1e9)[
-            "lithology"
-        ]
+        dominant = max(
+            layer_interps, key=lambda d: d.get("thickness_m") or 1e9
+        )["lithology"]
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp_text = ""

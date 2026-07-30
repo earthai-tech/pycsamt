@@ -213,7 +213,10 @@ def register_interp(app) -> None:
     # ── T1. Category pill → store ─────────────────────────────────────────
     @app.callback(
         Output(IDs.INTERP_ACTIVE_CAT, "data"),
-        [Input(f"interp-cat-btn-{slug}", "n_clicks") for slug, *_ in _INTERP_CATS],
+        [
+            Input(f"interp-cat-btn-{slug}", "n_clicks")
+            for slug, *_ in _INTERP_CATS
+        ],
         prevent_initial_call=True,
     )
     def switch_interp_cat(*_clicks):
@@ -242,7 +245,10 @@ def register_interp(app) -> None:
         }}
         """,
         [Output(f"interp-panel-{slug}", "style") for slug, *_ in _INTERP_CATS]
-        + [Output(f"interp-cat-btn-{slug}", "className") for slug, *_ in _INTERP_CATS],
+        + [
+            Output(f"interp-cat-btn-{slug}", "className")
+            for slug, *_ in _INTERP_CATS
+        ],
         Input(IDs.INTERP_ACTIVE_CAT, "data"),
     )
 
@@ -471,7 +477,11 @@ def register_interp(app) -> None:
             plt.close(fig)
 
             n_corr = len((corr_store or {}).get("steps", []))
-            src_tag = "corrected" if data_src == "corrected" and n_corr > 0 else "raw"
+            src_tag = (
+                "corrected"
+                if data_src == "corrected" and n_corr > 0
+                else "raw"
+            )
             imgs[idx] = src
             strip = _info_strip(
                 plot_label,
@@ -624,7 +634,9 @@ def _info_strip(
     ]
     if src_tag == "corrected" and n_corr > 0:
         chips.append(
-            _chip(f"{n_corr} correction{'s' if n_corr != 1 else ''}", "#cba6f7")
+            _chip(
+                f"{n_corr} correction{'s' if n_corr != 1 else ''}", "#cba6f7"
+            )
         )
     return html.Div(chips, className="interp-strip-chips")
 

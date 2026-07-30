@@ -160,7 +160,9 @@ class _AgentCard(QFrame):
         self.setObjectName("AgentCard")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedHeight(54)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self._build(name, description, is_llm)
 
     # ── build ─────────────────────────────────────────────────────────────────
@@ -174,7 +176,9 @@ class _AgentCard(QFrame):
         bar = QFrame()
         bar.setFixedWidth(4)
         color = _LLM_COLOR if is_llm else _PROC_COLOR
-        bar.setStyleSheet(f"background: {color}; border: none; border-radius: 0px;")
+        bar.setStyleSheet(
+            f"background: {color}; border: none; border-radius: 0px;"
+        )
         row.addWidget(bar)
 
         # Content area
@@ -273,7 +277,9 @@ class AgentBrowserWidget(QWidget):
         self._card_list.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        self._card_list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        self._card_list.setVerticalScrollMode(
+            QListWidget.ScrollMode.ScrollPerPixel
+        )
         self._card_list.currentRowChanged.connect(self._on_row_changed)
         self._card_list.itemDoubleClicked.connect(self._on_double_click)
         layout.addWidget(self._card_list, 1)
@@ -295,7 +301,9 @@ class AgentBrowserWidget(QWidget):
             cat_map["All"].extend(entries)
 
         proc = [
-            (n, e) for n, e in AGENT_REGISTRY.items() if e.get("type") == "processing"
+            (n, e)
+            for n, e in AGENT_REGISTRY.items()
+            if e.get("type") == "processing"
         ]
         if proc:
             cat_map["⚡ Processing"] = proc
@@ -363,7 +371,9 @@ class AgentBrowserWidget(QWidget):
             self._cat_bar.setCurrentIndex(0)
             self._cat_bar.blockSignals(False)
         cat = (
-            self._cat_names[self._cat_bar.currentIndex()] if self._cat_names else "All"
+            self._cat_names[self._cat_bar.currentIndex()]
+            if self._cat_names
+            else "All"
         )
         self._refresh_cards(cat, text)
 

@@ -39,7 +39,9 @@ def _json_value(value: Any) -> Any:
         for key, item in value.items():
             normalized = str(key)
             if normalized in result:
-                raise ValueError(f"mapping contains colliding JSON key {normalized!r}.")
+                raise ValueError(
+                    f"mapping contains colliding JSON key {normalized!r}."
+                )
             result[normalized] = _json_value(item)
         return result
     if isinstance(value, (list, tuple)):
@@ -106,7 +108,9 @@ def _artifact_path(value: str) -> str:
             "artifact paths must be normalized relative paths without '..'."
         )
     if text.endswith("/"):
-        raise ValueError("artifact paths must identify files, not directories.")
+        raise ValueError(
+            "artifact paths must identify files, not directories."
+        )
     return path.as_posix()
 
 
@@ -235,14 +239,20 @@ class ArtifactRecord:
         if digest.startswith("sha256:"):
             digest = digest[7:]
         if not _HEX_64.fullmatch(digest):
-            raise ValueError("sha256 must contain exactly 64 hexadecimal characters.")
+            raise ValueError(
+                "sha256 must contain exactly 64 hexadecimal characters."
+            )
         if self.size_bytes is not None and (
             not isinstance(self.size_bytes, int)
             or isinstance(self.size_bytes, bool)
             or self.size_bytes < 0
         ):
-            raise ValueError("size_bytes must be a non-negative integer or None.")
-        media_type = None if self.media_type is None else str(self.media_type).strip()
+            raise ValueError(
+                "size_bytes must be a non-negative integer or None."
+            )
+        media_type = (
+            None if self.media_type is None else str(self.media_type).strip()
+        )
         role = None if self.role is None else str(self.role).strip()
         if self.media_type is not None and not media_type:
             raise ValueError("media_type cannot be empty.")
@@ -305,7 +315,9 @@ class ArtifactRecord:
         """
         source = Path(path)
         if not source.is_file():
-            raise FileNotFoundError(f"artifact is not a regular file: {source}")
+            raise FileNotFoundError(
+                f"artifact is not a regular file: {source}"
+            )
         return cls(
             sha256_file(source, chunk_size=chunk_size),
             size_bytes=source.stat().st_size,
@@ -427,7 +439,9 @@ class DatasetManifest:
 
     def __post_init__(self) -> None:
         if self.schema_version != 2:
-            raise ValueError("new DatasetManifest objects require schema version 2.")
+            raise ValueError(
+                "new DatasetManifest objects require schema version 2."
+            )
         dataset_id = str(self.dataset_id).strip()
         if not _DATASET_ID.fullmatch(dataset_id):
             raise ValueError(
@@ -436,7 +450,9 @@ class DatasetManifest:
         generator = str(self.generator).strip()
         generator_version = str(self.generator_version).strip()
         if not generator or not generator_version:
-            raise ValueError("generator and generator_version cannot be empty.")
+            raise ValueError(
+                "generator and generator_version cannot be empty."
+            )
         if not isinstance(self.split, RealizationSplit):
             raise TypeError("split must be a RealizationSplit.")
         if (
@@ -450,7 +466,9 @@ class DatasetManifest:
         for path, value in self.artifacts.items():
             key = _artifact_path(path)
             if key in artifacts:
-                raise ValueError(f"duplicate normalized artifact path {key!r}.")
+                raise ValueError(
+                    f"duplicate normalized artifact path {key!r}."
+                )
             if isinstance(value, ArtifactRecord):
                 record = value
             elif isinstance(value, Mapping):
@@ -621,7 +639,9 @@ class DatasetManifest:
                 ok = sha256_file(candidate) == record.sha256
             results[path] = ok
             if not ok and raise_on_error:
-                raise ValueError(f"artifact integrity verification failed: {path}")
+                raise ValueError(
+                    f"artifact integrity verification failed: {path}"
+                )
         return results
 
     def to_dict(self) -> dict[str, Any]:
@@ -650,7 +670,8 @@ class DatasetManifest:
             "sample_count": self.sample_count,
             "created_utc": self.created_utc,
             "artifacts": {
-                path: record.to_dict() for path, record in self.artifacts.items()
+                path: record.to_dict()
+                for path, record in self.artifacts.items()
             },
         }
 
@@ -689,7 +710,9 @@ class DatasetManifest:
         if target.exists() and not overwrite:
             raise FileExistsError(f"manifest already exists: {target}")
         target.write_text(
-            json.dumps(self.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
+            json.dumps(
+                self.to_dict(), indent=2, sort_keys=True, ensure_ascii=False
+            )
             + "\n",
             encoding="utf-8",
         )
@@ -725,11 +748,17 @@ class DatasetManifest:
         """
         version = data.get("schema_version", 1)
         if version not in {1, 2}:
-            raise ValueError(f"unsupported DatasetManifest schema version {version!r}.")
+            raise ValueError(
+                f"unsupported DatasetManifest schema version {version!r}."
+            )
         configuration = dict(data["configuration"])
         recorded_hash = data.get("configuration_hash")
-        if recorded_hash is not None and recorded_hash != canonical_hash(configuration):
-            raise ValueError("configuration_hash does not match configuration.")
+        if recorded_hash is not None and recorded_hash != canonical_hash(
+            configuration
+        ):
+            raise ValueError(
+                "configuration_hash does not match configuration."
+            )
         raw_artifacts = data.get("artifacts", {})
         artifacts = {}
         for path, record in raw_artifacts.items():
@@ -783,4 +812,6 @@ class DatasetManifest:
         >>> loaded.dataset_id
         'd'
         """
-        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        return cls.from_dict(
+            json.loads(Path(path).read_text(encoding="utf-8"))
+        )

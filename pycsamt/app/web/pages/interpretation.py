@@ -39,7 +39,8 @@ _SLUG_BY_CAT = {full: slug for slug, full, _, _ in _INTERP_CATS}
 
 def _plot_opts(cat: str) -> list:
     return [
-        {"label": lbl, "value": fn} for lbl, fn, _ in WORKFLOW_CATALOGUE.get(cat, [])
+        {"label": lbl, "value": fn}
+        for lbl, fn, _ in WORKFLOW_CATALOGUE.get(cat, [])
     ]
 
 
@@ -90,7 +91,9 @@ def _run_bar() -> html.Div:
                 size="sm",
                 className="w-100 mb-2",
             ),
-            dbc.Spinner(html.Div(id=IDs.INTERP_SPINNER), size="sm", color="primary"),
+            dbc.Spinner(
+                html.Div(id=IDs.INTERP_SPINNER), size="sm", color="primary"
+            ),
         ],
         className="fwd-run-bar",
     )
@@ -211,7 +214,8 @@ def _controls_scroll() -> html.Div:
                                     dbc.Select(
                                         id=IDs.INTERP_CMAP,
                                         options=[
-                                            {"label": c, "value": c} for c in _CMAPS
+                                            {"label": c, "value": c}
+                                            for c in _CMAPS
                                         ],
                                         value="viridis",
                                         size="sm",

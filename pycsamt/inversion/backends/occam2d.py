@@ -126,7 +126,9 @@ class Occam2DBackend(BaseInversionBackend):
         occam_cfg = _occam_config(OccamConfig, cfg)
         if source is not None:
             try:
-                builder = InputBuilder(source, workdir=workdir, config=occam_cfg)
+                builder = InputBuilder(
+                    source, workdir=workdir, config=occam_cfg
+                )
                 build_options = _build_options(cfg.backend_options)
                 build_options.setdefault("error_floor_rho", cfg.error_floor)
                 build_options.setdefault("error_floor_phase", cfg.phase_error)
@@ -146,18 +148,23 @@ class Occam2DBackend(BaseInversionBackend):
             binary_path=runner_options.get(
                 "binary_path", cfg.backend_options.get("binary_path")
             ),
-            startup_file=runner_options.get("startup_file", occam_cfg.startup_file),
+            startup_file=runner_options.get(
+                "startup_file", occam_cfg.startup_file
+            ),
         )
         native = native or runner
         if missing:
             warnings.append(
-                "Occam2D runner not ready; missing files: " + ", ".join(missing)
+                "Occam2D runner not ready; missing files: "
+                + ", ".join(missing)
             )
         else:
             binary_name = str(
                 runner_options.get(
                     "binary_path",
-                    cfg.backend_options.get("binary_path", occam_cfg.binary_name),
+                    cfg.backend_options.get(
+                        "binary_path", occam_cfg.binary_name
+                    ),
                 )
             )
             command = _command_string(binary_name, runner.startup_file)
@@ -167,8 +174,12 @@ class Occam2DBackend(BaseInversionBackend):
                 try:
                     exit_code = runner.run(
                         max_iter=runner_options.get("max_iter", None),
-                        target_misfit=runner_options.get("target_misfit", None),
-                        auto_compile=bool(runner_options.get("auto_compile", False)),
+                        target_misfit=runner_options.get(
+                            "target_misfit", None
+                        ),
+                        auto_compile=bool(
+                            runner_options.get("auto_compile", False)
+                        ),
                     )
                     native = runner
                     executed = True
@@ -283,7 +294,8 @@ def _configured_files(
     for role, name in defaults.items():
         raw.setdefault(role, name)
     return {
-        role: str(_resolve_workdir_path(path, workdir)) for role, path in raw.items()
+        role: str(_resolve_workdir_path(path, workdir))
+        for role, path in raw.items()
     }
 
 

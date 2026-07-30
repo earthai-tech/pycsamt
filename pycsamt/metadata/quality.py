@@ -237,12 +237,20 @@ class ComponentQuality:
             "n_valid": self.n_valid,
             "n_total": self.n_total,
             "flag": self.flag.value,
-            "snr_mean": round(self.snr_mean, 2) if self.snr_mean is not None else None,
-            "snr_std": round(self.snr_std, 2) if self.snr_std is not None else None,
+            "snr_mean": round(self.snr_mean, 2)
+            if self.snr_mean is not None
+            else None,
+            "snr_std": round(self.snr_std, 2)
+            if self.snr_std is not None
+            else None,
         }
 
     def __repr__(self) -> str:
-        snr = f"  SNR={self.snr_mean:.1f} dB" if self.snr_mean is not None else ""
+        snr = (
+            f"  SNR={self.snr_mean:.1f} dB"
+            if self.snr_mean is not None
+            else ""
+        )
         return (
             f"ComponentQuality({self.name!r}  {self.pct_str}"
             f"  [{self.flag.value}]{snr})"
@@ -292,7 +300,9 @@ class DataQuality:
 
     def __post_init__(self) -> None:
         self.overall = (
-            QualityFlag.worst([c.flag for c in self.components if c.n_total > 0])
+            QualityFlag.worst(
+                [c.flag for c in self.components if c.n_total > 0]
+            )
             if self.components
             else QualityFlag.MISSING
         )
@@ -314,8 +324,12 @@ class DataQuality:
         tip = getattr(site, "tipper", None)
 
         n_freq = int(freq.size) if freq is not None else 0
-        freq_min = float(freq.min()) if freq is not None and freq.size else None
-        freq_max = float(freq.max()) if freq is not None and freq.size else None
+        freq_min = (
+            float(freq.min()) if freq is not None and freq.size else None
+        )
+        freq_max = (
+            float(freq.max()) if freq is not None and freq.size else None
+        )
 
         comps: list[ComponentQuality] = []
         if z is not None:
@@ -390,7 +404,9 @@ class DataQuality:
         ]
         for c in self.components:
             bar = _bar(c.coverage, width=8)
-            lines.append(f"  {c.name:<8} {bar} {c.pct_str:>5}  [{c.flag.value}]")
+            lines.append(
+                f"  {c.name:<8} {bar} {c.pct_str:>5}  [{c.flag.value}]"
+            )
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
@@ -442,7 +458,9 @@ def quality_dataframe(sites: Any, *, api: bool | None = None) -> Any:
     try:
         import pandas as pd  # noqa: PLC0415
     except ImportError as exc:
-        raise ImportError("pandas is required for quality_dataframe()") from exc
+        raise ImportError(
+            "pandas is required for quality_dataframe()"
+        ) from exc
 
     rows = []
     for dq in assess_collection(sites):

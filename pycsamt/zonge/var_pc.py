@@ -141,7 +141,9 @@ class PercentVarBase(AVGComponentBase):
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:
-                logger.debug(f"'{self.VAR_NAME}' not in source. Creating empty.")
+                logger.debug(
+                    f"'{self.VAR_NAME}' not in source. Creating empty."
+                )
 
         # ensure coords exist (inject conservative defaults)
         if "comp" not in df.columns:
@@ -155,7 +157,9 @@ class PercentVarBase(AVGComponentBase):
         df[self.VAR_NAME] = _to_numeric_percent(df[self.VAR_NAME].copy())
 
         keep = [
-            c for c in ("station", "freq", "comp", self.VAR_NAME) if c in df.columns
+            c
+            for c in ("station", "freq", "comp", self.VAR_NAME)
+            if c in df.columns
         ]
         # store a compact, predictable layout
         # self._frame = df.loc[:, ["station", "freq", "comp", self.VAR_NAME]]

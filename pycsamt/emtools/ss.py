@@ -684,7 +684,9 @@ def _tricube(u: np.ndarray) -> np.ndarray:
     return v**3
 
 
-def _loess_at_center(x: np.ndarray, y: np.ndarray, w: np.ndarray, poly: int) -> float:
+def _loess_at_center(
+    x: np.ndarray, y: np.ndarray, w: np.ndarray, poly: int
+) -> float:
     # eval at x=0 (center); poly 0 or 1
     if y.size == 0:
         return np.nan
@@ -860,7 +862,11 @@ def estimate_ss_loess(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    df = pd.DataFrame.from_records(rows).sort_values("station").reset_index(drop=True)
+    df = (
+        pd.DataFrame.from_records(rows)
+        .sort_values("station")
+        .reset_index(drop=True)
+    )
 
     return maybe_wrap_frame(
         df,
@@ -1010,7 +1016,11 @@ def estimate_ss_bilateral(
         )
         lr = LR[i]
         d = lr - tr
-        delta = float(np.nanmedian(d)) if summary == "median" else float(np.nanmean(d))
+        delta = (
+            float(np.nanmedian(d))
+            if summary == "median"
+            else float(np.nanmean(d))
+        )
         rows.append(
             dict(
                 station=st,
@@ -1020,7 +1030,11 @@ def estimate_ss_bilateral(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    df = pd.DataFrame.from_records(rows).sort_values("station").reset_index(drop=True)
+    df = (
+        pd.DataFrame.from_records(rows)
+        .sort_values("station")
+        .reset_index(drop=True)
+    )
 
     return maybe_wrap_frame(
         df,
@@ -1126,7 +1140,11 @@ def estimate_ss_refmedian(
     for st, fr, lr in zip(ST, FR, LR):
         idx = _nearest_idx(G, fr)
         d = lr - Ref[idx]
-        delta = float(np.nanmedian(d)) if summary == "median" else float(np.nanmean(d))
+        delta = (
+            float(np.nanmedian(d))
+            if summary == "median"
+            else float(np.nanmean(d))
+        )
         rows.append(
             dict(
                 station=st,
@@ -1136,7 +1154,11 @@ def estimate_ss_refmedian(
                 n_used=int(np.isfinite(d).sum()),
             )
         )
-    df = pd.DataFrame.from_records(rows).sort_values("station").reset_index(drop=True)
+    df = (
+        pd.DataFrame.from_records(rows)
+        .sort_values("station")
+        .reset_index(drop=True)
+    )
 
     return maybe_wrap_frame(
         df,
@@ -1232,7 +1254,9 @@ def plot_ss_delta_psection(
         if not np.any(m):
             continue
         j = _nearest_idx(fra, frb[m])
-        dlog = np.log10(np.maximum(ra[j], 1e-24)) - np.log10(np.maximum(rb[m], 1e-24))
+        dlog = np.log10(np.maximum(ra[j], 1e-24)) - np.log10(
+            np.maximum(rb[m], 1e-24)
+        )
         rows.append(dlog)
         yvals.append(np.log10(perb[m]) if axis_y == "logperiod" else perb[m])
         labs.append(list(pairs.keys())[k])
@@ -1264,7 +1288,9 @@ def plot_ss_delta_psection(
         vmin=-(vlim or 0.5),
         vmax=(vlim or 0.5),
     )
-    ax.set_ylabel(LOG10_PERIOD_LABEL if axis_y == "logperiod" else PERIOD_LABEL)
+    ax.set_ylabel(
+        LOG10_PERIOD_LABEL if axis_y == "logperiod" else PERIOD_LABEL
+    )
     PYCSAMT_STATION_RENDERING.apply(
         ax,
         np.arange(len(labs), dtype=float),
@@ -1425,8 +1451,14 @@ def plot_ss_delta_profile(
         if not np.any(m):
             continue
         j = _nearest_idx(fra, frb[m])
-        d = np.log10(np.maximum(ra[j], 1e-24)) - np.log10(np.maximum(rb[m], 1e-24))
-        val = float(np.nanmedian(d)) if robust == "median" else float(np.nanmean(d))
+        d = np.log10(np.maximum(ra[j], 1e-24)) - np.log10(
+            np.maximum(rb[m], 1e-24)
+        )
+        val = (
+            float(np.nanmedian(d))
+            if robust == "median"
+            else float(np.nanmean(d))
+        )
         labs.append(st)
         deltas.append(val)
     if not labs:
@@ -1460,7 +1492,9 @@ def plot_ss_delta_profile(
 # ── internal rendering helpers ─────────────────────────────────────────────── #
 
 
-def _ss_sort_freqs(freqs: np.ndarray, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
+def _ss_sort_freqs(
+    freqs: np.ndarray, *arrays: np.ndarray
+) -> tuple[np.ndarray, ...]:
     """Return (sorted_freqs, sorted_arr1, …) all ascending in Hz."""
     order = np.argsort(freqs)
     return (freqs[order],) + tuple(a[:, order] for a in arrays)
@@ -1535,7 +1569,9 @@ def _set_lT_yticks(
     labs = []
     for v in pos:
         r = round(v)
-        labs.append(f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$")
+        labs.append(
+            f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
+        )
     ax.set_yticks(pos)
     ax.set_yticklabels(labs, fontsize=fontsize)
     if ylabel:
@@ -1710,7 +1746,9 @@ def plot_ss_comparison_psection(
     )
     if title_before:
         axes[0].set_title(title_before, fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(axes[0], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel)
+    _set_lT_yticks(
+        axes[0], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel
+    )
 
     # ── after panel ───────────────────────────────────────────────────────
     _pcolor_lT(
@@ -1725,7 +1763,9 @@ def plot_ss_comparison_psection(
     )
     if title_after:
         axes[1].set_title(title_after, fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(axes[1], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel)
+    _set_lT_yticks(
+        axes[1], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel
+    )
 
     # shared colorbar spanning the two main panels
     cb_main = fig.colorbar(
@@ -1744,7 +1784,9 @@ def plot_ss_comparison_psection(
         fin_d = np.abs(delta)[np.isfinite(delta)]
         if delta_vlim is None:
             delta_vlim = (
-                float(np.percentile(fin_d, delta_vlim_pct)) if fin_d.size else 0.5
+                float(np.percentile(fin_d, delta_vlim_pct))
+                if fin_d.size
+                else 0.5
             )
         qm_d = _pcolor_lT(
             axes[2],
@@ -1757,7 +1799,9 @@ def plot_ss_comparison_psection(
             period_up=period_up,
         )
         if title_delta:
-            axes[2].set_title(title_delta, fontsize=9, fontweight="bold", pad=3)
+            axes[2].set_title(
+                title_delta, fontsize=9, fontweight="bold", pad=3
+            )
         _set_lT_yticks(
             axes[2], freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=ylabel
         )
@@ -2128,7 +2172,9 @@ def plot_ss_summary(
         cmap=cmap,
         period_up=period_up,
     )
-    ax_before.set_title("(a) Before correction", fontsize=9, fontweight="bold", pad=3)
+    ax_before.set_title(
+        "(a) Before correction", fontsize=9, fontweight="bold", pad=3
+    )
     _set_lT_yticks(
         ax_before,
         freqs,
@@ -2156,8 +2202,12 @@ def plot_ss_summary(
         cmap=cmap,
         period_up=period_up,
     )
-    ax_after.set_title("(b) After correction", fontsize=9, fontweight="bold", pad=3)
-    _set_lT_yticks(ax_after, freqs, n=n_yticks, fontsize=tick_fontsize, ylabel="")
+    ax_after.set_title(
+        "(b) After correction", fontsize=9, fontweight="bold", pad=3
+    )
+    _set_lT_yticks(
+        ax_after, freqs, n=n_yticks, fontsize=tick_fontsize, ylabel=""
+    )
     ax_after.tick_params(axis="y", labelleft=False)
     _set_station_xticks(
         ax_after,
@@ -2183,7 +2233,9 @@ def plot_ss_summary(
     delta = logRho_after - logRho_before
     fin_d = np.abs(delta)[np.isfinite(delta)]
     if delta_vlim is None:
-        delta_vlim = float(np.percentile(fin_d, delta_vlim_pct)) if fin_d.size else 0.5
+        delta_vlim = (
+            float(np.percentile(fin_d, delta_vlim_pct)) if fin_d.size else 0.5
+        )
     qm_d = _pcolor_lT(
         ax_delta,
         delta.T,
@@ -2609,7 +2661,9 @@ def ss_comparison_psection(
         logRho_b,
         logRho_a,
         freqs=freqs_union,
-        station_labels=station_labels if station_labels is not None else labels,
+        station_labels=station_labels
+        if station_labels is not None
+        else labels,
         show_delta=show_delta,
         cmap=cmap,
         delta_cmap=delta_cmap,
@@ -2647,7 +2701,9 @@ def _rotate_z(z: np.ndarray, ang_deg: np.ndarray) -> np.ndarray:
     return R @ z @ Rt
 
 
-def _pt_phi_for_station(S, station: str, fr: np.ndarray, stat: str) -> np.ndarray:
+def _pt_phi_for_station(
+    S, station: str, fr: np.ndarray, stat: str
+) -> np.ndarray:
     tb = build_phase_tensor_table(
         S,
         recursive=False,
@@ -2766,7 +2822,9 @@ def plot_ss_radar(
 
     def _ensure_polar_axis(axis: plt.Axes | None) -> plt.Axes:
         if axis is None:
-            _, new_ax = plt.subplots(figsize=figsize, subplot_kw={"polar": True})
+            _, new_ax = plt.subplots(
+                figsize=figsize, subplot_kw={"polar": True}
+            )
             return new_ax
         if getattr(axis, "name", "") == "polar":
             return axis
@@ -2963,7 +3021,10 @@ def _ama_residuals_ns(
             w = _w_of_dist(dist, weights, half_window)
             for kf, f in enumerate(fr):
                 vals = np.array(
-                    [LR[j][_nearest_idx(FR[j], np.array([f]))[0]] for j in nbr_ids],
+                    [
+                        LR[j][_nearest_idx(FR[j], np.array([f]))[0]]
+                        for j in nbr_ids
+                    ],
                     dtype=float,
                 )
                 rr = np.repeat(vals, np.maximum(1, (w * 100).astype(int)))
@@ -3123,7 +3184,9 @@ def detect_near_surface(
             source=sites,
         )
 
-    residuals = _ama_residuals_ns(FR, LR, half_window=half_window, weights=weights)
+    residuals = _ama_residuals_ns(
+        FR, LR, half_window=half_window, weights=weights
+    )
     rows = []
     for i, (st, fr, lr, delta) in enumerate(zip(ST, FR, LR, residuals)):
         hf = fr >= f_split
@@ -3172,8 +3235,12 @@ def detect_near_surface(
                 "sigma_hf": σ_hf,
                 "sigma_lf": σ_lf,
                 "ns_index": float(η) if np.isfinite(η) else float("nan"),
-                "slope_hf": float(slope_hf) if np.isfinite(slope_hf) else float("nan"),
-                "slope_lf": float(slope_lf) if np.isfinite(slope_lf) else float("nan"),
+                "slope_hf": float(slope_hf)
+                if np.isfinite(slope_hf)
+                else float("nan"),
+                "slope_lf": float(slope_lf)
+                if np.isfinite(slope_lf)
+                else float("nan"),
                 "gradient_delta": float(grad_delta)
                 if np.isfinite(grad_delta)
                 else float("nan"),

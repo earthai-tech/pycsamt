@@ -156,7 +156,9 @@ def make_html_report(
         status_icon = "&#10003;" if sr.ok else "&#10007;"
         status_c = "ok" if sr.ok else "err"
         params_str = (
-            ", ".join(f"{k}={v!r}" for k, v in sr.params.items()) if sr.params else "—"
+            ", ".join(f"{k}={v!r}" for k, v in sr.params.items())
+            if sr.params
+            else "—"
         )
         thumbs = _plot_thumbs(sr.plots, outdir)
         err_html = ""
@@ -183,7 +185,8 @@ def make_html_report(
     yaml_block = ""
     if pipeline_yaml:
         yaml_block = (
-            "<h2>Pipeline configuration</h2>" f"<pre><code>{pipeline_yaml}</code></pre>"
+            "<h2>Pipeline configuration</h2>"
+            f"<pre><code>{pipeline_yaml}</code></pre>"
         )
 
     # ── Assemble ──────────────────────────────────────────────────────

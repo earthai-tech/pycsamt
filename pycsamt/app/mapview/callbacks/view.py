@@ -36,7 +36,11 @@ def _register_rail(app) -> None:
         view = _RAIL.get(active_id, "map")
 
         def cls(bid):
-            return "mv-rail-btn mv-rail-active" if bid == active_id else "mv-rail-btn"
+            return (
+                "mv-rail-btn mv-rail-active"
+                if bid == active_id
+                else "mv-rail-btn"
+            )
 
         return (
             view,
@@ -60,15 +64,17 @@ def _register_render(app) -> None:
         State(IDs.SESSION_ID, "data"),
         prevent_initial_call=False,
     )
-    def render(store, view_name, controls, theme, lines, fit, masked, session_id):
+    def render(
+        store, view_name, controls, theme, lines, fit, masked, session_id
+    ):
         theme = theme or "light"
         if not store or not store.get("n_stations"):
             return empty_figure(theme), {"display": "flex"}
         view = get_view(session_id)
         if view is None:
-            return empty_figure(theme, "Session data unavailable — reload lines."), {
-                "display": "flex"
-            }
+            return empty_figure(
+                theme, "Session data unavailable — reload lines."
+            ), {"display": "flex"}
         active = (lines or {}).get("active")
         return (
             figure_for(

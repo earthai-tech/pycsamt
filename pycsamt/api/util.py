@@ -107,8 +107,8 @@ class TerminalSize:
             csbi = create_string_buffer(22)
             res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
             if res:
-                (_, _, _, _, _, left, top, right, bottom, _, _) = struct.unpack(
-                    "hhhhHhhhhhh", csbi.raw
+                (_, _, _, _, _, left, top, right, bottom, _, _) = (
+                    struct.unpack("hhhhHhhhhhh", csbi.raw)
                 )
                 sizex = right - left + 1
                 sizey = bottom - top + 1
@@ -134,7 +134,9 @@ class TerminalSize:
 
         def ioctl_GWINSZ(fd):
             try:
-                return struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
+                return struct.unpack(
+                    "hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234")
+                )
             except Exception:
                 return None
 
@@ -490,7 +492,9 @@ def format_text(
 
     # Adjust max_char_text based on the length of the key part: +3 for " : ".
     effective_max_char_text = (
-        max_char_text - len(key_str) + buffer_space if key_str else max_char_text
+        max_char_text - len(key_str) + buffer_space
+        if key_str
+        else max_char_text
     )
     formatted_text = ""
     text = str(text)
@@ -503,7 +507,9 @@ def format_text(
         else:
             # Find the space to break the line, ensuring it doesn't
             # exceed effective_max_char_text
-            break_point = text.rfind(" ", 0, effective_max_char_text - buffer_space)
+            break_point = text.rfind(
+                " ", 0, effective_max_char_text - buffer_space
+            )
 
             if break_point == -1:  # No spaces found, force break
                 break_point = effective_max_char_text - buffer_space
@@ -516,8 +522,12 @@ def format_text(
             key_str = " " * len(key_str)
 
     if add_frame_lines:
-        frame_lines = border_line * max_char_text  # (effective_max_char_text + 1 )
-        formatted_text = frame_lines + "\n" + formatted_text + "\n" + frame_lines
+        frame_lines = (
+            border_line * max_char_text
+        )  # (effective_max_char_text + 1 )
+        formatted_text = (
+            frame_lines + "\n" + formatted_text + "\n" + frame_lines
+        )
 
     return formatted_text
 
@@ -660,7 +670,9 @@ def get_table_width_from(
     .. [1] McKinney, Wes. "Data Structures for Statistical Computing in Python."
            Proceedings of the 9th Python in Science Conference. 2010.
     """
-    border_lines = [line for line in formatted_str.splitlines() if border_char in line]
+    border_lines = [
+        line for line in formatted_str.splitlines() if border_char in line
+    ]
 
     if not border_lines:
         if error == "warn":
@@ -668,7 +680,9 @@ def get_table_width_from(
                 " No border line found in the formatted string.", stacklevel=2
             )
         elif error == "raise":
-            raise ValueError("Error: No border line found in the formatted string.")
+            raise ValueError(
+                "Error: No border line found in the formatted string."
+            )
         return None
 
     if not deep_check:
@@ -828,7 +842,9 @@ def to_snake_case(name, mode="standard"):
     if mode == "soft":
         # Convert to lowercase and replace multiple spaces
         # or non-word characters with a single underscore
-        name = re.sub(r"\W+", " ", name)  # Replace non-word characters with spaces
+        name = re.sub(
+            r"\W+", " ", name
+        )  # Replace non-word characters with spaces
         name = re.sub(r"\s+", " ", name).strip()  # Normalize whitespace
         name = name.lower().replace(" ", "_")  # Convert spaces to underscores
 
@@ -837,7 +853,9 @@ def to_snake_case(name, mode="standard"):
         name = re.sub(
             r"(?<!^)(?=[A-Z])", "_", name
         ).lower()  # Convert CamelCase to snake_case
-        name = re.sub(r"\W+", "_", name)  # Replace non-word characters with '_'
+        name = re.sub(
+            r"\W+", "_", name
+        )  # Replace non-word characters with '_'
         name = re.sub(
             r"_+", "_", name
         )  # Replace multiple underscores with a single '_'
@@ -1130,7 +1148,8 @@ def beautify_dict(d, space=4, key=None, max_char=None):
 
     if not isinstance(d, dict):
         raise TypeError(
-            "Expected input to be a 'dict'," f" received '{type(d).__name__}' instead."
+            "Expected input to be a 'dict',"
+            f" received '{type(d).__name__}' instead."
         )
 
     if max_char is None:
@@ -1226,7 +1245,9 @@ def format_iterable(attr):
 
     def _format_ndarray(array):
         stats = (
-            _numeric_stats(array.flat) if np.issubdtype(array.dtype, np.number) else {}
+            _numeric_stats(array.flat)
+            if np.issubdtype(array.dtype, np.number)
+            else {}
         )
         details = ", ".join([f"{key}={value}" for key, value in stats.items()])
         return f"ndarray ({details}, shape={array.shape}, dtype={array.dtype})"
@@ -1234,7 +1255,9 @@ def format_iterable(attr):
     def _format_pandas_object(obj):
         if isinstance(obj, pd.Series):
             stats = _numeric_stats(obj) if obj.dtype != "object" else {}
-            details = ", ".join([f"{key}={value}" for key, value in stats.items()])
+            details = ", ".join(
+                [f"{key}={value}" for key, value in stats.items()]
+            )
             if details:
                 details += ", "
             return f"Series ({details}len={obj.size}, dtype={obj.dtype})"
@@ -1245,7 +1268,9 @@ def format_iterable(attr):
                 if not numeric_cols.empty
                 else {}
             )
-            details = ", ".join([f"{key}={value}" for key, value in stats.items()])
+            details = ", ".join(
+                [f"{key}={value}" for key, value in stats.items()]
+            )
             if details:
                 details += ", "
             return (

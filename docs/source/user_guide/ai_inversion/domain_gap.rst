@@ -4,15 +4,20 @@ Domain-gap and noise simulation
 ================================
 
 A geological prior generator plus a verified forward solver, as
-described in :doc:`geology_priors` and :doc:`dataset2d`, produces
-clean, noiseless responses. Field data is never that well behaved.
-:mod:`pycsamt.ai.domain_gap` exists to close some of that
-:term:`domain gap` deliberately, by turning a clean
+described in :doc:`geology_priors` and either :doc:`dataset2d` or
+:doc:`dataset3d`, produces clean, noiseless responses. Field data is
+never that well behaved. :mod:`pycsamt.ai.domain_gap` exists to close
+some of that :term:`domain gap` deliberately, by turning a clean
 :class:`~pycsamt.ai.data.contracts.SurveyData` into one with realistic
 :term:`error floor`, :term:`heteroscedastic noise`, :term:`static shift`,
 :term:`galvanic distortion`, missing stations or frequencies, and
 undetected outliers — instead of hoping that a generic noise term
-covers what a real survey actually looks like.
+covers what a real survey actually looks like. Every corruption
+function below operates on the canonical :class:`SurveyData` contract
+alone, with no notion of how many spatial dimensions produced it, so
+the same simulator applies unchanged whether the clean input came from
+a 2-D section or a 3-D volume — domain-gap simulation and forward-solver
+dimensionality are orthogonal concerns.
 
 Two families of corruption
 ------------------------------
@@ -215,7 +220,7 @@ parent seed, the preset name, and compact summaries of the concrete draws:
    'c91ce027d0f0'
 
 The seed reproduces the draw; the hash proves which parameter block was
-used. Both belong in the run manifest described in :doc:`reproducibility`.
+used. Both belong in the run manifest described in :doc:`reporting`.
 
 Fitting corruption from a real survey
 -------------------------------------------

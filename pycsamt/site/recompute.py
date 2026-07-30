@@ -209,7 +209,9 @@ class EDIRecomputer:
     write: bool = True
     manifest_csv: bool | str | Path = True
     rotate_angle: float | None = None
-    rotate_components: Iterable[str] = field(default_factory=lambda: ("Z", "Tip"))
+    rotate_components: Iterable[str] = field(
+        default_factory=lambda: ("Z", "Tip")
+    )
     fmin: float | None = None
     fmax: float | None = None
     keep_freq: Iterable[int] | None = None
@@ -224,9 +226,11 @@ class EDIRecomputer:
     copy: bool = True
     progress: bool | str = False
     verbose: int = 0
-    progress_callback: Callable[[int, int, str, str, str], None] | None = field(
-        default=None,
-        repr=False,
+    progress_callback: Callable[[int, int, str, str, str], None] | None = (
+        field(
+            default=None,
+            repr=False,
+        )
     )
 
     def run(self, source: Any) -> EDIRecomputeResult:
@@ -651,7 +655,9 @@ def _discover_path_groups(
     for child in sorted(p.iterdir()):
         if not child.is_dir():
             continue
-        files = sorted(child.rglob("*.edi") if recursive else child.glob("*.edi"))
+        files = sorted(
+            child.rglob("*.edi") if recursive else child.glob("*.edi")
+        )
         if files:
             child_groups.append(
                 _LineGroup(

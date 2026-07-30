@@ -151,7 +151,9 @@ overwrite_option.__doc__ = (
 n_jobs_option.__doc__ = (
     "Add the positive ``--jobs`` parallel-worker option to a Click command."
 )
-no_cache_option.__doc__ = "Add the ``--no-cache`` processing option to a Click command."
+no_cache_option.__doc__ = (
+    "Add the ``--no-cache`` processing option to a Click command."
+)
 
 # ---------------------------------------------------------------------------
 # Convenience bundle: options attached to nearly every command

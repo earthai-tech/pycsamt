@@ -334,7 +334,9 @@ def simulate_gps_drift(
     """
     n_samples = int(n_samples)
     rng = _rng(seed)
-    reference = start_time + np.arange(max(n_samples, 0)) * float(sample_interval_s)
+    reference = start_time + np.arange(max(n_samples, 0)) * float(
+        sample_interval_s
+    )
     elapsed = reference - start_time
     drift_s = (float(drift_ppm) * 1e-6) * elapsed
     jitter_s = rng.normal(0.0, float(jitter_ms) / 1000.0, size=reference.size)

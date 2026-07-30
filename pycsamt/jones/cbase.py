@@ -142,7 +142,11 @@ class JParseMixin:
 
             # directory -> (r)glob, filtered to J_SUFFIXES (.j/.jones/.txt/.dat)
             if p.exists() and p.is_dir():
-                it = p.rglob("*") if getattr(self, "recursive", True) else p.glob("*")
+                it = (
+                    p.rglob("*")
+                    if getattr(self, "recursive", True)
+                    else p.glob("*")
+                )
                 any_yielded = False
                 # Directory enumeration order (os.scandir/readdir) is
                 # filesystem-defined, not insertion order -- sort so
@@ -160,7 +164,11 @@ class JParseMixin:
             if _is_glob(str(p)):
                 if p.is_absolute():
                     parent, name = p.parent, p.name
-                    it = parent.rglob(name) if "**" in name else parent.glob(name)
+                    it = (
+                        parent.rglob(name)
+                        if "**" in name
+                        else parent.glob(name)
+                    )
                 else:
                     pat = str(p)
                     it = base.rglob(pat) if "**" in pat else base.glob(pat)
@@ -405,7 +413,9 @@ class JCoreParser(JParseMixin):
 
         jfs: list[JFile] = []
         src_list = (
-            sources if isinstance(sources, list) else list(self._iter_paths(sources))
+            sources
+            if isinstance(sources, list)
+            else list(self._iter_paths(sources))
         )
         for p in self._iter_j_files(src_list):
             res = self._read_one(p)

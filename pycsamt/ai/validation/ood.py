@@ -55,9 +55,7 @@ def _validate_2d(name: str, value: Any) -> np.ndarray:
     return array
 
 
-def _mahalanobis_scores(
-    x: np.ndarray, reference: np.ndarray
-) -> np.ndarray:
+def _mahalanobis_scores(x: np.ndarray, reference: np.ndarray) -> np.ndarray:
     """Return the Mahalanobis distance of each row of x from the
     reference set's mean and covariance.
     """
@@ -104,12 +102,7 @@ def _self_knn_scores(reference: np.ndarray, k: int) -> np.ndarray:
     neighbour among the other reference rows, excluding itself.
     """
     upper = reference.shape[0] - 1
-    if (
-        not isinstance(k, int)
-        or isinstance(k, bool)
-        or k < 1
-        or k > upper
-    ):
+    if not isinstance(k, int) or isinstance(k, bool) or k < 1 or k > upper:
         raise ValueError(
             f"k must be an integer in [1, {upper}] for "
             "self-referential k-NN scoring."
@@ -156,8 +149,14 @@ def ood_score(
     --------
     >>> import numpy as np
     >>> reference = np.array(
-    ...     [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0],
-    ...      [-1.0, 0.0], [0.0, -1.0], [0.5, 0.5]]
+    ...     [
+    ...         [0.0, 0.0],
+    ...         [1.0, 0.0],
+    ...         [0.0, 1.0],
+    ...         [-1.0, 0.0],
+    ...         [0.0, -1.0],
+    ...         [0.5, 0.5],
+    ...     ]
     ... )
     >>> x = np.array([[0.0, 0.0], [50.0, 50.0]])
     >>> scores = ood_score(x, reference, method="knn", k=2)
@@ -203,8 +202,14 @@ class OODReport:
     --------
     >>> import numpy as np
     >>> reference = np.array(
-    ...     [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0],
-    ...      [-1.0, 0.0], [0.0, -1.0], [0.5, 0.5]]
+    ...     [
+    ...         [0.0, 0.0],
+    ...         [1.0, 0.0],
+    ...         [0.0, 1.0],
+    ...         [-1.0, 0.0],
+    ...         [0.0, -1.0],
+    ...         [0.5, 0.5],
+    ...     ]
     ... )
     >>> x = np.array([[0.0, 0.0], [50.0, 50.0]])
     >>> report = flag_out_of_distribution(
@@ -230,21 +235,15 @@ class OODReport:
             raise ValueError("scores must be a non-empty 1-D array.")
         flagged = np.asarray(self.flagged, dtype=bool)
         if flagged.shape != scores.shape:
-            raise ValueError(
-                "flagged must have the same shape as scores."
-            )
+            raise ValueError("flagged must have the same shape as scores.")
         threshold = float(self.threshold)
         if not np.isfinite(threshold):
             raise ValueError("threshold must be finite.")
-        quantile = (
-            None if self.quantile is None else float(self.quantile)
-        )
+        quantile = None if self.quantile is None else float(self.quantile)
         if quantile is not None and not (0.0 < quantile < 1.0):
             raise ValueError("quantile must be within (0, 1).")
         if self.n_reference < 1 or self.n_features < 1:
-            raise ValueError(
-                "n_reference and n_features must be positive."
-            )
+            raise ValueError("n_reference and n_features must be positive.")
         object.__setattr__(self, "scores", _readonly(scores))
         object.__setattr__(self, "flagged", _readonly(flagged, bool))
         object.__setattr__(self, "threshold", threshold)
@@ -315,8 +314,14 @@ def flag_out_of_distribution(
     --------
     >>> import numpy as np
     >>> reference = np.array(
-    ...     [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0],
-    ...      [-1.0, 0.0], [0.0, -1.0], [0.5, 0.5]]
+    ...     [
+    ...         [0.0, 0.0],
+    ...         [1.0, 0.0],
+    ...         [0.0, 1.0],
+    ...         [-1.0, 0.0],
+    ...         [0.0, -1.0],
+    ...         [0.5, 0.5],
+    ...     ]
     ... )
     >>> x = np.array([[0.0, 0.0], [50.0, 50.0]])
     >>> report = flag_out_of_distribution(x, reference, k=1)

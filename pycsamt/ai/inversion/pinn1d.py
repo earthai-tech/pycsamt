@@ -128,7 +128,9 @@ class PINNInverter1D(BasePINNInverter):
         verbose: int = 0,
     ) -> None:
         if solver not in ("mt1d", "csamt1d"):
-            raise ValueError(f"solver must be 'mt1d' or 'csamt1d'; got {solver!r}.")
+            raise ValueError(
+                f"solver must be 'mt1d' or 'csamt1d'; got {solver!r}."
+            )
         super().__init__(
             n_layers=n_layers,
             depth_max=depth_max,

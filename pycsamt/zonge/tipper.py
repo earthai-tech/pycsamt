@@ -61,7 +61,9 @@ class Tipper(AVGComponentBase):
         verbose: bool = False,
     ) -> None:
         """Initializes the Tipper component."""
-        super().__init__(data=data, meta=meta, name=name or "Tipper", verbose=verbose)
+        super().__init__(
+            data=data, meta=meta, name=name or "Tipper", verbose=verbose
+        )
 
     def read(
         self,
@@ -88,7 +90,9 @@ class Tipper(AVGComponentBase):
             if col not in df.columns:
                 df[col] = np.nan
                 if self.verbose:
-                    self._logger.debug(f"'{col}' not in source. Creating empty column.")
+                    self._logger.debug(
+                        f"'{col}' not in source. Creating empty column."
+                    )
 
         # Ensure coordinates exist for consistency
         if "station" not in df.columns:
@@ -162,10 +166,18 @@ class Tipper(AVGComponentBase):
             return "Tipper(status=empty)"
 
         n_st = (
-            self._frame["station"].nunique() if "station" in self._frame.columns else 0
+            self._frame["station"].nunique()
+            if "station" in self._frame.columns
+            else 0
         )
-        n_frq = self._frame["freq"].nunique() if "freq" in self._frame.columns else 0
-        return f"Tipper(rows={len(self._frame)}, stations={n_st}, freqs={n_frq})"
+        n_frq = (
+            self._frame["freq"].nunique()
+            if "freq" in self._frame.columns
+            else 0
+        )
+        return (
+            f"Tipper(rows={len(self._frame)}, stations={n_st}, freqs={n_frq})"
+        )
 
     def __repr__(self) -> str:
         """Provide an unambiguous developer representation."""

@@ -70,7 +70,9 @@ class QCDashboardWindow(PanelWindow):
         self._combo_category.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_category.currentIndexChanged.connect(self._on_category_changed)
+        self._combo_category.currentIndexChanged.connect(
+            self._on_category_changed
+        )
         lay_cat.addWidget(self._combo_category)
         layout.addWidget(grp_cat)
 
@@ -96,7 +98,9 @@ class QCDashboardWindow(PanelWindow):
         self._btn_run = icon_button(
             "↻  Run / Refresh", "qc", "Render the selected QC plot"
         )
-        self._btn_export = icon_button("⬆  Export…", "export", "Save figure to file")
+        self._btn_export = icon_button(
+            "⬆  Export…", "export", "Save figure to file"
+        )
         self._btn_run.clicked.connect(self._on_run)
         self._btn_export.clicked.connect(self._on_export)
         lay_act.addWidget(self._btn_run)
@@ -207,7 +211,8 @@ class QCDashboardWindow(PanelWindow):
             plot_label, fn_name, _has_ax = plots[plot_row]
             desc = describe_plot(fn_name)
             self._desc_lbl.setText(
-                f"<b>{plot_label}</b><br/>" f"<small style='color:#888'>{desc}</small>"
+                f"<b>{plot_label}</b><br/>"
+                f"<small style='color:#888'>{desc}</small>"
             )
         except (IndexError, Exception):
             self._desc_lbl.setText("")

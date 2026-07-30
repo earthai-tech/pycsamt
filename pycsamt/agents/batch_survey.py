@@ -117,12 +117,16 @@ class BatchSurveyAgent(BaseAgent):
 
         # normalise to dict
         if isinstance(profiles_raw, (list, tuple)):
-            profiles = {f"profile_{i:02d}": str(p) for i, p in enumerate(profiles_raw)}
+            profiles = {
+                f"profile_{i:02d}": str(p) for i, p in enumerate(profiles_raw)
+            }
         else:
             profiles = {str(k): str(v) for k, v in profiles_raw.items()}
 
         if not profiles:
-            return AgentResult.failed("Empty profiles dict.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "Empty profiles dict.", elapsed=time.time() - t0
+            )
 
         workflow = str(input_data.get("workflow", self.workflow))
         n_jobs = int(input_data.get("n_jobs", self.n_jobs))
@@ -168,7 +172,8 @@ class BatchSurveyAgent(BaseAgent):
             from joblib import Parallel, delayed
 
             pairs = Parallel(n_jobs=n_jobs, prefer="threads")(
-                delayed(_run_one)(name, path) for name, path in profiles.items()
+                delayed(_run_one)(name, path)
+                for name, path in profiles.items()
             )
         except ImportError:
             warnings.append("joblib not installed — processing sequentially.")
@@ -178,7 +183,9 @@ class BatchSurveyAgent(BaseAgent):
             profile_results[name] = result
 
         # ── summary table ─────────────────────────────────────────────────
-        n_success = sum(1 for r in profile_results.values() if r.status != "failed")
+        n_success = sum(
+            1 for r in profile_results.values() if r.status != "failed"
+        )
         n_failed = len(profile_results) - n_success
 
         rows = []
@@ -338,7 +345,8 @@ def _plot_batch_summary(profile_results: dict[str, Any]) -> Any:
     names = list(profile_results.keys())
     elapsed = [profile_results[n].elapsed_seconds for n in names]
     colors = [
-        "#27ae60" if profile_results[n].status != "failed" else "#e74c3c" for n in names
+        "#27ae60" if profile_results[n].status != "failed" else "#e74c3c"
+        for n in names
     ]
 
     fig, ax = plt.subplots(figsize=(6, max(3, len(names) * 0.35)))

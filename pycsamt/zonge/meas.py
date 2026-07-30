@@ -91,7 +91,9 @@ class CompMeas(AVGComponentBase):
     required: set[str] = set()  # flexible on input
     provides: set[str] = {"comp"}  # always provides comp
 
-    def read(self, source: pd.DataFrame, meta: Mapping[str, Any] | None = None) -> None:
+    def read(
+        self, source: pd.DataFrame, meta: Mapping[str, Any] | None = None
+    ) -> None:
         """
         Ensure a normalised ``comp`` column exists.
 
@@ -199,7 +201,9 @@ class Amps(AVGComponentBase):
         super().__init__(data=data, meta=meta, name=name)
         self._stats = _AmpStats()
 
-    def read(self, source: pd.DataFrame, meta: Mapping[str, Any] | None = None) -> None:
+    def read(
+        self, source: pd.DataFrame, meta: Mapping[str, Any] | None = None
+    ) -> None:
         """
         Parse *source* and populate the ``amps`` column as float.
 
@@ -255,7 +259,9 @@ class Amps(AVGComponentBase):
         """
         Return a small table with context + ``amps`` only.
         """
-        keep = [c for c in ("station", "freq", "comp", "amps") if c in self._frame]
+        keep = [
+            c for c in ("station", "freq", "comp", "amps") if c in self._frame
+        ]
         return self._frame.loc[:, keep].copy()
 
     def to_xarray(
@@ -284,7 +290,9 @@ class Amps(AVGComponentBase):
         Serialise as a compact CSV fragment.  We keep context
         columns if present so the block remains useful alone.
         """
-        cols = [c for c in ("station", "freq", "comp", "amps") if c in self._frame]
+        cols = [
+            c for c in ("station", "freq", "comp", "amps") if c in self._frame
+        ]
         if not cols:
             return []
         return self._write_csv_block(
@@ -353,7 +361,9 @@ class Frequency(AVGComponentBase):
 
         # vector-like → build a tiny tidy frame
         if isinstance(source, (list, tuple, np.ndarray, pd.Series)):
-            vec = pd.to_numeric(pd.Series(source, dtype="float64"), errors="coerce")
+            vec = pd.to_numeric(
+                pd.Series(source, dtype="float64"), errors="coerce"
+            )
             df = pd.DataFrame({"freq": vec})
             if "station" in kws:
                 df["station"] = kws["station"]
@@ -380,7 +390,10 @@ class Frequency(AVGComponentBase):
 
         # robust numeric parsing ('.5' → 0.5, '*'/' ' → NaN)
         df["freq"] = (
-            df["freq"].astype(str).str.strip().replace({"": np.nan, "*": np.nan})
+            df["freq"]
+            .astype(str)
+            .str.strip()
+            .replace({"": np.nan, "*": np.nan})
         )
         df["freq"] = pd.to_numeric(df["freq"], errors="coerce")
 
@@ -463,7 +476,9 @@ class Frequency(AVGComponentBase):
         return int(self.unique().size)
 
     @staticmethod
-    def logspace(decade_start: int, decade_stop: int, n_points: int) -> np.ndarray:
+    def logspace(
+        decade_start: int, decade_stop: int, n_points: int
+    ) -> np.ndarray:
         """
         Canonical log-spaced grid (10**start → 10**stop), inclusive.
         """

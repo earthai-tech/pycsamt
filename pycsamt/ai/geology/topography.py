@@ -56,12 +56,18 @@ def _align_sites(
     for index, name in enumerate(names):
         key = str(name).strip().casefold()
         if key in lookup:
-            raise ValueError(f"duplicate station name after normalization: {name!r}.")
+            raise ValueError(
+                f"duplicate station name after normalization: {name!r}."
+            )
         lookup[key] = index
     requested_names = tuple(str(name).strip() for name in requested)
-    missing = [name for name in requested_names if name.casefold() not in lookup]
+    missing = [
+        name for name in requested_names if name.casefold() not in lookup
+    ]
     if missing:
-        raise ValueError(f"topography is missing requested stations: {missing}.")
+        raise ValueError(
+            f"topography is missing requested stations: {missing}."
+        )
     indices = np.asarray(
         [lookup[name.casefold()] for name in requested_names], dtype=int
     )
@@ -127,7 +133,9 @@ class TopographicSurface:
         )
         elevation = np.asarray(self.elevation_m, dtype=float)
         if elevation.shape != expected or not np.all(np.isfinite(elevation)):
-            raise ValueError(f"elevation_m must be finite and shaped {expected}.")
+            raise ValueError(
+                f"elevation_m must be finite and shaped {expected}."
+            )
         reference = float(self.reference_elevation_m)
         if not np.isfinite(reference):
             raise ValueError("reference_elevation_m must be finite.")
@@ -150,7 +158,9 @@ class TopographicSurface:
             if coordinates.ndim == 1 and width == 1:
                 coordinates = coordinates[:, None]
             if coordinates.ndim != 2 or coordinates.shape[1] != width:
-                raise ValueError(f"sample_coordinates_m must have shape (n, {width}).")
+                raise ValueError(
+                    f"sample_coordinates_m must have shape (n, {width})."
+                )
             if (
                 samples.shape != (len(coordinates),)
                 or not np.all(np.isfinite(coordinates))
@@ -164,9 +174,13 @@ class TopographicSurface:
                 or len(set(names)) != len(names)
                 or any(not name for name in names)
             ):
-                raise ValueError("station_names must uniquely label every sample.")
+                raise ValueError(
+                    "station_names must uniquely label every sample."
+                )
         elif names:
-            raise ValueError("station_names require sample coordinates and elevations.")
+            raise ValueError(
+                "station_names require sample coordinates and elevations."
+            )
         object.__setattr__(self, "elevation_m", _readonly(elevation))
         object.__setattr__(self, "reference_elevation_m", reference)
         object.__setattr__(self, "vertical_datum", datum)
@@ -235,7 +249,9 @@ class TopographicSurface:
         64
         """
         digest = hashlib.sha256()
-        digest.update(np.ascontiguousarray(self.elevation_m, dtype="<f8").tobytes())
+        digest.update(
+            np.ascontiguousarray(self.elevation_m, dtype="<f8").tobytes()
+        )
         digest.update(canonical_hash(self.provenance()).encode("ascii"))
         return digest.hexdigest()
 
@@ -256,7 +272,9 @@ class TopographicSurface:
         (2, 2)
         """
         horizontal_rank = self.elevation_m.ndim
-        depth = self.grid.z_m.reshape((len(self.grid.z_m),) + (1,) * horizontal_rank)
+        depth = self.grid.z_m.reshape(
+            (len(self.grid.z_m),) + (1,) * horizontal_rank
+        )
         return _readonly(depth - self.surface_depth_m)
 
     def earth_mask(self) -> np.ndarray:
@@ -415,7 +433,9 @@ class TopographicSurface:
         np.savez_compressed(
             target,
             elevation_m=self.elevation_m,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 
@@ -449,7 +469,9 @@ class TopographicSurface:
         with np.load(Path(path), allow_pickle=False) as archive:
             state = json.loads(str(archive["provenance_json"].item()))
             if state.get("schema_version") != 1:
-                raise ValueError("unsupported TopographicSurface schema version.")
+                raise ValueError(
+                    "unsupported TopographicSurface schema version."
+                )
             return cls(
                 GeologyGrid.from_dict(state["grid"]),
                 archive["elevation_m"],
@@ -537,7 +559,9 @@ def interpolate_topography(
             raster = values[index]
         elif method == "cubic":
             if len(x) < 4:
-                raise ValueError("2-D cubic topography needs at least four samples.")
+                raise ValueError(
+                    "2-D cubic topography needs at least four samples."
+                )
             from scipy.interpolate import interp1d
 
             raster = interp1d(
@@ -548,10 +572,14 @@ def interpolate_topography(
                 fill_value=(values[0], values[-1]),
             )(grid.x_m)
         else:
-            raster = np.interp(grid.x_m, x, values, left=values[0], right=values[-1])
+            raster = np.interp(
+                grid.x_m, x, values, left=values[0], right=values[-1]
+            )
     else:
         if len(np.unique(coordinates, axis=0)) != len(coordinates):
-            raise ValueError("3-D projected sample coordinates must be unique.")
+            raise ValueError(
+                "3-D projected sample coordinates must be unique."
+            )
         if len(coordinates) < 3 and method != "nearest":
             raise ValueError(
                 "3-D linear/cubic topography needs at least three samples."
@@ -671,9 +699,13 @@ def topography_from_sites(
         )
     if coordinates_m is None:
         if grid.dimension == 3:
-            raise ValueError("3-D Sites topography requires projected coordinates_m.")
+            raise ValueError(
+                "3-D Sites topography requires projected coordinates_m."
+            )
         if len(chainage) > 1 and np.any(np.diff(chainage) <= 0):
-            raise ValueError("Sites chainage must increase in requested station order.")
+            raise ValueError(
+                "Sites chainage must increase in requested station order."
+            )
         origin = (
             grid.extent_m["x"][0]
             if profile_origin_m is None
@@ -702,9 +734,9 @@ def topography_from_sites(
                 if profile_origin_m is None
                 else float(profile_origin_m)
             )
-            coordinates = (origin + np.concatenate([[0.0], np.cumsum(segments)]))[
-                :, None
-            ]
+            coordinates = (
+                origin + np.concatenate([[0.0], np.cumsum(segments)])
+            )[:, None]
     return interpolate_topography(
         grid,
         coordinates,

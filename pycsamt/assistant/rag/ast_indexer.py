@@ -50,7 +50,9 @@ def _signature(node: ast.AST) -> str:
                 bases.append(ast.unparse(b))
             except Exception:
                 pass
-        return f"class {name}({', '.join(bases)})" if bases else f"class {name}"
+        return (
+            f"class {name}({', '.join(bases)})" if bases else f"class {name}"
+        )
     try:
         args = ast.unparse(node.args)  # type: ignore[attr-defined]
     except Exception:
@@ -102,7 +104,9 @@ def _extract_params(node: ast.AST) -> list[dict[str, str | None]]:
         if arg.arg in ("self", "cls"):
             continue
         default = (
-            _unparse(defaults[i - first_default]) if i - first_default >= 0 else None
+            _unparse(defaults[i - first_default])
+            if i - first_default >= 0
+            else None
         )
         out.append(
             {
@@ -112,7 +116,9 @@ def _extract_params(node: ast.AST) -> list[dict[str, str | None]]:
             }
         )
     if a.vararg:
-        out.append({"name": f"*{a.vararg.arg}", "annotation": None, "default": None})
+        out.append(
+            {"name": f"*{a.vararg.arg}", "annotation": None, "default": None}
+        )
     for arg, dflt in zip(a.kwonlyargs, a.kw_defaults):
         out.append(
             {
@@ -122,7 +128,9 @@ def _extract_params(node: ast.AST) -> list[dict[str, str | None]]:
             }
         )
     if a.kwarg:
-        out.append({"name": f"**{a.kwarg.arg}", "annotation": None, "default": None})
+        out.append(
+            {"name": f"**{a.kwarg.arg}", "annotation": None, "default": None}
+        )
     return out
 
 
@@ -260,7 +268,8 @@ def _make_chunk(
         symbol=symbol,
         module=module,
         title=name,
-        workflow=infer_workflow(rel_path, symbol, doc) or workflow_for_path(rel_path),
+        workflow=infer_workflow(rel_path, symbol, doc)
+        or workflow_for_path(rel_path),
         priority=priority_for(rel_path),
         metadata={
             "name": name,

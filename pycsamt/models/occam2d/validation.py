@@ -126,7 +126,9 @@ def is_mesh_file(path: PathLike) -> bool:
             return True
         # Control line: first two tokens are integers (could be line 1 or 2)
         tokens = ln.split()
-        if len(tokens) >= 2 and all(t.lstrip("-").isdigit() for t in tokens[:2]):
+        if len(tokens) >= 2 and all(
+            t.lstrip("-").isdigit() for t in tokens[:2]
+        ):
             return True
     return False
 

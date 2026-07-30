@@ -81,7 +81,9 @@ _NUMERIC_REPLACE = {"*": np.nan, "nan": np.nan, "NaN": np.nan, "": np.nan}
 _COMMENT_PREFIXES = ("\\", "/", "!", '"')
 
 
-def find_and_rename_column(df: pd.DataFrame, canonical_name: str) -> pd.DataFrame:
+def find_and_rename_column(
+    df: pd.DataFrame, canonical_name: str
+) -> pd.DataFrame:
     """
     Find a column by any of its aliases and rename it to the
     canonical name.
@@ -184,7 +186,9 @@ def classify_avg_format(lines: Sequence[str]) -> int:
 
 def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
     """Parse legacy fixed‑width (kind‑1) AVG table."""
-    idx = next((i for i, ln in enumerate(lines) if _RX_K1_HEADER.search(ln)), None)
+    idx = next(
+        (i for i, ln in enumerate(lines) if _RX_K1_HEADER.search(ln)), None
+    )
     if idx is None:
         raise AvgFileError("Header row not found in kind‑1 file")
 
@@ -310,7 +314,8 @@ def _parse_kind2(lines: Sequence[str]) -> tuple[pd.DataFrame, dict[str, str]]:
             # Assemble header + rows for this block while skipping
             # inline comment lines that may appear among rows.
             table_txt = "\n".join(
-                [lines[start]] + [s for s in lines[start + 1 : j] if not _is_comment(s)]
+                [lines[start]]
+                + [s for s in lines[start + 1 : j] if not _is_comment(s)]
             )
 
             # Parse CSV with forgiving whitespace.  Convert numeric
@@ -563,7 +568,9 @@ def to_xarray(
     # Determine which coord columns we actually have.
     idx_cols = [c for c in coords if c in df.columns]
     if not idx_cols:
-        raise AvgDataError(f"No coordinate columns found. Expected any of: {coords!r}")
+        raise AvgDataError(
+            f"No coordinate columns found. Expected any of: {coords!r}"
+        )
 
     # Light type normalisation: make station/freq numeric when
     # possible; keep comp as string/categorical.
@@ -774,7 +781,9 @@ def write_avg(
             block = block.drop(columns=[col])
 
     # canonical → kind-2 casing (patch a couple of gaps)
-    canon_to_modern = {k: v for k, v in _CANON_TO_MODERN.items() if k in block.columns}
+    canon_to_modern = {
+        k: v for k, v in _CANON_TO_MODERN.items() if k in block.columns
+    }
     block.rename(columns=canon_to_modern, inplace=True)
 
     def _order_cols(df: pd.DataFrame) -> list[str]:
@@ -813,7 +822,9 @@ def write_avg(
             if "rx_length" in block.columns:
                 rx_lines.append(f"$Rx.Length{eq}{block['rx_length'].iloc[0]}")
             # If comp is uniform within the group, stamp it
-            comp_col = next((c for c in block.columns if c.lower() == "comp"), None)
+            comp_col = next(
+                (c for c in block.columns if c.lower() == "comp"), None
+            )
             if comp_col is not None:
                 vals = sub[comp_col].dropna().unique()
                 if len(vals) == 1:
@@ -847,16 +858,23 @@ def _format_aligned_csv(df: pd.DataFrame, float_fmt: str, na_rep: str) -> str:
                 lambda x: na_rep if pd.isna(x) else float_fmt % x
             )
         else:
-            df_str[col] = df[col].apply(lambda x: na_rep if pd.isna(x) else str(x))
+            df_str[col] = df[col].apply(
+                lambda x: na_rep if pd.isna(x) else str(x)
+            )
 
     # Calculate max width for each column
-    widths = {col: max(df_str[col].str.len().max(), len(col)) for col in df_str.columns}
+    widths = {
+        col: max(df_str[col].str.len().max(), len(col))
+        for col in df_str.columns
+    }
 
     # Format header and rows
     header = ",".join(f"{col:<{widths[col]}}" for col in df.columns)
     rows = [header]
     for _, row in df_str.iterrows():
-        rows.append(",".join(f"{val:<{widths[col]}}" for col, val in row.items()))
+        rows.append(
+            ",".join(f"{val:<{widths[col]}}" for col, val in row.items())
+        )
     return "\n".join(rows)
 
 
@@ -1045,7 +1063,12 @@ def read_stn(path: str | Path) -> pd.DataFrame:
     if header_idx >= 0:
         raw_header = lines[header_idx]
         # strip common quotes (", “, ”) and extra whitespace
-        cleaned = raw_header.replace('"', "").replace("“", "").replace("”", "").strip()
+        cleaned = (
+            raw_header.replace('"', "")
+            .replace("“", "")
+            .replace("”", "")
+            .strip()
+        )
         header = [h.strip() for h in re.split(delim, cleaned)]
         data_lines = lines[header_idx + 1 :]
     else:

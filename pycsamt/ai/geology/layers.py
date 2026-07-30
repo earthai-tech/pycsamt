@@ -72,20 +72,28 @@ def _child_seed(root: int, label: str) -> int:
     return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big")
 
 
-def _sequence(value: float | Sequence[float], count: int, name: str) -> np.ndarray:
+def _sequence(
+    value: float | Sequence[float], count: int, name: str
+) -> np.ndarray:
     if np.isscalar(value):
         result = np.full(count, float(value), dtype=float)
     else:
         result = np.asarray(value, dtype=float)
         if result.shape != (count,):
-            raise ValueError(f"{name} must be scalar or contain {count} values.")
+            raise ValueError(
+                f"{name} must be scalar or contain {count} values."
+            )
     if not np.all(np.isfinite(result)):
         raise ValueError(f"{name} must contain finite values.")
     return result
 
 
 def _horizontal_shape(grid: GeologyGrid) -> tuple[int, ...]:
-    return (len(grid.x_m),) if grid.dimension == 2 else (len(grid.y_m), len(grid.x_m))
+    return (
+        (len(grid.x_m),)
+        if grid.dimension == 2
+        else (len(grid.y_m), len(grid.x_m))
+    )
 
 
 def _horizontal_gaussian(
@@ -127,11 +135,16 @@ def _horizontal_gaussian(
     values = np.fft.ifftn(np.fft.fftn(white) * np.exp(-0.25 * exponent)).real
     if starts is not None:
         values = values[
-            tuple(slice(start, start + size) for start, size in zip(starts, shape))
+            tuple(
+                slice(start, start + size)
+                for start, size in zip(starts, shape)
+            )
         ]
     deviation = float(np.std(values))
     if deviation <= np.finfo(float).eps:
-        raise ValueError("interface correlation produced a numerically constant field.")
+        raise ValueError(
+            "interface correlation produced a numerically constant field."
+        )
     return (values - np.mean(values)) / deviation
 
 
@@ -150,9 +163,13 @@ def _project_interfaces(
         upper = bottom - minimum * (count - index)
         projected[index] = np.clip(projected[index], lower, upper)
     for index in range(1, count):
-        projected[index] = np.maximum(projected[index], projected[index - 1] + minimum)
+        projected[index] = np.maximum(
+            projected[index], projected[index - 1] + minimum
+        )
     for index in range(count - 2, -1, -1):
-        projected[index] = np.minimum(projected[index], projected[index + 1] - minimum)
+        projected[index] = np.minimum(
+            projected[index], projected[index + 1] - minimum
+        )
     changed = ~np.isclose(projected, surfaces, rtol=0.0, atol=1e-10)
     return projected, float(np.mean(changed))
 
@@ -209,18 +226,26 @@ class ElectricalLayer:
             raise ValueError("resistivity_ohm_m must be finite and positive.")
         if not np.isfinite(deviation) or deviation < 0:
             raise ValueError("log10_std must be finite and non-negative.")
-        if deviation > 0 and not isinstance(self.heterogeneity, GaussianCorrelation):
-            raise ValueError("positive log10_std requires a GaussianCorrelation.")
+        if deviation > 0 and not isinstance(
+            self.heterogeneity, GaussianCorrelation
+        ):
+            raise ValueError(
+                "positive log10_std requires a GaussianCorrelation."
+            )
         if (
             deviation == 0
             and self.heterogeneity is not None
             and not isinstance(self.heterogeneity, GaussianCorrelation)
         ):
-            raise TypeError("heterogeneity must be a GaussianCorrelation or None.")
+            raise TypeError(
+                "heterogeneity must be a GaussianCorrelation or None."
+            )
         bounds = self.resistivity_bounds_ohm_m
         if bounds is not None:
             if len(bounds) != 2:
-                raise ValueError("resistivity_bounds_ohm_m must contain two values.")
+                raise ValueError(
+                    "resistivity_bounds_ohm_m must contain two values."
+                )
             bounds = (float(bounds[0]), float(bounds[1]))
             if (
                 not np.all(np.isfinite(bounds))
@@ -308,7 +333,9 @@ class ElectricalLayer:
             data["name"],
             data["resistivity_ohm_m"],
             data.get("log10_std", 0.0),
-            None if correlation is None else GaussianCorrelation.from_dict(correlation),
+            None
+            if correlation is None
+            else GaussianCorrelation.from_dict(correlation),
             data.get("resistivity_bounds_ohm_m"),
         )
 
@@ -407,7 +434,9 @@ class LayeredGeology:
         minimum = float(self.minimum_thickness_m)
         adjusted = float(self.adjusted_interface_fraction)
         if not np.isfinite(minimum) or minimum <= 0:
-            raise ValueError("minimum_thickness_m must be finite and positive.")
+            raise ValueError(
+                "minimum_thickness_m must be finite and positive."
+            )
         if not np.isfinite(adjusted) or adjusted < 0 or adjusted > 1:
             raise ValueError("adjusted_interface_fraction must be in [0, 1].")
         if self.boundary not in {"reflect", "periodic"}:
@@ -436,12 +465,16 @@ class LayeredGeology:
             raise ValueError(
                 "interfaces violate model boundaries or minimum thickness."
             )
-        depth = self.grid.z_m.reshape((len(self.grid.z_m),) + (1,) * len(horizontal))
+        depth = self.grid.z_m.reshape(
+            (len(self.grid.z_m),) + (1,) * len(horizontal)
+        )
         expected_indices = np.zeros(self.grid.shape, dtype=np.int16)
         for surface in interfaces:
             expected_indices += depth >= surface
         if not np.array_equal(indices, expected_indices):
-            raise ValueError("layer_index is inconsistent with interface depths.")
+            raise ValueError(
+                "layer_index is inconsistent with interface depths."
+            )
         for index, layer in enumerate(layers):
             values = resistivity[indices == index]
             if values.size == 0:
@@ -516,7 +549,9 @@ class LayeredGeology:
         digest.update(
             np.ascontiguousarray(self.resistivity_ohm_m, dtype="<f8").tobytes()
         )
-        digest.update(np.ascontiguousarray(self.layer_index, dtype="<i2").tobytes())
+        digest.update(
+            np.ascontiguousarray(self.layer_index, dtype="<i2").tobytes()
+        )
         digest.update(
             np.ascontiguousarray(self.interface_depth_m, dtype="<f8").tobytes()
         )
@@ -562,8 +597,12 @@ class LayeredGeology:
             except ValueError as exc:
                 raise KeyError(f"unknown layer {layer!r}.") from exc
         else:
-            if not isinstance(layer, (int, np.integer)) or isinstance(layer, bool):
-                raise TypeError("layer must be an integer index or exact name.")
+            if not isinstance(layer, (int, np.integer)) or isinstance(
+                layer, bool
+            ):
+                raise TypeError(
+                    "layer must be an integer index or exact name."
+                )
             index = int(layer)
             if index < 0 or index >= self.n_layers:
                 raise IndexError(
@@ -602,7 +641,9 @@ class LayeredGeology:
             or index < 0
             or index >= self.n_layers - 1
         ):
-            raise IndexError(f"interface index must be in [0, {self.n_layers - 1}).")
+            raise IndexError(
+                f"interface index must be in [0, {self.n_layers - 1})."
+            )
         return self.interface_depth_m[index]
 
     def summary(self) -> dict[str, Any]:
@@ -711,7 +752,9 @@ class LayeredGeology:
             interface_depth_m=self.interface_depth_m,
             layer_index=self.layer_index,
             resistivity_ohm_m=self.resistivity_ohm_m,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 
@@ -750,7 +793,9 @@ class LayeredGeology:
                 raise ValueError("unsupported LayeredGeology schema version.")
             return cls(
                 GeologyGrid.from_dict(state["grid"]),
-                tuple(ElectricalLayer.from_dict(item) for item in state["layers"]),
+                tuple(
+                    ElectricalLayer.from_dict(item) for item in state["layers"]
+                ),
                 archive["interface_depth_m"],
                 archive["layer_index"],
                 archive["resistivity_ohm_m"],
@@ -842,7 +887,9 @@ def generate_layered_geology(
     if not isinstance(grid, GeologyGrid):
         raise TypeError("grid must be a GeologyGrid.")
     units = tuple(layers)
-    if not units or any(not isinstance(layer, ElectricalLayer) for layer in units):
+    if not units or any(
+        not isinstance(layer, ElectricalLayer) for layer in units
+    ):
         raise ValueError("layers must contain at least one ElectricalLayer.")
     if len({layer.name for layer in units}) != len(units):
         raise ValueError("layer names must be unique.")
@@ -858,7 +905,9 @@ def generate_layered_geology(
         interface_relief_std_m, interface_count, "interface_relief_std_m"
     )
     if np.any(relief < 0):
-        raise ValueError("interface relief standard deviations must be non-negative.")
+        raise ValueError(
+            "interface relief standard deviations must be non-negative."
+        )
     if boundary not in {"reflect", "periodic"}:
         raise ValueError("boundary must be 'reflect' or 'periodic'.")
     if interface_policy not in {"project", "raise"}:
@@ -900,7 +949,9 @@ def generate_layered_geology(
                     "positive interface relief requires interface_correlation."
                 )
             correlation.validate_grid(grid)
-            surfaces[index] = means[index] + relief[index] * _horizontal_gaussian(
+            surfaces[index] = means[index] + relief[
+                index
+            ] * _horizontal_gaussian(
                 grid,
                 correlation,
                 _child_seed(seed, f"interface/{index}"),
@@ -930,7 +981,9 @@ def generate_layered_geology(
                 seed=_child_seed(seed, f"heterogeneity/{index}"),
                 boundary=boundary,
             ).values
-            values = np.power(10.0, layer.log10_resistivity + layer.log10_std * field)
+            values = np.power(
+                10.0, layer.log10_resistivity + layer.log10_std * field
+            )
             if layer.resistivity_bounds_ohm_m is not None:
                 values = np.clip(values, *layer.resistivity_bounds_ohm_m)
         else:
@@ -952,7 +1005,8 @@ def generate_layered_geology(
             "mean_interface_depth_m": means.tolist(),
             "interface_relief_std_m": relief.tolist(),
             "interface_correlation": [
-                None if item is None else item.to_dict() for item in correlations
+                None if item is None else item.to_dict()
+                for item in correlations
             ],
         },
     )

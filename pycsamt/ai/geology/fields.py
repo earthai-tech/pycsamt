@@ -40,7 +40,9 @@ def _readonly(value: Any, dtype: Any | None = None) -> np.ndarray:
 def _axis(value: Any, name: str) -> np.ndarray:
     axis = np.asarray(value, dtype=float)
     if axis.ndim != 1 or axis.size < 2:
-        raise ValueError(f"{name} must be a 1-D array with at least two cells.")
+        raise ValueError(
+            f"{name} must be a 1-D array with at least two cells."
+        )
     if not np.all(np.isfinite(axis)) or not np.all(np.diff(axis) > 0):
         raise ValueError(f"{name} must be finite and strictly increasing.")
     return _readonly(axis)
@@ -52,7 +54,9 @@ def _regular_spacing(axis: np.ndarray, name: str) -> float:
     if not np.allclose(
         differences, spacing, rtol=1e-8, atol=max(1e-12, abs(spacing) * 1e-10)
     ):
-        raise ValueError(f"{name} must be regularly spaced for spectral synthesis.")
+        raise ValueError(
+            f"{name} must be regularly spaced for spectral synthesis."
+        )
     return spacing
 
 
@@ -336,7 +340,9 @@ class GeologyGrid:
         """
         if data.get("schema_version", 1) != 1:
             raise ValueError("unsupported GeologyGrid schema version.")
-        return cls(data["x_m"], data["z_m"], y_m=data.get("y_m"), crs=data.get("crs"))
+        return cls(
+            data["x_m"], data["z_m"], y_m=data.get("y_m"), crs=data.get("crs")
+        )
 
 
 def _centres(
@@ -395,7 +401,9 @@ class GaussianCorrelation:
         if self.length_y_m is not None:
             y = float(self.length_y_m)
             if not np.isfinite(y) or y <= 0:
-                raise ValueError("length_y_m must be finite and positive or None.")
+                raise ValueError(
+                    "length_y_m must be finite and positive or None."
+                )
             object.__setattr__(self, "length_y_m", y)
         azimuth = float(self.azimuth_deg)
         if not np.isfinite(azimuth):
@@ -551,7 +559,9 @@ class CorrelatedField:
         self.correlation.validate_grid(self.grid)
         values = np.asarray(self.values, dtype=float)
         if values.shape != self.grid.shape or not np.all(np.isfinite(values)):
-            raise ValueError(f"values must be finite and shaped {self.grid.shape}.")
+            raise ValueError(
+                f"values must be finite and shaped {self.grid.shape}."
+            )
         if self.boundary not in {"periodic", "reflect"}:
             raise ValueError("boundary must be 'periodic' or 'reflect'.")
         object.__setattr__(self, "values", _readonly(values))
@@ -689,7 +699,9 @@ class CorrelatedField:
         np.savez_compressed(
             target,
             values=self.values,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 
@@ -780,7 +792,9 @@ class DirectionalVariogram:
             or np.any(lag <= 0)
             or not np.all(np.diff(lag) > 0)
         ):
-            raise ValueError("lag_m must be finite, positive, and strictly increasing.")
+            raise ValueError(
+                "lag_m must be finite, positive, and strictly increasing."
+            )
         if not np.all(np.isfinite(semivariance)) or np.any(semivariance < 0):
             raise ValueError("semivariance must be finite and non-negative.")
         if not np.issubdtype(count.dtype, np.integer) or np.any(count <= 0):
@@ -878,7 +892,8 @@ def generate_gaussian_field(
     shape = white.shape
     spectral = np.fft.fftn(white)
     axes = [
-        2 * np.pi * np.fft.fftfreq(size, d=step) for size, step in zip(shape, spacing)
+        2 * np.pi * np.fft.fftfreq(size, d=step)
+        for size, step in zip(shape, spacing)
     ]
     if grid.dimension == 2:
         kz, kx = np.meshgrid(axes[0], axes[1], indexing="ij")
@@ -911,7 +926,9 @@ def generate_gaussian_field(
         )
     if standardize:
         values = (values - np.mean(values)) / sample_std
-    return CorrelatedField(values, grid, correlation, seed, boundary, standardize)
+    return CorrelatedField(
+        values, grid, correlation, seed, boundary, standardize
+    )
 
 
 def directional_variogram(
@@ -955,7 +972,9 @@ def directional_variogram(
     if field.grid.dimension == 3:
         axis_positions["y"] = 1
     if axis not in axis_positions:
-        raise ValueError(f"axis must be one of {tuple(axis_positions)} for this field.")
+        raise ValueError(
+            f"axis must be one of {tuple(axis_positions)} for this field."
+        )
     position = axis_positions[axis]
     size = field.values.shape[position]
     maximum = max(1, size // 2) if max_lag_cells is None else max_lag_cells

@@ -457,11 +457,17 @@ def plot_radiation_pattern(
         pats = np.maximum(pats, db_floor) - db_floor  # shift to ≥ 0
 
     n_pat = pats.shape[0]
-    lbls = labels if labels is not None else [f"pattern {i + 1}" for i in range(n_pat)]
+    lbls = (
+        labels
+        if labels is not None
+        else [f"pattern {i + 1}" for i in range(n_pat)]
+    )
 
     if ax is None:
         if polar:
-            _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+            _, ax = plt.subplots(
+                subplot_kw={"projection": "polar"}, figsize=figsize
+            )
         else:
             _, ax = plt.subplots(figsize=figsize)
 

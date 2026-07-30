@@ -514,5 +514,6 @@ cache to solve many problems at once, retrying only the exceptions a
 :class:`~pycsamt.forward.maxwell.batch.BatchPolicy` marks transient
 and collecting every terminal failure into a
 :class:`~pycsamt.forward.maxwell.batch.FailureManifest` instead of
-aborting the whole run — exactly the machinery :doc:`dataset2d`
-already shows generating a real, versioned training dataset with it.
+aborting the whole run — exactly the machinery :doc:`dataset2d` and
+:doc:`dataset3d` already show generating a real, versioned training
+dataset with it.

@@ -211,7 +211,9 @@ def export_elevations(
                 "line", data=np.asarray(lines, dtype=object), dtype=str_dtype
             )
     else:
-        msg = f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
+        msg = (
+            f"Unsupported export format: {resolved_fmt!r} (use 'csv' or 'h5')"
+        )
         raise ValueError(msg)
     return path
 

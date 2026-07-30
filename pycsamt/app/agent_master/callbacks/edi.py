@@ -275,7 +275,9 @@ def register_edi(app) -> None:
         else:
             groups = _folder_to_lines(str(p))
         if mode == "auto" and ctx.triggered_id == IDs.BTN_DETECT_LINES:
-            all_ids = [Path(f).stem for files in groups.values() for f in files]
+            all_ids = [
+                Path(f).stem for files in groups.values() for f in files
+            ]
             groups = _detect_from_ids(all_ids)
         panel = _build_lines_panel(
             groups,

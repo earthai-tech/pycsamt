@@ -113,7 +113,9 @@ def layout() -> html.Div:
                         size="sm",
                         color="primary",
                     ),
-                    html.Div(id=IDs.ADV_DATA_BAR, className="adv-data-bar mt-1"),
+                    html.Div(
+                        id=IDs.ADV_DATA_BAR, className="adv-data-bar mt-1"
+                    ),
                 ],
                 className="fwd-run-bar",
             ),
@@ -216,7 +218,9 @@ def layout() -> html.Div:
                             ),
                             html.Div(
                                 [
-                                    html.Div("Station", className="adv-param-label"),
+                                    html.Div(
+                                        "Station", className="adv-param-label"
+                                    ),
                                     dcc.Dropdown(
                                         id=IDs.ADV_PT_STATION,
                                         options=[],
@@ -405,7 +409,9 @@ def layout() -> html.Div:
     )
 
     # ── Per-group figure panels ───────────────────────────────────────────────
-    def _fig_panel(tab_id: str, img_id: str, visible: bool = False) -> html.Div:
+    def _fig_panel(
+        tab_id: str, img_id: str, visible: bool = False
+    ) -> html.Div:
         return html.Div(
             html.Div(
                 html.Img(

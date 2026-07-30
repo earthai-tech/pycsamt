@@ -269,7 +269,9 @@ def read_zmm(path: str | Path) -> ZMMStation:
 
     if tzy is not None and np.any(tzy != 0):
         st.tipper_zy = tzy
-        st.tipper_zy_se = np.abs(tzy) * 0.1  # 10% as default; no direct estimate
+        st.tipper_zy_se = (
+            np.abs(tzy) * 0.1
+        )  # 10% as default; no direct estimate
 
     return st
 
@@ -511,7 +513,9 @@ def make_mt_data_from_stations(
             if s.tipper_zy is not None and len(s.tipper_zy) == len(keep):
                 s.tipper_zy = s.tipper_zy[keep]
                 s.tipper_zy_se = (
-                    s.tipper_zy_se[keep] if s.tipper_zy_se is not None else None
+                    s.tipper_zy_se[keep]
+                    if s.tipper_zy_se is not None
+                    else None
                 )
 
     # ---- apply error floors ----
@@ -638,7 +642,9 @@ def make_mt_data_from_stations(
                         ]
                     )
 
-    data = np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    data = (
+        np.array(rows, dtype=float) if rows else np.empty((0, 6), dtype=float)
+    )
 
     # ---- UTM block ----
     theta = line_orientation - 90.0

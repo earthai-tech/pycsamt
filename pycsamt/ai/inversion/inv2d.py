@@ -130,7 +130,9 @@ class EMInverter2D(BaseEMNet):
         log_rho_out: bool = True,
         **net_kwargs,
     ) -> None:
-        super().__init__(arch=arch, n_layers=n_depth, solver="mt2d", device=device)
+        super().__init__(
+            arch=arch, n_layers=n_depth, solver="mt2d", device=device
+        )
         self.n_components = int(n_components)
         self.n_depth = int(n_depth)
         self.n_stations = int(n_stations)
@@ -306,7 +308,9 @@ class EMInverter2D(BaseEMNet):
 
         if pred.shape[-2:] == target_hw:
             return pred
-        return F.interpolate(pred, size=target_hw, mode="bilinear", align_corners=False)
+        return F.interpolate(
+            pred, size=target_hw, mode="bilinear", align_corners=False
+        )
 
     def _fit_torch(
         self,
@@ -376,7 +380,9 @@ class EMInverter2D(BaseEMNet):
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
+                    nn.utils.clip_grad_norm_(
+                        self._network.parameters(), grad_clip
+                    )
                 opt.step()
                 ep_loss += loss.item() * len(xb)
             ep_loss /= n_seen
@@ -495,7 +501,9 @@ class EMInverter2D(BaseEMNet):
 
             # channels-last: (n, n_freqs, n_sta, n_comp) → (n, n_depth, n_sta, 1)
             Xn_tf = Xn.transpose(0, 2, 3, 1)
-            out_tf = self._network.predict(Xn_tf, verbose=0)  # (n, ?, n_sta, 1)
+            out_tf = self._network.predict(
+                Xn_tf, verbose=0
+            )  # (n, ?, n_sta, 1)
             y_norm = out_tf.squeeze(-1)  # (n, ?, n_sta)
             # Resize depth axis if UNet output height != n_depth
             if y_norm.shape[1] != self.n_depth:
@@ -570,7 +578,9 @@ class EMInverter2D(BaseEMNet):
         set_backend(backend_name)
 
         if "_channels" in weights:
-            self._channels = tuple(int(c) for c in weights.pop("_channels").tolist())
+            self._channels = tuple(
+                int(c) for c in weights.pop("_channels").tolist()
+            )
 
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
             if attr in weights:

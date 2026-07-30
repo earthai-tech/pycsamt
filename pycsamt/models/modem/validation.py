@@ -155,7 +155,11 @@ def _parse_model_header(lines: list[str]):
                 ints.append(int(p))
             except ValueError:
                 break
-        loge = "LOGE" in ln.upper() or "LOG10" in ln.upper() or "LINEAR" in ln.upper()
+        loge = (
+            "LOGE" in ln.upper()
+            or "LOG10" in ln.upper()
+            or "LINEAR" in ln.upper()
+        )
         if len(ints) >= 2:
             return len(ints), loge
     return 0, False

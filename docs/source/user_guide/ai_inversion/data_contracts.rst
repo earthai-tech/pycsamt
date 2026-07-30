@@ -13,7 +13,8 @@ written down once, as code, rather than assumed silently in every
 consumer. Its central object,
 :class:`~pycsamt.ai.data.contracts.SurveyData` — the shared
 vocabulary of :doc:`geology_priors`, :doc:`domain_gap`,
-:doc:`dataset2d`, :doc:`losses`, and :doc:`scientific_validation` —
+:doc:`dataset2d`, :doc:`dataset3d`, :doc:`losses`, and
+:doc:`scientific_validation` —
 stores the :term:`impedance tensor` in a fixed ``(station, frequency,
 component)`` axis order. That sounds almost too small to matter, but
 swapping two axes of the same rank is exactly the kind of error that
@@ -398,9 +399,9 @@ Splitting realizations without leaking
 
 :mod:`pycsamt.ai.data.splits` answers a narrower, related question:
 once many geological realizations exist — as they do once
-:doc:`dataset2d` starts generating them — which ones may sit in
-training and which must be held out. The risk is the same one
-:doc:`training` already states as equation
+:doc:`dataset2d` or :doc:`dataset3d` starts generating them — which
+ones may sit in training and which must be held out. The risk is the
+same one :doc:`training` already states as equation
 :eq:`eq-ai-training-group-split`: if two samples share a parent, a
 split that separates them is not a genuine test of generalization.
 :class:`~pycsamt.ai.data.splits.RealizationSplit`'s ``lineage``

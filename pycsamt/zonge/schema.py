@@ -194,16 +194,29 @@ for alias, canon in _CANONICAL_MAP.items():
     _canon_to_aliases[canon].append(alias)
 
 ALL_ALIASES: dict[str, tuple[str, ...]] = {
-    canon: tuple(sorted(aliases)) for canon, aliases in _canon_to_aliases.items()
+    canon: tuple(sorted(aliases))
+    for canon, aliases in _canon_to_aliases.items()
 }
 
 QC_ALIASES: dict[str, tuple[str, ...]] = {
-    "pc_emag": tuple(sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_emag"])),
-    "s_ephz": tuple(sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_ephz"])),
-    "pc_hmag": tuple(sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_hmag"])),
-    "s_hphz": tuple(sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_hphz"])),
-    "pc_rho": tuple(sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_rho"])),
-    "s_phz": tuple(sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_phz"])),
+    "pc_emag": tuple(
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_emag"])
+    ),
+    "s_ephz": tuple(
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_ephz"])
+    ),
+    "pc_hmag": tuple(
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_hmag"])
+    ),
+    "s_hphz": tuple(
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_hphz"])
+    ),
+    "pc_rho": tuple(
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "pc_rho"])
+    ),
+    "s_phz": tuple(
+        sorted([k for k, v in _CANONICAL_MAP.items() if v == "s_phz"])
+    ),
 }
 
 _FLEX_CANON_NAMES = {

@@ -771,7 +771,8 @@ class PyCSAMTInterp:
         key = str(preset).lower().strip()
         if key not in _PRESETS:
             raise ValueError(
-                f"interp preset must be one of {sorted(_PRESETS)}, " f"got {preset!r}."
+                f"interp preset must be one of {sorted(_PRESETS)}, "
+                f"got {preset!r}."
             )
         return getattr(self, key)
 

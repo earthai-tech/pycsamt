@@ -164,7 +164,11 @@ class ResistivityModel:
         rho_2d = np.asarray(rho_2d, dtype=float)
         x_c = np.asarray(x_centers, dtype=float)
         z_c = np.asarray(z_centers, dtype=float)
-        sta_x = np.asarray(station_x, dtype=float) if station_x is not None else x_c
+        sta_x = (
+            np.asarray(station_x, dtype=float)
+            if station_x is not None
+            else x_c
+        )
         if station_names is None:
             station_names = [f"S{i:03d}" for i in range(len(sta_x))]
         return cls(

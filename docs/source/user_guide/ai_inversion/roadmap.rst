@@ -109,6 +109,14 @@ opposed to only unit-tested in isolation.
        into versioned :class:`~pycsamt.ai.data.contracts.SurveyData`
        training pairs.
      - :doc:`dataset2d`
+   * - :mod:`pycsamt.ai.training.dataset3d`
+     - Wires :mod:`~pycsamt.ai.geology` volumes through
+       :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` on a padded,
+       non-uniform mesh, into the same versioned
+       :class:`~pycsamt.ai.data.contracts.SurveyData` training-pair shape
+       as the 2-D generator. M8's research slice, not yet its production
+       backend (see M8 above).
+     - :doc:`dataset3d`
    * - :mod:`pycsamt.ai.losses`
      - The staged training objective: data fit, spatial
        regularization, response consistency, boundary constraints,
@@ -171,21 +179,33 @@ Two adapters exist as a direct consequence:
    Wraps the vendored ModEM Fortran solver
    (``pycsamt/models/modem/_source``) as a
    :class:`~pycsamt.forward.maxwell.external.BaseExternalMaxwellAdapter`
-   subclass, reusing ModEM's own file I/O rather than a second
-   parser. This is the intended production adapter, but no compiled
-   ``Mod3DMT`` binary exists in this environment, so its
-   ``verified_benchmarks`` is honestly empty — building ModEM (a
-   separate ``gfortran``/LAPACK/BLAS/MPI step) is a prerequisite the
-   docs cannot complete on your behalf.
+   subclass, reusing ModEM's own file I/O rather than a second parser.
+   This is the intended production adapter. No compiled ``Mod3DMT``
+   binary is committed to the repository (it is a local build
+   artifact — see ``pycsamt/models/modem/_source/README`` for build
+   instructions), but one has been built and used to validate this
+   adapter against both analytic benchmarks with real margin, so its
+   ``verified_benchmarks`` reports ``("half-space", "layered-earth")``.
+   That validation surfaced and fixed five real bugs spanning the
+   vendored Makefile, this adapter's own command-building and the
+   shared external-executable resolver, the WS-format model
+   reader/writer, and a genuine out-of-bounds read in ModEM's own
+   air-layer setup for grids with fewer than 10 earth z-cells (now an
+   explicit preflight rejection) — see the module docstring and the
+   M6 ADR's 2026-07-29 update for the full account.
 
 :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter`
-   A genuine, in-house discrete curl-curl solver on a uniform Yee
-   grid, provided as an explicit research-only alternative and capped
-   at 6,000 cells by its own declared capabilities. It passes the
-   analytic half-space benchmark but is known to fail the
-   layered-earth one, so its ``verified_benchmarks`` reports only
-   ``("half-space",)`` — an honest, partial pass rather than a claimed
-   one.
+   A genuine, in-house discrete curl-curl solver on a Cartesian Yee
+   grid (cell widths may be non-uniform per axis, e.g. a padded mesh),
+   provided as an explicit research-only alternative and capped at
+   6,000 cells by its own declared capabilities. On a padded,
+   non-uniform calibrated mesh it passes both the analytic half-space
+   and layered-earth benchmarks, so its ``verified_benchmarks``
+   reports ``("half-space", "layered-earth")``. Small-grid/research-only
+   status is unrelated to this and still applies: it exists because a
+   direct sparse solve does not scale to realistic production 3-D mesh
+   sizes (see the M6 architecture-decision record), not because of any
+   remaining accuracy gap.
 
 .. _ai_inversion_roadmap_verified:
 
@@ -359,16 +379,32 @@ their zero-height bars must not be read as failed experiments.
        :ref:`ai_inversion_roadmap_verified` above.
    * - M7
      - Verified 3-D forward backend
-     - Blocked/partial.
-       :class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` exists
-       but has zero verified benchmarks pending a compiled ModEM
-       binary;
-       :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` is a
-       research-only exception verified only at the half-space limit.
+     - Substantively addressed for the ModEM path.
+       :class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` was
+       validated against both analytic limits using a real compiled
+       ``Mod3DMT`` (a local build artifact, not committed — see
+       ``pycsamt/models/modem/_source/README``), which surfaced and
+       fixed five real bugs (a vendored Makefile gap, a
+       ``resolve_executable`` PATHEXT gap, a missing ModEM CLI
+       argument, a WS-format header mismatch, and a genuine
+       out-of-bounds read in ModEM's own air-layer sizing for grids
+       with fewer than 10 earth z-cells). Remaining open items: ModEM
+       license terms are still unconfirmed with the OSU authors, and
+       only the two analytic limits (not the 2-D extrusion, isolated
+       3-D body, non-uniform mesh, or MPI-build cases) have been
+       checked. :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` is
+       a research-only exception, verified at both the half-space and
+       layered-earth limits (not a production backend regardless —
+       see M6).
    * - M8
      - Correlated 3-D training and spatial model
-     - Not started. Depends on M7's production backend being
-       verified first.
+     - Not started against the verified ModEM backend; a research
+       slice exists but is explicitly not this milestone's production
+       backend — ``Inv3DAgent(physics="mt3d")`` trains on genuinely
+       3-D volumes solved with
+       :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` (via
+       :doc:`dataset3d`), not
+       :class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter`.
    * - M9
      - Hybrid inversion and uncertainty, on this architecture
      - Wired on the earlier architecture. The 1-D, 2-D, and 3-D hybrid

@@ -94,9 +94,7 @@ def _normalize_axis(ndim: int, axis: int) -> int:
     return normalized
 
 
-def _axis_pair(
-    array: np.ndarray, axis: int
-) -> tuple[np.ndarray, np.ndarray]:
+def _axis_pair(array: np.ndarray, axis: int) -> tuple[np.ndarray, np.ndarray]:
     """Return the front/back views shifted by one cell along *axis*."""
     front = [slice(None)] * array.ndim
     back = [slice(None)] * array.ndim
@@ -135,9 +133,7 @@ def _spatial_difference_loss(
     front_mask, back_mask = _axis_pair(mask, axis)
     pair_mask = front_mask & back_mask
     difference = np.where(pair_mask, front_values - back_values, 0.0)
-    per_cell = (
-        np.abs(difference) if kind == "l1" else np.square(difference)
-    )
+    per_cell = np.abs(difference) if kind == "l1" else np.square(difference)
     weight_array = _weight_array(weights, array.shape, "weights")
     if weight_array is None:
         active_weights = pair_mask.astype(float)
@@ -340,9 +336,7 @@ class SpatialLoss:
         for name in ("lambda_x", "lambda_z", "lambda_tv"):
             value = float(getattr(self, name))
             if not np.isfinite(value) or value < 0:
-                raise ValueError(
-                    f"{name} must be finite and non-negative."
-                )
+                raise ValueError(f"{name} must be finite and non-negative.")
             object.__setattr__(self, name, value)
 
     def __call__(
@@ -375,28 +369,37 @@ class SpatialLoss:
             raise ValueError("y_pred must be a 2-D (z, x) grid.")
         total = 0.0
         if self.lambda_z > 0:
-            total += self.lambda_z * gradient_smoothness_loss(
-                array,
-                axis=0,
-                kind=self.kind,
-                valid=valid,
-                weights=weights,
-                reduction=self.reduction,
-            ).value
+            total += (
+                self.lambda_z
+                * gradient_smoothness_loss(
+                    array,
+                    axis=0,
+                    kind=self.kind,
+                    valid=valid,
+                    weights=weights,
+                    reduction=self.reduction,
+                ).value
+            )
         if self.lambda_x > 0:
-            total += self.lambda_x * gradient_smoothness_loss(
-                array,
-                axis=1,
-                kind=self.kind,
-                valid=valid,
-                weights=weights,
-                reduction=self.reduction,
-            ).value
+            total += (
+                self.lambda_x
+                * gradient_smoothness_loss(
+                    array,
+                    axis=1,
+                    kind=self.kind,
+                    valid=valid,
+                    weights=weights,
+                    reduction=self.reduction,
+                ).value
+            )
         if self.lambda_tv > 0:
-            total += self.lambda_tv * total_variation_loss(
-                array,
-                valid=valid,
-                weights=weights,
-                reduction=self.reduction,
-            ).value
+            total += (
+                self.lambda_tv
+                * total_variation_loss(
+                    array,
+                    valid=valid,
+                    weights=weights,
+                    reduction=self.reduction,
+                ).value
+            )
         return total

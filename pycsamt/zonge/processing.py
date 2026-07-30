@@ -210,11 +210,15 @@ class ASTATIC(Zonge):
             has_read(source)
             self.avg = source
         else:
-            raise TypeError(f"Unsupported source type: {type(source).__name__}")
+            raise TypeError(
+                f"Unsupported source type: {type(source).__name__}"
+            )
 
         if self.verbose:
             src_name = (
-                self.avg._source_path.name if self.avg._source_path else "DataFrame"
+                self.avg._source_path.name
+                if self.avg._source_path
+                else "DataFrame"
             )
             self._logger.info(
                 f"ASTATIC processor initialized with data from '{src_name}'."
@@ -285,7 +289,9 @@ class ASTATIC(Zonge):
             )
 
         # --- Standardize inputs into Series ---
-        def _resolve_param(param: float | pd.Series | str, name: str) -> pd.Series:
+        def _resolve_param(
+            param: float | pd.Series | str, name: str
+        ) -> pd.Series:
             if isinstance(param, str):
                 if param not in df.columns:
                     raise ProcessingError(f"Column '{param}' not found.")
@@ -324,7 +330,8 @@ class ASTATIC(Zonge):
             self.avg.info.read(df, self.avg.info.meta)
             if self.avg.verbose:
                 self._logger.info(
-                    "Capacitive coupling correction applied. " "AVG object updated."
+                    "Capacitive coupling correction applied. "
+                    "AVG object updated."
                 )
 
         return df[["emag", "ephz"]]
@@ -399,7 +406,9 @@ class ASTATIC(Zonge):
                         np.log(st_data["rho"]),
                     )
                 ),
-                "phase": np.interp(np.log(reference_freq), log_freq, st_data["phase"]),
+                "phase": np.interp(
+                    np.log(reference_freq), log_freq, st_data["phase"]
+                ),
             }
 
         rho_profile = pd.Series({s: d["rho"] for s, d in interp_data.items()})
@@ -410,7 +419,9 @@ class ASTATIC(Zonge):
 
         elif filter_method in ("flma", "ama"):
             omega = 2 * PI * reference_freq
-            phase_profile = pd.Series({s: d["phase"] for s, d in interp_data.items()})
+            phase_profile = pd.Series(
+                {s: d["phase"] for s, d in interp_data.items()}
+            )
             # Calculate complex impedance at the reference frequency
             z_profile = np.sqrt(rho_profile * omega * MU_0) * np.exp(
                 1j * phase_profile * 1e-3

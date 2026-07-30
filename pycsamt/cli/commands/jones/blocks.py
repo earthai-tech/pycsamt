@@ -42,7 +42,8 @@ from ._base import _get_jfile, jones
     default=None,
     metavar="COMP",
     help=(
-        "Filter blocks by tensor component, e.g. XY, YX, ZX, ZY.  " "Case-insensitive."
+        "Filter blocks by tensor component, e.g. XY, YX, ZX, ZY.  "
+        "Case-insensitive."
     ),
 )
 @click.option(

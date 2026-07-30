@@ -159,7 +159,9 @@ class PINNInverter2D(BasePINNInverter):
         verbose: int = 0,
     ) -> None:
         if mode not in ("te", "tm", "both"):
-            raise ValueError(f"mode must be 'te', 'tm', or 'both'; got {mode!r}.")
+            raise ValueError(
+                f"mode must be 'te', 'tm', or 'both'; got {mode!r}."
+            )
         super().__init__(
             n_layers=n_layers,
             depth_max=depth_max,
@@ -331,7 +333,9 @@ class PINNInverter2D(BasePINNInverter):
                 pp = np.full_like(obs.freq, np.nan)
 
             rho_obs = obs.rho_te if self.mode in ("te", "both") else obs.rho_tm
-            ph_obs = obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
+            ph_obs = (
+                obs.phase_te if self.mode in ("te", "both") else obs.phase_tm
+            )
             for k in range(len(obs.freq)):
                 rows.append(
                     {

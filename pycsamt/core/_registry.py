@@ -412,7 +412,9 @@ class Manifest(CoreObject):
             New manifest with :class:`Record` instances rebuilt.
         """
 
-        recs = {k: Record.from_dict(v) for k, v in d.get("records", {}).items()}
+        recs = {
+            k: Record.from_dict(v) for k, v in d.get("records", {}).items()
+        }
         return cls(
             root=d.get("root", "."),
             version=int(d.get("version", 1)),

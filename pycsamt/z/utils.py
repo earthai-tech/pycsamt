@@ -114,7 +114,8 @@ def correct_for_sensor_orientation(
     if Zp.ndim == 2:
         if Zp.shape != (2, 2):
             raise ZError(
-                "For 2-D input, 'z_prime' shape must be (2, 2); " f"got {Zp.shape!r}."
+                "For 2-D input, 'z_prime' shape must be (2, 2); "
+                f"got {Zp.shape!r}."
             )
         Zp = Zp[None, ...]  # promote to (n,2,2)
         squeeze_output = True
@@ -122,7 +123,8 @@ def correct_for_sensor_orientation(
         squeeze_output = False
     else:
         raise ZError(
-            "'z_prime' must have shape (2, 2) or (n_freq, 2, 2); " f"got {Zp.shape!r}."
+            "'z_prime' must have shape (2, 2) or (n_freq, 2, 2); "
+            f"got {Zp.shape!r}."
         )
 
     if not np.issubdtype(Zp.dtype, np.complexfloating):
@@ -134,14 +136,16 @@ def correct_for_sensor_orientation(
         if Ze.ndim == 2:
             if Ze.shape != (2, 2):
                 raise ZError(
-                    "For 2-D input, 'z_prime_err' must be (2, 2); " f"got {Ze.shape!r}."
+                    "For 2-D input, 'z_prime_err' must be (2, 2); "
+                    f"got {Ze.shape!r}."
                 )
             Ze = Ze[None, ...]
         elif Ze.ndim == 3 and Ze.shape[1:] == (2, 2):
             pass
         else:
             raise ZError(
-                "'z_prime_err' must match (2, 2) or (n, 2, 2); " f"got {Ze.shape!r}."
+                "'z_prime_err' must match (2, 2) or (n, 2, 2); "
+                f"got {Ze.shape!r}."
             )
         if Ze.shape[0] != Zp.shape[0]:
             raise ZError(
@@ -158,7 +162,9 @@ def correct_for_sensor_orientation(
         # angles in degrees (clockwise positive)
         a = np.deg2rad(ax)
         b = np.deg2rad(ay)
-        return np.array([[np.cos(a), np.cos(b)], [np.sin(a), np.sin(b)]], dtype=float)
+        return np.array(
+            [[np.cos(a), np.cos(b)], [np.sin(a), np.sin(b)]], dtype=float
+        )
 
     T = _rotmat(ex, ey)
     U = _rotmat(bx, by)
@@ -201,7 +207,9 @@ def correct_for_sensor_orientation(
 
 
 # Frequency / period helpers
-def periods_from_freq(freq: Sequence[float], *, log10: bool = False) -> np.ndarray:
+def periods_from_freq(
+    freq: Sequence[float], *, log10: bool = False
+) -> np.ndarray:
     """
     Convert frequency (Hz) to period (s).
 
@@ -224,7 +232,9 @@ def periods_from_freq(freq: Sequence[float], *, log10: bool = False) -> np.ndarr
     return np.log10(T) if log10 else T
 
 
-def freq_from_periods(period: Sequence[float], *, log10: bool = False) -> np.ndarray:
+def freq_from_periods(
+    period: Sequence[float], *, log10: bool = False
+) -> np.ndarray:
     """
     Convert period (s) to frequency (Hz).
 
@@ -273,7 +283,9 @@ def ensure_z3(z: np.ndarray) -> np.ndarray:
     if arr.ndim == 2 and arr.shape == (2, 2):
         arr = arr[None, ...]
     elif not (arr.ndim == 3 and arr.shape[1:] == (2, 2)):
-        raise ZError(f"Z must be shape (2, 2) or (n_freq, 2, 2); got {arr.shape!r}.")
+        raise ZError(
+            f"Z must be shape (2, 2) or (n_freq, 2, 2); got {arr.shape!r}."
+        )
     return arr.astype(complex, copy=False)
 
 
@@ -425,7 +437,9 @@ def rotate_z(
     if np.isscalar(angle_deg) or (
         isinstance(angle_deg, (list, tuple)) and len(angle_deg) == 1
     ):
-        alphas = np.full(n, float(np.asarray(angle_deg).ravel()[0]), dtype=float)
+        alphas = np.full(
+            n, float(np.asarray(angle_deg).ravel()[0]), dtype=float
+        )
     else:
         a = np.asarray(angle_deg, dtype=float).ravel()
         if a.size != n:
@@ -549,7 +563,9 @@ def align_frequency_stack(
     try:
         dst = np.array([idx[val] for val in f], dtype=int)
     except KeyError as exc:
-        raise ZError("All 'freq' values must be present in 'ref_freq'.") from exc
+        raise ZError(
+            "All 'freq' values must be present in 'ref_freq'."
+        ) from exc
 
     out[dst, ...] = Z
     return out
@@ -576,7 +592,9 @@ def finite_mask(a: np.ndarray) -> np.ndarray:
     return np.isfinite(A)
 
 
-def sigma_clip_mask(a: np.ndarray, *, nsigma: float = 3.0, axis: int = 0) -> np.ndarray:
+def sigma_clip_mask(
+    a: np.ndarray, *, nsigma: float = 3.0, axis: int = 0
+) -> np.ndarray:
     """
     Sigma-clip mask for outlier rejection.
 

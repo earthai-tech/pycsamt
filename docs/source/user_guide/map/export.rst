@@ -15,6 +15,28 @@ contract.  A script can write a map, record the exact artifact path, and
 later compare the file suffix, size, or serialized
 :term:`figure specification` without repeating the plotting step.
 
+The examples use one figure throughout so differences come from export
+format rather than changing map content:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.map import (
+   ...     StationMapOptions,
+   ...     load_lines,
+   ...     plot_station_map,
+   ... )
+   >>> data = load_lines(
+   ...     "data/AMT/WILLY_DATA",
+   ...     detect="folder",
+   ...     recursive=True,
+   ... )
+   >>> fig = plot_station_map(
+   ...     data,
+   ...     options=StationMapOptions(overlay="elevation"),
+   ... )
+   >>> print(len(data.stations), len(fig.data))
+   128 10
+
 Choosing An Export Helper
 -------------------------
 
@@ -48,23 +70,17 @@ Output Directories
 
 All write helpers create parent directories automatically.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_html
-
-   path = write_html(fig, "outputs/maps/station.html")
-   print(path)
-   print(path.exists())
+   >>> from pycsamt.map import write_html
+   >>> path = write_html(fig, "outputs/maps/station.html")
+   >>> print(path.as_posix())
+   outputs/maps/station.html
+   >>> print(path.exists())
+   True
 
 If the directory does not exist, it is created before the figure is
 written.
-
-Captured output:
-
-.. code-block:: text
-
-   outputs/maps/station.html
-   True
 
 HTML
 ----
@@ -73,47 +89,30 @@ HTML is the safest default for Plotly station, profile, and 3-D maps.
 It preserves hover text, legends, zooming, panning, map tiles, and 3-D
 rotation.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ExportOptions, export_figure
-
-   path = export_figure(
-       fig,
-       ExportOptions(path="station.html"),
-   )
-   print("html export suffix", path.suffix)
-   print("html export kb", round(path.stat().st_size / 1024, 1))
-
-Captured output from the sample station figure:
-
-.. code-block:: text
-
-   html export suffix .html
-   html export kb 10.8
+   >>> from pycsamt.map import ExportOptions, export_figure
+   >>> path = export_figure(
+   ...     fig,
+   ...     ExportOptions(path="station.html"),
+   ... )
+   >>> print(path.suffix, path.exists())
+   .html True
 
 You can also call the direct helper:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_html
-
-   path = write_html(
-       fig,
-       "station.html",
-       include_plotlyjs="cdn",
-   )
-   print("html direct name", path.name)
-   print(
-       "html direct has cdn",
-       "plotly" in path.read_text(encoding="utf-8").lower(),
-   )
-
-Captured output:
-
-.. code-block:: text
-
-   html direct name station_cdn.html
-   html direct has cdn True
+   >>> from pycsamt.map import write_html
+   >>> path = write_html(
+   ...     fig,
+   ...     "station_cdn.html",
+   ...     include_plotlyjs="cdn",
+   ... )
+   >>> print(path.name)
+   station_cdn.html
+   >>> print("cdn.plot.ly" in path.read_text(encoding="utf-8"))
+   True
 
 ``include_plotlyjs`` is passed to Plotly's ``write_html`` method.
 Common values are:
@@ -140,30 +139,27 @@ Explicit Format
 If the path has no suffix, set ``format``.  ``format`` may be provided
 with or without a leading dot.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   path = export_figure(
-       fig,
-       ExportOptions(path="station", format="html"),
-   )
-   print("explicit format path", path.name)
-   print("explicit format exists", path.exists())
-
-   try:
-       export_figure(fig, ExportOptions(path="station_no_suffix"))
-   except ValueError as exc:
-       print("missing format error", exc)
+   >>> path = export_figure(
+   ...     fig,
+   ...     ExportOptions(path="station", format="html"),
+   ... )
+   >>> print(path.name, path.exists())
+   station True
+   >>> try:
+   ...     export_figure(fig, ExportOptions(path="station_no_suffix"))
+   ... except ValueError as exc:
+   ...     print(exc)
+   Export path must include an extension or ExportOptions.format must be set.
 
 Without a suffix or explicit format, ``export_figure`` raises
 ``ValueError`` rather than guessing.
 
-Captured output:
-
-.. code-block:: text
-
-   explicit format path station_no_suffix
-   explicit format exists True
-   missing format error Export path must include an extension or ExportOptions.format must be set.
+The explicit format selects a writer; it does not modify ``path``.  Thus
+``path="station"`` and ``format="html"`` write an HTML document named
+``station``.  Use ``path="station.html"`` when downstream software or a
+web server relies on the conventional extension.
 
 The dispatch rule is simple.  Let :math:`e` be the lower-case suffix of
 ``path`` unless ``format`` is supplied; then ``format`` replaces
@@ -179,55 +175,52 @@ Matplotlib figures are written with ``savefig``.  Plotly figures use
 ``write_image`` and require :term:`Kaleido` for
 :term:`static image export`.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   export_figure(
-       fig,
-       ExportOptions(path="station.png", scale=2.0),
-   )
+   >>> path = export_figure(
+   ...     fig,
+   ...     ExportOptions(path="station.png", scale=2.0),
+   ... )
+   >>> print(path.name)
+   station.png
 
 Direct helper:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import save_png
-
-   save_png(
-       fig,
-       "station.png",
-       width=1400,
-       height=900,
-       scale=2.0,
-   )
+   >>> from pycsamt.map import save_png
+   >>> path = save_png(
+   ...     fig,
+   ...     "station.png",
+   ...     width=1400,
+   ...     height=900,
+   ...     scale=2.0,
+   ... )
+   >>> print(path.name)
+   station.png
 
 For Plotly figures, ``width``, ``height``, and ``scale`` are forwarded
 to Plotly image export.  For Matplotlib figures, Plotly-specific keys
 are filtered out before calling ``savefig``.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import StationMapOptions, plot_station_map
-   path = save_png(
-       plot_station_map(
-           data,
-           options=StationMapOptions(
-               backend="matplotlib",
-               overlay="elevation",
-           ),
-       ),
-       "station_static.png",
-       dpi=200,
-       bbox_inches="tight",
-   )
-   print("png path", path.name)
-   print("png kb", round(path.stat().st_size / 1024, 1))
-
-Captured output from a Matplotlib station figure:
-
-.. code-block:: text
-
-   png path station_static.png
-   png kb 133.0
+   >>> from pycsamt.map import StationMapOptions, plot_station_map
+   >>> static = plot_station_map(
+   ...     data,
+   ...     options=StationMapOptions(
+   ...         backend="matplotlib",
+   ...         overlay="elevation",
+   ...     ),
+   ... )
+   >>> path = save_png(
+   ...     static,
+   ...     "station_static.png",
+   ...     dpi=200,
+   ...     bbox_inches="tight",
+   ... )
+   >>> print(path.name, path.exists())
+   station_static.png True
 
 .. figure:: ../../images/user_guide/map/map_export_station_static.png
    :alt: Static PNG export of a station map.
@@ -246,12 +239,13 @@ Other Static Image Formats
 
 Use :func:`pycsamt.map.write_image` for non-PNG Plotly image formats:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_image
-
-   write_image(fig, "station.svg", width=1200, height=800)
-   write_image(fig, "profile.pdf", width=1400, height=900)
+   >>> from pycsamt.map import write_image
+   >>> svg = write_image(fig, "station.svg", width=1200, height=800)
+   >>> pdf = write_image(fig, "profile.pdf", width=1400, height=900)
+   >>> print(svg.name, pdf.name)
+   station.svg profile.pdf
 
 ``export_figure`` also routes unknown suffixes to ``write_image``.
 This lets Plotly decide whether a format is supported.
@@ -263,35 +257,17 @@ JSON And Dict Export
 back to dictionary export.  ``write_dict`` writes the figure dictionary
 as JSON text.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_dict, write_json
-
-   json_path = write_json(fig, "station.json")
-   print(
-       "json suffix",
-       json_path.suffix,
-       "kb",
-       round(json_path.stat().st_size / 1024, 1),
-   )
-
-   try:
-       dict_path = write_dict(fig, "station.dict")
-       print(
-           "dict suffix",
-           dict_path.suffix,
-           "kb",
-           round(dict_path.stat().st_size / 1024, 1),
-       )
-   except TypeError as exc:
-       print("dict export error", exc)
-
-Captured output:
-
-.. code-block:: text
-
-   json suffix .json kb 9.9
-   dict export error Object of type ndarray is not JSON serializable
+   >>> from pycsamt.map import write_dict, write_json
+   >>> json_path = write_json(fig, "station.json")
+   >>> print(json_path.suffix, json_path.exists())
+   .json True
+   >>> try:
+   ...     dict_path = write_dict(fig, "station.dict")
+   ... except TypeError as exc:
+   ...     print(type(exc).__name__, "not JSON serializable" in str(exc))
+   TypeError True
 
 Use JSON or dict exports when you want to archive the figure
 specification, compare figure output in tests, or post-process traces
@@ -302,21 +278,13 @@ For Plotly figures that contain NumPy-backed arrays, prefer
 those arrays.  ``write_dict`` is intentionally plain ``json.dumps`` and
 is best for already JSON-serializable dictionaries.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import figure_to_dict
-
-   spec = figure_to_dict(fig)
-   trace_types = [trace.get("type") for trace in spec.get("data", [])]
-   print("dict trace count", len(trace_types))
-   print("dict trace types", trace_types)
-
-Captured output:
-
-.. code-block:: text
-
-   dict trace count 2
-   dict trace types ['scattermap', 'scattermap']
+   >>> from pycsamt.map import figure_to_dict
+   >>> spec = figure_to_dict(fig)
+   >>> trace_types = [trace.get("type") for trace in spec.get("data", [])]
+   >>> print(len(trace_types), sorted(set(trace_types)))
+   10 ['scattermap']
 
 ``figure_to_dict`` requires a Plotly-like object with ``to_dict`` or
 ``to_plotly_json``.  Matplotlib figures do not expose this contract.
@@ -352,44 +320,32 @@ Batch Export
 Because the helpers return :class:`pathlib.Path`, batch workflows can
 record or log output paths easily.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import (
-       ExportOptions,
-       StationMapOptions,
-       export_figure,
-       plot_station_map,
-   )
-
-   overlays = ["index", "elevation", "rho", "phase"]
-   outputs = []
-
-   for overlay in overlays:
-       fig = plot_station_map(
-           data,
-           options=StationMapOptions(
-               overlay=overlay,
-               frequency=100.0,
-           ),
-       )
-       outputs.append(
-           export_figure(
-               fig,
-               ExportOptions(
-                   path=f"outputs/station_{overlay}.html",
-               ),
-           )
-       )
-
-   print("batch outputs", [path.name for path in outputs])
-   print("batch count", len(outputs))
-
-Captured output:
-
-.. code-block:: text
-
-   batch outputs ['station_index.html', 'station_elevation.html', 'station_rho.html', 'station_phase.html']
-   batch count 4
+   >>> from pycsamt.map import (
+   ...     ExportOptions,
+   ...     StationMapOptions,
+   ...     export_figure,
+   ...     plot_station_map,
+   ... )
+   >>> overlays = ["index", "elevation", "rho", "phase"]
+   >>> outputs = []
+   >>> for overlay in overlays:
+   ...     figure = plot_station_map(
+   ...         data,
+   ...         options=StationMapOptions(
+   ...             overlay=overlay,
+   ...             frequency=100.0,
+   ...         ),
+   ...     )
+   ...     outputs.append(export_figure(
+   ...         figure,
+   ...         ExportOptions(path=f"outputs/station_{overlay}.html"),
+   ...     ))
+   >>> print([path.name for path in outputs])
+   ['station_index.html', 'station_elevation.html', 'station_rho.html', 'station_phase.html']
+   >>> print(len(outputs))
+   4
 
 MapView Export
 --------------
@@ -398,29 +354,40 @@ MapView Export
 the requested view, creates ``ExportOptions``, and calls
 ``export_figure`` internally.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import MapView
-
-   mv = MapView(data)
-   path = mv.export(
-       "outputs/fence.html",
-       view="map3d",
-       mode="fence",
-       depth_range=(0.0, 2500.0),
-   )
-   print("mapview export", path.name)
-   print("mapview kb", round(path.stat().st_size / 1024, 1))
+   >>> from pycsamt.map import MapView
+   >>> mv = MapView(data)
+   >>> path = mv.export(
+   ...     "outputs/fence.html",
+   ...     view="map3d",
+   ...     mode="fence",
+   ...     depth_range=(0.0, 2500.0),
+   ... )
+   >>> print(path.name, path.exists())
+   fence.html True
 
 This keeps application-style workflows and direct function workflows on
 the same export path.
 
-Captured output:
+For a compact survey handoff, :meth:`pycsamt.map.MapView.export_all`
+renders several standard views into one directory:
 
-.. code-block:: text
+.. code-block:: pycon
 
-   mapview export fence.html
-   mapview kb 454.0
+   >>> written = mv.export_all(
+   ...     "outputs/willy_map_bundle",
+   ...     fmt="html",
+   ...     views=("station", "pseudosection", "map3d"),
+   ... )
+   >>> print({name: path.name for name, path in written.items()})
+   {'station': 'station.html', 'pseudosection': 'pseudosection.html', 'map3d': 'map3d.html'}
+
+Each view is rebuilt from the same normalized :class:`pycsamt.map.MapData`.
+The convenience method guarantees a common destination and format, but it
+does not freeze plotting options or input data.  Archive the generating
+script and source-data version beside the bundle when exact regeneration
+matters.
 
 Round-Trip And Testing Workflows
 --------------------------------
@@ -428,28 +395,23 @@ Round-Trip And Testing Workflows
 JSON and dictionary exports are useful when you want to inspect or test
 figure content without rendering images.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import figure_to_dict
-
-   spec = figure_to_dict(fig)
-   trace_types = [trace.get("type") for trace in spec["data"]]
-   print(trace_types)
-   assert "scatter" in trace_types or "scattermap" in trace_types
-
-Captured output from printing ``trace_types``:
-
-.. code-block:: text
-
-   ['scattermap', 'scattermap']
+   >>> from pycsamt.map import figure_to_dict
+   >>> spec = figure_to_dict(fig)
+   >>> trace_types = [trace.get("type") for trace in spec["data"]]
+   >>> print(len(trace_types), sorted(set(trace_types)))
+   10 ['scattermap']
+   >>> assert "scatter" in trace_types or "scattermap" in trace_types
 
 For persistent artifacts, prefer ``write_json``:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_json
-
-   write_json(fig, "outputs/station_spec.json")
+   >>> from pycsamt.map import write_json
+   >>> path = write_json(fig, "outputs/station_spec.json")
+   >>> print(path.as_posix())
+   outputs/station_spec.json
 
 Recommended Formats
 -------------------

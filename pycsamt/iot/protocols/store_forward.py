@@ -151,7 +151,9 @@ class StoreAndForwardClient:
         return sent
 
     # -- helpers -----------------------------------------------------------
-    def _queued_ack(self, packet: TelemetryPacket, detail: str) -> TelemetryAck:
+    def _queued_ack(
+        self, packet: TelemetryPacket, detail: str
+    ) -> TelemetryAck:
         return TelemetryAck(
             ok=False,
             protocol=self.client.protocol.value,

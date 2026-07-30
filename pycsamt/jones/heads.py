@@ -197,7 +197,9 @@ class Banner(JComponentBase):
 
         if include_origin and self._raw:
             # keep original line verbatim, but mark as provenance
-            lines.append("#FROM " + self._raw.lstrip("#").strip().lstrip("WRITTEN BY"))
+            lines.append(
+                "#FROM " + self._raw.lstrip("#").strip().lstrip("WRITTEN BY")
+            )
 
         return lines
 
@@ -790,7 +792,11 @@ class Heads(JComponentBase):
 
     @property
     def azimuth(self) -> float | None:
-        return self.info.azimuth if self.info.azimuth is not None else self.head.az_hint
+        return (
+            self.info.azimuth
+            if self.info.azimuth is not None
+            else self.head.az_hint
+        )
 
     @property
     def software(self) -> str | None:

@@ -148,7 +148,8 @@ class OutputDir:
             )
         except Exception as exc:
             warnings.warn(
-                f"EDI export failed: {exc}.  " "Processed EDI files were not written.",
+                f"EDI export failed: {exc}.  "
+                "Processed EDI files were not written.",
                 stacklevel=2,
             )
             return []

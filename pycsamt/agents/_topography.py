@@ -29,7 +29,9 @@ def resolve_agent_topography(
         if not cfg.get("enabled", True):
             return None
     else:
-        warnings_list.append("'topography' must be a bool or mapping; ignored.")
+        warnings_list.append(
+            "'topography' must be a bool or mapping; ignored."
+        )
         return None
 
     exaggeration = float(cfg.get("exaggeration", 1.0))
@@ -61,7 +63,9 @@ def resolve_agent_topography(
         lookup: dict[str, int] = {}
         for i, name in enumerate(all_names):
             lookup.setdefault(str(name).strip().casefold(), i)
-        missing = [n for n in station_names if str(n).strip().casefold() not in lookup]
+        missing = [
+            n for n in station_names if str(n).strip().casefold() not in lookup
+        ]
         if missing:
             warnings_list.append(
                 "Topography station-name alignment failed for: "
@@ -76,7 +80,9 @@ def resolve_agent_topography(
                 exaggeration=exaggeration,
                 interp_method=interp_method,
             )
-        idx = np.asarray([lookup[str(n).strip().casefold()] for n in station_names])
+        idx = np.asarray(
+            [lookup[str(n).strip().casefold()] for n in station_names]
+        )
         elevation = np.asarray(all_elev, dtype=float)[idx]
         chainage = np.asarray(all_chain, dtype=float)[idx]
         chainage = chainage - chainage[0]
@@ -102,7 +108,9 @@ def resolve_agent_topography(
             chainage = np.asarray(explicit_chain, dtype=float).reshape(-1)
 
     if chainage.size != elevation.size or not np.all(np.isfinite(chainage)):
-        warnings_list.append("Topography chainage is invalid; topography ignored.")
+        warnings_list.append(
+            "Topography chainage is invalid; topography ignored."
+        )
         return None
     if not np.all(np.isfinite(elevation)) or not np.any(elevation != 0.0):
         warnings_list.append(
@@ -119,7 +127,8 @@ def resolve_agent_topography(
         )
     if np.any(np.diff(chainage) <= 0):
         warnings_list.append(
-            "Topography chainage must increase in station order; " "topography ignored."
+            "Topography chainage must increase in station order; "
+            "topography ignored."
         )
         return None
     return _metadata(

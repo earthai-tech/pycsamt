@@ -254,7 +254,8 @@ class MapView:
         key = str(view).lower()
         if key not in _VIEW_BUILDERS:
             raise ValueError(
-                f"Unknown view {view!r}. Expected one of " f"{sorted(_VIEW_BUILDERS)}."
+                f"Unknown view {view!r}. Expected one of "
+                f"{sorted(_VIEW_BUILDERS)}."
             )
         return getattr(self, _VIEW_BUILDERS[key])(**overrides)
 

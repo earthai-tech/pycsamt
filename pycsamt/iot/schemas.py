@@ -85,7 +85,9 @@ class TelemetryPayload(PyCSAMTObject):
 
     @classmethod
     def _consume_station(cls, data: dict[str, Any]) -> str | None:
-        return _c.as_optional_str(_first(data, cls._STATION_ALIASES), "station")
+        return _c.as_optional_str(
+            _first(data, cls._STATION_ALIASES), "station"
+        )
 
     def as_dict(self, *, drop_none: bool = False) -> dict[str, Any]:
         """Return a flat payload dictionary with canonical keys."""
@@ -135,7 +137,9 @@ class HealthPayload(TelemetryPayload):
 
     def validate(self) -> None:
         self._base_validate()
-        self.battery_v = _c.as_optional_finite_float(self.battery_v, "battery_v")
+        self.battery_v = _c.as_optional_finite_float(
+            self.battery_v, "battery_v"
+        )
         self.temperature_c = _c.as_optional_finite_float(
             self.temperature_c, "temperature_c"
         )
@@ -317,7 +321,9 @@ class PowerPayload(TelemetryPayload):
 
     def validate(self) -> None:
         self._base_validate()
-        self.battery_v = _c.as_optional_finite_float(self.battery_v, "battery_v")
+        self.battery_v = _c.as_optional_finite_float(
+            self.battery_v, "battery_v"
+        )
         self.state = _c.as_optional_str(self.state, "state")
         if self.state is not None:
             self.state = self.state.lower()
@@ -416,7 +422,9 @@ class SourcePayload(TelemetryPayload):
         self.tx_frequency_hz = _c.as_optional_positive(
             self.tx_frequency_hz, "tx_frequency_hz"
         )
-        self.tx_power_w = _c.as_optional_finite_float(self.tx_power_w, "tx_power_w")
+        self.tx_power_w = _c.as_optional_finite_float(
+            self.tx_power_w, "tx_power_w"
+        )
         self.dipole_length_m = _c.as_optional_positive(
             self.dipole_length_m, "dipole_length_m"
         )
@@ -425,7 +433,9 @@ class SourcePayload(TelemetryPayload):
         if self.on is not None:
             self.on = _c.as_bool(self.on)
         self.offset_m = _c.as_optional_positive(self.offset_m, "offset_m")
-        self.azimuth_deg = _c.as_optional_finite_float(self.azimuth_deg, "azimuth_deg")
+        self.azimuth_deg = _c.as_optional_finite_float(
+            self.azimuth_deg, "azimuth_deg"
+        )
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> SourcePayload:
@@ -508,8 +518,12 @@ class SyncPayload(TelemetryPayload):
 
     def validate(self) -> None:
         self._base_validate()
-        self.offset_ms = _c.as_optional_finite_float(self.offset_ms, "offset_ms")
-        self.drift_ppm = _c.as_optional_finite_float(self.drift_ppm, "drift_ppm")
+        self.offset_ms = _c.as_optional_finite_float(
+            self.offset_ms, "offset_ms"
+        )
+        self.drift_ppm = _c.as_optional_finite_float(
+            self.drift_ppm, "drift_ppm"
+        )
         if self.jitter_ms is not None:
             self.jitter_ms = _c.as_nonnegative(self.jitter_ms, "jitter_ms")
         if self.gps_lock is not None:
@@ -594,7 +608,9 @@ class EventPayload(TelemetryPayload):
     def validate(self) -> None:
         self._base_validate()
         self.event = _c.as_optional_str(self.event, "event")
-        self.severity = _c.normalise_enum(self.severity, EventSeverity, "severity")
+        self.severity = _c.normalise_enum(
+            self.severity, EventSeverity, "severity"
+        )
         self.message = _c.as_optional_str(self.message, "message")
         self.code = _c.as_optional_str(self.code, "code")
 
@@ -670,14 +686,18 @@ class AcquisitionPayload(TelemetryPayload):
         self.sample_rate_hz = _c.as_optional_positive(
             self.sample_rate_hz, "sample_rate_hz"
         )
-        self.frequency_hz = _c.as_optional_positive(self.frequency_hz, "frequency_hz")
+        self.frequency_hz = _c.as_optional_positive(
+            self.frequency_hz, "frequency_hz"
+        )
         self.frequency_band_hz = _normalise_band(self.frequency_band_hz)
         if self.n_samples is not None:
             self.n_samples = int(self.n_samples)
             if self.n_samples < 0:
                 raise ValueError("n_samples must be >= 0.")
         self.gain = _c.as_optional_finite_float(self.gain, "gain")
-        self.duration_s = _c.as_optional_positive(self.duration_s, "duration_s")
+        self.duration_s = _c.as_optional_positive(
+            self.duration_s, "duration_s"
+        )
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> AcquisitionPayload:
@@ -733,7 +753,9 @@ def _normalise_band(value: Any) -> tuple[float, float] | None:
     try:
         lo, hi = list(value)[:2]
     except Exception as exc:  # noqa: BLE001 - report a clear message
-        raise ValueError("frequency_band_hz must be a (low, high) pair.") from exc
+        raise ValueError(
+            "frequency_band_hz must be a (low, high) pair."
+        ) from exc
     lo = _c.as_positive(lo, "frequency_band_hz[0]")
     hi = _c.as_positive(hi, "frequency_band_hz[1]")
     if lo > hi:

@@ -19,9 +19,10 @@ A station map combines three kinds of information:
 * optional profile-line traces and station labels;
 * one scalar value per station, called the ``overlay``.
 
-If at least one finite coordinate pair is available, the Plotly backend
-builds a geographic map.  If no coordinates are available, it falls
-back to a profile-style station-index plot rather than failing.
+If the normalized table contains finite latitude and longitude values,
+the Plotly backend builds a geographic map; rows with incomplete pairs
+appear as gaps.  If neither coordinate axis is usable, it falls back to
+a profile-style station-index plot rather than failing.
 In normalized form, station :math:`s_i` contributes a coordinate pair
 :math:`(\lambda_i,\phi_i)` when longitude and latitude are finite, and
 an overlay value :math:`v_i`.  Geographic maps draw
@@ -37,34 +38,44 @@ Use :func:`pycsamt.map.plot_station_map` for one-shot scripts and
 notebooks.  Rendering options are passed with
 :class:`pycsamt.map.StationMapOptions`.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import StationMapOptions, plot_station_map
+   >>> from pycsamt.map import (
+   ...     StationMapOptions,
+   ...     ensure_map_data,
+   ...     plot_station_map,
+   ...     value_at_frequency_details,
+   ... )
 
-   fig = plot_station_map(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=StationMapOptions(
-           overlay="rho",
-           frequency=10.0,
-           frequency_tolerance=2.0,
-           component="xy",
-           show_profiles=True,
-           show_labels=True,
-       ),
-   )
+   >>> source = "data/AMT/WILLY_DATA/L18PLT"
+   >>> data = ensure_map_data(source)
+   >>> options = StationMapOptions(
+   ...     overlay="rho",
+   ...     frequency=10.0,
+   ...     frequency_tolerance=2.0,
+   ...     component="xy",
+   ...     show_profiles=True,
+   ...     show_labels=True,
+   ... )
+   >>> fig = plot_station_map(data, options=options)
+   >>> print(len(fig.data), tuple(trace.type for trace in fig.data))
+   2 ('scattermap', 'scattermap')
+
+   >>> selected = value_at_frequency_details(
+   ...     data,
+   ...     frequency=10.0,
+   ...     quantity="rho",
+   ...     component="xy",
+   ...     tolerance=2.0,
+   ... )
+   >>> print(len(selected))
+   28
+   >>> sorted({item.selection.actual for item in selected.values()})
+   [10.16]
 
 The function returns a Plotly figure by default.  You can display it in
 a notebook with ``fig.show()`` or export it with the helpers described
 in :doc:`export`.
-
-Captured output from inspecting the figure and the selected values:
-
-.. code-block:: text
-
-   function traces 2
-   function trace types ('scattermap', 'scattermap')
-   function stations with rho 28
-   function actual frequencies [10.16]
 
 The two traces are the station markers and the profile line.  The
 requested 10 Hz sample is taken from the nearest available
@@ -77,43 +88,56 @@ Reusing Loaded Data
 For repeated maps, load once and reuse the same
 :class:`pycsamt.map.MapData`.
 
-.. code-block:: python
+In v2.1, the normalizer delegates to the more robust
+:func:`pycsamt.emtools._core.ensure_sites`.  Its default ``"auto"``
+ordering uses coordinate-derived :term:`chainage` only when the sites
+form a credible profile; otherwise it preserves input order.  The
+decision is recorded on ``data.sites.ordering``, so a plot can report
+why its station sequence changed or remained unchanged.
 
-   from pycsamt.map import (
-       StationMapOptions,
-       ensure_map_data,
-       plot_station_map,
-   )
+.. code-block:: pycon
 
-   data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
+   >>> from pycsamt.map import (
+   ...     StationMapOptions,
+   ...     ensure_map_data,
+   ...     plot_station_map,
+   ...     value_at_frequency_details,
+   ... )
 
-   rho = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="rho",
-           frequency=100.0,
-           component="xy",
-       ),
-   )
+   >>> data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
+   >>> report = data.sites.ordering
+   >>> print(report["requested"], report["applied"], report["n_sites"])
+   auto chainage 28
+   >>> print(round(report["span_m"], 1), round(report["linearity"], 4))
+   2403.0 0.9999
 
-   phase = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="phase",
-           frequency=100.0,
-           component="xy",
-           cmap="Cividis",
-       ),
-   )
+   >>> rho_options = StationMapOptions(
+   ...     overlay="rho", frequency=100.0, component="xy"
+   ... )
+   >>> rho = plot_station_map(data, options=rho_options)
 
-Captured output:
+   >>> phase_options = StationMapOptions(
+   ...     overlay="phase",
+   ...     frequency=100.0,
+   ...     component="xy",
+   ...     cmap="Cividis",
+   ... )
+   >>> phase = plot_station_map(data, options=phase_options)
+   >>> print(len(rho.data), len(phase.data))
+   2 2
 
-.. code-block:: text
-
-   reuse rho traces 2
-   reuse phase traces 2
-   reuse rho range 22.899 2461.779
-   reuse phase range 3.313 59.84
+   >>> rho_values = value_at_frequency_details(
+   ...     data, frequency=100.0, quantity="rho", component="xy"
+   ... )
+   >>> phase_values = value_at_frequency_details(
+   ...     data, frequency=100.0, quantity="phase", component="xy"
+   ... )
+   >>> print(round(min(v.value for v in rho_values.values()), 3),
+   ...       round(max(v.value for v in rho_values.values()), 3))
+   22.899 2461.779
+   >>> print(round(min(v.value for v in phase_values.values()), 3),
+   ...       round(max(v.value for v in phase_values.values()), 3))
+   3.313 59.84
 
 .. figure:: ../../images/user_guide/map/map_station_rho_phase_comparison.png
    :alt: Side-by-side rho and phase station overlays for the L18 sample line.
@@ -121,8 +145,12 @@ Captured output:
    :width: 88%
 
    The same loaded :term:`MapData` rendered twice: once as
-   :math:`\rho_{a,xy}` and once as :math:`\phi_{xy}` at the selected
-   102.4 Hz sample.
+   :math:`\rho_{a,xy}` and once as :math:`\varphi_{xy}` at the selected
+   102.4 Hz sample.  The central part of the profile contains the
+   strongest resistive values, whereas the largest phases occur mainly
+   near the northern end.  Their spatial patterns are therefore not
+   interchangeable: a bright resistivity marker does not automatically
+   imply a large phase at the same station.
 
 Builder API
 -----------
@@ -131,26 +159,23 @@ Use :class:`pycsamt.map.StationMap` when you want an immutable builder
 style.  ``with_overlay`` and ``with_options`` return new builders that
 reuse the same normalized data.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import StationMap
+   >>> from pycsamt.map import StationMap
 
-   fig = (
-       StationMap("data/AMT/WILLY_DATA/L18PLT")
-       .with_overlay("skin_depth", frequency=10.0)
-       .with_options(show_labels=False)
-       .figure()
-   )
+   >>> builder = StationMap("data/AMT/WILLY_DATA/L18PLT")
+   >>> depth_builder = builder.with_overlay("skin_depth", frequency=10.0)
+   >>> clean_builder = depth_builder.with_options(show_labels=False)
+   >>> fig = clean_builder.figure()
+   >>> print(len(fig.data), fig.data[0].mode)
+   2 markers
 
 This pattern is convenient when a notebook or application lets a user
 switch overlays without re-reading the EDI files.
 
-Captured output:
-
-.. code-block:: text
-
-   builder traces 2
-   builder labels shown False
+The original ``builder`` is unchanged: each method returns a new
+builder with a copied options dataclass while all three builders point
+to the same normalized :term:`MapData`.
 
 Overlays
 --------
@@ -186,29 +211,37 @@ Frequency-Based Overlays
 the nearest finite positive frequency for each station.  Use
 ``frequency_tolerance`` when the match must be strict.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import StationMapOptions, plot_station_map
+   >>> from pycsamt.map import (
+   ...     StationMapOptions,
+   ...     plot_station_map,
+   ...     value_at_frequency_details,
+   ... )
 
-   fig = plot_station_map(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=StationMapOptions(
-           overlay="rho",
-           frequency=100.0,
-           frequency_tolerance=5.0,
-           component="xy",
-           log_color=True,
-           value_range=(10.0, 10000.0),
-       ),
-   )
-
-Captured output from the same data:
-
-.. code-block:: text
-
-   freq strict values 28
-   freq selected actual [102.4]
-   freq relative delta [0.024]
+   >>> options = StationMapOptions(
+   ...     overlay="rho",
+   ...     frequency=100.0,
+   ...     frequency_tolerance=5.0,
+   ...     component="xy",
+   ...     log_color=True,
+   ...     value_range=(10.0, 10000.0),
+   ... )
+   >>> fig = plot_station_map(data, options=options)
+   >>> matched = value_at_frequency_details(
+   ...     data,
+   ...     frequency=100.0,
+   ...     quantity="rho",
+   ...     component="xy",
+   ...     tolerance=5.0,
+   ... )
+   >>> print(len(matched))
+   28
+   >>> sorted({item.selection.actual for item in matched.values()})
+   [102.4]
+   >>> sorted({round(item.selection.relative_delta, 3)
+   ...         for item in matched.values()})
+   [0.024]
 
 The ``component`` option accepts the same component names used by the
 map core helpers:
@@ -228,17 +261,41 @@ When ``log_color=True``, only positive values are transformed with
 For a requested frequency :math:`f_r`, station :math:`i` selects
 :math:`f_i^\*` by minimizing :math:`|f_{ik}-f_r|` over its finite
 positive grid.  A finite tolerance :math:`\tau` keeps the station only
-when :math:`|f_i^\*-f_r|\le\tau`.  For the ``xy`` apparent-resistivity
-overlay, the plotted value is
+when :math:`|f_i^\*-f_r|\le\tau`.  Together, the index, selected
+frequency, and acceptance rule are
 
 .. math::
+   :label: station-map-frequency-match
+
+   k_i = \operatorname*{arg\,min}_{k:\,f_{ik}>0}|f_{ik}-f_r|,
+   \qquad
+   f_i^\* = f_{ik_i},
+   \qquad
+   |f_i^\*-f_r|\leq\tau.
+
+After the selection in :eq:`station-map-frequency-match`, the ``xy``
+apparent-resistivity overlay is
+
+.. math::
+   :label: station-map-apparent-resistivity
 
    v_i = \rho_{a,xy}(f_i^\*) =
    0.2\,\frac{|Z_{xy}(f_i^\*)|^2}{f_i^\*}.
 
-For phase, :math:`v_i=\arg Z_{xy}(f_i^\*)` in degrees.  For skin depth,
-the map computes
-:math:`v_i \approx 503\sqrt{\rho_{a,xy}(f_i^\*)/f_i^\*}` metres.  Keep
+Equation :eq:`station-map-apparent-resistivity` states the physical
+field-unit convention.  During plotting, pyCSAMT reads the resistivity
+and phase arrays already computed by the EDI parser at index :math:`k_i`
+rather than recomputing them from :math:`Z`.  For phase,
+:math:`v_i=\arg Z_{xy}(f_i^\*)` in degrees.  For skin depth, the map uses
+
+.. math::
+   :label: station-map-skin-depth
+
+   v_i = \delta_i \approx 503
+   \sqrt{\frac{\rho_{a,xy}(f_i^\*)}{f_i^\*}}\ \mathrm{m}.
+
+Equation :eq:`station-map-skin-depth` is a penetration-depth scale for
+an equivalent uniform conductor, not a recovered interface depth.  Keep
 ``frequency``, ``frequency_tolerance``, ``component``, and
 ``log_color`` fixed when comparing exported maps.
 
@@ -248,45 +305,43 @@ Labels, Lines, And Selection
 Station maps can label stations, draw line traces, filter lines, and
 highlight one station.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import StationMapOptions, load_lines, plot_station_map
+   >>> from pycsamt.map import StationMapOptions, load_lines, plot_station_map
 
-   data = load_lines("data/AMT/WILLY_DATA", detect="folder")
+   >>> data = load_lines("data/AMT/WILLY_DATA", detect="folder")
 
-   fig = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="elevation",
-           line_filter=("L18PLT", "L22PLT"),
-           selected_id="S012",
-           show_profiles=True,
-           show_labels=False,
-           marker_size=9,
-       ),
-   )
+   >>> options = StationMapOptions(
+   ...     overlay="elevation",
+   ...     line_filter=("L18PLT", "L22PLT"),
+   ...     selected_id="18-012A",
+   ...     show_profiles=True,
+   ...     show_labels=False,
+   ...     marker_size=9,
+   ... )
+   >>> fig = plot_station_map(data, options=options)
+   >>> print(data.lines)
+   ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
+   >>> print(len(fig.data), tuple(trace.type for trace in fig.data))
+   4 ('scattermap', 'scattermap', 'scattermap', 'scattermap')
+   >>> tuple(len(trace.lat) for trace in fig.data)
+   (28, 28, 25, 25)
 
 ``line_filter`` compares against normalized line names in
 ``data.lines``.  ``selected_id`` increases the selected station marker
 size; it does not remove other stations.
-
-Captured output:
-
-.. code-block:: text
-
-   selection lines ('L18PLT', 'L22PLT', 'L26PLT', 'L30PLT', 'L34PLT')
-   selection traces 4
-   selection trace types ('scattermap', 'scattermap', 'scattermap', 'scattermap')
-   selection coordinate counts (28, 28, 25, 25)
 
 .. figure:: ../../images/user_guide/map/map_station_filtered_elevation.png
    :alt: Filtered station map showing L18PLT and L22PLT elevation overlays.
    :align: center
    :width: 82%
 
-   Filtering keeps only ``L18PLT`` and ``L22PLT`` for display.  The
-   highlighted station remains part of the same station set; it is not a
-   separate filtered dataset.
+   Filtering keeps only ``L18PLT`` and ``L22PLT`` for display, revealing
+   two roughly north--south profiles separated in longitude.  The red
+   ring enlarges the real station ``18-012A`` without creating a new
+   trace or removing any record.  Elevation changes along both lines,
+   but the color pattern alone should not be read as a continuous
+   topographic surface between them.
 
 Basemaps
 --------
@@ -302,16 +357,18 @@ The theme controls the default:
 
 Pass ``basemap`` to choose a specific style.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="index",
-           basemap="carto-positron",
-           bearing=15.0,
-       ),
-   )
+   >>> fig = plot_station_map(
+   ...     data,
+   ...     options=StationMapOptions(
+   ...         overlay="index",
+   ...         basemap="carto-positron",
+   ...         bearing=15.0,
+   ...     ),
+   ... )
+   >>> print(fig.layout.map.style, fig.layout.map.bearing)
+   carto-positron 15.0
 
 The map package also supports token-free ESRI raster basemaps through
 the shared basemap helpers.  Common style names include
@@ -322,49 +379,55 @@ Density And Contour Layers
 
 For quick spatial trends, enable a :term:`density layer`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="rho",
-           frequency=100.0,
-           show_contours=True,
-           contour_opacity=0.45,
-       ),
-   )
+   >>> data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
+   >>> fig = plot_station_map(
+   ...     data,
+   ...     options=StationMapOptions(
+   ...         overlay="rho",
+   ...         frequency=100.0,
+   ...         show_contours=True,
+   ...         contour_opacity=0.45,
+   ...     ),
+   ... )
+   >>> print(len(fig.data), tuple(trace.type for trace in fig.data))
+   3 ('densitymap', 'scattermap', 'scattermap')
 
 ``show_contours`` adds a density-style Plotly map layer when at least
 three finite coordinate/value triples are available.
 
-Captured output:
-
-.. code-block:: text
-
-   density traces 3
-   density types ('densitymap', 'scattermap', 'scattermap')
-
 For a filled image layer similar to a Surfer-style contour map, enable
 ``contour_image``:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="rho",
-           frequency=100.0,
-           contour_image=True,
-           contour_mode="filled+lines",
-           contour_levels=16,
-           contour_opacity=0.55,
-       ),
-   )
+   >>> fig = plot_station_map(
+   ...     data,
+   ...     options=StationMapOptions(
+   ...         overlay="rho",
+   ...         frequency=100.0,
+   ...         contour_image=True,
+   ...         contour_mode="filled+lines",
+   ...         contour_levels=16,
+   ...         contour_opacity=0.55,
+   ...     ),
+   ... )
+   >>> len(fig.layout.map.layers)
+   1
 
 ``contour_image`` rasterizes contours to a transparent PNG and inserts
 it below station markers as a map image layer.  It returns no layer
 when there are fewer than three finite points or when log scaling would
 leave fewer than three positive values.
+
+For elevation maps, ``elevation_mode="contours"`` is the clearer shortcut.
+It enables the contour layer for Plotly and draws native ``contourf`` and
+contour lines for Matplotlib.  The default ``elevation_mode="markers"``
+preserves the original behavior.  Linear interpolation is the default
+because it remains within the local values supported by the stations;
+the Matplotlib result is additionally clipped to the observed elevation
+range after optional smoothing.
 
 .. figure:: ../../images/user_guide/map/map_station_density_contours.png
    :alt: Contour layer beneath station markers for the L18 rho overlay.
@@ -372,27 +435,32 @@ leave fewer than three positive values.
    :width: 82%
 
    A static rendering of the contour idea: the station
-   :math:`\log_{10}(\rho_a)` values are interpolated to a regular grid,
-   then station markers are drawn over the gridded layer.
+   :math:`\log_{10}(\rho_a)` values are interpolated before the measured
+   markers are drawn over the result.  The yellow zones in the central
+   profile follow high measured values, but the broad triangular bands
+   near the northern fold are controlled by sparse geometry.  They are
+   interpolation support, not evidence for a triangular subsurface
+   body.  Interpret the markers first and the filled surface only as a
+   visual trend between them.
 
 Themes And Color Scales
 -----------------------
 
 Station maps share the map theme and color utilities.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   fig = plot_station_map(
-       data,
-       options=StationMapOptions(
-           overlay="phase",
-           frequency=100.0,
-           theme="publication",
-           cmap="Turbo",
-           opacity=0.85,
-           title="L18 phase at 100 Hz",
-       ),
-   )
+   >>> options = StationMapOptions(
+   ...     overlay="phase",
+   ...     frequency=100.0,
+   ...     theme="publication",
+   ...     cmap="Turbo",
+   ...     opacity=0.85,
+   ...     title="L18 phase at 100 Hz",
+   ... )
+   >>> fig = plot_station_map(data, options=options)
+   >>> print(fig.layout.title.text, fig.data[0].marker.opacity)
+   L18 phase at 100 Hz 0.85
 
 Use ``value_range=(min, max)`` for stable comparisons across multiple
 maps.  This is especially important when exporting a sequence of maps
@@ -408,20 +476,16 @@ Backends
 ``plotly`` is the interactive default.  ``matplotlib`` produces static
 figures for reports and batch processing.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import StationMapOptions, plot_station_map
+   >>> from pycsamt.map import StationMapOptions, plot_station_map
 
-   fig = plot_station_map(
-       "data/AMT/WILLY_DATA/L18PLT",
-       options=StationMapOptions(backend="matplotlib"),
-   )
-
-Captured output:
-
-.. code-block:: text
-
-   matplotlib type Figure
+   >>> fig = plot_station_map(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     options=StationMapOptions(backend="matplotlib"),
+   ... )
+   >>> type(fig).__name__
+   'Figure'
 
 Backend behavior differs slightly:
 
@@ -439,24 +503,21 @@ Coordinate Fallback
 -------------------
 
 Station maps do not require coordinates to produce a useful diagnostic
-view.  If at least one finite latitude/longitude pair exists, the
-Plotly backend attempts a geographic map.  If no geographic coordinates
-exist, it creates a Cartesian station-index plot.
+view.  When the latitude and longitude columns contain usable values,
+the Plotly backend attempts a geographic map and leaves incomplete rows
+as gaps.  If the coordinate axes are unavailable, it creates a
+Cartesian station-index plot.
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import ensure_map_data
+   >>> from pycsamt.map import ensure_map_data
 
-   data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
-
-   if not data.has_geo:
-       print("Using profile fallback because coordinates are incomplete.")
-
-Captured output for the sample line:
-
-.. code-block:: text
-
+   >>> data = ensure_map_data("data/AMT/WILLY_DATA/L18PLT")
+   >>> print("has geo", data.has_geo)
    has geo True
+
+   >>> if not data.has_geo:
+   ...     print("Using profile fallback because coordinates are incomplete.")
 
 For production geographic maps, validate ``data.has_geo`` before
 plotting when every station must appear at a real location, and fix
@@ -467,15 +528,27 @@ Exporting Station Maps
 
 Use the export helpers to save figures consistently:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.map import write_html, save_png
+   >>> from pycsamt.map import (
+   ...     StationMapOptions,
+   ...     plot_station_map,
+   ...     save_png,
+   ...     write_html,
+   ... )
 
-   write_html(fig, "outputs/stations.html")
-   save_png(fig, "outputs/stations.png", width=1400, height=900)
+   >>> plotly_fig = plot_station_map(data)
+   >>> static_fig = plot_station_map(
+   ...     data, options=StationMapOptions(backend="matplotlib")
+   ... )
+   >>> print(write_html(plotly_fig, "outputs/stations.html").as_posix())
+   outputs/stations.html
+   >>> print(save_png(static_fig, "outputs/stations.png").as_posix())
+   outputs/stations.png
 
-PNG export requires a static image backend such as Kaleido for Plotly
-figures.  HTML export works without Kaleido.
+PNG export calls ``savefig`` directly for Matplotlib figures.  Exporting
+a Plotly figure to PNG instead requires a static image backend such as
+Kaleido; HTML export does not.
 
 Troubleshooting
 ---------------

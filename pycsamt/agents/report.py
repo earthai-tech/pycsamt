@@ -159,14 +159,20 @@ class ReportAgent(BaseAgent):
             if isinstance(fps, dict):
                 for fig_name, src_path in fps.items():
                     if src_path and Path(src_path).exists():
-                        dst = os.path.join(output_dir, f"{step_name}_{fig_name}.png")
+                        dst = os.path.join(
+                            output_dir, f"{step_name}_{fig_name}.png"
+                        )
                         try:
                             import shutil
 
                             shutil.copy2(src_path, dst)
-                            fig_refs[f"{step_name}_{fig_name}"] = os.path.basename(dst)
+                            fig_refs[f"{step_name}_{fig_name}"] = (
+                                os.path.basename(dst)
+                            )
                         except Exception as exc:
-                            warnings.append(f"Could not copy figure {src_path}: {exc}")
+                            warnings.append(
+                                f"Could not copy figure {src_path}: {exc}"
+                            )
 
         # ── build section texts ───────────────────────────────────────────────
         sections: dict[str, str] = {}
@@ -175,7 +181,9 @@ class ReportAgent(BaseAgent):
         sections["static_shift"] = self._section_ss(results, warnings)
         sections["phase_analysis"] = self._section_pt(results, warnings)
         sections["forward"] = self._section_fwd(results, warnings)
-        sections["recommendations"] = self._section_rec(results, sections, warnings)
+        sections["recommendations"] = self._section_rec(
+            results, sections, warnings
+        )
 
         # ── assemble markdown ─────────────────────────────────────────────────
         md = _build_markdown(title, sections, fig_refs, results)
@@ -195,7 +203,9 @@ class ReportAgent(BaseAgent):
             try:
                 import markdown as _md_pkg
 
-                html = _md_pkg.markdown(md, extensions=["tables", "fenced_code"])
+                html = _md_pkg.markdown(
+                    md, extensions=["tables", "fenced_code"]
+                )
                 html = _HTML_TEMPLATE.format(title=title, body=html)
                 html_path = os.path.join(output_dir, "survey_report.html")
                 Path(html_path).write_text(html, encoding="utf-8")
@@ -248,7 +258,9 @@ class ReportAgent(BaseAgent):
         stats = load_r.get("summary_stats") or {}
         t_min = stats.get("global_t_min_s")
         t_max = stats.get("global_t_max_s")
-        per_str = f"{t_min:.2e}–{t_max:.2e} s" if t_min and t_max else "unknown"
+        per_str = (
+            f"{t_min:.2e}–{t_max:.2e} s" if t_min and t_max else "unknown"
+        )
         base = (
             f"{n_st} stations were loaded. "
             f"Period range: {per_str}. "
@@ -308,9 +320,7 @@ class ReportAgent(BaseAgent):
             f"Consensus geoelectric strike: {st:.1f}° ± {iqr:.1f}°."
         )
         if self.api_key:
-            data_str = (
-                f"1D={n_1d}, 2D={n_2d}, 3D={n_3d}, strike={st:.1f}, iqr={iqr:.1f}"
-            )
+            data_str = f"1D={n_1d}, 2D={n_2d}, 3D={n_3d}, strike={st:.1f}, iqr={iqr:.1f}"
             llm_text = self._llm_section("phase_analysis", data_str)
             return llm_text or base
         return base

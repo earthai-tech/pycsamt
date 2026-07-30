@@ -72,7 +72,9 @@ class MQTTTelemetryClient(BaseTelemetryClient):
         if host:
             return str(host), port
         endpoint = self._require_endpoint()
-        parsed = urlparse(endpoint if "://" in endpoint else f"mqtt://{endpoint}")
+        parsed = urlparse(
+            endpoint if "://" in endpoint else f"mqtt://{endpoint}"
+        )
         if not parsed.hostname:
             raise TelemetryError(f"Cannot parse MQTT host from {endpoint!r}.")
         if parsed.scheme in {"mqtts", "ssl"}:
@@ -98,7 +100,9 @@ class MQTTTelemetryClient(BaseTelemetryClient):
             self._inbox.append(payload)
 
         client.on_message = _on_message
-        client.connect(host, port, keepalive=int(self.options.get("keepalive", 60)))
+        client.connect(
+            host, port, keepalive=int(self.options.get("keepalive", 60))
+        )
         client.loop_start()
         self._handle = client
 
@@ -120,7 +124,9 @@ class MQTTTelemetryClient(BaseTelemetryClient):
             retain=bool(packet.retained),
         )
         try:
-            info.wait_for_publish(timeout=float(self.options.get("timeout", 10.0)))
+            info.wait_for_publish(
+                timeout=float(self.options.get("timeout", 10.0))
+            )
         except Exception:  # noqa: BLE001 - older paho lacks timeout arg
             pass
         return f"published to {packet.topic}"

@@ -176,7 +176,9 @@ def _relabel_colorbar_log10(cb_ax) -> None:
             if t > 0:
                 v = np.log10(t)
                 labels.append(
-                    f"{int(round(v))}" if abs(v - round(v)) < 0.08 else f"{v:.2f}"
+                    f"{int(round(v))}"
+                    if abs(v - round(v)) < 0.08
+                    else f"{v:.2f}"
                 )
             else:
                 labels.append("")
@@ -259,7 +261,9 @@ def _fix_psection_axes(ax, colorbar_label: str = "") -> None:
                 if val > 0:
                     v = np.log10(val)
                     new_labels.append(
-                        f"{int(round(v))}" if abs(v - round(v)) < 0.08 else f"{v:.1f}"
+                        f"{int(round(v))}"
+                        if abs(v - round(v)) < 0.08
+                        else f"{v:.1f}"
                     )
                 else:
                     new_labels.append(lbl)
@@ -395,7 +399,9 @@ class PlotController:
                 build_phase_tensor_table,
             )
 
-            self._pt_df_cache[key] = build_phase_tensor_table(self._sites, verbose=0)
+            self._pt_df_cache[key] = build_phase_tensor_table(
+                self._sites, verbose=0
+            )
         return self._pt_df_cache[key]
 
     def clear(self) -> None:
@@ -438,7 +444,9 @@ class PlotController:
                 new_lo = max(min(yb, yt), T_min)
                 new_hi = min(max(yb, yt), T_max)
                 # Preserve inverted axes (some pseudosections put long T at bottom)
-                ax.set_ylim(new_lo, new_hi) if yb <= yt else ax.set_ylim(new_hi, new_lo)
+                ax.set_ylim(new_lo, new_hi) if yb <= yt else ax.set_ylim(
+                    new_hi, new_lo
+                )
             except Exception:
                 pass
 
@@ -519,7 +527,9 @@ class PlotController:
             T = 1.0 / (fr + 1e-24)
 
             for comp in self._components:
-                color = "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
+                color = (
+                    "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
+                )
                 ls = self._COMP_LS.get(comp, "-")
                 label = f"Z$_{{{comp.upper()}}}$"
 
@@ -665,7 +675,9 @@ class PlotController:
             return
         try:
             target = (
-                self._get_site(self._station_id) if self._station_id else self._sites
+                self._get_site(self._station_id)
+                if self._station_id
+                else self._sites
             )
             et.plot_tipper_components(target, ax=ax, verbose=0)
             ax.set_title(
@@ -738,7 +750,9 @@ class PlotController:
             # Station surface pins — hollow ▽ at y=1 (axes-fraction top edge).
             # mfc='none' keeps these unfilled: only inversion uses filled ▼.
             trans = ax.get_xaxis_transform()
-            valid = xticks[(xticks >= xlim[0] - 0.1) & (xticks <= xlim[1] + 0.1)]
+            valid = xticks[
+                (xticks >= xlim[0] - 0.1) & (xticks <= xlim[1] + 0.1)
+            ]
             pin_color = "#cccccc" if self.dark else "#444444"
             ax.plot(
                 valid,
@@ -763,7 +777,9 @@ class PlotController:
             # Explicitly recolor station tick labels — set_xticklabels()
             # creates Text objects whose color isn't always updated by the
             # later tick_params call when ticks have been moved to top.
-            tick_col = (_DARK if self.dark else _LIGHT)["tick_params"]["colors"]
+            tick_col = (_DARK if self.dark else _LIGHT)["tick_params"][
+                "colors"
+            ]
             for lbl in ax.get_xticklabels():
                 lbl.set_color(tick_col)
 
@@ -875,7 +891,9 @@ class PlotController:
             else:
                 _, tipper, tfr = t_out[:3]
             has_tipper = (
-                tipper is not None and tfr is not None and np.asarray(tipper).size > 0
+                tipper is not None
+                and tfr is not None
+                and np.asarray(tipper).size > 0
             )
             if has_tipper:
                 tipper = np.asarray(tipper, complex)
@@ -919,7 +937,9 @@ class PlotController:
             for j, comp in enumerate(comps):
                 ar = ax_rho_row[j]
                 ap = ax_phase_row[j]
-                color = "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
+                color = (
+                    "k" if self._bw_mode else self._COMP_COLOR.get(comp, "k")
+                )
                 ls = self._COMP_LS.get(comp, "-")
 
                 zz = _comp_slice(z, comp)

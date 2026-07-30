@@ -313,7 +313,9 @@ class Pipeline(PipelineBase):
 
             # Progress output
             if cfg.show_progress and cfg.progress_style != "silent":
-                _print_step_start(step_idx, len(self._steps), label, step.spec.code)
+                _print_step_start(
+                    step_idx, len(self._steps), label, step.spec.code
+                )
 
             # --- Transform -------------------------------------------
             try:
@@ -566,7 +568,9 @@ class Pipeline(PipelineBase):
 
     def steps_in_category(self, category: str) -> list[tuple[str, Step]]:
         """Return steps belonging to *category*."""
-        return [(lbl, s) for lbl, s in self._steps if s.spec.category == category]
+        return [
+            (lbl, s) for lbl, s in self._steps if s.spec.category == category
+        ]
 
     # ------------------------------------------------------------------
     # Display
@@ -604,7 +608,9 @@ class Pipeline(PipelineBase):
             if isinstance(item, tuple) and len(item) == 2:
                 label, step = item
                 if not isinstance(step, Step):
-                    raise TypeError(f"Expected (str, Step) tuple, got {type(step)}")
+                    raise TypeError(
+                        f"Expected (str, Step) tuple, got {type(step)}"
+                    )
                 normalised.append((str(label), step))
             elif isinstance(item, Step):
                 normalised.append((item.spec.name, item))
@@ -617,7 +623,9 @@ class Pipeline(PipelineBase):
 
     def _check_mutable(self, op: str) -> None:
         if self._running:
-            raise RuntimeError(f"Cannot {op!r} a pipeline that is currently running.")
+            raise RuntimeError(
+                f"Cannot {op!r} a pipeline that is currently running."
+            )
 
 
 # ---------------------------------------------------------------------------

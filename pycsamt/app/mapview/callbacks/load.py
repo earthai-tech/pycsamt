@@ -267,7 +267,8 @@ def _register_preflight(app) -> None:
         mode_lbl = "add" if mode == _MODE_APPEND else "replace"
         return [
             html.I(className="bi bi-check-circle-fill me-1"),
-            f"{len(names)} file(s) · {len(line_counts)} line group(s) · " f"{mode_lbl}",
+            f"{len(names)} file(s) · {len(line_counts)} line group(s) · "
+            f"{mode_lbl}",
         ]
 
 
@@ -366,7 +367,9 @@ def _register_confirm_load(app) -> None:
         State(IDs.STORE_THEME, "data"),
         prevent_initial_call=True,
     )
-    def confirm(_n, entries, selected_lines, session_id, mode, existing, theme):
+    def confirm(
+        _n, entries, selected_lines, session_id, mode, existing, theme
+    ):
         entries = _filtered_entries(entries, selected_lines)
         usable = [e for e in (entries or []) if e.get("content")]
         if not usable:
@@ -465,7 +468,9 @@ def _decode(usable, source):
     contents = [e.get("content") for e in usable]
     filenames = [e.get("filename") for e in usable]
     if source == "folder":
-        _paths, tmpdir, line_map = decode_folder_upload_to_tempdir(contents, filenames)
+        _paths, tmpdir, line_map = decode_folder_upload_to_tempdir(
+            contents, filenames
+        )
         return line_map, tmpdir
     paths, tmpdir = decode_upload_to_tempdir(contents, filenames)
     return ({"uploaded": list(paths)} if paths else {}), tmpdir

@@ -79,12 +79,15 @@ class HydroGeophysicalModel(PyCSAMTObject, MetadataMixin):
     logs: list[StratigraphicLog] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def aquifer_zones(self, *, min_confidence: float = 0.0) -> list[AquiferZone]:
+    def aquifer_zones(
+        self, *, min_confidence: float = 0.0
+    ) -> list[AquiferZone]:
         """Return aquifer-favourable zones above a confidence threshold."""
         return [
             zone
             for zone in self.zones
-            if zone.zone_type == "aquifer" and zone.confidence >= min_confidence
+            if zone.zone_type == "aquifer"
+            and zone.confidence >= min_confidence
         ]
 
     def station_summary(self) -> list[dict[str, Any]]:
@@ -268,7 +271,9 @@ class HydroInterpreter(PyCSAMTObject):
         self._result = out
         return out
 
-    def aquifer_zones(self, *, min_confidence: float = 0.0) -> list[AquiferZone]:
+    def aquifer_zones(
+        self, *, min_confidence: float = 0.0
+    ) -> list[AquiferZone]:
         """Return aquifer zones from the last fitted model."""
         if self._result is None:
             raise RuntimeError("HydroInterpreter.fit must be called first.")
@@ -289,7 +294,9 @@ class HydroInterpreter(PyCSAMTObject):
             return "aquifer", _range_confidence(rho, aq_lo, aq_hi)
         fr_lo, fr_hi = self.fracture_range
         if fr_lo <= rho <= fr_hi:
-            return "fractured/weathered", 0.65 * _range_confidence(rho, fr_lo, fr_hi)
+            return "fractured/weathered", 0.65 * _range_confidence(
+                rho, fr_lo, fr_hi
+            )
         if rho >= self.basement_min:
             return "resistive basement", min(
                 1.0, np.log10(rho / self.basement_min + 1.0)

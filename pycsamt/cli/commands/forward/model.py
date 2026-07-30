@@ -117,7 +117,8 @@ def model_geology(
             if key not in GEOLOGY_PRIORS:
                 available = ", ".join(sorted(GEOLOGY_PRIORS))
                 raise click.BadParameter(
-                    f"{name!r} is not a known scenario.  " f"Available: {available}",
+                    f"{name!r} is not a known scenario.  "
+                    f"Available: {available}",
                     param_hint="--name",
                 )
             _emit_detail(key, GEOLOGY_PRIORS[key], output_format)
@@ -165,7 +166,9 @@ def _emit_table(priors: dict, output_format: str) -> None:
 
 def _emit_detail(name: str, prior: dict, output_format: str) -> None:
     if output_format == "json":
-        click.echo(json.dumps({"scenario": name, **prior}, indent=2, default=str))
+        click.echo(
+            json.dumps({"scenario": name, **prior}, indent=2, default=str)
+        )
         return
 
     if output_format == "csv":

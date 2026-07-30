@@ -86,7 +86,9 @@ def estimate_cost(
     >>> estimate_cost("claude", "claude-sonnet-4-6", 500, 200)
     0.00451...
     """
-    return AGENT_CONFIG.estimate_cost(provider, model, input_tokens, output_tokens)
+    return AGENT_CONFIG.estimate_cost(
+        provider, model, input_tokens, output_tokens
+    )
 
 
 def format_cost(usd: float) -> str:

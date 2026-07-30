@@ -229,8 +229,12 @@ class FigureViewerWindow(QDialog):
         self._scroll = QScrollArea()
         self._scroll.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._scroll.setWidgetResizable(False)  # widget drives size, not area
-        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self._scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self._img_label = QLabel()
         self._img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._scroll.setWidget(self._img_label)
@@ -278,7 +282,9 @@ class FigureViewerWindow(QDialog):
 
         buf = io.BytesIO()
         try:
-            self._figure.savefig(buf, format="png", dpi=self._dpi, bbox_inches="tight")
+            self._figure.savefig(
+                buf, format="png", dpi=self._dpi, bbox_inches="tight"
+            )
         except Exception as exc:
             self._img_label.setText(f"Render error:\n{exc}")
             return
@@ -356,7 +362,12 @@ def _format_result_html(result) -> str:
     """Build structured HTML for the Summary tab from an AgentResult."""
 
     def _esc(s: str) -> str:
-        return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return (
+            str(s)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
 
     # Figure-only result (processing agents returning Axes / Figure)
     if hasattr(result, "savefig") or hasattr(result, "get_figure"):
@@ -507,7 +518,9 @@ class AgentRunnerWindow(PanelWindow):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
 
         inner = QWidget()
@@ -662,7 +675,9 @@ class AgentRunnerWindow(PanelWindow):
         _result_vlay.setSpacing(0)
         self._result_inner_tabs = QTabWidget()
         self._result_inner_tabs.setDocumentMode(True)
-        self._result_inner_tabs.setTabBarAutoHide(True)  # hidden when only 1 figure
+        self._result_inner_tabs.setTabBarAutoHide(
+            True
+        )  # hidden when only 1 figure
         # Seed with a placeholder canvas so the widget is never empty
         self._result_canvas = MplCanvas(self, toolbar=True)
         self._result_inner_tabs.addTab(self._result_canvas, "Result")
@@ -683,7 +698,9 @@ class AgentRunnerWindow(PanelWindow):
         self._btn_copy_interp = QPushButton("📋  Copy Interpretation")
         self._btn_copy_interp.setFlat(True)
         self._btn_copy_interp.setEnabled(False)
-        self._btn_copy_interp.setToolTip("Copy LLM interpretation text to clipboard")
+        self._btn_copy_interp.setToolTip(
+            "Copy LLM interpretation text to clipboard"
+        )
         self._btn_copy_interp.clicked.connect(self._on_copy_interpretation)
         _sum_tlay.addWidget(self._btn_copy_interp)
         _sum_vlay.addWidget(_sum_toolbar)
@@ -705,7 +722,9 @@ class AgentRunnerWindow(PanelWindow):
             container=_result_container,
             get_canvas_fn=lambda: (
                 w
-                if isinstance(w := self._result_inner_tabs.currentWidget(), MplCanvas)
+                if isinstance(
+                    w := self._result_inner_tabs.currentWidget(), MplCanvas
+                )
                 else None
             ),
         )
@@ -767,14 +786,18 @@ class AgentRunnerWindow(PanelWindow):
         self._chat_input.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        self._chat_input.installEventFilter(self)  # Enter=send, Shift+Enter=newline
+        self._chat_input.installEventFilter(
+            self
+        )  # Enter=send, Shift+Enter=newline
         chat_inp_row.addWidget(self._chat_input)
 
         self._btn_chat_send = QPushButton("▶")
         self._btn_chat_send.setFixedSize(36, 36)
         self._btn_chat_send.setToolTip("Send  (Enter)")
         self._btn_chat_send.clicked.connect(self._on_chat_send)
-        chat_inp_row.addWidget(self._btn_chat_send, 0, Qt.AlignmentFlag.AlignBottom)
+        chat_inp_row.addWidget(
+            self._btn_chat_send, 0, Qt.AlignmentFlag.AlignBottom
+        )
         chat_vlay.addLayout(chat_inp_row)
 
         _hint = QLabel("Enter to send  ·  Shift+Enter for new line")
@@ -896,7 +919,9 @@ class AgentRunnerWindow(PanelWindow):
 
             for i, (label, renderable) in enumerate(figs):
                 canvas = (
-                    self._result_canvas if i == 0 else MplCanvas(self, toolbar=True)
+                    self._result_canvas
+                    if i == 0
+                    else MplCanvas(self, toolbar=True)
                 )
                 try:
                     canvas.show_figure(renderable)
@@ -916,7 +941,9 @@ class AgentRunnerWindow(PanelWindow):
         self._summary_browser.setHtml(_format_result_html(result))
 
         # Store LLM interpretation for copy button
-        self._last_interpretation = getattr(result, "llm_interpretation", None) or ""
+        self._last_interpretation = (
+            getattr(result, "llm_interpretation", None) or ""
+        )
         self._btn_copy_interp.setEnabled(bool(self._last_interpretation))
 
         # Build chat context

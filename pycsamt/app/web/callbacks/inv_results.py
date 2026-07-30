@@ -215,7 +215,9 @@ def _make_fig_modem(result, tab: str, controls: dict) -> plt.Figure:
     elif which == "iteration" and iteration is not None:
         iter_keys = sorted(
             [k for k in result.models if k.startswith("iter_")],
-            key=lambda k: (int(k.split("_")[-1]) if k.split("_")[-1].isdigit() else 0),
+            key=lambda k: (
+                int(k.split("_")[-1]) if k.split("_")[-1].isdigit() else 0
+            ),
         )
         if iter_keys:
             idx = max(0, min(int(iteration) - 1, len(iter_keys) - 1))
@@ -867,7 +869,9 @@ def register_inv_results(app) -> None:
             return (
                 no_update,
                 [
-                    html.I(className="bi bi-question-circle me-1 text-warning"),
+                    html.I(
+                        className="bi bi-question-circle me-1 text-warning"
+                    ),
                     f"Cannot detect solver in: {path.name}",
                 ],
                 no_update,
@@ -882,7 +886,9 @@ def register_inv_results(app) -> None:
             return (
                 no_update,
                 [
-                    html.I(className="bi bi-exclamation-triangle me-1 text-danger"),
+                    html.I(
+                        className="bi bi-exclamation-triangle me-1 text-danger"
+                    ),
                     f"Load error: {exc}",
                 ],
                 no_update,
@@ -905,11 +911,15 @@ def register_inv_results(app) -> None:
             elif solver == "occam2d":
                 if hasattr(result, "response") and result.response is not None:
                     stas = getattr(result.response, "stations", [])
-                    station_opts = [{"label": s, "value": s} for s in sorted(stas)]
+                    station_opts = [
+                        {"label": s, "value": s} for s in sorted(stas)
+                    ]
         except Exception:
             pass
 
-        n_iter = int(getattr(result, "n_iter", getattr(result, "n_iterations", 0)) or 0)
+        n_iter = int(
+            getattr(result, "n_iter", getattr(result, "n_iterations", 0)) or 0
+        )
         rms_val = getattr(result, "final_rms", float("nan"))
         try:
             rms_f = float(rms_val or float("nan"))
@@ -922,7 +932,9 @@ def register_inv_results(app) -> None:
             "n_iter": n_iter,
             "rms": rms_f,
         }
-        rms_str = f"{rms_f:.3f}" if not __import__("math").isnan(rms_f) else "?"
+        rms_str = (
+            f"{rms_f:.3f}" if not __import__("math").isnan(rms_f) else "?"
+        )
         status = [
             html.I(className="bi bi-check-circle me-1 text-success"),
             f"{solver.upper()} loaded · {n_iter} iter · RMS={rms_str}",

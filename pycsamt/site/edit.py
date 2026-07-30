@@ -118,7 +118,9 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
             if a.ndim == 3 and a.shape[-2:] == (2, 2):
                 newz = r[None, :, :] @ a @ rinv[None, :, :]
                 _set_attr_first(z, ("z", "impedance", "_z"), newz)
-            ze = _get_attr_any(z, "z_error", "z_err", "impedance_err", "_z_err")
+            ze = _get_attr_any(
+                z, "z_error", "z_err", "impedance_err", "_z_err"
+            )
             if ze is not None:
                 ar = np.abs(r)
                 ari = np.abs(rinv)
@@ -567,7 +569,9 @@ def fill_missing(
             )
             _set_attr_first(z, ("z", "impedance", "_z"), znew)
 
-            ze = _get_attr_any(z, "z_error", "z_err", "impedance_err", "_z_err")
+            ze = _get_attr_any(
+                z, "z_error", "z_err", "impedance_err", "_z_err"
+            )
             if ze is not None:
                 _set_attr_first(
                     z,
@@ -947,7 +951,9 @@ def set_coords_all(
             row = fr[fr[col] == name]
             if row is None or len(row) == 0:
                 return None
-            la = float(row["lat"].iloc[0] if "lat" in row else row["latitude"].iloc[0])
+            la = float(
+                row["lat"].iloc[0] if "lat" in row else row["latitude"].iloc[0]
+            )
             if "lon" in row:
                 lo = float(row["lon"].iloc[0])
             else:
@@ -1419,7 +1425,9 @@ def _maybe_df(table: Any, columns: dict | None = None):
         try:
             df = pd.DataFrame(table)
         except Exception as exc:
-            raise TypeError("Unsupported table-like input for coordinates.") from exc
+            raise TypeError(
+                "Unsupported table-like input for coordinates."
+            ) from exc
 
     # normalize column names to lower for matching
     df.columns = [str(c).strip() for c in df.columns]

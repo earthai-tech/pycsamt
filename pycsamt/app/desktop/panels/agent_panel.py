@@ -47,7 +47,9 @@ class AgentPanel(QWidget):
     # Emitted just before the worker thread starts so the dock can show itself
     agent_started = Signal(str)  # agent_name
 
-    def __init__(self, app_controller=None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, app_controller=None, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self._ctrl = app_controller
         self._worker: object | None = None  # AgentWorker (set on run)
@@ -139,7 +141,9 @@ class AgentPanel(QWidget):
         )
 
         if self._ctrl is None or self._ctrl.sites is None:
-            self._status_lbl.setText("Load survey data before running an agent.")
+            self._status_lbl.setText(
+                "Load survey data before running an agent."
+            )
             return
 
         # Get API key from session if available

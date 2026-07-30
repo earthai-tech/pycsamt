@@ -220,7 +220,9 @@ class EMData(PyCSAMTObject, MetadataMixin):
             if n is None:
                 n = int(arr.shape[-1])
             elif int(arr.shape[-1]) != n:
-                raise ValueError("rho_a, phase, and errors must share sample length.")
+                raise ValueError(
+                    "rho_a, phase, and errors must share sample length."
+                )
         if self.frequencies is not None and n is not None:
             if int(self.frequencies.size) != n:
                 raise ValueError("frequencies must match data sample length.")
@@ -315,7 +317,9 @@ def _coerce_object(data: Any, *, method: str) -> EMData | None:
 def _from_response_object(obj: Any, *, method: str, source: Any) -> EMData:
     freqs = _frequencies(obj)
     rho, phase = _rho_phase(obj)
-    errors = _attr(obj, ("errors", "error", "rho_error", "std", "standard_deviation"))
+    errors = _attr(
+        obj, ("errors", "error", "rho_error", "std", "standard_deviation")
+    )
     station_names = _station_names_from_response(
         obj, _n_stations_from_arrays(rho, phase)
     )
@@ -335,7 +339,9 @@ def _from_response_object(obj: Any, *, method: str, source: Any) -> EMData:
     )
 
 
-def _from_response_collection(items: list[Any], *, method: str, source: Any) -> EMData:
+def _from_response_collection(
+    items: list[Any], *, method: str, source: Any
+) -> EMData:
     freqs = _frequencies(items[0])
     rho_rows = []
     phase_rows = []
@@ -381,7 +387,9 @@ def _from_response_collection(items: list[Any], *, method: str, source: Any) -> 
     )
 
 
-def _from_tdem_soundings(items: Iterable[Any], *, method: str, source: Any) -> EMData:
+def _from_tdem_soundings(
+    items: Iterable[Any], *, method: str, source: Any
+) -> EMData:
     soundings = list(items)
     if not soundings:
         return EMData(method="tdem", source=source)
@@ -516,7 +524,9 @@ def _station_x_from_response(obj: Any, n_stations: int) -> np.ndarray | None:
 
 
 def _station_name(obj: Any, idx: int) -> str:
-    raw = _attr(obj, ("station_name", "station", "name", "id", "site", "site_id"))
+    raw = _attr(
+        obj, ("station_name", "station", "name", "id", "site", "site_id")
+    )
     if raw is None or isinstance(raw, (list, tuple, np.ndarray, dict)):
         return f"S{idx:03d}"
     return str(raw)
@@ -537,7 +547,9 @@ def _tdem_values(obj: Any) -> np.ndarray:
             return np.asarray(dbdt(), dtype=float)
         except Exception:
             pass
-    return np.asarray(_attr(obj, ("dBz_dt", "dbdt", "data", "values")), dtype=float)
+    return np.asarray(
+        _attr(obj, ("dBz_dt", "dbdt", "data", "values")), dtype=float
+    )
 
 
 def _method_from_source(obj: Any, fallback: str) -> str:
@@ -569,6 +581,8 @@ def _attr(obj: Any, names: tuple[str, ...]) -> Any:
         if hasattr(obj, name):
             value = getattr(obj, name)
             return (
-                value() if callable(value) and name in {"metadata", "meta"} else value
+                value()
+                if callable(value) and name in {"metadata", "meta"}
+                else value
             )
     return None

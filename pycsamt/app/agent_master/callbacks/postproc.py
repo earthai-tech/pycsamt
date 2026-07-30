@@ -133,7 +133,9 @@ def register_postproc(app) -> None:
             )
         # Absolute path so the re-load validation and the later workflow
         # loader never depend on the process CWD.
-        dest = Path(base).expanduser().resolve() / f"{wtype}_{int(time.time())}"
+        dest = (
+            Path(base).expanduser().resolve() / f"{wtype}_{int(time.time())}"
+        )
         # Sanity-check the in-memory corrected data first (source of truth).
         try:
             n_mem = _count_valid_impedance(sites)
@@ -178,7 +180,8 @@ def register_postproc(app) -> None:
         new_edi.pop("groups", None)
         new_edi.pop("selected_lines", None)
         msg = html.Span(
-            f"{n_valid}/{n_total} corrected EDI(s) applied " f"to session → {dest}",
+            f"{n_valid}/{n_total} corrected EDI(s) applied "
+            f"to session → {dest}",
             style={"color": "var(--tag-ok)"},
         )
         return new_edi, msg, False

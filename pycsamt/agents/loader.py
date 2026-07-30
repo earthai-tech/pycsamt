@@ -184,7 +184,9 @@ class MTLoaderAgent(BaseAgent):
             "n_with_tipper": sum(1 for r in rows if r["has_tipper"]),
             "mean_qc_score": float(np.mean(scores)) if scores.size else 0.0,
             "min_qc_score": float(np.min(scores)) if scores.size else 0.0,
-            "median_n_freq": float(np.median(n_freq_all)) if n_freq_all else 0.0,
+            "median_n_freq": float(np.median(n_freq_all))
+            if n_freq_all
+            else 0.0,
             "global_t_min_s": min(
                 (r["t_min_s"] for r in rows if r["t_min_s"] is not None),
                 default=None,
@@ -198,7 +200,9 @@ class MTLoaderAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interpretation: str | None = None
         if self.api_key:
-            prompt = _build_interpretation_prompt(summary_stats, rows, warnings)
+            prompt = _build_interpretation_prompt(
+                summary_stats, rows, warnings
+            )
             interpretation = self.query_llm(prompt, max_tokens=200)
 
         elapsed = time.time() - t0

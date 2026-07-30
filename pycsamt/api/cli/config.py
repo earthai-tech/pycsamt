@@ -67,7 +67,9 @@ class LogConfig:
 
     def __post_init__(self) -> None:
         if self.level not in _VERBOSE_LEVELS:
-            raise ValueError(f"log.level must be one of {sorted(_VERBOSE_LEVELS)}.")
+            raise ValueError(
+                f"log.level must be one of {sorted(_VERBOSE_LEVELS)}."
+            )
 
 
 @dataclass
@@ -80,7 +82,9 @@ class OutputConfig:
 
     def __post_init__(self) -> None:
         if self.format not in _OUTPUT_FORMATS:
-            raise ValueError(f"output.format must be one of {sorted(_OUTPUT_FORMATS)}.")
+            raise ValueError(
+                f"output.format must be one of {sorted(_OUTPUT_FORMATS)}."
+            )
         self.dir = Path(self.dir)
 
 

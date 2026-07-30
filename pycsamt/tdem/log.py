@@ -294,7 +294,9 @@ def _update_output_metadata(
         frequency = data_clock.group("frequency")
         metadata["data_clock_mhz"] = float(frequency)
         metadata["data_clock_type"] = data_clock.group("clock").lower()
-        metadata["data_clock_resolution"] = float(data_clock.group("resolution"))
+        metadata["data_clock_resolution"] = float(
+            data_clock.group("resolution")
+        )
         metadata["data_clock_unit"] = data_clock.group("unit")
         return
 

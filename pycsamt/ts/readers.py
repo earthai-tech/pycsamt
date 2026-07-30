@@ -190,7 +190,9 @@ def read_lims(
 
     nchan = int(float(info.get("NCHAN", 0) or 0))
     if nchan <= 0:
-        raise FileHandlingError(f"{p}: NCHAN missing or invalid in INFO block.")
+        raise FileHandlingError(
+            f"{p}: NCHAN missing or invalid in INFO block."
+        )
 
     chan: list[str] = []
     azim: dict[str, float] = {}
@@ -459,7 +461,9 @@ def read_emslab(
         coordsys="GEOMAGNETIC NORTH",
         start=start.strftime("%Y-%m-%d %H:%M:%S"),
         stop=stop.strftime("%Y-%m-%d %H:%M:%S"),
-        units={str(c).upper(): _EMSLAB_UNITS.get(str(c).upper(), "") for c in chan},
+        units={
+            str(c).upper(): _EMSLAB_UNITS.get(str(c).upper(), "") for c in chan
+        },
         missing=-9999.0,
         source=str(p),
         format="emslab",

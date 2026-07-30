@@ -114,8 +114,12 @@ def _interp_complex(
         rr = r[idx]
         ii = im[idx]
     else:
-        rr = np.vstack([np.interp(xnew, x, r[:, j]) for j in range(r.shape[1])]).T
-        ii = np.vstack([np.interp(xnew, x, im[:, j]) for j in range(im.shape[1])]).T
+        rr = np.vstack(
+            [np.interp(xnew, x, r[:, j]) for j in range(r.shape[1])]
+        ).T
+        ii = np.vstack(
+            [np.interp(xnew, x, im[:, j]) for j in range(im.shape[1])]
+        ).T
     out = rr + 1j * ii
     return out.squeeze()
 
@@ -161,7 +165,9 @@ def _interp_rows_by_freq(
             x_fill,
             method=method,
         )
-        flat_out[fill, j] = interp if np.iscomplexobj(flat_out) else interp.real
+        flat_out[fill, j] = (
+            interp if np.iscomplexobj(flat_out) else interp.real
+        )
     return flat_out.reshape(values.shape)
 
 
@@ -403,12 +409,19 @@ def _apply_grid_one(
         except Exception:
             pass
         tipper_err = getattr(T, "tipper_err", None)
-        if isinstance(tipper_err, np.ndarray) and tipper_err.shape[0] == frt.size:
+        if (
+            isinstance(tipper_err, np.ndarray)
+            and tipper_err.shape[0] == frt.size
+        ):
             try:
-                T.tipper_err = _regrid_t(tipper_err, frt, fnew, method=method).real
+                T.tipper_err = _regrid_t(
+                    tipper_err, frt, fnew, method=method
+                ).real
             except Exception:
                 try:
-                    T._tipper_err = _regrid_t(tipper_err, frt, fnew, method=method).real
+                    T._tipper_err = _regrid_t(
+                        tipper_err, frt, fnew, method=method
+                    ).real
                 except Exception:
                     pass
         _set_block_freq(T, fnew)
@@ -504,7 +517,9 @@ def select_band(
             _apply_row_mask_to_block(Z, ("z", "z_err"), _keep_mask(fr), fr)
         T, t, fr = _get_t_block(ed)
         if T is not None:
-            _apply_row_mask_to_block(T, ("tipper", "tipper_err"), _keep_mask(fr), fr)
+            _apply_row_mask_to_block(
+                T, ("tipper", "tipper_err"), _keep_mask(fr), fr
+            )
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
@@ -732,7 +747,9 @@ def recover_low_confidence_frequencies(
 
     def _recover_block(obj, fields, fr, conf):
         trusted = np.isfinite(conf) & (conf >= float(ci_hi))
-        recover = np.isfinite(conf) & (conf >= float(ci_lo)) & (conf < float(ci_hi))
+        recover = (
+            np.isfinite(conf) & (conf >= float(ci_lo)) & (conf < float(ci_hi))
+        )
         reject_mask = np.isfinite(conf) & (conf < float(ci_lo))
         if recover.any():
             for field in fields:
@@ -1057,7 +1074,8 @@ def frequency_edit_report(
             )
         grouped = table.assign(
             safe=table["confidence"] >= ci_hi,
-            recoverable=(table["confidence"] >= ci_lo) & (table["confidence"] < ci_hi),
+            recoverable=(table["confidence"] >= ci_lo)
+            & (table["confidence"] < ci_hi),
             reject=table["confidence"] < ci_lo,
         ).groupby("station")
         return grouped.agg(
@@ -1084,10 +1102,14 @@ def frequency_edit_report(
         }
     )
     out = left.merge(right, on="station", how="outer")
-    out = out.merge(_conf_summary(tb_before, "before"), on="station", how="left")
+    out = out.merge(
+        _conf_summary(tb_before, "before"), on="station", how="left"
+    )
     out = out.merge(_conf_summary(tb_after, "after"), on="station", how="left")
     out["n_dropped"] = out["n_freq_before"] - out["n_freq_after"]
-    out["n_masked_or_unfinite"] = out["n_finite_before"] - out["n_finite_after"]
+    out["n_masked_or_unfinite"] = (
+        out["n_finite_before"] - out["n_finite_after"]
+    )
     out["confidence_delta"] = (
         out["confidence_median_after"] - out["confidence_median_before"]
     )
@@ -1206,7 +1228,9 @@ def frequency_edit_decision_table(
                     station=station,
                     frequency_hz=float(freq),
                     period_s=float(1.0 / freq) if freq else np.nan,
-                    log10_period=(float(np.log10(1.0 / freq)) if freq > 0 else np.nan),
+                    log10_period=(
+                        float(np.log10(1.0 / freq)) if freq > 0 else np.nan
+                    ),
                     confidence=float(cvec[j]),
                     flags=str(flagvec[j]),
                     finite_before=bool(finite_before[j]),
@@ -1831,7 +1855,9 @@ def plot_apparent_depth_psection(
     yt = np.linspace(
         0, Zplot.shape[0] - 1, num=min(8, Zplot.shape[0])
     )  # shape[0] = n_periods
-    yv = np.linspace(piv.index.min(), piv.index.max(), num=min(8, len(piv.index)))
+    yv = np.linspace(
+        piv.index.min(), piv.index.max(), num=min(8, len(piv.index))
+    )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.3g}" for v in yv])
     if axis_y == "period" and not ax.yaxis_inverted():
@@ -1927,7 +1953,9 @@ def plot_band_microstrips(
     # normalize per metric for color
     import pandas as pd
 
-    df = pd.DataFrame(rows, columns=["station", "band", "logrho", "phi", "tamp"])
+    df = pd.DataFrame(
+        rows, columns=["station", "band", "logrho", "phi", "tamp"]
+    )
 
     # global min/max (robust) for color normalization
     def _rng(s: pd.Series) -> tuple[float, float]:

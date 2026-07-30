@@ -482,7 +482,9 @@ class WaxmanSmitsModel(PyCSAMTObject):
 
             # Archie initial guess
             if sw_si > 1e-12:
-                S0 = np.clip((F_v * sw_si / (sigma_obs * F_v)) ** (1.0 / n), 1e-3, 1.0)
+                S0 = np.clip(
+                    (F_v * sw_si / (sigma_obs * F_v)) ** (1.0 / n), 1e-3, 1.0
+                )
             else:
                 S0 = 0.5
 
@@ -490,7 +492,9 @@ class WaxmanSmitsModel(PyCSAMTObject):
             try:
                 fa, fb = residual(1e-4), residual(1.0)
                 if fa * fb < 0:
-                    Sw_sol = brentq(residual, 1e-4, 1.0, xtol=tol, maxiter=max_iter)
+                    Sw_sol = brentq(
+                        residual, 1e-4, 1.0, xtol=tol, maxiter=max_iter
+                    )
                 else:
                     Sw_sol = float(np.clip(S0, 0.0, 1.0))
             except Exception:
@@ -639,7 +643,9 @@ class HashinShtrikmanBounds(PyCSAMTObject):
         log_rho = np.log10(np.clip(rho, 1e-4, 1e8))
         log_lower = np.log10(np.clip(lower, 1e-4, 1e8))
         log_upper = np.log10(np.clip(upper, 1e-4, 1e8))
-        return (log_rho >= log_lower - margin) & (log_rho <= log_upper + margin)
+        return (log_rho >= log_lower - margin) & (
+            log_rho <= log_upper + margin
+        )
 
     def __repr__(self) -> str:
         return (

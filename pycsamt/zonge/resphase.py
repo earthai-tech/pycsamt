@@ -113,14 +113,18 @@ class Resistivity(TensorBase):
             return
 
         if not isinstance(source, pd.DataFrame):
-            raise TypeError("Resistivity.read expects DataFrame or vector-like.")
+            raise TypeError(
+                "Resistivity.read expects DataFrame or vector-like."
+            )
 
         df = find_and_rename_column(source.copy(), self.VAR_NAME)
 
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:
-                self._logger.debug(f"'{self.VAR_NAME}' not in source. Creating empty.")
+                self._logger.debug(
+                    f"'{self.VAR_NAME}' not in source. Creating empty."
+                )
 
         # coords (inject defaults)
         if "comp" not in df.columns:
@@ -249,7 +253,9 @@ class Phase(TensorBase):
         name: str | None = None,
         verbose: bool = False,
     ) -> None:
-        super().__init__(data=data, meta=meta, name=name or "Phase", verbose=verbose)
+        super().__init__(
+            data=data, meta=meta, name=name or "Phase", verbose=verbose
+        )
 
     def read(  # noqa: D401
         self,
@@ -284,7 +290,9 @@ class Phase(TensorBase):
         if self.VAR_NAME not in df.columns:
             df[self.VAR_NAME] = np.nan
             if self.verbose:
-                self._logger.debug(f"'{self.VAR_NAME}' not in source. Creating empty.")
+                self._logger.debug(
+                    f"'{self.VAR_NAME}' not in source. Creating empty."
+                )
 
         if "comp" not in df.columns:
             df["comp"] = "ExHy"

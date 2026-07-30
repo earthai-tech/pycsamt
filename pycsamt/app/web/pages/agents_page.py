@@ -191,7 +191,9 @@ def _param_widget(key: str, spec: dict):
             className="param-input",
         )
     if ptype == "bool":
-        return dbc.Checkbox(id=wid, value=bool(default), className="param-check mt-1")
+        return dbc.Checkbox(
+            id=wid, value=bool(default), className="param-check mt-1"
+        )
     if ptype in ("float", "int"):
         lo, hi = spec.get("range", (None, None))
         return dbc.Input(
@@ -319,7 +321,9 @@ def _agent_list(names: list[str], selected: str | None) -> html.Div:
         for name in group_names:
             atype = (AGENT_REGISTRY.get(name) or {}).get("type", "processing")
             is_proc = atype == "processing"
-            badge_cl = "agent-list-badge-proc" if is_proc else "agent-list-badge-llm"
+            badge_cl = (
+                "agent-list-badge-proc" if is_proc else "agent-list-badge-llm"
+            )
             badge_lb = "⚡" if is_proc else "LLM"
             items.append(
                 html.Button(
@@ -355,7 +359,9 @@ def _render_history(history: list | None) -> list:
                 [
                     html.I(className=f"bi {icon} {icon_cl} me-1"),
                     html.Span(run.get("name", ""), className="history-name"),
-                    html.Span(run.get("timestamp", ""), className="history-time"),
+                    html.Span(
+                        run.get("timestamp", ""), className="history-time"
+                    ),
                 ],
                 id={"type": "history-item", "index": i},
                 className="agents-history-item",
@@ -403,7 +409,9 @@ def _build_data_bar(store_data: dict | None) -> list:
     )
 
     if line_counts:
-        summary = ", ".join(f"{ln}: {cnt}" for ln, cnt in list(line_counts.items())[:3])
+        summary = ", ".join(
+            f"{ln}: {cnt}" for ln, cnt in list(line_counts.items())[:3]
+        )
         if len(line_counts) > 3:
             summary += f" +{len(line_counts) - 3} more"
         chips.append(html.Span("·", className="agents-data-sep"))
@@ -500,7 +508,9 @@ def _render_chat(messages: list) -> list:
             # Preserve newlines
             parts = content.split("\n\n")
             inner.extend(
-                html.P(p, className="chat-bubble-text") for p in parts if p.strip()
+                html.P(p, className="chat-bubble-text")
+                for p in parts
+                if p.strip()
             )
 
         # Plan card
@@ -511,11 +521,13 @@ def _render_chat(messages: list) -> list:
                         html.Span(a, className="chat-plan-agent"),
                         html.Span(
                             " LLM"
-                            if (AGENT_REGISTRY.get(a) or {}).get("type") == "llm"
+                            if (AGENT_REGISTRY.get(a) or {}).get("type")
+                            == "llm"
                             else " ⚡",
                             className=(
                                 "chat-plan-badge-llm"
-                                if (AGENT_REGISTRY.get(a) or {}).get("type") == "llm"
+                                if (AGENT_REGISTRY.get(a) or {}).get("type")
+                                == "llm"
                                 else "chat-plan-badge-proc"
                             ),
                         ),
@@ -544,7 +556,9 @@ def _render_chat(messages: list) -> list:
                             [
                                 html.Button(
                                     [
-                                        html.I(className="bi bi-play-fill me-1"),
+                                        html.I(
+                                            className="bi bi-play-fill me-1"
+                                        ),
                                         "Confirm & Run",
                                     ],
                                     id={
@@ -573,7 +587,9 @@ def _render_chat(messages: list) -> list:
 
         # Cancelled plan note
         if p_stat == "cancelled":
-            inner.append(html.P("Plan cancelled.", className="chat-cancelled-note"))
+            inner.append(
+                html.P("Plan cancelled.", className="chat-cancelled-note")
+            )
 
         # Running indicator
         if p_stat == "running":
@@ -594,25 +610,37 @@ def _render_chat(messages: list) -> list:
         if r_log or r_sum or r_src:
             result_children: list = []
             if r_sum:
-                result_children.append(html.P(r_sum, className="chat-result-summary"))
+                result_children.append(
+                    html.P(r_sum, className="chat-result-summary")
+                )
             if r_log:
                 # open=True: log is always visible after execution —
                 # html.Details collapses on every Dash re-render otherwise.
                 result_children.append(
                     html.Details(
                         [
-                            html.Summary("Execution log", className="chat-log-summary"),
-                            html.Pre(r_log[:2000], className="chat-result-log"),
+                            html.Summary(
+                                "Execution log", className="chat-log-summary"
+                            ),
+                            html.Pre(
+                                r_log[:2000], className="chat-result-log"
+                            ),
                         ],
                         className="chat-result-details",
                         open=True,
                     )
                 )
             if r_src and r_src != empty_src(dark=True):
-                result_children.append(html.Img(src=r_src, className="chat-result-img"))
-            inner.append(html.Div(result_children, className="chat-result-block"))
+                result_children.append(
+                    html.Img(src=r_src, className="chat-result-img")
+                )
+            inner.append(
+                html.Div(result_children, className="chat-result-block")
+            )
 
-        bubbles.append(html.Div(inner, className="chat-bubble chat-bubble-assistant"))
+        bubbles.append(
+            html.Div(inner, className="chat-bubble chat-bubble-assistant")
+        )
 
     return bubbles
 
@@ -652,7 +680,9 @@ def _chat_layout() -> html.Div:
             # Quick action chips
             html.Div(
                 [
-                    html.Span("Quick actions:", className="agents-quick-label"),
+                    html.Span(
+                        "Quick actions:", className="agents-quick-label"
+                    ),
                     *[
                         html.Button(
                             label,
@@ -824,7 +854,9 @@ def layout() -> html.Div:
                         ],
                         className="agents-section-label",
                     ),
-                    html.Div(_build_param_form(first), id=IDs.AGENTS_PARAM_FORM),
+                    html.Div(
+                        _build_param_form(first), id=IDs.AGENTS_PARAM_FORM
+                    ),
                 ],
                 className="agents-detail-params",
             ),
@@ -1089,7 +1121,9 @@ def register_callbacks(app) -> None:
 
         # If active_lines is empty (store not yet initialised), show everything
         if not active_lines:
-            active_lines = list({r.get("Line", "") for r in records if r.get("Line")})
+            active_lines = list(
+                {r.get("Line", "") for r in records if r.get("Line")}
+            )
 
         # Build line options — only active lines
         line_opts = [{"label": ln, "value": ln} for ln in active_lines if ln]
@@ -1144,7 +1178,9 @@ def register_callbacks(app) -> None:
         records = store_data.get("station_records", [])
         active_lines = (active_lines_store or {}).get("active", [])
         if not active_lines:
-            active_lines = list({r.get("Line", "") for r in records if r.get("Line")})
+            active_lines = list(
+                {r.get("Line", "") for r in records if r.get("Line")}
+            )
         active_set = set(active_lines)
 
         # Always limit visible station options to active-line stations
@@ -1200,7 +1236,9 @@ def register_callbacks(app) -> None:
         State(IDs.AGENTS_STORE, "data"),
         prevent_initial_call=True,
     )
-    def _run_agent(_n, agent_name, _param_vals, station_filter, session_id, history):
+    def _run_agent(
+        _n, agent_name, _param_vals, station_filter, session_id, history
+    ):
         from pycsamt.app.web.callbacks.agents import (
             _exec_agent,
         )
@@ -1408,14 +1446,18 @@ def register_callbacks(app) -> None:
                     if result and getattr(result, "status", "") == "ok":
                         raw = getattr(result, "summary", "") or ""
                         # Extract agent names mentioned in the LLM response
-                        matched = [n for n in _ALL_NAMES if n.lower() in raw.lower()]
+                        matched = [
+                            n for n in _ALL_NAMES if n.lower() in raw.lower()
+                        ]
                         if matched:
                             plan = {
                                 "agents": matched[:4],
                                 "via": "llm",
                                 "description": raw[:200],
                             }
-                            llm_content = "Based on your request, here's what I'll run:"
+                            llm_content = (
+                                "Based on your request, here's what I'll run:"
+                            )
                         else:
                             plan = _smart_route(user_text)
                     else:
@@ -1429,10 +1471,14 @@ def register_callbacks(app) -> None:
 
         # Build assistant reply
         if plan.get("agents"):
-            content = llm_content or "Based on your request, here's what I'll run:"
+            content = (
+                llm_content or "Based on your request, here's what I'll run:"
+            )
             plan_status = "pending"
         else:
-            content = plan.get("description", "I couldn't identify a workflow.")
+            content = plan.get(
+                "description", "I couldn't identify a workflow."
+            )
             plan_status = None
 
         if not has_data:

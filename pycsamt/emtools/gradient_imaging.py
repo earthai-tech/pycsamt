@@ -635,7 +635,8 @@ def plot_gradient_section(
     q = _Q.get(quantity.lower())
     if q is None:
         raise ValueError(
-            f"quantity must be 'joint', 'spatial', or 'frequency'; " f"got {quantity!r}"
+            f"quantity must be 'joint', 'spatial', or 'frequency'; "
+            f"got {quantity!r}"
         )
 
     if q == "joint":
@@ -721,7 +722,9 @@ def plot_gradient_section(
         norm = Normalize(vmin=vmin, vmax=vmax)
 
     X_idx, Y_idx = np.meshgrid(np.arange(len(all_x)), np.arange(len(all_y)))
-    pcm = ax.pcolormesh(X_idx, Y_idx, grid, cmap=cmap, norm=norm, shading="nearest")
+    pcm = ax.pcolormesh(
+        X_idx, Y_idx, grid, cmap=cmap, norm=norm, shading="nearest"
+    )
     plt.colorbar(pcm, ax=ax, label="Ω·m")
 
     # x-axis: station positions

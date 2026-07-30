@@ -225,7 +225,9 @@ class PlotMisfit(_OccamPlotBase):
 
         ax_rms.plot(iters, rms, "o-", color="C0", label="RMS misfit", zorder=3)
         if self.target_line:
-            ax_rms.axhline(1.0, color="k", ls="--", lw=0.8, label="Target  1.0")
+            ax_rms.axhline(
+                1.0, color="k", ls="--", lw=0.8, label="Target  1.0"
+            )
         ax_rms.set_xlabel("Iteration")
         ax_rms.set_ylabel("RMS misfit", color="C0")
         ax_rms.tick_params(axis="y", labelcolor="C0")
@@ -409,7 +411,9 @@ class PlotModel(_OccamPlotBase):
             x_off_scale = 1.0
             xlabel = "Distance (m)"
 
-        depth_max = self.depth_max if self.depth_max is not None else float(zn[-1])
+        depth_max = (
+            self.depth_max if self.depth_max is not None else float(zn[-1])
+        )
         zi_max = int(np.searchsorted(zn, depth_max))
         zi_max = min(zi_max + 1, len(zn))
 
@@ -417,7 +421,8 @@ class PlotModel(_OccamPlotBase):
         data_obj = getattr(result, "data", None)
         n_stations = (
             int(data_obj.offsets.size)
-            if data_obj is not None and getattr(data_obj, "offsets", None) is not None
+            if data_obj is not None
+            and getattr(data_obj, "offsets", None) is not None
             else rho_sub.shape[1]
         )
         figsize = self.figsize or self.section_style.figsize_for(
@@ -636,7 +641,9 @@ class PlotResponse(_OccamPlotBase):
         all_site_idx = np.unique(response.data[:, 0].astype(int))
         if self.stations is not None:
             if data_obj is not None and data_obj.sites:
-                idx_map = {name: i + 1 for i, name in enumerate(data_obj.sites)}
+                idx_map = {
+                    name: i + 1 for i, name in enumerate(data_obj.sites)
+                }
                 sel_idx = np.array(
                     [idx_map[s] for s in self.stations if s in idx_map],
                     dtype=int,
@@ -682,7 +689,9 @@ class PlotResponse(_OccamPlotBase):
                     (ax_rho, "rho", codes["rho"]),
                     (ax_phs, "phs", codes["phs"]),
                 ]:
-                    mask = site_mask & (response.data[:, 2].astype(int) == code)
+                    mask = site_mask & (
+                        response.data[:, 2].astype(int) == code
+                    )
                     if not mask.any():
                         continue
                     sub = response.data[mask]
@@ -1065,7 +1074,9 @@ class PlotSounding1D(_OccamPlotBase):
         zc = (zn[:-1] + zn[1:]) / 2.0
 
         if data_obj is None or data_obj.offsets.size == 0:
-            raise RuntimeError("PlotSounding1D: no station offsets in result.data")
+            raise RuntimeError(
+                "PlotSounding1D: no station offsets in result.data"
+            )
 
         offsets = data_obj.offsets
         site_names = (
@@ -1075,7 +1086,11 @@ class PlotSounding1D(_OccamPlotBase):
         )
 
         if self.stations is not None:
-            sel = [(n, o) for n, o in zip(site_names, offsets) if n in self.stations]
+            sel = [
+                (n, o)
+                for n, o in zip(site_names, offsets)
+                if n in self.stations
+            ]
         else:
             sel = list(zip(site_names, offsets))
 
@@ -1086,26 +1101,34 @@ class PlotSounding1D(_OccamPlotBase):
             raise RuntimeError("PlotSounding1D: no stations to plot")
 
         n_air = mesh.n_airlayers
-        depth_max = self.depth_max if self.depth_max is not None else float(zn[-1])
+        depth_max = (
+            self.depth_max if self.depth_max is not None else float(zn[-1])
+        )
         zi_max = min(int(np.searchsorted(zn, depth_max)) + 1, len(zn) - 1)
         zc_sub = zc[n_air:zi_max]
 
         iter_n = getattr(getattr(result, "best_iter", None), "iteration", "?")
 
         if self.overlay:
-            fig, ax = plt.subplots(figsize=self.figsize or (6, 8), dpi=self.dpi)
+            fig, ax = plt.subplots(
+                figsize=self.figsize or (6, 8), dpi=self.dpi
+            )
             colors = cm.tab20(np.linspace(0, 1, len(sel)))
             for (name, off), color in zip(sel, colors):
                 col_idx = int(np.argmin(np.abs(xc - off)))
                 prof = rho_2d[n_air:zi_max, col_idx]
                 rho_lin = np.where(np.isfinite(prof), 10.0**prof, np.nan)
-                ax.semilogx(rho_lin, zc_sub, "-", lw=1.5, color=color, label=name)
+                ax.semilogx(
+                    rho_lin, zc_sub, "-", lw=1.5, color=color, label=name
+                )
 
             ax.set_xlim(self.rho_min, self.rho_max)
             ax.set_ylim(float(zc_sub[-1]) if zc_sub.size else 1.0, 0.0)
             ax.set_xlabel("Resistivity (Ω·m)")
             ax.set_ylabel("Depth (m)")
-            ax.legend(fontsize="x-small", bbox_to_anchor=(1.02, 1), loc="upper left")
+            ax.legend(
+                fontsize="x-small", bbox_to_anchor=(1.02, 1), loc="upper left"
+            )
             ax.set_title(f"1-D soundings from 2-D model  [iter {iter_n}]")
             ax.grid(True, which="both", lw=0.4, alpha=0.4)
             fig.tight_layout()
@@ -1270,7 +1293,10 @@ class PlotSiteMisfit(_OccamPlotBase):
         }
         present = set(np.unique(tcodes))
         wanted_codes = [
-            c for m in self.modes for c in _mode_codes.get(m, []) if c in present
+            c
+            for m in self.modes
+            for c in _mode_codes.get(m, [])
+            if c in present
         ]
         if not wanted_codes:
             raise RuntimeError("PlotSiteMisfit: no matching data type codes")
@@ -1291,7 +1317,9 @@ class PlotSiteMisfit(_OccamPlotBase):
                 if fin.size:
                     rms_table[si, ci] = float(np.sqrt(np.mean(fin**2)))
 
-        code_labels = [_TYPE_INFO.get(c, (str(c), "", False))[0] for c in wanted_codes]
+        code_labels = [
+            _TYPE_INFO.get(c, (str(c), "", False))[0] for c in wanted_codes
+        ]
         _bar_colors = ["C0", "C0", "C1", "C1"]
         _bar_alpha = [1.0, 0.55, 1.0, 0.55]
 
@@ -1337,7 +1365,9 @@ class PlotSiteMisfit(_OccamPlotBase):
             )
 
         ax_bar.set_xticks(x_pos)
-        ax_bar.set_xticklabels(site_labels, rotation=45, ha="right", fontsize="x-small")
+        ax_bar.set_xticklabels(
+            site_labels, rotation=45, ha="right", fontsize="x-small"
+        )
         ax_bar.set_ylabel("RMS misfit")
         ax_bar.set_title("Per-site RMS misfit by data type")
         ax_bar.legend(fontsize="small", loc="upper right")
@@ -1516,7 +1546,11 @@ class PlotResponseGrid(_OccamPlotBase):
         rd = response.data
         all_idx = np.unique(rd[:, 0].astype(int))
 
-        if self.stations is not None and data_obj is not None and data_obj.sites:
+        if (
+            self.stations is not None
+            and data_obj is not None
+            and data_obj.sites
+        ):
             idx_map = {name: i + 1 for i, name in enumerate(data_obj.sites)}
             sel_idx = np.array(
                 [idx_map[s] for s in self.stations if s in idx_map], dtype=int
@@ -1606,7 +1640,11 @@ class PlotResponseGrid(_OccamPlotBase):
             rms_val = _site_rms(site_1b)
             name = (
                 data_obj.sites[site_1b - 1]
-                if (data_obj and data_obj.sites and site_1b - 1 < len(data_obj.sites))
+                if (
+                    data_obj
+                    and data_obj.sites
+                    and site_1b - 1 < len(data_obj.sites)
+                )
                 else f"S{site_1b:03d}"
             )
             rms_str = f"{rms_val:.2f}" if np.isfinite(rms_val) else "n/a"
@@ -1642,7 +1680,8 @@ def _station_idx(result, station) -> int:
                 return data_obj.sites.index(station) + 1
             except ValueError:
                 raise ValueError(
-                    f"Station {station!r} not found.  " f"Available: {data_obj.sites}"
+                    f"Station {station!r} not found.  "
+                    f"Available: {data_obj.sites}"
                 )
         raise RuntimeError("No site names in data — pass an integer index.")
     return int(station)
@@ -1819,7 +1858,9 @@ class PlotStation1DFit(_OccamPlotBase):
         self.rho_depth_lim = rho_depth_lim
         self.title = title
         self.mode_colors = mode_colors or {"TE": "C0", "TM": "C3"}
-        self.max_rho_err = max_rho_err  # cap on log10(rho) error bar half-width
+        self.max_rho_err = (
+            max_rho_err  # cap on log10(rho) error bar half-width
+        )
         self.max_phs_err = max_phs_err  # cap on phase error bar (degrees)
 
     def plot(self):
@@ -1834,7 +1875,9 @@ class PlotStation1DFit(_OccamPlotBase):
 
         result = self.result
         if result is None:
-            raise RuntimeError("PlotStation1DFit: no InversionResult attached.")
+            raise RuntimeError(
+                "PlotStation1DFit: no InversionResult attached."
+            )
 
         site_1b = _station_idx(result, self.station)
         fit_data = _extract_fit_data(result, site_1b)
@@ -1977,7 +2020,9 @@ class PlotStation1DFit(_OccamPlotBase):
         # ── 1-D model profile ─────────────────────────────────────────────
         if z_top is not None and rho_1d is not None:
             depth_max_km = (
-                self.depth_max if self.depth_max is not None else float(z_bot[-1])
+                self.depth_max
+                if self.depth_max is not None
+                else float(z_bot[-1])
             )
             # staircase: for each layer draw a horizontal segment then vertical
             for zt, zb, rho in zip(z_top, z_bot, rho_1d):
@@ -2001,7 +2046,9 @@ class PlotStation1DFit(_OccamPlotBase):
             for k in range(len(valid) - 1):
                 _, _, r0 = valid[k]
                 _, z1, r1 = valid[k + 1]
-                ax_mod.plot([r0, r1], [z1, z1], color="#2ca02c", lw=1.8, zorder=3)
+                ax_mod.plot(
+                    [r0, r1], [z1, z1], color="#2ca02c", lw=1.8, zorder=3
+                )
 
             ax_mod.set_xscale("log")
             ax_mod.set_ylim(depth_max_km, 0.0)
@@ -2028,7 +2075,11 @@ class PlotStation1DFit(_OccamPlotBase):
         data_obj = getattr(result, "data", None)
         st_name = (
             data_obj.sites[site_1b - 1]
-            if (data_obj and data_obj.sites and site_1b - 1 < len(data_obj.sites))
+            if (
+                data_obj
+                and data_obj.sites
+                and site_1b - 1 < len(data_obj.sites)
+            )
             else f"S{site_1b:03d}"
         )
         fig.suptitle(

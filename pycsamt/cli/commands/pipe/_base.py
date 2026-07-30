@@ -83,7 +83,9 @@ def _resolve_pipeline(
         if name:
             pipe.name = name
         if verbose >= 1:
-            click.echo(f"  Loaded preset {preset!r} ({len(pipe)} steps)", err=True)
+            click.echo(
+                f"  Loaded preset {preset!r} ({len(pipe)} steps)", err=True
+            )
         return pipe
 
     if steps:
@@ -174,7 +176,11 @@ def _find_step_index(
 ) -> int | None:
     """Return the 0-based index of the step matching *query* (label or code)."""
     for i, (label, step) in enumerate(steps):
-        if label == query or step.spec.code == query or step.spec.name == query:
+        if (
+            label == query
+            or step.spec.code == query
+            or step.spec.name == query
+        ):
             return i
     return None
 
@@ -212,7 +218,9 @@ def _format_run_result(
         return json.dumps(data, indent=2, default=str)
 
     if output_format == "csv":
-        lines = ["idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,error"]
+        lines = [
+            "idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,error"
+        ]
         for sr in result.step_results:
             err = str(sr.error).replace(",", ";") if sr.error else ""
             lines.append(

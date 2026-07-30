@@ -349,7 +349,9 @@ def build_topo_section(
         exaggeration=exaggeration,
         clip_above_surface=clip_above_surface,
     )
-    surface_km = interp_elev(chain_km, elev_km, x_nodes_km, method=interp_method)
+    surface_km = interp_elev(
+        chain_km, elev_km, x_nodes_km, method=interp_method
+    )
 
     return TopoSection(
         x_nodes_km=x_nodes_km,
@@ -364,7 +366,9 @@ def build_topo_section(
         station_x_km=station_x_km,
         station_names=names,
         depth_min_km=depth_min_km,
-        depth_max_km=(float(z_centers_km.max()) if z_centers_km.size else depth_min_km),
+        depth_max_km=(
+            float(z_centers_km.max()) if z_centers_km.size else depth_min_km
+        ),
         exaggeration=float(exaggeration),
         log_rho=bool(log_rho),
         method=grid.method,
@@ -568,7 +572,9 @@ def plot_topo_section(
         fig = ax.get_figure()
 
     cbar_label = (
-        r"$\log_{10}\rho$ ($\Omega\cdot$m)" if log_rho else r"$\rho$ ($\Omega\cdot$m)"
+        r"$\log_{10}\rho$ ($\Omega\cdot$m)"
+        if log_rho
+        else r"$\rho$ ($\Omega\cdot$m)"
     )
     if topo_cfg is None:
         # Deliberately not forwarding `exaggeration` here: drape_section
@@ -584,7 +590,9 @@ def plot_topo_section(
         # rather than tinted with the fill colour. clip_below_surface stays
         # True so mismatched-column gaps (see docs/user_guide/topo/concepts)
         # blend into that same white instead of standing out separately.
-        topo_cfg = TopoConfig(station_pins_at_surface=show_stations, fill_alpha=0.0)
+        topo_cfg = TopoConfig(
+            station_pins_at_surface=show_stations, fill_alpha=0.0
+        )
     if station_marker is None:
         from ..api.station import PYCSAMT_STATION_RENDERING, StationMarkerStyle
 
@@ -716,7 +724,9 @@ def plot_topo_section(
 def _to_km(value: Any, unit: str) -> Any:
     """Convert a scalar or array from *unit* ("m"/"km") to km."""
     if isinstance(value, np.ndarray):
-        return value / 1000.0 if unit == "m" else value.astype(float, copy=True)
+        return (
+            value / 1000.0 if unit == "m" else value.astype(float, copy=True)
+        )
     return float(value) / 1000.0 if unit == "m" else float(value)
 
 
@@ -777,7 +787,11 @@ def _extract_grid(
         x_c = np.asarray(x_c, dtype=float)
         z_c = np.asarray(z_c, dtype=float)
         rho = np.asarray(rho, dtype=float)
-        sx = np.asarray(station_x, dtype=float) if station_x is not None else x_c
+        sx = (
+            np.asarray(station_x, dtype=float)
+            if station_x is not None
+            else x_c
+        )
         names = (
             list(station_names)
             if station_names is not None
@@ -848,7 +862,11 @@ def _extract_grid(
         return info
 
     # 4. Native Occam2D InversionResult (rho_2d + mesh, no x_centers).
-    if hasattr(model, "rho_2d") and hasattr(model, "mesh") and model.rho_2d is not None:
+    if (
+        hasattr(model, "rho_2d")
+        and hasattr(model, "mesh")
+        and model.rho_2d is not None
+    ):
         from ..interp import ResistivityModel
 
         rm = ResistivityModel.from_occam2d(model)
@@ -882,7 +900,11 @@ def _extract_grid(
         x_c = 0.5 * (x_nodes[:-1] + x_nodes[1:])
         z_c = 0.5 * (z_nodes[:-1] + z_nodes[1:])
         rho_log10 = np.asarray(mm.rho_loge, dtype=float) / np.log(10.0)
-        sx = np.asarray(station_x, dtype=float) if station_x is not None else x_c
+        sx = (
+            np.asarray(station_x, dtype=float)
+            if station_x is not None
+            else x_c
+        )
         names = (
             list(station_names)
             if station_names is not None
@@ -980,15 +1002,21 @@ def _resolve_topography(
     """Resolve (chainage_km, elev_m, names, source_used) for *grid*."""
     valid_sources = {"auto", "sites", "array", "model"}
     if topo_source not in valid_sources:
-        raise ValueError(f"topo_source must be one of {sorted(valid_sources)}.")
+        raise ValueError(
+            f"topo_source must be one of {sorted(valid_sources)}."
+        )
 
     names = (
-        list(station_names) if station_names is not None else list(grid.station_names)
+        list(station_names)
+        if station_names is not None
+        else list(grid.station_names)
     )
 
     if topo_source == "sites" or (topo_source == "auto" and sites is not None):
         if sites is None:
-            raise ValueError("topo_source='sites' requires the `sites` argument.")
+            raise ValueError(
+                "topo_source='sites' requires the `sites` argument."
+            )
         from .extract import (
             extract_chainage,
             extract_elevation,
@@ -1001,9 +1029,13 @@ def _resolve_topography(
             names = extract_station_names(sites)
         return chain_km, elev_m, names, "sites"
 
-    if topo_source == "array" or (topo_source == "auto" and elevation is not None):
+    if topo_source == "array" or (
+        topo_source == "auto" and elevation is not None
+    ):
         if elevation is None:
-            raise ValueError("topo_source='array' requires the `elevation` argument.")
+            raise ValueError(
+                "topo_source='array' requires the `elevation` argument."
+            )
         elev_m = np.asarray(elevation, dtype=float)
         if chainage is not None:
             chain_km = np.asarray(chainage, dtype=float)
@@ -1013,7 +1045,9 @@ def _resolve_topography(
 
     if topo_source in ("model", "auto"):
         z_km = _to_km(grid.z_centers, grid.unit)
-        terrain_km = _infer_terrain_km(z_km, grid.rho_log10, air_log10_threshold)
+        terrain_km = _infer_terrain_km(
+            z_km, grid.rho_log10, air_log10_threshold
+        )
         if terrain_km is not None:
             x_km = _to_km(grid.x_centers, grid.unit)
             return x_km, terrain_km * 1000.0, names, "model"

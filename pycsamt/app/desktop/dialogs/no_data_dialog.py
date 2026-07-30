@@ -44,7 +44,9 @@ class NoDataDialog(QDialog):
     parent : QWidget, optional
     """
 
-    def __init__(self, tool_name: str = "", parent: QWidget | None = None) -> None:
+    def __init__(
+        self, tool_name: str = "", parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("No Survey Data Loaded")
         self.setFixedWidth(420)

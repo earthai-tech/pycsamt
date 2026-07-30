@@ -51,7 +51,9 @@ def _register_parse_upload(app) -> None:
 
         elev = parse_elevation_file(contents, filename or "")
         if not elev:
-            return {}, _msg("No station/elevation columns found in file.", ok=False)
+            return {}, _msg(
+                "No station/elevation columns found in file.", ok=False
+            )
         return elev, _msg(f"Parsed {len(elev)} elevations from file.")
 
 

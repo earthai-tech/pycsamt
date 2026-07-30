@@ -26,7 +26,9 @@ def _perpendicular_distance(
     if norm < 1e-12:
         return np.linalg.norm(points - p1, axis=1)
     # signed area / base length = perpendicular distance
-    cross = np.abs((d[0]) * (p1[1] - points[:, 1]) - (p1[0] - points[:, 0]) * (d[1]))
+    cross = np.abs(
+        (d[0]) * (p1[1] - points[:, 1]) - (p1[0] - points[:, 0]) * (d[1])
+    )
     return cross / norm
 
 

@@ -129,7 +129,9 @@ def _dark_scene(title: str = "", dark: bool = True) -> dict:
 # ── ρ masking helper ──────────────────────────────────────────────────────────
 
 
-def _apply_rho_mask(rho: np.ndarray, rho_lo: float, rho_hi: float) -> np.ndarray:
+def _apply_rho_mask(
+    rho: np.ndarray, rho_lo: float, rho_hi: float
+) -> np.ndarray:
     """Return rho with values outside [rho_lo, rho_hi] set to NaN (transparent)."""
     if rho_lo <= 0 and rho_hi >= 1e8:
         return rho  # no filtering needed
@@ -207,7 +209,12 @@ def _line_real_offsets(profiles: dict) -> dict | None:
         lat = p.get("sta_lat") or []
         lon = p.get("sta_lon") or []
         names = p.get("sta_names") or []
-        if not lat or not lon or len(lat) != len(lon) or len(lat) != len(names):
+        if (
+            not lat
+            or not lon
+            or len(lat) != len(lon)
+            or len(lat) != len(names)
+        ):
             return None
         line_ids = [f"{name}::{n}" for n in names]
         per_line_ids[name] = line_ids
@@ -276,10 +283,16 @@ def _build_fence_fig(
         # Topo elevation for this line (Phase 3: source-aware resolution)
         sta_x = np.asarray(p.get("sta_x", x_arr), float)
         sta_elev = (
-            _resolve_profile_elevs(p, topo_src) if use_topo else np.zeros(len(sta_x))
+            _resolve_profile_elevs(p, topo_src)
+            if use_topo
+            else np.zeros(len(sta_x))
         )
-        sta_names_line = p.get("sta_names", [f"S{j}" for j in range(len(sta_x))])
-        elev_at_x = _elev_along_line(x_arr, sta_x, sta_elev) if use_topo else None
+        sta_names_line = p.get(
+            "sta_names", [f"S{j}" for j in range(len(sta_x))]
+        )
+        elev_at_x = (
+            _elev_along_line(x_arr, sta_x, sta_elev) if use_topo else None
+        )
 
         # Universal depth filter
         z_arr, rho = _apply_depth_mask(z_raw, rho, depth_lo, depth_hi)
@@ -562,7 +575,9 @@ def _build_block_fig(
         cmax=c_hi_data,
         showscale=True,
         colorbar=dict(
-            title=dict(text="log₁₀ρ (Ω·m)", font=dict(color=colors["text"], size=10)),
+            title=dict(
+                text="log₁₀ρ (Ω·m)", font=dict(color=colors["text"], size=10)
+            ),
             tickfont=dict(color=colors["tick"], size=9),
         ),
         caps=dict(
@@ -729,7 +744,9 @@ def _build_depth_slices_fig(
             traces.append(topo_surf)
 
     layout = _dark_scene(title, dark=dark)
-    z_axis_lbl = "Elevation (m a.s.l.)" if use_topo and apply_topo else "Depth (m)"
+    z_axis_lbl = (
+        "Elevation (m a.s.l.)" if use_topo and apply_topo else "Depth (m)"
+    )
     layout["scene"]["zaxis"]["title"] = dict(
         text=z_axis_lbl, font=dict(color=colors["text"], size=10)
     )
@@ -776,7 +793,11 @@ def _rho_xy_from_site(site) -> tuple:
                 else:
                     z_xy = z_arr.ravel()
                 n = min(len(freq), len(z_xy))
-                rho_xy = 0.2 * np.abs(z_xy[:n]) ** 2 / np.clip(freq[:n], 1e-10, None)
+                rho_xy = (
+                    0.2
+                    * np.abs(z_xy[:n]) ** 2
+                    / np.clip(freq[:n], 1e-10, None)
+                )
 
         if rho_xy is None:
             return None, None
@@ -799,7 +820,10 @@ def _station_distance_m(coords_list: list) -> np.ndarray:
         lat2 = np.radians(coords_list[i][0])
         lon2 = np.radians(coords_list[i][1])
         dlat, dlon = lat2 - lat1, lon2 - lon1
-        a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+        a = (
+            np.sin(dlat / 2) ** 2
+            + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+        )
         dists[i] = dists[i - 1] + 2 * R * np.arcsin(min(np.sqrt(a), 1.0))
     if dists[-1] < 1.0:
         dists = np.arange(n, dtype=float) * 100.0
@@ -1020,19 +1044,23 @@ def _parse_topo_upload(contents: str, filename: str) -> list[dict]:
                     (
                         k
                         for k in f
-                        if k.lower() in ("elevation", "elev", "z", "altitude", "height")
+                        if k.lower()
+                        in ("elevation", "elev", "z", "altitude", "height")
                     ),
                     None,
                 )
                 if id_key is None or elv_key is None:
                     return []
                 names = [
-                    n.decode() if isinstance(n, bytes) else str(n) for n in f[id_key][:]
+                    n.decode() if isinstance(n, bytes) else str(n)
+                    for n in f[id_key][:]
                 ]
                 elevs = np.asarray(f[elv_key][:], float)
                 for name, e in zip(names, elevs):
                     if name.strip() and np.isfinite(e):
-                        records.append({"station": name.strip(), "elev": float(e)})
+                        records.append(
+                            {"station": name.strip(), "elev": float(e)}
+                        )
 
         elif fname.endswith(".npz"):
             data = np.load(io.BytesIO(raw), allow_pickle=True)
@@ -1040,7 +1068,8 @@ def _parse_topo_upload(contents: str, filename: str) -> list[dict]:
                 (
                     k
                     for k in data
-                    if k.lower() in ("station", "station_names", "id", "name", "sta")
+                    if k.lower()
+                    in ("station", "station_names", "id", "name", "sta")
                 ),
                 None,
             )
@@ -1048,14 +1077,16 @@ def _parse_topo_upload(contents: str, filename: str) -> list[dict]:
                 (
                     k
                     for k in data
-                    if k.lower() in ("elevation", "elev", "z", "altitude", "height")
+                    if k.lower()
+                    in ("elevation", "elev", "z", "altitude", "height")
                 ),
                 None,
             )
             if id_key is None or elv_key is None:
                 return []
             names = [
-                n.decode() if isinstance(n, bytes) else str(n) for n in data[id_key]
+                n.decode() if isinstance(n, bytes) else str(n)
+                for n in data[id_key]
             ]
             elevs = np.asarray(data[elv_key], float)
             for name, e in zip(names, elevs):
@@ -1085,15 +1116,21 @@ def _build_elevs_dict(
             return None
 
     for r in station_records or []:
-        name = str(r.get("ID") or r.get("station") or r.get("name", "")).strip()
+        name = str(
+            r.get("ID") or r.get("station") or r.get("name", "")
+        ).strip()
         if not name:
             continue
-        e = _try_float(r.get("Elevation") or r.get("elevation") or r.get("elev"))
+        e = _try_float(
+            r.get("Elevation") or r.get("elevation") or r.get("elev")
+        )
         if e is not None:
             out.setdefault(name, {})["elev_sta"] = e
 
     for r in elev_raw_store or []:
-        name = str(r.get("station") or r.get("ID") or r.get("name", "")).strip()
+        name = str(
+            r.get("station") or r.get("ID") or r.get("name", "")
+        ).strip()
         if not name:
             continue
         e = _try_float(r.get("elev"))
@@ -1101,7 +1138,9 @@ def _build_elevs_dict(
             out.setdefault(name, {})["elev_raw"] = e
 
     for r in elev_corr_store or []:
-        name = str(r.get("station") or r.get("ID") or r.get("name", "")).strip()
+        name = str(
+            r.get("station") or r.get("ID") or r.get("name", "")
+        ).strip()
         if not name:
             continue
         e = _try_float(r.get("elev_corrected") or r.get("elev"))
@@ -1109,10 +1148,14 @@ def _build_elevs_dict(
             out.setdefault(name, {})["elev_corr"] = e
 
     for r in topo_upload_store or []:
-        name = str(r.get("station") or r.get("ID") or r.get("name", "")).strip()
+        name = str(
+            r.get("station") or r.get("ID") or r.get("name", "")
+        ).strip()
         if not name:
             continue
-        e = _try_float(r.get("elev") or r.get("elevation") or r.get("Elevation"))
+        e = _try_float(
+            r.get("elev") or r.get("elevation") or r.get("Elevation")
+        )
         if e is not None:
             out.setdefault(name, {})["elev_upload"] = e
 
@@ -1148,7 +1191,9 @@ def _resolve_profile_elevs(profile: dict, topo_src: str) -> np.ndarray:
                 if bad.any():
                     good_idx = np.where(~bad)[0]
                     if good_idx.size:
-                        a[bad] = np.interp(np.where(bad)[0], good_idx, a[good_idx])
+                        a[bad] = np.interp(
+                            np.where(bad)[0], good_idx, a[good_idx]
+                        )
                     else:
                         a = np.zeros(n, float)
                 return a
@@ -1160,7 +1205,9 @@ def _has_survey_line_profiles(store_data: dict | None) -> bool:
     if not store_data:
         return False
     line_counts = store_data.get("line_counts") or {}
-    named = [str(k).strip() for k, v in line_counts.items() if str(k).strip() and v]
+    named = [
+        str(k).strip() for k, v in line_counts.items() if str(k).strip() and v
+    ]
     return len(named) >= 2
 
 
@@ -1224,7 +1271,11 @@ def _profiles_from_pseudo(
                 continue
             line = (
                 sta_to_line.get(station)
-                or str(getattr(site, "Line", None) or getattr(site, "line", None) or "")
+                or str(
+                    getattr(site, "Line", None)
+                    or getattr(site, "line", None)
+                    or ""
+                )
                 or "default"
             )
             if require_line_metadata and line in {
@@ -1255,7 +1306,9 @@ def _profiles_from_pseudo(
         all_depths = all_depths[np.isfinite(all_depths) & (all_depths > 0)]
         if all_depths.size == 0:
             continue
-        z_arr = np.linspace(all_depths.min(), np.percentile(all_depths, 95), 40)
+        z_arr = np.linspace(
+            all_depths.min(), np.percentile(all_depths, 95), 40
+        )
         rho_grid = np.zeros((len(z_arr), len(items)), float)
         for j, (_, dep_j, rho_j, _) in enumerate(items):
             sort_idx = np.argsort(dep_j)
@@ -1266,8 +1319,12 @@ def _profiles_from_pseudo(
 
         # Topo metadata
         sta_names = [it[0] for it in items]
-        sta_lat = [float(it[3][0]) if it[3] is not None else 0.0 for it in items]
-        sta_lon = [float(it[3][1]) if it[3] is not None else 0.0 for it in items]
+        sta_lat = [
+            float(it[3][0]) if it[3] is not None else 0.0 for it in items
+        ]
+        sta_lon = [
+            float(it[3][1]) if it[3] is not None else 0.0 for it in items
+        ]
         sta_elev = [_safe_elev(it[3]) for it in items]
         # Fall back to 0.0 for missing elevations so arrays are always same length
         sta_elev = [e if e is not None else 0.0 for e in sta_elev]
@@ -1333,7 +1390,9 @@ def _profiles_from_inversion_result(
         profile["sta_elev"] = [_pick(n, "elev_sta") for n in sta_names]
         profile["sta_elev_raw"] = [_pick(n, "elev_raw") for n in sta_names]
         profile["sta_elev_corr"] = [_pick(n, "elev_corr") for n in sta_names]
-        profile["sta_elev_upload"] = [_pick(n, "elev_upload") for n in sta_names]
+        profile["sta_elev_upload"] = [
+            _pick(n, "elev_upload") for n in sta_names
+        ]
     else:
         profile["sta_elev"] = [0.0] * len(sta_names)
         profile["sta_elev_raw"] = [0.0] * len(sta_names)
@@ -1358,8 +1417,12 @@ def _profiles_from_inversion(session_id: str) -> dict:
         model = getattr(getattr(ctrl, "state", None), "model", None)
         if model is None:
             return {}
-        x = np.asarray(getattr(model, "x_centers", np.arange(model.rho_2d.shape[1])))
-        z = np.asarray(getattr(model, "z_centers", np.arange(model.rho_2d.shape[0])))
+        x = np.asarray(
+            getattr(model, "x_centers", np.arange(model.rho_2d.shape[1]))
+        )
+        z = np.asarray(
+            getattr(model, "z_centers", np.arange(model.rho_2d.shape[0]))
+        )
         rho = np.asarray(model.rho_2d)
         return {"Line 1": {"x": x, "z": z, "rho": _rho_log_to_ohm_m(rho)}}
     except Exception:
@@ -1420,7 +1483,10 @@ def _register_mode_switch(app) -> None:
         }}
         """,
         [Output(pid, "style") for pid in _panel_ids]
-        + [Output(f"map3d-mode-btn-{slug}", "className") for slug in _MODE_SLUGS]
+        + [
+            Output(f"map3d-mode-btn-{slug}", "className")
+            for slug in _MODE_SLUGS
+        ]
         + [Output("map3d-iso-band-card", "style")],
         Input(IDs.MAP3D_ACTIVE_MODE, "data"),
     )
@@ -1628,7 +1694,8 @@ def _register_generate(app) -> None:
             if data_src == "inversion":
                 if not _has_cached_inversion_result(session_id):
                     msg = (
-                        "Run an inversion first, then use " "Session inversion result."
+                        "Run an inversion first, then use "
+                        "Session inversion result."
                     )
                     return (
                         no_update,
@@ -1685,7 +1752,9 @@ def _register_generate(app) -> None:
                                 "elev_corr",
                                 elevs_by_name.get(n, {}).get(
                                     "elev_raw",
-                                    elevs_by_name.get(n, {}).get("elev_sta", 0.0),
+                                    elevs_by_name.get(n, {}).get(
+                                        "elev_sta", 0.0
+                                    ),
                                 ),
                             )
                         )
@@ -1911,7 +1980,9 @@ def _register_display(app) -> None:
                 "sta_elev": np.asarray(p.get("sta_elev", []), float),
                 "sta_elev_raw": np.asarray(p.get("sta_elev_raw", []), float),
                 "sta_elev_corr": np.asarray(p.get("sta_elev_corr", []), float),
-                "sta_elev_upload": np.asarray(p.get("sta_elev_upload", []), float),
+                "sta_elev_upload": np.asarray(
+                    p.get("sta_elev_upload", []), float
+                ),
                 "sta_names": p.get("sta_names", []),
                 "sta_lat": p.get("sta_lat", []),
                 "sta_lon": p.get("sta_lon", []),
@@ -1946,15 +2017,23 @@ def _register_display(app) -> None:
         # (mirrors api/station.py: facecolor=black→filled, facecolor=white→open)
         _default_sym = "diamond" if _src == "inversion" else "diamond-open"
         sta_sym_v = (
-            _default_sym if (sta_symbol_ui or "auto") == "auto" else str(sta_symbol_ui)
+            _default_sym
+            if (sta_symbol_ui or "auto") == "auto"
+            else str(sta_symbol_ui)
         )
         sta_size_v = int(sta_size_ui) if sta_size_ui is not None else 8
         sta_color_v = str(sta_color_ui) if sta_color_ui else "black"
 
         # Build filter description for context bar
-        rho_desc = f"ρ {rho_lo_f:.0f}–{rho_hi_f:.0f} Ω·m" if rho_hi_f < 1e7 else "all ρ"
+        rho_desc = (
+            f"ρ {rho_lo_f:.0f}–{rho_hi_f:.0f} Ω·m"
+            if rho_hi_f < 1e7
+            else "all ρ"
+        )
         dep_desc = (
-            f"depth {d_lo_f:.0f}–{d_hi_f:.0f} m" if d_hi_f < 1e5 else "full depth"
+            f"depth {d_lo_f:.0f}–{d_hi_f:.0f} m"
+            if d_hi_f < 1e5
+            else "full depth"
         )
 
         try:
@@ -1985,7 +2064,9 @@ def _register_display(app) -> None:
                     sta_size=sta_size_v,
                     sta_color=sta_color_v,
                 )
-                topo_tag = f" · topo: {topo_src_v}" if topo_src_v != "none" else ""
+                topo_tag = (
+                    f" · topo: {topo_src_v}" if topo_src_v != "none" else ""
+                )
                 info = _info(
                     f"Fence · {n_prof} profiles · {rho_desc} · {dep_desc} · src: {src}{topo_tag}",
                     "success",
@@ -1996,10 +2077,14 @@ def _register_display(app) -> None:
                     profiles, line_spacing=float(line_spacing or 1.0)
                 )
                 iso_lo_f = float(
-                    iso_lo if iso_lo is not None else grid_store.get("log_lo", 0.5)
+                    iso_lo
+                    if iso_lo is not None
+                    else grid_store.get("log_lo", 0.5)
                 )
                 iso_hi_f = float(
-                    iso_hi if iso_hi is not None else grid_store.get("log_hi", 3.0)
+                    iso_hi
+                    if iso_hi is not None
+                    else grid_store.get("log_hi", 3.0)
                 )
                 fig = _build_block_fig(
                     x_arr=x_arr,
@@ -2029,7 +2114,9 @@ def _register_display(app) -> None:
                 )
                 dlo = grid_store.get("log_lo", iso_lo_f)
                 dhi = grid_store.get("log_hi", iso_hi_f)
-                topo_tag = f" · topo: {topo_src_v}" if topo_src_v != "none" else ""
+                topo_tag = (
+                    f" · topo: {topo_src_v}" if topo_src_v != "none" else ""
+                )
                 info = _info(
                     f"Volume · {n_prof} profiles · {rho_desc} · {dep_desc} · "
                     f"data log: {dlo:.1f}–{dhi:.1f}{topo_tag}",
@@ -2069,7 +2156,9 @@ def _register_display(app) -> None:
                     apply_topo=apply_topo_v,
                     profiles=profiles,
                 )
-                topo_tag = f" · topo: {topo_src_v}" if topo_src_v != "none" else ""
+                topo_tag = (
+                    f" · topo: {topo_src_v}" if topo_src_v != "none" else ""
+                )
                 info = _info(
                     f"Depth slices · {int(n_slices or 8)} levels · "
                     f"{rho_desc} · {dep_desc} · {n_prof} profiles{topo_tag}",
@@ -2144,7 +2233,9 @@ def _assemble_3d_grid(profiles: dict, line_spacing: float = 1.0):
                     bounds_error=False,
                     fill_value=np.nan,
                 )
-                xi = np.array(np.meshgrid(z_arr, x_arr, indexing="ij")).T.reshape(-1, 2)
+                xi = np.array(
+                    np.meshgrid(z_arr, x_arr, indexing="ij")
+                ).T.reshape(-1, 2)
                 rho_i = interp(xi).reshape(n_x, n_z)
             except Exception:
                 rho_i = np.full((n_x, n_z), np.nanmean(rho_i))

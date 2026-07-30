@@ -675,7 +675,9 @@ _SCHEMAS: dict[str, dict] = {
                 "max": 50000,
                 "step": 500,
                 "default": 5000.0,
-                "help": ("Sites within this distance are linked as graph nodes."),
+                "help": (
+                    "Sites within this distance are linked as graph nodes."
+                ),
             },
             {
                 "id": _FID_GRAPH_W,
@@ -1078,7 +1080,8 @@ _SCHEMAS: dict[str, dict] = {
         "icon": "bi-file-earmark-text-fill",
         "color": "var(--sapphire)",
         "desc": (
-            "Generate a structured survey report. " "Choose format and detail level."
+            "Generate a structured survey report. "
+            "Choose format and detail level."
         ),
         "fields": [
             {
@@ -2246,7 +2249,9 @@ def _corr_field_from_spec(ps) -> dict:
         )
     else:  # "spin" (int) / "dspin" (float)
         lo, hi, st = (
-            (tuple(ps.opts) + (None, None, None))[:3] if ps.opts else (None, None, None)
+            (tuple(ps.opts) + (None, None, None))[:3]
+            if ps.opts
+            else (None, None, None)
         )
         field.update(
             type="number",
@@ -2518,7 +2523,9 @@ def _line_station_options(groups, edi_path):
     line_to_st: dict[str, list[str]] = {}
     if groups:
         for ln, files in groups.items():
-            line_to_st[str(ln)] = sorted({Path(str(f)).stem for f in (files or [])})
+            line_to_st[str(ln)] = sorted(
+                {Path(str(f)).stem for f in (files or [])}
+            )
     elif edi_path:
         try:
             p = Path(str(edi_path))
@@ -2533,7 +2540,8 @@ def _line_station_options(groups, edi_path):
         except Exception:  # noqa: BLE001
             pass
     line_opts = [
-        {"label": f"{ln}  ({len(sts)})", "value": ln} for ln, sts in line_to_st.items()
+        {"label": f"{ln}  ({len(sts)})", "value": ln}
+        for ln, sts in line_to_st.items()
     ]
     all_st = sorted({s for sts in line_to_st.values() for s in sts})
     station_opts = [{"label": s, "value": s} for s in all_st]
@@ -2555,7 +2563,9 @@ def _prepare_dynamic_fields(fields, groups, edi_path, preselect):
     selector when the form filters stations and more than one line is loaded.
 
     Returns ``(fields, {line: [stations]})``."""
-    line_opts, station_opts, line_to_st = _line_station_options(groups, edi_path)
+    line_opts, station_opts, line_to_st = _line_station_options(
+        groups, edi_path
+    )
     has_stations = any(f.get("key") == "stations" for f in fields)
     out: list = []
     if has_stations and len(line_opts) >= 2:
@@ -2607,9 +2617,13 @@ def register_params(app) -> None:
         ]
         # Loaded line groups + station names drive the line/station selectors.
         _groups = (
-            (edi_store or {}).get("groups", {}) or pending.get("edi_groups", {}) or {}
+            (edi_store or {}).get("groups", {})
+            or pending.get("edi_groups", {})
+            or {}
         )
-        _edi_path = (edi_store or {}).get("path", "") or pending.get("edi_path", "")
+        _edi_path = (edi_store or {}).get("path", "") or pending.get(
+            "edi_path", ""
+        )
         _presel = pending.get("selected_lines", []) or []
         form: list = []
         line_to_st: dict = {}
@@ -2708,8 +2722,12 @@ def register_params(app) -> None:
         wf = pending.get("workflow", "")
         schema = _SCHEMAS.get(wf, {})
 
-        pf_vals = {s["id"]["key"]: s["value"] for s in (ctx.states_list[6] or [])}
-        ps_vals = {s["id"]["key"]: s["value"] for s in (ctx.states_list[7] or [])}
+        pf_vals = {
+            s["id"]["key"]: s["value"] for s in (ctx.states_list[6] or [])
+        }
+        ps_vals = {
+            s["id"]["key"]: s["value"] for s in (ctx.states_list[7] or [])
+        }
         new_ic = _collect_params(
             schema,
             pf_vals,
@@ -2721,7 +2739,9 @@ def register_params(app) -> None:
         # Replace waiting bubble with thinking
         msgs = list(current_msgs or [])
         for i, c in enumerate(msgs):
-            cid = c.get("props", {}).get("id", "") if isinstance(c, dict) else ""
+            cid = (
+                c.get("props", {}).get("id", "") if isinstance(c, dict) else ""
+            )
             if cid == "am-waiting-bubble":
                 msgs[i] = _thinking_bubble(
                     [
@@ -2813,7 +2833,9 @@ def register_params(app) -> None:
         msgs = list(current_msgs or [])
         replaced = False
         for i, c in enumerate(msgs):
-            cid = c.get("props", {}).get("id", "") if isinstance(c, dict) else ""
+            cid = (
+                c.get("props", {}).get("id", "") if isinstance(c, dict) else ""
+            )
             if cid == "am-waiting-bubble":
                 msgs[i] = _cancel_bubble()
                 replaced = True

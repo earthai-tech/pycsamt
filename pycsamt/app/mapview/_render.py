@@ -88,13 +88,17 @@ def merge_views(old: MapView, new: MapView) -> MapView:
         if station.id not in by_id:
             order.append(station.id)
         by_id[station.id] = station
-    stations = tuple(replace(by_id[sid], index=i) for i, sid in enumerate(order))
+    stations = tuple(
+        replace(by_id[sid], index=i) for i, sid in enumerate(order)
+    )
     edi_by_id: dict[str, Any] = {}
     for edi in (*old.data.iter_edis(), *new.data.iter_edis()):
         edi_by_id[_station_id_from_edi(edi)] = edi
     edis = tuple(edi_by_id[sid] for sid in order if sid in edi_by_id)
     metadata = _carried_metadata(old.data.metadata, new.data.metadata)
-    data = MapData(sites=edis, stations=stations, profiles=(), metadata=metadata)
+    data = MapData(
+        sites=edis, stations=stations, profiles=(), metadata=metadata
+    )
     return MapView(data, theme=old.theme, backend=old.backend)
 
 
@@ -115,9 +119,13 @@ def exclude_stations(view: MapView, masked) -> MapView:
     if len(keep) == len(view.data.stations):
         return view
     ids = {s.id for s in keep}
-    edis = tuple(e for e in view.data.iter_edis() if _station_id_from_edi(e) in ids)
+    edis = tuple(
+        e for e in view.data.iter_edis() if _station_id_from_edi(e) in ids
+    )
     metadata = _carried_metadata(view.data.metadata)
-    data = MapData(sites=edis, stations=tuple(keep), profiles=(), metadata=metadata)
+    data = MapData(
+        sites=edis, stations=tuple(keep), profiles=(), metadata=metadata
+    )
     return MapView(data, theme=view.theme, backend=view.backend)
 
 
@@ -133,7 +141,9 @@ def restrict_to_lines(
     if len(keep) == len(view.data.stations):
         return view
     ids = {s.id for s in keep}
-    edis = tuple(e for e in view.data.iter_edis() if _station_id_from_edi(e) in ids)
+    edis = tuple(
+        e for e in view.data.iter_edis() if _station_id_from_edi(e) in ids
+    )
     data = MapData(
         sites=edis,
         stations=tuple(keep),
@@ -178,11 +188,15 @@ def reproject_view(view, mode, zone, hem, epsg):
     if not good.any():
         return view
     try:
-        xt, yt = transform_xy(lon, lat, crs=CRSConfig(source=code, target=4326))
+        xt, yt = transform_xy(
+            lon, lat, crs=CRSConfig(source=code, target=4326)
+        )
     except Exception:
         return view
     new_stations = tuple(
-        replace(s, longitude=float(xt[i]), latitude=float(yt[i])) if good[i] else s
+        replace(s, longitude=float(xt[i]), latitude=float(yt[i]))
+        if good[i]
+        else s
         for i, s in enumerate(stations)
     )
     data = MapData(

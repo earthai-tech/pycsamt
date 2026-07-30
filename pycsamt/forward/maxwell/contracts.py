@@ -50,7 +50,9 @@ def _json_mapping(value: Mapping[str, Any], name: str) -> Mapping[str, Any]:
     try:
         encoded = json.dumps(dict(value), sort_keys=True, allow_nan=False)
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must contain finite JSON-compatible values.") from exc
+        raise ValueError(
+            f"{name} must contain finite JSON-compatible values."
+        ) from exc
     return MappingProxyType(json.loads(encoded))
 
 
@@ -94,7 +96,11 @@ class MaxwellMesh:
     def __post_init__(self) -> None:
         x = _axis_edges(self.x_edges_m, "x_edges_m")
         z = _axis_edges(self.z_edges_m, "z_edges_m")
-        y = None if self.y_edges_m is None else _axis_edges(self.y_edges_m, "y_edges_m")
+        y = (
+            None
+            if self.y_edges_m is None
+            else _axis_edges(self.y_edges_m, "y_edges_m")
+        )
         crs = None if self.crs is None else str(self.crs).strip()
         if self.crs is not None and not crs:
             raise ValueError("crs cannot be empty.")
@@ -134,7 +140,11 @@ class MaxwellMesh:
         (3, 2)
         """
         nz, nx = len(self.z_edges_m) - 1, len(self.x_edges_m) - 1
-        return (nz, nx) if self.y_edges_m is None else (nz, len(self.y_edges_m) - 1, nx)
+        return (
+            (nz, nx)
+            if self.y_edges_m is None
+            else (nz, len(self.y_edges_m) - 1, nx)
+        )
 
     @property
     def cell_widths_m(self) -> Mapping[str, np.ndarray]:
@@ -179,7 +189,9 @@ class MaxwellMesh:
             "z": _readonly((self.z_edges_m[:-1] + self.z_edges_m[1:]) / 2),
         }
         if self.y_edges_m is not None:
-            values["y"] = _readonly((self.y_edges_m[:-1] + self.y_edges_m[1:]) / 2)
+            values["y"] = _readonly(
+                (self.y_edges_m[:-1] + self.y_edges_m[1:]) / 2
+            )
         return MappingProxyType(values)
 
     def to_dict(self) -> dict[str, Any]:
@@ -199,7 +211,9 @@ class MaxwellMesh:
             "schema_version": 1,
             "x_edges_m": self.x_edges_m.tolist(),
             "z_edges_m": self.z_edges_m.tolist(),
-            "y_edges_m": None if self.y_edges_m is None else self.y_edges_m.tolist(),
+            "y_edges_m": None
+            if self.y_edges_m is None
+            else self.y_edges_m.tolist(),
             "crs": self.crs,
         }
 
@@ -407,7 +421,9 @@ class MaxwellProblem:
         if not isinstance(self.mesh, MaxwellMesh) or not isinstance(
             self.receivers, ReceiverSet
         ):
-            raise TypeError("mesh and receivers must use Maxwell contract types.")
+            raise TypeError(
+                "mesh and receivers must use Maxwell contract types."
+            )
         if self.mesh.dimension != self.receivers.dimension:
             raise ValueError("mesh and receiver dimensions must match.")
         conductivity = np.asarray(self.conductivity_s_m, dtype=float)
@@ -431,7 +447,9 @@ class MaxwellProblem:
             )
         if len(np.unique(frequencies)) != len(frequencies):
             raise ValueError("frequencies_hz must be unique.")
-        components = tuple(str(value).strip().lower() for value in self.components)
+        components = tuple(
+            str(value).strip().lower() for value in self.components
+        )
         if (
             not components
             or len(set(components)) != len(components)
@@ -456,16 +474,22 @@ class MaxwellProblem:
                 f"active_cells must be shaped {self.mesh.shape} and contain an active cell."
             )
         if self.time_dependence not in _TIME_CONVENTIONS:
-            raise ValueError(f"time_dependence must be one of {_TIME_CONVENTIONS}.")
+            raise ValueError(
+                f"time_dependence must be one of {_TIME_CONVENTIONS}."
+            )
         permeability = float(self.magnetic_permeability_h_m)
         if not np.isfinite(permeability) or permeability <= 0:
-            raise ValueError("magnetic_permeability_h_m must be positive and finite.")
+            raise ValueError(
+                "magnetic_permeability_h_m must be positive and finite."
+            )
         object.__setattr__(self, "conductivity_s_m", _readonly(conductivity))
         object.__setattr__(self, "frequencies_hz", _readonly(frequencies))
         object.__setattr__(self, "components", components)
         object.__setattr__(self, "active_cells", _readonly(active, bool))
         object.__setattr__(self, "magnetic_permeability_h_m", permeability)
-        object.__setattr__(self, "metadata", _json_mapping(self.metadata, "metadata"))
+        object.__setattr__(
+            self, "metadata", _json_mapping(self.metadata, "metadata")
+        )
 
     @property
     def problem_hash(self) -> str:
@@ -489,12 +513,16 @@ class MaxwellProblem:
         digest.update(
             np.ascontiguousarray(self.conductivity_s_m, dtype="<f8").tobytes()
         )
-        digest.update(np.ascontiguousarray(self.frequencies_hz, dtype="<f8").tobytes())
-        digest.update(np.ascontiguousarray(self.active_cells, dtype=np.uint8).tobytes())
         digest.update(
-            json.dumps(self.provenance(), sort_keys=True, separators=(",", ":")).encode(
-                "utf-8"
-            )
+            np.ascontiguousarray(self.frequencies_hz, dtype="<f8").tobytes()
+        )
+        digest.update(
+            np.ascontiguousarray(self.active_cells, dtype=np.uint8).tobytes()
+        )
+        digest.update(
+            json.dumps(
+                self.provenance(), sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
         )
         return digest.hexdigest()
 
@@ -558,7 +586,9 @@ class MaxwellProblem:
             conductivity_s_m=self.conductivity_s_m,
             frequencies_hz=self.frequencies_hz,
             active_cells=self.active_cells,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 
@@ -645,12 +675,19 @@ class SolverDiagnostics:
         residual = np.asarray(self.relative_residual, dtype=float)
         if converged.ndim != 2 or converged.size < 1:
             raise ValueError("converged must be a non-empty 2-D array.")
-        if iterations.shape != converged.shape or residual.shape != converged.shape:
+        if (
+            iterations.shape != converged.shape
+            or residual.shape != converged.shape
+        ):
             raise ValueError("diagnostic arrays must have identical shapes.")
-        if not np.issubdtype(iterations.dtype, np.integer) or np.any(iterations < 0):
+        if not np.issubdtype(iterations.dtype, np.integer) or np.any(
+            iterations < 0
+        ):
             raise ValueError("iterations must contain non-negative integers.")
         if not np.all(np.isfinite(residual)) or np.any(residual < 0):
-            raise ValueError("relative_residual must be finite and non-negative.")
+            raise ValueError(
+                "relative_residual must be finite and non-negative."
+            )
         runtime = float(self.runtime_s)
         if not np.isfinite(runtime) or runtime < 0:
             raise ValueError("runtime_s must be finite and non-negative.")
@@ -819,7 +856,9 @@ class ForwardResult:
             impedance.shape[0] if impedance.ndim == 3 else 0,
             "receiver_names",
         )
-        components = tuple(str(value).strip().lower() for value in self.components)
+        components = tuple(
+            str(value).strip().lower() for value in self.components
+        )
         expected = (len(names), len(frequencies), len(components))
         if (
             impedance.shape != expected
@@ -837,7 +876,10 @@ class ForwardResult:
         )
         if valid.shape != impedance.shape:
             raise ValueError("valid must have the impedance shape.")
-        if np.any(valid & ~(np.isfinite(impedance.real) & np.isfinite(impedance.imag))):
+        if np.any(
+            valid
+            & ~(np.isfinite(impedance.real) & np.isfinite(impedance.imag))
+        ):
             raise ValueError("valid impedance entries must be finite.")
         backend_name, backend_version = (
             str(self.backend_name).strip(),
@@ -848,9 +890,13 @@ class ForwardResult:
             or not backend_version
             or not isinstance(self.diagnostics, SolverDiagnostics)
         ):
-            raise ValueError("backend identity and SolverDiagnostics are required.")
+            raise ValueError(
+                "backend identity and SolverDiagnostics are required."
+            )
         if self.diagnostics.converged.shape[0] != len(frequencies):
-            raise ValueError("diagnostics first axis must match frequencies_hz.")
+            raise ValueError(
+                "diagnostics first axis must match frequencies_hz."
+            )
         object.__setattr__(self, "problem_hash", problem_hash)
         object.__setattr__(self, "frequencies_hz", _readonly(frequencies))
         object.__setattr__(self, "receiver_names", names)
@@ -859,7 +905,9 @@ class ForwardResult:
         object.__setattr__(self, "valid", _readonly(valid, bool))
         object.__setattr__(self, "backend_name", backend_name)
         object.__setattr__(self, "backend_version", backend_version)
-        object.__setattr__(self, "metadata", _json_mapping(self.metadata, "metadata"))
+        object.__setattr__(
+            self, "metadata", _json_mapping(self.metadata, "metadata")
+        )
 
     @property
     def shape(self) -> tuple[int, int, int]:
@@ -1007,7 +1055,9 @@ class ForwardResult:
             frequencies_hz=self.frequencies_hz,
             impedance_v_a=self.impedance_v_a,
             valid=self.valid,
-            provenance_json=np.array(json.dumps(self.provenance(), sort_keys=True)),
+            provenance_json=np.array(
+                json.dumps(self.provenance(), sort_keys=True)
+            ),
         )
         return target
 

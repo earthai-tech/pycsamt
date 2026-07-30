@@ -179,13 +179,16 @@ class EMTrainer:
                 self.best_val_loss = val_loss
                 self.best_epoch = epoch
                 self._best_state = {
-                    k: v.cpu().clone() for k, v in self.model.state_dict().items()
+                    k: v.cpu().clone()
+                    for k, v in self.model.state_dict().items()
                 }
                 patience_ctr = 0
             else:
                 patience_ctr += 1
 
-            if self.verbose and (epoch % max(1, epochs // 20) == 0 or epoch == 1):
+            if self.verbose and (
+                epoch % max(1, epochs // 20) == 0 or epoch == 1
+            ):
                 print(
                     f"  Epoch {epoch:4d}/{epochs} | "
                     f"train={train_loss:.5f}  val={val_loss:.5f}  "
@@ -223,7 +226,9 @@ class EMTrainer:
             loss = loss_fn(pred, y_batch)
             loss.backward()
             if self.grad_clip is not None:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), self.grad_clip
+                )
             optimiser.step()
             total += loss.item()
             n_batch += 1

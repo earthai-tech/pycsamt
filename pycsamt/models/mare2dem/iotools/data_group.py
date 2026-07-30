@@ -56,7 +56,9 @@ class DataGroupFile:
     path: Path | None = None
     comment: str = ""
     group_names: list[str] = field(default_factory=list)
-    group_indices: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=int))
+    group_indices: np.ndarray = field(
+        default_factory=lambda: np.empty(0, dtype=int)
+    )
 
     @property
     def n_groups(self) -> int:
@@ -142,7 +144,9 @@ def read_data_group(path: str | Path) -> DataGroupFile:
         elif code in ("# data", "#data"):
             n_data = int(value)
             remaining = "\n".join(lines[i:])
-            vals = np.fromstring(remaining.replace("\n", " "), sep=" ", dtype=int)
+            vals = np.fromstring(
+                remaining.replace("\n", " "), sep=" ", dtype=int
+            )
             dg.group_indices = vals[:n_data]
             break
 

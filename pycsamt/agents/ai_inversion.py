@@ -191,7 +191,9 @@ class AIInversionAgent(BaseAgent):
             )
 
             if get_backend_instance() is None:
-                raise ImportError("No DL backend available (torch or tensorflow).")
+                raise ImportError(
+                    "No DL backend available (torch or tensorflow)."
+                )
         except ImportError as exc:
             return AgentResult.failed(
                 f"AI inversion requires PyTorch or TensorFlow: {exc}",
@@ -211,7 +213,9 @@ class AIInversionAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -267,7 +271,9 @@ class AIInversionAgent(BaseAgent):
         if self.pretrained and Path(self.pretrained).exists():
             try:
                 inverter = EMInverter1D.load(self.pretrained)
-                self._log.info("Loaded pre-trained model from %s", self.pretrained)
+                self._log.info(
+                    "Loaded pre-trained model from %s", self.pretrained
+                )
             except Exception as exc:
                 warnings.append(
                     f"Could not load pre-trained model: {exc}. Training fresh."
@@ -349,14 +355,16 @@ class AIInversionAgent(BaseAgent):
                 try:
                     resp = MT1DForward(freqs=freqs).run(model)
                     rho_fwd = np.asarray(resp.rho_a)
-                    rho_fwd_xy = rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
+                    rho_fwd_xy = (
+                        rho_fwd[:, 0, 1] if rho_fwd.ndim == 3 else rho_fwd
+                    )
                     per_obs = 1.0 / np.where(fr == 0, np.nan, fr)
                     per_fwd = 1.0 / np.where(freqs == 0, np.nan, freqs)
                     rho_obs_xy = getattr(Zobj, "resistivity_xy", None)
                     if rho_obs_xy is None:
-                        rho_obs_xy = (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(
-                            z[:, 0, 1]
-                        ) ** 2
+                        rho_obs_xy = (
+                            0.2 / np.where(fr == 0, np.nan, fr)
+                        ) * np.abs(z[:, 0, 1]) ** 2
                     rho_obs_xy = np.asarray(rho_obs_xy, float).ravel()
                     # forward curve sorted by ascending period (np.interp
                     # requires an increasing x grid)
@@ -367,8 +375,12 @@ class AIInversionAgent(BaseAgent):
                     mask = np.isfinite(per_obs) & (rho_obs_xy > 0)
                     if mask.sum() >= 2 and xp.size >= 2:
                         interp = np.interp(np.log10(per_obs[mask]), xp, fp)
-                        obs_log = np.log10(np.clip(rho_obs_xy[mask], 1e-6, None))
-                        rms_per[nm] = float(np.sqrt(np.mean((obs_log - interp) ** 2)))
+                        obs_log = np.log10(
+                            np.clip(rho_obs_xy[mask], 1e-6, None)
+                        )
+                        rms_per[nm] = float(
+                            np.sqrt(np.mean((obs_log - interp) ** 2))
+                        )
                 except Exception as _rms_exc:
                     warnings.append(f"{nm}: RMS not computed ({_rms_exc}).")
 
@@ -382,7 +394,9 @@ class AIInversionAgent(BaseAgent):
             except Exception as exc:
                 warnings.append(f"Prediction failed for {nm}: {exc}")
 
-        rms_global = float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
+        rms_global = (
+            float(np.nanmean(list(rms_per.values()))) if rms_per else np.nan
+        )
         n_pred = len(predictions)
 
         # ── save model ────────────────────────────────────────────────────────
@@ -465,7 +479,9 @@ class AIInversionAgent(BaseAgent):
             interp = self.query_llm(prompt, max_tokens=250)
 
         elapsed = time.time() - t0
-        rms_str = f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        rms_str = (
+            f"RMS {rms_global:.3f}" if not np.isnan(rms_global) else "RMS N/A"
+        )
         if n_pred == 0:
             summary = (
                 f"AI inversion ({arch}, {self.n_layers} layers) trained, "
@@ -543,7 +559,10 @@ def _z_to_features(
 
         lf = np.log10(np.where(fr <= 0, np.nan, fr))
         mask = (
-            np.isfinite(lf) & np.isfinite(rho_xy) & (rho_xy > 0) & np.isfinite(pha_xy)
+            np.isfinite(lf)
+            & np.isfinite(rho_xy)
+            & (rho_xy > 0)
+            & np.isfinite(pha_xy)
         )
         if mask.sum() < 2:
             return None
@@ -568,7 +587,9 @@ def _default_thicknesses(n_layers: int, freqs: np.ndarray) -> np.ndarray:
     rho_ref = 100.0  # Ω·m reference
     per_max = float(1.0 / freqs.min())
     d_max = np.sqrt(rho_ref * per_max / (4 * np.pi * 1e-7 * 2 * np.pi))
-    ths = np.logspace(np.log10(max(d_max / 100, 50)), np.log10(d_max), n_layers - 1)
+    ths = np.logspace(
+        np.log10(max(d_max / 100, 50)), np.log10(d_max), n_layers - 1
+    )
     return ths.astype(float)
 
 
@@ -622,7 +643,9 @@ def _plot_ai_section(
     ax.set_ylabel("Depth (km)", fontsize=9)
     ax.tick_params(axis="y", labelsize=8)
     section.add_colorbar(im, ax, label="$\\log_{10}\\rho$ (Ω·m)")
-    ax.set_title("AI-predicted resistivity section", fontsize=10, fontweight="bold")
+    ax.set_title(
+        "AI-predicted resistivity section", fontsize=10, fontweight="bold"
+    )
     fig.tight_layout()
     return fig
 

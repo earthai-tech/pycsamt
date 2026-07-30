@@ -507,9 +507,9 @@ class AVGtoEDI(TransformerMixin):
             f = np.asarray(ed.Z._freq, dtype=float)
 
             # 1) keep only rows that have at least one finite component
-            keep = np.isfinite(z.real).any(axis=(1, 2)) | np.isfinite(z.imag).any(
-                axis=(1, 2)
-            )
+            keep = np.isfinite(z.real).any(axis=(1, 2)) | np.isfinite(
+                z.imag
+            ).any(axis=(1, 2))
             if keep.ndim:  # guard for scalar shapes
                 z = z[keep]
                 f = f[keep]
@@ -1308,7 +1308,9 @@ class JtoEDI(TransformerMixin):
         nfreq = int(f.size) if f is not None else 0
 
         tip = getattr(ed, "Tip", None)
-        has_tip = bool(tip is not None and getattr(tip, "tipper", None) is not None)
+        has_tip = bool(
+            tip is not None and getattr(tip, "tipper", None) is not None
+        )
 
         have_xy = have_yx = False
         if z is not None and np.size(z) > 0:

@@ -80,7 +80,8 @@ _OCCAM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "cell_size_vertical_top",
-        "Thickness in metres of the top earth layer and current " "air-layer cells.",
+        "Thickness in metres of the top earth layer and current "
+        "air-layer cells.",
         "Mesh Options",
     ),
     ConfigParameter(

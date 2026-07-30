@@ -160,7 +160,9 @@ def build_index(
                 save_vectors,
             )
 
-            save_vectors(out_dir / VECTOR_FILENAME, [c.id for c in chunks], vectors)
+            save_vectors(
+                out_dir / VECTOR_FILENAME, [c.id for c in chunks], vectors
+            )
         (out_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8"
         )

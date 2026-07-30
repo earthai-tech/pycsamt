@@ -87,4 +87,6 @@ class WebSocketTelemetryClient(BaseTelemetryClient):
             return {"raw": message}
 
     def _transport_healthcheck(self) -> bool:
-        return self._handle is not None and getattr(self._handle, "connected", False)
+        return self._handle is not None and getattr(
+            self._handle, "connected", False
+        )

@@ -480,9 +480,9 @@ class OccamModel(OccamBase):
                 interior = [1]
         codes = np.array([7] + interior + [7], dtype=np.int32)
 
-        assert (
-            int(codes.sum()) == n_xcells
-        ), f"code sum {codes.sum()} != n_xcells {n_xcells}"
+        assert int(codes.sum()) == n_xcells, (
+            f"code sum {codes.sum()} != n_xcells {n_xcells}"
+        )
         n_cols = len(codes)
 
         layers: list[dict] = []

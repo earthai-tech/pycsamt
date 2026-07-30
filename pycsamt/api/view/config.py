@@ -34,7 +34,8 @@ def _normalise_backend(value: Any) -> str | ViewWrapper:
     if name in _PANDAS_BACKENDS:
         return "pandas"
     msg = (
-        "api view backend must be 'pycsamt', 'pandas'/False, " "or a callable wrapper."
+        "api view backend must be 'pycsamt', 'pandas'/False, "
+        "or a callable wrapper."
     )
     raise ValueError(msg)
 

@@ -121,7 +121,8 @@ class InputBuilder(OccamBase):
     def is_ready(self) -> bool:
         """Return ``True`` when all build objects are populated."""
         return all(
-            obj is not None for obj in (self.data, self.mesh, self.model, self.startup)
+            obj is not None
+            for obj in (self.data, self.mesh, self.model, self.startup)
         )
 
     def summary(self) -> str:

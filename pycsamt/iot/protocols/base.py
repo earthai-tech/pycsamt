@@ -163,7 +163,9 @@ class BaseTelemetryClient:
             # generic recorder); keep it distinct from real transport errors.
             raise
         except Exception as exc:  # noqa: BLE001 - normalise transport errs
-            raise TelemetryError(f"{self.protocol.value} send failed: {exc}") from exc
+            raise TelemetryError(
+                f"{self.protocol.value} send failed: {exc}"
+            ) from exc
         self.sent.append(pkt)
         return TelemetryAck(
             ok=True,
@@ -172,7 +174,9 @@ class BaseTelemetryClient:
             detail=detail or "sent",
         )
 
-    def receive(self, *, timeout: float | None = None) -> dict[str, Any] | None:
+    def receive(
+        self, *, timeout: float | None = None
+    ) -> dict[str, Any] | None:
         """Receive one payload, or ``None`` in dry-run/unsupported mode."""
         if self.dry_run:
             return None
@@ -242,7 +246,9 @@ class BaseTelemetryClient:
 
     def _require_endpoint(self) -> str:
         if not self.endpoint:
-            raise TelemetryError(f"{self.protocol.value} client requires an endpoint.")
+            raise TelemetryError(
+                f"{self.protocol.value} client requires an endpoint."
+            )
         return str(self.endpoint)
 
     # -- transport hooks (overridden by concrete clients) ------------------
@@ -290,7 +296,9 @@ class TelemetryClient(BaseTelemetryClient):
         dry_run: bool = True,
         **options: Any,
     ) -> None:
-        super().__init__(endpoint, protocol=protocol, dry_run=dry_run, **options)
+        super().__init__(
+            endpoint, protocol=protocol, dry_run=dry_run, **options
+        )
 
     def _transport_send(self, packet: TelemetryPacket) -> str:
         raise NotImplementedError(

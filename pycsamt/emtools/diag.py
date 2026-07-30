@@ -313,7 +313,9 @@ def rho_error_stats(
     )
 
     if isinstance(model_rho, dict):
-        pred_dict = {k: np.asarray(v, dtype=float) for k, v in model_rho.items()}
+        pred_dict = {
+            k: np.asarray(v, dtype=float) for k, v in model_rho.items()
+        }
     else:
         pred_dict = _rho_dict_from_sites(model_rho, rho_comp)
 
@@ -480,7 +482,9 @@ def plot_polar_coverage(
     )
 
     if ax is None:
-        _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+        _, ax = plt.subplots(
+            subplot_kw={"projection": "polar"}, figsize=figsize
+        )
     hide_polar_radius_labels(ax)
 
     if df.empty:
@@ -526,7 +530,9 @@ def plot_polar_coverage(
         ax.plot([t, t], [lo, hi], color="gray", lw=0.5, alpha=0.35, zorder=1)
 
     if n_freq_ticks > 0:
-        tick_theta = np.linspace(0.0, 2.0 * np.pi, n_freq_ticks, endpoint=False)
+        tick_theta = np.linspace(
+            0.0, 2.0 * np.pi, n_freq_ticks, endpoint=False
+        )
         tick_freq = 10.0 ** (
             log_f_min + (tick_theta / (2.0 * np.pi)) * (log_f_max - log_f_min)
         )
@@ -578,7 +584,9 @@ def plot_polar_errors(
     )
 
     if ax is None:
-        _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+        _, ax = plt.subplots(
+            subplot_kw={"projection": "polar"}, figsize=figsize
+        )
     hide_polar_radius_labels(ax)
 
     if df.empty or df["rel_err_pct"].isna().all():
@@ -661,7 +669,9 @@ def plot_width_drift(
 
     if ax is None:
         if polar:
-            _, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=figsize)
+            _, ax = plt.subplots(
+                subplot_kw={"projection": "polar"}, figsize=figsize
+            )
         else:
             _, ax = plt.subplots(figsize=figsize)
     if polar:

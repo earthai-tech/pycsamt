@@ -322,9 +322,13 @@ class Mare2DEMAgent(BaseAgent):
         if not binary_found:
             if auto_download:
                 try:
-                    self._log.info("Mare2DEMAgent: downloading MARE2DEM source...")
+                    self._log.info(
+                        "Mare2DEMAgent: downloading MARE2DEM source..."
+                    )
                     sm.download()
-                    self._log.info("Mare2DEMAgent: building MARE2DEM binary...")
+                    self._log.info(
+                        "Mare2DEMAgent: building MARE2DEM binary..."
+                    )
                     sm.build()
                     binary_found = sm.is_built()
                     source_downloaded = binary_found
@@ -380,7 +384,9 @@ class Mare2DEMAgent(BaseAgent):
             elif mt_kwargs is not None or csem_kwargs is not None:
                 # build from survey parameters
                 mt_cfg = MTSurveyConfig(**mt_kwargs) if mt_kwargs else None
-                csem_cfg = CSEMSurveyConfig(**csem_kwargs) if csem_kwargs else None
+                csem_cfg = (
+                    CSEMSurveyConfig(**csem_kwargs) if csem_kwargs else None
+                )
                 files = builder.build(
                     None,
                     output_dir,
@@ -420,8 +426,12 @@ class Mare2DEMAgent(BaseAgent):
                         input_data.get("confidence_method", "composite")
                     ),
                     confidence_weights=input_data.get("confidence_weights"),
-                    confidence_min=float(input_data.get("confidence_min", 0.05)),
-                    confidence_power=float(input_data.get("confidence_power", 1.0)),
+                    confidence_min=float(
+                        input_data.get("confidence_min", 0.05)
+                    ),
+                    confidence_power=float(
+                        input_data.get("confidence_power", 1.0)
+                    ),
                     topo=topo,
                 )
                 files = {
@@ -451,7 +461,9 @@ class Mare2DEMAgent(BaseAgent):
                 dest = Path(output_dir) / cfg.resistivity_file
                 shutil.copy2(str(resist_src), str(dest))
                 resist_path = dest
-                self._log.info("Mare2DEMAgent: used provided resistivity: %s", dest)
+                self._log.info(
+                    "Mare2DEMAgent: used provided resistivity: %s", dest
+                )
 
             # read back statistics
             if data_path and data_path.exists():
@@ -538,7 +550,9 @@ class Mare2DEMAgent(BaseAgent):
 
         # ── assemble result ────────────────────────────────────────────
         files_ok = sum(
-            1 for p in [data_path, resist_path, settings_path] if p and p.exists()
+            1
+            for p in [data_path, resist_path, settings_path]
+            if p and p.exists()
         )
         elapsed = time.time() - t0
 
@@ -557,7 +571,9 @@ class Mare2DEMAgent(BaseAgent):
             summary_parts.append(f"{n_data} data points")
         summary_parts.append(f"{files_ok}/3 files written")
         if mode == "run" and final_rms is not None:
-            summary_parts.append(f"final RMS={final_rms:.3f} (converged={converged})")
+            summary_parts.append(
+                f"final RMS={final_rms:.3f} (converged={converged})"
+            )
         summary = ". ".join(summary_parts) + f". Output: {output_dir}."
 
         return AgentResult(
@@ -613,7 +629,9 @@ class Mare2DEMAgent(BaseAgent):
         converged = result_obj.converged
 
         n_mt_rx = result_obj.data.n_data if result_obj.data else 0
-        n_csem_tx = result_obj.data.n_csem_transmitters if result_obj.data else 0
+        n_csem_tx = (
+            result_obj.data.n_csem_transmitters if result_obj.data else 0
+        )
         n_data = result_obj.data.n_data if result_obj.data else 0
 
         self._log.info(

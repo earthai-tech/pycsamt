@@ -729,7 +729,10 @@ class AgentConfig:
         Called internally by :meth:`~pycsamt.agents.BaseAgent.query_llm`
         *before* each API call.
         """
-        if self._budget_usd is not None and self._spent_usd >= self._budget_usd:
+        if (
+            self._budget_usd is not None
+            and self._spent_usd >= self._budget_usd
+        ):
             raise BudgetExceededError(self._spent_usd, self._budget_usd)
 
     # ------------------------------------------------------------------
@@ -848,7 +851,9 @@ class AgentConfig:
             "budget_usd": self._budget_usd,
             "spent_usd": round(self._spent_usd, 6),
             "remaining_usd": (
-                round(self.remaining_usd, 6) if self.remaining_usd is not None else None
+                round(self.remaining_usd, 6)
+                if self.remaining_usd is not None
+                else None
             ),
         }
 
@@ -893,7 +898,9 @@ class AgentConfig:
             "_provider": self._provider,
             "_model": self._model,
             "_keys": dict(self._keys),
-            "_custom_rates": {p: dict(m) for p, m in self._custom_rates.items()},
+            "_custom_rates": {
+                p: dict(m) for p, m in self._custom_rates.items()
+            },
             "_budget_usd": self._budget_usd,
             "_spent_usd": self._spent_usd,
         }
@@ -1037,7 +1044,9 @@ def configure_agents(
 
         configure_agents(provider="claude", api_key="sk-ant-…")
     """
-    return AGENT_CONFIG.configure(provider=provider, api_key=api_key, model=model)
+    return AGENT_CONFIG.configure(
+        provider=provider, api_key=api_key, model=model
+    )
 
 
 def reset_agents(*, keys: bool = True) -> AgentConfig:

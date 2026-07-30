@@ -88,7 +88,11 @@ class _RichGroup(click.Group):
     """Click Group that shows a rich help panel when called without args."""
 
     def invoke(self, ctx: click.Context) -> Any:
-        if not ctx.protected_args and not ctx.args and not ctx.invoked_subcommand:
+        if (
+            not ctx.protected_args
+            and not ctx.args
+            and not ctx.invoked_subcommand
+        ):
             if _RICH:
                 _print_rich_help(ctx)
             else:
@@ -148,6 +152,9 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
 
 def _register_commands() -> None:
     from pycsamt.cli.commands.avg import avg  # noqa: PLC0415
+    from pycsamt.cli.commands.build import (
+        build,  # noqa: PLC0415
+    )
     from pycsamt.cli.commands.config import (
         config,  # noqa: PLC0415
     )
@@ -204,6 +211,7 @@ def _register_commands() -> None:
     main.add_command(edi)
     main.add_command(jones)
     main.add_command(avg)
+    main.add_command(build)
 
 
 _register_commands()

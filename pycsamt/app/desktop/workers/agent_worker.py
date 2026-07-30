@@ -217,7 +217,11 @@ class AgentWorker(QThread):
         # If result is not renderable (no figure/axes) AND a separate result_plot
         # function is defined, call it now to produce the figure.
         result_plot_fn = entry.get("result_plot")
-        if result_plot_fn and result_plot_fn != fn_name and not _has_figure(res):
+        if (
+            result_plot_fn
+            and result_plot_fn != fn_name
+            and not _has_figure(res)
+        ):
             plot_fn = getattr(et, result_plot_fn, None)
             if plot_fn is not None:
                 try:
@@ -245,7 +249,8 @@ def _has_figure(obj) -> bool:
         return True
     if hasattr(obj, "data") and isinstance(obj.data, dict):
         return any(
-            hasattr(v, "savefig") or hasattr(v, "get_figure") for v in obj.data.values()
+            hasattr(v, "savefig") or hasattr(v, "get_figure")
+            for v in obj.data.values()
         )
     return False
 
@@ -302,4 +307,8 @@ def _is_sites_like(obj) -> bool:
     except Exception:
         pass
     # Structural fallback: Sites exposes edic, by_index, and as_list
-    return hasattr(obj, "edic") and hasattr(obj, "by_index") and hasattr(obj, "as_list")
+    return (
+        hasattr(obj, "edic")
+        and hasattr(obj, "by_index")
+        and hasattr(obj, "as_list")
+    )

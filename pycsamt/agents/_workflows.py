@@ -848,7 +848,9 @@ def classify_workflow(
     """
     t = (text or "").lower()
     matched = [
-        wf for wf, kws in WORKFLOW_KEYWORDS.items() if any(kw in t for kw in kws)
+        wf
+        for wf, kws in WORKFLOW_KEYWORDS.items()
+        if any(kw in t for kw in kws)
     ]
     if not matched:
         return default

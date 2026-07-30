@@ -215,7 +215,9 @@ def sites_summary(
         name="sites_summary",
         kind="edi.summary",
         source=sites,
-        description=("Per-site EDI frequency, tipper, and coordinate summary."),
+        description=(
+            "Per-site EDI frequency, tipper, and coordinate summary."
+        ),
     )
 
 
@@ -460,7 +462,9 @@ def plot_rhoa_phi(
         df = _df_resphase(S, kind="z")
     if df is None or df.empty:
         if ax_r is None or ax_p is None:
-            fig, (ax_r, ax_p) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+            fig, (ax_r, ax_p) = plt.subplots(
+                2, 1, figsize=figsize, sharex=True
+            )
         ax_r.text(0.5, 0.5, "no data", ha="center", va="center")
         ax_p.text(0.5, 0.5, "no data", ha="center", va="center")
         return ax_r, ax_p
@@ -539,10 +543,18 @@ def plot_tipper_components(
         _, ax = plt.subplots(figsize=figsize)
 
     _STYLES = {
-        ("tx", "real"): dict(color="#1f77b4", ls="-", marker="o", ms=3, lw=0.9),
-        ("tx", "imag"): dict(color="#1f77b4", ls="--", marker="o", ms=3, lw=0.9),
-        ("ty", "real"): dict(color="#d62728", ls="-", marker="s", ms=3, lw=0.9),
-        ("ty", "imag"): dict(color="#d62728", ls="--", marker="s", ms=3, lw=0.9),
+        ("tx", "real"): dict(
+            color="#1f77b4", ls="-", marker="o", ms=3, lw=0.9
+        ),
+        ("tx", "imag"): dict(
+            color="#1f77b4", ls="--", marker="o", ms=3, lw=0.9
+        ),
+        ("ty", "real"): dict(
+            color="#d62728", ls="-", marker="s", ms=3, lw=0.9
+        ),
+        ("ty", "imag"): dict(
+            color="#d62728", ls="--", marker="s", ms=3, lw=0.9
+        ),
     }
 
     n_plotted = 0
@@ -570,7 +582,9 @@ def plot_tipper_components(
                 n_plotted += 1
 
     ax.set_xscale("log")
-    ax.set_xlabel("Period (s)" if axis == "period" else "Frequency (Hz)", fontsize=9)
+    ax.set_xlabel(
+        "Period (s)" if axis == "period" else "Frequency (Hz)", fontsize=9
+    )
     ax.set_ylabel("Tipper", fontsize=9)
     ax.axhline(0, color="k", lw=0.5, ls=":")
     ax.tick_params(labelsize=8)
@@ -675,7 +689,9 @@ def pseudosection(
         # S10, S2). Reindex to the canonical Sites sequence.
         site_order = [_name(ed, i) for i, ed in enumerate(_iter_items(S))]
         present = set(piv.columns)
-        piv = piv.reindex(columns=[name for name in site_order if name in present])
+        piv = piv.reindex(
+            columns=[name for name in site_order if name in present]
+        )
     # Sort periods ascending; shallow (short period) will go to the top.
     piv = piv.sort_index()
     Y = piv.index.to_numpy()  # period values, ascending
@@ -734,7 +750,8 @@ def pseudosection(
             # Reorder to match pivot column order (station labels)
             name_to_idx = {n: i for i, n in enumerate(names)}
             ordered_idx = [
-                name_to_idx.get(str(s), i) for i, s in enumerate(station_labels)
+                name_to_idx.get(str(s), i)
+                for i, s in enumerate(station_labels)
             ]
             chain_ord = chain_km[ordered_idx] if len(chain_km) else chain_km
             elev_ord = elev_m[ordered_idx] if len(elev_m) else elev_m
@@ -798,7 +815,9 @@ def _pick_station(S, station):
         if station is None or st == station:
             return st, ed
     raise RuntimeError(
-        f"Station {station!r} not found." if station else "No sites in collection."
+        f"Station {station!r} not found."
+        if station
+        else "No sites in collection."
     )
 
 
@@ -1008,7 +1027,9 @@ def plot_station_response(
         )
 
     n_required_axes = (2 * n_comp) + (4 if has_tipper else 0)
-    axes_given = _axes_list(axes, n_required_axes) if axes is not None else None
+    axes_given = (
+        _axes_list(axes, n_required_axes) if axes is not None else None
+    )
     if axes_given is None:
         fig = plt.figure(figsize=figsize, constrained_layout=True)
         gs = gridspec.GridSpec(
@@ -1022,7 +1043,9 @@ def plot_station_response(
 
         # Build axes: [rho row, phase row] share x across columns
         ax_rho = [fig.add_subplot(gs[0, c]) for c in range(n_comp)]
-        ax_phase = [fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)]
+        ax_phase = [
+            fig.add_subplot(gs[1, c], sharex=ax_rho[c]) for c in range(n_comp)
+        ]
         if has_tipper:
             ax_tip = [fig.add_subplot(gs[2, c]) for c in range(4)]
         else:
@@ -1094,7 +1117,9 @@ def plot_station_response(
             mod_lbl = f"$Z^m_{{\\rm {comp.upper()}}}$"
             if show_rms and np.isfinite(rms_val):
                 mod_lbl += f"  rms={rms_val:.2f}"
-            mk = cs.plot_kwargs(ls="--", lw=1.6, alpha=0.85, marker="", label=mod_lbl)
+            mk = cs.plot_kwargs(
+                ls="--", lw=1.6, alpha=0.85, marker="", label=mod_lbl
+            )
             ax_r.plot(per_mod[valid_m], rho_mc[valid_m], **mk)
             ax_p.plot(per_mod, phi_mc, **{**mk, "label": ""})
 
@@ -1149,8 +1174,16 @@ def plot_station_response(
             "ty": tip[:, 1] if tip is not None else None,
         }
         tip_err_series = {
-            "tx": (tip_e[:, 0] if (tip_e is not None and tip_e.shape[1] > 0) else None),
-            "ty": (tip_e[:, 1] if (tip_e is not None and tip_e.shape[1] > 1) else None),
+            "tx": (
+                tip_e[:, 0]
+                if (tip_e is not None and tip_e.shape[1] > 0)
+                else None
+            ),
+            "ty": (
+                tip_e[:, 1]
+                if (tip_e is not None and tip_e.shape[1] > 1)
+                else None
+            ),
         }
         tip_mod_series = {
             "tx": tip_mod[:, 0] if tip_mod is not None else None,

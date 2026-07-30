@@ -56,7 +56,9 @@ def make_group(title: str) -> tuple[QGroupBox, QVBoxLayout]:
     return gb, lay
 
 
-def icon_button(text: str, icon_name: str = "", tooltip: str = "") -> QPushButton:
+def icon_button(
+    text: str, icon_name: str = "", tooltip: str = ""
+) -> QPushButton:
     btn = QPushButton(text)
     if icon_name:
         ic = _icon(icon_name)
@@ -142,7 +144,9 @@ class PanelWindow(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
 
         inner = QWidget()

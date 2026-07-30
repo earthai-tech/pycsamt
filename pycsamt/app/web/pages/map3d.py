@@ -187,7 +187,9 @@ def _topo_panel() -> dbc.AccordionItem:
                 style={"color": "var(--sub0)", "fontStyle": "italic"},
             ),
             # ── Station marker style ──────────────────────────────────────
-            html.Hr(style={"borderColor": "var(--overlay0)", "margin": "10px 0"}),
+            html.Hr(
+                style={"borderColor": "var(--overlay0)", "margin": "10px 0"}
+            ),
             _lbl("Station marker"),
             html.Div(
                 [
@@ -305,7 +307,9 @@ def _topo_panel() -> dbc.AccordionItem:
     )
 
 
-def _settings_item(title: str, icon: str, children, item_id: str) -> dbc.AccordionItem:
+def _settings_item(
+    title: str, icon: str, children, item_id: str
+) -> dbc.AccordionItem:
     return dbc.AccordionItem(
         children,
         title=html.Span(
@@ -336,7 +340,9 @@ def _run_bar() -> html.Div:
                 "Controls update live after first generation.",
                 className="fwd-feedback-mini mb-1",
             ),
-            dbc.Spinner(html.Div(id=IDs.MAP3D_SPINNER), size="sm", color="primary"),
+            dbc.Spinner(
+                html.Div(id=IDs.MAP3D_SPINNER), size="sm", color="primary"
+            ),
         ],
         className="fwd-run-bar",
     )
@@ -433,7 +439,9 @@ def _block_panel() -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Span("Clip X", className="fwd-bound-label me-1"),
+                            html.Span(
+                                "Clip X", className="fwd-bound-label me-1"
+                            ),
                             dcc.Slider(
                                 id=IDs.MAP3D_CLIP_X,
                                 min=0,
@@ -448,7 +456,9 @@ def _block_panel() -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Span("Clip Y", className="fwd-bound-label me-1"),
+                            html.Span(
+                                "Clip Y", className="fwd-bound-label me-1"
+                            ),
                             dcc.Slider(
                                 id=IDs.MAP3D_CLIP_Y,
                                 min=0,
@@ -819,7 +829,9 @@ def _controls_scroll() -> html.Div:
                             _depth_panel(),
                             html.Div(
                                 [
-                                    _ctrl_label("Block Volume Band (log₁₀ Ω·m)"),
+                                    _ctrl_label(
+                                        "Block Volume Band (log₁₀ Ω·m)"
+                                    ),
                                     html.Div(
                                         "Controls the visible resistivity interval for "
                                         "the semi-transparent volume.",
@@ -901,7 +913,9 @@ def _controls_scroll() -> html.Div:
                                     dbc.Col(
                                         dbc.Button(
                                             [
-                                                html.I(className="bi bi-image me-1"),
+                                                html.I(
+                                                    className="bi bi-image me-1"
+                                                ),
                                                 "PNG",
                                             ],
                                             id=IDs.BTN_MAP3D_EXPORT_PNG,

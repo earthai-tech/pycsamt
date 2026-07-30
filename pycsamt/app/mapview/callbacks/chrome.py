@@ -22,7 +22,9 @@ def register_chrome(app) -> None:
 
 # Plotly's responsive mode only re-lays out on a window resize event, so we
 # fire one after toggling a panel to make the canvas reclaim/yield space.
-_RESIZE = "setTimeout(function(){window.dispatchEvent(new Event('resize'));}, 80);"
+_RESIZE = (
+    "setTimeout(function(){window.dispatchEvent(new Event('resize'));}, 80);"
+)
 
 
 def _register_seed(app) -> None:

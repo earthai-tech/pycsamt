@@ -104,7 +104,9 @@ def interp_elev(
 
     # numpy linear / nearest
     if method == "nearest":
-        idx = np.argmin(np.abs(x_query_km[:, np.newaxis] - c[np.newaxis, :]), axis=1)
+        idx = np.argmin(
+            np.abs(x_query_km[:, np.newaxis] - c[np.newaxis, :]), axis=1
+        )
         return e[idx]
 
     # default: linear with clamped extrapolation
@@ -189,7 +191,8 @@ def drape_section(
     # Build 2-D draped z grid  (nz+1, nx+1)
     # Broadcasting: rows = depth nodes, cols = x nodes
     z_draped = (
-        elev_nodes[np.newaxis, :] - z_nodes[:, np.newaxis] * exaggeration  # (1, nx+1)
+        elev_nodes[np.newaxis, :]
+        - z_nodes[:, np.newaxis] * exaggeration  # (1, nx+1)
     )  # (nz+1, 1)
 
     data_out = data.copy()

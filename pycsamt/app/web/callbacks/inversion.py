@@ -192,7 +192,10 @@ def _classify(line: str) -> str:
 
 
 def _coloured_log(lines: list[str]) -> list[html.Span]:
-    return [html.Span(line + "\n", className=_classify(line) or None) for line in lines]
+    return [
+        html.Span(line + "\n", className=_classify(line) or None)
+        for line in lines
+    ]
 
 
 # ---
@@ -208,7 +211,9 @@ def _build_true_model(table_data, halfspace_rho):
     thk = np.array([float(r["thickness"]) for r in table_data])
     if np.any(thk <= 0) or np.any(rho <= 0) or halfspace_rho <= 0:
         raise ValueError("All resistivities and thicknesses must be > 0.")
-    return LayeredModel(resistivity=np.append(rho, halfspace_rho), thickness=thk)
+    return LayeredModel(
+        resistivity=np.append(rho, halfspace_rho), thickness=thk
+    )
 
 
 def _make_synthetic_1d(model_true, method, freqs, noise):
@@ -244,7 +249,9 @@ def _make_synthetic_1d(model_true, method, freqs, noise):
         )
 
 
-def _make_synthetic_2d(model_true, method, freqs, noise, n_stations, profile_len):
+def _make_synthetic_2d(
+    model_true, method, freqs, noise, n_stations, profile_len
+):
     from pycsamt.forward.em1d import MT1DForward
     from pycsamt.inversion.data import EMData
 
@@ -300,7 +307,11 @@ def _plot_1d_result(model_true, result, dark):
     plot_model(result, ax=axes[idx])
     axes[idx].set_title(f"Recovered  (RMS = {result.rms:.3f})")
     unc = result.uncertainty
-    if unc and unc.depth_confidence is not None and hasattr(result.model, "thickness"):
+    if (
+        unc
+        and unc.depth_confidence is not None
+        and hasattr(result.model, "thickness")
+    ):
         tops = np.concatenate([[0.0], np.cumsum(result.model.thickness)])
         conf = np.asarray(unc.depth_confidence)
         conf = conf / (conf.max() + 1e-9)
@@ -317,12 +328,16 @@ def _plot_1d_result(model_true, result, dark):
             rho_obs = np.asarray(data.rho_a)
             if rho_obs.ndim > 1:
                 rho_obs = rho_obs[0]
-            axes[idx].loglog(T, rho_obs, "o", color=c_o, ms=4, label="Observed")
+            axes[idx].loglog(
+                T, rho_obs, "o", color=c_o, ms=4, label="Observed"
+            )
             if pred is not None and hasattr(pred, "rho_a"):
                 rho_pred = np.asarray(pred.rho_a)
                 if rho_pred.ndim > 1:
                     rho_pred = rho_pred[0]
-                axes[idx].loglog(T, rho_pred, "-", color=c_p, lw=2, label="Predicted")
+                axes[idx].loglog(
+                    T, rho_pred, "-", color=c_p, lw=2, label="Predicted"
+                )
             axes[idx].set_xlabel("Period (s)")
             axes[idx].set_ylabel("ρₐ (Ω·m)")
             axes[idx].set_title("Data Fit")
@@ -348,7 +363,9 @@ def _plot_convergence(result, dark):
     if result.history is None:
         return None
     arrs = result.history.arrays()
-    iters = arrs.get("iteration", np.arange(max(len(v) for v in arrs.values())))
+    iters = arrs.get(
+        "iteration", np.arange(max(len(v) for v in arrs.values()))
+    )
     c_rms = "#f38ba8" if dark else "#d20f39"
     c_m = "#89b4fa" if dark else "#1e66f5"
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
@@ -406,7 +423,9 @@ def _stats_table(result, method, dim, backend, n_layers, regularize):
         )
         for k, v in rows
     ]
-    return html.Table(trs, style={"width": "100%", "borderCollapse": "collapse"})
+    return html.Table(
+        trs, style={"width": "100%", "borderCollapse": "collapse"}
+    )
 
 
 def _fwd2d_to_tensor(resp) -> np.ndarray:
@@ -414,7 +433,9 @@ def _fwd2d_to_tensor(resp) -> np.ndarray:
 
     Uses TE mode apparent resistivity (log10) + normalised phase.
     """
-    rho_a = np.asarray(resp.rho_a_te, dtype=np.float64)  # (n_freqs, n_stations)
+    rho_a = np.asarray(
+        resp.rho_a_te, dtype=np.float64
+    )  # (n_freqs, n_stations)
     phase = np.asarray(resp.phase_te, dtype=np.float64)
     ch0 = np.log10(np.maximum(rho_a, 1e-6)).astype(np.float32)
     ch1 = (phase / 90.0).astype(np.float32)
@@ -456,7 +477,9 @@ def _generate_2d_dataset(
             resp = fwd.run(model)
             rho_a = np.asarray(resp.rho_a, dtype=np.float32)
             phase = np.asarray(resp.phase, dtype=np.float32)
-            rho_a = np.maximum(rho_a * (1 + noise * rng.standard_normal(n_freqs)), 1e-3)
+            rho_a = np.maximum(
+                rho_a * (1 + noise * rng.standard_normal(n_freqs)), 1e-3
+            )
             phase = phase + noise * 45 * rng.standard_normal(n_freqs)
             X[i, 0, :, j] = np.log10(rho_a)
             X[i, 1, :, j] = phase / 90.0  # normalise to ~[-1, 1]
@@ -477,7 +500,9 @@ def _plot_predicted_section_2d(
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
     # Left: predicted resistivity section
-    im0 = axes[0].imshow(y_pred_section, aspect="auto", cmap=cmap, origin="upper")
+    im0 = axes[0].imshow(
+        y_pred_section, aspect="auto", cmap=cmap, origin="upper"
+    )
     axes[0].set_title("AI-predicted log₁₀(ρ) section")
     axes[0].set_xlabel("Station index")
     axes[0].set_ylabel("Depth layer")
@@ -575,7 +600,9 @@ def _plot_gcn_section_3d(
     c_p = "#f38ba8" if dark else "#d20f39"
 
     # Mean depth profile
-    axes[0].plot(rho_t.mean(axis=0), np.arange(n_layers), color=c_t, lw=2, label="True")
+    axes[0].plot(
+        rho_t.mean(axis=0), np.arange(n_layers), color=c_t, lw=2, label="True"
+    )
     axes[0].plot(
         rho_p.mean(axis=0),
         np.arange(n_layers),
@@ -1182,7 +1209,9 @@ def register_inversion(app) -> None:
             raise PreventUpdate
         data = list(data or [])
         last = float(data[-1]["resistivity"]) if data else 100.0
-        data.append({"layer": len(data) + 1, "resistivity": last, "thickness": 500})
+        data.append(
+            {"layer": len(data) + 1, "resistivity": last, "thickness": 500}
+        )
         return data
 
     # 5. ── PyTorch install: open confirm modal when AI run without torch ────────
@@ -1551,7 +1580,9 @@ def register_inversion(app) -> None:
                         seed=99,
                         verbose=False,
                     )
-                    _log(f"X_train {ds_train.X.shape}  X_test {ds_test.X.shape}")
+                    _log(
+                        f"X_train {ds_train.X.shape}  X_test {ds_test.X.shape}"
+                    )
                     _log(
                         f"Training EMInverter1D(arch={ai_arch}) "
                         f"— {epochs} epochs, batch {batch_sz}, lr {lr} …"
@@ -1573,7 +1604,9 @@ def register_inversion(app) -> None:
                     y_pred = inv.predict(ds_test.X, as_log_rho=True)
                     _log(f"Predicted {len(y_pred)} test samples.")
 
-                    fig_res = _plot_ai_comparison(ds_test.y, y_pred, ai_n_lay, dark)
+                    fig_res = _plot_ai_comparison(
+                        ds_test.y, y_pred, ai_n_lay, dark
+                    )
                     src_res = fig_to_src(fig_res)
                     plt.close(fig_res)
 
@@ -1637,7 +1670,9 @@ def register_inversion(app) -> None:
                         n_freqs = len(freqs)
                         n_sta_ai = int(ai_n_stations or 8)
                         has_fwd_test = False
-                        _log("No forward model in session — using synthetic data.")
+                        _log(
+                            "No forward model in session — using synthetic data."
+                        )
 
                     _log(
                         f"Generating {n_samp} synthetic 2-D profiles "
@@ -1706,7 +1741,9 @@ def register_inversion(app) -> None:
                             f"Predicted on session ForwardResponse2D "
                             f"— shape {y_pred_fwd.shape}"
                         )
-                        extra_lines.append("Session forward response: predicted ✓")
+                        extra_lines.append(
+                            "Session forward response: predicted ✓"
+                        )
                         fig_res = _plot_predicted_section_2d(
                             y_pred_fwd[0], fwd_resp, n_dep, dark
                         )
@@ -1811,14 +1848,18 @@ def register_inversion(app) -> None:
 
                     y_pred = inv.predict(X_te, adjacency=A, as_log_rho=True)
                     mae = float(
-                        np.abs(y_pred[..., :ai_n_lay] - y_te[..., :ai_n_lay]).mean()
+                        np.abs(
+                            y_pred[..., :ai_n_lay] - y_te[..., :ai_n_lay]
+                        ).mean()
                     )
                     _log(
                         f"Predicted {len(y_pred)} test surveys. "
                         f"MAE(log10 ρ) = {mae:.3f}"
                     )
 
-                    fig_res = _plot_gcn_section_3d(y_te, y_pred, ai_n_lay, dark)
+                    fig_res = _plot_gcn_section_3d(
+                        y_te, y_pred, ai_n_lay, dark
+                    )
                     src_res = fig_to_src(fig_res)
                     plt.close(fig_res)
 
@@ -1911,7 +1952,9 @@ def register_inversion(app) -> None:
                         _empty,
                         _empty,
                         _coloured_log(log_lines),
-                        html.Div(msg, style={"color": "#f9e2af", "padding": "10px"}),
+                        html.Div(
+                            msg, style={"color": "#f9e2af", "padding": "10px"}
+                        ),
                         msg,
                         "log",
                     )
@@ -1926,10 +1969,14 @@ def register_inversion(app) -> None:
                         if rho_s is None:
                             continue
                         all_rho.append(
-                            np.interp(np.log10(freqs), np.log10(freqs_s), rho_s)
+                            np.interp(
+                                np.log10(freqs), np.log10(freqs_s), rho_s
+                            )
                         )
                         all_phase.append(
-                            np.interp(np.log10(freqs), np.log10(freqs_s), phi_s)
+                            np.interp(
+                                np.log10(freqs), np.log10(freqs_s), phi_s
+                            )
                         )
                         st_x.append(getattr(site, "x", i * 200.0))
                         st_names.append(getattr(site, "station", f"S{i:02d}"))
@@ -1969,7 +2016,9 @@ def register_inversion(app) -> None:
                     )
                     _log(f"Synthetic 2-D: {em_data.n_stations} stations.")
                 else:
-                    em_data = _make_synthetic_1d(model_true, method, freqs, noise_level)
+                    em_data = _make_synthetic_1d(
+                        model_true, method, freqs, noise_level
+                    )
                     _log("Synthetic 1-D data generated.")
 
             _log(
@@ -2014,9 +2063,15 @@ def register_inversion(app) -> None:
             plt.close(fig_res)
 
             fig_cv = _plot_convergence(result, dark)
-            src_cv = (fig_to_src(fig_cv), plt.close(fig_cv))[0] if fig_cv else _empty
+            src_cv = (
+                (fig_to_src(fig_cv), plt.close(fig_cv))[0]
+                if fig_cv
+                else _empty
+            )
 
-            stats = _stats_table(result, method, t_dim, backend, n_layers, regularize)
+            stats = _stats_table(
+                result, method, t_dim, backend, n_layers, regularize
+            )
             msg = (
                 f"{method.upper()} {t_dim.upper()} converged — "
                 f"RMS={result.rms:.3f}, {result.n_iter} iterations"

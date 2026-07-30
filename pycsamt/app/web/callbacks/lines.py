@@ -81,11 +81,17 @@ def _register_init(app) -> None:
 
         # Append mode: preserve existing active/inactive choices.
         # Only newly added lines are defaulted to active.
-        if load_mode == "append" and prev_active_store and prev_active_store.get("all"):
+        if (
+            load_mode == "append"
+            and prev_active_store
+            and prev_active_store.get("all")
+        ):
             prev_active = set(prev_active_store.get("active", []))
             prev_all = set(prev_active_store.get("all", []))
             new_lines = [ln for ln in lines if ln not in prev_all]
-            active = [ln for ln in lines if ln in prev_active or ln in new_lines]
+            active = [
+                ln for ln in lines if ln in prev_active or ln in new_lines
+            ]
             return {"active": active, "all": lines}
 
         # Replace mode (or first load): all lines default to active
@@ -262,7 +268,9 @@ def _register_panel(app) -> None:
         if not line_counts:
             return _empty_hint(mode)
 
-        active_set = set((active_store or {}).get("active", list(line_counts.keys())))
+        active_set = set(
+            (active_store or {}).get("active", list(line_counts.keys()))
+        )
 
         try:
             from pycsamt.app.web.utils import _LINE_COLORS
@@ -285,7 +293,9 @@ def _register_panel(app) -> None:
         for idx, (line_name, count) in enumerate(line_counts.items()):
             color = palette[idx % len(palette)]
             is_active = line_name in active_set
-            rows.append(_build_row(line_name, count, color, is_active, edit_mode))
+            rows.append(
+                _build_row(line_name, count, color, is_active, edit_mode)
+            )
 
         children = [html.Div(rows, className="lines-list")]
 

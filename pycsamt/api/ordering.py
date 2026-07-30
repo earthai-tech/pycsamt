@@ -55,7 +55,9 @@ class SiteOrderingConfig:
                 f"Unknown ordering config key(s) {sorted(unknown)}. "
                 f"Valid keys: {sorted(valid)}"
             )
-        values = {field.name: getattr(self, field.name) for field in fields(self)}
+        values = {
+            field.name: getattr(self, field.name) for field in fields(self)
+        }
         values.update(kw)
         raw_mode = str(values["mode"]).strip().lower()
         mode = _ALIASES.get(raw_mode, raw_mode)

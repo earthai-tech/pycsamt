@@ -79,7 +79,9 @@ def plot_confusion_matrix(
     n = len(classes)
 
     if class_names is None:
-        class_names = _CLASS_NAMES_DEFAULT[:n] if n <= 3 else [str(c) for c in classes]
+        class_names = (
+            _CLASS_NAMES_DEFAULT[:n] if n <= 3 else [str(c) for c in classes]
+        )
 
     # Build confusion matrix
     cm = np.zeros((n, n), dtype=int)
@@ -123,7 +125,9 @@ def plot_confusion_matrix(
             val = cm_plot[i, j]
             color = "white" if val > thresh else EM_COLORS["text"]
             text = f"{val:{fmt}}" if fmt != "d" else str(int(cm[i, j]))
-            ax.text(j, i, text, ha="center", va="center", color=color, fontsize=9)
+            ax.text(
+                j, i, text, ha="center", va="center", color=color, fontsize=9
+            )
 
     add_colorbar(im, ax, label="Recall" if normalise else "Count", pad=0.03)
     fig.tight_layout()
@@ -204,7 +208,9 @@ def plot_residuals(
             lw=0.8,
             zorder=1,
         )
-        ax.scatter(yt_m, yp_m, s=6, alpha=0.5, color=color, linewidths=0, zorder=2)
+        ax.scatter(
+            yt_m, yp_m, s=6, alpha=0.5, color=color, linewidths=0, zorder=2
+        )
 
         if len(yt_m) > 1:
             ss_res = np.sum((yt_m - yp_m) ** 2)
@@ -282,7 +288,9 @@ def plot_layer_errors(
 
     labels = rho_lbl + thick_lbl
     values = np.concatenate([rho_mae, thick_mae])
-    colors = [EM_COLORS["primary"]] * n_rho + [EM_COLORS["secondary"]] * n_thick
+    colors = [EM_COLORS["primary"]] * n_rho + [
+        EM_COLORS["secondary"]
+    ] * n_thick
 
     if figsize is None:
         figsize = (max(5.0, len(labels) * 0.5), 3.5)
@@ -476,7 +484,9 @@ def plot_feature_importance(
     color[0] = EM_COLORS["secondary"]  # highlight top feature
 
     if horizontal:
-        ax.barh(y_pos, vals[::-1], color=color[::-1], edgecolor="white", lw=0.4)
+        ax.barh(
+            y_pos, vals[::-1], color=color[::-1], edgecolor="white", lw=0.4
+        )
         ax.set_yticks(y_pos)
         ax.set_yticklabels(names[::-1], fontsize=8)
         ax.set_xlabel("Importance", fontsize=9)

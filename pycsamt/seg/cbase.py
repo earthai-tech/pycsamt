@@ -163,7 +163,11 @@ class ParseMixin:
             if _is_glob(str(p)):
                 if p.is_absolute():
                     parent, name = p.parent, p.name
-                    it = parent.rglob(name) if "**" in name else parent.glob(name)
+                    it = (
+                        parent.rglob(name)
+                        if "**" in name
+                        else parent.glob(name)
+                    )
                 else:
                     pat = str(p)
                     it = base.rglob(pat) if "**" in pat else base.glob(pat)
@@ -318,7 +322,9 @@ class CoreParser(ParseMixin):
         self._errors.clear()
 
         for p in self._iter_edi_files(
-            sources if isinstance(sources, list) else list(self._iter_paths(sources))
+            sources
+            if isinstance(sources, list)
+            else list(self._iter_paths(sources))
         ):
             res = self._read_one(p)
             self.results.append(res)

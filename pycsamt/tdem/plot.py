@@ -272,7 +272,11 @@ class PlotDecayCurve(TDEMPlotBase):
                 lw=1.2,
                 label=label,
             )
-            if self.show_error and sounding.error is not None and self.y_mode == "data":
+            if (
+                self.show_error
+                and sounding.error is not None
+                and self.y_mode == "data"
+            ):
                 ax.errorbar(
                     t_ms,
                     np.abs(y),
@@ -321,7 +325,9 @@ class PlotTransformedRho(TDEMPlotBase):
         self.use_control = bool(use_control)
         self.panel_height_ratios = panel_height_ratios
         self.figsize = figsize or (
-            self.style.figsize_double if self.show_phase else self.style.figsize_single
+            self.style.figsize_double
+            if self.show_phase
+            else self.style.figsize_single
         )
         self.results = _as_transform_results(
             data,
@@ -663,7 +669,9 @@ class PlotSurveyMap(TDEMPlotBase):
             "s": self.marker_size or marker.size,
             "edgecolors": marker.edgecolor,
             "linewidths": marker.linewidth,
-            "alpha": marker.alpha if self.marker_alpha is None else self.marker_alpha,
+            "alpha": marker.alpha
+            if self.marker_alpha is None
+            else self.marker_alpha,
             "zorder": marker.zorder,
         }
         sc = ax.scatter(
@@ -838,7 +846,9 @@ class PlotSurveyOverview(TDEMPlotBase):
 
         profile = self.profile
         if profile is None:
-            profiles = _coordinate_profiles(_coordinate_records(self.data), None)
+            profiles = _coordinate_profiles(
+                _coordinate_records(self.data), None
+            )
             if profiles:
                 profile = next(iter(profiles))
 
@@ -919,7 +929,9 @@ class PlotGateProfile(TDEMPlotBase):
         import matplotlib.pyplot as plt
 
         rows = _avg_records(self.data)
-        windows = self.windows or _representative_windows(row["window"] for row in rows)
+        windows = self.windows or _representative_windows(
+            row["window"] for row in rows
+        )
         if ax is None:
             _fig, ax = plt.subplots(figsize=self.figsize)
         all_stations = np.asarray(
@@ -1193,7 +1205,9 @@ def _coordinate_records(data) -> list[dict[str, Any]]:
             return data.coordinates.to_records()
         rows = data.to_records()
         return [
-            row for row in rows if {"x", "y"}.issubset(row) and row.get("x") is not None
+            row
+            for row in rows
+            if {"x", "y"}.issubset(row) and row.get("x") is not None
         ]
     if isinstance(data, list):
         return data

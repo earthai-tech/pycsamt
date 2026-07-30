@@ -119,14 +119,18 @@ class StaticShiftAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         method = str(
-            input_data.get("method") or input_data.get("ss_method") or self.method
+            input_data.get("method")
+            or input_data.get("ss_method")
+            or self.method
         ).lower()
         output_dir = input_data.get("output_dir")
 
@@ -153,7 +157,9 @@ class StaticShiftAgent(BaseAgent):
             if method in ("none", "skip"):
                 # User explicitly chose no correction.
                 corrected_sites = sites
-                warnings.append("Static-shift correction skipped (method='none').")
+                warnings.append(
+                    "Static-shift correction skipped (method='none')."
+                )
             elif method == "ama":
                 corrected_sites = correct_ss_ama(
                     sites,
@@ -207,7 +213,8 @@ class StaticShiftAgent(BaseAgent):
                     )
                 else:
                     warnings.append(
-                        "estimate_ss_refmedian returned" " unexpected type; using AMA."
+                        "estimate_ss_refmedian returned"
+                        " unexpected type; using AMA."
                     )
                     corrected_sites = correct_ss_ama(
                         sites,
@@ -216,7 +223,9 @@ class StaticShiftAgent(BaseAgent):
                         verbose=0,
                     )
             else:
-                warnings.append(f"Unknown method {method!r}; falling back to AMA.")
+                warnings.append(
+                    f"Unknown method {method!r}; falling back to AMA."
+                )
                 corrected_sites = correct_ss_ama(
                     sites,
                     half_window=self.half_window,
@@ -261,7 +270,11 @@ class StaticShiftAgent(BaseAgent):
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
 
-        if rho_before is not None and rho_after is not None and freqs_all is not None:
+        if (
+            rho_before is not None
+            and rho_after is not None
+            and freqs_all is not None
+        ):
             # summary dashboard: before / after / delta
             try:
                 # _collect_rho is (n_freq, n_sta); plotters want (n_st, n_f)
@@ -309,7 +322,9 @@ class StaticShiftAgent(BaseAgent):
                     fig_cmp
                     if hasattr(fig_cmp, "savefig")
                     else (
-                        fig_cmp.get_figure() if hasattr(fig_cmp, "get_figure") else None
+                        fig_cmp.get_figure()
+                        if hasattr(fig_cmp, "get_figure")
+                        else None
                     )
                 )
                 if fig_c is not None:
@@ -412,7 +427,9 @@ def _collect_rho(
         # Always compute from Z — ed.rho is a
         # cached attribute that is stale after
         # impedance-tensor correction modifies Z.
-        rho_xy = (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(z[:, 0, 1]) ** 2
+        rho_xy = (0.2 / np.where(fr == 0, np.nan, fr)) * np.abs(
+            z[:, 0, 1]
+        ) ** 2
 
         log_rho = np.log10(np.clip(rho_xy, 1e-6, None))
 

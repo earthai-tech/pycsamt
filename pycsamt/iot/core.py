@@ -103,7 +103,8 @@ class DeviceConfig(PyCSAMTObject, MetadataMixin):
             if self.sample_rate_hz <= 0:
                 raise ValueError("sample_rate_hz must be positive.")
         self.channels = [
-            _as_nonempty_str(ch, "channel").lower() for ch in list(self.channels or [])
+            _as_nonempty_str(ch, "channel").lower()
+            for ch in list(self.channels or [])
         ]
         self.role = _normalise_enum(self.role, DeviceRole, "role")
         self.enabled = _c.as_bool(self.enabled)

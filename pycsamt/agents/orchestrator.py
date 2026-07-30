@@ -209,7 +209,11 @@ def _ifn_empty_model(r):
 
 def _ifn_inv2d_model(r):
     sec = r["inv2d"].get("pred_section", [])
-    return {"model": {"resistivity": (sec.tolist() if hasattr(sec, "tolist") else sec)}}
+    return {
+        "model": {
+            "resistivity": (sec.tolist() if hasattr(sec, "tolist") else sec)
+        }
+    }
 
 
 def _ifn_results(r):
@@ -1201,7 +1205,9 @@ class WorkflowOrchestratorAgent(BaseAgent):
             },
             warnings=warnings + exec_result.warnings,
             elapsed_seconds=elapsed,
-            cost_estimate_usd=(self._last_cost + exec_result.cost_estimate_usd),
+            cost_estimate_usd=(
+                self._last_cost + exec_result.cost_estimate_usd
+            ),
         )
 
 
@@ -1431,7 +1437,9 @@ def _build_registry(
                 exc,
             )
 
-    _try("ContextInputAgent", lambda: _import("context", "ContextInputAgent")())
+    _try(
+        "ContextInputAgent", lambda: _import("context", "ContextInputAgent")()
+    )
     _try("MTLoaderAgent", lambda: _import("loader", "MTLoaderAgent")())
     _try("DataQCAgent", lambda: _import("qc", "DataQCAgent")())
     _try(
@@ -1442,7 +1450,9 @@ def _build_registry(
         "PhaseAnalysisAgent",
         lambda: _import("phase_analysis", "PhaseAnalysisAgent")(),
     )
-    _try("ForwardModelAgent", lambda: _import("forward", "ForwardModelAgent")())
+    _try(
+        "ForwardModelAgent", lambda: _import("forward", "ForwardModelAgent")()
+    )
     _try(
         "InversionPrepAgent",
         lambda: _import("inversion_prep", "InversionPrepAgent")(),
@@ -1482,7 +1492,9 @@ def _build_registry(
         "JointInversionAgent",
         lambda: _import("joint_agent", "JointInversionAgent")(),
     )
-    _try("ModelZooAgent", lambda: _import("model_zoo_agent", "ModelZooAgent")())
+    _try(
+        "ModelZooAgent", lambda: _import("model_zoo_agent", "ModelZooAgent")()
+    )
     _try(
         "TensorRotationAgent",
         lambda: _import("tensor_rotation", "TensorRotationAgent")(),

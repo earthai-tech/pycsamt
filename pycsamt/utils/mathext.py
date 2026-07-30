@@ -328,7 +328,9 @@ def linkage_matrix(
                 "distance",
                 "no. of items in clust.",
             ],
-            index=["cluster %d" % (i + 1) for i in range(row_clusters.shape[0])],
+            index=[
+                "cluster %d" % (i + 1) for i in range(row_clusters.shape[0])
+            ],
         )
     return row_clusters
 
@@ -379,7 +381,9 @@ def betaj(xj: int, L: int, W: int, **kws) -> float:
 
     xk = W / 2
     # vec_betaj = np.vectorize( betaj ) ; vec_betaj(0, 1, 5)
-    return quad(d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws)[0]
+    return quad(d_hanning_window, xj - L / 2, xj + L / 2, args=(xk, W), **kws)[
+        0
+    ]
 
 
 def rhoa2z(
@@ -483,7 +487,9 @@ def rhophi2z(rho, phi, freq):
             abs_z = np.sqrt(5 * f * r)
         # `f` may arrive as a 1-element array: extract the scalar
         # explicitly (implicit conversion is removed in NumPy >= 2.3)
-        return cmath.rect(np.asarray(abs_z, dtype=float).ravel()[0], radians(p))
+        return cmath.rect(
+            np.asarray(abs_z, dtype=float).ravel()[0], radians(p)
+        )
 
     is_array2x2 = False
 
@@ -655,7 +661,10 @@ def savitzky_golay1d(
     half_window = (window_size - 1) // 2
     # precompute coefficients
     b = np.array(
-        [[k**i for i in order_range] for k in range(-half_window, half_window + 1)],
+        [
+            [k**i for i in order_range]
+            for k in range(-half_window, half_window + 1)
+        ],
         dtype=float,
     )
     m = np.linalg.pinv(b)[deriv] * rate**deriv * factorial(deriv)

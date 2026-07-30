@@ -1214,9 +1214,13 @@ class Sites(CoreObject):
         }
         from ..api.ordering import PYCSAMT_ORDERING
 
-        requested = str(PYCSAMT_ORDERING.mode if by is None else by).strip().lower()
+        requested = (
+            str(PYCSAMT_ORDERING.mode if by is None else by).strip().lower()
+        )
         min_linearity = float(
-            PYCSAMT_ORDERING.min_linearity if min_linearity is None else min_linearity
+            PYCSAMT_ORDERING.min_linearity
+            if min_linearity is None
+            else min_linearity
         )
         max_cross_track_ratio = float(
             PYCSAMT_ORDERING.max_cross_track_ratio
@@ -1238,7 +1242,9 @@ class Sites(CoreObject):
             "chainage",
         }
         if mode not in allowed:
-            raise ValueError(f"by must be one of {sorted(allowed)}, got {by!r}")
+            raise ValueError(
+                f"by must be one of {sorted(allowed)}, got {by!r}"
+            )
 
         target = self if inplace else Sites(self.as_list())
         n = len(target._items)
@@ -1255,7 +1261,9 @@ class Sites(CoreObject):
 
         def natural_key(site: Site) -> tuple[Any, ...]:
             parts = re.split(r"(\d+)", site.name)
-            return tuple(int(p) if p.isdigit() else p.casefold() for p in parts)
+            return tuple(
+                int(p) if p.isdigit() else p.casefold() for p in parts
+            )
 
         if mode == "station":
             target._items.sort(key=natural_key)
@@ -1267,7 +1275,9 @@ class Sites(CoreObject):
         valid_idx = np.flatnonzero(finite)
         report["n_coordinates"] = int(valid_idx.size)
         if valid_idx.size < 2:
-            report.update(applied="input", reason="fewer than two finite coordinates")
+            report.update(
+                applied="input", reason="fewer than two finite coordinates"
+            )
             target._ordering = report
             return target
 
@@ -1300,9 +1310,13 @@ class Sites(CoreObject):
         along = centred @ axis
         across = centred @ np.array([-axis[1], axis[0]])
         variance = singular * singular
-        linearity = float(variance[0] / variance.sum()) if variance.sum() else 0.0
+        linearity = (
+            float(variance[0] / variance.sum()) if variance.sum() else 0.0
+        )
         span = float(np.ptp(along))
-        cross_ratio = float(np.ptp(across) / span) if span > 0.0 else float("inf")
+        cross_ratio = (
+            float(np.ptp(across) / span) if span > 0.0 else float("inf")
+        )
         # A pair of parallel profiles can still have excellent global PCA
         # linearity. Detect a well-populated gap across the fitted axis so
         # such lines are ordered independently instead of interleaved.
@@ -1352,7 +1366,9 @@ class Sites(CoreObject):
             for group in groups:
                 subset = Sites([target._items[int(i)].edi for i in group])
                 ordered_items.extend(subset.ordered("chainage")._items)
-            ordered_items.extend(target._items[i] for i in range(n) if not finite[i])
+            ordered_items.extend(
+                target._items[i] for i in range(n) if not finite[i]
+            )
             target._items = ordered_items
             report.update(
                 applied="chainage_by_line",
@@ -1384,7 +1400,9 @@ class Sites(CoreObject):
             axis *= -1.0
 
         azimuth = math.degrees(math.atan2(axis[0], axis[1])) % 360.0
-        chainage = {int(idx): float(value) for idx, value in zip(valid_idx, along)}
+        chainage = {
+            int(idx): float(value) for idx, value in zip(valid_idx, along)
+        }
         ordered_idx = sorted(
             range(n),
             key=lambda i: (
@@ -2229,7 +2247,9 @@ def _is_seq_of_pathlike(x: Any) -> bool:
 
 
 def _is_edi_like(obj: Any) -> bool:
-    return obj is not None and hasattr(obj, "get_section") and hasattr(obj, "Z")
+    return (
+        obj is not None and hasattr(obj, "get_section") and hasattr(obj, "Z")
+    )
 
 
 def _is_single_edi_input(x: Any) -> bool:
@@ -2252,7 +2272,8 @@ def _unwrap_one_edi(x: Any, *, strict: bool = False) -> EDIFile | None:
         return x
     if strict:
         raise TypeError(
-            "Object cannot be unwrapped to an EDI-like item: " f"{type(x).__name__}."
+            "Object cannot be unwrapped to an EDI-like item: "
+            f"{type(x).__name__}."
         )
     return None
 
@@ -2469,7 +2490,9 @@ def _to_sites(
         )
         # If caller asked for 'raise', enforce it now.
         if on_dup.strip().lower() == "raise":
-            coll = _dedup_collection_names(coll, policy="raise", verbose=verbose)
+            coll = _dedup_collection_names(
+                coll, policy="raise", verbose=verbose
+            )
         # Wrap in Sites
         try:
             return Sites(coll)
@@ -2664,7 +2687,10 @@ def _slice_fields(Z: Any, sl: slice) -> None:
 
     # Finalize: compute rho/phi once arrays are consistent
     try:
-        if getattr(Z, "_z", None) is not None and getattr(Z, "_freq", None) is not None:
+        if (
+            getattr(Z, "_z", None) is not None
+            and getattr(Z, "_freq", None) is not None
+        ):
             Z.compute_resistivity_phase()
     except Exception:
         # Be tolerant; tests only require freq slicing to succeed

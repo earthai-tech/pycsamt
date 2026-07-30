@@ -147,11 +147,17 @@ def init(
             click.echo()
             click.echo("  Load with:")
             if fmt.lower() == "yaml":
-                click.echo(f"    pipe = Pipeline.from_yaml({str(output_path)!r})")
+                click.echo(
+                    f"    pipe = Pipeline.from_yaml({str(output_path)!r})"
+                )
             elif fmt.lower() == "json":
-                click.echo(f"    pipe = Pipeline.from_json({str(output_path)!r})")
+                click.echo(
+                    f"    pipe = Pipeline.from_json({str(output_path)!r})"
+                )
             else:
-                click.echo(f"    pipe = Pipeline.from_py({str(output_path)!r})")
+                click.echo(
+                    f"    pipe = Pipeline.from_py({str(output_path)!r})"
+                )
             click.echo()
             click.echo("  Run with:")
             click.echo(f"    pycsamt pipe run --config {output_path}")

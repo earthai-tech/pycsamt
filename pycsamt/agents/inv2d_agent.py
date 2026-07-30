@@ -238,7 +238,9 @@ class Inv2DAgent(BaseAgent):
 
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
-            return AgentResult.failed("No 'sites' or 'path'.", elapsed=time.time() - t0)
+            return AgentResult.failed(
+                "No 'sites' or 'path'.", elapsed=time.time() - t0
+            )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
@@ -257,7 +259,11 @@ class Inv2DAgent(BaseAgent):
             freqs = _DEFAULT_FREQS_2D[: self.n_freqs]
         else:
             freqs = np.asarray(freqs_cfg, dtype=float).reshape(-1)
-            if freqs.size < 2 or not np.all(np.isfinite(freqs)) or np.any(freqs <= 0):
+            if (
+                freqs.size < 2
+                or not np.all(np.isfinite(freqs))
+                or np.any(freqs <= 0)
+            ):
                 return AgentResult.failed(
                     "'freqs' must contain at least two finite positive values.",
                     elapsed=time.time() - t0,
@@ -299,7 +305,8 @@ class Inv2DAgent(BaseAgent):
         # each observed feature is flat [log10(rho_xy) | phase_xy]
         # (length 2 * n_freqs): fold back into (n_components=2, n_freqs)
         comp_feats = [
-            np.asarray(f, dtype=np.float32).reshape(2, n_freqs) for f in obs_feats
+            np.asarray(f, dtype=np.float32).reshape(2, n_freqs)
+            for f in obs_feats
         ]
         X_obs = np.stack(comp_feats, axis=2)  # (n_components, n_freqs, n_sta)
         X_obs_4d = X_obs[None, ...]  # (1, n_components, n_freqs, n_sta)
@@ -508,8 +515,12 @@ class Inv2DAgent(BaseAgent):
                 )
                 ax.set_ylabel("Depth (km)", fontsize=9)
                 ax.tick_params(axis="y", labelsize=8)
-                self._section.add_colorbar(im, ax, label="$\\log_{10}\\rho$ (Ω·m)")
-                ax.set_title("2-D AI inversion (U-Net)", fontsize=10, fontweight="bold")
+                self._section.add_colorbar(
+                    im, ax, label="$\\log_{10}\\rho$ (Ω·m)"
+                )
+                ax.set_title(
+                    "2-D AI inversion (U-Net)", fontsize=10, fontweight="bold"
+                )
                 fig.tight_layout()
                 figures["inv2d_section"] = fig
                 p = self._save_figure(

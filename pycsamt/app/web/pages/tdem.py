@@ -110,7 +110,9 @@ def layout() -> html.Div:
                             _ctrl_label("TEM Data Folder"),
                             dbc.Button(
                                 [
-                                    html.I(className="bi bi-folder2-open me-2"),
+                                    html.I(
+                                        className="bi bi-folder2-open me-2"
+                                    ),
                                     "Browse folder…",
                                 ],
                                 id=IDs.BTN_TDEM_BROWSE,
@@ -128,7 +130,9 @@ def layout() -> html.Div:
                             ),
                             dbc.Button(
                                 [
-                                    html.I(className="bi bi-box-arrow-in-down me-1"),
+                                    html.I(
+                                        className="bi bi-box-arrow-in-down me-1"
+                                    ),
                                     "Load",
                                 ],
                                 id=IDs.BTN_TDEM_LOAD,
@@ -151,7 +155,9 @@ def layout() -> html.Div:
                                 [
                                     html.Span(
                                         [
-                                            html.I(className="bi bi-box-seam me-1"),
+                                            html.I(
+                                                className="bi bi-box-seam me-1"
+                                            ),
                                             "Demo dataset",
                                         ],
                                         className="tdem-demo-badge",
@@ -186,7 +192,9 @@ def layout() -> html.Div:
                             ),
                         ],
                         className="ctrl-card tdem-demo-card",
-                        style={"display": "block"} if _SAMPLE else {"display": "none"},
+                        style={"display": "block"}
+                        if _SAMPLE
+                        else {"display": "none"},
                     ),
                     # 3. Plot selector
                     html.Div(
@@ -331,7 +339,9 @@ def layout() -> html.Div:
     )
 
     # ── Per-tab figure panels ─────────────────────────────────────────────────
-    def _fig_panel(tab_id: str, img_id: str, visible: bool = False) -> html.Div:
+    def _fig_panel(
+        tab_id: str, img_id: str, visible: bool = False
+    ) -> html.Div:
         return html.Div(
             html.Div(
                 html.Img(

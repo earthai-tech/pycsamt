@@ -55,7 +55,9 @@ class MethodProfile:
         return dict(
             method=self.method.value,
             frequency_band_hz=(
-                list(self.frequency_band_hz) if self.frequency_band_hz else None
+                list(self.frequency_band_hz)
+                if self.frequency_band_hz
+                else None
             ),
             required_channels=list(self.required_channels),
             default_sample_rate_hz=self.default_sample_rate_hz,

@@ -14,8 +14,16 @@
 # Output:  ./Mod2DMT
 
 # ---- compiler settings (override on command line) ----
+# -cpp is required even for the serial build: Declaration_MPI.f90,
+# Sub_MPI.f90, and Main_MPI.f90 are unconditionally `use`d by several
+# files below (INVcore.f90, DCG.f90, Mod2DMT.f90, SymmetryTest.f90,
+# ModelSpace.f90) but their entire module body is wrapped in
+# #ifdef MPI / #endif; without -cpp, gfortran does not strip that and
+# fails on the raw preprocessor directives / the unconditional
+# `include 'mpif.h'` inside (same issue as, and fixed identically to,
+# the 3D Makefile).
 F90      ?= gfortran
-FFLAGS   ?= -O3 -ffree-line-length-none
+FFLAGS   ?= -O3 -ffree-line-length-none -cpp
 MPIFLAGS ?= -x f95-cpp-input
 LIBS     ?= -llapack -lblas
 
@@ -37,6 +45,9 @@ OBJ = \
   $(OBJDIR)/math_constants.o \
   $(OBJDIR)/utilities.o \
   $(OBJDIR)/file_units.o \
+  $(OBJDIR)/declaration_mpi.o \
+  $(OBJDIR)/sub_mpi.o \
+  $(OBJDIR)/main_mpi.o \
   $(OBJDIR)/DataSpace.o \
   $(OBJDIR)/GridDef.o \
   $(OBJDIR)/EMfield.o \
@@ -81,6 +92,19 @@ $(OBJDIR)/utilities.o: $(UTILS)/utilities.f90
 	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
 
 $(OBJDIR)/file_units.o: $(UTILS)/file_units.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
+# ---- MPI stubs (module body is entirely #ifdef MPI / #endif; -cpp
+# strips it to an empty module for the serial build, matching how
+# INVcore.f90/DCG.f90/Mod2DMT.f90/SymmetryTest.f90/ModelSpace.f90
+# unconditionally `use` these regardless of MPI) ----
+$(OBJDIR)/declaration_mpi.o: $(MPI)/Declaration_MPI.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
+$(OBJDIR)/sub_mpi.o: $(SRC2D)/Sub_MPI.f90
+	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
+
+$(OBJDIR)/main_mpi.o: $(MPI)/Main_MPI.f90
 	$(F90) $(FFLAGS) $(MODULE) -c $< -o $@
 
 # ---- SENS ----

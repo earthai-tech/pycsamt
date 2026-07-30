@@ -288,7 +288,9 @@ def _to_float(s: str, name: str, lineno: int | None) -> float:
     try:
         return float(s)
     except Exception as exc:  # noqa: BLE001
-        raise JParseError(_fmt_err(f"Bad float for '{name}'", lineno, s)) from exc
+        raise JParseError(
+            _fmt_err(f"Bad float for '{name}'", lineno, s)
+        ) from exc
 
 
 def _fmt_err(msg: str, lineno: int | None, frag: str | None = None) -> str:

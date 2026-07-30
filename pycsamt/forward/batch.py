@@ -115,7 +115,9 @@ class ForwardDataset:
         meta = None
         if "meta_n_layers" in d:
             n = len(d["meta_n_layers"])
-            meta = np.zeros(n, dtype=[("n_layers", "i4"), ("noise_level", "f4")])
+            meta = np.zeros(
+                n, dtype=[("n_layers", "i4"), ("noise_level", "f4")]
+            )
             meta["n_layers"] = d["meta_n_layers"]
             meta["noise_level"] = d["meta_noise"]
         return cls(
@@ -332,7 +334,9 @@ def generate_dataset(
 
     solver = solver.lower().strip()
     if solver not in ("mt1d", "tem1d", "csamt1d"):
-        raise ValueError(f"Unknown solver {solver!r}. Use 'mt1d', 'tem1d', 'csamt1d'.")
+        raise ValueError(
+            f"Unknown solver {solver!r}. Use 'mt1d', 'tem1d', 'csamt1d'."
+        )
 
     # Default grids
     if freqs is None and solver in ("mt1d", "csamt1d"):
@@ -380,7 +384,9 @@ def generate_dataset(
                 print(f"  {i + 1}/{n_samples} samples generated")
     else:
         with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {pool.submit(_worker, a): i for i, a in enumerate(args_list)}
+            futures = {
+                pool.submit(_worker, a): i for i, a in enumerate(args_list)
+            }
             done = 0
             for fut in as_completed(futures):
                 results.append(fut.result())
@@ -505,7 +511,9 @@ class SurveyDataset3D:
         meta = None
         if "meta_corr_length" in d:
             n = len(d["meta_corr_length"])
-            meta = np.zeros(n, dtype=[("corr_length", "f4"), ("noise_level", "f4")])
+            meta = np.zeros(
+                n, dtype=[("corr_length", "f4"), ("noise_level", "f4")]
+            )
             meta["corr_length"] = d["meta_corr_length"]
             meta["noise_level"] = d["meta_noise"]
         return cls(
@@ -799,7 +807,8 @@ def generate_dataset_3d(
     solver = solver.lower().strip()
     if solver != "mt1d":
         raise ValueError(
-            f"generate_dataset_3d currently supports solver='mt1d'; " f"got {solver!r}."
+            f"generate_dataset_3d currently supports solver='mt1d'; "
+            f"got {solver!r}."
         )
 
     if freqs is None:
@@ -857,7 +866,9 @@ def generate_dataset_3d(
                 print(f"  {i + 1}/{n_surveys} surveys generated")
     else:
         with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)}
+            futures = {
+                pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)
+            }
             done = 0
             for fut in as_completed(futures):
                 results.append(fut.result())

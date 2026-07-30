@@ -118,7 +118,9 @@ class PetrophysicalConfig(PyCSAMTObject):
         (default 0.5 m).
     """
 
-    petro: _PetroModel = field(default_factory=lambda: ArchieModel(m=1.8, n=2.0))
+    petro: _PetroModel = field(
+        default_factory=lambda: ArchieModel(m=1.8, n=2.0)
+    )
     rho_w: float = 20.0
     porosity_prior: float = 0.25
     Sw_water_table_threshold: float = 0.85
@@ -233,8 +235,12 @@ class EMHydroResult(PyCSAMTObject):
                     "mean_porosity_sat": phi_sat,
                     "mean_K_ms": K_sat,
                     "transmissivity_m2s": float(self.transmissivity[ix]),
-                    "storativity_confined": float(self.storativity_confined[ix]),
-                    "storativity_unconfined": float(self.storativity_unconfined[ix]),
+                    "storativity_confined": float(
+                        self.storativity_confined[ix]
+                    ),
+                    "storativity_unconfined": float(
+                        self.storativity_unconfined[ix]
+                    ),
                     "dar_zarrouk_TR_ohm_m2": float(self.dar_zarrouk_TR[ix]),
                     "dar_zarrouk_S_siemens": float(self.dar_zarrouk_S[ix]),
                     "tds_mg_per_L": float(self.tds),
@@ -299,7 +305,9 @@ class EMHydroResult(PyCSAMTObject):
         try:
             import pandas as pd
         except ImportError as exc:
-            raise ImportError("pandas is required for to_dataframe().") from exc
+            raise ImportError(
+                "pandas is required for to_dataframe()."
+            ) from exc
         return pd.DataFrame(self.station_report())
 
 
@@ -440,7 +448,9 @@ class EMHydroModel(PyCSAMTObject):
             depth = water_table_from_profile(
                 col,
                 model.z_centers,
-                petro if isinstance(petro, ArchieModel) else _archie_from_ws(petro),
+                petro
+                if isinstance(petro, ArchieModel)
+                else _archie_from_ws(petro),
                 rho_w=cfg.rho_w,
                 Sw_threshold=cfg.Sw_water_table_threshold,
                 min_depth=cfg.min_wt_search_depth,
@@ -458,7 +468,9 @@ class EMHydroModel(PyCSAMTObject):
         model = self.resistivity_model
         cfg = self.config
         petro = cfg.petro
-        archie = petro if isinstance(petro, ArchieModel) else _archie_from_ws(petro)
+        archie = (
+            petro if isinstance(petro, ArchieModel) else _archie_from_ws(petro)
+        )
 
         phi_map = np.full(model.rho_2d.shape, cfg.porosity_prior)
         Sw_map = np.ones(model.rho_2d.shape)
@@ -473,13 +485,17 @@ class EMHydroModel(PyCSAMTObject):
                 if z >= wt_depth:
                     # saturated — invert for porosity
                     phi = float(archie.porosity(rho, 1.0, cfg.rho_w))
-                    phi = float(np.clip(phi, 1e-4, min(0.99, 3.0 * cfg.porosity_prior)))
+                    phi = float(
+                        np.clip(phi, 1e-4, min(0.99, 3.0 * cfg.porosity_prior))
+                    )
                     phi_map[iz, ix] = phi
                     Sw_map[iz, ix] = 1.0
                 else:
                     # vadose — invert for saturation
                     phi_map[iz, ix] = cfg.porosity_prior
-                    Sw = float(archie.saturation(rho, cfg.porosity_prior, cfg.rho_w))
+                    Sw = float(
+                        archie.saturation(rho, cfg.porosity_prior, cfg.rho_w)
+                    )
                     Sw_map[iz, ix] = float(np.clip(Sw, 0.0, 1.0))
 
         return phi_map, Sw_map

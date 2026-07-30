@@ -40,7 +40,9 @@ def register_session(app) -> None:
             "saved_at": datetime.now().isoformat(),
             "edi": edi_store or {},
             "settings": {
-                k: v for k, v in (settings or {}).items() if not k.startswith("key_")
+                k: v
+                for k, v in (settings or {}).items()
+                if not k.startswith("key_")
             },
             "message_count": len(messages or []),
         }

@@ -37,7 +37,9 @@ class FrameProfile:
     def from_frame(cls, df: pd.DataFrame) -> FrameProfile:
         total = int(df.size)
         missing = int(df.isna().sum().sum()) if total else 0
-        numeric = tuple(str(c) for c in df.select_dtypes(include="number").columns)
+        numeric = tuple(
+            str(c) for c in df.select_dtypes(include="number").columns
+        )
         try:
             memory = int(df.memory_usage(deep=True).sum())
         except Exception:
@@ -304,7 +306,10 @@ def _default_wrap_frame(
     """Wrap dataframe-like data as an :class:`APIFrame`."""
     if isinstance(data, APIFrame):
         if (
-            any(v is not None for v in (name, kind, source, units, meta, description))
+            any(
+                v is not None
+                for v in (name, kind, source, units, meta, description)
+            )
             or copy
         ):
             return APIFrame(
@@ -315,7 +320,9 @@ def _default_wrap_frame(
                 units=units or data.units,
                 meta=meta or data.meta,
                 description=(
-                    description if description is not None else data.description
+                    description
+                    if description is not None
+                    else data.description
                 ),
                 copy=copy,
             )

@@ -215,7 +215,9 @@ def nearest_index(val, array):
     return idx
 
 
-def make_log_increasing_array(z1_layer, target_depth, n_layers, increment_factor=0.999):
+def make_log_increasing_array(
+    z1_layer, target_depth, n_layers, increment_factor=0.999
+):
     """
     Create depth array with log-increasing cells.
     """
@@ -230,7 +232,9 @@ def make_log_increasing_array(z1_layer, target_depth, n_layers, increment_factor
     attempt = 0
     max_attempts = int(1e6)
     while True:
-        log_z = np.logspace(math.log10(z1_layer), math.log10(max_thick), num=n_layers)
+        log_z = np.logspace(
+            math.log10(z1_layer), math.log10(max_thick), num=n_layers
+        )
         if log_z.sum() <= target_depth:
             return log_z
         max_thick *= increment_factor
@@ -274,7 +278,9 @@ def invertmatrix_incl_errors(inmatrix, inmatrix_err=None):
                 total = 0.0
                 for k in range(2):
                     for l in range(2):
-                        total += abs(-inv_mat[i, k] * inv_mat[l, j] * err_mat[k, l])
+                        total += abs(
+                            -inv_mat[i, k] * inv_mat[l, j] * err_mat[k, l]
+                        )
                 inv_err[i, j] = total
     return inv_mat, inv_err
 
@@ -300,7 +306,9 @@ def rhophi2z(rho, phi, freq):
     return Z
 
 
-def compute_determinant_error(z_array, z_err_array, method="theoretical", repeats=1000):
+def compute_determinant_error(
+    z_array, z_err_array, method="theoretical", repeats=1000
+):
     """
     Compute error of det(Z) by theoretical or stochastic.
     Returns error and sqrt(error).
@@ -683,7 +691,9 @@ def rhophi_to_z(
 
     if z_abs is None:
         if resistivity is None:
-            raise ImpedanceConversionError("provide either `resistivity` or `z_abs`")
+            raise ImpedanceConversionError(
+                "provide either `resistivity` or `z_abs`"
+            )
         rho = _as_array(resistivity, "resistivity")
         ph, rho = np.broadcast_arrays(ph, rho)
         z_abs = np.sqrt(mu0 * 2 * np.pi * frq * rho)  # ρ → |Z|

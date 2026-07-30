@@ -311,7 +311,8 @@ class PipelineAgent(BaseAgent):
             f"  [{sr.step_code}] {sr.step_label}  "
             f"{'OK' if sr.ok else 'ERR'}  "
             f"{sr.n_sites_in}→{sr.n_sites_out} sites  "
-            f"{sr.elapsed_sec:.2f}s" + (f"  error={sr.error}" if not sr.ok else "")
+            f"{sr.elapsed_sec:.2f}s"
+            + (f"  error={sr.error}" if not sr.ok else "")
             for sr in pipe_result.step_results
         )
         request_line = f"User request : {request}" if request else ""

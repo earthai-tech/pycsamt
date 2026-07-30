@@ -350,7 +350,9 @@ class ContextBuilder:
             )
 
         if rerank_fn is not None:
-            pool = self.retriever.search(retrieval_query, k=max(k, rerank_top_n))
+            pool = self.retriever.search(
+                retrieval_query, k=max(k, rerank_top_n)
+            )
             from .rerank import llm_rerank
 
             reranked = llm_rerank(

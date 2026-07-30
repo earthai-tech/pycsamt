@@ -460,7 +460,9 @@ def plot_anisotropy(
     else:
         ax.set_ylabel("Frequency (Hz)")
 
-    ax.set_title(f"Anisotropy: {_METRIC_LABELS.get(metric, metric)} (wang2017)")
+    ax.set_title(
+        f"Anisotropy: {_METRIC_LABELS.get(metric, metric)} (wang2017)"
+    )
     return ax
 
 

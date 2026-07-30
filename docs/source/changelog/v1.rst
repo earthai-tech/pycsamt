@@ -1,0 +1,17 @@
+.. _changelog-v1:
+
+v1.x changelog
+==============
+
+The legacy v1 line. See the :ref:`Changelog index <changelog>` for the
+badge legend and links to other series, and :ref:`migration` in the v2
+changelog for the v1 → v2 name map.
+
+----
+
+.. _changelog-1-2-1:
+
+1.2.1 |Docs|
+------------
+
+Last stable v1 release. See ``README_v1.md`` for the full v1 changelog.

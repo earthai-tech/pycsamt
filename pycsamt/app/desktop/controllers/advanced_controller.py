@@ -163,7 +163,8 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
         "diagnostics."
     ),
     "plot_theta_rose_grid": (
-        "Grid of phase-tensor theta rose diagrams by period band or station " "group."
+        "Grid of phase-tensor theta rose diagrams by period band or station "
+        "group."
     ),
     "plot_theta_vs_period": (
         "Tracks phase-tensor theta as a function of period for each station."
@@ -187,7 +188,8 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
         "orientation, and a colour-coded scalar (default: skew)."
     ),
     "plot_phase_tensor_map": (
-        "Phase-tensor ellipses drawn on the station map at the selected " "period."
+        "Phase-tensor ellipses drawn on the station map at the selected "
+        "period."
     ),
     "plot_phase_tensor_strip": (
         "Single-station phase-tensor ellipse strip vs. period — the "
@@ -219,7 +221,9 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
     "plot_induction_arrows": (
         "Station-index induction arrows for a selected period and convention."
     ),
-    "plot_induction_map": ("Map view of induction arrows at station locations."),
+    "plot_induction_map": (
+        "Map view of induction arrows at station locations."
+    ),
     "plot_induction_section": (
         "Station-period pseudosection of tipper magnitude or components."
     ),
@@ -245,7 +249,9 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
     "plot_z_invariants_section": (
         "Station-period panels of impedance rotation-invariant quantities."
     ),
-    "plot_rho_phase_bode": ("Bode-style apparent-resistivity and phase curves."),
+    "plot_rho_phase_bode": (
+        "Bode-style apparent-resistivity and phase curves."
+    ),
     "plot_apparent_resistivity_polar": (
         "Polar apparent-resistivity response for directional inspection."
     ),
@@ -264,7 +270,8 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
         "Station-period pseudosection of phase-tensor ellipticity."
     ),
     "plot_depth_section": (
-        "Bostick depth pseudosection for a first-pass depth-of-investigation " "view."
+        "Bostick depth pseudosection for a first-pass depth-of-investigation "
+        "view."
     ),
     "plot_apparent_depth_psection": (
         "Apparent-depth pseudosection estimated from determinant "
@@ -295,14 +302,18 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
     "plot_sites_compare": (
         "Compares selected site responses in one diagnostic figure."
     ),
-    "plot_sites_panels": ("Station response panels for detailed per-site inspection."),
+    "plot_sites_panels": (
+        "Station response panels for detailed per-site inspection."
+    ),
     "plot_normalized_response": (
         "Normalized-response diagnostic for near-field/source-effect review."
     ),
     "plot_tf_coherence_network": (
         "Network view of transfer-function coherence between stations."
     ),
-    "plot_dim_map": ("Map of dimensionality class or confidence at station locations."),
+    "plot_dim_map": (
+        "Map of dimensionality class or confidence at station locations."
+    ),
     "plot_dim_occupancy_area": (
         "Occupancy-area summary of dimensionality classes across the survey."
     ),
@@ -624,7 +635,9 @@ class TopoPreviewController:
 
             ax.set_xlabel("Chainage (km)", fontsize=8, color=s["fg"])
             ax.set_ylabel("Elevation (m a.s.l.)", fontsize=8, color=s["fg"])
-            ax.set_title("Elevation Profile", fontsize=9, color=s["title"], pad=5)
+            ax.set_title(
+                "Elevation Profile", fontsize=9, color=s["title"], pad=5
+            )
             ax.legend(
                 fontsize=7,
                 facecolor=s["bg"],
@@ -678,7 +691,9 @@ class TopoPreviewController:
             # Synthetic resistivity grid: 64 depth layers × n_st stations
             n_depth = 64
             rng = np.random.default_rng(42)
-            rho = np.exp(rng.uniform(np.log(1), np.log(1000), size=(n_depth, n_st)))
+            rho = np.exp(
+                rng.uniform(np.log(1), np.log(1000), size=(n_depth, n_st))
+            )
 
             # Synthetic chainage and terrain
             chain_km = np.linspace(0, max(n_st * 0.5, 1), n_st)
@@ -698,7 +713,9 @@ class TopoPreviewController:
                 vmin=np.log10(1),
                 vmax=np.log10(1000),
             )
-            fig.colorbar(pcm, ax=ax, label="log₁₀(ρ) [Ω·m]", fraction=0.03, pad=0.02)
+            fig.colorbar(
+                pcm, ax=ax, label="log₁₀(ρ) [Ω·m]", fraction=0.03, pad=0.02
+            )
 
             fill_color = getattr(PYCSAMT_TOPO, "fill_color", "#a89070")
             fill_alpha = getattr(PYCSAMT_TOPO, "fill_alpha", 0.4)
@@ -910,7 +927,9 @@ class DimModelWorker(QThread):  # type: ignore[misc]
         finished = None  # type: ignore[assignment]
         error = None  # type: ignore[assignment]
 
-    def __init__(self, ctrl: AdvancedController, n_atoms: int, n_iter: int) -> None:
+    def __init__(
+        self, ctrl: AdvancedController, n_atoms: int, n_iter: int
+    ) -> None:
         super().__init__()
         self._ctrl = ctrl
         self._n_atoms = n_atoms
@@ -966,7 +985,9 @@ class ConversionController:
         return "desc"
 
     @staticmethod
-    def _split_labels(value: object, default: tuple[str, str]) -> tuple[str, str]:
+    def _split_labels(
+        value: object, default: tuple[str, str]
+    ) -> tuple[str, str]:
         if isinstance(value, (tuple, list)):
             labels = [str(v).strip() for v in value if str(v).strip()]
         else:
@@ -1050,7 +1071,9 @@ class ConversionController:
         Path(out_dir).mkdir(parents=True, exist_ok=True)
         written = 0
         for ed in _iter_items(collection):
-            write_fn = getattr(ed, "write_edifile", None) or getattr(ed, "write", None)
+            write_fn = getattr(ed, "write_edifile", None) or getattr(
+                ed, "write", None
+            )
             if write_fn is None:
                 continue
             write_fn(save_dir=out_dir)
@@ -1060,10 +1083,16 @@ class ConversionController:
     @classmethod
     def _spectra_kwargs(cls, options: dict) -> tuple[dict, dict]:
         init_kw: dict = {
-            "e_labels": cls._split_labels(options.get("e_labels"), ("EX", "EY")),
-            "h_labels": cls._split_labels(options.get("h_labels"), ("HX", "HY")),
+            "e_labels": cls._split_labels(
+                options.get("e_labels"), ("EX", "EY")
+            ),
+            "h_labels": cls._split_labels(
+                options.get("h_labels"), ("HX", "HY")
+            ),
             "estimate_error": bool(
-                options.get("estimate_error", options.get("estimate_errors", False))
+                options.get(
+                    "estimate_error", options.get("estimate_errors", False)
+                )
             ),
             "use_remote": bool(
                 options.get("use_remote", options.get("use_remote_ref", False))
@@ -1159,8 +1188,16 @@ class ConversionController:
                     _, z, freqs = _get_z_block(ed)
                     has_z = z is not None and z.size > 0
                     n_freqs = int(freqs.size) if freqs is not None else 0
-                    f_min = float(np.nanmin(freqs)) if n_freqs > 0 else float("nan")
-                    f_max = float(np.nanmax(freqs)) if n_freqs > 0 else float("nan")
+                    f_min = (
+                        float(np.nanmin(freqs))
+                        if n_freqs > 0
+                        else float("nan")
+                    )
+                    f_max = (
+                        float(np.nanmax(freqs))
+                        if n_freqs > 0
+                        else float("nan")
+                    )
                 except Exception:
                     has_z = False
                     n_freqs = 0
@@ -1170,7 +1207,9 @@ class ConversionController:
                 # Check for tipper
                 has_tipper = False
                 try:
-                    t = getattr(ed, "Tipper", None) or getattr(ed, "tipper", None)
+                    t = getattr(ed, "Tipper", None) or getattr(
+                        ed, "tipper", None
+                    )
                     if t is not None:
                         tm = getattr(t, "tipper", None)
                         has_tipper = tm is not None and np.any(np.isfinite(tm))
@@ -1328,7 +1367,9 @@ class ConversionController:
 
         ax.set_xlabel("Period (s)", fontsize=8, color=s["fg"])
         ax.set_ylabel("ρ_a  [Ω·m]", fontsize=8, color=s["fg"])
-        ax.set_title("Apparent Resistivity XY", fontsize=9, color=s["title"], pad=5)
+        ax.set_title(
+            "Apparent Resistivity XY", fontsize=9, color=s["title"], pad=5
+        )
         self._style_ax(ax, s)
         try:
             fig.tight_layout(pad=1.2)
@@ -1366,7 +1407,9 @@ class ConversionController:
             lats, lons, names_list = [], [], []
             for i, ed in enumerate(_iter_items(self._result)):
                 try:
-                    head = getattr(ed, "Head", None) or getattr(ed, "head", None)
+                    head = getattr(ed, "Head", None) or getattr(
+                        ed, "head", None
+                    )
                     if head is None:
                         head = ed
                     lat = float(
@@ -1411,7 +1454,9 @@ class ConversionController:
                 edgecolors=s["spine"],
                 linewidths=0.5,
             )
-            fig.colorbar(sc, ax=ax, label="Station index", fraction=0.03, pad=0.02)
+            fig.colorbar(
+                sc, ax=ax, label="Station index", fraction=0.03, pad=0.02
+            )
             for i, nm in enumerate(names_list):
                 ax.annotate(
                     nm,

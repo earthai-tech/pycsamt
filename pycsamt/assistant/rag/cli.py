@@ -26,7 +26,8 @@ def _cmd_build(args: argparse.Namespace) -> int:
         key = args.embed_key or os.environ.get("OPENAI_API_KEY")
         if not key:
             print(
-                "--embed needs an API key: pass --embed-key or set " "OPENAI_API_KEY."
+                "--embed needs an API key: pass --embed-key or set "
+                "OPENAI_API_KEY."
             )
             return 1
     mf = build_index(
@@ -55,7 +56,9 @@ def _cmd_stats(args: argparse.Namespace) -> int:
     mf = read_manifest(out_dir=args.out, root=args.root) or {}
     print(f"Index created: {mf.get('created')}  ({mf.get('n_chunks')} chunks)")
     if mf.get("embedded"):
-        print(f"  embeddings: {mf.get('embed_model')} (dim={mf.get('embed_dim')})")
+        print(
+            f"  embeddings: {mf.get('embed_model')} (dim={mf.get('embed_dim')})"
+        )
     else:
         print("  embeddings: none (BM25 + expansion only)")
     for k in sorted(mf.get("stats", {})):

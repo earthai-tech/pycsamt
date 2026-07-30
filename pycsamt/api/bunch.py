@@ -42,7 +42,9 @@ class Bunch(dict):
 
     def __str__(self):
         dict_o = {k: v for k, v in self.items() if "__" not in str(k)}
-        return format_dict_result(dict_o, dict_name="Bunch", include_message=True)
+        return format_dict_result(
+            dict_o, dict_name="Bunch", include_message=True
+        )
 
 
 class FlexDict(dict):

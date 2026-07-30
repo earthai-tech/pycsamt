@@ -24,7 +24,9 @@ def _axes_list(axes: Any, n: int, *, label: str = "axes") -> list[Any] | None:
     else:
         out = [axes]
     if len(out) < n:
-        raise ValueError(f"{label} must provide at least {n} axes; got {len(out)}.")
+        raise ValueError(
+            f"{label} must provide at least {n} axes; got {len(out)}."
+        )
     return out[:n]
 
 
@@ -47,7 +49,11 @@ def _wrap_one(ed):
     # For Sites-wrapped Site objects, unwrap to the underlying EDI item so
     # that ensure_sites can build a proper single-item Sites around it.
     edi = getattr(ed, "edi", None)
-    item = edi if (edi is not None and getattr(edi, "Z", None) is not None) else ed
+    item = (
+        edi
+        if (edi is not None and getattr(edi, "Z", None) is not None)
+        else ed
+    )
     return ensure_sites([item], recursive=False, strict=False)
 
 
@@ -194,7 +200,9 @@ def _get_z_block(
     if Z is None:
         Z = _first_attr(ed, ("z",))  # last resort: raw array
     if Z is None:
-        return (None, None, None) if not with_errors else (None, None, None, None)
+        return (
+            (None, None, None) if not with_errors else (None, None, None, None)
+        )
     z = _first_attr(Z, ("z", "Z"))
     fr = _first_attr(Z, ("freq",))
     if fr is None:
@@ -203,14 +211,18 @@ def _get_z_block(
     z = _as_cmplx_nd(z)
     fr = _as_1d_float(fr)
     if z is None or fr is None:
-        return (None, None, None) if not with_errors else (None, None, None, None)
+        return (
+            (None, None, None) if not with_errors else (None, None, None, None)
+        )
     # enforce (n,2,2) when possible
     if z.ndim == 3 and z.shape[1:3] == (2, 2):
         pass
     elif z.ndim == 2 and z.shape == (2, 2):
         z = z[None, ...]
     else:
-        return (None, None, None) if not with_errors else (None, None, None, None)
+        return (
+            (None, None, None) if not with_errors else (None, None, None, None)
+        )
     # trim all to min length
     if isinstance(ze, np.ndarray):
         ze = np.asarray(ze)
@@ -240,7 +252,9 @@ def _get_t_block(
         if edi is not None:
             T = _first_attr(edi, ("Tipper", "tipper", "Tip"))
     if T is None:
-        return (None, None, None) if not with_errors else (None, None, None, None)
+        return (
+            (None, None, None) if not with_errors else (None, None, None, None)
+        )
     t = _first_attr(T, ("tipper", "T", "tx_ty"))
     fr = _first_attr(T, ("freq",))
     if fr is None:
@@ -252,7 +266,9 @@ def _get_t_block(
     t = _as_cmplx_nd(t)
     fr = _as_1d_float(fr)
     if t is None or fr is None:
-        return (None, None, None) if not with_errors else (None, None, None, None)
+        return (
+            (None, None, None) if not with_errors else (None, None, None, None)
+        )
     # enforce (n,2).  v2 EDI tipper objects commonly store the array as
     # (n_freq, 1, 2), mirroring impedance tensor dimensions.
     if t.ndim == 2 and t.shape[1] == 2:
@@ -262,7 +278,9 @@ def _get_t_block(
     elif t.ndim == 1 and t.size == 2:
         t = t[None, ...]
     else:
-        return (None, None, None) if not with_errors else (None, None, None, None)
+        return (
+            (None, None, None) if not with_errors else (None, None, None, None)
+        )
     if isinstance(te, np.ndarray):
         te = np.asarray(te)
         if te.ndim == 3 and te.shape[1] == 1 and te.shape[2] == 2:
@@ -431,7 +449,8 @@ default="replace"
 
     if strict and len(S) == 0:
         raise ValueError(
-            "ensure_sites(strict=True): no sites were resolved from the " "given input."
+            "ensure_sites(strict=True): no sites were resolved from the "
+            "given input."
         )
 
     # ``Sites.ordered`` resolves ``None`` through the process-wide ordering

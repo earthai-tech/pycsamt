@@ -87,7 +87,9 @@ class JointInverter(BaseEMNet):
         log_thickness: bool = True,
         **net_kwargs,
     ) -> None:
-        super().__init__(arch="drcnn", n_layers=n_layers, solver="joint", device=device)
+        super().__init__(
+            arch="drcnn", n_layers=n_layers, solver="joint", device=device
+        )
         self.n_features_list = tuple(int(n) for n in n_features_list)
         self.growth_rate = int(growth_rate)
         self.n_dense_layers = int(n_dense_layers)
@@ -251,7 +253,9 @@ class JointInverter(BaseEMNet):
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            for *xbs, yb in DataLoader(tr_ds, batch_size=batch_size, shuffle=True):
+            for *xbs, yb in DataLoader(
+                tr_ds, batch_size=batch_size, shuffle=True
+            ):
                 xbs = [t.to(dev) for t in xbs]
                 yb = yb.to(dev)
                 pred = self._network(*xbs)
@@ -259,7 +263,9 @@ class JointInverter(BaseEMNet):
                 opt.zero_grad()
                 loss.backward()
                 if grad_clip:
-                    nn.utils.clip_grad_norm_(self._network.parameters(), grad_clip)
+                    nn.utils.clip_grad_norm_(
+                        self._network.parameters(), grad_clip
+                    )
                 opt.step()
                 ep_loss += loss.item() * len(yb)
             ep_loss /= len(ti)
@@ -388,7 +394,10 @@ class JointInverter(BaseEMNet):
             n = len(X_normed[0])
             outs = []
             for i in range(0, n, 256):
-                inputs = [torch.from_numpy(Xm[i : i + 256]).to(dev) for Xm in X_normed]
+                inputs = [
+                    torch.from_numpy(Xm[i : i + 256]).to(dev)
+                    for Xm in X_normed
+                ]
                 with torch.no_grad():
                     outs.append(self._network(*inputs).cpu().numpy())
             y_norm = np.concatenate(outs, axis=0)

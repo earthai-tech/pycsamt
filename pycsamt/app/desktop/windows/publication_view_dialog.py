@@ -47,7 +47,9 @@ class PublicationViewDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(
-            f"Publication View — {station_name}" if station_name else "Publication View"
+            f"Publication View — {station_name}"
+            if station_name
+            else "Publication View"
         )
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         self.resize(1280, 740)

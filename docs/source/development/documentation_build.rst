@@ -502,6 +502,35 @@ legacy warnings are cleaned:
 The long-term target should be warning-free strict builds.
 
 
+Changelog workflow
+-------------------
+
+The changelog is split by major-version series under
+``docs/source/changelog/`` (``v2.rst``, ``v1.rst``, …); ``changelog.rst``
+is just an index page with a toctree over those files. During development,
+contributors don't edit a series file directly -- each user-facing PR adds
+a small fragment under ``docs/changelog.d/`` instead (see
+``docs/changelog.d/README.rst`` for the exact filename convention and
+type/badge/section table). This avoids merge conflicts on a shared file and
+enforces the badge taxonomy by filename rather than editor discipline.
+
+At release time:
+
+.. code-block:: bash
+   :linenos:
+
+   python docs/scripts/changelog_release.py --version 2.2.0 --date 2026-08-15
+
+This assembles every pending fragment into a new version block at the top
+of the matching ``docs/source/changelog/vN.rst`` and deletes the consumed
+fragments. Then, by hand:
+
+1. Edit the ``TODO`` release-summary placeholder the script inserted.
+2. Write the narrative ``docs/source/release_notes/vX.Y.Z.rst`` page.
+3. If the script created a brand-new series file, add it to the toctree in
+   ``docs/source/changelog.rst``.
+
+
 Pre-release checklist
 ---------------------
 
@@ -522,7 +551,7 @@ Before publishing documentation:
    [ ] No unresolved internal references remain.
    [ ] Strict Sphinx build passes in CI.
    [ ] The generated homepage opens at docs/build/html/index.html.
-   [ ] The newest changelog.rst version section has a
+   [ ] The newest docs/source/changelog/vN.rst version section has a
        "*Released YYYY-MM-DD.*" line (drives the site's "New" badge --
        an entry without one is treated as unreleased).
 

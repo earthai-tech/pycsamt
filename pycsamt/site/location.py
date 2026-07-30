@@ -638,7 +638,9 @@ def distance(
         dlon = _rad(lo2 - lo1)
         A = (
             math.sin(dlat / 2) ** 2
-            + math.cos(_rad(la1)) * math.cos(_rad(la2)) * math.sin(dlon / 2) ** 2
+            + math.cos(_rad(la1))
+            * math.cos(_rad(la2))
+            * math.sin(dlon / 2) ** 2
         )
         return 2.0 * _EARTH_R * math.asin(min(1.0, math.sqrt(A)))
     if m == "flat":
@@ -650,7 +652,9 @@ def distance(
             if crs_to is None
             else crs_to
         )
-        X, Y = project([(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg)
+        X, Y = project(
+            [(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg
+        )
         return float(math.hypot(float(X[1] - X[0]), float(Y[1] - Y[0])))
     raise ValueError("mode must be 'geodetic','flat','utm'")
 
@@ -743,7 +747,9 @@ def bearing(
             if crs_to is None
             else crs_to
         )
-        X, Y = project([(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg)
+        X, Y = project(
+            [(lo1, la1), (lo2, la2)], crs_from="EPSG:4326", crs_to=epsg
+        )
         dx = float(X[1] - X[0])
         dy = float(Y[1] - Y[0])
         theta = math.degrees(math.atan2(dx, dy))

@@ -178,7 +178,11 @@ class ForwardResponse2D:
         """
         parts = []
         for mode_key in (
-            ["te"] if mode == "te" else ["tm"] if mode == "tm" else ["te", "tm"]
+            ["te"]
+            if mode == "te"
+            else ["tm"]
+            if mode == "tm"
+            else ["te", "tm"]
         ):
             rho = getattr(self, f"rho_a_{mode_key}")  # (n_freqs, n_stations)
             phi = getattr(self, f"phase_{mode_key}")
@@ -400,7 +404,9 @@ def _assemble_te(
             a_bl = dx_l * dz_d
             a_br = dx_r * dz_d
             a_tot = a_tl + a_tr + a_bl + a_br
-            sigma_n = (a_tl * s_tl + a_tr * s_tr + a_bl * s_bl + a_br * s_br) / a_tot
+            sigma_n = (
+                a_tl * s_tl + a_tr * s_tr + a_bl * s_bl + a_br * s_br
+            ) / a_tot
             react = 1j * omega * MU0 * sigma_n
 
             # ── diagonal ───────────────────────────────────────────────

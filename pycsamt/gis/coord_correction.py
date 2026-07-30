@@ -50,7 +50,9 @@ def _get_coords_df(sites) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["station", "lat", "lon", "elev"])
 
 
-def _apply_coords_bulk(sites, coords_dict: dict[str, tuple], inplace: bool = False):
+def _apply_coords_bulk(
+    sites, coords_dict: dict[str, tuple], inplace: bool = False
+):
     """
     Apply corrected (lat, lon, elev) per station from *coords_dict*.
 
@@ -121,7 +123,9 @@ def _to_ll_arrays(easting, northing, zone):
 
 def _pca_azimuth(easting: np.ndarray, northing: np.ndarray) -> float:
     """PCA-based profile azimuth (degrees from north, 0–180)."""
-    pts = np.column_stack([easting - easting.mean(), northing - northing.mean()])
+    pts = np.column_stack(
+        [easting - easting.mean(), northing - northing.mean()]
+    )
     cov = np.cov(pts.T)
     _, evecs = np.linalg.eigh(cov)
     pc1 = evecs[:, -1]  # largest eigenvalue
@@ -161,7 +165,9 @@ def correct_profile_projection(
     if len(valid) < 2:
         return sites
 
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = azimuth if azimuth is not None else _pca_azimuth(east, north)
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)  # unit vector along profile
@@ -221,7 +227,9 @@ def correct_spacing_regularize(
     if n < 2:
         return sites
 
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = azimuth if azimuth is not None else _pca_azimuth(east, north)
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)
@@ -238,9 +246,9 @@ def correct_spacing_regularize(
     if preserve_extent:
         new_chain = np.linspace(chain_sorted[0], chain_sorted[-1], n)
     else:
-        new_chain = np.arange(chain_sorted[0], chain_sorted[-1] + spacing_m, spacing_m)[
-            :n
-        ]
+        new_chain = np.arange(
+            chain_sorted[0], chain_sorted[-1] + spacing_m, spacing_m
+        )[:n]
         # Pad if fewer than n
         if len(new_chain) < n:
             new_chain = np.linspace(chain_sorted[0], chain_sorted[-1], n)
@@ -289,7 +297,9 @@ def correct_outlier_snap(
     if len(valid) < 2:
         return sites
 
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = azimuth if azimuth is not None else _pca_azimuth(east, north)
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)  # along-profile unit vector
@@ -350,7 +360,9 @@ def correct_elevation_smooth(
     if len(valid) < 3:
         return sites
 
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = azimuth if azimuth is not None else _pca_azimuth(east, north)
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)
@@ -372,11 +384,16 @@ def correct_elevation_smooth(
         except ImportError:
             k = max(1, window // 2)
             smooth_elev = np.array(
-                [np.mean(elev_s[max(0, i - k) : i + k + 1]) for i in range(len(elev_s))]
+                [
+                    np.mean(elev_s[max(0, i - k) : i + k + 1])
+                    for i in range(len(elev_s))
+                ]
             )
 
     coords: dict[str, tuple] = {}
-    for i, (st, (_, row)) in enumerate(zip(st_s, valid.iloc[order].iterrows())):
+    for i, (st, (_, row)) in enumerate(
+        zip(st_s, valid.iloc[order].iterrows())
+    ):
         coords[st] = (
             float(row["lat"]),
             float(row["lon"]),
@@ -478,7 +495,9 @@ def _loess_smooth(x: np.ndarray, y: np.ndarray, span: int = 5) -> np.ndarray:
         # Weighted linear fit
         xw = (xi * w).sum() / sw
         yw = (yi * w).sum() / sw
-        b1 = ((xi - xw) * (yi - yw) * w).sum() / (((xi - xw) ** 2 * w).sum() + 1e-30)
+        b1 = ((xi - xw) * (yi - yw) * w).sum() / (
+            ((xi - xw) ** 2 * w).sum() + 1e-30
+        )
         y_s[i] = yw + b1 * (x[i] - xw)
     return y_s
 
@@ -499,9 +518,13 @@ def df_profile_projection(
     valid = df.dropna(subset=["lat", "lon"])
     if len(valid) < 2:
         return df.copy()
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = (
-        azimuth if (azimuth is not None and azimuth >= 0) else _pca_azimuth(east, north)
+        azimuth
+        if (azimuth is not None and azimuth >= 0)
+        else _pca_azimuth(east, north)
     )
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)
@@ -529,9 +552,13 @@ def df_spacing_regularize(
     n = len(valid)
     if n < 2:
         return df.copy()
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = (
-        azimuth if (azimuth is not None and azimuth >= 0) else _pca_azimuth(east, north)
+        azimuth
+        if (azimuth is not None and azimuth >= 0)
+        else _pca_azimuth(east, north)
     )
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)
@@ -544,7 +571,9 @@ def df_spacing_regularize(
     if preserve_extent:
         new_chain = np.linspace(chain_s[0], chain_s[-1], n)
     else:
-        new_chain = np.arange(chain_s[0], chain_s[-1] + spacing_m, spacing_m)[:n]
+        new_chain = np.arange(chain_s[0], chain_s[-1] + spacing_m, spacing_m)[
+            :n
+        ]
         if len(new_chain) < n:
             new_chain = np.linspace(chain_s[0], chain_s[-1], n)
     new_east = oe + new_chain * ue
@@ -569,9 +598,13 @@ def df_outlier_snap(
     valid = df.dropna(subset=["lat", "lon"])
     if len(valid) < 2:
         return df.copy()
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = (
-        azimuth if (azimuth is not None and azimuth >= 0) else _pca_azimuth(east, north)
+        azimuth
+        if (azimuth is not None and azimuth >= 0)
+        else _pca_azimuth(east, north)
     )
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)
@@ -602,9 +635,13 @@ def df_elevation_smooth(
     valid = df.dropna(subset=["lat", "lon"])
     if len(valid) < 3:
         return df.copy()
-    east, north, zone = _to_utm_arrays(valid["lat"].values, valid["lon"].values)
+    east, north, zone = _to_utm_arrays(
+        valid["lat"].values, valid["lon"].values
+    )
     az = (
-        azimuth if (azimuth is not None and azimuth >= 0) else _pca_azimuth(east, north)
+        azimuth
+        if (azimuth is not None and azimuth >= 0)
+        else _pca_azimuth(east, north)
     )
     az_rad = np.radians(az)
     ue, un = np.sin(az_rad), np.cos(az_rad)
@@ -623,7 +660,10 @@ def df_elevation_smooth(
         except ImportError:
             k = max(1, window // 2)
             smooth = np.array(
-                [np.mean(elev_s[max(0, i - k) : i + k + 1]) for i in range(len(elev_s))]
+                [
+                    np.mean(elev_s[max(0, i - k) : i + k + 1])
+                    for i in range(len(elev_s))
+                ]
             )
     result = df.copy()
     for i, idx in enumerate(idx_s):

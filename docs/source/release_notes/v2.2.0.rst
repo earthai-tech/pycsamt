@@ -1,0 +1,270 @@
+.. _release_v2_2_0:
+
+-------------
+Version 2.2.0
+-------------
+
+pyCSAMT 2.2.0 |Feature| |Fix| |API Change| |Docs| |Build| |Tests|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-07-30.*
+
+This release lands a genuine 3-D Maxwell training-data pipeline and an
+opt-in ``physics="mt3d"`` mode for :class:`~pycsamt.agents.Inv3DAgent`,
+fixes the research-only 3-D solver's layered-earth benchmark, and gets
+:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` -- the intended
+*production* 3-D backend -- physics-validated against a real compiled
+ModEM binary for the first time. It also adds cross-platform build
+tooling so users no longer have to hand-run ``make`` against the
+vendored Fortran sources to get there.
+
+Why this release matters
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pyCSAMT vendors ModEM's Fortran source rather than shipping a compiled
+binary, and its own in-house 3-D solver (:mod:`~pycsamt.forward.maxwell.mt3d`)
+is deliberately research-only -- a real, non-uniform-grid curl-curl
+solver, but capped at a small cell budget that direct sparse solves
+cannot outgrow in 3-D (see the project's M6 architecture-decision
+record, ``docs/source/development/adr/AI-INVERSION-M6-3D-ADR.md``).
+Two things stood between that architecture and a trustworthy 3-D
+inversion workflow: ``mt3d.py``'s own benchmark had a real,
+misdiagnosed failure, and ``ModEm3DAdapter`` -- built as file I/O
+plumbing around the vendored ModEM source -- had never actually been
+run against a compiled binary, so nobody had confirmed its generated
+files and parsed responses were *correct*, only that they were
+well-formed. This release closes both gaps and adds the tooling to
+compile ModEM (and Occam2D, and MARE2DEM) without hand-editing a
+Makefile.
+
+Fixing ``mt3d.py``'s layered-earth benchmark
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``mt3d.py``'s ``layered_earth_benchmark`` had been failing at 30-45%
+error, and the project's own M6 architecture decision record recorded
+that as a physics defect in the solver's single-layer boundary
+approximation -- "refining the mesh does not reduce them." That
+diagnosis was wrong. The boundary approximation is exact for a
+laterally uniform half-space (which is why the half-space benchmark
+always passed) and stays negligible-error for a layered earth wherever
+the domain boundary has already decayed close to zero, the same
+argument :mod:`~pycsamt.forward.maxwell.mt2d` already relies on for its
+own lateral boundaries.
+
+The real cause: ``mt3d.py`` supported **uniform cell spacing only**.
+Because 3-D cell count scales as the cube of resolution, a uniform mesh
+cannot simultaneously reach several skin depths of lateral extent *and*
+resolve a few-hundred-metre layer interface within the adapter's cell
+budget. Refining resolution while holding the same small domain fixed
+-- exactly what the original investigation tried -- cannot fix that,
+which produced precisely the "refining doesn't help" symptom that got
+misread as a boundary bias.
+
+The fix generalizes the discrete curl operators (``_curl_e2h``,
+``_curl_h2e``) and edge-conductivity averaging to per-axis non-uniform
+cell widths, the same padded-mesh strategy ``mt2d.py`` already uses:
+fine cells near the receiver and structure, geometrically growing cells
+outward. On a 4,096-cell padded mesh (well under the 6,000-cell
+ceiling), both analytic benchmarks now pass -- half-space at ~1.9%
+normalized RMS, layered-earth at ~3.5% -- and
+``supports_nonuniform_mesh`` is ``True``.
+
+3-D training data and ``Inv3DAgent(physics="mt3d")``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With ``mt3d.py`` trustworthy, :mod:`pycsamt.ai.training.dataset3d` wires
+correlated 3-D geological volumes (:mod:`pycsamt.ai.geology`) into real
+:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` solves via
+:func:`~pycsamt.forward.maxwell.batch.solve_batch`, mirroring
+:mod:`~pycsamt.ai.training.dataset2d`'s design. The solver mesh it
+builds is padded and non-uniform rather than uniform, because
+``MT3DAdapter``'s cell budget (6,000, versus ``mt2d``'s 200,000) cannot
+afford a uniform mesh reaching the same physical extent -- a direct
+reuse of the fix above.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.training.dataset3d import (  # doctest: +SKIP
+   ...     Maxwell3DDatasetConfig, generate_3d_maxwell_dataset,
+   ... )
+   >>> config = Maxwell3DDatasetConfig(  # doctest: +SKIP
+   ...     n_realizations=8, freqs_hz=[1.0, 2.0],
+   ... )
+   >>> dataset = generate_3d_maxwell_dataset(config)  # doctest: +SKIP
+   >>> len(dataset.train)  # doctest: +SKIP
+   6
+
+:class:`~pycsamt.agents.Inv3DAgent` gained the same opt-in pattern
+:class:`~pycsamt.agents.Inv2DAgent` established for ``physics="mt2d"``:
+``physics="mt3d"`` trains the GCN inverter against this dataset and
+reports a genuine held-out recovery check, since the synthetic
+resistivity is known. It goes one step further than the 2-D precedent,
+though -- because real station ``(x, y)`` coordinates are already
+extracted to build the GCN adjacency graph, ``physics="mt3d"`` reuses
+those *exact* coordinates for the synthetic dataset rather than a
+synthetic uniform layout.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.agents import Inv3DAgent  # doctest: +SKIP
+   >>> agent = Inv3DAgent(physics="mt3d", n_train_profiles=6)  # doctest: +SKIP
+   >>> result = agent.execute({"sites": sites})  # doctest: +SKIP
+   >>> result.data["mt3d_recovery"]  # doctest: +SKIP
+   {'rmse': 0.28, 'mae': 0.19, 'r2': 0.74, 'n_samples': 6}
+
+``physics="mt1d"`` (tiled 1-D forwards + GCN spatial smoothing) remains
+the unchanged default. A real, open accuracy limitation is documented
+rather than glossed over: at the dataset's default core resolution,
+half-space error is ~1-2% at 1-2 Hz but ~6-10% at 20-50 Hz, since a
+smaller skin depth needs finer core resolution than a fixed cell budget
+affords at a fixed domain-extent safety margin. The new opt-in
+``cells_per_skin_depth`` config (on both ``Maxwell3DDatasetConfig`` and
+``Inv3DAgent``) narrows this -- ~8.8%/5.2% at the same cell budget,
+~6%/3.6% with more cells -- without fully closing it; low-frequency-
+concentrated surveys are recommended until it is.
+
+ModEM 3-D: from plumbing to validated physics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``ModEm3DAdapter`` existed before this release as file I/O plumbing
+around the vendored ModEM Fortran source, reusing
+:mod:`pycsamt.models.modem`'s real ``ModEmConfig``/``ModEmData``/
+``ModEmModel3D`` readers and writers -- but with no compiled ``Mod3DMT``
+binary available anywhere the adapter had been built, its generated
+files and parsed responses had never been checked end to end.
+Compiling ModEM's vendored 3-D source and running it for real surfaced
+and fixed five previously-latent bugs:
+
+1. **The vendored Makefile** was missing a build rule for
+   ``sg_spherical.f90`` and never compiled ``Declaration_MPI``/
+   ``Sub_MPI``/``Main_MPI.f90`` -- unconditionally ``use``\ d by several
+   files despite their bodies being wrapped in ``#ifdef MPI`` -- nor
+   passed ``-cpp`` to strip those guards for a serial build. The 2-D
+   Makefile had the identical MPI-stub gap.
+2. :func:`~pycsamt.forward.maxwell.external.resolve_executable`'s
+   ``search_paths`` fallback didn't apply Windows' ``PATHEXT``, so a
+   bare name like ``"Mod3DMT"`` never resolved to ``"Mod3DMT.exe"``.
+3. ``ModEm3DAdapter._build_command`` omitted the third positional
+   argument ModEM's ``-F`` forward mode requires -- the predicted-data
+   output filename -- so ``Mod3DMT`` printed its usage banner and
+   exited 0 having written nothing, which looked like a generic
+   missing-output-file failure rather than a malformed command.
+4. ``ModEmModel3D``'s WS-format reader and writer were missing a
+   mandatory leading header line ModEM's own Fortran reader
+   unconditionally reads and discards before the dimensions line -- a
+   real binary rejected the header-less file with a Fortran runtime
+   error.
+5. ModEM's own ``setup_airlayers`` (vendored Fortran) hardcodes 10 air
+   layers and reads that many earth-layer widths with no bounds check
+   against the actual earth cell count. Fewer than 10 earth z-cells
+   reads past the end of the array, producing NaNs deep inside the
+   solver. This is a genuine bug in ModEM's own source, not patched
+   there; ``ModEm3DAdapter.assess()`` now rejects problems with fewer
+   than 10 earth z-cells before any file is written.
+
+With those fixed, ``ModEm3DAdapter`` passes both analytic benchmarks
+with real margin on a plain uniform 8x8x10 grid -- no padded mesh
+needed, since ModEM synthesizes its own air layers and isn't subject to
+this project's small-grid research restriction.
+``pycsamt/forward/tests/test_maxwell_modem3d.py`` gained a
+``requires_real_modem``-marked section that runs both benchmarks for
+real and skips (not fails) when no local binary is present, so this
+validation is reproducible by anyone who builds ModEM locally without
+becoming a hard CI dependency.
+
+The compiled binary itself is not distributed -- it is a local build
+artifact, gitignored like any other -- and ModEM's exact
+redistribution/production-use license terms with the original OSU
+authors are still an open item to confirm before relying on this path
+in production.
+
+Compiling the external solvers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Validating ``ModEm3DAdapter`` required hand-compiling ModEM's vendored
+Fortran source. This release turns that one-off process into reusable
+tooling: cross-platform bash scripts under
+``pycsamt/models/_solver_build/`` that auto-detect a Fortran toolchain,
+offer an opt-in auto-installer, and drive a resilient, retrying
+``make`` for ModEM 2-D/3-D and Occam2D (MARE2DEM needs Intel's
+``mpiifort``/MKL toolchain and cannot build natively on Windows, so its
+script instead drives the existing
+:class:`pycsamt.models.mare2dem.SourceManager`).
+
+.. code-block:: console
+
+   pycsamt build modem3d
+   # or, from a checkout:
+   make modem3d
+
+See :doc:`/user_guide/models/compilation` for toolchain requirements
+and per-solver notes.
+
+Fixed
+~~~~~
+
+* |Fix| **mt3d.py layered-earth benchmark** -- generalized the discrete
+  curl operators to non-uniform per-axis cell widths; both analytic
+  benchmarks now pass.
+* |Fix| **ModEM 2-D and 3-D Makefiles** -- added the missing
+  ``sg_spherical.f90`` build rule and compiled the previously-skipped
+  MPI stub modules with ``-cpp``.
+* |Fix| **Windows executable resolution** --
+  ``resolve_executable``'s ``search_paths`` fallback now applies
+  ``PATHEXT``.
+* |Fix| **ModEM 3-D forward command** -- added the missing predicted-data
+  output filename argument to the ``-F`` forward-mode invocation.
+* |Fix| **ModEM WS-format model file** -- reader and writer now include
+  the mandatory leading header line ModEM's Fortran reader requires.
+* |Fix| **ModEM air-layer out-of-bounds read** -- ``ModEm3DAdapter``
+  now preflights a minimum of 10 earth z-cells, guarding a genuine
+  latent bug in ModEM's own vendored Fortran.
+* |Fix| **ModEM model3d footer-detection heuristic** -- fixed a
+  hardcoded threshold that silently truncated the resistivity grid for
+  any model with ``nx <= 3``.
+* |Fix| **.gitignore build-artifact collisions** -- anchored several
+  long-standing, unanchored ``build``/``_build``/``lib/`` patterns to
+  the repo root; they had been silently swallowing new directories with
+  matching names.
+
+Added
+~~~~~
+
+* |Feature| :mod:`pycsamt.ai.training.dataset3d` -- a 3-D Maxwell
+  training-data pipeline with an opt-in, frequency-aware
+  ``cells_per_skin_depth`` solver-mesh resolution control.
+* |API Change| :class:`pycsamt.agents.Inv3DAgent` gained
+  ``physics="mt3d"`` (``physics="mt1d"`` remains the unchanged
+  default), plus ``geology_grid_nx_ny``/``geology_grid_nz``/
+  ``cells_per_skin_depth`` constructor parameters.
+* |Feature| ``pycsamt/models/_solver_build/`` cross-platform build
+  scripts, exposed as a ``pycsamt build <solver>`` CLI subcommand group
+  and a root ``Makefile``.
+* |Tests| Regression coverage for ``dataset3d``, the non-uniform-mesh
+  curl operators, ``ModEm3DAdapter`` (including a real-binary-gated
+  benchmark section), the ``Inv3DAgent`` ``physics="mt3d"`` path, and
+  the ``pycsamt build`` CLI.
+* |Docs| :doc:`/user_guide/models/compilation` and
+  :doc:`/user_guide/ai_inversion/dataset3d`.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Build| **Stricter line length** -- ``ruff``'s configured line length
+  tightened from 97 to 79 characters, with a repo-wide reflow to match.
+
+Compatibility
+~~~~~~~~~~~~~
+
+Nothing in this release changes default behaviour. ``Inv3DAgent`` and
+``Inv2DAgent`` both still default to ``physics="mt1d"``; the new
+``physics="mt3d"``/``physics="mt2d"`` modes and every new
+``cells_per_skin_depth``-style parameter are opt-in. Existing
+``ModEm3DAdapter`` users on grids with fewer than 10 earth z-cells will
+now see an explicit, actionable preflight error instead of a solver
+crash producing NaNs -- add earth z-cells rather than treating this as
+a regression.
+
+See :doc:`/user_guide/ai_inversion/dataset3d` for the 3-D training-data
+walkthrough and :doc:`/user_guide/models/compilation` for build
+instructions.

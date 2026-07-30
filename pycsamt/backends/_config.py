@@ -71,7 +71,8 @@ class BackendConfig:
         name = name.lower().strip()
         if name not in _VALID_NAMES:
             raise ValueError(
-                f"Unknown backend {name!r}.  " f"Choose from: {sorted(_VALID_NAMES)}"
+                f"Unknown backend {name!r}.  "
+                f"Choose from: {sorted(_VALID_NAMES)}"
             )
         with _LOCK:
             if name == "auto":

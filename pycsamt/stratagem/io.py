@@ -267,7 +267,9 @@ class StratagemRawReader(PyCSAMTObject):
         if not d.is_dir():
             raise FileHandlingError(f"Directory not found: {d}")
 
-        components = ["X", "Y", "Z"] if self.component == "ALL" else [self.component]
+        components = (
+            ["X", "Y", "Z"] if self.component == "ALL" else [self.component]
+        )
 
         # collect station files for the primary component (always X-first)
         # Note: Stratagem uses the extension as the station number (X2HX.001,
@@ -309,7 +311,9 @@ class StratagemRawReader(PyCSAMTObject):
                     d.glob(f"{comp}*.*"),
                     key=lambda p: _station_number(p.name),
                 )
-                comp_files = [f for f in comp_files if _station_number(f.name) > 0]
+                comp_files = [
+                    f for f in comp_files if _station_number(f.name) > 0
+                ]
                 if comp_files:
                     _, cm, cs = _build_masks(comp_files)
                     self.component_masks_[comp] = (cm, cs)
@@ -416,7 +420,9 @@ class StratagemRawReader(PyCSAMTObject):
             raise NotFittedError("Call fit() first.")
 
         usable = self.snr_mask_.sum(axis=1)
-        valid_stacks = np.where(self.stack_counts_ > 0, self.stack_counts_, np.nan)
+        valid_stacks = np.where(
+            self.stack_counts_ > 0, self.stack_counts_, np.nan
+        )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             med_stacks = np.nanmedian(valid_stacks, axis=1)
@@ -451,7 +457,9 @@ class StratagemRawReader(PyCSAMTObject):
             raise NotFittedError("Call fit() first.")
 
         stations_ok = self.snr_mask_.sum(axis=0)
-        valid_stacks = np.where(self.stack_counts_ > 0, self.stack_counts_, np.nan)
+        valid_stacks = np.where(
+            self.stack_counts_ > 0, self.stack_counts_, np.nan
+        )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             med_stacks = np.nanmedian(valid_stacks, axis=0)
@@ -524,7 +532,11 @@ class StratagemRawReader(PyCSAMTObject):
 
         import matplotlib.pyplot as plt  # noqa: PLC0415 – optional dep
 
-        data = self.snr_mask_.astype(float) if kind == "snr" else self.stack_counts_
+        data = (
+            self.snr_mask_.astype(float)
+            if kind == "snr"
+            else self.stack_counts_
+        )
 
         fig, ax = plt.subplots(figsize=figsize or (12, 5))
 
@@ -635,7 +647,9 @@ class EDIBatch(PyCSAMTObject):
 
         paths = sorted(d.glob(self.pattern), key=_edi_sort_key)
         if not paths:
-            raise FileHandlingError(f"No EDI files matching '{self.pattern}' in {d}")
+            raise FileHandlingError(
+                f"No EDI files matching '{self.pattern}' in {d}"
+            )
 
         self.edi_paths_: list[Path] = paths
         self.edi_objects_: list[EDIFile] = []
@@ -652,7 +666,9 @@ class EDIBatch(PyCSAMTObject):
         self.n_stations_ = len(self.edi_objects_)
 
         if self.verbose:
-            msg = f"[EDIBatch] loaded {self.n_stations_} EDI files from {d.name}"
+            msg = (
+                f"[EDIBatch] loaded {self.n_stations_} EDI files from {d.name}"
+            )
             if skipped:
                 msg += f" ({skipped} skipped)"
             print(msg)

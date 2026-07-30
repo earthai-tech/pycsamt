@@ -116,7 +116,9 @@ class RecomputeDialog(QDialog):
         self.setWindowTitle("Recompute EDI Files")
         self.setWindowIcon(_icon("recompute"))
         self.setMinimumSize(640, 680)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        )
         self._build_ui()
         self._refresh_source_ui()
 
@@ -133,7 +135,9 @@ class RecomputeDialog(QDialog):
         root.addWidget(self._make_progress_group())
 
         root.addSpacerItem(
-            QSpacerItem(0, 4, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+            QSpacerItem(
+                0, 4, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
+            )
         )
         root.addLayout(self._make_buttons())
 
@@ -240,7 +244,9 @@ class RecomputeDialog(QDialog):
         out_row = QHBoxLayout()
         out_row.addWidget(QLabel("Output folder:"))
         self._out_edit = QLineEdit()
-        self._out_edit.setPlaceholderText("recomputed_edis  (auto next to source)")
+        self._out_edit.setPlaceholderText(
+            "recomputed_edis  (auto next to source)"
+        )
         out_row.addWidget(self._out_edit)
         btn_out = QPushButton("Browse…")
         btn_out.setObjectName("BrowseButton")

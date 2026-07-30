@@ -256,8 +256,12 @@ class AIInversionWorker(QThread):
         X_flat = dataset.X[:n_total]
         y_flat = dataset.y[:n_total]
         n_used = (len(X_flat) // n_sta) * n_sta
-        X_3d = X_flat[:n_used].reshape(-1, n_sta, X_flat.shape[-1])  # (N, ns, nf*2)
-        X_3d = X_3d.reshape(-1, X_flat.shape[-1])  # flatten back to (N*ns, nf*2)
+        X_3d = X_flat[:n_used].reshape(
+            -1, n_sta, X_flat.shape[-1]
+        )  # (N, ns, nf*2)
+        X_3d = X_3d.reshape(
+            -1, X_flat.shape[-1]
+        )  # flatten back to (N*ns, nf*2)
         y_3d = y_flat[:n_used]
 
         # Synthetic station coordinates for training
@@ -296,7 +300,9 @@ class AIInversionWorker(QThread):
             X_obs = X_3d[:n_sta]
             coords_obs = coords[:n_sta]
         self._log(f"Predicting on {len(X_obs)} station(s)…")
-        y_pred = inv.predict(X_obs, coords=coords_obs, radius=radius, as_log_rho=True)
+        y_pred = inv.predict(
+            X_obs, coords=coords_obs, radius=radius, as_log_rho=True
+        )
 
         self.progress.emit(100)
         self._log("AI 3-D inversion complete.")

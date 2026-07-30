@@ -274,7 +274,9 @@ def lonlat_to_utm(
     except ImportError:
         pass
 
-    east, north = _ll_to_utm_pure(lat_arr, lon_arr, zone, south_hemi, ellipsoid)
+    east, north = _ll_to_utm_pure(
+        lat_arr, lon_arr, zone, south_hemi, ellipsoid
+    )
     return east, north, zone, south_hemi
 
 

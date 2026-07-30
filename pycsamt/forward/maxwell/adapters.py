@@ -157,7 +157,9 @@ class BaseMaxwellAdapter(ABC):
         policy: AdapterPolicy | None = None,
     ) -> None:
         if not isinstance(capabilities, BackendCapabilities):
-            raise TypeError("capabilities must be a BackendCapabilities object.")
+            raise TypeError(
+                "capabilities must be a BackendCapabilities object."
+            )
         if policy is not None and not isinstance(policy, AdapterPolicy):
             raise TypeError("policy must be an AdapterPolicy or None.")
         self._capabilities = capabilities
@@ -317,7 +319,9 @@ class BaseMaxwellAdapter(ABC):
     def _solve_backend(self, problem: MaxwellProblem) -> ForwardResult:
         raise NotImplementedError
 
-    def _validate_result(self, problem: MaxwellProblem, result: ForwardResult) -> None:
+    def _validate_result(
+        self, problem: MaxwellProblem, result: ForwardResult
+    ) -> None:
         if not isinstance(result, ForwardResult):
             raise InvalidBackendResultError(
                 "backend must return a ForwardResult; "
@@ -337,13 +341,17 @@ class BaseMaxwellAdapter(ABC):
         diagnostics = result.diagnostics
         if self.policy.require_convergence and not diagnostics.success:
             failed = int(
-                np.size(diagnostics.converged) - np.count_nonzero(diagnostics.converged)
+                np.size(diagnostics.converged)
+                - np.count_nonzero(diagnostics.converged)
             )
             raise SolverConvergenceError(
                 f"backend {self.capabilities.name!r} reported {failed} unconverged solve(s)."
             )
         threshold = self.policy.maximum_relative_residual
-        if threshold is not None and diagnostics.maximum_relative_residual > threshold:
+        if (
+            threshold is not None
+            and diagnostics.maximum_relative_residual > threshold
+        ):
             raise SolverConvergenceError(
                 "maximum relative residual "
                 f"{diagnostics.maximum_relative_residual:.6g} exceeds {threshold:.6g}."

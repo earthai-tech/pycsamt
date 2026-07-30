@@ -37,7 +37,10 @@ import numpy as np
 from ...emtools._core import ensure_sites
 from ...emtools.dimensionality import pre2d_inversion_assessment
 from ..data.contracts import SurveyCoverage
-from .survey_fit import fit_distortion_priors_from_sites, survey_data_from_sites
+from .survey_fit import (
+    fit_distortion_priors_from_sites,
+    survey_data_from_sites,
+)
 
 __all__ = [
     "StationExclusion",
@@ -261,7 +264,9 @@ class DimensionalitySummary:
 
         Examples
         --------
-        >>> DimensionalitySummary(1, 1.0, 0.0, 0.0, None, None).to_dict()["n_samples"]
+        >>> DimensionalitySummary(1, 1.0, 0.0, 0.0, None, None).to_dict()[
+        ...     "n_samples"
+        ... ]
         1
         """
         return {
@@ -372,14 +377,18 @@ class SurveyAuditReport:
             raise ValueError("n_stations_input cannot be negative.")
         excluded = tuple(self.excluded_stations)
         if any(not isinstance(item, StationExclusion) for item in excluded):
-            raise TypeError("excluded_stations entries must be StationExclusion.")
+            raise TypeError(
+                "excluded_stations entries must be StationExclusion."
+            )
         if not isinstance(self.frequency_grid, FrequencyGridReport):
             raise TypeError("frequency_grid must be a FrequencyGridReport.")
         if not isinstance(self.dimensionality, DimensionalitySummary):
             raise TypeError("dimensionality must be a DimensionalitySummary.")
         n_included = self.n_stations_input - len(excluded)
         if n_included < 0:
-            raise ValueError("excluded_stations cannot exceed n_stations_input.")
+            raise ValueError(
+                "excluded_stations cannot exceed n_stations_input."
+            )
         coverage = self.coverage
         if coverage is not None and not isinstance(coverage, SurveyCoverage):
             raise TypeError("coverage must be a SurveyCoverage or None.")
@@ -409,9 +418,21 @@ class SurveyAuditReport:
         ...     2,
         ...     (StationExclusion("B", "missing freq or z array"),),
         ...     FrequencyGridReport(True, "A", {"A": 1}, ()),
-        ...     None, None, None, None, None, None, 0.0, False,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     0.0,
+        ...     False,
         ...     DimensionalitySummary(0, 0.0, 0.0, 0.0, None, None),
-        ...     0.0, 0.0, 0.0, 0.0, 0.0, "2026-01-01T00:00:00Z",
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     "2026-01-01T00:00:00Z",
         ... )
         >>> report.n_stations_included
         1
@@ -429,10 +450,24 @@ class SurveyAuditReport:
         Examples
         --------
         >>> report = SurveyAuditReport(
-        ...     1, (), FrequencyGridReport(True, "A", {"A": 1}, ()),
-        ...     None, None, None, None, None, None, 0.0, False,
+        ...     1,
+        ...     (),
+        ...     FrequencyGridReport(True, "A", {"A": 1}, ()),
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     0.0,
+        ...     False,
         ...     DimensionalitySummary(0, 0.0, 0.0, 0.0, None, None),
-        ...     0.0, 0.0, 0.0, 0.0, 0.0, "2026-01-01T00:00:00Z",
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     "2026-01-01T00:00:00Z",
         ... )
         >>> report.to_dict()["schema_version"]
         1
@@ -441,7 +476,9 @@ class SurveyAuditReport:
             "schema_version": 1,
             "n_stations_input": self.n_stations_input,
             "n_stations_included": self.n_stations_included,
-            "excluded_stations": [item.to_dict() for item in self.excluded_stations],
+            "excluded_stations": [
+                item.to_dict() for item in self.excluded_stations
+            ],
             "frequency_grid": self.frequency_grid.to_dict(),
             "coverage": None
             if self.coverage is None
@@ -496,10 +533,24 @@ class SurveyAuditReport:
         --------
         >>> from tempfile import TemporaryDirectory
         >>> report = SurveyAuditReport(
-        ...     1, (), FrequencyGridReport(True, "A", {"A": 1}, ()),
-        ...     None, None, None, None, None, None, 0.0, False,
+        ...     1,
+        ...     (),
+        ...     FrequencyGridReport(True, "A", {"A": 1}, ()),
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     0.0,
+        ...     False,
         ...     DimensionalitySummary(0, 0.0, 0.0, 0.0, None, None),
-        ...     0.0, 0.0, 0.0, 0.0, 0.0, "2026-01-01T00:00:00Z",
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     "2026-01-01T00:00:00Z",
         ... )
         >>> with TemporaryDirectory() as directory:
         ...     path = report.write_json(Path(directory) / "audit.json")
@@ -511,7 +562,9 @@ class SurveyAuditReport:
         if target.exists() and not overwrite:
             raise FileExistsError(f"audit report already exists: {target}")
         target.write_text(
-            json.dumps(self.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
+            json.dumps(
+                self.to_dict(), indent=2, sort_keys=True, ensure_ascii=False
+            )
             + "\n",
             encoding="utf-8",
         )
@@ -539,10 +592,24 @@ class SurveyAuditReport:
         Examples
         --------
         >>> report = SurveyAuditReport(
-        ...     1, (), FrequencyGridReport(True, "A", {"A": 1}, ()),
-        ...     None, None, None, None, None, None, 0.0, False,
+        ...     1,
+        ...     (),
+        ...     FrequencyGridReport(True, "A", {"A": 1}, ()),
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     0.0,
+        ...     False,
         ...     DimensionalitySummary(0, 0.0, 0.0, 0.0, None, None),
-        ...     0.0, 0.0, 0.0, 0.0, 0.0, "2026-01-01T00:00:00Z",
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     "2026-01-01T00:00:00Z",
         ... )
         >>> SurveyAuditReport.from_dict(report.to_dict()) == report
         True
@@ -582,7 +649,9 @@ class SurveyAuditReport:
                 **{
                     **data["dimensionality"],
                     "stations_recommending_3d_review": tuple(
-                        data["dimensionality"]["stations_recommending_3d_review"]
+                        data["dimensionality"][
+                            "stations_recommending_3d_review"
+                        ]
                     ),
                 }
             ),
@@ -613,7 +682,9 @@ class SurveyAuditReport:
         --------
         See :meth:`write_json` for a complete round trip.
         """
-        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        return cls.from_dict(
+            json.loads(Path(path).read_text(encoding="utf-8"))
+        )
 
     def summary(self) -> str:
         """Return a compact, human-readable multi-line report.
@@ -627,10 +698,24 @@ class SurveyAuditReport:
         Examples
         --------
         >>> report = SurveyAuditReport(
-        ...     1, (), FrequencyGridReport(True, "A", {"A": 1}, ()),
-        ...     None, None, None, None, None, None, 0.0, False,
+        ...     1,
+        ...     (),
+        ...     FrequencyGridReport(True, "A", {"A": 1}, ()),
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     None,
+        ...     0.0,
+        ...     False,
         ...     DimensionalitySummary(0, 0.0, 0.0, 0.0, None, None),
-        ...     0.0, 0.0, 0.0, 0.0, 0.0, "2026-01-01T00:00:00Z",
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     0.0,
+        ...     "2026-01-01T00:00:00Z",
         ... )
         >>> print(report.summary())
         Survey audit (generated 2026-01-01T00:00:00Z)
@@ -653,10 +738,16 @@ class SurveyAuditReport:
         grid = self.frequency_grid
         lines.append(
             "  Frequency grid: "
-            + ("matched" if grid.matched else f"MISMATCHED ({len(grid.mismatched_stations)} stations)")
+            + (
+                "matched"
+                if grid.matched
+                else f"MISMATCHED ({len(grid.mismatched_stations)} stations)"
+            )
         )
         if self.coverage is not None:
-            lines.append(f"  Impedance coverage: {self.coverage.overall * 100:.1f}%")
+            lines.append(
+                f"  Impedance coverage: {self.coverage.overall * 100:.1f}%"
+            )
         if self.frequency_range_hz is not None:
             lo, hi = self.frequency_range_hz
             lines.append(f"  Frequency range: {lo:g}-{hi:g} Hz")
@@ -674,7 +765,9 @@ class SurveyAuditReport:
                 f"max={self.station_spacing_m['max']:.1f}"
             )
         lines.append(f"  CRS declared: {self.crs_declared}")
-        lines.append(f"  Elevation coverage: {self.elevation_coverage * 100:.1f}%")
+        lines.append(
+            f"  Elevation coverage: {self.elevation_coverage * 100:.1f}%"
+        )
         dim = self.dimensionality
         lines.append(
             f"  Dimensionality: n={dim.n_samples}, "
@@ -692,8 +785,7 @@ class SurveyAuditReport:
                 + ", ".join(dim.stations_recommending_3d_review)
             )
         lines.append(
-            "  Static shift log10 sigma: "
-            f"{self.static_shift_log10_sigma:.4f}"
+            f"  Static shift log10 sigma: {self.static_shift_log10_sigma:.4f}"
         )
         lines.append(
             "  Distortion sigma: gain(log10)="
@@ -778,7 +870,9 @@ def audit_survey(
     for site in stations:
         freq = getattr(site, "freq", None)
         z = getattr(site, "z", None)
-        name = str(getattr(site, "name", f"station-{len(kept) + len(excluded)}"))
+        name = str(
+            getattr(site, "name", f"station-{len(kept) + len(excluded)}")
+        )
         if freq is None or z is None:
             excluded.append(StationExclusion(name, "missing freq or z array"))
             continue
@@ -787,12 +881,12 @@ def audit_survey(
         raise ValueError("no station in sites has usable impedance data.")
 
     n_freq_by_station: dict[str, int] = {}
-    reference = np.asarray(getattr(kept[0], "freq"), dtype=float)
+    reference = np.asarray(kept[0].freq, dtype=float)
     reference_name = str(getattr(kept[0], "name", "station-0"))
     mismatched: list[str] = []
     for site in kept:
         name = str(getattr(site, "name", "?"))
-        freq = np.asarray(getattr(site, "freq"), dtype=float)
+        freq = np.asarray(site.freq, dtype=float)
         n_freq_by_station[name] = int(freq.size)
         if freq.shape != reference.shape or not np.allclose(
             freq, reference, rtol=freq_rtol, atol=0.0
@@ -847,7 +941,9 @@ def audit_survey(
             "max": float(np.max(steps)),
         }
     )
-    elevation_coverage = float(np.mean(np.isfinite(elevation))) if len(kept) else 0.0
+    elevation_coverage = (
+        float(np.mean(np.isfinite(elevation))) if len(kept) else 0.0
+    )
 
     dim_table = pre2d_inversion_assessment(
         collection,
@@ -863,16 +959,26 @@ def audit_survey(
         n_samples = dim_table["n_samples"].to_numpy(dtype=float)
         total = float(n_samples.sum())
         if total > 0:
-            frac_1d = float((dim_table["frac_1d"].to_numpy() * n_samples).sum() / total)
-            frac_2d = float((dim_table["frac_2d"].to_numpy() * n_samples).sum() / total)
-            frac_3d = float((dim_table["frac_3d"].to_numpy() * n_samples).sum() / total)
+            frac_1d = float(
+                (dim_table["frac_1d"].to_numpy() * n_samples).sum() / total
+            )
+            frac_2d = float(
+                (dim_table["frac_2d"].to_numpy() * n_samples).sum() / total
+            )
+            frac_3d = float(
+                (dim_table["frac_3d"].to_numpy() * n_samples).sum() / total
+            )
         else:
             frac_1d = frac_2d = frac_3d = 0.0
         cons = dim_table["strike_consensus_deg"].to_numpy(dtype=float)
         cons_iqr = dim_table["strike_consensus_iqr_deg"].to_numpy(dtype=float)
-        strike_deg = float(np.nanmedian(cons)) if np.isfinite(cons).any() else None
+        strike_deg = (
+            float(np.nanmedian(cons)) if np.isfinite(cons).any() else None
+        )
         strike_iqr = (
-            float(np.nanmedian(cons_iqr)) if np.isfinite(cons_iqr).any() else None
+            float(np.nanmedian(cons_iqr))
+            if np.isfinite(cons_iqr).any()
+            else None
         )
         flagged = tuple(
             str(name)
@@ -898,7 +1004,9 @@ def audit_survey(
     )
 
     generated_utc = (
-        datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
     )
 
     return SurveyAuditReport(

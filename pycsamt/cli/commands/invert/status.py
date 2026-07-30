@@ -122,7 +122,9 @@ def _last_rms_occam(log_path: Path | None) -> float | None:
     if log_path is None or not log_path.exists():
         return None
     try:
-        for line in reversed(log_path.read_text(errors="replace").splitlines()):
+        for line in reversed(
+            log_path.read_text(errors="replace").splitlines()
+        ):
             low = line.lower()
             if "rms" in low or "misfit" in low:
                 for token in line.split():

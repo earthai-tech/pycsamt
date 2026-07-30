@@ -15,17 +15,18 @@
 # master, which burns a production-deploy credit each time and is what
 # exhausted the team's free-plan allowance and suspended the site (see
 # HOW-TO-USE-NETLIGY-FOR-OPEN-SOURCE.md, kept local-only, never committed).
-# Two layers now stop that:
-#   1. The GitHub App's push-triggered builds for `master` must be disabled
-#      in the Netlify UI (Site configuration -> Build & deploy -> Stop
-#      builds), so ordinary commits never even start a build. This is a
-#      dashboard setting, not something netlify.toml can express.
-#   2. Production deploys instead come from .github/workflows/netlify-
-#      release-deploy.yml, which POSTs to a Netlify Build Hook only when a
-#      `v*` tag is pushed (i.e. on release).
-# The `ignore` command below is a second line of defense in case build
-# triggers are ever re-enabled or a build starts by some other path: it
-# skips the deploy unless HEAD is exactly a `v*` release tag.
+# This is now stopped structurally rather than by a dashboard toggle:
+#   1. Netlify's production branch (Site configuration -> Build & deploy ->
+#      Branches and deploy contexts) is `docs-deploy`, not `master`, with
+#      Branch deploys set to None. Master commits never touch that branch,
+#      so they can never start a build.
+#   2. .github/workflows/netlify-release-deploy.yml force-pushes the exact
+#      tagged commit to `docs-deploy` only when a `v*` tag is pushed (i.e.
+#      on release) — that push is what Netlify's own GitHub integration
+#      detects and builds.
+# The `ignore` command below is a cheap second line of defense in case
+# `docs-deploy` is ever advanced by some other path: it skips the deploy
+# unless HEAD is exactly a `v*` release tag.
 
 [build]
   publish = "docs/build/html"

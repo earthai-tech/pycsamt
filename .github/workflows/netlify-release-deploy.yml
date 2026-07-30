@@ -2,12 +2,21 @@ name: Deploy docs to Netlify on release
 
 # pycsamt.org previously rebuilt on every push to master via Netlify's
 # GitHub App integration, which spends a production-deploy credit per
-# commit and exhausted the team's free-plan allowance. Deploys are now
-# release-only: this workflow fires solely on `vX.Y.Z` tag pushes and
-# tells Netlify (via a Build Hook) to build that exact tag. It is the only
-# thing that should trigger a production deploy — the site's automatic
-# branch deploys for master must stay disabled in the Netlify dashboard
-# (Site configuration -> Build & deploy -> Stop builds).
+# commit and exhausted the team's free-plan allowance.
+#
+# Deploys are now release-only, enforced structurally rather than by a
+# dashboard toggle: Netlify's production branch is `docs-deploy`, a
+# bot-only pointer branch nobody commits to directly. Ordinary pushes to
+# master never touch it, so they can never trigger a build. This workflow
+# is the only thing that moves it: on a `vX.Y.Z` tag push, it force-pushes
+# HEAD (the exact tagged commit) to `docs-deploy`, and that push is what
+# Netlify's native branch-deploy detection picks up — no Build Hook or
+# secret required.
+#
+# One-time Netlify dashboard setup (Site configuration -> Build & deploy ->
+# Branches and deploy contexts):
+#   - Production branch: docs-deploy
+#   - Branch deploys: None (so PR/branch previews never build either)
 on:
   push:
     tags:
@@ -15,26 +24,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  trigger-netlify:
-    name: Trigger Netlify production build
+  update-docs-deploy-branch:
+    name: Point docs-deploy at the release tag
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve tag name
-        id: tag
-        run: echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
 
-      - name: Call Netlify build hook
-        env:
-          NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
-        run: |
-          if [ -z "$NETLIFY_BUILD_HOOK_URL" ]; then
-            echo "::error::NETLIFY_BUILD_HOOK_URL repo secret is not set." >&2
-            exit 1
-          fi
-          curl --fail --silent --show-error -X POST \
-            -H "Content-Type: application/json" \
-            -d "{\"trigger_branch\": \"${{ steps.tag.outputs.name }}\", \"trigger_title\": \"release ${{ steps.tag.outputs.name }}\"}" \
-            "$NETLIFY_BUILD_HOOK_URL"
+      - name: Force-push tagged commit to docs-deploy
+        run: git push origin HEAD:refs/heads/docs-deploy --force

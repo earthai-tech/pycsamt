@@ -168,6 +168,77 @@ instead, at substantially higher cost per profile and still only as a
 research-stage slice, not a gated production path -- see :doc:`roadmap`'s M8
 entry before treating either mode's output as more validated than it is.
 
+The graph itself is worth inspecting before any physics mode is chosen.
+:func:`~pycsamt.ai.inversion.sites_to_coords_3d` and
+:func:`~pycsamt.ai.nets.build_adjacency` are exactly what ``Inv3DAgent``
+calls internally, so the adjacency a real run trains on can be built and
+read directly:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.ai.inversion import sites_to_coords_3d
+   >>> from pycsamt.ai.nets import build_adjacency
+
+   >>> sites = ensure_sites(
+   ...     "data/AMT/WILLY_data/L18PLT", recursive=True, verbose=0
+   ... )
+   >>> coords = sites_to_coords_3d(sites, recursive=False, verbose=0)
+   >>> coords.shape
+   (28, 2)
+
+   >>> radius = 250.0
+   >>> adjacency = build_adjacency(
+   ...     coords, radius, self_loops=False, normalise=False
+   ... )
+   >>> degree = adjacency.sum(axis=1).astype(int)
+   >>> int(adjacency.sum() // 2)
+   65
+   >>> int((degree == 0).sum())
+   0
+   >>> int(degree.min()), int(degree.max())
+   (2, 7)
+
+At WILLY L18's own 250 m radius -- the same value the executed
+``physics="mt3d"`` example in :doc:`agents` uses -- every station keeps
+at least two neighbours, so no node trains in isolation. L18 is a single
+profile line rather than an areal layout, which is exactly why its
+degree stays modest (2-7) instead of spanning the wide range an areal
+survey produces at a fixed radius; the previous diagnostic's synthetic
+points illustrate that areal case deliberately, since a real single-line
+survey cannot exercise it. Combining this adjacency with each station's
+own real median measured apparent resistivity, rather than a station
+index, shows what the network actually receives as spatial context:
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_gcn_3d_context
+   :linenos:
+   :title: View real WILLY graph-context source code
+
+.. figure:: ../../images/user_guide/ai_inversion/gcn_3d_context.png
+   :alt: Real WILLY L18 GCN adjacency graph at a 250-metre radius, coloured
+         by each station's own median measured apparent resistivity.
+   :align: center
+   :width: 90%
+
+   The real spatial graph ``Inv3DAgent(physics="mt3d")`` builds from WILLY
+   L18, not a synthetic layout. Height and colour are each station's own
+   median measured :math:`\log_{10}\rho_a`, not a fabricated feature.
+
+Edge thickness is the degree-normalised adjacency weight
+:func:`~pycsamt.ai.nets.build_adjacency` itself computes (formalised later
+in this page as equation :eq:`eq-ai-normalized-adjacency`), so a station
+with many close neighbours contributes each individual edge more weakly
+than one with few. The two
+most resistive stations near the profile's northern end sit close
+together and well connected; the lower-resistivity cluster toward the
+southern end is denser but locally more uniform. A GCN reading this graph
+propagates information along exactly these real edges, not along whichever
+lines happened to look tidy in an illustration -- which is also why a
+degree table like this one belongs in a real run's own report, not only in
+documentation.
+
 When dimension is uncertain, compare conservative alternatives.  A common
 selection record includes a 1-D baseline, a 2-D or graph candidate, and a note
 explaining whether the higher-dimensional candidate improved a declared

@@ -736,6 +736,32 @@ The same log-resistivity construction as equation
 argument, :math:`\rho_r(z,y,x)=10^{\mu_{\log\rho}+\sigma_{\log\rho}g_r(z,y,x)}`,
 once the correlated field itself is drawn from a 3-D
 :class:`~pycsamt.ai.geology.GaussianCorrelation` supplying ``length_y_m``.
+A larger ``n_realizations`` explores more draws from this prior; it does not
+turn the prior into faults, lenses, stratigraphic contacts, or facies. Those
+geometries require a different generator and must remain distinguishable in
+the manifest so that split and coverage audits can be performed by geological
+family.
+
+Preparation uses three related grids. Let :math:`G_g` denote the
+:term:`geological grid`, :math:`G_s` the padded :term:`solver mesh`, and
+:math:`G_o` the agent's :term:`output grid`. A piecewise-constant operator
+:math:`P_{g\rightarrow s}` transfers conductivity into the cells used by the
+Maxwell solve,
+
+.. math::
+   :label: eq-ai-data-3d-grid-transfer
+
+   \boldsymbol{\sigma}_s
+   =P_{g\rightarrow s}\!\left(\boldsymbol{\rho}_g^{-1}\right),
+   \qquad
+   \mathbf y_o=P_{g\rightarrow o}\!\left(\log_{10}\boldsymbol{\rho}_g\right).
+
+The first mapping extends the nearest geological edge cell into the padding;
+the second samples each station's true vertical column onto the requested
+display depths. Consequently, equal array sizes do not make these grids
+interchangeable. Record their edges, axis order, coordinate reference, units,
+and both mappings with the dataset.
+
 A small fully executed example, matching section 11's scale:
 
 .. code-block:: pycon
@@ -790,6 +816,15 @@ solver residual -- applies unchanged to this solve; the
 :math:`2.197\times10^{-19}` value above again shows an accurate linear
 solve, not mesh convergence or geological realism.
 
+The receiver contract is equally strict. ``station_xy_m`` contains
+``(x, y)`` coordinates in metres inside the geological grid, and the current
+generator evaluates them at the flat surface :math:`z=0`. Elevations may be
+retained for display and graph geometry, but neither ``MT3DAdapter`` nor the
+current ``ModEm3DAdapter`` configuration turns those elevations into active
+terrain cells. A terrain-aware claim therefore requires a separately
+validated mesh and receiver workflow; draping a section afterward changes
+the visualization, not the forward physics.
+
 Unlike section 11's uniform lateral mesh, the 3-D solver mesh is padded
 and non-uniform, because 3-D cell count scales as the *cube* of resolution
 rather than its square -- a uniform mesh both fine enough for the
@@ -805,12 +840,35 @@ distortion apply identically afterward, since it operates on the shared
 :class:`~pycsamt.ai.data.contracts.SurveyData` contract without any notion
 of how many spatial dimensions produced it.
 
+``cells_per_skin_depth`` defaults to ``None``, which preserves the geological
+grid's native core spacing. Set it explicitly only after choosing a frequency
+band and a cell budget; for example, ``8.0`` requests eight core cells across
+the shallowest skin depth, capped at the geological-grid spacing. The bundled
+small-grid benchmark is calibrated most strongly at frequencies up to 2 Hz.
+At tens of hertz, verify half-space error and mesh refinement for the actual
+resistivity range instead of treating a small linear-system residual as an
+accuracy certificate.
+
+The dataset generator is intentionally wired to the pure-Python
+:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` so small reproducible tests
+do not depend on an external executable. This is not the same backend as
+:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter`. For a production
+corpus, build the same solver-neutral Maxwell problems, run the compiled
+ModEM adapter, assess every result, and convert accepted responses back to the
+same ``SurveyData`` and target contracts. Do not label a corpus as ModEM
+generated merely because ``physics="mt3d"`` was selected in the agent: that
+agent path currently invokes ``MT3DAdapter``.
+
 A genuine 3-D solve costs far more per realization than a 2-D one --
 seconds to tens of seconds even at this documentation scale, against a
 2-D realization's fraction of a second -- so budget ``n_realizations``
 deliberately rather than reusing a 2-D-sized default, and prefer
 :class:`~pycsamt.forward.maxwell.MaxwellResultCache` so an interrupted
-generation run resumes instead of restarting.
+generation run resumes instead of restarting. Preserve the cache beside the
+manifest, accepted realization IDs, rejected attempts and reasons, exact
+split indices, and normalization arrays. If difficult conductivity fields
+fail more often, the accepted set is a different distribution; replacing
+failures with fresh draws without recording them hides that bias.
 
 13. Add realistic observation effects
 -------------------------------------
@@ -1214,9 +1272,10 @@ Avoid these errors:
 * training fixed-output networks on NaN-padded variable-layer targets without
   a tested mask-aware loss;
 * calling correlated 1-D graph examples full 3-D EM simulations;
-* treating ``Inv3DAgent(physics="mt3d")``'s genuine 3-D Maxwell training as
-  a gated production result rather than the research-stage slice
-  :doc:`roadmap`'s M8 entry describes it as;
+* assuming ``Inv3DAgent(physics="mt3d")`` invokes the compiled ModEM backend,
+  or treating the small-grid research solver as production validation;
+* using station elevations or a draped section as evidence that topography
+  participated in the 3-D Maxwell equations;
 * calling tiled 1-D profile responses 2-D Maxwell training data, or treating a
   small linear-system residual as evidence of mesh convergence;
 * discarding failed 2-D forward realizations without auditing how rejection

@@ -395,9 +395,15 @@ Here the cubic raster spans 426.7--581.4 m even though the observations span
 The signed-depth panel
 shows why ``surface_depth_m`` and ``local_depth_m`` must not be confused: the
 former is one terrain value per horizontal cell, while the latter broadcasts
-that surface across every depth cell. The binary mask is the appropriate
-input to physics; the slope curve is a diagnostic of the rasterization, not a
-replacement for inspecting the terrain itself.
+that surface across every depth cell. The binary mask is the geometry that a
+terrain-capable forward adapter would need; the slope curve is a diagnostic of
+the rasterization, not a replacement for inspecting the terrain itself. The
+distinction matters in the current stack: ``MT2DAdapter``, ``MT3DAdapter``,
+and the v1 ``ModEm3DAdapter`` all declare ``supports_topography=False`` and
+``supports_inactive_cells=False``. They reject an inactive air mask rather
+than silently solving terrain. Until a terrain-capable adapter is connected
+and benchmarked, these masks support geological auditing and display, not a
+claim of topographic Maxwell physics.
 
 In the lower-right panel of the diagnostic, white cells lie above the black
 terrain line and are excluded by :meth:`~pycsamt.ai.geology.TopographicSurface.earth_mask`.
@@ -531,6 +537,49 @@ they are not missing geological samples. Notice also that the body occupies
 only about 2% of the volume. That fraction should be checked across an
 ensemble: a rare target can be scientifically plausible yet too uncommon for
 a network to learn reliably.
+
+Connecting a rich prior to 3-D Maxwell training
+-------------------------------------------------
+
+The composition above is available to a custom forward workflow, but it is
+not yet the distribution sampled by
+:func:`pycsamt.ai.training.dataset3d.generate_3d_maxwell_dataset`. That
+convenience generator currently draws one standardized Gaussian field and
+maps it affinely into ``log10(resistivity)``. Increasing
+``n_realizations`` changes its random draws and correlation lengths; it does
+not introduce the named layers, projected interfaces, lens masks, or overlap
+policies demonstrated here. The 2-D Maxwell dataset generator has the same
+Gaussian-field boundary.
+
+For a layered/lens corpus, generate and persist each
+:class:`~pycsamt.ai.geology.LensGeology` or
+:class:`~pycsamt.ai.geology.LayeredGeology` realization first, convert
+``resistivity_ohm_m`` to conductivity, and explicitly transfer it from the
+:term:`geological grid` to a padded :term:`solver mesh`. Solve the resulting
+:class:`~pycsamt.forward.maxwell.contracts.MaxwellProblem` with the selected
+adapter, then retain the original geological volume as the target or resample
+it onto the declared :term:`output grid`. In symbols,
+
+.. math::
+   :label: eq-ai-geology-forward-transfer
+
+   \boldsymbol{\sigma}_s
+   =P_{g\rightarrow s}\!\left(\boldsymbol{\rho}_g^{-1}\right),
+   \qquad
+   \mathbf y_o=P_{g\rightarrow o}\!\left(\log_{10}\boldsymbol{\rho}_g\right).
+
+The transfer operators, grid edges, model hash, station coordinates, forward
+problem hash, backend identity, and accepted or rejected solve status belong
+in the realization record. Nearest-cell extension into padding may be a
+reasonable explicit boundary convention; allowing array shapes to imply a
+mapping is not. Keep every corruption variant attached to the same parent
+model hash so variants cannot leak across dataset partitions.
+
+Equation :eq:`eq-ai-geology-forward-transfer` also separates terrain display
+from terrain physics. Applying ``earth_mask`` only to a plotted target does
+not modify :math:`\boldsymbol{\sigma}_s`; a genuine terrain solve requires the
+mask to enter a backend that supports inactive cells and has been validated
+for that geometry.
 
 Persist identity and audit the ensemble
 -----------------------------------------

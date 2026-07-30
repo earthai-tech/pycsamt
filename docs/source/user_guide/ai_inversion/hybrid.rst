@@ -583,6 +583,54 @@ system, and station exclusions.  Stratify diagnostics by node degree and survey
 edge position because graph models often look best in dense interior regions
 and weakest near sparse boundaries.
 
+This remains true when the Stage-1 GCN checkpoint was trained with
+:term:`Genuine 3-D Maxwell training`. Such training gives the initializer
+experience of laterally coupled 3-D responses, but it does not change the
+implemented Stage-2 operator. ``HybridInverter3D`` has no ``mt3d`` or
+``modem3d`` solver argument: :func:`pycsamt.ai.inversion._pinn_ops.fit_3d_joint`
+evaluates a differentiable MT 1-D recursion independently at each station and
+couples the model columns through the graph penalty. Consequently,
+
+.. math::
+   :label: eq-hybrid-quasi3d-stage2
+
+   \mathcal J_{\mathrm{data}}^{\mathrm{Stage\,2}}
+   =\frac{1}{S}\sum_{s=1}^{S}
+     \mathcal J_{\mathrm{MT1D}}
+       \!\left(\mathbf m_s;\mathbf d_s^{\mathrm{obs}}\right),
+   \qquad
+   \mathcal J_{\mathrm{coupling}}=\lambda_g\mathcal J_g,
+
+not one coupled residual
+:math:`\lVert F_{\mathrm{MT3D}}(\mathbf m)-\mathbf d^{\mathrm{obs}}\rVert`
+over a shared conductivity volume. Equation
+:eq:`eq-hybrid-quasi3d-stage2` is therefore a quasi-3-D refinement even when
+Stage 1 came from genuine 3-D synthetic physics.
+
+The returned ``resistivity_volume()`` has shape ``(layer, station)``. The word
+``volume`` describes graph-linked vertical columns; it is not a rectilinear
+``(z, y, x)`` :term:`output grid`, and it should not be passed to a 3-D solver
+without an explicit interpolation and support policy. Preserve station
+coordinates, graph edges, per-station thicknesses, and any later gridding as
+separate artifacts so display interpolation is not mistaken for recovered
+3-D resolution.
+
+A genuinely 3-D Stage 2 would need to map the Stage-1 model from its output
+grid to a :term:`solver mesh`, run ``MT3DAdapter`` or ``ModEm3DAdapter`` for
+each candidate model, evaluate tensor residuals with observational errors,
+and obtain derivatives through an adjoint, a differentiable 3-D operator, or
+a documented derivative-free strategy. None of those optimization loops is
+implemented by ``HybridInverter3D`` today. Calling the current result
+``ModEM-refined`` or ``3-D Maxwell-refined`` would therefore be incorrect;
+ModEM may be used afterward as an independent response audit, provided the
+column-to-mesh mapping and backend provenance are recorded.
+
+The current refinement also has no inactive-cell or terrain operator. Station
+elevations can influence plotted geometry or graph coordinates, but they do
+not place air cells into equation :eq:`eq-hybrid-quasi3d-stage2`. A draped
+hybrid volume remains a visualization unless a terrain-capable 3-D forward
+problem is solved and validated separately.
+
 The 2-D mode semantics carry into this path: ``mode="both"`` averages TE and
 TM observables before optimization, and the built-in residual table does not
 reconstruct that averaged target. Report separate externally recomputed TE and
@@ -774,6 +822,10 @@ Hybrid inversion can fail quietly.  Watch for:
   structure;
 * a strong :term:`domain gap` is treated as a refinement problem;
 * lateral or graph regularization creates coherence unsupported by the data;
+* genuine 3-D Stage-1 training is reported as if Stage 2 also solved coupled
+  3-D Maxwell physics;
+* a gridded or terrain-draped ``(layer, station)`` result is described as a
+  solver-native 3-D volume;
 * the Stage-1 checkpoint is restored without its preprocessing normalizers;
 * synthetic validation shows improvement, but field residuals remain
   systematic;

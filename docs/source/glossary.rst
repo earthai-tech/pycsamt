@@ -123,6 +123,25 @@ definitions here are the single source of truth.
       solved. A mesh may consist of 1-D layers, a 2-D profile grid, triangular
       finite elements, or a 3-D volume of cells, depending on the backend.
 
+   Geological grid
+      The rectilinear physical grid on which a synthetic earth model is
+      defined before forward simulation. Its cell values, axis order, edges,
+      coordinate system, and units form the target-data geometry and need not
+      match either the numerical solver mesh or the inversion output grid.
+
+   Solver mesh
+      The numerical cells on which a forward backend discretizes Maxwell's
+      equations. It may refine the geological core and add graded padding to
+      control boundary effects; conductivity must therefore be transferred
+      explicitly from the geological grid rather than inferred from matching
+      array dimensions.
+
+   Output grid
+      The coordinates and depths at which an inversion model is reported or
+      displayed. In an AI workflow it is the checkpoint's target schema and
+      may be a resampling of geological columns rather than the forward
+      solver's mesh.
+
    Objective function
       The scalar quantity minimized during inversion, usually combining a data
       misfit term with a regularization term so the recovered model fits the
@@ -1043,12 +1062,6 @@ definitions here are the single source of truth.
       A controlled comparison in which one input, component, architecture
       feature, loss term, or augmentation is removed or changed to test whether
       it materially contributes to validation performance.
-
-   Geological prior
-      A named model prior tied to an expected geological setting, such as a
-      geothermal, marine, sedimentary, crystalline, or permafrost target. It
-      narrows synthetic-model sampling so generated examples resemble the
-      intended application instead of arbitrary resistivity variation.
 
    Noise model
       The rule used to perturb a synthetic response so it resembles measured

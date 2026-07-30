@@ -46,6 +46,7 @@ from pycsamt.ai.data.contracts import SurveyData
 from pycsamt.ai.inversion import (
     EMInverter1D,
     PINNInverter2D,
+    sites_to_coords_3d,
     sites_to_features_1d,
     sites_to_obs_1d,
     sites_to_obs_2d,
@@ -2721,6 +2722,58 @@ def make_agents_architecture_comparison() -> None:
     _save(fig, "agents_architecture_comparison.png")
 
 
+def make_agents_inv3d_mt1d_baseline() -> None:
+    """The historical Inv3DAgent(physics="mt1d") baseline: tiled independent
+    1-D columns shared through a GCN over real WILLY station geometry. Kept
+    to explain agents_inv3d_section.png/agents_inv3d_uncertainty.png as a
+    contrast with the genuine 3-D Maxwell physics="mt3d" route documented
+    alongside it -- not the new 3-D Maxwell workflow itself.
+    """
+    try:
+        import torch
+
+        torch.manual_seed(73)
+    except ImportError:
+        pass
+    np.random.seed(73)
+    sites = ensure_sites(
+        PROJECT_ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT",
+        recursive=True,
+        verbose=0,
+    )
+    # Use the WILLY stations' own measured band (~1 Hz-10 kHz) rather than
+    # the class default (1e-4-1e3 Hz): that legacy default reaches skin
+    # depths of hundreds of kilometres -- far below anything this AMT
+    # data actually constrains -- and was the root cause of the
+    # mantle-depth section this figure used to show.
+    _, measured_frequency, _ = sites_to_features_1d(
+        sites, comp="xy", n_freqs=64,
+    )
+    agent = Inv3DAgent(
+        physics="mt1d",
+        n_layers=10,
+        freqs=np.geomspace(
+            float(measured_frequency.min()),
+            float(measured_frequency.max()),
+            32,
+        ),
+        n_train_profiles=300,
+        epochs=80,
+        radius=250.0,
+        hidden=(256, 128, 64),
+        dropout=0.1,
+        n_mc=50,
+    )
+    result = agent.execute({"sites": sites})
+    if result.status == "failed":
+        raise RuntimeError(result.error)
+    print("agents_inv3d_section.png", ascii(result.summary))
+    _save(result["figures"]["resistivity_section"], "agents_inv3d_section.png")
+    _save(
+        result["figures"]["uncertainty_map"], "agents_inv3d_uncertainty.png"
+    )
+
+
 def make_agents_inv3d_willy_2km() -> None:
     """Execute genuine 3-D Maxwell training on the real WILLY geometry."""
     try:
@@ -2757,15 +2810,15 @@ def make_agents_inv3d_willy_2km() -> None:
         n_layers=5,
         freqs=frequency,
         depth_max=2000.0,
-        n_train_profiles=4,
-        epochs=10,
+        n_train_profiles=60,
+        epochs=80,
         radius=250.0,
         hidden=(64, 32),
         dropout=0.1,
         n_mc=0,
         physics="mt3d",
-        geology_grid_nx_ny=4,
-        geology_grid_nz=4,
+        geology_grid_nx_ny=6,
+        geology_grid_nz=8,
         max_mesh_cells=60_000,
     ).execute({"sites": sites, "topography": True})
     if result.status == "failed":
@@ -3639,60 +3692,73 @@ def make_validation_gate_dashboard() -> None:
 
 
 def make_gcn_3d_context() -> None:
-    rng = np.random.default_rng(77)
-    n_lines = 4
-    n_per_line = 11
-    xs, ys = [], []
-    for line in range(n_lines):
-        x = np.linspace(0, 10_000, n_per_line)
-        y = np.full_like(x, line * 1800.0) + rng.normal(0, 90, n_per_line)
-        xs.append(x + rng.normal(0, 120, n_per_line))
-        ys.append(y)
-    x = np.concatenate(xs)
-    y = np.concatenate(ys)
-    feature_strength = (
-        0.45
-        + 0.45
-        * np.exp(-((x - 6200) ** 2 / 9_000_000 + (y - 2600) ** 2 / 3_000_000))
-        + 0.10 * rng.random(x.size)
+    """The real spatial graph GCNInverter3D/Inv3DAgent build from the real
+    WILLY L18 station geometry, at the same adjacency radius used by the
+    executed physics="mt3d" example, coloured by each station's own real
+    measured apparent resistivity -- not a fabricated synthetic layout.
+    """
+    sites = ensure_sites(
+        PROJECT_ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT",
+        recursive=True,
+        verbose=0,
     )
+    coords = sites_to_coords_3d(sites, recursive=False, verbose=0)
+    dense_features, measured_frequency, _ = sites_to_features_1d(
+        sites, comp="xy", n_freqs=64,
+    )
+    # Each station's own median log10 apparent resistivity across the
+    # measured band -- real field data, robust to the ragged per-station
+    # frequency coverage sites_to_features_1d leaves as NaN at the edges.
+    station_log_rho = np.nanmedian(
+        dense_features[:, : measured_frequency.size], axis=1
+    )
+
+    radius = 250.0  # matches Inv3DAgent(physics="mt3d")'s own WILLY example
+    adjacency_raw = build_adjacency(
+        coords, radius, self_loops=False, normalise=False
+    )
+    adjacency_norm = build_adjacency(coords, radius)
+    degree = adjacency_raw.sum(axis=1).astype(int)
+    x, y = coords[:, 0], coords[:, 1]
+    n_stations = coords.shape[0]
 
     fig = plt.figure(figsize=(10.2, 4.6))
     ax = fig.add_subplot(111, projection="3d")
-    for i in range(x.size):
-        dist = np.hypot(x - x[i], y - y[i])
-        neighbours = np.where((dist > 0) & (dist < 2300))[0]
-        for j in neighbours:
-            if j > i:
+    for i in range(n_stations):
+        for j in range(i + 1, n_stations):
+            if adjacency_raw[i, j] > 0:
                 ax.plot(
                     [x[i], x[j]],
                     [y[i], y[j]],
-                    [0, 0],
+                    [station_log_rho[i], station_log_rho[j]],
                     color="#94a3b8",
-                    alpha=0.35,
-                    lw=0.7,
+                    alpha=0.4,
+                    lw=0.6 + 2.6 * adjacency_norm[i, j],
                 )
 
     sc = ax.scatter(
         x,
         y,
-        feature_strength * 1200,
-        c=feature_strength,
-        cmap="viridis",
-        s=54,
+        station_log_rho,
+        c=station_log_rho,
+        cmap="viridis_r",
+        s=60,
         edgecolor="#111827",
         linewidth=0.35,
         depthshade=False,
     )
     ax.set_xlabel("Easting offset (m)")
     ax.set_ylabel("Northing offset (m)")
-    ax.set_zlabel("Feature response")
+    ax.set_zlabel(r"median $\log_{10}\rho_a$ (measured)")
     ax.set_title(
-        "3-D AI inversion uses station geometry as graph context", pad=12
+        f"Real GCN spatial graph: WILLY L18, r={radius:.0f} m "
+        f"({int(adjacency_raw.sum() // 2)} edges, "
+        f"{int(np.sum(degree == 0))} isolated)",
+        pad=12,
     )
-    ax.view_init(elev=24, azim=-62)
+    ax.view_init(elev=16, azim=-70)
     cb = fig.colorbar(sc, ax=ax, shrink=0.74, pad=0.08)
-    cb.set_label("Normalised response feature")
+    cb.set_label(r"median $\log_{10}\rho_a$ [$\Omega\cdot$m]")
     fig.tight_layout()
     _save(fig, "gcn_3d_context.png")
 
@@ -3983,6 +4049,7 @@ def main() -> None:
     make_agents_executed_1d_audit()
     make_agents_architecture_comparison()
     make_agents_inv2d_willy_topography()
+    make_agents_inv3d_mt1d_baseline()
     make_agents_inv3d_willy_2km()
     make_pinn2d_willy_topography_audit()
     make_pinn2d_input_diagnostic()

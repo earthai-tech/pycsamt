@@ -185,12 +185,18 @@ the shape of an output array.
      - Layered station parameters share information through a spatial graph.
      - Multi-line or areal surveys with reviewed coordinates and meaningful
        neighborhood relationships.
-     - Graph smoothing is presented as a full 3-D numerical EM inversion.
+     - Graph context, genuine 3-D training physics, and a classical 3-D field
+       inversion are presented as though they were the same operation.
 
 :class:`~pycsamt.ai.inversion.GCNInverter3D` is graph-context inversion. It
 predicts layered parameters at spatial stations and shares information through
-adjacency. The label 3-D should not be interpreted as proof that a full 3-D EM
-forward operator was used in every supervised training example.
+adjacency. With ``Inv3DAgent(physics="mt1d")``, its responses remain tiled
+layered-earth simulations. With ``physics="mt3d"``, correlated 3-D volumes are
+solved by :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` before training,
+so lateral and vertical conductivity contrasts enter the same forward solve.
+The inverse architecture remains a GCN in both cases; training with 3-D physics
+does not turn it into an iterative ModEM field inversion or validate an
+arbitrary field prediction.
 
 Select dimension using :term:`strike`, :term:`dimensionality`,
 :term:`tipper` behavior, :term:`survey geometry`, target geometry, station
@@ -204,14 +210,14 @@ An AMT frequency band does not define a sharp maximum depth. For a uniform
 earth, the :term:`skin depth` gives the electromagnetic attenuation scale
 
 .. math::
-   :label: eq-ai-skin-depth
+   :label: eq-ai-concepts-skin-depth
 
    \delta(f,\rho) = \sqrt{\frac{2\rho}{\mu_0\,2\pi f}}
    \simeq 503\sqrt{\frac{\rho}{f}}\ \mathrm{m},
 
 where :math:`f` is frequency in hertz, :math:`\rho` is resistivity in ohm
 metres, and :math:`\mu_0` is the free-space magnetic permeability. Equation
-:eq:`eq-ai-skin-depth` describes attenuation in a homogeneous conductor. It is
+:eq:`eq-ai-concepts-skin-depth` describes attenuation in a homogeneous conductor. It is
 not a :term:`depth of investigation`, a vertical-resolution estimate, or
 permission to train an inverter to that depth. In a layered earth, conductive
 cover can screen deeper structure, resistive material can inflate the scale,
@@ -250,7 +256,7 @@ scale from the observed XY apparent resistivity. It does not invert the data.
 
    The left panel shows the actual XY apparent-resistivity curves and their
    station median. The right panel translates them through equation
-   :eq:`eq-ai-skin-depth`; the broad band is variation among stations, not an
+   :eq:`eq-ai-concepts-skin-depth`; the broad band is variation among stations, not an
    uncertainty interval. The 2 km line is a conservative modelling target,
    not a boundary inferred from the crossing.
 
@@ -307,6 +313,71 @@ Graph target
 Graph inversion commonly predicts the layered target at every station. A
 later volume or depth slice interpolates these predictions spatially. Separate
 network output, graph smoothing, and post-prediction gridding in reports.
+
+For genuine MT3D training, the resistivity label at station :math:`s` is the
+vertical column sampled from the same realization :math:`r` that generated its
+response,
+
+.. math::
+   :label: eq-ai-concepts-graph-column-target
+
+   y_{r,s,k}
+   =\log_{10}\rho_r
+     \left(x_{j(s)},y_{q(s)},z_{p(k)}\right),
+
+where :math:`j(s)` and :math:`q(s)` select the nearest geology-grid column and
+:math:`p(k)` maps the requested output layer to a geology-grid depth. Equation
+:eq:`eq-ai-concepts-graph-column-target` is a nearest-cell sampling contract;
+it does not create finer geological information when the output grid contains
+more layers than the training geology grid.
+
+Three grids in a 3-D AI workflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A robust 3-D workflow keeps three discretizations distinct:
+
+Geology grid
+   Stores the sampled true resistivity volume and defines the spatial support
+   of interfaces, correlations, or bodies. In the built-in dataset generator,
+   this is a comparatively coarse :class:`~pycsamt.ai.geology.GeologyGrid`.
+
+Solver mesh
+   Discretizes Maxwell's equations. It may add fine core cells and geometrically
+   growing padding around the geology domain. The current research MT3D path
+   supports a non-uniform tensor mesh, so physical extent and local resolution
+   need not be forced into one uniform cell size.
+
+Inverse-output grid
+   Contains the station-layer values predicted by the GCN. It is fixed by
+   station coordinates, ``n_layers``, and ``depth_max``; spatial interpolation
+   into a display volume occurs only afterward.
+
+Let :math:`P_{g\rightarrow s}` map geology-cell conductivity to the solver
+mesh, :math:`F_s` denote the discrete Maxwell solve, and
+:math:`P_{g\rightarrow o}` sample geology columns onto the inverse-output
+layers. One supervised realization is therefore
+
+.. math::
+   :label: eq-ai-concepts-three-grid-chain
+
+   \mathbf d_r
+   =F_s\!\left(P_{g\rightarrow s}\boldsymbol\sigma_r\right),
+   \qquad
+   \mathbf y_r
+   =P_{g\rightarrow o}\log_{10}\boldsymbol\rho_r.
+
+The two mappings in equation :eq:`eq-ai-concepts-three-grid-chain` serve
+different purposes and must be preserved in provenance. Treating a padded
+solver mesh as though it were the geological truth changes labels; treating an
+interpolated output volume as though it were directly solved invents spatial
+resolution.
+
+Topography adds another boundary decision. A terrain-draped section may use
+measured elevation only to transform depth below ground into an absolute
+vertical coordinate. Terrain affects physics only when earth, air, receivers,
+and conductivity are mapped consistently onto a solver that supports that
+topographic contract. The current ``Inv3DAgent`` records
+``affects_forward_physics=False`` for its draped output.
 
 Parameterization decisions include:
 
@@ -420,7 +491,11 @@ Design choices include:
 
 Geology
    Resistivity ranges, layer counts, thicknesses, correlations, interfaces,
-   faults, lateral structures, anisotropy, and rare targets.
+   faults, lateral structures, anisotropy, and rare targets. The built-in 3-D
+   Maxwell dataset currently samples correlated Gaussian volumes; explicit
+   layers, lenses, contacts, and multiple-body families require an externally
+   assembled geology corpus. More realizations of one family do not broaden
+   that family.
 
 Survey
    Frequency range, sampling density, station count, spacing, line layout,
@@ -432,7 +507,9 @@ Noise and nuisance effects
 
 Physics
    Forward solver, dimensionality, boundary conditions, mesh accuracy, and
-   approximations.
+   approximations. Record the exact backend: the research-scale in-process
+   ``MT3DAdapter`` and the compiled production ``ModEm3DAdapter`` solve the
+   same governing physics under different numerical and capability contracts.
 
 Class balance
    Frequency of common backgrounds versus rare conductive or resistive targets.
@@ -500,7 +577,7 @@ Physics-informed objective
 A PINN-style objective can combine data fit and regularization:
 
 .. math::
-   :label: eq-ai-pinn-objective
+   :label: eq-ai-concepts-pinn-objective
 
    \mathcal L(\theta)
    = \mathcal L_{\mathrm{data}}(\theta)
@@ -508,7 +585,7 @@ A PINN-style objective can combine data fit and regularization:
    + \lambda_l\mathcal R_l(\mathbf m_\theta)
    + \lambda_g\mathcal R_g(\mathbf m_\theta),
 
-In equation :eq:`eq-ai-pinn-objective`, vertical, lateral, or graph
+In equation :eq:`eq-ai-concepts-pinn-objective`, vertical, lateral, or graph
 regularizers apply according to dimension.
 The weights determine the balance between fit and structure. They must be
 treated as inversion parameters and tested, not hidden as neural-network
@@ -538,7 +615,9 @@ U-Net
 
 Graph convolutional network
    Propagates information along an adjacency graph. Radius, coordinate system,
-   normalization, and graph connectivity become inversion assumptions.
+   normalization, and graph connectivity become inversion assumptions. The
+   graph architecture determines information sharing; ``physics="mt1d"`` or
+   ``physics="mt3d"`` determines how supervised responses were generated.
 
 Architecture comparison is valid only when datasets, splits, preprocessing,
 target scale, training budget, and selection procedure are controlled.
@@ -588,7 +667,9 @@ Evaluate at several levels:
 
 :term:`Response-space metrics <Response-space metric>`
    Difference between observed responses and responses recomputed from the
-   prediction.
+   prediction. The reconstruction must match the claimed dimensionality: an
+   MT1D response computed independently at each station is a useful screen but
+   is not a coupled 3-D response validation.
 
 Structural metrics
    Boundary location, anomaly continuity, target detection, volume overlap, or
@@ -874,6 +955,14 @@ Avoid these misunderstandings:
 * selecting 2-D or 3-D solely for visual sophistication;
 * inferring forward physics from the U-Net output shape instead of recording
   whether training used tiled 1-D or 2-D Maxwell responses;
+* calling a graph-smoothed result genuine 3-D without recording whether its
+  training physics was ``mt1d`` or ``mt3d``;
+* treating geology-grid cells, padded Maxwell cells, and predicted output
+  layers as one interchangeable grid;
+* describing an MT1D station-column reconstruction as validation of a coupled
+  3-D field response;
+* assuming the current MT3D agent path automatically selects the compiled
+  ModEM backend;
 * checking array shape but not feature semantics;
 * using random splits that leak related synthetic profiles;
 * selecting a checkpoint on the test set;
@@ -899,6 +988,10 @@ Continue in this order:
 * :doc:`pinn_2d` for physics-informed profile inversion;
 * :doc:`agents` for standard orchestration;
 * :doc:`reporting` for model cards and release packages.
+
+For the numerical boundary behind the 3-D concepts, continue with
+:doc:`../forward/solvers_and_grids`, :doc:`../../theory/maxwell_forward`, and
+:doc:`../models/modem`.
 
 Documentation figures
 ---------------------

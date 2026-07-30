@@ -4,7 +4,7 @@ Canonical data contracts
 =========================
 
 Every stage in :doc:`roadmap`'s package map — a geological prior, a
-2-D Maxwell forward solve, an injected noise model, a training loss,
+2-D or 3-D Maxwell forward solve, an injected noise model, a training loss,
 a validation report — needs to agree on what "the data" actually is:
 which axis is the station, which is the frequency, whether an entry
 is missing or merely zero, and which sign convention the complex
@@ -101,6 +101,102 @@ rather than quietly reconciling them, because a survey-matched
 frequency selector is a scientific decision this package refuses to
 make on a caller's behalf.
 
+The 3-D Maxwell dataset contract
+--------------------------------
+
+The completed 3-D path uses the same :class:`SurveyData` response contract,
+but it must preserve more than the response tensor. A
+:class:`~pycsamt.ai.training.dataset3d.Maxwell3DSample` binds one converged
+survey to the true ``(z, y, x)`` resistivity volume that generated it, the
+realization ID and seed, the solver problem hash, mesh-cell count, residual,
+and runtime. :class:`~pycsamt.ai.training.dataset3d.Maxwell3DDataset` then
+binds all samples to one geology grid, a realization-level split, a manifest,
+and the IDs of rejected solves.
+
+The following small run exercises that complete route rather than constructing
+shapes by hand. Its three realizations are intentionally tiny enough for a
+documentation check; they are not a useful training corpus:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.ai.geology import GeologyGrid
+   >>> from pycsamt.ai.training.dataset3d import (
+   ...     Maxwell3DDatasetConfig, generate_3d_maxwell_dataset,
+   ... )
+   >>> grid = GeologyGrid.regular_3d(
+   ...     nx=4, ny=4, nz=4, dx_m=250, dy_m=250, dz_m=150,
+   ... )
+   >>> config = Maxwell3DDatasetConfig(
+   ...     dataset_id="contracts-3d-smoke-v1",
+   ...     grid=grid,
+   ...     correlation_length_x_m=(350.0, 700.0),
+   ...     correlation_length_y_m=(350.0, 700.0),
+   ...     correlation_length_z_m=(100.0, 250.0),
+   ...     frequencies_hz=[1.0],
+   ...     station_xy_m=[[375.0, 375.0], [625.0, 625.0]],
+   ...     n_realizations=3, seed=11, components=("zxy",),
+   ...     mesh_safety_factor=2.0, max_mesh_cells=6000,
+   ...     validation_fraction=1 / 3, test_fraction=1 / 3,
+   ... )
+   >>> dataset = generate_3d_maxwell_dataset(config)  # doctest: +SKIP
+   >>> sample = dataset.samples[0]  # doctest: +SKIP
+   >>> dataset.grid.shape, sample.resistivity_ohm_m.shape  # doctest: +SKIP
+   ((4, 4, 4), (4, 4, 4))
+   >>> sample.survey.shape  # doctest: +SKIP
+   (2, 1, 1)
+   >>> sample.survey.coordinates_m.tolist()  # doctest: +SKIP
+   [[375.0, 375.0, 0.0], [625.0, 625.0, 0.0]]
+   >>> dataset.split.sizes, dataset.rejected  # doctest: +SKIP
+   ({'train': 1, 'validation': 1, 'test': 1}, ())
+   >>> sample.mesh_cells, dataset.manifest.sample_count  # doctest: +SKIP
+   (4536, 3)
+   >>> len(dataset.manifest.manifest_hash)  # doctest: +SKIP
+   64
+
+The equal geology and truth-array shapes above are intentional: the sample
+stores truth on the geology grid. The ``4536`` solver cells belong to a
+different padded, non-uniform Maxwell mesh and are recorded as diagnostics,
+not reshaped into a false ``(z, y, x)`` truth array. The response shape follows
+the universal survey order ``(station, frequency, component)``; here that is
+two receivers, one frequency, and ``zxy`` only.
+
+For realization :math:`r`, the contract can be summarized as
+
+.. math::
+   :label: eq-ai-datacontracts-3d-realization
+
+   \mathcal R_r =
+   \left(
+      \rho_r[z,y,x],\;
+      Z_r[s,f,c],\;
+      \mathbf x_s,\;
+      h_r,\;q_r
+   \right),
+
+where :math:`h_r` is the solver problem hash and :math:`q_r` contains mesh and
+convergence diagnostics. Equation :eq:`eq-ai-datacontracts-3d-realization`
+keeps geological truth, simulated observations, receiver geometry, and solver
+provenance attached to the same realization. A bare response array cannot
+provide that guarantee.
+
+``Maxwell3DDatasetConfig.to_dict()`` records the geology grid, station
+coordinates, frequency and component selections, correlation ranges,
+resistivity distribution, seed, split fractions, and mesh controls. The
+dataset manifest hashes that complete record. Consequently, changing a mesh
+budget or station position changes dataset identity even when the returned
+array shapes happen to remain equal.
+
+.. admonition:: Topography is a contract, not an optional picture
+   :class: important
+
+   The current 3-D dataset generator and both exposed 3-D adapters declare no
+   inactive-cell or topographic-mask support through this API. Receiver
+   elevations in ``SurveyData.coordinates_m[:, 2]`` remain valuable metadata,
+   but nonzero elevations alone do not put air cells or terrain into the
+   Maxwell solve. Record a separate topography mapping only when the selected
+   backend actually applies it; otherwise mark
+   ``affects_forward_physics=False`` as :doc:`agents` does.
+
 Invalid data are never invented
 --------------------------------
 
@@ -168,7 +264,7 @@ convention, physical units, and rotation state, so
 :class:`~pycsamt.ai.data.contracts.ImpedanceConvention` records those
 explicitly rather than assuming everyone agrees. This is not
 decorative: :doc:`roadmap`'s governing 3-D equation
-:eq:`eq-ai-roadmap-maxwell` and the 2-D adapter behind it each fix
+:eq:`eq-ai-roadmap-maxwell` and the 2-D/3-D adapters behind it each fix
 *one* time convention per solve, and a predicted response built under
 ``exp(-iwt)`` compared directly against field data stored as
 ``exp(+iwt)`` produces a response residual that looks like a sign

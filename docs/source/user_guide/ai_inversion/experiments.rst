@@ -237,6 +237,17 @@ gate fails, even though the one metric it did see would have passed
 on its own. That asymmetry — silence must fail, never pass — is the
 whole point of predeclaring criteria in the first place.
 
+For a genuine 3-D experiment, response fit and model recovery are necessary
+but not sufficient gates. Predeclare a solver benchmark tolerance for the
+chosen frequency and resistivity range, a maximum rejected-realization rate,
+held-out volume or column recovery metrics, field-domain coverage, and the
+ordinary impedance misfit. A tiny linear-system residual only establishes
+that one discrete system was solved; it must not be substituted for a
+half-space or layered benchmark, mesh-refinement evidence, or blind field
+performance. Metrics calculated on accepted forward realizations also cannot
+hide rejected attempts: the requested and accepted counts belong in the
+observed evidence used by the gate.
+
 The complete configuration
 ------------------------------
 
@@ -313,6 +324,29 @@ convention. Saving and reloading the record is a plain, deterministic
 JSON round trip, exactly like :doc:`data_contracts`'s manifests and
 audit reports:
 
+For 3-D work, the uninterpreted ``physics`` mapping should nevertheless be
+complete enough for a reviewer to distinguish computations. At minimum pin:
+
+* ``solver`` and its implementation version, such as ``mt3d-python`` versus
+  ``modem3d-external``;
+* the forward-problem or solver-input hash and, for an external backend, the
+  executable/version identity and invocation configuration;
+* frequency order, requested tensor components, permeability convention, and
+  receiver coordinates;
+* the :term:`geological grid`, padded :term:`solver mesh`, and
+  :term:`output grid` definitions or their content hashes; and
+* boundary padding, ``max_mesh_cells``, ``cells_per_skin_depth``, convergence
+  policy, terrain/inactive-cell support, and accepted/rejected realization
+  counts.
+
+``Inv3DAgent(physics="mt3d")`` currently selects the research
+``MT3DAdapter`` training route; it does not prove that the compiled
+``ModEm3DAdapter`` ran. Conversely, a ModEM response converted to the shared
+``SurveyData`` contract remains a ModEM-generated artifact. Preserve the
+backend identity from the clean parent realization through corruption,
+training, prediction, and reporting instead of replacing it with the generic
+dimensionality label ``mt3d``.
+
 .. code-block:: pycon
 
    >>> from pathlib import Path
@@ -357,6 +391,19 @@ above 2.0. Run 5 fails only the RMSE threshold, while run 6 fails coverage.
 Seven of twelve runs pass all three criteria. Reporting only their mean would
 hide both the failure modes and the probability of obtaining an acceptable
 training outcome.
+
+Resuming a long 2-D or 3-D training run is the continuation of the same
+experiment only when the checkpoint agrees with the frozen protocol. Before
+loading it, verify the experiment, manifest, split, normalization, and model
+schema hashes; after loading, retain the completed epoch, optimizer and
+scheduler states, network weights, and every available random-generator
+state. If the current checkpoint format does not serialize one of those
+states, record that limitation and treat bitwise continuation as unproven.
+Changing the realization count, split, frequency grid, depth grid, feature
+order, solver backend, or loss weights creates a new experiment configuration,
+even when training starts from old weights. A checkpoint file existing on
+disk is therefore not itself evidence that L26, L30, or any other line
+finished its configured gate.
 
 .. figure:: ../../images/user_guide/ai_inversion/experiment_gate_diagnostic.png
    :alt: Provenance flow and three acceptance metrics across twelve independently seeded runs.

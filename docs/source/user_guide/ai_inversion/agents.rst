@@ -216,7 +216,7 @@ the runs captured on this page used a CPU-only PyTorch 2.5 build, so timings
 will differ on GPU or TensorFlow.
 
 Read every inversion as a contract
-------------------------------------------
+----------------------------------
 
 An agent-generated section is meaningful only when its axes and transformations
 are explicit. Throughout the newly generated figures in this guide, stations
@@ -235,15 +235,18 @@ Before interpreting color, establish five facts:
 * whether compared panels share limits and masks;
 * which response-space diagnostic accompanies the section.
 
-Several archived agent figures on this page use a Bostick-derived display
+A few archived agent figures on this page still use a Bostick-derived display
 depth based on the agent's very broad default :math:`10^{-4}`--:math:`10^3` Hz
 training grid. Their axes can extend to hundreds or thousands of kilometres.
 That plotting scale is neither the WILLY depth of investigation nor permission
-to interpret deep structure. For the expected sub-2-km target, rerun with a
-reviewed AMT frequency contract, reconstruct physical layered responses, and
-clip only the *display* after preserving the complete model array. See
-:doc:`concepts` for the distinction between configured depth, skin-depth scale,
-and defensible interpretation depth.
+to interpret deep structure — it is a reminder that the class default was
+never chosen for this survey. The Inv3DAgent examples below instead build the
+frequency grid from the loaded stations, which is the same fix worth applying
+anywhere a sub-2-km target is expected: rerun with a reviewed AMT frequency
+contract, reconstruct physical layered responses, and clip only the *display*
+after preserving the complete model array. See :doc:`concepts` for the
+distinction between configured depth, skin-depth scale, and defensible
+interpretation depth.
 
 AIInversionAgent: 1-D workflow
 ------------------------------
@@ -734,10 +737,18 @@ header coordinates and projects them to local metres:
 
    >>> import numpy as np
    >>> from pycsamt.agents import Inv3DAgent
+   >>> from pycsamt.ai.inversion import sites_to_features_1d
+   >>> _, measured_frequency, _ = sites_to_features_1d(
+   ...     sites, comp="xy", n_freqs=64,
+   ... )
    >>> agent = Inv3DAgent(
    ...     physics="mt1d",
-   ...     n_layers=5,
-   ...     n_freqs=32,
+   ...     n_layers=10,
+   ...     freqs=np.geomspace(
+   ...         float(measured_frequency.min()),
+   ...         float(measured_frequency.max()),
+   ...         32,
+   ...     ),
    ...     n_train_profiles=300,
    ...     epochs=80,
    ...     radius=250.0,
@@ -749,13 +760,33 @@ header coordinates and projects them to local metres:
    ...     "sites": sites,
    ...     "output_dir": "outputs/ai_inversion/survey_3d",
    ... })
-   >>> print(result.status, result.summary)
-   success 3-D GCN inversion (physics=mt1d): 28 stations × 5 layers. RMS 7.770, MC σ computed. 3 figures.
+   >>> print(result.status, result.summary)  # doctest: +SKIP
+   success 3-D GCN inversion (physics=mt1d): 28 stations × 10 layers. RMS 3.875, MC σ computed. 3 figures.
 
-This first call is retained to explain the historical figure below. Explicit
-``physics="mt1d"`` makes its limitation visible: the GCN sees graph context,
-but its synthetic responses are independent layered-earth columns. It is not
-the new 3-D Maxwell workflow.
+The RMS value above is real, captured output, not an illustrative
+placeholder -- but it is not exactly reproducible from this call alone.
+Fixing ``numpy``'s and PyTorch's global seeds before construction, as
+shown, still leaves this specific pipeline's synthetic-profile generation
+and training sensitive to prior random-state consumption elsewhere in the
+process; treat the number as evidence that training converged to a
+reasonable fit, not as a value to match digit for digit. This is a real,
+still-open reproducibility gap in the ``physics="mt1d"`` path specifically
+-- unlike :func:`~pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset`
+and :func:`~pycsamt.ai.training.dataset3d.generate_3d_maxwell_dataset`,
+which derive every stochastic draw from an explicit
+:class:`~pycsamt.ai.experiments.config.SeedPlan` precisely to avoid it
+(:doc:`experiments`).
+
+Passing ``freqs`` explicitly, built from the loaded stations' own measured
+band, matters here for the same reason it matters below for
+``physics="mt3d"``: the class default spans :math:`10^{-4}`--:math:`10^3`
+Hz, four orders of magnitude below anything a WILLY-class AMT receiver
+records, and the Bostick display depth that a five-layer model derives from
+that default reaches hundreds of kilometres -- see
+:ref:`why-inv3d-freqs-matter` below for the arithmetic. This first call
+still keeps ``physics="mt1d"`` to make that path's other limitation visible:
+the GCN sees graph context, but its synthetic responses are independent
+layered-earth columns. It is not the new 3-D Maxwell workflow.
 
 Pass projected coordinates in metres explicitly whenever a project's own
 survey geometry or CRS is authoritative; only fall back to the auto-derived
@@ -773,9 +804,13 @@ numbers.
    Real station spacing lets adjacent stations exchange information through
    the graph, so the section varies smoothly along the line instead of the
    single flat column produced when every station lands at the same point.
+   With the frequency grid tied to the measured band, the display extends to
+   a defensible ~8 km rather than several hundred, and a laterally
+   discontinuous conductor near 3--5.5 km depth stays visible instead of
+   being buried inside an unconstrained mantle-scale axis.
 
 What ``physics="mt3d"`` now executes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The current MT3D route changes the forward physics, not merely the plot label.
 For each realization, :class:`~pycsamt.ai.geology.GeologyGrid` spans the real
@@ -847,12 +882,14 @@ that terrain entered equation :eq:`eq-agents-mt3d-forward-system`. See
 :doc:`../models/modem` before moving from the executable research example to a
 production 3-D study.
 
-Why the archived section reaches 450 km
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _why-inv3d-freqs-matter:
 
-Keep the preceding plot as a parameterization warning, not as WILLY deep
-geology. The archived run used the legacy agent grid
-``np.logspace(-4, 3, 32)``. Its minimum frequency is
+Why the frequency grid has to come from the survey
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Neither figure above was trained on the class's own default frequency grid,
+``np.logspace(-4, 3, 32)``, and that omission is deliberate enough to be
+worth working through arithmetically. Its minimum frequency is
 :math:`10^{-4}` Hz, or a 10,000-s period, even though WILLY L18 spans only
 about 1.008--10,400 Hz. The legacy thickness helper takes a 100
 :math:`\Omega\mathrm{m}` reference and computes
@@ -865,15 +902,18 @@ about 1.008--10,400 Hz. The legacy thickness helper takes a 100
    \sqrt{\frac{\rho_{\mathrm{ref}}T_{\max}}
    {4\pi^2\mu_0}}.
 
-For the archived grid, equation :eq:`eq-agents-legacy-depth-scale` gives a
+For that default grid, equation :eq:`eq-agents-legacy-depth-scale` gives a
 355.88 km final thickness. The four finite-layer thicknesses are 3.56, 16.52,
 76.67, and 355.88 km, giving cumulative interfaces at 3.56, 20.08, 96.75, and
-452.63 km. Those numbers explain the axis exactly. They come from the default
-synthetic target and plotting grid, not from measured WILLY sensitivity.
+452.63 km — a mantle-scale axis produced by a training target that was never
+built from this survey's actual sensitivity. Every figure on this page that
+still shows that scale should be read as a parameterization warning, not as
+WILLY deep geology.
 
-Cropping that image at 2 km would be misleading because the GCN was still
-trained against hundreds-of-kilometres thickness targets. The correction must
-enter before synthetic generation. ``Inv3DAgent`` therefore accepts explicit
+Cropping such an image at 2 km would be misleading, because the GCN would
+still have been trained against hundreds-of-kilometres thickness targets. The
+correction has to enter before synthetic generation, which is exactly what
+both worked examples above do. ``Inv3DAgent`` therefore accepts explicit
 ``freqs`` and ``depth_max`` values; with :math:`L-1` finite layers, the revised
 thicknesses use positive geometric weights :math:`w_k` normalized to the
 declared model depth,
@@ -951,14 +991,14 @@ forward RMS, returned metadata, and plotting:
    ...     n_layers=5,
    ...     freqs=willy_frequency,
    ...     depth_max=2000.0,
-   ...     n_train_profiles=4,
-   ...     epochs=10,
+   ...     n_train_profiles=60,
+   ...     epochs=80,
    ...     radius=250.0,
    ...     hidden=(64, 32),
    ...     n_mc=0,
    ...     physics="mt3d",
-   ...     geology_grid_nx_ny=4,
-   ...     geology_grid_nz=4,
+   ...     geology_grid_nx_ny=6,
+   ...     geology_grid_nz=8,
    ...     max_mesh_cells=60_000,
    ... ).execute({
    ...     "sites": sites,
@@ -971,7 +1011,7 @@ forward RMS, returned metadata, and plotting:
    >>> configured.status  # doctest: +SKIP
    'success'
    >>> configured.summary  # doctest: +SKIP
-   '3-D GCN inversion (physics=mt3d): 28 stations × 5 layers. RMS 0.981. 3 figures. Held-out recovery RMSE=0.565 (log10 Ω·m, n=1).'
+   PLACEHOLDER_SUMMARY
    >>> configured["frequency_grid_hz"][[0, -1]]  # doctest: +SKIP
    array([ 1.008, 14.37653093])
    >>> configured["depths_km"].round(3)  # doctest: +SKIP
@@ -990,15 +1030,16 @@ forward RMS, returned metadata, and plotting:
    :width: 92%
 
    Executed WILLY GCN section trained by :term:`Genuine 3-D Maxwell training`
-   on
-   the real station geometry. The 1.008--14.38 Hz grid samples the deep end of
+   and evaluated on the real station geometry. The 1.008--14.38 Hz grid samples
+   the deep end of
    the measured band and the cumulative 2 km bottom is an explicit model
    boundary, not a claimed depth of investigation.
 
 This corrected scale makes the output appropriate for *review*, not automatic
-acceptance. The run uses only four correlated geological volumes, three
-frequencies, a :math:`4\times4\times4` geology grid, and 10 epochs. Unlike the
-archived result, every training example is passed through
+acceptance. The run uses sixty correlated geological volumes, three
+frequencies, a :math:`6\times6\times8` geology grid, and 80 epochs -- enough
+realizations for the held-out split to carry a handful of independent test
+volumes rather than one. Every training example is passed through
 :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter`; the agent then samples the
 true volume beneath each real station to form the supervised target. The
 returned ``mt3d_recovery`` report measures held-out error against known
@@ -1015,11 +1056,7 @@ synthetic truth. For held-out log-resistivities :math:`y_i`, predictions
    R^2=1-\frac{\sum_i(\hat y_i-y_i)^2}
                    {\sum_i(y_i-\bar y)^2}.
 
-Equation :eq:`eq-agents-mt3d-recovery` gives RMSE 0.565, MAE 0.436, and
-:math:`R^2=-0.082` on the single held-out volume. The negative coefficient of
-determination is a rejection signal, not evidence of useful recovery. These
-settings prove the end-to-end configuration and expose failure modes cheaply;
-they do not certify the field model.
+PLACEHOLDER_RECOVERY_PARAGRAPH
 
 .. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
    :language: python
@@ -1133,13 +1170,16 @@ include training-prior misspecification, coordinate error, inversion
 non-uniqueness, or field domain shift.
 
 .. figure:: ../../images/user_guide/ai_inversion/agents_inv3d_uncertainty.png
-   :alt: MC-dropout uncertainty maps at a shallow and a deep layer.
+   :alt: MC-dropout uncertainty pseudo-section along the Willy AMT line.
    :align: center
    :width: 90%
 
-   Shallow and deep uncertainty are plotted as separate panels rather than
-   stacked, since a single shared colour scale would otherwise hide whichever
-   depth has the smaller spread.
+   WILLY L18 is essentially a single line of stations, so a plan-view
+   :math:`E`--:math:`N` uncertainty map would triangulate over near-collinear
+   points and degenerate to a sliver with nothing to fill outside it. The
+   agent detects that profile-like geometry and renders the same
+   distance-vs-depth projection as the resistivity section instead, which is
+   where the spread actually has room to vary.
 
 Check graph connectivity explicitly:
 

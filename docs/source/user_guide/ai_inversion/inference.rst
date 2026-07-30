@@ -97,7 +97,9 @@ integrity tooling. Then compare model metadata with the inference request:
    * - Compatibility field
      - Required match
    * - Method and solver
-     - MT, CSAMT, TEM, or other documented physics and response convention.
+     - MT, CSAMT, TEM, or other documented physics and response convention;
+       for learned 3-D models, preserve the training forward backend separately
+       from the deep-learning runtime backend.
    * - Parameterization
      - Layer count, depth grid, thickness representation, and output order.
    * - Features
@@ -531,6 +533,16 @@ Graph prediction requires features plus adjacency or coordinates:
    >>> graph_prediction.shape
    (28, 9)
 
+The network call itself does not run Maxwell physics. The checkpoint must
+state whether its training responses came from tiled MT1D columns,
+``MT3DAdapter``, or a solver-neutral corpus produced with
+``ModEm3DAdapter``. All three checkpoints may share the same GCN architecture
+and output shape while representing materially different training
+distributions. The inference record must therefore preserve the dataset
+manifest and forward-backend identity; a generic label such as ``gcn3d`` or
+``physics=mt3d`` is not enough to establish that ModEM generated the training
+responses.
+
 The field feature order, coordinate order, and station-name order must be
 identical. ``sites_to_coords_3d`` reads each station's EDI header coordinates
 and projects them to local metres; it falls back to an artificial uniform
@@ -557,6 +569,26 @@ part of it as a resistivity section:
    >>> pred_rho = graph_prediction[:, :n_layers]
    >>> pred_rho.min().round(2), pred_rho.max().round(2)
    (-1.61, 6.29)
+
+``pred_rho`` has shape ``(station, layer)``. It is a set of graph-coupled
+vertical columns, not yet a rectilinear ``(z, y, x)`` resistivity volume. The
+layer depths come from each row's predicted thickness block; if thickness
+varies by station, even the vertical cell boundaries are not shared until a
+declared resampling is applied. Creating a map volume requires an explicit
+operator
+
+.. math::
+   :label: eq-ai-inference-graph-to-grid
+
+   \mathbf m_o=Q_{(s,\ell)\rightarrow(z,y,x)}
+      \!\left(\mathbf m_{s\ell},\mathbf c_s,\mathbf h_{s\ell}\right),
+
+where :math:`\mathbf c_s` are station coordinates and
+:math:`\mathbf h_{s\ell}` are layer thicknesses. Record the target
+:term:`output grid`, interpolation or support radius, extrapolation rule, and
+cells with no station support. Equation :eq:`eq-ai-inference-graph-to-grid`
+is a display/model-transfer step; it does not add spatial resolution or turn
+the prediction into a numerical 3-D inversion.
 
 If the fitted inverter stored an approved adjacency matrix, omit new geometry
 only when field nodes and order are exactly the same. Otherwise pass a reviewed
@@ -592,6 +624,14 @@ belong in the external deployment record. When a stored adjacency is reused,
 verify its shape and station ordering against the inference survey; a valid
 matrix attached to the wrong node order is scientifically invalid without
 raising a shape error.
+
+Elevation deserves the same separation. ``sites_to_coords_3d`` returns
+horizontal coordinates for graph construction; draping the decoded columns
+over station elevation changes their presentation, not the forward physics.
+Neither inference nor gridding introduces inactive air cells. A
+terrain-physics claim requires a separately constructed, terrain-capable
+Maxwell problem and a backend validated for it; the current MT2D, MT3D, and v1
+ModEM adapters do not provide that capability.
 
 11. Predict graph uncertainty
 -----------------------------
@@ -977,6 +1017,24 @@ Do not accept a model solely because it resembles expected geology. Conversely,
 response agreement alone cannot establish uniqueness — as the PINN layers in
 step 13 make concrete.
 
+For a graph checkpoint, choose the reconstruction operator according to the
+claim being tested. Station-wise ``MT1DForward`` responses test whether each
+decoded column is locally compatible with the observations, but they do not
+test the lateral coupling represented during genuine 3-D Maxwell training.
+To audit that claim, first apply the documented graph-to-grid mapping from
+equation :eq:`eq-ai-inference-graph-to-grid`, transfer the result onto a
+:term:`solver mesh`, and solve the shared 3-D conductivity model with
+``MT3DAdapter`` for a research-scale check or ``ModEm3DAdapter`` for the
+production backend. Compare the requested tensor components on the observed
+frequency and station axes, preserving observational errors and masks.
+
+That 3-D reconstruction is currently an explicit workflow, not a method
+inside ``GCNInverter3D.predict``. Its result must retain the graph prediction,
+mapping configuration, Maxwell problem hash, backend/version, diagnostics,
+and residual table. ModEM's v1 diagnostic residual of zero is a documented
+placeholder because its predicted-data file exposes no algebraic residual;
+use response benchmarks and observed-data residuals as the evidence instead.
+
 16. Apply acceptance rules
 --------------------------
 
@@ -1171,6 +1229,12 @@ Avoid these errors:
 * losing station order when exporting predictions;
 * changing profile station count or graph radius at deployment;
 * calling graph-context output a full numerical 3-D inversion;
+* calling ``(station, layer)`` predictions a rectilinear volume without a
+  documented output-grid mapping and unsupported-cell mask;
+* reporting an MT1D column reconstruction as validation of coupled MT3D
+  response physics, or calling an inference ModEM-generated when only the
+  network ran;
+* treating an elevation-draped prediction as terrain-aware forward physics;
 * treating MC dropout or ensemble spread as total uncertainty;
 * reading a shared-multiplier conformal interval as if it were scaled
   per-parameter, especially when the target mixes resistivity and thickness;

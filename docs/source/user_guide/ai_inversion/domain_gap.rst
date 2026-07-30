@@ -74,6 +74,14 @@ each independently normal with its own configured standard deviation
 impedance at once. Systematic effects change the signal; they do not,
 by themselves, say anything about how much to trust it.
 
+The matrix operation is exact only when the complete ``xx, xy, yx, yy``
+tensor is present. If a clean 2-D or 3-D dataset retains only ``xy`` and
+``yx``, the implementation treats the missing diagonal terms as zero before
+applying :math:`D_s`. That is a documented augmentation approximation, not a
+reconstruction of the unobserved tensor. Full-tensor 3-D forward responses
+should therefore remain full tensor through distortion simulation whenever
+the training feature contract can consume them.
+
 Random effects are the opposite: they update
 ``impedance_error`` and the validity mask directly, so a corrupted
 survey's declared uncertainty stays honest about what was actually
@@ -222,6 +230,26 @@ parent seed, the preset name, and compact summaries of the concrete draws:
 The seed reproduces the draw; the hash proves which parameter block was
 used. Both belong in the run manifest described in :doc:`reporting`.
 
+Coordinate and elevation perturbation need special care in a genuine 3-D
+workflow. :func:`~pycsamt.ai.domain_gap.simulator.perturb_coordinates` changes
+the reported receiver geometry but deliberately leaves impedance unchanged.
+It models location uncertainty in graph construction or preprocessing; it is
+not a second Maxwell solve at the displaced receivers, does not alter the
+:term:`solver mesh`, and does not introduce topography into the physics. If
+the intended experiment is sensitivity of impedance to receiver position or
+terrain, rebuild the Maxwell problem and run the chosen forward adapter at
+each perturbed geometry instead.
+
+One clean geological realization may produce several corruption variants,
+but those variants are not independent earth models. Assign each one a
+lineage key such as ``(dataset_id, realization_id)`` and split on that parent
+key before selecting ``clean``, ``in_distribution``, ``severe``, or
+``held_out_corruption`` variants. Otherwise a clean response can enter
+training while its noisy copy enters validation or test, giving an
+optimistically biased result. Store the child corruption seed and
+``CorruptionRecord`` beside the immutable parent ID; the configuration hash
+alone identifies the recipe, not the parent realization.
+
 Fitting corruption from a real survey
 -------------------------------------------
 
@@ -272,6 +300,13 @@ The fitted noise range (5-16% relative) and error floor (about 3% of
 :math:`|Z|`) come entirely from L18's own declared errors, not from a
 default — a survey with tighter QC would fit a narrower range without
 anyone having to retune a preset by hand.
+
+These fitted values describe the observation process represented by L18;
+they are not evidence that a synthetic geological prior covers L18's earth
+responses. They may be applied to clean MT1D, MT2D, MT3D, or ModEM-generated
+surveys because all use the same ``SurveyData`` contract, while the forward
+backend and its mesh provenance remain attached to the clean parent
+realization.
 
 More precisely, the fitter uses the finite ratios
 :math:`r=\sigma_Z/|Z|`: the 25th and 75th percentiles define the noise

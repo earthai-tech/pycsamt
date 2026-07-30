@@ -1396,6 +1396,79 @@ def _plot_depth_slices(
     return fig
 
 
+def _profile_distance_km(coords_m: np.ndarray) -> np.ndarray:
+    """Project station coordinates onto the dominant profile direction."""
+    n_sta = coords_m.shape[0]
+    cx = coords_m[:, 0] / 1000.0
+    cy = coords_m[:, 1] / 1000.0
+    if n_sta <= 1:
+        return np.zeros(max(n_sta, 1))
+    vec = np.array([cx[-1] - cx[0], cy[-1] - cy[0]])
+    vec_len = np.linalg.norm(vec) + 1e-9
+    vec /= vec_len
+    return np.array(
+        [np.dot([cx[i] - cx[0], cy[i] - cy[0]], vec) for i in range(n_sta)]
+    )
+
+
+def _is_profile_geometry(
+    coords_m: np.ndarray, ratio_threshold: float = 0.15
+) -> bool:
+    """Return True when *coords_m* is essentially a 1-D line (a profile),
+    rather than a genuine areal 2-D footprint.
+
+    Many AMT/CSAMT surveys (e.g. WILLY L18) place every station on one
+    line, so a plan-view E-W/N-S map (Delaunay-triangulated) degenerates
+    to a zero-width sliver with nothing to fill outside it.  This is
+    detected via the ratio of the two principal spatial extents (SVD of
+    the mean-centred coordinates): a ratio below *ratio_threshold* means
+    the cross-line spread is negligible next to the along-line spread.
+    """
+    if coords_m.shape[0] < 3:
+        return True
+    centred = coords_m - coords_m.mean(axis=0, keepdims=True)
+    singular_values = np.linalg.svd(centred, compute_uv=False)
+    if singular_values[0] <= 0:
+        return True
+    return bool((singular_values[1] / singular_values[0]) < ratio_threshold)
+
+
+def _smooth_depth_axis(
+    mat: np.ndarray, depths: np.ndarray, n_upsample: int = 200
+) -> tuple[np.ndarray, np.ndarray]:
+    """Resample a (n_layers, n_sta) section onto a finer depth axis.
+
+    The agent's layer count (``n_layers``) is a network-capacity/training
+    choice, typically kept small (5-10); rendering it directly with
+    ``imshow`` therefore produces a coarse, blocky section.  This applies
+    a monotone cubic (PCHIP) interpolation independently per station so
+    the displayed section reads as a continuous resistivity profile
+    without inventing new inversion information between layers.
+    """
+    from scipy.interpolate import PchipInterpolator
+
+    n_layers, n_sta = mat.shape
+    # 'depths' has one entry per layer (depths[0] == 0.0, the survey
+    # surface); it is used directly as each row's sample location, same
+    # as the pre-upsampling imshow's implicit even spacing between
+    # depths[0] and depths[-1].
+    layer_depths = np.asarray(depths, dtype=float)[:n_layers]
+    if n_layers < 2 or layer_depths.size < 2:
+        return mat, depths
+    fine_depths = np.linspace(layer_depths[0], layer_depths[-1], n_upsample)
+    fine_mat = np.empty((n_upsample, n_sta), dtype=mat.dtype)
+    for si in range(n_sta):
+        column = mat[:, si]
+        finite = np.isfinite(column)
+        if finite.sum() < 2:
+            fine_mat[:, si] = np.nanmean(column) if finite.any() else np.nan
+            continue
+        fine_mat[:, si] = PchipInterpolator(
+            layer_depths[finite], column[finite]
+        )(fine_depths)
+    return fine_mat, fine_depths
+
+
 def _plot_resistivity_section(
     pred_rho: np.ndarray,  # (n_sta, n_layers)
     station_names: list[str],
@@ -1412,24 +1485,14 @@ def _plot_resistivity_section(
     if n_sta == 0:
         return None
 
-    # project stations onto the dominant profile direction
-    cx = coords_m[:, 0] / 1000.0
-    cy = coords_m[:, 1] / 1000.0
-    if n_sta > 1:
-        vec = np.array([cx[-1] - cx[0], cy[-1] - cy[0]])
-        vec_len = np.linalg.norm(vec) + 1e-9
-        vec /= vec_len
-        dist = np.array(
-            [np.dot([cx[i] - cx[0], cy[i] - cy[0]], vec) for i in range(n_sta)]
-        )
-    else:
-        dist = np.zeros(1)
+    dist = _profile_distance_km(coords_m)
 
     section = PYCSAMT_SECTION.style_for("inversion")
     fig_w, fig_h = section.figsize_for(n_stations=n_sta, n_y=n_layers)
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
 
     mat = pred_rho.T  # (n_layers, n_sta)
+    mat, depth_axis = _smooth_depth_axis(mat, depths)
     vv = mat[np.isfinite(mat)]
     vmin = float(np.percentile(vv, 5)) if vv.size else 0.0
     vmax = float(np.percentile(vv, 95)) if vv.size else 4.0
@@ -1438,7 +1501,12 @@ def _plot_resistivity_section(
         mat,
         aspect="auto",
         origin="upper",
-        extent=(dist[0] - 0.25, dist[-1] + 0.25, depths[-1], depths[0]),
+        extent=(
+            dist[0] - 0.25,
+            dist[-1] + 0.25,
+            depth_axis[-1],
+            depth_axis[0],
+        ),
         cmap="jet_r",
         vmin=vmin,
         vmax=vmax,
@@ -1464,13 +1532,86 @@ def _plot_resistivity_section(
     return fig
 
 
+def _plot_uncertainty_section(
+    pred_unc: np.ndarray,  # (n_sta, n_layers)
+    coords_m: np.ndarray,
+    station_names: list[str],
+    depths: np.ndarray,  # km
+) -> Any:
+    """Uncertainty pseudo-section (profile distance vs depth).
+
+    Used instead of :func:`_plot_uncertainty_depth_map`'s plan-view map
+    when the station layout is a profile (see
+    :func:`_is_profile_geometry`): a Delaunay-triangulated E-W/N-S map of
+    near-collinear stations degenerates to a zero-width sliver, so the
+    same distance-vs-depth projection the resistivity section already
+    uses is far more informative here.
+    """
+    import matplotlib.pyplot as plt
+
+    from ..api.section import PYCSAMT_SECTION
+    from ..api.station import PYCSAMT_STATION_RENDERING
+
+    n_sta, n_layers = pred_unc.shape
+    if n_sta == 0:
+        return None
+
+    dist = _profile_distance_km(coords_m)
+    section = PYCSAMT_SECTION.style_for("inversion")
+    fig_w, fig_h = section.figsize_for(n_stations=n_sta, n_y=n_layers)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+    mat = pred_unc.T  # (n_layers, n_sta)
+    mat, depth_axis = _smooth_depth_axis(mat, depths)
+    vv = mat[np.isfinite(mat)]
+    vmax = float(np.percentile(vv, 95)) if vv.size else 1.0
+
+    im = ax.imshow(
+        mat,
+        aspect="auto",
+        origin="upper",
+        extent=(
+            dist[0] - 0.25,
+            dist[-1] + 0.25,
+            depth_axis[-1],
+            depth_axis[0],
+        ),
+        cmap="Oranges",
+        vmin=0.0,
+        vmax=vmax,
+        interpolation="bilinear",
+    )
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        dist,
+        station_names,
+        preset="inversion",
+        xlim=(dist[0] - 0.25, dist[-1] + 0.25),
+    )
+    ax.set_ylabel("Depth (km)", fontsize=9)
+    ax.set_xlabel("Profile distance (km)", fontsize=9)
+    ax.tick_params(labelsize=8)
+    section.add_colorbar(im, ax, label="σ (log₁₀ρ)")
+    ax.set_title(
+        "3-D GCN — MC-dropout uncertainty (σ log₁₀ρ)",
+        fontsize=10,
+        fontweight="bold",
+    )
+    fig.tight_layout()
+    return fig
+
+
 def _plot_uncertainty_depth_map(
     pred_unc: np.ndarray,  # (n_sta, n_layers)
     coords_m: np.ndarray,
     station_names: list[str],
     depths: np.ndarray,  # km
 ) -> Any:
-    """Uncertainty map at the shallowest and deepest depth slices."""
+    """Uncertainty map at the shallowest and deepest depth slices.
+
+    Falls back to :func:`_plot_uncertainty_section` for profile-shaped
+    surveys, where a plan-view map has no real cross-line information.
+    """
     import matplotlib.pyplot as plt
     from matplotlib.tri import Triangulation
 
@@ -1479,6 +1620,11 @@ def _plot_uncertainty_depth_map(
     n_sta, n_layers = pred_unc.shape
     if n_sta == 0:
         return None
+
+    if _is_profile_geometry(coords_m):
+        return _plot_uncertainty_section(
+            pred_unc, coords_m, station_names, depths
+        )
 
     PYCSAMT_SECTION.style_for("inversion")
     n_panels = min(2, n_layers)

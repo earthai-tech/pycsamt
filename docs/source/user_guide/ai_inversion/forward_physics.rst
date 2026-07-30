@@ -194,7 +194,8 @@ Meshes built from geology, not by hand
 -------------------------------------------
 
 Writing mesh edges by hand, as the minimal examples above do, does
-not scale to a real earth model with topography and padding.
+not scale to a real earth model that needs padding or may carry a
+topographic surface.
 :func:`~pycsamt.forward.maxwell.mesh.build_solver_mesh` takes a
 :class:`~pycsamt.ai.geology.GeologyGrid` and returns a padded,
 air-layered
@@ -273,6 +274,16 @@ An empty tuple from ``assess_receivers`` means no error was found;
 :meth:`~pycsamt.forward.maxwell.mesh.SolverMeshModel.to_problem`
 would have raised on exactly the same check if a receiver had been
 placed below the surface or outside the padded mesh.
+
+``build_solver_mesh`` is a geometry builder, not a promise that every backend
+can use every geometry it represents. Its air mask and terrain surface can be
+preserved for a future capable adapter, but ``MT2DAdapter``, ``MT3DAdapter``,
+and the current v1 ``ModEm3DAdapter`` all declare
+``supports_inactive_cells=False`` and ``supports_topography=False``. Passing
+``mark_air_inactive=True`` to ``to_problem`` is therefore incompatible with
+those adapters, and treating air cells as conductive does not become physical
+topography. Always call ``adapter.assess(problem)`` after mesh construction;
+an empty receiver-geometry report alone checks locations, not backend physics.
 
 Padding enough is not automatic, and neither is knowing which boundary
 controls the error. The executed width study below holds the vertical mesh
@@ -438,12 +449,89 @@ A 0.86% normalized RMS error, well inside the default 5% threshold, is
    catch — a solver's validated accuracy is a property of one mesh and
    one frequency band, not a permanent property of the adapter.
 
-:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` and
-:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` run the same
-two benchmark functions against 3-D problems, but do not share this
-section's clean result: their verification status differs
-adapter-by-adapter, and :doc:`roadmap` reports it honestly rather
-than repeating it here.
+What the solved 3-D backends guarantee
+---------------------------------------
+
+Both 3-D adapters now solve the frequency-domain curl--curl system, under the
+package's ``exp(+iwt)`` convention,
+
+.. math::
+   :label: eq-ai-forwardphysics-mt3d-curlcurl
+
+   \nabla\times\nabla\times\mathbf E
+   +i\omega\mu_0\sigma\mathbf E=\mathbf 0,
+   \qquad
+   \mathbf H=-\frac{\nabla\times\mathbf E}{i\omega\mu_0}.
+
+:class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter` discretizes equation
+:eq:`eq-ai-forwardphysics-mt3d-curlcurl` on a staggered Yee grid. Electric
+fields live on edges, magnetic fields on faces, and the non-uniform curl uses
+dual-grid distances. This detail is essential: on a graded mesh the dual
+distance between neighbouring faces is not either cell's individual width.
+Two horizontal source polarizations are solved at each frequency and combined
+at each receiver to recover ``zxx``, ``zxy``, ``zyx``, and ``zyy``.
+
+The pure-Python adapter is still research-only because it uses a direct sparse
+solve and rejects more than 6,000 cells by default. Non-uniform support solves
+the earlier *mesh-design* failure: a fine geological core can now be padded to
+several skin depths without paying for fine cells throughout the domain. It
+does not make direct factorization scale to a production survey. On the
+calibrated 4,096-cell mesh it passes both analytic gates at 0.5--2 Hz: about
+1.9% normalized RMS for the half-space and about 3.5% for the layered earth.
+Those numbers validate that mesh and band, not arbitrary tens-of-hertz grids.
+
+:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` maps the same
+:class:`~pycsamt.forward.maxwell.contracts.MaxwellProblem` to the compiled
+ModEM ``Mod3DMT`` forward executable and converts its native field impedance
+back to SI ``V/A``. The adapter shifts stations and model cells together into
+ModEM-local coordinates, always asks ModEM for the full tensor, and then
+filters the returned components into the caller's requested order. A real
+compiled v6.2.6 binary passes the half-space and layered-earth gates below 5%
+normalized RMS on the tested 8x8x10, 300 m-cell mesh at 0.5--1 Hz.
+
+The following output was executed directly from the current capability
+objects:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.forward.maxwell.mt3d import MT3DAdapter
+   >>> from pycsamt.forward.maxwell.modem3d import ModEm3DAdapter
+
+   >>> for backend in (MT3DAdapter(), ModEm3DAdapter()):
+   ...     cap = backend.capabilities
+   ...     print(cap.name, cap.version)
+   ...     print(cap.dimensions, cap.components)
+   ...     print(
+   ...         cap.supports_nonuniform_mesh,
+   ...         cap.supports_topography,
+   ...         cap.supports_inactive_cells,
+   ...         cap.supports_anisotropy,
+   ...     )
+   ...     print(cap.maximum_cells, cap.verified_benchmarks)
+   mt3d 1.0-research
+   (3,) ('zxx', 'zxy', 'zyx', 'zyy')
+   True False False False
+   6000 ('half-space', 'layered-earth')
+   modem3d modem-v6.2.6-adapter-1.0
+   (3,) ('zxx', 'zxy', 'zyx', 'zyy')
+   True False False False
+   None ('half-space', 'layered-earth')
+
+The shared capability list should not hide their different diagnostics.
+``MT3DAdapter`` reports a measured algebraic residual from its sparse solve.
+ModEM's predicted-data file exposes neither an iterative residual nor an
+iteration history, so the v1 adapter stores finite placeholders of ``0.0``
+and zero iterations while reporting real wall-clock time. A ModEM residual of
+zero is therefore **not** evidence of an exact linear solve; analytic and
+mesh-refinement comparisons remain the accuracy evidence.
+
+Both adapters enforce surface receivers, horizontal containment, isotropic
+conductivity, vacuum permeability, and no inactive cells or terrain. ModEM
+additionally requires the top mesh edge at :math:`z=0` and at least ten earth
+cells in depth, because its internal ten-air-layer setup otherwise reads past
+the available earth widths. These are adapter-v1 restrictions and preflight
+checks; they must not be generalized into claims about everything the ModEM
+solver itself can represent.
 
 Backends found by capability, not by import
 -------------------------------------------------

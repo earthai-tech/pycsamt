@@ -2582,15 +2582,6 @@ def make_agents_real_data_sections(names: set[str] | None = None) -> None:
             ),
             "uncertainty_section",
         ),
-        (
-            "agents_pinn2d_section.png",
-            PINNInversionAgent(
-                dim=2, n_layers=10, depth_max=2000.0,
-                smoothness_weight=0.01, lateral_weight=0.005,
-                epochs=300, lr=1e-2, solver="mt1d",
-            ),
-            "section",
-        ),
     )
     for filename, agent, figure_key in runs:
         if names is not None and filename not in names:
@@ -2767,8 +2758,10 @@ def make_agents_inv3d_mt1d_baseline() -> None:
     result = agent.execute({"sites": sites})
     if result.status == "failed":
         raise RuntimeError(result.error)
-    print("agents_inv3d_section.png", ascii(result.summary))
-    _save(result["figures"]["resistivity_section"], "agents_inv3d_section.png")
+    # The resistivity_section itself is intentionally not saved: it is a
+    # tiled mt1d baseline whose value is in the printed contract below and
+    # in agents.rst's worked source, not in a captured "reference" image.
+    print("agents_inv3d_uncertainty.png", ascii(result.summary))
     _save(
         result["figures"]["uncertainty_map"], "agents_inv3d_uncertainty.png"
     )
@@ -2810,15 +2803,15 @@ def make_agents_inv3d_willy_2km() -> None:
         n_layers=5,
         freqs=frequency,
         depth_max=2000.0,
-        n_train_profiles=60,
-        epochs=80,
+        n_train_profiles=20,
+        epochs=40,
         radius=250.0,
         hidden=(64, 32),
         dropout=0.1,
         n_mc=0,
         physics="mt3d",
-        geology_grid_nx_ny=6,
-        geology_grid_nz=8,
+        geology_grid_nx_ny=4,
+        geology_grid_nz=4,
         max_mesh_cells=60_000,
     ).execute({"sites": sites, "topography": True})
     if result.status == "failed":
@@ -2840,8 +2833,9 @@ def make_agents_inv3d_willy_2km() -> None:
     ax.xaxis.set_label_position("top")
     ax.xaxis.tick_top()
     _save(fig, "agents_inv3d_willy_2km_section.png")
-    topo_fig = result["figures"]["topography_section"]
-    _save(topo_fig, "agents_inv3d_willy_2km_topography.png")
+    # topography_section is intentionally not saved here: see the
+    # topography discussion in agents.rst, which points readers at the
+    # code-dropdown above instead of a fixed smoke-test capture.
 
 
 def make_agents_inv2d_willy_topography() -> None:
@@ -2892,6 +2886,153 @@ def make_agents_inv2d_willy_topography() -> None:
     fig.set_size_inches(12.5, 6.2)
     fig.subplots_adjust(left=0.09, right=0.88, bottom=0.14, top=0.70)
     _save(fig, "agents_inv2d_willy_topography.png")
+
+
+def make_agents_inv2d_synthetic_demo() -> None:
+    """EMInverter2D on a fully synthetic target -- no real survey involved.
+
+    Unlike the WILLY examples above, nothing here is constrained by a real
+    line's station count, frequency band, or wall-clock budget: the "true"
+    model is a hand-built, smoothed compact conductor (matched to the
+    training distribution's own correlation length so it is not an
+    out-of-distribution shape), forward-modelled with the same
+    :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter` the training data
+    generator uses internally, then inverted by a freshly trained
+    :class:`~pycsamt.ai.inversion.inv2d.EMInverter2D`. This is the
+    EMInverter2D/Maxwell2DDatasetConfig science-API layer beneath
+    ``Inv2DAgent(physics="mt2d")``, not a captured ``Inv2DAgent.execute()``
+    result -- ``Inv2DAgent`` always reads its observed panel from a real
+    ``Sites`` collection, even on the synthetic-training ``"mt2d"`` path.
+    """
+    from scipy.ndimage import gaussian_filter
+
+    from pycsamt.ai.geology import GeologyGrid
+    from pycsamt.ai.inversion.inv2d import EMInverter2D
+    from pycsamt.ai.training.dataset2d import _solver_mesh_and_conductivity
+    from pycsamt.api.mesh import PYCSAMT_MESH
+
+    try:
+        import torch
+
+        torch.manual_seed(7)
+    except ImportError:
+        pass
+    np.random.seed(7)
+
+    n_sta, n_depth = 24, 24
+    dx_m, depth_max_m = 100.0, 1200.0
+    grid = GeologyGrid.regular_2d(
+        nx=n_sta, nz=n_depth, dx_m=dx_m, dz_m=depth_max_m / n_depth
+    )
+    freqs = np.geomspace(2.0, 400.0, 12)
+
+    # Hand-built true model: a background with a compact conductor blob,
+    # Gaussian-smoothed so its spatial scale matches the correlation
+    # lengths below rather than presenting the network with a sharp box
+    # it never saw an analogue of during training.
+    log_true_rho = np.full((n_depth, n_sta), 2.0)  # log10(100 ohm.m)
+    z_core = slice(int(n_depth * 0.35), int(n_depth * 0.65))
+    x_core = slice(int(n_sta * 0.35), int(n_sta * 0.65))
+    log_true_rho[z_core, x_core] = np.log10(5.0)  # 5 ohm.m core
+    log_true_rho = gaussian_filter(log_true_rho, sigma=(1.8, 1.8))
+    true_rho = 10.0**log_true_rho
+
+    mesh_true, conductivity_true = _solver_mesh_and_conductivity(
+        grid, true_rho, freqs, safety_factor=6.0, max_mesh_cells=20_000
+    )
+    receivers = ReceiverSet(
+        [[float(x), 0.0] for x in grid.x_m],
+        [f"S{i:02d}" for i in range(n_sta)],
+    )
+    true_problem = MaxwellProblem(
+        mesh_true, conductivity_true, freqs, receivers, components=("zxy",)
+    )
+    true_result = MT2DAdapter().solve(true_problem)
+    if not true_result.success:
+        raise RuntimeError("synthetic true-model forward solve failed.")
+    true_survey = SurveyData(
+        impedance=true_result.impedance_v_a,
+        frequencies_hz=true_result.frequencies_hz,
+        station_names=true_result.receiver_names,
+        components=true_result.components,
+        coordinates_m=[[float(x), 0.0, 0.0] for x in grid.x_m],
+        valid=true_result.valid,
+    )
+
+    mu0 = 4.0e-7 * np.pi
+
+    def _samples_to_arrays(samples):
+        n_freq = len(freqs)
+        X = np.empty((len(samples), 2, n_freq, n_sta), dtype=np.float32)
+        y = np.empty((len(samples), n_depth, n_sta), dtype=np.float32)
+        for i, sample in enumerate(samples):
+            zxy = sample.survey.impedance[:, :, 0]
+            f = sample.survey.frequencies_hz[None, :]
+            rho_a = np.abs(zxy) ** 2 / (2.0 * np.pi * f * mu0)
+            phase = np.degrees(np.angle(zxy))
+            X[i, 0] = np.log10(np.clip(rho_a, 1e-12, None)).T
+            X[i, 1] = phase.T
+            y[i] = np.log10(sample.resistivity_ohm_m)
+        return X, y
+
+    def _survey_to_x(survey):
+        zxy = survey.impedance[:, :, 0]
+        f = survey.frequencies_hz[None, :]
+        rho_a = np.abs(zxy) ** 2 / (2.0 * np.pi * f * mu0)
+        phase = np.degrees(np.angle(zxy))
+        x = np.empty((1, 2, len(freqs), n_sta), dtype=np.float32)
+        x[0, 0] = np.log10(np.clip(rho_a, 1e-12, None)).T
+        x[0, 1] = phase.T
+        return x
+
+    config = Maxwell2DDatasetConfig(
+        dataset_id="agents-inv2d-synthetic-demo",
+        grid=grid,
+        correlation_length_x_m=(300.0, 900.0),
+        correlation_length_z_m=(100.0, 300.0),
+        frequencies_hz=freqs,
+        station_x_m=grid.x_m,
+        n_realizations=100,
+        seed=0,
+        log_resistivity_mean=2.0,
+        log_resistivity_std=0.4,
+        components=("zxy",),
+        mesh_safety_factor=4.0,
+        max_mesh_cells=20_000,
+    )
+    dataset = generate_2d_maxwell_dataset(config)
+    X_train, y_train = _samples_to_arrays(dataset.select("train"))
+
+    inverter = EMInverter2D(
+        n_components=2, n_depth=n_depth, n_stations=n_sta, n_freqs=len(freqs)
+    )
+    inverter.fit(X_train, y_train, epochs=80, patience=15, verbose=False, seed=7)
+    history = inverter._history
+
+    X_true = _survey_to_x(true_survey)
+    log_pred = inverter.predict(X_true)[0]
+    log_true = np.log10(true_rho)
+    rmse = float(np.sqrt(np.nanmean((log_pred - log_true) ** 2)))
+    print(
+        "agents_inv2d_synthetic_demo.png",
+        f"n_train={len(dataset.select('train'))}",
+        f"epochs_run={len(history['train_loss'])}",
+        f"rmse={rmse:.3f}",
+    )
+
+    fig = plot_inversion_result_2d(
+        log_pred,
+        log_true=log_true,
+        depths=None,
+        stations=grid.x_m / 1000.0,
+        depth_max=depth_max_m,
+        show_mesh=True,
+        mesh_style=PYCSAMT_MESH.style_for("review"),
+        train_loss=np.array(history["train_loss"]),
+        val_loss=np.array(history["val_loss"]),
+        suptitle="EMInverter2D on a fully synthetic target",
+    )
+    _save(fig, "agents_inv2d_synthetic_demo.png")
 
 
 def make_pinn2d_willy_topography_audit() -> None:
@@ -4048,9 +4189,15 @@ def main() -> None:
     make_agents_real_data_sections()
     make_agents_executed_1d_audit()
     make_agents_architecture_comparison()
-    make_agents_inv2d_willy_topography()
+    # make_agents_inv2d_willy_topography() is intentionally not called here:
+    # its only output, agents_inv2d_willy_topography.png, was dropped from
+    # agents.rst in favour of a code-dropdown pointing at this function, so
+    # running it during every doc build would just burn compute on an image
+    # nothing references. The function itself stays so the dropdown has a
+    # real, importable source to show and run.
     make_agents_inv3d_mt1d_baseline()
     make_agents_inv3d_willy_2km()
+    make_agents_inv2d_synthetic_demo()
     make_pinn2d_willy_topography_audit()
     make_pinn2d_input_diagnostic()
     make_pinn2d_regularization_anatomy()

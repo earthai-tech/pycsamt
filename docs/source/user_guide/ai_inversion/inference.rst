@@ -454,18 +454,22 @@ apparent resistivity and phase for one component, not four Re/Im tensor
 channels, so a panel and a training target must agree on that count before
 ``fit()`` is ever called.
 
-.. figure:: ../../images/user_guide/ai_inversion/inference_2d_section.png
-   :alt: EMInverter2D predicted resistivity section for the Willy AMT line, retrained without a persisted checkpoint.
-   :align: center
-   :width: 95%
-
-   This section comes from a U-Net retrained fresh for this example — see
-   the warning below on why the checkpoint step being demonstrated for 1-D
-   is not available here. Sixty epochs against 28 stations at once produces
-   a noticeably patchier result than the 1-D and hybrid sections elsewhere on
-   this page; that is a fast-retrain artefact to weigh against, not evidence
-   the architecture is unsuitable. Station names are placed along the top;
-   depth-cell index increases vertically.
+No captured section is shown here, unlike the 1-D and 3-D examples elsewhere
+on this page: those load a persisted, reviewed checkpoint (step 4), while
+``inverter_2d`` above has no such checkpoint step to demonstrate and would
+have to be refit from scratch for this example. A U-Net trained on a small
+synthetic realization budget for a handful of epochs, with the spatial
+regularization weights (``lambda_x``, ``lambda_z``, ``lambda_tv`` --
+:eq:`eq-agents-inv2d-staged-loss` in :doc:`agents`) left at their zero
+default, has no architectural or loss-level reason to keep neighbouring
+stations coherent, and running it against real field data rather than a
+held-out synthetic sample adds a domain-shift gap on top of that. The
+result is a section that looks like per-station noise rather than a smooth
+or even a plausibly blurry profile -- not a plotting bug, and not evidence
+that ``EMInverter2D`` is unsuitable, but not a result worth publishing
+either. Run the code above yourself against your own trained (and ideally
+checkpointed) ``inverter_2d`` and inspect what you actually get, rather than
+trusting a placeholder capture from an unreviewed retrain.
 
 The 2-D inverter applies its learned input and target normalization internally.
 The field station count must match the inverter's configured station axis.

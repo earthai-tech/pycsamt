@@ -31,6 +31,55 @@ delivery.
 
 See also ``[Kouabena2025]`` in :doc:`../references`.
 
+WILLY_DATA is :term:`AMT`, a natural-source method -- there is no controlled
+transmitter anywhere near this survey. The near-field, source-offset, and
+source-overprint machinery this tutorial exercises further down is built for
+:term:`CSAMT` and other active-source methods, where a real, known distance
+to a grounded dipole or loop transmitter matters. None of that applies to
+WILLY_DATA on physical grounds, not merely because nothing showed up in the
+diagnostics. Those sections stay in this tutorial anyway, run against a
+stated illustrative offset, for two reasons: to demonstrate *how* to confirm
+rather than assume a method's assumptions do not apply to a given survey, and
+because the same code becomes directly useful the moment this tutorial is
+adapted to real controlled-source data instead of AMT -- :term:`CSAMT`,
+:term:`CSUMT`, or similar. If you are adapting this tutorial to a genuinely
+controlled-source survey, replace the illustrative ``source_offset`` values
+below with the real transmitter-to-receiver distance from your acquisition
+log before trusting any of that section's output.
+
+Starting From Non-EDI Data
+---------------------------
+
+Every step below assumes :term:`EDI` input, because ``L26PLT``/``L30PLT``
+already ship as EDI. A real two-line project rarely starts there. Zonge
+:term:`AVG file`\ s, :term:`J-file`\ s, raw cross-power-spectra, and
+time-domain (TEM) soundings all need to become EDI first, through
+:mod:`pycsamt.transformers` and, for transient time-domain data specifically,
+:class:`pycsamt.tdem.transform.TEMtoEDI` -- :doc:`../user_guide/transformers`
+covers the full converter contract, and :doc:`../theory/tdem_basics` derives
+the late-time apparent-resistivity mapping :class:`~pycsamt.tdem.transform.TEMtoEDI`
+relies on. For a TEM survey the conversion is one class, not a rewrite of
+this tutorial's correction chain:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.tdem import TEMtoEDI
+   >>> converter = TEMtoEDI(method="late_time")
+   >>> tem_collection = converter.transform(tem_sounding)  # doctest: +SKIP
+   >>> edi_file = tem_collection[0]  # doctest: +SKIP
+
+``tem_sounding`` there is one :class:`~pycsamt.tdem.TEMSounding` read by
+:func:`pycsamt.tdem.read_temavg_soundings`, exactly as in
+:doc:`../user_guide/transformers`'s own worked example against the bundled
+``data/TEMAVG/JIANGSU`` survey. Once every station in a project is an
+:class:`~pycsamt.seg.edi.EDIFile`, whether it started as AVG, J-file, or a
+TEM decay curve, it enters this tutorial's pipeline the same way ``L26PLT``
+and ``L30PLT`` do below -- the QC, correction, and inversion steps that
+follow have no memory of which format the data originally arrived in.
+"Adapting This Tutorial" at the end of this page covers the remaining,
+survey-specific changes (input folders, the near-field/source-overprint
+offset noted above, tipper availability) once every station is EDI.
+
 What You Will Learn
 -------------------
 
@@ -928,6 +977,9 @@ builds a native 2-D input set exactly as in
    >>> builder30.data.n_data
    4684
 
+Compare how the QC-driven frequency drop shows up in each line's own Occam2D
+data-row count before moving on to the mesh those rows share:
+
 .. code-block:: python
    :linenos:
 
@@ -980,11 +1032,11 @@ builds a native 2-D input set exactly as in
 
 Both lines share the same 62 x 34 cell mesh and 780 parameters, since they
 use the same ``OccamConfig``. As in :doc:`prepare_occam2d_inversion`, this
-tutorial stops at file preparation and validation; run the external Occam2D
-executable against ``runs/L26PLT_occam2d`` and ``runs/L30PLT_occam2d``
-separately, then reload each with
-:class:`pycsamt.models.occam2d.InversionResult` when a completed run is
-available.
+tutorial stops at file preparation and validation; build or locate the
+``occam2d`` binary first (:ref:`occam2d_compilation`), then run it against
+``runs/L26PLT_occam2d`` and ``runs/L30PLT_occam2d`` separately, and reload
+each with :class:`pycsamt.models.occam2d.InversionResult` when a completed
+run is available.
 
 Prepare ModEM 3-D Inputs
 ------------------------
@@ -1010,6 +1062,9 @@ combine both lines into a single 3-D survey with
    (35, 45, 59)
    >>> len(builder3d.data.site_names), len(builder3d.data.periods)
    (50, 53)
+
+Inspect how far that starting mesh grows away from the station footprint in
+each of the three directions before treating it as ready to solve:
 
 .. code-block:: python
    :linenos:
@@ -1045,9 +1100,11 @@ combine both lines into a single 3-D survey with
 ``data.dat``, ``m0.ws``, ``covariance.cov``, and ``control.inv`` are now in
 ``runs/willy_modem_3d``. As with the Occam2D lines above, this tutorial stops
 at file preparation; the actual solve runs outside Python, against a locally
-compiled ``Mod3DMT``. :class:`pycsamt.models.modem.ModEmRunner` builds that
-command from the same ``cfg3d`` used above, so the launch stays tied to the
-configuration that generated the files rather than retyped by hand:
+compiled ``Mod3DMT`` (:ref:`modem_compilation` covers building it, including
+the MPI and Intel-build variants). :class:`pycsamt.models.modem.ModEmRunner`
+builds that command from the same ``cfg3d`` used above, so the launch stays
+tied to the configuration that generated the files rather than retyped by
+hand:
 
 .. code-block:: pycon
 
@@ -1342,281 +1399,185 @@ Executed output:
    L26PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.012 recovery_RMSE 0.501
    L30PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.168 recovery_RMSE 0.505
 
-Continue to validated 3-D externally
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Maxwell-Trained 3-D AI Inversion of Both Lines
+-----------------------------------------------
 
-The ModEM problem prepared immediately above is the correct continuation for
-a joint L26/L30 3-D inversion.  Run ``Mod3DMT`` externally, reload its predicted
-responses and model, and apply the same residual, sensitivity, uncertainty,
-and synthetic-recovery gates.  The current :class:`pycsamt.agents.Inv3DAgent`
-returns a station-by-layer graph candidate; it is not a voxelwise topographic
-Maxwell inversion and is therefore not substituted for that solve here.
+``Inv3DAgent(physics="mt3d")`` now trains against genuine 3-D Maxwell
+responses on a non-uniform, padded mesh -- the graph-only tiled path this
+tutorial used to fall back on for 3-D is no longer the only option. Both
+lines combine into **one** 3-D volume rather than being inverted
+independently, matching the spirit of the ModEM problem prepared above. No
+real cross-line coordinate was surveyed between ``L26PLT`` and ``L30PLT``,
+so, exactly as with the ModEM combination earlier, this section states its
+line-to-line offset as an explicit assumption -- 500 m, unrelated to any
+measured position -- rather than implying it was recovered from data.
 
-Rejected Legacy AI Construction
--------------------------------
-
-.. warning::
-
-   The material below records the former tutorial construction for audit while
-   it is being removed from downstream citations.  It uses legacy tiled-1D
-   training, blends an AI trend into an apparent-resistivity pseudosection,
-   invents a shallow display-depth axis, and treats a station-by-layer graph as
-   3-D inversion.  Do not copy, run, or interpret it.  Use the complete
-   Maxwell-AI workflow above.
-
-:class:`pycsamt.agents.inv2d_agent.Inv2DAgent` inverts each rotated,
-corrected line in 2-D; :class:`pycsamt.agents.inv3d_agent.Inv3DAgent`
-inverts both unrotated, corrected lines together in 3-D, using real
-chainage-derived station coordinates. Training settings are kept small so
-the page builds quickly, with fixed seeds for reproducibility -- scale up
-``n_train_profiles`` and ``epochs`` for production work.
+Build a display geological volume and its padded Maxwell mesh spanning both
+lines' combined footprint. This construction is independent of what
+``Inv3DAgent`` builds internally for training -- no agent constructor accepts
+an externally supplied grid, the same separation already used for the 2-D
+geology/mesh figure above.
 
 .. code-block:: pycon
 
-   >>> import numpy as np
-   >>> import random
-   >>> np.random.seed(7)
-   >>> random.seed(7)
-   >>> try:
-   ...     import torch
-   ...     _ = torch.manual_seed(7)
-   ... except ImportError:
-   ...     pass
-   >>> from pycsamt.agents.inv2d_agent import Inv2DAgent
-   >>> agent2d_26 = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8)
-   >>> res2d_26 = agent2d_26.execute({"sites": rot26_sites, "output_dir": "runs/L26PLT_ai2d"})
-   >>> res2d_26.status, round(res2d_26.data["rms_global"], 4)
-   ('success', 1.2866)
-   >>> agent2d_30 = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8)
-   >>> res2d_30 = agent2d_30.execute({"sites": rot30_sites, "output_dir": "runs/L30PLT_ai2d"})
-   >>> res2d_30.status, round(res2d_30.data["rms_global"], 4)
-   ('success', 1.5285)
-
-``n_stations_per_profile=25`` matters here: the agent's own default (20)
-silently truncates a profile to its first 20 stations, which would quietly
-drop 5 real stations from each line's dense section below. Match it to the
-actual station count whenever a line has more stations than the default.
-
-``pred_section`` is a dense (depth x station) grid, but its own depth axis
-is a generic default spanning kilometres to hundreds of kilometres -- built
-for flexibility across very different survey scales, not tuned for a
-shallow 2.4 km AMT line. Rather than trust that axis directly, use each
-station's own predicted trend as a lateral constraint on a shallow,
-pseudosection-derived depth image and drape the result on the real
-topography already extracted earlier -- the same construction used in
-:doc:`essential_3d_ai_inversion`, defined once here and reused for the 3-D
-result below.
-
-.. code-block:: python
-   :linenos:
-
-   import numpy as np
-   import matplotlib.pyplot as plt
-   from scipy.ndimage import gaussian_filter
-   from pycsamt.emtools._core import _get_z_block
-   from pycsamt.topo import (
-       drape_section,
-       extract_chainage,
-       extract_elevation,
-       extract_station_names,
-       interp_elev,
-   )
-
-   def cell_edges(centres):
-       centres = np.asarray(centres, dtype=float).ravel()
-       edges = np.empty(centres.size + 1, dtype=float)
-       edges[1:-1] = 0.5 * (centres[:-1] + centres[1:])
-       edges[0] = max(0.0, centres[0] - (edges[1] - centres[0]))
-       edges[-1] = centres[-1] + (centres[-1] - edges[-2])
-       return edges
-
-   def build_panel(ax, sites, chain_km, elev_m, labels, ai_trend, title, depth_max_km=1.5):
-       periods, log_rho_cols = [], []
-       for site in sites:
-           _, z, fr = _get_z_block(site)
-           period = 1.0 / np.maximum(fr, 1e-30)
-           rho = 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(fr, 1e-30)
-           mask = np.isfinite(period) & np.isfinite(rho) & (rho > 0.0)
-           periods.append(period[mask]); log_rho_cols.append(np.log10(rho[mask]))
-       common_periods = np.geomspace(
-           max(np.nanmin(p) for p in periods), min(np.nanmax(p) for p in periods), 90
-       )
-       pseudo = np.asarray([
-           np.interp(np.log10(common_periods), np.log10(p[np.argsort(p)]), lr[np.argsort(p)])
-           for p, lr in zip(periods, log_rho_cols)
-       ], dtype=float).T
-
-       # station-wise AI trend as a lateral constraint, not a depth axis
-       depth_centres_km = np.linspace(0.03, depth_max_km, pseudo.shape[0])
-       trend = np.nanmedian(ai_trend, axis=1)
-       trend = trend - np.nanmedian(trend)
-       pseudo = gaussian_filter(np.clip(pseudo + 0.20 * trend[None, :], 0.2, 5.2), sigma=(1.25, 0.65))
-
-       depth_edges_km = cell_edges(depth_centres_km)
-       log_rho_cells = 0.5 * (pseudo[:, :-1] + pseudo[:, 1:])
-       x_centres = 0.5 * (chain_km[:-1] + chain_km[1:])
-       elev_centres_km = interp_elev(chain_km, elev_m / 1000.0, x_centres)
-       x_nodes, z_draped, log_rho_cells = drape_section(
-           chain_km, depth_edges_km, log_rho_cells, elev_centres_km
-       )
-       surface_km = interp_elev(chain_km, elev_m / 1000.0, x_nodes)
-
-       vmin = max(float(np.nanpercentile(log_rho_cells, 4)), -0.5)
-       vmax = min(float(np.nanpercentile(log_rho_cells, 96)), 5.0)
-       im = ax.pcolormesh(x_nodes, z_draped, log_rho_cells, shading="auto", cmap="jet", vmin=vmin, vmax=vmax)
-       ax.plot(x_nodes, surface_km, color="#211813", linewidth=1.6, zorder=8)
-
-       # triangle markers on the real surface, station labels stacked above them
-       marker_y = elev_m / 1000.0 + 0.03
-       ax.scatter(chain_km, marker_y, marker="v", s=32, color="black", zorder=10)
-       for xi, yi, lab in zip(chain_km, marker_y + 0.10, labels):
-           ax.text(xi, yi, lab, rotation=90, ha="center", va="bottom", fontsize=6.6, zorder=11)
-
-       ax.set_ylim(float(surface_km.min() - depth_max_km), float(surface_km.max() + 0.55))
-       ax.set_xlim(float(chain_km.min()), float(chain_km.max()))
-       ax.set_xlabel("Profile distance (km)")
-       ax.set_title(title)
-       return im
-
-   chain26r = extract_chainage(rot26_sites)
-   chain30r = extract_chainage(rot30_sites)
-   elev26r = extract_elevation(rot26_sites)
-   elev30r = extract_elevation(rot30_sites)
-   labels26r = [n.split("-")[-1] for n in extract_station_names(rot26_sites)]
-   labels30r = [n.split("-")[-1] for n in extract_station_names(rot30_sites)]
-
-   pred26_2d = res2d_26.data["pred_section"].T  # -> (n_stations, n_depth)
-   pred30_2d = res2d_30.data["pred_section"].T
-
-   fig, axes = plt.subplots(1, 2, figsize=(15.0, 5.6), constrained_layout=True)
-   im1 = build_panel(axes[0], rot26_sites, chain26r, elev26r, labels26r, pred26_2d,
-                      "L26PLT: AI 2-D resistivity, real topography")
-   axes[0].set_ylabel("Elevation (km)")
-   im2 = build_panel(axes[1], rot30_sites, chain30r, elev30r, labels30r, pred30_2d,
-                      "L30PLT: AI 2-D resistivity, real topography")
-   fig.colorbar(im1, ax=axes, label="log10 rho (ohm.m)", shrink=0.85)
-   fig.savefig("willy_ai2d_topo_sections_both_lines.png", dpi=190, bbox_inches="tight")
-
-.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai2d_topo_sections_both_lines.png
-   :alt: AI 2-D inversion resistivity sections for L26PLT and L30PLT with real topography
-   :width: 100%
-
-   Both sections sharpen the same two-part picture already hinted at by the
-   raw pseudosections: a conductive upper few hundred metres giving way to a
-   substantially more resistive body at depth. That is enough to move on to
-   3-D, where both lines are combined into one spatially aware graph instead
-   of inverted independently.
-
-.. code-block:: pycon
-
-   >>> from pycsamt.agents.inv3d_agent import Inv3DAgent
+   >>> from pycsamt.ai.geology import (
+   ...     ElectricalLayer, EllipsoidalLens, GaussianCorrelation,
+   ...     GeologyGrid, generate_layered_geology, insert_lenses,
+   ... )
+   >>> from pycsamt.forward.maxwell import MeshDesign, build_solver_mesh
    >>> from pycsamt.topo import extract_chainage
    >>> chain26, chain30 = extract_chainage(corr26), extract_chainage(corr30)
    >>> coords = np.column_stack([
    ...     np.concatenate([chain26 * 1000.0, chain30 * 1000.0]),
    ...     np.concatenate([np.zeros_like(chain26), np.full_like(chain30, 500.0)]),
    ... ])
-   >>> agent3d = Inv3DAgent(n_layers=6, n_freqs=16, n_train_profiles=12, epochs=4, n_mc=0, radius=450.0)
-   >>> res3d = agent3d.execute({"sites": combined, "coords": coords, "output_dir": "runs/willy_ai3d"})
-   >>> res3d.status, round(res3d.data["rms_global"], 4)
-   ('success', 3.5881)
-   >>> res3d.data["pred_rho"].shape
-   (50, 6)
+   >>> combined = corr26.to_edis() + corr30.to_edis()
+   >>> grid3d = GeologyGrid.regular_3d(
+   ...     nx=24, ny=6, nz=18, dx_m=120, dy_m=133, dz_m=100,
+   ...     x_origin_m=-150, y_origin_m=-150,
+   ... )
+   >>> grid3d.shape
+   (18, 6, 24)
 
-The GCN's own depth axis for this run reaches past 500 km -- useful for the
-generic layered-earth training task it was built around, meaningless for a
-2.4 km AMT profile, and a second confirmation that no raw agent depth axis
-in this tutorial should be taken at face value. Spatially, though, both
-lines share one graph now, with ``L30PLT`` offset 500 m from ``L26PLT`` in
-the coordinate array above, so the depth-slice maps below are a single
-combined view rather than two lines stitched into one fictitious profile:
+The full construction below adds a layered prior and a dipping conductive
+lens the same way the earlier 2-D geology does, then pads it into a solver
+mesh with :func:`pycsamt.forward.maxwell.build_solver_mesh`.
 
-.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai3d_depth_slices.png
-   :alt: Combined AI 3-D inversion depth slices
+.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai3d_geology_maxwell_both_lines.png
+   :alt: Along-line, horizontal, and cross-line slices of the combined 3-D geological prior and padded Maxwell mesh
    :width: 100%
 
-   Read this as a spatial map, not a profile: ``L26PLT`` and ``L30PLT`` sit
-   at their real relative offsets, and each panel is one depth. A *profile*
-   section through this combined graph is the wrong next figure, though --
-   with two separate physical lines inside one array, a naive station-index
-   section would silently stitch ``L26PLT``'s last station to ``L30PLT``'s
-   first as if they were adjacent. :doc:`essential_3d_ai_inversion`'s own
-   construction avoids exactly that trap by building one profile at a time;
-   the closing section below does the same here, draping each line's own
-   3-D trend on its own real topography separately.
+   Mesh cell boundaries are drawn with :func:`pycsamt.api.mesh.draw_mesh`
+   (``preset="review"``) on every panel -- the same reusable overlay used
+   throughout this documentation, not something specific to this tutorial.
+   The along-line slice (left) shows numerical air above the real terrain,
+   the layered prior below it, and the seeded conductive lens as the dark
+   patch near 1.3--1.7 km profile distance. The mesh stayed at 9,000 padded
+   cells here, comfortably inside what the in-process solver can attempt --
+   this section's point is that a small 3-D problem runs at all, not a
+   replay of a deliberately oversized mesh.
 
-Corrected Versus Raw RMS
-------------------------
-
-Every correction in this tutorial is defensible on its own diagnostic
-grounds, but the real test is whether it improves the inversion fit. Rerun
-both AI inversions on the untouched raw EDIs and compare RMS directly.
+Run the fast integration training. This executes for real during this
+documentation build, on a training budget small enough to finish in a few
+minutes rather than hours:
 
 .. code-block:: pycon
 
-   >>> raw26 = Sites(read_edis("data/AMT/WILLY_DATA/L26PLT", recursive=False, strict=False, progress=False).collection).ordered("chainage")
-   >>> raw30 = Sites(read_edis("data/AMT/WILLY_DATA/L30PLT", recursive=False, strict=False, progress=False).collection).ordered("chainage")
-   >>> res2d_26_raw = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8).execute(
-   ...     {"sites": raw26, "output_dir": "runs/L26PLT_ai2d_raw"}
+   >>> from pycsamt.agents import Inv3DAgent
+   >>> agent3d = Inv3DAgent(
+   ...     physics="mt3d", n_layers=6,
+   ...     freqs=np.geomspace(1.0, 1000.0, 8), depth_max=1800.0,
+   ...     n_train_profiles=10, epochs=20, radius=450.0,
+   ...     hidden=(64, 32), dropout=0.1, n_mc=0,
+   ...     geology_grid_nx_ny=4, geology_grid_nz=4, max_mesh_cells=60_000,
    ... )
-   >>> res2d_30_raw = Inv2DAgent(n_depth=30, n_freqs=32, n_train_profiles=60, n_stations_per_profile=25, epochs=8).execute(
-   ...     {"sites": raw30, "output_dir": "runs/L30PLT_ai2d_raw"}
-   ... )
-   >>> combined_raw = raw26.to_edis() + raw30.to_edis()
-   >>> res3d_raw = Inv3DAgent(n_layers=6, n_freqs=16, n_train_profiles=12, epochs=4, n_mc=0, radius=450.0).execute(
-   ...     {"sites": combined_raw, "coords": coords, "output_dir": "runs/willy_ai3d_raw"}
-   ... )
-   >>> round(res2d_26_raw.data["rms_global"], 4), round(res2d_30_raw.data["rms_global"], 4), round(res3d_raw.data["rms_global"], 4)
-   (1.7334, 1.6443, 8.4667)
+   >>> res3d = agent3d.execute({
+   ...     "sites": combined, "coords": coords, "topography": True,
+   ...     "output_dir": "runs/willy_ai3d_maxwell",
+   ... })
+   >>> res3d.status, res3d.data["pred_rho"].shape
+   ('success', (50, 6))
 
-These historical values are not comparable validation evidence.  They came
-from different stochastic, legacy-physics models, and the graph RMS does not
-establish voxelwise 3-D recovery.  A smaller scalar RMS cannot rescue a model
-that fails known-truth recovery or backend compatibility.  Use the paired
-Maxwell-trained experiments and gates above instead.
+Gate the result the same way as the 2-D section, before looking at the
+figure it produces:
 
-For the seeded run reported by this page, the comparison is:
+.. code-block:: pycon
+
+   >>> recovery3d = res3d.data["mt3d_recovery"]
+   >>> response_pass = res3d.data["rms_global"] <= 1.2
+   >>> recovery_pass = recovery3d["rmse"] <= 0.25 and recovery3d["r2"] >= 0.60
+   >>> enough_test_models = recovery3d["n_samples"] >= 20
+   >>> promote = response_pass and recovery_pass and enough_test_models
+   >>> promote
+   False
+
+For the run captured on this page, ``rms_global`` was ``2.244`` and
+``mt3d_recovery`` was ``{'rmse': 0.536, 'mae': 0.444, 'r2': -0.147,
+'n_samples': 1}`` (:eq:`eq-agents-mt3d-recovery` in :doc:`../user_guide/ai_inversion/agents`
+defines these). Both gates fail, as expected at this budget, and one held-out
+volume is far too few to trust ``r2``'s sign. Re-running this exact call has
+already produced ``rms_global`` values from ``1.5`` to ``6.5`` across
+otherwise-identical seeded sessions on this machine -- the same open
+reproducibility gap already documented for ``physics="mt1d"`` in
+:doc:`../user_guide/ai_inversion/agents` extends to the ``mt3d`` combined-line
+path too, since dataset realizations are seed-controlled but network
+initialization and dropout still consume PyTorch's global random state.
+Treat any single captured RMS here as one draw, not a reproducible constant.
+
+.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai3d_maxwell_predictions_both_lines.png
+   :alt: Maxwell-trained 3-D AI inversion sections for L26PLT and L30PLT with mesh, real topography, and station labels
+   :width: 100%
+
+   Each line's own slice is cut from the single combined prediction -- not
+   two independent inversions -- with the same station-index caution as
+   before: never stitch ``L26PLT``'s last station to ``L30PLT``'s first as
+   if adjacent. The mesh overlay makes the display grid's actual cell
+   resolution visible under the color, the black line is real station
+   topography from :func:`pycsamt.topo.drape_section`, and triangles with
+   rotated labels mark every station on both lines.
+
+.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai3d_maxwell_validation_both_lines.png
+   :alt: Observed-response RMS and held-out geological recovery for the combined 3-D run
+   :width: 80%
+   :align: center
+
+   Both panels read the same way as the 2-D validation figure: the dashed
+   line at RMS 1 is a rough response-fit reference, not a pass threshold on
+   its own, and RMSE/MAE come from the single held-out volume discussed
+   above.
+
+Scale this up the same way the 2-D production configuration does -- more
+realizations, more epochs, a finer geology grid -- but budget accordingly.
+This project-scale configuration is deliberately **not executed** on this
+page; unlike the 2-D case, a realistic 3-D realization count on this survey
+is expected to take several hours to tens of hours on a single CPU core,
+not minutes:
+
+.. code-block:: pycon
+
+   >>> production_agent3d = Inv3DAgent(
+   ...     physics="mt3d", n_layers=10,
+   ...     freqs=np.geomspace(1.0, 10_000.0, 24), depth_max=2200.0,
+   ...     n_train_profiles=200, epochs=60, radius=450.0,
+   ...     hidden=(128, 64, 32), dropout=0.1, n_mc=0,
+   ...     correlation_length_x_m=(300.0, 1200.0),
+   ...     correlation_length_y_m=(300.0, 900.0),
+   ...     correlation_length_z_m=(80.0, 400.0),
+   ...     log_resistivity_mean=2.1, log_resistivity_std=0.75,
+   ...     geology_grid_nx_ny=8, geology_grid_nz=8,
+   ...     mesh_safety_factor=8.0, max_mesh_cells=300_000,
+   ... )
+   >>> production_agent3d.physics, production_agent3d.n_train_profiles
+   ('mt3d', 200)
+
+Copy the complete pipeline -- geology and mesh construction, the fast run,
+the production configuration, and every figure above -- from the accordion
+below, and run it yourself for the full realization count:
+
+.. code-dropdown:: ../../scripts/generate_tutorial_porphyry_ai3d_workflow.py
+   :language: python
+   :linenos:
+   :title: View and copy the complete L26/L30 Maxwell 3-D AI workflow
+
+Run it after the corrected EDI export step, exactly like the 2-D script:
+
+.. code-block:: console
+
+   python docs/scripts/generate_tutorial_porphyry_ai3d_workflow.py
+
+Executed output:
 
 .. code-block:: text
 
-   AI-2D L26PLT     raw RMS 1.7334  corrected RMS 1.2866  improvement 25.8%
-   AI-2D L30PLT     raw RMS 1.6443  corrected RMS 1.5285  improvement 7.0%
-   AI-3D combined   raw RMS 8.4667  corrected RMS 3.5881  improvement 57.6%
+   combined stations 50 geology (18, 6, 24) mesh (25, 12, 30) cells 9000 RMS 2.244 recovery_RMSE 0.536 recovery_n 1
 
-.. code-block:: python
-   :linenos:
+Pass ``--production`` to build (but not execute) the production agent instead
+of running the fast one -- it prints its configuration and returns without
+training, so you can inspect the object before committing CPU time:
 
-   import numpy as np
-   import matplotlib.pyplot as plt
+.. code-block:: console
 
-   rms_all = {
-       "AI-2D L26PLT": (1.7334, 1.2866),
-       "AI-2D L30PLT": (1.6443, 1.5285),
-       "AI-3D combined": (8.4667, 3.5881),
-   }
-   fig, ax = plt.subplots(figsize=(7.6, 4.4), constrained_layout=True)
-   labels = list(rms_all.keys())
-   x = np.arange(len(labels))
-   raw_vals = [rms_all[k][0] for k in labels]
-   corr_vals = [rms_all[k][1] for k in labels]
-   ax.bar(x - 0.18, raw_vals, width=0.35, label="raw (uncorrected)", color="#c0392b")
-   ax.bar(x + 0.18, corr_vals, width=0.35, label="corrected", color="#2471a3")
-   ax.set_xticks(x)
-   ax.set_xticklabels(labels, fontsize=9)
-   ax.set_ylabel("AI-inversion RMS")
-   ax.set_title("Effect of the correction chain on AI-inversion RMS")
-   ax.legend()
-   for xi, (rv, cv) in zip(x, zip(raw_vals, corr_vals)):
-       ax.text(xi, max(rv, cv) + 0.15, f"-{100*(rv-cv)/rv:.0f}%", ha="center", fontsize=9)
-   fig.savefig("willy_ai_rms_raw_vs_corrected.png", dpi=170)
-
-.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai_rms_raw_vs_corrected.png
-   :alt: AI-inversion RMS, raw versus corrected, for both 2-D lines and the combined 3-D run
-   :width: 80%
-
-   This chart is retained only to identify the withdrawn comparison.  It mixes
-   incompatible objectives and must not be used to claim that correction
-   improved a validated 3-D inversion.
+   python docs/scripts/generate_tutorial_porphyry_ai3d_workflow.py --production
 
 Correction Parameter Report
 ---------------------------
@@ -1649,8 +1610,6 @@ computed above.
    >>> round(report26["twist_deg"].abs().median(), 2), round(report26["fac_z_reviewed"].median(), 3)
    (8.34, 0.542)
 
-.. code-block:: pycon
-
    >>> report30 = gb30[["station", "gain", "twist_deg", "shear"]].merge(
    ...     ns30[["station", "ns_index", "ss_delta_log10", "distortion_type"]], on="station", how="left"
    ... ).merge(
@@ -1672,61 +1631,6 @@ received without re-deriving it:
    >>> report26.to_csv("runs/L26PLT_correction_report.csv", index=False)
    >>> report30.to_csv("runs/L30PLT_correction_report.csv", index=False)
 
-Rejected Legacy Topographic Sections
-------------------------------------
-
-The former closing step draped each line's graph trend onto its real
-station topography, following the same dense-block construction as
-:doc:`essential_3d_ai_inversion`: use the coarse GCN output as a station-wise
-trend constraint on a dense image built from the real pseudosection, then
-drape the result with :func:`pycsamt.topo.drape_section`.
-
-.. code-block:: pycon
-
-   >>> from pycsamt.topo import extract_elevation
-   >>> elev26, elev30 = extract_elevation(corr26), extract_elevation(corr30)
-   >>> round(chain26[-1], 3), elev26.min(), elev26.max()
-   (2.437, 42.0, 204.0)
-   >>> round(chain30[-1], 3), elev30.min(), elev30.max()
-   (2.403, 44.0, 187.0)
-
-Both profiles run a little over 2.4 km with real relief between 40 and
-around 200 metres -- genuine topography, not a flat stand-in.
-
-``build_panel`` and ``cell_edges`` are the same two helpers already defined
-above for the AI-2D sections -- no need to redefine them, only to call
-``build_panel`` again with the 3-D trend in place of the 2-D one.
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-   from pycsamt.topo import extract_station_names
-
-   pred_rho = res3d.data["pred_rho"]
-   n26 = len(corr26)
-   pred26, pred30 = pred_rho[:n26], pred_rho[n26:]
-   labels26 = [n.split("-")[-1] for n in extract_station_names(corr26)]
-   labels30 = [n.split("-")[-1] for n in extract_station_names(corr30)]
-
-   fig, axes = plt.subplots(1, 2, figsize=(15.0, 5.6), constrained_layout=True)
-   im1 = build_panel(axes[0], corr26, chain26, elev26, labels26, pred26,
-                      "L26PLT: AI 3-D resistivity, real topography")
-   axes[0].set_ylabel("Elevation (km)")
-   im2 = build_panel(axes[1], corr30, chain30, elev30, labels30, pred30,
-                      "L30PLT: AI 3-D resistivity, real topography")
-   fig.colorbar(im1, ax=axes, label="log10 rho (ohm.m)", shrink=0.85)
-   fig.savefig("willy_ai3d_topo_sections_both_lines.png", dpi=190, bbox_inches="tight")
-
-.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai3d_topo_sections_both_lines.png
-   :alt: AI 3-D resistivity sections for L26PLT and L30PLT with real topography
-   :width: 100%
-
-   This image is withdrawn as an inversion result.  Its apparent shallow
-   conductor, resistive basement, and patchy right-hand contact are dominated
-   by the measured pseudosection and plotting construction; they cannot be
-   attributed to the graph candidate.  Use the direct Maxwell-trained models
-   and validation gates above, or a completed external ModEM inversion.
 
 Adapting This Tutorial
 ----------------------

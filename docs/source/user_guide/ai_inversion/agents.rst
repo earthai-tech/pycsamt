@@ -599,6 +599,47 @@ are not used to generate those synthetic models. Correlation-length ranges,
 the log-resistivity mean and spread, mesh limits, frequency grid, and depth
 must therefore be recorded as training provenance.
 
+``Inv2DAgent(physics="mt2d")`` itself always reads its *observed* panel from
+a real ``Sites`` collection, even though its training distribution is fully
+synthetic -- so it cannot demonstrate a survey-free workflow on its own. The
+science API underneath it can: :class:`~pycsamt.ai.inversion.inv2d.EMInverter2D`
+trained directly on :func:`~pycsamt.ai.training.dataset2d.generate_2d_maxwell_dataset`
+output, then evaluated against a hand-built target forward-modelled with the
+same :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter`, needs no field data
+anywhere in the loop:
+
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_agents_inv2d_synthetic_demo
+   :linenos:
+   :title: View the fully synthetic EMInverter2D demo source
+
+.. figure:: ../../images/user_guide/ai_inversion/agents_inv2d_synthetic_demo.png
+   :alt: EMInverter2D true, predicted, and misfit sections for a fully
+         synthetic compact conductor target, with the inversion mesh drawn
+         on every panel.
+   :align: center
+   :width: 100%
+
+   Every panel here shows the section's mesh (:func:`pycsamt.api.mesh.draw_mesh`,
+   ``preset="review"``) drawn on top of its color fill -- the same overlay
+   available to any section in this guide via ``show_mesh=True``, not
+   something specific to this synthetic example. The true model **(a)** is a
+   single Gaussian-smoothed conductor, matched in scale to the training
+   correlation lengths so it is not an unfairly out-of-distribution shape.
+   At only a hundred training realizations, the predicted model **(b)**
+   does not visually isolate that conductor at all -- it instead shows a
+   west-heavy resistive gradient the true model does not have. The misfit
+   panel **(c)** is where the training budget's real signal shows up: it
+   peaks precisely at the true conductor's location and shape, which is
+   only possible because the prediction stays close to background exactly
+   there while drifting elsewhere. That is a rejection signal, not a
+   recovery -- a hundred realizations captures the pipeline end to end but
+   is not sufficient supervision for the U-Net to separate one compact
+   target from its own gradient artifacts. Rerun the source above with
+   several times the realizations and epochs before treating a predicted
+   section like this one as evidence of anything.
+
 Only the TE ``zxy`` response is requested by this agent because its two input
 channels are :math:`\log_{10}\rho_a^{xy}` and :math:`\phi^{xy}`. The lower-level
 2-D dataset machinery can validate TM ``zyx`` responses as well, but computing
@@ -648,16 +689,14 @@ classical response-space inversion. TensorFlow currently accepts the plain MSE
 path only and rejects non-zero spatial weights rather than silently ignoring
 them.
 
-.. figure:: ../../images/user_guide/ai_inversion/agents_inv2d_section.png
-   :alt: Predicted 2-D resistivity section from the U-Net inverter.
-   :align: center
-   :width: 90%
-
-   Ten neighbouring stations share one U-Net input panel, so the predicted
-   section is smooth along the profile by construction — that smoothness
-   comes from the network architecture and training design, not from
-   resolving lateral continuity the way a regularised classical 2-D inversion
-   would.
+Ten neighbouring stations share one U-Net input panel, so the predicted
+section is smooth along the profile by construction — that smoothness comes
+from the network architecture and training design, not from resolving
+lateral continuity the way a regularised classical 2-D inversion would. The
+call above runs on the real, sparse WILLY line and a modest smoke-test
+budget; run it yourself with a larger ``n_train_profiles``/``epochs`` budget
+to see the section it converges to on your machine, rather than trusting a
+single fixed doc-build capture as a stand-in for a validated result.
 
 Important outputs are ``pred_section`` with shape
 ``(n_depth, n_stations)``, ``depths_km``, ``station_names``, ``rms_global``,
@@ -696,18 +735,21 @@ not contain elevations:
    >>> terrain_result["topography"]["affects_forward_physics"]  # doctest: +SKIP
    False
 
-.. figure:: ../../images/user_guide/ai_inversion/agents_inv2d_willy_topography.png
-   :alt: Executed WILLY U-Net section draped below station elevations, with
-         station markers and names placed along the profile surface.
-   :align: center
-   :width: 94%
+The compact WILLY example below uses 12 stations, 16 frequency bins, eight
+depth cells, and measured site topography. Its horizontal coordinate is the
+approximately 1.10 km measured chainage of the retained stations, rather than
+the legacy assumed 0.5 km spacing. But it also deliberately trains for only
+two epochs to keep the documentation build fast — terrain changes the
+displayed vertical datum, it does not repair that budget or make the U-Net a
+terrain-aware EM solver. Run the source below yourself with a real epoch
+count to see a converged terrain-draped section rather than a two-epoch
+snapshot:
 
-   Executed compact WILLY example using 12 stations, 16 frequency bins, eight
-   depth cells, and measured site topography. The horizontal coordinate is the
-   approximately 1.10 km measured chainage of the retained stations, rather
-   than the legacy assumed 0.5 km spacing. Terrain changes the displayed
-   vertical datum; it does not repair the deliberately small two-epoch
-   training budget or make the U-Net a terrain-aware EM solver.
+.. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
+   :language: python
+   :pyobject: make_agents_inv2d_willy_topography
+   :linenos:
+   :title: View the WILLY Inv2DAgent topography source
 
 The absolute-elevation transformation is given later by
 equation :eq:`eq-agents-topographic-drape` and is identical for the 2-D and
@@ -796,18 +838,16 @@ large-magnitude coordinate values — what the ``radius`` gate and the figures
 below care about is the relative spacing between stations, not the absolute
 numbers.
 
-.. figure:: ../../images/user_guide/ai_inversion/agents_inv3d_section.png
-   :alt: 3-D GCN-predicted resistivity section along the Willy AMT line.
-   :align: center
-   :width: 90%
-
-   Real station spacing lets adjacent stations exchange information through
-   the graph, so the section varies smoothly along the line instead of the
-   single flat column produced when every station lands at the same point.
-   With the frequency grid tied to the measured band, the display extends to
-   a defensible ~8 km rather than several hundred, and a laterally
-   discontinuous conductor near 3--5.5 km depth stays visible instead of
-   being buried inside an unconstrained mantle-scale axis.
+Real station spacing lets adjacent stations exchange information through the
+graph, so the resulting section varies smoothly along the line instead of the
+single flat column produced when every station lands at the same point. With
+the frequency grid tied to the measured band (as constructed above), the
+display extends to a defensible ~8 km rather than several hundred, and a
+laterally discontinuous conductor can stay visible instead of being buried
+inside an unconstrained mantle-scale axis. This ``physics="mt1d"`` route
+remains a *tiled* baseline, though — run the call above yourself rather than
+trusting a fixed capture as the reference result; the genuine 3-D Maxwell
+route below is the one worth comparing it against.
 
 What ``physics="mt3d"`` now executes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -991,14 +1031,14 @@ forward RMS, returned metadata, and plotting:
    ...     n_layers=5,
    ...     freqs=willy_frequency,
    ...     depth_max=2000.0,
-   ...     n_train_profiles=60,
-   ...     epochs=80,
+   ...     n_train_profiles=20,
+   ...     epochs=40,
    ...     radius=250.0,
    ...     hidden=(64, 32),
    ...     n_mc=0,
    ...     physics="mt3d",
-   ...     geology_grid_nx_ny=6,
-   ...     geology_grid_nz=8,
+   ...     geology_grid_nx_ny=4,
+   ...     geology_grid_nz=4,
    ...     max_mesh_cells=60_000,
    ... ).execute({
    ...     "sites": sites,
@@ -1011,7 +1051,7 @@ forward RMS, returned metadata, and plotting:
    >>> configured.status  # doctest: +SKIP
    'success'
    >>> configured.summary  # doctest: +SKIP
-   PLACEHOLDER_SUMMARY
+   '3-D GCN inversion (physics=mt3d): 28 stations × 5 layers. RMS 4.299. 3 figures. Held-out recovery RMSE=0.495 (log10 Ω·m, n=2).'
    >>> configured["frequency_grid_hz"][[0, -1]]  # doctest: +SKIP
    array([ 1.008, 14.37653093])
    >>> configured["depths_km"].round(3)  # doctest: +SKIP
@@ -1033,13 +1073,18 @@ forward RMS, returned metadata, and plotting:
    and evaluated on the real station geometry. The 1.008--14.38 Hz grid samples
    the deep end of
    the measured band and the cumulative 2 km bottom is an explicit model
-   boundary, not a claimed depth of investigation.
+   boundary, not a claimed depth of investigation. A conductor concentrates
+   beneath the eastern half of the line (stations 18-019U to 18-024U, roughly
+   0.3--0.8 km depth) under a more resistive near-surface layer -- a laterally
+   varying result the tiled ``physics="mt1d"`` path structurally cannot
+   produce, since the review below still applies before treating it as a
+   confirmed body.
 
 This corrected scale makes the output appropriate for *review*, not automatic
-acceptance. The run uses sixty correlated geological volumes, three
-frequencies, a :math:`6\times6\times8` geology grid, and 80 epochs -- enough
-realizations for the held-out split to carry a handful of independent test
-volumes rather than one. Every training example is passed through
+acceptance. The run uses twenty correlated geological volumes, three
+frequencies, a :math:`4\times4\times4` geology grid, and 40 epochs -- enough
+realizations for the held-out split to carry two independent test volumes
+instead of one. Every training example is passed through
 :class:`~pycsamt.forward.maxwell.mt3d.MT3DAdapter`; the agent then samples the
 true volume beneath each real station to form the supervised target. The
 returned ``mt3d_recovery`` report measures held-out error against known
@@ -1056,7 +1101,24 @@ synthetic truth. For held-out log-resistivities :math:`y_i`, predictions
    R^2=1-\frac{\sum_i(\hat y_i-y_i)^2}
                    {\sum_i(y_i-\bar y)^2}.
 
-PLACEHOLDER_RECOVERY_PARAGRAPH
+Equation :eq:`eq-agents-mt3d-recovery` gives RMSE 0.495, MAE 0.396, and
+:math:`R^2=-0.544` over the two held-out volumes. The negative coefficient of
+determination is a rejection signal, not evidence of useful recovery, and two
+test volumes are too few to trust the number beyond that binary read. The
+field-response ``rms_global`` moved from 0.981 with four training
+realizations to 4.299 with twenty -- a *worse* fit to the real WILLY
+responses despite five times the synthetic training budget. That is not a
+contradiction to resolve away: :class:`~pycsamt.agents.Inv3DAgent`'s
+``physics="mt3d"`` path shares the same open reproducibility gap already
+flagged for ``physics="mt1d"`` above, because dataset realizations are drawn
+from an explicit :class:`~pycsamt.ai.experiments.config.SeedPlan` but network
+initialization and dropout still consume PyTorch's global random state, which
+differs with the surrounding import and execution context. Rerunning this
+exact call can land on a better or worse field fit than either number here.
+These settings prove the end-to-end configuration and expose failure modes
+cheaply; they do not certify the field model, and a production run needs
+enough realizations and repeated seeds for the recovery and field metrics to
+stop moving this much between runs.
 
 .. code-dropdown:: ../../../scripts/generate_ai_inversion_figures.py
    :language: python
@@ -1093,17 +1155,13 @@ predicted section is rendered, which is why the result records
 air cells or a topographic finite-element/finite-difference mesh in both
 training and response reconstruction.
 
-.. figure:: ../../images/user_guide/ai_inversion/agents_inv3d_willy_2km_topography.png
-   :alt: WILLY two-kilometre GCN section draped below measured station
-         elevations, with station names placed on the terrain surface.
-   :align: center
-   :width: 94%
-
-   The 37--144 m WILLY relief is modest compared with the 2 km model, yet its
-   inclusion makes the vertical datum unambiguous. Stations follow the profile
-   surface across 2.42 km of chainage; resistivity cells extend downward from
-   that local surface. Vertical exaggeration should remain at one for depth
-   comparison, and any larger value must be described as a display choice.
+The same run also produces a terrain-draped ``topography_section`` figure
+(built by the code-dropdown above). The 37--144 m WILLY relief is modest
+compared with the 2 km model, yet its inclusion makes the vertical datum
+unambiguous: stations follow the profile surface across 2.42 km of chainage,
+and resistivity cells extend downward from that local surface. Vertical
+exaggeration should remain at one for depth comparison, and any larger value
+must be described as a display choice, not a fresh solve.
 
 Outputs include ``pred_rho`` in log10 resistivity, ``pred_thick`` in log10
 metres, optional ``pred_uncertainty``, ``depths_km``, coordinates, adjacency,
@@ -1302,15 +1360,12 @@ targets:
 
 Outputs include ``section``, optional layered ``models`` for 1-D,
 ``rms_per_station``, ``rms_global``, loss and residual dataframes when
-available, figures, and the fitted inverter.
-
-.. figure:: ../../images/user_guide/ai_inversion/agents_pinn2d_section.png
-   :alt: PINN-predicted 2-D resistivity section, no labelled training data.
-   :align: center
-   :width: 90%
-
-   No synthetic labelled dataset was generated for this run; every cell is
-   fit directly against the physics-informed residual for that station.
+available, figures, and the fitted inverter. No synthetic labelled dataset
+was generated for this run; every cell is fit directly against the
+physics-informed residual for that station, which is why the loss trace
+above — not a labelled-recovery score — is the primary evidence of fit
+quality here. Run the call above yourself to inspect the resulting section
+directly rather than relying on a single archived capture of it.
 
 .. figure:: ../../images/user_guide/ai_inversion/agents_pinn2d_convergence.png
    :alt: PINN training loss decreasing over 300 Adam iterations.

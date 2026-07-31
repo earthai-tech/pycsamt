@@ -42,6 +42,13 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from ...api.mesh import (
+    PYCSAMT_MESH,
+    MeshFillStyle,
+    MeshStyle,
+    cell_edges_from_centres,
+)
+from ...api.mesh import draw_mesh as _draw_mesh
 from ._style import (
     EM_CMAPS,
     EM_COLORS,
@@ -63,15 +70,12 @@ _BOT_HEIGHT = 2.5
 
 
 def _cell_edges(centres: np.ndarray) -> np.ndarray:
-    """Return (n+1,) cell-boundary array from (n,) cell-centre array."""
-    if len(centres) < 2:
-        half = 0.5
-        return np.array([centres[0] - half, centres[0] + half])
-    d = np.diff(centres)
-    mids = centres[:-1] + d / 2.0
-    lo = centres[0] - d[0] / 2.0
-    hi = centres[-1] + d[-1] / 2.0
-    return np.concatenate([[lo], mids, [hi]])
+    """Return (n+1,) cell-boundary array from (n,) cell-centre array.
+
+    Thin alias of :func:`pycsamt.api.mesh.cell_edges_from_centres`, kept so
+    every existing call site in this module stays unchanged.
+    """
+    return cell_edges_from_centres(centres)
 
 
 def _safe_vlim(
@@ -104,6 +108,9 @@ def _draw_section(
     stations: np.ndarray,
     station_labels: list[str] | None,
     tick_cfg: StationTickConfig,
+    *,
+    show_mesh: bool = False,
+    mesh_style: MeshStyle | None = None,
 ) -> Any:
     """Render one 2-D section panel; return the pcolormesh mappable."""
     im = ax.pcolormesh(
@@ -115,6 +122,10 @@ def _draw_section(
         vmax=vmax,
         shading="flat",
     )
+    if show_mesh:
+        style = mesh_style or PYCSAMT_MESH.style_for("review")
+        # The fill was already drawn above; only overlay cell-edge lines.
+        _draw_mesh(ax, s_edges, d_edges, style=style.copy(fill=MeshFillStyle(show=False)))
     ax.invert_yaxis()
     if title:
         ax.set_title(title, fontsize=9, pad=4)
@@ -273,6 +284,9 @@ def plot_inversion_result_2d(
     tick_label_rotation: float = 0.0,
     tick_fontsize: int = 7,
     station_tick_config: StationTickConfig | None = None,
+    # ── mesh cell-boundary overlay ───────────────────────────────────────────
+    show_mesh: bool = False,
+    mesh_style: MeshStyle | None = None,
 ) -> Figure:
     """
     Multi-panel 2-D inversion result figure.
@@ -399,6 +413,15 @@ def plot_inversion_result_2d(
     station_tick_config : StationTickConfig or None
         Pre-built tick config; overrides ``tick_every`` / rotation /
         fontsize when provided.
+    show_mesh : bool
+        Overlay the section's cell-boundary lines on every section panel
+        (true/pred/misfit), via :func:`pycsamt.api.mesh.draw_mesh`. The
+        color fill drawn by this function is unaffected; only edge lines
+        are added on top.
+    mesh_style : pycsamt.api.mesh.MeshStyle or None
+        Explicit mesh-edge style. Defaults to
+        ``PYCSAMT_MESH.style_for("review")`` when ``show_mesh=True`` and
+        this is ``None``.
 
     Returns
     -------
@@ -600,6 +623,8 @@ def plot_inversion_result_2d(
             stations,
             station_labels,
             station_tick_config,
+            show_mesh=show_mesh,
+            mesh_style=mesh_style,
         )
         im_res = im
 
@@ -624,6 +649,8 @@ def plot_inversion_result_2d(
             stations,
             station_labels,
             station_tick_config,
+            show_mesh=show_mesh,
+            mesh_style=mesh_style,
         )
 
     # ── shared resistivity colorbar ──────────────────────────────────────────

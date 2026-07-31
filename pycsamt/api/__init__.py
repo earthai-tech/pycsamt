@@ -66,6 +66,19 @@ from .labels import (
     STATION_LABEL,
     period_axis_label,
 )
+from .mesh import (
+    PYCSAMT_MESH,
+    MeshEdgeStyle,
+    MeshFillStyle,
+    MeshStyle,
+    PyCSAMTMesh,
+    cell_edges_from_centres,
+    configure_mesh,
+    draw_mesh,
+    edges_from_geology_grid,
+    edges_from_maxwell_mesh,
+    reset_mesh,
+)
 from .ordering import (
     PYCSAMT_ORDERING,
     SiteOrderingConfig,
@@ -200,6 +213,18 @@ __all__ = [
     "SectionStyle",
     "configure_section",
     "reset_section",
+    # mesh-display API
+    "PYCSAMT_MESH",
+    "MeshEdgeStyle",
+    "MeshFillStyle",
+    "MeshStyle",
+    "PyCSAMTMesh",
+    "cell_edges_from_centres",
+    "configure_mesh",
+    "draw_mesh",
+    "edges_from_geology_grid",
+    "edges_from_maxwell_mesh",
+    "reset_mesh",
     # station rendering API
     "PYCSAMT_STATION_RENDERING",
     "PyCSAMTStationRendering",

@@ -18,6 +18,13 @@ import unittest
 
 import pycsamt.agents.ai_inversion as aimod
 from pycsamt.agents.ai_inversion import AIInversionAgent
+from pycsamt.agents.inv3d_agent import Inv3DAgent
+
+
+def test_inv3d_agent_accepts_explicit_early_stopping_patience():
+    agent = Inv3DAgent(epochs=50, patience=10, n_mc=0)
+    assert agent.epochs == 50
+    assert agent.patience == 10
 
 
 def _backend_available() -> bool:

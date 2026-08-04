@@ -333,6 +333,8 @@ class EMInverter2D(BaseEMNet):
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
 
+        from pycsamt.api.view.progress import get_progress_bar
+
         # channels-first: (n, n_comp, n_freqs, n_sta) — already correct
         # target: add channel dim → (n, 1, n_depth, n_sta)
         ytr = ytr[:, np.newaxis, :, :]
@@ -370,49 +372,50 @@ class EMInverter2D(BaseEMNet):
             tr_ds, batch_size=batch_size, shuffle=True, drop_last=drop_last
         )
         n_seen = len(tr_ds) - (1 if drop_last else 0)
-        for ep in range(1, epochs + 1):
-            self._network.train()
-            ep_loss = 0.0
-            for xb, yb in loader:
-                xb, yb = xb.to(dev), yb.to(dev)
-                pred = self._resize(self._network(xb), yb.shape[-2:])
-                loss = loss_fn(pred, yb)
-                opt.zero_grad()
-                loss.backward()
-                if grad_clip:
-                    nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
-                    )
-                opt.step()
-                ep_loss += loss.item() * len(xb)
-            ep_loss /= n_seen
+        with get_progress_bar(
+            total=epochs, desc="EMInverter2D", unit="epoch", verbose=verbose
+        ) as bar:
+            for ep in range(1, epochs + 1):
+                self._network.train()
+                ep_loss = 0.0
+                for xb, yb in loader:
+                    xb, yb = xb.to(dev), yb.to(dev)
+                    pred = self._resize(self._network(xb), yb.shape[-2:])
+                    loss = loss_fn(pred, yb)
+                    opt.zero_grad()
+                    loss.backward()
+                    if grad_clip:
+                        nn.utils.clip_grad_norm_(
+                            self._network.parameters(), grad_clip
+                        )
+                    opt.step()
+                    ep_loss += loss.item() * len(xb)
+                ep_loss /= n_seen
 
-            self._network.eval()
-            with torch.no_grad():
-                v_pred = self._resize(self._network(Xva_t), target_hw)
-                v_loss = loss_fn(v_pred, yva_t).item()
+                self._network.eval()
+                with torch.no_grad():
+                    v_pred = self._resize(self._network(Xva_t), target_hw)
+                    v_loss = loss_fn(v_pred, yva_t).item()
 
-            sched.step(v_loss)
-            train_losses.append(ep_loss)
-            val_losses.append(v_loss)
+                sched.step(v_loss)
+                train_losses.append(ep_loss)
+                val_losses.append(v_loss)
 
-            if v_loss < best_val - 1e-6:
-                best_val = v_loss
-                best_state = copy.deepcopy(self._network.state_dict())
-                no_improve = 0
-            else:
-                no_improve += 1
+                if v_loss < best_val - 1e-6:
+                    best_val = v_loss
+                    best_state = copy.deepcopy(self._network.state_dict())
+                    no_improve = 0
+                else:
+                    no_improve += 1
 
-            if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  EMInverter2D  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
+                bar.update(1, metrics={"train": ep_loss, "val": v_loss})
 
-            if no_improve >= patience:
-                if verbose:
-                    print(f"  Early stop at epoch {ep} (patience={patience})")
-                break
+                if no_improve >= patience:
+                    if bar.verbose:
+                        print(
+                            f"  Early stop at epoch {ep} (patience={patience})"
+                        )
+                    break
 
         if best_state is not None:
             self._network.load_state_dict(best_state)
@@ -423,6 +426,8 @@ class EMInverter2D(BaseEMNet):
         self, Xtr, ytr, Xva, yva, *, epochs, batch_size, lr, patience, verbose
     ):
         import tensorflow as tf
+
+        from pycsamt.api.view.progress import PYCSAMT_PROGRESS
 
         # TF UNet2D expects channels-last: (n, n_freqs, n_sta, n_comp)
         Xtr_tf = Xtr.transpose(0, 2, 3, 1)  # (n, n_freqs, n_sta, n_comp)
@@ -460,7 +465,7 @@ class EMInverter2D(BaseEMNet):
                         min_lr=1e-6,
                     ),
                 ],
-                verbose=1 if verbose else 0,
+                verbose=PYCSAMT_PROGRESS.resolve(verbose),
             )
         best_val = min(hist.history["val_loss"])
         return {

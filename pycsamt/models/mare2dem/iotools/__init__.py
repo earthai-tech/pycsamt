@@ -59,7 +59,9 @@ from .most_recent import get_most_recent
 from .poly import (
     PolyFile,
     read_poly,
+    read_triangulation,
     write_poly,
+    write_triangulation,
 )
 from .resistivity import (
     ResistivityFile,
@@ -94,7 +96,9 @@ __all__ = [
     # poly
     "PolyFile",
     "read_poly",
+    "read_triangulation",
     "write_poly",
+    "write_triangulation",
     # settings
     "SettingsFile",
     "write_settings",

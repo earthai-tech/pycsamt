@@ -9,7 +9,8 @@ Training loop for EM neural networks.
 * Masked MSE loss (ignores NaN padding for variable-depth datasets)
 * ``ReduceLROnPlateau`` learning-rate scheduling
 * Early stopping with configurable patience
-* Per-epoch progress display (``tqdm`` if available)
+* Per-epoch progress display, verbosity-aware (see
+  :mod:`pycsamt.utils.progress`)
 * History dict for :func:`~pycsamt.ai.plot.convergence.plot_convergence`
 """
 
@@ -20,14 +21,6 @@ import time
 import numpy as np
 
 __all__ = ["EMTrainer"]
-
-_TQDM_AVAILABLE = False
-try:
-    from tqdm.auto import tqdm as _tqdm
-
-    _TQDM_AVAILABLE = True
-except ImportError:
-    pass
 
 
 class EMTrainer:
@@ -52,8 +45,10 @@ class EMTrainer:
         Compute device (``'cpu'``, ``'cuda'``, ``'mps'``).
     grad_clip : float or None
         If set, clip gradient norms to this value.
-    verbose : bool
-        Print per-epoch summary.
+    verbose : bool, int, or str
+        Progress verbosity — see :func:`pycsamt.utils.progress.normalize_verbose`.
+        ``0``/``False`` silent, ``1``/``True`` animated bar, ``2``/``"log"``
+        one printed line per summary, ``"auto"`` tty-detected.
 
     Attributes
     ----------
@@ -76,7 +71,7 @@ class EMTrainer:
         batch_size: int = 256,
         device: str = "cpu",
         grad_clip: float | None = None,
-        verbose: bool = True,
+        verbose: bool | int | str = True,
     ):
         self.model = model
         self.lr = lr
@@ -129,6 +124,8 @@ class EMTrainer:
         except ImportError:
             raise ImportError("PyTorch required for EMTrainer.fit().")
 
+        from ...api.view.progress import get_progress_bar
+
         from .metrics import masked_mse_loss
 
         device = torch.device(self.device)
@@ -158,50 +155,54 @@ class EMTrainer:
 
         patience_ctr = 0
 
-        for epoch in range(1, epochs + 1):
-            t0 = time.perf_counter()
-            train_loss = self._train_epoch(
-                train_loader, optimiser, device, masked_mse_loss
-            )
-            val_loss = self._eval_epoch(val_loader, device, masked_mse_loss)
-            elapsed = time.perf_counter() - t0
+        with get_progress_bar(
+            total=epochs, desc="Training", unit="epoch", verbose=self.verbose
+        ) as bar:
+            for epoch in range(1, epochs + 1):
+                t0 = time.perf_counter()
+                train_loss = self._train_epoch(
+                    train_loader, optimiser, device, masked_mse_loss
+                )
+                val_loss = self._eval_epoch(val_loader, device, masked_mse_loss)
+                elapsed = time.perf_counter() - t0
 
-            scheduler.step(val_loss)
-            current_lr = optimiser.param_groups[0]["lr"]
+                scheduler.step(val_loss)
+                current_lr = optimiser.param_groups[0]["lr"]
 
-            self.history["train_loss"].append(train_loss)
-            self.history["val_loss"].append(val_loss)
-            self.history["lr"].append(current_lr)
-            self.history["epoch_time"].append(elapsed)
+                self.history["train_loss"].append(train_loss)
+                self.history["val_loss"].append(val_loss)
+                self.history["lr"].append(current_lr)
+                self.history["epoch_time"].append(elapsed)
 
-            # Early stopping
-            if val_loss < self.best_val_loss - self.min_delta:
-                self.best_val_loss = val_loss
-                self.best_epoch = epoch
-                self._best_state = {
-                    k: v.cpu().clone()
-                    for k, v in self.model.state_dict().items()
-                }
-                patience_ctr = 0
-            else:
-                patience_ctr += 1
+                # Early stopping
+                if val_loss < self.best_val_loss - self.min_delta:
+                    self.best_val_loss = val_loss
+                    self.best_epoch = epoch
+                    self._best_state = {
+                        k: v.cpu().clone()
+                        for k, v in self.model.state_dict().items()
+                    }
+                    patience_ctr = 0
+                else:
+                    patience_ctr += 1
 
-            if self.verbose and (
-                epoch % max(1, epochs // 20) == 0 or epoch == 1
-            ):
-                print(
-                    f"  Epoch {epoch:4d}/{epochs} | "
-                    f"train={train_loss:.5f}  val={val_loss:.5f}  "
-                    f"lr={current_lr:.2e}  [{elapsed:.1f}s]"
+                bar.update(
+                    1,
+                    metrics={
+                        "train_loss": train_loss,
+                        "val_loss": val_loss,
+                        "lr": current_lr,
+                    },
                 )
 
-            if patience_ctr >= self.patience:
-                if self.verbose:
-                    print(
-                        f"  Early stop at epoch {epoch} "
-                        f"(best val={self.best_val_loss:.5f} @ epoch {self.best_epoch})"
-                    )
-                break
+                if patience_ctr >= self.patience:
+                    if bar.verbose:
+                        print(
+                            f"  Early stop at epoch {epoch} "
+                            f"(best val={self.best_val_loss:.5f} "
+                            f"@ epoch {self.best_epoch})"
+                        )
+                    break
 
         # Restore best weights
         if self._best_state is not None:

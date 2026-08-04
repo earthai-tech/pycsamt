@@ -19,7 +19,59 @@ import numpy as np
 
 from ..iotools.emdata import EMDataFile
 
-__all__ = ["estimate_area_of_interest"]
+__all__ = ["estimate_area_of_interest", "survey_points"]
+
+
+def survey_points(em: EMDataFile) -> np.ndarray:
+    """Return every receiver/transmitter/electrode ``(y, z)`` position.
+
+    Shared by :func:`estimate_area_of_interest` and
+    :func:`~pycsamt.models.mare2dem.tri_mesh.build_survey_mesh` so there
+    is one place that knows how to walk an :class:`EMDataFile`'s
+    MT/CSEM/DC geometry, not two.
+
+    Parameters
+    ----------
+    em : EMDataFile
+        Survey data file supplying MT, CSEM, and DC receiver/
+        transmitter positions.
+
+    Returns
+    -------
+    numpy.ndarray, shape (n, 2)
+        Stacked ``(y, z)`` positions, empty (shape ``(0, 2)``) when *em*
+        carries no geometry.
+
+    Examples
+    --------
+    >>> from pycsamt.models.mare2dem import read_emdata
+    >>> from pycsamt.models.mare2dem.geom.area_of_interest import (
+    ...     survey_points,
+    ... )
+    >>> em = read_emdata("survey.emdata")
+    >>> survey_points(em).shape[1]
+    2
+    """
+    points: list[np.ndarray] = []
+
+    if em.csem is not None:
+        if len(em.csem.receivers):
+            points.append(em.csem.receivers[:, 1:3])  # y, z
+        if len(em.csem.transmitters):
+            points.append(em.csem.transmitters[:, 1:3])
+
+    if em.mt is not None and len(em.mt.receivers):
+        points.append(em.mt.receivers[:, 1:3])
+
+    if em.dc is not None:
+        if len(em.dc.tx_electrodes):
+            points.append(em.dc.tx_electrodes[:, 1:3])
+        if len(em.dc.rx_electrodes):
+            points.append(em.dc.rx_electrodes[:, 1:3])
+
+    if not points:
+        return np.zeros((0, 2))
+    return np.vstack(points)
 
 
 def estimate_area_of_interest(
@@ -55,27 +107,10 @@ def estimate_area_of_interest(
     >>> ylim
     array([-5500.,  5500.])
     """
-    points: list[np.ndarray] = []
-
-    if em.csem is not None:
-        if len(em.csem.receivers):
-            points.append(em.csem.receivers[:, 1:3])  # y, z
-        if len(em.csem.transmitters):
-            points.append(em.csem.transmitters[:, 1:3])
-
-    if em.mt is not None and len(em.mt.receivers):
-        points.append(em.mt.receivers[:, 1:3])
-
-    if em.dc is not None:
-        if len(em.dc.tx_electrodes):
-            points.append(em.dc.tx_electrodes[:, 1:3])
-        if len(em.dc.rx_electrodes):
-            points.append(em.dc.rx_electrodes[:, 1:3])
-
-    if not points:
+    survey = survey_points(em)
+    if len(survey) == 0:
         return None, None
 
-    survey = np.vstack(points)
     ymin, zmin = survey.min(axis=0)
     ymax, zmax = survey.max(axis=0)
     dy = ymax - ymin

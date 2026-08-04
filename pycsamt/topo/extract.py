@@ -203,40 +203,85 @@ def _get_head(ed: Any) -> Any | None:
     return None
 
 
-def _read_elev(ed: Any) -> float | None:
-    """Read elevation in metres from an EDI-like object's HEAD."""
-    h = _get_head(ed)
-    if h is not None:
-        # seg.edi.EDIFile exposes a Location sub-object
-        loc = getattr(h, "Location", None)
-        if loc is not None:
-            for name in ("elevation", "elev", "alt"):
-                v = getattr(loc, name, None)
-                if v is not None:
-                    try:
-                        f = float(v)
-                        return f if np.isfinite(f) else None
-                    except (TypeError, ValueError):
-                        pass
-        # Direct attributes on head (old style / MTpy)
-        for name in ("elev", "elevation", "alt", "ALT", "z", "Z"):
-            v = getattr(h, name, None)
-            if v is not None:
-                try:
-                    f = float(v)
-                    return f if np.isfinite(f) else None
-                except (TypeError, ValueError):
-                    pass
-    # Also try direct attributes on the EDI object itself
-    for name in ("elev", "elevation", "alt"):
-        v = getattr(ed, name, None)
+def _get_info(ed: Any) -> Any | None:
+    """Return the ``>INFO`` section object from a ``seg.edi.EDIFile``.
+
+    Some real deliveries (e.g. non-standard CSAMT exports) record
+    ``LATITUDE=``/``LONGITUDE=``/``ELEVATION=`` under the ``>INFO`` block
+    instead of the standard SEG-EDI ``>HEAD`` keys :func:`_get_head`
+    reads -- confirmed directly on a real survey where ``Site.coords``
+    (and this module's own HEAD-only lookup) came back empty even though
+    the values are right there in the file, already parsed onto
+    :class:`pycsamt.seg.heads.Info`'s own ``.latitude``/``.longitude``/
+    ``.elevation`` attributes. This is a real, standards-compliant
+    fallback (the SEG-EDI spec permits location metadata in ``>INFO``),
+    not a delivery-specific hack.
+    """
+    get_section = getattr(ed, "get_section", None)
+    if callable(get_section):
+        try:
+            return get_section("info")
+        except (KeyError, TypeError, ValueError):
+            return None
+    sections = getattr(ed, "sections", None)
+    if isinstance(sections, dict):
+        for key in ("info", "Info", "INFO"):
+            info = sections.get(key)
+            if info is not None:
+                return info
+    return None
+
+
+def _first_finite(obj: Any, names: tuple[str, ...]) -> float | None:
+    """Return the first finite float among ``obj``'s ``names`` attributes."""
+    for name in names:
+        v = getattr(obj, name, None)
         if v is not None:
             try:
                 f = float(v)
-                return f if np.isfinite(f) else None
+                if np.isfinite(f):
+                    return f
             except (TypeError, ValueError):
                 pass
     return None
+
+
+def _read_elev(ed: Any) -> float | None:
+    """Read elevation in metres from an EDI-like object's HEAD or INFO.
+
+    A parsed field that is present but exactly ``0.0`` is treated the
+    same as absent and superseded by a later, non-zero source -- the
+    standard ``>HEAD`` block's ``Location``/elevation fields default to
+    ``0.0`` when the file simply never set them (as opposed to a
+    genuine sea-level station), which previously masked a real, non-zero
+    value recorded under ``>INFO`` instead (see :func:`_get_info`).
+    """
+    candidate: float | None = None
+    h = _get_head(ed)
+    if h is not None:
+        loc = getattr(h, "Location", None)
+        if loc is not None:
+            v = _first_finite(loc, ("elevation", "elev", "alt"))
+            if v is not None and v != 0.0:
+                return v
+            candidate = candidate if candidate is not None else v
+        v = _first_finite(h, ("elev", "elevation", "alt", "ALT", "z", "Z"))
+        if v is not None and v != 0.0:
+            return v
+        candidate = candidate if candidate is not None else v
+    v = _first_finite(ed, ("elev", "elevation", "alt"))
+    if v is not None and v != 0.0:
+        return v
+    candidate = candidate if candidate is not None else v
+    # >INFO fallback (see _get_info's own docstring) -- checked last among
+    # non-zero sources, but preferred over an all-zero HEAD candidate.
+    info = _get_info(ed)
+    if info is not None:
+        v = _first_finite(info, ("elevation", "elev", "alt"))
+        if v is not None and v != 0.0:
+            return v
+        candidate = candidate if candidate is not None else v
+    return candidate
 
 
 def _read_latlon(sites: Any) -> list[tuple[float, float]]:
@@ -261,6 +306,12 @@ def _read_latlon(sites: Any) -> list[tuple[float, float]]:
             if lat is None or lon is None:
                 lat = getattr(h, "lat", None)
                 lon = getattr(h, "lon", None) or getattr(h, "long", None)
+        if lat is None or lon is None:
+            # Fall back to the >INFO section (see _get_info's docstring).
+            info = _get_info(ed)
+            if info is not None:
+                lat = lat if lat is not None else getattr(info, "latitude", None)
+                lon = lon if lon is not None else getattr(info, "longitude", None)
         if lat is not None and lon is not None:
             try:
                 coords.append((float(lat), float(lon)))

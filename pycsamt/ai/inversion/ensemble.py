@@ -132,27 +132,35 @@ class EnsembleInverter:
         -------
         self
         """
+        from pycsamt.api.view.progress import get_progress_bar
+
         self._members = []
-        for i, seed in enumerate(self.seeds[: self.n_estimators]):
-            member = copy.deepcopy(self.base_estimator)
-            if verbose:
-                print(
-                    f"\n=== Ensemble member {i + 1}/{self.n_estimators} "
-                    f"(seed={seed}) ==="
+        with get_progress_bar(
+            total=self.n_estimators,
+            desc="Ensemble",
+            unit="member",
+            verbose=verbose,
+        ) as bar:
+            for i, seed in enumerate(self.seeds[: self.n_estimators]):
+                member = copy.deepcopy(self.base_estimator)
+                bar.set_description(
+                    f"Ensemble member {i + 1}/{self.n_estimators} "
+                    f"(seed={seed})"
                 )
-            member.fit(
-                X,
-                y,
-                epochs=epochs,
-                batch_size=batch_size,
-                lr=lr,
-                patience=patience,
-                val_frac=val_frac,
-                grad_clip=grad_clip,
-                seed=seed,
-                verbose=verbose,
-            )
-            self._members.append(member)
+                member.fit(
+                    X,
+                    y,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    lr=lr,
+                    patience=patience,
+                    val_frac=val_frac,
+                    grad_clip=grad_clip,
+                    seed=seed,
+                    verbose=verbose,
+                )
+                self._members.append(member)
+                bar.update(1)
 
         self._is_fitted = True
         return self

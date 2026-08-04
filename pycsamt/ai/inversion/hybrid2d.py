@@ -235,6 +235,7 @@ class HybridInverter2D(BaseHybridInverter):
             log_every=_every,
             init_log_rho=init_log_rho,
             init_log_thick=init_log_thick,
+            verbose=verbose,
         )
         self._history = self._result["history"]
         self._is_fitted = True

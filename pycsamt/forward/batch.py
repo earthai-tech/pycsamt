@@ -332,6 +332,8 @@ def generate_dataset(
     """
     import os
 
+    from pycsamt.api.view.progress import get_progress_bar
+
     solver = solver.lower().strip()
     if solver not in ("mt1d", "tem1d", "csamt1d"):
         raise ValueError(
@@ -377,22 +379,22 @@ def generate_dataset(
 
     # Run workers
     results = []
-    if n_jobs_eff == 1:
-        for i, args in enumerate(args_list):
-            results.append(_worker(args))
-            if verbose and (i + 1) % max(1, n_samples // 10) == 0:
-                print(f"  {i + 1}/{n_samples} samples generated")
-    else:
-        with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {
-                pool.submit(_worker, a): i for i, a in enumerate(args_list)
-            }
-            done = 0
-            for fut in as_completed(futures):
-                results.append(fut.result())
-                done += 1
-                if verbose and done % max(1, n_samples // 10) == 0:
-                    print(f"  {done}/{n_samples} samples generated")
+    with get_progress_bar(
+        total=n_samples, desc="Generating dataset", unit="sample", verbose=verbose
+    ) as bar:
+        if n_jobs_eff == 1:
+            for args in args_list:
+                results.append(_worker(args))
+                bar.update(1)
+        else:
+            with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
+                futures = {
+                    pool.submit(_worker, a): i
+                    for i, a in enumerate(args_list)
+                }
+                for fut in as_completed(futures):
+                    results.append(fut.result())
+                    bar.update(1)
 
     # Assemble into arrays
     x_list = [r[0] for r in results]
@@ -804,6 +806,8 @@ def generate_dataset_3d(
     """
     import os
 
+    from pycsamt.api.view.progress import get_progress_bar
+
     solver = solver.lower().strip()
     if solver != "mt1d":
         raise ValueError(
@@ -859,22 +863,22 @@ def generate_dataset_3d(
     n_jobs_eff = os.cpu_count() if n_jobs == -1 else max(1, n_jobs)
 
     results = []
-    if n_jobs_eff == 1:
-        for i, a in enumerate(args_list):
-            results.append(_worker_3d(a))
-            if verbose and (i + 1) % max(1, n_surveys // 10) == 0:
-                print(f"  {i + 1}/{n_surveys} surveys generated")
-    else:
-        with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
-            futures = {
-                pool.submit(_worker_3d, a): i for i, a in enumerate(args_list)
-            }
-            done = 0
-            for fut in as_completed(futures):
-                results.append(fut.result())
-                done += 1
-                if verbose and done % max(1, n_surveys // 10) == 0:
-                    print(f"  {done}/{n_surveys} surveys generated")
+    with get_progress_bar(
+        total=n_surveys, desc="Generating 3-D surveys", unit="survey", verbose=verbose
+    ) as bar:
+        if n_jobs_eff == 1:
+            for a in args_list:
+                results.append(_worker_3d(a))
+                bar.update(1)
+        else:
+            with ProcessPoolExecutor(max_workers=n_jobs_eff) as pool:
+                futures = {
+                    pool.submit(_worker_3d, a): i
+                    for i, a in enumerate(args_list)
+                }
+                for fut in as_completed(futures):
+                    results.append(fut.result())
+                    bar.update(1)
 
     # ── assemble into 3-D arrays ──────────────────────────────────────────────
     X = np.stack([r[0] for r in results], axis=0).astype(np.float32)

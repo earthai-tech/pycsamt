@@ -322,6 +322,8 @@ class TensorFlowBackend(NeuralBackend):
         self.require()
         import tensorflow as tf
 
+        from pycsamt.api.view.progress import PYCSAMT_PROGRESS
+
         dev = self.resolve_device(device)
 
         with tf.device(dev):
@@ -351,7 +353,7 @@ class TensorFlowBackend(NeuralBackend):
                 epochs=epochs,
                 batch_size=batch_size,
                 callbacks=callbacks,
-                verbose=1 if verbose else 0,
+                verbose=PYCSAMT_PROGRESS.resolve(verbose),
             )
 
         return {

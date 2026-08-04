@@ -61,7 +61,7 @@ Use this page when you need to answer concrete processing questions:
      - Along-line and geographic views.
    * - How does Z strike compare with phase tensor and tipper direction?
      - ``plot_strike_analysis``
-     - Three-panel strike, PT azimuth, and tipper rose diagram.
+     - Strike and PT azimuth rose diagram, plus tipper rose when present.
 
 The examples use the public two-level import style:
 ``from pycsamt.emtools import ...``.
@@ -868,10 +868,14 @@ very small or very large.
 Combined Strike Analysis
 ------------------------
 
-``plot_strike_analysis`` creates a three-panel rose figure: impedance
-strike, phase-tensor azimuth, and :term:`tipper` strike.  The tipper
-panel is empty when the data do not contain vertical magnetic transfer
-functions.
+``plot_strike_analysis`` creates a rose figure of impedance strike and
+phase-tensor azimuth, adding a third :term:`tipper` strike panel only when
+*sites* actually carries vertical magnetic transfer functions somewhere in
+the survey.  A survey with no tipper channel at all (most AMT surveys, for
+instance) therefore gets a two-panel figure rather than a third panel that
+would only ever read "no data". If the survey does have tipper but the
+selected *band* happens to exclude every tipper-bearing row, the panel is
+still drawn, showing "no data" for that band specifically.
 
 For tipper vectors, pyCSAMT uses the real induction vector direction
 
@@ -903,7 +907,7 @@ directional diagnostic, not as a guaranteed rotation angle.
        method="consensus",
        band=(0.001, 10.0),
        bins=36,
-       suptitle="Strike, phase tensor, and tipper azimuth",
+       suptitle="Strike and phase-tensor azimuth",
    )
    fig.savefig("strike_analysis.png", dpi=200, bbox_inches="tight")
    plt.close(fig)
@@ -911,10 +915,15 @@ directional diagnostic, not as a guaranteed rotation angle.
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-16.png
    :width: 100%
 
+``L18PLT`` is AMT, with no vertical-field channel, so this call renders
+only the Strike (Z) and PT Azimuth panels -- the Tipper Strike panel is
+added automatically only when a survey actually carries tipper somewhere,
+rather than reserving a third panel that would only ever read "no data".
+
 Use this figure as a consistency check.  If Z strike and phase-tensor
 azimuth cluster around the same axial direction, confidence increases.
-If tipper strike is available and points somewhere else, investigate
-regional 3-D structure, coast effects, cultural noise, or sign
+If a survey does carry tipper and its strike points somewhere else,
+investigate regional 3-D structure, coast effects, cultural noise, or sign
 convention before choosing a rotation angle.
 
 Recommended Workflow

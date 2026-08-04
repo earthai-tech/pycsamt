@@ -512,7 +512,17 @@ class PlotModel(Mare2DEMBase):
     # -------------------------------------------------------
 
     def _load_mesh(self):
-        """Return (nodes, tris_1based, rho_per_tri) or (None, None, None)."""
+        """Return (nodes, tris_0based, rho_per_tri) or (None, None, None).
+
+        Delegates the actual ``.node``/``.ele`` parsing to
+        :func:`~pycsamt.models.mare2dem.iotools.poly.read_triangulation`
+        so there is one Triangle element-file reader in this package, not
+        two — this method only locates the mesh files next to the
+        ``.resistivity`` file and maps region attributes to resistivity
+        values.
+        """
+        from .iotools.poly import read_triangulation
+
         if self._workdir is None or self._rf is None:
             return None, None, None
 
@@ -521,74 +531,23 @@ class PlotModel(Mare2DEMBase):
             return None, None, None
 
         stem = Path(rf.poly_file).stem
-        node_p = ele_p = None
+        node_p = None
         for infix in (".1", ""):
             np_ = self._workdir / f"{stem}{infix}.node"
             ep_ = self._workdir / f"{stem}{infix}.ele"
             if np_.exists() and ep_.exists():
-                node_p, ele_p = np_, ep_
+                node_p = np_
                 break
 
         if node_p is None:
             return None, None, None
 
-        def _first_data(lines):
-            return next(
-                (
-                    i
-                    for i, ln in enumerate(lines)
-                    if ln.strip() and not ln.strip().startswith("#")
-                ),
-                None,
-            )
-
-        nlines = node_p.read_text(errors="replace").splitlines()
-        ni = _first_data(nlines)
-        if ni is None:
+        try:
+            nodes, tris, ri = read_triangulation(node_p)
+        except FileNotFoundError:
             return None, None, None
-
-        n_nodes = int(nlines[ni].split()[0])
-        ni += 1
-        nrows: list = []
-        while len(nrows) < n_nodes and ni < len(nlines):
-            ln = nlines[ni].strip()
-            ni += 1
-            if ln and not ln.startswith("#"):
-                nrows.append([float(v) for v in ln.split()])
-        if not nrows:
+        if len(nodes) == 0 or len(tris) == 0:
             return None, None, None
-        nodes = np.array(nrows, dtype=float)[:, 1:3]
-
-        elines = ele_p.read_text(errors="replace").splitlines()
-        ei = _first_data(elines)
-        if ei is None:
-            return None, None, None
-
-        ehdr = elines[ei].split()
-        ei += 1
-        n_tri = int(ehdr[0])
-        n_dpt = int(ehdr[1]) if len(ehdr) > 1 else 3
-        n_ea = int(ehdr[2]) if len(ehdr) > 2 else 0
-
-        erows: list = []
-        rattrs: list = []
-        while len(erows) < n_tri and ei < len(elines):
-            ln = elines[ei].strip()
-            ei += 1
-            if not ln or ln.startswith("#"):
-                continue
-            parts = ln.split()
-            erows.append([int(v) for v in parts[1 : 1 + n_dpt]])
-            if n_ea > 0 and len(parts) > 1 + n_dpt:
-                rattrs.append(int(float(parts[1 + n_dpt])))
-            else:
-                rattrs.append(0)
-
-        if not erows:
-            return None, None, None
-
-        tris = np.array(erows, dtype=int)
-        ri = np.array(rattrs, dtype=int)
 
         rho_table = rf.resistivity
         n_reg = len(rho_table)
@@ -686,7 +645,7 @@ class PlotModel(Mare2DEMBase):
 
         y = nodes[:, 0]
         z = nodes[:, 1]
-        els = tris - 1
+        els = tris  # already 0-based via read_triangulation
 
         rf = self._rf
         gb = (

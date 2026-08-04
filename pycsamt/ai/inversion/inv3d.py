@@ -320,6 +320,8 @@ class GCNInverter3D(BaseEMNet):
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
 
+        from pycsamt.api.view.progress import get_progress_bar
+
         dev = resolve_device(self.device)
         self._network = self._network.to(dev)
         A_t = torch.from_numpy(A).to(dev)  # (n_sta, n_sta) — fixed
@@ -340,61 +342,66 @@ class GCNInverter3D(BaseEMNet):
         best_val, best_state, no_improve = np.inf, None, 0
         train_losses, val_losses = [], []
 
-        for ep in range(1, epochs + 1):
-            self._network.train()
-            ep_loss = 0.0
+        with get_progress_bar(
+            total=epochs, desc="GCNInverter3D", unit="epoch", verbose=verbose
+        ) as bar:
+            for ep in range(1, epochs + 1):
+                self._network.train()
+                ep_loss = 0.0
 
-            for xb, yb in DataLoader(
-                tr_ds, batch_size=batch_size, shuffle=True
-            ):
-                xb, yb = xb.to(dev), yb.to(dev)  # (b, n_sta, n_feat/n_out)
-                b = xb.shape[0]
-                # Process each survey in the mini-batch; n_sta is typically
-                # small (< 300) so per-survey iteration has negligible overhead
-                preds = torch.stack(
-                    [self._network(xb[i], A_t) for i in range(b)], dim=0
-                )  # (b, n_sta, n_out)
-                loss = mse(preds, yb)
-                opt.zero_grad()
-                loss.backward()
-                if grad_clip:
-                    nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
+                for xb, yb in DataLoader(
+                    tr_ds, batch_size=batch_size, shuffle=True
+                ):
+                    xb, yb = xb.to(dev), yb.to(dev)  # (b, n_sta, n_feat/n_out)
+                    b = xb.shape[0]
+                    # Process each survey in the mini-batch; n_sta is
+                    # typically small (< 300) so per-survey iteration has
+                    # negligible overhead
+                    preds = torch.stack(
+                        [self._network(xb[i], A_t) for i in range(b)], dim=0
+                    )  # (b, n_sta, n_out)
+                    loss = mse(preds, yb)
+                    opt.zero_grad()
+                    loss.backward()
+                    if grad_clip:
+                        nn.utils.clip_grad_norm_(
+                            self._network.parameters(), grad_clip
+                        )
+                    opt.step()
+                    ep_loss += loss.item() * b
+
+                ep_loss /= len(Xtr)
+
+                self._network.eval()
+                with torch.no_grad():
+                    val_preds = torch.stack(
+                        [
+                            self._network(Xva_t[i], A_t)
+                            for i in range(len(Xva_t))
+                        ],
+                        dim=0,
                     )
-                opt.step()
-                ep_loss += loss.item() * b
+                    v_loss = mse(val_preds, yva_t).item()
 
-            ep_loss /= len(Xtr)
+                sched.step(v_loss)
+                train_losses.append(ep_loss)
+                val_losses.append(v_loss)
 
-            self._network.eval()
-            with torch.no_grad():
-                val_preds = torch.stack(
-                    [self._network(Xva_t[i], A_t) for i in range(len(Xva_t))],
-                    dim=0,
-                )
-                v_loss = mse(val_preds, yva_t).item()
+                if v_loss < best_val - 1e-6:
+                    best_val = v_loss
+                    best_state = copy.deepcopy(self._network.state_dict())
+                    no_improve = 0
+                else:
+                    no_improve += 1
 
-            sched.step(v_loss)
-            train_losses.append(ep_loss)
-            val_losses.append(v_loss)
+                bar.update(1, metrics={"train": ep_loss, "val": v_loss})
 
-            if v_loss < best_val - 1e-6:
-                best_val = v_loss
-                best_state = copy.deepcopy(self._network.state_dict())
-                no_improve = 0
-            else:
-                no_improve += 1
-
-            if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  GCNInverter3D  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
-
-            if no_improve >= patience:
-                if verbose:
-                    print(f"  Early stop at epoch {ep} (patience={patience})")
-                break
+                if no_improve >= patience:
+                    if bar.verbose:
+                        print(
+                            f"  Early stop at epoch {ep} (patience={patience})"
+                        )
+                    break
 
         if best_state is not None:
             self._network.load_state_dict(best_state)
@@ -416,6 +423,8 @@ class GCNInverter3D(BaseEMNet):
         verbose,
     ):
         import tensorflow as tf
+
+        from pycsamt.api.view.progress import get_progress_bar
 
         A_t = tf.constant(A)  # (n_sta, n_sta)
 
@@ -445,48 +454,54 @@ class GCNInverter3D(BaseEMNet):
         best_val, best_weights, no_improve = np.inf, None, 0
         train_losses, val_losses = [], []
 
-        for ep in range(1, epochs + 1):
-            ep_loss, n_batches = 0.0, 0
+        with get_progress_bar(
+            total=epochs,
+            desc="GCNInverter3D (TF)",
+            unit="epoch",
+            verbose=verbose,
+        ) as bar:
+            for ep in range(1, epochs + 1):
+                ep_loss, n_batches = 0.0, 0
 
-            for xb, yb in tr_ds:
-                with tf.GradientTape() as tape:
-                    preds = _forward_batch(xb, A_t, training=True)
-                    loss = mse(yb, preds)
-                grads = tape.gradient(loss, self._network.trainable_variables)
-                opt.apply_gradients(
-                    zip(grads, self._network.trainable_variables)
-                )
-                ep_loss += float(loss)
-                n_batches += 1
-            ep_loss /= max(n_batches, 1)
+                for xb, yb in tr_ds:
+                    with tf.GradientTape() as tape:
+                        preds = _forward_batch(xb, A_t, training=True)
+                        loss = mse(yb, preds)
+                    grads = tape.gradient(
+                        loss, self._network.trainable_variables
+                    )
+                    opt.apply_gradients(
+                        zip(grads, self._network.trainable_variables)
+                    )
+                    ep_loss += float(loss)
+                    n_batches += 1
+                ep_loss /= max(n_batches, 1)
 
-            v_loss, n_vb = 0.0, 0
-            for xb, yb in va_ds:
-                preds = _forward_batch(xb, A_t, training=False)
-                v_loss += float(mse(yb, preds))
-                n_vb += 1
-            v_loss /= max(n_vb, 1)
+                v_loss, n_vb = 0.0, 0
+                for xb, yb in va_ds:
+                    preds = _forward_batch(xb, A_t, training=False)
+                    v_loss += float(mse(yb, preds))
+                    n_vb += 1
+                v_loss /= max(n_vb, 1)
 
-            train_losses.append(ep_loss)
-            val_losses.append(v_loss)
+                train_losses.append(ep_loss)
+                val_losses.append(v_loss)
 
-            if v_loss < best_val - 1e-6:
-                best_val = v_loss
-                best_weights = self._network.get_weights()
-                no_improve = 0
-            else:
-                no_improve += 1
+                if v_loss < best_val - 1e-6:
+                    best_val = v_loss
+                    best_weights = self._network.get_weights()
+                    no_improve = 0
+                else:
+                    no_improve += 1
 
-            if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  GCNInverter3D (TF)  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
+                bar.update(1, metrics={"train": ep_loss, "val": v_loss})
 
-            if no_improve >= patience:
-                if verbose:
-                    print(f"  Early stop at epoch {ep} (patience={patience})")
-                break
+                if no_improve >= patience:
+                    if bar.verbose:
+                        print(
+                            f"  Early stop at epoch {ep} (patience={patience})"
+                        )
+                    break
 
         if best_weights is not None:
             self._network.set_weights(best_weights)

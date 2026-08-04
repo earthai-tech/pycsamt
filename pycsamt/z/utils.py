@@ -334,7 +334,7 @@ def rho_phi_from_z(
     if z_err is None:
         return rho, phi, None, None
 
-    E = ensure_z3(z_err).astype(float, copy=False)
+    E = ensure_z3(z_err).real.astype(float, copy=False)
     rho_e = np.zeros_like(rho, dtype=float)
     phi_e = np.zeros_like(phi, dtype=float)
     for k in range(Z.shape[0]):
@@ -393,7 +393,7 @@ def enforce_offdiag_antisymmetry(
     if z_err is None:
         return (Zc[0] if z.ndim == 2 else Zc), None
 
-    E = ensure_z3(z_err).astype(float, copy=False)
+    E = ensure_z3(z_err).real.astype(float, copy=False)
     Ec = E.copy()
     # combine off-diagonal errors conservatively (RMS)
     exy = Ec[:, 0, 1]
@@ -446,7 +446,7 @@ def rotate_z(
             raise ZError(f"Expected {n} angles, got {a.size}.")
         alphas = a
 
-    E = None if z_err is None else ensure_z3(z_err).astype(float, copy=False)
+    E = None if z_err is None else ensure_z3(z_err).real.astype(float, copy=False)
 
     Zr = np.empty_like(Z)
     Er = None if E is None else np.empty_like(E)
@@ -488,7 +488,7 @@ def invert_z(
         If any slice is singular.
     """
     Z = ensure_z3(z)
-    E = None if z_err is None else ensure_z3(z_err).astype(float, copy=False)
+    E = None if z_err is None else ensure_z3(z_err).real.astype(float, copy=False)
 
     Zi = np.empty_like(Z)
     Ei = None if E is None else np.empty_like(E)

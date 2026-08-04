@@ -46,9 +46,33 @@ Physics modes
     resistivity is added to the result via
     :func:`~pycsamt.ai.validation.recovery_report`, since the field
     survey has no ground truth to check against.
+``physics="mt2d_tri"``
+    Generates triangular-mesh correlated training models
+    (:func:`~pycsamt.ai.training.dataset2d_tri.generate_2d_tri_maxwell_dataset`)
+    solved with :class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter`
+    -- **unverified physics**, see that adapter's own module docstring;
+    it needs a real compiled MARE2DEM binary this environment does not
+    have. Uses the same synthetic uniform ``station_spacing_m`` geometry
+    ``physics="mt2d"`` already documents (real station coordinates are
+    not read here either). Output is a per-triangle
+    ``log10(resistivity)`` field, not a ``(depth, station)`` grid, so it
+    is trained and rendered differently from the other two modes: a
+    graph-convolutional inverter
+    (:class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D` with
+    ``n_layers=1``, reused rather than duplicated -- its architecture
+    has nothing 3-D/station-specific about it, only its ``n_layers``
+    naming, here repurposed to mean "one scalar per graph node" instead
+    of "one depth column per station") over the mesh's
+    triangle-centroid adjacency graph, rendered with
+    :func:`~pycsamt.api.mesh.draw_tri_mesh`. Not plotted via
+    :func:`~pycsamt.ai.plot.inversion.plot_inversion_result_2d` (that
+    function is rectilinear-only) or draped with real topography (that
+    needs real station coordinates, which this mode -- like
+    ``physics="mt2d"`` -- does not read).
 
 Requires PyTorch **or** TensorFlow (``physics="mt2d"``'s spatial
-regularization is PyTorch-only; see ``EMInverter2D.fit``).
+regularization is PyTorch-only, and ``physics="mt2d_tri"``'s GCN
+inverter always needs one; see ``EMInverter2D.fit``/``GCNInverter3D``).
 """
 
 from __future__ import annotations
@@ -58,7 +82,9 @@ from typing import Any
 
 import numpy as np
 
+from ..compat.sklearn import validate_params
 from ._base import AgentResult, BaseAgent
+from ._param_schemas import INV2D_PARAM_CONSTRAINTS
 from .ai_inversion import _default_thicknesses, _z_to_features
 
 _SYSTEM_PROMPT = """\
@@ -101,27 +127,58 @@ class Inv2DAgent(BaseAgent):
         Stations per synthetic profile (default 20).
     epochs : int
         Training epochs (default 30).
-    physics : {"mt1d", "mt2d"}, default "mt1d"
+    patience : int or None
+        Early-stopping patience. ``None`` uses one fifth of ``epochs`` with
+        a minimum of five. Set greater than ``epochs`` only for a controlled
+        fixed-epoch experiment; validation-based stopping is normally safer.
+    physics : {"mt1d", "mt2d", "mt2d_tri"}, default "mt1d"
         Synthetic training-data physics; see the module docstring.
     station_spacing_m : float, default 500.0
-        Uniform synthetic station spacing used only by
-        ``physics="mt2d"``; the actual survey's real station
-        geometry is not read.
+        Uniform synthetic station spacing used by ``physics="mt2d"``
+        and ``physics="mt2d_tri"``; the actual survey's real station
+        geometry is not read by either.
     correlation_length_x_m, correlation_length_z_m : (float, float)
-        ``physics="mt2d"`` only: horizontal/vertical correlation
-        length ranges forwarded to
-        :class:`~pycsamt.ai.training.dataset2d.Maxwell2DDatasetConfig`.
+        ``physics="mt2d"``/``"mt2d_tri"`` only: horizontal/vertical
+        correlation length ranges forwarded to
+        :class:`~pycsamt.ai.training.dataset2d.Maxwell2DDatasetConfig`/
+        :class:`~pycsamt.ai.training.dataset2d_tri.MaxwellTri2DDatasetConfig`.
     log_resistivity_mean, log_resistivity_std : float
-        ``physics="mt2d"`` only: affine map from the standardized
-        correlated field to ``log10(resistivity_ohm_m)``.
+        ``physics="mt2d"``/``"mt2d_tri"`` only: affine map from the
+        standardized correlated field to ``log10(resistivity_ohm_m)``.
     mesh_safety_factor, max_mesh_cells : float, int
         ``physics="mt2d"`` only: forwarded to
         ``Maxwell2DDatasetConfig``.
     lambda_x, lambda_z, lambda_tv : float, default 0.0
         Spatial-regularization weights forwarded to
         :meth:`~pycsamt.ai.inversion.inv2d.EMInverter2D.fit`. Zero by
-        default for both physics modes, so nothing changes unless
-        explicitly requested.
+        default, so nothing changes unless explicitly requested.
+        ``physics="mt2d"`` only.
+    mesh_target_cell_m, field_grid_cell_m : float
+        ``physics="mt2d_tri"`` only: forwarded to
+        ``MaxwellTri2DDatasetConfig``.
+    topo_x_m, topo_z_m : array-like, optional
+        ``physics="mt2d_tri"`` only: real topography (z positive down)
+        forwarded to ``MaxwellTri2DDatasetConfig``/
+        :func:`~pycsamt.forward.maxwell.tri_mesh_gen.build_graded_tri_mesh`.
+        Both default to ``None`` (flat surface at ``z=0``, unchanged from
+        before this parameter existed) -- when given, training stations
+        sit at their true interpolated elevation instead. This builds a
+        real topography-following *training mesh*; it is unrelated to
+        the ``topography`` execute()-time input key above, which only
+        re-renders an already-flat ``mt1d``/``mt2d`` prediction in an
+        absolute-elevation display frame.
+    gcn_hidden : tuple of int, default (64, 32, 16)
+        ``physics="mt2d_tri"`` only: hidden-layer widths forwarded to
+        :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`.
+    gcn_adjacency_radius_m : float, default 300.0
+        ``physics="mt2d_tri"`` only: triangle-centroid adjacency
+        radius forwarded to
+        :func:`~pycsamt.ai.nets.gcn.build_adjacency`.
+    mare2dem_adapter : object, optional
+        ``physics="mt2d_tri"`` only: pre-built
+        :class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter`
+        (e.g. pointed at a specific compiled binary). Defaults to
+        ``Mare2DEMAdapter()``, resolved from the environment.
 
     Input keys
     ----------
@@ -138,20 +195,29 @@ class Inv2DAgent(BaseAgent):
     Output data keys
     ----------------
     ``pred_section``      ndarray (n_depth × n_stations) — log₁₀ ρ
+                           (``physics="mt1d"``/``"mt2d"`` only)
+    ``pred_triangles``    dict with ``"mesh"``/``"log10_resistivity"``
+                           (``physics="mt2d_tri"`` only)
     ``depths_km``         ndarray — depth axis (km)
+                           (``physics="mt1d"``/``"mt2d"`` only)
     ``station_names``     list[str]
     ``topography``        dict or None — resolved terrain metadata
-    ``rms_global``        float
-    ``inverter``          EMInverter2D
+                           (``physics="mt1d"``/``"mt2d"`` only)
+    ``rms_global``        float (``physics="mt1d"``/``"mt2d"`` only)
+    ``inverter``          EMInverter2D or GCNInverter3D
     ``figures``           dict
     ``figure_paths``      dict
-    ``physics``           str — ``"mt1d"`` or ``"mt2d"``, mode used
+    ``physics``           str — ``"mt1d"``, ``"mt2d"``, or
+                           ``"mt2d_tri"``, mode used
     ``mt2d_recovery``     dict or None — held-out known-truth
                            recovery metrics (``physics="mt2d"`` only)
+    ``mt2d_tri_recovery`` dict or None — held-out known-truth
+                           recovery metrics (``physics="mt2d_tri"`` only)
     """
 
     SYSTEM_PROMPT = _SYSTEM_PROMPT
 
+    @validate_params(INV2D_PARAM_CONSTRAINTS, prefer_skip_nested_validation=True)
     def __init__(
         self,
         *,
@@ -167,6 +233,7 @@ class Inv2DAgent(BaseAgent):
         n_train_profiles: int = 200,
         n_stations_per_profile: int = 20,
         epochs: int = 30,
+        patience: int | None = None,
         physics: str = "mt1d",
         station_spacing_m: float = 500.0,
         correlation_length_x_m: tuple[float, float] = (500.0, 2000.0),
@@ -178,15 +245,22 @@ class Inv2DAgent(BaseAgent):
         lambda_x: float = 0.0,
         lambda_z: float = 0.0,
         lambda_tv: float = 0.0,
+        mesh_target_cell_m: float = 100.0,
+        field_grid_cell_m: float = 50.0,
+        topo_x_m: Any = None,
+        topo_z_m: Any = None,
+        gcn_hidden: tuple[int, ...] = (64, 32, 16),
+        gcn_adjacency_radius_m: float = 300.0,
+        mare2dem_adapter: Any | None = None,
+        verbose: bool | int | str = False,
     ) -> None:
-        if physics not in ("mt1d", "mt2d"):
-            raise ValueError("physics must be 'mt1d' or 'mt2d'.")
         super().__init__(
             "Inv2DAgent",
             api_key=api_key,
             model=model,
             llm_provider=llm_provider,
             section_preset="inversion",
+            verbose=verbose,
         )
         self.n_depth = n_depth
         self.n_freqs = n_freqs
@@ -197,6 +271,9 @@ class Inv2DAgent(BaseAgent):
         self.n_train_profiles = n_train_profiles
         self.n_stations_per_profile = n_stations_per_profile
         self.epochs = epochs
+        self.patience = (
+            None if patience is None else max(1, int(patience))
+        )
         self.physics = physics
         self.station_spacing_m = float(station_spacing_m)
         self.correlation_length_x_m = correlation_length_x_m
@@ -208,6 +285,13 @@ class Inv2DAgent(BaseAgent):
         self.lambda_x = float(lambda_x)
         self.lambda_z = float(lambda_z)
         self.lambda_tv = float(lambda_tv)
+        self.mesh_target_cell_m = float(mesh_target_cell_m)
+        self.field_grid_cell_m = float(field_grid_cell_m)
+        self.topo_x_m = topo_x_m
+        self.topo_z_m = topo_z_m
+        self.gcn_hidden = tuple(int(h) for h in gcn_hidden)
+        self.gcn_adjacency_radius_m = float(gcn_adjacency_radius_m)
+        self.mare2dem_adapter = mare2dem_adapter
 
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
@@ -311,6 +395,17 @@ class Inv2DAgent(BaseAgent):
         X_obs = np.stack(comp_feats, axis=2)  # (n_components, n_freqs, n_sta)
         X_obs_4d = X_obs[None, ...]  # (1, n_components, n_freqs, n_sta)
 
+        # ── triangular-mesh path: separate output shape, separate return ──────
+        if self.physics == "mt2d_tri":
+            return self._execute_mt2d_tri(
+                station_names=station_names,
+                comp_feats=comp_feats,
+                freqs=freqs,
+                output_dir=output_dir,
+                warnings=warnings,
+                t0=t0,
+            )
+
         # ── generate synthetic 2-D training data ───────────────────────────────
         mt2d_dataset = None
         if self.physics == "mt2d":
@@ -335,6 +430,7 @@ class Inv2DAgent(BaseAgent):
                     mesh_safety_factor=self.mesh_safety_factor,
                     max_mesh_cells=self.max_mesh_cells,
                     n_realizations=self.n_train_profiles,
+                    verbose=self.verbose,
                 )
                 n_samp = len(mt2d_dataset.select("train"))
             except Exception as exc:
@@ -360,7 +456,7 @@ class Inv2DAgent(BaseAgent):
                     noise_level=0.03,
                     seed=0,
                     n_jobs=1,
-                    verbose=False,
+                    verbose=self.verbose,
                 )
                 # X1d: (n_1d, n_freqs * 2) flat [log10(rho_xy) | phase_xy]
                 # → reshape to profiles
@@ -413,8 +509,12 @@ class Inv2DAgent(BaseAgent):
                 y2d,
                 epochs=self.epochs,
                 batch_size=max(4, min(16, n_samp // 10)),
-                patience=max(5, self.epochs // 5),
-                verbose=False,
+                patience=(
+                    self.patience
+                    if self.patience is not None
+                    else max(5, self.epochs // 5)
+                ),
+                verbose=self.verbose,
                 lambda_x=self.lambda_x,
                 lambda_z=self.lambda_z,
                 lambda_tv=self.lambda_tv,
@@ -642,6 +742,244 @@ class Inv2DAgent(BaseAgent):
             cost_estimate_usd=self._last_cost,
         )
 
+    def _execute_mt2d_tri(
+        self,
+        *,
+        station_names: list[str],
+        comp_feats: list[np.ndarray],
+        freqs: np.ndarray,
+        output_dir: str | None,
+        warnings: list[str],
+        t0: float,
+    ) -> AgentResult:
+        """``physics="mt2d_tri"`` branch: GCN inversion on a triangular mesh.
+
+        Separate from the shared U-Net path above because its output is
+        a per-triangle field, not a ``(depth, station)`` grid -- see the
+        module docstring's ``physics="mt2d_tri"`` section for why this
+        return is self-contained rather than merged into the shared
+        ``AgentResult`` at the end of :meth:`execute`.
+        """
+        n_sta = len(station_names)
+        n_freqs = len(freqs)
+        station_x = np.arange(n_sta, dtype=float) * self.station_spacing_m
+
+        self._log.info(
+            "Generating %d synthetic triangular-mesh 2-D Maxwell "
+            "realizations (%d stations x %d freqs)…",
+            self.n_train_profiles,
+            n_sta,
+            n_freqs,
+        )
+        try:
+            dataset, mesh, X_train, y_train = _generate_mt2d_tri_training_data(
+                station_x_m=station_x,
+                freqs=freqs,
+                depth_max_m=self.depth_max,
+                correlation_length_x_m=self.correlation_length_x_m,
+                correlation_length_z_m=self.correlation_length_z_m,
+                log_resistivity_mean=self.log_resistivity_mean,
+                log_resistivity_std=self.log_resistivity_std,
+                mesh_target_cell_m=self.mesh_target_cell_m,
+                field_grid_cell_m=self.field_grid_cell_m,
+                topo_x_m=self.topo_x_m,
+                topo_z_m=self.topo_z_m,
+                n_realizations=self.n_train_profiles,
+                adapter=self.mare2dem_adapter,
+                verbose=self.verbose,
+            )
+        except Exception as exc:
+            return AgentResult.failed(
+                f"Triangular-mesh Maxwell dataset assembly failed: {exc}",
+                elapsed=time.time() - t0,
+            )
+
+        self._log.info(
+            "Training GCNInverter3D (n_layers=1) for %d epochs…", self.epochs
+        )
+        try:
+            from ..ai.inversion.inv3d import GCNInverter3D
+
+            gcn = GCNInverter3D(
+                n_features=2 * n_freqs, n_layers=1, hidden=self.gcn_hidden
+            )
+            gcn.fit(
+                X_train,
+                y_train,
+                coords=mesh.triangle_centroids_m,
+                radius=self.gcn_adjacency_radius_m,
+                epochs=self.epochs,
+                batch_size=max(2, min(8, len(X_train) // 5)),
+                patience=(
+                    self.patience
+                    if self.patience is not None
+                    else max(5, self.epochs // 5)
+                ),
+                verbose=self.verbose,
+            )
+        except Exception as exc:
+            return AgentResult.failed(
+                f"GCN training failed: {exc}", elapsed=time.time() - t0
+            )
+
+        try:
+            X_obs = _maxwell_tri_samples_observed_features(
+                comp_feats, mesh, station_x
+            )
+            # No coords=/adjacency= here: reuses the exact adjacency built
+            # from this same shared mesh during fit() (self._A_stored),
+            # rather than rebuilding one at predict()'s different default
+            # radius (5_000.0 m) than gcn_adjacency_radius_m used to train.
+            pred_log_rho = gcn.predict(X_obs[None, ...])[0, :, 0]
+        except Exception as exc:
+            return AgentResult.failed(
+                f"Triangular-mesh prediction failed: {exc}",
+                elapsed=time.time() - t0,
+            )
+
+        mt2d_tri_recovery: dict[str, Any] | None = None
+        try:
+            mt2d_tri_recovery = _mt2d_tri_recovery_check(
+                gcn, dataset, mesh, station_x
+            )
+        except Exception as exc:
+            warnings.append(f"mt2d_tri recovery check failed: {exc}")
+
+        figures: dict[str, Any] = {}
+        fig_paths: dict[str, str] = {}
+        try:
+            import matplotlib.pyplot as plt
+
+            from ..api.mesh import draw_tri_mesh
+            from ..api.station import StationAxisStyle, StationMarkerStyle
+
+            fig, ax = plt.subplots(figsize=(10, 5))
+            fill, _edges = draw_tri_mesh(
+                ax, mesh, pred_log_rho, preset="review", cmap="jet_r"
+            )
+            station_z = (
+                np.interp(station_x, self.topo_x_m, self.topo_z_m)
+                if self.topo_x_m is not None
+                else np.zeros_like(station_x)
+            )
+            ax.scatter(
+                station_x,
+                station_z,
+                label="Stations",
+                **StationMarkerStyle().kwargs(),
+            )
+            y0, y1 = ax.get_ylim()
+            label_pad = 0.03 * abs(y1 - y0)
+            # Thin labels the same way StationAxisStyle does for every other
+            # station-axis figure: every one of the n markers stays visible,
+            # but only a subset gets a text label, so this scales from a
+            # ten-station line (all labelled) to a fifty-station one
+            # (crowding and title collisions otherwise) without a separate
+            # code path.
+            visible = StationAxisStyle().label_indices(
+                station_names, figwidth_in=fig.get_figwidth()
+            )
+            for i in visible:
+                ax.annotate(
+                    station_names[i],
+                    (station_x[i], station_z[i] - label_pad),
+                    ha="center",
+                    va="bottom",
+                    fontsize=7,
+                    rotation=90,
+                    clip_on=False,
+                    zorder=6,
+                )
+            ax.invert_yaxis()
+            if ((self.depth_max is not None and self.depth_max >= 10_000.0)
+                    or np.nanmax(station_x) >= 10_000.0):
+                from matplotlib.ticker import FuncFormatter
+
+                km = FuncFormatter(lambda value, _pos: f"{value / 1000:g}")
+                ax.xaxis.set_major_formatter(km)
+                ax.yaxis.set_major_formatter(km)
+                ax.set_xlabel("Profile distance (km)")
+                ax.set_ylabel("Depth below elevation datum (km)")
+            else:
+                ax.set_xlabel("x (m)")
+                ax.set_ylabel("Depth (m)")
+            ax.legend(loc="lower right", frameon=True)
+            fig.colorbar(fill, ax=ax, label=r"$\log_{10}\rho$ (Ohm.m)")
+            # Rotated station labels sit outside the axes box (clip_on=False)
+            # above each marker, and PlotConfig's default bbox_inches="tight"
+            # crops away any empty margin reserved via subplots_adjust, so
+            # only a real points-based title pad (not axes-fraction margin)
+            # reliably keeps the two apart across both a ten- and a
+            # fifty-station line.
+            ax.set_title(
+                "2-D AI inversion (triangular mesh, GCN)",
+                fontsize=10,
+                fontweight="bold",
+                pad=90,
+            )
+            figures["inv2d_tri_section"] = fig
+            p = self._save_figure(
+                fig, output_dir, "inv2d_tri_section", warnings_list=warnings
+            )
+            if p:
+                fig_paths["inv2d_tri_section"] = p
+        except Exception as exc:
+            warnings.append(f"draw_tri_mesh: {exc}")
+
+        interp: str | None = None
+        if self.api_key:
+            rho_mean = float(np.nanmean(10.0**pred_log_rho))
+            rho_std = float(np.nanstd(10.0**pred_log_rho))
+            prompt = (
+                f"2-D AI inversion (triangular mesh, GCN) summary:\n"
+                f"  Profile: {n_sta} stations x {n_freqs} frequencies\n"
+                f"  Mesh: {mesh.n_triangles} triangles\n"
+                f"  Mean resistivity: {rho_mean:.0f} Ohm.m +/- {rho_std:.0f}\n"
+                f"  Warnings: {warnings[:3] if warnings else 'none'}\n\n"
+                "Interpret the triangular-mesh resistivity section."
+            )
+            interp = self.query_llm(prompt, max_tokens=250)
+
+        elapsed = time.time() - t0
+        recovery_note = ""
+        if mt2d_tri_recovery is not None:
+            recovery_note = (
+                f" Held-out recovery RMSE={mt2d_tri_recovery['rmse']:.3f} "
+                f"(log10 Ohm.m, n={mt2d_tri_recovery['n_samples']})."
+            )
+        return AgentResult(
+            status="success",
+            summary=(
+                f"2-D AI inversion (GCN, physics=mt2d_tri): {n_sta} "
+                f"stations x {mesh.n_triangles} triangles. "
+                f"{len(figures)} figures.{recovery_note}"
+            ),
+            data={
+                "pred_triangles": {
+                    "mesh": mesh,
+                    "log10_resistivity": pred_log_rho,
+                },
+                "frequency_grid_hz": freqs,
+                "station_names": station_names,
+                "inverter": gcn,
+                "figures": figures,
+                "figure_paths": fig_paths,
+                "physics": self.physics,
+                "mt2d_tri_recovery": mt2d_tri_recovery,
+                "training_history": dict(getattr(gcn, "_history", {})),
+                "epochs_completed": len(
+                    getattr(gcn, "_history", {}).get("train_loss", [])
+                ),
+                "best_validation_loss": float(
+                    np.nanmin(getattr(gcn, "_history", {}).get("val_loss", [np.nan]))
+                ),
+            },
+            warnings=warnings,
+            llm_interpretation=interp,
+            elapsed_seconds=elapsed,
+            cost_estimate_usd=self._last_cost,
+        )
+
 
 def _generate_mt2d_training_data(
     *,
@@ -657,6 +995,7 @@ def _generate_mt2d_training_data(
     mesh_safety_factor: float,
     max_mesh_cells: int,
     n_realizations: int,
+    verbose: bool | int | str = False,
 ):
     """Build a genuinely 2-D correlated training set and convert it
     to :class:`~pycsamt.ai.inversion.inv2d.EMInverter2D`'s tensors.
@@ -710,6 +1049,7 @@ generate_2d_maxwell_dataset`
         max_mesh_cells=max_mesh_cells,
         validation_fraction=0.1,
         test_fraction=0.1,
+        verbose=verbose,
     )
     dataset = generate_2d_maxwell_dataset(config)
     X, y = _maxwell_samples_to_unet_arrays(dataset.select("train"), freqs)
@@ -766,6 +1106,172 @@ def _mt2d_recovery_check(inv2d, dataset) -> dict[str, Any] | None:
         true_log_rho = np.log10(sample.resistivity_ohm_m)
         report = recovery_report(
             pred_log_rho, true_log_rho, compute_ssim=False
+        )
+        rmse_vals.append(report.rmse)
+        mae_vals.append(report.mae)
+        r2_vals.append(report.r2)
+    return {
+        "rmse": float(np.mean(rmse_vals)),
+        "mae": float(np.mean(mae_vals)),
+        "r2": float(np.nanmean(r2_vals)),
+        "n_samples": len(held_out),
+    }
+
+
+def _generate_mt2d_tri_training_data(
+    *,
+    station_x_m: np.ndarray,
+    freqs: np.ndarray,
+    depth_max_m: float | None,
+    correlation_length_x_m: tuple[float, float],
+    correlation_length_z_m: tuple[float, float],
+    log_resistivity_mean: float,
+    log_resistivity_std: float,
+    mesh_target_cell_m: float,
+    field_grid_cell_m: float,
+    n_realizations: int,
+    adapter: Any | None,
+    topo_x_m: Any = None,
+    topo_z_m: Any = None,
+    verbose: bool | int | str = False,
+):
+    """Build a triangular-mesh training set and convert it to
+    :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`'s ``(X, y)``
+    convention.
+
+    Returns
+    -------
+    dataset : MaxwellTri2DDataset
+        Full dataset (train/validation/test), kept for a later
+        known-truth recovery check.
+    mesh : TriMesh
+        Shared triangular geometry (same object dataset.mesh).
+    X : ndarray (n_train, n_triangles, 2 * n_freqs)
+    y : ndarray (n_train, n_triangles, 1)
+    """
+    from ..ai.training.dataset2d_tri import (
+        MaxwellTri2DDatasetConfig,
+        generate_2d_tri_maxwell_dataset,
+    )
+
+    n_sta = len(station_x_m)
+    depth_total_m = (
+        float(depth_max_m)
+        if depth_max_m is not None
+        else float(np.sum(_default_thicknesses(max(n_sta, 8), freqs)))
+    )
+    x_max = float(station_x_m[-1]) if n_sta > 1 else float(station_x_m[0]) + 1.0
+    config = MaxwellTri2DDatasetConfig(
+        dataset_id="inv2dagent-mt2dtri",
+        x_range_m=(0.0, x_max),
+        z_range_m=(0.0, depth_total_m),
+        correlation_length_x_m=correlation_length_x_m,
+        correlation_length_z_m=correlation_length_z_m,
+        frequencies_hz=freqs,
+        station_x_m=station_x_m,
+        n_realizations=n_realizations,
+        seed=0,
+        log_resistivity_mean=log_resistivity_mean,
+        log_resistivity_std=log_resistivity_std,
+        components=("zxy",),
+        mesh_target_cell_m=mesh_target_cell_m,
+        field_grid_cell_m=field_grid_cell_m,
+        topo_x_m=topo_x_m,
+        topo_z_m=topo_z_m,
+        validation_fraction=0.1,
+        test_fraction=0.1,
+        verbose=verbose,
+    )
+    dataset = generate_2d_tri_maxwell_dataset(config, adapter=adapter)
+    X, y = _maxwell_tri_samples_to_gcn_arrays(
+        dataset.select("train"), dataset.mesh, station_x_m
+    )
+    return dataset, dataset.mesh, X, y
+
+
+def _nearest_station_features(
+    comp_feats: list[np.ndarray] | np.ndarray,
+    mesh: Any,
+    station_x_m: np.ndarray,
+) -> np.ndarray:
+    """Broadcast each triangle's nearest station's ``(2, n_freq)`` feature
+    block onto that triangle, flattened to ``(n_triangles, 2 * n_freq)``.
+
+    Nearest is by x-distance only, since receivers sit on the mesh's own
+    ``z=0`` surface and every triangle's centroid has a well-defined x.
+    """
+    station_x = np.asarray(station_x_m, dtype=float)
+    centroid_x = mesh.triangle_centroids_m[:, 0]
+    nearest = np.argmin(
+        np.abs(centroid_x[:, None] - station_x[None, :]), axis=1
+    )
+    flat = np.stack(
+        [np.asarray(f, dtype=np.float32).reshape(-1) for f in comp_feats],
+        axis=0,
+    )  # (n_sta, 2 * n_freq)
+    return flat[nearest]
+
+
+def _maxwell_tri_samples_observed_features(
+    comp_feats: list[np.ndarray],
+    mesh: Any,
+    station_x_m: np.ndarray,
+) -> np.ndarray:
+    """Return ``(n_triangles, 2 * n_freq)`` observed features for prediction."""
+    return _nearest_station_features(comp_feats, mesh, station_x_m)
+
+
+def _maxwell_tri_samples_to_gcn_arrays(
+    samples,
+    mesh: Any,
+    station_x_m: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Convert ``MaxwellTri2DSample`` objects into
+    :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`'s ``(X, y)``
+    convention: per-triangle nearest-station ``[log10(rho_a), phase]``
+    features for ``zxy``, and per-triangle ``log10(resistivity)`` targets.
+    """
+    if not samples:
+        raise ValueError("samples must contain at least one entry.")
+    n_tri = mesh.n_triangles
+    n_freq = len(samples[0].survey.frequencies_hz)
+    X = np.empty((len(samples), n_tri, 2 * n_freq), dtype=np.float32)
+    y = np.empty((len(samples), n_tri, 1), dtype=np.float32)
+    for i, sample in enumerate(samples):
+        comp_idx = sample.survey.components.index("zxy")
+        zxy = sample.survey.impedance[:, :, comp_idx]  # (n_sta, n_freq)
+        f = sample.survey.frequencies_hz[None, :]
+        mu0 = 4.0e-7 * np.pi
+        rho_a = np.abs(zxy) ** 2 / (2.0 * np.pi * f * mu0)
+        phase = np.degrees(np.angle(zxy))
+        log_rho_a = np.log10(np.clip(rho_a, 1e-12, None))
+        per_station = np.concatenate([log_rho_a, phase], axis=1)  # (n_sta, 2*n_freq)
+        X[i] = _nearest_station_features(per_station, mesh, station_x_m)
+        y[i, :, 0] = np.log10(sample.resistivity_ohm_m)
+    return X, y
+
+
+def _mt2d_tri_recovery_check(gcn, dataset, mesh, station_x_m) -> dict[str, Any] | None:
+    """Evaluate known-truth recovery on a held-out dataset partition.
+
+    Prefers the ``test`` partition, falling back to ``validation``;
+    returns ``None`` when neither has samples.
+    """
+    from ..ai.validation import recovery_report
+
+    held_out = dataset.select("test") or dataset.select("validation")
+    if not held_out:
+        return None
+    rmse_vals, mae_vals, r2_vals = [], [], []
+    for sample in held_out:
+        X_i, _ = _maxwell_tri_samples_to_gcn_arrays([sample], mesh, station_x_m)
+        pred = gcn.predict(X_i)[0, :, 0]  # reuses self._A_stored, see above
+        true = np.log10(sample.resistivity_ohm_m)
+        # recovery_report requires a 2-D/3-D grid; a triangle mesh has no
+        # such shape, so reshape to a (n_triangles, 1) column -- degenerate
+        # but valid, and the per-cell metrics (rmse/mae/r2) are unaffected.
+        report = recovery_report(
+            pred.reshape(-1, 1), true.reshape(-1, 1), compute_ssim=False
         )
         rmse_vals.append(report.rmse)
         mae_vals.append(report.mae)

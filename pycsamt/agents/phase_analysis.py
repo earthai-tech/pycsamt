@@ -249,7 +249,7 @@ class PhaseAnalysisAgent(BaseAgent):
         except Exception as exc:
             warnings.append(f"plot_phase_tensor_rose: {exc}")
 
-        # 3. Strike analysis (3-rose panel)
+        # 3. Strike analysis (rose panels; tipper panel only if present)
         try:
             fig_strike = plot_strike_analysis(sites, band=band, verbose=0)
             if fig_strike is not None:

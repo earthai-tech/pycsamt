@@ -180,6 +180,159 @@ def test_inv2d_agent_mt2d_physics_end_to_end(sites3):
     assert np.isfinite(recovery["mae"])
 
 
+_FAKE_MARE2DEM_SCRIPT = """
+import sys
+from pathlib import Path
+
+stem = sys.argv[-1]
+workdir = Path.cwd()
+lines = (workdir / f"{stem}.emdata").read_text().splitlines()
+
+data_lines = []
+in_data = False
+for line in lines:
+    s = line.strip()
+    if not s or s.startswith("!"):
+        continue
+    if s.lower().startswith("# data"):
+        in_data = True
+        continue
+    if in_data:
+        data_lines.append(s)
+
+out = ["Format:  EMResp_2.3\\n", f"# Data:       {len(data_lines)}\\n"]
+for line in data_lines:
+    parts = line.split()
+    code, freq_idx, tx_idx, rx_idx = (int(v) for v in parts[:4])
+    data_val, std_err = float(parts[4]), float(parts[5])
+    predicted = 1.0
+    out.append(
+        f"{code:7d} {freq_idx:7d} {tx_idx:7d} {rx_idx:7d} "
+        f"{data_val:22.15g} {std_err:22.15g} {predicted:20.15g} 0.0\\n"
+    )
+
+(workdir / f"{stem}.0.resp").write_text("".join(out))
+"""
+
+
+def _fake_mare2dem_adapter(tmp_path: Path):
+    import sys
+
+    from pycsamt.forward.maxwell import ExternalRunPolicy
+    from pycsamt.forward.maxwell.mare2dem import Mare2DEMAdapter
+    from pycsamt.models.mare2dem.config import Mare2DEMConfig
+
+    script = tmp_path / "fake_mare2dem.py"
+    script.write_text(_FAKE_MARE2DEM_SCRIPT)
+    adapter = Mare2DEMAdapter(
+        config=Mare2DEMConfig(use_mpi=False),
+        run_policy=ExternalRunPolicy(sys.executable, workdir=str(tmp_path)),
+    )
+    adapter._build_command = lambda problem, workdir, executable, context: [
+        str(executable),
+        str(script),
+        context["stem"],
+    ]
+    return adapter
+
+
+@requires_dl
+def test_inv2d_agent_mt2d_tri_physics_end_to_end(sites3, tmp_path):
+    """physics='mt2d_tri' trains a GCN over a triangular mesh, solved
+    with Mare2DEMAdapter -- unverified physics without a real compiled
+    MARE2DEM binary (see that adapter's module docstring), so this test
+    injects a scripted stand-in executable via mare2dem_adapter=,
+    exactly like test_maxwell_mare2dem.py / test_ai_training_dataset2d_tri.py
+    do. Proves the agent-level plumbing (mesh, GCN training/prediction,
+    triangular-mesh figure, AgentResult shape), not real Maxwell physics.
+    """
+    import numpy as np
+
+    from pycsamt.agents import Inv2DAgent
+
+    ag = mk(
+        Inv2DAgent,
+        epochs=1,
+        n_freqs=3,
+        n_train_profiles=20,
+        n_stations_per_profile=3,
+        physics="mt2d_tri",
+        station_spacing_m=200.0,
+        mesh_target_cell_m=100.0,
+        field_grid_cell_m=50.0,
+        mare2dem_adapter=_fake_mare2dem_adapter(tmp_path),
+    )
+    result = ag.execute(
+        {
+            "sites": sites3,
+            "freqs": [100.0, 30.0, 10.0],
+            "output_dir": str(tmp_path / "out"),
+        }
+    )
+    assert result.status == "success", result.error
+    assert result.data["physics"] == "mt2d_tri"
+    pred = result.data["pred_triangles"]
+    assert pred["mesh"].n_triangles > 0
+    assert pred["log10_resistivity"].shape == (pred["mesh"].n_triangles,)
+    assert np.all(np.isfinite(pred["log10_resistivity"]))
+    assert "inv2d_tri_section" in result.data["figures"]
+
+    recovery = result.data["mt2d_tri_recovery"]
+    assert recovery is not None
+    assert recovery["n_samples"] >= 1
+    assert np.isfinite(recovery["rmse"])
+
+
+def test_inv2d_agent_mt2d_tri_physics_with_real_topography(sites3, tmp_path):
+    """``topo_x_m``/``topo_z_m`` build a real topography-following
+    training mesh (stations at their true elevation, not z=0) -- proves
+    the capability is wired all the way from the agent's own
+    constructor down to ``build_graded_tri_mesh``, not just available
+    inside ``dataset2d_tri.py`` directly.
+    """
+    import numpy as np
+
+    from pycsamt.agents import Inv2DAgent
+
+    topo_x_m = [0.0, 200.0, 400.0]
+    topo_z_m = [-30.0, -50.0, -10.0]
+
+    ag = mk(
+        Inv2DAgent,
+        epochs=1,
+        n_freqs=3,
+        n_train_profiles=20,
+        n_stations_per_profile=3,
+        physics="mt2d_tri",
+        station_spacing_m=200.0,
+        mesh_target_cell_m=100.0,
+        field_grid_cell_m=50.0,
+        topo_x_m=topo_x_m,
+        topo_z_m=topo_z_m,
+        mare2dem_adapter=_fake_mare2dem_adapter(tmp_path),
+    )
+    result = ag.execute(
+        {
+            "sites": sites3,
+            "freqs": [100.0, 30.0, 10.0],
+            "output_dir": str(tmp_path / "out"),
+        }
+    )
+    assert result.status == "success", result.error
+    pred = result.data["pred_triangles"]
+    mesh = pred["mesh"]
+    # None of the stations are at z=0 in this synthetic topography, so a
+    # mesh node existing at each station's true interpolated elevation
+    # proves topography genuinely reached the mesh builder.
+    station_x = np.arange(3) * 200.0
+    station_z = np.interp(station_x, topo_x_m, topo_z_m)
+    assert not np.any(np.isclose(station_z, 0.0))
+    for sx, sz in zip(station_x, station_z):
+        assert np.any(
+            np.isclose(mesh.nodes_m[:, 0], sx) & np.isclose(mesh.nodes_m[:, 1], sz)
+        )
+
+
 @requires_dl
 def test_inv2d_agent_rejects_bad_physics():
     from pycsamt.agents import Inv2DAgent

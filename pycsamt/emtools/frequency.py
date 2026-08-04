@@ -274,6 +274,9 @@ def _apply_row_mask_to_block(
         value = getattr(obj, field, None)
         if isinstance(value, np.ndarray) and value.shape[0] == fr.size:
             _set_array_field(obj, field, value[keep])
+    rotation = getattr(obj, "rotation_angle", None)
+    if isinstance(rotation, np.ndarray) and rotation.shape[0] == fr.size:
+        obj.rotation_angle = rotation[keep]
     _set_block_freq(obj, fr[keep])
 
 
@@ -328,6 +331,9 @@ def _set_masked_strict_block(
             and z_err.shape[0] == fr.size
         ):
             obj._z_err = z_err[keep].astype(float, copy=False)
+        rotation = getattr(obj, "rotation_angle", None)
+        if isinstance(rotation, np.ndarray) and rotation.shape[0] == fr.size:
+            obj.rotation_angle = rotation[keep]
         obj.compute_resistivity_phase()
     except Exception:
         return False

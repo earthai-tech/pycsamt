@@ -4,10 +4,11 @@ from typing import Any
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from matplotlib.transforms import Affine2D
 import numpy as np
 import pandas as pd
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
+from matplotlib.colors import BoundaryNorm, ListedColormap, Normalize
 from matplotlib.patches import Ellipse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -619,13 +620,15 @@ def _attach_cbar(
     pad: float = 0.06,
     labelsize: int = 9,
     ticksize: int = 8,
-) -> None:
+    **colorbar_kws,
+):
     """Attach a right-side colorbar to *ax* via make_axes_locatable."""
     div = make_axes_locatable(ax)
     cax = div.append_axes("right", size=size, pad=pad)
-    cb = ax.get_figure().colorbar(mappable, cax=cax)
+    cb = ax.get_figure().colorbar(mappable, cax=cax, **colorbar_kws)
     cb.set_label(label, fontsize=labelsize)
     cb.ax.tick_params(labelsize=ticksize)
+    return cb
 
 
 # ------------------------------ plotting --------------------------------- #
@@ -640,6 +643,7 @@ def plot_phase_tensor_psection(
     # ── y-axis ────────────────────────────────────────────────────────────
     axis_y: str = "logperiod",
     period_up: bool = True,
+    frame_pct: tuple[float, float] | None = (1.0, 99.0),
     # ── ellipse sizing ────────────────────────────────────────────────────
     scale=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.scale
     normalise_by=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.normalise_by
@@ -651,10 +655,15 @@ def plot_phase_tensor_psection(
     clim: tuple[float, float] | None = None,
     clim_pct=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.clim_pct
     symmetric_clim=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.resolve_symmetric_clim()
+    color_mode: str = "continuous",
+    segment_bounds: tuple[float, float] | None = None,
+    segment_colors: tuple[str, str, str] = ("#2166ac", "#f7f7f7", "#b2182b"),
     # ── aesthetics ────────────────────────────────────────────────────────
     edgecolor=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.edgecolor
     linewidth=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.linewidth
     alpha=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.alpha
+    ellipse_kws: dict[str, Any] | None = None,
+    cb_kws: dict[str, Any] | None = None,
     # ── overlays ─────────────────────────────────────────────────────────
     skew_threshold=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     mark_3d=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
@@ -699,12 +708,22 @@ def plot_phase_tensor_psection(
     period_up : bool, default ``True``
         When ``True`` (MT convention) long period (low frequency) is at the
         top of the figure; ``False`` flips the y-axis.
+    frame_pct : (lo, hi) or None, default ``(1, 99)``
+        Robust percentiles of finite log-period/log-frequency values used for
+        the visible y-frame. This prevents a few isolated frequency rows from
+        creating large empty bands. Pass ``None`` to show the absolute range,
+        or use *period_range* for explicit scientific limits.
     scale : float, default ``0.85``
         Fraction of each cell occupied by the *reference* ellipse
         (the one with s1 = s1_ref).  Values above 1 cause overlap.
-    normalise_by : ``"cell"`` | ``"unity"`` | ``"abs"``
+    normalise_by : ``"shape"`` | ``"cell"`` | ``"unity"`` | ``"abs"``
         Sizing strategy:
 
+        ``"shape"``
+            MTpy-style display: every major axis has the same physical size
+            and the minor/major ratio is ``s2 / s1``. This emphasizes tensor
+            shape without allowing absolute phase magnitude or unequal plot
+            axes to turn ellipses into misleading needles.
         ``"cell"``
             Sizes are normalised so the 90th-percentile s1 fills *scale*
             of its cell.  Preserves relative size information.
@@ -732,6 +751,14 @@ def plot_phase_tensor_psection(
         Explicit colour limits.  When ``None``, derived from *clim_pct*.
     clim_pct : (lo, hi), default ``(5.0, 95.0)``
         Percentile limits used when *clim* is ``None``.
+    color_mode : ``"continuous"`` | ``"segmented"``
+        Continuous colour interpolation or three discrete classes. Segmented
+        mode follows the usual MTpy-style skew presentation.
+    segment_bounds : (lower, upper) or None
+        Class boundaries for segmented colour. By default these are
+        ``(-skew_threshold, skew_threshold)``.
+    segment_colors : sequence of three colours
+        Colours below, inside, and above *segment_bounds*, respectively.
     symmetric_clim : bool, default ``True``
         Enforce vmin = −vmax for skew-like quantities.
     edgecolor : str, default ``"k"``
@@ -741,15 +768,22 @@ def plot_phase_tensor_psection(
         *mark_3d* is ``True``.
     alpha : float, default ``0.92``
         Ellipse fill opacity.
+    ellipse_kws : dict or None
+        Additional ellipse styling, such as ``edgecolor`` and ``linewidth``.
+        Geometry and transform keys remain controlled by this function.
+    cb_kws : dict or None
+        Colourbar customization. ``size``, ``pad``, ``labelsize`` and
+        ``ticksize`` control layout; other entries go to ``Figure.colorbar``.
     skew_threshold : float or None, default ``3.0``
         |β| threshold (degrees) separating 1-D/2-D from 3-D structure.
-        Used to cap *clim* symmetrically when *clim* is ``None``, and to
-        highlight 3-D cells with a thicker border when *mark_3d* is ``True``.
+        It does not set the color limits; *clim_pct* remains data-driven.
+        The threshold only highlights 3-D cells with a thicker border when
+        *mark_3d* is ``True``.
     mark_3d : bool, default ``True``
         Draw a thicker border on ellipses where |β| > *skew_threshold*.
     ref_ellipse : bool, default ``True``
         Draw a labelled reference circle (φ_max = φ_min = s1_ref, β = 0°)
-        in a reserved legend strip above the data, as a scale indicator.
+        inside the axes, without expanding the data frame.
     legend_fontsize : float, default ``8.0``
         Font size for the reference-circle label and the 1-D/2-D vs 3-D
         annotation shown when *ref_ellipse* / *skew_threshold* are active.
@@ -861,7 +895,9 @@ def plot_phase_tensor_psection(
 
     # ── ellipse-size normalisation reference ──────────────────────────────
     s1_vals = df["s1"].to_numpy(float)
-    if normalise_by == "cell":
+    if normalise_by == "shape":
+        ref = None
+    elif normalise_by == "cell":
         if s1_ref is not None:
             ref = float(s1_ref)
         else:
@@ -884,8 +920,6 @@ def plot_phase_tensor_psection(
 
     if clim is not None:
         vmin, vmax = float(clim[0]), float(clim[1])
-    elif skew_threshold is not None and c_by in ("skew", "beta"):
-        vmin, vmax = -float(skew_threshold), float(skew_threshold)
     else:
         lo_pct, hi_pct = clim_pct
         vmin = (
@@ -900,8 +934,39 @@ def plot_phase_tensor_psection(
             vlim = max(abs(vmin), abs(vmax))
             vmin, vmax = -vlim, vlim
 
-    norm = Normalize(vmin=vmin, vmax=vmax)
-    cm = plt.get_cmap(cmap)
+    if not np.isfinite(vmin) or not np.isfinite(vmax):
+        vmin, vmax = -1.0, 1.0
+    elif np.isclose(vmin, vmax):
+        pad = max(abs(vmin) * 0.05, 1e-6)
+        vmin, vmax = vmin - pad, vmax + pad
+
+    color_mode = str(color_mode).lower()
+    if color_mode not in {"continuous", "segmented"}:
+        raise ValueError("color_mode must be 'continuous' or 'segmented'")
+    segment_ticks = segment_ticklabels = None
+    if color_mode == "segmented":
+        if len(segment_colors) != 3:
+            raise ValueError("segment_colors must contain exactly three colours")
+        if segment_bounds is None:
+            if skew_threshold is not None:
+                segment_bounds = (-float(skew_threshold), float(skew_threshold))
+            else:
+                step = (vmax - vmin) / 3.0
+                segment_bounds = (vmin + step, vmax - step)
+        lower, upper = map(float, segment_bounds)
+        if not lower < upper:
+            raise ValueError("segment_bounds must satisfy lower < upper")
+        outer_lo = min(vmin, lower - max(abs(lower) * 0.05, 1e-6))
+        outer_hi = max(vmax, upper + max(abs(upper) * 0.05, 1e-6))
+        cm = ListedColormap(segment_colors, name="phase_tensor_segments")
+        norm = BoundaryNorm([outer_lo, lower, upper, outer_hi], cm.N, clip=True)
+        segment_ticks = [0.5 * (outer_lo + lower), 0.5 * (lower + upper),
+                         0.5 * (upper + outer_hi)]
+        segment_ticklabels = [f"< {lower:g}", f"{lower:g} to {upper:g}",
+                              f"> {upper:g}"]
+    else:
+        norm = Normalize(vmin=vmin, vmax=vmax)
+        cm = plt.get_cmap(cmap)
 
     # ── extract arrays for the drawing loop ───────────────────────────────
     x_arr = df["station"].map(st_map).to_numpy(float)
@@ -916,13 +981,101 @@ def plot_phase_tensor_psection(
         else np.zeros(len(df))
     )
 
+    # Resolve the finite-data frame before drawing so ``shape`` mode can use
+    # physical display units, independent of station/period axis aspect.
+    y_all = y_arr[np.isfinite(y_arr)]
+    if len(y_all) and frame_pct is not None:
+        frame_lo, frame_hi = map(float, frame_pct)
+        if not (0.0 <= frame_lo < frame_hi <= 100.0):
+            raise ValueError("frame_pct must satisfy 0 <= lo < hi <= 100")
+        y_lo, y_hi = map(float, np.nanpercentile(y_all, [frame_lo, frame_hi]))
+    else:
+        y_lo = float(np.nanmin(y_all)) if len(y_all) else 0.0
+        y_hi = float(np.nanmax(y_all)) if len(y_all) else 1.0
+    margin = max(0.5 * cell_y, 0.02 * (y_hi - y_lo + 1e-9))
+    target_ylim = (
+        (y_lo - margin, y_hi + margin)
+        if period_up
+        else (y_hi + margin, y_lo - margin)
+    )
+    ax.set_xlim(-0.6, n_st - 0.4)
+    ax.set_ylim(*target_ylim)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(n_st, dtype=float),
+        st_list,
+        preset="pseudosection",
+        xlim=(-0.6, n_st - 0.4),
+    )
+    sm = ScalarMappable(cmap=cm, norm=norm)
+    sm.set_array([])
+    cb = _attach_cbar(ax, sm, cbar_label, **dict(cb_kws or {}))
+    if segment_ticks is not None:
+        cb.set_ticks(segment_ticks)
+        cb.set_ticklabels(segment_ticklabels)
+    ax.figure.canvas.draw()
+    station_px = abs(
+        ax.transData.transform((1.0, y_lo))[0]
+        - ax.transData.transform((0.0, y_lo))[0]
+    )
+
     # ── draw ellipses ─────────────────────────────────────────────────────
+    ellipse_options = dict(ellipse_kws or {})
+    forbidden = {"xy", "width", "height", "angle", "transform"}
+    bad_keys = forbidden.intersection(ellipse_options)
+    if bad_keys:
+        raise ValueError(
+            "ellipse_kws cannot override geometry keys: "
+            + ", ".join(sorted(bad_keys))
+        )
+    ellipse_options.setdefault("edgecolor", edgecolor)
+    ellipse_options.setdefault("alpha", alpha)
+    ellipse_options.setdefault("zorder", 3)
+
     for xi, yi, s1i, s2i, thi, ci, beti in zip(
         x_arr, y_arr, s1_arr, s2_arr, th_arr, cvals, skew_arr
     ):
         if not np.all(np.isfinite([xi, yi, s1i, s2i, thi, ci])):
             continue
 
+        is_3d = (
+            skew_threshold is not None
+            and mark_3d
+            and np.isfinite(beti)
+            and abs(beti) > skew_threshold
+        )
+
+        if normalise_by == "shape":
+            ratio = abs(s2i) / max(abs(s1i), 1e-12)
+            ratio = min(1.0, max(float(min_aspect), ratio))
+            x0, x1 = ax.get_xlim()
+            y0, y1 = ax.get_ylim()
+            x_frac = (xi - x0) / (x1 - x0)
+            y_frac = (yi - y0) / (y1 - y0)
+            width_px = scale * station_px
+            shape_transform = (
+                Affine2D()
+                .scale(0.5 * width_px, 0.5 * width_px * ratio)
+                .rotate_deg(thi)
+                .scale(1.0 / ax.bbox.width, 1.0 / ax.bbox.height)
+                .translate(x_frac, y_frac)
+                + ax.transAxes
+            )
+            patch_kws = dict(ellipse_options)
+            patch_kws.setdefault("facecolor", cm(norm(ci)))
+            base_lw = float(patch_kws.get("linewidth", linewidth))
+            patch_kws["linewidth"] = base_lw * 3.0 if is_3d else base_lw
+            ellipse = Ellipse(
+                (0.0, 0.0),
+                width=2.0,
+                height=2.0,
+                angle=0.0,
+                transform=shape_transform,
+                **patch_kws,
+            )
+            ellipse.set_clip_path(ax.patch)
+            ax.add_patch(ellipse)
+            continue
         if ref is not None:
             w = min(scale * cell_x * s1i / ref, 0.99 * cell_x)
             h = min(scale * cell_y * s2i / ref, 0.99 * cell_y)
@@ -932,13 +1085,10 @@ def plot_phase_tensor_psection(
         if min_aspect > 0:
             h = max(h, min_aspect * w)
 
-        is_3d = (
-            skew_threshold is not None
-            and mark_3d
-            and np.isfinite(beti)
-            and abs(beti) > skew_threshold
-        )
-        lw_i = linewidth * 3.0 if is_3d else linewidth
+        patch_kws = dict(ellipse_options)
+        patch_kws.setdefault("facecolor", cm(norm(ci)))
+        base_lw = float(patch_kws.get("linewidth", linewidth))
+        patch_kws["linewidth"] = base_lw * 3.0 if is_3d else base_lw
 
         ax.add_patch(
             Ellipse(
@@ -946,43 +1096,24 @@ def plot_phase_tensor_psection(
                 width=w,
                 height=h,
                 angle=thi,
-                facecolor=cm(norm(ci)),
-                edgecolor=edgecolor,
-                linewidth=lw_i,
-                alpha=alpha,
-                zorder=3,
+                **patch_kws,
             )
         )
 
     # ── axes limits and ticks ─────────────────────────────────────────────
     ax.set_xlim(-0.6, n_st - 0.4)
 
-    y_all = y_arr[np.isfinite(y_arr)]
-    y_lo = float(np.nanmin(y_all)) if len(y_all) else 0.0
-    y_hi = float(np.nanmax(y_all)) if len(y_all) else 1.0
-    margin = max(0.5 * cell_y, 0.02 * (y_hi - y_lo + 1e-9))
-
     # Reserve a dedicated legend strip beyond the data so the reference
     # ellipse and 1-D/2-D vs 3-D annotation never overlap real ellipses.
     want_legend = bool(ref_ellipse) or (
         skew_threshold is not None and c_by in ("skew", "beta")
     )
-    legend_depth = 3.2 * cell_y if want_legend else 0.0
-
+    legend_depth = 0.0
     if period_up:
         top_edge, top_sign = y_hi, 1.0
-        ax.set_ylim(y_lo - margin, y_hi + margin + legend_depth)
     else:
         top_edge, top_sign = y_lo, -1.0
-        ax.set_ylim(y_hi + margin, y_lo - margin - legend_depth)
-
-    PYCSAMT_STATION_RENDERING.apply(
-        ax,
-        np.arange(n_st, dtype=float),
-        st_list,
-        preset="pseudosection",
-        xlim=(-0.6, n_st - 0.4),
-    )
+    ax.set_ylim(*target_ylim)
 
     # y-ticks: integer log10 values
     y_int = np.arange(int(np.floor(y_lo)), int(np.ceil(y_hi)) + 1)
@@ -995,10 +1126,6 @@ def plot_phase_tensor_psection(
     ax.grid(True, ls=":", lw=0.4, color="#cccccc", alpha=0.7, zorder=0)
 
     # ── colorbar ─────────────────────────────────────────────────────────
-    sm = ScalarMappable(cmap=cm, norm=norm)
-    sm.set_array([])
-    _attach_cbar(ax, sm, cbar_label)
-
     # ── optional overlays: dedicated legend strip beyond the data ─────────
     if want_legend:
         # boundary rule separating data from the legend strip
@@ -1010,26 +1137,28 @@ def plot_phase_tensor_psection(
         va_out = "bottom" if top_sign > 0 else "top"
 
         if skew_threshold is not None and c_by in ("skew", "beta"):
-            y_near = bound + top_sign * 0.32 * legend_depth
-            y_far = bound + top_sign * 0.75 * legend_depth
+            y_near = 0.91
+            y_far = 0.975
             ax.text(
-                -0.45,
+                0.01,
                 y_far,
                 f"|β| < {skew_threshold:.0f}° → 1-D/2-D",
                 fontsize=legend_fontsize,
                 va="center",
                 ha="left",
                 color="#2166ac",
+                transform=ax.transAxes,
                 bbox=dict(fc="white", ec="0.75", lw=0.5, alpha=0.9, pad=2.0),
             )
             ax.text(
-                -0.45,
+                0.01,
                 y_near,
                 f"|β| ≥ {skew_threshold:.0f}° → 3-D",
                 fontsize=legend_fontsize,
                 va="center",
                 ha="left",
                 color="#b2182b",
+                transform=ax.transAxes,
                 bbox=dict(fc="white", ec="0.75", lw=0.5, alpha=0.9, pad=2.0),
             )
 
@@ -1037,10 +1166,8 @@ def plot_phase_tensor_psection(
         # data ellipse (φ_max = φ_min = ref), drawn at full data size so
         # it is directly comparable to the ellipses in the plot.
         if ref_ellipse and ref is not None:
-            rx = n_st - 1
-            ry = bound + top_sign * 0.38 * legend_depth
-            rw = min(scale * cell_x, 0.99 * cell_x)
-            rh = max(min(scale * cell_y, 0.99 * cell_y), min_aspect * rw)
+            rx, ry = 0.92, 0.94
+            rw, rh = 0.055, 0.03
             ax.add_patch(
                 Ellipse(
                     (rx, ry),
@@ -1051,6 +1178,7 @@ def plot_phase_tensor_psection(
                     edgecolor="k",
                     linewidth=0.9,
                     zorder=5,
+                    transform=ax.transAxes,
                 )
             )
             ref_label = {
@@ -1059,15 +1187,28 @@ def plot_phase_tensor_psection(
             }.get(normalise_by, "size reference")
             ax.text(
                 rx,
-                ry + top_sign * (0.5 * rh + 0.10 * legend_depth),
+                0.895,
                 ref_label,
                 ha="center",
-                va=va_out,
+                va="top",
                 fontsize=legend_fontsize,
                 linespacing=1.3,
+                transform=ax.transAxes,
                 bbox=dict(fc="white", ec="0.75", lw=0.5, alpha=0.9, pad=2.0),
             )
 
+    # Artists using ``ax.transAxes`` can still update Matplotlib's data limits
+    # when they are added as patches. Re-apply the finite-data frame last so
+    # annotations never create empty scientific-axis ranges.
+    ax.set_ylim(*target_ylim)
+    tick_lo = int(np.ceil(y_lo))
+    tick_hi = int(np.floor(y_hi))
+    if tick_lo <= tick_hi:
+        y_ticks = np.arange(tick_lo, tick_hi + 1)
+    else:
+        y_ticks = np.array([0.5 * (y_lo + y_hi)])
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f"{v:g}" for v in y_ticks], fontsize=8)
     return ax
 
 

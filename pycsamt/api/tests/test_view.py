@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from pycsamt.api import (
     APIFrame,
@@ -16,7 +17,13 @@ from pycsamt.api import (
     wrap_frame,
     wrap_result,
 )
-from pycsamt.api.view.progress import progress_enabled
+from pycsamt.api.view.progress import (
+    PYCSAMT_PROGRESS,
+    configure_progress,
+    get_progress_bar,
+    progress_enabled,
+    reset_progress,
+)
 
 
 def test_api_frame_keeps_pandas_behavior_and_display():
@@ -125,6 +132,51 @@ def test_read_edis_returns_api_survey_for_empty_match(tmp_path):
 def test_progress_auto_is_boolean():
     assert progress_enabled(True) is True
     assert progress_enabled(False) is False
+
+
+def test_progress_config_defaults_and_reset():
+    reset_progress()
+    assert PYCSAMT_PROGRESS.default_verbose == 1
+    assert PYCSAMT_PROGRESS.force_verbose is None
+    assert PYCSAMT_PROGRESS.style == "ascii"
+    configure_progress(style="unicode", min_interval=0.5)
+    assert PYCSAMT_PROGRESS.style == "unicode"
+    assert PYCSAMT_PROGRESS.min_interval == 0.5
+    reset_progress()
+    assert PYCSAMT_PROGRESS.style == "ascii"
+
+
+def test_progress_config_context_restores_previous_values():
+    reset_progress()
+    with PYCSAMT_PROGRESS.context(force_verbose=0):
+        assert PYCSAMT_PROGRESS.force_verbose == 0
+        assert PYCSAMT_PROGRESS.resolve(True) == 0  # forced silent wins
+    assert PYCSAMT_PROGRESS.force_verbose is None
+    reset_progress()
+
+
+def test_progress_config_rejects_unknown_key():
+    with pytest.raises(AttributeError):
+        configure_progress(not_a_real_key=1)
+    reset_progress()
+
+
+def test_progress_config_rejects_bad_style():
+    with pytest.raises(ValueError):
+        configure_progress(style="fancy")
+    reset_progress()
+
+
+def test_get_progress_bar_honours_forced_silence(capsys):
+    reset_progress()
+    try:
+        configure_progress(force_verbose=0)
+        with get_progress_bar(total=3, desc="x", verbose=True) as bar:
+            for _ in range(3):
+                bar.update(1)
+        assert capsys.readouterr().out == ""
+    finally:
+        reset_progress()
 
 
 def test_quality_dataframe_follows_global_config_by_default():

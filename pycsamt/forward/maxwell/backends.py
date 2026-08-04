@@ -25,6 +25,7 @@ from typing import (
 import numpy as np
 
 from .contracts import ForwardResult, MaxwellProblem
+from .contracts_tri import TriProblem
 
 __all__ = [
     "BackendCapabilities",
@@ -298,13 +299,21 @@ class BackendCapabilities:
         """
         return str(component).strip().lower() in self.components
 
-    def assess(self, problem: MaxwellProblem) -> CompatibilityReport:
+    def assess(
+        self, problem: MaxwellProblem | TriProblem
+    ) -> CompatibilityReport:
         """Assess a problem without invoking the numerical backend.
 
         Parameters
         ----------
-        problem : MaxwellProblem
-            Validated problem contract.
+        problem : MaxwellProblem or TriProblem
+            Validated problem contract, rectilinear or triangular. Both
+            expose the same ``mesh``/``frequencies_hz``/``components``/
+            ``time_dependence``/``active_cells`` shape this method reads;
+            only :attr:`~pycsamt.forward.maxwell.contracts.MaxwellMesh.cell_widths_m`
+            is rectilinear-only, so the nonuniform-mesh check below is
+            skipped (not applicable) for an unstructured
+            :class:`~pycsamt.forward.maxwell.contracts_tri.TriMesh`.
 
         Returns
         -------
@@ -323,8 +332,8 @@ class BackendCapabilities:
         ... ).compatible
         True
         """
-        if not isinstance(problem, MaxwellProblem):
-            raise TypeError("problem must be a MaxwellProblem.")
+        if not isinstance(problem, (MaxwellProblem, TriProblem)):
+            raise TypeError("problem must be a MaxwellProblem or TriProblem.")
         errors: list[str] = []
         warnings: list[str] = []
         if problem.mesh.dimension not in self.dimensions:
@@ -342,12 +351,13 @@ class BackendCapabilities:
             errors.append(
                 f"time convention {problem.time_dependence!r} is unsupported"
             )
-        widths = problem.mesh.cell_widths_m
-        nonuniform = any(
-            not np.allclose(value, value[0]) for value in widths.values()
-        )
-        if nonuniform and not self.supports_nonuniform_mesh:
-            errors.append("nonuniform meshes are unsupported")
+        widths = getattr(problem.mesh, "cell_widths_m", None)
+        if widths is not None:
+            nonuniform = any(
+                not np.allclose(value, value[0]) for value in widths.values()
+            )
+            if nonuniform and not self.supports_nonuniform_mesh:
+                errors.append("nonuniform meshes are unsupported")
         inactive = ~problem.active_cells
         if np.any(inactive) and not self.supports_inactive_cells:
             errors.append("inactive cells are unsupported")

@@ -21,8 +21,9 @@ tables, plots, and interpretation.
 What The Diagnostics Measure
 ----------------------------
 
-For each station and frequency, the module computes observed apparent
-resistivity from one off-diagonal impedance component:
+For each station and frequency, the module computes observed
+:term:`apparent resistivity` from one off-diagonal
+:term:`impedance tensor` component:
 
 .. math::
 
@@ -42,9 +43,9 @@ Given predicted bounds :math:`[L_j, U_j]`, coverage is:
    0, & \text{otherwise}
    \end{cases}
 
-The empirical coverage of a station is the mean of those binary values.
-For a nominal 90 percent interval, a station with empirical coverage
-above ``0.9`` is flagged as calibrated by the default rule.
+The :term:`empirical coverage` of a station is the mean of those binary
+values. For a nominal 90 percent interval, a station with empirical
+coverage above ``0.9`` is flagged as calibrated by the default rule.
 
 For station :math:`s`, with :math:`n_s` evaluated frequencies, this is
 
@@ -139,9 +140,9 @@ files. Use it when you already have observed values and interval bounds.
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-01.png
    :width: 100%
 
-Line 9 computes the fraction of observations that fall inside their
-interval. In this toy example, values below ``q_lo`` or above ``q_hi``
-count as misses.
+``coverage_score`` is the fraction of observations that fall inside
+their interval. In this toy example, values below ``q_lo`` or above
+``q_hi`` count as misses.
 
 Building Example Bounds
 -----------------------
@@ -154,48 +155,40 @@ grows toward longer periods.
 This is not a forecasting model. It is a transparent way to demonstrate
 the diagnostics using real observed EDI data.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
+   >>> import numpy as np
+   >>> from pycsamt.emtools.diag import rho_coverage
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> raw = rho_coverage(survey, q_lo=0.0, q_hi=np.inf, rho_comp="xy")
+   >>> q_lo = {}
+   >>> q_hi = {}
+   >>> model = {}
+   >>> log_period = np.log10(raw["period_s"])
+   >>> p_min = log_period.min()
+   >>> p_max = log_period.max()
+   >>> for station, group in raw.groupby("station", sort=False):
+   ...     group = group.reset_index(drop=True)
+   ...     smooth = (
+   ...         np.log10(group["rho_obs"])
+   ...         .rolling(5, center=True, min_periods=1)
+   ...         .median()
+   ...     )
+   ...     center = 10.0 ** smooth.to_numpy()
+   ...     t = (np.log10(group["period_s"]) - p_min) / (p_max - p_min + 1e-12)
+   ...     half_width = 0.15 + 0.30 * t
+   ...     q_lo[station] = center * (1.0 - half_width)
+   ...     q_hi[station] = center * (1.0 + half_width)
+   ...     model[station] = center
+   ...
+   >>> len(q_lo), len(model)
+   (28, 28)
 
-   from pycsamt.emtools.diag import rho_coverage
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-
-   raw = rho_coverage(
-       survey,
-       q_lo=0.0,
-       q_hi=np.inf,
-       rho_comp="xy",
-   )
-
-   q_lo = {}
-   q_hi = {}
-   model = {}
-
-   log_period = np.log10(raw["period_s"])
-   p_min = log_period.min()
-   p_max = log_period.max()
-
-   for station, group in raw.groupby("station", sort=False):
-       group = group.reset_index(drop=True)
-       smooth = (
-           np.log10(group["rho_obs"])
-           .rolling(5, center=True, min_periods=1)
-           .median()
-       )
-       center = 10.0 ** smooth.to_numpy()
-       t = (np.log10(group["period_s"]) - p_min) / (p_max - p_min + 1e-12)
-       half_width = 0.15 + 0.30 * t
-
-       q_lo[station] = center * (1.0 - half_width)
-       q_hi[station] = center * (1.0 + half_width)
-       model[station] = center
-
-Lines 7-12 use ``rho_coverage`` with infinite bounds as a convenient
-way to extract observed apparent resistivity. Lines 31-33 build
-station-specific lower bounds, upper bounds, and point predictions.
+``rho_coverage`` with infinite bounds is a convenient way to extract
+observed apparent resistivity without evaluating any real interval --
+every point trivially falls inside ``[0, inf]``. The loop that follows
+then builds station-specific lower bounds, upper bounds, and point
+predictions from that same observed data.
 
 In mathematical form, the center line is a rolling median in
 log-resistivity,
@@ -232,25 +225,19 @@ Per-Frequency Coverage
 
 Use ``rho_coverage`` when you need one row per station and frequency.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.diag import rho_coverage
-   detail = rho_coverage(
-       "data/AMT/WILLY_DATA/L18PLT",
-       q_lo=q_lo,
-       q_hi=q_hi,
-       rho_comp="xy",
-       recursive=True,
-       on_dup="replace",
-       strict=False,
-       verbose=0,
-   )
-   print(detail.head())
-   detail.to_csv("l18plt_coverage_detail.csv", index=False)
-
-.. code-block:: text
-
+   >>> detail = rho_coverage(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     q_lo=q_lo,
+   ...     q_hi=q_hi,
+   ...     rho_comp="xy",
+   ...     recursive=True,
+   ...     on_dup="replace",
+   ...     strict=False,
+   ...     verbose=0,
+   ... )
+   >>> detail.head()
       station  freq_hz  period_s  ...        q_hi  covered  width_pct
    0  18-001A  10400.0  0.000096  ...   83.967382     True  32.193022
    1  18-001A   8707.0  0.000115  ...   85.549285     True  31.582076
@@ -258,6 +245,7 @@ Use ``rho_coverage`` when you need one row per station and frequency.
    3  18-001A   6102.0  0.000164  ...  101.271129     True  33.461671
    4  18-001A   5108.0  0.000196  ...  112.968367     True  34.616073
    [5 rows x 8 columns]
+   >>> detail.to_csv("l18plt_coverage_detail.csv", index=False)
 
 The output columns are:
 
@@ -278,35 +266,27 @@ Single-Station Inspection
 Before trusting summary statistics, inspect one station's observed
 curve against its bounds.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   station = "18-001A"
-   one = detail.loc[detail["station"] == station].sort_values("period_s")
-
-   fig, ax = plt.subplots(figsize=(7, 4.5))
-   ax.fill_between(
-       one["period_s"],
-       one["q_lo"],
-       one["q_hi"],
-       color="0.85",
-       label="predicted interval",
-   )
-   ax.loglog(one["period_s"], one["rho_obs"], "o-", label="observed")
-   ax.scatter(
-       one.loc[~one["covered"], "period_s"],
-       one.loc[~one["covered"], "rho_obs"],
-       color="red",
-       zorder=4,
-       label="miss",
-   )
-   ax.set_xlabel("Period (s)")
-   ax.set_ylabel("Apparent resistivity (ohm.m)")
-   ax.set_title(f"{station} observed resistivity vs. prediction interval")
-   ax.legend()
-   fig.tight_layout()
+   >>> import matplotlib.pyplot as plt
+   >>> station = "18-001A"
+   >>> one = detail.loc[detail["station"] == station].sort_values("period_s")
+   >>> fig, ax = plt.subplots(figsize=(7, 4.5))
+   >>> _ = ax.fill_between(
+   ...     one["period_s"], one["q_lo"], one["q_hi"],
+   ...     color="0.85", label="predicted interval",
+   ... )
+   >>> _ = ax.loglog(one["period_s"], one["rho_obs"], "o-", label="observed")
+   >>> _ = ax.scatter(
+   ...     one.loc[~one["covered"], "period_s"],
+   ...     one.loc[~one["covered"], "rho_obs"],
+   ...     color="red", zorder=4, label="miss",
+   ... )
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel("Apparent resistivity (ohm.m)")
+   >>> _ = ax.set_title(f"{station} observed resistivity vs. prediction interval")
+   >>> _ = ax.legend()
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-04.png
    :width: 100%
@@ -331,17 +311,17 @@ Use ``coverage_table`` to summarize each station.
    ...     nominal=0.9,
    ... )
    >>> ranked = table.sort_values("empirical_cov")
-   >>> print(ranked.head(10))
+   >>> ranked.head(10)
        station  n_freq  empirical_cov  mean_width_pct  calibrated_flag
-   20  18-021B      53       0.754717       61.136034            False
+   21  18-021B      53       0.754717       61.136034            False
    23  18-022V      53       0.811321       61.889193            False
-   26  18-024U      53       0.830189       62.828105            False
    22  18-022U      53       0.830189       61.305808            False
+   26  18-024U      53       0.830189       62.828105            False
    13  18-014A      53       0.867925       66.977547            False
    18  18-019U      53       0.867925       62.615552            False
+   24  18-023A      53       0.886792       61.066131            False
    14  18-015U      53       0.886792       62.958395            False
    0   18-001A      53       0.886792       63.019031            False
-   24  18-023A      53       0.886792       61.066131            False
    1   18-002U      53       0.886792       63.691545            False
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-05.png
@@ -383,29 +363,23 @@ The radial segment spans :math:`\log_{10}L_j` to
 :math:`\log_{10}U_j`, so equal resistivity ratios occupy comparable
 visual distance.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.diag import plot_polar_coverage
-
-   fig, ax = plt.subplots(
-       subplot_kw={"projection": "polar"},
-       figsize=(7, 7),
-   )
-   plot_polar_coverage(
-       "data/AMT/WILLY_DATA/L18PLT",
-       q_lo=q_lo,
-       q_hi=q_hi,
-       rho_comp="xy",
-       n_freq_ticks=8,
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.diag import plot_polar_coverage
+   >>> fig, ax = plt.subplots(subplot_kw={"projection": "polar"}, figsize=(7, 7))
+   >>> _ = plot_polar_coverage(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     q_lo=q_lo,
+   ...     q_hi=q_hi,
+   ...     rho_comp="xy",
+   ...     n_freq_ticks=8,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-06.png
-   :width: 100%
+   :width: 65%
+   :align: center
 
 This plot is useful when you want to know whether misses cluster in a
 specific part of the frequency band. A red wedge suggests a systematic
@@ -428,52 +402,44 @@ For a frequency bin :math:`B_b`, the plotted mean width is
    \sum_{j\in B_b}
    100 {U_j-L_j \over \rho_{a,obs,j}}.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools.diag import plot_width_drift
+   >>> fig, ax_cart = plt.subplots(figsize=(8, 4))
+   >>> _ = plot_width_drift(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     q_lo=q_lo,
+   ...     q_hi=q_hi,
+   ...     n_bands=8,
+   ...     polar=False,
+   ...     ax=ax_cart,
+   ... )
 
-   from pycsamt.emtools.diag import plot_width_drift
-
-   fig, ax_cart = plt.subplots(figsize=(8, 4))
-   plot_width_drift(
-       "data/AMT/WILLY_DATA/L18PLT",
-       q_lo=q_lo,
-       q_hi=q_hi,
-       n_bands=8,
-       polar=False,
-       ax=ax_cart,
-   )
-
-   fig2, ax2 = plt.subplots(
-       subplot_kw={"projection": "polar"},
-       figsize=(6, 6),
-   )
-   plot_width_drift(
-       "data/AMT/WILLY_DATA/L18PLT",
-       q_lo=q_lo,
-       q_hi=q_hi,
-       n_bands=8,
-       polar=True,
-       ax=ax2,
-   )
-
-.. grid:: 1 1 2 2
-   :gutter: 2
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-07-01.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-07-02.png
-         :width: 100%
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-07-01.png
+   :width: 100%
 
 If widths grow toward lower frequencies, uncertainty is increasing with
 longer periods and, approximately, with greater investigation depth. If
 widths are huge everywhere, high coverage may not be very informative.
+The same bins also read well wrapped onto a polar axis, which keeps the
+frequency-band drift on the same angular convention as the coverage
+plot above:
+
+.. code-block:: pycon
+
+   >>> fig2, ax2 = plt.subplots(subplot_kw={"projection": "polar"}, figsize=(6, 6))
+   >>> _ = plot_width_drift(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     q_lo=q_lo,
+   ...     q_hi=q_hi,
+   ...     n_bands=8,
+   ...     polar=True,
+   ...     ax=ax2,
+   ... )
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-07-02.png
+   :width: 60%
+   :align: center
 
 Point-Prediction Error
 ----------------------
@@ -501,34 +467,31 @@ while the color follows the sign of
 
    \overline{e}_b = {1 \over |B_b|}\sum_{j\in B_b}e_j.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.diag import rho_error_stats, plot_polar_errors
-   errors = rho_error_stats(
-       "data/AMT/WILLY_DATA/L18PLT",
-       model_rho=model,
-       rho_comp="xy",
-   )
-   print(errors[["station", "freq_hz", "rel_err_pct", "abs_err_pct"]].head())
-   ax = plot_polar_errors(
-       "data/AMT/WILLY_DATA/L18PLT",
-       model_rho=model,
-       rho_comp="xy",
-       n_bins=18,
-   )
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.diag import rho_error_stats, plot_polar_errors
+   >>> errors = rho_error_stats(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     model_rho=model,
+   ...     rho_comp="xy",
+   ... )
+   >>> errors[["station", "freq_hz", "rel_err_pct", "abs_err_pct"]].head()
       station  freq_hz   rel_err_pct   abs_err_pct
    0  18-001A  10400.0  7.310073e+00  7.310073e+00
    1  18-001A   8707.0  1.375503e+00  1.375503e+00
    2  18-001A   7289.0 -1.893832e-14  1.893832e-14
    3  18-001A   6102.0  1.638024e-14  1.638024e-14
    4  18-001A   5108.0  0.000000e+00  0.000000e+00
+   >>> ax = plot_polar_errors(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     model_rho=model,
+   ...     rho_comp="xy",
+   ...     n_bins=18,
+   ... )
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-08.png
-   :width: 100%
+   :width: 65%
+   :align: center
 
 The output columns are:
 
@@ -547,46 +510,34 @@ Comparing Calibration Scenarios
 A useful diagnostic exercise is to compare sensible, overconfident, and
 underconfident intervals.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-
-   from pycsamt.emtools.diag import coverage_table
-
-   scenarios = {
-       "sensible": 1.0,
-       "overconfident": 0.4,
-       "underconfident": 3.0,
-   }
-
-   rows = []
-   for name, multiplier in scenarios.items():
-       lo_s = {}
-       hi_s = {}
-       for station in q_lo:
-           center = model[station]
-           lo_s[station] = center - (center - q_lo[station]) * multiplier
-           hi_s[station] = center + (q_hi[station] - center) * multiplier
-       t = coverage_table(
-           "data/AMT/WILLY_DATA/L18PLT",
-           q_lo=lo_s,
-           q_hi=hi_s,
-       )
-       rows.append(
-           {
-               "scenario": name,
-               "mean_coverage": t["empirical_cov"].mean(),
-               "mean_width_pct": t["mean_width_pct"].mean(),
-               "n_calibrated": int(t["calibrated_flag"].sum()),
-           }
-       )
-
-   comparison = pd.DataFrame(rows)
-   print(comparison)
-
-.. code-block:: text
-
+   >>> import pandas as pd
+   >>> scenarios = {
+   ...     "sensible": 1.0,
+   ...     "overconfident": 0.4,
+   ...     "underconfident": 3.0,
+   ... }
+   >>> rows = []
+   >>> for name, multiplier in scenarios.items():
+   ...     lo_s = {}
+   ...     hi_s = {}
+   ...     for station in q_lo:
+   ...         center = model[station]
+   ...         lo_s[station] = center - (center - q_lo[station]) * multiplier
+   ...         hi_s[station] = center + (q_hi[station] - center) * multiplier
+   ...     t = coverage_table("data/AMT/WILLY_DATA/L18PLT", q_lo=lo_s, q_hi=hi_s)
+   ...     rows.append(
+   ...         {
+   ...             "scenario": name,
+   ...             "mean_coverage": t["empirical_cov"].mean(),
+   ...             "mean_width_pct": t["mean_width_pct"].mean(),
+   ...             "n_calibrated": int(t["calibrated_flag"].sum()),
+   ...         }
+   ...     )
+   ...
+   >>> comparison = pd.DataFrame(rows)
+   >>> comparison
             scenario  mean_coverage  mean_width_pct  n_calibrated
    0        sensible       0.908356       62.287196            18
    1   overconfident       0.766846       24.914878             0
@@ -600,11 +551,11 @@ coverage and narrow width. Underconfident intervals should have high
 coverage and wide intervals. A useful model is the one that reaches the
 target coverage without making the intervals unnecessarily wide.
 
-Lines 15-19 scale the interval half-width around the same point
-prediction. That keeps the comparison fair: only the uncertainty width
-changes, not the model center.
-
-The scaled bounds are
+The loop scales the interval half-width around the same point
+prediction ``model[station]``, rather than around the original
+``q_lo``/``q_hi`` midpoint directly. That keeps the comparison fair:
+only the uncertainty width changes across scenarios, not the model
+center. The scaled bounds are
 
 .. math::
 
@@ -662,53 +613,43 @@ Saving A Reproducible Diagnostic Bundle
 Save the detailed coverage table, station summary, error table, and
 figures together.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.diag import (
+   ...     coverage_table,
+   ...     plot_polar_coverage,
+   ...     plot_width_drift,
+   ...     rho_coverage,
+   ...     rho_error_stats,
+   ... )
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> out = Path("outputs/diag_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> detail = rho_coverage(survey, q_lo=q_lo, q_hi=q_hi)
+   >>> table = coverage_table(survey, q_lo=q_lo, q_hi=q_hi)
+   >>> errors = rho_error_stats(survey, model_rho=model)
+   >>> detail.to_csv(out / "coverage_detail.csv", index=False)
+   >>> table.to_csv(out / "coverage_table.csv", index=False)
+   >>> errors.to_csv(out / "relative_errors.csv", index=False)
+   >>> fig1, ax1 = plt.subplots(subplot_kw={"projection": "polar"}, figsize=(7, 7))
+   >>> _ = plot_polar_coverage(survey, q_lo=q_lo, q_hi=q_hi, ax=ax1)
+   >>> fig1.savefig(out / "polar_coverage.png", dpi=200)
+   >>> fig2, ax2 = plt.subplots(figsize=(8, 4))
+   >>> _ = plot_width_drift(survey, q_lo=q_lo, q_hi=q_hi, ax=ax2)
+   >>> fig2.savefig(out / "width_drift.png", dpi=200)
 
-   import matplotlib.pyplot as plt
+``detail``, ``table``, and ``errors`` preserve the three tables behind
+every figure on this page. The saved polar-coverage and width-drift
+figures are the same diagnostics from the sections above, regenerated
+here from ``q_lo``/``q_hi``/``model`` in one place for a report bundle:
 
-   from pycsamt.emtools.diag import (
-       coverage_table,
-       plot_polar_coverage,
-       plot_width_drift,
-       rho_coverage,
-       rho_error_stats,
-   )
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-10-01.png
+   :width: 60%
+   :align: center
 
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   out = Path("outputs/diag_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   detail = rho_coverage(survey, q_lo=q_lo, q_hi=q_hi)
-   table = coverage_table(survey, q_lo=q_lo, q_hi=q_hi)
-   errors = rho_error_stats(survey, model_rho=model)
-
-   detail.to_csv(out / "coverage_detail.csv", index=False)
-   table.to_csv(out / "coverage_table.csv", index=False)
-   errors.to_csv(out / "relative_errors.csv", index=False)
-
-   fig1, ax1 = plt.subplots(subplot_kw={"projection": "polar"}, figsize=(7, 7))
-   plot_polar_coverage(survey, q_lo=q_lo, q_hi=q_hi, ax=ax1)
-   fig1.savefig(out / "polar_coverage.png", dpi=200)
-
-   fig2, ax2 = plt.subplots(figsize=(8, 4))
-   plot_width_drift(survey, q_lo=q_lo, q_hi=q_hi, ax=ax2)
-   fig2.savefig(out / "width_drift.png", dpi=200)
-
-.. grid:: 1 1 2 2
-   :gutter: 2
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-10-01.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-10-02.png
-         :width: 100%
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-diag-10-02.png
+   :width: 100%
 
 Worked Example
 --------------

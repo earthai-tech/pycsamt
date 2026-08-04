@@ -42,6 +42,11 @@ task you need.
      - You have cleaned and reviewed a line survey and want to prepare a 2-D
        Occam2D inversion workspace.
      - Occam2D data, model, startup, and run-directory files.
+   * - :doc:`process_zonge_avg_k1_k2`
+     - You have Zonge AVG plus station files and need a coordinate-safe path
+       through EDI, CSAMT-specific QC, Occam2D, and AI inversion.
+     - K1/K2 EDIs, midpoint-corrected coordinates, processing decisions,
+       and reproducible classical/AI run recipes.
    * - :doc:`ai_inversion_from_corrected_edis`
      - You have corrected EDIs and want to use AI inversion instead of, or
        alongside, classical inversion, and want to know whether to trust

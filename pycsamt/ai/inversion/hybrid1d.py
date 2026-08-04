@@ -181,6 +181,8 @@ class HybridInverter1D(BaseHybridInverter):
         -------
         self
         """
+        from pycsamt.api.view.progress import get_progress_bar
+
         self._require_backend()
         dev = self._resolve_device()
 
@@ -192,26 +194,32 @@ class HybridInverter1D(BaseHybridInverter):
         self._stage2 = []
         n_layers = self._ai_inv.n_layers
 
-        for i, (obs, params) in enumerate(zip(self._obs, init_params)):
-            if verbose:
-                print(f"[{i + 1}/{len(self._obs)}] Refining {obs.name} ...")
-            # Unpack AI output: [log_rho..., log_thick...]
-            init_lr = params[:n_layers]
-            init_lt = params[n_layers:]
+        with get_progress_bar(
+            total=len(self._obs),
+            desc="Stage 2 refinement",
+            unit="station",
+            verbose=verbose,
+        ) as bar:
+            for obs, params in zip(self._obs, init_params):
+                # Unpack AI output: [log_rho..., log_thick...]
+                init_lr = params[:n_layers]
+                init_lt = params[n_layers:]
 
-            res = fit_station(
-                obs,
-                n_layers=n_layers,
-                depth_max=0.0,
-                lam=self.smoothness_weight,
-                lr=self.lr,
-                epochs=self.max_iter,
-                device=dev,
-                log_every=_every,
-                init_log_rho=init_lr,
-                init_log_thick=init_lt,
-            )
-            self._stage2.append(res)
+                res = fit_station(
+                    obs,
+                    n_layers=n_layers,
+                    depth_max=0.0,
+                    lam=self.smoothness_weight,
+                    lr=self.lr,
+                    epochs=self.max_iter,
+                    device=dev,
+                    log_every=_every,
+                    init_log_rho=init_lr,
+                    init_log_thick=init_lt,
+                )
+                self._stage2.append(res)
+                bar.set_description(f"Stage 2 refinement: {obs.name}")
+                bar.update(1)
 
         self._is_fitted = True
         return self

@@ -112,11 +112,22 @@ class ResistivityFile:
     converge_slowly : str
         ``"yes"`` or ``"no"``.
     resistivity : numpy.ndarray, shape (n_regions, nrho)
-        Log10-resistivity per region per component.
+        Linear resistivity (ohm-m) per region per component. Despite
+        the "Global Bounds"/``log10_lagrange`` fields elsewhere in this
+        file being log10-scaled, the region table itself is linear --
+        confirmed against a real compiled MARE2DEM binary: its reader
+        (``mare2dem_io.f90``, comment ``"! rho is linear"``) applies
+        ``log10()`` itself only internally, for its own inversion
+        parameterization. Writing ``log10(rho)`` here instead produces
+        a self-consistent but physically wrong forward response
+        (magnitude off by a constant factor at every frequency; see
+        ``pycsamt.forward.maxwell.mare2dem``'s module docstring for the
+        full story).
     free_parameter : numpy.ndarray, shape (n_regions, nrho)
         Free-parameter index (0 = fixed, >0 = free parameter number).
     bounds : numpy.ndarray, shape (n_regions, 2*nrho)
-        Lower / upper bounds per region component.
+        Lower / upper bounds per region component, linear ohm-m (same
+        convention as ``resistivity`` above, not log10).
     prejudice : numpy.ndarray, shape (n_regions, 2*nrho)
         Prejudice value and weight per region component.
     """

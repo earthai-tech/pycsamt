@@ -1361,16 +1361,28 @@ def _rotm(angle_deg: float) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _slice_fields(obj: Any, sl: Any) -> None:
+    # Private underscore names are tried before their public property
+    # counterparts (e.g. "_z" before "z"). This matters for objects like
+    # pycsamt.z.z.Z: its `z`/`z_err` property setters cross-validate their
+    # new value's shape against *each other's current, not-yet-resliced*
+    # value and eagerly recompute rho/phase, so setting them through the
+    # properties one at a time transiently disagrees in shape and either
+    # raises (swallowed below) or fails an internal recompute (logged as a
+    # spurious ERROR by the object itself) -- confirmed by a real run of
+    # pycsamt.site.edit.select_freq_all on live EDI data. Writing the
+    # private attributes directly bypasses that mid-slice cross-validation
+    # entirely; every field ends up consistently resized before anything
+    # tries to recompute a derived quantity from them.
     groups = [
-        ("freq", ("freq", "frequency", "_freq")),
-        ("z", ("z", "impedance", "_z")),
-        ("z_error", ("z_error", "z_err", "impedance_err", "_z_err")),
-        ("rho", ("rho", "res", "resistivity", "_resistivity")),
-        ("phase", ("phase", "phi", "_phase")),
-        ("tipper", ("tipper", "tip", "_tipper")),
-        ("tipper_err", ("tipper_err", "_tipper_err")),
-        ("amp", ("amp", "_amp")),
-        ("azimuth", ("azimuth", "_azimuth")),
+        ("freq", ("_freq", "freq", "frequency")),
+        ("z", ("_z", "z", "impedance")),
+        ("z_error", ("_z_err", "z_error", "z_err", "impedance_err")),
+        ("rho", ("_resistivity", "rho", "res", "resistivity")),
+        ("phase", ("_phase", "phase", "phi")),
+        ("tipper", ("_tipper", "tipper", "tip")),
+        ("tipper_err", ("_tipper_err", "tipper_err")),
+        ("amp", ("_amp", "amp")),
+        ("azimuth", ("_azimuth", "azimuth")),
     ]
     for _, names in groups:
         for nm in names:
@@ -1383,6 +1395,19 @@ def _slice_fields(obj: Any, sl: Any) -> None:
             except Exception:
                 # keep going to other fields
                 pass
+            break
+
+    # freq/z/z_error are now consistently resized without having triggered
+    # any premature cross-validated recompute; refresh derived quantities
+    # (e.g. rho_err/phase_err, which pycsamt.z.z.Z only (re)computes after
+    # confirming z_err's shape matches z's) once, now that they genuinely
+    # agree.
+    recompute = getattr(obj, "compute_resistivity_phase", None)
+    if callable(recompute):
+        try:
+            recompute()
+        except Exception:
+            pass
 
 
 def _maybe_df(table: Any, columns: dict | None = None):

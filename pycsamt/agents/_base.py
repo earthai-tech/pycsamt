@@ -166,6 +166,12 @@ class BaseAgent(ABC):
     section_preset : str
         Which :data:`~pycsamt.api.section.PYCSAMT_SECTION` preset governs
         figures produced by this agent.  Default ``"pseudosection"``.
+    verbose : bool, int, or str
+        Progress verbosity forwarded to the underlying dataset-generation
+        and training calls — see
+        :func:`pycsamt.utils.progress.normalize_verbose`. Default
+        ``False`` (silent), matching this agent framework's historical
+        behaviour of returning results/logs rather than printing.
 
     Examples
     --------
@@ -202,6 +208,7 @@ class BaseAgent(ABC):
         model: str | None = None,
         llm_provider: str = "claude",
         section_preset: str = "pseudosection",
+        verbose: bool | int | str = False,
     ) -> None:
         llm_provider = llm_provider.lower()
         if llm_provider not in _PROVIDERS:
@@ -220,6 +227,7 @@ class BaseAgent(ABC):
         self.api_key = api_key
         self.llm_provider = llm_provider
         self.model = model or _DEFAULT_MODELS[llm_provider]
+        self.verbose = verbose
 
         # ── pycsamt API injection ──────────────────────────────────────────
         self._section: SectionStyle = PYCSAMT_SECTION.style_for(section_preset)

@@ -15,9 +15,14 @@ from .frame import (
 )
 from .io import read_edi, read_edis, read_sites
 from .progress import (
+    PYCSAMT_PROGRESS,
+    ProgressAPIConfig,
     ProgressConfig,
+    configure_progress,
+    get_progress_bar,
     iter_progress,
     progress_enabled,
+    reset_progress,
 )
 from .result import APIResult, wrap_result
 from .survey import APISurvey
@@ -36,9 +41,13 @@ __all__ = [
     "APIViewConfig",
     "FrameProfile",
     "PYCSAMT_API_VIEW",
+    "PYCSAMT_PROGRESS",
+    "ProgressAPIConfig",
     "ProgressConfig",
     "api_frame",
     "configure_api_view",
+    "configure_progress",
+    "get_progress_bar",
     "iter_progress",
     "maybe_wrap_frame",
     "progress_enabled",
@@ -46,6 +55,7 @@ __all__ = [
     "read_edis",
     "read_sites",
     "reset_api_view",
+    "reset_progress",
     "wrap_frame",
     "wrap_result",
     "geology_dataframe",

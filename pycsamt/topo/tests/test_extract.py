@@ -40,6 +40,9 @@ _DATA_ROOT = os.path.join(
     "AMT",
     "WILLY_DATA",
 )
+_CSAMT_ROOT = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "data", "CSAMT"
+)
 
 
 def _load_profile(profile: str) -> list[EDIFile]:
@@ -47,6 +50,13 @@ def _load_profile(profile: str) -> list[EDIFile]:
     paths = sorted(glob.glob(os.path.join(edi_dir, "*.edi")))
     if not paths:
         pytest.skip(f"WILLY {profile} EDI files not found at {edi_dir}")
+    return [EDIFile(p) for p in paths]
+
+
+def _load_csamt() -> list[EDIFile]:
+    paths = sorted(glob.glob(os.path.join(_CSAMT_ROOT, "*.edi")))
+    if not paths:
+        pytest.skip(f"CSAMT EDI files not found at {_CSAMT_ROOT}")
     return [EDIFile(p) for p in paths]
 
 
@@ -162,6 +172,111 @@ class TestExtractElevation:
 
         with pytest.warns(UserWarning, match="elevation"):
             extract_elevation([_ZeroElev()])
+
+
+# ---------------------------------------------------------------------------
+# >INFO-section fallback (real CSAMT data: LATITUDE=/LONGITUDE=/ELEVATION=
+# recorded under >INFO instead of the standard >HEAD keys)
+# ---------------------------------------------------------------------------
+
+
+class TestInfoSectionFallback:
+    """Real Tongkeng CSAMT delivery: no LAT=/LONG=/ELEV= under >HEAD at
+    all, but real values under >INFO, already parsed onto
+    ``pycsamt.seg.heads.Info``'s own ``.latitude``/``.longitude``/
+    ``.elevation`` attributes -- confirmed directly against the raw EDI
+    text (``grep ELEVATION data/CSAMT/csa000.edi`` shows ``ELEVATION=573.4``).
+    A standards-compliant fallback, not a delivery-specific hack: the
+    SEG-EDI spec permits location metadata in ``>INFO``.
+    """
+
+    def test_has_elevation_true_via_info_section(self):
+        edis = _load_csamt()
+        assert has_elevation(edis) is True
+
+    def test_extract_elevation_matches_raw_info_block(self):
+        """csa000/csa450 documented directly in the raw EDI text."""
+        edis = _load_csamt()
+        elev = extract_elevation(edis)
+        assert elev[0] == pytest.approx(573.4)
+        assert elev[-1] == pytest.approx(510.3)
+
+    def test_extract_elevation_no_zero_shadowing(self):
+        """A >HEAD Location defaulting to elevation=0.0 (because the file
+        never set it) must not shadow a real, non-zero >INFO value.
+        """
+        edis = _load_csamt()
+        elev = extract_elevation(edis)
+        assert np.all(elev > 0.0)
+
+    def test_extract_chainage_via_info_latlon(self):
+        """extract_chainage also needs >INFO's latitude/longitude to work
+        for this delivery -- station spacing here is a real, known 50 m.
+        """
+        edis = _load_csamt()
+        chain_m = extract_chainage(edis) * 1000.0
+        spacings = np.diff(chain_m)
+        assert np.allclose(spacings, 50.0, atol=5.0)
+
+    def test_info_section_does_not_override_a_real_head_value(self):
+        """A HEAD-provided non-zero elevation must win outright -- >INFO
+        is a fallback for missing/zero HEAD data, not an override.
+        """
+
+        class _Info:
+            elevation = 999.0
+            latitude = 99.0
+            longitude = 99.0
+
+        class _Location:
+            elevation = 250.0
+
+        class _Head:
+            Location = _Location()
+
+        class _EDI:
+            Head = _Head()
+
+            def get_section(self, name):
+                return _Info() if name == "info" else None
+
+        elev = extract_elevation([_EDI()])
+        assert elev[0] == pytest.approx(250.0)
+
+    def test_info_section_used_when_head_elevation_is_zero_default(self):
+        """A HEAD Location left at its 0.0 default (never set by the
+        file) must fall through to a real >INFO value.
+        """
+
+        class _Info:
+            elevation = 573.4
+
+        class _Location:
+            elevation = 0.0
+
+        class _Head:
+            Location = _Location()
+
+        class _EDI:
+            Head = _Head()
+
+            def get_section(self, name):
+                return _Info() if name == "info" else None
+
+        elev = extract_elevation([_EDI()])
+        assert elev[0] == pytest.approx(573.4)
+
+    def test_falls_back_to_zero_when_info_also_missing(self):
+        """No HEAD, no INFO: still degrades to the documented all-zero /
+        warning behaviour rather than raising.
+        """
+
+        class _EDI:
+            pass
+
+        with pytest.warns(UserWarning, match="elevation"):
+            elev = extract_elevation([_EDI()])
+        assert elev[0] == 0.0
 
 
 # ---------------------------------------------------------------------------

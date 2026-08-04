@@ -288,6 +288,7 @@ def _fit_2d_joint_torch(
     log_every,
     init_log_rho=None,
     init_log_thick=None,
+    verbose=None,
 ):
     r"""
     Jointly optimise a pseudo-2D section via Adam.
@@ -319,6 +320,8 @@ def _fit_2d_joint_torch(
     """
     import torch
     import torch.nn as nn
+
+    from pycsamt.api.view.progress import get_progress_bar
 
     # Accept numpy or tensor for freqs_t
     freqs_t = torch.as_tensor(
@@ -372,39 +375,45 @@ def _fit_2d_joint_torch(
     opt = torch.optim.Adam([log_rho, log_thick], lr=lr)
     history: list[float] = []
 
-    for ep in range(1, epochs + 1):
-        opt.zero_grad()
-        rho_pred, ph_pred = _mt1d_torch_batch(freqs_t, log_rho, log_thick)
-        lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
+    _verbose = verbose if verbose is not None else (2 if log_every > 0 else 0)
+    with get_progress_bar(
+        total=epochs,
+        desc="Stage 2 (2-D joint)",
+        unit="epoch",
+        verbose=_verbose,
+        log_every=log_every or None,
+    ) as bar:
+        for ep in range(1, epochs + 1):
+            opt.zero_grad()
+            rho_pred, ph_pred = _mt1d_torch_batch(freqs_t, log_rho, log_thick)
+            lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
 
-        lr_safe = torch.where(valid, lr_obs_t, lr_pred.detach())
-        ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
-        res_rho = (lr_pred - lr_safe) ** 2
-        res_ph = ((ph_pred - ph_safe) / 90.0) ** 2
-        n_v = valid.sum().clamp(min=1)
-        data_loss = (res_rho + res_ph).sum() / n_v
+            lr_safe = torch.where(valid, lr_obs_t, lr_pred.detach())
+            ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
+            res_rho = (lr_pred - lr_safe) ** 2
+            res_ph = ((ph_pred - ph_safe) / 90.0) ** 2
+            n_v = valid.sum().clamp(min=1)
+            data_loss = (res_rho + res_ph).sum() / n_v
 
-        vert = ((log_rho[:, 1:] - log_rho[:, :-1]) ** 2).mean()
+            vert = ((log_rho[:, 1:] - log_rho[:, :-1]) ** 2).mean()
 
-        if S > 1:
-            lat = ((log_rho[1:, :] - log_rho[:-1, :]) ** 2).mean()
-        else:
-            lat = torch.tensor(
-                0.0,
-                dtype=torch.float64,
-                device=device,
-            )
+            if S > 1:
+                lat = ((log_rho[1:, :] - log_rho[:-1, :]) ** 2).mean()
+            else:
+                lat = torch.tensor(
+                    0.0,
+                    dtype=torch.float64,
+                    device=device,
+                )
 
-        loss = data_loss + lam_z * vert + lam_x * lat
-        loss.backward()
-        nn.utils.clip_grad_norm_([log_rho, log_thick], max_norm=5.0)
-        opt.step()
-        with torch.no_grad():
-            log_thick.clamp_(0.0, 5.0)
-        history.append(loss.detach().item())
-
-        if log_every > 0 and ep % log_every == 0:
-            print(f"  epoch {ep:>5d}/{epochs}  loss={history[-1]:.5f}")
+            loss = data_loss + lam_z * vert + lam_x * lat
+            loss.backward()
+            nn.utils.clip_grad_norm_([log_rho, log_thick], max_norm=5.0)
+            opt.step()
+            with torch.no_grad():
+                log_thick.clamp_(0.0, 5.0)
+            history.append(loss.detach().item())
+            bar.update(1, metrics={"loss": history[-1]})
 
     return {
         "log_rho": (log_rho.detach().cpu().numpy()),
@@ -431,6 +440,7 @@ def _fit_3d_joint_torch(
     log_every,
     init_log_rho=None,
     init_log_thick=None,
+    verbose=None,
 ):
     r"""
     Jointly optimise a quasi-3D section via Adam.
@@ -464,6 +474,8 @@ def _fit_3d_joint_torch(
     """
     import torch
     import torch.nn as nn
+
+    from pycsamt.api.view.progress import get_progress_bar
 
     # Accept numpy or tensor for freqs_t
     freqs_t = torch.as_tensor(
@@ -524,34 +536,40 @@ def _fit_3d_joint_torch(
     opt = torch.optim.Adam([log_rho, log_thick], lr=lr)
     history: list[float] = []
 
-    for ep in range(1, epochs + 1):
-        opt.zero_grad()
-        rho_pred, ph_pred = _mt1d_torch_batch(freqs_t, log_rho, log_thick)
-        lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
+    _verbose = verbose if verbose is not None else (2 if log_every > 0 else 0)
+    with get_progress_bar(
+        total=epochs,
+        desc="Stage 2 (3-D joint)",
+        unit="epoch",
+        verbose=_verbose,
+        log_every=log_every or None,
+    ) as bar:
+        for ep in range(1, epochs + 1):
+            opt.zero_grad()
+            rho_pred, ph_pred = _mt1d_torch_batch(freqs_t, log_rho, log_thick)
+            lr_pred = torch.log10(rho_pred.clamp(min=1e-12))
 
-        lr_safe = torch.where(valid, lr_obs_t, lr_pred.detach())
-        ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
-        res_rho = (lr_pred - lr_safe) ** 2
-        res_ph = ((ph_pred - ph_safe) / 90.0) ** 2
-        n_v = valid.sum().clamp(min=1)
-        data_loss = (res_rho + res_ph).sum() / n_v
+            lr_safe = torch.where(valid, lr_obs_t, lr_pred.detach())
+            ph_safe = torch.where(valid, ph_obs_t, ph_pred.detach())
+            res_rho = (lr_pred - lr_safe) ** 2
+            res_ph = ((ph_pred - ph_safe) / 90.0) ** 2
+            n_v = valid.sum().clamp(min=1)
+            data_loss = (res_rho + res_ph).sum() / n_v
 
-        vert = ((log_rho[:, 1:] - log_rho[:, :-1]) ** 2).mean()
+            vert = ((log_rho[:, 1:] - log_rho[:, :-1]) ** 2).mean()
 
-        # Graph Laplacian: L = D - A
-        Lm = d_vec.unsqueeze(1) * log_rho - A_t @ log_rho
-        spatial = (Lm * log_rho).sum() / log_rho.numel()
+            # Graph Laplacian: L = D - A
+            Lm = d_vec.unsqueeze(1) * log_rho - A_t @ log_rho
+            spatial = (Lm * log_rho).sum() / log_rho.numel()
 
-        loss = data_loss + lam_z * vert + lam_g * spatial
-        loss.backward()
-        nn.utils.clip_grad_norm_([log_rho, log_thick], max_norm=5.0)
-        opt.step()
-        with torch.no_grad():
-            log_thick.clamp_(0.0, 5.0)
-        history.append(loss.detach().item())
-
-        if log_every > 0 and ep % log_every == 0:
-            print(f"  epoch {ep:>5d}/{epochs}  loss={history[-1]:.5f}")
+            loss = data_loss + lam_z * vert + lam_g * spatial
+            loss.backward()
+            nn.utils.clip_grad_norm_([log_rho, log_thick], max_norm=5.0)
+            opt.step()
+            with torch.no_grad():
+                log_thick.clamp_(0.0, 5.0)
+            history.append(loss.detach().item())
+            bar.update(1, metrics={"loss": history[-1]})
 
     return {
         "log_rho": (log_rho.detach().cpu().numpy()),

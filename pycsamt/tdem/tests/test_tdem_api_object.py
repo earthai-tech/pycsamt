@@ -104,3 +104,66 @@ def test_temavg_workflow_bundle_tracks_runtime_attrs():
     assert bundle.soundings[0].verbose == 8
     assert "verbose" not in repr(bundle)
     assert "logger" not in repr(bundle)
+
+
+def test_temtoedi_writes_a_valid_reloadable_edi_with_local_coordinates(
+    tmp_path,
+):
+    """EDI files must reload even when x/y are local survey metres.
+
+    Regression test: ``TEMSounding.x``/``.y`` are commonly local survey
+    coordinates (tens to thousands of metres), not geographic decimal
+    degrees. ``TEMtoEDI`` used to assign them straight to
+    ``Head.lat``/``Head.long``; the resulting ``ValueError`` was caught
+    by a bare ``except Exception: pass`` around the whole ``>HEAD``
+    construction, so the file silently ended up with no ``>HEAD``
+    section at all (and no ``>=DEFINEMEAS``/``>=MTSECT`` section either),
+    making it unreadable by :func:`~pycsamt.emtools.ensure_sites`.
+    """
+    from pycsamt.emtools import ensure_sites
+
+    sounding = TEMSounding(
+        time_gates=np.logspace(-5, -2, 20),
+        data=5e-5 * np.logspace(-5, -2, 20) ** (-5.0 / 2.0),
+        current=8.0,
+        tx_area=1.0e4,
+        station_name="LOCAL01",
+        x=250.0,  # local survey metres, not longitude
+        y=1080.0,  # local survey metres, not latitude
+        elevation=1090.0,
+    )
+
+    conv = TEMtoEDI(method="late_time", out_dir=str(tmp_path))
+    written = conv.save(sounding)
+    assert len(written) == 1
+
+    text = Path(written[0]).read_text()
+    assert text.startswith(">HEAD")
+    assert ">=DEFINEMEAS" in text
+    assert ">=MTSECT" in text or ">=EMAPSECT" in text
+
+    sites = ensure_sites(tmp_path, recursive=False)
+    assert len(sites) == 1
+    assert sites[0].z.shape[0] == sounding.n_gates
+
+
+def test_temtoedi_keeps_geographic_lat_lon_when_in_range():
+    """Genuine geographic coordinates should still reach Head.lat/long."""
+    sounding = TEMSounding(
+        time_gates=np.logspace(-5, -2, 15),
+        data=5e-5 * np.logspace(-5, -2, 15) ** (-5.0 / 2.0),
+        current=8.0,
+        tx_area=1.0e4,
+        station_name="GEO01",
+        x=113.487,  # longitude
+        y=26.052,  # latitude
+        elevation=574.5,
+    )
+
+    conv = TEMtoEDI(method="late_time")
+    edi = conv._result_to_edifile(
+        conv._transformer.transform(sounding)
+    )
+    head = edi.get_section("head")
+    assert head.long == pytest.approx(113.487, abs=1e-9)
+    assert head.lat == pytest.approx(26.052, abs=1e-9)

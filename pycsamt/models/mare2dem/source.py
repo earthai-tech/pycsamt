@@ -68,6 +68,13 @@ _SOURCE_MARKER = "Makefile"
 # Expected binary name (case-sensitive on Linux/macOS)
 _BINARY_NAME = "MARE2DEM"
 
+# Triangle mesh generator is compiled alongside MARE2DEM itself (see
+# ``TRICOPTS`` in :func:`_generate_inc`), so its binary name is not
+# fixed by pycsamt the way ``_BINARY_NAME`` is -- try both the
+# lowercase (upstream Shewchuk convention) and MARE2DEM's own
+# capitalized build product name.
+_TRIANGLE_BINARY_NAMES = ("triangle", "Triangle")
+
 
 # ---------------------------------------------------------------------------
 # Platform user-data directory (no external dependencies)
@@ -97,16 +104,29 @@ def _user_data_dir() -> Path:
 
 
 def _detect_fc() -> str:
-    """Return the best available MPI-Fortran compiler name."""
-    for candidate in ("mpiifort", "mpifort", "mpif90"):
+    """Return the best available MPI-Fortran compiler name.
+
+    ``mpiifx`` (wrapping ``ifx``) is tried before the classic ``mpiifort``
+    (wrapping ``ifort``): current Intel oneAPI releases (2024.0+) either do
+    not ship ``ifort``/``mpiifort`` at all, or ship a ``mpiifort`` that
+    internally tries to exec the now-removed classic ``ifort`` and fails
+    with ``eval: ifort: not found`` -- confirmed by a real build against a
+    2026.1 oneAPI install. ``mpiifort`` is still tried as a fallback for
+    older oneAPI installations where it genuinely works.
+    """
+    for candidate in ("mpiifx", "mpiifort", "mpifort", "mpif90"):
         if shutil.which(candidate):
             return candidate
     return "mpifort"
 
 
 def _detect_cc() -> str:
-    """Return the best available MPI-C compiler name."""
-    for candidate in ("mpiicc", "mpicc"):
+    """Return the best available MPI-C compiler name.
+
+    Same reasoning as :func:`_detect_fc`: ``mpiicx`` (wrapping ``icx``)
+    before the classic ``mpiicc`` (wrapping the now-removed ``icc``).
+    """
+    for candidate in ("mpiicx", "mpiicc", "mpicc"):
         if shutil.which(candidate):
             return candidate
     return "mpicc"
@@ -154,9 +174,10 @@ def _generate_inc(
     Parameters
     ----------
     fc :
-        MPI-Fortran compiler (e.g. ``"mpiifort"`` or ``"mpifort"``).
+        MPI-Fortran compiler (e.g. ``"mpiifx"``, ``"mpiifort"``, or
+        ``"mpifort"``).
     cc :
-        MPI-C compiler (e.g. ``"mpiicc"`` or ``"mpicc"``).
+        MPI-C compiler (e.g. ``"mpiicx"``, ``"mpiicc"``, or ``"mpicc"``).
     mklroot :
         Path to the Intel MKL root directory or ``None``.
     dest :
@@ -172,20 +193,44 @@ def _generate_inc(
 
     intel = _is_intel_compiler(fc)
 
-    fflags = "-O2 -fpp -fPIC" if intel else "-O2 -cpp -fPIC"
-    cflags = "-O2 -fPIC"
-    tricopts = (
-        "-O2 -fp-model precise -fp-model source -fPIC"
-        if intel
-        else "-O2 -fPIC"
-    )
+    # Real, confirmed-by-build flag differences from the vendored example
+    # include files (habanero.inc/macos.inc), all found by actually
+    # compiling against a current oneAPI release, not inferred:
+    #
+    # * Fortran needs ``-fpp`` (not GNU ``-cpp``) for Intel, since
+    #   call_triangle.f90's ``#IF DEFINED(...)``-style directives are
+    #   uppercase and only ``-fpp`` accepts them case-insensitively.
+    # * ``ifx`` specifically (not the classic ``ifort``) needs
+    #   ``-cxxlib`` or the final link fails; untested for the classic
+    #   compiler since it no longer exists in a current oneAPI install to
+    #   test against, so it is only added for the modern path.
+    # * The vendored BLACS/ScaLAPACK C sources (e.g. ``igsum2d_.c``) rely
+    #   on 1990s-style implicit function declarations that both ``icx``
+    #   and modern GCC reject by default under C99+ -- ``-std=gnu89``
+    #   permits them, matching how this code was originally written.
+    # * ``TRICOPTS``'s vendored example value (``-fp-model precise
+    #   -fp-model source``) is classic ``icc`` syntax; ``icx`` rejects it
+    #   outright (``unsupported argument 'source' to option
+    #   '-ffp-model='``). Not required for correctness, so dropped rather
+    #   than translated.
+    if intel:
+        fflags = "-cxxlib -O2 -fpp -fPIC" if "ifx" in fc else "-O2 -fpp -fPIC"
+        cflags = "-O2 -fPIC -std=gnu89"
+    else:
+        fflags = "-O2 -cpp -fPIC"
+        cflags = "-O2 -fPIC"
+    tricopts = "-O2 -fPIC"
 
-    arch_tool = "xiar" if intel else "ar"
+    # ``xiar`` (the classic Intel archiver) no longer exists in current
+    # oneAPI releases; plain GNU ``ar`` links ifx-compiled .o files on
+    # Linux/macOS fine -- confirmed by a real build, so this is no longer
+    # conditional on the detected compiler.
+    arch_tool = "ar"
     ranlib = "ranlib"
 
     if mklroot:
         mkllib = (
-            f"-L{mklroot}/lib -I{mklroot}/include "
+            f"-L{mklroot}/lib -Wl,-rpath,{mklroot}/lib -I{mklroot}/include "
             "-lmkl_intel_lp64 -lmkl_sequential -lmkl_core "
             "-lpthread -lm -ldl"
         )
@@ -321,6 +366,55 @@ class SourceManager(Mare2DEMBase):
         for candidate in (src / name, _user_data_dir() / name):
             if candidate.is_file() and os.access(candidate, os.X_OK):
                 return candidate
+        return None
+
+    def resolve_triangle_binary(self, name: str | None = None) -> Path | None:
+        """Return the path to a Triangle mesh-generator executable or ``None``.
+
+        Triangle meshing is a lighter-weight, independent concern from the
+        MARE2DEM solver itself (no MPI/Fortran/LAPACK build required), so
+        this resolves separately from :meth:`resolve_binary` rather than
+        assuming a full MARE2DEM build has happened.
+
+        Parameters
+        ----------
+        name : str, optional
+            Explicit executable name to look for. Tries both
+            ``"triangle"`` and ``"Triangle"`` when omitted.
+
+        Returns
+        -------
+        pathlib.Path or None
+            Resolved executable, or ``None`` if not found anywhere.
+
+        Resolution order (per candidate name):
+
+        1. ``PATH`` lookup via :func:`shutil.which`.
+        2. ``<source_dir>/<name>`` -- Triangle is typically a byproduct of
+           :meth:`build`, since MARE2DEM's own Makefile compiles it.
+        3. Platform user-data directory ``<name>``.
+
+        Each directory candidate is checked with ``shutil.which(name,
+        path=directory)`` before a literal-file fallback, so a bare name
+        like ``"triangle"`` also resolves to ``"triangle.exe"`` via
+        ``PATHEXT`` on Windows -- the same fix already required for
+        :func:`pycsamt.forward.maxwell.external.resolve_executable`'s
+        equivalent search-path loop.
+        """
+        names = (name,) if name else _TRIANGLE_BINARY_NAMES
+        src = self.resolve_source_dir()
+        search_dirs = (src, _user_data_dir())
+        for candidate_name in names:
+            found = shutil.which(candidate_name)
+            if found:
+                return Path(found)
+            for directory in search_dirs:
+                found = shutil.which(candidate_name, path=str(directory))
+                if found:
+                    return Path(found)
+                candidate = directory / candidate_name
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    return candidate
         return None
 
     # ------------------------------------------------------------------
@@ -595,7 +689,7 @@ class SourceManager(Mare2DEMBase):
                 "binary location."
             )
 
-        print(f"\nMAREDEM binary ready: {binary}\n")
+        print(f"\nMARE2DEM binary ready: {binary}\n")
         if self.verbose:
             self.logger.info("SourceManager: binary at %s", binary)
         return binary
@@ -677,8 +771,9 @@ source_dir : path-like, optional
 
 Notes
 -----
-MARE2DEM requires Intel compilers (``mpiifort``, ``mpiicc``) and
-the Intel MKL. When Intel oneAPI is installed, source the
+MARE2DEM requires Intel compilers (``mpiifx``/``mpiicx`` on current
+oneAPI releases, or the classic ``mpiifort``/``mpiicc`` on older
+ones) and the Intel MKL. When Intel oneAPI is installed, source the
 ``setvars.sh`` script before calling :meth:`build`:
 
 .. code-block:: bash

@@ -232,6 +232,8 @@ class JointInverter(BaseEMNet):
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
 
+        from pycsamt.api.view.progress import get_progress_bar
+
         dev = next(self._network.parameters()).device
         opt = torch.optim.Adam(self._network.parameters(), lr=lr)
         sched = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -250,50 +252,50 @@ class JointInverter(BaseEMNet):
         train_losses, val_losses = [], []
         no_improve = 0
 
-        for ep in range(1, epochs + 1):
-            self._network.train()
-            ep_loss = 0.0
-            for *xbs, yb in DataLoader(
-                tr_ds, batch_size=batch_size, shuffle=True
-            ):
-                xbs = [t.to(dev) for t in xbs]
-                yb = yb.to(dev)
-                pred = self._network(*xbs)
-                loss = mse(pred, yb)
-                opt.zero_grad()
-                loss.backward()
-                if grad_clip:
-                    nn.utils.clip_grad_norm_(
-                        self._network.parameters(), grad_clip
-                    )
-                opt.step()
-                ep_loss += loss.item() * len(yb)
-            ep_loss /= len(ti)
+        with get_progress_bar(
+            total=epochs, desc="JointInverter", unit="epoch", verbose=verbose
+        ) as bar:
+            for ep in range(1, epochs + 1):
+                self._network.train()
+                ep_loss = 0.0
+                for *xbs, yb in DataLoader(
+                    tr_ds, batch_size=batch_size, shuffle=True
+                ):
+                    xbs = [t.to(dev) for t in xbs]
+                    yb = yb.to(dev)
+                    pred = self._network(*xbs)
+                    loss = mse(pred, yb)
+                    opt.zero_grad()
+                    loss.backward()
+                    if grad_clip:
+                        nn.utils.clip_grad_norm_(
+                            self._network.parameters(), grad_clip
+                        )
+                    opt.step()
+                    ep_loss += loss.item() * len(yb)
+                ep_loss /= len(ti)
 
-            self._network.eval()
-            with torch.no_grad():
-                v_loss = mse(self._network(*va_inputs), yva).item()
+                self._network.eval()
+                with torch.no_grad():
+                    v_loss = mse(self._network(*va_inputs), yva).item()
 
-            sched.step(v_loss)
-            train_losses.append(ep_loss)
-            val_losses.append(v_loss)
+                sched.step(v_loss)
+                train_losses.append(ep_loss)
+                val_losses.append(v_loss)
 
-            if v_loss < best_val - 1e-6:
-                best_val = v_loss
-                best_state = copy.deepcopy(self._network.state_dict())
-                no_improve = 0
-            else:
-                no_improve += 1
+                if v_loss < best_val - 1e-6:
+                    best_val = v_loss
+                    best_state = copy.deepcopy(self._network.state_dict())
+                    no_improve = 0
+                else:
+                    no_improve += 1
 
-            if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  JointInverter  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
-            if no_improve >= patience:
-                if verbose:
-                    print(f"  Early stop at epoch {ep}")
-                break
+                bar.update(1, metrics={"train": ep_loss, "val": v_loss})
+
+                if no_improve >= patience:
+                    if bar.verbose:
+                        print(f"  Early stop at epoch {ep}")
+                    break
 
         if best_state is not None:
             self._network.load_state_dict(best_state)
@@ -314,6 +316,8 @@ class JointInverter(BaseEMNet):
         verbose,
     ):
         import tensorflow as tf
+
+        from pycsamt.api.view.progress import PYCSAMT_PROGRESS
 
         Xtr_list = [Xm[ti] for Xm in X_normed]
         Xva_list = [Xm[vi] for Xm in X_normed]
@@ -345,7 +349,7 @@ class JointInverter(BaseEMNet):
                         min_lr=1e-6,
                     ),
                 ],
-                verbose=1 if verbose else 0,
+                verbose=PYCSAMT_PROGRESS.resolve(verbose),
             )
         best_val = min(hist.history["val_loss"])
         return {

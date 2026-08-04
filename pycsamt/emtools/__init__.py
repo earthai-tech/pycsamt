@@ -48,7 +48,9 @@ from .csumt import (
     depth_coverage_table,
     frequency_for_depth,
     frequency_schedule,
+    plot_depth_coverage_ranking,
     plot_depth_section,
+    plot_frequency_schedule,
     vertical_resolution,
     vertical_resolution_pair,
 )
@@ -381,10 +383,12 @@ __all__ = [
     "vertical_resolution_pair",
     "frequency_for_depth",
     "frequency_schedule",
+    "plot_frequency_schedule",
     "bostick_depth",
     "vertical_resolution",
     "depth_coverage_table",
     "plot_depth_section",
+    "plot_depth_coverage_ranking",
     # source array design
     "wavenumber",
     "sdas_element_pattern",

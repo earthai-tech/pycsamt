@@ -186,7 +186,22 @@ package ``_source/`` directory may exist as an empty download destination,
 but it is not a populated source tree until :meth:`SourceManager.download
 <pycsamt.models.mare2dem.SourceManager.download>` succeeds. There is no
 compiled binary to discover on a typical machine, and none is bundled for
-this documentation build either.
+this documentation build either -- the examples below load a bundled,
+already-finished sample run instead (see `Inspect Results`_), the same way
+:doc:`modem` does for ModEM.
+
+This is a genuinely working, tested path, not an aspirational one: a real
+MARE2DEM binary has been built from this exact source-management code
+(inside WSL2 Ubuntu with Intel's free oneAPI toolchain) and its forward
+solve validated against the analytic half-space MT response to within the
+binary's own ~0.2-0.8% adaptive-mesh-refinement error -- see
+:ref:`mare2dem_compilation` for the full build transcript and
+:class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter`'s module
+docstring for the physics-validation account (a separate concern from
+building the binary: that adapter is the AI-inversion forward-solver
+integration in :mod:`pycsamt.forward.maxwell`, distinct from the classical
+inversion workflow this page documents, and talks to the same compiled
+``MARE2DEM`` executable through its own PSLG-based mesh convention).
 
 The complete supported build procedure, including Intel oneAPI, MKL, WSL,
 download behavior, and the ``pycsamt build`` wrapper, is documented at
@@ -250,11 +265,15 @@ Make include file:
    >>> # print(binary)
 
 MARE2DEM requires an MPI Fortran/C toolchain and Intel MKL for
-ScaLAPACK/BLACS. Prefer Intel ``mpiifort``/``mpiicc`` with oneAPI initialized;
-generic ``mpifort``/``mpicc`` may be detected by ``SourceManager`` but do not
-remove the MKL requirement and are not a guarantee of a usable build. The
-missing ``MKLROOT`` in the status above is that prerequisite being detected
-before compilation.
+ScaLAPACK/BLACS. Prefer Intel ``mpiifx``/``mpiicx`` (current oneAPI
+releases) or the classic ``mpiifort``/``mpiicc`` (older ones) with oneAPI
+initialized; generic ``mpifort``/``mpicc`` may be detected by
+``SourceManager`` but do not remove the MKL requirement and are not a
+guarantee of a usable build. The missing ``MKLROOT`` in the status above is
+that prerequisite being detected before compilation. See
+:ref:`mare2dem_compilation` for a real, successful build transcript and the
+toolchain-detection bugs a real build run against a current oneAPI
+installation surfaced and fixed.
 
 Binary Resolution
 --------------------

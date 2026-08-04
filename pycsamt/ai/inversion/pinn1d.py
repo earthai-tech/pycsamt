@@ -179,25 +179,33 @@ class PINNInverter1D(BasePINNInverter):
         -------
         self
         """
+        from pycsamt.api.view.progress import get_progress_bar
+
         self._require_backend()
         dev = self._resolve_device()
         _every = log_every if verbose else 0
 
         self._results = []
-        for i, obs in enumerate(self._obs):
-            if verbose:
-                print(f"[{i + 1}/{len(self._obs)}] Inverting {obs.name} ...")
-            res = fit_station(
-                obs,
-                n_layers=self.n_layers,
-                depth_max=self.depth_max,
-                lam=self.smoothness_weight,
-                lr=self.lr,
-                epochs=epochs,
-                device=dev,
-                log_every=_every,
-            )
-            self._results.append(res)
+        with get_progress_bar(
+            total=len(self._obs),
+            desc="PINN inversion",
+            unit="station",
+            verbose=verbose,
+        ) as bar:
+            for obs in self._obs:
+                bar.set_description(f"PINN inversion: {obs.name}")
+                res = fit_station(
+                    obs,
+                    n_layers=self.n_layers,
+                    depth_max=self.depth_max,
+                    lam=self.smoothness_weight,
+                    lr=self.lr,
+                    epochs=epochs,
+                    device=dev,
+                    log_every=_every,
+                )
+                self._results.append(res)
+                bar.update(1)
 
         self._is_fitted = True
         return self

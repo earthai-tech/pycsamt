@@ -50,6 +50,15 @@ Ported MATLAB scripts (complete)
 * 2-D resistivity grid → MARE2DEM ``.poly`` + ``.resistivity``
 * Topography import + profile projection
 
+**Mesh generation**:
+
+* Topography-aware PSLG construction + Triangle refinement
+  (``build_survey_mesh``, ``run_triangle``)
+* Triangle ``.node``/``.ele`` reader
+  (``read_triangulation``) and conversion to the solver-neutral
+  :class:`~pycsamt.forward.maxwell.contracts_tri.TriMesh` contract
+  (``tri_mesh_from_poly``)
+
 **Model comparison**:
 
 * Log10 (or custom) difference of two ``.resistivity`` files
@@ -61,7 +70,9 @@ Ported MATLAB scripts (complete)
 * Receiver geometry QC (6-panel)
 * Transmitter geometry QC
 * ``.poly`` PSLG mesh plot
-* Resistivity section stub (pending full mesh parser)
+* Resistivity section as a color-filled triangular mesh (via
+  ``read_triangulation``), falling back to a histogram when no mesh
+  is present
 
 Quick start
 -----------
@@ -134,6 +145,7 @@ from .geom import (
     parse_topo,
     project_onto_line,
     simplify_poly,
+    survey_points,
     topo_depth,
     topo_slope,
     triangle_areas,
@@ -179,6 +191,8 @@ from .iotools import (
     read_group_rms_log,
     read_poly,
     read_resistivity,
+    read_triangulation,
+    write_triangulation,
     write_data_group,
     write_emdata,
     write_poly,
@@ -229,6 +243,10 @@ from .survey import (
     MTSurveyConfig,
     make_data_file,
 )
+
+# ---- Triangle mesh generation ----
+from .tri_mesh import build_pslg, build_survey_mesh, tri_mesh_from_poly
+from .triangle_exec import TriangleRunError, run_triangle
 
 # ---- file-type detection ----
 from .validation import (
@@ -284,7 +302,9 @@ __all__ = [
     # poly I/O
     "PolyFile",
     "read_poly",
+    "read_triangulation",
     "write_poly",
+    "write_triangulation",
     # settings I/O
     "SettingsFile",
     "write_settings",
@@ -312,9 +332,16 @@ __all__ = [
     "utm_to_lonlat",
     "ELLIPSOIDS",
     "estimate_area_of_interest",
+    "survey_points",
     "get_triangle_regions",
     "get_line_orientation",
     "project_onto_line",
+    # triangular mesh generation
+    "build_pslg",
+    "build_survey_mesh",
+    "tri_mesh_from_poly",
+    "run_triangle",
+    "TriangleRunError",
     # survey builder
     "MTSurveyConfig",
     "CSEMSurveyConfig",

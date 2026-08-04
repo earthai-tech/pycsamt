@@ -250,19 +250,22 @@ print("orders differ now?", order_name != order_lon)
 # documented in :doc:`/emtools/ss`).
 
 # %%
-# 9. Combined three-panel diagnostic
+# 9. Combined strike/PT-azimuth diagnostic
 # ----------------------------------------
-# :func:`~pycsamt.emtools.strike.plot_strike_analysis` puts Strike
-# (Z), PT Azimuth, and Tipper Strike side by side in one figure.
+# :func:`~pycsamt.emtools.strike.plot_strike_analysis` puts Strike (Z)
+# and PT Azimuth side by side in one figure, adding a third Tipper
+# Strike panel only when *survey* actually carries a vertical-field
+# channel somewhere — rather than reserving a panel that would only
+# ever read "no data".
 
 fig4 = plot_strike_analysis(survey)
 for ax in fig4.get_axes():
     print(ax.get_title(), [t.get_text() for t in ax.texts])
 
 # %%
-# **Reading this output.** The Tipper Strike panel reports "no data"
-# — L18PLT, like the other AMT lines in ``data/AMT/WILLY_DATA/``, has
-# no vertical-field (tipper) channel (the same reason :doc:`/emtools/tf`'s
+# **Reading this output.** Only two panels are drawn — L18PLT, like the
+# other AMT lines in ``data/AMT/WILLY_DATA/``, has no vertical-field
+# (tipper) channel at all (the same reason :doc:`/emtools/tf`'s
 # induction-vector example uses **KAP03** instead). Strike (Z) and PT
 # Azimuth still agree reasonably well here (140.8 vs 147.4 degrees),
 # consistent with the axial-difference analysis in section 2.

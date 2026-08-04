@@ -19,6 +19,7 @@ from typing import Any
 
 from .backends import MaxwellBackend
 from .contracts import ForwardResult, MaxwellProblem
+from .contracts_tri import TriProblem
 
 __all__ = [
     "CacheCorruptionError",
@@ -640,8 +641,8 @@ class MaxwellResultCache:
 
     @staticmethod
     def _require_problem(problem: MaxwellProblem) -> None:
-        if not isinstance(problem, MaxwellProblem):
-            raise TypeError("problem must be a MaxwellProblem.")
+        if not isinstance(problem, (MaxwellProblem, TriProblem)):
+            raise TypeError("problem must be a MaxwellProblem or TriProblem.")
 
     def _paths(self, key: str) -> tuple[Path, Path]:
         normalized = _cache_key(key)

@@ -235,6 +235,26 @@ The remaining plot families follow the identical pattern:
 
 See :doc:`../api/api` for every accepted dotted path.
 
+Mesh Display
+------------
+
+Rectilinear and triangular meshes share one preset system --
+``"filled"`` (color only), ``"review"`` (color + cell edges), or
+``"diagram"`` (edges only):
+
+.. code-block:: python
+
+   from pycsamt.api import configure_mesh, reset_mesh
+
+   configure_mesh(
+      review__edge__alpha=0.4, 
+      review__edge__linewidth=0.25
+      )
+   reset_mesh()
+
+The full story — both mesh families, worked ``draw_mesh``/``draw_tri_mesh``
+examples, and the context-manager form — is on the :doc:`mesh` page.
+
 Agents
 ------
 
@@ -291,6 +311,7 @@ Each family has a ``reset_*`` helper; together they restore a clean session:
    from pycsamt.api import (
        reset_api_view,
        reset_cli,
+       reset_mesh,
        reset_ordering,
        reset_pipe,
        reset_style,
@@ -299,6 +320,7 @@ Each family has a ``reset_*`` helper; together they restore a clean session:
 
    reset_api_view()
    reset_cli()
+   reset_mesh()
    reset_ordering()
    reset_pipe()
    reset_style()

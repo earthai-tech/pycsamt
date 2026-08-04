@@ -347,6 +347,21 @@ definitions here are the single source of truth.
       :term:`impedance tensor` components move with period before they are
       reduced to apparent resistivity and phase.
 
+   Impedance Mohr circle
+      The locus traced by one :term:`impedance tensor` component as
+      :math:`\mathbf{Z}` is rotated through every angle,
+      :math:`\mathbf{Z}_\theta = \mathbf{R}(\theta)\,\mathbf{Z}\,
+      \mathbf{R}(\theta)^T`. A 1-D response collapses toward a point; a
+      2-D response traces a circle through the origin; a 3-D or distorted
+      response traces a circle offset from the origin.
+
+   Argand diagram
+      A plot of a complex quantity's real part against its imaginary part,
+      with an ordering parameter (usually period) encoded by colour or an
+      arrow. For :term:`impedance tensor` components, the resulting
+      :term:`Phasor` trajectory shape — smooth versus looping — indicates
+      whether the response is compatible with simple layered structure.
+
    Determinant response
       A compact impedance summary based on :math:`\det(\mathbf{Z})`. Because the
       determinant is unchanged by horizontal coordinate rotation, it is useful
@@ -362,6 +377,43 @@ definitions here are the single source of truth.
       observed impedance at a given frequency, :math:`\rho_a = 0.2\,|Z|^2 / f`
       (with :math:`Z` in field units and :math:`f` in Hz). It is *apparent*
       because the real earth is layered/heterogeneous.
+
+   Receiver midpoint
+      The spatial position assigned to a receiver measurement between two
+      surveyed electrode or station pegs. When observations use midpoint
+      chainages but the coordinate file uses peg chainages, coordinates must
+      be interpolated between bracketing pegs; an equality join is incorrect,
+      and extrapolation requires separate survey evidence.
+
+   Trimmed moving average
+   TMA
+      A robust moving-window smoother that discards one or more extreme
+      values before averaging the retained neighbours. In Zonge static-shift
+      processing it estimates a spatial reference response, but the window
+      length and reference frequency remain modelling choices that must be
+      tested rather than assumed.
+
+   Hampel filter
+      A robust sliding-window outlier filter that replaces a value only when
+      its deviation from the local median exceeds a chosen multiple of the
+      median absolute deviation. In EM frequency processing it is useful for
+      isolated spikes, but its window and threshold must be recorded and the
+      changed station-frequency cells inspected.
+
+   Data leakage
+      Contamination of validation or test evaluation by information used to
+      fit a model, choose preprocessing, tune hyperparameters, or construct
+      training examples. In spatial surveys, randomly splitting neighbouring
+      stations from the same line can leak nearly duplicated geological and
+      acquisition structure even when filenames differ.
+
+   Domain shift
+      A change between the statistical or physical conditions represented by
+      training data and those encountered during prediction. For EM inversion
+      this can include different geology, resistivity range, dimensionality,
+      frequency support, station spacing, noise, source geometry, or survey
+      processing; performance inside the training domain does not establish
+      performance after such a shift.
 
    Anisotropy
       Direction-dependent electrical resistivity. In CSAMT/AMT diagnostics it
@@ -379,6 +431,16 @@ definitions here are the single source of truth.
       The phase angle of an :term:`impedance tensor` element versus period; for a
       layered earth it tracks whether resistivity increases or decreases with
       depth. Reported in degrees.
+
+   Minimum-phase consistency
+   Bode consistency
+      A check of whether observed phase agrees with the phase implied by
+      the local log-log slope of :term:`apparent resistivity` under a
+      minimum-phase assumption,
+      :math:`\phi_{\mathrm{Bode}}(T) \approx 45^\circ\bigl(1 +
+      d\log\rho_a/d\log T\bigr)`. Persistent separation between observed
+      and predicted phase points to galvanic distortion, source effects,
+      or structure too complex for a simple layered model.
 
    Phase tensor
       A real 2×2 tensor derived from the real and imaginary parts of
@@ -472,6 +534,19 @@ definitions here are the single source of truth.
       :math:`|\beta|` flags 3-D structure, noise, or unresolved
       :term:`galvanic distortion` and should be reviewed before rotating a
       line to a single strike angle.
+
+   Swift skew
+   Swift strike
+      An older, raw-tensor dimensionality indicator,
+      :math:`S = |Z_{xx}-Z_{yy}| / |Z_{xy}+Z_{yx}|`, distinct from the
+      phase-tensor :term:`Skew` above: Swift skew compares the
+      :term:`impedance tensor`'s diagonal and off-diagonal magnitudes
+      directly, rather than the phase-tensor asymmetry, so it can react
+      differently to noise and :term:`galvanic distortion`. Its
+      companion Swift strike is the rotation angle that minimizes the
+      tensor's diagonal terms, and inherits the usual EM strike
+      ambiguity plus the numerical instability of Swift skew itself
+      when :math:`|Z_{xy}+Z_{yx}|` passes near zero.
 
    Dictionary learning
    Sparse coding
@@ -826,6 +901,15 @@ definitions here are the single source of truth.
       Held-out data used to calibrate uncertainty or interval coverage after a
       base model has been trained. It should not be reused for fitting network
       weights or selecting the final test result.
+
+   Empirical coverage
+      The observed fraction of held-out targets that actually fall inside
+      their predicted interval, :math:`\widehat{P}=n^{-1}\sum_j
+      \mathbf{1}\{L_j \le y_j \le U_j\}`. An interval is *calibrated* at
+      nominal level :math:`p_{nom}` when :math:`\widehat{P}\ge p_{nom}`.
+      Empirical coverage alone is not sufficient: a very wide, useless
+      interval can still be calibrated, so it should always be read
+      alongside :term:`Sharpness`.
 
    Sharpness
       Concentration of a predictive distribution, commonly summarized by mean
@@ -1834,6 +1918,14 @@ definitions here are the single source of truth.
       1-D (layered), 2-D (strike-invariant), or 3-D, typically assessed from
       :term:`phase tensor` skew and impedance invariants.
 
+   Ternary diagram
+      A triangular plot in which a point's position encodes three
+      barycentric weights that sum to one — for :term:`dimensionality`
+      display, the soft 1-D, 2-D, and 3-D membership of one station-period
+      datum. A point near a corner is dominated by that membership; a point
+      near an edge is a soft mixture of the two nearest classes rather than
+      a hard label.
+
    Skin depth
       The depth at which an EM field attenuates to :math:`1/e` of its surface
       amplitude, :math:`\delta \approx 503\,\sqrt{\rho / f}` metres. It sets the
@@ -1919,6 +2011,17 @@ definitions here are the single source of truth.
    AVG file
       Zonge instrument-averaged CSAMT/AMT export format; pyCSAMT reads it and can
       transform it to :term:`EDI`.
+
+   TEMAVG file
+      Zonge's processed-average export format for :term:`TEM`/:term:`TDEM`
+      soundings -- a different program and layout from the frequency-domain
+      :term:`AVG file`, despite the shared vendor and naming root. One
+      ``.AVG`` per profile stores every station's time-gated transient
+      magnitude; companion ``.LOG`` and ``.Z`` files record processing
+      provenance and a plotting-oriented export of the same magnitudes.
+      pyCSAMT reads a TEMAVG survey folder with
+      :mod:`pycsamt.tdem` and can transform it to a pseudo-frequency
+      :term:`EDI` collection.
 
    J-file
       The A.G. Jones ("BIRRP") ASCII format for MT transfer functions, readable by

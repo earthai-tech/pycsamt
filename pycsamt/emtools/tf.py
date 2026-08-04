@@ -201,9 +201,11 @@ def plot_tipper_hodograms(
             )
             X, Y, U, V = X / s, Y / s, U / s, V / s
         col = cols[k]
-        axX.plot(X, Y, ls=ls, lw=lw, color=col)
+        p_band = per[m]
+        band_label = f"{np.nanmin(p_band):.2g}-{np.nanmax(p_band):.2g} s"
+        axX.plot(X, Y, ls=ls, lw=lw, color=col, label=band_label)
         axX.scatter(X, Y, s=12 * ms, color=col)
-        axY.plot(U, V, ls=ls, lw=lw, color=col)
+        axY.plot(U, V, ls=ls, lw=lw, color=col, label=band_label)
         axY.scatter(U, V, s=12 * ms, color=col)
     for ax, lab in [(axX, "Tx"), (axY, "Ty")]:
         ax.axhline(0, color="0.85", lw=0.8)
@@ -216,6 +218,14 @@ def plot_tipper_hodograms(
         ax.set_ylabel("Imag")
         ax.set_title(f"{st} • {lab}")
         ax.grid(True, alpha=0.25)
+    handles, labels = axX.get_legend_handles_labels()
+    if handles:
+        fig.legend(
+            handles, labels, title="Period band", fontsize=7,
+            title_fontsize=7, loc="lower center", ncol=min(4, len(handles)),
+            framealpha=0.9, bbox_to_anchor=(0.5, -0.02),
+        )
+        fig.subplots_adjust(bottom=0.25)
     return fig
 
 
@@ -1740,6 +1750,8 @@ def plot_induction_multiperiod_map(
     annotation_color: str = "navy",
     annotation_fontsize: float = 8.0,
     title: str = "",
+    xlabel: str = "x  (m)",
+    ylabel: str = "y  (m)",
     axes=None,
     figsize: Any = _UNSET,
     panel_height: float = 3.0,
@@ -1836,6 +1848,9 @@ def plot_induction_multiperiod_map(
     annotation_fontsize : float
     title : str
         Figure suptitle.
+    xlabel, ylabel : str
+        Coordinate-axis labels. Set these to longitude/latitude labels when
+        geographic coordinates, rather than projected metres, are supplied.
     figsize : (float, float) or _UNSET
         Auto-computed from *panel_height*, *panel_width*, and number
         of panels when omitted.
@@ -2167,9 +2182,9 @@ def plot_induction_multiperiod_map(
         ax.set_ylim(background_extent[2], background_extent[3])
 
     # x-axis label on bottom panel only
-    axs[-1].set_xlabel("x  (m)", fontsize=8)
+    axs[-1].set_xlabel(xlabel, fontsize=8)
     for ax in axs:
-        ax.set_ylabel("y  (m)", fontsize=8)
+        ax.set_ylabel(ylabel, fontsize=8)
 
     # ── Shared background colorbar ────────────────────────────────────────
     if show_background_cbar and im_handle is not None:

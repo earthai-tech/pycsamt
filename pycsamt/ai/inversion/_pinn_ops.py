@@ -132,6 +132,7 @@ def fit_2d_joint(
     init_log_rho: np.ndarray | None = None,
     init_log_thick: np.ndarray | None = None,
     backend: str | None = None,
+    verbose: bool | int | str | None = None,
 ) -> dict:
     """
     Jointly optimise a pseudo-2D section via Adam.
@@ -157,6 +158,11 @@ def fit_2d_joint(
     init_log_rho : ndarray (S, L) or None
     init_log_thick : ndarray (S, L-1) or None
     backend : str or None
+    verbose : bool, int, str, or None
+        Progress verbosity — see
+        :func:`pycsamt.utils.progress.normalize_verbose`. When
+        ``None``, falls back to the legacy ``log_every``-based
+        print cadence (log mode if ``log_every > 0`` else silent).
 
     Returns
     -------
@@ -186,6 +192,7 @@ def fit_2d_joint(
         log_every=log_every,
         init_log_rho=init_log_rho,
         init_log_thick=init_log_thick,
+        verbose=verbose,
     )
 
 
@@ -209,6 +216,7 @@ def fit_3d_joint(
     init_log_rho: np.ndarray | None = None,
     init_log_thick: np.ndarray | None = None,
     backend: str | None = None,
+    verbose: bool | int | str | None = None,
 ) -> dict:
     """
     Jointly optimise a quasi-3D section via Adam.
@@ -233,6 +241,11 @@ def fit_3d_joint(
     init_log_rho : ndarray (S, L) or None
     init_log_thick : ndarray (S, L-1) or None
     backend : str or None
+    verbose : bool, int, str, or None
+        Progress verbosity — see
+        :func:`pycsamt.utils.progress.normalize_verbose`. When
+        ``None``, falls back to the legacy ``log_every``-based
+        print cadence (log mode if ``log_every > 0`` else silent).
 
     Returns
     -------
@@ -263,4 +276,5 @@ def fit_3d_joint(
         log_every=log_every,
         init_log_rho=init_log_rho,
         init_log_thick=init_log_thick,
+        verbose=verbose,
     )

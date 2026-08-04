@@ -1,17 +1,32 @@
 """Global mesh-display controls for pyCSAMT figures.
 
-This module centralizes how a structured (rectilinear) computational or
-inversion mesh is drawn: as a plain color fill (the historical default,
-identical to a bare ``pcolormesh`` call), as a color fill with cell
-boundaries drawn on top for QC review, or as a bare wireframe diagram with
-no fill at all — e.g. to inspect a solver mesh's discretization before any
-inversion has run.
+This module centralizes how a computational or inversion mesh is drawn,
+for both mesh families pyCSAMT supports:
 
-Every :class:`~pycsamt.forward.maxwell.contracts.MaxwellMesh` and
-:class:`~pycsamt.ai.geology.fields.GeologyGrid` in pyCSAMT is a structured,
-axis-aligned tensor grid — never an unstructured triangular mesh — so
-:func:`draw_mesh` and its adapters work from 1-D edge arrays, which both
-mesh contracts (or any station×depth grid built by hand) can supply.
+* a **structured (rectilinear)** tensor grid --
+  :class:`~pycsamt.forward.maxwell.contracts.MaxwellMesh` or
+  :class:`~pycsamt.ai.geology.fields.GeologyGrid` -- drawn by
+  :func:`draw_mesh` from 1-D edge arrays;
+* an **unstructured triangular** mesh --
+  :class:`~pycsamt.forward.maxwell.contracts_tri.TriMesh` -- drawn by
+  :func:`draw_tri_mesh` from its node/triangle connectivity.
+
+Both share the same three-preset display model: a plain color fill (the
+historical default, identical to a bare ``pcolormesh``/``tripcolor``
+call), a color fill with cell boundaries drawn on top for QC review, or a
+bare wireframe diagram with no fill at all -- e.g. to inspect a solver
+mesh's discretization before any inversion has run -- via one shared
+:class:`MeshStyle`/:class:`PyCSAMTMesh` configuration object.
+
+A :class:`TriMesh` built by
+:func:`~pycsamt.models.mare2dem.tri_mesh.build_survey_mesh` already has
+its node z-coordinates following real topography (the mesh's own top
+boundary *is* the topo line), so unlike the rectilinear
+:func:`~pycsamt.topo.section.build_topo_section` path -- which warps a
+flat regular grid onto a terrain surface via interpolation --
+:func:`draw_tri_mesh` needs no separate drape step: plotting the mesh's
+own node coordinates on a depth-positive-down (inverted) y-axis already
+shows a topography-draped section.
 
 Examples
 --------
@@ -31,7 +46,14 @@ before running an inversion::
 
     draw_mesh(ax, x_edges, z_edges, preset="diagram")
 
-Customize one preset globally::
+Draw a triangular-mesh section the same way, sharing the same presets::
+
+    from pycsamt.api.mesh import draw_tri_mesh
+
+    fill, edges = draw_tri_mesh(ax, tri_mesh, per_triangle_values)
+    fill, edges = draw_tri_mesh(ax, tri_mesh, values, preset="review")
+
+Customize one preset globally (applies to both mesh families)::
 
     from pycsamt.api import configure_mesh
 
@@ -50,9 +72,11 @@ import numpy as np
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
+    from matplotlib.tri import Triangulation
 
     from pycsamt.ai.geology.fields import GeologyGrid
     from pycsamt.forward.maxwell.contracts import MaxwellMesh
+    from pycsamt.forward.maxwell.contracts_tri import TriMesh
 
 _PRESETS = {"filled", "review", "diagram"}
 
@@ -266,6 +290,141 @@ def edges_from_geology_grid(
     )
 
 
+def triangulation_from_tri_mesh(mesh: TriMesh) -> Triangulation:
+    """Return a :class:`matplotlib.tri.Triangulation` for a 2-D :class:`TriMesh`.
+
+    Parameters
+    ----------
+    mesh : TriMesh
+        Solver-neutral unstructured triangular mesh.
+
+    Returns
+    -------
+    matplotlib.tri.Triangulation
+        Built directly from ``mesh.nodes_m`` and ``mesh.triangles``, ready
+        for :func:`draw_tri_mesh` or a direct ``ax.tripcolor``/``ax.triplot``
+        call.
+
+    Examples
+    --------
+    >>> from pycsamt.forward.maxwell import TriMesh
+    >>> mesh = TriMesh([[0, 0], [1, 0], [0, 1]], [[0, 1, 2]])
+    >>> tri = triangulation_from_tri_mesh(mesh)
+    >>> tri.triangles.tolist()
+    [[0, 1, 2]]
+    """
+    from matplotlib.tri import Triangulation
+
+    return Triangulation(
+        mesh.nodes_m[:, 0], mesh.nodes_m[:, 1], mesh.triangles
+    )
+
+
+def draw_tri_mesh(
+    ax: Axes,
+    tri_mesh: TriMesh,
+    values: np.ndarray | None = None,
+    *,
+    style: MeshStyle | None = None,
+    preset: str = "filled",
+    cmap: str | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Any | None = None,
+    **tripcolor_kw: Any,
+) -> tuple[Any | None, Any | None]:
+    """Draw an unstructured triangular mesh: color fill and/or cell edges.
+
+    The triangular-mesh counterpart of :func:`draw_mesh`, sharing the same
+    :class:`MeshStyle`/:data:`PYCSAMT_MESH` preset system so
+    ``"filled"``/``"review"``/``"diagram"`` behave identically across both
+    mesh families.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+        Target axes.
+    tri_mesh : TriMesh
+        Solver-neutral unstructured triangular mesh (see
+        :func:`triangulation_from_tri_mesh`).
+    values : ndarray, shape ``(tri_mesh.n_triangles,)``, optional
+        Per-triangle cell values for the color fill (e.g.
+        ``log10(resistivity_ohm_m)``). Required when the resolved
+        style's fill is enabled; omit for a pure wireframe diagram
+        (``preset="diagram"``).
+    style : MeshStyle, optional
+        Explicit style. Overrides ``preset`` when supplied.
+    preset : str, default "filled"
+        One of ``"filled"``, ``"review"``, or ``"diagram"`` -- see
+        :func:`draw_mesh`.
+    cmap, vmin, vmax, norm : optional
+        Forwarded to the fill layer's ``ax.tripcolor`` call.
+    **tripcolor_kw
+        Additional keywords forwarded to the fill layer's
+        ``ax.tripcolor`` call only.
+
+    Returns
+    -------
+    (fill_mappable, edge_lines) : tuple
+        ``fill_mappable`` is the ``ax.tripcolor`` return value (or
+        ``None``); ``edge_lines`` is the 2-tuple of ``Line2D`` objects
+        ``ax.triplot`` returns (or ``None``). The fill mappable can
+        still be handed to a colorbar helper, e.g.
+        :func:`pycsamt.api.plot.add_colorbar`.
+
+    Examples
+    --------
+    >>> import matplotlib
+    >>> matplotlib.use("Agg")
+    >>> import matplotlib.pyplot as plt
+    >>> from pycsamt.forward.maxwell import TriMesh
+    >>> mesh = TriMesh(
+    ...     [[0, 0], [1000, 0], [1000, 500], [0, 500]],
+    ...     [[0, 1, 2], [0, 2, 3]],
+    ... )
+    >>> fig, ax = plt.subplots()
+    >>> fill, edges = draw_tri_mesh(ax, mesh, [1.0, 2.0])
+    >>> fill is not None, edges is None
+    (True, True)
+    >>> ax.invert_yaxis()  # depth positive down
+    """
+    resolved = style or PYCSAMT_MESH.style_for(preset)
+    triangulation = triangulation_from_tri_mesh(tri_mesh)
+
+    fill_im = None
+    if resolved.fill.show:
+        if values is None:
+            msg = (
+                "draw_tri_mesh: 'values' is required when the fill layer "
+                "is enabled (style.fill.show=True / preset != 'diagram')."
+            )
+            raise ValueError(msg)
+        fill_im = ax.tripcolor(
+            triangulation,
+            facecolors=np.asarray(values),
+            cmap=cmap,
+            vmin=vmin,
+            vmax=vmax,
+            norm=norm,
+            alpha=resolved.fill.alpha,
+            edgecolor="none",
+            **tripcolor_kw,
+        )
+
+    edge_lines = None
+    if resolved.edge.show:
+        edge_lines = ax.triplot(
+            triangulation,
+            color=resolved.edge.color,
+            linewidth=resolved.edge.linewidth,
+            linestyle=resolved.edge.linestyle,
+            alpha=resolved.edge.alpha,
+            zorder=resolved.edge.zorder,
+        )
+
+    return fill_im, edge_lines
+
+
 class PyCSAMTMesh:
     """Package-wide mesh-display control container."""
 
@@ -384,7 +543,9 @@ __all__ = [
     "cell_edges_from_centres",
     "configure_mesh",
     "draw_mesh",
+    "draw_tri_mesh",
     "edges_from_geology_grid",
     "edges_from_maxwell_mesh",
     "reset_mesh",
+    "triangulation_from_tri_mesh",
 ]

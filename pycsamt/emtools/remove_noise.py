@@ -1418,6 +1418,13 @@ def drop_freqs_manual(
             if sliced is not None:
                 _assign(Tt, public_name, private_name, sliced)
         try:
+            rot = getattr(Tt, "rotation_angle", None)
+            sliced = _slice_first_axis(rot, keep)
+            if sliced is not None:
+                Tt.rotation_angle = sliced
+        except Exception:
+            pass
+        try:
             Tt.compute_amp_phase()
         except Exception:
             pass

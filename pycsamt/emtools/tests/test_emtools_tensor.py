@@ -406,3 +406,91 @@ class TestPlotStrikeDirectorField:
         ax = plot_strike_director_field(self._sites(), ax=ax0, streamlines=False)
         assert ax is ax0
         plt.close("all")
+
+
+def test_phase_tensor_psection_uses_dynamic_frame_and_skew_limits():
+    """Legends must not create empty period bands or fix beta to +/-3."""
+    from pycsamt.emtools.tensor import plot_phase_tensor_psection
+
+    fr = _freqs(12, f_lo=1e-4, f_hi=1e-1)
+    sites = [
+        _FakeSite("S00", _3d_z(fr, skew_frac=0.7), fr),
+        _FakeSite("S01", _3d_z(fr, skew_frac=1.1), fr),
+    ]
+    ax = plot_phase_tensor_psection(
+        sites, c_by="beta", period_up=False, recursive=False
+    )
+    data_y = np.log10(1.0 / fr)
+    ylim = ax.get_ylim()
+    assert min(ylim) >= data_y.min() - 0.5
+    assert max(ylim) <= data_y.max() + 0.5
+
+    cbar = ax.figure.axes[-1]
+    mappables = [item for item in cbar.collections if item.get_clim() != (None, None)]
+    assert mappables
+    vmin, vmax = mappables[0].get_clim()
+    assert not np.isclose(vmax, 3.0)
+    assert not np.isclose(vmin, -3.0)
+    assert np.isclose(abs(vmin), abs(vmax))
+    plt.close("all")
+
+
+def test_phase_tensor_psection_shape_mode_and_explicit_skew_clip():
+    """Shape mode keeps cells visible while allowing a publication beta scale."""
+    from matplotlib.patches import Ellipse
+    from pycsamt.emtools.tensor import plot_phase_tensor_psection
+
+    fr = _freqs(8, f_lo=1e-3, f_hi=1.0)
+    sites = [_FakeSite("S00", _3d_z(fr, skew_frac=1.0), fr)]
+    ax = plot_phase_tensor_psection(
+        sites,
+        c_by="beta",
+        normalise_by="shape",
+        min_aspect=0.12,
+        clim=(-3.0, 3.0),
+        recursive=False,
+    )
+    ellipses = [patch for patch in ax.patches if isinstance(patch, Ellipse)]
+    assert len(ellipses) >= len(fr)
+    renderer = ax.figure.canvas.get_renderer()
+    for ellipse in ellipses[: len(fr)]:
+        bounds = ellipse.get_window_extent(renderer).bounds
+        width, height = bounds[2], bounds[3]
+        assert min(width, height) / max(width, height) >= 0.11
+
+    cbar = ax.figure.axes[-1]
+    mappables = [item for item in cbar.collections if item.get_clim() != (None, None)]
+    assert mappables
+    assert np.allclose(mappables[0].get_clim(), (-3.0, 3.0))
+    plt.close("all")
+
+
+def test_phase_tensor_psection_segmented_colors_and_artist_kwargs():
+    """Discrete skew classes and ellipse/colorbar kwargs are user-controlled."""
+    from matplotlib.colors import BoundaryNorm, to_rgba
+    from matplotlib.patches import Ellipse
+    from pycsamt.emtools.tensor import plot_phase_tensor_psection
+
+    fr = _freqs(6, f_lo=1e-3, f_hi=1.0)
+    ax = plot_phase_tensor_psection(
+        [_FakeSite("S00", _3d_z(fr, skew_frac=1.0), fr)],
+        c_by="beta",
+        normalise_by="shape",
+        color_mode="segmented",
+        segment_bounds=(-3.0, 3.0),
+        segment_colors=("navy", "white", "firebrick"),
+        ellipse_kws={"edgecolor": "lime", "linewidth": 0.7},
+        cb_kws={"size": "4%", "pad": 0.1},
+        recursive=False,
+    )
+    ellipses = [patch for patch in ax.patches if isinstance(patch, Ellipse)]
+    assert ellipses
+    assert np.allclose(ellipses[0].get_edgecolor()[:3], to_rgba("lime")[:3])
+    assert any(
+        isinstance(collection.norm, BoundaryNorm)
+        for collection in ax.figure.axes[-1].collections
+    )
+    assert [tick.get_text() for tick in ax.figure.axes[-1].get_yticklabels()] == [
+        "< -3", "-3 to 3", "> 3"
+    ]
+    plt.close("all")

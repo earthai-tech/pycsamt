@@ -8,7 +8,8 @@
 # Unlike the ModEM/Occam2D scripts in this directory, MARE2DEM's
 # source is NOT vendored in this repository (it is ~49 MB and under
 # its own license; see pycsamt/models/mare2dem/_source/.gitkeep) and
-# its build genuinely needs Intel compilers (mpiifort/mpiicc) and the
+# its build genuinely needs Intel compilers (mpiifx/mpiicx on current
+# oneAPI releases, or the classic mpiifort/mpiicc on older ones) and the
 # Intel MKL for ScaLAPACK/BLACS -- there is no generic gfortran/conda
 # path for it the way there is for ModEM and Occam2D. pycsamt already
 # has a complete Python-side manager for exactly this

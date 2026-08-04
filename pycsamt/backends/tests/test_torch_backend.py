@@ -198,8 +198,11 @@ def test_train_with_grad_clip_and_verbose(backend, small_data, capsys):
         device="cpu",
     )
     assert len(hist["train_loss"]) == 1
-    out = capsys.readouterr().out
-    assert "torch" in out
+    # verbose=True now renders an animated tqdm bar (see
+    # pycsamt.utils.progress.ProgressBar), which — like tqdm itself —
+    # writes to stderr, not stdout, so stdout stays clean for piping.
+    captured = capsys.readouterr()
+    assert "torch" in captured.err
 
 
 def test_train_zero_epochs_leaves_best_state_none(backend, small_data):

@@ -5,7 +5,7 @@ Dimensionality Assessment
 
 ``pycsamt.emtools.dimensionality`` asks a practical question before
 interpretation or inversion: does each station-frequency sample behave
-like 1-D, 2-D, or 3-D electromagnetic structure?
+like :term:`1D`, :term:`2-D`, or :term:`3D` electromagnetic structure?
 
 The module provides two complementary routes:
 
@@ -86,71 +86,51 @@ with ``logrho_det`` storing :math:`\log_{10}\rho_{a,\det}` and
 Rule-Based Labels
 -----------------
 
-The default rule uses two thresholds:
+The default rule uses two thresholds, ``skew_th = 3.0`` degrees and
+``ellipt_th = 0.2``, applied to :math:`\beta=\text{beta\_abs}` and
+:math:`\varepsilon=\text{ellipt\_abs}` from the feature table:
 
-.. code-block:: text
-   :linenos:
+.. math::
 
-   skew_th = 3.0
-   ellipt_th = 0.2
+   \dim =
+   \begin{cases}
+   0\ (\text{1-D}), & \beta \le \tau_\beta
+      \ \text{and}\ \varepsilon \le \tau_\varepsilon, \\
+   1\ (\text{2-D}), & \beta \le \tau_\beta
+      \ \text{and}\ \varepsilon > \tau_\varepsilon, \\
+   2\ (\text{3-D}), & \text{otherwise},
+   \end{cases}
 
-The class labels are:
-
-.. code-block:: text
-   :linenos:
-
-   dim = 0  ->  1-D
-   dim = 1  ->  2-D
-   dim = 2  ->  3-D
-
-The rule is intentionally simple:
-
-.. code-block:: text
-   :linenos:
-
-   if beta_abs <= skew_th and ellipt_abs <= ellipt_th:
-       dim = 0
-   elif beta_abs <= skew_th and ellipt_abs > ellipt_th:
-       dim = 1
-   else:
-       dim = 2
-
-In other words, high phase-tensor skew pushes a sample into the 3-D
-class. Low skew with low ellipticity is treated as 1-D. Low skew with
-higher ellipticity is treated as 2-D.
+where :math:`\tau_\beta` is ``skew_th`` and :math:`\tau_\varepsilon` is
+``ellipt_th``. In other words, high phase-tensor skew alone is enough
+to push a sample into the 3-D class regardless of ellipticity; only
+once skew is low does ellipticity separate 1-D from 2-D.
 
 Build The Feature Table
 -----------------------
 
 Start with the raw feature table before interpreting any labels.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-   from pycsamt.emtools.dimensionality import phase_features_table
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-   features = phase_features_table(
-       edi_dir,
-       recursive=True,
-       on_dup="replace",
-       strict=False,
-       verbose=0,
-   )
-   cols = [
-       "station",
-       "freq",
-       "period",
-       "beta_abs",
-       "ellipt_abs",
-       "logrho_det",
-       "phi_det",
-       "tip_amp",
-   ]
-   print(features[cols].head())
-
-.. code-block:: text
-
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.dimensionality import phase_features_table
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> features = phase_features_table(
+   ...     edi_dir,
+   ...     recursive=True,
+   ...     on_dup="replace",
+   ...     strict=False,
+   ...     verbose=0,
+   ...     api=True,
+   ... ).to_pandas()
+   >>> len(features), features["station"].nunique()
+   (1484, 28)
+   >>> cols = [
+   ...     "station", "freq", "period", "beta_abs", "ellipt_abs",
+   ...     "logrho_det", "phi_det", "tip_amp",
+   ... ]
+   >>> features[cols].head()
       station     freq    period  ...  logrho_det    phi_det  tip_amp
    0  18-001A  10400.0  0.000096  ...    1.886481  63.023441      NaN
    1  18-001A   8707.0  0.000115  ...    1.925638  61.655406      NaN
@@ -159,47 +139,35 @@ Start with the raw feature table before interpreting any labels.
    4  18-001A   5108.0  0.000196  ...    2.182395  51.323119      NaN
    [5 rows x 8 columns]
 
-Line 7 loads the EDI directory through the shared ``ensure_sites``
-machinery. Lines 15-24 show the columns most often used in downstream
-checks.
+``phase_features_table`` loads the EDI directory through the shared
+``ensure_sites`` machinery, one row per station-frequency sample across
+the real 28-station line. Passing ``api=True`` and chaining
+``.to_pandas()`` makes the return type explicit and independent of the
+caller's global API-view setting -- every example on this page follows
+that same pattern for the table-returning functions.
 
 Inspect One Station
 -------------------
 
 A single-station view makes the thresholds tangible.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import phase_features_table
-
-   skew_th = 3.0
-   ellipt_th = 0.2
-
-   features = phase_features_table("data/AMT/WILLY_DATA/L18PLT")
-   station = "18-001A"
-   one = features.loc[features["station"] == station].sort_values("period")
-
-   fig, (ax_beta, ax_ellipt) = plt.subplots(
-       2,
-       1,
-       figsize=(7, 6),
-       sharex=True,
-   )
-
-   ax_beta.semilogx(one["period"], one["beta_abs"], "o-")
-   ax_beta.axhline(skew_th, color="0.4", linestyle="--")
-   ax_beta.set_ylabel("|beta| (deg)")
-
-   ax_ellipt.semilogx(one["period"], one["ellipt_abs"], "o-", color="C3")
-   ax_ellipt.axhline(ellipt_th, color="0.4", linestyle="--")
-   ax_ellipt.set_xlabel("Period (s)")
-   ax_ellipt.set_ylabel("Ellipticity")
-
-   fig.suptitle(f"{station} dimensionality features")
-   fig.tight_layout()
+   >>> import matplotlib.pyplot as plt
+   >>> skew_th = 3.0
+   >>> ellipt_th = 0.2
+   >>> station = "18-001A"
+   >>> one = features.loc[features["station"] == station].sort_values("period")
+   >>> fig, (ax_beta, ax_ellipt) = plt.subplots(2, 1, figsize=(7, 6), sharex=True)
+   >>> _ = ax_beta.semilogx(one["period"], one["beta_abs"], "o-")
+   >>> _ = ax_beta.axhline(skew_th, color="0.4", linestyle="--")
+   >>> _ = ax_beta.set_ylabel("|beta| (deg)")
+   >>> _ = ax_ellipt.semilogx(one["period"], one["ellipt_abs"], "o-", color="C3")
+   >>> _ = ax_ellipt.axhline(ellipt_th, color="0.4", linestyle="--")
+   >>> _ = ax_ellipt.set_xlabel("Period (s)")
+   >>> _ = ax_ellipt.set_ylabel("Ellipticity")
+   >>> _ = fig.suptitle(f"{station} dimensionality features")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-02.png
    :width: 100%
@@ -214,45 +182,50 @@ Classify The Survey
 Use ``classify_dimensionality`` to add the ``dim`` label to the feature
 table.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-   from pycsamt.emtools.dimensionality import classify_dimensionality
-   dim = classify_dimensionality(
-       "data/AMT/WILLY_DATA/L18PLT",
-       skew_th=3.0,
-       ellipt_th=0.2,
-   )
-   counts = (
-       dim.groupby("station")["dim"]
-       .value_counts(normalize=True)
-       .rename("fraction")
-       .reset_index()
-   )
-   label = {0: "1D", 1: "2D", 2: "3D"}
-   counts["label"] = counts["dim"].map(label)
-   print(counts.head(12))
-
-.. code-block:: text
-
+   >>> import pandas as pd
+   >>> from pycsamt.emtools.dimensionality import classify_dimensionality
+   >>> dim = classify_dimensionality(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     skew_th=3.0,
+   ...     ellipt_th=0.2,
+   ...     api=True,
+   ... ).to_pandas()
+   >>> counts = (
+   ...     dim.groupby("station")["dim"]
+   ...     .value_counts(normalize=True)
+   ...     .rename("fraction")
+   ...     .reset_index()
+   ... )
+   >>> label = {0: "1D", 1: "2D", 2: "3D"}
+   >>> counts["label"] = counts["dim"].map(label)
+   >>> counts.head(12)
        station  dim  fraction label
-   0   18-001A    2  0.981132    3D
-   1   18-001A    1  0.018868    2D
-   2   18-002U    2  0.981132    3D
-   3   18-002U    1  0.018868    2D
-   4   18-003A    2  0.981132    3D
-   5   18-003A    1  0.018868    2D
-   6   18-004A    2  0.981132    3D
-   7   18-004A    1  0.018868    2D
-   8   18-005U    2  0.943396    3D
-   9   18-005U    1  0.056604    2D
-   10  18-006A    2  0.962264    3D
-   11  18-006A    1  0.037736    2D
+   0   18-001A    2  0.660377    3D
+   1   18-001A    1  0.301887    2D
+   2   18-001A    0  0.037736    1D
+   3   18-002U    2  0.754717    3D
+   4   18-002U    1  0.132075    2D
+   5   18-002U    0  0.113208    1D
+   6   18-003A    2  0.905660    3D
+   7   18-003A    1  0.075472    2D
+   8   18-003A    0  0.018868    1D
+   9   18-004A    2  0.811321    3D
+   10  18-004A    1  0.132075    2D
+   11  18-004A    0  0.056604    1D
+   >>> dim["dim"].value_counts(normalize=True).sort_index()
+   dim
+   0    0.039084
+   1    0.104447
+   2    0.856469
+   Name: proportion, dtype: float64
 
-Line 5 uses the default rule. Lines 11-15 compute station-level
-fractions so you can see whether a station is mostly 1-D/2-D or mostly
-3-D.
+``classify_dimensionality`` applies the default rule; the per-station
+``value_counts`` show whether a station is mostly 1-D/2-D or mostly
+3-D, and the survey-wide breakdown confirms the same pattern holds
+broadly: roughly 86 percent of L18PLT's station-period samples read as
+3-D under these thresholds.
 
 Read The Rule In Feature Space
 ------------------------------
@@ -260,42 +233,24 @@ Read The Rule In Feature Space
 The clearest way to understand the rule is to plot ``beta_abs`` against
 ``ellipt_abs``.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import classify_dimensionality
-
-   skew_th = 3.0
-   ellipt_th = 0.2
-   dim = classify_dimensionality(
-       "data/AMT/WILLY_DATA/L18PLT",
-       skew_th=skew_th,
-       ellipt_th=ellipt_th,
-   )
-
-   colors = {0: "tab:green", 1: "tab:blue", 2: "tab:red"}
-   labels = {0: "1-D", 1: "2-D", 2: "3-D"}
-
-   fig, ax = plt.subplots(figsize=(6.5, 5.5))
-   for cls in (2, 1, 0):
-       sub = dim.loc[dim["dim"] == cls]
-       ax.scatter(
-           sub["beta_abs"],
-           sub["ellipt_abs"],
-           s=8,
-           alpha=0.45,
-           color=colors[cls],
-           label=labels[cls],
-       )
-
-   ax.axvline(skew_th, color="0.2", linestyle="--")
-   ax.axhline(ellipt_th, color="0.2", linestyle="--")
-   ax.set_xlabel("|beta| (deg)")
-   ax.set_ylabel("Ellipticity")
-   ax.legend()
-   fig.tight_layout()
+   >>> colors = {0: "tab:green", 1: "tab:blue", 2: "tab:red"}
+   >>> labels = {0: "1-D", 1: "2-D", 2: "3-D"}
+   >>> fig, ax = plt.subplots(figsize=(6.5, 5.5))
+   >>> for cls in (2, 1, 0):
+   ...     sub = dim.loc[dim["dim"] == cls]
+   ...     _ = ax.scatter(
+   ...         sub["beta_abs"], sub["ellipt_abs"],
+   ...         s=8, alpha=0.45, color=colors[cls], label=labels[cls],
+   ...     )
+   ...
+   >>> _ = ax.axvline(skew_th, color="0.2", linestyle="--")
+   >>> _ = ax.axhline(ellipt_th, color="0.2", linestyle="--")
+   >>> _ = ax.set_xlabel("|beta| (deg)")
+   >>> _ = ax.set_ylabel("Ellipticity")
+   >>> _ = ax.legend()
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-04.png
    :width: 100%
@@ -309,51 +264,48 @@ Threshold Sensitivity
 Do not tune thresholds blindly. Sweep them and report how the
 dimensionality fractions change.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   import pandas as pd
-   from pycsamt.emtools.dimensionality import phase_features_table
-   features = phase_features_table("data/AMT/WILLY_DATA/L18PLT")
-   beta = features["beta_abs"].to_numpy()
-   ellipt = features["ellipt_abs"].to_numpy()
-   skew_thresholds = np.array([1, 2, 3, 5, 8, 12, 18, 25, 35, 50])
-   ellipt_th = 0.2
-   rows = []
-   for skew_th in skew_thresholds:
-       low_skew = beta <= skew_th
-       frac_1d = np.mean(low_skew & (ellipt <= ellipt_th))
-       frac_2d = np.mean(low_skew & (ellipt > ellipt_th))
-       frac_3d = 1.0 - frac_1d - frac_2d
-       rows.append(
-           {
-               "skew_th": skew_th,
-               "frac_1d": frac_1d,
-               "frac_2d": frac_2d,
-               "frac_3d": frac_3d,
-           }
-       )
-   sensitivity = pd.DataFrame(rows)
-   print(sensitivity)
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> beta = features["beta_abs"].to_numpy()
+   >>> ellipt = features["ellipt_abs"].to_numpy()
+   >>> skew_thresholds = np.array([1, 2, 3, 5, 8, 12, 18, 25, 35, 50])
+   >>> rows = []
+   >>> for skew_th in skew_thresholds:
+   ...     low_skew = beta <= skew_th
+   ...     frac_1d = np.mean(low_skew & (ellipt <= ellipt_th))
+   ...     frac_2d = np.mean(low_skew & (ellipt > ellipt_th))
+   ...     frac_3d = 1.0 - frac_1d - frac_2d
+   ...     rows.append(
+   ...         {
+   ...             "skew_th": skew_th,
+   ...             "frac_1d": frac_1d,
+   ...             "frac_2d": frac_2d,
+   ...             "frac_3d": frac_3d,
+   ...         }
+   ...     )
+   ...
+   >>> sensitivity = pd.DataFrame(rows)
+   >>> sensitivity
       skew_th   frac_1d   frac_2d   frac_3d
-   0        1  0.001348  0.005391  0.993261
-   1        2  0.002022  0.012803  0.985175
-   2        3  0.002022  0.018868  0.979111
-   3        5  0.004717  0.028302  0.966981
-   4        8  0.008086  0.053235  0.938679
-   5       12  0.013477  0.079515  0.907008
-   6       18  0.018868  0.148922  0.832210
-   7       25  0.022237  0.249326  0.728437
-   8       35  0.033693  0.395553  0.570755
-   9       50  0.044474  0.537736  0.417790
+   0        1  0.014151  0.035040  0.950809
+   1        2  0.028302  0.071429  0.900270
+   2        3  0.039084  0.104447  0.856469
+   3        5  0.053908  0.182615  0.763477
+   4        8  0.058625  0.268194  0.673181
+   5       12  0.061321  0.364555  0.574124
+   6       18  0.064016  0.510108  0.425876
+   7       25  0.064016  0.595013  0.340970
+   8       35  0.064690  0.671833  0.263477
+   9       50  0.066038  0.766173  0.167790
 
-If the 3-D fraction stays high over a wide threshold range, the result
-is probably a property of the data. If the fractions flip abruptly near
-one threshold, report that sensitivity with the interpretation.
+The row at ``skew_th=3`` reproduces the same 3-D fraction (0.856) as
+the survey-wide breakdown above, since it is the same default
+threshold. If the 3-D fraction stays high over a wide threshold range,
+the result is probably a property of the data. Here it does: even at
+``skew_th=18`` -- six times the default -- 3-D still accounts for
+roughly 43 percent of the survey, so this line's high 3-D fraction is
+not an artifact of a strict threshold.
 
 Plot The Dimensionality Grid
 ----------------------------
@@ -385,21 +337,17 @@ once skew alone has already pushed a sample to 3-D. A cell near full
 opacity is not merely on the correct side of a threshold — it is far
 from the boundary that could have flipped its label.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import plot_dim_confidence_grid
-
-   fig, ax = plt.subplots(figsize=(9, 4.5))
-   plot_dim_confidence_grid(
-       "data/AMT/WILLY_DATA/L18PLT",
-       skew_th=3.0,
-       ellipt_th=0.2,
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.dimensionality import plot_dim_confidence_grid
+   >>> fig, ax = plt.subplots(figsize=(9, 4.5))
+   >>> _ = plot_dim_confidence_grid(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     skew_th=3.0,
+   ...     ellipt_th=0.2,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-06.png
    :width: 100%
@@ -413,22 +361,18 @@ Plot Period-Band Occupancy
 ``plot_dim_occupancy_area`` collapses station detail into period-band
 fractions.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import plot_dim_occupancy_area
-
-   fig, ax = plt.subplots(figsize=(9, 3.8))
-   plot_dim_occupancy_area(
-       "data/AMT/WILLY_DATA/L18PLT",
-       skew_th=3.0,
-       ellipt_th=0.2,
-       n_bands=24,
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.dimensionality import plot_dim_occupancy_area
+   >>> fig, ax = plt.subplots(figsize=(9, 3.8))
+   >>> _ = plot_dim_occupancy_area(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     skew_th=3.0,
+   ...     ellipt_th=0.2,
+   ...     n_bands=24,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-07.png
    :width: 100%
@@ -442,22 +386,18 @@ Map Dimensionality At One Period
 ``plot_dim_map`` chooses the nearest available period for each station
 and maps the dimensionality class in station coordinates.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import plot_dim_map
-
-   fig, ax = plt.subplots(figsize=(8, 6))
-   plot_dim_map(
-       "data/AMT/WILLY_DATA/L18PLT",
-       period=0.01,
-       skew_th=3.0,
-       ellipt_th=0.2,
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.dimensionality import plot_dim_map
+   >>> fig, ax = plt.subplots(figsize=(8, 6))
+   >>> _ = plot_dim_map(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     period=0.01,
+   ...     skew_th=3.0,
+   ...     ellipt_th=0.2,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-08.png
    :width: 100%
@@ -472,44 +412,32 @@ Pre-2D Inversion Assessment
 inversion. It combines dimensionality fractions, strike estimates,
 strike stability, rotation status, and Groom-Bailey status.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
-   assessment = pre2d_inversion_assessment(
-       "data/AMT/WILLY_DATA/L18PLT",
-       band=(0.001, 1.0),
-       skew_th=3.0,
-       ellipt_th=0.2,
-       rotation_applied=False,
-       rotation_method="consensus",
-       groom_bailey_attempted=False,
-       groom_bailey_applied=False,
-       groom_bailey_reason="Not attempted in this screening run.",
-   )
-   print(
-       assessment[
-           [
-               "station",
-               "frac_1d",
-               "frac_2d",
-               "frac_3d",
-               "strike_consensus_deg",
-               "strike_consensus_iqr_deg",
-               "strike_curve_iqr_deg",
-               "recommendation",
-           ]
-       ].head()
-   )
-
-.. code-block:: text
-
-      station  frac_1d  ...  strike_curve_iqr_deg               recommendation
-   0  18-001A      0.0  ...                  66.9  review_3d_effects_before_2d
-   1  18-002U      0.0  ...                  96.0  review_3d_effects_before_2d
-   2  18-003A      0.0  ...                  65.0  review_3d_effects_before_2d
-   3  18-004A      0.0  ...                  89.5  review_3d_effects_before_2d
-   4  18-005U      0.0  ...                  72.1  review_3d_effects_before_2d
+   >>> from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
+   >>> assessment = pre2d_inversion_assessment(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     band=(0.001, 1.0),
+   ...     skew_th=3.0,
+   ...     ellipt_th=0.2,
+   ...     rotation_applied=False,
+   ...     rotation_method="consensus",
+   ...     groom_bailey_attempted=False,
+   ...     groom_bailey_applied=False,
+   ...     groom_bailey_reason="Not attempted in this screening run.",
+   ...     api=True,
+   ... ).to_pandas()
+   >>> assessment[[
+   ...     "station", "frac_1d", "frac_2d", "frac_3d",
+   ...     "strike_consensus_deg", "strike_consensus_iqr_deg",
+   ...     "strike_curve_iqr_deg", "recommendation",
+   ... ]].head()
+      station   frac_1d  ...  strike_curve_iqr_deg               recommendation
+   0  18-001A  0.000000  ...                  66.9  review_3d_effects_before_2d
+   1  18-002U  0.076923  ...                  96.0  review_3d_effects_before_2d
+   2  18-003A  0.025641  ...                  65.0  review_3d_effects_before_2d
+   3  18-004A  0.076923  ...                  89.5  review_3d_effects_before_2d
+   4  18-005U  0.025641  ...                  72.1  review_3d_effects_before_2d
    [5 rows x 8 columns]
 
 Important columns include:
@@ -528,15 +456,17 @@ Important columns include:
   correction audit.
 - ``recommendation``: simple screening recommendation, from the rule
 
-  .. code-block:: text
-     :linenos:
+  .. math::
 
-     if frac_3d > 0.5:
-         recommendation = "review_3d_effects_before_2d"
-     elif strike_consensus_iqr_deg > 20.0:
-         recommendation = "unstable_strike_review_band"
-     else:
-         recommendation = "acceptable_for_2d_with_documented_rotation"
+     \text{recommendation} =
+     \begin{cases}
+     \text{review\_3d\_effects\_before\_2d}, &
+        \text{frac\_3d} > 0.5, \\
+     \text{unstable\_strike\_review\_band}, &
+        \text{strike\_consensus\_iqr\_deg} > 20^\circ, \\
+     \text{acceptable\_for\_2d\_with\_documented\_rotation}, &
+        \text{otherwise},
+     \end{cases}
 
   checked in that order, so a station that is both mostly 3-D and
   strike-unstable is reported for its dimensionality problem first — the
@@ -553,20 +483,33 @@ Masking 3-D Samples
 ``mask_by_dimensionality`` replaces samples outside the selected classes
 with ``NaN`` in the impedance tensor and tipper when present.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.dimensionality import mask_by_dimensionality
-
-   masked = mask_by_dimensionality(
-       "data/AMT/WILLY_DATA/L18PLT",
-       keep=(0, 1),
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.dimensionality import mask_by_dimensionality
+   >>> masked = mask_by_dimensionality(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     keep=(0, 1),
+   ...     inplace=False,
+   ... )
 
 By default, ``keep=(0, 1)`` keeps 1-D and 2-D samples and masks 3-D
 samples. Use this carefully: masking can remove large parts of a real
-survey if the line is strongly 3-D.
+survey if the line is strongly 3-D -- exactly the situation on
+L18PLT. The dimensionality counts already computed above say precisely
+how much this default mask would remove here:
+
+.. code-block:: pycon
+
+   >>> kept = dim["dim"].isin([0, 1])
+   >>> int(kept.sum()), len(dim), round(kept.mean(), 4)
+   (213, 1484, 0.1435)
+
+Only 14.35 percent of L18PLT's station-period samples are 1-D or 2-D
+under the default thresholds, so ``keep=(0, 1)`` here would discard
+the large majority of the survey -- a real instance of the "Masking
+removes too much data" failure mode below, not a hypothetical one.
+Widening the period band or accepting a documented rotation instead of
+masking is usually the better choice for a line this heavily 3-D.
 
 Projecting To A 2-D Tensor Form
 -------------------------------
@@ -574,18 +517,18 @@ Projecting To A 2-D Tensor Form
 ``project_to_2d`` rotates data to strike and optionally
 antisymmetrizes the off-diagonal tensor terms.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.dimensionality import project_to_2d
-
-   projected = project_to_2d(
-       "data/AMT/WILLY_DATA/L18PLT",
-       strike=None,
-       method="swift",
-       antisym=True,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.dimensionality import project_to_2d
+   >>> projected = project_to_2d(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     strike=None,
+   ...     method="swift",
+   ...     antisym=True,
+   ...     inplace=False,
+   ... )
+   >>> len(list(projected))
+   28
 
 When ``strike=None``, pyCSAMT estimates strike before rotation. Pass an
 explicit strike angle when you have already selected one from your
@@ -595,24 +538,17 @@ Sparse Dictionary Workflow
 --------------------------
 
 The dictionary route learns patterns from four standardized features:
-
-.. code-block:: text
-   :linenos:
-
-   beta_abs
-   ellipt_abs
-   logrho_det
-   tip_amp
-
-It is unsupervised. It does not know geology. Each feature is first
+``beta_abs``, ``ellipt_abs``, ``logrho_det``, and ``tip_amp`` -- the
+same columns built by ``phase_features_table`` above. It is
+unsupervised. It does not know geology. Each feature is first
 z-scored across the whole survey, :math:`x' = (x - \mu)/\sigma`, so that
 skew in degrees, ellipticity, log-resistivity, and tipper amplitude all
 compete on the same footing regardless of their native units. The
-model then learns a small set of :math:`k` atoms (``n_atoms``, default
-``6``) — feature-space directions that repeated patterns in the survey
-tend to align with — and represents every standardized sample
-:math:`z` as a sparse combination of them by solving a Lasso-style
-problem:
+model then learns a small set of :math:`k` atoms via :term:`dictionary
+learning` (``n_atoms``, default ``6``) — feature-space directions that
+repeated patterns in the survey tend to align with — and represents
+every standardized sample :math:`z` as a sparse combination of them by
+:term:`sparse coding`, solving a Lasso-style problem:
 
 .. math::
 
@@ -648,36 +584,35 @@ atom dominates its code,
 so ``encode_dimensionality`` labels a sample by which single learned
 pattern explains it most strongly, not by a vote across all of them.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.dimensionality import (
-       encode_dimensionality,
-       learn_dim_dictionary,
-   )
-   model = learn_dim_dictionary(
-       "data/AMT/WILLY_DATA/L18PLT",
-       n_atoms=6,
-       lam=0.05,
-       n_iter=40,
-       code_iter=50,
-   )
-   encoded = encode_dimensionality(
-       "data/AMT/WILLY_DATA/L18PLT",
-       model,
-       lam=0.05,
-       code_iter=50,
-   )
-   print(encoded.filter(regex="station|period|dim_pred|^a").head())
-
-.. code-block:: text
-
-      station    period   a0        a1        a2   a3        a4       a5  dim_pred
-   0  18-001A  0.000096  0.0 -1.327892  0.896831  0.0  0.016784 -0.00000         1
-   1  18-001A  0.000115  0.0 -1.317513  0.798761  0.0  0.000000 -0.00000         1
-   2  18-001A  0.000137  0.0 -1.361449  0.662154  0.0  0.000000 -0.02091         1
-   3  18-001A  0.000164 -0.0 -1.086200  0.800304 -0.0  0.350492  0.00000         1
-   4  18-001A  0.000196 -0.0 -0.336239  0.791009 -0.0  0.194019  0.00000         2
+   >>> pd.set_option("display.max_columns", None)
+   >>> pd.set_option("display.width", 120)
+   >>> from pycsamt.emtools.dimensionality import (
+   ...     encode_dimensionality,
+   ...     learn_dim_dictionary,
+   ... )
+   >>> model = learn_dim_dictionary(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     n_atoms=6,
+   ...     lam=0.05,
+   ...     n_iter=40,
+   ...     code_iter=50,
+   ... )
+   >>> encoded = encode_dimensionality(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     model,
+   ...     lam=0.05,
+   ...     code_iter=50,
+   ...     api=True,
+   ... ).to_pandas()
+   >>> encoded.filter(regex="station|period|dim_pred|^a").head()
+      station    period        a0        a1        a2   a3   a4        a5  dim_pred
+   0  18-001A  0.000096  0.792681 -0.814458  0.009989  0.0  0.0 -0.962689         2
+   1  18-001A  0.000115  0.814154 -0.755835  0.000000  0.0 -0.0 -0.929701         2
+   2  18-001A  0.000137  0.837414 -0.734864  0.000000  0.0 -0.0 -0.896495         2
+   3  18-001A  0.000164  0.984748 -0.694957  0.000000  0.0 -0.0 -0.704885         2
+   4  18-001A  0.000196  0.571910 -0.155617  0.000000  0.0 -0.0 -0.638730         2
 
 The model dictionary contains:
 
@@ -698,30 +633,20 @@ Compare Rule Labels And Dictionary Labels
 The dictionary workflow is most useful as an independent check, not as a
 replacement for the rule.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-   from pycsamt.emtools.dimensionality import (
-       classify_dimensionality,
-       encode_dimensionality,
-       learn_dim_dictionary,
-   )
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   rule = classify_dimensionality(survey)
-   model = learn_dim_dictionary(survey, n_atoms=6)
-   encoded = encode_dimensionality(survey, model)
-   compare = rule[["station", "period", "dim"]].merge(
-       encoded[["station", "period", "dim_pred"]],
-       on=["station", "period"],
-       how="inner",
-   )
-   agreement = (compare["dim"] == compare["dim_pred"]).mean()
-   print(f"rule/dictionary agreement = {agreement:.2%}")
-
-.. code-block:: text
-
-   rule/dictionary agreement = 68.13%
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> rule = classify_dimensionality(survey, api=True).to_pandas()
+   >>> model = learn_dim_dictionary(survey, n_atoms=6)
+   >>> encoded = encode_dimensionality(survey, model, api=True).to_pandas()
+   >>> compare = rule[["station", "period", "dim"]].merge(
+   ...     encoded[["station", "period", "dim_pred"]],
+   ...     on=["station", "period"],
+   ...     how="inner",
+   ... )
+   >>> agreement = (compare["dim"] == compare["dim_pred"]).mean()
+   >>> print(f"rule/dictionary agreement = {agreement:.2%}")
+   rule/dictionary agreement = 63.75%
 
 Agreement near 100 percent means the learned atoms reproduce the rule.
 Lower agreement means the data-driven features are separating samples
@@ -754,30 +679,16 @@ is. A cell can have a clear dominant atom yet low total energy — a weak,
 barely-nonzero code — so treat pale cells as ambiguous even where the
 color looks decisive.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import (
-       learn_dim_dictionary,
-       mask_by_dictionary,
-       plot_atom_psection,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   model = learn_dim_dictionary(survey, n_atoms=6)
-
-   masked = mask_by_dictionary(
-       survey,
-       model,
-       keep=(0, 1),
-       inplace=False,
-   )
-
-   fig, ax = plt.subplots(figsize=(9, 4.8))
-   plot_atom_psection(survey, model, energy="l2", ax=ax)
-   fig.tight_layout()
+   >>> from pycsamt.emtools.dimensionality import (
+   ...     mask_by_dictionary,
+   ...     plot_atom_psection,
+   ... )
+   >>> masked = mask_by_dictionary(survey, model, keep=(0, 1), inplace=False)
+   >>> fig, ax = plt.subplots(figsize=(9, 4.8))
+   >>> _ = plot_atom_psection(survey, model, energy="l2", ax=ax)
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-14.png
    :width: 100%
@@ -834,41 +745,34 @@ Saving A Reproducible Bundle
 For reporting, save the raw features, rule labels, pre-2D assessment,
 and dictionary encoding.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.dimensionality import (
-       classify_dimensionality,
-       encode_dimensionality,
-       learn_dim_dictionary,
-       phase_features_table,
-       plot_dim_confidence_grid,
-       pre2d_inversion_assessment,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   out = Path("outputs/dimensionality_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   features = phase_features_table(survey)
-   rule = classify_dimensionality(survey)
-   assessment = pre2d_inversion_assessment(survey, band=(0.001, 1.0))
-   model = learn_dim_dictionary(survey, n_atoms=6)
-   encoded = encode_dimensionality(survey, model)
-
-   features.to_csv(out / "phase_features.csv", index=False)
-   rule.to_csv(out / "rule_dimensionality.csv", index=False)
-   assessment.to_csv(out / "pre2d_assessment.csv", index=False)
-   encoded.to_csv(out / "dictionary_encoding.csv", index=False)
-
-   fig, ax = plt.subplots(figsize=(9, 4.5))
-   plot_dim_confidence_grid(survey, ax=ax)
-   fig.tight_layout()
-   fig.savefig(out / "dimensionality_confidence_grid.png", dpi=200)
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.dimensionality import (
+   ...     classify_dimensionality,
+   ...     encode_dimensionality,
+   ...     learn_dim_dictionary,
+   ...     phase_features_table,
+   ...     plot_dim_confidence_grid,
+   ...     pre2d_inversion_assessment,
+   ... )
+   >>> out = Path("outputs/dimensionality_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> features = phase_features_table(survey, api=True).to_pandas()
+   >>> rule = classify_dimensionality(survey, api=True).to_pandas()
+   >>> assessment = pre2d_inversion_assessment(
+   ...     survey, band=(0.001, 1.0), api=True,
+   ... ).to_pandas()
+   >>> model = learn_dim_dictionary(survey, n_atoms=6)
+   >>> encoded = encode_dimensionality(survey, model, api=True).to_pandas()
+   >>> features.to_csv(out / "phase_features.csv", index=False)
+   >>> rule.to_csv(out / "rule_dimensionality.csv", index=False)
+   >>> assessment.to_csv(out / "pre2d_assessment.csv", index=False)
+   >>> encoded.to_csv(out / "dictionary_encoding.csv", index=False)
+   >>> fig, ax = plt.subplots(figsize=(9, 4.5))
+   >>> _ = plot_dim_confidence_grid(survey, ax=ax)
+   >>> fig.tight_layout()
+   >>> fig.savefig(out / "dimensionality_confidence_grid.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-dimensionality-15.png
    :width: 100%

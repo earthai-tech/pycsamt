@@ -289,6 +289,7 @@ def _fit_2d_joint_tf(
     log_every,
     init_log_rho=None,
     init_log_thick=None,
+    verbose=None,
 ):
     r"""
     TensorFlow 2-D joint optimisation via Adam.
@@ -300,6 +301,8 @@ def _fit_2d_joint_tf(
     dict : log_rho (S,L), log_thick (S,L-1), history
     """
     import tensorflow as tf
+
+    from pycsamt.api.view.progress import get_progress_bar
 
     S, F = log_rho_obs.shape
     L = n_layers
@@ -328,55 +331,61 @@ def _fit_2d_joint_tf(
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
     history: list[float] = []
 
-    for ep in range(1, epochs + 1):
-        with tf.GradientTape() as tape:
-            lr_pred, ph_pred = _mt1d_tf_batch(
-                freqs_c, log_rho_var, log_thick_var
-            )
-            lr_safe = tf.where(
-                valid,
-                lr_obs_t,
-                tf.stop_gradient(lr_pred),
-            )
-            ph_safe = tf.where(
-                valid,
-                ph_obs_t,
-                tf.stop_gradient(ph_pred),
-            )
-            n_v = tf.maximum(
-                tf.reduce_sum(tf.cast(valid, tf.float64)),
-                1.0,
-            )
-            data_loss = (
-                tf.reduce_sum(
-                    (lr_pred - lr_safe) ** 2
-                    + ((ph_pred - ph_safe) / 90.0) ** 2
+    _verbose = verbose if verbose is not None else (2 if log_every > 0 else 0)
+    with get_progress_bar(
+        total=epochs,
+        desc="Stage 2 (2-D joint)",
+        unit="epoch",
+        verbose=_verbose,
+        log_every=log_every or None,
+    ) as bar:
+        for ep in range(1, epochs + 1):
+            with tf.GradientTape() as tape:
+                lr_pred, ph_pred = _mt1d_tf_batch(
+                    freqs_c, log_rho_var, log_thick_var
                 )
-                / n_v
-            )
-
-            vert = tf.reduce_mean(
-                (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
-            )
-
-            if S > 1:
-                lat = tf.reduce_mean(
-                    (log_rho_var[1:, :] - log_rho_var[:-1, :]) ** 2
+                lr_safe = tf.where(
+                    valid,
+                    lr_obs_t,
+                    tf.stop_gradient(lr_pred),
                 )
-            else:
-                lat = tf.constant(0.0, dtype=tf.float64)
+                ph_safe = tf.where(
+                    valid,
+                    ph_obs_t,
+                    tf.stop_gradient(ph_pred),
+                )
+                n_v = tf.maximum(
+                    tf.reduce_sum(tf.cast(valid, tf.float64)),
+                    1.0,
+                )
+                data_loss = (
+                    tf.reduce_sum(
+                        (lr_pred - lr_safe) ** 2
+                        + ((ph_pred - ph_safe) / 90.0) ** 2
+                    )
+                    / n_v
+                )
 
-            loss = data_loss + lam_z * vert + lam_x * lat
+                vert = tf.reduce_mean(
+                    (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
+                )
 
-        grads = tape.gradient(loss, [log_rho_var, log_thick_var])
-        clipped = _clip_grads_tf(grads)
-        opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
-        log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
-        val = float(loss.numpy())
-        history.append(val)
+                if S > 1:
+                    lat = tf.reduce_mean(
+                        (log_rho_var[1:, :] - log_rho_var[:-1, :]) ** 2
+                    )
+                else:
+                    lat = tf.constant(0.0, dtype=tf.float64)
 
-        if log_every > 0 and ep % log_every == 0:
-            print(f"  epoch {ep:>5d}/{epochs}  loss={val:.5f}")
+                loss = data_loss + lam_z * vert + lam_x * lat
+
+            grads = tape.gradient(loss, [log_rho_var, log_thick_var])
+            clipped = _clip_grads_tf(grads)
+            opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
+            log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
+            val = float(loss.numpy())
+            history.append(val)
+            bar.update(1, metrics={"loss": val})
 
     return {
         "log_rho": log_rho_var.numpy(),
@@ -403,6 +412,7 @@ def _fit_3d_joint_tf(
     log_every,
     init_log_rho=None,
     init_log_thick=None,
+    verbose=None,
 ):
     r"""
     TensorFlow 3-D joint optimisation via Adam.
@@ -414,6 +424,8 @@ def _fit_3d_joint_tf(
     dict : log_rho (S,L), log_thick (S,L-1), history
     """
     import tensorflow as tf
+
+    from pycsamt.api.view.progress import get_progress_bar
 
     S, F = log_rho_obs.shape
     L = n_layers
@@ -444,57 +456,63 @@ def _fit_3d_joint_tf(
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
     history: list[float] = []
 
-    for ep in range(1, epochs + 1):
-        with tf.GradientTape() as tape:
-            lr_pred, ph_pred = _mt1d_tf_batch(
-                freqs_c, log_rho_var, log_thick_var
-            )
-            lr_safe = tf.where(
-                valid,
-                lr_obs_t,
-                tf.stop_gradient(lr_pred),
-            )
-            ph_safe = tf.where(
-                valid,
-                ph_obs_t,
-                tf.stop_gradient(ph_pred),
-            )
-            n_v = tf.maximum(
-                tf.reduce_sum(tf.cast(valid, tf.float64)),
-                1.0,
-            )
-            data_loss = (
-                tf.reduce_sum(
-                    (lr_pred - lr_safe) ** 2
-                    + ((ph_pred - ph_safe) / 90.0) ** 2
+    _verbose = verbose if verbose is not None else (2 if log_every > 0 else 0)
+    with get_progress_bar(
+        total=epochs,
+        desc="Stage 2 (3-D joint)",
+        unit="epoch",
+        verbose=_verbose,
+        log_every=log_every or None,
+    ) as bar:
+        for ep in range(1, epochs + 1):
+            with tf.GradientTape() as tape:
+                lr_pred, ph_pred = _mt1d_tf_batch(
+                    freqs_c, log_rho_var, log_thick_var
                 )
-                / n_v
-            )
+                lr_safe = tf.where(
+                    valid,
+                    lr_obs_t,
+                    tf.stop_gradient(lr_pred),
+                )
+                ph_safe = tf.where(
+                    valid,
+                    ph_obs_t,
+                    tf.stop_gradient(ph_pred),
+                )
+                n_v = tf.maximum(
+                    tf.reduce_sum(tf.cast(valid, tf.float64)),
+                    1.0,
+                )
+                data_loss = (
+                    tf.reduce_sum(
+                        (lr_pred - lr_safe) ** 2
+                        + ((ph_pred - ph_safe) / 90.0) ** 2
+                    )
+                    / n_v
+                )
 
-            vert = tf.reduce_mean(
-                (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
-            )
+                vert = tf.reduce_mean(
+                    (log_rho_var[:, 1:] - log_rho_var[:, :-1]) ** 2
+                )
 
-            # Graph Laplacian: L = D - A
-            # d_vec: (S,); log_rho_var: (S,L)
-            d_col = tf.expand_dims(d_vec, 1)  # (S, 1)
-            Lm = d_col * log_rho_var - tf.linalg.matmul(A_t, log_rho_var)
-            spatial = tf.reduce_sum(Lm * log_rho_var) / tf.cast(
-                tf.size(log_rho_var),
-                tf.float64,
-            )
+                # Graph Laplacian: L = D - A
+                # d_vec: (S,); log_rho_var: (S,L)
+                d_col = tf.expand_dims(d_vec, 1)  # (S, 1)
+                Lm = d_col * log_rho_var - tf.linalg.matmul(A_t, log_rho_var)
+                spatial = tf.reduce_sum(Lm * log_rho_var) / tf.cast(
+                    tf.size(log_rho_var),
+                    tf.float64,
+                )
 
-            loss = data_loss + lam_z * vert + lam_g * spatial
+                loss = data_loss + lam_z * vert + lam_g * spatial
 
-        grads = tape.gradient(loss, [log_rho_var, log_thick_var])
-        clipped = _clip_grads_tf(grads)
-        opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
-        log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
-        val = float(loss.numpy())
-        history.append(val)
-
-        if log_every > 0 and ep % log_every == 0:
-            print(f"  epoch {ep:>5d}/{epochs}  loss={val:.5f}")
+            grads = tape.gradient(loss, [log_rho_var, log_thick_var])
+            clipped = _clip_grads_tf(grads)
+            opt.apply_gradients(zip(clipped, [log_rho_var, log_thick_var]))
+            log_thick_var.assign(tf.clip_by_value(log_thick_var, 0.0, 5.0))
+            val = float(loss.numpy())
+            history.append(val)
+            bar.update(1, metrics={"loss": val})
 
     return {
         "log_rho": log_rho_var.numpy(),

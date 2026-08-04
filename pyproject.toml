@@ -54,6 +54,11 @@ dependencies = [
     "numpy>=1.22; python_version >= '3.10'",
     "scipy>=1.8",
     "matplotlib>=3.5",
+    # Shewchuk's Triangle mesh generator (Python bindings): real,
+    # quality-graded unstructured triangular FEM meshes
+    # (pycsamt.forward.maxwell.tri_mesh_gen) with no compiled external
+    # binary required.
+    "triangle>=20220202",
     "pandas>=1.4",
     "pyyaml>=5.4",
     "tqdm>=4.60",
@@ -111,6 +116,9 @@ docs = [
     # scraped as HTML embeds; Kaleido is used for static image export.
     "plotly>=5.24",
     "kaleido",
+    # Legacy .xls TEM coordinate tables (pycsamt.tdem.coordinates), e.g.
+    # data/TEMAVG/JIANGSU/"Coordinate of measuring point.xls".
+    "xlrd>=2.0",
 ]
 
 # Desktop application

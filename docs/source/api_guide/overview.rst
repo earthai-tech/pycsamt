@@ -113,6 +113,12 @@ Configuration Families
    * - Topography
      - :func:`~pycsamt.api.configure_topo`, ``PYCSAMT_TOPO``
      - Topography handling and depth/frequency y-axis conventions.
+   * - Mesh display
+     - :func:`~pycsamt.api.configure_mesh`, :func:`~pycsamt.api.draw_mesh`,
+       :func:`~pycsamt.api.draw_tri_mesh`, ``PYCSAMT_MESH``
+     - Rectilinear and triangular mesh rendering: filled, reviewed (fill +
+       edges), or diagram (edges only) presets, shared by both mesh
+       families.
    * - Agents
      - :func:`~pycsamt.api.configure_agents`, ``AGENT_CONFIG``
      - LLM provider selection and spending budget for AI agents.
@@ -131,6 +137,11 @@ In This Section
     The opt-in view layer: ``api=True``, :class:`~pycsamt.api.APIFrame`,
     multi-table :class:`~pycsamt.api.APIResult` containers, global backend
     policy, custom wrappers, and the public readers.
+
+:doc:`mesh`
+    Rendering computational and inversion meshes: the shared ``"filled"``/
+    ``"review"``/``"diagram"`` preset system, rectilinear vs. triangular
+    mesh drawing, and dotted-path style configuration.
 
 :doc:`configuration`
     The configuration system in depth: the dotted-path convention, worked

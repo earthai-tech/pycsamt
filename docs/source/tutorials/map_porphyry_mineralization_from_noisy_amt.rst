@@ -32,23 +32,18 @@ delivery.
 See also ``[Kouabena2025]`` in :doc:`../references`.
 
 WILLY_DATA is :term:`AMT`, a natural-source method -- there is no controlled
-transmitter anywhere near this survey. The near-field, source-offset, and
-source-overprint machinery this tutorial exercises further down is built for
-:term:`CSAMT` and other active-source methods, where a real, known distance
-to a grounded dipole or loop transmitter matters. None of that applies to
-WILLY_DATA on physical grounds, not merely because nothing showed up in the
-diagnostics. Those sections stay in this tutorial anyway, run against a
-stated illustrative offset, for two reasons: to demonstrate *how* to confirm
-rather than assume a method's assumptions do not apply to a given survey, and
-because the same code becomes directly useful the moment this tutorial is
-adapted to real controlled-source data instead of AMT -- :term:`CSAMT`,
-:term:`CSUMT`, or similar. If you are adapting this tutorial to a genuinely
-controlled-source survey, replace the illustrative ``source_offset`` values
-below with the real transmitter-to-receiver distance from your acquisition
-log before trusting any of that section's output.
+transmitter anywhere near this survey, so the near-field, source-offset, and
+source-overprint diagnostics built for :term:`CSAMT` and other active-source
+methods have no place in this tutorial: they assume a real, known distance
+to a grounded dipole or loop transmitter, an assumption WILLY_DATA does not
+satisfy on physical grounds. :doc:`map_groundwater_geology_from_csamt`
+exercises that same machinery for real, against a real ten-station CSAMT
+line where a controlled source genuinely matters and roughly two-thirds of
+the band turns out to sit in the near field -- read that tutorial if your
+own survey has a real transmitter offset to account for.
 
 Starting From Non-EDI Data
----------------------------
+--------------------------
 
 Every step below assumes :term:`EDI` input, because ``L26PLT``/``L30PLT``
 already ship as EDI. A real two-line project rarely starts there. Zonge
@@ -77,8 +72,8 @@ TEM decay curve, it enters this tutorial's pipeline the same way ``L26PLT``
 and ``L30PLT`` do below -- the QC, correction, and inversion steps that
 follow have no memory of which format the data originally arrived in.
 "Adapting This Tutorial" at the end of this page covers the remaining,
-survey-specific changes (input folders, the near-field/source-overprint
-offset noted above, tipper availability) once every station is EDI.
+survey-specific changes (input folders, tipper availability) once every
+station is EDI.
 
 What You Will Learn
 -------------------
@@ -86,9 +81,9 @@ What You Will Learn
 After this tutorial you should be able to:
 
 - run a full noise-diagnosis chain on a genuinely difficult AMT line:
-  powerline harmonics, near-field/source-overprint screening, a learned
-  dimensionality dictionary, :term:`Groom-Bailey decomposition`, conditional
-  :term:`static shift` correction, and an :term:`EMAP` spatial filter;
+  powerline harmonics, a learned dimensionality dictionary,
+  :term:`Groom-Bailey decomposition`, conditional :term:`static shift`
+  correction, and an :term:`EMAP` spatial filter;
 - classify stations as clean, static, near-surface, or mixed from real
   diagnostics rather than a blanket rule;
 - estimate strike and rotate two lines that disagree with each other about
@@ -111,25 +106,22 @@ has removed a confound. The order used here, and why:
    baseline QC/confidence tables;
 2. remove powerline harmonics first, because a narrowband 50 Hz comb would
    otherwise pollute every later statistical diagnostic;
-3. run the CSAMT near-field and source-overprint diagnostics anyway, to
-   confirm (rather than assume) that they do not apply to a natural-source
-   AMT line;
-4. learn a dimensionality dictionary from phase-tensor features;
-5. remove :term:`galvanic distortion` with a :term:`Groom-Bailey
+3. learn a dimensionality dictionary from phase-tensor features;
+4. remove :term:`galvanic distortion` with a :term:`Groom-Bailey
    decomposition`, before static shift, because Groom-Bailey separates twist
    and shear from the scalar gain that static-shift methods alone would
    otherwise absorb;
-6. classify each station as clean, static, near-surface, or mixed, and
+5. classify each station as clean, static, near-surface, or mixed, and
    correct static shift only where that classification supports it;
-7. smooth remaining incoherent noise with an EMAP spatial filter;
-8. drop low-confidence frequency rows and export sanitized, corrected EDIs;
-9. map skew and dimensionality on the corrected data, then estimate strike
+6. smooth remaining incoherent noise with an EMAP spatial filter;
+7. drop low-confidence frequency rows and export sanitized, corrected EDIs;
+8. map skew and dimensionality on the corrected data, then estimate strike
    and rotate;
-10. prepare Occam2D (2-D, rotated) and ModEM (3-D, unrotated) inversion
-    inputs;
-11. build the L26 and L30 geology/topography problems, inspect their padded
+9. prepare Occam2D (2-D, rotated) and ModEM (3-D, unrotated) inversion
+   inputs;
+10. build the L26 and L30 geology/topography problems, inspect their padded
     Maxwell meshes, and run independent ``physics="mt2d"`` AI inversions;
-12. test observed-response fit and held-out geological recovery before any
+11. test observed-response fit and held-out geological recovery before any
     interpretation, then report correction and inversion provenance.
 
 Load Both Lines
@@ -232,6 +224,9 @@ and per-period detail matters more than a single summary number here.
    >>> round(fci26["confidence"].mean(), 3), round(fci30["confidence"].mean(), 3)
    (0.676, 0.64)
 
+Turn that single mean number into a full per-station, per-period picture
+before deciding where the low-confidence rows actually sit:
+
 .. code-block:: python
    :linenos:
 
@@ -308,6 +303,10 @@ appears.
    >>> largest_notch_change(sites30, notched30)
    ('30-023U', 50.29, 82.1)
 
+Plot that largest single-station change in context -- both the local
+spectrum around 50 Hz and how it compares against every other station on
+the line -- rather than trusting one number in isolation:
+
 .. code-block:: python
    :linenos:
 
@@ -361,100 +360,6 @@ appears.
    the raw 50.29 Hz impedance departed most strongly from its log-frequency
    neighbours, while small bars show where interpolation leaves an already
    smooth local spectrum nearly unchanged.
-
-Rule Out Near-Field Bias
-------------------------
-
-:doc:`../theory/field_zones` derives the CSAMT near/transition/far
-classification and the :math:`|k\cdot r|` parameter in detail. Both formulas
-assume a real, known offset to a controlled-source transmitter -- exactly
-the assumption a natural-source AMT survey does not satisfy. There is no
-controlled transmitter next to this railway or mining site; running the
-diagnostic anyway, with a stated illustrative offset, is the correct way to
-confirm that rather than merely assert it.
-
-.. code-block:: pycon
-
-   >>> from pycsamt.emtools import classify_field_zones
-   >>> zones26 = classify_field_zones(notched26, source_offset=500.0, recursive=False)
-   >>> zones26["zone"].value_counts().to_dict()
-   {'transition': 536, 'near': 519, 'far': 270}
-   >>> zones30 = classify_field_zones(notched30, source_offset=500.0, recursive=False)
-   >>> zones30["zone"].value_counts().to_dict()
-   {'near': 544, 'transition': 516, 'far': 265}
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-   from pycsamt.emtools import plot_field_zones
-
-   fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.0), constrained_layout=True)
-   for ax, name, sites in zip(axes, ["L26PLT", "L30PLT"], [notched26, notched30]):
-       plot_field_zones(sites, source_offset=500.0, recursive=False, ax=ax)
-       ax.set_title(f"{name} field-zone classification (assumed r=500 m)")
-   fig.savefig("willy_field_zones_assumed_offset.png", dpi=170)
-
-.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_field_zones_assumed_offset.png
-   :alt: CSAMT field-zone classification for both lines under an assumed 500 m offset
-   :width: 100%
-
-   Read this figure for what it actually shows: short periods (high
-   frequency, small :term:`Bostick depth`) classify far field, long periods
-   classify near field, purely because an assumed 500 m offset makes
-   :math:`|k\cdot r|=r/\delta_B` shrink as period grows. A real
-   controlled-source line would show exactly this pattern for a genuine
-   geometric reason; here it is an artefact of feeding a fictitious offset
-   into a formula built for a different acquisition geometry. The correct
-   reading is: this diagnostic does not apply to WILLY_DATA, and the
-   :term:`near-field correction` machinery in
-   :func:`pycsamt.emtools.correct_near_field` should not be used on it.
-
-Check Source Overprint
-----------------------
-
-:func:`pycsamt.emtools.detect_source_overprint` implements the same
-horizontal-electric-dipole shadow model (Yan & Fu 2004) used by the
-near-field diagnostic above, through the ground-wave/surface-wave ratio
-:math:`\beta_{Ey}`. It carries the identical caveat: it models a real
-transmitter at a known offset, and the railway or plant infrastructure near
-this line is not that.
-
-.. code-block:: pycon
-
-   >>> from pycsamt.emtools import detect_source_overprint
-   >>> ov26 = detect_source_overprint(notched26, source_offset=500.0, recursive=False)
-   >>> round(ov26["beta_pct"].median(), 2), int(ov26["overprint_flag"].sum()), len(ov26)
-   (48.52, 1166, 1325)
-   >>> ov30 = detect_source_overprint(notched30, source_offset=500.0, recursive=False)
-   >>> round(ov30["beta_pct"].median(), 2), int(ov30["overprint_flag"].sum()), len(ov30)
-   (49.16, 1191, 1325)
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-   from pycsamt.emtools import plot_overprint_section
-
-   fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.0), constrained_layout=True)
-   for ax, name, sites in zip(axes, ["L26PLT", "L30PLT"], [notched26, notched30]):
-       plot_overprint_section(sites, source_offset=500.0, recursive=False, ax=ax)
-       ax.set_title(f"{name} source-overprint beta (assumed r=500 m)")
-   fig.savefig("willy_overprint_beta_assumed_offset.png", dpi=170)
-
-.. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_overprint_beta_assumed_offset.png
-   :alt: Source-overprint beta section for both lines under an assumed 500 m offset
-   :width: 100%
-
-   Median :math:`\beta` near 49 percent, on both lines, at a 500 m assumed
-   offset is not a subtle warning -- it says the shadow model is completely
-   dominated by the fictitious geometry, not by anything in the data. Two
-   diagnostics built specifically for controlled-source acquisition both
-   agree, for the right reason, that they do not have a controlled source to
-   diagnose. The real noise mechanisms at play here -- narrowband harmonics
-   (already handled), galvanic distortion, and spatially incoherent noise
-   from nearby infrastructure -- are exactly the ones the rest of this
-   tutorial addresses directly.
 
 Dimensionality Dictionary
 -------------------------
@@ -654,6 +559,10 @@ production project rather than silent acceptance.
    >>> round(factors30["fac_z_reviewed"].median(), 3)
    0.535
 
+With static-shift factors computed and applied for both lines, visualize
+the resulting log-resistivity shift as a pseudosection instead of reading
+it off a table:
+
 .. code-block:: python
    :linenos:
 
@@ -718,6 +627,9 @@ choice below.
 
    >>> flma30 = apply_emap_filter(ss_corr30, method="flma", window=5, component="all", inplace=False, recursive=False)
 
+With FLMA now applied to both lines, plot the before/after/delta
+pseudosection that the comparison above was based on:
+
 .. code-block:: python
    :linenos:
 
@@ -753,6 +665,9 @@ corrected data rather than the raw one.
    >>> from pycsamt.emtools import drop_low_confidence_frequencies
    >>> dropped26 = drop_low_confidence_frequencies(flma26, method="composite", threshold=0.5, also="both", inplace=False, recursive=False)
    >>> dropped30 = drop_low_confidence_frequencies(flma30, method="composite", threshold=0.5, also="both", inplace=False, recursive=False)
+
+Visualize exactly which station-period rows each line lost to this
+threshold, rather than trusting the aggregate percentage alone:
 
 .. code-block:: python
    :linenos:
@@ -885,23 +800,25 @@ angle.
    for name, sites in [("L26PLT", corr26), ("L30PLT", corr30)]:
        fig = plot_strike_analysis(
            sites, recursive=False,
-           suptitle=f"{name} strike / phase-tensor / tipper analysis",
+           suptitle=f"{name} strike / phase-tensor analysis",
        )
        fig.savefig(f"willy_{name.lower()}_strike_analysis.png", dpi=170, bbox_inches="tight")
 
 .. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_l26plt_strike_analysis.png
-   :alt: L26PLT strike, phase-tensor azimuth, and tipper rose analysis
+   :alt: L26PLT strike and phase-tensor azimuth rose analysis
    :width: 100%
 
 .. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_l30plt_strike_analysis.png
-   :alt: L30PLT strike, phase-tensor azimuth, and tipper rose analysis
+   :alt: L30PLT strike and phase-tensor azimuth rose analysis
    :width: 100%
 
-   The tipper panel is empty by construction -- WILLY_DATA carries no
-   vertical-field channel. The impedance-sweep and phase-tensor roses agree
-   only loosely with each other on both lines, which matches the broad
-   circular spread already measured and argues against treating either
-   line's rotation as a precision result.
+   WILLY_DATA carries no vertical-field channel, so :func:`~pycsamt.emtools.plot_strike_analysis`
+   detects that and renders only the two panels it can actually support here
+   -- Strike (Z) and PT Azimuth -- rather than a third, permanently empty
+   tipper panel. The impedance-sweep and phase-tensor roses agree only
+   loosely with each other on both lines, which matches the broad circular
+   spread already measured and argues against treating either line's
+   rotation as a precision result.
 
 Rotate To Strike
 ----------------
@@ -1008,6 +925,11 @@ data-row count before moving on to the mesh those rows share:
    ``L26PLT`` carries more data points than ``L30PLT`` (4984 versus 4684)
    purely from the earlier frequency-drop step -- ``L30PLT`` lost more rows
    at the QC stage, and Occam2D simply reflects that in its row count.
+
+Both lines share the same mesh design regardless of that row-count
+difference; plot its cell skeleton to confirm the padding grows smoothly
+away from the station footprint before treating it as ready for either
+solver:
 
 .. code-block:: python
    :linenos:
@@ -1204,8 +1126,8 @@ also prevents silent truncation.
    >>> agent26 = Inv2DAgent(
    ...     physics="mt2d", n_depth=24, depth_max=1800,
    ...     n_freqs=8, freqs=frequencies_hz,
-   ...     n_train_profiles=10, n_stations_per_profile=25,
-   ...     station_spacing_m=101.5, epochs=30,
+   ...     n_train_profiles=100, n_stations_per_profile=25,
+   ...     station_spacing_m=101.5, epochs=100,
    ...     correlation_length_x_m=(350, 1000),
    ...     correlation_length_z_m=(90, 300),
    ...     lambda_x=.02, lambda_z=.01, lambda_tv=.005,
@@ -1248,11 +1170,16 @@ unsupported oscillation; it does not prove that a recovered feature is real.
 
    These are the direct ``pred_section`` arrays on the agent-returned 1.8 km
    depth axis—no pseudosection blending, trend injection, smoothing, or invented
-   depth conversion is used.  The stronger rerun gives L26 modest vertical and
-   lateral variation, including a weakly more resistive pattern near
-   ``1.9--2.4 km`` chainage.  L30 remains close to the mean prediction near
-   :math:`\log_{10}\rho\simeq2.1`.  The contrast demonstrates what the model
-   actually learned, but it is not sufficient evidence to label either pattern
+   depth conversion is used.  At this larger training scale, L26 develops a
+   coherent, near-continuous resistive cap (:math:`\log_{10}\rho` up to about
+   ``3.5``) spanning most of the profile in the top ``0.3 km``, transitioning
+   to a mid-range background (:math:`\log_{10}\rho\simeq2.0`) at depth, plus a
+   localized low-resistivity patch (:math:`\log_{10}\rho` below ``1``) near the
+   deep right edge of the section (``2.1--2.4 km`` chainage). L30 stays
+   comparatively featureless, hovering close to the mean prediction near
+   :math:`\log_{10}\rho\simeq2.0`--``2.3`` with only mild local texture. The
+   contrast demonstrates what the model actually learned, but—as the gate
+   below still confirms—it is not sufficient evidence to label either pattern
    as alteration or mineralization.
 
 Gate the result before interpretation
@@ -1266,31 +1193,116 @@ viewing the field model.
 .. code-block:: pycon
 
    >>> round(result26.data["rms_global"], 3)
-   1.012
+   1.31
    >>> recovery26 = result26.data["mt2d_recovery"]
    >>> round(recovery26["rmse"], 3), recovery26["n_samples"]
-   (0.501, 1)
+   (0.482, 10)
 
 .. figure:: ../images/tutorials/map_porphyry_mineralization_from_noisy_amt/willy_ai2d_maxwell_validation_both_lines.png
    :alt: Observed-response RMS and held-out geological recovery for both lines
    :width: 90%
    :align: center
 
-   L26 and L30 reach response RMS ``1.012`` and ``1.168``, respectively, but
-   recovery RMSE is ``0.501`` and ``0.505`` log10 ohm m.  With only one held-out
-   sample per line, those errors have high sampling uncertainty.  L26's added
-   structure makes the figure more useful pedagogically, whereas L30's mean
-   collapse exposes the remaining limitation.  Both still fail the structural-
-   recovery gate and therefore do not support a drilling interpretation.
+   L26 and L30 reach response RMS ``1.310`` and ``1.077``, respectively, while
+   recovery RMSE is ``0.482`` and ``0.488`` log10 ohm m, evaluated over ``10``
+   held-out samples per line rather than one.  The larger held-out set makes
+   these error estimates noticeably more trustworthy than the earlier ten-
+   realization run, but recovery :math:`R^2` is still barely positive
+   (``0.063`` and ``0.045``)—far below the ``0.60`` acceptance threshold—and
+   ``10`` samples remains short of the ``20``-sample floor set below. L26's
+   added structure makes the figure more useful pedagogically, whereas L30's
+   near-uniform prediction exposes the remaining limitation. Both still fail
+   the structural-recovery gate and therefore do not support a drilling
+   interpretation.
 
-The next correct step is to strengthen the training dataset and rerun both
-lines, publishing replacement sections only after structural recovery passes.
-For this survey, a meaningful rerun should use ``200--500+`` Maxwell geology
+Raising ``n_train_profiles`` from ``10`` to ``100`` and ``epochs`` from ``30``
+to ``100`` improved recovery :math:`R^2` from effectively zero to a small
+positive value and grew the held-out set from ``1`` to ``10`` samples, but it
+did not clear the gate—confirming that more of the *same* eight-frequency,
+correlated-field training recipe is not enough on its own. The next correct
+step is to strengthen the training dataset and rerun both lines, publishing
+replacement sections only after structural recovery passes.  For this survey,
+a meaningful rerun should use ``200--500+`` Maxwell geology
 realizations, ``16--32`` retained frequencies, and an upper limit of ``30--100``
 epochs with validation-based early stopping.  It should also cover broader
 layered, lens, fault/contact, and correlated-field priors; repeat multiple
 seeds; evaluate recovery by depth and target; and verify that the synthetic
 response distribution overlaps the L26/L30 observations.
+
+Tune this configuration for a real deployment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Everything on this page, including the ``100``-realization rerun above, is
+deliberately sized for documentation-build time, not for a defensible field
+interpretation.  If you are adapting this workflow for your own survey,
+treat the table below as a starting checklist of what to widen and why, then
+read the detailed reasoning that follows it before committing CPU time.
+
+.. list-table:: What to change before trusting a result
+   :header-rows: 1
+   :widths: 22 20 28 30
+
+   * - Parameter
+     - This page (demo)
+     - Widen toward
+     - Why
+   * - ``n_train_profiles``
+     - ``100``
+     - ``200--500+``
+     - Populates train/val/test splits and grows the held-out set past the
+       ``20``-sample gate floor; this is the dominant cost driver (see below).
+   * - ``epochs`` (ceiling)
+     - ``100``
+     - ``30--100``
+     - Already near the useful range; early stopping (``patience =
+       max(5, epochs // 5)``) restores the best checkpoint on its own, so
+       raising this further rarely helps once patience is already tuned.
+   * - frequencies
+     - ``8`` (``1``--``1000`` Hz)
+     - ``16--32``
+     - Match the field survey's own QC-surviving band; four isolated decades
+       under-samples the response compared to the field data.
+   * - ``n_depth`` / ``depth_max``
+     - ``24`` / ``1800`` m
+     - ``32`` / ``2200`` m
+     - More vertical degrees of freedom, kept within the survey's real
+       investigation depth—do not extend past what the frequency band resolves.
+   * - correlation lengths / resistivity priors
+     - narrow, single family
+     - wider ranges; add layered/lens/fault families explicitly
+     - The convenience agent only samples one correlated-field family; broader
+       priors and explicit geology objects (below) prevent the network from
+       overfitting to an unrealistically narrow training distribution.
+   * - ``mesh_safety_factor`` / ``max_mesh_cells``
+     - ``6.0`` / ``200,000``
+     - ``8.0`` / ``300,000``
+     - Only matters if the quality diagnostics show resolution against skin
+       depth is marginal; verify before spending the extra mesh cells.
+   * - root seed
+     - one (``17``)
+     - repeat ``[17, 29, 43, 71, 101]``
+     - A feature that moves between seeds is unstable, not real.
+   * - promotion thresholds
+     - fixed below
+     - fix *before* viewing the field result
+     - ``rmse <= 0.25``, ``r2 >= 0.60``, ``n_samples >= 20`` is an example
+       policy; choose your own in advance and do not adjust it after looking.
+
+Budget the compute before choosing these numbers.  Fitting the checkpointed
+loss-curve lengths against the elapsed times measured on this page shows that
+generating each Maxwell realization costs roughly ``32`` CPU-seconds on this
+25-station, 8-frequency, ``1254``-cell mesh, while training costs well under
+``0.1`` CPU-seconds per realization-epoch once early stopping is active.
+Concretely, that means **raising** ``n_train_profiles`` **is what makes a
+rerun expensive, not raising** ``epochs``—a ``500``-realization run at
+similar mesh/frequency complexity costs on the order of ``500 * 32 s ≈ 4.4``
+CPU-hours per line just to generate the training data, before any of the
+``[17, 29, 43, 71, 101]`` seed repeats multiply that further.  The practical
+levers are: parallelize realization generation across cores (each Maxwell
+solve is independent), cache a generated dataset and reuse it across
+epoch/regularization sweeps instead of regenerating it every run, and only
+pay for a denser frequency grid or larger mesh once the quality diagnostics
+show they are actually the resolution bottleneck.
 
 The following project-scale agent configuration makes the changes that the
 current convenience API exposes directly:
@@ -1374,12 +1386,26 @@ means overlap in frequency/component availability, apparent-resistivity and
 phase ranges, noise/error distributions, station spacing, topographic relief,
 and expected geological scales—not merely similar global means.
 
-Keep the middle configuration above as an approximately fourteen-minute CPU
-integration and teaching run.  On the documentation machine, 20 total Maxwell
-realizations at eight frequencies required ``813.8 s``; 256 per line can
-therefore take several hours on the same CPU.  Record the dataset configuration, split
-manifest, seeds, mesh diagnostics, loss curves, held-out metrics, and
-observed-response residuals for each line.
+The configuration above is no longer a quick integration test at this scale.
+On the documentation machine, training both lines at ``100`` realizations
+with an ``epochs=100`` ceiling took ``3,554.7 s`` (L26PLT) and ``3,473.4 s``
+(L30PLT)—``7,028 s`` combined, or about ``117`` minutes.  Validation-based
+early stopping (patience ``max(5, epochs // 5) = 20``) did trigger in both
+runs, well short of the ``100``-epoch ceiling: L26PLT stopped after ``38``
+epochs (best validation loss ``0.968``), L30PLT after ``28`` (``0.970``).
+Wall-clock time is nevertheless dominated by generating the ``100`` Maxwell
+realizations themselves, not by training on them—fitting the checkpointed
+loss-curve lengths against elapsed time gives roughly ``32`` CPU-seconds per
+realization generated versus well under ``0.1`` CPU-seconds per
+realization-epoch trained.  The earlier ``10``-realization, ``30``-epoch run
+took only ``813.8 s`` combined for both lines, consistent with that same
+per-realization cost.  Practically, this means raising ``n_train_profiles``
+is what makes a rerun expensive here, not raising ``epochs``.  The
+aspirational ``256``-realizations-per-line production configuration below,
+with three times the frequencies and a larger mesh, is a substantially
+bigger job again and was not run for this page.  Record the dataset
+configuration, split manifest, seeds, mesh diagnostics, loss curves,
+held-out metrics, and observed-response residuals for each line.
 
 .. code-dropdown:: ../../scripts/generate_tutorial_porphyry_ai_workflow.py
    :language: python
@@ -1390,17 +1416,18 @@ Run it after the corrected EDI export step:
 
 .. code-block:: console
 
-   python docs/scripts/generate_tutorial_porphyry_ai_workflow.py
+   python docs/scripts/generate_tutorial_porphyry_ai_workflow.py \
+       --n-train-profiles 100 --epochs 100
 
 Executed output:
 
 .. code-block:: text
 
-   L26PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.012 recovery_RMSE 0.501
-   L30PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.168 recovery_RMSE 0.505
+   L26PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.310 recovery_RMSE 0.482
+   L30PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.077 recovery_RMSE 0.488
 
 Maxwell-Trained 3-D AI Inversion of Both Lines
------------------------------------------------
+----------------------------------------------
 
 ``Inv3DAgent(physics="mt3d")`` now trains against genuine 3-D Maxwell
 responses on a non-uniform, padded mesh -- the graph-only tiled path this
@@ -1635,15 +1662,13 @@ received without re-deriving it:
 Adapting This Tutorial
 ----------------------
 
-For a different two-line project, change only the input folders and the
-assumed source offset first:
+For a different two-line project, change only the input folders first:
 
 .. code-block:: python
    :linenos:
 
    line_a_dir = "path/to/your/line_a_edis"
    line_b_dir = "path/to/your/line_b_edis"
-   assumed_source_offset_m = 500.0  # or drop the near-field/overprint section entirely
 
 Then rerun the same sequence. If your survey has tipper, add it to the
 strike and rotation sections following
@@ -1651,9 +1676,9 @@ strike and rotation sections following
 tight rather than broad, trust the rotation more; if it is broad like both
 lines here, retain the full tensor for an external 3-D Maxwell inversion
 rather than treating the station-graph candidate as a physical cross-check.
-If neither line is near
-controlled-source infrastructure, the near-field and source-overprint
-sections can be skipped outright rather than run as a negative control.
+If your survey does have a real controlled-source transmitter,
+:doc:`map_groundwater_geology_from_csamt` covers the near-field and
+source-overprint diagnostics this tutorial deliberately omits.
 
 See Also
 --------
@@ -1678,9 +1703,13 @@ See Also
     Construction and capability gating for a genuine topographic 3-D geology
     and Maxwell problem.
 
+:doc:`map_groundwater_geology_from_csamt`
+    The near-field and source-overprint diagnostics this tutorial omits,
+    run for real against a real ten-station CSAMT line.
+
 :doc:`../theory/field_zones`
-    The full near-field and source-overprint theory behind the diagnostic
-    run (and ruled out) above.
+    The full near-field and source-overprint theory behind that companion
+    tutorial's diagnostics.
 
 :doc:`../theory/static_shift`
     The physics and correction-factor derivation behind the static-shift

@@ -26,11 +26,13 @@ __all__ = [
     "vertical_resolution_pair",
     "frequency_for_depth",
     "frequency_schedule",
+    "plot_frequency_schedule",
     # sites-based analysis
     "bostick_depth",
     "vertical_resolution",
     "depth_coverage_table",
     "plot_depth_section",
+    "plot_depth_coverage_ranking",
 ]
 
 # ----------------------------- constants ---------------------------------- #
@@ -260,6 +262,91 @@ def frequency_schedule(
     if as_khz:
         return freqs / 1e3
     return freqs
+
+
+def plot_frequency_schedule(
+    target_depths: float | np.ndarray,
+    rho_estimate: float,
+    *,
+    f_min: float = F_MIN_CSUMT,
+    f_max: float = F_MAX_CSUMT,
+    ax: Any | None = None,
+    figsize: tuple[float, float] = (7.0, 5.0),
+    title: str = "Frequency schedule from target depths",
+) -> Any:
+    """
+    Visualize which requested target depths survive the CSUMT band filter
+    applied by :func:`frequency_schedule`.
+
+    Each target depth is converted to its raw frequency with
+    :func:`frequency_for_depth` and drawn as an open circle. Targets whose
+    raw frequency falls inside [*f_min*, *f_max*] are additionally marked
+    with a cross -- exactly the filter :func:`frequency_schedule` applies
+    before any ``min_resolution_m`` padding. This makes the schedule's
+    silent clipping of unreachable targets visible instead of only
+    reporting a row count.
+
+    Parameters
+    ----------
+    target_depths : float or array
+        Target depths in metres, as passed to :func:`frequency_schedule`.
+    rho_estimate : float
+        Background apparent resistivity ρ (Ω·m).
+    f_min, f_max : float
+        CSUMT transmitter band, default :data:`F_MIN_CSUMT` /
+        :data:`F_MAX_CSUMT`.
+    ax : matplotlib.axes.Axes, optional
+    figsize : (float, float), default=(7, 5)
+    title : str
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+
+    Examples
+    --------
+    >>> from pycsamt.emtools.csumt import plot_frequency_schedule
+    >>> ax = plot_frequency_schedule([10.0, 20.0, 35.0, 50.0, 65.0], 300.0)
+    """
+    import matplotlib.pyplot as plt
+
+    depths = np.unique(np.asarray(target_depths, dtype=float).ravel())
+    depths = depths[depths > 0]
+    freqs = frequency_for_depth(depths, rho_estimate)
+    in_band = (freqs >= f_min) & (freqs <= f_max)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    ax.scatter(
+        depths,
+        freqs,
+        s=90,
+        facecolors="none",
+        edgecolors="0.25",
+        linewidths=1.5,
+        zorder=2,
+        label="requested target depths",
+    )
+    if in_band.any():
+        ax.scatter(
+            depths[in_band],
+            freqs[in_band],
+            marker="x",
+            s=90,
+            color="crimson",
+            linewidths=2.2,
+            zorder=3,
+            label="kept in schedule",
+        )
+    ax.axhspan(f_min, f_max, color="0.9", zorder=0, label="CSUMT band")
+
+    ax.set_yscale("log")
+    ax.set_xlabel("Depth (m)")
+    ax.set_ylabel("Frequency (Hz)")
+    ax.set_title(title)
+    ax.legend(loc="upper right")
+    return ax
 
 
 # ======================= sites-based analysis API ========================= #
@@ -640,4 +727,104 @@ def plot_depth_section(
 
     cb = plt.colorbar(im, ax=ax)
     cb.set_label("log10 depth (m)" if log_color else "depth (m)")
+    return ax
+
+
+def plot_depth_coverage_ranking(
+    sites: Any,
+    *,
+    depth_unit: str = "km",
+    flag_coarse_resolution: bool = True,
+    color_fine: str = "#2e6f9e",
+    color_coarse: str = "#c0392b",
+    title: str = "Per-station Bostick depth coverage",
+    ax: Any | None = None,
+    figsize: tuple[float, float] | None = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> Any:
+    """
+    Horizontal ranking of the deepest Bostick depth reached per station.
+
+    Reduces :func:`depth_coverage_table` to one horizontal bar per
+    station, sorted by ``depth_max_m`` descending -- the fastest way to
+    see which stations drive a line's overall depth coverage. When
+    *flag_coarse_resolution* is True, stations whose
+    ``median_resolution_m`` is coarser than the survey-wide median are
+    drawn in *color_coarse* rather than *color_fine*, so a station that
+    only reaches deep with coarse vertical resolution is visually
+    distinguished from one that reaches comparable depth with fine
+    resolution.
+
+    Parameters
+    ----------
+    sites : path, EDI-like, Sites, or iterable
+        Any input accepted by
+        :func:`~pycsamt.emtools._core.ensure_sites`.
+    depth_unit : {"km", "m"}, default="km"
+        Unit for the plotted depth axis.
+    flag_coarse_resolution : bool, default=True
+        Colour bars by whether the station's median vertical resolution
+        exceeds the survey-wide median.
+    color_fine, color_coarse : str
+        Bar colours for resolution at-or-finer than, and coarser than,
+        the survey median.
+    title : str
+    ax : matplotlib.axes.Axes, optional
+    figsize : (float, float), optional
+        Defaults to a height that grows with the station count.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+
+    Examples
+    --------
+    >>> from pycsamt.emtools.csumt import plot_depth_coverage_ranking
+    >>> ax = plot_depth_coverage_ranking("data/AMT/WILLY_DATA/L18PLT")
+    """
+    import matplotlib.pyplot as plt
+
+    coverage = depth_coverage_table(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    ).sort_values("depth_max_m", ascending=False)
+
+    if ax is None:
+        if figsize is None:
+            figsize = (9.0, max(3.0, 0.28 * len(coverage) + 1.0))
+        _, ax = plt.subplots(figsize=figsize)
+
+    if coverage.empty:
+        ax.text(
+            0.5, 0.5, "no data", ha="center", va="center",
+            transform=ax.transAxes,
+        )
+        return ax
+
+    scale = 1e-3 if depth_unit == "km" else 1.0
+    depth = coverage["depth_max_m"].to_numpy(float) * scale
+
+    if flag_coarse_resolution:
+        med_res = float(np.nanmedian(coverage["median_resolution_m"]))
+        coarse = coverage["median_resolution_m"].to_numpy(float) > med_res
+        colors = np.where(coarse, color_coarse, color_fine)
+    else:
+        colors = color_fine
+
+    y = np.arange(len(coverage))
+    ax.barh(y, depth, color=colors)
+    ax.set_yticks(y)
+    ax.set_yticklabels(coverage["station"].tolist(), fontsize=8)
+    ax.invert_yaxis()
+    ax.set_xlabel(f"Deepest Bostick depth reached ({depth_unit})")
+    ax.set_ylabel("Station")
+    ax.set_title(title)
     return ax

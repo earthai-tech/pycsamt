@@ -100,6 +100,36 @@ class TestTdemInfo:
         result = runner.invoke(main, ["tdem", "info", "/no/such/path"])
         assert result.exit_code != 0
 
+    def test_reports_nonzero_coordinate_points(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """Regression: ``coord_info["n_points"]`` used to read
+        ``coord.records``, an attribute :class:`TEMCoordinateTable` does
+        not have, so a folder with a real coordinate table still printed
+        ``Coordinates : 0 points``. A CSV table (no ``xlrd`` dependency)
+        is enough to exercise the same code path as the bundled
+        ``JIANGSU`` ``.xls`` table.
+        """
+        import shutil
+
+        for suffix in (".AVG", ".LOG", ".Z"):
+            shutil.copy(
+                _TEMAVG_DIR / f"TEM100{suffix}", tmp_path / f"TEM100{suffix}"
+            )
+        (tmp_path / "coordinates.csv").write_text(
+            "100,100,4291789.77,19510112.90,100.0,100.0,1102.95,\n"
+            "100,120,4291789.73,19510132.81,100.0,120.0,1103.04,\n",
+            encoding="utf-8",
+        )
+
+        result = runner.invoke(
+            main, ["tdem", "info", str(tmp_path), "--format", "json"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["has_coordinates"] is True
+        assert data["coordinates"]["n_points"] == 2
+
 
 # ---------------------------------------------------------------------------
 # pycsamt tdem convert

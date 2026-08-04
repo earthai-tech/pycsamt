@@ -4,19 +4,27 @@
 Version 2.2.0
 -------------
 
-pyCSAMT 2.2.0 |Feature| |Fix| |API Change| |Docs| |Build| |Tests|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pyCSAMT 2.2.0 |Feature| |New| |Fix| |Enhancement| |API Change| |Breaking| |Docs| |Build| |Tests|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Released 2026-07-30.*
+*Released 2026-08-04.*
 
-This release lands a genuine 3-D Maxwell training-data pipeline and an
-opt-in ``physics="mt3d"`` mode for :class:`~pycsamt.agents.Inv3DAgent`,
-fixes the research-only 3-D solver's layered-earth benchmark, and gets
-:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` -- the intended
-*production* 3-D backend -- physics-validated against a real compiled
-ModEM binary for the first time. It also adds cross-platform build
-tooling so users no longer have to hand-run ``make`` against the
-vendored Fortran sources to get there.
+This release lands genuine 3-D **and** triangular-mesh 2-D Maxwell
+training-data pipelines, an opt-in ``physics="mt3d"`` mode for
+:class:`~pycsamt.agents.Inv3DAgent` and a ``physics="mt2d_tri"`` mode for
+:class:`~pycsamt.agents.Inv2DAgent`, fixes the research-only 3-D solver's
+layered-earth benchmark, and gets
+:class:`~pycsamt.forward.maxwell.modem3d.ModEm3DAdapter` **and**
+:class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter` -- the
+project's two production external-solver backends -- physics-validated
+against real compiled binaries for the first time. Real topography is
+now threaded end to end through the triangular-mesh solver and the AI
+agents, three new tutorials exercise this against real field data
+(TEM/TEMAVG, Zonge AVG K1/K2, and CSAMT groundwater mapping), and a sweep
+through :mod:`pycsamt.emtools` fixed several real phase-tensor and
+frequency-editing bugs. It also adds cross-platform build tooling so
+users no longer have to hand-run ``make`` against the vendored Fortran
+sources to get there.
 
 Why this release matters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -200,6 +208,185 @@ script instead drives the existing
 See :doc:`/user_guide/models/compilation` for toolchain requirements
 and per-solver notes.
 
+A second 2-D path: triangular meshes and a real MARE2DEM adapter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Everything above validates the *rectilinear* 2-D/3-D Maxwell path
+(:mod:`~pycsamt.forward.maxwell.mt2d`/``mt3d``/``modem3d``). MARE2DEM,
+the project's other production 2-D backend, is a 2.5-D **finite-element**
+solver on an unstructured triangular mesh -- it does not use a
+rectilinear grid at all, so validating it required a parallel mesh and
+solver-contract track rather than reusing the rectilinear one.
+
+:mod:`pycsamt.forward.maxwell.contracts_tri` adds ``TriMesh``/``TriProblem``,
+a solver-neutral triangular-mesh contract that sits beside the existing
+rectilinear ``MaxwellProblem`` (:class:`~pycsamt.forward.maxwell.backends.BackendCapabilities`
+and :class:`~pycsamt.forward.maxwell.cache.MaxwellResultCache` were widened
+to accept either). On top of it:
+
+* :func:`pycsamt.forward.maxwell.tri_mesh_gen.build_graded_tri_mesh` builds
+  a real graded mesh with Shewchuk's Triangle library, refining cell size
+  by distance to the nearest station instead of tiling the whole domain
+  at one resolution -- replacing an earlier placeholder mesh generator
+  that produced a uniform checkerboard regardless of station geometry.
+  Building it surfaced a real Triangle segfault: an unconstrained vertex
+  resting exactly in the interior of a PSLG segment could crash quality
+  refinement; the mesh builder now splits the segment at that vertex
+  explicitly instead of leaving it encroaching.
+* :mod:`pycsamt.forward.maxwell.tri_fem2d` adds
+  :class:`~pycsamt.forward.maxwell.tri_fem2d.TriFEM2DAdapter`, a real,
+  in-house P1 Galerkin TE/TM finite-element solver on this mesh. Its
+  first version failed both analytic benchmarks with a sign-flipped
+  field; the weak form's integration-by-parts step had flipped the
+  stiffness term's sign relative to the strong-form PDE, caught by
+  comparing interior-vs-boundary residuals against a known analytic
+  field rather than by code inspection. Both benchmarks pass after the
+  fix.
+* :class:`pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter` wraps the
+  real, compiled MARE2DEM binary itself, reusing
+  :mod:`pycsamt.models.mare2dem`'s existing I/O layers plus two new
+  pieces: :mod:`pycsamt.models.mare2dem.tri_mesh` (a topography-aware
+  triangular FEM mesh builder that completes a piece ``builder.py``'s
+  own docstring had flagged as unimplemented) and
+  :mod:`pycsamt.models.mare2dem.triangle_exec` (a subprocess wrapper for
+  the Triangle executable MARE2DEM's own source build compiles as a
+  byproduct). As with ``ModEm3DAdapter`` in 2.1.0, this had never
+  actually been run against a compiled binary before this release;
+  building it for real (in an isolated WSL2 toolchain, since MARE2DEM
+  needs Intel's ``mpiifx``/``mpiicx`` and cannot build natively on
+  Windows) surfaced a real :class:`~pycsamt.models.mare2dem.SourceManager`
+  toolchain bug -- it invoked ``mpiifort``/``xiar``, names Intel's
+  current oneAPI toolchain no longer ships, instead of ``mpiifx``/
+  ``mpiicx``. Both analytic benchmarks now pass against the real binary.
+* :mod:`pycsamt.ai.training.dataset2d_tri` is the triangular-mesh
+  counterpart of :mod:`~pycsamt.ai.training.dataset2d`: it resamples
+  correlated resistivity fields onto triangle centroids and solves each
+  realization through ``TriFEM2DAdapter``, exposed as
+  ``Inv2DAgent(physics="mt2d_tri")``.
+
+Real topography, end to end
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``TriFEM2DAdapter`` originally assumed every receiver sat exactly at
+``z = 0`` -- a real bug, not a simplification: stations on real terrain
+were hard-rejected rather than draped onto it. ``topo_x_m``/``topo_z_m``
+are now threaded end to end, from ``build_graded_tri_mesh`` through
+``dataset2d_tri`` into ``Inv2DAgent``, and a new datum-shift-invariance
+benchmark checks that translating an entire survey's elevation datum
+does not change the recovered model.
+
+Visualizing that topography-draped output needed a mesh-drawing tool
+:mod:`pycsamt.api` didn't have. :func:`pycsamt.api.mesh.draw_mesh` and
+``PYCSAMT_MESH`` draw structured-mesh cell boundaries with independent
+fill/edge alpha via a two-layer ``pcolormesh``, with adapters for
+``MaxwellMesh`` and ``GeologyGrid``, and an opt-in ``show_mesh`` toggle
+on ``plot_inversion_result_2d``. Its first version had a real bug of its
+own, found immediately by using it on a draped section: the edge-overlay
+layer only handled 1-D rectilinear cell edges, not the 2-D coordinate
+arrays a topography-draped section returns.
+
+Three new tutorials on real field data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:doc:`/tutorials/process_temavg_survey` walks a real 51-station TEM100
+profile (:doc:`/theory/tdem_basics`'s TEM/TEMAVG family) from raw
+soundings through late-time apparent-resistivity conversion, geographic-
+coordinate attachment, EDI export and correction, a graded triangular
+mesh, and a gated Maxwell AI inversion. Building it surfaced three real
+bugs in :mod:`pycsamt.tdem` (below) and one CLI bug, all fixed with
+regression tests.
+
+:doc:`/tutorials/process_zonge_avg_k1_k2` walks two real Zonge AVG CSAMT
+lines -- K1 (legacy encoding, 47 stations) and K2 (modern encoding, 28
+stations sampled at 25 m receiver-midpoint intervals against 50 m survey
+pegs, requiring topography interpolation) -- through EDI conversion,
+native-AVG QC, and conditioning. A static-shift trial is run and
+explicitly *rejected* as too unstable (correction factors spanning
+0.10--14.51 for K1 and 0.13--45.67 for K2); the accepted chain is
+frequency-domain Hampel despiking followed by a Torres-Verdín-Bostick
+Hanning spatial static-shift correction. Both the AI-inversion gate and
+several diagnostics (capacitive-coupling correction, source-effect
+screening, phase-tensor rotation) are shown as explicit, honestly-
+labeled placeholders rather than fabricated, because the bundled data
+does not carry the measurements those diagnostics need.
+
+:doc:`/tutorials/map_groundwater_geology_from_csamt` walks a real
+single-component (Zxy-only) CSAMT survey through QC, static-shift and
+EMAP correction, a graded triangular mesh, and a gated AI inversion.
+Phase-tensor and Groom-Bailey distortion diagnostics are deliberately
+*not* shown: because only one of the four tensor components was ever
+measured, :math:`\mathrm{Re}(Z)` is singular, and the pinv-based
+fallback these diagnostics previously used produced a fixed, physically
+meaningless result regardless of the input data (verified by a closed-
+form proof reproduced in the tutorial). The tutorial shows that proof
+instead of the diagnostic plots it used to fabricate.
+
+Scaled-up AI-inversion reruns
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three previously-published tutorials reran their AI inversions at larger
+scale using the machinery above:
+
+* :doc:`/tutorials/map_porphyry_mineralization_from_noisy_amt` gained a
+  *genuine* combined-line 3-D inversion (both WILLY lines in one volume,
+  with topography and station labels, via
+  ``Inv3DAgent(physics="mt3d")``), replacing three "rejected legacy"
+  sections that documented the graph-only tiled 3-D fallback the new
+  non-uniform-mesh 3-D path no longer needs. Its 2-D inversion also
+  reran at 100 Maxwell realizations and a 100-epoch ceiling (up from 10
+  and 30); recovery :math:`R^2` moved from effectively zero to a small
+  positive value and the held-out set grew from 1 to 10 samples per
+  line, still short of a promotable result. A new "Tune this
+  configuration for a real deployment" section gives a concrete
+  before/after checklist plus a measured compute-cost breakdown: on the
+  documentation machine, generating each Maxwell realization costs
+  roughly 32 CPU-seconds versus well under 0.1 CPU-seconds per
+  realization-epoch trained -- raising ``n_train_profiles``, not
+  ``epochs``, is what makes a rerun expensive.
+* :doc:`/tutorials/condition_mt_line_with_tipper_and_rotation` reran both
+  the triangular-mesh MT2D and rectilinear MT3D KAP03 AI inversions at
+  200 realizations and a 100-epoch ceiling, with the mesh coarsened to
+  100 km depth (down from 250 km) to keep the MT3D run tractable, and
+  added station labels and topography to the comparison figure.
+
+A sweep of real bugs across ``emtools``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Building and reviewing the tutorials above surfaced several real,
+independent bugs in :mod:`pycsamt.emtools`:
+
+* **Phase-tensor alpha/beta swap** --
+  :func:`pycsamt.emtools.tensor._angles_deg` had the skew angle
+  ``beta`` and rotation angle ``alpha`` swapped, with a sign flip, so
+  every phase-tensor ellipse orientation and skew value the module
+  reported was wrong. Worked examples and figures were regenerated with
+  corrected numbers.
+* **Phase-tensor pseudosection display** --
+  ``plot_phase_tensor_psection`` had two independent display bugs: its
+  colorbar range for ``c_by in ("skew", "beta")`` was hardcoded to
+  ``+/-skew_threshold`` (effectively always ``+/-3 deg``) instead of the
+  data's own range, silently clipping any larger values; and its
+  reserved legend strip could stretch the y-frame far beyond the real
+  data if a single period was an outlier. Fixed to derive the colorbar
+  from data percentiles and draw legend artists in axes-fraction
+  coordinates.
+* **Frequency-drop left a stale rotation angle array** -- dropping or
+  masking frequencies re-sliced every per-frequency array *except*
+  ``rotation_angle``, leaving it at its original length while the
+  frequency axis shrank underneath it -- a latent shape mismatch for
+  any downstream code zipping the two together. The same fix (re-slice
+  with the same ``keep`` mask) was needed at three independent call
+  sites in :mod:`~pycsamt.emtools.frequency` and
+  :mod:`~pycsamt.emtools.remove_noise`, which is itself evidence this
+  was a real cross-cutting bug rather than a one-off typo.
+* **Strike-rose panel for tipper-less surveys** --
+  ``plot_strike_analysis`` always drew three rose panels
+  (strike/phase-tensor/tipper) even when a survey carried no tipper
+  data at all -- the common case for AMT/CSAMT -- leaving a permanently
+  empty third panel. It now detects tipper availability and draws two
+  panels when there is none. This changes the returned figure's axes
+  count for tipper-less surveys.
+
 Fixed
 ~~~~~
 
@@ -226,6 +413,47 @@ Fixed
   long-standing, unanchored ``build``/``_build``/``lib/`` patterns to
   the repo root; they had been silently swallowing new directories with
   matching names.
+* |Fix| **Triangular FEM solver sign error** -- the P1 Galerkin weak
+  form's stiffness term had the wrong sign relative to the strong-form
+  PDE; both analytic benchmarks now pass.
+* |Fix| **Triangle mesh generator segfault** -- an unconstrained vertex
+  encroaching on a PSLG segment could crash Triangle's quality
+  refinement; the segment is now split at that vertex explicitly.
+* |Fix| **MARE2DEM toolchain resolution** --
+  ``SourceManager`` invoked ``mpiifort``/``xiar``, names current Intel
+  oneAPI no longer ships; fixed to ``mpiifx``/``mpiicx``.
+* |Fix| **Triangular-mesh solver rejected real topography** --
+  ``TriFEM2DAdapter`` hard-rejected receivers not sitting exactly at
+  ``z = 0``; ``topo_x_m``/``topo_z_m`` are now threaded through the mesh
+  builder, the dataset pipeline, and ``Inv2DAgent``.
+* |Fix| **Mesh-display edge overlay on draped sections** -- ``draw_mesh``
+  only handled 1-D rectilinear cell edges, not the 2-D coordinate arrays
+  a topography-draped section returns.
+* |Fix| **3-D AI inversion rendering for single-line surveys** --
+  ``Inv3DAgent`` rendered a degenerate triangulated sliver for
+  single-line geometries; a profile-geometry detector now renders a
+  continuous, PCHIP-interpolated section instead.
+* |Fix| **2-D AI-inversion station labels collided with the title** --
+  fixed by switching from ``fig.subplots_adjust`` (defeated by
+  ``PlotConfig``'s default ``bbox_inches="tight"``) to a points-based
+  ``ax.set_title`` ``pad``.
+* |Fix| **Phase-tensor alpha/beta swap and pseudosection display bugs**
+  -- see "A sweep of real bugs across ``emtools``" above.
+* |Fix| **Frequency-drop left a stale rotation angle array** -- fixed at
+  three independent call sites in :mod:`~pycsamt.emtools.frequency` and
+  :mod:`~pycsamt.emtools.remove_noise`.
+* |Fix| **Strike-rose panel for tipper-less surveys** -- two panels
+  instead of three when no station carries tipper data; changes the
+  returned figure's axes count for tipper-less surveys.
+* |Fix| **TEM-derived EDI files** -- ``TEMtoEDI`` was silently dropping
+  its ``>HEAD`` section for non-geographic coordinates, never wrote the
+  mandatory ``>=DEFINEMEAS``/``>=MTSECT`` sections, and built impedance
+  magnitude with the SI convention instead of pyCSAMT's field-unit
+  convention (resistivity wrong by a factor of roughly 6e5). All three
+  fixed with regression tests.
+* |Fix| **``pycsamt tdem info`` coordinate count** -- read a nonexistent
+  ``coord.records`` attribute instead of ``coord.n_points``, always
+  reporting zero points.
 
 Added
 ~~~~~
@@ -246,25 +474,85 @@ Added
   the ``pycsamt build`` CLI.
 * |Docs| :doc:`/user_guide/models/compilation` and
   :doc:`/user_guide/ai_inversion/dataset3d`.
+* |Feature| :mod:`pycsamt.forward.maxwell.contracts_tri`,
+  :mod:`~pycsamt.forward.maxwell.tri_fem2d`, and
+  :func:`~pycsamt.forward.maxwell.tri_mesh_gen.build_graded_tri_mesh` --
+  a triangular-mesh 2-D Maxwell FEM solver and graded mesh generator.
+* |Feature| :class:`pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter`,
+  :mod:`pycsamt.models.mare2dem.tri_mesh`, and
+  :mod:`pycsamt.models.mare2dem.triangle_exec` -- a real MARE2DEM
+  external-solver adapter, physics-validated against a compiled binary.
+* |Feature| :mod:`pycsamt.ai.training.dataset2d_tri` -- triangular-mesh
+  2-D training data, exposed as ``Inv2DAgent(physics="mt2d_tri")``.
+* |Feature| :func:`pycsamt.api.mesh.draw_mesh` / ``PYCSAMT_MESH`` --
+  reusable mesh-display utility, plus an opt-in ``show_mesh`` toggle on
+  ``plot_inversion_result_2d``.
+* |Feature| :func:`pycsamt.emtools.csumt.plot_frequency_schedule`.
+* |New| Three tutorials: :doc:`/tutorials/process_temavg_survey`,
+  :doc:`/tutorials/process_zonge_avg_k1_k2`, and
+  :doc:`/tutorials/map_groundwater_geology_from_csamt`.
+* |Tests| Regression coverage for the triangular-mesh contracts,
+  solver, mesh generator, MARE2DEM adapter, ``dataset2d_tri``, the
+  mesh-display utility, and every ``emtools``/``tdem``/CLI fix above.
+* |Docs| :doc:`/api_guide/mesh` and a deepened
+  :doc:`/user_guide/ai_inversion/index` (ten pages, new glossary
+  entries).
+
+Removed
+~~~~~~~
+
+* |Breaking| **Rejected-legacy 3-D AI-inversion sections** -- dropped
+  from :doc:`/tutorials/map_porphyry_mineralization_from_noisy_amt`,
+  superseded by the genuine combined-line 3-D inversion described above.
 
 Docs & tooling
 ~~~~~~~~~~~~~~
 
 * |Build| **Stricter line length** -- ``ruff``'s configured line length
   tightened from 97 to 79 characters, with a repo-wide reflow to match.
+* |Build| **New dependencies** -- ``triangle>=20220202`` (core, backs
+  the graded triangular mesh) and ``xlrd>=2.0`` (``docs`` extra, legacy
+  ``.xls`` TEM coordinate tables).
+* |Build| **Netlify docs deploys gated to a dedicated branch** -- the
+  release Build Hook now force-pushes the tagged commit to a bot-only
+  ``docs-deploy`` branch instead of setting ``trigger_branch`` to the
+  tag name, which Netlify cannot resolve.
+* |Build| **CI "interfaces" shard** -- split into ``interfaces-desktop``
+  and ``interfaces-cli``, and fixed two tests that were crawling the
+  full 2,790-station JIANGSU survey instead of a subset.
 
 Compatibility
 ~~~~~~~~~~~~~
 
-Nothing in this release changes default behaviour. ``Inv3DAgent`` and
+Default behaviour is unchanged for existing users. ``Inv3DAgent`` and
 ``Inv2DAgent`` both still default to ``physics="mt1d"``; the new
-``physics="mt3d"``/``physics="mt2d"`` modes and every new
-``cells_per_skin_depth``-style parameter are opt-in. Existing
-``ModEm3DAdapter`` users on grids with fewer than 10 earth z-cells will
-now see an explicit, actionable preflight error instead of a solver
-crash producing NaNs -- add earth z-cells rather than treating this as
-a regression.
+``physics="mt3d"``/``physics="mt2d"``/``physics="mt2d_tri"`` modes and
+every new ``cells_per_skin_depth``-/``topo_x_m``-style parameter are
+opt-in. Existing ``ModEm3DAdapter`` users on grids with fewer than 10
+earth z-cells will now see an explicit, actionable preflight error
+instead of a solver crash producing NaNs -- add earth z-cells rather
+than treating this as a regression.
+
+Three fixes are worth a closer look before upgrading:
+
+* Any resistivity value previously reloaded from a ``TEMtoEDI``-produced
+  EDI file was wrong by a factor of roughly ``6e5`` (an SI-vs-field-unit
+  convention bug); those files should be regenerated from source, not
+  patched.
+* ``pycsamt.emtools.tensor``'s phase-tensor orientation/skew values were
+  wrong for every user of that module before this release (the
+  alpha/beta swap); anything derived from them -- saved figures, strike
+  analyses, written reports -- should be treated as suspect and
+  regenerated.
+* ``plot_strike_analysis`` now returns a 2-axes figure instead of 3 for
+  tipper-less surveys; code indexing its returned axes by position
+  should be checked.
 
 See :doc:`/user_guide/ai_inversion/dataset3d` for the 3-D training-data
 walkthrough and :doc:`/user_guide/models/compilation` for build
-instructions.
+instructions. The triangular-mesh 2-D path
+(:mod:`~pycsamt.ai.training.dataset2d_tri`,
+``Inv2DAgent(physics="mt2d_tri")``) does not yet have a dedicated
+user-guide page -- see :doc:`/tutorials/process_temavg_survey` and
+:doc:`/tutorials/map_groundwater_geology_from_csamt` for worked examples
+in the meantime.

@@ -318,7 +318,7 @@ reimplementation:
 * its source is **not vendored** (``pycsamt/models/mare2dem/_source/`` ships
   only a ``.gitkeep`` -- the real tree is roughly 49 MB and under its own
   license), so it has to be downloaded first;
-* it genuinely needs Intel ``mpiifort``/``mpiicc`` and the Intel MKL for
+* it genuinely needs an Intel MPI Fortran/C toolchain and the Intel MKL for
   ScaLAPACK/BLACS -- there is no generic gfortran/conda path for it the way
   there is for ModEM and Occam2D;
 * it **cannot be built natively on Windows at all** --
@@ -355,11 +355,195 @@ which runs the same two calls documented on
    >>> sm.download()          # clones from Bitbucket, or falls back to a tar.gz
    >>> sm.build()              # generates a Make include, compiles, locates the binary
 
-There is no compiled ``MARE2DEM`` binary in the environment this page was
-written in (Intel oneAPI is not installed here), so the download/build call
-above is not shown with fabricated output -- run it yourself once the
-prerequisites are in place, and ``sm.print_status()`` will confirm what
-happened.
+**This has now genuinely been done, inside WSL2 Ubuntu with Intel's free
+oneAPI toolchain (2026.1)** -- everything below is real output from that
+build, not a description of a remaining risk. It surfaced several real bugs
+in ``SourceManager`` itself, all fixed in place; the sections after this one
+walk through what they were.
+
+Setting up the toolchain
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Intel oneAPI is not preinstalled on a plain Ubuntu (or WSL2 Ubuntu) image.
+Installed from Intel's own apt repository:
+
+.. code-block:: bash
+
+   wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+       | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+   echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+       | sudo tee /etc/apt/sources.list.d/oneAPI.list
+   sudo apt-get update
+   sudo apt-get install -y intel-oneapi-compiler-fortran intel-oneapi-mpi-devel intel-oneapi-mkl-devel
+
+   source /opt/intel/oneapi/setvars.sh
+
+``setvars.sh`` has to be sourced in every new shell that will build or run
+MARE2DEM -- it puts ``mpiifx``/``mpiicx``/``ifx``/``icx`` and the MKL
+runtime libraries on ``PATH``/``LD_LIBRARY_PATH``. ``SourceManager`` does
+not source it for you (it cannot -- that has to happen in the calling
+shell before Python even starts), which is why ``print_status()``/``build()``
+report an unusable toolchain if you forget this step.
+
+Real status, real build
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: pycon
+
+   >>> from pycsamt.models.mare2dem import Mare2DEMConfig, SourceManager
+   >>> cfg = Mare2DEMConfig(source_dir="/root/build/mare2dem")
+   >>> sm = SourceManager(config=cfg, verbose=1)
+   >>> sm.print_status()
+   MARE2DEM SourceManager status
+   ────────────────────────────────────────
+     source_dir  : /root/build/mare2dem
+     downloaded  : True
+     built       : False
+     binary      : (not found)
+     FC compiler : mpiifx
+     CC compiler : mpiicx
+     MKLROOT     : /opt/intel/oneapi/mkl/2026.1
+
+``FC compiler``/``CC compiler`` read ``mpiifx``/``mpiicx`` here, not the
+``mpiifort``/``mpiicc`` this page used to show -- see `A real toolchain bug,
+found and fixed`_ below for why that distinction matters.
+
+.. code-block:: pycon
+
+   >>> binary = sm.build()
+
+.. code-block:: console
+
+   Building MARE2DEM (this may take several minutes) …
+     FC = mpiifx
+     CC = mpiicx
+     MKLROOT = /opt/intel/oneapi/mkl/2026.1
+     Include file = /root/build/mare2dem/_pycsamt_build/pycsamt_auto.inc
+
+   mpiicx -O2 -fPIC -std=gnu89  -c -o triangle.o -DTRILIBRARY -O2 -fPIC triangle.c
+   triangle.c:12871:6: warning: a function definition without a prototype is
+   deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   ...
+   115 warnings generated.
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mt1d.o mt1d.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o kx_io.o kx_io.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o em2dkx.o em2dkx.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o dc2dkx.o dc2dkx.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mare2dem_scalapack.o mare2dem_scalapack.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o occam.o occam.f90
+   mpiicx -O2 -fPIC -std=gnu89  -c -o c_fortran_triangle.o c_fortran_triangle.c
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o filtermodules.o filtermodules.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mare2dem_common.o mare2dem_common.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o spline_kx_module.o spline_kx_module.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mare2dem_worker.o mare2dem_worker.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mare2dem_mpi.o mare2dem_mpi.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mare2dem_penaltymatrix.o mare2dem_penaltymatrix.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o mare2dem_io.o mare2dem_io.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o em2d.o em2d.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC -c -o runmare2dem.o runmare2dem.f90
+   mpiifx -cxxlib -O2 -fpp -fPIC em_constants.o kdtree2.o ... runmare2dem.o \
+       ./libraries/scalapack-2.2.0/libscalapack.a \
+       -L/opt/intel/oneapi/mkl/2026.1/lib -Wl,-rpath,/opt/intel/oneapi/mkl/2026.1/lib \
+       -I/opt/intel/oneapi/mkl/2026.1/include -lmkl_intel_lp64 -lmkl_sequential \
+       -lmkl_core -lpthread -lm -ldl -o MARE2DEM
+   #
+   # All done!
+   #
+
+   MARE2DEM binary ready: /root/build/mare2dem/MARE2DEM
+
+The ``triangle.c`` warnings (``-Wdeprecated-non-prototype``, 115 of them) are
+expected and harmless -- Triangle's own C source predates modern function-
+prototype conventions by decades; ``icx`` warns about it but still compiles
+it correctly. ScaLAPACK's BLACS layer (``./libraries/scalapack-2.2.0/``, not
+shown above since it only needs building once and was already cached here)
+produces a similar, equally harmless volume of ``-std=gnu89`` compatibility
+output the first time it is built. Point
+:class:`~pycsamt.models.mare2dem.Mare2DEMConfig` at the result the same way
+:doc:`mare2dem` already shows:
+
+.. code-block:: pycon
+
+   >>> cfg = Mare2DEMConfig(binary=str(binary), use_mpi=True, n_procs=4)
+
+A real physics check, not just a compile check
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A binary that compiles is not the same claim as a binary that produces
+correct physics. ``pycsamt/forward/tests/test_maxwell_mare2dem.py`` has a
+``requires_real_mare2dem``-gated test that only runs when
+``PYCSAMT_MARE2DEM_BINARY`` points at a real executable (and ``mpirun`` is
+on ``PATH``) -- it solves a real half-space forward problem through
+:class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter` and checks the
+result against the analytic
+:func:`~pycsamt.forward.maxwell.benchmarks.half_space_impedance` formula:
+
+.. code-block:: console
+
+   $ export PYCSAMT_MARE2DEM_BINARY=/root/build/mare2dem/MARE2DEM
+   $ python -m pytest pycsamt/forward/tests/test_maxwell_mare2dem.py -k real -v
+   pycsamt/forward/tests/test_maxwell_mare2dem.py::test_real_mare2dem_passes_half_space_benchmark PASSED
+   ======================= 1 passed in 1.13s =======================
+
+This is the adapter-level counterpart to the compile-level bugs below --
+getting MARE2DEM to *build* surfaced the toolchain issues on this page;
+getting a real solve to match known physics surfaced four further, genuinely
+different bugs in how :class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter`
+talks to the compiled binary (mesh input format, resistivity units, required
+filename conventions). None of those are build issues -- see that module's
+own docstring for the full account, since they belong there, not here.
+
+A real toolchain bug, found and fixed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before this real build, ``SourceManager`` detected and generated Make
+include flags for the *classic* Intel toolchain
+(``mpiifort``/``mpiicc``/``xiar``, the same names the vendored example
+include files ``habanero.inc``/``macos.inc`` use). That toolchain is gone or
+broken on a current oneAPI installation (2024.0+):
+
+* ``mpiifort`` is either absent, or present but internally tries to exec
+  the now-removed classic ``ifort`` and fails with ``eval: ifort: not
+  found``.
+* ``xiar`` (the classic Intel archiver) no longer exists at all.
+* The vendored ``TRICOPTS`` example (``-fp-model precise -fp-model
+  source``) is classic-``icc``-only syntax; ``icx`` rejects it outright
+  (``unsupported argument 'source' to option '-ffp-model='``).
+
+None of this is a documentation gap -- it is exactly the kind of thing that
+only a real build run finds, and it would have failed identically for
+anyone following the previous version of this page on a current oneAPI
+install. Fixed in ``pycsamt/models/mare2dem/source.py``:
+
+#. Compiler detection now tries ``mpiifx``/``mpiicx`` (the modern wrappers
+   for ``ifx``/``icx``) first, falling back to the classic
+   ``mpiifort``/``mpiicc`` only for older oneAPI installations where they
+   still genuinely work.
+#. The generated ``ARCH`` line is always plain ``ar`` now, not conditionally
+   ``xiar`` -- GNU ``ar`` links ``ifx``-compiled object files on Linux/macOS
+   fine, confirmed by the build above.
+#. ``TRICOPTS`` is simplified to ``-O2 -fPIC`` unconditionally; the
+   fp-model flags were never required for correctness, just inherited from
+   the vendored example.
+#. Two flags this page's previous version did not mention at all, both
+   required for a successful link/compile and both visible in the real
+   transcript above: ``-cxxlib`` in ``FFLAGS`` (``ifx``-specific; the final
+   link fails without it) and ``-std=gnu89`` in ``CFLAGS`` (the vendored
+   BLACS/ScaLAPACK C sources rely on 1990s-style implicit function
+   declarations that both ``icx`` and modern GCC reject under their C99+
+   defaults otherwise -- ``error: call to undeclared function
+   'BI_imvcopy'``, among others, without it).
+
+Two further, smaller fixes worth knowing if you build on a different
+system: ``call_triangle.f90``'s ``#IF DEFINED(...)``-style preprocessor
+directives are uppercase, which only Intel's ``-fpp`` accepts case-
+insensitively -- GNU-style ``-cpp`` does not, so a gfortran-based attempt at
+this build fails on that file specifically, which is also why there is no
+gfortran/conda fallback path for MARE2DEM the way there is for ModEM and
+Occam2D. And ``MKLLIB`` now always adds ``-Wl,-rpath,<mklroot>/lib``, so the
+built binary finds its MKL runtime libraries without needing
+``setvars.sh``/``LD_LIBRARY_PATH`` sourced again at *run* time, only at
+*build* time.
 
 .. _solver_windows_binaries:
 
@@ -412,6 +596,30 @@ installs a versioned binary (``gfortran-14``) without an unversioned
 ``gfortran`` symlink when multiple GCC versions coexist. Re-run the build
 script; its own detection already searches versioned names, so this
 typically resolves itself on retry once ``brew`` has finished linking.
+
+**``eval: ifort: not found`` while building MARE2DEM** -- ``mpiifort`` is
+present on ``PATH`` but is a wrapper for the classic ``ifort``, which
+current oneAPI releases no longer ship. ``SourceManager`` now prefers
+``mpiifx`` automatically (see `A real toolchain bug, found and fixed`_
+above); if you still see this, your oneAPI installation predates the fix
+being able to find ``mpiifx`` at all -- install ``intel-oneapi-compiler-
+fortran`` from a current oneAPI release, or pass an explicit
+``inc_file=`` to :meth:`~pycsamt.models.mare2dem.SourceManager.build` for
+your cluster's own toolchain.
+
+**``error: call to undeclared function 'BI_imvcopy'`` (or similar) while
+building MARE2DEM's ScaLAPACK dependency** -- a pre-2026 ``SourceManager``
+did not pass ``-std=gnu89`` to the C compiler; the vendored BLACS sources
+rely on implicit function declarations that both ``icx`` and modern GCC
+reject by default under C99+. Already fixed in ``_generate_inc`` -- if you
+see this with a current pycsamt, you are likely using a hand-written
+``inc_file=`` that needs the same flag added.
+
+**``unsupported argument 'source' to option '-ffp-model='`` while building
+MARE2DEM** -- the vendored example include files' ``TRICOPTS`` value
+(``-fp-model precise -fp-model source``) is classic-``icc``-only syntax;
+already dropped from the auto-generated include file (see above). Only
+relevant if you are editing a Make include file by hand.
 
 Related Reading
 ---------------

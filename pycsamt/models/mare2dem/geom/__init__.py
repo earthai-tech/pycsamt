@@ -33,7 +33,7 @@ simplify_poly
     (``m2d_simplify_poly``).
 """
 
-from .area_of_interest import estimate_area_of_interest
+from .area_of_interest import estimate_area_of_interest, survey_points
 from .centroids import (
     get_centroids,
     triangle_areas,
@@ -70,6 +70,7 @@ __all__ = [
     "ELLIPSOIDS",
     # area of interest
     "estimate_area_of_interest",
+    "survey_points",
     # triangle region assignment
     "get_triangle_regions",
     # line orientation

@@ -236,6 +236,7 @@ class PINNInverter2D(BasePINNInverter):
             epochs=self.epochs,
             device=dev,
             log_every=_every,
+            verbose=verbose,
         )
         self._history = self._result["history"]
         self._is_fitted = True

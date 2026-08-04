@@ -303,6 +303,18 @@ class Pipeline(PipelineBase):
         if out is not None:
             out.save_pipeline_config(yaml_str)
 
+        use_log = cfg.show_progress and cfg.progress_style == "log"
+        bar = None
+        if cfg.show_progress and cfg.progress_style == "bar":
+            from pycsamt.api.view.progress import get_progress_bar
+
+            bar = get_progress_bar(
+                total=len(self._steps),
+                desc=self.name,
+                unit="step",
+                verbose=1,
+            )
+
         # ── Main loop ─────────────────────────────────────────────────
         for step_idx, (label, step) in enumerate(self._steps, start=1):
             n_in = _count_sites(current_sites)
@@ -312,9 +324,14 @@ class Pipeline(PipelineBase):
             sites_after = current_sites
 
             # Progress output
-            if cfg.show_progress and cfg.progress_style != "silent":
+            if use_log:
                 _print_step_start(
                     step_idx, len(self._steps), label, step.spec.code
+                )
+            elif bar is not None:
+                bar.set_description(
+                    f"[{step_idx}/{len(self._steps)}] "
+                    f"{label} [{step.spec.code}]"
                 )
 
             # --- Transform -------------------------------------------
@@ -324,6 +341,8 @@ class Pipeline(PipelineBase):
                 error = exc
                 if cfg.on_step_error == "raise":
                     self._running = False
+                    if bar is not None:
+                        bar.close()
                     raise
                 elif cfg.on_step_error == "warn":
                     warnings.warn(
@@ -379,8 +398,19 @@ class Pipeline(PipelineBase):
             step_results.append(sr)
             current_sites = sites_after
 
-            if cfg.show_progress and cfg.progress_style != "silent":
+            if use_log:
                 _print_step_done(sr)
+            elif bar is not None:
+                bar.update(
+                    1,
+                    metrics={
+                        "status": "ok" if sr.ok else "ERROR",
+                        "elapsed": f"{sr.elapsed_sec:.2f}s",
+                    },
+                )
+
+        if bar is not None:
+            bar.close()
 
         # ── Post-run ──────────────────────────────────────────────────
         total_elapsed = time.perf_counter() - t_start
@@ -434,7 +464,7 @@ class Pipeline(PipelineBase):
             pipeline_name=self.name,
         )
 
-        if cfg.show_progress and cfg.progress_style != "silent":
+        if use_log or (cfg.show_progress and cfg.progress_style == "bar"):
             _print_run_done(result)
 
         return result

@@ -149,6 +149,8 @@ class TorchBackend(NeuralBackend):
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
 
+        from pycsamt.api.view.progress import get_progress_bar
+
         dev = self.resolve_device(device)
         model = model.to(dev)
 
@@ -174,45 +176,47 @@ class TorchBackend(NeuralBackend):
         train_losses, val_losses = [], []
         no_improve = 0
 
-        for ep in range(1, epochs + 1):
-            model.train()
-            ep_loss = 0.0
-            for xb, yb in loader:
-                xb, yb = xb.to(dev), yb.to(dev)
-                pred = model(xb)
-                l = loss_fn(pred, yb)
-                opt.zero_grad()
-                l.backward()
-                if grad_clip:
-                    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-                opt.step()
-                ep_loss += l.item() * len(xb)
-            ep_loss /= len(X_train)
+        with get_progress_bar(
+            total=epochs, desc="[torch]", unit="epoch", verbose=verbose
+        ) as bar:
+            for ep in range(1, epochs + 1):
+                model.train()
+                ep_loss = 0.0
+                for xb, yb in loader:
+                    xb, yb = xb.to(dev), yb.to(dev)
+                    pred = model(xb)
+                    l = loss_fn(pred, yb)
+                    opt.zero_grad()
+                    l.backward()
+                    if grad_clip:
+                        nn.utils.clip_grad_norm_(
+                            model.parameters(), grad_clip
+                        )
+                    opt.step()
+                    ep_loss += l.item() * len(xb)
+                ep_loss /= len(X_train)
 
-            model.eval()
-            with torch.no_grad():
-                v_loss = loss_fn(model(Xva), yva).item()
+                model.eval()
+                with torch.no_grad():
+                    v_loss = loss_fn(model(Xva), yva).item()
 
-            sched.step(v_loss)
-            train_losses.append(ep_loss)
-            val_losses.append(v_loss)
+                sched.step(v_loss)
+                train_losses.append(ep_loss)
+                val_losses.append(v_loss)
 
-            if v_loss < best_val - 1e-6:
-                best_val = v_loss
-                best_state = copy.deepcopy(model.state_dict())
-                no_improve = 0
-            else:
-                no_improve += 1
+                if v_loss < best_val - 1e-6:
+                    best_val = v_loss
+                    best_state = copy.deepcopy(model.state_dict())
+                    no_improve = 0
+                else:
+                    no_improve += 1
 
-            if verbose and (ep % max(1, epochs // 10) == 0 or ep == 1):
-                print(
-                    f"  [torch]  ep {ep:>4d}/{epochs}  "
-                    f"train={ep_loss:.5f}  val={v_loss:.5f}"
-                )
-            if no_improve >= patience:
-                if verbose:
-                    print(f"  Early stop at epoch {ep}")
-                break
+                bar.update(1, metrics={"train": ep_loss, "val": v_loss})
+
+                if no_improve >= patience:
+                    if bar.verbose:
+                        print(f"  Early stop at epoch {ep}")
+                    break
 
         if best_state is not None:
             model.load_state_dict(best_state)

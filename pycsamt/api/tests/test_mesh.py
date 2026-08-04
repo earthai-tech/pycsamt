@@ -19,11 +19,14 @@ from pycsamt.api import (
     cell_edges_from_centres,
     configure_mesh,
     draw_mesh,
+    draw_tri_mesh,
     edges_from_geology_grid,
     edges_from_maxwell_mesh,
     reset_mesh,
+    triangulation_from_tri_mesh,
 )
 from pycsamt.forward.maxwell.contracts import MaxwellMesh
+from pycsamt.forward.maxwell.contracts_tri import TriMesh
 
 
 def test_mesh_presets_are_available():
@@ -199,3 +202,106 @@ def test_mesh_reset_restores_defaults():
     reset_mesh()
 
     assert PYCSAMT_MESH.diagram.edge.linewidth != 5.0
+
+
+# ---------------------------------------------------------------------------
+# Triangular mesh (draw_tri_mesh / triangulation_from_tri_mesh)
+# ---------------------------------------------------------------------------
+
+
+def _tri_mesh():
+    return TriMesh(
+        [[0, 0], [1000, 0], [1000, 500], [0, 500]],
+        [[0, 1, 2], [0, 2, 3]],
+    )
+
+
+def test_triangulation_from_tri_mesh_matches_nodes_and_triangles():
+    mesh = _tri_mesh()
+    tri = triangulation_from_tri_mesh(mesh)
+    np.testing.assert_array_equal(tri.x, mesh.nodes_m[:, 0])
+    np.testing.assert_array_equal(tri.y, mesh.nodes_m[:, 1])
+    np.testing.assert_array_equal(tri.triangles, mesh.triangles)
+
+
+def test_draw_tri_mesh_filled_preset_has_no_edge_collection():
+    """The 'filled' preset should draw only the color fill."""
+    fig, ax = plt.subplots()
+    mesh = _tri_mesh()
+
+    fill, edges = draw_tri_mesh(ax, mesh, [1.0, 2.0], preset="filled")
+
+    assert fill is not None
+    assert edges is None
+    assert len(ax.collections) == 1
+    plt.close(fig)
+
+
+def test_draw_tri_mesh_review_preset_returns_both_layers():
+    """The 'review' preset should draw fill and edges with independent alpha."""
+    fig, ax = plt.subplots()
+    mesh = _tri_mesh()
+    style = MeshStyle(
+        fill=MeshFillStyle(show=True, alpha=1.0),
+        edge=MeshEdgeStyle(show=True, alpha=0.3),
+    )
+
+    fill, edges = draw_tri_mesh(ax, mesh, [1.0, 2.0], style=style)
+
+    assert fill is not None
+    assert edges is not None
+    assert fill.get_alpha() != edges[0].get_alpha()
+    plt.close(fig)
+
+
+def test_draw_tri_mesh_diagram_preset_has_no_fill():
+    """The 'diagram' preset should draw edges only, values optional."""
+    fig, ax = plt.subplots()
+    mesh = _tri_mesh()
+
+    fill, edges = draw_tri_mesh(ax, mesh, preset="diagram")
+
+    assert fill is None
+    assert edges is not None
+    plt.close(fig)
+
+
+def test_draw_tri_mesh_toggle_off_via_style():
+    """A style with both layers off should draw nothing."""
+    fig, ax = plt.subplots()
+    mesh = _tri_mesh()
+    style = MeshStyle(
+        fill=MeshFillStyle(show=False),
+        edge=MeshEdgeStyle(show=False),
+    )
+
+    fill, edges = draw_tri_mesh(ax, mesh, style=style)
+
+    assert fill is None
+    assert edges is None
+    assert len(ax.collections) == 0
+    plt.close(fig)
+
+
+def test_draw_tri_mesh_requires_values_for_fill():
+    """Requesting a fill layer without values should raise, not silently skip."""
+    fig, ax = plt.subplots()
+    mesh = _tri_mesh()
+
+    with pytest.raises(ValueError, match="values"):
+        draw_tri_mesh(ax, mesh, values=None, preset="filled")
+    plt.close(fig)
+
+
+def test_draw_tri_mesh_shares_presets_with_draw_mesh():
+    """draw_tri_mesh should read the same PYCSAMT_MESH presets as draw_mesh."""
+    reset_mesh()
+    fig, ax = plt.subplots()
+    mesh = _tri_mesh()
+
+    configure_mesh(review__edge__linewidth=2.5)
+    fill, edges = draw_tri_mesh(ax, mesh, [1.0, 2.0], preset="review")
+    assert edges[0].get_linewidth() == 2.5
+
+    reset_mesh()
+    plt.close(fig)

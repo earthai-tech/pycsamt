@@ -688,9 +688,14 @@ class PhaseTensorEllipseStyle:
 
     Parameters
     ----------
-    normalise_by : ``"cell"`` | ``"unity"`` | ``"abs"``
+    normalise_by : ``"shape"`` | ``"cell"`` | ``"unity"`` | ``"abs"``
         Size normalisation strategy:
 
+        ``"shape"``
+            Give every ellipse a constant displayed major axis and encode
+            only the absolute s2/s1 aspect ratio. This is useful for dense,
+            MTpy-like pseudosections where tensor magnitude would otherwise
+            obscure ellipse shape.
         ``"cell"``
             The 90th-percentile s1 fills *scale* of its grid cell.
             Relative sizes are preserved across stations/periods.

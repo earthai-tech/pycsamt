@@ -782,12 +782,23 @@ def _build_z_array(
     Construct complex impedance tensor array from apparent resistivity
     and phase (1-D earth assumption).
 
+    pyCSAMT's EDI/:class:`~pycsamt.z.z.Z` convention stores impedance in
+    field units (mV/km per nT), where apparent resistivity is recovered
+    with the practitioner formula
+    :math:`\rho_a=0.2\,|Z|^2/f` (see
+    :meth:`pycsamt.z.resphase.ResPhase.compute_resistivity_phase`) --
+    *not* the SI formula :math:`\rho_a=|Z|^2/(\omega\mu_0)`. ``|Z_{xy}|``
+    is therefore built with the exact inverse of that field-unit formula,
+    the same one used by
+    :meth:`~pycsamt.z.resphase.ResPhase.set_res_phase`, so that every
+    ``Site.rho``/``Site.phase`` consumer recovers this module's own
+    ``rho_a`` after an EDI write/read round trip:
+
     .. math::
 
-        |Z_{xy}(\omega)| = \sqrt{\rho_a(\omega)\,\omega\,\mu_0}
+        |Z_{xy}(f)| = \sqrt{5\,f\,\rho_a(f)}
     """
-    omega = 2.0 * np.pi * freq
-    Z_mag = np.sqrt(rho_a * omega * MU0)
+    Z_mag = np.sqrt(5.0 * freq * rho_a)
     phi_rad = np.radians(phase_xy_deg)
     Z_xy = Z_mag * (np.cos(phi_rad) + 1j * np.sin(phi_rad))
     n = len(freq)
@@ -805,12 +816,14 @@ def _z_error_from_rho_error(
     r"""
     Propagate apparent-resistivity uncertainty to impedance uncertainty.
 
+    Uses the same field-unit :math:`|Z|=\sqrt{5f\rho_a}` convention as
+    :func:`_build_z_array`.
+
     .. math::
 
         \delta|Z| = \frac{\delta\rho_a}{2\rho_a} \cdot |Z|
     """
-    omega = 2.0 * np.pi * freq
-    Z_mag = np.sqrt(rho_a * omega * MU0)
+    Z_mag = np.sqrt(5.0 * freq * rho_a)
     with np.errstate(divide="ignore", invalid="ignore"):
         dZ = np.where(rho_a > 0.0, rho_err / (2.0 * rho_a) * Z_mag, np.nan)
     n = len(freq)
@@ -1735,6 +1748,7 @@ class TEMtoEDI(PyCSAMTObject):
         if z_err is not None:
             edi.Z.z_err = z_err
         self._set_head(edi, result)
+        self._set_meas(edi, result)
         return edi
 
     @staticmethod
@@ -1752,13 +1766,25 @@ class TEMtoEDI(PyCSAMTObject):
     @staticmethod
     def _set_head(edi, result: dict) -> None:
         cfg = result.get("loop_config", "central")
+        x = float(result.get("x", 0.0))
+        y = float(result.get("y", 0.0))
+        # ``TEMSounding.x``/``.y`` are only guaranteed to be geographic
+        # decimal degrees when the caller has already reprojected them
+        # (as :class:`~pycsamt.zonge.avg.AVG` does via ``convert_coords``).
+        # A ``TEMCoordinateTable`` instead carries local survey metres,
+        # which fail :class:`~pycsamt.loc.Location` validation. Assigning
+        # them unconditionally used to raise inside this block and, since
+        # the whole block was wrapped in a bare ``except``, silently
+        # dropped the entire ``>HEAD`` section, producing an invalid EDI.
+        is_geographic = abs(x) <= 180.0 and abs(y) <= 90.0
         try:
             from ..seg.heads import Head
 
             head = Head()
             head.dataid = result["station_name"] or "TEM_SITE"
-            head.lon = float(result.get("x", 0.0))
-            head.lat = float(result.get("y", 0.0))
+            if is_geographic:
+                head.lon = x
+                head.lat = y
             head.elev = float(result.get("elevation", 0.0))
             head.acqby = "pyCSAMT.tdem"
             head.fileby = "pyCSAMT.tdem"
@@ -1769,14 +1795,62 @@ class TEMtoEDI(PyCSAMTObject):
         try:
             from ..seg.heads import Info
 
-            info = Info()
-            info.info_list = [
+            info_list = [
                 "Data origin: TEM (time-domain EM) transformed to MT equivalent",
                 "Transform: pycsamt.tdem.transform.TEMtoEDI",
                 f"Loop configuration: {cfg}",
                 "Z_xx = Z_yy = 0 (1-D assumption); Z_yx = -Z_xy",
             ]
+            if not is_geographic:
+                info_list.append(
+                    f"Local survey coordinates (not geographic): x={x}, y={y}"
+                )
+            info = Info()
+            info.info_list = info_list
             edi.add_section("info", info)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _set_meas(edi, result: dict) -> None:
+        """Attach the ``>=DEFINEMEAS``/``>=MTSECT`` sections.
+
+        Every :class:`~pycsamt.seg.validation.IsEdi` deep check requires
+        a measurement section alongside ``>FREQ``; without it the file
+        cannot be re-read as a valid EDI. The four EMAP channels are
+        placeholders (``x=y=z=azm=0``): only :math:`Z_{xy}=-Z_{yx}` is
+        physically informed by the transformed ``Hz`` transient, matching
+        the 1-D synthetic-tensor convention recorded in ``>INFO``.
+        """
+        try:
+            from ..seg.meas import DefineMeas, Emeasurement, Hmeasurement
+            from ..seg.mtemap import MTEMAP
+
+            head = edi.get_section("head")
+            dm = DefineMeas()
+            dm.units = "M"
+            dm.reftype = "CART"
+            dm.reflat = getattr(head, "lat", 0.0) or 0.0
+            dm.reflong = getattr(head, "long", 0.0) or 0.0
+            dm.refelev = getattr(head, "elev", 0.0) or 0.0
+
+            ids = {"HX": "101.001", "HY": "102.001", "EX": "103.001", "EY": "104.001"}
+            dm.hmeas.append(Hmeasurement(id=ids["HX"], chtype="HX", x=0, y=0, z=0, azm=0))
+            dm.hmeas.append(Hmeasurement(id=ids["HY"], chtype="HY", x=0, y=0, z=0, azm=90))
+            dm.emeas.append(
+                Emeasurement(id=ids["EX"], chtype="EX", x=0, y=0, z=0, x2=0, y2=0, z2=0)
+            )
+            dm.emeas.append(
+                Emeasurement(id=ids["EY"], chtype="EY", x=0, y=0, z=0, x2=0, y2=0, z2=0)
+            )
+            edi.add_section("definemeas", dm)
+
+            mt = MTEMAP()
+            mt.sectid = (head.dataid if head is not None else "") or "TEM_SITE"
+            mt.nfreq = int(np.asarray(result["freq"]).size)
+            mt.hx, mt.hy = ids["HX"], ids["HY"]
+            mt.ex, mt.ey = ids["EX"], ids["EY"]
+            edi.add_section("mtsect", mt)
         except Exception:
             pass
 

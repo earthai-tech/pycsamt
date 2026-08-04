@@ -13,6 +13,8 @@ from pycsamt.forward.maxwell import (
     MaxwellProblem,
     ReceiverSet,
     SolverDiagnostics,
+    TriMesh,
+    TriProblem,
 )
 
 
@@ -117,6 +119,24 @@ def test_unverified_backend_gets_warning_not_error():
     report = _capabilities(verified_benchmarks=()).assess(_problem())
     assert report.compatible
     assert report.warnings == ("backend declares no verified benchmarks",)
+
+
+def test_assess_accepts_tri_problem_without_nonuniform_mesh_penalty():
+    mesh = TriMesh(
+        [[0, 0], [1000, 0], [1000, 500], [0, 500]], [[0, 1, 2], [0, 2, 3]]
+    )
+    problem = TriProblem(
+        mesh, np.ones(mesh.shape), [10, 1], ReceiverSet([[500, 0]], ["S"])
+    )
+    # supports_nonuniform_mesh=False must not penalize a TriMesh -- it has
+    # no cell_widths_m / uniform-vs-nonuniform concept to check.
+    report = _capabilities(supports_nonuniform_mesh=False).assess(problem)
+    assert report.compatible
+
+
+def test_assess_rejects_unrecognized_problem_type():
+    with pytest.raises(TypeError, match="MaxwellProblem or TriProblem"):
+        _capabilities().assess(object())
 
 
 def test_registration_is_lazy_and_options_reach_factory():

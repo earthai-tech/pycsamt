@@ -17,6 +17,8 @@ from pycsamt.forward.maxwell import (
     MaxwellResultCache,
     ReceiverSet,
     SolverDiagnostics,
+    TriMesh,
+    TriProblem,
 )
 
 
@@ -79,6 +81,25 @@ def test_put_get_entry_and_statistics(tmp_path):
     statistics = cache.statistics()
     assert statistics.entry_count == 1
     assert statistics.total_bytes == entry.size_bytes
+
+
+def test_put_get_entry_accepts_a_tri_problem(tmp_path):
+    mesh = TriMesh([[0, 0], [1, 0], [0, 1]], [[0, 1, 2]])
+    problem = TriProblem(
+        mesh,
+        np.ones(mesh.shape),
+        [1.0],
+        ReceiverSet([[0.3, 0.1]], ["S"]),
+        ("zxy",),
+    )
+    cache = MaxwellResultCache(tmp_path / "cache")
+    assert cache.get(problem) is None
+    cache.put(problem, _result(problem))
+    assert cache.contains(problem)
+    restored = cache.get(problem)
+    np.testing.assert_array_equal(
+        restored.impedance_v_a, _result(problem).impedance_v_a
+    )
 
 
 def test_get_or_solve_uses_cache_after_first_call(tmp_path):

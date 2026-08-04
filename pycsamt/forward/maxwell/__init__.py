@@ -68,6 +68,7 @@ from .contracts import (
     ReceiverSet,
     SolverDiagnostics,
 )
+from .contracts_tri import TriMesh, TriProblem
 from .external import (
     BaseExternalMaxwellAdapter,
     ExecutableNotFoundError,
@@ -85,9 +86,12 @@ from .mesh import (
     build_solver_mesh,
     skin_depth_m,
 )
+from .mare2dem import Mare2DEMAdapter, register_mare2dem_backend
 from .modem3d import ModEm3DAdapter, register_modem3d_backend
 from .mt2d import MT2DAdapter, register_mt2d_backend
 from .mt3d import MT3DAdapter
+from .tri_fem2d import TriFEM2DAdapter, register_trifem2d_backend
+from .tri_mesh_gen import build_graded_tri_mesh
 
 __all__ = [
     "MaxwellMesh",
@@ -95,6 +99,8 @@ __all__ = [
     "MaxwellProblem",
     "SolverDiagnostics",
     "ForwardResult",
+    "TriMesh",
+    "TriProblem",
     "BackendCapabilities",
     "CompatibilityReport",
     "MaxwellBackend",
@@ -146,6 +152,11 @@ __all__ = [
     "MT3DAdapter",
     "ModEm3DAdapter",
     "register_modem3d_backend",
+    "Mare2DEMAdapter",
+    "register_mare2dem_backend",
+    "TriFEM2DAdapter",
+    "register_trifem2d_backend",
+    "build_graded_tri_mesh",
     "BatchAbortedError",
     "BatchPolicy",
     "BatchReport",

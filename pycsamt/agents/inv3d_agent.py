@@ -88,12 +88,15 @@ References
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Any
 
 import numpy as np
 
+from ..compat.sklearn import validate_params
 from ._base import AgentResult, BaseAgent
+from ._param_schemas import INV3D_PARAM_CONSTRAINTS
 from ._topography import resolve_agent_topography
 from .ai_inversion import _default_thicknesses, _z_to_features
 
@@ -136,6 +139,9 @@ class Inv3DAgent(BaseAgent):
         substantially (e.g. 20-40) for that mode.
     epochs : int
         Training epochs (default 30).
+    patience : int or None
+        Early-stopping patience measured in epochs. ``None`` uses one fifth
+        of ``epochs`` with a minimum of five.
     radius : float
         Maximum inter-station edge distance in metres for the adjacency graph
         (default 5 000 m).  Stations farther apart than *radius* are
@@ -218,6 +224,9 @@ class Inv3DAgent(BaseAgent):
     ``physics``           str — ``"mt1d"`` or ``"mt3d"``, mode used
     ``mt3d_recovery``     dict or None — held-out known-truth
                            recovery metrics (``physics="mt3d"`` only)
+    ``training_history``  dict -- per-epoch training and validation losses
+    ``epochs_completed``  int -- epochs actually completed before stopping
+    ``best_validation_loss`` float -- minimum finite validation loss
 
     Examples
     --------
@@ -234,6 +243,7 @@ class Inv3DAgent(BaseAgent):
 
     SYSTEM_PROMPT = _SYSTEM_PROMPT
 
+    @validate_params(INV3D_PARAM_CONSTRAINTS, prefer_skip_nested_validation=True)
     def __init__(
         self,
         *,
@@ -246,6 +256,7 @@ class Inv3DAgent(BaseAgent):
         depth_max: float | None = None,
         n_train_profiles: int = 150,
         epochs: int = 30,
+        patience: int | None = None,
         radius: float = 5_000.0,
         hidden: tuple[int, ...] = (256, 128, 64),
         dropout: float = 0.1,
@@ -261,15 +272,15 @@ class Inv3DAgent(BaseAgent):
         cells_per_skin_depth: float | None = None,
         geology_grid_nx_ny: int = 6,
         geology_grid_nz: int | None = None,
+        verbose: bool | int | str = False,
     ) -> None:
-        if physics not in ("mt1d", "mt3d"):
-            raise ValueError("physics must be 'mt1d' or 'mt3d'.")
         super().__init__(
             "Inv3DAgent",
             api_key=api_key,
             model=model,
             llm_provider=llm_provider,
             section_preset="inversion",
+            verbose=verbose,
         )
         self.n_layers = n_layers
         self.n_freqs = n_freqs
@@ -277,6 +288,7 @@ class Inv3DAgent(BaseAgent):
         self.depth_max = None if depth_max is None else float(depth_max)
         self.n_train_profiles = n_train_profiles
         self.epochs = epochs
+        self.patience = None if patience is None else max(1, int(patience))
         self.radius = radius
         self.hidden = tuple(hidden)
         self.dropout = dropout
@@ -310,11 +322,7 @@ class Inv3DAgent(BaseAgent):
         try:
             from ..ai.inversion.inv3d import GCNInverter3D
             from ..ai.nets.gcn import build_adjacency
-            from ..backends import get_backend_instance
             from ..forward.batch import generate_dataset
-
-            if get_backend_instance() is None:
-                raise ImportError("No DL backend.")
         except ImportError as exc:
             return AgentResult.failed(
                 f"Inv3DAgent requires PyTorch or TensorFlow: {exc}",
@@ -341,7 +349,7 @@ class Inv3DAgent(BaseAgent):
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
         output_dir = input_data.get("output_dir")
-        import os
+        
 
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -471,6 +479,7 @@ class Inv3DAgent(BaseAgent):
                     geology_grid_nx_ny=self.geology_grid_nx_ny,
                     geology_grid_nz=self.geology_grid_nz,
                     cells_per_skin_depth=self.cells_per_skin_depth,
+                    verbose=self.verbose,
                 )
                 n_samp = len(mt3d_dataset.select("train"))
             except Exception as exc:
@@ -495,7 +504,7 @@ class Inv3DAgent(BaseAgent):
                     noise_level=0.03,
                     seed=42,
                     n_jobs=1,
-                    verbose=False,
+                    verbose=self.verbose,
                 )
                 # X_1d: (n_1d, n_freqs, 4) → flatten → (n_1d, n_features)
                 X_1d = ds.X.reshape(n_1d_total, -1).astype(np.float32)
@@ -538,6 +547,21 @@ class Inv3DAgent(BaseAgent):
             self.hidden,
             self.epochs,
         )
+        # Delay loading PyTorch/TensorFlow until all SciPy Maxwell solves have
+        # finished. Importing PyTorch first can load a second OpenMP runtime on
+        # Windows and abort the sparse solver before its first realization.
+        try:
+            from ..backends import get_backend_instance
+
+            if get_backend_instance() is None:
+                raise ImportError("No DL backend.")
+        except ImportError as exc:
+            return AgentResult.failed(
+                f"Inv3DAgent requires PyTorch or TensorFlow: {exc}",
+                hint="pip install torch  or  pip install tensorflow",
+                elapsed=time.time() - t0,
+            )
+
         try:
             inverter = GCNInverter3D(
                 n_features=n_features,
@@ -551,8 +575,12 @@ class Inv3DAgent(BaseAgent):
                 adjacency=A,
                 epochs=self.epochs,
                 batch_size=max(4, min(16, n_samp // 10)),
-                patience=max(5, self.epochs // 5),
-                verbose=False,
+                patience=(
+                    self.patience
+                    if self.patience is not None
+                    else max(5, self.epochs // 5)
+                ),
+                verbose=self.verbose,
             )
         except Exception as exc:
             return AgentResult.failed(
@@ -801,6 +829,13 @@ class Inv3DAgent(BaseAgent):
                 "adjacency": A,
                 "rms_global": rms_global,
                 "inverter": inverter,
+                "training_history": dict(getattr(inverter, "_history", {})),
+                "epochs_completed": len(
+                    getattr(inverter, "_history", {}).get("val_loss", [])
+                ),
+                "best_validation_loss": float(
+                    getattr(inverter, "_meta", {}).get("best_val_loss", np.nan)
+                ),
                 "n_edges": off_diag_edges,
                 "figures": figures,
                 "figure_paths": fig_paths,
@@ -1084,6 +1119,7 @@ def _generate_mt3d_training_data(
     geology_grid_nx_ny: int,
     geology_grid_nz: int | None,
     cells_per_skin_depth: float | None,
+    verbose: bool | int | str = False,
 ):
     """Build a genuinely 3-D correlated training set at the survey's
     own real station positions and convert it to
@@ -1153,6 +1189,7 @@ def _generate_mt3d_training_data(
         cells_per_skin_depth=cells_per_skin_depth,
         validation_fraction=0.1,
         test_fraction=0.1,
+        verbose=verbose,
     )
     dataset = generate_3d_maxwell_dataset(config)
     X, y = _maxwell3d_samples_to_gcn_arrays(

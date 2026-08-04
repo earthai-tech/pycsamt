@@ -458,6 +458,7 @@ class Maxwell3DDatasetConfig:
     validation_fraction: float = 0.1
     test_fraction: float = 0.1
     namespace: str = "maxwell3d"
+    verbose: bool | int | str = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.grid, GeologyGrid) or self.grid.dimension != 3:
@@ -807,90 +808,111 @@ def generate_3d_maxwell_dataset(
     )
     coordinates_m = [[float(x), float(y), 0.0] for x, y in config.station_xy_m]
 
+    from pycsamt.api.view.progress import get_progress_bar
+
     realizations: dict[str, dict[str, Any]] = {}
     problems: dict[str, MaxwellProblem] = {}
-    for index in range(config.n_realizations):
-        realization_id = f"{config.dataset_id}-r{index:05d}"
-        correlation_seed = plan.derive(f"{realization_id}/correlation")
-        field_seed = plan.derive(f"{realization_id}/field")
-        correlation = _sample_correlation(config, correlation_seed)
-        field = generate_gaussian_field(grid, correlation, seed=field_seed)
-        log_resistivity = (
-            config.log_resistivity_mean
-            + config.log_resistivity_std * field.values
-        )
-        resistivity = np.power(10.0, log_resistivity)
-        mesh, conductivity = _solver_mesh_and_conductivity(
-            grid,
-            resistivity,
-            config.station_xy_m,
-            config.frequencies_hz,
-            safety_factor=config.mesh_safety_factor,
-            max_mesh_cells=config.max_mesh_cells,
-            cells_per_skin_depth=config.cells_per_skin_depth,
-        )
-        problem = MaxwellProblem(
-            mesh,
-            conductivity,
-            config.frequencies_hz,
-            receivers,
-            components=config.components,
-            metadata={"realization_id": realization_id},
-        )
-        if problem.problem_hash in problems:
-            raise RuntimeError(
-                "duplicate problem_hash across distinct realizations; "
-                "this should not happen."
+    with get_progress_bar(
+        total=config.n_realizations,
+        desc="Generating 3-D realizations",
+        unit="realization",
+        verbose=config.verbose,
+    ) as bar:
+        for index in range(config.n_realizations):
+            realization_id = f"{config.dataset_id}-r{index:05d}"
+            correlation_seed = plan.derive(f"{realization_id}/correlation")
+            field_seed = plan.derive(f"{realization_id}/field")
+            correlation = _sample_correlation(config, correlation_seed)
+            field = generate_gaussian_field(grid, correlation, seed=field_seed)
+            log_resistivity = (
+                config.log_resistivity_mean
+                + config.log_resistivity_std * field.values
             )
-        realizations[problem.problem_hash] = {
-            "realization_id": realization_id,
-            "seed": field_seed,
-            "correlation": correlation,
-            "resistivity_ohm_m": resistivity,
-        }
-        problems[problem.problem_hash] = problem
+            resistivity = np.power(10.0, log_resistivity)
+            mesh, conductivity = _solver_mesh_and_conductivity(
+                grid,
+                resistivity,
+                config.station_xy_m,
+                config.frequencies_hz,
+                safety_factor=config.mesh_safety_factor,
+                max_mesh_cells=config.max_mesh_cells,
+                cells_per_skin_depth=config.cells_per_skin_depth,
+            )
+            problem = MaxwellProblem(
+                mesh,
+                conductivity,
+                config.frequencies_hz,
+                receivers,
+                components=config.components,
+                metadata={"realization_id": realization_id},
+            )
+            if problem.problem_hash in problems:
+                raise RuntimeError(
+                    "duplicate problem_hash across distinct realizations; "
+                    "this should not happen."
+                )
+            realizations[problem.problem_hash] = {
+                "realization_id": realization_id,
+                "seed": field_seed,
+                "correlation": correlation,
+                "resistivity_ohm_m": resistivity,
+            }
+            problems[problem.problem_hash] = problem
+            bar.update(1)
 
     samples: list[Maxwell3DSample] = []
     rejected: list[str] = []
 
-    def _on_result(problem: MaxwellProblem, result: Any) -> None:
-        meta = realizations[problem.problem_hash]
-        if not result.success:
-            rejected.append(meta["realization_id"])
-            return
-        survey = SurveyData(
-            impedance=result.impedance_v_a,
-            frequencies_hz=result.frequencies_hz,
-            station_names=result.receiver_names,
-            components=result.components,
-            coordinates_m=coordinates_m,
-            valid=result.valid,
-        )
-        samples.append(
-            Maxwell3DSample(
-                realization_id=meta["realization_id"],
-                seed=meta["seed"],
-                correlation=meta["correlation"],
-                resistivity_ohm_m=meta["resistivity_ohm_m"],
-                survey=survey,
-                mesh_cells=int(np.prod(problem.mesh.shape)),
-                relative_residual=(
-                    result.diagnostics.maximum_relative_residual
-                ),
+    with get_progress_bar(
+        total=len(problems),
+        desc="Solving 3-D Maxwell realizations",
+        unit="problem",
+        verbose=config.verbose,
+    ) as solve_bar:
+
+        def _on_result(problem: MaxwellProblem, result: Any) -> None:
+            meta = realizations[problem.problem_hash]
+            if not result.success:
+                rejected.append(meta["realization_id"])
+                solve_bar.update(1)
+                return
+            survey = SurveyData(
+                impedance=result.impedance_v_a,
+                frequencies_hz=result.frequencies_hz,
+                station_names=result.receiver_names,
+                components=result.components,
+                coordinates_m=coordinates_m,
+                valid=result.valid,
             )
+            samples.append(
+                Maxwell3DSample(
+                    realization_id=meta["realization_id"],
+                    seed=meta["seed"],
+                    correlation=meta["correlation"],
+                    resistivity_ohm_m=meta["resistivity_ohm_m"],
+                    survey=survey,
+                    mesh_cells=int(np.prod(problem.mesh.shape)),
+                    relative_residual=(
+                        result.diagnostics.maximum_relative_residual
+                    ),
+                )
+            )
+            solve_bar.update(1)
+
+        def _on_failure(problem: MaxwellProblem, failure: Any) -> None:
+            rejected.append(
+                realizations[problem.problem_hash]["realization_id"]
+            )
+            solve_bar.update(1)
+
+        solve_batch(
+            problems.values(),
+            MT3DAdapter(max_cells=config.max_mesh_cells),
+            cache=cache,
+            policy=policy,
+            on_result=_on_result,
+            on_failure=_on_failure,
         )
-
-    def _on_failure(problem: MaxwellProblem, failure: Any) -> None:
-        rejected.append(realizations[problem.problem_hash]["realization_id"])
-
-    solve_batch(
-        problems.values(),
-        MT3DAdapter(max_cells=config.max_mesh_cells),
-        cache=cache,
-        policy=policy,
-        on_result=_on_result,
-        on_failure=_on_failure,
-    )
 
     if not samples:
         raise ValueError(

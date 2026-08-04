@@ -176,8 +176,9 @@ def rho_coverage(
 
     For each site and frequency, checks whether the Cagniard apparent
     resistivity extracted from the observed Z tensor falls inside the
-    predicted interval [L_j, U_j] (kouadio2025 eq. 1):
-        c_j = 1(L_j ≤ ρ_a,obs,j ≤ U_j)
+    predicted interval [L_j, U_j] (kouadio2025 eq. 1)::
+
+        c_j = 1(L_j <= rho_a,obs,j <= U_j)
 
     Parameters
     ----------
@@ -563,9 +564,9 @@ def plot_polar_errors(
     """
     Polar rose diagram of relative residuals (ε = (ρ_pred − ρ_obs)/ρ_obs × 100 %).
 
-    Each angular sector spans one frequency decade.  Bar length = mean |ε|
-    within that sector; red = over-prediction (mean ε > 0), blue = under.
-    Analogous to the polar violin in kouadio2025 Fig 2b.
+    Each angular sector spans one frequency decade.  Bar length = mean
+    abs(ε) within that sector; red = over-prediction (mean ε > 0), blue
+    = under. Analogous to the polar violin in kouadio2025 Fig 2b.
 
     Returns
     -------

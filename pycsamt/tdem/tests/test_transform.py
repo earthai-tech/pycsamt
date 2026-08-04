@@ -222,15 +222,34 @@ class TestBuildZArray:
         np.testing.assert_allclose(Z[:, 1, 0], -Z[:, 0, 1])
 
     def test_rho_roundtrip(self):
+        """``_build_z_array`` must use pyCSAMT's field-unit EDI
+        convention (``rho = 0.2|Z|**2/f``, see
+        :meth:`pycsamt.z.resphase.ResPhase.compute_resistivity_phase`),
+        not the SI convention (``rho = |Z|**2/(omega*mu0)``). Every
+        ``Site.rho`` consumer reads EDI impedance back with the former,
+        so a mismatch here silently produces resistivities wrong by a
+        factor of ``1/(0.4*pi*MU0) ~ 6.3e5``.
+        """
         n = 20
         rho_true = 100.0
         freq = np.logspace(1, 4, n)
         rho = np.full(n, rho_true)
         phi = np.full(n, 45.0)
         Z = _build_z_array(rho, phi, freq)
-        omega = 2.0 * np.pi * freq
-        rho_back = np.abs(Z[:, 0, 1]) ** 2 / (omega * MU0)
+        rho_back = 0.2 * np.abs(Z[:, 0, 1]) ** 2 / freq
         np.testing.assert_allclose(rho_back, rho_true, rtol=1e-10)
+
+    def test_rho_roundtrip_not_si_convention(self):
+        """Regression: the SI formula must NOT reproduce rho_true here."""
+        n = 10
+        rho_true = 100.0
+        freq = np.logspace(1, 4, n)
+        rho = np.full(n, rho_true)
+        phi = np.full(n, 45.0)
+        Z = _build_z_array(rho, phi, freq)
+        omega = 2.0 * np.pi * freq
+        rho_si = np.abs(Z[:, 0, 1]) ** 2 / (omega * MU0)
+        assert not np.allclose(rho_si, rho_true, rtol=1e-3)
 
 
 # ---------------------------------------------------------------------------

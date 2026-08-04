@@ -106,9 +106,9 @@ line directory this time.
    >>> table = confidence.to_pandas(copy=True)
    >>> print(round(table["confidence"].min(), 4), round(table["confidence"].median(), 4),
    ...       round(table["confidence"].max(), 4))
-   0.5419 0.691 0.8087
+   0.5419 0.6992 0.8087
 
-Composite confidence spans 0.54 to 0.81 with a median of 0.69 -- close to the
+Composite confidence spans 0.54 to 0.81 with a median of 0.70 -- close to the
 ``L18PLT`` numbers from :doc:`prepare_occam2d_inversion`, and, like that
 line, nothing here forces a rejection before conversion.
 

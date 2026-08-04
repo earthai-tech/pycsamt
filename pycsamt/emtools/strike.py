@@ -1804,13 +1804,24 @@ def plot_strike_analysis(
     strict: bool = False,
     verbose: int = 0,
 ) -> plt.Figure:
-    """Three-panel rose diagram: Strike (Z), PT Azimuth, and Tipper Strike.
+    """Rose diagram: Strike (Z), PT Azimuth, and, if present, Tipper Strike.
 
     Produces a publication-quality figure with one polar rose per analysis
-    type, analogous to the MTPy ``StrikeAnalysis`` plot.  All three panels
-    share the same :class:`~pycsamt.api._rose_style.RoseStyle` so colours
-    remain visually consistent.  Each panel carries a coloured title box to
-    distinguish the three quantities at a glance.
+    type, analogous to the MTPy ``StrikeAnalysis`` plot.  All panels share
+    the same :class:`~pycsamt.api._rose_style.RoseStyle` so colours remain
+    visually consistent.  Each panel carries a coloured title box to
+    distinguish the quantities at a glance.
+
+    The Tipper Strike panel is only drawn when *sites* actually carries a
+    vertical-field (tipper) channel on at least one station -- surveys with
+    no tipper at all (e.g. most AMT) get a two-panel Strike/PT figure
+    instead of a third, permanently empty "no data" rose.  This detection
+    is independent of *band*: a tipper-bearing survey whose selected band
+    happens to contain no tipper rows still gets a three-panel figure, with
+    "no data" drawn in that one panel, since the channel genuinely exists
+    elsewhere in the survey.  When *axes* is supplied explicitly, all three
+    panels are always used, since the caller has already committed to that
+    layout.
 
     Parameters
     ----------
@@ -1858,7 +1869,9 @@ def plot_strike_analysis(
     Returns
     -------
     matplotlib.figure.Figure
-        Figure with three polar axes: Strike (Z), PT Azimuth, Tipper Strike.
+        Figure with two polar axes (Strike (Z), PT Azimuth) when *sites*
+        has no tipper channel and *axes* was not supplied, otherwise three
+        (adding Tipper Strike).
 
     Examples
     --------
@@ -1939,11 +1952,17 @@ def plot_strike_analysis(
         ang_pt = np.empty(0)
 
     # ── 3. Tipper-strike angles (per frequency × station) ───────────────────
+    # ``tipper_available`` tracks whether *any* station carries a vertical-
+    # field channel at all, independent of *band* -- a survey with no
+    # tipper (e.g. AMT) is a structural absence, not merely an empty band
+    # selection, and drives whether the tipper panel is drawn at all below.
     _tip_list: list[float] = []
+    tipper_available = False
     for _i, ed in enumerate(_iter_items(S)):
         _T, t, fr = _get_t_block(ed)
         if t is None or fr is None:
             continue
+        tipper_available = True
         per_t = 1.0 / np.where(fr == 0, np.nan, fr)
         mask_t = np.isfinite(per_t)
         if band is not None:
@@ -1958,16 +1977,23 @@ def plot_strike_analysis(
     ang_tipper = np.array(_tip_list, float)
 
     # ── figure ───────────────────────────────────────────────────────────────
+    # When this function owns the layout (``axes`` not supplied), a survey
+    # with no tipper at all gets a two-panel figure instead of a third,
+    # permanently empty "no data" rose -- if tipper is present, all three
+    # panels are still drawn.  Externally supplied axes are always used as
+    # given (three panels), since the caller already committed to that grid.
+    n_panels = 3 if (axes is not None or tipper_available) else 2
     if figsize is None:
-        figsize = (subplot_size * 3 + 0.6, subplot_size + 0.5)
-    axes_given = _axes_list(axes, 3)
+        figsize = (subplot_size * n_panels + 0.6, subplot_size + 0.5)
+    axes_given = _axes_list(axes, n_panels)
     if axes_given is None:
         fig, axes_arr = plt.subplots(
             1,
-            3,
+            n_panels,
             figsize=figsize,
             subplot_kw=dict(polar=True),
         )
+        axes_arr = np.atleast_1d(axes_arr)
     else:
         axes_arr = np.asarray(axes_given, dtype=object)
         fig = axes_arr[0].figure
@@ -1992,16 +2018,17 @@ def plot_strike_analysis(
         title_fc=title_fc_pt,
         title_ec=title_ec,
     )
-    _draw_rose_on_ax(
-        axes_arr[2],
-        ang_tipper,
-        rs,
-        bins=bins,
-        cmap_override=cmap_tipper,
-        title="Tipper Strike",
-        title_fc=title_fc_tipper,
-        title_ec=title_ec,
-    )
+    if n_panels == 3:
+        _draw_rose_on_ax(
+            axes_arr[2],
+            ang_tipper,
+            rs,
+            bins=bins,
+            cmap_override=cmap_tipper,
+            title="Tipper Strike",
+            title_fc=title_fc_tipper,
+            title_ec=title_ec,
+        )
 
     if suptitle:
         fig.suptitle(suptitle, fontsize=10.0, y=1.02)

@@ -436,10 +436,15 @@ The TDEM subpackage follows a practical data flow:
 #. pass transformed or direct TDEM data into inversion and interpretation
    workflows.
 
-Step 3's "coordinates" is worth checking rather than assuming: the CLI
-confirms this particular survey folder has none attached yet (the station
-positions live in a separate spreadsheet, ``Coordinate of measuring
-point.xls``, not auto-joined by a plain AVG read):
+Step 3's "coordinates" is worth checking rather than assuming. The station
+positions for this survey live in a separate spreadsheet, ``Coordinate of
+measuring point.xls``; a plain ``*.AVG`` read does not carry them, but
+:func:`pycsamt.tdem.read_temavg_survey` looks for that filename (or a plain
+``coordinates.csv``) next to the AVG files and joins it automatically.
+Reading a legacy ``.xls`` table this way needs the optional ``xlrd``
+dependency (``pip install "pycsamt[docs]"`` or ``pip install xlrd``); without
+it the join is skipped and ``Coordinates`` reports ``none found`` instead of
+raising, so always check this line rather than assuming the join succeeded:
 
 .. code-block:: console
 
@@ -452,7 +457,7 @@ point.xls``, not auto-joined by a plain AVG read):
      ...
    Z files     : 55
    LOG files   : 55
-   Coordinates : none found
+   Coordinates : 5159 points  (with elevation)
 
 Converting one real sounding to an EDI collection needs no coordinates to
 demonstrate the mechanics:

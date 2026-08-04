@@ -1363,6 +1363,210 @@ def make_dataset2d_realization_gallery() -> None:
     _save(fig, "dataset2d_realization_gallery.png")
 
 
+def make_dataset2d_tri_topo_gallery() -> None:
+    """Triangular-mesh section: topography drape, filled cells, electrodes.
+
+    Demonstrates M15's ``draw_tri_mesh`` on a real, topography-following
+    triangular mesh and a real correlated resistivity field sampled onto
+    its triangle centroids (``pycsamt.ai.training.dataset2d_tri``'s own
+    nearest-mapping technique) -- not a forward-solved inversion result
+    (``Mare2DEMAdapter`` needs a real compiled MARE2DEM binary, unverified
+    in this environment; see its module docstring). The mesh is a real,
+    graded Shewchuk-Triangle quality mesh -- fine near the electrodes,
+    coarsening with depth -- built with
+    :func:`pycsamt.forward.maxwell.tri_mesh_gen.build_graded_tri_mesh`'s
+    own ``topo_x_m``/``topo_z_m`` support. An earlier version of this
+    figure inlined its own duplicate copy of that same two-pass Triangle
+    technique directly in this script (before topography support existed
+    in the shared function); it now just calls the shared builder.
+    """
+    from pycsamt.ai.geology import (
+        GaussianCorrelation,
+        GeologyGrid,
+        generate_gaussian_field,
+    )
+    from pycsamt.api.mesh import draw_tri_mesh
+    from pycsamt.api.station import StationMarkerStyle
+    from pycsamt.forward.maxwell.tri_mesh_gen import build_graded_tri_mesh
+
+    x_min, x_max = 0.0, 2000.0
+    station_x = np.linspace(200.0, 1800.0, 9)
+
+    def topo(x: np.ndarray) -> np.ndarray:
+        # z is positive-down, so a negative value is terrain *above* the
+        # flat reference datum -- a ridge, not a depression.
+        return -80.0 * np.exp(-(((x - 1100.0) / 500.0) ** 2)) - 20.0 * np.sin(
+            x / 600.0
+        )
+
+    x_profile = np.linspace(x_min, x_max, 60)
+    z_top = topo(x_profile)
+    bottom = 700.0
+
+    mesh = build_graded_tri_mesh(
+        (x_min, x_max),
+        (0.0, bottom),
+        station_x,
+        surface_cell_m=40.0,
+        growth_rate=1.3,
+        topo_x_m=x_profile,
+        topo_z_m=z_top,
+    )
+    stations = np.column_stack(
+        [station_x, np.interp(station_x, x_profile, z_top)]
+    )
+
+    z0 = float(z_top.min())
+    nz = 20
+    grid = GeologyGrid.regular_2d(
+        nx=40,
+        nz=nz,
+        dx_m=(x_max - x_min) / 40,
+        dz_m=(bottom - z0) / nz,
+        x_origin_m=x_min,
+        z_origin_m=z0,
+    )
+    field = generate_gaussian_field(
+        grid, GaussianCorrelation(length_x_m=350, length_z_m=150), seed=3
+    )
+    centroids = mesh.triangle_centroids_m
+    dx = grid.x_m[1] - grid.x_m[0]
+    dz = grid.z_m[1] - grid.z_m[0]
+    ix = np.clip(
+        np.round((centroids[:, 0] - grid.x_m[0]) / dx).astype(int),
+        0,
+        len(grid.x_m) - 1,
+    )
+    iz = np.clip(
+        np.round((centroids[:, 1] - grid.z_m[0]) / dz).astype(int),
+        0,
+        len(grid.z_m) - 1,
+    )
+    log_rho = 2.0 + 0.5 * field.values[iz, ix]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fill, _edges = draw_tri_mesh(ax, mesh, log_rho, preset="review", cmap="viridis_r")
+    ax.scatter(
+        stations[:, 0],
+        stations[:, 1],
+        label="Electrodes",
+        **StationMarkerStyle().kwargs(),
+    )
+    ax.plot(x_profile, z_top, color="black", lw=1.2)
+    ax.invert_yaxis()
+    ax.set_xlabel("x (m)")
+    ax.set_ylabel("Depth (m)")
+    ax.legend(loc="lower right", frameon=True)
+    fig.colorbar(fill, ax=ax, label=r"$\log_{10}(\rho)$ [Ohm.m]")
+    ax.set_title(
+        f"Triangular mesh, topography-draped ({mesh.n_triangles} cells) "
+        "-- true resistivity model, not a solved inversion"
+    )
+    _save(fig, "dataset2d_tri_topo_gallery.png")
+
+
+def make_dataset2d_tri_topo_ai_inversion() -> None:
+    """Real, trained triangular AI inversion, draped over real topography.
+
+    Companion to :func:`make_dataset2d_tri_topo_gallery`, which only ever
+    paints the *true* geological model -- this one is a genuine
+    ``Inv2DAgent(physics="mt2d_tri", topo_x_m=..., topo_z_m=...)`` run
+    (the same synthetic ridge topography, for visual continuity),
+    rendering the actual **predicted** per-triangle resistivity, not the
+    target field. Building this required a real fix first: an earlier
+    ``tri_fem2d.py`` hardcoded "surface" as literal ``z=0``, which
+    rejected any receiver away from that datum -- exactly what a real
+    topography-following station line needs. See that module's own
+    docstring for the fix and its datum-shift-invariance benchmark.
+
+    Real WILLY ``L18PLT`` stations supply the observed impedance
+    features (``Inv2DAgent`` always reads its observed panel from a
+    real ``Sites`` collection, even on this fully-synthetic-training
+    path); the topography and training geology are synthetic, same
+    teaching-scale honesty discipline as the Tongkeng CSAMT tutorial
+    (real recovery RMSE/R2 reported plainly, no convergence claimed).
+    """
+    from pycsamt.agents import Inv2DAgent
+    from pycsamt.api.mesh import draw_tri_mesh
+    from pycsamt.api.station import StationMarkerStyle
+    from pycsamt.forward.maxwell.tri_fem2d import TriFEM2DAdapter
+
+    np.random.seed(7)
+    try:
+        import torch
+
+        torch.manual_seed(7)
+    except ImportError:
+        pass
+
+    sites = ensure_sites(
+        PROJECT_ROOT / "data" / "AMT" / "WILLY_data" / "L18PLT",
+        recursive=True,
+        verbose=0,
+    )
+    n_sta = len(list(sites))
+    x_min, x_max = 0.0, 2000.0
+    station_spacing_m = (x_max - x_min) / (n_sta - 1)
+
+    def topo(x: np.ndarray) -> np.ndarray:
+        return -80.0 * np.exp(-(((x - 1100.0) / 500.0) ** 2)) - 20.0 * np.sin(
+            x / 600.0
+        )
+
+    x_profile = np.linspace(x_min, x_max, 60)
+    z_top = topo(x_profile)
+
+    agent = Inv2DAgent(
+        physics="mt2d_tri",
+        epochs=15,
+        n_freqs=4,
+        depth_max=700.0,
+        n_train_profiles=40,
+        n_stations_per_profile=n_sta,
+        station_spacing_m=station_spacing_m,
+        mesh_target_cell_m=40.0,
+        field_grid_cell_m=20.0,
+        correlation_length_x_m=(300.0, 600.0),
+        correlation_length_z_m=(80.0, 200.0),
+        topo_x_m=x_profile,
+        topo_z_m=z_top,
+        mare2dem_adapter=TriFEM2DAdapter(),
+    )
+    result = agent.execute(
+        {"sites": sites, "freqs": [100.0, 30.0, 10.0, 3.0]}
+    )
+    if result.status != "success":
+        raise RuntimeError(f"make_dataset2d_tri_topo_ai_inversion: {result.summary}")
+
+    pred = result.data["pred_triangles"]
+    mesh = pred["mesh"]
+    log_rho = pred["log10_resistivity"]
+    recovery = result.data.get("mt2d_tri_recovery") or {}
+    station_x = np.arange(n_sta, dtype=float) * station_spacing_m
+    station_z = np.interp(station_x, x_profile, z_top)
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    fill, _edges = draw_tri_mesh(ax, mesh, log_rho, preset="review", cmap="viridis_r")
+    ax.scatter(
+        station_x, station_z, label="Electrodes", **StationMarkerStyle().kwargs()
+    )
+    ax.plot(x_profile, z_top, color="black", lw=1.2)
+    ax.invert_yaxis()
+    ax.set_xlabel("x (m)")
+    ax.set_ylabel("Depth (m)")
+    ax.legend(loc="lower right", frameon=True)
+    fig.colorbar(fill, ax=ax, label=r"$\log_{10}(\rho)$ [Ohm.m]")
+    rmse = recovery.get("rmse", float("nan"))
+    r2 = recovery.get("r2", float("nan"))
+    n_recovery = recovery.get("n_samples", 0)
+    ax.set_title(
+        f"Triangular AI inversion, topography-draped ({mesh.n_triangles} cells)\n"
+        f"predicted log10(resistivity) -- recovery RMSE={rmse:.2f}, "
+        f"R2={r2:.2f} (n={n_recovery}, teaching-scale, not converged)"
+    )
+    _save(fig, "dataset2d_tri_topo_ai_inversion.png")
+
+
 def make_dataset2d_response_anatomy() -> None:
     """Plot one generated model beside its canonical TE/TM responses."""
     from pycsamt.ai.geology import GeologyGrid
@@ -4170,6 +4374,8 @@ def main() -> None:
     make_losses_regularization_tradeoff()
     make_hybrid_physics_refinement_audit()
     make_dataset2d_realization_gallery()
+    make_dataset2d_tri_topo_gallery()
+    make_dataset2d_tri_topo_ai_inversion()
     make_dataset2d_response_anatomy()
     make_dataset3d_realization_gallery()
     make_dataset3d_response_anatomy()

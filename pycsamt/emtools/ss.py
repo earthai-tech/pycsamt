@@ -24,12 +24,30 @@ from .tensor import build_phase_tensor_table
 
 
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
-    # ρa_det ≈ sqrt(ρ_xy ρ_yx) ; ρ = 0.2|Z|^2/f
+    """Geometric-mean apparent resistivity from off-diagonal Z (Ω·m).
+
+    ρa_det ≈ sqrt(ρ_xy ρ_yx) ; ρ = 0.2|Z|^2/f. Falls back to whichever
+    off-diagonal component is actually populated when the other is
+    identically zero, e.g. scalar single-component CSAMT surveys that
+    only record Zxy (or Zyx) -- see :func:`pycsamt.emtools.fieldzone
+    ._rho_a_det`, which the same fix already applies. Naively
+    multiplying rx and ry in that case silently collapses every
+    station to a flat rho=0 curve rather than signalling missing data.
+    """
     zx = z[:, 0, 1]
     zy = z[:, 1, 0]
     rx = 0.2 * (np.abs(zx) ** 2) / (fr + 1e-24)
     ry = 0.2 * (np.abs(zy) ** 2) / (fr + 1e-24)
-    return np.sqrt(rx * ry)
+    x_ok = np.abs(zx) > 0
+    y_ok = np.abs(zy) > 0
+    both = x_ok & y_ok
+    out = np.full(rx.shape, np.nan)
+    out[both] = np.sqrt(np.maximum(rx[both] * ry[both], 1e-12))
+    only_x = x_ok & ~y_ok
+    out[only_x] = rx[only_x]
+    only_y = y_ok & ~x_ok
+    out[only_y] = ry[only_y]
+    return out
 
 
 def _site_coords(ed: Any) -> tuple[float, float] | None:
@@ -106,15 +124,29 @@ def _w_of_dist(d: np.ndarray, scheme: str, k: int) -> np.ndarray:
 
 
 def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    # nearest index in x for each y (in log-freq space)
-    lx, ly = np.log10(x), np.log10(y)
+    """Return, for each value in ``y``, the index into ``x`` of its
+    nearest match in log-space.
+
+    ``np.searchsorted`` requires its reference array to be sorted
+    ascending, but real EDI frequency arrays are conventionally stored
+    high-to-low (descending). Calling this with a raw, unsorted ``x``
+    (as most callers do -- ``x`` is usually a station's native
+    frequency array) silently returned near-arbitrary indices rather
+    than the nearest match. Sorting ``x`` internally and mapping the
+    result back onto the caller's original indexing fixes every call
+    site at once, regardless of whether ``x`` happens to already be
+    ascending, descending, or unordered.
+    """
+    x = np.asarray(x)
+    order = np.argsort(x)
+    lx, ly = np.log10(x[order]), np.log10(y)
     idx = np.searchsorted(lx, ly)
     idx = np.clip(idx, 1, lx.size - 1)
     left = np.abs(ly - lx[idx - 1])
     right = np.abs(ly - lx[idx])
     pick_left = left <= right
     idx[pick_left] -= 1
-    return idx
+    return order[idx]
 
 
 def estimate_ss_ama(

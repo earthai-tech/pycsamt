@@ -56,14 +56,15 @@ print("unique flags:", sorted(set(flagged["flags"])))
 
 # %%
 # **Reading this output.** Every one of the 28 stations comes back
-# ``frac_ok=1.0`` (fully finite data) yet every single one is flagged
-# ``high_skew`` under the default ``max_skew_med=6.0`` threshold —
-# median Bibby skew here runs 30-50 degrees, an order of magnitude
-# above that threshold. That is not a data defect: it is the same
-# strongly 2-D/3-D structural signal this survey shows throughout the
-# gallery, just expressed through a QC threshold tuned for
-# near-1-D settings. A perfectly complete dataset can still fail a
-# structural-simplicity check.
+# ``frac_ok=1.0`` (fully finite data), and all but one -- ``18-001A``,
+# at ``skew_med=4.81`` -- are flagged ``high_skew`` under the default
+# ``max_skew_med=6.0`` threshold. Median phase-tensor skew across the
+# line is about 13.6 degrees, more than double that threshold, and
+# individual stations run as high as 54.5 degrees. That is not a data
+# defect: it is the same strongly 2-D/3-D structural signal this survey
+# shows throughout the gallery, just expressed through a QC threshold
+# tuned for near-1-D settings. A perfectly complete dataset can still
+# fail a structural-simplicity check.
 
 # %%
 # 2. Station confidence: presence vs. composite

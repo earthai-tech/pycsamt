@@ -18,7 +18,7 @@ those pages' own station rankings.
 # 1. The phasor wheel — one station, both off-diagonal components
 # ------------------------------------------------------------------------
 # :func:`~pycsamt.emtools.impedance.plot_phasor_wheel` plots each
-# requested tensor component as a point at (phase, |Z|) — a phasor —
+# requested tensor component as a point at (phase, ``|Z|``) — a phasor —
 # with colour encoding log-period, for one station at a time.
 
 import matplotlib.pyplot as plt
@@ -169,7 +169,7 @@ fig.tight_layout()
 # 6. The determinant track for two contrasting stations
 # -------------------------------------------------------------
 # :func:`~pycsamt.emtools.impedance.plot_determinant_track` shows
-# |det(Z)| and its phase vs. period, with an error-propagated confidence
+# ``|det(Z)|`` and its phase vs. period, with an error-propagated confidence
 # band from ``z_err`` (Monte Carlo, ``n_draws`` complex Gaussian draws).
 # ``18-016A`` (top of the residual ranking) and ``18-007U`` (bottom) are
 # a natural pair to compare.
@@ -182,7 +182,7 @@ plot_determinant_track(survey, station="18-016A", axes=(ax1, ax2))
 plot_determinant_track(survey, station="18-007U", axes=(ax3, ax4))
 
 # %%
-# **Reading this figure.** Both stations' |det(Z)| curves and shaded
+# **Reading this figure.** Both stations' ``|det(Z)|`` curves and shaded
 # bands look similar at a glance — the band itself is thin for both, so
 # the difference is not dramatic to the eye. Measured directly, though,
 # ``18-016A``'s median relative band width (0.19) is about 35% wider
@@ -223,7 +223,7 @@ ax.set_title("18-016A — confidence band width vs. pcts")
 
 # %%
 # **Reading this figure.** Both bands shrink by roughly two orders of
-# magnitude from the shortest to the longest period, tracking |det(Z)|
+# magnitude from the shortest to the longest period, tracking ``|det(Z)|``
 # itself — but the *ratio* of the 80% width to the 50% width stays
 # close to 2x at essentially every period (checked directly against the
 # underlying numbers, not just read off the plot). For this station,

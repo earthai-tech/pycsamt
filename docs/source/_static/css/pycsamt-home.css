@@ -606,7 +606,16 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
 }
 
 /* --------------------------------------------------------------------------
-   Feature boxes (scikit-learn style)
+   Feature boxes (scikit-learn style, flip-on-hover)
+
+   Front face keeps the icon, title, summary copy, and hero image — the
+   card always lands on this. Hovering, focusing anything inside the
+   card (keyboard), or tapping the round .pyc-feature-flip button (touch,
+   see pycsamt-home.js #8) rotates .pyc-feature-inner 180deg so the back
+   face — linked title, tag pills, "Learn more" — takes its place. The
+   flip button itself lives outside the rotating layer so it stays put
+   (and tappable) in both states. --pyc-flip-h is measured from content
+   by JS (#9); the value below is only the no-JS fallback height.
    -------------------------------------------------------------------------- */
 .pyc-features {
   display: grid;
@@ -616,6 +625,33 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
 
 .pyc-feature {
   position: relative;
+  perspective: 1800px;
+}
+
+.pyc-feature--blue   { --pyc-accent: var(--pyc-blue); }
+.pyc-feature--orange { --pyc-accent: var(--pyc-orange); }
+.pyc-feature--gold   { --pyc-accent: var(--pyc-gold); }
+
+.pyc-feature-inner {
+  position: relative;
+  height: var(--pyc-flip-h, 460px);
+  transform-style: preserve-3d;
+  transition: transform 620ms cubic-bezier(0.4, 0.15, 0.2, 1);
+}
+
+.pyc-feature:hover .pyc-feature-inner,
+.pyc-feature:focus-within .pyc-feature-inner,
+.pyc-feature.is-flipped .pyc-feature-inner {
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pyc-feature-inner { transition: none; }
+}
+
+.pyc-feature-face {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1.45rem 1.15rem;
@@ -624,24 +660,40 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
   border-radius: var(--pyc-radius);
   background: var(--pyc-surface);
   box-shadow: var(--pyc-shadow-sm);
-  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  transition: box-shadow 170ms ease;
 }
 
-.pyc-feature:hover {
-  transform: translateY(-4px);
+.pyc-feature:hover .pyc-feature-face,
+.pyc-feature:focus-within .pyc-feature-face,
+.pyc-feature.is-flipped .pyc-feature-face {
   box-shadow: var(--pyc-shadow);
-  border-color: color-mix(in srgb, var(--pyc-accent, var(--pyc-blue)) 55%, var(--pyc-border));
 }
 
-.pyc-feature--blue   { --pyc-accent: var(--pyc-blue); }
-.pyc-feature--orange { --pyc-accent: var(--pyc-orange); }
-.pyc-feature--gold   { --pyc-accent: var(--pyc-gold); }
+/* The face rotated away is also taken out of hit-testing and tab order,
+   not just hidden visually — otherwise a hidden "Learn more" could still
+   steal focus or clicks. */
+.pyc-feature-back { transform: rotateY(180deg); visibility: hidden; }
+
+.pyc-feature:hover .pyc-feature-back,
+.pyc-feature:focus-within .pyc-feature-back,
+.pyc-feature.is-flipped .pyc-feature-back {
+  visibility: visible;
+}
+
+.pyc-feature:hover .pyc-feature-front,
+.pyc-feature:focus-within .pyc-feature-front,
+.pyc-feature.is-flipped .pyc-feature-front {
+  visibility: hidden;
+}
 
 .pyc-feature-head {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.7rem;
+  margin: 0 2.4rem 0.7rem 0;
 }
 
 .pyc-feature-icon {
@@ -674,12 +726,18 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
 .pyc-feature h3 a:hover { color: var(--pyc-accent, var(--pyc-blue)); }
 
 .pyc-feature p {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   margin: 0 0 0.9rem;
   color: var(--pyc-muted);
   font-size: 0.94rem;
   line-height: 1.65;
 }
+
+/* Front face: hug the copy to the image instead of stretching the
+   paragraph to fill whatever height the flip forces (that flex-grow
+   used to leave a dead gap above the hero image whenever the back
+   face was the shorter of the two and still drove --pyc-flip-h). */
+.pyc-feature-front { justify-content: center; }
 
 .pyc-feature-tags {
   display: flex;
@@ -726,11 +784,11 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
   justify-content: center;
   gap: 0.45rem;
   margin-top: 0.2rem;
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1rem;
   border-radius: 10px;
   background: var(--pyc-accent, var(--pyc-blue));
   color: #fff !important;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   font-weight: 750;
   text-decoration: none !important;
   transition: filter 150ms ease, transform 150ms ease;
@@ -745,7 +803,125 @@ html[data-theme="dark"] .pyc-stat b { color: #9db8ea; }
 }
 
 .pyc-feature-more i { transition: transform 150ms ease; }
-.pyc-feature:hover .pyc-feature-more i { transform: translateX(4px); }
+.pyc-feature-back:hover .pyc-feature-more i,
+.pyc-feature-more:focus-visible i { transform: translateX(4px); }
+
+/* pydata-sphinx-theme doesn't ship Bootstrap's .sr-only utility, so the
+   flip button's screen-reader label (see index.rst) rendered as visible
+   text squeezed into the round button, spelling itself out in a vertical
+   column. Standard visually-hidden-but-accessible rule. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Flip affordance — a persistent round control that floats above both
+   faces (outside .pyc-feature-inner, so it never rotates away). Hover
+   and keyboard focus already flip the card in pure CSS; this is the
+   explicit, always-tappable trigger for touch, wired up in
+   pycsamt-home.js #8. */
+.pyc-feature-flip {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--pyc-border);
+  border-radius: 999px;
+  background: var(--pyc-surface-2);
+  color: var(--pyc-accent, var(--pyc-blue));
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease, transform 220ms ease;
+}
+
+.pyc-feature-flip:hover {
+  background: var(--pyc-accent, var(--pyc-blue));
+  color: #fff;
+}
+
+.pyc-feature.is-flipped .pyc-feature-flip,
+.pyc-feature:hover .pyc-feature-flip,
+.pyc-feature:focus-within .pyc-feature-flip {
+  transform: rotate(180deg);
+}
+
+/* Back face — same accent as the card's top border, as a tinted gradient
+   panel (not a flat alert-style fill) so it still reads as "paper". */
+.pyc-feature-back {
+  background: linear-gradient(
+    165deg,
+    var(--pyc-accent, var(--pyc-blue)) 0%,
+    color-mix(in srgb, var(--pyc-accent, var(--pyc-blue)) 78%, #000 12%) 100%
+  );
+  border-top-color: transparent;
+  justify-content: center;
+  text-align: center;
+}
+
+.pyc-feature--gold .pyc-feature-back {
+  background: linear-gradient(165deg, #b57a12 0%, #8f6110 100%);
+}
+
+.pyc-feature-back .pyc-feature-head { justify-content: center; }
+
+.pyc-feature-back .pyc-feature-icon {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.pyc-feature-back h3 a { color: #fff; }
+.pyc-feature-back h3 a:hover { color: rgba(255, 255, 255, 0.8); }
+
+.pyc-feature-back .pyc-feature-tags { justify-content: center; margin-bottom: 1.1rem; }
+
+.pyc-feature-back .pyc-feature-tags a,
+.pyc-feature-back .pyc-feature-tags span {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.pyc-feature-back .pyc-feature-tags a:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+/* The flip button lives outside .pyc-feature-inner (so it never rotates
+   away), which means it has to have its own "on the back now" styling
+   keyed off the same hover/focus-within/is-flipped state as the faces,
+   rather than a .pyc-feature-back ancestor selector. */
+.pyc-feature:hover .pyc-feature-flip,
+.pyc-feature:focus-within .pyc-feature-flip,
+.pyc-feature.is-flipped .pyc-feature-flip {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.pyc-feature:hover .pyc-feature-flip:hover,
+.pyc-feature:focus-within .pyc-feature-flip:hover,
+.pyc-feature.is-flipped .pyc-feature-flip:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.pyc-feature-back .pyc-feature-more {
+  background: rgba(255, 255, 255, 0.18);
+  margin-top: 0.3rem;
+}
+
+.pyc-feature-back .pyc-feature-more:hover { background: rgba(255, 255, 255, 0.3); }
 
 /* --------------------------------------------------------------------------
    Code-in-action section (styles sphinx-design tabs)

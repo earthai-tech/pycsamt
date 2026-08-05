@@ -810,6 +810,17 @@ h3 .sd-badge {
   top: -0.12em;
 }
 
+/* "Compatibility" badge: none of sphinx-design's built-in semantic colours
+   (already claimed by |Feature|/|Fix|/|Breaking|/etc.) fit "read this
+   before upgrading, but it isn't a fix or a break" -- reuse .sd-badge's
+   shape/padding and pair it with the brand blue (--pyc-blue, defined in
+   pycsamt-home.css :root, so it is available on every page) instead of
+   introducing a tenth semantic colour. */
+.sd-badge.pyc-bg-compat {
+  background-color: var(--pyc-blue, #3e65b0) !important;
+  color: #fff !important;
+}
+
 /* User Guide landing page: a scikit-learn-style bold, numbered outline
    rendered straight from the toctree, instead of a grid of cards. Depth is
    conveyed by size/weight/colour rather than bullets or icons. */

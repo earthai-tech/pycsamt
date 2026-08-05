@@ -188,146 +188,231 @@
        <div class="pyc-features">
 
          <div class="pyc-feature pyc-feature--blue pyc-reveal">
-           <div class="pyc-feature-head">
-             <span class="pyc-feature-icon"><i class="fa-solid fa-database"></i></span>
-             <h3><a href="user_guide/data_loading.html">Data I/O &amp; quality control</a></h3>
+           <button type="button" class="pyc-feature-flip" aria-expanded="false">
+             <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+             <span class="sr-only">Show links for Data I/O &amp; quality control</span>
+           </button>
+           <div class="pyc-feature-inner">
+             <div class="pyc-feature-face pyc-feature-front">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-database"></i></span>
+                 <h3>Data I/O &amp; quality control</h3>
+               </div>
+               <p>
+                 Load EDI, Zonge AVG, Jones J, TDEM, and MARE2DEM files into one
+                 site model. Inspect frequency coverage, flag noisy stations, and
+                 audit usable data before any processing step.
+               </p>
+               <div class="pyc-feature-hero" aria-hidden="true">
+                 <img src="_static/images/home/card-dataio.png"
+                      alt="" loading="lazy" width="1280" height="600"/>
+               </div>
+             </div>
+             <div class="pyc-feature-face pyc-feature-back">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-database"></i></span>
+                 <h3><a href="user_guide/data_loading.html">Data I/O &amp; quality control</a></h3>
+               </div>
+               <div class="pyc-feature-tags">
+                 <a href="getting_started/data_formats.html">Formats</a>
+                 <a href="user_guide/site/index.html">Site tools</a>
+                 <span>EDI</span><span>AVG</span><span>J</span><span>emdata</span>
+               </div>
+               <a class="pyc-feature-more" href="user_guide/data_loading.html">
+                 Learn more <i class="fa-solid fa-arrow-right"></i>
+               </a>
+             </div>
            </div>
-           <p>
-             Load EDI, Zonge AVG, Jones J, TDEM, and MARE2DEM files into one
-             site model. Inspect frequency coverage, flag noisy stations, and
-             audit usable data before any processing step.
-           </p>
-           <div class="pyc-feature-tags">
-             <a href="getting_started/data_formats.html">Formats</a>
-             <a href="user_guide/site/index.html">Site tools</a>
-             <span>EDI</span><span>AVG</span><span>J</span><span>emdata</span>
-           </div>
-           <div class="pyc-feature-hero" aria-hidden="true">
-             <img src="_static/images/home/card-dataio.png"
-                  alt="" loading="lazy" width="1280" height="600"/>
-           </div>
-           <a class="pyc-feature-more" href="user_guide/data_loading.html">
-             Learn more <i class="fa-solid fa-arrow-right"></i>
-           </a>
          </div>
 
          <div class="pyc-feature pyc-feature--orange pyc-reveal">
-           <div class="pyc-feature-head">
-             <span class="pyc-feature-icon"><i class="fa-solid fa-sliders"></i></span>
-             <h3><a href="user_guide/emtools/index.html">Processing &amp; corrections</a></h3>
+           <button type="button" class="pyc-feature-flip" aria-expanded="false">
+             <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+             <span class="sr-only">Show links for Processing &amp; corrections</span>
+           </button>
+           <div class="pyc-feature-inner">
+             <div class="pyc-feature-face pyc-feature-front">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-sliders"></i></span>
+                 <h3>Processing &amp; corrections</h3>
+               </div>
+               <p>
+                 A catalogue of 25 correction methods in six categories: notch
+                 filtering, static-shift removal, tensor rotation, phase-tensor
+                 analysis, and more.
+               </p>
+               <div class="pyc-feature-hero" aria-hidden="true">
+                 <img src="_static/images/home/card-processing.png"
+                      alt="" loading="lazy" width="1280" height="600"/>
+               </div>
+             </div>
+             <div class="pyc-feature-face pyc-feature-back">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-sliders"></i></span>
+                 <h3><a href="user_guide/emtools/index.html">Processing &amp; corrections</a></h3>
+               </div>
+               <div class="pyc-feature-tags">
+                 <a href="user_guide/emtools/index.html">Catalogue</a>
+                 <span>Static shift</span><span>Notch</span><span>Phase tensor</span>
+               </div>
+               <a class="pyc-feature-more" href="user_guide/emtools/index.html">
+                 Learn more <i class="fa-solid fa-arrow-right"></i>
+               </a>
+             </div>
            </div>
-           <p>
-             A catalogue of 25 correction methods in six categories: notch
-             filtering, static-shift removal, tensor rotation, phase-tensor
-             analysis, and more — each with a stable identifier.
-           </p>
-           <div class="pyc-feature-tags">
-             <a href="user_guide/emtools/index.html">Catalogue</a>
-             <span>Static shift</span><span>Notch</span><span>Phase tensor</span>
-           </div>
-           <div class="pyc-feature-hero" aria-hidden="true">
-             <img src="_static/images/home/card-processing.png"
-                  alt="" loading="lazy" width="1280" height="600"/>
-           </div>
-           <a class="pyc-feature-more" href="user_guide/emtools/index.html">
-             Learn more <i class="fa-solid fa-arrow-right"></i>
-           </a>
          </div>
 
          <div class="pyc-feature pyc-feature--gold pyc-reveal">
-           <div class="pyc-feature-head">
-             <span class="pyc-feature-icon"><i class="fa-solid fa-layer-group"></i></span>
-             <h3><a href="user_guide/forward/index.html">Forward modelling</a></h3>
+           <button type="button" class="pyc-feature-flip" aria-expanded="false">
+             <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+             <span class="sr-only">Show links for Forward modelling</span>
+           </button>
+           <div class="pyc-feature-inner">
+             <div class="pyc-feature-face pyc-feature-front">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-layer-group"></i></span>
+                 <h3>Forward modelling</h3>
+               </div>
+               <p>
+                 Build synthetic layered-earth and 2-D models, compute forward
+                 responses, add realistic noise, and generate datasets for survey
+                 design or inverter training.
+               </p>
+               <div class="pyc-feature-hero" aria-hidden="true">
+                 <img src="_static/images/home/card-forward.png"
+                      alt="" loading="lazy" width="1280" height="600"/>
+               </div>
+             </div>
+             <div class="pyc-feature-face pyc-feature-back">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-layer-group"></i></span>
+                 <h3><a href="user_guide/forward/index.html">Forward modelling</a></h3>
+               </div>
+               <div class="pyc-feature-tags">
+                 <a href="user_guide/forward/index.html">Synthetics</a>
+                 <a href="theory/index.html">Theory</a>
+                 <span>MT</span><span>CSAMT</span><span>TDEM</span>
+               </div>
+               <a class="pyc-feature-more" href="user_guide/forward/index.html">
+                 Learn more <i class="fa-solid fa-arrow-right"></i>
+               </a>
+             </div>
            </div>
-           <p>
-             Build synthetic layered-earth and 2-D models, compute forward
-             responses, add realistic noise, and generate datasets for survey
-             design or inverter training.
-           </p>
-           <div class="pyc-feature-tags">
-             <a href="user_guide/forward/index.html">Synthetics</a>
-             <a href="theory/index.html">Theory</a>
-             <span>MT</span><span>CSAMT</span><span>TDEM</span>
-           </div>
-           <div class="pyc-feature-hero" aria-hidden="true">
-             <img src="_static/images/home/card-forward.png"
-                  alt="" loading="lazy" width="1280" height="600"/>
-           </div>
-           <a class="pyc-feature-more" href="user_guide/forward/index.html">
-             Learn more <i class="fa-solid fa-arrow-right"></i>
-           </a>
          </div>
 
          <div class="pyc-feature pyc-feature--blue pyc-reveal">
-           <div class="pyc-feature-head">
-             <span class="pyc-feature-icon"><i class="fa-solid fa-brain"></i></span>
-             <h3><a href="user_guide/inversion/index.html">Inversion — classical &amp; AI</a></h3>
+           <button type="button" class="pyc-feature-flip" aria-expanded="false">
+             <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+             <span class="sr-only">Show links for Inversion — classical &amp; AI</span>
+           </button>
+           <div class="pyc-feature-inner">
+             <div class="pyc-feature-face pyc-feature-front">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-brain"></i></span>
+                 <h3>Inversion — classical &amp; AI</h3>
+               </div>
+               <p>
+                 Drive Occam2D, ModEM, and MARE2DEM end to end — input builders,
+                 runners, result loaders — or switch to physics-informed neural
+                 networks and hybrid deep-learning inverters in 1-D to 3-D.
+               </p>
+               <div class="pyc-feature-hero" aria-hidden="true">
+                 <img src="_static/images/home/card-inversion.png"
+                      alt="" loading="lazy" width="1280" height="600"/>
+               </div>
+             </div>
+             <div class="pyc-feature-face pyc-feature-back">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-brain"></i></span>
+                 <h3><a href="user_guide/inversion/index.html">Inversion — classical &amp; AI</a></h3>
+               </div>
+               <div class="pyc-feature-tags">
+                 <a href="user_guide/models/index.html">Solvers</a>
+                 <a href="user_guide/ai_inversion/index.html">PINN</a>
+                 <span>Occam2D</span><span>ModEM</span><span>MARE2DEM</span>
+               </div>
+               <a class="pyc-feature-more" href="user_guide/inversion/index.html">
+                 Learn more <i class="fa-solid fa-arrow-right"></i>
+               </a>
+             </div>
            </div>
-           <p>
-             Drive Occam2D, ModEM, and MARE2DEM end to end — input builders,
-             runners, result loaders — or switch to physics-informed neural
-             networks and hybrid deep-learning inverters in 1-D to 3-D.
-           </p>
-           <div class="pyc-feature-tags">
-             <a href="user_guide/models/index.html">Solvers</a>
-             <a href="user_guide/ai_inversion/index.html">PINN</a>
-             <span>Occam2D</span><span>ModEM</span><span>MARE2DEM</span>
-           </div>
-           <div class="pyc-feature-hero" aria-hidden="true">
-             <img src="_static/images/home/card-inversion.png"
-                  alt="" loading="lazy" width="1280" height="600"/>
-           </div>
-           <a class="pyc-feature-more" href="user_guide/inversion/index.html">
-             Learn more <i class="fa-solid fa-arrow-right"></i>
-           </a>
          </div>
 
          <div class="pyc-feature pyc-feature--orange pyc-reveal">
-           <div class="pyc-feature-head">
-             <span class="pyc-feature-icon"><i class="fa-solid fa-map"></i></span>
-             <h3><a href="user_guide/interpretation/index.html">Interpretation &amp; mapping</a></h3>
+           <button type="button" class="pyc-feature-flip" aria-expanded="false">
+             <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+             <span class="sr-only">Show links for Interpretation &amp; mapping</span>
+           </button>
+           <div class="pyc-feature-inner">
+             <div class="pyc-feature-face pyc-feature-front">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-map"></i></span>
+                 <h3>Interpretation &amp; mapping</h3>
+               </div>
+               <p>
+                 Classify resistivity, derive pseudostratigraphic logs, and render
+                 station maps, pseudosections, overlays, and 3-D quick-look views
+                 with the code-first MapView platform, plus uncertainty layers
+                 for reporting.
+               </p>
+               <div class="pyc-feature-hero" aria-hidden="true">
+                 <img src="_static/images/home/card-interpretation.png"
+                      alt="" loading="lazy" width="1280" height="600"/>
+               </div>
+             </div>
+             <div class="pyc-feature-face pyc-feature-back">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-map"></i></span>
+                 <h3><a href="user_guide/interpretation/index.html">Interpretation &amp; mapping</a></h3>
+               </div>
+               <div class="pyc-feature-tags">
+                 <a href="user_guide/map/index.html">Map tools</a>
+                 <a href="user_guide/map/index.html">Mapping guide</a>
+                 <span>Pseudosection</span><span>3-D</span>
+               </div>
+               <a class="pyc-feature-more" href="user_guide/interpretation/index.html">
+                 Learn more <i class="fa-solid fa-arrow-right"></i>
+               </a>
+             </div>
            </div>
-           <p>
-             Classify resistivity, derive pseudostratigraphic logs, and render
-             station maps, pseudosections, overlays, and 3-D quick-look views
-             with the code-first MapView platform.
-           </p>
-           <div class="pyc-feature-tags">
-             <a href="user_guide/map/index.html">Map tools</a>
-             <a href="user_guide/map/index.html">Mapping guide</a>
-             <span>Pseudosection</span><span>3-D</span>
-           </div>
-           <div class="pyc-feature-hero" aria-hidden="true">
-             <img src="_static/images/home/card-interpretation.png"
-                  alt="" loading="lazy" width="1280" height="600"/>
-           </div>
-           <a class="pyc-feature-more" href="user_guide/interpretation/index.html">
-             Learn more <i class="fa-solid fa-arrow-right"></i>
-           </a>
          </div>
 
          <div class="pyc-feature pyc-feature--gold pyc-reveal">
-           <div class="pyc-feature-head">
-             <span class="pyc-feature-icon"><i class="fa-solid fa-robot"></i></span>
-             <h3><a href="user_guide/pipeline/index.html">Pipelines, agents &amp; apps</a></h3>
+           <button type="button" class="pyc-feature-flip" aria-expanded="false">
+             <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+             <span class="sr-only">Show links for Pipelines, agents &amp; apps</span>
+           </button>
+           <div class="pyc-feature-inner">
+             <div class="pyc-feature-face pyc-feature-front">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-robot"></i></span>
+                 <h3>Pipelines, agents &amp; apps</h3>
+               </div>
+               <p>
+                 Define reproducible workflows in YAML, JSON, or Python; let
+                 LLM-driven agents orchestrate QC, inversion prep, and reporting;
+                 or work interactively in the web dashboard and desktop GUI.
+               </p>
+               <div class="pyc-feature-hero" aria-hidden="true">
+                 <img src="_static/images/home/card-pipeline.png"
+                      alt="" loading="lazy" width="1280" height="600"/>
+               </div>
+             </div>
+             <div class="pyc-feature-face pyc-feature-back">
+               <div class="pyc-feature-head">
+                 <span class="pyc-feature-icon"><i class="fa-solid fa-robot"></i></span>
+                 <h3><a href="user_guide/pipeline/index.html">Pipelines, agents &amp; apps</a></h3>
+               </div>
+               <div class="pyc-feature-tags">
+                 <a href="user_guide/pipeline/index.html">Pipeline</a>
+                 <a href="user_guide/agents/index.html">AI agents</a>
+                 <a href="applications/index.html">Apps</a>
+               </div>
+               <a class="pyc-feature-more" href="user_guide/pipeline/index.html">
+                 Learn more <i class="fa-solid fa-arrow-right"></i>
+               </a>
+             </div>
            </div>
-           <p>
-             Define reproducible workflows in YAML, JSON, or Python; let
-             LLM-driven agents orchestrate QC, inversion prep, and reporting;
-             or work interactively in the web dashboard and desktop GUI.
-           </p>
-           <div class="pyc-feature-tags">
-             <a href="user_guide/pipeline/index.html">Pipeline</a>
-             <a href="user_guide/agents/index.html">AI agents</a>
-             <a href="applications/index.html">Apps</a>
-           </div>
-           <div class="pyc-feature-hero" aria-hidden="true">
-             <img src="_static/images/home/card-pipeline.png"
-                  alt="" loading="lazy" width="1280" height="600"/>
-           </div>
-           <a class="pyc-feature-more" href="user_guide/pipeline/index.html">
-             Learn more <i class="fa-solid fa-arrow-right"></i>
-           </a>
          </div>
 
        </div>

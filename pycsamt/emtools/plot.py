@@ -2019,6 +2019,12 @@ def plot_sites_fit_grid(
                 aP.set_xlabel("")
     # global legend (TE/TM fits)
     if show_mode_legend:
+        if axes_given is None:
+            # reserve headroom above the axes so the figure-level legend
+            # does not collide with the per-group station titles, which
+            # are drawn with their own fixed padding above each group's
+            # top axis (see axR[0].set_title(..., pad=18) above).
+            fig.subplots_adjust(top=0.80)
         h_te = plt.Line2D([], [], color=color_fit_te, lw=lw_fit)
         h_tm = plt.Line2D([], [], color=color_fit_tm, lw=lw_fit)
         fig.legend(

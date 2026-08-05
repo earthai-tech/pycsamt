@@ -20,14 +20,15 @@ dimensionless parameter,
 skin depths.
 
 This is a genuinely CSAMT-specific concept: it needs a real
-source-receiver offset, which a natural-source AMT survey like
-**L18PLT** (``data/AMT/WILLY_DATA/``) does not record (there is no
-transmitter). As in the ``csumt`` example, this page applies the same
-physics to L18PLT's real, CSAMT-band (1 Hz-10.4 kHz) apparent
-resistivity using a few representative assumed offsets — a legitimate
-way to see how the method behaves, while being upfront that the exact
-offset numbers are chosen for illustration, not read from survey
-metadata.
+source-receiver offset. Unlike most other pyCSAMT example pages, this
+one therefore uses the bundled **Tongkeng** survey (``data/CSAMT``) —
+ten real stations acquired over a real grounded-dipole transmitter for
+a groundwater-exploration study in Hunan Province, China (Kouadio et
+al., 2020). The EDI files themselves still do not record the exact
+transmitter-receiver distance — that is field-notebook metadata, not
+part of the SEG EDI standard — so every worked example below still
+states its offset explicitly as an assumption, but at least the
+transmitter genuinely exists, unlike a natural-source AMT line.
 """
 
 # %%
@@ -49,7 +50,7 @@ from pycsamt.emtools import (
 
 BOSTICK_C = 356.0
 RHO_DEMO = 300.0
-freq = np.logspace(0, 4, 300)  # 1 Hz-10 kHz, matches L18PLT's band
+freq = np.logspace(-1, 4, 300)  # 0.1 Hz-10 kHz, spans Tongkeng's 0.125-8197 Hz band
 delta_b = BOSTICK_C * np.sqrt(RHO_DEMO / freq)
 
 fig, ax = plt.subplots(figsize=(7, 5))
@@ -84,14 +85,16 @@ ax.grid(True, which="both", alpha=0.3)
 # -------------------------------------------
 # :func:`~pycsamt.emtools.fieldzone.classify_field_zones` computes ``|k.r|``
 # from each station's actual measured apparent resistivity rather than
-# an assumed constant — using a representative 2 km offset.
+# an assumed constant — using a representative 1 km offset, the same
+# assumption used throughout this page and in the field-zone theory
+# guide.
 
 from _datasets import load_survey  # noqa: E402
 
-survey = load_survey("amt_l18plt")
-OFFSET_DEMO = 2000.0
+survey = load_survey("csamt_tongkeng")
+OFFSET_DEMO = 1000.0
 zones = classify_field_zones(survey, OFFSET_DEMO)
-station = "18-001A"
+station = "csa000"
 d = zones[zones["station"] == station].sort_values("period_s")
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -104,12 +107,13 @@ ax.set_ylabel(r"$|k \cdot r|$")
 ax.set_title(f"{station} — measured |k.r|  (r={OFFSET_DEMO:g} m)")
 
 # %%
-# **Reading this figure.** ``|k.r|`` falls from about 65 at the shortest
-# period, dipping as low as 0.08 around 0.24 s before settling around
-# 0.1-0.2 at the longest periods — this station's own sounding crosses
-# all three zones within its recorded band, entirely because apparent
-# resistivity and frequency both change with period, not because the
-# assumed offset changes.
+# **Reading this figure.** ``|k.r|`` falls monotonically from about 15
+# at the shortest measured period down to about ``3.5e-4`` at the
+# longest, crossing the far/transition line at the second-shortest
+# period and the transition/near line by the seventh sample — this
+# station's own sounding spends most of its recorded band in the near
+# field at a 1 km offset, entirely because apparent resistivity climbs
+# steeply with period here, not because the assumed offset changes.
 
 # %%
 # 3. Cross-checking against the near-field correction factor
@@ -143,17 +147,20 @@ ax.set_yscale("log")
 ax.set_xlabel(r"$|k \cdot r|$")
 ax.set_ylabel(r"near-field factor $|F(p)|$")
 ax.legend(fontsize=8)
-ax.set_title("L18PLT — near-field factor vs. |k.r|, all stations")
+ax.set_title("Tongkeng — near-field factor vs. |k.r|, all stations")
 
 # %%
-# **Reading this figure.** The two independent computations agree
-# closely: ``|F|`` averages 0.99 in the far zone (essentially unbiased),
-# climbs to a mean of about 13 in transition, and explodes to a mean
-# above 900 (up to nearly 17,000 at the most extreme point) in the near
-# zone — a smooth, monotonic blow-up as ``|k.r|`` falls below 1, exactly
-# where the plane-wave approximation is expected to fail. That the
-# threshold rule and the continuous formula tell the same story is a
-# useful internal consistency check before trusting either on its own.
+# **Reading this figure.** The two independent computations agree in
+# direction: ``|F|`` averages 0.99 in the far zone (essentially
+# unbiased) and climbs sharply once ``|k.r|`` drops below 1. On this
+# real survey the near-zone blow-up is dramatic rather than mild — a
+# mean above ``9e9`` and a maximum above ``2e11`` — driven by the
+# lowest measured frequency (0.125 Hz), where apparent resistivity
+# itself climbs past ten million ohm-metres at several stations. That
+# the threshold rule and the continuous formula agree on *direction* is
+# a useful internal consistency check; the *scale* of the blow-up is a
+# reminder that this survey's longest periods are not simply "a bit
+# biased" — they are geometric near-field artefacts.
 
 # %%
 # 4. The module's pseudo-section
@@ -162,14 +169,15 @@ ax.set_title("L18PLT — near-field factor vs. |k.r|, all stations")
 # view: every station's zone across the whole recorded band, with
 # dashed white ``|k.r|`` contours.
 
-plot_field_zones(survey, OFFSET_DEMO)
+plot_field_zones(survey, OFFSET_DEMO, sort_by="name")
 
 # %%
-# **Reading this figure.** Every station shows the same broad pattern
-# as the single-station curve in section 2 — green (far) at the bottom
-# (shortest periods), warming through orange to red toward the top
-# (longest periods) — because every station in this line shares a
-# comparable resistivity range and the same assumed 2 km offset.
+# **Reading this figure.** The near field sets in early (short period)
+# across nearly the whole profile, with a slightly more resistive patch
+# around ``csa150``-``csa200`` pushing the far/transition boundary out
+# to a longer period than its neighbours — the same feature visible in
+# the single-station curve of section 2, now shown to be a
+# profile-wide, not station-specific, pattern.
 
 # %%
 # 5. Advanced: how much does the assumed offset matter?
@@ -202,17 +210,18 @@ ax.set_xticks(x, [f"{o:g} m" for o in offsets])
 ax.set_ylabel("fraction of (station, frequency) pairs")
 ax.set_xlabel("assumed source offset")
 ax.legend(fontsize=8, loc="upper right")
-ax.set_title("L18PLT — zone mix vs. assumed offset")
+ax.set_title("Tongkeng — zone mix vs. assumed offset")
 
 # %%
-# **Reading this figure.** The near-field fraction drops from 35% at
-# 500 m to essentially 0% at 8 km, while the far-field fraction rises
-# from 26% to 71% over the same range — the *same* recorded data reads
-# as mostly contaminated or mostly clean depending entirely on an
-# offset number that, for a real CSAMT survey, must come from the
-# actual transmitter-receiver geometry. Getting it wrong doesn't just
-# shift a percentage: it silently changes which frequencies you should
-# have discarded before inversion.
+# **Reading this figure.** The near-field fraction falls only from 69%
+# at 500 m to 42% at 8 km, while the far-field fraction rises from 6%
+# to 36% over the same range — a real near-surface-resistive CSAMT
+# target does not "outrun" the near field just by assuming a generous
+# offset the way a more moderate survey might. Getting the offset wrong
+# doesn't just shift a percentage: it silently changes which
+# frequencies you should have discarded before inversion, and on this
+# survey a large fraction stays suspect under any reasonable
+# assumption.
 
 # %%
 # 6. Advanced: near vs. far offset, side by side
@@ -221,18 +230,20 @@ ax.set_title("L18PLT — zone mix vs. assumed offset")
 # sharing one figure via ``ax``.
 
 fig, (axa, axb) = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
-plot_field_zones(survey, 500.0, ax=axa)
+plot_field_zones(survey, 500.0, sort_by="name", ax=axa)
 axa.set_title("r = 500 m")
-plot_field_zones(survey, 8000.0, ax=axb)
+plot_field_zones(survey, 8000.0, sort_by="name", ax=axb)
 axb.set_title("r = 8000 m")
 fig.tight_layout()
 
 # %%
-# **Reading this figure.** The 500 m panel is dominated by orange/red
-# down through the middle of the band; the 8 km panel is nearly all
-# green until the very longest periods. Same stations, same
-# resistivities — the offset alone decides which one a practitioner
-# would trust.
+# **Reading this figure.** The 500 m panel is almost entirely red/orange
+# except at the very shortest periods; the 8 km panel gains a
+# meaningfully larger green band but still keeps a substantial red
+# near-field region at long period. Same stations, same resistivities —
+# the offset alone decides how much of the sounding a practitioner
+# would trust, but here even a generous offset assumption leaves real
+# near-field contamination at the long-period end.
 
 # %%
 # 7. Advanced: what the near-field bias would do to a sounding curve
@@ -270,8 +281,14 @@ ax.legend(fontsize=8)
 ax.set_title(f"{station} — measured vs. near-field-corrected ρ_a")
 
 # %%
-# **Reading this figure.** The two curves overlap almost exactly at
-# short period (the far zone, where ``|F|`` ≈ 1) and diverge sharply at the
-# longest periods, where section 2 already showed this station sits
-# deep in the near-field zone — precisely the frequencies where a plain
-# plane-wave inversion would be misled by this station's own data.
+# **Reading this figure.** The two curves only agree at the shortest
+# two or three periods (the far zone, where ``|F|`` ≈ 1). Past that
+# they do not just diverge — the illustrative correction collapses to
+# physically meaningless values, down to roughly ``1.7e-15`` Ω·m at the
+# longest (8 s) period, because ``nf_factor`` itself reaches about
+# ``6.7e10`` there and the correction divides by its square. That
+# collapse is the honest result of the formula, not a bug: dividing by
+# an astronomically large factor cannot recover a real earth
+# resistivity, and a station this deep in the near field needs a
+# genuine controlled-source inversion or exclusion, not a scalar
+# correction.

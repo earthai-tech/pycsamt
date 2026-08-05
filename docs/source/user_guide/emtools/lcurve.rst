@@ -19,13 +19,13 @@ curve, compare methods, and turn the result into a reproducible report.
 What The L-Curve Means
 ----------------------
 
-Regularization is a trade-off. A small regularization parameter usually
-fits the data more closely but allows a rough model. A large
+:term:`Regularization` is a trade-off. A small regularization parameter
+usually fits the data more closely but allows a rough model. A large
 regularization parameter usually makes the model smoother but increases
 the data misfit.
 
 In a standard Tikhonov problem the model :math:`m_\lambda` is obtained
-by minimizing
+by minimizing the :term:`objective function`
 
 .. math::
 
@@ -73,19 +73,16 @@ because the trade-off is usually multiplicative: a useful corner often
 means "this much extra smoothness costs this many times more misfit",
 not a fixed additive change in raw units.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   lambdas = np.logspace(-3, 3, 60)
-   roughness = 1.0 / (1.0 + lambdas**2)
-   misfit = lambdas**2 / (1.0 + lambdas**2)
-
-   # All three arrays should describe the same sweep order.
-   assert misfit.shape == roughness.shape == lambdas.shape
-   assert np.all(misfit > 0.0)
-   assert np.all(roughness > 0.0)
+   >>> import numpy as np
+   >>> lambdas = np.logspace(-3, 3, 60)
+   >>> roughness = 1.0 / (1.0 + lambdas**2)
+   >>> misfit = lambdas**2 / (1.0 + lambdas**2)
+   >>> # All three arrays should describe the same sweep order.
+   >>> assert misfit.shape == roughness.shape == lambdas.shape
+   >>> assert np.all(misfit > 0.0)
+   >>> assert np.all(roughness > 0.0)
 
 The module does not compute the inversion itself. It only analyzes the
 numbers produced by your inversion, forward-model sweep, or smoothing
@@ -98,38 +95,27 @@ Start with a curve whose corner is easy to see. This is useful for
 checking that the mechanics are clear before using real inversion
 output.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   from pycsamt.emtools import lcurve_table, plot_lcurve
-
-   lambdas = np.logspace(-3, 3, 40)
-
-   # Small lambda: rough model, low misfit.
-   # Large lambda: smooth model, higher misfit.
-   roughness = 1.0 / (1.0 + lambdas**2)
-   misfit = lambdas**2 / (1.0 + lambdas**2)
-
-   table = lcurve_table(misfit, roughness, lambdas)
-   corner_idx = table.attrs["corner_idx"]
-
-   print(table.iloc[corner_idx])
-   print("lambda* =", table["lam"].iloc[corner_idx])
-
-   ax = plot_lcurve(misfit, roughness, lambdas)
-   ax.figure.savefig("synthetic_lcurve.png", dpi=200)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import lcurve_table, plot_lcurve
+   >>> lambdas = np.logspace(-3, 3, 40)
+   >>> # Small lambda: rough model, low misfit.
+   >>> # Large lambda: smooth model, higher misfit.
+   >>> roughness = 1.0 / (1.0 + lambdas**2)
+   >>> misfit = lambdas**2 / (1.0 + lambdas**2)
+   >>> table = lcurve_table(misfit, roughness, lambdas)
+   >>> corner_idx = table.attrs["corner_idx"]
+   >>> table.iloc[corner_idx]
    rough     0.412354
    misfit    0.587646
    lam       1.193777
    curv      1.333709
    slope    -0.711581
    Name: 20, dtype: float64
+   >>> print("lambda* =", table["lam"].iloc[corner_idx])
    lambda* = 1.1937766417144369
+   >>> ax = plot_lcurve(misfit, roughness, lambdas)
+   >>> ax.figure.savefig("synthetic_lcurve.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-02.png
    :width: 100%
@@ -145,34 +131,29 @@ Read The Table
 The table is the most important output because it lets you inspect the
 corner selection numerically.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import lcurve_table
-   table = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       method="curvature",
-       smooth=3,
-       skip=1,
-   )
-   corner = table.attrs["corner_idx"]
-   row = table.iloc[corner]
-   print(f"corner index: {corner}")
-   print(f"lambda*: {row['lam']:.4g}")
-   print(f"misfit: {row['misfit']:.4g}")
-   print(f"roughness: {row['rough']:.4g}")
-   print(f"corner score: {row['curv']:.4g}")
-   print(f"local slope: {row['slope']:.4g}")
-
-.. code-block:: text
-
+   >>> table = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     skip=1,
+   ... )
+   >>> corner = table.attrs["corner_idx"]
+   >>> row = table.iloc[corner]
+   >>> print(f"corner index: {corner}")
    corner index: 20
+   >>> print(f"lambda*: {row['lam']:.4g}")
    lambda*: 1.194
+   >>> print(f"misfit: {row['misfit']:.4g}")
    misfit: 0.5876
+   >>> print(f"roughness: {row['rough']:.4g}")
    roughness: 0.4124
+   >>> print(f"corner score: {row['curv']:.4g}")
    corner score: 1.334
+   >>> print(f"local slope: {row['slope']:.4g}")
    local slope: -0.7116
 
 ``curv`` is the corner score. With ``method="curvature"``, it is the
@@ -224,24 +205,20 @@ The curve can be sorted by roughness, by lambda, or automatically.
 The default ``sort="auto"`` sorts by lambda when the lambda array is
 monotonic; otherwise it sorts by roughness.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import lcurve_table
-
-   by_lambda = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       sort="lambda",
-   )
-
-   by_roughness = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       sort="x",
-   )
+   >>> by_lambda = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     sort="lambda",
+   ... )
+   >>> by_roughness = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     sort="x",
+   ... )
 
 Use ``sort="lambda"`` when you want to preserve the physical sweep
 direction. Use ``sort="x"`` when the lambda values are missing,
@@ -267,31 +244,26 @@ Two corner-picking methods are available.
      - Finds the point farthest from the line joining the two endpoints.
      - Noisy curves, short sweeps, or uncertain smoothing.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import lcurve_table
-   curvature = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       method="curvature",
-       smooth=3,
-   )
-   maxdist = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       method="maxdist",
-   )
-   j_curv = curvature.attrs["corner_idx"]
-   j_dist = maxdist.attrs["corner_idx"]
-   print("curvature lambda*:", curvature["lam"].iloc[j_curv])
-   print("maxdist lambda*:", maxdist["lam"].iloc[j_dist])
-
-.. code-block:: text
-
+   >>> curvature = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     method="curvature",
+   ...     smooth=3,
+   ... )
+   >>> maxdist = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     method="maxdist",
+   ... )
+   >>> j_curv = curvature.attrs["corner_idx"]
+   >>> j_dist = maxdist.attrs["corner_idx"]
+   >>> print("curvature lambda*:", curvature["lam"].iloc[j_curv])
    curvature lambda*: 1.1937766417144369
+   >>> print("maxdist lambda*:", maxdist["lam"].iloc[j_dist])
    maxdist lambda*: 0.8376776400682924
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-06.png
@@ -331,24 +303,20 @@ moving average in log-log space before differentiating. The ``skip``
 argument prevents the first and last points from being selected as the
 corner.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import lcurve_table
-   for smooth in (1, 3, 5, 7):
-       table = lcurve_table(
-           misfit,
-           roughness,
-           lambdas,
-           method="curvature",
-           smooth=smooth,
-           skip=2,
-       )
-       j = table.attrs["corner_idx"]
-       print(f"smooth={smooth}: lambda*={table['lam'].iloc[j]:.4g}")
-
-.. code-block:: text
-
+   >>> for smooth in (1, 3, 5, 7):
+   ...     table = lcurve_table(
+   ...         misfit,
+   ...         roughness,
+   ...         lambdas,
+   ...         method="curvature",
+   ...         smooth=smooth,
+   ...         skip=2,
+   ...     )
+   ...     j = table.attrs["corner_idx"]
+   ...     print(f"smooth={smooth}: lambda*={table['lam'].iloc[j]:.4g}")
+   ...
    smooth=1: lambda*=1.194
    smooth=3: lambda*=1.194
    smooth=5: lambda*=0.8377
@@ -387,30 +355,23 @@ Plot A Single Curve
 both in log scale. The selected corner is marked with a star by
 default.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_lcurve
-
-   fig, ax = plt.subplots(figsize=(6.4, 4.8))
-
-   plot_lcurve(
-       misfit,
-       roughness,
-       lambdas,
-       labels=["station 18-001A"],
-       method="curvature",
-       smooth=3,
-       show_inset=True,
-       ax=ax,
-   )
-
-   ax.set_title("L-curve regularization sweep")
-   fig.tight_layout()
-   fig.savefig("lcurve_18-001A.png", dpi=200)
-   plt.close(fig)
+   >>> import matplotlib.pyplot as plt
+   >>> fig, ax = plt.subplots(figsize=(6.4, 4.8))
+   >>> _ = plot_lcurve(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     labels=["station 18-001A"],
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     show_inset=True,
+   ...     ax=ax,
+   ... )
+   >>> _ = ax.set_title("L-curve regularization sweep")
+   >>> fig.tight_layout()
+   >>> fig.savefig("lcurve_18-001A.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-08.png
    :width: 100%
@@ -424,37 +385,30 @@ Plot Multiple Curves
 Pass lists of misfit, roughness, and lambda arrays to compare several
 stations, inversion targets, or model parameterizations.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_lcurve
-
-   curves_misfit = [
-       misfit,
-       misfit * 1.25 + 0.03,
-       misfit * 0.85 + 0.08,
-   ]
-   curves_roughness = [
-       roughness,
-       roughness * 0.75 + 0.02,
-       roughness * 1.35 + 0.05,
-   ]
-   curves_lambda = [lambdas, lambdas, lambdas]
-
-   fig, ax = plt.subplots(figsize=(7.0, 5.0))
-   plot_lcurve(
-       curves_misfit,
-       curves_roughness,
-       curves_lambda,
-       labels=["run A", "run B", "run C"],
-       method="maxdist",
-       show_inset=True,
-       ax=ax,
-   )
-   fig.savefig("lcurve_multi_run.png", dpi=200)
-   plt.close(fig)
+   >>> curves_misfit = [
+   ...     misfit,
+   ...     misfit * 1.25 + 0.03,
+   ...     misfit * 0.85 + 0.08,
+   ... ]
+   >>> curves_roughness = [
+   ...     roughness,
+   ...     roughness * 0.75 + 0.02,
+   ...     roughness * 1.35 + 0.05,
+   ... ]
+   >>> curves_lambda = [lambdas, lambdas, lambdas]
+   >>> fig, ax = plt.subplots(figsize=(7.0, 5.0))
+   >>> _ = plot_lcurve(
+   ...     curves_misfit,
+   ...     curves_roughness,
+   ...     curves_lambda,
+   ...     labels=["run A", "run B", "run C"],
+   ...     method="maxdist",
+   ...     show_inset=True,
+   ...     ax=ax,
+   ... )
+   >>> fig.savefig("lcurve_multi_run.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-09.png
    :width: 100%
@@ -469,20 +423,17 @@ Show Sweep Direction
 ``arrow_every`` draws arrows along the curve. This is helpful when you
 want readers to see how increasing lambda moves through the trade-off.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import plot_lcurve
-
-   ax = plot_lcurve(
-       misfit,
-       roughness,
-       lambdas,
-       arrow_every=5,
-       show_points=False,
-       show_inset=False,
-   )
-   ax.figure.savefig("lcurve_with_lambda_direction.png", dpi=200)
+   >>> ax = plot_lcurve(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     arrow_every=5,
+   ...     show_points=False,
+   ...     show_inset=False,
+   ... )
+   >>> ax.figure.savefig("lcurve_with_lambda_direction.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-10.png
    :width: 100%
@@ -494,8 +445,8 @@ Use L-Curve With A Real Smoothing Sweep
 ---------------------------------------
 
 The example below builds a small Tikhonov smoothing problem from one
-station's apparent resistivity. It is not a full inversion; it is a
-transparent way to produce real misfit and roughness arrays.
+station's :term:`apparent resistivity`. It is not a full inversion; it
+is a transparent way to produce real misfit and roughness arrays.
 
 The model vector is the smoothed
 :math:`\log_{10}\rho_a(T)` curve.  The second-difference operator is
@@ -512,68 +463,55 @@ is
 
    (I + \lambda^2 D^T D)m_\lambda = d.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   from pycsamt.emtools import ensure_sites, lcurve_table, plot_lcurve
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   def second_difference(n):
-       operator = np.zeros((n - 2, n))
-       for i in range(n - 2):
-           operator[i, i] = 1.0
-           operator[i, i + 1] = -2.0
-           operator[i, i + 2] = 1.0
-       return operator
-
-   def station_log10_rho_xy(sites, station):
-       for index, site in enumerate(_iter_items(sites)):
-           if _name(site, index) != station:
-               continue
-           _, z, freq = _get_z_block(site)
-           rho_xy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq
-           return np.log10(rho_xy), freq
-       raise KeyError(station)
-
-   def smoothing_sweep(data, lambdas):
-       n = data.size
-       identity = np.eye(n)
-       rough_operator = second_difference(n)
-       regularizer = rough_operator.T @ rough_operator
-
-       misfits = []
-       roughness = []
-       models = []
-
-       for lam in lambdas:
-           model = np.linalg.solve(
-               identity + lam**2 * regularizer,
-               data,
-           )
-           misfits.append(np.linalg.norm(model - data))
-           roughness.append(np.linalg.norm(rough_operator @ model))
-           models.append(model)
-
-       return np.array(misfits), np.array(roughness), np.array(models)
-
-   lambdas = np.logspace(-3, 3, 60)
-   data, freq = station_log10_rho_xy(survey, "18-001A")
-   misfit, roughness, models = smoothing_sweep(data, lambdas)
-
-   table = lcurve_table(misfit, roughness, lambdas)
-   corner = table.attrs["corner_idx"]
-   print("lambda* =", table["lam"].iloc[corner])
-
-   ax = plot_lcurve(misfit, roughness, lambdas, labels=["18-001A"])
-   ax.figure.savefig("lcurve_real_station.png", dpi=200)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import ensure_sites
+   >>> from pycsamt.emtools._core import _get_z_block, _iter_items, _name
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> def second_difference(n):
+   ...     operator = np.zeros((n - 2, n))
+   ...     for i in range(n - 2):
+   ...         operator[i, i] = 1.0
+   ...         operator[i, i + 1] = -2.0
+   ...         operator[i, i + 2] = 1.0
+   ...     return operator
+   ...
+   >>> def station_log10_rho_xy(sites, station):
+   ...     for index, site in enumerate(_iter_items(sites)):
+   ...         if _name(site, index) != station:
+   ...             continue
+   ...         _, z, freq = _get_z_block(site)
+   ...         rho_xy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq
+   ...         return np.log10(rho_xy), freq
+   ...     raise KeyError(station)
+   ...
+   >>> def smoothing_sweep(data, lambdas):
+   ...     n = data.size
+   ...     identity = np.eye(n)
+   ...     rough_operator = second_difference(n)
+   ...     regularizer = rough_operator.T @ rough_operator
+   ...     misfits = []
+   ...     roughness = []
+   ...     models = []
+   ...     for lam in lambdas:
+   ...         model = np.linalg.solve(
+   ...             identity + lam**2 * regularizer,
+   ...             data,
+   ...         )
+   ...         misfits.append(np.linalg.norm(model - data))
+   ...         roughness.append(np.linalg.norm(rough_operator @ model))
+   ...         models.append(model)
+   ...     return np.array(misfits), np.array(roughness), np.array(models)
+   ...
+   >>> lambdas = np.logspace(-3, 3, 60)
+   >>> data, freq = station_log10_rho_xy(survey, "18-001A")
+   >>> misfit, roughness, models = smoothing_sweep(data, lambdas)
+   >>> table = lcurve_table(misfit, roughness, lambdas)
+   >>> corner = table.attrs["corner_idx"]
+   >>> print("lambda* =", table["lam"].iloc[corner])
    lambda* = 0.34863652276780877
+   >>> ax = plot_lcurve(misfit, roughness, lambdas, labels=["18-001A"])
+   >>> ax.figure.savefig("lcurve_real_station.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-11.png
    :width: 100%
@@ -601,44 +539,37 @@ model approaches the smoothest curve allowed by :math:`L`.  The corner
 is useful only if the model at :math:`\lambda^\ast` is a credible
 compromise between those two behaviors.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   period = 1.0 / freq
-   corner = table.attrs["corner_idx"]
-   under = 5
-   over = 50
-
-   fig, ax = plt.subplots(figsize=(7.0, 4.5))
-
-   ax.semilogx(period, data, "o", color="0.55", label="observed")
-   ax.semilogx(
-       period,
-       models[under],
-       "-",
-       label=f"under-regularized lambda={lambdas[under]:.3g}",
-   )
-   ax.semilogx(
-       period,
-       models[corner],
-       "-",
-       linewidth=2.2,
-       label=f"corner lambda={lambdas[corner]:.3g}",
-   )
-   ax.semilogx(
-       period,
-       models[over],
-       "-",
-       label=f"over-regularized lambda={lambdas[over]:.3g}",
-   )
-
-   ax.set_xlabel("Period (s)")
-   ax.set_ylabel("log10 apparent resistivity")
-   ax.legend(fontsize=8)
-   fig.savefig("regularization_levels.png", dpi=200)
-   plt.close(fig)
+   >>> period = 1.0 / freq
+   >>> corner = table.attrs["corner_idx"]
+   >>> under = 5
+   >>> over = 50
+   >>> fig, ax = plt.subplots(figsize=(7.0, 4.5))
+   >>> _ = ax.semilogx(period, data, "o", color="0.55", label="observed")
+   >>> _ = ax.semilogx(
+   ...     period,
+   ...     models[under],
+   ...     "-",
+   ...     label=f"under-regularized lambda={lambdas[under]:.3g}",
+   ... )
+   >>> _ = ax.semilogx(
+   ...     period,
+   ...     models[corner],
+   ...     "-",
+   ...     linewidth=2.2,
+   ...     label=f"corner lambda={lambdas[corner]:.3g}",
+   ... )
+   >>> _ = ax.semilogx(
+   ...     period,
+   ...     models[over],
+   ...     "-",
+   ...     label=f"over-regularized lambda={lambdas[over]:.3g}",
+   ... )
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel("log10 apparent resistivity")
+   >>> _ = ax.legend(fontsize=8)
+   >>> fig.savefig("regularization_levels.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-12.png
    :width: 100%
@@ -646,6 +577,214 @@ compromise between those two behaviors.
 The under-regularized model should usually track too much local noise.
 The over-regularized model should usually be too smooth. The corner
 model should sit between them.
+
+Reading Real Inversion Logs
+----------------------------
+
+The smoothing sweep above builds ``misfit``/``roughness``/``lambda``
+arrays by hand. Real 2-D and 3-D inversion codes already write exactly
+these three quantities to their convergence logs, one row per
+iteration, because Occam-style regularized inversion *is* an L-curve
+sweep: each iteration searches for the regularization parameter that
+best trades data fit against model roughness, then moves on. Three
+loader functions read those logs directly into an :class:`LCurveData`
+container, so the same :func:`lcurve_table` and :func:`plot_lcurve`
+used throughout this page work unchanged on real solver output:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Function
+     - Reads
+     - Regularization parameter
+   * - ``lcurve_from_occam2d``
+     - Occam2D's ``LogFile.logfile``
+     - Accepted Lagrange multiplier :math:`\mu` (linear scale).
+   * - ``lcurve_from_modem``
+     - ModEM's ``Modular_NLCG.log``
+     - Damping parameter :math:`\lambda` (linear scale).
+   * - ``lcurve_from_mare2dem``
+     - MARE2DEM's ``*.logfile``
+     - Optimal :math:`\mu`, converted from the log's
+       :math:`\log_{10}\mu` back to linear scale.
+
+Each function delegates to the existing, already-tested log parser for
+that backend (:class:`~pycsamt.models.occam2d.log.OccamLog`,
+:class:`~pycsamt.models.modem.log.ModEmLog`,
+:class:`~pycsamt.models.mare2dem.log.Mare2DEMLog`) rather than
+re-parsing the log text, and drops any row whose misfit or roughness is
+non-finite or non-positive -- for example an Occam2D iteration that
+stopped on "Convergence problems" before writing ``ROUGHNESS IS``, or a
+ModEM ``START`` record whose model-norm term ``m2`` is exactly zero
+before the first iteration.
+
+Occam2D
+~~~~~~~
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import lcurve_from_occam2d
+   >>> occam_sweep = lcurve_from_occam2d("data/occam2D/LogFile.logfile")
+   >>> occam_sweep.backend
+   'occam2d'
+   >>> occam_sweep.misfit.size
+   16
+   >>> ax = occam_sweep.plot(
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     show_inset=False,
+   ...     target_misfit=1.0,
+   ...     target_label="target RMS = 1.0",
+   ...     label_every=4,
+   ...     label_prefix="mu=",
+   ...     figsize=(7.5, 5.2),
+   ... )
+   >>> _ = ax.set_title("Occam2D real inversion L-curve (data/occam2D)")
+   >>> ax.figure.tight_layout()
+   >>> ax.figure.savefig("occam2d_lcurve.png", dpi=170)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-14.png
+   :width: 100%
+
+Sixteen of the seventeen logged iterations survive filtering (the
+seventeenth never finishes writing ``ROUGHNESS IS`` -- the log ends with
+"Convergence problems from RMS Misfit" instead). Occam's own search
+variable :math:`\mu` is not the linear :math:`\lambda` used earlier in
+this page; it behaves closer to :math:`\log_{10}\lambda` and can go
+negative, which is exactly what the ``mu=`` labels on the plot show
+happening once the run crosses the target RMS. The curve itself is not
+a clean textbook L: real Occam runs cut step size and re-search
+:math:`\mu` whenever a step overshoots, which shows up here as the
+visible zig-zag once roughness passes about 150.
+
+ModEM
+~~~~~
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import lcurve_from_modem
+   >>> modem_sweep = lcurve_from_modem(
+   ...     "data/modem/willy_27freq_watex_line02_sample/Modular_NLCG.log"
+   ... )
+   >>> modem_sweep.backend
+   'modem'
+   >>> modem_sweep.misfit.size
+   73
+   >>> ax = modem_sweep.plot(
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     show_inset=False,
+   ...     target_misfit=1.05,
+   ...     target_label="exit RMS = 1.05",
+   ...     label_every=12,
+   ...     label_prefix="lam=",
+   ...     figsize=(7.5, 5.2),
+   ... )
+   >>> _ = ax.set_title("ModEM real NLCG inversion L-curve (willy_27freq_watex_line02)")
+   >>> ax.figure.tight_layout()
+   >>> ax.figure.savefig("modem_lcurve.png", dpi=170)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-15.png
+   :width: 100%
+
+ModEM's roughness axis is its model-regularization term ``m2`` --
+:func:`lcurve_from_modem` passes it straight through as ``rough``,
+since it plays the identical :math:`\Phi_m(m)` role that Occam's
+``ROUGHNESS IS`` plays. The bundled sample's own ``inv.ctrl`` sets
+``Exit search when rms is less than 1.05``, plotted here as the target
+line; 73 NLCG iterations still leave the run at RMS ≈ 3.06, far short
+of it. That is not a bug in the reader -- it is an honest read of a
+deliberately compact bundled sample, not a converged production
+inversion, and the target line makes that gap visible at a glance
+instead of hiding it in an axis range that only covers the data.
+
+MARE2DEM
+~~~~~~~~
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import lcurve_from_mare2dem
+   >>> mare_sweep = lcurve_from_mare2dem(
+   ...     "data/mare2dem/demo_mt_inversion/demo.logfile"
+   ... )
+   >>> mare_sweep.backend
+   'mare2dem'
+   >>> mare_sweep.misfit.size
+   6
+   >>> ax = mare_sweep.plot(
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     show_inset=False,
+   ...     target_misfit=1.0,
+   ...     target_label="target misfit = 1.0",
+   ...     label_every=1,
+   ...     label_prefix="mu=",
+   ...     figsize=(7.5, 5.2),
+   ... )
+   >>> _ = ax.set_title("MARE2DEM real MT inversion L-curve (demo_mt_inversion)")
+   >>> ax.figure.tight_layout()
+   >>> ax.figure.savefig("mare2dem_lcurve.png", dpi=170)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-16.png
+   :width: 100%
+
+MARE2DEM logs only six completed iterations for this bundled MT demo,
+and it reaches the target misfit by iteration 5 -- close enough that
+iteration 6 actually *overshoots* slightly (misfit rises from 1.001 to
+1.002) as the mu search steps past the target. With only six points the
+curvature and max-distance corner scores have little to work with, so
+treat the corner pick on a sweep this short as a rough guide, not a
+precise answer.
+
+Compare Corner Methods On Real Data
+------------------------------------
+
+The "Curvature and max-distance disagree" failure mode described below
+is not hypothetical -- it shows up on all three real logs above, and by
+very different margins.
+
+.. code-block:: pycon
+
+   >>> import pandas as pd
+   >>> rows = []
+   >>> for name, sweep in [
+   ...     ("occam2d", occam_sweep),
+   ...     ("modem", modem_sweep),
+   ...     ("mare2dem", mare_sweep),
+   ... ]:
+   ...     tc = sweep.table(method="curvature")
+   ...     tm = sweep.table(method="maxdist")
+   ...     jc, jm = tc.attrs["corner_idx"], tm.attrs["corner_idx"]
+   ...     rows.append(
+   ...         {
+   ...             "backend": name,
+   ...             "n_iter": sweep.misfit.size,
+   ...             "curv_misfit": tc["misfit"].iloc[jc],
+   ...             "curv_rough": tc["rough"].iloc[jc],
+   ...             "maxdist_misfit": tm["misfit"].iloc[jm],
+   ...             "maxdist_rough": tm["rough"].iloc[jm],
+   ...         }
+   ...     )
+   ...
+   >>> summary = pd.DataFrame(rows)
+   >>> print(summary.to_string(index=False))
+    backend  n_iter  curv_misfit  curv_rough  maxdist_misfit  maxdist_rough
+    occam2d      16     1.037446  157.348700        1.195972     168.152600
+      modem      73     3.057482    0.206766        3.417263       0.008998
+   mare2dem       6     1.002000   37.440000        3.336000       7.278000
+
+Occam2D's two methods land close together (roughness 157 vs. 168 --
+both describe the same tight zig-zag near the target). ModEM's do not:
+curvature settles on the very last, flattest part of the sweep
+(roughness ≈ 0.21) while max-distance picks a point two decades
+rougher-tolerant near the start of the run (roughness ≈ 0.009) --
+exactly the instability the smoothing-and-endpoint-skipping section
+above warns about on a noisy, non-monotonic real curve. MARE2DEM's six
+points are too few for either score to be more than a rough pointer.
+When the two methods disagree this much, prefer the plotted curve and
+domain knowledge (a target misfit, a known noise floor) over either
+automatic corner pick.
 
 Common Failure Modes
 --------------------
@@ -681,50 +820,46 @@ Save A Reproducible L-Curve Bundle
 This script writes the table, selected corner, plot, and a short text
 summary for one sweep.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import lcurve_table, plot_lcurve
-
-   out = Path("lcurve_report")
-   out.mkdir(parents=True, exist_ok=True)
-
-   table = lcurve_table(
-       misfit,
-       roughness,
-       lambdas,
-       method="curvature",
-       smooth=3,
-       skip=1,
-   )
-   corner = table.attrs["corner_idx"]
-   table.to_csv(out / "lcurve_table.csv", index=False)
-
-   corner_row = table.iloc[corner]
-   with (out / "corner.txt").open("w", encoding="utf-8") as stream:
-       stream.write(f"corner_index: {corner}\n")
-       stream.write(f"lambda_star: {corner_row['lam']:.8g}\n")
-       stream.write(f"misfit: {corner_row['misfit']:.8g}\n")
-       stream.write(f"roughness: {corner_row['rough']:.8g}\n")
-       stream.write(f"score: {corner_row['curv']:.8g}\n")
-
-   fig, ax = plt.subplots(figsize=(6.4, 4.8))
-   plot_lcurve(
-       misfit,
-       roughness,
-       lambdas,
-       labels=["selected sweep"],
-       method="curvature",
-       smooth=3,
-       ax=ax,
-   )
-   fig.tight_layout()
-   fig.savefig(out / "lcurve.png", dpi=200)
-   plt.close(fig)
+   >>> from pathlib import Path
+   >>> out = Path("lcurve_report")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> table = lcurve_table(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     skip=1,
+   ... )
+   >>> corner = table.attrs["corner_idx"]
+   >>> table.to_csv(out / "lcurve_table.csv", index=False)
+   >>> corner_row = table.iloc[corner]
+   >>> with (out / "corner.txt").open("w", encoding="utf-8") as stream:
+   ...     stream.write(f"corner_index: {corner}\n")
+   ...     stream.write(f"lambda_star: {corner_row['lam']:.8g}\n")
+   ...     stream.write(f"misfit: {corner_row['misfit']:.8g}\n")
+   ...     stream.write(f"roughness: {corner_row['rough']:.8g}\n")
+   ...     stream.write(f"score: {corner_row['curv']:.8g}\n")
+   ...
+   17
+   24
+   19
+   20
+   17
+   >>> fig, ax = plt.subplots(figsize=(6.4, 4.8))
+   >>> _ = plot_lcurve(
+   ...     misfit,
+   ...     roughness,
+   ...     lambdas,
+   ...     labels=["selected sweep"],
+   ...     method="curvature",
+   ...     smooth=3,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
+   >>> fig.savefig(out / "lcurve.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-lcurve-13.png
    :width: 100%

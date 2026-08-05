@@ -127,7 +127,7 @@ print(f"mean |strike| after  rotation: {after['ang'].abs().mean():.1f} deg")
 
 # %%
 # **Reading this output.** Re-estimating the consensus strike on the
-# rotated data pulls the mean |angle| from 36.6 down to 24.6 degrees —
+# rotated data pulls the mean ``|angle|`` from 36.6 down to 24.6 degrees —
 # a real, if imperfect, reduction (imperfect because the consensus
 # estimate mixes two methods that do not each go exactly to zero under
 # a single rotation, and because strike estimation itself is noisy).
@@ -226,8 +226,8 @@ print(f"map extent: lon {ax.get_xlim()}, lat {ax.get_ylim()}")
 # --------------------------
 # :func:`~pycsamt.emtools.strike.plot_strike_profile` plots strike
 # (with an IQR ribbon) against station order. Fixed along the way: the
-# same recurring bug found elsewhere in this gallery (see :doc:`/emtools/ss`,
-# :doc:`/emtools/dimensionality`) — ``sort_by="lon"``/``"lat"``/``"auto"``
+# same recurring bug found elsewhere in this gallery (see :doc:`/user_guide/emtools/ss`,
+# :doc:`/user_guide/emtools/dimensionality`) — ``sort_by="lon"``/``"lat"``/``"auto"``
 # checked only flat ``.lon``/``.lat`` attributes that real ``Site``
 # objects do not have (coordinates live in ``.coords``), so every
 # station order silently collapsed to alphabetical-by-name. Now fixed.
@@ -247,7 +247,7 @@ print("orders differ now?", order_name != order_lon)
 # (``18-020A, 18-024U, 18-022U, ...``) bears little resemblance to
 # alphabetical order, because longitude barely varies along a line
 # that runs mostly north-south (the same axis-choice caveat already
-# documented in :doc:`/emtools/ss`).
+# documented in :doc:`/user_guide/emtools/ss`).
 
 # %%
 # 9. Combined strike/PT-azimuth diagnostic
@@ -265,7 +265,7 @@ for ax in fig4.get_axes():
 # %%
 # **Reading this output.** Only two panels are drawn — L18PLT, like the
 # other AMT lines in ``data/AMT/WILLY_DATA/``, has no vertical-field
-# (tipper) channel at all (the same reason :doc:`/emtools/tf`'s
+# (tipper) channel at all (the same reason :doc:`/user_guide/emtools/tf`'s
 # induction-vector example uses **KAP03** instead). Strike (Z) and PT
 # Azimuth still agree reasonably well here (140.8 vs 147.4 degrees),
 # consistent with the axial-difference analysis in section 2.

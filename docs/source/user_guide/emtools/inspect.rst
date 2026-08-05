@@ -5,13 +5,13 @@ First-Look Survey Inspection
 
 ``pycsamt.emtools.inspect`` is the first module to use after loading a
 survey.  It answers practical questions before you run deeper
-diagnostics, static-shift correction, dimensionality analysis, or
-inversion:
+diagnostics, :term:`static shift` correction, :term:`dimensionality`
+analysis, or inversion:
 
 * which stations loaded correctly?
-* which stations have impedance and tipper data?
+* which stations have impedance and :term:`tipper` data?
 * do all stations share the same frequency grid?
-* are the apparent-resistivity and phase curves sensible?
+* are the :term:`apparent resistivity` and :term:`phase` curves sensible?
 * where are the first obvious pseudo-section anomalies?
 * which single station deserves a full response plot?
 
@@ -39,7 +39,7 @@ Run this stage before:
 * deciding which frequency band to keep;
 * comparing survey lines;
 * trusting tipper-based induction arrows;
-* building phase-tensor or dimensionality products;
+* building :term:`phase tensor` or dimensionality products;
 * fitting a model response to observed data.
 
 Load The Survey
@@ -48,21 +48,18 @@ Load The Survey
 The inspection functions all call ``ensure_sites`` internally, but it is
 still useful to normalize once at the top of a script.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools import ensure_sites
-
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-   survey = ensure_sites(
-       edi_dir,
-       recursive=True,
-       on_dup="replace",
-       strict=True,
-       verbose=1,
-   )
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools import ensure_sites
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> survey = ensure_sites(
+   ...     edi_dir,
+   ...     recursive=True,
+   ...     on_dup="replace",
+   ...     strict=True,
+   ...     verbose=1,
+   ... )
 
 Use ``strict=True`` when a missing or empty dataset should stop the
 workflow. For exploratory notebooks, ``strict=False`` can be more
@@ -126,31 +123,27 @@ same transfer-function extraction path used by the plotting tools, so a
 placeholder tipper object is not counted unless usable tipper samples
 are present.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-   from pycsamt.emtools import ensure_sites, sites_summary
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-   summary = sites_summary(survey, api=False)
-   print(summary.head())
-   overview = {
-       "n_sites": len(summary),
-       "has_any_tipper": bool(summary["has_tipper"].any()),
-       "n_freq_values": sorted(summary["n_freq"].unique()),
-       "period_min": float(summary["period_min"].min()),
-       "period_max": float(summary["period_max"].max()),
-   }
-   print(pd.Series(overview))
-
-.. code-block:: text
-
+   >>> import pandas as pd
+   >>> from pycsamt.emtools import ensure_sites, sites_summary
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> summary = sites_summary(survey, api=False)
+   >>> summary.head()
       station  n_freq  has_tipper  period_min  period_max        lat         lon
    0  18-001A      53       False    0.000096    0.992063  32.120300  119.128833
    1  18-002U      53       False    0.000096    0.992063  32.121133  119.128900
    2  18-003A      53       False    0.000096    0.992063  32.122083  119.128850
    3  18-004A      53       False    0.000096    0.992063  32.123333  119.128833
    4  18-005U      53       False    0.000096    0.992063  32.123900  119.128833
+   >>> overview = {
+   ...     "n_sites": len(summary),
+   ...     "has_any_tipper": bool(summary["has_tipper"].any()),
+   ...     "n_freq_values": sorted(summary["n_freq"].unique()),
+   ...     "period_min": float(summary["period_min"].min()),
+   ...     "period_max": float(summary["period_max"].max()),
+   ... }
+   >>> pd.Series(overview)
    n_sites                 28
    has_any_tipper       False
    n_freq_values         [53]
@@ -169,25 +162,21 @@ Choose Summary Columns
 The ``fields`` argument lets you keep the inventory narrow when you are
 printing reports or comparing several lines.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import sites_summary
-   compact = sites_summary(
-       "data/AMT/WILLY_DATA/L18PLT",
-       fields=(
-           "station",
-           "n_freq",
-           "period_min",
-           "period_max",
-           "has_tipper",
-       ),
-       api=False,
-   )
-   print(compact.to_string(index=False))
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import sites_summary
+   >>> compact = sites_summary(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     fields=(
+   ...         "station",
+   ...         "n_freq",
+   ...         "period_min",
+   ...         "period_max",
+   ...         "has_tipper",
+   ...     ),
+   ...     api=False,
+   ... )
+   >>> print(compact.to_string(index=False))
    station  n_freq  period_min  period_max  has_tipper
    18-001A      53    0.000096    0.992063       False
    18-002U      53    0.000096    0.992063       False
@@ -209,8 +198,8 @@ printing reports or comparing several lines.
    18-018A      53    0.000096    0.992063       False
    18-019U      53    0.000096    0.992063       False
    18-020A      53    0.000096    0.992063       False
-   18-021B      53    0.000096    0.992063       False
    18-021U      53    0.000096    0.992063       False
+   18-021B      53    0.000096    0.992063       False
    18-022U      53    0.000096    0.992063       False
    18-022V      53    0.000096    0.992063       False
    18-023A      53    0.000096    0.992063       False
@@ -229,20 +218,17 @@ Missing Sections
 sections. The most common checks are ``"mt"`` for impedance and
 ``"tipper"`` for transfer-function data.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites, list_missing_sections
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-   missing = list_missing_sections(
-       survey,
-       require=("mt", "tipper"),
-   )
-   for station, sections in missing.items():
-       print(f"{station}: missing {', '.join(sections)}")
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import ensure_sites, list_missing_sections
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> missing = list_missing_sections(
+   ...     survey,
+   ...     require=("mt", "tipper"),
+   ... )
+   >>> for station, sections in missing.items():
+   ...     print(f"{station}: missing {', '.join(sections)}")
+   ...
    18-001A: missing tipper
    18-002U: missing tipper
    18-003A: missing tipper
@@ -263,8 +249,8 @@ sections. The most common checks are ``"mt"`` for impedance and
    18-018A: missing tipper
    18-019U: missing tipper
    18-020A: missing tipper
-   18-021B: missing tipper
    18-021U: missing tipper
+   18-021B: missing tipper
    18-022U: missing tipper
    18-022V: missing tipper
    18-023A: missing tipper
@@ -282,24 +268,19 @@ Check Tipper Availability Explicitly
 AMT/CSAMT lines often have no tipper. MT surveys often do. Make that
 difference explicit before writing code that assumes tipper exists.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import list_missing_sections
-   amt_missing = list_missing_sections(
-       "data/AMT/WILLY_DATA/L18PLT",
-       require=("tipper",),
-   )
-   mt_missing = list_missing_sections(
-       "data/MT/kap03lmt_edis",
-       require=("tipper",),
-   )
-   print(f"L18PLT stations missing tipper: {len(amt_missing)}")
-   print(f"KAP03 stations missing tipper: {len(mt_missing)}")
-
-.. code-block:: text
-
+   >>> amt_missing = list_missing_sections(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     require=("tipper",),
+   ... )
+   >>> mt_missing = list_missing_sections(
+   ...     "data/MT/kap03lmt_edis",
+   ...     require=("tipper",),
+   ... )
+   >>> print(f"L18PLT stations missing tipper: {len(amt_missing)}")
    L18PLT stations missing tipper: 28
+   >>> print(f"KAP03 stations missing tipper: {len(mt_missing)}")
    KAP03 stations missing tipper: 0
 
 If every station is missing tipper, that is not necessarily a failure.
@@ -327,28 +308,25 @@ returns :math:`F_\cap`.  A large union with an empty or tiny
 intersection means the survey needs frequency-grid alignment before
 station-by-station comparisons are treated as common-period statistics.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   from pycsamt.emtools import ensure_sites, frequency_coverage
-   survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
-   per_site = frequency_coverage(survey, mode="per-site")
-   union = frequency_coverage(survey, mode="union")
-   intersection = frequency_coverage(survey, mode="intersection")
-   print(f"stations: {len(per_site)}")
-   print(f"union frequency count: {union.size}")
-   print(f"common frequency count: {intersection.size}")
-   for station, freq in per_site.items():
-       missing_from_union = np.setdiff1d(union, freq)
-       if missing_from_union.size:
-           print(station, "missing", missing_from_union.size, "samples")
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> from pycsamt.emtools import ensure_sites, frequency_coverage
+   >>> survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
+   >>> per_site = frequency_coverage(survey, mode="per-site")
+   >>> union = frequency_coverage(survey, mode="union")
+   >>> intersection = frequency_coverage(survey, mode="intersection")
+   >>> print(f"stations: {len(per_site)}")
    stations: 26
+   >>> print(f"union frequency count: {union.size}")
    union frequency count: 37
+   >>> print(f"common frequency count: {intersection.size}")
    common frequency count: 0
+   >>> for station, freq in per_site.items():
+   ...     missing_from_union = np.setdiff1d(union, freq)
+   ...     if missing_from_union.size:
+   ...         print(station, "missing", missing_from_union.size, "samples")
+   ...
    kap103 missing 17 samples
    kap106 missing 17 samples
    kap109 missing 20 samples
@@ -401,26 +379,19 @@ The image therefore shows data availability only.  It does not know
 whether the impedance estimate at that frequency is stable, low-noise,
 or geologically reasonable.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, plot_coverage
-
-   survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
-
-   fig, ax = plt.subplots(figsize=(8.0, 4.5))
-   plot_coverage(
-       survey,
-       axis="period",
-       ax=ax,
-   )
-   ax.set_title("KAP03 frequency coverage")
-
-   fig.tight_layout()
-   fig.savefig("kap03_frequency_coverage.png", dpi=200)
-   plt.close(fig)
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools import plot_coverage
+   >>> fig, ax = plt.subplots(figsize=(8.0, 4.5))
+   >>> _ = plot_coverage(
+   ...     survey,
+   ...     axis="period",
+   ...     ax=ax,
+   ... )
+   >>> _ = ax.set_title("KAP03 frequency coverage")
+   >>> fig.tight_layout()
+   >>> fig.savefig("kap03_frequency_coverage.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-07.png
    :width: 100%
@@ -456,29 +427,21 @@ absolute difference.  Phase stays in degrees, so jumps, wraps, or
 component sign conventions should be checked before reading them as
 smooth physical trends.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, plot_rhoa_phi
-   from pycsamt.emtools._core import _iter_items
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   subset_paths = [site.edi.path for site in list(_iter_items(survey))[:4]]
-   subset = ensure_sites(subset_paths, strict=True)
-
-   ax_rho, ax_phase = plot_rhoa_phi(
-       subset,
-       components=("xy", "yx"),
-       axis="period",
-       errorbar=True,
-       figsize=(8.0, 6.0),
-   )
-
-   ax_rho.figure.savefig("l18plt_rho_phase_subset.png", dpi=200)
-   plt.close(ax_rho.figure)
+   >>> from pycsamt.emtools import plot_rhoa_phi
+   >>> from pycsamt.emtools._core import _iter_items
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> subset_paths = [site.edi.path for site in list(_iter_items(survey))[:4]]
+   >>> subset = ensure_sites(subset_paths, strict=True)
+   >>> ax_rho, ax_phase = plot_rhoa_phi(
+   ...     subset,
+   ...     components=("xy", "yx"),
+   ...     axis="period",
+   ...     errorbar=True,
+   ...     figsize=(8.0, 6.0),
+   ... )
+   >>> ax_rho.figure.savefig("l18plt_rho_phase_subset.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-08.png
    :width: 100%
@@ -512,28 +475,20 @@ The median aggregation is defensive: if duplicate rows exist after
 loading or merging, one repeated value cannot dominate the cell by
 counting more than once in a mean.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, pseudosection
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   fig, ax = plt.subplots(figsize=(10.0, 4.8))
-   pseudosection(
-       survey,
-       quantity="rho_xy",
-       period_range=(1e-4, 1.0),
-       ax=ax,
-       topo=False,
-   )
-   ax.set_title("L18PLT rho_xy pseudo-section")
-
-   fig.tight_layout()
-   fig.savefig("l18plt_rho_xy_pseudosection.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools import pseudosection
+   >>> fig, ax = plt.subplots(figsize=(10.0, 4.8))
+   >>> _ = pseudosection(
+   ...     survey,
+   ...     quantity="rho_xy",
+   ...     period_range=(1e-4, 1.0),
+   ...     ax=ax,
+   ...     topo=False,
+   ... )
+   >>> _ = ax.set_title("L18PLT rho_xy pseudo-section")
+   >>> fig.tight_layout()
+   >>> fig.savefig("l18plt_rho_xy_pseudosection.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-09.png
    :width: 100%
@@ -554,27 +509,17 @@ For two lines :math:`A` and :math:`B`, use one shared color transform
 its own values and a weak anomaly on one line can appear visually equal
 to a much stronger anomaly on another.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, pseudosection
-
-   line18 = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-   line22 = ensure_sites("data/AMT/WILLY_DATA/L22PLT", strict=True)
-
-   fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.0), sharey=True)
-
-   pseudosection(line18, quantity="rho_xy", vmin=10.0, vmax=5000.0, ax=axes[0])
-   axes[0].set_title("L18PLT")
-
-   pseudosection(line22, quantity="rho_xy", vmin=10.0, vmax=5000.0, ax=axes[1])
-   axes[1].set_title("L22PLT")
-
-   fig.tight_layout()
-   fig.savefig("rho_xy_line_comparison.png", dpi=200)
-   plt.close(fig)
+   >>> line18 = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> line22 = ensure_sites("data/AMT/WILLY_DATA/L22PLT", strict=True)
+   >>> fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.0), sharey=True)
+   >>> _ = pseudosection(line18, quantity="rho_xy", vmin=10.0, vmax=5000.0, ax=axes[0])
+   >>> _ = axes[0].set_title("L18PLT")
+   >>> _ = pseudosection(line22, quantity="rho_xy", vmin=10.0, vmax=5000.0, ax=axes[1])
+   >>> _ = axes[1].set_title("L22PLT")
+   >>> fig.tight_layout()
+   >>> fig.savefig("rho_xy_line_comparison.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-10.png
    :width: 100%
@@ -601,36 +546,28 @@ The vector magnitude used later by transfer-function maps is
 often better for finding sign flips, isolated spikes, or a single
 component that is driving the whole anomaly.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, plot_tipper_components
-   from pycsamt.emtools._core import _iter_items, _name
-
-   survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
-
-   station_names = ["kap103", "kap121", "kap142", "kap151"]
-   subset_paths = [
-       site.edi.path
-       for index, site in enumerate(_iter_items(survey))
-       if _name(site, index) in station_names
-   ]
-   subset = ensure_sites(subset_paths, strict=True)
-
-   fig, ax = plt.subplots(figsize=(8.5, 4.8))
-   plot_tipper_components(
-       subset,
-       kind=("real", "imag"),
-       axis="period",
-       ax=ax,
-   )
-   ax.set_title("KAP03 selected tipper components")
-
-   fig.tight_layout()
-   fig.savefig("kap03_tipper_components.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools import plot_tipper_components
+   >>> from pycsamt.emtools._core import _name
+   >>> survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
+   >>> station_names = ["kap103", "kap121", "kap142", "kap151"]
+   >>> subset_paths = [
+   ...     site.edi.path
+   ...     for index, site in enumerate(_iter_items(survey))
+   ...     if _name(site, index) in station_names
+   ... ]
+   >>> subset = ensure_sites(subset_paths, strict=True)
+   >>> fig, ax = plt.subplots(figsize=(8.5, 4.8))
+   >>> _ = plot_tipper_components(
+   ...     subset,
+   ...     kind=("real", "imag"),
+   ...     axis="period",
+   ...     ax=ax,
+   ... )
+   >>> _ = ax.set_title("KAP03 selected tipper components")
+   >>> fig.tight_layout()
+   >>> fig.savefig("kap03_tipper_components.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-11.png
    :width: 100%
@@ -657,30 +594,23 @@ This matters because a station can look clean over one band and unstable
 over another.  Keep the plotted ``period_range`` close to the band you
 will later use for inversion, strike, or dimensionality decisions.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, plot_station_response
-
-   survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
-
-   fig = plot_station_response(
-       survey,
-       station="kap151",
-       components=("xx", "xy", "yx", "yy"),
-       period_range=(1e-2, 2e4),
-       show_tipper=True,
-       show_error_bars=True,
-       rho_lim=None,
-       phase_lim=None,
-       tipper_lim=(-2.5, 2.5),
-       title="kap151 first-look response",
-   )
-
-   fig.savefig("kap151_station_response.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools import plot_station_response
+   >>> survey = ensure_sites("data/MT/kap03lmt_edis", strict=True)
+   >>> fig = plot_station_response(
+   ...     survey,
+   ...     station="kap151",
+   ...     components=("xx", "xy", "yx", "yy"),
+   ...     period_range=(1e-2, 2e4),
+   ...     show_tipper=True,
+   ...     show_error_bars=True,
+   ...     rho_lim=None,
+   ...     phase_lim=None,
+   ...     tipper_lim=(-2.5, 2.5),
+   ...     title="kap151 first-look response",
+   ... )
+   >>> fig.savefig("kap151_station_response.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-12.png
    :width: 100%
@@ -721,33 +651,25 @@ Because the misfit is logarithmic, a factor-of-two error at low
 resistivity is weighted the same as a factor-of-two error at high
 resistivity.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites, plot_station_response, smooth_mavg
-
-   observed = ensure_sites("data/MT/kap03lmt_edis", strict=True)
-
-   # For demonstration only: a smoothed copy behaves like a model response.
-   # In production, pass forward-model or inversion-response EDI data here.
-   model_like = smooth_mavg(observed, k=5)
-
-   fig = plot_station_response(
-       observed,
-       station="kap151",
-       sites_model=model_like,
-       components=("xy", "yx"),
-       period_range=(1e-2, 2e4),
-       show_rms=True,
-       show_tipper=False,
-       figsize=(8.5, 5.2),
-       title="kap151 observed vs model-like response",
-   )
-
-   fig.savefig("kap151_response_with_model_overlay.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> from pycsamt.emtools import smooth_mavg
+   >>> observed = ensure_sites("data/MT/kap03lmt_edis", strict=True)
+   >>> # For demonstration only: a smoothed copy behaves like a model response.
+   >>> # In production, pass forward-model or inversion-response EDI data here.
+   >>> model_like = smooth_mavg(observed, k=5)
+   >>> fig = plot_station_response(
+   ...     observed,
+   ...     station="kap151",
+   ...     sites_model=model_like,
+   ...     components=("xy", "yx"),
+   ...     period_range=(1e-2, 2e4),
+   ...     show_rms=True,
+   ...     show_tipper=False,
+   ...     figsize=(8.5, 5.2),
+   ...     title="kap151 observed vs model-like response",
+   ... )
+   >>> fig.savefig("kap151_response_with_model_overlay.png", dpi=200, bbox_inches="tight")
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-13.png
    :width: 100%
@@ -765,73 +687,47 @@ summary table, missing-section table, frequency coverage, rho/phase
 curves for a few stations, one pseudo-section, and one station
 response.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-   import pandas as pd
-
-   from pycsamt.emtools import (
-       ensure_sites,
-       list_missing_sections,
-       plot_coverage,
-       plot_rhoa_phi,
-       plot_station_response,
-       pseudosection,
-       sites_summary,
-   )
-   from pycsamt.emtools._core import _iter_items, _name
-
-   out = Path("inspect_report_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   summary = sites_summary(survey, api=False)
-   summary.to_csv(out / "sites_summary.csv", index=False)
-
-   missing = list_missing_sections(survey, require=("mt", "tipper"))
-   missing_rows = [
-       {"station": station, "missing": ",".join(sections)}
-       for station, sections in missing.items()
-   ]
-   pd.DataFrame(missing_rows).to_csv(out / "missing_sections.csv", index=False)
-
-   fig, ax = plt.subplots(figsize=(8.0, 4.5))
-   plot_coverage(survey, ax=ax)
-   fig.tight_layout()
-   fig.savefig(out / "frequency_coverage.png", dpi=200)
-   plt.close(fig)
-
-   subset_names = list(summary["station"].head(4))
-   subset_paths = [
-       site.edi.path
-       for index, site in enumerate(_iter_items(survey))
-       if _name(site, index) in subset_names
-   ]
-   subset = ensure_sites(subset_paths, strict=True)
-
-   ax_rho, ax_phase = plot_rhoa_phi(subset, components=("xy", "yx"))
-   ax_rho.figure.savefig(out / "rho_phase_subset.png", dpi=200)
-   plt.close(ax_rho.figure)
-
-   fig, ax = plt.subplots(figsize=(10.0, 4.8))
-   pseudosection(survey, quantity="rho_xy", ax=ax, topo=False)
-   fig.tight_layout()
-   fig.savefig(out / "rho_xy_pseudosection.png", dpi=200)
-   plt.close(fig)
-
-   first_station = str(summary["station"].iloc[0])
-   fig = plot_station_response(
-       survey,
-       station=first_station,
-       components=("xy", "yx"),
-       show_tipper=False,
-   )
-   fig.savefig(out / f"station_response_{first_station}.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> from pathlib import Path
+   >>> out = Path("inspect_report_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> summary = sites_summary(survey, api=False)
+   >>> summary.to_csv(out / "sites_summary.csv", index=False)
+   >>> missing = list_missing_sections(survey, require=("mt", "tipper"))
+   >>> missing_rows = [
+   ...     {"station": station, "missing": ",".join(sections)}
+   ...     for station, sections in missing.items()
+   ... ]
+   >>> pd.DataFrame(missing_rows).to_csv(out / "missing_sections.csv", index=False)
+   >>> fig, ax = plt.subplots(figsize=(8.0, 4.5))
+   >>> _ = plot_coverage(survey, ax=ax)
+   >>> fig.tight_layout()
+   >>> fig.savefig(out / "frequency_coverage.png", dpi=200)
+   >>> subset_names = list(summary["station"].head(4))
+   >>> subset_paths = [
+   ...     site.edi.path
+   ...     for index, site in enumerate(_iter_items(survey))
+   ...     if _name(site, index) in subset_names
+   ... ]
+   >>> subset = ensure_sites(subset_paths, strict=True)
+   >>> ax_rho, ax_phase = plot_rhoa_phi(subset, components=("xy", "yx"))
+   >>> ax_rho.figure.savefig(out / "rho_phase_subset.png", dpi=200)
+   >>> fig, ax = plt.subplots(figsize=(10.0, 4.8))
+   >>> _ = pseudosection(survey, quantity="rho_xy", ax=ax, topo=False)
+   >>> fig.tight_layout()
+   >>> fig.savefig(out / "rho_xy_pseudosection.png", dpi=200)
+   >>> first_station = str(summary["station"].iloc[0])
+   >>> first_station
+   '18-001A'
+   >>> fig = plot_station_response(
+   ...     survey,
+   ...     station=first_station,
+   ...     components=("xy", "yx"),
+   ...     show_tipper=False,
+   ... )
+   >>> fig.savefig(out / f"station_response_{first_station}.png", dpi=200, bbox_inches="tight")
 
 .. grid:: 1 1 2 2
    :gutter: 2

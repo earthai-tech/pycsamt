@@ -157,12 +157,12 @@ print(
 
 # %%
 # **Reading this output.** With the module's own default thresholds
-# (|skew| <= 3 deg, |ellipt| <= 0.2 for 1-D), only 3 of 1484 cells
-# classify as 1-D and 97.9% classify as 3-D — the median |skew| here is
+# (``|skew|`` <= 3 deg, ``|ellipt|`` <= 0.2 for 1-D), only 3 of 1484 cells
+# classify as 1-D and 97.9% classify as 3-D — the median ``|skew|`` here is
 # about 41 degrees, more than an order of magnitude above the 3-degree
 # threshold. This is the same strong 3-D/galvanic-distortion signal
-# already documented via Bibby skew in :doc:`/emtools/qc` and via static-shift
-# behaviour in :doc:`/emtools/ss` — now confirmed a third, independent way
+# already documented via Bibby skew in :doc:`/user_guide/emtools/qc` and via static-shift
+# behaviour in :doc:`/user_guide/emtools/ss` — now confirmed a third, independent way
 # through the phase tensor.
 #
 # :func:`~pycsamt.emtools.tensor.plot_dimensionality_grid` computes the
@@ -179,7 +179,7 @@ ax = plot_dimensionality_grid(S, recursive=False, skew_th=3.0, ellipt_th=0.2)
 # :func:`~pycsamt.emtools.tensor.plot_phase_tensor_psection` draws the
 # full Caldwell et al. (2004) ellipse at every ``(station, period)``
 # cell: major/minor axes from phi_max/phi_min, rotation from theta,
-# fill colour from skew by default, with 3-D cells (|skew| above
+# fill colour from skew by default, with 3-D cells (``|skew|`` above
 # threshold) marked with a thicker border.
 
 ax = plot_phase_tensor_psection(
@@ -206,7 +206,7 @@ print(f"band grid: {len(fig.get_axes())} panels")
 # **Reading this output.** The overall axial mean comes back at 147.4
 # degrees (n=1484) — matching, to one decimal place, the "PT Azimuth"
 # panel of :func:`pycsamt.emtools.strike.plot_strike_analysis` in
-# :doc:`/emtools/strike`, since both read the same underlying phase-tensor theta
+# :doc:`/user_guide/emtools/strike`, since both read the same underlying phase-tensor theta
 # column.
 
 # %%
@@ -216,7 +216,7 @@ print(f"band grid: {len(fig.get_axes())} panels")
 # one station-x-period image where hue encodes theta and saturation
 # encodes local (sliding-window) stability — the phase-tensor
 # counterpart of :func:`pycsamt.emtools.strike.plot_strike_ribbon` in
-# :doc:`/emtools/strike`.
+# :doc:`/user_guide/emtools/strike`.
 
 ax = plot_theta_stability_stripe(S, recursive=False)
 
@@ -224,7 +224,7 @@ ax = plot_theta_stability_stripe(S, recursive=False)
 # 7. Joint skew-ellipticity distribution
 # -------------------------------------------
 # :func:`~pycsamt.emtools.tensor.plot_skew_ellipt_density` is a hexbin
-# of |skew| vs |ellipticity| over every cell, with density contours and
+# of ``|skew|`` vs ``|ellipticity|`` over every cell, with density contours and
 # the same 1-D/2-D/3-D threshold lines used above.
 # :func:`~pycsamt.emtools.tensor.phase_tensor_legend` is a small,
 # standalone helper that draws a single reference ellipse — meant to be
@@ -353,8 +353,8 @@ print(f"Z after a 5-degree sensor-orientation correction:\n{z_or[0]}")
 # **Reading this output.** ``antisymmetrize`` forces Zxy = -Zyx exactly
 # (from -304+31j down to 0). ``invert`` maps Z to Z^-1 element-wise
 # through the 2x2 matrix inverse (magnitudes drop from ~O(1e3) to
-# ~O(1e-4), the reciprocal scale). ``balance_offdiag`` pulls |Zxy| and
-# |Zyx| (1881 and 2129 before) to their shared average (2005 for both)
+# ~O(1e-4), the reciprocal scale). ``balance_offdiag`` pulls ``|Zxy|`` and
+# ``|Zyx|`` (1881 and 2129 before) to their shared average (2005 for both)
 # while preserving phase. ``orient_from_sensors`` was fixed along the
 # way: it called ``zutils.correct_for_sensor_orientation()`` with
 # keyword arguments (``degrees=``, ``z_err=``) that function does not

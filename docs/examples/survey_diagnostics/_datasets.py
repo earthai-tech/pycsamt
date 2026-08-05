@@ -40,6 +40,7 @@ _DATASETS = {
     "amt_l34plt": ("AMT", "WILLY_DATA", "L34PLT"),
     "mt_kap03": ("MT", "kap03lmt_edis"),  # SAMTEX line, real tipper
     "mt_spectra": ("MT", "SPECTRA"),
+    "csamt_tongkeng": ("CSAMT",),  # 10-station Tongkeng CSAMT line, real Tx
 }
 
 

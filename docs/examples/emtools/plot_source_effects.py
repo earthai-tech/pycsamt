@@ -10,23 +10,22 @@ Da et al. (2016) ground-wave/surface-wave amplitude ratio
 Wang & Lin (2023) skin-depth field-zone classification with a
 near-field correction built on the equatorial HED transfer function
 :math:`F(p)`. Unlike natural-source MT, CSAMT needs the
-source-receiver offset :math:`r` to evaluate either formula, and no
-real offset is bundled with these docs (a standard EDI file does not
-carry it). This example reuses the same honest choice already made in
-the ``fieldzone`` example: a representative 2 km offset for **L18PLT**
-(``data/AMT/WILLY_DATA/``), chosen for illustration and stated plainly
-rather than read from survey metadata.
+source-receiver offset :math:`r` to evaluate either formula. This
+example uses **real** :mod:`pycsamt.emtools.fieldzone`-style data: the
+same ten-station Tongkeng CSAMT line (``data/CSAMT``) used in the
+``fieldzone`` example, with its real ~1 km transmitter offset and the
+same 1170 :math:`\Omega\cdot\mathrm{m}` far-field-only representative
+resistivity derived there.
 """
 
 # %%
 # 1. The core concept: how :math:`\beta_{Ey}` depends on offset
 # --------------------------------------------------------------------
 # :func:`~pycsamt.emtools.source_effects.overprint_beta` is pure
-# arithmetic — no sites needed. At fixed resistivity, sweeping
-# frequency at three representative offsets (the same 500 m / 2 km /
-# 8 km trio used in the ``fieldzone`` example) shows the expected
-# physical trend: a closer transmitter pushes the "safe" (low
-# :math:`\beta`) frequency band down.
+# arithmetic -- no sites needed. At fixed resistivity, sweeping
+# frequency at three representative offsets (the same trio used in the
+# ``fieldzone`` example) shows the expected physical trend: a closer
+# transmitter pushes the "safe" (low :math:`\beta`) frequency band down.
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,9 +44,9 @@ from pycsamt.emtools import (
 freq_sweep = np.logspace(-1, 3, 60)
 fig, ax = plt.subplots(figsize=(7.5, 4.2))
 for offset, color in zip(
-    [500.0, 2000.0, 8000.0], ["#d62728", "#ff7f0e", "#2ca02c"]
+    [500.0, 1000.0, 4000.0], ["#d62728", "#ff7f0e", "#2ca02c"]
 ):
-    beta = overprint_beta(rho=300.0, freq=freq_sweep, offset=offset)
+    beta = overprint_beta(rho=1170.0, freq=freq_sweep, offset=offset)
     ax.loglog(freq_sweep, beta, color=color, label=f"r={offset:g} m")
     above = freq_sweep[beta > BETA_THRESH_PCT]
     if above.size:
@@ -63,36 +62,35 @@ ax.axhline(
 )
 ax.set_xlabel("Frequency (Hz)")
 ax.set_ylabel(r"$\beta_{Ey}$ (%)")
-ax.set_title(r"$\beta_{Ey}$ vs. frequency at $\rho$=300 $\Omega\cdot$m")
+ax.set_title(r"$\beta_{Ey}$ vs. frequency at $\rho$=1170 $\Omega\cdot$m")
 ax.grid(True, which="both", alpha=0.25)
 ax.legend(fontsize=8)
 
 # %%
-# **Reading this output/figure.** At the same 300 :math:`\Omega\cdot`m
-# half-space, the frequency below which :math:`\beta_{Ey}` exceeds 3%
-# shrinks as the offset grows: up to 1000 Hz at 500 m, only 392 Hz at
-# 2 km, and just 27.6 Hz at 8 km. A closer transmitter contaminates a
-# *wider* frequency band — exactly the intuition behind treating offset
-# as the single most important survey-design choice, echoing the
-# ``fieldzone`` example's finding for the skin-depth field zones.
+# **Reading this output/figure.** At the same 1170
+# :math:`\Omega\cdot\mathrm{m}` half-space -- itself this survey's real
+# far-field resistivity, not an arbitrary round number -- both the
+# 500 m and the real ~1 km offset keep :math:`\beta_{Ey}` above 3%
+# across the *entire* 0.1-1000 Hz sweep; only pulling the transmitter
+# out to 4 km brings the contaminated band down to below 392 Hz. A
+# closer transmitter contaminates a *wider* frequency band -- exactly
+# the intuition behind treating offset as the single most important
+# survey-design choice, echoing the ``fieldzone`` example's finding for
+# the skin-depth field zones.
 
 # %%
-# 2. Per-frequency overprint on a real sounding
+# 2. Per-frequency overprint on the real sounding
 # ------------------------------------------------------
 # :func:`~pycsamt.emtools.source_effects.detect_source_overprint`
 # applies the same formula, station by station, using each station's
 # own real observed :math:`\rho_a` and frequency instead of a fixed
 # half-space value.
 
-import warnings  # noqa: E402
-
 from _datasets import load_survey  # noqa: E402
 
-survey = load_survey("amt_l18plt")
+survey = load_survey("csamt_tongkeng")
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")  # no source_offset metadata in real EDIs
-    detail = detect_source_overprint(survey, source_offset=2000.0)
+detail = detect_source_overprint(survey, source_offset=1000.0)
 
 print(detail["beta_pct"].describe())
 print(
@@ -101,15 +99,16 @@ print(
 )
 
 # %%
-# **Reading this output.** At the assumed 2 km offset, 944 of 1484
-# rows (64%) are flagged — a real, if severe, consequence of treating
-# an ordinary CSAMT-band AMT-style line as if it had this specific
-# transmitter geometry: :func:`overprint_beta` in section 1 already
-# showed 2 km keeps :math:`\beta` under 3% only above ~392 Hz, and this
-# line's real resistivities push that crossover frequency around even
-# further station to station. This is exactly why the offset has to be
-# a real, measured survey parameter in practice — it is not a detail
-# that can be guessed after the fact from the impedance alone.
+# **Reading this output.** At this survey's real ~1 km offset, 162 of
+# 170 rows (95%) are flagged -- a real, severe consequence of a
+# transmitter that sits close relative to this line's resistive
+# near-surface target: :func:`overprint_beta` in section 1 already
+# showed 1 km keeps :math:`\beta` above 3% across the whole swept band,
+# and this line's real, highly resistive apparent resistivities push
+# the effect even further. This is exactly why the offset has to be a
+# real, measured survey parameter in practice -- it is not a detail
+# that can be guessed after the fact from the impedance alone, and here
+# it does not need to be: the Tongkeng transmitter geometry is real.
 
 # %%
 # 3. Per-station summary and the da2016 slope criterion
@@ -118,20 +117,11 @@ print(
 # collapses each station to :math:`\beta_{max}`/:math:`\beta_{mean}`
 # plus a low-/high-frequency log-log slope comparison (da2016): a
 # strongly negative ``slope_delta`` signals a resistivity contrast
-# beneath the source. The default ``f_split=1.0`` Hz sits right at this
-# survey's own lower frequency limit (~1.008 Hz), leaving no
-# low-frequency samples at all — raising ``f_split`` to 50 Hz actually
-# splits the band in two.
+# beneath the source. ``f_split=50`` Hz sits comfortably inside this
+# line's real 0.125-8196.722 Hz band.
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    table_default_split = source_overprint_table(survey, source_offset=2000.0)
-    table = source_overprint_table(survey, source_offset=2000.0, f_split=50.0)
+table = source_overprint_table(survey, source_offset=1000.0, f_split=50.0)
 
-print(
-    "f_split=1.0 Hz (default): all lf_slope NaN?",
-    table_default_split["lf_slope"].isna().all(),
-)
 print(
     table[["station", "beta_max_pct", "overprint_frac", "slope_delta"]]
     .sort_values("slope_delta")
@@ -144,13 +134,12 @@ print(
 )
 
 # %%
-# **Reading this output.** With a sensible split, ``18-020A`` has the
-# most negative ``slope_delta`` (-1.13) — its low-frequency
-# :math:`\rho_a` trend rises far more steeply than its high-frequency
-# one, the da2016 signature of a contrast beneath the source. Every
-# station's ``beta_max_pct`` sits at essentially the same ceiling
-# (~50%, the formula's own numerical cap at very small offset-to-skin
-# -depth ratios), so ``overprint_frac`` (the *fraction* of frequencies
+# **Reading this output.** ``csa200`` has the most negative
+# ``slope_delta`` (-0.63), with ``csa250`` close behind (-0.56) -- both
+# stations also reach 100% ``overprint_frac``. Every station's
+# ``beta_max_pct`` sits at essentially the same ceiling (~50%, the
+# formula's own numerical cap at very small offset-to-skin-depth
+# ratios), so ``overprint_frac`` (the *fraction* of frequencies
 # flagged) is the more discriminating per-station number here, not the
 # maximum.
 
@@ -161,17 +150,15 @@ print(
 # :math:`\beta_{Ey}` for every station and period at once, with a
 # dashed white contour at the 3% threshold.
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    plot_overprint_section(survey, source_offset=2000.0)
+plot_overprint_section(survey, source_offset=1000.0)
 
 # %%
-# **Reading this figure.** The 3% threshold contour (dashed white)
-# sweeps through most of the middle of the period range at nearly every
-# station — consistent with section 2's 64% flagged fraction — with a
-# visibly darker, more saturated patch around ``18-021B`` at short
-# periods where :math:`\beta_{Ey}` climbs highest. The same station
-# reappears in section 6 below from a completely different formula.
+# **Reading this figure.** Nearly the whole pseudo-section is saturated
+# near-black -- the deepest colour on this scale -- for every period
+# longer than about :math:`2\times10^{-3}` s, consistent with section
+# 2's 95% flagged fraction. Only the shortest-period row at the very
+# top shows real station-to-station variation, from pale (nearly
+# unflagged) through orange to saturated red.
 
 # %%
 # 5. Wang & Lin (2023): normalized response and field zone
@@ -181,17 +168,21 @@ with warnings.catch_warnings():
 # a reference phase, while independently classifying each
 # (station, frequency) point into near/transition/far zones using the
 # Wang & Lin skin-depth thresholds (0.5\ :math:`\delta`, 4\ :math:`\delta`)
-# — the same zone definitions used in the ``fieldzone`` example.
+# -- a stricter, differently-scaled criterion from the Bostick-depth
+# zones used in the ``fieldzone`` example.
 
-norm = normalize_response(survey, rho_ref=300.0, source_offset=2000.0)
+norm = normalize_response(survey, rho_ref=1170.0, source_offset=1000.0)
 print(norm["zone"].value_counts())
 
 # %%
-# **Reading this output.** At the same assumed 2 km offset, the 1484
-# station-frequency points split roughly evenly: 603 far, 468
-# transition, 413 near — a genuinely mixed survey where no single zone
-# dominates, the same kind of offset-sensitive mixed outcome the
-# ``fieldzone`` example found when comparing assumed offsets directly.
+# **Reading this output.** At the real ~1 km offset, the 170
+# station-frequency points split 118 near / 42 transition / 10 far --
+# 69% near field. That is a harsher picture than the ``fieldzone``
+# example's Bostick-depth classification of the same survey (12% far),
+# which is the expected direction of disagreement: Wang & Lin's skin
+# depth is about :math:`\sqrt2` times the Bostick depth, so the same
+# offset reads as "closer" in skin-depth units and more rows fall into
+# ``near``.
 
 # %%
 # 6. Two-panel normalized pseudo-section
@@ -202,19 +193,20 @@ print(norm["zone"].value_counts())
 
 fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.0))
 plot_normalized_response(
-    survey, rho_ref=300.0, source_offset=2000.0, axes=axes
+    survey, rho_ref=1170.0, source_offset=1000.0, axes=axes
 )
 fig.tight_layout()
 
 # %%
-# **Reading this figure.** The left panel's darkest red patch sits at
-# short periods around ``18-021B``/``18-022U`` — the same station
-# ``plot_overprint_section`` (section 4) flagged from the unrelated
-# :math:`\beta_{Ey}` formula. The right (phase) panel splits roughly in
-# two along the line: stations up to about ``18-017U`` run mostly red
-# (phase above the 45-degree reference) while later stations show more
-# blue — a spatial pattern in phase behaviour that neither the
-# amplitude-only :math:`\beta_{Ey}` view nor ``rho_n`` alone reveals.
+# **Reading this figure.** The left panel's darkest red patches sit at
+# the longest periods (top row) -- the same near-field apparent
+# resistivity runaway already documented in the ``fieldzone`` example,
+# ``rho_n`` climbing past 10,000 (ten thousand times the reference
+# resistivity) at several stations. The right (phase) panel runs almost
+# entirely negative (red): observed phase sits well below the
+# 45-degree far-field reference nearly everywhere, consistent with a
+# survey dominated by near- and transition-field rows rather than clean
+# plane-wave behaviour.
 
 # %%
 # 7. Near-field correction
@@ -222,7 +214,8 @@ fig.tight_layout()
 # :func:`~pycsamt.emtools.source_effects.correct_near_field` divides
 # :math:`Z` by the complex near-field factor
 # :math:`F(p)=1-3/p^2+3/p^3`. In the far field :math:`F\to 1` and the
-# correction does nothing; in the near field it can be large.
+# correction does nothing; in the near field it can be large. This
+# survey's EDIs record only ``Zxy`` (scalar single-dipole CSAMT).
 
 from pycsamt.emtools import ensure_sites  # noqa: E402
 from pycsamt.emtools._core import (  # noqa: E402
@@ -232,7 +225,7 @@ from pycsamt.emtools._core import (  # noqa: E402
 )
 
 
-def rho_xy(sites, name="18-016A"):
+def rho_xy(sites, name="csa350"):
     s = ensure_sites(sites, recursive=False)
     for i, ed in enumerate(_iter_items(s)):
         if _name(ed, i) == name:
@@ -241,24 +234,26 @@ def rho_xy(sites, name="18-016A"):
     raise KeyError(name)
 
 
-before, fr0 = rho_xy(survey, "18-016A")
-corrected = correct_near_field(survey, source_offset=2000.0)
-after, _ = rho_xy(corrected, "18-016A")
+before, fr0 = rho_xy(survey, "csa350")
+corrected = correct_near_field(survey, source_offset=1000.0)
+after, _ = rho_xy(corrected, "csa350")
 print(
-    f"18-016A: max |change| in log10(rho) after near-field correction = "
+    f"csa350: max |change| in log10(rho) after near-field correction = "
     f"{np.nanmax(np.abs(np.log10(before) - np.log10(after))):.2f}"
 )
 
 # %%
-# **Reading this output.** A swing of more than 6 decades in
-# :math:`\log_{10}\rho_a` — the correction can shrink the apparent
-# resistivity by a factor of roughly 2.6 million at the frequencies
-# where this station sits deepest in the near field for a 2 km offset.
-# That is not a bug: :math:`F(p)` genuinely diverges as the near-field
-# geometric term dominates, and a correction this large is itself a
-# useful diagnostic — it flags exactly how far the raw, uncorrected
-# sounding departed from the plane-wave assumption at those
-# frequencies, rather than a small, reassuring nudge.
+# **Reading this output.** A swing of more than 22 decades in
+# :math:`\log_{10}\rho_a` at the frequency where ``csa350`` sits deepest
+# in the near field for a 1 km offset. That is not a bug:
+# :math:`F(p)` genuinely diverges as the near-field geometric term
+# dominates and :math:`|p|` approaches the values where the equatorial
+# HED transfer function passes through its own near-zero minimum -- a
+# correction this large is itself a useful diagnostic. It flags exactly
+# how far the raw, uncorrected sounding departed from the plane-wave
+# assumption at that frequency, not a small, reassuring nudge, and it
+# is a stronger warning than any AMT stand-in data could honestly show,
+# because this transmitter and offset are real.
 
 # %%
 # 8. Advanced: do the two independent formulas agree?
@@ -278,10 +273,10 @@ print(agreement)
 # %%
 # **Reading this output.** Agreement is essentially total for the
 # unambiguous cases: 100% of "near" and 100% of "transition" points are
-# also flagged by :math:`\beta_{Ey}`, while only 10.4% of "far" points
-# are. Two formulas built on different physical arguments — one an
-# amplitude-ratio criterion, the other a skin-depth threshold — reach
+# also flagged by :math:`\beta_{Ey}`, while only 20% of "far" points
+# are. Two formulas built on different physical arguments -- one an
+# amplitude-ratio criterion, the other a skin-depth threshold -- reach
 # the same practical conclusion about which frequencies are usable at
-# this assumed offset, which is a genuine, useful cross-check before
-# trusting either one alone on a real survey where the offset is known
-# rather than assumed.
+# this survey's real transmitter offset: most of this line's band is
+# not safely in the far field, and a plane-wave interpretation of the
+# raw data would be difficult to defend without correction.

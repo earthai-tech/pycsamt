@@ -80,21 +80,18 @@ Use ``ensure_sites`` first when you are building a notebook or script.
 That makes the rest of the code explicit and avoids reloading files for
 each plot.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools import ensure_sites
-
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-   survey = ensure_sites(
-       edi_dir,
-       recursive=True,
-       on_dup="replace",
-       strict=True,
-       verbose=1,
-   )
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools import ensure_sites
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> survey = ensure_sites(
+   ...     edi_dir,
+   ...     recursive=True,
+   ...     on_dup="replace",
+   ...     strict=True,
+   ...     verbose=1,
+   ... )
 
 ``strict=True`` is useful in documentation, tests, and reproducible
 analysis because it fails early when no valid sites are found. In an
@@ -163,27 +160,21 @@ The colour coordinate is a normalized log-period value,
 Thus the wheel is not a phase-tensor plot and not a rose diagram.  It is
 the complex impedance itself, drawn as a path through period.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_phasor_wheel
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   ax = plot_phasor_wheel(
-       survey,
-       station="18-001A",
-       components=("xy", "yx"),
-       radius="abs",
-       connect=True,
-       figsize=(5.0, 5.0),
-   )
-
-   ax.figure.savefig("phasor_wheel_18-001A.png", dpi=200)
-   plt.close(ax.figure)
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools import ensure_sites
+   >>> from pycsamt.emtools.impedance import plot_phasor_wheel
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> ax = plot_phasor_wheel(
+   ...     survey,
+   ...     station="18-001A",
+   ...     components=("xy", "yx"),
+   ...     radius="abs",
+   ...     connect=True,
+   ...     figsize=(5.0, 5.0),
+   ... )
+   >>> ax.figure.savefig("phasor_wheel_18-001A.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-02.png
    :width: 100%
@@ -202,43 +193,31 @@ The ``pband`` argument selects a period interval in seconds. This is a
 simple way to ask whether shallow and deeper parts of the sounding have
 different tensor behaviour.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_phasor_wheel
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-   station = "18-001A"
-
-   fig, axes = plt.subplots(
-       1,
-       2,
-       figsize=(9.5, 5.0),
-       subplot_kw={"polar": True},
-   )
-
-   plot_phasor_wheel(
-       survey,
-       station=station,
-       pband=(9e-5, 1e-3),
-       ax=axes[0],
-   )
-   axes[0].set_title("short periods")
-
-   plot_phasor_wheel(
-       survey,
-       station=station,
-       pband=(1e-1, 1.0),
-       ax=axes[1],
-   )
-   axes[1].set_title("long periods")
-
-   fig.tight_layout()
-   fig.savefig("phasor_period_bands_18-001A.png", dpi=200)
-   plt.close(fig)
+   >>> fig, axes = plt.subplots(
+   ...     1,
+   ...     2,
+   ...     figsize=(9.5, 5.0),
+   ...     subplot_kw={"polar": True},
+   ... )
+   >>> station = "18-001A"
+   >>> _ = plot_phasor_wheel(
+   ...     survey,
+   ...     station=station,
+   ...     pband=(9e-5, 1e-3),
+   ...     ax=axes[0],
+   ... )
+   >>> _ = axes[0].set_title("short periods")
+   >>> _ = plot_phasor_wheel(
+   ...     survey,
+   ...     station=station,
+   ...     pband=(1e-1, 1.0),
+   ...     ax=axes[1],
+   ... )
+   >>> _ = axes[1].set_title("long periods")
+   >>> fig.tight_layout()
+   >>> fig.savefig("phasor_period_bands_18-001A.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-03.png
    :width: 100%
@@ -279,26 +258,19 @@ A compact way to summarize the same idea is the diagonal energy ratio
 Small :math:`\eta_{\mathrm{diag}}` is compatible with a coordinate frame
 where the off-diagonal modes dominate. Large values do not identify a
 single cause by themselves: they may reflect 3-D structure, a poor
-strike rotation, galvanic distortion, or data-quality problems.
+strike rotation, :term:`galvanic distortion`, or data-quality problems.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_phasor_wheel
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   ax = plot_phasor_wheel(
-       survey,
-       station="18-001A",
-       components=("xy", "yx", "xx", "yy"),
-       radius="norm",
-       connect=False,
-       ms=2.5,
-   )
-
-   ax.figure.savefig("phasor_all_components_18-001A.png", dpi=200)
+   >>> ax = plot_phasor_wheel(
+   ...     survey,
+   ...     station="18-001A",
+   ...     components=("xy", "yx", "xx", "yy"),
+   ...     radius="norm",
+   ...     connect=False,
+   ...     ms=2.5,
+   ... )
+   >>> ax.figure.savefig("phasor_all_components_18-001A.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-04.png
    :width: 100%
@@ -315,32 +287,28 @@ The plot is useful, but a station report should also write the numbers.
 The lower-level helper ``_get_z_block`` returns the validated tensor and
 frequency arrays used by the plotting functions.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-   rows = []
-   for index, site in enumerate(_iter_items(survey)):
-       _, z, freq = _get_z_block(site)
-       if z is None:
-           continue
-       rows.append(
-           {
-               "station": _name(site, index),
-               "mean_abs_zxx": float(np.nanmean(np.abs(z[:, 0, 0]))),
-               "mean_abs_zxy": float(np.nanmean(np.abs(z[:, 0, 1]))),
-               "mean_abs_zyx": float(np.nanmean(np.abs(z[:, 1, 0]))),
-               "mean_abs_zyy": float(np.nanmean(np.abs(z[:, 1, 1]))),
-           }
-       )
-   for row in rows[:5]:
-       print(row)
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> from pycsamt.emtools._core import _get_z_block, _iter_items, _name
+   >>> rows = []
+   >>> for index, site in enumerate(_iter_items(survey)):
+   ...     _, z, freq = _get_z_block(site)
+   ...     if z is None:
+   ...         continue
+   ...     rows.append(
+   ...         {
+   ...             "station": _name(site, index),
+   ...             "mean_abs_zxx": float(np.nanmean(np.abs(z[:, 0, 0]))),
+   ...             "mean_abs_zxy": float(np.nanmean(np.abs(z[:, 0, 1]))),
+   ...             "mean_abs_zyx": float(np.nanmean(np.abs(z[:, 1, 0]))),
+   ...             "mean_abs_zyy": float(np.nanmean(np.abs(z[:, 1, 1]))),
+   ...         }
+   ...     )
+   ...
+   >>> for row in rows[:5]:
+   ...     print(row)
+   ...
    {'station': '18-001A', 'mean_abs_zxx': 446.87532535812795, 'mean_abs_zxy': 808.4345401982367, 'mean_abs_zyx': 1145.0965447882752, 'mean_abs_zyy': 557.6049786167763}
    {'station': '18-002U', 'mean_abs_zxx': 133.0926461161051, 'mean_abs_zxy': 620.1474584088546, 'mean_abs_zyx': 859.6134726088661, 'mean_abs_zyy': 257.84731425866534}
    {'station': '18-003A', 'mean_abs_zxx': 109.30601909208245, 'mean_abs_zxy': 610.4449839811526, 'mean_abs_zyx': 388.2097256381032, 'mean_abs_zyy': 106.6560768811014}
@@ -349,9 +317,9 @@ frequency arrays used by the plotting functions.
 
 This is not meant to replace phase-tensor dimensionality or skew
 analysis. It is a quick tensor sanity check: if the diagonal terms are
-large at a station, look at dimensionality, distortion, static shift,
-and strike diagnostics before treating that station as simple 2-D
-input.
+large at a station, look at dimensionality, distortion, :term:`static
+shift`, and strike diagnostics before treating that station as simple
+2-D input.
 
 Off-Diagonal Antisymmetry
 -------------------------
@@ -387,28 +355,19 @@ The first case is the ideal :term:`off-diagonal antisymmetry` pair. The
 second case means the two terms reinforce rather than cancel, which is
 not the expected 1-D/2-D off-diagonal structure.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_offdiag_antisym_residual
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   fig, ax = plt.subplots(figsize=(10.0, 4.8))
-   plot_offdiag_antisym_residual(
-       survey,
-       vlim=0.8,
-       cmap="magma",
-       ax=ax,
-   )
-   ax.set_title("L18PLT off-diagonal antisymmetry residual")
-
-   fig.tight_layout()
-   fig.savefig("offdiag_antisymmetry_l18plt.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools.impedance import plot_offdiag_antisym_residual
+   >>> fig, ax = plt.subplots(figsize=(10.0, 4.8))
+   >>> _ = plot_offdiag_antisym_residual(
+   ...     survey,
+   ...     vlim=0.8,
+   ...     cmap="magma",
+   ...     ax=ax,
+   ... )
+   >>> _ = ax.set_title("L18PLT off-diagonal antisymmetry residual")
+   >>> fig.tight_layout()
+   >>> fig.savefig("offdiag_antisymmetry_l18plt.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-06.png
    :width: 100%
@@ -425,49 +384,34 @@ Rank Stations By Residual
 
 The pseudo-section shows the pattern. A table names the stations.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   import pandas as pd
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   rows = []
-   for index, site in enumerate(_iter_items(survey)):
-       _, z, freq = _get_z_block(site)
-       if z is None:
-           continue
-
-       xy = np.abs(z[:, 0, 1])
-       yx = np.abs(z[:, 1, 0])
-       residual = np.abs(z[:, 0, 1] + z[:, 1, 0]) / (xy + yx + 1e-24)
-       residual = np.clip(residual, 0.0, 1.0)
-
-       rows.append(
-           {
-               "station": _name(site, index),
-               "mean_residual": float(np.nanmean(residual)),
-               "p90_residual": float(np.nanpercentile(residual, 90)),
-               "max_residual": float(np.nanmax(residual)),
-               "n_frequency": int(np.isfinite(residual).sum()),
-           }
-       )
-
-   ranking = (
-       pd.DataFrame(rows)
-       .sort_values("mean_residual", ascending=False)
-       .reset_index(drop=True)
-   )
-
-   print(ranking.head(10))
-   ranking.to_csv("impedance_antisymmetry_ranking.csv", index=False)
-
-.. code-block:: text
-
+   >>> import pandas as pd
+   >>> rows = []
+   >>> for index, site in enumerate(_iter_items(survey)):
+   ...     _, z, freq = _get_z_block(site)
+   ...     if z is None:
+   ...         continue
+   ...     xy = np.abs(z[:, 0, 1])
+   ...     yx = np.abs(z[:, 1, 0])
+   ...     residual = np.abs(z[:, 0, 1] + z[:, 1, 0]) / (xy + yx + 1e-24)
+   ...     residual = np.clip(residual, 0.0, 1.0)
+   ...     rows.append(
+   ...         {
+   ...             "station": _name(site, index),
+   ...             "mean_residual": float(np.nanmean(residual)),
+   ...             "p90_residual": float(np.nanpercentile(residual, 90)),
+   ...             "max_residual": float(np.nanmax(residual)),
+   ...             "n_frequency": int(np.isfinite(residual).sum()),
+   ...         }
+   ...     )
+   ...
+   >>> ranking = (
+   ...     pd.DataFrame(rows)
+   ...     .sort_values("mean_residual", ascending=False)
+   ...     .reset_index(drop=True)
+   ... )
+   >>> ranking.head(10)
       station  mean_residual  p90_residual  max_residual  n_frequency
    0  18-016A       0.786452      0.942456      0.958245           53
    1  18-018A       0.749186      0.961107      0.998407           53
@@ -479,6 +423,7 @@ The pseudo-section shows the pattern. A table names the stations.
    7  18-024U       0.526460      0.811147      0.961759           53
    8  18-015U       0.500570      0.984507      0.999133           53
    9  18-025A       0.498164      0.782128      0.842395           53
+   >>> ranking.to_csv("impedance_antisymmetry_ranking.csv", index=False)
 
 Use ``mean_residual`` for a broad station ranking. Use
 ``p90_residual`` when you want to highlight stations with a persistent
@@ -492,14 +437,14 @@ The antisymmetry residual is related to, but not identical with,
 diagonal skew or apparent anisotropy. The best practice is to compare
 metrics instead of assuming they flag the same stations.
 For example, the residual above is an off-diagonal cancellation measure,
-whereas a Swift-style skew compares diagonal and off-diagonal energy:
+whereas :term:`Swift skew` compares diagonal and off-diagonal energy:
 
 .. math::
 
-   \kappa_{\mathrm{Swift}}
+   S
    =
-   \frac{|Z_{xx}+Z_{yy}|}
-        {|Z_{xy}-Z_{yx}|+\epsilon}.
+   \frac{|Z_{xx}-Z_{yy}|}
+        {|Z_{xy}+Z_{yx}|+\epsilon}.
 
 An apparent anisotropy ratio instead compares the two off-diagonal
 apparent resistivities:
@@ -522,46 +467,32 @@ can have small diagonal terms and still poor off-diagonal cancellation;
 another can have strong diagonal terms while :math:`Z_{xy}` and
 :math:`Z_{yx}` remain nearly antisymmetric.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   import pandas as pd
-
-   from pycsamt.emtools import anisotropy_table, ensure_sites
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   residual_rows = []
-   for index, site in enumerate(_iter_items(survey)):
-       _, z, freq = _get_z_block(site)
-       if z is None:
-           continue
-
-       xy = np.abs(z[:, 0, 1])
-       yx = np.abs(z[:, 1, 0])
-       residual = np.abs(z[:, 0, 1] + z[:, 1, 0]) / (xy + yx + 1e-24)
-       residual_rows.append(
-           {
-               "station": _name(site, index),
-               "antisym_mean": float(np.nanmean(np.clip(residual, 0.0, 1.0))),
-           }
-       )
-
-   residual_df = pd.DataFrame(residual_rows).set_index("station")
-   aniso_df = anisotropy_table(survey).set_index("station")
-
-   merged = residual_df.join(
-       aniso_df[["mean_swift_skew", "mean_ratio_log10"]],
-       how="inner",
-   )
-   merged["abs_ratio_log10"] = merged["mean_ratio_log10"].abs()
-
-   print(merged.corr(numeric_only=True))
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import anisotropy_table
+   >>> residual_rows = []
+   >>> for index, site in enumerate(_iter_items(survey)):
+   ...     _, z, freq = _get_z_block(site)
+   ...     if z is None:
+   ...         continue
+   ...     xy = np.abs(z[:, 0, 1])
+   ...     yx = np.abs(z[:, 1, 0])
+   ...     residual = np.abs(z[:, 0, 1] + z[:, 1, 0]) / (xy + yx + 1e-24)
+   ...     residual_rows.append(
+   ...         {
+   ...             "station": _name(site, index),
+   ...             "antisym_mean": float(np.nanmean(np.clip(residual, 0.0, 1.0))),
+   ...         }
+   ...     )
+   ...
+   >>> residual_df = pd.DataFrame(residual_rows).set_index("station")
+   >>> aniso_df = anisotropy_table(survey).set_index("station")
+   >>> merged = residual_df.join(
+   ...     aniso_df[["mean_swift_skew", "mean_ratio_log10"]],
+   ...     how="inner",
+   ... )
+   >>> merged["abs_ratio_log10"] = merged["mean_ratio_log10"].abs()
+   >>> merged.corr(numeric_only=True)
                      antisym_mean  ...  abs_ratio_log10
    antisym_mean          1.000000  ...         0.719606
    mean_swift_skew      -0.592220  ...        -0.613406
@@ -615,27 +546,18 @@ The plot has two panels: ``|det(Z)|`` and determinant phase versus
 period. If impedance errors are available as ``z_err``, pyCSAMT draws a
 Monte Carlo uncertainty band for the determinant magnitude.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_determinant_track
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   fig = plot_determinant_track(
-       survey,
-       station="18-016A",
-       pband=(1e-4, 1.0),
-       pcts=(10.0, 50.0, 90.0),
-       n_draws=300,
-       figsize=(6.8, 4.2),
-   )
-
-   fig.savefig("determinant_track_18-016A.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools.impedance import plot_determinant_track
+   >>> fig = plot_determinant_track(
+   ...     survey,
+   ...     station="18-016A",
+   ...     pband=(1e-4, 1.0),
+   ...     pcts=(10.0, 50.0, 90.0),
+   ...     n_draws=300,
+   ...     figsize=(6.8, 4.2),
+   ... )
+   >>> fig.savefig("determinant_track_18-016A.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-09.png
    :width: 100%
@@ -651,36 +573,23 @@ Compare Two Stations
 The determinant track is most useful when compared across stations with
 contrasting tensor diagnostics.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_determinant_track
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   fig = plt.figure(figsize=(11.0, 4.8))
-   grid = fig.add_gridspec(
-       2,
-       2,
-       height_ratios=(2, 1),
-       hspace=0.08,
-       wspace=0.25,
-   )
-
-   left_axes = (fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[1, 0]))
-   right_axes = (fig.add_subplot(grid[0, 1]), fig.add_subplot(grid[1, 1]))
-
-   plot_determinant_track(survey, station="18-016A", axes=left_axes)
-   plot_determinant_track(survey, station="18-007U", axes=right_axes)
-
-   left_axes[0].set_title("high residual station")
-   right_axes[0].set_title("low residual station")
-
-   fig.savefig("determinant_station_comparison.png", dpi=200)
-   plt.close(fig)
+   >>> fig = plt.figure(figsize=(11.0, 4.8))
+   >>> grid = fig.add_gridspec(
+   ...     2,
+   ...     2,
+   ...     height_ratios=(2, 1),
+   ...     hspace=0.08,
+   ...     wspace=0.25,
+   ... )
+   >>> left_axes = (fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[1, 0]))
+   >>> right_axes = (fig.add_subplot(grid[0, 1]), fig.add_subplot(grid[1, 1]))
+   >>> _ = plot_determinant_track(survey, station="18-016A", axes=left_axes)
+   >>> _ = plot_determinant_track(survey, station="18-007U", axes=right_axes)
+   >>> _ = left_axes[0].set_title("high residual station")
+   >>> _ = right_axes[0].set_title("low residual station")
+   >>> fig.savefig("determinant_station_comparison.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-10.png
    :width: 100%
@@ -734,56 +643,40 @@ This gives a scale-free number: 0.2 is a narrow band relative to the
 determinant magnitude, while 1.0 means the uncertainty span is about as
 large as the reported magnitude itself.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   import pandas as pd
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-   from pycsamt.emtools.impedance import _det_ci
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   rows = []
-   for index, site in enumerate(_iter_items(survey)):
-       _, z, freq, z_err = _get_z_block(site, with_errors=True)
-       if z is None:
-           continue
-
-       mag, phase, band = _det_ci(
-           z,
-           freq,
-           z_err,
-           pcts=(10.0, 50.0, 90.0),
-           n_draws=300,
-           seed=0,
-       )
-       relative_width = (band[:, 1] - band[:, 0]) / (mag + 1e-24)
-
-       rows.append(
-           {
-               "station": _name(site, index),
-               "median_det_abs": float(np.nanmedian(mag)),
-               "median_relative_band_width": float(
-                   np.nanmedian(relative_width)
-               ),
-               "max_relative_band_width": float(np.nanmax(relative_width)),
-           }
-       )
-
-   det_quality = (
-       pd.DataFrame(rows)
-       .sort_values("median_relative_band_width", ascending=False)
-       .reset_index(drop=True)
-   )
-
-   print(det_quality.head(10))
-   det_quality.to_csv("determinant_band_width.csv", index=False)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.impedance import _det_ci
+   >>> rows = []
+   >>> for index, site in enumerate(_iter_items(survey)):
+   ...     _, z, freq, z_err = _get_z_block(site, with_errors=True)
+   ...     if z is None:
+   ...         continue
+   ...     mag, phase, band = _det_ci(
+   ...         z,
+   ...         freq,
+   ...         z_err,
+   ...         pcts=(10.0, 50.0, 90.0),
+   ...         n_draws=300,
+   ...         seed=0,
+   ...     )
+   ...     relative_width = (band[:, 1] - band[:, 0]) / (mag + 1e-24)
+   ...     rows.append(
+   ...         {
+   ...             "station": _name(site, index),
+   ...             "median_det_abs": float(np.nanmedian(mag)),
+   ...             "median_relative_band_width": float(
+   ...                 np.nanmedian(relative_width)
+   ...             ),
+   ...             "max_relative_band_width": float(np.nanmax(relative_width)),
+   ...         }
+   ...     )
+   ...
+   >>> det_quality = (
+   ...     pd.DataFrame(rows)
+   ...     .sort_values("median_relative_band_width", ascending=False)
+   ...     .reset_index(drop=True)
+   ... )
+   >>> det_quality.head(10)
       station  median_det_abs  median_relative_band_width  max_relative_band_width
    0  18-021U   138059.459579                    1.244798                 1.558835
    1  18-020A    58591.215698                    0.981629                 1.719329
@@ -795,6 +688,7 @@ large as the reported magnitude itself.
    7  18-013U   409823.995492                    0.242223                 1.320911
    8  18-024U    37132.445937                    0.241634                 0.978317
    9  18-023A    57853.829945                    0.223259                 1.416815
+   >>> det_quality.to_csv("determinant_band_width.csv", index=False)
 
 The private helper ``_det_ci`` is used here because it exposes the
 computed arrays behind the public plot. For stable production code,
@@ -807,28 +701,17 @@ A warm residual column is more meaningful when the same style of
 feature appears on neighbouring survey lines or when it lines up with
 known geology. Use the same colour limit when comparing lines.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.impedance import plot_offdiag_antisym_residual
-
-   line18 = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-   line22 = ensure_sites("data/AMT/WILLY_DATA/L22PLT", strict=True)
-
-   fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.0), sharey=True)
-
-   plot_offdiag_antisym_residual(line18, vlim=0.8, ax=axes[0])
-   axes[0].set_title("L18PLT")
-
-   plot_offdiag_antisym_residual(line22, vlim=0.8, ax=axes[1])
-   axes[1].set_title("L22PLT")
-
-   fig.tight_layout()
-   fig.savefig("antisymmetry_line_comparison.png", dpi=200)
-   plt.close(fig)
+   >>> line18 = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> line22 = ensure_sites("data/AMT/WILLY_DATA/L22PLT", strict=True)
+   >>> fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.0), sharey=True)
+   >>> _ = plot_offdiag_antisym_residual(line18, vlim=0.8, ax=axes[0])
+   >>> _ = axes[0].set_title("L18PLT")
+   >>> _ = plot_offdiag_antisym_residual(line22, vlim=0.8, ax=axes[1])
+   >>> _ = axes[1].set_title("L22PLT")
+   >>> fig.tight_layout()
+   >>> fig.savefig("antisymmetry_line_comparison.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-impedance-12.png
    :width: 100%
@@ -875,74 +758,57 @@ The following script writes the main impedance outputs for one survey:
 one residual pseudo-section, one station ranking, one phasor wheel, and
 one determinant track.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-   import pandas as pd
-
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-   from pycsamt.emtools.impedance import (
-       plot_determinant_track,
-       plot_offdiag_antisym_residual,
-       plot_phasor_wheel,
-   )
-
-   out = Path("impedance_report_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
-
-   fig, ax = plt.subplots(figsize=(10.0, 4.8))
-   plot_offdiag_antisym_residual(survey, vlim=0.8, ax=ax)
-   fig.tight_layout()
-   fig.savefig(out / "antisymmetry_residual.png", dpi=200)
-   plt.close(fig)
-
-   rows = []
-   for index, site in enumerate(_iter_items(survey)):
-       _, z, freq = _get_z_block(site)
-       if z is None:
-           continue
-       xy = np.abs(z[:, 0, 1])
-       yx = np.abs(z[:, 1, 0])
-       residual = np.clip(
-           np.abs(z[:, 0, 1] + z[:, 1, 0]) / (xy + yx + 1e-24),
-           0.0,
-           1.0,
-       )
-       rows.append(
-           {
-               "station": _name(site, index),
-               "mean_residual": float(np.nanmean(residual)),
-               "p90_residual": float(np.nanpercentile(residual, 90)),
-           }
-       )
-
-   ranking = pd.DataFrame(rows).sort_values(
-       "mean_residual",
-       ascending=False,
-   )
-   ranking.to_csv(out / "antisymmetry_ranking.csv", index=False)
-
-   station = ranking.iloc[0]["station"]
-
-   ax = plot_phasor_wheel(
-       survey,
-       station=station,
-       components=("xy", "yx", "xx", "yy"),
-       radius="norm",
-   )
-   ax.figure.savefig(out / f"phasor_{station}.png", dpi=200)
-   plt.close(ax.figure)
-
-   fig = plot_determinant_track(survey, station=station, n_draws=300)
-   fig.savefig(out / f"determinant_{station}.png", dpi=200)
-   plt.close(fig)
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.impedance import (
+   ...     plot_determinant_track,
+   ...     plot_offdiag_antisym_residual,
+   ...     plot_phasor_wheel,
+   ... )
+   >>> out = Path("impedance_report_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> fig, ax = plt.subplots(figsize=(10.0, 4.8))
+   >>> _ = plot_offdiag_antisym_residual(survey, vlim=0.8, ax=ax)
+   >>> fig.tight_layout()
+   >>> fig.savefig(out / "antisymmetry_residual.png", dpi=200)
+   >>> rows = []
+   >>> for index, site in enumerate(_iter_items(survey)):
+   ...     _, z, freq = _get_z_block(site)
+   ...     if z is None:
+   ...         continue
+   ...     xy = np.abs(z[:, 0, 1])
+   ...     yx = np.abs(z[:, 1, 0])
+   ...     residual = np.clip(
+   ...         np.abs(z[:, 0, 1] + z[:, 1, 0]) / (xy + yx + 1e-24),
+   ...         0.0,
+   ...         1.0,
+   ...     )
+   ...     rows.append(
+   ...         {
+   ...             "station": _name(site, index),
+   ...             "mean_residual": float(np.nanmean(residual)),
+   ...             "p90_residual": float(np.nanpercentile(residual, 90)),
+   ...         }
+   ...     )
+   ...
+   >>> ranking = pd.DataFrame(rows).sort_values(
+   ...     "mean_residual",
+   ...     ascending=False,
+   ... )
+   >>> ranking.to_csv(out / "antisymmetry_ranking.csv", index=False)
+   >>> station = ranking.iloc[0]["station"]
+   >>> station
+   '18-016A'
+   >>> ax = plot_phasor_wheel(
+   ...     survey,
+   ...     station=station,
+   ...     components=("xy", "yx", "xx", "yy"),
+   ...     radius="norm",
+   ... )
+   >>> ax.figure.savefig(out / f"phasor_{station}.png", dpi=200)
+   >>> fig = plot_determinant_track(survey, station=station, n_draws=300)
+   >>> fig.savefig(out / f"determinant_{station}.png", dpi=200)
 
 .. grid:: 1 1 2 3
    :gutter: 2

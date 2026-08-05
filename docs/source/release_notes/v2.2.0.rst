@@ -7,7 +7,7 @@ Version 2.2.0
 pyCSAMT 2.2.0 |Feature| |New| |Fix| |Enhancement| |API Change| |Breaking| |Docs| |Build| |Tests|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Released 2026-08-04.*
+*Released 2026-08-05.*
 
 This release lands genuine 3-D **and** triangular-mesh 2-D Maxwell
 training-data pipelines, an opt-in ``physics="mt3d"`` mode for
@@ -20,14 +20,15 @@ project's two production external-solver backends -- physics-validated
 against real compiled binaries for the first time. Real topography is
 now threaded end to end through the triangular-mesh solver and the AI
 agents, three new tutorials exercise this against real field data
-(TEM/TEMAVG, Zonge AVG K1/K2, and CSAMT groundwater mapping), and a sweep
-through :mod:`pycsamt.emtools` fixed several real phase-tensor and
-frequency-editing bugs. It also adds cross-platform build tooling so
-users no longer have to hand-run ``make`` against the vendored Fortran
-sources to get there.
+(TEM/TEMAVG, Zonge AVG K1/K2, and CSAMT groundwater mapping), and two
+independent sweeps through :mod:`pycsamt.emtools` (and the EDI/spectra
+layer underneath it) fixed several real phase-tensor, frequency-editing,
+coordinate-recovery, and tipper-plotting bugs. It also adds
+cross-platform build tooling so users no longer have to hand-run
+``make`` against the vendored Fortran sources to get there.
 
-Why this release matters
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Why this release matters |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pyCSAMT vendors ModEM's Fortran source rather than shipping a compiled
 binary, and its own in-house 3-D solver (:mod:`~pycsamt.forward.maxwell.mt3d`)
@@ -45,8 +46,8 @@ well-formed. This release closes both gaps and adds the tooling to
 compile ModEM (and Occam2D, and MARE2DEM) without hand-editing a
 Makefile.
 
-Fixing ``mt3d.py``'s layered-earth benchmark
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Fixing ``mt3d.py``'s layered-earth benchmark |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``mt3d.py``'s ``layered_earth_benchmark`` had been failing at 30-45%
 error, and the project's own M6 architecture decision record recorded
@@ -77,8 +78,8 @@ ceiling), both analytic benchmarks now pass -- half-space at ~1.9%
 normalized RMS, layered-earth at ~3.5% -- and
 ``supports_nonuniform_mesh`` is ``True``.
 
-3-D training data and ``Inv3DAgent(physics="mt3d")``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3-D training data and ``Inv3DAgent(physics="mt3d")`` |Feature|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 With ``mt3d.py`` trustworthy, :mod:`pycsamt.ai.training.dataset3d` wires
 correlated 3-D geological volumes (:mod:`pycsamt.ai.geology`) into real
@@ -131,8 +132,8 @@ affords at a fixed domain-extent safety margin. The new opt-in
 ~6%/3.6% with more cells -- without fully closing it; low-frequency-
 concentrated surveys are recommended until it is.
 
-ModEM 3-D: from plumbing to validated physics
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ModEM 3-D: from plumbing to validated physics |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``ModEm3DAdapter`` existed before this release as file I/O plumbing
 around the vendored ModEM Fortran source, reusing
@@ -186,8 +187,8 @@ redistribution/production-use license terms with the original OSU
 authors are still an open item to confirm before relying on this path
 in production.
 
-Compiling the external solvers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Compiling the external solvers |Feature| |Build|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Validating ``ModEm3DAdapter`` required hand-compiling ModEM's vendored
 Fortran source. This release turns that one-off process into reusable
@@ -208,8 +209,8 @@ script instead drives the existing
 See :doc:`/user_guide/models/compilation` for toolchain requirements
 and per-solver notes.
 
-A second 2-D path: triangular meshes and a real MARE2DEM adapter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A second 2-D path: triangular meshes and a real MARE2DEM adapter |Feature|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Everything above validates the *rectilinear* 2-D/3-D Maxwell path
 (:mod:`~pycsamt.forward.maxwell.mt2d`/``mt3d``/``modem3d``). MARE2DEM,
@@ -264,8 +265,8 @@ to accept either). On top of it:
   realization through ``TriFEM2DAdapter``, exposed as
   ``Inv2DAgent(physics="mt2d_tri")``.
 
-Real topography, end to end
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Real topography, end to end |Fix| |Feature|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``TriFEM2DAdapter`` originally assumed every receiver sat exactly at
 ``z = 0`` -- a real bug, not a simplification: stations on real terrain
@@ -285,8 +286,8 @@ own, found immediately by using it on a draped section: the edge-overlay
 layer only handled 1-D rectilinear cell edges, not the 2-D coordinate
 arrays a topography-draped section returns.
 
-Three new tutorials on real field data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Three new tutorials on real field data |New| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :doc:`/tutorials/process_temavg_survey` walks a real 51-station TEM100
 profile (:doc:`/theory/tdem_basics`'s TEM/TEMAVG family) from raw
@@ -321,8 +322,8 @@ meaningless result regardless of the input data (verified by a closed-
 form proof reproduced in the tutorial). The tutorial shows that proof
 instead of the diagnostic plots it used to fabricate.
 
-Scaled-up AI-inversion reruns
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Scaled-up AI-inversion reruns |Enhancement|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Three previously-published tutorials reran their AI inversions at larger
 scale using the machinery above:
@@ -349,8 +350,8 @@ scale using the machinery above:
   100 km depth (down from 250 km) to keep the MT3D run tractable, and
   added station labels and topography to the comparison figure.
 
-A sweep of real bugs across ``emtools``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A sweep of real bugs across ``emtools`` |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Building and reviewing the tutorials above surfaced several real,
 independent bugs in :mod:`pycsamt.emtools`:
@@ -386,6 +387,68 @@ independent bugs in :mod:`pycsamt.emtools`:
   empty third panel. It now detects tipper availability and draws two
   panels when there is none. This changes the returned figure's axes
   count for tipper-less surveys.
+
+A second sweep: coordinates, transfer functions, and legends |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A deep rewrite of the ``strike``, ``spectra``, ``tensor``, and ``tf``
+user-guide pages -- converting every example to real, byte-verified
+output and reaching for other bundled datasets wherever that made a
+page richer -- surfaced a second, independent round of real bugs, one
+of them wide enough to change what several figures on this page's own
+tutorials actually plot.
+
+* **EDI coordinates ignored ``>=DEFINEMEAS``** --
+  :func:`pycsamt.site.utils.get_coords` only ever read ``LAT=``/
+  ``LONG=`` from ``>HEAD``. Older BIRRP-processed files that leave those
+  keys empty but carry a real station position as ``REFLAT``/
+  ``REFLONG`` in ``>=DEFINEMEAS`` -- true for every file in the bundled
+  KAP03 SAMTEX survey -- reported ``(nan, nan)`` for every station,
+  silently disabling every coordinate-based plot for that survey. A
+  fallback to ``>=DEFINEMEAS`` per missing field now recovers real
+  positions for all 26 KAP03 stations, which is what makes the tensor
+  and tipper pages' new geographic maps possible at all.
+* **Spectra DoF fallback ignored real metadata** --
+  :func:`pycsamt.seg.ops.effective_dof_from_meta` treated a zero
+  ``segnum`` -- the common case, since most real ``>=SPECTRASECT``
+  blocks never populate it -- as an explicit zero-DoF count rather than
+  "not provided," silently skipping its own documented ``avgt * bw``
+  fallback even when both were genuinely available.
+  ``Spectra.to_Z(estimate_error=True)`` returned ``z_err=None`` for
+  essentially every real file as a result; the docstring's claim that
+  errors were "left as NaN" was also corrected to describe the real
+  ``None`` behaviour.
+* **Tipper nearest-period lookup assumed sorted frequency** --
+  ``pycsamt.emtools.tf._nearest_idx`` called ``np.searchsorted`` against
+  a raw, potentially unsorted per-station frequency array. Two real
+  KAP03 stations concatenate runs recorded at different sample rates and
+  are genuinely non-monotonic, corrupting nearest-period matching for
+  every period-based tipper plot at those stations. Fixed to sort
+  internally in log-period space -- the same fix already shipped for
+  ``ss.py``'s analogous helper in this release.
+* **Induction-map axes mislabeled as metres** --
+  ``plot_induction_map`` and ``plot_induction_convention`` hardcoded
+  ``"x (m)"``/``"y / Northing (m)"`` axis labels regardless of the
+  actual coordinate source. Once real EDI coordinates flow through (see
+  the ``>=DEFINEMEAS`` fix above), those are usually geographic degrees,
+  not projected metres. Both functions now detect the coordinate source
+  and label the axes "Longitude"/"Latitude" when that is what is
+  actually plotted.
+* **Normalized-response pseudosection didn't match its sibling plot** --
+  ``plot_normalized_response`` drew station labels along the bottom axis
+  and put short period at the bottom (long period at top), unlike every
+  other pseudosection in the package -- including
+  ``plot_overprint_section``, in the same module. Switched to the shared
+  top-mounted station-marker convention and inverted the period axis so
+  shallow/short-period sits on top, matching the log10-period axis label
+  convention used everywhere else.
+* **Phase-tensor legend didn't show an ellipse** --
+  ``phase_tensor_legend`` drew a plain circle (equal width and height
+  can never show ellipticity) with one unlabeled line and no docstring.
+  Rewrote it to draw a real, labeled reference ellipse --
+  :math:`\phi_{\max}`/:math:`\phi_{\min}` axes and a ``theta``
+  orientation arc -- matching the exact convention the pseudosection and
+  map plots already use.
 
 Fixed
 ~~~~~
@@ -454,6 +517,11 @@ Fixed
 * |Fix| **``pycsamt tdem info`` coordinate count** -- read a nonexistent
   ``coord.records`` attribute instead of ``coord.n_points``, always
   reporting zero points.
+* |Fix| **EDI coordinates ignored ``>=DEFINEMEAS``, spectra DoF fallback,
+  tipper nearest-period lookup, induction-map axis labels, the
+  normalized-response pseudosection's orientation, and the phase-tensor
+  legend** -- see "A second sweep: coordinates, transfer functions, and
+  legends" above.
 
 Added
 ~~~~~
@@ -497,6 +565,14 @@ Added
 * |Docs| :doc:`/api_guide/mesh` and a deepened
   :doc:`/user_guide/ai_inversion/index` (ten pages, new glossary
   entries).
+* |Docs| Deepened :doc:`/user_guide/emtools/strike`,
+  :doc:`/user_guide/emtools/spectra`, :doc:`/user_guide/emtools/tensor`,
+  and :doc:`/user_guide/emtools/tf` -- every example converted to real,
+  byte-verified output; new real-data examples (a real KAP03 induction
+  map with genuine tipper, a real single-component CSAMT degenerate
+  phase-tensor case); long examples moved to ``docs/scripts/`` behind
+  ``code-dropdown``; and new glossary entries (induction vector,
+  Parkinson/Wiese convention, hodogram).
 
 Removed
 ~~~~~~~
@@ -521,8 +597,8 @@ Docs & tooling
   and ``interfaces-cli``, and fixed two tests that were crawling the
   full 2,790-station JIANGSU survey instead of a subset.
 
-Compatibility
-~~~~~~~~~~~~~
+|Compatibility|
+~~~~~~~~~~~~~~~~
 
 Default behaviour is unchanged for existing users. ``Inv3DAgent`` and
 ``Inv2DAgent`` both still default to ``physics="mt1d"``; the new

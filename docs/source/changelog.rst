@@ -33,14 +33,15 @@ Latest release
 
 .. _changelog-latest:
 
-**2.2.0** — *2026-08-04* — genuine 3-D and triangular-mesh 2-D Maxwell
+**2.2.0** — *2026-08-05* — genuine 3-D and triangular-mesh 2-D Maxwell
 training-data pipelines, an ``Inv3DAgent`` ``physics="mt3d"`` mode, a real
 MARE2DEM external-solver adapter, real topography support in the mesh and
 AI agents, three new tutorials (TEM/TEMAVG, Zonge AVG K1/K2, CSAMT
-groundwater mapping), and a run of phase-tensor and frequency-editing bug
-fixes — plus ``ModEm3DAdapter`` and ``Mare2DEMAdapter`` physics-validated
-against real compiled binaries for the first time, and cross-platform
-build tooling for the external solvers.
+groundwater mapping), and two rounds of real bug fixes across ``emtools``
+(phase-tensor, frequency-editing, EDI-coordinate, spectra, and
+tipper-plotting) — plus ``ModEm3DAdapter`` and ``Mare2DEMAdapter``
+physics-validated against real compiled binaries for the first time, and
+cross-platform build tooling for the external solvers.
 :ref:`Full 2.2.0 entry <changelog-2-2-0>` · :ref:`Upgrade guidance
 <release_v2_2_0>`.
 

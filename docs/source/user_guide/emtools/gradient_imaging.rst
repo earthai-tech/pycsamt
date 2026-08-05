@@ -3,9 +3,9 @@
 Gradient-Based Pseudo-Sections
 ==============================
 
-``pycsamt.emtools.gradient_imaging`` builds CSAMT/AMT apparent
-resistivity pseudo-sections from gradients rather than from
-resistivity values alone.  The goal is boundary emphasis: highlight
+``pycsamt.emtools.gradient_imaging`` builds :term:`CSAMT`/:term:`AMT`
+:term:`apparent resistivity` pseudo-sections from gradients rather than
+from resistivity values alone.  The goal is boundary emphasis: highlight
 where apparent resistivity changes laterally, vertically, or in both
 directions at once.
 
@@ -61,7 +61,7 @@ default it uses the determinant-style geometric mean:
 
 You can also use one component only with ``comp="xy"`` or ``comp="yx"``.
 
-The depth column is an apparent skin-depth scale,
+The depth column is an apparent :term:`skin depth` scale,
 
 .. math::
 
@@ -133,20 +133,15 @@ The value is assigned to the midpoint between the two stations.  Its
 sign is directional: positive means apparent resistivity increases to
 the right along the sorted line, while negative means it decreases.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gradient_imaging import rho_spatial_gradient
-   spatial = rho_spatial_gradient(
-       "data/AMT/WILLY_DATA/L18PLT",
-       spacing_m=200.0,
-       comp="det",
-   )
-   print(spatial.head())
-   spatial.to_csv("l18plt_spatial_gradient.csv", index=False)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.gradient_imaging import rho_spatial_gradient
+   >>> spatial = rho_spatial_gradient(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     spacing_m=200.0,
+   ...     comp="det",
+   ... )
+   >>> spatial.head()
      station_a station_b    x_m  ...       depth_m   rho_a_ohmm  delta_rho_x
    0   18-001A   18-002U  100.0  ...  16441.550076  1076.986058  -789.812389
    1   18-001A   18-002U  100.0  ...  23164.458570  2553.493898   633.104370
@@ -154,6 +149,23 @@ the right along the sorted line, while negative means it decreases.
    3   18-001A   18-002U  100.0  ...  16229.672127  1788.573047    68.027386
    4   18-001A   18-002U  100.0  ...  22026.195330  3934.779127 -5968.395877
    [5 rows x 9 columns]
+   >>> spatial.to_csv("l18plt_spatial_gradient.csv", index=False)
+
+The full table holds every adjacent-station pair at every frequency.
+Plotting one pair's gradient curve against period is a useful first
+look before assembling the full pseudo-section:
+
+.. code-block:: pycon
+
+   >>> import matplotlib.pyplot as plt
+   >>> pair = spatial.loc[spatial["station_a"] == "18-001A"].sort_values("period_s")
+   >>> fig, ax = plt.subplots(figsize=(7, 4.5))
+   >>> _ = ax.semilogx(pair["period_s"], pair["delta_rho_x"], "o-")
+   >>> _ = ax.axhline(0.0, color="0.4", linewidth=0.8)
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel(r"$\Delta\rho_a^x$ ($\Omega\cdot$m)")
+   >>> _ = ax.set_title("18-001A-18-002U spatial gradient")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-01.png
    :width: 100%
@@ -198,13 +210,26 @@ true derivative with respect to physical depth.
    ...     comp="det",
    ... )
    >>> one = vertical.loc[vertical["station"] == "18-001A"].sort_values("period_s")
-   >>> print(one[["period_s", "rho_a_ohmm", "delta_rho_z"]].head())
+   >>> one[["period_s", "rho_a_ohmm", "delta_rho_z"]].head()
       period_s  rho_a_ohmm  delta_rho_z
    51  0.000096   80.630809    -7.264990
    50  0.000115   86.503532    -4.480456
    49  0.000137  102.020596   -26.553673
    48  0.000164  133.745279   -36.895692
    47  0.000196  154.026762    -3.667275
+
+Plotting the same station's full curve against period shows where the
+sign flips and how it grows toward the low-frequency end:
+
+.. code-block:: pycon
+
+   >>> fig, ax = plt.subplots(figsize=(7, 4.5))
+   >>> _ = ax.semilogx(one["period_s"], one["delta_rho_z"], "o-", color="C2")
+   >>> _ = ax.axhline(0.0, color="0.4", linewidth=0.8)
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel(r"$\Delta\rho_a^z$ ($\Omega\cdot$m)")
+   >>> _ = ax.set_title("18-001A frequency gradient")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-02.png
    :width: 100%
@@ -253,20 +278,15 @@ This is a mixed finite difference on the station-frequency grid:
    =
    \Delta_f\left(\Delta_x\rho_a\right).
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gradient_imaging import rho_joint_gradient
-   joint = rho_joint_gradient(
-       "data/AMT/WILLY_DATA/L18PLT",
-       spacing_m=200.0,
-       comp="det",
-   )
-   print(joint.head())
-   joint.to_csv("l18plt_joint_gradient.csv", index=False)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.gradient_imaging import rho_joint_gradient
+   >>> joint = rho_joint_gradient(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     spacing_m=200.0,
+   ...     comp="det",
+   ... )
+   >>> joint.head()
      station_a station_b    x_m  ...  period_s       depth_m  delta_rho_zx
    0   18-001A   18-002U  100.0  ...  0.830565  19740.513225   1422.916759
    1   18-001A   18-002U  100.0  ...  0.695410  18387.618571  -1040.901362
@@ -274,6 +294,21 @@ This is a mixed finite difference on the station-frequency grid:
    3   18-001A   18-002U  100.0  ...  0.487329  14850.211800  -6036.423263
    4   18-001A   18-002U  100.0  ...  0.407997  16531.998598   3783.198291
    [5 rows x 8 columns]
+   >>> joint.to_csv("l18plt_joint_gradient.csv", index=False)
+
+The same pair's joint gradient, sorted by period, mixes the spatial and
+frequency contrasts together:
+
+.. code-block:: pycon
+
+   >>> pair_joint = joint.loc[joint["station_a"] == "18-001A"].sort_values("period_s")
+   >>> fig, ax = plt.subplots(figsize=(7, 4.5))
+   >>> _ = ax.semilogx(pair_joint["period_s"], pair_joint["delta_rho_zx"], "o-", color="C3")
+   >>> _ = ax.axhline(0.0, color="0.4", linewidth=0.8)
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel(r"$\Delta\rho_a^{zx}$ ($\Omega\cdot$m)")
+   >>> _ = ax.set_title("18-001A-18-002U joint gradient")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-03.png
    :width: 100%
@@ -310,26 +345,19 @@ where :math:`q` is one of
 used because zero means "no local change" for the selected finite
 difference, while the sign tells the direction of the contrast.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.gradient_imaging import plot_gradient_section
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-
-   fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
-   plot_gradient_section(survey, quantity="spatial", ax=axes[0])
-   axes[0].set_title("Spatial")
-
-   plot_gradient_section(survey, quantity="frequency", ax=axes[1])
-   axes[1].set_title("Frequency")
-
-   plot_gradient_section(survey, quantity="joint", ax=axes[2])
-   axes[2].set_title("Joint")
-
-   fig.tight_layout()
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools.gradient_imaging import plot_gradient_section
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
+   >>> _ = plot_gradient_section(survey, quantity="spatial", ax=axes[0])
+   >>> _ = axes[0].set_title("Spatial")
+   >>> _ = plot_gradient_section(survey, quantity="frequency", ax=axes[1])
+   >>> _ = axes[1].set_title("Frequency")
+   >>> _ = plot_gradient_section(survey, quantity="joint", ax=axes[2])
+   >>> _ = axes[2].set_title("Joint")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-04.png
    :width: 100%
@@ -341,17 +369,15 @@ apparent-resistivity change.
 Use ``vlim`` when comparing several lines or components so the color
 scale is consistent.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gradient_imaging import plot_gradient_section
-
-   ax = plot_gradient_section(
-       "data/AMT/WILLY_DATA/L18PLT",
-       quantity="joint",
-       comp="det",
-       vlim=(-3000.0, 3000.0),
-   )
+   >>> from pycsamt.emtools.gradient_imaging import plot_gradient_section
+   >>> ax = plot_gradient_section(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     quantity="joint",
+   ...     comp="det",
+   ...     vlim=(-3000.0, 3000.0),
+   ... )
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-05.png
    :width: 100%
@@ -378,31 +404,28 @@ The default ``"det"`` is usually more stable because it combines both
 off-diagonal modes. Component-specific plots are still important when
 the two modes disagree.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import pandas as pd
-   from pycsamt.emtools.gradient_imaging import rho_joint_gradient
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   rows = []
-   for comp in ("det", "xy", "yx"):
-       table = rho_joint_gradient(survey, comp=comp)
-       rows.append(
-           {
-               "component": comp,
-               "std": table["delta_rho_zx"].std(),
-               "max_abs": table["delta_rho_zx"].abs().max(),
-           }
-       )
-   component_sensitivity = pd.DataFrame(rows)
-   print(component_sensitivity)
-
-.. code-block:: text
-
+   >>> import pandas as pd
+   >>> from pycsamt.emtools.gradient_imaging import rho_joint_gradient
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> rows = []
+   >>> for comp in ("det", "xy", "yx"):
+   ...     table = rho_joint_gradient(survey, comp=comp)
+   ...     rows.append(
+   ...         {
+   ...             "component": comp,
+   ...             "std": table["delta_rho_zx"].std(),
+   ...             "max_abs": table["delta_rho_zx"].abs().max(),
+   ...         }
+   ...     )
+   ...
+   >>> component_sensitivity = pd.DataFrame(rows)
+   >>> component_sensitivity
      component          std        max_abs
-   0       det  1319.337312   11797.378008
-   1        xy  2582.458888   32488.264297
-   2        yx  9287.900947  175431.466235
+   0       det  1204.168366   11797.378008
+   1        xy  2574.547370   32488.264297
+   2        yx  9243.952423  175431.466235
 
 Report the component whenever you show a gradient section.
 
@@ -412,35 +435,26 @@ Single-Pair And Single-Station Curves
 Before interpreting a full pseudo-section, inspect a station pair or
 station curve.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.gradient_imaging import (
-       rho_frequency_gradient,
-       rho_spatial_gradient,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-
-   spatial = rho_spatial_gradient(survey)
-   pair = spatial.loc[spatial["station_a"] == "18-001A"].sort_values("period_s")
-
-   frequency = rho_frequency_gradient(survey)
-   station = frequency.loc[frequency["station"] == "18-001A"].sort_values("period_s")
-
-   fig, (ax_pair, ax_station) = plt.subplots(2, 1, figsize=(7, 7), sharex=True)
-   ax_pair.semilogx(pair["period_s"], pair["delta_rho_x"], "o-")
-   ax_pair.axhline(0.0, color="0.4", linewidth=0.8)
-   ax_pair.set_ylabel("Spatial gradient")
-
-   ax_station.semilogx(station["period_s"], station["delta_rho_z"], "o-", color="C2")
-   ax_station.axhline(0.0, color="0.4", linewidth=0.8)
-   ax_station.set_xlabel("Period (s)")
-   ax_station.set_ylabel("Frequency gradient")
-
-   fig.tight_layout()
+   >>> from pycsamt.emtools.gradient_imaging import (
+   ...     rho_frequency_gradient,
+   ...     rho_spatial_gradient,
+   ... )
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> spatial = rho_spatial_gradient(survey)
+   >>> pair = spatial.loc[spatial["station_a"] == "18-001A"].sort_values("period_s")
+   >>> frequency = rho_frequency_gradient(survey)
+   >>> station = frequency.loc[frequency["station"] == "18-001A"].sort_values("period_s")
+   >>> fig, (ax_pair, ax_station) = plt.subplots(2, 1, figsize=(7, 7), sharex=True)
+   >>> _ = ax_pair.semilogx(pair["period_s"], pair["delta_rho_x"], "o-")
+   >>> _ = ax_pair.axhline(0.0, color="0.4", linewidth=0.8)
+   >>> _ = ax_pair.set_ylabel("Spatial gradient")
+   >>> _ = ax_station.semilogx(station["period_s"], station["delta_rho_z"], "o-", color="C2")
+   >>> _ = ax_station.axhline(0.0, color="0.4", linewidth=0.8)
+   >>> _ = ax_station.set_xlabel("Period (s)")
+   >>> _ = ax_station.set_ylabel("Frequency gradient")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-07.png
    :width: 100%
@@ -469,27 +483,23 @@ Values below one mean the joint gradient is globally narrower than the
 spatial gradient.  That supports, but does not prove, the idea that
 background variation has been reduced.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gradient_imaging import (
-       rho_joint_gradient,
-       rho_spatial_gradient,
-   )
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   spatial = rho_spatial_gradient(survey)
-   joint = rho_joint_gradient(survey)
-   spatial_std = spatial["delta_rho_x"].std()
-   joint_std = joint["delta_rho_zx"].std()
-   print(f"spatial std = {spatial_std:.1f} ohm.m")
-   print(f"joint std   = {joint_std:.1f} ohm.m")
-   print(f"ratio       = {joint_std / spatial_std:.2f}")
-
-.. code-block:: text
-
-   spatial std = 2659.9 ohm.m
-   joint std   = 1319.3 ohm.m
-   ratio       = 0.50
+   >>> from pycsamt.emtools.gradient_imaging import (
+   ...     rho_joint_gradient,
+   ...     rho_spatial_gradient,
+   ... )
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> spatial = rho_spatial_gradient(survey)
+   >>> joint = rho_joint_gradient(survey)
+   >>> spatial_std = spatial["delta_rho_x"].std()
+   >>> joint_std = joint["delta_rho_zx"].std()
+   >>> print(f"spatial std = {spatial_std:.1f} ohm.m")
+   spatial std = 2200.1 ohm.m
+   >>> print(f"joint std   = {joint_std:.1f} ohm.m")
+   joint std   = 1204.2 ohm.m
+   >>> print(f"ratio       = {joint_std / spatial_std:.2f}")
+   ratio       = 0.55
 
 This is not a proof of geological correctness, but it is a useful
 sanity check before relying on the joint image.
@@ -499,24 +509,17 @@ Compare Neighboring Lines
 
 Use the same ``quantity``, ``comp``, and ``vlim`` when comparing lines.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.gradient_imaging import plot_gradient_section
-
-   l18 = "data/AMT/WILLY_DATA/L18PLT"
-   l22 = "data/AMT/WILLY_DATA/L22PLT"
-
-   fig, (ax18, ax22) = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
-   plot_gradient_section(l18, quantity="joint", comp="det", vlim=(-3000, 3000), ax=ax18)
-   ax18.set_title("L18PLT")
-
-   plot_gradient_section(l22, quantity="joint", comp="det", vlim=(-3000, 3000), ax=ax22)
-   ax22.set_title("L22PLT")
-
-   fig.tight_layout()
+   >>> from pycsamt.emtools.gradient_imaging import plot_gradient_section
+   >>> l18 = "data/AMT/WILLY_DATA/L18PLT"
+   >>> l22 = "data/AMT/WILLY_DATA/L22PLT"
+   >>> fig, (ax18, ax22) = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
+   >>> _ = plot_gradient_section(l18, quantity="joint", comp="det", vlim=(-3000, 3000), ax=ax18)
+   >>> _ = ax18.set_title("L18PLT")
+   >>> _ = plot_gradient_section(l22, quantity="joint", comp="det", vlim=(-3000, 3000), ax=ax22)
+   >>> _ = ax22.set_title("L22PLT")
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-09.png
    :width: 100%
@@ -568,36 +571,28 @@ Saving A Reproducible Bundle
 
 Save the three gradient tables and the main pseudo-section.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.gradient_imaging import (
-       plot_gradient_section,
-       rho_frequency_gradient,
-       rho_joint_gradient,
-       rho_spatial_gradient,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   out = Path("outputs/gradient_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   spatial = rho_spatial_gradient(survey, comp="det")
-   frequency = rho_frequency_gradient(survey, comp="det")
-   joint = rho_joint_gradient(survey, comp="det")
-
-   spatial.to_csv(out / "spatial_gradient.csv", index=False)
-   frequency.to_csv(out / "frequency_gradient.csv", index=False)
-   joint.to_csv(out / "joint_gradient.csv", index=False)
-
-   fig, ax = plt.subplots(figsize=(10, 5))
-   plot_gradient_section(survey, quantity="joint", comp="det", ax=ax)
-   fig.tight_layout()
-   fig.savefig(out / "joint_gradient_section.png", dpi=200)
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.gradient_imaging import (
+   ...     plot_gradient_section,
+   ...     rho_frequency_gradient,
+   ...     rho_joint_gradient,
+   ...     rho_spatial_gradient,
+   ... )
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> out = Path("outputs/gradient_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> spatial = rho_spatial_gradient(survey, comp="det")
+   >>> frequency = rho_frequency_gradient(survey, comp="det")
+   >>> joint = rho_joint_gradient(survey, comp="det")
+   >>> spatial.to_csv(out / "spatial_gradient.csv", index=False)
+   >>> frequency.to_csv(out / "frequency_gradient.csv", index=False)
+   >>> joint.to_csv(out / "joint_gradient.csv", index=False)
+   >>> fig, ax = plt.subplots(figsize=(10, 5))
+   >>> _ = plot_gradient_section(survey, quantity="joint", comp="det", ax=ax)
+   >>> fig.tight_layout()
+   >>> fig.savefig(out / "joint_gradient_section.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-gradient-imaging-10.png
    :width: 100%

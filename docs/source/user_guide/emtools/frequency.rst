@@ -5,8 +5,8 @@ Frequency Editing, Resampling, And QC
 
 ``pycsamt.emtools.frequency`` is the user-guide hub for operations that
 change, evaluate, or visualize the frequency axis. It is used before
-inversion, before section plotting, after quality control, and whenever
-multiple stations need to share a consistent frequency grid.
+inversion, before section plotting, after :term:`quality control`, and
+whenever multiple stations need to share a consistent frequency grid.
 
 The module covers four practical jobs:
 
@@ -60,21 +60,17 @@ Selecting A Band
 
 Use ``select_band`` when you already know the frequency limits.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools.frequency import select_band
-
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-
-   mid_band = select_band(
-       edi_dir,
-       fmin=10.0,
-       fmax=1000.0,
-       inplace=False,
-   )
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.frequency import select_band
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> mid_band = select_band(
+   ...     edi_dir,
+   ...     fmin=10.0,
+   ...     fmax=1000.0,
+   ...     inplace=False,
+   ... )
 
 ``fmin`` and ``fmax`` are in hertz. The convenience argument
 ``band_hz=(10.0, 1000.0)`` is also accepted. If both forms are provided,
@@ -83,15 +79,12 @@ explicit ``fmin`` and ``fmax`` take precedence.
 Use ``keep`` when you want specific frequencies rather than a continuous
 band.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import select_band
-
-   selected = select_band(
-       "data/AMT/WILLY_DATA/L18PLT",
-       keep=[10.0, 100.0, 1000.0],
-   )
+   >>> selected = select_band(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     keep=[10.0, 100.0, 1000.0],
+   ... )
 
 Band selection removes rows outside the chosen band. It changes the
 frequency grid length.
@@ -102,16 +95,14 @@ Removing Duplicate Frequencies
 Use ``drop_duplicates`` when a station has repeated or unsorted
 frequency rows.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import drop_duplicates
-
-   cleaned = drop_duplicates(
-       "data/AMT/WILLY_DATA/L18PLT",
-       tol=1e-10,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.frequency import drop_duplicates
+   >>> cleaned = drop_duplicates(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     tol=1e-10,
+   ...     inplace=False,
+   ... )
 
 The function keeps the first occurrence of each frequency within the
 tolerance and applies the same row selection to impedance and tipper
@@ -137,8 +128,8 @@ where :math:`i` indexes the station, :math:`f` the frequency, and
 :math:`k` runs over ``coverage``, ``uncertainty``, ``offdiag``,
 ``diagonal``, ``phase``, and ``spatial``, weighted respectively
 ``0.35, 0.20, 0.15, 0.10, 0.10, 0.10``. A missing component drops out of
-both the numerator and the denominator, so a station with no tipper is
-not penalized twice for the same gap. ``ci_hi`` and ``ci_lo`` then cut
+both the numerator and the denominator, so a station with no
+:term:`tipper` is not penalized twice for the same gap. ``ci_hi`` and ``ci_lo`` then cut
 the ``[0, 1]`` range of :math:`\mathrm{CR}` into three working classes:
 at or above ``ci_hi`` a row is trusted and kept as-is, between ``ci_lo``
 and ``ci_hi`` it is a candidate for interpolation, and below ``ci_lo``
@@ -146,57 +137,47 @@ it is a rejection candidate. The frequency module computes this table
 internally, but you should look at its distribution before editing
 anything.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.qc import frequency_confidence_table
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   confidence = frequency_confidence_table(survey)
-
-   print(confidence[["station", "frequency_hz", "confidence", "flags"]].head())
-   print(confidence["confidence"].describe())
-
-   station = "18-001A"
-   one = confidence.loc[confidence["station"] == station].sort_values("period_s")
-
-   fig, ax = plt.subplots(figsize=(7, 4.5))
-   ax.semilogx(one["period_s"], one["confidence"], "o-")
-   ax.axhline(0.90, color="tab:red", linestyle="--", label="ci_hi")
-   ax.axhline(0.50, color="tab:orange", linestyle="--", label="ci_lo")
-   ax.set_xlabel("Period (s)")
-   ax.set_ylabel("Confidence")
-   ax.legend()
-   fig.tight_layout()
-
-.. code-block:: text
-
-      station  ...                                              flags
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools.qc import frequency_confidence_table
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> confidence = frequency_confidence_table(survey, api=True).to_pandas()
+   >>> confidence[["station", "frequency_hz", "confidence", "flags"]].head()
+     station  ...                                              flags
    0  18-001A  ...  recoverable,high_error,offdiag_mismatch,diagon...
    1  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
    2  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
    3  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
    4  18-001A  ...  reject,high_error,offdiag_mismatch,diagonal_le...
-
    [5 rows x 4 columns]
+   >>> confidence["confidence"].describe()
    count    1484.000000
-   mean        0.658116
-   std         0.096143
+   mean        0.659129
+   std         0.096056
    min         0.417464
-   25%         0.586675
-   50%         0.654938
-   75%         0.736039
+   25%         0.587712
+   50%         0.656305
+   75%         0.737060
    max         0.863041
    Name: confidence, dtype: float64
+   >>> station = "18-001A"
+   >>> one = confidence.loc[confidence["station"] == station].sort_values("period_s")
+   >>> fig, ax = plt.subplots(figsize=(7, 4.5))
+   >>> _ = ax.semilogx(one["period_s"], one["confidence"], "o-")
+   >>> _ = ax.axhline(0.90, color="tab:red", linestyle="--", label="ci_hi")
+   >>> _ = ax.axhline(0.50, color="tab:orange", linestyle="--", label="ci_lo")
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel("Confidence")
+   >>> _ = ax.legend()
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-04.png
    :width: 100%
 
 The key lesson is simple: do not choose ``ci_hi``, ``ci_lo``, or
 ``threshold`` before looking at the confidence distribution above. In
-this survey the median :math:`\mathrm{CR}` sits near ``0.65`` and the
+this survey the median :math:`\mathrm{CR}` sits near ``0.66`` and the
 maximum barely reaches ``0.86``. Leaving ``ci_hi`` at a textbook value
 like ``0.90`` would mean no row is ever trusted enough to act as an
 interpolation donor, and recovery would silently have nothing to work
@@ -225,33 +206,34 @@ the rule. Dropping removes them from the frequency grid entirely.
 Masking keeps the grid the same length but replaces the corresponding
 tensor rows with ``NaN``.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import (
-       drop_low_confidence_frequencies,
-       mask_low_confidence_frequencies,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-
-   dropped = drop_low_confidence_frequencies(
-       survey,
-       threshold=0.50,
-       also="both",
-       inplace=False,
-   )
-
-   masked = mask_low_confidence_frequencies(
-       survey,
-       threshold=0.50,
-       also="both",
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.frequency import (
+   ...     drop_low_confidence_frequencies,
+   ...     mask_low_confidence_frequencies,
+   ... )
+   >>> dropped = drop_low_confidence_frequencies(
+   ...     survey,
+   ...     threshold=0.50,
+   ...     also="both",
+   ...     inplace=False,
+   ... )
+   >>> masked = mask_low_confidence_frequencies(
+   ...     survey,
+   ...     threshold=0.50,
+   ...     also="both",
+   ...     inplace=False,
+   ... )
 
 Use ``drop`` when downstream code cannot handle missing rows. Use
 ``mask`` when preserving the original frequency grid matters, for
-example when comparing before and after processing.
+example when comparing before and after processing. Dropping shrinks
+the impedance array before the frequency array, in that order, to
+avoid a hard failure in the underlying setter; you may see one harmless
+``ERROR``-level log line per edited station as a result ("Failed to
+compute rho/phi after setting Z") -- it self-corrects one line later
+once the frequency array is updated to match, and does not indicate
+that anything actually failed.
 
 The ``also`` argument controls which blocks are edited:
 
@@ -301,20 +283,18 @@ high-frequency end and would barely constrain the low-frequency end at
 all. Rows in :math:`B` are not interpolated; they are handled entirely
 by ``reject``.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import recover_low_confidence_frequencies
-
-   recovered = recover_low_confidence_frequencies(
-       "data/AMT/WILLY_DATA/L18PLT",
-       ci_hi=0.72,
-       ci_lo=0.50,
-       interpolation="linear",
-       reject="drop",
-       also="both",
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.frequency import recover_low_confidence_frequencies
+   >>> recovered = recover_low_confidence_frequencies(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     ci_hi=0.72,
+   ...     ci_lo=0.50,
+   ...     interpolation="linear",
+   ...     reject="drop",
+   ...     also="both",
+   ...     inplace=False,
+   ... )
 
 Valid interpolation modes are ``"linear"`` and ``"nearest"``. Valid
 ``reject`` modes are:
@@ -346,26 +326,21 @@ High-Level Editing Workflow
 Use ``edit_frequencies_by_confidence`` when you want the edited sites,
 a station-level report, and a row-level decision table in one object.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import edit_frequencies_by_confidence
-   result = edit_frequencies_by_confidence(
-       "data/AMT/WILLY_DATA/L18PLT",
-       mode="recover",
-       ci_hi=0.72,
-       ci_lo=0.50,
-       reject="drop",
-       interpolation="linear",
-       api=False,
-   )
-   print(result.summary())
-   print(result.report.head())
-   print(result.decisions.head())
-
-.. code-block:: text
-
-   FrequencyEditResult(mode='recover', method='composite', dropped=73, masked=102, recovered=867)
+   >>> from pycsamt.emtools.frequency import edit_frequencies_by_confidence
+   >>> result = edit_frequencies_by_confidence(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     mode="recover",
+   ...     ci_hi=0.72,
+   ...     ci_lo=0.50,
+   ...     reject="drop",
+   ...     interpolation="linear",
+   ...     api=False,
+   ... )
+   >>> result.summary()
+   "FrequencyEditResult(mode='recover', method='composite', dropped=68, masked=102, recovered=867)"
+   >>> result.report.head()
       station  n_freq_before  ...  n_masked_or_unfinite  confidence_delta
    0  18-001A             53  ...                     0          0.027413
    1  18-002U             53  ...                     0         -0.038885
@@ -373,6 +348,7 @@ a station-level report, and a row-level decision table in one object.
    3  18-004A             53  ...                     3         -0.026442
    4  18-005U             53  ...                     1          0.026781
    [5 rows x 18 columns]
+   >>> result.decisions.head()
       station  frequency_hz  period_s  ...  present_after  finite_after action
    0  18-001A       10400.0  0.000096  ...           True          True   kept
    1  18-001A        8707.0  0.000115  ...           True          True   kept
@@ -399,53 +375,37 @@ Station-Level Report
 
 ``frequency_edit_report`` compares before and after sites.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import (
-       edit_frequencies_by_confidence,
-       frequency_edit_report,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   result = edit_frequencies_by_confidence(
-       survey,
-       mode="drop",
-       threshold=0.50,
-       api=False,
-   )
-
-   report = frequency_edit_report(
-       survey,
-       result.sites,
-       ci_hi=0.90,
-       ci_lo=0.50,
-   )
-
-   print(
-       report[
-           [
-               "station",
-               "n_freq_before",
-               "n_freq_after",
-               "n_dropped",
-               "n_finite_before",
-               "n_finite_after",
-               "confidence_median_before",
-               "confidence_median_after",
-           ]
-       ].head()
-   )
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.frequency import (
+   ...     edit_frequencies_by_confidence,
+   ...     frequency_edit_report,
+   ... )
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> result = edit_frequencies_by_confidence(
+   ...     survey,
+   ...     mode="drop",
+   ...     threshold=0.50,
+   ...     api=False,
+   ... )
+   >>> report = frequency_edit_report(
+   ...     survey,
+   ...     result.sites,
+   ...     ci_hi=0.90,
+   ...     ci_lo=0.50,
+   ...     api=True,
+   ... ).to_pandas()
+   >>> report[[
+   ...     "station", "n_freq_before", "n_freq_after", "n_dropped",
+   ...     "n_finite_before", "n_finite_after",
+   ...     "confidence_median_before", "confidence_median_after",
+   ... ]].head()
       station  n_freq_before  ...  confidence_median_before  confidence_median_after
    0  18-001A             53  ...                  0.711753                 0.711753
    1  18-002U             53  ...                  0.749480                 0.749480
    2  18-003A             53  ...                  0.666613                 0.671639
    3  18-004A             53  ...                  0.735994                 0.743510
    4  18-005U             53  ...                  0.728841                 0.733250
-
    [5 rows x 8 columns]
 
 Important report columns include:
@@ -466,37 +426,34 @@ Decision Table
 ``frequency_edit_decision_table`` records one row per original
 station-frequency sample.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import (
-       edit_frequencies_by_confidence,
-       frequency_edit_decision_table,
-   )
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   result = edit_frequencies_by_confidence(
-       survey,
-       mode="recover",
-       ci_hi=0.72,
-       ci_lo=0.50,
-       reject="drop",
-       api=False,
-   )
-   decisions = frequency_edit_decision_table(
-       survey,
-       result.sites,
-       ci_hi=0.72,
-       ci_lo=0.50,
-   )
-   print(decisions["action"].value_counts())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.frequency import (
+   ...     edit_frequencies_by_confidence,
+   ...     frequency_edit_decision_table,
+   ... )
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> result = edit_frequencies_by_confidence(
+   ...     survey,
+   ...     mode="recover",
+   ...     ci_hi=0.72,
+   ...     ci_lo=0.50,
+   ...     reject="drop",
+   ...     api=False,
+   ... )
+   >>> decisions = frequency_edit_decision_table(
+   ...     survey,
+   ...     result.sites,
+   ...     ci_hi=0.72,
+   ...     ci_lo=0.50,
+   ...     api=True,
+   ... ).to_pandas()
+   >>> decisions["action"].value_counts()
    action
    recovered    867
-   kept         442
+   kept         447
    masked       102
-   dropped       73
+   dropped       68
    Name: count, dtype: int64
 
 Actions are:
@@ -512,31 +469,20 @@ Plot Edit Results
 Use the summary plot for station-level effects and the decision plot for
 row-level actions.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.frequency import (
-       edit_frequencies_by_confidence,
-       plot_frequency_edit_decisions,
-       plot_frequency_edit_summary,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   result = edit_frequencies_by_confidence(
-       survey,
-       mode="recover",
-       ci_hi=0.72,
-       ci_lo=0.50,
-       reject="drop",
-       api=False,
-   )
-
-   fig, (ax_summary, ax_decisions) = plt.subplots(2, 1, figsize=(10, 8))
-   plot_frequency_edit_summary(survey, result.sites, ci_hi=0.72, ci_lo=0.50, ax=ax_summary)
-   plot_frequency_edit_decisions(survey, result.sites, ci_hi=0.72, ci_lo=0.50, ax=ax_decisions)
-   fig.tight_layout()
+   >>> from pycsamt.emtools.frequency import (
+   ...     plot_frequency_edit_decisions,
+   ...     plot_frequency_edit_summary,
+   ... )
+   >>> fig, (ax_summary, ax_decisions) = plt.subplots(2, 1, figsize=(10, 8))
+   >>> _ = plot_frequency_edit_summary(
+   ...     survey, result.sites, ci_hi=0.72, ci_lo=0.50, ax=ax_summary,
+   ... )
+   >>> _ = plot_frequency_edit_decisions(
+   ...     survey, result.sites, ci_hi=0.72, ci_lo=0.50, ax=ax_decisions,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-10.png
    :width: 100%
@@ -549,21 +495,17 @@ Regrid To A Target Grid
 
 Use ``regrid_to`` when you already have the target frequencies.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-
-   from pycsamt.emtools.frequency import regrid_to
-
-   target_freq = np.array([1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0])
-
-   regridded = regrid_to(
-       "data/AMT/WILLY_DATA/L18PLT",
-       target_freq,
-       method="linear",
-       inplace=False,
-   )
+   >>> import numpy as np
+   >>> from pycsamt.emtools.frequency import regrid_to
+   >>> target_freq = np.array([1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0])
+   >>> regridded = regrid_to(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     target_freq,
+   ...     method="linear",
+   ...     inplace=False,
+   ... )
 
 ``regrid_to`` reuses the same log-frequency interpolator introduced
 above for recovery, except every target frequency is filled from the
@@ -597,19 +539,17 @@ CSAMT/AMT band is actually sampled at. When ``fmin``/``fmax`` are
 omitted, they default to the min/max of the union grid across all
 stations.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import regrid_logspace
-
-   regular = regrid_logspace(
-       "data/AMT/WILLY_DATA/L18PLT",
-       fmin=1.0,
-       fmax=10000.0,
-       per_decade=6,
-       method="linear",
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.frequency import regrid_logspace
+   >>> regular = regrid_logspace(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     fmin=1.0,
+   ...     fmax=10000.0,
+   ...     per_decade=6,
+   ...     method="linear",
+   ...     inplace=False,
+   ... )
 
 ``band_hz=(lo, hi)`` is accepted as an alias for ``fmin`` and ``fmax``.
 ``n_per_decade`` is accepted as an alias for ``per_decade`` when
@@ -639,23 +579,20 @@ k/2\rfloor` smoothed values slightly toward zero. Keep ``k`` small
 relative to the number of rows in a station's band if the edge rows
 still need to be trusted afterward.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import decimate_step, smooth_mavg
-
-   decimated = decimate_step(
-       "data/AMT/WILLY_DATA/L18PLT",
-       step=2,
-       inplace=False,
-   )
-
-   smoothed = smooth_mavg(
-       "data/AMT/WILLY_DATA/L18PLT",
-       k=3,
-       on="z",
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.frequency import decimate_step, smooth_mavg
+   >>> decimated = decimate_step(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     step=2,
+   ...     inplace=False,
+   ... )
+   >>> smoothed = smooth_mavg(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     k=3,
+   ...     on="z",
+   ...     inplace=False,
+   ... )
 
 Smoothing changes the measured tensor values. Use it as a processing
 choice, not as a plotting convenience, and report the window size.
@@ -665,29 +602,25 @@ Align Station Grids
 
 Use ``align_grid`` when stations need a common grid.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.frequency import align_grid
-
-   union_aligned = align_grid(
-       "data/AMT/WILLY_DATA/L18PLT",
-       mode="union",
-       method="nearest",
-   )
-
-   intersection_aligned = align_grid(
-       "data/AMT/WILLY_DATA/L18PLT",
-       mode="intersection",
-       method="nearest",
-   )
-
-   ref_aligned = align_grid(
-       "data/AMT/WILLY_DATA/L18PLT",
-       mode="ref",
-       ref_station="18-001A",
-       method="nearest",
-   )
+   >>> from pycsamt.emtools.frequency import align_grid
+   >>> union_aligned = align_grid(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     mode="union",
+   ...     method="nearest",
+   ... )
+   >>> intersection_aligned = align_grid(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     mode="intersection",
+   ...     method="nearest",
+   ... )
+   >>> ref_aligned = align_grid(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     mode="ref",
+   ...     ref_station="18-001A",
+   ...     method="nearest",
+   ... )
 
 The modes are:
 
@@ -734,20 +667,16 @@ grows relative to the signal, :math:`q` decays smoothly toward ``0``
 instead of blowing up, which keeps the colour scale usable even for
 badly noisy cells.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.frequency import plot_coverage_quality_heatmap
-
-   fig, ax = plt.subplots(figsize=(9, 4.5))
-   plot_coverage_quality_heatmap(
-       "data/AMT/WILLY_DATA/L18PLT",
-       axis="period",
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.frequency import plot_coverage_quality_heatmap
+   >>> fig, ax = plt.subplots(figsize=(9, 4.5))
+   >>> _ = plot_coverage_quality_heatmap(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     axis="period",
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-15.png
    :width: 100%
@@ -760,10 +689,10 @@ Apparent Depth Pseudo-Section
 -----------------------------
 
 ``plot_apparent_depth_psection`` turns each station-frequency cell into
-a rough sense of investigation depth. It first needs an apparent
-resistivity, which it gets from the determinant of the two off-diagonal
-impedance modes — the same geometric-mean convention used elsewhere in
-``emtools`` (see :ref:`emtools_csumt`):
+a rough sense of investigation depth. It first needs an :term:`apparent
+resistivity`, which it gets from the determinant of the two off-diagonal
+:term:`impedance tensor` modes — the same geometric-mean convention used
+elsewhere in ``emtools`` (see :ref:`emtools_csumt`):
 
 .. math::
 
@@ -773,8 +702,8 @@ impedance modes — the same geometric-mean convention used elsewhere in
    \left(0.2\,\frac{|Z_{yx}|^2}{f}\right)
    },
 
-and then converts that resistivity and frequency into a skin-depth-style
-apparent depth,
+and then converts that resistivity and frequency into a
+:term:`skin depth`-style apparent depth,
 
 .. math::
 
@@ -785,22 +714,18 @@ with :math:`\delta` in metres when :math:`\rho_{a,\det}` is in
 and higher apparent resistivity both push :math:`\delta` deeper, which
 is exactly the trade-off a CSAMT/AMT sounding is designed to exploit.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.frequency import plot_apparent_depth_psection
-
-   fig, ax = plt.subplots(figsize=(9, 4.5))
-   plot_apparent_depth_psection(
-       "data/AMT/WILLY_DATA/L18PLT",
-       axis_y="period",
-       agg="median",
-       log_color=True,
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.frequency import plot_apparent_depth_psection
+   >>> fig, ax = plt.subplots(figsize=(9, 4.5))
+   >>> _ = plot_apparent_depth_psection(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     axis_y="period",
+   ...     agg="median",
+   ...     log_color=True,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-16.png
    :width: 100%
@@ -833,27 +758,22 @@ own marker — circle, square, triangle — and its own colour
 normalization, so a single compact grid of dots can stand in for what
 would otherwise be three separate pseudo-sections per line.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.frequency import plot_band_microstrips
-
-   bands = [
-       (1e-4, 1e-3),
-       (1e-3, 1e-2),
-       (1e-2, 1e-1),
-       (1e-1, 1.0),
-   ]
-
-   fig, ax = plt.subplots(figsize=(9, 6))
-   plot_band_microstrips(
-       "data/AMT/WILLY_DATA/L18PLT",
-       bands=bands,
-       ax=ax,
-   )
-   fig.tight_layout()
+   >>> from pycsamt.emtools.frequency import plot_band_microstrips
+   >>> bands = [
+   ...     (1e-4, 1e-3),
+   ...     (1e-3, 1e-2),
+   ...     (1e-2, 1e-1),
+   ...     (1e-1, 1.0),
+   ... ]
+   >>> fig, ax = plt.subplots(figsize=(9, 6))
+   >>> _ = plot_band_microstrips(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     bands=bands,
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-frequency-17.png
    :width: 100%
@@ -874,47 +794,30 @@ A conservative frequency workflow looks like this:
 6. Plot coverage and apparent depth after editing.
 7. Keep the original data available for audit.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools.frequency import (
-       edit_frequencies_by_confidence,
-       plot_apparent_depth_psection,
-       plot_coverage_quality_heatmap,
-       regrid_logspace,
-       select_band,
-   )
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   out = Path("outputs/frequency_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   banded = select_band(survey, fmin=10.0, fmax=1000.0)
-   result = edit_frequencies_by_confidence(
-       banded,
-       mode="recover",
-       before_sites=banded,
-       ci_hi=0.72,
-       ci_lo=0.50,
-       reject="drop",
-       api=False,
-   )
-   regular = regrid_logspace(result.sites, fmin=10.0, fmax=1000.0, per_decade=6)
-
-   result.report.to_csv(out / "frequency_edit_report.csv", index=False)
-   result.decisions.to_csv(out / "frequency_edit_decisions.csv", index=False)
-
-   fig1, ax1 = plt.subplots(figsize=(9, 4.5))
-   plot_coverage_quality_heatmap(regular, ax=ax1)
-   fig1.savefig(out / "coverage_quality_heatmap.png", dpi=200)
-
-   fig2, ax2 = plt.subplots(figsize=(9, 4.5))
-   plot_apparent_depth_psection(regular, ax=ax2)
-   fig2.savefig(out / "apparent_depth_psection.png", dpi=200)
+   >>> from pathlib import Path
+   >>> out = Path("outputs/frequency_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> banded = select_band(survey, fmin=10.0, fmax=1000.0)
+   >>> result = edit_frequencies_by_confidence(
+   ...     banded,
+   ...     mode="recover",
+   ...     before_sites=banded,
+   ...     ci_hi=0.72,
+   ...     ci_lo=0.50,
+   ...     reject="drop",
+   ...     api=False,
+   ... )
+   >>> regular = regrid_logspace(result.sites, fmin=10.0, fmax=1000.0, per_decade=6)
+   >>> result.report.to_csv(out / "frequency_edit_report.csv", index=False)
+   >>> result.decisions.to_csv(out / "frequency_edit_decisions.csv", index=False)
+   >>> fig1, ax1 = plt.subplots(figsize=(9, 4.5))
+   >>> _ = plot_coverage_quality_heatmap(regular, ax=ax1)
+   >>> fig1.savefig(out / "coverage_quality_heatmap.png", dpi=200)
+   >>> fig2, ax2 = plt.subplots(figsize=(9, 4.5))
+   >>> _ = plot_apparent_depth_psection(regular, ax=ax2)
+   >>> fig2.savefig(out / "apparent_depth_psection.png", dpi=200)
 
 .. grid:: 1 1 2 2
    :gutter: 2

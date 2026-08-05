@@ -109,7 +109,7 @@ plot_tipper_hodograms(
 # **Reading this figure.** The shortest-period band (dark) and,
 # especially, the 200-2000 s band both reach well *outside* the unit
 # circle — real tipper amplitudes routinely exceed 1 for a strong,
-# genuine anomaly, and ``kap151``'s do, peaking with |T| ≈ 2.3 near
+# genuine anomaly, and ``kap151``'s do, peaking with ``|T|`` ≈ 2.3 near
 # 200 s. The longest-period band (light) contracts back down close to
 # the origin. So this is not a response that simply grows or shrinks
 # monotonically with period: it is concentrated in a broad but bounded
@@ -141,7 +141,7 @@ plot_tipper_polar(survey, station=strongest, component="real")
 # ------------------------------------------
 # :func:`~pycsamt.emtools.tf.plot_induction_map` draws both the real
 # (solid) and imaginary (dashed) Parkinson arrows for every station at
-# one period, coloured by |T|, with a reference-length arrow and a
+# one period, coloured by ``|T|``, with a reference-length arrow and a
 # colorbar — the richer, single-period counterpart to the profile view
 # in the next section. ``scale`` is set explicitly here because the
 # stations' 1-unit index spacing would otherwise make the default
@@ -246,7 +246,7 @@ plot_induction_rose(
 # %%
 # 7. Period pseudo-section
 # --------------------------------
-# :func:`~pycsamt.emtools.tf.plot_induction_section` grids |T| onto a
+# :func:`~pycsamt.emtools.tf.plot_induction_section` grids ``|T|`` onto a
 # station × log\ :sub:`10`\ (period) pseudo-section — the most compact
 # single view of how the tipper anomaly is distributed both along the
 # profile and with period at once.

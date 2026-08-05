@@ -22,6 +22,15 @@ recursive-include pycsamt/metadata *.json *.yml
 recursive-include pycsamt/models/occam2d/_source *
 recursive-include pycsamt/models/modem/_source *
 recursive-include pycsamt/data/occam2d *
+
+# MARE2DEM source is NOT vendored like occam2d/modem above -- it is a
+# third-party solver that pycsamt.models.mare2dem.source.SourceManager
+# downloads on demand (~5-6 MB) into models/mare2dem/_source/ at
+# build/run time. Keep it out of both sdist and wheel: `prune` here
+# also blocks it from the wheel via include-package-data=true, so an
+# accidental future `recursive-include .../mare2dem/_source *` above
+# would still be neutralized by this line running after it.
+prune pycsamt/models/mare2dem/_source
 include pycsamt/data/3edis/*.edi
 recursive-include pycsamt/app/web/assets *
 recursive-include pycsamt/app/mapview/assets *

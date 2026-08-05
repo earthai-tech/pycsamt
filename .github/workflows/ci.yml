@@ -111,10 +111,26 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           MPLBACKEND: Agg
+          # xdist runs several test-worker processes at once; each one
+          # importing torch (repo-root conftest.py) alongside scipy's
+          # OpenMP runtime is a known duplicate-runtime hazard (see
+          # forward/tests/conftest.py) that KMP_DUPLICATE_LIB_OK alone
+          # only silences for a single process. Under real concurrent
+          # load from multiple workers it has crashed worker processes
+          # outright (science/workflows: test_maxwell_mt3d.py,
+          # test_ai_training_dataset3d.py). Pin every math library to a
+          # single thread so xdist's process-level parallelism is the
+          # only source of concurrency, removing the oversubscription.
+          KMP_DUPLICATE_LIB_OK: "TRUE"
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
         run: >
           python -m pytest
           ${{ matrix.test-paths }}
           -m "not live"
+          -n auto
           --timeout=300
           --timeout-method=thread
           --cov-append
@@ -132,11 +148,17 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           MPLBACKEND: Agg
+          KMP_DUPLICATE_LIB_OK: "TRUE"
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
         shell: bash
         run: |
           set +e
           python -m pytest ${{ matrix.test-paths }} \
             -m "not live" \
+            -n auto \
             --timeout=300 \
             --timeout-method=thread \
             --cov-append \

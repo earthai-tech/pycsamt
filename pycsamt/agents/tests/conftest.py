@@ -13,9 +13,20 @@ Conventions
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
+
+# The repo-root conftest.py unconditionally pre-imports torch (for an
+# unrelated coverage-tracing crash, see its own comment). Agents in this
+# package call into pycsamt.forward's mt3d solver, which pulls in scipy's
+# OpenMP runtime for its sparse curl-curl factorizations -- the same
+# torch/scipy duplicate-OpenMP-runtime hazard already documented and
+# guarded against in pycsamt/forward/tests/conftest.py and
+# pycsamt/app/tests/conftest.py. Must be set before scipy's OpenMP
+# runtime actually initializes.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 

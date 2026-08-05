@@ -156,20 +156,9 @@ jobs:
         shell: bash
         run: |
           set +e
-          # -n 2 (not auto): a handful of tests here start a real QThread
-          # and don't deterministically wait for it before the test body
-          # returns. In serial mode the thread reliably finishes in time;
-          # under heavier xdist CPU contention it can still be running
-          # when this suite's own teardown (root conftest's plt.close("all")
-          # followed by app/tests/conftest.py's settle_qt_gc(), which pumps
-          # the event queue) destroys its target canvas, so the thread's
-          # queued signal lands on an already-deleted C++ object
-          # ("RuntimeError: Internal C++ object (FigureCanvasQTAgg) already
-          # deleted"). Capping concurrency here is a mitigation, not a fix --
-          # the real fix is making those tests wait on the thread explicitly.
           python -m pytest ${{ matrix.test-paths }} \
             -m "not live" \
-            -n 2 \
+            -n auto \
             --timeout=300 \
             --timeout-method=thread \
             --cov-append \

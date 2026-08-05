@@ -47,7 +47,27 @@ def settle_qt_gc() -> None:
 
     app = QApplication.instance()
     if app is not None:
-        app.processEvents()
+        _process_events_past_dead_canvases(app)
     gc.collect()
     if app is not None:
+        _process_events_past_dead_canvases(app)
+
+
+def _process_events_past_dead_canvases(app) -> None:
+    """Pump the Qt event queue, dropping one benign teardown race.
+
+    A test that closes its figures (``plt.close("all")``, run before
+    this by the autouse fixture in ``app/tests/conftest.py``) can leave
+    a ``FigureCanvasQTAgg``'s deferred ``draw_idle()`` repaint still
+    queued for a canvas whose C++ object is now gone. matplotlib's idle
+    -draw handler only guards against ``_draw_pending``, not against a
+    fully-deleted C++ object, so flushing that stale event here raises
+    instead of silently no-op'ing. The canvas is gone by design at this
+    point, so the stale repaint is safe to drop; any other RuntimeError
+    is a real bug and still propagates.
+    """
+    try:
         app.processEvents()
+    except RuntimeError as exc:
+        if "already deleted" not in str(exc):
+            raise

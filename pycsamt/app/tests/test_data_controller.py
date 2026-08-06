@@ -305,11 +305,32 @@ def test_station_coords_columns(willy_paths):
     assert list(coords.columns) == ["ID", "Latitude", "Longitude"]
 
 
-def test_station_coords_drops_nan_rows(kap03_paths):
-    # kap03lmt EDIs carry no LAT/LONG -> summary() yields NaN lat/lon,
-    # so station_coords() must drop every row.
+def test_station_coords_recovers_definemeas_fallback(kap03_paths):
+    # kap03lmt EDIs carry no usable LAT/LONG in >HEAD, but do carry
+    # real REFLAT/REFLONG (DMS) in >=DEFINEMEAS; Site.coords falls
+    # back to that section, so these rows are NOT NaN.
     ctrl = DataController()
     ctrl.load(kap03_paths)
+    assert ctrl.dataframe["Latitude"].notna().all()
+    coords = ctrl.station_coords()
+    assert len(coords) == 3
+    assert set(coords["ID"]) == {p.stem for p in kap03_paths}
+
+
+def test_station_coords_drops_nan_rows(monkeypatch, willy_paths):
+    # A station whose Location lookup fails entirely (both summary()
+    # and the header fallback) degrades to a NaN row (see
+    # test_build_dataframe_double_fallback_yields_nan_row); that row
+    # must still be dropped by station_coords().
+    edi = EDIFile(willy_paths[0])
+    head = edi.get_section("head")
+    del head.__dict__["Location"]
+    sites = Sites([edi])
+    monkeypatch.setattr(Sites, "get", lambda self, name: None)
+
+    ctrl = DataController()
+    ctrl._sites = sites
+    ctrl._df = ctrl._build_dataframe()
     assert ctrl.dataframe["Latitude"].isna().all()
     coords = ctrl.station_coords()
     assert coords.empty
@@ -327,8 +348,9 @@ def test_station_coords_mixed_nan_and_valid_rows(kap03_paths, willy_paths):
     ctrl = DataController()
     ctrl.load([kap03_paths[0], willy_paths[0]])
     coords = ctrl.station_coords()
-    # Only the WILLY station (has real lat/lon) should survive.
-    assert list(coords["ID"]) == [willy_paths[0].stem]
+    # Both stations now resolve real coordinates: WILLY from >HEAD
+    # LAT/LONG, kap03 via its >=DEFINEMEAS REFLAT/REFLONG fallback.
+    assert set(coords["ID"]) == {kap03_paths[0].stem, willy_paths[0].stem}
 
 
 # ── is_loaded ─────────────────────────────────────────────────────────────

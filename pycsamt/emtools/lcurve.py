@@ -121,7 +121,13 @@ def lcurve_table(
 ):
     x, y, l = _prep_curve(misfit, rough, lam, sort=sort)
     if x.size == 0:
-        return pd.DataFrame() if pd is not None else None
+        if return_dict:
+            return dict(rough=x, misfit=y, lam=l, curv=x, slope=x, corner=None)
+        if pd is None:
+            return None
+        df = pd.DataFrame(columns=["rough", "misfit", "lam", "curv", "slope"])
+        df.attrs["corner_idx"] = None
+        return df
     j, s = _pick_corner(x, y, method=method, smooth=smooth, skip=skip)
     lx = np.log10(x)
     ly = np.log10(y)

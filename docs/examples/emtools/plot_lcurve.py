@@ -281,26 +281,25 @@ plot_lcurve(mi_18001a, ro_18001a, lambdas, arrow_every=6, show_points=False)
 # along one curve rather than three separate models.
 
 # %%
-# 7. Real inversion logs: Occam2D, ModEM, and MARE2DEM
-# ------------------------------------------------------------------
+# 7. Real inversion logs: Occam2D and ModEM
+# ------------------------------------------------------
 # Sections 1-6 build the L-curve arrays by hand. Real Occam-style
 # regularized inversion codes already write exactly these three
 # quantities — misfit, roughness, regularization parameter — to a
 # convergence log, one row per iteration, because that *is* what an
-# Occam-style inversion does at every step. Three adapters read those
-# logs directly: :func:`~pycsamt.emtools.lcurve.lcurve_from_occam2d`,
-# :func:`~pycsamt.emtools.lcurve.lcurve_from_modem`, and
-# :func:`~pycsamt.emtools.lcurve.lcurve_from_mare2dem`, each returning
+# Occam-style inversion does at every step. Two adapters read those
+# logs directly: :func:`~pycsamt.emtools.lcurve.lcurve_from_occam2d`
+# and :func:`~pycsamt.emtools.lcurve.lcurve_from_modem`, each returning
 # an :class:`~pycsamt.emtools.lcurve.LCurveData` with a `.plot()` and
-# `.table()` shortcut.
+# `.table()` shortcut. A third adapter,
+# :func:`~pycsamt.emtools.lcurve.lcurve_from_mare2dem`, reads MARE2DEM
+# logs the same way but is not exercised here — the bundled MARE2DEM
+# demo run is local-only test data (not checked into the repository),
+# so an example built on it would not reproduce from a fresh clone.
 
 from _datasets import repo_root  # noqa: E402
 
-from pycsamt.emtools import (  # noqa: E402
-    lcurve_from_mare2dem,
-    lcurve_from_modem,
-    lcurve_from_occam2d,
-)
+from pycsamt.emtools import lcurve_from_modem, lcurve_from_occam2d  # noqa: E402
 
 _DATA = repo_root() / "data"
 occam_sweep = lcurve_from_occam2d(_DATA / "occam2D" / "LogFile.logfile")
@@ -310,13 +309,10 @@ modem_sweep = lcurve_from_modem(
     / "willy_27freq_watex_line02_sample"
     / "Modular_NLCG.log"
 )
-mare_sweep = lcurve_from_mare2dem(
-    _DATA / "mare2dem" / "demo_mt_inversion" / "demo.logfile"
-)
-for sweep in (occam_sweep, modem_sweep, mare_sweep):
+for sweep in (occam_sweep, modem_sweep):
     print(f"{sweep.backend}: {sweep.misfit.size} iterations kept")
 
-fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+fig, axes = plt.subplots(1, 2, figsize=(11, 5))
 occam_sweep.plot(
     show_inset=False,
     target_misfit=1.0,
@@ -333,17 +329,9 @@ modem_sweep.plot(
     ax=axes[1],
 )
 axes[1].set_title("ModEM")
-mare_sweep.plot(
-    show_inset=False,
-    target_misfit=1.0,
-    label_every=1,
-    label_prefix="mu=",
-    ax=axes[2],
-)
-axes[2].set_title("MARE2DEM")
 
 # %%
-# **Reading this figure.** All three are real convergence histories, not
+# **Reading this figure.** Both are real convergence histories, not
 # textbook curves. Occam2D (16 of 17 logged iterations survive — the
 # last stops on "Convergence problems" before writing a roughness) zig
 # zags once it crosses the target RMS, because Occam re-searches its mu
@@ -351,10 +339,7 @@ axes[2].set_title("MARE2DEM")
 # its own configured exit RMS of 1.05 — it is a deliberately compact
 # bundled demo, not a converged production run, and the target line
 # makes that gap honest rather than hiding it inside an axis range that
-# only covers the data. MARE2DEM's 6-iteration MT demo is the cleanest
-# of the three and reaches the target by iteration 5, slightly
-# overshooting on iteration 6 (misfit 1.001 -> 1.002) as the mu search
-# steps past it.
+# only covers the data.
 
 # %%
 # 8. Advanced: do the two corner methods agree on real data?
@@ -370,7 +355,6 @@ rows = []
 for name, sweep in (
     ("occam2d", occam_sweep),
     ("modem", modem_sweep),
-    ("mare2dem", mare_sweep),
 ):
     tc = sweep.table(method="curvature")
     tm = sweep.table(method="maxdist")
@@ -390,8 +374,9 @@ print(pd.DataFrame(rows).to_string(index=False))
 # (roughness 157 vs. 168 -- both describe the same tight zig-zag near
 # the target). ModEM's do not: curvature settles on the very last,
 # flattest part of the run (roughness ~0.21) while max-distance picks a
-# point two decades rougher-tolerant near the start (roughness ~0.009)
-# -- the real-data version of the smoothing instability from section 5.
-# MARE2DEM's six points are too few for either score to be more than a
-# rough pointer. When the two disagree this much, trust the plotted
-# curve and a known target misfit over either automatic pick.
+# point roughly two and a half decades *smoother*, near the start of
+# the NLCG iteration where the model is still close to its smooth
+# initial guess (roughness ~0.00068) -- the real-data version of the
+# smoothing instability from section 5. When the two disagree this
+# much, trust the plotted curve and a known target misfit over either
+# automatic pick.

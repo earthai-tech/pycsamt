@@ -481,19 +481,30 @@ def effective_dof_from_meta(
 ) -> int | np.ndarray | None:
     r"""
     Estimate effective DoF (independent averages) from
-    per-frequency metadata. If ``segnum`` is given, use it.
-    Else, if both ``avgt`` and ``bw`` are finite, use
-    ``round(avgt * bw)``. Returns ``None`` if nothing can be
-    inferred.
+    per-frequency metadata. Where ``segnum`` is nonzero, use it.
+    A zero ``segnum`` entry means the field was not populated in
+    the source EDI (most real ``>=SPECTRASECT`` blocks never set
+    it), so it falls back to ``round(avgt * bw)`` for that entry
+    when both are available. Returns ``None`` if nothing can be
+    inferred at all.
     """
-    if segnum is not None:
-        return np.asarray(segnum).astype(int)
-    if avgt is None or bw is None:
+    seg = None if segnum is None else np.asarray(segnum)
+
+    fallback = None
+    if avgt is not None and bw is not None:
+        a = np.asarray(avgt, float)
+        b = np.asarray(bw, float)
+        with np.errstate(invalid="ignore"):
+            fb = np.rint(a * b)
+        fallback = np.where(np.isfinite(fb), fb, 0.0)
+
+    if seg is not None:
+        m = np.where(seg != 0, seg, fallback) if fallback is not None else seg
+    elif fallback is not None:
+        m = fallback
+    else:
         return None
-    a = np.asarray(avgt, float)
-    b = np.asarray(bw, float)
-    with np.errstate(invalid="ignore"):
-        m = np.rint(a * b)
+
     m = np.where(np.isfinite(m), m, 0.0).astype(int)
     if np.ndim(m) == 0:
         return int(max(min_dof, m))

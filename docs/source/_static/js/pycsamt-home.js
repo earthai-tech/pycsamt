@@ -7,6 +7,10 @@
  *  5. Hero background carousel (slides + dots, auto-advance).
  *  6. Typewriter animation on the code-in-action tabs.
  *  7. Click-to-copy on the "pip install pycsamt" workflow-strip pill.
+ *  8. Tap/keyboard toggle for the six flip cards (CSS handles hover
+ *     and :focus-within on its own; this is the explicit control).
+ *  9. Measures flip-card face heights so the card fits its content
+ *     instead of the CSS fallback height.
  * All motion respects prefers-reduced-motion.
  */
 
@@ -331,6 +335,95 @@
           document.body.removeChild(tmp);
           flash();
         }
+      });
+    }
+
+    /* ---- 8. flip-card toggle (touch & keyboard) -------------------------- */
+    /* Hover and :focus-within already flip the six capability cards in
+     * pure CSS, so this only has to cover the case CSS can't: a tap on a
+     * touchscreen. Clicking a card's round button toggles .is-flipped;
+     * clicking elsewhere, or Escape, closes whichever card is open. */
+    var flipButtons = Array.prototype.slice.call(
+      home.querySelectorAll(".pyc-feature-flip")
+    );
+    if (flipButtons.length) {
+      var closeAllFlips = function (except) {
+        flipButtons.forEach(function (btn) {
+          if (btn === except) return;
+          var card = btn.closest(".pyc-feature");
+          if (card) card.classList.remove("is-flipped");
+          btn.setAttribute("aria-expanded", "false");
+        });
+      };
+
+      flipButtons.forEach(function (btn) {
+        btn.addEventListener("click", function (event) {
+          event.stopPropagation();
+          var card = btn.closest(".pyc-feature");
+          if (!card) return;
+          var flipped = card.classList.toggle("is-flipped");
+          btn.setAttribute("aria-expanded", flipped ? "true" : "false");
+          if (flipped) closeAllFlips(btn);
+        });
+      });
+
+      document.addEventListener("click", function () {
+        closeAllFlips(null);
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closeAllFlips(null);
+      });
+    }
+
+    /* ---- 9. flip-card height measurement --------------------------------- */
+    /* Both faces are position:absolute so the card can't size itself from
+     * content; drive --pyc-flip-h from the taller of the two faces
+     * instead of relying on the fixed CSS fallback. Re-measured on
+     * resize and once each hero image has its real dimensions.
+     *
+     * scrollHeight can't be read directly off a face: inset:0 pins both
+     * its top and bottom to .pyc-feature-inner, so as long as content
+     * fits, scrollHeight just reports back whatever height the card
+     * currently has (the very value we're trying to compute) instead of
+     * how tall the content actually wants to be. Flipping the face to
+     * position:static for one synchronous read lets it size to content,
+     * then the inline override is removed before the browser paints. */
+    var featureCards = Array.prototype.slice.call(
+      home.querySelectorAll(".pyc-feature")
+    );
+    if (featureCards.length) {
+      var measureFaceHeight = function (face) {
+        var prevPosition = face.style.position;
+        face.style.position = "static";
+        var h = face.offsetHeight;
+        face.style.position = prevPosition;
+        return h;
+      };
+
+      var sizeFeatureCard = function (card) {
+        var front = card.querySelector(".pyc-feature-front");
+        var back = card.querySelector(".pyc-feature-back");
+        if (!front || !back) return;
+        var h = Math.max(measureFaceHeight(front), measureFaceHeight(back));
+        if (h) card.style.setProperty("--pyc-flip-h", h + "px");
+      };
+
+      var sizeAllFeatureCards = function () {
+        featureCards.forEach(sizeFeatureCard);
+      };
+
+      sizeAllFeatureCards();
+
+      home.querySelectorAll(".pyc-feature-hero img").forEach(function (img) {
+        if (!img.complete) {
+          img.addEventListener("load", sizeAllFeatureCards, { once: true });
+        }
+      });
+
+      var featureResizeTimer = null;
+      window.addEventListener("resize", function () {
+        window.clearTimeout(featureResizeTimer);
+        featureResizeTimer = window.setTimeout(sizeAllFeatureCards, 150);
       });
     }
   });

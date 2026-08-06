@@ -3220,18 +3220,104 @@ def _draw_skew_ellipt_density(
 def phase_tensor_legend(
     *,
     size: float = 1.0,
-    figsize: tuple[float, float] = (2.5, 2.5),
+    ellipt: float = 0.45,
+    theta_deg: float = 20.0,
+    figsize: tuple[float, float] = (2.8, 2.8),
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
+    r"""Draw a labeled reference phase-tensor ellipse.
+
+    Explains the ellipse convention shared by every phase-tensor plot in
+    this module -- :func:`plot_phase_tensor_psection`,
+    :func:`plot_phase_tensor_map`, :func:`plot_phase_tensor_strip`, and
+    friends -- by drawing one annotated example: a major axis
+    :math:`\phi_{\max}`, a minor axis :math:`\phi_{\min}`, and an
+    orientation angle ``theta`` measured counterclockwise from the
+    horizontal (dashed reference line), matching the ``width``,
+    ``height``, ``angle`` convention Matplotlib's own ``Ellipse`` patch
+    uses.
+
+    Parameters
+    ----------
+    size : float, default 1.0
+        Semi-major axis length (:math:`\phi_{\max}`) of the example
+        ellipse, in axis data units.
+    ellipt : float, default 0.45
+        Example ellipticity used only to make the minor axis visibly
+        shorter than the major axis; :math:`\phi_{\min} = \text{size}
+        \times (1-\text{ellipt})`. Purely illustrative -- it does not
+        come from real data.
+    theta_deg : float, default 20.0
+        Example orientation angle, in degrees, used to draw the
+        rotated ellipse and the ``theta`` arc.
+    figsize : (float, float), default (2.8, 2.8)
+        Figure size when *ax* is not supplied.
+    ax : matplotlib.axes.Axes or None
+        Axes to draw on; created if *None*.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    e = Ellipse(
-        (0.0, 0.0), width=size, height=size, angle=0.0, fill=False, lw=1.0
+
+    phi_max = float(size)
+    phi_min = phi_max * max(0.05, 1.0 - float(ellipt))
+    theta = np.radians(float(theta_deg))
+
+    ax.add_patch(
+        Ellipse(
+            (0.0, 0.0),
+            width=2.0 * phi_max,
+            height=2.0 * phi_min,
+            angle=float(theta_deg),
+            fill=False,
+            lw=1.4,
+            edgecolor="crimson",
+        )
     )
-    ax.add_patch(e)
-    ax.plot([0, 0], [0, size * 0.6], "-", lw=1.0)
-    ax.set_xlim(-size, size)
-    ax.set_ylim(-size, size)
+
+    major = np.array([np.cos(theta), np.sin(theta)]) * phi_max
+    minor = np.array([-np.sin(theta), np.cos(theta)]) * phi_min
+    ax.plot([-major[0], major[0]], [-major[1], major[1]], "-", lw=1.0, color="0.15")
+    ax.plot([-minor[0], minor[0]], [-minor[1], minor[1]], "-", lw=1.0, color="0.15")
+
+    label_pad = 1.2
+    ax.annotate(
+        r"$\phi_{\max}$",
+        xy=tuple(major * label_pad),
+        ha="center",
+        va="center",
+        fontsize=9,
+    )
+    ax.annotate(
+        r"$\phi_{\min}$",
+        xy=tuple(minor * label_pad),
+        ha="center",
+        va="center",
+        fontsize=9,
+    )
+
+    ax.plot([0.0, phi_max * 1.05], [0.0, 0.0], "--", lw=0.7, color="0.6")
+    arc_r = 0.4 * phi_max
+    arc = np.linspace(0.0, theta, 30)
+    ax.plot(arc_r * np.cos(arc), arc_r * np.sin(arc), "-", lw=0.8, color="0.4")
+    ax.annotate(
+        r"$\theta$",
+        xy=(
+            arc_r * 1.4 * np.cos(theta / 2.0),
+            arc_r * 1.4 * np.sin(theta / 2.0),
+        ),
+        ha="center",
+        va="center",
+        fontsize=9,
+        color="0.3",
+    )
+
+    lim = phi_max * 1.6
+    ax.set_xlim(-lim, lim)
+    ax.set_ylim(-lim, lim)
     ax.set_aspect("equal", adjustable="box")
     ax.axis("off")
     return ax

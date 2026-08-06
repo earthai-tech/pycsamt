@@ -112,39 +112,33 @@ Fit A Distortion Table
 
 Start by estimating parameters without changing the data.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gb import groom_bailey_table
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   table = groom_bailey_table(
-       survey,
-       band=(1e-3, 10.0),
-       rotate_deg=None,
-       min_freq=4,
-       max_iter=30,
-       tol=1e-6,
-       robust=True,
-   )
-   print(
-       table[
-           [
-               "station",
-               "status",
-               "n_freq",
-               "twist_deg",
-               "shear",
-               "anisotropy",
-               "rms_fit",
-               "diagonal_ratio_before",
-               "diagonal_ratio_after",
-           ]
-       ].head()
-   )
-
-.. code-block:: text
-
-      station status  ...  diagonal_ratio_before  diagonal_ratio_after
+   >>> from pycsamt.emtools.gb import groom_bailey_table
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> table = groom_bailey_table(
+   ...     survey,
+   ...     band=(1e-3, 10.0),
+   ...     rotate_deg=None,
+   ...     min_freq=4,
+   ...     max_iter=30,
+   ...     tol=1e-6,
+   ...     robust=True,
+   ... )
+   >>> table[
+   ...     [
+   ...         "station",
+   ...         "status",
+   ...         "n_freq",
+   ...         "twist_deg",
+   ...         "shear",
+   ...         "anisotropy",
+   ...         "rms_fit",
+   ...         "diagonal_ratio_before",
+   ...         "diagonal_ratio_after",
+   ...     ]
+   ... ].head()
+     station status  ...  diagonal_ratio_before  diagonal_ratio_after
    0  18-001A     ok  ...               0.614153              0.273213
    1  18-002U     ok  ...               0.434659              0.261954
    2  18-003A     ok  ...               0.373588              0.379570
@@ -296,47 +290,37 @@ Rank Stations For Review
 Use the table to find stations with poor fits or strong residual
 diagonal leakage.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gb import groom_bailey_table
-
-   table = groom_bailey_table(
-       "data/AMT/WILLY_DATA/L18PLT",
-       band=(1e-3, 10.0),
-       robust=True,
-   )
-
-   ok = table.loc[table["status"] == "ok"].copy()
-   ok["diag_reduction"] = (
-       ok["diagonal_ratio_before"] - ok["diagonal_ratio_after"]
-   )
-
-   ranked = ok.sort_values(
-       ["rms_fit", "diagonal_ratio_after"],
-       ascending=[False, False],
-   )
-
-   print(
-       ranked[
-           [
-               "station",
-               "n_freq",
-               "rms_fit",
-               "diag_reduction",
-               "twist_deg",
-               "shear",
-               "anisotropy",
-           ]
-       ].head(10)
-   )
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.gb import groom_bailey_table
+   >>> table = groom_bailey_table(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     band=(1e-3, 10.0),
+   ...     robust=True,
+   ... )
+   >>> ok = table.loc[table["status"] == "ok"].copy()
+   >>> ok["diag_reduction"] = (
+   ...     ok["diagonal_ratio_before"] - ok["diagonal_ratio_after"]
+   ... )
+   >>> ranked = ok.sort_values(
+   ...     ["rms_fit", "diagonal_ratio_after"],
+   ...     ascending=[False, False],
+   ... )
+   >>> ranked[
+   ...     [
+   ...         "station",
+   ...         "n_freq",
+   ...         "rms_fit",
+   ...         "diag_reduction",
+   ...         "twist_deg",
+   ...         "shear",
+   ...         "anisotropy",
+   ...     ]
+   ... ].head(10)
        station  n_freq   rms_fit  diag_reduction  twist_deg     shear  anisotropy
    22  18-022U      39  0.552447        0.322411  22.141866 -0.117145   -0.008538
-   21  18-021U      39  0.537890       -0.419458 -63.216543  0.990000    0.404853
-   20  18-021B      39  0.430286       -0.604539 -37.911526  0.866936    0.211520
+   20  18-021U      39  0.537890       -0.419458 -63.216543  0.990000    0.404853
+   21  18-021B      39  0.430286       -0.604539 -37.911526  0.866936    0.211520
    17  18-018A      39  0.427220       -0.564491  56.099182  0.990000   -0.234017
    24  18-023A      39  0.412376        0.298014  19.376516 -0.123178    0.012153
    27  18-025A      39  0.390159       -0.384625 -62.091367  0.504772    0.012596
@@ -354,19 +338,16 @@ Use A Strike Rotation
 If you have selected a strike angle, pass it as ``rotate_deg`` before
 fitting.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gb import groom_bailey_table
-
-   strike_deg = 35.0
-
-   table = groom_bailey_table(
-       "data/AMT/WILLY_DATA/L18PLT",
-       band=(1e-3, 10.0),
-       rotate_deg=strike_deg,
-       robust=True,
-   )
+   >>> from pycsamt.emtools.gb import groom_bailey_table
+   >>> strike_deg = 35.0
+   >>> table = groom_bailey_table(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     band=(1e-3, 10.0),
+   ...     rotate_deg=strike_deg,
+   ...     robust=True,
+   ... )
 
 The rotation is applied to the tensor before fitting the distortion
 matrix. Use a strike that has been justified by the strike and
@@ -378,30 +359,27 @@ Apply A Precomputed Table
 Use ``apply_groom_bailey`` when you have already inspected and accepted
 a table.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-
-   table = groom_bailey_table(
-       survey,
-       band=(1e-3, 10.0),
-       robust=True,
-   )
-
-   accepted = table.loc[
-       (table["status"] == "ok")
-       & (table["rms_fit"] < 0.25)
-       & (table["diagonal_ratio_after"] < table["diagonal_ratio_before"])
-   ].copy()
-
-   corrected = apply_groom_bailey(
-       survey,
-       table=accepted,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> table = groom_bailey_table(
+   ...     survey,
+   ...     band=(1e-3, 10.0),
+   ...     robust=True,
+   ... )
+   >>> accepted = table.loc[
+   ...     (table["status"] == "ok")
+   ...     & (table["rms_fit"] < 0.25)
+   ...     & (table["diagonal_ratio_after"] < table["diagonal_ratio_before"])
+   ... ].copy()
+   >>> corrected = apply_groom_bailey(
+   ...     survey,
+   ...     table=accepted,
+   ...     inplace=False,
+   ... )
+   >>> len(accepted)
+   6
 
 Only stations present in the accepted table are corrected. Stations
 missing from the table or with invalid matrices are left unchanged.
@@ -424,9 +402,9 @@ the fitted table and optionally corrected sites.
    ...     inplace=False,
    ... )
    >>> print(result.summary())
+   GroomBaileyResult(stations=28, applied=True, median_rms=0.2797)
    >>> corrected_sites = result.sites
    >>> gb_table = result.table
-   GroomBaileyResult(stations=28, applied=True, median_rms=0.2797)
 
 The result container records:
 
@@ -462,47 +440,37 @@ Gaussian residuals — this is the same M-estimator recipe used for
 robust regression generally, not something specific to galvanic
 distortion. Compare both modes when outliers are suspected.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.gb import groom_bailey_table
-
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-
-   robust = groom_bailey_table(
-       survey,
-       band=(1e-3, 10.0),
-       robust=True,
-       api=False,
-   )
-   plain = groom_bailey_table(
-       survey,
-       band=(1e-3, 10.0),
-       robust=False,
-       api=False,
-   )
-
-   compare = robust.merge(
-       plain,
-       on="station",
-       suffixes=("_robust", "_plain"),
-   )
-
-   print(
-       compare[
-           [
-               "station",
-               "rms_fit_robust",
-               "rms_fit_plain",
-               "twist_deg_robust",
-               "twist_deg_plain",
-           ]
-       ].head()
-   )
-
-.. code-block:: text
-
-      station  rms_fit_robust  rms_fit_plain  twist_deg_robust  twist_deg_plain
+   >>> from pycsamt.emtools.gb import groom_bailey_table
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> robust = groom_bailey_table(
+   ...     survey,
+   ...     band=(1e-3, 10.0),
+   ...     robust=True,
+   ...     api=False,
+   ... )
+   >>> plain = groom_bailey_table(
+   ...     survey,
+   ...     band=(1e-3, 10.0),
+   ...     robust=False,
+   ...     api=False,
+   ... )
+   >>> compare = robust.merge(
+   ...     plain,
+   ...     on="station",
+   ...     suffixes=("_robust", "_plain"),
+   ... )
+   >>> compare[
+   ...     [
+   ...         "station",
+   ...         "rms_fit_robust",
+   ...         "rms_fit_plain",
+   ...         "twist_deg_robust",
+   ...         "twist_deg_plain",
+   ...     ]
+   ... ].head()
+     station  rms_fit_robust  rms_fit_plain  twist_deg_robust  twist_deg_plain
    0  18-001A        0.138687       0.138478         10.728457        10.602753
    1  18-002U        0.212166       0.211317          8.600826         9.526479
    2  18-003A        0.278134       0.277152          4.295350         4.190446
@@ -520,32 +488,30 @@ a known distorted 2-D tensor. This example constructs a small synthetic
 site-like object with a known distortion matrix and checks whether the
 correction reduces diagonal leakage.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   from pycsamt.emtools.gb import groom_bailey_table
-   class ZBlock:
-       def __init__(self, z, freq):
-           self.z = z
-           self.freq = freq
-           self.z_err = None
-   class Site:
-       station = "SYN001"
-       def __init__(self, z, freq):
-           self.Z = ZBlock(z, freq)
-   freq = np.logspace(0, 3, 12)
-   regional = np.zeros((freq.size, 2, 2), dtype=complex)
-   regional[:, 0, 1] = 1.0 + 0.2j
-   regional[:, 1, 0] = -0.8 + 0.1j
-   D = np.array([[1.0, 0.25], [-0.15, 1.1]])
-   observed = D[None, :, :] @ regional
-   site = Site(observed, freq)
-   table = groom_bailey_table([site], robust=False)
-   print(table[["station", "rms_fit", "diagonal_ratio_before", "diagonal_ratio_after"]])
-
-.. code-block:: text
-
+   >>> import numpy as np
+   >>> from pycsamt.emtools.gb import groom_bailey_table
+   >>> class ZBlock:
+   ...     def __init__(self, z, freq):
+   ...         self.z = z
+   ...         self.freq = freq
+   ...         self.z_err = None
+   ...
+   >>> class Site:
+   ...     station = "SYN001"
+   ...     def __init__(self, z, freq):
+   ...         self.Z = ZBlock(z, freq)
+   ...
+   >>> freq = np.logspace(0, 3, 12)
+   >>> regional = np.zeros((freq.size, 2, 2), dtype=complex)
+   >>> regional[:, 0, 1] = 1.0 + 0.2j
+   >>> regional[:, 1, 0] = -0.8 + 0.1j
+   >>> D = np.array([[1.0, 0.25], [-0.15, 1.1]])
+   >>> observed = D[None, :, :] @ regional
+   >>> site = Site(observed, freq)
+   >>> table = groom_bailey_table([site], robust=False)
+   >>> table[["station", "rms_fit", "diagonal_ratio_before", "diagonal_ratio_after"]]
      station       rms_fit  diagonal_ratio_before  diagonal_ratio_after
    0  SYN001  3.678917e-16               0.187225          4.388355e-17
 
@@ -559,37 +525,33 @@ Integrate With Pre-2D Assessment
 The dimensionality guide includes ``pre2d_inversion_assessment``. After
 running Groom-Bailey, record whether it was attempted and applied.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
-   from pycsamt.emtools.gb import groom_bailey_decomposition
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   band = (1e-3, 10.0)
-   gb = groom_bailey_decomposition(
-       survey,
-       apply=True,
-       band=band,
-       robust=True,
-   )
-   assessment = pre2d_inversion_assessment(
-       gb.sites,
-       band=band,
-       rotation_applied=False,
-       groom_bailey_attempted=True,
-       groom_bailey_applied=gb.applied,
-       groom_bailey_reason="Applied pycsamt.emtools.gb real 2-D distortion fit.",
-   )
-   print(assessment[["station", "frac_3d", "groom_bailey_applied", "recommendation"]].head())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
+   >>> from pycsamt.emtools.gb import groom_bailey_decomposition
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> band = (1e-3, 10.0)
+   >>> gb = groom_bailey_decomposition(
+   ...     survey,
+   ...     apply=True,
+   ...     band=band,
+   ...     robust=True,
+   ... )
+   >>> assessment = pre2d_inversion_assessment(
+   ...     gb.sites,
+   ...     band=band,
+   ...     rotation_applied=False,
+   ...     groom_bailey_attempted=True,
+   ...     groom_bailey_applied=gb.applied,
+   ...     groom_bailey_reason="Applied pycsamt.emtools.gb real 2-D distortion fit.",
+   ... )
+   >>> assessment[["station", "frac_3d", "groom_bailey_applied", "recommendation"]].head()
       station   frac_3d  groom_bailey_applied               recommendation
-   0  18-001A  0.974359                  True  review_3d_effects_before_2d
-   1  18-002U  0.974359                  True  review_3d_effects_before_2d
-   2  18-003A  0.974359                  True  review_3d_effects_before_2d
-   3  18-004A  0.974359                  True  review_3d_effects_before_2d
-   4  18-005U  0.923077                  True  review_3d_effects_before_2d
+   0  18-001A  0.717949                  True  review_3d_effects_before_2d
+   1  18-002U  0.820513                  True  review_3d_effects_before_2d
+   2  18-003A  0.871795                  True  review_3d_effects_before_2d
+   3  18-004A  0.769231                  True  review_3d_effects_before_2d
+   4  18-005U  0.846154                  True  review_3d_effects_before_2d
 
 This makes the correction auditable in reports and manuscripts.
 
@@ -626,8 +588,9 @@ Very large twist, shear, or anisotropy
    can also indicate a poor model assumption.
 
 Treating gain as static shift
-   The scalar gain ambiguity is not uniquely solved here. Use static
-   shift workflows and independent constraints when gain matters.
+   The scalar gain ambiguity is not uniquely solved here. Use
+   :term:`static shift` workflows and independent constraints when gain
+   matters.
 
 Applying correction globally
    Do not apply every fitted row blindly. Filter by status and quality
@@ -638,47 +601,42 @@ Saving A Reproducible Bundle
 
 Save the fitted table, accepted subset, and pre-2D assessment.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
+   >>> from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+   >>> survey = "data/AMT/WILLY_DATA/L18PLT"
+   >>> band = (1e-3, 10.0)
+   >>> out = Path("outputs/gb_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> table = groom_bailey_table(survey, band=band, robust=True)
+   >>> accepted = table.loc[
+   ...     (table["status"] == "ok")
+   ...     & (table["rms_fit"] < 0.25)
+   ...     & (table["diagonal_ratio_after"] < table["diagonal_ratio_before"])
+   ... ].copy()
+   >>> corrected = apply_groom_bailey(survey, table=accepted, inplace=False)
+   >>> assessment = pre2d_inversion_assessment(
+   ...     corrected,
+   ...     band=band,
+   ...     groom_bailey_attempted=True,
+   ...     groom_bailey_applied=True,
+   ...     groom_bailey_reason="Applied accepted Groom-Bailey station fits.",
+   ... )
+   >>> table.to_csv(out / "groom_bailey_table.csv", index=False)
+   >>> accepted.to_csv(out / "groom_bailey_accepted.csv", index=False)
+   >>> assessment.to_csv(out / "pre2d_assessment_after_gb.csv", index=False)
 
-   from pycsamt.emtools.dimensionality import pre2d_inversion_assessment
-   from pycsamt.emtools.gb import apply_groom_bailey, groom_bailey_table
+Worked Example
+--------------
 
-   survey = "data/AMT/WILLY_DATA/L18PLT"
-   band = (1e-3, 10.0)
-   out = Path("outputs/gb_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
+The gallery example uses **L18PLT** from ``data/AMT/WILLY_DATA/``. It
+demonstrates fitting a distortion table without applying correction,
+ranking stations for review, the effect of a strike rotation, robust
+vs. non-robust weighting, applying correction to accepted stations
+only, and a direct check that the fitted correction changes nothing
+about the phase-tensor-based pre-2D dimensionality assessment.
 
-   table = groom_bailey_table(survey, band=band, robust=True)
-   accepted = table.loc[
-       (table["status"] == "ok")
-       & (table["rms_fit"] < 0.25)
-       & (table["diagonal_ratio_after"] < table["diagonal_ratio_before"])
-   ].copy()
-
-   corrected = apply_groom_bailey(survey, table=accepted, inplace=False)
-   assessment = pre2d_inversion_assessment(
-       corrected,
-       band=band,
-       groom_bailey_attempted=True,
-       groom_bailey_applied=True,
-       groom_bailey_reason="Applied accepted Groom-Bailey station fits.",
-   )
-
-   table.to_csv(out / "groom_bailey_table.csv", index=False)
-   accepted.to_csv(out / "groom_bailey_accepted.csv", index=False)
-   assessment.to_csv(out / "pre2d_assessment_after_gb.csv", index=False)
-
-Worked Workflow
----------------
-
-There is currently no dedicated Sphinx-Gallery ``plot_gb.py`` example in
-``docs/examples/emtools``. Until one is added, use the examples in this
-page as the worked workflow:
-
-- estimate the table without applying correction;
-- filter stations by fit quality;
-- apply correction to accepted stations;
-- record the result in the pre-2D assessment.
+Open the rendered example here:
+:ref:`sphx_glr_examples_emtools_plot_gb.py`.

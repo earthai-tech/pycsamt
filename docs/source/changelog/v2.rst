@@ -15,18 +15,18 @@ each release.
 2.2.0 |Feature| |New| |Fix| |Enhancement| |API Change| |Breaking| |Docs| |Build| |Tests|
 ------------------------------------------------------------------------------------------
 
-*Released 2026-08-04.*
+*Released 2026-08-05.*
 
 *Feature release adding genuine 3-D and triangular-mesh 2-D Maxwell
 training-data pipelines, an* ``Inv3DAgent`` *physics="mt3d" mode, a real
 MARE2DEM external-solver adapter, real topography support in the mesh and AI
 agents, cross-platform build tooling for the external ModEM / Occam2D /
 MARE2DEM solvers, three new tutorials (TEM/TEMAVG, Zonge AVG K1/K2, CSAMT
-groundwater mapping), and a run of phase-tensor and frequency-editing bug
-fixes across* :mod:`pycsamt.emtools` *-- plus the fixes that made*
-``ModEm3DAdapter`` *and* ``Mare2DEMAdapter`` *physics-validated against real
-compiled binaries for the first time. See* :ref:`release_v2_2_0` *for the
-full account.*
+groundwater mapping), and two independent rounds of real bug fixes across*
+:mod:`pycsamt.emtools` *(phase-tensor, frequency-editing, EDI-coordinate,
+spectra, and tipper-plotting) -- plus the fixes that made* ``ModEm3DAdapter``
+*and* ``Mare2DEMAdapter`` *physics-validated against real compiled binaries
+for the first time. See* :ref:`release_v2_2_0` *for the full account.*
 
 Added
 ~~~~~
@@ -278,6 +278,45 @@ Fixed
 * |Fix| **``pycsamt tdem info`` always reported zero coordinate points**
   -- it read a nonexistent ``coord.records`` attribute instead of
   ``coord.n_points``.
+* |Fix| **EDI coordinates ignored ``>=DEFINEMEAS``** --
+  :func:`pycsamt.site.utils.get_coords` only read ``LAT=``/``LONG=``
+  from ``>HEAD``; older BIRRP-processed files that leave those empty but
+  carry a real position as ``REFLAT``/``REFLONG`` in ``>=DEFINEMEAS``
+  (true for every file in the bundled KAP03 SAMTEX survey) reported
+  ``(nan, nan)`` for every station, silently disabling every
+  coordinate-based plot. Added a fallback to ``>=DEFINEMEAS`` per
+  missing field.
+* |Fix| **Spectra DoF fallback ignored real metadata** --
+  :func:`pycsamt.seg.ops.effective_dof_from_meta` treated a zero
+  ``segnum`` (the common case, since most real ``>=SPECTRASECT`` blocks
+  never populate it) as an explicit zero-DoF count rather than "not
+  provided," silently skipping its own documented ``avgt * bw`` fallback
+  even when both were genuinely available --
+  ``Spectra.to_Z(estimate_error=True)`` returned ``z_err=None`` for
+  essentially every real file as a result.
+* |Fix| **Tipper nearest-period lookup assumed sorted frequency** --
+  ``pycsamt.emtools.tf._nearest_idx`` called ``np.searchsorted`` against
+  a raw, potentially unsorted per-station frequency array; two real
+  KAP03 stations concatenate runs recorded at different sample rates and
+  are genuinely non-monotonic. Fixed to sort internally in log-period
+  space, matching ``ss.py``'s analogous helper.
+* |Fix| **Induction-map axes mislabeled as metres** --
+  ``plot_induction_map`` and ``plot_induction_convention`` hardcoded
+  ``"x (m)"``/``"y / Northing (m)"`` axis labels regardless of the
+  actual coordinate source; both now detect whether the plotted
+  coordinates are projected metres or geographic degrees and label the
+  axes accordingly.
+* |Fix| **Normalized-response pseudosection didn't match its sibling
+  plot** -- ``plot_normalized_response`` drew station labels along the
+  bottom axis and put short period at the bottom, unlike every other
+  pseudosection in the package (including ``plot_overprint_section`` in
+  the same module). Switched to the shared top-mounted station-marker
+  convention and inverted the period axis so shallow/short-period sits
+  on top.
+* |Fix| **Phase-tensor legend didn't show an ellipse** --
+  ``phase_tensor_legend`` drew a plain circle with one unlabeled line
+  and no docstring; rewrote it to draw a real, labeled reference ellipse
+  matching the convention the pseudosection and map plots use.
 
 Changed
 ~~~~~~~
@@ -383,6 +422,15 @@ Docs & tooling
   mesh generator, core dependency, backs the graded triangular mesh --
   no compiled external binary required) and ``xlrd>=2.0`` (``docs``
   extra, reads legacy ``.xls`` TEM coordinate tables).
+* |Docs| **Deepened ``strike``/``spectra``/``tensor``/``tf`` user guide
+  pages** -- :doc:`/user_guide/emtools/strike`,
+  :doc:`/user_guide/emtools/spectra`, :doc:`/user_guide/emtools/tensor`,
+  and :doc:`/user_guide/emtools/tf` converted to real, byte-verified
+  ``pycon`` output throughout, with new real-data examples (a real
+  KAP03 induction map with genuine tipper, a real single-component
+  CSAMT degenerate phase-tensor case), long examples moved to
+  ``docs/scripts/`` behind ``code-dropdown``, and new glossary entries
+  (induction vector, Parkinson/Wiese convention, hodogram).
 
 ----
 

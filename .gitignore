@@ -390,10 +390,13 @@ pipe_results/
 # MARE2DEM example data — copied from mare2dem_examples/ for local testing only
 data/mare2dem/
 
-# MARE2DEM downloaded source tree — too large to commit (~49 MB)
-# The .gitkeep placeholder in _source/ is committed; actual sources are not.
+# MARE2DEM downloaded source tree — third-party, not vendored (see
+# pycsamt/models/mare2dem/_source/README.md). Only that README is
+# committed; SourceManager.download() writes the real ~5-6 MB source
+# tree (and, with the "git" method, its own nested .git/) here, and
+# none of it is meant to be committed.
 pycsamt/models/mare2dem/_source/*
-!pycsamt/models/mare2dem/_source/.gitkeep
+!pycsamt/models/mare2dem/_source/README.md
 # Auto-generated Make include files written during build
 pycsamt/models/mare2dem/_source/_pycsamt_build/
 

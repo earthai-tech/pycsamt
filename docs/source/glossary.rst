@@ -385,14 +385,6 @@ definitions here are the single source of truth.
       be interpolated between bracketing pegs; an equality join is incorrect,
       and extrapolation requires separate survey evidence.
 
-   Trimmed moving average
-   TMA
-      A robust moving-window smoother that discards one or more extreme
-      values before averaging the retained neighbours. In Zonge static-shift
-      processing it estimates a spatial reference response, but the window
-      length and reference frequency remain modelling choices that must be
-      tested rather than assumed.
-
    Hampel filter
       A robust sliding-window outlier filter that replaces a value only when
       its deviation from the local median exceeds a chosen multiple of the
@@ -547,6 +539,25 @@ definitions here are the single source of truth.
       tensor's diagonal terms, and inherits the usual EM strike
       ambiguity plus the numerical instability of Swift skew itself
       when :math:`|Z_{xy}+Z_{yx}|` passes near zero.
+
+   Bahr skewness
+      A third, independent skew invariant computed directly from the
+      complex :term:`impedance tensor`,
+
+      .. math::
+
+         \eta =
+         \sqrt{\frac{|Z_{xx}+Z_{yy}|^2 + |Z_{xy}-Z_{yx}|^2}
+                    {|Z_{xx}-Z_{yy}|^2 + |Z_{xy}+Z_{yx}|^2}}.
+
+      Unlike phase-tensor :term:`Skew`, which comes from
+      :math:`\mathrm{Re}(Z)^{-1}\mathrm{Im}(Z)`, and :term:`Swift skew`,
+      which compares raw tensor magnitudes without the summed-diagonal
+      term above, Bahr skewness is dimensionless rather than an angle. A
+      commonly used 2-D/3-D diagnostic boundary is :math:`\eta = 0.4`;
+      the three measures can agree that a station departs from 1-D/2-D
+      while ranking the severity differently, since each folds the same
+      four tensor components together in a different way.
 
    Dictionary learning
    Sparse coding
@@ -894,8 +905,8 @@ definitions here are the single source of truth.
       fitted estimator, typically architecture settings, learned weights,
       normalization state, and training history. A checkpoint is executable
       model content, not a complete scientific deployment package unless its
-      feature, target, geometry, provenance, and validation contracts are also
-      preserved.
+      feature, target, geometry, provenance, checksum, and validation
+      contracts are also preserved.
 
    Calibration set
       Held-out data used to calibrate uncertainty or interval coverage after a
@@ -962,12 +973,6 @@ definitions here are the single source of truth.
       A structured documentation record describing a model's identity,
       intended use, training data, architecture, evaluation, uncertainty,
       limitations, and operational constraints.
-
-   Checkpoint
-      A saved model artifact containing learned parameters and enough
-      architecture/backend information to restore inference. It is not
-      scientifically interpretable without its feature contract, dataset
-      record, checksum, and validation evidence.
 
    AgentResult
       The standardised return value of every :term:`agent` in
@@ -1644,7 +1649,10 @@ definitions here are the single source of truth.
       A :term:`FLMA`-style fixed-length spatial filter that discards the
       smallest and largest values inside the window before averaging. The
       trimming reduces sensitivity to one or two anomalous stations compared
-      with a plain fixed-length average.
+      with a plain fixed-length average. In Zonge-style static-shift
+      processing the same trimmed average estimates a spatial reference
+      response, but the window length and reference frequency remain
+      modelling choices that must be tested rather than assumed.
 
    Traditional inversion
       A physics-based iterative inversion that updates model parameters by
@@ -1907,6 +1915,41 @@ definitions here are the single source of truth.
       the horizontal magnetic field. Its induction arrows point toward (or away
       from) lateral conductivity contrasts.
 
+   Induction vector
+      The real (in-phase) or imaginary (quadrature) part of the
+      :term:`Tipper`, :math:`(T_x, T_y)`, drawn as a 2-D arrow. Its length
+      reflects local induction strength and its azimuth is read as
+      evidence for nearby lateral conductivity contrast, subject to
+      whichever :term:`Parkinson convention` the figure uses.
+
+   Parkinson convention
+   Wiese convention
+      The two common sign/rotation conventions for drawing real
+      :term:`induction vector` arrows. Parkinson arrows point toward a
+      nearby conductor; Wiese arrows are rotated a quarter turn from
+      Parkinson and point away from it,
+
+      .. math::
+
+         \mathbf{w}
+         =
+         \begin{bmatrix}
+         0 & -1 \\
+         1 & 0
+         \end{bmatrix}
+         \mathbf{p},
+
+      where :math:`\mathbf{p}` is the Parkinson arrow. A figure drawn in
+      one convention but captioned without naming it is easy to misread
+      as the other.
+
+   Hodogram
+      A parametric plot of a complex transfer-function component's real
+      part against its imaginary part as frequency (or period) varies,
+      traced as a curve. A smooth hodogram indicates a coherent,
+      frequency-dependent response; a scattered one signals noise or an
+      unstable estimate.
+
    Strike
    Geoelectric strike
       The azimuth of the principal geoelectric direction, estimated from the
@@ -2037,10 +2080,6 @@ definitions here are the single source of truth.
    MARE2DEM
       A 2-D/2.5-D goal-oriented adaptive finite-element inversion code for MT and
       CSEM; pyCSAMT can build its input files.
-
-   EMAP
-      Electromagnetic array profiling — a spatially continuous acquisition and
-      filtering approach used to suppress :term:`static shift`.
 
    RMS
    RMS misfit

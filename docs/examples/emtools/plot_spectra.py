@@ -233,7 +233,7 @@ print(
 # runs 3.0–55.0 Ω·m over this station's band — a factor of roughly 2-4
 # between the two apparent-resistivity curves at any given frequency,
 # consistent with the 2-D/3-D structural complexity documented
-# elsewhere in this gallery (see :doc:`/emtools/ss`), now confirmed from the
+# elsewhere in this gallery (see :doc:`/user_guide/emtools/ss`), now confirmed from the
 # spectra directly rather than from a pre-computed Z tensor.
 
 # %%

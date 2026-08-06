@@ -73,15 +73,13 @@ Load the survey with ``ensure_sites`` first.  This gives every strike
 function the same clean input and avoids repeating EDI parsing options in
 every call.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools import ensure_sites
-
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-   sites = ensure_sites(edi_dir, recursive=True, verbose=0)
+   >>> from pathlib import Path
+   >>> import numpy as np
+   >>> from pycsamt.emtools import ensure_sites
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> sites = ensure_sites(edi_dir, recursive=True, verbose=0)
 
 For map and profile plots, coordinates matter.  ``plot_strike_profile``
 can order stations by ``"lon"``, ``"lat"``, ``"name"``, or ``"auto"``.
@@ -114,9 +112,8 @@ a ``pandas.DataFrame`` with the same practical columns:
      - Number of frequency samples used.
 
 The impedance sweep rotates each tensor through a grid of trial angles
-and chooses the angle that optimizes a metric.
-
-For a trial angle :math:`\alpha`, the impedance tensor is rotated as
+and chooses the angle that optimizes a metric.  For a trial angle
+:math:`\alpha`, the impedance tensor is rotated as
 
 .. math::
 
@@ -131,8 +128,8 @@ For a trial angle :math:`\alpha`, the impedance tensor is rotated as
    -\sin \alpha & \cos \alpha
    \end{bmatrix}.
 
-The default sweep metric compares the diagonal and off-diagonal energy
-after rotation,
+The default sweep metric (``metric="diag_ratio"``) compares the diagonal
+and off-diagonal energy after rotation,
 
 .. math::
 
@@ -157,21 +154,16 @@ period band, after unwrapping jumps across the :math:`\pm 90^\circ`
 boundary.  The reported ``iqr`` is the interquartile range of the same
 unwrapped angle population.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import numpy as np
-   from pycsamt.emtools import estimate_strike_sweep
-   sweep = estimate_strike_sweep(
-       sites,
-       angles=np.arange(-90.0, 91.0, 1.0),
-       metric="diag_ratio",
-       band=(0.001, 10.0),
-   )
-   print(sweep[["station", "ang", "iqr", "n"]])
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import estimate_strike_sweep
+   >>> sweep = estimate_strike_sweep(
+   ...     sites,
+   ...     angles=np.arange(-90.0, 91.0, 1.0),
+   ...     metric="diag_ratio",
+   ...     band=(0.001, 10.0),
+   ... )
+   >>> print(sweep[["station", "ang", "iqr", "n"]])
        station   ang    iqr   n
    0   18-001A  34.0  175.5  39
    1   18-002U  32.0  248.5  39
@@ -193,8 +185,8 @@ unwrapped angle population.
    17  18-018A -14.0   55.0  39
    18  18-019U -22.0  322.5  39
    19  18-020A -37.0   96.5  39
-   20  18-021B -25.0  104.0  39
-   21  18-021U -29.0   24.5  39
+   20  18-021U -29.0   24.5  39
+   21  18-021B -25.0  104.0  39
    22  18-022U -19.0   56.0  39
    23  18-022V -53.0  146.5  39
    24  18-023A -23.0   82.0  39
@@ -202,17 +194,18 @@ unwrapped angle population.
    26  18-024U -75.0   44.0  39
    27  18-025A -66.0  319.0  39
 
-The default ``metric="diag_ratio"`` searches for the rotation that
-minimizes diagonal energy relative to off-diagonal energy.  This is a
-useful impedance-based strike diagnostic, but it can be sensitive to
-noise, 3-D effects, and weak diagonal/off-diagonal contrast.
+Most ``iqr`` values here sit between ``50`` and ``250`` degrees, which is
+large.  ``diag_ratio`` searches for the rotation that minimizes diagonal
+energy relative to off-diagonal energy -- a useful impedance-based strike
+diagnostic, but one that is sensitive to noise, 3-D effects, and weak
+diagonal/off-diagonal contrast at any single frequency.  Do not treat a
+single-frequency sweep angle as reliable; the station-level median over a
+band is what makes the estimate usable.
 
 The phase-tensor estimator summarizes the phase tensor ``theta`` angle.
 It is often more stable than a raw impedance sweep because the
 :term:`phase tensor` is less affected by :term:`static shift` amplitude
-distortion.
-
-Writing the complex impedance as
+distortion.  Writing the complex impedance as
 :math:`\mathbf{Z}=\mathbf{X}+i\mathbf{Y}`, the phase tensor is
 
 .. math::
@@ -227,19 +220,15 @@ information that is often cleaner than the amplitude-sensitive sweep.
 :math:`\theta_{\Phi}(f)` at each frequency and reports its robust axial
 median over the chosen period band.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import estimate_strike_phase_tensor
-   pt = estimate_strike_phase_tensor(
-       sites,
-       band=(0.001, 10.0),
-       robust=True,
-   )
-   print(pt[["station", "ang", "iqr", "n"]])
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import estimate_strike_phase_tensor
+   >>> pt = estimate_strike_phase_tensor(
+   ...     sites,
+   ...     band=(0.001, 10.0),
+   ...     robust=True,
+   ... )
+   >>> print(pt[["station", "ang", "iqr", "n"]])
        station        ang         iqr   n
    0   18-001A -44.641194   33.507488  39
    1   18-002U -43.757578   13.310763  39
@@ -270,10 +259,16 @@ median over the chosen period band.
    26  18-024U -51.114376   11.877314  39
    27  18-025A -40.069989   24.228480  39
 
-The consensus estimator blends the sweep and phase-tensor estimates.
-Use it when neither method should dominate the processing decision.
+The phase-tensor table is the cleanest of the three: most ``iqr`` values
+sit well under ``40`` degrees and the ``ang`` column clusters tightly
+around ``-40`` degrees.  A handful of stations (``18-014A``, ``18-015U``,
+``18-022U``, ``18-023A``) break that pattern with much larger ``iqr``
+values; treat those as unstable regardless of which estimator produced
+them.
 
-Before blending, pyCSAMT places both angles on the same axial branch.  A
+The consensus estimator blends the sweep and phase-tensor estimates.  Use
+it when neither method should dominate the processing decision.  Before
+blending, pyCSAMT places both angles on the same axial branch.  A
 two-estimator consensus can be read as
 
 .. math::
@@ -293,21 +288,17 @@ where :math:`\tilde{\theta}_s` is the unwrapped sweep estimate,
 Use weights that sum to one when you want the consensus to remain a
 direct weighted average.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import estimate_strike_consensus
-   consensus = estimate_strike_consensus(
-       sites,
-       band=(0.001, 10.0),
-       w_sweep=0.4,
-       w_pt=0.6,
-       metric="diag_ratio",
-   )
-   print(consensus[["station", "ang", "iqr", "n"]])
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import estimate_strike_consensus
+   >>> consensus = estimate_strike_consensus(
+   ...     sites,
+   ...     band=(0.001, 10.0),
+   ...     w_sweep=0.4,
+   ...     w_pt=0.6,
+   ...     metric="diag_ratio",
+   ... )
+   >>> print(consensus[["station", "ang", "iqr", "n"]])
        station        ang         iqr   n
    0   18-001A -13.184716  104.503744  78
    1   18-002U -13.454547  130.905381  78
@@ -329,8 +320,8 @@ direct weighted average.
    17  18-018A -25.836916   34.181271  78
    18  18-019U -27.893008  174.120894  78
    19  18-020A -32.826529   51.486293  78
-   20  18-021B -23.053114  100.730883  78
-   21  18-021U -28.515085   15.289719  78
+   20  18-021U -28.515085   15.289719  78
+   21  18-021B -23.053114  100.730883  78
    22  18-022U -24.690689  104.274257  78
    23  18-022V -34.625089   82.429802  78
    24  18-023A -33.994482  118.684448  78
@@ -338,10 +329,14 @@ direct weighted average.
    26  18-024U -60.668626   27.938657  78
    27  18-025A -50.441993  171.614240  78
 
-For all three tables, treat ``iqr`` as a stability warning.  A station
-with an angle near ``30`` degrees and an ``iqr`` near ``80`` degrees does
-not have a reliable single strike; it has a broad or frequency-dependent
-strike population.
+``n`` roughly doubles in the consensus table because it is the sum of
+sweep and phase-tensor sample counts, not a separate independent count.
+For all three tables, treat ``iqr`` as a stability warning.  Station
+``18-011A`` illustrates why: the sweep angle is ``76.0`` degrees, the
+phase-tensor angle is ``-40.4`` degrees, and the consensus lands at
+``6.2`` degrees with a high ``iqr`` -- the two estimators disagree enough
+that the blended number does not represent a confident single strike at
+that station.
 
 Compare Axial Angles Correctly
 ------------------------------
@@ -359,26 +354,22 @@ For two angles :math:`\theta_1` and :math:`\theta_2`, use
    -
    90^\circ .
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   merged = sweep.merge(
-       pt,
-       on="station",
-       suffixes=("_sweep", "_pt"),
-   )
-   axial_diff = (
-       (merged["ang_sweep"] - merged["ang_pt"] + 90.0) % 180.0
-   ) - 90.0
-   merged["abs_axial_diff"] = axial_diff.abs()
-   print(
-       merged[
-           ["station", "ang_sweep", "ang_pt", "abs_axial_diff"]
-       ].sort_values("abs_axial_diff", ascending=False)
-   )
-
-.. code-block:: text
-
+   >>> merged = sweep.merge(
+   ...     pt,
+   ...     on="station",
+   ...     suffixes=("_sweep", "_pt"),
+   ... )
+   >>> axial_diff = (
+   ...     (merged["ang_sweep"] - merged["ang_pt"] + 90.0) % 180.0
+   ... ) - 90.0
+   >>> merged["abs_axial_diff"] = axial_diff.abs()
+   >>> print(
+   ...     merged[
+   ...         ["station", "ang_sweep", "ang_pt", "abs_axial_diff"]
+   ...     ].sort_values("abs_axial_diff", ascending=False)
+   ... )
        station  ang_sweep     ang_pt  abs_axial_diff
    0   18-001A       34.0 -44.641194       78.641194
    1   18-002U       32.0 -43.757578       75.757578
@@ -406,13 +397,17 @@ For two angles :math:`\theta_1` and :math:`\theta_2`, use
    6   18-007U      -41.0 -45.967488        4.967488
    25  18-023V      -46.0 -50.745390        4.745390
    12  18-013U      -38.0 -41.742580        3.742580
-   20  18-021B      -25.0 -21.755190        3.244810
-   21  18-021U      -29.0 -28.191808        0.808192
+   21  18-021B      -25.0 -21.755190        3.244810
+   20  18-021U      -29.0 -28.191808        0.808192
 
-Use this pattern when comparing sweep, phase tensor, consensus, tipper
-azimuth, or externally interpreted structural trends.  A naive Pearson
-correlation of raw angles can be misleading because it treats the wrap
-boundary as a real discontinuity.
+Roughly a third of the survey shows better than ``10`` degrees of
+agreement between the two estimators; the top of the table is dominated
+by the same high-``iqr`` stations already flagged above (``18-001A``,
+``18-002U``, ``18-011A``).  Use this comparison pattern whenever you
+compare sweep, phase tensor, consensus, tipper azimuth, or externally
+interpreted structural trends.  A naive Pearson correlation of raw angles
+can be misleading because it treats the wrap boundary as a real
+discontinuity.
 
 Choose A Period Band
 --------------------
@@ -422,30 +417,26 @@ the station-level estimators and on the high-level plots that summarize
 station-level strike.  Use it to separate shallow, high-frequency
 behavior from deeper, long-period behavior.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   short_period = estimate_strike_consensus(
-       sites,
-       band=(0.001, 0.1),
-   )
-   long_period = estimate_strike_consensus(
-       sites,
-       band=(0.1, 10.0),
-   )
-   band_compare = short_period[["station", "ang", "iqr"]].merge(
-       long_period[["station", "ang", "iqr"]],
-       on="station",
-       suffixes=("_short", "_long"),
-   )
-   band_compare["band_axial_diff"] = (
-       (band_compare["ang_short"] - band_compare["ang_long"] + 90.0)
-       % 180.0
-   ) - 90.0
-   print(band_compare)
-
-.. code-block:: text
-
+   >>> short_period = estimate_strike_consensus(
+   ...     sites,
+   ...     band=(0.001, 0.1),
+   ... )
+   >>> long_period = estimate_strike_consensus(
+   ...     sites,
+   ...     band=(0.1, 10.0),
+   ... )
+   >>> band_compare = short_period[["station", "ang", "iqr"]].merge(
+   ...     long_period[["station", "ang", "iqr"]],
+   ...     on="station",
+   ...     suffixes=("_short", "_long"),
+   ... )
+   >>> band_compare["band_axial_diff"] = (
+   ...     (band_compare["ang_short"] - band_compare["ang_long"] + 90.0)
+   ...     % 180.0
+   ... ) - 90.0
+   >>> print(band_compare)
        station  ang_short   iqr_short   ang_long    iqr_long  band_axial_diff
    0   18-001A -54.506201   41.369421 -63.900455  123.466880         9.394254
    1   18-002U -48.985879  160.057160 -36.157439   19.623319       -12.828440
@@ -467,8 +458,8 @@ behavior from deeper, long-period behavior.
    17  18-018A -23.871328   47.793334 -36.763786   97.172580        12.892458
    18  18-019U  26.599036   81.719385 -34.186076   31.783625        60.785112
    19  18-020A -60.182514   85.406263 -32.313086    3.341403       -27.869429
-   20  18-021B -17.977499   83.255421 -22.009438   56.404952         4.031939
-   21  18-021U -27.000027   18.589938 -29.192501    3.856444         2.192474
+   20  18-021U -27.000027   18.589938 -29.192501    3.856444         2.192474
+   21  18-021B -17.977499   83.255421 -22.009438   56.404952         4.031939
    22  18-022U  -5.488390  103.595335 -24.809677   54.724645        19.321287
    23  18-022V  -0.989376   80.416924 -30.666820    4.212487        29.677445
    24  18-023A -32.013201  115.048817 -16.838399   49.906991       -15.174802
@@ -476,19 +467,20 @@ behavior from deeper, long-period behavior.
    26  18-024U -68.098458   50.928656 -45.399175   33.879698       -22.699283
    27  18-025A -15.407326  101.090032 -39.573699   66.987043        24.166372
 
-If short- and long-period strikes disagree strongly, do not force a
-single rotation across the entire band.  Review dimensionality, static
-shift, near-surface diagnostics, and the inversion band before choosing a
-processing strike.
+Stations ``18-017U`` and ``18-019U`` swing by more than ``60`` degrees
+between the short- and long-period bands, and both bands still carry
+large ``iqr`` values at most stations.  If short- and long-period strikes
+disagree strongly, do not force a single rotation across the entire
+band.  Review dimensionality, static shift, near-surface diagnostics, and
+the inversion band before choosing a processing strike.
 
 Rotate Data Onto Strike
 -----------------------
 
 ``rotate_to_strike`` estimates one strike angle per station and rotates
 that station's impedance tensor.  Keep the original and rotated data
-separate until you have checked the result.
-
-For station :math:`s`, the rotation applied to every frequency sample is
+separate until you have checked the result.  For station :math:`s`, the
+rotation applied to every frequency sample is
 
 .. math::
 
@@ -503,37 +495,36 @@ requested method.  In a 2-D interpretation this tries to place the
 dominant response into the off-diagonal modes, but the formula is only a
 coordinate rotation; it does not remove 3-D induction or bad data.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import rotate_to_strike
-   rotated = rotate_to_strike(
-       sites,
-       method="consensus",
-       band=(0.001, 10.0),
-       metric="diag_ratio",
-       inplace=False,
-   )
-   before = estimate_strike_consensus(
-       sites,
-       band=(0.001, 10.0),
-   )
-   after = estimate_strike_consensus(
-       rotated,
-       band=(0.001, 10.0),
-   )
-   print("before mean abs strike:", before["ang"].abs().mean())
-   print("after mean abs strike:", after["ang"].abs().mean())
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import rotate_to_strike
+   >>> rotated = rotate_to_strike(
+   ...     sites,
+   ...     method="consensus",
+   ...     band=(0.001, 10.0),
+   ...     metric="diag_ratio",
+   ...     inplace=False,
+   ... )
+   >>> before = estimate_strike_consensus(
+   ...     sites,
+   ...     band=(0.001, 10.0),
+   ... )
+   >>> after = estimate_strike_consensus(
+   ...     rotated,
+   ...     band=(0.001, 10.0),
+   ... )
+   >>> print("before mean abs strike:", before["ang"].abs().mean())
    before mean abs strike: 33.75926323036427
+   >>> print("after mean abs strike:", after["ang"].abs().mean())
    after mean abs strike: 23.699459229145212
 
-Valid method names are ``"consensus"``, ``"sweep"``, and ``"pt"``.
-Use ``inplace=False`` while building a workflow.  It returns a rotated
-copy and keeps the unrotated survey available for before/after checks.
-
+Re-estimating strike on the rotated survey pulls the mean absolute angle
+from about ``34`` degrees down to about ``24`` degrees, which is the
+expected direction of change: rotation moves the dominant axis closer to
+``0``/``90`` in the rotated frame, it does not force it there exactly.
+Valid method names are ``"consensus"``, ``"sweep"``, and ``"pt"``.  Use
+``inplace=False`` while building a workflow; it returns a rotated copy
+and keeps the unrotated survey available for before/after checks.
 Rotation does not make a survey 2-D by itself.  If the selected band has
 high skew, unstable strike, or strong station-to-station disagreement,
 the rotated tensors may still be poor 2-D inversion input.
@@ -545,29 +536,25 @@ Per-Frequency Strike Curve
 each station to one number.  It is useful for finding unstable bands or
 stations whose strike flips with period.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import strike_curve_sweep
-   curve = strike_curve_sweep(
-       sites,
-       angles=np.arange(-90.0, 91.0, 1.0),
-       metric="diag_ratio",
-       smooth=5,
-   )
-   print(curve.head())
-   print(curve.groupby("station")["ang"].agg(["median", "std", "count"]))
-
-.. code-block:: text
-
-       station     freq    period   ang
+   >>> from pycsamt.emtools import strike_curve_sweep
+   >>> curve = strike_curve_sweep(
+   ...     sites,
+   ...     angles=np.arange(-90.0, 91.0, 1.0),
+   ...     metric="diag_ratio",
+   ...     smooth=5,
+   ... )
+   >>> print(curve.head())
+      station     freq    period   ang
    0  18-001A  10400.0  0.000096  59.0
    1  18-001A   8707.0  0.000115 -78.2
    2  18-001A   7289.0  0.000137 -36.2
    3  18-001A   6102.0  0.000164  -2.2
    4  18-001A   5108.0  0.000196  -3.2
+   >>> print(curve.groupby("station")["ang"].agg(["median", "std", "count"]))
             median        std  count
-   station
+   station                          
    18-001A   -27.4  52.458417     53
    18-002U   -45.8  60.834128     53
    18-003A   -22.4  46.238784     53
@@ -601,7 +588,11 @@ The table columns are ``station``, ``freq``, and ``ang``.  ``smooth``
 applies a moving average to the frequency-level sweep angles before they
 are wrapped back into the axial range.  Increase it only when you want a
 smoother visual trend; do not use smoothing to hide genuine strike
-changes.
+changes.  Every ``std`` in the summary above exceeds ``30`` degrees --
+consistent with the noisy, unstable single-frequency sweep angles seen
+earlier -- which is exactly why the station-level estimators reduce the
+curve to a robust median rather than reporting a single frequency's
+value.
 
 The smoothing is applied to an unwrapped axial sequence, so a transition
 near :math:`90^\circ` is treated as a continuation of the same axis
@@ -627,42 +618,44 @@ Ribbon Plot
 
 ``plot_strike_ribbon`` converts the per-frequency strike curve to a
 station-by-period image.  Hue encodes strike angle.  Saturation encodes
-local stability: desaturated colors indicate high local variance.
-
-This makes the ribbon more than a color table.  A saturated, coherent
-stripe means nearby period samples agree on the same axial direction.  A
+local stability: desaturated colors indicate high local variance.  This
+makes the ribbon more than a color table -- a saturated, coherent stripe
+means nearby period samples agree on the same axial direction, while a
 pale or mottled interval means the local angular variance is high, so a
 single strike from that interval should be treated cautiously.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_strike_ribbon
-
-   ax = plot_strike_ribbon(
-       sites,
-       method="sweep",
-       win=5,
-       show_colorbar=True,
-   )
-   ax.figure.savefig("strike_ribbon.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools import plot_strike_ribbon
+   >>> ax = plot_strike_ribbon(
+   ...     sites,
+   ...     method="sweep",
+   ...     win=5,
+   ...     show_colorbar=True,
+   ... )
+   >>> ax.figure.savefig("strike_ribbon.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-09.png
    :width: 100%
 
-Use the ribbon before selecting a single strike for a broad period band.
-If the ribbon changes color systematically from short period to long
-period, the survey may need band-specific interpretation.
+The ribbon confirms the picture from the curve table: colors change
+station to station and period to period across most of the survey,
+matching the large ``std`` values reported above.  Use the ribbon before
+selecting a single strike for a broad period band.  If it changes color
+systematically from short period to long period, the survey may need
+band-specific interpretation.
 
 Rose Diagrams
 -------------
 
-``plot_strike_rose`` draws axial strike histograms.  It mirrors the
-``0`` to ``180`` degree histogram around the full circle, so both halves
-of the polar plot represent the same set of axes.
+``plot_strike_rose`` draws axial strike histograms styled with the
+``"pycsamt"`` ``RoseStyle`` preset by default: gradient-colored bars, a
+bold outer ring, a crimson mean-direction spike, a dashed secondary-axis
+line, and an annotation box reporting the mean angle and station count.
+It mirrors the ``0`` to ``180`` degree histogram around the full circle,
+so both halves of the polar plot represent the same set of axes.
 
 When inverse-IQR weighting is requested, stations with stable frequency
 behavior carry more weight:
@@ -686,84 +679,90 @@ the unit vectors, and halving the result:
    \sum_s w_s \cos 2\theta_s
    \right).
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_strike_rose
-
-   fig = plot_strike_rose(
-       sites,
-       method="consensus",
-       band=(0.001, 10.0),
-       bins=36,
-       weight="inv_iqr",
-       suptitle="Consensus geoelectric strike",
-   )
-   fig.savefig("strike_rose_consensus.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> from pycsamt.emtools import plot_strike_rose
+   >>> fig = plot_strike_rose(
+   ...     sites,
+   ...     method="consensus",
+   ...     band=(0.001, 10.0),
+   ...     bins=36,
+   ...     weight="inv_iqr",
+   ...     suptitle="Consensus geoelectric strike",
+   ... )
+   >>> fig.savefig("strike_rose_consensus.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-10.png
    :width: 100%
 
-``weight="inv_iqr"`` down-weights stations whose strike varies strongly
-with frequency.  Use ``weight="uniform"`` when every station should
-contribute equally.
+The weighted mean lands at ``145.4`` degrees (equivalently ``-34.6``
+degrees on the compact axial scale), which sits close to the
+phase-tensor cluster seen in the station table.  ``weight="inv_iqr"``
+down-weights stations whose strike varies strongly with frequency; use
+``weight="uniform"`` when every station should contribute equally.
 
 When ``groups`` is omitted, pyCSAMT attempts to group stations by a
 profile-like station-name prefix.  This works for names such as
 ``E1S01`` because the inferred group is ``E1``.  For station names that
-do not encode the line this way, pass an explicit mapping.
+do not encode the line this way, pass an explicit mapping.  L18PLT and
+L22PLT are two separate AMT lines from the same survey, so comparing
+them checks whether the regional strike is consistent along strike or
+only a property of one profile.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   line18 = sorted(Path("data/AMT/WILLY_DATA/L18PLT").glob("*.edi"))
-   line22 = sorted(Path("data/AMT/WILLY_DATA/L22PLT").glob("*.edi"))
-
-   groups = {
-       "L18PLT": [path.stem for path in line18],
-       "L22PLT": [path.stem for path in line22],
-   }
-
-   fig = plot_strike_rose(
-       line18 + line22,
-       groups=groups,
-       method="consensus",
-       bins=36,
-       n_cols=2,
-       suptitle="Strike by profile line",
-   )
-   fig.savefig("strike_rose_profiles.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> from pathlib import Path
+   >>> line18 = sorted(Path("data/AMT/WILLY_DATA/L18PLT").glob("*.edi"))
+   >>> line22 = sorted(Path("data/AMT/WILLY_DATA/L22PLT").glob("*.edi"))
+   >>> groups = {
+   ...     "L18PLT": [path.stem for path in line18],
+   ...     "L22PLT": [path.stem for path in line22],
+   ... }
+   >>> fig = plot_strike_rose(
+   ...     line18 + line22,
+   ...     groups=groups,
+   ...     method="consensus",
+   ...     bins=36,
+   ...     n_cols=2,
+   ...     suptitle="Strike by profile line",
+   ... )
+   >>> fig.savefig("strike_rose_profiles.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-11.png
    :width: 100%
 
+L18PLT and L22PLT agree to within one degree (``143.1`` versus ``144.1``
+degrees), which is strong evidence that the estimated direction reflects
+a regional structural trend rather than an artifact of one particular
+line's geometry or noise.
+
 ``plot_strike_rose_by_line`` is a simpler line-comparison helper.  It
-requires at least two stations per group; if automatic grouping produces
-only singleton groups, pass the explicit ``groups`` dictionary yourself.
+draws each group with plain degree ticks rather than the full compass
+styling above, and requires at least two stations per group; if
+automatic grouping produces only singleton groups, pass the explicit
+``groups`` dictionary yourself.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import plot_strike_rose_by_line
-
-   fig = plot_strike_rose_by_line(
-       line18 + line22,
-       groups=groups,
-       method="consensus",
-       band=(0.001, 10.0),
-       weight="inv_iqr",
-   )
-   fig.savefig("strike_rose_by_line.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> from pycsamt.emtools import plot_strike_rose_by_line
+   >>> fig = plot_strike_rose_by_line(
+   ...     line18 + line22,
+   ...     groups=groups,
+   ...     method="consensus",
+   ...     band=(0.001, 10.0),
+   ...     weight="inv_iqr",
+   ... )
+   >>> fig.savefig("strike_rose_by_line.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-12.png
    :width: 100%
+
+Both lines again cluster tightly around the same ``145``-ish degree
+direction (``145.4`` and ``148.4`` degrees here), reinforcing the
+profile-comparison result above with a lighter, quick-look plot.
 
 Frequency-Band Roses
 --------------------
@@ -771,34 +770,36 @@ Frequency-Band Roses
 Use ``bar_style="bands"`` when you want one rose diagram to show several
 period bands.  Each band contributes its own stacked histogram.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   fig = plot_strike_rose(
-       sites,
-       method="consensus",
-       bar_style="bands",
-       freq_bands=[
-           (0.001, 0.01),
-           (0.01, 0.1),
-           (0.1, 10.0),
-       ],
-       band_labels=[
-           "very short period",
-           "short period",
-           "long period",
-       ],
-       suptitle="Strike by period band",
-   )
-   fig.savefig("strike_rose_bands.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> fig = plot_strike_rose(
+   ...     sites,
+   ...     method="consensus",
+   ...     bar_style="bands",
+   ...     freq_bands=[
+   ...         (0.001, 0.01),
+   ...         (0.01, 0.1),
+   ...         (0.1, 10.0),
+   ...     ],
+   ...     band_labels=[
+   ...         "very short period",
+   ...         "short period",
+   ...         "long period",
+   ...     ],
+   ...     suptitle="Strike by period band",
+   ... )
+   >>> fig.savefig("strike_rose_bands.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-13.png
    :width: 100%
 
-If the bands stack around different mean directions, report the
-band-specific behavior instead of collapsing it to one survey-wide
-number.
+The long-period band dominates the count and carries most of the ``145``
+degree signal, while the very-short-period band is thin -- fewer stations
+have a stable strike at the shortest periods, which matches the noisy
+ribbon plot above.  If the bands stack around clearly different mean
+directions, report the band-specific behavior instead of collapsing it
+to one survey-wide number.
 
 Profile And Map-Stick Views
 ---------------------------
@@ -807,75 +808,119 @@ Profile And Map-Stick Views
 IQR ribbon.  It is the best quick check for station-to-station
 coherence.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_strike_profile
-
-   ax = plot_strike_profile(
-       sites,
-       method="consensus",
-       band=(0.001, 10.0),
-       sort_by="lat",
-   )
-   ax.figure.savefig("strike_profile.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_strike_profile
+   >>> ax = plot_strike_profile(
+   ...     sites,
+   ...     method="consensus",
+   ...     band=(0.001, 10.0),
+   ...     sort_by="lat",
+   ... )
+   >>> ax.figure.savefig("strike_profile.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-14.png
    :width: 100%
 
-The profile plot uses ``ang`` as the line and ``iqr`` as the uncertainty
-ribbon.  A coherent 2-D line should not show random jumps from station to
-station unless there is a real geological or data-quality reason.
+Most of the profile holds between about ``120`` and ``175`` degrees with
+a moderate IQR ribbon, consistent with a broadly coherent 2-D line.
+Station ``18-011A`` is the clear exception -- it drops to about ``20``
+degrees, matching the same station flagged earlier for large
+sweep/phase-tensor disagreement.  A coherent 2-D line should not show
+random jumps from station to station unless there is a real geological
+or data-quality reason, and this is exactly the kind of single-station
+outlier that a survey-wide statistic like the rose mean would hide.
 
 ``plot_strike_mapsticks`` draws a short line segment at each station
 coordinate, oriented along the estimated strike.  It is useful for
 checking whether nearby stations point in a consistent direction.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_strike_mapsticks
-
-   ax = plot_strike_mapsticks(
-       sites,
-       method="consensus",
-       band=(0.001, 10.0),
-       len_deg=0.02,
-   )
-   lats = [site.coords[0] for site in sites if site.coords]
-   lons = [site.coords[1] for site in sites if site.coords]
-   lon_pad = (max(lons) - min(lons)) * 0.15
-   lat_pad = (max(lats) - min(lats)) * 0.15
-   ax.set_xlim(min(lons) - lon_pad, max(lons) + lon_pad)
-   ax.set_ylim(min(lats) - lat_pad, max(lats) + lat_pad)
-   ax.set_aspect("auto", adjustable="box")
-   ax.ticklabel_format(axis="x", style="plain", useOffset=False)
-   ax.figure.savefig("strike_mapsticks.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_strike_mapsticks
+   >>> ax = plot_strike_mapsticks(
+   ...     sites,
+   ...     method="consensus",
+   ...     band=(0.001, 10.0),
+   ...     len_deg=0.02,
+   ... )
+   >>> lats = [site.coords[0] for site in sites if site.coords]
+   >>> lons = [site.coords[1] for site in sites if site.coords]
+   >>> lon_pad = (max(lons) - min(lons)) * 0.15
+   >>> lat_pad = (max(lats) - min(lats)) * 0.15
+   >>> _ = ax.set_xlim(min(lons) - lon_pad, max(lons) + lon_pad)
+   >>> _ = ax.set_ylim(min(lats) - lat_pad, max(lats) + lat_pad)
+   >>> _ = ax.set_aspect("auto", adjustable="box")
+   >>> ax.ticklabel_format(axis="x", style="plain", useOffset=False)
+   >>> ax.figure.savefig("strike_mapsticks.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-15.png
    :width: 100%
 
-The ``len_deg`` value is a display length in coordinate degrees, not a
-geological length.  Adjust it for readability when the survey extent is
-very small or very large.
+Neighboring sticks tilt in visibly consistent directions along most of
+the line, which is the same coherence the profile plot showed, now in
+map view.  The ``len_deg`` value is a display length in coordinate
+degrees, not a geological length; adjust it for readability when the
+survey extent is very small or very large.
 
 Combined Strike Analysis
 ------------------------
 
-``plot_strike_analysis`` creates a rose figure of impedance strike and
-phase-tensor azimuth, adding a third :term:`tipper` strike panel only when
-*sites* actually carries vertical magnetic transfer functions somewhere in
-the survey.  A survey with no tipper channel at all (most AMT surveys, for
-instance) therefore gets a two-panel figure rather than a third panel that
-would only ever read "no data". If the survey does have tipper but the
-selected *band* happens to exclude every tipper-bearing row, the panel is
-still drawn, showing "no data" for that band specifically.
+``plot_strike_analysis`` draws a rose figure of impedance strike and
+phase-tensor azimuth, adding a third :term:`tipper` strike panel only
+when *sites* actually carries vertical magnetic transfer functions
+somewhere in the survey.  A survey with no tipper channel at all gets a
+two-panel figure rather than a third panel that would only ever read "no
+data".  L18PLT is AMT, with no vertical-field channel, so it is a
+two-panel example.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_strike_analysis
+   >>> fig = plot_strike_analysis(
+   ...     sites,
+   ...     method="consensus",
+   ...     band=(0.001, 10.0),
+   ...     bins=36,
+   ...     suptitle="Strike and phase-tensor azimuth -- L18PLT (AMT, no tipper)",
+   ... )
+   >>> fig.savefig("strike_analysis_l18plt.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-16.png
+   :width: 100%
+
+Strike (Z) reports ``146.8`` degrees from ``28`` station-level estimates,
+and PT Azimuth reports ``145.8`` degrees from ``1092`` individual
+frequency samples (``28`` stations times up to ``39`` frequencies each).
+The two panel counts are not meant to match: the Strike (Z) panel
+summarizes one robust angle per station, while PT Azimuth plots every
+frequency-level phase-tensor sample directly.  The near-identical mean
+direction from two very differently sized populations is itself a good
+consistency check.
+
+To see the third panel with a real survey, switch to ``data/MT/kap03lmt_edis``:
+a 26-station real MT line from the SAMTEX archive that, unlike the AMT
+lines above, carries genuine vertical-field (tipper) data at every
+station.
+
+.. code-block:: pycon
+
+   >>> kap = ensure_sites("data/MT/kap03lmt_edis", recursive=True, verbose=0)
+   >>> fig = plot_strike_analysis(
+   ...     kap,
+   ...     method="consensus",
+   ...     band=(1.0, 1000.0),
+   ...     bins=36,
+   ...     suptitle="Strike, phase-tensor azimuth, and tipper strike -- KAP03 (MT, real tipper)",
+   ... )
+   >>> fig.savefig("strike_analysis_kap03.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-17.png
+   :width: 100%
 
 For tipper vectors, pyCSAMT uses the real induction vector direction
 
@@ -891,144 +936,54 @@ For tipper vectors, pyCSAMT uses the real induction vector direction
    \bmod 180^\circ ,
 
 where :math:`T_{zx}` and :math:`T_{zy}` are the horizontal magnetic-field
-transfer functions into the vertical magnetic component.  Compare this
-azimuth with impedance and phase-tensor strike as an independent
-directional diagnostic, not as a guaranteed rotation angle.
-
-.. code-block:: python
-   :linenos:
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_strike_analysis
-
-   fig = plot_strike_analysis(
-       sites,
-       method="consensus",
-       band=(0.001, 10.0),
-       bins=36,
-       suptitle="Strike and phase-tensor azimuth",
-   )
-   fig.savefig("strike_analysis.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
-
-.. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-16.png
-   :width: 100%
-
-``L18PLT`` is AMT, with no vertical-field channel, so this call renders
-only the Strike (Z) and PT Azimuth panels -- the Tipper Strike panel is
-added automatically only when a survey actually carries tipper somewhere,
-rather than reserving a third panel that would only ever read "no data".
-
-Use this figure as a consistency check.  If Z strike and phase-tensor
-azimuth cluster around the same axial direction, confidence increases.
-If a survey does carry tipper and its strike points somewhere else,
-investigate regional 3-D structure, coast effects, cultural noise, or sign
-convention before choosing a rotation angle.
+transfer functions into the vertical magnetic component.  Here, Strike
+(Z) and PT Azimuth still agree closely (``150.3`` and ``136.7`` degrees),
+but Tipper Strike points in a very different direction (``7.2`` degrees,
+essentially north-south) and is visibly more scattered around the polar
+plot than the other two panels.  KAP03 is a long-period, widely spaced
+MT line (roughly ``60`` km station spacing) sensitive to much deeper
+structure than the impedance and phase-tensor strike, so this is not a
+contradiction to resolve by picking a "correct" panel -- it is exactly
+the kind of independent directional evidence this figure exists to
+surface.  Compare tipper azimuth with impedance and phase-tensor strike
+as a diagnostic, not as a guaranteed rotation angle: investigate regional
+3-D structure, coast effects, cultural noise, or sign convention before
+choosing a rotation based on it alone.
 
 Recommended Workflow
 --------------------
 
-A robust strike workflow keeps estimation, comparison, visualization, and
-rotation separate:
+A robust strike workflow keeps estimation, comparison, visualization,
+and rotation separate.  The script below runs that pattern end to end on
+L18PLT: estimate the consensus strike, plot the profile and rose views,
+then rotate only if the median station-level ``iqr`` is below a
+stability threshold.
 
-.. code-block:: python
+.. code-dropdown:: ../../../scripts/generate_user_guide_emtools_strike_figures.py
+   :language: python
+   :pyobject: run_strike_workflow
    :linenos:
-
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-
-   from pycsamt.emtools import (
-       ensure_sites,
-       estimate_strike_consensus,
-       estimate_strike_phase_tensor,
-       estimate_strike_sweep,
-       plot_strike_profile,
-       plot_strike_rose,
-       rotate_to_strike,
-   )
-
-   sites = ensure_sites(
-       Path("data/AMT/WILLY_DATA/L18PLT"),
-       recursive=True,
-   )
-
-   band = (0.001, 10.0)
-
-   sweep = estimate_strike_sweep(
-       sites,
-       band=band,
-       angles=np.arange(-90.0, 91.0, 1.0),
-   )
-   pt = estimate_strike_phase_tensor(sites, band=band)
-   consensus = estimate_strike_consensus(
-       sites,
-       band=band,
-       w_sweep=0.4,
-       w_pt=0.6,
-   )
-
-   comparison = consensus[["station", "ang", "iqr"]].merge(
-       pt[["station", "ang", "iqr"]],
-       on="station",
-       suffixes=("_consensus", "_pt"),
-   )
-   comparison["consensus_pt_diff"] = (
-       (comparison["ang_consensus"] - comparison["ang_pt"] + 90.0)
-       % 180.0
-   ) - 90.0
-
-   comparison.to_csv("strike_comparison.csv", index=False)
-   consensus.to_csv("strike_consensus.csv", index=False)
-
-   ax = plot_strike_profile(
-       sites,
-       method="consensus",
-       band=band,
-       sort_by="lat",
-   )
-   ax.figure.savefig(
-       "strike_recommended_profile.png",
-       dpi=200,
-       bbox_inches="tight",
-   )
-   plt.close(ax.figure)
-
-   fig = plot_strike_rose(
-       sites,
-       method="consensus",
-       band=band,
-       weight="inv_iqr",
-   )
-   fig.savefig("strike_recommended_rose.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
-
-   stable = consensus["iqr"].median() < 45.0
-   if stable:
-       rotated = rotate_to_strike(
-           sites,
-           method="consensus",
-           band=band,
-           inplace=False,
-       )
+   :title: View the executed workflow source code
 
 .. grid:: 2
    :gutter: 2
 
    .. grid-item::
 
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-17-01.png
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-18-01.png
          :width: 100%
 
    .. grid-item::
 
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-17-02.png
+      .. image:: ../../images/user_guide/emtools/user-guide-emtools-strike-18-02.png
          :width: 100%
 
-The ``stable`` threshold in this example is only a processing rule of
-thumb.  Choose the final threshold based on survey purpose, dimensionality
+For L18PLT the median consensus ``iqr`` is about ``99`` degrees, well
+above the ``45`` degree threshold used in this example, so the
+conditional rotation step is skipped -- correctly, given how unstable
+most of this survey's per-station strike turned out to be in the tables
+above.  The ``stable`` threshold itself is only a processing rule of
+thumb; choose the final threshold based on survey purpose, dimensionality
 diagnostics, period band, and inversion assumptions.
 
 Common Pitfalls

@@ -195,13 +195,27 @@ def run_ai_mt2d_tri(sites, *, n_train_profiles: int = 20,
                     epochs: int = 50, patience: int = 8):
     """Run topography-following triangular MT2D training and field inference.
 
-    Coarser and shallower than the first pass at this tutorial: the mesh
-    stops at 100 km depth instead of 250 km, and the surface/field cell
-    sizes are roughly doubled. Both changes exist to make a 200-realization
-    run (double the original 100) finish in a comparable wall-clock budget,
-    not because the physics needs less resolution -- KAP03's own frequency
-    band (5e-5 to 0.04 Hz) does not resolve structure anywhere near 250 km
-    with useful confidence in the first place.
+    Shallower than the first pass at this tutorial (100 km instead of
+    250 km -- KAP03's own frequency band, 5e-5 to 0.04 Hz, does not
+    resolve structure anywhere near 250 km with useful confidence in the
+    first place), but the surface/field cell sizes are now *finer* than
+    both earlier passes: ``mesh_target_cell_m=15,000`` matches the
+    standalone display mesh built by :func:`build_profile_triangle_mesh`
+    rather than the coarser 45,000 m used previously, so the triangles
+    actually driving GCN training are no bigger than the ones already
+    shown as the "optional" mesh figure.
+
+    ``gcn_adjacency_radius_m`` is now set explicitly to 30,000 m (2x
+    ``mesh_target_cell_m``). It was never set in any earlier pass of
+    this tutorial, silently leaving ``Inv2DAgent``'s 300 m library
+    default in effect -- 15-40x smaller than the actual median distance
+    between neighbouring triangle centroids on this mesh (~10 km).
+    ``build_adjacency`` degrades to the identity matrix below that
+    distance, so the GCN never did any spatial message-passing in any
+    earlier run of this branch; every triangle nearest a given station
+    predicted the same value regardless of its own depth, which is what
+    produced the flat vertical "curtain" per station visible in the
+    comparison figure before this fix.
     """
     from pycsamt.agents import Inv2DAgent
     from pycsamt.forward.maxwell.tri_fem2d import TriFEM2DAdapter
@@ -225,8 +239,9 @@ def run_ai_mt2d_tri(sites, *, n_train_profiles: int = 20,
         n_train_profiles=n_train_profiles,
         n_stations_per_profile=n_sites,
         station_spacing_m=spacing,
-        mesh_target_cell_m=45_000.0,
-        field_grid_cell_m=22_500.0,
+        mesh_target_cell_m=15_000.0,
+        field_grid_cell_m=7_500.0,
+        gcn_adjacency_radius_m=30_000.0,
         correlation_length_x_m=(40_000.0, 180_000.0),
         correlation_length_z_m=(5_000.0, 25_000.0),
         gcn_hidden=(128, 64, 32),
@@ -276,12 +291,25 @@ def run_ai_mt2d_tri(sites, *, n_train_profiles: int = 20,
 def run_ai_mt3d(sites, *, n_train_profiles: int = 20, epochs: int = 50, patience: int = 8):
     """Run the structured-mesh MT3D training branch on request.
 
-    Coarser and shallower than the first pass, for the same reason as
-    :func:`run_ai_mt2d_tri`: 100 km depth instead of 250 km (6 layers
-    instead of 10, keeping roughly the original per-layer resolution near
-    surface where KAP03's band actually constrains something), and a
-    5x-smaller forward-solve mesh budget (``max_mesh_cells``) so 200
-    realizations is tractable.
+    Shallower than the first pass, for the same reason as
+    :func:`run_ai_mt2d_tri`: 100 km depth instead of 250 km. The lever
+    that actually thins the *plotted* MT3D section is ``n_layers`` (10
+    depth rows instead of 6; the 26 station columns are already the
+    real station count and cannot be finer) -- ``geology_grid_nx_ny``,
+    ``geology_grid_nz``, and ``max_mesh_cells`` instead control the
+    realism/cost of the *training-data* forward solves and were left
+    close to their original values on purpose. Two smoke tests found a
+    real 3-D Maxwell solve's cost on this solver scales far worse than
+    linearly with cell count: quadrupling ``max_mesh_cells`` to 20,000
+    multiplied per-realization time by ~17x (not 4x), and even a modest
+    5,000-to-8,000 bump (with ``geology_grid_nx_ny=4``,
+    ``geology_grid_nz=5``) multiplied it by ~5.8x -- a 200-realization
+    run at that setting would take about 5.4 hours, not the ~2-2.5
+    hours a naive N^2 estimate suggested. ``max_mesh_cells=6,000``
+    (a 20% bump) with the original ``geology_grid_nx_ny=3``,
+    ``geology_grid_nz=4`` keeps training-data cost close to the
+    original run's while still giving every realization a slightly
+    finer solver core.
     """
     from pycsamt.agents import Inv3DAgent
 
@@ -294,7 +322,7 @@ def run_ai_mt3d(sites, *, n_train_profiles: int = 20, epochs: int = 50, patience
         pass
     agent = Inv3DAgent(
         physics="mt3d",
-        n_layers=6,
+        n_layers=10,
         freqs=np.geomspace(5.0e-5, 0.04, 8),
         depth_max=100_000.0,
         n_train_profiles=n_train_profiles,
@@ -308,9 +336,9 @@ def run_ai_mt3d(sites, *, n_train_profiles: int = 20, epochs: int = 50, patience
         correlation_length_y_m=(40_000.0, 150_000.0),
         correlation_length_z_m=(5_000.0, 25_000.0),
         geology_grid_nx_ny=3,
-        geology_grid_nz=3,
+        geology_grid_nz=4,
         mesh_safety_factor=8.0,
-        max_mesh_cells=5_000,
+        max_mesh_cells=6_000,
     )
     result = agent.execute({
         "sites": sites,
@@ -395,8 +423,10 @@ def plot_ai_comparison(mt2d_result=None, mt3d_result=None):
         return
     fig = plt.figure(figsize=(16.5, 9.4), constrained_layout=True)
     gs = fig.add_gridspec(2, 3, width_ratios=(1.0, 1.0, 0.82))
+    model_axes = []
     for row, (title, mesh_path, manifest_path, result) in enumerate(rows):
         ax_model = fig.add_subplot(gs[row, :2])
+        model_axes.append(ax_model)
         mesh_data = np.load(mesh_path)
         if row == 0:
             import matplotlib.tri as mtri
@@ -405,10 +435,21 @@ def plot_ai_comparison(mt2d_result=None, mt3d_result=None):
             triangulation = mtri.Triangulation(
                 nodes[:, 0], nodes[:, 1], mesh_data["triangles"]
             )
+            # Clip the *display* range only -- a handful of triangles
+            # nearest a few far-profile stations (real, uncorrected field
+            # apparent resistivity/phase well outside anything the
+            # synthetic training distribution ever produced) extrapolate
+            # to physically nonsensical log10(rho) values in the tens; a
+            # few such outliers would otherwise wash out the legitimate
+            # depth-varying structure across the rest of the section.
+            # ``log10_resistivity`` in the saved .npz is untouched.
+            clip_lo, clip_hi = -1.0, 5.0
+            log_rho = mesh_data["log10_resistivity"]
+            n_clipped = int(np.sum((log_rho < clip_lo) | (log_rho > clip_hi)))
             artist = ax_model.tripcolor(
-                triangulation, facecolors=mesh_data["log10_resistivity"],
+                triangulation, facecolors=log_rho,
                 cmap="turbo_r", shading="flat", edgecolors="0.18",
-                linewidth=0.28,
+                linewidth=0.28, vmin=clip_lo, vmax=clip_hi,
             )
             ax_model.plot(mesh_data["station_x_m"] / 1000.0,
                           mesh_data["station_z_m"] / 1000.0,
@@ -417,6 +458,16 @@ def plot_ai_comparison(mt2d_result=None, mt3d_result=None):
                          ylabel="Depth below elevation datum (km)")
             ax_model.invert_yaxis()
             ax_model.legend(loc="lower right", fontsize=8)
+            if n_clipped:
+                ax_model.text(
+                    0.99, 0.02,
+                    f"{n_clipped}/{log_rho.size} triangles off-scale"
+                    f" (clipped to [{clip_lo:g}, {clip_hi:g}])",
+                    transform=ax_model.transAxes, ha="right", va="bottom",
+                    fontsize=7.5, color="0.25",
+                    bbox={"facecolor": "white", "edgecolor": "none",
+                          "alpha": 0.75, "pad": 1.5},
+                )
             if "station_names" in mesh_data:
                 _add_station_labels(
                     ax_model,
@@ -449,8 +500,11 @@ def plot_ai_comparison(mt2d_result=None, mt3d_result=None):
             ax_model.legend(loc="lower right", fontsize=8)
             if "station_names" in mesh_data:
                 _add_station_labels(ax_model, x, surface_depth, mesh_data["station_names"])
-        fig.colorbar(artist, ax=ax_model, pad=0.015,
-                     label=r"$\log_{10}\rho$ ($\Omega\,m$)")
+        fig.colorbar(
+            artist, ax=ax_model, pad=0.015,
+            extend="both" if (row == 0 and n_clipped) else "neither",
+            label=r"$\log_{10}\rho$ ($\Omega\,m$)",
+        )
         ax_model.text(
             0.01, 0.985, title, transform=ax_model.transAxes,
             ha="left", va="top", fontsize=12, fontweight="bold",
@@ -479,6 +533,34 @@ def plot_ai_comparison(mt2d_result=None, mt3d_result=None):
         ax_loss.grid(alpha=0.22)
         if train.size or valid.size:
             ax_loss.legend(fontsize=8)
+
+    # Both model panels compress ~100 km of depth into roughly the same
+    # on-screen width as ~1,500 km of profile -- real, close-to-isotropic
+    # triangles (independently verified: median width/height ratio 0.99 on
+    # the MT2D mesh) therefore render visibly "tall." Rather than let that
+    # read as a mesh defect, compute the actual exaggeration from the
+    # rendered axes geometry (not an assumed constant) and label it
+    # explicitly, the same disclosure convention geological cross-sections
+    # use for any vertically exaggerated section.
+    fig.canvas.draw()
+    for ax_model in model_axes:
+        bbox_in = ax_model.get_window_extent().transformed(
+            fig.dpi_scale_trans.inverted()
+        )
+        xlim = ax_model.get_xlim()
+        ylim = ax_model.get_ylim()
+        data_w = abs(xlim[1] - xlim[0])
+        data_h = abs(ylim[1] - ylim[0])
+        km_per_in_x = data_w / bbox_in.width
+        km_per_in_y = data_h / bbox_in.height
+        vert_exag = km_per_in_x / km_per_in_y
+        ax_model.text(
+            0.99, 0.985, f"vertical exaggeration ≈ {vert_exag:.1f}x",
+            transform=ax_model.transAxes, ha="right", va="top", fontsize=8,
+            color="0.2",
+            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78,
+                  "pad": 1.8}, zorder=8,
+        )
     fig.savefig(IMAGE_DIR / "kp_ai_mt2d_mt3d_comparison.png", dpi=190)
     plt.close(fig)
 

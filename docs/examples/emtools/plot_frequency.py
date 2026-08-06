@@ -178,11 +178,11 @@ for th in (0.50, 0.70, 0.85):
     print(f"mask@{th}: {n_fin}/{n_tot} finite ({n_tot - n_fin} masked)")
 
 # %%
-# **Reading this output.** Dropping at the default 0.50 removes 73 rows
-# survey-wide (matching the table's own ~4.9% below 0.50). Masking at
-# the same threshold matches that exactly (73 masked) — good, since
+# **Reading this output.** Dropping at the default 0.50 removes 68 rows
+# survey-wide (matching the table's own ~4.6% below 0.50). Masking at
+# the same threshold matches that exactly (68 masked) — good, since
 # both read the same underlying confidence — while masking at 0.70
-# takes out 951 rows and at 0.85 leaves only 5 finite out of 1484,
+# takes out 946 rows and at 0.85 leaves only 5 finite out of 1484,
 # consistent with the confidence ceiling seen in section 2.
 
 # %%
@@ -262,7 +262,7 @@ print(result.summary())
 
 # %%
 # **Reading this output.** ``n_dropped``, ``n_masked``, and
-# ``n_recovered`` (72, 102, 867 respectively for the values used here)
+# ``n_recovered`` (68, 102, 867 respectively for the values used here)
 # summarize the whole edit in three numbers — more than half of this
 # station's 1484 station-frequency rows get touched one way or another,
 # a useful check before assuming an edit was conservative.
@@ -343,7 +343,7 @@ ax.set_title(f"{STATION} — 5-point moving-average smoothing")
 # **Reading this output/figure.** 4.01 decades at 6 points/decade gives
 # 25 regridded points (from 53); decimating every 3rd of 53 gives 18.
 # Smoothing leaves most points only mildly changed (a 7% median relative
-# shift in |Z_xy|) but reins in the sharpest single-frequency outlier by
+# shift in :math:`|Z_{xy}|`) but reins in the sharpest single-frequency outlier by
 # 93% — the same kind of point-to-point spike flagged as "expected, not
 # a bug" throughout the ``csumt``, ``tf``, and ``fieldzone`` examples —
 # without changing the frequency grid itself.

@@ -24,7 +24,7 @@ and :func:`~pycsamt.emtools.advanced.plot_tf_coherence_network` crashed
 on any survey whose EDI files carry no per-station coordinates in the
 standard header field — the same class of bug already found and fixed
 in :func:`pycsamt.emtools.tensor.plot_phase_tensor_map` (see
-:doc:`/emtools/tensor`), here in a second, independent function.
+:doc:`/user_guide/emtools/tensor`), here in a second, independent function.
 """
 
 # %%
@@ -147,8 +147,8 @@ print(f"mean 1-D membership: {u1d.mean():.5f}")
 # corner: mean u_3D = 0.983, with 97.1% of all 1484 cells above 0.9.
 # Mean u_1D is essentially zero. This is the same strong 3-D/galvanic
 # distortion signal already found four other independent ways across
-# this gallery — Bibby skew in :doc:`/emtools/qc`, static-shift behaviour in
-# :doc:`/emtools/ss`, the phase-tensor dimensionality grid in :doc:`/emtools/tensor`
+# this gallery — Bibby skew in :doc:`/user_guide/emtools/qc`, static-shift behaviour in
+# :doc:`/user_guide/emtools/ss`, the phase-tensor dimensionality grid in :doc:`/user_guide/emtools/tensor`
 # (97.9% classified 3-D there too), and now the continuous ternary
 # membership.
 
@@ -320,7 +320,7 @@ print(f"edges drawn (capped at max_edges): {len(ax.lines)}")
 # %%
 # The function also had the same NaN-coordinate crash as
 # :func:`pycsamt.emtools.tensor.plot_phase_tensor_map` (see
-# :doc:`/emtools/tensor`): its coordinate filter checked only ``is None``, and
+# :doc:`/user_guide/emtools/tensor`): its coordinate filter checked only ``is None``, and
 # KAP03's EDI files (no per-station ``LAT``/``LONG`` in ``>HEAD``)
 # return ``(nan, nan, nan)`` from ``.coords``, which crashed
 # ``ax.set_aspect()`` instead of reaching the function's own graceful
@@ -340,7 +340,7 @@ print(
 # KAP03 does carry real coordinates, just as ``REFLAT``/``REFLONG`` in
 # ``>=DEFINEMEAS`` rather than the ``>HEAD`` fields ``.coords`` reads
 # (the same situation already used for the tipper overlay in
-# :doc:`/emtools/tensor`). Setting them explicitly via
+# :doc:`/user_guide/emtools/tensor`). Setting them explicitly via
 # :meth:`~pycsamt.site.base.Site.set_coords` gives a second, genuinely
 # 2-D-spread network to compare against L18PLT's near-linear one — and,
 # since KAP03 spans whole degrees rather than a few hundredths, a real

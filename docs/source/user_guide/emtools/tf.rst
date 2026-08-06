@@ -4,8 +4,8 @@ Transfer Functions And Tipper Diagnostics
 =========================================
 
 The transfer-function tools in ``pycsamt.emtools`` focus on the
-vertical-field response, usually called the tipper.  The tipper relates
-the vertical magnetic field to the horizontal magnetic field:
+vertical-field response, usually called the :term:`tipper`.  The tipper
+relates the vertical magnetic field to the horizontal magnetic field:
 
 .. math::
 
@@ -17,9 +17,9 @@ Fourier coefficients at frequency :math:`f`, while :math:`T_x` and
 laterally uniform 1-D earth, the horizontal magnetic field has no
 preferred lateral induction contrast to couple into :math:`H_z`, so the
 tipper is weak.  When current is channelled by conductors or sharp
-resistivity contrasts, the vertical field grows and induction arrows
-become one of the fastest qualitative diagnostics for conductor
-position, strike, and period-dependent structure.
+resistivity contrasts, the vertical field grows and :term:`induction
+vector` arrows become one of the fastest qualitative diagnostics for
+conductor position, strike, and period-dependent structure.
 
 It is useful to treat the tipper as a two-component complex vector,
 
@@ -73,27 +73,42 @@ transfer function.  The tipper functions will then return graceful
 
 For induction-vector work, first verify that the selected survey really
 has tipper data.  The bundled KAP03 long-period MT profile is useful for
-examples because it includes vertical-field measurements.
+examples because it includes vertical-field measurements *and* real
+station coordinates -- recovered from ``REFLAT``/``REFLONG`` in
+``>=DEFINEMEAS`` when the older, BIRRP-processed ``>HEAD`` block leaves
+``LAT=``/``LONG=`` empty, which is the case for every file in this
+survey. Every map on this page uses those real coordinates, not an
+index-on-a-line fallback.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools import ensure_sites
-
-   edi_dir = Path("data/MT/kap03lmt_edis")
-   sites = ensure_sites(
-       edi_dir,
-       recursive=True,
-       on_dup="replace",
-       strict=False,
-       verbose=0,
-   )
+   >>> from pathlib import Path
+   >>> import numpy as np
+   >>> from pycsamt.emtools import ensure_sites
+   >>> edi_dir = Path("data/MT/kap03lmt_edis")
+   >>> sites = ensure_sites(
+   ...     edi_dir,
+   ...     recursive=True,
+   ...     on_dup="replace",
+   ...     strict=False,
+   ...     verbose=0,
+   ... )
+   >>> print(len(sites), "stations")
+   26 stations
+   >>> n_valid = sum(
+   ...     1 for s in sites
+   ...     if s.coords and np.isfinite(s.coords[0]) and np.isfinite(s.coords[1])
+   ... )
+   >>> print("with usable coordinates:", n_valid, "/", len(sites))
+   with usable coordinates: 26 / 26
 
 If a plot says ``"no tipper"``, check the data before changing plotting
 options.  Missing tipper is a data-content issue, not necessarily a
-failed plot.
+failed plot.  If a map plots stations along a flat, evenly spaced line
+with no vertical spread, that is the *coordinate* fallback -- check
+``site.coords`` before assuming the survey has no real geometry; it may
+simply live in a less common EDI location like ``>=DEFINEMEAS`` instead
+of the ordinary ``>HEAD`` fields.
 
 What The Tipper Stores
 ----------------------
@@ -154,22 +169,25 @@ The period is
    T = \frac{1}{f}.
 
 When a requested period :math:`T_0` does not exist exactly in every EDI,
-the plotting functions use the nearest available sampled period,
+the plotting functions use the nearest available sampled period in
+log-period space,
 
 .. math::
 
    j^\ast
    =
-   \operatorname*{arg\,min}_j |T_j - T_0|.
+   \operatorname*{arg\,min}_j |\log_{10}T_j - \log_{10}T_0|.
 
 This keeps maps and roses reproducible across stations with slightly
-different frequency grids, but it also means that a very narrow band
-should be chosen only when the original sampling supports it.
+different frequency grids, and it holds even when a station's own
+frequency array is not stored in strictly ascending or descending order
+-- true for two real stations in this survey, ``kap109`` and ``kap145``,
+whose files concatenate runs recorded at different sample rates.  A
+narrow band should still be chosen only when the original sampling
+supports it.
 
 .. code-block:: pycon
 
-   >>> import numpy as np
-   >>> # Example period choices for a broad-band MT profile.
    >>> periods = [25.0, 650.0, 2000.0, 17000.0]
    >>> short_band = (25.0, 200.0)
    >>> long_band = (2000.0, 17000.0)
@@ -188,7 +206,7 @@ Single-Station Hodograms
 
 Start with ``plot_tipper_hodograms`` when inspecting one station.  It
 plots ``Tx`` and ``Ty`` in the complex plane, with colors split by period
-band.
+band -- a :term:`hodogram`.
 
 For each component, the hodogram point is simply the complex coefficient
 written as Cartesian coordinates:
@@ -203,34 +221,35 @@ Smooth curves through these points indicate that the station response
 evolves coherently with period.  A scattered cloud means the azimuth and
 amplitude plots should be interpreted with more caution.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_tipper_hodograms
-
-   fig = plot_tipper_hodograms(
-       sites,
-       station="kap151",
-       bands=[
-           (25.0, 200.0),
-           (200.0, 2000.0),
-           (2000.0, 17000.0),
-       ],
-       unit_circle=True,
-       normalize=False,
-   )
-   fig.savefig("tf_tipper_hodograms.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> import matplotlib.pyplot as plt
+   >>> from pycsamt.emtools import plot_tipper_hodograms
+   >>> fig = plot_tipper_hodograms(
+   ...     sites,
+   ...     station="kap151",
+   ...     bands=[
+   ...         (25.0, 200.0),
+   ...         (200.0, 2000.0),
+   ...         (2000.0, 17000.0),
+   ...     ],
+   ...     unit_circle=True,
+   ...     normalize=False,
+   ... )
+   >>> fig.savefig("tf_tipper_hodograms.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-03.png
    :width: 100%
 
-Read a hodogram before reading arrows.  It shows whether a station has a
-smooth, coherent complex response or a scattered cloud.  A large loop
-outside the unit circle can be real for strong 3-D/lateral induction; it
-is not automatically an error.
+Read a hodogram before reading arrows.  Station ``kap151``'s ``Tx``
+traces a large, coherent loop that reaches well outside the unit circle
+in the short- and mid-period bands (dark purple and teal) -- real for
+strong 3-D/lateral induction, and not automatically an error, but a
+clear signal that this station warrants closer inspection before its
+arrows are trusted at face value.  ``Ty``'s loop is smaller and stays
+closer to the unit circle, so the two components are not equally
+reliable here.
 
 Set ``normalize=True`` only when comparing shape rather than amplitude.
 For conductor-strength interpretation, keep the raw amplitude.
@@ -259,35 +278,31 @@ real parts by imaginary parts.  With ``component="abs"``, the radius is
 the complex-vector norm and the displayed direction follows the
 component convention used by the plotting helper.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_tipper_polar
-
-   ax = plot_tipper_polar(
-       sites,
-       station="kap151",
-       component="real",
-   )
-   ax.figure.savefig("tf_tipper_polar.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_tipper_polar
+   >>> ax = plot_tipper_polar(
+   ...     sites,
+   ...     station="kap151",
+   ...     component="real",
+   ... )
+   >>> ax.figure.savefig("tf_tipper_polar.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-04.png
    :width: 100%
 
 Valid components are ``"real"``, ``"imag"``, and ``"abs"``.  Use
-``"real"`` for a Parkinson-style conductor-direction reading, use
-``"imag"`` to inspect the quadrature response, and use ``"abs"`` when
-you mainly care about magnitude.
+``"real"`` for a :term:`Parkinson convention`-style conductor-direction
+reading, use ``"imag"`` to inspect the quadrature response, and use
+``"abs"`` when you mainly care about magnitude.
 
 Induction Map At One Period
 ---------------------------
 
-``plot_induction_map`` draws real and imaginary induction arrows at a
-single target period.  The function picks the nearest available period
-for each station.
+``plot_induction_map`` draws real and imaginary :term:`induction vector`
+arrows at a single target period.  The function picks the nearest
+available period for each station.
 
 At station :math:`s`, the in-phase arrow is formed from
 :math:`\Re(T_x)` and :math:`\Re(T_y)` at the selected period.  The
@@ -303,38 +318,38 @@ The plotted length is scaled for readability,
 where :math:`q` is the display scale.  Changing ``scale`` changes only
 the drawing length; it does not change the transfer function.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_induction_map
-
-   ax = plot_induction_map(
-       sites,
-       period=2000.0,
-       convention="park",
-       show_real=True,
-       show_imag=True,
-       scale=4.0,
-       station_labels=True,
-       reference_arrow=0.1,
-   )
-   ax.figure.savefig("tf_induction_map.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_induction_map
+   >>> ax = plot_induction_map(
+   ...     sites,
+   ...     period=2000.0,
+   ...     convention="park",
+   ...     show_real=True,
+   ...     show_imag=True,
+   ...     scale=4.0,
+   ...     station_labels=True,
+   ...     reference_arrow=0.1,
+   ... )
+   >>> ax.figure.savefig("tf_induction_map.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-05.png
    :width: 100%
 
 The station coordinates come from easting/northing, x/y, or lon/lat when
-available.  If none are present, pyCSAMT falls back to an index along a
-line.  That fallback is still useful for a profile, but do not interpret
-the x-axis as real distance unless the source data contain real
-coordinates.
+available, in that priority order; here they are the real ``(lon, lat)``
+positions recovered from ``>=DEFINEMEAS``, which is why the axes read
+"Longitude" and "Latitude" rather than a distance unit.  If none of
+those sources are usable, pyCSAMT falls back to an index along a flat
+line -- a real map should never look like an exactly horizontal row of
+stations; if one does, check ``site.coords`` before trusting the layout.
 
 ``scale`` controls arrow length in plot coordinates.  If arrows are too
 small or overlap badly, adjust ``scale`` rather than changing the tipper
-data.
+data.  The strongest, most coherent arrows here cluster around
+``kap121``-``kap130``, in the same part of the profile that the
+period section below flags as anomalous across most of the band.
 
 Compare Several Periods On One Axis
 -----------------------------------
@@ -342,23 +357,19 @@ Compare Several Periods On One Axis
 ``plot_induction_arrows`` overlays arrows from several requested periods
 on one profile axis.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_induction_arrows
-
-   ax = plot_induction_arrows(
-       sites,
-       periods=[25.0, 650.0, 2000.0, 17000.0],
-       convention="park",
-       scale=1.0,
-       normalize=True,
-       strike_ticks=False,
-   )
-   ax.figure.savefig("tf_induction_arrows.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_induction_arrows
+   >>> ax = plot_induction_arrows(
+   ...     sites,
+   ...     periods=[25.0, 650.0, 2000.0, 17000.0],
+   ...     convention="park",
+   ...     scale=1.0,
+   ...     normalize=True,
+   ...     strike_ticks=False,
+   ... )
+   >>> ax.figure.savefig("tf_induction_arrows.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-06.png
    :width: 100%
@@ -372,8 +383,9 @@ Sign Conventions
 ----------------
 
 Induction-vector interpretation depends on convention.  The two common
-views are Parkinson and Wiese.  They are rotated relative to each other,
-so a figure can be misread if the convention is not stated.
+views are :term:`Parkinson convention` and :term:`Wiese convention`.
+They are rotated relative to each other, so a figure can be misread if
+the convention is not stated.
 
 With the real induction vector written as
 :math:`\mathbf{p}=(\Re(T_x),\Re(T_y))`, the Wiese vector can be read as a
@@ -397,27 +409,25 @@ are used for interpretation.
 ``plot_induction_convention`` puts Parkinson/Wiese and real/imaginary
 components in one 2-by-2 figure.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_induction_convention
-
-   plot_induction_convention(
-       sites,
-       period=650.0,
-       station_labels=False,
-   )
-   plt.gcf().savefig("tf_induction_convention.png", dpi=200, bbox_inches="tight")
-   plt.close()
+   >>> from pycsamt.emtools import plot_induction_convention
+   >>> _ = plot_induction_convention(
+   ...     sites,
+   ...     period=650.0,
+   ...     station_labels=False,
+   ... )
+   >>> plt.gcf().savefig("tf_induction_convention.png", dpi=200, bbox_inches="tight")
+   >>> plt.close()
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-07.png
    :width: 100%
 
 Use this plot when communicating with collaborators or comparing to a
 paper.  It makes sign and component choices visible instead of leaving
-them implicit.
+them implicit -- the Wiese panels here are visibly rotated relative to
+the Parkinson panels at the same period, exactly as the quarter-turn
+formula predicts.
 
 Period Pseudosection
 --------------------
@@ -440,22 +450,18 @@ For station :math:`s` and period :math:`T_j`, the section cell is
 This is why ``component="abs"`` is useful for anomaly strength, while
 ``"real"`` and ``"imag"`` separate in-phase and quadrature behavior.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_induction_section
-
-   ax = plot_induction_section(
-       sites,
-       component="abs",
-       n_periods=30,
-       cmap="RdBu_r",
-       section="pseudosection",
-   )
-   ax.figure.savefig("tf_induction_section.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_induction_section
+   >>> ax = plot_induction_section(
+   ...     sites,
+   ...     component="abs",
+   ...     n_periods=30,
+   ...     cmap="RdBu_r",
+   ...     section="pseudosection",
+   ... )
+   >>> ax.figure.savefig("tf_induction_section.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-08.png
    :width: 100%
@@ -463,7 +469,13 @@ This is why ``component="abs"`` is useful for anomaly strength, while
 Use ``component="abs"`` for anomaly strength, ``"real"`` for in-phase
 strength, and ``"imag"`` for quadrature strength.  A section is the best
 single view for answering: where along the line is the tipper strong,
-and at what periods?
+and at what periods?  Two stations dominate this section: ``kap121``
+through ``kap130`` are strong across the short-period half of the band,
+while ``kap148`` stands out even more sharply -- saturated dark red
+across almost the *entire* period range, not just one band.  A station
+that stays anomalous from the shortest to the longest period sampled is
+a different kind of feature than one that is only strong in a narrow
+window, and deserves separate follow-up.
 
 Induction Rose
 --------------
@@ -481,37 +493,32 @@ For each selected sample, the rose angle is
    \bmod 360^\circ,
 
 where :math:`\mathbf{a}=(a_x,a_y)` is the chosen real, imaginary, or
-magnitude-based induction vector.  Unlike geoelectric strike, induction
-arrows are directional vectors, so the full :math:`0^\circ` to
+magnitude-based induction vector.  Unlike :term:`geoelectric strike`,
+induction arrows are directional vectors, so the full :math:`0^\circ` to
 :math:`360^\circ` circle is meaningful unless you deliberately fold the
 result for a separate structural-axis comparison.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_induction_rose
-
-   ax = plot_induction_rose(
-       sites,
-       component="real",
-       pband=(25.0, 200.0),
-       nbins=36,
-       title="Short-period induction azimuths",
-   )
-   ax.figure.savefig("tf_induction_rose_short.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
-
-   ax = plot_induction_rose(
-       sites,
-       component="real",
-       pband=(2000.0, 17000.0),
-       nbins=36,
-       title="Long-period induction azimuths",
-   )
-   ax.figure.savefig("tf_induction_rose_long.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
+   >>> from pycsamt.emtools import plot_induction_rose
+   >>> ax = plot_induction_rose(
+   ...     sites,
+   ...     component="real",
+   ...     pband=(25.0, 200.0),
+   ...     nbins=36,
+   ...     title="Short-period induction azimuths",
+   ... )
+   >>> ax.figure.savefig("tf_induction_rose_short.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
+   >>> ax = plot_induction_rose(
+   ...     sites,
+   ...     component="real",
+   ...     pband=(2000.0, 17000.0),
+   ...     nbins=36,
+   ...     title="Long-period induction azimuths",
+   ... )
+   >>> ax.figure.savefig("tf_induction_rose_long.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(ax.figure)
 
 .. grid:: 2
    :gutter: 2
@@ -527,9 +534,14 @@ result for a separate structural-axis comparison.
          :width: 100%
 
 Compare short and long period roses before claiming a regional conductor.
-A short-period rose may be scattered because shallow heterogeneity points
-in many directions.  A long-period rose that tightens into one sector can
-support a deeper, more coherent conductive structure.
+The short-period rose here is genuinely scattered: strong petals near
+``0``, ``90``, and ``180`` degrees with no single dominant sector --
+consistent with shallow, heterogeneous structure pointing in several
+directions at once.  The long-period rose tells a different story: it
+tightens sharply toward roughly ``0``-``30`` degrees, with most of the
+short-period sectors barely present.  That contrast, not either rose
+alone, is the evidence for a deeper, more coherent conductive structure
+along a preferred azimuth.
 
 Multi-Period Map
 ----------------
@@ -538,29 +550,31 @@ Multi-Period Map
 is the most report-ready induction-vector figure.  It can use real EDI
 tipper, or an explicit ``tipper_data`` override.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import plot_induction_multiperiod_map
-
-   fig, axes = plot_induction_multiperiod_map(
-       sites,
-       periods=[25.0, 650.0, 2000.0, 17000.0],
-       convention="park",
-       arrow_scale=6.0,
-       reference_arrow=0.1,
-       show_background_cbar=False,
-       station_labels=False,
-       title="Induction vectors across period",
-   )
-   fig.savefig("tf_induction_multiperiod_map.png", dpi=200, bbox_inches="tight")
-   plt.close(fig)
+   >>> from pycsamt.emtools import plot_induction_multiperiod_map
+   >>> fig, axes = plot_induction_multiperiod_map(
+   ...     sites,
+   ...     periods=[25.0, 650.0, 2000.0, 17000.0],
+   ...     convention="park",
+   ...     arrow_scale=6.0,
+   ...     reference_arrow=0.1,
+   ...     show_background_cbar=False,
+   ...     station_labels=False,
+   ...     xlabel="Longitude",
+   ...     ylabel="Latitude",
+   ...     title="Induction vectors across period",
+   ... )
+   >>> fig.savefig("tf_induction_multiperiod_map.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-10.png
    :width: 100%
 
+``xlabel``/``ylabel`` default to ``"x  (m)"``/``"y  (m)"`` because this
+function -- unlike ``plot_induction_map`` -- does not inspect the
+coordinate source to relabel itself; pass real axis labels explicitly
+whenever the underlying coordinates are geographic, as they are here.
 When ``background`` is not supplied, the function draws a synthetic
 terrain-like background.  That background is a visual placeholder, not a
 real DEM.  For a report, pass your own ``background`` and
@@ -568,49 +582,55 @@ real DEM.  For a report, pass your own ``background`` and
 
 The fallback EDI read path in this function can only use a single tipper
 component in some situations.  When you need full two-component vectors,
-pass ``tipper_data`` explicitly as a dictionary keyed by period:
+pass ``tipper_data`` explicitly as a dictionary keyed by period.  The
+example below builds that dictionary from KAP03's own real tipper --
+useful both as a template for wiring in your own externally processed
+transfer functions, and as a check that the override path reproduces the
+EDI-driven map above exactly when fed the same underlying data:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-   import numpy as np
-
-   # Each value is an array with shape (n_stations, 2):
-   # column 0 is Tx, column 1 is Ty. Replace these synthetic
-   # rows with processed Tx/Ty values from your own workflow.
-   n_stations = 26
-   tipper_data = {}
-   for period, tx, ty in [
-       (25.0, 0.08 + 0.02j, 0.02 + 0.01j),
-       (650.0, 0.22 + 0.05j, 0.10 + 0.03j),
-       (2000.0, 0.16 + 0.03j, 0.18 + 0.04j),
-       (17000.0, 0.05 + 0.01j, 0.20 + 0.04j),
-   ]:
-       tipper_data[period] = np.tile(
-           np.array([[tx, ty]], dtype=complex),
-           (n_stations, 1),
-       )
-
-   fig, axes = plot_induction_multiperiod_map(
-       sites,
-       periods=list(tipper_data),
-       tipper_data=tipper_data,
-       arrow_scale=6.0,
-       show_background_cbar=False,
-   )
-   fig.savefig(
-       "tf_induction_multiperiod_map_synthetic.png",
-       dpi=200,
-       bbox_inches="tight",
-   )
-   plt.close(fig)
+   >>> from pycsamt.emtools._core import _iter_items, _name
+   >>> from pycsamt.emtools.tf import _get_t_block, _nearest_idx
+   >>> override_periods = [25.0, 650.0, 2000.0, 17000.0]
+   >>> tipper_data = {}
+   >>> for p in override_periods:
+   ...     rows = []
+   ...     for i, ed in enumerate(_iter_items(sites)):
+   ...         _, t, fr = _get_t_block(ed)
+   ...         per = 1.0 / fr
+   ...         j = _nearest_idx(per, np.array([p]))[0]
+   ...         rows.append([t[j, 0], t[j, 1]])
+   ...     tipper_data[p] = np.array(rows, dtype=complex)
+   >>> print({p: arr.shape for p, arr in tipper_data.items()})
+   {25.0: (26, 2), 650.0: (26, 2), 2000.0: (26, 2), 17000.0: (26, 2)}
+   >>> print("|T| mean at 25 s:", np.abs(tipper_data[25.0]).mean())
+   |T| mean at 25 s: 0.22174234813909238
+   >>> fig, axes = plot_induction_multiperiod_map(
+   ...     sites,
+   ...     periods=list(tipper_data),
+   ...     tipper_data=tipper_data,
+   ...     arrow_scale=6.0,
+   ...     show_background_cbar=False,
+   ... )
+   >>> fig.savefig(
+   ...     "tf_induction_multiperiod_map_synthetic.png",
+   ...     dpi=200,
+   ...     bbox_inches="tight",
+   ... )
+   >>> plt.close(fig)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-11.png
    :width: 100%
 
-The station order in each ``tipper_data`` array must match the station
-order returned by ``ensure_sites`` for the input survey.
+Each ``tipper_data`` value has shape ``(n_stations, 2)`` -- column 0 is
+``Tx``, column 1 is ``Ty`` -- and the station order in each array must
+match the station order returned by ``ensure_sites`` for the input
+survey, which is exactly what iterating ``sites`` itself guarantees
+above.  Compare the two figures: they agree, because both are reading
+the same real transfer functions, just through two different code paths.
+Swap the extraction loop for your own inversion or remote-reference
+output to reuse this pattern with genuinely external data.
 
 Spectra-Direct Workflows
 ------------------------
@@ -646,8 +666,11 @@ frequency solves
 
 Here the rows represent time windows or spectral estimates at the same
 frequency.  The plotting API does not require you to perform this solve
-manually; it asks each spectra object for its tipper and then applies
-the same map, polar, and rose formulas used for EDI-based data.
+manually; it asks each spectra object for its tipper (via ``Spectra.to_Z``,
+covered on :ref:`emtools_spectra`) and then applies the same map, polar,
+and rose formulas used for EDI-based data -- any real
+``pycsamt.seg.spectra.Spectra`` object works directly, with no adapter
+needed.
 
 Use these functions when your workflow is still at the spectra stage:
 
@@ -665,66 +688,53 @@ Use these functions when your workflow is still at the spectra stage:
    * - ``plot_induction_rose_from_spectra``
      - Summarize spectra-derived induction azimuths over a period band.
 
-.. code-block:: python
-   :linenos:
+The bundled ``data/MT/SPECTRA`` files carry real cross-power spectra and
+a real ``HZ`` channel, so their tipper is genuine -- but they are
+de-identified (``REFLAT``/``REFLONG`` are zeroed), so a real map still
+needs an explicit ``coords`` mapping.  Use a placeholder local grid for
+that, and be honest in the caption that the *positions* are placeholders
+even though the *tipper values* are not.
 
-   import matplotlib.pyplot as plt
-   import numpy as np
+.. code-block:: pycon
 
-   from pycsamt.emtools import (
-       plot_induction_map_from_spectra,
-       plot_induction_rose_from_spectra,
-       plot_tipper_polar_from_spectra,
-   )
-   from pycsamt.z.tipper import Tipper
-
-   class SpectraWithTipper:
-       def __init__(self, name, tx_scale, ty_scale):
-           self.name = name
-           self.freq = np.array([0.1, 0.01, 0.001])
-           periods = 1.0 / self.freq
-           tx = tx_scale * (0.08 + 0.02j) * np.sqrt(periods / periods[0])
-           ty = ty_scale * (0.04 + 0.01j) * np.sqrt(periods / periods[0])
-           self._tipper = np.column_stack([tx, ty])
-
-       def to_Z(self, estimate_error=False):
-           tipper = Tipper(tipper_array=self._tipper, freq=self.freq)
-           return None, tipper
-
-   spectra_by_station = {
-       "S001": SpectraWithTipper("S001", 1.0, 0.6),
-       "S002": SpectraWithTipper("S002", 1.4, 0.9),
-       "S003": SpectraWithTipper("S003", 0.8, 1.3),
-   }
-
-   coords = {
-       "S001": (0.0, 0.0),
-       "S002": (500.0, 0.0),
-       "S003": (1000.0, 0.0),
-   }
-
-   plot_induction_map_from_spectra(
-       spectra_by_station,
-       coords=coords,
-       period=100.0,
-   )
-   plt.gcf().savefig("tf_spectra_induction_map.png", dpi=200, bbox_inches="tight")
-   plt.close()
-
-   plot_tipper_polar_from_spectra(
-       {"S001": spectra_by_station["S001"]},
-       component="real",
-   )
-   plt.gcf().savefig("tf_spectra_tipper_polar.png", dpi=200, bbox_inches="tight")
-   plt.close()
-
-   plot_induction_rose_from_spectra(
-       spectra_by_station,
-       component="real",
-       pband=(10.0, 1000.0),
-   )
-   plt.gcf().savefig("tf_spectra_induction_rose.png", dpi=200, bbox_inches="tight")
-   plt.close()
+   >>> from pycsamt.seg.spectra import Spectra
+   >>> from pycsamt.emtools import (
+   ...     plot_induction_map_from_spectra,
+   ...     plot_induction_rose_from_spectra,
+   ...     plot_tipper_polar_from_spectra,
+   ... )
+   >>> spectra_dir = Path("data/MT/SPECTRA")
+   >>> sp1 = Spectra.from_file(spectra_dir / "spectra01.edi")
+   >>> sp2 = Spectra.from_file(spectra_dir / "spectra02.edi")
+   >>> print(sp1.name, "period range:", (1 / sp1.freq).min(), (1 / sp1.freq).max())
+   SPECTRA01 period range: 9.615384615384615e-05 0.5813953488372093
+   >>> print(sp2.name, "period range:", (1 / sp2.freq).min(), (1 / sp2.freq).max())
+   SPECTRA02 period range: 0.003125 2380.9523809523807
+   >>> spectra_by_station = {"spectra01": sp1, "spectra02": sp2}
+   >>> coords = {
+   ...     "spectra01": (0.0, 0.0),
+   ...     "spectra02": (500.0, 0.0),
+   ... }
+   >>> _ = plot_induction_map_from_spectra(
+   ...     spectra_by_station,
+   ...     coords=coords,
+   ...     period=0.1,
+   ... )
+   >>> plt.gcf().savefig("tf_spectra_induction_map.png", dpi=200, bbox_inches="tight")
+   >>> plt.close()
+   >>> _ = plot_tipper_polar_from_spectra(
+   ...     {"spectra01": sp1},
+   ...     component="real",
+   ... )
+   >>> plt.gcf().savefig("tf_spectra_tipper_polar.png", dpi=200, bbox_inches="tight")
+   >>> plt.close()
+   >>> _ = plot_induction_rose_from_spectra(
+   ...     spectra_by_station,
+   ...     component="real",
+   ...     pband=(0.003, 0.6),
+   ... )
+   >>> plt.gcf().savefig("tf_spectra_induction_rose.png", dpi=200, bbox_inches="tight")
+   >>> plt.close()
 
 .. grid:: 3
    :gutter: 2
@@ -744,115 +754,25 @@ Use these functions when your workflow is still at the spectra stage:
       .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-12-03.png
          :width: 100%
 
-For spectra maps, ``coords`` are plot coordinates ``(x, y)``.  A bare
-``Spectra`` object does not carry reliable map geometry.
+``sp1`` and ``sp2`` barely overlap in period (``0.003``-``0.58`` s), so
+``0.1`` s and the ``(0.003, 0.6)`` s rose band were chosen to land inside
+both.  For spectra maps, ``coords`` are plot coordinates ``(x, y)``.  A
+bare ``Spectra`` object does not carry reliable map geometry, which is
+why this is the one map on this page that still needs an explicit
+override.
 
 Recommended Workflow
 --------------------
 
 A robust tipper interpretation keeps the raw station behavior, the
-period behavior, and the sign convention visible:
+period behavior, and the sign convention visible.  The script below runs
+that sequence end to end on KAP03.
 
-.. code-block:: python
+.. code-dropdown:: ../../../scripts/generate_user_guide_emtools_tf_figures.py
+   :language: python
+   :pyobject: run_tf_workflow
    :linenos:
-
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import (
-       ensure_sites,
-       plot_induction_convention,
-       plot_induction_map,
-       plot_induction_multiperiod_map,
-       plot_induction_rose,
-       plot_induction_section,
-       plot_tipper_hodograms,
-       plot_tipper_polar,
-   )
-
-   sites = ensure_sites(
-       Path("data/MT/kap03lmt_edis"),
-       recursive=True,
-   )
-
-   strongest_station = "kap151"
-   periods = [25.0, 650.0, 2000.0, 17000.0]
-
-   plot_tipper_hodograms(
-       sites,
-       station=strongest_station,
-       bands=[(25.0, 200.0), (200.0, 2000.0), (2000.0, 17000.0)],
-   ).savefig("tf_recommended_hodograms.png", dpi=200, bbox_inches="tight")
-   plt.close()
-
-   ax = plot_tipper_polar(
-       sites,
-       station=strongest_station,
-       component="real",
-   )
-   ax.figure.savefig("tf_recommended_polar.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
-
-   ax = plot_induction_map(
-       sites,
-       period=2000.0,
-       convention="park",
-       show_real=True,
-       show_imag=True,
-       scale=4.0,
-   )
-   ax.figure.savefig("tf_recommended_map.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
-
-   plot_induction_convention(
-       sites,
-       period=650.0,
-       station_labels=False,
-   )
-   plt.gcf().savefig("tf_recommended_convention.png", dpi=200, bbox_inches="tight")
-   plt.close()
-
-   ax = plot_induction_rose(
-       sites,
-       component="real",
-       pband=(25.0, 200.0),
-       title="Short-period induction azimuths",
-   )
-   ax.figure.savefig("tf_recommended_rose_short.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
-
-   ax = plot_induction_rose(
-       sites,
-       component="real",
-       pband=(2000.0, 17000.0),
-       title="Long-period induction azimuths",
-   )
-   ax.figure.savefig("tf_recommended_rose_long.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
-
-   ax = plot_induction_section(
-       sites,
-       component="abs",
-       n_periods=30,
-   )
-   ax.figure.savefig("tf_recommended_section.png", dpi=200, bbox_inches="tight")
-   plt.close(ax.figure)
-
-   fig, axes = plot_induction_multiperiod_map(
-       sites,
-       periods=periods,
-       convention="park",
-       arrow_scale=6.0,
-       show_background_cbar=False,
-       station_labels=False,
-   )
-   fig.savefig(
-       "tf_recommended_multiperiod_map.png",
-       dpi=200,
-       bbox_inches="tight",
-   )
-   plt.close(fig)
+   :title: View the executed workflow source code
 
 .. grid:: 3
    :gutter: 2
@@ -900,7 +820,11 @@ period behavior, and the sign convention visible:
 This sequence answers the practical questions in order: which station is
 strong, whether its response is coherent, where the profile responds,
 which convention is being used, whether azimuths tighten with period,
-and how the anomaly migrates across period.
+and how the anomaly migrates across period.  On this survey it converges
+on the same two features found piecemeal above: ``kap151`` is the
+station whose hodogram most rewards a closer look, and ``kap121``
+through ``kap148`` are the segment of the profile that stays anomalous
+across the widest part of the period band.
 
 Common Pitfalls
 ---------------
@@ -912,10 +836,15 @@ Always state the sign convention.  Parkinson and Wiese views are rotated
 relative to each other.
 
 Do not interpret index-based map axes as geographic distance.  If EDI
-coordinates are missing, the plots may fall back to station index.
+coordinates are missing from both ``>HEAD`` and ``>=DEFINEMEAS``, the
+plots fall back to station index -- and unlike a missing map, this
+failure mode still draws something, so check for an exactly flat,
+evenly spaced line before trusting a map's layout.
 
 Do not collapse all periods too early.  A strong whole-band station may
-be strong only over a narrow period window.
+be strong only over a narrow period window -- or, as with ``kap148``
+here, genuinely strong across nearly the entire band, which is itself
+worth flagging rather than averaging away.
 
 Do not treat synthetic or placeholder backgrounds as real topography in
 multi-period maps.  Pass a real background raster for publication.

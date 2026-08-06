@@ -1377,8 +1377,10 @@ class Spectra(BaseEM):
 
         Uncertainties are computed by first-order propagation
         under a complex-Wishart model and scale as
-        ``1 / sqrt(DoF)``.  If DoF cannot be determined, errors
-        are left as NaN.
+        ``1 / sqrt(DoF)``.  If DoF cannot be determined for every
+        frequency, no per-frequency array is attached at all:
+        ``z_err`` (and ``tip.tipper_err`` when applicable) come
+        back as ``None`` rather than an array of NaN.
 
         Examples
         --------

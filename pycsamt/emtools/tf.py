@@ -96,12 +96,73 @@ def _station_xy(ed: Any, i: int) -> tuple[float, float]:
     return float(i), 0.0  # fallback: index on a line
 
 
+_XY_AXIS_LABELS = {
+    "projected": ("x / Easting  (m)", "y / Northing  (m)"),
+    "geographic": ("Longitude", "Latitude"),
+    "index": ("Station index", "y  (arb.)"),
+}
+
+
+def _xy_axis_kind(ed: Any) -> str:
+    """Classify which branch :func:`_station_xy` would take for ``ed``.
+
+    Mirrors its priority order so axis labels stay honest about what the
+    plotted coordinates actually are: real projected metres (flat
+    ``east``/``easting``/``x`` attributes), real geographic degrees (the
+    EDI's ``coords`` -> lat/lon fallback), or a synthetic index-on-a-line
+    when neither is available.
+    """
+    for kx, ky in [("east", "north"), ("easting", "northing"), ("x", "y")]:
+        x = getattr(ed, kx, None)
+        y = getattr(ed, ky, None)
+        if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+            return "projected"
+    coords = getattr(ed, "coords", None)
+    if coords is not None:
+        try:
+            lat, lon = float(coords[0]), float(coords[1])
+        except (TypeError, ValueError, IndexError):
+            lat = lon = float("nan")
+        if np.isfinite(lat) and np.isfinite(lon):
+            return "geographic"
+    return "index"
+
+
+def _xy_axis_labels(S: Any) -> tuple[str, str]:
+    """Return ``(xlabel, ylabel)`` matching the coordinate source that
+    :func:`_station_xy` will actually use for this survey.
+    """
+    for i, ed in enumerate(_iter_items(S)):
+        kind = _xy_axis_kind(ed)
+        if kind != "index":
+            return _XY_AXIS_LABELS[kind]
+    return _XY_AXIS_LABELS["index"]
+
+
 def _nearest_idx(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    j = np.searchsorted(x, y)
-    j = np.clip(j, 1, x.size - 1)
-    use_left = np.abs(y - x[j - 1]) <= np.abs(y - x[j])
-    j[use_left] -= 1
-    return j
+    """Return, for each value in ``y``, the index into ``x`` of its
+    nearest match in log-space.
+
+    ``np.searchsorted`` requires its reference array to be sorted
+    ascending. Most callers pass ``x = 1.0 / freq`` built directly from
+    a station's native frequency array, which real EDI files can store
+    high-to-low, low-to-high, or -- when a file concatenates runs with
+    different sample rates (as happens for a few real stations in
+    ``data/MT/kap03lmt_edis``) -- non-monotonically. Sorting ``x``
+    internally and mapping the result back onto the caller's original
+    indexing fixes every call site regardless of the input's native
+    order.
+    """
+    x = np.asarray(x)
+    order = np.argsort(x)
+    lx, ly = np.log10(x[order]), np.log10(y)
+    idx = np.searchsorted(lx, ly)
+    idx = np.clip(idx, 1, lx.size - 1)
+    left = np.abs(ly - lx[idx - 1])
+    right = np.abs(ly - lx[idx])
+    pick_left = left <= right
+    idx[pick_left] -= 1
+    return order[idx]
 
 
 def _pt_angle(S, station: str, per: np.ndarray) -> np.ndarray | None:
@@ -748,8 +809,9 @@ def plot_induction_map(
     if show_imag:
         y_extent.append(ys + im[:, 1] * scale)
     _set_map_aspect(ax, np.concatenate(y_extent), scale)
-    ax.set_xlabel("x / Easting  (m)", fontsize=9)
-    ax.set_ylabel("y / Northing  (m)", fontsize=9)
+    _xlab, _ylab = _xy_axis_labels(S)
+    ax.set_xlabel(_xlab, fontsize=9)
+    ax.set_ylabel(_ylab, fontsize=9)
     ax.set_title(
         title or f"Induction arrows  —  T = {period:g} s  [{convention}]",
         fontsize=10,
@@ -1029,8 +1091,9 @@ def plot_induction_convention(
         # a thin band -- switch to a tight, non-equal window in that case.
         _set_map_aspect(ax, ys + v, scale)
         ax.set_title(label, fontsize=9, pad=5)
-        ax.set_xlabel("x  (m)", fontsize=8)
-        ax.set_ylabel("y  (m)", fontsize=8)
+        _xlab, _ylab = _xy_axis_labels(S)
+        ax.set_xlabel(_xlab, fontsize=8)
+        ax.set_ylabel(_ylab, fontsize=8)
         _spine_style(ax)
 
     axes_given = _axes_list(axes, 4) if axes is not None else None

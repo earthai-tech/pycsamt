@@ -148,6 +148,10 @@ from .inspect import (
 
 # ─── L-curve ──────────────────────────────────────────────────────────────────
 from .lcurve import (
+    LCurveData,
+    lcurve_from_mare2dem,
+    lcurve_from_modem,
+    lcurve_from_occam2d,
     lcurve_table,
     plot_lcurve,
 )
@@ -614,6 +618,10 @@ __all__ = [
     # l-curve
     "lcurve_table",
     "plot_lcurve",
+    "LCurveData",
+    "lcurve_from_occam2d",
+    "lcurve_from_modem",
+    "lcurve_from_mare2dem",
     # cross-spectra
     "coherence_matrix",
     "psd_table",

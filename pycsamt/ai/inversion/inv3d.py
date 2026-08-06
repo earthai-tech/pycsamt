@@ -123,10 +123,10 @@ class GCNInverter3D(BaseEMNet):
         self.dropout = float(dropout)
         self._net_kwargs = net_kwargs
 
-        self._x_mean: float | None = None
-        self._x_std: float | None = None
-        self._y_mean: float | None = None
-        self._y_std: float | None = None
+        self._x_mean: np.ndarray | None = None
+        self._x_std: np.ndarray | None = None
+        self._y_mean: np.ndarray | None = None
+        self._y_std: np.ndarray | None = None
         self._backend_name: str | None = None
         self._A_stored: np.ndarray | None = None  # adjacency from training
 
@@ -240,11 +240,25 @@ class GCNInverter3D(BaseEMNet):
         A = self._prepare_adjacency(adjacency, coords, radius, n_stations)
         self._A_stored = A.copy()
 
-        # Global z-score normalisation
-        self._x_mean = float(np.nanmean(X))
-        self._x_std = float(np.nanstd(X)) + 1e-8
-        self._y_mean = float(np.nanmean(y))
-        self._y_std = float(np.nanstd(y)) + 1e-8
+        # Per-feature/per-output z-score normalisation (over the sample and
+        # station/triangle axes, keeping the last axis separate). A single
+        # global scalar here would let whichever feature happens to have
+        # the largest raw magnitude (e.g. phase in degrees, O(10-100))
+        # dominate the shared std and flatten every other feature -- e.g.
+        # log10(rho_a) at O(1) or a normalized [0, 1] position feature --
+        # to a nearly constant value after normalisation, effectively
+        # hiding it from the network regardless of its real information
+        # content. See the mt2d_tri position-feature addition in
+        # pycsamt.agents.inv2d_agent for the case this was found from.
+        # np.nanmean/nanstd upcast float32 input to float64 for a vector
+        # result (unlike a Python-float scalar, which numpy's weak-scalar
+        # promotion rules leave float32 arithmetic alone) -- cast back
+        # explicitly so Xn/yn below, and every later predict() call, stay
+        # float32 and match the float32 network weights.
+        self._x_mean = np.nanmean(X, axis=(0, 1)).astype(np.float32)
+        self._x_std = (np.nanstd(X, axis=(0, 1)) + 1e-8).astype(np.float32)
+        self._y_mean = np.nanmean(y, axis=(0, 1)).astype(np.float32)
+        self._y_std = (np.nanstd(y, axis=(0, 1)) + 1e-8).astype(np.float32)
 
         Xn = (X - self._x_mean) / self._x_std
         yn = (y - self._y_mean) / self._y_std
@@ -702,7 +716,7 @@ class GCNInverter3D(BaseEMNet):
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
             val = getattr(self, attr, None)
             if val is not None:
-                out[attr] = np.array([val])
+                out[attr] = np.atleast_1d(np.asarray(val, dtype=np.float32))
         if self._backend_name:
             out["_backend"] = np.array(self._backend_name)
         if self._A_stored is not None:
@@ -719,7 +733,7 @@ class GCNInverter3D(BaseEMNet):
 
         for attr in ("_x_mean", "_x_std", "_y_mean", "_y_std"):
             if attr in weights:
-                setattr(self, attr, float(weights.pop(attr)[0]))
+                setattr(self, attr, np.asarray(weights.pop(attr), dtype=np.float32))
         if "_A_stored" in weights:
             self._A_stored = weights.pop("_A_stored")
         self._network = self._build_network()

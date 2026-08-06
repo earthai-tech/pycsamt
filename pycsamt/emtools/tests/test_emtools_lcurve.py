@@ -2,13 +2,36 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import matplotlib
 import numpy as np
+import pytest
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from pycsamt.emtools.lcurve import lcurve_table, plot_lcurve
+from pycsamt.emtools.lcurve import (
+    LCurveData,
+    lcurve_from_mare2dem,
+    lcurve_from_modem,
+    lcurve_from_occam2d,
+    lcurve_table,
+    plot_lcurve,
+)
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_OCCAM2D_LOG = _REPO_ROOT / "data" / "occam2D" / "LogFile.logfile"
+_MODEM_LOG = (
+    _REPO_ROOT
+    / "data"
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
+    / "Modular_NLCG.log"
+)
+_MARE2DEM_LOG = (
+    _REPO_ROOT / "data" / "mare2dem" / "demo_mt_inversion" / "demo.logfile"
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Synthetic L-curve data
@@ -132,3 +155,137 @@ class TestPlotLcurve:
         ax = plot_lcurve(m, r)
         plt.close("all")
         assert ax is not None
+
+    def test_target_misfit_line(self):
+        m, r, l = _ldata()
+        ax = plot_lcurve(m, r, l, target_misfit=1.0, target_label="target")
+        plt.close("all")
+        assert any(
+            np.allclose(line.get_ydata(), 1.0) for line in ax.get_lines()
+        )
+
+    def test_label_every(self):
+        m, r, l = _ldata()
+        ax = plot_lcurve(m, r, l, label_every=3, label_prefix="lambda=")
+        plt.close("all")
+        assert any(
+            t.get_text().startswith("lambda=") for t in ax.texts
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Real-inversion adapters (Occam2D, ModEM, MARE2DEM)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.skipif(
+    not _OCCAM2D_LOG.exists(), reason="bundled Occam2D log not available"
+)
+class TestLcurveFromOccam2d:
+    def test_returns_lcurvedata(self):
+        sweep = lcurve_from_occam2d(_OCCAM2D_LOG)
+        assert isinstance(sweep, LCurveData)
+        assert sweep.backend == "occam2d"
+
+    def test_arrays_aligned_and_positive(self):
+        sweep = lcurve_from_occam2d(_OCCAM2D_LOG)
+        n = sweep.misfit.size
+        assert n > 0
+        assert sweep.rough.size == n
+        assert sweep.lam.size == n
+        assert sweep.iterations.size == n
+        assert np.all(sweep.misfit > 0)
+        assert np.all(sweep.rough > 0)
+
+    def test_misfit_decreases_overall(self):
+        sweep = lcurve_from_occam2d(_OCCAM2D_LOG)
+        order = np.argsort(sweep.iterations)
+        assert sweep.misfit[order][-1] < sweep.misfit[order][0]
+
+    def test_table_and_plot(self):
+        sweep = lcurve_from_occam2d(_OCCAM2D_LOG)
+        df = sweep.table()
+        assert not df.empty
+        ax = sweep.plot()
+        plt.close("all")
+        assert ax is not None
+
+
+@pytest.mark.skipif(
+    not _MODEM_LOG.exists(), reason="bundled ModEM log not available"
+)
+class TestLcurveFromModem:
+    def test_returns_lcurvedata(self):
+        sweep = lcurve_from_modem(_MODEM_LOG)
+        assert isinstance(sweep, LCurveData)
+        assert sweep.backend == "modem"
+
+    def test_arrays_aligned_and_positive(self):
+        sweep = lcurve_from_modem(_MODEM_LOG)
+        n = sweep.misfit.size
+        assert n > 0
+        assert sweep.rough.size == n
+        assert sweep.lam.size == n
+        assert np.all(sweep.misfit > 0)
+        assert np.all(sweep.rough > 0)
+
+    def test_lambda_decreases_with_damping_schedule(self):
+        sweep = lcurve_from_modem(_MODEM_LOG)
+        order = np.argsort(sweep.iterations)
+        assert sweep.lam[order][-1] < sweep.lam[order][0]
+
+    def test_table_and_plot(self):
+        sweep = lcurve_from_modem(_MODEM_LOG)
+        df = sweep.table()
+        assert not df.empty
+        ax = sweep.plot()
+        plt.close("all")
+        assert ax is not None
+
+
+@pytest.mark.skipif(
+    not _MARE2DEM_LOG.exists(), reason="bundled MARE2DEM log not available"
+)
+class TestLcurveFromMare2dem:
+    def test_returns_lcurvedata(self):
+        sweep = lcurve_from_mare2dem(_MARE2DEM_LOG)
+        assert isinstance(sweep, LCurveData)
+        assert sweep.backend == "mare2dem"
+
+    def test_arrays_aligned_and_positive(self):
+        sweep = lcurve_from_mare2dem(_MARE2DEM_LOG)
+        n = sweep.misfit.size
+        assert n > 0
+        assert sweep.rough.size == n
+        assert sweep.lam.size == n
+        assert np.all(sweep.misfit > 0)
+        assert np.all(sweep.rough > 0)
+        # "Optimal Mu" is log10(mu) in the raw log; the adapter must
+        # convert it back to linear scale.
+        assert np.all(sweep.lam > 0)
+
+    def test_table_and_plot(self):
+        sweep = lcurve_from_mare2dem(_MARE2DEM_LOG)
+        df = sweep.table()
+        assert not df.empty
+        ax = sweep.plot()
+        plt.close("all")
+        assert ax is not None
+
+
+class TestLcurveFromMissingFile:
+    def test_occam2d_missing_file_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            lcurve_from_occam2d(tmp_path / "does_not_exist.logfile")
+
+    def test_modem_missing_file_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            lcurve_from_modem(tmp_path / "does_not_exist.log")
+
+    def test_mare2dem_missing_file_returns_empty(self, tmp_path):
+        # Mare2DEMLog does not raise for a missing path; it silently
+        # leaves `iterations` empty, so the adapter mirrors that instead
+        # of pretending it validated the file.
+        sweep = lcurve_from_mare2dem(tmp_path / "does_not_exist.logfile")
+        assert isinstance(sweep, LCurveData)
+        assert sweep.misfit.size == 0

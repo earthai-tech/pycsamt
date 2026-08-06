@@ -510,6 +510,15 @@ class SourceManager(Mare2DEMBase):
                 "Check your network connection or try method='archive'."
             )
 
+        # Strip the clone's own .git/ so *dest* holds plain files, matching
+        # what the "archive" method produces. Left in place, a nested .git
+        # turns *dest* into an embedded repository from the parent repo's
+        # point of view -- `git add` on a dev checkout would either skip it
+        # silently (it also matches the _source/* ignore pattern) or, for
+        # anyone forcing it, record a dangling gitlink with no
+        # corresponding .gitmodules entry.
+        shutil.rmtree(dest / ".git", ignore_errors=True)
+
     def _download_archive(self, dest: Path) -> None:
         """Download and extract the MARE2DEM tar.gz archive into *dest*."""
         try:

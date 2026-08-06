@@ -7,11 +7,12 @@ Noise Removal And Spatial Filtering
 module for CSAMT/AMT/MT transfer functions. It operates on impedance
 and tipper arrays already stored in EDI or ``Sites`` objects. It does
 not estimate transfer functions from time series, and it does not
-perform true remote-reference processing internally. Use it after data
-loading, and before inversion or final interpretation, when the survey
-contains power-line harmonics, isolated frequency spikes, station-local
-outliers, station-to-station jumps, or rows that should be filtered more
-strongly because their confidence is low.
+perform true :term:`remote reference` processing internally. Use it
+after data loading, and before inversion or final interpretation, when
+the survey contains :term:`power-line harmonics <Powerline harmonics>`,
+isolated frequency spikes, station-local outliers, station-to-station
+jumps, or rows that should be filtered more strongly because their
+confidence is low.
 
 The module has many functions because noise is not one problem. A
 single CSAMT line may need one or more of these treatments:
@@ -69,20 +70,16 @@ workflows: a directory of EDI files, a single EDI path, an existing
 repeatable processing, load once with ``ensure_sites`` and keep the raw
 object unchanged while you test settings.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools import ensure_sites
-
-   edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
-   raw = ensure_sites(edi_dir, recursive=True, verbose=0)
-
-   # Most remove_noise functions default to inplace=False. The returned
-   # object is therefore the processed survey, while raw remains the
-   # baseline for before/after QC.
-   processed = raw
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools import ensure_sites
+   >>> edi_dir = Path("data/AMT/WILLY_DATA/L18PLT")
+   >>> raw = ensure_sites(edi_dir, recursive=True, verbose=0)
+   >>> # Most remove_noise functions default to inplace=False. The returned
+   >>> # object is therefore the processed survey, while raw remains the
+   >>> # baseline for before/after QC.
+   >>> processed = raw
 
 Use ``inplace=False`` during exploration. Switch to ``inplace=True`` only
 inside a controlled pipeline where you no longer need the raw object in
@@ -93,7 +90,7 @@ SNR Diagnostics
 
 The simplest diagnostic is ``snr_table``. It returns one row per station
 and frequency. For each row, pyCSAMT computes an impedance-amplitude
-signal-to-noise ratio from ``Z`` and ``Z_err``:
+:term:`signal-to-noise ratio <SNR>` from ``Z`` and ``Z_err``:
 
 .. math::
 
@@ -106,31 +103,20 @@ If the input EDI files do not contain impedance errors, the SNR values
 are ``NaN``. That is useful information: it means later SNR-gated steps
 cannot make a data-driven decision from error bars.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.remove_noise import snr_table
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-   snr = snr_table(sites)
-   print(snr.head())
-   print(snr["snr"].describe())
-   weak_rows = snr.loc[snr["snr"] < 3.0, ["station", "freq", "snr"]]
-   weak_by_station = (
-       weak_rows.groupby("station", as_index=False)
-       .agg(n_weak=("freq", "size"), min_snr=("snr", "min"))
-       .sort_values(["n_weak", "min_snr"], ascending=[False, True])
-   )
-   print(weak_by_station.head(10))
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import ensure_sites
+   >>> from pycsamt.emtools.remove_noise import snr_table
+   >>> sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
+   >>> snr = snr_table(sites)
+   >>> snr.head()
    station     freq        snr
    0  18-001A  10400.0  24.379116
    1  18-001A   8707.0  21.511108
    2  18-001A   7289.0  21.241377
    3  18-001A   6102.0  15.230757
    4  18-001A   5108.0  13.140256
+   >>> snr["snr"].describe()
    count    1484.000000
    mean       14.064419
    std         5.878163
@@ -140,6 +126,13 @@ cannot make a data-driven decision from error bars.
    75%        17.294278
    max        56.055512
    Name: snr, dtype: float64
+   >>> weak_rows = snr.loc[snr["snr"] < 3.0, ["station", "freq", "snr"]]
+   >>> weak_by_station = (
+   ...     weak_rows.groupby("station", as_index=False)
+   ...     .agg(n_weak=("freq", "size"), min_snr=("snr", "min"))
+   ...     .sort_values(["n_weak", "min_snr"], ascending=[False, True])
+   ... )
+   >>> weak_by_station.head(10)
       station  n_weak   min_snr
    2  18-024U       3  2.187781
    1  18-022U       1  2.388301
@@ -161,43 +154,32 @@ whether remote reference was attempted, whether it was available, which
 power-line notch settings were used, and how many harmonic samples were
 affected.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites
-   from pycsamt.emtools.remove_noise import emi_mitigation_report
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   emi = emi_mitigation_report(
-       sites,
-       remote_reference_attempted=False,
-       remote_reference_reason=(
-           "No independent remote-reference time series were acquired; "
-           "post-estimation EMI mitigation was applied to the EDI transfer functions."
-       ),
-       mains_hz=50.0,
-       n_harm=30,
-       tol_hz=0.08,
-       notch_mode="interp",
-   )
-
-   print(
-       emi[
-           [
-               "station",
-               "remote_reference_attempted",
-               "remote_reference_available",
-               "n_frequency",
-               "harmonic_z_samples",
-               "harmonic_tipper_samples",
-               "applied_measures",
-           ]
-       ].head()
-   )
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools.remove_noise import emi_mitigation_report
+   >>> emi = emi_mitigation_report(
+   ...     sites,
+   ...     remote_reference_attempted=False,
+   ...     remote_reference_reason=(
+   ...         "No independent remote-reference time series were acquired; "
+   ...         "post-estimation EMI mitigation was applied to the EDI transfer functions."
+   ...     ),
+   ...     mains_hz=50.0,
+   ...     n_harm=30,
+   ...     tol_hz=0.08,
+   ...     notch_mode="interp",
+   ... )
+   >>> emi[
+   ...     [
+   ...         "station",
+   ...         "remote_reference_attempted",
+   ...         "remote_reference_available",
+   ...         "n_frequency",
+   ...         "harmonic_z_samples",
+   ...         "harmonic_tipper_samples",
+   ...         "applied_measures",
+   ...     ]
+   ... ].head()
       station  ...                                   applied_measures
    0  18-001A  ...  notch_powerline(mode=interp, mains_hz=50, n_ha...
    1  18-002U  ...  notch_powerline(mode=interp, mains_hz=50, n_ha...
@@ -238,22 +220,18 @@ unmasked rows. This distinction matters: masking preserves the evidence
 of contamination, while interpolation prepares a complete grid for tools
 that cannot accept gaps.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites, notch_powerline
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   notched = notch_powerline(
-       sites,
-       mains_hz=50.0,
-       n_harm=30,
-       tol_hz=0.08,
-       mode="interp",
-       also="both",
-       inplace=False,
-   )
+   >>> from pycsamt.emtools import notch_powerline
+   >>> notched = notch_powerline(
+   ...     sites,
+   ...     mains_hz=50.0,
+   ...     n_harm=30,
+   ...     tol_hz=0.08,
+   ...     mode="interp",
+   ...     also="both",
+   ...     inplace=False,
+   ... )
 
 Use ``mode="mask"`` when you want contaminated rows to remain visibly
 missing for later QC. Use ``mode="interp"`` when the downstream workflow
@@ -291,57 +269,45 @@ only rows that pass the SNR gate are smoothed. The filter therefore
 reduces point-to-point scatter without forcing a station to follow one
 global curve shape.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-
-   from pycsamt.emtools import ensure_sites, smooth_logfreq
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   smoothed = smooth_logfreq(
-       sites,
-       win=5,
-       kind="tri",
-       also="both",
-       gate_snr=2.5,
-       inplace=False,
-   )
-
-   def rho_xy(survey, station="18-016A"):
-       for i, edi in enumerate(_iter_items(survey)):
-           if _name(edi, i) == station:
-               _, z, freq = _get_z_block(edi)
-               return 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq, freq
-       raise KeyError(station)
-
-   rho_raw, freq = rho_xy(sites)
-   rho_smooth, _ = rho_xy(smoothed)
-
-   fig, ax = plt.subplots(figsize=(8, 4.4))
-   ax.loglog(1.0 / freq, rho_raw, "o-", ms=3, lw=1, color="0.45", label="raw")
-   ax.loglog(
-       1.0 / freq,
-       rho_smooth,
-       "-",
-       lw=2,
-       label="smooth_logfreq, triangular window",
-   )
-   ax.set_xlabel("Period (s)")
-   ax.set_ylabel(r"$\rho_{a,xy}$ ($\Omega\,m$)")
-   ax.set_title("18-016A: local log-frequency smoothing")
-   ax.grid(True, which="both", alpha=0.25)
-   ax.legend(fontsize=8)
-   fig.tight_layout()
-
-   out = Path("docs/source/images/user_guide/emtools")
-   fig.savefig(out / "user-guide-emtools-remove-noise-04.png", dpi=200)
-   plt.close(fig)
+   >>> import matplotlib.pyplot as plt
+   >>> import numpy as np
+   >>> from pycsamt.emtools import smooth_logfreq
+   >>> from pycsamt.emtools._core import _get_z_block, _iter_items, _name
+   >>> smoothed = smooth_logfreq(
+   ...     sites,
+   ...     win=5,
+   ...     kind="tri",
+   ...     also="both",
+   ...     gate_snr=2.5,
+   ...     inplace=False,
+   ... )
+   >>> def rho_xy(survey, station="18-016A"):
+   ...     for i, edi in enumerate(_iter_items(survey)):
+   ...         if _name(edi, i) == station:
+   ...             _, z, freq = _get_z_block(edi)
+   ...             return 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq, freq
+   ...     raise KeyError(station)
+   ...
+   >>> rho_raw, freq = rho_xy(sites)
+   >>> rho_smooth, _ = rho_xy(smoothed)
+   >>> fig, ax = plt.subplots(figsize=(8, 4.4))
+   >>> _ = ax.loglog(1.0 / freq, rho_raw, "o-", ms=3, lw=1, color="0.45", label="raw")
+   >>> _ = ax.loglog(
+   ...     1.0 / freq,
+   ...     rho_smooth,
+   ...     "-",
+   ...     lw=2,
+   ...     label="smooth_logfreq, triangular window",
+   ... )
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel(r"$\rho_{a,xy}$ ($\Omega\,m$)")
+   >>> _ = ax.set_title("18-016A: local log-frequency smoothing")
+   >>> ax.grid(True, which="both", alpha=0.25)
+   >>> _ = ax.legend(fontsize=8)
+   >>> fig.tight_layout()
+   >>> fig.savefig("user-guide-emtools-remove-noise-04.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-04.png
    :width: 100%
@@ -398,62 +364,40 @@ is ``blend``. A partial blend is often a good first pass when the curve
 is noisy but still carries short-period structure that should not be
 flattened completely.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-
-   from pycsamt.emtools import ensure_sites, smooth_rho_phase
-   from pycsamt.emtools._core import _get_z_block, _iter_items, _name
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   trend = smooth_rho_phase(
-       sites,
-       components="offdiag",
-       degree=3,
-       min_points=None,
-       smooth_rho=True,
-       smooth_phase=True,
-       robust=True,
-       robust_iters=3,
-       blend=1.0,
-       inplace=False,
-   )
-
-   def rho_xy(survey, station="18-016A"):
-       for i, edi in enumerate(_iter_items(survey)):
-           if _name(edi, i) == station:
-               _, z, freq = _get_z_block(edi)
-               return 0.2 * np.abs(z[:, 0, 1]) ** 2 / freq, freq
-       raise KeyError(station)
-
-   rho_raw, freq = rho_xy(sites)
-   rho_trend, _ = rho_xy(trend)
-
-   fig, ax = plt.subplots(figsize=(8, 4.4))
-   ax.loglog(1.0 / freq, rho_raw, "o-", ms=3, lw=1, color="0.45", label="raw")
-   ax.loglog(
-       1.0 / freq,
-       rho_trend,
-       "-",
-       lw=2,
-       color="C3",
-       label="smooth_rho_phase, robust degree 3",
-   )
-   ax.set_xlabel("Period (s)")
-   ax.set_ylabel(r"$\rho_{a,xy}$ ($\Omega\,m$)")
-   ax.set_title("18-016A: rho/phase trend smoothing")
-   ax.grid(True, which="both", alpha=0.25)
-   ax.legend(fontsize=8)
-   fig.tight_layout()
-
-   out = Path("docs/source/images/user_guide/emtools")
-   fig.savefig(out / "user-guide-emtools-remove-noise-05.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools import smooth_rho_phase
+   >>> trend = smooth_rho_phase(
+   ...     sites,
+   ...     components="offdiag",
+   ...     degree=3,
+   ...     min_points=None,
+   ...     smooth_rho=True,
+   ...     smooth_phase=True,
+   ...     robust=True,
+   ...     robust_iters=3,
+   ...     blend=1.0,
+   ...     inplace=False,
+   ... )
+   >>> rho_raw, freq = rho_xy(sites)
+   >>> rho_trend, _ = rho_xy(trend)
+   >>> fig, ax = plt.subplots(figsize=(8, 4.4))
+   >>> _ = ax.loglog(1.0 / freq, rho_raw, "o-", ms=3, lw=1, color="0.45", label="raw")
+   >>> _ = ax.loglog(
+   ...     1.0 / freq,
+   ...     rho_trend,
+   ...     "-",
+   ...     lw=2,
+   ...     color="C3",
+   ...     label="smooth_rho_phase, robust degree 3",
+   ... )
+   >>> _ = ax.set_xlabel("Period (s)")
+   >>> _ = ax.set_ylabel(r"$\rho_{a,xy}$ ($\Omega\,m$)")
+   >>> _ = ax.set_title("18-016A: rho/phase trend smoothing")
+   >>> ax.grid(True, which="both", alpha=0.25)
+   >>> _ = ax.legend(fontsize=8)
+   >>> fig.tight_layout()
+   >>> fig.savefig("user-guide-emtools-remove-noise-05.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-05.png
    :width: 100%
@@ -471,8 +415,8 @@ Outlier And Spatial Denoising
 Outlier removal can operate along one station's frequency curve, across
 neighboring stations, or across the whole survey matrix.
 The three filters below use different definitions of "unlikely". The
-Hampel filter compares a row with the median of its own local frequency
-window:
+:term:`Hampel filter` compares a row with the median of its own local
+frequency window:
 
 .. math::
 
@@ -487,44 +431,37 @@ Here :math:`y_i` is either a real/imaginary value or a magnitude value,
 ``nsig``. The factor 1.4826 scales the median absolute deviation toward
 a standard-deviation equivalent for Gaussian noise.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import (
-       ensure_sites,
-       hampel_filter_freq,
-       rpca_offdiag_denoise,
-       spatial_median_filter,
-   )
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   # Per-station, along frequency. Best for isolated spikes in one curve.
-   hampel = hampel_filter_freq(
-       sites,
-       win=3,
-       nsig=3.0,
-       on="z",
-       inplace=False,
-   )
-
-   # Across station order. Best for a station that jumps relative to its
-   # neighbors at the same frequency.
-   spatial = spatial_median_filter(
-       sites,
-       half_window=2,
-       lam=0.25,
-       on="z",
-       inplace=False,
-   )
-
-   # Survey-wide low-rank denoising of off-diagonal log magnitudes.
-   # Best when the line has a common coherent trend plus sparse outliers.
-   low_rank = rpca_offdiag_denoise(
-       sites,
-       rank=2,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools import (
+   ...     hampel_filter_freq,
+   ...     rpca_offdiag_denoise,
+   ...     spatial_median_filter,
+   ... )
+   >>> # Per-station, along frequency. Best for isolated spikes in one curve.
+   >>> hampel = hampel_filter_freq(
+   ...     sites,
+   ...     win=3,
+   ...     nsig=3.0,
+   ...     on="z",
+   ...     inplace=False,
+   ... )
+   >>> # Across station order. Best for a station that jumps relative to its
+   >>> # neighbors at the same frequency.
+   >>> spatial = spatial_median_filter(
+   ...     sites,
+   ...     half_window=2,
+   ...     lam=0.25,
+   ...     on="z",
+   ...     inplace=False,
+   ... )
+   >>> # Survey-wide low-rank denoising of off-diagonal log magnitudes.
+   >>> # Best when the line has a common coherent trend plus sparse outliers.
+   >>> low_rank = rpca_offdiag_denoise(
+   ...     sites,
+   ...     rank=2,
+   ...     inplace=False,
+   ... )
 
 ``hampel_filter_freq`` is conservative at typical ``nsig`` values. It
 does not remove a station merely because the station is high amplitude;
@@ -592,19 +529,15 @@ where :math:`\lambda` is ``lam``. With ``mode="sym"``, the target uses
 choice for checking whether off-diagonal MT/CSAMT responses can be made
 more internally consistent before inversion.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites, enforce_offdiag_consistency
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   consistent = enforce_offdiag_consistency(
-       sites,
-       mode="anti",
-       lam=0.5,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools import enforce_offdiag_consistency
+   >>> consistent = enforce_offdiag_consistency(
+   ...     sites,
+   ...     mode="anti",
+   ...     lam=0.5,
+   ...     inplace=False,
+   ... )
 
 ``lam=0`` leaves the data unchanged. ``lam=1`` fully replaces the
 selected components by the consistency target. Intermediate values are
@@ -633,30 +566,21 @@ where :math:`N_i` is the number of stations with that frequency and
 This makes the decision survey-wide: a frequency can be removed even if
 one station looks acceptable, because too few stations support it.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import (
-       drop_freqs_manual,
-       ensure_sites,
-       mask_incoherent_freqs,
-   )
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   masked = mask_incoherent_freqs(
-       sites,
-       snr_thresh=2.5,
-       min_frac=0.4,
-       inplace=False,
-   )
-
-   trimmed = drop_freqs_manual(
-       sites,
-       drop_freqs=[50.0, 60.0],
-       tol_rel=0.005,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools import drop_freqs_manual, mask_incoherent_freqs
+   >>> masked = mask_incoherent_freqs(
+   ...     sites,
+   ...     snr_thresh=2.5,
+   ...     min_frac=0.4,
+   ...     inplace=False,
+   ... )
+   >>> trimmed = drop_freqs_manual(
+   ...     sites,
+   ...     drop_freqs=[50.0, 60.0],
+   ...     tol_rel=0.005,
+   ...     inplace=False,
+   ... )
 
 Use ``mask_incoherent_freqs`` for a rule based on the data. Use
 ``drop_freqs_manual`` when the field log, instrument notes, or a
@@ -688,29 +612,24 @@ The gate is the same harmonic mask used by ``notch_powerline`` when
 operation: it becomes a general spatial shrinkage toward the line trend,
 not only an EMI correction.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import ensure_sites, shrink_to_group_trend
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   harmonic_shrink = shrink_to_group_trend(
-       sites,
-       lam=0.25,
-       gate_harm=True,
-       mains_hz=50.0,
-       n_harm=30,
-       tol_hz=0.08,
-       inplace=False,
-   )
-
-   all_rows_shrink = shrink_to_group_trend(
-       sites,
-       lam=0.25,
-       gate_harm=False,
-       inplace=False,
-   )
+   >>> from pycsamt.emtools import shrink_to_group_trend
+   >>> harmonic_shrink = shrink_to_group_trend(
+   ...     sites,
+   ...     lam=0.25,
+   ...     gate_harm=True,
+   ...     mains_hz=50.0,
+   ...     n_harm=30,
+   ...     tol_hz=0.08,
+   ...     inplace=False,
+   ... )
+   >>> all_rows_shrink = shrink_to_group_trend(
+   ...     sites,
+   ...     lam=0.25,
+   ...     gate_harm=False,
+   ...     inplace=False,
+   ... )
 
 Keep ``gate_harm=True`` when the problem is power-line contamination.
 Use ``gate_harm=False`` only when you have decided that the entire line
@@ -721,9 +640,10 @@ Static Shift And EMAP Filters
 
 The module contains two related families of station-profile filters.
 ``correct_static_shift`` implements a Torres-Verdin and Bostick style
-Hanning adaptive moving-average correction. ``apply_emap_filter`` is a
-dispatcher for adaptive moving average (``"ama"``), fixed-length moving
-average (``"flma"``), and trimmed moving average (``"tma"``).
+Hanning adaptive moving-average correction. ``apply_emap_filter`` is an
+:term:`EMAP` dispatcher for adaptive moving average (``"ama"``),
+fixed-length moving average (``"flma"``), and :term:`trimmed moving
+average <TMA>` (``"tma"``).
 The adaptive moving-average correction works in log apparent
 resistivity along station position :math:`x_s`. With a Hanning window of
 full width :math:`W_H`, the spatial weight between stations :math:`s`
@@ -763,73 +683,59 @@ The impedance correction factor is then
    \qquad
    Z^{new}_{s,ab}(f_i) = C_s(f_i) Z_{s,ab}(f_i).
 
-This formulation is useful for static shift because a near-surface
-galvanic multiplier mainly changes apparent-resistivity level while
+This formulation is useful for :term:`static shift` because a
+near-surface galvanic multiplier mainly changes apparent-resistivity
+level while
 leaving phase much less affected. The filter estimates that multiplier
 from neighboring stations rather than from a single isolated curve.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import (
-       apply_emap_filter,
-       correct_static_shift,
-       ensure_sites,
-       plot_emap_filter_profile,
-   )
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   ama_static = correct_static_shift(
-       sites,
-       window_m=1500.0,
-       comp="xy",
-       inplace=False,
-   )
-
-   flma = apply_emap_filter(
-       sites,
-       method="flma",
-       window=5,
-       component="xy",
-       inplace=False,
-   )
-
-   tma = apply_emap_filter(
-       sites,
-       method="tma",
-       window=5,
-       component="xy",
-       inplace=False,
-   )
-
-   fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.0), sharey=True)
-   for ax, method, filtered in zip(
-       axes,
-       ("ama", "flma", "tma"),
-       (ama_static, flma, tma),
-   ):
-       plot_emap_filter_profile(
-           sites,
-           filtered,
-           method=method,
-           component="xy",
-           ax=ax,
-           station_label_step=4,
-       )
-       ax.set_title(method.upper())
-
-   axes[0].set_ylabel(r"$\log_{10}|Z_{XY}|$")
-   fig.suptitle("L18PLT station-profile response to EMAP-style filters", y=1.02)
-   fig.tight_layout()
-
-   out = Path("docs/source/images/user_guide/emtools")
-   fig.savefig(out / "user-guide-emtools-remove-noise-06.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools import (
+   ...     apply_emap_filter,
+   ...     correct_static_shift,
+   ...     plot_emap_filter_profile,
+   ... )
+   >>> ama_static = correct_static_shift(
+   ...     sites,
+   ...     window_m=1500.0,
+   ...     comp="xy",
+   ...     inplace=False,
+   ... )
+   >>> flma = apply_emap_filter(
+   ...     sites,
+   ...     method="flma",
+   ...     window=5,
+   ...     component="xy",
+   ...     inplace=False,
+   ... )
+   >>> tma = apply_emap_filter(
+   ...     sites,
+   ...     method="tma",
+   ...     window=5,
+   ...     component="xy",
+   ...     inplace=False,
+   ... )
+   >>> fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.0), sharey=True)
+   >>> for ax, method, filtered in zip(
+   ...     axes,
+   ...     ("ama", "flma", "tma"),
+   ...     (ama_static, flma, tma),
+   ... ):
+   ...     _ = plot_emap_filter_profile(
+   ...         sites,
+   ...         filtered,
+   ...         method=method,
+   ...         component="xy",
+   ...         ax=ax,
+   ...         station_label_step=4,
+   ...     )
+   ...     _ = ax.set_title(method.upper())
+   ...
+   >>> _ = axes[0].set_ylabel(r"$\log_{10}|Z_{XY}|$")
+   >>> _ = fig.suptitle("L18PLT station-profile response to EMAP-style filters", y=1.02)
+   >>> fig.tight_layout()
+   >>> fig.savefig("user-guide-emtools-remove-noise-06.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-06.png
    :width: 100%
@@ -850,66 +756,50 @@ EMAP Reports And Plots
 Before using an EMAP-filtered survey downstream, summarize where the
 filter changed the data.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import (
-       apply_emap_filter,
-       emap_filter_report,
-       ensure_sites,
-       plot_emap_filter_profile,
-       plot_emap_filter_psection,
-   )
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-   flma = apply_emap_filter(
-       sites,
-       method="flma",
-       window=5,
-       component="xy",
-       inplace=False,
-   )
-
-   report = emap_filter_report(
-       sites,
-       flma,
-       component="xy",
-   )
-   print(report.sort_values("rms_delta_log10_abs_z", ascending=False).head())
-
-   fig, ax = plt.subplots(figsize=(8, 4))
-   plot_emap_filter_profile(
-       sites,
-       flma,
-       method="flma",
-       component="xy",
-       ax=ax,
-   )
-   fig.tight_layout()
-   fig.savefig("emap_filter_profile_xy.png", dpi=200)
-   plt.close(fig)
-
-   fig = plot_emap_filter_psection(
-       sites,
-       flma,
-       method="flma",
-       component="xy",
-   )
-   fig.savefig("emap_filter_psection_xy.png", dpi=200)
-   plt.close(fig)
-
-.. code-block:: text
-
+   >>> from pycsamt.emtools import (
+   ...     emap_filter_report,
+   ...     plot_emap_filter_psection,
+   ... )
+   >>> flma = apply_emap_filter(
+   ...     sites,
+   ...     method="flma",
+   ...     window=5,
+   ...     component="xy",
+   ...     inplace=False,
+   ... )
+   >>> report = emap_filter_report(
+   ...     sites,
+   ...     flma,
+   ...     component="xy",
+   ... )
+   >>> report.sort_values("rms_delta_log10_abs_z", ascending=False).head()
        station component  ...  median_delta_log10_abs_z  rms_delta_log10_abs_z
-   18  18-019U        xy  ...                  0.415765               0.505929
+   18  18-019U        xy  ...                  0.435822               0.533851
    26  18-024U        xy  ...                  0.346431               0.401617
    22  18-022U        xy  ...                  0.360391               0.391346
    17  18-018A        xy  ...                  0.361853               0.377488
-   23  18-022V        xy  ...                  0.300769               0.310826
+   23  18-022V        xy  ...                  0.262095               0.297116
 
    [5 rows x 5 columns]
+   >>> fig, ax = plt.subplots(figsize=(8, 4))
+   >>> _ = plot_emap_filter_profile(
+   ...     sites,
+   ...     flma,
+   ...     method="flma",
+   ...     component="xy",
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
+   >>> fig.savefig("emap_filter_profile_xy.png", dpi=200)
+   >>> fig = plot_emap_filter_psection(
+   ...     sites,
+   ...     flma,
+   ...     method="flma",
+   ...     component="xy",
+   ... )
+   >>> fig.savefig("emap_filter_psection_xy.png", dpi=200)
 
 .. grid:: 1 1 2 2
    :gutter: 2
@@ -979,27 +869,20 @@ move fully to the spatially filtered estimate, and middle-confidence
 data move only part of the way. This is often the most defensible EMAP
 workflow because the correction strength is tied to the QC evidence.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import confidence_gated_emap_filter, ensure_sites
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-   result = confidence_gated_emap_filter(
-       sites,
-       method="flma",
-       window=5,
-       ci_hi=0.90,
-       ci_lo=0.50,
-       component="xy",
-   )
-   print(result.summary())
-   print(result.report.head())
-   print(result.decisions.head())
-   gated_sites = result.sites
-
-.. code-block:: text
-
-   EMAPFilterResult(method='flma', confidence='composite', preserved=0, blended=1411, filtered=73)
+   >>> from pycsamt.emtools import confidence_gated_emap_filter
+   >>> result = confidence_gated_emap_filter(
+   ...     sites,
+   ...     method="flma",
+   ...     window=5,
+   ...     ci_hi=0.90,
+   ...     ci_lo=0.50,
+   ...     component="xy",
+   ... )
+   >>> print(result.summary())
+   EMAPFilterResult(method='flma', confidence='composite', preserved=0, blended=1416, filtered=68)
+   >>> result.report.head()
       station  n_freq  ...  median_confidence  median_delta_log10_abs_z
    0  18-001A      53  ...           0.711753                 -0.020918
    1  18-002U      53  ...           0.749480                  0.015749
@@ -1007,6 +890,7 @@ workflow because the correction strength is tied to the QC evidence.
    3  18-004A      53  ...           0.735994                  0.004156
    4  18-005U      53  ...           0.728841                 -0.025544
    [5 rows x 8 columns]
+   >>> result.decisions.head()
       station  frequency_hz  period_s  ...  blend_weight   action  delta_log10_abs_z
    0  18-001A       10400.0  0.000096  ...      0.109609  blended          -0.002075
    1  18-001A        8707.0  0.000115  ...      0.134217  blended          -0.001228
@@ -1014,6 +898,7 @@ workflow because the correction strength is tied to the QC evidence.
    3  18-001A        6102.0  0.000164  ...      0.236784  blended          -0.006566
    4  18-001A        5108.0  0.000196  ...      0.437715  blended          -0.007875
    [5 rows x 8 columns]
+   >>> gated_sites = result.sites
 
 The return value is an ``EMAPFilterResult``. It keeps the processed
 ``sites`` object, a station-level ``report``, a row-level ``decisions``
@@ -1021,35 +906,29 @@ table, the EMAP method, and the confidence thresholds. The convenience
 properties ``n_preserved``, ``n_blended``, and ``n_filtered`` are useful
 for logging.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools import confidence_gated_emap_filter, ensure_sites
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-   result = confidence_gated_emap_filter(sites, method="flma")
-   print(result.n_preserved)
-   print(result.n_blended)
-   print(result.n_filtered)
-   most_filtered = (
-       result.report.sort_values(
-           ["n_filtered", "median_confidence"],
-           ascending=[False, True],
-       )
-       .loc[:, ["station", "n_preserved", "n_blended", "n_filtered", "median_confidence"]]
-   )
-   print(most_filtered.head(10))
-
-.. code-block:: text
-
+   >>> result = confidence_gated_emap_filter(sites, method="flma")
+   >>> print(result.n_preserved)
    0
-   1411
-   73
+   >>> print(result.n_blended)
+   1416
+   >>> print(result.n_filtered)
+   68
+   >>> most_filtered = (
+   ...     result.report.sort_values(
+   ...         ["n_filtered", "median_confidence"],
+   ...         ascending=[False, True],
+   ...     )
+   ...     .loc[:, ["station", "n_preserved", "n_blended", "n_filtered", "median_confidence"]]
+   ... )
+   >>> most_filtered.head(10)
        station  n_preserved  n_blended  n_filtered  median_confidence
-   22  18-022U            0         38          15           0.569810
+   22  18-022U            0         41          12           0.573241
    24  18-023A            0         41          12           0.612583
    5   18-006A            0         47           6           0.764254
+   21  18-021B            0         48           5           0.561078
    12  18-013U            0         48           5           0.669948
-   20  18-021B            0         49           4           0.594338
    17  18-018A            0         50           3           0.585752
    26  18-024U            0         50           3           0.631934
    11  18-012A            0         50           3           0.651210
@@ -1070,30 +949,24 @@ shrinkage. It is convenient for batch processing, but you should still
 run the individual diagnostics first so you know which part of the
 pipeline is doing the work.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   from pycsamt.emtools import ensure_sites, remove_noise_pipeline
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   cleaned = remove_noise_pipeline(
-       sites,
-       mains_hz=50.0,
-       n_harm=30,
-       tol_hz=0.08,
-       notch_mode="interp",
-       smooth_win=5,
-       smooth_kind="tri",
-       gate_snr=2.5,
-       group_shrink=False,
-       inplace=False,
-   )
-
-   output_dir = Path("outputs/remove_noise")
-   output_dir.mkdir(parents=True, exist_ok=True)
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools import remove_noise_pipeline
+   >>> cleaned = remove_noise_pipeline(
+   ...     sites,
+   ...     mains_hz=50.0,
+   ...     n_harm=30,
+   ...     tol_hz=0.08,
+   ...     notch_mode="interp",
+   ...     smooth_win=5,
+   ...     smooth_kind="tri",
+   ...     gate_snr=2.5,
+   ...     group_shrink=False,
+   ...     inplace=False,
+   ... )
+   >>> output_dir = Path("outputs/remove_noise")
+   >>> output_dir.mkdir(parents=True, exist_ok=True)
 
 The exact keyword names are intentionally close to the lower-level
 functions. Keep your pipeline call in a script or notebook with all
@@ -1107,62 +980,48 @@ The dedicated ``nr_qc_*`` figures compare a raw survey with a named
 noise-removal method. They are designed to be used after a method is
 chosen, not as a substitute for choosing the method carefully.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import (
-       ensure_sites,
-       nr_qc_delta_offdiag_psection,
-       nr_qc_harmonic_waterfall,
-       nr_qc_snr_gain_profile,
-       nr_qc_station_offdiag_curves,
-   )
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   fig, ax = plt.subplots(figsize=(9, 5))
-   nr_qc_delta_offdiag_psection(
-       sites,
-       method="pipeline",
-       ax=ax,
-   )
-   fig.savefig("nr_qc_delta_offdiag_psection.png", dpi=200)
-   plt.close(fig)
-
-   fig, ax = plt.subplots(figsize=(8, 4))
-   nr_qc_snr_gain_profile(
-       sites,
-       method="pipeline",
-       ax=ax,
-   )
-   fig.tight_layout()
-   fig.savefig("nr_qc_snr_gain_profile.png", dpi=200)
-   plt.close(fig)
-
-   fig, ax = plt.subplots(figsize=(9, 5))
-   nr_qc_harmonic_waterfall(
-       sites,
-       method="notch",
-       mains_hz=50.0,
-       n_harm=5,
-       tol_hz=25.0,
-       ax=ax,
-   )
-   fig.savefig("nr_qc_harmonic_waterfall.png", dpi=200)
-   plt.close(fig)
-
-   fig, ax = plt.subplots(figsize=(8, 4))
-   nr_qc_station_offdiag_curves(
-       sites,
-       method="pipeline",
-       station="18-016A",
-       ax=ax,
-   )
-   fig.tight_layout()
-   fig.savefig("nr_qc_station_offdiag_curves_18-016A.png", dpi=200)
-   plt.close(fig)
+   >>> from pycsamt.emtools import (
+   ...     nr_qc_delta_offdiag_psection,
+   ...     nr_qc_harmonic_waterfall,
+   ...     nr_qc_snr_gain_profile,
+   ...     nr_qc_station_offdiag_curves,
+   ... )
+   >>> fig, ax = plt.subplots(figsize=(9, 5))
+   >>> _ = nr_qc_delta_offdiag_psection(
+   ...     sites,
+   ...     method="pipeline",
+   ...     ax=ax,
+   ... )
+   >>> fig.savefig("nr_qc_delta_offdiag_psection.png", dpi=200)
+   >>> fig, ax = plt.subplots(figsize=(8, 4))
+   >>> _ = nr_qc_snr_gain_profile(
+   ...     sites,
+   ...     method="pipeline",
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
+   >>> fig.savefig("nr_qc_snr_gain_profile.png", dpi=200)
+   >>> fig, ax = plt.subplots(figsize=(9, 5))
+   >>> _ = nr_qc_harmonic_waterfall(
+   ...     sites,
+   ...     method="notch",
+   ...     mains_hz=50.0,
+   ...     n_harm=5,
+   ...     tol_hz=25.0,
+   ...     ax=ax,
+   ... )
+   >>> fig.savefig("nr_qc_harmonic_waterfall.png", dpi=200)
+   >>> fig, ax = plt.subplots(figsize=(8, 4))
+   >>> _ = nr_qc_station_offdiag_curves(
+   ...     sites,
+   ...     method="pipeline",
+   ...     station="18-016A",
+   ...     ax=ax,
+   ... )
+   >>> fig.tight_layout()
+   >>> fig.savefig("nr_qc_station_offdiag_curves_18-016A.png", dpi=200)
 
 .. grid:: 1 1 2 2
    :gutter: 2
@@ -1230,56 +1089,40 @@ Reproducible Bundle
 
 A practical processing bundle usually contains four outputs:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pathlib import Path
-
-   import matplotlib.pyplot as plt
-
-   from pycsamt.emtools import (
-       ensure_sites,
-       nr_qc_station_offdiag_curves,
-       remove_noise_pipeline,
-   )
-   from pycsamt.emtools.remove_noise import emi_mitigation_report, snr_table
-
-   out = Path("outputs/remove_noise_l18plt")
-   out.mkdir(parents=True, exist_ok=True)
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True)
-
-   snr_table(sites).to_csv(out / "snr_table_raw.csv", index=False)
-   emi_mitigation_report(
-       sites,
-       remote_reference_attempted=False,
-       mains_hz=50.0,
-       n_harm=30,
-       tol_hz=0.08,
-       notch_mode="interp",
-   ).to_csv(out / "emi_mitigation_report.csv", index=False)
-
-   cleaned = remove_noise_pipeline(
-       sites,
-       mains_hz=50.0,
-       notch_mode="interp",
-       smooth_win=5,
-       smooth_kind="tri",
-       gate_snr=2.5,
-       group_shrink=False,
-       inplace=False,
-   )
-
-   fig, ax = plt.subplots(figsize=(8, 4))
-
-   nr_qc_station_offdiag_curves(
-       sites,
-       method="pipeline",
-       station="18-016A",
-       ax=ax,
-   )
-   fig.savefig(out / "station_18-016A_pipeline_offdiag.png", dpi=200)
-   plt.close(fig)
+   >>> from pathlib import Path
+   >>> from pycsamt.emtools import nr_qc_station_offdiag_curves
+   >>> from pycsamt.emtools.remove_noise import emi_mitigation_report, snr_table
+   >>> out = Path("outputs/remove_noise_l18plt")
+   >>> out.mkdir(parents=True, exist_ok=True)
+   >>> snr_table(sites).to_csv(out / "snr_table_raw.csv", index=False)
+   >>> emi_mitigation_report(
+   ...     sites,
+   ...     remote_reference_attempted=False,
+   ...     mains_hz=50.0,
+   ...     n_harm=30,
+   ...     tol_hz=0.08,
+   ...     notch_mode="interp",
+   ... ).to_csv(out / "emi_mitigation_report.csv", index=False)
+   >>> cleaned = remove_noise_pipeline(
+   ...     sites,
+   ...     mains_hz=50.0,
+   ...     notch_mode="interp",
+   ...     smooth_win=5,
+   ...     smooth_kind="tri",
+   ...     gate_snr=2.5,
+   ...     group_shrink=False,
+   ...     inplace=False,
+   ... )
+   >>> fig, ax = plt.subplots(figsize=(8, 4))
+   >>> _ = nr_qc_station_offdiag_curves(
+   ...     sites,
+   ...     method="pipeline",
+   ...     station="18-016A",
+   ...     ax=ax,
+   ... )
+   >>> fig.savefig(out / "station_18-016A_pipeline_offdiag.png", dpi=200)
 
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-remove-noise-17.png
    :width: 100%

@@ -173,7 +173,19 @@ class Inv2DAgent(BaseAgent):
     gcn_adjacency_radius_m : float, default 300.0
         ``physics="mt2d_tri"`` only: triangle-centroid adjacency
         radius forwarded to
-        :func:`~pycsamt.ai.nets.gcn.build_adjacency`.
+        :func:`~pycsamt.ai.nets.gcn.build_adjacency`. Must be set
+        relative to the actual mesh scale, not left at the default: it
+        is a hard cutoff in the same metres as ``mesh_target_cell_m``,
+        and if it is smaller than the typical distance between
+        neighbouring triangle centroids, ``build_adjacency`` returns
+        the identity matrix (every triangle connected only to itself)
+        and the GCN silently degenerates into a per-triangle lookup
+        with no spatial message-passing at all -- no error is raised.
+        A radius of roughly 1.5-2x ``mesh_target_cell_m`` is a
+        reasonable starting point; verify with
+        ``build_adjacency(mesh.triangle_centroids_m, radius).sum() >
+        mesh.n_triangles`` (more than just the self-loops) before
+        trusting a training run.
     mare2dem_adapter : object, optional
         ``physics="mt2d_tri"`` only: pre-built
         :class:`~pycsamt.forward.maxwell.mare2dem.Mare2DEMAdapter`
@@ -801,7 +813,9 @@ class Inv2DAgent(BaseAgent):
             from ..ai.inversion.inv3d import GCNInverter3D
 
             gcn = GCNInverter3D(
-                n_features=2 * n_freqs, n_layers=1, hidden=self.gcn_hidden
+                n_features=2 * n_freqs + N_POSITION_FEATURES,
+                n_layers=1,
+                hidden=self.gcn_hidden,
             )
             gcn.fit(
                 X_train,
@@ -1146,7 +1160,7 @@ def _generate_mt2d_tri_training_data(
         known-truth recovery check.
     mesh : TriMesh
         Shared triangular geometry (same object dataset.mesh).
-    X : ndarray (n_train, n_triangles, 2 * n_freqs)
+    X : ndarray (n_train, n_triangles, 2 * n_freqs + N_POSITION_FEATURES)
     y : ndarray (n_train, n_triangles, 1)
     """
     from ..ai.training.dataset2d_tri import (
@@ -1199,6 +1213,12 @@ def _nearest_station_features(
 
     Nearest is by x-distance only, since receivers sit on the mesh's own
     ``z=0`` surface and every triangle's centroid has a well-defined x.
+
+    Every triangle assigned to the same nearest station receives an
+    *identical* feature block here, regardless of its own depth or exact
+    position -- this function alone gives a GCN nothing to key a
+    depth-varying prediction on. See :func:`_triangle_position_features`
+    for the per-triangle signal that fixes that.
     """
     station_x = np.asarray(station_x_m, dtype=float)
     centroid_x = mesh.triangle_centroids_m[:, 0]
@@ -1212,13 +1232,40 @@ def _nearest_station_features(
     return flat[nearest]
 
 
+def _triangle_position_features(mesh: Any) -> np.ndarray:
+    """Return each triangle's own ``[x_norm, z_norm]`` position, both
+    normalized to the mesh's own bounding box (``[0, 1]``).
+
+    :func:`_nearest_station_features` broadcasts the *same* sounding
+    curve onto every triangle nearest a given station, so two triangles
+    at very different depths under the same station otherwise look
+    identical to the network. Appending each triangle's own normalized
+    position gives it something to actually vary a depth-dependent
+    prediction on, rather than relying solely on message-passing
+    between differently-stationed neighbours to break the symmetry.
+    """
+    centroids = mesh.triangle_centroids_m
+    lo = centroids.min(axis=0)
+    span = np.maximum(centroids.max(axis=0) - lo, 1.0)
+    return ((centroids - lo) / span).astype(np.float32)
+
+
+N_POSITION_FEATURES = 2
+
+
 def _maxwell_tri_samples_observed_features(
     comp_feats: list[np.ndarray],
     mesh: Any,
     station_x_m: np.ndarray,
 ) -> np.ndarray:
-    """Return ``(n_triangles, 2 * n_freq)`` observed features for prediction."""
-    return _nearest_station_features(comp_feats, mesh, station_x_m)
+    """Return ``(n_triangles, 2 * n_freq + 2)`` observed features for
+    prediction: the nearest station's sounding curve plus the triangle's
+    own normalized ``[x, z]`` position.
+    """
+    nearest_feats = _nearest_station_features(comp_feats, mesh, station_x_m)
+    return np.concatenate(
+        [nearest_feats, _triangle_position_features(mesh)], axis=1
+    )
 
 
 def _maxwell_tri_samples_to_gcn_arrays(
@@ -1229,13 +1276,16 @@ def _maxwell_tri_samples_to_gcn_arrays(
     """Convert ``MaxwellTri2DSample`` objects into
     :class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D`'s ``(X, y)``
     convention: per-triangle nearest-station ``[log10(rho_a), phase]``
-    features for ``zxy``, and per-triangle ``log10(resistivity)`` targets.
+    features for ``zxy`` concatenated with the triangle's own normalized
+    ``[x, z]`` position, and per-triangle ``log10(resistivity)`` targets.
     """
     if not samples:
         raise ValueError("samples must contain at least one entry.")
     n_tri = mesh.n_triangles
     n_freq = len(samples[0].survey.frequencies_hz)
-    X = np.empty((len(samples), n_tri, 2 * n_freq), dtype=np.float32)
+    n_feat = 2 * n_freq + N_POSITION_FEATURES
+    pos_feats = _triangle_position_features(mesh)
+    X = np.empty((len(samples), n_tri, n_feat), dtype=np.float32)
     y = np.empty((len(samples), n_tri, 1), dtype=np.float32)
     for i, sample in enumerate(samples):
         comp_idx = sample.survey.components.index("zxy")
@@ -1246,7 +1296,8 @@ def _maxwell_tri_samples_to_gcn_arrays(
         phase = np.degrees(np.angle(zxy))
         log_rho_a = np.log10(np.clip(rho_a, 1e-12, None))
         per_station = np.concatenate([log_rho_a, phase], axis=1)  # (n_sta, 2*n_freq)
-        X[i] = _nearest_station_features(per_station, mesh, station_x_m)
+        nearest_feats = _nearest_station_features(per_station, mesh, station_x_m)
+        X[i] = np.concatenate([nearest_feats, pos_feats], axis=1)
         y[i, :, 0] = np.log10(sample.resistivity_ohm_m)
     return X, y
 

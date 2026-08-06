@@ -279,3 +279,104 @@ plot_lcurve(mi_18001a, ro_18001a, lambdas, arrow_every=6, show_points=False)
 # capture before this expensive-fit regime takes over. Same two
 # regimes as section 3, now visible directly as a direction of travel
 # along one curve rather than three separate models.
+
+# %%
+# 7. Real inversion logs: Occam2D and ModEM
+# ------------------------------------------------------
+# Sections 1-6 build the L-curve arrays by hand. Real Occam-style
+# regularized inversion codes already write exactly these three
+# quantities — misfit, roughness, regularization parameter — to a
+# convergence log, one row per iteration, because that *is* what an
+# Occam-style inversion does at every step. Two adapters read those
+# logs directly: :func:`~pycsamt.emtools.lcurve.lcurve_from_occam2d`
+# and :func:`~pycsamt.emtools.lcurve.lcurve_from_modem`, each returning
+# an :class:`~pycsamt.emtools.lcurve.LCurveData` with a `.plot()` and
+# `.table()` shortcut. A third adapter,
+# :func:`~pycsamt.emtools.lcurve.lcurve_from_mare2dem`, reads MARE2DEM
+# logs the same way but is not exercised here — the bundled MARE2DEM
+# demo run is local-only test data (not checked into the repository),
+# so an example built on it would not reproduce from a fresh clone.
+
+from _datasets import repo_root  # noqa: E402
+
+from pycsamt.emtools import lcurve_from_modem, lcurve_from_occam2d  # noqa: E402
+
+_DATA = repo_root() / "data"
+occam_sweep = lcurve_from_occam2d(_DATA / "occam2D" / "LogFile.logfile")
+modem_sweep = lcurve_from_modem(
+    _DATA
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
+    / "Modular_NLCG.log"
+)
+for sweep in (occam_sweep, modem_sweep):
+    print(f"{sweep.backend}: {sweep.misfit.size} iterations kept")
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 5))
+occam_sweep.plot(
+    show_inset=False,
+    target_misfit=1.0,
+    label_every=4,
+    label_prefix="mu=",
+    ax=axes[0],
+)
+axes[0].set_title("Occam2D")
+modem_sweep.plot(
+    show_inset=False,
+    target_misfit=1.05,
+    label_every=12,
+    label_prefix="lam=",
+    ax=axes[1],
+)
+axes[1].set_title("ModEM")
+
+# %%
+# **Reading this figure.** Both are real convergence histories, not
+# textbook curves. Occam2D (16 of 17 logged iterations survive — the
+# last stops on "Convergence problems" before writing a roughness) zig
+# zags once it crosses the target RMS, because Occam re-searches its mu
+# whenever a step overshoots. ModEM's 73-iteration sample never reaches
+# its own configured exit RMS of 1.05 — it is a deliberately compact
+# bundled demo, not a converged production run, and the target line
+# makes that gap honest rather than hiding it inside an axis range that
+# only covers the data.
+
+# %%
+# 8. Advanced: do the two corner methods agree on real data?
+# ------------------------------------------------------------------
+# Section 5 showed heavy smoothing can break the curvature method on a
+# real but well-behaved curve. Real convergence logs are noisier still,
+# so it is worth checking both methods against each other directly
+# instead of trusting either one blindly.
+
+import pandas as pd  # noqa: E402
+
+rows = []
+for name, sweep in (
+    ("occam2d", occam_sweep),
+    ("modem", modem_sweep),
+):
+    tc = sweep.table(method="curvature")
+    tm = sweep.table(method="maxdist")
+    jc, jm = tc.attrs["corner_idx"], tm.attrs["corner_idx"]
+    rows.append(
+        {
+            "backend": name,
+            "n_iter": sweep.misfit.size,
+            "curv_rough": tc["rough"].iloc[jc],
+            "maxdist_rough": tm["rough"].iloc[jm],
+        }
+    )
+print(pd.DataFrame(rows).to_string(index=False))
+
+# %%
+# **Reading this output.** Occam2D's two methods land close together
+# (roughness 157 vs. 168 -- both describe the same tight zig-zag near
+# the target). ModEM's do not: curvature settles on the very last,
+# flattest part of the run (roughness ~0.21) while max-distance picks a
+# point roughly two and a half decades *smoother*, near the start of
+# the NLCG iteration where the model is still close to its smooth
+# initial guess (roughness ~0.00068) -- the real-data version of the
+# smoothing instability from section 5. When the two disagree this
+# much, trust the plotted curve and a known target misfit over either
+# automatic pick.

@@ -680,14 +680,33 @@ def _rho_a_comp(z: np.ndarray, fr: np.ndarray, comp: str) -> np.ndarray:
 
 
 def _phase_comp_deg(z: np.ndarray, comp: str) -> np.ndarray:
-    """Phase [°] for a named Z component."""
+    """Phase [°] for a named Z component.
+
+    ``comp="det"`` averages the two off-diagonal phases, but falls back
+    to whichever off-diagonal component is actually populated when the
+    other is identically zero (see :func:`_rho_a_det`) -- otherwise a
+    scalar single-component CSAMT survey with no Zyx would silently
+    average a real phase with a spurious 0-degree angle instead of
+    reporting the real Zxy phase alone.
+    """
     if comp == "xy":
         return np.degrees(np.angle(z[:, 0, 1]))
     if comp == "yx":
         return np.degrees(np.angle(z[:, 1, 0]))
-    phi_xy = np.degrees(np.angle(z[:, 0, 1]))
-    phi_yx = np.degrees(np.angle(z[:, 1, 0]))
-    return 0.5 * (phi_xy + phi_yx)
+    zxy = z[:, 0, 1]
+    zyx = z[:, 1, 0]
+    phi_xy = np.degrees(np.angle(zxy))
+    phi_yx = np.degrees(np.angle(zyx))
+    xy_ok = np.abs(zxy) > 0
+    yx_ok = np.abs(zyx) > 0
+    both = xy_ok & yx_ok
+    out = np.full(phi_xy.shape, np.nan)
+    out[both] = 0.5 * (phi_xy[both] + phi_yx[both])
+    only_xy = xy_ok & ~yx_ok
+    out[only_xy] = phi_xy[only_xy]
+    only_yx = yx_ok & ~xy_ok
+    out[only_yx] = phi_yx[only_yx]
+    return out
 
 
 def _skin_depth_wang(rho: np.ndarray, freq: np.ndarray) -> np.ndarray:
@@ -735,16 +754,35 @@ def _label_pseudo_ax(
     period_axis: bool,
     title: str,
 ) -> None:
-    """Apply station xticks, y-ticks, and title to a pseudosection axes."""
-    ax.set_xticks(range(len(stations)))
-    ax.set_xticklabels(stations, rotation=45, ha="right", fontsize=8)
-    ax.set_xlabel("Station")
+    """Apply top station labels, log-period y-ticks, and title to a
+    pseudosection axes, matching the convention used by
+    :func:`plot_overprint_section`: shallow (short period / high
+    frequency) at the top, deep (long period / low frequency) at the
+    bottom.
+    """
+    from ..api.labels import FREQUENCY_LABEL, LOG10_PERIOD_LABEL
+
+    PYCSAMT_STATION_RENDERING.apply(
+        ax,
+        np.arange(len(stations), dtype=float),
+        stations,
+        preset="pseudosection",
+        xlim=(-0.5, len(stations) - 0.5),
+    )
     n_ytick = min(8, len(all_y))
     step = max(1, len(all_y) // n_ytick)
     tick_idx = np.arange(0, len(all_y), step)
     ax.set_yticks(tick_idx)
-    ax.set_yticklabels([f"{all_y[k]:.3g}" for k in tick_idx], fontsize=8)
-    ax.set_ylabel("Period (s)" if period_axis else "Frequency (Hz)")
+    if period_axis:
+        ax.set_yticklabels(
+            [f"{np.log10(all_y[k]):.2g}" for k in tick_idx], fontsize=8
+        )
+        ax.set_ylabel(LOG10_PERIOD_LABEL)
+        if not ax.yaxis_inverted():
+            ax.invert_yaxis()
+    else:
+        ax.set_yticklabels([f"{all_y[k]:.3g}" for k in tick_idx], fontsize=8)
+        ax.set_ylabel(FREQUENCY_LABEL)
     ax.set_title(title)
 
 

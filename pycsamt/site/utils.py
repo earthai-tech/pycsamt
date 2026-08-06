@@ -486,8 +486,13 @@ def get_coords(ed: Any) -> _Coord:
     Notes
     -----
     Both ``lon`` and legacy ``long`` header attribute names are
-    supported. If the header is missing or fields cannot be read,
-    all values are ``nan``.
+    supported. Some EDI files (notably older BIRRP-processed
+    files) leave ``>HEAD`` without usable ``LAT``/``LONG`` keys but
+    still carry a real station position as ``REFLAT``/``REFLONG``
+    (and ``REFELEV``) in ``>=DEFINEMEAS``; that block is used as a
+    fallback for whichever of latitude, longitude, and elevation
+    the header did not supply. If neither section can supply a
+    field, it is returned as ``nan``.
 
     Examples
     --------
@@ -508,6 +513,23 @@ def get_coords(ed: Any) -> _Coord:
     la = getattr(h, "lat", float("nan")) if h else float("nan")
     lo = getattr(h, "long", float("nan")) if h else float("nan")
     ev = getattr(h, "elev", float("nan")) if h else float("nan")
+
+    def _finite(v: Any) -> bool:
+        try:
+            return math.isfinite(float(v))
+        except Exception:
+            return False
+
+    if not (_finite(la) and _finite(lo)):
+        dm = _get_definemeas(ed)
+        if dm is not None:
+            if not _finite(la):
+                la = getattr(dm, "reflat", float("nan"))
+            if not _finite(lo):
+                lo = getattr(dm, "reflong", float("nan"))
+            if not _finite(ev):
+                ev = getattr(dm, "refelev", float("nan"))
+
     try:
         return _Coord(float(la), float(lo), float(ev))
     except Exception:
@@ -1092,6 +1114,13 @@ def mrad_to_deg(x: float | np.ndarray) -> np.ndarray:
 def _get_head(ed: EDIFile) -> Any:
     try:
         return ed.get_section("head")  # type: ignore
+    except Exception:
+        return None
+
+
+def _get_definemeas(ed: EDIFile) -> Any:
+    try:
+        return ed.get_section("definemeas")  # type: ignore
     except Exception:
         return None
 

@@ -180,8 +180,8 @@ ax.set_title("Distribution: spatial vs. joint gradient (whole survey)")
 
 # %%
 # **Reading this figure.** The joint-gradient histogram is visibly
-# narrower than the spatial one (about half the standard deviation,
-# 1319 vs. 2660 Ω·m) — on this real line, the joint quantity really
+# narrower than the spatial one (just over half the standard deviation,
+# 1204 vs. 2200 Ω·m) — on this real line, the joint quantity really
 # does concentrate closer to zero overall, leaving the largest values
 # for the fewer places where lateral and vertical change coincide,
 # which is exactly the behaviour the paper attributes to it.
@@ -232,6 +232,6 @@ print(f"L22PLT joint std: {joint22['delta_rho_zx'].std():.0f} Ohm.m")
 # **Reading this figure.** The two lines share the same broad character
 # (sparse, sign-alternating patches on a mostly-quiet background) but
 # are not identical — L22PLT's joint gradient has a modestly larger
-# spread (about 1.7x L18PLT's) — a reasonable amount of line-to-line
+# spread (about 1.9x L18PLT's) — a reasonable amount of line-to-line
 # variation for two lines from the same survey, not evidence of a
 # processing problem on either one.

@@ -116,11 +116,16 @@ retrieval date, coordinate source, and elevation for every station.
    observations; terrain resolution and vertical-datum uncertainty belong in
    the near-surface mesh sensitivity analysis.
 
+The coordinate-validation and topography-injection step that produced the
+distances and elevations above:
+
 .. code-dropdown:: ../../scripts/generate_tutorial_kp_mt_conditioning.py
    :language: python
    :pyobject: _inject_coordinates_topography
    :linenos:
    :title: View coordinate validation and topography injection code
+
+The map and terrain-profile figure itself comes from:
 
 .. code-dropdown:: ../../scripts/generate_tutorial_kp_mt_conditioning.py
    :language: python
@@ -859,12 +864,15 @@ on a topography-following triangular mesh, whereas ``physics="mt3d"`` learns
 on a structured 3-D mesh. Each requests 100 epochs, enables :term:`early
 stopping` with patience 15, uses 200 geological realizations and eight
 frequencies inside the measured band. Both meshes stop at 100 km depth
-rather than 250 km, and use roughly half the cell resolution of the first
-pass at this tutorial -- KAP03's own 5e-5-0.04 Hz band does not resolve
-structure near 250 km with useful confidence in the first place, and
-coarsening plus shallowing is what makes 200 realizations (double the
-original count) finish in a comparable wall-clock budget. The MT2D
-configuration is concise:
+rather than 250 km -- KAP03's own 5e-5-0.04 Hz band does not resolve
+structure near 250 km with useful confidence in the first place -- but,
+unlike an earlier coarsened pass at this same 200-realization count, the
+cell sizes below are now deliberately *fine* rather than coarsened for
+speed: MT2D's ``mesh_target_cell_m`` matches the standalone triangular
+mesh already shown above, and MT3D's ``n_layers`` doubles the vertical
+resolution of the plotted section, the two knobs that actually determine
+how blocky each branch's own figure looks. The MT2D configuration is
+concise:
 
 .. code-block:: pycon
 
@@ -877,23 +885,81 @@ configuration is concise:
    ...     n_train_profiles=200, epochs=100, patience=15,
    ...     n_freqs=8, n_stations_per_profile=26,
    ...     station_spacing_m=profile_length_m / 25,
-   ...     mesh_target_cell_m=45_000.0,
-   ...     field_grid_cell_m=22_500.0,
+   ...     mesh_target_cell_m=15_000.0,
+   ...     field_grid_cell_m=7_500.0,
+   ...     gcn_adjacency_radius_m=30_000.0,
    ...     topo_x_m=chainage_m, topo_z_m=surface_depth_m,
    ...     mare2dem_adapter=TriFEM2DAdapter(),
    ... )
 
-The measured elevations therefore enter the MT2D forward mesh. The MT3D
-branch adds dropout uncertainty and a bounded structured solver-cell budget,
-cut roughly 20x (100,000 to 5,000 cells) alongside the shallower domain and
-fewer depth layers (10 to 6) to keep 200 realizations of a genuine 3-D
-Maxwell solve tractable:
+The measured elevations therefore enter the MT2D forward mesh, and
+``mesh_target_cell_m=15,000`` now matches the standalone triangular mesh
+built earlier rather than the coarser 45,000 m used in an earlier pass at
+this tutorial -- the triangles actually driving GCN training are no bigger
+than the ones already shown in the "optional" mesh figure.
+
+A finer mesh alone made an existing problem visible rather than fixing
+anything: the first render of this refined mesh showed near-constant
+resistivity in a "curtain" under each station, unrelated to depth. Two
+separate things turned out to be going on:
+
+- The raw *triangle shapes* are not actually elongated -- measuring them
+  directly gave a median width of 19.7 km against a median height of
+  19.8 km (ratio 0.99), i.e. genuinely close to isotropic. The vertical
+  "stretch" is a rendering artifact: 100 km of depth is drawn across
+  roughly the same plot width as 1,500 km of profile, so any real
+  triangle looks tall and thin on screen.
+- The GCN, however, really was depth-blind. ``Inv2DAgent``'s
+  ``gcn_adjacency_radius_m`` had never been set in any earlier pass of
+  this tutorial, leaving the library default of 300 m in effect on a
+  mesh whose actual median distance between neighbouring triangle
+  centroids is about 10 km -- 2-3 orders of magnitude coarser than that
+  radius. Directly rebuilding the adjacency matrix at 300 m on this
+  mesh's real triangle centroids gives **zero edges** among all 434,940
+  possible triangle pairs; after the mandatory self-loops, the "graph"
+  is exactly the identity matrix, so no message-passing was happening
+  at all. Combined with every triangle's input being only its nearest
+  station's frequency-sounding curve (no depth or position information),
+  every triangle nearest a given station received an identical input and
+  no cross-triangle mixing, so the network could only predict one value
+  per station regardless of depth -- exactly the flat curtain.
+
+Fixing this needed two changes, both now in ``pycsamt/agents/inv2d_agent.py``
+rather than only in this tutorial's script: ``gcn_adjacency_radius_m`` is
+now set to 30,000 m above (empirically verified to give every triangle on
+this mesh at least one neighbour, mean degree ~13), and every triangle's
+own normalized ``[x, z]`` position is now concatenated onto its input
+features (the new ``_triangle_position_features`` helper), so a triangle
+has something to actually vary a depth-dependent prediction
+on beyond which station is nearest. Re-inspecting individual station
+columns after the fix confirms real depth structure where there was none
+before -- e.g. station kap157 predicts :math:`\log_{10}\rho` from 1.18 at
+18.0 km depth up to 2.49 at 81.5 km, not a single repeated value.
+
+This is not a purely cosmetic fix: the held-out recovery below improves
+from :math:`R^2=0.349` (fine mesh, broken adjacency) to :math:`R^2=0.623`
+(fine mesh, fixed adjacency and features) over the same twenty held-out
+realizations -- and a second, independent bug, described after the results
+below, pushes that further still once found.
+
+The MT3D branch
+adds dropout uncertainty and a bounded structured solver-cell budget. A
+genuine 3-D Maxwell solve on this solver does not scale linearly with cell
+count -- two smoke tests before the run below found that quadrupling the
+cell budget from 5,000 to 20,000 multiplied per-realization time by about
+17x, not 4x, and that even a modest 5,000-to-8,000 bump multiplied it by
+about 5.8x, which would have pushed a 200-realization run past five hours.
+The setting used below therefore keeps the solver-cell budget close to the
+original run's (5,000 to 6,000 cells) and instead spends the resolution
+budget on ``n_layers`` (6 to 10), which is what actually controls the
+vertical resolution of the plotted section -- the horizontal axis already
+uses all 26 real stations and cannot be made finer:
 
 .. code-block:: pycon
 
    >>> from pycsamt.agents import Inv3DAgent
    >>> agent = Inv3DAgent(
-   ...     physics="mt3d", n_layers=6,
+   ...     physics="mt3d", n_layers=10,
    ...     freqs=np.geomspace(5e-5, 0.04, 8),
    ...     depth_max=100_000.0,
    ...     n_train_profiles=200, epochs=100, patience=15,
@@ -902,8 +968,8 @@ Maxwell solve tractable:
    ...     correlation_length_x_m=(40_000.0, 180_000.0),
    ...     correlation_length_y_m=(40_000.0, 150_000.0),
    ...     correlation_length_z_m=(5_000.0, 25_000.0),
-   ...     geology_grid_nx_ny=3, geology_grid_nz=3,
-   ...     mesh_safety_factor=8.0, max_mesh_cells=5_000,
+   ...     geology_grid_nx_ny=3, geology_grid_nz=4,
+   ...     mesh_safety_factor=8.0, max_mesh_cells=6_000,
    ... )
 
 Run the branches explicitly because every realization invokes a Maxwell
@@ -931,19 +997,47 @@ competing OpenMP runtimes. The executed run used the safe sequential MKL mode
    python docs/scripts/generate_tutorial_kp_mt_inversion.py --run-ai `
        --n-train-profiles 200 --epochs 100 --patience 15
 
-The 200-realization MT2D run completed in 1,184 seconds (about 20 minutes)
-and stopped at epoch 58. MT3D completed in 3,347 seconds (about 56 minutes)
-and stopped at epoch 50 -- both well short of the 100 requested, and both
-substantially faster than a naive (uncoarsened, un-shallowed) 200-realization
-rerun would have been:
+With the adjacency-radius and position-feature fix in place, a
+200-realization MT2D run completed in 2,876 seconds (about 48 minutes) and
+used the full 100 requested epochs without early stopping, reaching
+:math:`R^2=0.623`. Inspecting the resulting section, however, still showed
+a real problem: 143 of 660 triangles (21.7%) predicted physically
+nonsensical resistivity -- as low as :math:`10^{-23}\,\Omega\,\mathrm m` and
+as high as :math:`10^{13}\,\Omega\,\mathrm m`. Tracing this into
+:class:`~pycsamt.ai.inversion.inv3d.GCNInverter3D` (the GCN both AI
+branches share) found a second, independent bug: ``fit()`` standardized
+every input feature with one **global scalar** mean and standard
+deviation, rather than normalizing each feature independently. Measuring
+the actual per-feature statistics on this mesh's training data showed why
+that matters -- phase features average 44-76° (large, since they are in
+degrees), while :math:`\log_{10}\rho_a` averages about 2.0 and the two
+normalized position features added above average 0.3-0.5. A single shared
+std, dominated by phase's much larger raw magnitude, collapses both
+:math:`\log_{10}\rho_a` and the position features to a nearly constant
+value after normalization -- effectively hiding two of the network's three
+input signal types regardless of their real information content. This is
+not specific to ``mt2d_tri``: the same global-scalar normalization also
+mixes resistivity- and thickness-scale outputs together for the MT3D
+branch's own multi-layer target. Fixing it (per-feature mean/std computed
+over the sample and station/triangle axes, keeping the feature axis
+separate) is a change in ``pycsamt/ai/inversion/inv3d.py``, not this
+tutorial's script, so it improves both branches.
+
+With both fixes in place, the 200-realization MT2D run completed in 2,935
+seconds (about 49 minutes) and this time stopped early at epoch 63. Every
+one of its 660 triangles now falls inside :math:`\log_{10}\rho\in[-0.62,
+3.39]` -- entirely physically reasonable, with no clipping needed. MT3D --
+unchanged and not rerun here, since this pass focused on the MT2D branch
+specifically -- completed earlier in 5,268 seconds (about 88 minutes) and
+stopped at epoch 49:
 
 .. code-block:: text
 
-   MT2D: epochs=58/100, best_epoch=43, best_val_loss=0.6002
-          held_out_rmse=0.3818, held_out_r2=0.3963, n=20
-   MT3D: epochs=50/100, best_epoch=35, best_val_loss=0.0863
-          field_rms=1.5181, held_out_rmse=0.8467,
-          held_out_r2=-3.5310, n=20
+   MT2D: epochs=63/100, best_epoch=48, best_val_loss=0.2997
+          held_out_rmse=0.2471, held_out_r2=0.7263, n=20
+   MT3D: epochs=49/100, best_epoch=34, best_val_loss=0.0839
+          field_rms=1.5616, held_out_rmse=0.6955,
+          held_out_r2=-1.6681, n=20
 
 .. figure:: ../images/tutorials/condition_mt_line_with_tipper_and_rotation/kp_ai_mt2d_mt3d_comparison.png
    :alt: Two-row comparison of triangular MT2D and structured MT3D AI inversions with their actual training and validation histories
@@ -954,10 +1048,51 @@ its actual epoch history. ``tripcolor`` preserves every MT2D triangle and its
 edge, while ``pcolormesh`` exposes the station-by-depth cells of the MT3D
 profile slice instead of smoothing them. The latter is a section through the
 3-D prediction, not a claim that the full 3-D forward mesh is two-dimensional.
-MT2D reaches its validation minimum at epoch 43 and stops after 15 further
-non-improving epochs. MT3D reaches its minimum at epoch 35 and likewise stops
-at epoch 50. Early stopping is active in both cases and restores the best
-checkpoint rather than retaining the final, more overfit weights.
+Both panels report their real, rendered vertical exaggeration in the top
+corner (computed from the actual axes geometry at save time, not a fixed
+assumption) -- about 4.6x for MT2D and 4.1x for MT3D here. Compressing
+100 km of depth and roughly 1,500 km of profile into a similarly
+proportioned panel necessarily stretches every real feature vertically by
+that factor; a companion small-scale MT2D triangular section from the
+:doc:`process_temavg_survey` tutorial, plotted at its own natural ~1.7:1
+aspect (600 m deep by 1,000 m wide) with no exaggeration to speak of,
+confirms this same architecture produces smooth, laterally coherent
+sections rather than "curtains" once the plot is not fighting a domain this
+elongated -- and, not incidentally, that example never hits the adjacency
+bug described above either, because its 20 m mesh happens to sit
+comfortably under ``Inv2DAgent``'s 300 m default radius. Labelling the
+exaggeration is the standard geological cross-section convention for
+exactly this reason: it lets a reader separate real structure from a
+plotting choice, rather than mistaking one for the other.
+
+MT2D reaches its validation minimum at epoch 48 and stops after 15 further
+non-improving epochs, at epoch 63. MT3D reaches its minimum at epoch 34 and
+stops at epoch 49. Early stopping is active in both cases and restores the
+best checkpoint rather than retaining the final, more overfit weights.
+
+The extrapolation failure that motivated the normalization fix was
+initially suspected to be mostly a real data-quality problem. Cross-checking
+which stations the extreme triangles clustered under, across three
+independent training runs before the normalization fix, found two stations
+-- kap148 and kap169 -- extreme in *every* run tested, which pointed at
+their real observed phase: kap148 spans -162.4° to +121.3° and kap169 spans
+-127.3° to +154.6°, both far outside the 0-90° range a minimum-phase
+impedance response should occupy (computed with pyCSAMT's own convention,
+:math:`\rho_a=0.2f^{-1}|Z_{xy}|^2`, after catching and correcting a units
+error in an SI-based first attempt at this check). That diagnosis was not
+wrong exactly, but it was incomplete: it explained why those two stations'
+already-unusual phase would be *especially* exposed by a normalization bug
+that gives every feature comparable weight regardless of scale, not that
+the anomaly required bad data to occur at all. Once normalization was
+fixed, the extreme-triangle count dropped from 143/660 to zero, including
+at kap148 and kap169. kap148 still stands out in the figure below -- a
+real, localized low-resistivity feature reaching :math:`\log_{10}\rho
+\approx -0.6` through much of the depth range beneath it -- but that is now
+a physically plausible anomaly rather than a numerical blow-up, and it is
+consistent with kap148's genuinely unusual phase rather than contradicting
+it. The other seed-dependent stations from the earlier cross-check
+(kap130, kap133, kap136, kap145, kap151, kap152, kap163, kap172) no longer
+show extreme triangles either.
 
 The models are successful computational realizations, not yet defensible
 geological sections. Large adjacent resistivity contrasts and vertically
@@ -984,29 +1119,40 @@ not resolved.
 The topographic rendering places station markers at their EDI elevations, but
 the relief remains visually small compared with 100 km depth and still does
 not enter MT3D forward physics. MC-dropout uncertainty is typically
-0.10-0.20 log-resistivity units across the section, reaching about 0.27 in
-the most uncertain patches, so many apparent boundaries are not stable
-enough for geological picking.
+0.08-0.18 log-resistivity units across the section, reaching about 0.22 in
+the most uncertain patches (the shallow crust beneath KAP103, where the
+profile's western end has fewer nearby stations to constrain it), so many
+apparent boundaries are not stable enough for geological picking.
 
 .. figure:: ../images/tutorials/condition_mt_line_with_tipper_and_rotation/kp_ai_mt3d_validation_audit.png
    :alt: Observed-response RMS and held-out synthetic recovery audit for the executed AI inversion
    :width: 82%
 
-The MT3D observed-response RMS is 1.518, still above the unit-error target.
-Its held-out RMSE is 0.847 log units and :math:`R^2=-3.531` over twenty
-held-out realizations -- worse than MT2D's, and not meaningfully improved by
-doubling the realization count to 200: the strongly negative :math:`R^2`
-means the predictor is worse than the held-out mean regardless. MT2D reaches
-RMSE 0.382 and :math:`R^2=0.396` over the same twenty held-out realizations,
-a real improvement over the first 100-realization pass (:math:`R^2=0.337`)
--- a larger ensemble that MT2D's simpler 2-D physics was actually able to
-use, unlike MT3D's. That asymmetry -- more data and a coarser, shallower
-domain helping MT2D but not MT3D -- is itself informative: MT3D's difficulty
-here is not primarily a training-budget problem this tutorial's own scale
-can fix.
+The MT3D observed-response RMS is 1.562, still above the unit-error target.
+Its held-out RMSE is 0.696 log units and :math:`R^2=-1.668` over twenty
+held-out realizations -- still meaning the predictor underperforms the
+held-out mean, unchanged from the earlier fine-mesh pass since this branch
+was not rerun here (the normalization bug affects it too -- see above --
+but confirming the same fix helps MT3D's own held-out recovery is future
+work, not something this pass measures). MT2D, with both fixes, now
+reaches RMSE 0.247 and :math:`R^2=0.726` over the same twenty held-out
+realizations -- clearly better than MT3D's, and the best of every MT2D
+pass at this tutorial by a wide margin (0.337 at 100 realizations, 0.396 at
+200 realizations with a coarse mesh, 0.349 at 200 realizations with a fine
+mesh but the depth-blind adjacency bug still present, 0.623 with the
+adjacency bug fixed but the normalization bug still present). That
+ordering is itself the useful result: mesh refinement alone made MT2D's
+recovery *worse* (0.396 to 0.349), and it only improved once the two bugs
+present in every earlier number -- neither of them something the mesh
+change introduced -- were actually found and fixed. The lesson is not
+"finer mesh helps 2-D but not 3-D"; it is that MT2D's real bottleneck was
+never mesh resolution, and no amount of mesh refinement was going to show
+it while the GCN could not use depth information at all, or while its own
+normalization was quietly discarding most of what it could use.
 More geological realizations, a larger validation/test allocation, bounded
-target resistivities, and repeated seeds are still required before either
-branch supports interpretation.
+target resistivities, repeated seeds, and applying the same normalization
+fix's benefit to MT3D are still required before either branch supports
+interpretation.
 
 The runner stores its manifest under
 ``results/kap03_mt_tutorial/inversion/ai_mt3d``. Accept an AI result only when
@@ -1014,7 +1160,7 @@ the validation minimum precedes or coincides with the restored checkpoint,
 held-out synthetic recovery is credible, observed-response RMS is reported,
 and uncertainty does not dominate the interpreted target. A rising validation
 curve followed by early stopping is expected evidence of overfitting control;
-continuing to epoch 50 despite that rise would be the problematic behavior.
+continuing to epoch 49 despite that rise would be the problematic behavior.
 
 ``topography=True`` drapes the reported prediction and station markers over
 the EDI elevations, but it does **not** change the present MT3D forward solve.
@@ -1023,17 +1169,26 @@ triangular 2-D branch above is therefore the only mesh in this tutorial whose
 forward-compatible surface actually follows elevation; claiming otherwise
 would confuse visualization geometry with forward physics.
 
+The triangular MT2D branch's own configuration and execution code carries
+the adjacency-radius and mesh-size fix described above:
+
 .. code-dropdown:: ../../scripts/generate_tutorial_kp_mt_inversion.py
    :language: python
    :pyobject: run_ai_mt2d_tri
    :linenos:
    :title: View the 100-epoch triangular MT2D execution code
 
+The structured-mesh MT3D branch is set up the same way, on its own mesh
+and station adjacency:
+
 .. code-dropdown:: ../../scripts/generate_tutorial_kp_mt_inversion.py
    :language: python
    :pyobject: run_ai_mt3d
    :linenos:
    :title: View the 100-epoch MT3D AI configuration and execution code
+
+Both results feed the same two-row comparison-and-validation figure shown
+above:
 
 .. code-dropdown:: ../../scripts/generate_tutorial_kp_mt_inversion.py
    :language: python

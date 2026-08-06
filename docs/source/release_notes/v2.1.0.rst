@@ -322,8 +322,8 @@ Docs & tooling
   ``master``. The previous per-commit pattern had exhausted the hosting
   team's free-plan credits and suspended the site.
 
-Compatibility
-~~~~~~~~~~~~~
+Compatibility |Compatibility|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The default processing order now comes from ``PYCSAMT_ORDERING`` and defaults
 to ``auto``.  Code that requires the exact loader order should opt out

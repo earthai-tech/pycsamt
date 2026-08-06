@@ -314,6 +314,10 @@ rst_epilog = """
 .. |Docs| replace:: :bdg-secondary:`Docs`
 .. |Build| replace:: :bdg-primary:`Build`
 .. |Tests| replace:: :bdg-primary:`Tests`
+
+.. |Compatibility| raw:: html
+
+   <span class="sd-badge pyc-bg-compat">Compatibility</span>
 """
 
 # Canonical URL of the published docs (Netlify + custom domain); the theme

@@ -33,7 +33,14 @@
   # CPU-only torch first: the ai_inversion gallery examples need a DL
   # backend, and the default PyPI torch drags in multi-GB CUDA wheels the
   # build image cannot afford. The cpu index wheel is ~190 MB.
-  command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && python -m sphinx -b html -j auto docs/source docs/build/html"
+  #
+  # No "-j" here: sphinx's own parallel-reading flag executes gallery
+  # examples out of order across worker processes -- a separate hazard
+  # from sphinx_gallery_conf's "parallel" option (see conf.py), which is
+  # already deliberately left disabled for the same reason. The inversion
+  # section's plot_4 -> plot_5 -> plot_6 examples share files on disk
+  # (each writes what the next reads), so reading must stay serial.
+  command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && python -m sphinx -b html docs/source docs/build/html"
 
   # Build only for release tags. Netlify's clone can be shallow enough to
   # miss tag refs, so fetch them explicitly first; `git describe` then

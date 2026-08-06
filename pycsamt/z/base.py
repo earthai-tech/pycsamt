@@ -73,18 +73,18 @@ class EMBase:
     The class aims to be a small, composable layer.  It avoids
     imposing a strict attribute schema so that existing containers
     can adopt it without refactors.  Uniform frequency handling is
-    offered through the :pyattr:`freq` property.
+    offered through the :attr:`EMBase.freq` property.
 
     **Slicing.**
     :meth:`subset` returns a deep-copied view where every attribute
-    whose first dimension equals :pyattr:`n_freq` is sliced along
+    whose first dimension equals :attr:`EMBase.n_freq` is sliced along
     axis-0.  This covers typical arrays like ``_z``, ``_tipper``,
     ``_phase``, and their error fields.  Subclasses can override
     :meth:`_sliceable_predicate` for fine-grained control.
 
     **Validation.**
     :meth:`validate_shapes` checks that all frequency-aligned arrays
-    share the same leading dimension (:pyattr:`n_freq`).  It raises
+    share the same leading dimension (:attr:`EMBase.n_freq`).  It raises
     :class:`~pycsamt.exceptions.ZError` on mismatches.
 
     **Verbosity.**

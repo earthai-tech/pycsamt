@@ -260,9 +260,9 @@ def regularization_residual(
 
     References
     ----------
-    .. [1] Tikhonov, A. N. and Arsenin, V. Y. (1977). *Solutions of
+    .. [regularization-residual-1] Tikhonov, A. N. and Arsenin, V. Y. (1977). *Solutions of
        Ill-Posed Problems*. Winston.
-    .. [2] Farquharson, C. G. and Oldenburg, D. W. (1998). Non-linear
+    .. [regularization-residual-2] Farquharson, C. G. and Oldenburg, D. W. (1998). Non-linear
        inversion using general measures of data misfit and model structure.
        *Geophysical Journal International*, 134(1), 213-227.
     """

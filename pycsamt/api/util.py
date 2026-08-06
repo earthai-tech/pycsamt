@@ -56,9 +56,9 @@ class TerminalSize:
 
     References
     ----------
-    .. [1] Python Software Foundation. Python Language Reference, version 3.9.
+    .. [TerminalSize-1] Python Software Foundation. Python Language Reference, version 3.9.
        Available at http://www.python.org
-    .. [2] Python `shutil` module documentation. Available at
+    .. [TerminalSize-2] Python `shutil` module documentation. Available at
        https://docs.python.org/3/library/shutil.html#get_terminal_size
     """
 
@@ -667,7 +667,7 @@ def get_table_width_from(
 
     References
     ----------
-    .. [1] McKinney, Wes. "Data Structures for Statistical Computing in Python."
+    .. [get-table-width-from-1] McKinney, Wes. "Data Structures for Statistical Computing in Python."
            Proceedings of the 9th Python in Science Conference. 2010.
     """
     border_lines = [
@@ -1452,9 +1452,9 @@ def count_functions(
 
     References
     ----------
-    .. [1] Python Software Foundation. Python Language Reference, version 3.9.
+    .. [count-functions-1] Python Software Foundation. Python Language Reference, version 3.9.
        Available at http://www.python.org
-    .. [2] Python `ast` module documentation. Available at
+    .. [count-functions-2] Python `ast` module documentation. Available at
        https://docs.python.org/3/library/ast.html
     """
 
@@ -1592,7 +1592,7 @@ def round_numeric_values(df, precision=4):
 
     References
     ----------
-    .. [1] "NumPy Documentation", https://numpy.org/doc/stable/
+    .. [round-numeric-values-1] "NumPy Documentation", https://numpy.org/doc/stable/
 
     """
 

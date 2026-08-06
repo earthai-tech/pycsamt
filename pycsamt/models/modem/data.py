@@ -902,11 +902,11 @@ Write a ModEM data file:
 
 References
 ----------
-.. [1] Egbert, G. D., and Kelbert, A., "Computational
+.. [ModEmData-1] Egbert, G. D., and Kelbert, A., "Computational
    recipes for electromagnetic inverse problems", Geophysical
    Journal International, 189(1), 251-267, 2012,
    doi:10.1111/j.1365-246X.2011.05347.x.
-.. [2] Kelbert, A., Meqbel, N., Egbert, G. D., and Tandon,
+.. [ModEmData-2] Kelbert, A., Meqbel, N., Egbert, G. D., and Tandon,
    K., "ModEM: A modular system for inversion of
    electromagnetic geophysical data", Computers and
    Geosciences, 66, 40-53, 2014,

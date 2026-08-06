@@ -102,7 +102,7 @@ class TSect(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [TSect-1] SEG EDI MT/EMAP standard (1987).  MTNet.
            https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -322,7 +322,7 @@ class TSIO(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [TSIO-1] SEG EDI MT/EMAP standard (1987).  MTNet.
            https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -539,7 +539,7 @@ class TimeSeriesMixin:
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [TimeSeriesMixin-1] SEG EDI MT/EMAP standard (1987).  MTNet.
            https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -670,7 +670,7 @@ class TimeSeries(BaseEM):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [TimeSeries-1] SEG EDI MT/EMAP standard (1987).  MTNet.
            https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 

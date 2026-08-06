@@ -86,7 +86,7 @@ class JCollectionMixin(JParseMixin):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
+    .. [JCollectionMixin-1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
 
     def add_from(
@@ -278,7 +278,7 @@ class JCollection(JCBBase, JCollectionMixin):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
+    .. [JCollection-1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
 
     def __init__(

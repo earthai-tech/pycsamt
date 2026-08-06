@@ -277,7 +277,7 @@ Notes
 -----
 MARE2DEM implements 2.5-D finite-element MT and CSEM forward
 modelling in the frequency domain with an Occam-style
-regularized inversion [1]_. The inversion minimizes an
+regularized inversion [Mare2DEMConfig-1]_. The inversion minimizes an
 objective of the form
 
 .. math::
@@ -332,7 +332,7 @@ Point to a custom source directory:
 
 References
 ----------
-.. [1] Key, K. (2016). MARE2DEM: A 2-D inversion code for
+.. [Mare2DEMConfig-1] Key, K. (2016). MARE2DEM: A 2-D inversion code for
    controlled-source electromagnetic and magnetotelluric data.
    *Geophysical Journal International*, 207(1), 571-588.
    doi:10.1093/gji/ggw290.

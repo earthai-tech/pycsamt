@@ -721,11 +721,11 @@ Read an existing Occam data file:
 
 References
 ----------
-.. [1] deGroot-Hedlin, C., and Constable, S.,
+.. [OccamData-1] deGroot-Hedlin, C., and Constable, S.,
    "Occam's inversion to generate smooth, two-dimensional
    models from magnetotelluric data", Geophysics, 55(12),
    1613-1624, 1990.
-.. [2] Constable, S. C., Parker, R. L., and Constable,
+.. [OccamData-2] Constable, S. C., Parker, R. L., and Constable,
    C. G., "Occam's inversion: A practical algorithm for
    generating smooth models from electromagnetic sounding
    data", Geophysics, 52(3), 289-300, 1987.
@@ -812,7 +812,7 @@ Use only TM data with stronger phase floor:
 
 References
 ----------
-.. [1] deGroot-Hedlin, C., and Constable, S.,
+.. [OccamData-from-edi---func---1] deGroot-Hedlin, C., and Constable, S.,
    "Occam's inversion to generate smooth, two-dimensional
    models from magnetotelluric data", Geophysics, 55(12),
    1613-1624, 1990.

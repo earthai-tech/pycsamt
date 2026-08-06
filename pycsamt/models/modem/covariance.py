@@ -437,7 +437,7 @@ where :math:`W_m` is shaped by smoothing weights and region
 masks from this file. Larger smoothing values generally favour
 models that vary more gradually in the corresponding direction.
 Mask exceptions can reduce or disable smoothing across
-geological boundaries, air, or ocean regions [1]_, [2]_.
+geological boundaries, air, or ocean regions [ModEmCovariance-1]_, [ModEmCovariance-2]_.
 
 Parameters
 ----------
@@ -528,11 +528,11 @@ True
 
 References
 ----------
-.. [1] Egbert, G. D., and Kelbert, A., "Computational
+.. [ModEmCovariance-1] Egbert, G. D., and Kelbert, A., "Computational
    recipes for electromagnetic inverse problems", Geophysical
    Journal International, 189(1), 251-267, 2012,
    doi:10.1111/j.1365-246X.2011.05347.x.
-.. [2] Kelbert, A., Meqbel, N., Egbert, G. D., and Tandon,
+.. [ModEmCovariance-2] Kelbert, A., Meqbel, N., Egbert, G. D., and Tandon,
    K., "ModEM: A modular system for inversion of
    electromagnetic geophysical data", Computers and
    Geosciences, 66, 40-53, 2014,

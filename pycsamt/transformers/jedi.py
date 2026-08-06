@@ -168,8 +168,8 @@ class AVGtoEDI(TransformerMixin):
 
         References
         ----------
-        .. [1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
-        .. [2] Egbert, G. D. (1997). Robust MT processing.
+        .. [AVGtoEDI-compute-z-from-res-1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
+        .. [AVGtoEDI-compute-z-from-res-2] Egbert, G. D. (1997). Robust MT processing.
         """
 
         if b.freq is None or b.rho is None or b.phase is None:
@@ -931,8 +931,8 @@ class JtoEDI(TransformerMixin):
 
     References
     ----------
-    .. [1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
-    .. [2] Egbert, G. D. (1997). Robust MT processing.
+    .. [JtoEDI-1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
+    .. [JtoEDI-2] Egbert, G. D. (1997). Robust MT processing.
     """
 
     class _HeadStub:

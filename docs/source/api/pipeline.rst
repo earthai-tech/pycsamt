@@ -7,6 +7,7 @@ and report generation.
 .. automodule:: pycsamt.pipeline
    :members:
    :show-inheritance:
+   :exclude-members: PipelineAPIConfig
 
 Pipeline Modules
 ----------------

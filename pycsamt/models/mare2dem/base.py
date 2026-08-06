@@ -79,7 +79,7 @@ logger : logging.Logger
 Notes
 -----
 MARE2DEM implements 2.5-D finite-element electromagnetic
-inversion for marine and land MT and CSEM data [1]_. The base
+inversion for marine and land MT and CSEM data [Mare2DEMBase-1]_. The base
 class does not implement any physics; it provides the
 infrastructure used by all MARE2DEM wrapper classes.
 
@@ -101,7 +101,7 @@ Examples
 
 References
 ----------
-.. [1] Key, K. (2016). MARE2DEM: A 2-D inversion code for
+.. [Mare2DEMBase-1] Key, K. (2016). MARE2DEM: A 2-D inversion code for
    controlled-source electromagnetic and magnetotelluric data.
    *Geophysical Journal International*, 207(1), 571-588.
    doi:10.1093/gji/ggw290.

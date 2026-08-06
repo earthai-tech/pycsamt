@@ -5,7 +5,7 @@ Python interface to the Occam2DMT inversion workflow.
 
 The :mod:`pycsamt.models.occam2d` subpackage builds, runs, reads, and
 plots two-dimensional magnetotelluric and CSAMT inversions using the
-Occam smooth-model approach [1]_, [2]_. The inversion seeks a model
+Occam smooth-model approach [module-1]_, [module-2]_. The inversion seeks a model
 that fits the data to a target normalized RMS while minimizing
 roughness.
 
@@ -40,11 +40,11 @@ Examples
 
 References
 ----------
-.. [1] Constable, S. C., Parker, R. L., and Constable, C. G.,
+.. [module-1] Constable, S. C., Parker, R. L., and Constable, C. G.,
    "Occam's inversion: A practical algorithm for generating
    smooth models from electromagnetic sounding data", Geophysics,
    52(3), 289-300, 1987.
-.. [2] deGroot-Hedlin, C., and Constable, S.,
+.. [module-2] deGroot-Hedlin, C., and Constable, S.,
    "Occam's inversion to generate smooth, two-dimensional models
    from magnetotelluric data", Geophysics, 55(12), 1613-1624,
    1990.

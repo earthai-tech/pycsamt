@@ -97,7 +97,7 @@ class OtherSECT(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
+    .. [OtherSECT-1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
     """
 
     KEY_ORDER: list[str] = [
@@ -317,7 +317,7 @@ class OtherIO(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
+    .. [OtherIO-1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
     """
 
     def __init__(
@@ -516,7 +516,7 @@ class OtherMixin:
 
     References
     ----------
-    .. [1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
+    .. [OtherMixin-1] SEG EDI Standard (MT/EMAP), 1987.  MTNet archive.
     """
 
     @classmethod

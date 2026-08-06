@@ -6,6 +6,7 @@ Survey, frequency, quality, instrument, geology, and rock metadata helpers.
 .. automodule:: pycsamt.metadata
    :members:
    :show-inheritance:
+   :exclude-members: doi_estimate
 
 Metadata Modules
 ----------------

@@ -7,6 +7,7 @@ table/result view objects, and high-level reader functions.
 .. automodule:: pycsamt.api
    :members:
    :show-inheritance:
+   :exclude-members: SiteOrderingConfig, configure_ordering, reset_ordering, configure_topo, reset_topo
 
 Site Ordering Configuration
 ---------------------------

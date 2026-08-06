@@ -955,7 +955,7 @@ class AVG(BaseAVG):
     its content, and hydrates a full suite of data components,
     including stations, frequencies, impedance, quality metrics,
     and header blocks. This makes the entire survey accessible
-    through strongly-typed attributes [1]_.
+    through strongly-typed attributes [AVG-1]_.
 
     Parameters
     ----------
@@ -1033,7 +1033,7 @@ class AVG(BaseAVG):
 
     References
     ----------
-    .. [1] Zonge International, Inc. (2014). *ASTATIC v3.70
+    .. [AVG-1] Zonge International, Inc. (2014). *ASTATIC v3.70
            User Manual*.
     """
 
@@ -1435,7 +1435,7 @@ class AMTAVG(AVG):
         Notes
         -----
         The calculations are based on the fundamental MT
-        relationships [1]_:
+        relationships [AMTAVG-compute-resistivity-phase-1]_:
 
         .. math::
             \rho_a = \frac{1}{\omega \mu_0} |Z|^2
@@ -1449,7 +1449,7 @@ class AMTAVG(AVG):
 
         References
         ----------
-        .. [1] Chave, A. D., and Jones, A. G. (2012). *The
+        .. [AMTAVG-compute-resistivity-phase-1] Chave, A. D., and Jones, A. G. (2012). *The
                Magnetotelluric Method: Theory and Practice*.
                Cambridge University Press.
         """
@@ -1657,7 +1657,7 @@ class AMTAVG(AVG):
         Notes
         -----
         The calculations are based on the formulas described in the
-        AMTAVG manual [1]_. The coefficient of variation (C-var),
+        AMTAVG manual [AMTAVG-calculate-statistics-1]_. The coefficient of variation (C-var),
         which corresponds to the legacy ``%`` columns, is
         calculated as:
 
@@ -1669,7 +1669,7 @@ class AMTAVG(AVG):
 
         References
         ----------
-        .. [1] Zonge Engineering (1996). *AMTAVG v7.2x User
+        .. [AMTAVG-calculate-statistics-1] Zonge Engineering (1996). *AMTAVG v7.2x User
                Manual*, Appendix B.
         """
         has_read(self)
@@ -1868,7 +1868,7 @@ class AMTAVG(AVG):
         Notes
         -----
         The rotation is performed using the standard 2D tensor
-        rotation matrix [1]_:
+        rotation matrix [AMTAVG-rotate-1]_:
 
         .. math::
             \mathbf{Z'} = \mathbf{R}(\theta) \mathbf{Z}
@@ -1892,7 +1892,7 @@ class AMTAVG(AVG):
 
         References
         ----------
-        .. [1] Simpson, F., & Bahr, K. (2005). *Practical
+        .. [AMTAVG-rotate-1] Simpson, F., & Bahr, K. (2005). *Practical
                Magnetotellurics*. Cambridge University Press.
 
         See Also

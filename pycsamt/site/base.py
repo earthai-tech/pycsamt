@@ -67,7 +67,7 @@ class SiteMixin(CoreObject):
 
     References
     ----------
-    .. [1] SEG EDI Format. Society of Exploration Geophysicists.
+    .. [SiteMixin-1] SEG EDI Format. Society of Exploration Geophysicists.
            Commonly used magnetotelluric exchange format.
     """
 
@@ -157,7 +157,7 @@ class SiteMixin(CoreObject):
         Returns
         -------
         array-like or None
-            Error array aligned with :pyattr:`z`, or ``None`` if
+            Error array aligned with :attr:`SiteMixin.z`, or ``None`` if
             absent.
         """
 
@@ -758,13 +758,13 @@ class Site(SiteMixin):
 
     References
     ----------
-    .. [1] SEG EDI Format Specification. Society of Exploration
+    .. [Site-1] SEG EDI Format Specification. Society of Exploration
            Geophysicists. Exchange format for magnetotelluric
            and related EM data.
-    .. [2] Chave, A. D., and Jones, A. G. (Eds.) (2012).
+    .. [Site-2] Chave, A. D., and Jones, A. G. (Eds.) (2012).
            The Magnetotelluric Method. Cambridge University
            Press.
-    .. [3] Simpson, F., and Bahr, K. (2005). Practical
+    .. [Site-3] Simpson, F., and Bahr, K. (2005). Practical
            Magnetotellurics. Cambridge University Press.
     """
 
@@ -989,11 +989,11 @@ class Sites(CoreObject):
 
     References
     ----------
-    .. [1] SEG EDI Format Specification. Society of Exploration
+    .. [Sites-1] SEG EDI Format Specification. Society of Exploration
            Geophysicists.
-    .. [2] Chave, A. D., and Jones, A. G. (2012). The
+    .. [Sites-2] Chave, A. D., and Jones, A. G. (2012). The
            Magnetotelluric Method. Cambridge University Press.
-    .. [3] Simpson, F., and Bahr, K. (2005). Practical
+    .. [Sites-3] Simpson, F., and Bahr, K. (2005). Practical
            Magnetotellurics. Cambridge University Press.
     """
 

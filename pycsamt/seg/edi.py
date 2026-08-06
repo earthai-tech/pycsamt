@@ -90,7 +90,7 @@ class EDIMixin(CoreObject):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [EDIMixin-1] SEG EDI MT/EMAP standard (1987).  MTNet.
     """
 
     def _init_registry(self) -> None:
@@ -180,7 +180,7 @@ class EDIOMixin(CoreObject):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [EDIOMixin-1] SEG EDI MT/EMAP standard (1987).  MTNet.
     """
 
     # tolerant key sets (lower-case)
@@ -556,8 +556,8 @@ class EDIFile(EDIMixin, EDIOMixin):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987).  MTNet.
-    .. [2] B. Groom, R. Bailey (1989).  Decomposition of the
+    .. [EDIFile-1] SEG EDI MT/EMAP standard (1987).  MTNet.
+    .. [EDIFile-2] B. Groom, R. Bailey (1989).  Decomposition of the
            magnetotelluric impedance tensor.  *Geophysics*.
     """
 

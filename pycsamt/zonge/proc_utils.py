@@ -708,7 +708,7 @@ def get_strike(df: pd.DataFrame) -> pd.DataFrame:
     -----
     The calculation is performed using a common tensor
     decomposition method based on the real parts of the impedance
-    tensor components [1]_. The formula used is:
+    tensor components [get-strike-1]_. The formula used is:
 
     .. math::
         \theta_s = \frac{1}{2} \arctan\left(
@@ -730,7 +730,7 @@ def get_strike(df: pd.DataFrame) -> pd.DataFrame:
 
     References
     ----------
-    .. [1] Simpson, F., & Bahr, K. (2005). *Practical
+    .. [get-strike-1] Simpson, F., & Bahr, K. (2005). *Practical
            Magnetotellurics*. Cambridge University Press.
 
     See Also
@@ -812,7 +812,7 @@ def get_skew(df: pd.DataFrame) -> pd.DataFrame:
     Notes
     -----
     The function calculates the conventional skew definition
-    proposed by Swift [1]_. The formula is:
+    proposed by Swift [get-skew-1]_. The formula is:
 
     .. math::
         \text{skew} = \frac{|Z_{xx} + Z_{yy}|}{|Z_{xy} - Z_{yx}|}
@@ -833,7 +833,7 @@ def get_skew(df: pd.DataFrame) -> pd.DataFrame:
 
     References
     ----------
-    .. [1] Swift, C. M. (1967). A magnetotelluric investigation
+    .. [get-skew-1] Swift, C. M. (1967). A magnetotelluric investigation
            of an electrical conductivity anomaly in the southwestern
            United States. Ph.D. Thesis, MIT.
 

@@ -105,9 +105,9 @@ Run from a dictionary in one line::
     references="""
 References
 ----------
-.. [1] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+.. [workflow-1] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
        Estimation and Inverse Problems*, 3rd edition. Elsevier.
-.. [2] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
+.. [workflow-2] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
        Theory and Practice*. Cambridge University Press.
 """,
 )
@@ -182,10 +182,10 @@ Coerce a mapping supplied in a configuration file::
     references="""
 References
 ----------
-.. [1] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
+.. [model-1] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
        inversion: A practical algorithm for generating smooth models from
        electromagnetic sounding data. *Geophysics*, 52(3), 289-300.
-.. [2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+.. [model-2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
        Estimation and Inverse Problems*, 3rd edition. Elsevier.
 """,
 )
@@ -228,11 +228,11 @@ Use component masks to down-weight stations or samples::
     error_model_references="""
 References
 ----------
-.. [1] Tarantola, A. (2005). *Inverse Problem Theory and Methods for Model
+.. [errors-1] Tarantola, A. (2005). *Inverse Problem Theory and Methods for Model
        Parameter Estimation*. SIAM.
-.. [2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+.. [errors-2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
        Estimation and Inverse Problems*, 3rd edition. Elsevier.
-.. [3] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
+.. [errors-3] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
        Theory and Practice*. Cambridge University Press.
 """,
 )
@@ -317,12 +317,12 @@ Read shared settings from an inversion config::
     references="""
 References
 ----------
-.. [1] Tikhonov, A. N. and Arsenin, V. Y. (1977). *Solutions of Ill-Posed
+.. [regularization-1] Tikhonov, A. N. and Arsenin, V. Y. (1977). *Solutions of Ill-Posed
        Problems*. Winston.
-.. [2] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
+.. [regularization-2] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
        inversion: A practical algorithm for generating smooth models from
        electromagnetic sounding data. *Geophysics*, 52(3), 289-300.
-.. [3] Farquharson, C. G. and Oldenburg, D. W. (1998). Non-linear inversion
+.. [regularization-3] Farquharson, C. G. and Oldenburg, D. W. (1998). Non-linear inversion
        using general measures of data misfit and model structure. *Geophysical
        Journal International*, 134(1), 213-227.
 """,
@@ -396,10 +396,23 @@ Summarize a result in logs or notebooks::
     references="""
 References
 ----------
-.. [1] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
+.. [result-1] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
        inversion: A practical algorithm for generating smooth models from
        electromagnetic sounding data. *Geophysics*, 52(3), 289-300.
-.. [2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+.. [result-2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+       Estimation and Inverse Problems*, 3rd edition. Elsevier.
+""",
+    # Same citations as `references`, but with distinct footnote labels:
+    # both blocks are interpolated into different classes' docstrings that
+    # render on the same page (pycsamt.inversion.results), so the labels
+    # must not collide.
+    references_uncertainty="""
+References
+----------
+.. [result-unc-1] Constable, S. C., Parker, R. L. and Constable, C. G. (1987). Occam's
+       inversion: A practical algorithm for generating smooth models from
+       electromagnetic sounding data. *Geophysics*, 52(3), 289-300.
+.. [result-unc-2] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
        Estimation and Inverse Problems*, 3rd edition. Elsevier.
 """,
 )
@@ -531,11 +544,11 @@ Build TDEM data from time gates and decay values::
     references="""
 References
 ----------
-.. [1] Simpson, F. and Bahr, K. (2005). *Practical Magnetotellurics*.
+.. [data-1] Simpson, F. and Bahr, K. (2005). *Practical Magnetotellurics*.
        Cambridge University Press.
-.. [2] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
+.. [data-2] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
        Theory and Practice*. Cambridge University Press.
-.. [3] Nabighian, M. N. and Macnae, J. C. (1991). Time domain electromagnetic
+.. [data-3] Nabighian, M. N. and Macnae, J. C. (1991). Time domain electromagnetic
        prospecting methods. In *Electromagnetic Methods in Applied Geophysics*,
        volume 2, SEG.
 """,

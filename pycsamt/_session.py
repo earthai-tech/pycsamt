@@ -145,8 +145,8 @@ class Session(CoreObject):
 
     References
     ----------
-    .. [1] Python Stdlib. *context managers* (`with` statement).
-    .. [2] NumPy. *np.savez_compressed* used by registry packers.
+    .. [Session-1] Python Stdlib. *context managers* (`with` statement).
+    .. [Session-2] NumPy. *np.savez_compressed* used by registry packers.
     """
 
     def __init__(
@@ -473,8 +473,8 @@ class Normalize(CoreObject):
 
     References
     ----------
-    .. [1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
-    .. [2] Zonge International. *AVG data format*, tech notes.
+    .. [Normalize-1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
+    .. [Normalize-2] Zonge International. *AVG data format*, tech notes.
     """
 
     def __init__(

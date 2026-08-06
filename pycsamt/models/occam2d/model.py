@@ -198,7 +198,7 @@ class OccamModel(OccamBase):
     Each model layer contains integer column codes. Boundary
     code ``7`` marks fixed edge columns tied to the binding
     value, while active even codes represent free inversion
-    columns [1]_. If :math:`p_j` is the code for one model
+    columns [OccamModel-1]_. If :math:`p_j` is the code for one model
     column, then the number of mesh cells represented by that
     column is encoded by the code value itself. The PyCSAMT
     builder uses ``2`` for interior columns and ``7`` for the
@@ -318,11 +318,11 @@ class OccamModel(OccamBase):
 
     References
     ----------
-    .. [1] deGroot-Hedlin, C., and Constable, S.,
+    .. [OccamModel-1] deGroot-Hedlin, C., and Constable, S.,
        "Occam's inversion to generate smooth, two-dimensional
        models from magnetotelluric data", Geophysics, 55(12),
        1613-1624, 1990.
-    .. [2] Constable, S. C., Parker, R. L., and Constable,
+    .. [OccamModel-2] Constable, S. C., Parker, R. L., and Constable,
        C. G., "Occam's inversion: A practical algorithm for
        generating smooth models from electromagnetic sounding
        data", Geophysics, 52(3), 289-300, 1987.

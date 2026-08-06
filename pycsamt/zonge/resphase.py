@@ -64,7 +64,7 @@ class Resistivity(TensorBase):
     Attributes
     ----------
     VAR_NAME : str
-        Canonical column in :pyattr:`frame` (``"rho"``).
+        Canonical column in :attr:`AVGComponentBase.frame` (``"rho"``).
     ALIASES : tuple[str, ...]
         Ordered alias list used during :meth:`read`.
     UNIT_ATTR : str
@@ -359,7 +359,7 @@ class Phase(TensorBase):
         r"""
         Convert the phase values **in place** between
         :math:`\mathrm{mrad}` and :math:`\mathrm{deg}` and update
-        ``Unit.Phase`` in :pyattr:`meta`.
+        ``Unit.Phase`` in :attr:`AVGComponentBase.meta`.
 
         .. math::
            1~\mathrm{mrad} =

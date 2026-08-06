@@ -114,8 +114,8 @@ def by_names(
 
     References
     ----------
-    .. [1] Python re module documentation.
-    .. [2] Unix shell-style wildcards (glob) convention.
+    .. [by-names-1] Python re module documentation.
+    .. [by-names-2] Unix shell-style wildcards (glob) convention.
     """
 
     s = _to_sites(sites)
@@ -267,7 +267,7 @@ def by_chainage(sites: Any, smin: float, smax: float):
 
     References
     ----------
-    .. [1] Linear referencing and chainage in civil engineering.
+    .. [by-chainage-1] Linear referencing and chainage in civil engineering.
     """
 
     s = _to_sites(sites)
@@ -417,7 +417,7 @@ def by_bbox(
 
     References
     ----------
-    .. [1] Snyder, J. P., "Map Projections: A Working Manual",
+    .. [by-bbox-1] Snyder, J. P., "Map Projections: A Working Manual",
            USGS Professional Paper 1395.
     """
 
@@ -497,7 +497,7 @@ def by_predicate(sites: Any, pred: Callable[[Any], bool]):
 
     References
     ----------
-    .. [1] Gamble, T. D. et al., "Magnetotellurics with a remote
+    .. [by-predicate-1] Gamble, T. D. et al., "Magnetotellurics with a remote
            reference", Geophysics, 44(1), 53-68, 1979.
     """
 
@@ -625,7 +625,7 @@ def mask_large_phase_err(sites: Any, thresh: float):
 
     References
     ----------
-    .. [1] Gamble, T. D., Goubau, W. M., Clarke, J., "Magneto-
+    .. [mask-large-phase-err-1] Gamble, T. D., Goubau, W. M., Clarke, J., "Magneto-
            tellurics with a remote reference", Geophysics,
            44(1), 53-68, 1979.
     """

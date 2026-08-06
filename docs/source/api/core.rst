@@ -7,6 +7,7 @@ across pyCSAMT v2.
 .. automodule:: pycsamt.core
    :members:
    :show-inheritance:
+   :exclude-members: TransformerMixin
 
 Core Modules
 ------------

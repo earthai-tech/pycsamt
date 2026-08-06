@@ -61,7 +61,7 @@ def to_csv(
 
     References
     ----------
-    .. [1] Shafranovich, Y. (2005). Common Format and MIME Type for
+    .. [to-csv-1] Shafranovich, Y. (2005). Common Format and MIME Type for
        Comma-Separated Values (CSV) Files. RFC 4180.
     """
     model = result.to_resistivity_model()
@@ -116,7 +116,7 @@ def to_npz(result: InversionResult, path: PathLike) -> Path:
 
     References
     ----------
-    .. [1] NumPy Developers. ``numpy.savez_compressed`` documentation.
+    .. [to-npz-1] NumPy Developers. ``numpy.savez_compressed`` documentation.
     """
     model = result.to_resistivity_model()
     out = Path(path)
@@ -187,7 +187,7 @@ def to_geojson(
 
     References
     ----------
-    .. [1] Butler, H. et al. (2016). The GeoJSON Format. RFC 7946.
+    .. [to-geojson-1] Butler, H. et al. (2016). The GeoJSON Format. RFC 7946.
     """
     model = result.to_resistivity_model()
     rho = np.asarray(model.rho_2d, dtype=float)
@@ -281,7 +281,7 @@ def to_vtk(
 
     References
     ----------
-    .. [1] Schroeder, W., Martin, K. and Lorensen, B. (2006). *The
+    .. [to-vtk-1] Schroeder, W., Martin, K. and Lorensen, B. (2006). *The
        Visualization Toolkit*, 4th edition.
     """
     model = result.to_resistivity_model()
@@ -352,8 +352,8 @@ def to_geotiff(
 
     References
     ----------
-    .. [1] Ritter, N. and Ruth, M. (1997). GeoTIFF Format Specification.
-    .. [2] Gillies, S. et al. Rasterio documentation.
+    .. [to-geotiff-1] Ritter, N. and Ruth, M. (1997). GeoTIFF Format Specification.
+    .. [to-geotiff-2] Gillies, S. et al. Rasterio documentation.
     """
     try:
         import rasterio
@@ -440,7 +440,7 @@ def to_archive(
 
     References
     ----------
-    .. [1] PKWARE Inc. ZIP File Format Specification.
+    .. [to-archive-1] PKWARE Inc. ZIP File Format Specification.
     """
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)

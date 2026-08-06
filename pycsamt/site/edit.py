@@ -102,9 +102,9 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
 
     References
     ----------
-    .. [1] Simpson, F. and Bahr, K. (2005). Practical
+    .. [rotate-1] Simpson, F. and Bahr, K. (2005). Practical
        Magnetotellurics. Cambridge Univ. Press.
-    .. [2] SEG EDI format usage notes for MT tensors.
+    .. [rotate-2] SEG EDI format usage notes for MT tensors.
     """
 
     ed = _to_mutable(site, inplace=inplace)
@@ -241,7 +241,7 @@ def select_freq(
 
     References
     ----------
-    .. [1] SEG EDI format usage notes for frequency-indexed MT
+    .. [select-freq-1] SEG EDI format usage notes for frequency-indexed MT
        arrays.
     """
 
@@ -360,7 +360,7 @@ def rename(
 
     References
     ----------
-    .. [1] SEG EDI format field naming and common aliases for
+    .. [rename-1] SEG EDI format field naming and common aliases for
        station identifiers.
     """
 
@@ -463,7 +463,7 @@ def set_coords(
 
     References
     ----------
-    .. [1] SEG EDI format, HEAD section fields for station
+    .. [set-coords-1] SEG EDI format, HEAD section fields for station
        coordinates.
     """
 
@@ -545,9 +545,9 @@ def fill_missing(
 
     References
     ----------
-    .. [1] Simpson, F. and Bahr, K. (2005). Practical
+    .. [fill-missing-1] Simpson, F. and Bahr, K. (2005). Practical
        Magnetotellurics. Cambridge Univ. Press.
-    .. [2] SEG EDI format usage notes for MT arrays and tipper.
+    .. [fill-missing-2] SEG EDI format usage notes for MT arrays and tipper.
     """
 
     how = str(how).lower()
@@ -756,7 +756,7 @@ def select_freq_all(
 
     References
     ----------
-    .. [1] SEG EDI format usage notes for frequency-indexed MT
+    .. [select-freq-all-1] SEG EDI format usage notes for frequency-indexed MT
        arrays.
     """
 
@@ -846,7 +846,7 @@ def rename_all(
 
     References
     ----------
-    .. [1] SEG EDI format field naming conventions for station
+    .. [rename-all-1] SEG EDI format field naming conventions for station
        identifiers.
     """
 
@@ -937,7 +937,7 @@ def set_coords_all(
 
     References
     ----------
-    .. [1] SEG EDI HEAD section fields for station coordinates.
+    .. [set-coords-all-1] SEG EDI HEAD section fields for station coordinates.
     """
 
     def _lookup_by_frame(name: str):
@@ -1056,9 +1056,9 @@ def recompute_res_phase(
 
     References
     ----------
-    .. [1] Simpson, F. and Bahr, K. (2005). Practical
+    .. [recompute-res-phase-1] Simpson, F. and Bahr, K. (2005). Practical
        Magnetotellurics. Cambridge Univ. Press.
-    .. [2] SEG EDI format usage notes for derived MT quantities.
+    .. [recompute-res-phase-2] SEG EDI format usage notes for derived MT quantities.
     """
 
     ed = _to_mutable(site, inplace=inplace)
@@ -1220,9 +1220,9 @@ def set_coords_from_table(
 
     References
     ----------
-    .. [1] EPSG Geodetic Parameter Registry,
+    .. [set-coords-from-table-1] EPSG Geodetic Parameter Registry,
            https://epsg.org/
-    .. [2] pyproj documentation, https://pyproj4.github.io/pyproj/
+    .. [set-coords-from-table-2] pyproj documentation, https://pyproj4.github.io/pyproj/
     """
 
     df, cols = _maybe_df(table, columns=columns)
@@ -1327,9 +1327,9 @@ def set_coords_from_en(
 
     References
     ----------
-    .. [1] EPSG Geodetic Parameter Registry,
+    .. [set-coords-from-en-1] EPSG Geodetic Parameter Registry,
            https://epsg.org/
-    .. [2] pyproj documentation, https://pyproj4.github.io/pyproj/
+    .. [set-coords-from-en-2] pyproj documentation, https://pyproj4.github.io/pyproj/
     """
 
     lo, la = _project_en_to_lonlat(

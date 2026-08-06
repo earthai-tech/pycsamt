@@ -235,7 +235,7 @@ data, the reported quantity is commonly interpreted as
 
 An inversion is usually considered well weighted when
 :math:`\phi_d \approx 1`. The practical target still depends
-on error estimates and modeling assumptions [1]_.
+on error estimates and modeling assumptions [OccamLog-1]_.
 
 Parameters
 ----------
@@ -297,11 +297,11 @@ Print a compact report for scripts:
 
 References
 ----------
-.. [1] Constable, S. C., Parker, R. L., and Constable,
+.. [OccamLog-1] Constable, S. C., Parker, R. L., and Constable,
    C. G., "Occam's inversion: A practical algorithm for
    generating smooth models from electromagnetic sounding
    data", Geophysics, 52(3), 289-300, 1987.
-.. [2] deGroot-Hedlin, C., and Constable, S.,
+.. [OccamLog-2] deGroot-Hedlin, C., and Constable, S.,
    "Occam's inversion to generate smooth, two-dimensional
    models from magnetotelluric data", Geophysics, 55(12),
    1613-1624, 1990.

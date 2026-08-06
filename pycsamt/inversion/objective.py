@@ -370,7 +370,7 @@ def weighted_rms(observed, predicted, errors=None) -> float:
 
     References
     ----------
-    .. [1] Tarantola, A. (2005). *Inverse Problem Theory and Methods for Model
+    .. [weighted-rms-1] Tarantola, A. (2005). *Inverse Problem Theory and Methods for Model
        Parameter Estimation*. SIAM.
     """
     obs = np.asarray(observed, dtype=float)

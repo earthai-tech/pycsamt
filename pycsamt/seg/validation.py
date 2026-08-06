@@ -147,7 +147,7 @@ class IsEdi(ABC):
     r"""
     Abstract base for SEG-EDI validation helpers.
 
-    Subclasses implement :pyattr:`is_valid`.  The static
+    Subclasses implement :attr:`IsEdi.is_valid`.  The static
     method :py:meth:`_assert_edi` provides a robust, file-level
     validator that accepts either a path or an existing
     :class:`IsEdi` instance.  The check is heuristic, fast, and
@@ -202,7 +202,7 @@ class IsEdi(ABC):
 
     References
     ----------
-    .. [1] SEG (1987). *MT/EMAP EDI Format Standard*. Society of
+    .. [IsEdi-1] SEG (1987). *MT/EMAP EDI Format Standard*. Society of
        Exploration Geophysicists. Available online:
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """

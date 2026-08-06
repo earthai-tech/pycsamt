@@ -76,7 +76,7 @@ def register_packer(kind: str, packer: Packer) -> None:
 
     References
     ----------
-    .. [1] NumPy. ``np.savez_compressed`` for NPZ payloads.
+    .. [register-packer-1] NumPy. ``np.savez_compressed`` for NPZ payloads.
     """
 
     if not kind or not isinstance(kind, str):
@@ -275,7 +275,7 @@ def pack_to_file(
 
     References
     ----------
-    .. [1] NumPy Reference. *np.savez_compressed*.
+    .. [pack-to-file-1] NumPy Reference. *np.savez_compressed*.
     """
 
     p = Path(path)
@@ -423,8 +423,8 @@ class RegistryAPI(CoreObject):
 
     References
     ----------
-    .. [1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
-    .. [2] NumPy Reference. *np.savez_compressed*, *np.load*.
+    .. [RegistryAPI-1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
+    .. [RegistryAPI-2] NumPy Reference. *np.savez_compressed*, *np.load*.
     """
 
     def __init__(

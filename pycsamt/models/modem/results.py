@@ -334,7 +334,7 @@ Here :math:`d_i^{{obs}}` and :math:`d_i^{{pred}}` are observed
 and predicted data values, and :math:`\sigma_i` is the data
 uncertainty used for weighting. The exact composition of the
 sum depends on the component family selected in the ModEM data
-file [1]_.
+file [InversionResult-1]_.
 
 Parameters
 ----------
@@ -433,7 +433,7 @@ ModEmCovariance
 
 References
 ----------
-.. [1] Kelbert, A., Meqbel, N., Egbert, G. D., and
+.. [InversionResult-1] Kelbert, A., Meqbel, N., Egbert, G. D., and
    Tandon, K. (2014). ModEM: A modular system for inversion
    of electromagnetic geophysical data. *Computers &
    Geosciences*, 66, 40-53.

@@ -160,7 +160,7 @@ class Head(EDIComponentBase):
     ----------
     Location : :class:`~pycsamt.loc.Location`
         Container for geographic coordinates.  The
-        :pyattr:`lat`, :pyattr:`long` and :pyattr:`elev`
+        :attr:`Head.lat`, :attr:`Head.long` and :attr:`Head.elev`
         properties delegate to this object.
     dataid, acqby, fileby : str or None
         Dataset identifier, acquisition contractor, and file
@@ -172,7 +172,7 @@ class Head(EDIComponentBase):
         Descriptive location metadata.
     lat, long, elev : float or None
         Coordinates as decimal degrees and elevation in the
-        current :pyattr:`units`.  DMS inputs are converted to
+        current :attr:`Head.units`.  DMS inputs are converted to
         decimal when reading; writers emit DMS strings.
     units : {'m', 'ft'}
         Elevation units (default ``'m'``).
@@ -201,7 +201,7 @@ class Head(EDIComponentBase):
     -----
     * Key names are normalized to lower case and stored in a
       canonical set (for example *lon* is exposed as
-      :pyattr:`long`).
+      :attr:`Head.long`).
     * Latitude and longitude accept DMS strings of the form
       ``'DD:MM:SS'`` with optional decimals and optional
       cardinal letters.  See :mod:`pycsamt.gis.utils`.
@@ -237,7 +237,7 @@ class Head(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
+    .. [Head-1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
 
@@ -604,7 +604,7 @@ class Info(EDIComponentBase):
     processing provenance.  It supports **both** classic
     ``KEY=VALUE`` blocks and spectra-style **free-text** INFO
     blocks.  Non-KV lines are preserved in
-    :pyattr:`info_text` and are written back unmodified.
+    :attr:`Info.info_text` and are written back unmodified.
 
     Parameters
     ----------
@@ -612,7 +612,7 @@ class Info(EDIComponentBase):
         Raw ``KEY=VALUE`` lines for the INFO block.  If
         provided, they are parsed immediately via
         :meth:`read`.  Non-KV lines should be passed via
-        :pyattr:`info_text` or supplied through
+        :attr:`Info.info_text` or supplied through
         :meth:`from_file`.
     verbose : int, optional
         Verbosity level forwarded to the base component.
@@ -646,10 +646,10 @@ class Info(EDIComponentBase):
     Notes
     -----
     * Known keys are routed into nested containers (for
-      example ``processedby`` → :pyattr:`Processing`).
+      example ``processedby`` → :attr:`Info.Processing`).
     * If an INFO block contains **no** KV lines, parse is
       still successful; fields remain at defaults and
-      :pyattr:`info_text` carries the original text.
+      :attr:`Info.info_text` carries the original text.
 
     Examples
     --------
@@ -679,7 +679,7 @@ class Info(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
+    .. [Info-1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
 
@@ -1051,7 +1051,7 @@ class Heads(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
+    .. [Heads-1] SEG MT/EMAP EDI specification (1987/2006).  MTNet:
            https://www.mtnet.info/
     """
 

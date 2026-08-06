@@ -61,9 +61,9 @@ pycsamt.api.plot.save_fig
 
 References
 ----------
-.. [1] Hunter, J. D. (2007). Matplotlib: A 2D graphics environment.
+.. [module-1] Hunter, J. D. (2007). Matplotlib: A 2D graphics environment.
    *Computing in Science & Engineering*, 9(3), 90-95.
-.. [2] Tufte, E. R. (2001). *The Visual Display of Quantitative Information*,
+.. [module-2] Tufte, E. R. (2001). *The Visual Display of Quantitative Information*,
    2nd edition. Graphics Press.
 """
 
@@ -175,11 +175,11 @@ def plot_model(
 
     References
     ----------
-    .. [1] Tufte, E. R. (2001). *The Visual Display of Quantitative
+    .. [plot-model-1] Tufte, E. R. (2001). *The Visual Display of Quantitative
        Information*, 2nd edition. Graphics Press.
-    .. [2] Hunter, J. D. (2007). Matplotlib: A 2D graphics environment.
+    .. [plot-model-2] Hunter, J. D. (2007). Matplotlib: A 2D graphics environment.
        *Computing in Science & Engineering*, 9(3), 90-95.
-    .. [3] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
+    .. [plot-model-3] Chave, A. D. and Jones, A. G. (2012). *The Magnetotelluric Method:
        Theory and Practice*. Cambridge University Press.
     """
     import matplotlib.pyplot as plt
@@ -327,9 +327,9 @@ def plot_rms(
 
     References
     ----------
-    .. [1] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+    .. [plot-rms-1] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
        Estimation and Inverse Problems*, 3rd edition. Elsevier.
-    .. [2] Constable, S. C., Parker, R. L. and Constable, C. G. (1987).
+    .. [plot-rms-2] Constable, S. C., Parker, R. L. and Constable, C. G. (1987).
        Occam's inversion: A practical algorithm for generating smooth models
        from electromagnetic sounding data. *Geophysics*, 52(3), 289-300.
     """

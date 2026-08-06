@@ -312,7 +312,7 @@ See Also
 InversionResult.history
     Result field that carries convergence diagnostics.
 
-{_inversion_param_docs.result.references}
+{_inversion_param_docs.result.references_uncertainty}
 """
 
 InversionUncertainty.__doc__ = rf"""
@@ -344,7 +344,7 @@ metadata : dict, optional
 
 References
 ----------
-.. [1] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+.. [InversionUncertainty-1] Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
    Estimation and Inverse Problems*, 3rd edition. Elsevier.
 """
 

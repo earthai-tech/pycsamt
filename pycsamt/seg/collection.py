@@ -100,7 +100,7 @@ class CollectionMixin(ParseMixin):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [CollectionMixin-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -301,7 +301,7 @@ class EDICollection(CBBase, CollectionMixin):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [EDICollection-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -812,7 +812,7 @@ class EDICollection(CBBase, CollectionMixin):
 
         References
         ----------
-        .. [1] SEG EDI 1.0 Electromagnetic Data Interchange
+        .. [EDICollection-fetch-1] SEG EDI 1.0 Electromagnetic Data Interchange
                specification.
         """
 

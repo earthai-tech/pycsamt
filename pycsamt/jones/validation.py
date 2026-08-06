@@ -166,7 +166,7 @@ class IsJ(ABC):
     r"""
     Abstract base for A.G. Jones J-format validation helpers.
 
-    Subclasses implement :pyattr:`is_valid`.  The static method
+    Subclasses implement :attr:`IsJ.is_valid`.  The static method
     :py:meth:`_assert_j` provides a robust, file-level validator
     that accepts either a path or an existing :class:`IsJ`
     instance.  The check is heuristic, fast and tolerant of

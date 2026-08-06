@@ -82,9 +82,9 @@ class JMixin:
 
     References
     ----------
-    .. [1] A. G. Jones, *Magnetotelluric data file J-format*,
+    .. [JMixin-1] A. G. Jones, *Magnetotelluric data file J-format*,
            version 2.0, 1994.
-    .. [2] MTNet, *J format documentation*.
+    .. [JMixin-2] MTNet, *J format documentation*.
     """
 
     _tidx: dict[str, tuple[int, int]] = dict(TENSOR_INDEX)
@@ -196,9 +196,9 @@ class JIOMixin(JMixin):
 
     References
     ----------
-    .. [1] A. G. Jones, *Magnetotelluric data file J-format*,
+    .. [JIOMixin-1] A. G. Jones, *Magnetotelluric data file J-format*,
            version 2.0, 1994.
-    .. [2] MTNet, *J format documentation*.
+    .. [JIOMixin-2] MTNet, *J format documentation*.
     """
 
     def _scan_blocks(
@@ -476,7 +476,7 @@ class JFile(JIOMixin):
     freq : ndarray or None
         Shared frequency vector inferred from available
         objects.  Periods are available via
-        :pyattr:`periods`.
+        :attr:`JFile.periods`.
     periods : ndarray or None
         Convenience view of ``1.0/freq`` when known.
     n_freq : int
@@ -536,9 +536,9 @@ class JFile(JIOMixin):
 
     References
     ----------
-    .. [1] A. G. Jones, *Magnetotelluric data file J-format*,
+    .. [JFile-1] A. G. Jones, *Magnetotelluric data file J-format*,
            version 2.0, 1994.
-    .. [2] MTNet, *J format documentation*.
+    .. [JFile-2] MTNet, *J format documentation*.
     """
 
     def __init__(
@@ -581,9 +581,9 @@ class JFile(JIOMixin):
         Returns
         -------
         JFile
-            Instance with :pyattr:`heads`, :pyattr:`blocks`
-            and objects (:pyattr:`Z`, :pyattr:`Tip`,
-            :pyattr:`Res`) populated where possible.
+            Instance with :attr:`JFile.heads`, :attr:`JFile.blocks`
+            and objects (:attr:`JFile.Z`, :attr:`JFile.Tip`,
+            :attr:`JFile.Res`) populated where possible.
 
         Notes
         -----
@@ -609,7 +609,7 @@ class JFile(JIOMixin):
 
         References
         ----------
-        .. [1] A. G. Jones, *Magnetotelluric data file
+        .. [JFile-from-file-1] A. G. Jones, *Magnetotelluric data file
                J-format*, version 2.0, 1994.
         """
         inst = cls(path, verbose=verbose)
@@ -674,7 +674,7 @@ class JFile(JIOMixin):
 
         References
         ----------
-        .. [1] A. G. Jones, *Magnetotelluric data file
+        .. [JFile-read-1] A. G. Jones, *Magnetotelluric data file
                J-format*, version 2.0, 1994.
         """
 
@@ -723,7 +723,7 @@ class JFile(JIOMixin):
         ----------
         j_fn : str, optional
             Base filename to use.  If omitted, derive from
-            :pyattr:`path` or default to ``'out.j'``.
+            :attr:`JFile.path` or default to ``'out.j'``.
         new_jfn : str, optional
             Replacement filename.  Takes precedence over
             ``j_fn`` when provided.
@@ -732,10 +732,10 @@ class JFile(JIOMixin):
             auto-detects from available objects on the instance.
         savepath : str or Path, optional
             Folder where to save.  Defaults to the parent of
-            :pyattr:`path` or the current directory.
+            :attr:`JFile.path` or the current directory.
         verbose : int, optional
             Override verbosity.  If ``None``, reuse
-            :pyattr:`verbose`.
+            :attr:`JFile.verbose`.
         overwrite : bool, default=True
             If ``False`` and the target exists, a numeric
             suffix is appended to avoid clobbering.
@@ -772,7 +772,7 @@ class JFile(JIOMixin):
 
         References
         ----------
-        .. [1] A. G. Jones, *Magnetotelluric data file
+        .. [JFile-write-1] A. G. Jones, *Magnetotelluric data file
                J-format*, version 2.0, 1994.
         """
 

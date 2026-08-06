@@ -109,7 +109,7 @@ class Stations(SurveyBase):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [Stations-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -559,7 +559,7 @@ class Topography(SurveyBase):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [Topography-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -921,9 +921,9 @@ class EDIProfile(SurveyBase):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [EDIProfile-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
-    .. [2] Snyder, J. P. (1987). *Map Projections – A Working
+    .. [EDIProfile-2] Snyder, J. P. (1987). *Map Projections – A Working
        Manual*, USGS Prof. Paper 1395.
     """
 

@@ -12,6 +12,10 @@ static-shift correction, source-effect tools, and plotting helpers.
 .. automodule:: pycsamt.emtools
    :members:
    :show-inheritance:
+   :exclude-members: RoseStyle, overlay_noise_cone, overlay_spectral_holes,
+                      plot_consistency_fan, plot_coverage_psection,
+                      plot_qc_quicklook, plot_snr_hist,
+                      plot_xyyx_crossover_map
 
 Processing and QC
 -----------------

@@ -512,7 +512,7 @@ InversionResult
 
 References
 ----------
-.. [1] Kelbert, A., Meqbel, N., Egbert, G. D., and
+.. [ModEmRunner-1] Kelbert, A., Meqbel, N., Egbert, G. D., and
    Tandon, K. (2014). ModEM: A modular system for inversion
    of electromagnetic geophysical data. *Computers &
    Geosciences*, 66, 40-53.

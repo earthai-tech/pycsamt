@@ -86,7 +86,7 @@ class JParseMixin:
 
     References
     ----------
-    .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
+    .. [JParseMixin-1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
 
     J_SUFFIXES = {".j", ".jones", ".txt", ".dat"}
@@ -374,7 +374,7 @@ class JCoreParser(JParseMixin):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
+    .. [JCoreParser-1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
 
     def __init__(
@@ -514,7 +514,7 @@ class JCBBase:
 
     References
     ----------
-    .. [1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
+    .. [JCBBase-1] A. G. Jones (1994). *J-format v2.0*. MTNet notes.
     """
 
     def __init__(

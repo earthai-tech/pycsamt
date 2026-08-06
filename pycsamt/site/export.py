@@ -76,7 +76,7 @@ def write_site(site: Any, path: str | Path) -> Path:
 
     References
     ----------
-    .. [1] Python Software Foundation. "pathlib" and "io" modules.
+    .. [write-site-1] Python Software Foundation. "pathlib" and "io" modules.
     """
 
     out = Path(path)
@@ -188,7 +188,7 @@ def write_sites(
 
     References
     ----------
-    .. [1] Python Software Foundation. "csv" module.
+    .. [write-sites-1] Python Software Foundation. "csv" module.
     """
 
     out_root = Path(outdir)
@@ -304,7 +304,7 @@ def pack_zip(
 
     References
     ----------
-    .. [1] Python Software Foundation. "zipfile" module.
+    .. [pack-zip-1] Python Software Foundation. "zipfile" module.
     """
 
     out_zip = Path(out_zip)

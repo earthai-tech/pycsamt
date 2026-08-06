@@ -42,7 +42,7 @@ class Z(ResPhase):
     ``(2, 2)`` matrix is promoted to a one-row stack.
 
     Frequency is held as a 1-D vector ``(n,)`` in Hz. When either
-    :pyattr:`z` or :pyattr:`freq` is set, apparent resistivity
+    :attr:`Z.z` or :attr:`Z.freq` is set, apparent resistivity
     :math:`\rho` and phase :math:`\phi` are recomputed via the
     parent class.
 
@@ -52,12 +52,12 @@ class Z(ResPhase):
         Complex impedance tensor(s). Real arrays are cast to
         complex.
     z_err_array : ndarray, optional
-        Absolute per-component errors on :pyattr:`z`. Shapes as
+        Absolute per-component errors on :attr:`Z.z`. Shapes as
         for ``z_array`` after any promotion.
     freq : array-like of float, optional
         Frequency vector in Hz. Must be 1-D and strictly
         positive. Length must equal the number of rows in
-        :pyattr:`z`.
+        :attr:`Z.z`.
     name : str, optional
         Display name forwarded to
         :class:`~pycsamt.z.base.BaseEM`.
@@ -71,7 +71,7 @@ class Z(ResPhase):
     z : ndarray or None
         Complex impedance stack, shape ``(n, 2, 2)``.
     z_err : ndarray or None
-        Absolute errors on :pyattr:`z`.
+        Absolute errors on :attr:`Z.z`.
     freq : ndarray or None
         Frequency vector in Hz.
     rotation_angle : float or ndarray
@@ -385,7 +385,7 @@ class Z(ResPhase):
 
     def rotate(self, alpha: Sequence[float] | float) -> None:
         r"""
-        Rotate :pyattr:`z` by angle(s) ``alpha`` (degrees, CW
+        Rotate :attr:`Z.z` by angle(s) ``alpha`` (degrees, CW
         positive).
 
         The rotation is referenced to geographic axes (X→North,
@@ -402,16 +402,16 @@ class Z(ResPhase):
         Raises
         ------
         pycsamt.exceptions.ZError
-            If :pyattr:`z` is missing or the number of angles is
+            If :attr:`Z.z` is missing or the number of angles is
             invalid.
 
         Notes
         -----
         The following are updated:
 
-        - :pyattr:`z`
-        - :pyattr:`z_err` (if present)
-        - :pyattr:`rotation_angle`
+        - :attr:`Z.z`
+        - :attr:`Z.z_err` (if present)
+        - :attr:`Z.rotation_angle`
         - Derived :math:`\rho` and :math:`\phi`
 
         Rotation uses

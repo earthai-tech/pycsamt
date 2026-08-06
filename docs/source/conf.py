@@ -157,7 +157,7 @@ sphinx_gallery_conf = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "_templates", "Thumbs.db", ".DS_Store"]
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 master_doc = "index"
 
@@ -278,11 +278,9 @@ html_theme_options = {
     # template does not exist at all, and referencing it here throws
     # "'sidebar-collapse.html' not found" and hard-fails the whole build.
     "primary_sidebar_end": [],
-    # Code highlighting — NOTE: pydata-sphinx-theme spells these
-    # "pygment_*" (no "s"); the "pygments_*" spelling is ignored and
-    # dark mode falls back to black-on-dark unreadable tokens.
-    "pygment_light_style": "tango",
-    "pygment_dark_style": "monokai",
+    # Code highlighting.
+    "pygments_light_style": "tango",
+    "pygments_dark_style": "monokai",
     # Footer
     "footer_start": ["copyright"],
     # "netlify-badge" satisfies the Netlify Open Source Plan's requirement

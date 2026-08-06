@@ -94,7 +94,7 @@ class PhaseStdBase(AVGComponentBase):
     ) -> None:
         """
         Parse *source* and build an internal tidy frame with the
-        canonical variable name :pyattr:`VAR_NAME`.
+        canonical variable name :attr:`PhaseStdBase.VAR_NAME`.
 
         If *source* is vector-like, construct a minimal tidy frame
         with columns ``station, freq, comp`` when possible (missing
@@ -359,7 +359,7 @@ class PhaseStdBase(AVGComponentBase):
         r"""
         Convert the phase-stdev column **in place** between
         :math:`\mathrm{mrad}` and :math:`\mathrm{deg}` and update
-        ``Unit.Phase`` in :pyattr:`meta`.
+        ``Unit.Phase`` in :attr:`AVGComponentBase.meta`.
 
         The conversion factors come from:
 

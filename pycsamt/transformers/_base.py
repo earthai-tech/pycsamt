@@ -102,8 +102,8 @@ class TransformerMixin(MTBase):
 
     References
     ----------
-    .. [1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
-    .. [2] Egbert, G. D. (1997). Robust MT processing.
+    .. [TransformerMixin-1] Simpson, F. & Bahr, K. (2005). *Practical MT*.
+    .. [TransformerMixin-2] Egbert, G. D. (1997). Robust MT processing.
 
     """
 
@@ -210,7 +210,7 @@ class TransformerMixin(MTBase):
         Notes
         -----
         The default implementation is a no-op. Subclasses may
-        override to apply the standard MT relations [1]_ [2]_.
+        override to apply the standard MT relations [TransformerMixin-compute-res-from-z-1]_ [TransformerMixin-compute-res-from-z-2]_.
         """
         return b
 

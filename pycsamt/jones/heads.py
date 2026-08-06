@@ -120,9 +120,9 @@ class Banner(JComponentBase):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file J-format,
+    .. [Banner-1] A. G. Jones (1994). Magnetotelluric data file J-format,
        version 2.0.
-    .. [2] MTNet. "J format documentation".
+    .. [Banner-2] MTNet. "J format documentation".
     """
 
     def __init__(
@@ -298,7 +298,7 @@ class Info(JComponentBase):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [Info-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
 
@@ -518,9 +518,9 @@ class Head(JComponentBase):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [Head-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
-    .. [2] MTNet. "J format documentation".
+    .. [Head-2] MTNet. "J format documentation".
     """
 
     _repr_keys = ["station", "n"]
@@ -721,7 +721,7 @@ class Heads(JComponentBase):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [Heads-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
 

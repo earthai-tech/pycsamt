@@ -824,7 +824,7 @@ Mare2DEMConfig
 
 References
 ----------
-.. [1] Key, K. (2016). MARE2DEM: A 2-D inversion code for
+.. [SourceManager-1] Key, K. (2016). MARE2DEM: A 2-D inversion code for
    controlled-source electromagnetic and magnetotelluric data.
    *Geophysical Journal International*, 207(1), 571-588.
    doi:10.1093/gji/ggw290.

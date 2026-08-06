@@ -107,19 +107,10 @@ Each token is a format extension (without the leading dot):
 Supported formats: ``png``, ``svg``, ``pdf``, ``eps``, ``tiff``,
 ``jpg``/``jpeg``.
 
-PlotConfig attributes
----------------------
-.. autosummary::
-
-   PlotConfig.fmt
-   PlotConfig.base_fmt
-   PlotConfig.dpi
-   PlotConfig.bbox_inches
-   PlotConfig.transparent
-   PlotConfig.facecolor
-   PlotConfig.savedir
-   PlotConfig.close_after_save
-   PlotConfig.verbose
+See :class:`PlotConfig` below for the full list of configurable
+attributes (``fmt``, ``base_fmt``, ``dpi``, ``bbox_inches``,
+``transparent``, ``facecolor``, ``savedir``, ``close_after_save``,
+``verbose``).
 """
 
 from __future__ import annotations

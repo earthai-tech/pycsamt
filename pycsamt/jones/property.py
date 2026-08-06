@@ -92,7 +92,7 @@ class JSiteProperty:
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file J-format,
+    .. [JSiteProperty-1] A. G. Jones (1994). Magnetotelluric data file J-format,
        version 2.0.
     """
 
@@ -158,7 +158,7 @@ class JSiteProperty:
 
         References
         ----------
-        .. [1] A. G. Jones (1994). Magnetotelluric data file
+        .. [JSiteProperty-from-file-1] A. G. Jones (1994). Magnetotelluric data file
            J-format, version 2.0.
         """
         lines = iter_lines(obj, encoding=encoding)
@@ -220,7 +220,7 @@ class JSiteProperty:
 
         References
         ----------
-        .. [1] A. G. Jones (1994). Magnetotelluric data file
+        .. [JSiteProperty-from-lines-1] A. G. Jones (1994). Magnetotelluric data file
            J-format, version 2.0.
         """
 
@@ -314,7 +314,7 @@ class JSiteProperty:
 
         References
         ----------
-        .. [1] A. G. Jones (1994). Magnetotelluric data file
+        .. [JSiteProperty-from-mapping-1] A. G. Jones (1994). Magnetotelluric data file
            J-format, version 2.0.
         """
         lines = (f">{k}={v}" for k, v in mapping.items())

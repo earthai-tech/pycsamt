@@ -92,7 +92,7 @@ class ParseMixin:
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [ParseMixin-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -280,7 +280,7 @@ class CoreParser(ParseMixin):
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [CoreParser-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 
@@ -440,7 +440,7 @@ class CBBase:
 
     References
     ----------
-    .. [1] SEG EDI MT/EMAP standard (1987), MTNet.
+    .. [CBBase-1] SEG EDI MT/EMAP standard (1987), MTNet.
        https://www.mtnet.info/docs/seg_mt_emap_1987.pdf
     """
 

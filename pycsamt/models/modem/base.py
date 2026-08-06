@@ -167,7 +167,7 @@ behavior:
 
 References
 ----------
-.. [1] Egbert, G. D., and Kelbert, A., "Computational
+.. [ModEmBase-1] Egbert, G. D., and Kelbert, A., "Computational
    recipes for electromagnetic inverse problems", Geophysical
    Journal International, 189(1), 251-267, 2012,
    doi:10.1111/j.1365-246X.2011.05347.x.

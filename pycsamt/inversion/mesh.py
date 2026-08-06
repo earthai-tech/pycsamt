@@ -57,7 +57,7 @@ class InversionMesh(PyCSAMTObject, MetadataMixin):
 
     References
     ----------
-    .. [1] Oldenburg, D. W. and Li, Y. (2005). Inversion for applied
+    .. [InversionMesh-1] Oldenburg, D. W. and Li, Y. (2005). Inversion for applied
        geophysics: A tutorial. In *Near-Surface Geophysics*, SEG.
     """
 
@@ -146,7 +146,7 @@ def depth_widths(
 
     References
     ----------
-    .. [1] Ward, S. H. and Hohmann, G. W. (1988). Electromagnetic theory for
+    .. [depth-widths-1] Ward, S. H. and Hohmann, G. W. (1988). Electromagnetic theory for
        geophysical applications. In *Electromagnetic Methods in Applied
        Geophysics*, volume 1, SEG.
     """

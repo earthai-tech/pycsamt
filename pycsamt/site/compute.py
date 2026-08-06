@@ -119,10 +119,10 @@ def strike_estimate(
 
     References
     ----------
-    .. [1] Swift, C. M., 1967. A magnetotelluric investigation of an
+    .. [strike-estimate-1] Swift, C. M., 1967. A magnetotelluric investigation of an
            electrical conductivity anomaly in the southwestern
            United States. PhD thesis, MIT.
-    .. [2] Groom, R. W., and R. C. Bailey, 1989. Decomposition of
+    .. [strike-estimate-2] Groom, R. W., and R. C. Bailey, 1989. Decomposition of
            magnetotelluric impedance tensors in the presence of
            local three dimensional galvanic distortion. JGR.
     """
@@ -258,9 +258,9 @@ def res_at_freq(
 
     References
     ----------
-    .. [1] Vozoff, K., 1991. The magnetotelluric method. In
+    .. [res-at-freq-1] Vozoff, K., 1991. The magnetotelluric method. In
            Electromagnetic methods in applied geophysics.
-    .. [2] Simpson, F., and K. Bahr, 2005. Practical Magnetotellurics.
+    .. [res-at-freq-2] Simpson, F., and K. Bahr, 2005. Practical Magnetotellurics.
            Cambridge University Press.
     """
 
@@ -394,9 +394,9 @@ def phase_slope(
 
     References
     ----------
-    .. [1] Simpson, F., and K. Bahr, 2005. Practical
+    .. [phase-slope-1] Simpson, F., and K. Bahr, 2005. Practical
            Magnetotellurics. Cambridge University Press.
-    .. [2] Vozoff, K., 1991. The magnetotelluric method. In
+    .. [phase-slope-2] Vozoff, K., 1991. The magnetotelluric method. In
            Electromagnetic methods in applied geophysics.
     """
 
@@ -541,7 +541,7 @@ def tipper_magnitude(
 
     References
     ----------
-    .. [1] Simpson, F., and K. Bahr, 2005. Practical
+    .. [tipper-magnitude-1] Simpson, F., and K. Bahr, 2005. Practical
            Magnetotellurics. Cambridge University Press.
     """
 

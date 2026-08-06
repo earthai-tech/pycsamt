@@ -58,7 +58,7 @@ class ResPhase(BaseEM):
         :meth:`set_res_phase`.
     phase : ndarray, shape (n_freq, 2, 2)
         Phase :math:`\phi` in degrees.  Set alongside
-        :pyattr:`resistivity`.
+        :attr:`ResPhase.resistivity`.
     resistivity_err : ndarray or None, shape (n_freq, 2, 2)
         Absolute uncertainty on :math:`\rho` (Ω·m) or ``None`` if no
         **Z** errors were provided.
@@ -71,7 +71,7 @@ class ResPhase(BaseEM):
     freq : ndarray or None, shape (n_freq,)
         Frequency vector in Hz (1-D, finite, > 0).
     n_freq : int
-        Inferred number of frequencies (from :pyattr:`freq` or the
+        Inferred number of frequencies (from :attr:`ResPhase.freq` or the
         first dimension of known arrays).
 
     Notes
@@ -143,9 +143,9 @@ class ResPhase(BaseEM):
 
     References
     ----------
-    .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+    .. [ResPhase-1] Chave, A. D., & Jones, A. G. (2012). *The
            Magnetotelluric Method: Theory and Practice*. CUP.
-    .. [2] Simpson, F., & Bahr, K. (2005). *Practical
+    .. [ResPhase-2] Simpson, F., & Bahr, K. (2005). *Practical
            Magnetotellurics*. CUP.
     """
 
@@ -227,8 +227,8 @@ class ResPhase(BaseEM):
         from complex **Z**.
 
         Any provided inputs override the instance state.  On success,
-        :pyattr:`resistivity`, :pyattr:`phase`, and, when applicable,
-        :pyattr:`resistivity_err` and :pyattr:`phase_err` are set.
+        :attr:`ResPhase.resistivity`, :attr:`ResPhase.phase`, and, when applicable,
+        :attr:`ResPhase.resistivity_err` and :attr:`ResPhase.phase_err` are set.
 
         Parameters
         ----------
@@ -374,8 +374,8 @@ class ResPhase(BaseEM):
         Returns
         -------
         None
-            Results are stored on the instance (:pyattr:`_z`,
-            :pyattr:`_z_err`, :pyattr:`resistivity`, :pyattr:`phase`).
+            Results are stored on the instance (:attr:`ResPhase._z`,
+            :attr:`ResPhase._z_err`, :attr:`ResPhase.resistivity`, :attr:`ResPhase.phase`).
 
         Raises
         ------

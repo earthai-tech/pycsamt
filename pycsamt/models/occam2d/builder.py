@@ -154,7 +154,7 @@ files consumed by the Occam2DMT Fortran program:
 * ``Occam2DModel``: mapping from mesh cells to parameters.
 * ``Startup``: inversion controls and initial model vector.
 
-The build chain follows Occam smooth inversion [1]_, [2]_.
+The build chain follows Occam smooth inversion [InputBuilder-1]_, [InputBuilder-2]_.
 The inversion later seeks the smoothest model that reaches a
 target
 normalized RMS misfit:
@@ -259,11 +259,11 @@ True
 
 References
 ----------
-.. [1] Constable, S. C., Parker, R. L., and Constable,
+.. [InputBuilder-1] Constable, S. C., Parker, R. L., and Constable,
    C. G., "Occam's inversion: A practical algorithm for
    generating smooth models from electromagnetic sounding
    data", Geophysics, 52(3), 289-300, 1987.
-.. [2] deGroot-Hedlin, C., and Constable, S.,
+.. [InputBuilder-2] deGroot-Hedlin, C., and Constable, S.,
    "Occam's inversion to generate smooth, two-dimensional
    models from magnetotelluric data", Geophysics, 55(12),
    1613-1624, 1990.

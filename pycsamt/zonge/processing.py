@@ -41,7 +41,7 @@ class ASTATIC(Zonge):
 
     This class provides a suite of methods for data conditioning
     and analysis that mirror the functionality of Zonge's ASTATIC
-    software [1]_. It operates on a loaded
+    software [ASTATIC-1]_. It operates on a loaded
     :class:`~.avg.AMTAVG` object, allowing for complex
     operations like static shift correction, data filtering, and
     interpolation.
@@ -107,7 +107,7 @@ class ASTATIC(Zonge):
 
     References
     ----------
-    .. [1] Zonge International, Inc. (2014). *ASTATIC v3.70
+    .. [ASTATIC-1] Zonge International, Inc. (2014). *ASTATIC v3.70
            User Manual*.
 
     See Also

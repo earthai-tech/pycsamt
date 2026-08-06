@@ -140,7 +140,7 @@ class JBlock(JComponentBase):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [JBlock-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
 
@@ -321,7 +321,7 @@ class RBlock(JBlock):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [RBlock-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
 
@@ -520,7 +520,7 @@ class TFBlock(JBlock):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [TFBlock-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
 
@@ -700,7 +700,7 @@ class JBlocks(JComponentBase):
 
     References
     ----------
-    .. [1] A. G. Jones (1994). Magnetotelluric data file
+    .. [JBlocks-1] A. G. Jones (1994). Magnetotelluric data file
        J-format, version 2.0.
     """
 
@@ -1110,7 +1110,7 @@ RRow : Row model for resistivity/phase blocks.
 
 References
 ----------
-.. [1] A. G. Jones (1994). Magnetotelluric data file
+.. [TFRow-1] A. G. Jones (1994). Magnetotelluric data file
    J-format, version 2.0.
 """
 
@@ -1165,6 +1165,6 @@ TFRow : Row model for transfer-function blocks.
 
 References
 ----------
-.. [1] A. G. Jones (1994). Magnetotelluric data file
+.. [RRow-1] A. G. Jones (1994). Magnetotelluric data file
    J-format, version 2.0.
 """

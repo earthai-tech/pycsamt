@@ -508,8 +508,8 @@ class FileManifestStore(ManifestStore):
 
     References
     ----------
-    .. [1] Python Standard Library. *json* module.
-    .. [2] Python 3.11+. *tomllib* — TOML parser.
+    .. [FileManifestStore-1] Python Standard Library. *json* module.
+    .. [FileManifestStore-2] Python 3.11+. *tomllib* — TOML parser.
     """
 
     def load(self, path: Path) -> Manifest:
@@ -654,9 +654,9 @@ class Registry(CoreObject):
 
     References
     ----------
-    .. [1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
+    .. [Registry-1] D. Wight (1991). *SEG MT/EMAP EDI Standard*.
        Society of Exploration Geophysicists.
-    .. [2] Python Standard Library. *pathlib* module.
+    .. [Registry-2] Python Standard Library. *pathlib* module.
     """
 
     def __init__(

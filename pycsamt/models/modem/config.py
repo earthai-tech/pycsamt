@@ -495,7 +495,7 @@ the initial model value is commonly
    m_0 = \ln(\rho_0).
 
 ModEM then updates this model while balancing data fit and
-regularization [1]_, [2]_.
+regularization [ModEmConfig-1]_, [ModEmConfig-2]_.
 
 Dimensionality
 --------------
@@ -702,11 +702,11 @@ PosixPath('modem_config.json')
 
 References
 ----------
-.. [1] Egbert, G. D., and Kelbert, A., "Computational
+.. [ModEmConfig-1] Egbert, G. D., and Kelbert, A., "Computational
    recipes for electromagnetic inverse problems", Geophysical
    Journal International, 189(1), 251-267, 2012,
    doi:10.1111/j.1365-246X.2011.05347.x.
-.. [2] Kelbert, A., Meqbel, N., Egbert, G. D., and Tandon,
+.. [ModEmConfig-2] Kelbert, A., Meqbel, N., Egbert, G. D., and Tandon,
    K., "ModEM: A modular system for inversion of
    electromagnetic geophysical data", Computers and
    Geosciences, 66, 40-53, 2014,

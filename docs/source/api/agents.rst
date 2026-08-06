@@ -7,6 +7,7 @@ inversion preparation, interpretation, reporting, and orchestration.
 .. automodule:: pycsamt.agents
    :members:
    :show-inheritance:
+   :exclude-members: IoTFieldAgent
 
 Agent Modules
 -------------

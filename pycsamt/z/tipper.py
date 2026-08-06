@@ -65,7 +65,7 @@ class Tipper(BaseEM):
     tipper : ndarray or None
         Complex tipper, shape ``(n_freq, 1, 2)``.
     tipper_err : ndarray or None
-        Absolute errors on :pyattr:`tipper`.
+        Absolute errors on :attr:`Tipper.tipper`.
     freq : ndarray or None
         Frequency vector (Hz).
     rotation_angle : float or ndarray
@@ -295,7 +295,7 @@ class Tipper(BaseEM):
         phase is the argument of the complex number in
         degrees.
 
-        When :pyattr:`tipper_err` is present, uncertainties
+        When :attr:`Tipper.tipper_err` is present, uncertainties
         are propagated component-wise using
         :func:`pycsamt.utils.zmath.propagate_error_rect2polar`.
 
@@ -303,13 +303,13 @@ class Tipper(BaseEM):
         -------
         None
             Results are stored in the attributes
-            :pyattr:`amplitude`, :pyattr:`phase`,
+            :attr:`Tipper.amplitude`, :attr:`Tipper.phase`,
             and, when applicable,
-            :pyattr:`amplitude_err`, :pyattr:`phase_err`.
+            :attr:`Tipper.amplitude_err`, :attr:`Tipper.phase_err`.
 
         Notes
         -----
-        If :pyattr:`tipper` is ``None``, the method exits
+        If :attr:`Tipper.tipper` is ``None``, the method exits
         silently and leaves derived fields unchanged.
 
         Examples
@@ -378,10 +378,10 @@ class Tipper(BaseEM):
         -------
         None
             Results are stored in
-            :pyattr:`mag_real`, :pyattr:`mag_imag`,
-            :pyattr:`angle_real`, :pyattr:`angle_imag`.
-            If :pyattr:`tipper_err` is present, heuristic
-            proxies :pyattr:`mag_err` and :pyattr:`angle_err`
+            :attr:`Tipper.mag_real`, :attr:`Tipper.mag_imag`,
+            :attr:`Tipper.angle_real`, :attr:`Tipper.angle_imag`.
+            If :attr:`Tipper.tipper_err` is present, heuristic
+            proxies :attr:`Tipper.mag_err` and :attr:`Tipper.angle_err`
             are also set.
 
         Notes
@@ -486,13 +486,13 @@ class Tipper(BaseEM):
 
         where :math:`\phi` is given in **degrees**.  Shapes
         are normalized to ``(n_freq, 1, 2)`` following the
-        same rules as :pyattr:`tipper`.
+        same rules as :attr:`Tipper.tipper`.
 
         Parameters
         ----------
         r_array : array-like
             Real amplitudes.  Accepted shapes are the same
-            as for :pyattr:`tipper`.  Must be real-valued.
+            as for :attr:`Tipper.tipper`.  Must be real-valued.
         phi_array : array-like
             Real phases in **degrees**.  Same shape rules as
             ``r_array``.
@@ -506,12 +506,12 @@ class Tipper(BaseEM):
         Returns
         -------
         None
-            The method updates :pyattr:`tipper` and then
+            The method updates :attr:`Tipper.tipper` and then
             recomputes amplitude / phase and arrow metrics.
 
         Notes
         -----
-        If :pyattr:`tipper` already exists, both arrays must
+        If :attr:`Tipper.tipper` already exists, both arrays must
         match its normalized shape.
 
         Examples
@@ -608,14 +608,14 @@ class Tipper(BaseEM):
         Raises
         ------
         ZError
-            If :pyattr:`tipper` is not initialized or if the
+            If :attr:`Tipper.tipper` is not initialized or if the
             supplied vectors are not scalar or length
             ``n_freq``.
 
         Returns
         -------
         None
-            The method updates :pyattr:`tipper` and then
+            The method updates :attr:`Tipper.tipper` and then
             recomputes arrow metrics and amplitude / phase.
 
         Examples
@@ -682,15 +682,15 @@ class Tipper(BaseEM):
         Raises
         ------
         ZError
-            If :pyattr:`tipper` is missing, or if the number
+            If :attr:`Tipper.tipper` is missing, or if the number
             of angles is not 1 or ``n_freq``.
 
         Returns
         -------
         None
-            The method updates :pyattr:`tipper`,
-            :pyattr:`tipper_err` (if present), and
-            :pyattr:`rotation_angle`, then recomputes
+            The method updates :attr:`Tipper.tipper`,
+            :attr:`Tipper.tipper_err` (if present), and
+            :attr:`Tipper.rotation_angle`, then recomputes
             amplitude / phase and arrow metrics.
 
         Notes

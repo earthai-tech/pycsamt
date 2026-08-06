@@ -139,7 +139,7 @@ def sort_edis_by_location(
         * ``"latlon"`` – ascending lat then lon;
         * ``"distance"`` – distance from *reference*;
         * ``"name"`` – basename of ``.edi`` file;
-        * ``"dataid"`` – :pyattr:`~pycsamt.seg.heads.Head.dataid`;
+        * ``"dataid"`` – :attr:`~pycsamt.seg.heads.Head.dataid`;
         * ``"index"`` – first integer found in the filename
           (default, mimics legacy behaviour).
     method :

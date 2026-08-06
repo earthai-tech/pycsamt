@@ -44,7 +44,7 @@ class SpectraSECT(EDIComponentBase):
     header that precedes one or more ``>SPECTRA`` data
     blocks. It collects the option key/values and the
     ordered set of measurement IDs that the spectra apply
-    to, as described by the SEG EDI convention [1]_.
+    to, as described by the SEG EDI convention [SpectraSECT-1]_.
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ class SpectraSECT(EDIComponentBase):
       or by end of file, whichever comes first.
     * For consistent processing, maintain the same
       frequency set across related data sections,
-      as recommended in the EDI spec [1]_.
+      as recommended in the EDI spec [SpectraSECT-1]_.
 
     See Also
     --------
@@ -128,7 +128,7 @@ class SpectraSECT(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG EDI standard, "Spectra Data Sections".
+    .. [SpectraSECT-1] SEG EDI standard, "Spectra Data Sections".
     """
 
     KEY_ORDER: list[str] = [
@@ -382,7 +382,7 @@ class SpectraIO(EDIComponentBase):
 
     References
     ----------
-    .. [1] SEG EDI standard, "Spectra Data Sections".
+    .. [SpectraIO-1] SEG EDI standard, "Spectra Data Sections".
     """
 
     def __init__(
@@ -600,7 +600,7 @@ class SpectraMixin:
 
     References
     ----------
-    .. [1] SEG EDI standard, "Spectra Data Sections".
+    .. [SpectraMixin-1] SEG EDI standard, "Spectra Data Sections".
     """
 
     @classmethod
@@ -703,9 +703,9 @@ class Spectra(BaseEM):
 
     References
     ----------
-    .. [1] SEG EDI standard, *Spectra Data Sections*.
+    .. [Spectra-1] SEG EDI standard, *Spectra Data Sections*.
            Society of Exploration Geophysicists.
-    .. [2] Chave, A. D., & Jones, A. G. (2012). *The
+    .. [Spectra-2] Chave, A. D., & Jones, A. G. (2012). *The
            Magnetotelluric Method: Theory and Practice*.
            Cambridge Univ. Press.
     """
@@ -1402,10 +1402,10 @@ class Spectra(BaseEM):
 
         References
         ----------
-        .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+        .. [Spectra-to-Z-1] Chave, A. D., & Jones, A. G. (2012). *The
                Magnetotelluric Method: Theory and Practice*.
                Cambridge University Press.
-        .. [2] Bendat, J. S., & Piersol, A. G. (2011). *Random
+        .. [Spectra-to-Z-2] Bendat, J. S., & Piersol, A. G. (2011). *Random
                Data: Analysis and Measurement Procedures*. Wiley.
         """
         has_read(
@@ -1729,13 +1729,13 @@ class Spectra(BaseEM):
 
         References
         ----------
-        .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+        .. [Spectra-from-Z-1] Chave, A. D., & Jones, A. G. (2012). *The
                Magnetotelluric Method: Theory and Practice*.
                Cambridge Univ. Press.
-        .. [2] Bendat, J. S., & Piersol, A. G. (2011).
+        .. [Spectra-from-Z-2] Bendat, J. S., & Piersol, A. G. (2011).
                *Random Data: Analysis and Measurement
                Procedures*. Wiley.
-        .. [3] SEG EDI MT/EMAP standard (1987). MTNet.
+        .. [Spectra-from-Z-3] SEG EDI MT/EMAP standard (1987). MTNet.
         """
 
         return spectra_from_Z(z_obj=z_obj, **kws)
@@ -1885,13 +1885,13 @@ def spectra_from_Z(
 
     References
     ----------
-    .. [1] Chave, A. D., & Jones, A. G. (2012). *The
+    .. [spectra-from-Z-1] Chave, A. D., & Jones, A. G. (2012). *The
            Magnetotelluric Method: Theory and Practice*.
            Cambridge Univ. Press.
-    .. [2] Bendat, J. S., & Piersol, A. G. (2011).
+    .. [spectra-from-Z-2] Bendat, J. S., & Piersol, A. G. (2011).
            *Random Data: Analysis and Measurement
            Procedures*. Wiley.
-    .. [3] SEG EDI MT/EMAP standard (1987). MTNet.
+    .. [spectra-from-Z-3] SEG EDI MT/EMAP standard (1987). MTNet.
     """
 
     if (

@@ -65,6 +65,9 @@ dependencies = [
     "click>=8.1",
     "rich>=13.0",
     "typing_extensions>=4.1; python_version < '3.10'",
+    # pycsamt.compat.sklearn is a hard import for several agents modules
+    # (inv2d_agent, inv3d_agent) and other core paths -- not optional.
+    "scikit-learn>=1.1",
 ]
 
 # ---------------------------------------------------------------------------
@@ -97,8 +100,6 @@ dev = [
     "pytest-xdist>=3.5",
     "ruff>=0.4",
     "pre-commit>=3.0",
-    # exercises the sklearn fallback paths of the AI processing tools
-    "scikit-learn>=1.1",
 ]
 
 # Documentation build
@@ -120,9 +121,6 @@ docs = [
     # Legacy .xls TEM coordinate tables (pycsamt.tdem.coordinates), e.g.
     # data/TEMAVG/JIANGSU/"Coordinate of measuring point.xls".
     "xlrd>=2.0",
-    # autosummary imports pycsamt.agents.inv2d_agent/inv3d_agent, which
-    # hard-import pycsamt.compat.sklearn.
-    "scikit-learn>=1.1",
 ]
 
 # Desktop application
@@ -142,8 +140,6 @@ agents = [
     "anthropic>=0.40",
     "openai>=1.54",
     "google-generativeai>=0.8",
-    # inv2d_agent/inv3d_agent hard-import pycsamt.compat.sklearn.
-    "scikit-learn>=1.1",
 ]
 
 # Dash web application (legacy pycsamt/app/web)

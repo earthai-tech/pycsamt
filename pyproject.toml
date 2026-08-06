@@ -120,6 +120,9 @@ docs = [
     # Legacy .xls TEM coordinate tables (pycsamt.tdem.coordinates), e.g.
     # data/TEMAVG/JIANGSU/"Coordinate of measuring point.xls".
     "xlrd>=2.0",
+    # autosummary imports pycsamt.agents.inv2d_agent/inv3d_agent, which
+    # hard-import pycsamt.compat.sklearn.
+    "scikit-learn>=1.1",
 ]
 
 # Desktop application
@@ -139,6 +142,8 @@ agents = [
     "anthropic>=0.40",
     "openai>=1.54",
     "google-generativeai>=0.8",
+    # inv2d_agent/inv3d_agent hard-import pycsamt.compat.sklearn.
+    "scikit-learn>=1.1",
 ]
 
 # Dash web application (legacy pycsamt/app/web)

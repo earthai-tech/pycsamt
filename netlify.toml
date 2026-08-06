@@ -2,14 +2,20 @@
 # (https://pycsamt.org): Python 3.12, `pip install .[docs,geo]`, Sphinx HTML
 # written to docs/build/html.
 #
-# Netlify's default build timeout is 15 minutes too — what makes it viable
-# here is the cache plugin at the bottom: docs/build (Sphinx environment,
-# doctrees, written html) and docs/source/examples (executed sphinx-gallery
-# output) persist between deploys, so a push only re-executes the example
-# scripts whose .py actually changed and only rewrites affected pages.
-# Only the first, cold build runs everything; if that one hits the timeout,
-# deploy once with `-D plot_gallery=0` appended to the sphinx command (or ask
-# Netlify support to raise the site's timeout), then restore this command.
+# Netlify's default build timeout is 15 minutes — the cache plugin at the
+# bottom persists docs/build (Sphinx environment, doctrees, written html)
+# between deploys. docs/source/examples (sphinx-gallery's own per-file
+# skip-cache) is deliberately NOT persisted: several example chains write
+# shared state to disk outside that directory (e.g. docs/examples/inversion/
+# workspaces/, gitignored, not cached) that a later script in the same
+# chain reads (plot_4 -> plot_5 -> plot_6). If sphinx-gallery's cache says
+# an earlier script is unchanged, it skips re-executing it and that shared
+# state never gets recreated in the build's own container -- while a later
+# script in the chain, invalidated for an unrelated reason, still runs and
+# fails to find it. Every release build therefore re-executes every
+# example fresh; if a cold build hits the timeout, deploy once with
+# `-D plot_gallery=0` appended to the sphinx command (or ask Netlify
+# support to raise the site's timeout), then restore this command.
 #
 # Release-gated builds: pycsamt.org previously rebuilt on every commit to
 # master, which burns a production-deploy credit each time and is what
@@ -65,6 +71,5 @@
 
   [plugins.inputs]
     paths = [
-      "docs/build",           # doctrees + environment pickle + written html
-      "docs/source/examples", # gallery output: unchanged examples are not re-run
+      "docs/build", # doctrees + environment pickle + written html
     ]

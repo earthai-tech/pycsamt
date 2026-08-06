@@ -17,7 +17,7 @@ try:
 
     __version__ = _pkg_version(__name__)
 except Exception:
-    __version__ = "2.2.0"
+    __version__ = "2.2.1"
 
 # ── Removed v1 names ──────────────────────────────────────────────────────────
 # Defined BEFORE logging (and before __getattr__) so this dict is always

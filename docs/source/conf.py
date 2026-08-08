@@ -485,6 +485,15 @@ def _latest_release_info():
                 continue
 
             version = version_match.group("version")
+            # The "New" banner links straight to this URL regardless of
+            # release size (see whats-new.js), so a released version
+            # without a matching release_notes page would otherwise ship
+            # a live 404 -- skip it rather than advertise a dead link.
+            rst_path = os.path.join(
+                os.path.dirname(__file__), "release_notes", f"v{version}.rst"
+            )
+            if not os.path.isfile(rst_path):
+                continue
             if best is None or _version_key(version) > _version_key(best["version"]):
                 best = {
                     "version": version,

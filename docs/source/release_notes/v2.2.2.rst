@@ -1,0 +1,119 @@
+.. _release_v2_2_2:
+
+-------------
+Version 2.2.2
+-------------
+
+pyCSAMT 2.2.2 |Fix| |Docs| |Enhancement|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-08-07.*
+
+A patch release. Its two real code fixes both came out of verification
+work: compiling and running Occam2D for real against pyCSAMT-generated
+input files exposed two solver-integration bugs, and building faithful,
+doctest-verified examples for the API view layer exposed a third. The
+bulk of the release is a new end-to-end tutorial and a corrected
+:doc:`/api_guide/views` page.
+
+Verifying the whole pipeline against a real compiled solver |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:doc:`/tutorials/process_stratagem_dafang_to_inversion` walks a real
+Dafang line-5 Stratagem field survey from raw hardware import through a
+compiled Occam2D inversion: :class:`~pycsamt.stratagem.EDIBatch`/
+``StratagemRawReader`` import, coordinate injection via
+``CoordinateInjector`` (against an empirically confirmed EPSG, cross-
+checked with an independent tool's own coordinates rather than assumed),
+static-shift correction, frequency filtering, noise removal,
+cross-validation against both that independent tool and
+:func:`~pycsamt.emtools.remove_noise.smooth_logfreq`, QC export, and a
+real ``Occam2D`` inversion run against a genuinely compiled binary.
+Bundled as ``data/stratagem/Dafang/`` alongside its own ``README.md``,
+following the same pattern as the K2 dataset in
+:doc:`/tutorials/process_zonge_avg_k1_k2`. The reported inversion result
+is an honest, non-converged RMS of 11.20 rather than a cleaned-up figure
+-- consistent with this project's practice of reporting real solver
+behaviour, convergence problems included.
+
+Running that real solver for the first time against real Occam2D mesh
+files surfaced two previously-latent bugs:
+
+* ``OccamRunner.compile()`` looked for a binary literally named
+  ``Occam2D``, not the module's own ``.exe``-suffixed constant, so a
+  genuinely successful Windows ``make`` was reported as a failed compile.
+* ``OccamMesh`` read and wrote the mesh header's fourth control field as
+  an air-layer count. The vendored Fortran solver (``MT2D.f90``) actually
+  uses that field for the fixed-resistivity count (``nrfix``, always
+  ``0`` for pyCSAMT-generated meshes) and manages air layers internally
+  via its own ``addair()`` routine -- confirmed by reading the solver's
+  own parser and cross-checking two independent, bundled reference mesh
+  files, not by guessing at the format. Every mesh pyCSAMT wrote or read
+  was desynchronized from that field onward. Fixed in parsing, writing,
+  and the module docstring.
+
+Correcting the API view documentation, and a real wrapper bug |Fix| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:doc:`/api_guide/views` previously claimed that pyCSAMT's dataframe-
+returning functions return a plain :class:`pandas.DataFrame` by default.
+Verifying that claim against real code proved the opposite: the ``api``
+keyword most of these functions accept defaults to ``api=None``, which
+resolves through the package-wide :data:`~pycsamt.api.PYCSAMT_API_VIEW`
+switch -- and that switch's own default backend is already ``"pycsamt"``,
+not ``"pandas"``. A bare call is therefore already wrapped into an
+:class:`~pycsamt.api.APIFrame` or :class:`~pycsamt.api.APIResult`. The
+page has been rewritten with real, doctest-verified examples throughout
+to state this plainly instead of leaving a reader to discover it by
+checking a type.
+
+Building the page's custom-wrapper example surfaced a second, independent
+bug: ``maybe_wrap_frame(..., api=True)`` ignored any wrapper configured
+via ``configure_api_view(wrapper=...)`` and always produced an
+``APIFrame`` regardless, contradicting the documented "swap the wrapper
+out" contract. Fixed so an explicit ``api=True`` still respects a
+configured custom wrapper; only an explicit ``api=False`` bypasses it.
+
+Fixed
+~~~~~
+
+* |Fix| **Occam2D binary discovery on Windows** -- ``OccamRunner.compile()``
+  now looks for the module's own ``.exe``-suffixed binary name instead of
+  a hardcoded ``Occam2D``.
+* |Fix| **Occam2D mesh header field mislabeling** -- ``OccamMesh`` no
+  longer reads or writes an air-layer count into the mesh header's
+  fixed-resistivity (``nrfix``) field; air layers are inferred from the
+  cell-type rows instead, matching the real vendored solver.
+* |Fix| **Custom API view wrapper bypassed by** ``api=True`` --
+  ``maybe_wrap_frame`` now respects a wrapper configured via
+  ``configure_api_view(wrapper=...)`` on both a bare call and an explicit
+  ``api=True`` call.
+* |Fix| **Stray root-level artefacts** -- removed leftover example outputs
+  (``figures/``, generated ``.npz``/``.png`` files, ``all_blocks.pycon``)
+  and gitignored ``all_blocks.pycon`` so it stops reappearing.
+
+Added
+~~~~~
+
+* |New| :doc:`/tutorials/process_stratagem_dafang_to_inversion` and its
+  bundled ``data/stratagem/Dafang/`` dataset.
+* |Docs| Rewrote :doc:`/api_guide/views`; added matching :doc:`/faq`
+  entries on the API view default behaviour and the new tutorial.
+
+Changed
+~~~~~~~
+
+* |Enhancement| ``TEM1DForward`` now delegates its Hankel/Fourier
+  transform to :mod:`empymod`'s validated digital linear filters instead
+  of a hand-rolled quadrature; ``empymod`` moved from an optional extra
+  to a core dependency.
+
+|Compatibility|
+~~~~~~~~~~~~~~~~
+
+Default behaviour is unchanged for existing users. Anything that relied
+on ``maybe_wrap_frame(..., api=True)`` silently ignoring a configured
+custom wrapper -- unlikely, since that contradicted the documented
+contract -- will now see the wrapper applied. Occam2D meshes written by
+the previous, buggy ``OccamMesh`` are not compatible with a real Occam2D
+binary and should be regenerated rather than reused.

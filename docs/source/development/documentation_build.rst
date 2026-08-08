@@ -554,6 +554,11 @@ Before publishing documentation:
    [ ] The newest docs/source/changelog/vN.rst version section has a
        "*Released YYYY-MM-DD.*" line (drives the site's "New" badge --
        an entry without one is treated as unreleased).
+   [ ] docs/source/release_notes/vX.Y.Z.rst exists for that same version
+       and is linked from release_notes/index.rst as "(latest)". The
+       "New" badge's banner links directly to release_notes/vX.Y.Z.html
+       regardless of release size -- a changelog entry without a matching
+       page is a live 404, not just a missing narrative page.
 
 
 Troubleshooting

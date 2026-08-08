@@ -41,25 +41,28 @@ Every one of those choices feeds a single relationship, the
 data:
 
 .. math::
+   :label: eq-fwd-concepts-forward-operator
 
    d_{\mathrm{pred}} = F(m).
 
 Inversion searches the same relationship from the other direction, adjusting
-:math:`m` until predicted and observed data agree within the assigned errors
-while the model itself stays well behaved:
+:math:`m` until the prediction from :eq:`eq-fwd-concepts-forward-operator`
+agrees with observed data within the assigned errors, while the model itself
+stays well behaved:
 
 .. math::
+   :label: eq-fwd-concepts-objective
 
    \Phi(m) = \Phi_d(m) + \lambda \Phi_m(m), \qquad
    \Phi_d(m) = \left\| W_d \left(d_{\mathrm{obs}} - F(m)\right) \right\|_2^2.
 
 :math:`\Phi_d` is the data misfit, :math:`\Phi_m` is the model penalty, and
 :math:`\lambda` trades one off against the other --
-:doc:`../../theory/inversion_concepts` works through this objective in full.
-What matters here is that :math:`F` is not a side detail: it defines how a
-model is compared to data in the first place, so a forward assumption that
-does not match the true physics can let an inversion fit the data while still
-producing a misleading model.
+:doc:`../../theory/inversion_concepts` works through objective
+:eq:`eq-fwd-concepts-objective` in full. What matters here is that :math:`F`
+is not a side detail: it defines how a model is compared to data in the first
+place, so a forward assumption that does not match the true physics can let
+an inversion fit the data while still producing a misleading model.
 
 Physical Inputs
 ---------------
@@ -151,12 +154,14 @@ A :term:`layered model` is a stack of horizontal layers. Resistivity varies
 with depth only:
 
 .. math::
+   :label: eq-fwd-concepts-1d-model
 
    \rho(\mathbf{x}) = \rho(z).
 
-:class:`pycsamt.forward.LayeredModel` stores layer resistivities and
-thicknesses. The final layer is the :term:`half-space` and has no thickness
-value.
+:class:`pycsamt.forward.LayeredModel` implements
+:eq:`eq-fwd-concepts-1d-model` directly: it stores layer resistivities and
+thicknesses, with the final layer as the :term:`half-space` that has no
+thickness value.
 
 .. code-block:: pycon
 
@@ -233,28 +238,34 @@ methods.
 For :term:`MT` and :term:`CSAMT`, angular frequency is:
 
 .. math::
+   :label: eq-fwd-concepts-angular-frequency
 
    \omega = 2 \pi f.
 
 For a 1-D MT response, :term:`apparent resistivity` is computed from the
-surface :term:`impedance tensor` :math:`Z`:
+surface :term:`impedance tensor` :math:`Z` and the angular frequency in
+:eq:`eq-fwd-concepts-angular-frequency`:
 
 .. math::
+   :label: eq-fwd-concepts-mt-rhoa
 
    \rho_a = \frac{|Z|^2}{\mu_0 \omega}.
 
 The impedance :term:`phase` is:
 
 .. math::
+   :label: eq-fwd-concepts-mt-phase
 
    \phi = \tan^{-1}\left(\frac{\operatorname{Im}(Z)}
                               {\operatorname{Re}(Z)}\right).
 
 :term:`TEM` is different. It observes a transient decay after transmitter
 current changes, rather than the continuous-wave impedance MT and CSAMT
-estimate. A useful scale estimate is:
+estimate in :eq:`eq-fwd-concepts-mt-rhoa` and :eq:`eq-fwd-concepts-mt-phase`.
+A useful scale estimate is:
 
 .. math::
+   :label: eq-fwd-concepts-tem-depth-scale
 
    z(t) \propto \sqrt{\frac{\rho t}{\mu_0}},
 
@@ -265,9 +276,11 @@ This is only a sensitivity scale, not a direct depth conversion.
 ---------------------
 
 In a 2-D model, resistivity varies with horizontal distance and depth but is
-constant along strike:
+constant along strike -- one degree of freedom more than the layered case in
+:eq:`eq-fwd-concepts-1d-model`:
 
 .. math::
+   :label: eq-fwd-concepts-2d-model
 
    \rho(\mathbf{x}) = \rho(x, z).
 
@@ -437,13 +450,15 @@ Frequency-domain EM responses are commonly plotted against period
 greater depths. A useful plane-wave :term:`skin depth` scale is:
 
 .. math::
+   :label: eq-fwd-concepts-skin-depth
 
    \delta \approx 503 \sqrt{\frac{\rho}{f}},
 
 where :math:`\delta` is in metres when :math:`\rho` is in :math:`\Omega m`
 and :math:`f` is in Hz -- the same relation the 1-D, 2-D, and quasi-3-D
 examples above all reduce to when their period axis is read as a depth
-proxy.
+proxy, and the same :math:`f` that sets :math:`\omega` in
+:eq:`eq-fwd-concepts-angular-frequency`.
 
 This is only a scale estimate. Actual sensitivity depends on:
 

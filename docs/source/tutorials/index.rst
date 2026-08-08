@@ -27,6 +27,7 @@ foundation.
    condition_mt_line_with_tipper_and_rotation
    process_zonge_avg_k1_k2
    process_temavg_survey
+   process_stratagem_dafang_to_inversion
    prepare_occam2d_inversion
    prepare_modem_inversion
    prepare_mare2dem_inversion
@@ -34,5 +35,6 @@ foundation.
    ai_inversion_from_corrected_edis
    essential_3d_ai_inversion
    map_porphyry_mineralization_from_noisy_amt
+   forward_model_1d_to_3d
    map_groundwater_geology_from_csamt
    run_pipeline_from_config

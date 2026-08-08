@@ -325,10 +325,10 @@ class OccamRunner(OccamBase):
         )
         if result.returncode != 0:
             raise RuntimeError(f"Compilation failed:\n{result.stderr}")
-        compiled = _SOURCE_DIR / "Occam2D"
+        compiled = _SOURCE_DIR / _BINARY_NAME
         if not compiled.is_file():
             raise RuntimeError(
-                "make succeeded but 'Occam2D' binary was not produced."
+                f"make succeeded but '{_BINARY_NAME}' binary was not produced."
             )
         return compiled
 

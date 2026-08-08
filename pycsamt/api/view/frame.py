@@ -391,7 +391,23 @@ def maybe_wrap_frame(
     if api is False:
         return data
     if api is True:
-        # Explicit per-call override: always produce an APIFrame.
+        # Explicit per-call override: always wrap. A configured custom
+        # wrapper still applies here -- only an explicit "pandas"/disabled
+        # backend is overridden, since that would contradict "always wrap".
+        from .config import PYCSAMT_API_VIEW
+
+        if callable(PYCSAMT_API_VIEW.backend):
+            return wrap_frame(
+                data,
+                name=name,
+                kind=kind,
+                source=source,
+                units=units,
+                meta=meta,
+                description=description,
+                copy=copy,
+                **frame_kwargs,
+            )
         return _default_wrap_frame(
             data,
             name=name,

@@ -18,23 +18,30 @@ point that gathers three things every workflow needs:
 
 Everything documented here is importable directly from ``pycsamt.api``:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pycsamt.api import (
-       read_edis,            # data in
-       configure_api_view,   # what api=True returns
-       configure_pipe,       # where pipeline outputs go
-       configure_ordering,   # how survey stations are ordered
-       use_style,            # how figures look
-   )
+   >>> from pycsamt.api import (
+   ...     read_edis,            # data in
+   ...     configure_api_view,   # what api=True returns
+   ...     configure_pipe,       # where pipeline outputs go
+   ...     configure_ordering,   # how survey stations are ordered
+   ...     use_style,            # how figures look
+   ... )
 
-   configure_api_view(backend="pycsamt")
-   configure_pipe(output_root="results/run01", plot_dpi=200)
-   configure_ordering(mode="auto")
-   use_style("publication")
+   >>> configure_api_view(backend="pycsamt")
+   >>> _ = configure_pipe(output_root="results/run01", plot_dpi=200)
+   >>> _ = configure_ordering(mode="auto")
+   >>> use_style("publication")
 
-   survey = read_edis("data/edi/", progress="auto")
-   print(survey.summary())        # APIFrame: compact, metadata-rich
+   >>> survey = read_edis("data/AMT/WILLY_DATA/L18PLT", progress="auto")
+   >>> print(survey.summary())        # APIFrame: compact, metadata-rich
+   APIFrame: edi_survey_summary
+   kind: edi.summary
+   shape: 28 rows x 6 columns
+   columns: station, path, n_freq, tipper, spectra, ts
+   numeric: 1 columns
+   missing: 0.0%
+   source: data/AMT/WILLY_DATA/L18PLT
 
 One Pattern Everywhere
 ----------------------
@@ -85,10 +92,10 @@ Configuration Families
      - Logging level, output format and directory, parallel build jobs.
    * - Plot styles
      - :func:`~pycsamt.api.configure_style`, :func:`~pycsamt.api.use_style`,
-       ``PYCSAMT_STYLE``
+       ``PYCSAMT_STYLE`` -- :doc:`style`
      - MT component colours, multiline gradients, correction, rose, and
        phase-tensor ellipse styles.  Presets: ``pycsamt``, ``publication``,
-       ``dark``.
+       ``dark``, ``modem``.
    * - Figure output
      - :func:`~pycsamt.api.save_fig`, :func:`~pycsamt.api.set_dpi`,
        :func:`~pycsamt.api.set_fmt`, :func:`~pycsamt.api.set_savedir`,
@@ -96,31 +103,36 @@ Configuration Families
      - Global figure saving defaults: DPI, formats, output directory.
    * - View controls
      - :func:`~pycsamt.api.configure_control`,
-       :func:`~pycsamt.api.wrap_phase`, ``PYCSAMT_CONTROL``
+       :func:`~pycsamt.api.wrap_phase`, ``PYCSAMT_CONTROL`` --
+       :doc:`view_controls`
      - Apparent-resistivity and phase axis behaviour, frequency-axis
        direction, phase wrapping.
    * - Sections
-     - :func:`~pycsamt.api.configure_section`, ``PYCSAMT_SECTION``
+     - :func:`~pycsamt.api.configure_section`, ``PYCSAMT_SECTION`` --
+       :doc:`section`
      - Resistivity-section figure, axis, and colourbar styling.
    * - Station rendering
      - :func:`~pycsamt.api.configure_station_rendering`,
-       ``PYCSAMT_STATION_RENDERING``
+       ``PYCSAMT_STATION_RENDERING`` -- :doc:`station_rendering`
      - Station map markers and axis styling.
    * - Interpretation
      - :func:`~pycsamt.api.configure_interp`,
-       :func:`~pycsamt.api.use_interp`, ``PYCSAMT_INTERP``
+       :func:`~pycsamt.api.use_interp`, ``PYCSAMT_INTERP`` --
+       :doc:`interpretation`
      - Hydrogeological profile and section styles.
    * - Topography
-     - :func:`~pycsamt.api.configure_topo`, ``PYCSAMT_TOPO``
+     - :func:`~pycsamt.api.configure_topo`, ``PYCSAMT_TOPO`` --
+       :doc:`../user_guide/topo/concepts`
      - Topography handling and depth/frequency y-axis conventions.
    * - Mesh display
      - :func:`~pycsamt.api.configure_mesh`, :func:`~pycsamt.api.draw_mesh`,
-       :func:`~pycsamt.api.draw_tri_mesh`, ``PYCSAMT_MESH``
+       :func:`~pycsamt.api.draw_tri_mesh`, ``PYCSAMT_MESH`` -- :doc:`mesh`
      - Rectilinear and triangular mesh rendering: filled, reviewed (fill +
        edges), or diagram (edges only) presets, shared by both mesh
        families.
    * - Agents
-     - :func:`~pycsamt.api.configure_agents`, ``AGENT_CONFIG``
+     - :func:`~pycsamt.api.configure_agents`, ``AGENT_CONFIG`` --
+       :doc:`agent_config`
      - LLM provider selection and spending budget for AI agents.
 
 Besides the families above, ``pycsamt.api`` also exposes shared axis-label
@@ -142,6 +154,34 @@ In This Section
     Rendering computational and inversion meshes: the shared ``"filled"``/
     ``"review"``/``"diagram"`` preset system, rectilinear vs. triangular
     mesh drawing, and dotted-path style configuration.
+
+:doc:`style`
+    Plot styles in depth: MT component colours, multiline gradients,
+    correction pairs, raw-data style, phase-tensor ellipses, rose
+    diagrams, and the four named presets.
+
+:doc:`interpretation`
+    Hydrogeophysical plot styles: section and profile colours, the four
+    presets, and why these plot classes track live configuration changes
+    without an explicit style hand-off.
+
+:doc:`agent_config`
+    ``AGENT_CONFIG`` in the family lineup, with a fast quick-reference;
+    points to :doc:`../user_guide/agents/llm_configuration` for the full
+    guide.
+
+:doc:`section`
+    Section-plot figure sizing, axis direction, and the topography-
+    awareness gate shared by every pseudosection and inversion section.
+
+:doc:`station_rendering`
+    Station tick marks, the adaptive label-thinning algorithm, and
+    terrain-following marker placement.
+
+:doc:`view_controls`
+    Apparent-resistivity scale, phase wrapping, and the frequency/period
+    axis convention read by most :mod:`pycsamt.emtools` plotting
+    functions.
 
 :doc:`configuration`
     The configuration system in depth: the dotted-path convention, worked

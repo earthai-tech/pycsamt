@@ -62,6 +62,11 @@ Frequently asked questions
            <summary><span>Why does an optional feature fail after the base package installs?</span><span class="pyc-faq-badge pyc-faq-badge--setup">Setup</span></summary>
            <div class="pyc-faq-answer"><p>Some plotting, geospatial, AI, and application features use optional dependencies. Read the error for the missing package or extra, install only the feature set you need, then restart the Python process so imports are refreshed.</p><p class="pyc-faq-next"><b>Next:</b> see <a href="getting_started/installation.html">installation and optional dependencies</a>.</p></div>
          </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="start data">
+           <summary><span>Why does a table-returning function give me an APIFrame instead of a plain pandas DataFrame?</span><span class="pyc-faq-badge pyc-faq-badge--popular">Key concept</span></summary>
+           <div class="pyc-faq-answer"><p>Most dataframe-returning functions accept an <code>api</code> keyword that defaults to <code>api=None</code>, which resolves through the package-wide <code>PYCSAMT_API_VIEW</code> switch -- and that switch defaults to <code>"pycsamt"</code>, not <code>"pandas"</code>. A bare call is therefore already wrapped into an <code>APIFrame</code> (or <code>APIResult</code> for multi-table workflows) unless you pass <code>api=False</code> for the raw <code>DataFrame</code>, or disable wrapping globally with <code>configure_api_view(backend=False)</code>.</p><p class="pyc-faq-next"><b>Next:</b> read <a href="api_guide/views.html">API views</a> for the full behaviour, including custom wrappers.</p></div>
+         </details>
        </section>
 
        <section class="pyc-faq-group" data-faq-group>
@@ -198,6 +203,11 @@ Frequently asked questions
            <summary><span>What quality checks should I run before correction or inversion?</span><span class="pyc-faq-badge pyc-faq-badge--popular">Popular</span></summary>
            <div class="pyc-faq-answer"><p>Check station geometry, frequency overlap, missing components, apparent-resistivity and phase continuity, error estimates, outliers, and repeatability. Save the unmodified import and record every exclusion: correction should address a diagnosed problem, not make a curve merely look smooth.</p><p class="pyc-faq-next"><b>Workflow:</b> <a href="user_guide/data_loading.html">load and audit data</a>, then use the <a href="user_guide/emtools/index.html">processing catalogue</a>.</p></div>
          </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="data processing inversion start">
+           <summary><span>I have raw Stratagem/Zonge hardware field data, not EDI -- is there a complete worked example?</span><span class="pyc-faq-badge">Tutorial</span></summary>
+           <div class="pyc-faq-answer"><p>Yes. A full tutorial covers a real field survey from raw Stratagem hardware output through <code>StratagemRawReader</code>, injecting surveyed coordinates with <code>CoordinateInjector</code>, static-shift correction, frequency filtering, noise removal, QC export, and an Occam2D inversion using the vendored, compilable solver. It also shows cross-checking the correction against an independent tool and against pyCSAMT's own log-frequency smoothing.</p><p class="pyc-faq-next"><b>Follow:</b> <a href="tutorials/process_stratagem_dafang_to_inversion.html">processing Stratagem field data to inversion</a>.</p></div>
+         </details>
        </section>
 
        <section class="pyc-faq-group" data-faq-group>
@@ -211,6 +221,11 @@ Frequently asked questions
          <details class="pyc-faq-item" data-faq-item data-topic="processing data errors">
            <summary><span>Should I smooth noisy curves before inversion?</span><span class="pyc-faq-badge pyc-faq-badge--warning">Caution</span></summary>
            <div class="pyc-faq-answer"><p>Not automatically. First distinguish isolated outliers, coherent cultural noise, static shift, and genuine geological structure. Over-smoothing can remove useful signal and produce unjustified confidence. Preserve raw data, document exclusions, and propagate realistic error floors into inversion.</p><p class="pyc-faq-next"><b>Learn:</b> <a href="user_guide/emtools/index.html">diagnostics and corrections</a>.</p></div>
+         </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="processing data">
+           <summary><span>Which pyCSAMT tool actually performs frequency-domain smoothing, and how do I judge whether it helped?</span><span class="pyc-faq-badge">Tool</span></summary>
+           <div class="pyc-faq-answer"><p><code>pycsamt.emtools.remove_noise.smooth_logfreq</code> applies a triangular or box kernel along the log-frequency axis. Judge it by comparing the smoothed curve against both the unmodified import and, where available, an independent processing of the same stations -- agreement between two different corrections is a better signal than a curve that merely looks less noisy.</p><p class="pyc-faq-next"><b>See it applied:</b> <a href="tutorials/process_stratagem_dafang_to_inversion.html#static-shift-frequency-filtering-and-noise-removal">the static shift and smoothing section</a> of the Stratagem tutorial.</p></div>
          </details>
 
          <details class="pyc-faq-item" data-faq-item data-topic="processing inversion">

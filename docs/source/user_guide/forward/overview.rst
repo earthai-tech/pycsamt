@@ -4,7 +4,7 @@ Overview
 ========
 
 Forward And Model Integrations
---------------------------------
+------------------------------
 
 The :mod:`pycsamt.forward` and :mod:`pycsamt.models` packages are related, but
 they should not be treated as the same layer.
@@ -37,7 +37,7 @@ the known model gives the reference answer, and the inversion workflow tests
 whether that answer can be recovered from the predicted data.
 
 Package Map
--------------
+-----------
 
 The public forward API is built around a small set of object families.
 
@@ -80,7 +80,7 @@ The public forward API is built around a small set of object families.
        generated datasets before they are trusted downstream.
 
 Core Workflow
----------------
+-------------
 
 A typical :term:`forward modelling` workflow has six stages. The smallest
 version starts with a 1-D :term:`layered earth` because the geometry is easy to
@@ -135,8 +135,70 @@ and archived with outputs:
 #. apply a documented :term:`noise model` when simulating observations;
 #. plot and archive the model, response, configuration, and metadata.
 
+:class:`~pycsamt.forward.ForwardConfig` is the object that carries stages 1-2
+and part of stage 5: it records the sampled :term:`frequency grid` (or
+:term:`time gate` grid for TEM), the solver name, and the noise settings that
+a collaborator would need to reproduce the run, rather than leaving them
+scattered across a script. :doc:`configuration` covers all three
+``ForwardConfig*`` classes, template files, and validation in depth; the
+compact version below only threads a single config through stages 3-5 for
+the same three-layer model as above, this time with a documented noise model
+applied.
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.forward import (
+   ...     ForwardConfig, LayeredModel, MT1DForward, GaussianNoise,
+   ...     plot_response_and_model_1d,
+   ... )
+
+   >>> cfg = ForwardConfig(
+   ...     solver="mt1d", freq_min=1e-2, freq_max=1e3, n_freqs=40,
+   ...     noise_level=0.05, seed=0,
+   ... )
+   >>> cfg.validate()
+   >>> freqs = cfg.freq_grid()
+   >>> print(f"freqs: {freqs.size} points, {freqs.min():.2e}-{freqs.max():.2e} Hz")
+   freqs: 40 points, 1.00e-02-1.00e+03 Hz
+
+   >>> model = LayeredModel(resistivity=[100.0, 15.0, 800.0], thickness=[250.0, 700.0])
+   >>> clean = MT1DForward(freqs).run(model)
+   >>> noisy = GaussianNoise(level=cfg.noise_level).apply(clean, seed=cfg.seed)
+   >>> print(f"clean rho_a[0] = {clean.rho_a[0]:.2f} Ohm.m, noisy rho_a[0] = {noisy.rho_a[0]:.2f} Ohm.m")
+   clean rho_a[0] = 475.29 Ohm.m, noisy rho_a[0] = 482.22 Ohm.m
+   >>> print(f"clean phase[0] = {clean.phase[0]:.2f} deg, noisy phase[0] = {noisy.phase[0]:.2f} deg")
+   clean phase[0] = 33.22 deg, noisy phase[0] = 30.39 deg
+
+   >>> fig = plot_response_and_model_1d(noisy, model, title="Noisy MT1D response (5% Gaussian)")
+   >>> fig.savefig("runs/forward/mt1d_noisy_response.png", dpi=200)
+
+.. figure:: ../../images/user_guide/forward/overview_mt1d_noisy_response.png
+   :alt: MT1D layered-earth model with a 5 percent Gaussian-noise response overlay.
+   :align: center
+   :width: 100%
+
+   Same three-layer model, now with a :term:`noise model` applied to
+   :math:`\rho_a` and phase independently, seeded for reproducibility.
+   ``noise_level=0.05`` is a standard deviation in
+   :math:`\log_{10}\rho_a`-space, not a direct linear-relative percentage --
+   for this seeded draw the realized *linear* relative scatter in
+   :math:`\rho_a` across all 40 points has a standard deviation of about 9.0%
+   (largest single deviation 23%), and phase scatter has a standard
+   deviation of about 2.4° (matching the default ``phase_level =
+   noise_level * 45``). Neither shows any systematic dependence on period --
+   each frequency's perturbation is drawn independently, so the noisiest
+   point in a given realization is wherever the random draw happened to land
+   largest, not a fixed feature of the curve.
+
+Both examples share the same physical model and solver; the difference is
+entirely in what gets carried forward for someone else to reproduce. The
+first is fine for a quick, throwaway check. The second -- config, seed, and
+noise level all explicit and archivable -- is the version worth keeping in a
+project.
+
 Choosing A Path
-------------------
+---------------
 
 Different users enter the forward section with different goals.
 
@@ -166,6 +228,10 @@ Different users enter the forward section with different goals.
    * - Diagnose a generated dataset or response
      - :doc:`plotting`
      - :doc:`synthetic_datasets`, :doc:`forward_to_inversion`
+   * - Get a response with a checkable accuracy claim, or a
+       production-backed forward check
+     - :doc:`maxwell_overview`
+     - :doc:`maxwell_adapters`, :doc:`maxwell_benchmarks`
 
 Relationship To Theory
 ----------------------

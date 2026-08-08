@@ -51,36 +51,48 @@ Use :func:`pycsamt.forward.generate_dataset` to create batches of independent
 1-D forward responses. It supports ``solver="mt1d"``, ``solver="csamt1d"``,
 and ``solver="tem1d"``.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import generate_dataset
+   >>> from pycsamt.forward import generate_dataset
 
-   dataset = generate_dataset(
-       solver="mt1d",
-       n_samples=1000,
-       freqs=np.logspace(-3, 4, 40),
-       n_layers=(3, 7),
-       rho_range=(1.0, 10000.0),
-       depth_max=3000.0,
-       noise_level=0.05,
-       noise_type="field",
-       include_phase=True,
-       seed=42,
-       n_jobs=1,
-       output="runs/forward/mt1d_dataset.npz",
-   )
+   >>> dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=1000,
+   ...     freqs=np.logspace(-3, 4, 40),
+   ...     n_layers=(3, 7),
+   ...     rho_range=(1.0, 10000.0),
+   ...     depth_max=3000.0,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ... )
+   >>> dataset.save("runs/forward/mt1d_dataset.npz")
 
-   print(dataset)
-   print(dataset.X.shape)
-   print(dataset.y.shape)
-
-Captured with a smaller ``n_samples`` value, the same recipe produces:
+Captured with the same recipe but a much smaller ``n_samples=12`` (kept fast
+enough to actually run here, rather than illustrated only):
 
 .. code-block:: pycon
+   :linenos:
 
+   >>> dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=12,
+   ...     freqs=np.logspace(-3, 4, 40),
+   ...     n_layers=(3, 7),
+   ...     rho_range=(1.0, 10000.0),
+   ...     depth_max=3000.0,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ...     verbose=False,
+   ... )
    >>> print(dataset)
    ForwardDataset(n=12, n_features=80, n_params=13, solver='mt1d')
    >>> print(dataset.X.shape)
@@ -173,29 +185,23 @@ Saving, Loading, And Splitting
 
 Datasets can be saved as compressed ``.npz`` files. Passing ``output=...`` to
 ``generate_dataset`` saves the dataset automatically, or you can call
-``dataset.save`` yourself.
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.forward import ForwardDataset
-
-   dataset.save("runs/forward/mt1d_dataset.npz")
-
-   loaded = ForwardDataset.load("runs/forward/mt1d_dataset.npz")
-
-   train, val, test = loaded.split(
-       val_frac=0.1,
-       test_frac=0.1,
-       seed=0,
-   )
-
-   print(len(train), len(val), len(test))
-
-For the 12-sample example above, a fixed split seed gives:
+``dataset.save`` yourself. Continuing with the 12-sample ``dataset`` from
+above, a fixed split seed gives a reproducible train/val/test partition:
 
 .. code-block:: pycon
+   :linenos:
 
+   >>> from pycsamt.forward import ForwardDataset
+
+   >>> dataset.save("runs/forward/mt1d_dataset.npz")
+
+   >>> loaded = ForwardDataset.load("runs/forward/mt1d_dataset.npz")
+
+   >>> train, val, test = loaded.split(
+   ...     val_frac=0.1,
+   ...     test_frac=0.1,
+   ...     seed=0,
+   ... )
    >>> print(len(train), len(val), len(test))
    10 1 1
 
@@ -209,15 +215,17 @@ For repeatable studies, prefer a configuration file over a long script. The
 :class:`pycsamt.forward.ForwardConfig` object records the same options accepted
 by ``generate_dataset`` and can write annotated templates.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import ForwardConfig, generate_dataset
+   >>> from pycsamt.forward import ForwardConfig, generate_dataset
 
-   ForwardConfig.write_template("runs/forward/mt1d_config.yml")
+   >>> _ = ForwardConfig.write_template("runs/forward/mt1d_config.yml")
 
-   cfg = ForwardConfig.from_file("runs/forward/mt1d_config.yml")
-   dataset = generate_dataset(**cfg.to_dataset_kwargs())
+   >>> cfg = ForwardConfig.from_file("runs/forward/mt1d_config.yml")
+   >>> cfg_kwargs = cfg.to_dataset_kwargs()
+   >>> cfg_kwargs["output"] = None
+   >>> cfg_dataset = generate_dataset(**cfg_kwargs)
 
 This pattern makes it easier to archive the exact generation recipe alongside
 the resulting ``.npz`` file.
@@ -229,35 +237,47 @@ TDEM Datasets
 target layout remains the same layered-earth vector, but ``dataset.times`` is
 populated instead of ``dataset.freqs``.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import generate_dataset
+   >>> from pycsamt.forward import generate_dataset
 
-   tdem_dataset = generate_dataset(
-       solver="tem1d",
-       n_samples=250,
-       times=np.logspace(-6, -3, 25),
-       n_layers=4,
-       rho_range=(5.0, 3000.0),
-       depth_max=1500.0,
-       loop_radius=40.0,
-       noise_level=0.03,
-       noise_type="gaussian",
-       seed=11,
-       n_jobs=1,
-       verbose=True,
-   )
+   >>> tdem_dataset = generate_dataset(
+   ...     solver="tem1d",
+   ...     n_samples=250,
+   ...     times=np.logspace(-6, -3, 25),
+   ...     n_layers=4,
+   ...     rho_range=(5.0, 3000.0),
+   ...     depth_max=1500.0,
+   ...     loop_radius=40.0,
+   ...     noise_level=0.03,
+   ...     noise_type="gaussian",
+   ...     seed=11,
+   ...     n_jobs=1,
+   ... )
+   >>> tdem_dataset.save("runs/forward/tem1d_dataset.npz")
 
-   print(tdem_dataset.times.shape)
-   print(tdem_dataset.X.shape)
-
-Captured with ``n_samples=8``:
+Captured with the same recipe but ``n_samples=8``:
 
 .. code-block:: pycon
+   :linenos:
 
+   >>> tdem_dataset = generate_dataset(
+   ...     solver="tem1d",
+   ...     n_samples=8,
+   ...     times=np.logspace(-6, -3, 25),
+   ...     n_layers=4,
+   ...     rho_range=(5.0, 3000.0),
+   ...     depth_max=1500.0,
+   ...     loop_radius=40.0,
+   ...     noise_level=0.03,
+   ...     noise_type="gaussian",
+   ...     seed=11,
+   ...     n_jobs=1,
+   ...     verbose=False,
+   ... )
    >>> print(tdem_dataset.times.shape)
    (25,)
    >>> print(tdem_dataset.X.shape)
@@ -265,8 +285,10 @@ Captured with ``n_samples=8``:
    >>> print(tdem_dataset.y.shape)
    (8, 7)
 
-TDEM generation can be slower than MT/CSAMT generation because the solver uses
-numerical integration. Start with a small ``n_samples`` value when designing a
+TDEM generation is usually slower than MT/CSAMT generation, since each sample
+runs the full :mod:`empymod`-backed digital-filter transform described in
+:doc:`solvers_and_grids` rather than a closed-form impedance recursion. Start
+with a small ``n_samples`` value when designing a
 new TDEM dataset recipe.
 
 Geological Priors
@@ -277,24 +299,34 @@ ask ``generate_dataset`` to draw from a named :term:`geological prior`. The
 underlying model generator uses
 :meth:`pycsamt.forward.LayeredModel.from_geology`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import generate_dataset
+   >>> from pycsamt.forward import generate_dataset
 
-   geothermal = generate_dataset(
-       solver="mt1d",
-       n_samples=500,
-       geology="geothermal",
-       noise_level=0.04,
-       noise_type="field",
-       seed=5,
-   )
+   >>> geothermal = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=500,
+   ...     geology="geothermal",
+   ...     noise_level=0.04,
+   ...     noise_type="field",
+   ...     seed=5,
+   ... )
 
-With a small reproducibility check:
+With a small ``n_samples=8`` reproducibility check:
 
 .. code-block:: pycon
+   :linenos:
 
+   >>> geothermal = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=8,
+   ...     geology="geothermal",
+   ...     noise_level=0.04,
+   ...     noise_type="field",
+   ...     seed=5,
+   ...     verbose=False,
+   ... )
    >>> print(geothermal)
    ForwardDataset(n=8, n_features=60, n_params=9, solver='mt1d')
    >>> print(geothermal.X.shape)
@@ -342,45 +374,70 @@ belong with the dataset, not only with the script that created it.
 
 You can use named noise models through ``generate_dataset``:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   dataset = generate_dataset(
-       solver="mt1d",
-       n_samples=1000,
-       noise_level=0.05,
-       noise_type="field",
-       seed=42,
-   )
+   >>> field_dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=1000,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     seed=42,
+   ... )
 
 Or apply noise directly to a single response:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import FieldRealisticNoise, LayeredModel, MT1DForward
+   >>> from pycsamt.forward import FieldRealisticNoise, LayeredModel, MT1DForward
 
-   model = LayeredModel([100.0, 20.0, 800.0], [300.0, 1000.0])
-   response = MT1DForward(np.logspace(-3, 4, 40)).run(model)
+   >>> model = LayeredModel([100.0, 20.0, 800.0], [300.0, 1000.0])
+   >>> response = MT1DForward(np.logspace(-3, 4, 40)).run(model)
 
-   noise = FieldRealisticNoise(
-       base_level=0.03,
-       powerline_freq=50.0,
-       dead_band=True,
-   )
+   >>> noise = FieldRealisticNoise(
+   ...     base_level=0.03,
+   ...     powerline_freq=50.0,
+   ...     dead_band=True,
+   ... )
 
-   noisy_response = noise.apply(response, seed=42)
-   profile = noise.noise_profile(response.freqs)
+   >>> noisy_response = noise.apply(response, seed=42)
+   >>> profile = noise.noise_profile(response.freqs)
+   >>> print(profile.min(), profile.max())
+   0.03 0.15
+
+A saved noise-profile plot makes the perturbation recipe auditable:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> import matplotlib.pyplot as plt
+
+   >>> fig, ax = plt.subplots(figsize=(7, 4.5))
+   >>> _ = ax.semilogx(response.freqs, profile, "-", color="#d62728", lw=1.6)
+   >>> _ = ax.axhline(
+   ...     noise.base_level, ls="--", color="0.5", lw=1.0,
+   ...     label=f"base level ({noise.base_level:.0%})",
+   ... )
+   >>> _ = ax.set_xlabel("frequency (Hz)")
+   >>> _ = ax.set_ylabel("relative noise level")
+   >>> _ = ax.set_title("FieldRealisticNoise profile")
+   >>> _ = ax.legend()
 
 .. figure:: ../../images/user_guide/forward/synthetic_noise_profile.png
    :alt: Field-realistic relative noise profile over frequency.
    :align: center
    :width: 75%
 
-   A saved noise-profile plot makes the perturbation recipe auditable. In this
-   example the low-frequency edge is inflated relative to the base noise level.
+   Every frequency sits at the 3% base level except the single lowest sample
+   (0.001 Hz), which spikes to 15% -- it falls inside ``dead_band_freq_range``
+   (0.0003-0.001 Hz by default), the low-frequency edge where natural-source
+   MT signal strength genuinely drops off. None of the 40 sampled frequencies
+   land near a 50 Hz power-line harmonic here, so that inflation mechanism
+   happens not to fire for this particular frequency grid -- a reminder that
+   a noise profile is only as realistic as the axis it is evaluated on.
 
 ``FieldRealisticNoise`` requires a frequency-domain response. Use Gaussian or
 multiplicative noise for TDEM responses.
@@ -392,41 +449,49 @@ For benchmarking, it is often useful to generate one clean dataset and one noisy
 dataset with the same model draw settings. Use different output paths and keep
 the same seed.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import generate_dataset
+   >>> from pycsamt.forward import generate_dataset
 
-   common = dict(
-       solver="mt1d",
-       n_samples=500,
-       freqs=np.logspace(-3, 4, 30),
-       n_layers=4,
-       rho_range=(1.0, 10000.0),
-       depth_max=2500.0,
-       include_phase=True,
-       seed=100,
-       n_jobs=1,
-   )
+   >>> common = dict(
+   ...     solver="mt1d",
+   ...     n_samples=8,
+   ...     freqs=np.logspace(-3, 4, 30),
+   ...     n_layers=4,
+   ...     rho_range=(1.0, 10000.0),
+   ...     depth_max=2500.0,
+   ...     include_phase=True,
+   ...     seed=100,
+   ...     n_jobs=1,
+   ...     verbose=False,
+   ... )
 
-   clean = generate_dataset(
-       **common,
-       noise_level=0.0,
-       output="runs/forward/clean_mt1d.npz",
-   )
+   >>> clean = generate_dataset(**common, noise_level=0.0)
+   >>> noisy = generate_dataset(**common, noise_level=0.05, noise_type="gaussian")
 
-   noisy = generate_dataset(
-       **common,
-       noise_level=0.05,
-       noise_type="gaussian",
-       output="runs/forward/noisy_mt1d.npz",
-   )
+The shared ``seed`` and draw settings are worth checking directly rather than
+assuming: the two calls should draw the exact same sequence of models, so
+only the *features* differ, not the *targets*:
 
-This does not guarantee identical sample ordering if implementation details
-change in the future, but it is the intended reproducible pattern within the
-current generator.
+.. code-block:: pycon
+   :linenos:
+
+   >>> print("same targets:", np.array_equal(clean.y, noisy.y, equal_nan=True))
+   same targets: True
+   >>> print("same features:", np.array_equal(clean.X, noisy.X))
+   same features: False
+   >>> print("mean |X difference|:", round(float(np.abs(clean.X - noisy.X).mean()), 3))
+   mean |X difference|: 0.817
+
+``clean.y`` and ``noisy.y`` match element for element, confirming the model
+draw really is shared; ``clean.X`` and ``noisy.X`` differ, as expected, by
+roughly the injected noise level. This does not guarantee identical sample
+ordering if implementation details change in the future, but it is the
+intended reproducible pattern within the current generator -- and it is the
+kind of assumption worth re-verifying rather than trusting on faith.
 
 Pseudo-3-D Survey Datasets
 --------------------------
@@ -437,34 +502,43 @@ responses at each station, but draws station models from a spatially correlated
 Gaussian random field. This creates lateral structure in the target model while
 keeping the forward computation lightweight.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import generate_dataset_3d
+   >>> from pycsamt.forward import generate_dataset_3d
 
-   surveys = generate_dataset_3d(
-       solver="mt1d",
-       n_surveys=500,
-       n_stations=25,
-       n_layers=4,
-       extent=10000.0,
-       corr_length=2000.0,
-       noise_level=0.03,
-       noise_type="gaussian",
-       include_phase=True,
-       seed=7,
-       output="runs/forward/survey3d_dataset.npz",
-   )
-
-   print(surveys)
-   print(surveys.X.shape)
-   print(surveys.y.shape)
-   print(surveys.coords.shape)
+   >>> surveys = generate_dataset_3d(
+   ...     solver="mt1d",
+   ...     n_surveys=500,
+   ...     n_stations=25,
+   ...     n_layers=4,
+   ...     extent=10000.0,
+   ...     corr_length=2000.0,
+   ...     noise_level=0.03,
+   ...     noise_type="gaussian",
+   ...     include_phase=True,
+   ...     seed=7,
+   ... )
+   >>> surveys.save("runs/forward/survey3d_dataset.npz")
 
 Captured with four small surveys and nine stations:
 
 .. code-block:: pycon
+   :linenos:
 
+   >>> surveys = generate_dataset_3d(
+   ...     solver="mt1d",
+   ...     n_surveys=4,
+   ...     n_stations=9,
+   ...     n_layers=4,
+   ...     extent=10000.0,
+   ...     corr_length=2000.0,
+   ...     noise_level=0.03,
+   ...     noise_type="gaussian",
+   ...     include_phase=True,
+   ...     seed=7,
+   ...     verbose=False,
+   ... )
    >>> print(surveys)
    SurveyDataset3D(n_surveys=4, n_stations=9, n_features=60, n_params=7, solver='mt1d')
    >>> print(surveys.X.shape)
@@ -503,21 +577,14 @@ All surveys share the same station layout. That is intentional: graph models
 can build one adjacency matrix from ``surveys.coords`` and reuse it for all
 survey realizations.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import SurveyDataset3D
+   >>> from pycsamt.forward import SurveyDataset3D
 
-   loaded = SurveyDataset3D.load("runs/forward/survey3d_dataset.npz")
-   train, val, test = loaded.split(seed=0)
-
-   print(train.X.shape)
-   print(train.coords[:3])
-
-With the same small survey dataset:
-
-.. code-block:: pycon
-
+   >>> surveys.save("runs/forward/survey3d_dataset.npz")
+   >>> loaded = SurveyDataset3D.load("runs/forward/survey3d_dataset.npz")
+   >>> train, val, test = loaded.split(seed=0)
    >>> print(train.X.shape)
    (4, 9, 60)
    >>> print(train.coords[:3])
@@ -538,35 +605,50 @@ a small custom loop around :class:`pycsamt.forward.Grid2D`,
 :class:`pycsamt.forward.MT2DForward`, :class:`pycsamt.forward.Grid3D`, or
 :class:`pycsamt.forward.MT3DForward`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import Grid2D, MT2DForward
+   >>> from pycsamt.forward import Grid2D, MT2DForward
 
-   freqs = np.logspace(-1, 3, 12)
-   samples = []
+   >>> freqs = np.logspace(-1, 3, 12)
+   >>> samples = []
 
-   for seed in range(10):
-       grid = Grid2D.random(
-           nx=40,
-           nz=25,
-           x_max=6000.0,
-           z_max=3000.0,
-           n_stations=12,
-           seed=seed,
-       )
-       response = MT2DForward(freqs=freqs, grid=grid, verbose=False).run()
-       samples.append(response.to_feature_array(mode="both"))
+   >>> for seed in range(10):
+   ...     grid = Grid2D.random(
+   ...         nx=40,
+   ...         nz=25,
+   ...         x_max=6000.0,
+   ...         z_max=3000.0,
+   ...         n_stations=12,
+   ...         seed=seed,
+   ...     )
+   ...     response = MT2DForward(freqs=freqs, grid=grid, verbose=False).run()
+   ...     samples.append(response.to_feature_array(mode="both"))
+   ...
 
-   X = np.stack(samples, axis=0)
-   print(X.shape)
+   >>> X = np.stack(samples, axis=0)
 
-For three lightweight grid draws with eight stations:
+For three lightweight grid draws with eight stations, the same recipe gives:
 
 .. code-block:: pycon
+   :linenos:
 
+   >>> samples = []
+   >>> for seed in range(3):
+   ...     grid = Grid2D.random(
+   ...         nx=40,
+   ...         nz=25,
+   ...         x_max=6000.0,
+   ...         z_max=3000.0,
+   ...         n_stations=8,
+   ...         seed=seed,
+   ...     )
+   ...     response = MT2DForward(freqs=freqs, grid=grid, verbose=False).run()
+   ...     samples.append(response.to_feature_array(mode="both"))
+   ...
+   >>> X = np.stack(samples, axis=0)
    >>> print(X.shape)
    (3, 8, 48)
 
@@ -577,28 +659,41 @@ Dataset QA
 ----------
 
 Before using a synthetic dataset for training, reporting, or benchmarking,
-perform basic quality assurance.
-
-.. code-block:: python
-   :linenos:
-
-   import numpy as np
-
-   def check_forward_dataset(dataset):
-       print(dataset)
-       print("X:", dataset.X.shape, dataset.X.dtype)
-       print("y:", dataset.y.shape, dataset.y.dtype)
-       print("finite X:", np.isfinite(dataset.X).all())
-       print("target NaN count:", np.isnan(dataset.y).sum())
-       if dataset.meta is not None:
-           print("layer counts:", np.unique(dataset.meta["n_layers"]))
-           print("noise levels:", np.unique(dataset.meta["noise_level"]))
-
-   check_forward_dataset(dataset)
-
-The check should be saved with the dataset archive. For the small MT1D example:
+perform basic quality assurance. Re-building the 12-sample MT1D dataset from
+the top of this page keeps this section runnable on its own:
 
 .. code-block:: pycon
+   :linenos:
+
+   >>> import numpy as np
+
+   >>> from pycsamt.forward import generate_dataset
+
+   >>> dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=12,
+   ...     freqs=np.logspace(-3, 4, 40),
+   ...     n_layers=(3, 7),
+   ...     rho_range=(1.0, 10000.0),
+   ...     depth_max=3000.0,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     n_jobs=1,
+   ...     verbose=False,
+   ... )
+
+   >>> def check_forward_dataset(dataset):
+   ...     print(dataset)
+   ...     print("X:", dataset.X.shape, dataset.X.dtype)
+   ...     print("y:", dataset.y.shape, dataset.y.dtype)
+   ...     print("finite X:", np.isfinite(dataset.X).all())
+   ...     print("target NaN count:", np.isnan(dataset.y).sum())
+   ...     if dataset.meta is not None:
+   ...         print("layer counts:", np.unique(dataset.meta["n_layers"]))
+   ...         print("noise levels:", np.unique(dataset.meta["noise_level"]))
+   ...
 
    >>> check_forward_dataset(dataset)
    ForwardDataset(n=12, n_features=80, n_params=13, solver='mt1d')
@@ -608,6 +703,8 @@ The check should be saved with the dataset archive. For the small MT1D example:
    target NaN count: 42
    layer counts: [3 4 5 6 7]
    noise levels: [0.05]
+
+The check should be saved with the dataset archive.
 
 .. figure:: ../../images/user_guide/forward/synthetic_dataset_qa_grid.png
    :alt: Synthetic dataset QA grid with sample curves and histograms.

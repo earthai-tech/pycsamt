@@ -79,16 +79,18 @@ Load the edited files with strict validation of keys:
      freq_min             = 0.0001 Hz
      freq_max             = 1e+04 Hz
      n_freqs              = 30
-     n_layers             = 3-8
-     rho_min              = 1 Ohm.m
-     rho_max              = 1e+04 Ohm.m
+     n_layers             = 3–7
+     rho_min              = 1 Ω·m
+     rho_max              = 1e+04 Ω·m
      depth_max            = 2e+03 m
-     n_samples            = 100
+     n_samples            = 10,000
      noise_level          = 0.05  (gaussian)
      seed                 = None
      n_jobs               = 1
-     output               = forward_dataset.npz
+     output               = ./forward_dataset.npz
 
+This is an unedited template, so every field is still the class default --
+edit the values that matter for the experiment before loading it back.
 ``strict=True`` is recommended for production runs because misspelled keys
 raise an error instead of being ignored. Use ``strict=False`` only when
 loading a file that intentionally contains extra metadata.
@@ -179,9 +181,9 @@ Generate a 1-D MT training dataset:
      freq_min             = 0.001 Hz
      freq_max             = 1e+04 Hz
      n_freqs              = 40
-     n_layers             = 3-7
-     rho_min              = 1 Ohm.m
-     rho_max              = 1e+04 Ohm.m
+     n_layers             = 3–7
+     rho_min              = 1 Ω·m
+     rho_max              = 1e+04 Ω·m
      depth_max            = 3e+03 m
      n_samples            = 5,000
      noise_level          = 0.05  (field)
@@ -239,7 +241,7 @@ Common prior names include:
      freq_min             = 0.0001 Hz
      freq_max             = 1e+04 Hz
      n_freqs              = 30
-     n_layers             = 4-7
+     n_layers             = 4–7
      geology              = 'geothermal'
      n_samples            = 20,000
      noise_level          = 0.05  (field)
@@ -291,9 +293,9 @@ requiring a dense linear grid.
      time_max             = 0.01 s
      n_times              = 25
      loop_radius          = 50.0 m
-     n_layers             = 3-6
-     rho_min              = 1 Ohm.m
-     rho_max              = 1e+04 Ohm.m
+     n_layers             = 3–6
+     rho_min              = 1 Ω·m
+     rho_max              = 1e+04 Ω·m
      depth_max            = 2e+03 m
      n_samples            = 1,000
      noise_level          = 0.03  (gaussian)
@@ -378,24 +380,36 @@ Example 2-D anomaly run:
    ...     anomaly_z_lo=400.0,
    ...     anomaly_z_hi=1800.0,
    ...     n_stations=16,
-   ...     verbose=True,
+   ...     verbose=False,
    ... )
 
    >>> cfg.validate()
    >>> print(cfg.summary())
    ForwardConfig2D
      model_type             = 'anomaly'
-     bg_rho                 = 300.0 Ohm.m
-     freq range             = 0.01-1e+03 Hz  (25 pts)
-     grid (nx x nz)         = 50 x 35  (core, +8 pad)
+     bg_rho                 = 300.0 Ω·m
+     freq range             = 0.01–1e+03 Hz  (25 pts)
+     grid (nx × nz)         = 50 × 35  (core, +8 pad)
      x_max                  = 10000 m
      z_max                  = 6000 m
      n_stations             = 16
-     anomaly                = 10.0 Ohm.m  x=[2500.0,6500.0]  z=[400.0,1800.0]
+     anomaly                = 10.0 Ω·m  x=[2500.0,6500.0]  z=[400.0,1800.0]
 
    >>> grid = cfg.to_grid()
    >>> solver = MT2DForward(grid=grid, **cfg.to_solver_kwargs())
    >>> response = solver.run()
+   >>> features = response.to_feature_array(mode="both")
+   >>> features.shape
+   (16, 100)
+
+Sixteen stations times the twenty-five sampled frequencies times both
+modes' apparent resistivity and phase gives the hundred columns above --
+the same ``to_feature_array`` pattern used throughout
+:doc:`concepts`, now driven entirely by the config rather than by
+hand-built keyword arguments. Set ``verbose=True`` on ``ForwardConfig2D``
+during long exploratory runs; it streams a per-frequency progress line to
+stdout, which is useful interactively but not worth capturing in a static
+transcript.
 
 ``to_grid()`` accepts a ``seed`` argument for random models:
 
@@ -405,8 +419,13 @@ Example 2-D anomaly run:
    >>> cfg = ForwardConfig2D(model_type="random")
    >>> cfg.validate()
    >>> grid = cfg.to_grid(seed=42)
-   >>> grid.rho.shape
-   (50, 30)
+   >>> grid.resistivity.shape
+   (38, 56)
+
+The requested ``nx=40``, ``nz=30`` core is padded on every side that is not
+the free surface, so the stored array is larger than the core grid: eight
+padding cells on each side of ``nx`` (``40 + 2*8 = 56``) and eight beneath
+``nz`` (``30 + 8 = 38``), with no padding added above ``z=0``.
 
 2-D Grid Tuning
 ---------------
@@ -510,22 +529,32 @@ Example quasi-3-D block anomaly:
    ...     anomaly_z_hi=2000.0,
    ...     nx_stations=6,
    ...     ny_stations=6,
-   ...     verbose=True,
+   ...     verbose=False,
    ... )
 
    >>> cfg.validate()
    >>> print(cfg.summary())
    ForwardConfig3D
      method                   = 'quasi3d'
-     model_type               = 'block_anomaly'  (bg=500.0 Ohm.m)
-     freq range               = 0.01-1e+03 Hz  (15 pts)
-     grid (nx x ny x nz)      = 24 x 24 x 18  (core, +8 pad)
-     extents (x,y,z)          = 9000 m x 9000 m x 5000 m
-     stations                 = 6 x 6 = 36 total
-     anomaly                  = 20.0 Ohm.m  x=[2500.0,6500.0]  y=[2500.0,6500.0]  z=[500.0,2000.0]
+     model_type               = 'block_anomaly'  (bg=500.0 Ω·m)
+     freq range               = 0.01–1e+03 Hz  (15 pts)
+     grid (nx×ny×nz)          = 24×24×18  (core, +8 pad)
+     extents (x,y,z)          = 9000 m × 9000 m × 5000 m
+     stations                 = 6×6 = 36 total
+     anomaly                  = 20.0 Ω·m  x=[2500.0,6500.0]  y=[2500.0,6500.0]  z=[500.0,2000.0]
 
    >>> grid = cfg.to_grid()
    >>> response = MT3DForward(grid=grid, **cfg.to_solver_kwargs()).run()
+   >>> x = response.to_feature_array(components="xy_yx")
+   >>> x.shape
+   (36, 60)
+
+Thirty-six stations on the 6x6 layout, times the fifteen sampled
+frequencies, times the ``xy``/``yx`` components' apparent resistivity and
+phase, gives the sixty columns above -- config-driven quasi-3-D behaves
+exactly like the hand-built :class:`pycsamt.forward.Grid3D` example in
+:doc:`concepts`, which is the point of routing both through the same
+``to_feature_array`` convention.
 
 Random layered 3-D model:
 
@@ -543,8 +572,15 @@ Random layered 3-D model:
 
    >>> cfg.validate()
    >>> grid = cfg.to_grid(seed=42)
-   >>> grid.rho.shape
-   (20, 20, 15)
+   >>> grid.resistivity.shape
+   (23, 36, 36)
+
+The default 20x20x15 core grid picks up the same eight-cell padding
+convention as the 2-D case, on every side except the free surface:
+``nx = ny = 20 + 2*8 = 36`` and ``nz = 15 + 8 = 23``.
+:class:`pycsamt.forward.Grid3D` stores ``resistivity`` as
+``(nz, ny, nx)``, which is why the padded shape reads ``(23, 36, 36)``
+rather than ``(36, 36, 23)``.
 
 3-D Configuration Notes
 -----------------------
@@ -601,9 +637,14 @@ saved in logs or reports.
 
    >>> run_dir = Path("runs/forward/2d_anomaly")
    >>> run_dir.mkdir(parents=True, exist_ok=True)
-   >>> (run_dir / "summary.txt").write_text(cfg.summary())
+   >>> (run_dir / "summary.txt").write_text(cfg.summary(), encoding="utf-8")
    363
    >>> cfg.to_template(run_dir / "forward_config_2d.yml")
+
+``summary()`` contains the ``Ω·m`` resistivity unit, so pass
+``encoding="utf-8"`` explicitly -- on Windows, :class:`pathlib.Path`
+otherwise defaults to the console code page and raises
+``UnicodeEncodeError`` on that character.
 
 What To Record
 --------------

@@ -1,0 +1,24 @@
+ 50   0
+    df5x.000 TX=     0 TY=     0 Tz=     0 RX=     0 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=000140 G2=000080 G3=000080
+    df5x.001 TX=     0 TY=     0 Tz=     0 RX=     0 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.002 TX=     0 TY=     0 Tz=     0 RX=    20 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.003 TX=     0 TY=     0 Tz=     0 RX=    40 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.004 TX=     0 TY=     0 Tz=     0 RX=    60 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.005 TX=     0 TY=     0 Tz=     0 RX=    80 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.006 TX=     0 TY=     0 Tz=     0 RX=   100 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.007 TX=     0 TY=     0 Tz=     0 RX=   120 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.008 TX=     0 TY=     0 Tz=     0 RX=   140 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 b42 G2=00  80 G3=00 a81
+    df5x.009 TX=     0 TY=     0 Tz=     0 RX=   160 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.010 TX=     0 TY=     0 Tz=     0 RX=   180 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.011 TX=     0 TY=     0 Tz=     0 RX=   200 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.012 TX=     0 TY=     0 Tz=     0 RX=   220 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.013 TX=     0 TY=     0 Tz=     0 RX=   240 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.014 TX=     0 TY=     0 Tz=     0 RX=   260 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.015 TX=     0 TY=     0 Tz=     0 RX=   280 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 a81
+    df5x.016 TX=     0 TY=     0 Tz=     0 RX=   300 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 881
+    df5x.017 TX=     0 TY=     0 Tz=     0 RX=   320 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 881
+    df5x.018 TX=     0 TY=     0 Tz=     0 RX=   340 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 881
+    df5x.019 TX=     0 TY=     0 Tz=     0 RX=   340 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 881
+    df5x.020 TX=     0 TY=     0 Tz=     0 RX=   360 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 881
+    df5x.021 TX=     0 TY=     0 Tz=     0 RX=   380 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 943 G2=00  80 G3=00 881
+    df5x.022 TX=     0 TY=     0 Tz=     0 RX=   400 RY=     0 Rz=     0 XL=  2000 YL=  2000 G1=00 942 G2=00  80 G3=00 480

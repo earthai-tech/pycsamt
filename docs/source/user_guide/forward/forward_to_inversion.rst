@@ -8,6 +8,7 @@ Forward modelling and inversion are the two directions of the same
 earth model:
 
 .. math::
+   :label: eq-forward-operator
 
    d_{\mathrm{pred}} = F(m).
 
@@ -16,6 +17,7 @@ until predicted and observed data agree while the model itself stays well
 behaved:
 
 .. math::
+   :label: eq-inversion-objective
 
    \Phi(m) = \Phi_d(m) + \lambda \Phi_m(m), \qquad
    \Phi_d(m) = \left\| W_d \left(d_{\mathrm{obs}} - F(m)\right) \right\|_2^2.
@@ -143,60 +145,55 @@ is converted into the backend-neutral inversion mapping using ``freqs``,
 truth model, the noisy synthetic data, and the inversion configuration in one
 pass.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import FieldRealisticNoise, LayeredModel, MT1DForward
-   from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
+   >>> from pycsamt.forward import FieldRealisticNoise, LayeredModel, MT1DForward
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
 
-   freqs = np.logspace(-2, 2, 16)
+   >>> freqs = np.logspace(-2, 2, 16)
 
-   truth = LayeredModel(
-       resistivity=[80.0, 25.0, 600.0],
-       thickness=[250.0, 900.0],
-   )
+   >>> truth = LayeredModel(
+   ...     resistivity=[80.0, 25.0, 600.0],
+   ...     thickness=[250.0, 900.0],
+   ... )
 
-   clean = MT1DForward(freqs=freqs).run(truth)
-   noisy = FieldRealisticNoise(base_level=0.05).apply(clean, seed=42)
+   >>> clean = MT1DForward(freqs=freqs).run(truth)
+   >>> noisy = FieldRealisticNoise(base_level=0.05).apply(clean, seed=42)
 
-   cfg = InversionConfig(
-       method="mt",
-       dimension="1d",
-       backend="builtin",
-       data={
-           "freqs": freqs,
-           "rho_a": noisy.rho_a,
-           "phase": noisy.phase,
-       },
-       starting_model=StartingModel(
-           resistivities=[100.0, 50.0, 500.0],
-           thicknesses=[300.0, 1000.0],
-       ),
-       error_floor=0.05,
-       phase_error=3.0,
-       regularization="smooth",
-       max_iter=25,
-       metadata={
-           "experiment": "synthetic_mt_1d_recovery",
-           "noise_seed": 42,
-       },
-   )
+   >>> cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="1d",
+   ...     backend="builtin",
+   ...     data={
+   ...         "freqs": freqs,
+   ...         "rho_a": noisy.rho_a,
+   ...         "phase": noisy.phase,
+   ...     },
+   ...     starting_model=StartingModel(
+   ...         resistivities=[100.0, 50.0, 500.0],
+   ...         thicknesses=[300.0, 1000.0],
+   ...     ),
+   ...     error_floor=0.05,
+   ...     phase_error=3.0,
+   ...     regularization="smooth",
+   ...     max_iter=25,
+   ...     metadata={
+   ...         "experiment": "synthetic_mt_1d_recovery",
+   ...         "noise_seed": 42,
+   ...     },
+   ... )
 
-   result = InversionWorkflow(cfg).run()
+   >>> result = InversionWorkflow(cfg).run()
 
-   print(result.summary())
-   recovered = result.model
-   print("recovered resistivities:", np.round(recovered.resistivities, 1))
-   print("truth resistivities:    ", truth.resistivity)
-
-Captured output:
-
-.. code-block:: text
-
+   >>> print(result.summary())
    InversionResult(method='mt', dimension='1d', backend='builtin', status='converged', rms=0.851)
+   >>> recovered = result.model
+   >>> print("recovered resistivities:", np.round(recovered.resistivities, 1))
    recovered resistivities: [ 74.3  25.6 596. ]
+   >>> print("truth resistivities:    ", truth.resistivity)
    truth resistivities:     [ 80.  25. 600.]
 
 The starting model was off by 20-100% on every layer, and 25 iterations were
@@ -215,27 +212,23 @@ exactly. Plotting the two side by side makes the same point visually:
 Use the result diagnostics, not only the recovered layer values, to judge
 whether that agreement is trustworthy rather than lucky:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   if result.history is not None:
-       history = result.history.arrays()
-       print("objective (final):", round(float(history["objective"][-1]), 4))
-       print("rms (final):", round(float(history["rms"][-1]), 4))
-
-   if result.uncertainty is not None:
-       print("uncertainty.confidence shape:", result.uncertainty.confidence.shape)
-
-   model_for_export = result.to_resistivity_model()
-   print("model_for_export.method:", model_for_export.method)
-
-Captured output:
-
-.. code-block:: text
-
+   >>> if result.history is not None:
+   ...     history = result.history.arrays()
+   ...     print("objective (final):", round(float(history["objective"][-1]), 4))
+   ...     print("rms (final):", round(float(history["rms"][-1]), 4))
+   ...
    objective (final): 23.1926
    rms (final): 0.8513
+   >>> if result.uncertainty is not None:
+   ...     print("uncertainty.confidence shape:", result.uncertainty.confidence.shape)
+   ...
    uncertainty.confidence shape: (3, 1)
+
+   >>> model_for_export = result.to_resistivity_model()
+   >>> print("model_for_export.method:", model_for_export.method)
    model_for_export.method: builtin:mt:1d
 
 An :term:`RMS misfit` near 1 means the recovered model fits the noisy data
@@ -259,51 +252,68 @@ Important interpretation points:
 and phase. The backend-neutral mapping therefore uses ``times`` and
 ``values``.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import LayeredModel, TEM1DForward
-   from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
+   >>> from pycsamt.forward import LayeredModel, TEM1DForward
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
 
-   times = np.logspace(-5, -3, 8)
+   >>> times = np.logspace(-5, -3, 8)
 
-   truth = LayeredModel(
-       resistivity=[60.0, 250.0, 900.0],
-       thickness=[120.0, 700.0],
-   )
+   >>> truth = LayeredModel(
+   ...     resistivity=[60.0, 250.0, 900.0],
+   ...     thickness=[120.0, 700.0],
+   ... )
 
-   forward_options = {
-       "loop_radius": 25.0,
-       "n_freqs": 10,
-       "n_lam": 16,
-   }
+   >>> forward_options = {
+   ...     "loop_radius": 25.0,
+   ... }
 
-   clean = TEM1DForward(times=times, **forward_options).run(truth)
+   >>> clean = TEM1DForward(times=times, **forward_options).run(truth)
 
-   cfg = InversionConfig(
-       method="tdem",
-       dimension="1d",
-       backend="builtin",
-       data={
-           "times": times,
-           "values": clean.dBz_dt,
-       },
-       starting_model=StartingModel(
-           resistivities=[80.0, 200.0, 700.0],
-           thicknesses=[150.0, 800.0],
-       ),
-       backend_options=forward_options,
-       max_iter=8,
-   )
+   >>> cfg = InversionConfig(
+   ...     method="tdem",
+   ...     dimension="1d",
+   ...     backend="builtin",
+   ...     data={
+   ...         "times": times,
+   ...         "values": clean.dBz_dt,
+   ...     },
+   ...     starting_model=StartingModel(
+   ...         resistivities=[80.0, 200.0, 700.0],
+   ...         thicknesses=[150.0, 800.0],
+   ...     ),
+   ...     backend_options=forward_options,
+   ...     max_iter=8,
+   ... )
 
-   result = InversionWorkflow(cfg).run()
+   >>> result = InversionWorkflow(cfg).run()
 
-For TDEM, carry the forward numerical options into ``backend_options`` when the
-inversion needs the same source geometry or numerical quadrature settings. If
-the forward and inverse calculations use different transmitter geometry, the
-recovery test is no longer testing only inversion behaviour.
+   >>> print(result.summary())
+   InversionResult(method='tdem', dimension='1d', backend='builtin', status='needs_review', rms=5.01e-07)
+   >>> recovered = result.model
+   >>> print("recovered resistivities:", np.round(recovered.resistivities, 1))
+   recovered resistivities: [ 60.  250.  844.4]
+   >>> print("truth resistivities:    ", truth.resistivity)
+   truth resistivities:     [ 60. 250. 900.]
+
+The top two layers recover almost exactly; the resistive basal layer is
+underestimated by about 6% (844 vs. 900 Ω·m), the expected pattern for TEM --
+sensitivity to a deep, resistive target decays faster than to a shallow or
+conductive one, since the diffusing current smoke-ring has to reach it first.
+``status`` reads ``'needs_review'`` rather than ``'converged'`` here only
+because ``max_iter=8`` (kept small for a fast documentation build) is reached
+before SciPy's own strict internal tolerance is satisfied -- the RMS is
+already essentially zero, so this is a budget label, not a quality problem.
+
+``TEM1DForward`` carries only the transmitter geometry (``loop_radius``, and
+``moment`` if set away from its default); thread the same values into
+``backend_options`` so the inversion evaluates candidate models with the
+exact same loop the synthetic data was generated from. If the forward and
+inverse calculations use different transmitter geometry, the recovery test
+is no longer testing only inversion behaviour.
 
 Stitched 2-D Profile Recovery
 -----------------------------
@@ -314,59 +324,54 @@ screening data quality, :term:`static shift` effects, and starting models. It
 is not a substitute for native 2-D physics when lateral currents are
 important.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import LayeredModel, MT1DForward
-   from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
+   >>> from pycsamt.forward import LayeredModel, MT1DForward
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
 
-   freqs = np.logspace(-2, 2, 12)
+   >>> freqs = np.logspace(-2, 2, 12)
 
-   station_models = [
-       LayeredModel([80.0, 20.0, 500.0], [250.0, 900.0]),
-       LayeredModel([100.0, 35.0, 600.0], [300.0, 850.0]),
-       LayeredModel([120.0, 60.0, 700.0], [350.0, 800.0]),
-   ]
+   >>> station_models = [
+   ...     LayeredModel([80.0, 20.0, 500.0], [250.0, 900.0]),
+   ...     LayeredModel([100.0, 35.0, 600.0], [300.0, 850.0]),
+   ...     LayeredModel([120.0, 60.0, 700.0], [350.0, 800.0]),
+   ... ]
 
-   responses = [MT1DForward(freqs=freqs).run(model) for model in station_models]
+   >>> responses = [MT1DForward(freqs=freqs).run(model) for model in station_models]
 
-   data = {
-       "method": "mt",
-       "freqs": freqs,
-       "rho_a": np.vstack([response.rho_a for response in responses]),
-       "phase": np.vstack([response.phase for response in responses]),
-       "station_names": ["S1", "S2", "S3"],
-       "station_x": [0.0, 500.0, 1000.0],
-   }
+   >>> data = {
+   ...     "method": "mt",
+   ...     "freqs": freqs,
+   ...     "rho_a": np.vstack([response.rho_a for response in responses]),
+   ...     "phase": np.vstack([response.phase for response in responses]),
+   ...     "station_names": ["S1", "S2", "S3"],
+   ...     "station_x": [0.0, 500.0, 1000.0],
+   ... }
 
-   cfg = InversionConfig(
-       method="mt",
-       dimension="2d",
-       backend="builtin",
-       data=data,
-       n_layers=3,
-       starting_model=StartingModel(
-           resistivities=[100.0, 50.0, 500.0],
-           thicknesses=[300.0, 900.0],
-       ),
-       max_iter=15,
-   )
+   >>> cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="2d",
+   ...     backend="builtin",
+   ...     data=data,
+   ...     n_layers=3,
+   ...     starting_model=StartingModel(
+   ...         resistivities=[100.0, 50.0, 500.0],
+   ...         thicknesses=[300.0, 900.0],
+   ...     ),
+   ...     max_iter=15,
+   ... )
 
-   result = InversionWorkflow(cfg).run()
-   section = result.to_resistivity_model()
+   >>> result = InversionWorkflow(cfg).run()
+   >>> section = result.to_resistivity_model()
 
-   print(result.summary())
-   print("section.rho_2d.shape:", section.rho_2d.shape)
-   print("section.station_names:", section.station_names)
-
-Captured output:
-
-.. code-block:: text
-
+   >>> print(result.summary())
    InversionResult(method='mt', dimension='2d', backend='builtin', status='success', rms=1.11e-08)
+   >>> print("section.rho_2d.shape:", section.rho_2d.shape)
    section.rho_2d.shape: (3, 3)
+   >>> print("section.station_names:", section.station_names)
    section.station_names: ['S1', 'S2', 'S3']
 
 The important shape convention is visible in the ``np.vstack`` call:
@@ -395,65 +400,60 @@ When you use ``MT2DForward``, the response is produced by a 2-D forward solver
 and the TE/TM arrays are stored with frequency as the first dimension. For the
 inversion profile API, transpose the selected component.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import Grid2D, MT2DForward
-   from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
+   >>> from pycsamt.forward import Grid2D, MT2DForward
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow, StartingModel
 
-   freqs = np.array([1.0, 10.0])
+   >>> freqs = np.array([1.0, 10.0])
 
-   grid = Grid2D.halfspace(
-       rho=100.0,
-       nx=2,
-       nz=2,
-       x_max=1000.0,
-       z_max=1000.0,
-       n_pad=0,
-       n_stations=2,
-   )
+   >>> grid = Grid2D.halfspace(
+   ...     rho=100.0,
+   ...     nx=2,
+   ...     nz=2,
+   ...     x_max=1000.0,
+   ...     z_max=1000.0,
+   ...     n_pad=0,
+   ...     n_stations=2,
+   ... )
 
-   response = MT2DForward(freqs, grid, verbose=False).run()
+   >>> response = MT2DForward(freqs, grid, verbose=False).run()
 
-   cfg = InversionConfig(
-       method="mt",
-       dimension="2d",
-       backend="builtin",
-       data={
-           "freqs": freqs,
-           "rho_a": response.rho_a_te.T,
-           "phase": response.phase_te.T,
-           "station_x": [0.0, 1000.0],
-           "station_names": ["S1", "S2"],
-       },
-       n_layers=2,
-       starting_model=StartingModel(
-           resistivities=[100.0, 100.0],
-           thicknesses=[500.0],
-       ),
-       max_iter=1,
-       backend_options={
-           "profile_mode": "fd2d",
-           "nx": 2,
-           "n_pad": 0,
-           "x_margin": 0.0,
-           "x_max": 1000.0,
-           "components": ("te",),
-           "regularization_weight": 0.0,
-           "forward_verbose": False,
-       },
-   )
+   >>> cfg = InversionConfig(
+   ...     method="mt",
+   ...     dimension="2d",
+   ...     backend="builtin",
+   ...     data={
+   ...         "freqs": freqs,
+   ...         "rho_a": response.rho_a_te.T,
+   ...         "phase": response.phase_te.T,
+   ...         "station_x": [0.0, 1000.0],
+   ...         "station_names": ["S1", "S2"],
+   ...     },
+   ...     n_layers=2,
+   ...     starting_model=StartingModel(
+   ...         resistivities=[100.0, 100.0],
+   ...         thicknesses=[500.0],
+   ...     ),
+   ...     max_iter=1,
+   ...     backend_options={
+   ...         "profile_mode": "fd2d",
+   ...         "nx": 2,
+   ...         "n_pad": 0,
+   ...         "x_margin": 0.0,
+   ...         "x_max": 1000.0,
+   ...         "components": ("te",),
+   ...         "regularization_weight": 0.0,
+   ...         "forward_verbose": False,
+   ...     },
+   ... )
 
-   result = InversionWorkflow(cfg).run()
+   >>> result = InversionWorkflow(cfg).run()
 
-   print(result.summary())
-
-Captured output:
-
-.. code-block:: text
-
+   >>> print(result.summary())
    InversionResult(method='mt', dimension='2d', backend='builtin', status='converged', rms=0)
 
 This example is intentionally small -- a 2x2 halfspace grid started from the
@@ -516,9 +516,13 @@ Use these rules:
 * Do not tune the error floor only to force a visually pleasing model.
 * Compare the predicted response with the noisy data and the clean data.
 
-The inversion objective weights residuals by the supplied data uncertainty:
+The inversion objective weights residuals by the supplied data uncertainty --
+the same :math:`W_d` and forward operator :math:`F(m)` from
+:eq:`eq-inversion-objective` and :eq:`eq-forward-operator`, just written out
+as a residual vector rather than squared into a scalar objective:
 
 .. math::
+   :label: eq-weighted-residual
 
    r = W_d \left( d_{\mathrm{obs}} - F(m) \right).
 

@@ -54,6 +54,7 @@ results/
 runs/
 /edi_new_out/
 /edi_out/
+/all_blocks.pycon
 
 # Unit test / coverage reports
 .coverage
@@ -326,6 +327,37 @@ data/stratagem/K2/k2-HX/*
 !data/stratagem/K2/k2-HX/BE26V2.*
 !data/stratagem/K2/k2-HX/S746_HX.*
 !data/stratagem/K2/k2-HX/S747_HY.*
+
+# Exception: real Stratagem (EMI/Geometrics) AMT field survey, Dafang line 5
+# -- bundled sample data for the process_stratagem_dafang_to_inversion
+# tutorial. WinGLink-exported EDIs, coordinates, and both independent
+# cross-validation EDI sets are kept in full. In df5-hx, only the usable
+# (ASCII) raw hardware files are kept -- XDF5X.*/ZDF5X.* plus
+# calibration/sensor files. YDF5X.* raw files stay local-only: like K2's
+# Y2HX.*, they are binary time-series captures, not the ASCII format
+# StratagemRawReader parses, and account for ~34 MB of the 36 MB df5-hx
+# directory.
+!data/stratagem/Dafang
+data/stratagem/Dafang/*
+!data/stratagem/Dafang/README.md
+!data/stratagem/Dafang/df5-coords.csv
+!data/stratagem/Dafang/df5-edi
+!data/stratagem/Dafang/df5-edi/**
+!data/stratagem/Dafang/df5-watex-edi
+!data/stratagem/Dafang/df5-watex-edi/**
+!data/stratagem/Dafang/df5-watex-edi-processed
+!data/stratagem/Dafang/df5-watex-edi-processed/**
+!data/stratagem/Dafang/df5-hx
+data/stratagem/Dafang/df5-hx/*
+!data/stratagem/Dafang/df5-hx/XDF5X.*
+!data/stratagem/Dafang/df5-hx/ZDF5X.*
+!data/stratagem/Dafang/df5-hx/SENSORS.TBL
+!data/stratagem/Dafang/df5-hx/@
+!data/stratagem/Dafang/df5-hx/@S
+!data/stratagem/Dafang/df5-hx/AFEV3.*
+!data/stratagem/Dafang/df5-hx/BE26V2.*
+!data/stratagem/Dafang/df5-hx/S746_HX.*
+!data/stratagem/Dafang/df5-hx/S747_HY.*
 
 # Inversion-plot runs (rendered PNGs, ~18 MB) are local-only outputs and
 # must never be committed — GitHub repo-size hygiene. ``data/*`` already

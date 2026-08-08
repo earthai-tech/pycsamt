@@ -78,26 +78,36 @@ Saving Figures
 --------------
 
 Because the plotting functions return Matplotlib objects, save figures using
-standard Matplotlib methods.
+standard Matplotlib methods. Any response works for this pattern; a quick
+halfspace keeps the point focused on saving, not on the model:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import matplotlib.pyplot as plt
+   >>> import numpy as np
+   >>> import matplotlib.pyplot as plt
 
-   axes = plot_response_1d(response)
-   fig = axes[0].get_figure()
-   fig.savefig("response_1d.png", dpi=200, bbox_inches="tight")
+   >>> from pycsamt.forward import LayeredModel, MT1DForward, plot_response_1d
 
-   plt.close(fig)
+   >>> model = LayeredModel([100.0], [])
+   >>> response = MT1DForward(np.logspace(-3, 4, 10)).run(model)
+
+   >>> axes = plot_response_1d(response)
+   >>> fig = axes[0].get_figure()
+   >>> fig.savefig("response_1d.png", dpi=200, bbox_inches="tight")
+
+   >>> plt.close(fig)
 
 For composite functions that return a figure directly:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   fig = plot_response_and_model_1d(response, model=model)
-   fig.savefig("model_and_response.png", dpi=200, bbox_inches="tight")
+   >>> from pycsamt.forward import plot_response_and_model_1d
+
+   >>> fig = plot_response_and_model_1d(response, model=model)
+   >>> fig.savefig("model_and_response.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
 
 1-D Response Plots
 ------------------
@@ -105,28 +115,26 @@ For composite functions that return a figure directly:
 Use ``plot_response_1d`` for MT and CSAMT apparent resistivity and phase curves.
 It returns two axes: ``[ax_rho, ax_phase]``.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import LayeredModel, MT1DForward, plot_response_1d
+   >>> from pycsamt.forward import LayeredModel, MT1DForward, plot_response_1d
 
-   model = LayeredModel(
-       resistivity=[100.0, 10.0, 500.0],
-       thickness=[300.0, 800.0],
-       name="conductive_middle_layer",
-   )
+   >>> model = LayeredModel(
+   ...     resistivity=[100.0, 10.0, 500.0],
+   ...     thickness=[300.0, 800.0],
+   ...     name="conductive_middle_layer",
+   ... )
 
-   response = MT1DForward(
-       freqs=np.logspace(-3, 4, 40),
-   ).run(model)
+   >>> response = MT1DForward(freqs=np.logspace(-3, 4, 40)).run(model)
 
-   axes = plot_response_1d(
-       response,
-       modes="both",
-       title="MT1D response",
-   )
+   >>> axes = plot_response_1d(
+   ...     response,
+   ...     modes="both",
+   ...     title="MT1D response",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_1d_response.png
    :alt: MT1D apparent resistivity and phase response.
@@ -156,25 +164,29 @@ Read this plot as a quick physical sanity check:
 ``plot_response_1d`` expects frequency-domain responses. TDEM responses can be
 quickly inspected with the response object's own ``plot`` method:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import LayeredModel, TEM1DForward
+   >>> from pycsamt.forward import LayeredModel, TEM1DForward
 
-   model = LayeredModel([60.0, 250.0, 900.0], [120.0, 700.0])
-   response = TEM1DForward(np.logspace(-6, -3, 25)).run(model)
+   >>> model = LayeredModel([60.0, 250.0, 900.0], [120.0, 700.0])
+   >>> response = TEM1DForward(np.logspace(-6, -3, 25)).run(model)
 
-   ax = response.plot()
-   print(response.times.shape, response.dBz_dt.shape)
-
-Captured output:
-
-.. code-block:: pycon
-
+   >>> ax = response.plot()
    >>> print(response.times.shape, response.dBz_dt.shape)
    (25,) (25,)
+
+.. figure:: ../../images/user_guide/forward/plotting_1d_tem_response.png
+   :alt: TEM1D step-off dBz/dt response on log-log axes.
+   :align: center
+   :width: 65%
+
+   ``response.plot()`` is a quick diagnostic, not a publication figure -- it
+   picks its axes and labels from ``response.method`` automatically, which is
+   why no ``mode`` or ``quantity`` argument is needed the way the 2-D and 3-D
+   plotting functions require one.
 
 A TEM response uses :term:`time gate`\ s instead of frequency samples, and
 ``response.plot()`` reads them off the same object rather than needing a
@@ -186,20 +198,20 @@ separate axis argument.
 Use ``plot_model_1d`` to inspect one or more layered models. It returns one
 axis.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import LayeredModel, plot_model_1d
+   >>> from pycsamt.forward import LayeredModel, plot_model_1d
 
-   truth = LayeredModel([80.0, 25.0, 600.0], [250.0, 900.0], name="truth")
-   start = LayeredModel([100.0, 50.0, 500.0], [300.0, 1000.0], name="start")
+   >>> truth = LayeredModel([80.0, 25.0, 600.0], [250.0, 900.0], name="truth")
+   >>> start = LayeredModel([100.0, 50.0, 500.0], [300.0, 1000.0], name="start")
 
-   ax = plot_model_1d(
-       [truth, start],
-       labels=["truth", "starting model"],
-       depth_max=2000.0,
-       title="Layered models",
-   )
+   >>> ax = plot_model_1d(
+   ...     [truth, start],
+   ...     labels=["truth", "starting model"],
+   ...     depth_max=2000.0,
+   ...     title="Layered models",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_1d_models.png
    :alt: Truth and starting layered-earth resistivity models.
@@ -219,25 +231,25 @@ information the inversion receives.
 ``plot_response_and_model_1d`` creates the canonical validation figure for a
 single 1-D forward run. It returns a Matplotlib ``Figure``.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import (
-       LayeredModel,
-       MT1DForward,
-       plot_response_and_model_1d,
-   )
+   >>> from pycsamt.forward import (
+   ...     LayeredModel,
+   ...     MT1DForward,
+   ...     plot_response_and_model_1d,
+   ... )
 
-   model = LayeredModel([100.0, 20.0, 800.0], [300.0, 1000.0])
-   response = MT1DForward(np.logspace(-3, 4, 40)).run(model)
+   >>> model = LayeredModel([100.0, 20.0, 800.0], [300.0, 1000.0])
+   >>> response = MT1DForward(np.logspace(-3, 4, 40)).run(model)
 
-   fig = plot_response_and_model_1d(
-       response,
-       model=model,
-       title="Forward validation",
-   )
+   >>> fig = plot_response_and_model_1d(
+   ...     response,
+   ...     model=model,
+   ...     title="Forward validation",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_1d_composite.png
    :alt: Composite 1-D earth model, apparent resistivity, and phase figure.
@@ -255,30 +267,30 @@ If ``model`` is omitted, the function returns a two-panel response-only figure.
 Use ``plot_model_2d`` to display a :class:`pycsamt.forward.Grid2D`. By default,
 it clips padding cells and displays the core model region.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import Grid2D, plot_model_2d
+   >>> from pycsamt.forward import Grid2D, plot_model_2d
 
-   grid = Grid2D.with_anomaly(
-       bg_rho=500.0,
-       anomaly_rho=5.0,
-       anomaly_bounds=(2000.0, 6000.0, 300.0, 1500.0),
-       nx=50,
-       nz=35,
-       x_max=10000.0,
-       z_max=6000.0,
-       n_pad=8,
-       n_stations=16,
-   )
+   >>> grid = Grid2D.with_anomaly(
+   ...     bg_rho=500.0,
+   ...     anomaly_rho=5.0,
+   ...     anomaly_bounds=(2000.0, 6000.0, 300.0, 1500.0),
+   ...     nx=50,
+   ...     nz=35,
+   ...     x_max=10000.0,
+   ...     z_max=6000.0,
+   ...     n_pad=8,
+   ...     n_stations=16,
+   ... )
 
-   ax = plot_model_2d(
-       grid,
-       clip_core=True,
-       show_stations=True,
-       station_preset="inversion",
-       title="2-D anomaly model",
-   )
+   >>> ax = plot_model_2d(
+   ...     grid,
+   ...     clip_core=True,
+   ...     show_stations=True,
+   ...     station_preset="inversion",
+   ...     title="2-D anomaly model",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_2d_model.png
    :alt: Two-dimensional resistivity grid with a conductive anomaly and stations.
@@ -308,24 +320,24 @@ Important options:
 Use ``plot_pseudosection_2d`` to show a period-by-station view of a 2-D MT
 response. It works on :class:`pycsamt.forward.ForwardResponse2D`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import MT2DForward, plot_pseudosection_2d
+   >>> from pycsamt.forward import MT2DForward, plot_pseudosection_2d
 
-   response = MT2DForward(
-       freqs=[1.0, 10.0, 100.0],
-       grid=grid,
-       verbose=False,
-   ).run()
+   >>> response = MT2DForward(
+   ...     freqs=[1.0, 10.0, 100.0],
+   ...     grid=grid,
+   ...     verbose=False,
+   ... ).run()
 
-   ax = plot_pseudosection_2d(
-       response,
-       mode="te",
-       quantity="rho_a",
-       n_contours=6,
-       title="TE apparent resistivity",
-   )
+   >>> ax = plot_pseudosection_2d(
+   ...     response,
+   ...     mode="te",
+   ...     quantity="rho_a",
+   ...     n_contours=6,
+   ...     title="TE apparent resistivity",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_2d_pseudosection.png
    :alt: TE apparent resistivity pseudo-section from a 2-D forward response.
@@ -349,18 +361,18 @@ creates a coherent response pattern, not to interpret target geometry directly.
 Use ``plot_response_profiles`` to inspect how the response varies along the
 profile at selected frequencies.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import plot_response_profiles
+   >>> from pycsamt.forward import plot_response_profiles
 
-   ax = plot_response_profiles(
-       response,
-       mode="te",
-       quantity="rho_a",
-       freq_indices=[0, 1, 2],
-       title="Lateral response profiles",
-   )
+   >>> ax = plot_response_profiles(
+   ...     response,
+   ...     mode="te",
+   ...     quantity="rho_a",
+   ...     freq_indices=[0, 1, 2],
+   ...     title="Lateral response profiles",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_2d_profiles.png
    :alt: Lateral apparent-resistivity profiles at selected frequencies.
@@ -380,32 +392,32 @@ whether an anomaly response is localized, broad, shifted, or absent.
 Use ``plot_model_3d`` to inspect a :class:`pycsamt.forward.Grid3D`. It returns
 three axes: ``[ax_xz, ax_yz, ax_xy]``.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import Grid3D, plot_model_3d
+   >>> from pycsamt.forward import Grid3D, plot_model_3d
 
-   grid3d = Grid3D.block_anomaly(
-       bg_rho=500.0,
-       anomaly_rho=20.0,
-       bounds=(2000.0, 6000.0, 2000.0, 6000.0, 300.0, 1500.0),
-       nx=20,
-       ny=20,
-       nz=15,
-       x_max=8000.0,
-       y_max=8000.0,
-       z_max=4000.0,
-       n_pad=6,
-       nx_stations=5,
-       ny_stations=5,
-   )
+   >>> grid3d = Grid3D.block_anomaly(
+   ...     bg_rho=500.0,
+   ...     anomaly_rho=20.0,
+   ...     bounds=(2000.0, 6000.0, 2000.0, 6000.0, 300.0, 1500.0),
+   ...     nx=20,
+   ...     ny=20,
+   ...     nz=15,
+   ...     x_max=8000.0,
+   ...     y_max=8000.0,
+   ...     z_max=4000.0,
+   ...     n_pad=6,
+   ...     nx_stations=5,
+   ...     ny_stations=5,
+   ... )
 
-   axes = plot_model_3d(
-       grid3d,
-       clip_core=True,
-       show_stations=True,
-       title="3-D block anomaly",
-   )
+   >>> axes = plot_model_3d(
+   ...     grid3d,
+   ...     clip_core=True,
+   ...     show_stations=True,
+   ...     title="3-D block anomaly",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_3d_model.png
    :alt: Orthogonal slices through a 3-D block-anomaly resistivity model.
@@ -429,24 +441,25 @@ Station positions are overlaid on the XY panel.
 Use ``plot_response_map_3d`` to display one response component at one frequency
 as a map-view station scatter plot.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import MT3DForward, plot_response_map_3d
+   >>> from pycsamt.forward import MT3DForward, plot_response_map_3d
 
-   response3d = MT3DForward(
-       freqs=[1.0, 10.0, 100.0],
-       grid=grid3d,
-   ).run()
+   >>> response3d = MT3DForward(
+   ...     freqs=[1.0, 10.0, 100.0],
+   ...     grid=grid3d,
+   ...     verbose=False,
+   ... ).run()
 
-   ax = plot_response_map_3d(
-       response3d,
-       freq_idx=0,
-       component="xy",
-       quantity="rho_a",
-       show_labels=True,
-       title="Zxy apparent resistivity map",
-   )
+   >>> ax = plot_response_map_3d(
+   ...     response3d,
+   ...     freq_idx=0,
+   ...     component="xy",
+   ...     quantity="rho_a",
+   ...     show_labels=True,
+   ...     title="Zxy apparent resistivity map",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_3d_map.png
    :alt: Map-view Zxy apparent resistivity response over a 3-D station grid.
@@ -465,18 +478,18 @@ quantities are ``"rho_a"`` and ``"phase"``.
 Use ``plot_response_section_3d`` for a period-by-station pseudo-section through
 one y-row of the station layout.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import plot_response_section_3d
+   >>> from pycsamt.forward import plot_response_section_3d
 
-   ax = plot_response_section_3d(
-       response3d,
-       component="xy",
-       quantity="rho_a",
-       y_row=None,
-       n_contours=5,
-   )
+   >>> ax = plot_response_section_3d(
+   ...     response3d,
+   ...     component="xy",
+   ...     quantity="rho_a",
+   ...     y_row=None,
+   ...     n_contours=5,
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_3d_section.png
    :alt: Period-by-station 3-D response section through the middle y-row.
@@ -495,17 +508,17 @@ inspect different profile lines through the station grid.
 Use ``plot_tensor_components_3d`` to compare all four tensor components at one
 frequency.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import plot_tensor_components_3d
+   >>> from pycsamt.forward import plot_tensor_components_3d
 
-   axes = plot_tensor_components_3d(
-       response3d,
-       freq_idx=0,
-       quantity="rho_a",
-       title="Tensor component comparison",
-   )
+   >>> axes = plot_tensor_components_3d(
+   ...     response3d,
+   ...     freq_idx=0,
+   ...     quantity="rho_a",
+   ...     title="Tensor component comparison",
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_3d_tensor_components.png
    :alt: Four tensor-component apparent-resistivity maps from a 3-D response.
@@ -533,29 +546,29 @@ Plotting Noisy Responses
 Always plot a few clean and noisy responses before training an AI model. This
 prevents accidental use of unrealistic noise levels or corrupted axes.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import (
-       FieldRealisticNoise,
-       LayeredModel,
-       MT1DForward,
-       plot_response_1d,
-   )
+   >>> from pycsamt.forward import (
+   ...     FieldRealisticNoise,
+   ...     LayeredModel,
+   ...     MT1DForward,
+   ...     plot_response_1d,
+   ... )
 
-   model = LayeredModel([100.0, 20.0, 800.0], [300.0, 1000.0])
-   clean = MT1DForward(np.logspace(-3, 4, 40)).run(model)
-   noisy = FieldRealisticNoise(base_level=0.05).apply(clean, seed=10)
+   >>> model = LayeredModel([100.0, 20.0, 800.0], [300.0, 1000.0])
+   >>> clean = MT1DForward(np.logspace(-3, 4, 40)).run(model)
+   >>> noisy = FieldRealisticNoise(base_level=0.05).apply(clean, seed=10)
 
-   axes = plot_response_1d(clean, label_te="clean", color_te="0.2")
-   plot_response_1d(
-       noisy,
-       label_te="noisy",
-       color_te="firebrick",
-       axes=axes,
-   )
+   >>> axes = plot_response_1d(clean, label_te="clean", color_te="0.2")
+   >>> _ = plot_response_1d(
+   ...     noisy,
+   ...     label_te="noisy",
+   ...     color_te="firebrick",
+   ...     axes=axes,
+   ... )
 
 .. figure:: ../../images/user_guide/forward/plotting_noisy_response.png
    :alt: Clean and noisy MT1D apparent resistivity and phase curves overlaid.
@@ -575,23 +588,47 @@ Plotting Dataset Samples
 
 ``ForwardDataset`` stores feature vectors, not full response objects. For
 dataset QA, plot feature vectors directly or regenerate selected examples from
-the original configuration. A simple feature plot can still catch many issues.
+the original configuration. A small real dataset makes this concrete:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import matplotlib.pyplot as plt
-   import numpy as np
+   >>> import numpy as np
+   >>> import matplotlib.pyplot as plt
 
-   def plot_dataset_sample(dataset, index=0):
-       fig, ax = plt.subplots(figsize=(7, 3), constrained_layout=True)
-       ax.plot(np.asarray(dataset.X[index]).ravel(), lw=1.2)
-       ax.set_xlabel("Feature index")
-       ax.set_ylabel("Feature value")
-       ax.set_title(f"{dataset.solver} sample {index}")
-       return ax
+   >>> from pycsamt.forward import generate_dataset
 
-   ax = plot_dataset_sample(dataset, index=0)
+   >>> dataset = generate_dataset(
+   ...     solver="mt1d",
+   ...     n_samples=6,
+   ...     freqs=np.logspace(-3, 4, 40),
+   ...     n_layers=(3, 7),
+   ...     rho_range=(1.0, 10000.0),
+   ...     depth_max=3000.0,
+   ...     noise_level=0.05,
+   ...     noise_type="field",
+   ...     include_phase=True,
+   ...     seed=42,
+   ...     verbose=False,
+   ... )
+   >>> print(dataset)
+   ForwardDataset(n=6, n_features=80, n_params=13, solver='mt1d')
+
+A simple feature plot can still catch many issues:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> def plot_dataset_sample(dataset, index=0):
+   ...     fig, ax = plt.subplots(figsize=(7, 3), constrained_layout=True)
+   ...     ax.plot(np.asarray(dataset.X[index]).ravel(), lw=1.2)
+   ...     ax.set_xlabel("Feature index")
+   ...     ax.set_ylabel("Feature value")
+   ...     ax.set_title(f"{dataset.solver} sample {index}")
+   ...     return ax
+   ...
+
+   >>> ax = plot_dataset_sample(dataset, index=0)
 
 .. figure:: ../../images/user_guide/forward/plotting_dataset_sample.png
    :alt: One synthetic dataset feature vector plotted by feature index.
@@ -605,23 +642,26 @@ For MT/CSAMT datasets with phase included, the first half of the feature vector
 is log apparent resistivity and the second half is phase. Splitting the feature
 vector before plotting often makes the QA clearer.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   def plot_mt_feature_sample(dataset, index=0):
-       n_freqs = len(dataset.freqs)
-       x = dataset.X[index]
-       log_rho = x[:n_freqs]
-       phase = x[n_freqs:2 * n_freqs]
+   >>> def plot_mt_feature_sample(dataset, index=0):
+   ...     n_freqs = len(dataset.freqs)
+   ...     x = dataset.X[index]
+   ...     log_rho = x[:n_freqs]
+   ...     phase = x[n_freqs:2 * n_freqs]
+   ...
+   ...     fig, axes = plt.subplots(2, 1, figsize=(7, 5), sharex=True)
+   ...     period = 1.0 / dataset.freqs
+   ...     axes[0].semilogx(period, log_rho)
+   ...     axes[0].set_ylabel("log10 rho_a")
+   ...     axes[1].semilogx(period, phase)
+   ...     axes[1].set_ylabel("phase")
+   ...     axes[1].set_xlabel("period (s)")
+   ...     return axes
+   ...
 
-       fig, axes = plt.subplots(2, 1, figsize=(7, 5), sharex=True)
-       period = 1.0 / dataset.freqs
-       axes[0].semilogx(period, log_rho)
-       axes[0].set_ylabel("log10 rho_a")
-       axes[1].semilogx(period, phase)
-       axes[1].set_ylabel("phase")
-       axes[1].set_xlabel("period (s)")
-       return axes
+   >>> axes = plot_mt_feature_sample(dataset, index=0)
 
 .. figure:: ../../images/user_guide/forward/plotting_mt_feature_sample.png
    :alt: MT feature vector split into log apparent resistivity and phase panels.

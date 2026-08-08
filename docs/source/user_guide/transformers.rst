@@ -499,25 +499,24 @@ covers the conversion contract itself. ``data/TEMAVG/JIANGSU`` is a real
    EDICollection 1
    >>> print(ed_tem.station, ed_tem.Z.freq.shape)
    TEM100_100 (25,)
-   >>> print(np.round(ed_tem.Z.res_xy[:5], 8))
-   [0.00267665 0.00138815 0.00048914 0.00055128 0.00052855]
+   >>> print(np.round(ed_tem.Z.res_xy[:5], 2))
+   [1695.01  879.05  309.75  349.1   334.71]
    >>> print(np.round(result["rho_a"][:5] / ed_tem.Z.res_xy[:5], 1))
-   [633257.4 633257.4 633257.4 633257.4 633257.4]
+   [1. 1. 1. 1. 1.]
 
-That last ratio is exactly the same ``RHO_FACTOR``/``ZONGE_RHO_FACTOR``
-gap seen on the K1 line above, and it shows up here for the same reason:
-``TEMtoEDI`` builds ``ed_tem.Z.z`` directly with the SI convention used by
-:meth:`LateTimeTransform.transform`, but ``ed_tem.Z.res_xy`` is a property
-that recomputes resistivity from that ``z`` using ``EDIFile.Z``'s own
-legacy Zonge convention. The physically meaningful apparent resistivity is
-``result["rho_a"]``, computed once by the transform itself; re-deriving it
-from the packed EDI's ``res_xy`` after the fact silently returns a value
-~633257 times too small. This is worth internalizing before plotting
-``TEMtoEDI`` output directly from an ``EDICollection`` without keeping the
-original ``LateTimeTransform``/``FourierTransform`` result dict around.
+Unlike the K1 line above, there is no scale gap here: ``ed_tem.Z.res_xy``
+comes back identical to ``result["rho_a"]`` (up to floating-point noise).
+``TEMtoEDI`` builds ``|Z_xy|`` as the exact inverse of the legacy Zonge
+formula ``EDIFile.Z``'s own ``res_xy`` property applies when it recomputes
+resistivity from a packed ``z`` -- :math:`|Z_{xy}|=\sqrt{5\,f\,\rho_a}` --
+specifically so that this round trip lands back on the same number. Read
+either ``result["rho_a"]`` or ``ed_tem.Z.res_xy`` after conversion; they
+agree, which also means an EDI written from this collection and reopened
+later will report the same apparent resistivity a caller already trusted
+from ``result``.
 
-The station's own decay curve, alongside the correctly-scaled apparent
-resistivity from ``result``, reproduces the figure below:
+The station's own decay curve, alongside the apparent resistivity from
+``result``, reproduces the figure below:
 
 .. code-block:: python
    :linenos:
@@ -582,6 +581,105 @@ impedance tensor rather than a raw spectra block, so
 ``RuntimeError`` with the same message the moment ``skip_errors=False``,
 which is the setting to use once a batch is expected to fully succeed.
 
+Recording A Workflow Session
+----------------------------
+
+Everything above converts one file at a time. :mod:`pycsamt.session` adds
+two thin layers on top for a whole workflow: a single normalized entry
+point across source formats, and light, on-disk provenance for whatever a
+script actually produced.
+
+:class:`~pycsamt.session.Normalize` dispatches any of the inputs this page
+has covered -- an :class:`~pycsamt.zonge.avg.AVG`/:class:`~pycsamt.jones.j.JFile`
+object or path, a bare :class:`~pycsamt.seg.edi.EDIFile`, or an existing
+:class:`~pycsamt.seg.collection.EDICollection` -- to the matching
+transformer and always hands back a collection:
+
+.. code-block:: pycon
+
+   >>> import shutil
+   >>> from pycsamt.session import Normalize
+
+   >>> shutil.rmtree("work/normalize_demo", ignore_errors=True)  # fresh manifest below
+   >>> with Normalize("work/normalize_demo") as nz:
+   ...     coll = nz.load("data/avg/K1.AVG")
+   ...     same = nz.load(coll)
+   ...
+   >>> print(type(coll).__name__, len(coll))
+   EDICollection 47
+   >>> print(same is coll)
+   True
+
+An already-normalized :class:`~pycsamt.seg.collection.EDICollection` passes
+straight through unchanged rather than being re-converted -- ``Normalize``
+is meant to sit at the top of a script where the input format is not known
+in advance, not to be called defensively before every operation. This is a
+different normalization from ``ensure_sites``'s own permissive input
+handling covered in :doc:`data_loading`: ``Normalize`` dispatches raw
+AVG/J/EDI sources to the matching transformer and returns an
+``EDICollection``; ``ensure_sites`` accepts that (and more) and returns a
+:class:`~pycsamt.site.Sites`.
+
+:class:`~pycsamt.session.Session` instead wraps :func:`~pycsamt.core.base.to_edi`,
+:meth:`AVGtoEDI.transform`, and :meth:`JtoEDI.transform` for the duration
+of a ``with`` block, so their **outputs** -- not inputs -- are recorded in
+a small on-disk registry automatically, with no change to the conversion
+code itself:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.session import Session
+
+   >>> shutil.rmtree("work/session_demo", ignore_errors=True)  # fresh manifest below
+   >>> with Session("work/session_demo", auto_capture=True) as ses:
+   ...     avg = AVG.from_file("data/avg/K1.AVG")
+   ...     coll2 = AVGtoEDI().transform(avg)
+   ...     hits = ses.reg.find(tag="AVGtoEDI.transform")
+   ...
+   >>> len(hits), hits[0].kind, hits[0].tags
+   (1, 'edi_col', ['AVGtoEDI.transform'])
+
+The wrapping is genuinely temporary: outside the ``with`` block,
+``AVGtoEDI.transform`` is the original method again, so an identical call
+made after the session closes is not recorded:
+
+.. code-block:: pycon
+
+   >>> _ = AVGtoEDI().transform(avg)   # outside the session now
+   >>> len(ses.reg.list())
+   1
+
+Register something explicitly with :meth:`ses.reg.add_object()
+<pycsamt.core.registry.RegistryAPI.add_object>` when a script produces or
+selects something the automatic capture would not see on its own, such as
+one station pulled out of a collection:
+
+.. code-block:: pycon
+
+   >>> with Session("work/session_demo", auto_capture=True) as ses:
+   ...     one_edi = coll2[0]
+   ...     _ = ses.reg.add_object(one_edi, tags=["raw"])
+   ...     print(one_edi.station, len(ses.reg.list()))
+   ...
+   S150 2
+
+A new ``Session`` pointed at the same ``root`` reopens that directory's
+existing ``manifest.json`` rather than starting empty -- the count above
+is ``2``, not ``1``, because it includes the ``AVGtoEDI.transform`` record
+from the previous block. Point every session at the same ``root`` across
+an entire script, or across separate runs of the same pipeline, to build
+up one running, on-disk manifest rather than a fresh one each time. The
+interception itself is process-local and uses monkey-patching: safe for a
+single script or notebook kernel, but avoid running two sessions
+concurrently in different threads without adding your own locking.
+:func:`~pycsamt.session.work_session`
+and :func:`~pycsamt.session.normalize_session` are convenience wrappers
+around ``Session(...)`` and ``Normalize(...)`` with the same defaults, and
+all four names are also available directly off the package root --
+``pycsamt.Session``, ``pycsamt.work_session``, ``pycsamt.Normalize``,
+``pycsamt.normalize_session`` -- for a script that otherwise only imports
+``pycsamt`` itself.
+
 Troubleshooting
 ---------------
 
@@ -607,14 +705,6 @@ Coordinates staying at ``0.0``
     :meth:`~pycsamt.zonge.survey.Topography.convert_coords` with the
     correct ``utm_zone``/``epsg`` before conversion, as shown above.
 
-Apparent resistivity looking implausibly small or large after ``TEMtoEDI``
-    Read ``rho_a`` from the ``LateTimeTransform``/``FourierTransform``
-    result dictionary directly. ``EDIFile.Z.res_xy`` recomputes
-    resistivity from the packed ``z`` using the legacy Zonge convention,
-    which differs from the SI convention used to build ``z`` by the
-    ``RHO_FACTOR``/``ZONGE_RHO_FACTOR`` ratio documented in
-    :doc:`../theory/impedance_tensor`.
-
 See Also
 --------
 
@@ -635,3 +725,6 @@ See Also
 :mod:`pycsamt.core.config`
     ``CoreConfig``, ``StationNamePolicy``, and ``config_context`` used to
     control finalization behaviour globally or temporarily.
+:mod:`pycsamt.session`
+    API reference for ``Session``, ``work_session``, ``Normalize``, and
+    ``normalize_session``, covered above in "Recording A Workflow Session".

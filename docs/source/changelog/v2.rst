@@ -10,6 +10,73 @@ each release.
 
 ----
 
+.. _changelog-2-2-2:
+
+2.2.2 |Fix| |Docs| |Enhancement|
+--------------------------------
+
+*Released 2026-08-07.*
+
+*Patch release. A real, validated Occam2D compile-and-run pass exposed and
+fixed two solver-integration bugs; building faithful, doctest-verified
+examples for the API view layer exposed and fixed a custom-wrapper bypass.
+The bulk of this release is documentation: a new end-to-end Stratagem
+hardware-to-inversion tutorial built on a real Dafang field survey, a
+rewritten* :doc:`/api_guide/views` *page, new FAQ entries, and repository
+cleanup.*
+
+Added
+~~~~~
+
+* |Feature| **Stratagem hardware-to-inversion tutorial** -- new
+  :doc:`/tutorials/process_stratagem_dafang_to_inversion`, an end-to-end
+  worked example on a real Dafang line-5 field survey: raw Stratagem
+  hardware import, coordinate injection with an empirically confirmed EPSG,
+  static-shift correction, frequency filtering, noise removal, cross-
+  validation against an independent tool and against
+  :func:`~pycsamt.emtools.remove_noise.smooth_logfreq`, QC export, and a
+  real compiled Occam2D inversion. Bundled as
+  ``data/stratagem/Dafang/`` with its own ``README.md``.
+* |Docs| Rewrote :doc:`/api_guide/views` with real, doctest-verified
+  examples throughout, correcting its previous claim that table-returning
+  functions return plain :class:`pandas.DataFrame` objects by default --
+  they resolve through :data:`~pycsamt.api.PYCSAMT_API_VIEW`, whose default
+  backend already wraps into :class:`~pycsamt.api.APIFrame` /
+  :class:`~pycsamt.api.APIResult`.
+* |Docs| Added FAQ entries on the API view default behaviour and the new
+  Stratagem tutorial to :doc:`/faq`.
+
+Fixed
+~~~~~
+
+* |Fix| ``OccamRunner.compile()`` looked for a binary named ``Occam2D``
+  rather than the module's own ``.exe``-suffixed constant on Windows,
+  reporting a false "binary was not produced" error after a genuinely
+  successful ``make``.
+* |Fix| ``OccamMesh`` read and wrote the mesh header's 4th control field as
+  an air-layer count; the real vendored Occam2D solver (``MT2D.f90``)
+  uses that field for the fixed-resistivity count (``nrfix``, always ``0``
+  for pycsamt-generated meshes) and manages air layers internally,
+  desynchronizing every subsequent mesh read. Confirmed against two
+  independent, bundled reference mesh files and fixed in ``mesh.py``
+  (parsing, writing, and docstring).
+* |Fix| ``maybe_wrap_frame(..., api=True)`` ignored a custom wrapper
+  configured via ``configure_api_view(wrapper=...)``, always producing an
+  ``APIFrame`` instead of the user's callable's own return type.
+* |Fix| Removed stray root-level artefacts (``figures/``, generated
+  ``.npz``/``.png`` outputs, ``all_blocks.pycon``) left over from example
+  runs; ``all_blocks.pycon`` is now gitignored so it stops reappearing.
+
+Changed
+~~~~~~~
+
+* |Enhancement| ``TEM1DForward`` now delegates its Hankel/Fourier
+  transform to :mod:`empymod`'s validated digital linear filters instead
+  of a hand-rolled quadrature; ``empymod`` moved from an optional extra to
+  a core dependency.
+
+----
+
 .. _changelog-2-2-0:
 
 2.2.0 |Feature| |New| |Fix| |Enhancement| |API Change| |Breaking| |Docs| |Build| |Tests|

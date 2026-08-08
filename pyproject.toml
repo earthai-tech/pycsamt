@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.2.1"
+version     = "2.2.2"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
@@ -68,6 +68,10 @@ dependencies = [
     # pycsamt.compat.sklearn is a hard import for several agents modules
     # (inv2d_agent, inv3d_agent) and other core paths -- not optional.
     "scikit-learn>=1.1",
+    # pycsamt.forward.em1d.TEM1DForward delegates its Hankel/Fourier
+    # transform to empymod's validated digital linear filters rather than
+    # a hand-rolled quadrature (see TEM1DForward's docstring for why).
+    "empymod>=2.5",
     # optional HDF5 elevation export/import (pycsamt.map.topo)
     "h5py>=3.8",
 ]

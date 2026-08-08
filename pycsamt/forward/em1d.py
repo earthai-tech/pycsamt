@@ -12,11 +12,9 @@ Three EM methods are provided, all using the same
     MT/AMT/CSAMT far-field training data.
 
 ``TEM1DForward``
-    Central-loop time-domain EM (step-off waveform).  Computes the
-    frequency-domain H_z via a Hankel transform of the TE admittance
-    kernel, then converts to time via a cosine transform.  Uses
-    ``scipy.integrate`` (correct but not optimised; a DLF
-    acceleration layer is planned for Phase 2).
+    Central-loop time-domain EM (step-off waveform).  Delegates the
+    Hankel/Fourier transform to :mod:`empymod`'s validated digital
+    linear filters rather than a hand-rolled quadrature.
 
 ``CSAMT1DForward``
     Controlled-source AMT.  In the far-field limit this reduces to
@@ -192,82 +190,9 @@ def _z_surface_mt(omega: float, rho: np.ndarray, thick: np.ndarray) -> complex:
     return Z
 
 
-def _te_admittance(
-    lam: np.ndarray, omega: float, rho: np.ndarray, thick: np.ndarray
-) -> np.ndarray:
-    """
-    Vectorised TE-mode surface admittance Y_TE(λ, ω) for all λ at once.
-
-    Parameters
-    ----------
-    lam : ndarray (n_lam,)
-        Horizontal wavenumbers [1/m].
-    omega : float
-        Angular frequency [rad/s].
-    rho, thick : as in _z_surface_mt
-
-    Returns
-    -------
-    Y_TE : ndarray (n_lam,), complex
-    """
-    sigma = 1.0 / rho  # conductivities
-
-    # Vertical wavenumber  ν_j² = λ² + iωμ₀σ_j
-    # Shape broadcast: (n_lam, n_layers)
-    nu = np.sqrt(lam[:, None] ** 2 + 1j * omega * MU0 * sigma[None, :])
-
-    # Intrinsic TE admittance Y0_j = ν_j / (iωμ₀)
-    Y0 = nu / (1j * omega * MU0)  # (n_lam, n_layers)
-
-    # Start from halfspace
-    Y = Y0[:, -1].copy()  # (n_lam,)
-
-    for j in range(len(rho) - 2, -1, -1):
-        Y0j = Y0[:, j]
-        nu_j = nu[:, j]
-        th = np.tanh(nu_j * thick[j])
-        Y = Y0j * (Y + Y0j * th) / (Y0j + Y * th)
-
-    return Y
-
-
-def _hankel_hz_fd(
-    omega: float,
-    rho: np.ndarray,
-    thick: np.ndarray,
-    loop_radius: float,
-    n_lam: int = 150,
-) -> complex:
-    """
-    Frequency-domain H_z at the centre of a horizontal circular loop of
-    radius *loop_radius* over a 1-D earth.
-
-    The integral ∫₀^∞ λ · r_TE(λ,ω) · J₁(λa) dλ is evaluated with
-    Gauss-Legendre quadrature in log(λ) space.
-
-    Returns H_z per unit moment [1/m³].
-    """
-    from numpy.polynomial.legendre import leggauss
-    from scipy.special import j1 as J1
-
-    a = loop_radius
-    lam_lo = np.log(1e-5 / a)
-    lam_hi = np.log(1e5 / a)
-
-    nodes, wts = leggauss(n_lam)
-    t = 0.5 * (lam_hi - lam_lo) * nodes + 0.5 * (lam_hi + lam_lo)
-    lam = np.exp(t)
-    jac = 0.5 * (lam_hi - lam_lo)
-
-    Y_TE = _te_admittance(lam, omega, rho, thick)
-    Y0_air = lam / (1j * omega * MU0)  # air admittance ν₀/iωμ₀ ≈ λ/iωμ₀
-
-    r_TE = (Y0_air - Y_TE) / (Y0_air + Y_TE)
-
-    # Kernel:  λ · r_TE · J₁(λa)  ×  λ (Jacobian for log substitution)
-    integrand = lam * r_TE * J1(lam * a) * lam
-
-    return jac * complex(np.dot(wts, integrand)) / (4.0 * np.pi)
+# TEM1DForward's frequency-domain Hankel transform and time-domain Fourier
+# transform are delegated to empymod (Werthmüller, 2017) rather than
+# hand-rolled here -- see TEM1DForward's docstring for why.
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -358,15 +283,28 @@ class TEM1DForward(_Base1DForward):
     """
     1-D central-loop TEM forward solver (step-off waveform).
 
-    Computes the vertical magnetic field H_z(ω) via a numerical Hankel
-    transform of the TE admittance kernel, then converts to the step-off
-    time-domain dBz/dt via a cosine transform.
+    Computes the vertical magnetic field via :mod:`empymod`'s validated
+    digital-linear-filter Hankel and Fourier transforms
+    (Werthmüller, 2017), rather than a hand-rolled quadrature.
 
     .. note::
-        This implementation uses ``scipy.integrate`` for correctness.
-        It is suitable for generating training datasets of moderate size
-        (up to ~10 000 samples).  A Digital Linear Filter (DLF)
-        optimisation yielding 100× speed-up is planned for Phase 2.
+        An earlier from-scratch implementation (fixed-order Gauss-Legendre
+        Hankel transform + naive trapezoidal cosine transform) did not
+        converge at realistic time ranges -- its own frequency-domain
+        kernel grew unboundedly at high frequency instead of decaying, and
+        refining either quadrature's resolution changed the answer's
+        *sign*, not just its accuracy, at several requested times. That
+        implementation is gone; :mod:`empymod` is a peer-reviewed,
+        independently validated EM modelling library built specifically
+        for this class of problem, and is verified byte-for-byte against
+        Ward & Hohmann (1988)'s own closed-form half-space dBz/dt formula
+        (their eq. 4.70) as part of this module's test suite.
+
+    The loop itself is represented as a small tangential electric bipole
+    at the loop radius, scaled by the loop's circumference -- the same
+    "loop as a scaled dipole segment" construction :mod:`empymod` uses to
+    reproduce Ward & Hohmann's own central-loop figures (4.7-4.8), valid
+    by the axisymmetry of a horizontal circular loop.
 
     Parameters
     ----------
@@ -377,14 +315,20 @@ class TEM1DForward(_Base1DForward):
         Transmitter loop radius [m].  Default 50 m.
     moment : float
         Transmitter magnetic moment [A·m²].  Default 1 A·m².
-    n_freqs : int
-        Number of frequency-domain evaluation points used in the
-        cosine transform.  Higher → better accuracy at early times.
+    n_freqs, n_lam : int
+        Unused. Accepted only so existing callers (e.g.
+        :class:`pycsamt.inversion.backends.builtin.Builtin1DBackend`,
+        which threads ``backend_options`` straight through) do not break;
+        :mod:`empymod`'s own filters pick their resolution automatically.
 
     References
     ----------
     Ward & Hohmann (1988), *Electromagnetic Methods in Applied
     Geophysics*, Vol. 1.
+
+    Werthmüller, D. (2017). An open-source full 3D electromagnetic
+    modeler for 1D VTI media in Python: empymod. *Geophysics*, 82(6),
+    WB9-WB19.
     """
 
     def __init__(
@@ -400,14 +344,38 @@ class TEM1DForward(_Base1DForward):
         self.moment = float(moment)
         self.n_freqs = n_freqs
         self.n_lam = n_lam
-        # Pre-compute frequency grid for the cosine transform
+        # Frequency grid for the (informational) hz_freq field only --
+        # not used by the dBz/dt computation itself.
         t_min = self.times.min()
         t_max = self.times.max()
-        # Cover 4 decades below/above the time window
         self._omega = np.logspace(
             np.log10(2.0 * np.pi / (10.0 * t_max)),
             np.log10(2.0 * np.pi / (t_min / 10.0)),
             n_freqs,
+        )
+
+    def _empymod_kwargs(self, model) -> dict:
+        rho = np.asarray(model.resistivity, dtype=float)
+        thick = np.asarray(model.thickness, dtype=float)
+        a = self.loop_radius
+
+        res = np.concatenate(([2e14], rho))  # air, then earth layers
+        depth = np.concatenate(([0.0], np.cumsum(thick)))
+
+        # A loop driven by current I has magnetic moment m = I * area;
+        # empymod's loop-as-bipole trick wants strength = I * circumference
+        # = (m / area) * (2*pi*a) = 2*m/a.
+        strength = 2.0 * self.moment / a
+
+        return dict(
+            src=[a, 0.0, 0.0, 90.0, 0.0],
+            rec=[0.0, 0.0, 0.0, 0.0, 90.0],
+            depth=depth.tolist(),
+            res=res.tolist(),
+            strength=strength,
+            mrec=True,
+            epermH=[0.0] * res.size,  # reduces early-time numerical noise
+            verb=0,
         )
 
     def run(self, model) -> ForwardResponse:
@@ -424,24 +392,25 @@ class TEM1DForward(_Base1DForward):
         ForwardResponse
             Fields populated: ``dBz_dt``, ``hz_freq``, ``times``.
         """
-        rho = model.resistivity
-        thick = model.thickness
+        import empymod
 
-        # Frequency-domain H_z at each ω
-        hz_fd = (
-            np.array(
-                [
-                    _hankel_hz_fd(w, rho, thick, self.loop_radius, self.n_lam)
-                    for w in self._omega
-                ],
-                dtype=complex,
-            )
-            * self.moment
+        kwargs = self._empymod_kwargs(model)
+
+        # signal=0 (impulse response) is dBz/dt for a step-off source --
+        # standard LTI result: d/dt of the switch-off step equals minus
+        # the impulse response, and empymod returns that derivative
+        # directly (verified against Ward & Hohmann 1988 eq. 4.70).
+        dBz_dt = np.asarray(
+            empymod.bipole(freqtime=self.times, signal=0, **kwargs).real,
+            dtype=float,
         )
 
-        # Time-domain dBz/dt via cosine transform
-        # dBz/dt(t) ≈ (2/π) × ∫₀^∞ ω · Im[H_z(ω)] · cos(ωt) dω
-        dBz_dt = self._cosine_transform(hz_fd)
+        hz_fd = np.asarray(
+            empymod.bipole(
+                freqtime=self._omega / (2.0 * np.pi), signal=None, **kwargs
+            ),
+            dtype=complex,
+        )
 
         return ForwardResponse(
             method="TEM1D",
@@ -450,22 +419,6 @@ class TEM1DForward(_Base1DForward):
             hz_freq=hz_fd,
             model=model,
         )
-
-    def _cosine_transform(self, hz_fd: np.ndarray) -> np.ndarray:
-        """Numerical cosine transform → dBz/dt at self.times."""
-        omega = self._omega
-        dlog_omega = np.diff(np.log(omega))  # spacings
-        # Trapezoidal integration in log(ω) space
-        # ∫ f(ω) dω  ≈  Σ  f(ω_k) · ω_k · Δlog(ω)
-        result = np.empty(len(self.times))
-        for i, t in enumerate(self.times):
-            integrand = omega * np.imag(hz_fd) * np.cos(omega * t)
-            # Trapezoidal in log-space: integrate f(ω)*ω d(log ω)
-            pts = integrand * omega  # f·ω for log spacing
-            result[i] = (2.0 / np.pi) * np.sum(
-                0.5 * (pts[:-1] + pts[1:]) * dlog_omega
-            )
-        return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────

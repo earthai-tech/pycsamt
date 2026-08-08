@@ -1018,13 +1018,25 @@ def _plot_qc_metric(
 def _plot_qc_reasons(ax: Any, rows: list[Mapping[str, Any]]) -> None:
     ax.set_title("Reasons and warnings")
     reason_counts: dict[str, int] = defaultdict(int)
+    # ``reasons``/``warnings`` are window- (or packet-) level and repeated
+    # identically on every channel row of the same result; count each one
+    # once per result instead of once per channel, or a single rejected
+    # window inflates its own reason counts by the channel count.
+    seen_window: set[tuple[Any, str]] = set()
     for row in rows:
-        for reason in list(row.get("reasons") or []) + list(
-            row.get("channel_reasons") or []
-        ):
+        result_index = row.get("result_index")
+        for reason in row.get("reasons") or []:
+            key = (result_index, reason)
+            if key not in seen_window:
+                seen_window.add(key)
+                reason_counts[str(reason)] += 1
+        for reason in row.get("channel_reasons") or []:
             reason_counts[str(reason)] += 1
         for warning in row.get("warnings") or []:
-            reason_counts[f"warn:{warning}"] += 1
+            key = (result_index, f"warn:{warning}")
+            if key not in seen_window:
+                seen_window.add(key)
+                reason_counts[f"warn:{warning}"] += 1
     if not reason_counts:
         _empty_panel(ax, "No rejection reasons")
         return

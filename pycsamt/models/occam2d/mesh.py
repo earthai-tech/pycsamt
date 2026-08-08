@@ -20,13 +20,21 @@ Mesh file format (PW2D)
 ::
 
     <comment line>
-    0  num_h_nodes  num_v_nodes  n_airlayers  0  mesh_type
+    0  num_h_nodes  num_v_nodes  n_fixed_resistivities  0  mesh_type
     <x-cell widths: num_h_nodes-1 floats, wrapped across any number of lines>
     <blank line — optional>
     <z-layer thicknesses: num_v_nodes-1 floats, wrapped across any number of lines>
     0
-    <cell-type character rows: num_v_nodes rows of num_h_nodes-1 characters each>
+    <cell-type character rows: 4*(num_v_nodes-1) rows of num_h_nodes-1 characters
+     each, 4 identical rows per z-layer>
         '?' = free model parameter, other = fixed / air / boundary
+
+The 4th control-line field is the number of *fixed resistivities*
+(``nrfix`` in the reference Fortran reader), not the air-layer count --
+pyCSAMT does not write fixed-resistivity blocks, so this is always ``0``.
+Air layers are not stored as a header count at all; they are inferred from
+the cell-type rows themselves (leading z-layers whose 4 rows are entirely
+``'0'``).
 """
 
 from __future__ import annotations
@@ -76,13 +84,16 @@ def _parse_mesh(path: Path) -> dict:
 
     comment = lines[0].strip()
 
-    # Line 1: control integers — "0  num_h_nodes  num_v_nodes  n_airlayers  0  mesh_type"
+    # Line 1: control integers —
+    # "0  num_h_nodes  num_v_nodes  n_fixed_resistivities  0  mesh_type"
+    # The 4th field is nrfix (fixed resistivities), not an air-layer count;
+    # see the module docstring. Air layers are recovered below from the
+    # cell-type rows themselves.
     ctrl = lines[1].strip().split()
     if len(ctrl) < 3:
         raise ValueError(f"Cannot parse mesh control line: {lines[1]!r}")
     num_h_nodes = int(ctrl[1])
     num_v_nodes = int(ctrl[2])
-    n_airlayers = int(ctrl[3]) if len(ctrl) > 3 else 0
     n_xcells = num_h_nodes - 1
     n_zcells = num_v_nodes - 1
 
@@ -120,6 +131,16 @@ def _parse_mesh(path: Path) -> dict:
 
     x_nodes = np.concatenate([[0.0], np.cumsum(x_widths)])
     z_nodes = np.concatenate([[0.0], np.cumsum(z_widths)])
+
+    # Air layers are written as 4 identical all-'0' rows per z-layer
+    # (see from_data()); recover the count by scanning leading layers.
+    n_airlayers = 0
+    for layer_start in range(0, len(cell_rows) - 3, 4):
+        layer_rows = cell_rows[layer_start : layer_start + 4]
+        if all(set(row) <= {"0"} for row in layer_rows):
+            n_airlayers += 1
+        else:
+            break
 
     return {
         "comment": comment,
@@ -511,7 +532,9 @@ class OccamMesh(OccamBase):
 
         lines: list[str] = []
         lines.append(f"{comment}\n")
-        lines.append(f"   0  {n_h}  {n_v}  {self.n_airlayers}  0  2\n")
+        # 4th field is nrfix (fixed resistivities), always 0 here — see the
+        # module docstring. It is NOT the air-layer count.
+        lines.append(f"   0  {n_h}  {n_v}  0  0  2\n")
 
         def _write_floats(vals: np.ndarray, per_row: int = 8) -> None:
             for i in range(0, len(vals), per_row):

@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pycsamt.forward.em1d import MT1DForward
+from pycsamt.forward.em1d import MT1DForward, TEM1DForward
 from pycsamt.forward.synthetic import LayeredModel
 
 
@@ -88,3 +88,61 @@ def test_layered_model_depth_and_validation():
     assert np.allclose(m.depth, [0.0, 300.0, 1100.0])
     with pytest.raises(Exception):
         LayeredModel(resistivity=[100, 10], thickness=[100, 200, 300])
+
+
+def test_tem1d_matches_empymod_reference():
+    """TEM1DForward's central-loop step-off response, cross-checked
+    against a directly-constructed :func:`empymod.bipole` call using the
+    same loop-as-scaled-dipole-segment trick empymod's own gallery uses
+    to reproduce Ward & Hohmann (1988)'s central-loop figures (4.7-4.8).
+
+    Exercises the moment -> strength conversion, the air-layer
+    insertion, and the depth/resistivity array construction from a
+    :class:`LayeredModel` -- the integration surface most likely to
+    regress even though the transform itself is empymod's own.
+    """
+    import empymod
+
+    radius = 25.0
+    moment = 4.0
+    times = np.logspace(-5, -3, 6)
+    model = LayeredModel(resistivity=[60.0, 250.0, 900.0], thickness=[120.0, 700.0])
+
+    resp = TEM1DForward(times=times, loop_radius=radius, moment=moment).run(model)
+
+    strength = 2.0 * moment / radius
+    ref = empymod.bipole(
+        src=[radius, 0.0, 0.0, 90.0, 0.0],
+        rec=[0.0, 0.0, 0.0, 0.0, 90.0],
+        depth=[0.0, 120.0, 820.0],
+        res=[2e14, 60.0, 250.0, 900.0],
+        freqtime=times,
+        signal=0,
+        strength=strength,
+        mrec=True,
+        epermH=[0.0, 0.0, 0.0, 0.0],
+        verb=0,
+    ).real
+
+    assert resp.method == "TEM1D"
+    assert np.allclose(resp.dBz_dt, ref, rtol=1e-6)
+
+
+def test_tem1d_halfspace_step_off_is_smooth_and_decaying():
+    """A simple half-space's central-loop step-off response must decay
+    smoothly and stay single-signed.
+
+    An earlier, from-scratch Hankel/Fourier-transform implementation
+    failed this even for its own default parameters: its frequency-domain
+    kernel grew unboundedly at high frequency instead of decaying, and
+    refining either quadrature's resolution changed the answer's *sign*
+    at several times rather than converging. TEM1DForward now delegates
+    to empymod's validated digital linear filters instead.
+    """
+    times = np.logspace(-6, -2, 20)
+    model = LayeredModel(resistivity=[100.0], thickness=[])
+    resp = TEM1DForward(times=times, loop_radius=50.0).run(model)
+
+    assert np.all(np.isfinite(resp.dBz_dt))
+    assert np.all(resp.dBz_dt > 0) or np.all(resp.dBz_dt < 0)
+    assert np.all(np.diff(np.abs(resp.dBz_dt)) <= 0)

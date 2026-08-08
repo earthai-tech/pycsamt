@@ -26,6 +26,13 @@ training data, uncertainty design, and quality control.
    concepts
    configuration
    solvers_and_grids
+   maxwell_overview
+   maxwell_contracts
+   maxwell_meshing
+   maxwell_backends
+   maxwell_adapters
+   maxwell_benchmarks
+   maxwell_caching_and_batch
    synthetic_datasets
    plotting
    forward_to_inversion

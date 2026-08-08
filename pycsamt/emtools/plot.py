@@ -1429,7 +1429,7 @@ def plot_response_tipper(
             bbox_to_anchor=(0.38, -0.015),
             fontsize=8,
         )
-    if show_tipper_legend:
+    if show_tipper_legend and tips:
         real_style = PYCSAMT_STYLE.mt.xy
         imag_style = PYCSAMT_STYLE.mt.yx.copy(
             ls="--",

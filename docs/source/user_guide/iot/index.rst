@@ -3,17 +3,18 @@
 IoT-Enabled Field Acquisition
 =============================
 
-The :mod:`pycsamt.iot` subpackage documents and audits IoT-enabled AMT,
-MT, CSAMT, and CSEM acquisition. It does not replace the normal impedance,
-quality-control, dimensionality, or inversion workflow. Instead, it records
-the operational layer around those data: devices, stations, packets, edge
+The :mod:`pycsamt.iot` subpackage implements the :term:`IoT` layer that
+documents and audits :term:`IoT`-enabled AMT, MT, CSAMT, and CSEM
+acquisition. It does not replace the normal impedance, quality-control,
+dimensionality, or inversion workflow. Instead, it records the
+operational layer around those data: devices, stations, packets, edge
 QC decisions, power, clock synchronisation, security configuration, and
 provenance. It also bridges back into the science API, turning edge
 impedance estimates into a :class:`pycsamt.z.z.Z` and a preliminary EDI,
 and seeding a re-occupation session from an existing EDI survey.
 
 Use this guide to configure and audit the operational layer of an
-IoT-enabled field survey: telemetry, edge QC, monitoring, power,
+:term:`IoT`-enabled field survey: telemetry, edge QC, monitoring, power,
 synchronisation, security, and provenance.
 
 .. toctree::

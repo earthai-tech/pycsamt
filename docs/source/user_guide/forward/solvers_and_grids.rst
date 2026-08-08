@@ -29,6 +29,7 @@ response arrays but may use different :term:`model container`\ s and different
 solver settings. The practical contract is:
 
 .. math::
+   :label: eq-solver-contract
 
    \mathbf{d} = F(\mathbf{m}; \mathbf{a}, \mathbf{s}),
 
@@ -86,6 +87,7 @@ one fewer entry than ``resistivity``. If there are :math:`L` layers, pyCSAMT
 stores
 
 .. math::
+   :label: eq-layered-model-arrays
 
    \boldsymbol{\rho} = [\rho_0,\rho_1,\ldots,\rho_{L-1}],
    \qquad
@@ -94,34 +96,28 @@ stores
 with top-of-layer depths
 
 .. math::
+   :label: eq-layer-depths
 
    z_0 = 0,\qquad z_j = \sum_{k=0}^{j-1}h_k.
 
 The last layer :math:`\rho_{L-1}` extends downward indefinitely. This is why a
 three-layer model has three resistivities but only two thicknesses.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import LayeredModel, MT1DForward
+   >>> from pycsamt.forward import LayeredModel, MT1DForward
 
-   model = LayeredModel(
-       resistivity=[100.0, 10.0, 500.0],
-       thickness=[300.0, 800.0],
-       name="conductive_middle_layer",
-   )
+   >>> model = LayeredModel(
+   ...     resistivity=[100.0, 10.0, 500.0],
+   ...     thickness=[300.0, 800.0],
+   ...     name="conductive_middle_layer",
+   ... )
 
-   freqs = np.logspace(-3, 4, 40)
-   response = MT1DForward(freqs=freqs).run(model)
-
-   print(response.rho_a.shape)
-   print(response.phase.shape)
-
-Captured output:
-
-.. code-block:: pycon
+   >>> freqs = np.logspace(-3, 4, 40)
+   >>> response = MT1DForward(freqs=freqs).run(model)
 
    >>> print(response.rho_a.shape)
    (40,)
@@ -145,6 +141,7 @@ The important depth scale for frequency-domain EM is the skin depth. A common
 engineering estimate is:
 
 .. math::
+   :label: eq-skin-depth
 
    \delta \approx 503 \sqrt{\frac{\rho}{f}},
 
@@ -165,6 +162,7 @@ For one angular frequency :math:`\omega = 2\pi f`, the implementation starts
 from the bottom halfspace and recursively moves upward. In layer :math:`j`,
 
 .. math::
+   :label: eq-mt-layer-impedance
 
    k_j = \sqrt{\frac{i\omega\mu_0}{\rho_j}},
    \qquad
@@ -175,6 +173,7 @@ intrinsic layer impedance. If :math:`Z_{j+1}` is the effective impedance below
 layer :math:`j`, then the upward recursion used by the code is
 
 .. math::
+   :label: eq-mt-impedance-recursion
 
    Z_j = Z^0_j
    \frac{Z_{j+1} + Z^0_j\tanh(k_j h_j)}
@@ -184,6 +183,7 @@ At the surface, :math:`Z_0` becomes the predicted impedance. Apparent
 resistivity and phase are then derived consistently as
 
 .. math::
+   :label: eq-rho-a-phase-1d
 
    \rho_a(f) = \frac{|Z_0(f)|^2}{\omega\mu_0},
    \qquad
@@ -194,6 +194,7 @@ near-field factor based on the first-layer skin depth
 :math:`\delta=\sqrt{2\rho_0/(\omega\mu_0)}`:
 
 .. math::
+   :label: eq-csamt-near-field
 
    g_\mathrm{nf}(f) =
    \frac{1}{1 + (r/\delta)^{-2}},
@@ -203,34 +204,30 @@ near-field factor based on the first-layer skin depth
 As :math:`r/\delta` becomes large, the correction approaches one and the CSAMT
 response approaches the MT plane-wave response.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   import numpy as np
+   >>> import numpy as np
 
-   from pycsamt.forward import CSAMT1DForward, LayeredModel, MT1DForward
+   >>> from pycsamt.forward import CSAMT1DForward, LayeredModel, MT1DForward
 
-   model = LayeredModel(
-       resistivity=[80.0, 25.0, 600.0],
-       thickness=[250.0, 900.0],
-   )
+   >>> model = LayeredModel(
+   ...     resistivity=[80.0, 25.0, 600.0],
+   ...     thickness=[250.0, 900.0],
+   ... )
 
-   freqs = np.logspace(-1, 4, 32)
+   >>> freqs = np.logspace(-1, 4, 32)
 
-   mt_response = MT1DForward(freqs=freqs).run(model)
+   >>> mt_response = MT1DForward(freqs=freqs).run(model)
 
-   csamt_response = CSAMT1DForward(
-       freqs=freqs,
-       source_offset=5000.0,
-       dipole_length=1000.0,
-   ).run(model)
+   >>> csamt_response = CSAMT1DForward(
+   ...     freqs=freqs,
+   ...     source_offset=5000.0,
+   ...     dipole_length=1000.0,
+   ... ).run(model)
 
-   mt_features = mt_response.to_array(log_rho=True, include_phase=True)
-   csamt_features = csamt_response.to_array(log_rho=True, include_phase=True)
-
-Captured output:
-
-.. code-block:: pycon
+   >>> mt_features = mt_response.to_array(log_rho=True, include_phase=True)
+   >>> csamt_features = csamt_response.to_array(log_rho=True, include_phase=True)
 
    >>> print(mt_response.z.shape, mt_response.rho_a.shape, mt_response.phase.shape)
    (32,) (32,) (32,)
@@ -268,11 +265,12 @@ response. Use 2-D or 3-D grids when lateral geometry is part of the experiment.
 
 ``TEM1DForward`` computes a central-loop step-off response for a
 :term:`layered earth`. It uses :term:`time gate`\ s rather than frequencies as
-the primary output axis. Internally the solver still evaluates a
-frequency-domain kernel first. For horizontal wavenumber :math:`\lambda`, the
-TE admittance recursion uses
+the primary output axis, but the underlying physics is still built
+frequency-first: for horizontal wavenumber :math:`\lambda`, the TE admittance
+recursion uses
 
 .. math::
+   :label: eq-tem-te-admittance
 
    \nu_j^2 = \lambda^2 + i\omega\mu_0\sigma_j,
    \qquad
@@ -283,42 +281,41 @@ then integrates the reflected field with a Hankel-type kernel involving
 is obtained with a cosine transform:
 
 .. math::
+   :label: eq-tem-cosine-transform
 
    \frac{dB_z}{dt}(t) \approx
    \frac{2}{\pi}\int_0^\infty
    \omega\,\Im\{H_z(\omega)\}\cos(\omega t)\,d\omega.
 
-The implementation evaluates that integral numerically, which is why TEM
-examples are usually slower than MT1D examples.
-
-.. code-block:: python
-   :linenos:
-
-   import numpy as np
-
-   from pycsamt.forward import LayeredModel, TEM1DForward
-
-   model = LayeredModel(
-       resistivity=[60.0, 250.0, 900.0],
-       thickness=[120.0, 700.0],
-   )
-
-   times = np.logspace(-6, -3, 30)
-
-   response = TEM1DForward(
-       times=times,
-       loop_radius=50.0,
-       n_freqs=32,
-       n_lam=80,
-   ).run(model)
-
-   print(response.times.shape)
-   print(response.dBz_dt.shape)
-   print(response.to_array().shape)
-
-Captured output:
+pyCSAMT delegates that Hankel-then-Fourier evaluation to :mod:`empymod`'s
+digital linear filters (Werthmüller, 2017) rather than a hand-rolled
+quadrature -- an earlier from-scratch attempt at this exact integral did not
+converge reliably at realistic time ranges (its own frequency-domain kernel
+grew with frequency instead of decaying), which is a large part of why
+validated, peer-reviewed EM-transform libraries are worth depending on rather
+than re-deriving. The loop itself is represented internally as a small
+tangential electric-dipole segment at the loop radius, scaled by the loop's
+circumference -- exact by the axisymmetry of a horizontal circular loop, and
+the same construction :mod:`empymod`'s own gallery uses to reproduce Ward &
+Hohmann (1988)'s central-loop figures. TEM examples are still usually a
+little slower than MT1D ones simply because a full digital-filter transform
+does more work per time gate than a closed-form impedance recursion.
 
 .. code-block:: pycon
+   :linenos:
+
+   >>> import numpy as np
+
+   >>> from pycsamt.forward import LayeredModel, TEM1DForward
+
+   >>> model = LayeredModel(
+   ...     resistivity=[60.0, 250.0, 900.0],
+   ...     thickness=[120.0, 700.0],
+   ... )
+
+   >>> times = np.logspace(-6, -3, 30)
+
+   >>> response = TEM1DForward(times=times, loop_radius=50.0).run(model)
 
    >>> print(response.times.shape)
    (30,)
@@ -326,6 +323,8 @@ Captured output:
    (30,)
    >>> print(response.to_array().shape)
    (30,)
+   >>> print(np.all(response.dBz_dt > 0))
+   True
 
 For TDEM responses:
 
@@ -333,9 +332,49 @@ For TDEM responses:
 * ``response.dBz_dt`` has shape ``(n_times,)``;
 * ``response.to_array()`` returns a log-scaled decay feature vector by default.
 
-Use early gates to test shallow sensitivity and later gates to test deeper
-sensitivity. If the time range is too narrow, the inversion may fit the decay
-curve but remain insensitive to the target interval.
+A clean step-off response should stay single-signed and decay smoothly across
+the whole gate range -- a real, physical sanity check worth plotting rather
+than only checking shapes:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> import matplotlib.pyplot as plt
+
+   >>> fig, ax = plt.subplots(figsize=(7, 5))
+   >>> _ = ax.loglog(times * 1e3, response.dBz_dt, "o-", ms=4, color="#1f77b4", label="dBz/dt")
+
+   >>> t_ref = times[-6:]
+   >>> ref = response.dBz_dt[-6] * (t_ref / times[-6]) ** (-2.5)
+   >>> _ = ax.loglog(t_ref * 1e3, ref, "--", color="0.4", lw=1.3, label=r"$t^{-5/2}$ reference")
+
+   >>> _ = ax.set_xlabel("time (ms)")
+   >>> _ = ax.set_ylabel(r"$dB_z/dt$ (arb. units)")
+   >>> _ = ax.set_title("TEM1DForward step-off decay -- 3-layer model")
+   >>> _ = ax.legend()
+   >>> _ = ax.grid(True, which="both", alpha=0.3)
+
+.. figure:: ../../images/user_guide/forward/solvers_1d_tem_decay.png
+   :alt: Log-log TEM step-off decay curve with a -5/2 power-law reference slope.
+   :align: center
+   :width: 75%
+
+   The dashed line is the classic conductive-halfspace late-time asymptote
+   :math:`dB_z/dt \propto t^{-5/2}` (Nabighian, 1979), anchored to the curve's
+   last point for comparison, not fitted to it.
+
+The curve's own late-time slope (a least-squares fit through the last third of
+the gates, in log-log space) comes out to about :math:`-2.70` -- close to but
+steeper than the ideal halfspace value of :math:`-2.5`, because the deep,
+resistive third layer (900 Ω·m below 820 m) is still shaping the decay rather
+than the response having settled into the true asymptotic regime. Early
+gates, by contrast, have a much shallower slope (about :math:`-0.30` over the
+first eight points): the induced-current "smoke ring" has barely started
+diffusing outward and downward, so the field is still dominated by the near
+loop geometry rather than the earth's conductivity structure. Use early gates
+to test shallow sensitivity and later gates to test deeper sensitivity; if
+the time range is too narrow, the inversion may fit the decay curve but
+remain insensitive to the target interval.
 
 2-D Profile Grid Concepts
 -------------------------
@@ -359,6 +398,7 @@ added on the left, right, and bottom. Thus a core grid with
 :math:`p` padding cells is stored approximately as
 
 .. math::
+   :label: eq-grid2d-padding
 
    n_x = n_x^\mathrm{core} + 2p,\qquad
    n_z = n_z^\mathrm{core} + p.
@@ -371,35 +411,29 @@ the left, right, and bottom to reduce boundary influence. The ``n_pad`` value
 records how many padding cells were added so plotting and interpretation tools
 can distinguish core cells from numerical buffer cells.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import Grid2D
+   >>> import numpy as np
 
-   grid = Grid2D.halfspace(
-       rho=100.0,
-       nx=40,
-       nz=28,
-       x_max=8000.0,
-       z_max=5000.0,
-       n_pad=8,
-       pad_factor=1.3,
-       n_stations=12,
-   )
+   >>> from pycsamt.forward import Grid2D
 
-   print(grid.resistivity.shape)
-   print(grid.x_stations)
-   print(grid.x_nodes[0], grid.x_nodes[-1])
-
-Captured output:
-
-.. code-block:: pycon
+   >>> grid = Grid2D.halfspace(
+   ...     rho=100.0,
+   ...     nx=40,
+   ...     nz=28,
+   ...     x_max=8000.0,
+   ...     z_max=5000.0,
+   ...     n_pad=8,
+   ...     pad_factor=1.3,
+   ...     n_stations=12,
+   ... )
 
    >>> print(grid.resistivity.shape)
    (36, 56)
    >>> print(np.round(grid.x_stations, 1))
-   [ 6203.   6930.3  7657.5  8384.8  9112.1  9839.4 10566.6 11293.9
-    12021.2 12748.5 13475.7 14203. ]
+   [ 6203.   6930.3  7657.5  8384.8  9112.1  9839.4 10566.6 11293.9 12021.2
+    12748.5 13475.7 14203. ]
    >>> print(grid.x_nodes[0], grid.x_nodes[-1])
    0.0 20405.999163999997
    >>> print(grid.core_resistivity.shape)
@@ -433,28 +467,28 @@ Use the constructor that matches the experiment you want to run.
 
 A compact block-anomaly grid looks like this:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import Grid2D, MT2DForward
+   >>> from pycsamt.forward import Grid2D, MT2DForward
 
-   grid = Grid2D.with_anomaly(
-       bg_rho=500.0,
-       anomaly_rho=5.0,
-       anomaly_bounds=(2000.0, 6000.0, 300.0, 1500.0),
-       nx=50,
-       nz=35,
-       x_max=10000.0,
-       z_max=6000.0,
-       n_pad=8,
-       n_stations=16,
-   )
+   >>> grid = Grid2D.with_anomaly(
+   ...     bg_rho=500.0,
+   ...     anomaly_rho=5.0,
+   ...     anomaly_bounds=(2000.0, 6000.0, 300.0, 1500.0),
+   ...     nx=50,
+   ...     nz=35,
+   ...     x_max=10000.0,
+   ...     z_max=6000.0,
+   ...     n_pad=8,
+   ...     n_stations=16,
+   ... )
 
-   response = MT2DForward(
-       freqs=[1.0, 10.0, 100.0],
-       grid=grid,
-       verbose=True,
-   ).run()
+   >>> response = MT2DForward(
+   ...     freqs=[1.0, 10.0, 100.0],
+   ...     grid=grid,
+   ...     verbose=False,
+   ... ).run()
 
 ``anomaly_bounds`` are specified in core model coordinates as
 ``(x_lo, x_hi, z_lo, z_hi)``. The constructor internally accounts for padding
@@ -489,12 +523,14 @@ conductivity field :math:`\sigma(x,z)=1/\rho(x,z)`, the TE unknown is
 operators can be read as
 
 .. math::
+   :label: eq-2d-te-pde
 
    \nabla^2 E_y - i\omega\mu_0\sigma E_y = 0,
 
 and
 
 .. math::
+   :label: eq-2d-tm-pde
 
    \nabla\cdot\left(\rho\,\nabla H_y\right)
    - i\omega\mu_0 H_y = 0.
@@ -505,29 +541,22 @@ linear systems, then estimates surface impedance at the stations. The response
 conversion is the same impedance-to-observable relation used in 1-D:
 :math:`\rho_a=|Z|^2/(\omega\mu_0)` and :math:`\phi=\arg Z`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   station_0 = response.station_response(0)
+   >>> station_0 = response.station_response(0)
 
-   print(station_0["rho_a_te"])
-   print(station_0["phase_te"])
+   >>> features_te = response.to_feature_array(
+   ...     mode="te",
+   ...     log_rho=True,
+   ...     include_phase=True,
+   ... )
 
-   features_te = response.to_feature_array(
-       mode="te",
-       log_rho=True,
-       include_phase=True,
-   )
-
-   features_both = response.to_feature_array(
-       mode="both",
-       log_rho=True,
-       include_phase=True,
-   )
-
-Captured output:
-
-.. code-block:: pycon
+   >>> features_both = response.to_feature_array(
+   ...     mode="both",
+   ...     log_rho=True,
+   ...     include_phase=True,
+   ... )
 
    >>> print(response.rho_a_te.shape)
    (3, 16)
@@ -594,15 +623,17 @@ analysis sample.
 When passing a 2-D forward response to the inversion profile API, transpose the
 selected response arrays:
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   inversion_data = {
-       "freqs": response.freqs,
-       "rho_a": response.rho_a_te.T,
-       "phase": response.phase_te.T,
-       "station_x": response.stations_x,
-   }
+   >>> inversion_data = {
+   ...     "freqs": response.freqs,
+   ...     "rho_a": response.rho_a_te.T,
+   ...     "phase": response.phase_te.T,
+   ...     "station_x": response.stations_x,
+   ... }
+   >>> print(inversion_data["rho_a"].shape)
+   (16, 3)
 
 3-D Volume Grid Concepts
 ------------------------
@@ -616,30 +647,23 @@ selected response arrays:
 * padding in x, y, and z;
 * helpers that extract XZ and YZ slices for the quasi-3-D solver.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import Grid3D
+   >>> from pycsamt.forward import Grid3D
 
-   grid = Grid3D.halfspace(
-       rho=100.0,
-       nx=20,
-       ny=20,
-       nz=15,
-       x_max=8000.0,
-       y_max=8000.0,
-       z_max=4000.0,
-       n_pad=6,
-       nx_stations=5,
-       ny_stations=5,
-   )
-
-   print(grid.resistivity.shape)
-   print(grid.stations_xy.shape)
-
-Captured output:
-
-.. code-block:: pycon
+   >>> grid = Grid3D.halfspace(
+   ...     rho=100.0,
+   ...     nx=20,
+   ...     ny=20,
+   ...     nz=15,
+   ...     x_max=8000.0,
+   ...     y_max=8000.0,
+   ...     z_max=4000.0,
+   ...     n_pad=6,
+   ...     nx_stations=5,
+   ...     ny_stations=5,
+   ... )
 
    >>> print(grid.resistivity.shape)
    (21, 32, 32)
@@ -674,30 +698,31 @@ The main constructors are:
      - Random laterally variable model.
      - Synthetic training data and robustness tests.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   from pycsamt.forward import Grid3D, MT3DForward
+   >>> from pycsamt.forward import Grid3D, MT3DForward
 
-   grid = Grid3D.block_anomaly(
-       bg_rho=500.0,
-       anomaly_rho=20.0,
-       bounds=(2000.0, 6000.0, 2000.0, 6000.0, 300.0, 1500.0),
-       nx=20,
-       ny=20,
-       nz=15,
-       x_max=8000.0,
-       y_max=8000.0,
-       z_max=4000.0,
-       n_pad=6,
-       nx_stations=5,
-       ny_stations=5,
-   )
+   >>> grid = Grid3D.block_anomaly(
+   ...     bg_rho=500.0,
+   ...     anomaly_rho=20.0,
+   ...     bounds=(2000.0, 6000.0, 2000.0, 6000.0, 300.0, 1500.0),
+   ...     nx=20,
+   ...     ny=20,
+   ...     nz=15,
+   ...     x_max=8000.0,
+   ...     y_max=8000.0,
+   ...     z_max=4000.0,
+   ...     n_pad=6,
+   ...     nx_stations=5,
+   ...     ny_stations=5,
+   ... )
 
-   response = MT3DForward(
-       freqs=[1.0, 10.0, 100.0],
-       grid=grid,
-   ).run()
+   >>> response = MT3DForward(
+   ...     freqs=[1.0, 10.0, 100.0],
+   ...     grid=grid,
+   ...     verbose=False,
+   ... ).run()
 
 .. figure:: ../../images/user_guide/forward/solvers_3d_block_model.png
    :alt: Orthogonal slices through a 3-D block anomaly model.
@@ -731,6 +756,7 @@ another estimate along :math:`y`. pyCSAMT stores the resulting tensor-like
 components as
 
 .. math::
+   :label: eq-quasi3d-tensor
 
    \mathbf{Z}_s(f) =
    \begin{bmatrix}
@@ -745,39 +771,31 @@ validated full-3-D solution.
 
 The output is :class:`pycsamt.forward.ForwardResponse3D`.
 
-.. code-block:: python
+.. code-block:: pycon
    :linenos:
 
-   print(response.rho_a_xy.shape)
-   print(response.phase_xy.shape)
-   print(response.stations_xy.shape)
+   >>> features = response.to_feature_array(
+   ...     components="xy_yx",
+   ...     log_rho=True,
+   ...     include_phase=True,
+   ... )
 
-   features = response.to_feature_array(
-       components="xy_yx",
-       log_rho=True,
-       include_phase=True,
-   )
-
-   all_components = response.to_feature_array(
-       components="all",
-       log_rho=True,
-       include_phase=False,
-   )
-
-Captured output:
-
-.. code-block:: pycon
+   >>> all_components = response.to_feature_array(
+   ...     components="all",
+   ...     log_rho=True,
+   ...     include_phase=False,
+   ... )
 
    >>> print(response.rho_a_xy.shape)
-   (3, 16)
+   (3, 25)
    >>> print(response.phase_xy.shape)
-   (3, 16)
+   (3, 25)
    >>> print(response.stations_xy.shape)
-   (16, 2)
+   (25, 2)
    >>> print(features.shape)
-   (16, 12)
+   (25, 12)
    >>> print(all_components.shape)
-   (16, 12)
+   (25, 12)
 
 .. figure:: ../../images/user_guide/forward/solvers_3d_tensor_components.png
    :alt: Four quasi-3-D apparent-resistivity tensor component maps.
@@ -828,13 +846,18 @@ trusting a response, check these points.
 
 ``Dimensionality``
    Use 1-D models for layered checks, 2-D grids for profile structure, and
-   quasi-3-D grids for survey design or synthetic AI catalogues. Move to native
-   external backends when production 2-D or 3-D inversion files are required.
+   quasi-3-D grids for survey design or synthetic AI catalogues. Move to
+   :doc:`maxwell_overview`'s validated adapters when the result needs a
+   checkable accuracy claim, and further to native external backends
+   through :doc:`/user_guide/models/overview` when production 2-D or 3-D
+   inversion files are required.
 
 A useful numerical rule is to compare the target depth with the skin-depth
-range implied by the frequency axis:
+range implied by the frequency axis -- the same estimate from
+:eq:`eq-skin-depth`, evaluated once at each end of the swept band:
 
 .. math::
+   :label: eq-skin-depth-range
 
    \delta_\mathrm{min} \approx 503\sqrt{\rho_\mathrm{ref}/f_\mathrm{max}},
    \qquad
@@ -845,29 +868,40 @@ range, while the near-surface cells should be fine enough for the shallow end.
 This estimate is only a screening tool, but it catches many poor frequency-grid
 and depth-extent choices before a solver run.
 
-A compact grid-check helper can be useful in notebooks:
-
-.. code-block:: python
-   :linenos:
-
-   import numpy as np
-
-   def describe_grid2d(grid):
-       print(f"cells: nz={grid.nz}, nx={grid.nx}")
-       print(f"stations: {grid.n_stations}")
-       print(f"x extent: {grid.x_nodes[0]:.1f} to {grid.x_nodes[-1]:.1f} m")
-       print(f"z extent: {grid.z_nodes[0]:.1f} to {grid.z_nodes[-1]:.1f} m")
-       print(f"rho range: {np.nanmin(grid.resistivity):.3g} to "
-             f"{np.nanmax(grid.resistivity):.3g} ohm m")
-       print(f"padding cells: {grid.n_pad}")
-
-   describe_grid2d(grid)
-
-Captured output for the anomaly grid above:
+A compact grid-check helper can be useful in notebooks. Re-building the
+earlier 2-D anomaly grid keeps this section runnable on its own, independent
+of the 3-D grids built in between:
 
 .. code-block:: pycon
+   :linenos:
 
-   >>> describe_grid2d(grid)
+   >>> import numpy as np
+
+   >>> from pycsamt.forward import Grid2D
+
+   >>> grid2d = Grid2D.with_anomaly(
+   ...     bg_rho=500.0,
+   ...     anomaly_rho=5.0,
+   ...     anomaly_bounds=(2000.0, 6000.0, 300.0, 1500.0),
+   ...     nx=50,
+   ...     nz=35,
+   ...     x_max=10000.0,
+   ...     z_max=6000.0,
+   ...     n_pad=8,
+   ...     n_stations=16,
+   ... )
+
+   >>> def describe_grid2d(grid):
+   ...     print(f"cells: nz={grid.nz}, nx={grid.nx}")
+   ...     print(f"stations: {grid.n_stations}")
+   ...     print(f"x extent: {grid.x_nodes[0]:.1f} to {grid.x_nodes[-1]:.1f} m")
+   ...     print(f"z extent: {grid.z_nodes[0]:.1f} to {grid.z_nodes[-1]:.1f} m")
+   ...     print(f"rho range: {np.nanmin(grid.resistivity):.3g} to "
+   ...           f"{np.nanmax(grid.resistivity):.3g} ohm m")
+   ...     print(f"padding cells: {grid.n_pad}")
+   ...
+
+   >>> describe_grid2d(grid2d)
    cells: nz=43, nx=66
    stations: 16
    x extent: 0.0 to 22406.0 m

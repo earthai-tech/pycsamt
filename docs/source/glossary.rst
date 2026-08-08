@@ -52,6 +52,125 @@ definitions here are the single source of truth.
       :mod:`pycsamt.inversion`. It gives the backend-neutral workflow a named
       solver route while preserving a common configuration and result interface.
 
+   Backend capability
+      The declared scope of a :term:`Maxwell adapter`'s wrapped solver --
+      dimensionality, impedance components, time convention, mesh and
+      topography support, cell/frequency limits, and its
+      :term:`verified benchmark`\ s -- assessed against a submitted problem
+      before any solve begins. A capability declaration is a claim that must
+      be re-verified whenever the adapter's translation logic or numerical
+      dependency changes; it does not certify itself.
+
+   Maxwell adapter
+      The validation boundary between a solver-neutral problem/result
+      contract and one backend's native input and output, in
+      :mod:`pycsamt.forward.maxwell`. It runs a :term:`preflight assessment`
+      before calling its backend, and a :term:`postflight validation`
+      afterward, so a subclass cannot skip either check even by accident. See
+      :doc:`user_guide/forward/maxwell_adapters`.
+
+   Preflight assessment
+      The :term:`backend capability` check a :term:`Maxwell adapter` runs
+      against an incoming problem before calling its backend. It rejects
+      dimensionality, component, mesh, or size mismatches before an
+      expensive solve is attempted on a problem the backend never claimed to
+      support.
+
+   Postflight validation
+      The contract check a :term:`Maxwell adapter` runs on a backend's raw
+      output before returning it: frequency order, receiver order, component
+      set, problem identity, and :term:`solver diagnostics` must all match
+      what was requested. A backend that silently drops or reorders part of
+      a response fails postflight rather than returning a corrupted array.
+
+   Adapter policy
+      The acceptance rule a :term:`Maxwell adapter` applies after
+      :term:`postflight validation`, such as requiring convergence at every
+      frequency-receiver pair or capping the maximum relative solver
+      residual. Two adapters can receive identical backend output and still
+      accept or reject it differently depending on policy.
+
+   Verified benchmark
+      An analytic reference case, such as a uniform :term:`half-space` or a
+      :term:`layered earth`, that a backend has been checked against and is
+      listed inside its :term:`backend capability`. Naming the specific
+      benchmarks a given adapter version has passed is a stronger claim than
+      stating dimensionality support alone.
+
+   Problem hash
+      A content hash of a solved problem's mesh, receivers, frequencies, and
+      components, carried through to its :term:`forward response` (and to a
+      cache entry, when cached) so a saved or reused result can be tied back
+      to the exact input that produced it.
+
+   Benchmark hash
+      A content hash of one analytic benchmark case as a whole -- its
+      :term:`problem hash`, analytic reference values, acceptance
+      thresholds, tags, and metadata -- distinct from the problem hash it
+      contains. Two benchmarks can share the same underlying problem while
+      differing in benchmark hash because their acceptance thresholds
+      differ, which is exactly the situation :doc:`user_guide/forward/maxwell_benchmarks`
+      uses to show the same solved result passing one threshold policy and
+      failing a stricter one.
+
+   Solver diagnostics
+      Per-frequency, per-receiver convergence flags, iteration counts, and
+      numerical solver residuals reported alongside a :term:`forward
+      response`. This numerical residual is distinct from the data-misfit
+      :term:`residual` used in inversion review.
+
+   External adapter
+      A :term:`Maxwell adapter` that wraps a trusted external executable
+      rather than in-repository Python: it resolves the executable, writes
+      native input files, runs the process under a timeout policy, parses
+      native output, and retains stdout/stderr provenance. Availability of
+      an executable is not the same as compatibility of a problem or
+      validation of its result.
+
+   Content-addressed cache
+      A cache keyed by a deterministic content hash of its input -- here,
+      :class:`~pycsamt.forward.maxwell.MaxwellResultCache` keyed by
+      :term:`problem hash` -- rather than by an arbitrary name chosen by the
+      caller. Two callers requesting the same physical problem always land
+      on the same entry regardless of when, where, or by whom it was first
+      solved; an entry that fails its stored checksum on read is corruption,
+      not a second, differently-keyed problem.
+
+   Failure manifest
+      The ordered, JSON-persistable record of every problem a
+      :func:`~pycsamt.forward.maxwell.batch.solve_batch` run gave up on
+      after exhausting its attempts, keyed by :term:`problem hash` with the
+      exception type and message retained. Dropping failed realizations
+      from a dataset without recording why can silently bias what remains,
+      for example by thinning out exactly the high-contrast cases hardest
+      to solve.
+
+   Transient failure
+      An exception :class:`~pycsamt.forward.maxwell.batch.BatchPolicy`
+      treats as worth retrying, such as a backend execution error or a
+      non-converged solve, as opposed to a terminal failure like an
+      incompatible problem that would fail identically on every attempt. A
+      backend that wraps ordinary Python exceptions into a generic
+      execution error can make an actually-deterministic bug look transient
+      unless that wrapping is disabled.
+
+   Backend registry
+      A thread-safe store of lazy :term:`Maxwell adapter` factories keyed by
+      name, each paired with its :term:`backend capability` declaration and
+      an optional :term:`availability probe`. The default instance is
+      process-wide and shared by ``register_backend``/``create_backend``/
+      ``list_backends``; a private instance can be built the same way for an
+      isolated application or test that should not read or mutate global
+      registrations.
+
+   Availability probe
+      A lightweight, zero-argument callable stored on a backend
+      registration that reports whether its backend can currently be
+      created -- typically whether an external executable resolves --
+      without importing the solver or constructing the adapter. A backend
+      can be capability-compatible with a problem and still unavailable in
+      a given environment; the two questions are checked separately.
+
    Inversion model
       The resistivity or conductivity distribution recovered by an inversion
       workflow from observed electromagnetic data and modelling assumptions.
@@ -726,6 +845,16 @@ definitions here are the single source of truth.
       digital samples. If the input exceeds the configured full-scale range, the
       samples clip at the rail and the channel is saturated.
 
+   IoT
+   Internet of Things
+      The operational, connectivity layer around an acquisition survey —
+      field devices, station inventory, :term:`telemetry packet`\ s, edge
+      quality control, monitoring, power budgeting, clock synchronisation,
+      provenance, and transport security — implemented in
+      :mod:`pycsamt.iot` and covered in :doc:`user_guide/iot/index`. It
+      audits and records how data were acquired; it does not change the
+      electromagnetic inversion itself.
+
    Edge diagnostics
       Lightweight checks run close to acquisition, often on the logger or an
       edge gateway, before full transfer-function processing. They summarize
@@ -1189,6 +1318,25 @@ definitions here are the single source of truth.
       Numerical buffer cells added outside the scientific core of a finite
       difference grid. They reduce boundary effects but should not be interpreted
       as part of the target model.
+
+   Core slices
+      The tuple of array slices, one per axis, marking exactly where an
+      original geological grid sits inside a padded solver mesh built by
+      :func:`~pycsamt.forward.maxwell.build_solver_mesh`. Indexing a
+      built :class:`~pycsamt.forward.maxwell.mesh.SolverMeshModel`'s
+      conductivity with its own core slices recovers the unpadded source
+      model exactly; recomputing the same bounds from padding counts after
+      serialization is unnecessary and error-prone compared to storing the
+      slices themselves.
+
+   Size function
+      The function a graded mesh generator evaluates at every candidate
+      location to decide how large a cell or triangle may be there.
+      :func:`~pycsamt.forward.maxwell.tri_mesh_gen.build_graded_tri_mesh`
+      grows its target edge length geometrically with distance from the
+      nearest receiver, capped at a maximum, which is what produces a mesh
+      fine near the stations that actually need resolution and coarse
+      everywhere distance from them makes that resolution wasteful.
 
    Time gate
       One sample time in a transient electromagnetic decay curve. A TEM

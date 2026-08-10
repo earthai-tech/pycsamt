@@ -206,6 +206,24 @@ style, phase-tensor ellipses, and rose diagrams -- plus the presets'
 compounding behaviour and the rose functions' ``style="pycsamt"`` literal
 gotcha -- are covered in depth on :doc:`style`.
 
+Contour Overlays
+----------------
+
+Contour-capable plots resolve line levels, color, width, style, opacity, and
+optional labels through :data:`pycsamt.api.PYCSAMT_CONTOUR`:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.api import configure_contour, PYCSAMT_CONTOUR, reset_contour
+   >>> configure_contour(levels=9, linewidths=1.0, alpha=0.9)
+   >>> PYCSAMT_CONTOUR.default.levels
+   9
+   >>> reset_contour()
+
+Named ``review``, ``subtle``, ``publication``, and ``off`` presets, per-call
+precedence, labels, and the interpretation limits of interpolated contours are
+covered in :doc:`contour`.
+
 Figure Output
 -------------
 
@@ -417,6 +435,7 @@ Each family has a ``reset_*`` helper; together they restore a clean session:
    from pycsamt.api import (
        reset_api_view,
        reset_cli,
+       reset_contour,
        reset_control,
        reset_interp,
        reset_mesh,
@@ -432,6 +451,7 @@ Each family has a ``reset_*`` helper; together they restore a clean session:
 
    reset_api_view()
    reset_cli()
+   reset_contour()
    reset_control()
    reset_interp()
    reset_mesh()
@@ -449,7 +469,7 @@ Next Steps
 
 * :doc:`overview` for the shared ``PYCSAMT_<FAMILY>`` / ``configure_*`` /
   ``reset_*`` / ``use_*`` contract itself.
-* :doc:`style`, :doc:`interpretation`, :doc:`agent_config`, :doc:`section`,
+* :doc:`style`, :doc:`contour`, :doc:`interpretation`, :doc:`agent_config`, :doc:`section`,
   :doc:`station_rendering`, :doc:`view_controls`, :doc:`views`, and
   :doc:`mesh` for each family's own worked depth.
 * :doc:`../getting_started/configuration` for the settings most users touch

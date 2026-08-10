@@ -1,170 +1,106 @@
 .. _getting_started_overview:
 
-Overview
-========
+Start here
+==========
 
-This section is written for users who want to install the package,
-understand which data format they have, configure a working session, and
-inspect a first field survey before moving into processing, inversion, or
-AI-assisted workflows.
+Getting Started takes you from an unconfigured Python environment to a loaded
+and inspected electromagnetic survey. It deliberately stops before correction,
+inversion, or interpretation. Those stages require scientific choices that
+cannot be made safely until the input format, station inventory, coordinates,
+frequency coverage, and available response components are understood.
 
-Fast Path
----------
+You can follow the pages in order or use :doc:`quickstart` when pyCSAMT is
+already installed and the input is a directory of EDI files.
 
-For a standard Python environment and a folder of EDI files, the complete
-first path is:
-
-.. code-block:: console
-   :linenos:
-
-   python -m pip install pycsamt
-   pycsamt --help
-   pycsamt edi info data/edis
-   pycsamt edi validate data/edis
-
-Then in Python:
-
-.. code-block:: pycon
-   :linenos:
-
-   >>> from pycsamt.api import read_edis
-   >>> from pycsamt.pipeline import Pipeline
-
-   >>> survey = read_edis("data/edis", strict=False)
-   >>> print(survey)
-   >>> print(survey.summary().df.head())
-
-   >>> pipe = Pipeline.from_preset("basic_qc")
-   >>> result = pipe.run(survey.to_collection(), outdir="results/first_survey")
-   >>> print(result.summary())
-
-If that works, pyCSAMT is installed, the EDI reader can see your data, the
-public API is available, and the processing pipeline can produce a first
-quality-control run.
-
-For a condensed end-to-end demonstration — processing, Occam2D inversion,
-geological interpretation, and AI-based inversion in a few code blocks —
-see :doc:`quickstart`.
-
-Recommended Reading Order
--------------------------
-
-Read the pages in this order for the smoothest first experience:
+The recommended path
+--------------------
 
 .. list-table::
    :header-rows: 1
-   :widths: 22 38 40
+   :widths: 12 26 32 30
 
    * - Step
      - Page
-     - Use it to
+     - Question it answers
+     - Continue when
    * - 1
      - :doc:`installation`
-     - Choose an environment, install core pyCSAMT or optional extras, and
-       verify the CLI, API, AI backends, GUI, and documentation tools.
+     - Can this Python environment import and run pyCSAMT?
+     - The package import and CLI checks succeed.
    * - 2
      - :doc:`data_formats`
-     - Identify whether your inputs are EDI, Zonge AVG/AMTAVG, J-format,
-       spectra, TDEM/TEM, site tables, or inversion/model files.
+     - What do the field files contain, and can they be loaded directly?
+     - The input family and required conversion route are known.
    * - 3
      - :doc:`configuration`
-     - Configure API table behavior, plotting style, pipeline output, AI
-       backend selection, and agent/LLM settings.
+     - Which station order, figure destination, and plot style should this
+       session use?
+     - The few settings that affect the first survey are explicit.
    * - 4
      - :doc:`first_survey`
-     - Load a first EDI survey, inspect station metadata, check parser
-       errors, build QC tables, save figures, and run ``basic_qc``.
+     - Did the intended stations load, and what does the first diagnostic show?
+     - Counts, identities, errors, coverage, and unusual patterns are reviewed.
+   * - 5
+     - :doc:`quickstart`
+     - What does the complete minimal script look like?
+     - The script reproduces its inventory and diagnostic figure.
 
-The order matters because pyCSAMT workflows become much easier when you know
-which optional dependencies are installed, which field format you are using,
-and where outputs will be written before you begin processing data.
+The sequence separates different kinds of failure. Installation problems
+should not be diagnosed as parser problems, unsupported field formats should
+not be passed to an EDI reader, and a readable survey should not be mistaken
+for an inversion-ready dataset.
 
-What Each Page Covers
----------------------
+Choose a shorter entry point
+----------------------------
 
-:doc:`installation`
-    Installation recipes for PyPI, source checkouts, development, docs,
-    geospatial workflows, desktop/web apps, AI backends, and LLM provider
-    SDKs.  It also includes verification commands and troubleshooting notes.
+Start with :doc:`quickstart` if all of the following are true:
 
-:doc:`data_formats`
-    A practical guide to supported input families.  It explains the standard
-    EDI path, legacy/field formats, conversion routes into EDI, site metadata,
-    inversion files, duplicate-station policies, and unit conventions.
+* pyCSAMT is already installed and importable;
+* the data are frequency-domain EDI files;
+* station metadata and units are known;
+* you want a compact load, inventory, normalization, and plot example.
 
-:doc:`configuration`
-    The core runtime settings users usually touch first: APIFrame versus
-    pandas output, pipeline output directories, plotting defaults, AI backend
-    selection, and agent configuration.
+Start with :doc:`data_formats` if the delivery contains AVG/AMTAVG, Jones
+J-format, spectral EDI, field time series, TEM/TDEM decay data, Stratagem raw
+files, coordinate tables, or inversion files. Renaming an extension does not
+convert the underlying measurements.
 
-:doc:`first_survey`
-    The first end-to-end survey walkthrough.  It demonstrates
-    :func:`pycsamt.api.read_edis`, station summaries, parser-error review,
-    quality tables, confidence plots, the ``basic_qc`` pipeline preset, and
-    CLI equivalents.
+Start with :doc:`first_survey` if the data already load but the station count,
+source-file mapping, frequency coverage, or diagnostic figure needs careful
+review.
 
-:doc:`quickstart`
-    A condensed tour of the core v2 workflow: EDI processing, 2-D inversion
-    with Occam2D, geological interpretation and export, and AI-based 1-D
-    inversion — each in a short, copy-paste-ready code block.
+What Getting Started does not do
+--------------------------------
 
-Choose Your Entry Point
------------------------
+This section does not prescribe filtering thresholds, static-shift factors,
+dimensionality assumptions, inversion regularization, or geological meaning.
+Those decisions depend on the acquisition, processing history, response
+quality, survey geometry, and scientific objective.
 
-Different users arrive with different needs.  Use this table to jump directly
-to the right page.
+After the first inspection, use:
 
-.. list-table::
-   :header-rows: 1
-   :widths: 42 58
+* :doc:`../user_guide/data_loading` for reusable loading and normalization
+  rules;
+* :doc:`../user_guide/emtools/index` for electromagnetic QC and processing;
+* :doc:`../user_guide/site/index` for station selection, coordinates, profiles,
+  and metadata;
+* :doc:`../user_guide/inversion/index` to choose an inversion path;
+* :doc:`../tutorials/index` for complete worked workflows.
 
-   * - If you want to...
-     - Start with...
-   * - install pyCSAMT on a new machine
-     - :doc:`installation`
-   * - decide between ``venv``, conda, core install, and full extras
-     - :doc:`installation`
-   * - enable the desktop GUI or Dash-based app components
-     - :doc:`installation`
-   * - enable PyTorch, TensorFlow, or LLM-backed agents
-     - :doc:`installation` and :doc:`../user_guide/agents/llm_configuration`
-   * - understand whether your field files are supported
-     - :doc:`data_formats`
-   * - convert AVG, J-format, spectra, or TEM/TDEM data into an EDI workflow
-     - :doc:`data_formats`
-   * - configure where pipeline results and figures are written
-     - :doc:`configuration`
-   * - load an EDI directory and inspect stations
-     - :doc:`first_survey`
-   * - run the first quality-control pipeline
-     - :doc:`first_survey`
+Before leaving this section
+---------------------------
 
-Before You Continue
--------------------
+Confirm that:
 
-Before moving into tutorials, pipeline customization, or inversion
-preparation, confirm these basics:
+* Python imports the expected pyCSAMT version and ``pycsamt --help`` works;
+* the input family and original measurement units are known;
+* raw inputs remain unchanged and generated outputs use a separate directory;
+* the loaded station count matches the field manifest;
+* parser failures and duplicate identities are understood;
+* station order and coordinate reference information are plausible;
+* frequency grids and required response components have been checked;
+* the first diagnostic has been interpreted as a screening result, not a
+  geological conclusion.
 
-* ``python -c "import pycsamt; print(pycsamt.__version__)"`` prints a version.
-* ``pycsamt --help`` shows the command groups.
-* You know whether your input data are EDI, AVG, J-format, spectra, TDEM/TEM,
-  site metadata, or model/inversion files.
-* Your output directory is explicit, for example ``results/first_survey``.
-* ``read_edis(..., strict=False)`` loads the expected number of EDI stations.
-* Parser errors are understood before processing results are trusted.
-* The first ``basic_qc`` pipeline run writes a report and plots.
-
-Where To Go Next
-----------------
-
-Once the getting-started workflow is working, continue with:
-
-* :doc:`../tutorials/read_edi_survey` for a deeper EDI loading tutorial;
-* :doc:`../tutorials/inspect_and_qc_survey` for richer survey diagnostics;
-* :doc:`../user_guide/pipeline/index` for reproducible processing pipelines;
-* :doc:`../user_guide/pipeline/presets` for built-in workflow presets;
-* :doc:`../tutorials/prepare_occam2d_inversion` for a first inversion
-  preparation path;
-* :doc:`../user_guide/agents/overview` for AI-assisted survey review,
-  processing plans, and result summaries;
-* :doc:`../development/index` if you are contributing to pyCSAMT itself.
+If any item is uncertain, return to the corresponding page before applying a
+correction or preparing an inversion.

@@ -14,7 +14,7 @@ User Guide
    :maxdepth: 3
    :class: pycsamt-guide-toc
 
-   prerequisites
+   workflow_overview
    data_loading
    transformers
    map/index

@@ -30,6 +30,7 @@ plot_sensitivity_depth_section
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import matplotlib.colors as mcolors
@@ -39,6 +40,7 @@ import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, Normalize
 
+from ..api.contour import PYCSAMT_CONTOUR
 from ..api.plot import add_colorbar
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.style import PYCSAMT_STYLE
@@ -520,13 +522,31 @@ _FINGERPRINT_QUANTITIES = {
     "beta": dict(label="|β| (°)", cmap="Reds", sym=False, pct=(5, 95)),
 }
 
+_FINGERPRINT_ALIASES = {
+    "ellipticity": "ellipt",
+    "phi_max": "s1",
+    "phimax": "s1",
+    "phi_min": "s2",
+    "phimin": "s2",
+    "abs_skew": "beta",
+    "|beta|": "beta",
+}
+
 
 def plot_survey_fingerprint(
     sites: Any,
     *,
-    quantities: list[str] | None = None,
+    quantities: Sequence[str] | str | None = None,
     period_range: tuple[float, float] | None = None,
     station_order: list[str] | None = None,
+    render: str = "pcolormesh",
+    cmaps: str | Mapping[str, str] | None = None,
+    plot_kws: Mapping[str, Any] | None = None,
+    quantity_kws: Mapping[str, Mapping[str, Any]] | None = None,
+    contours: bool | None = None,
+    contour_kws: Mapping[str, Any] | None = None,
+    station_grid: bool = False,
+    station_grid_kws: Mapping[str, Any] | None = None,
     cell_aspect: float = 1.0,
     axes=None,
     figsize: tuple[float, float] | None = None,
@@ -560,12 +580,38 @@ def plot_survey_fingerprint(
     Parameters
     ----------
     sites : any
-    quantities : list of str or None
-        Subset of the available quantities.
-        Default: ``["skew", "ellipt", "theta", "s1"]``.
+    quantities : sequence of str, str, or None
+        Quantities to plot, in panel order. A single string produces one
+        panel. Aliases include ``"ellipticity"`` and ``"phi_max"``.
+        The default is ``("skew", "ellipt", "s1")``.
     period_range : (T_min, T_max) or None
     station_order : list of str or None
         Explicit station order along the x-axis.  Auto from data when None.
+    render : {"pcolormesh", "imshow"}, default="pcolormesh"
+        Matplotlib renderer used for every panel.
+    cmaps : str, mapping, or None
+        One colormap for every panel, or a mapping from quantity name to
+        colormap. Missing mapping entries use the quantity defaults.
+    plot_kws : mapping or None
+        Renderer keyword arguments applied to every panel.
+    quantity_kws : mapping of mappings or None
+        Per-quantity renderer overrides. Explicit ``vmin``, ``vmax``, or
+        ``norm`` values replace the robust percentile limits.
+    contours : bool or None, default=None
+        Overlay contour lines on each rendered quantity. ``None`` resolves
+        through :data:`pycsamt.api.PYCSAMT_CONTOUR`.
+    contour_kws : mapping or None
+        Keyword arguments forwarded to :meth:`matplotlib.axes.Axes.contour`.
+        Defaults are ``levels=7``, thin dark lines, and partial transparency.
+    station_grid : bool, default=False
+        Draw a vertical guide through every station centre on every panel.
+        Because the panels share their station geometry, these guides make it
+        easier to compare a feature at the same station across quantities.
+    station_grid_kws : mapping or None
+        Keyword arguments forwarded to
+        :meth:`matplotlib.axes.Axes.axvline`. Defaults produce restrained
+        white dotted guides. Common controls are ``color``, ``linewidth``,
+        ``linestyle``, ``alpha``, and ``zorder``.
     cell_aspect : float
         Aspect ratio of individual cells (width / height per cell).
     figsize : (float, float) or None
@@ -579,10 +625,65 @@ def plot_survey_fingerprint(
     --------
     >>> from pycsamt.emtools.advanced import plot_survey_fingerprint
     >>> fig = plot_survey_fingerprint(all_sites, period_range=(1e-4, 1.0))
+    >>> fig = plot_survey_fingerprint(
+    ...     all_sites,
+    ...     quantities=["skew", "phi_max"],
+    ...     render="imshow",
+    ...     cmaps={"skew": "coolwarm", "phi_max": "magma"},
+    ... )
     """
 
     if quantities is None:
-        quantities = ["skew", "ellipt", "theta", "s1"]
+        quantities = ["skew", "ellipt", "s1"]
+    elif isinstance(quantities, str):
+        quantities = [quantities]
+    else:
+        quantities = list(quantities)
+
+    quantities = [
+        _FINGERPRINT_ALIASES.get(str(qty).lower(), str(qty).lower())
+        for qty in quantities
+    ]
+    if not quantities:
+        raise ValueError("quantities must contain at least one quantity")
+    unknown = [qty for qty in quantities if qty not in _FINGERPRINT_QUANTITIES]
+    if unknown:
+        available = ", ".join(sorted(_FINGERPRINT_QUANTITIES))
+        raise ValueError(
+            f"unknown fingerprint quantities {unknown!r}; "
+            f"choose from {available}"
+        )
+
+    render = str(render).lower()
+    if render not in {"pcolormesh", "imshow"}:
+        raise ValueError("render must be 'pcolormesh' or 'imshow'")
+    common_plot_kws = dict(plot_kws or {})
+    common_station_grid_kws = {
+        "color": "#f5f5f5",
+        "linewidth": 0.65,
+        "linestyle": ":",
+        "alpha": 0.75,
+        "zorder": 3,
+    }
+    common_station_grid_kws.update(station_grid_kws or {})
+    contours_enabled, common_contour_kws, contour_label_kws = (
+        PYCSAMT_CONTOUR.resolve(contours, contour_kws)
+    )
+    per_quantity_kws = {
+        _FINGERPRINT_ALIASES.get(
+            str(key).lower(), str(key).lower()
+        ): dict(value)
+        for key, value in (quantity_kws or {}).items()
+    }
+    if cmaps is None or isinstance(cmaps, str):
+        cmap_map: Mapping[str, str] = {}
+        common_cmap = cmaps
+    else:
+        cmap_map = {
+            _FINGERPRINT_ALIASES.get(str(key).lower(), str(key).lower()): value
+            for key, value in cmaps.items()
+        }
+        common_cmap = None
 
     df = build_phase_tensor_table(
         sites,
@@ -642,13 +743,9 @@ def plot_survey_fingerprint(
         gs = None
 
     for qi, qty in enumerate(quantities):
-        if qty not in _FINGERPRINT_QUANTITIES:
-            continue
         qmeta = _FINGERPRINT_QUANTITIES[qty]
-        col = (
-            qty if qty in df.columns else ("beta" if qty == "|beta|" else None)
-        )
-        if col is None or col not in df.columns:
+        col = qty
+        if col not in df.columns:
             continue
 
         ax = (
@@ -689,17 +786,57 @@ def plot_survey_fingerprint(
         if vmin == vmax:
             vmax = vmin + 1.0
 
-        cmap_obj = plt.get_cmap(qmeta["cmap"])
-        im = ax.imshow(
-            img,
-            aspect="auto",
-            origin="upper",
-            extent=[0, n_sta, np.log10(per_grid[-1]), np.log10(per_grid[0])],
-            cmap=cmap_obj,
-            vmin=vmin,
-            vmax=vmax,
-            interpolation="nearest",
+        draw_kws = dict(common_plot_kws)
+        draw_kws.update(per_quantity_kws.get(qty, {}))
+        draw_kws.setdefault(
+            "cmap", common_cmap or cmap_map.get(qty, qmeta["cmap"])
         )
+        if "norm" not in draw_kws:
+            draw_kws.setdefault("vmin", vmin)
+            draw_kws.setdefault("vmax", vmax)
+
+        if render == "imshow":
+            draw_kws.setdefault("aspect", "auto")
+            draw_kws.setdefault("origin", "upper")
+            draw_kws.setdefault("interpolation", "nearest")
+            draw_kws.setdefault(
+                "extent",
+                [
+                    0,
+                    n_sta,
+                    np.log10(per_grid[-1]),
+                    np.log10(per_grid[0]),
+                ],
+            )
+            im = ax.imshow(img, **draw_kws)
+        else:
+            draw_kws.setdefault("shading", "auto")
+            x_edges = np.arange(n_sta + 1, dtype=float)
+            log_period = np.log10(per_grid)
+            y_edges = np.empty(n_grid + 1, dtype=float)
+            y_edges[1:-1] = 0.5 * (log_period[:-1] + log_period[1:])
+            y_edges[0] = log_period[0] - 0.5 * (
+                log_period[1] - log_period[0]
+            )
+            y_edges[-1] = log_period[-1] + 0.5 * (
+                log_period[-1] - log_period[-2]
+            )
+            im = ax.pcolormesh(x_edges, y_edges, img, **draw_kws)
+            ax.set_ylim(y_edges[-1], y_edges[0])
+
+        if contours_enabled:
+            contour_set = ax.contour(
+                np.arange(n_sta, dtype=float) + 0.5,
+                np.log10(per_grid),
+                img,
+                **common_contour_kws,
+            )
+            if contour_label_kws:
+                ax.clabel(contour_set, **contour_label_kws)
+
+        if station_grid:
+            for station_x in np.arange(n_sta, dtype=float) + 0.5:
+                ax.axvline(station_x, **common_station_grid_kws)
 
         # axes decoration
         ax.set_ylabel(qmeta["label"], fontsize=8)
@@ -732,10 +869,11 @@ def plot_survey_fingerprint(
         cb.ax.tick_params(labelsize=6)
 
     if title:
-        fig.suptitle(title, fontsize=10, fontweight="bold")
+        fig.suptitle(title, y=1.06, fontsize=10, fontweight="bold")
     else:
         fig.suptitle(
             "Survey fingerprint  (phase-tensor metrics)",
+            y=1.06,
             fontsize=10,
             fontweight="bold",
         )

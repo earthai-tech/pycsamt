@@ -174,6 +174,75 @@ class TestPlotSurveyFingerprint:
         plt.close("all")
         assert fig is not None
 
+    def test_default_uses_three_pcolormesh_panels(self):
+        sites = _mixed(3)
+        fig = plot_survey_fingerprint(sites)
+        main_axes = [ax for ax in fig.axes if ax.get_ylabel()]
+        assert len(main_axes) == 3
+        assert all(ax.collections for ax in main_axes)
+        assert all(not ax.images for ax in main_axes)
+        plt.close("all")
+
+    def test_imshow_single_alias_and_custom_cmap(self):
+        sites = _mixed(3)
+        fig = plot_survey_fingerprint(
+            sites,
+            quantities="phi_max",
+            render="imshow",
+            cmaps={"phi_max": "magma"},
+            quantity_kws={"phi_max": {"interpolation": "bilinear"}},
+        )
+        main_axes = [ax for ax in fig.axes if ax.get_ylabel()]
+        assert len(main_axes) == 1
+        assert len(main_axes[0].images) == 1
+        image = main_axes[0].images[0]
+        assert image.get_cmap().name == "magma"
+        assert image.get_interpolation() == "bilinear"
+        plt.close("all")
+
+    def test_imshow_contour_overlay_forwards_kwargs(self):
+        sites = _mixed(3)
+        fig = plot_survey_fingerprint(
+            sites,
+            quantities="skew",
+            render="imshow",
+            contours=True,
+            contour_kws={"levels": 4, "colors": "white", "linewidths": 0.8},
+        )
+        main_axes = [ax for ax in fig.axes if ax.get_ylabel()]
+        assert len(main_axes[0].images) == 1
+        assert main_axes[0].collections
+        plt.close("all")
+
+    def test_station_grid_aligns_every_panel(self):
+        sites = _mixed(3)
+        fig = plot_survey_fingerprint(
+            sites,
+            station_grid=True,
+            station_grid_kws={
+                "color": "magenta",
+                "linewidth": 1.25,
+                "linestyle": "--",
+                "alpha": 0.6,
+            },
+        )
+        main_axes = [ax for ax in fig.axes if ax.get_ylabel()]
+        assert len(main_axes) == 3
+        for ax in main_axes:
+            assert len(ax.lines) == 3
+            assert [line.get_xdata()[0] for line in ax.lines] == [0.5, 1.5, 2.5]
+            assert all(line.get_color() == "magenta" for line in ax.lines)
+            assert all(line.get_linewidth() == 1.25 for line in ax.lines)
+            assert all(line.get_linestyle() == "--" for line in ax.lines)
+        plt.close("all")
+
+    def test_invalid_renderer_and_quantity_raise(self):
+        sites = _mixed(2)
+        with np.testing.assert_raises(ValueError):
+            plot_survey_fingerprint(sites, render="contourf")
+        with np.testing.assert_raises(ValueError):
+            plot_survey_fingerprint(sites, quantities=["not-a-quantity"])
+
     def test_empty_sites_no_crash(self):
         try:
             plot_survey_fingerprint([])

@@ -14,6 +14,7 @@ from pycsamt.emtools.inspect import (
     frequency_coverage,
     list_missing_sections,
     plot_coverage,
+    plot_survey_inventory_overview,
     plot_rhoa_phi,
     plot_tipper_components,
     pseudosection,
@@ -229,6 +230,32 @@ class TestPlotCoverage:
             plot_coverage([])
         except Exception:
             pass
+        plt.close("all")
+
+
+class TestPlotSurveyInventoryOverview:
+    def test_aligned_count_and_coverage_panels(self):
+        sites = [_site("S00", n=5), _site("S01", n=7), _site("S02", n=4)]
+        fig = plot_survey_inventory_overview(sites)
+        data_axes = [ax for ax in fig.axes if ax.get_ylabel()]
+        assert len(data_axes) == 2
+        assert data_axes[0].xaxis.get_label_position() == "top"
+        assert len(data_axes[0].lines) >= 2  # count profile + station guides
+        assert data_axes[1].collections
+        assert data_axes[0].get_xlim() == data_axes[1].get_xlim()
+        plt.close("all")
+
+    def test_custom_station_labels_must_match(self):
+        with pytest.raises(ValueError, match="station_labels"):
+            plot_survey_inventory_overview(
+                [_site("S00"), _site("S01")],
+                station_order=["S00", "S01"],
+                station_labels=["only one"],
+            )
+
+    def test_empty_sites_returns_message_figure(self):
+        fig = plot_survey_inventory_overview([])
+        assert fig is not None
         plt.close("all")
 
 

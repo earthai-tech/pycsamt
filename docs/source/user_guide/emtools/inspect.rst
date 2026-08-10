@@ -361,6 +361,25 @@ which frequencies are shared by every station.
 Plot Frequency Coverage
 -----------------------
 
+For a first-pass acquisition dashboard, combine row counts and frequency
+placement with :func:`~pycsamt.emtools.plot_survey_inventory_overview`. Its
+station markers and labels sit above the count profile, while the lower map
+uses the same station centres to expose missing bands that equal row counts
+could conceal:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_survey_inventory_overview
+   >>> fig = plot_survey_inventory_overview(
+   ...     survey,
+   ...     station_grid=True,
+   ...     station_grid_kws={"color": "white", "linestyle": ":"},
+   ... )
+
+Use ``count_kws`` to control the upper line and markers, ``coverage_cmap`` for
+the lower map, and ``station_labels`` when display names should be shorter
+than the identifiers retained in the data.
+
 ``plot_coverage`` converts the frequency dictionary into a station by
 frequency presence mask.
 

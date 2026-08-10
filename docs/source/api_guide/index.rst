@@ -27,6 +27,7 @@ signatures. For the complete generated reference of every
    views
    mesh
    style
+   contour
    interpretation
    agent_config
    section

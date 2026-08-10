@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.style import PYCSAMT_STYLE
 from ..api.view import maybe_wrap_frame
 from ._core import (
@@ -289,6 +290,198 @@ def frequency_coverage(
                 g = a
         return g if g is not None else np.array([], dtype=float)
     raise ValueError("mode must be per-site|union|intersection")
+
+
+def plot_survey_inventory_overview(
+    sites: Any,
+    *,
+    station_order: list[str] | None = None,
+    station_labels: list[str] | None = None,
+    count_kws: dict[str, Any] | None = None,
+    coverage_cmap: str = "YlGnBu",
+    station_grid: bool = True,
+    station_grid_kws: dict[str, Any] | None = None,
+    figsize: tuple[float, float] | None = None,
+    title: str = "Survey inventory overview",
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> plt.Figure:
+    """Plot station inventory counts and the observed period coverage map.
+
+    The upper panel reports the number of usable frequency rows at each
+    station. The lower panel shows where those rows occur on a common
+    log-period axis, so equal row counts cannot conceal different bands or
+    internal gaps. Both panels use the same station centres.
+
+    Parameters
+    ----------
+    sites : any
+        Any input accepted by :func:`ensure_sites`.
+    station_order : list of str or None
+        Explicit station order. Missing names are retained as empty columns.
+    station_labels : list of str or None
+        Display labels corresponding to ``station_order``. By default the
+        resolved station names are used.
+    count_kws : dict or None
+        Matplotlib line/marker overrides for the upper inventory profile.
+        Useful keys include ``color``, ``marker``, ``markersize``,
+        ``linewidth``, ``markerfacecolor``, and ``markeredgecolor``.
+    coverage_cmap : str, default="YlGnBu"
+        Colormap for absent/present samples in the lower map.
+    station_grid : bool, default=True
+        Draw aligned vertical station guides in both panels.
+    station_grid_kws : dict or None
+        Keyword arguments forwarded to ``Axes.axvline``.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure containing the aligned inventory and coverage axes.
+    """
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    observed: dict[str, np.ndarray] = {}
+    for i, ed in enumerate(_iter_items(S)):
+        fr = _get_freq(ed)
+        observed[_name(ed, i)] = (
+            np.asarray(fr, dtype=float)
+            if isinstance(fr, np.ndarray)
+            else np.array([], dtype=float)
+        )
+
+    names = list(observed) if station_order is None else list(station_order)
+    if not names:
+        fig, ax = plt.subplots(figsize=figsize or (8.0, 3.5))
+        ax.text(0.5, 0.5, "no station data", ha="center", va="center")
+        ax.set_axis_off()
+        return fig
+    if station_labels is not None and len(station_labels) != len(names):
+        raise ValueError("station_labels must match the resolved station count")
+
+    labels = list(station_labels) if station_labels is not None else names
+    arrays = [observed.get(name, np.array([], dtype=float)) for name in names]
+    grid = _union_freq(arrays)
+    counts = np.asarray([arr.size for arr in arrays], dtype=int)
+    x = np.arange(len(names), dtype=float)
+    if figsize is None:
+        figsize = (max(9.0, 0.34 * len(names) + 2.5), 7.2)
+    fig, (ax_count, ax_map) = plt.subplots(
+        2,
+        1,
+        figsize=figsize,
+        gridspec_kw={"height_ratios": (1.0, 2.25), "hspace": 0.16},
+    )
+
+    line_kws: dict[str, Any] = {
+        "color": "#176b87",
+        "marker": "o",
+        "markersize": 5.5,
+        "linewidth": 1.5,
+        "markerfacecolor": "#f7fbff",
+        "markeredgecolor": "#12485a",
+        "markeredgewidth": 1.0,
+        "zorder": 4,
+    }
+    line_kws.update(count_kws or {})
+    ax_count.vlines(x, 0, counts, color=line_kws["color"], alpha=0.24, lw=1.0)
+    ax_count.plot(x, counts, **line_kws)
+    pad = max(0.8, float(np.nanmax(counts)) * 0.025)
+    for xpos, count in zip(x, counts):
+        ax_count.text(
+            xpos,
+            count + pad,
+            str(count),
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color="#26343d",
+        )
+    ax_count.set_ylabel("Frequency rows")
+    ax_count.set_ylim(0, max(1.0, float(np.nanmax(counts)) + 4.5 * pad))
+    ax_count.grid(axis="y", color="#d6dde1", lw=0.7, alpha=0.75)
+    ax_count.set_axisbelow(True)
+    PYCSAMT_STATION_RENDERING.apply(
+        ax_count,
+        x,
+        labels,
+        preset="pseudosection",
+        xlim=(-0.5, len(names) - 0.5),
+    )
+
+    if grid.size:
+        presence = np.vstack([_presence_vec(arr, grid) for arr in arrays]).T
+        periods = 1.0 / grid
+        order = np.argsort(periods)
+        log_periods = np.log10(periods[order])
+        presence = presence[order]
+        if log_periods.size == 1:
+            y_edges = np.array([log_periods[0] - 0.5, log_periods[0] + 0.5])
+        else:
+            y_edges = np.empty(log_periods.size + 1)
+            y_edges[1:-1] = 0.5 * (log_periods[:-1] + log_periods[1:])
+            y_edges[0] = log_periods[0] - 0.5 * (log_periods[1] - log_periods[0])
+            y_edges[-1] = log_periods[-1] + 0.5 * (
+                log_periods[-1] - log_periods[-2]
+            )
+        image = ax_map.pcolormesh(
+            np.arange(len(names) + 1) - 0.5,
+            y_edges,
+            presence,
+            shading="flat",
+            cmap=coverage_cmap,
+            vmin=0,
+            vmax=1,
+        )
+        ax_map.set_ylim(y_edges[-1], y_edges[0])
+        ticks = np.arange(np.ceil(log_periods[0]), np.floor(log_periods[-1]) + 1)
+        ax_map.set_yticks(ticks)
+        ax_map.set_yticklabels([f"$10^{{{int(value)}}}$" for value in ticks])
+        colorbar = fig.colorbar(
+            image,
+            ax=ax_map,
+            orientation="horizontal",
+            pad=0.16,
+            fraction=0.06,
+            aspect=45,
+        )
+        colorbar.set_ticks([0, 1])
+        colorbar.set_ticklabels(["absent", "present"])
+        colorbar.set_label("Frequency sample availability", fontsize=8)
+        colorbar.ax.tick_params(labelsize=8, length=2)
+    else:
+        ax_map.text(0.5, 0.5, "no frequency data", ha="center", va="center")
+    ax_map.set_ylabel("Period (s)")
+    ax_map.set_xlabel("Stations share one aligned horizontal axis")
+    ax_map.set_xlim(-0.5, len(names) - 0.5)
+    ax_map.tick_params(axis="x", bottom=False, labelbottom=False)
+
+    guide_kws: dict[str, Any] = {
+        "color": "white",
+        "linewidth": 0.6,
+        "linestyle": ":",
+        "alpha": 0.8,
+        "zorder": 3,
+    }
+    guide_kws.update(station_grid_kws or {})
+    if station_grid:
+        for ax in (ax_count, ax_map):
+            for xpos in x:
+                ax.axvline(xpos, **guide_kws)
+    for ax in (ax_count, ax_map):
+        ax.set_facecolor("#f8fafb")
+        for spine in ax.spines.values():
+            spine.set_color("#38444c")
+            spine.set_linewidth(0.8)
+    if title:
+        fig.suptitle(title, y=1.045, fontsize=12, fontweight="bold")
+    return fig
 
 
 def plot_coverage(

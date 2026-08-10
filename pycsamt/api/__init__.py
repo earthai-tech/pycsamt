@@ -39,6 +39,14 @@ from .cli import (
     reset_cli,
     verbose_option,
 )
+from .contour import (
+    PYCSAMT_CONTOUR,
+    ContourStyle,
+    PyCSAMTContour,
+    configure_contour,
+    reset_contour,
+    use_contour,
+)
 from .control import (
     PYCSAMT_CONTROL,
     FrequencyAxisControl,
@@ -211,6 +219,13 @@ __all__ = [
     "configure_control",
     "reset_control",
     "wrap_phase",
+    # contour API
+    "ContourStyle",
+    "PYCSAMT_CONTOUR",
+    "PyCSAMTContour",
+    "configure_contour",
+    "reset_contour",
+    "use_contour",
     # section API
     "PYCSAMT_SECTION",
     "PyCSAMTSection",

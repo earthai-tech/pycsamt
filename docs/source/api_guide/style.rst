@@ -432,6 +432,37 @@ The three named-preset strings (``"pycsamt"``/``"pycsamt-rose"``,
 values regardless of what ``PYCSAMT_STYLE.rose`` currently holds, since
 they are resolved independently of the singleton in the same way.
 
+Contour And Station-Guide Overlays
+----------------------------------
+
+Raster and pseudosection overlays use a separate configuration family because
+they describe spatial structure rather than data-series identity. The live
+:data:`pycsamt.api.PYCSAMT_CONTOUR` configuration supplies contour levels,
+colour, width, line style, opacity, and optional labels to compatible plots.
+For example, :func:`pycsamt.emtools.plot_survey_fingerprint` uses the visible
+``"review"`` contour preset by default:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.api import configure_contour
+   >>> configure_contour(linewidths=0.9, colors="#202020", alpha=0.85)
+   >>> fig = plot_survey_fingerprint(
+   ...     sites,
+   ...     render="imshow",
+   ...     station_grid=True,
+   ...     station_grid_kws={
+   ...         "color": "white",
+   ...         "linewidth": 0.65,
+   ...         "linestyle": ":",
+   ...         "alpha": 0.75,
+   ...     },
+   ... )
+
+The contour configuration is persistent; ``station_grid_kws`` is deliberately
+local to the plot call. This keeps survey-dependent station density from
+silently changing unrelated figures. See :doc:`contour` for presets, temporary
+contexts, labels, override precedence, and interpretation guidance.
+
 Configuring And Sharing Styles
 ------------------------------
 
@@ -474,6 +505,9 @@ Next Steps
 
 * :doc:`overview` for how the style family fits alongside every other
   :mod:`pycsamt.api` configuration family.
+* :doc:`contour` for persistent contour presets, per-call overrides, and
+  station-aligned vertical guides. Contours describe equal-value structure;
+  station guides identify the shared sampling column across stacked panels.
 * :doc:`../user_guide/emtools/tensor` for the phase-tensor ellipse
   encoding itself, independent of styling.
 * :doc:`../user_guide/emtools/ss` for the static-shift correction methods

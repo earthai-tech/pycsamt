@@ -1,749 +1,202 @@
 .. _getting-started-configuration:
 
-Configuration
-=============
+Configure a first session
+=========================
 
-pyCSAMT can be used with almost no configuration for a first survey, but a
-real project usually needs a few choices to be explicit:
+pyCSAMT works with its defaults, so configuration is not a prerequisite for
+loading a first survey. For a reproducible project, however, make three choices
+explicit near the beginning of the script or notebook:
 
-* where outputs are written;
-* how progress and CLI output should look;
-* whether dataframe-like results are wrapped in pyCSAMT view objects;
-* which plot style should be used;
-* which AI backend should be selected;
-* whether AI-assisted agents may call an LLM provider;
-* how much LLM cost is allowed in one session.
+* how stations are ordered;
+* where generated figures are written;
+* which visual style is used.
 
-Most v2 configuration follows the same pattern:
+These settings are process-local. They affect subsequent calls in the current
+Python process but do not rewrite the field data. The complete configuration
+system—including views, pipelines, meshes, sections, interpretation, CLI, and
+agents—is documented in :doc:`../api_guide/configuration`.
 
-.. code-block:: python
-   :linenos:
+Start with a small explicit setup
+---------------------------------
 
-   configure_something(...)
-   reset_something()
+The following setup preserves the loader's station order and gives figures a
+predictable destination and appearance:
 
-   with PYCSAMT_SOMETHING.context(...):
-       ...
+.. code-block:: pycon
 
-Use global configuration for a notebook or application session.  Use context
-managers when one workflow needs temporary settings.
+   >>> from pycsamt.api import (
+   ...     PLOT_CONFIG,
+   ...     PYCSAMT_ORDERING,
+   ...     configure_ordering,
+   ...     set_dpi,
+   ...     set_savedir,
+   ...     use_style,
+   ... )
+   >>> configure_ordering(mode="input")
+   SiteOrderingConfig(mode='input', min_linearity=0.95, max_cross_track_ratio=0.15, min_coordinate_fraction=0.6)
+   >>> use_style("pycsamt")
+   >>> set_savedir("results/figures")
+   >>> set_dpi(200)
+   >>> PYCSAMT_ORDERING.mode
+   'input'
+   >>> PLOT_CONFIG.savedir, PLOT_CONFIG.dpi
+   ('results/figures', 200)
 
+``mode="input"`` is a conservative first-survey choice because the returned
+row order follows file discovery. It is reproducible only when the input file
+list itself is reproducible. When filenames do not reflect profile position,
+use the ordering modes described below after validating the coordinates.
 
-Quick project setup
--------------------
+``set_savedir`` establishes a default for plotting functions that honor the
+global figure configuration. It does not create a scientific project layout or
+force every third-party Matplotlib call into that directory. Pass an explicit
+output path when a function documents one.
 
-This is a reasonable starting configuration for a local project.
+Choose station ordering deliberately
+------------------------------------
 
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import (
-       configure_api_view,
-       configure_cli,
-       configure_pipe,
-       configure_style,
-   )
-   from pycsamt.backends import set_backend
-
-   configure_api_view(backend="pycsamt")
-
-   configure_cli(
-       log__level=1,
-       output__format="text",
-       output__dir="results",
-       build__n_jobs=4,
-   )
-
-   configure_pipe(
-       output_root="results/pipeline",
-       plot_dpi=200,
-       plot_fmt="png",
-       show_progress=True,
-       on_step_error="warn",
-   )
-
-   configure_style(
-       multiline__mode="gradient",
-       multiline__base_color="blue",
-       mt__xy__color="#003f88",
-       mt__yx__color="#d62828",
-   )
-
-   # Optional: only needed for AI/model-zoo workflows.
-   set_backend("auto")
-
-This does not configure LLM agents.  Agents can still run deterministic steps
-where supported, but LLM interpretation remains disabled until a provider key
-is configured.
-
-
-Configuration layers
---------------------
-
-pyCSAMT has several configuration layers because different parts of the
-package solve different problems.
+Station order controls how survey rows and profile plots correspond to
+physical locations. The main choices are:
 
 .. list-table::
    :header-rows: 1
-   :widths: 24 34 42
+   :widths: 22 78
 
-   * - Layer
-     - Main object
-     - What it controls
-   * - API view
-     - ``PYCSAMT_API_VIEW``
-     - Whether dataframe-like results are returned as pyCSAMT view objects or
-       raw pandas-style objects.
-   * - CLI
-     - ``PYCSAMT_CLI``
-     - Verbosity, color, output format, output directory, cache, and job count
-       for command-line workflows.
-   * - Pipeline
-     - ``PYCSAMT_PIPE``
-     - Pipeline output directories, progress style, plot format, report format,
-       and step error policy.
-   * - Style
-     - ``PYCSAMT_STYLE``
-     - Plot colors, line styles, rose diagrams, component colors, and
-       publication-style visual defaults.
-   * - AI backend
-     - ``pycsamt.backends``
-     - PyTorch/TensorFlow backend selection for AI inversion and model-zoo
-       workflows.
-   * - Agents
-     - ``AGENT_CONFIG``
-     - LLM provider, model, API keys, pricing, and session budget.
+   * - Mode
+     - Use it when
+   * - ``"input"``
+     - The supplied file or object sequence already has the required order.
+   * - ``"station"``
+     - Station identifiers encode the desired numeric order, such as ``S2``
+       before ``S10``.
+   * - ``"latitude"`` or ``"longitude"``
+     - A cardinal coordinate direction represents the profile adequately.
+   * - ``"chainage"``
+     - Valid coordinates define a survey line and order should follow distance
+       projected along it.
+   * - ``"auto"``
+     - pyCSAMT may use coordinate-derived chainage when the geometry passes its
+       single-line checks, otherwise preserving input order.
 
+Automatic ordering is convenient, but it cannot detect every coordinate or
+survey-layout error. Compare the resulting station sequence with the field
+manifest before using row position as profile distance. See
+:func:`pycsamt.emtools.ensure_sites` and :doc:`../user_guide/data_loading` for
+the processing boundary where ordering is applied.
 
-Inspect current settings
+Choose a plotting preset
 ------------------------
 
-The global configuration objects are normal Python objects.  You can print
-them or inspect their attributes.
+Named styles provide consistent colors and line conventions without requiring
+new users to configure individual components:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.api import PYCSAMT_CLI, PYCSAMT_PIPE
-   from pycsamt.api.view import PYCSAMT_API_VIEW
-   from pycsamt.backends import get_backend, list_backends
+   >>> from pycsamt.api import use_style
+   >>> use_style("publication")
 
-   print(PYCSAMT_CLI)
-   print(PYCSAMT_PIPE)
-   print(PYCSAMT_API_VIEW)
-   print(get_backend())
-   print(list_backends())
+Use ``"pycsamt"`` for the normal project appearance, ``"publication"`` for
+print-oriented figures, and ``"dark"`` only when the surrounding medium also
+uses a dark background. Plot style changes presentation, not the underlying
+resistivity, phase, uncertainty, or inversion result.
 
-For agents:
+For multi-format output, set the formats and resolution together:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.agents import AGENT_CONFIG
+   >>> from pycsamt.api import set_dpi, set_fmt, set_savedir
+   >>> set_fmt("png", "pdf")
+   >>> set_dpi(300)
+   >>> set_savedir("results/publication")
 
-   print(AGENT_CONFIG.info())
+PNG is convenient for web pages and notebooks; PDF preserves vector content
+for publication when the plotting elements support it. Higher DPI improves
+raster resolution but does not add information absent from the data.
 
+Keep API result views at their default initially
+------------------------------------------------
 
-Temporary configuration
------------------------
+Public table-producing functions normally return pyCSAMT view objects such as
+``APIFrame``. These retain metadata and provide readable summaries while still
+allowing conversion to pandas:
 
-Context managers are useful when a single block of code needs different
-settings without changing the rest of the session.
+.. code-block:: pycon
 
-.. code-block:: python
-   :linenos:
+   >>> from pycsamt.api import read_edis
+   >>> survey = read_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=False,
+   ...     progress=False,
+   ... )
+   >>> summary = survey.summary()
+   >>> type(summary).__name__
+   'APIFrame'
+   >>> summary.to_pandas(copy=True).shape
+   (28, 6)
 
-   from pycsamt.api import PYCSAMT_PIPE
-   from pycsamt.pipeline import Pipeline, Step
+There is usually no reason to change this setting during Getting Started. If
+an integration requires raw pandas outputs globally, use
+:func:`pycsamt.api.configure_api_view` as described in
+:doc:`../api_guide/views`.
 
-   pipe = Pipeline([
-       ("notch", Step("NR001", mains_hz=50)),
-       ("band", Step("FREQ001")),
-   ])
+Use temporary settings for isolated work
+----------------------------------------
 
-   with PYCSAMT_PIPE.context(
-       output_root="results/publication",
-       plot_dpi=300,
-       plot_fmt="pdf",
-       show_progress=False,
-   ):
-       result = pipe.run(sites)
+Configuration singletons provide context managers when one block needs a
+temporary override. The previous values are restored even if the block raises
+an exception:
 
-   # The previous pipeline settings are restored here.
+.. code-block:: pycon
 
+   >>> from pycsamt.api import PYCSAMT_ORDERING
+   >>> before = PYCSAMT_ORDERING.mode
+   >>> with PYCSAMT_ORDERING.context(mode="station"):
+   ...     print(PYCSAMT_ORDERING.mode)
+   station
+   >>> PYCSAMT_ORDERING.mode == before
+   True
 
-API view configuration
-----------------------
+This is safer in notebooks and reusable libraries than changing a global
+setting for one operation and relying on a later cell to restore it.
 
-Many public helpers return dataframe-like data.  The API view layer controls
-whether those results are wrapped in pyCSAMT's lightweight view objects.
+Reset the settings you changed
+------------------------------
 
-Default behavior uses pyCSAMT wrappers:
+Reset helpers restore package defaults for the current process:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.api import configure_api_view, read_edis
+   >>> from pycsamt.api import (
+   ...     reset_ordering,
+   ...     reset_plot_config,
+   ...     reset_style,
+   ... )
+   >>> reset_ordering()
+   >>> reset_plot_config()
+   >>> reset_style()
 
-   configure_api_view(backend="pycsamt")
-   survey = read_edis("data/willy/edis")
+Resetting does not remove output files and does not undo transformations
+already applied to data objects.
 
-To receive raw pandas-style objects where applicable:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import configure_api_view
-
-   configure_api_view(backend="pandas")
-
-Accepted values:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Value
-     - Meaning
-   * - ``"pycsamt"``, ``"api"``, ``"view"``, ``True``
-     - Return pyCSAMT API view wrappers.
-   * - ``"pandas"``, ``"raw"``, ``"none"``, ``False``
-     - Return the raw dataframe-like object.
-   * - callable
-     - Call ``wrapper(data, **metadata)`` and return the custom wrapper result.
-
-Environment variable:
-
-.. code-block:: bash
-   :linenos:
-
-   export PYCSAMT_API_VIEW=pandas
-
-
-CLI configuration
------------------
-
-The CLI configuration uses section-style keys with double underscores:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import PYCSAMT_CLI, configure_cli, reset_cli
-
-   configure_cli(
-       log__level=1,
-       log__color=True,
-       output__format="json",
-       output__dir="results/cli",
-       output__overwrite=False,
-       build__n_jobs=4,
-       build__cache=True,
-   )
-
-   print(PYCSAMT_CLI.summary())
-
-   reset_cli()
-
-Important keys:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 28 42
-
-   * - Key
-     - Values
-     - Meaning
-   * - ``log__level``
-     - ``0``, ``1``, ``2``
-     - Quiet, info, or debug verbosity.
-   * - ``log__color``
-     - ``True`` or ``False``
-     - Enable colored terminal output.
-   * - ``output__format``
-     - ``"text"``, ``"json"``, ``"csv"``
-     - Preferred command output format.
-   * - ``output__dir``
-     - path-like
-     - Default output directory.
-   * - ``output__overwrite``
-     - ``True`` or ``False``
-     - Whether existing output may be overwritten.
-   * - ``build__n_jobs``
-     - integer >= 1
-     - Number of jobs for CLI workflows that support parallel execution.
-   * - ``build__cache``
-     - ``True`` or ``False``
-     - Enable command cache where supported.
-
-Environment variables loaded at import time:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 34 66
-
-   * - Variable
-     - Meaning
-   * - ``PYCSAMT_VERBOSE``
-     - Integer verbosity level, usually ``0``, ``1``, or ``2``.
-   * - ``PYCSAMT_NO_COLOR``
-     - Any non-empty value disables color.
-   * - ``PYCSAMT_OUTPUT``
-     - Output format: ``text``, ``json``, or ``csv``.
-   * - ``PYCSAMT_OUTPUT_DIR``
-     - Default output directory.
-   * - ``PYCSAMT_JOBS``
-     - Integer job count.
-
-Example shell setup:
-
-.. code-block:: bash
-   :linenos:
-
-   export PYCSAMT_VERBOSE=1
-   export PYCSAMT_OUTPUT=json
-   export PYCSAMT_OUTPUT_DIR=results/cli
-   export PYCSAMT_JOBS=4
-
-
-Pipeline configuration
-----------------------
-
-Pipeline configuration controls the default behavior of
-``pycsamt.pipeline.Pipeline.run``.
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import PYCSAMT_PIPE, configure_pipe, reset_pipe
-
-   configure_pipe(
-       output_root="results/pipeline",
-       processed_subdir="processed",
-       plots_subdir="plots",
-       on_step_error="warn",
-       save_intermediate=False,
-       show_progress=True,
-       progress_style="bar",
-       plot_dpi=150,
-       plot_fmt="png",
-       report_formats=("html", "txt"),
-   )
-
-   print(PYCSAMT_PIPE)
-
-   reset_pipe()
-
-Key settings:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 28 32 40
-
-   * - Setting
-     - Default
-     - Meaning
-   * - ``output_root``
-     - ``"pipe_results"``
-     - Root directory used when ``Pipeline.run`` is called without ``outdir``.
-   * - ``processed_subdir``
-     - ``"processed"``
-     - Subdirectory for processed EDI files.
-   * - ``plots_subdir``
-     - ``"plots"``
-     - Subdirectory for QC and diagnostic figures.
-   * - ``on_step_error``
-     - ``"warn"``
-     - Step failure policy: ``"raise"``, ``"warn"``, or ``"skip"``.
-   * - ``save_intermediate``
-     - ``False``
-     - Save EDI snapshots after each step.
-   * - ``show_progress``
-     - ``True``
-     - Show progress during pipeline execution.
-   * - ``progress_style``
-     - ``"bar"``
-     - Progress style: ``"bar"``, ``"log"``, or ``"silent"``.
-   * - ``plot_dpi``
-     - ``150``
-     - DPI for saved figures.
-   * - ``plot_fmt``
-     - ``"png"``
-     - Figure format, for example ``"png"``, ``"pdf"``, or ``"svg"``.
-   * - ``report_formats``
-     - ``("html", "txt")``
-     - Pipeline report formats.
-
-Use stricter error behavior when validating a new workflow:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import PYCSAMT_PIPE
-
-   with PYCSAMT_PIPE.context(on_step_error="raise"):
-       result = pipe.run(sites, outdir="results/debug")
-
-
-Plot style configuration
-------------------------
-
-Plot style configuration keeps figures consistent across notebooks,
-tutorials, reports, and agent-generated outputs.
-
-Use named style presets where available:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import use_style
-
-   use_style("publication")
-
-Override specific style attributes with double-underscore paths:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import configure_style
-
-   configure_style(
-       multiline__mode="gradient",
-       multiline__base_color="teal",
-       multiline__lw=1.8,
-       mt__xy__color="#003f88",
-       mt__yx__color="#d62828",
-       correction__before__color="#808080",
-       correction__after__color="#005f73",
-   )
-
-Temporary style:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import PYCSAMT_STYLE
-
-   with PYCSAMT_STYLE.context("dark"):
-       fig = plot_function(...)
-
-The exact style sections are documented in the API reference, but the most
-common sections are:
-
-* ``multiline`` for multi-station and multi-profile lines;
-* ``mt`` for MT component colors;
-* ``rose`` for rose diagrams;
-* ``correction`` for before/after correction figures;
-* ``raw`` for diagnostic raw-data traces.
-
-
-AI backend configuration
-------------------------
-
-AI inversion and model-zoo workflows can use PyTorch or TensorFlow.  Neither
-backend is required for the base package.  Backend packages are loaded lazily
-when AI functionality is used.
-
-Inspect available backends:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.backends import get_backend, list_backends
-
-   print(list_backends())
-   print(get_backend())
-
-Select a backend for this session:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.backends import set_backend
-
-   set_backend("torch")
-   # or
-   set_backend("tensorflow")
-   # or
-   set_backend("auto")
-
-Persist a backend choice to ``~/.pycsamt/config.json``:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.backends import set_backend
-
-   set_backend("torch", persist=True)
-
-Environment variable:
-
-.. code-block:: bash
-   :linenos:
-
-   export PYCSAMT_AI_BACKEND=torch
-
-Backend resolution order:
-
-1. Explicit ``set_backend(...)`` call in the current Python session.
-2. ``PYCSAMT_AI_BACKEND`` environment variable.
-3. ``~/.pycsamt/config.json`` key ``"ai_backend"``.
-4. Auto-detection from installed frameworks.
-
-
-Agent and LLM configuration
+Configuration that can wait
 ---------------------------
 
-pyCSAMT agents can run deterministic scientific steps without an LLM when the
-agent supports fallback behavior.  LLM configuration is only needed for
-natural-language interpretation, report wording, and assistant-style workflow
-guidance.
-
-Basic setup:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.agents import configure_agents
-
-   configure_agents(
-       provider="claude",
-       api_key="sk-ant-...",
-       model="claude-sonnet-4-6",
-   )
-
-Configure with environment variables instead of hard-coding keys:
-
-.. code-block:: bash
-   :linenos:
-
-   export ANTHROPIC_API_KEY="sk-ant-..."
-   export OPENAI_API_KEY="sk-..."
-   export GOOGLE_API_KEY="AIza..."
-
-Then select the provider in Python:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.agents import configure_agents
-
-   configure_agents(provider="openai")
-
-Provider environment variables:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 28 72
-
-   * - Provider
-     - Variables checked
-   * - ``"claude"``
-     - ``ANTHROPIC_API_KEY``, ``PYCSAMT_CLAUDE_API_KEY``
-   * - ``"openai"``
-     - ``OPENAI_API_KEY``, ``PYCSAMT_OPENAI_API_KEY``
-   * - ``"gemini"``
-     - ``GOOGLE_API_KEY``, ``GOOGLE_GENERATIVEAI_API_KEY``,
-       ``PYCSAMT_GEMINI_API_KEY``
-
-Use a session budget before experimenting with LLM-assisted agents:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.agents import AGENT_CONFIG
-
-   AGENT_CONFIG.set_budget(usd=2.0)
-   print(AGENT_CONFIG.remaining_usd)
-
-Switch providers:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.agents import AGENT_CONFIG
-
-   AGENT_CONFIG.set_key("claude", "sk-ant-...")
-   AGENT_CONFIG.set_key("openai", "sk-...")
-
-   AGENT_CONFIG.switch("claude")
-   # run Claude-assisted workflow
-
-   AGENT_CONFIG.switch("openai")
-   # run OpenAI-assisted workflow
-
-Temporary LLM override:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.agents import AGENT_CONFIG, DataQCAgent
-
-   with AGENT_CONFIG.using(provider="gemini", api_key="AIza..."):
-       result = DataQCAgent().execute({"path": "data/willy/edis"})
-
-   # Original agent settings are restored here.
-
-For the full agent configuration guide, see
-:ref:`agents-llm-configuration`.
-
-
-Configuration files
--------------------
-
-Most day-to-day configuration is done in Python or environment variables.
-The AI backend layer can also persist the selected backend to:
-
-.. code-block:: text
-   :linenos:
-
-   ~/.pycsamt/config.json
-
-Example content:
-
-.. code-block:: json
-   :linenos:
-
-   {
-     "ai_backend": "torch"
-   }
-
-Pipeline workflows may also be stored as YAML or JSON pipeline configuration
-files.  Those files describe processing steps, not global runtime settings.
-See the pipeline configuration guide for details:
-:ref:`pipeline-configuration-files`.
-
-
-Logging behavior
-----------------
-
-CLI verbosity is controlled by ``PYCSAMT_CLI`` and the ``PYCSAMT_VERBOSE``
-environment variable.  Python logging is initialized by the package at import
-time so command-line and library workflows have a consistent baseline.
-
-For most users:
-
-.. code-block:: bash
-   :linenos:
-
-   export PYCSAMT_VERBOSE=1
-
-For Python scripts:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import configure_cli
-
-   configure_cli(log__level=2)
-
-Use ``log__level=2`` for debugging configuration and parsing problems.  Use
-``log__level=0`` for quiet batch runs.
-
-
-Recommended setups
-------------------
-
-Notebook exploration:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import configure_api_view, configure_pipe, use_style
-
-   configure_api_view(backend="pycsamt")
-   configure_pipe(output_root="notebook_results", show_progress=True)
-   use_style("publication")
-
-Batch processing:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import configure_cli, configure_pipe
-
-   configure_cli(log__level=1, output__format="json", build__n_jobs=8)
-   configure_pipe(
-       output_root="batch_results",
-       progress_style="log",
-       on_step_error="warn",
-       save_intermediate=True,
-   )
-
-AI inversion:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.backends import set_backend
-   from pycsamt.agents import AGENT_CONFIG
-
-   set_backend("auto")
-   AGENT_CONFIG.set_budget(usd=5.0)
-
-   # Add provider only when LLM explanation is needed.
-   # AGENT_CONFIG.configure(provider="claude")
-
-Report/publication figures:
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import configure_pipe, use_style
-
-   use_style("publication")
-   configure_pipe(plot_dpi=300, plot_fmt="pdf")
-
-
-Reset configuration
--------------------
-
-Reset helpers restore package defaults for the current Python session.
-
-.. code-block:: python
-   :linenos:
-
-   from pycsamt.api import reset_api_view, reset_cli, reset_pipe, reset_style
-   from pycsamt.agents import reset_agents
-
-   reset_api_view()
-   reset_cli()
-   reset_pipe()
-   reset_style()
-   reset_agents()
-
-Backend persistence is separate.  If you used ``set_backend(..., persist=True)``,
-edit or remove ``~/.pycsamt/config.json`` to clear the saved backend choice.
-
-
-Common mistakes
----------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 36 64
-
-   * - Problem
-     - Fix
-   * - Agent does not produce LLM interpretation
-     - Configure a provider and key, or accept deterministic no-LLM fallback.
-   * - AI inversion says no backend is installed
-     - Install PyTorch or TensorFlow, then run ``set_backend("auto")``.
-   * - Pipeline writes to an unexpected directory
-     - Pass ``outdir=...`` to ``Pipeline.run`` or configure
-       ``output_root``.
-   * - CLI ignores environment changes
-     - Set environment variables before importing pyCSAMT or call
-       ``PYCSAMT_CLI.load_env()``.
-   * - Plots are inconsistent across notebooks
-     - Configure style once at the start of the session.
-   * - Raw pandas objects are needed
-     - Use ``configure_api_view(backend="pandas")``.
-
-
-In short
---------
-
-For a first project, configure output directories, progress behavior, and
-plot style.  Add AI backend selection only when using AI inversion.  Add LLM
-agent configuration only when natural-language interpretation or assistant
-guidance is required.
+Do not configure every subsystem before the first survey. Add settings when a
+workflow actually needs them:
+
+* pipeline output and failure policies: :doc:`../user_guide/pipeline/index`;
+* mesh, section, station, and interpretation rendering:
+  :doc:`../api_guide/configuration`;
+* AI framework selection: :doc:`../user_guide/ai_inversion/index`;
+* agent providers, credentials, and spending limits:
+  :doc:`../user_guide/agents/llm_configuration`;
+* command-line defaults: :doc:`../cli/index`.
+
+.. important::
+
+   Never place provider API keys in documentation, notebooks committed to
+   version control, pipeline configuration files, or command history. Use the
+   provider's supported environment variable or a local secret store.
+
+With input format and session defaults established, continue to
+:doc:`first_survey` to load and inspect the first survey line.

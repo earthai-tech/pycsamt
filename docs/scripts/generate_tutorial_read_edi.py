@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
-import io
 import sys
 from pathlib import Path
 
@@ -23,12 +21,22 @@ IMAGE_DIR = (
 
 
 def _import_pycsamt():
-    sys.path.insert(0, str(ROOT))
-    stderr = io.StringIO()
-    with contextlib.redirect_stderr(stderr):
-        pass
+    """Import the public APIs used by this standalone generator."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
 
-    return locals()
+    from pycsamt.api import read_edi, read_edis
+    from pycsamt.emtools import (
+        plot_survey_fingerprint,
+        plot_survey_inventory_overview,
+    )
+
+    return {
+        "plot_survey_fingerprint": plot_survey_fingerprint,
+        "plot_survey_inventory_overview": plot_survey_inventory_overview,
+        "read_edi": read_edi,
+        "read_edis": read_edis,
+    }
 
 
 def _style_axis(ax: plt.Axes) -> None:
@@ -45,53 +53,15 @@ def _save(fig: plt.Figure, name: str) -> None:
     plt.close(fig)
 
 
-def _inventory_plot(inventory) -> None:
-    plot_df = inventory.copy()
-    plot_df["short_station"] = plot_df["station"].str.replace(
-        "23-", "", regex=False
+def _inventory_plot(functions, survey) -> None:
+    labels = [name.replace("23-", "") for name in survey.stations]
+    fig = functions["plot_survey_inventory_overview"](
+        survey.collection,
+        station_labels=labels,
+        recursive=False,
+        title="L18PLT acquisition inventory and period coverage",
+        figsize=(11.2, 7.2),
     )
-    x = np.arange(len(plot_df))
-    fig, axes = plt.subplots(
-        2, 1, figsize=(11.2, 7.0), constrained_layout=True
-    )
-
-    axes[0].bar(
-        x,
-        plot_df["n_freq"],
-        color="#2f6f8f",
-        edgecolor="#27323a",
-        linewidth=0.45,
-        alpha=0.88,
-    )
-    axes[0].set_xticks(x[::2])
-    axes[0].set_xticklabels(
-        plot_df["short_station"].iloc[::2], rotation=45, ha="right"
-    )
-    axes[0].set_ylabel("Frequency rows")
-    axes[0].set_title("Loaded station inventory")
-    _style_axis(axes[0])
-
-    availability = (
-        plot_df[["tipper", "spectra", "ts"]].astype(int).T.to_numpy()
-    )
-    im = axes[1].imshow(
-        availability, aspect="auto", cmap="YlGnBu", vmin=0, vmax=1
-    )
-    axes[1].set_yticks([0, 1, 2])
-    axes[1].set_yticklabels(["tipper", "spectra", "time series"])
-    axes[1].set_xticks(x[::2])
-    axes[1].set_xticklabels(
-        plot_df["short_station"].iloc[::2], rotation=45, ha="right"
-    )
-    axes[1].set_xlabel("Station")
-    axes[1].set_title("Optional EDI sections detected")
-    axes[1].grid(False)
-    axes[1].set_facecolor("#fbfbf7")
-    for spine in axes[1].spines.values():
-        spine.set_color("#39434d")
-    cb = fig.colorbar(im, ax=axes[1], pad=0.015)
-    cb.set_ticks([0, 1])
-    cb.set_ticklabels(["absent", "present"])
     _save(fig, "survey_inventory_overview.png")
 
 
@@ -118,6 +88,9 @@ def _fingerprint(functions, survey) -> None:
     fig = functions["plot_survey_fingerprint"](
         survey.collection,
         quantities=["skew", "ellipt", "s1"],
+        render="imshow",
+        plot_kws={"interpolation": "bilinear"},
+        station_grid=True,
         period_range=(1e-4, 1.0),
         recursive=False,
         title="L18PLT quick survey fingerprint",
@@ -140,9 +113,19 @@ def main() -> int:
     one = functions["read_edi"](ONE_EDI)
     single = functions["read_edis"](ONE_EDI, recursive=False, progress=False)
 
-    _inventory_plot(inventory)
+    _inventory_plot(functions, survey)
     _path_plot(inventory)
-    _fingerprint(functions, survey)
+    # Some processing-oriented plotting paths normalize station metadata on
+    # their input collection.  Use a separate load so figure generation cannot
+    # alter the survey used for captured inventory and selection output.
+    plot_survey = functions["read_edis"](
+        DATA_DIR,
+        recursive=False,
+        strict=False,
+        on_dup="replace",
+        progress=False,
+    )
+    _fingerprint(functions, plot_survey)
 
     print("survey_text:")
     print(survey)

@@ -55,6 +55,7 @@
     var versionPattern = info.version.replace(/\./g, "\\.");
     return (
       /\/changelog\.html$/.test(path) ||
+      /\/changelog\/v\d+\.html$/.test(path) ||
       /\/release_notes\/(index\.html)?$/.test(path) ||
       new RegExp(
         "/release_notes/v" + versionPattern + "\\.html$"

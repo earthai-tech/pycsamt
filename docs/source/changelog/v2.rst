@@ -23,7 +23,7 @@ examples for the API view layer exposed and fixed a custom-wrapper bypass.
 The bulk of this release is documentation: a new end-to-end Stratagem
 hardware-to-inversion tutorial built on a real Dafang field survey, a
 rewritten* :doc:`/api_guide/views` *page, new FAQ entries, and repository
-cleanup.*
+cleanup. See* :ref:`release_v2_2_2` *for the full account.*
 
 Added
 ~~~~~

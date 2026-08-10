@@ -463,6 +463,19 @@ For API/docstring edits:
    sphinx-build -q -b html source /tmp/pycsamt-docs-html-api \
        source/api/index.rst
 
+After any complete HTML build, validate that every object in the searchable
+public API table has a registered Sphinx target:
+
+.. code-block:: bash
+   :linenos:
+
+   python scripts/validate_api_catalog.py --inventory build/html/objects.inv
+
+The command exits nonzero and lists every unresolved class or function. This
+prevents an importable object from appearing as unlinked, fully qualified text
+in the long table. ``make validate-api`` runs the same check against the
+default HTML build directory.
+
 For release preparation:
 
 .. code-block:: bash
@@ -488,6 +501,10 @@ Recommended CI steps:
    - name: Build documentation
      working-directory: docs
      run: sphinx-build -W --keep-going -E -a -b html source build/html
+
+   - name: Validate public API catalogue
+     working-directory: docs
+     run: python scripts/validate_api_catalog.py --inventory build/html/objects.inv
 
 During the v2 migration, CI may temporarily use a non-strict build while known
 legacy warnings are cleaned:

@@ -33,17 +33,13 @@ Latest release
 
 .. _changelog-latest:
 
-**2.2.0** — *2026-08-05* — genuine 3-D and triangular-mesh 2-D Maxwell
-training-data pipelines, an ``Inv3DAgent`` ``physics="mt3d"`` mode, a real
-MARE2DEM external-solver adapter, real topography support in the mesh and
-AI agents, three new tutorials (TEM/TEMAVG, Zonge AVG K1/K2, CSAMT
-groundwater mapping), and two rounds of real bug fixes across ``emtools``
-(phase-tensor, frequency-editing, EDI-coordinate, spectra, and
-tipper-plotting) — plus ``ModEm3DAdapter`` and ``Mare2DEMAdapter``
-physics-validated against real compiled binaries for the first time, and
-cross-platform build tooling for the external solvers.
-:ref:`Full 2.2.0 entry <changelog-2-2-0>` · :ref:`Upgrade guidance
-<release_v2_2_0>`.
+**2.2.2** — *2026-08-07* — fixes Windows Occam2D binary discovery, corrects
+the Occam2D mesh header contract, makes explicit ``api=True`` honour custom
+API view wrappers, and adds a verified Stratagem-to-Occam2D tutorial plus a
+rewritten API views guide. ``TEM1DForward`` now uses ``empymod``'s validated
+digital linear filters.
+:ref:`Full 2.2.2 entry <changelog-2-2-2>` · :ref:`Release notes
+<release_v2_2_2>`.
 
 .. toctree::
    :maxdepth: 1

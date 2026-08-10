@@ -203,6 +203,11 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+def __dir__():
+    """Expose lazy public agents to introspection tools such as autodoc."""
+    return sorted(set(globals()) | set(__all__) | set(_LAZY))
+
+
 if TYPE_CHECKING:  # pragma: no cover - imports exist only for static analyzers
     from .ai_inversion import AIInversionAgent
     from .anomaly_agent import AnomalyDetectionAgent

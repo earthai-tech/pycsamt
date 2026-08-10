@@ -21,7 +21,13 @@ def _public_names(module: object) -> Iterable[str]:
 
 
 def _members(module_name: str) -> dict[str, list[str]]:
-    """Classify public modules, classes, and functions for *module_name*."""
+    """Classify public modules, classes, and functions for *module_name*.
+
+    Object names intentionally retain the public facade through which they
+    were discovered.  Rewriting a re-export to ``value.__module__`` makes the
+    catalogue depend on an implementation path that autodoc may not register,
+    leaving a readable but unlinked autosummary row.
+    """
     module = importlib.import_module(module_name)
     result: dict[str, list[str]] = {
         "Modules": [],
@@ -45,20 +51,31 @@ def _members(module_name: str) -> dict[str, list[str]]:
             continue
         qualified = f"{module_name}.{name}"
         if inspect.isclass(value):
+            # Exceptions and anonymous tuple factories are useful runtime
+            # exports but are not class/function reference entries. Autodoc
+            # does not index undocumented exceptions, while namedtuple
+            # factories report ``builtins.tuple`` as their owner.
+            if (
+                issubclass(value, BaseException)
+                or value.__module__ == "builtins"
+            ):
+                continue
             owner = getattr(value, "__module__", "")
             owner_is_public = owner.startswith("pycsamt.") and not any(
                 part.startswith("_") for part in owner.split(".")[1:]
             )
-            if owner_is_public:
+            # Keep normal subpackage re-exports on their stable facade. For a
+            # cross-package compatibility alias (for example
+            # ``pycsamt.core.AVGtoEDI`` -> ``pycsamt.transformers.AVGtoEDI``),
+            # use the owning package, where autodoc registers the real class.
+            owned_here = owner == module_name or owner.startswith(
+                f"{module_name}."
+            )
+            is_named_alias = name != getattr(value, "__name__", name)
+            if owner_is_public and (not owned_here or is_named_alias):
                 qualified = f"{owner}.{value.__qualname__}"
             result["Classes"].append(qualified)
         elif inspect.isroutine(value):
-            owner = getattr(value, "__module__", "")
-            owner_is_public = owner.startswith("pycsamt.") and not any(
-                part.startswith("_") for part in owner.split(".")[1:]
-            )
-            if owner_is_public:
-                qualified = f"{owner}.{value.__qualname__}"
             result["Functions"].append(qualified)
 
     for values in result.values():

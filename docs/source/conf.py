@@ -498,7 +498,10 @@ def _latest_release_info():
                 best = {
                     "version": version,
                     "date": released_match.group("date"),
-                    "url": f"release_notes/v{version}.html",
+                    "url": (
+                        f"changelog/v{version.split('.')[0]}.html"
+                        f"#changelog-{version.replace('.', '-')}"
+                    ),
                 }
 
     return best

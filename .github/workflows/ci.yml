@@ -283,6 +283,11 @@ jobs:
           PYCSAMT_DOCS_BUILD: "1"
         run: python -m sphinx -b html docs/source docs/_build/html
 
+      - name: Validate public API catalogue
+        run: >-
+          python docs/scripts/validate_api_catalog.py
+          --inventory docs/_build/html/objects.inv
+
   package:
     name: Package
     runs-on: ubuntu-latest

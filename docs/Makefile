@@ -6,10 +6,13 @@ SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = source
 BUILDDIR      = build
 
-.PHONY: help clean html latexpdf livehtml
+.PHONY: help clean html latexpdf livehtml validate-api
 
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+validate-api:
+	@python scripts/validate_api_catalog.py --inventory "$(BUILDDIR)/html/objects.inv"
 
 clean:
 	rm -rf $(BUILDDIR)

@@ -1,0 +1,30 @@
+name: L14_full_processing
+steps:
+- name: notch
+  code: NR001
+  params:
+    mains_hz: 50
+    n_harm: 30
+    tol_hz: 0.08
+- name: drop_dup
+  code: FREQ002
+- name: select_band
+  code: FREQ001
+  params:
+    band_hz:
+    - 0.001
+    - 10000.0
+- name: align_grid
+  code: FREQ004
+- name: mask_skew
+  code: SK001
+  params:
+    thresh: 0.3
+- name: rotate_strike
+  code: TZ001
+  params:
+    method: swift
+- name: correct_ss
+  code: SS001
+- name: qc_snapshot
+  code: QC001

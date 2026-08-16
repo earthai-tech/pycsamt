@@ -76,7 +76,9 @@ def _build_rho_2d(
     n_x = mesh.n_xcells  # 576
     grid = np.full((n_z, n_x), np.nan)
 
-    z_row = 0
+    # OccamModel.from_mesh excludes air rows, so the first model layer
+    # starts at the first earth cell rather than mesh row zero.
+    z_row = int(mesh.n_airlayers)
     occm = 0
     for layer in model.layers:
         n_merge = layer["n_merge"]

@@ -11,9 +11,27 @@ reference resources.
 Model Packages
 --------------
 
-.. autosummary::
-   :toctree: generated
+Each backend wraps one external inversion code end to end: config, I/O
+readers/writers, a runner that calls the compiled binary, result objects,
+and plotting.
 
-   pycsamt.models.occam2d
-   pycsamt.models.modem
-   pycsamt.models.mare2dem
+pycsamt.models.occam2d
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: pycsamt.models.occam2d
+   :members:
+   :show-inheritance:
+
+pycsamt.models.mare2dem
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: pycsamt.models.mare2dem
+   :members:
+   :show-inheritance:
+
+pycsamt.models.modem
+~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: pycsamt.models.modem
+   :members:
+   :show-inheritance:

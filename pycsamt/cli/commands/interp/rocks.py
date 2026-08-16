@@ -3,7 +3,7 @@
 """
 pycsamt interp rocks — browse or query the built-in rock-physics database.
 
-Without ``--rho`` prints the full 25-entry database sorted by resistivity.
+Without ``--rho`` prints the full built-in database sorted by resistivity.
 With ``--rho VALUE`` classifies that linear Ω·m value and returns the
 best-matching geological unit.
 
@@ -75,9 +75,9 @@ def rocks(
 ) -> None:
     """Browse or query the built-in rock-physics database.
 
-    Without ``--rho``, prints a sorted table of all 25 rock entries with
-    their resistivity ranges and descriptions.  With ``--rho``, returns
-    the best-matching geological unit for that resistivity value.
+    Without ``--rho``, prints a sorted table of all built-in rock entries
+    with their resistivity ranges and descriptions.  With ``--rho``,
+    returns the best-matching geological unit for that resistivity value.
 
     \b
     Examples:
@@ -89,7 +89,7 @@ def rocks(
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
-    from ....interp.lithology import (
+    from ....geology.lithology import (
         RockDatabase,  # noqa: PLC0415
     )
 
@@ -130,8 +130,9 @@ def _emit_database(db, output_format: str) -> None:
             "rho_max": e.rho_max,
             "rho_mid": round(e.rho_mid, 2),
             "description": e.description,
+            "source": e.source,
         }
-        for e in db._entries
+        for e in db.entries
     ]
     df = pd.DataFrame(rows).sort_values("rho_min").reset_index(drop=True)
 

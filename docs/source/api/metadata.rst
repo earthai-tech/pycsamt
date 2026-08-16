@@ -24,4 +24,4 @@ Metadata Modules
 Frequency Helpers
 -----------------
 
-.. autofunction:: pycsamt.metadata.frequency.doi_estimate
+.. autofunction:: pycsamt.metadata.doi_estimate

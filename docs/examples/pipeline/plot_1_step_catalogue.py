@@ -4,8 +4,8 @@ The processing-step catalogue
 
 A pipeline is built from **steps**, each identified by a short code (like
 ``NR001`` for the power-line notch). Before assembling a workflow it helps
-to see what is available: :mod:`pycsamt.pipeline` ships a registry of 47
-steps across eight categories, and this example browses it.
+to see what is available: :mod:`pycsamt.pipeline` ships a registry of
+processing steps across several categories, and this example browses it.
 """
 
 # %%

@@ -569,8 +569,88 @@ manifest should therefore describe the intended section orientation, not only
 the file format. If a viewer requires elevation-positive-up display, create a
 derived visualization file and keep the original model-depth export unchanged.
 
-9. Export deterministic hydro results
--------------------------------------
+9. Export to Golden Software Surfer
+------------------------------------
+
+:func:`pycsamt.interp.export.to_surfer_grid` and
+:func:`pycsamt.interp.export.to_surfer_xyz` write a
+:class:`pycsamt.interp.ResistivityModel` — or *any* other 2-D inversion
+result accepted by :meth:`~pycsamt.interp.ResistivityModel.from_any`
+(Occam2D, ModEM, the backend-neutral
+:class:`~pycsamt.inversion.results.InversionResult`, an AI agent
+result, or a raw array) — for Golden Software Surfer:
+
+.. code-block:: python
+
+   grd_path = export.to_surfer_grid(
+       calibrated_model,
+       root / "grids" / "calibrated_resistivity.grd",
+       log_rho=False,
+       nx=2, ny=4,
+   )
+   xyz_path = export.to_surfer_xyz(
+       calibrated_model,
+       root / "grids" / "calibrated_resistivity.dat",
+       log_rho=False,
+   )
+
+``to_surfer_grid`` writes Surfer's DSAA regular-grid header first, then one
+row of Z-values per line, from ``ymin`` to ``ymax``:
+
+.. code-block:: text
+
+   DSAA
+   2 4
+   0 100
+   -100 -10
+   100 3162.28
+   1584.89 3162.28
+   869.441 1540.57
+   421.138 598.738
+   100 199.526
+
+``to_surfer_xyz`` writes the same model's real cell centres directly, with
+no resampling:
+
+.. code-block:: text
+
+   X	Y	Z
+   0.000	-10.000	100.00000
+   0.000	-30.000	316.22777
+   0.000	-60.000	630.95734
+   0.000	-100.000	1584.89319
+   100.000	-10.000	199.52623
+   100.000	-30.000	398.10717
+   100.000	-60.000	1000.00000
+   100.000	-100.000	3162.27766
+
+Important format details:
+
+* ``to_surfer_grid`` requires a *regular* grid — DSAA cannot represent an
+  irregular one — so it resamples the model's own ``x_centers``/``z_centers``
+  (log-depth Occam2D cells, mesh padding, ...) onto a new uniform ``nx`` x
+  ``ny`` grid first; ``to_surfer_xyz`` needs no such step and is exact;
+* Y is ``−depth`` by default (shallow near 0, deep negative), so the
+  section reads shallow-up in Surfer's own map view, matching
+  :func:`to_oasis_montaj_xyz`'s convention;
+* pass ``elevation=`` (plus ``chainage=`` or the model's own
+  ``station_x``) to either function to drape real terrain instead — Y
+  becomes ``elevation − depth``, exactly as
+  :doc:`the topography-draped tutorial figures </tutorials/build_two_line_occam2d_survey>`
+  do;
+* missing/masked cells are written as Surfer's own blanking sentinel
+  (``1.70141e38``) in ``to_surfer_grid``, or simply omitted as rows in
+  ``to_surfer_xyz`` — never as the literal text ``nan``, which Surfer's
+  DSAA reader cannot parse;
+* a native Occam2D/ModEM result is not auto-cropped to the station-carrying
+  core — pass ``model.clip_to_stations()`` first if Occam2D's own wide
+  boundary-padding columns should not appear in the grid.
+
+As with VTK, no CRS, vertical datum, or interpretation confidence is
+embedded — state those in the manifest, not the filename.
+
+10. Export deterministic hydro results
+--------------------------------------
 
 An :class:`pycsamt.interp.EMHydroResult` provides two CSV levels:
 
@@ -634,8 +714,8 @@ Document these interpretation qualifications:
 If pandas is installed, ``hydro_result.to_dataframe()`` supports further
 review, but any derived table should retain the original field names and units.
 
-10. Export qualitative hydro interpretation
---------------------------------------------
+11. Export qualitative hydro interpretation
+-------------------------------------------
 
 A :class:`pycsamt.interp.HydroGeophysicalModel` can write cell classifications
 and interpreted zones:
@@ -666,7 +746,7 @@ similar response. In clay-rich aquifers, weathered basement, saline water, and
 conductive alteration can overlap in resistivity space, so context is part of
 the interpretation method rather than a footnote.
 
-11. Export uncertainty summaries
+12. Export uncertainty summaries
 --------------------------------
 
 :class:`pycsamt.interp.UncertaintyResult` writes a per-station summary:
@@ -714,7 +794,7 @@ source inversion model, structural interpretation, or borehole control is held
 fixed, the interval does not include errors from those sources. Good reports
 say both what varied and what was held fixed.
 
-12. Report calibration residuals
+13. Report calibration residuals
 --------------------------------
 
 When quantitative field constraints are used, retain per-constraint residuals:
@@ -762,7 +842,7 @@ where :math:`\sigma_i` is the assigned observation uncertainty. The value of
 :math:`\sigma_i` is part of the scientific assumption and belongs in the
 calibration record.
 
-13. Generate review figures and diagnostics
+14. Generate review figures and diagnostics
 -------------------------------------------
 
 Interpretation figures are review evidence and communication products. They
@@ -1033,7 +1113,7 @@ plotting. For example, a hydraulic-conductivity section labelled
 ``log10(K m/s)`` and clipped to :math:`[-10,-3]` is not interchangeable with a
 linear ``K`` section in metres per second.
 
-14. Write the technical narrative
+15. Write the technical narrative
 ---------------------------------
 
 A concise but complete interpretation report normally contains:
@@ -1107,7 +1187,7 @@ contradicts the hypothesis, or uncertainty is too broad for the decision. "No
 aquifer detected" is a much stronger claim than "no supported aquifer
 interpretation within the reliable depth range."
 
-15. Build a machine-readable manifest
+16. Build a machine-readable manifest
 -------------------------------------
 
 The manifest is the package's index. YAML or JSON is suitable. A minimal YAML
@@ -1163,7 +1243,7 @@ conclusion should be traceable back to the model and configuration that made
 it; a figure should be traceable back to the table or model values it plotted.
 This turns the manifest into an audit map rather than a file listing.
 
-16. Add checksums and validate files
+17. Add checksums and validate files
 ------------------------------------
 
 Checksums detect accidental change after approval. Generate them with an
@@ -1209,7 +1289,7 @@ scientific validation, compare claims against withheld observations before
 reviewing calibration successes, so the report does not accidentally reward
 overfitting.
 
-17. Review and approval
+18. Review and approval
 -----------------------
 
 Use separate review roles when project scale permits:
@@ -1232,7 +1312,7 @@ Track comments and dispositions. If a review changes inputs, parameters, or
 conclusions, increment the revision and regenerate dependent outputs. Do not
 edit an approved binary or CSV in place.
 
-18. Handle revisions and superseded products
+19. Handle revisions and superseded products
 --------------------------------------------
 
 Maintain a changelog with:
@@ -1249,7 +1329,7 @@ Preserve superseded packages in read-only archival storage with an obvious
 status marker. Notify downstream users when a revision changes target
 locations, depths, confidence, or safety-relevant conclusions.
 
-19. Protect sensitive information
+20. Protect sensitive information
 ---------------------------------
 
 Interpretation packages can contain private well locations, infrastructure,

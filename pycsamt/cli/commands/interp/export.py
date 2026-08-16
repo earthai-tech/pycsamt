@@ -9,6 +9,8 @@ Supported output formats
 * **las**  — CWLS LAS 2.0 well-log ASCII (one file per station)
 * **csv**  — flat layer table (station, depth, rock, resistivity)
 * **vtk**  — ASCII rectilinear-grid format for ParaView / QGIS
+* **surfer_grid** — Golden Software Surfer DSAA regular grid (``.grd``)
+* **surfer_xyz**  — Golden Software Surfer scattered ``X Y Z`` points
 
 Workflow
 --------
@@ -25,6 +27,8 @@ Usage
     pycsamt interp export occam_run/ --format csv
     pycsamt interp export occam_run/ --format las --output-dir las_logs/
     pycsamt interp export occam_run/ --format vtk --output-dir vtk_out/
+    pycsamt interp export occam_run/ --format surfer_grid --output-dir surfer/
+    pycsamt interp export occam_run/ --format surfer_xyz --output-dir surfer/
 """
 
 from __future__ import annotations
@@ -69,7 +73,10 @@ from .classify import _detect_solver
     "--format",
     "-f",
     "export_format",
-    type=click.Choice(["xyz", "las", "csv", "vtk"], case_sensitive=False),
+    type=click.Choice(
+        ["xyz", "las", "csv", "vtk", "surfer_grid", "surfer_xyz"],
+        case_sensitive=False,
+    ),
     required=True,
     help="Output format.",
 )
@@ -129,10 +136,12 @@ def export(
 
     \b
     Format details:
-      xyz   Single profile file — Oasis Montaj / GIS-compatible XYZ
-      las   One LAS 2.0 file per station (CWLS well-log format)
-      csv   Flat layer table — all stations in a single file
-      vtk   ASCII rectilinear VTK grid — for ParaView / QGIS
+      xyz          Single profile file — Oasis Montaj / GIS-compatible XYZ
+      las          One LAS 2.0 file per station (CWLS well-log format)
+      csv          Flat layer table — all stations in a single file
+      vtk          ASCII rectilinear VTK grid — for ParaView / QGIS
+      surfer_grid  Golden Software Surfer DSAA regular grid (resampled)
+      surfer_xyz   Golden Software Surfer scattered X Y Z points
 
     \b
     Examples:
@@ -140,6 +149,7 @@ def export(
       pycsamt interp export occam_run/ --format las --output-dir las_logs/
       pycsamt interp export occam_run/ --format csv
       pycsamt interp export occam_run/ --format vtk --output-dir vtk_out/
+      pycsamt interp export occam_run/ --format surfer_grid --output-dir surfer/
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
@@ -243,6 +253,24 @@ def export(
                     f"{out} already exists.  Pass --overwrite to replace it."
                 )
             _export.to_vtk(model, str(out))
+            click.echo(f"Written → {out}")
+
+        elif fmt == "surfer_grid":
+            out = output_dir / "model.grd"
+            if out.exists() and not overwrite:
+                raise click.UsageError(
+                    f"{out} already exists.  Pass --overwrite to replace it."
+                )
+            _export.to_surfer_grid(model, str(out))
+            click.echo(f"Written → {out}")
+
+        elif fmt == "surfer_xyz":
+            out = output_dir / "model.dat"
+            if out.exists() and not overwrite:
+                raise click.UsageError(
+                    f"{out} already exists.  Pass --overwrite to replace it."
+                )
+            _export.to_surfer_xyz(model, str(out))
             click.echo(f"Written → {out}")
 
     except (click.exceptions.UsageError, click.exceptions.BadParameter):

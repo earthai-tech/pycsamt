@@ -481,6 +481,8 @@ class TestInterpExport:
         monkeypatch.setattr(_exp, "to_las", lambda log, path: None)
         monkeypatch.setattr(_exp, "to_csv", lambda logs, path: None)
         monkeypatch.setattr(_exp, "to_vtk", lambda model, path: None)
+        monkeypatch.setattr(_exp, "to_surfer_grid", lambda model, path: None)
+        monkeypatch.setattr(_exp, "to_surfer_xyz", lambda model, path: None)
 
         args = [
             "interp",
@@ -493,7 +495,9 @@ class TestInterpExport:
         ] + (extra_args or [])
         return runner.invoke(main, args)
 
-    @pytest.mark.parametrize("fmt", ["xyz", "las", "csv", "vtk"])
+    @pytest.mark.parametrize(
+        "fmt", ["xyz", "las", "csv", "vtk", "surfer_grid", "surfer_xyz"]
+    )
     def test_all_formats(
         self,
         fmt: str,

@@ -60,7 +60,7 @@ The preset API is intentionally small:
    >>> [(label, step.spec.code) for label, step in preset.steps]
    [('notch', 'NR001'), ('drop_duplicates', 'FREQ002'), ('select_band', 'FREQ001'), ('align_grid', 'FREQ004'), ('qc_snapshot', 'QC001')]
    >>> [(p.name, len(p.steps)) for p in list_presets()]
-   [('basic_qc', 5), ('noise_reduction', 6), ('full_processing', 8), ('tensor_analysis', 5), ('dimensionality_filter', 4), ('publication_ready', 9), ('stratagem_mt', 7)]
+   [('basic_qc', 5), ('noise_reduction', 6), ('full_processing', 8), ('tensor_analysis', 5), ('dimensionality_filter', 4), ('publication_ready', 9), ('stratagem_mt', 7), ('mt_qc', 11), ('amt_qc', 11), ('csamt_qc', 14), ('csumt_qc', 15)]
 
 The CLI exposes the same information:
 
@@ -132,7 +132,10 @@ the step sequence that actually ran.
 Built-In Preset Summary
 -----------------------
 
-The normal pipeline registry currently provides seven presets.
+The normal pipeline registry currently provides eleven presets: the seven
+processing-intent presets below, plus four method-aware presets
+(``mt_qc``, ``amt_qc``, ``csamt_qc``, ``csumt_qc``) covered in
+`Method-Aware Presets`_.
 
 .. list-table::
    :header-rows: 1
@@ -216,6 +219,12 @@ preset is easier to diagnose because fewer transforms stand between
      - ``stratagem_mt``
      - It applies Stratagem-oriented AMT band selection, static shift,
        denoising, and QC at the emtools pipeline level.
+
+The table above chooses by *processing intent* only.  If you also know the
+EM survey method (MT, AMT, CSAMT, or CSUMT), start from
+`Method-Aware Presets`_ instead — its QC steps inspect the actual data
+before deciding what to plot, and CSAMT/CSUMT additionally get near-field
+correction that the presets above never apply.
 
 Preset Details
 --------------
@@ -407,6 +416,225 @@ collection:
 Use :class:`pycsamt.pipeline.stratagem.StratagemPipeline` or
 ``run_stratagem_preset`` when you also need the full raw EDI plus GPS CSV
 workflow.
+
+Method-Aware Presets
+--------------------
+
+The seven presets above are chosen by *processing intent* only — the same
+step sequence runs regardless of whether the survey is MT, AMT, CSAMT, or
+CSUMT.  In reality these EM methods are not interchangeable: CSAMT/CSUMT use
+a controlled source and can suffer near-field/transition-zone contamination
+that MT/AMT never see; a single-component TE- or TM-only CSAMT line cannot
+produce a meaningful phase-tensor ellipse the way full-tensor MT/AMT data
+can; and tipper is only sometimes recorded at all.  ``mt_qc``, ``amt_qc``,
+``csamt_qc``, and ``csumt_qc`` are chosen by EM method as well as intent, and
+their QC steps inspect the actual data before deciding what to plot instead
+of always firing the same figures.
+
+Selection stays fully explicit — there is no automatic detection of survey
+method from the data.  You (or a config file, or
+:class:`~pycsamt.metadata.survey.SurveyMeta.method` if you already have one)
+choose ``mt_qc``/``amt_qc``/``csamt_qc``/``csumt_qc`` by name, exactly the
+same way you choose ``basic_qc`` vs. ``tensor_analysis`` today.
+
+Smart QC And Preview Building Blocks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three new diagnostic-only steps and two new preview steps back every
+method-aware preset.  They are plain registry steps — nothing about them is
+special-cased to the four presets above, so any pipeline, existing or new,
+can add them too.
+
+``QC005`` (``tensor_qc_smart``)
+    Plots the phase-tensor-ellipse pseudosection only when at least one
+    station has both off-diagonal impedance components (Zxy and Zyx)
+    populated.  A single-component TE/TM-only CSAMT line skips this plot
+    entirely rather than drawing a degenerate ellipse.
+
+``QC006`` (``tipper_qc_smart``)
+    Plots the induction-vector map, induction section, response-tipper
+    panels, tipper components, and tipper hodograms only when at least one
+    station carries a real tipper channel.  Most AMT surveys have none, so
+    these five plots are silently skipped rather than drawn empty.
+
+``QC007`` (``strike_qc``)
+    Always plots the strike rose and the combined strike/phase-tensor/
+    tipper-strike analysis figure.  ``plot_strike_analysis`` is already
+    internally tipper-aware — it draws a two-panel figure when no tipper is
+    present and three panels when it is — so it needs no gating here.
+
+``PRE001``/``PRE002`` (``raw_preview``/``processed_preview``)
+    ``PRE001`` opens a method-aware preset and plots up to three randomly
+    (but deterministically) chosen stations' *raw* 1-D response; ``PRE002``
+    closes the preset and plots the *same* station-selection logic against
+    the *processed* result, so a before/after comparison is always
+    available without hunting through the full station list.  Both steps
+    independently re-derive the station subset with the same default seed
+    rather than sharing state, so if an intermediate step drops one of the
+    previewed stations, the after-plot's reselection (drawn from the
+    smaller surviving set) can end up choosing a different station than the
+    before-plot — a deliberate trade-off documented in
+    :mod:`pycsamt.pipeline._preview` rather than solved with a cross-step
+    state channel.
+
+A QC step's plot functions are always called as ``fn(sites)`` with no way to
+forward extra parameters (see :doc:`steps`), which is why every gating
+decision above is made *inside* the plot function from the data itself
+(:mod:`pycsamt.pipeline._smart_qc`), not from a step parameter.
+
+Method-Aware Preset Summary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 12 40 28
+
+   * - Preset
+     - Steps
+     - Best for
+     - What differs from mt_qc
+   * - ``mt_qc``
+     - 11
+     - Broadband MT quick-look.
+     - Baseline: denoise, frequency cleanup, strike rotation, smart QC,
+       raw/processed preview.
+   * - ``amt_qc``
+     - 11
+     - AMT quick-look.
+     - Trims ``select_band`` to the standard AMT band (10 Hz - 100 kHz).
+   * - ``csamt_qc``
+     - 14
+     - CSAMT quick-look.
+     - Adds near-field/transition-zone correction (``SRC001``), its zone
+       pseudosection (``QC002``), and source-response normalization
+       (``SRC002``).
+   * - ``csumt_qc``
+     - 15
+     - CSUMT quick-look.
+     - Everything ``csamt_qc`` adds, trimmed to the CSUMT acquisition band,
+       plus a Bostick depth-section snapshot (``QC004``).
+
+mt_qc
+~~~~~
+
+.. code-block:: text
+   :linenos:
+
+   raw_preview        PRE001  raw_preview
+   notch              NR001   notch_powerline
+   drop_dup           FREQ002 drop_duplicates
+   select_band        FREQ001 select_band
+   align_grid         FREQ004 align_grid
+   rotate_strike      TZ001   rotate_strike
+   qc_snapshot        QC001   qc_snapshot
+   strike_qc          QC007   strike_qc
+   tensor_qc_smart    QC005   tensor_qc_smart
+   tipper_qc_smart    QC006   tipper_qc_smart
+   processed_preview  PRE002  processed_preview
+
+``select_band`` is left at its registry default (``0.001 Hz - 10 kHz``),
+which is already a broadband-MT-appropriate range — no method-specific
+override is applied.
+
+amt_qc
+~~~~~~
+
+Identical to ``mt_qc`` except ``select_band(FREQ001, band_hz=(10.0, 1e5))``
+— the exact AMT band already used by ``stratagem_mt``, not a new number.
+
+csamt_qc
+~~~~~~~~
+
+.. code-block:: text
+   :linenos:
+
+   raw_preview           PRE001  raw_preview
+   notch                 NR001   notch_powerline
+   drop_dup              FREQ002 drop_duplicates
+   select_band           FREQ001 select_band
+   align_grid            FREQ004 align_grid
+   correct_near_field    SRC001  correct_near_field  source_offset=None
+   field_zone_snapshot   QC002   field_zone_snapshot
+   normalize_response    SRC002  normalize_response
+   rotate_strike         TZ001   rotate_strike
+   qc_snapshot           QC001   qc_snapshot
+   strike_qc             QC007   strike_qc
+   tensor_qc_smart       QC005   tensor_qc_smart
+   tipper_qc_smart       QC006   tipper_qc_smart
+   processed_preview     PRE002  processed_preview
+
+``correct_near_field`` runs with ``source_offset=None`` — this is not "no
+correction," it is "resolve per station from the site's own
+``source_offset``/``offset``/``dist`` metadata, and warn instead of failing
+when nothing resolves."  Against the real Tongkeng CSAMT example dataset
+(``data/CSAMT``, whose EDI headers carry no offset metadata), a real run
+warns once per station rather than raising:
+
+.. code-block:: text
+   :linenos:
+
+   UserWarning: correct_near_field: no source offset for 'csa000'; station skipped.
+   UserWarning: correct_near_field: no source offset for 'csa050'; station skipped.
+
+and the impedance tensor for those stations passes through unchanged.  When
+a station's offset *is* resolvable, the correction is real — dividing
+:math:`Z_{\mathrm{obs}}` by the complex near-field factor
+:math:`F(p) = 1 - 3/p^2 + 3/p^3` — not a no-op; see
+:func:`pycsamt.emtools.source_effects.correct_near_field` for the full
+reference.  No CSAMT-specific frequency band is applied — there is no
+authoritative CSAMT band constant in the codebase to draw from, so
+``select_band`` stays at its registry default and the real
+method-differentiating behavior here is the near-field correction itself.
+
+csumt_qc
+~~~~~~~~
+
+Same chain as ``csamt_qc``, plus:
+
+* ``select_band(FREQ001, band_hz=(F_MIN_CSUMT, F_MAX_CSUMT))`` — the real
+  9.6 kHz - 614.4 kHz CSUMT band constants from
+  :mod:`pycsamt.emtools.csumt`, not invented numbers.
+* ``depth_section_snapshot`` (``QC004``) — the Bostick depth-section
+  snapshot, CSUMT-specific and already registered.
+
+Selecting By Method String
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`~pycsamt.pipeline.get_preset_for_method` maps an explicit method
+string to the matching preset, so a caller that already knows (or has a
+:class:`~pycsamt.metadata.survey.SurveyMeta`) doesn't have to hand-build the
+preset name:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.pipeline import get_preset_for_method
+   >>> get_preset_for_method("CSAMT").name
+   'csamt_qc'
+   >>> get_preset_for_method("amt").name
+   'amt_qc'
+
+This performs no data inspection — *method* must be supplied explicitly,
+the same way :func:`~pycsamt.pipeline.get_preset` requires an explicit
+preset name.  ``"MT"``, ``"BBMT"``, ``"LAMT"``, and ``"LMT"`` all map to
+``mt_qc``; ``"CSUMT"`` is recognised here even though it predates
+:class:`~pycsamt.metadata.survey.SurveyMeta`'s own method vocabulary.
+``"CSEM"``/``"TEM"`` are recognised as valid EM methods but have no
+method-aware preset yet (see below) and raise ``ValueError``.
+
+Not Yet Covered
+~~~~~~~~~~~~~~~
+
+Two things are deliberately out of scope for the current method-aware
+presets, rather than silently missing:
+
+* **A ``csem_qc`` preset.**  No CSEM-specific processing code exists
+  anywhere in :mod:`pycsamt.emtools` today — fabricating CSEM corrections
+  without real domain code behind them would be guessing at physics.
+* **Method-aware ``*_publication_ready`` tiers.**  The QC-level presets
+  above are the first pass; fuller, publication-oriented method-aware
+  chains are a natural follow-up once these are validated against more
+  real surveys.
 
 Export A Preset To A Config
 ---------------------------

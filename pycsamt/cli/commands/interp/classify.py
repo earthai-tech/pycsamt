@@ -138,7 +138,7 @@ def classify(
 
     Loads the model, classifies each depth cell against the built-in
     rock-physics database, and merges adjacent cells that share the same
-    lithology into discrete :class:`~pycsamt.interp.lithology.Layer` objects.
+    lithology into discrete :class:`~pycsamt.geology.lithology.Layer` objects.
 
     \b
     Output columns:

@@ -524,6 +524,34 @@ class TestPosteriorCalibrator(unittest.TestCase):
         self.assertEqual(sigma_cal.shape, sigma[:10].shape)
         self.assertTrue(np.all(sigma_cal > 0))
 
+    def test_calibrated_std_widens_under_dispersed_raw_sigma(self):
+        # Regression test: calibrated_std must SCALE UP a raw sigma that
+        # systematically understates the true residual spread (the common
+        # case for a small/early-stopped ensemble), not shrink it further.
+        # calibrated_std previously divided by the learned scale instead of
+        # multiplying, which made calibrated coverage worse than using the
+        # raw, uncalibrated sigma outright.
+        from pycsamt.ai.inversion.calibration import PosteriorCalibrator
+
+        rng = np.random.default_rng(0)
+        n, p = 4000, 3
+        y_pred = np.zeros((n, p))
+        sigma_raw = np.ones((n, p))
+        true_std = 4.0
+        y_true = y_pred + rng.normal(0, true_std, size=(n, p))
+
+        pc = PosteriorCalibrator().fit(y_true, y_pred, sigma_raw)
+        sigma_cal = pc.calibrated_std(sigma_raw)
+
+        self.assertGreater(sigma_cal.mean(), sigma_raw.mean())
+        np.testing.assert_allclose(sigma_cal.mean(), true_std, rtol=0.1)
+
+        z90 = 1.6448536269514722  # scipy.stats.norm.ppf(0.95)
+        cov_raw = float((np.abs(y_true - y_pred) <= z90 * sigma_raw).mean())
+        cov_cal = float((np.abs(y_true - y_pred) <= z90 * sigma_cal).mean())
+        self.assertGreater(cov_cal, cov_raw)
+        self.assertAlmostEqual(cov_cal, 0.90, delta=0.03)
+
     def test_mace_in_range(self):
         from pycsamt.ai.inversion.calibration import (
             PosteriorCalibrator,

@@ -27,7 +27,12 @@ from pycsamt.interp import ResistivityModel
 from pycsamt.inversion.results import InversionResult
 from pycsamt.seg.collection import EDICollection
 from pycsamt.seg.edi import EDIFile
-from pycsamt.topo import build_topo_section, plot_topo_section, reset_topo
+from pycsamt.topo import (
+    build_topo_section,
+    plot_topo_array,
+    plot_topo_section,
+    reset_topo,
+)
 from pycsamt.topo.section import (
     TopoSection,
     _cell_edges,
@@ -484,6 +489,30 @@ class TestPlotTopoSectionSynthetic:
         )
         assert out_ax is ax
 
+    def test_existing_ax_does_not_tight_layout_whole_figure(self):
+        """A caller composing several axes into one hand-built GridSpec
+        figure (e.g. stacking CRM/NM/misfit panels with a shared
+        colorbar column) owns that figure's overall layout.
+        fig.tight_layout() called internally here would reflow every
+        axes on the figure, including ones this call knows nothing
+        about, silently breaking the caller's own arrangement -- so it
+        must only run when this call built the figure itself (ax=None)."""
+        x_c, z_c, rho = _grid()
+        fig = plt.figure()
+        gs = fig.add_gridspec(1, 2, width_ratios=[10, 1])
+        ax = fig.add_subplot(gs[0, 0])
+        cax = fig.add_subplot(gs[0, 1])
+        cax_pos_before = cax.get_position().bounds
+
+        plot_topo_section(
+            (x_c, z_c, rho),
+            elevation=np.full(x_c.size, 120.0),
+            chainage=x_c,
+            ax=ax,
+        )
+
+        assert cax.get_position().bounds == cax_pos_before
+
     def test_show_stations_false_skips_pins(self):
         x_c, z_c, rho = _grid(n_x=6)
         elev = np.linspace(80.0, 200.0, 6)
@@ -662,3 +691,83 @@ class TestPlotTopoSectionRealData:
         assert data.method == "ai"
         assert data.topo_source == "sites"
         ax.figure.canvas.draw()
+
+
+# ---------------------------------------------------------------------------
+# plot_topo_array — non-resistivity scalar fields (e.g. calibration misfit)
+# ---------------------------------------------------------------------------
+
+
+class TestPlotTopoArray:
+    def test_basic_drape_returns_axes_with_correct_labels(self):
+        x_c, z_c, _ = _grid(n_x=10, n_z=8, z_km=0.5)
+        values = np.full((8, 10), 5.0)
+        elev = 100.0 + 10.0 * np.sin(x_c)
+        ax = plot_topo_array(
+            x_c * 1000.0, z_c * 1000.0, values,
+            elevation=elev, station_x=x_c * 1000.0,
+            cmap="RdYlBu_r", vmin=0.0, vmax=20.0, cbar_label="G (%)",
+        )
+        assert ax.get_ylabel() == "Elevation (km)"
+        assert ax.get_xlabel() == "Profile distance (km)"
+        ax.figure.canvas.draw()
+
+    def test_values_are_not_log_transformed(self):
+        """Unlike plot_topo_section, the array is plotted as-given -- no
+        10**values or log10 anywhere, since it is not a resistivity."""
+        x_c, z_c, _ = _grid(n_x=6, n_z=4, z_km=0.3)
+        values = np.full((4, 6), 42.0)
+        elev = np.full(6, 100.0)
+        ax = plot_topo_array(
+            x_c * 1000.0, z_c * 1000.0, values,
+            elevation=elev, station_x=x_c * 1000.0, clip_above_surface=False,
+        )
+        mappable = ax.collections[0]
+        finite = mappable.get_array().compressed() if hasattr(
+            mappable.get_array(), "compressed"
+        ) else np.asarray(mappable.get_array())
+        np.testing.assert_allclose(finite, 42.0)
+
+    def test_requires_station_x_or_chainage(self):
+        x_c, z_c, _ = _grid(n_x=5, n_z=4)
+        values = np.zeros((4, 5))
+        with pytest.raises(ValueError, match="station_x or chainage"):
+            plot_topo_array(x_c, z_c, values, elevation=np.zeros(5))
+
+    def test_draws_station_markers_by_default(self):
+        x_c, z_c, _ = _grid(n_x=8, n_z=5, z_km=0.4)
+        values = np.zeros((5, 8))
+        elev = np.full(8, 50.0)
+        ax = plot_topo_array(
+            x_c * 1000.0, z_c * 1000.0, values,
+            elevation=elev, station_x=x_c * 1000.0,
+        )
+        # draw_topo_section adds a scatter collection for the station pins
+        # on top of the pcolormesh QuadMesh.
+        assert len(ax.collections) >= 2
+
+    def test_show_stations_false_runs_without_error(self):
+        # Matches the existing plot_topo_section precedent
+        # (test_show_stations_false_skips_pins): show_stations=False
+        # still draws the marker scatter, just pinned at 0 elevation
+        # rather than the real terrain surface -- it does not remove
+        # the collection outright.
+        x_c, z_c, _ = _grid(n_x=8, n_z=5, z_km=0.4)
+        values = np.zeros((5, 8))
+        elev = np.full(8, 50.0)
+        ax = plot_topo_array(
+            x_c * 1000.0, z_c * 1000.0, values,
+            elevation=elev, station_x=x_c * 1000.0, show_stations=False,
+        )
+        ax.figure.canvas.draw()
+
+    def test_existing_ax_is_reused(self):
+        x_c, z_c, _ = _grid(n_x=6, n_z=4, z_km=0.3)
+        values = np.zeros((4, 6))
+        elev = np.full(6, 80.0)
+        fig, ax = plt.subplots()
+        out = plot_topo_array(
+            x_c * 1000.0, z_c * 1000.0, values,
+            ax=ax, elevation=elev, station_x=x_c * 1000.0,
+        )
+        assert out is ax

@@ -24,12 +24,39 @@ Available presets
     Static-shift → AMT band select → powerline notch → Hampel → QC.
     Use :mod:`pycsamt.pipeline.stratagem` when you also need coordinate
     injection and renaming from raw EDI + CSV inputs.
+
+Method-aware presets
+---------------------
+The presets above are chosen by processing intent only; the four below are
+additionally chosen by EM survey method, since MT/AMT (passive) and
+CSAMT/CSUMT (controlled-source) surveys need genuinely different treatment
+-- see :doc:`/user_guide/pipeline/presets` for the full rationale.
+
+``"mt_qc"``
+    Broadband MT quick-look: denoise, frequency cleanup, strike rotation,
+    and data-driven ("smart") tensor/tipper/strike QC that only fires the
+    plots the data actually supports.
+``"amt_qc"``
+    Same as ``mt_qc``, trimmed to the standard AMT acquisition band
+    (10 Hz - 100 kHz).
+``"csamt_qc"``
+    Adds CSAMT-specific near-field/transition-zone correction and its
+    diagnostic pseudosection on top of ``mt_qc``'s chain.
+``"csumt_qc"``
+    Same as ``csamt_qc``, trimmed to the CSUMT acquisition band and adding
+    the Bostick depth-section snapshot.
+
+Every method-aware preset opens with a raw-data preview and closes with a
+processed-data preview of the same (deterministically) randomly chosen
+stations, so a before/after comparison is always available.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..emtools.csumt import F_MAX_CSUMT, F_MIN_CSUMT
+from ..metadata.survey import _VALID_METHODS as _VALID_SURVEY_METHODS
 from ._steps import Step
 
 # ---------------------------------------------------------------------------
@@ -183,6 +210,107 @@ PRESETS: dict[str, Preset] = {
             ("qc_snapshot", Step("QC001")),
         ],
     ),
+    # ── Method-aware presets ────────────────────────────────────────────
+    "mt_qc": Preset(
+        name="mt_qc",
+        description=(
+            "Broadband MT quick-look: denoise, frequency cleanup, strike "
+            "rotation, and data-driven tensor/tipper/strike QC. "
+            "Opens and closes with a raw-vs-processed station preview."
+        ),
+        steps=[
+            ("raw_preview", Step("PRE001")),
+            ("notch", Step("NR001")),
+            ("drop_dup", Step("FREQ002")),
+            ("select_band", Step("FREQ001")),
+            ("align_grid", Step("FREQ004")),
+            ("rotate_strike", Step("TZ001")),
+            ("qc_snapshot", Step("QC001")),
+            ("strike_qc", Step("QC007")),
+            ("tensor_qc_smart", Step("QC005")),
+            ("tipper_qc_smart", Step("QC006")),
+            ("processed_preview", Step("PRE002")),
+        ],
+    ),
+    "amt_qc": Preset(
+        name="amt_qc",
+        description=(
+            "Same chain as mt_qc, trimmed to the standard AMT acquisition "
+            "band (10 Hz - 100 kHz)."
+        ),
+        steps=[
+            ("raw_preview", Step("PRE001")),
+            ("notch", Step("NR001")),
+            ("drop_dup", Step("FREQ002")),
+            ("select_band", Step("FREQ001", band_hz=(10.0, 1e5))),
+            ("align_grid", Step("FREQ004")),
+            ("rotate_strike", Step("TZ001")),
+            ("qc_snapshot", Step("QC001")),
+            ("strike_qc", Step("QC007")),
+            ("tensor_qc_smart", Step("QC005")),
+            ("tipper_qc_smart", Step("QC006")),
+            ("processed_preview", Step("PRE002")),
+        ],
+    ),
+    "csamt_qc": Preset(
+        name="csamt_qc",
+        description=(
+            "CSAMT quick-look: mt_qc's chain plus near-field/transition-"
+            "zone correction and its diagnostic pseudosection. "
+            "source_offset defaults to None (auto-resolved per station from "
+            "site metadata; stations without a resolvable offset are "
+            "warned about and left uncorrected, never fail the run)."
+        ),
+        steps=[
+            ("raw_preview", Step("PRE001")),
+            ("notch", Step("NR001")),
+            ("drop_dup", Step("FREQ002")),
+            ("select_band", Step("FREQ001")),
+            ("align_grid", Step("FREQ004")),
+            (
+                "correct_near_field",
+                Step("SRC001", source_offset=None, verbose=1),
+            ),
+            ("field_zone_snapshot", Step("QC002")),
+            ("normalize_response", Step("SRC002")),
+            ("rotate_strike", Step("TZ001")),
+            ("qc_snapshot", Step("QC001")),
+            ("strike_qc", Step("QC007")),
+            ("tensor_qc_smart", Step("QC005")),
+            ("tipper_qc_smart", Step("QC006")),
+            ("processed_preview", Step("PRE002")),
+        ],
+    ),
+    "csumt_qc": Preset(
+        name="csumt_qc",
+        description=(
+            "CSUMT quick-look: csamt_qc's chain trimmed to the CSUMT "
+            "acquisition band, plus a Bostick depth-section snapshot."
+        ),
+        steps=[
+            ("raw_preview", Step("PRE001")),
+            ("notch", Step("NR001")),
+            ("drop_dup", Step("FREQ002")),
+            (
+                "select_band",
+                Step("FREQ001", band_hz=(F_MIN_CSUMT, F_MAX_CSUMT)),
+            ),
+            ("align_grid", Step("FREQ004")),
+            (
+                "correct_near_field",
+                Step("SRC001", source_offset=None, verbose=1),
+            ),
+            ("field_zone_snapshot", Step("QC002")),
+            ("normalize_response", Step("SRC002")),
+            ("rotate_strike", Step("TZ001")),
+            ("qc_snapshot", Step("QC001")),
+            ("depth_section_snapshot", Step("QC004")),
+            ("strike_qc", Step("QC007")),
+            ("tensor_qc_smart", Step("QC005")),
+            ("tipper_qc_smart", Step("QC006")),
+            ("processed_preview", Step("PRE002")),
+        ],
+    ),
 }
 
 
@@ -212,6 +340,72 @@ def get_preset(name: str) -> Preset:
     return PRESETS[name]
 
 
+_METHOD_PRESET_MAP: dict[str, str] = {
+    "MT": "mt_qc",
+    "BBMT": "mt_qc",
+    "LMT": "mt_qc",
+    "LAMT": "mt_qc",
+    "AMT": "amt_qc",
+    "CSAMT": "csamt_qc",
+    "CSUMT": "csumt_qc",
+}
+
+# SurveyMeta._VALID_METHODS predates the CSUMT-specific tooling in
+# emtools/csumt.py and does not include "CSUMT" -- accept the union so a
+# real, first-class method this feature is about is never rejected by an
+# unrelated, older module's vocabulary.
+_RECOGNIZED_METHODS = _VALID_SURVEY_METHODS | set(_METHOD_PRESET_MAP)
+
+
+def get_preset_for_method(method: str, level: str = "qc") -> Preset:
+    """Return the method-aware :class:`Preset` for an explicit EM method.
+
+    Parameters
+    ----------
+    method:
+        An EM method string -- either one recognised by
+        :class:`~pycsamt.metadata.survey.SurveyMeta` (``"MT"``, ``"AMT"``,
+        ``"CSAMT"``, ``"CSEM"``, ``"TEM"``, ``"BBMT"``, ``"LAMT"``,
+        ``"LMT"``) or ``"CSUMT"`` (recognised here even though
+        ``SurveyMeta``'s vocabulary predates it).  ``"MT"``, ``"BBMT"``,
+        ``"LAMT"``, ``"LMT"``, ``"AMT"``, ``"CSAMT"``, and ``"CSUMT"`` are
+        mapped to a preset today; ``"CSEM"``/``"TEM"`` are recognised but
+        have no method-aware preset yet.  Case-insensitive.
+    level:
+        Preset tier.  Only ``"qc"`` exists today.
+
+    This performs no data inspection or auto-detection -- *method* must be
+    supplied explicitly (e.g. from a
+    :class:`~pycsamt.metadata.survey.SurveyMeta.method` the caller already
+    has), the same way :func:`get_preset` requires an explicit preset name.
+
+    Raises
+    ------
+    ValueError
+        When *method* is not a recognised EM method, or has no method-aware
+        preset yet.
+
+    Examples
+    --------
+    >>> from pycsamt.pipeline import get_preset_for_method
+    >>> get_preset_for_method("CSAMT").name
+    'csamt_qc'
+    """
+    m = method.strip().upper()
+    if m not in _RECOGNIZED_METHODS:
+        raise ValueError(
+            f"method {method!r} is not one of {sorted(_RECOGNIZED_METHODS)}."
+        )
+    if m not in _METHOD_PRESET_MAP:
+        raise ValueError(
+            f"method {method!r} has no method-aware preset yet.  "
+            f"Available: {sorted(_METHOD_PRESET_MAP)}"
+        )
+    if level != "qc":
+        raise ValueError(f"level {level!r} is not available; only 'qc' exists today.")
+    return get_preset(_METHOD_PRESET_MAP[m])
+
+
 def preset_catalogue() -> str:
     """Return a formatted catalogue of all presets."""
     lines = ["Available pipeline presets", "─" * 60]
@@ -227,6 +421,7 @@ __all__ = [
     "Preset",
     "PRESETS",
     "get_preset",
+    "get_preset_for_method",
     "list_presets",
     "preset_catalogue",
 ]

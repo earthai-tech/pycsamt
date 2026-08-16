@@ -1494,6 +1494,40 @@ class MTBase(CoreObject):
         zz = np.asarray(z, dtype=complex)
         return zz * self.Z_UNIT_MVK_NT_TO_SI * self.MU0
 
+    def z_ohms_to_mvk_nt(self, z: object) -> np.ndarray:
+        r"""
+        Convert ``Z`` from ohms (Ω) to ``(mV/km)/nT``.
+
+        Inverse of :meth:`z_mvk_nt_to_ohms`. Standard EDI/SEG files
+        store impedance in ``(mV/km)/nT`` field units; sources that
+        compute ``Z`` in SI ohms (e.g. Zonge AVG) must be converted
+        through this factor before being written into an EDI ``Z``
+        section, otherwise downstream apparent-resistivity formulas
+        (which assume field units) are off by ``(μ₀ × 1e3)²``.
+
+        Parameters
+        ----------
+        z : array_like
+            Impedance in ohms (Ω).
+
+        Returns
+        -------
+        Z_field : ndarray
+            Impedance in mixed field units ``(mV/km)/nT``.
+
+        Examples
+        --------
+        >>> from pycsamt.core.base import MTBase
+        >>> import numpy as np
+        >>> z_ohm = np.array([50.0 * 4 * np.pi * 1e-4])
+        >>> Z_field = MTBase().z_ohms_to_mvk_nt(z_ohm)
+        >>> Z_field.shape
+        (1,)
+        """
+
+        zz = np.asarray(z, dtype=complex)
+        return zz / (self.Z_UNIT_MVK_NT_TO_SI * self.MU0)
+
     @staticmethod
     def rotate_fields(
         e: object,

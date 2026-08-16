@@ -208,6 +208,102 @@ def draw_topo_section(
                 zorder=_mstyle.zorder + 1,
             )
 
+    # ── 5. Drop the redundant top frame line ───────────────────────────────
+    # The terrain polyline/fill already marks "the surface" on the side
+    # the markers and labels sit on; a plain straight box-frame line
+    # there besides is not just redundant, it is what the labels/markers
+    # visually collide with. Left, right, and bottom keep their normal
+    # depth-axis / profile-distance frame -- only the terrain side loses
+    # its spine.
+    ax.spines["top" if toward_top > 0 else "bottom"].set_visible(False)
+
+    # ── 6. Clear the figure of every marker/label ──────────────────────────
+    # Markers and labels are drawn with clip_on=False so the plot boundary
+    # never visually clips them, but without enough headroom in ylim they
+    # can still hang past the axes into a neighbouring subplot's title or
+    # off the edge of the figure. A fixed-fraction pad has no way to know
+    # how tall a rotated label actually renders, so this measures the real
+    # rendered extent and grows ylim past it, for any caller -- not just
+    # this one section style.
+    _expand_ylim_for_topside_artists(ax, toward_top)
+
+
+def _expand_ylim_for_topside_artists(
+    ax, toward_top: float, pad_frac: float = 0.02, max_iter: int = 4
+) -> None:
+    """Grow *ax*'s y-limit on the terrain side so its own frame (the
+    spine at the current ``ylim`` edge) clears every station marker and
+    label rather than cutting through them.
+
+    Expanding ``ylim`` changes the axes' pixel-to-data scale, which
+    changes how much *data* height a text artist's fixed *point* size
+    represents -- so a single measure-then-expand pass systematically
+    under-shoots (the label was measured against the old, tighter
+    scale). This re-measures after each expansion and stops once the
+    frame already clears everything, which converges in a couple of
+    iterations since each correction is smaller than the last.
+
+    Only text artists (the rotated station-name labels) are measured.
+    The marker itself is small and already kept clear by
+    ``marker_pad_fraction``; a scatter ``PathCollection``'s
+    ``get_window_extent()`` can also return a degenerate, inverted box
+    in some matplotlib states, which is not worth working around here.
+
+    Requires a live canvas/renderer to measure real text extents; if
+    none is available (e.g. a backend that has not drawn yet and
+    cannot be forced to), this silently does nothing rather than
+    raising -- the section still renders, just with the older
+    fixed-fraction margin.
+    """
+    fig = ax.figure
+    if fig is None or fig.canvas is None or not ax.texts:
+        return
+
+    for _ in range(max_iter):
+        try:
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+        except Exception:
+            return
+
+        inv = ax.transData.inverted()
+        extreme_y = None
+        for artist in ax.texts:
+            try:
+                bbox = artist.get_window_extent(renderer=renderer)
+            except Exception:
+                continue
+            if not np.isfinite([bbox.x0, bbox.y0, bbox.x1, bbox.y1]).all():
+                continue
+            _, y0 = inv.transform((bbox.x0, bbox.y0))
+            _, y1 = inv.transform((bbox.x1, bbox.y1))
+            y_edge = max(y0, y1) if toward_top > 0 else min(y0, y1)
+            if extreme_y is None:
+                extreme_y = y_edge
+            elif toward_top > 0:
+                extreme_y = max(extreme_y, y_edge)
+            else:
+                extreme_y = min(extreme_y, y_edge)
+
+        if extreme_y is None or not np.isfinite(extreme_y):
+            return
+
+        ylim = ax.get_ylim()
+        lo, hi = min(ylim), max(ylim)
+        pad = pad_frac * max(hi - lo, 1e-6)
+        ascending = ylim[0] <= ylim[1]
+
+        if toward_top > 0:
+            if extreme_y <= hi:
+                return  # frame already clears every label/marker
+            new_hi = extreme_y + pad
+            ax.set_ylim((lo, new_hi) if ascending else (new_hi, lo))
+        else:
+            if extreme_y >= lo:
+                return
+            new_lo = extreme_y - pad
+            ax.set_ylim((new_lo, hi) if ascending else (hi, new_lo))
+
 
 def draw_topo_strip(
     fig,

@@ -107,6 +107,56 @@ class TestDrawTopoSection:
         draw_topo_section(ax, chain, elev, station_names=None)
         assert len(ax.texts) == 0
 
+    def test_ylim_expands_to_clear_rotated_labels(self):
+        """The top spine (ylim[1]) must sit at or above every rotated
+        station-name label's real rendered extent, not cut through it --
+        the naive fixed-fraction pad this used to rely on has no way to
+        know how tall a rotated label actually renders."""
+        chain = np.linspace(0.0, 2.5, 10)
+        elev = 100.0 + 20.0 * np.sin(chain)
+        names = [f"VeryLongStationName{i:02d}" for i in range(10)]
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, 2.5)
+        ax.set_ylim(-1.0, 0.15)  # deliberately too tight for these labels
+
+        draw_topo_section(ax, chain, elev, names, station_x_km=chain)
+
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        inv = ax.transData.inverted()
+        max_label_top = max(
+            inv.transform(
+                (t.get_window_extent(renderer=renderer).x0,
+                 t.get_window_extent(renderer=renderer).y1)
+            )[1]
+            for t in ax.texts
+        )
+        assert ax.get_ylim()[1] >= max_label_top
+
+    def test_top_spine_hidden_others_kept(self):
+        """The terrain polyline already marks the surface where markers
+        and station labels sit; the plain box-frame line there is both
+        redundant and what those labels visually collide with. Left,
+        right, and bottom (depth axis / profile distance) keep their
+        normal frame."""
+        chain, elev, names = _simple_inputs()
+        _, ax = _make_section_axes()
+        draw_topo_section(ax, chain, elev, names)
+        assert ax.spines["top"].get_visible() is False
+        assert ax.spines["bottom"].get_visible() is True
+        assert ax.spines["left"].get_visible() is True
+        assert ax.spines["right"].get_visible() is True
+
+    def test_ylim_unchanged_when_labels_already_clear(self):
+        """A generously tall axes should not be needlessly expanded."""
+        chain, elev, names = _simple_inputs(n=3)
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, 5)
+        ax.set_ylim(0.0, 5.0)  # already far taller than any label needs
+        ylim_before = ax.get_ylim()
+        draw_topo_section(ax, chain, elev, names, station_x_km=chain)
+        assert ax.get_ylim() == ylim_before
+
     def test_dark_mode_true(self):
         chain, elev, names = _simple_inputs()
         _, ax = _make_section_axes()

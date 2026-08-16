@@ -71,6 +71,8 @@ from .response import OccamResponse
 from .results import InversionResult
 from .runner import OccamRunner
 from .startup import OccamIter, OccamStartup
+from .prejudice import OccamPrejudice
+from .synthetic import SyntheticSite, sites_from_response
 
 __all__ = [
     "InputBuilder",
@@ -80,6 +82,7 @@ __all__ = [
     "OccamMesh",
     "OccamModel",
     "OccamStartup",
+    "OccamPrejudice",
     "OccamIter",
     "OccamResponse",
     "OccamLog",
@@ -91,4 +94,6 @@ __all__ = [
     "PlotSiteMisfit",
     "PlotResponseGrid",
     "OccamConfig",
+    "SyntheticSite",
+    "sites_from_response",
 ]

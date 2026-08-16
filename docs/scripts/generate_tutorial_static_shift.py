@@ -16,6 +16,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
+CSAMT_DIR = ROOT / "data" / "CSAMT"
+MT_DIR = ROOT / "data" / "MT" / "kap03lmt_edis"
 IMAGE_DIR = (
     ROOT / "docs" / "source" / "images" / "tutorials" / "correct_static_shift"
 )
@@ -25,7 +27,22 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        pass
+        from pycsamt.api import read_edis
+        from pycsamt.emtools.ss import (
+            _get_z_block,
+            _iter_items,
+            _name,
+            _rho_det_from_z,
+            apply_ss_factors,
+            correct_ss_ama,
+            detect_near_surface,
+            estimate_ss_ama,
+            estimate_ss_bilateral,
+            estimate_ss_loess,
+            estimate_ss_refmedian,
+            plot_ss_radar,
+            plot_ss_station_curves,
+        )
 
     return locals()
 
@@ -44,7 +61,12 @@ def _save(fig: plt.Figure, name: str) -> None:
     plt.close(fig)
 
 
-def _factor_plot(factor_df) -> None:
+def _factor_plot(
+    factor_df,
+    filename: str = "ama_factor_profile.png",
+    title: str = "AMA static-shift factors, exploratory full-band estimate",
+    xtick_step: int = 2,
+) -> None:
     x = np.arange(len(factor_df))
     colors = np.where(
         factor_df["delta_log10_rho"].to_numpy(dtype=float) >= 0,
@@ -63,13 +85,15 @@ def _factor_plot(factor_df) -> None:
     ax.axhline(0.0, color="#27323a", linewidth=1.0)
     ax.axhline(0.30, color="#c85745", linestyle="--", linewidth=1.0)
     ax.axhline(-0.30, color="#c85745", linestyle="--", linewidth=1.0)
-    ax.set_xticks(x[::2])
-    ax.set_xticklabels(factor_df["station"].iloc[::2], rotation=45, ha="right")
+    ax.set_xticks(x[::xtick_step])
+    ax.set_xticklabels(
+        factor_df["station"].iloc[::xtick_step], rotation=45, ha="right"
+    )
     ax.set_ylabel(r"$\Delta \log_{10}\rho_a$")
     ax.set_xlabel("Station")
-    ax.set_title("AMA static-shift factors, exploratory full-band estimate")
+    ax.set_title(title)
     _style_axis(ax)
-    _save(fig, "ama_factor_profile.png")
+    _save(fig, filename)
 
 
 def _method_comparison_plot(tables) -> None:
@@ -184,6 +208,91 @@ def _compare_plots(functions, sites, corrected, factors) -> None:
     ax.set_title(f"{station}: apparent-resistivity curve before and after")
     _style_axis(ax)
     _save(ax.figure, "station_curve_before_after.png")
+    return station
+
+
+def _radar_before_after(functions, sites, corrected, station: str, name: str) -> None:
+    """Two-panel raw-vs-AMA-corrected static-shift radar for one station.
+
+    Both panels share one radial (log10 rho_a) scale so the correction's
+    actual amplitude shift is visible -- matplotlib polar axes otherwise
+    autoscale each panel independently, which would hide a uniform shift.
+    """
+    fig, axes = plt.subplots(
+        1, 2, figsize=(9.6, 4.8), subplot_kw={"polar": True}
+    )
+    functions["plot_ss_radar"](
+        sites, station=station, rotate="none", ax=axes[0],
+    )
+    axes[0].set_title(f"{station} (raw)", pad=14)
+    functions["plot_ss_radar"](
+        corrected, station=station, rotate="none", ax=axes[1],
+    )
+    axes[1].set_title(f"{station} (AMA-corrected)", pad=14)
+
+    r_all = np.concatenate(
+        [
+            np.concatenate([line.get_ydata() for line in ax.lines])
+            for ax in axes
+        ]
+    )
+    r_all = r_all[np.isfinite(r_all)]
+    pad = 0.08 * (r_all.max() - r_all.min() + 1e-9)
+    rmin, rmax = r_all.min() - pad, r_all.max() + pad
+    for ax in axes:
+        ax.set_ylim(rmin, rmax)
+
+    fig.subplots_adjust(wspace=0.55)
+    _save(fig, name)
+
+
+def _csamt_static_shift(functions):
+    """Real, freshly-computed Tongkeng CSAMT static-shift estimate."""
+    sites = functions["read_edis"](
+        CSAMT_DIR, recursive=False, strict=False, progress=False,
+    ).collection
+    ss = functions["estimate_ss_ama"](
+        sites, recursive=False, api=True,
+    ).to_pandas(copy=True)
+    _factor_plot(
+        ss,
+        filename="csamt_tongkeng_factor_profile.png",
+        title="AMA static-shift factors, Tongkeng CSAMT (default settings)",
+        xtick_step=1,
+    )
+    ax = functions["plot_ss_radar"](
+        sites, station="csa000", rotate="none",
+    )
+    ax.set_title("csa000 (Tongkeng CSAMT, raw)", pad=14)
+    _save(ax.figure, "radar_csamt_tongkeng_csa000_raw.png")
+    return ss
+
+
+def _mt_static_shift(functions):
+    """Real, freshly-computed KAP03 MT static-shift trial."""
+    sites = functions["read_edis"](
+        MT_DIR, recursive=False, strict=True, progress=False,
+    ).collection
+    ss = functions["estimate_ss_ama"](
+        sites,
+        sort_by="name",
+        half_window=3,
+        max_skew=None,
+        recursive=False,
+        api=True,
+    ).to_pandas(copy=True)
+    _factor_plot(
+        ss,
+        filename="mt_kap03_factor_profile.png",
+        title="AMA static-shift factors, KAP03 MT (sort_by='name')",
+        xtick_step=2,
+    )
+    ax = functions["plot_ss_radar"](
+        sites, station="kap112", rotate="none",
+    )
+    ax.set_title("kap112 (KAP03 MT, raw)", pad=14)
+    _save(ax.figure, "radar_mt_kap03_kap112_raw.png")
+    return ss
 
 
 def main() -> int:
@@ -198,7 +307,6 @@ def main() -> int:
 
     conservative = functions["estimate_ss_ama"](
         sites,
-        sort_by="name",
         half_window=3,
         weights="tri",
         pband=None,
@@ -237,28 +345,28 @@ def main() -> int:
         verbose=0,
     )
 
-    pband = (0.0001, 1.0)
+    pband = (0.01, 10.0)
     loess = functions["estimate_ss_loess"](
         sites,
         half_window=3,
         poly=1,
         it=2,
         pband=pband,
-        max_skew=None,
+        max_skew=6.0,
         api=True,
     ).to_pandas(copy=True)
     bilateral = functions["estimate_ss_bilateral"](
         sites,
         half_window=4,
         pband=pband,
-        max_skew=None,
+        max_skew=6.0,
         summary="median",
         api=True,
     ).to_pandas(copy=True)
     refmedian = functions["estimate_ss_refmedian"](
         sites,
         pband=pband,
-        max_skew=None,
+        max_skew=6.0,
         api=True,
     ).to_pandas(copy=True)
 
@@ -271,7 +379,17 @@ def main() -> int:
             "bilateral": bilateral,
         }
     )
-    _compare_plots(functions, sites, corrected, factors)
+    max_delta_station = _compare_plots(functions, sites, corrected, factors)
+    _radar_before_after(
+        functions,
+        sites,
+        corrected,
+        max_delta_station,
+        "radar_amt_station_raw_vs_corrected.png",
+    )
+
+    csamt_ss = _csamt_static_shift(functions)
+    mt_ss = _mt_static_shift(functions)
 
     before_rho, freqs, labels = _logrho_matrix(functions, sites)
     after_rho, _, _ = _logrho_matrix(functions, corrected)
@@ -312,6 +430,37 @@ def main() -> int:
         bilateral[["station", "fac_z"]].rename(columns={"fac_z": "bilateral"})
     )
     print(joined.head(6).to_string(index=False))
+    print(f"max_delta_station: {max_delta_station}")
+
+    print("csamt_tongkeng_ama:")
+    print(
+        csamt_ss[["station", "delta_log10_rho", "fac_rho", "fac_z", "n_used"]]
+        .to_string(index=False)
+    )
+    print(f"csamt_delta_log10_rho_nunique: {csamt_ss['delta_log10_rho'].nunique()}")
+    print("csamt_fac_rho_describe:")
+    print(csamt_ss["fac_rho"].describe().to_string())
+    csamt_ns = functions["detect_near_surface"](
+        functions["read_edis"](
+            CSAMT_DIR, recursive=False, strict=False, progress=False,
+        ).collection,
+        f_split=32.0,
+        recursive=False,
+    )
+    print("csamt_distortion_type_counts:")
+    print(csamt_ns["distortion_type"].value_counts().to_string())
+
+    print("mt_kap03_ama_head:")
+    print(
+        mt_ss[["station", "delta_log10_rho", "fac_rho", "fac_z", "n_used"]]
+        .head(8)
+        .to_string(index=False)
+    )
+    print("mt_kap03_fac_z_describe:")
+    print(mt_ss["fac_z"].describe().to_string())
+    kap112_fac_z = float(mt_ss.loc[mt_ss["station"] == "kap112", "fac_z"].iloc[0])
+    print(f"mt_kap112_fac_z: {kap112_fac_z:.6f}")
+
     print(f"images: {IMAGE_DIR.relative_to(ROOT)}")
     return 0
 

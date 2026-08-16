@@ -49,6 +49,7 @@ from each subpackage's current public exports, including the IoT field stack.
    pycsamt.stratagem
    pycsamt.emtools
    pycsamt.transformers
+   pycsamt.geology
    pycsamt.interp
    pycsamt.tdem
    pycsamt.utils
@@ -90,6 +91,7 @@ from each subpackage's current public exports, including the IoT field stack.
    stratagem
    emtools
    transformers
+   geology
    interp
    tdem
    utils

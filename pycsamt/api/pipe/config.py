@@ -29,8 +29,8 @@ from dataclasses import dataclass, field, fields
 from typing import Any
 
 _ON_STEP_ERROR = {"raise", "warn", "skip"}
-_PROGRESS_STYLES = {"bar", "log", "silent"}
-_REPORT_FORMATS = {"html", "txt"}
+_PROGRESS_STYLES = {"bar", "log", "silent", "rich"}
+_REPORT_FORMATS = {"html", "txt", "dashboard"}
 
 
 @dataclass
@@ -62,6 +62,9 @@ class PipelineAPIConfig:
         ``"log"`` when unavailable).
         ``"log"``  – one line per step.
         ``"silent"`` – no output.
+        ``"rich"``  – a live-updating :class:`rich.table.Table` showing every
+        step's status (pending/running/OK/ERR/cached) at once, rewritten in
+        place as the run progresses.  See :doc:`/user_guide/pipeline/observability`.
     repr_width:
         Character width used when printing the pipeline summary.
     plot_dpi:
@@ -70,8 +73,23 @@ class PipelineAPIConfig:
         File extension / format for saved figures (``"png"``, ``"pdf"``,
         ``"svg"``).
     report_formats:
-        Sequence of report types to write.  Each item must be ``"html"``
-        or ``"txt"``.
+        Sequence of report types to write.  Each item must be ``"html"``,
+        ``"txt"``, or ``"dashboard"``.  ``"dashboard"`` writes a richer,
+        branded ``dashboard.html`` with KPI stat tiles and inline-SVG
+        charts (step status, per-step duration, site-count flow) — see
+        :doc:`/user_guide/pipeline/outputs`.
+    cache_root:
+        Default root directory for the pipeline step cache
+        (:class:`~pycsamt.pipeline.StepCache`) when
+        :meth:`~pycsamt.pipeline.Pipeline.run` is called with
+        ``cache=True``.  ``None`` resolves lazily to
+        ``~/.pycsamt/pipeline_cache``.
+    history_path:
+        Default file for the run history log
+        (:func:`~pycsamt.pipeline.load_history`) when
+        :meth:`~pycsamt.pipeline.Pipeline.run` is called with
+        ``history=True``.  ``None`` resolves lazily to
+        ``~/.pycsamt/pipeline_history.jsonl``.
     """
 
     output_root: str = "pipe_results"
@@ -85,6 +103,8 @@ class PipelineAPIConfig:
     plot_dpi: int = 150
     plot_fmt: str = "png"
     report_formats: tuple = field(default_factory=lambda: ("html", "txt"))
+    cache_root: str | None = None
+    history_path: str | None = None
 
     # ------------------------------------------------------------------
     # Public API

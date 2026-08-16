@@ -74,25 +74,17 @@ Use :func:`pycsamt.api.read_edis` for the public v2 API. During first
 inspection, ``strict=False`` is usually the best choice because it keeps
 reading the remaining stations when one file has a recoverable issue.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.api import read_edis
-
-   survey = read_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       recursive=False,
-       strict=False,
-       on_dup="replace",
-       progress=False,
-   )
-
-   print(survey)
-
-For the bundled line, the printed survey object is:
-
-.. code-block:: text
-
+   >>> from pycsamt.api import read_edis
+   >>> survey = read_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=False,
+   ...     strict=False,
+   ...     on_dup="replace",
+   ...     progress=False,
+   ... )
+   >>> print(survey)
    APISurvey: edi_survey
    sites: 28
    stations: 23-18-001A, 23-18-002U, 23-18-003A, 23-18-004A, 23-18-005U, 23-18-006A, 23-18-007U, 23-18-008U, ...
@@ -100,28 +92,34 @@ For the bundled line, the printed survey object is:
 
 The returned object is an ``APISurvey``. It is a friendly public facade over
 the lower-level EDI collection. It keeps the high-level workflow readable while
-still exposing the raw collection when you need advanced operations.
+still exposing the raw collection when you need advanced operations. The
+``23-`` prefix on every station name is the EDI ``DATAID`` field
+(``23-18-001A``, encoding the 2023 acquisition year), reported as-is rather
+than trimmed -- worth knowing before matching these names against a
+QC or confidence table keyed on the plain ``18-001A`` form.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   print(survey.n_sites)
-   print(survey.stations[:5])
-   print(survey.paths[:5])
-
-   collection = survey.collection
-   same_collection = survey.to_collection()
-
-Example output:
-
-.. code-block:: text
-
+   >>> from pathlib import Path
+   >>> print(survey.n_sites)
    28
+   >>> print(survey.stations[:5])
    ['23-18-001A', '23-18-002U', '23-18-003A', '23-18-004A', '23-18-005U']
+   >>> print([Path(p).name for p in survey.paths[:5]])
    ['18-001A.edi', '18-002U.edi', '18-003A.edi', '18-004A.edi', '18-005U.edi']
+   >>> collection = survey.collection
+   >>> same_collection = survey.to_collection()
+   >>> collection is same_collection
+   True
 
-``survey.collection`` is the object used by many lower-level EDI, site,
-editing, and QC helpers.
+``survey.paths`` itself returns fully-resolved absolute filesystem paths, not
+bare filenames -- ``Path(p).name`` is applied above to keep the printed
+list short and portable across machines; use the raw ``survey.paths`` value
+when you need the actual location on disk. ``survey.collection`` and
+``survey.to_collection()`` return the identical ``EDICollection`` object, not
+just the same type -- ``to_collection()`` is a convenience alias, not a
+fresh copy, and is the type used by many lower-level EDI, site, editing, and
+QC helpers.
 
 Read One EDI File
 -----------------
@@ -129,40 +127,33 @@ Read One EDI File
 For a single EDI file, use :func:`pycsamt.api.read_edi` when you want the raw
 ``EDIFile`` object directly:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.api import read_edi
-
-   edi = read_edi("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
-   print(edi.station)
+   >>> from pycsamt.api import read_edi
+   >>> edi = read_edi("data/AMT/WILLY_DATA/L18PLT/18-001A.edi")
+   >>> print(edi.station)
+   23-18-001A
 
 If you want the same ``APISurvey`` interface used by the rest of this tutorial,
 read the file with ``read_edis`` instead:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.api import read_edis
-
-   survey = read_edis(
-       "data/AMT/WILLY_DATA/L18PLT/18-001A.edi",
-       recursive=False,
-       progress=False,
-   )
-   print(survey.n_sites)
-   print(survey.summary())
-
-Example output:
-
-.. code-block:: text
-
-   23-18-001A
+   >>> survey1 = read_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT/18-001A.edi",
+   ...     recursive=False,
+   ...     progress=False,
+   ... )
+   >>> print(survey1.n_sites)
    1
+   >>> print(survey1.summary())
    APIFrame: edi_survey_summary
    kind: edi.summary
    shape: 1 rows x 6 columns
    columns: station, path, n_freq, tipper, spectra, ts
+   numeric: 1 columns
+   missing: 0.0%
+   source: data/AMT/WILLY_DATA/L18PLT/18-001A.edi
 
 This is useful when you are writing reusable code that should accept either one
 file or many files.
@@ -173,25 +164,27 @@ Build a Station Inventory
 The fastest survey inventory is ``survey.summary()``. It returns an
 ``APIFrame`` with a compact station-level table.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   summary = survey.summary()
-   print(summary)
-
-   inventory = summary.to_pandas(copy=True)
-   print(inventory.head())
-
-Example output:
-
-.. code-block:: text
-
-      station        path  n_freq  tipper  spectra     ts
-   23-18-001A 18-001A.edi      53   False    False  False
-   23-18-002U 18-002U.edi      53   False    False  False
-   23-18-003A 18-003A.edi      53   False    False  False
-   23-18-004A 18-004A.edi      53   False    False  False
-   23-18-005U 18-005U.edi      53   False    False  False
+   >>> summary = survey.summary()
+   >>> print(summary)
+   APIFrame: edi_survey_summary
+   kind: edi.summary
+   shape: 28 rows x 6 columns
+   columns: station, path, n_freq, tipper, spectra, ts
+   numeric: 1 columns
+   missing: 0.0%
+   source: data/AMT/WILLY_DATA/L18PLT
+   >>> inventory = summary.to_pandas(copy=True)
+   >>> compact = inventory.copy()
+   >>> compact["path"] = compact["path"].map(lambda value: Path(value).name)
+   >>> print(compact.head(5).to_string(index=False))
+      station        path  n_freq  tipper  spectra    ts
+   23-18-001A 18-001A.edi      53   False    False False
+   23-18-002U 18-002U.edi      53   False    False False
+   23-18-003A 18-003A.edi      53   False    False False
+   23-18-004A 18-004A.edi      53   False    False False
+   23-18-005U 18-005U.edi      53   False    False False
 
 The figures in this tutorial are generated by
 ``docs/scripts/generate_tutorial_read_edi.py``. This overview shows that every
@@ -201,6 +194,14 @@ not include tipper, spectra, or time-series sections:
 .. image:: ../images/tutorials/read_edi_survey/survey_inventory_overview.png
    :alt: Station inventory and optional EDI section availability for L18PLT.
    :width: 100%
+
+Both panels confirm the same two facts visually: the top panel's markers sit
+on a flat line at ``53`` for every one of the 28 stations (no station lost
+frequencies during acquisition or parsing), and the bottom panel is solid
+dark blue across the whole period range for every station (every frequency
+sample is present, not just counted). A ragged top line or a mottled bottom
+panel would be the visual signal to investigate specific stations before
+moving on, rather than a uniform coverage problem.
 
 The default columns are:
 
@@ -224,31 +225,25 @@ The default columns are:
 
 For a focused table, request the columns you want:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   station_table = survey.summary(
-       fields=["station", "n_freq", "tipper", "path"],
-   )
-
-   print(station_table.to_pandas(copy=True))
-
-Example output:
-
-.. code-block:: text
-
-   station  n_freq  tipper        path
-   18-001A      53   False 18-001A.edi
-   18-002U      53   False 18-002U.edi
-   18-003A      53   False 18-003A.edi
+   >>> station_table = survey.summary(
+   ...     fields=["station", "n_freq", "tipper", "path"],
+   ... )
+   >>> focused = station_table.to_pandas(copy=True)
+   >>> focused["path"] = focused["path"].map(lambda value: Path(value).name)
+   >>> print(focused.head(3).to_string(index=False))
+      station  n_freq  tipper        path
+   23-18-001A      53   False 18-001A.edi
+   23-18-002U      53   False 18-002U.edi
+   23-18-003A      53   False 18-003A.edi
 
 Save the inventory for a field notebook, spreadsheet review, or processing
 report:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   inventory.to_csv("survey_inventory.csv", index=False)
+   >>> inventory.to_csv("survey_inventory.csv", index=False)
 
 Inspect Stations Programmatically
 ---------------------------------
@@ -256,45 +251,42 @@ Inspect Stations Programmatically
 The ``APISurvey`` object behaves like a small collection. You can iterate over
 loaded EDI objects, select one by name, or access a station by index.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   for edi in survey:
-       print(edi.station, edi.path)
+   >>> for i, edi in enumerate(survey):
+   ...     if i >= 3:
+   ...         break
+   ...     print(edi.station, Path(edi.path).name)
+   23-18-001A 18-001A.edi
+   23-18-002U 18-002U.edi
+   23-18-003A 18-003A.edi
+   >>> first = survey[0]
+   >>> type(first).__name__, first.station
+   ('EDIFile', '23-18-001A')
+   >>> station = survey.stations[0]
+   >>> selected = survey.get_site(station)
+   >>> selected.station == first.station
+   True
 
-   first = survey[0]
-   print(first.station)
+Dropping the ``if i >= 3: break`` guard iterates over all 28 stations
+instead of just the first three shown here. ``first`` is a real ``EDIFile``,
+the underlying EDI object, and its ``station`` is still ``23-18-001A`` --
+the DATAID-derived name is consistent at every level of the API, not just
+at the survey-table level. ``get_site``
+accepts the common identifiers used by the collection resolver, including
+station names and file stems, and ``selected`` above resolves to the exact
+same station as ``first``.
 
-   station = survey.stations[0]
-   selected = survey.get_site(station)
-   print(selected.path)
+``get_site`` returns ``None`` by default when a station cannot be resolved,
+rather than raising:
 
-Example output:
+.. code-block:: pycon
 
-.. code-block:: text
-
-   18-001A
-   data/AMT/WILLY_DATA/L18PLT/18-001A.edi
-
-Station identifiers can include line prefixes in the survey table while the
-underlying EDI object may expose the local station name. ``get_site`` accepts
-the common identifiers used by the collection resolver, including station
-names and file stems.
-
-``get_site`` accepts common station identifiers, including station names and
-file stems. It returns ``None`` by default when a station cannot be resolved:
-
-.. code-block:: python
-   :linenos:
-
-   maybe_site = survey.get_site("S999")
-   if maybe_site is None:
-       print("Station not found")
-
-Output:
-
-.. code-block:: text
-
+   >>> maybe_site = survey.get_site("S999")
+   >>> maybe_site is None
+   True
+   >>> if maybe_site is None:
+   ...     print("Station not found")
    Station not found
 
 Handle Parser Errors
@@ -304,43 +296,38 @@ EDI files from different acquisition or processing software can vary in
 metadata style. For a first pass, keep ``strict=False`` and inspect parser
 errors after loading:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   survey = read_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       recursive=False,
-       strict=False,
-       progress=False,
-   )
-
-   errors = survey.errors()
-   print(f"{len(errors)} read error(s)")
-
-   for path, exc in errors[:10]:
-       print(path, type(exc).__name__, exc)
-
-The bundled line reads without parser errors:
-
-.. code-block:: text
-
+   >>> errors = survey.errors()
+   >>> print(f"{len(errors)} read error(s)")
    0 read error(s)
+   >>> for path, exc in errors[:10]:
+   ...     print(path, type(exc).__name__, exc)
+
+The bundled line reads without parser errors, so the second loop above
+prints nothing -- on a survey with real parser issues, each line would show
+the offending file path, the exception class, and its message, which is
+usually enough to tell a recoverable metadata quirk apart from a file that
+needs re-export.
 
 Use ``strict=True`` in automated validation jobs when the workflow should fail
 as soon as one EDI cannot be read:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   survey = read_edis(
-       "data/AMT/WILLY_DATA/L18PLT",
-       recursive=False,
-       strict=True,
-       progress=False,
-   )
+   >>> strict_survey = read_edis(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     recursive=False,
+   ...     strict=True,
+   ...     progress=False,
+   ... )
+   >>> strict_survey.n_sites
+   28
 
 This stricter mode is useful before committing data to a project archive or
-before running a batch inversion pipeline.
+before running a batch inversion pipeline. On this clean bundled line, both
+modes load the same 28 stations; the difference only shows up on a survey
+with a genuinely broken file.
 
 Choose a Duplicate Policy
 -------------------------
@@ -360,18 +347,29 @@ in the returned survey:
 
 Example:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   survey = read_edis(
-       "data/AMT/WILLY_DATA",
-       recursive=True,
-       on_dup="keep",
-   )
+   >>> multi_line = read_edis(
+   ...     "data/AMT/WILLY_DATA",
+   ...     recursive=True,
+   ...     on_dup="keep",
+   ...     progress=False,
+   ... )
+   >>> len(multi_line.stations)
+   128
+   >>> multi_line.stations[:5]
+   ['23-18-001A', '23-18-002U', '23-18-003A', '23-18-004A', '23-18-005U']
+   >>> multi_line.stations[-3:]
+   ['23-34-023U', '23-34-024U', '23-34-025A']
 
-   print(survey.stations)
-
-If duplicate names are unexpected, inspect the source paths and fix the station
+``data/AMT/WILLY_DATA`` contains five line folders (``L18PLT``, ``L22PLT``,
+``L26PLT``, ``L30PLT``, ``L34PLT``), and this recursive read finds all 128
+stations across them, distinguished by their line-number prefix
+(``18-``, ``22-``, ``26-``, ``30-``, ``34-``). No station name collides
+across lines here, so ``on_dup="keep"`` never actually has to choose between
+two files -- but on a project where two exports genuinely share a station
+name, this is exactly the setting that decides which file wins. If
+duplicate names are unexpected, inspect the source paths and fix the station
 metadata or file selection before continuing.
 
 Control Progress Output
@@ -379,14 +377,17 @@ Control Progress Output
 
 The ``progress`` argument is intended for both notebooks and scripts:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   interactive = read_edis("data/AMT/WILLY_DATA/L18PLT", progress="auto")
-   quiet = read_edis("data/AMT/WILLY_DATA/L18PLT", progress=False)
-   always_show = read_edis("data/AMT/WILLY_DATA/L18PLT", progress=True)
+   >>> interactive = read_edis("data/AMT/WILLY_DATA/L18PLT", progress="auto")
+   >>> quiet = read_edis("data/AMT/WILLY_DATA/L18PLT", progress=False)
+   >>> always_show = read_edis("data/AMT/WILLY_DATA/L18PLT", progress=True)
+   >>> interactive.n_sites, quiet.n_sites, always_show.n_sites
+   (28, 28, 28)
 
-Use ``progress=False`` in tests, scheduled jobs, and log files. Use
+``progress`` only changes whether a progress indicator is written to the
+console while reading; it never changes which stations are loaded. Use
+``progress=False`` in tests, scheduled jobs, and log files. Use
 ``progress="auto"`` during interactive survey inspection.
 
 Read Several Sources
@@ -395,20 +396,31 @@ Read Several Sources
 You can pass several folders or files at once. This is helpful when a project
 has separate field folders but you want one in-memory survey for inspection.
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   survey = read_edis(
-       [
-           "data/AMT/WILLY_DATA/L18PLT",
-           "data/AMT/WILLY_DATA/L22PLT",
-           "extra_stations/S999.edi",
-       ],
-       recursive=True,
-       on_dup="replace",
-   )
+   >>> two_lines = read_edis(
+   ...     [
+   ...         "data/AMT/WILLY_DATA/L18PLT",
+   ...         "data/AMT/WILLY_DATA/L22PLT",
+   ...     ],
+   ...     recursive=True,
+   ...     on_dup="replace",
+   ... )
+   >>> print(two_lines.summary())
+   APIFrame: edi_survey_summary
+   kind: edi.summary
+   shape: 53 rows x 6 columns
+   columns: station, path, n_freq, tipper, spectra, ts
+   numeric: 1 columns
+   missing: 0.0%
+   source: ['data/AMT/WILLY_DATA/L18PLT', 'data/AMT/WILLY_DATA/L22PLT']
 
-   print(survey.summary())
+The merged survey has 53 rows -- the full 28 from ``L18PLT`` plus 25 from
+``L22PLT``, so no station names collided between the two lines. Individual
+files can be mixed into the same list alongside folders (for example a
+single stray ``.edi`` recovered separately from the rest of a line); the
+list form and the loading behaviour are identical whether every entry is a
+folder or some entries are single files.
 
 Before moving into QC, a quick filename regularity check can catch mixed
 exports or accidental files:
@@ -416,6 +428,14 @@ exports or accidental files:
 .. image:: ../images/tutorials/read_edi_survey/source_filename_check.png
    :alt: Source filename length check for the L18PLT tutorial line.
    :width: 80%
+
+Every one of L18PLT's 28 filenames is exactly 11 characters
+(``18-001A.edi``, ``18-002U.edi``, ...), so the plotted line is perfectly
+flat. A single station with a differently formatted filename -- a longer
+name, a missing zero-pad, an extra suffix from a re-export -- would show up
+as a visible spike, which is often the fastest way to notice that one file
+in a folder came from a different acquisition batch or software export than
+the rest.
 
 Keep this merged survey only when the stations belong to the same processing
 context. For inversion preparation, line identity and profile geometry often
@@ -471,23 +491,20 @@ Move to QC
 After reading the survey, the next step is normally a quality-control table.
 The ``survey.collection`` object can be passed directly to the QC helpers:
 
-.. code-block:: python
-   :linenos:
+.. code-block:: pycon
 
-   from pycsamt.emtools.qc import build_qc_table
+   >>> from pycsamt.emtools.qc import build_qc_table
+   >>> qc = build_qc_table(
+   ...     survey.collection,
+   ...     include_skew=True,
+   ...     recursive=False,
+   ...     api=True,
+   ... )
+   >>> qc_df = qc.to_pandas(copy=True)
+   >>> qc_df.to_csv("survey_qc.csv", index=False)
 
-   qc = build_qc_table(
-       survey.collection,
-       include_skew=True,
-       recursive=False,
-       api=True,
-   )
-
-   qc_df = qc.to_pandas(copy=True)
-   qc_df.to_csv("survey_qc.csv", index=False)
-
-The QC tutorial explains how to interpret this table and decide which stations
-need review.
+The QC tutorial (:doc:`inspect_and_qc_survey`) explains how to interpret this
+table and decide which stations need review.
 
 If you want one more visual check before QC, a survey fingerprint compresses
 phase-tensor behavior across stations and periods:
@@ -495,6 +512,20 @@ phase-tensor behavior across stations and periods:
 .. image:: ../images/tutorials/read_edi_survey/survey_fingerprint.png
    :alt: Quick phase-tensor survey fingerprint for the L18PLT tutorial line.
    :width: 100%
+
+The three panels (skew, ellipticity, and maximum phase) all show the same
+break partway along the profile: stations from ``18-001A`` to roughly
+``18-017U`` are comparatively calm (pale, low-contrast skew; muted
+ellipticity), while stations from about ``18-019U`` onward turn visibly
+noisier -- strong alternating red/blue skew patches and bright yellow
+ellipticity and ``phi_max`` streaks concentrated at short periods. That is
+not a coincidence: ``18-017U``, ``18-021U``, ``18-021B``, and ``18-022U``
+are exactly the stations :doc:`inspect_and_qc_survey` flags as low-confidence
+using an entirely different, non-visual method (tensor consistency,
+diagonal leakage, and spatial coherence scores). Seeing the same stations
+stand out in a quick phase-tensor image and in a numeric confidence table is
+a useful cross-check -- neither view depends on the other, so agreement
+between them is real evidence, not a restatement of the same calculation.
 
 Troubleshooting
 ---------------
@@ -525,6 +556,8 @@ Next Steps
 ----------
 
 - Run quality-control tables with :doc:`inspect_and_qc_survey`.
+- Compare two lines before reusing one QC config with
+  :doc:`compare_survey_lines_for_qc`.
 - Correct static shift with :doc:`correct_static_shift`.
 - Prepare inversion files with :doc:`prepare_occam2d_inversion`.
 

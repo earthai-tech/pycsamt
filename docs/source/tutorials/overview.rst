@@ -19,7 +19,8 @@ task you need.
    * - :doc:`read_edi_survey`
      - You need to load one EDI file, a line directory, or a recursive survey
        tree and inspect what pyCSAMT found.
-     - ``APISurvey``, station inventory, parser diagnostics.
+     - ``APISurvey``, station inventory, parser diagnostics, a quick
+       phase-tensor fingerprint cross-check.
    * - :doc:`inspect_and_qc_survey`
      - You want to review station coverage, usable frequencies, skew proxies,
        signal quality, and stations that need manual attention.
@@ -31,8 +32,11 @@ task you need.
        processing decision table.
    * - :doc:`correct_static_shift`
      - You have inspected the survey and want a conservative static-shift
-       correction workflow before inversion preparation.
-     - Static-shift factors, corrected site collection, corrected EDIs.
+       correction workflow -- on AMT, MT, or CSAMT data -- before inversion
+       preparation, including recognizing when correction should be
+       rejected or is a no-op.
+     - Static-shift factors, corrected site collection, corrected EDIs,
+       period-labeled static-shift radar plots.
    * - :doc:`condition_mt_line_with_tipper_and_rotation`
      - You have MT data with tipper and full impedance tensors and need a
        transparent conditioning workflow before inversion.
@@ -68,9 +72,10 @@ task you need.
        raw-versus-corrected RMS, topography-draped final sections.
    * - :doc:`run_pipeline_from_config`
      - You want a repeatable processing workflow stored in YAML, JSON, or
-       Python config files and runnable from Python or the CLI.
+       Python config files, method-aware presets for MT/AMT/CSAMT/CSUMT, and
+       runnable from Python or the CLI.
      - Processed EDIs, plots, ``pipeline.yaml``, ``summary.txt``,
-       ``report.html``.
+       ``report.html``, optionally ``dashboard.html``.
 
 Recommended Learning Path
 -----------------------------
@@ -79,7 +84,8 @@ Recommended Learning Path
 
    This page introduces :func:`pycsamt.api.read_edis`, the ``APISurvey``
    object, station summaries, duplicate policies, parser errors, and the
-   basic EDI CLI commands.
+   basic EDI CLI commands -- and shows a quick phase-tensor fingerprint that
+   already hints at which stations will need review later.
 
 2. Continue with :doc:`inspect_and_qc_survey`.
 
@@ -96,7 +102,9 @@ Recommended Learning Path
 
    Static-shift correction should not be the first operation applied blindly.
    The tutorial shows how to estimate, inspect, apply, and export correction
-   factors conservatively.
+   factors conservatively -- worked through on AMT, MT, and CSAMT lines, so
+   it also covers the case where a large factor should still be rejected
+   and the case where correction is genuinely a no-op.
 
 5. Use :doc:`condition_mt_line_with_tipper_and_rotation` for advanced MT data.
 

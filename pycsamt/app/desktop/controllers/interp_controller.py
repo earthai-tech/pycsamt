@@ -289,14 +289,14 @@ class InterpController:
         self.state.model = ResistivityModel.from_occam2d(res)
 
     def add_borehole_csv(self, path: str) -> str:
-        from pycsamt.interp.borehole import Borehole
+        from pycsamt.geology.borehole import Borehole
 
         bh = Borehole.from_csv(path)
         self.state.boreholes.append(bh)
         return bh.name
 
     def add_borehole_las(self, path: str) -> str:
-        from pycsamt.interp.borehole import Borehole
+        from pycsamt.geology.borehole import Borehole
 
         bh = Borehole.from_las(path)
         self.state.boreholes.append(bh)
@@ -308,12 +308,12 @@ class InterpController:
         ]
 
     def set_rock_db_default(self) -> None:
-        from pycsamt.interp.lithology import RockDatabase
+        from pycsamt.geology.lithology import RockDatabase
 
         self.state.db = RockDatabase.default()
 
     def set_rock_db_csv(self, path: str) -> None:
-        from pycsamt.interp.lithology import RockDatabase
+        from pycsamt.geology.lithology import RockDatabase
 
         self.state.db = RockDatabase.from_csv(path)
 
@@ -371,7 +371,7 @@ class InterpController:
         if db is None:
             self.set_rock_db_default()
             db = self.state.db
-        from pycsamt.interp.lithology import StratigraphicLog
+        from pycsamt.geology.lithology import StratigraphicLog
 
         model = self.state.model
         logs = []
@@ -656,7 +656,7 @@ class InterpController:
             db = self.state.db
         import matplotlib.pyplot as plt
 
-        rocks = list(db)
+        rocks = list(db.entries)
         fig, ax = plt.subplots(figsize=(10, max(4, len(rocks) * 0.4 + 1)))
         self._apply_fig_style(fig, ax)
         try:

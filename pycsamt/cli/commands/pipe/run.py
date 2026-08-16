@@ -56,7 +56,8 @@ from ._base import (
     metavar="NAME",
     help=(
         "Named preset (basic_qc, noise_reduction, full_processing, "
-        "tensor_analysis, dimensionality_filter, publication_ready).  "
+        "tensor_analysis, dimensionality_filter, publication_ready, "
+        "stratagem_mt, mt_qc, amt_qc, csamt_qc, csumt_qc).  "
         "Run  pycsamt pipe presets  to list all."
     ),
 )
@@ -158,6 +159,63 @@ from ._base import (
     show_default=True,
     help="File format for saved QC figures.",
 )
+@click.option(
+    "--cache",
+    is_flag=True,
+    default=False,
+    help=(
+        "Cache each step's output, keyed by the exact upstream data + step "
+        "code + params.  A rerun of the identical command replays already-"
+        "completed steps from cache instead of recomputing them — this is "
+        "also how an interrupted run resumes.  Off by default: a step whose "
+        "function is non-deterministic or reads state outside its own "
+        "params is not safe to cache."
+    ),
+)
+@click.option(
+    "--cache-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    metavar="DIR",
+    help="Cache location.  Defaults to ~/.pycsamt/pipeline_cache.  Implies --cache.",
+)
+@click.option(
+    "--live",
+    is_flag=True,
+    default=False,
+    help=(
+        "Render a live-updating status table (pending/running/OK/ERR/cached "
+        "per step) instead of a static progress bar.  Implies visible "
+        "progress even without -v."
+    ),
+)
+@click.option(
+    "--history",
+    is_flag=True,
+    default=False,
+    help=(
+        "Append a one-line JSON summary of this run to the run history log "
+        "(default ~/.pycsamt/pipeline_history.jsonl).  See  pycsamt pipe history."
+    ),
+)
+@click.option(
+    "--history-file",
+    type=click.Path(path_type=Path),
+    default=None,
+    metavar="FILE",
+    help="Run-history log location.  Implies --history.",
+)
+@click.option(
+    "--dashboard",
+    is_flag=True,
+    default=False,
+    help=(
+        "Also write dashboard.html — a richer, branded report with KPI "
+        "stat tiles and inline-SVG charts (step status, per-step "
+        "duration, site-count flow) — alongside the default report.html "
+        "and summary.txt."
+    ),
+)
 # ── Standard global options ───────────────────────────────────────────────
 @n_jobs_option
 @format_option
@@ -184,6 +242,12 @@ def run(
     no_report: bool,
     dpi: int,
     plot_fmt: str,
+    cache: bool,
+    cache_dir: Path | None,
+    live: bool,
+    history: bool,
+    history_file: Path | None,
+    dashboard: bool,
     n_jobs: int,
     output_format: str,
     verbose: int,
@@ -221,6 +285,18 @@ def run(
 
       # Override error policy and output DPI
       pycsamt pipe run --preset basic_qc --on-error raise --dpi 300 --plot-fmt pdf
+
+      # Cache step outputs — a rerun resumes instead of recomputing
+      pycsamt pipe run --config workflow.yaml --survey ./edis/ --cache
+
+      # Live per-step status table instead of a static progress bar
+      pycsamt pipe run --preset basic_qc --live
+
+      # Log this run, then compare later with  pycsamt pipe history
+      pycsamt pipe run --preset basic_qc --history
+
+      # Also write a branded dashboard.html with stat tiles and charts
+      pycsamt pipe run --preset basic_qc --dashboard
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
@@ -229,12 +305,21 @@ def run(
     )
 
     # Apply pipeline-level config overrides
-    configure_pipe(
+    pipe_overrides = dict(
         on_step_error=on_error,
         plot_dpi=dpi,
         plot_fmt=plot_fmt.lower(),
-        show_progress=(verbose >= 1),
+        show_progress=(verbose >= 1) or live,
     )
+    if live:
+        # --live is an explicit request to see it — don't disturb the
+        # user's own progress_style configuration otherwise.
+        pipe_overrides["progress_style"] = "rich"
+    if dashboard:
+        # --dashboard adds the "dashboard" report format for this run only
+        # — don't disturb any other formats already configured.
+        pipe_overrides["report_formats"] = ("html", "txt", "dashboard")
+    configure_pipe(**pipe_overrides)
 
     # ── 1. Resolve pipeline ───────────────────────────────────────────────
     try:
@@ -265,6 +350,8 @@ def run(
         raise click.ClickException(f"Failed to load sites: {exc}") from exc
 
     n_sites = len(sites) if hasattr(sites, "__len__") else "?"
+    cache_arg: bool | Path = cache_dir if cache_dir is not None else cache
+    history_arg: bool | Path = history_file if history_file is not None else history
 
     # ── 4. Dry-run: print resolved pipeline and exit ──────────────────────
     if dry_run:
@@ -273,6 +360,9 @@ def run(
         click.echo(f"Sites   : {n_sites}")
         click.echo(f"Steps   : {len(pipeline)}")
         click.echo(f"Out dir : {out_dir or 'pipe_results (default)'}")
+        click.echo(f"Cache   : {cache_arg if cache_arg else 'disabled'}")
+        click.echo(f"History : {history_arg if history_arg else 'disabled'}")
+        click.echo(f"Dashboard : {'enabled' if dashboard else 'disabled'}")
         click.echo()
         click.echo("Dry run — no processing performed.")
         return
@@ -288,6 +378,8 @@ def run(
             save_plots=not no_plots,
             save_edis=not no_edi,
             save_report=not no_report,
+            cache=cache_arg,
+            history=history_arg,
         )
     except Exception as exc:
         raise click.ClickException(f"Pipeline run failed: {exc}") from exc

@@ -234,6 +234,30 @@ data/AMT/WILLY_DATA/*
 !data/AMT/WILLY_DATA/L22PLT
 !data/AMT/WILLY_DATA/README.md
 
+# Exception: L14 — real CSAMT field survey (Hunan, China). Track the raw
+# AVG/STN source, the reference scripts, three sample EDIs (first/middle/
+# last station), and the lightweight pipeline outputs (yaml/html/txt) as a
+# small worked example; exclude the full 58-station edi/ set and the
+# regenerable per-run processed EDIs and QC plots to keep the repo small.
+!data/avg
+data/avg/*
+!data/avg/L14
+data/avg/L14/*
+!data/avg/L14/*.avg
+!data/avg/L14/*.stn
+!data/avg/L14/*.py
+!data/avg/L14/*.md
+!data/avg/L14/edi
+data/avg/L14/edi/*
+!data/avg/L14/edi/S1000.edi
+!data/avg/L14/edi/S2120.edi
+!data/avg/L14/edi/S3280.edi
+!data/avg/L14/output
+data/avg/L14/output/*
+!data/avg/L14/output/pipeline.yaml
+!data/avg/L14/output/report.html
+!data/avg/L14/output/summary.txt
+
 !data/MT
 data/MT/*
 !data/MT/kap03lmt_edis
@@ -383,6 +407,10 @@ docs/examples/**/*.py[cod]
 # C&G paper submission files — not for public distribution
 /cag-paper/
 
+# DUHI paper reproduction — local drafts, checkpoints, and configs, not
+# for public distribution
+/DUHI-paper/
+
 # Reviewer-response handoff artifacts — local drafts/results for students
 /QUESTIONS-TO-ANSWERS.md
 /docs/reviewer_response_emtools.tex
@@ -491,6 +519,8 @@ docs/examples/topo/l18_prepared_workspace/
 /workflow_script.py
 /mt1d_train*.npz
 /*_train.npz
+/out.txt
+/out2.txt
 
 # General local artifact and scratch directories.
 /artifacts/

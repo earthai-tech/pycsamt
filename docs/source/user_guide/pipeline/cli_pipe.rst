@@ -49,6 +49,33 @@ Command Overview
      - Pretty-print a config file or preset before running it.
    * - ``pycsamt pipe run``
      - Run a pipeline against MT/AMT EDI data.
+   * - ``pycsamt pipe plugins``
+     - Discover and list third-party :term:`pipeline plugin` steps.
+   * - ``pycsamt pipe history``
+     - List runs previously logged with ``pycsamt pipe run --history``.
+
+The ``pipe`` group itself also accepts ``--with-plugins``, which discovers
+plugin steps before any subcommand runs, so a plugin step code can be passed
+to ``--steps`` in the same command.  It is off by default because the
+underlying scan can take several seconds in a large environment; see
+:doc:`extending` for the full plugin mechanism and when this flag is needed.
+
+``pycsamt pipe run`` also accepts ``--cache``/``--cache-dir``, which caches
+each step's output so a rerun of the identical command replays already-
+completed steps instead of recomputing them -- also how an interrupted run
+resumes.  Off by default; see :doc:`caching` for the full mechanism and its
+caveats.
+
+``--live`` renders a live-updating per-step status table instead of a
+static progress bar; ``--history``/``--history-file`` logs the run for
+``pycsamt pipe history`` to list later.  Both off by default; see
+:doc:`observability` for the full mechanism, including the ``on_step``
+Python hook these CLI flags build on.
+
+``--dashboard`` adds a richer, branded ``dashboard.html`` report alongside
+the default ``report.html``/``summary.txt`` -- KPI stat tiles and inline-SVG
+charts built from the same per-step data.  Off by default; see
+:doc:`outputs` for what it contains.
 
 Start With Help
 ---------------
@@ -65,6 +92,8 @@ version:
    pycsamt pipe steps --help
    pycsamt pipe presets --help
    pycsamt pipe show --help
+   pycsamt pipe plugins --help
+   pycsamt pipe history --help
 
 The examples below assume the survey data live in ``data/edis`` and outputs
 should be written under ``results/``.
@@ -756,4 +785,10 @@ Related Pages
 * :doc:`configuration_files` explains YAML, JSON, and Python config files.
 * :doc:`presets` explains built-in workflows and how to choose one.
 * :doc:`steps` explains registered operations and extension patterns.
+* :doc:`extending` explains ``pycsamt pipe plugins`` and ``--with-plugins``
+  in depth.
+* :doc:`caching` explains ``--cache``/``--cache-dir`` and how a rerun
+  resumes an interrupted pipeline.
+* :doc:`observability` explains ``--live``, ``--history``, and the
+  ``on_step`` Python hook.
 * :doc:`outputs` explains the generated output directory.

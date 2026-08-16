@@ -17,4 +17,7 @@ command-line execution, outputs, and reports into one workflow.
    cli_pipe
    presets
    steps
+   extending
+   caching
+   observability
    outputs

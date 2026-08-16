@@ -1,13 +1,13 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""Tests for pycsamt.interp.borehole — Interval and Borehole."""
+"""Tests for pycsamt.geology.borehole — Interval and Borehole."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from pycsamt.interp.borehole import Borehole, Interval
+from pycsamt.geology.borehole import Borehole, Interval
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Interval

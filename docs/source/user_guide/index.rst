@@ -20,6 +20,7 @@ User Guide
    map/index
    topo/index
    inversion/index
+   geology/index
    interpretation/index
    iot/index
    stratagem/index

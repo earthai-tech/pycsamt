@@ -174,6 +174,11 @@ class StepResult:
         If the step raised an exception and execution continued
         (``on_step_error != "raise"``), the exception is stored here.
         ``None`` means the step completed without error.
+    cached:
+        ``True`` when this step's result was replayed from the pipeline's
+        step cache (``Pipeline.run(..., cache=...)``) instead of actually
+        being recomputed.  Only ever ``True`` when caching was enabled for
+        this run.
     """
 
     step_idx: int
@@ -186,6 +191,7 @@ class StepResult:
     n_sites_in: int = 0
     n_sites_out: int = 0
     error: Exception | None = None
+    cached: bool = False
 
     @property
     def ok(self) -> bool:
@@ -195,12 +201,13 @@ class StepResult:
     def summary_line(self) -> str:
         """Return a one-line text summary of this step result."""
         status = "OK" if self.ok else "ERR"
+        cached_str = "  (cached)" if self.cached else ""
         return (
             f"  [{self.step_idx:2d}] {self.step_name:<20s} "
             f"[{self.step_code}]  {status}  "
             f"{self.elapsed_sec:.2f}s  "
             f"sites {self.n_sites_in}→{self.n_sites_out}  "
-            f"plots={len(self.plots)}"
+            f"plots={len(self.plots)}{cached_str}"
         )
 
     def __repr__(self) -> str:

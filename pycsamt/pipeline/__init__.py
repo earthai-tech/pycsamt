@@ -39,7 +39,7 @@ Discover available steps and presets::
 
     from pycsamt.pipeline import list_steps, preset_catalogue
 
-    list_steps()  # all 33 StepSpec objects
+    list_steps()  # all built-in StepSpec objects
     list_steps("noise_removal")  # by category
     print(preset_catalogue())  # named presets
 
@@ -54,6 +54,19 @@ Configure pipeline output globally::
 
     with PYCSAMT_PIPE.context(show_progress=False):
         result = pipe.run(sites)
+
+Cache step outputs so an interrupted run resumes instead of recomputing::
+
+    result = pipe.run(sites, outdir="results/", cache=True)
+
+Observe a run live, or log it for later comparison::
+
+    result = pipe.run(sites, on_step=lambda sr: print(sr.summary_line()))
+    result = pipe.run(sites, history=True)  # -> load_history() later
+
+A finished ``PipelineResult`` renders inline in Jupyter (``_repr_html_``),
+and ``configure_pipe(progress_style="rich")`` (or CLI ``--live``) renders a
+live-updating status table in the terminal while a run is in progress.
 """
 
 from __future__ import annotations
@@ -74,17 +87,24 @@ from ._presets import (
     PRESETS,
     Preset,
     get_preset,
+    get_preset_for_method,
     list_presets,
     preset_catalogue,
 )
+from ._cache import StepCache, fingerprint_sites
+from ._history import load_history
+from ._plugins import ENTRY_POINT_GROUP, PluginLoadResult, discover_plugins
+from .ai_steps import register_ai_steps
 from ._registry import (
     STEP_REGISTRY,
     StepSpec,
     categories,
     list_steps,
     lookup_step,
+    register_step,
     step_codes,
     step_names,
+    unregister_step,
 )
 from ._steps import Step, StepResult
 from .plot import (
@@ -118,10 +138,24 @@ __all__ = [
     "step_codes",
     "step_names",
     "categories",
+    "register_step",
+    "unregister_step",
+    # ── plugins
+    "discover_plugins",
+    "PluginLoadResult",
+    "ENTRY_POINT_GROUP",
+    # ── opt-in AI steps
+    "register_ai_steps",
+    # ── step cache
+    "StepCache",
+    "fingerprint_sites",
+    # ── run history
+    "load_history",
     # ── presets
     "Preset",
     "PRESETS",
     "get_preset",
+    "get_preset_for_method",
     "list_presets",
     "preset_catalogue",
     # ── config loaders

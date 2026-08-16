@@ -158,9 +158,9 @@ class ArchieModel(PyCSAMTObject):
     --------
     >>> archie = ArchieModel(m=1.8, n=2.0, a=1.0)
     >>> archie.forward(phi=0.30, Sw=1.0, rho_w=0.025)  # fully saturated
-    0.309...
+    0.218...
     >>> archie.saturation(rho=1.2, phi=0.30, rho_w=0.025)
-    0.508...
+    0.427...
     """
 
     m: float = 1.8
@@ -375,7 +375,7 @@ class WaxmanSmitsModel(PyCSAMTObject):
     --------
     >>> ws = WaxmanSmitsModel(m=1.8, n=2.0, sigma_s=0.01)
     >>> ws.forward(phi=0.30, Sw=0.70, sigma_w=40.0)  # sigma_w in mS/m
-    8.31...  # Ω·m
+    328.3...  # Ω·m
     """
 
     m: float = 1.8
@@ -584,6 +584,7 @@ class HashinShtrikmanBounds(PyCSAMTObject):
     >>> hs = HashinShtrikmanBounds(rho_matrix=1000.0, rho_fluid=25.0)
     >>> lower, upper = hs.bounds(phi=0.25)
     >>> print(f"{lower:.1f}  {upper:.1f}")
+    122.5  524.4
     """
 
     def __init__(
@@ -714,7 +715,7 @@ def kozeny_carman_K(
     Examples
     --------
     >>> kozeny_carman_K(0.30, d50_m=1e-3)  # coarse sand, φ = 0.30
-    1.16e-03  # m/s  (within typical coarse-sand range)
+    1.5e-03  # m/s  (within typical coarse-sand range)
     """
     phi = _arr(phi)
     was_scalar = phi.ndim == 0

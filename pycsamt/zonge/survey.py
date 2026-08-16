@@ -230,9 +230,9 @@ class Topography(AVGComponentBase):
             col_lower = str(col).lower()
             if "station" in col_lower or "dot" in col_lower:
                 rename_map[col] = "station"
-            elif "east" in col_lower or col_lower == "e":
+            elif "east" in col_lower or col_lower in ("e", "gride"):
                 rename_map[col] = "easting"
-            elif "north" in col_lower or col_lower == "n":
+            elif "north" in col_lower or col_lower in ("n", "gridn"):
                 rename_map[col] = "northing"
             elif "elev" in col_lower or col_lower == "h":
                 rename_map[col] = "elevation"

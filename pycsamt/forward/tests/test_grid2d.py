@@ -504,3 +504,81 @@ def test_plot_uses_name_as_title():
     ax = g.plot()
     assert ax.get_title() == "test-model"
     plt.close(ax.get_figure())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# value_at / core_x_offset
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_core_x_offset_matches_first_core_node():
+    g = Grid2D.halfspace(rho=100.0, nx=20, x_max=2000.0, n_pad=6, n_stations=5)
+    assert g.core_x_offset == pytest.approx(g.x_nodes[6])
+
+
+def test_core_x_offset_zero_without_padding():
+    g = Grid2D.halfspace(rho=100.0, nx=10, x_max=1000.0, n_pad=0, n_stations=3)
+    assert g.core_x_offset == 0.0
+
+
+def test_value_at_absolute_vs_chainage():
+    g = Grid2D.halfspace(rho=100.0, nx=20, x_max=2000.0, n_pad=6, n_stations=5)
+    # chainage 0 should land on the same cell as the absolute core-start x
+    assert g.value_at(0.0, 10.0, chainage=True) == g.value_at(
+        g.core_x_offset, 10.0, chainage=False
+    )
+
+
+def test_value_at_returns_nearest_cell_value():
+    g = Grid2D.with_anomaly(
+        bg_rho=50.0, anomaly_rho=500.0,
+        anomaly_bounds=(400.0, 800.0, 100.0, 300.0),
+        nx=40, nz=25, x_max=2000.0, z_max=1000.0, n_stations=8,
+    )
+    assert g.value_at(600.0, 200.0, chainage=True) == pytest.approx(500.0)
+    assert g.value_at(50.0, 50.0, chainage=True) == pytest.approx(50.0)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# layered_with_fault
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _fault_model():
+    m = LayeredModel(resistivity=[80.0, 300.0, 3000.0], thickness=[60.0, 260.0])
+    return Grid2D.layered_with_fault(
+        m, fault_x_m=1200.0, apparent_dip_deg=65.0,
+        throw_m=700.0, downthrown_side="right",
+        nx=60, nz=50, x_max=2400.0, z_max=1600.0, n_stations=25,
+    )
+
+
+def test_layered_with_fault_shape_and_stations():
+    g = _fault_model()
+    assert g.resistivity.shape == (60, 80)
+    assert g.n_stations == 25
+
+
+def test_layered_with_fault_footwall_matches_unshifted_layers():
+    g = _fault_model()
+    # far from the fault, footwall side: ordinary 1-D layering
+    assert g.value_at(100.0, 30.0, chainage=True) == pytest.approx(80.0)
+    assert g.value_at(100.0, 200.0, chainage=True) == pytest.approx(300.0)
+    assert g.value_at(100.0, 900.0, chainage=True) == pytest.approx(3000.0)
+
+
+def test_layered_with_fault_downthrown_shallow_stays_in_top_layer():
+    g = _fault_model()
+    # near the surface trace, on the downthrown side: still shallow
+    # enough (< throw_m) to be the top layer, not yet into the basement
+    assert g.value_at(1260.0, 80.0, chainage=True) == pytest.approx(80.0)
+
+
+def test_layered_with_fault_rejects_bad_downthrown_side():
+    m = LayeredModel(resistivity=[80.0, 300.0], thickness=[100.0])
+    with pytest.raises(ValueError):
+        Grid2D.layered_with_fault(
+            m, fault_x_m=500.0, apparent_dip_deg=60.0,
+            throw_m=100.0, downthrown_side="up",
+            nx=10, nz=10, x_max=1000.0, z_max=500.0, n_stations=3,
+        )

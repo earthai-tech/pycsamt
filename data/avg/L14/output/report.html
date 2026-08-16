@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>pyCSAMT Pipeline — L14_full_processing</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2em; color: #222; }
+  h1 { border-bottom: 2px solid #4a6fa5; padding-bottom: 0.4em; }
+  h2 { color: #4a6fa5; margin-top: 1.5em; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 0.4em 0.7em; text-align: left; }
+  th { background: #4a6fa5; color: white; }
+  tr:nth-child(even) { background: #f5f7fb; }
+  .ok   { color: #2d7a3e; font-weight: bold; }
+  .err  { color: #c0392b; font-weight: bold; }
+  .step-card { border: 1px solid #ddd; border-radius: 6px;
+               padding: 1em; margin: 1em 0; }
+  .step-card h3 { margin: 0 0 0.5em; }
+  .step-meta { font-size: 0.85em; color: #666; }
+  .plots { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
+  .plots a img { max-height: 120px; border: 1px solid #ccc;
+                 border-radius: 4px; }
+  .error-box { background: #fdecea; border-left: 4px solid #c0392b;
+               padding: 0.5em 1em; font-size: 0.9em; }
+  footer { margin-top: 3em; font-size: 0.8em; color: #888;
+           border-top: 1px solid #eee; padding-top: 1em; }
+</style>
+</head><body><h1>pyCSAMT Pipeline Report</h1><table><tr><th>Pipeline</th><td>L14_full_processing</td></tr><tr><th>Run at</th><td>2026-08-13 09:58:45</td></tr><tr><th>Status</th><td><span class='ok'>SUCCESS</span></td></tr><tr><th>Sites</th><td>58 → 58</td></tr><tr><th>Elapsed</th><td>45.04 s</td></tr><tr><th>Steps</th><td>8 (8 ok, 0 err)</td></tr></table><h2>Step results</h2><div class="step-card"><h3><span class="ok">&#10003;</span> (1) notch <small>[NR001]</small></h3><div class="step-meta"><b>Label:</b> Power-line Harmonic Notch &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 3.82 s &nbsp;|&nbsp; <b>Plots:</b> 2</div><p><b>Params:</b> <code>mains_hz=50, n_harm=30, tol_hz=0.08</code></p><div class="plots"><a href="plots\01_notch\nr_qc_harmonic_waterfall.png" target="_blank"><img src="plots\01_notch\nr_qc_harmonic_waterfall.png" /></a><a href="plots\01_notch\nr_qc_snr_gain_profile.png" target="_blank"><img src="plots\01_notch\nr_qc_snr_gain_profile.png" /></a></div></div><div class="step-card"><h3><span class="ok">&#10003;</span> (2) drop_dup <small>[FREQ002]</small></h3><div class="step-meta"><b>Label:</b> Drop Duplicate Frequencies &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 1.59 s &nbsp;|&nbsp; <b>Plots:</b> 1</div><p><b>Params:</b> <code>—</code></p><div class="plots"><a href="plots\02_drop_dup\plot_coverage_quality_heatmap.png" target="_blank"><img src="plots\02_drop_dup\plot_coverage_quality_heatmap.png" /></a></div></div><div class="step-card"><h3><span class="ok">&#10003;</span> (3) select_band <small>[FREQ001]</small></h3><div class="step-meta"><b>Label:</b> Frequency Band Select &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 13.31 s &nbsp;|&nbsp; <b>Plots:</b> 2</div><p><b>Params:</b> <code>band_hz=(0.001, 10000.0)</code></p><div class="plots"><a href="plots\03_select_band\plot_band_microstrips.png" target="_blank"><img src="plots\03_select_band\plot_band_microstrips.png" /></a><a href="plots\03_select_band\plot_coverage_quality_heatmap.png" target="_blank"><img src="plots\03_select_band\plot_coverage_quality_heatmap.png" /></a></div></div><div class="step-card"><h3><span class="ok">&#10003;</span> (4) align_grid <small>[FREQ004]</small></h3><div class="step-meta"><b>Label:</b> Frequency Grid Alignment &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 1.87 s &nbsp;|&nbsp; <b>Plots:</b> 1</div><p><b>Params:</b> <code>—</code></p><div class="plots"><a href="plots\04_align_grid\plot_coverage_quality_heatmap.png" target="_blank"><img src="plots\04_align_grid\plot_coverage_quality_heatmap.png" /></a></div></div><div class="step-card"><h3><span class="ok">&#10003;</span> (5) mask_skew <small>[SK001]</small></h3><div class="step-meta"><b>Label:</b> Mask by Bahr Skewness Threshold &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 1.54 s &nbsp;|&nbsp; <b>Plots:</b> 1</div><p><b>Params:</b> <code>thresh=0.3</code></p><div class="plots"><a href="plots\05_mask_skew\plot_skew_traffic_psection.png" target="_blank"><img src="plots\05_mask_skew\plot_skew_traffic_psection.png" /></a></div></div><div class="step-card"><h3><span class="ok">&#10003;</span> (6) rotate_strike <small>[TZ001]</small></h3><div class="step-meta"><b>Label:</b> Strike Rotation &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 15.64 s &nbsp;|&nbsp; <b>Plots:</b> 2</div><p><b>Params:</b> <code>method='swift'</code></p><div class="plots"><a href="plots\06_rotate_strike\plot_strike_rose.png" target="_blank"><img src="plots\06_rotate_strike\plot_strike_rose.png" /></a><a href="plots\06_rotate_strike\plot_phase_tensor_psection.png" target="_blank"><img src="plots\06_rotate_strike\plot_phase_tensor_psection.png" /></a></div></div><div class="step-card"><h3><span class="ok">&#10003;</span> (7) correct_ss <small>[SS001]</small></h3><div class="step-meta"><b>Label:</b> Static Shift (AMA) &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 0.33 s &nbsp;|&nbsp; <b>Plots:</b> 0</div><p><b>Params:</b> <code>—</code></p></div><div class="step-card"><h3><span class="ok">&#10003;</span> (8) qc_snapshot <small>[QC001]</small></h3><div class="step-meta"><b>Label:</b> QC Quick-Look Snapshot &nbsp;|&nbsp; <b>Sites:</b> 58 → 58 &nbsp;|&nbsp; <b>Time:</b> 6.93 s &nbsp;|&nbsp; <b>Plots:</b> 3</div><p><b>Params:</b> <code>—</code></p><div class="plots"><a href="plots\08_qc_snapshot\plot_qc_quicklook.png" target="_blank"><img src="plots\08_qc_snapshot\plot_qc_quicklook.png" /></a><a href="plots\08_qc_snapshot\plot_station_confidence_dashboard.png" target="_blank"><img src="plots\08_qc_snapshot\plot_station_confidence_dashboard.png" /></a><a href="plots\08_qc_snapshot\plot_coverage_psection.png" target="_blank"><img src="plots\08_qc_snapshot\plot_coverage_psection.png" /></a></div></div><h2>Pipeline configuration</h2><pre><code>name: L14_full_processing
+steps:
+- name: notch
+  code: NR001
+  params:
+    mains_hz: 50
+    n_harm: 30
+    tol_hz: 0.08
+- name: drop_dup
+  code: FREQ002
+- name: select_band
+  code: FREQ001
+  params:
+    band_hz:
+    - 0.001
+    - 10000.0
+- name: align_grid
+  code: FREQ004
+- name: mask_skew
+  code: SK001
+  params:
+    thresh: 0.3
+- name: rotate_strike
+  code: TZ001
+  params:
+    method: swift
+- name: correct_ss
+  code: SS001
+- name: qc_snapshot
+  code: QC001
+</code></pre><footer>Generated by pyCSAMT — 2026-08-13 09:58:45</footer></body></html>

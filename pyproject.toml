@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.2.2"
+version     = "2.3.0"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
@@ -37,6 +37,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
 
@@ -71,7 +72,12 @@ dependencies = [
     # pycsamt.forward.em1d.TEM1DForward delegates its Hankel/Fourier
     # transform to empymod's validated digital linear filters rather than
     # a hand-rolled quadrature (see TEM1DForward's docstring for why).
-    "empymod>=2.5",
+    # empymod dropped Python 3.9 support in its 2.4 line, so >=2.5 has no
+    # installable release there (CI: every 3.9 shard failed at "Install
+    # package"). 2.3.1 -- the newest 3.9 has -- exercises the same
+    # empymod.bipole() call and passes test_forward_em1d.py unchanged.
+    "empymod>=2.3.1; python_version < '3.10'",
+    "empymod>=2.5; python_version >= '3.10'",
     # optional HDF5 elevation export/import (pycsamt.map.topo)
     "h5py>=3.8",
 ]
@@ -220,6 +226,7 @@ exclude = ["*.tests", "*.tests.*", "tests", "tests.*"]
     "log/p.configlog.yml",
     "metadata/*.json",
     "metadata/*.yml",
+    "gis/*.npy",
     "app/desktop/resources/*.qss",
     "app/desktop/resources/icons/*",
     "app/web/assets/*",

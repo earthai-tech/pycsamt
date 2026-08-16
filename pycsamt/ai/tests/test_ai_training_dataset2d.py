@@ -16,6 +16,7 @@ from pycsamt.ai.training.dataset2d import (
     Maxwell2DDataset,
     Maxwell2DDatasetConfig,
     Maxwell2DSample,
+    build_2d_maxwell_problem,
     generate_2d_maxwell_dataset,
 )
 from pycsamt.forward.maxwell.benchmarks import half_space_impedance
@@ -45,6 +46,42 @@ def _config(**overrides):
 def test_config_defaults_to_both_modes():
     config = _config()
     assert config.components == ("zxy", "zyx")
+
+
+def test_build_problem_accepts_an_explicit_geological_model():
+    grid = _small_grid()
+    model = np.full(grid.shape, 100.0)
+    problem = build_2d_maxwell_problem(
+        grid,
+        model,
+        [10.0, 3.0],
+        [600.0, 900.0],
+        station_names=["A", "B"],
+        metadata={"family": "layered"},
+    )
+    assert problem.components == ("zxy", "zyx")
+    assert problem.receivers.names == ("A", "B")
+    assert problem.metadata["family"] == "layered"
+    assert problem.conductivity_s_m.shape == problem.mesh.shape
+
+
+def test_build_problem_rejects_invalid_model_and_station_names():
+    grid = _small_grid()
+    with pytest.raises(ValueError, match="resistivity_ohm_m"):
+        build_2d_maxwell_problem(
+            grid,
+            np.ones((2, 2)),
+            [10.0],
+            [600.0],
+        )
+    with pytest.raises(ValueError, match="station_names"):
+        build_2d_maxwell_problem(
+            grid,
+            np.full(grid.shape, 100.0),
+            [10.0],
+            [600.0, 900.0],
+            station_names=["duplicate", "duplicate"],
+        )
 
 
 def test_config_rejects_non_2d_grid_and_bad_surface():

@@ -208,6 +208,25 @@ def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
         )
     if not data_rows:
         raise AvgDataError("No data rows in kind‑1 file")
+
+    # Some GDP/AMTAVG builds (e.g. AMTAVG 7.40) emit one or more extra
+    # trailing data columns that are not listed in the "skp Station ..."
+    # header row. When every row consistently carries the same surplus
+    # of fields, extend the header with generic names instead of letting
+    # pandas raise on the column-count mismatch.
+    row_lengths = {len(row) for row in data_rows}
+    if len(row_lengths) == 1:
+        n_extra = row_lengths.pop() - len(hdr_tokens)
+        if n_extra > 0:
+            logger.debug(
+                f"Kind-1 AVG data rows carry {n_extra} more field(s) than "
+                "the header row; appending generic column name(s) for "
+                "the surplus."
+            )
+            hdr_tokens = hdr_tokens + [
+                f"extra_{i + 1}" for i in range(n_extra)
+            ]
+
     df = pd.DataFrame(data_rows, columns=hdr_tokens)
     return _standardise_columns(df)
 
@@ -1062,9 +1081,12 @@ def read_stn(path: str | Path) -> pd.DataFrame:
     # build header
     if header_idx >= 0:
         raw_header = lines[header_idx]
-        # strip common quotes (", “, ”) and extra whitespace
+        # strip stray HTML tags (e.g. a "<input type="hidden" />"
+        # fragment accidentally pasted in from a browser-based export)
+        # then common quotes (", “, ”) and extra whitespace
         cleaned = (
-            raw_header.replace('"', "")
+            re.sub(r"<[^>]*>", "", raw_header)
+            .replace('"', "")
             .replace("“", "")
             .replace("”", "")
             .strip()

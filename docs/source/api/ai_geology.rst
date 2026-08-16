@@ -15,3 +15,4 @@ priors for synthetic-data generation.
    pycsamt.ai.geology.layers
    pycsamt.ai.geology.lenses
    pycsamt.ai.geology.topography
+   pycsamt.ai.geology.benchmark

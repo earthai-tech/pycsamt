@@ -171,6 +171,17 @@ definitions here are the single source of truth.
       can be capability-compatible with a problem and still unavailable in
       a given environment; the two questions are checked separately.
 
+   Inverse crime
+      Solving the forward problem that generates synthetic "observed" data
+      on the same discretisation an inversion later uses to recover it.
+      Doing so lets the inversion implicitly benefit from a
+      discretisation-error match it would never have against real field
+      data, flattering its apparent accuracy. The standard precaution --
+      used for both synthetic lines in
+      :doc:`/tutorials/build_two_line_occam2d_survey` -- is to keep the
+      true model's forward-modelling grid and the inversion's own mesh
+      independent, built by unrelated code with no shared parameterisation.
+
    Inversion model
       The resistivity or conductivity distribution recovered by an inversion
       workflow from observed electromagnetic data and modelling assumptions.
@@ -191,6 +202,18 @@ definitions here are the single source of truth.
       borehole evidence, or interpretation parameters to the calculated
       resistivity model. It remains model-derived evidence, not a direct
       geological observation.
+
+   Nearest-midpoint classification
+      The default strategy of
+      :meth:`RockDatabase.classify() <pycsamt.geology.lithology.RockDatabase.classify>`
+      (``method="nearest"``): a resistivity value is compared, in
+      :math:`\log_{10}` space, to every entry's geometric-mean midpoint
+      :math:`\sqrt{\rho_{\min}\rho_{\max}}`, and the entry with the closest
+      midpoint is returned. Because the ranges in
+      :class:`~pycsamt.geology.lithology.RockDatabase` overlap heavily, several
+      entries may equally *contain* the queried value; ``method="overlap"``
+      returns the first such entry in database order instead, which can
+      disagree with the nearest-midpoint answer.
 
    Archie's law
       The petrophysical relation :math:`\rho = a\,\rho_w\,\phi^{-m}\,S_w^{-n}`
@@ -1667,6 +1690,58 @@ definitions here are the single source of truth.
       The per-step record stored inside a ``PipelineResult``. It records the
       step index, user label, registry code, parameters, elapsed time, site
       counts, saved plot paths, and any captured error.
+
+   Pipeline plugin
+      A :term:`StepSpec` added to the :term:`step registry` at runtime through
+      ``register_step`` rather than through a reviewed pyCSAMT release. Its
+      ``origin`` field reads ``"plugin"``, distinguishing it from the built-in
+      steps shipped with pyCSAMT, whose ``origin`` reads ``"builtin"``.
+
+   Plugin entry-point group
+      The ``pycsamt.pipeline.steps`` name that a third-party package declares
+      under ``[project.entry-points]`` in its own ``pyproject.toml``. Each
+      entry resolves to a zero-argument callable that calls ``register_step``
+      for whatever steps the package contributes.
+
+   Plugin discovery
+      The explicit act of scanning the :term:`plugin entry-point group` and
+      running every callable found there, performed by
+      ``pycsamt.pipeline.discover_plugins``. It never runs merely because a
+      plugin package is installed; it only runs when requested, either
+      directly in Python or through ``pycsamt pipe plugins`` and
+      ``pycsamt pipe --with-plugins``.
+
+   Step cache
+      The on-disk, content-addressed store of pipeline step outputs used by
+      ``Pipeline.run(..., cache=...)``. A cache hit replays a step's
+      previously computed result instead of recomputing it, which is also
+      how a crashed-and-rerun pipeline "resumes" -- no separate checkpoint
+      mechanism exists.
+
+   Chain hash
+      The cache key for one pipeline step: a hash of the content fingerprint
+      of the sites flowing into the step, the step's registry code, and its
+      exact merged parameters. Because each step's chain hash depends on the
+      previous step's output fingerprint, changing an early step's
+      parameters automatically invalidates every step's cache entry after
+      it, the same way a changed layer invalidates the ones built on top of
+      it in a Docker image.
+
+   Run history log
+      The append-only JSONL file (default
+      ``~/.pycsamt/pipeline_history.jsonl``) that ``Pipeline.run(...,
+      history=True)`` or the CLI's ``--history`` flag writes one line to per
+      run: pipeline name, overall status, timing, site counts, and a
+      per-step summary. ``pycsamt pipe history`` lists it back; logging is
+      opt-in and off by default.
+
+   Dashboard report
+      The richer, branded ``dashboard.html`` written alongside the default
+      ``report.html``/``summary.txt`` when ``"dashboard"`` is included in
+      :term:`PipelineResult`'s report formats (CLI ``--dashboard``). Adds
+      KPI stat tiles and inline-SVG charts -- step status, per-step
+      duration, site-count flow -- built from the same per-step data the
+      plain report already uses.
 
    Active survey context
       The survey path remembered by the survey CLI for the current project or

@@ -19,7 +19,8 @@ Every processing operation exposed by :mod:`pycsamt.emtools` is described by a
 from __future__ import annotations
 
 import importlib
-from dataclasses import dataclass, field
+import threading
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable
 
 # ---------------------------------------------------------------------------
@@ -74,6 +75,38 @@ def _qc_snapshot_fn(sites: Any, **kw: Any) -> Any:
     return sites
 
 
+def _export_modem_fn(sites: Any, **kw: Any) -> Any:
+    """Write ModEM data/model/control (and covariance for 3-D) files."""
+    from pycsamt.models.modem import InputBuilder
+
+    workdir = kw.pop("workdir", "pipeline_exports/modem")
+    config = kw.pop("config", None)
+    InputBuilder(config=config).build(sites, workdir=workdir, **kw)
+    return sites
+
+
+def _export_occam2d_fn(sites: Any, **kw: Any) -> Any:
+    """Write Occam2D data/mesh/model/startup files."""
+    from pycsamt.models.occam2d import InputBuilder
+
+    workdir = kw.pop("workdir", "pipeline_exports/occam2d")
+    config = kw.pop("config", None)
+    InputBuilder(sites, workdir=workdir, config=config).build(**kw)
+    return sites
+
+
+def _export_mare2dem_fn(sites: Any, **kw: Any) -> Any:
+    """Write a MARE2DEM .emdata data file (resistivity/settings/mesh are separate)."""
+    from pathlib import Path
+
+    from pycsamt.models.mare2dem.edi import make_mt_data_from_edi
+
+    workdir = kw.pop("workdir", "pipeline_exports/mare2dem")
+    data_filename = kw.pop("data_filename", "line.emdata")
+    make_mt_data_from_edi(sites, Path(workdir) / data_filename, **kw)
+    return sites
+
+
 # ---------------------------------------------------------------------------
 # StepSpec
 # ---------------------------------------------------------------------------
@@ -112,6 +145,10 @@ class StepSpec:
         these after each step to generate QC figures.
     override_fn:
         Direct callable override.  When set, *mod* / *fn_name* are ignored.
+    origin:
+        ``"builtin"`` for the 47 steps shipped with pyCSAMT (default), or
+        ``"plugin"`` for anything added via :func:`register_step`.  Stamped
+        automatically by :func:`register_step` — callers never need to set it.
     """
 
     code: str
@@ -124,6 +161,7 @@ class StepSpec:
     fn_name: str | None = None
     qc_defs: list[tuple[str, str]] = field(default_factory=list)
     override_fn: Callable | None = field(default=None, repr=False)
+    origin: str = "builtin"
 
     # ------------------------------------------------------------------
     # Resolution helpers
@@ -160,6 +198,7 @@ class StepSpec:
 # ---------------------------------------------------------------------------
 
 _EMTOOLS = "pycsamt.emtools"
+_PIPELINE = "pycsamt.pipeline"
 
 STEP_REGISTRY: dict[str, StepSpec] = {
     spec.code: spec
@@ -656,7 +695,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             category="skew",
             mod=f"{_EMTOOLS}.skew",
             fn_name="mask_by_skew",
-            defaults={"threshold": 0.3},
+            defaults={"thresh": 0.3},
             qc_defs=[
                 (f"{_EMTOOLS}.skew", "plot_skew_traffic_psection"),
             ],
@@ -668,7 +707,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             category="skew",
             mod=f"{_EMTOOLS}.skew",
             fn_name="keep_longest_low_skew",
-            defaults={"threshold": 0.3},
+            defaults={"thresh": 0.3},
             qc_defs=[
                 (f"{_EMTOOLS}.skew", "plot_skew_percentile_ribbon"),
             ],
@@ -716,6 +755,15 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             name="normalize_response",
             label="Normalize Source Response",
             category="source_effects",
+            # normalize_response(...) returns a tidy per-(station, frequency)
+            # pandas.DataFrame, not a Sites object -- it is an analytics
+            # function whose real output is the QC plot below, exactly like
+            # QC002/QC003. Chaining it as returns_sites=True (the dataclass
+            # default) silently corrupted downstream site counts: any real
+            # multi-frequency survey collapsed to n_stations x n_freq
+            # "sites", which the next step then reduced to zero. Caught by
+            # csamt_qc/csumt_qc being the first presets to ever chain SRC002.
+            returns_sites=False,
             mod=f"{_EMTOOLS}.source_effects",
             fn_name="normalize_response",
             defaults={},
@@ -774,6 +822,108 @@ STEP_REGISTRY: dict[str, StepSpec] = {
                 (f"{_EMTOOLS}.csumt", "plot_depth_section"),
             ],
         ),
+        StepSpec(
+            code="EXPORT001",
+            name="export_modem",
+            label="Export ModEM Input Files",
+            category="export",
+            override_fn=_export_modem_fn,
+            defaults={"workdir": "pipeline_exports/modem"},
+        ),
+        StepSpec(
+            code="EXPORT002",
+            name="export_occam2d",
+            label="Export Occam2D Input Files",
+            category="export",
+            override_fn=_export_occam2d_fn,
+            defaults={"workdir": "pipeline_exports/occam2d"},
+        ),
+        StepSpec(
+            code="EXPORT003",
+            name="export_mare2dem",
+            label="Export MARE2DEM Data File",
+            category="export",
+            override_fn=_export_mare2dem_fn,
+            defaults={
+                "workdir": "pipeline_exports/mare2dem",
+                "data_filename": "line.emdata",
+            },
+        ),
+        # ── Smart / method-aware QC ─────────────────────────────────────
+        # Data-driven diagnostics: each qc_defs hook checks the actual data
+        # (component count, tipper presence) and returns None — silently
+        # skipped, see Step.generate_qc_plots — when the plot would not be
+        # meaningful, instead of always firing regardless of survey method.
+        StepSpec(
+            code="QC005",
+            name="tensor_qc_smart",
+            label="Phase Tensor QC (multi-component only)",
+            category="qc",
+            returns_sites=False,
+            override_fn=_qc_snapshot_fn,
+            defaults={},
+            qc_defs=[
+                (f"{_PIPELINE}._smart_qc", "phase_tensor_smart"),
+            ],
+        ),
+        StepSpec(
+            code="QC006",
+            name="tipper_qc_smart",
+            label="Tipper QC (tipper-present only)",
+            category="qc",
+            returns_sites=False,
+            override_fn=_qc_snapshot_fn,
+            defaults={},
+            qc_defs=[
+                (f"{_PIPELINE}._smart_qc", "induction_multiperiod_map_smart"),
+                (f"{_PIPELINE}._smart_qc", "induction_section_smart"),
+                (f"{_PIPELINE}._smart_qc", "response_tipper_smart"),
+                (f"{_PIPELINE}._smart_qc", "tipper_components_smart"),
+                (f"{_PIPELINE}._smart_qc", "tipper_hodograms_smart"),
+            ],
+        ),
+        StepSpec(
+            code="QC007",
+            name="strike_qc",
+            label="Strike Analysis & Rose QC",
+            category="qc",
+            returns_sites=False,
+            override_fn=_qc_snapshot_fn,
+            defaults={},
+            qc_defs=[
+                (f"{_EMTOOLS}.strike", "plot_strike_analysis"),
+                (f"{_EMTOOLS}.strike", "plot_strike_rose"),
+            ],
+        ),
+        # ── Raw-vs-processed preview ────────────────────────────────────
+        # PRE001 belongs first in a preset (captures true raw data), PRE002
+        # last (captures the final processed data) — both independently
+        # re-derive the same deterministic random station subset (see
+        # pycsamt.pipeline._preview for the seed/caveat).
+        StepSpec(
+            code="PRE001",
+            name="raw_preview",
+            label="Raw Data Preview (random stations)",
+            category="preview",
+            returns_sites=False,
+            override_fn=_qc_snapshot_fn,
+            defaults={},
+            qc_defs=[
+                (f"{_PIPELINE}._preview", "plot_raw_preview"),
+            ],
+        ),
+        StepSpec(
+            code="PRE002",
+            name="processed_preview",
+            label="Processed Data Preview (random stations)",
+            category="preview",
+            returns_sites=False,
+            override_fn=_qc_snapshot_fn,
+            defaults={},
+            qc_defs=[
+                (f"{_PIPELINE}._preview", "plot_processed_preview"),
+            ],
+        ),
     ]
 }
 
@@ -781,6 +931,12 @@ STEP_REGISTRY: dict[str, StepSpec] = {
 _NAME_INDEX: dict[str, StepSpec] = {
     spec.name: spec for spec in STEP_REGISTRY.values()
 }
+
+# Guards mutation of STEP_REGISTRY / _NAME_INDEX so register_step/
+# unregister_step are safe to call from a Dash callback or a desktop-app
+# worker thread.  Reads (lookup_step, list_steps, categories, ...) stay
+# lock-free, unchanged from their original behaviour.
+_REGISTRY_LOCK = threading.RLock()
 
 
 # ---------------------------------------------------------------------------
@@ -842,6 +998,99 @@ def categories() -> list[str]:
     return sorted({s.category for s in STEP_REGISTRY.values()})
 
 
+def register_step(
+    spec: StepSpec, *, replace_existing: bool = False, validate: bool = True
+) -> StepSpec:
+    """Register a third-party :class:`StepSpec` into the pipeline registry.
+
+    This is the extension point for anything outside the 47 steps shipped
+    with pyCSAMT — a plugin package (see :func:`pycsamt.pipeline.discover_plugins`)
+    or a one-off custom step defined in a user script.  Once registered, the
+    step is usable everywhere a built-in step is: ``Step(code)``, the CLI
+    (``pycsamt pipe steps``, ``pipe run --steps ...``), presets, etc.
+
+    Parameters
+    ----------
+    spec:
+        The step to register.  Its ``origin`` is always overwritten to
+        ``"plugin"`` regardless of what the caller passed.
+    replace_existing:
+        If ``False`` (default), raises :class:`ValueError` when *spec.code*
+        or *spec.name* already exists in the registry.  Set ``True`` to
+        overwrite an existing entry (built-in or previously-registered
+        plugin) — e.g. to patch a built-in step's implementation.
+    validate:
+        If ``True`` (default), resolves ``spec.get_fn()`` once before
+        inserting, so a typo'd ``mod``/``fn_name`` or a broken
+        ``override_fn`` is caught at registration time rather than at the
+        first pipeline run.  On failure the registry is left untouched.
+
+    Returns
+    -------
+    StepSpec
+        The registered spec (with ``origin="plugin"`` stamped on it).
+
+    Raises
+    ------
+    ValueError
+        *spec.code* or *spec.name* collides with an existing entry and
+        ``replace_existing`` is ``False``.
+    ModuleNotFoundError, AttributeError, RuntimeError
+        ``validate=True`` and ``spec.get_fn()`` could not resolve a
+        callable (bad ``mod``, missing ``fn_name``, or neither ``mod``/
+        ``fn_name`` nor ``override_fn`` set) — whatever :meth:`StepSpec.get_fn`
+        itself raises propagates unchanged.
+    """
+    with _REGISTRY_LOCK:
+        code_taken = spec.code in STEP_REGISTRY and not (
+            replace_existing and STEP_REGISTRY[spec.code].name == spec.name
+        )
+        name_taken = spec.name in _NAME_INDEX and not (
+            replace_existing and _NAME_INDEX[spec.name].code == spec.code
+        )
+        if not replace_existing and (spec.code in STEP_REGISTRY or spec.name in _NAME_INDEX):
+            raise ValueError(
+                f"Pipeline step code={spec.code!r} or name={spec.name!r} is "
+                "already registered.  Pass replace_existing=True to overwrite it."
+            )
+        if replace_existing and (code_taken or name_taken):
+            raise ValueError(
+                f"Cannot register step code={spec.code!r}/name={spec.name!r}: "
+                "one of them is already used by a different step "
+                "(code and name must refer to the same entry)."
+            )
+
+        registered = replace(spec, origin="plugin")
+        if validate:
+            registered.get_fn()  # raises RuntimeError on unresolvable step
+
+        STEP_REGISTRY[registered.code] = registered
+        _NAME_INDEX[registered.name] = registered
+        return registered
+
+
+def unregister_step(code_or_name: str, *, missing_ok: bool = False) -> None:
+    """Remove a previously-registered step from the pipeline registry.
+
+    Parameters
+    ----------
+    code_or_name:
+        The step's code or name (see :func:`lookup_step`).
+    missing_ok:
+        If ``False`` (default), raises :class:`KeyError` when no such step
+        is registered.  Set ``True`` to no-op instead.
+    """
+    with _REGISTRY_LOCK:
+        try:
+            spec = lookup_step(code_or_name)
+        except KeyError:
+            if missing_ok:
+                return
+            raise
+        STEP_REGISTRY.pop(spec.code, None)
+        _NAME_INDEX.pop(spec.name, None)
+
+
 __all__ = [
     "StepSpec",
     "STEP_REGISTRY",
@@ -850,4 +1099,6 @@ __all__ = [
     "step_codes",
     "step_names",
     "categories",
+    "register_step",
+    "unregister_step",
 ]

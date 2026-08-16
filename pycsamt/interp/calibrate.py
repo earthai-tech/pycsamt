@@ -53,14 +53,15 @@ from collections.abc import Sequence
 
 import numpy as np
 
+from ..api.property import PyCSAMTObject
+from ..geology.borehole import Borehole
+from ..geology.lithology import RockDatabase, StratigraphicLog
 from ._base import ResistivityModel
-from .borehole import Borehole
-from .lithology import RockDatabase, StratigraphicLog
 
 __all__ = ["ModelCalibrator"]
 
 
-class ModelCalibrator:
+class ModelCalibrator(PyCSAMTObject):
     """Constrain a 2-D EM resistivity model with borehole TRES values.
 
     Parameters
@@ -195,7 +196,7 @@ class ModelCalibrator:
         model: str = "nm",
         merge_tolerance: float = 0.2,
     ) -> list[StratigraphicLog]:
-        """Build a :class:`~pycsamt.interp.lithology.StratigraphicLog`
+        """Build a :class:`~pycsamt.geology.lithology.StratigraphicLog`
         for every station.
 
         Parameters

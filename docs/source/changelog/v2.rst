@@ -10,6 +10,229 @@ each release.
 
 ----
 
+.. _changelog-2-3-0:
+
+2.3.0 |New| |Fix| |API Change| |Docs| |Build|
+---------------------------------------------
+
+*Released 2026-08-14.*
+
+*Minor release. New* :mod:`pycsamt.geology` *package: general-purpose
+lithology classification, a pluggable rock-property provider architecture,
+and new structural-geology primitives (strike/dip, trend/plunge, fault
+traces), split out of* :mod:`pycsamt.interp` *with backward-compatible
+re-exports. Deep-filled the lithology, petrophysics, and monitoring pages
+of the interpretation user guide with real, doctest-verified examples,
+which surfaced and fixed several stale docstring examples and a real
+``RockDatabase`` iteration bug. Also new: a Dual-Uncertainty Hybrid
+Inversion (DUHI) pathway --* :class:`~pycsamt.ai.DUHIInverter2D`
+*and a native Occam2D prejudice-file reader/writer connect a trained AI
+ensemble's mean/uncertainty to the physical solver's data- and
+model-space regularization, alongside a reusable synthetic
+benchmark-geology generator and a field-calibrated corruption model --
+exercised end to end against a real compiled Occam2D binary and a real
+trained ensemble, which surfaced and fixed two further real bugs. Running
+a real legacy CSAMT survey line (AVG + ``.stn`` topography) end to end
+through AVG-to-EDI conversion and the processing pipeline surfaced and
+fixed six further bugs across the Zonge readers, the AVG-to-EDI unit
+conversion, and two pipeline steps, plus a packaging gap that dropped the
+fallback EPSG table from installed wheels. The pipeline itself also gains
+four method-aware presets (``mt_qc``/``amt_qc``/``csamt_qc``/``csumt_qc``)
+with real near-field correction and data-driven QC, a branded dashboard
+report, and data-driven power-line-harmonic detection
+(``mains_hz="auto"``) -- building real, runnable examples for the rewritten
+config-driven-pipeline tutorial and CLI reference surfaced three further
+bugs, including one where a pipeline step silently corrupted its site
+count. See* :ref:`release_v2_3_0` *for the full account.*
+
+Added
+~~~~~
+
+* |New| ``pycsamt.geology`` **package** -- a general-purpose geology
+  package with no electromagnetic dependency, holding earth-science domain
+  knowledge that ``pycsamt.interp`` builds on rather than owns:
+  resistivity-to-lithology classification (:mod:`~pycsamt.geology.lithology`),
+  the literature-compiled rock/fluid property table behind it
+  (:mod:`~pycsamt.geology.rock_library`), ground-truth borehole logs
+  (:mod:`~pycsamt.geology.borehole`), and field structural measurements
+  (:mod:`~pycsamt.geology.structural`). ``pycsamt.interp`` re-exports
+  ``Borehole``, ``Interval``, ``RockDatabase``, ``RockEntry``,
+  ``StratigraphicLog`` and ``Layer`` from their new home for backward
+  compatibility; new code should import them from ``pycsamt.geology``.
+* |New| **Pluggable rock-property providers** -- :class:`~pycsamt.geology.rock_providers.RockPropertyProvider`
+  protocol with :class:`~pycsamt.geology.rock_providers.LocalRockPropertyProvider`
+  and :class:`~pycsamt.geology.rock_providers.RemoteRockPropertyProvider`
+  implementations, exposed as ``RockDatabase.from_url`` and
+  ``RockDatabase.from_provider``. Remote lookups are cached under
+  ``~/.pycsamt/rock_db/`` with a TTL and fall back to the built-in table on
+  fetch failure, mirroring the existing model-cache convention in
+  :mod:`pycsamt.ai._zoo`. The built-in table itself
+  (:data:`~pycsamt.geology.rock_library.BUILTIN_ROCKS`) was expanded from
+  literature (Palacky, Telford, Keller) and given a public read-only
+  ``RockDatabase.entries`` accessor.
+* |New| **Structural geology primitives** -- :class:`~pycsamt.geology.StructuralMeasurement`
+  (planar strike/dip/dip-direction, cross-validated against each other),
+  :class:`~pycsamt.geology.LinearMeasurement` (trend/plunge), and
+  :class:`~pycsamt.geology.FaultTrace` (where a fault crosses a profile, with
+  downthrown side and sense) record field structural evidence against a
+  profile position, matching the recording convention used by modern digital
+  field-mapping tools. :class:`~pycsamt.geology.StructuralModel` collects all
+  three per profile with ``from_csv`` (three independent optional schemas) and
+  ``nearest``/``within`` queries, ready to back the structural-continuity
+  review step described in :doc:`/user_guide/interpretation/workflow`.
+* |New| **DUHI hybrid AI-physics inversion** -- :class:`~pycsamt.ai.DUHIInverter2D`
+  and :class:`~pycsamt.ai.DUHIPreparation` (:mod:`pycsamt.ai.inversion`)
+  connect a trained AI ensemble's mean/uncertainty grids to Occam2D's
+  data-space errors (``apply_observation_reliability``) and model-space
+  prejudice, via the new :func:`~pycsamt.ai.inversion.map_ai_grid_to_occam`
+  and :class:`~pycsamt.models.occam2d.OccamPrejudice` -- a full
+  reader/writer for the sparse ``OCCAM2MTPREJ_2.0`` model-prejudice
+  format. Reliability itself is now independently testable via
+  :func:`~pycsamt.ai.inversion.dimensionality_reliability` and
+  :func:`~pycsamt.ai.inversion.combine_observation_reliability`
+  (:mod:`pycsamt.ai.inversion`), and
+  :meth:`~pycsamt.models.occam2d.OccamRunner.run_forward` runs the
+  bundled solver's native forward-only ``-F`` mode directly.
+* |New| **Reproducible synthetic benchmark infrastructure** --
+  :func:`~pycsamt.ai.geology.generate_benchmark_geology` and
+  :class:`~pycsamt.ai.geology.BenchmarkGeology`
+  (:mod:`pycsamt.ai.geology.benchmark`) generate the six in-distribution
+  and six out-of-distribution geological families
+  (:data:`~pycsamt.ai.geology.ID_BENCHMARK_FAMILIES`,
+  :data:`~pycsamt.ai.geology.OOD_BENCHMARK_FAMILIES`);
+  :func:`~pycsamt.ai.domain_gap.apply_empirical_corruption`
+  (:mod:`pycsamt.ai.domain_gap.empirical`) applies a field-calibrated,
+  jointly-sampled static-shift/noise/missing-observation corruption
+  model; :func:`~pycsamt.ai.training.dataset2d.build_2d_maxwell_problem`
+  factors out the validated geology-grid-to-solver-problem construction
+  this is built on.
+* |New| ``MTBase.z_ohms_to_mvk_nt()`` (:mod:`pycsamt.core.base`) -- inverse
+  of the existing ``z_mvk_nt_to_ohms``, converting SI-ohm impedance to the
+  standard EDI ``(mV/km)/nT`` field-unit convention.
+* |New| **Branded pipeline dashboard report** -- opt-in ``dashboard.html``
+  (CLI ``--dashboard`` / ``report_formats``) with KPI stat tiles and three
+  native inline-SVG charts, alongside the existing plain report (whose
+  palette also moved to the same real, validated pyCSAMT brand tokens).
+* |New| **Method-aware pipeline presets** -- ``mt_qc``, ``amt_qc``,
+  ``csamt_qc``, ``csumt_qc``, and
+  :func:`~pycsamt.pipeline.get_preset_for_method` (:mod:`pycsamt.pipeline`).
+  CSAMT/CSUMT presets wire in real near-field correction (``SRC001``) for
+  the first time; all four add data-driven "smart" tensor/tipper/strike QC
+  steps (``QC005``-``QC007``) and a raw-vs-processed station preview
+  (``PRE001``/``PRE002``), both usable by any pipeline.
+* |New| ``notch_powerline(..., mains_hz="auto")`` (:mod:`pycsamt.emtools.remove_noise`,
+  pipeline step ``NR001``) -- detects 50 vs 60 Hz from the survey's own
+  frequency grid and snaps each harmonic to its nearest real sample
+  (``snap_frac`` tolerance) instead of requiring an exact match. Plain
+  numeric ``mains_hz`` is unaffected.
+
+Fixed
+~~~~~
+
+* |Fix| Corrected stale, incorrect example outputs in the docstrings of
+  ``ArchieModel.forward``/``.saturation``, ``WaxmanSmitsModel.forward``,
+  ``kozeny_carman_K`` and ``HashinShtrikmanBounds`` (:mod:`pycsamt.geology.lithology`,
+  :mod:`pycsamt.interp.petrophysics`), found while building doctest-verified
+  examples for :doc:`/user_guide/interpretation/petrophysics`.
+* |Fix| ``RockDatabase`` had no public way to iterate its entries; the desktop
+  app's ``InterpController.plot_rock_db()`` and the ``pycsamt rocks`` CLI
+  command both worked around this by reaching into the private ``_entries``
+  attribute directly, and the desktop call site called ``list(db)`` on a
+  non-iterable object outright, raising at plot time. Added a public
+  ``RockDatabase.entries`` read-only tuple property and switched both call
+  sites to it; the CLI table also gained a ``source`` column.
+* |Fix| ``PosteriorCalibrator.calibrated_std``/``.predict_posterior``
+  divided the raw ensemble standard deviation by the learned dispersion
+  scale instead of multiplying, shrinking an already under-dispersed
+  estimate instead of widening it; no existing test exercised an
+  under-dispersed case. Fixed both methods and added a regression test
+  that specifically does.
+* |Fix| ``InversionResult.rho_2d`` assigned model-layer values starting at
+  mesh row zero instead of the first row after the air layers, silently
+  shifting the recovered resistivity section by the air-layer count
+  whenever a mesh had any.
+* |Fix| The legacy (kind-1) AVG parser (``pycsamt.zonge.utils._parse_kind1``)
+  raised on real AMTAVG 7.40 files whose data rows carry an unlabeled
+  trailing field beyond the header's ``sPhz`` column; it now extends the
+  header with generic names when every row consistently carries the same
+  surplus instead of raising a column-count mismatch.
+* |Fix| The ``.stn`` topography reader (``pycsamt.zonge.utils.read_stn``,
+  ``Topography._normalize_stn_columns``) crashed on files using ``GridE``/
+  ``GridN`` grid-coordinate column names, and mis-parsed files with a
+  stray HTML fragment pasted into the header line.
+* |Fix| ``AVGtoEDI`` wrote Zonge's SI-ohm impedance directly into EDI ``Z``
+  sections, which the EDI/SEG standard and the ``rho = 0.2|Z|^2/f`` formula
+  used to derive apparent resistivity both assume are in ``(mV/km)/nT``
+  field units -- every AVG-derived EDI's resistivity/phase was wrong by a
+  factor of about ``(mu_0 x 1e3)^2``. Fixed via the new
+  ``MTBase.z_ohms_to_mvk_nt()``.
+* |Fix| Pipeline steps ``SK001``/``SK002`` (``mask_by_skew``,
+  ``keep_longest_low_skew``) had registry defaults keyed ``threshold=``
+  instead of the functions' actual ``thresh=`` parameter, crashing the
+  skew-masking step of the ``full_processing``/``publication_ready``
+  presets on every run (silently downgraded to a no-op warning by the
+  pipeline's default error handling).
+* |Fix| ``pycsamt.emtools.ss._nearest_idx`` was called with its arguments
+  reversed at four call sites (``estimate_ss_ama``, ``estimate_ss_loess``/
+  ``estimate_ss_refmedian``, ``detect_near_surface``,
+  ``_pt_phi_for_station``), aligning a station's own frequency axis
+  against phase-tensor-table row positions instead of the other way
+  around; this crashed static-shift correction (``SS001``) with an
+  ``IndexError`` whenever it ran downstream of skew masking.
+* |Fix| ``nr_qc_harmonic_waterfall`` silently rendered a blank heatmap
+  when no station frequency fell within tolerance of a mains harmonic --
+  as for any CSAMT log-decade frequency sweep; it now shows an
+  explanatory message instead.
+* |Fix| Pipeline step ``SRC002`` (``normalize_response``) was registered
+  ``returns_sites=True`` but its function actually returns a ``DataFrame``,
+  not a ``Sites`` object; chaining it (as ``csamt_qc``/``csumt_qc`` are the
+  first presets to do) silently inflated the site count to
+  ``n_stations x n_frequencies`` then collapsed it to zero one step later,
+  with no error raised. Fixed by registering it ``returns_sites=False``.
+* |Fix| ``pipe run --help``'s ``--preset`` option listed only 6 of 11
+  registered presets; ``pipe steps --help`` claimed "33 registered steps"
+  and 8 categories where there are now 55 steps across 10 categories.
+  Both corrected.
+
+Changed
+~~~~~~~
+
+* |API Change| ``ResistivityModel`` (:mod:`pycsamt.interp`) now inherits
+  ``PyCSAMTObject``/``MetadataMixin`` like the rest of the interpretation
+  layer, gaining auto-repr, ``to_dict()``, ``clone()``, ``update()``, and a
+  new ``metadata`` field for free-form provenance (coordinate reference,
+  backend version, original file paths).
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| Deep-filled three previously stub pages under :doc:`/user_guide/interpretation/index`
+  with narrative content, real doctest-verified ``pycon`` examples, and
+  regenerated figures: :doc:`/user_guide/interpretation/lithology`,
+  :doc:`/user_guide/interpretation/petrophysics` (Archie's law, Waxman-Smits
+  clay conductivity, Hashin-Shtrikman bounds, Kozeny-Carman hydraulic
+  conductivity, water-table detection), and
+  :doc:`/user_guide/interpretation/monitoring` (time-lapse EM, multi-method
+  fusion). Added the "Nearest-midpoint classification" glossary term.
+* |Docs| Added the :doc:`/api/geology` reference page and updated
+  :doc:`/api/interp`, :doc:`/cli/interp`, and the interpretation user
+  guide's toctree to match the ``pycsamt.geology`` split.
+* |Docs| Rewrote :doc:`/tutorials/run_pipeline_from_config` and
+  :doc:`/cli/pipe` to cover method-aware presets, the step cache, live
+  progress, the run-history log, and the dashboard report; converted
+  every interactive example on both pages to ``pycon`` per the
+  documentation guidelines, with output re-captured from real runs.
+  Added the "Run history log" and "Dashboard report" glossary terms and
+  a new real field-zone pseudosection figure.
+* |Build| ``pycsamt/gis/epsg.npy`` -- the fallback EPSG-code table used
+  when ``pyproj``'s legacy flat ``epsg`` file isn't available -- was
+  missing from ``pyproject.toml``'s package-data and ``MANIFEST.in``, so
+  installed wheels silently shipped without it and any EPSG lookup that
+  fell back to it failed at import time with "Failed to load EPSG
+  definitions".
+
+----
+
 .. _changelog-2-2-2:
 
 2.2.2 |Fix| |Docs| |Enhancement|

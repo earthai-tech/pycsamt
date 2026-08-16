@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""Tests for pycsamt.interp.export — Oasis Montaj XYZ, LAS, CSV, VTK."""
+"""Tests for pycsamt.interp.export — Oasis Montaj XYZ, LAS, CSV, VTK,
+Surfer grid/XYZ."""
 
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ import pytest
 
 from pycsamt.interp import export
 from pycsamt.interp._base import ResistivityModel
-from pycsamt.interp.lithology import Layer, StratigraphicLog
+from pycsamt.geology.lithology import Layer, StratigraphicLog
 
 
 def _log(name="S1", x=100.0, with_nan=True):
@@ -281,3 +282,193 @@ def test_to_vtk_point_data_count(tmp_path):
     out = export.to_vtk(_model(), tmp_path / "m.vtk")
     text = out.read_text()
     assert "POINT_DATA 6" in text  # nx=2, nz=3
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# to_surfer_grid
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _uniform_model():
+    """A model already on a perfectly uniform grid, so resampling is a
+    lossless identity transform -- lets tests assert exact values."""
+    rho_2d = np.array([[2.0, 2.1, 2.2], [2.5, 2.6, 2.7]])
+    return ResistivityModel.from_array(
+        rho_2d,
+        x_centers=np.array([0.0, 100.0, 200.0]),
+        z_centers=np.array([10.0, 50.0]),
+        method="test",
+    )
+
+
+class _FakeOccamMesh:
+    """Minimal native-Occam2D-shaped mesh: 4 uniform 50 m cells, no
+    padding, so x_centers land exactly on 25/75/125/175."""
+
+    def __init__(self):
+        self.x_nodes = np.array([0.0, 50.0, 100.0, 150.0, 200.0])
+        self.z_nodes = np.array([0.0, 20.0, 60.0])
+
+
+class _FakeOccamData:
+    def __init__(self):
+        self.offsets = np.array([25.0, 75.0, 125.0, 175.0])
+        self.sites = ["S0", "S1", "S2", "S3"]
+
+
+class _FakeOccamResult:
+    """Duck-typed native pycsamt.models.occam2d.results.InversionResult,
+    the same pattern pycsamt/interp/tests/test_base.py uses -- proves
+    to_surfer_grid/to_surfer_xyz accept a *native* Occam2D result
+    directly, not only an already-built ResistivityModel."""
+
+    def __init__(self):
+        self.mesh = _FakeOccamMesh()
+        self.data = _FakeOccamData()
+        self.rho_2d = np.array([[2.0, 2.1, 2.2, 2.3], [2.5, 2.6, 2.7, 2.8]])
+        self.final_rms = 1.5
+
+
+def test_to_surfer_grid_accepts_native_occam2d_result(tmp_path):
+    out = export.to_surfer_grid(_FakeOccamResult(), tmp_path / "m.grd")
+    assert out.exists()
+    assert out.read_text().splitlines()[0] == "DSAA"
+
+
+def test_to_surfer_xyz_accepts_native_occam2d_result(tmp_path):
+    out = export.to_surfer_xyz(_FakeOccamResult(), tmp_path / "m.dat")
+    lines = out.read_text().splitlines()
+    assert lines[0] == "X\tY\tZ"
+    assert len(lines) == 1 + 4 * 2  # header + 4 stations x 2 depths
+
+
+def test_to_surfer_grid_dsaa_header(tmp_path):
+    out = export.to_surfer_grid(_uniform_model(), tmp_path / "m.grd", nx=3, ny=2)
+    lines = out.read_text().splitlines()
+    assert lines[0] == "DSAA"
+    assert lines[1] == "3 2"
+    assert lines[2] == "0 200"
+    assert lines[3] == "-50 -10"
+
+
+def test_to_surfer_grid_values_match_source_on_uniform_grid(tmp_path):
+    out = export.to_surfer_grid(_uniform_model(), tmp_path / "m.grd", nx=3, ny=2)
+    rows = out.read_text().splitlines()[5:]
+    deep_row = [float(v) for v in rows[0].split()]   # y_min = -50 (z=50)
+    shallow_row = [float(v) for v in rows[1].split()]  # y_max = -10 (z=10)
+    np.testing.assert_allclose(deep_row, [2.5, 2.6, 2.7])
+    np.testing.assert_allclose(shallow_row, [2.0, 2.1, 2.2])
+
+
+def test_to_surfer_grid_linear_rho(tmp_path):
+    out = export.to_surfer_grid(
+        _uniform_model(), tmp_path / "m.grd", nx=3, ny=2, log_rho=False,
+    )
+    rows = out.read_text().splitlines()[5:]
+    shallow_row = [float(v) for v in rows[1].split()]
+    # rtol matches the file's own %.6g write precision, not full float64
+    np.testing.assert_allclose(
+        shallow_row, 10.0 ** np.array([2.0, 2.1, 2.2]), rtol=1e-5
+    )
+
+
+def test_to_surfer_grid_nan_source_cell_blanked_not_literal_nan(tmp_path):
+    out = export.to_surfer_grid(_model(), tmp_path / "m.grd")
+    text = out.read_text()
+    assert "nan" not in text.lower()
+
+
+def test_to_surfer_grid_accepts_raw_array_triple(tmp_path):
+    x = np.array([0.0, 100.0, 200.0])
+    z = np.array([10.0, 50.0])
+    rho = np.array([[2.0, 2.1, 2.2], [2.5, 2.6, 2.7]])
+    out = export.to_surfer_grid((x, z, rho), tmp_path / "m.grd", nx=3, ny=2)
+    assert out.exists()
+    assert out.read_text().splitlines()[0] == "DSAA"
+
+
+def test_to_surfer_grid_with_elevation_shifts_y_range(tmp_path):
+    m = _uniform_model()
+    flat = export.to_surfer_grid(m, tmp_path / "flat.grd", nx=3, ny=2)
+    draped = export.to_surfer_grid(
+        m, tmp_path / "draped.grd", nx=3, ny=2,
+        elevation=np.array([100.0, 100.0, 100.0]),
+        chainage=m.x_centers,
+    )
+    flat_ylim = flat.read_text().splitlines()[3]
+    draped_ylim = draped.read_text().splitlines()[3]
+    assert flat_ylim != draped_ylim
+    # elevation=100 uniformly shifts Y by +100 relative to the flat case
+    y0_flat, y1_flat = (float(v) for v in flat_ylim.split())
+    y0_draped, y1_draped = (float(v) for v in draped_ylim.split())
+    assert y0_draped == pytest.approx(y0_flat + 100.0)
+    assert y1_draped == pytest.approx(y1_flat + 100.0)
+
+
+def test_to_surfer_grid_creates_parent_dirs(tmp_path):
+    out = export.to_surfer_grid(_uniform_model(), tmp_path / "nested" / "m.grd")
+    assert out.exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# to_surfer_xyz
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_to_surfer_xyz_header_and_row_count(tmp_path):
+    out = export.to_surfer_xyz(_uniform_model(), tmp_path / "m.dat")
+    lines = out.read_text().splitlines()
+    assert lines[0] == "X\tY\tZ"
+    assert len(lines) == 1 + 3 * 2  # header + n_x * n_z real cells
+
+
+def test_to_surfer_xyz_no_header(tmp_path):
+    out = export.to_surfer_xyz(_uniform_model(), tmp_path / "m.dat", header=False)
+    lines = out.read_text().splitlines()
+    assert lines[0] != "X\tY\tZ"
+    assert len(lines) == 3 * 2
+
+
+def test_to_surfer_xyz_skips_nan_cells(tmp_path):
+    out = export.to_surfer_xyz(_model(), tmp_path / "m.dat")
+    text = out.read_text()
+    assert "nan" not in text.lower()
+    # 2 stations x 3 depths = 6 cells, minus the one real NaN = 5 rows + header
+    assert len(text.splitlines()) == 1 + 5
+
+
+def test_to_surfer_xyz_exact_values_no_resampling(tmp_path):
+    out = export.to_surfer_xyz(_uniform_model(), tmp_path / "m.dat")
+    rows = out.read_text().splitlines()[1:]
+    first = rows[0].split("\t")
+    assert first == ["0.000", "-10.000", "2.00000"]
+
+
+def test_to_surfer_xyz_custom_delimiter(tmp_path):
+    out = export.to_surfer_xyz(_uniform_model(), tmp_path / "m.dat", delimiter=",")
+    assert "," in out.read_text().splitlines()[0]
+
+
+def test_to_surfer_xyz_elevation_shifts_y(tmp_path):
+    m = _uniform_model()
+    flat = export.to_surfer_xyz(m, tmp_path / "flat.dat")
+    draped = export.to_surfer_xyz(
+        m, tmp_path / "draped.dat", elevation=np.array([50.0, 50.0, 50.0]),
+        chainage=m.x_centers,
+    )
+    y_flat = float(flat.read_text().splitlines()[1].split("\t")[1])
+    y_draped = float(draped.read_text().splitlines()[1].split("\t")[1])
+    assert y_draped == pytest.approx(y_flat + 50.0)
+
+
+def test_to_surfer_xyz_accepts_raw_array_triple(tmp_path):
+    x = np.array([0.0, 100.0])
+    z = np.array([10.0])
+    rho = np.array([[2.0, 2.1]])
+    out = export.to_surfer_xyz((x, z, rho), tmp_path / "m.dat")
+    assert out.exists()
+
+
+def test_to_surfer_xyz_creates_parent_dirs(tmp_path):
+    out = export.to_surfer_xyz(_uniform_model(), tmp_path / "nested" / "m.dat")
+    assert out.exists()

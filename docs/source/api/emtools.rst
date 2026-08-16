@@ -61,13 +61,19 @@ Source and Field-Zone Effects
    pycsamt.emtools.lcurve
    pycsamt.emtools.legacy
 
+Rose Diagram Styling
+---------------------
+
+.. autoclass:: pycsamt.emtools.RoseStyle
+   :members:
+
 Public QC Plot Functions
 ------------------------
 
-.. autofunction:: pycsamt.emtools.qc.overlay_noise_cone
-.. autofunction:: pycsamt.emtools.qc.overlay_spectral_holes
-.. autofunction:: pycsamt.emtools.qc.plot_consistency_fan
-.. autofunction:: pycsamt.emtools.qc.plot_coverage_psection
-.. autofunction:: pycsamt.emtools.qc.plot_qc_quicklook
-.. autofunction:: pycsamt.emtools.qc.plot_snr_hist
-.. autofunction:: pycsamt.emtools.qc.plot_xyyx_crossover_map
+.. autofunction:: pycsamt.emtools.overlay_noise_cone
+.. autofunction:: pycsamt.emtools.overlay_spectral_holes
+.. autofunction:: pycsamt.emtools.plot_consistency_fan
+.. autofunction:: pycsamt.emtools.plot_coverage_psection
+.. autofunction:: pycsamt.emtools.plot_qc_quicklook
+.. autofunction:: pycsamt.emtools.plot_snr_hist
+.. autofunction:: pycsamt.emtools.plot_xyyx_crossover_map

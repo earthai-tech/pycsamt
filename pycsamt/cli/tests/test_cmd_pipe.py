@@ -17,6 +17,7 @@ Test strategy
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -121,11 +122,17 @@ class TestPipeGroup:
     def test_help_lists_subcommands(self, runner: CliRunner) -> None:
         r = runner.invoke(main, ["pipe", "--help"])
         assert r.exit_code == 0
-        for sub in ("run", "steps", "presets", "init", "show"):
+        for sub in ("run", "steps", "presets", "plugins", "init", "show", "history"):
             assert sub in r.output
 
+    def test_help_lists_opt_in_flags(self, runner: CliRunner) -> None:
+        r = runner.invoke(main, ["pipe", "--help"])
+        assert r.exit_code == 0
+        assert "--with-plugins" in r.output
+        assert "--with-ai-steps" in r.output
+
     def test_each_subcommand_has_help(self, runner: CliRunner) -> None:
-        for sub in ("run", "steps", "presets", "init", "show"):
+        for sub in ("run", "steps", "presets", "plugins", "init", "show", "history"):
             r = runner.invoke(main, ["pipe", sub, "--help"])
             assert r.exit_code == 0, f"pipe {sub} --help failed: {r.output}"
             assert "--help" in r.output
@@ -261,7 +268,7 @@ class TestPipeSteps:
         codes = [line.strip() for line in r.output.splitlines() if line.strip()]
         assert "NR001" in codes
         assert "SS001" in codes
-        assert len(codes) == 47
+        assert len(codes) == 55
 
     def test_codes_only_json(self, runner: CliRunner) -> None:
         r = runner.invoke(main, ["pipe", "steps", "--codes-only", "--format", "json"])
@@ -269,7 +276,7 @@ class TestPipeSteps:
         data = json.loads(r.output)
         assert isinstance(data, list)
         assert "NR001" in data
-        assert len(data) == 47
+        assert len(data) == 55
 
     def test_format_json_full(self, runner: CliRunner) -> None:
         r = runner.invoke(
@@ -297,6 +304,123 @@ class TestPipeSteps:
         lines = r.output.strip().splitlines()
         assert lines[0] == "code,name,label,category,returns_sites"
         assert any(l.startswith("NR001,") for l in lines)
+
+
+# ============================================================================
+# 3b · pycsamt pipe plugins
+# ============================================================================
+
+
+@dataclasses.dataclass
+class _FakeEntryPoint:
+    name: str
+    _target: object
+
+    def load(self):
+        return self._target
+
+
+def _register_demo_cli_plugin() -> None:
+    from pycsamt.pipeline import StepSpec, register_step  # noqa: PLC0415
+
+    register_step(
+        StepSpec(
+            code="DEMOCLI001",
+            name="demo_cli_step",
+            label="Demo CLI Plugin Step",
+            category="plugin_demo",
+            override_fn=lambda sites, **kw: sites,
+        )
+    )
+
+
+def _broken_cli_plugin() -> None:
+    raise RuntimeError("deliberately broken CLI plugin")
+
+
+@pytest.fixture()
+def fake_entry_points(monkeypatch: pytest.MonkeyPatch):
+    """Patch pycsamt.pipeline discovery to yield a given set of fake plugins,
+    and unregister DEMOCLI001 afterwards regardless of what a test did."""
+    from pycsamt.pipeline import _plugins as pipeline_plugins_mod
+    from pycsamt.pipeline import unregister_step
+
+    def _install(*entry_points: _FakeEntryPoint) -> None:
+        monkeypatch.setattr(
+            pipeline_plugins_mod, "_iter_entry_points", lambda group: entry_points
+        )
+
+    yield _install
+    unregister_step("DEMOCLI001", missing_ok=True)
+
+
+class TestPipePlugins:
+    def test_no_plugins_installed_text(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points()  # simulate an environment with none installed
+        r = runner.invoke(main, ["pipe", "plugins"])
+        assert r.exit_code == 0
+        assert "No pipeline plugins found." in r.output
+        assert "No plugin steps registered." in r.output
+
+    def test_no_plugins_installed_json(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points()
+        r = runner.invoke(main, ["pipe", "plugins", "--format", "json"])
+        assert r.exit_code == 0
+        data = json.loads(r.output)
+        assert data == {"plugins": [], "steps": []}
+
+    def test_no_plugins_installed_csv(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points()
+        r = runner.invoke(main, ["pipe", "plugins", "--format", "csv"])
+        assert r.exit_code == 0
+        assert "plugin_name,ok,error" in r.output
+        assert "code,name,label,category" in r.output
+
+    def test_discovers_and_lists_a_registered_plugin(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points(_FakeEntryPoint("demo", _register_demo_cli_plugin))
+
+        r = runner.invoke(main, ["pipe", "plugins"])
+        assert r.exit_code == 0
+        assert "demo" in r.output
+        assert "DEMOCLI001" in r.output
+        assert "demo_cli_step" in r.output
+
+    def test_discovers_and_lists_a_registered_plugin_json(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points(_FakeEntryPoint("demo", _register_demo_cli_plugin))
+
+        r = runner.invoke(main, ["pipe", "plugins", "--format", "json"])
+        assert r.exit_code == 0
+        data = json.loads(r.output)
+        assert data["plugins"] == [{"name": "demo", "ok": True, "error": None}]
+        assert data["steps"][0]["code"] == "DEMOCLI001"
+
+    def test_strict_propagates_plugin_failure(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points(_FakeEntryPoint("broken", _broken_cli_plugin))
+
+        r = runner.invoke(main, ["pipe", "plugins", "--strict"])
+        assert r.exit_code != 0
+
+    def test_default_mode_reports_failure_without_crashing(
+        self, runner: CliRunner, fake_entry_points
+    ) -> None:
+        fake_entry_points(_FakeEntryPoint("broken", _broken_cli_plugin))
+
+        r = runner.invoke(main, ["pipe", "plugins"])
+        assert r.exit_code == 0
+        assert "broken" in r.output
+        assert "FAILED" in r.output
 
 
 # ============================================================================
@@ -579,6 +703,125 @@ class TestPipeShow:
 
 
 # ============================================================================
+# 6b · pycsamt pipe history
+# ============================================================================
+
+
+class TestPipeHistory:
+    def test_no_runs_logged_text(self, runner: CliRunner, tmp_path: Path) -> None:
+        r = runner.invoke(
+            main, ["pipe", "history", "--file", str(tmp_path / "missing.jsonl")]
+        )
+        assert r.exit_code == 0
+        assert "No pipeline runs logged yet." in r.output
+
+    def test_no_runs_logged_json(self, runner: CliRunner, tmp_path: Path) -> None:
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "history",
+                "--file",
+                str(tmp_path / "missing.jsonl"),
+                "--format",
+                "json",
+            ],
+        )
+        assert r.exit_code == 0
+        assert json.loads(r.output) == []
+
+    def test_lists_a_real_logged_run(self, runner: CliRunner, tmp_path: Path) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        hist_file = tmp_path / "hist.jsonl"
+        pipe = Pipeline.from_preset("basic_qc")
+        pipe.name = "cli_history_test"
+
+        class _Sites:
+            def __len__(self):
+                return 3
+
+            def __iter__(self):
+                return iter(())
+
+        # Real run against an empty-but-well-shaped sites stand-in, so this
+        # exercises the actual Pipeline.run(history=...) write path rather
+        # than mocking it — TestPipeRunUnit already covers the CLI wiring
+        # via mocks; this test covers the on-disk round trip specifically.
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            pipe.run(
+                _Sites(),
+                outdir=None,
+                save_report=False,
+                save_plots=False,
+                history=hist_file,
+            )
+
+        r = runner.invoke(main, ["pipe", "history", "--file", str(hist_file)])
+        assert r.exit_code == 0
+        assert "cli_history_test" in r.output
+
+    def test_last_option(self, runner: CliRunner, tmp_path: Path) -> None:
+        hist_file = tmp_path / "hist.jsonl"
+        hist_file.write_text(
+            "\n".join(
+                json.dumps(
+                    {
+                        "timestamp": f"2026-01-0{i}T00:00:00Z",
+                        "pipeline_name": f"run{i}",
+                        "ok": True,
+                        "n_errors": 0,
+                        "elapsed_sec": 1.0,
+                        "n_sites_in": 1,
+                        "n_sites_out": 1,
+                        "outdir": None,
+                        "steps": [],
+                    }
+                )
+                for i in range(1, 4)
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        r = runner.invoke(
+            main, ["pipe", "history", "--file", str(hist_file), "--last", "1"]
+        )
+        assert r.exit_code == 0
+        assert "run3" in r.output
+        assert "run1" not in r.output
+
+    def test_csv_format(self, runner: CliRunner, tmp_path: Path) -> None:
+        hist_file = tmp_path / "hist.jsonl"
+        hist_file.write_text(
+            json.dumps(
+                {
+                    "timestamp": "2026-01-01T00:00:00Z",
+                    "pipeline_name": "run1",
+                    "ok": True,
+                    "n_errors": 0,
+                    "elapsed_sec": 1.0,
+                    "n_sites_in": 1,
+                    "n_sites_out": 1,
+                    "outdir": None,
+                    "steps": [],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        r = runner.invoke(
+            main, ["pipe", "history", "--file", str(hist_file), "--format", "csv"]
+        )
+        assert r.exit_code == 0
+        lines = r.output.strip().splitlines()
+        assert lines[0].startswith("timestamp,pipeline_name,ok,")
+        assert "run1" in lines[1]
+
+
+# ============================================================================
 # 7 · pycsamt pipe run  (unit — mocked)
 # ============================================================================
 
@@ -639,6 +882,111 @@ class TestPipeRunUnit:
         assert "FREQ002" in r.output
         assert "FREQ004" in r.output
 
+    def test_steps_flag_rejects_unknown_plugin_code_by_default(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+        fake_entry_points,
+    ) -> None:
+        """Without --with-plugins, a plugin step code is never discovered —
+        this is the opt-in guarantee, and the error should say how to opt in."""
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        fake_entry_points(_FakeEntryPoint("demo", _register_demo_cli_plugin))
+        r = runner.invoke(
+            main,
+            ["pipe", "run", "--steps", "DEMOCLI001,NR001", "--survey", ".", "--dry-run"],
+        )
+        assert r.exit_code != 0
+        assert "--with-plugins" in r.output
+
+    def test_with_plugins_flag_makes_plugin_step_usable_in_one_shot(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+        fake_entry_points,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        fake_entry_points(_FakeEntryPoint("demo", _register_demo_cli_plugin))
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "--with-plugins",
+                "run",
+                "--steps",
+                "DEMOCLI001,NR001",
+                "--survey",
+                ".",
+                "--dry-run",
+            ],
+        )
+        assert r.exit_code == 0
+        assert "DEMOCLI001" in r.output
+
+    def test_export_steps_need_no_opt_in(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--steps",
+                "NR001,EXPORT001",
+                "--survey",
+                ".",
+                "--dry-run",
+            ],
+        )
+        assert r.exit_code == 0
+        assert "EXPORT001" in r.output
+
+    def test_ai_step_rejected_without_with_ai_steps(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            ["pipe", "run", "--steps", "AI001", "--survey", ".", "--dry-run"],
+        )
+        assert r.exit_code != 0
+        assert "Unknown step" in r.output
+
+    def test_with_ai_steps_flag_makes_ai001_usable_in_one_shot(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        from pycsamt.pipeline import unregister_step
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "--with-ai-steps",
+                "run",
+                "--steps",
+                "AI001",
+                "--survey",
+                ".",
+                "--dry-run",
+            ],
+        )
+        unregister_step("AI001", missing_ok=True)
+        assert r.exit_code == 0
+        assert "AI001" in r.output
+
     def test_dry_run_shows_site_count(
         self,
         runner: CliRunner,
@@ -660,6 +1008,85 @@ class TestPipeRunUnit:
         )
         assert r.exit_code == 0
         assert str(len(fake_sites)) in r.output
+
+    def test_dry_run_shows_cache_disabled_by_default(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            ["pipe", "run", "--preset", "basic_qc", "--survey", ".", "--dry-run"],
+        )
+        assert r.exit_code == 0
+        assert "Cache   : disabled" in r.output
+
+    def test_dry_run_shows_cache_dir_when_given(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+        tmp_path: Path,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--cache-dir",
+                str(tmp_path),
+                "--dry-run",
+            ],
+        )
+        assert r.exit_code == 0
+        assert str(tmp_path) in r.output
+
+    def test_dry_run_shows_history_disabled_by_default(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            ["pipe", "run", "--preset", "basic_qc", "--survey", ".", "--dry-run"],
+        )
+        assert r.exit_code == 0
+        assert "History : disabled" in r.output
+
+    def test_dry_run_shows_history_file_when_given(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+        tmp_path: Path,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        hist_file = tmp_path / "hist.jsonl"
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--history-file",
+                str(hist_file),
+                "--dry-run",
+            ],
+        )
+        assert r.exit_code == 0
+        assert str(hist_file) in r.output
 
     def test_dry_run_n_steps_slices(
         self,
@@ -835,6 +1262,381 @@ class TestPipeRunUnit:
         )
         assert r.exit_code == 0
         assert "mock_pipe" in r.output or "sites" in r.output.lower()
+
+    def test_cache_flag_forwarded_to_pipeline_run(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        captured = {}
+
+        def _fake_run(self, *a, **kw):
+            captured.update(kw)
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+                "--cache",
+            ],
+        )
+        assert r.exit_code == 0
+        assert captured["cache"] is True
+
+    def test_cache_dir_flag_forwarded_to_pipeline_run(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites,
+        tmp_path: Path,
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        captured = {}
+
+        def _fake_run(self, *a, **kw):
+            captured.update(kw)
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+                "--cache-dir",
+                str(tmp_path),
+            ],
+        )
+        assert r.exit_code == 0
+        assert captured["cache"] == tmp_path
+
+    def test_no_cache_flag_forwards_false(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        captured = {}
+
+        def _fake_run(self, *a, **kw):
+            captured.update(kw)
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+            ],
+        )
+        assert r.exit_code == 0
+        assert captured["cache"] is False
+
+    def test_history_flag_forwarded_to_pipeline_run(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        captured = {}
+
+        def _fake_run(self, *a, **kw):
+            captured.update(kw)
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+                "--history",
+            ],
+        )
+        assert r.exit_code == 0
+        assert captured["history"] is True
+
+    def test_history_file_flag_forwarded_to_pipeline_run(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites,
+        tmp_path: Path,
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        captured = {}
+
+        def _fake_run(self, *a, **kw):
+            captured.update(kw)
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        hist_file = tmp_path / "hist.jsonl"
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+                "--history-file",
+                str(hist_file),
+            ],
+        )
+        assert r.exit_code == 0
+        assert captured["history"] == hist_file
+
+    def test_no_history_flag_forwards_false(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        captured = {}
+
+        def _fake_run(self, *a, **kw):
+            captured.update(kw)
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+            ],
+        )
+        assert r.exit_code == 0
+        assert captured["history"] is False
+
+    def test_live_flag_sets_rich_progress_style(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import PYCSAMT_PIPE, Pipeline
+        from pycsamt.api.pipe import reset_pipe
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        seen_style = {}
+
+        def _fake_run(self, *a, **kw):
+            seen_style["progress_style"] = PYCSAMT_PIPE.progress_style
+            seen_style["show_progress"] = PYCSAMT_PIPE.show_progress
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        try:
+            r = runner.invoke(
+                main,
+                [
+                    "pipe",
+                    "run",
+                    "--preset",
+                    "basic_qc",
+                    "--survey",
+                    ".",
+                    "--no-plots",
+                    "--no-edi",
+                    "--no-report",
+                    "--live",
+                ],
+            )
+            assert r.exit_code == 0
+            assert seen_style["progress_style"] == "rich"
+            assert seen_style["show_progress"] is True
+        finally:
+            # --live sets progress_style="rich" on the global PYCSAMT_PIPE
+            # singleton with no matching reset in run.py itself; clean up
+            # explicitly so it can't leak into a later test in this file.
+            reset_pipe()
+
+    def test_without_live_flag_progress_style_untouched(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import PYCSAMT_PIPE, Pipeline, configure_pipe
+        from pycsamt.api.pipe import reset_pipe
+
+        configure_pipe(progress_style="log")
+        try:
+            _patch_resolve_sites(monkeypatch, fake_sites)
+            seen_style = {}
+
+            def _fake_run(self, *a, **kw):
+                seen_style["progress_style"] = PYCSAMT_PIPE.progress_style
+                return _make_fake_result(fake_sites)
+
+            monkeypatch.setattr(Pipeline, "run", _fake_run)
+            r = runner.invoke(
+                main,
+                [
+                    "pipe",
+                    "run",
+                    "--preset",
+                    "basic_qc",
+                    "--survey",
+                    ".",
+                    "--no-plots",
+                    "--no-edi",
+                    "--no-report",
+                ],
+            )
+            assert r.exit_code == 0
+            # --live was NOT passed: a user's own progress_style must survive.
+            assert seen_style["progress_style"] == "log"
+        finally:
+            reset_pipe()  # this test mutates the global PYCSAMT_PIPE singleton;
+            # no autouse reset fixture exists in this file, so clean up
+            # explicitly to avoid leaking "log" into later tests' state.
+
+    def test_dashboard_flag_adds_dashboard_report_format(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import PYCSAMT_PIPE, Pipeline
+        from pycsamt.api.pipe import reset_pipe
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        seen = {}
+
+        def _fake_run(self, *a, **kw):
+            seen["report_formats"] = PYCSAMT_PIPE.report_formats
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        try:
+            r = runner.invoke(
+                main,
+                [
+                    "pipe",
+                    "run",
+                    "--preset",
+                    "basic_qc",
+                    "--survey",
+                    ".",
+                    "--no-plots",
+                    "--no-edi",
+                    "--no-report",
+                    "--dashboard",
+                ],
+            )
+            assert r.exit_code == 0
+            assert "dashboard" in seen["report_formats"]
+        finally:
+            reset_pipe()
+
+    def test_without_dashboard_flag_report_formats_untouched(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch, fake_sites
+    ) -> None:
+        from pycsamt.pipeline import PYCSAMT_PIPE, Pipeline
+
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        seen = {}
+
+        def _fake_run(self, *a, **kw):
+            seen["report_formats"] = PYCSAMT_PIPE.report_formats
+            return _make_fake_result(fake_sites)
+
+        monkeypatch.setattr(Pipeline, "run", _fake_run)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+            ],
+        )
+        assert r.exit_code == 0
+        assert "dashboard" not in seen["report_formats"]
+
+    def test_dry_run_shows_dashboard_disabled_by_default(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            ["pipe", "run", "--preset", "basic_qc", "--survey", ".", "--dry-run"],
+        )
+        assert r.exit_code == 0
+        assert "Dashboard : disabled" in r.output
+
+    def test_dry_run_shows_dashboard_enabled_when_flag_given(
+        self,
+        runner: CliRunner,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_sites: _FakeSites,
+    ) -> None:
+        _patch_resolve_sites(monkeypatch, fake_sites)
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                ".",
+                "--dashboard",
+                "--dry-run",
+            ],
+        )
+        assert r.exit_code == 0
+        assert "Dashboard : enabled" in r.output
 
     def test_run_json_output(self, runner: CliRunner, patched_run) -> None:
         r = runner.invoke(
@@ -1033,3 +1835,34 @@ class TestPipeRunIntegration:
         assert list((out / "processed").glob("*.edi")), "No EDIs in processed/"
         assert (out / "pipeline.yaml").exists()
         assert (out / "summary.txt").exists()
+
+    def test_run_with_dashboard_flag_writes_dashboard_html(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """End-to-end: --dashboard writes dashboard.html alongside the fast tier."""
+        out = tmp_path / "pipe_results_dashboard_cli_test"
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--preset",
+                "basic_qc",
+                "--survey",
+                str(_DATA_WILLY),
+                "--out",
+                str(out),
+                "--no-plots",
+                "--dpi",
+                "72",
+                "--dashboard",
+            ],
+        )
+        assert r.exit_code == 0, r.output
+        assert (out / "report.html").exists()
+        assert (out / "summary.txt").exists()
+        dashboard_html = out / "dashboard.html"
+        assert dashboard_html.exists()
+        content = dashboard_html.read_text(encoding="utf-8")
+        assert "pycsamt-dashboard" in content
+        assert "NR001" in content

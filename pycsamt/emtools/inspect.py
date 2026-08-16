@@ -301,6 +301,7 @@ def plot_survey_inventory_overview(
     coverage_cmap: str = "YlGnBu",
     station_grid: bool = True,
     station_grid_kws: dict[str, Any] | None = None,
+    axes: tuple[plt.Axes, plt.Axes] | None = None,
     figsize: tuple[float, float] | None = None,
     title: str = "Survey inventory overview",
     recursive: bool = True,
@@ -334,6 +335,9 @@ def plot_survey_inventory_overview(
         Draw aligned vertical station guides in both panels.
     station_grid_kws : dict or None
         Keyword arguments forwarded to ``Axes.axvline``.
+    axes : (Axes, Axes) or None
+        Existing ``(ax_count, ax_map)`` pair to draw into. When ``None``
+        (default), a new two-panel figure is created.
 
     Returns
     -------
@@ -358,7 +362,11 @@ def plot_survey_inventory_overview(
 
     names = list(observed) if station_order is None else list(station_order)
     if not names:
-        fig, ax = plt.subplots(figsize=figsize or (8.0, 3.5))
+        if axes is not None:
+            ax = axes[0]
+            fig = ax.get_figure()
+        else:
+            fig, ax = plt.subplots(figsize=figsize or (8.0, 3.5))
         ax.text(0.5, 0.5, "no station data", ha="center", va="center")
         ax.set_axis_off()
         return fig
@@ -370,14 +378,18 @@ def plot_survey_inventory_overview(
     grid = _union_freq(arrays)
     counts = np.asarray([arr.size for arr in arrays], dtype=int)
     x = np.arange(len(names), dtype=float)
-    if figsize is None:
-        figsize = (max(9.0, 0.34 * len(names) + 2.5), 7.2)
-    fig, (ax_count, ax_map) = plt.subplots(
-        2,
-        1,
-        figsize=figsize,
-        gridspec_kw={"height_ratios": (1.0, 2.25), "hspace": 0.16},
-    )
+    if axes is not None:
+        ax_count, ax_map = axes
+        fig = ax_count.get_figure()
+    else:
+        if figsize is None:
+            figsize = (max(9.0, 0.34 * len(names) + 2.5), 7.2)
+        fig, (ax_count, ax_map) = plt.subplots(
+            2,
+            1,
+            figsize=figsize,
+            gridspec_kw={"height_ratios": (1.0, 2.25), "hspace": 0.16},
+        )
 
     line_kws: dict[str, Any] = {
         "color": "#176b87",

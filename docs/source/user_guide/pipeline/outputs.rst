@@ -171,7 +171,8 @@ come from :class:`pycsamt.api.pipe.PipelineAPIConfig`:
      - Plot format.  CLI choices are ``png``, ``pdf``, and ``svg``.
    * - ``report_formats``
      - ``("html", "txt")``
-     - Report files to write when reports are enabled.
+     - Report files to write when reports are enabled.  ``"dashboard"`` is
+       a third, opt-in value — see `Dashboard Report`_.
    * - ``save_intermediate``
      - ``False``
      - Save EDI snapshots after successful intermediate steps.
@@ -341,7 +342,9 @@ Reports
 
 When ``save_report=True``, the pipeline writes reports according to
 ``PYCSAMT_PIPE.report_formats``.  By default it writes both ``summary.txt`` and
-``report.html``.
+``report.html``.  A third, opt-in format, ``"dashboard"``, writes a richer
+branded report with KPI stat tiles and charts — see `Dashboard Report`_
+below.
 
 ``summary.txt``
     Plain-text report for terminals, CI logs, quick review, and diffable
@@ -394,6 +397,118 @@ Write only one report format:
    >>> from pycsamt.api.pipe import PYCSAMT_PIPE
    >>> with PYCSAMT_PIPE.context(report_formats=("txt",)):
    ...     result = pipe.run(sites, outdir="results/text_only")
+
+Dashboard Report
+----------------
+
+``report_formats`` also accepts ``"dashboard"``, a third, richer report
+tier written to ``<outdir>/dashboard.html`` alongside — not instead of —
+``summary.txt`` and ``report.html``.  Where ``report.html`` stays a plain,
+cheap-to-render step-card list, the dashboard adds pyCSAMT's own logo and
+brand colors, KPI stat tiles, and three native inline-SVG charts built
+from the same ``step_results`` the other two reports already use.  There
+is no external JavaScript or CDN dependency, so the file stays
+self-contained: it opens directly from disk in a browser, or travels as a
+single email attachment.
+
+Enable it from Python by adding ``"dashboard"`` to ``report_formats``:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.api.pipe import PYCSAMT_PIPE
+   >>> with PYCSAMT_PIPE.context(report_formats=("html", "txt", "dashboard")):
+   ...     result = pipe.run(sites, outdir="results/with_dashboard")
+
+or from the CLI with ``--dashboard``:
+
+.. code-block:: console
+   :linenos:
+
+   pycsamt pipe run data/3edis \
+       --preset basic_qc \
+       --out results/with_dashboard \
+       --dashboard
+
+The dashboard adds four things beyond ``report.html``:
+
+Stat tiles
+    Steps ok/total, error count, total elapsed time, sites in → out, cache
+    hit rate, and total figures generated — one glance at whether the run
+    needs attention.
+
+Step status timeline
+    One colored block per step (green = OK, red = error), with a small
+    gold-ringed dot marking any step whose result was replayed from the
+    :doc:`step cache <caching>` instead of recomputed.  Hovering a block
+    shows the step name, code, elapsed time, and cache status via a native
+    SVG ``<title>`` — no script required.
+
+Step duration bars
+    One bar per step, in the brand blue by default.  A step at or above
+    the run's own 80th-percentile elapsed time is drawn in gold instead,
+    so an unusually slow step stands out without a fixed, run-independent
+    threshold.
+
+Site-count flow
+    A two-series line chart of sites in vs. sites out per step, so a step
+    that silently drops stations is visible at a glance rather than buried
+    in a table column.
+
+Every chart sits above a plain ``<table>`` restating the same per-step
+numbers — the table is not an afterthought; it is the accessibility twin
+required for anyone who cannot read the charts, and it is what a
+:kbd:`Ctrl-F` search or a text diff actually matches against.
+
+A run against three real EDIs, captured the same way as
+`Captured Minimal Run`_ above:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> with PYCSAMT_PIPE.context(
+   ...     show_progress=False,
+   ...     plot_dpi=72,
+   ...     report_formats=("html", "txt", "dashboard"),
+   ... ):
+   ...     result = pipe.run(
+   ...         sites,
+   ...         outdir=".tmp/docs_outputs/basic_qc_dashboard",
+   ...         save_plots=False,
+   ...         save_edis=False,
+   ...         save_report=True,
+   ...     )
+   >>> sorted(p.name for p in Path(".tmp/docs_outputs/basic_qc_dashboard").iterdir())
+   ['dashboard.html', 'pipeline.yaml', 'plots', 'processed', 'report.html', 'summary.txt']
+
+The stat-tiles block from that same run (SVG icon path data elided for
+brevity — each tile embeds one small ``currentColor`` icon so it inherits
+the surrounding text color in both light and dark mode):
+
+.. code-block:: html
+   :linenos:
+
+   <div class="tiles">
+     <div class="tile"><svg class="icon" ...></svg>
+       <div class="label">Steps</div><div class="value">5/5 ok</div>
+     </div>
+     <div class="tile"><svg class="icon" ...></svg>
+       <div class="label">Errors</div><div class="value">0</div>
+     </div>
+     <div class="tile"><svg class="icon" ...></svg>
+       <div class="label">Total time</div><div class="value">28.50s</div>
+     </div>
+     ...
+   </div>
+
+The dashboard's palette is not an arbitrary restyle: the brand blue/orange
+pair used for the site-count-flow chart, and the good/warning/critical
+status colors used throughout, were both checked against pyCSAMT's own
+light and dark surfaces with the project's color-blindness and contrast
+validator before being wired in, and both passed without substitution.
+Where a status color's contrast is intentionally low against a light
+surface (the gold "slow step" / "cached" marker), the mitigation is a
+visible caption or tooltip beside it, never color alone.
 
 Pipeline Snapshot
 -----------------
@@ -579,7 +694,12 @@ directory exists.
      - Controls saved figure extension and Matplotlib output format.
    * - ``report_formats``
      - Reports
-     - Selects ``html`` and/or ``txt`` when reports are enabled.
+     - Selects ``html`` and/or ``txt`` when reports are enabled; add
+       ``dashboard`` for the richer branded report.
+   * - ``--dashboard``
+     - CLI
+     - Adds ``dashboard.html`` for this run without disabling the default
+       ``html``/``txt`` reports.
 
 Recommended Output Layout
 -------------------------
@@ -689,8 +809,8 @@ Related Pages
 * :doc:`concepts` explains the run lifecycle and ``PipelineResult`` object.
 * :doc:`configuration_files` explains ``output_dir`` and config-driven runs.
 * :doc:`cli_pipe` explains CLI output flags such as ``--out``,
-  ``--no-plots``, ``--no-edi``, ``--no-report``, ``--dpi``, and
-  ``--plot-fmt``.
+  ``--no-plots``, ``--no-edi``, ``--no-report``, ``--dpi``, ``--plot-fmt``,
+  and ``--dashboard``.
 * :doc:`steps` explains which steps generate QC figures.
 * :doc:`presets` explains how preset workflows produce comparable output
   directories.

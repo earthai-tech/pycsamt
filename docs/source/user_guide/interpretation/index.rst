@@ -14,6 +14,9 @@ geometry, profiles, and overlays are covered separately in
    :class: pycsamt-guide-toc
 
    workflow
+   lithology
+   petrophysics
    hydrogeophysics
+   monitoring
    uncertainty
    reporting

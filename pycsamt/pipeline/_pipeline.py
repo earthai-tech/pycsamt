@@ -53,7 +53,7 @@ import time
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ._base import PipelineBase
 from ._steps import Step, StepResult
@@ -136,6 +136,27 @@ class PipelineResult:
         if self.outdir is not None:
             lines.append(f"  Output  : {self.outdir}")
         return "\n".join(lines)
+
+    def _repr_html_(self) -> str:
+        """Inline HTML rendering for Jupyter — a quick-glance step table.
+
+        Not a replacement for the full ``report.html`` written by
+        :meth:`Pipeline.run` (``save_report=True``): no plot thumbnails, no
+        embedded config YAML, just enough to see a run's shape at a glance
+        while scrolling through a notebook.
+        """
+        from ._report import make_notebook_html
+
+        n_in = _count_sites(self.sites_in)
+        n_out = _count_sites(self.sites_out)
+        return make_notebook_html(
+            self.pipeline_name,
+            self.step_results,
+            self.elapsed_sec,
+            self.outdir,
+            n_in,
+            n_out,
+        )
 
     def __repr__(self) -> str:
         return (
@@ -253,6 +274,9 @@ class Pipeline(PipelineBase):
         save_edis: bool = True,
         save_report: bool = True,
         api: Any = None,
+        cache: bool | str | Path = False,
+        on_step: Callable[[StepResult], None] | None = None,
+        history: bool | str | Path = False,
     ) -> PipelineResult:
         """Run all steps in order and return a :class:`PipelineResult`.
 
@@ -273,8 +297,40 @@ class Pipeline(PipelineBase):
         api:
             Optional :class:`~pycsamt.api.pipe.PipelineAPIConfig` override.
             When ``None`` the global singleton is used.
+        cache:
+            ``False`` (default) — no caching, identical behavior to every
+            prior release.  ``True`` — cache each step's output under
+            :attr:`~pycsamt.api.pipe.PipelineAPIConfig.cache_root`.  A path —
+            cache under that directory instead.  A rerun of the identical
+            call replays every already-completed step from cache instead of
+            recomputing it — this is also how an interrupted run "resumes."
+            See :doc:`/user_guide/pipeline/caching` for what is and isn't
+            safe to cache.
+        on_step:
+            Optional callable invoked once per step, immediately after that
+            step's :class:`~pycsamt.pipeline.StepResult` is built — for a
+            fresh computation, a cache hit, or a warn/skip error alike (a
+            step that raises under ``on_step_error="raise"`` never gets a
+            ``StepResult`` and so never fires this either, same as today).
+            An exception raised by *on_step* itself is caught and warned,
+            never allowed to corrupt or abort the run.  This is the hook a
+            notebook, a script, or a future GUI integration would use to
+            observe a run in progress — see :doc:`/user_guide/pipeline/observability`.
+        history:
+            ``False`` (default) — no history logged.  ``True`` — append a
+            compact one-line JSON summary of this run to
+            :attr:`~pycsamt.api.pipe.PipelineAPIConfig.history_path`
+            (default ``~/.pycsamt/pipeline_history.jsonl``).  A path — log
+            to that file instead.  Read back with
+            :func:`~pycsamt.pipeline.load_history`.
         """
         cfg = api or _get_cfg()
+
+        step_cache = None
+        if cache is not False:
+            from ._cache import DIAGNOSTIC_OK, StepCache, _MISS, chain_key
+
+            step_cache = StepCache(cfg.cache_root if cache is True else cache)
 
         # Resolve the output root:
         #   outdir=_UNSET → use pipeline default → fall back to cfg.output_root
@@ -298,6 +354,12 @@ class Pipeline(PipelineBase):
         current_sites = sites
         step_results: list[StepResult] = []
 
+        current_fp = None
+        if step_cache is not None:
+            from ._cache import fingerprint_sites
+
+            current_fp = fingerprint_sites(current_sites)
+
         # Save initial pipeline config for reproducibility
         yaml_str = self.to_yaml_string()
         if out is not None:
@@ -313,6 +375,14 @@ class Pipeline(PipelineBase):
                 desc=self.name,
                 unit="step",
                 verbose=1,
+            )
+
+        rich_live, rich_rows, render_rich_table = None, None, None
+        if cfg.show_progress and cfg.progress_style == "rich":
+            from ._richview import make_rich_live
+
+            rich_live, rich_rows, render_rich_table = make_rich_live(
+                self.name, self._steps
             )
 
         # ── Main loop ─────────────────────────────────────────────────
@@ -333,26 +403,51 @@ class Pipeline(PipelineBase):
                     f"[{step_idx}/{len(self._steps)}] "
                     f"{label} [{step.spec.code}]"
                 )
+            if rich_rows is not None:
+                rich_rows[step_idx - 1]["status"] = "running"
+                rich_live.update(render_rich_table())
 
-            # --- Transform -------------------------------------------
-            try:
-                sites_after = step.transform(current_sites)
-            except Exception as exc:
-                error = exc
-                if cfg.on_step_error == "raise":
-                    self._running = False
-                    if bar is not None:
-                        bar.close()
-                    raise
-                elif cfg.on_step_error == "warn":
-                    warnings.warn(
-                        f"Pipeline step {label!r} [{step.spec.code}] "
-                        f"raised {type(exc).__name__}: {exc}.  "
-                        "Continuing with previous sites.",
-                        stacklevel=2,
+            # --- Transform (cache-aware) ------------------------------
+            cache_key = None
+            cached_hit = False
+            if step_cache is not None:
+                cache_key = chain_key(current_fp, step.spec.code, step.params)
+                cached_value = step_cache.get(cache_key)
+                if cached_value is not _MISS:
+                    cached_hit = True
+                    sites_after = (
+                        cached_value
+                        if step.spec.returns_sites
+                        else current_sites
                     )
-                # "skip" — silent, continue with current_sites
-                sites_after = current_sites
+
+            if not cached_hit:
+                try:
+                    sites_after = step.transform(current_sites)
+                except Exception as exc:
+                    error = exc
+                    if cfg.on_step_error == "raise":
+                        self._running = False
+                        if bar is not None:
+                            bar.close()
+                        if rich_live is not None:
+                            rich_live.stop()
+                        raise
+                    elif cfg.on_step_error == "warn":
+                        warnings.warn(
+                            f"Pipeline step {label!r} [{step.spec.code}] "
+                            f"raised {type(exc).__name__}: {exc}.  "
+                            "Continuing with previous sites.",
+                            stacklevel=2,
+                        )
+                    # "skip" — silent, continue with current_sites
+                    sites_after = current_sites
+
+                if step_cache is not None and error is None:
+                    step_cache.put(
+                        cache_key,
+                        sites_after if step.spec.returns_sites else DIAGNOSTIC_OK,
+                    )
 
             # --- QC plots -------------------------------------------
             if save_plots and out is not None and error is None:
@@ -394,9 +489,22 @@ class Pipeline(PipelineBase):
                 n_sites_in=n_in,
                 n_sites_out=n_out,
                 error=error,
+                cached=cached_hit,
             )
             step_results.append(sr)
             current_sites = sites_after
+            if step_cache is not None:
+                current_fp = fingerprint_sites(current_sites)
+
+            if on_step is not None:
+                try:
+                    on_step(sr)
+                except Exception as exc:
+                    warnings.warn(
+                        f"on_step callback raised {type(exc).__name__}: {exc}.  "
+                        "Continuing — a broken callback must not abort the run.",
+                        stacklevel=2,
+                    )
 
             if use_log:
                 _print_step_done(sr)
@@ -408,9 +516,21 @@ class Pipeline(PipelineBase):
                         "elapsed": f"{sr.elapsed_sec:.2f}s",
                     },
                 )
+            elif rich_rows is not None:
+                row = rich_rows[step_idx - 1]
+                row["status"] = "OK" if sr.ok else "ERR"
+                row["elapsed"] = f"{sr.elapsed_sec:.2f}s"
+                # ASCII arrow, not "→": rich's legacy-Windows console
+                # renderer (non-UTF-8 codepage, e.g. plain cmd.exe) crashes
+                # encoding U+2192 — a real bug caught by testing on Windows.
+                row["sites"] = f"{sr.n_sites_in}->{sr.n_sites_out}"
+                row["cached"] = "yes" if sr.cached else ""
+                rich_live.update(render_rich_table())
 
         if bar is not None:
             bar.close()
+        if rich_live is not None:
+            rich_live.stop()
 
         # ── Post-run ──────────────────────────────────────────────────
         total_elapsed = time.perf_counter() - t_start
@@ -429,28 +549,41 @@ class Pipeline(PipelineBase):
 
             n_in_total = _count_sites(sites)
             n_out_total = _count_sites(current_sites)
-            txt = make_text_report(
-                self.name,
-                step_results,
-                total_elapsed,
-                out.root,
-                n_in_total,
-                n_out_total,
-            )
-            html = make_html_report(
-                self.name,
-                step_results,
-                total_elapsed,
-                out.root,
-                n_in_total,
-                n_out_total,
-                pipeline_yaml=yaml_str,
-            )
             fmts = cfg.report_formats or ("html", "txt")
             if "txt" in fmts:
+                txt = make_text_report(
+                    self.name,
+                    step_results,
+                    total_elapsed,
+                    out.root,
+                    n_in_total,
+                    n_out_total,
+                )
                 out.save_text(txt, "summary.txt")
             if "html" in fmts:
+                html = make_html_report(
+                    self.name,
+                    step_results,
+                    total_elapsed,
+                    out.root,
+                    n_in_total,
+                    n_out_total,
+                    pipeline_yaml=yaml_str,
+                )
                 out.save_text(html, "report.html")
+            if "dashboard" in fmts:
+                from ._dashboard import make_dashboard_html
+
+                dashboard = make_dashboard_html(
+                    self.name,
+                    step_results,
+                    total_elapsed,
+                    out.root,
+                    n_in_total,
+                    n_out_total,
+                    pipeline_yaml=yaml_str,
+                )
+                out.save_text(dashboard, "dashboard.html")
 
         self._running = False
 
@@ -464,8 +597,27 @@ class Pipeline(PipelineBase):
             pipeline_name=self.name,
         )
 
-        if use_log or (cfg.show_progress and cfg.progress_style == "bar"):
+        if use_log or (
+            cfg.show_progress and cfg.progress_style in ("bar", "rich")
+        ):
             _print_run_done(result)
+
+        if history is not False:
+            from ._history import append_run, default_history_path
+
+            history_path = Path(
+                (cfg.history_path or default_history_path())
+                if history is True
+                else history
+            )
+            try:
+                append_run(history_path, result)
+            except Exception as exc:
+                warnings.warn(
+                    f"Failed to append run history to {history_path}: "
+                    f"{type(exc).__name__}: {exc}",
+                    stacklevel=2,
+                )
 
         return result
 

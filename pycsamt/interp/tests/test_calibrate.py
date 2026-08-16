@@ -8,9 +8,9 @@ import numpy as np
 import pytest
 
 from pycsamt.interp._base import ResistivityModel
-from pycsamt.interp.borehole import Borehole, Interval
+from pycsamt.geology.borehole import Borehole, Interval
 from pycsamt.interp.calibrate import ModelCalibrator
-from pycsamt.interp.lithology import RockDatabase
+from pycsamt.geology.lithology import RockDatabase
 
 
 def _model():

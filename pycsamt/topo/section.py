@@ -85,7 +85,10 @@ import numpy as np
 from .config import TopoConfig
 from .drape import drape_section, interp_elev
 
-__all__ = ["TopoSection", "build_topo_section", "plot_topo_section"]
+__all__ = [
+    "TopoSection", "build_topo_section", "plot_topo_section", "plot_topo_array",
+    "GridInfo", "extract_grid",
+]
 
 # log10(rho) threshold above which a cell is treated as "air" when
 # inferring terrain directly from a model grid.  Matches the ModEM
@@ -166,8 +169,14 @@ class TopoSection:
 
 
 @dataclass
-class _GridInfo:
-    """Internal adapter output — a flat cell-centre resistivity grid."""
+class GridInfo:
+    """Adapter output — a flat cell-centre resistivity grid.
+
+    Returned by :func:`extract_grid`, the single "accept any 2-D
+    inversion result" normalizer shared across the package (topography
+    draping here, :meth:`pycsamt.interp.ResistivityModel.from_any`,
+    :mod:`pycsamt.interp.export`'s Surfer writers, ...).
+    """
 
     x_centers: np.ndarray
     z_centers: np.ndarray
@@ -177,6 +186,10 @@ class _GridInfo:
     method: str
     rms: float
     unit: str  # "m" or "km"
+
+
+# Retained for any code still importing the pre-promotion private names.
+_GridInfo = GridInfo
 
 
 # ---------------------------------------------------------------------------
@@ -519,6 +532,14 @@ def plot_topo_section(
     if kind not in ("pcolormesh", "imshow"):
         raise ValueError("kind must be 'pcolormesh' or 'imshow'.")
 
+    # fig.tight_layout() below only makes sense when this call owns the
+    # whole figure (ax was None). When the caller passed an existing ax
+    # -- e.g. one panel of a hand-built multi-axes GridSpec composition
+    # -- tight_layout() operates on the *entire* figure, including axes
+    # this call knows nothing about, and can silently distort a layout
+    # the caller already arranged deliberately.
+    _owns_figure = ax is None
+
     section_style = (
         section.copy()
         if isinstance(section, SectionStyle)
@@ -702,7 +723,7 @@ def plot_topo_section(
                 marker_style=station_marker,
             )
 
-    if section_style.figure.tight:
+    if section_style.figure.tight and _owns_figure:
         try:
             fig.tight_layout()
         except Exception:
@@ -713,6 +734,198 @@ def plot_topo_section(
 
     if return_data:
         return ax, data
+    return ax
+
+
+def plot_topo_array(
+    x_centers: np.ndarray,
+    z_centers: np.ndarray,
+    values: np.ndarray,
+    *,
+    ax: Any = None,
+    elevation: np.ndarray,
+    station_x: np.ndarray | None = None,
+    chainage: np.ndarray | None = None,
+    station_names: Sequence[str] | None = None,
+    model_unit: str = "m",
+    depth_min: float = 0.0,
+    depth_max: float | None = None,
+    exaggeration: float = 1.0,
+    clip_above_surface: bool = True,
+    cmap: str = "viridis",
+    vmin: float | None = None,
+    vmax: float | None = None,
+    colorbar: bool = True,
+    cbar_label: str = "",
+    show_stations: bool = True,
+    show_station_names: bool = True,
+    station_marker: Any = None,
+    dark: bool = False,
+    title: str | None = None,
+    figsize: tuple[float, float] | None = None,
+):
+    """Drape an arbitrary 2-D scalar field over real topography.
+
+    The terrain-following counterpart of :func:`plot_topo_section` for
+    grids that are *not* log10(resistivity) — a calibration misfit map,
+    a sensitivity map, a depth-of-investigation mask, anything defined
+    on the same ``(x_centers, z_centers)`` grid as a resistivity model
+    but carrying its own physical units and colour scale. Uses the same
+    :func:`~pycsamt.topo.drape.drape_section` warp and
+    :func:`~pycsamt.topo.overlay.draw_topo_section` terrain overlay (and
+    the same default ``inversion`` station marker) as
+    :func:`plot_topo_section`, without ever assuming the values are
+    resistivity or applying a log10 transform.
+
+    Parameters
+    ----------
+    x_centers, z_centers : array_like
+        Cell-centre coordinates of *values*, in *model_unit*.
+    values : ndarray, shape (n_z, n_x)
+        The scalar field, plotted and colour-mapped exactly as given.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw into. A new figure/axes is created when
+        omitted.
+    elevation : array_like
+        Terrain elevation (m a.s.l.) matching *chainage* (or
+        *station_x* when *chainage* is omitted).
+    station_x : array_like, optional
+        Station positions for the marker pins, in *model_unit*.
+        Defaults to *chainage*.
+    chainage : array_like, optional
+        Along-profile positions matching *elevation*, in *model_unit*.
+        Defaults to *station_x*. One of the two is required.
+    station_names : sequence of str, optional
+    model_unit : {"m", "km"}
+    depth_min, depth_max : float
+        Depth window to display, in *model_unit*. Defaults to the full
+        range of *z_centers*.
+    exaggeration : float
+        Vertical exaggeration applied to both the terrain and the depth
+        axis.
+    clip_above_surface : bool
+        Mask cells above the local terrain surface to NaN.
+    cmap, vmin, vmax : colour-scale controls forwarded to ``pcolormesh``.
+    colorbar : bool
+    cbar_label : str
+        Colorbar label. Unlike :func:`plot_topo_section`, this is never
+        inferred — there is no single physical quantity to assume —
+        so pass the correct label explicitly.
+    show_stations, show_station_names : bool
+    station_marker : pycsamt.api.station.StationMarkerStyle, optional
+        Defaults to the shared ``inversion`` marker (white-filled,
+        black-edged downward triangle), matching :func:`plot_topo_section`.
+    dark : bool
+    title : str, optional
+    figsize : (float, float), optional
+        Used only when *ax* is omitted.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pycsamt.topo.section import plot_topo_array
+    >>> x = np.linspace(0.0, 900.0, 10)
+    >>> z = np.linspace(10.0, 500.0, 8)
+    >>> values = np.full((8, 10), 5.0)
+    >>> elev = 100.0 + 10.0 * np.sin(x / 300.0)
+    >>> ax = plot_topo_array(
+    ...     x, z, values, elevation=elev, station_x=x,
+    ...     cmap="RdYlBu_r", vmin=0.0, vmax=20.0, cbar_label="G (%)",
+    ... )
+    >>> ax.get_ylabel()
+    'Elevation (km)'
+    """
+    import matplotlib.pyplot as plt
+
+    from .overlay import draw_topo_section
+
+    if station_x is None and chainage is None:
+        raise ValueError("One of station_x or chainage is required.")
+
+    x_c = _to_km(np.asarray(x_centers, dtype=float), model_unit)
+    z_c = _to_km(np.asarray(z_centers, dtype=float), model_unit)
+    values = np.asarray(values, dtype=float)
+
+    chain_km = _to_km(
+        np.asarray(chainage if chainage is not None else station_x, dtype=float),
+        model_unit,
+    )
+    sx_km = (
+        _to_km(np.asarray(station_x, dtype=float), model_unit)
+        if station_x is not None
+        else chain_km
+    )
+    elev_km = np.asarray(elevation, dtype=float) / 1000.0
+    names = list(station_names) if station_names is not None else []
+
+    depth_min_km = _to_km(depth_min, model_unit)
+    depth_max_km = (
+        float(z_c.max()) if depth_max is None else _to_km(depth_max, model_unit)
+    )
+    mask = (z_c >= depth_min_km) & (z_c <= depth_max_km)
+    if not np.any(mask):
+        mask = np.ones_like(z_c, dtype=bool)
+    z_c = z_c[mask]
+    values = values[mask, :]
+
+    x_nodes_km = _cell_edges(x_c)
+    z_nodes_km = _cell_edges(z_c)
+    if z_nodes_km.size:
+        z_nodes_km[0] = max(0.0, float(z_nodes_km[0]))
+
+    elev_at_centres_km = interp_elev(chain_km, elev_km, x_c)
+    x_nodes_draped, z_draped_km, values_draped = drape_section(
+        x_nodes_km, z_nodes_km, values, elev_at_centres_km,
+        exaggeration=exaggeration, clip_above_surface=clip_above_surface,
+    )
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize or (10, 5))
+    else:
+        fig = ax.get_figure()
+
+    im = ax.pcolormesh(
+        x_nodes_draped, z_draped_km, values_draped,
+        shading="auto", cmap=cmap, vmin=vmin, vmax=vmax,
+    )
+    ax.set_xlabel("Profile distance (km)")
+    ax.set_ylabel("Elevation (km)")
+    if title:
+        ax.set_title(
+            title, pad=62 if (show_stations and show_station_names) else None
+        )
+    if ax.yaxis_inverted():
+        ax.invert_yaxis()
+
+    surface_km = interp_elev(chain_km, elev_km, x_nodes_km)
+    top = float(np.nanmax(surface_km))
+    bottom = float(np.nanmin(z_draped_km))
+    margin = 0.04 * max(top - bottom, 1e-6)
+    ax.set_ylim(bottom - margin * 0.25, top + margin)
+    ax.set_xlim(float(x_nodes_km.min()), float(x_nodes_km.max()))
+
+    if colorbar:
+        fig.colorbar(im, ax=ax, label=cbar_label)
+
+    if station_marker is None:
+        from ..api.station import PYCSAMT_STATION_RENDERING, StationMarkerStyle
+
+        _base = PYCSAMT_STATION_RENDERING.inversion.marker
+        station_marker = StationMarkerStyle(
+            marker=_base.marker, size=_base.size, facecolor="white",
+            edgecolor="black", linewidth=_base.linewidth, alpha=_base.alpha,
+            offset=_base.offset, zorder=_base.zorder,
+        )
+    topo_cfg = TopoConfig(station_pins_at_surface=show_stations, fill_alpha=0.0)
+    draw_topo_section(
+        ax, chain_km, elev_km * 1000.0,
+        names if show_station_names else None,
+        station_x_km=sx_km, cfg=topo_cfg, dark=dark, marker_style=station_marker,
+    )
     return ax
 
 
@@ -773,14 +986,64 @@ def _infer_terrain_km(
     return -z_centers_km[first_idx]
 
 
-def _extract_grid(
+def extract_grid(
     model: Any,
     *,
     station_x: Any = None,
     station_names: Sequence[str] | None = None,
     unit: str = "m",
-) -> _GridInfo:
-    """Adapt any supported *model* input into a flat :class:`_GridInfo`."""
+) -> GridInfo:
+    """Adapt any supported 2-D inversion result into a flat :class:`GridInfo`.
+
+    This is the single "accept anything" normalizer behind
+    :func:`build_topo_section`/:func:`plot_topo_section`,
+    :meth:`pycsamt.interp.ResistivityModel.from_any`, and
+    :mod:`pycsamt.interp.export`'s Surfer writers — promoted to public
+    so those callers do not need a private cross-module import.
+
+    Parameters
+    ----------
+    model : object
+        Any of the forms listed in this module's docstring under
+        "Accepted model inputs" (a raw ``(x_centers, z_centers,
+        rho_2d)`` triple, :class:`~pycsamt.interp.ResistivityModel`, a
+        backend-neutral :class:`~pycsamt.inversion.results.InversionResult`,
+        a native Occam2D or 2-D ModEM ``InversionResult``, or an AI
+        agent result exposing ``pred_rho``).
+    station_x : array_like, optional
+        Overrides the station positions carried by *model*.
+    station_names : sequence of str, optional
+        Overrides the station labels carried by *model*.
+    unit : {"m", "km"}
+        Unit of *model*'s own coordinates when *model* is a raw
+        ``(x_centers, z_centers, rho_2d)`` triple. Ignored for input
+        forms that carry their own unit.
+
+    Returns
+    -------
+    GridInfo
+
+    Raises
+    ------
+    TypeError
+        If *model* is not a recognised input form.
+    NotImplementedError
+        For a native MARE2DEM result (unstructured triangular mesh —
+        regrid onto a regular grid first).
+    ValueError
+        For a native 3-D ModEM result (extract a 2-D cut first).
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pycsamt.topo.section import extract_grid
+    >>> x = np.array([0.0, 100.0, 200.0])
+    >>> z = np.array([10.0, 50.0])
+    >>> rho_log10 = np.array([[2.0, 2.1, 2.2], [2.5, 2.6, 2.7]])
+    >>> info = extract_grid((x, z, rho_log10))
+    >>> info.method, info.unit
+    ('array', 'm')
+    """
     # 1. Raw (x_centers, z_centers, rho_2d) triple.
     if isinstance(model, (tuple, list)) and len(model) == 3:
         x_c, z_c, rho = model
@@ -987,6 +1250,10 @@ def _extract_grid(
         "a native Occam2D or 2-D ModEM InversionResult, or an AI agent "
         "result exposing 'pred_rho'."
     )
+
+
+# Retained for any code still importing the pre-promotion private name.
+_extract_grid = extract_grid
 
 
 def _resolve_topography(

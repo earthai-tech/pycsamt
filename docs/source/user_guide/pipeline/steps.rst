@@ -191,9 +191,9 @@ The same registry is available from Python:
 
    >>> from pycsamt.pipeline import categories, list_steps, lookup_step
    >>> categories()
-   ['dimensionality', 'frequency', 'noise_removal', 'qc', 'skew', 'source_effects', 'static_shift', 'tensor']
+   ['dimensionality', 'export', 'frequency', 'noise_removal', 'preview', 'qc', 'skew', 'source_effects', 'static_shift', 'tensor']
    >>> {c: len(list_steps(c)) for c in categories()}
-   {'dimensionality': 3, 'frequency': 9, 'noise_removal': 14, 'qc': 4, 'skew': 4, 'source_effects': 2, 'static_shift': 4, 'tensor': 7}
+   {'dimensionality': 3, 'export': 3, 'frequency': 9, 'noise_removal': 14, 'preview': 2, 'qc': 7, 'skew': 4, 'source_effects': 2, 'static_shift': 4, 'tensor': 7}
    >>> [(spec.code, spec.name, spec.defaults)
    ...  for spec in list_steps("frequency")[:2]]
    [('FREQ001', 'select_band', {'band_hz': (0.001, 10000.0)}), ('FREQ002', 'drop_duplicates', {})]
@@ -215,7 +215,9 @@ human-readable explanation:
 Registered Categories
 ---------------------
 
-The current registry contains 46 processing and diagnostic steps.
+The current registry contains 55 built-in processing and diagnostic steps.
+The opt-in AI audit step (``AI001``, see :doc:`extending`) is not counted
+here since it is not registered by default.
 
 .. list-table::
    :header-rows: 1
@@ -252,8 +254,18 @@ The current registry contains 46 processing and diagnostic steps.
      - ``SRC001`` - ``SRC002``
      - Correct near-field source effects and normalize source response.
    * - ``qc``
-     - ``QC001`` - ``QC004``
+     - ``QC001`` - ``QC007``
      - Generate diagnostic snapshots without changing the site collection.
+       ``QC005`` - ``QC007`` are data-driven ("smart") diagnostics used by
+       the method-aware presets -- see :doc:`presets`.
+   * - ``preview``
+     - ``PRE001`` - ``PRE002``
+     - Raw-vs-processed 1-D preview of a deterministic random station
+       subset, meant to open (``PRE001``) and close (``PRE002``) a preset.
+   * - ``export``
+     - ``EXPORT001`` - ``EXPORT003``
+     - Write processed sites out to ModEM, Occam2D, or MARE2DEM solver input
+       files.
 
 Recommended Ordering
 --------------------
@@ -418,7 +430,8 @@ production recipes.
    * - ``NR001``
      - ``notch_powerline``
      - Power-line harmonics contaminate the response.
-     - ``mains_hz=50``, ``n_harm=30``, ``tol_hz=0.08``
+     - ``mains_hz=50``, ``n_harm=30``, ``tol_hz=0.08``.  ``mains_hz="auto"``
+       is also accepted -- see below.
    * - ``NR002``
      - ``smooth_logfreq``
      - Responses are noisy along log-frequency.
@@ -497,6 +510,49 @@ Example:
          nsig: 3.5
      - name: incoherence_gate
        code: NR010
+
+``mains_hz="auto"`` (``NR001`` only)
+    Real EDI frequency grids are usually log-spaced rather than sampled
+    exactly on multiples of 50/60 Hz, so a fixed numeric ``mains_hz`` can
+    silently miss harmonics that fall outside the tight ``+-tol_hz``
+    window.  Passing the literal string ``"auto"`` instead makes the
+    match data-driven: pyCSAMT scores 50 Hz and 60 Hz -- the only two
+    real-world AC grid frequencies -- against the survey's actual pooled
+    frequency array, resolves to whichever explains more harmonics, then
+    snaps each harmonic to its single nearest real sample within a
+    relative ``snap_frac`` tolerance (default 1%, deliberately tight so a
+    coarse, non-mains-aware grid does not get treated as evidence).  If
+    neither candidate clears a minimum-evidence bar, ``"auto"`` leaves the
+    data untouched and warns rather than guessing:
+
+    .. code-block:: pycon
+       :linenos:
+
+       >>> from pycsamt.api import read_edis
+       >>> from pycsamt.emtools.remove_noise import notch_powerline
+       >>> survey = read_edis("data/AMT/WILLY_DATA/L18PLT", recursive=False, strict=False, progress=False)
+       >>> out = notch_powerline(survey.collection, mains_hz="auto", verbose=1)
+
+    A ``UserWarning`` reports the resolved fundamental (captured against
+    the real 28-station ``L18PLT`` line):
+
+    .. code-block:: text
+       :linenos:
+
+       notch_powerline: mains_hz="auto" resolved to 60 Hz (4/30 harmonics matched within 1%) for this survey.
+
+    Passing a plain number is completely unaffected -- output is
+    identical to every previous release. ``verbose=2`` additionally logs
+    every individual snapped harmonic (station, target frequency, the
+    real frequency substituted for it, and the offset). In a config file:
+
+    .. code-block:: yaml
+       :linenos:
+
+       - name: notch
+         code: NR001
+         params:
+           mains_hz: auto
 
 Static-Shift Steps
 ------------------
@@ -674,11 +730,11 @@ or for rejecting intervals where 3-D effects dominate.
    * - ``SK001``
      - ``mask_by_skew``
      - Frequencies above a Bahr skewness threshold should be masked.
-     - ``threshold=0.3``
+     - ``thresh=0.3``
    * - ``SK002``
      - ``longest_low_skew``
      - You want the longest continuous low-skew band.
-     - ``threshold=0.3``
+     - ``thresh=0.3``
    * - ``SK003``
      - ``select_skew_band``
      - You want the lowest-skew band selected automatically.
@@ -784,6 +840,94 @@ Use QC snapshots at major checkpoints:
        code: SS001
      - name: final_qc
        code: QC001
+
+Export Steps
+------------
+
+Export steps write processed sites out to solver-ready input files.  Unlike
+QC steps they are not diagnostic-only: ``returns_sites=True``, so a real
+write failure propagates through the pipeline's normal ``on_step_error``
+policy rather than being silently turned into a warning.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 13 22 45 20
+
+   * - Code
+     - Name
+     - Use when
+     - Defaults
+   * - ``EXPORT001``
+     - ``export_modem``
+     - You want ModEM data, model, and control files (plus covariance for a
+       3-D run).
+     - ``workdir='pipeline_exports/modem'``
+   * - ``EXPORT002``
+     - ``export_occam2d``
+     - You want a full native Occam2D data/mesh/model/startup working
+       directory.
+     - ``workdir='pipeline_exports/occam2d'``
+   * - ``EXPORT003``
+     - ``export_mare2dem``
+     - You want the MARE2DEM ``.emdata`` data file specifically.
+     - ``workdir='pipeline_exports/mare2dem'``,
+       ``data_filename='line.emdata'``
+
+``EXPORT003`` deliberately writes only the data file.
+``pycsamt.models.mare2dem.builder.InputBuilder.write_resistivity``/``.write_settings``
+are separate calls with their own configuration, and full mesh generation
+(the ``.poly`` file) is not wired into any pipeline step yet.
+
+A step function only ever receives ``sites`` and its own parameters, with no
+hook into the run's own output directory, so each export step's ``workdir``
+resolves relative to the process's current working directory rather than
+following ``--out``.  Point it explicitly at wherever the run's output
+should live:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.pipeline import Pipeline, Step
+   >>> pipe = Pipeline(
+   ...     [
+   ...         ("notch", Step("NR001")),
+   ...         (
+   ...             "export_modem",
+   ...             Step("EXPORT001", workdir="results/line22_export/modem"),
+   ...         ),
+   ...     ],
+   ...     name="export_ready",
+   ... )
+   >>> [label for label, step in pipe]
+   ['notch', 'export_modem']
+
+Captured against the real 25-station WILLY L22 line:
+
+.. code-block:: console
+   :linenos:
+
+   pycsamt pipe run data/AMT/WILLY_DATA/L22PLT \
+       --steps NR001,EXPORT001,EXPORT002,EXPORT003 \
+       --out results/line22_export
+
+.. code-block:: text
+   :linenos:
+
+   PipelineResult  'cli_pipeline'
+     Sites   : 25 in → 25 out
+     Steps   : 4 (4 ok, 0 err)
+     Time    : 12.15 s
+     Plots   : 2
+     Output  : results\line22_export
+
+Files actually written under each step's default ``workdir``:
+
+.. code-block:: text
+   :linenos:
+
+   pipeline_exports/modem/     control.inv  covariance.cov  data.dat  m0.ws
+   pipeline_exports/occam2d/   Occam2DMesh  Occam2DModel  OccamDataFile.dat  Startup
+   pipeline_exports/mare2dem/  line.emdata
 
 Parameters And Defaults
 -----------------------
@@ -981,7 +1125,7 @@ short enough to audit:
      - name: low_skew_gate
        code: SK001
        params:
-         threshold: 0.3
+         thresh: 0.3
 
      - name: static_shift
        code: SS001
@@ -1012,6 +1156,14 @@ Extension Policy
 The current pipeline registry is source-controlled and static.  That is
 intentional: processing steps are scientific operations, so adding one should
 be reviewed with tests, defaults, documentation, and diagnostic behavior.
+
+A second, runtime path exists for steps that should not be reviewed into
+pyCSAMT itself, such as a site-specific correction or a vendor-format
+adapter: ``register_step`` adds a ``StepSpec`` to the same registry without
+touching pyCSAMT's source tree, and the resulting entry is usable everywhere
+a built-in step is.  See :doc:`extending` for the full mechanism, including
+how a third-party package can announce its steps through an entry point so
+they are found automatically rather than registered by hand in every script.
 
 To add a new built-in step:
 
@@ -1118,5 +1270,8 @@ Related Pages
 * :doc:`cli_pipe` explains ``pycsamt pipe steps``, ``pycsamt pipe show``, and
   ``pycsamt pipe run``.
 * :doc:`presets` explains built-in step sequences.
+* :doc:`extending` explains ``register_step`` and third-party plugin steps.
+* :doc:`caching` explains caching a step's output and how that gives an
+  interrupted run resume.
 * :doc:`outputs` explains reports, plots, processed EDIs, and saved pipeline
   snapshots.

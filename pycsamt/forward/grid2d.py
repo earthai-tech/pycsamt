@@ -286,6 +286,47 @@ class Grid2D:
         """Resistivity array clipped to the core (non-padding) region."""
         return self.resistivity[self.core_z_slice, self.core_x_slice]
 
+    @property
+    def core_x_offset(self) -> float:
+        """x-coordinate where the core (non-padding) region begins [m].
+
+        Padding is built identically on both sides of the grid (the same
+        cell-width list, left side reversed), so this is also where
+        along-profile chainage -- ``0`` at the first core column -- and
+        the grid's own absolute x coordinate (``0`` at the outer edge of
+        the left padding) part ways. See :meth:`value_at`.
+        """
+        return float(self.x_nodes[self.n_pad]) if self.n_pad else 0.0
+
+    def value_at(self, x_m: float, z_m: float, *, chainage: bool = False) -> float:
+        """Return the resistivity of the cell nearest ``(x_m, z_m)``.
+
+        Parameters
+        ----------
+        x_m : float
+            Horizontal position, metres. In the grid's own absolute
+            coordinates (``0`` at the outer edge of the left padding) by
+            default.
+        z_m : float
+            Depth, metres, positive downward.
+        chainage : bool, default False
+            When ``True``, *x_m* is along-profile chainage instead --
+            ``0`` at the first core (station-carrying) column, matching
+            :class:`pycsamt.geology.Borehole`'s ``x`` convention. Set
+            this when sampling ground truth for a borehole or any other
+            profile-relative position.
+
+        Examples
+        --------
+        >>> g = Grid2D.halfspace(rho=100.0, nx=20, x_max=2000.0, n_stations=5)
+        >>> g.value_at(0.0, 50.0, chainage=True)
+        100.0
+        """
+        x = x_m + self.core_x_offset if chainage else x_m
+        ix = int(np.argmin(np.abs(self.x_centers - x)))
+        iz = int(np.argmin(np.abs(self.z_centers - z_m)))
+        return float(self.resistivity[iz, ix])
+
     # ─── column / row profiles for 1-D boundary conditions ───────────────
 
     def column_profile(
@@ -722,6 +763,136 @@ class Grid2D:
         col_mask = (xc >= x_lo) & (xc <= x_hi)
         row_mask = (zc >= z_lo) & (zc <= z_hi)
         g.resistivity[np.ix_(row_mask, col_mask)] = anomaly_rho
+
+        return g
+
+    @classmethod
+    def layered_with_fault(
+        cls,
+        model,  # LayeredModel
+        *,
+        fault_x_m: float,
+        apparent_dip_deg: float,
+        throw_m: float,
+        downthrown_side: str = "right",
+        nx: int = 60,
+        nz: int = 50,
+        x_max: float = 10_000.0,
+        z_max: float = 5_000.0,
+        n_pad: int = 10,
+        pad_factor: float = 1.35,
+        n_stations: int = 10,
+        station_x_max: float | None = None,
+        name: str = "",
+    ) -> Grid2D:
+        """Extend a 1-D :class:`~pycsamt.forward.synthetic.LayeredModel`
+        across x on a uniform fine grid (as :meth:`halfspace` does, not
+        :meth:`from_1d_layers`'s coarse one-cell-per-layer discretisation
+        -- accurate forward modelling near a thin near-surface layer
+        needs cells much thinner than the layer itself), then offset it
+        across one dipping fault plane.
+
+        The fault plane migrates laterally with depth
+        (``z / tan(apparent_dip_deg)``), so a column's resistivity comes
+        from evaluating the *same* 1-D layer stack at a shifted depth
+        (``z - throw_m`` on the downthrown block) rather than a fixed
+        per-column swap -- the whole stack drops by ``throw_m``, it is
+        not replaced by a different one.
+
+        Parameters
+        ----------
+        model : LayeredModel
+            Background 1-D layer stack.
+        fault_x_m : float
+            Along-profile position where the fault reaches the surface,
+            in the same core coordinates as *station_x_max* (``0`` at the
+            left edge of the core region, not the padded grid).
+        apparent_dip_deg : float
+            Dip of the fault *as it appears in this 2-D section*,
+            degrees below horizontal, ``(0, 90]``. This is not
+            necessarily the fault's true 3-D dip unless the profile runs
+            perpendicular to strike -- see
+            :class:`pycsamt.geology.FaultTrace` for the general
+            apparent-dip relationship.
+        throw_m : float
+            Vertical displacement of the layer stack on the downthrown
+            side, metres (magnitude only; direction is carried by
+            *downthrown_side*).
+        downthrown_side : {'right', 'left'}
+            Which side of *fault_x_m* -- toward increasing or decreasing
+            x -- has the layer stack shifted deeper.
+        nx, nz : int
+            Core cell counts, horizontal and vertical.
+        x_max, z_max : float
+            Core region extent, metres.
+        n_pad : int
+            Padding cells on each side (left, right, bottom).
+        pad_factor : float
+            Padding growth factor.
+        n_stations : int
+            Number of equally spaced surface stations.
+        station_x_max : float or None
+            Right-most station x [m]. Defaults to *x_max*.
+        name : str
+            Model label.
+
+        Returns
+        -------
+        Grid2D
+
+        Examples
+        --------
+        >>> from pycsamt.forward.synthetic import LayeredModel
+        >>> from pycsamt.forward.grid2d import Grid2D
+        >>> m = LayeredModel(resistivity=[80.0, 300.0, 3000.0], thickness=[60.0, 260.0])
+        >>> g = Grid2D.layered_with_fault(
+        ...     m, fault_x_m=1200.0, apparent_dip_deg=65.0,
+        ...     throw_m=700.0, downthrown_side="right",
+        ...     nx=60, nz=50, x_max=2400.0, z_max=1600.0, n_stations=25,
+        ... )
+        >>> g.resistivity.shape
+        (60, 80)
+        """
+        if downthrown_side not in ("left", "right"):
+            raise ValueError(
+                f"downthrown_side must be 'left' or 'right', got {downthrown_side!r}."
+            )
+        g = cls.halfspace(
+            rho=float(model.resistivity[0]),
+            nx=nx, nz=nz, x_max=x_max, z_max=z_max,
+            n_pad=n_pad, pad_factor=pad_factor,
+            n_stations=n_stations, station_x_max=station_x_max,
+            name=name or f"{model.n_layers}-layer + fault at {fault_x_m:.0f} m",
+        )
+
+        xc = g.x_centers - g.core_x_offset
+        zc = g.z_centers
+
+        tangent = np.tan(np.deg2rad(apparent_dip_deg))
+        depth = np.asarray(model.depth, dtype=float)
+        rho_col = np.asarray(model.resistivity, dtype=float)
+
+        for iz, z in enumerate(zc):
+            idx = int(np.searchsorted(depth, z, side="right")) - 1
+            idx = min(max(idx, 0), len(rho_col) - 1)
+            g.resistivity[iz, :] = rho_col[idx]
+
+            if downthrown_side == "right":
+                plane_x = fault_x_m + z / tangent
+                block = xc >= plane_x
+            else:
+                plane_x = fault_x_m - z / tangent
+                block = xc <= plane_x
+            if not np.any(block):
+                continue
+            shifted_z = z - throw_m
+            if shifted_z < 0.0:
+                layer_rho = rho_col[0]
+            else:
+                idx = int(np.searchsorted(depth, shifted_z, side="right")) - 1
+                idx = min(max(idx, 0), len(rho_col) - 1)
+                layer_rho = rho_col[idx]
+            g.resistivity[iz, block] = layer_rho
 
         return g
 

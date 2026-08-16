@@ -27,7 +27,8 @@ Command Map
    * - ``pycsamt interp classify WORKDIR``
      - Load an Occam2D inversion result and print pseudo-stratigraphic logs.
    * - ``pycsamt interp export WORKDIR``
-     - Export interpreted logs or grids to ``xyz``, ``las``, ``csv``, or ``vtk``.
+     - Export interpreted logs or grids to ``xyz``, ``las``, ``csv``, ``vtk``,
+       ``surfer_grid``, or ``surfer_xyz``.
 
 Global Conventions
 ------------------
@@ -53,7 +54,7 @@ calibrator.
 
 ``pycsamt interp rocks`` is the quickest way to inspect the lithology
 catalog used by the interpretation layer. It uses
-``pycsamt.interp.lithology.RockDatabase.default()``.
+``pycsamt.geology.lithology.RockDatabase.default()``.
 
 List the catalog:
 
@@ -293,6 +294,8 @@ The export format is required:
    pycsamt interp export occam_run/ --format las --output-dir las_logs/
    pycsamt interp export occam_run/ --format csv --output-dir exports/
    pycsamt interp export occam_run/ --format vtk --output-dir vtk_out/
+   pycsamt interp export occam_run/ --format surfer_grid --output-dir surfer/
+   pycsamt interp export occam_run/ --format surfer_xyz --output-dir surfer/
 
 Overwrite existing output:
 
@@ -322,6 +325,16 @@ Formats
    * - ``vtk``
      - ``model.vtk``
      - ASCII rectilinear grid for ParaView/QGIS-style inspection.
+   * - ``surfer_grid``
+     - ``model.grd``
+     - Golden Software Surfer DSAA regular grid — resampled onto a
+       uniform grid and opens directly in Surfer, no further gridding
+       needed.
+   * - ``surfer_xyz``
+     - ``model.dat``
+     - Golden Software Surfer scattered ``X Y Z`` points at the model's
+       real cell centres — no resampling; Surfer grids it with
+       whatever method the user chooses.
 
 Export Pipeline
 ~~~~~~~~~~~~~~~
@@ -335,7 +348,19 @@ For all formats, the command:
 5. fits ``ModelCalibrator(ptol=ptol)``;
 6. builds stratigraphic logs with ``merge_tolerance=merge_tol``;
 7. dispatches to ``pycsamt.interp.export`` writer functions:
-   ``to_oasis_montaj_xyz``, ``to_las``, ``to_csv``, or ``to_vtk``.
+   ``to_oasis_montaj_xyz``, ``to_las``, ``to_csv``, ``to_vtk``,
+   ``to_surfer_grid``, or ``to_surfer_xyz``.
+
+The ``surfer_grid``/``surfer_xyz`` writers accept *any* 2-D inversion
+result — not just Occam2D — via
+:meth:`~pycsamt.interp.ResistivityModel.from_any`; the CLI command
+above is Occam2D-only today only because ``interp export`` as a whole
+is (``--solver`` only accepts ``auto``/``occam2d``, above), not because
+the writers themselves are limited. Called directly from Python, they
+also accept ModEM, the backend-neutral
+:class:`~pycsamt.inversion.results.InversionResult`, an AI agent
+result, or a raw array, and an optional real ``elevation`` to drape
+real terrain instead of a flat datum.
 
 Options
 ~~~~~~~
@@ -358,7 +383,8 @@ Options
      - Positive iteration number to load.
    * - ``--format``, ``-f``
      - required
-     - One of ``xyz``, ``las``, ``csv``, or ``vtk``.
+     - One of ``xyz``, ``las``, ``csv``, ``vtk``, ``surfer_grid``, or
+       ``surfer_xyz``.
    * - ``--output-dir``, ``-o``
      - current directory
      - Directory where output files are written.
@@ -455,7 +481,7 @@ Rock lookup:
 
 .. code-block:: python
 
-   from pycsamt.interp.lithology import RockDatabase
+   from pycsamt.geology.lithology import RockDatabase
 
    db = RockDatabase.default()
    entry = db.classify(250.0, method="nearest")

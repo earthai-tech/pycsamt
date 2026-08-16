@@ -21,6 +21,10 @@ from .audit import (
     SurveyAuditReport,
     audit_survey,
 )
+from .empirical import (
+    EmpiricalCorruptionResult,
+    apply_empirical_corruption,
+)
 from .report import (
     DistributionComparisonReport,
     FeatureComparison,
@@ -52,6 +56,8 @@ __all__ = [
     "DimensionalitySummary",
     "SurveyAuditReport",
     "audit_survey",
+    "EmpiricalCorruptionResult",
+    "apply_empirical_corruption",
     "SEVERITY_PRESETS",
     "CorruptionConfig",
     "CorruptionRecord",

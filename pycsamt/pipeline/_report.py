@@ -45,17 +45,18 @@ def make_text_report(
         "  Step results",
         "  " + "─" * (width - 2),
         f"  {'#':>3}  {'Name':<22} {'Code':<8} {'Status':<5} "
-        f"{'Time(s)':>7}  {'Sites':>10}  {'Plots':>5}",
+        f"{'Time(s)':>7}  {'Sites':>10}  {'Plots':>5}  {'Cached':>6}",
         "  " + "─" * (width - 2),
     ]
     for sr in step_results:
         status = "OK " if sr.ok else "ERR"
         sites_str = f"{sr.n_sites_in}→{sr.n_sites_out}"
+        cached_str = "yes" if sr.cached else "-"
         lines.append(
             f"  {sr.step_idx:>3}  {sr.step_name:<22} "
             f"{sr.step_code:<8} {status:<5} "
             f"{sr.elapsed_sec:>7.2f}  {sites_str:>10}  "
-            f"{len(sr.plots):>5}"
+            f"{len(sr.plots):>5}  {cached_str:>6}"
         )
     lines.append("  " + "─" * (width - 2))
 
@@ -83,28 +84,34 @@ def make_text_report(
 # HTML report
 # ---------------------------------------------------------------------------
 
+# pyCSAMT brand tokens (docs/source/_static/css/custom.css) — the fast tier
+# gets a palette swap only, no new markup: real ink/surface/status colors in
+# place of the old generic blue/green/red, kept cheap to render and small.
+# Status colors (good/warning/critical) are the dataviz skill's validated,
+# brand-independent set — see pycsamt/pipeline/_dashboard.py for the full
+# provenance and the richer "dashboard" report tier built on the same tokens.
 _CSS = """
 <style>
-  body { font-family: system-ui, sans-serif; margin: 2em; color: #222; }
-  h1 { border-bottom: 2px solid #4a6fa5; padding-bottom: 0.4em; }
-  h2 { color: #4a6fa5; margin-top: 1.5em; }
+  body { font-family: system-ui, sans-serif; margin: 2em; color: #24324b; }
+  h1 { border-bottom: 2px solid #3e65b0; padding-bottom: 0.4em; }
+  h2 { color: #3e65b0; margin-top: 1.5em; }
   table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #ddd; padding: 0.4em 0.7em; text-align: left; }
-  th { background: #4a6fa5; color: white; }
-  tr:nth-child(even) { background: #f5f7fb; }
-  .ok   { color: #2d7a3e; font-weight: bold; }
-  .err  { color: #c0392b; font-weight: bold; }
-  .step-card { border: 1px solid #ddd; border-radius: 6px;
+  th, td { border: 1px solid #dde3ee; padding: 0.4em 0.7em; text-align: left; }
+  th { background: #3e65b0; color: white; }
+  tr:nth-child(even) { background: #f6f8fc; }
+  .ok   { color: #0ca30c; font-weight: bold; }
+  .err  { color: #d03b3b; font-weight: bold; }
+  .step-card { border: 1px solid #dde3ee; border-radius: 6px;
                padding: 1em; margin: 1em 0; }
   .step-card h3 { margin: 0 0 0.5em; }
-  .step-meta { font-size: 0.85em; color: #666; }
+  .step-meta { font-size: 0.85em; color: #5c677d; }
   .plots { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.5em; }
-  .plots a img { max-height: 120px; border: 1px solid #ccc;
+  .plots a img { max-height: 120px; border: 1px solid #dde3ee;
                  border-radius: 4px; }
-  .error-box { background: #fdecea; border-left: 4px solid #c0392b;
+  .error-box { background: #fdecea; border-left: 4px solid #d03b3b;
                padding: 0.5em 1em; font-size: 0.9em; }
-  footer { margin-top: 3em; font-size: 0.8em; color: #888;
-           border-top: 1px solid #eee; padding-top: 1em; }
+  footer { margin-top: 3em; font-size: 0.8em; color: #5c677d;
+           border-top: 1px solid #dde3ee; padding-top: 1em; }
 </style>
 """
 
@@ -161,6 +168,7 @@ def make_html_report(
             else "—"
         )
         thumbs = _plot_thumbs(sr.plots, outdir)
+        cached_badge = " &nbsp;|&nbsp; <b>Cached:</b> yes" if sr.cached else ""
         err_html = ""
         if not sr.ok:
             err_html = f'<div class="error-box"><b>Error:</b> {sr.error}</div>'
@@ -173,7 +181,7 @@ def make_html_report(
             f"<b>Label:</b> {sr.step_label} &nbsp;|&nbsp; "
             f"<b>Sites:</b> {sr.n_sites_in} → {sr.n_sites_out} &nbsp;|&nbsp; "
             f"<b>Time:</b> {sr.elapsed_sec:.2f} s &nbsp;|&nbsp; "
-            f"<b>Plots:</b> {len(sr.plots)}</div>"
+            f"<b>Plots:</b> {len(sr.plots)}{cached_badge}</div>"
             f"<p><b>Params:</b> <code>{params_str}</code></p>"
             f"{err_html}"
             f"{thumbs}"
@@ -212,4 +220,84 @@ def make_html_report(
     return html
 
 
-__all__ = ["make_text_report", "make_html_report"]
+# ---------------------------------------------------------------------------
+# Notebook (_repr_html_) — compact, scoped, no plot thumbnails/config block
+# ---------------------------------------------------------------------------
+
+# Same palette as _CSS above, but every selector is scoped under
+# .pycsamt-result: this HTML is injected directly into a Jupyter output
+# cell's DOM (not a standalone document), so unscoped selectors like the
+# ones in _CSS ("table { width: 100% }", "th { background: ... }") would
+# leak out and restyle every other table/output in the notebook.
+_NOTEBOOK_CSS = """
+<style>
+  .pycsamt-result { font-family: system-ui, sans-serif; color: #222; }
+  .pycsamt-result table { border-collapse: collapse; width: auto; }
+  .pycsamt-result th, .pycsamt-result td {
+    border: 1px solid #ddd; padding: 0.3em 0.6em; text-align: left;
+    font-size: 0.9em;
+  }
+  .pycsamt-result th { background: #4a6fa5; color: white; }
+  .pycsamt-result tr:nth-child(even) { background: #f5f7fb; }
+  .pycsamt-result .ok  { color: #2d7a3e; font-weight: bold; }
+  .pycsamt-result .err { color: #c0392b; font-weight: bold; }
+  .pycsamt-result .cached { color: #8a6d00; }
+  .pycsamt-result .title { font-weight: bold; margin-bottom: 0.4em; }
+</style>
+"""
+
+
+def make_notebook_html(
+    pipeline_name: str,
+    step_results: list[StepResult],
+    elapsed_sec: float,
+    outdir: Path | None,
+    n_sites_in: int,
+    n_sites_out: int,
+) -> str:
+    """Return a compact, scoped HTML fragment for ``PipelineResult._repr_html_``.
+
+    A quick-glance step table, not a substitute for :func:`make_html_report`
+    (no plot thumbnails, no embedded config YAML).
+    """
+    n_ok = sum(1 for sr in step_results if sr.ok)
+    n_err = len(step_results) - n_ok
+    status_cls = "ok" if n_err == 0 else "err"
+    status_txt = "OK" if n_err == 0 else f"{n_err} error(s)"
+
+    rows = []
+    for sr in step_results:
+        status_c = "ok" if sr.ok else "err"
+        status_t = "OK" if sr.ok else "ERR"
+        cached = '<span class="cached">yes</span>' if sr.cached else "&ndash;"
+        rows.append(
+            "<tr>"
+            f"<td>{sr.step_idx}</td>"
+            f"<td>{sr.step_name}</td>"
+            f"<td>{sr.step_code}</td>"
+            f'<td><span class="{status_c}">{status_t}</span></td>'
+            f"<td>{sr.elapsed_sec:.2f}s</td>"
+            f"<td>{sr.n_sites_in}&rarr;{sr.n_sites_out}</td>"
+            f"<td>{cached}</td>"
+            "</tr>"
+        )
+
+    outdir_line = f"<br><b>Output:</b> {outdir}" if outdir is not None else ""
+
+    return (
+        f"{_NOTEBOOK_CSS}"
+        '<div class="pycsamt-result">'
+        f'<div class="title">PipelineResult &#39;{pipeline_name}&#39; '
+        f'&mdash; <span class="{status_cls}">{status_txt}</span></div>'
+        f"<b>Sites:</b> {n_sites_in}&rarr;{n_sites_out} &nbsp;|&nbsp; "
+        f"<b>Steps:</b> {len(step_results)} ({n_ok} ok, {n_err} err) "
+        f"&nbsp;|&nbsp; <b>Time:</b> {elapsed_sec:.2f}s"
+        f"{outdir_line}"
+        "<table><tr><th>#</th><th>Step</th><th>Code</th><th>Status</th>"
+        "<th>Time</th><th>Sites</th><th>Cached</th></tr>"
+        + "".join(rows)
+        + "</table></div>"
+    )
+
+
+__all__ = ["make_text_report", "make_html_report", "make_notebook_html"]

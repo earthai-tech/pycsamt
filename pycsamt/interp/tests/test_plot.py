@@ -22,12 +22,12 @@ import pytest  # noqa: E402
 
 from pycsamt.interp import plot as ip  # noqa: E402
 from pycsamt.interp._base import ResistivityModel  # noqa: E402
-from pycsamt.interp.borehole import Borehole, Interval  # noqa: E402
+from pycsamt.geology.borehole import Borehole, Interval  # noqa: E402
 from pycsamt.interp.hydromodel import (  # noqa: E402
     EMHydroModel,
     PetrophysicalConfig,
 )
-from pycsamt.interp.lithology import (  # noqa: E402
+from pycsamt.geology.lithology import (  # noqa: E402
     RockDatabase,
     StratigraphicLog,
 )
@@ -263,6 +263,100 @@ def test_plot_fence_diagram_empty_raises():
 def test_plot_fence_diagram_max_depth_truncates():
     logs = [_log("S1", 0.0), _log("S2", 500.0)]
     fig = ip.PlotFenceDiagram(logs, max_depth=20.0).plot()
+    assert isinstance(fig, matplotlib.figure.Figure)
+
+
+def test_plot_fence_diagram_legend_matches_distinct_lithologies():
+    logs = [_log("S1", 0.0), _log("S2", 500.0)]
+    fig = ip.PlotFenceDiagram(logs).plot()
+    legend = fig.legends[0]
+    lithologies = {log.lithology for log in logs[0].layers + logs[1].layers}
+    assert {t.get_text() for t in legend.get_texts()} == lithologies
+
+
+def test_plot_fence_diagram_legend_can_be_disabled():
+    logs = [_log("S1", 0.0)]
+    fig = ip.PlotFenceDiagram(logs, show_legend=False).plot()
+    assert fig.legends == []
+
+
+def test_plot_fence_diagram_elevation_strip_adds_axes():
+    logs = [_log("S1", 0.0), _log("S2", 500.0), _log("S3", 1000.0)]
+    elev = np.array([100.0, 120.0, 90.0])
+    fig = ip.PlotFenceDiagram(logs, elevation_m=elev).plot()
+    # 3 station panels + 1 elevation strip
+    assert len(fig.axes) == 4
+
+
+def test_plot_fence_diagram_without_elevation_has_no_strip():
+    logs = [_log("S1", 0.0), _log("S2", 500.0)]
+    fig = ip.PlotFenceDiagram(logs).plot()
+    assert len(fig.axes) == 2
+
+
+def test_plot_fence_diagram_elevation_length_mismatch_raises():
+    logs = [_log("S1", 0.0), _log("S2", 500.0)]
+    with pytest.raises(ValueError, match="elevation_m has"):
+        ip.PlotFenceDiagram(logs, elevation_m=np.array([100.0])).plot()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PlotBoreholeFence
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _borehole(name="A1", x=300.0):
+    return Borehole(
+        name,
+        x=x,
+        intervals=[
+            Interval(top=0.0, bottom=65.0, lithology="Overburden", resistivity=80.0),
+            Interval(top=65.0, bottom=321.0, lithology="Weathered basement", resistivity=300.0),
+            Interval(top=321.0, bottom=450.0, lithology="Fresh basement", resistivity=3000.0),
+        ],
+    )
+
+
+def _regional_db():
+    from pycsamt.geology.lithology import RockEntry
+
+    return RockDatabase([
+        RockEntry(name="Overburden", rho_min=30, rho_max=180, color="#D4AC0D"),
+        RockEntry(name="Weathered basement", rho_min=180, rho_max=900, color="#A9780C"),
+        RockEntry(name="Fresh basement", rho_min=900, rho_max=8000, color="#4A4A4A"),
+    ])
+
+
+def test_plot_borehole_fence_multi():
+    boreholes = [_borehole("A1", 300.0), _borehole("A2", 2100.0)]
+    fig = ip.PlotBoreholeFence(boreholes, db=_regional_db()).plot()
+    assert isinstance(fig, matplotlib.figure.Figure)
+    assert len(fig.axes) >= 2
+
+
+def test_plot_borehole_fence_empty_raises():
+    with pytest.raises(ValueError, match="No boreholes"):
+        ip.PlotBoreholeFence([]).plot()
+
+
+def test_plot_borehole_fence_legend_matches_db_lithologies():
+    boreholes = [_borehole("A1", 300.0)]
+    fig = ip.PlotBoreholeFence(boreholes, db=_regional_db()).plot()
+    legend = fig.legends[0]
+    assert {t.get_text() for t in legend.get_texts()} == {
+        "Overburden", "Weathered basement", "Fresh basement",
+    }
+
+
+def test_plot_borehole_fence_without_db_uses_lithology_fallback_color():
+    boreholes = [_borehole("A1", 300.0)]
+    fig = ip.PlotBoreholeFence(boreholes, db=None, show_legend=False).plot()
+    assert isinstance(fig, matplotlib.figure.Figure)
+
+
+def test_plot_borehole_fence_max_depth_truncates():
+    boreholes = [_borehole("A1", 300.0)]
+    fig = ip.PlotBoreholeFence(boreholes, max_depth=100.0).plot()
     assert isinstance(fig, matplotlib.figure.Figure)
 
 

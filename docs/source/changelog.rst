@@ -33,13 +33,21 @@ Latest release
 
 .. _changelog-latest:
 
-**2.2.2** — *2026-08-07* — fixes Windows Occam2D binary discovery, corrects
-the Occam2D mesh header contract, makes explicit ``api=True`` honour custom
-API view wrappers, and adds a verified Stratagem-to-Occam2D tutorial plus a
-rewritten API views guide. ``TEM1DForward`` now uses ``empymod``'s validated
-digital linear filters.
-:ref:`Full 2.2.2 entry <changelog-2-2-2>` · :ref:`Release notes
-<release_v2_2_2>`.
+**2.3.0** — *2026-08-14* — adds a new :mod:`pycsamt.geology` package
+(lithology classification, pluggable rock-property providers, and
+structural-geology primitives), split out of :mod:`pycsamt.interp` with
+backward-compatible re-exports. Deep-fills the lithology, petrophysics, and
+monitoring pages of the interpretation user guide, fixing several stale
+docstring examples and a real ``RockDatabase`` iteration bug along the way.
+Running a real legacy CSAMT line end to end through AVG-to-EDI conversion
+and the processing pipeline surfaced and fixed six further bugs, plus a
+packaging gap that dropped the fallback EPSG table from installed wheels.
+Also adds four method-aware pipeline presets with real near-field
+correction and data-driven QC, a branded dashboard report, and data-driven
+power-line-harmonic detection, alongside a full rewrite of the
+config-driven-pipeline tutorial and CLI reference that surfaced three
+further bugs. :ref:`Full 2.3.0 entry <changelog-2-3-0>` · :ref:`Release
+notes <release_v2_3_0>`.
 
 .. toctree::
    :maxdepth: 1

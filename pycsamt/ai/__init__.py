@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""Artificial intelligence and machine learning for EM processing and inversion.
+"""Artificial intelligence and machine learning for EM processing and
+inversion.
 
 Phase 2 additions
 -----------------
@@ -29,12 +30,16 @@ from ._zoo import (
 )
 from .inversion import (
     ConformalPredictor,
+    DUHIInverter2D,
+    DUHIPreparation,
     EMInverter1D,
     EMInverter2D,
     EnsembleInverter,
     GCNInverter3D,
     JointInverter,
     PosteriorCalibrator,
+    combine_observation_reliability,
+    dimensionality_reliability,
 )
 from .nets import (
     CNN1DNet,
@@ -103,6 +108,10 @@ __all__ = [
     "GCNInverter3D",
     "JointInverter",
     "EnsembleInverter",
+    "DUHIInverter2D",
+    "DUHIPreparation",
+    "dimensionality_reliability",
+    "combine_observation_reliability",
     # calibrated UQ
     "ConformalPredictor",
     "PosteriorCalibrator",

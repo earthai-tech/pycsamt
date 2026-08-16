@@ -387,8 +387,8 @@ class RunConfig:
     description : str
         Optional free-text note describing the experiment.
 
-    Cross-validation
-    ----------------
+    Notes
+    -----
     :meth:`validate` checks internal consistency between the two sub-configs:
 
     * ``forward.solver == inversion.solver``

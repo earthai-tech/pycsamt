@@ -494,9 +494,16 @@ class AVGtoEDI(TransformerMixin):
         if bundle.freq is not None:
             ed.Z._freq = np.asarray(bundle.freq, dtype=float)
         if bundle.z is not None:
-            ed.Z._z = np.asarray(bundle.z, dtype=complex)
+            # Zonge's AVG Z is computed in SI ohms, but EDI files (and
+            # the resistivity/phase formula used by ed.Z) expect the
+            # standard (mV/km)/nT field units. Convert here or every
+            # downstream apparent-resistivity value is wrong by
+            # (μ₀ × 1e3)².
+            ed.Z._z = self.z_ohms_to_mvk_nt(np.asarray(bundle.z, dtype=complex))
         if bundle.z_err is not None:
-            ed.Z._z_err = np.asarray(bundle.z_err, dtype=float)
+            ed.Z._z_err = np.abs(
+                self.z_ohms_to_mvk_nt(np.asarray(bundle.z_err, dtype=float))
+            )
 
         if bundle.phase is not None:
             ed.Z._phase = np.asarray(bundle.phase, dtype=float)

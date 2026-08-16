@@ -136,12 +136,10 @@ class CorruptionConfig:
     static_shift_log10_sigma : float, default=0.0
         Std. dev. of the log\\ :sub:`10` per-station static-shift factor
         applied identically across all frequencies.
-    distortion_gain_log10_sigma, distortion_twist_deg_sigma,
-    distortion_shear_sigma, distortion_anisotropy_sigma : float, default=0.0
+    distortion_gain_log10_sigma, distortion_twist_deg_sigma, distortion_shear_sigma, distortion_anisotropy_sigma : float, default=0.0
         Std. dev. of the per-station Groom-Bailey-style gain, twist, shear,
         and anisotropy parameters of the injected galvanic distortion.
-    station_dropout_rate, frequency_dropout_rate, random_dropout_rate :
-    float, default=0.0
+    station_dropout_rate, frequency_dropout_rate, random_dropout_rate : float, default=0.0
         Probability that an entire station, an entire frequency (across all
         stations), or an individual observation is marked missing.
     outlier_rate : float, default=0.0

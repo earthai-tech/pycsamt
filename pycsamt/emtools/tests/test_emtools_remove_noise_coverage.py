@@ -9,6 +9,8 @@ test_emtools_rho_phase_smoothing.py).
 
 from __future__ import annotations
 
+import warnings
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -367,6 +369,113 @@ def test_notch_powerline_inplace_mutates_input():
     fr = site.Z.freq
     harm_idx = np.isin(fr, [50.0, 100.0, 150.0])
     assert np.isnan(z[harm_idx]).all()
+
+
+# ------------------------- mains_hz="auto" ------------------------------ #
+# _HARM_FREQS carries exact 50/100/150 Hz values and nothing near a 60 Hz
+# multiple within 1%, so it doubles as a synthetic "genuinely 50 Hz-aware"
+# grid for these tests -- no separate fixture needed.
+
+# A synthetic grid with several samples close (but not exact) to 60 Hz
+# multiples, and nothing near a 50 Hz multiple within 1%.
+_HARM_FREQS_60 = np.array(
+    [15.0, 33.0, 60.03, 90.0, 119.7, 150.0, 180.4, 210.0, 240.6, 275.0]
+)
+
+
+def _harm_site_60(station: str, rho: float = 100.0) -> _FakeSite:
+    fr = _HARM_FREQS_60.copy()
+    z = _make_z(fr, rho)
+    return _FakeSite(station, z, fr)
+
+
+def test_notch_powerline_auto_resolves_50hz_survey():
+    sites = [_harm_site("S00")]
+    with pytest.warns(UserWarning, match=r'resolved to 50 Hz'):
+        out = notch_powerline(
+            sites, mains_hz="auto", n_harm=3, mode="mask", verbose=1
+        )
+    z, fr = _first_z(out)
+    harm_idx = np.isin(fr, [50.0, 100.0, 150.0])
+    assert np.isnan(z[harm_idx]).all()
+    assert not np.isnan(z[~harm_idx]).any()
+
+
+def test_notch_powerline_auto_resolves_60hz_survey():
+    sites = [_harm_site_60("S00")]
+    with pytest.warns(UserWarning, match=r'resolved to 60 Hz'):
+        out = notch_powerline(
+            sites, mains_hz="auto", n_harm=4, mode="mask", verbose=1
+        )
+    z, fr = _first_z(out)
+    # snapped to the nearest real samples: 60.03, 119.7, 180.4, 240.6
+    snapped = np.isin(fr, [60.03, 119.7, 180.4, 240.6])
+    assert np.isnan(z[snapped]).all()
+    assert not np.isnan(z[~snapped]).any()
+
+
+def test_notch_powerline_auto_snaps_to_nearest_not_exact_value():
+    # 49.95 Hz is 0.1% away from the 50 Hz fundamental -- close enough to
+    # snap even though it is not an exact match, unlike the fixed-tol_hz
+    # numeric path which would need it within +-0.08 Hz (0.16%, coincides
+    # here, so use a grid point further out to make the distinction real).
+    fr = np.array([49.95, 12.0, 23.0, 100.03, 37.0, 150.02, 61.0, 74.0])
+    z = _make_z(fr, 100.0)
+    sites = [_FakeSite("S00", z, fr)]
+    out = notch_powerline(sites, mains_hz="auto", n_harm=3, mode="mask", verbose=0)
+    z2, fr2 = _first_z(out)
+    snapped = np.isin(fr2, [49.95, 100.03, 150.02])
+    assert np.isnan(z2[snapped]).all()
+    assert not np.isnan(z2[~snapped]).any()
+
+
+def test_notch_powerline_auto_no_signature_leaves_data_unchanged():
+    # A generic, non-mains-aware log-spaced grid: no harmonic of 50 or 60
+    # Hz should land within 1% of any of these 16 points across 4 decades.
+    sites = [_clean_site("S00")]
+    with pytest.warns(UserWarning, match="no reliable mains signature"):
+        out = notch_powerline(sites, mains_hz="auto", verbose=1)
+    z_out, fr_out = _first_z(out)
+    z_in, fr_in = _first_z(sites)
+    assert np.allclose(z_out, z_in)
+    assert not np.isnan(z_out).any()
+
+
+def test_notch_powerline_auto_case_insensitive():
+    sites = [_harm_site("S00")]
+    out_lower = notch_powerline(sites, mains_hz="auto", n_harm=3)
+    out_upper = notch_powerline(sites, mains_hz="AUTO", n_harm=3)
+    z1, _ = _first_z(out_lower)
+    z2, _ = _first_z(out_upper)
+    assert np.allclose(z1, z2, equal_nan=True)
+
+
+def test_notch_powerline_invalid_mains_hz_string_raises():
+    sites = [_harm_site("S00")]
+    with pytest.raises(ValueError, match="auto"):
+        notch_powerline(sites, mains_hz="bogus")
+
+
+def test_notch_powerline_auto_verbose2_logs_each_snapped_harmonic():
+    sites = [_harm_site("S00")]
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        notch_powerline(sites, mains_hz="auto", n_harm=3, verbose=2)
+    per_harmonic = [
+        w for w in caught if "nearest sample" in str(w.message)
+    ]
+    assert len(per_harmonic) == 3
+
+
+def test_notch_powerline_numeric_mains_hz_output_unchanged_by_auto_support():
+    # Regression: adding "auto" support must not alter the plain-number
+    # path's output at all.
+    sites = [_harm_site("S00")]
+    out = notch_powerline(sites, mode="mask", also="z", mains_hz=50)
+    z, fr = _first_z(out)
+    harm_idx = np.isin(fr, [50.0, 100.0, 150.0])
+    assert np.isnan(z[harm_idx]).all()
+    assert not np.isnan(z[~harm_idx]).any()
 
 
 # ======================================================================= #

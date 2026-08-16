@@ -37,4 +37,6 @@ foundation.
    map_porphyry_mineralization_from_noisy_amt
    forward_model_1d_to_3d
    map_groundwater_geology_from_csamt
+   build_two_line_occam2d_survey
+   interpret_two_line_occam2d_survey
    run_pipeline_from_config

@@ -7,7 +7,9 @@ Click group via side-effect imports.
 """
 
 from . import (
+    history,  # noqa: F401  registers pipe history
     init,  # noqa: F401  registers pipe init
+    plugins,  # noqa: F401  registers pipe plugins
     presets,  # noqa: F401  registers pipe presets
     run,  # noqa: F401  registers pipe run
     show,  # noqa: F401  registers pipe show

@@ -64,5 +64,5 @@ Agent Modules
 IoT Field Agent
 ---------------
 
-.. autoclass:: pycsamt.agents.iot_agent.IoTFieldAgent
+.. autoclass:: pycsamt.agents.IoTFieldAgent
    :members:

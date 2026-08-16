@@ -316,9 +316,7 @@ class SurveyAuditReport:
         formal :term:`CRS`.
     dimensionality : DimensionalitySummary
         Aggregate dimensionality and strike indicators.
-    static_shift_log10_sigma, distortion_gain_log10_sigma,
-    distortion_twist_deg_sigma, distortion_shear_sigma,
-    distortion_anisotropy_sigma : float
+    static_shift_log10_sigma, distortion_gain_log10_sigma, distortion_twist_deg_sigma, distortion_shear_sigma, distortion_anisotropy_sigma : float
         Empirical spreads from :func:`~pycsamt.ai.domain_gap.survey_fit.fit_distortion_priors_from_sites`.
     generated_utc : str
         Timezone-aware ISO-8601 timestamp of when the audit ran.

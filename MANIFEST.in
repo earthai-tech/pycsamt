@@ -19,6 +19,7 @@ include MANIFEST.in
 # Package data (mirrors [tool.setuptools.package-data] in pyproject.toml)
 include pycsamt/log/p.configlog.yml
 recursive-include pycsamt/metadata *.json *.yml
+recursive-include pycsamt/gis *.npy
 recursive-include pycsamt/models/occam2d/_source *
 recursive-include pycsamt/models/modem/_source *
 recursive-include pycsamt/data/occam2d *

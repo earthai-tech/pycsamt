@@ -25,7 +25,7 @@ from ._base import pipe
     help=(
         "Filter by step category.  "
         "One of: frequency, noise_removal, static_shift, tensor, "
-        "dimensionality, skew, source_effects, qc."
+        "dimensionality, skew, source_effects, qc, preview, export."
     ),
 )
 @click.option(
@@ -59,7 +59,7 @@ def steps(
 ) -> None:
     """List and inspect available MT processing steps.
 
-    Without options, prints a grouped catalogue of all 33 registered
+    Without options, prints a grouped catalogue of all 55 registered
     steps.  Use --category to narrow the view, or --info CODE to see
     full details about a specific step.
 

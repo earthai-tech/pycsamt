@@ -17,6 +17,7 @@ The root group:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,25 @@ from pycsamt import __version__
 
 from ..api.cli.config import PYCSAMT_CLI, configure_cli
 
+
+def _ensure_utf8_stdio() -> None:
+    """Force UTF-8 on stdout/stderr.
+
+    Windows falls back to the legacy console codepage (commonly cp1252)
+    whenever stdout isn't attached to a real console — e.g. piped through
+    ``| cat`` or redirected to a file — which crashes on the box-drawing
+    characters used by the banner/help panel below.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:  # noqa: BLE001
+                pass
+
+
+_ensure_utf8_stdio()
+
 # ---------------------------------------------------------------------------
 # Optional rich formatting (degrades gracefully if rich is absent)
 # ---------------------------------------------------------------------------
@@ -33,15 +53,45 @@ try:
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
+    from rich.text import Text
 
     _RICH = True
 except ImportError:
     _RICH = False
 
 
+# ---------------------------------------------------------------------------
+# Startup banner — block wordmark split at the "py" / "CSAMT" boundary and
+# coloured with the site's brand palette (docs/source/_static/css/custom.css:
+# --pycsamt-blue #3e65b0, --pst-color-primary #f15a29).
+# ---------------------------------------------------------------------------
+_BANNER_SPLIT = 17
+_BANNER_LINES = (
+    "██████╗ ██╗   ██╗ ██████╗███████╗ █████╗ ███╗   ███╗████████╗",
+    "██╔══██╗╚██╗ ██╔╝██╔════╝██╔════╝██╔══██╗████╗ ████║╚══██╔══╝",
+    "██████╔╝ ╚████╔╝ ██║     ███████╗███████║██╔████╔██║   ██║   ",
+    "██╔═══╝   ╚██╔╝  ██║     ╚════██║██╔══██║██║╚██╔╝██║   ██║   ",
+    "██║        ██║   ╚██████╗███████║██║  ██║██║ ╚═╝ ██║   ██║   ",
+    "╚═╝        ╚═╝    ╚═════╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝   ╚═╝   ",
+)
+_BANNER_BLUE = "#3e65b0"
+_BANNER_ORANGE = "#f15a29"
+
+
+def _print_banner(console: "Console") -> None:
+    """Print the pyCSAMT block wordmark, skipped on narrow terminals."""
+    if console.size.width < len(_BANNER_LINES[0]):
+        return
+    for line in _BANNER_LINES:
+        text = Text(line[:_BANNER_SPLIT], style=f"bold {_BANNER_BLUE}")
+        text.append(line[_BANNER_SPLIT:].rstrip(), style=f"bold {_BANNER_ORANGE}")
+        console.print(text)
+
+
 def _print_rich_help(ctx: click.Context) -> None:
     """Print a grouped, coloured help panel using rich."""
     console = Console()
+    _print_banner(console)
 
     table = Table.grid(padding=(0, 2))
     table.add_column(style="bold cyan", no_wrap=True)
@@ -138,7 +188,15 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
 
     # CLI flags always win over config file
     if verbose:
-        configure_cli(log__level=verbose)
+        configure_cli(log__level=min(verbose, 2))
+        from pycsamt.log.logger import (
+            enable_console_logging,  # noqa: PLC0415
+        )
+        import logging  # noqa: PLC0415
+
+        enable_console_logging(
+            logging.DEBUG if verbose >= 2 else logging.INFO
+        )
     if no_color:
         configure_cli(log__color=False)
 

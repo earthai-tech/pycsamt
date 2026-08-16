@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 
 from pycsamt.interp import ResistivityModel
-from pycsamt.interp.borehole import Borehole, Interval
+from pycsamt.geology.borehole import Borehole, Interval
 
 
 def demo_model(wet: float = 1.0, seed: int = 0) -> ResistivityModel:

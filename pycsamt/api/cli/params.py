@@ -230,7 +230,9 @@ class PipeStepList(click.ParamType):
             except KeyError:
                 self.fail(
                     f"Unknown step {token!r}.  "
-                    "Run  pycsamt pipe steps  to see all available steps.",
+                    "Run  pycsamt pipe steps  to see all available steps.  "
+                    "If this is a plugin step, pass  pipe --with-plugins  "
+                    "or run  pycsamt pipe plugins  first.",
                     param,
                     ctx,
                 )

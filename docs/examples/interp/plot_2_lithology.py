@@ -3,9 +3,9 @@ Lithology: rock classification and logs
 =======================================
 
 The first interpretation step is turning resistivity numbers into named
-rock units. :mod:`pycsamt.interp.lithology` provides a
+rock units. :mod:`pycsamt.geology.lithology` provides a
 :class:`~pycsamt.interp.RockDatabase` that classifies a resistivity into a
-lithology, and a :class:`~pycsamt.interp.lithology.StratigraphicLog` that
+lithology, and a :class:`~pycsamt.geology.lithology.StratigraphicLog` that
 stacks those classifications into a borehole-style column. This example
 classifies the synthetic section and draws single-station and multi-station
 (fence) logs.
@@ -32,7 +32,7 @@ for rho in (8.0, 40.0, 200.0, 1500.0):
 # --------------------------------
 # The quickest way to get per-station logs is the hydro interpreter, which
 # classifies every sounding and exposes the resulting
-# :class:`~pycsamt.interp.lithology.StratigraphicLog` objects on ``.logs``.
+# :class:`~pycsamt.geology.lithology.StratigraphicLog` objects on ``.logs``.
 # (The next example covers the hydrogeology it adds on top.)
 
 from _interp_data import demo_model

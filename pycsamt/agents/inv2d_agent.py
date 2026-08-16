@@ -905,6 +905,41 @@ class Inv2DAgent(BaseAgent):
                     zorder=6,
                 )
             ax.invert_yaxis()
+
+            # The triangular mesh's own topography-following top edge
+            # already marks the surface; a plain box-frame line there
+            # besides is redundant and, once rotated station labels are
+            # added above it, is what they visually collide with -- the
+            # same fix applied to pycsamt.topo.overlay.draw_topo_section
+            # for every flat-grid topography-draped section in the
+            # package. The y-axis is inverted here (depth increases
+            # downward), so "the surface side" is the *shallow* end of
+            # ylim, not simply ylim[1].
+            ax.spines["top"].set_visible(False)
+            if len(visible) > 0:
+                try:
+                    fig.canvas.draw()
+                    renderer = fig.canvas.get_renderer()
+                    inv_transform = ax.transData.inverted()
+                    shallow_y = min(
+                        inv_transform.transform(
+                            (t.get_window_extent(renderer=renderer).x0,
+                             t.get_window_extent(renderer=renderer).y1)
+                        )[1]
+                        for t in ax.texts
+                    )
+                    cur_lo, cur_hi = ax.get_ylim()
+                    shallow_bound = min(cur_lo, cur_hi)
+                    if np.isfinite(shallow_y) and shallow_y < shallow_bound:
+                        pad = 0.02 * abs(cur_hi - cur_lo)
+                        new_shallow = shallow_y - pad
+                        if cur_lo <= cur_hi:
+                            ax.set_ylim(new_shallow, cur_hi)
+                        else:
+                            ax.set_ylim(cur_lo, new_shallow)
+                except Exception:
+                    pass
+
             if ((self.depth_max is not None and self.depth_max >= 10_000.0)
                     or np.nanmax(station_x) >= 10_000.0):
                 from matplotlib.ticker import FuncFormatter

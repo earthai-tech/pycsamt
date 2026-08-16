@@ -14,8 +14,8 @@ produces, and how to reproduce it. Each script prints the meaningful
 output (step catalogues, per-step timings, run summaries, the reproducible
 config) and ends with one small summary figure.
 
-* **Step catalogue** — the 47 processing steps, by category, and how to
-  inspect one;
+* **Step catalogue** — the built-in processing steps, by category, and how
+  to inspect one;
 * **Build and run** — assemble a pipeline of steps, run it on a real survey
   line, and read the ``PipelineResult`` and its output package;
 * **Presets** — ready-made recipes (``basic_qc``, ``full_processing`` …)

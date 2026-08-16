@@ -6,8 +6,11 @@ Three plot classes cover the main interpretation deliverables:
 
 * :class:`PlotStratigraphicLog` — single-station pseudo-stratigraphic
   log in the style of Fig. 5d / Fig. 7 of Kouadio et al. (2022).
-* :class:`PlotFenceDiagram` — multi-station panel with all logs
-  arranged along the profile.
+* :class:`PlotFenceDiagram` — multi-station panel with all *classified*
+  model logs arranged along the profile.
+* :class:`PlotBoreholeFence` — the same fence layout for raw
+  :class:`~pycsamt.geology.Borehole` field/ground-truth data instead
+  of a classified model column.
 * :class:`PlotCalibratedModel` — side-by-side CRM vs NM with the
   misfit G (%) map overlaid.
 
@@ -20,7 +23,7 @@ All classes follow the same pattern::
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 
@@ -33,7 +36,11 @@ from ..api.interp import (
     resolve_section_style,
 )
 from ._base import ResistivityModel
-from .lithology import StratigraphicLog
+from ..geology.lithology import StratigraphicLog
+
+if TYPE_CHECKING:
+    from ..geology.borehole import Borehole
+    from ..geology.lithology import RockDatabase
 
 # Type alias accepted by the style= parameter of every hydro plot class.
 _StyleArg = Optional[
@@ -43,6 +50,7 @@ _StyleArg = Optional[
 __all__ = [
     "PlotStratigraphicLog",
     "PlotFenceDiagram",
+    "PlotBoreholeFence",
     "PlotCalibratedModel",
     # hydro-geophysics plots
     "PlotHydroSection",
@@ -251,6 +259,24 @@ class PlotFenceDiagram:
     title : str, optional
     max_depth : float, optional
         Truncate display at this depth (metres).
+    show_legend : bool
+        Draw a shared lithology legend below the panels, built from
+        every distinct lithology actually present across *logs*
+        (default ``True``).
+    station_fontsize, depth_fontsize : float
+        Font sizes for the per-station title and the shared depth
+        axis (label + tick labels). Both default larger than the
+        original 7 pt station title so a fence diagram with 20+
+        stations stays legible.
+    elevation_m : array_like, optional
+        Real terrain elevation (m a.s.l.) for each entry in *logs*, in
+        the same order. When given, a thin elevation-profile strip with
+        the shared :data:`~pycsamt.api.station.PYCSAMT_STATION_RENDERING`
+        ``inversion`` station marker is drawn above the panels, in the
+        same style :func:`pycsamt.topo.draw_topo_strip` uses for
+        pseudosections -- station *index* on the x-axis (matching the
+        panels' equal-width columns below), not real chainage. Omit for
+        the original flat layout with no terrain context.
     """
 
     def __init__(
@@ -260,29 +286,54 @@ class PlotFenceDiagram:
         figsize: tuple[float, float] | None = None,
         title: str = "Fence Diagram",
         max_depth: float | None = None,
+        show_legend: bool = True,
+        station_fontsize: float = 10.0,
+        depth_fontsize: float = 11.0,
+        elevation_m: np.ndarray | None = None,
     ) -> None:
         self.logs = list(logs)
         self.figsize = figsize or (2 * len(logs), 10)
         self.title = title
         self.max_depth = max_depth
+        self.show_legend = show_legend
+        self.station_fontsize = station_fontsize
+        self.depth_fontsize = depth_fontsize
+        self.elevation_m = (
+            None if elevation_m is None else np.asarray(elevation_m, dtype=float)
+        )
 
     def plot(self):
         """Render and return the matplotlib Figure."""
         _, plt = _require_mpl()
+        from matplotlib.patches import Patch
 
         n = len(self.logs)
         if n == 0:
             raise ValueError("No logs provided.")
+        if self.elevation_m is not None and self.elevation_m.shape[0] != n:
+            raise ValueError(
+                f"elevation_m has {self.elevation_m.shape[0]} values but "
+                f"there are {n} logs; one elevation value per log is required."
+            )
 
-        fig, axes = plt.subplots(
-            1,
-            n,
-            figsize=self.figsize,
-            sharey=True,
-            gridspec_kw={"wspace": 0.05},
-        )
-        if n == 1:
-            axes = [axes]
+        ax_elev = None
+        if self.elevation_m is not None:
+            fig = plt.figure(figsize=self.figsize)
+            gs = fig.add_gridspec(
+                2, n, height_ratios=[0.16, 0.84], hspace=0.4, wspace=0.05
+            )
+            ax_elev = fig.add_subplot(gs[0, :])
+            axes = [fig.add_subplot(gs[1, i]) for i in range(n)]
+        else:
+            fig, axes = plt.subplots(
+                1,
+                n,
+                figsize=self.figsize,
+                sharey=True,
+                gridspec_kw={"wspace": 0.05},
+            )
+            if n == 1:
+                axes = [axes]
 
         z_max = self.max_depth or max(
             max(
@@ -292,6 +343,7 @@ class PlotFenceDiagram:
             for log in self.logs
         )
 
+        legend_entries: dict[str, str] = {}
         for ax, log in zip(axes, self.logs):
             for layer in log.layers:
                 if layer.top > z_max:
@@ -307,15 +359,266 @@ class PlotFenceDiagram:
                     edgecolor="0.3",
                     linewidth=0.4,
                 )
+                legend_entries.setdefault(layer.lithology, layer.color)
 
             ax.set_xlim(0, 1)
             ax.set_ylim(z_max, 0.0)
             ax.set_xticks([])
-            ax.set_title(log.station_name, fontsize=7, pad=3)
+            ax.set_title(
+                log.station_name,
+                fontsize=self.station_fontsize,
+                fontweight="bold",
+                rotation=45 if n > 15 else 0,
+                pad=6,
+            )
 
-        axes[0].set_ylabel("Depth (m)")
-        fig.suptitle(self.title, fontweight="bold")
-        fig.tight_layout()
+        axes[0].set_ylabel("Depth (m)", fontsize=self.depth_fontsize, fontweight="bold")
+        axes[0].tick_params(axis="y", labelsize=self.depth_fontsize)
+
+        if ax_elev is not None:
+            from ..api.station import PYCSAMT_STATION_RENDERING
+            from ..topo.config import PYCSAMT_TOPO
+
+            elev = self.elevation_m
+            idx = np.arange(n, dtype=float)
+            ax_elev.fill_between(
+                idx, elev, float(elev.min()) - max(1.0, 0.05 * np.ptp(elev)),
+                color=PYCSAMT_TOPO.fill_color, alpha=0.5, linewidth=0, zorder=2,
+            )
+            ax_elev.plot(
+                idx, elev, color=PYCSAMT_TOPO.line_color, linewidth=1.5, zorder=3,
+            )
+            _mstyle = PYCSAMT_STATION_RENDERING.inversion.marker
+            ax_elev.scatter(
+                idx, elev, marker=_mstyle.marker, s=_mstyle.size,
+                facecolors="white", edgecolors="black",
+                linewidths=_mstyle.linewidth, zorder=5, clip_on=False,
+            )
+            ax_elev.set_xlim(-0.5, n - 0.5)
+            ax_elev.set_ylabel("Elev (m)", fontsize=9)
+            ax_elev.set_xticks([])
+            for side in ("top", "right", "bottom"):
+                ax_elev.spines[side].set_visible(False)
+            ax_elev.set_title(
+                "Real terrain", fontsize=9, loc="left",
+                style="italic", color="0.35",
+            )
+
+        fig.suptitle(self.title, fontweight="bold", fontsize=13)
+
+        bottom_margin = 0.14
+        fig.tight_layout(rect=(0.0, bottom_margin, 1.0, 1.0))
+        if self.show_legend and legend_entries:
+            handles = [
+                Patch(
+                    facecolor=color,
+                    hatch=_hatch_for(name),
+                    edgecolor="0.3",
+                    alpha=0.80,
+                    label=name,
+                )
+                for name, color in legend_entries.items()
+            ]
+            fig.legend(
+                handles=handles,
+                loc="lower center",
+                ncol=min(len(handles), 5),
+                fontsize=10,
+                frameon=True,
+                bbox_to_anchor=(0.5, 0.0),
+            )
+        return fig
+
+
+# ---------------------------------------------------------------------------
+# PlotBoreholeFence
+# ---------------------------------------------------------------------------
+
+
+class PlotBoreholeFence:
+    """Side-by-side comparison of several real :class:`~pycsamt.geology.Borehole`
+    logs, ordered by profile position.
+
+    Unlike :class:`PlotFenceDiagram` (which plots *classified* model
+    columns from a :class:`~pycsamt.geology.lithology.StratigraphicLog`),
+    this class plots ground-truth or field borehole data directly from
+    their :class:`~pycsamt.geology.Interval` objects — the raw
+    calibration/validation evidence itself, before any inversion model
+    is involved. Each interval is coloured by looking up its
+    ``resistivity`` in *db* (when available) or by hashing its
+    ``lithology`` name to a stable colour otherwise, and annotated with
+    the lithology name and thickness, in the style of
+    :class:`PlotStratigraphicLog`'s left-hand panel.
+
+    Parameters
+    ----------
+    boreholes : list of Borehole
+        Boreholes to compare, plotted in the given order (typically
+        sorted by ``x``).
+    db : RockDatabase, optional
+        Used to recolour intervals from their ``resistivity`` value.
+        When ``None`` (default) or when an interval has no
+        ``resistivity``, the interval's own ``lithology`` name is
+        hashed to a fixed colour instead, so the panel is always
+        renderable even for boreholes with lithology-only logs.
+    figsize : tuple, optional
+        Defaults to ``(2.4 * n_boreholes, 10)``.
+    title : str, optional
+    max_depth : float, optional
+        Truncate display at this depth (metres).
+    show_legend : bool
+        Draw a shared lithology legend below the panels (default ``True``).
+    annotate : bool
+        Print the lithology name and thickness inside each interval
+        wide enough to hold it (default ``True``).
+
+    Example
+    -------
+    >>> from pycsamt.geology import Borehole, Interval
+    >>> from pycsamt.interp.plot import PlotBoreholeFence
+    >>> bh1 = Borehole("A1", x=300.0, intervals=[
+    ...     Interval(top=0.0, bottom=65.0, lithology="Overburden", resistivity=80.0),
+    ...     Interval(top=65.0, bottom=321.0, lithology="Weathered basement", resistivity=300.0),
+    ... ])
+    >>> bh2 = Borehole("A2", x=2100.0, intervals=[
+    ...     Interval(top=0.0, bottom=769.0, lithology="Overburden", resistivity=80.0),
+    ...     Interval(top=769.0, bottom=1025.0, lithology="Weathered basement", resistivity=300.0),
+    ... ])
+    >>> fig = PlotBoreholeFence([bh1, bh2], title="Line A boreholes").plot()
+    >>> len(fig.axes)
+    2
+    """
+
+    def __init__(
+        self,
+        boreholes: Sequence["Borehole"],
+        *,
+        db: Optional["RockDatabase"] = None,
+        figsize: tuple[float, float] | None = None,
+        title: str = "Borehole Fence",
+        max_depth: float | None = None,
+        show_legend: bool = True,
+        annotate: bool = True,
+    ) -> None:
+        self.boreholes = list(boreholes)
+        self.db = db
+        self.figsize = figsize or (2.4 * max(len(self.boreholes), 1), 10)
+        self.title = title
+        self.max_depth = max_depth
+        self.show_legend = show_legend
+        self.annotate = annotate
+
+    @staticmethod
+    def _fallback_color(lithology: str) -> str:
+        """Deterministic colour for a lithology name, used only when no
+        resistivity/db lookup is available."""
+        import colorsys
+
+        h = (hash(lithology) % 360) / 360.0
+        r, g, b = colorsys.hsv_to_rgb(h, 0.45, 0.85)
+        return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+
+    def _color_and_lithology(self, interval) -> tuple[str, str]:
+        if self.db is not None and interval.resistivity is not None:
+            entry = self.db.classify(float(interval.resistivity))
+            return entry.color, entry.name
+        return self._fallback_color(interval.lithology), interval.lithology
+
+    def plot(self):
+        """Render and return the matplotlib Figure."""
+        _, plt = _require_mpl()
+        from matplotlib.patches import Patch
+
+        boreholes = self.boreholes
+        n = len(boreholes)
+        if n == 0:
+            raise ValueError("No boreholes provided.")
+
+        fig, axes = plt.subplots(
+            1,
+            n,
+            figsize=self.figsize,
+            sharey=True,
+            gridspec_kw={"wspace": 0.08},
+        )
+        if n == 1:
+            axes = [axes]
+
+        z_max = self.max_depth or max(bh.max_depth for bh in boreholes)
+
+        legend_entries: dict[str, str] = {}
+        for ax, bh in zip(axes, boreholes):
+            for iv in bh.intervals:
+                if iv.top > z_max:
+                    continue
+                bottom = min(iv.bottom, z_max)
+                color, lithology = self._color_and_lithology(iv)
+                ax.barh(
+                    y=(iv.top + bottom) / 2,
+                    width=1.0,
+                    height=bottom - iv.top,
+                    color=color,
+                    alpha=0.85,
+                    hatch=_hatch_for(lithology),
+                    edgecolor="0.25",
+                    linewidth=0.6,
+                )
+                legend_entries.setdefault(lithology, color)
+                if self.annotate and (bottom - iv.top) >= 0.05 * z_max:
+                    ax.annotate(
+                        f"{lithology}\n({iv.bottom - iv.top:.0f} m)",
+                        xy=(0.5, (iv.top + bottom) / 2),
+                        xycoords=("axes fraction", "data"),
+                        ha="center",
+                        va="center",
+                        fontsize=8,
+                        fontweight="bold",
+                        color="0.05",
+                    )
+
+            ax.set_xlim(0, 1)
+            ax.set_ylim(z_max, 0.0)
+            ax.set_xticks([])
+            # No box frame down to z_max: undrilled depth below the last
+            # interval should stay visually blank, not boxed in. Each
+            # interval's own barh edgecolor already frames the drilled
+            # range, so the default four-sided spine box is redundant
+            # there and misleading below it.
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+            ax.set_title(
+                f"{bh.name}\n(x={bh.x:.0f} m)",
+                fontsize=11,
+                fontweight="bold",
+                pad=6,
+            )
+
+        axes[0].set_ylabel("Depth (m)", fontsize=12, fontweight="bold")
+        axes[0].tick_params(axis="y", labelsize=11)
+        axes[0].spines["left"].set_visible(True)
+        fig.suptitle(self.title, fontweight="bold", fontsize=14)
+
+        bottom_margin = 0.13
+        fig.tight_layout(rect=(0.0, bottom_margin, 1.0, 1.0))
+        if self.show_legend and legend_entries:
+            handles = [
+                Patch(
+                    facecolor=color,
+                    hatch=_hatch_for(name),
+                    edgecolor="0.25",
+                    alpha=0.85,
+                    label=name,
+                )
+                for name, color in legend_entries.items()
+            ]
+            fig.legend(
+                handles=handles,
+                loc="lower center",
+                ncol=min(len(handles), 5),
+                fontsize=10,
+                frameon=True,
+                bbox_to_anchor=(0.5, 0.0),
+            )
         return fig
 
 
@@ -348,6 +651,14 @@ class PlotCalibratedModel:
         Matplotlib colourmap for the resistivity panels.
     vmin_rho, vmax_rho : float
         Colour-scale limits for log₁₀(ρ).
+    vmax_g : float
+        Upper clip for the misfit G (%) colour scale (default ``10.0``,
+        matching :meth:`~pycsamt.interp.calibrate.ModelCalibrator.misfit_map`'s
+        typical range). Raise this when *misfit_map* legitimately runs
+        higher everywhere the model is dominated by rock-database
+        autolayer reclassification rather than direct borehole
+        replacement — with the default clip such a model saturates the
+        whole panel to one colour.
     title : str, optional
     """
 
@@ -361,6 +672,7 @@ class PlotCalibratedModel:
         cmap_rho: str = "jet",
         vmin_rho: float = 1.0,
         vmax_rho: float = 5.0,
+        vmax_g: float = 10.0,
         title: str | None = None,
     ) -> None:
         self.crm = crm
@@ -379,6 +691,7 @@ class PlotCalibratedModel:
         self.cmap_rho = cmap_rho
         self.vmin_rho = vmin_rho
         self.vmax_rho = vmax_rho
+        self.vmax_g = vmax_g
         self.title = title or "CRM vs Calibrated NM"
 
     def plot(self):
@@ -413,14 +726,14 @@ class PlotCalibratedModel:
         _rho_im(ax_nm, self.nm.rho_2d, "NM — Calibrated model")
 
         # Misfit panel
-        g_clip = np.clip(self._misfit, 0, 10)
+        g_clip = np.clip(self._misfit, 0, self.vmax_g)
         im_g = ax_g.imshow(
             g_clip,
             aspect="auto",
             extent=extent,
             cmap="RdYlBu_r",
             vmin=0,
-            vmax=10,
+            vmax=self.vmax_g,
             origin="upper",
         )
         ax_g.set_ylabel("Depth (m)")

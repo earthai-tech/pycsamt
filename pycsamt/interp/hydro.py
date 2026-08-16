@@ -21,9 +21,9 @@ import numpy as np
 
 from ..api.property import MetadataMixin, PyCSAMTObject
 from ._base import ResistivityModel
-from .borehole import Borehole
+from ..geology.borehole import Borehole
 from .calibrate import ModelCalibrator
-from .lithology import RockDatabase, StratigraphicLog
+from ..geology.lithology import RockDatabase, StratigraphicLog
 
 PathLike = Union[str, Path]
 

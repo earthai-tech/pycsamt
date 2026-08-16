@@ -32,6 +32,14 @@ Command map
      - Pretty-print a config file or preset.
    * - ``pycsamt pipe run``
      - Execute a config, preset, or ad-hoc step list.
+   * - ``pycsamt pipe history``
+     - List runs previously logged with ``pipe run --history``.
+   * - ``pycsamt pipe plugins``
+     - Discover and list third-party pipeline-step plugins.
+
+``pycsamt pipe --with-plugins`` and ``pycsamt pipe --with-ai-steps`` are
+group-level flags (placed before the subcommand) rather than subcommands of
+their own -- see `Plugins and the opt-in AI step`_.
 
 Core model
 ----------
@@ -51,11 +59,15 @@ The pipeline command group revolves around four public concepts:
 
 ``PipelineResult``
     The run record. It stores per-step status, timing, input/output site
-    counts, plot paths, processed EDI paths, output directory, and errors.
+    counts, plot paths, processed EDI paths, output directory, errors, and
+    (when caching is enabled) whether each step was replayed from cache.
 
 During ``pipe run``, pyCSAMT loads EDI data into ``Sites``, applies each
 configured step in order, writes optional outputs, and prints a terminal
-summary.
+summary. Four opt-in flags extend this without changing default behaviour:
+``--cache`` (resume from the step cache), ``--live`` (live per-step status
+table), ``--history`` (log the run), and ``--dashboard`` (a richer branded
+HTML report) -- see `Cache, live progress, history, and the dashboard`_.
 
 Input resolution
 ----------------
@@ -89,9 +101,13 @@ Explore steps
    pycsamt pipe steps --info notch_powerline
    pycsamt pipe steps --format json
 
-The step catalogue is grouped by categories such as ``frequency``,
-``noise_removal``, ``static_shift``, ``tensor``, ``dimensionality``,
-``skew``, ``source_effects``, and ``qc``.
+The registry currently holds 55 built-in steps, grouped into the
+categories ``frequency``, ``noise_removal``, ``static_shift``, ``tensor``,
+``dimensionality``, ``skew``, ``source_effects``, ``qc``, ``preview``, and
+``export``. ``preview`` (``PRE001``/``PRE002``) and three of the ``qc``
+codes (``QC005``-``QC007``) are the data-driven "smart" QC and raw/
+processed-preview steps behind the method-aware presets -- see
+`Explore presets`_.
 
 Useful details:
 
@@ -121,12 +137,23 @@ Explore presets
    pycsamt pipe presets --expand full_processing
    pycsamt pipe presets --expand basic_qc --format json
 
-Presets are named, opinionated workflows. Common names include
-``basic_qc``, ``noise_reduction``, ``full_processing``,
-``tensor_analysis``, ``dimensionality_filter``, and
-``publication_ready``. ``stratagem_mt`` is also available for Stratagem AMT
-data that is already loaded as ``Sites``. Use ``--expand`` to see the exact
-step sequence.
+Presets are named, opinionated workflows. Eleven are registered today:
+
+- **Chosen by processing intent**: ``basic_qc``, ``noise_reduction``,
+  ``full_processing``, ``tensor_analysis``, ``dimensionality_filter``,
+  ``publication_ready``, and ``stratagem_mt`` (for Stratagem AMT data
+  already loaded as ``Sites``).
+- **Chosen by EM survey method**: ``mt_qc``, ``amt_qc``, ``csamt_qc``, and
+  ``csumt_qc``. Each adds real near-field/transition-zone correction
+  (CSAMT/CSUMT only) and data-driven QC -- phase-tensor and tipper plots
+  that check the actual data before drawing themselves, instead of always
+  producing the same figures regardless of what the survey contains. In
+  Python, :func:`pycsamt.pipeline.get_preset_for_method` maps an explicit
+  method string (``"MT"``, ``"AMT"``, ``"CSAMT"``, ``"CSUMT"``, ...) to the
+  matching preset name rather than hand-building it. Full mechanism in
+  :doc:`../user_guide/pipeline/presets`'s "Method-Aware Presets" section.
+
+Use ``--expand`` to see the exact step sequence.
 
 Machine-readable output:
 
@@ -140,6 +167,45 @@ Machine-readable output:
 
 ``pycsamt pipe presets --format csv``
     Emits ``name,description,n_steps,codes``.
+
+Plugins and the opt-in AI step
+------------------------------
+
+Two families of steps are never registered by default, because discovering
+them has a real cost that most invocations shouldn't pay:
+
+.. code-block:: console
+
+   pycsamt pipe plugins
+   pycsamt pipe plugins --strict
+   pycsamt pipe plugins --format json
+   pycsamt pipe --with-plugins run --steps MY_PLUGIN001,NR001 --survey ./edis/
+   pycsamt pipe --with-ai-steps run --steps AI001 --survey ./edis/
+
+``pycsamt pipe plugins``
+    Scans the ``pycsamt.pipeline.steps`` entry-point group (declared by a
+    third-party package in its own ``pyproject.toml``), calls every
+    registration callable found there, and lists every step now registered
+    with ``origin=plugin``. This is the one command that always discovers
+    plugins -- that is its job. ``--strict`` exits non-zero if any plugin
+    failed to load (useful in CI).
+
+``--with-plugins`` (a ``pycsamt pipe`` group flag, placed before the
+subcommand)
+    Discovers plugins before any other subcommand runs, so a plugin step
+    code can be used with ``--steps`` in the same invocation. Off by
+    default: scanning installed packages for entry points can take several
+    seconds in a large environment.
+
+``--with-ai-steps`` (same group-flag placement)
+    Registers the opt-in AI domain-gap survey-audit step (``AI001``) before
+    the subcommand runs. Off by default: resolving it imports ``torch``, a
+    real one-time cost this CLI does not force on users who never touch AI
+    steps.
+
+Both flags are equivalent to setting an environment variable
+(``PYCSAMT_PIPELINE_LOAD_PLUGINS=1`` / ``PYCSAMT_PIPELINE_LOAD_AI_STEPS=1``),
+useful for a CI job or a shell profile that always wants them on.
 
 Create a config
 ---------------
@@ -199,6 +265,11 @@ YAML and JSON configs use the same schema:
 ``name`` and ``output_dir`` are optional. Each step entry must provide a
 ``code`` or registry ``name``. The pipeline label is taken from the entry
 ``name`` when present; otherwise pyCSAMT uses the registry name.
+
+``NR001``'s ``mains_hz`` also accepts the literal string ``auto`` --
+pyCSAMT then detects 50 vs 60 Hz from the survey's own frequency grid and
+snaps each harmonic to the nearest real sample instead of requiring an
+exact match. See :doc:`../user_guide/pipeline/steps`.
 
 A config may also include ``preset: basic_qc``. In that case, preset steps are
 loaded first and the explicit ``steps`` entries are appended.
@@ -265,6 +336,10 @@ Examples:
    pycsamt pipe run --config workflow.yaml --dry-run
    pycsamt pipe run --config workflow.yaml --n-steps 3 --dry-run
    pycsamt pipe run --config workflow.yaml --from-step align --until-step correct_ss
+   pycsamt pipe run --config workflow.yaml --survey ./edis/ --cache
+   pycsamt pipe run --preset basic_qc --live
+   pycsamt pipe run --preset basic_qc --history
+   pycsamt pipe run --preset basic_qc --dashboard
 
 Execution controls:
 
@@ -312,7 +387,8 @@ Output controls:
     Skip processed EDI output.
 
 ``--no-report``
-    Skip HTML/text run reports.
+    Skip HTML/text run reports (also skips ``dashboard.html`` if
+    ``--dashboard`` was passed).
 
 ``--dpi INT`` and ``--plot-fmt png|pdf|svg``
     Control saved QC figure resolution and format.
@@ -325,6 +401,61 @@ If ``--out`` is omitted, output directory resolution follows this order:
 ``--dry-run`` prints the resolved pipeline and site count but writes nothing.
 Pass ``--out`` explicitly when the dry-run display should show the intended
 target directory.
+
+Cache, live progress, history, and the dashboard
+------------------------------------------------
+
+Four more flags on ``pipe run`` are opt-in and off by default -- a run that
+doesn't pass them behaves exactly as before:
+
+``--cache`` / ``--cache-dir DIR``
+    Keys each step's output by the exact upstream data, step code, and
+    parameters, in a content-addressed store (default
+    ``~/.pycsamt/pipeline_cache``, override with ``--cache-dir``, which also
+    implies ``--cache``). Rerunning the identical command replays every
+    already-completed step from cache instead of recomputing it -- this is
+    also how an interrupted or crashed run resumes, with no separate
+    checkpoint mechanism. Not every step is safe to cache -- see
+    :doc:`../user_guide/pipeline/caching`.
+
+``--live``
+    Replaces the static progress bar with a live-updating status table
+    (pending/running/OK/ERR/cached, one row per step, rewritten in place).
+    Implies visible progress even without ``-v``.
+
+``--history`` / ``--history-file FILE``
+    Appends a one-line JSON summary of the run -- pipeline name, status,
+    timing, site counts, per-step summary -- to a run history log (default
+    ``~/.pycsamt/pipeline_history.jsonl``, override with ``--history-file``,
+    which also implies ``--history``). Query it back with:
+
+    .. code-block:: console
+
+       pycsamt pipe history
+       pycsamt pipe history --last 5
+       pycsamt pipe history --format json
+
+    ``--file FILE`` points ``pipe history`` at a non-default log;
+    ``--last N`` trims to the N most recent runs.
+
+``--dashboard``
+    Also writes ``dashboard.html`` -- a richer, branded report with KPI stat
+    tiles and inline-SVG charts (step status, per-step duration, site-count
+    flow) -- alongside the default ``report.html`` and ``summary.txt``. Full
+    contents in :doc:`../user_guide/pipeline/outputs`'s "Dashboard Report"
+    section.
+
+QC-figure generation is not itself cache-aware -- a cache hit skips the step
+*transform* only, so the same figures regenerate on every run regardless of
+``--cache``. :doc:`../user_guide/pipeline/caching` isolates the transform-only
+speed-up with ``--no-plots`` if you want a clean before/after timing
+comparison; the practical value of ``--cache`` day to day is resuming a long
+or interrupted run without recomputing what already succeeded.
+
+Full mechanism for all four, including the Python API equivalents
+(``cache=``, ``on_step=``, ``history=``, ``report_formats=``) in
+:doc:`../user_guide/pipeline/observability` and
+:doc:`../user_guide/pipeline/caching`.
 
 Output directory
 ----------------
@@ -343,6 +474,7 @@ A normal run with output enabled writes a directory like this:
    |   `-- ...
    |-- pipeline.yaml
    |-- report.html
+   |-- dashboard.html        # only with --dashboard
    `-- summary.txt
 
 ``pipeline.yaml``
@@ -358,6 +490,14 @@ A normal run with output enabled writes a directory like this:
 ``report.html`` and ``summary.txt``
     Human-readable run reports, unless ``--no-report`` was used.
 
+``dashboard.html``
+    Richer branded report, only written when ``--dashboard`` was passed.
+
+The step :term:`cache <step cache>` and the run history log live outside
+this tree, at ``~/.pycsamt/pipeline_cache`` and
+``~/.pycsamt/pipeline_history.jsonl`` by default (``--cache-dir``/
+``--history-file`` to relocate either).
+
 Output formats
 --------------
 
@@ -367,13 +507,14 @@ shell pipelines.
 
 For ``pipe run --format json``, the terminal summary includes ``pipeline``,
 ``ok``, ``n_errors``, ``elapsed_sec``, input/output site counts, number of
-plots, ``outdir``, and a ``steps`` list.
+plots, ``outdir``, and a ``steps`` list -- each step entry includes a
+``cached`` boolean (``true`` when that step was replayed from cache).
 
 For ``pipe run --format csv``, the header is:
 
 .. code-block:: text
 
-   idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,error
+   idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,cached,error
 
 The ``--format`` option controls terminal output only. It does not change
 saved ``report.html`` or ``summary.txt`` files.
@@ -405,6 +546,13 @@ Step not found during slicing
     ``--from-step`` and ``--until-step`` match pipeline labels, registry
     codes, or registry names. Use ``pipe show`` to inspect the exact labels.
 
+Near-field correction warns for every station
+    Expected, not a failure, when a survey's EDI headers carry no resolvable
+    ``source_offset``/``offset``/``dist``. ``csamt_qc``/``csumt_qc`` run
+    near-field correction with ``source_offset=None`` precisely so this
+    warns and passes each station through uncorrected instead of failing
+    the run.
+
 Recommended workflow
 --------------------
 
@@ -416,25 +564,45 @@ Recommended workflow
    pycsamt pipe init --preset basic_qc --name l18_qc -o l18_qc.yaml
    pycsamt pipe show l18_qc.yaml
    pycsamt pipe run --config l18_qc.yaml --dry-run
-   pycsamt pipe run --config l18_qc.yaml --out results/l18_qc/
+   pycsamt pipe run --config l18_qc.yaml --out results/l18_qc/ --cache --history
+
+Once a config stabilises, add ``--cache`` and ``--history`` as shown above so
+later iterations resume instead of recomputing and every run is logged --
+see `Cache, live progress, history, and the dashboard`_.
 
 Python equivalent
 -----------------
 
-.. code-block:: python
+.. code-block:: pycon
+   :linenos:
 
-   from pycsamt.emtools._core import ensure_sites
-   from pycsamt.pipeline import Pipeline
-
-   sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True, verbose=0)
-   pipe = Pipeline.from_yaml("l18_qc.yaml")
-   result = pipe.run(sites, outdir="results/l18_qc")
+   >>> from pycsamt.emtools._core import ensure_sites
+   >>> from pycsamt.pipeline import Pipeline
+   >>> sites = ensure_sites("data/AMT/WILLY_DATA/L18PLT", recursive=True, verbose=0)
+   >>> pipe = Pipeline.from_yaml("l18_qc.yaml")
+   >>> result = pipe.run(sites, outdir="results/l18_qc")
+   >>> print(result.summary())
+   PipelineResult  'l18_qc'
+     Sites   : 28 in → 28 out
+     Steps   : 3 (3 ok, 0 err)
+     Time    : 23.97 s
+     Plots   : 7
+     Output  : results/l18_qc
 
 Related pages
 -------------
 
-For deeper background, see the pipeline pages under ``docs/source/pipeline``:
-``concepts.rst`` for the object model, ``configuration_files.rst`` for config
-schemas, ``presets.rst`` for built-in workflows, ``steps.rst`` for the step
-registry, and ``outputs.rst`` for the output directory contract.
+For deeper background, see the pipeline pages under
+``docs/source/user_guide/pipeline/``: :doc:`../user_guide/pipeline/concepts`
+for the object model, :doc:`../user_guide/pipeline/configuration_files` for
+config schemas, :doc:`../user_guide/pipeline/presets` for built-in workflows
+including the method-aware ``mt_qc``/``amt_qc``/``csamt_qc``/``csumt_qc``
+group, :doc:`../user_guide/pipeline/steps` for the step registry,
+:doc:`../user_guide/pipeline/caching` for the step cache,
+:doc:`../user_guide/pipeline/observability` for live progress and the run
+history log, :doc:`../user_guide/pipeline/extending` for plugins and the
+opt-in AI step, and :doc:`../user_guide/pipeline/outputs` for the output
+directory contract including the dashboard report. The worked
+:doc:`../tutorials/run_pipeline_from_config` tutorial walks all of this
+end to end on real data.
 

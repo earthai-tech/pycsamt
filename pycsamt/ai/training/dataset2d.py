@@ -66,6 +66,7 @@ are a separate, already-built stage: see
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -90,6 +91,7 @@ __all__ = [
     "Maxwell2DSample",
     "Maxwell2DDataset",
     "Maxwell2DDatasetConfig",
+    "build_2d_maxwell_problem",
     "generate_2d_maxwell_dataset",
 ]
 
@@ -231,6 +233,164 @@ def _solver_mesh_and_conductivity(
         resistivity_ohm_m, old_z_edges, old_x_edges, z_centres, x_centres
     )
     return MaxwellMesh(x_edges, z_edges), 1.0 / resistivity_on_mesh
+
+
+def build_2d_maxwell_problem(
+    grid: GeologyGrid,
+    resistivity_ohm_m: Any,
+    frequencies_hz: Any,
+    station_x_m: Any,
+    *,
+    components: Sequence[str] = ("zxy", "zyx"),
+    station_names: Sequence[str] | None = None,
+    mesh_safety_factor: float = 8.0,
+    max_mesh_cells: int = 200_000,
+    metadata: Mapping[str, Any] | None = None,
+) -> MaxwellProblem:
+    """Build a validated full-2-D Maxwell problem from a geology grid.
+
+    Parameters
+    ----------
+    grid : GeologyGrid
+        Regular 2-D geology grid whose shallowest edge is at depth zero.
+    resistivity_ohm_m : array-like
+        Positive finite resistivity shaped exactly like ``grid``.
+    frequencies_hz : array-like
+        Positive, finite, unique simulation frequencies.
+    station_x_m : array-like
+        Unique receiver positions within the geology-grid x extent.
+    components : sequence of {"zxy", "zyx"}, default=("zxy", "zyx")
+        Requested 2-D impedance components.
+    station_names : sequence of str or None, optional
+        Unique receiver names. Defaults to ``S0000``, ``S0001``, and so on.
+    mesh_safety_factor : float, default=8.0
+        Skin-depth multiplier used to extend the solver mesh.
+    max_mesh_cells : int, default=200000
+        Maximum permitted number of uniform lateral mesh cells.
+    metadata : mapping or None, optional
+        JSON-compatible provenance copied to the Maxwell problem.
+
+    Returns
+    -------
+    MaxwellProblem
+        Solver-ready problem for
+        :class:`~pycsamt.forward.maxwell.mt2d.MT2DAdapter`.
+
+    Raises
+    ------
+    TypeError
+        If ``grid`` is not a 2-D :class:`GeologyGrid`.
+    ValueError
+        If model, survey, or mesh controls are invalid.
+
+    Examples
+    --------
+    >>> grid = GeologyGrid.regular_2d(nx=4, nz=3, dx_m=200, dz_m=100)
+    >>> problem = build_2d_maxwell_problem(
+    ...     grid,
+    ...     np.full(grid.shape, 100.0),
+    ...     [10.0, 1.0],
+    ...     [300.0, 500.0],
+    ... )
+    >>> problem.components
+    ('zxy', 'zyx')
+    """
+    if not isinstance(grid, GeologyGrid) or grid.dimension != 2:
+        raise TypeError("grid must be a 2-D GeologyGrid.")
+    if not np.isclose(grid.extent_m["z"][0], 0.0, atol=1e-6):
+        raise ValueError("grid's shallowest edge must be at depth zero.")
+
+    resistivity = np.asarray(resistivity_ohm_m, dtype=float)
+    if (
+        resistivity.shape != grid.shape
+        or not np.all(np.isfinite(resistivity))
+        or np.any(resistivity <= 0)
+    ):
+        raise ValueError(
+            f"resistivity_ohm_m must be positive, finite, and shaped "
+            f"{grid.shape}."
+        )
+
+    frequencies = np.asarray(frequencies_hz, dtype=float)
+    if (
+        frequencies.ndim != 1
+        or frequencies.size < 1
+        or not np.all(np.isfinite(frequencies))
+        or np.any(frequencies <= 0)
+        or np.unique(frequencies).size != frequencies.size
+    ):
+        raise ValueError(
+            "frequencies_hz must be a non-empty, positive, finite, "
+            "unique vector."
+        )
+
+    positions = np.asarray(station_x_m, dtype=float)
+    x_min, x_max = grid.extent_m["x"]
+    if (
+        positions.ndim != 1
+        or positions.size < 1
+        or not np.all(np.isfinite(positions))
+        or np.any(positions < x_min)
+        or np.any(positions > x_max)
+        or np.unique(positions).size != positions.size
+    ):
+        raise ValueError(
+            "station_x_m must be a non-empty, finite, unique vector "
+            f"within the grid's x extent {(x_min, x_max)}."
+        )
+
+    names = (
+        tuple(f"S{index:04d}" for index in range(positions.size))
+        if station_names is None
+        else tuple(str(name).strip() for name in station_names)
+    )
+    if (
+        len(names) != positions.size
+        or any(not name for name in names)
+        or len(set(names)) != len(names)
+    ):
+        raise ValueError(
+            "station_names must contain one unique non-empty name per "
+            "station."
+        )
+    modes = tuple(str(component).strip().lower() for component in components)
+    if (
+        not modes
+        or len(set(modes)) != len(modes)
+        or any(component not in ("zxy", "zyx") for component in modes)
+    ):
+        raise ValueError(
+            "components must be a unique, non-empty subset of "
+            "('zxy', 'zyx')."
+        )
+    safety_factor = float(mesh_safety_factor)
+    if not np.isfinite(safety_factor) or safety_factor <= 0:
+        raise ValueError("mesh_safety_factor must be finite and positive.")
+    if (
+        not isinstance(max_mesh_cells, int)
+        or isinstance(max_mesh_cells, bool)
+        or max_mesh_cells < 2
+    ):
+        raise ValueError("max_mesh_cells must be an integer of at least 2.")
+
+    mesh, conductivity = _solver_mesh_and_conductivity(
+        grid,
+        resistivity,
+        frequencies,
+        safety_factor=safety_factor,
+        max_mesh_cells=max_mesh_cells,
+    )
+    receivers = ReceiverSet(
+        [[float(position), 0.0] for position in positions], names
+    )
+    return MaxwellProblem(
+        mesh,
+        conductivity,
+        frequencies,
+        receivers,
+        components=modes,
+        metadata={} if metadata is None else dict(metadata),
+    )
 
 
 def _sample_correlation(
@@ -642,9 +802,6 @@ def generate_2d_maxwell_dataset(
     plan = SeedPlan(config.seed, namespace=config.namespace)
     grid = config.grid
     station_names = tuple(f"S{i:04d}" for i in range(len(config.station_x_m)))
-    receivers = ReceiverSet(
-        [[float(x), 0.0] for x in config.station_x_m], station_names
-    )
     coordinates_m = [[float(x), 0.0, 0.0] for x in config.station_x_m]
 
     realizations: dict[str, dict[str, Any]] = {}
@@ -666,19 +823,15 @@ def generate_2d_maxwell_dataset(
                 + config.log_resistivity_std * field.values
             )
             resistivity = np.power(10.0, log_resistivity)
-            mesh, conductivity = _solver_mesh_and_conductivity(
+            problem = build_2d_maxwell_problem(
                 grid,
                 resistivity,
                 config.frequencies_hz,
-                safety_factor=config.mesh_safety_factor,
-                max_mesh_cells=config.max_mesh_cells,
-            )
-            problem = MaxwellProblem(
-                mesh,
-                conductivity,
-                config.frequencies_hz,
-                receivers,
+                config.station_x_m,
                 components=config.components,
+                station_names=station_names,
+                mesh_safety_factor=config.mesh_safety_factor,
+                max_mesh_cells=config.max_mesh_cells,
                 metadata={"realization_id": realization_id},
             )
             if problem.problem_hash in problems:

@@ -1,0 +1,27 @@
+────────────────────────────────────────────────────────────────────────
+  pyCSAMT Pipeline Report
+  Pipeline : L14_full_processing
+  Run at   : 2026-08-13 09:58:45
+  Sites    : 58 in → 58 out
+  Total    : 45.04s
+────────────────────────────────────────────────────────────────────────
+
+  Step results
+  ──────────────────────────────────────────────────────────────────────
+    #  Name                   Code     Status Time(s)       Sites  Plots
+  ──────────────────────────────────────────────────────────────────────
+    1  notch                  NR001    OK       3.82       58→58      2
+    2  drop_dup               FREQ002  OK       1.59       58→58      1
+    3  select_band            FREQ001  OK      13.31       58→58      2
+    4  align_grid             FREQ004  OK       1.87       58→58      1
+    5  mask_skew              SK001    OK       1.54       58→58      1
+    6  rotate_strike          TZ001    OK      15.64       58→58      2
+    7  correct_ss             SS001    OK       0.33       58→58      0
+    8  qc_snapshot            QC001    OK       6.93       58→58      3
+  ──────────────────────────────────────────────────────────────────────
+
+  Output → D:\projects\pycsamt\data\avg\L14\output
+    EDIs   : D:\projects\pycsamt\data\avg\L14\output\processed
+    Plots  : D:\projects\pycsamt\data\avg\L14\output\plots
+
+────────────────────────────────────────────────────────────────────────

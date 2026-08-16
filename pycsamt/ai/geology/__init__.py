@@ -11,6 +11,12 @@ interfaces, faults, lenses, resistive/conductive bodies, and topography.  All
 generators must accept explicit random-number state and expose provenance.
 """
 
+from .benchmark import (
+    ID_BENCHMARK_FAMILIES,
+    OOD_BENCHMARK_FAMILIES,
+    BenchmarkGeology,
+    generate_benchmark_geology,
+)
 from .fields import (
     CorrelatedField,
     DirectionalVariogram,
@@ -34,6 +40,10 @@ __all__ = [
     "DirectionalVariogram",
     "generate_gaussian_field",
     "directional_variogram",
+    "ID_BENCHMARK_FAMILIES",
+    "OOD_BENCHMARK_FAMILIES",
+    "BenchmarkGeology",
+    "generate_benchmark_geology",
     "ElectricalLayer",
     "LayeredGeology",
     "generate_layered_geology",

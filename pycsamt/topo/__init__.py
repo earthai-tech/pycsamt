@@ -61,12 +61,18 @@ Public API
 :func:`plot_topo_section`
     One-call topography-embedded section plot for any pycsamt
     resistivity model or inversion result.
+:func:`plot_topo_array`
+    The same terrain-following drape for an arbitrary non-resistivity
+    2-D array (misfit map, sensitivity map, ...).
 :func:`build_topo_section`
     Resolve a model + topography source into a :class:`TopoSection`
     without plotting.
 :class:`TopoSection`
     Resolved terrain-draped section data returned by
     :func:`build_topo_section`.
+:func:`synthetic_elevation_profile`
+    Generate a plausible elevation profile for a synthetic survey with
+    no real field topography.
 """
 
 from .config import (  # noqa: F401
@@ -95,8 +101,10 @@ from .overlay import (  # noqa: F401
 from .section import (  # noqa: F401
     TopoSection,
     build_topo_section,
+    plot_topo_array,
     plot_topo_section,
 )
+from .synthetic import synthetic_elevation_profile  # noqa: F401
 
 __all__ = [
     # config
@@ -122,4 +130,7 @@ __all__ = [
     "TopoSection",
     "build_topo_section",
     "plot_topo_section",
+    "plot_topo_array",
+    # synthetic
+    "synthetic_elevation_profile",
 ]

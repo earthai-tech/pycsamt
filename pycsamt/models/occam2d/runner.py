@@ -31,7 +31,9 @@ import sys
 from pathlib import Path
 from typing import Union
 
+from ...compat.sklearn import validate_params
 from .base import OccamBase
+from .schema import OCCAM_RUNNER_FORWARD_SCHEMA
 
 PathLike = Union[str, Path]
 
@@ -340,6 +342,7 @@ class OccamRunner(OccamBase):
         max_iter: int | None = None,
         target_misfit: float | None = None,
         auto_compile: bool = True,
+        timeout: float | None = None,
     ) -> int:
         """Run Occam2D synchronously.
 
@@ -363,12 +366,25 @@ class OccamRunner(OccamBase):
         auto_compile : bool, default True
             Passed to :meth:`discover_binary`. If ``True``,
             missing binaries may trigger compilation.
+        timeout : float, optional
+            Maximum wall-clock seconds to wait before killing the
+            process. ``None`` (the default) waits indefinitely,
+            matching the solver's own ``Iterations to run`` and
+            internal step-search limits. Occam2D's outer iteration
+            count does not bound the inner Lagrange-multiplier
+            line search, so a numerically pathological model can
+            in principle run far longer than any observed typical
+            case; pass an explicit bound for unattended batch runs.
+            On expiry, the process (and its full process group, on
+            POSIX) is killed and :attr:`exit_code` is set to ``-9``.
 
         Returns
         -------
         int
             Process exit code. A value of ``0`` indicates that
-            the executable returned successfully.
+            the executable returned successfully. A value of
+            ``-9`` indicates the process was killed after
+            exceeding ``timeout``.
 
         Raises
         ------
@@ -393,6 +409,10 @@ class OccamRunner(OccamBase):
         >>> from pycsamt.models.occam2d import OccamRunner
         >>> runner = OccamRunner(workdir="occam_run")
         >>> code = runner.run(max_iter=100, target_misfit=1.0)
+
+        Bound unattended batch runs against a pathological case:
+
+        >>> code = runner.run(timeout=3600)  # doctest: +SKIP
         """
         self.discover_binary(auto_compile=auto_compile)
 
@@ -406,14 +426,24 @@ class OccamRunner(OccamBase):
             open(self.stdout_log, "w") as fout,
             open(self.stderr_log, "w") as ferr,
         ):
-            proc = subprocess.run(
-                [str(self.binary), self.startup_file],
-                cwd=self.workdir,
-                stdout=fout,
-                stderr=ferr,
-            )
+            try:
+                proc = subprocess.run(
+                    [str(self.binary), self.startup_file],
+                    cwd=self.workdir,
+                    stdout=fout,
+                    stderr=ferr,
+                    timeout=timeout,
+                )
+                self.exit_code = proc.returncode
+            except subprocess.TimeoutExpired:
+                self.exit_code = -9
+                self.logger.warning(
+                    "Occam2D exceeded timeout=%s s in %s; process killed.",
+                    timeout,
+                    self.workdir,
+                )
+                return self.exit_code
 
-        self.exit_code = proc.returncode
         if self.exit_code != 0:
             self.logger.warning(
                 "Occam2D exited with code %d.  See %s",
@@ -424,6 +454,109 @@ class OccamRunner(OccamBase):
             self.logger.info("Occam2D finished successfully.")
 
         return self.exit_code
+
+    @validate_params(OCCAM_RUNNER_FORWARD_SCHEMA)
+    def run_forward(
+        self,
+        output_root: str = "Forward",
+        *,
+        auto_compile: bool = True,
+    ) -> Path:
+        """Run the native full-2-D forward solver and return its output.
+
+        The bundled Occam2D executable supports a forward-only ``-F``
+        mode. It evaluates the parameter vector in ``startup_file`` and
+        writes an ``OCCAM2MTDATA_1.0`` file containing the modeled data
+        and the errors from the input data file. No inversion iteration
+        is performed.
+
+        Parameters
+        ----------
+        output_root : str, default "Forward"
+            Local root used for the generated ``.fwd`` filename. It must
+            be non-empty and contain no path separators or dots.
+        auto_compile : bool, default True
+            If ``True``, allow binary discovery to compile the bundled
+            Fortran source when no executable can be found.
+
+        Returns
+        -------
+        pathlib.Path
+            Path to the generated forward-data file.
+
+        Raises
+        ------
+        FileNotFoundError
+            Raised when the startup file or solver binary is missing.
+        RuntimeError
+            Raised when the solver exits unsuccessfully or reports
+            success without creating the expected output.
+        ValueError
+            Raised when ``output_root`` is not a local filename root.
+
+        See Also
+        --------
+        OccamRunner.run
+            Executes the iterative Occam inversion.
+        OccamData.read
+            Reads the generated forward-data file.
+
+        Examples
+        --------
+        Evaluate a known model stored in ``TruthStartup``:
+
+        >>> runner = OccamRunner(
+        ...     "synthetic_case",
+        ...     startup_file="TruthStartup",
+        ... )
+        >>> forward_file = runner.run_forward("TruthForward")
+        """
+        if (
+            not output_root.strip()
+            or Path(output_root).name != output_root
+            or "." in output_root
+            or "/" in output_root
+            or "\\" in output_root
+        ):
+            raise ValueError(
+                "output_root must be a non-empty local filename root"
+            )
+
+        self.discover_binary(auto_compile=auto_compile)
+        startup_path = self.workdir / self.startup_file
+        if not startup_path.is_file():
+            raise FileNotFoundError(f"Startup file not found: {startup_path}")
+
+        output_path = self.workdir / f"{output_root}.fwd"
+        self.logger.info("Running Occam2D forward model in %s", self.workdir)
+        with (
+            open(self.stdout_log, "w") as fout,
+            open(self.stderr_log, "w") as ferr,
+        ):
+            proc = subprocess.run(
+                [
+                    str(self.binary),
+                    "-F",
+                    self.startup_file,
+                    output_root,
+                ],
+                cwd=self.workdir,
+                stdout=fout,
+                stderr=ferr,
+            )
+
+        self.exit_code = proc.returncode
+        if self.exit_code != 0:
+            raise RuntimeError(
+                "Occam2D forward run exited with code "
+                f"{self.exit_code}; see {self.stderr_log}"
+            )
+        if not output_path.is_file():
+            raise RuntimeError(
+                "Occam2D forward run did not create " f"{output_path}"
+            )
+        self.logger.info("Occam2D forward model written to %s", output_path)
+        return output_path
 
     # ------------------------------------------------------------------
     # Run (async)

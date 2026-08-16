@@ -11,12 +11,14 @@ model-zoo utilities, and diagnostic plotting.
 AI Modules
 ----------
 
-The newer data contracts, geological priors, objective functions, domain-gap
-tools, experiment records, and validation gates have dedicated references:
+The AI inverters, newer data contracts, geological priors, objective
+functions, domain-gap tools, experiment records, and validation gates have
+dedicated references:
 
 .. toctree::
    :maxdepth: 1
 
+   ai_inversion
    ai_data
    ai_geology
    ai_losses
@@ -27,12 +29,6 @@ tools, experiment records, and validation gates have dedicated references:
 .. autosummary::
    :toctree: generated
 
-   pycsamt.ai.inversion.inv1d
-   pycsamt.ai.inversion.inv2d
-   pycsamt.ai.inversion.inv3d
-   pycsamt.ai.inversion.ensemble
-   pycsamt.ai.inversion.joint
-   pycsamt.ai.inversion.calibration
    pycsamt.ai.nets.cnn1d
    pycsamt.ai.nets.drcnn
    pycsamt.ai.nets.fcn

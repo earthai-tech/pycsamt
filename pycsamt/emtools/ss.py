@@ -313,10 +313,14 @@ def estimate_ss_ama(
         if max_skew is not None and not pt.empty:
             sdf = pt[pt["station"] == st]
             if not sdf.empty:
-                # align skew by nearest period
+                # align skew by nearest period: for each of the site's
+                # own frequencies, find the nearest index into p_ref/sk
+                # (not the other way around -- idx must have the same
+                # length as m/per, and its values must be valid indices
+                # into sk).
                 p_ref = sdf["period"].to_numpy()
                 sk = np.abs(sdf["skew"].to_numpy())
-                idx = _nearest_idx(1.0 / fr, p_ref)
+                idx = _nearest_idx(p_ref, per)
                 m &= sk[idx] <= float(max_skew)
         fr1 = fr[m]
         lr1 = np.log10(np.maximum(rho[m], 1e-24))
@@ -699,7 +703,7 @@ def _prep_lr_curves(
             if not sdf.empty:
                 p_ref = sdf["period"].to_numpy()
                 sk = np.abs(sdf["skew"].to_numpy())
-                idx = _nearest_idx(1.0 / fr, p_ref)
+                idx = _nearest_idx(p_ref, per)
                 m &= sk[idx] <= float(max_skew)
         fr1 = fr[m]
         lr1 = np.log10(np.maximum(rho[m], 1e-24))
@@ -1588,6 +1592,12 @@ def _pcolor_lT(
     return qm
 
 
+def _decade_label(v: float) -> str:
+    """Format a log10 value as a ``$10^{n}$``-style decade label."""
+    r = round(v)
+    return f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
+
+
 def _set_lT_yticks(
     ax: plt.Axes,
     freqs: np.ndarray,
@@ -1598,12 +1608,7 @@ def _set_lT_yticks(
 ) -> None:
     lT = np.log10(1.0 / freqs)
     pos = np.linspace(lT.min(), lT.max(), n)
-    labs = []
-    for v in pos:
-        r = round(v)
-        labs.append(
-            f"$10^{{{r}}}$" if abs(r - v) < 0.04 else f"$10^{{{v:.1f}}}$"
-        )
+    labs = [_decade_label(v) for v in pos]
     ax.set_yticks(pos)
     ax.set_yticklabels(labs, fontsize=fontsize)
     if ylabel:
@@ -2753,7 +2758,7 @@ def _pt_phi_for_station(
         if col in sdf.columns:
             p_ref = sdf["period"].to_numpy(dtype=float)
             phi = sdf[col].to_numpy(dtype=float)
-            j = _nearest_idx(1.0 / fr, p_ref)
+            j = _nearest_idx(p_ref, 1.0 / fr)
             if stat == "median":
                 return phi[j]
             if stat == "mean":
@@ -2761,6 +2766,60 @@ def _pt_phi_for_station(
             # fallback to per-frequency direct mapping
             return phi[j]
     return np.zeros(fr.size, dtype=float)
+
+
+def _engineering_label(v: float) -> str:
+    """Compact numeric label; scientific notation outside 1e-3..1e3."""
+    av = abs(v)
+    if av != 0 and (av >= 1000.0 or av < 1e-3):
+        return f"{v:.1e}"
+    return f"{v:.3g}"
+
+
+_RADAR_AXIS_CAPTION = {
+    "logperiod": "angle = log₁₀(period), clockwise from top",
+    "period": "angle = period (s), clockwise from top",
+    "freq": "angle = frequency (Hz), clockwise from top",
+}
+
+
+def _set_radar_theta_ticks(
+    ax: plt.Axes,
+    raw_min: float,
+    raw_max: float,
+    theta_axis: str,
+    *,
+    n: int = 8,
+    fontsize: int = 8,
+) -> None:
+    """Label the angular axis with period/frequency, not raw degrees.
+
+    The angle in :func:`plot_ss_radar` encodes period or frequency, not a
+    compass direction, so matplotlib's default degree tick labels
+    (0deg, 45deg, ...) are not meaningful here. This maps *n* evenly spaced
+    angular positions back to the physical quantity they represent, using
+    the same linear normalization the plotted points were built from.
+    """
+    angles_deg = np.linspace(0.0, 360.0, n, endpoint=False)
+    fracs = angles_deg / 360.0
+    values = raw_min + fracs * (raw_max - raw_min)
+    if theta_axis == "logperiod":
+        labels = [f"{_decade_label(v)} s" for v in values]
+    elif theta_axis == "period":
+        labels = [f"{_engineering_label(v)} s" for v in values]
+    else:
+        labels = [f"{_engineering_label(v)} Hz" for v in values]
+    ax.set_thetagrids(angles_deg, labels=labels, fontsize=fontsize)
+    ax.text(
+        0.5,
+        -0.14,
+        _RADAR_AXIS_CAPTION.get(theta_axis, ""),
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=7,
+        color="0.35",
+    )
 
 
 def plot_ss_radar(
@@ -2918,21 +2977,18 @@ def plot_ss_radar(
         r_xy = np.log10(0.2 * (np.abs(xy) ** 2) / (fr + eps))
         r_yx = np.log10(0.2 * (np.abs(yx) ** 2) / (fr + eps))
 
-    # theta mapping
+    # theta mapping: a single quantity (log10-period, period, or frequency)
+    # is linearly normalized to the full [0, 2π) circle. Keeping one
+    # normalization here (rather than two overlapping branches) also lets
+    # the angular-tick labels below use the exact same raw_min/raw_max.
     if theta_axis == "freq":
-        x = fr
+        raw = fr
     elif theta_axis == "period":
-        x = per
+        raw = per
     else:
-        x = np.log10(np.maximum(per, 1e-24))
-        # normalize to [0, 2π)
-        x = (x - x.min()) / (x.max() - x.min() + eps)
-        x = 2.0 * np.pi * x
-    th = (
-        x
-        if theta_axis == "logperiod"
-        else (2.0 * np.pi * (x - x.min()) / (x.max() - x.min() + 1e-24))
-    )
+        raw = np.log10(np.maximum(per, 1e-24))
+    raw_min, raw_max = raw.min(), raw.max()
+    th = 2.0 * np.pi * (raw - raw_min) / (raw_max - raw_min + eps)
 
     th = th[m]
     r1 = r_xy[m]
@@ -2973,6 +3029,7 @@ def plot_ss_radar(
 
     ax.grid(True, alpha=0.25)
     hide_polar_radius_labels(ax)
+    _set_radar_theta_ticks(ax, raw_min, raw_max, theta_axis)
     ax.set_title(str(station), pad=10)
     ax.set_ylabel("")
     # Outside the polar axes entirely: bbox_to_anchor=(0.02, 0.02) used
@@ -3195,7 +3252,7 @@ def detect_near_surface(
             if not sdf.empty:
                 p_ref = sdf["period"].to_numpy()
                 sk = np.abs(sdf["skew"].to_numpy())
-                idx = _nearest_idx(1.0 / fr, p_ref)
+                idx = _nearest_idx(p_ref, per)
                 m &= sk[idx] <= float(max_skew)
         fr1 = fr[m]
         lr1 = np.log10(np.maximum(rho[m], 1e-24))

@@ -352,9 +352,11 @@ class TestBoreholes:
 
 class TestRockDb:
     def test_set_rock_db_default(self, ctrl):
+        from pycsamt.geology.lithology import RockDatabase
+
         ctrl.set_rock_db_default()
         assert ctrl.state.db is not None
-        assert len(ctrl.state.db) == 25
+        assert len(ctrl.state.db) == len(RockDatabase.default())
 
     def test_set_rock_db_csv(self, ctrl, tmp_path):
         p = tmp_path / "rocks.csv"
@@ -616,21 +618,24 @@ class TestPlotCalibratedModel:
 
 class TestPlotRockDb:
     def test_via_generate_no_db_does_not_raise(self, ctrl):
-        """BUG: plot_rock_db() calls `list(db)` before its try/except,
-        and RockDatabase implements neither __iter__ nor __getitem__, so
-        the *direct* call raises TypeError (see test below). Through the
-        generate() dispatcher the exception is still caught and turned
-        into an error figure, so the app-level contract holds."""
+        """plot_rock_db() reads `db.entries` (RockDatabase's public,
+        read-only accessor), so both the generate() dispatcher and a
+        direct call succeed."""
         fig = ctrl.generate("plot_rock_db")
         assert fig is not None
         _close()
 
-    def test_direct_call_raises_due_to_non_iterable_rockdb(self, ctrl):
-        """Regression/documentation of the RockDatabase-not-iterable bug:
-        calling plot_rock_db() directly (bypassing generate()'s except
-        Exception guard) propagates a TypeError."""
-        with pytest.raises(TypeError, match="not iterable"):
-            ctrl.plot_rock_db()
+    def test_direct_call_renders_one_bar_per_entry(self, ctrl):
+        """Regression test for the former RockDatabase-not-iterable bug:
+        plot_rock_db() now reads `db.entries` instead of `list(db)`, so a
+        direct call renders successfully with one bar per database
+        entry."""
+        fig = ctrl.plot_rock_db()
+        ax = fig.axes[0]
+        from pycsamt.geology.lithology import RockDatabase
+
+        assert len(ax.patches) == len(RockDatabase.default())
+        _close()
 
 
 # ═════════════════════════════════════════════════════════════════════════

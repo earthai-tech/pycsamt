@@ -35,9 +35,14 @@ def _import_pycsamt():
     sys.path.insert(0, str(ROOT))
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
-        pass
+        from pycsamt.api import read_edis
+        from pycsamt.emtools.qc import build_qc_table, station_confidence_table
 
-    return locals()
+    return {
+        "read_edis": read_edis,
+        "build_qc_table": build_qc_table,
+        "station_confidence_table": station_confidence_table,
+    }
 
 
 def _style_axis(ax: plt.Axes) -> None:

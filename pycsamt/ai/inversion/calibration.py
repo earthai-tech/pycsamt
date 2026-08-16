@@ -555,8 +555,12 @@ class PosteriorCalibrator:
         # Transform to standardised residual via inverse-normal
         z_star = ndtri(p_star)  # (n_samp, n_pts, n_p)
 
-        # Calibrated sigma (apply global scale)
-        sigma_cal = sigma_pred / self._sigma_scale  # (n_pts, n_p)
+        # Calibrated sigma (apply global scale). z_cal_scaled = z_cal /
+        # sigma_scale was used to fit the map, i.e. sigma_scale is how many
+        # multiples of sigma_raw the *actual* calibration residuals spanned;
+        # reproducing that same spread around a new sigma_pred requires
+        # multiplying, not dividing, by sigma_scale.
+        sigma_cal = sigma_pred * self._sigma_scale  # (n_pts, n_p)
 
         # Posterior draws
         draws = y_pred[None, :, :] + sigma_cal[None, :, :] * z_star
@@ -565,6 +569,15 @@ class PosteriorCalibrator:
     def calibrated_std(self, sigma_raw: np.ndarray) -> np.ndarray:
         """
         Apply the global variance recalibration to raw sigma estimates.
+
+        ``sigma_scale`` (``s_j`` in the class docstring) is the empirical
+        standard deviation of the calibration-set standardised residuals
+        ``z_cal = (y_cal - y_pred_cal) / sigma_raw``. A raw ensemble sigma
+        that is systematically under-dispersed (the common case for a
+        small or early-stopped ensemble) has ``s_j > 1``; reproducing the
+        calibration set's own actual residual spread around a new
+        ``sigma_raw`` therefore requires *multiplying* by ``s_j``, not
+        dividing by it.
 
         Parameters
         ----------
@@ -577,7 +590,7 @@ class PosteriorCalibrator:
             approximately nominal on the calibration distribution.
         """
         self._check_fitted()
-        return np.asarray(sigma_raw, dtype=float) / self._sigma_scale
+        return np.asarray(sigma_raw, dtype=float) * self._sigma_scale
 
     def calibration_error(
         self,

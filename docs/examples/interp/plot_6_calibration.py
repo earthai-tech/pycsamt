@@ -13,7 +13,7 @@ against two boreholes and compares before and after.
 # Boreholes and the native model
 # ------------------------------
 # The two boreholes log the true four-unit sequence at 500 m and 1500 m.
-# :class:`~pycsamt.interp.borehole.Borehole` holds a list of depth
+# :class:`~pycsamt.geology.borehole.Borehole` holds a list of depth
 # ``Interval`` s with lithology labels.
 
 from _interp_data import demo_boreholes, demo_model

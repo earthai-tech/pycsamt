@@ -10,6 +10,15 @@ industry-standard exports.
 It supersedes the ``geodrill`` module from pyCSAMT v1, extending its
 scope beyond OCCAM2D and CSAMT to cover MT, AMT, CSAMT, and CSEM.
 
+``RockDatabase``, ``RockEntry``, ``Layer``, ``StratigraphicLog``,
+``Borehole``, and ``Interval`` moved to :mod:`pycsamt.geology` — general
+geological domain knowledge with no EM dependency. They remain importable
+from here (``pycsamt.interp.RockDatabase`` and so on) for backward
+compatibility; see :mod:`pycsamt.geology` for their canonical location and
+``pycsamt.geology.lithology``/``.borehole`` for the submodules that used to
+live at ``pycsamt.interp.lithology``/``.borehole`` (removed; import from
+:mod:`pycsamt.geology` directly if you relied on that submodule path).
+
 Quickstart
 ----------
 >>> from pycsamt.interp import ResistivityModel, ModelCalibrator
@@ -43,16 +52,11 @@ Package layout
 ``_base``
     :class:`ResistivityModel` — unified model container; adapters for
     Occam2D, ModEM, AI outputs, and raw numpy arrays.
-``borehole``
-    :class:`Borehole`, :class:`Interval` — ground-truth depth-interval
-    data; readers for CSV and LAS 2.0.
 ``calibrate``
     :class:`ModelCalibrator` — generalised NM construction (Kouadio
-    et al. 2022), borehole-constrained or database-only.
-``lithology``
-    :class:`RockDatabase`, :class:`StratigraphicLog`, :class:`Layer` —
-    resistivity-to-lithology classification; built-in 25-rock EM
-    database.
+    et al. 2022), borehole-constrained or database-only; imports
+    :class:`~pycsamt.geology.RockDatabase` and
+    :class:`~pycsamt.geology.Borehole` from :mod:`pycsamt.geology`.
 ``export``
     :func:`~export.to_oasis_montaj_xyz`,
     :func:`~export.to_las`,
@@ -71,9 +75,16 @@ References
    201, 104647. https://doi.org/10.1016/j.jappgeo.2022.104647
 """
 
+from ..geology import (
+    Borehole,
+    Interval,
+    Layer,
+    RockDatabase,
+    RockEntry,
+    StratigraphicLog,
+)
 from . import export, plot
 from ._base import ResistivityModel
-from .borehole import Borehole, Interval
 from .calibrate import ModelCalibrator
 from .constraints import (
     ConstrainedCalibrator,
@@ -94,12 +105,6 @@ from .hydromodel import (
     EMHydroResult,
     PetrophysicalConfig,
 )
-from .lithology import (
-    Layer,
-    RockDatabase,
-    RockEntry,
-    StratigraphicLog,
-)
 from .timelapse import TimeLapseEM, assert_compatible_grids
 from .uncertainty import (
     MonteCarloHydro,
@@ -110,9 +115,6 @@ from .uncertainty import (
 __all__ = [
     # core model
     "ResistivityModel",
-    # borehole
-    "Borehole",
-    "Interval",
     # calibration (geological)
     "ModelCalibrator",
     # qualitative hydrogeology
@@ -140,11 +142,13 @@ __all__ = [
     "UncertaintyBounds",
     "UncertaintyResult",
     "MonteCarloHydro",
-    # lithology
+    # lithology + borehole (canonical home: pycsamt.geology)
     "RockDatabase",
     "RockEntry",
     "Layer",
     "StratigraphicLog",
+    "Borehole",
+    "Interval",
     # sub-modules
     "export",
     "plot",

@@ -611,8 +611,7 @@ def sites_to_panel_2d(
     X_panel : ndarray
         Shape ``(1, n_components, n_freqs, n_stations)``.
         Channel layout (for ``n_components=4``):
-        ``[log10(rho_te), phase_te,
-           log10(rho_tm), phase_tm]``.
+        ``[log10(rho_te), phase_te, log10(rho_tm), phase_tm]``.
         For ``n_components=2``: TE channels only.
     freqs : ndarray (n_freqs,)
         Common frequency grid in Hz (high to low).

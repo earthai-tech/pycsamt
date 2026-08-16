@@ -175,8 +175,8 @@ def sites() -> _CountingSites:
 
 
 class TestStepRegistry:
-    def test_registry_has_46_entries(self):
-        assert len(STEP_REGISTRY) == 47
+    def test_registry_has_55_entries(self):
+        assert len(STEP_REGISTRY) == 55
 
     def test_lookup_by_code(self):
         spec = lookup_step("NR001")
@@ -197,7 +197,7 @@ class TestStepRegistry:
 
     def test_list_steps_returns_all(self):
         all_specs = list_steps()
-        assert len(all_specs) == 47
+        assert len(all_specs) == 55
 
     def test_list_steps_by_category_noise_removal(self):
         nr = list_steps("noise_removal")
@@ -208,11 +208,18 @@ class TestStepRegistry:
         freq = list_steps("frequency")
         assert len(freq) == 9
 
+    def test_list_steps_by_category_export(self):
+        export = list_steps("export")
+        assert len(export) == 3
+        assert {s.code for s in export} == {"EXPORT001", "EXPORT002", "EXPORT003"}
+        assert all(s.origin == "builtin" for s in export)
+
     def test_categories_sorted(self):
         cats = categories()
         assert cats == sorted(cats)
         assert "noise_removal" in cats
         assert "static_shift" in cats
+        assert "export" in cats
 
     def test_step_codes_sorted(self):
         codes = step_codes()
@@ -320,10 +327,14 @@ class TestPresets:
         "dimensionality_filter",
         "publication_ready",
         "stratagem_mt",
+        "mt_qc",
+        "amt_qc",
+        "csamt_qc",
+        "csumt_qc",
     ]
 
-    def test_six_presets_registered(self):
-        assert len(PRESETS) == 7
+    def test_eleven_presets_registered(self):
+        assert len(PRESETS) == 11
 
     @pytest.mark.parametrize("name", _PRESET_NAMES)
     def test_preset_loads_without_error(self, name):
@@ -348,7 +359,7 @@ class TestPresets:
 
     def test_list_presets_returns_all(self):
         all_presets = list_presets()
-        assert len(all_presets) == 7
+        assert len(all_presets) == 11
 
     def test_preset_catalogue_is_non_empty_string(self):
         cat = preset_catalogue()
@@ -361,6 +372,92 @@ class TestPresets:
         assert isinstance(pipe, Pipeline)
         assert pipe.name == "basic_qc"
         assert len(pipe) == 5  # NR001, FREQ002, FREQ001, FREQ004, QC001
+
+
+class TestMethodAwarePresets:
+    """Structural checks for the mt_qc/amt_qc/csamt_qc/csumt_qc presets.
+
+    Real end-to-end runs against MT/AMT/CSAMT data live in
+    test_presets.py; these are fast, data-free structural assertions.
+    """
+
+    def _codes(self, name: str) -> list[str]:
+        return [s.spec.code for _, s in get_preset(name).steps]
+
+    def test_mt_qc_opens_and_closes_with_preview(self):
+        codes = self._codes("mt_qc")
+        assert codes[0] == "PRE001"
+        assert codes[-1] == "PRE002"
+
+    def test_all_method_presets_include_smart_qc_steps(self):
+        for name in ("mt_qc", "amt_qc", "csamt_qc", "csumt_qc"):
+            codes = self._codes(name)
+            assert "QC005" in codes
+            assert "QC006" in codes
+            assert "QC007" in codes
+
+    def test_mt_and_amt_qc_have_no_source_effects_steps(self):
+        for name in ("mt_qc", "amt_qc"):
+            codes = self._codes(name)
+            assert "SRC001" not in codes
+            assert "SRC002" not in codes
+            assert "QC002" not in codes
+
+    def test_csamt_and_csumt_qc_include_near_field_correction(self):
+        for name in ("csamt_qc", "csumt_qc"):
+            codes = self._codes(name)
+            assert "SRC001" in codes
+            assert "SRC002" in codes
+            assert "QC002" in codes
+
+    def test_csamt_near_field_step_defaults_to_auto_resolve(self):
+        preset = get_preset("csamt_qc")
+        src001 = next(s for _, s in preset.steps if s.spec.code == "SRC001")
+        assert src001.params["source_offset"] is None
+
+    def test_only_csumt_qc_includes_depth_section(self):
+        assert "QC004" in self._codes("csumt_qc")
+        for name in ("mt_qc", "amt_qc", "csamt_qc"):
+            assert "QC004" not in self._codes(name)
+
+    def test_amt_band_matches_stratagem_mt_band(self):
+        amt = next(
+            s for _, s in get_preset("amt_qc").steps if s.spec.code == "FREQ001"
+        )
+        strat = next(
+            s
+            for _, s in get_preset("stratagem_mt").steps
+            if s.spec.code == "FREQ001"
+        )
+        assert amt.params["band_hz"] == strat.params["band_hz"]
+
+    def test_csumt_band_uses_real_csumt_constants(self):
+        from pycsamt.emtools.csumt import F_MAX_CSUMT, F_MIN_CSUMT
+
+        csumt = next(
+            s for _, s in get_preset("csumt_qc").steps if s.spec.code == "FREQ001"
+        )
+        assert csumt.params["band_hz"] == (F_MIN_CSUMT, F_MAX_CSUMT)
+
+    def test_get_preset_for_method_maps_to_expected_presets(self):
+        from pycsamt.pipeline import get_preset_for_method
+
+        assert get_preset_for_method("MT").name == "mt_qc"
+        assert get_preset_for_method("amt").name == "amt_qc"
+        assert get_preset_for_method("CSAMT").name == "csamt_qc"
+        assert get_preset_for_method("csumt").name == "csumt_qc"
+
+    def test_get_preset_for_method_rejects_unknown_method(self):
+        from pycsamt.pipeline import get_preset_for_method
+
+        with pytest.raises(ValueError, match="not one of"):
+            get_preset_for_method("bogus")
+
+    def test_get_preset_for_method_rejects_method_without_preset(self):
+        from pycsamt.pipeline import get_preset_for_method
+
+        with pytest.raises(ValueError, match="no method-aware preset"):
+            get_preset_for_method("CSEM")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -922,6 +1019,125 @@ class TestPipelineRun:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 9b · Pipeline.run(cache=...)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _CountingMutatingStep(_MutatingStep):
+    """_MutatingStep that also records how many times transform() actually ran."""
+
+    def transform(self, sites):
+        self._calls.append(1)
+        return super().transform(sites)
+
+
+def _counting_mutating(code: str, calls: list) -> _CountingMutatingStep:
+    """Same bypass-__init__ construction _mutating() uses, plus a call counter."""
+    step = _CountingMutatingStep.__new__(_CountingMutatingStep)
+    step.spec = lookup_step(code)
+    step.params = dict(step.spec.defaults)
+    step._calls = calls
+    return step
+
+
+class TestPipelineCaching:
+    def test_disabled_by_default_no_behavior_change(self, simple_pipe, sites):
+        result = simple_pipe.run(sites, save_edis=False, save_report=False)
+        assert all(not sr.cached for sr in result.step_results)
+
+    def test_cache_false_is_identical_to_omitting_it(self, simple_pipe, sites):
+        result = simple_pipe.run(
+            sites, save_edis=False, save_report=False, cache=False
+        )
+        assert all(not sr.cached for sr in result.step_results)
+
+    def test_second_run_hits_cache_and_skips_transform(self, tmp_path):
+        calls: list[int] = []
+        pipe = Pipeline(
+            [
+                ("a", _counting_mutating("NR001", calls)),
+                ("b", _counting_mutating("FREQ001", calls)),
+            ]
+        )
+        start = _CountingSites(n=3, count=0)
+
+        r1 = pipe.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 2
+        assert all(not sr.cached for sr in r1.step_results)
+
+        r2 = pipe.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 2  # no new transform() calls on the second run
+        assert all(sr.cached for sr in r2.step_results)
+        assert r2.sites_out.count == r1.sites_out.count == 2
+
+    def test_changed_upstream_param_invalidates_downstream_cache(self, tmp_path):
+        calls: list[int] = []
+        start = _CountingSites(n=3, count=0)
+
+        pipe_a = Pipeline([("a", _counting_mutating("NR001", calls))])
+        pipe_a.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 1
+
+        # A different step at the same position -> different upstream state
+        # for anything chained after it; a *second*, distinct pipeline command
+        # naturally gets a fresh cache key chain, proving there's no false hit.
+        pipe_b = Pipeline([("a", _counting_mutating("FREQ001", calls))])
+        pipe_b.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 2  # ran again — different step code, different key
+
+    def test_resume_after_simulated_crash(self, tmp_path):
+        """A pipeline that raises on step 2 the first time, then succeeds on
+        a rerun, must not recompute step 1 the second time — this is the
+        "resumability" property this whole cache mechanism exists to give."""
+        calls: list[int] = []
+        start = _CountingSites(n=3, count=0)
+
+        attempt_1 = Pipeline(
+            [
+                ("a", _counting_mutating("NR001", calls)),
+                ("b", _raising("FREQ001")),
+            ]
+        )
+        configure_pipe(on_step_error="raise")
+        with pytest.raises(RuntimeError, match="deliberate step failure"):
+            attempt_1.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 1  # step "a" completed and was cached before the crash
+
+        # Rerun with step 2 fixed this time.
+        attempt_2 = Pipeline(
+            [
+                ("a", _counting_mutating("NR001", calls)),
+                ("b", _counting_mutating("FREQ001", calls)),
+            ]
+        )
+        result = attempt_2.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 2  # step "a" replayed from cache, NOT recomputed
+        assert result.step_results[0].cached is True
+        assert result.step_results[1].cached is False
+        assert result.ok
+
+    def test_diagnostic_step_cache_hit_skips_recompute(self, tmp_path):
+        calls: list[int] = []
+
+        class _CountingDiagnosticStep(Step):
+            def transform(self, sites):
+                calls.append(1)
+                return sites  # diagnostic: unchanged, but still "ran"
+
+            def generate_qc_plots(self, sites):
+                return []
+
+        pipe = Pipeline([("qc", _CountingDiagnosticStep("QC001"))])
+        start = _CountingSites(n=3, count=0)
+
+        pipe.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 1
+
+        pipe.run(start, outdir=None, save_report=False, cache=tmp_path)
+        assert len(calls) == 1  # second call skipped entirely
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 10 · PipelineResult
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -963,7 +1179,7 @@ class TestPipelineResult:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _make_step_result(idx: int, *, ok: bool = True) -> StepResult:
+def _make_step_result(idx: int, *, ok: bool = True, cached: bool = False) -> StepResult:
     return StepResult(
         step_idx=idx,
         step_name=f"step_{idx}",
@@ -975,6 +1191,7 @@ def _make_step_result(idx: int, *, ok: bool = True) -> StepResult:
         n_sites_in=5,
         n_sites_out=5 if ok else 0,
         error=None if ok else RuntimeError("test error"),
+        cached=cached,
     )
 
 
@@ -1014,3 +1231,36 @@ class TestReportGenerators:
         sr = [_make_step_result(1, ok=False)]
         html = make_html_report("pipe", sr, 0.1, None, 5, 0)
         assert 'class="err"' in html
+
+    def test_text_report_shows_cached_marker(self):
+        sr = [_make_step_result(1, cached=True), _make_step_result(2, cached=False)]
+        txt = make_text_report("pipe", sr, 0.5, None, 5, 5)
+        lines = txt.splitlines()
+        cached_line = next(l for l in lines if "step_1" in l)
+        uncached_line = next(l for l in lines if "step_2" in l)
+        assert "yes" in cached_line
+        assert "yes" not in uncached_line
+
+    def test_html_report_shows_cached_badge(self):
+        sr = [_make_step_result(1, cached=True)]
+        html = make_html_report("pipe", sr, 0.1, None, 5, 5)
+        assert "<b>Cached:</b> yes" in html
+
+    def test_html_report_omits_cached_badge_when_not_cached(self):
+        sr = [_make_step_result(1, cached=False)]
+        html = make_html_report("pipe", sr, 0.1, None, 5, 5)
+        assert "<b>Cached:</b>" not in html
+
+    def test_html_report_uses_real_pycsamt_brand_hex(self):
+        # _CSS was swapped from generic blue/green/red to the real
+        # pyCSAMT brand tokens (docs/source/_static/css/custom.css).
+        sr = [_make_step_result(1)]
+        html = make_html_report("pipe", sr, 0.1, None, 5, 5)
+        assert "#3e65b0" in html
+        assert "#4a6fa5" not in html
+
+    def test_html_report_still_renders_step_cards_after_palette_swap(self):
+        sr = [_make_step_result(i) for i in range(1, 3)]
+        html = make_html_report("pipe", sr, 0.1, None, 5, 5)
+        assert 'class="step-card"' in html
+        assert html.count('class="step-card"') == 2

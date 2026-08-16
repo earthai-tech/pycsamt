@@ -598,7 +598,10 @@ The pipeline documentation is organized around these ideas:
 * :doc:`configuration_files` explains how to store pipelines as YAML, JSON, or
   Python files.
 * :doc:`presets` explains built-in workflows and when to start from each one.
-* :doc:`steps` explains registered operations and extension patterns.
+* :doc:`steps` explains registered operations, and :doc:`extending` explains
+  runtime plugin registration.
+* :doc:`caching` explains ``cache=`` and how it makes a rerun resume.
+* :doc:`observability` explains ``on_step``, live progress, and run history.
 * :doc:`outputs` explains the generated files and reports.
 * :doc:`cli_pipe` explains the ``pycsamt pipe`` command group.
 

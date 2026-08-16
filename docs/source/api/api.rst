@@ -25,8 +25,8 @@ The live process-wide configuration is available as
 Topography Configuration
 ------------------------
 
-.. autofunction:: pycsamt.topo.config.configure_topo
-.. autofunction:: pycsamt.topo.config.reset_topo
+.. autofunction:: pycsamt.api.configure_topo
+.. autofunction:: pycsamt.api.reset_topo
 
 API Modules
 -----------

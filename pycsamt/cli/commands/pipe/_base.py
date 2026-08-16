@@ -41,6 +41,11 @@ def _resolve_pipeline(
 
     Priority: *config* > *preset* > *steps* (explicit codes).
     Raises :class:`click.UsageError` when none of the three is supplied.
+
+    A plugin step code in *steps* only resolves if ``pycsamt pipe
+    --with-plugins`` triggered discovery before this ran (see the ``pipe``
+    group callback) — plugin discovery is never implicit, since scanning
+    installed packages for entry points can take several seconds.
     """
     from pycsamt.pipeline import (  # noqa: PLC0415
         Pipeline,
@@ -210,6 +215,7 @@ def _format_run_result(
                     "n_sites_in": sr.n_sites_in,
                     "n_sites_out": sr.n_sites_out,
                     "n_plots": len(sr.plots),
+                    "cached": sr.cached,
                     "error": str(sr.error) if sr.error else None,
                 }
                 for sr in result.step_results
@@ -219,14 +225,15 @@ def _format_run_result(
 
     if output_format == "csv":
         lines = [
-            "idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,error"
+            "idx,label,code,ok,elapsed_sec,n_sites_in,n_sites_out,n_plots,cached,error"
         ]
         for sr in result.step_results:
             err = str(sr.error).replace(",", ";") if sr.error else ""
             lines.append(
                 f"{sr.step_idx},{sr.step_name},{sr.step_code},"
                 f"{sr.ok},{sr.elapsed_sec:.3f},"
-                f"{sr.n_sites_in},{sr.n_sites_out},{len(sr.plots)},{err}"
+                f"{sr.n_sites_in},{sr.n_sites_out},{len(sr.plots)},"
+                f"{sr.cached},{err}"
             )
         return "\n".join(lines)
 
@@ -262,9 +269,42 @@ def _rich_pipe_table(
 # ---------------------------------------------------------------------------
 
 
+_WITH_PLUGINS_ENV_VAR = "PYCSAMT_PIPELINE_LOAD_PLUGINS"
+_WITH_AI_STEPS_ENV_VAR = "PYCSAMT_PIPELINE_LOAD_AI_STEPS"
+
+
 @click.group("pipe")
+@click.option(
+    "--with-plugins",
+    is_flag=True,
+    default=False,
+    envvar=_WITH_PLUGINS_ENV_VAR,
+    help=(
+        "Discover third-party pipeline-step plugins before running this "
+        "command, so a plugin step code can be used with --steps in the "
+        "same invocation.  Off by default: scanning installed packages for "
+        "entry points can take several seconds in a large environment, so "
+        "it never happens implicitly.  Equivalent to setting "
+        f"{_WITH_PLUGINS_ENV_VAR}=1.  `pycsamt pipe plugins` always "
+        "discovers regardless of this flag, since that command's only job "
+        "is discovery."
+    ),
+)
+@click.option(
+    "--with-ai-steps",
+    is_flag=True,
+    default=False,
+    envvar=_WITH_AI_STEPS_ENV_VAR,
+    help=(
+        "Register the opt-in AI domain-gap survey audit step (AI001) before "
+        "running this command.  Off by default: resolving it imports torch, "
+        "a real one-time cost this CLI does not force on users who never "
+        "touch AI steps.  Equivalent to setting "
+        f"{_WITH_AI_STEPS_ENV_VAR}=1."
+    ),
+)
 @click.pass_context
-def pipe(ctx: click.Context) -> None:
+def pipe(ctx: click.Context, with_plugins: bool, with_ai_steps: bool) -> None:
     """Run, configure, and explore the pyCSAMT processing pipeline.
 
     \b
@@ -288,5 +328,34 @@ def pipe(ctx: click.Context) -> None:
 
       # Generate a starter config
       pycsamt pipe init --preset basic_qc --format yaml -o my_workflow.yaml
+
+      # Discover third-party plugin steps
+      pycsamt pipe plugins
+
+      # Use a plugin step code with --steps in one shot
+      pycsamt pipe --with-plugins run --steps MY_PLUGIN001,NR001 --survey ./edis/
+
+      # Export processed data to ModEM/Occam2D/MARE2DEM input files
+      pycsamt pipe run --steps NR001,FREQ001,EXPORT001 --survey ./edis/
+
+      # Use the opt-in AI survey-audit step in one shot
+      pycsamt pipe --with-ai-steps run --steps AI001 --survey ./edis/
     """
     ctx.ensure_object(dict)
+
+    if with_plugins:
+        # Explicit opt-in only — see the --with-plugins help text above for
+        # why this never happens implicitly.  This is a *group*-level flag
+        # (not on individual subcommands) because it must run before Click
+        # parses a subcommand's own options — --steps is validated against
+        # the registry at *parse* time (PipeStepList.convert).
+        from pycsamt.pipeline import discover_plugins  # noqa: PLC0415
+
+        discover_plugins(on_error="warn")
+
+    if with_ai_steps:
+        # Same opt-in reasoning as --with-plugins, and the same group-level
+        # placement requirement (must run before --steps is parsed).
+        from pycsamt.pipeline import register_ai_steps  # noqa: PLC0415
+
+        register_ai_steps(replace_existing=True)

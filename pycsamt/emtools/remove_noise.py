@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -226,6 +227,141 @@ def _harm_mask(
     return m
 
 
+# Only the two real-world AC power-grid frequencies in practical use --
+# mains_hz="auto" needs no numeric hint from the caller because there is
+# nothing else to test.
+_AUTO_MAINS_CANDIDATES = (50.0, 60.0)
+
+
+def _score_mains_candidate(
+    pooled_fr: np.ndarray, candidate: float, n_harm: int, snap_frac: float
+) -> tuple[int, float]:
+    """Return (n_hits, mean_relative_distance_over_hits) for *candidate*.
+
+    A "hit" is a harmonic k*candidate whose nearest pooled sample lies
+    within snap_frac of it (relative distance). More hits, and tighter
+    hits, mean *candidate* explains this survey's frequency grid better.
+    """
+    kk = np.arange(1, int(n_harm) + 1, dtype=float)
+    fH = kk * float(candidate)
+    hits = 0
+    dist_sum = 0.0
+    for fh in fH:
+        idx = np.argmin(np.abs(pooled_fr - fh))
+        d_rel = abs(pooled_fr[idx] - fh) / fh
+        if d_rel <= snap_frac:
+            hits += 1
+            dist_sum += d_rel
+    mean_dist = dist_sum / hits if hits else float("inf")
+    return hits, mean_dist
+
+
+def _resolve_auto_mains(
+    S: Any, *, n_harm: int, snap_frac: float, verbose: int
+) -> float | None:
+    """Resolve mains_hz="auto" to 50.0 or 60.0 for the whole *S* collection.
+
+    Pools every station's frequency array once so the whole survey
+    resolves to a single, coherent fundamental rather than a potentially
+    different choice per station.
+
+    Returns ``None`` when neither candidate clears a minimum-evidence bar
+    (see ``min_hits`` below) -- e.g. a coarse, general-purpose sounding
+    grid with only a handful of frequencies spread over several decades
+    will often have *one* harmonic land near *some* candidate by pure
+    numerical coincidence; without a floor on how much agreement is
+    required, that single coincidence would otherwise "win" a 50-vs-60
+    contest and go on to notch an unrelated frequency. ``None`` means
+    "no reliable mains signature found in this grid" -- the caller should
+    skip masking entirely rather than guess.
+    """
+    pooled: list[np.ndarray] = []
+    for ed in _iter_items(S):
+        _Z, _z, fr = _get_z_block(ed)
+        if fr is not None and fr.size:
+            pooled.append(np.asarray(fr, dtype=float))
+    if not pooled:
+        return None
+    pooled_fr = np.unique(np.concatenate(pooled))
+
+    scored = [
+        (c, *_score_mains_candidate(pooled_fr, c, n_harm, snap_frac))
+        for c in _AUTO_MAINS_CANDIDATES
+    ]
+    # Best: most hits, then lowest mean distance among hits, then prefer
+    # the first candidate (50.0) as the least-surprising tie-break.
+    best = min(
+        scored,
+        key=lambda row: (-row[1], row[2], _AUTO_MAINS_CANDIDATES.index(row[0])),
+    )
+    resolved, hits, _mean_dist = best
+
+    # Minimum-evidence gate: require several harmonics to agree, not just
+    # one coincidental match, before trusting the detection at all.
+    min_hits = max(3, int(np.ceil(0.1 * n_harm)))
+    if hits < min_hits:
+        if verbose >= 1:
+            warnings.warn(
+                f'notch_powerline: mains_hz="auto" found no reliable mains '
+                f"signature in this survey's frequency grid (best candidate "
+                f"{resolved:g} Hz matched only {hits}/{n_harm} harmonics "
+                f"within {snap_frac * 100:g}%, need >= {min_hits}). "
+                "Skipping notch -- pass an explicit mains_hz if you know it.",
+                UserWarning,
+                stacklevel=4,
+            )
+        return None
+
+    if verbose >= 1:
+        warnings.warn(
+            f'notch_powerline: mains_hz="auto" resolved to {resolved:g} Hz '
+            f"({hits}/{n_harm} harmonics matched within "
+            f"{snap_frac * 100:g}%) for this survey.",
+            UserWarning,
+            stacklevel=4,
+        )
+    return resolved
+
+
+def _snap_harm_mask(
+    fr: np.ndarray,
+    mains: float,
+    n_harm: int,
+    snap_frac: float,
+    *,
+    verbose: int = 0,
+    station: str = "",
+) -> np.ndarray:
+    """Like _harm_mask, but snap each harmonic to its single nearest sample.
+
+    Used only by the mains_hz="auto" path. Unlike _harm_mask's fixed
+    ``tol_hz`` window (which can match zero or several samples), this
+    always picks at most one sample per harmonic -- the closest one --
+    and only if it is within a relative ``snap_frac`` of the harmonic
+    frequency, so a harmonic with no nearby real sample is left alone
+    instead of corrupting an unrelated frequency far away.
+    """
+    kk = np.arange(1, int(n_harm) + 1, dtype=float)
+    fH = kk * float(mains)
+    m = np.zeros(fr.size, dtype=bool)
+    for k, fh in zip(kk.astype(int), fH):
+        idx = int(np.argmin(np.abs(fr - fh)))
+        d = float(fr[idx] - fh)
+        d_rel = abs(d) / fh
+        if d_rel <= snap_frac:
+            m[idx] = True
+            if verbose >= 2:
+                prefix = f"[{station}] " if station else ""
+                warnings.warn(
+                    f"{prefix}notch_powerline: harmonic {k}x{mains:g}="
+                    f"{fh:g} Hz -> nearest sample {fr[idx]:g} Hz "
+                    f"(D={d:+.2f} Hz, {d_rel * 100:.1f}%)",
+                    UserWarning,
+                    stacklevel=4,
+                )
+    return m
+
+
 def _interp_rows(
     y: np.ndarray,
     good: np.ndarray,
@@ -257,9 +393,10 @@ def _interp_rows(
 def notch_powerline(
     sites: Any,
     *,
-    mains_hz: float = 50.0,  # 50 or 60
+    mains_hz: float | str = 50.0,  # 50, 60, or "auto"
     n_harm: int = 30,
-    tol_hz: float = 0.08,  # Hz window around each harmonic
+    tol_hz: float = 0.08,  # Hz window around each harmonic (numeric mains_hz only)
+    snap_frac: float = 0.01,  # relative window used only when mains_hz="auto"
     mode: str = "interp",  # mask|interp
     also: str = "both",  # z|tipper|both
     inplace: bool = False,
@@ -268,7 +405,34 @@ def notch_powerline(
     strict: bool = False,
     verbose: int = 0,
 ):
-    """Suppress mains-frequency harmonics in impedance and tipper data."""
+    """Suppress mains-frequency harmonics in impedance and tipper data.
+
+    ``mains_hz`` is normally a fixed number (50 or 60): each harmonic
+    ``k * mains_hz`` is matched against real sampled frequencies within a
+    fixed ``+-tol_hz`` window. Real EDI frequency grids are usually
+    log-spaced rather than sampled exactly on multiples of 50/60 Hz, so a
+    harmonic can fall outside that tight window and go un-notched with no
+    warning.
+
+    Pass ``mains_hz="auto"`` to make this data-driven instead: pyCSAMT
+    scores 50 Hz and 60 Hz (the only two real-world AC grid frequencies)
+    against this survey's actual pooled frequency array, resolves to
+    whichever explains more harmonics, then snaps each harmonic to its
+    single nearest real sample (within a relative ``snap_frac`` tolerance,
+    default 1%, deliberately tight -- real AC grids drift far less than
+    that, and a wide window just finds the nearest point on a coarse
+    log-spaced grid regardless of whether it is really mains-related)
+    instead of requiring an exact-window match. If neither 50 Hz nor 60 Hz
+    explains at least a handful of harmonics this tightly, the grid likely
+    has no identifiable mains signature at all (common for coarse,
+    general-purpose sounding schedules with only a few points spread over
+    several decades) -- "auto" then leaves the data untouched rather than
+    guessing and notching an unrelated frequency. With ``verbose>=1`` the
+    resolved fundamental (or the "no reliable signature" outcome) is
+    reported via a warning; with ``verbose>=2`` every individual snapped
+    harmonic is too. Passing a plain number is unaffected by any of this
+    -- output is identical to every previous release.
+    """
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -277,12 +441,39 @@ def notch_powerline(
         verbose=verbose,
     )
 
+    auto = isinstance(mains_hz, str) and mains_hz.strip().lower() == "auto"
+    if isinstance(mains_hz, str) and not auto:
+        raise ValueError(
+            f'mains_hz must be a number or the literal string "auto"; '
+            f"got {mains_hz!r}."
+        )
+
+    if auto:
+        resolved_mains = _resolve_auto_mains(
+            S, n_harm=n_harm, snap_frac=snap_frac, verbose=verbose
+        )
+
+        def _mask(fr: np.ndarray, station: str) -> np.ndarray:
+            if resolved_mains is None:
+                # No reliable mains signature found survey-wide -- leave
+                # every station's data untouched rather than guess.
+                return np.zeros(fr.size, dtype=bool)
+            return _snap_harm_mask(
+                fr, resolved_mains, n_harm, snap_frac, verbose=verbose, station=station
+            )
+    else:
+        resolved_mains = float(mains_hz)
+
+        def _mask(fr: np.ndarray, station: str) -> np.ndarray:
+            return _harm_mask(fr, resolved_mains, n_harm, tol_hz)
+
     def _one(Si):
         ed = next(_iter_items(Si))
+        station = _name(ed, 0)
         Z, z, fr = _get_z_block(ed)
         if Z is None:
             return Si
-        mH = _harm_mask(fr, mains_hz, n_harm, tol_hz)
+        mH = _mask(fr, station)
         z2 = z.copy()
         if mode == "mask":
             z2[mH] = np.nan
@@ -294,7 +485,7 @@ def notch_powerline(
         if also in ("tipper", "both"):
             T, t, ft = _get_t_block(ed)
             if T is not None and t is not None:
-                mt = _harm_mask(ft, mains_hz, n_harm, tol_hz)
+                mt = _mask(ft, station)
                 t2 = t.copy()
                 if mode == "mask":
                     t2[mt] = np.nan
@@ -794,7 +985,7 @@ def shrink_to_group_trend(
 def remove_noise_pipeline(
     sites: Any,
     *,
-    mains_hz: float = 50.0,
+    mains_hz: float | str = 50.0,  # forwarded to notch_powerline; "auto" accepted
     n_harm: int = 30,
     tol_hz: float = 0.08,
     notch_mode: str = "interp",
@@ -2770,6 +2961,20 @@ def nr_qc_harmonic_waterfall(
     D = (Hb - Ha).T  # reduction (dB-like log units)
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
+    if not np.any(np.isfinite(D)):
+        ax.text(
+            0.5,
+            0.5,
+            "no station frequency falls within tol_hz of a "
+            f"{mains_hz:g} Hz harmonic",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            wrap=True,
+        )
+        ax.set_xticks([])
+        ax.set_yticks([])
+        return ax
     im = ax.imshow(
         D,
         aspect="auto",

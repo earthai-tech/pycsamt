@@ -31,6 +31,8 @@ from typing import Union
 
 import numpy as np
 
+from ..api.property import PyCSAMTObject
+
 __all__ = ["Interval", "Borehole"]
 
 PathLike = Union[str, Path]
@@ -42,7 +44,7 @@ PathLike = Union[str, Path]
 
 
 @dataclass
-class Interval:
+class Interval(PyCSAMTObject):
     """A single depth interval in a borehole log.
 
     Parameters
@@ -84,7 +86,7 @@ class Interval:
 # ---------------------------------------------------------------------------
 
 
-class Borehole:
+class Borehole(PyCSAMTObject):
     """Borehole / well log with depth-interval data.
 
     Parameters

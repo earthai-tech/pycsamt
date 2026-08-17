@@ -216,6 +216,7 @@ data/ModEM_inversion_files/
 /project description.md
 /sample.stn
 /AGENTS.md
+/docs/pyCSAMT-v2-Sphinx-Documentation-Guidelines.md
 
 # All field / survey data — may contain confidential site information
 data/*

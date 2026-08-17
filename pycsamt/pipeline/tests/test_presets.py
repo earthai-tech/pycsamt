@@ -67,7 +67,12 @@ def _plot_names(result) -> set[str]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# Each class below has a class-scoped fixture that writes to a fixed
+# shared directory; pytest-xdist's default load-balanced scheduling does
+# not keep a class's tests on one worker, so xdist_group pins each class
+# to a single worker to avoid two workers racing on the same output dir.
 @pytest.mark.skipif(not _DATA_MT.exists(), reason=f"MT data not found at {_DATA_MT}")
+@pytest.mark.xdist_group(name="presets_mt_qc")
 class TestMtQcRealData:
     @pytest.fixture(scope="class")
     def result(self):

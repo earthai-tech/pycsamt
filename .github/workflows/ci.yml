@@ -131,6 +131,7 @@ jobs:
           ${{ matrix.test-paths }}
           -m "not live"
           -n auto
+          --dist=loadgroup
           --timeout=300
           --timeout-method=thread
           --cov-append
@@ -159,6 +160,7 @@ jobs:
           python -m pytest ${{ matrix.test-paths }} \
             -m "not live" \
             -n auto \
+            --dist=loadgroup \
             --timeout=300 \
             --timeout-method=thread \
             --cov-append \

@@ -253,6 +253,7 @@ markers    = [
     "gui: tests that require Qt, Dash, browser, or other UI runtime support",
     "optional_dependency: tests that require an optional dependency group",
     "requires_xarray: tests that require the optional xarray dependency",
+    "xdist_group(name): keep tests sharing external state on one xdist worker",
 ]
 
 [tool.ruff]

@@ -706,6 +706,74 @@ class TestStationPositions:
         pos = _station_positions(eds, spacing_m=250.0)
         assert pos[0] == pytest.approx(0.0)
 
+    def test_latlon_fallback_matches_real_span(self):
+        """Regression for GH report: stations without east/north attrs
+        (the normal case for real EDI-backed Site objects, which only
+        expose lat/lon) must not fall back to index*spacing_m — that
+        silently stretched a ~2050 m AMT line out to ~8000 m."""
+        from types import SimpleNamespace
+
+        from pycsamt.emtools._core import _station_positions
+
+        n = 41
+        span_m = 2050.0
+        lat0 = 10.0
+        lats = [lat0 + i * (span_m / (n - 1)) / 111_000.0 for i in range(n)]
+
+        def _latlon_site(i, lat):
+            head = SimpleNamespace(lat=lat, long=120.0, elev=0.0)
+            edi = SimpleNamespace(
+                station=f"S{i}", get_section=lambda *_a, **_k: head
+            )
+            return SimpleNamespace(edi=edi)
+
+        eds = [_latlon_site(i, lat) for i, lat in enumerate(lats)]
+        pos = _station_positions(eds, spacing_m=200.0)
+
+        # rel=1e-2: the synthetic fixture spaces latitudes using a flat
+        # 111 km/deg constant, while the real UTM projection accounts for
+        # Earth's ellipticity, so a small (~0.3%) difference is expected.
+        assert pos.max() == pytest.approx(span_m, rel=1e-2)
+        assert pos.max() != pytest.approx((n - 1) * 200.0)
+
+    def test_latlon_offsets_are_cached_on_the_edi_object(self):
+        from pycsamt.emtools._core import (
+            _GEO_OFFSET_CACHE_ATTR,
+            _station_latlon_offsets,
+        )
+
+        eds = [
+            _site("S0", east=None, north=None),
+            _site("S1", east=None, north=None),
+        ]
+        # attach lat/lon via get_section, like a real EDI head would.
+        from types import SimpleNamespace
+
+        for ed, lat in zip(eds, (10.0, 10.01)):
+            ed.get_section = lambda *_a, _h=SimpleNamespace(
+                lat=lat, long=120.0, elev=0.0
+            ), **_k: _h
+
+        first = _station_latlon_offsets(eds)
+        assert all(o is not None for o in first)
+        cached = getattr(eds[0], _GEO_OFFSET_CACHE_ATTR, None)
+        assert cached is not None
+
+        # second call reuses the cached (lat, lon)-keyed offset unchanged.
+        second = _station_latlon_offsets(eds)
+        assert second == first
+
+    def test_force_spacing_bypasses_coordinates(self):
+        from pycsamt.emtools._core import _station_positions
+
+        eds = [
+            _site("S0", east=0.0, north=0.0),
+            _site("S1", east=500.0, north=0.0),
+            _site("S2", east=1000.0, north=0.0),
+        ]
+        pos = _station_positions(eds, spacing_m=100.0, force_spacing=True)
+        np.testing.assert_allclose(pos, [0.0, 100.0, 200.0])
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_confidence_profile — return type and axes labels
@@ -892,6 +960,38 @@ class TestPlotConfidenceProfile:
         )
 
         assert len(ax.patches) > 0
+        plt.close("all")
+
+    def _sites_all_bad(self, n=25):
+        """n stations all below the default ci_lo, to exercise low-point
+        label decluttering."""
+        fr = _freqs(10)
+        z_bad = _make_z(fr, 100.0).copy()
+        z_bad[:8] = np.nan  # 8 of 10 bad -> CI = 0.2 < ci_lo
+        return [
+            _FakeSite(f"S{i:02d}", z_bad, fr, east=i * 300.0, north=0.0)
+            for i in range(n)
+        ]
+
+    def test_annotate_low_auto_thins_many_low_points(self):
+        """Regression: with most/all stations flagged low, the default
+        annotate_low=True must not label every single one -- that clutters
+        and duplicates the top station-name axis (GH #76 follow-up)."""
+        sites = self._sites_all_bad(n=25)
+        ax = plot_confidence_profile(sites)
+        assert 0 < len(ax.texts) < 25
+        plt.close("all")
+
+    def test_annotate_low_step_1_labels_every_low_point(self):
+        sites = self._sites_all_bad(n=25)
+        ax = plot_confidence_profile(sites, annotate_low_step=1)
+        assert len(ax.texts) == 25
+        plt.close("all")
+
+    def test_annotate_low_false_disables_low_point_labels(self):
+        sites = self._sites_all_bad(n=25)
+        ax = plot_confidence_profile(sites, annotate_low=False)
+        assert len(ax.texts) == 0
         plt.close("all")
 
     def test_frequency_confidence_table_columns(self):

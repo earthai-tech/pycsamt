@@ -1,0 +1,123 @@
+.. _release_v2_4_0:
+
+-------------
+Version 2.4.0
+-------------
+
+pyCSAMT 2.4.0 |New| |Fix| |Enhancement|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-08-18.*
+
+A focused release around the station confidence profile
+(:func:`~pycsamt.emtools.qc.plot_confidence_profile`,
+:func:`~pycsamt.emtools.qc.station_confidence_table`,
+:func:`~pycsamt.emtools.qc.frequency_confidence_table`): station distance
+is now computed from real survey coordinates instead of silently
+defaulting to a hardcoded spacing, with an opt-in escape hatch for
+surveys whose coordinates cannot be trusted, and decluttered point
+labels when many stations are flagged low-confidence. Thanks to
+`@shahidalishah130-hub <https://github.com/shahidalishah130-hub>`__ for
+reporting this with a clear reproducing figure in `issue #76
+<https://github.com/earthai-tech/pycsamt/issues/76>`__.
+
+Real inter-station distance, not a hardcoded spacing |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The reported symptom: a real ~2050 m AMT line (41 stations, ``L48PLT``)
+plotted with an x-axis stretched out to ~8000 m, even though the station
+names and their order were correct.
+
+The root cause lived in the shared ``_station_positions`` helper. It only
+looked for ``east``/``north`` (or ``x``/``y``, ``easting``/``northing``)
+*attributes* directly on each station object -- but real EDI-backed
+``Site`` objects never carry those; they only expose ``lat``/``lon``
+(read from the EDI ``>HEAD`` section). So that lookup always failed, and
+the function silently fell back to laying every station out at a flat
+``spacing_m`` default of 200 m: 41 stations x 200 m = 8000 m, exactly
+matching the reported figure.
+
+Station distance is now derived from real coordinates whenever at least
+two stations carry usable ones: EDI HEAD latitude/longitude is projected
+to true UTM easting/northing using the existing, dependency-free
+:func:`pycsamt.gis.utils.ll_to_utm` (no GDAL/pyproj required), then
+projected onto the bearing from the first to the last valid station --
+real chainage, the same convention already used for station ordering
+elsewhere in the project. An earlier internal draft of this fix used a
+naive equirectangular approximation (multiplying absolute longitude by a
+per-point ``cos(lat)`` factor); a regression test comparing against a
+known span caught a ~6% distortion from that shortcut before it shipped,
+which is why the final fix goes through a real UTM projection instead.
+Each station's projected offset is cached on its underlying EDI object
+(keyed by the exact lat/lon it was derived from), so repeated calls
+across a session -- e.g. several ``plot_confidence_profile`` calls on the
+same survey, each of which gets a freshly re-wrapped ``Sites`` instance
+-- do not re-parse the header or redo the projection every time.
+``spacing_m`` is now only ever a fallback: for individual stations
+without usable coordinates, or for the whole line when none have any.
+
+Two new opt-in controls |New| |Enhancement|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Force uniform spacing.** Real coordinates are not always trustworthy
+-- a bad GPS fix, a copy-paste error in the header, or a placeholder
+value can all corrupt station positions. ``force_spacing=True`` on
+:func:`~pycsamt.emtools.qc.plot_confidence_profile`,
+:func:`~pycsamt.emtools.qc.station_confidence_table`, and
+:func:`~pycsamt.emtools.qc.frequency_confidence_table` skips coordinate
+lookup entirely and lays every station out at uniform ``spacing_m``
+steps, so a user who knows their coordinates are unreliable can trust
+their own spacing value instead.
+
+**Decluttered low-confidence labels.** ``plot_confidence_profile``
+already drew a rotated station-name label above every point below
+``ci_lo`` (``annotate_low=True``) on top of the station names already on
+the top axis. For a survey where most stations are flagged low --
+exactly the ``L48PLT`` case in the original report -- that meant nearly
+every point got its own label, stacked on top of the top-axis labels.
+The new ``annotate_low_step`` thins these the same way
+``station_label_step`` already thins the top axis: left at its default
+``None``, it auto-thins once more than 18 stations are flagged low;
+``annotate_low_step=1`` restores the previous label-every-point
+behaviour; ``annotate_low=False`` turns per-point labels off entirely.
+
+Added
+~~~~~
+
+* |New| **Low-confidence point label decluttering** --
+  ``plot_confidence_profile`` gains ``annotate_low_step``, analogous to
+  ``station_label_step`` but applied only to the (typically much smaller)
+  subset of points below ``ci_lo``.
+
+Fixed
+~~~~~
+
+* |Fix| **Station confidence-profile distance defaulted to a hardcoded
+  200 m spacing** -- station distance is now derived from real EDI
+  coordinates (east/north, or lat/lon projected through a real UTM
+  transform) whenever at least two stations carry usable ones, cached
+  per EDI object. ``spacing_m`` is only ever a per-station fallback.
+
+Changed
+~~~~~~~
+
+* |Enhancement| **User-controlled station spacing** --
+  ``station_confidence_table``, ``frequency_confidence_table``, and
+  ``plot_confidence_profile`` gain a ``force_spacing`` parameter to
+  bypass coordinate lookup entirely and trust a user-supplied
+  ``spacing_m`` instead.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+This release changes default output for real surveys. Any call to
+``plot_confidence_profile``, ``station_confidence_table``, or
+``frequency_confidence_table`` on stations that carry lat/lon but no
+``east``/``north`` attributes -- the normal case for ordinary EDI-backed
+``Site`` objects -- previously plotted a distance axis stretched out by a
+uniform 200 m-per-station default; it now plots the real inter-station
+distance. This is a correction, not a behaviour change to preserve:
+station names, order, and confidence values are unaffected, only the
+x-axis distance scale. ``force_spacing`` and ``annotate_low_step`` are
+both new, opt-in parameters with defaults that keep every other existing
+call unaffected.

@@ -507,6 +507,7 @@ def station_confidence_table(
     phase_jump_tolerance_deg: float = 90.0,
     spatial_tolerance_log10: float = 0.60,
     spacing_m: float = 200.0,
+    force_spacing: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -520,6 +521,16 @@ def station_confidence_table(
     trust indicators: finite data coverage, tensor uncertainty when error
     tensors exist, off-diagonal consistency, diagonal leakage, phase
     smoothness, and spatial coherence with neighboring stations.
+
+    ``distance_m`` in the returned table is the real inter-station
+    distance projected along the survey line, derived from EDI
+    coordinates (east/north, or lat/lon as a fallback) whenever at least
+    two stations carry usable coordinates. ``spacing_m`` is only used as
+    a uniform per-station fallback for stations without coordinates, or
+    for the whole line when no station has any. Pass
+    ``force_spacing=True`` to bypass coordinate lookup entirely and lay
+    every station out at uniform ``spacing_m`` steps -- e.g. when the
+    available coordinates are known to be unreliable.
     """
     method = str(method).lower()
     if method not in {"presence", "composite"}:
@@ -534,7 +545,9 @@ def station_confidence_table(
         verbose=verbose,
     )
     items = list(_iter_items(S))
-    positions = _station_positions(items, spacing_m)
+    positions = _station_positions(
+        items, spacing_m, force_spacing=force_spacing
+    )
     rows: list[dict[str, Any]] = []
     med_logrho = []
     for i, ed in enumerate(items):
@@ -677,6 +690,7 @@ def frequency_confidence_table(
     phase_jump_tolerance_deg: float = 90.0,
     spatial_tolerance_log10: float = 0.60,
     spacing_m: float = 200.0,
+    force_spacing: bool = False,
     recursive: bool = True,
     on_dup: str = "replace",
     strict: bool = False,
@@ -691,6 +705,9 @@ def frequency_confidence_table(
     finite impedance-tensor availability.  ``method="composite"`` combines
     coverage, tensor uncertainty, off-diagonal consistency, diagonal leakage,
     phase smoothness, and same-frequency spatial coherence.
+
+    See :func:`station_confidence_table` for how ``distance_m``,
+    ``spacing_m``, and ``force_spacing`` interact.
     """
     method = str(method).lower()
     if method not in {"presence", "composite"}:
@@ -705,7 +722,9 @@ def frequency_confidence_table(
         verbose=verbose,
     )
     items = list(_iter_items(S))
-    positions = _station_positions(items, spacing_m)
+    positions = _station_positions(
+        items, spacing_m, force_spacing=force_spacing
+    )
     rows: list[dict[str, Any]] = []
     for station_index, ed in enumerate(items):
         station = _name(ed, station_index)
@@ -884,6 +903,7 @@ def plot_confidence_profile(
     shade_recoverable: bool = True,
     shade_mode: str = "score",
     annotate_low: bool = True,
+    annotate_low_step: int | None = None,
     station_labels: bool = True,
     station_label_step: int | None = None,
     show_errorbars: bool = True,
@@ -891,6 +911,7 @@ def plot_confidence_profile(
     ylim: tuple[float, float] | None = None,
     weights: dict[str, float] | None = None,
     spacing_m: float = 200.0,
+    force_spacing: bool = False,
     figsize: tuple[float, float] = (9.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -925,6 +946,20 @@ def plot_confidence_profile(
         ``"score"`` draws compact vertical intervals tied to each station
         point. ``"full"`` preserves the older full-height station shading.
         ``"none"`` disables station interval shading.
+    annotate_low : bool
+        If ``True``, draw a rotated station-name label above each point
+        below ``ci_lo``. Set ``False`` to turn these off entirely -- e.g.
+        when ``station_labels`` (the top-axis station ticks) already
+        identifies every station and the per-point labels would just
+        duplicate it.
+    annotate_low_step : int or None
+        Gap between labeled low-confidence points, analogous to
+        ``station_label_step`` but applied only to the (typically much
+        smaller) subset of points below ``ci_lo``. ``None`` auto-thins
+        once there are more than 18 low points, the same threshold used
+        for the top axis, so a survey where most stations are flagged
+        doesn't end up with every single one labeled. ``1`` forces every
+        low point to be labeled regardless of count.
     station_label_step : int or None
         Gap between visible station labels on the top axis. ``None`` chooses
         a readable spacing automatically while keeping all station tick marks.
@@ -938,8 +973,16 @@ def plot_confidence_profile(
     ylim : tuple of float or None
         Explicit y-axis limits. Overrides ``smart_ylim`` when provided.
     spacing_m : float
-        Fallback station spacing [m] used when no coordinate metadata is
-        available on the EDI objects.
+        The x-axis is real inter-station distance projected along the
+        survey line (from EDI east/north, or lat/lon as a fallback)
+        whenever at least two stations carry usable coordinates.
+        ``spacing_m`` is only used as a uniform fallback for stations
+        without coordinates, or for the whole line when none have any.
+    force_spacing : bool
+        If ``True``, skip coordinate lookup entirely and lay every
+        station out at uniform ``spacing_m`` steps -- e.g. when the
+        available coordinates are known to be unreliable and a
+        user-supplied spacing should be trusted instead.
     figsize : tuple
         Figure size when a new figure is created.
     recursive, on_dup, strict, verbose
@@ -963,6 +1006,7 @@ def plot_confidence_profile(
         method=method,
         weights=weights,
         spacing_m=spacing_m,
+        force_spacing=force_spacing,
         recursive=recursive,
         on_dup=on_dup,
         strict=strict,
@@ -1085,12 +1129,24 @@ def plot_confidence_profile(
             linewidths=1.0,
         )
     if annotate_low:
-        for x, y, name in zip(xs, ys, names):
-            if y < ci_lo:
+        low_idx = np.flatnonzero(ys < ci_lo)
+        if low_idx.size:
+            if annotate_low_step is None:
+                low_step = (
+                    max(1, int(np.ceil(low_idx.size / 12)))
+                    if low_idx.size > 18
+                    else 1
+                )
+            else:
+                low_step = max(1, int(annotate_low_step))
+            keep = low_idx[::low_step]
+            if low_idx[-1] not in keep:
+                keep = np.r_[keep, low_idx[-1]]
+            for i in keep:
                 ax.text(
-                    x,
-                    max(y + 0.04, 0.04),
-                    name,
+                    xs[i],
+                    max(ys[i] + 0.04, 0.04),
+                    names[i],
                     ha="center",
                     va="bottom",
                     rotation=90,

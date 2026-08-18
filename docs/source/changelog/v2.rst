@@ -10,6 +10,70 @@ each release.
 
 ----
 
+.. _changelog-2-4-0:
+
+2.4.0 |New| |Fix| |Enhancement|
+-------------------------------
+
+*Released 2026-08-18.*
+
+A focused patch-style minor release: the station confidence profile
+(``plot_confidence_profile``, ``station_confidence_table``,
+``frequency_confidence_table``) now computes real inter-station distance
+from EDI coordinates via a dependency-free UTM projection, instead of
+silently defaulting every station to a hardcoded 200 m spacing whenever
+east/north attributes were absent -- which they always are for ordinary
+EDI-backed ``Site`` objects. A new opt-in ``force_spacing`` parameter
+lets callers bypass coordinates entirely for surveys with unreliable
+positioning, and low-confidence point labels now auto-declutter instead
+of stacking one per station.
+
+Added
+~~~~~
+
+* |New| **Low-confidence point label decluttering** --
+  ``plot_confidence_profile`` gains ``annotate_low_step``, which thins the
+  rotated station-name labels drawn above points below ``ci_lo`` the same
+  way ``station_label_step`` already thins the top station axis. Left at
+  its default ``None``, it auto-thins once more than 18 stations are
+  flagged low, so a survey where most stations are below threshold no
+  longer plots an overlapping label at every single point;
+  ``annotate_low_step=1`` restores the previous label-every-point
+  behaviour.
+
+Fixed
+~~~~~
+
+* |Fix| **Station confidence-profile distance defaulted to a hardcoded
+  200 m spacing** -- :func:`~pycsamt.emtools.qc.plot_confidence_profile`,
+  :func:`~pycsamt.emtools.qc.station_confidence_table`, and
+  :func:`~pycsamt.emtools.qc.frequency_confidence_table` derived station
+  distance only from ``east``/``north``/``x``/``y`` attributes, which real
+  EDI-backed ``Site`` objects never carry (they expose ``lat``/``lon``
+  instead). Every real survey therefore silently fell back to
+  ``index * spacing_m``, stretching a real ~2050 m AMT line out to a plotted
+  ~8000 m. Distance is now derived from real station coordinates: EDI HEAD
+  latitude/longitude projected to true UTM easting/northing via the
+  existing, dependency-free :func:`~pycsamt.gis.utils.ll_to_utm`, whenever
+  at least two stations carry usable coordinates, and cached per EDI object
+  so repeated calls on the same survey don't re-project. ``spacing_m`` is
+  now only ever a per-station fallback for stations without usable
+  coordinates. Thanks to `@shahidalishah130-hub
+  <https://github.com/shahidalishah130-hub>`__ for the clear report with a
+  reproducing figure (`#76 <https://github.com/earthai-tech/pycsamt/issues/76>`__).
+
+Changed
+~~~~~~~
+
+* |Enhancement| **User-controlled station spacing** -- ``station_confidence_table``,
+  ``frequency_confidence_table``, and ``plot_confidence_profile``
+  (:mod:`pycsamt.emtools.qc`) gain a ``force_spacing`` parameter: when
+  ``True``, coordinate lookup is skipped entirely and every station is laid
+  out at uniform ``spacing_m`` steps, for surveys whose EDI coordinates are
+  known to be unreliable.
+
+----
+
 .. _changelog-2-3-0:
 
 2.3.0 |New| |Fix| |API Change| |Docs| |Build|

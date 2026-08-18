@@ -33,21 +33,22 @@ Latest release
 
 .. _changelog-latest:
 
-**2.3.0** — *2026-08-14* — adds a new :mod:`pycsamt.geology` package
-(lithology classification, pluggable rock-property providers, and
-structural-geology primitives), split out of :mod:`pycsamt.interp` with
-backward-compatible re-exports. Deep-fills the lithology, petrophysics, and
-monitoring pages of the interpretation user guide, fixing several stale
-docstring examples and a real ``RockDatabase`` iteration bug along the way.
-Running a real legacy CSAMT line end to end through AVG-to-EDI conversion
-and the processing pipeline surfaced and fixed six further bugs, plus a
-packaging gap that dropped the fallback EPSG table from installed wheels.
-Also adds four method-aware pipeline presets with real near-field
-correction and data-driven QC, a branded dashboard report, and data-driven
-power-line-harmonic detection, alongside a full rewrite of the
-config-driven-pipeline tutorial and CLI reference that surfaced three
-further bugs. :ref:`Full 2.3.0 entry <changelog-2-3-0>` · :ref:`Release
-notes <release_v2_3_0>`.
+**2.4.0** — *2026-08-18* — the station confidence profile
+(:func:`~pycsamt.emtools.qc.plot_confidence_profile`,
+:func:`~pycsamt.emtools.qc.station_confidence_table`,
+:func:`~pycsamt.emtools.qc.frequency_confidence_table`) now computes real
+inter-station distance from EDI coordinates via a dependency-free UTM
+projection, instead of silently defaulting every station to a hardcoded
+200 m spacing whenever east/north attributes were absent — which they
+always are for ordinary EDI-backed ``Site`` objects. Adds an opt-in
+``force_spacing`` parameter to bypass coordinates entirely for surveys
+with unreliable positioning, and ``annotate_low_step`` to auto-declutter
+low-confidence point labels on surveys where most stations are flagged.
+Thanks to `@shahidalishah130-hub
+<https://github.com/shahidalishah130-hub>`__ for the report
+(`#76 <https://github.com/earthai-tech/pycsamt/issues/76>`__).
+:ref:`Full 2.4.0 entry <changelog-2-4-0>` · :ref:`Release notes
+<release_v2_4_0>`.
 
 .. toctree::
    :maxdepth: 1

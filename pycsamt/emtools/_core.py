@@ -294,15 +294,104 @@ def _get_t_block(
     return T, t, fr
 
 
-def _station_positions(eds, spacing_m: float = 200.0) -> np.ndarray:
+_GEO_OFFSET_CACHE_ATTR = "_pycsamt_utm_offset_m"
+_WGS84_ELLIPSOID_ID = 23  # ELLIPSOIDS id used across pycsamt.gis
+
+
+def _station_latlon_offsets(
+    eds,
+) -> list[tuple[float, float] | None]:
+    """Return real (easting_m, northing_m) offsets from EDI HEAD lat/lon.
+
+    Uses the dependency-free UTM projection in
+    :func:`pycsamt.gis.utils.ll_to_utm` (no GDAL/pyproj required), so it
+    gives true metric station coordinates rather than a hardcoded or
+    reference-relative approximation. Each result is cached on the
+    underlying EDI object (keyed by the exact lat/lon it was derived
+    from) so repeated calls -- e.g. from successive
+    ``plot_confidence_profile``/``station_confidence_table`` calls on the
+    same survey, which each get a freshly re-wrapped ``Sites`` instance --
+    do not re-parse the EDI header or redo the projection every time. The
+    cache self-invalidates whenever a station's coordinates change.
+
+    Returns one ``(easting, northing)`` (or ``None``) per input station,
+    all in the *same* UTM zone. If the finite coordinates straddle more
+    than one UTM zone, eastings would not be directly comparable, so
+    every entry is returned as ``None`` and the caller should fall back
+    to uniform spacing instead.
+    """
+    from ..gis.utils import ll_to_utm
+    from ..site.utils import get_coords
+
+    offsets: list[tuple[float, float] | None] = []
+    zones: list[str | None] = []
+    for ed in eds:
+        edi = getattr(ed, "edi", ed)
+        try:
+            c = get_coords(edi)
+            lat, lon = float(c.lat), float(c.lon)
+        except Exception:
+            lat, lon = float("nan"), float("nan")
+
+        if not (np.isfinite(lat) and np.isfinite(lon)):
+            offsets.append(None)
+            zones.append(None)
+            continue
+
+        cached = getattr(edi, _GEO_OFFSET_CACHE_ATTR, None)
+        if cached is not None and cached[0] == lat and cached[1] == lon:
+            _, _, east, north, zone = cached
+        else:
+            try:
+                zone, east, north = ll_to_utm(_WGS84_ELLIPSOID_ID, lat, lon)
+            except Exception:
+                offsets.append(None)
+                zones.append(None)
+                continue
+            try:
+                setattr(
+                    edi,
+                    _GEO_OFFSET_CACHE_ATTR,
+                    (lat, lon, east, north, zone),
+                )
+            except Exception:
+                pass
+        offsets.append((east, north))
+        zones.append(zone)
+
+    if len({z for z in zones if z is not None}) > 1:
+        return [None] * len(offsets)
+    return offsets
+
+
+def _station_positions(
+    eds,
+    spacing_m: float = 200.0,
+    *,
+    force_spacing: bool = False,
+) -> np.ndarray:
     """
     Return station positions [m] projected along the survey line.
 
-    Tries ``east``/``north`` (or ``x``/``y``, ``easting``/``northing``)
-    attributes on each EDI object and projects onto the bearing from the
-    first to the last valid station.  Falls back to integer spacing when
-    no coordinate metadata is found.
+    By default, computes real inter-station distances: it tries
+    ``east``/``north`` (or ``x``/``y``, ``easting``/``northing``)
+    attributes on each EDI object first, then falls back to a local-metre
+    projection of the EDI HEAD ``lat``/``lon`` coordinates (cached per EDI
+    object, see :func:`_station_latlon_offsets`). Either way, positions are
+    the projection of each station onto the bearing from the first to the
+    last valid station -- i.e. real chainage, not a hardcoded step.
+
+    ``spacing_m`` is only used as a uniform per-station fallback, for
+    stations that have no usable coordinates (or, if none at all do, for
+    the whole line). Set ``force_spacing=True`` to skip coordinate lookup
+    entirely and always lay stations out at uniform ``spacing_m`` steps --
+    e.g. when the available coordinates are known to be unreliable and a
+    user-supplied spacing should be trusted instead.
     """
+    eds = list(eds)
+    if force_spacing:
+        return np.arange(len(eds), dtype=float) * spacing_m
+
     coords = []
     for ed in eds:
         e = None
@@ -326,6 +415,15 @@ def _station_positions(eds, spacing_m: float = 200.0) -> np.ndarray:
         coords.append((e, n) if e is not None and n is not None else None)
 
     valid = [(i, c) for i, c in enumerate(coords) if c is not None]
+    if len(valid) < 2:
+        latlon_offsets = _station_latlon_offsets(eds)
+        latlon_valid = [
+            (i, c) for i, c in enumerate(latlon_offsets) if c is not None
+        ]
+        if len(latlon_valid) >= 2:
+            coords = latlon_offsets
+            valid = latlon_valid
+
     if len(valid) < 2:
         return np.arange(len(coords), dtype=float) * spacing_m
 

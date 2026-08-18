@@ -1,0 +1,96 @@
+"""AFMAG-family scientific adapter contracts.
+
+The package separates historical comparator AFMAG from modern tensor
+AFMAG/AirMt instead of collapsing distinct response families into one schema.
+No proprietary native delivery parser is assumed.
+"""
+
+from .adapter import (
+    AFMAGValidationError,
+    build_airmt_dataset,
+    build_airmt_emtf,
+    build_airmt_line,
+    build_airmt_record,
+    build_original_afmag_dataset,
+    build_original_afmag_emtf,
+    build_original_afmag_line,
+    build_original_afmag_record,
+    compute_airmt_amplification_parameter,
+    validate_airmt_transfer_function,
+    validate_original_afmag_tilt,
+)
+from .base import (
+    AFMAGReferenceStation,
+    AirMtSystemSpec,
+    OriginalAFMAGSystemSpec,
+)
+from .constants import (
+    AFMAG_AP_CODE,
+    AFMAG_AP_TAG,
+    AFMAG_AP_UNITS,
+    AFMAG_ORIGINAL_COIL_COUNT,
+    AFMAG_ORIGINAL_COIL_SEPARATION_DEG,
+    AFMAG_ORIGINAL_COIL_TILT_DEG,
+    AFMAG_ORIGINAL_HISTORICAL_BAND_HZ,
+    AFMAG_ORIGINAL_TYPICAL_FREQUENCIES_HZ,
+    AFMAG_TENSOR_CODE,
+    AFMAG_TENSOR_COMPONENTS,
+    AFMAG_TENSOR_INPUT_CHANNELS,
+    AFMAG_TENSOR_NOMINAL_SAMPLING_RATE_HZ,
+    AFMAG_TENSOR_OUTPUT_CHANNELS,
+    AFMAG_TENSOR_PRACTICAL_FREQUENCY_RANGE_HZ,
+    AFMAG_TENSOR_REFERENCE_CHANNELS,
+    AFMAG_TENSOR_TAG,
+    AFMAG_TENSOR_TYPICAL_FREQUENCY_COUNT,
+    AFMAG_TENSOR_UNITS,
+    AFMAG_TILT_CODE,
+    AFMAG_TILT_DEFAULT_UNITS,
+    AFMAG_TILT_TAG,
+)
+from .datatypes import (
+    AFMAG_AP_DEFINITION,
+    AFMAG_TILT_DEFINITION,
+    register_afmag_datatypes,
+)
+
+__all__ = [
+    "AFMAGValidationError",
+    "AFMAG_TILT_CODE",
+    "AFMAG_TILT_TAG",
+    "AFMAG_TILT_DEFAULT_UNITS",
+    "AFMAG_ORIGINAL_TYPICAL_FREQUENCIES_HZ",
+    "AFMAG_ORIGINAL_HISTORICAL_BAND_HZ",
+    "AFMAG_ORIGINAL_COIL_COUNT",
+    "AFMAG_ORIGINAL_COIL_TILT_DEG",
+    "AFMAG_ORIGINAL_COIL_SEPARATION_DEG",
+    "AFMAG_TENSOR_CODE",
+    "AFMAG_TENSOR_TAG",
+    "AFMAG_TENSOR_INPUT_CHANNELS",
+    "AFMAG_TENSOR_OUTPUT_CHANNELS",
+    "AFMAG_TENSOR_COMPONENTS",
+    "AFMAG_TENSOR_UNITS",
+    "AFMAG_TENSOR_PRACTICAL_FREQUENCY_RANGE_HZ",
+    "AFMAG_TENSOR_TYPICAL_FREQUENCY_COUNT",
+    "AFMAG_TENSOR_NOMINAL_SAMPLING_RATE_HZ",
+    "AFMAG_TENSOR_REFERENCE_CHANNELS",
+    "AFMAG_AP_CODE",
+    "AFMAG_AP_TAG",
+    "AFMAG_AP_UNITS",
+    "AFMAG_TILT_DEFINITION",
+    "AFMAG_AP_DEFINITION",
+    "register_afmag_datatypes",
+    "OriginalAFMAGSystemSpec",
+    "AirMtSystemSpec",
+    "AFMAGReferenceStation",
+    "compute_airmt_amplification_parameter",
+    "validate_airmt_transfer_function",
+    "validate_original_afmag_tilt",
+    "build_airmt_emtf",
+    "build_airmt_record",
+    "build_airmt_line",
+    "build_airmt_dataset",
+    "build_original_afmag_emtf",
+    "build_original_afmag_record",
+    "build_original_afmag_line",
+    "build_original_afmag_dataset",
+]

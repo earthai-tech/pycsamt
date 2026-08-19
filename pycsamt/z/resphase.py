@@ -391,8 +391,10 @@ class ResPhase(BaseEM):
         PhaseError
             If φ contains complex values.
         ZError
-            If shapes are inconsistent, values are non-finite, or
-            frequencies are not strictly positive.
+            If shapes are inconsistent, ρ or φ contain +/-inf, or
+            frequencies are not strictly positive. NaN entries in ρ/φ
+            are tolerated (missing component) and propagate to NaN in
+            the reconstructed **Z**.
 
         Notes
         -----
@@ -432,7 +434,12 @@ class ResPhase(BaseEM):
             raise ZError("freq must be 1-D with length equal to ρ.shape[0]")
         if np.any(f <= 0.0) or not np.all(np.isfinite(f)):
             raise ZError("freq must be finite and > 0")
-        if not np.all(np.isfinite(rho)) or not np.all(np.isfinite(phi)):
+        # NaN in rho/phi means "component not measured" (e.g. an EDI
+        # RHOxx/PHSxx block absent or holding the >HEAD EMPTY sentinel)
+        # and is legitimate real-world data -- it propagates to a NaN Z
+        # entry below, mirroring how compute_resistivity_phase() already
+        # tolerates NaN Z. Only +/-inf indicates genuinely malformed input.
+        if np.any(np.isinf(rho)) or np.any(np.isinf(phi)):
             raise ZError("ρ and φ must be finite")
 
         self._resistivity = rho
@@ -467,9 +474,9 @@ class ResPhase(BaseEM):
                 f"{rho_err.shape!r} vs {rho.shape!r}, "
                 f"{phi_err.shape!r} vs {phi.shape!r}"
             )
-        if not np.all(np.isfinite(rho_err)) or not np.all(
-            np.isfinite(phi_err)
-        ):
+        # As above: NaN means "uncertainty unavailable" for that
+        # component, not a caller error -- only +/-inf is rejected.
+        if np.any(np.isinf(rho_err)) or np.any(np.isinf(phi_err)):
             raise ZError("ρ_err and φ_err must be finite")
         if np.any(rho_err < 0) or np.any(phi_err < 0):
             raise ZError("ρ_err and φ_err must be non-negative")

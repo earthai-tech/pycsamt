@@ -267,8 +267,8 @@ class Occam1DResult(Occam1DBase):
         path = self._one_optional(kind)
         if path is None:
             raise FileNotFoundError(
-                f"Run directory has no recognized Occam1D {kind} file: "
-                f"{self.workdir}"
+                f"Run directory has no recognized Occam1D {kind.value} "
+                f"file: {self.workdir}"
             )
         return path
 
@@ -279,7 +279,7 @@ class Occam1DResult(Occam1DBase):
             return None
         if len(paths) > 1:
             names = ", ".join(path.name for path in paths)
-            message = f"Multiple Occam1D {kind} files found: {names}."
+            message = f"Multiple Occam1D {kind.value} files found: {names}."
             if self.strict:
                 raise ValueError(message)
             self.add_warning(message + f" Using {paths[0].name}.")

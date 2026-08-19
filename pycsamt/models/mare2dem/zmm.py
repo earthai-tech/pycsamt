@@ -451,8 +451,8 @@ def make_mt_data_from_stations(
             zone=zone_int,
             south_hemi=sh,
         )
-        s._easting = float(e)
-        s._northing = float(n)
+        s._easting = float(e[0])
+        s._northing = float(n[0])
 
     northings = np.array([s._northing for s in stations])
     eastings = np.array([s._easting for s in stations])

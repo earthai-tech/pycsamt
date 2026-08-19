@@ -502,6 +502,17 @@ def notch_powerline(
 # ------------------------- log-frequency smoothing ----------------------- #
 
 
+def _convolve_same(a: np.ndarray, w: np.ndarray) -> np.ndarray:
+    # np.convolve(..., mode="same") returns length max(len(a), len(w)),
+    # not len(a), whenever the kernel is longer than the signal. Pad
+    # explicitly and use "valid" so the output always matches len(a).
+    pad = len(w) - 1
+    left = pad // 2
+    right = pad - left
+    ap = np.pad(a, (left, right), mode="edge")
+    return np.convolve(ap, w, mode="valid")
+
+
 def _smooth1d(y: np.ndarray, win: int, kind: str) -> np.ndarray:
     if win <= 1:
         return y
@@ -510,12 +521,11 @@ def _smooth1d(y: np.ndarray, win: int, kind: str) -> np.ndarray:
         w = np.convolve(w, w, mode="full")
     w = w / np.sum(w)
     if y.ndim == 1:
-        yy = np.convolve(y, w, mode="same")
-        return yy
+        return _convolve_same(y, w)
     # apply per column
     out = np.empty_like(y)
     for j in range(y.shape[1]):
-        out[:, j] = np.convolve(y[:, j], w, mode="same")
+        out[:, j] = _convolve_same(y[:, j], w)
     return out
 
 

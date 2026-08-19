@@ -577,7 +577,11 @@ def ts_to_edi(
     )
     sid = ed.station or "SITE"
     name = out or f"{sid}_ts.edi"
-    path = ed.write(new_edifn=name, savepath=savepath)
+    # This Z is freshly computed from spectra, not sourced from a legacy
+    # instrument that used 0.0 as its own "no data" marker -- an exact
+    # zero here is a legitimate value, not evidence of a missing
+    # measurement, so it must not collapse to the EDI EMPTY sentinel.
+    path = ed.write(new_edifn=name, savepath=savepath, preserve_zero=True)
     if verbose:
         logger.info("EDI written: %s", path)
     return path

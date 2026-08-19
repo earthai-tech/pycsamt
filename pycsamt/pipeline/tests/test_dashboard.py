@@ -288,6 +288,13 @@ pytestmark_willy = pytest.mark.skipif(
 
 
 @pytestmark_willy
+# The class-scoped fixture below writes to a fixed shared directory
+# (_OUTDIR); pytest-xdist's default load-balanced scheduling does not keep
+# a class's tests on one worker, so two workers running the fixture at
+# once for different tests in this class raced on the same files
+# (CI: py3.9 shard, dashboard.html/report.html missing). xdist_group pins
+# the whole class to a single worker.
+@pytest.mark.xdist_group(name="dashboard_real_data")
 class TestDashboardRealData:
     @pytest.fixture(scope="class")
     def dashboard_result(self):

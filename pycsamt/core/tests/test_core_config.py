@@ -8,6 +8,14 @@ import pytest
 from pycsamt.core import config as cfg
 
 
+@pytest.fixture(autouse=True)
+def _reset_global_config():
+    """Keep configuration mutations from leaking to later test modules."""
+    cfg.reset_config()
+    yield
+    cfg.reset_config()
+
+
 def test_public_api_all():
     expected = {
         "StationNamePolicy",

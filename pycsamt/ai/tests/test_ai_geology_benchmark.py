@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 import pytest
-import yaml
 
 from pycsamt.ai.geology import (
     ID_BENCHMARK_FAMILIES,
@@ -16,12 +13,107 @@ from pycsamt.ai.geology import (
     generate_benchmark_geology,
 )
 
-ROOT = Path(__file__).resolve().parents[3]
-CONFIG = yaml.safe_load(
-    (ROOT / "DUHI-paper" / "configs" / "geology_v1.yaml").read_text(
-        encoding="utf-8"
-    )
-)
+# A self-contained stand-in for the frozen DUHI-paper geology_v1.yaml
+# config (that file lives in the private, gitignored DUHI-paper/ tree and
+# is not distributed with the package). Same schema and parameter ranges
+# generate_benchmark_geology() expects, so the public contract is tested
+# without depending on paper-reproduction material outside the repo.
+CONFIG = {
+    "base_layered": {
+        "cover_resistivity_ohm_m": [20.0, 80.0],
+        "host_resistivity_ohm_m": [90.0, 350.0],
+        "basement_resistivity_ohm_m": [600.0, 1500.0],
+        "first_interface_depth_m": [300.0, 510.0],
+        "second_interface_depth_m": [900.0, 1200.0],
+        "interface_length_x_m": [600.0, 1800.0],
+        "interface_length_z_m": 300.0,
+        "minimum_thickness_m": 150.0,
+    },
+    "id_families": {
+        "layered": {
+            "interface_relief_std_m": [15.0, 90.0],
+        },
+        "intrusion": {
+            "center_x_fraction": [0.30, 0.70],
+            "center_depth_m": [450.0, 1050.0],
+            "radius_x_m": [450.0, 1050.0],
+            "radius_z_m": [150.0, 360.0],
+            "resistivity_ohm_m": [3.0, 18.0],
+            "dip_deg": [-35.0, 35.0],
+            "transition_fraction": [0.05, 0.25],
+        },
+        "intrusion_halo": {
+            "center_x_fraction": [0.30, 0.70],
+            "center_depth_m": [450.0, 1050.0],
+            "halo_radius_x_m": [750.0, 1350.0],
+            "halo_radius_z_m": [300.0, 540.0],
+            "halo_resistivity_ohm_m": [18.0, 60.0],
+            "core_radius_fraction": [0.40, 0.65],
+            "core_resistivity_ohm_m": [2.0, 10.0],
+            "dip_deg": [-35.0, 35.0],
+        },
+        "dipping_fault": {
+            "dip_deg": [45.0, 75.0],
+            "trace_x_fraction": [0.30, 0.60],
+            "throw_cells": [1, 3],
+        },
+        "multiple_body": {
+            "body_count": [2, 4],
+            "radius_x_m": [240.0, 480.0],
+            "radius_z_m": [120.0, 270.0],
+            "conductive_resistivity_ohm_m": [3.0, 20.0],
+            "resistive_resistivity_ohm_m": [1600.0, 3000.0],
+        },
+        "correlated_heterogeneous": {
+            "correlation_length_x_m": [600.0, 1800.0],
+            "correlation_length_z_m": [150.0, 450.0],
+            "log10_resistivity_mean": [1.7, 2.5],
+            "log10_resistivity_std": [0.25, 0.55],
+        },
+    },
+    "ood_families": {
+        "extreme_dip": {
+            "dip_deg": [20.0, 35.0],
+            "trace_x_fraction": [0.25, 0.65],
+            "throw_cells": [2, 4],
+        },
+        "deep_small_conductor": {
+            "center_x_fraction": [0.25, 0.75],
+            "center_depth_m": [1350.0, 1650.0],
+            "radius_x_m": [150.0, 300.0],
+            "radius_z_m": [90.0, 180.0],
+            "resistivity_ohm_m": [1.0, 6.0],
+        },
+        "overlapping_multibody": {
+            "body_count": [3, 5],
+            "centre_spread_x_m": 360.0,
+            "centre_spread_z_m": 180.0,
+            "radius_x_m": [450.0, 750.0],
+            "radius_z_m": [210.0, 390.0],
+            "resistivity_ohm_m": [2.0, 25.0],
+        },
+        "high_contrast_halo": {
+            "center_x_fraction": [0.30, 0.70],
+            "center_depth_m": [450.0, 1050.0],
+            "halo_radius_x_m": [900.0, 1500.0],
+            "halo_radius_z_m": [360.0, 600.0],
+            "halo_resistivity_ohm_m": [5.0, 15.0],
+            "core_radius_fraction": [0.35, 0.55],
+            "core_resistivity_ohm_m": [0.3, 1.5],
+            "dip_deg": [-45.0, 45.0],
+        },
+        "anisotropic_correlation": {
+            "correlation_length_z_m": [120.0, 240.0],
+            "horizontal_vertical_ratio": [8.0, 14.0],
+            "log10_resistivity_mean": [1.7, 2.5],
+            "log10_resistivity_std": [0.35, 0.65],
+        },
+        "rugged_interfaces": {
+            "interface_relief_std_m": [150.0, 260.0],
+            "interface_length_x_m": [450.0, 900.0],
+        },
+    },
+}
 
 
 def _grid() -> GeologyGrid:

@@ -221,8 +221,15 @@ def iter_edifiles(edic: Any) -> Iterator[EDIFile]:
         return
     if hasattr(edic, "__iter__") and not is_pathlike(edic):
         for it in edic:  # type: ignore
-            if is_edi_file(it):
-                yield it  # type: ignore
+            # A bare `Site` (or anything exposing a compatible `.edi`)
+            # does not itself look EDI-shaped -- unwrap it first so a
+            # plain list of `Site` objects is not silently dropped.
+            candidate = it
+            edi_attr = getattr(it, "edi", None)
+            if not is_edi_file(it) and is_edi_file(edi_attr):
+                candidate = edi_attr
+            if is_edi_file(candidate):
+                yield candidate  # type: ignore
 
 
 def _is_pathlike(obj: Any) -> bool:

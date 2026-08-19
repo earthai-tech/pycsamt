@@ -769,12 +769,26 @@ Disabling coordinate validation too early
    Out-of-range values may then enter selection, distance, projection, or map
    workflows. Keep validation enabled for geographic EDI coordinates.
 
+Expecting this editor to touch EMTF-XML metadata directly
+   :class:`SiteMetadataEditor` and its convenience functions edit EDI
+   sections (``HEAD``, ``INFO``, and similar) specifically. Running them on
+   an XML-native :class:`~pycsamt.site.base.Site` still works -- it
+   materializes and edits that site's EDI view, the same way
+   :meth:`~pycsamt.site.base.Site.rename` does -- but the change lands in
+   ``site.edi``, not in the richer :attr:`~pycsamt.site.base.Site.site_meta`/
+   :attr:`~pycsamt.site.base.Site.provenance` objects on ``site.tf``. To edit
+   those directly, work with the :mod:`pycsamt.metadata` dataclasses (see
+   :doc:`../metadata/index`) through ``site.tf`` itself.
+
 Next Steps
 ----------
 
-* :doc:`containers` explains the ``Site`` and ``Sites`` object model;
+* :doc:`containers` explains the ``Site`` and ``Sites`` object model,
+  including the EDI/EMTF-XML dual backend;
 * :doc:`location_profile` establishes a defensible station order;
 * :doc:`selection` filters stations after metadata normalization;
 * :doc:`editing` changes response arrays and derived quantities;
 * :doc:`export_reporting` covers manifests, archives, and delivery reports;
-* :doc:`utilities` documents the low-level naming and coordinate helpers.
+* :doc:`utilities` documents the low-level naming and coordinate helpers;
+* :doc:`../metadata/index` documents the richer, format-neutral metadata
+  objects available through :attr:`~pycsamt.site.base.Site.tf`.

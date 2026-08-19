@@ -4,12 +4,13 @@
 Version 2.4.0
 -------------
 
-pyCSAMT 2.4.0 |New| |Fix| |Enhancement|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pyCSAMT 2.4.0 |New| |Fix| |Enhancement| |Docs| |Build|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Released 2026-08-18.*
+*Released 2026-08-19.*
 
-A focused release around the station confidence profile
+Three independent pieces of work landed in this release. First, the
+station confidence profile
 (:func:`~pycsamt.emtools.qc.plot_confidence_profile`,
 :func:`~pycsamt.emtools.qc.station_confidence_table`,
 :func:`~pycsamt.emtools.qc.frequency_confidence_table`): station distance
@@ -20,6 +21,139 @@ labels when many stations are flagged low-confidence. Thanks to
 `@shahidalishah130-hub <https://github.com/shahidalishah130-hub>`__ for
 reporting this with a clear reproducing figure in `issue #76
 <https://github.com/earthai-tech/pycsamt/issues/76>`__.
+
+Second, :class:`~pycsamt.site.base.Site`/:class:`~pycsamt.site.base.Sites`
+-- the station wrapper used across :mod:`pycsamt.emtools`, the CLI, and
+the desktop app -- now accepts EMTF-XML transfer functions
+(:class:`~pycsamt.emtf.document.EMTF`) symmetrically with the historical
+SEG-EDI format, with no changes required anywhere that already consumes
+``Site``/``Sites``. Building the real, oracle-validated round trip behind
+this feature surfaced and fixed five further real bugs, three of them
+pre-existing and unrelated to XML at all -- including one where
+``Sites.write()`` had been silently writing placeholder files instead of
+real EDI content on every call, for as long as the method has existed.
+
+Third, :mod:`pycsamt.airborne` -- the MobileMT/ZTEM/AFMAG package added in
+2.3.x -- went through a full guideline-compliance pass: a new shared
+:mod:`pycsamt.airborne.validation` module now centralizes boundary
+validation that each technology adapter had independently duplicated
+(frequency/period resolution, matrix-shape checks, record masks,
+reference-station metadata mapping), every public class and function
+across the package gained complete NumPy-style docstrings, and one real
+inheritance mismatch was corrected. Alongside it, a new
+:mod:`pycsamt.emtools.afmag` module adds AFMAG-specific processing,
+diagnostics, and plotting -- including a from-scratch implementation of
+the rotation-matrix motion-induced-noise method of Liu et al. (2018),
+grounded directly in that paper's own equations.
+
+Real EMTF-XML support in ``Site``/``Sites`` |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``Site`` previously only wrapped a parsed SEG-EDI object. It now accepts
+either an EDI object or an :class:`~pycsamt.emtf.document.EMTF` XML
+document, via a lazy dual-backend design: :attr:`~pycsamt.site.base.Site.edi`
+and :attr:`~pycsamt.site.base.Site.tf` are both always available on any
+``Site`` regardless of which one it was built from -- the representation
+not natively supplied is materialized from the other on first access and
+cached, using the existing, oracle-validated
+:func:`~pycsamt.emtf.converters.edi.edi_to_emtf`/``emtf_to_edi``
+converters. Because :attr:`~pycsamt.site.base.Site.edi` always resolves
+to a real EDI-shaped object either way, every existing piece of code that
+reads ``.edi``/``.edi.Z``/``.edi.Tipper`` directly -- across
+:mod:`pycsamt.emtools`, the CLI, and the desktop app -- keeps working
+completely unmodified for an XML-native ``Site``, with no code changes
+required anywhere outside :mod:`pycsamt.site`.
+
+New surface: :meth:`Site.from_xml() <pycsamt.site.base.Site.from_xml>` /
+:meth:`Site.to_xml() <pycsamt.site.base.Site.to_xml>` (the ``from_edi``
+constructor is now spelled out explicitly too, for symmetry),
+:attr:`Site.backend <pycsamt.site.base.Site.backend>` (``"edi"`` or
+``"xml"``), and typed metadata properties --
+:attr:`~pycsamt.site.base.Site.site_meta`,
+:attr:`~pycsamt.site.base.Site.site_layout`,
+:attr:`~pycsamt.site.base.Site.provenance`,
+:attr:`~pycsamt.site.base.Site.processing`,
+:attr:`~pycsamt.site.base.Site.copyright`,
+:attr:`~pycsamt.site.base.Site.quality_meta` -- that are the *same*
+:mod:`pycsamt.metadata` objects the ``EMTF`` document itself already
+models (``SiteMeta``, ``SiteLayout``, ``ProvenanceMeta``, and so on), not
+a parallel copy. ``Sites`` gained the matching bulk operations,
+:meth:`~pycsamt.site.base.Sites.to_emtf_list` and
+:meth:`~pycsamt.site.base.Sites.write_xml`, mirroring the existing EDI-side
+``to_edis``/``write``. And the coercion layer behind
+:func:`~pycsamt.site.base.to_sites` and
+:func:`~pycsamt.emtools.ensure_sites` -- the single entry point every
+``emtools`` function validates its input through -- now recognizes a
+single ``.xml`` path, an ``EMTF`` object, a list mixing either with EDI
+sources, and a directory containing ``*.xml`` files alongside (or instead
+of) ``*.edi`` files, with no changes needed in ``ensure_sites`` itself.
+
+This was validated end to end, both numerically and by literally reading
+the files back off disk, in a new example,
+``examples/emtf_xml_roundtrip_demo/`` (see its ``README.md``): three
+real field stations converted EDI -> XML -> EDI through both the
+``Site``/``Sites`` API and the raw ``EMTF`` document API side by side,
+comparing periods, impedance, tipper, and variance at every step.
+Separately, the underlying EDI<->EMTF-XML conversion itself was
+validated against a real, locally compiled reference implementation
+(USGS EMTF-FCU v4.1) for the first time -- periods, impedance, variance,
+site coordinates, channel geometry, and rotation math all matched to
+floating-point precision on real field data
+(``pycsamt/emtf/tests/test_fcu_oracle.py``, skipped rather than failed
+when no local FCU build is present).
+
+The :doc:`/user_guide/site/index` pages are updated to match:
+:doc:`/user_guide/site/containers` gains a "Working With EMTF-XML" section (real
+captured output against the bundled Gabbs Valley station, already used
+throughout :doc:`/user_guide/metadata/index` and
+:doc:`/user_guide/emtf/index`), and :doc:`/user_guide/site/metadata`,
+:doc:`/user_guide/site/export_reporting`, and
+:doc:`/user_guide/site/selection` each note where their existing,
+EDI-specific tooling still applies unchanged and where the new EMTF-XML
+surface takes over.
+
+Five real bugs found and fixed |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Building and validating the above surfaced five real, previously
+unnoticed bugs -- two specific to the new XML coercion logic, and three
+pre-existing ones with no relation to XML support at all:
+
+- ``ensure_sites``/``to_sites`` silently returned an **empty** ``Sites``
+  for a plain Python list of already-constructed ``Site`` objects (a bare
+  ``Site`` doesn't look EDI-shaped itself, so it was dropped by the
+  duck-typed unwrapping step) -- a real limitation noted, but not
+  root-caused, in an earlier audit. Fixed.
+- :meth:`~pycsamt.site.base.Sites.ordered` and
+  :meth:`~pycsamt.site.base.Sites.select` forced every site through its
+  materialized EDI view on every non-``inplace`` call, silently
+  downgrading an XML-native site back to EDI -- and since
+  ``ensure_sites`` always calls ``.ordered(...)`` on its way out, this
+  meant newly-XML-aware ``Sites`` were downgraded again immediately
+  after being built correctly. Fixed to preserve each site's native
+  backend.
+- **``Sites.write()`` had been writing placeholder files, not real EDI
+  content, since the method was introduced** -- it looked for an
+  ``EDIFile.to_file()`` method that has never existed
+  (the real serializer is ``EDIFile.write()``), silently fell back to a
+  one-line placeholder, and the only existing test checked that the
+  output file *existed*, never its content. Fixed to use
+  :func:`pycsamt.emtf.converters.edi.write_edi`, the same writer already
+  used elsewhere.
+- The EDI reader (:mod:`pycsamt.seg.edi`) mapped the historical EDI
+  missing-data sentinel (``EMPTY``, typically ``1.0E+32``) to ``0.0``
+  instead of ``NaN`` for impedance, tipper, and variance -- inventing a
+  measured-exactly-zero value in place of a genuinely missing period.
+  This affects any EDI with real gaps (dead bands, dropped channels), not
+  only XML-related code paths. Fixed to emit ``NaN``.
+- That fix then exposed a second, latent bug it had been masking:
+  :meth:`pycsamt.z.resphase.ResPhase.compute_resistivity_phase` had a
+  guard that unconditionally rejected any ``NaN`` uncertainty paired
+  with a *valid* impedance value, even though the surrounding
+  per-component logic was already written to tolerate exactly that case
+  gracefully. A measured impedance with an unavailable uncertainty is
+  common in real field data. Relaxed to only reject genuinely malformed
+  (negative or infinite) uncertainties.
 
 Real inter-station distance, not a hardcoded spacing |Fix|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -81,6 +215,121 @@ The new ``annotate_low_step`` thins these the same way
 ``annotate_low_step=1`` restores the previous label-every-point
 behaviour; ``annotate_low=False`` turns per-point labels off entirely.
 
+``pycsamt.airborne`` guideline pass: shared validation, deeper docs |Enhancement| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.airborne` (MobileMT/ZTEM/AFMAG, added in 2.3.x) went
+through the project's new-subpackage development guidelines module by
+module. The main structural change is a new shared
+:mod:`pycsamt.airborne.validation` module, which centralizes boundary
+validation that :mod:`~pycsamt.airborne.mobilemt`,
+:mod:`~pycsamt.airborne.ztem`, and :mod:`~pycsamt.airborne.afmag` had
+each independently reimplemented: resolving a frequency-or-period axis,
+validating a transfer-function matrix or per-sample estimate array
+against its expected shape, resolving a record mask, and mapping a
+technology's reference-station metadata into the shared
+:class:`~pycsamt.emtf.EMTF` model
+(:func:`~pycsamt.airborne.validation.reference_station_mapping`,
+:func:`~pycsamt.airborne.validation.merge_remote_reference_processing`).
+:mod:`~pycsamt.airborne.ztem` and :mod:`~pycsamt.airborne.afmag` were
+migrated onto it, removing several dozen lines of near-duplicate logic;
+in :func:`~pycsamt.airborne.afmag.adapter.build_airmt_emtf`, two
+previously separate checks (tensor-shape validation and a
+frequency-count match) collapsed into one shared call with no behaviour
+change. A related duplicate was found one layer up: both
+:mod:`~pycsamt.airborne.mobilemt` and :mod:`~pycsamt.airborne.afmag`
+reimplemented the same "register this EMTF data type unless an
+incompatible one already exists" guard, now available once as
+:func:`pycsamt.emtf.datatypes.ensure_emtf_datatype_registered`.
+
+One real inheritance mismatch was corrected:
+:class:`~pycsamt.airborne.base.AirborneEMDataset` inherited
+:class:`~pycsamt.core.base.MTBase` although it performs no
+electromagnetic arithmetic itself (it only aggregates flight lines --
+the actual EM math lives in the :class:`~pycsamt.emtf.EMTF` documents it
+holds); it now inherits :class:`~pycsamt.core.base.CoreObject`, matching
+every sibling container in the package. The registry value objects
+(:class:`~pycsamt.airborne.registry.AirborneTechnologyDefinition`,
+:class:`~pycsamt.airborne.registry.AirborneFormatDefinition`) and the QC
+finding type (:class:`~pycsamt.airborne.qc.AirborneQCIssue`) now inherit
+:class:`~pycsamt.api.property.PyCSAMTObject`, matching the equivalent
+objects already established in :mod:`pycsamt.emtf` and
+:mod:`pycsamt.metadata`. Every public class and function across
+:mod:`~pycsamt.airborne.base`, :mod:`~pycsamt.airborne.registry`,
+:mod:`~pycsamt.airborne.qc`, :mod:`~pycsamt.airborne.io`, and the
+``ztem``/``afmag`` adapter and metadata modules gained complete
+NumPy-style docstrings (Parameters, Returns, Raises, and Notes
+explaining non-obvious design choices, such as why
+:mod:`~pycsamt.airborne.afmag`'s own per-sample frequency-grid
+validation is deliberately stricter than the shared helper it otherwise
+reuses). This was a structural and documentation pass only: every step
+was verified against the full existing test suite, and no behaviour
+change is expected outside the corrected inheritance above.
+
+New: AFMAG motion-noise physics and diagnostics |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.emtools.afmag` is a new module bringing AFMAG-specific
+processing into :mod:`pycsamt.emtools`, following that package's
+existing conventions throughout: every processing function accepts
+``sites`` (coerced through the same
+:func:`~pycsamt.emtools.ensure_sites` every other ``emtools`` function
+uses) and every plot function accepts ``ax``/``axes`` and returns
+``Axes``/``Figure`` -- the latter is not just a style guideline, it is
+mechanically enforced by the package's existing
+``test_plot_api_signatures.py`` gate, which now also covers this module.
+
+AFMAG is magnetic-field-only -- there is no electric-field channel, so
+the module is built entirely on :attr:`Site.tipper
+<pycsamt.site.base.Site.tipper>` (the classical AFMAG tilt-angle readout
+is, in modern MT terms, the same object), never on ``Site.z``. Three
+pieces:
+
+* **Motion-coupling physics** -- a from-scratch, paper-grounded
+  implementation of Liu et al. (2018)'s rotation-matrix method for
+  simulating and removing platform-motion-induced noise:
+  :func:`~pycsamt.emtools.afmag.euler_rotation_matrix`,
+  :func:`~pycsamt.emtools.afmag.geomagnetic_field_direction`,
+  :func:`~pycsamt.emtools.afmag.coil_normal_direction`,
+  :func:`~pycsamt.emtools.afmag.motion_coupling_cosine`/``_angle``,
+  :func:`~pycsamt.emtools.afmag.simulate_motion_induced_voltage`, and
+  :func:`~pycsamt.emtools.afmag.correct_motion_induced_noise`. These
+  operate on raw attitude (yaw/pitch/roll) and geomagnetic geometry
+  rather than on ``Sites`` -- :class:`~pycsamt.site.base.Site` has no
+  time axis or attitude field to run them on -- and are validated both
+  against hand-derived analytic cases (identity, 90-degree, orthogonality)
+  and against the paper's own qualitative findings (Fig. 2: theta(t) is
+  linear in roll, and inclination shifts rather than reshapes the
+  curve; yaw has no effect at zero pitch/roll for a z-axis coil).
+* **Tilt-angle diagnostics** -- :func:`~pycsamt.emtools.afmag.afmag_tilt_angles`
+  derives the classical in-phase/quadrature AFMAG tilt angle directly
+  from ``Site.tipper``, and three new plots present it the way AFMAG
+  data has traditionally been read:
+  :func:`~pycsamt.emtools.afmag.plot_afmag_tilt_profile` (the classic
+  flight-line profile), :func:`~pycsamt.emtools.afmag.plot_afmag_tilt_psection`
+  (station x log-period pseudosection), and
+  :func:`~pycsamt.emtools.afmag.plot_afmag_tilt_polar`.
+* **Motion-coupling QC** -- the bridge between the two:
+  :func:`~pycsamt.emtools.afmag.motion_susceptibility_table` scores each
+  station's exposure to motion noise from a nominal attitude-amplitude
+  envelope and the survey's geomagnetic geometry, and
+  :func:`~pycsamt.emtools.afmag.flag_motion_susceptible_band` is the one
+  mutating, ``Sites``-in/``Sites``-out function in the module -- it
+  masks or drops a susceptible station's low-frequency tipper band,
+  following the same ``ensure_sites``/mutation contract as
+  :func:`~pycsamt.emtools.remove_noise.notch_powerline`.
+  :func:`~pycsamt.emtools.afmag.plot_motion_susceptibility_map` and
+  :func:`~pycsamt.emtools.afmag.plot_afmag_correction_comparison` (a
+  before/after/delta pseudosection triptych) visualize both.
+
+No apparent-resistivity/conductivity formula is derived from tilt angle
+-- unlike full MT, nothing in Ward (1959) or Liu et al. (2018) provides
+one, so none is invented -- and the module does not attempt the paper's
+literal time-domain "subtract predicted noise from raw movement data"
+step against a frequency-domain ``Sites`` object, which has no raw time
+series to run it on; that math is exposed as the reusable physics
+functions above instead.
+
 Added
 ~~~~~
 
@@ -88,6 +337,43 @@ Added
   ``plot_confidence_profile`` gains ``annotate_low_step``, analogous to
   ``station_label_step`` but applied only to the (typically much smaller)
   subset of points below ``ci_lo``.
+* |New| **EMTF-XML support in ``Site``/``Sites``** --
+  :meth:`~pycsamt.site.base.Site.from_xml`,
+  :meth:`~pycsamt.site.base.Site.to_xml`,
+  :attr:`~pycsamt.site.base.Site.tf`,
+  :attr:`~pycsamt.site.base.Site.backend`, and typed
+  :mod:`pycsamt.metadata` properties (``site_meta``, ``site_layout``,
+  ``provenance``, ``processing``, ``copyright``, ``quality_meta``) on
+  ``Site``; :meth:`~pycsamt.site.base.Sites.to_emtf_list` and
+  :meth:`~pycsamt.site.base.Sites.write_xml` on ``Sites``.
+  :func:`~pycsamt.site.base.to_sites`/``ensure_sites`` now recognize
+  ``.xml`` paths, ``EMTF`` objects, and directories mixing ``*.edi`` and
+  ``*.xml`` files.
+* |New| **``examples/emtf_xml_roundtrip_demo/``** -- converts three real
+  field stations through EDI -> XML -> EDI via both the ``Site``/``Sites``
+  API and the raw ``EMTF`` document API, with full numeric verification
+  including a re-read of the files actually written to disk.
+* |New| **``pycsamt/emtf/tests/test_fcu_oracle.py``** -- validates
+  pycsamt's EDI<->EMTF-XML conversion against a real, locally compiled
+  EMTF-FCU v4.1 reference implementation; skips (doesn't fail) when no
+  local build is present.
+* |New| **``pycsamt.emtools.afmag``** -- AFMAG-specific processing,
+  diagnostics, and plotting: a from-scratch implementation of the
+  Liu et al. (2018) rotation-matrix motion-induced-noise method
+  (``euler_rotation_matrix``, ``motion_coupling_cosine``,
+  ``simulate_motion_induced_voltage``, ``correct_motion_induced_noise``,
+  and friends), classical tilt-angle diagnostics from ``Site.tipper``
+  (``afmag_tilt_angles``), motion-coupling QC
+  (``motion_susceptibility_table``, ``flag_motion_susceptible_band``),
+  and six new plots. See :doc:`the module's own documentation
+  </api/emtools>` for the full list.
+* |New| **``pycsamt.airborne.validation``** -- shared boundary-validation
+  and reference-metadata-mapping module for
+  :mod:`~pycsamt.airborne.mobilemt`/:mod:`~pycsamt.airborne.ztem`/
+  :mod:`~pycsamt.airborne.afmag`, and
+  **``pycsamt.emtf.datatypes.ensure_emtf_datatype_registered``**, a
+  shared idempotent EMTF-datatype-registration helper factored out of
+  two adapters that had each reimplemented it.
 
 Fixed
 ~~~~~
@@ -97,6 +383,25 @@ Fixed
   coordinates (east/north, or lat/lon projected through a real UTM
   transform) whenever at least two stations carry usable ones, cached
   per EDI object. ``spacing_m`` is only ever a per-station fallback.
+* |Fix| **``ensure_sites``/``to_sites`` dropped a list of ``Site``
+  objects** -- a plain Python list of already-constructed ``Site``
+  instances silently resolved to an empty ``Sites``, with no error.
+* |Fix| **``Sites.ordered()``/``Sites.select()`` silently downgraded
+  XML-native sites to EDI** on every non-``inplace`` call, including the
+  one ``ensure_sites`` always performs on its way out.
+* |Fix| **``Sites.write()`` wrote placeholder files instead of real EDI
+  content** -- it looked for a nonexistent ``EDIFile.to_file()`` method
+  and had been silently falling back to a one-line placeholder since the
+  method was introduced; the only existing test never checked file
+  content. Now uses :func:`pycsamt.emtf.converters.edi.write_edi`.
+* |Fix| **EDI missing-data sentinel mapped to ``0.0`` instead of
+  ``NaN``** (:mod:`pycsamt.seg.edi`) -- affects any EDI with real gaps
+  (dead bands, dropped channels), not only EMTF-XML code paths.
+* |Fix| **``compute_resistivity_phase`` rejected legitimate missing
+  uncertainty** (:mod:`pycsamt.z.resphase`) -- a valid impedance
+  measurement with an unavailable (``NaN``) uncertainty raised instead of
+  propagating the missing value, exposed once the EDI sentinel fix above
+  landed.
 
 Changed
 ~~~~~~~
@@ -106,6 +411,41 @@ Changed
   ``plot_confidence_profile`` gain a ``force_spacing`` parameter to
   bypass coordinate lookup entirely and trust a user-supplied
   ``spacing_m`` instead.
+* |Enhancement| **``pycsamt.airborne`` guideline-compliance pass** --
+  :class:`~pycsamt.airborne.base.AirborneEMDataset` now inherits
+  :class:`~pycsamt.core.base.CoreObject` instead of
+  :class:`~pycsamt.core.base.MTBase` (it performs no EM arithmetic
+  itself); the registry definitions and
+  :class:`~pycsamt.airborne.qc.AirborneQCIssue` now inherit
+  :class:`~pycsamt.api.property.PyCSAMTObject`, matching the equivalent
+  objects in :mod:`pycsamt.emtf`/:mod:`pycsamt.metadata`;
+  :mod:`~pycsamt.airborne.ztem` and :mod:`~pycsamt.airborne.afmag` were
+  migrated onto the new :mod:`~pycsamt.airborne.validation` module,
+  removing several dozen lines of near-duplicate boundary-validation
+  logic. Verified against the full existing test suite at every step;
+  no behaviour change outside the ``AirborneEMDataset`` base class.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| **``user_guide/site/`` updated for EMTF-XML** --
+  :doc:`/user_guide/site/containers`, :doc:`/user_guide/site/metadata`,
+  :doc:`/user_guide/site/export_reporting`, and
+  :doc:`/user_guide/site/selection` now cover the ``Site``/``Sites``
+  EMTF-XML backend, with real captured output against the bundled Gabbs
+  Valley station. Also fixed a stale cross-reference in
+  :doc:`/user_guide/metadata/index` pointing at "the upcoming EMTF XML
+  guide", which now exists.
+* |Docs| **``pycsamt.airborne`` docstrings** -- every public class and
+  function across :mod:`~pycsamt.airborne.base`,
+  :mod:`~pycsamt.airborne.registry`, :mod:`~pycsamt.airborne.qc`,
+  :mod:`~pycsamt.airborne.io`, and the ``ztem``/``afmag`` adapter and
+  metadata modules gained complete NumPy-style docstrings (Parameters,
+  Returns, Raises, and Notes explaining non-obvious design choices).
+* |Build| **``pyproject.toml`` gains ``norecursedirs``** excluding the
+  local-only vendored EMTF-FCU checkout from pytest collection -- without
+  it, a plain ``pytest`` run breaks entirely on Windows for anyone who
+  builds that reference oracle locally.
 
 |Compatibility|
 ~~~~~~~~~~~~~~~
@@ -121,3 +461,23 @@ station names, order, and confidence values are unaffected, only the
 x-axis distance scale. ``force_spacing`` and ``annotate_low_step`` are
 both new, opt-in parameters with defaults that keep every other existing
 call unaffected.
+
+``Site``/``Sites`` gain new capabilities without removing any existing
+ones -- every EDI-only call site keeps working exactly as before, and
+``Site.edi``/``Site.tf`` are additive. Any EDI parsed from a file with
+genuinely missing periods (rare, but real) now correctly reports ``NaN``
+for those instead of a fabricated ``0.0``; code that assumed EDI-derived
+Z/tipper arrays are always fully finite should be checked against this.
+``Sites.write()`` now writes real EDI content where it previously wrote
+a one-line placeholder -- any code that happened to tolerate the
+placeholder output will see a real, larger file instead.
+
+``pycsamt.emtools.afmag`` and ``pycsamt.airborne.validation`` are both
+entirely new, additive modules. The one base-class change in
+``pycsamt.airborne`` (:class:`~pycsamt.airborne.base.AirborneEMDataset`
+now inherits :class:`~pycsamt.core.base.CoreObject` instead of
+:class:`~pycsamt.core.base.MTBase`) removes access to ``MTBase``'s
+electromagnetic numeric methods on that one class; nothing in pycsamt
+itself called them there, and this only matters to external code that
+did ``isinstance(dataset, MTBase)`` or called an ``MTBase`` method
+directly on an ``AirborneEMDataset`` instance.

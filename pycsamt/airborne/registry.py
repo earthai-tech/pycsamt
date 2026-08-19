@@ -11,6 +11,17 @@ The registry separates two concepts deliberately:
 The built-in technologies are registered immediately because their scientific
 contracts are stable. No native vendor format is registered until a genuine
 sample or authoritative format specification is available.
+
+The two definition dataclasses (:class:`AirborneTechnologyDefinition`,
+:class:`AirborneFormatDefinition`) are lightweight value objects, so they
+inherit :class:`~pycsamt.api.property.PyCSAMTObject` rather than
+:class:`~pycsamt.core.base.CoreObject` or
+:class:`~pycsamt.core.base.MTBase` -- the same choice already made for
+the analogous :class:`~pycsamt.emtf.datatypes.DataTypeDefinition` in the
+sibling :mod:`pycsamt.emtf` registry. The bookkeeping itself (alias
+collisions, detector-then-extension matching) is not reimplemented here;
+it is delegated to :class:`~pycsamt.core._named_registry.NamedRegistry`,
+which both this module and :mod:`pycsamt.io.formats` share.
 """
 
 from __future__ import annotations
@@ -19,10 +30,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from ..core.base import CoreObject
+from ..api.property import PyCSAMTObject
 from ..core._named_registry import (
     NamedRegistry,
+)
+from ..core._named_registry import (
     normalize_extension as _normal_extension,
+)
+from ..core._named_registry import (
     normalize_key as _normal_key,
 )
 
@@ -56,9 +71,52 @@ class AirborneFormatDetectionError(AirborneRegistryError):
     """Raised when native airborne format detection is ambiguous."""
 
 
-@dataclass(frozen=True)
-class AirborneTechnologyDefinition:
-    """Describe one scientific airborne-EM technology contract."""
+@dataclass(frozen=True, repr=False)
+class AirborneTechnologyDefinition(PyCSAMTObject):
+    """Describe one scientific airborne-EM technology contract.
+
+    A technology definition is intentionally free of file-format
+    knowledge: it only records how to recognize the technology from an
+    already-built :class:`~pycsamt.airborne.base.AirborneEMDataset` /
+    :class:`~pycsamt.emtf.EMTF` object. A concrete native delivery is
+    described separately by :class:`AirborneFormatDefinition`.
+
+    Parameters
+    ----------
+    name : str
+        Canonical technology key, for example ``"mobilemt"``. Passed
+        through :func:`~pycsamt.core._named_registry.normalize_key`.
+    label : str
+        Human-readable display name, for example ``"MobileMT"``.
+    family : str
+        Broad measurement family shared by related technologies, for
+        example ``"natural_field_airborne_em"``. Also normalized.
+    aliases : tuple of str, optional
+        Alternate keys accepted for lookup, for example
+        ``("mobile_mt",)``.
+    primary_tf_names : tuple of str, optional
+        Transfer-function names that are unique enough to this
+        technology to justify inference; see ``infer_from_tf``.
+    reference_required : bool, default False
+        Whether a fixed ground reference station is scientifically
+        required for this technology's response. Used by
+        :func:`~pycsamt.airborne.qc.assess_airborne_qc` to decide
+        whether a missing reference-station is a QC issue.
+    infer_from_tf : bool, default False
+        Whether :func:`identify_airborne_technologies` may infer this
+        technology purely from a matching entry of
+        ``primary_tf_names``, when nothing else identifies it.
+        Deliberately ``False`` for tipper-only technologies (ZTEM),
+        because standard tipper ``T`` is not unique to one technology.
+    description : str, default ""
+        Short human-readable description.
+
+    Raises
+    ------
+    ValueError
+        If ``name``, ``label``, or ``family`` is empty after
+        normalization/stripping.
+    """
 
     name: str
     label: str
@@ -89,9 +147,46 @@ class AirborneTechnologyDefinition:
         )
 
 
-@dataclass(frozen=True)
-class AirborneFormatDefinition:
-    """Describe one concrete native airborne delivery format."""
+@dataclass(frozen=True, repr=False)
+class AirborneFormatDefinition(PyCSAMTObject):
+    """Describe one concrete native airborne delivery format.
+
+    A format definition binds one technology to a concrete on-disk (or
+    stream) representation. It stays empty of ``reader``/``writer``
+    until a genuine sample or authoritative specification exists to
+    validate against; see the module-level docstring and
+    :func:`register_airborne_format`.
+
+    Parameters
+    ----------
+    name : str
+        Canonical format key, unique across all technologies.
+    technology : str
+        Owning technology key; must already be registered via
+        :func:`register_airborne_technology` before this format is
+        registered.
+    reader : callable, optional
+        ``reader(source, **kwargs) -> AirborneEMDataset``. ``None``
+        means the format is not yet readable.
+    writer : callable, optional
+        ``writer(dataset, target, **kwargs) -> Any``. ``None`` means
+        the format is not yet writable.
+    detector : callable, optional
+        ``detector(source) -> bool`` used for content-aware format
+        detection, ahead of extension-based matching.
+    extensions : tuple of str, optional
+        File extensions used as a detection hint when no detector
+        matches; normalized to a leading dot and lowercased.
+    aliases : tuple of str, optional
+        Alternate keys accepted for lookup.
+    description : str, default ""
+        Short human-readable description.
+
+    Raises
+    ------
+    ValueError
+        If ``name`` or ``technology`` is empty after normalization.
+    """
 
     name: str
     technology: str
@@ -147,7 +242,30 @@ def register_airborne_technology(
     *,
     replace: bool = False,
 ) -> AirborneTechnologyDefinition:
-    """Register one scientific technology definition."""
+    """Register one scientific technology definition.
+
+    Parameters
+    ----------
+    definition : AirborneTechnologyDefinition
+        Technology contract to register.
+    replace : bool, default False
+        Whether to overwrite an existing registration under the same
+        canonical name, forwarded to
+        :meth:`~pycsamt.core._named_registry.NamedRegistry.register`.
+
+    Returns
+    -------
+    AirborneTechnologyDefinition
+        The same *definition* instance, for convenient chaining.
+
+    Raises
+    ------
+    TypeError
+        If *definition* is not an :class:`AirborneTechnologyDefinition`.
+    AirborneRegistryError
+        If the canonical name or an alias is already registered and
+        ``replace`` is ``False``.
+    """
     if not isinstance(definition, AirborneTechnologyDefinition):
         raise TypeError("definition must be AirborneTechnologyDefinition")
     _tech_registry.register(
@@ -162,7 +280,12 @@ def register_airborne_technology(
 def get_airborne_technology(
     name: str,
 ) -> AirborneTechnologyDefinition | None:
-    """Return a technology definition by canonical name or alias."""
+    """Return a technology definition by canonical name or alias.
+
+    Returns ``None`` rather than raising when *name* is unregistered,
+    since callers such as :func:`_technology_from_text` use this for
+    best-effort inference over untrusted ``attrs``/``subtype`` values.
+    """
     return _tech_registry.get(name)
 
 
@@ -172,6 +295,7 @@ def list_airborne_technologies() -> tuple[AirborneTechnologyDefinition, ...]:
 
 
 def _technology_from_text(value: Any) -> str | None:
+    """Resolve free-form text to a canonical technology name, if any."""
     if value is None:
         return None
     definition = get_airborne_technology(str(value))
@@ -179,6 +303,19 @@ def _technology_from_text(value: Any) -> str | None:
 
 
 def _collect_object_technologies(obj: Any, out: set[str]) -> None:
+    """Recursively accumulate technology names identified on *obj*.
+
+    Walks, in priority order, an explicit ``attrs["technology"]`` tag,
+    the EMTF ``subtype`` bridge for the two AFMAG-family documents,
+    then per-transfer-function ``attrs["technology"]`` and (only for
+    technologies with ``infer_from_tf=True``) a name match against
+    ``primary_tf_names``. It then recurses into ``.emtf``,
+    ``.records``, and ``.lines`` so a dataset, line, record, or bare
+    :class:`~pycsamt.emtf.EMTF` can all be inspected uniformly.
+    Matches accumulate into *out* rather than short-circuiting, so a
+    dataset that genuinely mixes technologies is reported as mixed
+    instead of picking one arbitrarily.
+    """
     attrs = getattr(obj, "attrs", None)
     if isinstance(attrs, dict):
         technology = _technology_from_text(attrs.get("technology"))
@@ -232,9 +369,27 @@ def _collect_object_technologies(obj: Any, out: set[str]) -> None:
 def identify_airborne_technologies(obj: Any) -> tuple[str, ...]:
     """Return canonical technologies explicitly or safely identified.
 
-    Only response types that are unique to one technology are inferred from
-    transfer-function names. Standard tipper ``T`` and interstation ``TI``
-    are intentionally not enough by themselves to identify ZTEM or AirMt.
+    Parameters
+    ----------
+    obj : AirborneEMDataset, AirborneEMLine, AirborneEMRecord, or EMTF
+        Object to inspect; see :func:`_collect_object_technologies`
+        for exactly what is walked and in what priority.
+
+    Returns
+    -------
+    tuple of str
+        Zero or more canonical technology names, in registration
+        order. Zero means *obj* carries no explicit or safely
+        inferable technology tag; more than one means *obj* genuinely
+        mixes technologies (see :func:`detect_airborne_technology` to
+        turn that into an error instead).
+
+    Notes
+    -----
+    Only response types that are unique to one technology are inferred
+    from transfer-function names. Standard tipper ``T`` and
+    interstation ``TI`` are intentionally not enough by themselves to
+    identify ZTEM or AirMt.
     """
     out: set[str] = set()
     _collect_object_technologies(obj, out)
@@ -250,7 +405,30 @@ def detect_airborne_technology(
     *,
     strict: bool = True,
 ) -> str | None:
-    """Return one canonical technology or report ambiguous mixed content."""
+    """Return one canonical technology, or report/ignore mixed content.
+
+    Parameters
+    ----------
+    obj : AirborneEMDataset, AirborneEMLine, AirborneEMRecord, or EMTF
+        Object to inspect; forwarded to
+        :func:`identify_airborne_technologies`.
+    strict : bool, default True
+        Whether more than one identified technology is an error
+        (``True``) or is reported as ``None`` (``False``).
+
+    Returns
+    -------
+    str or None
+        The single identified technology; ``None`` if none was
+        identified, or if more than one was identified and ``strict``
+        is ``False``.
+
+    Raises
+    ------
+    AirborneTechnologyAmbiguityError
+        If more than one technology is identified and ``strict`` is
+        ``True``.
+    """
     technologies = identify_airborne_technologies(obj)
     if len(technologies) == 1:
         return technologies[0]
@@ -269,7 +447,33 @@ def register_airborne_format(
     *,
     replace: bool = False,
 ) -> AirborneFormatDefinition:
-    """Register a concrete native airborne file/delivery format."""
+    """Register a concrete native airborne file/delivery format.
+
+    Parameters
+    ----------
+    definition : AirborneFormatDefinition
+        Format to register. Its ``technology`` must already be
+        registered via :func:`register_airborne_technology`.
+    replace : bool, default False
+        Whether to overwrite an existing registration under the same
+        canonical name instead of raising.
+
+    Returns
+    -------
+    AirborneFormatDefinition
+        The registered definition. This may be a new instance with
+        *technology* rewritten to the owning definition's canonical
+        name when *definition* was constructed with an alias.
+
+    Raises
+    ------
+    TypeError
+        If *definition* is not an :class:`AirborneFormatDefinition`.
+    AirborneRegistryError
+        If ``definition.technology`` is not a registered technology,
+        or if the canonical name/an alias collides and ``replace`` is
+        ``False``.
+    """
     if not isinstance(definition, AirborneFormatDefinition):
         raise TypeError("definition must be AirborneFormatDefinition")
     technology = get_airborne_technology(definition.technology)
@@ -299,7 +503,7 @@ def register_airborne_format(
 
 
 def get_airborne_format(name: str) -> AirborneFormatDefinition | None:
-    """Return a native format definition by name or alias."""
+    """Return a native format definition by name or alias, or ``None``."""
     return _format_registry.get(name)
 
 
@@ -307,7 +511,24 @@ def list_airborne_formats(
     *,
     technology: str | None = None,
 ) -> tuple[AirborneFormatDefinition, ...]:
-    """Return registered native formats, optionally for one technology."""
+    """Return registered native formats, optionally for one technology.
+
+    Parameters
+    ----------
+    technology : str, optional
+        Canonical name or alias to filter by. ``None`` returns every
+        registered format across all technologies.
+
+    Returns
+    -------
+    tuple of AirborneFormatDefinition
+        Matching formats in registration order.
+
+    Raises
+    ------
+    AirborneRegistryError
+        If *technology* is supplied and is not registered.
+    """
     if technology is None:
         return _format_registry.all()
     definition = get_airborne_technology(technology)
@@ -320,6 +541,7 @@ def list_airborne_formats(
 
 
 def _extension_of(source: Any) -> str | None:
+    """Return a lowercased file extension for a path-like source."""
     if isinstance(source, (str, Path)):
         try:
             return Path(source).suffix.lower() or None
@@ -331,9 +553,30 @@ def _extension_of(source: Any) -> str | None:
 def detect_airborne_format(source: Any) -> str | None:
     """Detect a registered native format using detectors, then extensions.
 
-    Detectors have priority. Extensions are only hints and are used when they
-    map to exactly one registered format. No built-in vendor formats are
-    registered merely from published system descriptions.
+    Parameters
+    ----------
+    source : Any
+        Candidate to identify, typically a path or an open stream.
+        Passed to each registered detector, and to
+        :func:`_extension_of` when no detector matches.
+
+    Returns
+    -------
+    str or None
+        The canonical format name, or ``None`` if nothing matched.
+
+    Raises
+    ------
+    AirborneFormatDetectionError
+        If more than one registered format matches *source*, whether
+        by detector or by extension.
+
+    Notes
+    -----
+    Detectors have priority. Extensions are only hints and are used
+    when they map to exactly one registered format. No built-in
+    vendor formats are registered merely from published system
+    descriptions.
     """
     matches = _format_registry.match_by_detector(source)
     if len(matches) > 1:
@@ -357,6 +600,12 @@ def detect_airborne_format(source: Any) -> str | None:
 
 
 def _register_builtin_technologies() -> None:
+    """Register the four built-in technology contracts, once per process.
+
+    Guarded by ``get_airborne_technology(...) is None`` so re-importing
+    this module (for example under test isolation) does not raise on
+    an already-registered name.
+    """
     builtins = (
         AirborneTechnologyDefinition(
             name="mobilemt",

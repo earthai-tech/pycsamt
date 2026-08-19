@@ -146,8 +146,10 @@ class EDIOMixin(CoreObject):
     _scan_blocks(path, start=None, empty_val=1e32)
         Return a mapping ``key → list[float]`` by streaming
         lines until the next section or EOF.  Unknown keys are
-        ignored.  Values equal to ``empty_val`` are converted
-        to zeros.
+        ignored.  Values equal to ``empty_val`` (the EDI missing-
+        data sentinel) are converted to NaN, never to zero --
+        zero is a valid measured value and must not be invented
+        for a period the instrument never recorded.
     _build_from_comp(comp, z_obj, tip_obj)
         Populate ``z_obj`` and ``tip_obj`` from the components.
         Frequency order is normalized to *descending*.  Z–error
@@ -279,10 +281,10 @@ class EDIOMixin(CoreObject):
                 try:
                     v = float(tok)
                     if v == empty_val:
-                        v = 0.0
+                        v = float("nan")
                     vals.append(v)
                 except Exception:
-                    vals.append(0.0)
+                    vals.append(float("nan"))
             comp[cur].extend(vals)
 
         return _lower_keys(comp)
@@ -810,7 +812,14 @@ class EDIFile(EDIMixin, EDIOMixin):
 
         return self
 
-    def compose_headers(self) -> str:
+    def compose_headers(self, *, stamp_head: bool = True) -> str:
+        """Serialize structural EDI headers without numeric data blocks.
+
+        ``stamp_head`` preserves the historical default in which ``>HEAD``
+        file/program timestamps are refreshed by :class:`Head`.  Format
+        converters may disable stamping when they need to retain mapped
+        provenance metadata exactly.
+        """
         out: list[str] = []
         for key in (
             "head",
@@ -827,7 +836,10 @@ class EDIFile(EDIMixin, EDIOMixin):
             write = getattr(sec, "write", None)
             if callable(write):
                 try:
-                    out.extend(write())
+                    if key == "head":
+                        out.extend(write(stamp=stamp_head))
+                    else:
+                        out.extend(write())
                 except Exception:
                     pass
         return "".join(out)
@@ -840,12 +852,19 @@ class EDIFile(EDIMixin, EDIOMixin):
         savepath: str | Path | None = None,
         add_filter_array: np.ndarray | None = None,
         synthesize_spectra: bool = False,
+        preserve_zero: bool = False,
+        stamp_headers: bool = True,
+        force_tipper: bool | None = None,
         **kwargs,
     ) -> str:
         # verbosity: prefer kwarg, else instance value
         v = kwargs.pop("verbose", None)
         if v is not None:
             self.verbose = int(v)
+        if force_tipper is None:
+            force_tipper = bool(
+                getattr(self, "_force_tipper_on_write", False)
+            )
 
         # v2 auto-detects MT vs EMAP from the section header.
         def _detect_tf_mode() -> str | None:
@@ -903,7 +922,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         lines: list[str] = []
 
         # 1) structural section headers (safe compose)
-        blob = self.compose_headers()
+        blob = self.compose_headers(stamp_head=stamp_headers)
         if blob:
             lines.append(blob)
 
@@ -935,7 +954,11 @@ class EDIFile(EDIMixin, EDIOMixin):
                     zrot = np.full(f.size, 0.0, dtype=float)
 
             tip = getattr(self.Tip, "tipper", None)
-            tip_ok = tip is not None and tip.size and not np.all(tip == 0.0)
+            tip_present = tip is not None and np.asarray(tip).size > 0
+            tip_ok = bool(
+                tip_present
+                and (force_tipper or not np.all(np.asarray(tip) == 0.0))
+            )
             trot = getattr(self.Tip, "rotation_angle", None)
             if tip_ok:
                 if np.ndim(trot) == 0:
@@ -953,11 +976,14 @@ class EDIFile(EDIMixin, EDIOMixin):
         if self.has_section("mtsect") or self.Z.n_freq > 0:
             freq, zrot, trot, tip_ok = _emit_freq_and_rot()
 
-            z = np.nan_to_num(self.Z.z)
+            # Keep NaN/Inf until _sanitize_payload so they become the EDI
+            # EMPTY sentinel.  The historical default still maps exact zeros
+            # to EMPTY; neutral converters can opt into preserve_zero=True.
+            z = np.asarray(self.Z.z)
             ze = (
-                np.nan_to_num(self.Z.z_err)
-                if (self.Z.z_err is not None)
-                else np.zeros_like(z.real)
+                np.asarray(self.Z.z_err, dtype=float)
+                if self.Z.z_err is not None
+                else np.full(z.shape, np.nan, dtype=float)
             )
 
             if dtype == "mt":
@@ -978,21 +1004,30 @@ class EDIFile(EDIMixin, EDIOMixin):
                 _append(
                     self._emit_block(
                         f"{tag}R",
-                        self._sanitize_payload(z[:, i, j].real),
+                        self._sanitize_payload(
+                            z[:, i, j].real,
+                            replace_zero=not preserve_zero,
+                        ),
                         rot=rot_tag,
                     )
                 )
                 _append(
                     self._emit_block(
                         f"{tag}I",
-                        self._sanitize_payload(z[:, i, j].imag),
+                        self._sanitize_payload(
+                            z[:, i, j].imag,
+                            replace_zero=not preserve_zero,
+                        ),
                         rot=rot_tag,
                     )
                 )
                 _append(
                     self._emit_block(
                         f"{tag}.VAR",
-                        self._sanitize_payload(np.square(ze[:, i, j])),
+                        self._sanitize_payload(
+                            np.square(ze[:, i, j]),
+                            replace_zero=not preserve_zero,
+                        ),
                         rot=rot_tag,
                     )
                 )
@@ -1011,14 +1046,20 @@ class EDIFile(EDIMixin, EDIOMixin):
                     _append(
                         self._emit_block(
                             tag,
-                            self._sanitize_payload(a),
+                            self._sanitize_payload(
+                                a,
+                                replace_zero=not preserve_zero,
+                            ),
                             rot="ROT=NONE",
                         )
                     )
                     _append(
                         self._emit_block(
                             f"{tag}.ERR",
-                            self._sanitize_payload(err),
+                            self._sanitize_payload(
+                                err,
+                                replace_zero=not preserve_zero,
+                            ),
                             rot="ROT=NONE",
                         )
                     )
@@ -1044,14 +1085,20 @@ class EDIFile(EDIMixin, EDIOMixin):
                         _append(
                             self._emit_block(
                                 "FRHOXY",
-                                self._sanitize_payload(a[:, 0, 1]),
+                                self._sanitize_payload(
+                                    a[:, 0, 1],
+                                    replace_zero=not preserve_zero,
+                                ),
                                 rot="ROT=NONE",
                             )
                         )
                         _append(
                             self._emit_block(
                                 "FRHOYX",
-                                self._sanitize_payload(a[:, 1, 0]),
+                                self._sanitize_payload(
+                                    a[:, 1, 0],
+                                    replace_zero=not preserve_zero,
+                                ),
                                 rot="ROT=NONE",
                             )
                         )
@@ -1064,29 +1111,38 @@ class EDIFile(EDIMixin, EDIOMixin):
                 tip = np.asarray(self.Tip.tipper)
                 terr = getattr(self.Tip, "_tipper_err", None)
                 tvar = (
-                    np.square(terr)
+                    np.square(np.asarray(terr, dtype=float))
                     if terr is not None
-                    else np.zeros_like(tip.real)
+                    else np.full(tip.shape, np.nan, dtype=float)
                 )
                 for idx, tag in enumerate(("TX", "TY")):
                     _append(
                         self._emit_block(
                             f"{tag}R.EXP",
-                            self._sanitize_payload(tip[:, 0, idx].real),
+                            self._sanitize_payload(
+                                tip[:, 0, idx].real,
+                                replace_zero=not preserve_zero,
+                            ),
                             rot="ROT=TROT",
                         )
                     )
                     _append(
                         self._emit_block(
                             f"{tag}I.EXP",
-                            self._sanitize_payload(tip[:, 0, idx].imag),
+                            self._sanitize_payload(
+                                tip[:, 0, idx].imag,
+                                replace_zero=not preserve_zero,
+                            ),
                             rot="ROT=TROT",
                         )
                     )
                     _append(
                         self._emit_block(
                             f"{tag}VAR.EXP",
-                            self._sanitize_payload(tvar[:, 0, idx]),
+                            self._sanitize_payload(
+                                tvar[:, 0, idx],
+                                replace_zero=not preserve_zero,
+                            ),
                             rot="ROT=TROT",
                         )
                     )
@@ -1203,12 +1259,14 @@ class EDIFile(EDIMixin, EDIOMixin):
         *,
         replace_zero: bool = True,
     ) -> np.ndarray:
-        # replace 0/NaN/Inf by EMPTY sentinel for data payloads
+        # Replace NaN/Inf by EMPTY in all modes. Historical EDI writing also
+        # maps exact zeros to EMPTY; converters can opt out of that behavior
+        # without changing the legacy default.
         out = np.asarray(arr, dtype=float).copy()
-        if not replace_zero:
-            return out
         sentinel = self._sentinel()
-        bad = (~np.isfinite(out)) | (out == 0.0)
+        bad = ~np.isfinite(out)
+        if replace_zero:
+            bad |= out == 0.0
         out[bad] = sentinel
         return out
 

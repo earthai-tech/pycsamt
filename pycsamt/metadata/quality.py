@@ -50,6 +50,7 @@ from typing import Any
 
 import numpy as np
 
+from ..api.property import PyCSAMTObject
 from ..api.view import maybe_wrap_frame
 
 __all__ = [
@@ -58,6 +59,8 @@ __all__ = [
     "DataQuality",
     "assess_collection",
     "quality_dataframe",
+    "QualityComment",
+    "TransferFunctionQuality",
 ]
 
 # Component ordering
@@ -425,6 +428,118 @@ class DataQuality:
             f"DataQuality({self.station!r}  {self.n_freq} freq"
             f"  overall={self.overall.value})"
         )
+
+
+# ---------------------------------------------------------------------------
+# Archive / transfer-function quality metadata
+# ---------------------------------------------------------------------------
+
+
+@dataclass(repr=False)
+class QualityComment(PyCSAMTObject):
+    """Free-text transfer-function quality comment with optional author."""
+
+    text: str
+    author: str | None = None
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        self.text = str(self.text).strip()
+        if not self.text:
+            raise ValueError("quality comment text must be non-empty")
+        if self.author is not None:
+            value = str(self.author).strip()
+            self.author = value or None
+
+
+@dataclass(repr=False)
+class TransferFunctionQuality(PyCSAMTObject):
+    """Archival quality assessment attached to an EM transfer function.
+
+    This class intentionally does **not** replace :class:`DataQuality`.
+    ``DataQuality`` is a pyCSAMT-computed coverage/SNR assessment, whereas
+    ``TransferFunctionQuality`` preserves expert/archive metadata such as the
+    EMTF 0--5 rating, accepted period range, warning flag, and comments.
+    """
+
+    rating: int | None = None
+    good_from_period: float | None = None
+    good_to_period: float | None = None
+    comments: list[QualityComment] = field(default_factory=list)
+    warning_flag: int | None = None
+    warnings: list[QualityComment] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        if self.rating is not None:
+            rating = int(self.rating)
+            if rating < 0 or rating > 5:
+                raise ValueError(
+                    "transfer-function quality rating must be 0..5"
+                )
+            self.rating = rating
+
+        for attr in ("good_from_period", "good_to_period"):
+            value = getattr(self, attr)
+            if value is None:
+                continue
+            period = float(value)
+            if not np.isfinite(period) or period <= 0.0:
+                raise ValueError(f"{attr} must be finite and positive")
+            setattr(self, attr, period)
+        if (
+            self.good_from_period is not None
+            and self.good_to_period is not None
+            and self.good_from_period > self.good_to_period
+        ):
+            raise ValueError("good_from_period must not exceed good_to_period")
+
+        if self.warning_flag is not None:
+            flag = int(self.warning_flag)
+            if flag not in {0, 1}:
+                raise ValueError("warning_flag must be 0, 1, or None")
+            self.warning_flag = flag
+
+        self.comments = self._normalize_comments(self.comments, "comments")
+        self.warnings = self._normalize_comments(self.warnings, "warnings")
+        self.extra = dict(self.extra or {})
+
+    @staticmethod
+    def _normalize_comments(
+        values: list[QualityComment],
+        name: str,
+    ) -> list[QualityComment]:
+        out = list(values or [])
+        for value in out:
+            if not isinstance(value, QualityComment):
+                raise TypeError(
+                    f"{name} must contain QualityComment instances"
+                )
+        return out
+
+    @property
+    def has_warning(self) -> bool:
+        """Return whether an archive warning is explicitly present."""
+        return self.warning_flag == 1 or bool(self.warnings)
+
+    @property
+    def rating_label(self) -> str | None:
+        """Return the conventional EMTF rating interpretation."""
+        if self.rating is None:
+            return None
+        return {
+            5: "great",
+            4: "good",
+            3: "could_be_improved",
+            2: "serious_issues",
+            1: "poor",
+            0: "not_assessed",
+        }[self.rating]
 
 
 # ---------------------------------------------------------------------------

@@ -346,5 +346,16 @@ def test_sites_write(tmp_path: Path, simulated_edi: Path) -> None:
 
     out = sites.write(tmp_path, template="{station}.edi", exist_ok=True)
     assert len(out) == 2
-    for p in out:
+    for p, src in zip(out, (s1, s2)):
         assert p.exists()
+        # Real EDI content, not the placeholder `Sites.write()` used to
+        # silently emit when the underlying EDI object had no `to_file`
+        # method (it never did -- the real writer is `EDIFile.write`).
+        text = p.read_text(encoding="utf-8")
+        assert ">HEAD" in text
+        assert ">FREQ" in text
+        reloaded = EDIFile(p)
+        np.testing.assert_allclose(
+            np.sort(np.asarray(reloaded.Z.freq, dtype=float)),
+            np.sort(np.asarray(src.edi.Z.freq, dtype=float)),
+        )

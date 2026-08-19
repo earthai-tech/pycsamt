@@ -61,6 +61,49 @@ class TestConvertCommand:
         n_out = len(list(out.glob("*.edi")))
         assert n_out == n_in
 
+    def test_edi_passthrough_directory_with_explicit_to_edi(
+        self, runner: CliRunner, edi_dir: Path, tmp_path: Path
+    ) -> None:
+        """An explicit ``--to edi`` on a directory must still run the
+        legacy batch path rather than being rejected as a single-file
+        transfer-function conversion (regression guard)."""
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            [
+                "convert",
+                str(edi_dir),
+                "--to",
+                "edi",
+                "--output-dir",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0
+        n_in = len(list(edi_dir.glob("*.edi")))
+        n_out = len(list(out.glob("*.edi")))
+        assert n_out == n_in
+
+    def test_directory_with_to_emtf_xml_is_rejected_clearly(
+        self, runner: CliRunner, edi_dir: Path, tmp_path: Path
+    ) -> None:
+        """A target format other than EDI has no directory-batch support;
+        it must fail with a clear message, not silently misbehave."""
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            [
+                "convert",
+                str(edi_dir),
+                "--to",
+                "emtf-xml",
+                "--output-dir",
+                str(out),
+            ],
+        )
+        assert result.exit_code != 0
+        assert "SOURCE must be a file" in result.output
+
     # ------------------------------------------------------------------
     # Overwrite protection
     # ------------------------------------------------------------------

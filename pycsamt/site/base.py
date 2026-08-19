@@ -71,8 +71,96 @@ class SiteMixin(CoreObject):
            Commonly used magnetotelluric exchange format.
     """
 
-    def __init__(self, edi: EDIFile) -> None:
-        self.edi = edi
+    def __init__(self, source: Any, *, on_loss: str = "warn") -> None:
+        self._on_loss = on_loss
+        if _is_xml_like(source):
+            self._native = "xml"
+            self._tf_obj: Any = source
+            self._edi_obj: EDIFile | None = None
+        else:
+            self._native = "edi"
+            self._edi_obj = source
+            self._tf_obj = None
+
+    @property
+    def backend(self) -> str:
+        r"""
+        Which backend natively constructed this site.
+
+        Returns
+        -------
+        str
+            ``"edi"`` or ``"xml"``. The other representation is
+            always available too (see :attr:`edi` and :attr:`tf`)
+            but is lazily materialized and cached on first access.
+        """
+
+        return self._native
+
+    @property
+    def edi(self) -> EDIFile:
+        r"""
+        The underlying :class:`~pycsamt.seg.edi.EDIFile`.
+
+        Returns
+        -------
+        pycsamt.seg.edi.EDIFile
+            When this site was constructed from an EDI object, the
+            same object every time. When constructed from an
+            :class:`~pycsamt.emtf.document.EMTF` XML document, an
+            EDI view is materialized on first access via
+            :func:`pycsamt.emtf.converters.edi.emtf_to_edi` and
+            cached, so this always returns the same object on
+            repeated access (safe for in-place mutation and
+            identity-keyed caches elsewhere in the codebase).
+
+        Notes
+        -----
+        Materializing from XML may emit a
+        :class:`~pycsamt.emtf.converters.edi.DataLossWarning` (or
+        raise, depending on ``on_loss`` passed at construction) if
+        the source document holds metadata the historical EDI
+        format cannot represent.
+        """
+
+        if self._edi_obj is None:
+            from ..emtf.converters.edi import emtf_to_edi
+
+            self._edi_obj = emtf_to_edi(self._tf_obj, on_loss=self._on_loss)
+        return self._edi_obj
+
+    @edi.setter
+    def edi(self, value: EDIFile) -> None:
+        self._edi_obj = value
+
+    @property
+    def tf(self) -> Any:
+        r"""
+        The underlying :class:`~pycsamt.emtf.document.EMTF` document.
+
+        Returns
+        -------
+        pycsamt.emtf.document.EMTF
+            When this site was constructed from an XML document,
+            the same object every time. When constructed from an
+            EDI object, a format-neutral view is materialized on
+            first access via
+            :func:`pycsamt.emtf.converters.edi.edi_to_emtf` and
+            cached (lossless -- XML is a strict superset of EDI).
+
+        See Also
+        --------
+        site_meta, site_layout, provenance, processing, copyright,
+        quality_meta
+            Typed :mod:`pycsamt.metadata` accessors built on top of
+            this document.
+        """
+
+        if self._tf_obj is None:
+            from ..emtf.converters.edi import edi_to_emtf
+
+            self._tf_obj = edi_to_emtf(self._edi_obj)
+        return self._tf_obj
 
     @property
     def name(self) -> str:
@@ -88,8 +176,15 @@ class SiteMixin(CoreObject):
         Notes
         -----
         The resolution order is defined in :func:`_station_name`.
+        XML-native sites resolve the name directly from the
+        :class:`~pycsamt.emtf.document.EMTF` document without
+        forcing EDI materialization.
         """
 
+        if self._native == "xml" and self._edi_obj is None:
+            nm = _tf_station_name(self._tf_obj)
+            if nm:
+                return nm
         return _station_name(self.edi)
 
     @property
@@ -106,9 +201,17 @@ class SiteMixin(CoreObject):
         Notes
         -----
         This accessor relies on :func:`_get_coords` which parses
-        EDI HEAD latitude, longitude and elevation.
+        EDI HEAD latitude, longitude and elevation. XML-native
+        sites read directly from the :class:`EMTF` document without
+        forcing EDI materialization.
         """
 
+        if self._native == "xml" and self._edi_obj is None:
+            tf = self._tf_obj
+            lat = float(tf.lat) if tf.lat is not None else float("nan")
+            lon = float(tf.lon) if tf.lon is not None else float("nan")
+            elev = float(tf.elev) if tf.elev is not None else float("nan")
+            return (lat, lon, elev)
         c = _get_coords(self.edi)
         return (float(c.lat), float(c.lon), float(c.elev))
 
@@ -228,6 +331,8 @@ class SiteMixin(CoreObject):
         keys are omitted.
         """
 
+        if self._native == "xml" and self._edi_obj is None:
+            return _tf_meta(self._tf_obj)
         h = _get_head(self.edi)
         info = _safe_get(self.edi, "INFO")
         out: dict[str, Any] = {}
@@ -649,25 +754,48 @@ class Site(SiteMixin):
     convenient accessors for coordinates, impedance Z, tipper,
     and derived quantities.
 
-    The constructor normalizes EDI ``HEAD`` fields so that
-    ``dataid`` (and, if absent, ``station``) matches the site
-    stem resolved by :func:`_stem_from_edi`. If an in-memory
-    ``edi.name`` exists, the stem may prefer it so that a prior
-    rename is preserved. This normalization improves name-based
+    ``Site`` also accepts an :class:`~pycsamt.emtf.document.EMTF` XML
+    document instead of an EDI object -- see :meth:`from_xml`. Either
+    way, :attr:`edi` and :attr:`tf` are both always available: the
+    representation not natively supplied is lazily materialized and
+    cached from the other via
+    :func:`pycsamt.emtf.converters.edi.edi_to_emtf`/``emtf_to_edi``,
+    so every existing EDI-shaped accessor keeps working unchanged
+    regardless of which format the site was built from.
+
+    When constructed from EDI, the constructor normalizes EDI
+    ``HEAD`` fields so that ``dataid`` (and, if absent, ``station``)
+    matches the site stem resolved by :func:`_stem_from_edi`. If an
+    in-memory ``edi.name`` exists, the stem may prefer it so that a
+    prior rename is preserved. This normalization improves name-based
     indexing, deterministic selection, and downstream joins in
-    collections.
+    collections. XML-native sites keep the station identity already
+    recorded in the document instead.
 
     Parameters
     ----------
-    edi : pycsamt.seg.edi.EDIFile
-        Parsed SEG-EDI container holding one station. The file
-        may be constructed from disk or synthesized in memory.
+    source : pycsamt.seg.edi.EDIFile or pycsamt.emtf.document.EMTF
+        Parsed SEG-EDI container, or an EMTF XML document, holding
+        one station. The EDI file may be constructed from disk or
+        synthesized in memory.
+    on_loss : {"warn", "raise", "ignore"}, default "warn"
+        Policy applied if :attr:`edi` is later materialized from an
+        XML-native site and the document holds metadata the
+        historical EDI format cannot represent.
 
     Attributes
     ----------
     edi : pycsamt.seg.edi.EDIFile
-        Underlying EDI object. Use with care; prefer the typed
-        accessors of :class:`SiteMixin` (e.g., ``freq``, ``z``).
+        Underlying (possibly lazily materialized) EDI object. Use
+        with care; prefer the typed accessors of :class:`SiteMixin`
+        (e.g., ``freq``, ``z``).
+    tf : pycsamt.emtf.document.EMTF
+        Underlying (possibly lazily materialized) EMTF XML document.
+        See also :attr:`site_meta`, :attr:`provenance`,
+        :attr:`processing`, :attr:`site_layout`, :attr:`copyright`,
+        :attr:`quality_meta`.
+    backend : str
+        ``"edi"`` or ``"xml"`` -- which representation is native.
     name : str
         Normalized station identifier. By default this equals
         the file stem, unless a previous explicit rename is in
@@ -768,17 +896,151 @@ class Site(SiteMixin):
            Magnetotellurics. Cambridge University Press.
     """
 
-    def __init__(self, edi: EDIFile) -> None:
-        super().__init__(edi)
-        try:
-            h = _ensure_head(self.edi)
-            nm = _stem_from_edi(self.edi)
-            if nm:
-                h.dataid = nm
-                if not getattr(h, "station", None):
-                    h.station = nm
-        except Exception:
-            pass
+    def __init__(self, source: Any, *, on_loss: str = "warn") -> None:
+        super().__init__(source, on_loss=on_loss)
+        if self._native == "edi":
+            try:
+                h = _ensure_head(self.edi)
+                nm = _stem_from_edi(self.edi)
+                if nm:
+                    h.dataid = nm
+                    if not getattr(h, "station", None):
+                        h.station = nm
+            except Exception:
+                pass
+
+    @classmethod
+    def from_edi(cls, source: Any, *, on_loss: str = "warn") -> Site:
+        r"""
+        Construct a :class:`Site` from an EDI object or a path to one.
+
+        Parameters
+        ----------
+        source : pycsamt.seg.edi.EDIFile or str or pathlib.Path
+            Parsed EDI object, or a path that will be read via
+            ``EDIFile(source)``.
+        on_loss : {"warn", "raise", "ignore"}, default "warn"
+            Policy used if this site's :attr:`tf` is later
+            materialized and something needs to be converted back.
+
+        Returns
+        -------
+        Site
+            A site backed natively by EDI.
+
+        See Also
+        --------
+        from_xml : Construct from an EMTF XML document instead.
+        """
+
+        if isinstance(source, (str, bytes, Path, PathLike)):
+            source = EDIFile(source)
+        return cls(source, on_loss=on_loss)
+
+    @classmethod
+    def from_xml(cls, source: Any, *, on_loss: str = "warn") -> Site:
+        r"""
+        Construct a :class:`Site` from an EMTF XML document or path.
+
+        Parameters
+        ----------
+        source : pycsamt.emtf.document.EMTF or str or pathlib.Path
+            Parsed EMTF document, or a path that will be read via
+            :meth:`pycsamt.emtf.document.EMTF.from_xml`.
+        on_loss : {"warn", "raise", "ignore"}, default "warn"
+            Policy applied when this site's :attr:`edi` view is
+            later materialized and the document holds metadata the
+            historical EDI format cannot represent.
+
+        Returns
+        -------
+        Site
+            A site backed natively by the richer EMTF XML model;
+            :attr:`z`, :attr:`freq`, :attr:`tipper`, and friends
+            keep working exactly as for an EDI-backed site (via a
+            cached, lazily materialized EDI view), while
+            :attr:`tf`, :attr:`site_meta`, :attr:`provenance`, and
+            related properties expose the full richer metadata.
+
+        See Also
+        --------
+        from_edi : Construct from a SEG EDI object instead.
+        Site.to_xml : Serialize a site back to EMTF XML.
+        """
+
+        from ..emtf.document import EMTF
+
+        if not isinstance(source, EMTF):
+            source = EMTF.from_xml(source)
+        return cls(source, on_loss=on_loss)
+
+    def to_xml(self, target: Any = None, **kwargs) -> Any:
+        r"""
+        Serialize this site to EMTF XML.
+
+        Parameters
+        ----------
+        target : str or pathlib.Path, optional
+            Destination path. If ``None``, the XML document is
+            returned as a string instead of being written.
+        **kwargs
+            Forwarded to
+            :meth:`pycsamt.emtf.document.EMTF.write_xml` (when
+            ``target`` is given) or
+            :meth:`pycsamt.emtf.document.EMTF.to_xml` (otherwise).
+
+        Returns
+        -------
+        str or Any
+            The XML document as a string when ``target`` is
+            ``None``; otherwise the return value of
+            :meth:`~pycsamt.emtf.document.EMTF.write_xml`.
+
+        See Also
+        --------
+        from_xml : The inverse constructor.
+        tf : The underlying :class:`EMTF` document used here.
+        """
+
+        if target is None:
+            return self.tf.to_xml(**kwargs)
+        return self.tf.write_xml(target, **kwargs)
+
+    @property
+    def site_meta(self) -> Any:
+        r"""``pycsamt.metadata.SiteMeta`` for this site (via :attr:`tf`)."""
+
+        return self.tf.site
+
+    @property
+    def site_layout(self) -> Any:
+        r"""``pycsamt.metadata.SiteLayout`` channel geometry (via :attr:`tf`)."""
+
+        return self.tf.site_layout
+
+    @property
+    def provenance(self) -> Any:
+        r"""``pycsamt.metadata.ProvenanceMeta`` creator/submitter info."""
+
+        return self.tf.provenance
+
+    @property
+    def processing(self) -> Any:
+        r"""``pycsamt.metadata.ProcessingMeta`` processing/software info."""
+
+        return self.tf.processing
+
+    @property
+    def copyright(self) -> Any:
+        r"""``pycsamt.metadata.CopyrightInfo`` release/citation info."""
+
+        return self.tf.copyright
+
+    @property
+    def quality_meta(self) -> Any:
+        r"""``pycsamt.metadata.TransferFunctionQuality`` QC rating/comments."""
+
+        return self.tf.quality
 
     def to_edi(self, *, copy: bool = False) -> EDIFile:
         r"""
@@ -856,10 +1118,13 @@ class Sites(CoreObject):
     Parameters
     ----------
     edic : pycsamt.seg.collection.EDICollection or sequence of
-           pycsamt.seg.edi.EDIFile
-        Parsed EDI collection or any sequence of EDI objects.
-        Items are wrapped into :class:`Site` instances in the
-        order provided.
+           pycsamt.seg.edi.EDIFile, pycsamt.emtf.document.EMTF, or
+           :class:`Site`
+        Parsed EDI collection, or any sequence mixing EDI objects,
+        EMTF XML documents, and already-constructed :class:`Site`
+        instances. Items are wrapped into :class:`Site` instances
+        (existing ``Site`` items are used as-is) in the order
+        provided.
 
     Attributes
     ----------
@@ -999,13 +1264,18 @@ class Sites(CoreObject):
 
     def __init__(
         self,
-        edic: EDICollection | Sequence[EDIFile],
+        edic: EDICollection | Sequence[EDIFile | Any | Site],
+        *,
+        on_loss: str = "warn",
     ) -> None:
-        if isinstance(edic, EDIFile):
+        if isinstance(edic, EDIFile) or isinstance(edic, Site) or _is_xml_like(edic):
             edic = [edic]
 
         items = list(edic)
-        self._items: list[Site] = [Site(e) for e in items]
+        self._items: list[Site] = [
+            it if isinstance(it, Site) else Site(it, on_loss=on_loss)
+            for it in items
+        ]
 
     @property
     def edic(self) -> list[EDIFile]:
@@ -1246,7 +1516,12 @@ class Sites(CoreObject):
                 f"by must be one of {sorted(allowed)}, got {by!r}"
             )
 
-        target = self if inplace else Sites(self.as_list())
+        # Reorder via the existing Site objects, not `self.as_list()`
+        # (which forces every site through its materialized `.edi`
+        # view) -- that would silently downgrade XML-native sites to
+        # EDI-backed on every non-inplace `.ordered()` call, including
+        # the one `ensure_sites` always performs.
+        target = self if inplace else Sites(self._items)
         n = len(target._items)
         report: dict[str, Any] = {
             "requested": mode,
@@ -1488,6 +1763,57 @@ class Sites(CoreObject):
             progress=progress,
             verbose=verbose,
         )
+
+    def to_emtf_list(self) -> list[Any]:
+        r"""
+        Return the underlying EMTF XML documents as a list.
+
+        Returns
+        -------
+        list of pycsamt.emtf.document.EMTF
+            One document per site, in site order. EDI-native sites
+            are lazily converted and cached via
+            :attr:`Site.tf`; XML-native sites are returned as-is,
+            with no information loss.
+
+        See Also
+        --------
+        write_xml : Persist these documents to a directory.
+        to_edis : The EDI-side equivalent.
+        """
+
+        return [s.tf for s in self._items]
+
+    def write_xml(self, outdir: str | Path, **kwargs) -> list[Path]:
+        r"""
+        Write one EMTF XML file per site into a directory.
+
+        Parameters
+        ----------
+        outdir : str or pathlib.Path
+            Destination directory. It is created if missing.
+        **kwargs
+            Forwarded to :meth:`Site.to_xml` for each site.
+
+        Returns
+        -------
+        list of pathlib.Path
+            Paths to the written files, named ``"{station}.xml"``.
+
+        See Also
+        --------
+        to_emtf_list : In-memory equivalent without writing to disk.
+        Sites.write : The EDI-side equivalent.
+        """
+
+        outdir = Path(outdir)
+        outdir.mkdir(parents=True, exist_ok=True)
+        paths: list[Path] = []
+        for s in self._items:
+            p = outdir / f"{s.name}.xml"
+            s.to_xml(p, **kwargs)
+            paths.append(p)
+        return paths
 
     def closest(
         self,
@@ -1806,14 +2132,17 @@ class Sites(CoreObject):
         True
         """
 
-        out: list[EDIFile] = []
+        # Filter via the existing Site objects, not `.edi`, so an
+        # XML-native site stays XML-native through a select() (the
+        # same class of bug fixed in `ordered()`).
+        out: list[Site]
         if names:
             wanted = {str(n).lower() for n in names}
-            out.extend(s.edi for s in self._items if s.name.lower() in wanted)
+            out = [s for s in self._items if s.name.lower() in wanted]
         elif predicate:
-            out.extend(s.edi for s in self._items if predicate(s))
+            out = [s for s in self._items if predicate(s)]
         else:
-            out = self.as_list()
+            out = list(self._items)
         return Sites(out)
 
     @classmethod
@@ -1908,8 +2237,14 @@ class Sites(CoreObject):
 
         Notes
         -----
-        If an EDI object implements ``to_file``, it is used to
-        serialize. Otherwise a small placeholder file is written.
+        Serialization goes through
+        :func:`pycsamt.emtf.converters.edi.write_edi`, which writes
+        the underlying :class:`~pycsamt.seg.edi.EDIFile` to an exact
+        target path (working around
+        :meth:`~pycsamt.seg.edi.EDIFile.write`'s own default of
+        deriving a ``new_``-prefixed name under a local ``edi_out/``
+        directory when not given an explicit ``new_edifn``/
+        ``savepath``).
 
         Examples
         --------
@@ -1920,6 +2255,8 @@ class Sites(CoreObject):
         True
         """
 
+        from ..emtf.converters.edi import write_edi
+
         outp = Path(outdir)
         outp.mkdir(parents=True, exist_ok=True)
         paths: list[Path] = []
@@ -1929,17 +2266,7 @@ class Sites(CoreObject):
             p = outp / fn
             if p.exists() and not exist_ok:
                 raise FileExistsError(str(p))
-            edi = s.edi
-            tf = getattr(edi, "to_file", None)
-            if callable(tf):
-                try:
-                    tf(str(p))
-                    paths.append(p)
-                    continue
-                except Exception:
-                    pass
-            with open(p, "w", encoding="utf-8") as f:
-                f.write(f"# EDI placeholder for {name}\n")
+            write_edi(s.edi, p)
             paths.append(p)
         return paths
 
@@ -2252,10 +2579,227 @@ def _is_edi_like(obj: Any) -> bool:
     )
 
 
+def _is_xml_like(obj: Any) -> bool:
+    """Duck-type-safe check for an in-memory EMTF XML document.
+
+    Uses ``isinstance`` (unlike the EDI checks above) because
+    :class:`~pycsamt.emtf.document.EMTF` is a concrete, stable class
+    rather than a historically duck-typed format.
+    """
+
+    if obj is None:
+        return False
+    from ..emtf.document import EMTF
+
+    return isinstance(obj, EMTF)
+
+
+def _is_xml_path(obj: Any) -> bool:
+    """True for a path-like object whose suffix is ``.xml``.
+
+    Works for plain file paths and simple ``*.xml``-suffixed glob
+    patterns alike, since :attr:`pathlib.PurePath.suffix` is purely
+    lexical (it does not touch the filesystem).
+    """
+
+    if not _is_pathlike(obj):
+        return False
+    try:
+        return Path(str(obj)).suffix.lower() == ".xml"
+    except Exception:
+        return False
+
+
+def _load_xml(obj: Any) -> Any:
+    """Return an :class:`EMTF` document from *obj* (object or path)."""
+
+    from ..emtf.document import EMTF
+
+    if isinstance(obj, EMTF):
+        return obj
+    return EMTF.from_xml(obj)
+
+
+def _tf_station_name(tf: Any) -> str:
+    for attr in ("station_id", "station"):
+        v = _safe_get(tf, attr, default=None)
+        if v:
+            return str(v)
+    site = _safe_get(tf, "site", default=None)
+    for attr in ("site_id", "name"):
+        v = _safe_get(site, attr, default=None)
+        if v:
+            return str(v)
+    return "site"
+
+
+def _tf_meta(tf: Any) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    name = _tf_station_name(tf)
+    if name:
+        out["station"] = name
+        out["dataid"] = name
+    site = _safe_get(tf, "site", default=None)
+    nm = _safe_get(site, "name", default=None)
+    if nm:
+        out["name"] = nm
+        out["sitename"] = nm
+    for key in ("lat", "lon", "elev"):
+        v = _safe_get(tf, key, default=None)
+        if v is not None:
+            out[key] = v
+    return out
+
+
+def _discover_xml_sites(
+    dir_path: Any, *, recursive: bool = True, on_loss: str = "warn"
+) -> list[Site]:
+    """Glob ``*.xml`` under *dir_path* and wrap each as a :class:`Site`.
+
+    Malformed/unrelated XML files are skipped rather than raised,
+    matching the tolerant, best-effort spirit of the EDI-side
+    discovery this runs alongside.
+    """
+
+    p = Path(dir_path)
+    if not p.is_dir():
+        return []
+    it = p.rglob("*.xml") if recursive else p.glob("*.xml")
+    out: list[Site] = []
+    for m in sorted(it):
+        if not m.is_file():
+            continue
+        try:
+            out.append(Site(_load_xml(m), on_loss=on_loss))
+        except Exception:
+            continue
+    return out
+
+
+def _partition_xml_sources(
+    x: Any, *, recursive: bool = True, on_loss: str = "warn"
+) -> tuple[list[Site], Any, bool]:
+    """Split XML-native content out of *x* for :func:`_to_sites`.
+
+    Returns ``(xml_sites, edi_remainder, touched)``. When ``touched``
+    is ``False``, *x* contained nothing XML-native and
+    ``edi_remainder`` is *x* itself, unmodified -- callers should
+    fall through to the original, unchanged EDI-only coercion in
+    that case. ``edi_remainder`` is what should still be handed to
+    that EDI-only coercion (possibly *x* itself, a filtered list, or
+    an empty list).
+    """
+
+    if _is_xml_like(x):
+        return [Site(x, on_loss=on_loss)], [], True
+    if _is_xml_path(x):
+        return [Site(_load_xml(x), on_loss=on_loss)], [], True
+    if isinstance(x, Site):
+        if x.backend == "xml":
+            return [x], [], True
+        return [], x, False
+    # EDI-like objects (and anything that merely looks EDI-like) must
+    # never be iterated into -- short-circuit before the generic
+    # iterable fallback below.
+    if _is_edi_like(x) or isinstance(x, (EDIFile, Sites, EDICollection)):
+        return [], x, False
+
+    if _is_pathlike(x):
+        p = Path(x)
+        if p.is_dir():
+            found = _discover_xml_sites(p, recursive=recursive, on_loss=on_loss)
+            if found:
+                return found, x, True
+        return [], x, False
+
+    if hasattr(x, "__iter__"):
+        try:
+            items = list(x)
+        except Exception:
+            return [], x, False
+        xml_sites: list[Site] = []
+        edi_remainder: list[Any] = []
+        touched = False
+        for item in items:
+            if _is_xml_like(item):
+                xml_sites.append(Site(item, on_loss=on_loss))
+                touched = True
+            elif _is_xml_path(item):
+                xml_sites.append(Site(_load_xml(item), on_loss=on_loss))
+                touched = True
+            elif isinstance(item, Site) and item.backend == "xml":
+                xml_sites.append(item)
+                touched = True
+            elif (
+                _is_pathlike(item)
+                and not _is_edi_like(item)
+                and Path(item).is_dir()
+            ):
+                found = _discover_xml_sites(
+                    item, recursive=recursive, on_loss=on_loss
+                )
+                if found:
+                    xml_sites.extend(found)
+                    touched = True
+                edi_remainder.append(item)
+            else:
+                edi_remainder.append(item)
+        return xml_sites, edi_remainder, touched
+
+    return [], x, False
+
+
+def _dedup_sites(
+    sites: list[Site], *, policy: str = "replace", verbose: int = 0
+) -> list[Site]:
+    """List-level counterpart of :func:`_dedup_collection_names`.
+
+    Used to apply the same ``on_dup`` vocabulary uniformly across a
+    combined EDI+XML site list (which may include XML-native
+    :class:`Site` objects that never pass through an
+    :class:`EDICollection`).
+    """
+
+    key = (policy or "replace").strip().lower()
+    if key in {"replace", "keep"} or len(sites) < 2:
+        return sites
+
+    name_to_idx: dict[str, int] = {}
+    names: list[str] = []
+    for i, s in enumerate(sites):
+        n = s.name
+        names.append(n)
+        if key == "keep_first":
+            name_to_idx.setdefault(n, i)
+        elif key == "keep_last":
+            name_to_idx[n] = i
+        elif key == "raise":
+            if n in name_to_idx:
+                raise ValueError(
+                    f"Duplicate site '{n}' encountered with on_dup='raise'."
+                )
+            name_to_idx[n] = i
+        else:
+            name_to_idx[i] = i
+
+    if verbose > 0:
+        dups = sorted({n for n in names if names.count(n) > 1})
+        if dups:
+            warnings.warn(
+                f"to_sites: duplicates {dups} handled with policy='{key}'.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+    return [sites[i] for i in sorted(name_to_idx.values())]
+
+
 def _is_single_edi_input(x: Any) -> bool:
     if isinstance(x, Site):
         return True
     if _is_edi_like(x):
+        return True
+    if _is_xml_like(x) or _is_xml_path(x):
         return True
     if _is_pathlike(x):
         return False
@@ -2265,6 +2809,10 @@ def _is_single_edi_input(x: Any) -> bool:
 def _unwrap_one_edi(x: Any, *, strict: bool = False) -> EDIFile | None:
     if isinstance(x, Site):
         return x.edi
+    if _is_xml_like(x):
+        return Site(x).edi
+    if _is_xml_path(x):
+        return Site(_load_xml(x)).edi
     edi = getattr(x, "edi", None)
     if _is_edi_like(edi):
         return edi
@@ -2464,6 +3012,7 @@ def _to_sites(
     on_dup: str = "replace",
     strict: bool = False,
     verbose: int = 0,
+    _skip_xml: bool = False,
 ):
     r"""
     Internal helper that implements :func:`to_sites`.
@@ -2477,6 +3026,46 @@ def _to_sites(
     # Fast path
     if isinstance(x, Sites):
         return x
+
+    # 0) XML-aware pre-pass: pull out anything XML-native (an EMTF
+    # object, a .xml path, an XML-backed Site, or *.xml files found
+    # inside a directory) without disturbing the EDI-only logic below.
+    # When nothing XML-native is found, `touched` is False and
+    # `edi_remainder` is `x` itself, unmodified -- the original,
+    # unchanged coercion runs exactly as before. `_skip_xml` guards
+    # the recursive call below: for a single directory, `edi_remainder`
+    # is that same directory (its *.edi half is handled by the
+    # unmodified logic further down), so re-running this pre-pass on
+    # it would re-discover the same *.xml files and recurse forever.
+    if not _skip_xml:
+        xml_sites, edi_remainder, touched = _partition_xml_sources(
+            x, recursive=recursive, on_loss="warn"
+        )
+    else:
+        xml_sites, edi_remainder, touched = [], x, False
+    if touched:
+        # `_partition_xml_sources` already extracted every XML-native
+        # item in one pass (including *.xml files inside any directory
+        # it walked), so the recursive call below only ever needs to
+        # run the original, unmodified EDI-only logic -- never another
+        # XML-discovery pass, which would otherwise re-find (and
+        # duplicate) the same *.xml files.
+        edi_only = _to_sites(
+            edi_remainder,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=False,
+            verbose=verbose,
+            _skip_xml=True,
+        )
+        combined = list(edi_only) + xml_sites
+        combined = _dedup_sites(combined, policy=on_dup, verbose=verbose)
+        if strict and not combined:
+            raise ValueError(
+                "to_sites(strict=True): no EDI- or EMTF-like items "
+                "could be coerced from the provided input."
+            )
+        return Sites(combined)
 
     # 1) Path-like (single or sequence) → from_sources(...)
     if _is_pathlike(x) or _is_seq_of_pathlike(x):

@@ -9,6 +9,18 @@ arrays and maps two distinct AFMAG generations into the common pyCSAMT model:
 * original comparator AFMAG -> scalar line-direction tilt response;
 * tensor AFMAG / AirMt -> 3 x 2 interstation magnetic transfer function plus
   the optional rotationally invariant amplification parameter.
+
+Shape/frequency/mask/metadata normalization that is not specific to
+either AFMAG generation is delegated to
+:mod:`pycsamt.airborne.validation` (shared with
+:mod:`pycsamt.airborne.mobilemt` and :mod:`pycsamt.airborne.ztem`) via
+its ``error_cls`` parameter, so every ``AFMAGValidationError`` raised
+here still comes from this module even though the check itself is not
+reimplemented per technology. ``build_original_afmag_*`` and
+``build_airmt_*`` remain genuinely separate below them, because the
+two AFMAG generations are scientifically distinct responses (a real
+scalar tilt versus a complex 3x2 interstation tensor), not two
+configurations of one response.
 """
 
 from __future__ import annotations
@@ -24,12 +36,20 @@ from ...emtf.transfer import TransferFunction
 from ...metadata import (
     OrientationMeta,
     ProcessingMeta,
-    RemoteReferenceMeta,
     SiteMeta,
     SurveyMeta,
 )
 from ..base import AirborneEMDataset, AirborneEMLine, AirborneEMRecord
 from ..navigation import NavigationTrack
+from ..validation import (
+    merge_remote_reference_processing,
+    normalize_estimate_array,
+    normalize_frequency,
+    normalize_record_mask,
+    normalize_sample_axis_array,
+    reference_station_mapping,
+    resolve_frequency_or_periods,
+)
 from .base import (
     AFMAGReferenceStation,
     AirMtSystemSpec,
@@ -68,51 +88,20 @@ class AFMAGValidationError(ValueError):
     """Raised when decoded AFMAG scientific arrays are inconsistent."""
 
 
-def _as_frequency(value: Any, *, name: str = "frequency") -> np.ndarray:
-    arr = np.asarray(value, dtype=float)
-    if arr.ndim == 0:
-        arr = arr.reshape(1)
-    if arr.ndim != 1:
-        raise AFMAGValidationError(f"{name} must be a 1-D array")
-    if arr.size == 0:
-        raise AFMAGValidationError(f"{name} must be non-empty")
-    if not np.all(np.isfinite(arr)) or np.any(arr <= 0.0):
-        raise AFMAGValidationError(
-            f"{name} must contain finite positive values"
-        )
-    return arr
-
-
-def _period_axis(
-    *,
-    frequency: Any | None,
-    periods: Any | None,
-) -> tuple[np.ndarray, np.ndarray]:
-    if (frequency is None) == (periods is None):
-        raise AFMAGValidationError(
-            "exactly one of frequency or periods must be supplied"
-        )
-    if frequency is not None:
-        freq = _as_frequency(frequency)
-        return freq, 1.0 / freq
-    period_arr = _as_frequency(periods, name="periods")
-    return 1.0 / period_arr, period_arr
-
-
-def _normalize_tensor(value: Any) -> np.ndarray:
-    arr = np.asarray(value)
-    if arr.ndim == 2 and arr.shape == (3, 2):
-        arr = arr[None, ...]
-    if arr.ndim != 3 or arr.shape[1:] != (3, 2):
-        raise AFMAGValidationError(
-            "AirMt tensor must have shape (nf, 3, 2) or (3, 2)"
-        )
-    if arr.dtype.kind not in "biufc":
-        raise AFMAGValidationError("AirMt tensor must be numeric")
-    return arr
-
-
 def _normalize_tilt(value: Any) -> np.ndarray:
+    """Return one sample-batched real-valued ``(nf,)`` tilt array.
+
+    Original comparator AFMAG reports a real angle or deflection, not
+    a complex EM transfer function; a genuinely complex input (with
+    non-zero imaginary part) is rejected rather than silently
+    truncated to its real part.
+
+    Raises
+    ------
+    AFMAGValidationError
+        If *value* is not scalar/1-D, is not numeric, or is complex
+        with a non-zero imaginary component.
+    """
     arr = np.asarray(value)
     if arr.ndim == 0:
         arr = arr.reshape(1)
@@ -127,31 +116,25 @@ def _normalize_tilt(value: Any) -> np.ndarray:
     return np.asarray(np.real(arr), dtype=float)
 
 
-def _normalize_estimate(
-    value: Any,
-    *,
-    n_frequency: int,
-    tail: tuple[int, int],
-    name: str,
-) -> np.ndarray:
-    arr = np.asarray(value)
-    if arr.ndim == 2 and arr.shape == tail:
-        arr = arr[None, ...]
-    if arr.ndim != 3 or arr.shape != (n_frequency, *tail):
-        raise AFMAGValidationError(
-            f"{name} must have shape {(n_frequency, *tail)}, "
-            f"got {arr.shape}"
-        )
-    if arr.dtype.kind not in "biufc":
-        raise AFMAGValidationError(f"{name} must be numeric")
-    return arr
-
-
 def _normalize_scalar_variance(
     value: Any,
     *,
     n_frequency: int,
 ) -> np.ndarray:
+    """Return one sample-batched real-valued ``(nf, 1, 1)`` variance array.
+
+    Distinct from :func:`~pycsamt.airborne.validation.normalize_estimate_array`
+    in two ways beyond shape: a bare ``(nf,)`` vector is also accepted
+    (there is no separate output/input channel axis to distinguish it
+    from), and the result is coerced real, matching
+    :func:`_normalize_tilt`'s real-valued response.
+
+    Raises
+    ------
+    AFMAGValidationError
+        If *value* does not match one of the accepted shapes, or is
+        complex with a non-zero imaginary component.
+    """
     arr = np.asarray(value)
     if arr.ndim == 0:
         arr = arr.reshape(1)
@@ -237,7 +220,29 @@ def compute_airmt_amplification_parameter(
 def validate_airmt_transfer_function(
     tf: TransferFunction,
 ) -> TransferFunction:
-    """Validate and return an AirMt 3 x 2 interstation magnetic TF."""
+    """Validate and return an AirMt 3 x 2 interstation magnetic TF.
+
+    Parameters
+    ----------
+    tf : TransferFunction
+        Transfer function to validate in place.
+
+    Returns
+    -------
+    TransferFunction
+        *tf*, unchanged, for convenient chaining after
+        :meth:`~pycsamt.emtf.EMTF.add_transfer_function`.
+
+    Raises
+    ------
+    TypeError
+        If *tf* is not a :class:`~pycsamt.emtf.TransferFunction`.
+    AFMAGValidationError
+        If *tf* does not use the standard EMTF interstation
+        ``TI``/``interstation_transfer_functions`` datatype with
+        ``Hx``/``Hy`` inputs, ``Hx``/``Hy``/``Hz`` outputs, and matrix
+        shape ``(3, 2)``.
+    """
     if not isinstance(tf, TransferFunction):
         raise TypeError("tf must be a TransferFunction")
     if tf.name != AFMAG_TENSOR_TAG:
@@ -260,7 +265,28 @@ def validate_airmt_transfer_function(
 def validate_original_afmag_tilt(
     tf: TransferFunction,
 ) -> TransferFunction:
-    """Validate and return an original AFMAG scalar tilt response."""
+    """Validate and return an original AFMAG scalar tilt response.
+
+    Parameters
+    ----------
+    tf : TransferFunction
+        Transfer function to validate in place.
+
+    Returns
+    -------
+    TransferFunction
+        *tf*, unchanged, for convenient chaining after
+        :meth:`~pycsamt.emtf.EMTF.add_transfer_function`.
+
+    Raises
+    ------
+    TypeError
+        If *tf* is not a :class:`~pycsamt.emtf.TransferFunction`.
+    AFMAGValidationError
+        If *tf* does not use the ``afmag_tilt`` datatype, is not
+        scalar (no input/output channels, matrix shape ``(1, 1)``),
+        or carries a non-zero imaginary component.
+    """
     if not isinstance(tf, TransferFunction):
         raise TypeError("tf must be a TransferFunction")
     if tf.name != AFMAG_TILT_TAG:
@@ -276,29 +302,18 @@ def validate_original_afmag_tilt(
     return tf
 
 
-def _reference_mapping(
-    reference_station: AFMAGReferenceStation | None,
-) -> dict[str, Any] | None:
-    if reference_station is None:
-        return None
-    result: dict[str, Any] = {
-        "station_id": reference_station.preferred_id,
-        "measured_channels": list(reference_station.measured_channels),
-        "transfer_input_channels": list(
-            reference_station.transfer_input_channels
-        ),
-    }
-    if reference_station.site is not None:
-        result["site"] = reference_station.site.to_dict(max_depth=2)
-    if reference_station.attrs:
-        result["attrs"] = dict(reference_station.attrs)
-    return result
-
-
 def _airmt_notes(
     spec: AirMtSystemSpec,
     reference_station: AFMAGReferenceStation | None,
 ) -> dict[str, Any]:
+    """Return a ``{"AFMAG": {...}}`` block for ``EMTF.metadata["notes"]``.
+
+    Presentation metadata only, mirroring
+    :func:`~pycsamt.airborne.ztem.adapter._xml_notes_mapping`: it does
+    not feed :attr:`~pycsamt.emtf.EMTF.processing` (see
+    :func:`_processing_for_reference` for that) and is not read back
+    by any adapter.
+    """
     low, high = spec.practical_frequency_range_hz
     values: dict[str, Any] = {
         "Family": "tensor_afmag_airmt",
@@ -336,6 +351,13 @@ def _original_notes(
     *,
     response_kind: str,
 ) -> dict[str, Any]:
+    """Return a ``{"AFMAG": {...}}`` block for ``EMTF.metadata["notes"]``.
+
+    Presentation metadata only; see :func:`_airmt_notes`. The original
+    generation has no reference-station geometry to record, unlike
+    AirMt, so this block is purely descriptive of the historical
+    instrument.
+    """
     low, high = spec.historical_frequency_band_hz
     values: dict[str, Any] = {
         "Family": "original_comparator_afmag",
@@ -357,48 +379,30 @@ def _processing_for_reference(
     reference_station: AFMAGReferenceStation | None,
     processing: ProcessingMeta | None,
 ) -> ProcessingMeta | None:
-    if processing is not None and not isinstance(processing, ProcessingMeta):
-        raise TypeError("processing must be a ProcessingMeta or None")
-    if reference_station is None:
-        return processing
+    """Fold *reference_station* into *processing*'s remote reference.
 
-    remote = RemoteReferenceMeta(
-        reference_type="fixed_ground_magnetic",
-        site=reference_station.preferred_id,
-        extra={
+    Thin AirMt-specific wrapper around
+    :func:`~pycsamt.airborne.validation.merge_remote_reference_processing`;
+    see that function's docstring for the merge/conflict semantics
+    (shared verbatim with
+    :func:`~pycsamt.airborne.ztem.adapter._processing_for_reference`).
+    """
+    extra = {}
+    if reference_station is not None:
+        extra = {
             "measured_channels": list(reference_station.measured_channels),
             "transfer_input_channels": list(
                 reference_station.transfer_input_channels
             ),
-            "technology": "AirMt",
-        },
+        }
+    return merge_remote_reference_processing(
+        reference_station,
+        processing,
+        reference_type="fixed_ground_magnetic",
+        technology="AirMt",
+        extra=extra,
+        error_cls=AFMAGValidationError,
     )
-    if processing is None:
-        return ProcessingMeta(remote_reference=remote)
-    if processing.remote_reference is None:
-        return ProcessingMeta(
-            sign_convention=processing.sign_convention,
-            processed_by=processing.processed_by,
-            software=processing.software,
-            remote_reference=remote,
-            processing_tag=processing.processing_tag,
-            run_list=(
-                None
-                if processing.run_list is None
-                else list(processing.run_list)
-            ),
-            extra=dict(processing.extra),
-        )
-
-    existing = processing.remote_reference
-    reference_id = reference_station.preferred_id
-    if existing.site is not None and reference_id is not None:
-        if str(existing.site) != str(reference_id):
-            raise AFMAGValidationError(
-                "processing remote-reference site conflicts with "
-                "AFMAGReferenceStation"
-            )
-    return processing
 
 
 def build_airmt_emtf(
@@ -421,15 +425,66 @@ def build_airmt_emtf(
     processing: ProcessingMeta | None = None,
     attrs: Mapping[str, Any] | None = None,
 ) -> EMTF:
-    """Build one sample-level tensor AFMAG/AirMt :class:`EMTF` response."""
+    """Build one sample-level tensor AFMAG/AirMt :class:`EMTF` response.
+
+    Parameters
+    ----------
+    tensor : array-like
+        Complex interstation magnetic transfer function with shape
+        ``(nf, 3, 2)``, or one ``(3, 2)`` matrix for a single
+        frequency.
+    frequency, periods : array-like, optional
+        Exactly one positive frequency or period vector must be
+        supplied.
+    variance : array-like, optional
+        Component variance with shape ``(nf, 3, 2)``.
+    inverse_signal_covariance : array-like, optional
+        Input covariance factor ``S`` with shape ``(nf, 2, 2)``.
+    residual_covariance : array-like, optional
+        Output residual covariance ``N`` with shape ``(nf, 3, 3)``.
+    include_amplification_parameter : bool, default True
+        Whether to also attach the derived
+        ``airmt_amplification_parameter`` transfer function; see
+        :func:`compute_airmt_amplification_parameter`.
+    amplification_zero_policy : {"nan", "raise"}, default "nan"
+        Forwarded to :func:`compute_airmt_amplification_parameter`.
+    reference_station : AFMAGReferenceStation, optional
+        Fixed ground reference metadata; folded into
+        ``EMTF.processing`` and ``EMTF.attrs["afmag"]`` (see
+        :func:`_processing_for_reference`).
+    system_spec : AirMtSystemSpec, optional
+        System-description metadata; defaults to published nominal
+        values.
+
+    Returns
+    -------
+    EMTF
+        Document carrying the ``interstation_transfer_functions``
+        (``TI``) transfer function and, unless disabled, the derived
+        amplification parameter.
+
+    Raises
+    ------
+    AFMAGValidationError
+        If *tensor*, *frequency*/*periods*, or any statistical
+        estimate does not match its expected shape.
+    TypeError
+        If *system_spec*, *reference_station*, *site*, or
+        *orientation* has the wrong type.
+    """
     register_afmag_datatypes()
-    freq, period_arr = _period_axis(frequency=frequency, periods=periods)
-    data = _normalize_tensor(tensor)
-    if data.shape[0] != freq.size:
-        raise AFMAGValidationError(
-            "frequency count does not match AirMt tensor: "
-            f"{freq.size} != {data.shape[0]}"
-        )
+    freq, period_arr = resolve_frequency_or_periods(
+        frequency=frequency,
+        periods=periods,
+        error_cls=AFMAGValidationError,
+    )
+    data = normalize_estimate_array(
+        tensor,
+        n_frequency=freq.size,
+        tail=(3, 2),
+        name="tensor",
+        error_cls=AFMAGValidationError,
+    )
 
     tf = TransferFunction(
         name=AFMAG_TENSOR_TAG,
@@ -454,11 +509,12 @@ def build_airmt_emtf(
             StatisticalEstimate(
                 name="VAR",
                 kind="variance",
-                data=_normalize_estimate(
+                data=normalize_estimate_array(
                     variance,
                     n_frequency=freq.size,
                     tail=(3, 2),
                     name="variance",
+                    error_cls=AFMAGValidationError,
                 ),
             )
         )
@@ -467,11 +523,12 @@ def build_airmt_emtf(
             StatisticalEstimate(
                 name="INVSIGCOV",
                 kind="inverse_signal_covariance",
-                data=_normalize_estimate(
+                data=normalize_estimate_array(
                     inverse_signal_covariance,
                     n_frequency=freq.size,
                     tail=(2, 2),
                     name="inverse_signal_covariance",
+                    error_cls=AFMAGValidationError,
                 ),
             )
         )
@@ -480,11 +537,12 @@ def build_airmt_emtf(
             StatisticalEstimate(
                 name="RESIDCOV",
                 kind="residual_covariance",
-                data=_normalize_estimate(
+                data=normalize_estimate_array(
                     residual_covariance,
                     n_frequency=freq.size,
                     tail=(3, 3),
                     name="residual_covariance",
+                    error_cls=AFMAGValidationError,
                 ),
             )
         )
@@ -511,7 +569,13 @@ def build_airmt_emtf(
     document_attrs["afmag"] = {
         "family": "tensor_airmt",
         "system": spec.to_dict(max_depth=2),
-        "reference_station": _reference_mapping(reference_station),
+        "reference_station": reference_station_mapping(
+            reference_station,
+            channel_fields=(
+                "measured_channels",
+                "transfer_input_channels",
+            ),
+        ),
     }
 
     doc = EMTF(
@@ -578,9 +642,46 @@ def build_original_afmag_emtf(
     defaults to degrees. ``'comparator_deflection'`` preserves an archival
     instrument deflection without pretending it is an angle; units should then
     be supplied when known.
+
+    Parameters
+    ----------
+    tilt : array-like
+        Real-valued tilt/deflection response, scalar or shape ``(nf,)``.
+    frequency, periods : array-like, optional
+        Exactly one positive frequency or period vector must be
+        supplied.
+    response_kind : str, default "tilt_angle"
+        Either ``"tilt_angle"`` (a calibrated angle, defaulting to
+        degrees) or ``"comparator_deflection"`` (a raw archival
+        instrument deflection with no implied angular unit).
+    variance : array-like, optional
+        Real-valued response variance, scalar or shape ``(nf,)`` /
+        ``(nf, 1, 1)``.
+    system_spec : OriginalAFMAGSystemSpec, optional
+        System-description metadata; defaults to published nominal
+        values.
+
+    Returns
+    -------
+    EMTF
+        Document carrying the ``afmag_tilt`` transfer function.
+
+    Raises
+    ------
+    AFMAGValidationError
+        If *tilt*, *frequency*/*periods*, or *variance* does not
+        match its expected shape.
+    ValueError
+        If *response_kind* is not a recognized value.
+    TypeError
+        If *system_spec*, *site*, or *orientation* has the wrong type.
     """
     register_afmag_datatypes()
-    freq, period_arr = _period_axis(frequency=frequency, periods=periods)
+    freq, period_arr = resolve_frequency_or_periods(
+        frequency=frequency,
+        periods=periods,
+        error_cls=AFMAGValidationError,
+    )
     data = _normalize_tilt(tilt)
     if data.size != freq.size:
         raise AFMAGValidationError(
@@ -680,7 +781,28 @@ def build_airmt_record(
     record_attrs: Mapping[str, Any] | None = None,
     **emtf_kwargs: Any,
 ) -> AirborneEMRecord:
-    """Build one airborne record from decoded tensor AFMAG/AirMt data."""
+    """Build one airborne record from decoded tensor AFMAG/AirMt data.
+
+    Parameters
+    ----------
+    sample_id : str
+        Navigation sample identifier for the new record.
+    tensor : array-like
+        Forwarded to :func:`build_airmt_emtf`.
+    frequency, periods : array-like, optional
+        Exactly one must be supplied; forwarded to
+        :func:`build_airmt_emtf`.
+    fields, quality, record_attrs : dict, optional
+        Forwarded to :class:`~pycsamt.airborne.base.AirborneEMRecord`.
+    **emtf_kwargs
+        Forwarded to :func:`build_airmt_emtf`.
+
+    Returns
+    -------
+    AirborneEMRecord
+        The record, with its EMTF ``product_id`` defaulted to
+        ``str(sample_id)`` unless overridden in ``emtf_kwargs``.
+    """
     doc = build_airmt_emtf(
         tensor,
         frequency=frequency,
@@ -708,7 +830,28 @@ def build_original_afmag_record(
     record_attrs: Mapping[str, Any] | None = None,
     **emtf_kwargs: Any,
 ) -> AirborneEMRecord:
-    """Build one record from a historical AFMAG tilt response."""
+    """Build one record from a historical AFMAG tilt response.
+
+    Parameters
+    ----------
+    sample_id : str
+        Navigation sample identifier for the new record.
+    tilt : array-like
+        Forwarded to :func:`build_original_afmag_emtf`.
+    frequency, periods : array-like, optional
+        Exactly one must be supplied; forwarded to
+        :func:`build_original_afmag_emtf`.
+    fields, quality, record_attrs : dict, optional
+        Forwarded to :class:`~pycsamt.airborne.base.AirborneEMRecord`.
+    **emtf_kwargs
+        Forwarded to :func:`build_original_afmag_emtf`.
+
+    Returns
+    -------
+    AirborneEMRecord
+        The record, with its EMTF ``product_id`` defaulted to
+        ``str(sample_id)`` unless overridden in ``emtf_kwargs``.
+    """
     doc = build_original_afmag_emtf(
         tilt,
         frequency=frequency,
@@ -731,9 +874,24 @@ def _line_frequency_rows(
     n_samples: int,
     n_frequency: int,
 ) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """Return ``(common_frequency, frequency_rows)`` for one flight line.
+
+    Deliberately not
+    :func:`~pycsamt.airborne.validation.resolve_line_frequency_grid`:
+    that shared helper only shape-checks a per-sample ``(n_samples,
+    nf)`` grid, deferring each row's own finiteness/positivity to a
+    later per-sample call so a row belonging to a ``record_mask``-
+    excluded sample never needs to be valid. AFMAG validates the
+    entire per-sample grid eagerly instead, catching a bad frequency
+    row at line-construction time even for samples that end up masked
+    out. That is a real, intentional behavioral difference from
+    MobileMT/ZTEM, not an oversight -- do not "fix" it into matching
+    the shared helper without confirming the stricter behavior is no
+    longer wanted.
+    """
     freq = np.asarray(frequency, dtype=float)
     if freq.ndim == 1:
-        common = _as_frequency(freq)
+        common = normalize_frequency(freq, error_cls=AFMAGValidationError)
         if common.size != n_frequency:
             raise AFMAGValidationError(
                 "shared frequency length does not match response"
@@ -750,17 +908,6 @@ def _line_frequency_rows(
     )
 
 
-def _record_mask(value: Any | None, *, n_samples: int) -> np.ndarray:
-    if value is None:
-        return np.ones(n_samples, dtype=bool)
-    mask = np.asarray(value, dtype=bool)
-    if mask.ndim != 1 or mask.size != n_samples:
-        raise AFMAGValidationError(
-            "record_mask must have one boolean per navigation sample"
-        )
-    return mask
-
-
 def _optional_sample_array(
     value: Any | None,
     *,
@@ -768,16 +915,20 @@ def _optional_sample_array(
     expected: tuple[int, ...],
     n_samples: int,
 ) -> np.ndarray | None:
+    """Return one line's optional per-sample estimate array, or ``None``.
+
+    Thin ``None``-tolerant wrapper around
+    :func:`~pycsamt.airborne.validation.normalize_sample_axis_array`.
+    """
     if value is None:
         return None
-    arr = np.asarray(value)
-    if n_samples == 1 and arr.shape == expected[1:]:
-        arr = arr[None, ...]
-    if arr.shape != expected:
-        raise AFMAGValidationError(
-            f"{name} must have shape {expected}, got {arr.shape}"
-        )
-    return arr
+    return normalize_sample_axis_array(
+        value,
+        name=name,
+        n_samples=n_samples,
+        expected=expected,
+        error_cls=AFMAGValidationError,
+    )
 
 
 def build_airmt_line(
@@ -797,7 +948,54 @@ def build_airmt_line(
     orientation: OrientationMeta | None = None,
     attrs: Mapping[str, Any] | None = None,
 ) -> AirborneEMLine:
-    """Build one tensor-AFMAG/AirMt flight line from decoded arrays."""
+    """Build one tensor-AFMAG/AirMt flight line from decoded arrays.
+
+    Parameters
+    ----------
+    line_id : str
+        Flight-line identifier.
+    navigation : NavigationTrack
+        Sample-aligned navigation defining the line's sample axis.
+    tensor : array-like
+        Line-batched interstation tensor. For ``n_samples == 1``, a
+        single ``(3, 2)`` matrix or one ``(nf, 3, 2)`` stack is also
+        accepted (``n_frequency`` is not known in advance, unlike
+        :func:`~pycsamt.airborne.validation.normalize_sample_axis_array`'s
+        contract); for ``n_samples > 1``, the canonical
+        ``(samples, nf, 3, 2)`` shape is required directly.
+    frequency : array-like
+        Either one shared ``(nf,)`` vector or a per-sample
+        ``(n_samples, nf)`` grid; see :func:`_line_frequency_rows`.
+    record_mask : array-like of bool, optional
+        Marks which navigation samples get an attached record;
+        ``None`` means every sample does.
+    variance, inverse_signal_covariance, residual_covariance :
+    array-like, optional
+        Per-sample statistical estimates, each shaped
+        ``(n_samples, nf, *tail)``; forwarded per sample to
+        :func:`build_airmt_record`.
+    include_amplification_parameter : bool, default True
+        Forwarded to :func:`build_airmt_emtf` for every sample.
+    units, reference_station, system_spec, orientation : optional
+        Forwarded to :func:`build_airmt_emtf` for every sample.
+    attrs : dict, optional
+        Line-level extension metadata; ``"technology"`` is set to
+        ``"AirMt"`` here.
+
+    Returns
+    -------
+    AirborneEMLine
+        The line, with one record per sample where ``record_mask``
+        (or its default) is ``True``.
+
+    Raises
+    ------
+    TypeError
+        If *navigation* is not a :class:`NavigationTrack`.
+    AFMAGValidationError
+        If *tensor*, *frequency*, *record_mask*, or any statistical
+        estimate does not match its expected shape.
+    """
     if not isinstance(navigation, NavigationTrack):
         raise TypeError("navigation must be a NavigationTrack")
     n_samples = navigation.n_samples
@@ -824,7 +1022,11 @@ def build_airmt_line(
         n_samples=n_samples,
         n_frequency=n_frequency,
     )
-    mask = _record_mask(record_mask, n_samples=n_samples)
+    mask = normalize_record_mask(
+        record_mask,
+        n_samples=n_samples,
+        error_cls=AFMAGValidationError,
+    )
 
     var = _optional_sample_array(
         variance,
@@ -887,7 +1089,49 @@ def build_original_afmag_line(
     orientation: OrientationMeta | None = None,
     attrs: Mapping[str, Any] | None = None,
 ) -> AirborneEMLine:
-    """Build one historical comparator-AFMAG flight line."""
+    """Build one historical comparator-AFMAG flight line.
+
+    Parameters
+    ----------
+    line_id : str
+        Flight-line identifier.
+    navigation : NavigationTrack
+        Sample-aligned navigation defining the line's sample axis.
+    tilt : array-like
+        Line-batched real tilt/deflection response, shape
+        ``(n_samples, nf)`` (or unbatched when ``n_samples == 1``).
+    frequency : array-like
+        Either one shared ``(nf,)`` vector or a per-sample
+        ``(n_samples, nf)`` grid; see :func:`_line_frequency_rows`.
+    record_mask : array-like of bool, optional
+        Marks which navigation samples get an attached record;
+        ``None`` means every sample does.
+    response_kind, units : optional
+        Forwarded to :func:`build_original_afmag_emtf` for every
+        sample.
+    variance : array-like, optional
+        Per-sample response variance, shape ``(n_samples, nf)``.
+    system_spec, orientation : optional
+        Forwarded to :func:`build_original_afmag_emtf` for every
+        sample.
+    attrs : dict, optional
+        Line-level extension metadata; ``"technology"`` is set to
+        ``"AFMAG"`` here.
+
+    Returns
+    -------
+    AirborneEMLine
+        The line, with one record per sample where ``record_mask``
+        (or its default) is ``True``.
+
+    Raises
+    ------
+    TypeError
+        If *navigation* is not a :class:`NavigationTrack`.
+    AFMAGValidationError
+        If *tilt*, *frequency*, *record_mask*, or *variance* does not
+        match its expected shape.
+    """
     if not isinstance(navigation, NavigationTrack):
         raise TypeError("navigation must be a NavigationTrack")
     n_samples = navigation.n_samples
@@ -910,7 +1154,11 @@ def build_original_afmag_line(
         n_samples=n_samples,
         n_frequency=n_frequency,
     )
-    mask = _record_mask(record_mask, n_samples=n_samples)
+    mask = normalize_record_mask(
+        record_mask,
+        n_samples=n_samples,
+        error_cls=AFMAGValidationError,
+    )
 
     var = None
     if variance is not None:
@@ -956,7 +1204,43 @@ def build_airmt_dataset(
     instrument_serial: str | None = None,
     attrs: Mapping[str, Any] | None = None,
 ) -> AirborneEMDataset:
-    """Build a common airborne dataset for tensor AFMAG/AirMt lines."""
+    """Build a common airborne dataset for tensor AFMAG/AirMt lines.
+
+    Parameters
+    ----------
+    name : str
+        Dataset/survey name.
+    lines : iterable of AirborneEMLine
+        Lines to attach, typically previously built by
+        :func:`build_airmt_line`.
+    survey : SurveyMeta, optional
+        Survey-level metadata; defaults to
+        ``SurveyMeta(name=name, method="AEM")``.
+    system_spec : AirMtSystemSpec, optional
+        Used to build the dataset's ``instrument`` metadata; defaults
+        to published nominal values.
+    instrument_serial : str, optional
+        Forwarded to :meth:`AirMtSystemSpec.to_instrument_meta`.
+    attrs : dict, optional
+        Dataset-level extension metadata; ``"technology"`` is set to
+        ``"AirMt"`` here.
+
+    Returns
+    -------
+    AirborneEMDataset
+        The dataset, with every line attached.
+
+    Raises
+    ------
+    TypeError
+        If *system_spec* has the wrong type, or an entry of *lines*
+        is not an :class:`~pycsamt.airborne.base.AirborneEMLine` (this
+        is enforced by :class:`AirborneEMDataset` construction, unlike
+        :func:`~pycsamt.airborne.ztem.build_ztem_dataset`, which
+        checks explicitly beforehand and additionally rejects a line
+        tagged with a conflicting technology; this function does not
+        perform that second, stricter check).
+    """
     spec = system_spec or AirMtSystemSpec()
     if not isinstance(spec, AirMtSystemSpec):
         raise TypeError("system_spec must be an AirMtSystemSpec or None")
@@ -983,7 +1267,41 @@ def build_original_afmag_dataset(
     instrument_serial: str | None = None,
     attrs: Mapping[str, Any] | None = None,
 ) -> AirborneEMDataset:
-    """Build a common airborne dataset for original AFMAG lines."""
+    """Build a common airborne dataset for original AFMAG lines.
+
+    Parameters
+    ----------
+    name : str
+        Dataset/survey name.
+    lines : iterable of AirborneEMLine
+        Lines to attach, typically previously built by
+        :func:`build_original_afmag_line`.
+    survey : SurveyMeta, optional
+        Survey-level metadata; defaults to
+        ``SurveyMeta(name=name, method="AEM")``.
+    system_spec : OriginalAFMAGSystemSpec, optional
+        Used to build the dataset's ``instrument`` metadata; defaults
+        to published nominal values.
+    instrument_serial : str, optional
+        Forwarded to
+        :meth:`OriginalAFMAGSystemSpec.to_instrument_meta`.
+    attrs : dict, optional
+        Dataset-level extension metadata; ``"technology"`` is set to
+        ``"AFMAG"`` here.
+
+    Returns
+    -------
+    AirborneEMDataset
+        The dataset, with every line attached.
+
+    Raises
+    ------
+    TypeError
+        If *system_spec* has the wrong type, or an entry of *lines* is
+        not an :class:`~pycsamt.airborne.base.AirborneEMLine`; see
+        :func:`build_airmt_dataset` for how this differs from the
+        ZTEM/MobileMT dataset builders.
+    """
     spec = system_spec or OriginalAFMAGSystemSpec()
     if not isinstance(spec, OriginalAFMAGSystemSpec):
         raise TypeError(

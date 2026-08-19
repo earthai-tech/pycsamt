@@ -26,6 +26,8 @@ User Guide
    stratagem/index
    emtools/index
    site/index
+   metadata/index
+   emtf/index
    forward/index
    pipeline/index
    ../tutorials/index

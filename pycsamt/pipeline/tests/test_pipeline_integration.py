@@ -3,19 +3,15 @@
 This test loads real EDI files from ``data/AMT/WILLY_DATA/L22PLT/``, runs a
 multi-step pipeline, and verifies every expected output artefact is produced:
 
-* ``pipe_results/integration_test/processed/``    — processed EDI files
-* ``pipe_results/integration_test/plots/``        — QC figures, one
-  sub-folder per step
-* ``pipe_results/integration_test/pipeline.yaml`` — reproduced config
-  (reproducibility)
-* ``pipe_results/integration_test/summary.txt``   — plain-text run report
-* ``pipe_results/integration_test/report.html``   — HTML run report
+* ``pipe_results/processed/``    — processed EDI files
+* ``pipe_results/plots/``        — QC figures, one sub-folder per step
+* ``pipe_results/pipeline.yaml`` — reproduced config (reproducibility)
+* ``pipe_results/summary.txt``   — plain-text run report
+* ``pipe_results/report.html``   — HTML run report
 
 The output directory is **not cleaned up** after the test so the user can
 inspect the results directly.  It is listed in ``.gitignore`` to prevent
-accidental commits. It is scoped to its own subfolder (not the shared
-``pipe_results/`` root) so its startup ``shutil.rmtree`` cannot race with
-other pipeline tests' output directories under xdist parallel workers.
+accidental commits.
 
 Skip condition: the test is skipped automatically when the ``data/`` tree is
 not present (e.g. on a fresh CI clone without the data submodule).
@@ -44,22 +40,14 @@ from pycsamt.pipeline import (
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DATA_DIR = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
-_PIPE_RESULTS = _PROJECT_ROOT / "pipe_results" / "integration_test"
+_PIPE_RESULTS = _PROJECT_ROOT / "pipe_results"
 
 # ── Skip guard ────────────────────────────────────────────────────────────────
 
-# The module-scoped `pipeline_result` fixture below writes to a fixed
-# shared directory (_PIPE_RESULTS); pytest-xdist's default load-balanced
-# scheduling does not keep a module's tests on one worker, so two workers
-# running the fixture at once for different tests in this module can race
-# on the same files. xdist_group pins the whole module to a single worker.
-pytestmark = [
-    pytest.mark.skipif(
-        not _DATA_DIR.exists(),
-        reason=f"WILLY EDI data not found at {_DATA_DIR}",
-    ),
-    pytest.mark.xdist_group(name="pipeline_integration"),
-]
+pytestmark = pytest.mark.skipif(
+    not _DATA_DIR.exists(),
+    reason=f"WILLY EDI data not found at {_DATA_DIR}",
+)
 
 # ── How many stations to use (keep the test fast) ────────────────────────────
 

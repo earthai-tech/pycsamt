@@ -35,8 +35,10 @@ _SUBPACKAGES = frozenset(
     {
         "ai",
         "agents",
+        "airborne",
         "backends",
         "emtools",
+        "emtf",
         "forward",
         "geology",
         "gis",
@@ -75,6 +77,9 @@ _LAZY_SYMBOLS: dict[str, str] = {
     "work_session": ".session",
     "Normalize": ".session",
     "normalize_session": ".session",
+    # transfer-function convenience API
+    "read_tf": ".io",
+    "write_tf": ".io",
 }
 
 
@@ -118,6 +123,7 @@ __all__ = [
     "agents",
     "backends",
     "emtools",
+    "emtf",
     "forward",
     "geology",
     "gis",
@@ -151,4 +157,7 @@ __all__ = [
     "work_session",
     "Normalize",
     "normalize_session",
+    # transfer-function convenience API
+    "read_tf",
+    "write_tf",
 ]

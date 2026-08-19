@@ -32,6 +32,26 @@ from .advanced import (
     plot_zt_argand,
 )
 
+# ─── AFMAG (motion-coupling physics, tilt diagnostics, QC) ───────────────────
+from .afmag import (
+    afmag_tilt_angles,
+    coil_normal_direction,
+    correct_motion_induced_noise,
+    euler_rotation_matrix,
+    flag_motion_susceptible_band,
+    geomagnetic_field_direction,
+    motion_coupling_angle,
+    motion_coupling_cosine,
+    motion_susceptibility_table,
+    plot_afmag_correction_comparison,
+    plot_afmag_tilt_polar,
+    plot_afmag_tilt_profile,
+    plot_afmag_tilt_psection,
+    plot_motion_coupling,
+    plot_motion_susceptibility_map,
+    simulate_motion_induced_voltage,
+)
+
 # ─── Anisotropy analysis ──────────────────────────────────────────────────────
 from .anisotropy import (
     ANISO_RATIO_THRESH,
@@ -175,6 +195,7 @@ from .legacy import (
 )
 
 # ─── Site-level visualisation ─────────────────────────────────────────────────
+from .overview import plot_response_overview
 from .plot import (
     plot_raw_sites_1d,
     plot_response_tipper,
@@ -383,6 +404,23 @@ __all__ = [
     "resolve_rose_style",
     # input helpers
     "ensure_sites",
+    # AFMAG
+    "euler_rotation_matrix",
+    "geomagnetic_field_direction",
+    "coil_normal_direction",
+    "motion_coupling_cosine",
+    "motion_coupling_angle",
+    "simulate_motion_induced_voltage",
+    "correct_motion_induced_noise",
+    "afmag_tilt_angles",
+    "motion_susceptibility_table",
+    "flag_motion_susceptible_band",
+    "plot_afmag_tilt_profile",
+    "plot_afmag_tilt_psection",
+    "plot_afmag_tilt_polar",
+    "plot_motion_coupling",
+    "plot_motion_susceptibility_map",
+    "plot_afmag_correction_comparison",
     # survey design
     "bostick_depth_from_rho",
     "vertical_resolution_pair",
@@ -612,6 +650,7 @@ __all__ = [
     "plot_induction_rose_from_spectra",
     "plot_induction_multiperiod_map",
     # site-level visualisation
+    "plot_response_overview",
     "plot_response_tipper",
     "plot_raw_sites_1d",
     "plot_sites_panels",
@@ -653,4 +692,22 @@ __all__ = [
     "plot_tensors",
     "plot_station_tensors",
     "wrap_phase",
+    #Advanced plots 
+    "plot_apparent_anisotropy_section",
+    "plot_apparent_resistivity_polar",
+    "plot_dimensionality_depth_profile",
+    "plot_dimensionality_ternary",
+    "plot_distortion_radar",
+    "plot_impedance_mohr_circles",
+    "plot_mt_composite_section",
+    "plot_pt_period_clock",
+    "plot_rho_phase_bode",
+    "plot_sensitivity_depth_section",
+    "plot_snr_section",
+    "plot_strike_stability_bands",
+    "plot_survey_fingerprint",
+    "plot_tf_coherence_network",
+    "plot_z_invariants_section",
+    "plot_zt_argand",
+    
 ]

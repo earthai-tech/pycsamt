@@ -1,14 +1,21 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
-"""AFMAG-family derived EMTF datatype registration."""
+"""AFMAG-family derived EMTF datatype registration.
+
+Both derived response definitions below are registered through
+:func:`~pycsamt.emtf.datatypes.ensure_emtf_datatype_registered`, the
+same idempotent-registration helper used by
+:mod:`pycsamt.airborne.mobilemt`, rather than each technology adapter
+reimplementing its own "already registered compatibly? then no-op;
+registered incompatibly? then raise" guard.
+"""
 
 from __future__ import annotations
 
 from ...emtf.datatypes import (
     DataTypeDefinition,
-    get_emtf_datatype,
-    register_emtf_datatype,
+    ensure_emtf_datatype_registered,
 )
 from .constants import (
     AFMAG_AP_CODE,
@@ -53,32 +60,27 @@ AFMAG_AP_DEFINITION = DataTypeDefinition(
 )
 
 
-def _register(definition: DataTypeDefinition) -> DataTypeDefinition:
-    existing = get_emtf_datatype(definition.tag)
-    if existing is not None:
-        if existing.name != definition.name:
-            raise ValueError(
-                f"{definition.tag!r} is already registered with code "
-                f"{existing.name!r}"
-            )
-        return existing
-
-    by_code = get_emtf_datatype(definition.name)
-    if by_code is not None and by_code.tag != definition.tag:
-        raise ValueError(
-            f"EMTF datatype code {definition.name!r} is already registered "
-            f"for {by_code.tag!r}"
-        )
-    return register_emtf_datatype(definition)
-
-
 def register_afmag_datatypes() -> tuple[DataTypeDefinition, ...]:
     """Register AFMAG derived response definitions idempotently.
 
     The tensor response itself reuses the existing EMTF ``TI`` interstation
     magnetic transfer-function definition and therefore is not re-registered.
+
+    Returns
+    -------
+    (DataTypeDefinition, DataTypeDefinition)
+        ``(AFMAG_TILT_DEFINITION, AFMAG_AP_DEFINITION)``, each either
+        newly registered or the already-registered definition sharing
+        its tag; see
+        :func:`~pycsamt.emtf.datatypes.ensure_emtf_datatype_registered`.
+
+    Raises
+    ------
+    ValueError
+        If either definition's tag or code is already registered
+        under a materially different definition.
     """
     return (
-        _register(AFMAG_TILT_DEFINITION),
-        _register(AFMAG_AP_DEFINITION),
+        ensure_emtf_datatype_registered(AFMAG_TILT_DEFINITION),
+        ensure_emtf_datatype_registered(AFMAG_AP_DEFINITION),
     )

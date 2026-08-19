@@ -1,7 +1,19 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 
-"""ZTEM-specific metadata that reuses the common airborne/EMTF model."""
+"""ZTEM-specific metadata that reuses the common airborne/EMTF model.
+
+Both classes inherit :class:`~pycsamt.core.base.CoreObject`, matching
+:mod:`pycsamt.airborne.base` and every sibling technology's metadata
+(:class:`~pycsamt.airborne.mobilemt.MobileMTSystemSpec`,
+:class:`~pycsamt.airborne.afmag.AirMtSystemSpec`, ...): they are
+mutable-until-validated descriptive containers, not frozen registry
+value objects, so :class:`~pycsamt.api.property.PyCSAMTObject` alone
+would be the wrong base (see :mod:`pycsamt.airborne.registry` for
+where that choice *is* the right one). Range/positivity/fixed-channel
+normalization is delegated to :mod:`pycsamt.airborne.validation`
+rather than reimplemented here field by field.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +24,13 @@ import numpy as np
 
 from ...core.base import CoreObject
 from ...metadata import InstrumentMeta, SensorSpec, SiteMeta
+from ..validation import (
+    normalize_count_range,
+    normalize_fixed_channels,
+    normalize_frequency_range,
+    normalize_optional_identifier,
+    normalize_positive_float,
+)
 from .constants import (
     ZTEM_COMMON_PROCESSED_BANDS_HZ,
     ZTEM_INPUT_CHANNELS,
@@ -29,9 +48,43 @@ __all__ = ["ZTEMSystemSpec", "ZTEMReferenceStation"]
 class ZTEMSystemSpec(CoreObject):
     """Published/declared ZTEM system characteristics.
 
-    The values are informative defaults. ZTEM frequency selection depends on
-    platform speed, sampling, signal strength, and noise, so processed survey
-    products may legitimately use a different subset or frequency grid.
+    The values are informative defaults. ZTEM frequency selection
+    depends on platform speed, sampling, signal strength, and noise,
+    so processed survey products may legitimately use a different
+    subset or frequency grid; nothing here constrains
+    :func:`~pycsamt.airborne.ztem.build_ztem_emtf`'s accepted input.
+
+    Parameters
+    ----------
+    practical_frequency_range_hz : (float, float), optional
+        Published practical frequency band in Hz, ``(low, high)`` with
+        ``0 < low < high``. See :meth:`practical_frequency_mask`.
+    common_processed_bands_hz : tuple of (float, float), optional
+        Commonly published processed sub-bands in Hz; each validated
+        the same way as *practical_frequency_range_hz*.
+    typical_frequency_count : (int, int), optional
+        Typical minimum/maximum count of processed frequency windows,
+        ``(low, high)`` with ``0 < low <= high``.
+    time_series_sampling_rate_hz : float, optional
+        Published raw time-series sampling rate in Hz.
+    nominal_output_rate_hz : float, optional
+        Published processed-output rate in Hz.
+    input_channels : (str, str), default ("Hx", "Hy")
+        Fixed ground-reference horizontal magnetic input channels;
+        must equal ``("Hx", "Hy")``.
+    output_channels : (str,), default ("Hz",)
+        Fixed airborne vertical magnetic output channel; must equal
+        ``("Hz",)``.
+    attrs : dict, optional
+        Free-form extension metadata.
+
+    Raises
+    ------
+    ValueError
+        If any frequency range/band/count is not finite and correctly
+        ordered, if any rate is not finite and positive, or if
+        *input_channels*/*output_channels* differ from their fixed
+        values.
     """
 
     practical_frequency_range_hz: tuple[float, float] = (
@@ -53,56 +106,40 @@ class ZTEMSystemSpec(CoreObject):
         self.validate()
 
     def validate(self) -> None:
-        low, high = (float(v) for v in self.practical_frequency_range_hz)
-        if not np.isfinite(low) or not np.isfinite(high):
-            raise ValueError("practical frequency range must be finite")
-        if low <= 0.0 or high <= low:
-            raise ValueError(
-                "practical frequency range must satisfy 0 < low < high"
+        """Normalize and range-check every descriptive field in place."""
+        self.practical_frequency_range_hz = normalize_frequency_range(
+            self.practical_frequency_range_hz,
+            name="practical_frequency_range_hz",
+        )
+        self.common_processed_bands_hz = tuple(
+            normalize_frequency_range(
+                band,
+                name="common_processed_bands_hz",
             )
-        self.practical_frequency_range_hz = (low, high)
-
-        bands: list[tuple[float, float]] = []
-        for band in self.common_processed_bands_hz:
-            if len(band) != 2:
-                raise ValueError("each common ZTEM band must contain 2 values")
-            start, stop = (float(v) for v in band)
-            if not np.isfinite(start) or not np.isfinite(stop):
-                raise ValueError("common ZTEM bands must be finite")
-            if start <= 0.0 or stop <= start:
-                raise ValueError(
-                    "common ZTEM bands must satisfy 0 < low < high"
-                )
-            bands.append((start, stop))
-        self.common_processed_bands_hz = tuple(bands)
-
-        if len(self.typical_frequency_count) != 2:
-            raise ValueError("typical_frequency_count must contain min/max")
-        count_low, count_high = (int(v) for v in self.typical_frequency_count)
-        if count_low <= 0 or count_high < count_low:
-            raise ValueError("typical frequency count must be positive")
-        self.typical_frequency_count = (count_low, count_high)
-
-        rate = float(self.time_series_sampling_rate_hz)
-        if not np.isfinite(rate) or rate <= 0.0:
-            raise ValueError("time_series_sampling_rate_hz must be positive")
-        self.time_series_sampling_rate_hz = rate
-
-        output_rate = float(self.nominal_output_rate_hz)
-        if not np.isfinite(output_rate) or output_rate <= 0.0:
-            raise ValueError("nominal_output_rate_hz must be positive")
-        self.nominal_output_rate_hz = output_rate
-
-        self.input_channels = tuple(
-            str(value).strip() for value in self.input_channels
+            for band in self.common_processed_bands_hz
         )
-        self.output_channels = tuple(
-            str(value).strip() for value in self.output_channels
+        self.typical_frequency_count = normalize_count_range(
+            self.typical_frequency_count,
+            name="typical_frequency_count",
         )
-        if self.input_channels != ZTEM_INPUT_CHANNELS:
-            raise ValueError("ZTEM reference inputs must be Hx/Hy")
-        if self.output_channels != ZTEM_OUTPUT_CHANNELS:
-            raise ValueError("ZTEM airborne output must be Hz")
+        self.time_series_sampling_rate_hz = normalize_positive_float(
+            self.time_series_sampling_rate_hz,
+            name="time_series_sampling_rate_hz",
+        )
+        self.nominal_output_rate_hz = normalize_positive_float(
+            self.nominal_output_rate_hz,
+            name="nominal_output_rate_hz",
+        )
+        self.input_channels = normalize_fixed_channels(
+            self.input_channels,
+            expected=ZTEM_INPUT_CHANNELS,
+            name="input_channels",
+        )
+        self.output_channels = normalize_fixed_channels(
+            self.output_channels,
+            expected=ZTEM_OUTPUT_CHANNELS,
+            name="output_channels",
+        )
         self.attrs = dict(self.attrs or {})
 
     def practical_frequency_mask(self, frequency: Any) -> np.ndarray:
@@ -117,7 +154,13 @@ class ZTEMSystemSpec(CoreObject):
         serial: str | None = None,
         software_version: str = "",
     ) -> InstrumentMeta:
-        """Return reusable instrument metadata without vendor guesses."""
+        """Return reusable instrument metadata without vendor guesses.
+
+        Only a ``magnetic_sensor`` is populated -- ``electric_sensor``
+        stays ``None`` because ZTEM's tipper geometry has no electric
+        channel, unlike MobileMT's admittance (see
+        :meth:`~pycsamt.airborne.mobilemt.MobileMTSystemSpec.to_instrument_meta`).
+        """
         return InstrumentMeta(
             system="ZTEM",
             serial=serial,
@@ -140,7 +183,36 @@ class ZTEMSystemSpec(CoreObject):
 
 @dataclass(repr=False)
 class ZTEMReferenceStation(CoreObject):
-    """Fixed ground magnetic reference station used by ZTEM processing."""
+    """Fixed ground magnetic reference station used by ZTEM processing.
+
+    Passed to :func:`~pycsamt.airborne.ztem.build_ztem_emtf` to
+    populate :attr:`~pycsamt.emtf.EMTF.processing`'s remote-reference
+    metadata; see
+    :func:`~pycsamt.airborne.ztem.adapter._processing_for_reference`.
+
+    Parameters
+    ----------
+    station_id : str, optional
+        Explicit reference-station identifier. Falls back to
+        ``site.preferred_name`` through :attr:`preferred_id` when
+        omitted; see
+        :func:`~pycsamt.airborne.validation.normalize_optional_identifier`.
+    site : SiteMeta, optional
+        Reference-station location/identity metadata.
+    magnetic_channels : (str, str), default ("Hx", "Hy")
+        Fixed horizontal magnetic channels measured at the reference
+        station; must equal ``("Hx", "Hy")``.
+    attrs : dict, optional
+        Free-form extension metadata.
+
+    Raises
+    ------
+    TypeError
+        If *site* is supplied and is not a
+        :class:`~pycsamt.metadata.SiteMeta`.
+    ValueError
+        If *magnetic_channels* differs from ``("Hx", "Hy")``.
+    """
 
     station_id: str | None = None
     site: SiteMeta | None = None
@@ -151,17 +223,15 @@ class ZTEMReferenceStation(CoreObject):
         self.validate()
 
     def validate(self) -> None:
-        if self.station_id is not None:
-            text = str(self.station_id).strip()
-            self.station_id = text or None
+        """Normalize the identifier/channels and type-check ``site``."""
+        self.station_id = normalize_optional_identifier(self.station_id)
         if self.site is not None and not isinstance(self.site, SiteMeta):
             raise TypeError("site must be a SiteMeta or None")
-        channels = tuple(
-            str(value).strip() for value in self.magnetic_channels
+        self.magnetic_channels = normalize_fixed_channels(
+            self.magnetic_channels,
+            expected=ZTEM_INPUT_CHANNELS,
+            name="magnetic_channels",
         )
-        if channels != ZTEM_INPUT_CHANNELS:
-            raise ValueError("ZTEM reference magnetic channels must be Hx/Hy")
-        self.magnetic_channels = channels
         self.attrs = dict(self.attrs or {})
 
     @property

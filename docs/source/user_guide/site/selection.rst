@@ -813,6 +813,16 @@ Setting attributes on a selector's output as if it were still raw EDI
    wrappers. Reach through ``.edi`` to set attributes -- such as chainage --
    that downstream selectors read from the underlying EDI object.
 
+Every selector on this page works identically for EDI- and XML-native
+stations without any special handling: they read ``site.name``,
+``site.coords``, ``site.freq``, ``site.z``, and similar
+:class:`~pycsamt.site.base.SiteMixin` accessors, which are backend-neutral
+by design (see :doc:`containers`). The one exception is the ``.edi``
+reach-through pattern noted just above -- setting an attribute directly on
+``site.edi`` (rather than through a typed accessor) materializes an EDI view
+for an XML-native station the first time it happens, same as any other
+``.edi`` access.
+
 Next Pages
 ----------
 

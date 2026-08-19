@@ -1,0 +1,16 @@
+pyCSAMT native Occam1D inversion
+  station       : E1_3
+  mode          : determinant
+  frequencies   : 55
+  observations  : 110
+  layers        : 30
+  status        : max_iterations
+  iterations    : 20
+  initial RMS   : 25.713259
+  final RMS     : 5.7731529
+  target RMS    : 1
+  roughness     : 25.592668
+  multiplier    : 0.5
+  rejected      : 1548
+  failed steps  : 0
+  message       : The maximum iteration count was reached.

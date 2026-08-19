@@ -2173,6 +2173,22 @@ definitions here are the single source of truth.
       frequency-dependent response; a scattered one signals noise or an
       unstable estimate.
 
+   AFMAG
+      Audio-frequency magnetics, a passive, magnetic-field-only EM method
+      with no electric-field channel [Ward1959]_. The historical
+      two-coil comparator reports a scalar line-direction tilt angle;
+      modern tensor systems (ZTEM, AirMt) report a full interstation
+      magnetic transfer function. Both readouts are, in modern MT
+      terms, the same object as the :term:`Tipper` -- see
+      :doc:`user_guide/emtools/afmag`.
+
+   Motion-induced noise
+      Spurious signal in an airborne EM receiver caused by the coil's
+      own attitude (yaw/pitch/roll) changing relative to the local
+      geomagnetic field during flight, rather than by the subsurface
+      response. Its energy concentrates at low frequency, where it can
+      dominate a genuine natural-source AFMAG signal [Liu2018]_.
+
    Strike
    Geoelectric strike
       The azimuth of the principal geoelectric direction, estimated from the
@@ -2292,6 +2308,14 @@ definitions here are the single source of truth.
    J-file
       The A.G. Jones ("BIRRP") ASCII format for MT transfer functions, readable by
       pyCSAMT and convertible to :term:`EDI`.
+
+   Occam1D
+      The 1-D counterpart of :term:`Occam2D`: a regularised (smooth)
+      layered-earth inversion for one independent sounding at a time, with
+      no lateral coupling between stations. :mod:`pycsamt.models.occam1d`
+      implements the forward model, analytic Jacobian, and Occam nonlinear
+      iteration natively in Python rather than wrapping an external binary,
+      though it can still drive one if supplied.
 
    Occam2D
       A 2-D regularised (smooth) inversion scheme and file format for MT data;
@@ -2678,6 +2702,17 @@ definitions here are the single source of truth.
       pyCSAMT this is the default behavior of the site metadata editor; an
       explicit ``inplace=True`` request is required to commit validated state
       back into the supplied object.
+
+   Format-neutral metadata
+      A metadata object under :mod:`pycsamt.metadata` -- such as
+      :class:`~pycsamt.metadata.SiteMeta`, :class:`~pycsamt.metadata.SurveyMeta`,
+      or :class:`~pycsamt.metadata.ProvenanceMeta` -- that describes a
+      transfer function's identity, provenance, processing, or quality
+      independently of whether the underlying file is a historical EDI or an
+      EMTF XML document. The same object is read from and written to either
+      format by :class:`~pycsamt.emtf.document.EMTF`, so a scientific fact
+      about a station is recorded once rather than being re-derived per
+      format.
 
    Metadata transaction
       A batch of station metadata changes evaluated on private copies before

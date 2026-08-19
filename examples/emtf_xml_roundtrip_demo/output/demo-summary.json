@@ -1,0 +1,155 @@
+{
+  "data_loss_warnings_via_emtf": [],
+  "data_loss_warnings_via_site": [],
+  "schema": "pycsamt.emtf_xml_roundtrip.demo/v1",
+  "source_directory": "data\\gv_data\\gv_final_edi",
+  "stations": [
+    {
+      "on_disk_edi_via_emtf_vs_original": {
+        "label": "on-disk written EDI (EMTF path) vs. original",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 48,
+        "n_periods_ref": 48
+      },
+      "on_disk_edi_via_site_vs_original": {
+        "label": "on-disk written EDI (Site path) vs. original",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 48,
+        "n_periods_ref": 48
+      },
+      "site_path_vs_emtf_path_agreement": {
+        "label": "Site path vs. raw EMTF path (roundtripped)",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 48,
+        "n_periods_ref": 48
+      },
+      "source": "data\\gv_data\\gv_final_edi\\gv100.edi",
+      "station": "gv100",
+      "via_emtf_roundtrip_vs_original": {
+        "label": "EMTF: EDI -> XML -> EDI vs. original",
+        "max_abs_diff_periods": 3.865352482534945e-12,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 48,
+        "n_periods_ref": 48
+      },
+      "via_site_roundtrip_vs_original": {
+        "label": "Site: EDI -> XML -> EDI vs. original",
+        "max_abs_diff_periods": 3.865352482534945e-12,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 48,
+        "n_periods_ref": 48
+      }
+    },
+    {
+      "on_disk_edi_via_emtf_vs_original": {
+        "label": "on-disk written EDI (EMTF path) vs. original",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "on_disk_edi_via_site_vs_original": {
+        "label": "on-disk written EDI (Site path) vs. original",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "site_path_vs_emtf_path_agreement": {
+        "label": "Site path vs. raw EMTF path (roundtripped)",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "source": "data\\gv_data\\gv_final_edi\\gv101.edi",
+      "station": "gv101",
+      "via_emtf_roundtrip_vs_original": {
+        "label": "EMTF: EDI -> XML -> EDI vs. original",
+        "max_abs_diff_periods": 2.7284841053187847e-12,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "via_site_roundtrip_vs_original": {
+        "label": "Site: EDI -> XML -> EDI vs. original",
+        "max_abs_diff_periods": 2.7284841053187847e-12,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      }
+    },
+    {
+      "on_disk_edi_via_emtf_vs_original": {
+        "label": "on-disk written EDI (EMTF path) vs. original",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "on_disk_edi_via_site_vs_original": {
+        "label": "on-disk written EDI (Site path) vs. original",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "site_path_vs_emtf_path_agreement": {
+        "label": "Site path vs. raw EMTF path (roundtripped)",
+        "max_abs_diff_periods": 0.0,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "source": "data\\gv_data\\gv_final_edi\\gv102.edi",
+      "station": "gv102",
+      "via_emtf_roundtrip_vs_original": {
+        "label": "EMTF: EDI -> XML -> EDI vs. original",
+        "max_abs_diff_periods": 2.7284841053187847e-12,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      },
+      "via_site_roundtrip_vs_original": {
+        "label": "Site: EDI -> XML -> EDI vs. original",
+        "max_abs_diff_periods": 2.7284841053187847e-12,
+        "max_abs_diff_tipper": 0.0,
+        "max_abs_diff_variance": 0.0,
+        "max_abs_diff_z": 0.0,
+        "n_periods_other": 42,
+        "n_periods_ref": 42
+      }
+    }
+  ]
+}

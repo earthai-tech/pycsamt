@@ -23,6 +23,7 @@ Processing and QC
 .. autosummary::
    :toctree: generated
 
+   pycsamt.emtools.afmag
    pycsamt.emtools.inspect
    pycsamt.emtools.qc
    pycsamt.emtools.frequency
@@ -31,6 +32,7 @@ Processing and QC
    pycsamt.emtools.diag
    pycsamt.emtools.spectra
    pycsamt.emtools.plot
+   pycsamt.emtools.overview
 
 Tensor and Dimensionality
 -------------------------

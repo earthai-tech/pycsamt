@@ -102,6 +102,16 @@ geo = [
     "contextily>=1.6",
 ]
 
+# Optional runtime-performance accelerators. Everything that imports these
+# (pycsamt.models.occam1d, pycsamt.agents.batch_survey, pycsamt.pipeline,
+# pycsamt.utils.funcutils) degrades gracefully to a slower pure-Python/NumPy
+# path when they are not installed -- this extra is a convenience, never a
+# hard requirement.
+perf = [
+    "joblib>=1.2",
+    "numba>=0.58",
+]
+
 # Development & testing
 dev = [
     "pytest>=7.2",
@@ -246,6 +256,13 @@ exclude = ["*.tests", "*.tests.*", "tests", "tests.*"]
 minversion = "7.2"
 addopts    = "-ra -q --tb=short"
 testpaths  = ["pycsamt"]
+# `pycsamt/emtf/fcu-v4.1/` is a local-only, gitignored vendor checkout
+# (the EMTF-FCU Fortran reference oracle + its FoX XML dependency, see
+# that .gitignore entry) -- never shipped, never a test target, and its
+# FoX/DoX docs subtree contains files pytest's default collection chokes
+# on across platforms. Being gitignored does not stop pytest from
+# walking it since `testpaths = ["pycsamt"]` recurses the whole tree.
+norecursedirs = ["fcu-v4.1", ".git", "build", "dist", "*.egg"]
 markers    = [
     "live: tests that require an LLM API key (deselect with -m 'not live')",
     "slow: tests that are deterministic but too slow for the tightest local loop",

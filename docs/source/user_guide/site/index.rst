@@ -4,8 +4,9 @@ Site Tools
 ==========
 
 The :mod:`pycsamt.site` package provides station-centric tools for working
-with EDI sites and survey-line collections. It sits between low-level EDI
-parsing and higher-level processing, inversion, plotting, and reporting.
+with EDI or EMTF-XML sites and survey-line collections. It sits between
+low-level EDI/EMTF-XML parsing and higher-level processing, inversion,
+plotting, and reporting.
 
 Use this section when you need to:
 

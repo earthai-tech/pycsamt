@@ -53,6 +53,19 @@ Tool Map
      - :mod:`pycsamt.site.report`
      - Compute and display survey-level and per-station statistics for a
        collection.
+   * - :meth:`pycsamt.site.base.Sites.write_xml`
+     - :mod:`pycsamt.site.base`
+     - Write one EMTF-XML file per station -- the XML-side equivalent of
+       :func:`~pycsamt.site.export.write_sites`.
+
+The writers on this page (:func:`write_site`, :func:`write_sites`,
+:func:`pack_zip`) all write EDI, regardless of whether a station is
+EDI- or XML-native: they iterate through :attr:`Site.edi`, which
+materializes an EDI view transparently for an XML-native station (see
+:doc:`containers`). To write EMTF-XML instead, use
+:meth:`~pycsamt.site.base.Sites.write_xml` or
+:meth:`~pycsamt.site.base.Site.to_xml` directly -- there is currently no
+XML-side equivalent of the manifest/zip helpers on this page.
 
 Reproducible Demo Sites
 -----------------------

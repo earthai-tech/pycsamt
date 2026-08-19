@@ -99,6 +99,23 @@ CSAMT / MT methodology and source effects
 
 ----
 
+Airborne and passive EM methods
+-----------------------------------
+
+.. [Ward1959] Ward, S.H. (1959). ‡
+   AFMAG -- airborne and ground.
+   *Geophysics*, 24(4), 761–787.
+   https://doi.org/10.1190/1.1438652
+
+.. [Liu2018] Liu, F., Huang, L., Pang, Y., Shi, Z., Xiao, P.,
+   Fang, G. (2018). ‡
+   Airborne AFMAG method motion-induced noise simulation and
+   suppression.
+   *Journal of Applied Geophysics*, 158, 129–138.
+   https://doi.org/10.1016/j.jappgeo.2018.09.006
+
+----
+
 Tensor decomposition and dimensionality
 -------------------------------------------
 

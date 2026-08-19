@@ -319,6 +319,42 @@ def _dms_to_deg(s: str) -> float | None:
     return val
 
 
+def dms_to_decimal_fallback(value: Any, hem: str | None = None) -> float:
+    """Dependency-free DMS-string-to-decimal-degree conversion.
+
+    Used only as a fallback when :func:`pycsamt.gis.utils.dms_to_decimal`
+    cannot be imported (``seg/heads.py`` and ``seg/meas.py``), so it must
+    not import anything beyond the standard library. Not a replacement
+    for :func:`_dms_to_deg`, which serves a different lenient-parsing
+    call site with its own ``None``-on-mismatch contract.
+    """
+    text = str(value).strip().upper()
+    sign = -1.0 if text.startswith("-") else 1.0
+    if text.endswith(("S", "W")):
+        sign = -1.0
+    text = text.rstrip("NSEW").lstrip("+-")
+    parts = [part for part in re.split(r"[:\s]+", text) if part]
+    if len(parts) == 1:
+        return sign * float(parts[0])
+    degree = float(parts[0])
+    minute = float(parts[1]) if len(parts) > 1 else 0.0
+    second = float(parts[2]) if len(parts) > 2 else 0.0
+    return sign * (degree + minute / 60.0 + second / 3600.0)
+
+
+def decimal_to_dms_fallback(value: Any, hem: str | None = None) -> str:
+    """Dependency-free decimal-degree-to-DMS-string counterpart of
+    :func:`dms_to_decimal_fallback`."""
+    numeric = float(value)
+    sign = "-" if numeric < 0 else ""
+    numeric = abs(numeric)
+    degree = int(numeric)
+    rem = (numeric - degree) * 60.0
+    minute = int(rem)
+    second = (rem - minute) * 60.0
+    return f"{sign}{degree:02d}:{minute:02d}:{second:08.5f}"
+
+
 def parse_kv_pairs(s: str) -> dict[str, Any]:
     """
     Parse `KEY=VALUE` pairs from a single line.

@@ -765,57 +765,16 @@ Recommended Workflow
 --------------------
 
 A robust tipper interpretation keeps the raw station behavior, the
-period behavior, and the sign convention visible.  The script below runs
-that sequence end to end on KAP03.
+period behavior, and the sign convention visible -- each already shown
+individually above.  The dropdown below is that same sequence as one
+self-contained script, reproducing every figure on this page end to
+end on KAP03:
 
 .. code-dropdown:: ../../../scripts/generate_user_guide_emtools_tf_figures.py
    :language: python
    :pyobject: run_tf_workflow
    :linenos:
    :title: View the executed workflow source code
-
-.. grid:: 3
-   :gutter: 2
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-01.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-02.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-03.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-04.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-05.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-06.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-07.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-tf-13-08.png
-         :width: 100%
 
 This sequence answers the practical questions in order: which station is
 strong, whether its response is coherent, where the profile responds,

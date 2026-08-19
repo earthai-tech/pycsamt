@@ -259,8 +259,7 @@ class MTEMAP(EDIComponentBase):
         for j in range(start_idx + 1, len(lines)):
             u = lines[j].upper().lstrip()
             if (
-                u.startswith(">!")
-                or u.startswith(">FREQ")
+                u.startswith(">FREQ")
                 or u.startswith(">ZROT")
                 or u.startswith(">RHOROT")
                 or u.startswith(">=")

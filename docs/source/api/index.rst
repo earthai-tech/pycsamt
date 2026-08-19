@@ -41,6 +41,7 @@ from each subpackage's current public exports, including the IoT field stack.
    pycsamt.core
    pycsamt.io
    pycsamt.metadata
+   pycsamt.emtf
    pycsamt.site
    pycsamt.seg
    pycsamt.z
@@ -83,6 +84,7 @@ from each subpackage's current public exports, including the IoT field stack.
    core
    io
    metadata
+   emtf
    site
    seg
    z

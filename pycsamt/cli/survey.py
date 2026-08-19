@@ -195,15 +195,43 @@ def _write_cache(key: str, path: Path, sites: Sites) -> None:
 
 
 def _read_cache(key: str) -> Sites | None:
-    """Return a cached ``Sites`` or ``None`` on any failure."""
+    """Return a cached ``Sites`` or ``None`` on any failure.
+
+    Unpickling restores ``__dict__`` directly without calling
+    ``__init__``, so a cache written by an older pyCSAMT version whose
+    ``Site``/``Sites`` classes have since gained new instance
+    attributes can unpickle "successfully" yet be missing state that
+    current code requires (e.g. the ``backend``/``edi``/``tf`` dual
+    representation added for EMTF-XML support). That would surface as
+    a confusing ``AttributeError`` deep in an unrelated command rather
+    than the documented "corrupt pickle -> silent rebuild" behavior.
+    Guard against it the same way: treat a structurally stale cache as
+    invalid too.
+    """
     pkl = _cache_pkl(key)
     if not pkl.exists():
         return None
     try:
         with open(pkl, "rb") as fh:
-            return pickle.load(fh)  # noqa: S301
+            sites = pickle.load(fh)  # noqa: S301
     except Exception:  # noqa: BLE001
         return None
+
+    # Only reject a *genuine* `pycsamt.site.base.Site` missing the new
+    # attribute -- stay duck-typed (no container-type check) for
+    # anything else, since this cache is deliberately exercised in
+    # tests with minimal Sites-like/Site-like stand-ins that were never
+    # meant to satisfy the real class's full shape.
+    from pycsamt.site.base import Site as _Site  # noqa: PLC0415
+
+    try:
+        for item in sites:
+            if isinstance(item, _Site) and not hasattr(item, "backend"):
+                return None
+            break
+    except TypeError:
+        pass
+    return sites
 
 
 def _cache_is_valid(key: str, path: Path) -> bool:

@@ -1,0 +1,19 @@
+Format: OCCAMITER_FLEX
+Model File: Occam1DModel
+Data File: Occam1DData
+Iterations to run: 20
+Target Misfit: 1.0
+Roughness Type: 1
+Stepsize Cut Count: 8
+Debug Level: 1
+Iteration: 0
+Lagrange Value: 5.0
+Param Count: 30
+2 2 2 2
+2 2 2 2
+2 2 2 2
+2 2 2 2
+2 2 2 2
+2 2 2 2
+2 2 2 2
+2 2

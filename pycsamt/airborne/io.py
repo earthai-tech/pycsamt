@@ -7,6 +7,28 @@ No vendor reader is registered by default. Technology adapters already accept
 decoded scientific arrays; native readers should enter this registry only when
 their actual delivery schema has been verified from a representative file or
 an authoritative format specification.
+
+Architecturally this module mirrors :mod:`pycsamt.io.formats` /
+:mod:`pycsamt.io.transfer` (:func:`~pycsamt.io.formats.detect_tf_format`,
+:func:`~pycsamt.io.transfer.read_transfer_function`): a
+:class:`~pycsamt.airborne.registry.AirborneFormatDefinition` registry
+resolved by detector-then-extension, dispatched through one stable
+public entry point. The two are deliberately *not* the same registry,
+because they operate on different units of work: ``pycsamt.io``
+readers/writers exchange one site's transfer function (EDI/EMTF XML),
+while this module exchanges a whole-survey
+:class:`~pycsamt.airborne.base.AirborneEMDataset` (many flight lines,
+each with many samples). :class:`AirborneIOError` is a ``RuntimeError``
+rather than :class:`~pycsamt.io.formats.TransferFunctionFormatError`'s
+``ValueError`` for the same reason it exists at all right now: every
+failure currently reachable here is "no native reader/writer is
+registered for this technology yet" -- a capability gap, not bad user
+input -- because, per the project roadmap, no vendor has supplied a
+delivery sample to validate a native decoder against (see
+:mod:`pycsamt.airborne.mobilemt` for why that is permanent for
+MobileMT specifically). Should a genuine format-detection-from-bad-
+input failure mode be added later, reconsider this rather than
+assuming that day is today.
 """
 
 from __future__ import annotations
@@ -16,6 +38,7 @@ from typing import Any
 
 from .base import AirborneEMDataset
 from .registry import (
+    AirborneFormatDefinition,
     AirborneFormatDetectionError,
     AirborneRegistryError,
     detect_airborne_format,
@@ -34,7 +57,11 @@ __all__ = [
 
 
 class AirborneIOError(RuntimeError):
-    """Raised when no defensible native airborne I/O path is available."""
+    """Raised when no defensible native airborne I/O path is available.
+
+    See the module docstring for why this is a ``RuntimeError`` rather
+    than a ``ValueError``.
+    """
 
 
 def _resolved_format(
@@ -42,7 +69,35 @@ def _resolved_format(
     *,
     format: str | None,
     technology: str | None,
-):
+) -> AirborneFormatDefinition:
+    """Resolve one :class:`AirborneFormatDefinition` for *source*.
+
+    Parameters
+    ----------
+    source : Any
+        Candidate to resolve a format for: an explicit *format* name
+        skips inspecting this value entirely, otherwise it is passed
+        to :func:`~pycsamt.airborne.registry.detect_airborne_format`.
+    format : str, optional
+        Explicit registered format name or alias. When ``None``,
+        content/extension-based detection is used instead.
+    technology : str, optional
+        When given, cross-checked against the resolved format's own
+        ``technology`` so a caller cannot silently read/write a
+        MobileMT file through a ZTEM-scoped call, for example.
+
+    Returns
+    -------
+    AirborneFormatDefinition
+        The resolved format definition.
+
+    Raises
+    ------
+    AirborneIOError
+        If *format* is given but unregistered; if detection is
+        ambiguous, finds nothing, or *format* is omitted; or if
+        *technology* is given but does not own the resolved format.
+    """
     if format is not None:
         definition = get_airborne_format(format)
         if definition is None:
@@ -86,8 +141,36 @@ def read_airborne(
 ) -> AirborneEMDataset:
     """Read one verified native airborne delivery into the common dataset.
 
-    Passing an existing :class:`AirborneEMDataset` is an intentional no-op
-    when no explicit native format is requested.
+    Parameters
+    ----------
+    source : Any
+        Delivery to read: typically a path, though the concrete type
+        accepted depends on the registered reader. Passing an existing
+        :class:`AirborneEMDataset` is an intentional no-op when *format*
+        is not explicitly requested, so pipeline code can call this
+        uniformly whether it already has a dataset or a raw delivery.
+    format : str, optional
+        Explicit registered format name or alias. When omitted,
+        content/extension-based detection selects the format.
+    technology : str, optional
+        Restrict resolution to one technology's formats; see
+        :func:`_resolved_format`.
+    **kwargs
+        Forwarded to the selected format's registered reader.
+
+    Returns
+    -------
+    AirborneEMDataset
+        The dataset produced by the resolved reader, or *source*
+        itself when it already was one and *format* was omitted.
+
+    Raises
+    ------
+    AirborneIOError
+        If no reader can be resolved for *source* (see
+        :func:`_resolved_format`), or if the resolved format has no
+        registered reader, or if that reader does not return an
+        :class:`AirborneEMDataset`.
     """
     if isinstance(source, AirborneEMDataset) and format is None:
         return source
@@ -116,7 +199,40 @@ def write_airborne(
     technology: str | None = None,
     **kwargs: Any,
 ) -> Any:
-    """Write a dataset through a verified native airborne writer."""
+    """Write a dataset through a verified native airborne writer.
+
+    Parameters
+    ----------
+    dataset : AirborneEMDataset
+        Dataset to serialize.
+    target : Any
+        Output destination. When *format* is omitted, *target* must be
+        a path/string with an extension that resolves unambiguously
+        via :func:`~pycsamt.airborne.registry.detect_airborne_format`.
+    format : str, optional
+        Explicit registered format name or alias.
+    technology : str, optional
+        Restrict resolution to one technology's formats; see
+        :func:`_resolved_format`.
+    **kwargs
+        Forwarded to the selected format's registered writer.
+
+    Returns
+    -------
+    Any
+        Whatever the resolved writer returns; not constrained by this
+        dispatcher.
+
+    Raises
+    ------
+    TypeError
+        If *dataset* is not an :class:`AirborneEMDataset`.
+    AirborneIOError
+        If *format* is omitted and cannot be inferred from *target*,
+        if no writer can otherwise be resolved (see
+        :func:`_resolved_format`), or if the resolved format has no
+        registered writer.
+    """
     if not isinstance(dataset, AirborneEMDataset):
         raise TypeError("dataset must be an AirborneEMDataset")
     if format is None:
@@ -146,7 +262,26 @@ def available_airborne_readers(
     *,
     technology: str | None = None,
 ) -> tuple[str, ...]:
-    """Return native formats with a registered reader."""
+    """Return native formats with a registered reader.
+
+    Parameters
+    ----------
+    technology : str, optional
+        Restrict to one technology's formats; ``None`` lists across
+        all registered technologies.
+
+    Returns
+    -------
+    tuple of str
+        Canonical format names currently readable. Empty until a
+        native reader has been registered for at least one format;
+        see the module docstring.
+
+    Raises
+    ------
+    AirborneIOError
+        If *technology* is given but not registered.
+    """
     try:
         formats = list_airborne_formats(technology=technology)
     except AirborneRegistryError as exc:
@@ -158,7 +293,26 @@ def available_airborne_writers(
     *,
     technology: str | None = None,
 ) -> tuple[str, ...]:
-    """Return native formats with a registered writer."""
+    """Return native formats with a registered writer.
+
+    Parameters
+    ----------
+    technology : str, optional
+        Restrict to one technology's formats; ``None`` lists across
+        all registered technologies.
+
+    Returns
+    -------
+    tuple of str
+        Canonical format names currently writable. Empty until a
+        native writer has been registered for at least one format;
+        see the module docstring.
+
+    Raises
+    ------
+    AirborneIOError
+        If *technology* is given but not registered.
+    """
     try:
         formats = list_airborne_formats(technology=technology)
     except AirborneRegistryError as exc:

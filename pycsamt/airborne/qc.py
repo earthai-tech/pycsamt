@@ -7,6 +7,15 @@ These utilities deliberately assess representation quality, completeness, and
 metadata consistency. They do not invent universal geophysical thresholds for
 signal-to-noise ratio, frequency range, or anomaly quality. Technology-specific
 scientific QC can later be registered on top of this common structural layer.
+
+:class:`AirborneQCIssue` inherits :class:`~pycsamt.api.property.PyCSAMTObject`
+as a lightweight immutable finding, the same choice made for
+:class:`~pycsamt.metadata.quality.QualityComment` and for the registry
+definitions in :mod:`pycsamt.airborne.registry`.
+:class:`AirborneInspection` and :class:`AirborneQCReport` inherit
+:class:`~pycsamt.core.base.CoreObject`, matching
+:mod:`pycsamt.airborne.base`: they aggregate and summarize, rather than
+perform electromagnetic arithmetic themselves.
 """
 
 from __future__ import annotations
@@ -16,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from ..api.property import PyCSAMTObject
 from ..core.base import CoreObject
 
 if TYPE_CHECKING:
@@ -25,12 +35,7 @@ from .registry import (
     get_airborne_technology,
     identify_airborne_technologies,
 )
-
-def _emtf_class():
-    from ..emtf.document import EMTF
-
-    return EMTF
-
+from .validation import emtf_class
 
 __all__ = [
     "AirborneQCIssue",
@@ -41,9 +46,33 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True)
-class AirborneQCIssue:
-    """One structural/metadata QC finding."""
+@dataclass(frozen=True, repr=False)
+class AirborneQCIssue(PyCSAMTObject):
+    """One structural/metadata QC finding.
+
+    Parameters
+    ----------
+    code : str
+        Short machine-readable finding code, for example
+        ``"missing_reference_station"``. Lower-cased on construction.
+    severity : {"info", "warning", "error"}
+        Finding severity. ``"error"`` reflects an internally
+        inconsistent scientific state (for example a non-positive
+        frequency axis), not merely incomplete or sparse data; see
+        :func:`assess_airborne_qc`.
+    message : str
+        Human-readable description. Stripped on construction.
+    line_id : str, optional
+        Flight line the finding applies to, when scoped to one line.
+    sample_id : str, optional
+        Sample the finding applies to, when scoped to one record.
+
+    Raises
+    ------
+    ValueError
+        If ``code`` is empty, or ``severity`` is not one of
+        ``"info"``, ``"warning"``, ``"error"``.
+    """
 
     code: str
     severity: str
@@ -65,7 +94,31 @@ class AirborneQCIssue:
 
 @dataclass(repr=False)
 class AirborneInspection(CoreObject):
-    """Compact scientific inventory of an airborne object."""
+    """Compact scientific inventory of an airborne object.
+
+    Returned by :func:`inspect_airborne` for a dataset, line, record,
+    or bare :class:`~pycsamt.emtf.EMTF`; the fields below are filled
+    in as far as they are meaningful for that ``object_type`` (for
+    example a single record leaves ``n_lines``/``bbox`` at their
+    defaults).
+
+    Parameters
+    ----------
+    object_type : {"dataset", "line", "record", "emtf"}
+        Kind of object the inventory describes.
+    technologies : tuple of str, optional
+        Canonical technologies identified on the object; see
+        :func:`~pycsamt.airborne.registry.identify_airborne_technologies`.
+    n_lines, n_samples, n_records : int, default 0
+        Counts meaningful at and above the object's own level.
+    transfer_function_names : tuple of str, optional
+        Sorted union of transfer-function names present.
+    bbox : BBox, optional
+        Geographic bounding box, when applicable and available.
+    attrs : dict, optional
+        Object-type-specific extra fields (for example ``sample_id``
+        for a record, or ``name``/``method`` for a dataset).
+    """
 
     object_type: str
     technologies: tuple[str, ...] = field(default_factory=tuple)
@@ -79,7 +132,25 @@ class AirborneInspection(CoreObject):
 
 @dataclass(repr=False)
 class AirborneQCReport(CoreObject):
-    """Common structural QC report for an airborne dataset."""
+    """Common structural QC report for an airborne dataset.
+
+    Returned by :func:`assess_airborne_qc`.
+
+    Parameters
+    ----------
+    technologies : tuple of str
+        Canonical technologies identified across the dataset.
+    metrics : dict
+        Dataset-level scalar metrics (coverage fractions, counts);
+        see :func:`assess_airborne_qc` for the exact keys.
+    line_metrics : dict of str to dict
+        Per-line metrics keyed by ``line_id``; see
+        :func:`_line_metrics` for the exact keys.
+    issues : tuple of AirborneQCIssue, optional
+        Individual findings, most to least specific in scope
+        (per-sample, then per-line, then dataset-wide) in the order
+        they were raised.
+    """
 
     technologies: tuple[str, ...]
     metrics: dict[str, Any]
@@ -88,7 +159,11 @@ class AirborneQCReport(CoreObject):
 
     @property
     def status(self) -> str:
-        """Return ``error``, ``warning``, or ``pass``."""
+        """Return ``"error"``, ``"warning"``, or ``"pass"``.
+
+        The worst severity present in :attr:`issues`, or ``"pass"``
+        when there are none.
+        """
         severities = {issue.severity for issue in self.issues}
         if "error" in severities:
             return "error"
@@ -98,19 +173,37 @@ class AirborneQCReport(CoreObject):
 
     @property
     def errors(self) -> tuple[AirborneQCIssue, ...]:
+        """Return only the ``"error"``-severity issues."""
         return tuple(
             issue for issue in self.issues if issue.severity == "error"
         )
 
     @property
     def warnings(self) -> tuple[AirborneQCIssue, ...]:
+        """Return only the ``"warning"``-severity issues."""
         return tuple(
             issue for issue in self.issues if issue.severity == "warning"
         )
 
 
 def inspect_airborne(obj: Any) -> AirborneInspection:
-    """Return a compact inventory for dataset, line, record, or EMTF object."""
+    """Return a compact inventory for dataset, line, record, or EMTF object.
+
+    Parameters
+    ----------
+    obj : AirborneEMDataset, AirborneEMLine, AirborneEMRecord, or EMTF
+        Object to summarize.
+
+    Returns
+    -------
+    AirborneInspection
+        Inventory populated as far as meaningful for *obj*'s type.
+
+    Raises
+    ------
+    TypeError
+        If *obj* is none of the supported types.
+    """
     technologies = identify_airborne_technologies(obj)
     if isinstance(obj, AirborneEMDataset):
         return AirborneInspection(
@@ -142,7 +235,7 @@ def inspect_airborne(obj: Any) -> AirborneInspection:
             transfer_function_names=obj.transfer_function_names,
             attrs={"sample_id": obj.sample_id},
         )
-    if isinstance(obj, _emtf_class()):
+    if isinstance(obj, emtf_class()):
         return AirborneInspection(
             object_type="emtf",
             technologies=technologies,
@@ -157,6 +250,12 @@ def inspect_airborne(obj: Any) -> AirborneInspection:
 
 
 def _finite_complex_fraction(value: Any) -> tuple[int, int]:
+    """Return ``(n_finite, n_total)`` element counts for *value*.
+
+    A complex element counts as finite only when both its real and
+    imaginary parts are finite, matching the missing-value convention
+    (``nan + nan*1j``) used for absent EMTF matrix components.
+    """
     arr = np.asarray(value)
     if arr.size == 0:
         return 0, 0
@@ -168,6 +267,7 @@ def _finite_complex_fraction(value: Any) -> tuple[int, int]:
 
 
 def _navigation_location_count(line: AirborneEMLine) -> int:
+    """Count samples with a finite geographic or projected position."""
     nav = line.navigation
     mask = np.zeros(nav.n_samples, dtype=bool)
     if nav.latitude is not None and nav.longitude is not None:
@@ -178,13 +278,27 @@ def _navigation_location_count(line: AirborneEMLine) -> int:
 
 
 def _clearance_count(line: AirborneEMLine) -> int:
+    """Count samples with a finite explicit or derived clearance."""
     values = line.navigation.clearance_values
     if values is None:
         return 0
     return int(np.count_nonzero(np.isfinite(values)))
 
 
-def _reference_present(doc: "EMTF", technology: str) -> bool:
+def _reference_present(doc: EMTF, technology: str) -> bool:
+    """Return whether *doc* carries reference-station metadata.
+
+    The check is technology-specific because reference metadata is
+    stored differently per adapter: MobileMT's ground electric
+    reference lives under ``doc.attrs["mobilemt"]["reference_station"]``
+    (see :mod:`pycsamt.airborne.mobilemt`), while ZTEM/AirMt route
+    their fixed ground magnetic reference through the shared
+    :attr:`~pycsamt.emtf.EMTF.processing`/``remote_reference`` field
+    instead (see :mod:`pycsamt.airborne.ztem`,
+    :mod:`pycsamt.airborne.afmag`). Technologies without a
+    ``reference_required`` contract are not checked here at all; see
+    :func:`assess_airborne_qc`.
+    """
     if technology == "mobilemt":
         meta = doc.attrs.get("mobilemt")
         return bool(
@@ -200,6 +314,9 @@ def _reference_present(doc: "EMTF", technology: str) -> bool:
 
 
 def _line_metrics(line: AirborneEMLine) -> dict[str, Any]:
+    """Return one line's ``n_samples``/``n_records``/coverage-fraction
+    metrics, keyed exactly as documented on
+    :attr:`AirborneQCReport.line_metrics`."""
     n_samples = line.n_samples
     n_records = line.n_records
     return {
@@ -223,10 +340,36 @@ def _line_metrics(line: AirborneEMLine) -> dict[str, Any]:
 def assess_airborne_qc(dataset: AirborneEMDataset) -> AirborneQCReport:
     """Assess common structural completeness and metadata consistency.
 
+    Parameters
+    ----------
+    dataset : AirborneEMDataset
+        Dataset to assess.
+
+    Returns
+    -------
+    AirborneQCReport
+        Dataset-level and per-line metrics plus individual findings.
+        See :attr:`AirborneQCReport.metrics` for the exact dataset-level
+        keys this function populates (record/EMTF coverage fractions,
+        valid-frequency and finite-response fractions, primary/derived
+        transfer-function counts, variance/covariance coverage
+        fractions, and reference-metadata coverage).
+
+    Raises
+    ------
+    TypeError
+        If *dataset* is not an :class:`AirborneEMDataset`.
+
+    Notes
+    -----
     The report is intentionally descriptive. A missing record, missing
     covariance, or absent coordinates can be important without being a
-    universal processing failure, so only internally inconsistent scientific
-    states are classified as errors.
+    universal processing failure, so only internally inconsistent
+    scientific states -- currently just a non-positive or non-finite
+    frequency axis on an attached EMTF -- are classified as
+    ``"error"``. Everything else that is merely incomplete or sparse
+    is reported at ``"info"``/``"warning"`` severity; see
+    :class:`AirborneQCIssue`.
     """
     if not isinstance(dataset, AirborneEMDataset):
         raise TypeError("dataset must be an AirborneEMDataset")

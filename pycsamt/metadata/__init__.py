@@ -2,6 +2,7 @@
 
 from ._property import (
     CopyrightInfo,
+    MetadataError,
     Person,
     Reference,
     Software,
@@ -21,6 +22,7 @@ from .geology import (
     GeologyCatalog,
     geology_prior,
 )
+from .channels import ChannelMeta, SiteLayout
 from .instrument import (
     KNOWN_SYSTEMS,
     InstrumentMeta,
@@ -28,10 +30,18 @@ from .instrument import (
     known_system,
     list_presets,
 )
+from .processing import (
+    ProcessingMeta,
+    RemoteReferenceMeta,
+    normalize_sign_convention,
+)
+from .provenance import ProvenanceMeta
 from .quality import (
     ComponentQuality,
     DataQuality,
+    QualityComment,
     QualityFlag,
+    TransferFunctionQuality,
     assess_collection,
     quality_dataframe,
 )
@@ -40,6 +50,8 @@ from .rocks import (
     ROCK_HATCH_PATTERNS,
     RockProperties,
 )
+from .orientation import OrientationMeta
+from .site import LocationMeta, SiteMeta
 from .survey import BBox, SurveyMeta
 
 __all__ = [
@@ -48,6 +60,19 @@ __all__ = [
     "CopyrightInfo",
     "Person",
     "Software",
+    "MetadataError",
+    # transfer-function metadata
+    "ProvenanceMeta",
+    "LocationMeta",
+    "SiteMeta",
+    "OrientationMeta",
+    "ChannelMeta",
+    "SiteLayout",
+    "RemoteReferenceMeta",
+    "ProcessingMeta",
+    "normalize_sign_convention",
+    "QualityComment",
+    "TransferFunctionQuality",
     # rocks
     "GEO_ROCK_RESISTIVITY",
     "ROCK_HATCH_PATTERNS",

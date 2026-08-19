@@ -12,6 +12,7 @@ __all__ = [
     "Spectra",
     "SpectraSECT",
     "SpectraIO",
+    "SpectraValidationWarning",
     "TimeSeries",
     "TSect",
     "TSIO",
@@ -35,6 +36,7 @@ _EXPORTS = {
     "Spectra": ("spectra", "Spectra"),
     "SpectraSECT": ("spectra", "SpectraSECT"),
     "SpectraIO": ("spectra", "SpectraIO"),
+    "SpectraValidationWarning": ("spectra", "SpectraValidationWarning"),
     "TimeSeries": ("time_series", "TimeSeries"),
     "TSect": ("time_series", "TSect"),
     "TSIO": ("time_series", "TSIO"),
@@ -72,7 +74,12 @@ def __getattr__(name: str):
 if TYPE_CHECKING:
     from .edi import EDIFile, EDIMixin, EDIOMixin
     from .other import OtherIO, OtherSECT
-    from .spectra import Spectra, SpectraIO, SpectraSECT
+    from .spectra import (
+        Spectra,
+        SpectraIO,
+        SpectraSECT,
+        SpectraValidationWarning,
+    )
     from .survey import (
         EDIProfile,
         Stations,

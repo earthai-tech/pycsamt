@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from datetime import datetime
 from pathlib import Path
 from typing import (
     Any,
@@ -16,7 +15,13 @@ from ..exceptions import (
     FileHandlingError,
     HeaderError,
 )
-from ..gis.utils import decimal_to_dms, dms_to_decimal
+try:
+    from ..gis.utils import decimal_to_dms, dms_to_decimal
+except (ImportError, RuntimeError):
+    from .utils import (
+        decimal_to_dms_fallback as decimal_to_dms,
+        dms_to_decimal_fallback as dms_to_decimal,
+    )
 from .base import EDIComponentBase
 from .validation import (
     IsEdi,
@@ -122,9 +127,7 @@ class Hmeasurement(EDIComponentBase):
         self.filter: str | None = None
         self.sensor: str | None = None
         self.gain: float | None = None
-        self.measdate: str | None = datetime.utcnow().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        self.measdate: str | None = None
         if kws:
             self.update_from_dict(kws)
 
@@ -194,9 +197,7 @@ class Emeasurement(EDIComponentBase):
         self.filter: str | None = None
         self.sensor: str | None = None
         self.gain: float | None = None
-        self.measdate: str | None = datetime.utcnow().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        self.measdate: str | None = None
         if kws:
             self.update_from_dict(kws)
 

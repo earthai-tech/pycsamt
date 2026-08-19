@@ -4,34 +4,15 @@
 pycsamt convert
 ===============
 
-Convert AMT/MT data files to EDI format.
+Convert electromagnetic transfer-function files.
 
-Supported input formats
------------------------
+The preferred Phase-9 interface converts EDI and EMTF XML through the
+format-neutral :mod:`pycsamt.emtf` model::
 
-==========  =======================================================
-Extension   Source format
-==========  =======================================================
-``.j``      Jones J-file (via ``pycsamt.jones``)
-``.avg``    Zonge AVG file (via ``pycsamt.zonge``)
-``.edi``    EDI pass-through / re-export / header normalisation
-==========  =======================================================
+    pycsamt convert station.edi station.xml
+    pycsamt convert station.xml station.edi
 
-Usage
------
-::
-
-    # single file
-    pycsamt convert station.j --output-dir edis/
-
-    # whole directory — converts every recognised file
-    pycsamt convert survey/ --output-dir edis/
-
-    # force overwrite of existing outputs
-    pycsamt convert survey/ --output-dir edis/ --overwrite
-
-    # dry run — list what would be converted
-    pycsamt convert survey/ --dry-run -v
+Historical Jones/AVG/EDI-to-EDI batch workflows remain supported.
 """
 
 from __future__ import annotations
@@ -191,7 +172,10 @@ def _convert_avg(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
             "src": str(src),
             "dst": str(dst),
             "status": "error",
-            "message": "zonge package unavailable — AVG conversion not supported yet",
+            "message": (
+                "zonge package unavailable — AVG conversion not "
+                "supported yet"
+            ),
         }
     except Exception as exc:  # noqa: BLE001
         return {
@@ -264,21 +248,192 @@ def _fmt_csv(results: list[dict[str, Any]]) -> str:
 # ---------------------------------------------------------------------------
 # Command
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Format-neutral transfer-function conversion helpers
+# ---------------------------------------------------------------------------
+
+
+def _canonical_tf_format(name: str | None) -> str | None:
+    """Return a canonical registered TF format name."""
+    if name is None:
+        return None
+    from ...io import get_tf_format
+
+    return get_tf_format(name).name
+
+
+def _tf_extension(name: str) -> str:
+    """Return the preferred filename extension for a TF format."""
+    from ...io import get_tf_format
+
+    spec = get_tf_format(name)
+    if not spec.extensions:
+        raise click.ClickException(
+            f"No output extension is registered for {spec.name!r}."
+        )
+    return spec.extensions[0]
+
+
+def _read_as_emtf(src: Path, source_format: str | None):
+    """Read any supported TF source into the neutral EMTF model."""
+    from ...emtf import EMTF
+    from ...io import detect_tf_format
+
+    canonical = (
+        _canonical_tf_format(source_format)
+        if source_format is not None
+        else detect_tf_format(src)
+    )
+    if canonical == "edi":
+        return EMTF.from_edi(src), canonical
+    if canonical == "emtf_xml":
+        return EMTF.from_xml(src), canonical
+    raise click.ClickException(
+        f"Format {canonical!r} cannot be converted through EMTF."
+    )
+
+
+def _convert_tf(
+    src: Path,
+    dst: Path,
+    *,
+    source_format: str | None,
+    target_format: str | None,
+    on_loss: str,
+    verbose: int,
+) -> dict[str, Any]:
+    """Convert EDI/EMTF XML through the format-neutral EMTF model."""
+    try:
+        from ...io import get_tf_format_for_target, write_transfer_function
+
+        doc, src_fmt = _read_as_emtf(src, source_format)
+        if target_format is None:
+            dst_fmt = get_tf_format_for_target(dst).name
+        else:
+            dst_fmt = _canonical_tf_format(target_format)
+            assert dst_fmt is not None
+
+        kwargs: dict[str, Any] = {}
+        if dst_fmt == "edi":
+            kwargs["on_loss"] = on_loss
+        write_transfer_function(doc, dst, format=dst_fmt, **kwargs)
+        if verbose >= 1:
+            click.echo(
+                f"  {src.name}  →  {dst.name}  "
+                f"({src_fmt} → {dst_fmt})",
+                err=True,
+            )
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "ok",
+            "source_format": src_fmt,
+            "target_format": dst_fmt,
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "src": str(src),
+            "dst": str(dst),
+            "status": "error",
+            "message": str(exc),
+        }
+
+
+def _generic_tf_mode(
+    source: Path,
+    target: Path | None,
+    source_format: str | None,
+    target_format: str | None,
+) -> bool:
+    """Return whether the new format-neutral conversion path is requested.
+
+    ``--to edi`` alone must stay indistinguishable from the historical
+    default (EDI was, and remains, the only legacy output format), so a
+    directory SOURCE combined only with ``--to edi`` still runs the
+    legacy Jones/AVG/EDI batch path. Only an explicit TARGET, an
+    explicit ``--from``, or a target format other than EDI opts a
+    directory into the single-file transfer-function path.
+    """
+    if target is not None or source_format is not None:
+        return True
+    if target_format is not None:
+        try:
+            canonical = _canonical_tf_format(target_format)
+        except Exception:  # noqa: BLE001
+            return True
+        if canonical != "edi":
+            return True
+    return source.is_file() and source.suffix.lower() == ".xml"
+
+
+def _generic_target(
+    source: Path,
+    target: Path | None,
+    output_dir: Path,
+    target_format: str | None,
+) -> tuple[Path, str]:
+    """Resolve output path and target format for one TF conversion."""
+    from ...io import get_tf_format_for_target
+
+    if target is not None:
+        canonical = (
+            _canonical_tf_format(target_format)
+            if target_format is not None
+            else get_tf_format_for_target(target).name
+        )
+        assert canonical is not None
+        return target, canonical
+
+    if target_format is None:
+        # A lone XML source naturally converts to the historical EDI format.
+        # A lone EDI source remains on the legacy pass-through path.
+        canonical = "edi"
+    else:
+        canonical = _canonical_tf_format(target_format)
+        assert canonical is not None
+    return output_dir / f"{source.stem}{_tf_extension(canonical)}", canonical
+
+
+# ---------------------------------------------------------------------------
+# Command
+# ---------------------------------------------------------------------------
 
 
 @click.command("convert")
 @click.argument(
     "source",
     type=click.Path(exists=True, path_type=Path),
-    metavar="FILE_OR_DIR",
+    metavar="SOURCE",
+)
+@click.argument(
+    "target",
+    required=False,
+    type=click.Path(path_type=Path),
+    metavar="[TARGET]",
+)
+@click.option(
+    "--from",
+    "source_format",
+    default=None,
+    metavar="FORMAT",
+    help="Explicit source TF format (edi, emtf-xml, xml).",
 )
 @click.option(
     "--to",
     "target_format",
-    type=click.Choice(["edi"], case_sensitive=False),
-    default="edi",
+    default=None,
+    metavar="FORMAT",
+    help=(
+        "Target TF format (edi or emtf-xml). With no TARGET, the output "
+        "filename is derived in --output-dir."
+    ),
+)
+@click.option(
+    "--on-loss",
+    type=click.Choice(["warn", "raise", "ignore"], case_sensitive=False),
+    default="warn",
     show_default=True,
-    help="Target format (currently only EDI is supported).",
+    help="Policy for EMTF → EDI information that EDI cannot preserve.",
 )
 @click.option(
     "--dry-run",
@@ -295,7 +450,10 @@ def _fmt_csv(results: list[dict[str, Any]]) -> str:
 def convert(
     ctx: click.Context,
     source: Path,
-    target_format: str,
+    target: Path | None,
+    source_format: str | None,
+    target_format: str | None,
+    on_loss: str,
     dry_run: bool,
     verbose: int,
     no_color: bool,
@@ -303,23 +461,30 @@ def convert(
     output_dir: Path,
     overwrite: bool,
 ) -> None:
-    """Convert AMT/MT data files to EDI format.
+    """Convert electromagnetic transfer-function files.
 
-    SOURCE can be a single file (.j, .avg, .edi) or a directory.  When
-    SOURCE is a directory every recognised file inside it is converted.
+    The preferred modern form is ``pycsamt convert SOURCE TARGET``. EDI and
+    EMTF XML are converted through the format-neutral :class:`EMTF` model.
+    Existing Jones/AVG-to-EDI directory workflows remain supported.
 
     \b
-    Supported input extensions:
+    Modern transfer-function examples:
+      pycsamt convert station.edi station.xml
+      pycsamt convert station.xml station.edi
+      pycsamt convert station.edi --to emtf-xml -o converted/
+      pycsamt convert input.dat output.xml --from edi --to emtf-xml
+
+    \b
+    Legacy input formats (unchanged):
       .j    Jones J-file
       .avg  Zonge AVG file
       .edi  EDI pass-through / re-export
 
     \b
-    Examples:
+    Legacy conversion examples:
       pycsamt convert station.j --output-dir edis/
-      pycsamt convert survey/   --output-dir edis/ --overwrite
-      pycsamt convert survey/   --dry-run -v
-      pycsamt convert survey/   --output-dir edis/ --format json
+      pycsamt convert survey/ --output-dir edis/ --overwrite
+      pycsamt convert survey/ --dry-run -v
     """
     configure_cli(
         log__level=verbose,
@@ -329,11 +494,80 @@ def convert(
         output__overwrite=overwrite,
     )
 
+    # ------------------------------------------------------------------
+    # Modern EDI <-> EMTF XML conversion. This path is intentionally
+    # single-file so conversion semantics and loss policy stay explicit.
+    # ------------------------------------------------------------------
+    if _generic_tf_mode(source, target, source_format, target_format):
+        if source.is_dir():
+            raise click.ClickException(
+                "SOURCE must be a file when TARGET, --from, or --to is used."
+            )
+        try:
+            dst, canonical_target = _generic_target(
+                source,
+                target,
+                output_dir,
+                target_format,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise click.ClickException(str(exc)) from exc
+
+        if source.resolve() == dst.resolve():
+            raise click.ClickException(
+                "SOURCE and TARGET must be different files."
+            )
+        if dst.exists() and not overwrite:
+            result = {
+                "src": str(source),
+                "dst": str(dst),
+                "status": "skipped",
+                "message": "output exists (use --overwrite to replace)",
+            }
+            if output_format == "json":
+                click.echo(_fmt_json([result]))
+            elif output_format == "csv":
+                click.echo(_fmt_csv([result]))
+            else:
+                click.echo(_fmt_text([result]))
+            return
+
+        if dry_run:
+            click.echo(
+                f"Dry run — {source}  →  {dst} ({canonical_target})"
+            )
+            return
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        result = _convert_tf(
+            source,
+            dst,
+            source_format=source_format,
+            target_format=canonical_target,
+            on_loss=on_loss.lower(),
+            verbose=verbose,
+        )
+        if output_format == "json":
+            click.echo(_fmt_json([result]))
+        elif output_format == "csv":
+            click.echo(_fmt_csv([result]))
+        else:
+            click.echo(_fmt_text([result]))
+        if result["status"] == "error":
+            raise click.ClickException(
+                result.get("message", "conversion failed")
+            )
+        return
+
+    # ------------------------------------------------------------------
+    # Historical Jones / AVG / EDI-to-EDI batch behavior.
+    # ------------------------------------------------------------------
     inputs = _collect_inputs(source)
     if not inputs:
         click.echo(
             f"No convertible files found in {source}.\n"
-            f"Supported extensions: {', '.join(sorted(_SUPPORTED_EXTS))}",
+            f"Supported legacy extensions: "
+            f"{', '.join(sorted(_SUPPORTED_EXTS))}",
             err=True,
         )
         sys.exit(1)

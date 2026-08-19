@@ -911,6 +911,69 @@ h3 .sd-badge {
   color: var(--pycsamt-toc-link);
 }
 
+/* Collapsible sub-branches (see _ext/guide_toc_accordion.py). Every item
+   below the outline's top level that has its own children is rebuilt at
+   build time into a closed <details>/<summary>, so the reader sees each
+   chapter's chapters/pages but not the wall of in-page headings underneath
+   until they ask for it. The toggle is pinned to the item's top-right
+   corner, scikit-learn-sidebar style, so it never reflows the link text. */
+.pycsamt-guide-toc li.has-children {
+  position: relative;
+}
+
+.pycsamt-guide-toc li.has-children > a {
+  margin-right: 1.7rem;
+}
+
+.pycsamt-guide-toc li.has-children > details > summary {
+  position: absolute;
+  top: 0.1rem;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  color: var(--pycsamt-muted);
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.pycsamt-guide-toc li.has-children > details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pycsamt-guide-toc li.has-children > details > summary:hover,
+.pycsamt-guide-toc li.has-children > details > summary:focus-visible {
+  color: var(--pycsamt-toc-hover);
+  background: var(--pycsamt-surface-2);
+}
+
+.pycsamt-guide-toc li.has-children > details > summary:focus-visible {
+  outline: 2px solid var(--pycsamt-toc-hover);
+  outline-offset: 1px;
+}
+
+.pycsamt-guide-toc .pyc-toc-toggle {
+  display: inline-flex;
+  transition: transform 0.18s ease;
+}
+
+.pycsamt-guide-toc .pyc-toc-toggle .fa-chevron-down {
+  font-size: 0.68rem;
+}
+
+.pycsamt-guide-toc li.has-children > details[open] > summary .pyc-toc-toggle {
+  transform: rotate(180deg);
+}
+
+.pycsamt-guide-toc li.has-children > details > ul {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}
+
 /* The "1.", "1.2.", "1.2.3." prefix Sphinx emits for a :numbered: toctree.
    Tabular figures keep the numbers from jittering between rows. */
 .pycsamt-guide-toc .section-number,

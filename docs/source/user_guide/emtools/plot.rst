@@ -6,9 +6,13 @@ Multi-Station Diagnostic Panels
 ``pycsamt.emtools.plot`` is the multi-station plotting layer for
 :term:`impedance tensor` and :term:`tipper` response diagnostics. It is
 the place to go when one station at a time is too narrow, but a map or
-pseudo-section is too compressed.
+pseudo-section is too compressed. Its sibling module,
+``pycsamt.emtools.overview``, covers the opposite case -- one station,
+every diagnostic at once -- and is documented on this page too, since
+both re-export through the same top-level ``pycsamt.emtools`` namespace
+and cover the same site-level visualisation job.
 
-The module covers five common plotting jobs:
+The page covers six common plotting jobs:
 
 * compact :term:`apparent resistivity` and :term:`phase` panels for many
   stations;
@@ -16,7 +20,9 @@ The module covers five common plotting jobs:
 * response plus tipper :term:`quality control` panels;
 * before/after comparison figures;
 * measured-versus-predicted fit grids with per-component
-  :term:`RMS misfit` labels.
+  :term:`RMS misfit` labels;
+* a single-station "full response" overview combining impedance,
+  induction arrows, and :term:`phase tensor` ellipses in one figure.
 
 Full callable signatures live in the :doc:`API reference <../../api/emtools>`.
 This page explains when to use each figure, which arguments matter, and
@@ -52,6 +58,10 @@ station-group figures for QC, comparison, and reporting.
    * - ``plot_sites_fit_grid``
      - Observed vs predicted inversion-response review.
      - Component columns with RMS labels.
+   * - ``plot_response_overview``
+     - One station, every diagnostic at once.
+     - Rho/phase columns plus induction-arrow and phase-tensor-ellipse
+       rows.
 
 All functions accept a path, ``Sites`` object, collection, or compatible
 iterable. Internally they normalize inputs with ``ensure_sites`` unless
@@ -605,6 +615,140 @@ Use custom fit colours when assembling figures for publication or when
 the package defaults conflict with another report's existing colour
 convention.
 
+Full-Response Station Overview
+-------------------------------
+
+Every figure so far puts several *stations* side by side. Sometimes the
+opposite view is what a report needs: one station, but the complete
+picture -- apparent resistivity and phase for all four impedance
+components, induction arrows, and :term:`phase tensor` ellipses, all
+sharing one period axis. ``plot_response_overview`` (in the sibling
+``pycsamt.emtools.overview`` module, re-exported from
+``pycsamt.emtools``) builds exactly that: the classic MT "full response"
+quicklook, reworked to read display convention from
+``PYCSAMT_CONTROL``/``PYCSAMT_STYLE`` like every other function on this
+page rather than hard-coding colours or axis choices.
+
+The example switches datasets one more time, to the Gabbs Valley USGS MT
+survey bundled at ``data/gv_data`` -- three real stations (``gv100``,
+``gv130``, ``gv163``) that, unlike L18PLT, carry a full :math:`2\times 2`
+:term:`impedance tensor` (:math:`Z_{xx}` and :math:`Z_{yy}` included, not
+just the off-diagonal pair) as well as tipper, which this figure needs
+to fill every row.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import ensure_sites, sites_summary, plot_response_overview
+   >>> gv = ensure_sites("data/gv_data/gv_final_edi", strict=True)
+   >>> gv_summary = sites_summary(gv)
+   >>> print(len(gv_summary), "stations,", "tipper present:", bool(gv_summary["has_tipper"].all()))
+   3 stations, tipper present: True
+   >>> fig = plot_response_overview(gv, station="gv100")
+   >>> len(fig.axes)
+   7
+   >>> fig.axes[0].get_yscale(), fig.axes[0].get_xscale()
+   ('log', 'log')
+   >>> fig.axes[2].get_yscale()
+   'linear'
+   >>> fig.savefig("gv100_response_overview.png", dpi=200, bbox_inches="tight")
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-16.png
+   :width: 100%
+
+Seven axes come back for the default two-column layout: apparent
+resistivity and phase for the off-diagonal (:math:`Z_{xy}`,
+:math:`Z_{yx}`) pair on the left, the diagonal (:math:`Z_{xx}`,
+:math:`Z_{yy}`) pair on the right, one induction-arrow row, one
+phase-tensor-ellipse row, and the ellipse row's own colourbar axis. The
+apparent-resistivity row confirms as genuinely log-log
+(``get_yscale() == "log"`` over a log x-axis, not :math:`\log_{10}\rho_a`
+values plotted on a linear axis) and the phase row as linear-over-log,
+i.e. semilog -- both draw Matplotlib's own per-decade grid rather than
+sparse gridlines over pre-logged numbers, matching the reference
+quicklook convention this figure reproduces.
+
+Reading the panels from top to bottom: the resistivity and phase curves
+behave exactly as in the earlier sections, just with all four components
+present at once -- :math:`Z_{xx}` and :math:`Z_{yy}` stay small relative
+to the off-diagonal pair through the middle of the period range, as
+expected for a survey without strong 3-D distortion there, then grow
+noticeably at the longest periods where the error bars also widen -- a
+data-quality effect documented in the survey's own USGS data release,
+`Peacock et al. (2021) <https://doi.org/10.5066/P9GZ9Z56>`_, not a
+plotting artefact. The induction-arrow row draws one arrow per period
+for the real and imaginary tipper parts, in the same real/imag colour
+pairing used by ``plot_response_tipper``'s :math:`T_x`/:math:`T_y` rows
+earlier on this page; each arrow's vertical extent is the physically
+meaningful part, while its slight horizontal fan is a schematic
+separation between neighbouring periods, not a period shift. The bottom
+row draws one phase-tensor ellipse per period, coloured by :term:`Skew`
+by default: the pale, near-white ellipses through the middle of the
+period range indicate low skew (consistent with the comparatively
+regular, near-1-D-looking sounding curves above them), while the more
+saturated red/blue ellipses at the shortest and longest periods flag the
+same noisier bands already visible in the resistivity row.
+
+A Full-Range Ellipse Colouring
+-------------------------------
+
+The default skew colouring is the more diagnostic choice -- it flags
+departures from 1-D/2-D structure directly -- but some reports expect
+the other common convention: colouring by :math:`\phi_{\min}` (the
+:term:`phase tensor`'s minor-axis angle) over its natural
+:math:`0^\circ`-:math:`90^\circ` range. Pass ``c_by="phimin_deg"`` with
+an explicit ``clim`` to get it; note this is deliberately not the same
+as ``c_by="phi_min"``, which colours by the raw phase-tensor singular
+value (tan units) instead of its arctan in degrees and saturates near
+one end of a 0-90 scale instead of using it fully.
+
+.. code-block:: pycon
+
+   >>> fig = plot_response_overview(
+   ...     gv,
+   ...     station="gv130",
+   ...     c_by="phimin_deg",
+   ...     clim=(0.0, 90.0),
+   ...     cmap="turbo",
+   ... )
+   >>> cbar_ax = fig.axes[-1]
+   >>> cbar_ax.get_xlabel()
+   '$\\phi_{min}$ (°)'
+   >>> cbar_ax.get_xlim()
+   (0.0, 90.0)
+   >>> fig.savefig("gv130_response_overview_phimin.png", dpi=200, bbox_inches="tight")
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-plot-17.png
+   :width: 100%
+
+The colourbar now spans the full requested :math:`0^\circ`-:math:`90^\circ`
+range and every ellipse gets a distinct hue rather than clustering near
+one end -- exactly the "very saturated, easy to scan" look a
+:math:`\phi_{\min}`-coloured strip is expected to have, and the reason
+this convention, not skew, is the one to reach for when the ellipse row
+needs to be readable at a glance rather than used as a 3-D-structure
+flag. The colourbar itself lives in its own reserved row below the
+ellipse strip by default (``cbar_orientation="horizontal"``); pass
+``cbar_orientation="vertical"`` to restore a right-hand gutter column
+instead. Either way the space is reserved in the layout up front, so the
+arrow row above and the ellipse row stay pixel-aligned on the shared
+period axis -- a colourbar attached the ordinary
+``Figure.colorbar``-via-divider way would otherwise narrow just the
+ellipse row after the fact, leaving a given period at a different pixel
+column in each row.
+
+Two more knobs are worth knowing about before reaching for this
+function on a new survey. ``show_diag=False`` drops the
+:math:`Z_{xx}`/:math:`Z_{yy}` column entirely, narrowing the figure to a
+single column when a survey's diagonal terms are not of interest or are
+too noisy to be useful; the arrow and ellipse rows then span that one
+column instead of two. And ``x_view`` and ``log_log_rho`` control the
+axis conventions independently of ``PYCSAMT_CONTROL``'s shared global
+state -- ``x_view="log10_period"`` switches to the
+:math:`\log_{10}T\,(\mathrm{s})` linear-axis convention used by
+``plot_raw_sites_1d`` earlier on this page, and ``log_log_rho=False``
+does the same for apparent resistivity, without needing a
+``PYCSAMT_CONTROL.context(...)`` block for either.
+
 Choosing The Right Figure
 -------------------------
 
@@ -629,6 +773,11 @@ Here is a practical decision path:
 ``I have model predictions or inversion responses``
     Use ``plot_sites_fit_grid`` and read the RMS labels component by
     component.
+
+``I need the complete picture for one station -- full tensor, arrows, and ellipses``
+    Use ``plot_response_overview``. Confirm the station carries a full
+    :math:`2\times 2` tensor and tipper first, the same way
+    ``sites_summary`` confirmed it for **gv100** above.
 
 Common Pitfalls
 ---------------

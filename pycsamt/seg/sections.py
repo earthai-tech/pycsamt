@@ -38,7 +38,7 @@ def _find_header_end(lines: list[str], start: int) -> int:
     n = len(lines)
     while j < n:
         s = lines[j].lstrip()
-        if s.startswith(">"):
+        if s.startswith(">") and not s.startswith(">!"):
             break
         j += 1
     return j

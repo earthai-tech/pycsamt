@@ -291,6 +291,17 @@ data/gv_data/gv_final_edi/*
 !data/gv_data/gv_final_edi/gv130.edi
 !data/gv_data/gv_final_edi/gv163.edi
 
+# Real EMTF-XML conversions of three of the above (gv100-gv102),
+# referenced by the metadata/emtf/site user-guide pages as genuine,
+# externally-reproducible sample XML -- not regenerable from the EDI
+# exceptions above alone (those keep first/middle/last; these are the
+# first three consecutive stations, matching the emtf-xml-roundtrip demo).
+!data/gv_data/xml
+data/gv_data/xml/*
+!data/gv_data/xml/gv100.xml
+!data/gv_data/xml/gv101.xml
+!data/gv_data/xml/gv102.xml
+
 # Exception: de-identified copies of two real cross-power-spectra EDI
 # files, used as bundled sample data for the emtools.spectra gallery.
 # The originals (HBH03.edi, ZBR02.edi) are real private field data and
@@ -421,6 +432,13 @@ data/stratagem/Dafang/df5-hx/*
 examples/*
 !examples/occam1_demo/
 !examples/occam1_demo/**
+!examples/emtf_xml_roundtrip_demo/
+!examples/emtf_xml_roundtrip_demo/**
+# Bytecode caches still slip through the blanket "!examples/**"
+# exceptions above (a later negation wins over the earlier global
+# __pycache__ rule), so re-exclude them explicitly.
+examples/occam1_demo/__pycache__/
+examples/emtf_xml_roundtrip_demo/__pycache__/
 
 # Exception: sphinx-gallery example *source* scripts under
 # docs/examples/<section>/ — hand-written, not generated, and must be
@@ -474,7 +492,6 @@ AI-INVERSION-IMPLEMENTATION-PLAN.md
 /paper.pdf
 /NEW-SUBPACKAGE-AND-MODULE-DEVELOPMENT-GUIDELINES.md
 /PYCSAMT-EMTF-XML-AIRBONE-IMPLEMENTATION-PLAN.md
-/PYCSAMT-EMTF-XML-AIRBONE-AUDIT-AND-REMEDIATION-PLAN.md
 
 # EMTF FCU v4.1 reference implementation (Fortran) — vendored locally as a
 # behavioral oracle for pycsamt.emtf development, not shipped with the

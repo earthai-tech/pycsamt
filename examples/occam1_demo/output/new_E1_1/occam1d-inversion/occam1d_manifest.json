@@ -1,0 +1,45 @@
+{
+  "config": {
+    "binary_name": "Occam1D",
+    "data_file": "Occam1DData",
+    "debug_level": 1,
+    "depth_max": 5000.0,
+    "error_floor_phase": 2.0,
+    "error_floor_rho": 0.05,
+    "first_thickness": 5.0,
+    "freq_max": null,
+    "freq_min": null,
+    "lagrange_max": 10000000000.0,
+    "lagrange_min": 1e-10,
+    "lagrange_start": 5.0,
+    "max_iterations": 20,
+    "mode": "determinant",
+    "model_file": "Occam1DModel",
+    "n_layers": 30,
+    "roughness_type": 1,
+    "starting_resistivity": 100.0,
+    "startup_file": "Startup",
+    "stepsize_cut_count": 8,
+    "target_misfit": 1.0
+  },
+  "data": {
+    "frequency_bounds_hz": [
+      6.875,
+      70000.0
+    ],
+    "n_frequencies": 53,
+    "n_observations": 106
+  },
+  "files": {
+    "Occam1DData": "cbf33a30967ca68b4681ea4e83b45fe9e31f2a940590850350e242ec74be1a90",
+    "Occam1DModel": "d0c7cad654f705e6d0f87533a99c1f3c97a6b074c6428b0030f534e233b1a02c",
+    "Startup": "f145ce64de67571d10dfe2d225f3c6a332e3381bf24c2483a1dca8ff38f06a74"
+  },
+  "mode": "determinant",
+  "model": {
+    "depth_max_m": 5000.0,
+    "n_layers": 30
+  },
+  "schema": "pycsamt.occam1d.input-manifest/v1",
+  "station": "E1_1"
+}

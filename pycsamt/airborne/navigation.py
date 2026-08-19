@@ -12,6 +12,7 @@ import numpy as np
 
 from ..core.base import CoreObject
 from ..metadata import BBox
+from .validation import normalize_numeric_vector, normalize_object_vector
 
 __all__ = ["NavigationTrack"]
 
@@ -26,44 +27,6 @@ def _normalize_sample_ids(values: Any) -> tuple[str, ...]:
         raise ValueError("sample_ids must not contain empty identifiers")
     if len(out) != len(set(out)):
         raise ValueError("sample_ids must be unique")
-    return out
-
-
-def _normalize_numeric_vector(
-    value: Any | None,
-    *,
-    name: str,
-    size: int,
-) -> np.ndarray | None:
-    if value is None:
-        return None
-    arr = np.asarray(value, dtype=float)
-    if arr.ndim == 0:
-        arr = arr.reshape(1)
-    if arr.ndim != 1:
-        raise ValueError(f"{name} must be a 1-D array")
-    if arr.size != size:
-        raise ValueError(
-            f"{name} length must match sample_ids: {arr.size} != {size}"
-        )
-    if np.any(np.isinf(arr)):
-        raise ValueError(f"{name} must not contain infinite values")
-    return arr
-
-
-def _normalize_object_vector(
-    value: Any | None,
-    *,
-    name: str,
-    size: int,
-) -> tuple[Any, ...] | None:
-    if value is None:
-        return None
-    out = tuple(value)
-    if len(out) != size:
-        raise ValueError(
-            f"{name} length must match sample_ids: {len(out)} != {size}"
-        )
     return out
 
 
@@ -141,13 +104,13 @@ class NavigationTrack(CoreObject):
             setattr(
                 self,
                 name,
-                _normalize_numeric_vector(
+                normalize_numeric_vector(
                     getattr(self, name),
                     name=name,
                     size=n,
                 ),
             )
-        self.timestamps = _normalize_object_vector(
+        self.timestamps = normalize_object_vector(
             self.timestamps,
             name="timestamps",
             size=n,

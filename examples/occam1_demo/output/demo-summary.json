@@ -1,0 +1,102 @@
+{
+  "schema": "pycsamt.occam1d.demo/v1",
+  "source_directory": "data\\3edis",
+  "stations": [
+    {
+      "converged": false,
+      "final_rms": 8.868787615050172,
+      "initial_rms": 22.647284595408752,
+      "iterations": 20,
+      "model_image": {
+        "convergence": "new_E1_1\\model-image\\E1_1_occam1d_convergence.png",
+        "model": "new_E1_1\\model-image\\E1_1_occam1d_model.png",
+        "response": "new_E1_1\\model-image\\E1_1_occam1d_response.png",
+        "summary": "new_E1_1\\model-image\\E1_1_occam1d_summary.png"
+      },
+      "model_text": {
+        "failures": "new_E1_1\\model-text\\E1_1_failed_iterations.csv",
+        "iterations": "new_E1_1\\model-text\\E1_1_iterations.csv",
+        "metadata": "new_E1_1\\model-text\\E1_1_metadata.json",
+        "model": "new_E1_1\\model-text\\E1_1_model.csv",
+        "rejected": "new_E1_1\\model-text\\E1_1_rejected_candidates.csv",
+        "response": "new_E1_1\\model-text\\E1_1_response.csv",
+        "summary": "new_E1_1\\model-text\\E1_1_summary.txt"
+      },
+      "native_inputs": {
+        "data": "new_E1_1\\occam1d-inversion\\Occam1DData",
+        "manifest": "new_E1_1\\occam1d-inversion\\occam1d_manifest.json",
+        "model": "new_E1_1\\occam1d-inversion\\Occam1DModel",
+        "startup": "new_E1_1\\occam1d-inversion\\Startup"
+      },
+      "restart": "new_E1_1\\occam1d-inversion\\native-restart.json",
+      "source": "data\\3edis\\new_E1_1.edi",
+      "station": "E1_1",
+      "status": "max_iterations",
+      "target_rms": 1.0
+    },
+    {
+      "converged": false,
+      "final_rms": 8.410800236738663,
+      "initial_rms": 30.799123745474862,
+      "iterations": 20,
+      "model_image": {
+        "convergence": "new_E1_2\\model-image\\E1_2_occam1d_convergence.png",
+        "model": "new_E1_2\\model-image\\E1_2_occam1d_model.png",
+        "response": "new_E1_2\\model-image\\E1_2_occam1d_response.png",
+        "summary": "new_E1_2\\model-image\\E1_2_occam1d_summary.png"
+      },
+      "model_text": {
+        "failures": "new_E1_2\\model-text\\E1_2_failed_iterations.csv",
+        "iterations": "new_E1_2\\model-text\\E1_2_iterations.csv",
+        "metadata": "new_E1_2\\model-text\\E1_2_metadata.json",
+        "model": "new_E1_2\\model-text\\E1_2_model.csv",
+        "rejected": "new_E1_2\\model-text\\E1_2_rejected_candidates.csv",
+        "response": "new_E1_2\\model-text\\E1_2_response.csv",
+        "summary": "new_E1_2\\model-text\\E1_2_summary.txt"
+      },
+      "native_inputs": {
+        "data": "new_E1_2\\occam1d-inversion\\Occam1DData",
+        "manifest": "new_E1_2\\occam1d-inversion\\occam1d_manifest.json",
+        "model": "new_E1_2\\occam1d-inversion\\Occam1DModel",
+        "startup": "new_E1_2\\occam1d-inversion\\Startup"
+      },
+      "restart": "new_E1_2\\occam1d-inversion\\native-restart.json",
+      "source": "data\\3edis\\new_E1_2.edi",
+      "station": "E1_2",
+      "status": "max_iterations",
+      "target_rms": 1.0
+    },
+    {
+      "converged": false,
+      "final_rms": 5.773152901951995,
+      "initial_rms": 25.71325947234269,
+      "iterations": 20,
+      "model_image": {
+        "convergence": "new_E1_3\\model-image\\E1_3_occam1d_convergence.png",
+        "model": "new_E1_3\\model-image\\E1_3_occam1d_model.png",
+        "response": "new_E1_3\\model-image\\E1_3_occam1d_response.png",
+        "summary": "new_E1_3\\model-image\\E1_3_occam1d_summary.png"
+      },
+      "model_text": {
+        "failures": "new_E1_3\\model-text\\E1_3_failed_iterations.csv",
+        "iterations": "new_E1_3\\model-text\\E1_3_iterations.csv",
+        "metadata": "new_E1_3\\model-text\\E1_3_metadata.json",
+        "model": "new_E1_3\\model-text\\E1_3_model.csv",
+        "rejected": "new_E1_3\\model-text\\E1_3_rejected_candidates.csv",
+        "response": "new_E1_3\\model-text\\E1_3_response.csv",
+        "summary": "new_E1_3\\model-text\\E1_3_summary.txt"
+      },
+      "native_inputs": {
+        "data": "new_E1_3\\occam1d-inversion\\Occam1DData",
+        "manifest": "new_E1_3\\occam1d-inversion\\occam1d_manifest.json",
+        "model": "new_E1_3\\occam1d-inversion\\Occam1DModel",
+        "startup": "new_E1_3\\occam1d-inversion\\Startup"
+      },
+      "restart": "new_E1_3\\occam1d-inversion\\native-restart.json",
+      "source": "data\\3edis\\new_E1_3.edi",
+      "station": "E1_3",
+      "status": "max_iterations",
+      "target_rms": 1.0
+    }
+  ]
+}

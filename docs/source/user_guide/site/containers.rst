@@ -6,11 +6,12 @@ Site Containers
 .. currentmodule:: pycsamt.site.base
 
 The :mod:`pycsamt.site.base` module provides the station-centric containers
-used throughout the site layer. These containers wrap :term:`EDI` objects
-without replacing the lower-level EDI parser. Their purpose is to make common
-survey operations easier: station lookup, coordinate access, tensor
-inspection, DataFrame export, bulk selection, profile preparation, and
-writing cleaned sites back to disk.
+used throughout the site layer. A container wraps either a :term:`EDI`
+object or a modern :class:`~pycsamt.emtf.document.EMTF` XML document,
+without replacing either lower-level parser. Their purpose is to make common
+survey operations easier regardless of which format a station arrived in:
+station lookup, coordinate access, tensor inspection, DataFrame export, bulk
+selection, profile preparation, and writing cleaned sites back to disk.
 
 The main objects are:
 
@@ -28,26 +29,31 @@ The main objects are:
        export.
    * - :class:`Site`
      - One concrete station.
-     - High-level wrapper around one :class:`pycsamt.seg.edi.EDIFile` with a
-       stable station identity and convenience edit helpers.
+     - High-level wrapper around one :class:`pycsamt.seg.edi.EDIFile` *or*
+       one :class:`~pycsamt.emtf.document.EMTF` XML document, with a stable
+       station identity and convenience edit helpers. See :attr:`Site.edi`,
+       :attr:`Site.tf`, and :attr:`Site.backend`.
    * - :class:`Sites`
      - Many stations.
      - Ordered collection wrapper with integer indexing, name lookup,
        selection, batch edits, topography alignment, profile conversion, and
-       export.
+       export. Items may be a mix of EDI- and XML-backed :class:`Site`
+       objects.
    * - :func:`to_sites`
      - API boundary helper.
-     - Coerce compatible EDI-like inputs into a :class:`Sites` container.
+     - Coerce compatible EDI- or EMTF-XML-like inputs (paths, objects, or
+       mixed directories) into a :class:`Sites` container.
    * - :func:`to_edis`
      - API boundary helper.
      - Unwrap :class:`Site` or :class:`Sites` objects back to raw EDI objects
-       or an :class:`pycsamt.seg.collection.EDICollection`.
+       or an :class:`pycsamt.seg.collection.EDICollection`, materializing an
+       EDI view for any XML-native site.
 
 Where Containers Fit
 --------------------
 
-The site containers sit above :mod:`pycsamt.seg` and below the higher-level
-workflow layers.
+The site containers sit above :mod:`pycsamt.seg` and :mod:`pycsamt.emtf`, and
+below the higher-level workflow layers.
 
 .. list-table::
    :header-rows: 1
@@ -63,16 +69,22 @@ workflow layers.
      - :class:`pycsamt.seg.collection.EDICollection`
      - Discover and parse many EDI files from paths, folders, or glob
        patterns.
+   * - EMTF-XML document
+     - :class:`pycsamt.emtf.document.EMTF`
+     - Read, hold, and write one format-neutral transfer function, with the
+       full :doc:`../metadata/index` object tree. See :doc:`../emtf/index`.
    * - Site layer
      - :class:`Site`, :class:`Sites`
      - Expose station-oriented accessors, editing, filtering, summaries, and
-       survey preparation helpers.
+       survey preparation helpers, transparently over either format.
    * - Downstream workflows
      - Selection, diagnostics, export, profiles, inversion, agents.
      - Use prepared site containers as consistent inputs.
 
-Use :class:`EDIFile` or :class:`EDICollection` when you are primarily parsing
-SEG-EDI data. Use :class:`Site` or :class:`Sites` when you are preparing,
+Use :class:`EDIFile`/:class:`EDICollection` or :class:`EMTF` directly when
+you are primarily parsing one format and need its own low-level API (see
+:doc:`../emtf/index` for the latter). Use :class:`Site` or :class:`Sites`
+when you are preparing,
 inspecting, selecting, or editing station data.
 
 Creating One Site
@@ -445,6 +457,147 @@ input types, use :func:`to_sites`:
    >>> sites = to_sites(collection)
    >>> print(len(sites))
    28
+
+Working With EMTF-XML
+----------------------
+
+Every example so far has built a :class:`Site` from an
+:class:`~pycsamt.seg.edi.EDIFile`. :class:`Site` accepts an
+:class:`~pycsamt.emtf.document.EMTF` XML document exactly the same way, via
+:meth:`Site.from_xml`. The examples below use the real Gabbs Valley station
+``gv100`` (public-domain USGS data,
+`doi:10.5066/P9GZ9Z56 <https://doi.org/10.5066/P9GZ9Z56>`__), bundled both as
+EDI (``data/gv_data/gv_final_edi/gv100.edi``) and as the EMTF-XML pyCSAMT
+converted it to (``data/gv_data/xml/gv100.xml``) -- the same file already
+used throughout :doc:`../metadata/index` and :doc:`../emtf/index`.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.site.base import Site
+
+   >>> xml_site = Site.from_xml("data/gv_data/xml/gv100.xml")
+
+   >>> print(xml_site.backend)
+   >>> print(xml_site.name)
+   >>> print(xml_site.coords)
+   xml
+   gv100
+   (38.6113805555556, -118.535261111111, 1437.4)
+
+:attr:`Site.backend` reports which format is native -- informational only,
+since every :class:`SiteMixin` accessor used earlier on this page (``name``,
+``coords``, ``freq``, ``z``, ``rho``, ``phase``, ``tipper``,
+:meth:`~Site.to_dataframe`, :meth:`~Site.quality_flags`,
+:meth:`~Site.has_component`, :meth:`~Site.summary`) works identically
+regardless of it. Loading the matching EDI file confirms the two
+representations agree numerically:
+
+.. code-block:: pycon
+
+   >>> edi_site = Site.from_edi("data/gv_data/gv_final_edi/gv100.edi")
+
+   >>> import numpy as np
+   >>> print(np.allclose(edi_site.z, xml_site.z))
+   True
+
+Lazy Materialization
+~~~~~~~~~~~~~~~~~~~~
+
+:attr:`Site.edi` and :attr:`Site.tf` are both always available on any
+:class:`Site`, regardless of which one it was built from. The representation
+not natively supplied is materialized from the other on first access, via
+:func:`pycsamt.emtf.converters.edi.edi_to_emtf`/``emtf_to_edi`` (see
+:doc:`../emtf/edi_interop`), and cached -- so ``xml_site.z`` above already
+triggered a real EDI materialization behind the scenes the first time it ran.
+The effect is visible on :attr:`Site.meta`, which reads directly from the XML
+document when nothing has forced materialization yet, but falls back to the
+plain EDI-header dictionary once it has:
+
+.. code-block:: pycon
+
+   >>> fresh = Site.from_xml("data/gv_data/xml/gv100.xml")
+   >>> print(fresh.meta)
+   {'station': 'gv100', 'dataid': 'gv100', 'name': 'Gabbs Valley',
+    'sitename': 'Gabbs Valley', 'lat': 38.6113805555556,
+    'lon': -118.535261111111, 'elev': 1437.4}
+
+   >>> print(fresh.z.shape)          # forces materialization
+   (48, 2, 2)
+
+   >>> print(fresh.meta)             # now the plain EDI-header view
+   {'lat': 38.6113805555556, 'lon': -118.535261111111, 'elev': 1437.4,
+    'dataid': 'gv100'}
+
+Neither dictionary is wrong -- ``meta`` has always been the lean, EDI-shaped
+summary documented in "Array Accessors" above. The
+richer view, available whenever a :class:`Site` is (or still is) XML-native,
+comes from a set of typed properties that return the same
+:mod:`pycsamt.metadata` objects the :class:`EMTF` document itself holds, not
+a copy:
+
+.. code-block:: pycon
+
+   >>> rich = Site.from_xml("data/gv_data/xml/gv100.xml")
+   >>> print(rich.site_meta.name, "/", rich.site_meta.survey)
+   >>> print(rich.provenance.creator.name)
+   Gabbs Valley / GV2020
+   Jared Peacock
+
+:attr:`Site.site_meta`, :attr:`Site.site_layout`, :attr:`Site.provenance`,
+:attr:`Site.processing`, :attr:`Site.copyright`, and :attr:`Site.quality_meta`
+mirror :class:`EMTF`'s own attributes exactly. See :doc:`../metadata/index`
+for what each object holds and :doc:`../emtf/index` for how they round-trip
+through EDI and XML.
+
+Writing And Discovering XML
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:meth:`Site.to_xml` writes a document back out; without a target it returns
+the XML as a string:
+
+.. code-block:: pycon
+
+   >>> text = edi_site.to_xml()
+   >>> print(text.splitlines()[:2])
+   ['<?xml version="1.0" encoding="UTF-8"?>', '<EM_TF>']
+
+``Sites`` accepts a mix of EDI- and XML-backed stations directly:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.site.base import Sites
+
+   >>> mixed = Sites([edi_site, xml_site])
+   >>> print(len(mixed))
+   >>> print([s.backend for s in mixed])
+   2
+   ['edi', 'xml']
+
+and :func:`to_sites` -- the same coercion :func:`~pycsamt.emtools.ensure_sites`
+uses -- discovers a directory of ``*.xml`` files (or a directory mixing
+``*.edi`` and ``*.xml``) the same way it already discovers EDI directories:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.site.base import to_sites
+
+   >>> discovered = to_sites("data/gv_data/xml")
+   >>> print(len(discovered))
+   >>> print(sorted(s.name for s in discovered))
+   3
+   ['gv100', 'gv101', 'gv102']
+
+:meth:`Sites.write_xml` and :meth:`Sites.to_emtf_list` are the XML-side
+counterparts of :meth:`Sites.write` and :meth:`Sites.to_edis`:
+
+.. code-block:: pycon
+
+   >>> paths = discovered.write_xml("outputs/clean_xml")
+   >>> for path in paths:
+   ...     print(path)
+   outputs/clean_xml/gv100.xml
+   outputs/clean_xml/gv101.xml
+   outputs/clean_xml/gv102.xml
 
 Unwrapping Back To EDI
 ----------------------
@@ -828,8 +981,10 @@ Writing Sites
    ...
    28 files written
 
-For richer export workflows, including manifest CSV files and zip packages,
-use the functions documented in :doc:`export_reporting`.
+Use :meth:`Sites.write_xml` instead for the EMTF-XML equivalent (see
+"Working With EMTF-XML" above). For richer export workflows, including
+manifest CSV files and zip packages, use the functions documented in
+:doc:`export_reporting`.
 
 Common Patterns
 ---------------
@@ -897,6 +1052,12 @@ Using ``summary`` as a substitute for data inspection
    :meth:`Site.quality_flags`, and the diagnostics in
    :doc:`computed_diagnostics` for deeper checks.
 
+Assuming ``Site`` is EDI-only
+   :class:`Site` and :class:`Sites` accept :class:`~pycsamt.emtf.document.EMTF`
+   XML documents and directories of ``*.xml`` files too -- see "Working With
+   EMTF-XML" above. Code written against ``site.z``/``site.freq``/etc. does
+   not need to change to support both.
+
 Next Pages
 ----------
 
@@ -907,4 +1068,7 @@ Continue with:
 * :doc:`location_profile` for coordinates, topography, distances, and
   :term:`chainage`;
 * :doc:`computed_diagnostics` for strike, resistivity, phase, and tipper
-  diagnostics.
+  diagnostics;
+* :doc:`../emtf/index` for what :attr:`Site.tf` gives you access to;
+* :doc:`../metadata/index` for the objects behind :attr:`Site.provenance`,
+  :attr:`Site.site_layout`, and friends.

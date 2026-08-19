@@ -31,9 +31,19 @@ from .validation import (
 
 logger = get_logger(__name__)
 
-__all__ = ["SpectraSECT", "SpectraIO", "SpectraMixin", "Spectra"]
+__all__ = [
+    "SpectraSECT",
+    "SpectraIO",
+    "SpectraMixin",
+    "Spectra",
+    "SpectraValidationWarning",
+]
 
 _EMPTY = 1.0e32
+
+
+class SpectraValidationWarning(UserWarning):
+    """Warning emitted for recoverable EDI SPECTRA inconsistencies."""
 
 
 class SpectraSECT(EDIComponentBase):
@@ -664,6 +674,14 @@ class Spectra(BaseEM):
     :meth:`from_io` or :meth:`from_file` to populate an
     instance from sections and data blocks.
 
+    To recover a format-neutral EMTF document with full FCU-compatible
+    covariance from this container, use
+    :meth:`pycsamt.emtf.EMTF.from_edi_spectra` or
+    :func:`pycsamt.emtf.converters.spectra.spectra_to_emtf` on the
+    ``pycsamt.emtf`` side rather than a method on this class — spectra
+    parsing stays in :mod:`pycsamt.seg`, transfer-function/covariance
+    recovery stays in the EMTF interoperability layer.
+
     Methods
     -------
     from_io(sect, io) : classmethod
@@ -732,6 +750,20 @@ class Spectra(BaseEM):
         self.chan_ids: list[str] = []
         self.id_to_chtype: dict[str, str] = {}
 
+        # Phase-8 bookkeeping. ``_S`` preserves the historical pyCSAMT
+        # unpacking convention for backward compatibility. ``_S_fcu`` stores
+        # the exact complex cross-power convention used by EMTF FCU, where
+        # the first channel is conjugated. EDI SPECTRA files are tiny enough
+        # that retaining both views is inexpensive and avoids changing legacy
+        # ``Spectra.S`` semantics.
+        self._S_fcu: np.ndarray | None = None
+        self._missing_mask: np.ndarray | None = None
+        self._from_edi_spectra = False
+        self.declared_nfreq: int | None = None
+        self.parsed_nfreq: int = 0
+        self.avgt_present = np.zeros(0, dtype=bool)
+        self.rotspec_present = np.zeros(0, dtype=bool)
+
     # ---------------- basic props
     @property
     def freq(self) -> np.ndarray:
@@ -740,6 +772,30 @@ class Spectra(BaseEM):
     @property
     def S(self) -> np.ndarray:
         return self._S
+
+    @property
+    def fcu_cross_spectra(self) -> np.ndarray:
+        """Return spectra in the EMTF-FCU cross-power convention.
+
+        ``Spectra.S`` retains the historical pyCSAMT convention
+        ``channel_i * conj(channel_j)`` so existing callers and
+        :meth:`to_Z` are unchanged by Phase 8. EMTF FCU uses the
+        conjugate convention ``conj(channel_i) * channel_j``.
+
+        EDI SPECTRA input keeps an exact FCU view in ``_S_fcu``. For
+        spectra constructed through the historical pyCSAMT API, the FCU
+        view is therefore the element-wise complex conjugate of ``S``.
+        """
+        if self._S_fcu is not None:
+            return self._S_fcu
+        return np.conjugate(self._S)
+
+    @property
+    def missing_mask(self) -> np.ndarray | None:
+        """Return the per-frequency missing cross-spectral component mask."""
+        if self._missing_mask is None:
+            return None
+        return np.array(self._missing_mask, copy=True)
 
     @property
     def n_freq(self) -> int:
@@ -768,6 +824,49 @@ class Spectra(BaseEM):
                 H[i, j] = re + 1j * im
                 H[j, i] = re - 1j * im
         return H
+
+    @staticmethod
+    def _unpack_fcu(
+        vals: np.ndarray,
+        n: int,
+        *,
+        empty: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Unpack one SEG SPECTRA matrix exactly as EMTF FCU does.
+
+        The packed real matrix stores the real part below the diagonal and
+        the *negative* imaginary part above the diagonal. The resulting
+        complex matrix therefore represents ``conj(channel_i) * channel_j``.
+        A boolean mask is returned in scientific matrix coordinates so exact
+        covariance recovery can reject or skip incomplete frequencies rather
+        than silently replacing the EDI EMPTY sentinel by zero.
+        """
+        v = np.asarray(vals, dtype=float)
+        need = n * n
+        if v.size < need:
+            raise EdIDataError("SPECTRA payload too short")
+        M = v[:need].reshape(n, n)
+        raw_missing = ~np.isfinite(M) | (M == float(empty))
+
+        C = np.zeros((n, n), dtype=complex)
+        missing = np.zeros((n, n), dtype=bool)
+        for i in range(n):
+            if raw_missing[i, i]:
+                C[i, i] = np.nan + 0.0j
+                missing[i, i] = True
+            else:
+                C[i, i] = M[i, i] + 0.0j
+            for j in range(i + 1, n):
+                bad = bool(raw_missing[j, i] or raw_missing[i, j])
+                if bad:
+                    z = np.nan + 1j * np.nan
+                    missing[i, j] = True
+                    missing[j, i] = True
+                else:
+                    z = complex(M[j, i], -M[i, j])
+                C[i, j] = z
+                C[j, i] = np.conjugate(z)
+        return C, missing
 
     @staticmethod
     def _pack(H: np.ndarray) -> np.ndarray:
@@ -840,6 +939,9 @@ class Spectra(BaseEM):
             verbose=verbose,
         )
         self.chan_ids = list(sect.meas_ids or [])
+        self.declared_nfreq = getattr(sect, "nfreq", None)
+        self.parsed_nfreq = len(io.blocks)
+        self._from_edi_spectra = True
         # carry DefineMeas mapping (if present on the header)
         idm = getattr(sect, "id_to_chtype", None)
         if isinstance(idm, dict) and idm:
@@ -923,10 +1025,14 @@ class Spectra(BaseEM):
 
         freqs: list[float] = []
         mats: list[np.ndarray] = []
+        mats_fcu: list[np.ndarray] = []
+        missing_masks: list[np.ndarray] = []
         bw: list[float] = []
         avgt: list[float] = []
+        avgt_present: list[bool] = []
         avgf: list[float] = []
         rots: list[float] = []
+        rots_present: list[bool] = []
         segnum: list[int] = []
         band: list[str] = []
 
@@ -937,25 +1043,33 @@ class Spectra(BaseEM):
 
             vals = np.asarray(getattr(blk, "values", []), float)
             H = cls._unpack(vals, nc, empty=empty)
+            H_fcu, missing = cls._unpack_fcu(vals, nc, empty=empty)
 
             freqs.append(float(f0))
             mats.append(H)
+            mats_fcu.append(H_fcu)
+            missing_masks.append(missing)
 
             # bw
             v = _get_float(blk, "bw", default=0.0)
             bw.append(0.0 if v is None else float(v))
 
-            # avgt
-            v = _get_float(blk, "avgt", default=1.0)
-            avgt.append(1.0 if v is None else float(v))
+            # AVGT is historically defaulted to one in the legacy view.
+            # Track whether it was actually present because FCU covariance
+            # recovery requires the supplied number of independent averages.
+            v_raw = _get_float(blk, "avgt", default=None)
+            avgt_present.append(v_raw is not None)
+            avgt.append(1.0 if v_raw is None else float(v_raw))
 
             # avgf
             v = _get_float(blk, "avgf", default=np.nan)
             avgf.append(np.nan if v is None else float(v))
 
-            # rotspec  (this was causing your failure)
-            v = _get_float(blk, "rotspec", default=np.nan)
-            rots.append(np.nan if v is None else float(v))
+            # ROTSPEC presence is scientifically meaningful in FCU: its
+            # presence marks the stored data as orthogonal.
+            v_raw = _get_float(blk, "rotspec", default=None)
+            rots_present.append(v_raw is not None)
+            rots.append(np.nan if v_raw is None else float(v_raw))
 
             # segnum
             sn = _get_int(blk, "segnum", default=0)
@@ -970,20 +1084,28 @@ class Spectra(BaseEM):
             # tolerate empty after filtering
             self._freq = np.zeros(0, dtype=float)
             self._S = np.zeros((0, nc, nc), dtype=complex)
+            self._S_fcu = np.zeros((0, nc, nc), dtype=complex)
+            self._missing_mask = np.zeros((0, nc, nc), dtype=bool)
             self.bw = np.zeros(0, dtype=float)
             self.avgt = np.zeros(0, dtype=float)
+            self.avgt_present = np.zeros(0, dtype=bool)
             self.avgf = np.zeros(0, dtype=float)
             self.rotspec = np.zeros(0, dtype=float)
+            self.rotspec_present = np.zeros(0, dtype=bool)
             self.segnum = np.zeros(0, dtype=int)
             self.band = []
             return self
 
         self._freq = np.asarray(freqs, dtype=float)
         self._S = np.stack(mats, axis=0)
+        self._S_fcu = np.stack(mats_fcu, axis=0)
+        self._missing_mask = np.stack(missing_masks, axis=0)
         self.bw = np.asarray(bw, dtype=float)
         self.avgt = np.asarray(avgt, dtype=float)
+        self.avgt_present = np.asarray(avgt_present, dtype=bool)
         self.avgf = np.asarray(avgf, dtype=float)
         self.rotspec = np.asarray(rots, dtype=float)
+        self.rotspec_present = np.asarray(rots_present, dtype=bool)
         self.segnum = np.asarray(segnum, dtype=int)
         self.band = list(band)
 
@@ -992,10 +1114,14 @@ class Spectra(BaseEM):
             sl = slice(None, None, -1)
             self._freq = self._freq[sl]
             self._S = self._S[sl]
+            self._S_fcu = self._S_fcu[sl]
+            self._missing_mask = self._missing_mask[sl]
             self.bw = self.bw[sl]
             self.avgt = self.avgt[sl]
+            self.avgt_present = self.avgt_present[sl]
             self.avgf = self.avgf[sl]
             self.rotspec = self.rotspec[sl]
+            self.rotspec_present = self.rotspec_present[sl]
             self.segnum = self.segnum[sl]
             self.band = self.band[::-1]
 
@@ -1257,6 +1383,59 @@ class Spectra(BaseEM):
 
     def cross(self, i: int, j: int) -> np.ndarray:
         return np.asarray(self._S[:, i, j])
+
+    def validate_frequency_count(self, *, policy: str = "raise") -> bool:
+        """Validate ``SPECTRASECT.NFREQ`` against parsed/usable blocks.
+
+        Parameters
+        ----------
+        policy : {"raise", "warn", "ignore"}
+            Action when the declared count differs from either the number of
+            parsed ``>SPECTRA`` blocks or the number of usable frequency
+            blocks. FCU historically stops on this inconsistency; ``warn`` is
+            provided for recovery of heterogeneous archives.
+
+        Returns
+        -------
+        bool
+            ``True`` if the declared ``NFREQ`` matches both the parsed and
+            usable block counts (or no ``NFREQ`` was declared); ``False``
+            when a mismatch is found and ``policy`` is ``"warn"`` or
+            ``"ignore"``.
+
+        Raises
+        ------
+        ValueError
+            If ``policy`` is not one of ``"raise"``, ``"warn"``, ``"ignore"``.
+        EdIDataError
+            If a mismatch is found and ``policy="raise"``.
+        """
+        policy = str(policy).strip().lower()
+        if policy not in {"raise", "warn", "ignore"}:
+            raise ValueError("policy must be 'raise', 'warn', or 'ignore'")
+        declared = self.declared_nfreq
+        if declared is None:
+            return True
+        actual_blocks = int(self.parsed_nfreq)
+        usable = int(self.n_freq)
+        if int(declared) == actual_blocks == usable:
+            return True
+        message = (
+            "EDI SPECTRA NFREQ mismatch: header declares "
+            f"{int(declared)}, parsed {actual_blocks} block(s), and "
+            f"{usable} usable frequency block(s)."
+        )
+        if policy == "raise":
+            raise EdIDataError(message)
+        if policy == "warn":
+            import warnings
+
+            warnings.warn(
+                message,
+                SpectraValidationWarning,
+                stacklevel=2,
+            )
+        return False
 
     def rotate(
         self,

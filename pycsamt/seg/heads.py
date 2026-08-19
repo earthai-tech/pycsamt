@@ -15,15 +15,10 @@ from ..log.logger import get_logger
 try:
     from ..gis.utils import decimal_to_dms, dms_to_decimal
 except (ImportError, RuntimeError):
-
-    def dms_to_decimal(s, hem=None):  # type: ignore[misc]
-        try:
-            return float(str(s).strip())
-        except Exception:
-            return float("nan")
-
-    def decimal_to_dms(v, hem="N"):  # type: ignore[misc]
-        return f"{float(v):.6f}"
+    from .utils import (
+        decimal_to_dms_fallback as decimal_to_dms,
+        dms_to_decimal_fallback as dms_to_decimal,
+    )
 
 
 from ..exceptions import (

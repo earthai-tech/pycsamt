@@ -7,6 +7,14 @@ ZTEM is represented as the standard vertical magnetic transfer function
 (tipper), while acquisition geometry records that the airborne Hz output is
 referenced to fixed ground Hx/Hy measurements. No proprietary native file
 schema is assumed here.
+
+Shape/frequency/mask normalization that is not specific to the ZTEM
+tipper layout is delegated to :mod:`pycsamt.airborne.validation`
+(shared with :mod:`pycsamt.airborne.mobilemt` and, once it moves onto
+the same helpers, :mod:`pycsamt.airborne.afmag`) via its ``error_cls``
+parameter, so every ``ZTEMValidationError`` raised here still comes
+from this module even though the check itself is not reimplemented
+per technology.
 """
 
 from __future__ import annotations
@@ -28,6 +36,14 @@ from ...metadata import (
 )
 from ..base import AirborneEMDataset, AirborneEMLine, AirborneEMRecord
 from ..navigation import NavigationTrack
+from ..validation import (
+    normalize_estimate_array,
+    normalize_frequency,
+    normalize_record_mask,
+    normalize_sample_axis_array,
+    resolve_frequency_or_periods,
+    resolve_line_frequency_grid,
+)
 from .base import ZTEMReferenceStation, ZTEMSystemSpec
 from .constants import (
     ZTEM_INPUT_CHANNELS,
@@ -51,22 +67,20 @@ class ZTEMValidationError(ValueError):
     """Raised when decoded ZTEM scientific arrays are inconsistent."""
 
 
-def _as_frequency(value: Any, *, name: str = "frequency") -> np.ndarray:
-    arr = np.asarray(value, dtype=float)
-    if arr.ndim == 0:
-        arr = arr.reshape(1)
-    if arr.ndim != 1:
-        raise ZTEMValidationError(f"{name} must be a 1-D array")
-    if arr.size == 0:
-        raise ZTEMValidationError(f"{name} must be non-empty")
-    if not np.all(np.isfinite(arr)) or np.any(arr <= 0.0):
-        raise ZTEMValidationError(
-            f"{name} must contain finite positive values"
-        )
-    return arr
-
-
 def _normalize_tipper(value: Any) -> np.ndarray:
+    """Return one sample-batched ``(nf, 1, 2)`` complex tipper array.
+
+    Accepts, and promotes to that canonical shape, a single
+    ``(Tzx, Tzy)`` pair of shape ``(2,)``, a stack of shape
+    ``(nf, 2)``, or the canonical EMTF matrix shape ``(nf, 1, 2)``
+    already.
+
+    Raises
+    ------
+    ZTEMValidationError
+        If *value* matches none of the accepted shapes, or is not
+        numeric.
+    """
     arr = np.asarray(value)
     if arr.ndim == 1 and arr.shape == (2,):
         arr = arr[None, None, :]
@@ -81,29 +95,10 @@ def _normalize_tipper(value: Any) -> np.ndarray:
     return arr
 
 
-def _normalize_estimate(
-    value: Any,
-    *,
-    n_frequency: int,
-    tail: tuple[int, int],
-    name: str,
-) -> np.ndarray:
-    arr = np.asarray(value)
-    if arr.ndim == 2 and arr.shape == tail:
-        arr = arr[None, ...]
-    if arr.ndim != 3 or arr.shape != (n_frequency, *tail):
-        raise ZTEMValidationError(
-            f"{name} must have shape {(n_frequency, *tail)}, "
-            f"got {arr.shape}"
-        )
-    if arr.dtype.kind not in "biufc":
-        raise ZTEMValidationError(f"{name} must be numeric")
-    return arr
-
-
 def _reference_mapping(
     reference_station: ZTEMReferenceStation | None,
 ) -> dict[str, Any] | None:
+    """Return *reference_station* as a plain ``EMTF.attrs`` mapping."""
     if reference_station is None:
         return None
     result: dict[str, Any] = {
@@ -121,6 +116,15 @@ def _xml_notes_mapping(
     spec: ZTEMSystemSpec,
     reference_station: ZTEMReferenceStation | None,
 ) -> dict[str, Any]:
+    """Return a ``{"ZTEM": {...}}`` block for ``EMTF.metadata["notes"]``.
+
+    This is presentation metadata only: it does not feed
+    :attr:`~pycsamt.emtf.EMTF.processing` (see
+    :func:`_processing_for_reference` for that) and is not read back
+    by any adapter, so its keys are free to describe the system
+    however is most useful for a human or archive reading the
+    serialized EMTF XML.
+    """
     low, high = spec.practical_frequency_range_hz
     ztem: dict[str, Any] = {
         "PracticalFrequencyMinHz": low,
@@ -154,6 +158,19 @@ def _processing_for_reference(
     reference_station: ZTEMReferenceStation | None,
     processing: ProcessingMeta | None,
 ) -> ProcessingMeta | None:
+    """Fold *reference_station* into *processing*'s remote reference.
+
+    ``reference_station`` is the ZTEM-specific, scientifically typed
+    way to supply the fixed ground magnetic reference; a caller-
+    supplied *processing* is the general EMTF way. When both are
+    given, they must describe the same reference site -- this raises
+    :class:`ZTEMValidationError` on conflict rather than silently
+    preferring one over the other. When only *reference_station* is
+    given, this synthesizes a :class:`~pycsamt.metadata.ProcessingMeta`
+    around it so :attr:`~pycsamt.emtf.EMTF.processing` is always the
+    one place downstream code looks, in
+    :func:`~pycsamt.airborne.qc.assess_airborne_qc` and elsewhere.
+    """
     if processing is not None and not isinstance(processing, ProcessingMeta):
         raise TypeError("processing must be a ProcessingMeta or None")
     if reference_station is None:
@@ -199,7 +216,28 @@ def _processing_for_reference(
 def validate_ztem_transfer_function(
     tf: TransferFunction,
 ) -> TransferFunction:
-    """Validate and return a ZTEM 1x2 vertical magnetic tipper."""
+    """Validate and return a ZTEM 1x2 vertical magnetic tipper.
+
+    Parameters
+    ----------
+    tf : TransferFunction
+        Transfer function to validate in place.
+
+    Returns
+    -------
+    TransferFunction
+        *tf*, unchanged, for convenient chaining after
+        :meth:`~pycsamt.emtf.EMTF.add_transfer_function`.
+
+    Raises
+    ------
+    TypeError
+        If *tf* is not a :class:`~pycsamt.emtf.TransferFunction`.
+    ZTEMValidationError
+        If *tf* does not use the standard EMTF ``tipper`` datatype
+        with ``Hx``/``Hy`` inputs, ``Hz`` output, and matrix shape
+        ``(1, 2)``.
+    """
     if not isinstance(tf, TransferFunction):
         raise TypeError("tf must be a TransferFunction")
     if tf.name != ZTEM_TIPPER_TAG:
@@ -257,18 +295,11 @@ def build_ztem_emtf(
     distinction is acquisition geometry: airborne ``Hz`` is related to fixed
     ground-reference ``Hx`` and ``Hy``. No line-axis orientation is inferred.
     """
-    if (frequency is None) == (periods is None):
-        raise ZTEMValidationError(
-            "exactly one of frequency or periods must be supplied"
-        )
-
-    if frequency is not None:
-        freq = _as_frequency(frequency)
-        period_arr = 1.0 / freq
-    else:
-        period_arr = _as_frequency(periods, name="periods")
-        freq = 1.0 / period_arr
-
+    freq, period_arr = resolve_frequency_or_periods(
+        frequency=frequency,
+        periods=periods,
+        error_cls=ZTEMValidationError,
+    )
     data = _normalize_tipper(tipper)
     if data.shape[0] != freq.size:
         raise ZTEMValidationError(
@@ -298,11 +329,12 @@ def build_ztem_emtf(
             StatisticalEstimate(
                 name="VAR",
                 kind="variance",
-                data=_normalize_estimate(
+                data=normalize_estimate_array(
                     variance,
                     n_frequency=freq.size,
                     tail=(1, 2),
                     name="variance",
+                    error_cls=ZTEMValidationError,
                 ),
             )
         )
@@ -311,11 +343,12 @@ def build_ztem_emtf(
             StatisticalEstimate(
                 name="INVSIGCOV",
                 kind="inverse_signal_covariance",
-                data=_normalize_estimate(
+                data=normalize_estimate_array(
                     inverse_signal_covariance,
                     n_frequency=freq.size,
                     tail=(2, 2),
                     name="inverse_signal_covariance",
+                    error_cls=ZTEMValidationError,
                 ),
             )
         )
@@ -324,11 +357,12 @@ def build_ztem_emtf(
             StatisticalEstimate(
                 name="RESIDCOV",
                 kind="residual_covariance",
-                data=_normalize_estimate(
+                data=normalize_estimate_array(
                     residual_covariance,
                     n_frequency=freq.size,
                     tail=(1, 1),
                     name="residual_covariance",
+                    error_cls=ZTEMValidationError,
                 ),
             )
         )
@@ -391,7 +425,28 @@ def build_ztem_record(
     record_attrs: Mapping[str, Any] | None = None,
     **emtf_kwargs: Any,
 ) -> AirborneEMRecord:
-    """Build one airborne record from decoded ZTEM tipper values."""
+    """Build one airborne record from decoded ZTEM tipper values.
+
+    Parameters
+    ----------
+    sample_id : str
+        Navigation sample identifier for the new record.
+    tipper : array-like
+        Forwarded to :func:`build_ztem_emtf`.
+    frequency, periods : array-like, optional
+        Exactly one must be supplied; forwarded to
+        :func:`build_ztem_emtf`.
+    fields, quality, record_attrs : dict, optional
+        Forwarded to :class:`~pycsamt.airborne.base.AirborneEMRecord`.
+    **emtf_kwargs
+        Forwarded to :func:`build_ztem_emtf`.
+
+    Returns
+    -------
+    AirborneEMRecord
+        The record, with its EMTF ``product_id`` defaulted to
+        ``str(sample_id)`` unless overridden in ``emtf_kwargs``.
+    """
     doc = build_ztem_emtf(
         tipper,
         frequency=frequency,
@@ -413,6 +468,24 @@ def _sample_axis_tipper(
     *,
     n_samples: int,
 ) -> np.ndarray:
+    """Return one line's tipper data as ``(n_samples, nf, 1, 2)``.
+
+    Combines two independent promotions: the leading sample axis may
+    be omitted when ``n_samples == 1`` (see
+    :func:`~pycsamt.airborne.validation.normalize_sample_axis_array`),
+    and the tipper tail axis may be supplied as ``(..., 2)`` instead
+    of the canonical ``(..., 1, 2)`` (see :func:`_normalize_tipper`).
+    Both are handled together here because unlike the generic
+    per-estimate arrays (variance, covariances), a stacked ``(nf, 2)``
+    per-sample tipper is ambiguous between "one sample, ``nf`` rows"
+    and "``nf`` samples, one row" without also knowing ``n_samples``.
+
+    Raises
+    ------
+    ZTEMValidationError
+        If *value* does not match one of the accepted shapes for the
+        given *n_samples*, or is not numeric.
+    """
     arr = np.asarray(value)
     if arr.ndim == 1 and arr.shape == (2,) and n_samples == 1:
         arr = arr[None, None, None, :]
@@ -444,23 +517,6 @@ def _sample_axis_tipper(
     return arr
 
 
-def _sample_axis_array(
-    value: Any,
-    *,
-    name: str,
-    n_samples: int,
-    expected: tuple[int, ...],
-) -> np.ndarray:
-    arr = np.asarray(value)
-    if n_samples == 1 and arr.shape == expected[1:]:
-        arr = arr[None, ...]
-    if arr.shape != expected:
-        raise ZTEMValidationError(
-            f"{name} must have shape {expected}, got {arr.shape}"
-        )
-    return arr
-
-
 def build_ztem_line(
     line_id: str,
     navigation: NavigationTrack,
@@ -477,37 +533,72 @@ def build_ztem_line(
     orientation: OrientationMeta | None = None,
     attrs: Mapping[str, Any] | None = None,
 ) -> AirborneEMLine:
-    """Build one ZTEM flight line from decoded sample-aligned arrays."""
+    """Build one ZTEM flight line from decoded sample-aligned arrays.
+
+    Parameters
+    ----------
+    line_id : str
+        Flight-line identifier.
+    navigation : NavigationTrack
+        Sample-aligned navigation defining the line's sample axis.
+    tipper : array-like
+        Forwarded to :func:`_sample_axis_tipper`; accepts the
+        per-sample analogues of every shape :func:`_normalize_tipper`
+        accepts for one sample.
+    frequency : array-like
+        Either one shared ``(nf,)`` vector or a per-sample
+        ``(n_samples, nf)`` grid; see
+        :func:`~pycsamt.airborne.validation.resolve_line_frequency_grid`.
+    record_mask : array-like of bool, optional
+        Marks which navigation samples get an attached record;
+        ``None`` means every sample does. Samples excluded here never
+        need a valid ``tipper``/``frequency`` row -- navigation points
+        are never deleted to represent a rejected EM sample.
+    variance, inverse_signal_covariance, residual_covariance :
+    array-like, optional
+        Per-sample statistical estimates, each shaped
+        ``(n_samples, nf, *tail)`` (or unbatched when
+        ``n_samples == 1``); forwarded per sample to
+        :func:`build_ztem_record`.
+    units : str, optional
+        Forwarded to :func:`build_ztem_emtf` for every sample.
+    reference_station, system_spec, orientation : optional
+        Forwarded to :func:`build_ztem_emtf` for every sample.
+    attrs : dict, optional
+        Line-level extension metadata; ``"technology"`` and
+        ``"reference_station"`` are set here unless already present.
+
+    Returns
+    -------
+    AirborneEMLine
+        The line, with one record per sample where ``record_mask``
+        (or its default) is ``True``.
+
+    Raises
+    ------
+    TypeError
+        If *navigation* is not a :class:`NavigationTrack`.
+    ZTEMValidationError
+        If *tipper*, *frequency*, *record_mask*, or any statistical
+        estimate does not match its expected shape.
+    """
     if not isinstance(navigation, NavigationTrack):
         raise TypeError("navigation must be a NavigationTrack")
     n_samples = navigation.n_samples
     data = _sample_axis_tipper(tipper, n_samples=n_samples)
     n_frequency = data.shape[1]
 
-    freq = np.asarray(frequency, dtype=float)
-    if freq.ndim == 1:
-        common_frequency = _as_frequency(freq)
-        if common_frequency.size != n_frequency:
-            raise ZTEMValidationError(
-                "shared frequency length does not match tipper"
-            )
-        frequency_rows = None
-    elif freq.ndim == 2 and freq.shape == (n_samples, n_frequency):
-        common_frequency = None
-        frequency_rows = freq
-    else:
-        raise ZTEMValidationError(
-            "frequency must have shape (nf,) or (n_samples, nf)"
-        )
-
-    if record_mask is None:
-        mask = np.ones(n_samples, dtype=bool)
-    else:
-        mask = np.asarray(record_mask, dtype=bool)
-        if mask.ndim != 1 or mask.size != n_samples:
-            raise ZTEMValidationError(
-                "record_mask must have one boolean per navigation sample"
-            )
+    common_frequency, frequency_rows = resolve_line_frequency_grid(
+        frequency,
+        n_samples=n_samples,
+        n_frequency=n_frequency,
+        error_cls=ZTEMValidationError,
+    )
+    mask = normalize_record_mask(
+        record_mask,
+        n_samples=n_samples,
+        error_cls=ZTEMValidationError,
+    )
 
     def _optional_sample(
         value: Any | None,
@@ -518,11 +609,12 @@ def build_ztem_line(
         if value is None:
             return None
         expected = (n_samples, n_frequency, *tail)
-        return _sample_axis_array(
+        return normalize_sample_axis_array(
             value,
             name=name,
             n_samples=n_samples,
             expected=expected,
+            error_cls=ZTEMValidationError,
         )
 
     var_all = _optional_sample(
@@ -559,9 +651,10 @@ def build_ztem_line(
         sample_frequency = (
             common_frequency
             if common_frequency is not None
-            else _as_frequency(
+            else normalize_frequency(
                 frequency_rows[index],
                 name=f"frequency[{sample_id}]",
+                error_cls=ZTEMValidationError,
             )
         )
         record = build_ztem_record(
@@ -596,7 +689,42 @@ def build_ztem_dataset(
     software_version: str = "",
     attrs: Mapping[str, Any] | None = None,
 ) -> AirborneEMDataset:
-    """Build a common airborne dataset from constructed ZTEM lines."""
+    """Build a common airborne dataset from constructed ZTEM lines.
+
+    Parameters
+    ----------
+    name : str
+        Dataset/survey name.
+    lines : iterable of AirborneEMLine, or mapping of str to AirborneEMLine
+        Lines to attach, typically previously built by
+        :func:`build_ztem_line`.
+    survey : SurveyMeta, optional
+        Survey-level metadata.
+    system_spec : ZTEMSystemSpec, optional
+        Used to build the dataset's ``instrument`` metadata; defaults
+        to published nominal values.
+    instrument_serial : str, optional
+        Forwarded to :meth:`ZTEMSystemSpec.to_instrument_meta`.
+    software_version : str, optional
+        Forwarded to :meth:`ZTEMSystemSpec.to_instrument_meta`.
+    attrs : dict, optional
+        Dataset-level extension metadata; ``"technology"`` and
+        ``"ztem_system"`` are set here unless already present.
+
+    Returns
+    -------
+    AirborneEMDataset
+        The dataset, with every line attached via
+        :meth:`~pycsamt.airborne.base.AirborneEMDataset.add_line`.
+
+    Raises
+    ------
+    TypeError
+        If *survey*, *system_spec*, or an entry of *lines* has the
+        wrong type.
+    ZTEMValidationError
+        If a line is explicitly tagged with a different technology.
+    """
     if survey is not None and not isinstance(survey, SurveyMeta):
         raise TypeError("survey must be a SurveyMeta or None")
     spec = system_spec or ZTEMSystemSpec()

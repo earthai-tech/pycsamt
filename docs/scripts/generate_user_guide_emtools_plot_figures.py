@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 from pycsamt.emtools import (  # noqa: E402
     ensure_sites,
     plot_raw_sites_1d,
+    plot_response_overview,
     plot_sites_compare,
     plot_sites_fit_grid,
     plot_sites_panels,
@@ -23,6 +24,7 @@ from pycsamt.emtools import (  # noqa: E402
 
 IMAGES = ROOT / "docs/source/images/user_guide/emtools"
 L18PLT = ROOT / "data/AMT/WILLY_DATA/L18PLT"
+GV_DATA = ROOT / "data/gv_data/gv_final_edi"
 
 
 def make_plot_report_bundle() -> None:
@@ -76,6 +78,29 @@ def make_plot_report_bundle() -> None:
     plt.close(fig)
 
 
+def make_response_overview_figures() -> None:
+    """Write the two figures used by the "Full-Response Station Overview"
+    section: the default single-station overview (Gabbs Valley gv100)
+    and the MTpy-style phimin ellipse-colouring variant (gv130).
+    """
+    survey = ensure_sites(GV_DATA, strict=True)
+
+    fig = plot_response_overview(survey, station="gv100")
+    fig.savefig(IMAGES / "user-guide-emtools-plot-16.png", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    fig = plot_response_overview(
+        survey,
+        station="gv130",
+        c_by="phimin_deg",
+        clim=(0.0, 90.0),
+        cmap="turbo",
+    )
+    fig.savefig(IMAGES / "user-guide-emtools-plot-17.png", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     IMAGES.mkdir(parents=True, exist_ok=True)
     make_plot_report_bundle()
+    make_response_overview_figures()

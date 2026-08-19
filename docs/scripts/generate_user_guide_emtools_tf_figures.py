@@ -31,7 +31,10 @@ def run_tf_workflow() -> None:
     """Run station, period, and convention diagnostics for KAP03 in the
     order recommended on the tf.rst page: hodogram, polar view, map,
     convention comparison, short/long-period roses, period section, and
-    a multi-period map.
+    a multi-period map. Each step reproduces one of the figures already
+    shown individually above; this function is documented here as a
+    single, self-contained script rather than as a separate set of
+    figures.
     """
     sites = ensure_sites(KAP03, recursive=True)
 
@@ -42,18 +45,17 @@ def run_tf_workflow() -> None:
         sites,
         station=strongest_station,
         bands=[(25.0, 200.0), (200.0, 2000.0), (2000.0, 17000.0)],
-    ).savefig(IMAGES / "user-guide-emtools-tf-13-01.png", dpi=200, bbox_inches="tight")
+    )
     plt.close()
 
-    ax = plot_tipper_polar(
+    plot_tipper_polar(
         sites,
         station=strongest_station,
         component="real",
     )
-    ax.figure.savefig(IMAGES / "user-guide-emtools-tf-13-02.png", dpi=200, bbox_inches="tight")
-    plt.close(ax.figure)
+    plt.close()
 
-    ax = plot_induction_map(
+    plot_induction_map(
         sites,
         period=2000.0,
         convention="park",
@@ -61,44 +63,39 @@ def run_tf_workflow() -> None:
         show_imag=True,
         scale=4.0,
     )
-    ax.figure.savefig(IMAGES / "user-guide-emtools-tf-13-03.png", dpi=200, bbox_inches="tight")
-    plt.close(ax.figure)
+    plt.close()
 
     plot_induction_convention(
         sites,
         period=650.0,
         station_labels=False,
     )
-    plt.gcf().savefig(IMAGES / "user-guide-emtools-tf-13-04.png", dpi=200, bbox_inches="tight")
     plt.close()
 
-    ax = plot_induction_rose(
+    plot_induction_rose(
         sites,
         component="real",
         pband=(25.0, 200.0),
         title="Short-period induction azimuths",
     )
-    ax.figure.savefig(IMAGES / "user-guide-emtools-tf-13-05.png", dpi=200, bbox_inches="tight")
-    plt.close(ax.figure)
+    plt.close()
 
-    ax = plot_induction_rose(
+    plot_induction_rose(
         sites,
         component="real",
         pband=(2000.0, 17000.0),
         title="Long-period induction azimuths",
     )
-    ax.figure.savefig(IMAGES / "user-guide-emtools-tf-13-06.png", dpi=200, bbox_inches="tight")
-    plt.close(ax.figure)
+    plt.close()
 
-    ax = plot_induction_section(
+    plot_induction_section(
         sites,
         component="abs",
         n_periods=30,
     )
-    ax.figure.savefig(IMAGES / "user-guide-emtools-tf-13-07.png", dpi=200, bbox_inches="tight")
-    plt.close(ax.figure)
+    plt.close()
 
-    fig, axes = plot_induction_multiperiod_map(
+    plot_induction_multiperiod_map(
         sites,
         periods=periods,
         convention="park",
@@ -108,12 +105,7 @@ def run_tf_workflow() -> None:
         xlabel="Longitude",
         ylabel="Latitude",
     )
-    fig.savefig(
-        IMAGES / "user-guide-emtools-tf-13-08.png",
-        dpi=200,
-        bbox_inches="tight",
-    )
-    plt.close(fig)
+    plt.close()
 
 
 if __name__ == "__main__":

@@ -310,7 +310,14 @@ class ResPhase(BaseEM):
             )
         valid_z = np.isfinite(z.real) & np.isfinite(z.imag)
         valid_zerr = np.isfinite(z_err) & (z_err >= 0)
-        if np.any(~valid_zerr & valid_z):
+        # NaN z_err means "uncertainty unavailable" (e.g. an EDI .VAR
+        # dummy value at an otherwise-measured period) and is legitimate
+        # real-world data, not a caller error -- the per-component loop
+        # below already leaves rho_e/phi_e as NaN for it. Only a finite-
+        # but-negative or infinite z_err indicates genuinely malformed
+        # input worth rejecting outright.
+        bad_zerr = ~np.isnan(z_err) & ~valid_zerr
+        if np.any(bad_zerr & valid_z):
             raise ZError("z_err must be finite and non-negative")
 
         rho_e = np.full_like(self._resistivity, np.nan, dtype=float)

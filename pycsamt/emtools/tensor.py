@@ -381,15 +381,47 @@ def balance_offdiag(
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
+def _is_z_tensor_shaped(z: np.ndarray) -> bool:
+    """Return whether *z* looks like a proper (n, 2, 2) impedance tensor."""
+    return (z.ndim == 3 and z.shape[1:3] == (2, 2)) or (
+        z.ndim == 2 and z.shape == (2, 2)
+    )
+
+
 def _get_z(ed: Any) -> tuple[np.ndarray | None, np.ndarray | None]:
-    Zobj = getattr(ed, "Z", None) or getattr(ed, "z", None)
+    # ``getattr(ed, "Z", None) or getattr(ed, "z", None)`` silently drops
+    # valid data for Site-wrapped objects that only expose a lowercase
+    # ``.z`` (raw array, no ``.freq`` sibling) with the real ``Z`` wrapper
+    # living at ``ed.edi.Z`` -- the same pattern documented in
+    # rotate_to_strike(). That path returned (None, None) for such sites
+    # even though `_get_z_block` (this module's sibling in `_core.py`)
+    # resolves them fine, making build_phase_tensor_table silently empty
+    # for real EDI batches that construct Site wrappers this way.
+    #
+    # The `ed.edi.Z` fallback below reaches past `Site.z`'s own shape
+    # validation straight to the raw EDI wrapper, so a malformed
+    # ``Z.z`` (not (n,2,2)) that `Site.z` would normally reject as None
+    # must be re-validated here explicitly with `_is_z_tensor_shaped`,
+    # or callers like `_finite_z_period_rows` crash on it instead of
+    # gracefully treating the station as "no impedance data".
+    Zobj = getattr(ed, "Z", None)
+    if Zobj is None:
+        edi = getattr(ed, "edi", None)
+        if edi is not None:
+            Zobj = getattr(edi, "Z", None)
+    if Zobj is None:
+        Zobj = getattr(ed, "z", None)
     if Zobj is None:
         return None, None
     z = getattr(Zobj, "z", None)
     fr = getattr(Zobj, "freq", None)
-    if isinstance(z, np.ndarray) and isinstance(fr, np.ndarray):
+    if (
+        isinstance(z, np.ndarray)
+        and isinstance(fr, np.ndarray)
+        and _is_z_tensor_shaped(z)
+    ):
         return z, fr
-    if isinstance(Zobj, np.ndarray) and Zobj.ndim == 3:
+    if isinstance(Zobj, np.ndarray) and _is_z_tensor_shaped(Zobj):
         fr2 = getattr(ed, "freq", None)
         if isinstance(fr2, np.ndarray):
             return Zobj, fr2
@@ -582,6 +614,8 @@ _C_LABEL: dict[str, str] = {
     "phi_mean": "Φ̄ = (φ_max+φ_min)/2",
     "phi_max": "φ_max (tan units)",
     "phi_min": "φ_min (tan units)",
+    "phimax_deg": r"$\phi_{max}$ (°)",
+    "phimin_deg": r"$\phi_{min}$ (°)",
 }
 
 # Symmetric c_by quantities (vmin = -vmax enforced by default)
@@ -607,6 +641,20 @@ def _resolve_cvals(df: pd.DataFrame, c_by: str) -> tuple[np.ndarray, str]:
         return df["s1"].to_numpy(float), _C_LABEL["phi_max"]
     if c_by == "phi_min":
         return df["s2"].to_numpy(float), _C_LABEL["phi_min"]
+    if c_by == "phimax_deg":
+        # s1/s2 are the phase-tensor singular values (tan units); the
+        # classic MTpy-style 0-90 deg phimin/phimax colouring needs the
+        # arctan of those, not the raw tan-unit values "phi_max"/"phi_min"
+        # above return (those saturate a 0-90 colour scale near 0).
+        return (
+            np.degrees(np.arctan(df["s1"].to_numpy(float))),
+            _C_LABEL["phimax_deg"],
+        )
+    if c_by == "phimin_deg":
+        return (
+            np.degrees(np.arctan(df["s2"].to_numpy(float))),
+            _C_LABEL["phimin_deg"],
+        )
     col_name = c_by if c_by in df.columns else "skew"
     return df[col_name].to_numpy(float), _C_LABEL.get(c_by, c_by)
 

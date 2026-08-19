@@ -87,15 +87,35 @@ def test_forward_allows_zerr_nan_where_z_is_masked():
     assert np.isfinite(rp.resistivity_err[1, 0, 0])
 
 
-def test_forward_rejects_zerr_nan_where_z_is_valid():
+def test_forward_allows_zerr_nan_where_z_is_valid():
+    # A valid Z with an unavailable uncertainty (e.g. an EDI .VAR dummy
+    # value at an otherwise-measured period) is legitimate real-world
+    # data, not a caller error -- it must propagate as a missing error
+    # estimate, not be rejected outright.
     z, f = _mk_stack()
     ze = np.full_like(z, 0.1, dtype=float)
     ze[0, 0, 0] = np.nan
     rp = ResPhase()
+    rp.compute_resistivity_phase(z_array=z, z_err_array=ze, freq=f)
 
-    bad = z.copy()
+    assert np.isnan(rp.resistivity_err[0, 0, 0])
+    assert np.isnan(rp.phase_err[0, 0, 0])
+    assert np.isfinite(rp.resistivity_err[1, 0, 0])
+
+
+def test_forward_rejects_negative_or_infinite_zerr_where_z_is_valid():
+    z, f = _mk_stack()
+    rp = ResPhase()
+
+    ze_neg = np.full_like(z, 0.1, dtype=float)
+    ze_neg[0, 0, 0] = -0.1
     with pytest.raises(ZError):
-        rp.compute_resistivity_phase(z_array=bad, z_err_array=ze, freq=f)
+        rp.compute_resistivity_phase(z_array=z, z_err_array=ze_neg, freq=f)
+
+    ze_inf = np.full_like(z, 0.1, dtype=float)
+    ze_inf[0, 0, 0] = np.inf
+    with pytest.raises(ZError):
+        rp.compute_resistivity_phase(z_array=z, z_err_array=ze_inf, freq=f)
 
 
 def test_inverse_builds_z_and_zerr_when_errors_given():

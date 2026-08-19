@@ -308,6 +308,16 @@ class TFBundle(CoreObject):
         Sensor azimuth or site orientation (degrees).
     attrs : dict
         Free-form attributes that accompany the data.
+    transfer_functions : dict
+        Optional generalized transfer-function payload. Keys should be
+        semantic names such as ``"impedance"`` or ``"tipper"``. This
+        field is additive and does not replace the legacy ``z`` and
+        ``tipper`` attributes.
+    estimates : dict
+        Optional generalized statistical-estimate payload. The precise
+        values are backend-defined; the EMTF core uses this field to
+        retain richer error/covariance objects without changing legacy
+        ``z_err`` and ``tipper_err`` semantics.
 
     Notes
     -----
@@ -339,12 +349,19 @@ class TFBundle(CoreObject):
     azimuth: float | None = None
     attrs: dict[str, Any] = field(default_factory=dict)
 
+    # Generalized fields are appended deliberately. Keeping all historical
+    # fields in their original order preserves positional construction for
+    # downstream code that still uses the legacy TFBundle signature.
+    transfer_functions: dict[str, Any] = field(default_factory=dict)
+    estimates: dict[str, Any] = field(default_factory=dict)
+
     def is_empty(self) -> bool:
         r"""
         Return True if there is no usable TF content.
 
         A bundle is considered empty when neither ``z`` nor the pair
-        ``(rho, phase)`` is present.
+        ``(rho, phase)`` nor generalized transfer-function content is
+        present.
 
         Returns
         -------
@@ -360,7 +377,8 @@ class TFBundle(CoreObject):
         """
         have_z = self.z is not None
         have_rp = (self.rho is not None) and (self.phase is not None)
-        return not (have_z or have_rp)
+        have_general = bool(self.transfer_functions)
+        return not (have_z or have_rp or have_general)
 
 
 class SupportsToBundle(Protocol):
@@ -851,7 +869,8 @@ class MTBase(CoreObject):
     @staticmethod
     def determinant_z(z: object) -> np.ndarray:
         r"""
-        Determinant impedance ``Z_det = sqrt(-Z_xy Z_yx)``.
+        Determinant impedance
+        ``Z_det = sqrt(det(Z)) = sqrt(Zxx Zyy - Zxy Zyx)``.
 
         Parameters
         ----------
@@ -865,12 +884,19 @@ class MTBase(CoreObject):
 
         Notes
         -----
-        The minus sign assumes the common MT sign convention.
+        ``Z_det`` is the square root of the true 2x2 matrix
+        determinant, which is exactly invariant under any proper
+        rotation of the horizontal coordinate frame. It reduces to
+        ``sqrt(-Zxy Zyx)`` only in the special case of a purely
+        off-diagonal (``Zxx = Zyy = 0``) tensor; the diagonal terms
+        must be included for a general impedance tensor.
         """
         zz = np.asarray(z, dtype=complex)
+        zxx = zz[..., 0, 0]
         zxy = zz[..., 0, 1]
         zyx = zz[..., 1, 0]
-        return np.sqrt(-zxy * zyx)
+        zyy = zz[..., 1, 1]
+        return np.sqrt(zxx * zyy - zxy * zyx)
 
     def rho_phase_from_det(
         self,

@@ -4,13 +4,14 @@
 pycsamt info
 ============
 
-Inspect metadata for one EDI file or a directory of EDI files.
+Inspect EDI and EMTF XML transfer-function metadata.
 
 Usage
 -----
 ::
 
     pycsamt info station.edi
+    pycsamt info station.xml
     pycsamt info survey/
     pycsamt info survey/ --format json
     pycsamt info survey/ --stations S01,S02 -v
@@ -187,6 +188,70 @@ def _parse_edi_header(path: Path, record: dict[str, Any]) -> None:
     record["components"] = sorted(components)
 
 
+
+
+def _emtf_info(path: Path) -> dict[str, Any]:
+    """Extract a format-neutral scientific summary from EDI or EMTF XML."""
+    import numpy as np  # noqa: PLC0415
+
+    from ...emtf import EMTF
+    from ...io import detect_tf_format
+
+    fmt = detect_tf_format(path)
+    doc = EMTF.from_edi(path) if fmt == "edi" else EMTF.from_xml(path)
+    freq = (
+        np.asarray(doc.frequency, dtype=float)
+        if doc.frequency is not None
+        else np.array([])
+    )
+    location = doc.site.location if doc.site is not None else None
+    orientation = doc.orientation
+    components = []
+    covariance: dict[str, list[str]] = {}
+    for key, tf in doc.transfer_functions.items():
+        components.append(key)
+        covariance[key] = sorted(tf.estimates)
+
+    return {
+        "file": str(path),
+        "format": fmt,
+        "station": doc.station,
+        "latitude": None if location is None else location.latitude,
+        "longitude": None if location is None else location.longitude,
+        "elevation": None if location is None else location.elevation,
+        "n_frequencies": int(freq.size),
+        "freq_min_hz": float(freq.min()) if freq.size else None,
+        "freq_max_hz": float(freq.max()) if freq.size else None,
+        "components": sorted(components),
+        "tags": list(doc.tags),
+        "orientation": (
+            None
+            if orientation is None
+            else {
+                "mode": orientation.mode,
+                "angle_to_geographic_north": (
+                    orientation.angle_to_geographic_north
+                ),
+            }
+        ),
+        "covariance": covariance,
+        "quality": {},
+        "error": None,
+    }
+
+
+def _collect_tf_paths(source: Path) -> list[Path]:
+    """Collect supported TF paths for explicit file/directory inspection."""
+    if source.is_file():
+        return [source] if source.suffix.lower() in {".edi", ".xml"} else []
+    if source.is_dir():
+        return sorted(
+            p
+            for p in source.iterdir()
+            if p.is_file() and p.suffix.lower() in {".edi", ".xml"}
+        )
+    return []
+
 # ---------------------------------------------------------------------------
 # Formatters
 # ---------------------------------------------------------------------------
@@ -195,20 +260,40 @@ def _parse_edi_header(path: Path, record: dict[str, Any]) -> None:
 def _fmt_text(records: list[dict[str, Any]], verbose: int) -> str:
     lines: list[str] = []
     for r in records:
-        lines.append(f"Station : {r['station'] or Path(r['file']).stem}")
+        lines.append(f"Station : {r.get('station') or Path(r['file']).stem}")
         lines.append(f"  File       : {r['file']}")
-        if r["error"]:
+        if r.get("format"):
+            lines.append(f"  Format     : {r['format']}")
+        if r.get("error"):
             lines.append(f"  ERROR      : {r['error']}")
             lines.append("")
             continue
-        lines.append(f"  Lat / Lon  : {r['latitude']}, {r['longitude']}")
-        lines.append(f"  Elevation  : {r['elevation']} m")
         lines.append(
-            f"  Frequencies: {r['n_frequencies']}  "
-            f"[{r['freq_min_hz']:.4g} – {r['freq_max_hz']:.4g} Hz]"
+            f"  Lat / Lon  : {r.get('latitude')}, {r.get('longitude')}"
         )
-        lines.append(f"  Components : {', '.join(r['components']) or '—'}")
-        if verbose >= 1 and r["quality"]:
+        lines.append(f"  Elevation  : {r.get('elevation')} m")
+        nfreq = r.get("n_frequencies")
+        fmin = r.get("freq_min_hz")
+        fmax = r.get("freq_max_hz")
+        if nfreq and fmin is not None and fmax is not None:
+            lines.append(
+                f"  Frequencies: {nfreq}  [{fmin:.4g} – {fmax:.4g} Hz]"
+            )
+        else:
+            lines.append(f"  Frequencies: {nfreq or 0}")
+        lines.append(
+            f"  Components : {', '.join(r.get('components', [])) or '—'}"
+        )
+        if r.get("orientation"):
+            orient = r["orientation"]
+            lines.append(
+                "  Orientation: "
+                f"{orient.get('mode')} @ "
+                f"{orient.get('angle_to_geographic_north')}°"
+            )
+        if verbose >= 1 and r.get("covariance"):
+            lines.append(f"  Estimates  : {r['covariance']}")
+        if verbose >= 1 and r.get("quality"):
             lines.append(f"  Quality    : {r['quality']}")
         lines.append("")
     return "\n".join(lines)
@@ -266,7 +351,7 @@ def info(
     output_format: str,
     output_dir: Path,
 ) -> None:
-    """Inspect metadata for an EDI file or directory of EDIs.
+    """Inspect metadata for EDI or EMTF XML transfer functions.
 
     SOURCE is optional when an active survey is set with
     ``pycsamt survey set``.  Priority: SOURCE > --survey > active context.
@@ -279,6 +364,7 @@ def info(
 
       # explicit path:
       pycsamt info station.edi
+      pycsamt info station.xml
       pycsamt info survey/
       pycsamt info survey/ --format json -v
     """
@@ -291,23 +377,24 @@ def info(
 
     explicit = source or survey_path
 
-    # Try fast path: if we have a plain path and no cache needed, stay lightweight
+    # Explicit paths can now contain either EDI or EMTF XML. Active survey
+    # context remains EDI-oriented for backward compatibility.
     if explicit is not None and not fresh:
-        edi_paths = _collect_edi_paths(explicit)
+        edi_paths = _collect_tf_paths(explicit)
     else:
-        # Use resolve_survey (with cache) so Sites are available for richer info
         sites = resolve_survey(explicit, fresh=fresh, verbose=verbose)
         edi_paths = _collect_edi_paths(None, sites)
-        # Fallback: if Sites didn't carry file paths, derive from context
         if not edi_paths and explicit is not None:
-            edi_paths = _collect_edi_paths(explicit)
+            edi_paths = _collect_tf_paths(explicit)
         elif not edi_paths:
             ctx_obj = SurveyContext.load()
             if ctx_obj is not None:
                 edi_paths = _collect_edi_paths(ctx_obj.survey_path)
 
     if not edi_paths:
-        click.echo("No .edi files found.", err=True)
+        click.echo(
+            "No supported EDI/XML transfer-function files found.", err=True
+        )
         sys.exit(1)
 
     if stations:
@@ -320,9 +407,12 @@ def info(
             sys.exit(1)
 
     if verbose >= 1:
-        click.echo(f"Scanning {len(edi_paths)} EDI file(s)…", err=True)
+        click.echo(f"Scanning {len(edi_paths)} TF file(s)…", err=True)
 
-    records = [_edi_info(p) for p in edi_paths]
+    records = [
+        _emtf_info(p) if p.suffix.lower() == ".xml" else _edi_info(p)
+        for p in edi_paths
+    ]
 
     if output_format == "json":
         output = _fmt_json(records)

@@ -31,5 +31,6 @@ from :doc:`../ai_inversion/index`, which covers learned inversion methods.
    configuration_and_io
    compilation
    occam2d
+   occam1d
    modem
    mare2dem

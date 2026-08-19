@@ -7,7 +7,8 @@ pycsamt.metadata.survey
 Campaign-level survey descriptor.
 
 :class:`SurveyMeta` captures the essential context of an MT/AMT/CSAMT/TEM
-measurement campaign — who, what, when, where — as a first-class Python
+measurement campaign — including AEM — as a first-class Python object. It
+records who, what, when, and where for the campaign.
 object.  It serialises to / deserialises from JSON and YAML, can be built
 directly from a :class:`~pycsamt.site.base.Sites` collection, and can push
 its fields into an EDI ``>HEAD`` section.
@@ -45,7 +46,7 @@ from typing import Any
 __all__ = ["BBox", "SurveyMeta"]
 
 _VALID_METHODS = frozenset(
-    {"MT", "AMT", "CSAMT", "CSEM", "TEM", "BBMT", "LAMT", "LMT"}
+    {"MT", "AMT", "CSAMT", "CSEM", "TEM", "BBMT", "LAMT", "LMT", "AEM"}
 )
 
 
@@ -173,7 +174,7 @@ class SurveyMeta:
         Acquisition company or institution.
     method : str, default ``"MT"``
         EM method: ``"MT"``, ``"AMT"``, ``"CSAMT"``, ``"TEM"``,
-        ``"CSEM"``, ``"BBMT"``, ``"LAMT"``, or ``"LMT"``.
+        ``"CSEM"``, ``"AEM"``, ``"BBMT"``, ``"LAMT"``, or ``"LMT"``.
     bbox : BBox, optional
         Geographic bounding box of all station locations.
     date_start : date, optional

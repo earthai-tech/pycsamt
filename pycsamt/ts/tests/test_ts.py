@@ -265,11 +265,13 @@ def test_ts_to_edi_roundtrip(tmp_path):
     assert ed.Z.n_freq > 3
     assert ed.has_tipper
     # impedance round-trips through the EDI text format
-    assert np.allclose(
+    np.testing.assert_allclose(
         ed.Z.z,
         np.broadcast_to(z0[None], ed.Z.z.shape),
         rtol=1e-4,
         atol=1e-4,
+        err_msg=f"freq={ed.Z.freq!r}",
+        verbose=True,
     )
     # geometry made it into DEFINEMEAS
     dm = ed.get_section("definemeas")

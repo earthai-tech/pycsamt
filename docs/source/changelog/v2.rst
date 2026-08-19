@@ -17,7 +17,7 @@ each release.
 
 *Released 2026-08-19.*
 
-Three independent pieces of work: the station confidence profile
+Four independent pieces of work: the station confidence profile
 (``plot_confidence_profile``, ``station_confidence_table``,
 ``frequency_confidence_table``) now computes real inter-station distance
 from EDI coordinates via a dependency-free UTM projection, instead of
@@ -38,7 +38,13 @@ guideline-compliance pass -- a new shared
 validation across the ``mobilemt``/``ztem``/``afmag`` adapters and every
 public member gained complete docstrings -- alongside a new
 :mod:`pycsamt.emtools.afmag` module implementing the Liu et al. (2018)
-motion-induced-noise method plus AFMAG tilt-angle diagnostics.
+motion-induced-noise method plus AFMAG tilt-angle diagnostics. Fourth, a
+new :mod:`pycsamt.models.occam1d` package brings a native, pure
+Python/NumPy 1-D Occam smooth-model inversion engine (forward model,
+analytic Jacobian, regularization, nonlinear inversion loop) with no
+external binary required, covering both single-station and
+whole-survey batch inversion, backed by a new bundled example against
+three real Gabbs Valley soundings.
 
 Added
 ~~~~~
@@ -97,6 +103,25 @@ Added
   .ensure_emtf_datatype_registered``**, a shared idempotent
   EMTF-datatype-registration helper factored out of two adapters that
   had each reimplemented it.
+* |New| **``pycsamt.models.occam1d``** -- native 1-D Occam inversion
+  engine: :class:`~pycsamt.models.occam1d.Occam1DForwardModel` (isotropic
+  layered-earth recursion, optionally Numba-compiled),
+  :class:`~pycsamt.models.occam1d.Occam1DJacobian` (analytic
+  sensitivities), :class:`~pycsamt.models.occam1d.Occam1DRegularization`/
+  :class:`~pycsamt.models.occam1d.Occam1DInversion` (roughness penalty and
+  the nonlinear Lagrange-multiplier Occam loop, scoring every trial
+  candidate through the full nonlinear forward model), plus
+  :class:`~pycsamt.models.occam1d.Occam1DInputBuilder`/
+  :class:`~pycsamt.models.occam1d.Occam1DBatch` for native-file
+  construction and whole-survey batch inversion (optionally parallel via
+  ``joblib``), :class:`~pycsamt.models.occam1d.Occam1DRunner` for driving
+  an external ``Occam1D``-compatible binary instead, and
+  ``PlotModel``/``PlotResponse``/``PlotConvergence``/``PlotSummary`` for
+  review figures. Optional Numba/joblib acceleration via
+  ``pip install pycsamt[perf]``.
+* |New| **``examples/occam1_demo/``** -- builds and inverts three real
+  Gabbs Valley EDI soundings with the native Occam1D engine end to end,
+  writing native files, text/JSON result products, and review figures.
 
 Fixed
 ~~~~~
@@ -137,6 +162,12 @@ Fixed
   uncertainty** (:mod:`pycsamt.z.resphase`) -- a valid impedance with an
   unavailable (``NaN``) uncertainty raised instead of propagating the
   missing value; exposed once the EDI sentinel fix above landed.
+* |Fix| **``pycsamt.api.occam1d``'s public style API was never wired
+  into ``pycsamt.api``'s top-level namespace** -- ``PYCSAMT_OCCAM1D`` and
+  friends were not importable via ``from pycsamt.api import
+  PYCSAMT_OCCAM1D``, the exact form documented in
+  ``examples/occam1_demo/README.md``. Fixed to match every other style
+  registry in the package.
 
 Changed
 ~~~~~~~
@@ -179,6 +210,10 @@ Docs & tooling
   local-only vendored EMTF-FCU checkout (``pycsamt/emtf/fcu-v4.1/``) from
   pytest collection -- without it, a plain ``pytest`` run breaks entirely
   on Windows for anyone who builds that reference oracle locally.
+* |Docs| **``user_guide/models/occam1d.rst``** -- new page covering
+  configuration, native-file construction, single-station and batch
+  inversion, and text/image result products, with real captured output
+  and figures against the Gabbs Valley survey.
 
 ----
 

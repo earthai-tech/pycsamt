@@ -89,6 +89,16 @@ from .mesh import (
     reset_mesh,
     triangulation_from_tri_mesh,
 )
+from .occam1d import (
+    PYCSAMT_OCCAM1D,
+    Occam1DArtistStyle,
+    Occam1DPlotStyle,
+    PyCSAMTOccam1D,
+    configure_occam1d_style,
+    reset_occam1d_style,
+    resolve_occam1d_style,
+    use_occam1d_style,
+)
 from .ordering import (
     PYCSAMT_ORDERING,
     SiteOrderingConfig,
@@ -181,6 +191,15 @@ __all__ = [
     "SiteOrderingConfig",
     "configure_ordering",
     "reset_ordering",
+    # Occam1D style API
+    "PYCSAMT_OCCAM1D",
+    "Occam1DArtistStyle",
+    "Occam1DPlotStyle",
+    "PyCSAMTOccam1D",
+    "configure_occam1d_style",
+    "reset_occam1d_style",
+    "resolve_occam1d_style",
+    "use_occam1d_style",
     # topography API
     "TopoConfig",
     "PYCSAMT_TOPO",

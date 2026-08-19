@@ -63,7 +63,7 @@
          <p class="pyc-hero-sub">
            Electromagnetic geophysics in Python — built for
            <span class="pyc-rotator"
-                 data-words='["CSAMT","AMT","MT","TDEM","CSEM"]'>CSAMT</span>
+                 data-words='["CSAMT","AMT","MT","TDEM","CSEM","AFMAG"]'>CSAMT</span>
            surveys.
          </p>
          <div class="pyc-hero-actions">

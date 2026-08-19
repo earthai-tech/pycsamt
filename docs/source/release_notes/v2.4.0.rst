@@ -9,7 +9,7 @@ pyCSAMT 2.4.0 |New| |Fix| |Enhancement| |Docs| |Build|
 
 *Released 2026-08-19.*
 
-Three independent pieces of work landed in this release. First, the
+Four independent pieces of work landed in this release. First, the
 station confidence profile
 (:func:`~pycsamt.emtools.qc.plot_confidence_profile`,
 :func:`~pycsamt.emtools.qc.station_confidence_table`,
@@ -45,6 +45,16 @@ inheritance mismatch was corrected. Alongside it, a new
 diagnostics, and plotting -- including a from-scratch implementation of
 the rotation-matrix motion-induced-noise method of Liu et al. (2018),
 grounded directly in that paper's own equations.
+
+Fourth, a new :mod:`pycsamt.models.occam1d` package brings a native,
+1-D Occam smooth-model inversion engine into pyCSAMT: forward physics,
+analytic Jacobian, roughness regularization, and the nonlinear Occam
+loop itself are all implemented in Python/NumPy, with no external
+``Occam1D`` binary required (:class:`~pycsamt.models.occam1d.Occam1DRunner`
+remains available for those who still want one). Per-station and
+whole-survey batch inversion are both covered, backed by a new bundled
+example, ``examples/occam1_demo/``, against three real Gabbs Valley
+soundings.
 
 Real EMTF-XML support in ``Site``/``Sites`` |New|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -266,7 +276,7 @@ reuses). This was a structural and documentation pass only: every step
 was verified against the full existing test suite, and no behaviour
 change is expected outside the corrected inheritance above.
 
-New: AFMAG motion-noise physics and diagnostics |New|
+AFMAG motion-noise physics and diagnostics |New|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :mod:`pycsamt.emtools.afmag` is a new module bringing AFMAG-specific
@@ -330,6 +340,68 @@ step against a frequency-domain ``Sites`` object, which has no raw time
 series to run it on; that math is exposed as the reusable physics
 functions above instead.
 
+New: Native Occam1D Inversion Engine |New| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.models.occam1d` is pyCSAMT's own :term:`Occam1D` engine.
+Unlike :mod:`~pycsamt.models.occam2d`, which prepares files for an
+external Fortran executable, Occam1D's forward model, analytic
+Jacobian, and nonlinear Occam iteration are implemented natively:
+:class:`~pycsamt.models.occam1d.Occam1DForwardModel` recurses the
+isotropic layered-earth impedance from basement to surface (optionally
+Numba-compiled, roughly an order of magnitude faster per evaluation
+when the optional ``perf`` extra is installed), and
+:class:`~pycsamt.models.occam1d.Occam1DInversion` runs the Lagrange-
+multiplier search, scoring every trial candidate through the full
+*nonlinear* forward model rather than a linearized estimate, and
+keeping every rejected candidate in the result rather than discarding
+it silently. Every station is inverted independently -- there is no
+lateral mesh -- so an entire survey can be built and inverted in two
+calls, :meth:`~pycsamt.models.occam1d.Occam1DBatch.build_all` /
+:meth:`~pycsamt.models.occam1d.Occam1DBatch.invert_all`, the latter
+optionally dispatching stations to separate processes via
+`joblib <https://joblib.readthedocs.io/>`__ (also part of ``perf``).
+
+The rest of the package rounds out the workflow around that core:
+:class:`~pycsamt.models.occam1d.Occam1DConfig` for layer geometry and
+iteration control; :class:`~pycsamt.models.occam1d.Occam1DInputBuilder`
+to build native data/model/startup files from EDI or site sources;
+:class:`~pycsamt.models.occam1d.Occam1DRunner` to drive an external
+``Occam1D``-compatible binary instead of the native engine, when one
+is preferred; :class:`~pycsamt.models.occam1d.Occam1DResult` and
+:meth:`~pycsamt.models.occam1d.Occam1DInversion.restart` to load
+completed runs and checkpoint/resume in-progress ones; and
+``PlotModel``/``PlotResponse``/``PlotConvergence``/``PlotSummary`` for
+model, fit, convergence, and combined-summary figures, customizable
+through the shared :data:`~pycsamt.api.PYCSAMT_OCCAM1D` style registry
+without touching the inversion itself. ``mode="determinant"`` -- fitting
+the rotation-invariant :math:`Z_d=\sqrt{-Z_{xy}Z_{yx}}` response -- is
+the default, chosen for field data whose true dimensionality is not yet
+known; ``"xy"``/``"yx"`` single-polarization modes remain available.
+
+The new :doc:`/user_guide/models/occam1d` page walks through
+configuration, native-file construction, a single-station inversion,
+and batch inversion, with real captured output and figures against
+three stations (``gv100``, ``gv130``, ``gv163``) of the same public
+Gabbs Valley survey already used elsewhere in the documentation. The
+bundled ``examples/occam1_demo/`` runs the same three-station workflow
+end to end from the command line, writing native files, text/JSON
+result products, and review figures per station. As with
+:mod:`pycsamt.models.occam1d`'s Numba/joblib acceleration, this is
+purely additive: the ``pycsamt invert`` CLI does not yet cover Occam1D
+(``--solver`` there still accepts only ``occam2d`` and ``modem``) --
+use the Python API shown on the new page until CLI support is added.
+
+One real bug turned up while writing this section: ``PYCSAMT_OCCAM1D``
+and the rest of :mod:`pycsamt.api.occam1d`'s public style API were
+never wired into :mod:`pycsamt.api`'s top-level namespace, unlike every
+other style registry in that package (``PYCSAMT_STYLE``,
+``PYCSAMT_MESH``, ``PYCSAMT_SECTION``, and so on) -- so
+``from pycsamt.api import PYCSAMT_OCCAM1D``, exactly as shown in
+``examples/occam1_demo/README.md``, raised ``ImportError``. Fixed by
+adding the same ``from .occam1d import (...)`` wiring every sibling
+style module already has.
+
 Added
 ~~~~~
 
@@ -374,6 +446,15 @@ Added
   **``pycsamt.emtf.datatypes.ensure_emtf_datatype_registered``**, a
   shared idempotent EMTF-datatype-registration helper factored out of
   two adapters that had each reimplemented it.
+* |New| **``pycsamt.models.occam1d``** -- native 1-D Occam inversion
+  engine (forward model, analytic Jacobian, regularization, nonlinear
+  inversion loop, native-file I/O, results, plotting, and validation);
+  see the summary above and :doc:`/user_guide/models/occam1d` for the
+  full package map. Optional Numba/joblib acceleration via
+  ``pip install pycsamt[perf]``.
+* |New| **``examples/occam1_demo/``** -- builds and inverts three real
+  Gabbs Valley EDI soundings with the native Occam1D engine end to end,
+  writing native files, text/JSON result products, and review figures.
 
 Fixed
 ~~~~~
@@ -402,6 +483,11 @@ Fixed
   measurement with an unavailable (``NaN``) uncertainty raised instead of
   propagating the missing value, exposed once the EDI sentinel fix above
   landed.
+* |Fix| **``pycsamt.api.occam1d``'s public style API was never wired
+  into ``pycsamt.api``'s top-level namespace** -- unlike every other
+  style registry in the package, ``PYCSAMT_OCCAM1D`` and friends were
+  not importable via ``from pycsamt.api import PYCSAMT_OCCAM1D``, the
+  exact form documented in ``examples/occam1_demo/README.md``.
 
 Changed
 ~~~~~~~
@@ -446,6 +532,10 @@ Docs & tooling
   local-only vendored EMTF-FCU checkout from pytest collection -- without
   it, a plain ``pytest`` run breaks entirely on Windows for anyone who
   builds that reference oracle locally.
+* |Docs| **``user_guide/models/occam1d.rst``** -- new page covering
+  configuration, native-file construction, single-station and batch
+  inversion, and text/image result products, with real captured output
+  and figures against the Gabbs Valley survey.
 
 |Compatibility|
 ~~~~~~~~~~~~~~~
@@ -481,3 +571,10 @@ electromagnetic numeric methods on that one class; nothing in pycsamt
 itself called them there, and this only matters to external code that
 did ``isinstance(dataset, MTBase)`` or called an ``MTBase`` method
 directly on an ``AirborneEMDataset`` instance.
+
+``pycsamt.models.occam1d`` is an entirely new, additive package with no
+interaction with any existing inversion engine; it does not touch
+``pycsamt invert``, :mod:`~pycsamt.models.occam2d`, or
+:mod:`~pycsamt.models.modem`. Its Numba/joblib acceleration is part of
+the existing, optional ``perf`` extra -- without it, the package still
+works, only slower.

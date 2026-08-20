@@ -1,37 +1,47 @@
-name: Deploy docs to Netlify on release
+name: Sync docs-deploy from a ref (manual)
 
 # pycsamt.org previously rebuilt on every push to master via Netlify's
 # GitHub App integration, which spends a production-deploy credit per
 # commit and exhausted the team's free-plan allowance.
 #
-# Deploys are now release-only, enforced structurally rather than by a
-# dashboard toggle: Netlify's production branch is `docs-deploy`, a
-# bot-only pointer branch nobody commits to directly. Ordinary pushes to
-# master never touch it, so they can never trigger a build. This workflow
-# is the only thing that moves it: on a `vX.Y.Z` tag push, it force-pushes
-# HEAD (the exact tagged commit) to `docs-deploy`, and that push is what
-# Netlify's native branch-deploy detection picks up — no Build Hook or
-# secret required.
+# Deploys are controlled structurally rather than by a dashboard toggle:
+# Netlify's production branch is `docs-deploy`, a branch nobody commits to
+# as part of ordinary development. Master/v2 pushes never touch it, so
+# they can never trigger a build by themselves.
+#
+# `docs-deploy` is deliberately NOT tied to release tags -- a docs build
+# should be retriable and iterable without implying a new package version
+# (tags trigger PyPI publishing separately, via python-publish.yml, on
+# master). The normal way to publish a docs update is a direct
+#   git push origin <ref>:docs-deploy
+# from a checkout; that push is what Netlify's native branch-deploy
+# detection picks up. This workflow is only a convenience for doing the
+# same thing from the GitHub UI/API without a local checkout -- point it
+# at any branch, tag, or commit SHA.
 #
 # One-time Netlify dashboard setup (Site configuration -> Build & deploy ->
 # Branches and deploy contexts):
 #   - Production branch: docs-deploy
 #   - Branch deploys: None (so PR/branch previews never build either)
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or commit to publish to docs-deploy"
+        required: true
+        default: "v2"
 
 permissions:
   contents: write
 
 jobs:
   update-docs-deploy-branch:
-    name: Point docs-deploy at the release tag
+    name: Point docs-deploy at the requested ref
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
-      - name: Force-push tagged commit to docs-deploy
+      - name: Force-push ${{ inputs.ref }} to docs-deploy
         run: git push origin HEAD:refs/heads/docs-deploy --force

@@ -4,35 +4,50 @@
 #
 # Netlify's default build timeout is 15 minutes — the cache plugin at the
 # bottom persists docs/build (Sphinx environment, doctrees, written html)
-# between deploys. docs/source/examples (sphinx-gallery's own per-file
-# skip-cache) is deliberately NOT persisted: several example chains write
-# shared state to disk outside that directory (e.g. docs/examples/inversion/
-# workspaces/, gitignored, not cached) that a later script in the same
-# chain reads (plot_4 -> plot_5 -> plot_6). If sphinx-gallery's cache says
-# an earlier script is unchanged, it skips re-executing it and that shared
-# state never gets recreated in the build's own container -- while a later
-# script in the chain, invalidated for an unrelated reason, still runs and
-# fails to find it. Every release build therefore re-executes every
-# example fresh; if a cold build hits the timeout, deploy once with
-# `-D plot_gallery=0` appended to the sphinx command (or ask Netlify
-# support to raise the site's timeout), then restore this command.
+# *and* docs/source/examples, sphinx-gallery's own generated copy of each
+# executed script (thumbnails, notebooks, and the per-file marker it
+# compares a fresh script's hash against to decide whether to re-execute
+# it). Earlier this directory was deliberately left out of the cache, so
+# every build looked "cold" to sphinx-gallery and re-executed every
+# example from scratch every time -- fine for one release build, much too
+# slow once docs-deploy is pushed to iteratively (see below). Persisting
+# it lets sphinx-gallery skip re-executing a script whose source hasn't
+# changed since the last successful build, the normal, fast case for a
+# docs-only change.
 #
-# Release-gated builds: pycsamt.org previously rebuilt on every commit to
-# master, which burns a production-deploy credit each time and is what
+# That skip-cache is only trustworthy if a later script's on-disk inputs
+# survive too: several example chains write shared state outside
+# docs/source/examples (e.g. docs/examples/inversion/workspaces/,
+# gitignored) that a later script in the same chain reads
+# (plot_4 -> plot_5 -> plot_6). Skipping an earlier script without also
+# persisting what it wrote would leave a later, genuinely-invalidated
+# script unable to find its input -- so every such directory is listed in
+# the cache plugin's paths below too. If a cold/cache-cleared build ever
+# hits the timeout regardless, deploy once with `-D plot_gallery=0`
+# appended to the sphinx command (or ask Netlify support to raise the
+# site's timeout), then restore this command.
+#
+# Deploy-controlled builds: pycsamt.org previously rebuilt on every commit
+# to master, which burns a production-deploy credit each time and is what
 # exhausted the team's free-plan allowance and suspended the site (see
 # HOW-TO-USE-NETLIGY-FOR-OPEN-SOURCE.md, kept local-only, never committed).
-# This is now stopped structurally rather than by a dashboard toggle:
-#   1. Netlify's production branch (Site configuration -> Build & deploy ->
-#      Branches and deploy contexts) is `docs-deploy`, not `master`, with
-#      Branch deploys set to None. Master commits never touch that branch,
-#      so they can never start a build.
-#   2. .github/workflows/netlify-release-deploy.yml force-pushes the exact
-#      tagged commit to `docs-deploy` only when a `v*` tag is pushed (i.e.
-#      on release) — that push is what Netlify's own GitHub integration
-#      detects and builds.
-# The `ignore` command below is a cheap second line of defense in case
-# `docs-deploy` is ever advanced by some other path: it skips the deploy
-# unless HEAD is exactly a `v*` release tag.
+# This is stopped structurally rather than by a dashboard toggle: Netlify's
+# production branch (Site configuration -> Build & deploy -> Branches and
+# deploy contexts) is `docs-deploy`, not `master`, with Branch deploys set
+# to None. Master/v2 commits never touch that branch, so they can never
+# start a build by themselves.
+#
+# `docs-deploy` is deliberately decoupled from the release tag/PyPI cycle
+# (python-publish.yml is what tags trigger, on master, independently of
+# this file): a docs build should be retriable and iterable without
+# implying a new package version. Whoever wants a docs deploy pushes (or
+# fast-forward-merges) the ready commit onto `docs-deploy` directly, and
+# Netlify's own git integration builds on every new commit to its
+# configured production branch -- the default behaviour, so no custom
+# `ignore` command is needed here any more. If `docs-deploy` ever needs to
+# be resynced with a specific tagged release after the fact, do that with
+# an explicit `git push origin <tag>:docs-deploy` rather than reintroducing
+# an automatic tag-triggered force-push.
 
 [build]
   publish = "docs/build/html"
@@ -47,13 +62,6 @@
   # section's plot_4 -> plot_5 -> plot_6 examples share files on disk
   # (each writes what the next reads), so reading must stay serial.
   command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && python -m sphinx -b html docs/source docs/build/html"
-
-  # Build only for release tags. Netlify's clone can be shallow enough to
-  # miss tag refs, so fetch them explicitly first; `git describe` then
-  # succeeds (exit 0) only when HEAD is exactly tagged `vX.Y.Z...`. Negate
-  # it so the overall exit code carries Netlify's expected meaning (0 =
-  # skip, non-zero = proceed).
-  ignore = "git fetch --tags --quiet 2>/dev/null; ! git describe --tags --exact-match --match 'v*' HEAD >/dev/null 2>&1"
 
 [build.environment]
   # Python runtime on Netlify's build image. Newer (mise-based) images read
@@ -72,4 +80,8 @@
   [plugins.inputs]
     paths = [
       "docs/build", # doctrees + environment pickle + written html
+      "docs/source/examples", # sphinx-gallery's own generated/skip-cache copy
+      "docs/examples/**/edi_out",
+      "docs/examples/**/workspaces",
+      "docs/examples/topo/l18_prepared_workspace",
     ]

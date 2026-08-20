@@ -114,6 +114,55 @@ Airborne and passive EM methods
    *Journal of Applied Geophysics*, 158, 129–138.
    https://doi.org/10.1016/j.jappgeo.2018.09.006
 
+.. [Lo2008] Lo, B., Zang, M. (2008). ‡
+   Numerical modeling of Z-TEM (airborne AFMAG) responses to guide
+   exploration strategies.
+   *SEG Technical Program Expanded Abstracts*, 27, 1098–1101.
+
+.. [Legault2012] Legault, J.M., Zhao, S., Fitch, R. (2012). ‡
+   ZTEM airborne AFMAG survey results over low sulphidation
+   epithermal gold-silver vein systems at Gold Springs, south
+   eastern Nevada.
+   22nd International Geophysical Conference and Exhibition (ASEG),
+   Brisbane.
+
+.. [Sattel2012] Sattel, D., Witherly, K. (2012). ‡
+   An overview of ZTEM data interpretation tools.
+   2012 NFEM Forum.
+
+.. [Pedersen1994] Pedersen, L.B., Qian, W., Dynesius, L.,
+   Zhang, P. (1994). ‡
+   An airborne tensor VLF system. From concept to realization.
+   *Geophysical Prospecting*, 42(8), 863–883.
+
+.. [wang2025] Wang, Y., Qu, J., Chen, T., Zhou, S., Li, Y. (2025). ‡
+   Studies of three dimensional staggered-grid finite difference for
+   Z-axis tipper electromagnetic numerical simulation.
+   *Frontiers in Earth Science*, 13, 1496312.
+   https://doi.org/10.3389/feart.2025.1496312
+
+.. [Prikhodko2022] Prikhodko, A., Bagrianski, A., Kuzmin, P.,
+   Sirohey, A. (2022). ‡
+   Natural field airborne electromagnetics -- history of development
+   and current exploration capabilities.
+   *Minerals*, 12(5), 583.
+   https://doi.org/10.3390/min12050583
+
+.. [Sattel2019] Sattel, D., Witherly, K., Kaminski, V. (2019). ‡
+   A brief analysis of MobileMT data.
+   SEG International Exposition and Annual Meeting, D043S102R007.
+
+.. [Zhdanov2024] Zhdanov, M.S., Gribenko, A., Prikhodko, A.,
+   Sabra, H.E., Jorgensen, M., Cox, L.H. (2024). ‡
+   Three-dimensional MobileMT and TMI data inversions for mineral
+   exploration.
+   1st ASEG DISCOVER Symposium.
+
+.. [Swift1967] Swift, C.M. (1967). ‡
+   A magnetotelluric investigation of an electrical conductivity
+   anomaly in the southwestern United States.
+   PhD thesis, MIT.
+
 ----
 
 Tensor decomposition and dimensionality

@@ -7,6 +7,15 @@ readout maps onto. KAP03 is a ground MT survey, not an airborne AFMAG
 survey; the motion-coupling physics section below uses a separate,
 explicitly synthetic attitude time series, since no bundled dataset
 carries INS/attitude data.
+
+The second half of this script (figures 08-12) instead reads the two
+genuine synthetic AFMAG-family sample surveys committed under
+``data/AFMAG/`` (see that directory's generator,
+``scripts/airborne/generate_synthetic_survey_xml.py``, for the full
+synthetic-data notice): ``abitibi_on`` (original comparator, a real
+scalar tilt) and ``yulong_belt_cn`` (tensor AFMAG/AirMt, a real
+``(nf, 3, 2)`` interstation tensor). Neither is a vendor delivery or a
+reproduction of the cited papers' actual field data.
 """
 
 from pathlib import Path
@@ -22,6 +31,7 @@ import numpy as np  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from pycsamt.airborne.site import ensure_asites as ensure_asites_afmag  # noqa: E402
 from pycsamt.emtools import (  # noqa: E402
     afmag_tilt_angles,
     ensure_sites,
@@ -36,9 +46,16 @@ from pycsamt.emtools import (  # noqa: E402
     plot_motion_coupling,
     plot_motion_susceptibility_map,
 )
+from pycsamt.emtools.afmag import (  # noqa: E402
+    airmt_tilt_angles,
+    plot_airmt_tilt_psection,
+    plot_original_afmag_dual_frequency_profile,
+)
 
 IMAGES = ROOT / "docs/source/images/user_guide/emtools"
 KAP03 = ROOT / "data/MT/kap03lmt_edis"
+ABITIBI = ROOT / "data/AFMAG/abitibi_on"
+YULONG = ROOT / "data/AFMAG/yulong_belt_cn"
 
 # Illustrative mid-southern-latitude geomagnetic geometry for the KAP03
 # footprint (roughly southern South Africa/Namibia/Botswana, ~-22 to
@@ -219,6 +236,144 @@ def make_correction_comparison(sites) -> None:
     plt.close(fig)
 
 
+def _load_airborne_sites():
+    return ensure_asites_afmag(ABITIBI), ensure_asites_afmag(YULONG)
+
+
+def make_dual_frequency_profile(abitibi) -> None:
+    ax = plot_original_afmag_dual_frequency_profile(abitibi)
+    ax.figure.savefig(
+        IMAGES / "user-guide-emtools-afmag-08.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(ax.figure)
+
+
+def make_airmt_psection(yulong) -> None:
+    ax = plot_airmt_tilt_psection(yulong)
+    ax.figure.savefig(
+        IMAGES / "user-guide-emtools-afmag-09.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(ax.figure)
+
+
+def make_airmt_azimuth_profile(yulong) -> None:
+    table = airmt_tilt_angles(yulong)
+    freqs = sorted(table["freq"].unique())
+    f0 = freqs[2]  # 89.13 Hz, the pseudosection's third row
+    sub = table[table["freq"] == f0].reset_index(drop=True)
+    stations = sub["station"].tolist()
+    azimuth = sub["tilt_real_azimuth_deg"].to_numpy()
+
+    fig, ax = plt.subplots(figsize=(9.5, 3.8))
+    x = np.arange(len(stations))
+    ax.axhline(0.0, color="0.85", lw=0.8)
+    ax.plot(x, azimuth, marker="o", lw=1.6, color="tab:orange")
+    ax.set_xticks(x)
+    ax.set_xticklabels(stations, rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("tilt_real_azimuth_deg")
+    ax.set_ylim(-200.0, 200.0)
+    ax.set_title(
+        f"AirMt real-tilt azimuth along the line at {f0:.1f} Hz",
+        fontsize=10,
+    )
+    ax.grid(True, ls=":", alpha=0.35)
+    fig.tight_layout()
+    fig.savefig(
+        IMAGES / "user-guide-emtools-afmag-10.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+
+
+def make_flight_line_map(yulong) -> None:
+    lats = [s.coords[0] for s in yulong]
+    lons = [s.coords[1] for s in yulong]
+    names = [s.sample_id for s in yulong]
+    ref_lat, ref_lon = 31.304492, 97.190538
+
+    fig, ax = plt.subplots(figsize=(6.0, 6.0))
+    ax.plot(lons, lats, "-", color="0.7", lw=1.2, zorder=1)
+    ax.scatter(lons, lats, c="tab:blue", s=45, zorder=2, label="flight line")
+    for name, lon, lat in zip(names, lons, lats):
+        ax.annotate(
+            name.replace("YU_0", ""),
+            (lon, lat),
+            textcoords="offset points",
+            xytext=(6, 0),
+            fontsize=7,
+        )
+    ax.scatter(
+        [ref_lon], [ref_lat], marker="*", s=220, color="tab:red", zorder=3,
+        label="ground magnetic reference",
+    )
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.set_title(
+        "Yulong belt AirMt: flight line and reference station", fontsize=10,
+    )
+    ax.ticklabel_format(useOffset=False, style="plain")
+    ax.set_xlim(min(lons + [ref_lon]) - 0.0015, max(lons + [ref_lon]) + 0.0015)
+    ax.legend(loc="lower left", fontsize=8, frameon=True)
+    ax.grid(True, ls=":", alpha=0.35)
+    fig.tight_layout()
+    fig.savefig(
+        IMAGES / "user-guide-emtools-afmag-11.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+
+
+def make_amplification_parameter_plot(yulong) -> None:
+    picks = ["YU_002", "YU_006", "YU_009"]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.0))
+    for name in picks:
+        site = yulong.get(name)
+        freq = site.freq
+        ap = site.afmag_amplification_parameter
+        ax1.plot(freq, np.abs(ap), marker="o", lw=1.4, label=name)
+        ax2.plot(
+            freq, np.degrees(np.angle(ap)), marker="o", lw=1.4, label=name
+        )
+    ax1.axhline(1.0, color="0.75", lw=0.8, ls="--")
+    ax1.set_xscale("log")
+    ax1.set_xlabel("Frequency (Hz)")
+    ax1.set_ylabel(r"$|AP|$")
+    ax1.set_title("AirMt amplification parameter magnitude", fontsize=10)
+    ax1.grid(True, ls=":", alpha=0.35)
+    ax1.legend(fontsize=8)
+
+    ax2.axhline(0.0, color="0.75", lw=0.8, ls="--")
+    ax2.set_xscale("log")
+    ax2.set_xlabel("Frequency (Hz)")
+    ax2.set_ylabel(r"$\arg(AP)$ (deg)")
+    ax2.set_title("AirMt amplification parameter phase", fontsize=10)
+    ax2.grid(True, ls=":", alpha=0.35)
+    ax2.legend(fontsize=8)
+
+    fig.tight_layout()
+    fig.savefig(
+        IMAGES / "user-guide-emtools-afmag-12.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+
+
+def run_airborne_afmag_workflow() -> None:
+    abitibi, yulong = _load_airborne_sites()
+    make_dual_frequency_profile(abitibi)
+    make_airmt_psection(yulong)
+    make_airmt_azimuth_profile(yulong)
+    make_flight_line_map(yulong)
+    make_amplification_parameter_plot(yulong)
+
+
 def run_afmag_workflow() -> None:
     """Run the recommended AFMAG diagnostic sequence on KAP03 end to
     end: tilt profile, tilt pseudosection, tilt polar view, motion-
@@ -294,3 +449,4 @@ if __name__ == "__main__":
     make_susceptibility_map(sites)
     make_correction_comparison(sites)
     run_afmag_workflow()
+    run_airborne_afmag_workflow()

@@ -38,12 +38,16 @@ from .registry import (
     register_airborne_format,
     register_airborne_technology,
 )
+from .site import AirborneSite, AirborneSites, ensure_asites
 
 __all__ = [
     "NavigationTrack",
     "AirborneEMRecord",
     "AirborneEMLine",
     "AirborneEMDataset",
+    "AirborneSite",
+    "AirborneSites",
+    "ensure_asites",
     "AirborneTechnologyDefinition",
     "AirborneFormatDefinition",
     "AirborneRegistryError",

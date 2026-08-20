@@ -11,6 +11,7 @@
   --pyc-orange:      #f15a29;
   --pyc-orange-soft: #ff7a4d;
   --pyc-gold:        #fbb040;
+  --pyc-teal:        #0d9488;
   --pyc-ink:         #1c2941;
   --pyc-muted:       #5c677d;
   --pyc-surface:     #ffffff;
@@ -264,7 +265,14 @@ html[data-theme="dark"] .pyc-wm .cls-1 { fill: #9db8ea; }
   display: inline-block;
   min-width: 7ch;
   color: var(--pyc-orange);
-  transition: opacity 260ms ease, transform 260ms ease;
+  transition: opacity 260ms ease, transform 260ms ease, color 260ms ease;
+}
+
+/* Airborne EM methods (AFMAG/ZTEM/MobileMT) get a distinct colour from
+   the ground-based methods above, so the rotator visibly flags the
+   switch in survey category rather than just changing the word. */
+.pyc-hero-sub .pyc-rotator.is-airborne {
+  color: var(--pyc-teal);
 }
 
 .pyc-hero-sub .pyc-rotator.is-swapping {

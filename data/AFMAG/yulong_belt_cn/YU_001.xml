@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EM_TF>
+  <Description>SYNTHETIC DATA. Forward-modeled with a simplified skin-depth weighted analytic approximation for pyCSAMT documentation and testing only. Not a vendor delivery sample and not a reproduction of the cited paper's actual field data. Survey: Yulong belt AirMt survey (synthetic). Loosely inspired by Liu, F., Huang, L., Pang, Y., Shi, Z., Xiao, P., and Fang, G. (2018), Journal of Applied Geophysics, 158, 129-138.</Description>
+  <ProductId>yulong_belt_cn.YU_001</ProductId>
+  <SubType>afmag_airmt</SubType>
+  <Notes>
+    <AFMAG>
+      <Family>tensor_afmag_airmt</Family>
+      <PracticalFrequencyMinHz>20.0</PracticalFrequencyMinHz>
+      <PracticalFrequencyMaxHz>800.0</PracticalFrequencyMaxHz>
+      <TypicalFrequencyCountMin>5</TypicalFrequencyCountMin>
+      <TypicalFrequencyCountMax>6</TypicalFrequencyCountMax>
+      <TimeSeriesSamplingRateHz>2000.0</TimeSeriesSamplingRateHz>
+      <TransferInputChannels>Hx,Hy</TransferInputChannels>
+      <AirborneOutputChannels>Hx,Hy,Hz</AirborneOutputChannels>
+      <ReferenceMeasuredChannels>Hx,Hy,Hz</ReferenceMeasuredChannels>
+      <TransferFunction>[Hx,Hy,Hz](r) = TI * [Hx,Hy](r0)</TransferFunction>
+      <ReferenceStationId>YULONG_BELT_CN_BASE</ReferenceStationId>
+      <ReferenceLatitude>31.304491555874957</ReferenceLatitude>
+      <ReferenceLongitude>97.19053810401414</ReferenceLongitude>
+      <ReferenceElevation>4170.0</ReferenceElevation>
+      <ReferenceDatum>WGS84</ReferenceDatum>
+    </AFMAG>
+  </Notes>
+  <Tags>afmag,airmt,interstation_transfer_functions,airmt_amplification_parameter</Tags>
+  <Site>
+    <Project>pycsamt synthetic airborne demo</Project>
+    <Survey>Yulong belt AirMt survey (synthetic)</Survey>
+    <YearCollected>2019</YearCollected>
+    <Country>China</Country>
+    <Id>YU_001</Id>
+    <Name>YU_001</Name>
+    <Location datum="WGS84">
+      <Latitude>31.3</Latitude>
+      <Longitude>97.2</Longitude>
+      <Elevation units="meters">4200</Elevation>
+    </Location>
+    <Orientation angle_to_geographic_north="0">orthogonal</Orientation>
+    <AcquiredBy>pycsamt.examples (synthetic)</AcquiredBy>
+  </Site>
+  <ProcessingInfo>
+    <SignConvention>exp(- i\omega t)</SignConvention>
+    <RemoteRef type="fixed_ground_magnetic" />
+    <RemoteInfo>
+      <Site>
+        <Id>YULONG_BELT_CN_BASE</Id>
+      </Site>
+    </RemoteInfo>
+    <ProcessedBy>pycsamt synthetic data generator</ProcessedBy>
+    <ProcessingSoftware>
+      <Name>pycsamt.scripts.airborne.generate_synthetic_survey_xml</Name>
+    </ProcessingSoftware>
+    <ProcessingTag>yulong_belt_cn_synthetic_v1</ProcessingTag>
+  </ProcessingInfo>
+  <DataTypes>
+    <DataType name="TI" type="complex" output="H" input="H" units="[]">
+      <Description>Interstation magnetic transfer functions</Description>
+      <Intention>primary data type</Intention>
+      <Tag>interstation_transfer_functions</Tag>
+    </DataType>
+    <DataType name="AP" type="complex" units="[]">
+      <Description>AirMt rotationally invariant complex amplification parameter</Description>
+      <Intention>derived data type</Intention>
+      <Tag>airmt_amplification_parameter</Tag>
+      <DerivedFrom>interstation_transfer_functions</DerivedFrom>
+    </DataType>
+  </DataTypes>
+  <Data count="6">
+    <Period value="0.04" units="secs">
+      <TI type="complex" size="3 2" units="[]">
+        <value name="TIxx" output="Hx" input="Hx">0.99801566820859822 0.011206565233690968</value>
+        <value name="TIxy" output="Hx" input="Hy">0.034136174566675788 -0.00054658885667787684</value>
+        <value name="TIyx" output="Hy" input="Hx">0.015273338981998244 -0.030112129117937602</value>
+        <value name="TIyy" output="Hy" input="Hy">0.99449969538605765 0.03901876042164254</value>
+        <value name="TIx" output="Hz" input="Hx">-0.013723534559917112 -0.0050641581445768696</value>
+        <value name="TIy" output="Hz" input="Hy">0.00032195352619537377 0.011600066340858764</value>
+      </TI>
+      <AP type="complex" size="1 1" units="[]">
+        <value name="AP">0.99168040722368944 0.0512052971001025</value>
+      </AP>
+    </Period>
+    <Period value="0.0211844768209762" units="secs">
+      <TI type="complex" size="3 2" units="[]">
+        <value name="TIxx" output="Hx" input="Hx">1.0036141963637164 0.0038531419511820823</value>
+        <value name="TIxy" output="Hx" input="Hy">0.016042645013300876 -0.037362893224516976</value>
+        <value name="TIyx" output="Hy" input="Hx">-0.024853448865316659 0.01603933468660098</value>
+        <value name="TIyy" output="Hy" input="Hy">1.0420599111900974 -0.01777190340434133</value>
+        <value name="TIx" output="Hz" input="Hx">-0.0053864343226052488 0.0084924784661086807</value>
+        <value name="TIy" output="Hz" input="Hy">0.0024007894382125053 -0.0089319172073533161</value>
+      </TI>
+      <AP type="complex" size="1 1" units="[]">
+        <value name="AP">1.0457110838316106 -0.015072318544824723</value>
+      </AP>
+    </Period>
+    <Period value="0.011219551454462" units="secs">
+      <TI type="complex" size="3 2" units="[]">
+        <value name="TIxx" output="Hx" input="Hx">0.97939681325717709 0.0082448098296507323</value>
+        <value name="TIxy" output="Hx" input="Hy">-0.045454634319266551 0.012877271533973937</value>
+        <value name="TIyx" output="Hy" input="Hx">0.025379856122769402 0.024097711436764032</value>
+        <value name="TIyy" output="Hy" input="Hy">0.98646064015205803 -0.0094178466350797914</value>
+        <value name="TIx" output="Hz" input="Hx">-0.034948187880173183 -0.0093039552432180907</value>
+        <value name="TIy" output="Hz" input="Hy">0.00082366414386521379 -0.026452381226383832</value>
+      </TI>
+      <AP type="complex" size="1 1" units="[]">
+        <value name="AP">0.96831900611486921 -5.4563368281943635e-06</value>
+      </AP>
+    </Period>
+    <Period value="0.00594200819322001" units="secs">
+      <TI type="complex" size="3 2" units="[]">
+        <value name="TIxx" output="Hx" input="Hx">0.9888626473696086 -0.017833676121051481</value>
+        <value name="TIxy" output="Hx" input="Hy">-0.0098981651180513712 0.0067345603888002191</value>
+        <value name="TIyx" output="Hy" input="Hx">-0.044142138708243669 0.039432438985064933</value>
+        <value name="TIyy" output="Hy" input="Hy">0.98668036900792611 0.022582396759722508</value>
+        <value name="TIx" output="Hz" input="Hx">-0.0090960628787813708 -0.0098589924705766094</value>
+        <value name="TIy" output="Hz" input="Hy">-0.012795140200855759 -0.0039504995767526956</value>
+      </TI>
+      <AP type="complex" size="1 1" units="[]">
+        <value name="AP">0.97605367577085067 0.0055638251503338509</value>
+      </AP>
+    </Period>
+    <Period value="0.00314695837098301" units="secs">
+      <TI type="complex" size="3 2" units="[]">
+        <value name="TIxx" output="Hx" input="Hx">1.0482005727412849 -0.032538657672768284</value>
+        <value name="TIxy" output="Hx" input="Hy">0.020504102018585029 -0.0069363829757128435</value>
+        <value name="TIyx" output="Hy" input="Hx">-0.011072168719455319 0.0019517381946905577</value>
+        <value name="TIyy" output="Hy" input="Hy">0.97080970377156217 0.011906752520966924</value>
+        <value name="TIx" output="Hz" input="Hx">-0.00074951043525679946 -0.014108197921900892</value>
+        <value name="TIy" output="Hz" input="Hy">0.0011320252951262531 -0.0030221628250843928</value>
+      </TI>
+      <AP type="complex" size="1 1" units="[]">
+        <value name="AP">1.0182050631846924 -0.019220966239010033</value>
+      </AP>
+    </Period>
+    <Period value="0.00166666666666667" units="secs">
+      <TI type="complex" size="3 2" units="[]">
+        <value name="TIxx" output="Hx" input="Hx">0.97752415656361635 0.031464828916569404</value>
+        <value name="TIxy" output="Hx" input="Hy">0.0035601469849086687 -0.023266394389397396</value>
+        <value name="TIyx" output="Hy" input="Hx">-0.061050930419581824 0.044131773993176471</value>
+        <value name="TIyy" output="Hy" input="Hy">1.0209965605733902 0.061298553151327359</value>
+        <value name="TIx" output="Hz" input="Hx">0.00064315182394728693 -0.00015565557898183317</value>
+        <value name="TIy" output="Hz" input="Hy">-0.014309753599008483 -0.0011235128179166039</value>
+      </TI>
+      <AP type="complex" size="1 1" units="[]">
+        <value name="AP">0.99540842460719181 0.090481230219552136</value>
+      </AP>
+    </Period>
+  </Data>
+  <PeriodRange min="0.00166666666666667" max="0.04" />
+</EM_TF>

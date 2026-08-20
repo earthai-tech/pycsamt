@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EM_TF>
+  <Description>SYNTHETIC DATA. Forward-modeled with a simplified skin-depth weighted analytic approximation for pyCSAMT documentation and testing only. Not a vendor delivery sample and not a reproduction of the cited paper's actual field data. Survey: Abitibi comparator-AFMAG survey (synthetic). Loosely inspired by Ward, S.H. (1959), Geophysics, 24(4), 761-787.</Description>
+  <ProductId>abitibi_on.AB_006</ProductId>
+  <SubType>afmag_original</SubType>
+  <Notes>
+    <AFMAG>
+      <Family>original_comparator_afmag</Family>
+      <HistoricalFrequencyMinHz>1.0</HistoricalFrequencyMinHz>
+      <HistoricalFrequencyMaxHz>20000.0</HistoricalFrequencyMaxHz>
+      <TypicalFrequenciesHz>150,510</TypicalFrequenciesHz>
+      <CoilCount>2</CoilCount>
+      <CoilTiltDeg>45.0</CoilTiltDeg>
+      <CoilSeparationDeg>45.0</CoilSeparationDeg>
+      <DigitalRecording>False</DigitalRecording>
+      <ResponseKind>tilt_angle</ResponseKind>
+    </AFMAG>
+  </Notes>
+  <Tags>afmag,afmag_tilt</Tags>
+  <Site>
+    <Project>pycsamt synthetic airborne demo</Project>
+    <Survey>Abitibi comparator-AFMAG survey (synthetic)</Survey>
+    <YearCollected>1960</YearCollected>
+    <Country>Canada</Country>
+    <Id>AB_006</Id>
+    <Name>AB_006</Name>
+    <Location datum="WGS84">
+      <Latitude>48.25</Latitude>
+      <Longitude>-79.2959528341707</Longitude>
+      <Elevation units="meters">305</Elevation>
+    </Location>
+    <Orientation angle_to_geographic_north="90">orthogonal</Orientation>
+    <AcquiredBy>pycsamt.examples (synthetic)</AcquiredBy>
+  </Site>
+  <ProcessingInfo>
+    <ProcessedBy>pycsamt synthetic data generator</ProcessedBy>
+    <ProcessingSoftware>
+      <Name>pycsamt.scripts.airborne.generate_synthetic_survey_xml</Name>
+    </ProcessingSoftware>
+    <ProcessingTag>abitibi_on_synthetic_v1</ProcessingTag>
+  </ProcessingInfo>
+  <StatisticalEstimates>
+    <Estimate name="VAR" type="real">
+      <Description>Variance</Description>
+      <Intention>error estimate</Intention>
+      <Tag>variance</Tag>
+    </Estimate>
+  </StatisticalEstimates>
+  <DataTypes>
+    <DataType name="AFTILT" type="real" units="deg">
+      <Description>Original AFMAG line-direction magnetic polarization tilt response</Description>
+      <Intention>derived data type</Intention>
+      <Tag>afmag_tilt</Tag>
+    </DataType>
+  </DataTypes>
+  <Data count="2">
+    <Period value="0.00666666666666667" units="secs">
+      <AFTILT type="real" size="1 1" units="deg">
+        <value name="AFTILT">2.4065847528698496</value>
+      </AFTILT>
+      <AFTILT.VAR type="real" size="1 1" units="deg^2">
+        <value name="AFTILT">0.35999999999999999</value>
+      </AFTILT.VAR>
+    </Period>
+    <Period value="0.00196078431372549" units="secs">
+      <AFTILT type="real" size="1 1" units="deg">
+        <value name="AFTILT">3.1739627208624874</value>
+      </AFTILT>
+      <AFTILT.VAR type="real" size="1 1" units="deg^2">
+        <value name="AFTILT">0.35999999999999999</value>
+      </AFTILT.VAR>
+    </Period>
+  </Data>
+  <PeriodRange min="0.00196078431372549" max="0.00666666666666667" />
+</EM_TF>

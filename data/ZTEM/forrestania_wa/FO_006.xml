@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EM_TF>
+  <Description>SYNTHETIC DATA. Forward-modeled with a simplified skin-depth weighted analytic approximation for pyCSAMT documentation and testing only. Not a vendor delivery sample and not a reproduction of the cited paper's actual field data. Survey: Forrestania ZTEM test-range survey (synthetic). Loosely inspired by Sattel, D., and Witherly, K. (2012), 2012 NFEM Forum. Flight line forrestania_wa.</Description>
+  <ProductId>forrestania_wa.FO_006</ProductId>
+  <SubType>ztem</SubType>
+  <Notes>
+    <ZTEM>
+      <PracticalFrequencyMinHz>22.0</PracticalFrequencyMinHz>
+      <PracticalFrequencyMaxHz>720.0</PracticalFrequencyMaxHz>
+      <TypicalFrequencyCountMin>5</TypicalFrequencyCountMin>
+      <TypicalFrequencyCountMax>6</TypicalFrequencyCountMax>
+      <TimeSeriesSamplingRateHz>2000.0</TimeSeriesSamplingRateHz>
+      <NominalOutputRateHz>2.5</NominalOutputRateHz>
+      <InputChannels>Hx,Hy</InputChannels>
+      <OutputChannels>Hz</OutputChannels>
+      <TransferFunction>Hz = Tzx*Hx + Tzy*Hy</TransferFunction>
+      <ReferenceStationId>FORRESTANIA_WA_BASE</ReferenceStationId>
+      <ReferenceLatitude>-32.50538986704995</ReferenceLatitude>
+      <ReferenceLongitude>119.7042604708855</ReferenceLongitude>
+      <ReferenceElevation>390.0</ReferenceElevation>
+      <ReferenceDatum>WGS84</ReferenceDatum>
+      <LineId>forrestania_wa</LineId>
+    </ZTEM>
+  </Notes>
+  <Tags>ztem,tipper</Tags>
+  <Site>
+    <Project>pycsamt synthetic airborne demo</Project>
+    <Survey>Forrestania ZTEM test-range survey (synthetic)</Survey>
+    <YearCollected>2010</YearCollected>
+    <Country>Australia</Country>
+    <Id>FO_006</Id>
+    <Name>FO_006</Name>
+    <Location datum="WGS84">
+      <Latitude>-32.49820337765</Latitude>
+      <Longitude>119.7</Longitude>
+      <Elevation units="meters">420</Elevation>
+    </Location>
+    <Orientation angle_to_geographic_north="0">orthogonal</Orientation>
+    <AcquiredBy>pycsamt.examples (synthetic)</AcquiredBy>
+  </Site>
+  <ProcessingInfo>
+    <SignConvention>exp(- i\omega t)</SignConvention>
+    <RemoteRef type="fixed_ground_horizontal_magnetic" />
+    <RemoteInfo>
+      <Site>
+        <Id>FORRESTANIA_WA_BASE</Id>
+      </Site>
+    </RemoteInfo>
+    <ProcessedBy>pycsamt synthetic data generator</ProcessedBy>
+    <ProcessingSoftware>
+      <Name>pycsamt.scripts.airborne.generate_synthetic_survey_xml</Name>
+    </ProcessingSoftware>
+    <ProcessingTag>forrestania_wa_synthetic_v1</ProcessingTag>
+  </ProcessingInfo>
+  <StatisticalEstimates>
+    <Estimate name="VAR" type="real">
+      <Description>Variance</Description>
+      <Intention>error estimate</Intention>
+      <Tag>variance</Tag>
+    </Estimate>
+  </StatisticalEstimates>
+  <DataTypes>
+    <DataType name="T" type="complex" output="H" input="H" units="[]">
+      <Description>Vertical field transfer functions (tipper)</Description>
+      <Intention>primary data type</Intention>
+      <Tag>tipper</Tag>
+    </DataType>
+  </DataTypes>
+  <Data count="6">
+    <Period value="0.0333333333333333" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.0092717445496674922 -0.0095839838131647793</value>
+        <value name="Ty" output="Hz" input="Hy">-0.0017910979496718609 -0.0076658777184579049</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.0222222222222222" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">0.0094180132285456627 -0.011288047066136224</value>
+        <value name="Ty" output="Hz" input="Hy">-0.014436145446313003 -0.00062946940822474081</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.0111111111111111" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">0.001602503701992291 -0.0043374685095425632</value>
+        <value name="Ty" output="Hz" input="Hy">-0.0033913512751739465 0.0095947470966414247</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.00555555555555556" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.013862221313230932 0.0011887550872212789</value>
+        <value name="Ty" output="Hz" input="Hy">0.0033617878857427844 0.0064136715345008638</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.00277777777777778" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.0020625081923301971 -0.0094500487681619203</value>
+        <value name="Ty" output="Hz" input="Hy">-0.0073784685534247045 -0.0090587195033127316</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.00138888888888889" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">0.0027428730107512803 0.0043391960373372028</value>
+        <value name="Ty" output="Hz" input="Hy">-0.0061024906026830288 -0.0091309168227292781</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+  </Data>
+  <PeriodRange min="0.00138888888888889" max="0.0333333333333333" />
+</EM_TF>

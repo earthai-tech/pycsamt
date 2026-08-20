@@ -13,7 +13,7 @@ each release.
 .. _changelog-2-4-0:
 
 2.4.0 |New| |Fix| |Enhancement| |Docs| |Build|
------------------------------------------------
+----------------------------------------------
 
 *Released 2026-08-19.*
 
@@ -44,7 +44,11 @@ Python/NumPy 1-D Occam smooth-model inversion engine (forward model,
 analytic Jacobian, regularization, nonlinear inversion loop) with no
 external binary required, covering both single-station and
 whole-survey batch inversion, backed by a new bundled example against
-three real Gabbs Valley soundings.
+three real Gabbs Valley soundings. Fifth, a docs-only follow-up:
+:mod:`pycsamt.airborne` gains a complete six-page user guide and a new
+API reference page, and :doc:`/user_guide/data_loading` now documents
+that EMTF-XML loads through the same ``Site``/``Sites`` boundary as
+EDI, alongside the separate airborne loading boundary.
 
 Added
 ~~~~~
@@ -214,6 +218,20 @@ Docs & tooling
   configuration, native-file construction, single-station and batch
   inversion, and text/image result products, with real captured output
   and figures against the Gabbs Valley survey.
+* |Docs| **``user_guide/airborne/`` completed** -- 6 pages (index,
+  overview, data_model, site, registry_and_io, quality_control), real
+  captured output and figures against the committed synthetic ZTEM/
+  AFMAG/MobileMT sample surveys, including a three-panel diagnostic
+  composite in ``site.rst`` that calls each technology's own
+  :mod:`pycsamt.emtools` literature-grade plotting function directly on
+  the containers this page builds.
+* |Docs| **``api/airborne.rst``** -- new API reference page for
+  :mod:`pycsamt.airborne`, registered in :doc:`/api/index`.
+* |Docs| **``user_guide/data_loading.rst``** now documents that
+  ``ensure_sites`` normalizes EMTF-XML exactly like EDI into the same
+  ``Sites`` container (with a symmetric write-back example), and
+  introduces ``ensure_asites`` as airborne surveys' own, separate
+  loading boundary.
 
 ----
 

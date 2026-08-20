@@ -30,6 +30,8 @@ the complete callable reference, see :doc:`../../api/emtools`.
    impedance
    tf
    afmag
+   ztem
+   mobilemt
    spectra
    source_effects
    source_array

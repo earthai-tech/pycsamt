@@ -12,7 +12,7 @@ see :doc:`getting_started/installation` instead.
 Requirements
 ------------
 
-* **Python 3.9 or later** (3.9–3.12 are tested in CI).
+* **Python 3.9 or later** (3.9–3.13 are tested in CI).
 * Linux, macOS, and Windows are supported for the Python package. External
   solver toolchains have additional platform requirements described below.
 * The core installation pulls in a deliberately small scientific stack:
@@ -51,10 +51,18 @@ Requirements
    * - scikit-learn
      - 1.1
      - Shared compatibility layer and machine-learning utilities
+   * - empymod
+     - 2.3.1
+     - Validated Hankel/Fourier digital linear filters behind
+       :class:`~pycsamt.forward.em1d.TEM1DForward`
+   * - h5py
+     - 3.8
+     - HDF5 elevation import/export (:mod:`pycsamt.map.topo`)
 
 Python 3.9 installations constrain NumPy to the 1.x line for compatibility
-with the supported Matplotlib and desktop stack. pip applies this marker
-automatically from the package metadata.
+with the supported Matplotlib and desktop stack, and use empymod 2.3.1 (the
+newest release with a Python 3.9 wheel) instead of 2.5+. pip applies both
+markers automatically from the package metadata.
 
 Standard Install
 ----------------
@@ -66,8 +74,8 @@ Standard Install
 
 ``full`` bundles ``torch``, ``geo``, ``dev``, ``docs``, ``app``, and
 ``agents``. It intentionally prefers the PyTorch backend. It does **not**
-include ``tensorflow`` or the separate ``agent-master`` application stack;
-add either one explicitly when required.
+include ``tensorflow``, the separate ``agent-master`` application stack, or
+the ``perf`` acceleration extra; add any of them explicitly when required.
 
 Optional Feature Groups
 -----------------------
@@ -89,8 +97,14 @@ Every group can be combined freely, for example
      - TensorFlow ≥ 2.10
      - The Keras/TensorFlow model backend
    * - ``geo``
-     - pyproj, xarray, contextily, h5py
-     - Reprojection, gridded data, web basemaps, and HDF5 elevation data
+     - pyproj ≥ 3.3, xarray ≥ 2022.6, contextily ≥ 1.6
+     - Reprojection, gridded data, and web basemaps (HDF5 elevation support
+       via ``h5py`` is part of the core install, not this extra)
+   * - ``perf``
+     - joblib ≥ 1.2, numba ≥ 0.58
+     - Optional acceleration for :mod:`pycsamt.models.occam1d`,
+       :mod:`pycsamt.agents.batch_survey`, and :mod:`pycsamt.pipeline`;
+       everything that uses them degrades gracefully without it
    * - ``agents``
      - anthropic, openai, google-generativeai
      - LLM-driven agents: Claude, OpenAI (and DeepSeek via the OpenAI SDK),
@@ -99,7 +113,8 @@ Every group can be combined freely, for example
      - PySide6, pyqtgraph, contextily
      - The native desktop application
    * - ``web``
-     - Dash, dash-bootstrap-components, Plotly, diskcache, Pillow
+     - Dash, dash-bootstrap-components, Flask, diskcache, multiprocess,
+       Plotly, Pillow
      - The Dash web dashboard
    * - ``app``
      - ``desktop`` + ``web``
@@ -108,14 +123,15 @@ Every group can be combined freely, for example
      - ``agents`` + Dash 4 stack
      - The Agent Master web application (chat-driven workflows)
    * - ``dev``
-     - pytest, pytest-cov, ruff, pre-commit
+     - pytest, pytest-cov, pytest-timeout, pytest-xdist, ruff, pre-commit
      - Running the test suite and contributing
    * - ``docs``
      - Sphinx, PyData theme, numpydoc, MyST, sphinx-design, ...
      - Building this documentation locally
    * - ``full``
      - ``torch`` + ``geo`` + ``dev`` + ``docs`` + ``app`` + ``agents``
-     - Broad development setup; excludes ``tensorflow`` and ``agent-master``
+     - Broad development setup; excludes ``tensorflow``, ``agent-master``,
+       and ``perf``
 
 Console Commands
 ----------------
@@ -244,6 +260,7 @@ Check optional pieces only if you installed them:
    import torch                    # [torch]
    import pyproj                   # [geo]
    import anthropic                # [agents]
+   import numba                    # [perf]
 
 For a backend-aware check, use the public backend registry:
 

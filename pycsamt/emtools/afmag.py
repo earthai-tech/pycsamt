@@ -5,29 +5,54 @@ r"""AFMAG-specific processing, diagnostics, and plotting.
 
 AFMAG (Audio-Frequency Magnetics) is a passive, magnetic-field-only
 method: there is no electric-field channel, so the usual impedance
-tensor ``Z`` is not part of its data model. What AFMAG *does* measure —
-whether the historical two-coil comparator or a modern tensor system
-such as ZTEM/AirMt — is, in modern MT terms, exactly the same object
-:class:`~pycsamt.site.base.Site` already carries as :attr:`Site.tipper`
-(the complex ``(Tzx, Tzy)`` pair, ``Hz = Tzx*Hx + Tzy*Hy``); pyCSAMT's
-own ZTEM adapter documents this equivalence explicitly (see
-:mod:`pycsamt.airborne.ztem`). This module is therefore built, like
-:mod:`pycsamt.emtools.tf`, entirely on :attr:`Site.tipper` — it never
-touches :attr:`Site.z`.
+tensor ``Z`` is not part of its data model. This module's own
+"Tilt-angle diagnostics" and "Motion-coupling QC" sections below are
+built, like :mod:`pycsamt.emtools.tf`, entirely on :attr:`Site.tipper`
+(the complex ``(Tzx, Tzy)`` pair, ``Hz = Tzx*Hx + Tzy*Hy``) — they
+never touch :attr:`Site.z`, and apply equally to ground data and to a
+ZTEM-style airborne tipper (see :mod:`pycsamt.airborne.ztem`, which
+documents that equivalence explicitly).
 
-Two genuinely different things live here side by side:
+That is deliberately *not* a claim that every real AFMAG measurement
+*is* a ``(Tzx, Tzy)`` tipper pair, though. :mod:`pycsamt.airborne.afmag`
+keeps two genuinely different response families, neither of them
+tipper-shaped:
+
+* the historical two-coil comparator (Ward 1959) reports a bare
+  scalar tilt/deflection angle -- one real number per frequency, no
+  input/output channels, no polarization-ellipse decomposition
+  possible at all;
+* modern tensor AFMAG/AirMt reports a complex ``(nf, 3, 2)``
+  interstation magnetic transfer function (ground-reference Hx,Hy ->
+  airborne Hx,Hy,Hz) plus a derived rotation-invariant amplification
+  parameter -- six components, not two.
+
+Section "AFMAG-family tilt diagnostics" below handles those two real
+shapes explicitly and separately (:func:`original_afmag_tilt_table`,
+:func:`airmt_tilt_angles`), reading them via
+:class:`~pycsamt.airborne.site.AirborneSite`'s
+:attr:`~pycsamt.airborne.site.AirborneSite.afmag_tilt_deg`/
+:attr:`~pycsamt.airborne.site.AirborneSite.interstation_tensor`
+rather than forcing either into the tipper-shaped functions above.
+
+Three genuinely different things live here side by side:
 
 * Sections "Tilt-angle diagnostics" and "Motion-coupling QC" are
-  ordinary ``emtools`` functions: they take ``sites`` (coerced through
-  :func:`~pycsamt.emtools._core.ensure_sites`, like every other
-  ``emtools`` function) and either return a
-  :class:`~pycsamt.site.base.Sites` (the one mutating function,
+  ordinary ``emtools`` functions built on the ZTEM-style tipper: they
+  take ``sites`` (coerced through
+  :func:`~pycsamt.emtools._core.ensure_any_sites`, like
+  :mod:`pycsamt.emtools.ztem`) and either return a ``Sites``-or-
+  ``AirborneSites`` container (the one mutating function,
   :func:`flag_motion_susceptible_band`) or a tidy
   :class:`pandas.DataFrame` (matching the convention already used by
   :func:`~pycsamt.emtools.spectra.psd_table`,
   :func:`~pycsamt.emtools.spectra.coherence_table`, and friends — not
-  every ``emtools`` "processing" function returns ``Sites``; only the
-  data-mutating ones do).
+  every ``emtools`` "processing" function returns a container; only
+  the data-mutating ones do).
+* Section "AFMAG-family tilt diagnostics" is built on the two real
+  AFMAG-family shapes described above instead, and therefore only
+  ever accepts :class:`~pycsamt.airborne.site.AirborneSites` (there
+  is no ground-EDI equivalent of either shape).
 * Section "Motion-coupling physics" implements the rotation-matrix /
   Euler-angle motion-induced-noise method of Liu et al. (2018) directly
   from their Eq. 1-14. These functions are deliberately **not**
@@ -82,7 +107,7 @@ from ._core import (
     _get_t_block,
     _iter_items,
     _name,
-    ensure_sites,
+    ensure_any_sites,
     hide_polar_radius_labels,
 )
 
@@ -95,8 +120,11 @@ __all__ = [
     "motion_coupling_angle",
     "simulate_motion_induced_voltage",
     "correct_motion_induced_noise",
-    # tilt-angle diagnostics
+    # tilt-angle diagnostics (ground / tipper-shaped)
     "afmag_tilt_angles",
+    # tilt-angle diagnostics (real AFMAG-family shapes)
+    "airmt_tilt_angles",
+    "original_afmag_tilt_table",
     # motion-coupling QC
     "motion_susceptibility_table",
     "flag_motion_susceptible_band",
@@ -104,6 +132,11 @@ __all__ = [
     "plot_afmag_tilt_profile",
     "plot_afmag_tilt_psection",
     "plot_afmag_tilt_polar",
+    "plot_airmt_tilt_profile",
+    "plot_airmt_tilt_psection",
+    "plot_original_afmag_tilt_profile",
+    "original_afmag_conductor_diagnostics",
+    "plot_original_afmag_dual_frequency_profile",
     "plot_motion_coupling",
     "plot_motion_susceptibility_map",
     "plot_afmag_correction_comparison",
@@ -472,11 +505,18 @@ def afmag_tilt_angles(
 
     Parameters
     ----------
-    sites : Sites-like
+    sites : Sites-like or AirborneSites-like
         Anything accepted by
-        :func:`~pycsamt.emtools._core.ensure_sites`.
+        :func:`~pycsamt.emtools._core.ensure_any_sites`. Ground
+        tipper-shaped input goes through
+        :class:`~pycsamt.site.base.Sites` as before; airborne input
+        goes through :class:`~pycsamt.airborne.site.AirborneSites`
+        but only finds data here when it carries a ZTEM-style
+        tipper transfer function -- see :func:`airmt_tilt_angles`/
+        :func:`original_afmag_tilt_table` for the real AFMAG-family
+        shapes instead.
     recursive, on_dup, strict, verbose
-        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_any_sites`.
 
     Returns
     -------
@@ -487,7 +527,7 @@ def afmag_tilt_angles(
         ``tilt_resultant_deg``. Stations with no tipper are omitted,
         not filled with a fabricated zero.
     """
-    S = ensure_sites(
+    S = ensure_any_sites(
         sites,
         recursive=recursive,
         on_dup=on_dup,
@@ -509,6 +549,140 @@ def afmag_tilt_angles(
             }
             row.update({key: float(val[k]) for key, val in comp.items()})
             rows.append(row)
+    return pd.DataFrame.from_records(rows)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# AFMAG-family tilt diagnostics (the two real, non-tipper shapes)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def airmt_tilt_angles(
+    sites: Any,
+    *,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> pd.DataFrame:
+    r"""Per-station, per-frequency tensor AFMAG/AirMt tilt angles.
+
+    Applies the exact same real/imaginary tilt-angle decomposition
+    as :func:`afmag_tilt_angles` (:func:`_tilt_components`) -- but to
+    the ``(Hzx, Hzy)`` row of
+    :attr:`~pycsamt.airborne.site.AirborneSite.interstation_tensor`
+    rather than to :attr:`~pycsamt.site.base.Site.tipper`. That row
+    is physically the same Hz-to-horizontal relation a ZTEM tipper
+    describes; the other two rows (``Hxx, Hxy, Hyx, Hyy``, the
+    horizontal-to-horizontal part of the tensor) are not used here.
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`. Sites with no
+        ``interstation_transfer_functions`` transfer function
+        attached (including original-comparator AFMAG sites -- see
+        :func:`original_afmag_tilt_table` for those) are silently
+        omitted, not filled with a fabricated zero.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.airborne.site.ensure_asites`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Same columns as :func:`afmag_tilt_angles`: ``station``,
+        ``freq``, ``period``, ``tilt_real_deg``,
+        ``tilt_real_azimuth_deg``, ``tilt_imag_deg``,
+        ``tilt_imag_azimuth_deg``, ``tilt_resultant_deg``.
+    """
+    from ..airborne.site import ensure_asites
+
+    S = ensure_asites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    rows: list[dict[str, Any]] = []
+    for ed in S:
+        tensor = ed.interstation_tensor
+        fr = ed.freq
+        if tensor is None or fr is None:
+            continue
+        t = np.asarray(tensor)[:, 2, :]  # (Hzx, Hzy), shape (nf, 2)
+        comp = _tilt_components(t)
+        for k in range(fr.size):
+            row = {
+                "station": ed.name,
+                "freq": float(fr[k]),
+                "period": float(1.0 / fr[k]) if fr[k] != 0 else np.nan,
+            }
+            row.update({key: float(val[k]) for key, val in comp.items()})
+            rows.append(row)
+    return pd.DataFrame.from_records(rows)
+
+
+def original_afmag_tilt_table(
+    sites: Any,
+    *,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> pd.DataFrame:
+    r"""Per-station, per-frequency original comparator AFMAG tilt table.
+
+    Reads :attr:`~pycsamt.airborne.site.AirborneSite.afmag_tilt_deg`
+    directly -- the historical comparator measurement already *is*
+    a tilt angle in degrees, not a complex tipper pair, so there is
+    no ``arctan``/decomposition step here the way there is in
+    :func:`afmag_tilt_angles`/:func:`airmt_tilt_angles`: a single
+    real number per frequency is all the instrument ever reported
+    (see the module docstring).
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`. Sites with no
+        ``afmag_tilt`` transfer function attached are silently
+        omitted, not filled with a fabricated zero.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.airborne.site.ensure_asites`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns: ``station``, ``freq``, ``period``, ``tilt_deg``.
+    """
+    from ..airborne.site import ensure_asites
+
+    S = ensure_asites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    rows: list[dict[str, Any]] = []
+    for ed in S:
+        tilt = ed.afmag_tilt_deg
+        fr = ed.freq
+        if tilt is None or fr is None:
+            continue
+        for k in range(fr.size):
+            rows.append(
+                {
+                    "station": ed.name,
+                    "freq": float(fr[k]),
+                    "period": (
+                        float(1.0 / fr[k]) if fr[k] != 0 else np.nan
+                    ),
+                    "tilt_deg": float(tilt[k]),
+                }
+            )
     return pd.DataFrame.from_records(rows)
 
 
@@ -593,9 +767,16 @@ def motion_susceptibility_table(
 
     Parameters
     ----------
-    sites : Sites-like
+    sites : Sites-like or AirborneSites-like
         Anything accepted by
-        :func:`~pycsamt.emtools._core.ensure_sites`.
+        :func:`~pycsamt.emtools._core.ensure_any_sites`. Ground
+        tipper-shaped input goes through
+        :class:`~pycsamt.site.base.Sites` as before; airborne input
+        goes through :class:`~pycsamt.airborne.site.AirborneSites`
+        but only finds data here when it carries a ZTEM-style
+        tipper transfer function -- see :func:`airmt_tilt_angles`/
+        :func:`original_afmag_tilt_table` for the real AFMAG-family
+        shapes instead.
     inclination, declination : float
         Geomagnetic inclination/declination in degrees, assumed
         common to the survey (a local, small-region approximation
@@ -608,7 +789,7 @@ def motion_susceptibility_table(
         for a z-axis coil (rotation about the coil's own normal), so
         this defaults to zero rather than an assumed value.
     recursive, on_dup, strict, verbose
-        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_any_sites`.
 
     Returns
     -------
@@ -617,7 +798,7 @@ def motion_susceptibility_table(
         ``cos_theta_min``, ``cos_theta_max``, ``susceptibility_score``
         (``cos_theta_max - cos_theta_min``; larger means more exposed).
     """
-    S = ensure_sites(
+    S = ensure_any_sites(
         sites,
         recursive=recursive,
         on_dup=on_dup,
@@ -657,11 +838,21 @@ def flag_motion_susceptible_band(
     For stations whose :func:`motion_susceptibility_table` score
     exceeds *threshold*, the tipper values within *band_hz* are either
     masked (set to ``nan``, distinguishing "suspect" from "measured
-    zero") or dropped entirely, mirroring the same
-    :func:`~pycsamt.emtools._core.ensure_sites` /
-    :func:`~pycsamt.emtools._core._apply_each` mutation contract used
-    by :func:`~pycsamt.emtools.remove_noise.notch_powerline` and
-    :func:`~pycsamt.emtools.remove_noise.drop_freqs_manual`.
+    zero") or dropped entirely. For ground ``Sites`` input, this
+    mirrors the same ``ensure_sites`` -> ``_apply_each`` mutation
+    contract used by
+    :func:`~pycsamt.emtools.remove_noise.notch_powerline` and
+    :func:`~pycsamt.emtools.remove_noise.drop_freqs_manual`. Only
+    ``action="mask"`` is offered for
+    :class:`~pycsamt.airborne.site.AirborneSites` input (see Raises),
+    matching :func:`~pycsamt.emtools.ztem.mask_outside_ztem_band`'s
+    identical restriction for the identical reason -- this function
+    only ever finds real tipper data on an ``AirborneSite`` in the
+    first place when it carries a ZTEM-style tipper transfer
+    function, since neither real AFMAG-family shape
+    (:attr:`~pycsamt.airborne.site.AirborneSite.afmag_tilt_deg`,
+    :attr:`~pycsamt.airborne.site.AirborneSite.interstation_tensor`)
+    is one.
 
     This does not attempt the paper's literal time-domain subtraction
     (see the module docstring for why: ``Sites`` carries no raw time
@@ -672,11 +863,21 @@ def flag_motion_susceptible_band(
 
     Parameters
     ----------
-    sites : Sites-like
+    sites : Sites-like or AirborneSites-like
         Anything accepted by
-        :func:`~pycsamt.emtools._core.ensure_sites`.
-    inclination, declination, roll_amplitude_deg, pitch_amplitude_deg,
-    yaw_amplitude_deg
+        :func:`~pycsamt.emtools._core.ensure_any_sites`. Ground
+        tipper-shaped input goes through
+        :class:`~pycsamt.site.base.Sites` as before; airborne input
+        goes through :class:`~pycsamt.airborne.site.AirborneSites`
+        but only finds data here when it carries a ZTEM-style
+        tipper transfer function -- see :func:`airmt_tilt_angles`/
+        :func:`original_afmag_tilt_table` for the real AFMAG-family
+        shapes instead.
+    inclination, declination : float
+        Forwarded to :func:`motion_susceptibility_table`.
+    roll_amplitude_deg, pitch_amplitude_deg : float
+        Forwarded to :func:`motion_susceptibility_table`.
+    yaw_amplitude_deg : float, default 0.0
         Forwarded to :func:`motion_susceptibility_table`.
     band_hz : (float, float), default (150.0, 510.0)
         Frequency band to flag on a susceptible station, in Hz.
@@ -702,8 +903,12 @@ def flag_motion_susceptible_band(
     Raises
     ------
     ValueError
-        If *action* is not ``"mask"`` or ``"drop"``.
+        If *action* is not ``"mask"`` or ``"drop"``, or if *action*
+        is ``"drop"`` and *sites* resolves to
+        :class:`~pycsamt.airborne.site.AirborneSites`.
     """
+    from ..airborne.site import AirborneSites
+
     action = str(action).strip().lower()
     if action not in {"mask", "drop"}:
         raise ValueError("action must be 'mask' or 'drop'")
@@ -747,13 +952,27 @@ def flag_motion_susceptible_band(
                     ed.freq = new_fr
         return Si
 
-    S = ensure_sites(
+    S = ensure_any_sites(
         sites,
         recursive=recursive,
         on_dup=on_dup,
         strict=strict,
         verbose=verbose,
     )
+    if isinstance(S, AirborneSites):
+        if action == "drop":
+            raise ValueError(
+                "action='drop' is not supported for AirborneSites "
+                "(it would leave the EMTF document's shared period "
+                "axis inconsistent with the tipper transfer "
+                "function's own periods); use action='mask' instead"
+            )
+        if not inplace:
+            import copy
+
+            S = copy.deepcopy(S)
+        _one(S)
+        return S
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
@@ -783,9 +1002,16 @@ def plot_afmag_tilt_profile(
 
     Parameters
     ----------
-    sites : Sites-like
+    sites : Sites-like or AirborneSites-like
         Anything accepted by
-        :func:`~pycsamt.emtools._core.ensure_sites`.
+        :func:`~pycsamt.emtools._core.ensure_any_sites`. Ground
+        tipper-shaped input goes through
+        :class:`~pycsamt.site.base.Sites` as before; airborne input
+        goes through :class:`~pycsamt.airborne.site.AirborneSites`
+        but only finds data here when it carries a ZTEM-style
+        tipper transfer function -- see :func:`airmt_tilt_angles`/
+        :func:`original_afmag_tilt_table` for the real AFMAG-family
+        shapes instead.
     component : {"real", "imag", "resultant"}, default "real"
         Which :func:`afmag_tilt_angles` column to plot.
     frequency_hz, period_s : float, optional
@@ -867,9 +1093,16 @@ def plot_afmag_tilt_psection(
 
     Parameters
     ----------
-    sites : Sites-like
+    sites : Sites-like or AirborneSites-like
         Anything accepted by
-        :func:`~pycsamt.emtools._core.ensure_sites`.
+        :func:`~pycsamt.emtools._core.ensure_any_sites`. Ground
+        tipper-shaped input goes through
+        :class:`~pycsamt.site.base.Sites` as before; airborne input
+        goes through :class:`~pycsamt.airborne.site.AirborneSites`
+        but only finds data here when it carries a ZTEM-style
+        tipper transfer function -- see :func:`airmt_tilt_angles`/
+        :func:`original_afmag_tilt_table` for the real AFMAG-family
+        shapes instead.
     component : {"real", "imag", "resultant"}, default "resultant"
         Which :func:`afmag_tilt_angles` column to image.
     cmap : str, default "RdYlBu_r"
@@ -976,7 +1209,7 @@ def plot_afmag_tilt_polar(
     cmap : str, default "viridis"
     figsize : (float, float), default (5.5, 5.5)
     recursive, on_dup, strict, verbose
-        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_any_sites`.
     ax : matplotlib.axes.Axes, optional
         Existing polar axes to draw on.
 
@@ -986,7 +1219,7 @@ def plot_afmag_tilt_polar(
     """
     import matplotlib.colors as mcolors
 
-    S = ensure_sites(
+    S = ensure_any_sites(
         sites,
         recursive=recursive,
         on_dup=on_dup,
@@ -1043,6 +1276,584 @@ def plot_afmag_tilt_polar(
     ax.set_title(f"{st} — AFMAG tilt polar [{component}]", fontsize=10)
     cbar = add_polar_colorbar(sc, ax, label=r"$\log_{10}T$ (s)")
     cbar.ax.tick_params(labelsize=7)
+    return ax
+
+
+def plot_airmt_tilt_profile(
+    sites: Any,
+    *,
+    component: str = "real",
+    frequency_hz: float | None = None,
+    period_s: float | None = None,
+    figsize: tuple[float, float] = (9.5, 4.0),
+    station_label_step: int | None = 1,
+    station_preset: str = "pseudosection",
+    station_style: Any | None = None,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
+    r"""Plot the tensor AFMAG/AirMt flight-line tilt-angle profile.
+
+    Direct AirMt-tensor analogue of :func:`plot_afmag_tilt_profile`;
+    see :func:`airmt_tilt_angles` for the underlying table.
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`.
+    component : {"real", "imag", "resultant"}, default "real"
+    frequency_hz, period_s : float, optional
+        Reference frequency/period; nearest available value is used
+        per station. At most one may be given; the median frequency
+        across all stations is used when neither is given.
+    figsize : (float, float), default (9.5, 4.0)
+        Used only when *ax* is not supplied.
+    station_label_step, station_preset, station_style
+        Forwarded to
+        :meth:`~pycsamt.api.station.PyCSAMTStationRendering.style_for`
+        via :func:`_apply_station_rendering`.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw on.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+    table = airmt_tilt_angles(sites)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    if table.empty:
+        ax.text(0.5, 0.5, "no interstation tensor data", ha="center",
+                 va="center")
+        return ax
+
+    col = {
+        "real": "tilt_real_deg",
+        "imag": "tilt_imag_deg",
+        "resultant": "tilt_resultant_deg",
+    }.get(component, "tilt_real_deg")
+
+    if frequency_hz is None and period_s is not None:
+        frequency_hz = 1.0 / max(float(period_s), 1e-24)
+    if frequency_hz is None:
+        frequency_hz = float(table["freq"].median())
+
+    stations = list(dict.fromkeys(table["station"]))
+    values = []
+    used_freqs = []
+    for station in stations:
+        sub = table[table["station"] == station]
+        idx = (sub["freq"] - frequency_hz).abs().idxmin()
+        values.append(float(sub.loc[idx, col]))
+        used_freqs.append(float(sub.loc[idx, "freq"]))
+
+    x = np.arange(len(stations))
+    _ml = PYCSAMT_STYLE.multiline
+    ax.axhline(0.0, color="0.85", lw=0.8)
+    ax.plot(x, values, lw=_ml.lw, alpha=_ml.alpha, marker="o")
+    _apply_station_rendering(
+        ax,
+        stations,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    ref = float(np.nanmedian(used_freqs))
+    ax.set_ylabel(f"AirMt tilt angle ({component}), deg")
+    ax.set_title(f"AirMt tilt profile at {ref:.4g} Hz", fontsize=10)
+    ax.grid(True, ls=":", alpha=0.35)
+    return ax
+
+
+def plot_original_afmag_tilt_profile(
+    sites: Any,
+    *,
+    frequency_hz: float | None = None,
+    period_s: float | None = None,
+    figsize: tuple[float, float] = (9.5, 4.0),
+    station_label_step: int | None = 1,
+    station_preset: str = "pseudosection",
+    station_style: Any | None = None,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
+    r"""Plot the original comparator AFMAG flight-line tilt profile.
+
+    Direct original-comparator analogue of
+    :func:`plot_afmag_tilt_profile`; see
+    :func:`original_afmag_tilt_table` for the underlying table. There
+    is no ``component`` argument here (unlike
+    :func:`plot_afmag_tilt_profile`/:func:`plot_airmt_tilt_profile`):
+    the historical measurement is a single real number per frequency,
+    not a complex pair with a real/imaginary/resultant split.
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`.
+    frequency_hz, period_s : float, optional
+        Reference frequency/period; nearest available value is used
+        per station. At most one may be given; the median frequency
+        across all stations is used when neither is given.
+    figsize : (float, float), default (9.5, 4.0)
+        Used only when *ax* is not supplied.
+    station_label_step, station_preset, station_style
+        Forwarded to
+        :meth:`~pycsamt.api.station.PyCSAMTStationRendering.style_for`
+        via :func:`_apply_station_rendering`.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw on.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+    table = original_afmag_tilt_table(sites)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    if table.empty:
+        ax.text(0.5, 0.5, "no original AFMAG tilt data", ha="center",
+                 va="center")
+        return ax
+
+    if frequency_hz is None and period_s is not None:
+        frequency_hz = 1.0 / max(float(period_s), 1e-24)
+    if frequency_hz is None:
+        frequency_hz = float(table["freq"].median())
+
+    stations = list(dict.fromkeys(table["station"]))
+    values = []
+    used_freqs = []
+    for station in stations:
+        sub = table[table["station"] == station]
+        idx = (sub["freq"] - frequency_hz).abs().idxmin()
+        values.append(float(sub.loc[idx, "tilt_deg"]))
+        used_freqs.append(float(sub.loc[idx, "freq"]))
+
+    x = np.arange(len(stations))
+    _ml = PYCSAMT_STYLE.multiline
+    ax.axhline(0.0, color="0.85", lw=0.8)
+    ax.plot(
+        x, values, lw=_ml.lw, alpha=_ml.alpha, marker="o", color="tab:blue"
+    )
+    _apply_station_rendering(
+        ax,
+        stations,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    ref = float(np.nanmedian(used_freqs))
+    ax.set_ylabel("Original AFMAG tilt angle (deg)")
+    ax.set_title(
+        f"Original comparator AFMAG tilt profile at {ref:.4g} Hz",
+        fontsize=10,
+    )
+    ax.grid(True, ls=":", alpha=0.35)
+    return ax
+
+
+def original_afmag_conductor_diagnostics(
+    sites: Any,
+    *,
+    freq_low_hz: float | None = None,
+    freq_high_hz: float | None = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> dict[str, Any]:
+    r"""Ward (1959)-style dual-frequency conductor diagnostics.
+
+    Reproduces the two semi-quantitative measurements Ward's own
+    worked example computes from a dual-frequency tilt profile
+    (Ward 1959, Fig. 16 and Results section (a)-(b)):
+
+    * the along-line **crossover position** at each frequency -- the
+      station-to-station zero-crossing of the signed
+      :func:`original_afmag_tilt_table` tilt angle nearest the
+      profile's own peak-to-trough swing, i.e. the conductor axis --
+      and the **shift** between the two frequencies' crossovers,
+      which Ward reads as evidence of inhomogeneity along the
+      conductor;
+    * the **peak-to-peak amplitude ratio** between the two
+      frequencies, :math:`(\max-\min)_{\text{low}} /
+      (\max-\min)_{\text{high}}`, Ward's semi-quantitative
+      conductivity indicator (his own worked example on a
+      pyrite-pyrrhotite body gives :math:`0.74`; values range from 0,
+      very poor, toward 1, excellent).
+
+    Ward's further estimates -- depth to the top of the conductor
+    from the crossover slope, depth extent from the profile's
+    beyond-peak slope, and dip from profile asymmetry -- all require
+    a scale-model calibration curve that the paper does not give in
+    closed form, so, matching this module's stated policy of not
+    inventing a formula the cited literature does not itself supply,
+    they are not computed here.
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`.
+    freq_low_hz, freq_high_hz : float, optional
+        The two frequencies to compare. Default to the minimum and
+        maximum frequency actually present (Ward's own instrument
+        always operated 150 and 510 Hz together, but this stays
+        general rather than hardcoding that pair).
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.airborne.site.ensure_asites`.
+
+    Returns
+    -------
+    dict
+        Keys: ``freq_low_hz``, ``freq_high_hz``, ``crossover_low_m``,
+        ``crossover_high_m`` (along-line position in metres, ``nan``
+        if the profile does not change sign), ``crossover_shift_m``
+        (``crossover_high_m - crossover_low_m``),
+        ``peak_to_peak_low``, ``peak_to_peak_high``,
+        ``peak_to_peak_ratio`` (degrees; ``low / high``), and
+        ``profile`` -- a :class:`pandas.DataFrame` with columns
+        ``station``, ``position_m``, ``tilt_low_deg``,
+        ``tilt_high_deg``, the shared input the companion plot
+        function draws from.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 distinct frequencies are present, or a
+        requested *freq_low_hz*/*freq_high_hz* is not found.
+    """
+    from ..airborne.site import ensure_asites
+    from ._core import _station_positions
+
+    S = ensure_asites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    items = list(S)
+    table = original_afmag_tilt_table(S)
+    freqs_available = np.sort(table["freq"].unique()) if not table.empty else np.array([])
+    if freqs_available.size < 2:
+        raise ValueError(
+            "original_afmag_conductor_diagnostics requires at least 2 "
+            f"distinct frequencies; found {freqs_available.size}"
+        )
+    f_lo = float(freqs_available[0]) if freq_low_hz is None else float(freq_low_hz)
+    f_hi = float(freqs_available[-1]) if freq_high_hz is None else float(freq_high_hz)
+
+    def _nearest_freq(target: float) -> float:
+        idx = int(np.argmin(np.abs(freqs_available - target)))
+        return float(freqs_available[idx])
+
+    f_lo, f_hi = _nearest_freq(f_lo), _nearest_freq(f_hi)
+
+    positions = _station_positions(items)
+    pos_by_station = {
+        ed.name: float(positions[i]) for i, ed in enumerate(items)
+    }
+    stations = list(dict.fromkeys(table["station"]))
+    rows = []
+    for station in stations:
+        sub = table[table["station"] == station]
+        row = {"station": station, "position_m": pos_by_station.get(station, np.nan)}
+        for label, f0 in (("tilt_low_deg", f_lo), ("tilt_high_deg", f_hi)):
+            idx = (sub["freq"] - f0).abs().idxmin()
+            row[label] = float(sub.loc[idx, "tilt_deg"])
+        rows.append(row)
+    profile = pd.DataFrame(rows).sort_values("position_m").reset_index(drop=True)
+
+    def _crossover(x: np.ndarray, y: np.ndarray) -> float:
+        if x.size < 2 or not np.any(np.isfinite(y)):
+            return float("nan")
+        i_max, i_min = int(np.nanargmax(y)), int(np.nanargmin(y))
+        lo, hi = (i_max, i_min) if i_max < i_min else (i_min, i_max)
+        for i in range(lo, hi):
+            y0, y1 = y[i], y[i + 1]
+            if not (np.isfinite(y0) and np.isfinite(y1)):
+                continue
+            if y0 == 0.0:
+                return float(x[i])
+            if np.sign(y0) != np.sign(y1):
+                t = y0 / (y0 - y1)
+                return float(x[i] + t * (x[i + 1] - x[i]))
+        return float("nan")
+
+    x = profile["position_m"].to_numpy()
+    y_lo = profile["tilt_low_deg"].to_numpy()
+    y_hi = profile["tilt_high_deg"].to_numpy()
+    cross_lo = _crossover(x, y_lo)
+    cross_hi = _crossover(x, y_hi)
+    pp_lo = float(np.nanmax(y_lo) - np.nanmin(y_lo)) if y_lo.size else float("nan")
+    pp_hi = float(np.nanmax(y_hi) - np.nanmin(y_hi)) if y_hi.size else float("nan")
+
+    return {
+        "freq_low_hz": f_lo,
+        "freq_high_hz": f_hi,
+        "crossover_low_m": cross_lo,
+        "crossover_high_m": cross_hi,
+        "crossover_shift_m": (
+            cross_hi - cross_lo
+            if np.isfinite(cross_lo) and np.isfinite(cross_hi)
+            else float("nan")
+        ),
+        "peak_to_peak_low": pp_lo,
+        "peak_to_peak_high": pp_hi,
+        "peak_to_peak_ratio": (
+            pp_lo / pp_hi if pp_hi not in (0.0, float("nan")) else float("nan")
+        ),
+        "profile": profile,
+    }
+
+
+def plot_original_afmag_dual_frequency_profile(
+    sites: Any,
+    *,
+    freq_low_hz: float | None = None,
+    freq_high_hz: float | None = None,
+    figsize: tuple[float, float] = (9.5, 4.5),
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
+    r"""Ward (1959) Fig. 16-style dual-frequency tilt-angle profile.
+
+    Plots both frequencies together along real chainage -- the
+    classic AFMAG field product, not a single-frequency curve -- and
+    marks the crossover ("axis of conductor") at each frequency using
+    :func:`original_afmag_conductor_diagnostics`, the same
+    interpretation Ward's own worked example applies.
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`.
+    freq_low_hz, freq_high_hz : float, optional
+        Forwarded to :func:`original_afmag_conductor_diagnostics`.
+    figsize : (float, float), default (9.5, 4.5)
+        Used only when *ax* is not supplied.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw on.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    try:
+        diag = original_afmag_conductor_diagnostics(
+            sites, freq_low_hz=freq_low_hz, freq_high_hz=freq_high_hz,
+        )
+    except ValueError:
+        ax.text(
+            0.5, 0.5, "no original AFMAG tilt data", ha="center",
+            va="center",
+        )
+        return ax
+
+    profile = diag["profile"]
+    x = profile["position_m"].to_numpy()
+    ax.axhline(0.0, color="0.85", lw=0.8)
+    ax.plot(
+        x, profile["tilt_low_deg"], "-", color="tab:blue", marker="o",
+        ms=4, label=f"{diag['freq_low_hz']:.0f} Hz",
+    )
+    ax.plot(
+        x, profile["tilt_high_deg"], "--", color="tab:red", marker="x",
+        ms=5, label=f"{diag['freq_high_hz']:.0f} Hz",
+    )
+    for cross, color in (
+        (diag["crossover_low_m"], "tab:blue"),
+        (diag["crossover_high_m"], "tab:red"),
+    ):
+        if np.isfinite(cross):
+            ax.axvline(cross, color=color, lw=1.0, ls=":", alpha=0.7)
+    if np.isfinite(diag["crossover_low_m"]):
+        ax.annotate(
+            "axis of\nconductor",
+            xy=(diag["crossover_low_m"], 0.0),
+            xytext=(0, 14),
+            textcoords="offset points",
+            ha="center",
+            fontsize=8,
+        )
+    ax.set_xlabel("Position along line (m)")
+    ax.set_ylabel("Tilt angle (deg)")
+    ratio = diag["peak_to_peak_ratio"]
+    ratio_txt = f"{ratio:.2f}" if np.isfinite(ratio) else "n/a"
+    ax.set_title(
+        "Original comparator AFMAG dual-frequency profile "
+        f"(peak-to-peak ratio {ratio_txt})",
+        fontsize=10,
+    )
+    ax.legend(fontsize=8, loc="best")
+    ax.grid(True, ls=":", alpha=0.35)
+    return ax
+
+
+def plot_airmt_tilt_psection(
+    sites: Any,
+    *,
+    component: str = "resultant",
+    cmap: str = "RdYlBu_r",
+    clim: tuple[float, float] | None = None,
+    clim_pct: tuple[float, float] = (2.0, 98.0),
+    show_grid: bool = True,
+    show_contour: bool = True,
+    n_contour_levels: int = 3,
+    figsize: tuple[float, float] = (9.0, 5.0),
+    station_label_step: int | None = 1,
+    station_preset: str = "pseudosection",
+    station_style: Any | None = None,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
+    r"""Plot an AirMt tilt-angle pseudosection (station x log-period).
+
+    Direct AirMt-tensor analogue of :func:`plot_afmag_tilt_psection`,
+    reading :func:`airmt_tilt_angles` instead -- the same
+    station-x-log-period layout every other airborne technology in
+    this project already gets
+    (:func:`~pycsamt.emtools.ztem.plot_ztem_divergence_psection`,
+    :func:`~pycsamt.emtools.mobilemt.plot_mobilemt_conductivity_psection`),
+    closing the one real gap left when only a single-frequency profile
+    (:func:`plot_airmt_tilt_profile`) existed for this technology.
+    The underlying image stays a plain :func:`~matplotlib.pyplot.imshow`
+    grid (matching the rest of this module's psection functions), with
+    two optional overlays matching the cell-boundary/level-line
+    convention already used for :mod:`pycsamt.emtools.fieldzone`'s own
+    ``imshow``/``contour`` pseudosections: cell-boundary gridlines
+    (*show_grid*) and white contour level lines with inline labels
+    (*show_contour*) tracing the same imaged field.
+
+    Parameters
+    ----------
+    sites : AirborneSites-like
+        Anything accepted by
+        :func:`~pycsamt.airborne.site.ensure_asites`.
+    component : {"real", "imag", "resultant"}, default "resultant"
+        Which :func:`airmt_tilt_angles` column to image.
+    cmap : str, default "RdYlBu_r"
+    clim : (float, float), optional
+        Explicit color limits; overrides *clim_pct*.
+    clim_pct : (float, float), default (2.0, 98.0)
+        Percentile color limits when *clim* is not given.
+    show_grid : bool, default True
+        Draw thin gridlines at every station/period cell boundary.
+    show_contour : bool, default True
+        Overlay *n_contour_levels* - 2 evenly-spaced contour lines
+        (dropping the two outermost levels, which would otherwise
+        hug the colour-scale edges) with inline value labels, tracing
+        the same imaged field -- a visual aid for the broad trend on
+        top of a necessarily coarse, noisy station/period grid, not a
+        claim of smooth structure between stations.
+    n_contour_levels : int, default 3
+        Number of evenly-spaced levels spanning the image's own
+        colour range before dropping the two outermost; must be at
+        least 3 for any contour line to be drawn.
+    figsize : (float, float), default (9.0, 5.0)
+        Used only when *ax* is not supplied.
+    station_label_step, station_preset, station_style
+        See :func:`plot_afmag_tilt_profile`.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw on.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    """
+    table = airmt_tilt_angles(sites)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    if table.empty:
+        ax.text(
+            0.5, 0.5, "no interstation tensor data", ha="center",
+            va="center",
+        )
+        return ax
+
+    col = {
+        "real": "tilt_real_deg",
+        "imag": "tilt_imag_deg",
+        "resultant": "tilt_resultant_deg",
+    }.get(component, "tilt_resultant_deg")
+
+    stations = list(dict.fromkeys(table["station"]))
+    freqs = np.sort(table["freq"].unique())[::-1]
+    grid = np.full((freqs.size, len(stations)), np.nan, dtype=float)
+    for j, station in enumerate(stations):
+        sub = table[table["station"] == station]
+        for _, row in sub.iterrows():
+            i = int(np.argmin(np.abs(freqs - row["freq"])))
+            grid[i, j] = row[col]
+
+    if clim is None:
+        finite = grid[np.isfinite(grid)]
+        vmin, vmax = (
+            np.percentile(finite, clim_pct) if finite.size else (0.0, 1.0)
+        )
+    else:
+        vmin, vmax = float(clim[0]), float(clim[1])
+
+    extent = (
+        -0.5,
+        len(stations) - 0.5,
+        np.log10(1.0 / freqs[0]),
+        np.log10(1.0 / freqs[-1]),
+    )
+    im = ax.imshow(
+        grid,
+        aspect="auto",
+        origin="upper",
+        interpolation="nearest",
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        extent=extent,
+    )
+    ax.set_ylabel(LOG10_PERIOD_LABEL)
+    ax.set_title(f"AirMt tilt pseudosection [{component}]", fontsize=10)
+
+    nf, ns = grid.shape
+    y_top, y_bottom = extent[3], extent[2]
+    dy = (y_top - y_bottom) / nf
+    y_centers = y_top - (np.arange(nf) + 0.5) * dy
+
+    if show_grid:
+        ax.set_xticks(np.arange(-0.5, ns, 1.0), minor=True)
+        ax.set_yticks(
+            y_top - np.arange(nf + 1) * dy, minor=True,
+        )
+        ax.grid(
+            which="minor", color="white", linewidth=0.6, alpha=0.6,
+        )
+        ax.tick_params(which="minor", length=0)
+
+    if show_contour and n_contour_levels >= 3 and nf >= 2 and ns >= 2:
+        finite = grid[np.isfinite(grid)]
+        if finite.size:
+            levels = np.linspace(
+                float(finite.min()), float(finite.max()), n_contour_levels,
+            )[1:-1]
+            if levels.size:
+                xx, yy = np.meshgrid(np.arange(ns), y_centers)
+                masked = np.ma.masked_invalid(grid)
+                cs = ax.contour(
+                    xx, yy, masked, levels=levels, colors="white",
+                    linewidths=0.8,
+                )
+                ax.clabel(cs, fmt="%.1f", fontsize=6, inline=True)
+
+    _apply_station_rendering(
+        ax,
+        stations,
+        station_label_step=station_label_step,
+        station_preset=station_preset,
+        station_style=station_style,
+    )
+    add_colorbar(im, ax, label="tilt angle (deg)")
     return ax
 
 
@@ -1137,8 +1948,11 @@ def plot_motion_susceptibility_map(
     Parameters
     ----------
     sites : Sites-like
-    inclination, declination, roll_amplitude_deg, pitch_amplitude_deg,
-    yaw_amplitude_deg
+    inclination, declination : float
+        Forwarded to :func:`motion_susceptibility_table`.
+    roll_amplitude_deg, pitch_amplitude_deg : float
+        Forwarded to :func:`motion_susceptibility_table`.
+    yaw_amplitude_deg : float, default 0.0
         Forwarded to :func:`motion_susceptibility_table`.
     cmap : str, default "magma_r"
     figsize : (float, float), default (7.0, 5.5)
@@ -1150,7 +1964,7 @@ def plot_motion_susceptibility_map(
     -------
     matplotlib.axes.Axes
     """
-    S = ensure_sites(sites, recursive=True, strict=False)
+    S = ensure_any_sites(sites, recursive=True, strict=False)
     table = motion_susceptibility_table(
         S,
         inclination=inclination,
@@ -1227,12 +2041,15 @@ def plot_afmag_correction_comparison(
         Already-corrected sites; computed from *before_sites* when
         omitted.
     component : {"real", "imag", "resultant"}, default "resultant"
-    inclination, declination, roll_amplitude_deg, pitch_amplitude_deg,
-    yaw_amplitude_deg
+    inclination, declination : float, optional
         Forwarded to :func:`flag_motion_susceptible_band` when
-        *after_sites* is omitted; *inclination*, *declination*,
-        *roll_amplitude_deg*, and *pitch_amplitude_deg* are then
-        required.
+        *after_sites* is omitted; required in that case.
+    roll_amplitude_deg, pitch_amplitude_deg : float, optional
+        Forwarded to :func:`flag_motion_susceptible_band` when
+        *after_sites* is omitted; required in that case.
+    yaw_amplitude_deg : float, default 0.0
+        Forwarded to :func:`flag_motion_susceptible_band` when
+        *after_sites* is omitted.
     cmap, delta_cmap : str
         Colormaps for the before/after and delta panels.
     figsize : (float, float), default (11.0, 8.2)

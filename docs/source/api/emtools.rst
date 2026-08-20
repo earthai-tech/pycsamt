@@ -24,6 +24,8 @@ Processing and QC
    :toctree: generated
 
    pycsamt.emtools.afmag
+   pycsamt.emtools.ztem
+   pycsamt.emtools.mobilemt
    pycsamt.emtools.inspect
    pycsamt.emtools.qc
    pycsamt.emtools.frequency

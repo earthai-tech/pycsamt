@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -252,6 +253,16 @@ def _get_t_block(
         if edi is not None:
             T = _first_attr(edi, ("Tipper", "tipper", "Tip"))
     if T is None:
+        # pycsamt.airborne.site.AirborneSite has no .Tipper/.Tip
+        # wrapper and no .edi bridge at all (that bridge is exactly
+        # what it exists to avoid) -- it exposes .tipper/.freq
+        # directly off its EMTF document instead. Use the site
+        # itself as the "T" handle so downstream mutation code (e.g.
+        # ztem.mask_outside_ztem_band) can still write back through
+        # AirborneSite.tipper's setter.
+        if _first_attr(ed, ("tipper",)) is not None:
+            T = ed
+    if T is None:
         return (
             (None, None, None) if not with_errors else (None, None, None, None)
         )
@@ -326,7 +337,12 @@ def _station_latlon_offsets(
     offsets: list[tuple[float, float] | None] = []
     zones: list[str | None] = []
     for ed in eds:
+        # Unchanged primary path: ground Site (or any bare EDI-like
+        # object exposing get_section()/HEAD lat-lon, as used by
+        # e.g. this module's own test fixtures) resolves through
+        # get_coords() exactly as before.
         edi = getattr(ed, "edi", ed)
+        cache_key = edi
         try:
             c = get_coords(edi)
             lat, lon = float(c.lat), float(c.lon)
@@ -334,11 +350,27 @@ def _station_latlon_offsets(
             lat, lon = float("nan"), float("nan")
 
         if not (np.isfinite(lat) and np.isfinite(lon)):
+            # AirborneSite (pycsamt.airborne.site) has no .edi at all
+            # for get_coords() to resolve anything from -- it exposes
+            # (lat, lon, elev) directly as .coords instead, the same
+            # fallback tf.py's own _station_xy already uses for
+            # exactly this reason. Only tried as a fallback here, so
+            # every existing get_coords()-resolvable case (including
+            # bare test fixtures with no .coords at all) is untouched.
+            coords = getattr(ed, "coords", None)
+            if coords is not None:
+                try:
+                    lat, lon = float(coords[0]), float(coords[1])
+                    cache_key = ed
+                except (TypeError, ValueError, IndexError):
+                    lat, lon = float("nan"), float("nan")
+
+        if not (np.isfinite(lat) and np.isfinite(lon)):
             offsets.append(None)
             zones.append(None)
             continue
 
-        cached = getattr(edi, _GEO_OFFSET_CACHE_ATTR, None)
+        cached = getattr(cache_key, _GEO_OFFSET_CACHE_ATTR, None)
         if cached is not None and cached[0] == lat and cached[1] == lon:
             _, _, east, north, zone = cached
         else:
@@ -350,7 +382,7 @@ def _station_latlon_offsets(
                 continue
             try:
                 setattr(
-                    edi,
+                    cache_key,
                     _GEO_OFFSET_CACHE_ATTR,
                     (lat, lon, east, north, zone),
                 )
@@ -556,3 +588,136 @@ default="replace"
     # that resolution in one place also preserves compatibility with custom
     # Sites-like implementations that expose the simple ``ordered(by)`` API.
     return S.ordered(order_by)
+
+
+def _looks_edi_incompatible(path: Any) -> bool | None:
+    """Peek at one EMTF-XML file to see if it needs ``AirborneSites``.
+
+    Returns ``True`` when the first matching file parses and has no
+    impedance transfer function -- the one condition
+    :func:`~pycsamt.emtf.converters.edi.emtf_to_edi` unconditionally
+    refuses (see :mod:`pycsamt.airborne.site`'s module docstring),
+    whatever the *other* transfer functions on the document are: a
+    ZTEM-style tipper, an AFMAG interstation tensor, or a bare
+    AFMAG scalar tilt with no transfer function at all besides
+    itself. Returns ``False`` when it parses and carries an
+    impedance TF (ordinary ground MT). Returns ``None`` when nothing
+    could be determined (not a path, no matching file, or the file
+    does not parse), in which case the caller should fall back to
+    the existing ground-``Sites`` behavior rather than guess.
+    """
+    p = Path(path)
+    if p.is_file():
+        candidate = p
+    elif p.is_dir():
+        found = sorted(p.rglob("*.xml")) or sorted(p.glob("*.xml"))
+        candidate = found[0] if found else None
+    else:
+        return None
+    if candidate is None:
+        return None
+    try:
+        from ..emtf.document import EMTF
+
+        doc = EMTF.from_xml(candidate)
+    except Exception:
+        return None
+    return doc.impedance is None
+
+
+def ensure_any_sites(
+    sites: Any,
+    *,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+):
+    r"""
+    Coerce to :class:`~pycsamt.site.base.Sites` or
+    :class:`~pycsamt.airborne.site.AirborneSites`, whichever fits.
+
+    Tipper-only technologies (ZTEM, AFMAG) can be delivered either
+    as ground-style EDI/EMTF-XML carrying an impedance transfer
+    function too (routes through the existing :func:`ensure_sites`),
+    or as genuinely tipper-only EMTF-XML with no electric channel at
+    all -- the case ``Sites``/``Site`` cannot represent (see
+    :mod:`pycsamt.airborne.site`'s module docstring). This function
+    is the single entry point tipper-based ``emtools`` functions
+    (:mod:`pycsamt.emtools.ztem`, and any future ``emtools`` module
+    facing the same choice) should coerce their ``sites`` parameter
+    through instead of calling :func:`ensure_sites` directly, so that
+    parameter stays a single, plainly-named argument accepting either
+    container rather than gaining a second, redundant one.
+
+    Parameters
+    ----------
+    sites : Any
+        Anything :func:`ensure_sites` accepts, plus anything
+        :func:`pycsamt.airborne.site.ensure_asites` accepts
+        (:class:`~pycsamt.airborne.AirborneEMLine`/``AirborneEMDataset``,
+        an existing
+        :class:`~pycsamt.airborne.site.AirborneSites`/``AirborneSite``,
+        or a path). A bare path/directory is routed to the airborne
+        side only when peeking at its first EMTF-XML file shows no
+        impedance transfer function at all -- whatever else the
+        document carries instead (a ZTEM-style tipper, an AFMAG
+        interstation tensor, a bare AFMAG scalar tilt); anything
+        else (including an ambiguous or unreadable peek) goes
+        through the unchanged, existing :func:`ensure_sites` path.
+    recursive, on_dup, strict, verbose
+        Forwarded to whichever of :func:`ensure_sites`/
+        :func:`~pycsamt.airborne.site.ensure_asites` is selected.
+
+    Returns
+    -------
+    pycsamt.site.base.Sites or pycsamt.airborne.site.AirborneSites
+
+    See Also
+    --------
+    ensure_sites : The ground-only entry point this wraps.
+    pycsamt.airborne.site.ensure_asites : The airborne-only entry
+        point this wraps.
+    """
+    from ..airborne.base import AirborneEMDataset, AirborneEMLine
+    from ..airborne.site import AirborneSite, AirborneSites, ensure_asites
+
+    _airborne_types = (
+        AirborneSites, AirborneEMLine, AirborneEMDataset, AirborneSite,
+    )
+
+    def _to_airborne():
+        return ensure_asites(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+
+    if isinstance(sites, _airborne_types):
+        return _to_airborne()
+
+    if isinstance(sites, (str, Path)):
+        if _looks_edi_incompatible(sites):
+            return _to_airborne()
+        return ensure_sites(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+
+    if isinstance(sites, (list, tuple)) and any(
+        isinstance(it, _airborne_types) for it in sites
+    ):
+        return _to_airborne()
+
+    return ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )

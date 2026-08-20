@@ -13,7 +13,14 @@ The public entry points are :func:`pycsamt.api.read_edi` for one EDI file and
 :func:`pycsamt.api.read_edis` for one or more files. ``read_edis`` returns an
 :class:`~pycsamt.api.APISurvey`: a stable survey view with station metadata, a
 compact inventory, and access to the underlying EDI collection when an
-advanced processing function requires it.
+advanced processing function requires it. Both are deliberately EDI-only --
+narrow, predictable, and unchanged below. Ground stations delivered as
+EMTF-XML instead of EDI, and airborne surveys with no EDI-shaped impedance at
+all, load through two further, equally stable boundaries introduced later on
+this page: :func:`pycsamt.emtools.ensure_sites` (:ref:`data-loading-xml`) and
+:func:`pycsamt.airborne.site.ensure_asites` (:ref:`data-loading-airborne`).
+Nothing about ``read_edi``/``read_edis``/``APISurvey`` changes because of
+either.
 
 Reading a survey directory
 --------------------------
@@ -162,7 +169,7 @@ EDI collection or a site container. For the processing-oriented ``Sites``
 representation, use the public normalization function described next.
 
 Normalizing inputs
---------------------
+------------------
 
 :func:`pycsamt.emtools.ensure_sites` is the public normalization boundary used
 by the electromagnetic processing tools. It accepts paths, an ``EDIFile`` or
@@ -216,6 +223,113 @@ value reports coercion and duplicate warnings. Import the function from
 ``pycsamt.emtools`` as shown above—the private implementation module is not a
 user-facing import path.
 
+.. _data-loading-xml:
+
+Loading EMTF-XML the same way
+-----------------------------
+
+``ensure_sites`` is not an EDI-only boundary. A directory, path, or object
+built from the modern EMTF-XML transfer-function format normalizes into the
+exact same :class:`~pycsamt.site.base.Sites` container, with no separate
+function to learn and no change to what a returned :class:`Site` can do.
+The examples below use the real Gabbs Valley station ``gv100`` (public-domain
+USGS data, `doi:10.5066/P9GZ9Z56 <https://doi.org/10.5066/P9GZ9Z56>`__),
+committed both as EDI (``data/gv_data/gv_final_edi/``) and as the three-
+station EMTF-XML subset pyCSAMT converted it to (``data/gv_data/xml/``):
+
+.. code-block:: pycon
+
+   >>> xml_sites = ensure_sites("data/gv_data/xml")
+   >>> type(xml_sites).__name__, len(xml_sites)
+   ('Sites', 3)
+   >>> sorted(s.name for s in xml_sites)
+   ['gv100', 'gv101', 'gv102']
+   >>> gv100 = xml_sites[0]
+   >>> gv100.backend
+   'xml'
+   >>> xml_summary = gv100.summary()
+   >>> xml_summary["name"], xml_summary["nfreq"], xml_summary["tipper"]
+   ('gv100', 48, True)
+   >>> xml_summary["components"]
+   ['Zxx', 'Zxy', 'Zyx', 'Zyy']
+
+:attr:`~pycsamt.site.base.Site.backend` is the only visible difference --
+``gv100``'s impedance (``Zxx``...``Zyy``) and tipper are both filled exactly
+as they would be from an EDI file, because every numeric accessor on
+:class:`~pycsamt.site.base.Site` (``z``, ``tipper``, ``rho``, ``phase``,
+:meth:`~pycsamt.site.base.Site.to_dataframe`) works identically regardless of
+which format is native. EMTF-XML also carries richer typed metadata than an
+EDI header can (site layout, provenance, processing history, per-component
+variance) through :attr:`~pycsamt.site.base.Site.site_meta`,
+:attr:`~pycsamt.site.base.Site.provenance`, and related properties -- the
+full lazy-materialization and metadata story, including how a
+:class:`Site` converts between the two representations on first access, is
+covered in :doc:`site/containers`; see :doc:`metadata/index` for what each
+metadata object holds.
+
+Writing back out is symmetric, not a one-way import. A :class:`Sites`
+collection converts to either format regardless of which one is native,
+because pyCSAMT round-trips EDI and EMTF-XML rather than treating one as
+authoritative:
+
+.. code-block:: pycon
+
+   >>> import tempfile
+   >>> from pathlib import Path
+   >>> with tempfile.TemporaryDirectory() as tmp:
+   ...     xml_paths = xml_sites.write_xml(tmp)
+   ...     edi_paths = xml_sites.write(tmp)
+   ...     xml_names = sorted(Path(p).name for p in xml_paths)
+   ...     edi_names = sorted(Path(p).name for p in edi_paths)
+   >>> xml_names
+   ['gv100.xml', 'gv101.xml', 'gv102.xml']
+   >>> edi_names
+   ['gv100.edi', 'gv101.edi', 'gv102.edi']
+
+``xml_sites`` above is XML-native, yet :meth:`~pycsamt.site.base.Sites.write`
+still produces genuine, re-readable EDI files, not placeholders -- the same
+:func:`~pycsamt.emtf.converters.edi.edi_to_emtf`/``emtf_to_edi`` conversion
+:doc:`site/containers` documents in full runs automatically underneath both
+calls. Nothing downstream needs to know or care which file format a survey
+originally arrived in.
+
+.. _data-loading-airborne:
+
+Loading airborne surveys
+------------------------
+
+Airborne EM (ZTEM, AFMAG, MobileMT) does not fit the ground-station model at
+all -- a genuine airborne measurement has no fixed electric-field channel, so
+there is no impedance to bridge into an EDI-shaped :class:`Site`, and forcing
+one would mean either bending ``Site`` until it stops meaning "ground EDI
+station" or fabricating data that was never actually measured. pyCSAMT keeps
+these as a parallel, EMTF-XML-only boundary instead:
+:func:`pycsamt.airborne.site.ensure_asites`, returning
+:class:`~pycsamt.airborne.site.AirborneSites` rather than ``Sites``:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.airborne.site import ensure_asites
+   >>> asites = ensure_asites("data/ZTEM/forrestania_wa")
+   >>> type(asites).__name__, len(asites), asites.technologies
+   ('AirborneSites', 15, ('ztem',))
+   >>> station = asites[0]
+   >>> station.name, station.technology
+   ('FO_001', 'ztem')
+   >>> station.z is None
+   True
+   >>> station.tipper.shape
+   (6, 1, 2)
+
+``station.z`` is ``None`` -- not a loading failure, but an honest
+reflection of what a ZTEM system actually records: a tipper relating the
+airborne vertical field to a fixed-ground horizontal reference, never an
+electric field. Reading synthetic sample surveys for all three airborne
+technologies, the technology-per-station auto-detection ``asites.technologies``
+performs above, and the structural quality-control layer this boundary feeds
+into are covered in full in :doc:`airborne/index`, starting with
+:doc:`airborne/site`.
+
 Preparing data for downstream science
 -------------------------------------
 
@@ -255,7 +369,9 @@ Common loading problems
 -----------------------
 
 No stations are returned
-   Confirm that the path exists and contains ``.edi`` files. Enable
+   Confirm that the path exists and contains files of the expected kind for
+   the boundary in use: ``.edi`` for ``read_edis``, ``.edi``/``.xml`` for
+   ``ensure_sites``, ``.xml`` for ``ensure_asites``. Enable
    ``recursive=True`` only if files are nested below the supplied directory.
    During diagnosis, use ``strict=False`` and a nonzero ``verbose`` value;
    restore ``strict=True`` for the reproducible pipeline.
@@ -276,10 +392,22 @@ Tipper, spectra, or time-series flags are false
    use only impedance, but any workflow requiring them must exclude or repair
    the affected stations explicitly.
 
+An ``AirborneSite``'s ``z`` is always ``None``
+   This is expected, not a loading failure -- see :ref:`data-loading-airborne`.
+   ZTEM, AFMAG, and MobileMT have no electric-field channel to build an
+   impedance from; check ``has_component("tipper")``/``"admittance"`` instead
+   of assuming ``z`` will ever populate.
+
 See also
 --------
 
 * :doc:`../getting_started/quickstart` — the shortest complete first workflow.
 * :doc:`../tutorials/read_edi_survey` — detailed EDI survey inspection.
+* :doc:`site/containers` — full ``Site``/``Sites`` EDI/EMTF-XML dual-backend
+  reference, including lazy materialization and the rich metadata properties.
+* :doc:`emtf/xml` — the EMTF-XML format itself, independent of ``Site``.
+* :doc:`airborne/index` — the airborne data model, starting with
+  :doc:`airborne/site` for reading real ZTEM/AFMAG/MobileMT sample surveys.
 * :doc:`../api/api` — public loading functions and survey-view API.
+* :doc:`../api/airborne` — the complete airborne callable reference.
 * :doc:`workflow_overview` — choose the route that matches your input and goal.

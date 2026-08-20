@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EM_TF>
+  <Description>SYNTHETIC DATA. Forward-modeled with a simplified skin-depth weighted analytic approximation for pyCSAMT documentation and testing only. Not a vendor delivery sample and not a reproduction of the cited paper's actual field data. Survey: Gold Springs ZTEM survey (synthetic). Loosely inspired by Legault, J.M., Zhao, S., and Fitch, R. (2012), ASEG 22nd Conference, Brisbane. Flight line gold_springs_nv_L4.</Description>
+  <ProductId>gold_springs_nv_L4.GO_L4_007</ProductId>
+  <SubType>ztem</SubType>
+  <Notes>
+    <ZTEM>
+      <PracticalFrequencyMinHz>22.0</PracticalFrequencyMinHz>
+      <PracticalFrequencyMaxHz>720.0</PracticalFrequencyMaxHz>
+      <TypicalFrequencyCountMin>5</TypicalFrequencyCountMin>
+      <TypicalFrequencyCountMax>6</TypicalFrequencyCountMax>
+      <TimeSeriesSamplingRateHz>2000.0</TimeSeriesSamplingRateHz>
+      <NominalOutputRateHz>2.5</NominalOutputRateHz>
+      <InputChannels>Hx,Hy</InputChannels>
+      <OutputChannels>Hz</OutputChannels>
+      <TransferFunction>Hz = Tzx*Hx + Tzy*Hy</TransferFunction>
+      <ReferenceStationId>GOLD_SPRINGS_NV_BASE</ReferenceStationId>
+      <ReferenceLatitude>37.98269493352497</ReferenceLatitude>
+      <ReferenceLongitude>-114.15569831252199</ReferenceLongitude>
+      <ReferenceElevation>1720.0</ReferenceElevation>
+      <ReferenceDatum>WGS84</ReferenceDatum>
+      <LineId>gold_springs_nv_L4</LineId>
+    </ZTEM>
+  </Notes>
+  <Tags>ztem,tipper</Tags>
+  <Site>
+    <Project>pycsamt synthetic airborne demo</Project>
+    <Survey>Gold Springs ZTEM survey (synthetic)</Survey>
+    <YearCollected>2011</YearCollected>
+    <Country>USA</Country>
+    <Id>GO_L4_007</Id>
+    <Name>GO_L4_007</Name>
+    <Location datum="WGS84">
+      <Latitude>37.98</Latitude>
+      <Longitude>-114.146581012487</Longitude>
+      <Elevation units="meters">1750</Elevation>
+    </Location>
+    <Orientation angle_to_geographic_north="90">orthogonal</Orientation>
+    <AcquiredBy>pycsamt.examples (synthetic)</AcquiredBy>
+  </Site>
+  <ProcessingInfo>
+    <SignConvention>exp(- i\omega t)</SignConvention>
+    <RemoteRef type="fixed_ground_horizontal_magnetic" />
+    <RemoteInfo>
+      <Site>
+        <Id>GOLD_SPRINGS_NV_BASE</Id>
+      </Site>
+    </RemoteInfo>
+    <ProcessedBy>pycsamt synthetic data generator</ProcessedBy>
+    <ProcessingSoftware>
+      <Name>pycsamt.scripts.airborne.generate_synthetic_survey_xml</Name>
+    </ProcessingSoftware>
+    <ProcessingTag>gold_springs_nv_synthetic_v1</ProcessingTag>
+  </ProcessingInfo>
+  <StatisticalEstimates>
+    <Estimate name="VAR" type="real">
+      <Description>Variance</Description>
+      <Intention>error estimate</Intention>
+      <Tag>variance</Tag>
+    </Estimate>
+  </StatisticalEstimates>
+  <DataTypes>
+    <DataType name="T" type="complex" output="H" input="H" units="[]">
+      <Description>Vertical field transfer functions (tipper)</Description>
+      <Intention>primary data type</Intention>
+      <Tag>tipper</Tag>
+    </DataType>
+  </DataTypes>
+  <Data count="6">
+    <Period value="0.0333333333333333" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.031182485267113039 0.0039492564180324125</value>
+        <value name="Ty" output="Hz" input="Hy">-0.0086360145566659555 -0.0022386861483035371</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.0222222222222222" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.039845957984662679 -0.015252092399826559</value>
+        <value name="Ty" output="Hz" input="Hy">0.0011602050270564839 0.014474436303868177</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.0111111111111111" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.038365144369359894 -0.016529428436848348</value>
+        <value name="Ty" output="Hz" input="Hy">-0.01010156118023868 -0.0086250059289140046</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.00555555555555556" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.055966590815087695 0.0013935670492380772</value>
+        <value name="Ty" output="Hz" input="Hy">0.0058077733601784188 -0.015118809914398561</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.00277777777777778" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.028337524078163402 0.001946359768723406</value>
+        <value name="Ty" output="Hz" input="Hy">-0.010073386657868551 -0.024366024011140203</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+    <Period value="0.00138888888888889" units="secs">
+      <T type="complex" size="1 2" units="[]">
+        <value name="Tx" output="Hz" input="Hx">-0.057237772242152173 -0.001919570902384711</value>
+        <value name="Ty" output="Hz" input="Hy">-0.015776946367756339 0.0059508817651743795</value>
+      </T>
+      <T.VAR type="real" size="1 2">
+        <value name="Tx" output="Hz" input="Hx">0.0001</value>
+        <value name="Ty" output="Hz" input="Hy">0.0001</value>
+      </T.VAR>
+    </Period>
+  </Data>
+  <PeriodRange min="0.00138888888888889" max="0.0333333333333333" />
+</EM_TF>

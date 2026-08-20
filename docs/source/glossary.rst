@@ -2189,6 +2189,48 @@ definitions here are the single source of truth.
       response. Its energy concentrates at low frequency, where it can
       dominate a genuine natural-source AFMAG signal [Liu2018]_.
 
+   Interstation transfer function
+      A complex frequency-domain relation between magnetic fields
+      recorded at two different locations, rather than between the
+      electric and magnetic field at one location (contrast
+      :term:`Impedance tensor`). Tensor AFMAG/AirMt's
+      :math:`(n_f, 3, 2)` response -- ground-reference horizontal
+      :math:`H_x, H_y` mapped to airborne :math:`H_x, H_y, H_z` -- is
+      one; see :doc:`user_guide/emtools/afmag`.
+
+   Amplification parameter
+      A rotation-invariant complex quantity derived from an AirMt
+      :term:`Interstation transfer function`'s two column vectors,
+      :math:`AP = (T_1 \times T_2) \cdot \mathrm{Re}(T_1 \times
+      T_2)\,/\,|\mathrm{Re}(T_1 \times T_2)|`. Being a normalized
+      projection rather than a raw amplitude, it does not track target
+      strength the way the tensor's vertical-field row does; see
+      :doc:`user_guide/emtools/afmag` for a real comparison.
+
+   Admittance tensor
+      The complex transfer function relating a fixed ground electric
+      dipole pair :math:`(E_x, E_y)` to an airborne three-component
+      magnetic field :math:`(H_x, H_y, H_z)`, measured by MobileMT
+      [Prikhodko2022]_. In the limit where the airborne and ground
+      sensors are co-located it reduces to the classical MT admittance
+      :math:`Y = Z^{-1}`, the reciprocal of the :term:`Impedance
+      tensor` -- unlike a :term:`Tipper` or
+      :term:`Interstation transfer function`, which relate magnetic
+      field to magnetic field and never involve an electric field at
+      all. See :doc:`theory/airborne` for the full derivation and
+      :mod:`pycsamt.emtools.mobilemt` for the implementation.
+
+   Total divergence
+   Peaker
+      The along-line horizontal derivative of an airborne tipper
+      component, :math:`\partial T_{zx}/\partial x` (Lo and Zang
+      2008). Sattel and Witherly (2012) note that for a single flight
+      line this coincides with the VLF-style "Peaker"
+      (Pedersen et al. 1994): both convert a raw tipper crossover
+      anomaly into a peak/trough centred on the causative contact,
+      making the anomaly's along-line position easier to read than
+      from the raw crossover alone. See :doc:`user_guide/emtools/ztem`.
+
    Strike
    Geoelectric strike
       The azimuth of the principal geoelectric direction, estimated from the

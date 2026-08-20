@@ -63,6 +63,11 @@ Frequently asked questions
            <div class="pyc-faq-answer"><p>Some plotting, geospatial, AI, and application features use optional dependencies. Read the error for the missing package or extra, install only the feature set you need, then restart the Python process so imports are refreshed.</p><p class="pyc-faq-next"><b>Next:</b> see <a href="getting_started/installation.html">installation and optional dependencies</a>.</p></div>
          </details>
 
+         <details class="pyc-faq-item" data-faq-item data-topic="start errors">
+           <summary><span>Do I need Numba or joblib installed?</span><span class="pyc-faq-badge">Optional</span></summary>
+           <div class="pyc-faq-answer"><p>No. The <code>perf</code> extra (<code>python -m pip install "pycsamt[perf]"</code>) adds optional Numba/joblib acceleration for <code>pycsamt.models.occam1d</code>, batch survey agents, and pipeline execution. Everything that can use them degrades gracefully to a slower pure-Python/NumPy path when they are absent -- <code>perf</code> is a convenience, never a hard requirement, and it is not part of the <code>full</code> extra.</p><p class="pyc-faq-next"><b>Details:</b> <a href="installation.html#optional-feature-groups">the optional feature groups table</a>.</p></div>
+         </details>
+
          <details class="pyc-faq-item" data-faq-item data-topic="start data">
            <summary><span>Why does a table-returning function give me an APIFrame instead of a plain pandas DataFrame?</span><span class="pyc-faq-badge pyc-faq-badge--popular">Key concept</span></summary>
            <div class="pyc-faq-answer"><p>Most dataframe-returning functions accept an <code>api</code> keyword that defaults to <code>api=None</code>, which resolves through the package-wide <code>PYCSAMT_API_VIEW</code> switch -- and that switch defaults to <code>"pycsamt"</code>, not <code>"pandas"</code>. A bare call is therefore already wrapped into an <code>APIFrame</code> (or <code>APIResult</code> for multi-table workflows) unless you pass <code>api=False</code> for the raw <code>DataFrame</code>, or disable wrapping globally with <code>configure_api_view(backend=False)</code>.</p><p class="pyc-faq-next"><b>Next:</b> read <a href="api_guide/views.html">API views</a> for the full behaviour, including custom wrappers.</p></div>
@@ -208,6 +213,30 @@ Frequently asked questions
            <summary><span>I have raw Stratagem/Zonge hardware field data, not EDI -- is there a complete worked example?</span><span class="pyc-faq-badge">Tutorial</span></summary>
            <div class="pyc-faq-answer"><p>Yes. A full tutorial covers a real field survey from raw Stratagem hardware output through <code>StratagemRawReader</code>, injecting surveyed coordinates with <code>CoordinateInjector</code>, static-shift correction, frequency filtering, noise removal, QC export, and an Occam2D inversion using the vendored, compilable solver. It also shows cross-checking the correction against an independent tool and against pyCSAMT's own log-frequency smoothing.</p><p class="pyc-faq-next"><b>Follow:</b> <a href="tutorials/process_stratagem_dafang_to_inversion.html">processing Stratagem field data to inversion</a>.</p></div>
          </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="data start">
+           <summary><span>Does pyCSAMT read modern EMTF-XML files, or only classic EDI?</span><span class="pyc-faq-badge">New</span></summary>
+           <div class="pyc-faq-answer"><p>Both, through the same boundary. <code>Site</code>/<code>Sites</code> now wrap either format via a lazy dual backend: whichever representation was not natively supplied is materialized from the other on first access and cached, so every existing EDI-only accessor (<code>z</code>, <code>tipper</code>, <code>rho</code>, <code>phase</code>) keeps working unchanged. <code>ensure_sites</code> normalizes a single <code>.xml</code> file, an <code>EMTF</code> object, or a directory mixing <code>*.edi</code> and <code>*.xml</code> files into the same <code>Sites</code> container -- no separate function to learn, and nothing downstream needs to know which format a station arrived in.</p><p class="pyc-faq-next"><b>Read:</b> <a href="user_guide/data_loading.html#data-loading-xml">loading EMTF-XML the same way</a> and <a href="user_guide/site/containers.html">the full Site/Sites XML reference</a>.</p></div>
+         </details>
+       </section>
+
+       <section class="pyc-faq-group" data-faq-group>
+         <h2><i class="fa-solid fa-tower-broadcast" aria-hidden="true"></i> Airborne EM (ZTEM, AFMAG, MobileMT)</h2>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="data start">
+           <summary><span>Does pyCSAMT support airborne EM surveys like ZTEM, AFMAG, or MobileMT?</span><span class="pyc-faq-badge">New</span></summary>
+           <div class="pyc-faq-answer"><p>Yes. <code>pycsamt.airborne</code> is a technology-neutral data model built directly on <code>EMTF</code> documents -- flight lines, datasets, a technology/format registry, and structural QC -- with no EDI bridge and no impedance requirement, since a genuine airborne measurement rarely has one. Three technology subpackages (<code>pycsamt.airborne.afmag</code>, <code>.ztem</code>, <code>.mobilemt</code>) map each system's decoded response onto that shared model.</p><p class="pyc-faq-next"><b>Start:</b> <a href="user_guide/airborne/index.html">the airborne EM guide</a>, beginning with <a href="user_guide/airborne/overview.html">the data-model overview</a>.</p></div>
+         </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="data processing">
+           <summary><span>How do I read a directory of airborne EMTF-XML files?</span><span class="pyc-faq-badge">Tool</span></summary>
+           <div class="pyc-faq-answer"><p><code>pycsamt.airborne.site.ensure_asites</code> is the airborne counterpart of <code>ensure_sites</code>: point it at a directory of EMTF-XML files and it returns an <code>AirborneSites</code> collection with each station's technology auto-detected from its document, ready for the same kind of selection, mapping, and export operations ground <code>Sites</code> already support.</p><p class="pyc-faq-next"><b>See it read real sample surveys:</b> <a href="user_guide/airborne/site.html">the airborne site view</a>.</p></div>
+         </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="data errors">
+           <summary><span>Why is an airborne station's <code>z</code> always <code>None</code>?</span><span class="pyc-faq-badge pyc-faq-badge--warning">Not a bug</span></summary>
+           <div class="pyc-faq-answer"><p>ZTEM, AFMAG, and MobileMT have no electric-field channel, so there is no impedance to build. An <code>AirborneSite</code> deliberately never fabricates one -- check <code>has_component("tipper")</code> or <code>"admittance"</code> instead of assuming <code>z</code> will populate. ZTEM/AFMAG carry a tipper or interstation tensor; MobileMT carries a ground-electric-to-airborne-magnetic admittance tensor, a genuinely different physical quantity from either.</p><p class="pyc-faq-next"><b>Understand the four response shapes:</b> <a href="user_guide/airborne/site.html#four-response-families">one container, four response families</a>.</p></div>
+         </details>
        </section>
 
        <section class="pyc-faq-group" data-faq-group>
@@ -250,6 +279,11 @@ Frequently asked questions
          <details class="pyc-faq-item" data-faq-item data-topic="inversion processing">
            <summary><span>When should I use AI inversion?</span><span class="pyc-faq-badge pyc-faq-badge--pro">Advanced</span></summary>
            <div class="pyc-faq-answer"><p>Use AI methods when training coverage, validation design, uncertainty reporting, and deployment constraints are explicit. Always benchmark against a classical method and test domain shift. For a new survey or limited training data, a classical baseline is usually the more interpretable starting point.</p><p class="pyc-faq-next"><b>Evaluate:</b> <a href="user_guide/ai_inversion/index.html">AI inversion guidance</a>.</p></div>
+         </details>
+
+         <details class="pyc-faq-item" data-faq-item data-topic="inversion solvers start">
+           <summary><span>Do I need an external Occam1D binary for 1-D inversion?</span><span class="pyc-faq-badge">New</span></summary>
+           <div class="pyc-faq-answer"><p>No, not unless you want one. <code>pycsamt.models.occam1d</code> is a native, pure Python/NumPy 1-D Occam smooth-model engine -- forward model, analytic Jacobian, roughness regularization, and the nonlinear Occam loop are all implemented directly, with no compiled dependency. <code>Occam1DRunner</code> remains available for driving an external <code>Occam1D</code>-compatible executable instead, if you already have one and prefer it.</p><p class="pyc-faq-next"><b>Walk through it:</b> <a href="user_guide/models/occam1d.html">configuration, single-station, and batch inversion</a>.</p></div>
          </details>
        </section>
 

@@ -312,6 +312,41 @@ data/MT/SPECTRA/*
 !data/MT/SPECTRA/spectra02.edi
 !data/MT/SPECTRA/README.md
 
+# Exception: synthetic ZTEM, MobileMT, and AFMAG EMTF-XML sample
+# data. No vendor delivery sample exists for any of these
+# technologies (see pycsamt.airborne.mobilemt's module docstring);
+# these station XML files are forward-modeled from published survey/
+# target parameters by
+# scripts/airborne/generate_synthetic_survey_xml.py for the future
+# user_guide/airborne/ documentation. Track every generated file; the
+# reference PDFs sitting alongside them stay local-only.
+!data/ZTEM
+data/ZTEM/*
+!data/ZTEM/gold_springs_nv
+data/ZTEM/gold_springs_nv/*
+!data/ZTEM/gold_springs_nv/*.xml
+!data/ZTEM/forrestania_wa
+data/ZTEM/forrestania_wa/*
+!data/ZTEM/forrestania_wa/*.xml
+
+!data/mobileMT
+data/mobileMT/*
+!data/mobileMT/flammefjeld_greenland
+data/mobileMT/flammefjeld_greenland/*
+!data/mobileMT/flammefjeld_greenland/*.xml
+!data/mobileMT/timiskaming_kimberlite_on
+data/mobileMT/timiskaming_kimberlite_on/*
+!data/mobileMT/timiskaming_kimberlite_on/*.xml
+
+!data/AFMAG
+data/AFMAG/*
+!data/AFMAG/abitibi_on
+data/AFMAG/abitibi_on/*
+!data/AFMAG/abitibi_on/*.xml
+!data/AFMAG/yulong_belt_cn
+data/AFMAG/yulong_belt_cn/*
+!data/AFMAG/yulong_belt_cn/*.xml
+
 # Exception: bundled CSAMT survey (Tongkeng area, Hunan Province, China)
 # used by pycsamt.seg true-file tests (edi_csamt_file / any_edi_file
 # fixtures in conftest.py) and CSAMT theory/user-guide examples. Published

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EM_TF>
+  <Description>SYNTHETIC DATA. Forward-modeled with a simplified skin-depth weighted analytic approximation for pyCSAMT documentation and testing only. Not a vendor delivery sample and not a reproduction of the cited paper's actual field data. Survey: Flammefjeld MobileMT survey (synthetic). Loosely inspired by Zhdanov, M.S., Gribenko, A., Prikhodko, A., Sabra, H.E., Jorgensen, M., and Cox, L.H. (2024), 1st ASEG DISCOVER Symposium.</Description>
+  <ProductId>flammefjeld_greenland.FL_004</ProductId>
+  <SubType>mobilemt</SubType>
+  <Notes>
+    <MobileMT>
+      <NominalFrequencyMinHz>19.0</NominalFrequencyMinHz>
+      <NominalFrequencyMaxHz>26000.0</NominalFrequencyMaxHz>
+      <NominalMaxFrequencyWindows>30</NominalMaxFrequencyWindows>
+      <NominalSamplingRateHz>73728.0</NominalSamplingRateHz>
+      <InputChannels>Ex,Ey</InputChannels>
+      <OutputChannels>Hx,Hy,Hz</OutputChannels>
+      <ReferenceStationId>FLAMMEFJELD_GREENLAND_BASE</ReferenceStationId>
+      <ReferenceLatitude>67.50718648939993</ReferenceLatitude>
+      <ReferenceLongitude>-32.02816880269227</ReferenceLongitude>
+      <ReferenceElevation>630.0</ReferenceElevation>
+      <ReferenceDatum>WGS84</ReferenceDatum>
+      <ApparentConductivitySm>0.001910086296,0.00184123327,0.001894180402,0.00191464438,0.001896941727,0.001930400456,0.001849532926,0.001918428692,0.001830018914,0.001819154421</ApparentConductivitySm>
+    </MobileMT>
+  </Notes>
+  <Tags>mobilemt,mobilemt_admittance</Tags>
+  <Site>
+    <Project>pycsamt synthetic airborne demo</Project>
+    <Survey>Flammefjeld MobileMT survey (synthetic)</Survey>
+    <YearCollected>2023</YearCollected>
+    <Country>Greenland</Country>
+    <Id>FL_004</Id>
+    <Name>FL_004</Name>
+    <Location datum="WGS84">
+      <Latitude>67.5</Latitude>
+      <Longitude>-31.9929577993269</Longitude>
+      <Elevation units="meters">650</Elevation>
+    </Location>
+    <AcquiredBy>pycsamt.examples (synthetic)</AcquiredBy>
+  </Site>
+  <ProcessingInfo>
+    <SignConvention>exp(- i\omega t)</SignConvention>
+    <RemoteRef type="fixed_ground_horizontal_electric" />
+    <RemoteInfo>
+      <Site>
+        <Id>FLAMMEFJELD_GREENLAND_BASE</Id>
+      </Site>
+    </RemoteInfo>
+    <ProcessedBy>pycsamt synthetic data generator</ProcessedBy>
+    <ProcessingSoftware>
+      <Name>pycsamt.scripts.airborne.generate_synthetic_survey_xml</Name>
+    </ProcessingSoftware>
+    <ProcessingTag>flammefjeld_greenland_synthetic_v1</ProcessingTag>
+  </ProcessingInfo>
+  <DataTypes>
+    <DataType name="Y" type="complex" output="H" input="E">
+      <Description>MobileMT magnetic-to-electric admittance with horizontal electric inputs and three-component magnetic outputs</Description>
+      <Intention>primary data type</Intention>
+      <Tag>mobilemt_admittance</Tag>
+    </DataType>
+  </DataTypes>
+  <Data count="10">
+    <Period value="0.04" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">-8.3729607789808334e-05 -0.00028423806716094919</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.002789121507039769 0.0026013833499198154</value>
+        <value name="Yyx" output="Hy" input="Ex">0.0028671032736034999 -0.0028856775217600186</value>
+        <value name="Yyy" output="Hy" input="Ey">-9.7403640247219555e-05 -0.0002744234298796586</value>
+        <value name="Yzx" output="Hz" input="Ex">-2.789121507039769e-05 2.6013833499198154e-05</value>
+        <value name="Yzy" output="Hz" input="Ey">2.8671032736035e-05 -2.8856775217600185e-05</value>
+      </Y>
+    </Period>
+    <Period value="0.0201439343920066" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">-0.00018067792476706481 -0.00011486586297216884</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.0019388716108143934 0.0019764697053455387</value>
+        <value name="Yyx" output="Hy" input="Ex">0.0018383668543413237 -0.0020364248810619701</value>
+        <value name="Yyy" output="Hy" input="Ey">-0.00018466670386133046 -0.00012483772202194496</value>
+        <value name="Yzx" output="Hz" input="Ex">-1.9388716108143935e-05 1.9764697053455388e-05</value>
+        <value name="Yzy" output="Hz" input="Ey">1.8383668543413239e-05 -2.0364248810619701e-05</value>
+      </Y>
+    </Period>
+    <Period value="0.0101444523197366" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">1.2040375590016301e-05 -1.1100434213027645e-05</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.0013309995745967528 0.0013147849081980708</value>
+        <value name="Yyx" output="Hy" input="Ex">0.0013639202357434591 -0.0014522716222679284</value>
+        <value name="Yyy" output="Hy" input="Ey">1.1396932438433322e-05 -1.250942981824464e-05</value>
+        <value name="Yzx" output="Hz" input="Ex">-1.3309995745967528e-05 1.3147849081980709e-05</value>
+        <value name="Yzy" output="Hz" input="Ey">1.363920235743459e-05 -1.4522716222679284e-05</value>
+      </Y>
+    </Period>
+    <Period value="0.00510872954929035" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">4.7640743536689315e-05 0.00011084591941049054</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.00098076178062296029 0.0010230070941722829</value>
+        <value name="Yyx" output="Hy" input="Ex">0.0010111417696712856 -0.00096212497484146815</value>
+        <value name="Yyy" output="Hy" input="Ey">4.9526536332010155e-05 0.0001024589477162781</value>
+        <value name="Yzx" output="Hz" input="Ex">-9.8076178062296039e-06 1.0230070941722828e-05</value>
+        <value name="Yzy" output="Hz" input="Ey">1.0111417696712855e-05 -9.621249748414681e-06</value>
+      </Y>
+    </Period>
+    <Period value="0.00257274782168526" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">4.53651043957943e-05 -2.8093980226553145e-05</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.00068171406787794733 0.00069092623006370671</value>
+        <value name="Yyx" output="Hy" input="Ex">0.00070114855691294899 -0.00069702709417520672</value>
+        <value name="Yyy" output="Hy" input="Ey">4.1223544205943887e-05 -2.4078744737855744e-05</value>
+        <value name="Yzx" output="Hz" input="Ex">-6.8171406787794735e-06 6.9092623006370671e-06</value>
+        <value name="Yzy" output="Hz" input="Ey">7.0114855691294903e-06 -6.9702709417520674e-06</value>
+      </Y>
+    </Period>
+    <Period value="0.00129563158318014" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">2.5683159768018766e-05 -4.9604785989981608e-07</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.0004920031573247875 0.00049440543162892949</value>
+        <value name="Yyx" output="Hy" input="Ex">0.00049663751788238831 -0.00045701714628656418</value>
+        <value name="Yyy" output="Hy" input="Ey">2.403529022444372e-05 -2.1503001944469764e-06</value>
+        <value name="Yzx" output="Hz" input="Ex">-4.9200315732478753e-06 4.9440543162892953e-06</value>
+        <value name="Yzy" output="Hz" input="Ey">4.9663751788238835e-06 -4.5701714628656422e-06</value>
+      </Y>
+    </Period>
+    <Period value="0.00065247794019481" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">5.6408205462729725e-06 -1.8270245802666185e-05</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.00034506833807690824 0.00034500512518652836</value>
+        <value name="Yyx" output="Hy" input="Ex">0.00034491743936086597 -0.00034442945334360836</value>
+        <value name="Yyy" output="Hy" input="Ey">5.3481681181388554e-06 -1.8121364021319989e-05</value>
+        <value name="Yzx" output="Hz" input="Ex">-3.4506833807690823e-06 3.4500512518652836e-06</value>
+        <value name="Yzy" output="Hz" input="Ey">3.4491743936086598e-06 -3.4442945334360837e-06</value>
+      </Y>
+    </Period>
+    <Period value="0.000328586820487897" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">-1.3567622687782888e-05 1.7425440716642819e-06</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.00026249311723446517 0.00023681680131127538</value>
+        <value name="Yyx" output="Hy" input="Ex">0.00023618325080880677 -0.00023998697087078419</value>
+        <value name="Yyy" output="Hy" input="Ey">-1.3838632392897035e-05 1.9931733747045667e-06</value>
+        <value name="Yzx" output="Hz" input="Ex">-2.6249311723446518e-06 2.368168013112754e-06</value>
+        <value name="Yzy" output="Hz" input="Ey">2.3618325080880679e-06 -2.399869708707842e-06</value>
+      </Y>
+    </Period>
+    <Period value="0.000165475783849656" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">1.1083468141837699e-05 4.4803208795493671e-06</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.00017579886550772892 0.00018216856391415855</value>
+        <value name="Yyx" output="Hy" input="Ex">0.00017355866837701775 -0.00017027914469562903</value>
+        <value name="Yyy" output="Hy" input="Ey">1.0507041904592824e-05 4.3918410248737236e-06</value>
+        <value name="Yzx" output="Hz" input="Ex">-1.7579886550772892e-06 1.8216856391415855e-06</value>
+        <value name="Yzy" output="Hz" input="Ey">1.7355866837701774e-06 -1.7027914469562904e-06</value>
+      </Y>
+    </Period>
+    <Period value="8.33333333333333e-05" units="secs">
+      <Y type="complex" size="3 2">
+        <value name="Yxx" output="Hx" input="Ex">2.4352306623402299e-06 -4.3826954326912008e-06</value>
+        <value name="Yxy" output="Hx" input="Ey">-0.0001298318729892833 0.00012106711718686581</value>
+        <value name="Yyx" output="Hy" input="Ex">0.00012168175598288319 -0.00012502012544436629</value>
+        <value name="Yyy" output="Hy" input="Ey">2.3780987188983817e-06 -4.1982514800975751e-06</value>
+        <value name="Yzx" output="Hz" input="Ex">-1.2983187298928331e-06 1.2106711718686582e-06</value>
+        <value name="Yzy" output="Hz" input="Ey">1.2168175598288319e-06 -1.2502012544436629e-06</value>
+      </Y>
+    </Period>
+  </Data>
+  <PeriodRange min="8.33333333333333e-05" max="0.04" />
+</EM_TF>

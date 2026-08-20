@@ -134,6 +134,9 @@ docs = [
     "sphinx-gallery>=0.17",
     "sphinx-autodoc-typehints>=2.0",
     "sphinx-autobuild>=2024.2",
+    # docs/source/_ext/guide_toc_accordion.py rewrites the rendered
+    # pycsamt-guide-toc outline into collapsible <details> disclosures.
+    "beautifulsoup4>=4.12",
     # Interactive map gallery (docs/examples/map_3d): Plotly figures are
     # scraped as HTML embeds; Kaleido is used for static image export.
     "plotly>=5.24",

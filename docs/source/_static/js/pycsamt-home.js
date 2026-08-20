@@ -98,21 +98,40 @@
     }
 
     /* ---- 4. rotating hero keyword --------------------------------------- */
+    /* Ground methods (CSAMT/AMT/MT/TDEM/CSEM) keep the default accent
+     * colour; airborne EM methods (AFMAG/ZTEM/MobileMT), listed
+     * separately via data-airborne-words, get the .is-airborne colour
+     * instead, so the rotator visibly flags the category switch. */
     var rotator = home.querySelector(".pyc-rotator");
-    if (rotator && !reduceMotion) {
+    if (rotator) {
       var words;
       try {
         words = JSON.parse(rotator.getAttribute("data-words") || "[]");
       } catch (e) {
         words = [];
       }
-      if (words.length > 1) {
+      var airborneWords;
+      try {
+        airborneWords = JSON.parse(
+          rotator.getAttribute("data-airborne-words") || "[]"
+        );
+      } catch (e) {
+        airborneWords = [];
+      }
+      var airborneSet = new Set(airborneWords);
+      var syncAirborne = function (word) {
+        rotator.classList.toggle("is-airborne", airborneSet.has(word));
+      };
+      syncAirborne(rotator.textContent.trim());
+
+      if (!reduceMotion && words.length > 1) {
         var idx = 0;
         window.setInterval(function () {
           rotator.classList.add("is-swapping");
           window.setTimeout(function () {
             idx = (idx + 1) % words.length;
             rotator.textContent = words[idx];
+            syncAirborne(words[idx]);
             rotator.classList.remove("is-swapping");
           }, 270);
         }, 2600);

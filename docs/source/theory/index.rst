@@ -22,6 +22,7 @@ diagnostic plot.
    prerequisites
    constants
    csamt_amt_mt_overview
+   airborne
    field_zones
    impedance_tensor
    dimensionality

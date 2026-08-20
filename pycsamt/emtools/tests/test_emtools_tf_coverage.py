@@ -328,6 +328,31 @@ class TestPlotInductionSection:
         plt.close("all")
         assert ax is ax_in
 
+    def test_accepts_airborne_sites(self):
+        from pycsamt.airborne import NavigationTrack
+        from pycsamt.airborne.site import AirborneSites
+        from pycsamt.airborne.ztem import build_ztem_line
+
+        freqs = np.array([30.0, 90.0, 270.0])
+        n = 5
+        nav = NavigationTrack(
+            sample_ids=tuple(f"S{i}" for i in range(n)),
+            easting=np.arange(n, dtype=float) * 100.0,
+            northing=np.zeros(n),
+        )
+        tipper = np.zeros((n, freqs.size, 2), dtype=complex)
+        tipper[..., 0] = 0.1 + 0.05j
+        tipper[..., 1] = 0.05 - 0.02j
+        line = build_ztem_line("L001", nav, tipper, frequency=freqs)
+        asites = AirborneSites.from_line(line, technology="ztem")
+
+        ax = plot_induction_section(asites)
+        plt.close("all")
+        assert ax is not None
+        assert "no tipper" not in (
+            ax.texts[0].get_text() if ax.texts else ""
+        )
+
     def test_custom_title(self):
         sites = _profile(3, n=16)
         ax = plot_induction_section(sites, title="My section")

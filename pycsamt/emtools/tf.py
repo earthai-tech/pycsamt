@@ -23,6 +23,7 @@ from ._core import (
     _get_z_block,
     _iter_items,
     _name,
+    ensure_any_sites,
     ensure_sites,
     hide_polar_radius_labels,
 )
@@ -848,6 +849,12 @@ def plot_induction_section(
     Parameters
     ----------
     sites : Sites-like
+        Anything accepted by
+        :func:`~pycsamt.emtools._core.ensure_any_sites`: ground
+        :class:`~pycsamt.site.base.Sites` (impedance/tipper) or
+        tipper-only :class:`~pycsamt.airborne.site.AirborneSites`
+        (ZTEM/AFMAG) transparently -- both expose a ``(nf, 1, 2)``
+        tipper, the only shape this plot reads.
     component : {'real', 'imag', 'abs'}
     n_periods : int
     cmap : str
@@ -859,7 +866,7 @@ def plot_induction_section(
     -------
     ax : Axes
     """
-    S = ensure_sites(
+    S = ensure_any_sites(
         sites,
         recursive=recursive,
         on_dup=on_dup,

@@ -12,7 +12,7 @@ User Guide
 .. toctree::
    :numbered: 4
    :maxdepth: 3
-   :class: pycsamt-guide-toc
+   :class: pycsamt-guide-toc pycsamt-guide-toc-root
 
    workflow_overview
    data_loading
@@ -25,6 +25,7 @@ User Guide
    iot/index
    stratagem/index
    emtools/index
+   airborne/index
    site/index
    metadata/index
    emtf/index

@@ -77,6 +77,7 @@ extensions = [
     "gallery_hub",  # compact animated-card landing page for examples/
     "public_api_catalog",  # grouped public modules/classes/functions tables
     "code_dropdown",  # accessible collapsible long-source listings
+    "guide_toc_accordion",  # collapsible sub-branches on pycsamt-guide-toc
 ]
 
 # -- sphinx-copybutton -----------------------------------------------------

@@ -292,6 +292,34 @@ from .source_effects import (
     source_overprint_table,
 )
 
+# ─── MobileMT (admittance tables, determinant σ_a, skew, band QC) ────────────
+from .mobilemt import (
+    admittance_determinant_table,
+    admittance_skew_table,
+    admittance_table,
+    ensure_mobilemt_dataset,
+    mask_outside_mobilemt_band,
+    plot_mobilemt_admittance_profile,
+    plot_mobilemt_conductivity_psection,
+    plot_mobilemt_skew_profile,
+)
+
+# ─── ZTEM (along-profile divergence, phase rotation, band QC) ────────────────
+from .ztem import (
+    mask_outside_ztem_band,
+    phase_rotate_table,
+    plot_ztem_band_mask_psection,
+    plot_ztem_divergence_profile,
+    plot_ztem_divergence_psection,
+    plot_ztem_divergence_psection_grid,
+    plot_ztem_flight_lines,
+    plot_ztem_map,
+    plot_ztem_phase_rotation_profile,
+    plot_ztem_tipper_profile,
+    total_divergence_table,
+    ztem_crossover_diagnostics,
+)
+
 # ─── Cross-spectra analysis and visualisation ────────────────────────────────
 from .spectra import (
     band_select,
@@ -709,5 +737,26 @@ __all__ = [
     "plot_tf_coherence_network",
     "plot_z_invariants_section",
     "plot_zt_argand",
-    
+    # ZTEM
+    "ztem_crossover_diagnostics",
+    "total_divergence_table",
+    "phase_rotate_table",
+    "mask_outside_ztem_band",
+    "plot_ztem_tipper_profile",
+    "plot_ztem_divergence_profile",
+    "plot_ztem_divergence_psection",
+    "plot_ztem_divergence_psection_grid",
+    "plot_ztem_phase_rotation_profile",
+    "plot_ztem_band_mask_psection",
+    "plot_ztem_flight_lines",
+    "plot_ztem_map",
+    # MobileMT
+    "ensure_mobilemt_dataset",
+    "admittance_table",
+    "admittance_determinant_table",
+    "admittance_skew_table",
+    "mask_outside_mobilemt_band",
+    "plot_mobilemt_admittance_profile",
+    "plot_mobilemt_conductivity_psection",
+    "plot_mobilemt_skew_profile",
 ]

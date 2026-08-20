@@ -68,6 +68,10 @@
   # the .python-version file at the repo root instead; keep both in sync.
   PYTHON_VERSION = "3.12"
   PIP_DISABLE_PIP_VERSION_CHECK = "1"
+  # Repo-relative (not ~/.cache/pip) so the cache plugin below can persist it
+  # without guessing the build image's home directory. Skips re-downloading
+  # the CPU torch wheel (~190 MB) and the rest of .[docs,geo] every build.
+  PIP_CACHE_DIR = ".cache/pip"
 
 # Persists the listed directories in Netlify's build cache. The plugin is a
 # community package, so it must be declared in package.json (repo root) for
@@ -79,6 +83,7 @@
 
   [plugins.inputs]
     paths = [
+      ".cache/pip", # pip download/wheel cache (PIP_CACHE_DIR above)
       "docs/build", # doctrees + environment pickle + written html
       "docs/source/examples", # sphinx-gallery's own generated/skip-cache copy
       "docs/examples/**/edi_out",

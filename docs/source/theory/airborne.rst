@@ -20,8 +20,12 @@ those objects relate to the impedance-tensor formalism the rest of
 the documentation builds around. The worked, code-driven
 demonstrations live on their own pages --
 :doc:`../user_guide/emtools/afmag` and
-:doc:`../user_guide/emtools/ztem` -- and are cross-referenced rather
-than repeated here.
+:doc:`../user_guide/emtools/ztem`. For a broader, general-audience introduction to
+how airborne and ground geophysical surveys are designed and read --
+useful background before the pyCSAMT-specific physics below -- see
+UBC-GIF's open `Geophysical Surveys
+<https://em.geosci.xyz/content/geophysical_surveys/index.html>`__
+overview on GeoSci.xyz.
 
 Why A Natural Source Can Be Flown
 ---------------------------------

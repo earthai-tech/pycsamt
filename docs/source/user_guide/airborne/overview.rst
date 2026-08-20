@@ -1,7 +1,10 @@
 .. _user_guide_airborne_overview:
 
 Airborne Data Model Overview
-=============================
+============================
+
+Core Containers
+---------------
 
 The core containers are technology-neutral:
 :class:`~pycsamt.airborne.NavigationTrack` for one flight line's
@@ -25,6 +28,9 @@ dispatched (:doc:`registry_and_io`), and :mod:`~pycsamt.airborne.qc`
 assesses structural completeness and metadata consistency without
 inventing technology-specific signal thresholds (:doc:`quality_control`).
 
+Technology Subpackages
+----------------------
+
 Three technology subpackages map decoded scientific arrays onto this
 model, each with its own ``build_*_line``/``build_*_dataset``
 constructors and a ``*SystemSpec`` describing the real instrument's
@@ -42,6 +48,9 @@ every subpackage above only maps already-decoded arrays onto the
 common model. Synthetic sample surveys for all three are committed
 under ``data/ZTEM/``, ``data/AFMAG/``, and ``data/mobileMT/``, and are
 used throughout this section's pages.
+
+Where To Go Next
+----------------
 
 This section only covers the data model itself. For the science --
 reading the sample surveys, computing tilt/divergence/admittance

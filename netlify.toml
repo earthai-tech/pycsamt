@@ -59,9 +59,25 @@
   # examples out of order across worker processes -- a separate hazard
   # from sphinx_gallery_conf's "parallel" option (see conf.py), which is
   # already deliberately left disabled for the same reason. The inversion
-  # section's plot_4 -> plot_5 -> plot_6 examples share files on disk
-  # (each writes what the next reads), so reading must stay serial.
-  command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && python -m sphinx -b html docs/source docs/build/html"
+  # section's plot_1 -> ... -> plot_11 examples are one sequential l18
+  # case-study chain sharing files on disk under
+  # docs/examples/inversion/workspaces/ (each script reads what an
+  # earlier one wrote), so reading must stay serial.
+  #
+  # rm -rf below, always run before sphinx: persisting
+  # docs/source/examples (sphinx-gallery's own md5-stamped skip-cache,
+  # see the cache plugin below) hit a real inconsistency for exactly this
+  # chain on 2026-08-20 -- some inversion scripts were restored with a
+  # skip-worthy cached md5 while their corresponding
+  # docs/examples/inversion/workspaces/ state was not restored alongside
+  # it (that gitignored directory had no cache history of its own yet),
+  # so a later script in the chain ran for real, found its input missing,
+  # and failed. Forcibly clearing both the generated cache and the
+  # on-disk workspace for this one section before every build guarantees
+  # the whole chain is always self-consistent -- an 11-script re-run is a
+  # small, bounded cost, well inside the time budget the pip/docs/build
+  # caches free up elsewhere.
+  command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && rm -rf docs/source/examples/inversion docs/examples/inversion/workspaces && python -m sphinx -b html docs/source docs/build/html"
 
 [build.environment]
   # Python runtime on Netlify's build image. Newer (mise-based) images read

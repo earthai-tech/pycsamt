@@ -23,7 +23,7 @@ unnoticed bugs, one in :class:`~pycsamt.models.modem.model3d.ModEmModel3D`
 and one in the web 3-D view's topography uploader. A new user-guide page
 and a bundled conversion demo round out the release. Separately, running
 real, full-scale Occam2D and ModEM 3-D inversions against a real 128-station
-survey surfaced and fixed three more real solver-launch bugs, including a
+survey surfaced and fixed four more real solver-launch bugs, including a
 new :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl` that
 finally lets a 3-D covariance file reach Mod3DMT at all.
 
@@ -142,14 +142,14 @@ own uploader while working fine through :func:`pycsamt.map.topo.apply_elevations
 "Upload file" source elsewhere in the package. It now delegates to the
 shared parser entirely.
 
-Three real Occam2D/ModEM solver bugs found running real inversions |Fix|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Four real Occam2D/ModEM solver bugs found running real inversions |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Running a full 5-line Occam2D inversion and a block-wide ModEM 3-D
 inversion against the real WILLY_DATA survey (128 stations) -- both
 against the vendored, natively compiled ``Occam2D.exe``/``Mod3DMT.exe``
 binaries, not a Python re-implementation -- exercised configurations no
-existing test had reached, and surfaced three more real, previously
+existing test had reached, and surfaced four more real, previously
 unnoticed bugs.
 
 Both :meth:`~pycsamt.models.occam2d.mesh.OccamMesh.from_data` and
@@ -189,8 +189,39 @@ needed to reach the covariance file.
 auto-write or reference a default forward-control file whenever
 ``covariance=`` is supplied without an explicit ``fwd_control=``, and
 :class:`~pycsamt.models.modem.builder.InputBuilder` writes one for every
-3-D build alongside the covariance file. All three fixes were confirmed
-via real solver runs, not just the test suite.
+3-D build alongside the covariance file.
+
+The fourth was caught by comparing the new forward-control file's own
+printed diagnostic against what had actually been written to it: Mod3DMT
+echoed a real ``1e-7`` tolerance back as ``0.1000000E-13``, a
+six-order-of-magnitude corruption. Fortran's ``G`` edit descriptor on
+*input* requires an explicit decimal point in the field, or the format's
+own decimal-digit count silently re-places one -- and Python's ``%g``
+formatting (used by both :meth:`ModEmControl.write`'s and
+:meth:`ModEmForwardControl.write`'s previous implementation) omits the
+decimal point for whole numbers (``10.0`` -> ``"10"``) and many
+small-magnitude exponentials (``1e-7`` -> ``"1e-07"``). The real,
+already-running ``ModEM.inv`` on disk had exactly this: ``Initial damping
+factor lambda: 10``, ``To update lambda divide by: 100``, and -- most
+consequentially -- ``Exit search when rms is less than: 1``, meaning
+``target_rms`` itself had been silently corrupted in every prior run, a
+strong candidate for the real root cause of the earlier stuck-optimizer
+symptom (RMS frozen across three full iterations while the damping
+parameter exploded from ``1e-6`` to ``1e9``) -- independent of, and
+arguably more consequential than, the covariance-argument bug above.
+ModEM's own usage-text examples in ``UserCtrl.f90`` confirm this was
+always a real requirement: every example value includes a decimal point,
+even whole numbers (``"1."``, ``"10."``, ``"1.0e-7"``, never ``"1"``,
+``"10"``, or ``"1e-7"``). Both writers now use ``%.6E`` scientific
+notation, which always includes a literal ``.``; new regression tests
+assert every float field parses with a decimal point present, including
+the exact values that regressed. Verified end-to-end against the real
+compiled Mod3DMT: its own diagnostic now echoes back ``1e-7``, ``1e-5``,
+``10.0``, ``100.0``, and ``1.0`` exactly, for every previously-corrupted
+field.
+
+All four fixes were confirmed via real solver runs, not just the test
+suite.
 
 New user guide page and conversion demo |Docs|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -282,6 +313,18 @@ Fixed
   columns.
 * |Fix| **ModEM 3-D covariance file was unreachable from ``ModEmRunner``**
   -- see the summary above; fixed via the new ``ModEmForwardControl``.
+* |Fix| **``ModEmControl``/``ModEmForwardControl`` numeric fields lost
+  their decimal point, silently corrupting real solver runs** -- Fortran's
+  ``G`` edit descriptor on input requires an explicit decimal point or the
+  format's own decimal-digit count re-places one; Python's ``%g``
+  formatting omits it for whole numbers (``10.0`` -> ``"10"``) and many
+  small exponentials (``1e-7`` -> ``"1e-07"``). Confirmed live: a real
+  Mod3DMT echoed a written ``1e-7`` back as ``0.1000000E-13``, and the
+  already-running ``ModEM.inv`` had ``target_rms`` itself written as a
+  bare ``"1"`` -- a likely root cause of an earlier stuck-optimizer run
+  (RMS frozen while lambda exploded to ``1e9``). Both writers now use
+  ``%.6E``, which always includes a literal ``.``; new regression tests
+  assert every float field parses with a decimal point present.
 
 Docs & tooling
 ~~~~~~~~~~~~~~
@@ -322,14 +365,19 @@ pure bug fix: any upload that previously failed silently due to a
 ``station_names`` column now parses correctly; no previously-working
 upload is affected.
 
-The air-layer and ``ModEmControl`` column-width fixes change on-disk file
-*content* written by ``OccamMesh.from_data``/``ModEmModel3D.halfspace``/
-``ModEmControl.write`` -- both changes make files that a real Occam2D/ModEM
-solver could not run at all now runnable, so no working file set regresses.
-``ModEmRunner.run``/``.command`` and ``InputBuilder.build``/
-``.build_from_data`` gain a purely additive, keyword-only ``fwd_control``
-parameter; 3-D builds now also return a ``"fwd_control"`` key in the
-returned file mapping alongside ``"covariance"`` -- code that reads
-specific keys out of that mapping is unaffected, but an exact
-``set(files) == {...}``/``sorted(files) == [...]`` comparison against a
-3-D build's result should include ``"fwd_control"``.
+The air-layer, ``ModEmControl`` column-width, and decimal-point fixes
+change on-disk file *content* written by ``OccamMesh.from_data``/
+``ModEmModel3D.halfspace``/``ModEmControl.write``/
+``ModEmForwardControl.write`` -- all three changes make files that a real
+Occam2D/ModEM solver either could not run at all, or silently misread, now
+correct, so no working file set regresses; any existing ``ModEM.inv`` or
+forward-control file written by the previous ``%g``-based formatting
+should be rewritten (rerun the builder, or call ``.write`` again) before
+its next real solver run. ``ModEmRunner.run``/``.command`` and
+``InputBuilder.build``/``.build_from_data`` gain a purely additive,
+keyword-only ``fwd_control`` parameter; 3-D builds now also return a
+``"fwd_control"`` key in the returned file mapping alongside
+``"covariance"`` -- code that reads specific keys out of that mapping is
+unaffected, but an exact ``set(files) == {...}``/``sorted(files) ==
+[...]`` comparison against a 3-D build's result should include
+``"fwd_control"``.

@@ -219,7 +219,16 @@ class ModEmControl(ModEmBase):
             val = getattr(self, attr)
             key = f"{label + ':':<{_W}}"
             if attr in _FLOAT_ATTRS:
-                lines.append(f"{key}{val:.4g}\n")
+                # Fortran's G-edit descriptor on *input* requires an
+                # explicit decimal point in the field, or the format's own
+                # decimal-digit count silently re-places one -- e.g. "10"
+                # (from a naive `.4g` of 10.0) is misread as if it were
+                # 10 * 10^-7 for a `g15.7` field, not 10.0. ModEM's own
+                # usage-text examples always include one even for whole
+                # numbers ("1.", "10.", "100."), confirming this is a real
+                # requirement, not a formatting nicety. `.6E` guarantees a
+                # literal "." for every magnitude.
+                lines.append(f"{key}{val:.6E}\n")
             elif attr in _INT_ATTRS:
                 lines.append(f"{key}{int(val)}\n")
             else:

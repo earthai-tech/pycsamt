@@ -24,7 +24,7 @@ QC into a survey-scale plotting and export toolkit for single and multiple
 lines. Real bugs were fixed in ``ModEmModel3D``, the web 3-D view's
 topography uploader, and confidence-map/profile geometry. Running real,
 full-scale Occam2D and ModEM 3-D inversions against a real 128-station
-survey found and fixed three more real solver-launch bugs, including a
+survey found and fixed four more real solver-launch bugs, including a
 new ``ModEmForwardControl`` that finally lets a 3-D covariance file reach
 Mod3DMT at all.
 
@@ -100,6 +100,14 @@ Fixed
   ``covariance=`` silently landed in the wrong slot and a real Mod3DMT
   aborted trying to parse it as forward-solver settings. Fixed via the
   new ``ModEmForwardControl``.
+* |Fix| **``ModEmControl``/``ModEmForwardControl`` numeric fields lost
+  their decimal point, silently corrupting real solver runs** -- Fortran's
+  ``G`` input editing needs an explicit ``.`` or its own decimal-digit
+  count re-places one; a real Mod3DMT echoed a written ``1e-7`` back as
+  ``0.1000000E-13``, and ``target_rms`` itself had been written as a bare
+  ``"1"`` in every prior 3-D run -- a likely root cause of an earlier
+  stuck-optimizer run. Both writers now use ``%.6E``, always including a
+  literal ``.``.
 
 Docs & tooling
 ~~~~~~~~~~~~~~

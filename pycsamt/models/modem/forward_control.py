@@ -130,6 +130,15 @@ class ModEmForwardControl(ModEmBase):
         (``a36`` there, not ``a48`` -- the two file formats use
         different fixed widths; do not share the constant).
 
+        Float values are written in ``%.6E`` scientific notation, not
+        Python's default ``%g``: Fortran's ``G`` edit descriptor on
+        *input* requires an explicit decimal point, or the field's own
+        decimal-digit count (``.7`` here) silently re-places one --
+        confirmed both by a real run (a written ``1e-07`` was read back
+        as ``0.1000000E-13``) and by ModEM's own usage-text examples in
+        ``UserCtrl.f90``, which write even whole numbers with a trailing
+        ``.`` (``"1.0e-7"``, never ``"1e-7"``).
+
         Examples
         --------
         >>> from pycsamt.models.modem.config import ModEmConfig
@@ -152,7 +161,7 @@ class ModEmForwardControl(ModEmBase):
             if is_int:
                 lines.append(f"{key}{int(val)}\n")
             else:
-                lines.append(f"{key}{val:.4g}\n")
+                lines.append(f"{key}{val:.6E}\n")
 
         with p.open("w") as fh:
             fh.writelines(lines)

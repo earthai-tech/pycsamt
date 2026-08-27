@@ -40,9 +40,11 @@ grid export. The release also fixes ``ModEmModel3D`` centre/rotation
 retention, web 3-D topography uploads, and confidence-map/profile geometry,
 with expanded PCSF and confidence-evaluation guides and reproducible
 examples. Running real, full-scale Occam2D and ModEM 3-D inversions
-against a real 128-station survey found and fixed three more real
+against a real 128-station survey found and fixed four more real
 solver-launch bugs, including a new ``ModEmForwardControl`` that finally
-lets a 3-D covariance file reach Mod3DMT at all.
+lets a 3-D covariance file reach Mod3DMT at all, and a Fortran
+formatted-input decimal-point bug that had silently corrupted control
+values (``target_rms`` included) in every prior 3-D run.
 :ref:`Full 2.4.1 entry <changelog-2-4-1>` · :ref:`Release notes
 <release_v2_4_1>`.
 

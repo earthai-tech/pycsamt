@@ -59,6 +59,7 @@ from each subpackage's current public exports, including the IoT field stack.
    pycsamt.forward.maxwell
    pycsamt.inversion
    pycsamt.models
+   pycsamt.format
    pycsamt.backends
    pycsamt.ai
    pycsamt.ai.data
@@ -103,6 +104,7 @@ from each subpackage's current public exports, including the IoT field stack.
    forward_maxwell
    inversion
    models
+   format
    backends
    ai
    ai_data

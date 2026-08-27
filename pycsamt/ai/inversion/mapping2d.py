@@ -17,7 +17,7 @@ from ...compat.sklearn import validate_params
 from ...models.occam2d import OccamMesh, OccamModel
 from .schema import GRID_MAPPING_SCHEMA
 
-__all__ = ["map_ai_grid_to_occam"]
+__all__ = ["map_ai_grid_to_occam", "build_occam_parameter_adjacency"]
 
 
 @validate_params(GRID_MAPPING_SCHEMA)
@@ -290,3 +290,101 @@ def _aggregate_parameter_groups(
             "mapped AI vector does not match Occam parameter count"
         )
     return mapped
+
+
+def build_occam_parameter_adjacency(model: OccamModel) -> list[tuple[int, int]]:
+    r"""Return 1-based Occam parameter pairs that are spatial neighbours.
+
+    Two parameters are adjacent when their model bricks share a
+    horizontal edge within the same layer, or share any horizontal
+    overlap between two vertically consecutive layers. The traversal
+    order and 1-based numbering exactly match
+    :func:`map_ai_grid_to_occam`'s parameter order, so pairs returned
+    here index directly into ``ai_mean_parameters``/
+    ``ai_std_parameters``-style vectors and into
+    :class:`pycsamt.models.occam2d.OccamPrejudice`'s one-based
+    ``parameter_indices``.
+
+    Parameters
+    ----------
+    model : OccamModel
+        Populated Occam model definition. Each layer's ``params``
+        (horizontal span codes) is used to derive brick boundaries in
+        mesh-column index space; no physical widths are required.
+
+    Returns
+    -------
+    list of (int, int)
+        Unique, unordered 1-based parameter-index pairs. Each pair
+        appears once with the smaller index first.
+
+    Raises
+    ------
+    TypeError
+        Raised when ``model`` lacks the required Occam model interface.
+    ValueError
+        Raised when ``model`` has no parameter layers or a layer has
+        an invalid parameter-code array.
+
+    See Also
+    --------
+    map_ai_grid_to_occam
+        Produces the parameter-ordered vectors these pairs index into.
+    pycsamt.models.occam2d.OccamModel.exceptions
+        Native per-pair roughness-penalty weighting that consumes
+        these pairs.
+
+    Examples
+    --------
+    >>> from pycsamt.ai.inversion.mapping2d import (
+    ...     build_occam_parameter_adjacency,
+    ... )
+    >>> from pycsamt.models.occam2d import OccamModel
+    >>> model = OccamModel.read("occam_run/Occam2DModel")  # doctest: +SKIP
+    >>> pairs = build_occam_parameter_adjacency(model)  # doctest: +SKIP
+    """
+    if not hasattr(model, "layers"):
+        raise TypeError("model must provide the OccamModel interface")
+    if not model.layers:
+        raise ValueError("Occam model has no parameter layers")
+
+    running_index = 0
+    layer_bricks: list[list[tuple[int, int, int]]] = []
+    pairs: set[tuple[int, int]] = set()
+
+    for layer_index, layer in enumerate(model.layers):
+        try:
+            codes = np.asarray(layer["params"], dtype=int).reshape(-1)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"invalid Occam model layer {layer_index}"
+            ) from exc
+        if codes.size == 0 or np.any(codes < 1):
+            raise ValueError(
+                f"invalid parameter grouping in model layer {layer_index}"
+            )
+
+        bricks: list[tuple[int, int, int]] = []
+        x_col = 0
+        previous_index: int | None = None
+        for span in codes:
+            running_index += 1
+            index = running_index
+            x_start, x_end = x_col, x_col + int(span)
+            bricks.append((index, x_start, x_end))
+            if previous_index is not None:
+                pairs.add((previous_index, index))
+            previous_index = index
+            x_col = x_end
+        layer_bricks.append(bricks)
+
+    for layer_index in range(len(layer_bricks) - 1):
+        top = layer_bricks[layer_index]
+        bottom = layer_bricks[layer_index + 1]
+        for top_index, top_start, top_end in top:
+            for bottom_index, bottom_start, bottom_end in bottom:
+                if top_start < bottom_end and bottom_start < top_end:
+                    lo, hi = sorted((top_index, bottom_index))
+                    pairs.add((lo, hi))
+
+    return sorted(pairs)

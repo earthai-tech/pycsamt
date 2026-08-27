@@ -86,6 +86,7 @@ from pycsamt.app.desktop.windows import (
     InterpretationWindow,
     InversionWindow,
     MapViewerWindow,
+    Pcsf3DWindow,
     ProfileViewerWindow,
     QCDashboardWindow,
     TDEMWindow,
@@ -260,6 +261,7 @@ class MainWindow(QMainWindow):
     def _create_panel_windows(self) -> None:
         self._profile_win = ProfileViewerWindow(parent=self)
         self._map_win = MapViewerWindow(parent=self)
+        self._pcsf3d_win = Pcsf3DWindow(parent=self)
         self._qc_win = QCDashboardWindow(parent=self)
         self._correction_win = CorrectionWindow(parent=self)
         self._advanced_win = AdvancedToolsWindow(parent=self)
@@ -412,6 +414,13 @@ class MainWindow(QMainWindow):
         act_map.setShortcut("Ctrl+M")
         act_map.triggered.connect(lambda: self._show_window(self._map_win))
         view_menu.addAction(act_map)
+
+        act_pcsf3d = QAction(_icon("3d"), "&PCSF 3D Viewer", self)
+        act_pcsf3d.setShortcut("Ctrl+Shift+M")
+        act_pcsf3d.triggered.connect(
+            lambda: self._show_window(self._pcsf3d_win)
+        )
+        view_menu.addAction(act_pcsf3d)
 
         act_qc = QAction(_icon("qc"), "&QC Dashboard", self)
         act_qc.setShortcut("Ctrl+Q")
@@ -1057,6 +1066,7 @@ class MainWindow(QMainWindow):
         for attr in (
             "_profile_win",
             "_map_win",
+            "_pcsf3d_win",
             "_qc_win",
             "_correction_win",
             "_advanced_win",
@@ -1395,6 +1405,7 @@ class MainWindow(QMainWindow):
         _LABEL = {
             "_profile_win": "Profile",
             "_map_win": "Map",
+            "_pcsf3d_win": "PCSF 3D",
             "_qc_win": "QC",
             "_correction_win": "Correction",
             "_advanced_win": "Advanced",

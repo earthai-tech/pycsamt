@@ -572,6 +572,19 @@ def _controls_scroll() -> html.Div:
                                         ),
                                         "value": "profiles",
                                     },
+                                    {
+                                        "label": html.Span(
+                                            [
+                                                html.I(
+                                                    className="bi bi-file-earmark-binary me-2",
+                                                    style={"color": "#cba6f7"},
+                                                ),
+                                                "PCSF file",
+                                            ],
+                                            className="d-flex align-items-center",
+                                        ),
+                                        "value": "pcsf",
+                                    },
                                 ],
                                 value="pseudo",
                                 inputStyle={"cursor": "pointer"},
@@ -585,8 +598,61 @@ def _controls_scroll() -> html.Div:
                                 "Skin-depth uses loaded EDI stations. Survey line "
                                 "profiles groups those stations by line metadata. "
                                 "Session inversion uses the current inversion model "
-                                "when one is available.",
+                                "when one is available. PCSF file loads a persisted "
+                                "multiline .pcsf model directly, independent of the "
+                                "current session.",
                                 className="fwd-feedback-mini mt-2",
+                            ),
+                            html.Div(
+                                id="map3d-pcsf-upload-wrap",
+                                children=[
+                                    dcc.Upload(
+                                        id=IDs.MAP3D_PCSF_UPLOAD,
+                                        children=html.Div(
+                                            [
+                                                html.I(
+                                                    className="bi bi-cloud-upload me-1"
+                                                ),
+                                                "Drop or ",
+                                                html.A(
+                                                    "browse",
+                                                    style={
+                                                        "textDecoration": "underline",
+                                                        "cursor": "pointer",
+                                                    },
+                                                ),
+                                                " a multiline .pcsf file",
+                                                html.Br(),
+                                                html.Span(
+                                                    ".pcsf",
+                                                    style={
+                                                        "fontSize": "10px",
+                                                        "color": "var(--sub0)",
+                                                    },
+                                                ),
+                                            ]
+                                        ),
+                                        accept=".pcsf",
+                                        multiple=False,
+                                        style={
+                                            "border": "1px dashed var(--overlay0)",
+                                            "borderRadius": "6px",
+                                            "padding": "8px 6px",
+                                            "textAlign": "center",
+                                            "cursor": "pointer",
+                                            "fontSize": "12px",
+                                            "color": "var(--text)",
+                                            "marginTop": "6px",
+                                            "marginBottom": "6px",
+                                        },
+                                    ),
+                                    html.Div(
+                                        id=IDs.MAP3D_PCSF_UPLOAD_INFO,
+                                        className="fwd-feedback-mini",
+                                        style={"minHeight": "16px"},
+                                    ),
+                                ],
+                                style={"display": "none"},  # source == "pcsf" only
                             ),
                         ],
                         "map3d-settings-source",

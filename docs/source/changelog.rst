@@ -33,22 +33,18 @@ Latest release
 
 .. _changelog-latest:
 
-**2.4.0** — *2026-08-18* — the station confidence profile
-(:func:`~pycsamt.emtools.qc.plot_confidence_profile`,
-:func:`~pycsamt.emtools.qc.station_confidence_table`,
-:func:`~pycsamt.emtools.qc.frequency_confidence_table`) now computes real
-inter-station distance from EDI coordinates via a dependency-free UTM
-projection, instead of silently defaulting every station to a hardcoded
-200 m spacing whenever east/north attributes were absent — which they
-always are for ordinary EDI-backed ``Site`` objects. Adds an opt-in
-``force_spacing`` parameter to bypass coordinates entirely for surveys
-with unreliable positioning, and ``annotate_low_step`` to auto-declutter
-low-confidence point labels on surveys where most stations are flagged.
-Thanks to `@shahidalishah130-hub
-<https://github.com/shahidalishah130-hub>`__ for the report
-(`#76 <https://github.com/earthai-tech/pycsamt/issues/76>`__).
-:ref:`Full 2.4.0 entry <changelog-2-4-0>` · :ref:`Release notes
-<release_v2_4_0>`.
+**2.4.1** — *2026-08-26* — a new backend-neutral inversion-result format,
+:mod:`pycsamt.format` (PCSF), plus a survey-scale confidence-ratio QC suite
+with ten complementary plots, smart geographic contours, and CSV/Surfer
+grid export. The release also fixes ``ModEmModel3D`` centre/rotation
+retention, web 3-D topography uploads, and confidence-map/profile geometry,
+with expanded PCSF and confidence-evaluation guides and reproducible
+examples. Running real, full-scale Occam2D and ModEM 3-D inversions
+against a real 128-station survey found and fixed three more real
+solver-launch bugs, including a new ``ModEmForwardControl`` that finally
+lets a 3-D covariance file reach Mod3DMT at all.
+:ref:`Full 2.4.1 entry <changelog-2-4-1>` · :ref:`Release notes
+<release_v2_4_1>`.
 
 .. toctree::
    :maxdepth: 1

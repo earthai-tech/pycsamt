@@ -95,10 +95,35 @@ class VolumeMapOptions:
     show_terrain: bool = True
     terrain_opacity: float = 0.7
     show_stations: bool = False
+    # A native Plotly Scatter3d marker symbol, or "triangle-down"/
+    # "triangle-down-open" -- pycsamt's own extension, rendered as real
+    # geometry since Plotly's 3-D marker enum has no triangle at all
+    # (see pycsamt.map.volume.TRIANGLE_DOWN_SYMBOLS).
     station_symbol: str = "diamond"
     station_size: int = 4
     station_color: str = "#1f2937"
     station_labels: bool = False
+    # Screen-space rotation (degrees) for the per-station labels. Only
+    # meaningful with ``station_labels`` -- the labels are drawn as
+    # scene annotations (``go.Scatter3d`` text cannot rotate) so a
+    # crowded line can tilt its labels to 45/90 the way a 2-D section
+    # does. 0 = horizontal.
+    station_label_angle: float = 0.0
+    # Which markers get a *label* (markers themselves are unaffected --
+    # you still see every station's position). ``station_label_names``
+    # wins when set: only those station ids are labelled. Otherwise
+    # ``station_label_fraction`` keeps an evenly-spaced fraction per
+    # line (1.0 = all, 0.5 = every other, ...), first and last always
+    # kept. Lets a crowded line stay readable without hiding stations.
+    station_label_fraction: float = 1.0
+    station_label_names: tuple[str, ...] | None = None
+    # Cap on how many station markers/labels are drawn per line, evenly
+    # spaced along that line's own station order (first and last are
+    # always kept) -- lets a crowded fence/block with many stations
+    # thin the overlay to, say, 5 or 10 per line instead of every one.
+    # None (default) shows every station, unchanged from before this
+    # option existed.
+    max_stations: int | None = None
     aspectmode: str = "data"
     x_unit: str = "m"
     depth_unit: str = "m"

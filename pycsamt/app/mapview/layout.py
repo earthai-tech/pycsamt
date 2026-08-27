@@ -748,6 +748,74 @@ def _three_d_group() -> html.Div:
                 [
                     html.Div(
                         [
+                            html.Label(
+                                "Label angle °", className="mv-field-lbl"
+                            ),
+                            _num(
+                                IDs.CTL_STA_LABEL_ANGLE,
+                                0,
+                                min=-90,
+                                max=90,
+                                step=15,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label(
+                                "Label density", className="mv-field-lbl"
+                            ),
+                            dbc.Select(
+                                id=IDs.CTL_STA_LABEL_DENSITY,
+                                options=[
+                                    {"label": "All (100%)", "value": "1"},
+                                    {"label": "75%", "value": "0.75"},
+                                    {"label": "50%", "value": "0.5"},
+                                    {"label": "25%", "value": "0.25"},
+                                ],
+                                value="1",
+                                size="sm",
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Div(
+                [
+                    html.Label(
+                        "Named stations only", className="mv-field-lbl"
+                    ),
+                    dbc.Input(
+                        id=IDs.CTL_STA_LABEL_NAMES,
+                        type="text",
+                        value="",
+                        placeholder="e.g. 23-30-013U, 23-34-011J",
+                        size="sm",
+                        debounce=True,
+                    ),
+                ],
+                className="mv-mini-row",
+            ),
+            html.Div(
+                [
+                    html.Label("Markers / line", className="mv-field-lbl"),
+                    _num(
+                        IDs.CTL_STA_MAX,
+                        None,
+                        min=1,
+                        step=1,
+                        placeholder="all",
+                    ),
+                ],
+                className="mv-mini-row",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
                             html.Label("Symbol", className="mv-field-lbl"),
                             dbc.Select(
                                 id=IDs.CTL_STA_SYMBOL,
@@ -762,6 +830,14 @@ def _three_d_group() -> html.Div:
                                         "diamond-open",
                                         "circle-open",
                                     )
+                                ]
+                                + [
+                                    # Not native Plotly Scatter3d symbols
+                                    # (that enum has no triangle at all) --
+                                    # rendered as real geometry instead,
+                                    # see pycsamt.map.volume.TRIANGLE_DOWN_SYMBOLS.
+                                    {"label": "Triangle Down (filled)", "value": "triangle-down"},
+                                    {"label": "Triangle Down (open)", "value": "triangle-down-open"},
                                 ],
                                 value="diamond",
                                 size="sm",
@@ -905,6 +981,7 @@ def _three_d_group() -> html.Div:
                     sta_sec,
                     appearance_sec,
                 ],
+                id=IDs.CTL_3D_ACCORDION,
                 active_item=["3d-mode", "3d-depth"],
                 always_open=True,
                 flush=True,
@@ -1441,18 +1518,18 @@ def _load_modal() -> dbc.Modal:
                 dbc.Tabs(
                     [
                         dbc.Tab(
-                            _load_modal_edi_body(),
-                            label="EDI stations",
-                            tab_id="load-tab-edi",
-                        ),
-                        dbc.Tab(
                             _load_modal_inversion_body(),
                             label="Inversion results",
                             tab_id="load-tab-inversion",
                         ),
+                        dbc.Tab(
+                            _load_modal_edi_body(),
+                            label="EDI stations",
+                            tab_id="load-tab-edi",
+                        ),
                     ],
                     id=IDs.LOAD_TABS,
-                    active_tab="load-tab-edi",
+                    active_tab="load-tab-inversion",
                 ),
             ),
             dbc.ModalFooter(
@@ -1646,19 +1723,47 @@ def _load_modal_edi_body() -> html.Div:
 
 
 def _load_modal_inversion_body() -> html.Div:
-    """ModEM inversion-result import: native folder picker + confirm.
+    """Inversion-result import: a backend-neutral PCSF/PCSM picker.
 
-    Same browse-button pattern as the EDI tab (``edi_loader.js``): a
-    transparent ``<input webkitdirectory>`` is injected over the
-    button by ``modem_loader.js``, so the OS's native folder dialog
-    opens instead of an in-app folder navigator.
+    Accepts ``.pcsf``, ``.pcsm``, or ``.pcsm.gz`` — the two lossless
+    encodings of pycsamt's backend-neutral format (see
+    ``pycsamt/format/SPEC.md``) every inversion backend (Occam2D,
+    ModEM, MARE2DEM, DUHI) can be converted to. A raw ModEM/Occam2D/
+    MARE2DEM result folder is no longer accepted directly here —
+    convert it first via ``pycsamt.format.adapters`` (or the
+    ``pycsamt.format`` CLI/API), then point this importer at the
+    result.
+
+    Two ways in, both landing in the same candidate list:
+
+    - **Browse folder**: a transparent ``<input webkitdirectory>`` is
+      injected over the button by ``assets/pcsf_loader.js`` (same
+      pattern as the EDI tab's ``edi_loader.js``), so the OS's native
+      folder dialog opens; the folder is scanned for ``.pcsf``/
+      ``.pcsm``/``.pcsm.gz`` files only.
+    - **Drop / browse files**: a plain :class:`dash.dcc.Upload`
+      (``multiple=True``) for one or more files picked or dragged in
+      directly — no folder dialog needed.
+
+    Either source can turn up more than one candidate (e.g. one
+    ``.pcsf`` per line). The confirm step below shows every candidate
+    found, labelled with its geometry kind (peeked cheaply via
+    :func:`pycsamt.format.peek_kind` — no full load), auto-selects
+    when exactly one is importable, and disables only a candidate that
+    could not even be read (a corrupt/truncated upload or an
+    unrecognised future geometry kind) rather than letting the user
+    pick one and hit a raw import error — every real PCSF geometry
+    kind (``grid2d``, ``multiline``, native ``grid3d``, and
+    ``mesh_unstructured``) builds a real per-station curtain.
     """
     return html.Div(
         [
             html.Div(
-                "Import a ModEM 3-D inversion result folder. A single "
-                "run inverts one volume for the whole survey — it is "
-                "sliced into one panel per detected line.",
+                "Import a backend-neutral PCSF result — the same "
+                "self-describing container every backend (Occam2D, "
+                "ModEM, MARE2DEM, DUHI) can be converted to via "
+                "pycsamt.format. Browse to a folder or drop file(s); "
+                "only .pcsf/.pcsm/.pcsm.gz files are picked up.",
                 className="mv-panel-lbl",
                 style={"marginBottom": "8px"},
             ),
@@ -1667,7 +1772,7 @@ def _load_modal_inversion_body() -> html.Div:
                     html.I(className="bi bi-folder2-open me-2"),
                     html.Span("Browse folder", style={"fontWeight": "600"}),
                     html.Span(
-                        " — pick a ModEM results directory",
+                        " — looks for .pcsf/.pcsm/.pcsm.gz files inside",
                         style={"fontSize": "11px", "opacity": ".75"},
                     ),
                 ],
@@ -1689,6 +1794,18 @@ def _load_modal_inversion_body() -> html.Div:
                 className="mv-loader-overlay",
                 style={"display": "none"},
             ),
+            dcc.Upload(
+                id=IDs.INV_PCSF_UPLOAD,
+                children=html.Div(
+                    [
+                        html.I(className="bi bi-file-earmark-binary me-2"),
+                        "…or drop .pcsf / .pcsm / .pcsm.gz file(s) here",
+                    ],
+                ),
+                className="mv-upload-drop mb-2",
+                multiple=True,
+                accept=".pcsf,.pcsm,.gz",
+            ),
             html.Div(
                 [
                     html.Span(
@@ -1702,11 +1819,39 @@ def _load_modal_inversion_body() -> html.Div:
                 ],
                 className="d-flex align-items-center gap-2 mt-1 mb-2",
             ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(
+                                "Found files",
+                                className="mv-folder-filter-title",
+                            ),
+                            html.Span(
+                                "Pick the one to import.",
+                                className="mv-folder-filter-hint",
+                            ),
+                        ],
+                        className="mv-folder-filter-head",
+                    ),
+                    dcc.RadioItems(
+                        id=IDs.INV_CANDIDATE_PICKER,
+                        options=[],
+                        value=None,
+                        className="mv-folder-filter-list mv-candidate-list",
+                        labelClassName="mv-folder-filter-option",
+                        inputClassName="mv-folder-filter-input",
+                    ),
+                ],
+                id=IDs.INV_CANDIDATE_WRAP,
+                className="mv-folder-filter",
+                style={"display": "none"},
+            ),
             dbc.Switch(
                 id=IDs.CK_INV_KNOWN_STA,
                 label="Match coordinates from already-loaded EDI stations",
                 value=True,
-                className="mv-switch mb-2",
+                className="mv-switch mb-2 mt-2",
             ),
             dbc.Button(
                 [
@@ -2078,6 +2223,8 @@ def _stores() -> list:
         dcc.Store(id=IDs.LOAD_MODE_STORE, data="replace"),
         dcc.Store(id=IDs.FOLDER_STORE, data={}),
         dcc.Store(id=IDs.INV_FOLDER_STORE, data={}),
+        dcc.Store(id=IDs.INV_CANDIDATES_STORE, data={}),
+        dcc.Store(id=IDs.INV_RESOLVED_STORE, data={}),
         dcc.Store(id=IDs.UPLOAD_SELECTION, data=[]),
         dcc.Store(id=IDs.SOURCE_SELECTION, data="none"),
         dcc.Store(id=IDs.TOPO_UPLOAD_STORE, data={}),

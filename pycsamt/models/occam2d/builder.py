@@ -65,6 +65,7 @@ class InputBuilder(OccamBase):
         self,
         modes: list[str] | None = None,
         n_layers: int | None = None,
+        max_depth: float | None = None,
         cell_size: float | None = None,
         error_floor_rho: float | None = None,
         error_floor_phase: float | None = None,
@@ -79,6 +80,8 @@ class InputBuilder(OccamBase):
             cfg.modes = modes
         if n_layers is not None:
             cfg.n_layers = n_layers
+        if max_depth is not None:
+            cfg.max_depth = max_depth
         if cell_size is not None:
             cfg.cell_size_horizontal = cell_size
         if error_floor_rho is not None:
@@ -295,6 +298,7 @@ Parameters
 ----------
 {_params.data.modes}
 {_params.mesh.n_layers}
+{_params.mesh.max_depth}
 {_params.mesh.cell_size}
 {_params.data.error_floor_rho}
 {_params.data.error_floor_phase}

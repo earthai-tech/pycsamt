@@ -18,6 +18,9 @@ Supported formats
   inversion result — Occam2D, ModEM, the backend-neutral
   :class:`~pycsamt.inversion.results.InversionResult`, an AI agent
   result, or a raw array — via :meth:`~pycsamt.interp.ResistivityModel.from_any`.
+  ``to_surfer_bln`` writes the matching topography polygon (Surfer
+  blanking file) so the air above real station elevation can be blanked
+  out of the grid/map in Surfer directly.
 
 Example
 -------
@@ -38,8 +41,8 @@ from typing import Any, Union
 
 import numpy as np
 
-from ._base import ResistivityModel
 from ..geology.lithology import StratigraphicLog
+from ._base import ResistivityModel
 
 __all__ = [
     "to_oasis_montaj_xyz",
@@ -47,7 +50,9 @@ __all__ = [
     "to_csv",
     "to_vtk",
     "to_surfer_grid",
+    "to_surfer_dsaa",
     "to_surfer_xyz",
+    "to_surfer_bln",
 ]
 
 PathLike = Union[str, Path]
@@ -349,6 +354,53 @@ def to_vtk(
 _SURFER_BLANK = 1.70141e38  # Surfer's own default blanking sentinel
 
 
+def to_surfer_dsaa(
+    x: np.ndarray,
+    y: np.ndarray,
+    values: np.ndarray,
+    path: PathLike,
+    *,
+    blank_value: float = _SURFER_BLANK,
+) -> Path:
+    """Write a regular scalar grid as a Golden Software Surfer DSAA file.
+
+    Unlike :func:`to_surfer_grid`, this generic writer applies no
+    resistivity, logarithm, depth, or elevation convention. ``x`` and ``y``
+    are increasing one-dimensional grid axes and ``values`` has shape
+    ``(len(y), len(x))``. Non-finite cells are written with Surfer's blanking
+    sentinel.
+    """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    grid = np.asarray(values, dtype=float)
+    if x.ndim != 1 or y.ndim != 1 or x.size < 2 or y.size < 2:
+        raise ValueError(
+            "x and y must be one-dimensional with at least 2 values."
+        )
+    if grid.shape != (y.size, x.size):
+        raise ValueError("values shape must be (len(y), len(x)).")
+    if not np.isfinite(x).all() or not np.isfinite(y).all():
+        raise ValueError("x and y must contain only finite values.")
+    if np.any(np.diff(x) <= 0.0) or np.any(np.diff(y) <= 0.0):
+        raise ValueError("x and y must be strictly increasing.")
+    written = grid.copy()
+    written[~np.isfinite(written)] = float(blank_value)
+    finite = grid[np.isfinite(grid)]
+    z_min = float(finite.min()) if finite.size else 0.0
+    z_max = float(finite.max()) if finite.size else 0.0
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w") as fh:
+        fh.write("DSAA\n")
+        fh.write(f"{x.size} {y.size}\n")
+        fh.write(f"{x.min():.12g} {x.max():.12g}\n")
+        fh.write(f"{y.min():.12g} {y.max():.12g}\n")
+        fh.write(f"{z_min:.12g} {z_max:.12g}\n")
+        for row in written:
+            fh.write(" ".join(f"{value:.9g}" for value in row) + "\n")
+    return out
+
+
 def _elevation_at_x(
     x_centers: np.ndarray,
     elevation: np.ndarray | None,
@@ -457,7 +509,10 @@ def to_surfer_grid(
     >>> z = np.array([10.0, 50.0, 120.0])
     >>> rho_log10 = np.tile(np.array([[2.0], [2.5], [3.0]]), (1, 10))
     >>> path = export.to_surfer_grid(
-    ...     (x, z, rho_log10), "surfer_grid_doctest.grd", nx=5, ny=3,
+    ...     (x, z, rho_log10),
+    ...     "surfer_grid_doctest.grd",
+    ...     nx=5,
+    ...     ny=3,
     ... )
     >>> lines = path.read_text().splitlines()
     >>> lines[0]
@@ -575,7 +630,9 @@ def to_surfer_xyz(
     >>> x = np.array([0.0, 100.0])
     >>> z = np.array([10.0, 50.0])
     >>> rho_log10 = np.array([[2.0, 2.1], [2.5, 2.6]])
-    >>> path = export.to_surfer_xyz((x, z, rho_log10), "surfer_xyz_doctest.dat")
+    >>> path = export.to_surfer_xyz(
+    ...     (x, z, rho_log10), "surfer_xyz_doctest.dat"
+    ... )
     >>> path.read_text().splitlines()
     ['X\\tY\\tZ', '0.000\\t-10.000\\t2.00000', '0.000\\t-50.000\\t2.50000', '100.000\\t-10.000\\t2.10000', '100.000\\t-50.000\\t2.60000']
     >>> path.unlink()
@@ -604,5 +661,89 @@ def to_surfer_xyz(
                     )
                     + "\n"
                 )
+
+    return out
+
+
+def to_surfer_bln(
+    elevation: np.ndarray,
+    chainage: np.ndarray,
+    path: PathLike,
+    *,
+    sky_margin: float = 100.0,
+) -> Path:
+    """Write a Golden Software Surfer blanking (``.bln``) polygon for topography.
+
+    Traces the real, along-profile station elevation as one edge of a
+    closed polygon covering everything *above* the terrain (the "sky"),
+    with the blanking flag set so Surfer blanks that polygon's interior
+    (``Map``/``Grid > Blank`` in Surfer, using this file). Loaded together
+    with a terrain-draped grid from :func:`to_surfer_grid` (pass the same
+    *elevation*/*chainage*), this removes the flat rectangular "no data"
+    band above real terrain that :func:`to_surfer_grid` otherwise leaves
+    filled with its blanking sentinel but does not clip out of the plot.
+
+    Parameters
+    ----------
+    elevation : ndarray
+        Real terrain elevation at each profile position, metres a.s.l.
+        (e.g. real station elevation from EDI headers via
+        :func:`pycsamt.topo.extract.extract_elevation`).
+    chainage : ndarray
+        Along-profile position matching *elevation*, metres, in the same
+        coordinate frame as the grid written by :func:`to_surfer_grid`
+        (its *chainage*/*station_x* argument).
+    path : path-like
+        Output ``.bln`` file.
+    sky_margin : float
+        Extra height, in metres, added above the highest station so the
+        polygon's top edge clears the grid's own upper bound with room to
+        spare (default ``100.0`` m).
+
+    Returns
+    -------
+    Path
+
+    Notes
+    -----
+    The Surfer ``.bln`` format's first line is ``n_points,blank_flag``,
+    where ``blank_flag=1`` blanks the polygon's *interior* (used here) and
+    ``0`` would blank everything *outside* it. Each following line is one
+    ``x,y`` vertex; Surfer closes the polygon back to the first vertex
+    automatically.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pycsamt.interp import export
+    >>> elev = np.array([100.0, 120.0, 90.0])
+    >>> chain = np.array([0.0, 50.0, 100.0])
+    >>> path = export.to_surfer_bln(elev, chain, "topo_doctest.bln")
+    >>> path.read_text().splitlines()[0]
+    '5,1'
+    >>> path.unlink()
+
+    See Also
+    --------
+    to_surfer_grid
+        Write the matching terrain-draped resistivity grid.
+    """
+    elevation = np.asarray(elevation, dtype=float)
+    chainage = np.asarray(chainage, dtype=float)
+    order = np.argsort(chainage)
+    x = chainage[order]
+    y = elevation[order]
+
+    y_sky = float(np.nanmax(y)) + float(sky_margin)
+    xs = np.concatenate([[x[0]], x, [x[-1]]])
+    ys = np.concatenate([[y_sky], y, [y_sky]])
+    n = xs.size
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w") as fh:
+        fh.write(f"{n},1\n")
+        for xi, yi in zip(xs, ys):
+            fh.write(f"{xi:.6g},{yi:.6g}\n")
 
     return out

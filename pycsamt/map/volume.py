@@ -334,7 +334,7 @@ def _fence_figure(profiles, options, colors):
     az = np.deg2rad(float(options.azimuth))
     unit = _line_offset_unit(profiles)
     real_offsets = _line_real_offsets(profiles)
-    cmin, cmax = _crange(options)
+    cmin, cmax = _full_value_crange(profiles, options)
     for idx, (name, grid) in enumerate(profiles.items()):
         x, z_pos, values, elev = _prepare_section(grid, options)
         z = -z_pos
@@ -347,6 +347,13 @@ def _fence_figure(profiles, options, colors):
         xx = xx + offset * np.sin(az)
         if options.topography:
             zz = zz + elev[np.newaxis, :]
+        # Open real holes in the mesh wherever the section is masked
+        # (resistivity-range selection or genuine data gap), so the
+        # panel shows only the selected cells instead of a full surface
+        # tinted by a NaN colour.
+        hole = ~np.isfinite(np.asarray(values, dtype=float))
+        if hole.any():
+            zz = np.where(hole, np.nan, zz)
         fig.add_trace(
             go.Surface(
                 x=xx,
@@ -394,17 +401,25 @@ def _prepare_section(grid, options):
     x = np.asarray(grid["x"], dtype=float)
     z = np.asarray(grid["z"], dtype=float)
     values = _filtered_values(grid, options)
+    # Cells the resistivity-range selection hides (options.rho_range).
+    # Tracked separately from genuine NaN data gaps so the smoothing
+    # pass below can re-open exactly these — see the re-mask step.
+    hidden = _rho_range_mask(grid, options)
     elev = _elev_for(grid, options)
 
     order = np.argsort(x)
     x, values, elev = x[order], values[:, order], elev[order]
+    hidden = hidden[:, order]
     x, uniq = np.unique(x, return_index=True)
     values, elev = values[:, uniq], elev[uniq]
+    hidden = hidden[:, uniq]
 
     zorder = np.argsort(z)
     z, values = z[zorder], values[zorder, :]
+    hidden = hidden[zorder, :]
     z, zuniq = np.unique(z, return_index=True)
     values = values[zuniq, :]
+    hidden = hidden[zuniq, :]
 
     if not getattr(options, "smooth_sections", True):
         return x, z, values, elev
@@ -428,6 +443,15 @@ def _prepare_section(grid, options):
         # gradients; clip back so the colorscale isn't stretched by
         # spline artefacts rather than real data.
         vi = np.clip(vi, float(np.nanmin(filled)), float(np.nanmax(filled)))
+        # _fill_nan_2d filled the resistivity-range holes so the spline
+        # could fit; punch them back through on the dense grid via the
+        # nearest source cell. Without this the fence stays whole and
+        # merely recolours when a range is selected, instead of showing
+        # only the cells inside the range and masking the rest.
+        if hidden.any():
+            zi_idx = np.abs(zi[:, None] - z[None, :]).argmin(axis=1)
+            xi_idx = np.abs(xi[:, None] - x[None, :]).argmin(axis=1)
+            vi[hidden[np.ix_(zi_idx, xi_idx)]] = np.nan
         elev_i = np.interp(xi, x, elev)
         return xi, zi, vi, elev_i
     except Exception:  # noqa: BLE001 - fall back to the raw grid
@@ -457,47 +481,180 @@ def _fill_nan_2d(z, x, values):
         return np.where(good, values, float(np.nanmedian(values[good])))
 
 
+def _volume_point_cloud(profiles, options):
+    """Flatten the dense ``(x, y, z)`` volume grid to *finite-only*
+    1-D point arrays for ``go.Volume``/``go.Isosurface``, plus an
+    iso-value window clamped to the data actually present.
+
+    ``go.Volume``/``go.Isosurface`` render **nothing** when the value
+    array still carries the ``NaN`` cells left by the topography drape
+    / no-data gaps, or when ``[isomin, isomax]`` lands outside the
+    values that remain (e.g. a resistivity-band selection with no cell
+    that conductive) or collapses to a single value. Both used to
+    happen here, so the block silently disappeared under topography or
+    any resistivity filter. This mirrors the working
+    ``pycsamt.app.web`` block builder.
+
+    Returns ``(x, y, z, value, iso_lo, iso_hi, cmin, cmax, banded)``
+    where the grid is kept whole (``go.Volume`` needs a regular lattice
+    to reconstruct a shape). ``cmin/cmax`` is always the full-model
+    colour range (never the band). When ``banded`` (a resistivity-range
+    selection is active), every out-of-band cell is set to a
+    far-below-``iso_lo`` sentinel so ``go.Isosurface`` renders *only*
+    the in-band body, each surviving cell keeping the exact hue it had
+    on the unfiltered colourbar -- the 3-D equivalent of what fence mode
+    already does. Otherwise only genuine no-data cells get the sentinel.
+    Returns ``None`` when nothing can be drawn.
+    """
+    grid = _dense_volume_grid(profiles, options)
+    if grid is None:
+        return None
+    x_arr, y_arr, z_arr, rho_vol = grid
+    X, Y, Z = np.meshgrid(x_arr, y_arr, z_arr, indexing="ij")
+    finite = rho_vol[np.isfinite(rho_vol)]
+    if finite.size == 0:
+        return None
+    data_lo, data_hi = float(finite.min()), float(finite.max())
+
+    # Colour scale = the *full, unfiltered* model range, exactly the
+    # scale fence/depth mode use (:func:`_full_value_crange`). A
+    # resistivity-range selection must only decide *which* cells show,
+    # never rescale the colourbar -- the surviving cells keep the same
+    # hue they had before the filter, other cells are masked away.
+    cmin, cmax = _full_value_crange(profiles, options)
+    if cmin is None or cmax is None:
+        cmin, cmax = data_lo, data_hi
+    if cmax <= cmin:  # a near-uniform model -- keep a valid colour span
+        pad = max(abs(cmin) * 0.05, 0.05)
+        cmin, cmax = cmin - pad, cmax + pad
+
+    iso_lo, iso_hi = _iso_range(finite, options)
+    # A resistivity band that doesn't overlap the model at all -> honour
+    # it (draw nothing), rather than silently widen back to full range.
+    if options.rho_range and (iso_lo > data_hi or iso_hi < data_lo):
+        return None
+    # go.Volume/go.Isosurface draw nothing when [isomin, isomax] lands
+    # outside the values present or collapses to a point -- clamp it
+    # into the data range and widen a degenerate window back to full.
+    iso_lo = max(float(iso_lo), data_lo)
+    iso_hi = min(float(iso_hi), data_hi)
+    if iso_hi <= iso_lo:
+        if data_hi > data_lo:
+            iso_lo, iso_hi = data_lo, data_hi
+        else:  # a perfectly uniform model -- pad so the window is valid
+            pad = max(abs(data_lo) * 0.05, 0.05)
+            iso_lo, iso_hi = data_lo - pad, data_hi + pad
+
+    banded = bool(options.rho_range)
+
+    span = iso_hi - iso_lo
+    sentinel = iso_lo - max(span, 1.0) * (10.0 if banded else 1.0)
+    if banded:
+        # ``isomin``/``isomax`` alone do NOT isolate a value band -- the
+        # isomax iso-surface still wraps everything *above* it, so a
+        # "conductive" selection would drape the whole resistive model.
+        # Push every out-of-band cell (both sides) to the sentinel so
+        # only the band itself has a renderable value.
+        in_band = (
+            np.isfinite(rho_vol)
+            & (rho_vol >= iso_lo)
+            & (rho_vol <= iso_hi)
+        )
+        value = np.where(in_band, rho_vol, sentinel)
+    else:
+        value = np.where(np.isfinite(rho_vol), rho_vol, sentinel)
+    return (
+        X.ravel(),
+        Y.ravel(),
+        Z.ravel(),
+        value.ravel(),
+        iso_lo,
+        iso_hi,
+        cmin,
+        cmax,
+        banded,
+    )
+
+
+def _annotate_3d(fig, text, colors):
+    """Drop a centred note on an otherwise-empty 3-D figure."""
+    fig.add_annotation(
+        text=text,
+        x=0.5,
+        y=0.5,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font=dict(color=colors["text"], size=12),
+    )
+    return fig
+
+
+_VOLUME_EMPTY_MSG = (
+    "No 3-D block for the current filters — every cell is outside the "
+    "selected depth or resistivity range."
+)
+
+
 def _block_figure(profiles, options, colors):
     go = require_plotly()
 
     fig = go.Figure()
-    grid = _dense_volume_grid(profiles, options)
-    if grid is not None:
-        x_arr, y_arr, z_arr, rho_vol = grid
-        X, Y, Z = np.meshgrid(x_arr, y_arr, z_arr, indexing="ij")
-        finite = rho_vol[np.isfinite(rho_vol)]
-        if finite.size:
-            iso_lo, iso_hi = _iso_range(finite, options)
-            cmin, cmax = _crange(options)
-            if cmin is None or cmax is None:
-                cmin, cmax = float(finite.min()), float(finite.max())
-            fig.add_trace(
-                go.Volume(
-                    x=X.ravel(),
-                    y=Y.ravel(),
-                    z=Z.ravel(),
-                    value=rho_vol.ravel(),
-                    isomin=iso_lo,
-                    isomax=iso_hi,
-                    # Fade rather than hard-cut so the block still reads
-                    # as one solid shape instead of a jagged threshold.
-                    opacityscale=[
-                        [0.0, 0.0],
-                        [0.2, 0.3],
-                        [0.5, 0.7],
-                        [1.0, 1.0],
-                    ],
-                    opacity=float(options.opacity),
-                    surface_count=max(2, int(options.surface_count)),
-                    colorscale=to_plotly_cmap(options.cmap),
-                    cmin=cmin,
-                    cmax=cmax,
-                    showscale=True,
-                    colorbar=dict(
-                        title=dict(text=_colorbar_title(options), side="right")
-                    ),
-                )
-            )
+    cloud = _volume_point_cloud(profiles, options)
+    if cloud is None:
+        _annotate_3d(fig, _VOLUME_EMPTY_MSG, colors)
+        _style_3d(fig, options, colors)
+        return fig
+    vx, vy, vz, vv, iso_lo, iso_hi, cmin, cmax, banded = cloud
+    colorbar = dict(
+        title=dict(text=_colorbar_title(options), side="right")
+    )
+    if banded:
+        # A resistivity-band selection is a "show me only this zone"
+        # request -- render it as one closed iso-surface body with
+        # filled caps, not a translucent whole-model volume.
+        trace = go.Isosurface(
+            x=vx,
+            y=vy,
+            z=vz,
+            value=vv,
+            isomin=iso_lo,
+            isomax=iso_hi,
+            surface_count=2,
+            opacity=float(options.opacity),
+            caps=dict(x_show=True, y_show=True, z_show=True),
+            colorscale=to_plotly_cmap(options.cmap),
+            cmin=cmin,
+            cmax=cmax,
+            showscale=True,
+            colorbar=colorbar,
+        )
+    else:
+        trace = go.Volume(
+            x=vx,
+            y=vy,
+            z=vz,
+            value=vv,
+            isomin=iso_lo,
+            isomax=iso_hi,
+            # Fade rather than hard-cut so the block still reads as one
+            # solid shape instead of a jagged threshold.
+            opacityscale=[
+                [0.0, 0.0],
+                [0.2, 0.3],
+                [0.5, 0.7],
+                [1.0, 1.0],
+            ],
+            opacity=float(options.opacity),
+            surface_count=max(2, int(options.surface_count)),
+            caps=dict(x_show=False, y_show=False, z_show=False),
+            colorscale=to_plotly_cmap(options.cmap),
+            cmin=cmin,
+            cmax=cmax,
+            showscale=True,
+            colorbar=colorbar,
+        )
+    fig.add_trace(trace)
     _style_3d(fig, options, colors)
     return fig
 
@@ -519,27 +676,60 @@ def _depth_figure(profiles, options, colors):
     )
     if width == 0:
         return _empty_3d_figure(colors)
-    cmin, cmax = _crange(options)
+    cmin, cmax = _full_value_crange(profiles, options)
+
+    # go.Surface interpolates between *adjacent* rows of the stacked
+    # grid below -- lines must be vstacked in real cross-strike
+    # (y-offset) order, not whatever order the profiles dict happens
+    # to iterate in, or the reconstructed surface connects unrelated
+    # lines and twists on itself. _line_offset's own idx argument (the
+    # original insertion order) still has to stay unchanged, since
+    # it's also the fallback spacing multiplier shared with
+    # _add_station_markers/_dense_volume_grid -- only the row-stacking
+    # order below is resorted.
+    names = list(profiles.keys())
+    offsets = [
+        _line_offset(name, idx, real_offsets, unit, options)
+        for idx, name in enumerate(names)
+    ]
+    stack_order = sorted(range(len(names)), key=lambda i: offsets[i])
+    # Each line's own stations must be in real along-profile (x) order
+    # too -- go.Surface (and the terrain polyline below) connects
+    # *adjacent* columns, and grid["x"]'s column order only reflects
+    # whatever order the source pivot table produced (e.g. lexical by
+    # station name), not necessarily real spatial order. x itself is
+    # already a correct per-station geometric distance regardless of
+    # that order (see _station_uv/_station_x); this just makes the
+    # column order agree with it, the same way _prepare_section
+    # (fence) and _dense_volume_grid (block/surface) already do.
+    x_orders = {
+        i: np.argsort(np.asarray(profiles[names[i]]["x"], dtype=float))
+        for i in range(len(names))
+    }
+
     for depth in depths:
         x_rows = []
         y_rows = []
         z_rows = []
         val_rows = []
-        for line_idx, (name, grid) in enumerate(profiles.items()):
+        for i in stack_order:
+            name = names[i]
+            grid = profiles[name]
+            offset = offsets[i]
+            x_order = x_orders[i]
             values = _values_at_depth(
                 grid,
                 depth,
                 options,
-            )
-            x = np.asarray(grid["x"], dtype=float)
-            offset = _line_offset(name, line_idx, real_offsets, unit, options)
+            )[x_order]
+            x = np.asarray(grid["x"], dtype=float)[x_order]
             y = np.full_like(
                 x,
                 offset * np.cos(az),
             )
             x_rows.append(_pad_row(x + offset * np.sin(az), width))
             y_rows.append(_pad_row(y, width))
-            z = _elev_for(grid, options) - float(depth)
+            z = _elev_for(grid, options)[x_order] - float(depth)
             z_rows.append(_pad_row(z, width))
             color = _color_values(values, options)
             val_rows.append(_pad_row(color, width))
@@ -561,14 +751,17 @@ def _depth_figure(profiles, options, colors):
             )
         )
     if options.show_terrain and options.topography:
-        for line_idx, (name, grid) in enumerate(profiles.items()):
-            x = np.asarray(grid["x"], dtype=float)
-            offset = _line_offset(name, line_idx, real_offsets, unit, options)
+        for i in stack_order:
+            name = names[i]
+            grid = profiles[name]
+            offset = offsets[i]
+            x_order = x_orders[i]
+            x = np.asarray(grid["x"], dtype=float)[x_order]
             fig.add_trace(
                 _terrain_trace(
                     x + offset * np.sin(az),
                     np.full_like(x, offset * np.cos(az)),
-                    _elev_for(grid, options),
+                    _elev_for(grid, options)[x_order],
                     name,
                 )
             )
@@ -580,32 +773,33 @@ def _surface_figure(profiles, options, colors):
     go = require_plotly()
 
     fig = go.Figure()
-    grid = _dense_volume_grid(profiles, options)
-    if grid is not None:
-        x_arr, y_arr, z_arr, rho_vol = grid
-        X, Y, Z = np.meshgrid(x_arr, y_arr, z_arr, indexing="ij")
-        finite = rho_vol[np.isfinite(rho_vol)]
-        if finite.size:
-            lo, hi = _iso_range(finite, options)
-            fig.add_trace(
-                go.Isosurface(
-                    x=X.ravel(),
-                    y=Y.ravel(),
-                    z=Z.ravel(),
-                    value=rho_vol.ravel(),
-                    isomin=lo,
-                    isomax=hi,
-                    surface_count=max(2, int(options.surface_count)),
-                    opacity=float(options.opacity),
-                    colorscale=to_plotly_cmap(options.cmap),
-                    caps=dict(x_show=False, y_show=False),
-                    colorbar=dict(
-                        title=dict(text=_colorbar_title(options), side="right")
-                    ),
-                    cmin=lo,
-                    cmax=hi,
-                )
-            )
+    cloud = _volume_point_cloud(profiles, options)
+    if cloud is None:
+        _annotate_3d(fig, _VOLUME_EMPTY_MSG, colors)
+        _style_3d(fig, options, colors)
+        return fig
+    vx, vy, vz, vv, iso_lo, iso_hi, cmin, cmax, banded = cloud
+    fig.add_trace(
+        go.Isosurface(
+            x=vx,
+            y=vy,
+            z=vz,
+            value=vv,
+            isomin=iso_lo,
+            isomax=iso_hi,
+            surface_count=2 if banded else max(2, int(options.surface_count)),
+            opacity=float(options.opacity),
+            colorscale=to_plotly_cmap(options.cmap),
+            caps=dict(
+                x_show=banded, y_show=banded, z_show=banded
+            ),
+            colorbar=dict(
+                title=dict(text=_colorbar_title(options), side="right")
+            ),
+            cmin=cmin,
+            cmax=cmax,
+        )
+    )
     _style_3d(fig, options, colors)
     return fig
 
@@ -731,12 +925,21 @@ def _line_offset(name, idx, real_offsets, unit, options) -> float:
     )
 
 
+def _rho_range_mask(grid, options):
+    """Boolean grid, ``True`` where a cell falls outside
+    ``options.rho_range`` and must be hidden. All-``False`` when no
+    range is set."""
+    value = np.asarray(grid["value"], dtype=float)
+    if not options.rho_range:
+        return np.zeros(value.shape, dtype=bool)
+    lo, hi = options.rho_range
+    rho = np.asarray(grid["rho"], dtype=float)
+    return (rho < lo) | (rho > hi)
+
+
 def _filtered_values(grid, options):
     out = np.asarray(grid["value"], dtype=float).copy()
-    if options.rho_range:
-        lo, hi = options.rho_range
-        rho = np.asarray(grid["rho"], dtype=float)
-        out[(rho < lo) | (rho > hi)] = np.nan
+    out[_rho_range_mask(grid, options)] = np.nan
     return out
 
 
@@ -745,6 +948,37 @@ def _color_values(values, options):
     if _volume_quantity(options.quantity) == "rho" and options.log_color:
         return np.where(arr > 0, np.log10(arr), np.nan)
     return arr
+
+
+def _full_value_crange(profiles, options) -> tuple[float | None, float | None]:
+    """``(cmin, cmax)`` for the fence/depth-slice colour scale.
+
+    Returns the user's own fixed ``options.value_range`` when set
+    (via :func:`_crange`), else falls back to every profile's *full,
+    unfiltered* value array, in the same colour space
+    :func:`_color_values` renders (log10 rho when requested) --
+    deliberately independent of ``options.rho_range``. The
+    resistivity-range filter only decides which cells
+    :func:`_filtered_values` masks to NaN (what is shown); it must
+    never also renormalise cmin/cmax (the scale it is shown on), or a
+    narrow selection (e.g. a "conductive" 1-100 ohm.m slice) gets
+    stretched across the whole colourscale and reads as one near-solid
+    colour instead of the same hues it had before filtering.
+    """
+    cmin, cmax = _crange(options)
+    if cmin is not None and cmax is not None:
+        return cmin, cmax
+    finite_chunks = []
+    for grid in profiles.values():
+        raw = np.asarray(grid["value"], dtype=float)
+        colored = _color_values(raw, options)
+        finite = colored[np.isfinite(colored)]
+        if finite.size:
+            finite_chunks.append(finite)
+    if not finite_chunks:
+        return None, None
+    combined = np.concatenate(finite_chunks)
+    return float(combined.min()), float(combined.max())
 
 
 def _crange(options) -> tuple[float | None, float | None]:
@@ -803,11 +1037,221 @@ def _marker_z_offset(profiles) -> float:
     return max(span * 0.01, 1.0) if span > 0 else 1.0
 
 
+def _ref_line_x_range(profiles) -> tuple[float, float]:
+    """``(x_min, x_max)`` of the line :func:`_dense_volume_grid` uses as
+    its shared x-reference (the one with the most stations) -- the exact
+    x-extent the block / iso-surface is reconstructed over."""
+    if not profiles:
+        return (-np.inf, np.inf)
+    ref = max(profiles.values(), key=lambda g: np.asarray(g["x"]).size)
+    x = np.asarray(ref["x"], dtype=float)
+    x = x[np.isfinite(x)]
+    if x.size == 0:
+        return (-np.inf, np.inf)
+    return (float(x.min()), float(x.max()))
+
+
+def _thin_indices(n: int, max_count: int | None) -> np.ndarray:
+    """Evenly-spaced station indices, thinning ``n`` items down to at
+    most ``max_count`` while always keeping the first and last one.
+
+    Returns every index unchanged (``0..n-1``) when ``max_count`` is
+    ``None`` or already ``>= n`` -- the default, so existing callers
+    that never set :attr:`VolumeMapOptions.max_stations` keep showing
+    every station exactly as before this option existed.
+    """
+    if max_count is None or n == 0 or max_count >= n:
+        return np.arange(n)
+    if max_count <= 1:
+        return np.array([0], dtype=int)
+    return np.unique(np.round(np.linspace(0, n - 1, max_count)).astype(int))
+
+
+def _label_keep_set(drawn, stations, options) -> set:
+    """Which of a line's *drawn* marker indices (``drawn``) also get a
+    text label.
+
+    ``station_label_names`` wins: label only those station ids.
+    Otherwise keep an evenly-spaced ``station_label_fraction`` of the
+    drawn markers (first and last always kept). Markers themselves are
+    never affected -- this only thins the labels so a dense line stays
+    legible.
+    """
+    if not drawn:
+        return set()
+    names = getattr(options, "station_label_names", None)
+    if names:
+        want = {str(n).strip() for n in names if str(n).strip()}
+        return {j for j in drawn if str(stations[j]) in want}
+    frac = float(getattr(options, "station_label_fraction", 1.0) or 1.0)
+    if frac >= 1.0 or len(drawn) <= 2:
+        return set(drawn)
+    count = max(2, int(np.ceil(len(drawn) * max(frac, 0.0))))
+    picks = _thin_indices(len(drawn), count)
+    return {drawn[p] for p in picks}
+
+
+# Plotly's Scatter3d marker symbol enum has no triangle variant at all
+# (only circle/circle-open/cross/diamond/diamond-open/square/square-open/x
+# — triangles exist only for 2-D go.Scatter). These two values are
+# pycsamt's own extension: _add_station_markers detects them and draws
+# real custom geometry (a Mesh3d for the filled case, a closed Scatter3d
+# line loop for the open/outline case) instead of a sprite marker.
+TRIANGLE_DOWN_SYMBOLS = ("triangle-down", "triangle-down-open")
+
+
+def _triangle_marker_size(profiles, options) -> tuple[float, float]:
+    """``(half_width, height)`` for a custom triangle-down glyph, in
+    world (data) units — unlike a sprite marker's pixel ``size``, this
+    scales with the survey's own geometry so the glyph reads the same
+    relative size regardless of survey scale. ``options.station_size``
+    still controls it (as a multiplier against its own default of 4),
+    so the one existing size control keeps working for this symbol too.
+
+    Width and height are deliberately scaled off *different* axes,
+    each against a quantity that stays roughly constant as a survey
+    grows: width against the median along-profile station spacing (not
+    the total profile length, which can span anywhere from tens of
+    metres to kilometres depending on station count with no change in
+    how "big" one marker should look), height against the depth-axis
+    span the same way :func:`_marker_z_offset` already does. Coupling
+    height to the width instead (e.g. a fixed aspect ratio) breaks
+    badly whenever the along-profile and depth extents differ by
+    orders of magnitude, which is the common case, not an edge case.
+    """
+    spacings = []
+    z_spans = []
+    for grid in profiles.values():
+        x = np.sort(np.asarray(grid.get("x", []), dtype=float))
+        x = x[np.isfinite(x)]
+        if x.size > 1:
+            spacings.append(float(np.median(np.diff(x))))
+        z = np.asarray(grid.get("z", []), dtype=float)
+        z = z[np.isfinite(z)]
+        if z.size:
+            z_spans.append(float(z.max() - z.min()))
+    spacing = abs(float(np.median(spacings))) if spacings else 100.0
+    z_span = max(z_spans) if z_spans else spacing
+    size_frac = max(float(options.station_size), 0.1) / 4.0
+    # Capped independently of size_frac: a user cranking station_size
+    # way up should get a visibly bigger marker, never one so big it
+    # swallows the gap to the next station or dwarfs the whole panel.
+    half_width = min(max(spacing * 0.15 * size_frac, 1.0), spacing * 0.45)
+    # Height is a *small* glyph, not a structural element: keep it near
+    # the along-profile spacing and hard-cap it at a few percent of the
+    # depth span so a marker never floats visibly clear of the section /
+    # block it is meant to sit on.
+    height = min(
+        max(z_span * 0.02 * size_frac, spacing * 0.35, 1.0),
+        z_span * 0.06,
+    )
+    return half_width, height
+
+
+def _triangle_down_mesh_trace(
+    xs, ys, zs, half_width: float, height: float, color: str, hover: list[str]
+):
+    """One combined ``Mesh3d`` trace: a filled, downward-pointing
+    triangle per station (apex at the station's own point, base
+    extending ``height`` upward in +Z, ``2 * half_width`` wide in X) —
+    lies in the vertical X-Z plane at each station's Y, the orientation
+    that stays least foreshortened under Plotly's default oblique
+    camera (an isometric-style eye vector with x == y == z)."""
+    go = require_plotly()
+    vx: list[float] = []
+    vy: list[float] = []
+    vz: list[float] = []
+    vi: list[int] = []
+    vj: list[int] = []
+    vk: list[int] = []
+    vhover: list[str] = []
+    for x, y, z, h in zip(xs, ys, zs, hover):
+        base = len(vx)
+        vx.extend([x, x - half_width, x + half_width])
+        vy.extend([y, y, y])
+        vz.extend([z, z + height, z + height])
+        vhover.extend([h, h, h])
+        vi.append(base)
+        vj.append(base + 1)
+        vk.append(base + 2)
+    return go.Mesh3d(
+        x=vx,
+        y=vy,
+        z=vz,
+        i=vi,
+        j=vj,
+        k=vk,
+        color=color,
+        opacity=1.0,
+        flatshading=True,
+        hovertext=vhover,
+        hovertemplate="%{hovertext}<extra></extra>",
+        name="stations",
+        showlegend=False,
+    )
+
+
+def _triangle_down_outline_trace(
+    xs, ys, zs, half_width: float, height: float, color: str, hover: list[str]
+):
+    """One combined ``Scatter3d`` line trace: the unfilled/outline
+    variant of :func:`_triangle_down_mesh_trace` — each triangle drawn
+    as a closed 4-point loop, with a ``None`` gap between triangles so
+    they render as separate closed shapes in a single trace."""
+    go = require_plotly()
+    lx: list[float | None] = []
+    ly: list[float | None] = []
+    lz: list[float | None] = []
+    lhover: list[str | None] = []
+    for x, y, z, h in zip(xs, ys, zs, hover):
+        loop_x = [x, x - half_width, x + half_width, x]
+        loop_z = [z, z + height, z + height, z]
+        lx.extend(loop_x + [None])
+        ly.extend([y] * 4 + [None])
+        lz.extend(loop_z + [None])
+        lhover.extend([h] * 4 + [None])
+    return go.Scatter3d(
+        x=lx,
+        y=ly,
+        z=lz,
+        mode="lines",
+        line=dict(color=color, width=3),
+        hovertext=lhover,
+        hovertemplate="%{hovertext}<extra></extra>",
+        name="stations",
+        showlegend=False,
+    )
+
+
+#: Modes whose grid is built from :func:`_dense_volume_grid` -- one
+#: literal, axis-aligned ``(x, y, z)`` lattice shared by both
+#: ``go.Volume`` (block) and ``go.Isosurface`` (surface), neither of
+#: which can be rotated by azimuth without shearing the reconstructed
+#: shape (see ``test_block_mode_ignores_azimuth``). Markers must sit
+#: in that same unrotated frame for both, not just block.
+_AXIS_ALIGNED_MODES = {"block", "surface"}
+
+
 def _add_station_markers(fig, profiles, options) -> None:
-    """Overlay per-station markers at the survey surface across lines."""
+    """Overlay per-station markers at the survey surface across lines.
+
+    Block and surface (isosurface) mode share one dense ``(x, y, z)``
+    grid that is built axis-aligned and deliberately never rotated by
+    azimuth -- ``go.Volume``/``go.Isosurface`` need one literal
+    rectangular lattice to reconstruct a shape, and rotating it would
+    shear that reconstruction. Markers must sit in that same unrotated
+    frame for those two modes, or they drift outside the block/
+    isosurface's own footprint whenever ``azimuth != 0`` -- fence/depth
+    mode keep applying azimuth as before, since those panels rotate
+    with it.
+    """
     go = require_plotly()
 
-    az = np.deg2rad(float(options.azimuth))
+    az = (
+        0.0
+        if options.mode in _AXIS_ALIGNED_MODES
+        else np.deg2rad(float(options.azimuth))
+    )
     unit = _line_offset_unit(profiles)
     real_offsets = _line_real_offsets(profiles)
     # A marker at exactly the same (x, y, z) as the panel's own top
@@ -816,46 +1260,123 @@ def _add_station_markers(fig, profiles, options) -> None:
     # markers a hair above the surface, scaled to the survey's own
     # depth extent so it reads the same regardless of scale.
     z_offset = _marker_z_offset(profiles)
+    # Block / iso-surface are reconstructed on ONE shared x-axis -- the
+    # densest line's (see _dense_volume_grid). A station on a longer line
+    # would otherwise plot its marker well outside the rendered block.
+    x_lo, x_hi = (
+        _ref_line_x_range(profiles)
+        if options.mode in _AXIS_ALIGNED_MODES
+        else (-np.inf, np.inf)
+    )
     xs: list[float] = []
     ys: list[float] = []
     zs: list[float] = []
-    labels: list[str] = []
+    labels: list[str | None] = []
     hover: list[str] = []
     for line_idx, (name, grid) in enumerate(profiles.items()):
         x = np.asarray(grid["x"], dtype=float)
         elev = _elev_for(grid, options)
         offset = _line_offset(name, line_idx, real_offsets, unit, options)
         stations = grid.get("stations", np.arange(x.size))
-        for j in range(x.size):
+        drawn = [
+            j
+            for j in _thin_indices(x.size, options.max_stations)
+            if x_lo <= x[j] <= x_hi
+        ]
+        label_keep = _label_keep_set(drawn, stations, options)
+        for j in drawn:
             xs.append(float(x[j] + offset * np.sin(az)))
             ys.append(float(offset * np.cos(az)))
             zs.append(float(elev[j]) + z_offset)
-            labels.append(str(stations[j]))
+            labels.append(str(stations[j]) if j in label_keep else None)
             hover.append(f"{name} · {stations[j]}")
     if not xs:
         return
     show_labels = bool(options.station_labels)
+    symbol = str(options.station_symbol)
+
+    if symbol in TRIANGLE_DOWN_SYMBOLS:
+        half_width, height = _triangle_marker_size(profiles, options)
+        color = str(options.station_color)
+        if symbol == "triangle-down":
+            fig.add_trace(
+                _triangle_down_mesh_trace(xs, ys, zs, half_width, height, color, hover)
+            )
+        else:
+            fig.add_trace(
+                _triangle_down_outline_trace(
+                    xs, ys, zs, half_width, height, color, hover
+                )
+            )
+        if show_labels:
+            _add_station_labels(
+                fig, xs, ys, zs, labels, options,
+                z_lift=height, clear_px=10,
+            )
+        return
+
     fig.add_trace(
         go.Scatter3d(
             x=xs,
             y=ys,
             z=zs,
-            mode="markers+text" if show_labels else "markers",
+            mode="markers",
             marker=dict(
-                symbol=str(options.station_symbol),
+                symbol=symbol,
                 size=int(options.station_size),
                 color=str(options.station_color),
                 line=dict(width=0),
             ),
-            text=labels if show_labels else None,
-            textposition="top center",
-            textfont=dict(size=9, color=str(options.station_color)),
             hovertext=hover,
             hovertemplate="%{hovertext}<extra></extra>",
             name="stations",
             showlegend=False,
         )
     )
+    if show_labels:
+        _add_station_labels(
+            fig, xs, ys, zs, labels, options,
+            clear_px=int(options.station_size) + 9,
+        )
+
+
+def _add_station_labels(
+    fig, xs, ys, zs, labels, options, *, z_lift=0.0, clear_px=10
+) -> None:
+    """Per-station labels as rotatable, screen-facing scene annotations.
+
+    ``go.Scatter3d`` text has no rotation, so the labels ride on
+    ``layout.scene.annotations`` instead -- which do support
+    ``textangle`` (``options.station_label_angle``), letting a crowded
+    line tilt its labels the way a 2-D pseudosection does.
+
+    ``None`` entries in ``labels`` are markers the label-density /
+    named-only filter dropped -- skipped here. Each label is anchored by
+    its *bottom* edge and lifted ``clear_px`` screen pixels above the
+    marker so a rotated label sits on top of the glyph instead of
+    running through it.
+    """
+    angle = float(getattr(options, "station_label_angle", 0.0) or 0.0)
+    color = str(options.station_color)
+    notes = [
+        dict(
+            x=float(x),
+            y=float(y),
+            z=float(z) + z_lift,
+            text=str(t),
+            showarrow=False,
+            textangle=angle,
+            yanchor="bottom",
+            yshift=clear_px,
+            font=dict(size=9, color=color),
+        )
+        for x, y, z, t in zip(xs, ys, zs, labels)
+        if t is not None
+    ]
+    if not notes:
+        return
+    existing = list(getattr(fig.layout.scene, "annotations", None) or [])
+    fig.update_scenes(annotations=tuple(existing) + tuple(notes))
 
 
 def _terrain_trace(x, y, elev, name):
@@ -949,6 +1470,16 @@ def _dense_volume_grid(profiles, options):
         sampled = interp(np.column_stack([zz.ravel(), xx.ravel()]))
         rho_vol[:, idx, :] = sampled.reshape(z_ref.size, x_ref.size).T
 
+    elev_lines = None
+    if options.topography:
+        elev_lines = np.stack(
+            [
+                _line_elevation_on_x_ref(profiles[name], options, x_ref)
+                for name in names
+            ],
+            axis=1,
+        )  # (x_ref.size, n_lines)
+
     if n_lines >= 2:
         order = np.argsort(y_vals)
         y_sorted = y_vals[order]
@@ -962,7 +1493,102 @@ def _dense_volume_grid(profiles, options):
                 )
         rho_vol, y_vals = dense, y_dense
 
-    return x_ref, y_vals, -np.abs(z_ref), rho_vol
+        if elev_lines is not None:
+            elev_dense = np.empty((x_ref.size, n_y_dense), dtype=float)
+            for ix in range(x_ref.size):
+                elev_dense[ix, :] = _interp_finite_1d(
+                    y_dense, y_sorted, elev_lines[ix, order]
+                )
+            elev_lines = elev_dense
+
+    z_depth = -np.abs(z_ref)
+    if elev_lines is not None:
+        rho_vol, z_out = _drape_dense_volume(rho_vol, z_depth, elev_lines)
+        return x_ref, y_vals, z_out, rho_vol
+
+    return x_ref, y_vals, z_depth, rho_vol
+
+
+def _line_elevation_on_x_ref(grid, options, x_ref):
+    """Real station elevation for one line, interpolated onto the
+    shared ``x_ref`` axis -- same source (:func:`_elev_for`) the fence
+    and depth-slice panels already drape by, densified across ``x``
+    the same way :func:`_dense_volume_grid` already densifies
+    resistivity."""
+    x = np.asarray(grid["x"], dtype=float)
+    elev = _elev_for(grid, options)
+    if elev.size != x.size or x.size < 2:
+        return np.zeros_like(x_ref)
+    order = np.argsort(x)
+    x_sorted, elev_sorted = x[order], elev[order]
+    good = np.isfinite(x_sorted) & np.isfinite(elev_sorted)
+    if good.sum() < 2:
+        return np.zeros_like(x_ref)
+    return np.interp(x_ref, x_sorted[good], elev_sorted[good])
+
+
+def _drape_dense_volume(rho_vol, z_depth, elev_grid):
+    """Resample a flat (depth-below-surface) volume onto one shared
+    absolute-elevation lattice, terrain-following per ``(x, y)``
+    column.
+
+    ``rho_vol`` : (nx, ny, nz) array of values as a function of
+        ``z_depth`` (depth below each column's own local surface,
+        ``<= 0``, ``0`` at the surface) -- the flat datum
+        :func:`_dense_volume_grid` builds before this call.
+    ``elev_grid`` : (nx, ny) real elevation (m) at each ``(x, y)``
+        column, from the same station topography the fence and
+        depth-slice panels already drape by.
+
+    Plotly's ``go.Volume``/``go.Isosurface`` need one shared, literal
+    rectangular ``(x, y, z)`` lattice to reconstruct a shape -- unlike
+    ``go.Surface``, they cannot be warped per index the way a fence
+    panel's terrain-following ``z`` mesh can. So instead of warping
+    the *coordinate* grid, ``z`` stays one shared absolute-elevation
+    axis and the *values* are resampled into it: for each ``(x, y)``
+    column, a query elevation is converted back to that column's own
+    local depth below its real surface and sampled from the flat
+    volume at that depth. A query above the local terrain (or deeper
+    than any profile actually sampled) is left ``NaN`` -- real air or
+    genuine no-data, never a fabricated value -- which is exactly what
+    makes the rendered block's top surface follow real terrain instead
+    of a flat datum.
+    """
+    nx, ny, nz = rho_vol.shape
+    finite_elev = elev_grid[np.isfinite(elev_grid)]
+    if finite_elev.size == 0:
+        return rho_vol, z_depth
+    top = float(finite_elev.max())
+    bottom = float(finite_elev.min() + z_depth.min())
+    z_abs = np.linspace(bottom, top, nz)
+
+    order = np.argsort(z_depth)
+    z_sorted = z_depth[order]
+
+    draped = np.full((nx, ny, nz), np.nan, dtype=float)
+    for ix in range(nx):
+        for iy in range(ny):
+            elev = elev_grid[ix, iy]
+            if not np.isfinite(elev):
+                continue
+            col = rho_vol[ix, iy, order]
+            good = np.isfinite(col)
+            if good.sum() < 2:
+                continue
+            depth_query = z_abs - elev
+            sampled = np.interp(
+                depth_query,
+                z_sorted[good],
+                col[good],
+                left=np.nan,
+                right=np.nan,
+            )
+            # Above the local terrain is real air, not no-data below
+            # the profile's own range -- mask it explicitly rather
+            # than let np.interp's edge clamp show a fabricated value.
+            sampled = np.where(depth_query > 0, np.nan, sampled)
+            draped[ix, iy, :] = sampled
+    return draped, z_abs
 
 
 def _interp_finite_1d(x_new, x, values):

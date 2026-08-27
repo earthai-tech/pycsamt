@@ -409,6 +409,46 @@ output_stem : str, default "ModEM_out"
 """,
 )
 
+_modem_forward_params = dict(
+    qmr_iters_per_divcor="""
+qmr_iters_per_divcor : int, default 40
+    Number of QMR (quasi-minimal residual) solver iterations
+    performed between successive divergence-correction passes
+    of ModEM's 3-D forward/adjoint EM solver. Matches the
+    Fortran solver's own compiled-in default
+    (``IterPerDivCorDef``); left at the default here so writing
+    this file changes nothing about forward-solver behaviour
+    versus omitting it.
+""",
+    max_divcor="""
+max_divcor : int, default 20
+    Maximum number of divergence-correction calls per forward
+    or adjoint EM solve. Matches the Fortran solver's own
+    compiled-in default (``MaxDivCorDef``).
+""",
+    max_iter_divcor="""
+max_iter_divcor : int, default 100
+    Maximum number of iterations within a single divergence
+    correction. Matches the Fortran solver's own compiled-in
+    default (``MaxIterDivCorDef``).
+""",
+    tol_em_fwd="""
+tol_em_fwd : float, default 1.0e-7
+    Misfit tolerance for the 3-D EM forward solver. Matches the
+    Fortran solver's own compiled-in default (``tolEMDef``).
+""",
+    tol_em_adj="""
+tol_em_adj : float, default 1.0e-7
+    Misfit tolerance for the 3-D EM adjoint solver. Matches the
+    Fortran solver's own compiled-in default (``tolEMDef``).
+""",
+    tol_divcor="""
+tol_divcor : float, default 1.0e-5
+    Misfit tolerance for divergence correction. Matches the
+    Fortran solver's own compiled-in default (``tolDivCorDef``).
+""",
+)
+
 _modem_runner_params = dict(
     model="""
 model : path-like
@@ -557,6 +597,13 @@ ctrl_filename : str, default "control.inv"
     target RMS, lambda controls, and output-stem information
     derived from :class:`ModEmConfig`.
 """,
+    fwd_ctrl_filename="""
+fwd_ctrl_filename : str, default "fwd_control.ctrl"
+    Name of the 3-D forward-solver control file written by the
+    builder (see :class:`ModEmForwardControl`). Required by
+    Mod3DMT's own CLI argument order before a covariance file can
+    be passed at all. Not written for 2-D builder workflows.
+""",
 )
 
 _modem_result_params = dict(
@@ -647,6 +694,7 @@ _modem_param_docs = DocstringComponents.from_nested_components(
     model=DocstringComponents(_modem_model_params),
     covariance=DocstringComponents(_modem_covariance_params),
     control=DocstringComponents(_modem_control_params),
+    forward=DocstringComponents(_modem_forward_params),
     builder=DocstringComponents(_modem_builder_params),
     runner=DocstringComponents(_modem_runner_params),
     result=DocstringComponents(_modem_result_params),

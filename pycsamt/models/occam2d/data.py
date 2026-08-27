@@ -115,6 +115,27 @@ def _unique_freqs(all_freqs: list, rtol: float = 0.01) -> np.ndarray:
     return np.array(merged, dtype=float)
 
 
+def _extract_topo_elevations(items: list) -> np.ndarray:
+    """Return per-item elevation (m) via :mod:`pycsamt.topo`, when present.
+
+    Occam2D itself carries no elevation field, but the EDI/Sites source
+    used to build the data file often does. ``items`` is a flat list of
+    site-like objects in the same order as ``names``/``offsets`` before
+    profile-chainage sorting, matching :func:`pycsamt.topo.extract_elevation`'s
+    generic-iterable input path. Returns an all-zero array (the same
+    "no elevation known" convention :mod:`pycsamt.topo` itself uses) when
+    the source carries no non-zero elevation, or on any extraction error.
+    """
+    try:
+        from pycsamt.topo import extract_elevation, has_elevation
+
+        if has_elevation(items):
+            return extract_elevation(items)
+    except Exception:
+        pass
+    return np.zeros(len(items), dtype=float)
+
+
 def _normalise_source(source) -> list:
     """Return a flat list of site-like items."""
     # Sites (pycsamt.site.base.Sites): has _items → iterate directly
@@ -132,10 +153,37 @@ def _normalise_source(source) -> list:
     return list(source)
 
 
+def _normalized_offsets(names: list, offsets: list) -> tuple[list, list]:
+    """Shift *offsets* so the minimum chainage is exactly zero.
+
+    ``OccamMesh.from_data`` builds its mesh in a strictly zero-based
+    coordinate system (``x_nodes = concatenate([0.0], cumsum(x_widths))``,
+    with the leftmost station-zone cell starting right after the left
+    padding block) -- it has no notion of an absolute profile origin.
+    ``Profile.from_sites`` chainages and the Euclidean lat/lon fallback
+    below can both return offsets referenced to an arbitrary point (e.g.
+    the profile's midpoint, or a station other than the first), which can
+    be negative-only. Left un-normalized, the compiled Occam solver reads
+    those negative absolute offsets directly from ``OccamDataFile.dat``
+    and cannot match them to any real mesh node (all of which are >= 0),
+    silently collapsing every station onto the nearest boundary padding
+    node instead of its real position. Every synthetic benchmark in this
+    project used hand-specified, already-non-negative station
+    coordinates, so this path was never exercised until real EDI data
+    with an off-origin chainage reference was used.
+    """
+    finite = [v for v in offsets if np.isfinite(v)]
+    shift = min(finite) if finite else 0.0
+    return names, [v - shift if np.isfinite(v) else v for v in offsets]
+
+
 def _compute_offsets(items: list):
     """Return (names, offsets_m) sorted by profile chainage.
 
-    Try ``Profile.from_sites`` first, then simple coordinates.
+    Try ``Profile.from_sites`` first, then simple coordinates. The
+    returned offsets are always shifted to start at zero (see
+    :func:`_normalized_offsets`), matching the zero-based coordinate
+    system ``OccamMesh.from_data`` assumes.
     """
     # Station names
     names = []
@@ -152,7 +200,7 @@ def _compute_offsets(items: list):
         prof = Profile.from_sites(items)
         offsets = [float(prof.chainages.get(n, float("nan"))) for n in names]
         if all(np.isfinite(offsets)):
-            return names, offsets
+            return _normalized_offsets(names, offsets)
     except Exception:
         pass
 
@@ -183,7 +231,7 @@ def _compute_offsets(items: list):
         else:
             offsets.append(float(len(offsets)) * 1000.0)  # 1 km spacing
 
-    return names, offsets
+    return _normalized_offsets(names, offsets)
 
 
 # -----------------------------------------------------------------------
@@ -349,6 +397,12 @@ class OccamData(OccamBase):
         self.offsets: np.ndarray = np.array([])
         self.frequencies: np.ndarray = np.array([])
         self.data_blocks: np.ndarray = np.empty((0, 5))
+        #: Per-site elevation (m a.s.l.), same order as :attr:`sites`.
+        #: Populated by :meth:`from_edi` via :mod:`pycsamt.topo` when the
+        #: EDI/Sites source carries topography; all-zero ("no elevation
+        #: known") otherwise -- Occam2D's own file formats carry no
+        #: elevation field at all.
+        self.elevations: np.ndarray = np.array([])
 
     # ------------------------------------------------------------------
     # Construction from EDI
@@ -372,12 +426,14 @@ class OccamData(OccamBase):
 
         # ---- profile sort → chainages (offsets in metres) ----------------
         names, offsets = _compute_offsets(items)
+        elevations = _extract_topo_elevations(items)
 
         # sort by chainage
         order = np.argsort(offsets)
         names = [names[i] for i in order]
         offsets = [offsets[i] for i in order]
         items = [items[i] for i in order]
+        elevations = elevations[order]
 
         # ---- global frequency list ---------------------------------------
         all_freqs: list[float] = []
@@ -513,15 +569,18 @@ class OccamData(OccamBase):
         obj.sites = names
         obj.offsets = np.array(offsets, dtype=float)
         obj.frequencies = freqs
+        obj.elevations = np.asarray(elevations, dtype=float)
         if data_rows:
             obj.data_blocks = np.array(data_rows, dtype=float)
 
         if obj.verbose:
             obj.logger.info(
-                "OccamData.from_edi: %d sites, %d freqs, %d data blocks",
+                "OccamData.from_edi: %d sites, %d freqs, %d data blocks, "
+                "topography=%s",
                 obj.n_sites,
                 obj.n_frequencies,
                 obj.n_data,
+                bool(np.any(obj.elevations != 0.0)),
             )
         return obj
 
@@ -615,6 +674,34 @@ class OccamData(OccamBase):
             return np.array([], dtype=int)
         return np.unique(self.data_blocks[:, 2].astype(int))
 
+    @property
+    def has_topography(self) -> bool:
+        """``True`` when :attr:`elevations` carries real, non-zero relief."""
+        return bool(self.elevations.size) and bool(
+            np.any(self.elevations != 0.0)
+        )
+
+    def station_elevations(self) -> dict[str, float]:
+        """Return ``{station_name: elevation_m}`` for stations with topography.
+
+        Built from :attr:`sites`/:attr:`elevations` (populated by
+        :meth:`from_edi` via :mod:`pycsamt.topo`). Empty when the source
+        carried no real elevation. The returned mapping matches the
+        ``station_elevations`` parameter accepted by
+        :func:`pycsamt.format.adapters.occam2d.occam2d_to_pcsf`.
+
+        Returns
+        -------
+        dict of str to float
+        """
+        if not self.has_topography:
+            return {}
+        return {
+            name: float(elev)
+            for name, elev in zip(self.sites, self.elevations)
+            if elev != 0.0
+        }
+
 
 OccamData.__doc__ = rf"""
 Represent an Occam2D magnetotelluric data file.
@@ -671,6 +758,13 @@ data_blocks : numpy.ndarray of float, shape (n_data, 5)
     ``type_code``, ``datum``, and ``error``. Indices are
     one-based because they are written directly to Occam
     files.
+elevations : numpy.ndarray of float, shape (n_sites,)
+    Per-site elevation in metres above sea level, same order as
+    :attr:`sites`. Populated by :meth:`from_edi` via
+    :func:`pycsamt.topo.extract_elevation` when the EDI/Sites
+    source carries topography; all-zero otherwise. Occam2D's own
+    file formats have no elevation field of their own -- see
+    :meth:`station_elevations` and :attr:`has_topography`.
 
 Notes
 -----

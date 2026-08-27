@@ -32,6 +32,23 @@ File format (OCCAM2MTMOD_1.0)
       <n_cols integers — parameter codes for each model column>
       ... (repeated N times)
     NO. EXCEPTIONS:   <K>
+      <brick_i>  <brick_j>  <expen>
+      ... (repeated |K| times when K < 0)
+
+Roughness-penalty exceptions
+-----------------------------
+A negative exception count ``K`` selects the brick-pair convention:
+each of the following ``|K|`` lines names two one-based free-parameter
+("brick") indices and a non-negative multiplier ``expen`` applied to
+the default first-difference roughness penalty between them. A value
+of ``1.0`` leaves the default penalty unchanged; smaller values relax
+the smoothness constraint between that specific pair (``0.0`` removes
+it entirely); values are silently taken as ``abs(expen)`` by the
+solver. This is a native OCCAM 3.0 mechanism, unrelated to the
+prejudice file. A positive count uses an alternative row/column
+convention that this reader parses for line accounting but does not
+decode into :attr:`OccamModel.exceptions`; PyCSAMT never writes that
+form.
 
 Parameter codes
 ---------------
@@ -105,6 +122,7 @@ def _parse_model(path: Path) -> dict:
 
     result: dict = {v: None for v in _HEADER_MAP.values()}
     result["layers"] = []
+    result["exceptions"] = []
 
     with path.open("r", errors="replace") as fh:
         lines = [line.rstrip("\n") for line in fh]
@@ -171,6 +189,29 @@ def _parse_model(path: Path) -> dict:
                                 "params": params,
                             }
                         )
+
+                # After NO. EXCEPTIONS we switch to reading exception
+                # records. Negative counts use the brick-pair convention
+                # (brick_i brick_j expen) that OccamModel always writes;
+                # positive counts use the row/col convention (four
+                # regularization-grid indices plus expen) from the
+                # original OCCAM 3.0 format. Row/col records are
+                # consumed to keep line accounting correct but are not
+                # decoded into ``exceptions`` (see class docstring).
+                if attr == "n_exceptions" and result["n_exceptions"]:
+                    n_exceptions = result["n_exceptions"]
+                    n_records = abs(n_exceptions)
+                    brick_pairs: list[tuple[int, int, float]] = []
+                    for _ in range(n_records):
+                        while i < N and not lines[i].strip():
+                            i += 1
+                        fields = lines[i].strip().split()
+                        i += 1
+                        if n_exceptions < 0 and len(fields) >= 3:
+                            brick_pairs.append(
+                                (int(fields[0]), int(fields[1]), float(fields[2]))
+                            )
+                    result["exceptions"] = brick_pairs
 
     if result["format_str"] is None:
         raise ValueError(
@@ -275,8 +316,20 @@ class OccamModel(OccamBase):
             free inversion parameters.
 
     n_exceptions : int
-        Number of exception records at the end of the model
-        file. PyCSAMT currently writes ``0``.
+        Number of exception records parsed from an existing model
+        file, in the file's native (possibly negative) sign
+        convention. Ignored by :meth:`write` whenever
+        :attr:`exceptions` is non-empty; the written count is then
+        always ``-len(exceptions)``.
+    exceptions : list of (int, int, float)
+        Roughness-penalty exceptions as one-based
+        ``(brick_i, brick_j, expen)`` triples, in the brick-pair
+        convention (see "Roughness-penalty exceptions" above).
+        Empty by default. Indices should reference bricks produced by
+        the same parameter traversal as
+        :func:`pycsamt.ai.inversion.mapping2d.map_ai_grid_to_occam`;
+        :func:`pycsamt.ai.inversion.mapping2d.build_occam_parameter_adjacency`
+        enumerates the valid adjacent pairs for this model.
 
     Notes
     -----
@@ -348,6 +401,7 @@ class OccamModel(OccamBase):
         self.n_layers: int = 0
         self.layers: list[dict] = []
         self.n_exceptions: int = 0
+        self.exceptions: list[tuple[int, int, float]] = []
 
     # ------------------------------------------------------------------
     # Construction
@@ -572,6 +626,7 @@ class OccamModel(OccamBase):
                 setattr(obj, attr, val)
 
         obj.layers = parsed["layers"]
+        obj.exceptions = parsed.get("exceptions") or []
 
         if obj.verbose:
             obj.logger.info(
@@ -644,7 +699,21 @@ class OccamModel(OccamBase):
             lines.append(f"     {n_merge}   {n_cols}\n")
             lines.append("    " + "    ".join(str(v) for v in params) + "\n")
 
-        lines.append(f"NO. EXCEPTIONS:   {self.n_exceptions}\n")
+        if self.exceptions:
+            for brick_i, brick_j, expen in self.exceptions:
+                if int(brick_i) < 1 or int(brick_j) < 1:
+                    raise ValueError(
+                        "exceptions brick indices must be one-based and positive"
+                    )
+                if int(brick_i) == int(brick_j):
+                    raise ValueError("exceptions cannot link a brick to itself")
+                if not (float(expen) >= 0.0) or not np.isfinite(float(expen)):
+                    raise ValueError("exceptions expen values must be finite and non-negative")
+            lines.append(f"NO. EXCEPTIONS:   {-len(self.exceptions)}\n")
+            for brick_i, brick_j, expen in self.exceptions:
+                lines.append(f"{int(brick_i)} {int(brick_j)} {float(expen):.6g}\n")
+        else:
+            lines.append(f"NO. EXCEPTIONS:   {self.n_exceptions}\n")
 
         with p.open("w") as fh:
             fh.writelines(lines)

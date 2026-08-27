@@ -19,6 +19,7 @@ from .control import ModEmControl
 from .covariance import ModEmCovariance
 from .data import ModEmData
 from .doc import _modem_param_docs as _params
+from .forward_control import ModEmForwardControl
 from .model2d import ModEmModel2D
 from .model3d import ModEmModel3D
 
@@ -40,6 +41,7 @@ class InputBuilder(ModEmBase):
         self.model: ModEmModel2D | ModEmModel3D | None = None
         self.covariance: ModEmCovariance | None = None
         self.control: ModEmControl | None = None
+        self.fwd_control: ModEmForwardControl | None = None
 
     # ------------------------------------------------------------------
     # Main entry point
@@ -54,6 +56,7 @@ class InputBuilder(ModEmBase):
         model_filename: str | None = None,
         cov_filename: str = "covariance.cov",
         ctrl_filename: str = "control.inv",
+        fwd_ctrl_filename: str = "fwd_control.ctrl",
     ) -> dict[str, Path]:
         """Write the complete ModEM input set to ``workdir``.
 
@@ -62,14 +65,18 @@ class InputBuilder(ModEmBase):
         converts ``source`` to :class:`ModEmData`, then builds
         a uniform half-space starting model with the geometry
         defined by ``self.config``. For 3-D runs it also derives
-        a covariance file from the model grid. Finally, it
-        writes the inversion-control file.
+        a covariance file from the model grid and a forward-solver
+        control file (required by Mod3DMT's own CLI argument order
+        before the covariance file can be passed at all -- see
+        :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl`).
+        Finally, it writes the inversion-control file.
 
         The generated file set is:
 
         * observed data, usually ``data.dat``;
         * starting model, ``m0.ws`` in 3-D or ``m0.rho`` in 2-D;
         * covariance file for 3-D runs only;
+        * forward-solver control file for 3-D runs only;
         * inversion-control file, usually ``control.inv``.
 
         Parameters
@@ -101,6 +108,9 @@ class InputBuilder(ModEmBase):
         ctrl_filename : str, default "control.inv"
             Name of the inversion-control file written in
             ``workdir``.
+        fwd_ctrl_filename : str, default "fwd_control.ctrl"
+            Name of the forward-solver control file written for
+            3-D runs. Ignored for 2-D workflows.
 
         Returns
         -------
@@ -108,7 +118,8 @@ class InputBuilder(ModEmBase):
             Mapping from output role to resolved
             :class:`pathlib.Path`. The mapping always contains
             ``"data"``, ``"model"``, and ``"control"``. It also
-            contains ``"covariance"`` for 3-D runs.
+            contains ``"covariance"`` and ``"fwd_control"`` for
+            3-D runs.
 
         Raises
         ------
@@ -127,7 +138,7 @@ class InputBuilder(ModEmBase):
         >>> builder = InputBuilder(config=cfg)
         >>> files = builder.build(sites, workdir="modem_3d")
         >>> sorted(files)
-        ['control', 'covariance', 'data', 'model']
+        ['control', 'covariance', 'data', 'fwd_control', 'model']
 
         Build a 2-D TE inversion input set with custom names:
 
@@ -167,14 +178,17 @@ class InputBuilder(ModEmBase):
             self.model = ModEmModel2D.halfspace(self.data, config=cfg)
         model_path = self.model.write(wd / model_filename)
 
-        # 3. Covariance (3-D only) -------------------------------------
+        # 3. Covariance + forward-solver control (3-D only) -------------
         cov_path: Path | None = None
+        fwd_ctrl_path: Path | None = None
         if is_3d:
             self.covariance = ModEmCovariance.from_model(
                 self.model,
                 config=cfg,
             )
             cov_path = self.covariance.write(wd / cov_filename)
+            self.fwd_control = ModEmForwardControl.from_config(cfg)
+            fwd_ctrl_path = self.fwd_control.write(wd / fwd_ctrl_filename)
 
         # 4. Control ---------------------------------------------------
         self.control = ModEmControl.from_config(cfg)
@@ -187,6 +201,8 @@ class InputBuilder(ModEmBase):
         }
         if cov_path is not None:
             files["covariance"] = cov_path
+        if fwd_ctrl_path is not None:
+            files["fwd_control"] = fwd_ctrl_path
 
         if self.verbose:
             self.logger.info(
@@ -209,16 +225,18 @@ class InputBuilder(ModEmBase):
         model_filename: str | None = None,
         cov_filename: str = "covariance.cov",
         ctrl_filename: str = "control.inv",
+        fwd_ctrl_filename: str = "fwd_control.ctrl",
     ) -> dict[str, Path]:
         """Write run files from an existing :class:`ModEmData`.
 
         This method is useful when the observed-data object has
         already been assembled, filtered, edited, or written by a
         caller. It uses the supplied data to build the starting
-        model, derives a covariance file for 3-D workflows, and
-        writes the inversion-control file. It does not write the
-        data file itself, so callers should write ``data`` to the
-        run directory when the ModEM executable will need it.
+        model, derives a covariance file and forward-solver
+        control file for 3-D workflows, and writes the
+        inversion-control file. It does not write the data file
+        itself, so callers should write ``data`` to the run
+        directory when the ModEM executable will need it.
 
         Parameters
         ----------
@@ -240,6 +258,9 @@ class InputBuilder(ModEmBase):
         ctrl_filename : str, default "control.inv"
             Name of the inversion-control file written in
             ``workdir``.
+        fwd_ctrl_filename : str, default "fwd_control.ctrl"
+            Name of the forward-solver control file written for
+            3-D runs. Ignored for 2-D workflows.
 
         Returns
         -------
@@ -247,7 +268,8 @@ class InputBuilder(ModEmBase):
             Mapping from output role to resolved
             :class:`pathlib.Path`. The mapping contains
             ``"model"`` and ``"control"`` for all modes, and
-            also ``"covariance"`` for 3-D runs.
+            also ``"covariance"`` and ``"fwd_control"`` for
+            3-D runs.
 
         Examples
         --------
@@ -259,7 +281,7 @@ class InputBuilder(ModEmBase):
         >>> builder = InputBuilder(config=cfg)
         >>> files = builder.build_from_data(data, workdir="run")
         >>> sorted(files)
-        ['control', 'covariance', 'model']
+        ['control', 'covariance', 'fwd_control', 'model']
         """
         cfg = self.config
         wd = Path(workdir)
@@ -277,12 +299,15 @@ class InputBuilder(ModEmBase):
         model_path = self.model.write(wd / model_filename)
 
         cov_path: Path | None = None
+        fwd_ctrl_path: Path | None = None
         if is_3d:
             self.covariance = ModEmCovariance.from_model(
                 self.model,
                 config=cfg,
             )
             cov_path = self.covariance.write(wd / cov_filename)
+            self.fwd_control = ModEmForwardControl.from_config(cfg)
+            fwd_ctrl_path = self.fwd_control.write(wd / fwd_ctrl_filename)
 
         self.control = ModEmControl.from_config(cfg)
         ctrl_path = self.control.write(wd / ctrl_filename)
@@ -293,6 +318,8 @@ class InputBuilder(ModEmBase):
         }
         if cov_path is not None:
             files["covariance"] = cov_path
+        if fwd_ctrl_path is not None:
+            files["fwd_control"] = fwd_ctrl_path
         return files
 
 
@@ -302,16 +329,18 @@ Build and write a complete ModEM input set.
 ``InputBuilder`` is the main preparation object for the ModEM
 v2 workflow. It turns a survey source into the files required
 by the ModEM executable: an observed-data file, a half-space
-starting model, a covariance file for 3-D runs, and an
-inversion-control file. The builder does not launch ModEM.
-Instead, it creates a consistent working directory that can be
-passed to :class:`~pycsamt.models.modem.runner.ModEmRunner`.
+starting model, a covariance file and forward-solver control
+file for 3-D runs, and an inversion-control file. The builder
+does not launch ModEM. Instead, it creates a consistent working
+directory that can be passed to
+:class:`~pycsamt.models.modem.runner.ModEmRunner`.
 
 The build sequence is deterministic:
 
 1. Convert the survey source to :class:`ModEmData`.
 2. Build a 2-D or 3-D half-space starting model.
-3. Derive a 3-D covariance file when ``config.mode == "3d"``.
+3. Derive a 3-D covariance file and forward-solver control file
+   when ``config.mode == "3d"``.
 4. Write the ModEM inversion-control file.
 
 For a uniform starting resistivity :math:`\rho_0`, model
@@ -351,6 +380,8 @@ covariance : ModEmCovariance or None
     starting model.
 control : ModEmControl or None
     Inversion-control object generated from ``config``.
+fwd_control : ModEmForwardControl or None
+    Forward-solver control object generated only for 3-D runs.
 
 Build Parameters
 ----------------
@@ -360,6 +391,7 @@ Build Parameters
 {_params.builder.model_filename}
 {_params.builder.cov_filename}
 {_params.builder.ctrl_filename}
+{_params.builder.fwd_ctrl_filename}
 
 Notes
 -----
@@ -400,7 +432,7 @@ Build the default 3-D ModEM files:
 >>> builder = InputBuilder(config=cfg)
 >>> files = builder.build(sites, workdir="modem_run")
 >>> sorted(files)
-['control', 'covariance', 'data', 'model']
+['control', 'covariance', 'data', 'fwd_control', 'model']
 
 Build a 2-D TE input set:
 

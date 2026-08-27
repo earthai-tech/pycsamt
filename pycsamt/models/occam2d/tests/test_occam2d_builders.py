@@ -117,6 +117,36 @@ def test_from_edi_offsets_monotone():
     assert np.all(np.diff(d.offsets) >= 0), "offsets not monotone"
 
 
+def test_from_edi_offsets_start_at_zero_when_reference_site_is_easternmost():
+    """Regression test: OccamMesh.from_data builds a strictly zero-based
+    mesh (x_nodes = concatenate([0.0], cumsum(x_widths))); a real profile
+    whose reference/first station is not the westernmost one produces
+    negative-only chainages from the lat/lon fallback in
+    ``_compute_offsets`` unless they are re-normalized. Found via real
+    L26 EDI data, where the last station in file order was the profile's
+    western end, producing offsets from -2403 to 0 and silently
+    misaligning every station against the mesh in the compiled solver.
+    """
+    from pycsamt.models.occam2d.data import OccamData
+
+    freqs = np.logspace(4, -1, 6)
+    rho = np.full(6, 100.0)
+    phs = np.full(6, 45.0)
+    phs_yx = np.full(6, -135.0)
+    # Reference (first) site sits at the *eastern* end; the rest extend
+    # west of it, so the naive Euclidean offset would be negative-only.
+    sites = [
+        _FakeSite(
+            name=f"S{i:02d}", lat=0.0, lon=-i * 0.01,
+            freqs=freqs, rho_xy=rho, rho_yx=rho, phs_xy=phs, phs_yx=phs_yx,
+        )
+        for i in range(4)
+    ]
+    d = OccamData.from_edi(sites)
+    assert d.offsets.min() == pytest.approx(0.0)
+    assert np.all(np.diff(np.sort(d.offsets)) >= 0)
+
+
 def test_from_edi_frequencies_descending():
     from pycsamt.models.occam2d.data import OccamData
 
@@ -236,7 +266,15 @@ def test_mesh_from_data_shape():
     cfg = OccamConfig(n_layers=10, n_airlayers=3, cell_size_horizontal=100.0)
     m = OccamMesh.from_data(d, config=cfg)
     assert m.n_xcells > 0
-    assert m.n_zcells == cfg.n_layers + cfg.n_airlayers
+    # No air rows are written into the mesh file: Occam2D's own solver adds
+    # its air layer(s) internally (MT2D.f90's `addair`), and a mismatch
+    # between written mesh z-rows and the model's declared layer count
+    # breaks the external solver's free-parameter count. Verified against
+    # a real, working mtpy-generated reference (data/occam2D/Tonkeng),
+    # where sum(irz) across declared model layers equals the mesh's total
+    # z-cell count exactly, with no air offset.
+    assert m.n_zcells == cfg.n_layers
+    assert m.n_airlayers == 0
 
 
 def test_mesh_from_data_xcells_even():
@@ -274,18 +312,27 @@ def test_mesh_from_data_cell_rows_count():
     assert len(m.cell_rows) == 4 * m.n_zcells
 
 
-def test_mesh_from_data_air_rows_fixed():
-    """Air rows should use '0'; active rows use '?'."""
+def test_mesh_from_data_no_air_rows_written():
+    """No fixed '0' air rows: every written z-cell is a free '?' earth cell.
+
+    A prior version of this method wrote `cfg.n_airlayers` leading fixed
+    ('0') rows into the mesh file. That desynchronizes the free-parameter
+    count Occam2D's own Fortran computes while reading the mesh/model pair
+    (which walks exactly `n_layers` mesh z-rows starting from row 1, with
+    no air offset) from the count declared in the Startup file, aborting
+    with "Model file error: # params <> # free bricks". See
+    test_mesh_from_data_shape and pycsamt/models/occam2d/mesh.py.
+    """
     from pycsamt.models.occam2d.config import OccamConfig
     from pycsamt.models.occam2d.mesh import OccamMesh
 
     d = _simple_data(3)
     cfg = OccamConfig(n_layers=5, n_airlayers=2)
     m = OccamMesh.from_data(d, config=cfg)
-    for row in m.cell_rows[:8]:  # first 2 z-cells × 4 rows = air
-        assert "?" not in row
-    for row in m.cell_rows[8:]:  # rest are active
+    assert m.n_zcells == cfg.n_layers
+    for row in m.cell_rows:
         assert "0" not in row
+        assert set(row) == {"?"}
 
 
 def test_mesh_from_data_roundtrip(tmp_path):
@@ -318,6 +365,98 @@ def test_mesh_from_data_no_stations_raises():
     d.offsets = np.array([])
     with pytest.raises(ValueError, match="no station offsets"):
         OccamMesh.from_data(d)
+
+
+# ---------------------------------------------------------------------------
+# OccamMesh.cell_centers_survey_x / resample_rho_to_grid
+#
+# Regression coverage for a real bug: comparing/resampling a solved model
+# against anything in survey (station-offset) coordinates using the mesh's
+# raw node coordinates lands every query inside the left-padding zone
+# (tens of km wide) and clamps to one constant value, since x_nodes is
+# zero-based at the *outer* padding edge, not at the survey's own offset
+# zero. Found while investigating a DUHI-paper field figure that looked
+# artificially flat.
+# ---------------------------------------------------------------------------
+
+
+def test_cell_centers_survey_x_first_station_zone_cell_is_near_zero():
+    from pycsamt.models.occam2d.mesh import OccamMesh
+
+    d = _simple_data(5)  # offsets 0, 500, ..., 2000
+    m = OccamMesh.from_data(d)
+    centers = m.cell_centers_survey_x()
+    # First left-padding cell center must be negative (it sits entirely
+    # left of the survey's own offset-0 station).
+    assert centers[0] < 0.0
+    # The first station-zone cell (right after the 7 padding cells)
+    # should straddle the survey's own zero offset.
+    first_station_cell = centers[m.N_PAD]
+    assert 0.0 <= first_station_cell < d.offsets[1]
+
+
+def test_cell_centers_survey_x_spans_negative_and_positive():
+    from pycsamt.models.occam2d.mesh import OccamMesh
+
+    d = _simple_data(5)
+    m = OccamMesh.from_data(d)
+    centers = m.cell_centers_survey_x()
+    assert centers.min() < 0.0
+    assert centers.max() > d.offsets.max()
+
+
+def test_resample_rho_to_grid_recovers_real_lateral_structure():
+    from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.mesh import OccamMesh, resample_rho_to_grid
+
+    d = _simple_data(5)
+    cfg = OccamConfig(n_layers=4, n_airlayers=0, cell_size_horizontal=100.0)
+    m = OccamMesh.from_data(d, config=cfg)
+    rng = np.random.default_rng(0)
+    rho_2d = rng.uniform(1.0, 3.0, size=(m.n_zcells, m.n_xcells))
+
+    ai_x = np.linspace(d.offsets.min() + 50.0, d.offsets.max() - 50.0, 8)
+    ai_z = np.linspace(50.0, 500.0, 4)
+    grid = resample_rho_to_grid(rho_2d, m, ai_x, ai_z)
+
+    assert grid.shape == (ai_z.size, ai_x.size)
+    # A random, laterally-varying source model must not collapse to a
+    # single constant value once correctly resampled onto the survey-zone
+    # query grid (the padding-coordinate bug clamped every row flat).
+    assert grid[0, :].std() > 0.05
+
+
+def test_resample_rho_to_grid_matches_old_buggy_behaviour_when_shifted_back():
+    """The corrected resample differs from the raw-node-coordinate version
+    precisely by the left-padding shift -- pins down *why* the old
+    behaviour was wrong, not just that the new one differs."""
+    from pycsamt.models.occam2d.config import OccamConfig
+    from pycsamt.models.occam2d.mesh import OccamMesh, resample_rho_to_grid
+
+    d = _simple_data(5)
+    cfg = OccamConfig(n_layers=4, n_airlayers=0, cell_size_horizontal=100.0)
+    m = OccamMesh.from_data(d, config=cfg)
+    rng = np.random.default_rng(1)
+    rho_2d = rng.uniform(1.0, 3.0, size=(m.n_zcells, m.n_xcells))
+
+    left_pad_width = float(np.sum(m.x_widths[: m.N_PAD]))
+    ai_x = np.linspace(d.offsets.min() + 50.0, d.offsets.max() - 50.0, 8)
+    ai_z = np.linspace(50.0, 500.0, 4)
+
+    correct = resample_rho_to_grid(rho_2d, m, ai_x, ai_z)
+    # Re-derive the old (buggy) query by asking for the *unshifted* mesh
+    # coordinate that used to be passed in as if it were survey-space.
+    buggy_query_x = ai_x + left_pad_width
+    old_source_x = np.cumsum(m.x_widths) - 0.5 * m.x_widths
+    old_source_z = np.cumsum(m.z_widths) - 0.5 * m.z_widths
+    old_horizontal = np.vstack(
+        [np.interp(buggy_query_x, old_source_x, row) for row in rho_2d]
+    )
+    old_grid = np.vstack(
+        [np.interp(ai_z, old_source_z, old_horizontal[:, c])
+         for c in range(ai_x.size)]
+    ).T
+    assert np.allclose(correct, old_grid)
 
 
 # ---------------------------------------------------------------------------

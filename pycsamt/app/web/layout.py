@@ -536,7 +536,7 @@ class IDs:
     MAP3D_ACTIVE_MODE = (
         "map3d-active-mode"  # dcc.Store: "fence"|"block"|"depth"
     )
-    MAP3D_DATA_SRC = "map3d-data-src"  # inversion | pseudo | profiles
+    MAP3D_DATA_SRC = "map3d-data-src"  # inversion | pseudo | profiles | pcsf
     MAP3D_CMAP = "map3d-cmap"
     MAP3D_SCALE = "map3d-scale"  # log | linear
     MAP3D_VMIN = "map3d-vmin"
@@ -596,6 +596,9 @@ class IDs:
         "map3d-topo-upload-store"  # parsed topo upload records
     )
     MAP3D_TOPO_UPLOAD_INFO = "map3d-topo-upload-info"  # upload status label
+    # Multiline PCSF file data source (Phase 5 of the PCSF format plan)
+    MAP3D_PCSF_UPLOAD = "map3d-pcsf-upload"  # dcc.Upload for a .pcsf file
+    MAP3D_PCSF_UPLOAD_INFO = "map3d-pcsf-upload-info"  # upload status label
     # Station marker style (within topography/annotation controls)
     MAP3D_STA_SYMBOL = "map3d-sta-symbol"  # Plotly 3D marker symbol or "auto"
     MAP3D_STA_SIZE = "map3d-sta-size"  # marker size in px (int)

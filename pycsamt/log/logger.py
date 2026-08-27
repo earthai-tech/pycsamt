@@ -8,6 +8,7 @@ basic default logging configuration.
 
 import logging
 import logging.config
+import logging.handlers
 import os
 import sys
 import warnings
@@ -15,6 +16,40 @@ import warnings
 import yaml
 
 _CONFIGURED = False
+
+
+class SafeRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """``RotatingFileHandler`` that never lets a failed rollover crash
+    logging.
+
+    On Windows a rotating log cannot be renamed while any other handle
+    (another thread mid-write, an antivirus scanner, a second process,
+    the file indexer) still holds it open -- ``os.rename`` then raises
+    ``PermissionError`` (``WinError 32``). Under a threaded dev web
+    server that hammers a shared file handler this happens constantly
+    and floods the console with "--- Logging error ---" tracebacks.
+    Here a rollover that fails is simply skipped: the current file keeps
+    growing a little past ``maxBytes`` until the next attempt succeeds,
+    which is harmless.
+    """
+
+    def doRollover(self):  # noqa: N802 - stdlib name
+        try:
+            super().doRollover()
+        except (OSError, PermissionError):
+            try:  # make sure we still have a usable stream to write to
+                if self.stream is None:
+                    self.stream = self._open()
+            except OSError:
+                pass
+
+
+# Make the handler resolvable by ``logging.config.dictConfig`` under a
+# dotted path whose package is already fully imported. Referencing it as
+# ``pycsamt.log.logger.SafeRotatingFileHandler`` fails on the very first
+# import, because the ``pycsamt.log`` package has not yet bound its
+# ``logger`` submodule attribute while this module is still executing.
+logging.handlers.SafeRotatingFileHandler = SafeRotatingFileHandler
 
 
 def get_data_home(data_home: str = None) -> str:

@@ -101,7 +101,11 @@ def test_builder_3d_covariance_dims(tmp_path, sites_3d):
     cov = ModEmCovariance.read(tmp_path / "covariance.cov")
     assert cov.nx_earth == b.model.nx
     assert cov.ny_earth == b.model.ny
-    assert cov.nz_earth == b.model.nz - cfg.n_airlayers
+    # b.model.n_air is always 0 for a 3-D halfspace -- see
+    # test_model3d_halfspace_air_layers -- so nz_earth equals b.model.nz
+    # directly, with no n_airlayers subtraction.
+    assert b.model.n_air == 0
+    assert cov.nz_earth == b.model.nz
 
 
 def test_builder_3d_custom_filenames(tmp_path, sites_3d):

@@ -17,7 +17,7 @@ handlers:
     stream: ext://sys.stdout
 
   info_file_handler:
-    class: logging.handlers.RotatingFileHandler
+    class: logging.handlers.SafeRotatingFileHandler
     level: INFO
     formatter: detailed
     filename: infos.log  
@@ -26,7 +26,7 @@ handlers:
     encoding: utf-8
 
   warning_file_handler:
-    class: logging.handlers.RotatingFileHandler
+    class: logging.handlers.SafeRotatingFileHandler
     level: WARNING
     formatter: detailed
     filename: warnings.log
@@ -35,7 +35,7 @@ handlers:
     encoding: utf-8
 
   error_file_handler:
-    class: logging.handlers.RotatingFileHandler
+    class: logging.handlers.SafeRotatingFileHandler
     level: ERROR
     formatter: detailed
     filename: errors.log
@@ -48,6 +48,18 @@ loggers:
   # file only (see below). It's attached at runtime via
   # `pycsamt.log.logger.enable_console_logging()` when the user opts in
   # (CLI `-v`/`--verbose`, or programmatically).
+
+  # The Dash/Flask dev server (``pycsamt-mapview``) logs one INFO line
+  # per HTTP request through ``werkzeug``. Routed onto the root handlers
+  # below it floods ``infos.log`` and forces a rollover on nearly every
+  # request -- keep only its warnings/errors, and don't propagate.
+  werkzeug:
+    level: WARNING
+    handlers:
+      - warning_file_handler
+      - error_file_handler
+    propagate: no
+
   pycsamt:
     level: DEBUG
     handlers:

@@ -127,6 +127,17 @@ def test_model3d_halfspace_shape():
 
 
 def test_model3d_halfspace_air_layers():
+    """`cfg.n_airlayers` is not written into the 3-D WS model file.
+
+    ModEM's own Fortran WS-format reader (`read_modelParam_ws` in WS.inc)
+    hardcodes NzAir=10 unconditionally and treats the 4th header field as
+    a "mapping" flag that must be exactly 0, not an air-layer count --
+    writing `n_airlayers` there (as a prior version of `halfspace` did)
+    hits the unimplemented mapping path and a real compiled Mod3DMT
+    aborts with "Mapping not supported yet in read_modelParam_WS". See
+    `pycsamt.forward.maxwell.modem3d`'s already-validated WS writer,
+    which explicitly sets `model.n_air = 0` for the same reason.
+    """
     from pycsamt.models.modem.config import ModEmConfig
     from pycsamt.models.modem.data import ModEmData
     from pycsamt.models.modem.model3d import ModEmModel3D
@@ -135,9 +146,8 @@ def test_model3d_halfspace_air_layers():
     cfg = ModEmConfig(mode="3d", n_airlayers=3)
     d = ModEmData.from_edi(sites, config=cfg)
     m = ModEmModel3D.halfspace(d, config=cfg)
-    assert m.n_air == 3
-    # air layers should have very high resistivity
-    assert np.all(m.rho_loge[:3, :, :] > 20)
+    assert m.n_air == 0
+    assert m.nz == cfg.nz
 
 
 def test_model3d_halfspace_earth_uniform():
@@ -149,9 +159,10 @@ def test_model3d_halfspace_earth_uniform():
     cfg = ModEmConfig(mode="3d", n_airlayers=3, initial_rho=50.0)
     d = ModEmData.from_edi(sites, config=cfg)
     m = ModEmModel3D.halfspace(d, config=cfg)
-    n_air = cfg.n_airlayers
+    # no air rows are written at all, so the whole grid is the uniform
+    # earth half-space
     np.testing.assert_allclose(
-        m.rho_loge[n_air:, :, :],
+        m.rho_loge,
         np.log(cfg.initial_rho),
         rtol=1e-6,
     )
@@ -279,7 +290,10 @@ def test_cov_from_model_dims():
     d = ModEmData.from_edi(sites, config=cfg)
     m = ModEmModel3D.halfspace(d, config=cfg)
     cov = ModEmCovariance.from_model(m, config=cfg)
-    assert cov.nz_earth == m.nz - cfg.n_airlayers
+    # m.n_air is always 0 for a 3-D halfspace (see
+    # test_model3d_halfspace_air_layers), so nz_earth equals m.nz directly.
+    assert m.n_air == 0
+    assert cov.nz_earth == m.nz
     assert cov.nx_earth == m.nx
     assert cov.ny_earth == m.ny
 

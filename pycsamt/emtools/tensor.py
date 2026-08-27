@@ -690,7 +690,7 @@ def plot_phase_tensor_psection(
     period_range: tuple[float, float] | None = None,
     # ── y-axis ────────────────────────────────────────────────────────────
     axis_y: str = "logperiod",
-    period_up: bool = True,
+    period_up: bool = False,
     frame_pct: tuple[float, float] | None = (1.0, 99.0),
     # ── ellipse sizing ────────────────────────────────────────────────────
     scale=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.scale
@@ -712,6 +712,7 @@ def plot_phase_tensor_psection(
     alpha=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.alpha
     ellipse_kws: dict[str, Any] | None = None,
     cb_kws: dict[str, Any] | None = None,
+    colorbar: bool = True,
     # ── overlays ─────────────────────────────────────────────────────────
     skew_threshold=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.skew_threshold
     mark_3d=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
@@ -753,9 +754,14 @@ def plot_phase_tensor_psection(
         Restrict the period range plotted.
     axis_y : ``"logperiod"`` | ``"logfreq"``
         Y-axis quantity.  ``"logperiod"`` is the MT convention.
-    period_up : bool, default ``True``
-        When ``True`` (MT convention) long period (low frequency) is at the
-        top of the figure; ``False`` flips the y-axis.
+    period_up : bool, default ``False``
+        When ``False`` (default; standard pseudo-section convention, as
+        used elsewhere in :mod:`pycsamt.emtools`, e.g.
+        :func:`~pycsamt.emtools.tensor.plot_dimensionality_psection`),
+        short period (high frequency, shallow sensitivity) is at the top
+        of the figure and long period (low frequency, deep sensitivity)
+        is at the bottom -- matching a geological cross-section with
+        depth increasing downward. ``True`` flips the y-axis.
     frame_pct : (lo, hi) or None, default ``(1, 99)``
         Robust percentiles of finite log-period/log-frequency values used for
         the visible y-frame. This prevents a few isolated frequency rows from
@@ -822,6 +828,11 @@ def plot_phase_tensor_psection(
     cb_kws : dict or None
         Colourbar customization. ``size``, ``pad``, ``labelsize`` and
         ``ticksize`` control layout; other entries go to ``Figure.colorbar``.
+    colorbar : bool, default ``True``
+        Draw the per-axes colourbar. Set ``False`` when composing several
+        calls onto a shared grid (e.g. one panel per line) and drawing a
+        single shared colourbar separately, using the same *cmap*/*clim*
+        passed to every call so the mapping is identical across panels.
     skew_threshold : float or None, default ``3.0``
         |β| threshold (degrees) separating 1-D/2-D from 3-D structure.
         It does not set the color limits; *clim_pct* remains data-driven.
@@ -1057,10 +1068,11 @@ def plot_phase_tensor_psection(
     )
     sm = ScalarMappable(cmap=cm, norm=norm)
     sm.set_array([])
-    cb = _attach_cbar(ax, sm, cbar_label, **dict(cb_kws or {}))
-    if segment_ticks is not None:
-        cb.set_ticks(segment_ticks)
-        cb.set_ticklabels(segment_ticklabels)
+    if colorbar:
+        cb = _attach_cbar(ax, sm, cbar_label, **dict(cb_kws or {}))
+        if segment_ticks is not None:
+            cb.set_ticks(segment_ticks)
+            cb.set_ticklabels(segment_ticklabels)
     ax.figure.canvas.draw()
     station_px = abs(
         ax.transData.transform((1.0, y_lo))[0]
@@ -1712,11 +1724,23 @@ def plot_ellipticity_psection(
     return ax
 
 
+#: Traffic-light dimensionality palette (1D=safe green, 2D=caution amber,
+#: 3D=warning red), matching :func:`pycsamt.emtools.skew.plot_skew_traffic_psection`.
+DIMENSIONALITY_TRAFFIC_COLORS = (
+    (0.20, 0.60, 0.20),  # 1D — green
+    (0.95, 0.70, 0.20),  # 2D — amber
+    (0.85, 0.25, 0.20),  # 3D — red
+)
+
+
 def plot_dimensionality_psection(
     sites: Any,
     *,
     skew_th: float = 3.0,
     ellipt_th: float = 0.2,
+    segmented_colors: bool = True,
+    cmap: str | Any = "viridis",
+    colorbar: bool = True,
     figsize: tuple[float, float] = (8.5, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -1754,11 +1778,19 @@ def plot_dimensionality_psection(
     )
     piv = piv.sort_index()
     Z = piv.to_numpy(dtype=float)  # (n_logp, n_st) — no transpose
+    if segmented_colors:
+        plot_cmap = ListedColormap(DIMENSIONALITY_TRAFFIC_COLORS)
+        plot_norm = BoundaryNorm([-0.5, 0.5, 1.5, 2.5], plot_cmap.N)
+    else:
+        plot_cmap = cmap
+        plot_norm = None
     im = ax.imshow(
         Z,
         aspect="auto",
         origin="lower",
         interpolation="nearest",
+        cmap=plot_cmap,
+        norm=plot_norm,
     )
     ax.set_ylabel(LOG10_PERIOD_LABEL)
     PYCSAMT_STATION_RENDERING.apply(
@@ -1778,8 +1810,14 @@ def plot_dimensionality_psection(
     )
     ax.set_yticks(yt)
     ax.set_yticklabels([f"{v:.2g}" for v in yvals])
-    cb = plt.colorbar(im, ax=ax)
-    cb.set_label("dim (0=1D,1=2D,2=3D)")
+    if colorbar:
+        cb = plt.colorbar(im, ax=ax)
+        if segmented_colors:
+            cb.set_ticks([0, 1, 2])
+            cb.set_ticklabels(["1D", "2D", "3D"])
+            cb.set_label("Dimensionality")
+        else:
+            cb.set_label("dim (0=1D,1=2D,2=3D)")
     return ax
 
 

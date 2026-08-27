@@ -278,6 +278,35 @@ class OccamMesh(OccamBase):
         self.cell_rows: list[str] = []
         self.n_airlayers: int = self.config.n_airlayers
 
+    #: Fixed horizontal padding-cell count on each profile end. Matches
+    #: the boundary code 7 used by :meth:`OccamModel.from_mesh` and the
+    #: hardcoded ``n_pad`` in :meth:`from_data` -- an architectural
+    #: invariant, not something inferred per-mesh, so it also applies to
+    #: meshes rebuilt via :meth:`read`.
+    N_PAD: int = 7
+
+    def cell_centers_survey_x(self) -> np.ndarray:
+        """Horizontal cell-center coordinates in survey (offset) space.
+
+        :attr:`x_widths`/:attr:`x_nodes` are zero-based at the *outer*
+        edge of the left padding, not at the survey's own zero offset
+        (see :class:`OccamData`'s ``offsets``, which starts at 0 after
+        normalization). Comparing or resampling a solved model against
+        anything expressed in survey/offset coordinates -- true models,
+        AI display grids, station chainage -- must shift by the total
+        left-padding width, or the comparison silently lands entirely
+        inside the padding zone.
+
+        Returns
+        -------
+        numpy.ndarray of float, shape (n_xcells,)
+            Cell-center x-coordinates, in metres, in the same
+            zero-based convention as :class:`OccamData`'s ``offsets``.
+        """
+        centers = np.cumsum(self.x_widths) - 0.5 * self.x_widths
+        left_pad_width = float(np.sum(self.x_widths[: self.N_PAD]))
+        return centers - left_pad_width
+
     # ------------------------------------------------------------------
     # Construction
     # ------------------------------------------------------------------
@@ -310,10 +339,15 @@ class OccamMesh(OccamBase):
         config : OccamConfig, optional
             Configuration object controlling mesh geometry.
             The builder uses ``cell_size_horizontal``,
-            ``n_airlayers``, ``n_layers``,
+            ``n_airlayers``, ``n_layers``, ``max_depth``,
             ``cell_size_vertical_top``, and ``depth_scale``.
-            If omitted, a default :class:`OccamConfig` is
-            created.
+            Earth layers expand geometrically from
+            ``cell_size_vertical_top`` by ``depth_scale`` and
+            stop -- truncating the last layer if needed -- once
+            cumulative depth reaches ``max_depth`` (default
+            1500 m) or ``n_layers`` layers have been added,
+            whichever comes first. If omitted, a default
+            :class:`OccamConfig` is created.
         **kwargs
             Additional keyword arguments forwarded to the
             ``OccamMesh`` constructor. Use this for
@@ -356,7 +390,39 @@ class OccamMesh(OccamBase):
             )
 
         cell_h = cfg.cell_size_horizontal
-        n_pad = 7  # fixed: matches boundary code 7 in OccamModel.from_mesh
+        n_pad = cls.N_PAD  # fixed: matches boundary code 7 in OccamModel.from_mesh
+
+        # Two stations closer together than this are for practical purposes
+        # coincident (e.g. a repeat/QC measurement at the same physical
+        # site under a different station suffix). Left unguarded, the gap
+        # still produces one degenerate sub-metre-wide station-zone cell
+        # (max(1, round(gap/cell_h)) never returns 0), which builds and
+        # writes without error here but breaks the external Occam2D
+        # Fortran solver's own free-parameter count deep inside its own
+        # I/O ("Model file error: # params <> # free bricks") with no
+        # indication of which station caused it. Fail fast here instead,
+        # with an actionable message, rather than downstream in a
+        # compiled binary's stderr.
+        min_gap = 0.01 * cell_h
+        if offsets.size > 1:
+            gaps = np.diff(offsets)
+            too_close = np.nonzero(gaps < min_gap)[0]
+            if too_close.size:
+                pairs = ", ".join(
+                    f"offsets[{i}]={offsets[i]:.3f} m, "
+                    f"offsets[{i + 1}]={offsets[i + 1]:.3f} m "
+                    f"(gap={gaps[i]:.3f} m)"
+                    for i in too_close
+                )
+                raise ValueError(
+                    "OccamMesh.from_data: station offsets closer than "
+                    f"{min_gap:.3f} m (1% of cell_size_horizontal="
+                    f"{cell_h:g} m) found: {pairs}. These are almost "
+                    "certainly repeat/QC measurements at the same "
+                    "physical site rather than distinct along-line "
+                    "positions; drop one station from each such pair "
+                    "before building the mesh."
+                )
 
         # ---- station-zone x-cells ----------------------------------------
         station_widths: list[float] = []
@@ -382,26 +448,55 @@ class OccamMesh(OccamBase):
 
         x_widths = np.array(left_pad + station_widths + right_pad, dtype=float)
 
-        # ---- vertical cells ----------------------------------------------
-        n_air = cfg.n_airlayers
+        # ---- vertical cells ------------------------------------------------
+        # Occam2D's own Fortran solver adds its own air layer(s) internally
+        # (the `addair` subroutine in MT2D.f90) purely for the forward
+        # boundary condition; a properly formed Occam2DMesh/Occam2DModel
+        # file pair does not represent air in the finite-element region
+        # grid at all -- confirmed against a real, working mtpy-generated
+        # reference (data/occam2D/Tonkeng), where every mesh z-row is a
+        # free ("?") earth cell and sum(irz) across the declared model
+        # layers equals the mesh's total z-cell count exactly, with no
+        # offset for air. Writing `cfg.n_airlayers` extra fixed ("0") rows
+        # here, as an earlier version of this method did, desynchronizes
+        # that count: `OccamModel.from_mesh` declares only the earth
+        # layers (`mesh.n_zcells - mesh.n_airlayers`), but the free-brick
+        # counting loop inside Occam2D's own MT2D.f90 walks mesh z-rows
+        # starting from row 1 for exactly `nlay` (the *declared* earth
+        # layer count) steps -- so with extra unaccounted air rows
+        # prepended, it silently reads across the wrong z-range and comes
+        # up short by exactly `n_airlayers` layers' worth of free
+        # parameters, aborting with "Model file error: # params <> # free
+        # bricks" deep inside the compiled binary. `cfg.n_airlayers` /
+        # `cfg.cell_size_vertical_top` are therefore not applicable to the
+        # Occam2D mesh file and are intentionally not used below; they
+        # remain on `OccamConfig` only because the same config class is
+        # shared with the 2-D startup/model builders' docstrings and CLI.
         n_active = cfg.n_layers
-        air_h = cfg.cell_size_vertical_top
+        max_depth = float(getattr(cfg, "max_depth", 0.0) or 0.0)
 
-        air_w = [air_h] * n_air
         z_w: list[float] = []
         thick = float(cfg.cell_size_vertical_top)
+        cum_depth = 0.0
         for _ in range(n_active):
+            if max_depth > 0.0 and cum_depth >= max_depth:
+                break
+            if max_depth > 0.0:
+                thick = min(thick, max_depth - cum_depth)
+            if thick <= 0.0:
+                break
             z_w.append(thick)
+            cum_depth += thick
             thick *= cfg.depth_scale
 
-        z_widths = np.array(air_w + z_w, dtype=float)
+        z_widths = np.array(z_w, dtype=float)
 
-        # ---- char matrix (4 rows per z-cell) ----------------------------
+        # ---- char matrix (4 rows per z-cell, all free earth cells) --------
         n_xcells = len(x_widths)
         n_zcells = len(z_widths)
         cell_rows: list[str] = []
-        for iz in range(n_zcells):
-            row = ("0" if iz < n_air else "?") * n_xcells
+        for _iz in range(n_zcells):
+            row = "?" * n_xcells
             for _ in range(4):
                 cell_rows.append(row)
 
@@ -412,14 +507,14 @@ class OccamMesh(OccamBase):
         obj.x_nodes = np.concatenate([[0.0], np.cumsum(x_widths)])
         obj.z_nodes = np.concatenate([[0.0], np.cumsum(z_widths)])
         obj.cell_rows = cell_rows
-        obj.n_airlayers = n_air
+        obj.n_airlayers = 0
 
         if obj.verbose:
             obj.logger.info(
-                "OccamMesh.from_data: %d×%d cells (%d airlayers) from %d stations",
+                "OccamMesh.from_data: %d×%d cells (no air rows written; "
+                "Occam2D adds its own internally) from %d stations",
                 n_xcells,
                 n_zcells,
-                n_air,
                 offsets.size,
             )
         return obj
@@ -574,3 +669,50 @@ class OccamMesh(OccamBase):
         if not self.cell_rows:
             return 0
         return sum(row.count("?") for row in self.cell_rows)
+
+
+def resample_rho_to_grid(
+    rho_2d: np.ndarray,
+    mesh: OccamMesh,
+    x: np.ndarray,
+    z: np.ndarray,
+) -> np.ndarray:
+    """Resample a solved Occam2D resistivity model onto a regular grid.
+
+    ``rho_2d`` is defined on the mesh's own irregular, padding-inclusive
+    cell grid. ``x``/``z`` are typically a regular display or comparison
+    grid expressed in survey coordinates (station-offset-relative, e.g.
+    an AI benchmark's true-model grid or a fixed display grid) -- *not*
+    the mesh's own zero-at-outer-padding coordinate system. Resampling
+    must therefore go through :meth:`OccamMesh.cell_centers_survey_x`,
+    not the mesh's raw node coordinates, or every query lands inside the
+    (typically tens of kilometres of) horizontal padding and is clamped
+    to a single, flat, constant-per-row value regardless of the model's
+    real structure.
+
+    Parameters
+    ----------
+    rho_2d : numpy.ndarray, shape (n_zcells, n_xcells)
+        Resistivity (or log-resistivity) on the mesh's own grid,
+        including any air-layer rows at the top (stripped internally
+        using ``mesh.n_airlayers``).
+    mesh : OccamMesh
+        Mesh the model was solved on.
+    x, z : numpy.ndarray
+        Target cell-center coordinates, in metres, in survey (offset)
+        and depth (positive-down) coordinates respectively.
+
+    Returns
+    -------
+    numpy.ndarray, shape (z.size, x.size)
+        ``rho_2d`` resampled onto the ``x``/``z`` grid.
+    """
+    n_air = int(mesh.n_airlayers)
+    earth = np.asarray(rho_2d, dtype=float)[n_air:, :]
+    z_widths = np.asarray(mesh.z_widths, dtype=float)[n_air:]
+    source_x = mesh.cell_centers_survey_x()
+    source_z = np.cumsum(z_widths) - 0.5 * z_widths
+    horizontal = np.vstack([np.interp(x, source_x, row) for row in earth])
+    return np.vstack(
+        [np.interp(z, source_z, horizontal[:, c]) for c in range(x.size)]
+    ).T

@@ -1,0 +1,10 @@
+# ILLUSTRATIVE topo file for the pcsf_conversion_demo -- data/occam2D's
+# real station names (S00, S01, ...) have no independently-sourced real
+# coordinate anywhere in the repository, so these two rows are clearly
+# fabricated placeholder values, not a real GPS survey. Demonstrates the
+# named (.csv, station-id-matched) branch of pycsamt.format.topo_source:
+# only S00/S01 are listed, S02.. stay unmatched (nan), same partial-
+# coverage story the old hand-typed station_elevations dict told.
+station,lat,lon,elev
+S00,25.100000,102.700000,1200.0
+S01,25.100500,102.700400,1195.5

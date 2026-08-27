@@ -203,17 +203,27 @@ class ModEmControl(ModEmBase):
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        _W = 44  # key field width
+        # ModEM's own Fortran reader (NLCG.f90) parses this file with fixed
+        # column widths, not by splitting on ':' -- the label (including
+        # its colon) is read as `a36` (columns 1-36) and the value
+        # immediately after as `g15.7` (columns 37-51). A key field wider
+        # than 36 (this used 44) pushes the colon into the numeric field's
+        # column range, which a real Mod3DMT/Mod2DMT then rejects with
+        # "Fortran runtime error: Bad value during floating point read"
+        # (the colon is not a valid part of a floating-point literal).
+        # pycsamt's own `read()` above is colon-split and tolerant of any
+        # width, so this only matters for the external solver.
+        _W = 36  # key field width, colon included -- matches Fortran a36
         lines: list[str] = []
         for attr, label in _KEYS:
             val = getattr(self, attr)
-            key = f"{label:<{_W}}"
+            key = f"{label + ':':<{_W}}"
             if attr in _FLOAT_ATTRS:
-                lines.append(f"{key}: {val:.4g}\n")
+                lines.append(f"{key}{val:.4g}\n")
             elif attr in _INT_ATTRS:
-                lines.append(f"{key}: {int(val)}\n")
+                lines.append(f"{key}{int(val)}\n")
             else:
-                lines.append(f"{key}: {val}\n")
+                lines.append(f"{key}{val}\n")
 
         with p.open("w") as fh:
             fh.writelines(lines)

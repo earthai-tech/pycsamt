@@ -177,6 +177,45 @@ _MODEM_CONFIG_SCHEMA = [
         "Covariance",
     ),
     ConfigParameter(
+        "qmr_iters_per_divcor",
+        "3-D forward/adjoint QMR solver iterations between "
+        "divergence-correction passes. Matches ModEM's own "
+        "compiled-in default (40); written to the forward-control "
+        "file so a covariance file can also be passed, without "
+        "changing forward-solver behaviour.",
+        "Forward Solver (3-D)",
+    ),
+    ConfigParameter(
+        "max_divcor",
+        "Maximum divergence-correction calls per 3-D forward or "
+        "adjoint EM solve. Matches ModEM's own compiled-in default (20).",
+        "Forward Solver (3-D)",
+    ),
+    ConfigParameter(
+        "max_iter_divcor",
+        "Maximum iterations within one divergence correction. "
+        "Matches ModEM's own compiled-in default (100).",
+        "Forward Solver (3-D)",
+    ),
+    ConfigParameter(
+        "tol_em_fwd",
+        "Misfit tolerance for the 3-D EM forward solver. Matches "
+        "ModEM's own compiled-in default (1e-7).",
+        "Forward Solver (3-D)",
+    ),
+    ConfigParameter(
+        "tol_em_adj",
+        "Misfit tolerance for the 3-D EM adjoint solver. Matches "
+        "ModEM's own compiled-in default (1e-7).",
+        "Forward Solver (3-D)",
+    ),
+    ConfigParameter(
+        "tol_divcor",
+        "Misfit tolerance for divergence correction. Matches "
+        "ModEM's own compiled-in default (1e-5).",
+        "Forward Solver (3-D)",
+    ),
+    ConfigParameter(
         "max_iterations",
         "Maximum number of nonlinear conjugate-gradient "
         "iterations allowed by the control file.",
@@ -239,6 +278,13 @@ _MODEM_CONFIG_SCHEMA = [
     ConfigParameter(
         "control_file",
         "Default inversion-control filename.",
+        "File Names",
+    ),
+    ConfigParameter(
+        "fwd_control_file",
+        "Default 3-D forward-solver control filename. Required by "
+        "Mod3DMT's own CLI argument order to reach the covariance "
+        "file slot (see ModEmForwardControl).",
         "File Names",
     ),
     ConfigParameter(
@@ -319,6 +365,14 @@ class ModEmConfig:
     smooth_z: float = 0.1
     n_smooth_iter: int = 2
 
+    # ---- forward solver control (3D) ----
+    qmr_iters_per_divcor: int = 40
+    max_divcor: int = 20
+    max_iter_divcor: int = 100
+    tol_em_fwd: float = 1.0e-7
+    tol_em_adj: float = 1.0e-7
+    tol_divcor: float = 1.0e-5
+
     # ---- inversion control ----
     max_iterations: int = 100
     target_rms: float = 1.05
@@ -336,6 +390,7 @@ class ModEmConfig:
     model_file: str = "ModEM_Model.rho"
     covariance_file: str = "ModEM.cov"
     control_file: str = "ModEM.inv"
+    fwd_control_file: str = "ModEM_fwd.ctrl"
     log_file: str = "Modular_NLCG.log"
     output_stem: str = "ModEM_out"
 

@@ -34,3 +34,4 @@ from :doc:`../ai_inversion/index`, which covers learned inversion methods.
    occam1d
    modem
    mare2dem
+   pcsf_format

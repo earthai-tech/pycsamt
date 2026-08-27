@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import base64
-import io
 
 import numpy as np
 import plotly.graph_objects as go
@@ -31,11 +30,7 @@ from pycsamt.app.web.pages.map3d import (
     _MAP3D_MODES,
     _empty_3d_fig,
 )
-from pycsamt.map.geometry import (
-    normalize_offsets,
-    resolve_offset,
-    survey_uv,
-)
+from pycsamt.map.geometry import resolve_offset
 
 # ── Mode metadata ─────────────────────────────────────────────────────────────
 _MODE_SLUGS = [slug for slug, _, _ in _MAP3D_MODES]
@@ -199,41 +194,17 @@ def _line_real_offsets(profiles: dict) -> dict | None:
     "inversion" — see ``_profiles_from_inversion_result``); returns
     ``None`` otherwise so callers fall back to the synthetic
     index-based line stack.
+
+    Delegates to :func:`pycsamt.format.multiline.line_offsets_from_stations`
+    — promoted there in Phase 5 of the PCSF format plan so this app's
+    live-cache rendering and a persisted multiline ``.pcsf`` file are
+    provably the same computation (see
+    ``pycsamt/format/tests/test_multiline.py::TestEquivalenceWithMap3DPrivateFunctions``),
+    not two copies that can drift apart.
     """
-    ids: list = []
-    lats: list = []
-    lons: list = []
-    lines: list = []
-    per_line_ids: dict[str, list] = {}
-    for name, p in profiles.items():
-        lat = p.get("sta_lat") or []
-        lon = p.get("sta_lon") or []
-        names = p.get("sta_names") or []
-        if (
-            not lat
-            or not lon
-            or len(lat) != len(lon)
-            or len(lat) != len(names)
-        ):
-            return None
-        line_ids = [f"{name}::{n}" for n in names]
-        per_line_ids[name] = line_ids
-        ids.extend(line_ids)
-        lats.extend(lat)
-        lons.extend(lon)
-        lines.extend([name] * len(line_ids))
-    if len(ids) < 2:
-        return None
-    uv = survey_uv(ids, lats, lons, lines)
-    if not uv:
-        return None
-    raw = {}
-    for name, line_ids in per_line_ids.items():
-        vs = [uv[i][1] for i in line_ids if i in uv]
-        if not vs:
-            return None
-        raw[name] = float(np.median(vs))
-    return normalize_offsets(raw)
+    from pycsamt.format.multiline import line_offsets_from_stations
+
+    return line_offsets_from_stations(profiles)
 
 
 # ── Figure builders ───────────────────────────────────────────────────────────
@@ -983,120 +954,24 @@ def _build_topo_2d_surface(
 def _parse_topo_upload(contents: str, filename: str) -> list[dict]:
     """Parse a user-uploaded topography file into [{station, elev}, ...] records.
 
-    Supported formats: CSV, H5/HDF5, NPZ.
-    Expected columns/arrays: station (or ID/name) + elevation (or elev/Elevation).
+    Delegates to :func:`pycsamt.map.topo.parse_elevation_file` (CSV /
+    H5/HDF5 / NPZ, flexible station-id and elevation column/array
+    names) — promoted there in Phase 6 of the PCSF format plan.
+    Previously this function reimplemented the same CSV/H5/NPZ parsing
+    independently, and had quietly drifted from it: this function's
+    own id-column list never recognised ``"station_names"``, which
+    ``pycsamt.map.topo``'s already did, so an otherwise-valid upload
+    could silently fail here while working through the "Upload file"
+    elevation source elsewhere in the app. Converts the shared
+    parser's ``{station_id: elevation}`` return into this function's
+    own ``[{"station", "elev"}, ...]`` shape so every existing caller
+    (``_build_elevs_dict``, the ``MAP3D_TOPO_UPLOAD_STORE`` callback)
+    keeps working unchanged.
     """
-    _, enc = contents.split(",", 1)
-    raw = base64.b64decode(enc)
-    fname = (filename or "").lower()
-    records: list[dict] = []
+    from pycsamt.map.topo import parse_elevation_file
 
-    try:
-        if fname.endswith(".csv"):
-            import pandas as pd
-
-            df = pd.read_csv(io.BytesIO(raw), dtype=str)
-            df.columns = [c.strip() for c in df.columns]
-            # Flexible column detection
-            id_col = next(
-                (
-                    c
-                    for c in df.columns
-                    if c.lower() in ("station", "id", "name", "sta")
-                ),
-                None,
-            )
-            elev_col = next(
-                (
-                    c
-                    for c in df.columns
-                    if c.lower()
-                    in ("elevation", "elev", "z", "alt", "altitude", "height")
-                ),
-                None,
-            )
-            if id_col is None or elev_col is None:
-                return []
-            for _, row in df.iterrows():
-                name = str(row[id_col]).strip()
-                try:
-                    e = float(row[elev_col])
-                except (TypeError, ValueError):
-                    continue
-                if name and np.isfinite(e):
-                    records.append({"station": name, "elev": e})
-
-        elif fname.endswith((".h5", ".hdf5")):
-            import h5py
-
-            with h5py.File(io.BytesIO(raw), "r") as f:
-                # Try common dataset names for station IDs
-                id_key = next(
-                    (
-                        k
-                        for k in f
-                        if k.lower()
-                        in ("station", "station_names", "id", "name", "sta")
-                    ),
-                    None,
-                )
-                elv_key = next(
-                    (
-                        k
-                        for k in f
-                        if k.lower()
-                        in ("elevation", "elev", "z", "altitude", "height")
-                    ),
-                    None,
-                )
-                if id_key is None or elv_key is None:
-                    return []
-                names = [
-                    n.decode() if isinstance(n, bytes) else str(n)
-                    for n in f[id_key][:]
-                ]
-                elevs = np.asarray(f[elv_key][:], float)
-                for name, e in zip(names, elevs):
-                    if name.strip() and np.isfinite(e):
-                        records.append(
-                            {"station": name.strip(), "elev": float(e)}
-                        )
-
-        elif fname.endswith(".npz"):
-            data = np.load(io.BytesIO(raw), allow_pickle=True)
-            id_key = next(
-                (
-                    k
-                    for k in data
-                    if k.lower()
-                    in ("station", "station_names", "id", "name", "sta")
-                ),
-                None,
-            )
-            elv_key = next(
-                (
-                    k
-                    for k in data
-                    if k.lower()
-                    in ("elevation", "elev", "z", "altitude", "height")
-                ),
-                None,
-            )
-            if id_key is None or elv_key is None:
-                return []
-            names = [
-                n.decode() if isinstance(n, bytes) else str(n)
-                for n in data[id_key]
-            ]
-            elevs = np.asarray(data[elv_key], float)
-            for name, e in zip(names, elevs):
-                if name.strip() and np.isfinite(e):
-                    records.append({"station": name.strip(), "elev": float(e)})
-
-    except Exception:
-        return []
-
-    return records
+    elev_map = parse_elevation_file(contents, filename)
+    return [{"station": name, "elev": elev} for name, elev in elev_map.items()]
 
 
 def _build_elevs_dict(
@@ -1340,6 +1215,48 @@ def _profiles_from_pseudo(
             "sta_lon": sta_lon,
         }
     return result
+
+
+def _profiles_from_pcsf(contents: str) -> dict:
+    """Convert an uploaded ``.pcsf`` multiline file into map3D profiles.
+
+    Phase 5 of the PCSF format plan: a persisted
+    :func:`~pycsamt.format.multiline.build_multiline_pcsf` file becomes
+    a data source in its own right, so the fence/block/depth-slice
+    figures are reproducible from that one file alone — no session
+    cache, no re-running an inversion. Reuses the exact same
+    ``{"x", "z", "rho", ...}`` profile shape every other data source
+    here already produces, so no rendering code needs to change.
+
+    Parameters
+    ----------
+    contents : str
+        A Dash ``dcc.Upload`` data URI (``"data:...;base64,..."``),
+        same convention as :func:`_parse_topo_upload`.
+
+    Returns
+    -------
+    dict
+        ``{}`` when *contents* cannot be parsed as a multiline
+        ``.pcsf`` file (caller shows a friendly error, matching every
+        other data-extraction failure path in ``generate_grid``).
+    """
+    import tempfile
+    from pathlib import Path
+
+    from pycsamt.format import read_pcsf
+    from pycsamt.format.multiline import multiline_pcsf_to_profiles
+
+    try:
+        _, enc = contents.split(",", 1)
+        raw = base64.b64decode(enc)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "upload.pcsf"
+            path.write_bytes(raw)
+            model = read_pcsf(path)
+        return multiline_pcsf_to_profiles(model)
+    except Exception:
+        return {}
 
 
 def _rho_log_to_ohm_m(rho: np.ndarray) -> np.ndarray:
@@ -1643,6 +1560,78 @@ def _register_presets(app) -> None:
         )
 
 
+def _finish_generate_grid(
+    profiles: dict,
+    data_src: str,
+    elev_corr_store,
+    elev_raw_store,
+):
+    """Shared tail of ``generate_grid``: profiles dict -> MAP3D_GRID_STORE.
+
+    Every data source (pseudo/inversion/survey-line-profiles/pcsf)
+    converges on the same ``{"x", "z", "rho", ...}`` profiles shape
+    before reaching here, so the ρ/depth range hint and the serialised
+    grid store are computed exactly once, the same way regardless of
+    where the data came from.
+    """
+    if not profiles:
+        return (
+            no_update,
+            "",
+            "",
+            True,
+            "No profile data found. Try 'Skin-depth pseudo' source.",
+        )
+
+    all_rho = np.concatenate(
+        [np.asarray(p["rho"]).ravel() for p in profiles.values()]
+    )
+    all_rho = all_rho[np.isfinite(all_rho) & (all_rho > 0)]
+    if all_rho.size:
+        log_lo = float(np.log10(all_rho.min()))
+        log_hi = float(np.log10(all_rho.max()))
+        all_z = np.concatenate(
+            [np.abs(np.asarray(p["z"])).ravel() for p in profiles.values()]
+        )
+        z_max = float(all_z.max()) if all_z.size else 2000.0
+        hint = (
+            f"Data: ρ {all_rho.min():.0f}–{all_rho.max():.0f} Ω·m  "
+            f"({log_lo:.1f}–{log_hi:.1f} log₁₀)  ·  "
+            f"depth 0–{z_max:.0f} m  ·  {len(profiles)} profile(s)"
+        )
+    else:
+        log_lo = log_hi = 0.0
+        hint = ""
+
+    grid_data = {
+        name: {
+            "x": np.asarray(p["x"]).tolist(),
+            "z": np.asarray(p["z"]).tolist(),
+            "rho": np.asarray(p["rho"]).tolist(),
+            "sta_x": p.get("sta_x", []),
+            "sta_elev": p.get("sta_elev", []),
+            "sta_elev_raw": p.get("sta_elev_raw", []),
+            "sta_elev_corr": p.get("sta_elev_corr", []),
+            "sta_elev_upload": p.get("sta_elev_upload", []),
+            "sta_names": p.get("sta_names", []),
+            "sta_lat": p.get("sta_lat", []),
+            "sta_lon": p.get("sta_lon", []),
+        }
+        for name, p in profiles.items()
+    }
+
+    store = {
+        "profiles": grid_data,
+        "n_profiles": len(profiles),
+        "src": data_src,
+        "log_lo": log_lo,
+        "log_hi": log_hi,
+        "topo_corr": elev_corr_store,
+        "topo_raw": elev_raw_store,
+    }
+    return store, hint, "", False, ""
+
+
 def _register_generate(app) -> None:
     """
     'Load & Generate' button: extract Sites data → serialise to MAP3D_GRID_STORE.
@@ -1662,6 +1651,7 @@ def _register_generate(app) -> None:
         State("tool-elev-corrected-store", "data"),
         State("tool-elev-raw-store", "data"),
         State(IDs.MAP3D_TOPO_UPLOAD_STORE, "data"),
+        State(IDs.MAP3D_PCSF_UPLOAD, "contents"),
         prevent_initial_call=True,
     )
     def generate_grid(
@@ -1672,11 +1662,25 @@ def _register_generate(app) -> None:
         elev_corr_store,
         elev_raw_store,
         topo_upload_store,
+        pcsf_contents,
     ):
         if not n_clicks:
             raise PreventUpdate
 
         data_src = data_src or "pseudo"
+
+        # PCSF file needs no session/cache state at all -- that is the
+        # whole point (Phase 5 of the PCSF format plan): the figure is
+        # reproducible from the uploaded file alone.
+        if data_src == "pcsf":
+            if not pcsf_contents:
+                return no_update, "", "", True, "Upload a .pcsf file first."
+            profiles = _profiles_from_pcsf(pcsf_contents)
+            if not profiles:
+                msg = "Could not load profiles from the uploaded .pcsf file."
+                return no_update, "", "", True, msg
+            return _finish_generate_grid(profiles, data_src, None, None)
+
         sites = cache_get(session_id)
         if sites is None:
             return no_update, "", "", True, "Load survey data first."
@@ -1765,62 +1769,9 @@ def _register_generate(app) -> None:
                     for n in sta_names_p
                 ]
 
-        if not profiles:
-            return (
-                no_update,
-                "",
-                "",
-                True,
-                "No profile data found. Try 'Skin-depth pseudo' source.",
-            )
-
-        all_rho = np.concatenate(
-            [np.asarray(p["rho"]).ravel() for p in profiles.values()]
+        return _finish_generate_grid(
+            profiles, data_src, elev_corr_store, elev_raw_store
         )
-        all_rho = all_rho[np.isfinite(all_rho) & (all_rho > 0)]
-        if all_rho.size:
-            log_lo = float(np.log10(all_rho.min()))
-            log_hi = float(np.log10(all_rho.max()))
-            all_z = np.concatenate(
-                [np.abs(np.asarray(p["z"])).ravel() for p in profiles.values()]
-            )
-            z_max = float(all_z.max()) if all_z.size else 2000.0
-            hint = (
-                f"Data: ρ {all_rho.min():.0f}–{all_rho.max():.0f} Ω·m  "
-                f"({log_lo:.1f}–{log_hi:.1f} log₁₀)  ·  "
-                f"depth 0–{z_max:.0f} m  ·  {len(profiles)} profile(s)"
-            )
-        else:
-            log_lo = log_hi = 0.0
-            hint = ""
-
-        grid_data = {
-            name: {
-                "x": np.asarray(p["x"]).tolist(),
-                "z": np.asarray(p["z"]).tolist(),
-                "rho": np.asarray(p["rho"]).tolist(),
-                "sta_x": p.get("sta_x", []),
-                "sta_elev": p.get("sta_elev", []),
-                "sta_elev_raw": p.get("sta_elev_raw", []),
-                "sta_elev_corr": p.get("sta_elev_corr", []),
-                "sta_elev_upload": p.get("sta_elev_upload", []),
-                "sta_names": p.get("sta_names", []),
-                "sta_lat": p.get("sta_lat", []),
-                "sta_lon": p.get("sta_lon", []),
-            }
-            for name, p in profiles.items()
-        }
-
-        store = {
-            "profiles": grid_data,
-            "n_profiles": len(profiles),
-            "src": data_src,
-            "log_lo": log_lo,
-            "log_hi": log_hi,
-            "topo_corr": elev_corr_store,
-            "topo_raw": elev_raw_store,
-        }
-        return store, hint, "", False, ""
 
     # ── Show / hide upload widget based on source selection ─────────────────
     @app.callback(
@@ -1832,6 +1783,36 @@ def _register_generate(app) -> None:
         if src == "upload":
             return {"display": "block", "marginBottom": "4px"}
         return {"display": "none"}
+
+    @app.callback(
+        Output("map3d-pcsf-upload-wrap", "style"),
+        Input(IDs.MAP3D_DATA_SRC, "value"),
+        prevent_initial_call=False,
+    )
+    def _toggle_pcsf_upload_widget(src):
+        if src == "pcsf":
+            return {"display": "block", "marginBottom": "4px"}
+        return {"display": "none"}
+
+    @app.callback(
+        Output(IDs.MAP3D_PCSF_UPLOAD_INFO, "children"),
+        Input(IDs.MAP3D_PCSF_UPLOAD, "contents"),
+        State(IDs.MAP3D_PCSF_UPLOAD, "filename"),
+        prevent_initial_call=True,
+    )
+    def _show_pcsf_upload_name(contents, filename):
+        if not contents:
+            raise PreventUpdate
+        return html.Span(
+            [
+                html.I(
+                    className="bi bi-check-circle-fill me-1",
+                    style={"color": "var(--green)"},
+                ),
+                f"{filename} loaded. Click 'Load & Generate 3D' to render.",
+            ],
+            className="small",
+        )
 
     # ── Parse topography file and populate store ─────────────────────────────
     @app.callback(
@@ -2205,48 +2186,18 @@ def _register_export_html(app) -> None:
 
 
 def _assemble_3d_grid(profiles: dict, line_spacing: float = 1.0):
-    line_names = list(profiles.keys())
-    n_lines = len(line_names)
-    real_offsets = _line_real_offsets(profiles)
-    ref = profiles[line_names[0]]
-    x_arr = np.asarray(ref["x"])
-    z_arr = np.asarray(ref["z"])
-    n_x, n_z = len(x_arr), len(z_arr)
+    """Resample every line onto the first line's (x, z) grid.
 
-    rho_3d = np.zeros((n_lines, n_x, n_z))
-    for i, name in enumerate(line_names):
-        p = profiles[name]
-        rho_i = np.asarray(p["rho"])
-        if rho_i.shape == (n_z, n_x):
-            rho_i = rho_i.T
-        if rho_i.shape != (n_x, n_z):
-            x_i = np.asarray(p["x"])
-            z_i = np.asarray(p["z"])
-            from scipy.interpolate import (
-                RegularGridInterpolator,
-            )
+    Delegates to :func:`pycsamt.format.multiline.stack_lines_to_common_grid`
+    (see the note on :func:`_line_real_offsets` above) — same
+    algorithm, only the return order differs (``x, y, z, rho`` here vs
+    ``x, z, y, rho`` there, kept as each already shipped to match
+    their own callers).
+    """
+    from pycsamt.format.multiline import stack_lines_to_common_grid
 
-            try:
-                interp = RegularGridInterpolator(
-                    (z_i, x_i),
-                    np.asarray(p["rho"]),
-                    bounds_error=False,
-                    fill_value=np.nan,
-                )
-                xi = np.array(
-                    np.meshgrid(z_arr, x_arr, indexing="ij")
-                ).T.reshape(-1, 2)
-                rho_i = interp(xi).reshape(n_x, n_z)
-            except Exception:
-                rho_i = np.full((n_x, n_z), np.nanmean(rho_i))
-        rho_3d[i] = rho_i
-
-    y_arr = np.array(
-        [
-            resolve_offset(name, i, real_offsets, 1000.0, line_spacing)
-            for i, name in enumerate(line_names)
-        ],
-        dtype=float,
+    x_arr, z_arr, y_arr, rho_3d = stack_lines_to_common_grid(
+        profiles, line_spacing=line_spacing
     )
     return x_arr, y_arr, z_arr, rho_3d
 

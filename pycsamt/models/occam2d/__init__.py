@@ -54,7 +54,7 @@ from .builder import InputBuilder
 from .config import OccamConfig
 from .data import OccamData
 from .log import OccamLog
-from .mesh import OccamMesh
+from .mesh import OccamMesh, resample_rho_to_grid
 from .model import OccamModel
 from .plot import (
     PlotMisfit,
@@ -80,6 +80,7 @@ __all__ = [
     "InversionResult",
     "OccamData",
     "OccamMesh",
+    "resample_rho_to_grid",
     "OccamModel",
     "OccamStartup",
     "OccamPrejudice",

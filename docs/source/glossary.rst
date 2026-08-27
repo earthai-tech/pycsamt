@@ -2818,6 +2818,30 @@ definitions here are the single source of truth.
       that it is the exact record the engine's binary consumed or produced,
       not the editable parameters used to build it.
 
+   PCSF
+      pyCSAMT Common Subsurface Format, an HDF5 container defined by
+      :mod:`pycsamt.format` that any inversion backend's result can be
+      converted to (Occam2D, ModEM, MARE2DEM; a DUHI-prepared result,
+      see :term:`AI inversion`, converts through the same Occam2D path
+      once folded back into a solved run). Unlike a :term:`native file`,
+      a PCSF file is backend-neutral: canonical resistivity is always linear
+      :math:`\Omega\,\mathrm{m}`, geometry is discriminated explicitly
+      by one of four kinds (``grid2d``, ``grid3d``,
+      ``mesh_unstructured``, ``multiline``) rather than inferred from
+      array shape, and it is the one file format the desktop 3-D
+      panel, the web 3-D view, and :class:`~pycsamt.map.MapView` all
+      read directly. See :doc:`user_guide/models/pcsf_format`.
+
+   PCSM
+      pyCSAMT Common Subsurface Markup, the lossless, hand-editable ASCII
+      projection of :term:`PCSF`. A ``.pcsm`` file reconstructs the same
+      :class:`~pycsamt.format.schema.PCSFModel` and preserves canonical
+      resistivity in linear :math:`\Omega\,\mathrm{m}`; it is a second
+      encoding, not a separate inversion-result schema. Plain PCSM is useful
+      for inspection, comments, and version-control diffs, while ``.pcsm.gz``
+      trades direct readability for smaller files. See
+      :doc:`user_guide/models/pcsf_format`.
+
    Interpretation package
       A controlled set of interpretation deliverables, usually including source
       run identifiers, configuration, evidence tables, exported grids or logs,

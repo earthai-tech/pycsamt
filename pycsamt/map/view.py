@@ -131,6 +131,42 @@ class MapView:
         )
         return cls(data, theme=theme, backend=backend)
 
+    @classmethod
+    def from_pcsf(
+        cls,
+        path: str | Path,
+        *,
+        known_stations: Any = None,
+        fetch_elevation: bool = True,
+        theme: str = "light",
+        backend: str = "plotly",
+        mesh_z_samples: int = 60,
+    ) -> MapView:
+        """Build a view from a backend-neutral ``.pcsf``/``.pcsm``/
+        ``.pcsm.gz`` file.
+
+        See :func:`pycsamt.map.inversion.load_pcsf_lines`. Works with a
+        file in either PCSF encoding (binary ``.pcsf`` or its lossless
+        ASCII sibling, ``.pcsm``/gzip-compressed ``.pcsm.gz`` — see
+        ``pycsamt/format/SPEC.md`` S9) with any of the four geometry
+        kinds — ``grid2d``, ``multiline``, native ``grid3d`` (e.g.
+        ModEM 3-D), or ``mesh_unstructured`` (e.g. MARE2DEM, sampled by
+        point-location on its real triangulation, see
+        ``mesh_z_samples``) — pass
+        ``known_stations=existing_view.data.stations`` to geo-reference
+        it against a previously-loaded EDI survey, the same as
+        :meth:`from_inversion_results`.
+        """
+        from .inversion import load_pcsf_lines
+
+        data = load_pcsf_lines(
+            path,
+            known_stations=known_stations,
+            fetch_elevation=fetch_elevation,
+            mesh_z_samples=mesh_z_samples,
+        )
+        return cls(data, theme=theme, backend=backend)
+
     # ── survey introspection ───────────────────────────
 
     @property

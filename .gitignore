@@ -469,11 +469,24 @@ examples/*
 !examples/occam1_demo/**
 !examples/emtf_xml_roundtrip_demo/
 !examples/emtf_xml_roundtrip_demo/**
+!examples/pcsf_conversion_demo/
+!examples/pcsf_conversion_demo/**
+!examples/pcsm_conversion/
+!examples/pcsm_conversion/**
+!examples/ai_inversion_pcsf/
+!examples/ai_inversion_pcsf/**
+# The complete ModEM PCSM products are optional ~20 MB demo outputs;
+# documentation tracks only the concise, explicitly marked excerpt.
+examples/pcsm_conversion/output/modem3d.pcsm
+examples/pcsm_conversion/output/modem3d.pcsm.gz
 # Bytecode caches still slip through the blanket "!examples/**"
 # exceptions above (a later negation wins over the earlier global
 # __pycache__ rule), so re-exclude them explicitly.
 examples/occam1_demo/__pycache__/
 examples/emtf_xml_roundtrip_demo/__pycache__/
+examples/pcsf_conversion_demo/__pycache__/
+examples/pcsm_conversion/__pycache__/
+examples/ai_inversion_pcsf/__pycache__/
 
 # Exception: sphinx-gallery example *source* scripts under
 # docs/examples/<section>/ — hand-written, not generated, and must be
@@ -493,6 +506,10 @@ docs/examples/**/*.py[cod]
 # DUHI paper reproduction — local drafts, checkpoints, and configs, not
 # for public distribution
 /DUHI-paper/
+
+/GMD-paper/
+
+/PAGEO-paper/
 
 # Reviewer-response handoff artifacts — local drafts/results for students
 /QUESTIONS-TO-ANSWERS.md
@@ -527,6 +544,7 @@ AI-INVERSION-IMPLEMENTATION-PLAN.md
 /paper.pdf
 /NEW-SUBPACKAGE-AND-MODULE-DEVELOPMENT-GUIDELINES.md
 /PYCSAMT-EMTF-XML-AIRBONE-IMPLEMENTATION-PLAN.md
+/PYCSAMT-PCSF-INVERSION-FORMAT-PLAN.md
 
 # EMTF FCU v4.1 reference implementation (Fortran) — vendored locally as a
 # behavioral oracle for pycsamt.emtf development, not shipped with the

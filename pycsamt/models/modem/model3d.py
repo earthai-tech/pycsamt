@@ -104,6 +104,7 @@ def _parse_model3d(path: Path) -> dict:
             # Could be trailing centre/rotation. Stop only if we have
             # most of the data we need
             if len(rho_flat) >= total - nx:
+                i -= 1  # leave this line for the trailer scan below
                 break
         for tok in parts:
             try:
@@ -115,6 +116,41 @@ def _parse_model3d(path: Path) -> dict:
         rho_flat[:total],
         dtype=float,
     ).reshape(nz, ny, nx)
+
+    # A real ModEM writer appends the grid centre (2 or 3 floats: x,
+    # y[, z], already in metres -- unlike the Mackie-format footer
+    # ``read_mackie3d`` parses, which is in km) immediately after the
+    # resistivity volume, sometimes followed by a rotation angle on
+    # its own line. The main loop above usually exits the instant
+    # rho_flat reaches `total` -- exactly when the next line *is* this
+    # trailer -- without ever visiting it, so it has to be picked up
+    # separately here rather than silently discarded as previously
+    # happened. Defaults (zeros / 0.0) deliberately match
+    # ``read_mackie3d``'s ``origin``/``rotation`` convention, which
+    # every existing consumer of these attributes
+    # (``iotools.export.write_meshtools3d``, ``iotools.interpolate``)
+    # already assumes -- ``None`` would break their
+    # ``getattr(model, "origin", [0.0, 0.0, 0.0])`` fallback.
+    origin = np.zeros(3, dtype=float)
+    rotation = 0.0
+    trailer = [
+        stripped
+        for ln in lines[i:]
+        if (stripped := ln.strip()) and not stripped.startswith("#")
+    ]
+    if trailer:
+        first_parts = trailer[0].split()
+        if 2 <= len(first_parts) <= 3 and all(
+            _is_simple_numeric(p) for p in first_parts
+        ):
+            vals = [float(p) for p in first_parts]
+            origin = np.array(vals + [0.0] * (3 - len(vals)), dtype=float)
+            if len(trailer) > 1:
+                second_parts = trailer[1].split()
+                if len(second_parts) == 1 and _is_simple_numeric(
+                    second_parts[0]
+                ):
+                    rotation = float(second_parts[0])
 
     if log_type == "LOG10":
         rho_loge = rho_arr * np.log(10.0)
@@ -134,6 +170,8 @@ def _parse_model3d(path: Path) -> dict:
         "y_widths": y_widths,
         "z_widths": z_widths,
         "rho_loge": rho_loge,
+        "origin": origin,
+        "rotation": rotation,
     }
 
 
@@ -161,6 +199,11 @@ class ModEmModel3D(ModEmBase):
         self.rho_loge: np.ndarray = np.empty((0, 0, 0))
         self.n_air: int = 0
         self.log_type: str = "LOGE"
+        # Real-world grid centre (metres) and rotation (degrees), same
+        # convention and defaults as read_mackie3d's origin/rotation
+        # (see model3d._parse_model3d and iotools/mackie.py).
+        self.origin: np.ndarray = np.zeros(3, dtype=float)
+        self.rotation: float = 0.0
 
     # ------------------------------------------------------------------
     # Derived
@@ -300,16 +343,27 @@ class ModEmModel3D(ModEmBase):
         )
 
         # -- vertical grid ---------------------------------------------
-        n_air = cfg.n_airlayers
+        # The WS-format `.rho` file this method feeds into `write()` has no
+        # way to declare air layers at all: ModEM's own Fortran reader
+        # (`read_modelParam_ws` in WS.inc) hardcodes NzAir=10 unconditionally
+        # ("No information about the air layers in file. Hardcoded here."),
+        # and its 4th header field is not an air-layer count but a "mapping"
+        # flag that must be exactly 0 -- any nonzero value (e.g. this
+        # method previously writing `cfg.n_airlayers` there) hits the
+        # unimplemented `read_modelParam_WS` mapping path and aborts with
+        # "Mapping not supported yet in read_modelParam_WS". Confirmed
+        # against `pycsamt.forward.maxwell.modem3d`'s already-validated WS
+        # writer, which explicitly sets `model.n_air = 0` before writing
+        # for the same reason. `cfg.n_airlayers`/`cfg.cell_size_v_top`'s
+        # air contribution are therefore not written here; only the earth
+        # column is.
         n_active = cfg.nz
-        air_h = cfg.cell_size_v_top
-        air_z = [air_h] * n_air
         earth_z: list[float] = []
         thick = float(cfg.cell_size_v_top)
         for _ in range(n_active):
             earth_z.append(thick)
             thick *= cfg.depth_scale
-        z_w = np.array(air_z + earth_z, dtype=float)
+        z_w = np.array(earth_z, dtype=float)
 
         nz_tot = len(z_w)
         ny_tot = len(y_w)
@@ -321,18 +375,17 @@ class ModEmModel3D(ModEmBase):
             rho_val,
             dtype=float,
         )
-        if n_air > 0:
-            rho_grid[:n_air, :, :] = np.log(1e12)
 
         obj.x_widths = x_w
         obj.y_widths = y_w
         obj.z_widths = z_w
-        obj.n_air = n_air
+        obj.n_air = 0
         obj.rho_loge = rho_grid
 
         if obj.verbose:
             obj.logger.info(
-                "ModEmModel3D.halfspace: %d x %d x %d grid, rho=%.1f ohm m",
+                "ModEmModel3D.halfspace: %d x %d x %d earth grid (air added "
+                "internally by Mod3DMT), rho=%.1f ohm m",
                 nx_tot,
                 ny_tot,
                 nz_tot,
@@ -389,6 +442,8 @@ class ModEmModel3D(ModEmBase):
         obj.rho_loge = d["rho_loge"]
         obj.n_air = d["n_air"]
         obj.log_type = d["log_type"]
+        obj.origin = d["origin"]
+        obj.rotation = d["rotation"]
         if obj.verbose:
             obj.logger.info(
                 "ModEmModel3D.read: %d x %d x %d from %s",
@@ -523,6 +578,18 @@ log_type : str, default "LOGE"
     is the standard internal representation used by this
     class. Readers also accept ``"LOG10"`` and ``"LINEAR"`` and
     convert them to natural logarithms.
+origin : numpy.ndarray, shape (3,), default zeros
+    Real-world grid centre ``(x, y, z)`` in metres, parsed from the
+    optional trailing centre-coordinate line a real ModEM writer
+    appends after the resistivity volume. Defaults to ``[0, 0, 0]``
+    when the file carries no such line (e.g. models built by
+    :meth:`halfspace`) -- the same convention and default
+    :func:`~pycsamt.models.modem.iotools.mackie.read_mackie3d` uses
+    for its own ``origin`` attribute on this class.
+rotation : float, default 0.0
+    Grid rotation in degrees about the vertical axis, parsed from
+    the optional trailing rotation line that follows the centre
+    coordinates.
 
 Derived Properties
 ------------------

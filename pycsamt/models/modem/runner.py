@@ -14,6 +14,7 @@ from typing import Union
 from .base import ModEmBase
 from .config import ModEmConfig
 from .doc import _modem_param_docs as _params
+from .forward_control import ModEmForwardControl
 from .results import InversionResult
 
 PathLike = Union[str, Path]
@@ -52,6 +53,37 @@ class ModEmRunner(ModEmBase):
     # Public API
     # ------------------------------------------------------------------
 
+    def _resolve_fwd_control_arg(
+        self,
+        fwd_control: PathLike | None,
+        covariance: PathLike | None,
+        cfg: ModEmConfig,
+        *,
+        write: bool,
+    ) -> str | None:
+        """Return the fwdCtrl argument for Mod3DMT's ``-I NLCG`` command.
+
+        Mod3DMT's own CLI argument order is ``rFile_Model rFile_Data
+        [rFile_invCtrl] [rFile_fwdCtrl] [rFile_Cov]`` -- the covariance
+        file is the *sixth* positional argument and is only reached
+        once a forward-control file (the fifth) is also present and
+        exists on disk (``UserCtrl.f90``). When *covariance* is
+        requested but no *fwd_control* was supplied, a default one
+        (matching Mod3DMT's own compiled-in solver defaults -- see
+        :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl`)
+        is written to ``workdir`` so passing a covariance file works
+        without the caller needing to manage this extra file by hand.
+        """
+        if fwd_control is not None:
+            return str(fwd_control)
+        if covariance is None:
+            return None
+        if write:
+            ModEmForwardControl.from_config(cfg).write(
+                self.workdir / cfg.fwd_control_file
+            )
+        return str(cfg.fwd_control_file)
+
     def run(
         self,
         model: PathLike,
@@ -59,6 +91,7 @@ class ModEmRunner(ModEmBase):
         control: PathLike,
         covariance: PathLike | None = None,
         *,
+        fwd_control: PathLike | None = None,
         mode: str | None = None,
         use_mpi: bool | None = None,
         n_procs: int | None = None,
@@ -98,7 +131,24 @@ class ModEmRunner(ModEmBase):
             ModEM covariance file passed to 3-D inversion runs.
             The file describes smoothing strengths, smoothing
             iteration count, and active-cell masks. It is
-            commonly omitted for 2-D workflows.
+            commonly omitted for 2-D workflows. Mod3DMT's own
+            CLI argument order only reaches this (sixth) argument
+            once a forward-control file (fifth) is also present,
+            so supplying ``covariance`` without ``fwd_control``
+            automatically writes a default forward-control file
+            to ``workdir`` (see ``fwd_control`` below) rather than
+            silently misplacing ``covariance`` into that slot.
+        fwd_control : path-like, optional
+            3-D forward-solver control file (QMR iteration count,
+            divergence-correction limits, solver tolerances) --
+            see
+            :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl`.
+            Required by Mod3DMT's own CLI argument order before
+            ``covariance`` can be passed at all. When omitted but
+            ``covariance`` is given, a default file matching
+            Mod3DMT's own compiled-in solver defaults is written
+            automatically, so forward-solver behaviour is
+            unaffected either way.
         mode : {"2d", "3d"}, optional
             Dimensionality override for this invocation. If omitted,
             ``config.mode`` is used. The value selects
@@ -205,6 +255,10 @@ class ModEmRunner(ModEmBase):
             )
             raise FileNotFoundError(msg)
 
+        fwd_control_arg = self._resolve_fwd_control_arg(
+            fwd_control, covariance, cfg, write=True
+        )
+
         cmd: list[str] = []
         if _mpi:
             cmd += [cfg.mpi_command, "-np", str(_procs)]
@@ -216,6 +270,8 @@ class ModEmRunner(ModEmBase):
             str(data),
             str(control),
         ]
+        if fwd_control_arg is not None:
+            cmd.append(fwd_control_arg)
         if covariance is not None:
             cmd.append(str(covariance))
         if extra_args:
@@ -353,6 +409,7 @@ class ModEmRunner(ModEmBase):
         control: PathLike,
         covariance: PathLike | None = None,
         *,
+        fwd_control: PathLike | None = None,
         mode: str | None = None,
         use_mpi: bool | None = None,
         n_procs: int | None = None,
@@ -361,7 +418,13 @@ class ModEmRunner(ModEmBase):
 
         This helper is a dry-run view of :meth:`run`. It applies the
         same mode, MPI, process-count, and file-name choices, but it
-        does not resolve the executable or start a subprocess.
+        does not resolve the executable, start a subprocess, or write
+        any files -- including the default forward-control file
+        :meth:`run` would write when ``covariance`` is given without
+        an explicit ``fwd_control`` (only its filename is included in
+        the returned string; call :meth:`run` or write one directly
+        via :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl`
+        before actually invoking the printed command by hand).
 
         Parameters
         ----------
@@ -375,7 +438,14 @@ class ModEmRunner(ModEmBase):
             string.
         covariance : path-like, optional
             Covariance file appended to the command when
-            supplied.
+            supplied. Only reachable once a forward-control file
+            is also present in the command -- see ``fwd_control``.
+        fwd_control : path-like, optional
+            3-D forward-solver control file, required by Mod3DMT's
+            own CLI argument order before ``covariance`` can be
+            included at all. When omitted but ``covariance`` is
+            given, ``config.fwd_control_file``'s default name is
+            used in the displayed command.
         mode : {"2d", "3d"}, optional
             Dimensionality override for the command string.
         use_mpi : bool, optional
@@ -397,11 +467,25 @@ class ModEmRunner(ModEmBase):
         >>> runner = ModEmRunner("modem_run", config=cfg)
         >>> "mpirun" in runner.command("m0.ws", "d0.dat", "c.inv")
         True
+
+        Passing ``covariance`` without ``fwd_control`` inserts the
+        default forward-control filename automatically, so the
+        printed command has the file order Mod3DMT actually expects:
+
+        >>> cmd = runner.command(
+        ...     "m0.ws", "d0.dat", "c.inv", covariance="cov.cov"
+        ... )
+        >>> cmd.endswith("c.inv ModEM_fwd.ctrl cov.cov")
+        True
         """
         cfg = self.config
         _mode = (mode or cfg.mode).lower()
         _mpi = cfg.use_mpi if use_mpi is None else use_mpi
         _procs = cfg.n_procs if n_procs is None else n_procs
+
+        fwd_control_arg = self._resolve_fwd_control_arg(
+            fwd_control, covariance, cfg, write=False
+        )
 
         bin_name = cfg.binary_3d if _mode == "3d" else cfg.binary_2d
         cmd: list[str] = []
@@ -415,6 +499,8 @@ class ModEmRunner(ModEmBase):
             str(data),
             str(control),
         ]
+        if fwd_control_arg is not None:
+            cmd.append(fwd_control_arg)
         if covariance is not None:
             cmd.append(str(covariance))
         return " ".join(shlex.quote(c) for c in cmd)
@@ -425,17 +511,17 @@ Launch ModEM inversion and forward-modeling subprocesses.
 
 ``ModEmRunner`` is the execution layer of the ModEM wrapper. It
 does not build input files itself; instead it receives model,
-data, control, and optional covariance files created by
-:class:`~pycsamt.models.modem.builder.InputBuilder` or by user
-code, selects the configured ModEM executable, launches the
-process from ``workdir``, and can load the finished run into an
-:class:`~pycsamt.models.modem.results.InversionResult`.
+data, control, and optional covariance/forward-control files
+created by :class:`~pycsamt.models.modem.builder.InputBuilder` or
+by user code, selects the configured ModEM executable, launches
+the process from ``workdir``, and can load the finished run into
+an :class:`~pycsamt.models.modem.results.InversionResult`.
 
 For inversion runs the command has the logical form
 
 .. code-block:: text
 
-   Mod3DMT -I NLCG model.ws data.dat control.inv covariance.cov
+   Mod3DMT -I NLCG model.ws data.dat control.inv fwd_control.ctrl covariance.cov
 
 or, when MPI execution is requested,
 
@@ -445,8 +531,12 @@ or, when MPI execution is requested,
 
 The 2-D runner uses ``config.binary_2d`` and 2-D model files,
 whereas the 3-D runner uses ``config.binary_3d`` and can pass a
-covariance file. The forward-only path uses the ``-F`` flag and
-requires only model and data files.
+covariance file. Mod3DMT's own CLI argument order only reaches the
+covariance file once a forward-control file is also present (a
+default one is written automatically -- see :meth:`run`), which is
+why it appears *before* the covariance file above, not after. The
+forward-only path uses the ``-F`` flag and requires only model and
+data files.
 
 Parameters
 ----------

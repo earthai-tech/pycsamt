@@ -71,12 +71,13 @@ The composite confidence ratio is a weighted mean of available
 component scores:
 
 .. math::
+   :label: eq-qc-composite-confidence
 
    \mathrm{CR}_{i,f} =
-   { \sum_k w_k s_{k,i,f}
-     \mathbf{1}_{s_{k,i,f}\ \mathrm{finite}} \over
-     \sum_k w_k
-     \mathbf{1}_{s_{k,i,f}\ \mathrm{finite}} },
+   \frac{\sum_{k\in\mathcal K} w_k s_{k,i,f}
+     \mathbf{1}[s_{k,i,f}\ \mathrm{finite}]}
+     {\sum_{k\in\mathcal K} w_k
+     \mathbf{1}[s_{k,i,f}\ \mathrm{finite}]},
    \qquad 0 \le s_k \le 1.
 
 Missing scores are ignored. Finite scores are clipped to ``[0, 1]``.
@@ -108,57 +109,102 @@ The default weights are:
      - ``0.10``
      - Coherence with neighbouring stations.
 
-Every component follows the same shape. Each one reduces the tensor to a
-single non-negative "badness" statistic :math:`m_k`, compares it against
-a tolerance :math:`\tau_k`, and folds the excess back into a
-:math:`[0, 1]` trust score:
+Except for coverage, each component reduces the tensor to a
+non-negative discrepancy :math:`m_k`, compares it with a positive
+tolerance :math:`\tau_k`, and maps the result to a bounded trust score:
 
 .. math::
+   :label: eq-qc-linear-score
 
-   s_k = \mathrm{clip}_{[0,1]}\!\left(1 - \frac{m_k}{\tau_k}\right).
+   s_k = \operatorname{clip}_{[0,1]}
+   \left(1 - \frac{m_k}{\tau_k}\right).
 
 A statistic of ``0`` scores a perfect ``1``; as :math:`m_k` grows toward
 :math:`\tau_k` the score decays linearly to ``0`` and stays there beyond
 it, so nothing is ever penalized twice or rewarded for being
-implausibly clean. Concretely, the six statistics are:
+implausibly clean. The coverage score is computed directly. For station
+:math:`i` with :math:`N_i` frequencies and impedance tensor
+:math:`Z_{i,f,ab}`, it is
 
-- ``coverage`` needs no tolerance -- it is already the
-  :term:`Finite coverage` fraction of the tensor, in ``[0, 1]``.
-- ``uncertainty`` uses :math:`m = \mathrm{median}(|Z_{\mathrm{err}}| /
-  |Z|)` against ``relerr_threshold`` (default ``0.20``): how large the
-  reported error is relative to the signal.
-- ``offdiag`` uses :math:`m = \left|\log_{10}(|Z_{xy}| /
-  |Z_{yx}|)\right|` against ``offdiag_tolerance_log10`` (default
-  ``0.35``): how far the two :term:`off-diagonal component` modes
-  disagree in log amplitude.
-- ``diagonal`` uses :math:`m = \mathrm{med}(|Z_{xx}|, |Z_{yy}|) \big/
-  \left[\mathrm{med}(|Z_{xx}|, |Z_{yy}|) + \mathrm{med}(|Z_{xy}|,
-  |Z_{yx}|)\right]` against ``diagonal_leakage_max`` (default ``0.35``):
-  the fraction of tensor amplitude sitting on the diagonal, where a 1-D
-  or 2-D earth should keep most of it off-diagonal.
-- ``phase`` uses :math:`m = \mathrm{med}|\Delta\varphi_{xy,yx}|`, the
-  median absolute jump in degrees between the unwrapped phase of
-  neighbouring frequencies, against ``phase_jump_tolerance_deg``
-  (default ``90``).
-- ``spatial`` uses :math:`m = \left|\log_{10}\rho -
-  \mathrm{median}(\log_{10}\rho_{\mathrm{neighbours}})\right|` against
-  ``spatial_tolerance_log10`` (default ``0.60``), where :math:`\rho` is a
-  determinant-style :term:`apparent resistivity` proxy compared against
-  the immediately adjacent stations (or, at the frequency level, the
-  same frequency at the two nearest stations by distance).
+.. math::
+   :label: eq-qc-coverage-score
 
-At the station level each :math:`m_k` is one median taken over every
-frequency row, which is why ``station_confidence_table`` returns one
-score per station. At the frequency level, further down, the same six
-formulas are evaluated one row at a time instead, so a station that
-looks coherent overall can still carry a handful of untrustworthy
-individual frequencies underneath.
+   s_{\mathrm{cov},i} = \frac{1}{N_i}
+   \sum_f \mathbf{1}
+   [Z_{i,f,xx},Z_{i,f,xy},Z_{i,f,yx},Z_{i,f,yy}\ \mathrm{finite}],
+
+whereas a frequency cell uses the fraction of its four finite tensor
+components. Thus station presence is deliberately strict: a row counts
+only when the complete impedance tensor is finite.
+
+The remaining discrepancies used in :eq:`eq-qc-linear-score` are
+
+.. math::
+   :label: eq-qc-component-discrepancies
+
+   \begin{aligned}
+   m_{\mathrm{unc}} &={\rm med}_{f,a,b}
+      \frac{|Z_{{\rm err},i,f,ab}|}{|Z_{i,f,ab}|+\epsilon},\\
+   m_{\mathrm{off}} &={\rm med}_{f}
+      \left|\log_{10}\frac{|Z_{i,f,xy}|+\epsilon}
+      {|Z_{i,f,yx}|+\epsilon}\right|,\\
+   m_{\mathrm{diag}} &={\rm med}_{f}
+      \frac{d_{i,f}}{d_{i,f}+o_{i,f}+\epsilon},\\
+   d_{i,f} &={\rm med}(|Z_{i,f,xx}|,|Z_{i,f,yy}|),\qquad
+   o_{i,f}={\rm med}(|Z_{i,f,xy}|,|Z_{i,f,yx}|),\\
+   m_{\mathrm{phase}} &={\rm med}_{f,c\in\{xy,yx\}}
+      |\Delta\,\operatorname{unwrap}(\arg Z_{i,f,c})|_{\rm deg}.
+   \end{aligned}
+
+Their tolerances are respectively ``relerr_threshold=0.20``,
+``offdiag_tolerance_log10=0.35``, ``diagonal_leakage_max=0.35``, and
+``phase_jump_tolerance_deg=90``. At the frequency level, the first three
+statistics are evaluated on one row. The phase score uses the strongest
+adjacent jump touching that row for each off-diagonal mode, followed by
+the median across the available modes. The small :math:`\epsilon`
+prevents division by zero and is numerical, not a tunable tolerance.
+
+Spatial coherence first forms the log-response proxy
+
+.. math::
+   :label: eq-qc-spatial-proxy
+
+   r_{i,f}=\frac{1}{2}\left[
+   \log_{10}\left(\frac{|Z_{i,f,xy}|^2}{f}+\epsilon\right)+
+   \log_{10}\left(\frac{|Z_{i,f,yx}|^2}{f}+\epsilon\right)\right].
+
+At station level :math:`r_i={\rm med}_f(r_{i,f})`; at frequency level
+:math:`r_{i,f}` is retained. The spatial discrepancy is
+
+.. math::
+   :label: eq-qc-spatial-score
+
+   m_{\mathrm{sp},i,f}=
+   \left|r_{i,f}-{\rm med}(r_{j,f}:j\in\mathcal N_i)\right|,
+   \qquad \tau_{\mathrm{sp}}=0.60,
+
+where :math:`\mathcal N_i` contains the immediately adjacent available
+stations. The omitted physical constants cancel in this relative
+logarithmic comparison; :math:`r` should therefore be read as a
+resistivity-like proxy, not a reported apparent resistivity.
+
+At station level the discrepancies summarize the frequency axis, which
+is why ``station_confidence_table`` returns one score per station. At
+frequency level the analogous local quantities are evaluated row by
+row. Consequently, a coherent station aggregate can still contain weak
+individual frequencies.
 
 The default confidence bands are:
 
-* ``CR >= 0.95``: safe / retained;
-* ``0.85 <= CR < 0.95``: recoverable or marginal;
-* ``CR < 0.85``: reject, down-weight, or manually review.
+* ``CR >= 0.95``: safe under the default policy;
+* ``0.85 <= CR < 0.95``: marginal or recoverable;
+* ``CR < 0.85``: high-priority review or down-weighting candidate.
+
+.. important::
+
+   These are operational defaults, not universal geophysical laws. A low
+   score can reflect genuine dimensionality or a sharp geological boundary.
+   Inspect the component scores and response curves before deleting data.
 
 Compute A Confidence Ratio Directly
 -----------------------------------
@@ -400,10 +446,10 @@ Frequency flags can include ``reject``, ``recoverable``, ``missing``,
 ``high_error``, ``offdiag_mismatch``, ``diagonal_leakage``,
 ``phase_jump``, and ``spatial_outlier``. Nearly every one of this
 survey's 1484 station-frequency cells reads ``reject`` at the frequency
-level, a much harsher picture than the station-level composite range of
-0.54-0.81 above -- station scores are medians over frequency, so a
-station can stay "recoverable" overall while most of its individual
-frequencies fail one or more component thresholds underneath.
+level. The station-level composite range of 0.54--0.81 is also below
+the default 0.85 boundary, but aggregation makes the station scores less
+extreme than many individual cells. Use the frequency table when the
+decision concerns a period band rather than a complete station.
 
 Build A Mask From Confidence
 ----------------------------
@@ -432,6 +478,418 @@ the confidence table.
 Use a review band instead of a hard delete when the flagged frequencies
 line up with known structural complexity. Low confidence is a prompt
 for inspection, not always proof of bad data.
+
+Survey-Scale Confidence Views
+-----------------------------
+
+The L18 examples above explain one profile. Spatial confidence figures
+need more than one non-collinear line, so the examples in this section
+use all five ``WILLY_DATA`` profiles (128 stations). Line membership is
+derived from the station prefix only for display; it does not alter the
+confidence calculation.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import ensure_sites, station_confidence_table
+   >>> all_lines = ensure_sites("data/AMT/WILLY_DATA", recursive=True)
+   >>> all_table = station_confidence_table(
+   ...     all_lines, method="composite", api=False,
+   ... )
+   >>> line_labels = {
+   ...     str(station): f"L{str(station).split('-', 1)[0]}"
+   ...     for station in all_table["station"]
+   ... }
+   >>> len(all_table), sorted(set(line_labels.values()))
+   (128, ['L18', 'L22', 'L26', 'L30', 'L34'])
+
+The complete, executable figure-generation script is available below.
+It writes every image in this section and exports the confidence surface
+as CSV and Surfer DSAA grid files.
+
+.. code-dropdown:: ../../../scripts/generate_user_guide_emtools_qc_confidence_figures.py
+   :language: python
+   :linenos:
+   :title: Generate all survey-scale confidence figures
+
+Route, contour, and regular-grid maps
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``plot_confidence_map`` uses measured longitude/latitude when available
+and otherwise falls back to easting/northing. Route mode orders stations
+from coordinate-derived chainage; it does not trust lexical station names.
+Contour mode requires at least three non-collinear locations and is
+restricted to the triangulated survey footprint.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_map
+   >>> route_ax = plot_confidence_map(
+   ...     "data/AMT/WILLY_DATA/L18PLT",
+   ...     method="composite",
+   ...     mode="route",
+   ...     show_confidence_values=True,
+   ...     confidence_value_step=2,
+   ... )
+   >>> contour_ax = plot_confidence_map(
+   ...     all_lines,
+   ...     method="composite",
+   ...     mode="contour",
+   ...     line_labels=line_labels,
+   ...     boundary_levels=[0.50, 0.85, 0.90, 1.00],
+   ...     show_contour_lines=False,
+   ...     show_threshold_contours=True,
+   ... )
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. figure:: ../../images/user_guide/emtools/confidence/confidence_route.png
+         :width: 100%
+
+         Composite confidence along the measured L18 route.
+
+   .. grid-item::
+
+      .. figure:: ../../images/user_guide/emtools/confidence/confidence_contour.png
+         :width: 100%
+
+         Five-line confidence surface with requested decision boundaries.
+
+The route view reveals station-scale variability without implying
+two-dimensional coverage. The multi-line contour is appropriate for a
+spatial overview, but no 0.85, 0.90, or 1.00 isoline appears in this
+dataset because the observed composite maximum is about 0.81. Omitting
+an absent boundary is the scientifically correct result.
+
+Ordinary labelled isolines can be added independently of the decision
+boundaries. ``plot_confidence_grid_map`` instead evaluates the same
+triangulated field on a regular :math:`n_x\times n_y` grid. Its masked
+cells outside the convex hull remain blank and its arrays are available
+as ``ax._pycsamt_grid_x``, ``ax._pycsamt_grid_y``, and
+``ax._pycsamt_confidence_grid``.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_grid_map
+   >>> isoline_ax = plot_confidence_map(
+   ...     all_lines,
+   ...     mode="contour",
+   ...     line_labels=line_labels,
+   ...     show_contour_lines=True,
+   ...     contour_line_levels=[0.55, 0.60, 0.65, 0.70, 0.75, 0.80],
+   ...     contour_line_colors="0.2",
+   ...     contour_labels=True,
+   ... )
+   >>> grid_ax = plot_confidence_grid_map(
+   ...     all_lines,
+   ...     line_labels=line_labels,
+   ...     grid_shape=(220, 180),
+   ...     interpolation="linear",
+   ... )
+
+.. grid:: 1 1 2 2
+   :gutter: 2
+
+   .. grid-item::
+
+      .. figure:: ../../images/user_guide/emtools/confidence/confidence_contour_lines.png
+         :width: 100%
+
+         Labelled confidence isolines within the acquisition footprint.
+
+   .. grid-item::
+
+      .. figure:: ../../images/user_guide/emtools/confidence/confidence_grid_map.png
+         :width: 100%
+
+         Regular 220 by 180 confidence grid; white cells are unsurveyed.
+
+The stepped edges in the regular-grid figure are raster-cell boundaries,
+not geological discontinuities. Use ``max_triangle_edge`` to suppress
+triangles spanning an unjustified gap between lines. ``interpolation``
+may be ``"linear"`` or ``"cubic"``; cubic interpolation is visually
+smoother but should not be interpreted as new measurements.
+
+For external mapping, ``export_confidence_map`` writes station values and
+the regular field without coupling export to plotting:
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import export_confidence_map
+   >>> outputs = export_confidence_map(
+   ...     all_lines,
+   ...     method="composite",
+   ...     line_labels=line_labels,
+   ...     csv_path="confidence_map.csv",
+   ...     surfer_path="confidence_map.grd",
+   ...     grid_shape=(200, 200),
+   ... )
+   >>> sorted(outputs)
+   ['csv', 'surfer']
+
+The Surfer file uses ASCII DSAA format. As with the plotted grid, cells
+outside the convex hull are blank. Export CSV instead of a grid for a
+single collinear profile.
+
+Diagnosing which component controls confidence
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``plot_confidence_component_map`` applies one fixed 0--1 scale to the
+overall score and all six terms in :eq:`eq-qc-composite-confidence`.
+This fixed normalization is essential: independently rescaling each
+panel would make a weak component look artificially strong.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_component_map
+   >>> component_fig = plot_confidence_component_map(
+   ...     all_lines,
+   ...     method="composite",
+   ...     line_labels=line_labels,
+   ...     ncols=4,
+   ...     marker_size=32,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_component_map.png
+   :align: center
+   :width: 100%
+
+   Overall confidence and the six component scores on shared coordinates.
+
+Coverage and phase smoothness are consistently strong in WILLY_DATA,
+whereas diagonal leakage, off-diagonal consistency, and spatial
+coherence contain repeated low-score stations. The overall composite
+therefore remains below the safe threshold even though the transfer
+functions are complete. This is precisely the distinction between
+presence and trustworthiness introduced above.
+
+``plot_confidence_heatmap`` presents the same decomposition as a compact
+station-by-component matrix. Gray cells mean that a component could not
+be evaluated; they do not mean zero confidence.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_heatmap
+   >>> heatmap_ax = plot_confidence_heatmap(
+   ...     all_lines,
+   ...     method="composite",
+   ...     line_labels=line_labels,
+   ...     station_order="route",
+   ...     annotate=False,
+   ...     station_label_step=4,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_heatmap.png
+   :align: center
+   :width: 100%
+
+   Confidence diagnostic matrix with stations grouped by survey line.
+
+The dark-green coverage row confirms complete input, while coherent red
+blocks in the tensor-shape and spatial rows identify systematic rather
+than isolated penalties. Use cell annotations for small surveys; for 128
+stations, thinning labels and suppressing values preserves the pattern.
+
+Comparing methods and processing states
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``plot_confidence_method_comparison`` matches station coordinates and
+shows presence, composite, and their difference
+:math:`\Delta\mathrm{CR}=\mathrm{CR}_{\rm composite}-
+\mathrm{CR}_{\rm presence}`. The first two panels share 0--1 limits;
+the difference panel is symmetric about zero.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_method_comparison
+   >>> comparison_fig = plot_confidence_method_comparison(
+   ...     all_lines,
+   ...     line_labels=line_labels,
+   ...     marker_size=34,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_method_comparison.png
+   :align: center
+   :width: 100%
+
+   Presence, composite, and paired method difference at 128 stations.
+
+Presence is 1.0 throughout because every impedance row is finite.
+Composite confidence is lower by about 0.19--0.50 because it includes
+the additional discrepancies in :eq:`eq-qc-component-discrepancies`.
+This difference is not a processing loss; it is information that the
+presence method does not attempt to represent.
+
+For genuine processing audits, pass separate datasets to
+``plot_confidence_before_after``. For matched station :math:`i`, the
+reported change is
+
+.. math::
+   :label: eq-qc-before-after
+
+   \Delta\mathrm{CR}_i =
+   \mathrm{CR}_{i,\mathrm{after}}-\mathrm{CR}_{i,\mathrm{before}}.
+
+Values larger than ``change_tolerance`` are improvements, values below
+its negative are degradations, and smaller absolute changes are stable.
+The default tolerance is 0.01.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_before_after
+   >>> audit_fig = plot_confidence_before_after(
+   ...     all_lines,
+   ...     before_method="presence",
+   ...     after_method="composite",
+   ...     before_label="Presence",
+   ...     after_label="Composite",
+   ...     line_labels=line_labels,
+   ...     show_station_labels=False,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_before_after.png
+   :align: center
+   :width: 100%
+
+   Paired scoring audit, ordered station changes, and line-level median change.
+
+This reproducible example audits two scoring methods on one dataset, so
+all changes are negative by construction. In a processing workflow,
+replace the first argument with the unprocessed survey and pass the
+processed survey as ``after_sites`` while keeping both methods
+``"composite"``. Unmatched station names are retained on the returned
+figure for auditability and excluded from paired statistics.
+
+Risk, distributions, and priorities
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Confidence risk is the complement of confidence,
+
+.. math::
+   :label: eq-qc-confidence-risk
+
+   R_i = 1-\mathrm{CR}_i.
+
+Consequently, the default CR limits 0.95 and 0.85 correspond to risk
+limits 0.05 and 0.15. ``plot_confidence_risk_map`` reports low,
+moderate, and high-risk station counts and does not invent a new quality
+metric.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_risk_map
+   >>> risk_ax = plot_confidence_risk_map(
+   ...     all_lines,
+   ...     line_labels=line_labels,
+   ...     mode="contour",
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_risk_map.png
+   :align: center
+   :width: 88%
+
+   Complementary confidence risk across WILLY_DATA.
+
+All 128 composite scores are below 0.85, so every station belongs to the
+default high-risk review class. The orange-to-red variation still ranks
+relative risk within that class; it must not be read as evidence that
+the interpolated space between lines was directly measured.
+
+``plot_confidence_distribution`` combines density, empirical cumulative
+fraction, and line-wise violin summaries. The empirical curve is exact;
+the Gaussian density is a visualization whose bandwidth does not change
+the underlying station scores.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_distribution
+   >>> distribution_fig = plot_confidence_distribution(
+   ...     all_lines,
+   ...     method="both",
+   ...     line_labels=line_labels,
+   ...     bins=18,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_distribution.png
+   :align: center
+   :width: 100%
+
+   Presence/composite density, cumulative fraction, and survey-line spread.
+
+The spike at presence CR = 1.0 and the broad composite mode near
+0.6--0.75 summarize the method difference compactly. The line violins
+show that the composite spread is not controlled by a single profile.
+
+``plot_confidence_rank`` turns the same values into an operational
+priority list. Station rank is exact; the line panel uses the median and
+interquartile range by default so an isolated extreme station does not
+control an entire line's rank.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_rank
+   >>> rank_fig = plot_confidence_rank(
+   ...     all_lines,
+   ...     method="composite",
+   ...     line_labels=line_labels,
+   ...     order="worst",
+   ...     annotate_stations=False,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_rank.png
+   :align: center
+   :width: 100%
+
+   Worst-first station priorities and robust survey-line ranking.
+
+The WILLY station curve rises from about 0.50 to 0.81. L34 has the
+lowest line median and L26 the highest in this run, but their overlapping
+IQRs caution against treating that ordering as a sharp statistical
+separation.
+
+Coverage retained as a threshold rises
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``plot_confidence_coverage_curve`` asks an operational question: how
+much survey remains when the minimum accepted CR is :math:`t`? The
+station and valid-data retention functions are
+
+.. math::
+   :label: eq-qc-retention-curves
+
+   C_{\rm st}(t)=\frac{1}{N}\sum_i\mathbf{1}[\mathrm{CR}_i\ge t],
+   \qquad
+   C_{\rm data}(t)=
+   \frac{\sum_i n_{i,\rm ok}\mathbf{1}[\mathrm{CR}_i\ge t]}
+        {\sum_i n_{i,\rm ok}}.
+
+Connected-route retention sums only station-to-station segment lengths
+whose two endpoints meet the threshold, divided by total route length.
+It can therefore fall faster than station retention when accepted
+stations become spatially fragmented. The reported AUC is
+:math:`\int_0^1 C(t)\,dt`.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_confidence_coverage_curve
+   >>> coverage_fig = plot_confidence_coverage_curve(
+   ...     all_lines,
+   ...     method="composite",
+   ...     line_labels=line_labels,
+   ... )
+
+.. figure:: ../../images/user_guide/emtools/confidence/confidence_coverage_curve.png
+   :align: center
+   :width: 100%
+
+   Retained station, valid-data, and connected-route fractions versus CR.
+
+Station and valid-data AUC are about 0.68, while connected-route AUC is
+about 0.65. The earlier loss of route coverage means isolated weak
+stations fragment otherwise retained line segments. All curves reach
+zero before 0.85, consistent with the risk and ranking views.
 
 Station Confidence Profile
 --------------------------
@@ -462,14 +920,14 @@ stations.
 .. image:: ../../images/user_guide/emtools/user-guide-emtools-qc-09.png
    :width: 100%
 
-Every station in this survey lands in the pink "recoverable" band
-(:math:`0.50 \le \mathrm{CR} < 0.95`), consistent with the 0.54-0.81
-range printed earlier -- none rejected, none fully safe. If no station
-coordinate metadata are available, distance falls back to regular
-spacing controlled by ``spacing_m``, which is exactly what happens here
-since these EDI objects expose latitude/longitude rather than
-projected easting/northing, so the x-axis reads as station order along
-the line rather than a surveyed distance.
+Every station is red because its composite score lies below the default
+0.85 boundary; none is marginal and none is safe. The error bars are
+component-score spread, as defined after
+:eq:`eq-qc-composite-confidence`, not a confidence interval from repeat
+measurements. L18 provides geographic coordinates, so pyCSAMT projects
+their along-line separation into metres; the corrected route is about
+2.4 km long, rather than the former 5 km display. ``spacing_m`` is used only
+where coordinates are unavailable, or when ``force_spacing=True``.
 
 Frequency Confidence Pseudo-Section
 -----------------------------------
@@ -807,83 +1265,6 @@ then:
 
 Confidence weighting should increase uncertainty for low-confidence
 data. It should not make any datum artificially more precise.
-
-Build A QC Report Bundle
-------------------------
-
-The following script writes station tables, frequency tables, and the
-main QC figures for one line, reusing the survey already loaded above.
-
-.. code-block:: pycon
-
-   >>> from pathlib import Path
-   >>> import matplotlib.pyplot as plt
-   >>> from pycsamt.emtools import (
-   ...     build_qc_table,
-   ...     frequency_confidence_table,
-   ...     plot_confidence_band_summary,
-   ...     plot_confidence_profile,
-   ...     plot_frequency_confidence_psection,
-   ...     qc_flags,
-   ...     station_confidence_table,
-   ... )
-   >>> from pycsamt.emtools.qc import plot_qc_quicklook
-   >>> out = Path("qc_report_l18plt")
-   >>> out.mkdir(parents=True, exist_ok=True)
-   >>> build_qc_table(survey, api=False).to_csv(out / "station_qc_summary.csv", index=False)
-   >>> qc_flags(survey).to_csv(out / "station_qc_flags.csv", index=False)
-   >>> station_confidence_table(survey, method="composite", api=False).to_csv(
-   ...     out / "station_confidence.csv", index=False,
-   ... )
-   >>> frequency_confidence_table(survey, method="composite", api=False).to_csv(
-   ...     out / "frequency_confidence.csv", index=False,
-   ... )
-   >>> fig, ax = plt.subplots(figsize=(9.5, 4.2))
-   >>> _ = plot_confidence_profile(survey, method="composite", ax=ax)
-   >>> fig.tight_layout()
-   >>> fig.savefig(out / "confidence_profile.png", dpi=200)
-   >>> plt.close(fig)
-   >>> fig, ax = plt.subplots(figsize=(10.0, 4.8))
-   >>> _ = plot_frequency_confidence_psection(survey, method="composite", ax=ax)
-   >>> fig.savefig(out / "frequency_confidence_psection.png", dpi=200)
-   >>> plt.close(fig)
-   >>> fig, ax = plt.subplots(figsize=(8.5, 4.2))
-   >>> _ = plot_confidence_band_summary(survey, method="composite", ax=ax)
-   >>> fig.savefig(out / "confidence_band_summary.png", dpi=200)
-   >>> plt.close(fig)
-   >>> fig = plot_qc_quicklook(survey)
-   >>> fig.savefig(out / "qc_quicklook.png", dpi=200)
-   >>> plt.close(fig)
-   >>> sorted(p.name for p in out.iterdir())
-   ['confidence_band_summary.png', 'confidence_profile.png', 'frequency_confidence.csv', 'frequency_confidence_psection.png', 'qc_quicklook.png', 'station_confidence.csv', 'station_qc_flags.csv', 'station_qc_summary.csv']
-
-.. grid:: 1 1 2 2
-   :gutter: 2
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-qc-19-01.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-qc-19-02.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-qc-19-03.png
-         :width: 100%
-
-   .. grid-item::
-
-      .. image:: ../../images/user_guide/emtools/user-guide-emtools-qc-19-04.png
-         :width: 100%
-
-Eight files land in the output directory -- four tables, four figures --
-in the same order the calls were written. A directory listing like the
-one above is a cheap sanity check that a batch script actually produced
-everything it claims to before a report gets built from it.
 
 Reading QC Results
 ------------------

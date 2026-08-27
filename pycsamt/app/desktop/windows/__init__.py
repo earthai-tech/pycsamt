@@ -5,6 +5,7 @@ from .forward_window import ForwardModelWindow
 from .interp_window import InterpretationWindow
 from .inversion_window import InversionWindow
 from .map_window import MapViewerWindow
+from .pcsf3d_window import Pcsf3DWindow
 from .profile_window import ProfileViewerWindow
 from .qc_window import QCDashboardWindow
 from .tdem_window import TDEMWindow
@@ -12,6 +13,7 @@ from .tdem_window import TDEMWindow
 __all__ = [
     "ProfileViewerWindow",
     "MapViewerWindow",
+    "Pcsf3DWindow",
     "QCDashboardWindow",
     "CorrectionWindow",
     "AgentRunnerWindow",

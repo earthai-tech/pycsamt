@@ -130,3 +130,74 @@ def test_wrong_format_raises(tmp_path):
     bad.write_text("Format: WRONG_FORMAT\nModel Name: test\n")
     with pytest.raises(ValueError, match="OCCAM2MTMOD"):
         OccamModel.read(bad)
+
+
+# -----------------------------------------------------------------------
+# Roughness-penalty exceptions
+# -----------------------------------------------------------------------
+
+
+def _small_model():
+    from pycsamt.models.occam2d.model import OccamModel
+
+    m = OccamModel()
+    m.n_layers = 2
+    m.layers = [
+        {"n_merge": 1, "n_cols": 2, "params": [2, 2]},
+        {"n_merge": 1, "n_cols": 2, "params": [2, 2]},
+    ]
+    return m
+
+
+def test_model_exceptions_default_empty():
+    from pycsamt.models.occam2d.model import OccamModel
+
+    assert OccamModel().exceptions == []
+
+
+def test_model_write_no_exceptions_writes_zero_count(tmp_path):
+    model = _small_model()
+    path = model.write(tmp_path / "Occam2DModel")
+    text = path.read_text()
+    assert "NO. EXCEPTIONS:   0" in text
+
+
+def test_model_exceptions_roundtrip(tmp_path):
+    from pycsamt.models.occam2d.model import OccamModel
+
+    model = _small_model()
+    model.exceptions = [(1, 2, 0.3), (2, 4, 1.0)]
+    path = model.write(tmp_path / "Occam2DModel")
+
+    restored = OccamModel.read(path)
+    assert restored.n_exceptions == -2
+    assert len(restored.exceptions) == 2
+    for (bi, bj, expen), (rbi, rbj, rexpen) in zip(
+        model.exceptions, restored.exceptions
+    ):
+        assert (bi, bj) == (rbi, rbj)
+        assert math.isclose(expen, rexpen, rel_tol=1e-6)
+
+
+def test_model_exceptions_written_after_layer_blocks(tmp_path):
+    model = _small_model()
+    model.exceptions = [(1, 3, 0.0)]
+    path = model.write(tmp_path / "Occam2DModel")
+    text = path.read_text()
+    header_index = text.index("NO. EXCEPTIONS:")
+    row_index = text.index("1 3 0")
+    assert row_index > header_index
+
+
+def test_model_exceptions_rejects_self_link(tmp_path):
+    model = _small_model()
+    model.exceptions = [(1, 1, 0.5)]
+    with pytest.raises(ValueError, match="itself"):
+        model.write(tmp_path / "Occam2DModel")
+
+
+def test_model_exceptions_rejects_negative_expen(tmp_path):
+    model = _small_model()
+    model.exceptions = [(1, 2, -0.5)]
+    with pytest.raises(ValueError, match="non-negative"):
+        model.write(tmp_path / "Occam2DModel")

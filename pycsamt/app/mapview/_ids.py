@@ -155,6 +155,10 @@ class IDs:
     CTL_TERRAIN = "mv-ctl-terrain"
     CTL_SHOW_STA = "mv-ctl-show-sta"
     CTL_STA_LABELS = "mv-ctl-sta-labels"
+    CTL_STA_LABEL_ANGLE = "mv-ctl-sta-label-angle"
+    CTL_STA_LABEL_DENSITY = "mv-ctl-sta-label-density"
+    CTL_STA_LABEL_NAMES = "mv-ctl-sta-label-names"
+    CTL_STA_MAX = "mv-ctl-sta-max"
     CTL_STA_SYMBOL = "mv-ctl-sta-symbol"
     CTL_STA_SIZE = "mv-ctl-sta-size"
     CTL_STA_COLOR = "mv-ctl-sta-color"
@@ -171,6 +175,7 @@ class IDs:
     TOPO_EXPORT_DL = "mv-topo-export-dl"
     GRP_STATION = "mv-grp-station"
     GRP_3D = "mv-grp-3d"
+    CTL_3D_ACCORDION = "mv-ctl-3d-accordion"
     STATION_INSPECT = "mv-station-inspect"
 
     # ── bottom dock ───────────────────────────
@@ -216,6 +221,11 @@ class IDs:
     CK_INV_KNOWN_STA = "mv-ck-inv-known-sta"
     INV_STATUS = "mv-inv-status"
     BTN_INV_CONFIRM = "mv-btn-inv-confirm"
+    INV_PCSF_UPLOAD = "mv-inv-pcsf-upload"
+    INV_CANDIDATES_STORE = "mv-inv-candidates-store"
+    INV_RESOLVED_STORE = "mv-inv-resolved-store"
+    INV_CANDIDATE_PICKER = "mv-inv-candidate-picker"
+    INV_CANDIDATE_WRAP = "mv-inv-candidate-wrap"
 
     # ── export modal / download ───────────────
     EXPORT_DL = "mv-export-dl"

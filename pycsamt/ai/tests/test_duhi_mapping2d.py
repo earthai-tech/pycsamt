@@ -4,7 +4,10 @@ import numpy as np
 import pytest
 
 from pycsamt.compat.sklearn import InvalidParameterError
-from pycsamt.ai.inversion.mapping2d import map_ai_grid_to_occam
+from pycsamt.ai.inversion.mapping2d import (
+    build_occam_parameter_adjacency,
+    map_ai_grid_to_occam,
+)
 from pycsamt.ai.inversion.schema import GRID_MAPPING_SCHEMA
 
 
@@ -172,3 +175,55 @@ def test_geometry_mapper_uses_compatibility_parameter_schema():
     )
     with pytest.raises(InvalidParameterError, match="grid"):
         map_ai_grid_to_occam(1.0, object(), object())
+
+
+def test_parameter_adjacency_single_layer_is_consecutive_only():
+    model = _model(
+        [{"n_merge": 1, "n_cols": 3, "params": np.array([1, 2, 1])}]
+    )
+    assert build_occam_parameter_adjacency(model) == [(1, 2), (2, 3)]
+
+
+def test_parameter_adjacency_aligned_layers_links_directly_below():
+    model = _model(
+        [
+            {"n_merge": 1, "n_cols": 2, "params": np.array([2, 2])},
+            {"n_merge": 1, "n_cols": 2, "params": np.array([2, 2])},
+        ]
+    )
+    assert build_occam_parameter_adjacency(model) == [
+        (1, 2), (1, 3), (2, 4), (3, 4),
+    ]
+
+
+def test_parameter_adjacency_handles_span_mismatch_between_layers():
+    model = _model(
+        [
+            {"n_merge": 1, "n_cols": 2, "params": np.array([2, 2])},
+            {"n_merge": 1, "n_cols": 1, "params": np.array([4])},
+        ]
+    )
+    assert build_occam_parameter_adjacency(model) == [(1, 2), (1, 3), (2, 3)]
+
+
+def test_parameter_adjacency_pairs_are_unique_and_sorted():
+    model = _model(
+        [
+            {"n_merge": 1, "n_cols": 3, "params": np.array([2, 2, 2])},
+            {"n_merge": 1, "n_cols": 3, "params": np.array([2, 2, 2])},
+        ]
+    )
+    pairs = build_occam_parameter_adjacency(model)
+    assert len(pairs) == len(set(pairs))
+    assert pairs == sorted(pairs)
+    assert all(i < j for i, j in pairs)
+
+
+def test_parameter_adjacency_rejects_empty_model():
+    with pytest.raises(ValueError, match="no parameter layers"):
+        build_occam_parameter_adjacency(_model([]))
+
+
+def test_parameter_adjacency_rejects_missing_layers_attribute():
+    with pytest.raises(TypeError, match="OccamModel interface"):
+        build_occam_parameter_adjacency(object())

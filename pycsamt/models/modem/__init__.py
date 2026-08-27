@@ -32,6 +32,7 @@ from .config import ModEmConfig
 from .control import ModEmControl
 from .covariance import ModEmCovariance
 from .data import ModEmData
+from .forward_control import ModEmForwardControl
 from .iotools import (
     ImpedanceFile,
     ZBlock,
@@ -100,6 +101,7 @@ __all__ = [
     "ModEmModel3D",
     "ModEmCovariance",
     "ModEmControl",
+    "ModEmForwardControl",
     "ModEmLog",
     "InversionResult",
     "ModEmRunner",

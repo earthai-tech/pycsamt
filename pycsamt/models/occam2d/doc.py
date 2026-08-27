@@ -119,6 +119,15 @@ n_layers : int, optional
     model parameters and can make the problem less stable
     without adequate data support.
 """,
+    max_depth="""
+max_depth : float, optional
+    Target maximum depth in metres for the earth-layer column.
+    Geometrically expanding layers stop -- truncating the last
+    one if needed -- once cumulative depth reaches this value,
+    or once ``n_layers`` layers have been added, whichever comes
+    first. This value overrides ``config.max_depth`` (default
+    1500 m) for one build only.
+""",
     cell_size="""
 cell_size : float, optional
     Horizontal cell width in metres near station positions.

@@ -60,9 +60,21 @@ _OCCAM_CONFIG_SCHEMA = [
     ),
     ConfigParameter(
         "n_layers",
-        "Number of active earth layers in the Occam model. "
-        "Larger values allow more vertical structure but "
-        "increase the inversion parameter count.",
+        "Maximum number of active earth layers in the Occam "
+        "model. Larger values allow more vertical structure but "
+        "increase the inversion parameter count. The mesh "
+        "builder stops adding layers earlier than this count "
+        "once the cumulative depth reaches max_depth.",
+        "Mesh Options",
+    ),
+    ConfigParameter(
+        "max_depth",
+        "Target maximum depth in metres for the earth-layer "
+        "column. The geometrically expanding layer sequence "
+        "(cell_size_vertical_top, depth_scale) stops -- "
+        "truncating the last layer if needed -- once cumulative "
+        "depth reaches this value, or once n_layers is reached, "
+        "whichever comes first.",
         "Mesh Options",
     ),
     ConfigParameter(
@@ -216,9 +228,17 @@ class OccamConfig:
     Mesh Options
     ------------
     n_layers : int
-        Number of active earth layers below the air layers.
-        Larger values represent more vertical structure but
-        increase the parameter count.
+        Maximum number of active earth layers below the air
+        layers. Larger values represent more vertical structure
+        but increase the parameter count. The mesh builder may
+        stop earlier, once ``max_depth`` is reached.
+    max_depth : float
+        Target maximum depth in metres for the earth-layer
+        column. :meth:`OccamMesh.from_data` stops adding
+        geometrically expanding layers -- truncating the last
+        one if needed -- once cumulative depth reaches this
+        value, or once ``n_layers`` layers have been added,
+        whichever comes first.
     n_airlayers : int
         Number of air layers above the earth model. These
         layers stabilize finite-element boundaries near
@@ -341,6 +361,7 @@ class OccamConfig:
     >>> cfg.cell_size_horizontal = 50.0
     >>> cfg.cell_size_vertical_top = 5.0
     >>> cfg.depth_scale = 1.15
+    >>> cfg.max_depth = 800.0  # shallow near-surface target, in metres
 
     Generate a documented source-of-truth template:
 
@@ -376,6 +397,7 @@ class OccamConfig:
 
     # --- mesh ---
     n_layers: int = 30
+    max_depth: float = 1500.0
     n_airlayers: int = 5
     cell_size_horizontal: float = 100.0
     cell_size_vertical_top: float = 10.0

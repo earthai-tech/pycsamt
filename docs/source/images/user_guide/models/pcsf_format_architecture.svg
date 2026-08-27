@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">PCSF and PCSM format architecture</title>
+  <desc id="desc">Occam2D, ModEM 3-D, MARE2DEM, and multiline profile data pass through backend adapters into one validated PCSFModel, which can be serialized as canonical HDF5 PCSF or human-readable ASCII PCSM and consumed by maps, three-dimensional viewers, point clouds, and external tools.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#34495e"/>
+    </marker>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#102a43" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      .title { font: 700 31px Arial, sans-serif; fill: #102a43; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #486581; }
+      .group { font: 700 18px Arial, sans-serif; fill: #243b53; letter-spacing: .5px; }
+      .head { font: 700 19px Arial, sans-serif; fill: #102a43; }
+      .body { font: 400 15px Arial, sans-serif; fill: #334e68; }
+      .small { font: 400 13px Arial, sans-serif; fill: #486581; }
+      .mono { font: 600 14px Consolas, monospace; fill: #243b53; }
+      .box { stroke-width: 1.5; filter: url(#shadow); }
+      .flow { fill: none; stroke: #34495e; stroke-width: 2.4; marker-end: url(#arrow); }
+      .branch { fill: none; stroke: #627d98; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1400" height="760" fill="#f7fafc"/>
+  <text x="700" y="48" text-anchor="middle" class="title">PCSF / PCSM architecture</text>
+  <text x="700" y="76" text-anchor="middle" class="subtitle">One validated subsurface model · two lossless on-disk encodings · backend-neutral consumers</text>
+
+  <text x="145" y="124" text-anchor="middle" class="group">SOURCE RESULTS</text>
+  <rect x="35" y="148" width="220" height="82" rx="10" fill="#e8f1fb" stroke="#5b8db8" class="box"/>
+  <text x="145" y="179" text-anchor="middle" class="head">Occam2D</text>
+  <text x="145" y="203" text-anchor="middle" class="body">grid2d · log₁₀(ρ)</text>
+  <rect x="35" y="250" width="220" height="82" rx="10" fill="#e8f1fb" stroke="#5b8db8" class="box"/>
+  <text x="145" y="281" text-anchor="middle" class="head">ModEM 3-D</text>
+  <text x="145" y="305" text-anchor="middle" class="body">grid3d · ln(ρ)</text>
+  <rect x="35" y="352" width="220" height="82" rx="10" fill="#e8f1fb" stroke="#5b8db8" class="box"/>
+  <text x="145" y="383" text-anchor="middle" class="head">MARE2DEM</text>
+  <text x="145" y="407" text-anchor="middle" class="body">triangular mesh · linear ρ</text>
+  <rect x="35" y="454" width="220" height="82" rx="10" fill="#e8f1fb" stroke="#5b8db8" class="box"/>
+  <text x="145" y="485" text-anchor="middle" class="head">Profile stack</text>
+  <text x="145" y="509" text-anchor="middle" class="body">multiline fence</text>
+
+  <text x="410" y="124" text-anchor="middle" class="group">ADAPTER BOUNDARY</text>
+  <rect x="305" y="174" width="210" height="328" rx="12" fill="#fff5dc" stroke="#d6a93d" class="box"/>
+  <text x="410" y="210" text-anchor="middle" class="head">Backend adapters</text>
+  <line x1="335" y1="228" x2="485" y2="228" stroke="#d6a93d"/>
+  <text x="410" y="260" text-anchor="middle" class="mono">occam2d_to_pcsf</text>
+  <text x="410" y="304" text-anchor="middle" class="mono">modem3d_to_pcsf</text>
+  <text x="410" y="348" text-anchor="middle" class="mono">mare2dem_to_pcsf</text>
+  <text x="410" y="392" text-anchor="middle" class="mono">build_multiline_pcsf</text>
+  <line x1="335" y1="416" x2="485" y2="416" stroke="#d6a93d"/>
+  <text x="410" y="449" text-anchor="middle" class="small">normalize units</text>
+  <text x="410" y="472" text-anchor="middle" class="small">preserve native values</text>
+
+  <path d="M255 189 H305" class="flow"/><path d="M255 291 H305" class="flow"/>
+  <path d="M255 393 H305" class="flow"/><path d="M255 495 H305" class="flow"/>
+
+  <text x="700" y="124" text-anchor="middle" class="group">SHARED IN-MEMORY SCHEMA</text>
+  <rect x="565" y="148" width="270" height="388" rx="14" fill="#e9f7ef" stroke="#3f9d6a" stroke-width="2.2" class="box"/>
+  <text x="700" y="186" text-anchor="middle" class="head">PCSFModel</text>
+  <text x="700" y="211" text-anchor="middle" class="small">validated backend-neutral object</text>
+  <line x1="595" y1="230" x2="805" y2="230" stroke="#73b993"/>
+  <text x="700" y="263" text-anchor="middle" class="mono">geometry.kind</text>
+  <text x="700" y="290" text-anchor="middle" class="small">grid2d · grid3d</text>
+  <text x="700" y="312" text-anchor="middle" class="small">mesh_unstructured · multiline</text>
+  <text x="700" y="352" text-anchor="middle" class="mono">resistivity</text>
+  <text x="700" y="376" text-anchor="middle" class="body">always linear Ω·m</text>
+  <text x="700" y="416" text-anchor="middle" class="mono">stations · topography</text>
+  <text x="700" y="456" text-anchor="middle" class="mono">history · metadata</text>
+  <text x="700" y="496" text-anchor="middle" class="mono">uncertainty · sensitivity</text>
+  <path d="M515 338 H565" class="flow"/>
+
+  <text x="1010" y="124" text-anchor="middle" class="group">ON-DISK ENCODINGS</text>
+  <rect x="890" y="160" width="240" height="150" rx="12" fill="#f0ebfa" stroke="#8265ad" class="box"/>
+  <text x="1010" y="197" text-anchor="middle" class="head">PCSF · .pcsf</text>
+  <text x="1010" y="224" text-anchor="middle" class="body">canonical HDF5</text>
+  <text x="1010" y="250" text-anchor="middle" class="small">typed datasets · attributes</text>
+  <text x="1010" y="274" text-anchor="middle" class="small">compact · per-array compression</text>
+  <rect x="890" y="366" width="240" height="150" rx="12" fill="#fff0e8" stroke="#c87645" class="box"/>
+  <text x="1010" y="403" text-anchor="middle" class="head">PCSM · .pcsm</text>
+  <text x="1010" y="430" text-anchor="middle" class="body">lossless ASCII projection</text>
+  <text x="1010" y="456" text-anchor="middle" class="small">keywords · blocks · comments</text>
+  <text x="1010" y="480" text-anchor="middle" class="small">hand-editable · optional gzip</text>
+  <path d="M835 294 C860 294 862 235 890 235" class="branch"/>
+  <path d="M835 390 C860 390 862 441 890 441" class="branch"/>
+  <path d="M1010 310 V366" fill="none" stroke="#627d98" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+  <text x="1025" y="342" class="small">lossless conversion</text>
+
+  <text x="1270" y="124" text-anchor="middle" class="group">CONSUMERS</text>
+  <rect x="1175" y="160" width="190" height="356" rx="12" fill="#eef2f6" stroke="#829ab1" class="box"/>
+  <text x="1270" y="203" text-anchor="middle" class="head">One reader model</text>
+  <line x1="1205" y1="222" x2="1335" y2="222" stroke="#9fb3c8"/>
+  <text x="1270" y="264" text-anchor="middle" class="body">MapView</text>
+  <text x="1270" y="310" text-anchor="middle" class="body">web 3-D view</text>
+  <text x="1270" y="356" text-anchor="middle" class="body">desktop 3-D panel</text>
+  <text x="1270" y="402" text-anchor="middle" class="body">point clouds</text>
+  <text x="1270" y="448" text-anchor="middle" class="body">HDF5 / text tools</text>
+  <text x="1270" y="482" text-anchor="middle" class="small">no solver-specific logic</text>
+  <path d="M1130 235 H1175" class="flow"/>
+  <path d="M1130 441 H1175" class="flow"/>
+
+  <rect x="65" y="594" width="1270" height="118" rx="12" fill="#ffffff" stroke="#9fb3c8" stroke-width="1.4"/>
+  <text x="700" y="628" text-anchor="middle" class="head">Invariants carried through the complete pipeline</text>
+  <text x="700" y="660" text-anchor="middle" class="body">geometry is explicit · canonical resistivity is linear Ω·m · source-native values remain labelled</text>
+  <text x="700" y="688" text-anchor="middle" class="body">coordinate frames remain declared · derived volumes remain identified as synthesized products</text>
+</svg>

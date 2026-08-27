@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import re
+
 from dash import Input, Output, State, ctx
 
 from .._ids import IDs
@@ -91,6 +93,23 @@ def _register_group_visibility(app) -> None:
     )
 
 
+def _as_fraction(value) -> float:
+    """Parse the label-density select ('1', '0.75', ...) to a float."""
+    try:
+        return min(max(float(value), 0.0), 1.0)
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _split_names(text):
+    """Comma / whitespace / semicolon separated station ids -> tuple,
+    or ``None`` when blank (label every drawn station)."""
+    if not text or not str(text).strip():
+        return None
+    parts = [p.strip() for p in re.split(r"[,;\s]+", str(text)) if p.strip()]
+    return tuple(parts) or None
+
+
 def _fmt_freq(freq) -> str:
     if freq is None:
         return "—"
@@ -156,6 +175,10 @@ def _register_gather(app) -> None:
         Input(IDs.CTL_CONTOUR_MODE, "value"),
         Input(IDs.CTL_SHOW_STA, "value"),
         Input(IDs.CTL_STA_LABELS, "value"),
+        Input(IDs.CTL_STA_LABEL_ANGLE, "value"),
+        Input(IDs.CTL_STA_LABEL_DENSITY, "value"),
+        Input(IDs.CTL_STA_LABEL_NAMES, "value"),
+        Input(IDs.CTL_STA_MAX, "value"),
         Input(IDs.CTL_STA_SYMBOL, "value"),
         Input(IDs.CTL_STA_SIZE, "value"),
         Input(IDs.CTL_STA_COLOR, "value"),
@@ -207,6 +230,10 @@ def _register_gather(app) -> None:
         contour_mode,
         show_sta,
         sta_labels,
+        sta_label_angle,
+        sta_label_density,
+        sta_label_names,
+        sta_max,
         sta_symbol,
         sta_size,
         sta_color,
@@ -263,6 +290,12 @@ def _register_gather(app) -> None:
             "contour_mode": contour_mode or "filled+lines",
             "show_stations": bool(show_sta),
             "station_labels": bool(sta_labels),
+            "station_label_angle": sta_label_angle
+            if sta_label_angle is not None
+            else 0.0,
+            "station_label_fraction": _as_fraction(sta_label_density),
+            "station_label_names": _split_names(sta_label_names),
+            "station_max": int(sta_max) if sta_max else None,
             "station_symbol": sta_symbol or "diamond",
             "station_size": sta_size if sta_size else 4,
             "station_color": sta_color or "#1f2937",

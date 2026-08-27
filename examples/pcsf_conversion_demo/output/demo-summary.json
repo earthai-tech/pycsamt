@@ -1,0 +1,86 @@
+{
+  "duhi_note": "DUHI has no separate adapter -- its output only becomes a final resistivity model once folded back into an Occam2D run, so a DUHI-prepared result converts through occam2d_to_pcsf() exactly like the plain Occam2D files above.",
+  "files": [
+    {
+      "file": "examples\\pcsf_conversion_demo\\output\\occam2d_no_topo.pcsf",
+      "has_topography": false,
+      "kind": "grid2d",
+      "n_stations": 47,
+      "n_topography_stations": 0,
+      "resistivity_shape": [
+        31,
+        576
+      ],
+      "size_bytes": 96273,
+      "source_backend": "occam2d"
+    },
+    {
+      "file": "examples\\pcsf_conversion_demo\\output\\occam2d_with_topo.pcsf",
+      "has_topography": true,
+      "kind": "grid2d",
+      "n_stations": 47,
+      "n_topography_stations": 47,
+      "resistivity_shape": [
+        31,
+        576
+      ],
+      "size_bytes": 101505,
+      "source_backend": "occam2d"
+    },
+    {
+      "file": "examples\\pcsf_conversion_demo\\output\\occam2d_with_bln_topo.pcsf",
+      "has_topography": true,
+      "kind": "grid2d",
+      "n_stations": 47,
+      "n_topography_stations": 47,
+      "resistivity_shape": [
+        31,
+        576
+      ],
+      "size_bytes": 101505,
+      "source_backend": "occam2d"
+    },
+    {
+      "file": "examples\\pcsf_conversion_demo\\output\\modem3d_no_topo.pcsf",
+      "has_topography": false,
+      "kind": "grid3d",
+      "n_stations": 125,
+      "n_topography_stations": 0,
+      "resistivity_shape": [
+        41,
+        50,
+        288
+      ],
+      "size_bytes": 4061531,
+      "source_backend": "modem3d"
+    },
+    {
+      "file": "examples\\pcsf_conversion_demo\\output\\modem3d_with_topo.pcsf",
+      "has_topography": true,
+      "kind": "grid3d",
+      "n_stations": 125,
+      "n_topography_stations": 112,
+      "resistivity_shape": [
+        41,
+        50,
+        288
+      ],
+      "size_bytes": 4068339,
+      "source_backend": "modem3d"
+    },
+    {
+      "file": "examples\\pcsf_conversion_demo\\output\\mare2dem.pcsf",
+      "has_topography": false,
+      "kind": "mesh_unstructured",
+      "n_stations": 0,
+      "n_topography_stations": 0,
+      "resistivity_shape": [
+        6774
+      ],
+      "size_bytes": 120289,
+      "source_backend": "mare2dem"
+    }
+  ],
+  "plan": "PYCSAMT-PCSF-INVERSION-FORMAT-PLAN.md",
+  "schema": "pycsamt.pcsf_conversion.demo/v1"
+}

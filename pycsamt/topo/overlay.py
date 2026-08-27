@@ -66,6 +66,7 @@ def draw_topo_section(
     cfg=None,
     dark: bool = True,
     marker_style=None,
+    label_fontsize: float = 7.0,
 ) -> None:
     """Overlay terrain on a depth-section axes (terrain-following frame).
 
@@ -104,6 +105,11 @@ def draw_topo_section(
         their current appearance; pass this to use a different marker
         for this call only, without touching the global rendering
         config.
+    label_fontsize : float, default 7.0
+        Font size of the station name labels only (the terrain, fill,
+        and marker pins are unaffected). The default matches this
+        function's long-standing appearance; increase it for a wider
+        figure where names would otherwise read as too small.
     """
     cfg = _get_cfg(cfg)
     chain = np.asarray(chainage_km, dtype=float)
@@ -195,7 +201,7 @@ def draw_topo_section(
                 sx[i],
                 marker_y[i] + label_offset,
                 station_names[i],
-                fontsize=7,
+                fontsize=label_fontsize,
                 rotation=90,
                 va="bottom" if toward_top > 0 else "top",
                 ha="center",

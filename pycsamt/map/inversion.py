@@ -42,7 +42,7 @@ from ._core import (
     normalize_station_id,
 )
 
-__all__ = ["group_modem_stations", "load_modem_lines"]
+__all__ = ["group_modem_stations", "load_modem_lines", "load_pcsf_lines"]
 
 
 def group_modem_stations(
@@ -106,6 +106,244 @@ def _lookup(
     if exact is not None:
         return exact
     return known_by_id.get(normalize_station_id(name))
+
+
+def _grid3d_offset(
+    node_extent: tuple[float, float] | None,
+    centers: np.ndarray,
+    coords: np.ndarray,
+) -> float:
+    """Registration offset between a PCSF ``grid3d`` file's own grid
+    frame and its station coordinate frame.
+
+    Same symmetric-padding heuristic
+    :func:`pycsamt.models.modem.section.station_curtain` uses for a
+    *live* ModEM folder (there, ``_grid_offset``), reimplemented here
+    from a PCSF file's plain arrays instead of a live
+    ``ModEmModel3D``/``ModEmData`` pair: ModEM builds its horizontal
+    grid with symmetric padding around the station footprint, so the
+    grid's own extent midpoint always coincides with the midpoint of
+    the station coordinate range -- a closed-form offset that needs no
+    parsed padding/core-zone boundaries either way. Grid rotation is
+    not applied here, matching ``station_curtain``'s own scope -- both
+    are exact for an axis-aligned grid (``rotation_deg == 0``, the
+    common case) and best-effort otherwise.
+    """
+    finite = coords[np.isfinite(coords)]
+    if finite.size == 0 or centers.size == 0:
+        return 0.0
+    data_mid = (float(finite.min()) + float(finite.max())) / 2.0
+    if node_extent is not None:
+        grid_mid = (node_extent[0] + node_extent[1]) / 2.0
+    else:
+        grid_mid = (float(centers[0]) + float(centers[-1])) / 2.0
+    return grid_mid - data_mid
+
+
+def _nearest_cell(centers: np.ndarray, value: float) -> int:
+    idx = int(np.searchsorted(centers, value))
+    if idx <= 0:
+        return 0
+    if idx >= centers.size:
+        return centers.size - 1
+    return (
+        idx
+        if abs(centers[idx] - value) < abs(centers[idx - 1] - value)
+        else idx - 1
+    )
+
+
+def _grid3d_sections(
+    model: Any,
+    known_stations: Iterable[StationRecord] | None,
+) -> tuple[list[StationRecord], dict[str, dict[str, Any]]]:
+    """Slice one 2-D vertical curtain per survey line from a PCSF
+    ``grid3d`` volume.
+
+    The same nearest-cell sampling
+    :func:`pycsamt.models.modem.section.station_curtain` already does
+    for a *live* ModEM folder — a single ModEM 3-D run inverts one
+    volume for a whole (possibly multi-line) survey, so a curtain has
+    to be sliced out per line, not read off a per-line file. Lines are
+    grouped the same way :func:`load_modem_lines` groups a live
+    folder's stations (:func:`group_modem_stations`, by
+    ``known_stations`` line tags first, else a station-name-prefix
+    heuristic) whenever the file carries no explicit
+    ``stations.line_id`` -- :func:`pycsamt.format.adapters.modem3d.modem3d_to_pcsf`
+    does not currently set one.
+    """
+    geo = model.geometry
+    st = model.stations
+    known_by_id = _index_known_stations(known_stations)
+
+    if st.line_id:
+        groups: dict[str, list[str]] = {}
+        for name, line in zip(st.name, st.line_id):
+            groups.setdefault(str(line), []).append(str(name))
+    else:
+        groups = group_modem_stations(st.name, known_stations=known_stations)
+
+    name_to_idx = {str(name): i for i, name in enumerate(st.name)}
+    x_nodes = geo.x_nodes if geo.x_nodes is not None else geo.x
+    y_nodes = geo.y_nodes if geo.y_nodes is not None else geo.y
+    offset_x = _grid3d_offset(
+        (float(x_nodes[0]), float(x_nodes[-1])), geo.x, st.x
+    )
+    offset_y = _grid3d_offset(
+        (float(y_nodes[0]), float(y_nodes[-1])), geo.y, st.y
+    )
+
+    n_air = int(getattr(geo, "n_air", 0) or 0)
+    z_earth = np.asarray(geo.z[n_air:], dtype=float)
+    rho_earth = model.resistivity[n_air:, :, :]
+
+    stations: list[StationRecord] = []
+    sections: dict[str, dict[str, Any]] = {}
+    for line_id, names in groups.items():
+        line_names: list[str] = []
+        elevs: list[float] = []
+        columns: list[np.ndarray] = []
+        for name in names:
+            i = name_to_idx.get(str(name))
+            if i is None:
+                continue
+            match = _lookup(known_by_id, name)
+            ix = _nearest_cell(geo.x, float(st.x[i]) + offset_x)
+            iy = _nearest_cell(geo.y, float(st.y[i]) + offset_y)
+            elev = float(st.z[i])
+            if not np.isfinite(elev) and match is not None:
+                elev = match.elevation if match.elevation is not None else np.nan
+            lon, lat = _resolve_pcsf_lonlat(st, i, match)
+            stations.append(
+                StationRecord(
+                    id=str(name),
+                    latitude=lat,
+                    longitude=lon,
+                    elevation=elev if np.isfinite(elev) else None,
+                    line=str(line_id),
+                    index=len(stations),
+                )
+            )
+            line_names.append(str(name))
+            elevs.append(elev)
+            columns.append(rho_earth[:, iy, ix])
+        if not line_names:
+            continue
+        sections[str(line_id)] = {
+            "z": z_earth,
+            "rho": np.column_stack(columns),
+            "stations": np.array(line_names, dtype=object),
+            "elev": np.array(elevs, dtype=float),
+        }
+    return stations, sections
+
+
+_MESH_DEFAULT_N_Z = 60
+
+
+def _mesh_unstructured_sections(
+    model: Any,
+    known_stations: Iterable[StationRecord] | None,
+    n_z: int,
+) -> tuple[list[StationRecord], dict[str, dict[str, Any]]]:
+    """Slice one per-station curtain from a PCSF ``mesh_unstructured``
+    (MARE2DEM) mesh via point-location on its real triangulation.
+
+    Unlike ``grid2d``/``multiline``/``grid3d``, a mesh has no
+    rectilinear index to look up a station's nearest column by — a
+    triangle's own connectivity is the only structure there is, so a
+    curtain needs an actual point-in-triangle query at each
+    ``(x_station, z_sample)`` location. :class:`matplotlib.tri.Triangulation`
+    (already a hard pycsamt dependency, no new install) builds that
+    query structure directly from the mesh's own real ``nodes``/
+    ``connectivity`` — no re-triangulation, no approximation of the
+    mesh's own geometry.
+
+    ``z_sample`` itself has no natural resolution to reuse (a mesh
+    carries no separate z axis the way a rectilinear grid does), so
+    *n_z* evenly spaced samples across the mesh's own node z-range are
+    used — the same kind of pragmatic, documented default the rest of
+    this format already makes rather than inventing an unbounded
+    resolution choice (cf. PCSM's own row-width cap).
+
+    A query point outside the mesh (above the mesh's shallowest
+    triangle at that x, or beyond its lateral/depth extent) returns
+    ``nan`` for that depth, never a fabricated value.
+    """
+    from matplotlib.tri import Triangulation
+
+    geo = model.geometry
+    st = model.stations
+    known_by_id = _index_known_stations(known_stations)
+
+    connectivity = np.asarray(geo.connectivity, dtype=np.int64)
+    nodes = np.asarray(geo.nodes, dtype=float)
+    resistivity = np.asarray(model.resistivity, dtype=float)
+    if resistivity.shape != (connectivity.shape[0],):
+        raise ValueError(
+            "load_pcsf_lines needs per-triangle mesh_unstructured "
+            f"resistivity (shape ({connectivity.shape[0]},)), got "
+            f"shape {resistivity.shape} -- expand resistivity_by_region "
+            "onto each triangle's region id first (every "
+            "pycsamt.format.adapters writer already does this)."
+        )
+
+    triangulation = Triangulation(nodes[:, 0], nodes[:, 1], triangles=connectivity)
+    trifinder = triangulation.get_trifinder()
+    z_samples = np.linspace(
+        float(nodes[:, 1].min()), float(nodes[:, 1].max()), n_z
+    )
+
+    if st.line_id:
+        groups: dict[str, list[str]] = {}
+        for name, line in zip(st.name, st.line_id):
+            groups.setdefault(str(line), []).append(str(name))
+    else:
+        groups = {"line1": [str(name) for name in st.name]}
+    name_to_idx = {str(name): i for i, name in enumerate(st.name)}
+
+    stations: list[StationRecord] = []
+    sections: dict[str, dict[str, Any]] = {}
+    for line_id, names in groups.items():
+        line_names: list[str] = []
+        elevs: list[float] = []
+        columns: list[np.ndarray] = []
+        for name in names:
+            i = name_to_idx.get(str(name))
+            if i is None:
+                continue
+            match = _lookup(known_by_id, name)
+            x_station = float(st.x[i])
+            tri_idx = trifinder(np.full(n_z, x_station), z_samples)
+            column = np.full(n_z, np.nan)
+            inside = tri_idx >= 0
+            column[inside] = resistivity[tri_idx[inside]]
+            elev = float(st.z[i])
+            if not np.isfinite(elev) and match is not None:
+                elev = match.elevation if match.elevation is not None else np.nan
+            lon, lat = _resolve_pcsf_lonlat(st, i, match)
+            stations.append(
+                StationRecord(
+                    id=str(name),
+                    latitude=lat,
+                    longitude=lon,
+                    elevation=elev if np.isfinite(elev) else None,
+                    line=str(line_id),
+                    index=len(stations),
+                )
+            )
+            line_names.append(str(name))
+            elevs.append(elev)
+            columns.append(column)
+        if not line_names:
+            continue
+        sections[str(line_id)] = {
+            "z": z_samples,
+            "rho": np.column_stack(columns),
+            "stations": np.array(line_names, dtype=object),
+            "elev": np.array(elevs, dtype=float),
+        }
+    return stations, sections
 
 
 def load_modem_lines(
@@ -204,6 +442,180 @@ def load_modem_lines(
     return data
 
 
+def load_pcsf_lines(
+    path: str | Path,
+    *,
+    known_stations: Iterable[StationRecord] | None = None,
+    fetch_elevation: bool = True,
+    verbose: int = 0,
+    mesh_z_samples: int = _MESH_DEFAULT_N_Z,
+) -> MapData:
+    """Load a backend-neutral ``.pcsf``/``.pcsm``/``.pcsm.gz`` file as a
+    multi-line MapData.
+
+    Phase 7 of the PCSF format plan: the same route
+    :func:`load_modem_lines` already established, but working from any
+    backend's converted ``grid2d``/``multiline`` PCSF file instead of a
+    live ModEM folder — the view layer here carries no
+    Occam2D/ModEM/MARE2DEM-specific logic, only PCSF's own schema.
+    Both encodings of the format are accepted transparently — see
+    :func:`pycsamt.format.read_pcsf_or_pcsm` — since PCSM is a
+    lossless ASCII projection of the exact same in-memory model.
+
+    ``pycsamt.map.volume``'s 3-D builders need one real ``(x, z, rho)``
+    curtain *per named station*. For ``grid2d``/``multiline``, a PCSF
+    file's own dense mesh column at each real station's along-profile
+    position is extracted (the nearest-column convention
+    :meth:`pycsamt.interp._base.ResistivityModel.column_nearest` also
+    uses) — the full mesh resolution between stations is not carried
+    into ``MapData``, the same simplification :func:`load_modem_lines`
+    already makes via :func:`pycsamt.models.modem.section.station_curtain`.
+    For ``grid3d`` (native ModEM 3-D), the same nearest-cell sampling
+    ``station_curtain`` uses for a *live* ModEM folder is applied here
+    to the PCSF file's own volume instead — see :func:`_grid3d_sections`.
+    For ``mesh_unstructured`` (MARE2DEM), a station's column instead
+    comes from point-location on the mesh's real triangulation (which
+    triangle contains a given ``(x, z)`` query point) — a genuinely
+    different algorithm from the other three kinds' index lookups,
+    since a triangular mesh carries no rectilinear index to begin with
+    — see :func:`_mesh_unstructured_sections`.
+
+    Parameters
+    ----------
+    path : path-like
+        A ``.pcsf``, ``.pcsm``, or ``.pcsm.gz`` file with
+        ``geometry.kind`` ``"grid2d"``, ``"multiline"``, ``"grid3d"``,
+        or ``"mesh_unstructured"``, and a populated
+        :attr:`PCSFModel.stations` table.
+    known_stations : iterable of StationRecord, optional
+        Previously-loaded EDI stations, used the same way
+        :func:`load_modem_lines` uses them: when a station matches one
+        here, its ``line``/elevation/lon/lat take priority. Real
+        geo-referencing does not strictly require this, though --
+        ``StationTable``'s own ``lon``/``lat`` (populated by
+        ``occam2d_to_pcsf(station_lonlat=...)``,
+        ``modem3d_to_pcsf``'s ``GG_Lat``/``GG_Lon`` passthrough, or
+        ``build_multiline_pcsf``'s ``sta_lat``/``sta_lon``), when
+        present, are used as the fallback source -- only an
+        unmatched station in a file with neither falls back to
+        synthetic line spacing.
+    fetch_elevation : bool, default True
+        Best-effort online elevation lookup for any station still
+        missing one after ``known_stations`` matching (see
+        :func:`load_modem_lines`).
+    verbose : int, default 0
+        Unused today; accepted for signature parity with
+        :func:`load_modem_lines`.
+    mesh_z_samples : int, default 60
+        ``mesh_unstructured`` only: number of evenly spaced depth
+        samples across the mesh's own node z-range to query per
+        station. A triangular mesh carries no separate z axis to reuse
+        the way a rectilinear grid does, so this is a pragmatic,
+        overridable resolution choice, not a property of the file
+        itself. Ignored for every other geometry kind.
+
+    Returns
+    -------
+    MapData
+        ``sites=None``; ``metadata["sections"]`` carries one precomputed
+        curtain per line, consumed directly by :mod:`pycsamt.map.volume`.
+
+    Raises
+    ------
+    ValueError
+        If the file has no station table, or (``mesh_unstructured``
+        only) its resistivity is the compact per-region form rather
+        than already expanded onto each triangle.
+    """
+    from pycsamt.format import read_pcsf_or_pcsm
+
+    model = read_pcsf_or_pcsm(path)
+    if model.stations is None or not list(model.stations.name):
+        raise ValueError(
+            f"{path}: PCSF file has no station table -- MapView needs "
+            "named stations to build 2-D curtains."
+        )
+
+    if model.kind == "grid3d":
+        stations, sections = _grid3d_sections(model, known_stations)
+    elif model.kind == "mesh_unstructured":
+        stations, sections = _mesh_unstructured_sections(
+            model, known_stations, mesh_z_samples
+        )
+    else:
+        if model.kind == "grid2d":
+            line_specs = [
+                (
+                    "line1",
+                    model.geometry.x,
+                    model.geometry.z,
+                    model.resistivity,
+                )
+            ]
+        else:
+            line_specs = [
+                (line.line_id, line.geometry.x, line.geometry.z, line.resistivity)
+                for line in model.geometry.lines
+            ]
+
+        st = model.stations
+        station_by_line: dict[str, list[int]] = {}
+        for i, name in enumerate(st.name):
+            line_id = st.line_id[i] if st.line_id else "line1"
+            station_by_line.setdefault(str(line_id), []).append(i)
+
+        known_by_id = _index_known_stations(known_stations)
+        stations = []
+        sections = {}
+        for line_id, x_geo, z_geo, rho in line_specs:
+            idxs = station_by_line.get(str(line_id), [])
+            if not idxs:
+                continue
+            names: list[str] = []
+            elevs: list[float] = []
+            columns: list[np.ndarray] = []
+            for i in idxs:
+                name = str(st.name[i])
+                match = _lookup(known_by_id, name)
+                col_idx = int(np.argmin(np.abs(x_geo - st.x[i])))
+                elev = float(st.z[i])
+                if not np.isfinite(elev) and match is not None:
+                    elev = (
+                        match.elevation if match.elevation is not None else np.nan
+                    )
+                lon, lat = _resolve_pcsf_lonlat(st, i, match)
+                stations.append(
+                    StationRecord(
+                        id=name,
+                        latitude=lat,
+                        longitude=lon,
+                        elevation=elev if np.isfinite(elev) else None,
+                        line=str(line_id),
+                        index=len(stations),
+                    )
+                )
+                names.append(name)
+                elevs.append(elev)
+                columns.append(rho[:, col_idx])
+            sections[str(line_id)] = {
+                "z": np.asarray(z_geo, dtype=float),
+                "rho": np.column_stack(columns),
+                "stations": np.array(names, dtype=object),
+                "elev": np.array(elevs, dtype=float),
+            }
+
+    metadata = {
+        "source": "pcsf",
+        "path": str(path),
+        "sections": sections,
+        "rms": (model.metadata or {}).get("final_rms"),
+    }
+    data = MapData(sites=None, stations=tuple(stations), metadata=metadata)
+    if fetch_elevation:
+        data = _try_fetch_elevations(data)
+    return data
+
+
 def _try_fetch_elevations(data: MapData) -> MapData:
     """Best-effort online elevation fetch for stations missing one.
 
@@ -240,4 +652,30 @@ def _resolve_lonlat(
     lonlat = data.site_lonlat.get(name)
     if lonlat is not None:
         return float(lonlat[0]), float(lonlat[1])
+    return None, None
+
+
+def _resolve_pcsf_lonlat(
+    st: Any,
+    i: int,
+    known_match: StationRecord | None,
+) -> tuple[float | None, float | None]:
+    """Same priority :func:`_resolve_lonlat` uses for a live ModEM
+    folder's ``site_lonlat`` -- ``known_stations`` first (lets an
+    already-geo-located EDI survey override/enrich), else the PCSF
+    file's own ``StationTable.lon``/``.lat`` (populated by
+    ``occam2d_to_pcsf``'s ``station_lonlat``,
+    ``modem3d_to_pcsf``'s own ``GG_Lat``/``GG_Lon`` passthrough, or
+    ``build_multiline_pcsf``'s ``sta_lat``/``sta_lon``), else unknown.
+    """
+    if (
+        known_match is not None
+        and known_match.longitude is not None
+        and known_match.latitude is not None
+    ):
+        return known_match.longitude, known_match.latitude
+    if st.lon is not None and st.lat is not None:
+        lon, lat = float(st.lon[i]), float(st.lat[i])
+        if np.isfinite(lon) and np.isfinite(lat):
+            return lon, lat
     return None, None

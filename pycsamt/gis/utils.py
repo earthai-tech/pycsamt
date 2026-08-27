@@ -1747,9 +1747,21 @@ def project_point_utm2ll(
     else:
         assert pp is not None
         lon, lat = pp(easting, northing, inverse=True)
-    # normalize_lat_lon resolve the classic axis order issue often
-    # seen when interacting with different GIS libraries.
-    lat, lon = normalize_lat_lon(lon, lat, assume="latlon")
+    # normalize_lat_lon resolves the classic axis order issue often
+    # seen when interacting with different GIS libraries. Both branches
+    # above hand back (lon, lat) (GDAL's TransformPoint and pyproj's
+    # Proj.__call__ both order results as (x, y) = (lon, lat)), so the
+    # values passed here genuinely are (lon, lat) -- assume must say so
+    # too. Passing assume="latlon" here was backwards: it told the
+    # ambiguity heuristic to treat the *first* argument as latitude,
+    # which silently swapped lat/lon for every point where both
+    # |lat| <= 90 and |lon| <= 90 (most of the inhabited world,
+    # including all of Europe/Africa/western Asia) -- not caught by
+    # this module's own tests, which happen to only ever exercise
+    # |lon| > 90 points (Los Angeles, Sydney) where the heuristic's
+    # own unambiguous-value auto-detection masked the bug regardless
+    # of the wrong hint.
+    lat, lon = normalize_lat_lon(lon, lat, assume="lonlat")
     return (round(lat, 6), round(lon, 6))
 
 

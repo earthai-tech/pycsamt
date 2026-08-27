@@ -325,6 +325,16 @@ def figure_for(
             section_res=int(c.get("section_res", 100)),
             show_stations=bool(c.get("show_stations", False)),
             station_labels=bool(c.get("station_labels", False)),
+            station_label_angle=float(c.get("station_label_angle", 0.0)),
+            station_label_fraction=float(
+                c.get("station_label_fraction", 1.0) or 1.0
+            ),
+            station_label_names=(
+                tuple(c["station_label_names"])
+                if c.get("station_label_names")
+                else None
+            ),
+            max_stations=c.get("station_max"),
             station_symbol=c.get("station_symbol", "diamond"),
             station_size=int(c.get("station_size", 4)),
             station_color=c.get("station_color", "#1f2937"),

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import matplotlib
 import numpy as np
+import pandas as pd
 import pytest
 
 matplotlib.use("Agg")
@@ -37,9 +38,20 @@ from pycsamt.emtools.frequency import (
 )
 from pycsamt.emtools.qc import (
     confidence_ratio,
+    export_confidence_map,
     frequency_confidence_table,
     plot_confidence_band_summary,
+    plot_confidence_before_after,
+    plot_confidence_component_map,
+    plot_confidence_coverage_curve,
+    plot_confidence_distribution,
+    plot_confidence_heatmap,
+    plot_confidence_grid_map,
+    plot_confidence_map,
+    plot_confidence_method_comparison,
     plot_confidence_profile,
+    plot_confidence_rank,
+    plot_confidence_risk_map,
     plot_frequency_confidence_psection,
     plot_station_confidence_dashboard,
     plot_station_confidence_spectrum,
@@ -778,6 +790,694 @@ class TestStationPositions:
 # ─────────────────────────────────────────────────────────────────────────────
 # plot_confidence_profile — return type and axes labels
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestPlotConfidenceMap:
+    def test_projected_map_returns_axes_and_fixed_scale(self):
+        sites = [_site(f"S{i}", east=i * 200.0, north=i * 25.0) for i in range(4)]
+        ax = plot_confidence_map(
+            sites,
+            coordinate_system="projected",
+            colorbar_min=0.0,
+        )
+
+        assert isinstance(ax, plt.Axes)
+        assert ax._pycsamt_coordinate_system == "projected"
+        assert "easting" in ax.get_xlabel().lower()
+        points = [c for c in ax.collections if isinstance(c, PathCollection)]
+        assert len(points[0].get_offsets()) == 4
+        assert points[0].norm.vmin == 0.0
+        assert points[0].norm.vmax == 1.0
+        plt.close("all")
+
+    def test_route_adaptive_colorbar_and_confidence_values(self):
+        fr = _freqs(10)
+        z_partial = _make_z(fr, 100.0)
+        z_partial[:4] = np.nan
+        sites = [
+            _FakeSite("S0", z_partial, fr, east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+        ]
+        ax = plot_confidence_map(
+            sites,
+            method="presence",
+            coordinate_system="projected",
+            mode="route",
+            show_confidence_values=True,
+        )
+
+        colorbar_ticks = ax.figure.axes[-1].get_yticks()
+        np.testing.assert_allclose(colorbar_ticks, [0.6, 0.85, 0.95, 1.0])
+        assert {text.get_text() for text in ax.texts} == {"0.60", "1.00"}
+        plt.close("all")
+
+    def test_auto_prefers_longitude_latitude(self):
+        sites = [_site(f"S{i}", east=i * 200.0, north=0.0) for i in range(3)]
+        for i, site in enumerate(sites):
+            site.longitude = -4.0 + i * 0.01
+            site.latitude = 6.0 + i * 0.005
+        ax = plot_confidence_map(sites)
+
+        assert ax._pycsamt_coordinate_system == "geographic"
+        assert "longitude" in ax.get_xlabel().lower()
+        assert "latitude" in ax.get_ylabel().lower()
+        plt.close("all")
+
+    def test_line_labels_do_not_connect_separate_lines(self):
+        sites = [_site(f"S{i}", east=i * 100.0, north=i % 2) for i in range(4)]
+        labels = {"S0": "L1", "S1": "L1", "S2": "L2", "S3": "L2"}
+        ax = plot_confidence_map(
+            sites,
+            coordinate_system="projected",
+            line_labels=labels,
+        )
+
+        assert len(ax.lines) == 2
+        assert {text.get_text() for text in ax.texts} == {"L1", "L2"}
+        plt.close("all")
+
+    def test_route_is_sorted_by_coordinate_chainage(self):
+        sites = [
+            _site("L-10", east=0.0, north=200.0),
+            _site("L-1", east=0.0, north=0.0),
+            _site("L-20", east=0.0, north=300.0),
+            _site("L-2", east=0.0, north=100.0),
+        ]
+        ax = plot_confidence_map(sites, coordinate_system="projected")
+
+        route_y = np.asarray(ax.lines[0].get_ydata(), dtype=float)
+        assert np.all(np.diff(route_y) >= 0.0) or np.all(np.diff(route_y) <= 0.0)
+        plt.close("all")
+
+    def test_station_table_exposes_map_coordinates(self):
+        sites = [_site("S0", east=123.0, north=456.0)]
+        table = station_confidence_table(sites, api=False)
+
+        assert {"longitude", "latitude", "easting", "northing"}.issubset(
+            table.columns
+        )
+        assert table.loc[0, "easting"] == pytest.approx(123.0)
+        assert table.loc[0, "northing"] == pytest.approx(456.0)
+
+    def test_missing_coordinates_is_informative(self):
+        ax = plot_confidence_map([_site("S0")], coordinate_system="projected")
+        assert "no projected coordinates" in ax.texts[0].get_text()
+        plt.close("all")
+
+    def test_contour_map_accepts_two_dimensional_layout(self):
+        sites = [
+            _site("S0", east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+            _site("S2", east=0.0, north=100.0),
+            _site("S3", east=100.0, north=100.0),
+        ]
+        ax = plot_confidence_map(
+            sites,
+            coordinate_system="projected",
+            mode="contour",
+        )
+
+        assert "contour" in ax.get_title().lower()
+        assert len(ax.collections) > 1
+        plt.close("all")
+
+    def test_contour_map_rejects_single_line(self):
+        sites = [_site(f"S{i}", east=i * 100.0, north=0.0) for i in range(4)]
+        with pytest.raises(ValueError, match="non-collinear"):
+            plot_confidence_map(
+                sites,
+                coordinate_system="projected",
+                mode="contour",
+            )
+        plt.close("all")
+
+    def test_contour_map_rejects_too_small_edge_mask(self):
+        sites = [
+            _site("S0", east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+            _site("S2", east=0.0, north=100.0),
+        ]
+        with pytest.raises(ValueError, match="masks every"):
+            plot_confidence_map(
+                sites,
+                coordinate_system="projected",
+                mode="contour",
+                max_triangle_edge=10.0,
+            )
+        plt.close("all")
+
+    def test_contour_colorbar_uses_adaptive_floor_and_thresholds(self):
+        fr = _freqs(10)
+        z_partial = _make_z(fr, 100.0)
+        z_partial[:4] = np.nan
+        sites = [
+            _FakeSite("S0", z_partial, fr, east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+            _site("S2", east=0.0, north=100.0),
+            _site("S3", east=100.0, north=100.0),
+        ]
+        ax = plot_confidence_map(
+            sites,
+            method="presence",
+            coordinate_system="projected",
+            mode="contour",
+            show_contour_lines=True,
+            contour_line_levels=[0.7, 0.8, 0.9],
+            contour_line_colors="navy",
+            contour_linewidths=1.2,
+            contour_linestyles="dashed",
+            contour_label_fmt="%.2f",
+        )
+
+        colorbar_ticks = ax.figure.axes[-1].get_yticks()
+        np.testing.assert_allclose(colorbar_ticks, [0.6, 0.85, 0.95, 1.0])
+        assert len(ax.collections) > 2
+        assert "0.70" in {text.get_text() for text in ax.texts}
+        plt.close("all")
+
+    def test_boundary_only_contours_accept_custom_levels(self):
+        fr = _freqs(10)
+        z_partial = _make_z(fr, 100.0)
+        z_partial[:4] = np.nan
+        sites = [
+            _FakeSite("S0", z_partial, fr, east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+            _site("S2", east=0.0, north=100.0),
+            _site("S3", east=100.0, north=100.0),
+        ]
+        ax = plot_confidence_map(
+            sites,
+            method="presence",
+            coordinate_system="projected",
+            mode="contour",
+            boundary_levels=[0.5, 0.85, 0.90, 1.0],
+            show_contour_lines=False,
+            show_threshold_contours=True,
+        )
+
+        np.testing.assert_allclose(
+            ax.figure.axes[-1].get_yticks(),
+            [0.6, 0.85, 0.90, 1.0],
+        )
+        labels = {text.get_text() for text in ax.texts}
+        assert {"0.85", "0.90"}.issubset(labels)
+        plt.close("all")
+
+    def test_export_confidence_map_csv_and_surfer_grid(self, tmp_path):
+        sites = [
+            _site("S0", east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+            _site("S2", east=0.0, north=100.0),
+            _site("S3", east=100.0, north=100.0),
+        ]
+        outputs = export_confidence_map(
+            sites,
+            coordinate_system="projected",
+            csv_path=tmp_path / "confidence.csv",
+            surfer_path=tmp_path / "confidence.grd",
+            grid_shape=(7, 5),
+        )
+
+        csv = pd.read_csv(outputs["csv"])
+        assert {"station", "x", "y", "confidence"}.issubset(csv.columns)
+        lines = outputs["surfer"].read_text().splitlines()
+        assert lines[0] == "DSAA"
+        assert lines[1] == "7 5"
+
+
+class TestPlotConfidenceGridMap:
+    def _sites(self):
+        return [
+            _site("S0", east=0.0, north=0.0),
+            _site("S1", east=100.0, north=0.0),
+            _site("S2", east=0.0, north=100.0),
+            _site("S3", east=100.0, north=100.0),
+        ]
+
+    def test_regular_grid_shape_and_coordinates(self):
+        ax = plot_confidence_grid_map(
+            self._sites(),
+            coordinate_system="projected",
+            grid_shape=(17, 11),
+        )
+
+        assert ax._pycsamt_confidence_grid.shape == (11, 17)
+        assert len(ax._pycsamt_grid_x) == 17
+        assert len(ax._pycsamt_grid_y) == 11
+        assert ax._pycsamt_coordinate_system == "projected"
+        plt.close("all")
+
+    def test_cubic_interpolation_and_visible_cell_edges(self):
+        ax = plot_confidence_grid_map(
+            self._sites(),
+            coordinate_system="projected",
+            grid_shape=(8, 7),
+            interpolation="cubic",
+            show_grid_edges=True,
+        )
+
+        assert ax._pycsamt_confidence_grid.shape == (7, 8)
+        assert ax.collections
+        plt.close("all")
+
+    def test_collinear_stations_raise(self):
+        sites = [
+            _site(f"S{i}", east=i * 100.0, north=0.0) for i in range(4)
+        ]
+        with pytest.raises(ValueError, match="non-collinear"):
+            plot_confidence_grid_map(
+                sites,
+                coordinate_system="projected",
+            )
+        plt.close("all")
+
+
+class TestPlotConfidenceComponentMap:
+    def _sites(self):
+        return [
+            _site("L1-1", east=0.0, north=0.0),
+            _site("L1-2", east=0.0, north=100.0),
+            _site("L2-1", east=100.0, north=0.0),
+            _site("L2-2", east=100.0, north=100.0),
+        ]
+
+    def test_default_publication_grid(self):
+        sites = self._sites()
+        labels = {site.station: site.station.split("-")[0] for site in sites}
+        fig = plot_confidence_component_map(
+            sites,
+            coordinate_system="projected",
+            line_labels=labels,
+        )
+
+        visible = [ax for ax in fig.axes if ax.get_visible()]
+        titles = [ax.get_title(loc="left") for ax in visible]
+        assert any("Overall confidence" in title for title in titles)
+        assert any("Spatial coherence" in title for title in titles)
+        assert fig._suptitle.get_text() == "Station confidence components (composite)"
+        plt.close("all")
+
+    def test_custom_components_and_existing_axes(self):
+        fig, axes = plt.subplots(1, 2)
+        out = plot_confidence_component_map(
+            self._sites(),
+            components=["confidence", "coverage"],
+            coordinate_system="projected",
+            axes=axes,
+            panel_letters=False,
+        )
+
+        assert out is fig
+        assert axes[0].get_title(loc="left") == "Overall confidence"
+        assert axes[1].get_title(loc="left") == "Data coverage"
+        plt.close("all")
+
+    def test_unknown_component_raises(self):
+        with pytest.raises(ValueError, match="unknown confidence components"):
+            plot_confidence_component_map(
+                self._sites(),
+                components=["bogus"],
+            )
+
+
+class TestPlotConfidenceMethodComparison:
+    def _sites(self):
+        fr = _freqs(10)
+        z_partial = _make_z(fr, 100.0)
+        z_partial[:3] = np.nan
+        return [
+            _FakeSite("L1-1", z_partial, fr, east=0.0, north=0.0),
+            _site("L1-2", east=0.0, north=100.0),
+            _site("L2-1", east=100.0, north=0.0),
+            _site("L2-2", east=100.0, north=100.0),
+        ]
+
+    def test_three_panel_comparison(self):
+        sites = self._sites()
+        labels = {site.station: site.station.split("-")[0] for site in sites}
+        fig = plot_confidence_method_comparison(
+            sites,
+            coordinate_system="projected",
+            line_labels=labels,
+        )
+
+        titles = [ax.get_title(loc="left") for ax in fig.axes[:3]]
+        assert titles == [
+            "(a)  Presence confidence",
+            "(b)  Composite confidence",
+            "(c)  Composite − presence",
+        ]
+        assert fig._suptitle.get_text() == "Confidence-method comparison"
+        assert fig.axes[0].get_shared_x_axes().joined(fig.axes[0], fig.axes[2])
+        plt.close("all")
+
+    def test_difference_scale_is_symmetric(self):
+        fig = plot_confidence_method_comparison(
+            self._sites(),
+            coordinate_system="projected",
+            difference_limit=0.6,
+        )
+        difference_points = fig.axes[2].collections[0]
+        assert difference_points.norm.vmin == pytest.approx(-0.6)
+        assert difference_points.norm.vcenter == pytest.approx(0.0)
+        assert difference_points.norm.vmax == pytest.approx(0.6)
+        plt.close("all")
+
+    def test_accepts_existing_axes(self):
+        fig, axes = plt.subplots(1, 3)
+        out = plot_confidence_method_comparison(
+            self._sites(),
+            coordinate_system="projected",
+            axes=axes,
+            show_statistics=False,
+        )
+        assert out is fig
+        assert not axes[0].texts
+        plt.close("all")
+
+
+class TestPlotConfidenceBeforeAfter:
+    def _paired_sites(self):
+        fr = _freqs(10)
+        before = []
+        after = []
+        for index, (missing_before, missing_after) in enumerate(
+            ((5, 1), (3, 3), (1, 4), (4, 0))
+        ):
+            z_before = _make_z(fr, 100.0)
+            z_after = _make_z(fr, 100.0)
+            z_before[:missing_before] = np.nan
+            z_after[:missing_after] = np.nan
+            kwargs = {
+                "east": 100.0 * (index // 2),
+                "north": 100.0 * (index % 2),
+            }
+            station = f"L{1 + index // 2}-{index}"
+            before.append(_FakeSite(station, z_before, fr, **kwargs))
+            after.append(_FakeSite(station, z_after, fr, **kwargs))
+        return before, after
+
+    def test_matched_changes_and_line_summary(self):
+        before, after = self._paired_sites()
+        labels = {site.station: site.station.split("-")[0] for site in before}
+        fig = plot_confidence_before_after(
+            before,
+            after,
+            method="presence",
+            line_labels=labels,
+        )
+
+        table = fig._pycsamt_before_after_table
+        np.testing.assert_allclose(table["delta"], table["after"] - table["before"])
+        assert set(table["status"]) == {"improved", "stable", "degraded"}
+        assert len(fig._pycsamt_before_after_line_table) == 2
+        assert len(fig.axes) == 3
+        plt.close("all")
+
+    def test_same_data_can_compare_methods(self):
+        before, _ = self._paired_sites()
+        fig = plot_confidence_before_after(
+            before,
+            before_method="presence",
+            after_method="composite",
+            show_line_panel=False,
+        )
+
+        assert len(fig.axes) == 2
+        assert len(fig._pycsamt_before_after_table) == 4
+        plt.close("all")
+
+    def test_reports_unmatched_station_names(self):
+        before, after = self._paired_sites()
+        after = after[:-1]
+        fig = plot_confidence_before_after(before, after, method="presence")
+
+        assert fig._pycsamt_unmatched_before == [before[-1].station]
+        assert fig._pycsamt_unmatched_after == []
+        plt.close("all")
+
+
+class TestPlotConfidenceRiskMap:
+    def _sites(self):
+        fr = _freqs(10)
+        values = []
+        for index, missing in enumerate((0, 1, 3, 6)):
+            z = _make_z(fr, 100.0)
+            z[:missing] = np.nan
+            values.append(
+                _FakeSite(
+                    f"S{index}",
+                    z,
+                    fr,
+                    east=100.0 * (index % 2),
+                    north=100.0 * (index // 2),
+                )
+            )
+        return values
+
+    def test_contour_risk_is_one_minus_confidence(self):
+        ax = plot_confidence_risk_map(
+            self._sites(),
+            method="presence",
+            coordinate_system="projected",
+        )
+
+        table = ax._pycsamt_risk_table
+        np.testing.assert_allclose(table["risk"], 1.0 - table["confidence"])
+        assert ax.get_title(loc="left") == "Confidence-risk map (presence)"
+        assert "Easting" in ax.get_xlabel()
+        plt.close("all")
+
+    def test_scatter_mode_supports_single_line(self):
+        sites = [
+            _site(f"S{i}", east=i * 100.0, north=0.0) for i in range(4)
+        ]
+        ax = plot_confidence_risk_map(
+            sites,
+            coordinate_system="projected",
+            mode="scatter",
+        )
+
+        points = [c for c in ax.collections if isinstance(c, PathCollection)]
+        assert len(points[0].get_offsets()) == 4
+        plt.close("all")
+
+    def test_contour_rejects_collinear_stations(self):
+        sites = [
+            _site(f"S{i}", east=i * 100.0, north=0.0) for i in range(4)
+        ]
+        with pytest.raises(ValueError, match="non-collinear"):
+            plot_confidence_risk_map(
+                sites,
+                coordinate_system="projected",
+                mode="contour",
+            )
+        plt.close("all")
+
+
+class TestPlotConfidenceHeatmap:
+    def _sites(self):
+        return [
+            _site("L1-2", east=0.0, north=100.0),
+            _site("L1-1", east=0.0, north=0.0),
+            _site("L2-2", east=100.0, north=100.0),
+            _site("L2-1", east=100.0, north=0.0),
+        ]
+
+    def test_default_component_matrix_and_route_groups(self):
+        sites = self._sites()
+        labels = {site.station: site.station.split("-")[0] for site in sites}
+        ax = plot_confidence_heatmap(sites, line_labels=labels)
+
+        assert ax._pycsamt_heatmap_matrix.shape == (7, 4)
+        assert list(ax._pycsamt_confidence_table["_line"]) == [
+            "L1",
+            "L1",
+            "L2",
+            "L2",
+        ]
+        assert "diagnostic matrix" in ax.get_title(loc="left")
+        plt.close("all")
+
+    def test_custom_components_and_annotations(self):
+        ax = plot_confidence_heatmap(
+            self._sites(),
+            components=["confidence", "coverage"],
+            annotate=True,
+            annotation_fmt=".1f",
+        )
+
+        assert ax._pycsamt_heatmap_matrix.shape == (2, 4)
+        assert len(ax.texts) == 8
+        plt.close("all")
+
+    def test_unknown_component_raises(self):
+        with pytest.raises(ValueError, match="unknown confidence components"):
+            plot_confidence_heatmap(self._sites(), components=["bogus"])
+
+class TestPlotConfidenceCoverageCurve:
+    def _sites(self):
+        fr = _freqs(10)
+        sites = []
+        for index, missing in enumerate((0, 2, 4, 6)):
+            z = _make_z(fr, 100.0)
+            z[:missing] = np.nan
+            sites.append(
+                _FakeSite(
+                    f"L{1 + index // 2}-{index}",
+                    z,
+                    fr,
+                    east=100.0 * (index // 2),
+                    north=100.0 * (index % 2),
+                )
+            )
+        return sites
+
+    def test_retention_curves_are_monotonic(self):
+        sites = self._sites()
+        labels = {site.station: site.station.split("-")[0] for site in sites}
+        fig = plot_confidence_coverage_curve(
+            sites,
+            method="presence",
+            line_labels=labels,
+            thresholds=np.linspace(0.0, 1.0, 21),
+        )
+
+        table = fig._pycsamt_coverage_curve_table
+        for column in (
+            "station_retention",
+            "data_retention",
+            "route_retention",
+        ):
+            assert np.all(np.diff(table[column]) <= 1e-12)
+        assert len(fig._pycsamt_line_coverage_table) == 2
+        plt.close("all")
+
+    def test_can_render_survey_panel_only(self):
+        fig = plot_confidence_coverage_curve(
+            self._sites(),
+            method="presence",
+            show_line_curves=False,
+            show_route_retention=False,
+        )
+
+        assert len(fig.axes) == 1
+        assert len(fig.axes[0].lines) >= 2
+        plt.close("all")
+
+    def test_rejects_no_enabled_measure(self):
+        with pytest.raises(ValueError, match="at least one"):
+            plot_confidence_coverage_curve(
+                self._sites(),
+                show_station_retention=False,
+                show_data_retention=False,
+                show_route_retention=False,
+            )
+
+
+class TestPlotConfidenceDistribution:
+    def _sites(self):
+        fr = _freqs(10)
+        sites = []
+        for index, missing in enumerate((0, 2, 4, 6)):
+            z = _make_z(fr, 100.0)
+            z[:missing] = np.nan
+            sites.append(
+                _FakeSite(
+                    f"L{1 + index // 2}-{index}",
+                    z,
+                    fr,
+                    east=100.0 * (index // 2),
+                    north=100.0 * (index % 2),
+                )
+            )
+        return sites
+
+    def test_both_methods_create_three_panels(self):
+        sites = self._sites()
+        labels = {site.station: site.station.split("-")[0] for site in sites}
+        fig = plot_confidence_distribution(
+            sites,
+            method="both",
+            line_labels=labels,
+        )
+
+        assert len(fig.axes) == 3
+        assert fig.axes[0].get_title(loc="left").startswith("(a)")
+        assert fig.axes[1].get_ylim()[1] >= 1.0
+        assert len(fig.axes[2].get_xticks()) == 2
+        plt.close("all")
+
+    def test_component_distribution(self):
+        fig = plot_confidence_distribution(
+            self._sites(),
+            method="composite",
+            metric="coverage",
+            show_points=False,
+        )
+
+        assert fig.axes[0].get_xlabel() == "Data coverage"
+        assert fig.axes[2].get_ylabel() == "Data coverage"
+        plt.close("all")
+
+    def test_both_rejects_component_metric(self):
+        with pytest.raises(ValueError, match="only for confidence"):
+            plot_confidence_distribution(
+                self._sites(), method="both", metric="coverage"
+            )
+
+
+class TestPlotConfidenceRank:
+    def _sites(self):
+        fr = _freqs(10)
+        sites = []
+        for index, missing in enumerate((0, 2, 4, 6)):
+            z = _make_z(fr, 100.0)
+            z[:missing] = np.nan
+            sites.append(
+                _FakeSite(
+                    f"L{1 + index // 2}-{index}",
+                    z,
+                    fr,
+                    east=100.0 * (index // 2),
+                    north=100.0 * (index % 2),
+                )
+            )
+        return sites
+
+    def test_worst_first_station_and_line_ranks(self):
+        sites = self._sites()
+        labels = {site.station: site.station.split("-")[0] for site in sites}
+        fig = plot_confidence_rank(
+            sites,
+            method="presence",
+            line_labels=labels,
+            order="worst",
+        )
+
+        scores = fig._pycsamt_rank_table["confidence"].to_numpy(float)
+        assert np.all(np.diff(scores) >= 0.0)
+        assert len(fig.axes) == 3  # station, line, station colour bar
+        assert len(fig._pycsamt_line_rank_table) == 2
+        plt.close("all")
+
+    def test_best_first_limit_and_single_panel(self):
+        fig = plot_confidence_rank(
+            self._sites(),
+            method="presence",
+            order="best",
+            max_stations=2,
+            show_line_panel=False,
+        )
+
+        assert len(fig._pycsamt_rank_table) == 2
+        scores = fig._pycsamt_rank_table["confidence"].to_numpy(float)
+        assert np.all(np.diff(scores) <= 0.0)
+        plt.close("all")
+
+    def test_invalid_order_raises(self):
+        with pytest.raises(ValueError, match="order must"):
+            plot_confidence_rank(self._sites(), order="sideways")
 
 
 class TestPlotConfidenceProfile:

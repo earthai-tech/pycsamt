@@ -96,22 +96,24 @@ def test_inversion_import_decode_and_confirm(monkeypatch, tmp_path):
 
     monkeypatch.setattr(inv.tempfile, "mkdtemp", lambda **_: str(tmp_path))
     content = "data:application/octet-stream;base64," + base64.b64encode(b"x").decode()
-    inv._decode_to_tempdir(["folder/model.dat", "bad"], [content, "?"])
-    assert (tmp_path / "model.dat").read_bytes() == b"x"
+    path = inv._decode_to_tempfile("folder/model.pcsf", content)
+    assert (tmp_path / "model.pcsf").read_bytes() == b"x"
+    assert path == str(tmp_path / "model.pcsf")
 
     app = _capture(inv, "register_inversion_import")
     confirm = app.get("confirm")
     assert confirm(1, {}, False, "sid", "replace", "light")[0] is no_update
     assert (
-        "Session" in confirm(1, {"filenames": ["x"]}, False, "", "replace", "light")[1]
+        "Session"
+        in confirm(1, {"filenames": ["x.pcsf"]}, False, "", "replace", "light")[1]
     )
 
     fake_view = SimpleNamespace(n_stations=2, data=SimpleNamespace(stations=["known"]))
-    monkeypatch.setattr(inv, "_decode_to_tempdir", lambda *a: str(tmp_path))
+    monkeypatch.setattr(inv, "_decode_to_tempfile", lambda *a: str(tmp_path / "model.pcsf"))
     monkeypatch.setattr(
         map_pkg,
         "MapView",
-        SimpleNamespace(from_inversion_results=lambda *a, **k: fake_view),
+        SimpleNamespace(from_pcsf=lambda *a, **k: fake_view),
     )
     monkeypatch.setattr(inv, "get_view", lambda _sid: fake_view)
     monkeypatch.setattr(inv, "merge_views", lambda old, new: new)
@@ -123,7 +125,7 @@ def test_inversion_import_decode_and_confirm(monkeypatch, tmp_path):
     )
     out = confirm(
         1,
-        {"filenames": ["x"], "contents": [content]},
+        {"filenames": ["model.pcsf"], "contents": [content]},
         True,
         "sid",
         "append",

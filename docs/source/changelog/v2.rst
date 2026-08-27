@@ -10,6 +10,117 @@ each release.
 
 ----
 
+.. _changelog-2-4-1:
+
+2.4.1 |New| |Fix| |Docs|
+------------------------
+
+*Released 2026-08-26.*
+
+A new backend-neutral inversion-result format, :mod:`pycsamt.format`
+(PCSF), converts Occam2D, ModEM 3-D, and MARE2DEM results to one
+self-describing HDF5 container. The release also expands confidence-ratio
+QC into a survey-scale plotting and export toolkit for single and multiple
+lines. Real bugs were fixed in ``ModEmModel3D``, the web 3-D view's
+topography uploader, and confidence-map/profile geometry. Running real,
+full-scale Occam2D and ModEM 3-D inversions against a real 128-station
+survey found and fixed three more real solver-launch bugs, including a
+new ``ModEmForwardControl`` that finally lets a 3-D covariance file reach
+Mod3DMT at all.
+
+Added
+~~~~~
+
+* |New| **PCSF, a backend-neutral inversion-result format** --
+  :mod:`pycsamt.format` converts Occam2D, ModEM 3-D, and MARE2DEM results
+  (and a DUHI-prepared result, via the Occam2D path) into one self-describing
+  HDF5 container instead of five disagreeing native conventions: canonical
+  resistivity is always linear ohm.m, geometry is discriminated explicitly
+  through one of four kinds (``grid2d``, ``grid3d``, ``mesh_unstructured``,
+  ``multiline``) rather than inferred from array shape, and every second-level
+  module (``adapters``, ``schema``, ``io``, ``multiline``, ``topography``,
+  ``pointcloud``) is public right after ``import pycsamt.format``.
+  :func:`~pycsamt.format.pointcloud.pcsf_to_point_cloud` flattens any geometry
+  kind into one point cloud with reproducible seeded subsampling, powering
+  three new consumers with no backend-specific view code: the desktop app's
+  first 3-D/volume panel (``Pcsf3DWindow``), a new "PCSF file" data source in
+  the web 3-D view that renders with no session cache at all, and
+  :meth:`pycsamt.map.MapView.from_pcsf`. :mod:`pycsamt.format.topography`
+  wires ``.pcsf`` topography through the existing
+  :mod:`pycsamt.map.topo` elevation parser rather than adding a third one.
+* |New| **Survey-scale confidence evaluation** -- ten public plotting
+  functions add route/contour and regular-grid maps, component panels,
+  composite-vs-presence comparison, before/after comparison, risk,
+  station-by-line heatmap, distribution, ranking, and threshold-retention
+  curves. Contour levels, line appearance, and labels are configurable;
+  colour limits adapt to finite confidence values and boundary isolines
+  are drawn only when crossed. ``export_confidence_map`` exports station
+  CSV and Surfer ASCII ``DSAA`` grids.
+* |New| **``ModEmForwardControl``** -- writes Mod3DMT's forward-solver
+  control file, matching the executable's own compiled-in solver defaults
+  exactly. Required by Mod3DMT's own CLI argument order before a
+  covariance file is reachable at all; ``InputBuilder`` and
+  ``ModEmRunner`` now build/reference it automatically. See Fixed below.
+
+Fixed
+~~~~~
+
+* |Fix| **Web 3-D view's topography upload silently rejected a valid
+  ``station_names`` column** -- ``app/web/callbacks/map3d.py``'s own
+  CSV/HDF5/NPZ elevation parser reimplemented :mod:`pycsamt.map.topo`'s
+  parser independently and had quietly drifted from it: its id-column list
+  never recognised a ``station_names`` column/dataset that
+  :func:`pycsamt.map.topo.parse_elevation_file` already did. It now delegates
+  to that shared parser entirely instead of keeping a second copy.
+* |Fix| **``ModEmModel3D`` silently discarded a real ModEM model's grid centre and
+  rotation** -- a real ModEM writer appends the grid's real-world centre and
+  an optional rotation angle after the resistivity volume; the WS-format
+  reader parsed but never stored either. Now exposed as
+  ``ModEmModel3D.origin``/``.rotation`` (metres/degrees, default
+  ``zeros(3)``/``0.0``, matching the convention
+  :func:`~pycsamt.models.modem.iotools.mackie.read_mackie3d` already used on
+  the same class -- an initial ``None`` default broke that convention's
+  existing ``getattr(model, "origin", [0, 0, 0])`` fallback in
+  ``iotools.export``/``iotools.interpolate``).
+* |Fix| **Confidence geographic and chainage geometry** -- multi-line
+  maps preserve real longitude/latitude station positions, including L22,
+  and the regenerated L18 profile uses corrected coordinate-derived
+  chainage (about 2.4 km rather than the former 5 km display).
+* |Fix| **Occam2D/ModEM 3-D meshes wrote spurious air-layer rows** --
+  ``OccamMesh.from_data`` and ``ModEmModel3D.halfspace`` both inserted air
+  rows that Occam2D's PW2D and ModEM's WS formats never expect, crashing
+  a real compiled Occam2D and Mod3DMT. Air rows/``n_air`` now always ``0``.
+* |Fix| **``ModEmControl`` inversion-control column misalignment** -- the
+  key-field width (44 columns) pushed the colon past Fortran's fixed
+  ``a36`` boundary, causing a real "Bad value during floating point read".
+  Fixed to 36 columns.
+* |Fix| **ModEM 3-D covariance file was unreachable from ``ModEmRunner``**
+  -- Mod3DMT's own CLI argument order needs a forward-solver control file
+  before covariance is reachable at all; nothing built one, so
+  ``covariance=`` silently landed in the wrong slot and a real Mod3DMT
+  aborted trying to parse it as forward-solver settings. Fixed via the
+  new ``ModEmForwardControl``.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| **``user_guide/models/pcsf_format.rst``** -- new page covering PCSF's four
+  geometry kinds, converting a real Occam2D/ModEM/MARE2DEM result with real
+  captured output, multiline/topography construction, and the
+  ``pcsf_to_point_cloud`` consumers, plus a real two-panel figure rendering
+  an Occam2D ``grid2d`` model and a ModEM ``grid3d`` volume through the same
+  function call. New bundled ``examples/pcsf_conversion_demo/`` converts all
+  three real backends' bundled sample data to ``.pcsf``, with and without
+  topography, and round-trip-verifies every file it writes.
+* |Docs| **Confidence QC guide and examples** --
+  :doc:`/user_guide/emtools/qc` now gives labelled formulations for both
+  confidence methods and their components, explains and interprets every
+  new plot, and documents interpolation/threshold limitations.
+  ``examples/confidence/`` and the documentation figure generator recreate
+  the complete figure set from bundled WILLY data.
+
+----
+
 .. _changelog-2-4-0:
 
 2.4.0 |New| |Fix| |Enhancement| |Docs| |Build|

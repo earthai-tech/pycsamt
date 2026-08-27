@@ -1,0 +1,335 @@
+.. _release_v2_4_1:
+
+-------------
+Version 2.4.1
+-------------
+
+pyCSAMT 2.4.1 |New| |Fix| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-08-26.*
+
+Occam2D, ModEM 3-D, and MARE2DEM each write their own native files, and
+each one disagrees with the others about almost everything a downstream
+viewer needs to know: resistivity encoding (log10 vs. natural log vs.
+linear), geometry representation (rectilinear grids with different axis
+orders vs. an unstructured triangular mesh), and real-world station
+coordinates. This release introduces :mod:`pycsamt.format`, the pyCSAMT
+Common Subsurface Format (PCSF) -- a single, self-describing HDF5
+container any of the three backends' results convert *to*, so a viewer
+only ever needs to understand one schema. Building the three adapters
+against real bundled data surfaced and fixed two real, previously
+unnoticed bugs, one in :class:`~pycsamt.models.modem.model3d.ModEmModel3D`
+and one in the web 3-D view's topography uploader. A new user-guide page
+and a bundled conversion demo round out the release. Separately, running
+real, full-scale Occam2D and ModEM 3-D inversions against a real 128-station
+survey surfaced and fixed three more real solver-launch bugs, including a
+new :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl` that
+finally lets a 3-D covariance file reach Mod3DMT at all.
+
+The confidence-ratio workflow also grows from a single-line profile into
+a survey-scale evaluation toolkit. New route, contour, component,
+comparison, risk, heatmap, distribution, ranking, grid, coverage, and
+before/after views use the same station-confidence API and support both
+the ``composite`` and ``presence`` methods. Geographic plots retain real
+longitude/latitude geometry, while profile chainage is derived from the
+corrected station coordinates rather than an assumed line length.
+
+Survey-scale confidence evaluation |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.emtools.qc` now provides a coherent family of confidence
+diagnostics for a single line or multiple lines:
+:func:`~pycsamt.emtools.qc.plot_confidence_map`,
+:func:`~pycsamt.emtools.qc.plot_confidence_grid_map`,
+:func:`~pycsamt.emtools.qc.plot_confidence_component_map`,
+:func:`~pycsamt.emtools.qc.plot_confidence_method_comparison`,
+:func:`~pycsamt.emtools.qc.plot_confidence_risk_map`,
+:func:`~pycsamt.emtools.qc.plot_confidence_heatmap`,
+:func:`~pycsamt.emtools.qc.plot_confidence_distribution`,
+:func:`~pycsamt.emtools.qc.plot_confidence_rank`,
+:func:`~pycsamt.emtools.qc.plot_confidence_coverage_curve`, and
+:func:`~pycsamt.emtools.qc.plot_confidence_before_after`.
+
+The map API supports an observation-preserving route view and an
+interpolated contour view. Contour levels and isoline colour, width,
+style, labels, and label formatting are configurable. Its colour scale
+adapts to the finite data range instead of automatically starting at
+zero; operational boundaries such as 0.50, 0.85, 0.90, 0.95, and 1.00
+are drawn only where the observed/interpolated range actually crosses
+them. :func:`~pycsamt.emtools.qc.export_confidence_map` writes the same
+confidence surface as a station CSV and a Surfer ASCII ``DSAA`` grid for
+use outside pyCSAMT.
+
+The component map separates coverage, uncertainty, off-diagonal,
+diagonal, phase, and spatial contributions on shared geographic axes.
+The method-comparison and before/after views expose score changes rather
+than hiding them behind a single aggregate. Risk, ranking, distribution,
+heatmap, and coverage-retention views answer complementary questions:
+where review is needed, which stations should be reviewed first, how the
+survey population is distributed, how confidence varies by line, and
+how much station/data coverage remains at a selected threshold.
+
+A new backend-neutral inversion-result format |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.format` discriminates its geometry explicitly through
+``geometry.kind`` rather than letting a reader infer it from array shape.
+Four kinds are supported: ``grid2d`` (Occam2D, and a DUHI-prepared result
+once folded back into an Occam2D run), ``grid3d`` (ModEM 3-D -- the first
+genuinely *persisted* 3-D resistivity volume in pyCSAMT; earlier 3-D views
+only ever synthesized one at render time from stacked 2-D sections),
+``mesh_unstructured`` (MARE2DEM's real triangular mesh, never forced onto
+a rectilinear grid), and ``multiline`` (a formalized fence/stack of
+independent lines, with real-vs-synthetic cross-line offsets). Canonical
+resistivity is always linear :math:`\Omega\,\mathrm{m}` in every kind; the
+source backend's own encoding is kept alongside it, explicitly labelled,
+never assumed.
+
+:func:`~pycsamt.format.adapters.occam2d.occam2d_to_pcsf`,
+:func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf`, and
+:func:`~pycsamt.format.adapters.mare2dem.mare2dem_to_pcsf` build on each
+backend's own existing result objects rather than rewriting them --
+:func:`~pycsamt.format.multiline.build_multiline_pcsf` similarly reuses
+:mod:`pycsamt.map.geometry`'s existing real-vs-synthetic line-offset
+computation instead of reimplementing it. Every second-level module of the
+new package -- ``adapters``, ``schema``, ``io``, ``multiline``,
+``topography``, ``pointcloud`` -- is public immediately after
+``import pycsamt.format``, not only through an explicit submodule import.
+
+:func:`~pycsamt.format.pointcloud.pcsf_to_point_cloud` flattens any of the
+four geometry kinds into one ``(x, y, z, log10_rho)`` point cloud, with a
+reproducible seeded subsample for a native ``grid3d``/``mesh_unstructured``
+file that can carry hundreds of thousands of cells. It is the one function
+behind three new consumers, none of which carry backend-specific logic:
+the desktop app's first 3-D/volume panel, a new "PCSF file" data source in
+the web 3-D view that renders directly from an uploaded file with no
+session cache at all, and :meth:`pycsamt.map.MapView.from_pcsf` (which
+mirrors :meth:`~pycsamt.map.MapView.from_inversion_results`'s existing
+real-per-station-curtain approach for ModEM, so the existing fence/
+depth-slice builders in :mod:`pycsamt.map.volume` render PCSF-sourced
+lines unmodified). :mod:`pycsamt.format.topography` wires a PCSF file's
+topography through the existing :mod:`pycsamt.map.topo` elevation parser
+instead of adding a third, independent one.
+
+Two real bugs found and fixed |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Validating the ModEM adapter against a real bundled 3-D inversion volume
+(41x50x288 real cells) surfaced a real, previously unnoticed bug in
+:class:`~pycsamt.models.modem.model3d.ModEmModel3D`: a real ModEM writer
+appends the grid's real-world centre coordinates and an optional rotation
+angle immediately after the resistivity volume, and the WS-format reader
+parsed that trailing line only to discard it -- nothing on the class ever
+stored it. It is now exposed as ``ModEmModel3D.origin``/``.rotation``
+(metres/degrees), matching the convention
+:func:`~pycsamt.models.modem.iotools.mackie.read_mackie3d` already used on
+the same class -- with the same defaults (``zeros(3)``/``0.0``, not
+``None``), since ``iotools.export``/``iotools.interpolate`` already
+depended on that exact default through a
+``getattr(model, "origin", [0, 0, 0])`` fallback; an initial ``None``
+default broke both with a ``TypeError``, caught by ten real test failures
+before the fix landed.
+
+Wiring topography through :mod:`pycsamt.format.topography` surfaced a
+second bug: the web 3-D view's own CSV/HDF5/NPZ elevation-upload parser
+(``pycsamt.app.web.callbacks.map3d._parse_topo_upload``) had reimplemented
+:mod:`pycsamt.map.topo`'s parser independently rather than reusing it, and
+had quietly drifted -- its own id-column list never recognised a
+``station_names`` column/dataset that the shared parser already did. An
+otherwise-valid upload could silently fail to parse through the web app's
+own uploader while working fine through :func:`pycsamt.map.topo.apply_elevations`'s
+"Upload file" source elsewhere in the package. It now delegates to the
+shared parser entirely.
+
+Three real Occam2D/ModEM solver bugs found running real inversions |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Running a full 5-line Occam2D inversion and a block-wide ModEM 3-D
+inversion against the real WILLY_DATA survey (128 stations) -- both
+against the vendored, natively compiled ``Occam2D.exe``/``Mod3DMT.exe``
+binaries, not a Python re-implementation -- exercised configurations no
+existing test had reached, and surfaced three more real, previously
+unnoticed bugs.
+
+Both :meth:`~pycsamt.models.occam2d.mesh.OccamMesh.from_data` and
+:meth:`~pycsamt.models.modem.model3d.ModEmModel3D.halfspace` were
+inserting air-layer rows into meshes/models that Occam2D's own PW2D
+format and ModEM's WS format never expect -- both formats derive or
+hardcode air separately. A real compiled Occam2D failed deep inside its
+own file I/O with "Model file error: # params <> # free bricks"; a real
+compiled Mod3DMT failed with "Mapping not supported yet in
+read_modelParam_WS". Air rows/``n_air`` are now always ``0`` for both.
+Separately, :meth:`~pycsamt.models.modem.control.ModEmControl.write`'s
+key-field width (44 columns) pushed the colon past Fortran's fixed
+``a36`` read boundary into the adjacent numeric field, producing "Bad
+value during floating point read" against a real ``ModEM.inv`` file; the
+field is now 36 columns, matching the Fortran source exactly.
+
+The third was more involved: Mod3DMT's own ``-I NLCG`` command-line
+argument order is ``rFile_Model rFile_Data [rFile_invCtrl
+rFile_fwdCtrl] [rFile_Cov]`` (``UserCtrl.f90``) -- the covariance file is
+the *sixth* positional argument, and is only reachable once a
+forward-solver control file (the fifth) is also present. Nothing built
+that fifth file, so passing ``covariance=`` to
+:class:`~pycsamt.models.modem.runner.ModEmRunner` landed it in the
+forward-control slot instead, and a real Mod3DMT then tried to parse a
+covariance file as forward-solver settings and aborted ("Bad value during
+integer read") -- covariance could not be passed to a 3-D inversion at
+all. New
+:class:`~pycsamt.models.modem.forward_control.ModEmForwardControl`
+writes this file matching Mod3DMT's own compiled-in solver defaults
+exactly (QMR iteration count, divergence-correction limits, solver
+tolerances -- confirmed against the real Fortran source,
+``EMsolve3D.f90``'s ``readEMsolveControl``, a distinct fixed-column
+format from ``ModEmControl``'s), so writing it changes nothing about
+forward-solver behaviour; its only effect is occupying the argument slot
+needed to reach the covariance file.
+:meth:`~pycsamt.models.modem.runner.ModEmRunner.run`/``.command`` now
+auto-write or reference a default forward-control file whenever
+``covariance=`` is supplied without an explicit ``fwd_control=``, and
+:class:`~pycsamt.models.modem.builder.InputBuilder` writes one for every
+3-D build alongside the covariance file. All three fixes were confirmed
+via real solver runs, not just the test suite.
+
+New user guide page and conversion demo |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:doc:`/user_guide/models/pcsf_format` walks through PCSF's four geometry
+kinds, converting a real Occam2D, ModEM, and MARE2DEM result with real
+captured output against each backend's own bundled sample data,
+constructing a multiline fence and adding topography, and the
+``pcsf_to_point_cloud`` consumers -- including a real two-panel figure
+rendering an Occam2D ``grid2d`` model and a ModEM ``grid3d`` volume through
+the exact same function call, on one shared colour scale. A new bundled
+example, ``examples/pcsf_conversion_demo/``, converts all three real
+backends' bundled sample data to ``.pcsf`` (with and without topography for
+Occam2D and ModEM -- the ModEM case uses **real** elevation, matched from
+``data/AMT/WILLY_DATA`` by recognizing that ModEM's own station names carry
+a survey-year prefix the real EDI station ids don't), round-trip-verifying
+every file it writes and printing each one's full HDF5 group/dataset tree
+to the console.
+
+Added
+~~~~~
+
+* |New| **:mod:`pycsamt.format`** -- backend-neutral PCSF inversion-result
+  format: :func:`~pycsamt.format.adapters.occam2d.occam2d_to_pcsf`,
+  :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf`,
+  :func:`~pycsamt.format.adapters.mare2dem.mare2dem_to_pcsf`,
+  :func:`~pycsamt.format.multiline.build_multiline_pcsf`,
+  :mod:`~pycsamt.format.topography`, and
+  :func:`~pycsamt.format.pointcloud.pcsf_to_point_cloud`. See the summary
+  above for the full picture.
+* |New| **``Pcsf3DWindow``** -- the desktop app's first 3-D/volume panel,
+  rendering any ``.pcsf`` file through ``pcsf_to_point_cloud`` on a plain
+  Matplotlib 3-D scatter (``View > PCSF 3D Viewer``,
+  :kbd:`Ctrl+Shift+M`), independent of the loaded EDI session.
+* |New| **Web 3-D view "PCSF file" data source** -- fence/block/
+  depth-slice figures render directly from an uploaded ``.pcsf`` file with
+  no session cache and no cached inversion result.
+* |New| **``MapView.from_pcsf``** -- :func:`pycsamt.map.inversion.load_pcsf_lines`
+  loads a ``grid2d``/``multiline`` PCSF file the same way
+  ``MapView.from_inversion_results`` already loads a live ModEM folder;
+  ``grid3d``/``mesh_unstructured`` files raise ``NotImplementedError`` by
+  design (a real per-station curtain has no way to slice a native volume
+  without a station table).
+* |New| **``examples/pcsf_conversion_demo/``** -- converts real Occam2D,
+  ModEM, and MARE2DEM sample data to ``.pcsf``, with and without
+  topography, round-trip-verifying every file.
+* |New| **Survey-scale confidence plotting and export** -- ten public
+  confidence visualizations cover geographic route/contour and grid maps,
+  component diagnostics, method comparison, risk, heatmap, distribution,
+  ranking, threshold-retention curves, and before/after assessment.
+  ``export_confidence_map`` writes CSV and Surfer ASCII ``DSAA`` products.
+* |New| **``ModEmForwardControl``** --
+  :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl`
+  writes Mod3DMT's forward-solver control file, matching the executable's
+  own compiled-in solver defaults exactly. Required by Mod3DMT's own CLI
+  argument order before a covariance file can be passed at all; see the
+  summary above. ``InputBuilder`` now writes one for every 3-D build
+  alongside ``covariance``, and ``ModEmRunner.run``/``.command`` auto-write
+  or reference a default one whenever ``covariance=`` is given without an
+  explicit ``fwd_control=``.
+
+Fixed
+~~~~~
+
+* |Fix| **``ModEmModel3D`` silently discarded a real ModEM model's grid
+  centre and rotation** -- now exposed as ``ModEmModel3D.origin``/
+  ``.rotation``, matching ``read_mackie3d``'s existing convention on the
+  same class.
+* |Fix| **Web 3-D view's topography upload silently rejected a valid
+  ``station_names`` column** -- ``_parse_topo_upload`` now delegates to
+  :func:`pycsamt.map.topo.parse_elevation_file` entirely instead of
+  keeping an independently drifted copy.
+* |Fix| **Confidence maps and profiles could present misleading survey
+  geometry** -- multi-line maps now retain each station's real longitude
+  and latitude, and the L18/L22 examples use corrected coordinate-derived
+  chainage. The regenerated L18 confidence profile is about 2.4 km long,
+  not the former 5 km display.
+* |Fix| **Occam2D and ModEM 3-D meshes wrote spurious air-layer rows** --
+  ``OccamMesh.from_data`` and ``ModEmModel3D.halfspace`` both inserted
+  air-layer rows that Occam2D's PW2D format and ModEM's WS format never
+  expect (both derive/hardcode air separately), crashing a real compiled
+  Occam2D ("# params <> # free bricks") and a real compiled Mod3DMT
+  ("Mapping not supported yet in read_modelParam_WS"). Air rows/``n_air``
+  are now always ``0`` for both.
+* |Fix| **``ModEmControl`` inversion-control file column misalignment** --
+  the key-field width (44 columns) pushed the colon past Fortran's fixed
+  ``a36`` read boundary into the numeric field, causing "Bad value during
+  floating point read" against a real ``ModEM.inv`` file. Fixed to 36
+  columns.
+* |Fix| **ModEM 3-D covariance file was unreachable from ``ModEmRunner``**
+  -- see the summary above; fixed via the new ``ModEmForwardControl``.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| **``user_guide/models/pcsf_format.rst``** -- new page, registered
+  in :doc:`/user_guide/models/index`; see the summary above.
+* |Docs| **New "PCSF" glossary term** -- :term:`PCSF`, cross-referenced
+  from the new page.
+* |Docs| **Confidence-ratio guide and reproducible figure suite** --
+  :doc:`/user_guide/emtools/qc` now derives the composite and presence
+  implementations, component discrepancies, spatial score, risk,
+  before/after change, retention curves, and AUC without repeating the
+  same definitions per plot. It explains and interprets every confidence
+  figure, including interpolation and threshold limitations. The bundled
+  ``examples/confidence/`` workflow and a documentation generator recreate
+  all publication-ready figures from the WILLY survey data.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.format` is an entirely new, additive package with no
+interaction with any existing inversion engine, result object, or public
+API -- it does not touch :mod:`~pycsamt.models.occam2d`,
+:mod:`~pycsamt.models.modem`, or :mod:`~pycsamt.models.mare2dem`
+themselves, only reads their already-loaded result objects. PCSF is at
+format version ``0.1.0`` (see :data:`pycsamt.format.schema.PCSF_VERSION`);
+no formal versioning policy has been finalized yet, and a ``.pcsf`` file
+should not be treated as a long-term archival format until one is.
+
+The ``ModEmModel3D.origin``/``.rotation`` fix is additive and matches an
+existing convention already relied upon elsewhere in the same module
+(``read_mackie3d``); no existing caller's behaviour changes except that
+``origin``/``rotation`` are now always present (previously absent unless a
+model came from ``read_mackie3d``) and, for a WS-format file that carries a
+real trailing centre/rotation line, now correctly populated instead of
+silently ``[0, 0, 0]``/``0.0``. The web 3-D view topography-parser fix is a
+pure bug fix: any upload that previously failed silently due to a
+``station_names`` column now parses correctly; no previously-working
+upload is affected.
+
+The air-layer and ``ModEmControl`` column-width fixes change on-disk file
+*content* written by ``OccamMesh.from_data``/``ModEmModel3D.halfspace``/
+``ModEmControl.write`` -- both changes make files that a real Occam2D/ModEM
+solver could not run at all now runnable, so no working file set regresses.
+``ModEmRunner.run``/``.command`` and ``InputBuilder.build``/
+``.build_from_data`` gain a purely additive, keyword-only ``fwd_control``
+parameter; 3-D builds now also return a ``"fwd_control"`` key in the
+returned file mapping alongside ``"covariance"`` -- code that reads
+specific keys out of that mapping is unaffected, but an exact
+``set(files) == {...}``/``sorted(files) == [...]`` comparison against a
+3-D build's result should include ``"fwd_control"``.

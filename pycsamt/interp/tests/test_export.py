@@ -472,3 +472,50 @@ def test_to_surfer_xyz_accepts_raw_array_triple(tmp_path):
 def test_to_surfer_xyz_creates_parent_dirs(tmp_path):
     out = export.to_surfer_xyz(_uniform_model(), tmp_path / "nested" / "m.dat")
     assert out.exists()
+
+
+def test_to_surfer_bln_header_point_count(tmp_path):
+    elev = np.array([100.0, 120.0, 90.0, 95.0])
+    chain = np.array([0.0, 50.0, 100.0, 150.0])
+    out = export.to_surfer_bln(elev, chain, tmp_path / "topo.bln")
+    lines = out.read_text().splitlines()
+    n, flag = lines[0].split(",")
+    assert int(n) == len(lines) - 1 == len(elev) + 2
+    assert int(flag) == 1
+
+
+def test_to_surfer_bln_traces_real_elevation(tmp_path):
+    elev = np.array([100.0, 120.0, 90.0])
+    chain = np.array([0.0, 50.0, 100.0])
+    out = export.to_surfer_bln(elev, chain, tmp_path / "topo.bln")
+    rows = [line.split(",") for line in out.read_text().splitlines()[1:]]
+    xy = [(float(x), float(y)) for x, y in rows]
+    # first/last vertices are the sky-height closing corners; the
+    # interior vertices must be the real (chainage, elevation) pairs
+    assert xy[1:-1] == [(0.0, 100.0), (50.0, 120.0), (100.0, 90.0)]
+
+
+def test_to_surfer_bln_sky_above_max_elevation(tmp_path):
+    elev = np.array([100.0, 120.0, 90.0])
+    chain = np.array([0.0, 50.0, 100.0])
+    out = export.to_surfer_bln(elev, chain, tmp_path / "topo.bln", sky_margin=25.0)
+    rows = [line.split(",") for line in out.read_text().splitlines()[1:]]
+    y_first = float(rows[0][1])
+    y_last = float(rows[-1][1])
+    assert y_first == y_last == pytest.approx(145.0)  # 120 + 25
+
+
+def test_to_surfer_bln_sorts_unordered_chainage(tmp_path):
+    elev = np.array([90.0, 100.0, 120.0])
+    chain = np.array([100.0, 0.0, 50.0])  # deliberately unsorted
+    out = export.to_surfer_bln(elev, chain, tmp_path / "topo.bln")
+    rows = [line.split(",") for line in out.read_text().splitlines()[1:]]
+    xs = [float(x) for x, _ in rows[1:-1]]
+    assert xs == sorted(xs)
+
+
+def test_to_surfer_bln_creates_parent_dirs(tmp_path):
+    elev = np.array([100.0, 110.0])
+    chain = np.array([0.0, 100.0])
+    out = export.to_surfer_bln(elev, chain, tmp_path / "nested" / "topo.bln")
+    assert out.exists()

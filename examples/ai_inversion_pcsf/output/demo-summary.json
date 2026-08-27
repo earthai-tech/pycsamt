@@ -1,0 +1,72 @@
+{
+  "files": [
+    {
+      "file": "examples\\ai_inversion_pcsf\\output\\toy_unet_grid2d.pcsf",
+      "has_resistivity_by_node": false,
+      "kind": "grid2d",
+      "model_provenance": {
+        "architecture": "UNet",
+        "authors": [
+          "pycsamt example"
+        ],
+        "checkpoint": "examples\\ai_inversion_pcsf\\output\\toy_unet_checkpoint.bin",
+        "checkpoint_sha256": "73ba40d48a2cc6c622886c681a817ed7ca1f9ca33b9936329b30bd8df8a3b8e7",
+        "contact": "",
+        "extra": {},
+        "framework": "pytorch",
+        "framework_version": "2.3.0",
+        "git_commit": "",
+        "hyperparameters": {
+          "batch_size": 16,
+          "epochs": 50,
+          "lr": 0.001
+        },
+        "notes": "Synthetic demo prediction -- not a real trained model.",
+        "random_seed": 42,
+        "training_data": "synthetic_layered_earth_v1 (illustrative, not a real survey)"
+      },
+      "n_stations": 24,
+      "resistivity_shape": [
+        14,
+        24
+      ],
+      "size_bytes": 31087,
+      "source_backend": "unet"
+    },
+    {
+      "file": "examples\\ai_inversion_pcsf\\output\\toy_gcn_mesh.pcsf",
+      "has_resistivity_by_node": true,
+      "kind": "mesh_unstructured",
+      "model_provenance": {
+        "architecture": "GCN",
+        "authors": [
+          "pycsamt example"
+        ],
+        "checkpoint": "examples\\ai_inversion_pcsf\\output\\toy_gcn_checkpoint.bin",
+        "checkpoint_sha256": "f366e704c1f090f3b0a8698ff0556a33ad022896a1747295711b09c818d10f33",
+        "contact": "",
+        "extra": {},
+        "framework": "pytorch-geometric",
+        "framework_version": "2.5.2",
+        "git_commit": "",
+        "hyperparameters": {
+          "hidden_dim": 64,
+          "layers": 4,
+          "lr": 0.0005
+        },
+        "notes": "Synthetic demo prediction -- not a real trained model.",
+        "random_seed": 7,
+        "training_data": "synthetic_mesh_earth_v1 (illustrative, not a real survey)"
+      },
+      "n_stations": 0,
+      "resistivity_shape": [
+        96
+      ],
+      "size_bytes": 23552,
+      "source_backend": "gcn"
+    }
+  ],
+  "note": "Both files are built with pycsamt.format.adapters.generic from plain numpy arrays -- no pycsamt.ai or solver result object involved -- the same path a third-party AI/DL inversion tool would use.",
+  "plan": "PYCSAMT-PCSF-INVERSION-FORMAT-PLAN.md (Phase 9)",
+  "schema": "pycsamt.ai_inversion_pcsf.demo/v1"
+}

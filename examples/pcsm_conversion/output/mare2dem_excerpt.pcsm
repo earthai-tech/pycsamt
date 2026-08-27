@@ -1,0 +1,56 @@
+# DOCUMENTATION EXCERPT ONLY -- ellipses make this file
+# non-parseable. Generate the complete model with:
+# python examples/pcsm_conversion/run_demo.py
+
+# PCSM -- pyCSAMT Common Subsurface Markup (ASCII sibling of a .pcsf file)
+PCSM_VERSION 0.1.0
+SOURCE_BACKEND mare2dem
+CREATED_BY pcsf_conversion_demo
+CREATED_AT 2026-08-26T18:19:22.121359+00:00
+RESISTIVITY_UNIT ohm.m
+DESCRIPTION MARE2DEM demo_mt_inversion -- real mesh + real per-region resistivity
+
+GEOMETRY_KIND mesh_unstructured
+N_NODES 3394
+N_TRIANGLES 6774
+PLANE xz
+
+NODES
+        -1000000.0          -100000.0
+        -1000000.0          1000000.0
+# ... 3390 data rows omitted ...
+          750000.0  813145.9265372688
+         -500000.0          1000000.0
+END_NODES
+
+CONNECTIVITY
+   3    4    0
+   6    4 3139
+# ... 6770 data rows omitted ...
+3390 3389 3375
+ 984  917  879
+END_CONNECTIVITY
+
+REGION_IDS
+   2    3 6004    3    3 6097    3 6091
+   3    3 1511 1472 6199    3    3    3
+# ... 843 data rows omitted ...
+6060 6057 6420 6455 6410 6531 4421 4528
+6064 6063 4267 4779 6062 1860
+END_REGION_IDS
+
+RESISTIVITY  # linear ohm.m (canonical, see model/resistivity in SPEC.md S4)
+1000000000000.0             0.3             1.0             0.3             0.3             1.0             0.3             1.0
+            0.3             0.3             1.0             1.0             1.0             0.3             0.3             0.3
+# ... 843 data rows omitted ...
+            1.0             1.0             1.0             1.0             1.0             1.0             1.0             1.0
+            1.0             1.0             1.0             1.0             1.0             1.0
+END_RESISTIVITY
+
+RESISTIVITY_BY_REGION
+            1.0 1000000000000.0             0.3             1.0             1.0             1.0             1.0             1.0
+            1.0             1.0             1.0             1.0             1.0             1.0             1.0             1.0
+# ... 814 data rows omitted ...
+            1.0             1.0             1.0             1.0             1.0             1.0             1.0             1.0
+            1.0             1.0             1.0             1.0
+END_RESISTIVITY_BY_REGION

@@ -568,6 +568,7 @@ def plot_raw_sites_1d(
     tick_fontsize: int = 7,
     show_error_bars: bool = True,
     show_component_legend: bool = True,
+    legend_y: float = -0.14,
     ylim_rhoa: tuple[float, float] | None = None,
     ylim_phase: tuple[float, float] | None = None,
     grid: bool = True,
@@ -809,11 +810,13 @@ def plot_raw_sites_1d(
             loc="lower center",
             ncol=len(labels),
             frameon=False,
-            # Far enough below the figure bottom edge to clear the
-            # shared-group x-axis label text: with an odd ncols_groups
-            # (e.g. 3), one group's label sits at the same horizontal
-            # center as this legend, and -0.015 used to overlap it.
-            bbox_to_anchor=(0.5, -0.14),
+            # Default -0.14 clears the shared-group x-axis label text in
+            # the worst case (odd ncols_groups, e.g. 3, where one group's
+            # label sits at the same horizontal center as this legend, and
+            # -0.015 used to overlap it). Pass a less negative legend_y
+            # when the grid has fewer rows and that clearance is not
+            # needed, to avoid a large blank margin below the figure.
+            bbox_to_anchor=(0.5, legend_y),
             fontsize=8,
         )
     return fig

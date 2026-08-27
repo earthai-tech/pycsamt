@@ -846,6 +846,18 @@ html, body, #react-entry-point, .mv-root {
 .mv-folder-filter-option:hover { border-color: var(--mv-accent); }
 .mv-folder-filter-input { flex: 0 0 auto; }
 
+.mv-candidate-list {
+    grid-template-columns: 1fr;
+    max-height: 180px;
+}
+.mv-candidate-list .mv-folder-filter-option:has(input:disabled) {
+    opacity: .55;
+    cursor: not-allowed;
+}
+.mv-candidate-list .mv-folder-filter-option:has(input:disabled):hover {
+    border-color: var(--mv-border);
+}
+
 .mv-file-manager { margin-top: 10px; }
 .mv-file-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .mv-file-head-title { font-size: 12px; font-weight: 600; }

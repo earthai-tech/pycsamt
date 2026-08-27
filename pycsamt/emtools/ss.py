@@ -1351,6 +1351,7 @@ def plot_ss_station_curves(
     *,
     station: str | None = None,
     pband: tuple[float, float] | None = None,
+    log_period: bool = False,
     figsize: tuple[float, float] = (7.8, 4.2),
     verbose: int = 0,
     ax: plt.Axes | None = None,
@@ -1373,6 +1374,11 @@ def plot_ss_station_curves(
         common station is used.
     pband : tuple of float or None
         Period band :math:`(p_{min}, p_{max})` in seconds.
+    log_period : bool, default ``False``
+        When ``True``, plot :math:`\log_{10}(T)` (s) on a linear x-axis
+        (:data:`~pycsamt.api.labels.LOG10_PERIOD_LABEL`), matching the
+        pseudo-section convention used elsewhere in :mod:`pycsamt.emtools`.
+        When ``False`` (default), plot period on a log-scaled axis.
     figsize : (float, float), default (7.8, 4.2)
         Figure size.
     verbose : int, default 0
@@ -1419,11 +1425,19 @@ def plot_ss_station_curves(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
     _cs = PYCSAMT_STYLE.correction
-    ax.set_xscale("log")
-    ax.plot(pb[mb], rb[mb], **_cs.before.plot_kwargs(ms=3.5))
-    ax.plot(pa[ma], ra[ma], **_cs.after.plot_kwargs(ms=3.5))
-    ax.set_xlabel("Period (s)")
-    ax.set_ylabel("ρ_det (Ω·m)")
+    if log_period:
+        ax.plot(
+            np.log10(pb[mb]), rb[mb], **_cs.before.plot_kwargs(ms=3.5)
+        )
+        ax.plot(np.log10(pa[ma]), ra[ma], **_cs.after.plot_kwargs(ms=3.5))
+        ax.set_xlabel(LOG10_PERIOD_LABEL)
+    else:
+        ax.set_xscale("log")
+        ax.plot(pb[mb], rb[mb], **_cs.before.plot_kwargs(ms=3.5))
+        ax.plot(pa[ma], ra[ma], **_cs.after.plot_kwargs(ms=3.5))
+        ax.set_xlabel(PERIOD_LABEL)
+    ax.set_yscale("log")
+    ax.set_ylabel(r"$\rho_{\mathrm{det}}$ ($\Omega\cdot$m)")
     ax.set_title(str(station))
     ax.grid(True, alpha=0.25, which="both")
     ax.legend()

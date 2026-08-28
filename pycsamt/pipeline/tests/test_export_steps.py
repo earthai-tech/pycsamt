@@ -70,9 +70,16 @@ class TestExportModem:
 
         assert result is willy_sites  # sites pass through unchanged
         # Real filenames written by InputBuilder.build() with default config
-        # (ModEmConfig() defaults to a 3-D run, hence covariance.cov too).
+        # (ModEmConfig() defaults to a 3-D run, hence covariance.cov and the
+        # forward-control file that lets that covariance reach Mod3DMT).
         written = {p.name for p in (tmp_path / "modem").iterdir()}
-        assert written == {"data.dat", "m0.ws", "covariance.cov", "control.inv"}
+        assert written == {
+            "data.dat",
+            "m0.ws",
+            "covariance.cov",
+            "control.inv",
+            "fwd_control.ctrl",
+        }
 
     def test_creates_workdir_if_missing(self, willy_sites, tmp_path):
         workdir = tmp_path / "nested" / "modem_out"

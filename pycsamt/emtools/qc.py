@@ -30,6 +30,7 @@ from ..api.station import (
     StationAxisStyle,
 )
 from ..api.view import maybe_wrap_frame
+from ..compat.numpy import trapz as _trapz
 from ._core import (
     _axes_list,
     _get_t_block,
@@ -1706,7 +1707,10 @@ def plot_confidence_grid_map(
         .agg({"confidence": "mean"})
         .copy()
     )
-    xy = grouped[[xkey, ykey]].to_numpy(dtype=float)
+    # ``.to_numpy()`` can hand back a read-only view (pandas copy-on-write);
+    # matplotlib's Triangulation / CubicTriInterpolator assume writeable
+    # input and raise "assignment destination is read-only" otherwise.
+    xy = np.array(grouped[[xkey, ykey]].to_numpy(dtype=float), dtype=float)
     if len(xy) < 3 or np.linalg.matrix_rank(xy - xy.mean(axis=0)) < 2:
         raise ValueError(
             "grid maps require at least three non-collinear station "
@@ -1740,9 +1744,12 @@ def plot_confidence_grid_map(
         else LinearTriInterpolator
     )
     interpolator = interpolator_class(
-        triangulation, grouped["confidence"].to_numpy(dtype=float)
+        triangulation,
+        np.array(grouped["confidence"].to_numpy(dtype=float), dtype=float),
     )
-    confidence_grid = np.ma.asarray(interpolator(grid_x, grid_y))
+    confidence_grid = np.ma.asarray(
+        interpolator(np.array(grid_x), np.array(grid_y))
+    )
     confidence_grid = np.ma.masked_invalid(
         np.ma.clip(confidence_grid, 0.0, 1.0)
     )
@@ -3618,7 +3625,7 @@ def plot_confidence_coverage_curve(
         if not enabled:
             continue
         values = curve_table[column].to_numpy(float)
-        auc = float(np.trapz(values, thresholds))
+        auc = float(_trapz(values, thresholds))
         survey_ax.plot(
             thresholds,
             values,
@@ -3653,7 +3660,7 @@ def plot_confidence_coverage_curve(
                 [np.mean(values >= threshold) for threshold in thresholds]
             )
             line = str(group["_line"].iloc[0])
-            auc = float(np.trapz(retention, thresholds))
+            auc = float(_trapz(retention, thresholds))
             line_ax.step(
                 thresholds,
                 retention,

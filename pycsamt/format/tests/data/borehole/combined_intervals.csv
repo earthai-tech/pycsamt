@@ -1,0 +1,4 @@
+borehole_id,x,y,z,crs,kind,status,total_depth_md,from_md,to_md,lithology,resistivity_ohm_m
+BH-001,421550.2,1048230.7,347.5,EPSG:32629,water,completed,125,0,12.5,Laterite,25
+BH-001,421550.2,1048230.7,347.5,EPSG:32629,water,completed,125,12.5,48,Saprolite,42
+BH-002,421710.1,1048350.4,351.2,EPSG:32629,mining_exploration,completed,210,0,18,Soil,

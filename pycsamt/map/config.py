@@ -20,6 +20,13 @@ class StationMapOptions:
     overlay: str = "index"
     frequency: float | None = None
     frequency_tolerance: float | None = None
+    # For inversion surveys: the depth (m below surface) at which
+    # ``overlay="resistivity"`` slices the precomputed sections. ``None``
+    # keeps the classic behaviour (apparent resistivity at ``frequency``).
+    depth: float | None = None
+    # Draw the per-station scatter markers. Turning them off leaves just
+    # the filled-contour depth slice / value image over the basemap.
+    show_markers: bool = True
     component: str = "xy"
     theme: MapTheme = "light"
     backend: MapBackend = "plotly"
@@ -127,8 +134,22 @@ class VolumeMapOptions:
     aspectmode: str = "data"
     x_unit: str = "m"
     depth_unit: str = "m"
+    # Fence panels: resample each per-line section onto a denser
+    # spline grid so it reads as a smooth curtain, not raw stripes.
     smooth_sections: bool = True
     section_res: int = 100
+    # Block / iso-surface / anomaly structure smoothing. 0.0 (default)
+    # renders the volume exactly as reconstructed on the raw
+    # station/depth lattice -- the current behaviour. A positive value
+    # (the mapview "Light / Medium / Strong / Very strong" presets pass
+    # 0.8 / 1.5 / 2.5 / 4.0) first resamples the volume onto a finer
+    # 3-D lattice -- 2x to ~3.6x denser per axis, higher = denser --
+    # so Plotly's marching-cubes reconstructs rounded iso-surfaces (the
+    # Geosoft-voxel look) instead of faceting on the sparse grid, then
+    # applies a NaN-aware Gaussian whose width scales with that lattice
+    # and, for a resistivity-band body, feathers the in/out-of-band
+    # cliff so the envelope is a smooth contour, not a voxel staircase.
+    volume_smoothing: float = 0.0
     title: str = ""
 
 

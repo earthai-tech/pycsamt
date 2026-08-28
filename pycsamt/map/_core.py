@@ -531,6 +531,69 @@ def skin_depth_at_frequency(
     return out
 
 
+def inversion_depth_range(data: MapData) -> tuple[float, float] | None:
+    """``(z_min, z_max)`` across every precomputed inversion section, or
+    ``None`` when the survey carries no inversion result."""
+    sections = (data.metadata or {}).get("sections")
+    if not sections:
+        return None
+    zs = []
+    for section in sections.values():
+        z = np.asarray(section.get("z", []), dtype=float)
+        z = z[np.isfinite(z)]
+        if z.size:
+            zs.append(z)
+    if not zs:
+        return None
+    allz = np.concatenate(zs)
+    return float(allz.min()), float(allz.max())
+
+
+def resistivity_at_depth(
+    data: MapData,
+    depth: float,
+) -> dict[str, float]:
+    """Per-station resistivity on a horizontal slice at ``depth`` (m
+    below the surface), read from the precomputed inversion sections in
+    ``data.metadata["sections"]``.
+
+    Each station column is linearly interpolated in depth; a query
+    outside a column's own sampled range returns no entry for that
+    station (never a fabricated value). Returns ``{}`` when the survey
+    has no inversion result.
+    """
+    sections = (data.metadata or {}).get("sections")
+    if not sections:
+        return {}
+    out: dict[str, float] = {}
+    d = float(depth)
+    for section in sections.values():
+        z = np.asarray(section.get("z", []), dtype=float)
+        rho = np.asarray(section.get("rho", []), dtype=float)
+        stations = np.asarray(
+            section.get("stations", []), dtype=object
+        )
+        if z.ndim != 1 or rho.ndim != 2 or rho.shape[0] != z.size:
+            continue
+        order = np.argsort(z)
+        z_sorted = z[order]
+        rho_sorted = rho[order, :]
+        for col in range(min(rho_sorted.shape[1], stations.size)):
+            good = np.isfinite(z_sorted) & np.isfinite(rho_sorted[:, col])
+            if good.sum() < 1:
+                continue
+            val = np.interp(
+                d,
+                z_sorted[good],
+                rho_sorted[good, col],
+                left=np.nan,
+                right=np.nan,
+            )
+            if np.isfinite(val):
+                out[str(stations[col])] = float(val)
+    return out
+
+
 def pseudosection_table(
     data: MapData,
     *,

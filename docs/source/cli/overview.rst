@@ -147,6 +147,10 @@ The CLI is organized by workflow domain.
      - ``pycsamt interp rocks --rho 250``
      - Classify inversion models, query resistivity labels, and export
        interpreted products.
+   * - ``format``
+     - ``pycsamt format convert data/occam2D occam.pcsf``
+     - Convert any solver or AI inversion result to the backend-neutral
+       PCSF / PCSM format, and detect, inspect, or validate those files.
    * - ``tdem``
      - ``pycsamt tdem info raw_tdem/``
      - Inspect, convert, and plot transient electromagnetic survey data.
@@ -160,8 +164,8 @@ The CLI is organized by workflow domain.
 
 The detailed reference pages focus on the main workflow groups:
 ``config``, ``edi``, ``avg``, ``jones``, ``site``, ``transform``,
-``forward``, ``invert``, ``map``, ``interp``, ``pipe``, ``tdem``, and
-``survey``.
+``forward``, ``invert``, ``format``, ``map``, ``interp``, ``pipe``,
+``tdem``, and ``survey``.
 
 Active Survey Context
 ---------------------

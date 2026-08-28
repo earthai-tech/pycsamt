@@ -541,6 +541,7 @@ class PCSFModel(PyCSAMTObject, MetadataMixin):
     crs: str | None = None
     description: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
+    boreholes: Any | None = None
 
     def __post_init__(self) -> None:
         self.resistivity = _opt_arr(self.resistivity)
@@ -633,3 +634,9 @@ class PCSFModel(PyCSAMTObject, MetadataMixin):
             self.stations.validate()
         if self.topography is not None:
             self.topography.validate()
+        if self.boreholes is not None:
+            from .borehole.pcsf import PCBHAssociation
+
+            if not isinstance(self.boreholes, PCBHAssociation):
+                raise TypeError("boreholes must be a PCBHAssociation")
+            self.boreholes.validate()

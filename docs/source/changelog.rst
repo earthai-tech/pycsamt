@@ -33,8 +33,12 @@ Latest release
 
 .. _changelog-latest:
 
-**2.4.1** — *2026-08-26* — a new backend-neutral inversion-result format,
-:mod:`pycsamt.format` (PCSF), plus a survey-scale confidence-ratio QC suite
+**2.5.0** — *2026-08-28* — a major interoperability release centered on two
+complementary common-format families: PCSF/PCSM for subsurface models and
+inversion results, and PCBH for spatial multi-borehole observations and
+geology. Their explicit association supports reproducible model-plus-evidence
+exchange and shared 3-D interpretation. The release also adds a survey-scale
+confidence-ratio QC suite
 with ten complementary plots, smart geographic contours, and CSV/Surfer
 grid export. The release also fixes ``ModEmModel3D`` centre/rotation
 retention, web 3-D topography uploads, and confidence-map/profile geometry,
@@ -44,9 +48,16 @@ against a real 128-station survey found and fixed four more real
 solver-launch bugs, including a new ``ModEmForwardControl`` that finally
 lets a 3-D covariance file reach Mod3DMT at all, and a Fortran
 formatted-input decimal-point bug that had silently corrupted control
-values (``target_rms`` included) in every prior 3-D run.
-:ref:`Full 2.4.1 entry <changelog-2-4-1>` · :ref:`Release notes
-<release_v2_4_1>`.
+values (``target_rms`` included) in every prior 3-D run. The Map View's
+resistivity modes were reworked for real inversion volumes: 3-D
+resistivity/depth filters that mask instead of recolour, block and
+iso-surface modes that render under topography at all, depth slices kept
+inside the real model, a new inversion "Resistivity @ depth" plan-slice
+over the basemap, opt-in volume smoothing, rotatable/thinnable station
+labels, a Borehole Builder with shared web/MapView 3-D rendering, and a
+Windows ``pycsamt-mapview`` logging-flood fix.
+:ref:`Full 2.5.0 entry <changelog-2-5-0>` · :ref:`Release notes
+<release_v2_5_0>`.
 
 .. toctree::
    :maxdepth: 1

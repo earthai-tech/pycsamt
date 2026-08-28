@@ -654,6 +654,55 @@ def _controls_scroll() -> html.Div:
                                 ],
                                 style={"display": "none"},  # source == "pcsf" only
                             ),
+                            html.Hr(),
+                            _lbl("Borehole overlay (PCBH)"),
+                            dcc.Upload(
+                                id=IDs.MAP3D_PCBH_UPLOAD,
+                                children=html.Div(
+                                    [html.I(className="bi bi-cloud-upload me-1"),
+                                     "Drop or browse .pcbh.json"]
+                                ),
+                                accept=".pcbh.json,.json",
+                                multiple=False,
+                                style={
+                                    "border": "1px dashed var(--overlay0)",
+                                    "borderRadius": "6px",
+                                    "padding": "8px 6px",
+                                    "textAlign": "center",
+                                    "cursor": "pointer",
+                                    "fontSize": "12px",
+                                },
+                            ),
+                            html.Div(
+                                id=IDs.MAP3D_PCBH_UPLOAD_INFO,
+                                className="fwd-feedback-mini mt-1",
+                            ),
+                            dbc.Switch(
+                                id=IDs.MAP3D_PCBH_VISIBLE,
+                                label="Show boreholes",
+                                value=True,
+                                className="mt-2",
+                            ),
+                            dbc.Switch(
+                                id=IDs.MAP3D_PCBH_LABELS,
+                                label="Collar labels",
+                                value=True,
+                            ),
+                            _lbl("Log family"),
+                            dbc.Input(
+                                id=IDs.MAP3D_PCBH_FAMILY,
+                                value="lithology",
+                                size="sm",
+                                debounce=True,
+                            ),
+                            _lbl("Borehole opacity"),
+                            dcc.Slider(
+                                id=IDs.MAP3D_PCBH_OPACITY,
+                                min=0.1,
+                                max=1.0,
+                                step=0.1,
+                                value=0.9,
+                            ),
                         ],
                         "map3d-settings-source",
                     ),
@@ -1030,9 +1079,17 @@ def _controls_scroll() -> html.Div:
 def layout() -> html.Div:
     store = dcc.Store(id=IDs.MAP3D_ACTIVE_MODE, data=_DEFAULT_MODE)
     grid_store = dcc.Store(id=IDs.MAP3D_GRID_STORE)
+    pcbh_store = dcc.Store(id=IDs.MAP3D_PCBH_STORE)
 
     sidebar = html.Div(
-        [store, grid_store, _run_bar(), _mode_bar(), _controls_scroll()],
+        [
+            store,
+            grid_store,
+            pcbh_store,
+            _run_bar(),
+            _mode_bar(),
+            _controls_scroll(),
+        ],
         className="analysis-controls fwd-sidebar",
     )
 

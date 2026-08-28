@@ -458,6 +458,17 @@ carrying backend-specific logic:
    point-cloud/section path rather than passing those files to the existing
    multiline callback.
 
+Associating observed boreholes
+------------------------------
+
+PCSF may embed or checksum-reference a PCBH document without converting the
+observed geology into model cells. PCBH retains borehole identity, CRS,
+trajectory, logs, structures, and provenance; PCSF retains the inversion grid
+or mesh and resistivity. Alignment for display is a derived operation and
+requires an explicit vertical offset whenever the two vertical references
+cannot be proven compatible. See :doc:`../geology/pcbh_format` for the PCBH
+contract, CSV import, legacy adapters, and 3-D alignment workflow.
+
 PCSM: the browsable ASCII projection
 -------------------------------------
 

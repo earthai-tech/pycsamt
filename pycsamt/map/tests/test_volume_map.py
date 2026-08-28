@@ -290,6 +290,202 @@ def test_fence_and_depth_colorbar_range_is_stable_under_rho_range_filter() -> No
     assert np.isclose(unfiltered_depth.data[-1].cmax, filtered_depth.data[-1].cmax)
 
 
+def _layered_section_data() -> MapData:
+    """3 lines, a real (z, rho) inversion section each: conductive
+    overburden over a resistive layer over a conductive base, plus a
+    resistive body down one flank -- so a horizontal slice is never
+    laterally uniform."""
+    z = np.linspace(20.0, 900.0, 24)
+    sections, recs = {}, []
+    for li in range(3):
+        nsta = 10 + li * 2
+        sta = np.array([f"L{li}S{i:02d}" for i in range(nsta)], dtype=object)
+        zz, xx = np.meshgrid(z, np.arange(nsta), indexing="ij")
+        rho = np.where(zz < 200, 30.0, np.where(zz < 550, 500.0, 12.0))
+        rho = np.where(xx > nsta * 0.7, rho * 5.0, rho)
+        elev = 100.0 + 30.0 * np.sin(np.arange(nsta) * 0.5) + li * 10
+        sections[f"L{li}"] = {
+            "stations": sta,
+            "rho": rho,
+            "z": z,
+            "elev": elev,
+        }
+        for i, s in enumerate(sta):
+            recs.append(
+                StationRecord(str(s), float("nan"), float("nan"),
+                              float(elev[i]), f"L{li}", len(recs))
+            )
+    return MapData(
+        sites=None, stations=tuple(recs), metadata={"sections": sections}
+    )
+
+
+def test_depth_slices_stay_inside_the_data_and_show_lateral_structure() -> None:
+    """Regression: slices were generated across the raw depth *window*
+    (e.g. 0-800 m), so the endpoints landed outside the model's real
+    z-extent and rendered as all-NaN ghost surfaces. Every drawn slice
+    must now carry real, laterally-varying resistivity.
+    """
+    from pycsamt.map.volume import _profile_grids, _slice_depths
+
+    data = _layered_section_data()
+    opts = VolumeMapOptions(mode="depth", n_slices=5, depth_range=(0.0, 5000.0))
+    grids = _profile_grids(data, opts)
+    z_all = np.concatenate([g["z"] for g in grids.values()])
+    depths = _slice_depths(grids, opts)
+    assert depths.min() >= z_all.min() - 1e-6
+    assert depths.max() <= z_all.max() + 1e-6
+
+    fig = build_3d_map(data, opts)
+    surfaces = [t for t in fig.data if type(t).__name__ == "Surface"]
+    assert surfaces
+    for s in surfaces:
+        sc = np.asarray(s.surfacecolor, dtype=float)
+        assert np.isfinite(sc).any()  # no all-NaN ghost slice
+        assert np.nanstd(sc) > 1e-3  # laterally varying, not uniform
+
+
+def test_depth_slice_colorbar_is_fixed_across_depth_windows() -> None:
+    """The colour scale must not move when the depth window / slice
+    depth changes -- same principle as ignoring ``rho_range``."""
+    data = _layered_section_data()
+    full = build_3d_map(data, VolumeMapOptions(mode="depth", n_slices=4))
+    shallow = build_3d_map(
+        data, VolumeMapOptions(mode="depth", n_slices=1, depth_range=(0.0, 150.0))
+    )
+    f0, s0 = full.data[0], shallow.data[0]
+    assert np.isclose(f0.cmin, s0.cmin) and np.isclose(f0.cmax, s0.cmax)
+
+
+def test_depth_single_slice_cuts_through_the_window_middle() -> None:
+    from pycsamt.map.volume import _profile_grids, _slice_depths
+
+    data = _layered_section_data()
+    opts = VolumeMapOptions(mode="depth", n_slices=1, depth_range=(0.0, 200.0))
+    depths = _slice_depths(_profile_grids(data, opts), opts)
+    assert len(depths) == 1
+    assert 80.0 <= depths[0] <= 120.0  # ~100 m, not 0 m
+
+
+def test_depth_slice_rho_range_filters_after_interpolating_the_depth() -> None:
+    """Regression: the resistivity filter used to NaN whole cells
+    *before* the depth interpolation, so ``np.interp`` bridged across an
+    out-of-band layer and painted the slice a solid colour where it
+    should be masked. It must now filter against the resistivity
+    actually interpolated at the slice depth.
+    """
+    from pycsamt.map.volume import _profile_grids, _values_at_depth
+
+    data = _layered_section_data()  # 30 / 500 / 12 ohm.m layers, split at 200/550 m
+    cond = VolumeMapOptions(mode="depth", rho_range=(1.0, 100.0))
+    grids = _profile_grids(data, cond)
+    grid = next(iter(grids.values()))
+
+    # a slice right in the 500 ohm.m resistive layer -> every left-flank
+    # column masked (the right flank is 5x higher, also masked)
+    mid = _values_at_depth(grid, 350.0, cond)
+    assert np.isnan(mid).all()
+
+    # a slice in the conductive overburden -> left flank (30 ohm.m) shows,
+    # right flank (150 ohm.m) is masked
+    top = _values_at_depth(grid, 90.0, cond)
+    assert np.isfinite(top).any() and np.isnan(top).any()
+
+
+def test_volume_smoothing_refines_and_softens_without_moving_the_footprint() -> None:
+    """Opt-in ``volume_smoothing`` reconstructs the block / iso-surface
+    volume on a *finer* lattice (so Plotly rounds the surfaces instead
+    of faceting -- the Geosoft-voxel look) and then gently blurs it.
+    ``0.0`` (default) leaves the raw lattice untouched. Neither the data
+    footprint (bounding box) nor the colour scale may move.
+    """
+    from pycsamt.map.volume import _dense_volume_grid, _profile_grids
+
+    data = _layered_section_data()
+    raw_opts = VolumeMapOptions(mode="block", volume_smoothing=0.0)
+    sm_opts = VolumeMapOptions(mode="block", volume_smoothing=1.5)
+    xr, _, zr, raw = _dense_volume_grid(_profile_grids(data, raw_opts), raw_opts)
+    xs, _, zs, sm = _dense_volume_grid(_profile_grids(data, sm_opts), sm_opts)
+
+    # finer lattice, same spatial extent (identical x/z span, just
+    # sampled denser -- the blur must never bleed the volume outward)
+    assert sm.size > raw.size
+    assert np.isclose(xs.min(), xr.min()) and np.isclose(xs.max(), xr.max())
+    assert np.nanmin(zs) >= np.nanmin(zr) - 1e-6
+    assert np.nanmax(zs) <= np.nanmax(zr) + 1e-6
+
+    # same along-profile footprint: finite data starts/ends at the same x
+    def _x_span(vol, xa):
+        fin = np.isfinite(vol).any(axis=(1, 2))
+        xi = np.where(fin)[0]
+        return xa[xi[0]], xa[xi[-1]]
+
+    np.testing.assert_allclose(
+        _x_span(sm, xs), _x_span(raw, xr), rtol=0.02, atol=1e-6
+    )
+
+    # genuinely smoother: smaller normalised cell-to-cell gradients
+    g_raw = np.nanstd(np.diff(raw, axis=2)) / (np.nanstd(raw) or 1.0)
+    g_sm = np.nanstd(np.diff(sm, axis=2)) / (np.nanstd(sm) or 1.0)
+    assert g_sm < g_raw
+
+    raw_fig = build_3d_map(data, raw_opts)
+    sm_fig = build_3d_map(data, sm_opts)
+    assert np.isclose(raw_fig.data[0].cmin, sm_fig.data[0].cmin)
+    assert np.isclose(raw_fig.data[0].cmax, sm_fig.data[0].cmax)
+
+
+def test_volume_smoothing_levels_scale_lattice_density() -> None:
+    """Each stronger preset (Light -> Medium -> Strong -> Very strong)
+    reconstructs the volume on a denser lattice, so raising the control
+    keeps removing visible facets."""
+    from pycsamt.map.volume import (
+        _dense_volume_grid,
+        _profile_grids,
+        _volume_smoothing_params,
+    )
+
+    data = _layered_section_data()
+    sizes = []
+    for strength in (0.8, 1.5, 2.5, 4.0):
+        opts = VolumeMapOptions(mode="block", volume_smoothing=strength)
+        _, _, _, vol = _dense_volume_grid(_profile_grids(data, opts), opts)
+        sizes.append(vol.size)
+    assert sizes == sorted(sizes)
+    assert sizes[-1] > 2 * sizes[0]
+
+    # 4.0 resolves to the "very strong" preset (the densest factor)
+    assert _volume_smoothing_params(4.0)[0] >= _volume_smoothing_params(2.5)[0]
+    assert _volume_smoothing_params(0.0) == (1.0, 0, 0, 0.0)
+
+
+def test_volume_smoothing_feathers_the_banded_isosurface_cliff() -> None:
+    """A resistivity-band body used to render as a hard sentinel/in-band
+    step (voxel staircase). With smoothing on, the composed ``value``
+    field carries a smooth ramp between the two, so ``go.Isosurface``
+    cuts a rounded envelope."""
+    from pycsamt.map.volume import _volume_point_cloud, _profile_grids
+
+    data = _layered_section_data()
+    band = dict(mode="block", rho_range=(20.0, 120.0))
+    raw = _volume_point_cloud(
+        _profile_grids(data, VolumeMapOptions(**band, volume_smoothing=0.0)),
+        VolumeMapOptions(**band, volume_smoothing=0.0),
+    )
+    sm = _volume_point_cloud(
+        _profile_grids(data, VolumeMapOptions(**band, volume_smoothing=2.5)),
+        VolumeMapOptions(**band, volume_smoothing=2.5),
+    )
+    assert raw is not None and sm is not None
+    raw_vals = np.unique(np.round(raw[3], 6))
+    sm_vals = np.unique(np.round(sm[3], 6))
+    # raw: essentially two populations (sentinel + the in-band hues);
+    # feathered: many intermediate values bridging them
+    assert sm_vals.size > raw_vals.size * 3
+    # colour scale still the full-model range, not the band
+    assert np.isclose(raw[6], sm[6]) and np.isclose(raw[7], sm[7])
+
+
 class _Sites4:
     def as_list(self):
         return [_Edi("S00"), _Edi("S01"), _Edi("S02"), _Edi("S03")]

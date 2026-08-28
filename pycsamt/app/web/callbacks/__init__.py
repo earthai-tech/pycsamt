@@ -97,3 +97,8 @@ def register_callbacks(app) -> None:
     )
 
     _reg_agents_page(app)
+    from pycsamt.app.web.pages.borehole_builder import (
+        register_callbacks as _reg_borehole_builder,
+    )
+
+    _reg_borehole_builder(app)

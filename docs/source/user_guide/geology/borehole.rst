@@ -14,6 +14,13 @@ directly, building one without a CSV file, and reading LAS 2.0 well
 logs, which :doc:`../interpretation/workflow` mentions but does not
 demonstrate.
 
+.. note::
+
+   This lightweight class represents one vertical log at a profile-relative
+   ``x`` coordinate. For a universal, spatial, multi-hole exchange document
+   with CRS, deviation surveys, multiple log families, structures, and PCSF
+   association, use :doc:`pcbh_format`.
+
 Querying a log directly
 --------------------------
 

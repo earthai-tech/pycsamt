@@ -10,14 +10,15 @@ filesystem, not simulated network calls.
 from __future__ import annotations
 
 import json
-import time
 
 import pytest
 
+import pycsamt.geology.rock_providers as providers
 from pycsamt.geology.lithology import RockDatabase, RockEntry
 from pycsamt.geology.rock_providers import (
     LocalRockPropertyProvider,
     RemoteRockPropertyProvider,
+    RockPropertyProvider,
     RockProviderFetchError,
 )
 
@@ -217,3 +218,100 @@ def test_rockdatabase_from_provider():
     db = RockDatabase.from_provider(LocalRockPropertyProvider())
     assert len(db) == len(RockDatabase.default())
     assert db.metadata["origin"] == "default"
+
+
+def test_provider_protocol_is_runtime_checkable():
+    assert isinstance(LocalRockPropertyProvider(), RockPropertyProvider)
+    assert not isinstance(object(), RockPropertyProvider)
+    assert RockPropertyProvider.fetch(LocalRockPropertyProvider()) is None
+
+
+def test_cache_directory_resolution_precedence(tmp_path, monkeypatch):
+    explicit = tmp_path / "explicit"
+    monkeypatch.setenv("PYCSAMT_ROCKDB_CACHE", str(tmp_path / "env"))
+    configured = RemoteRockPropertyProvider("file:///x", cache_dir=explicit)
+    assert configured._resolve_cache_dir() == explicit
+    assert (
+        RemoteRockPropertyProvider("file:///x")._resolve_cache_dir()
+        == tmp_path / "env"
+    )
+
+    monkeypatch.delenv("PYCSAMT_ROCKDB_CACHE")
+    monkeypatch.setattr(
+        providers.Path, "home", classmethod(lambda cls: tmp_path)
+    )
+    assert (
+        RemoteRockPropertyProvider("file:///x")._resolve_cache_dir()
+        == tmp_path / ".pycsamt" / "rock_db"
+    )
+
+
+@pytest.mark.parametrize(
+    "contents",
+    ["not-json", json.dumps({"fetched_at": "yesterday", "entries": []})],
+)
+def test_malformed_cache_is_ignored(tmp_path, contents):
+    cache = tmp_path / "cache.json"
+    cache.write_text(contents)
+    assert providers._read_cache(cache, max_age_seconds=10) is None
+
+
+def test_cache_read_error_is_ignored(tmp_path, monkeypatch):
+    cache = tmp_path / "cache.json"
+    cache.write_text("{}")
+
+    def fail_read(*args, **kwargs):
+        raise OSError("unreadable")
+
+    monkeypatch.setattr(providers.Path, "read_text", fail_read)
+    assert providers._read_cache(cache, max_age_seconds=10) is None
+
+
+def test_invalid_json_response_raises_without_fallback(tmp_path):
+    src = tmp_path / "invalid.json"
+    src.write_text("not-json")
+    provider = RemoteRockPropertyProvider(
+        src.as_uri(), cache_dir=tmp_path / "cache", fallback=False
+    )
+    with pytest.raises(RockProviderFetchError, match="not valid JSON"):
+        provider.fetch()
+
+
+def test_non_object_entry_raises_without_fallback(tmp_path):
+    src = tmp_path / "invalid-row.json"
+    url = _write_rocks_json(src, ["granite"])
+    provider = RemoteRockPropertyProvider(
+        url, cache_dir=tmp_path / "cache", fallback=False
+    )
+    with pytest.raises(RockProviderFetchError, match="not a JSON object"):
+        provider.fetch()
+
+
+def test_remote_provider_preserves_all_optional_fields(tmp_path):
+    src = tmp_path / "complete.json"
+    url = _write_rocks_json(
+        src,
+        [
+            {
+                "name": "R",
+                "rho_min": "1",
+                "rho_max": "2",
+                "color": "#123456",
+                "description": "desc",
+                "code": "7",
+                "source": "field",
+            }
+        ],
+    )
+    entries, _ = RemoteRockPropertyProvider(
+        url, cache_dir=tmp_path / "cache"
+    ).fetch()
+    assert entries[0] == RockEntry(
+        name="R",
+        rho_min=1.0,
+        rho_max=2.0,
+        color="#123456",
+        description="desc",
+        code=7,
+        source="field",
+    )

@@ -2,12 +2,13 @@ pycsamt.format
 ==============
 
 Backend-neutral PCSF and PCSM representations for electromagnetic inversion
-results. The package provides the shared model schema, binary and text I/O,
-conversion adapters, multiline construction, topography integration,
-point-cloud extraction, regridding, and model provenance helpers.
+results, plus the human-readable PCBH borehole exchange contract. The package
+provides shared schemas, serialization, conversion adapters, model/borehole
+association, rendering contracts, and provenance helpers.
 
 For format concepts, complete workflows, and browsable file examples, see
-:doc:`../user_guide/models/pcsf_format`.
+:doc:`../user_guide/models/pcsf_format`. For spatial multi-hole projects, see
+:doc:`../user_guide/geology/pcbh_format`.
 
 Public facade
 -------------
@@ -64,3 +65,24 @@ Provenance
    :toctree: generated
 
    pycsamt.format.provenance
+
+Borehole exchange
+-----------------
+
+The :mod:`pycsamt.format.borehole` namespace contains PCBH schema objects,
+canonical JSON I/O, CSV/LAS adapters, trajectory derivation, PCSF association,
+and application-neutral 3-D render/export contracts.
+
+.. autosummary::
+   :toctree: generated
+
+   pycsamt.format.borehole
+   pycsamt.format.borehole.schema
+   pycsamt.format.borehole.jsonio
+   pycsamt.format.borehole.csvio
+   pycsamt.format.borehole.lasio
+   pycsamt.format.borehole.relational
+   pycsamt.format.borehole.trajectory
+   pycsamt.format.borehole.pcsf
+   pycsamt.format.borehole.render
+   pycsamt.format.borehole.exports

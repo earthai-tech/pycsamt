@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from dash import Input, Output, State, ctx
 
+from pycsamt.app._borehole import add_pcbh_to_figure
+
 from .._ids import IDs
 from .._render import VIEW_TITLES, empty_figure, figure_for
 from ..cache import get_view
@@ -61,23 +63,43 @@ def _register_render(app) -> None:
         Input(IDs.STORE_LINES, "data"),
         Input(IDs.STORE_FIT, "data"),
         Input(IDs.STORE_MASKED, "data"),
+        Input(IDs.PCBH_STORE, "data"),
+        Input(IDs.PCBH_VISIBLE, "value"),
+        Input(IDs.PCBH_LABELS, "value"),
+        Input(IDs.PCBH_FAMILY, "value"),
+        Input(IDs.PCBH_OPACITY, "value"),
         State(IDs.SESSION_ID, "data"),
         prevent_initial_call=False,
     )
     def render(
-        store, view_name, controls, theme, lines, fit, masked, session_id
+        store, view_name, controls, theme, lines, fit, masked, pcbh_store,
+        pcbh_visible, pcbh_labels, pcbh_family, pcbh_opacity, session_id
     ):
         theme = theme or "light"
         if not store or not store.get("n_stations"):
-            return empty_figure(theme), {"display": "flex"}
+            fig = empty_figure(theme, "Upload PCBH or load survey lines")
+            if pcbh_store:
+                fig = add_pcbh_to_figure(
+                    fig,
+                    pcbh_store,
+                    visible=bool(pcbh_visible),
+                    show_labels=bool(pcbh_labels),
+                    family=pcbh_family or "lithology",
+                    opacity=pcbh_opacity if pcbh_opacity is not None else 0.9,
+                )
+            welcome = (
+                {"display": "none"}
+                if pcbh_store
+                else {"display": "flex"}
+            )
+            return fig, welcome
         view = get_view(session_id)
         if view is None:
             return empty_figure(
                 theme, "Session data unavailable — reload lines."
             ), {"display": "flex"}
         active = (lines or {}).get("active")
-        return (
-            figure_for(
+        fig = figure_for(
                 view_name or "map",
                 view,
                 controls,
@@ -85,6 +107,14 @@ def _register_render(app) -> None:
                 active_lines=active,
                 masked=masked,
                 fit=int(fit or 0),
-            ),
-            {"display": "none"},
-        )
+            )
+        if pcbh_store and (view_name or "map") == "map3d":
+            fig = add_pcbh_to_figure(
+                fig,
+                pcbh_store,
+                visible=bool(pcbh_visible),
+                show_labels=bool(pcbh_labels),
+                family=pcbh_family or "lithology",
+                opacity=pcbh_opacity if pcbh_opacity is not None else 0.9,
+            )
+        return fig, {"display": "none"}

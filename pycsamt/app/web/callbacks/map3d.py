@@ -20,6 +20,7 @@ from dash import (
 )
 from dash.exceptions import PreventUpdate
 
+from pycsamt.app._borehole import add_pcbh_to_figure, decode_pcbh_upload
 from pycsamt.app.web.cache import (
     cache_get,
     cache_get_inversion_result,
@@ -1354,8 +1355,30 @@ def register_map3d(app) -> None:
     _register_source_options(app)
     _register_presets(app)
     _register_generate(app)
+    _register_pcbh_upload(app)
     _register_display(app)
     _register_export_html(app)
+
+
+def _register_pcbh_upload(app) -> None:
+    @app.callback(
+        Output(IDs.MAP3D_PCBH_STORE, "data"),
+        Output(IDs.MAP3D_PCBH_UPLOAD_INFO, "children"),
+        Input(IDs.MAP3D_PCBH_UPLOAD, "contents"),
+        State(IDs.MAP3D_PCBH_UPLOAD, "filename"),
+        prevent_initial_call=True,
+    )
+    def load_pcbh(contents, filename):
+        if not contents:
+            raise PreventUpdate
+        try:
+            store = decode_pcbh_upload(contents, filename)
+        except (TypeError, ValueError) as error:
+            return None, html.Span(str(error), className="text-danger")
+        return store, html.Span(
+            f"{store['filename']} — {store['n_boreholes']} borehole(s)",
+            className="text-success",
+        )
 
 
 def _register_mode_switch(app) -> None:
@@ -1903,6 +1926,11 @@ def _register_display(app) -> None:
         Input(IDs.MAP3D_STA_SYMBOL, "value"),
         Input(IDs.MAP3D_STA_SIZE, "value"),
         Input(IDs.MAP3D_STA_COLOR, "value"),
+        Input(IDs.MAP3D_PCBH_STORE, "data"),
+        Input(IDs.MAP3D_PCBH_VISIBLE, "value"),
+        Input(IDs.MAP3D_PCBH_LABELS, "value"),
+        Input(IDs.MAP3D_PCBH_FAMILY, "value"),
+        Input(IDs.MAP3D_PCBH_OPACITY, "value"),
         prevent_initial_call=True,
     )
     def display_3d(
@@ -1939,9 +1967,30 @@ def _register_display(app) -> None:
         sta_symbol_ui,
         sta_size_ui,
         sta_color_ui,
+        pcbh_store=None,
+        pcbh_visible=True,
+        pcbh_labels=True,
+        pcbh_family="lithology",
+        pcbh_opacity=0.9,
     ):
         dark = (theme or "dark") == "dark"
         if not grid_store or not grid_store.get("profiles"):
+            if pcbh_store:
+                fig = _empty_3d_fig(dark=dark)
+                add_pcbh_to_figure(
+                    fig,
+                    pcbh_store,
+                    visible=bool(pcbh_visible),
+                    show_labels=bool(pcbh_labels),
+                    family=pcbh_family or "lithology",
+                    opacity=pcbh_opacity if pcbh_opacity is not None else 0.9,
+                )
+                return (
+                    fig,
+                    _info("Standalone PCBH boreholes", "success"),
+                    False,
+                    "",
+                )
             return (
                 _empty_3d_fig(dark=dark),
                 _info(
@@ -2157,6 +2206,15 @@ def _register_display(app) -> None:
                 str(exc),
             )
 
+        if pcbh_store:
+            add_pcbh_to_figure(
+                fig,
+                pcbh_store,
+                visible=bool(pcbh_visible),
+                show_labels=bool(pcbh_labels),
+                family=pcbh_family or "lithology",
+                opacity=pcbh_opacity if pcbh_opacity is not None else 0.9,
+            )
         return fig, info, False, ""
 
 

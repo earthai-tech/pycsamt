@@ -16,6 +16,7 @@ from ._backends import (
 from ._core import (
     MapData,
     ensure_map_data,
+    resistivity_at_depth,
     skin_depth_at_frequency,
     station_dataframe,
     value_at_frequency,
@@ -108,6 +109,24 @@ def build_station_map(
         # the common topographic use case and keeps ``markers`` backward
         # compatible.
         opts = replace(opts, contour_image=True)
+    if opts.overlay.lower() in {
+        "depth_rho",
+        "inv_rho",
+        "resistivity_at_depth",
+    }:
+        # A depth slice of an inversion result IS a filled-contour map --
+        # turn the raster on, and (unless the user overrode it) show it
+        # on a log resistivity scale, the way every inversion viewer does.
+        overrides = {"contour_image": True}
+        if not opts.log_color and opts.value_range is None:
+            overrides["log_color"] = True
+        if opts.value_range is None:
+            full = _inversion_rho_range(data)
+            if full is not None:
+                # Fix the colour scale to the whole model so scrubbing
+                # the slice depth never re-graduates the colours.
+                overrides["value_range"] = full
+        opts = replace(opts, **overrides)
     df = _station_values(data, opts)
     colors = theme_colors(opts.theme)
     if opts.backend == "matplotlib":
@@ -170,6 +189,19 @@ def _station_values(
         )
         df["_value"] = df["ID"].map(vals)
         df["_label"] = "δ skin depth (m)"
+    elif overlay in {"depth_rho", "inv_rho", "resistivity_at_depth"}:
+        depth = getattr(opts, "depth", None)
+        vals = (
+            resistivity_at_depth(data, float(depth))
+            if depth is not None
+            else {}
+        )
+        df["_value"] = df["ID"].map(vals)
+        df["_label"] = (
+            f"ρ at {float(depth):.0f} m (Ω·m)"
+            if depth is not None
+            else "ρ (Ω·m)"
+        )
     else:
         if opts.overlay in df:
             df["_value"] = df[opts.overlay]
@@ -178,6 +210,26 @@ def _station_values(
         df["_label"] = opts.overlay
     df["_plot_value"] = _plot_values(df["_value"], opts)
     return df
+
+
+def _inversion_rho_range(data: MapData) -> tuple[float, float] | None:
+    """``(rho_min, rho_max)`` across every precomputed inversion section
+    (positive values only), or ``None`` when there is no inversion
+    result."""
+    sections = (data.metadata or {}).get("sections")
+    if not sections:
+        return None
+    lo = np.inf
+    hi = -np.inf
+    for section in sections.values():
+        rho = np.asarray(section.get("rho", []), dtype=float)
+        rho = rho[np.isfinite(rho) & (rho > 0)]
+        if rho.size:
+            lo = min(lo, float(rho.min()))
+            hi = max(hi, float(rho.max()))
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        return None
+    return lo, hi
 
 
 def _has_geo(df) -> bool:
@@ -191,6 +243,10 @@ def _geo_station_map(df, opts, colors, dark: bool):
 
     cmin, cmax = _shared_color_range(df, opts)
     scale_shown = False
+    show_markers = bool(getattr(opts, "show_markers", True))
+    colorbar = dict(
+        title=dict(text=_color_title(df, opts), side="right")
+    )
     fig = go.Figure()
     for line, group in df.groupby("Line", dropna=False):
         line_name = str(line or "line")
@@ -201,39 +257,35 @@ def _geo_station_map(df, opts, colors, dark: bool):
         marker_size = _marker_sizes(group["ID"], opts)
         if opts.show_contours:
             _add_density_layer(fig, group, opts)
-        fig.add_trace(
-            _scatter_map_trace(
-                go,
-                lat=lat,
-                lon=lon,
-                mode=_marker_mode(opts.show_labels),
-                text=group["ID"],
-                customdata=group["ID"],
-                name=line_name,
-                marker=dict(
-                    size=marker_size,
-                    color=group["_plot_value"],
-                    colorscale=to_plotly_cmap(opts.cmap),
-                    opacity=opts.opacity,
-                    showscale=not scale_shown,
-                    cmin=cmin,
-                    cmax=cmax,
-                    colorbar=dict(
-                        title=dict(
-                            text=_color_title(df, opts),
-                            side="right",
-                        ),
+        if show_markers:
+            fig.add_trace(
+                _scatter_map_trace(
+                    go,
+                    lat=lat,
+                    lon=lon,
+                    mode=_marker_mode(opts.show_labels),
+                    text=group["ID"],
+                    customdata=group["ID"],
+                    name=line_name,
+                    marker=dict(
+                        size=marker_size,
+                        color=group["_plot_value"],
+                        colorscale=to_plotly_cmap(opts.cmap),
+                        opacity=opts.opacity,
+                        showscale=not scale_shown,
+                        cmin=cmin,
+                        cmax=cmax,
+                        colorbar=colorbar,
                     ),
-                ),
-                textposition="top right",
-                hovertemplate=(
-                    "<b>%{text}</b><br>"
-                    "lat=%{lat:.5f}<br>lon=%{lon:.5f}"
-                    "<extra></extra>"
-                ),
+                    textposition="top right",
+                    hovertemplate=(
+                        "<b>%{text}</b><br>"
+                        "lat=%{lat:.5f}<br>lon=%{lon:.5f}"
+                        "<extra></extra>"
+                    ),
+                )
             )
-        )
-        scale_shown = True
+            scale_shown = True
         if opts.show_profiles and len(group) > 1:
             fig.add_trace(
                 build_profile_line_overlay(
@@ -257,6 +309,31 @@ def _geo_station_map(df, opts, colors, dark: bool):
     contour_layer = _contour_image_layer(df, opts)
     if contour_layer is not None:
         layers.append(contour_layer)
+    if not scale_shown and cmin is not None and cmax is not None:
+        # No marker trace carried the colour scale (markers hidden) --
+        # attach an off-map, invisible point so the depth-slice /
+        # value-image overlay still gets a colourbar.
+        fig.add_trace(
+            _scatter_map_trace(
+                go,
+                lat=[float(df["Latitude"].astype(float).mean())],
+                lon=[float(df["Longitude"].astype(float).mean())],
+                mode="markers",
+                marker=dict(
+                    size=0.1,
+                    color=[cmin],
+                    colorscale=to_plotly_cmap(opts.cmap),
+                    cmin=cmin,
+                    cmax=cmax,
+                    opacity=0.0,
+                    showscale=True,
+                    colorbar=colorbar,
+                ),
+                hoverinfo="skip",
+                showlegend=False,
+                name="scale",
+            )
+        )
     map_layout = dict(
         style=basemap.style,
         center=basemap.center,
@@ -267,7 +344,8 @@ def _geo_station_map(df, opts, colors, dark: bool):
         map_layout["layers"] = layers
     fig.update_layout(
         **{_map_layout_key(fig): map_layout},
-        paper_bgcolor=colors["paper"],
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color=colors["text"]),
         margin=dict(l=0, r=0, t=30, b=0),
         legend=dict(orientation="h"),
@@ -282,6 +360,7 @@ def _contour_image_layer(df, opts):
         return None
     from .overlays import build_geo_contour_image
 
+    vr = opts.value_range
     overlay = build_geo_contour_image(
         df["Longitude"],
         df["Latitude"],
@@ -294,6 +373,8 @@ def _contour_image_layer(df, opts):
         grid_res=int(opts.contour_grid_res),
         interp=opts.contour_interp,
         smooth_sigma=float(opts.contour_smooth),
+        vmin=float(vr[0]) if vr else None,
+        vmax=float(vr[1]) if vr else None,
     )
     if overlay is None:
         return None

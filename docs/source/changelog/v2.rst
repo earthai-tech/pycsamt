@@ -10,29 +10,71 @@ each release.
 
 ----
 
-.. _changelog-2-4-1:
+.. _changelog-2-5-0:
 
-2.4.1 |New| |Fix| |Docs|
+2.5.0 |New| |Fix| |Docs|
 ------------------------
 
-*Released 2026-08-26.*
+*Released 2026-08-28.*
 
-A new backend-neutral inversion-result format, :mod:`pycsamt.format`
-(PCSF), converts Occam2D, ModEM 3-D, and MARE2DEM results to one
-self-describing HDF5 container. The release also expands confidence-ratio
+The defining feature of 2.5.0 is a pair of complementary common-format
+families. PCSF/PCSM give subsurface models and inversion results one
+backend-neutral scientific contract in binary HDF5 and human-readable ASCII;
+PCBH gives spatial multi-borehole observations and geological evidence a
+human-readable JSON contract. They remain independently valid, but an
+explicit, checksummed association and CRS/vertical alignment allow boreholes
+to enter shared 3-D model views without conflating evidence and inversion
+cells. The release also expands confidence-ratio
 QC into a survey-scale plotting and export toolkit for single and multiple
 lines. Real bugs were fixed in ``ModEmModel3D``, the web 3-D view's
 topography uploader, and confidence-map/profile geometry. Running real,
 full-scale Occam2D and ModEM 3-D inversions against a real 128-station
 survey found and fixed four more real solver-launch bugs, including a
 new ``ModEmForwardControl`` that finally lets a 3-D covariance file reach
-Mod3DMT at all.
+Mod3DMT at all. With a real resistivity volume now reaching the viewer,
+the Map View's resistivity modes were reworked to behave like an
+inversion viewer -- 3-D resistivity/depth filters that mask instead of
+recolour, block/iso-surface modes that render under topography at all,
+depth slices kept inside the real model, an inversion "Resistivity @
+depth" plan-slice over the basemap, plus a Windows logging-flood fix.
+PCBH adds CSV/LAS and legacy-geology adapters, shared web/MapView 3-D
+rendering, and an accessible Borehole Builder. PCSF/PCSM convert Occam2D,
+ModEM 3-D, MARE2DEM, multiline models, and generic AI/DL arrays into the same
+explicit geometry and canonical linear-resistivity representation.
 
 Added
 ~~~~~
 
-* |New| **PCSF, a backend-neutral inversion-result format** --
-  :mod:`pycsamt.format` converts Occam2D, ModEM 3-D, and MARE2DEM results
+* |New| **Two common formats, one model-plus-evidence workflow** -- PCSF/PCSM
+  are the authoritative subsurface-model contract and PCBH is the
+  authoritative borehole-evidence contract. Either can travel independently;
+  together they preserve their separate provenance while supporting explicit
+  checksum association, coordinate/datum alignment, and consistent 3-D
+  rendering across Python, web, and MapView consumers.
+* |New| **PCBH, the pyCSAMT Common Borehole Format** -- a versioned,
+  human-readable ``.pcbh.json`` contract stores many water, mining,
+  geotechnical, geothermal, petroleum, monitoring, or exploration holes in
+  one document with a document-wide CRS, explicit vertical reference and
+  units, collars, measured/deviated trajectories, categorical interval-log
+  families, structures, vocabularies, provenance, and namespaced domain
+  extensions. The reference package provides canonical JSON and JSON Schema,
+  semantic validation and bounded readers, combined and manifested relational
+  CSV import/export, LAS 2.0 adaptation, legacy
+  :class:`pycsamt.geology.Borehole` views, deterministic minimum-curvature
+  desurveying, and loss-reporting GeoJSON/VTP/glTF/GLB exports. PCBH can be
+  embedded in or checksum-referenced from PCSF without conflating observed
+  geology with inversion cells; explicit CRS/vertical-datum alignment inserts
+  the paths into native 3-D blocks. The web Borehole Builder supports CSV
+  mapping, row-linked validation, 2-D log and 3-D trajectory previews,
+  autosave/recovery, canonical download, and PCSF embedding. Web and MapView
+  consumers use the same application-neutral render contract for centerlines,
+  interval tubes, contacts, structures, colors, selection, and scientific
+  hover values. See :doc:`/user_guide/geology/pcbh_format`.
+* |New| **PCSF/PCSM, universal subsurface-model exchange** -- PCSF is the
+  compact HDF5 encoding and PCSM (plain or ``.pcsm.gz``) is its lossless,
+  human-readable ASCII projection; both reconstruct the same validated
+  :class:`~pycsamt.format.PCSFModel`. :mod:`pycsamt.format` converts Occam2D,
+  ModEM 3-D, and MARE2DEM results
   (and a DUHI-prepared result, via the Occam2D path) into one self-describing
   HDF5 container instead of five disagreeing native conventions: canonical
   resistivity is always linear ohm.m, geometry is discriminated explicitly
@@ -48,6 +90,20 @@ Added
   :meth:`pycsamt.map.MapView.from_pcsf`. :mod:`pycsamt.format.topography`
   wires ``.pcsf`` topography through the existing
   :mod:`pycsamt.map.topo` elevation parser rather than adding a third one.
+* |New| **``pycsamt format`` command group** -- a smart, robust CLI face
+  for :mod:`pycsamt.format`. ``pycsamt format convert SOURCE [TARGET]``
+  auto-detects the source (an Occam2D / ModEM 3-D / MARE2DEM working
+  directory, a single signature file inside one, an AI/DL ``.npz`` /
+  ``.npy`` array bundle, or an existing ``.pcsf`` / ``.pcsm``) and writes
+  ``.pcsf`` or ``.pcsm`` through the matching adapter -- rebuilding the
+  MARE2DEM mesh from the run's ``.poly`` PSLG, recognising ``log10`` /
+  ``ln`` resistivity keys, and carrying ``--topo`` / ``--epsg`` /
+  ``--origin`` through. ``pycsamt format detect`` reports the
+  classification without converting (non-zero exit when unconvertible),
+  ``pycsamt format info`` summarises a file, and ``pycsamt format
+  validate`` runs a header / load / schema / round-trip check. The shared
+  detector is public as :func:`pycsamt.format.detect_source` /
+  :class:`~pycsamt.format.SourceKind`.
 * |New| **Survey-scale confidence evaluation** -- ten public plotting
   functions add route/contour and regular-grid maps, component panels,
   composite-vs-presence comparison, before/after comparison, risk,
@@ -61,6 +117,23 @@ Added
   exactly. Required by Mod3DMT's own CLI argument order before a
   covariance file is reachable at all; ``InputBuilder`` and
   ``ModEmRunner`` now build/reference it automatically. See Fixed below.
+* |New| **Map View 2-D "Resistivity @ depth"** -- with an inversion
+  result loaded, :func:`pycsamt.map.resistivity_at_depth` /
+  :func:`pycsamt.map.inversion_depth_range` slice the model at a chosen
+  depth and the Map view draws it as a filled-contour raster with
+  isolines over the basemap, on a fixed whole-model log colour scale,
+  with a slice-depth slider and a "Station markers" toggle
+  (``StationMapOptions.show_markers``).
+* |New| **Map View 3-D label and smoothing options** --
+  ``VolumeMapOptions.station_label_angle`` (rotate labels, drawn as scene
+  annotations), ``station_label_fraction`` / ``station_label_names`` /
+  ``max_stations`` (thin labels or name a subset without hiding markers),
+  and ``volume_smoothing`` -- opt-in structure smoothing of the block /
+  iso-surface / anomaly volume (finer render lattice + Gaussian),
+  ``0.0`` (unchanged) by default. New "Smoothing" panel; the
+  "Stations (3-D)" panel gains the label controls.
+* |New| **``SafeRotatingFileHandler``** -- swallows a failed log rollover
+  instead of crashing logging; used by the bundled logging config.
 
 Fixed
 ~~~~~
@@ -108,10 +181,48 @@ Fixed
   ``"1"`` in every prior 3-D run -- a likely root cause of an earlier
   stuck-optimizer run. Both writers now use ``%.6E``, always including a
   literal ``.``.
+* |Fix| **Map View 3-D resistivity filter recoloured instead of masking**
+  -- selecting a resistivity band left the whole fence / depth-slice
+  panel visible in altered colours (the smoothing spline refilled the
+  mask). In-range cells keep their exact hue; out-of-range cells become
+  real holes; the colour scale is unchanged.
+* |Fix| **Map View 3-D block and iso-surface rendered nothing** --
+  ``go.Volume``/``go.Isosurface`` were handed the topography drape's
+  ``NaN`` cells and an unclamped iso window. Both now render under
+  topography and any filter; a resistivity band is drawn as one closed
+  iso-surface body, not a whole-model volume tinted by it.
+* |Fix| **Map View 3-D depth slices** -- ghost all-``NaN`` slices at
+  depths the model never sampled, a colour scale that re-graduated per
+  slice, ``n_slices=1`` cutting the window floor, and a resistivity
+  filter that bridged across out-of-band layers. Slices now stay inside
+  the real depth extent, a single slice cuts the window middle, the
+  colour scale is fixed to the whole model, and the filter is applied at
+  the interpolated slice depth.
+* |Fix| **Map View 3-D station markers/labels** -- block/iso markers
+  drifted outside the block footprint; rotated labels overlapped the
+  marker glyph. Fixed.
+* |Fix| **Surfer-style contour overlays carried an opaque white
+  background** -- ``build_geo_contour_image`` rasterised onto a white
+  Matplotlib figure, so the "transparent" PNG hid the basemap outside the
+  contoured hull. Now genuinely transparent; the 2-D station map also
+  drops its solid plot background.
+* |Fix| **``pycsamt-mapview`` flooded the console with rotating-log
+  errors on Windows** -- the rotating file handlers sat on the root
+  logger, so werkzeug per-request logging forced an ``infos.log``
+  rollover on nearly every request and Windows refused the rename. The
+  ``werkzeug`` logger is pinned at ``WARNING`` (no propagation) and
+  ``SafeRotatingFileHandler`` skips a failed rollover.
 
 Docs & tooling
 ~~~~~~~~~~~~~~
 
+* |Docs| **PCBH format guide and public contract** --
+  :doc:`/user_guide/geology/pcbh_format` explains the format architecture,
+  scientific conventions, Python and Borehole Builder workflows, CSV import,
+  legacy adapters, PCSF alignment, and derived exports. The checked-in schema,
+  canonical fixture, independent-reader guide, governance/extension registry,
+  interoperability matrix, fuzz tests, and repeatable 1,000-hole benchmark
+  complete the pre-1.0 publication gate.
 * |Docs| **``user_guide/models/pcsf_format.rst``** -- new page covering PCSF's four
   geometry kinds, converting a real Occam2D/ModEM/MARE2DEM result with real
   captured output, multiline/topography construction, and the

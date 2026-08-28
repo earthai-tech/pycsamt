@@ -133,6 +133,9 @@ metadata_json                      dataset[str], optional  JSON blob
 
 history/                           optional
     <key>                        dataset[float64]  e.g. "rms", "lambda", per iteration
+
+boreholes/                         optional  (attrs: kind = "pcbh", version)
+    association_json              dataset[str]  embedded/reference descriptor
 ```
 
 `survey_json`/`metadata_json` are UTF-8 JSON strings (via
@@ -141,6 +144,20 @@ free-form survey metadata (from `pycsamt.metadata`'s `SurveyMeta`,
 `BBox`, `ProvenanceMeta`) and any adapter-specific extras
 round-trippable without PCSF having to mirror every field of those
 classes as its own typed schema.
+
+### 3.1 PCBH borehole association
+
+The optional ``boreholes`` group associates observed/interpreted borehole
+knowledge without merging it into the inversion model. Its JSON descriptor
+contains ``embedded`` (a canonical PCBH JSON object), ``reference`` (a URI and
+lowercase SHA-256), or both. When both are present, their checksums MUST match.
+Readers that do not implement PCBH may ignore this optional group.
+
+PCBH uses elevation positive upward; PCSF grid ``z`` uses depth positive
+downward. Alignment MUST transform the horizontal CRS, subtract the PCSF grid
+origin, undo ``rotation_deg``, and convert elevation to depth relative to the
+grid origin. An unknown or incompatible vertical datum MUST require an
+explicit vertical offset. It must never be silently assumed compatible.
 
 ### Compression
 

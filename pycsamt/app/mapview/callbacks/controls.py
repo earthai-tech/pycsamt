@@ -37,6 +37,80 @@ def register_controls(app) -> None:
     _register_group_visibility(app)
     _register_depth_presets(app)
     _register_rho_presets(app)
+    _register_map_overlay(app)
+
+
+_EDI_OVERLAYS = [
+    {"label": "Station index", "value": "index"},
+    {"label": "Elevation", "value": "elevation"},
+    {"label": "App. resistivity", "value": "rho"},
+    {"label": "Phase", "value": "phase"},
+    {"label": "Skin depth", "value": "skin_depth"},
+]
+_INV_OVERLAYS = [
+    {"label": "Resistivity @ depth", "value": "depth_rho"},
+    {"label": "Station index", "value": "index"},
+    {"label": "Elevation", "value": "elevation"},
+]
+
+
+def _register_map_overlay(app) -> None:
+    """Swap the "Colour by" options for inversion surveys and drive the
+    slice-depth slider from the model's real z-extent."""
+
+    @app.callback(
+        Output(IDs.CTL_OVERLAY, "options"),
+        Output(IDs.CTL_OVERLAY, "value"),
+        Output(IDs.CTL_MAP_DEPTH, "min"),
+        Output(IDs.CTL_MAP_DEPTH, "max"),
+        Output(IDs.CTL_MAP_DEPTH, "step"),
+        Output(IDs.CTL_MAP_DEPTH, "value"),
+        Output(IDs.CTL_MAP_DEPTH, "marks"),
+        Input(IDs.STORE_DATA, "data"),
+        State(IDs.CTL_OVERLAY, "value"),
+        State(IDs.CTL_MAP_DEPTH, "value"),
+        prevent_initial_call=True,
+    )
+    def sync(store, cur_overlay, cur_depth):
+        store = store or {}
+        is_inv = bool(store.get("is_inversion"))
+        opts = _INV_OVERLAYS if is_inv else _EDI_OVERLAYS
+        valid = {o["value"] for o in opts}
+        value = cur_overlay if cur_overlay in valid else opts[0]["value"]
+
+        dr = store.get("depth_range")
+        if dr and len(dr) == 2:
+            lo, hi = float(dr[0]), float(dr[1])
+        else:
+            lo, hi = 0.0, 1000.0
+        span = max(hi - lo, 1.0)
+        step = _nice_step(span / 40.0)
+        depth = (
+            cur_depth
+            if cur_depth is not None and lo <= cur_depth <= hi
+            else lo + span * 0.15
+        )
+        marks = {
+            int(round(lo)): f"{lo:.0f}",
+            int(round(lo + span / 2)): f"{lo + span / 2:.0f}",
+            int(round(hi)): f"{hi:.0f}",
+        }
+        return (
+            opts,
+            value,
+            round(lo),
+            round(hi),
+            step,
+            round(depth),
+            marks,
+        )
+
+
+def _nice_step(raw: float) -> float:
+    for s in (1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500):
+        if raw <= s:
+            return float(s)
+    return 1000.0
 
 
 def _register_depth_presets(app) -> None:
@@ -91,6 +165,27 @@ def _register_group_visibility(app) -> None:
         Input(IDs.STORE_VIEW, "data"),
         prevent_initial_call=False,
     )
+    # Frequency slider vs. slice-depth slider, by "Colour by" choice.
+    app.clientside_callback(
+        """
+        function(overlay, depth) {
+            var isDepth = overlay === 'depth_rho';
+            var show = {}, hide = {display:'none'};
+            var lbl = (depth == null) ? '\\u2014' : (Math.round(depth) + ' m');
+            return [
+                isDepth ? hide : show,
+                isDepth ? show : hide,
+                lbl
+            ];
+        }
+        """,
+        Output(IDs.GRP_MAP_FREQ, "style"),
+        Output(IDs.GRP_MAP_DEPTH, "style"),
+        Output(IDs.CTL_MAP_DEPTH_LABEL, "children"),
+        Input(IDs.CTL_OVERLAY, "value"),
+        Input(IDs.CTL_MAP_DEPTH, "value"),
+        prevent_initial_call=False,
+    )
 
 
 def _as_fraction(value) -> float:
@@ -99,6 +194,13 @@ def _as_fraction(value) -> float:
         return min(max(float(value), 0.0), 1.0)
     except (TypeError, ValueError):
         return 1.0
+
+
+def _as_float(value, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _split_names(text):
@@ -186,6 +288,8 @@ def _register_gather(app) -> None:
         Input(IDs.CTL_MARKER_SIZE, "value"),
         Input(IDs.CTL_OPACITY_MAP, "value"),
         Input(IDs.CTL_PROFILES, "value"),
+        Input(IDs.CTL_MAP_STATIONS, "value"),
+        Input(IDs.CTL_MAP_DEPTH, "value"),
         Input(IDs.CTL_CRS_MODE, "value"),
         Input(IDs.CTL_UTM_ZONE, "value"),
         Input(IDs.CTL_UTM_HEM, "value"),
@@ -198,6 +302,7 @@ def _register_gather(app) -> None:
         Input(IDs.CTL_DEPTH_UNIT, "value"),
         Input(IDs.CTL_SMOOTH, "value"),
         Input(IDs.CTL_SECTION_RES, "value"),
+        Input(IDs.CTL_VOL_SMOOTH, "value"),
         State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
@@ -241,6 +346,8 @@ def _register_gather(app) -> None:
         marker_size,
         map_opacity,
         profiles,
+        map_stations,
+        map_depth,
         crs_mode,
         utm_zone,
         utm_hem,
@@ -253,6 +360,7 @@ def _register_gather(app) -> None:
         depth_unit,
         smooth_sections,
         section_res,
+        vol_smooth,
         store,
     ):
         freqs = (store or {}).get("frequencies", [])
@@ -303,6 +411,10 @@ def _register_gather(app) -> None:
             "marker_size": marker_size if marker_size else 10,
             "map_opacity": map_opacity if map_opacity else 92,
             "profiles": bool(profiles),
+            "map_stations": bool(map_stations),
+            "map_depth": (
+                float(map_depth) if map_depth is not None else None
+            ),
             "crs_mode": crs_mode or "geo",
             "utm_zone": utm_zone,
             "utm_hem": utm_hem or "N",
@@ -317,5 +429,6 @@ def _register_gather(app) -> None:
             "depth_unit": depth_unit or "m",
             "smooth_sections": bool(smooth_sections),
             "section_res": int(section_res) if section_res else 100,
+            "volume_smoothing": _as_float(vol_smooth, 0.0),
         }
         return controls, _fmt_freq(freq)

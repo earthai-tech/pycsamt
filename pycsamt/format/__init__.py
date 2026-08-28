@@ -26,7 +26,26 @@ right after ``import pycsamt.format``, not only via an explicit
   likewise re-exported here.
 """
 
-from . import adapters
+from . import adapters, borehole
+from .borehole import (
+    align_pcbh_to_pcsf,
+    borehole_from_las,
+    boreholes_from_csv,
+    boreholes_from_csv_directory,
+    build_render_model,
+    desurvey,
+    embed_pcbh,
+    extract_pcbh,
+    read_pcbh,
+    reference_pcbh,
+    write_csv_directory,
+    write_geojson,
+    write_gltf,
+    write_las_subset,
+    write_pcbh,
+    write_vtp,
+)
+from .detect import SourceKind, describe_source, detect_source
 from .io import read_pcsf, write_pcsf
 from .multiline import (
     build_multiline_pcsf,
@@ -37,14 +56,6 @@ from .multiline import (
 from .pointcloud import PointCloud, pcsf_to_point_cloud
 from .provenance import ModelProvenance, compute_checkpoint_hash
 from .regrid import mesh_to_grid2d
-from .text import (
-    peek_kind,
-    pcsf_to_pcsm,
-    pcsm_to_pcsf,
-    read_pcsf_or_pcsm,
-    read_pcsm,
-    write_pcsm,
-)
 from .schema import (
     DERIVATION_METHODS,
     GEOMETRY_KINDS,
@@ -62,6 +73,14 @@ from .schema import (
     TopographyPerStation,
     TopographyRaster,
     UnstructuredMeshGeometry,
+)
+from .text import (
+    pcsf_to_pcsm,
+    pcsm_to_pcsf,
+    peek_kind,
+    read_pcsf_or_pcsm,
+    read_pcsm,
+    write_pcsm,
 )
 from .topo_source import (
     TopoAttribution,
@@ -81,6 +100,26 @@ from .topography import (
 
 __all__ = [
     "adapters",
+    "borehole",
+    "read_pcbh",
+    "write_pcbh",
+    "desurvey",
+    "boreholes_from_csv",
+    "boreholes_from_csv_directory",
+    "write_csv_directory",
+    "borehole_from_las",
+    "write_las_subset",
+    "build_render_model",
+    "embed_pcbh",
+    "reference_pcbh",
+    "extract_pcbh",
+    "align_pcbh_to_pcsf",
+    "write_geojson",
+    "write_vtp",
+    "write_gltf",
+    "SourceKind",
+    "detect_source",
+    "describe_source",
     "PCSF_VERSION",
     "RESISTIVITY_UNIT",
     "GEOMETRY_KINDS",

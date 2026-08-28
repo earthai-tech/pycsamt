@@ -1,0 +1,14 @@
+{
+  "pcbh_version": "0.1.0",
+  "document_id": "example:invalid-crs",
+  "created_at": "2026-08-28T12:00:00Z",
+  "created_by": "pycsamt test fixture",
+  "crs": {"horizontal": "", "vertical": "unknown", "axis_order": "latlon", "coordinate_unit": "m"},
+  "units": {"depth": "m", "diameter": "m", "angle": "deg", "resistivity": "ohm.m"},
+  "conventions": {"depth_reference": "collar", "z_positive": "up", "azimuth_direction": "clockwise", "inclination_reference": "vertical_down"},
+  "boreholes": [{
+    "id": "BAD-CRS", "name": "BAD-CRS", "kind": "unknown", "status": "unknown",
+    "collar": {"x": 0, "y": 0, "z": 0}, "total_depth_md": 10,
+    "trajectory": {"method": "vertical", "north_reference": "unknown", "desurvey_method": "minimum_curvature", "stations": []}
+  }]
+}

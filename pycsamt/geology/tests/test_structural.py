@@ -443,3 +443,55 @@ def test_from_csv_raises_on_missing_header(tmp_path):
     empty_csv.write_text("")
     with pytest.raises(ValueError, match="no header"):
         StructuralModel.from_csv(faults_path=empty_csv)
+
+
+def test_from_csv_preserves_all_optional_values(tmp_path):
+    planar_csv = tmp_path / "planar.csv"
+    planar_csv.write_text(
+        "x,kind,strike_deg,dip_deg,dip_direction_deg,z,station,confidence,notes\n"
+        "1,bedding,0,20,90,3,ST01,0.8,outcrop\n"
+    )
+    linear_csv = tmp_path / "linear.csv"
+    linear_csv.write_text(
+        "x,kind,trend_deg,plunge_deg,z,station,confidence,notes\n"
+        "2,lineation,180,10,4,ST02,0.7,measured\n"
+    )
+    faults_csv = tmp_path / "faults.csv"
+    faults_csv.write_text(
+        "x,dip_deg,downthrown_side,sense,throw_m,strike_deg,z_top,confidence,evidence,notes\n"
+        "3,60,left,normal,5,370,6,0.6,offset,mapped\n"
+    )
+
+    model = StructuralModel.from_csv(
+        planar_path=planar_csv, linear_path=linear_csv, faults_path=faults_csv
+    )
+    assert (model.planar[0].z, model.planar[0].station) == (3.0, "ST01")
+    assert (model.linear[0].z, model.linear[0].station) == (4.0, "ST02")
+    fault = model.faults[0]
+    assert (fault.strike_deg, fault.z_top, fault.confidence) == (
+        10.0,
+        6.0,
+        0.6,
+    )
+    assert (fault.evidence, fault.notes) == ("offset", "mapped")
+
+
+def test_invalid_optional_float_uses_field_default(tmp_path):
+    linear_csv = tmp_path / "linear.csv"
+    linear_csv.write_text(
+        "x,kind,trend_deg,plunge_deg,confidence\n"
+        "2,lineation,180,10,not-a-number\n"
+    )
+    model = StructuralModel.from_csv(linear_path=linear_csv)
+    assert model.linear[0].confidence == 1.0
+
+
+@pytest.mark.parametrize("kind", ["planar", "linear"])
+def test_from_csv_raises_on_missing_header_for_each_measurement(
+    tmp_path, kind
+):
+    empty_csv = tmp_path / f"{kind}.csv"
+    empty_csv.write_text("")
+    kwargs = {f"{kind}_path": empty_csv}
+    with pytest.raises(ValueError, match="no header"):
+        StructuralModel.from_csv(**kwargs)

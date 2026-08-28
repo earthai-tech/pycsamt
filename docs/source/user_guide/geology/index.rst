@@ -26,4 +26,5 @@ the complete callable reference, see :doc:`../../api/geology`.
    concepts
    rock_database
    borehole
+   pcbh_format
    structural

@@ -378,6 +378,18 @@ def write_pcsf(model: PCSFModel, path: str | PathLike) -> Path:
         if model.metadata:
             _write_json(fh, "metadata_json", model.metadata)
 
+        if model.boreholes is not None:
+            from .borehole.pcsf import association_to_dict
+
+            boreholes = fh.create_group("boreholes")
+            boreholes.attrs["kind"] = "pcbh"
+            boreholes.attrs["version"] = "0.1.0"
+            _write_json(
+                boreholes,
+                "association_json",
+                association_to_dict(model.boreholes),
+            )
+
     return path
 
 
@@ -472,6 +484,14 @@ def read_pcsf(path: str | PathLike) -> PCSFModel:
             hist_group = fh["history"]
             history = {key: _read_arr(hist_group, key) for key in hist_group}
 
+        boreholes = None
+        if "boreholes" in fh:
+            from .borehole.pcsf import association_from_dict
+
+            boreholes = association_from_dict(
+                _read_json(fh["boreholes"], "association_json")
+            )
+
         model = PCSFModel(
             geometry=geometry,
             resistivity=_read_arr(model_group, "resistivity"),
@@ -495,6 +515,7 @@ def read_pcsf(path: str | PathLike) -> PCSFModel:
             crs=(str(fh.attrs["crs"]) if "crs" in fh.attrs else None),
             description=_attr_str(fh.attrs, "description"),
             metadata=_read_json(fh, "metadata_json"),
+            boreholes=boreholes,
         )
 
     model.validate()

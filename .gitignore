@@ -545,6 +545,7 @@ AI-INVERSION-IMPLEMENTATION-PLAN.md
 /NEW-SUBPACKAGE-AND-MODULE-DEVELOPMENT-GUIDELINES.md
 /PYCSAMT-EMTF-XML-AIRBONE-IMPLEMENTATION-PLAN.md
 /PYCSAMT-PCSF-INVERSION-FORMAT-PLAN.md
+/PYCSAMT-PCBH-BOREHOLE-FORMAT-PLAN.md
 
 # EMTF FCU v4.1 reference implementation (Fortran) — vendored locally as a
 # behavioral oracle for pycsamt.emtf development, not shipped with the

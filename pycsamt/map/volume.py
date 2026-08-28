@@ -228,6 +228,7 @@ def _edi_profile_grids(
         median_rho = np.nanmedian(rho, axis=1)
         depth = 503.0 * np.sqrt(median_rho * periods)
         depth = np.where(np.isfinite(depth), depth, periods)
+        value_full = values  # before any depth-range clip -- see below
         if options.depth_range:
             lo, hi = options.depth_range
             keep = (depth >= lo) & (depth <= hi)
@@ -249,6 +250,10 @@ def _edi_profile_grids(
             "period": periods,
             "rho": rho,
             "value": values,
+            # Full (pre depth-clip) values so the colour scale stays put
+            # while the user scrubs the depth window / slice depth --
+            # same principle as ignoring rho_range for cmin/cmax.
+            "value_full": value_full,
             "elev": np.array(
                 [station_elev.get(str(s), np.nan) for s in stations],
                 dtype=float,
@@ -297,6 +302,7 @@ def _inversion_profile_grids(
         z = np.asarray(section["z"], dtype=float)
         if stations.size == 0 or rho.size == 0:
             continue
+        rho_full = rho  # before any depth-range clip
         if options.depth_range:
             lo, hi = options.depth_range
             keep = (z >= lo) & (z <= hi)
@@ -320,6 +326,7 @@ def _inversion_profile_grids(
             "period": np.full_like(z, np.nan),
             "rho": rho,
             "value": rho,
+            "value_full": rho_full,
             "elev": elev,
             "quantity": np.array([quantity], dtype=object),
             "stations": stations,
@@ -561,6 +568,18 @@ def _volume_point_cloud(profiles, options):
             & (rho_vol <= iso_hi)
         )
         value = np.where(in_band, rho_vol, sentinel)
+        # Structure smoothing: feather the sentinel <-> in-band cliff so
+        # go.Isosurface cuts a rounded envelope, not a voxel staircase.
+        # (Non-banded block/iso already round off from the denser
+        # lattice + grid blur in :func:`_dense_volume_grid`.)
+        _, _, _, sigma_cells = _volume_smoothing_params(
+            float(getattr(options, "volume_smoothing", 0.0) or 0.0)
+        )
+        if sigma_cells > 0:
+            value = _feather_volume(
+                value, sentinel,
+                _axis_sigma(value.shape, sigma_cells + 0.6),
+            )
     else:
         value = np.where(np.isfinite(rho_vol), rho_vol, sentinel)
     return (
@@ -707,7 +726,10 @@ def _depth_figure(profiles, options, colors):
         for i in range(len(names))
     }
 
-    for depth in depths:
+    drawn_any = False
+    # Deepest first so the shallower slices render on top (the usual
+    # oblique / from-above viewing angle).
+    for depth in sorted(depths, reverse=True):
         x_rows = []
         y_rows = []
         z_rows = []
@@ -733,23 +755,38 @@ def _depth_figure(profiles, options, colors):
             z_rows.append(_pad_row(z, width))
             color = _color_values(values, options)
             val_rows.append(_pad_row(color, width))
+        color_grid = np.vstack(val_rows)
+        if not np.isfinite(color_grid).any():
+            # This depth is outside every line's sampled range -- an
+            # all-NaN ghost surface, skip it.
+            continue
         fig.add_trace(
             go.Surface(
                 x=np.vstack(x_rows),
                 y=np.vstack(y_rows),
                 z=np.vstack(z_rows),
-                surfacecolor=np.vstack(val_rows),
+                surfacecolor=color_grid,
                 colorscale=to_plotly_cmap(options.cmap),
                 cmin=cmin,
                 cmax=cmax,
                 opacity=float(options.opacity),
-                showscale=True,
+                showscale=not drawn_any,
                 colorbar=dict(
                     title=dict(text=_colorbar_title(options), side="right")
                 ),
                 contours=_surface_contours(options),
+                name=f"{depth:.0f} m",
+                hovertemplate=(
+                    f"depth {depth:.0f} m<br>"
+                    "%{surfacecolor:.2f}<extra></extra>"
+                ),
             )
         )
+        drawn_any = True
+    if not drawn_any:
+        _annotate_3d(fig, _VOLUME_EMPTY_MSG, colors)
+        _style_3d(fig, options, colors)
+        return fig
     if options.show_terrain and options.topography:
         for i in stack_order:
             name = names[i]
@@ -970,7 +1007,9 @@ def _full_value_crange(profiles, options) -> tuple[float | None, float | None]:
         return cmin, cmax
     finite_chunks = []
     for grid in profiles.values():
-        raw = np.asarray(grid["value"], dtype=float)
+        # Prefer the pre-depth-clip values (``value_full``) so scrubbing
+        # the depth window / slice depth never rescales the colourbar.
+        raw = np.asarray(grid.get("value_full", grid["value"]), dtype=float)
         colored = _color_values(raw, options)
         finite = colored[np.isfinite(colored)]
         if finite.size:
@@ -1002,25 +1041,58 @@ def _elev_for(grid, options):
     return np.where(np.isfinite(elev), elev, 0.0)
 
 
-def _values_at_depth(grid, depth, options):
-    z = np.asarray(grid["z"], dtype=float)
-    values = _filtered_values(grid, options)
-    order = np.argsort(z)
-    z = z[order]
-    values = values[order, :]
-    out = np.empty(values.shape[1], dtype=float)
-    for col in range(values.shape[1]):
-        good = np.isfinite(z) & np.isfinite(values[:, col])
-        if good.sum() == 0:
-            out[col] = np.nan
-            continue
-        out[col] = np.interp(
+def _depth_interp_column(z, col_values, depth):
+    """Interpolate one station column at ``depth``; NaN outside its
+    sampled range or when it has < 1 finite sample."""
+    good = np.isfinite(z) & np.isfinite(col_values)
+    if not good.any():
+        return np.nan
+    return float(
+        np.interp(
             float(depth),
             z[good],
-            values[good, col],
+            col_values[good],
             left=np.nan,
             right=np.nan,
         )
+    )
+
+
+def _values_at_depth(grid, depth, options):
+    """Resistivity (or phase) on a horizontal slice at ``depth``.
+
+    The resistivity-range filter is applied *after* the depth
+    interpolation, against the resistivity actually interpolated at
+    that depth -- not before it. Filtering first (NaN-ing whole cells)
+    let ``np.interp`` bridge across an out-of-band layer and paint the
+    slice a solid colour where it should be masked.
+    """
+    z = np.asarray(grid["z"], dtype=float)
+    values = np.asarray(grid["value"], dtype=float)
+    rho = np.asarray(grid["rho"], dtype=float)
+    order = np.argsort(z)
+    z = z[order]
+    values = values[order, :]
+    rho = rho[order, :]
+
+    out = np.array(
+        [
+            _depth_interp_column(z, values[:, col], depth)
+            for col in range(values.shape[1])
+        ],
+        dtype=float,
+    )
+    if options.rho_range:
+        lo, hi = options.rho_range
+        rho_here = np.array(
+            [
+                _depth_interp_column(z, rho[:, col], depth)
+                for col in range(rho.shape[1])
+            ],
+            dtype=float,
+        )
+        drop = ~np.isfinite(rho_here) | (rho_here < lo) | (rho_here > hi)
+        out[drop] = np.nan
     return out
 
 
@@ -1405,6 +1477,132 @@ def _pad_row(arr, width):
     return out
 
 
+# Structure smoothing ("Light / Medium / Strong / Very strong" in the
+# mapview). Each level: (a) rebuilds the block/iso volume on a lattice
+# ``factor`` times denser per axis (capped per axis, and by a global
+# cell budget) so Plotly's marching-cubes has the resolution to draw a
+# rounded surface -- this is what actually removes the facets; (b) runs
+# a NaN-aware Gaussian of ``sigma_cells`` *refined cells* (small on
+# purpose -- a wide blur on the already-dense lattice erodes thin bodies
+# away entirely); and (c) -- see :func:`_feather_volume` -- ramps the
+# in/out-of-band cliff so a resistivity-band body reads as one smooth
+# shape. Strength 0 (the default) skips all of it. Earlier revisions
+# blurred the raw *sparse* grid with the preset value straight as a
+# sigma, which only blobbed bodies without ever rounding the surfaces.
+_VOLUME_SMOOTHING_PRESETS = (
+    # (strength_threshold, refine_factor, axis_cap, y_cap, sigma_cells)
+    (3.5, 3.4, 170, 105, 3.0),  # very strong
+    (2.5, 3.0, 140, 92, 2.2),   # strong
+    (1.5, 2.5, 118, 82, 1.5),   # medium
+    (0.0, 2.0, 92, 66, 0.9),    # light (any strength > 0)
+)
+# go.Volume / go.Isosurface run marching-cubes in the browser; past
+# ~0.5M lattice cells the render janks badly or drops the trace
+# entirely (which is what "Very strong makes the block vanish" was).
+# Keep the refined lattice under this budget -- it is still ~10x the
+# native station/depth grid, plenty for a facet-free surface once the
+# Gaussian + envelope feather are applied. See the cube-root downscale.
+_VOLUME_CELL_BUDGET = 500_000
+
+
+def _volume_smoothing_params(strength):
+    """Resolve the UI structure-smoothing strength (0 / 0.8 / 1.5 / 2.5
+    / 4.0) to ``(refine_factor, axis_cap, y_cap, sigma_cells)``.
+
+    ``strength <= 0`` -> ``(1.0, 0, 0, 0.0)``: no refinement, no blur --
+    the default, untouched volume. Higher strength = denser lattice
+    (the main lever) plus a slightly wider Gaussian.
+    """
+    if not strength or strength <= 0:
+        return 1.0, 0, 0, 0.0
+    s = float(strength)
+    for thresh, factor, cap, y_cap, sigma_cells in _VOLUME_SMOOTHING_PRESETS:
+        if s >= thresh:
+            return factor, cap, y_cap, sigma_cells
+    return _VOLUME_SMOOTHING_PRESETS[-1][1:]
+
+
+def _axis_sigma(shape, sigma_cells):
+    """Per-axis Gaussian sigma for a volume of ``shape``: ``sigma_cells``
+    on every axis that has real extent (>= 5 samples), 0 on a thin axis
+    (e.g. a 1-line survey's cross-line axis) so the blur never collapses
+    it. Returns ``None`` when there is nothing to blur."""
+    if not sigma_cells or sigma_cells <= 0:
+        return None
+    sig = tuple(float(sigma_cells) if n >= 5 else 0.0 for n in shape)
+    return sig if any(s > 0 for s in sig) else None
+
+
+def _smooth_volume(rho_vol, sigma):
+    """NaN-aware Gaussian blur of the dense resistivity volume.
+
+    ``sigma`` may be a scalar or a per-axis sequence; ``None`` / all
+    non-positive returns the volume untouched (the default). The blur
+    is normalised by a matching blur of the finite-mask so no-data
+    cells don't drag values toward zero. Cells where the blurred mask
+    is below ``0.4`` (i.e. mostly reaching into no-data) are dropped, so
+    the smoothed body keeps essentially the original footprint but its
+    boundary rounds off by ~one sigma instead of stair-stepping.
+    """
+    sig = np.atleast_1d(np.asarray(sigma, dtype=float)) if sigma is not None \
+        else np.array([0.0])
+    if sig.size == 0 or not np.any(sig > 0):
+        return rho_vol
+    try:
+        from scipy.ndimage import gaussian_filter
+    except Exception:  # noqa: BLE001 - scipy.ndimage is part of scipy
+        return rho_vol
+    finite = np.isfinite(rho_vol)
+    if not finite.any():
+        return rho_vol
+    sig_use = float(sig[0]) if sig.size == 1 else tuple(sig.tolist())
+    filled = np.where(finite, rho_vol, 0.0)
+    num = gaussian_filter(filled, sigma=sig_use, mode="nearest")
+    den = gaussian_filter(finite.astype(float), sigma=sig_use, mode="nearest")
+    out = np.divide(num, den, out=np.full_like(num, np.nan), where=den > 1e-6)
+    out[den < 0.3] = np.nan  # keep ~the original footprint, edge rounded
+    if not np.isfinite(out).any():
+        # A wide blur on a thin footprint can erase everything -- never
+        # let smoothing turn the whole block into no-data.
+        return rho_vol
+    return out
+
+
+def _feather_volume(value, sentinel, sigma):
+    """Ramp the cliff between the ``sentinel`` fill and the live cells so
+    ``go.Isosurface`` cuts a rounded envelope instead of a voxel
+    staircase.
+
+    Only the sentinel cells are moved: they are set to a Gaussian-
+    blurred field that rises from a moderate floor up toward the band
+    near the boundary. **Live cells keep their exact value**, so the
+    body can never be blurred out of existence and hues are unchanged.
+
+    ``sigma`` is a per-axis sequence (or scalar). Returns ``value``
+    untouched when SciPy is missing or ``sigma`` is empty.
+    """
+    sig = np.atleast_1d(np.asarray(sigma, dtype=float)) if sigma is not None \
+        else np.array([0.0])
+    if sig.size == 0 or not np.any(sig > 0):
+        return value
+    try:
+        from scipy.ndimage import gaussian_filter
+    except Exception:  # noqa: BLE001
+        return value
+    sig_use = float(sig[0]) if sig.size == 1 else tuple(sig.tolist())
+    live_mask = value > sentinel
+    live = value[live_mask]
+    if live.size == 0:
+        return value
+    # Clamp the sentinel to a moderate distance below the live range
+    # first: blurring against an extreme outlier makes a needle-thin
+    # ramp (still a hard edge). A gentle offset gives a real ramp.
+    floor = float(live.min()) - max(float(np.ptp(live)), 1.0) * 0.5
+    clamped = np.where(live_mask, value, floor)
+    ramp = gaussian_filter(clamped, sigma=sig_use, mode="nearest")
+    return np.where(live_mask, value, ramp)
+
+
 def _dense_volume_grid(profiles, options):
     """Build a regular ``(x, y, z)`` grid + resistivity volume for
     ``go.Volume``/``go.Isosurface``.
@@ -1443,6 +1641,34 @@ def _dense_volume_grid(profiles, options):
     z_ref = np.unique(np.asarray(profiles[ref_name]["z"], dtype=float))
     if x_ref.size < 2 or z_ref.size < 2:
         return None
+
+    # Structure smoothing: when it's on, reconstruct every line onto a
+    # denser shared (x, z) lattice first so the block/iso surfaces round
+    # off instead of faceting on the raw station/depth spacing.
+    refine, axis_cap, y_cap, sigma_cells = _volume_smoothing_params(
+        float(getattr(options, "volume_smoothing", 0.0) or 0.0)
+    )
+    n_y_target = None
+    if refine > 1:
+        n_x_t = min(axis_cap, max(x_ref.size, round(x_ref.size * refine)))
+        n_z_t = min(axis_cap, max(z_ref.size, round(z_ref.size * refine)))
+        n_y_t = (
+            min(y_cap, max(20, n_lines * 6) * 2) if n_lines >= 2 else 1
+        )
+        # Keep the refined lattice inside a global cell budget so a big
+        # survey at "Very strong" stays renderable -- shrink all three
+        # target counts by the cube-root of the overshoot, but never
+        # below the native resolution (coarsening would lose structure).
+        scale = (_VOLUME_CELL_BUDGET / max(n_x_t * n_y_t * n_z_t, 1)) ** (1 / 3)
+        if scale < 1.0:
+            n_x_t = max(int(n_x_t * scale), x_ref.size)
+            n_z_t = max(int(n_z_t * scale), z_ref.size)
+            n_y_t = max(int(n_y_t * scale), min(n_y_t, 20))
+        if n_x_t > x_ref.size:
+            x_ref = np.linspace(float(x_ref.min()), float(x_ref.max()), n_x_t)
+        if n_z_t > z_ref.size:
+            z_ref = np.linspace(float(z_ref.min()), float(z_ref.max()), n_z_t)
+        n_y_target = n_y_t
 
     rho_vol = np.full((x_ref.size, n_lines, z_ref.size), np.nan, dtype=float)
     for idx, name in enumerate(names):
@@ -1484,6 +1710,12 @@ def _dense_volume_grid(profiles, options):
         order = np.argsort(y_vals)
         y_sorted = y_vals[order]
         n_y_dense = max(20, n_lines * 6)
+        if n_y_target is not None:
+            # Cross-line data is genuinely sparse (a handful of lines);
+            # densify it too, but modestly -- more than ~2x just invents
+            # structure between lines that was never measured. Use the
+            # budget-adjusted target from above (floored at one per line).
+            n_y_dense = max(n_lines, n_y_target)
         y_dense = np.linspace(y_sorted[0], y_sorted[-1], n_y_dense)
         dense = np.empty((x_ref.size, n_y_dense, z_ref.size), dtype=float)
         for ix in range(x_ref.size):
@@ -1500,6 +1732,8 @@ def _dense_volume_grid(profiles, options):
                     y_dense, y_sorted, elev_lines[ix, order]
                 )
             elev_lines = elev_dense
+
+    rho_vol = _smooth_volume(rho_vol, _axis_sigma(rho_vol.shape, sigma_cells))
 
     z_depth = -np.abs(z_ref)
     if elev_lines is not None:
@@ -1649,18 +1883,36 @@ def _colorbar_title(options) -> str:
 
 
 def _slice_depths(profiles, options):
+    """Depths (m below surface) to cut a horizontal resistivity slice at.
+
+    Always kept inside the data's real z-extent -- a slice at a depth
+    the model never sampled comes back all-NaN and renders as an empty
+    ghost surface. ``n_slices == 1`` cuts through the *middle* of the
+    requested window (so "0-200 m, 1 slice" gives the 100 m slice, not
+    the 0 m one).
+    """
     all_z = np.concatenate(
         [np.asarray(grid["z"], dtype=float) for grid in profiles.values()]
     )
     all_z = all_z[np.isfinite(all_z)]
     if all_z.size == 0:
         return np.array([0.0])
-    if options.depth_range:
-        lo, hi = options.depth_range
-    else:
-        lo = float(np.nanmin(all_z))
-        hi = float(np.nanmax(all_z))
-    return np.linspace(lo, hi, max(1, int(options.n_slices)))
+    z_lo, z_hi = float(np.nanmin(all_z)), float(np.nanmax(all_z))
+    req_lo, req_hi = (
+        (float(options.depth_range[0]), float(options.depth_range[1]))
+        if options.depth_range
+        else (z_lo, z_hi)
+    )
+    n = max(1, int(options.n_slices))
+    if n == 1:
+        # the middle of the *requested* window, clamped into real data
+        mid = 0.5 * (req_lo + req_hi)
+        return np.array([float(np.clip(mid, z_lo, z_hi))])
+    lo = max(req_lo, z_lo)
+    hi = min(req_hi, z_hi)
+    if not (hi > lo):
+        return np.array([float(np.clip(0.5 * (z_lo + z_hi), z_lo, z_hi))])
+    return np.linspace(lo, hi, n)
 
 
 def _surface_contours(options):

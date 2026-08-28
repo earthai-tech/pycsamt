@@ -60,7 +60,6 @@ try:
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
-    from rich.text import Text
 
     _RICH = True
 except ImportError:
@@ -627,7 +626,21 @@ class SitesReport:
     def _survey_stats(self) -> dict[str, Any]:
         recs = self._records
         if not recs:
-            return {"n_stations": 0}
+            return {
+                "n_stations": 0,
+                "lat_min": None,
+                "lat_max": None,
+                "lon_min": None,
+                "lon_max": None,
+                "elev_min": None,
+                "elev_max": None,
+                "freq_min_common": None,
+                "freq_max_common": None,
+                "nfreq_min": None,
+                "nfreq_max": None,
+                "comp_counts": {c: 0 for c in _COMPONENTS},
+                "tip_count": 0,
+            }
 
         lats = [r["lat"] for r in recs if r["lat"] is not None]
         lons = [r["lon"] for r in recs if r["lon"] is not None]

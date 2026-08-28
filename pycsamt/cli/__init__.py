@@ -22,6 +22,8 @@ Available commands
 ------------------
 info        Inspect EDI or EMTF XML transfer-function metadata.
 convert     Convert EDI <-> EMTF XML and legacy AVG/J inputs to EDI.
+format      Convert any solver / AI inversion result to PCSF / PCSM,
+            and inspect / validate those files.
 """
 
 from ._base import main

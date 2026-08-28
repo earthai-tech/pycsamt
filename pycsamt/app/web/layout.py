@@ -599,6 +599,13 @@ class IDs:
     # Multiline PCSF file data source (Phase 5 of the PCSF format plan)
     MAP3D_PCSF_UPLOAD = "map3d-pcsf-upload"  # dcc.Upload for a .pcsf file
     MAP3D_PCSF_UPLOAD_INFO = "map3d-pcsf-upload-info"  # upload status label
+    MAP3D_PCBH_UPLOAD = "map3d-pcbh-upload"
+    MAP3D_PCBH_UPLOAD_INFO = "map3d-pcbh-upload-info"
+    MAP3D_PCBH_STORE = "map3d-pcbh-store"
+    MAP3D_PCBH_VISIBLE = "map3d-pcbh-visible"
+    MAP3D_PCBH_LABELS = "map3d-pcbh-labels"
+    MAP3D_PCBH_FAMILY = "map3d-pcbh-family"
+    MAP3D_PCBH_OPACITY = "map3d-pcbh-opacity"
     # Station marker style (within topography/annotation controls)
     MAP3D_STA_SYMBOL = "map3d-sta-symbol"  # Plotly 3D marker symbol or "auto"
     MAP3D_STA_SIZE = "map3d-sta-size"  # marker size in px (int)
@@ -2113,6 +2120,7 @@ _NAV_ENTRIES = [
     ("inversion", "inversion", "Inversion"),
     ("interpretation", "interpret", "Interpretation"),
     ("map3d", "3d", "3D Map"),
+    ("borehole-builder", "interpret", "Borehole Builder"),
     ("inv-results", "results", "Results View"),
     ("agents", "agents", "AI Agents"),
 ]
@@ -2124,7 +2132,16 @@ _NAV_GROUPS = [
     ("Analysis", ["advanced", "tdem"]),
     ("Processing", ["pipeline"]),
     ("Modelling", ["forward", "inversion"]),
-    ("Results", ["interpretation", "map3d", "inv-results", "agents"]),
+    (
+        "Results",
+        [
+            "interpretation",
+            "map3d",
+            "borehole-builder",
+            "inv-results",
+            "agents",
+        ],
+    ),
 ]
 
 _NAV_LOOKUP = {pid: (icon, lbl) for pid, icon, lbl in _NAV_ENTRIES}
@@ -5362,6 +5379,7 @@ def layout() -> html.Div:
     from pycsamt.app.web.pages import (  # noqa: PLC0415
         advanced,
         agents_page,
+        borehole_builder,
         correction,
         forward,
         interpretation,
@@ -5383,6 +5401,7 @@ def layout() -> html.Div:
         ("inversion", inversion),
         ("interpretation", interpretation),
         ("map3d", map3d),
+        ("borehole-builder", borehole_builder),
         ("inv-results", inv_results),
         ("agents", agents_page),
     ]

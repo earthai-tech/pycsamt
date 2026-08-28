@@ -1,31 +1,46 @@
-.. _release_v2_4_1:
+.. _release_v2_5_0:
 
 -------------
-Version 2.4.1
+Version 2.5.0
 -------------
 
-pyCSAMT 2.4.1 |New| |Fix| |Docs|
+pyCSAMT 2.5.0 |New| |Fix| |Docs|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Released 2026-08-26.*
+*Released 2026-08-28.*
 
-Occam2D, ModEM 3-D, and MARE2DEM each write their own native files, and
-each one disagrees with the others about almost everything a downstream
-viewer needs to know: resistivity encoding (log10 vs. natural log vs.
-linear), geometry representation (rectilinear grids with different axis
-orders vs. an unstructured triangular mesh), and real-world station
-coordinates. This release introduces :mod:`pycsamt.format`, the pyCSAMT
-Common Subsurface Format (PCSF) -- a single, self-describing HDF5
-container any of the three backends' results convert *to*, so a viewer
-only ever needs to understand one schema. Building the three adapters
-against real bundled data surfaced and fixed two real, previously
-unnoticed bugs, one in :class:`~pycsamt.models.modem.model3d.ModEmModel3D`
-and one in the web 3-D view's topography uploader. A new user-guide page
-and a bundled conversion demo round out the release. Separately, running
-real, full-scale Occam2D and ModEM 3-D inversions against a real 128-station
-survey surfaced and fixed four more real solver-launch bugs, including a
-new :class:`~pycsamt.models.modem.forward_control.ModEmForwardControl` that
-finally lets a 3-D covariance file reach Mod3DMT at all.
+Version 2.5.0 is a major interoperability milestone built around **two
+complementary common-format families**. PCSF/PCSM standardize subsurface
+models and inversion results; PCBH standardizes the borehole observations and
+geological evidence used to constrain and interpret those models. Together
+they give pyCSAMT explicit, reusable contracts for both sides of an integrated
+3-D interpretation instead of requiring every importer, solver, and viewer to
+reconstruct scientific meaning independently.
+
+The pyCSAMT Common Subsurface Format has two lossless encodings of the same
+model: PCSF is a self-describing HDF5 container for routine interchange and
+large arrays, while PCSM is its human-readable ASCII projection. Occam2D,
+ModEM 3-D, MARE2DEM, multiline models, and generic AI/DL arrays converge on
+one geometry-aware representation with canonical linear resistivity. A
+downstream consumer therefore reads one model contract instead of branching
+on native resistivity encodings, axis orders, grid or mesh layouts, and solver
+metadata.
+
+The pyCSAMT Common Borehole Format provides the complementary human-readable
+``.pcbh.json`` contract for many water, mining, geotechnical, geothermal,
+petroleum, monitoring, or exploration boreholes. Collars, measured/deviated
+trajectories, geological intervals, structures, vocabularies, units, CRS and
+vertical reference, and provenance travel together. PCBH remains independently
+valid geological evidence, while a PCSF/PCSM model may embed or
+checksum-reference it and align it explicitly for shared 3-D display. The
+Borehole Builder, web 3-D view, and MapView all consume the same validated
+document and render contract.
+
+Implementing and exercising PCSF/PCSM against real bundled data and full-scale
+Occam2D and ModEM 3-D runs also surfaced important pre-existing model-reader,
+topography-upload, and solver-launch defects. These include a new
+:class:`~pycsamt.models.modem.forward_control.ModEmForwardControl` that finally
+allows a covariance file to reach Mod3DMT correctly.
 
 The confidence-ratio workflow also grows from a single-line profile into
 a survey-scale evaluation toolkit. New route, contour, component,
@@ -34,6 +49,57 @@ before/after views use the same station-confidence API and support both
 the ``composite`` and ``presence`` methods. Geographic plots retain real
 longitude/latitude geometry, while profile chainage is derived from the
 corrected station coordinates rather than an assumed line length.
+
+PCBH: universal borehole exchange and 3-D integration |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.format.borehole` introduces the versioned PCBH 0.1 contract and
+canonical ``.pcbh.json`` encoding. One document declares the horizontal CRS,
+vertical reference, units, depth and orientation conventions, shared
+lithology/formation dictionaries, and provenance for every contained hole.
+Each borehole has a stable ID, kind and status, spatial XYZ collar, total
+measured depth, vertical shorthand or ordered deviation survey, categorical
+interval-log families, structural observations, and namespaced extensions.
+Inclination is measured from vertical down in the range 0--180 degrees, so
+upward/re-entry paths remain representable; intervals are half-open and may
+contain honest gaps, while overlap is rejected within each categorical family.
+
+The public facade exposes :func:`~pycsamt.format.read_pcbh` and
+:func:`~pycsamt.format.write_pcbh`, dependency-free semantic validation, a
+checked-in JSON Schema and canonical fixture, deterministic minimum-curvature
+desurveying, resource limits for untrusted input, and structured diagnostics.
+Combined collar/interval CSV import supports explicit column mappings,
+bounded previews, strict or permissive rejection reports, and reusable mapping
+profiles. A manifested relational CSV projection preserves collars, surveys,
+logs, structures, checksums, CRS, and table relationships. LAS 2.0 import and
+export preserve supported depth curves and report unavoidable loss.
+
+Compatibility remains additive. Promotion from the established
+:class:`pycsamt.geology.Borehole` requires an explicit absolute collar and
+retains legacy profile chainage only as metadata; downgrade requires an
+explicit ``profile_x`` mapping and cannot silently treat collar easting as
+chainage. :func:`~pycsamt.format.embed_pcbh` and
+:func:`~pycsamt.format.reference_pcbh` associate an unchanged PCBH document
+with PCSF. :func:`~pycsamt.format.align_pcbh_to_pcsf` transforms trajectories
+into a grid3d model frame, reports inside/intersecting/outside paths, and
+requires a caller-supplied vertical offset whenever datum compatibility cannot
+be demonstrated.
+
+The shared render model supplies centerlines, colored interval segments,
+contacts, structure glyphs, material batches, selection state, and scientific
+hover values to both application front ends. MapView can load, filter, style,
+select, and export PCBH overlays alongside 3-D inversion blocks. The web
+application adds an accessible **Interpret → Borehole Builder** with project,
+collar, survey, interval, structure, water, construction, sample, and assay
+editors; CSV mapping preview; row-linked live validation; 2-D log and 3-D
+trajectory previews; browser-local recovery; canonical JSON download; and PCSF
+embedding. GeoJSON, VTP, glTF, and GLB exporters return explicit loss reports
+and never replace authoritative PCBH JSON.
+
+See :doc:`/user_guide/geology/pcbh_format` for the complete workflow and
+:doc:`/api/format` for the callable reference. PCBH stays at format version
+``0.1.0`` while the pyCSAMT package advances to 2.5.0; these version numbers
+describe different contracts and intentionally do not move together.
 
 Survey-scale confidence evaluation |New|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -70,10 +136,20 @@ where review is needed, which stations should be reviewed first, how the
 survey population is distributed, how confidence varies by line, and
 how much station/data coverage remains at a selected threshold.
 
-A new backend-neutral inversion-result format |New|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PCSF/PCSM: universal subsurface-model exchange |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:mod:`pycsamt.format` discriminates its geometry explicitly through
+PCSF and PCSM are two lossless encodings of the same validated
+:class:`~pycsamt.format.PCSFModel`; they are not competing scientific models.
+PCSF stores typed arrays, attributes, and groups in HDF5 for compact routine
+interchange and large 2-D/3-D results. PCSM projects the same model into
+UTF-8 keyword blocks for inspection, version-control diffs, annotation, and
+software that should not depend on HDF5. ``.pcsm.gz`` adds whole-file
+compression when text-schema portability matters more than direct browsing.
+Conversion in either direction reconstructs the same geometry, canonical
+resistivity, stations, topography, history, and provenance.
+
+:mod:`pycsamt.format` discriminates model geometry explicitly through
 ``geometry.kind`` rather than letting a reader infer it from array shape.
 Four kinds are supported: ``grid2d`` (Occam2D, and a DUHI-prepared result
 once folded back into an Occam2D run), ``grid3d`` (ModEM 3-D -- the first
@@ -86,6 +162,15 @@ resistivity is always linear :math:`\Omega\,\mathrm{m}` in every kind; the
 source backend's own encoding is kept alongside it, explicitly labelled,
 never assumed.
 
+Both encodings enforce the same scientific invariants. Canonical
+``model/resistivity``/``RESISTIVITY`` values are linear
+:math:`\Omega\,\mathrm{m}`; an optional source-native array remains separate
+and carries its declared ``linear``, ``log10``, or ``ln`` encoding. Grid
+coordinates, node edges, rotations, station locations, topography,
+uncertainty, sensitivity, and derivation metadata retain explicit identities.
+A multiline derived volume is labelled synthesized and is never presented as
+a native 3-D inversion.
+
 :func:`~pycsamt.format.adapters.occam2d.occam2d_to_pcsf`,
 :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf`, and
 :func:`~pycsamt.format.adapters.mare2dem.mare2dem_to_pcsf` build on each
@@ -96,6 +181,15 @@ computation instead of reimplementing it. Every second-level module of the
 new package -- ``adapters``, ``schema``, ``io``, ``multiline``,
 ``topography``, ``pointcloud`` -- is public immediately after
 ``import pycsamt.format``, not only through an explicit submodule import.
+
+:func:`~pycsamt.format.write_pcsf`, :func:`~pycsamt.format.read_pcsf`,
+:func:`~pycsamt.format.write_pcsm`, and :func:`~pycsamt.format.read_pcsm`
+provide the canonical I/O boundaries. :func:`~pycsamt.format.pcsf_to_pcsm`
+and :func:`~pycsamt.format.pcsm_to_pcsf` compose those readers and writers
+rather than maintaining a second conversion engine. Readers inspect the
+declared version and geometry kind before interpreting array shape, while the
+writers validate dimensions, finite scientific values, identifiers, and
+metadata relationships before serialization.
 
 :func:`~pycsamt.format.pointcloud.pcsf_to_point_cloud` flattens any of the
 four geometry kinds into one ``(x, y, z, log10_rho)`` point cloud, with a
@@ -111,6 +205,38 @@ depth-slice builders in :mod:`pycsamt.map.volume` render PCSF-sourced
 lines unmodified). :mod:`pycsamt.format.topography` wires a PCSF file's
 topography through the existing :mod:`pycsamt.map.topo` elevation parser
 instead of adding a third, independent one.
+
+PCSF/PCSM remain authoritative for model geometry and physical-property
+arrays. PCBH remains authoritative for borehole observations. A model may
+embed or checksum-reference PCBH, but this association preserves the two
+contracts and their provenance instead of rasterizing geology into model
+cells. See :doc:`/user_guide/models/pcsf_format` for complete HDF5 and ASCII
+layouts, real backend conversions, topography, multiline models, and
+round-trip examples.
+
+One command to reach all of it: ``pycsamt format``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``pycsamt format convert SOURCE [TARGET]`` is the CLI shortcut past the
+adapter-selection step. It calls one detector --
+:func:`pycsamt.format.detect_source`, now public alongside
+:class:`~pycsamt.format.SourceKind` -- which reads only file names,
+extensions, and a few solver signatures (never a heavy array load) and
+reports whether ``SOURCE`` is an Occam2D / ModEM 3-D / MARE2DEM working
+directory, a single signature file inside one, an AI/DL ``.npz`` /
+``.npy`` array bundle, or an existing ``.pcsf`` / ``.pcsm``. It then runs
+the matching converter: rebuilding the MARE2DEM triangulation from the
+run's own ``.poly`` PSLG, recognising ``log10`` / ``ln`` resistivity
+keys in an ``.npz`` and setting the encoding automatically, and carrying
+``--topo`` / ``--epsg`` / ``--utm-zone`` / ``--origin`` through to the
+adapter. An existing ``.pcsf`` transcodes losslessly to ``.pcsm`` (and
+back). ``pycsamt format detect`` prints the classification without
+converting -- and exits non-zero when the source is not convertible, so
+it works as a pre-flight check in a script. ``pycsamt format info``
+summarises a written file (geometry, per-array resistivity statistics,
+stations, topography, provenance, history), and ``pycsamt format
+validate`` runs a header / load / schema / write-read-compare
+round-trip check.
 
 Two real bugs found and fixed |Fix|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -223,6 +349,72 @@ field.
 All four fixes were confirmed via real solver runs, not just the test
 suite.
 
+Map View 3-D and 2-D refinements |New| |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now that a real, persisted resistivity volume can reach the viewer (PCSF
+``grid3d``, or a ModEM/MARE2DEM folder via
+:meth:`~pycsamt.map.MapView.from_inversion_results`), the Map View's
+resistivity-focused modes were reworked to behave the way an inversion
+viewer is expected to, rather than the way an apparent-resistivity
+station map does.
+
+In the **3-D view**, selecting a resistivity range now *masks* the model
+instead of recolouring it: fence and depth-slice panels open real holes
+where the resistivity is out of the selected band (the smoothing spline
+used to refill that mask before rendering), and block / iso-surface mode
+renders that band as one closed body -- ``isomin``/``isomax`` alone never
+isolate a value band, because the ``isomax`` iso-surface still wraps
+everything more resistive than it. Throughout, the colour scale stays
+pinned to the whole model, so scrubbing a filter or a slice depth never
+re-graduates the hues. Block and iso-surface mode also rendered *nothing*
+under topography until now -- ``go.Volume``/``go.Isosurface`` were being
+handed the drape's ``NaN`` cells (which break both traces) and an iso
+window that was never clamped to the data actually present. An opt-in
+"Smoothing" panel adds a structure-smoothing pass -- a finer render
+lattice plus a Gaussian -- for rounder iso-surfaces and softer anomaly
+edges, off by default. Station markers
+and their labels were also refined: labels can be rotated (drawn as
+scene annotations, which plain 3-D text cannot rotate), thinned to a
+fraction per line or a named subset without hiding any marker, and no
+longer overlap the marker glyph; block/iso markers are clipped to the
+reconstructed block footprint.
+
+Depth-slice mode in particular was made robust for real inversion
+volumes. Slices are kept inside the model's real depth extent (an
+endpoint at 0 m, or past the deepest cell, used to render as an invisible
+all-``NaN`` ghost surface); a single slice now cuts the *middle* of the
+requested window rather than its floor; and a resistivity-range filter is
+applied against the resistivity actually interpolated *at* the slice
+depth, so it can no longer bridge across an out-of-band layer and paint
+the slice solid.
+
+In the **2-D map view**, an inversion result unlocks a new "Resistivity @
+depth" colouring: :func:`~pycsamt.map.resistivity_at_depth` slices every
+loaded section at a chosen depth and the result is drawn as a
+Surfer-style filled-contour raster with isolines over the basemap, on a
+log scale and a fixed whole-model colour range, the way ResIPy / Oasis /
+Surfer present a depth slice. The frequency slider is replaced by a
+slice-depth slider bounded by the model's real z-extent
+(:func:`~pycsamt.map.inversion_depth_range`); a new "Station markers"
+switch hides the scatter overlay to leave just the slice. Building that
+raster surfaced a real bug affecting every Surfer-style contour overlay
+in the package: it was rasterised onto a white Matplotlib figure, so the
+transparent PNG actually carried an opaque white background that hid the
+basemap everywhere outside the contoured hull -- it is now genuinely
+transparent, and the 2-D station map figure drops its solid plot
+background too.
+
+Logging: ``pycsamt-mapview`` (and every pyCSAMT Dash app) flooded the
+console with ``--- Logging error --- PermissionError [WinError 32]`` on
+Windows. The rotating file handlers sat on the *root* logger, so
+werkzeug's one-line-per-request logging filled ``infos.log`` and forced a
+rollover on nearly every HTTP request, and Windows cannot rename a file
+another request thread still holds open. The ``werkzeug`` logger is now
+pinned at ``WARNING`` with no propagation, and a
+``pycsamt.log.logger.SafeRotatingFileHandler`` skips a failed rollover
+instead of raising.
+
 New user guide page and conversion demo |Docs|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -244,14 +436,24 @@ to the console.
 Added
 ~~~~~
 
-* |New| **:mod:`pycsamt.format`** -- backend-neutral PCSF inversion-result
-  format: :func:`~pycsamt.format.adapters.occam2d.occam2d_to_pcsf`,
+* |New| **PCSF/PCSM in :mod:`pycsamt.format`** -- backend-neutral
+  subsurface-model exchange with compact HDF5 and lossless human-readable
+  ASCII encodings: :func:`~pycsamt.format.adapters.occam2d.occam2d_to_pcsf`,
   :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf`,
   :func:`~pycsamt.format.adapters.mare2dem.mare2dem_to_pcsf`,
   :func:`~pycsamt.format.multiline.build_multiline_pcsf`,
   :mod:`~pycsamt.format.topography`, and
-  :func:`~pycsamt.format.pointcloud.pcsf_to_point_cloud`. See the summary
-  above for the full picture.
+  :func:`~pycsamt.format.pointcloud.pcsf_to_point_cloud`,
+  :func:`~pycsamt.format.write_pcsf`, :func:`~pycsamt.format.write_pcsm`,
+  :func:`~pycsamt.format.pcsf_to_pcsm`, and
+  :func:`~pycsamt.format.pcsm_to_pcsf`. See the summary above for the full
+  scientific and encoding contract.
+* |New| **``pycsamt format`` command group** -- ``convert`` (any
+  solver / AI result / ``.pcsf`` / ``.pcsm`` -> ``.pcsf`` / ``.pcsm``,
+  source auto-detected), ``detect``, ``info``, and ``validate``. The
+  shared detector is public as :func:`pycsamt.format.detect_source` /
+  :class:`~pycsamt.format.SourceKind`. See :doc:`/cli/format` and the
+  summary above.
 * |New| **``Pcsf3DWindow``** -- the desktop app's first 3-D/volume panel,
   rendering any ``.pcsf`` file through ``pcsf_to_point_cloud`` on a plain
   Matplotlib 3-D scatter (``View > PCSF 3D Viewer``,
@@ -282,6 +484,25 @@ Added
   alongside ``covariance``, and ``ModEmRunner.run``/``.command`` auto-write
   or reference a default one whenever ``covariance=`` is given without an
   explicit ``fwd_control=``.
+* |New| **Map View 2-D "Resistivity @ depth" for inversion surveys** --
+  :func:`pycsamt.map.resistivity_at_depth` and
+  :func:`pycsamt.map.inversion_depth_range` slice a loaded inversion
+  result at a chosen depth; the Map view draws the result as a
+  filled-contour raster with isolines over the basemap, on a fixed
+  whole-model log colour scale, with a slice-depth slider and a
+  ``StationMapOptions.show_markers`` / "Station markers" toggle.
+* |New| **Map View 3-D station-label and smoothing options** --
+  :attr:`VolumeMapOptions.station_label_angle` (rotate labels),
+  ``station_label_fraction`` / ``station_label_names`` and ``max_stations``
+  (thin labels or name a subset without hiding markers; cap markers per
+  line), and :attr:`VolumeMapOptions.volume_smoothing` -- an opt-in
+  NaN-aware Gaussian blur of the reconstructed block / iso-surface /
+  anomaly volume, ``0.0`` (unchanged behaviour) by default. Exposed
+  through the Map View "Stations (3-D)" and new "Smoothing" panels.
+* |New| **``SafeRotatingFileHandler``** --
+  :class:`pycsamt.log.logger.SafeRotatingFileHandler` swallows a failed
+  log rollover instead of crashing logging; used by the bundled logging
+  config.
 
 Fixed
 ~~~~~
@@ -325,6 +546,43 @@ Fixed
   (RMS frozen while lambda exploded to ``1e9``). Both writers now use
   ``%.6E``, which always includes a literal ``.``; new regression tests
   assert every float field parses with a decimal point present.
+* |Fix| **Map View 3-D resistivity filter recoloured instead of masking**
+  -- selecting a resistivity band left the whole fence / depth-slice
+  panel visible in altered colours; the section-smoothing spline refilled
+  the mask before rendering. In-range cells now keep their exact hue and
+  out-of-range cells become real holes, on an unchanged colour scale.
+* |Fix| **Map View 3-D block and iso-surface rendered nothing** --
+  ``go.Volume``/``go.Isosurface`` were handed the topography drape's
+  ``NaN`` cells (which break both traces) and an iso window never clamped
+  to the values present. Both now render under topography and under any
+  filter; a resistivity-band selection is drawn as one closed iso-surface
+  body of that band rather than a whole-model volume tinted by it.
+* |Fix| **Map View 3-D depth slices** -- slices at a depth the model
+  never sampled rendered as invisible all-``NaN`` ghost surfaces; the
+  colour scale re-graduated per slice; ``n_slices=1`` cut at the window
+  floor; and the resistivity filter, applied before the depth
+  interpolation, bridged across an out-of-band layer and painted the
+  slice solid. Slices are now kept inside the real depth extent, a single
+  slice cuts the window middle, the colour scale is fixed to the whole
+  model, and the filter is applied against the resistivity interpolated
+  at the slice depth.
+* |Fix| **Map View 3-D station markers and labels** -- block / iso-surface
+  markers drifted outside the reconstructed block footprint, and rotated
+  station labels ran through the marker glyph. Markers are clipped to the
+  footprint; labels are bottom-anchored clear of the glyph.
+* |Fix| **Surfer-style contour overlays carried an opaque white
+  background** -- :func:`pycsamt.map.overlays.build_geo_contour_image`
+  rasterised onto a white Matplotlib figure, so the "transparent" PNG hid
+  the basemap everywhere outside the contoured hull. It is now genuinely
+  transparent, and the 2-D station map figure drops its solid plot
+  background.
+* |Fix| **``pycsamt-mapview`` flooded the console with rotating-log
+  errors on Windows** -- the rotating file handlers were attached to the
+  *root* logger, so werkzeug's per-request logging filled ``infos.log``
+  and forced a rollover on nearly every request, and Windows cannot
+  rename a log another request thread holds open. The ``werkzeug`` logger
+  is now pinned at ``WARNING`` with no propagation, and
+  ``SafeRotatingFileHandler`` skips a failed rollover.
 
 Docs & tooling
 ~~~~~~~~~~~~~~
@@ -381,3 +639,18 @@ keyword-only ``fwd_control`` parameter; 3-D builds now also return a
 unaffected, but an exact ``set(files) == {...}``/``sorted(files) ==
 [...]`` comparison against a 3-D build's result should include
 ``"fwd_control"``.
+
+Every Map View change is additive or a fix. New
+:class:`~pycsamt.map.config.VolumeMapOptions` /
+:class:`~pycsamt.map.config.StationMapOptions` fields
+(``station_label_angle``, ``station_label_fraction``,
+``station_label_names``, ``volume_smoothing``, ``depth``, ``show_markers``)
+default to the previous behaviour -- ``volume_smoothing=0.0`` is exactly
+the old block/iso reconstruction, and ``show_markers=True`` /
+``station_label_fraction=1.0`` change nothing. The 3-D fence/block/
+iso/depth fixes change *what renders* for a resistivity or depth filter
+(previously it was wrong -- recoloured, blank, or a solid ghost), never
+the unfiltered figure. The contour-overlay transparency fix affects
+``build_geo_contour_image`` output for every scalar overlay, not only the
+new depth slice: a Surfer-style overlay that previously painted a white
+box behind the contours now shows the basemap through it.

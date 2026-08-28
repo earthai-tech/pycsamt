@@ -331,7 +331,37 @@ def _map_controls() -> html.Div:
                         tooltip={"placement": "bottom"},
                     ),
                 ],
+                id=IDs.GRP_MAP_FREQ,
                 className="mv-field-row",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label(
+                                "Slice depth", className="mv-field-lbl"
+                            ),
+                            html.Span(
+                                "—",
+                                id=IDs.CTL_MAP_DEPTH_LABEL,
+                                className="mv-freq-val",
+                            ),
+                        ],
+                        className="mv-field-head",
+                    ),
+                    dcc.Slider(
+                        id=IDs.CTL_MAP_DEPTH,
+                        min=0,
+                        max=1000,
+                        step=10,
+                        value=100,
+                        marks=None,
+                        tooltip={"placement": "bottom"},
+                    ),
+                ],
+                id=IDs.GRP_MAP_DEPTH,
+                className="mv-field-row",
+                style={"display": "none"},
             ),
             _ctl_row(
                 "Basemap",
@@ -377,6 +407,12 @@ def _map_controls() -> html.Div:
             ),
             html.Div(
                 [
+                    dbc.Switch(
+                        id=IDs.CTL_MAP_STATIONS,
+                        label="Station markers",
+                        value=True,
+                        className="mv-switch",
+                    ),
                     dbc.Switch(
                         id=IDs.CTL_PROFILES,
                         label="Profile lines",
@@ -939,10 +975,26 @@ def _three_d_group() -> html.Div:
                 value=False,
                 className="mv-switch",
             ),
-            html.Hr(className="mv-hr"),
+        ],
+    )
+
+    interp_sec = _acc_item(
+        "Smoothing",
+        "bi-bounding-box-circles",
+        "3d-interp",
+        [
+            html.Div(
+                "Rendering quality only — the underlying resistivities "
+                "are never changed.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            html.Div(
+                "Fence sections", className="mv-panel-lbl mt-2"
+            ),
             dbc.Switch(
                 id=IDs.CTL_SMOOTH,
-                label="Smooth sections (interpolate)",
+                label="Smooth sections (spline resample)",
                 value=True,
                 className="mv-switch",
             ),
@@ -958,6 +1010,85 @@ def _three_d_group() -> html.Div:
                     ],
                     value="100",
                     size="sm",
+                ),
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div(
+                "Block / iso-surface / anomaly", className="mv-panel-lbl mt-2"
+            ),
+            _ctl_row(
+                "Structure smoothing",
+                dbc.Select(
+                    id=IDs.CTL_VOL_SMOOTH,
+                    options=[
+                        {"label": "Off (raw)", "value": "0"},
+                        {"label": "Light", "value": "0.8"},
+                        {"label": "Medium", "value": "1.5"},
+                        {"label": "Strong", "value": "2.5"},
+                        {"label": "Very strong", "value": "4"},
+                    ],
+                    value="0",
+                    size="sm",
+                ),
+            ),
+            html.Div(
+                "Rebuilds the block / iso-surface on a finer 3-D lattice "
+                "so bodies read as rounded voxel structures (Geosoft-"
+                "style) instead of faceting on the station/depth grid, "
+                "then blurs and feathers the envelope. Raise toward "
+                "“Very strong” until no discrete blocks show. "
+                "“Off” is the default.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+        ],
+    )
+
+    borehole_sec = _acc_item(
+        "Boreholes (PCBH)",
+        "bi-signpost-split",
+        "3d-boreholes",
+        [
+            dcc.Upload(
+                id=IDs.PCBH_UPLOAD,
+                children=html.Div(
+                    [html.I(className="bi bi-cloud-upload me-1"),
+                     "Drop / pick .pcbh.json"]
+                ),
+                accept=".pcbh.json,.json",
+                multiple=False,
+                className="mv-upload-drop",
+            ),
+            html.Div(id=IDs.PCBH_UPLOAD_INFO, className="mv-topo-status"),
+            dbc.Switch(
+                id=IDs.PCBH_VISIBLE,
+                label="Show boreholes",
+                value=True,
+                className="mv-switch",
+            ),
+            dbc.Switch(
+                id=IDs.PCBH_LABELS,
+                label="Collar labels",
+                value=True,
+                className="mv-switch",
+            ),
+            _ctl_row(
+                "Log family",
+                dbc.Input(
+                    id=IDs.PCBH_FAMILY,
+                    value="lithology",
+                    size="sm",
+                    debounce=True,
+                ),
+            ),
+            _ctl_row(
+                "Opacity",
+                dcc.Slider(
+                    id=IDs.PCBH_OPACITY,
+                    min=0.1,
+                    max=1.0,
+                    step=0.1,
+                    value=0.9,
                 ),
             ),
         ],
@@ -979,6 +1110,8 @@ def _three_d_group() -> html.Div:
                     geom_sec,
                     topo_sec,
                     sta_sec,
+                    borehole_sec,
+                    interp_sec,
                     appearance_sec,
                 ],
                 id=IDs.CTL_3D_ACCORDION,
@@ -2229,6 +2362,7 @@ def _stores() -> list:
         dcc.Store(id=IDs.SOURCE_SELECTION, data="none"),
         dcc.Store(id=IDs.TOPO_UPLOAD_STORE, data={}),
         dcc.Store(id=IDs.STORE_FIT, data=0),
+        dcc.Store(id=IDs.PCBH_STORE, data=None),
         dcc.Download(id=IDs.EXPORT_DL),
         dcc.Store(id=IDs.SESSION_SNAPSHOT, storage_type="local", data=None),
         dcc.Download(id=IDs.SESSION_DL),

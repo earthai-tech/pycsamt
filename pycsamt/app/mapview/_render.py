@@ -41,6 +41,9 @@ def store_from_view(view: MapView, *, data_dir: str = "[browsed]") -> dict:
         {float(f) for f in frequency_axis(view.data) if f > 0},
         reverse=True,
     )
+    from pycsamt.map import inversion_depth_range
+
+    depth_range = inversion_depth_range(view.data)
     return {
         "station_records": records,
         "n_stations": view.n_stations,
@@ -49,6 +52,8 @@ def store_from_view(view: MapView, *, data_dir: str = "[browsed]") -> dict:
         "lines": list(view.lines),
         "frequencies": freqs,
         "has_geo": view.has_geo,
+        "is_inversion": depth_range is not None,
+        "depth_range": list(depth_range) if depth_range else None,
         "data_dir": data_dir,
     }
 
@@ -274,12 +279,14 @@ def figure_for(
             overlay=c.get("overlay", "index"),
             component=c.get("component", "xy"),
             frequency=c.get("frequency"),
+            depth=c.get("map_depth"),
             cmap=c.get("cmap", "plasma"),
             log_color=bool(c.get("log", False)),
             basemap=c.get("basemap", "esri-satellite"),
             marker_size=int(c.get("marker_size", 10)),
             opacity=float(c.get("map_opacity", 92)) / 100.0,
             show_labels=bool(c.get("labels", True)),
+            show_markers=bool(c.get("map_stations", True)),
             show_profiles=bool(c.get("profiles", True)),
             contour_image=bool(c.get("contour_enable", False)),
             contour_levels=int(c.get("contour_levels", 12)),
@@ -323,6 +330,7 @@ def figure_for(
             depth_unit=c.get("depth_unit", "m"),
             smooth_sections=bool(c.get("smooth_sections", True)),
             section_res=int(c.get("section_res", 100)),
+            volume_smoothing=float(c.get("volume_smoothing", 0.0) or 0.0),
             show_stations=bool(c.get("show_stations", False)),
             station_labels=bool(c.get("station_labels", False)),
             station_label_angle=float(c.get("station_label_angle", 0.0)),

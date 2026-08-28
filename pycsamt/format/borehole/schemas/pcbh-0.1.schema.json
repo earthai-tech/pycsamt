@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pycsamt.org/schemas/pcbh/0.1/schema.json",
+  "title": "PCBH 0.1 - pyCSAMT Common Borehole Format",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pcbh_version", "document_id", "created_at", "created_by", "crs", "units", "conventions", "boreholes"],
+  "properties": {
+    "$schema": {"type": "string", "format": "uri-reference"},
+    "pcbh_version": {"const": "0.1.0"},
+    "document_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "created_by": {"type": "string", "minLength": 1},
+    "crs": {"$ref": "#/$defs/crs"},
+    "units": {"$ref": "#/$defs/units"},
+    "conventions": {"$ref": "#/$defs/conventions"},
+    "dictionaries": {"$ref": "#/$defs/dictionaries"},
+    "boreholes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/borehole"}},
+    "metadata": {"type": "object"},
+    "extensions": {"$ref": "#/$defs/extensions"}
+  },
+  "$defs": {
+    "finiteNumber": {"type": "number"},
+    "extensions": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[^:]+:.+$"},
+      "additionalProperties": true
+    },
+    "crs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["horizontal", "vertical", "axis_order", "coordinate_unit"],
+      "properties": {
+        "horizontal": {"type": "string", "minLength": 1},
+        "vertical": {"type": "string", "minLength": 1},
+        "axis_order": {"const": "xy"},
+        "coordinate_unit": {"type": "string", "minLength": 1}
+      }
+    },
+    "units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["depth", "diameter", "angle", "resistivity"],
+      "properties": {
+        "depth": {"type": "string", "minLength": 1},
+        "diameter": {"type": "string", "minLength": 1},
+        "angle": {"type": "string", "minLength": 1},
+        "resistivity": {"type": "string", "minLength": 1}
+      }
+    },
+    "conventions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["depth_reference", "z_positive", "azimuth_direction", "inclination_reference"],
+      "properties": {
+        "depth_reference": {"const": "collar"},
+        "z_positive": {"const": "up"},
+        "azimuth_direction": {"const": "clockwise"},
+        "inclination_reference": {"const": "vertical_down"}
+      }
+    },
+    "vocabularyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "color": {"type": ["string", "null"], "pattern": "^#[0-9A-Fa-f]{6}$"},
+        "description": {"type": "string"},
+        "external_ids": {"type": "object", "additionalProperties": {"type": "string"}},
+        "properties": {"type": "object"}
+      }
+    },
+    "dictionaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lithologies": {"type": "array", "items": {"$ref": "#/$defs/vocabularyEntry"}},
+        "formations": {"type": "array", "items": {"$ref": "#/$defs/vocabularyEntry"}}
+      }
+    },
+    "collar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"$ref": "#/$defs/finiteNumber"},
+        "y": {"$ref": "#/$defs/finiteNumber"},
+        "z": {"$ref": "#/$defs/finiteNumber"},
+        "longitude": {"type": ["number", "null"], "minimum": -180, "maximum": 180},
+        "latitude": {"type": ["number", "null"], "minimum": -90, "maximum": 90},
+        "position_uncertainty_m": {"type": ["number", "null"], "minimum": 0}
+      },
+      "dependentRequired": {"longitude": ["latitude"], "latitude": ["longitude"]}
+    },
+    "surveyStation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["md", "azimuth_deg", "inclination_deg"],
+      "properties": {
+        "md": {"type": "number", "minimum": 0},
+        "azimuth_deg": {"type": "number", "minimum": 0, "exclusiveMaximum": 360},
+        "inclination_deg": {"type": "number", "minimum": 0, "maximum": 180}
+      }
+    },
+    "trajectory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "north_reference", "desurvey_method", "stations"],
+      "properties": {
+        "method": {"enum": ["vertical", "survey"]},
+        "north_reference": {"enum": ["true", "grid", "magnetic", "unknown"]},
+        "desurvey_method": {"const": "minimum_curvature"},
+        "stations": {"type": "array", "items": {"$ref": "#/$defs/surveyStation"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"method": {"const": "vertical"}}}, "then": {"properties": {"stations": {"maxItems": 0}}}},
+        {"if": {"properties": {"method": {"const": "survey"}}}, "then": {"properties": {"stations": {"minItems": 2}}}}
+      ]
+    },
+    "logInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_md", "to_md", "data_nature"],
+      "properties": {
+        "from_md": {"type": "number", "minimum": 0},
+        "to_md": {"type": "number", "exclusiveMinimum": 0},
+        "code": {"type": ["string", "null"]},
+        "label": {"type": ["string", "null"]},
+        "description": {"type": "string"},
+        "resistivity_ohm_m": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "data_nature": {"enum": ["observed", "interpreted", "derived", "unknown"]},
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "properties": {"type": "object"}
+      },
+      "anyOf": [
+        {"required": ["code"], "properties": {"code": {"type": "string", "minLength": 1}}},
+        {"required": ["label"], "properties": {"label": {"type": "string", "minLength": 1}}}
+      ]
+    },
+    "structure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "orientation_representation", "data_nature"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "at_md": {"type": ["number", "null"], "minimum": 0},
+        "from_md": {"type": ["number", "null"], "minimum": 0},
+        "to_md": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "orientation_representation": {"enum": ["none", "global_plane", "global_line", "core_alpha_beta"]},
+        "strike_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "dip_deg": {"type": ["number", "null"], "minimum": 0, "maximum": 90},
+        "dip_direction_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "trend_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "plunge_deg": {"type": ["number", "null"], "minimum": 0, "maximum": 90},
+        "alpha_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "beta_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "aperture_m": {"type": ["number", "null"], "minimum": 0},
+        "fill": {"type": ["string", "null"]},
+        "data_nature": {"enum": ["observed", "interpreted", "derived", "unknown"]},
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+      },
+      "oneOf": [
+        {"required": ["at_md"], "not": {"anyOf": [{"required": ["from_md"]}, {"required": ["to_md"]}]}},
+        {"required": ["from_md", "to_md"], "not": {"required": ["at_md"]}}
+      ]
+    },
+    "borehole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "status", "collar", "total_depth_md", "trajectory"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "collar": {"$ref": "#/$defs/collar"},
+        "total_depth_md": {"type": "number", "exclusiveMinimum": 0},
+        "diameter": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "trajectory": {"$ref": "#/$defs/trajectory"},
+        "interval_logs": {"type": "object", "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/logInterval"}}},
+        "structures": {"type": "array", "items": {"$ref": "#/$defs/structure"}},
+        "metadata": {"type": "object"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      }
+    }
+  }
+}

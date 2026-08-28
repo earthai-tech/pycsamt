@@ -89,6 +89,20 @@
   # the CPU torch wheel (~190 MB) and the rest of .[docs,geo] every build.
   PIP_CACHE_DIR = ".cache/pip"
 
+# Versioned public PCBH contract resources. These friendly URLs remain stable
+# while the source files stay packaged with pyCSAMT and reviewable in Git.
+[[redirects]]
+  from = "/schemas/pcbh/0.1/schema.json"
+  to = "https://raw.githubusercontent.com/earthai-tech/pycsamt/master/pycsamt/format/borehole/schemas/pcbh-0.1.schema.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/examples/pcbh/0.1/minimal-vertical.pcbh.json"
+  to = "https://raw.githubusercontent.com/earthai-tech/pycsamt/master/pycsamt/format/borehole/examples/minimal-vertical.pcbh.json"
+  status = 200
+  force = true
+
 # Persists the listed directories in Netlify's build cache. The plugin is a
 # community package, so it must be declared in package.json (repo root) for
 # Netlify's npm step to install it — netlify.toml alone is not enough.

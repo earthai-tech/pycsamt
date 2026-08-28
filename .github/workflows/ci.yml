@@ -39,6 +39,7 @@ jobs:
               pycsamt/ai/tests
           - test-shard: formats-models
             test-paths: >-
+              pycsamt/format/tests
               pycsamt/api/tests
               pycsamt/models
               pycsamt/inversion/tests

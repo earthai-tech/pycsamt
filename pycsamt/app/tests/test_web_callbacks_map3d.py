@@ -870,17 +870,22 @@ class TestGenerateGrid:
     def _fn(self, web_app):
         return _cb_multi(web_app, f"{IDs.MAP3D_GRID_STORE}.data")
 
+    # Positional call order mirrors the callback's (n_clicks, data_src,
+    # session_id, store_data, elev_corr, elev_raw, topo_upload_store,
+    # pcsf_contents) -- the trailing ``None`` is the uploaded .pcsf file.
     def test_no_clicks_prevents_update(self, web_app):
         with pytest.raises(PreventUpdate):
-            self._fn(web_app)(None, "pseudo", "s", None, None, None, None)
+            self._fn(web_app)(None, "pseudo", "s", None, None, None, None, None)
 
     def test_no_cached_sites(self, web_app):
-        out = self._fn(web_app)(1, "pseudo", "no-such-session", None, None, None, None)
+        out = self._fn(web_app)(
+            1, "pseudo", "no-such-session", None, None, None, None, None
+        )
         assert "Load survey data first." in out[4]
 
     def test_pseudo_source_real_data(self, web_app, cached_session, store_data_willy):
         out = self._fn(web_app)(
-            1, "pseudo", cached_session, store_data_willy, None, None, None
+            1, "pseudo", cached_session, store_data_willy, None, None, None, None
         )
         store, hint, spinner, is_open, body = out
         assert store["n_profiles"] > 0
@@ -895,6 +900,7 @@ class TestGenerateGrid:
             None,
             None,
             None,
+            None,
         )
         assert "at least two named lines" in out[1]
 
@@ -902,13 +908,15 @@ class TestGenerateGrid:
         self, web_app, cached_session, store_data_willy
     ):
         out = self._fn(web_app)(
-            1, "profiles", cached_session, store_data_willy, None, None, None
+            1, "profiles", cached_session, store_data_willy, None, None, None, None
         )
         store = out[0]
         assert store["n_profiles"] >= 1
 
     def test_inversion_source_without_result(self, web_app, cached_session):
-        out = self._fn(web_app)(1, "inversion", cached_session, None, None, None, None)
+        out = self._fn(web_app)(
+            1, "inversion", cached_session, None, None, None, None, None
+        )
         assert "Run an inversion first" in out[1]
 
     def test_inversion_source_with_result(
@@ -918,6 +926,7 @@ class TestGenerateGrid:
             1,
             "inversion",
             cached_session_with_inv_result,
+            None,
             None,
             None,
             None,
@@ -943,6 +952,7 @@ class TestGenerateGrid:
             store_data_willy,
             elev_corr,
             elev_raw,
+            None,
             None,
         )
         assert out[0]["n_profiles"] > 0
@@ -1116,7 +1126,7 @@ class TestDisplay3d:
     def test_real_pseudo_end_to_end(self, web_app, cached_session, store_data_willy):
         gen_fn = _cb_multi(web_app, f"{IDs.MAP3D_GRID_STORE}.data")
         grid, hint, spinner, err_open, err_body = gen_fn(
-            1, "pseudo", cached_session, store_data_willy, None, None, None
+            1, "pseudo", cached_session, store_data_willy, None, None, None, None
         )
         assert err_open is False
         for mode in ("fence", "block", "depth"):

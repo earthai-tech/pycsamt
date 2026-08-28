@@ -230,6 +230,8 @@ def build_geo_contour_image(
     expand: float = 0.06,
     interp: str = "cubic",
     smooth_sigma: float = 0.0,
+    vmin: float | None = None,
+    vmax: float | None = None,
 ) -> dict | None:
     """Render a Surfer-style filled-contour PNG for a basemap image layer.
 
@@ -292,36 +294,56 @@ def build_geo_contour_image(
         except Exception:
             pass
 
-    vmin = float(np.nanmin(zz))
-    vmax = float(np.nanmax(zz))
-    fig = Figure(figsize=(6, 6), dpi=100)
-    canvas = FigureCanvasAgg(fig)
+    # An externally fixed colour range (``vmin``/``vmax``, given in raw
+    # units) keeps the raster consistent while the user scrubs a slice
+    # depth. ``zz`` is already log10 here when ``log_scale``.
+    lo_fix, hi_fix = vmin, vmax
+    if log_scale:
+        lo_fix = (
+            float(np.log10(lo_fix))
+            if lo_fix is not None and lo_fix > 0
+            else None
+        )
+        hi_fix = (
+            float(np.log10(hi_fix))
+            if hi_fix is not None and hi_fix > 0
+            else None
+        )
+    lo = lo_fix if lo_fix is not None else float(np.nanmin(zz))
+    hi = hi_fix if hi_fix is not None else float(np.nanmax(zz))
+    if not (hi > lo):
+        hi = lo + 1e-6
+    fig = Figure(figsize=(6, 6), dpi=100, facecolor="none")
+    FigureCanvasAgg(fig)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_axis_off()
+    ax.patch.set_alpha(0.0)
     ax.set_xlim(lon_min, lon_max)
     ax.set_ylim(lat_min, lat_max)
-    levels = max(2, int(n_levels))
+    n = max(2, int(n_levels))
+    levels = np.linspace(lo, hi, n + 1)
     if mode in ("filled", "filled+lines"):
         ax.contourf(
             xi,
             yi,
-            zz,
+            np.clip(zz, lo, hi),
             levels=levels,
             cmap=cmap,
             alpha=float(opacity),
+            extend="both",
         )
     if mode in ("lines", "filled+lines"):
         ax.contour(
             xi,
             yi,
-            zz,
+            np.clip(zz, lo, hi),
             levels=levels,
             colors="k",
             linewidths=0.5,
             alpha=0.5,
         )
     buf = io.BytesIO()
-    canvas.print_png(buf)
+    fig.savefig(buf, format="png", transparent=True)
     fig.clf()
     b64 = base64.b64encode(buf.getvalue()).decode()
     return {
@@ -332,8 +354,8 @@ def build_geo_contour_image(
             [lon_max, lat_min],  # bottom-right
             [lon_min, lat_min],  # bottom-left
         ],
-        "vmin": vmin,
-        "vmax": vmax,
+        "vmin": lo,
+        "vmax": hi,
     }
 
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 def register_all(app) -> None:
     """Register every callback module on *app*."""
     from .chrome import register_chrome
+    from .borehole import register_borehole
     from .controls import register_controls
     from .export import register_export
     from .inversion_import import register_inversion_import
@@ -20,6 +21,7 @@ def register_all(app) -> None:
     from .view import register_view
 
     register_chrome(app)
+    register_borehole(app)
     register_load(app)
     register_inversion_import(app)
     register_view(app)

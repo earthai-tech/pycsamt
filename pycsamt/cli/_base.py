@@ -220,6 +220,9 @@ def _register_commands() -> None:
         convert,  # noqa: PLC0415
     )
     from pycsamt.cli.commands.edi import edi  # noqa: PLC0415
+    from pycsamt.cli.commands.format import (
+        fmt,  # noqa: PLC0415
+    )
     from pycsamt.cli.commands.forward import (
         forward,  # noqa: PLC0415
     )
@@ -260,6 +263,7 @@ def _register_commands() -> None:
     main.add_command(map)
     main.add_command(info)
     main.add_command(convert)
+    main.add_command(fmt)
     main.add_command(invert)
     main.add_command(transform)
     main.add_command(forward)

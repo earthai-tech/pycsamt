@@ -12,6 +12,7 @@ Each module exposes:
 from pycsamt.app.web.pages import (
     advanced,
     agents_page,
+    borehole_builder,
     correction,
     forward,
     home,
@@ -36,5 +37,6 @@ ALL_PAGES = [
     interpretation,
     map3d,
     agents_page,
+    borehole_builder,
     inv_results,
 ]

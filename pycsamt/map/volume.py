@@ -1372,7 +1372,9 @@ def _add_station_markers(fig, profiles, options) -> None:
         color = str(options.station_color)
         if symbol == "triangle-down":
             fig.add_trace(
-                _triangle_down_mesh_trace(xs, ys, zs, half_width, height, color, hover)
+                _triangle_down_mesh_trace(
+                    xs, ys, zs, half_width, height, color, hover
+                )
             )
         else:
             fig.add_trace(
@@ -1659,7 +1661,8 @@ def _dense_volume_grid(profiles, options):
         # survey at "Very strong" stays renderable -- shrink all three
         # target counts by the cube-root of the overshoot, but never
         # below the native resolution (coarsening would lose structure).
-        scale = (_VOLUME_CELL_BUDGET / max(n_x_t * n_y_t * n_z_t, 1)) ** (1 / 3)
+        _overshoot = max(n_x_t * n_y_t * n_z_t, 1)
+        scale = (_VOLUME_CELL_BUDGET / _overshoot) ** (1 / 3)
         if scale < 1.0:
             n_x_t = max(int(n_x_t * scale), x_ref.size)
             n_z_t = max(int(n_z_t * scale), z_ref.size)

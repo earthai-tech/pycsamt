@@ -169,8 +169,9 @@ def _grid3d_sections(
     folder's stations (:func:`group_modem_stations`, by
     ``known_stations`` line tags first, else a station-name-prefix
     heuristic) whenever the file carries no explicit
-    ``stations.line_id`` -- :func:`pycsamt.format.adapters.modem3d.modem3d_to_pcsf`
-    does not currently set one.
+    ``stations.line_id`` --
+    :func:`pycsamt.format.adapters.modem3d.modem3d_to_pcsf` does not
+    currently set one.
     """
     geo = model.geometry
     st = model.stations
@@ -212,7 +213,11 @@ def _grid3d_sections(
             iy = _nearest_cell(geo.y, float(st.y[i]) + offset_y)
             elev = float(st.z[i])
             if not np.isfinite(elev) and match is not None:
-                elev = match.elevation if match.elevation is not None else np.nan
+                elev = (
+                    match.elevation
+                    if match.elevation is not None
+                    else np.nan
+                )
             lon, lat = _resolve_pcsf_lonlat(st, i, match)
             stations.append(
                 StationRecord(
@@ -288,7 +293,9 @@ def _mesh_unstructured_sections(
             "pycsamt.format.adapters writer already does this)."
         )
 
-    triangulation = Triangulation(nodes[:, 0], nodes[:, 1], triangles=connectivity)
+    triangulation = Triangulation(
+        nodes[:, 0], nodes[:, 1], triangles=connectivity
+    )
     trifinder = triangulation.get_trifinder()
     z_samples = np.linspace(
         float(nodes[:, 1].min()), float(nodes[:, 1].max()), n_z
@@ -320,7 +327,11 @@ def _mesh_unstructured_sections(
             column[inside] = resistivity[tri_idx[inside]]
             elev = float(st.z[i])
             if not np.isfinite(elev) and match is not None:
-                elev = match.elevation if match.elevation is not None else np.nan
+                elev = (
+                    match.elevation
+                    if match.elevation is not None
+                    else np.nan
+                )
             lon, lat = _resolve_pcsf_lonlat(st, i, match)
             stations.append(
                 StationRecord(
@@ -554,13 +565,18 @@ def load_pcsf_lines(
             ]
         else:
             line_specs = [
-                (line.line_id, line.geometry.x, line.geometry.z, line.resistivity)
+                (
+                    line.line_id,
+                    line.geometry.x,
+                    line.geometry.z,
+                    line.resistivity,
+                )
                 for line in model.geometry.lines
             ]
 
         st = model.stations
         station_by_line: dict[str, list[int]] = {}
-        for i, name in enumerate(st.name):
+        for i in range(len(st.name)):
             line_id = st.line_id[i] if st.line_id else "line1"
             station_by_line.setdefault(str(line_id), []).append(i)
 
@@ -581,7 +597,9 @@ def load_pcsf_lines(
                 elev = float(st.z[i])
                 if not np.isfinite(elev) and match is not None:
                     elev = (
-                        match.elevation if match.elevation is not None else np.nan
+                        match.elevation
+                        if match.elevation is not None
+                        else np.nan
                     )
                 lon, lat = _resolve_pcsf_lonlat(st, i, match)
                 stations.append(

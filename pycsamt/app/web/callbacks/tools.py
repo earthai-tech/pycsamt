@@ -5863,7 +5863,7 @@ def register_tools(app) -> None:
             str(r.get("Station", r.get("ID", i))) for i, r in enumerate(rows)
         ]
         fig = go.Figure(
-            go.Scattermapbox(
+            go.Scattermap(
                 lat=lats,
                 lon=lons,
                 mode="markers+text",
@@ -5874,7 +5874,7 @@ def register_tools(app) -> None:
             )
         )
         fig.update_layout(
-            mapbox=dict(
+            map=dict(
                 style="carto-darkmatter",
                 center=dict(
                     lat=sum(lats) / len(lats), lon=sum(lons) / len(lons)

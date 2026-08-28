@@ -100,6 +100,7 @@ def test_all_panel_windows_exist(window):
     for attr in (
         "_map_win",
         "_profile_win",
+        "_pcsf3d_win",
         "_qc_win",
         "_correction_win",
         "_advanced_win",

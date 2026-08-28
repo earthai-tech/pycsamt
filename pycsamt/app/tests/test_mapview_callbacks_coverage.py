@@ -81,10 +81,20 @@ def test_export_and_view_callbacks(monkeypatch):
     assert app.get("switch")()[0] == "map"
     render = app.get("render")
     monkeypatch.setattr(view, "empty_figure", lambda *a: ("empty", a))
-    assert render({}, "map", {}, "light", {}, 0, [], "sid")[1]["display"] == "flex"
+    # render(store, view_name, controls, theme, lines, fit, masked,
+    #        pcbh_store, pcbh_visible, pcbh_labels, pcbh_family,
+    #        pcbh_opacity, session_id)
+    assert (
+        render({}, "map", {}, "light", {}, 0, [], None, None, None, None,
+               None, "sid")[1]["display"]
+        == "flex"
+    )
     monkeypatch.setattr(view, "get_view", lambda _sid: object())
     monkeypatch.setattr(view, "figure_for", lambda *a, **k: "figure")
-    assert render({"n_stations": 1}, "map", {}, None, {}, 2, [], "sid") == (
+    assert render(
+        {"n_stations": 1}, "map", {}, None, {}, 2, [], None, None, None,
+        None, None, "sid",
+    ) == (
         "figure",
         {"display": "none"},
     )

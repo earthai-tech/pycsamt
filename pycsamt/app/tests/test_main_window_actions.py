@@ -241,8 +241,9 @@ def test_show_window_moves_and_shows(window):
     assert win.isVisible()
 
 
-def test_panel_windows_lists_all_ten(window):
-    assert len(window._panel_windows()) == 10
+def test_panel_windows_lists_all_eleven(window):
+    # 10 scientific panels + the PCSF 3-D viewer added in 2.4.1/2.5.0.
+    assert len(window._panel_windows()) == 11
 
 
 def test_open_agent_master_success(window, monkeypatch):

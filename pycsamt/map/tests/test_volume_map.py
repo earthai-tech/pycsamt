@@ -1111,3 +1111,130 @@ def test_smoothed_fence_rho_range_opens_holes_not_recolour() -> None:
     # the colour scale is still the full unfiltered range
     assert np.isclose(unfiltered.data[0].cmin, filtered.data[0].cmin)
     assert np.isclose(unfiltered.data[0].cmax, filtered.data[0].cmax)
+
+
+def _air_fill_section_data(*, air_value: float = float("nan")) -> MapData:
+    """One line, a real (z, rho) section whose shallowest rows are a
+    ModEM-style air / overburden fill over a normal 12-500 ohm.m earth,
+    plus a handful of genuine 5e4 ohm.m resistive outliers -- the
+    Baohuashan fig08-vs-MapView discrepancy, reduced to a single curtain.
+
+    ``air_value`` is ``nan`` by default (the state after the adapter /
+    loader defensive mask), or a finite ~1e12 to exercise the in-view
+    ``rho_display_max`` cutoff.
+    """
+    z = np.linspace(20.0, 900.0, 24)
+    nsta = 12
+    sta = np.array([f"S{i:02d}" for i in range(nsta)], dtype=object)
+    zz, xx = np.meshgrid(z, np.arange(nsta), indexing="ij")
+    rho = np.where(zz < 200, 30.0, np.where(zz < 550, 500.0, 12.0))
+    rho[(zz > 800) & (xx >= nsta - 1)] = 5e4  # ~2 real resistive outliers
+    rho[:3, :] = air_value  # three air-fill rows on top
+    elev = np.full(nsta, 100.0)
+    recs = [
+        StationRecord(str(s), float("nan"), float("nan"), 100.0, "L0", i)
+        for i, s in enumerate(sta)
+    ]
+    return MapData(
+        sites=None,
+        stations=tuple(recs),
+        metadata={"sections": {"L0": {"stations": sta, "rho": rho, "z": z, "elev": elev}}},
+    )
+
+
+def test_crange_percentile_robust_default_clips_outliers() -> None:
+    """With air already masked to NaN (the real pipeline), the 2nd-98th
+    percentile default keeps the auto colour scale on the bulk earth
+    instead of a handful of 5e4 ohm.m outliers."""
+    data = _air_fill_section_data()
+    fig = build_3d_map(data, VolumeMapOptions(mode="fence", log_color=True))
+    # bulk earth tops out at 500 -> log10 < 3; 5e4 outliers -> log10 ~ 4.7
+    assert float(fig.data[0].cmax) < 4.0
+
+
+def test_crange_percentile_none_is_raw_minmax() -> None:
+    data = _air_fill_section_data()
+    fig = build_3d_map(
+        data,
+        VolumeMapOptions(mode="fence", log_color=True, crange_percentile=None),
+    )
+    # raw max is 5e4 -> log10 ~ 4.7, not clipped
+    assert float(fig.data[0].cmax) > 4.5
+
+
+def test_rho_display_max_masks_cells_and_rescales_colour() -> None:
+    data = _air_fill_section_data(air_value=1e12)
+    base = VolumeMapOptions(mode="fence", log_color=True, crange_percentile=None)
+    no_cut = build_3d_map(data, base)
+    cut = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence",
+            log_color=True,
+            crange_percentile=None,
+            rho_display_max=1e6,
+        ),
+    )
+    # cells above 1e6 ohm.m are punched out of the panel geometry ...
+    assert np.isnan(np.asarray(cut.data[0].z, dtype=float)).any()
+    # ... and no longer inflate the colour scale.
+    assert float(cut.data[0].cmax) < float(no_cut.data[0].cmax)
+    # no_cut colourbar reaches the 1e12 air (log10 ~ 12); the cut one
+    # only the 5e4 real earth outliers (log10 ~ 4.7).
+    assert float(no_cut.data[0].cmax) > 10.0
+    assert float(cut.data[0].cmax) < 5.0
+
+
+def test_rho_display_max_clamps_block_iso_band() -> None:
+    data = _air_fill_section_data(air_value=1e12)
+    fig = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="block", log_color=True, rho_display_max=1e6
+        ),
+    )
+    iso = [t for t in fig.data if type(t).__name__ in ("Isosurface", "Volume")]
+    assert iso
+    # the iso band's upper bound is clamped to log10(1e6) = 6, well
+    # below the 1e12 air fill.
+    assert float(iso[0].isomax) <= 6.0 + 1e-9
+
+
+def _dup_x_section_data() -> MapData:
+    """Two lines whose station projection collapses a pair onto one
+    along-strike position each -- a real ModEM multi-line geometry that
+    used to make RegularGridInterpolator raise and leave the whole
+    block/iso volume empty."""
+    z = np.linspace(20.0, 900.0, 20)
+    sections, recs = {}, []
+    for li in range(2):
+        nsta = 10
+        xs = np.arange(nsta, dtype=float) * 100.0
+        xs[3] = xs[2]  # two stations at the same along-strike x
+        sta = np.array([f"L{li}S{i:02d}" for i in range(nsta)], dtype=object)
+        zz, xx = np.meshgrid(z, xs, indexing="ij")
+        rho = np.where(zz < 400, 40.0, 800.0) * (1.0 + 0.1 * (xx / 900.0))
+        sections[f"L{li}"] = {
+            "stations": sta, "rho": rho, "z": z,
+            "elev": np.full(nsta, 100.0 + li * 20.0),
+        }
+        for i, s in enumerate(sta):
+            recs.append(
+                StationRecord(str(s), float("nan"), float("nan"),
+                              100.0 + li * 20.0, f"L{li}", len(recs))
+            )
+    return MapData(
+        sites=None, stations=tuple(recs), metadata={"sections": sections}
+    )
+
+
+def test_block_and_iso_render_with_duplicate_station_x() -> None:
+    data = _dup_x_section_data()
+    for mode, kind in (("block", "Volume"), ("surface", "Isosurface")):
+        fig = build_3d_map(data, VolumeMapOptions(mode=mode))
+        bodies = [t for t in fig.data if type(t).__name__ == kind]
+        assert bodies, f"{mode}: no {kind} trace was drawn"
+        val = np.asarray(bodies[0].value, dtype=float)
+        assert np.isfinite(val).any()
+        # no "empty block" annotation
+        assert not getattr(fig.layout, "annotations", None)

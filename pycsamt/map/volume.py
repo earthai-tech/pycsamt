@@ -963,15 +963,22 @@ def _line_offset(name, idx, real_offsets, unit, options) -> float:
 
 
 def _rho_range_mask(grid, options):
-    """Boolean grid, ``True`` where a cell falls outside
-    ``options.rho_range`` and must be hidden. All-``False`` when no
-    range is set."""
+    """Boolean grid, ``True`` where a cell must be hidden.
+
+    Combines the ``options.rho_range`` visibility band with the
+    ``options.rho_display_max`` air / overburden cutoff (either may be
+    unset). All-``False`` when neither is set.
+    """
     value = np.asarray(grid["value"], dtype=float)
-    if not options.rho_range:
-        return np.zeros(value.shape, dtype=bool)
-    lo, hi = options.rho_range
     rho = np.asarray(grid["rho"], dtype=float)
-    return (rho < lo) | (rho > hi)
+    mask = np.zeros(value.shape, dtype=bool)
+    if options.rho_range:
+        lo, hi = options.rho_range
+        mask |= (rho < lo) | (rho > hi)
+    cutoff = getattr(options, "rho_display_max", None)
+    if cutoff is not None:
+        mask |= rho > float(cutoff)
+    return mask
 
 
 def _filtered_values(grid, options):
@@ -1001,15 +1008,28 @@ def _full_value_crange(profiles, options) -> tuple[float | None, float | None]:
     narrow selection (e.g. a "conductive" 1-100 ohm.m slice) gets
     stretched across the whole colourscale and reads as one near-solid
     colour instead of the same hues it had before filtering.
+
+    Two things *do* shape the auto range, because both target exactly
+    the "a few extreme cells crush everything else" failure:
+    ``options.rho_display_max`` drops cells above the cutoff from the
+    pool, and ``options.crange_percentile`` clips the result to a
+    (low, high) percentile band -- ``(2, 98)`` by default, matching the
+    convention hand-drawn ModEM sections use. ``None`` / ``(0, 100)``
+    restores the raw min/max.
     """
     cmin, cmax = _crange(options)
     if cmin is not None and cmax is not None:
         return cmin, cmax
+    cutoff = getattr(options, "rho_display_max", None)
     finite_chunks = []
     for grid in profiles.values():
         # Prefer the pre-depth-clip values (``value_full``) so scrubbing
         # the depth window / slice depth never rescales the colourbar.
         raw = np.asarray(grid.get("value_full", grid["value"]), dtype=float)
+        if cutoff is not None:
+            rho = np.asarray(grid.get("rho", raw), dtype=float)
+            if rho.shape == raw.shape:
+                raw = np.where(rho > float(cutoff), np.nan, raw)
         colored = _color_values(raw, options)
         finite = colored[np.isfinite(colored)]
         if finite.size:
@@ -1017,6 +1037,14 @@ def _full_value_crange(profiles, options) -> tuple[float | None, float | None]:
     if not finite_chunks:
         return None, None
     combined = np.concatenate(finite_chunks)
+    lo_hi = getattr(options, "crange_percentile", None)
+    if lo_hi is not None:
+        p_lo, p_hi = float(lo_hi[0]), float(lo_hi[1])
+        if 0.0 <= p_lo < p_hi <= 100.0 and (p_lo > 0.0 or p_hi < 100.0):
+            c_lo = float(np.percentile(combined, p_lo))
+            c_hi = float(np.percentile(combined, p_hi))
+            if c_hi > c_lo:  # guard a near-uniform model
+                return c_lo, c_hi
     return float(combined.min()), float(combined.max())
 
 
@@ -1605,6 +1633,45 @@ def _feather_volume(value, sentinel, sigma):
     return np.where(live_mask, value, ramp)
 
 
+def _collapse_duplicate_axis(coords, grid, axis):
+    """Merge exact-duplicate positions along *axis* of a 2-D value grid.
+
+    *coords* is sorted ascending; where consecutive entries are equal,
+    the matching slices of *grid* are averaged (NaN-aware) into one.
+    Returns ``(unique_coords, collapsed_grid)`` -- a no-op when *coords*
+    already has no repeats.
+    """
+    coords = np.asarray(coords, dtype=float)
+    if coords.size < 2 or np.all(np.diff(coords) > 0):
+        return coords, grid
+    uniq = np.unique(coords)
+    if uniq.size == coords.size:
+        return coords, grid
+    shape = (
+        (uniq.size, grid.shape[1])
+        if axis == 0
+        else (grid.shape[0], uniq.size)
+    )
+    out = np.empty(shape, dtype=float)
+    for k, c in enumerate(uniq):
+        sel = coords == c
+        block = grid[sel, :] if axis == 0 else grid[:, sel]
+        mask = np.isfinite(block)
+        cnt = mask.sum(axis=axis)
+        tot = np.where(mask, block, 0.0).sum(axis=axis)
+        merged = np.divide(
+            tot,
+            cnt,
+            out=np.full(cnt.shape, np.nan, dtype=float),
+            where=cnt > 0,
+        )
+        if axis == 0:
+            out[k, :] = merged
+        else:
+            out[:, k] = merged
+    return uniq, out
+
+
 def _dense_volume_grid(profiles, options):
     """Build a regular ``(x, y, z)`` grid + resistivity volume for
     ``go.Volume``/``go.Isosurface``.
@@ -1683,9 +1750,23 @@ def _dense_volume_grid(profiles, options):
         values = _color_values(np.asarray(grid["value"], dtype=float), options)
         xo, zo = np.argsort(x), np.argsort(z)
         x_sorted, z_sorted = x[xo], z[zo]
-        if np.unique(x_sorted).size < 2 or np.unique(z_sorted).size < 2:
-            continue
         vals_sorted = values[np.ix_(zo, xo)]
+        # Real multi-line ModEM geometry routinely snaps two nearby
+        # stations onto one along-strike position (and the depth axis
+        # can repeat too) -- RegularGridInterpolator needs *strictly*
+        # ascending axes, so collapse exact duplicates first (mean of
+        # the coincident columns/rows), the same way _prepare_section
+        # does for the fence panels. Without this every line raised
+        # ValueError below and the whole block/iso volume came back
+        # empty.
+        x_sorted, vals_sorted = _collapse_duplicate_axis(
+            x_sorted, vals_sorted, axis=1
+        )
+        z_sorted, vals_sorted = _collapse_duplicate_axis(
+            z_sorted, vals_sorted, axis=0
+        )
+        if x_sorted.size < 2 or z_sorted.size < 2:
+            continue
         try:
             interp = RegularGridInterpolator(
                 (z_sorted, x_sorted),
@@ -1797,10 +1878,21 @@ def _drape_dense_volume(rho_vol, z_depth, elev_grid):
         return rho_vol, z_depth
     top = float(finite_elev.max())
     bottom = float(finite_elev.min() + z_depth.min())
-    z_abs = np.linspace(bottom, top, nz)
 
     order = np.argsort(z_depth)
     z_sorted = z_depth[order]
+    # Span [bottom, top] but keep the *input* depth axis's own spacing
+    # rather than a uniform linspace: a ModEM volume grades geometrically
+    # to tens of km for the boundary conditions, so a uniform
+    # absolute-elevation lattice would spend almost every sample in the
+    # deep padding and leave the interpretable near-surface with one or
+    # two.
+    span = float(z_sorted.max() - z_sorted.min())
+    if span > 0 and top > bottom:
+        rel = (z_sorted - z_sorted.min()) / span
+        z_abs = bottom + rel * (top - bottom)
+    else:
+        z_abs = np.linspace(bottom, top, nz)
 
     draped = np.full((nx, ny, nz), np.nan, dtype=float)
     for ix in range(nx):
@@ -1848,10 +1940,13 @@ def _iso_range(vals, options):
     finite = arr[np.isfinite(arr)]
     if finite.size == 0:
         return 0.0, 1.0
-    return (
-        float(np.nanpercentile(finite, 20)),
-        float(np.nanpercentile(finite, 80)),
-    )
+    # Fill whichever side the user did not pin (e.g. a bare
+    # ``rho_display_max`` sets only the upper bound) from the data.
+    lo = float(np.nanpercentile(finite, 20)) if lo is None else lo
+    hi = float(np.nanpercentile(finite, 80)) if hi is None else hi
+    if lo >= hi:  # a tight cutoff can invert the auto-filled side
+        lo = float(np.nanmin(finite))
+    return lo, hi
 
 
 def _iso_color_range(options) -> tuple[float | None, float | None]:
@@ -1862,8 +1957,11 @@ def _iso_color_range(options) -> tuple[float | None, float | None]:
     would starve ``go.Volume``/``go.Isosurface`` of the density they
     need to interpolate a smooth shape.
     """
-    if options.rho_range:
-        lo, hi = options.rho_range
+    cutoff = getattr(options, "rho_display_max", None)
+    if options.rho_range or cutoff is not None:
+        lo, hi = options.rho_range if options.rho_range else (None, None)
+        if cutoff is not None:
+            hi = float(cutoff) if hi is None else min(float(hi), float(cutoff))
         if _volume_quantity(options.quantity) == "rho" and options.log_color:
             lo = float(np.log10(lo)) if lo and lo > 0 else None
             hi = float(np.log10(hi)) if hi and hi > 0 else None

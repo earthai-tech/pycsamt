@@ -114,6 +114,31 @@ def _parse_origin(text: str | None) -> tuple[float, ...] | None:
     help="Encoding of the AI resistivity array (default: auto/linear).",
 )
 @click.option(
+    "--station-z",
+    "station_z_convention",
+    type=click.Choice(
+        ["auto", "elevation", "depth_down"], case_sensitive=False
+    ),
+    default="auto",
+    show_default=True,
+    help=(
+        "ModEM: how to read the .dat Z column. 'auto' flips a "
+        "positive-down depth to an elevation only when the file's "
+        "comments say so; 'depth_down' forces it; 'elevation' trusts it."
+    ),
+)
+@click.option(
+    "--air-threshold",
+    "air_threshold_ohm_m",
+    type=float,
+    default=1e8,
+    show_default=True,
+    help=(
+        "ModEM: mask cells above this resistivity (ohm.m) as "
+        "above-topography air fill. Pass 0 to disable."
+    ),
+)
+@click.option(
     "--poly",
     type=click.Path(exists=True, path_type=Path),
     default=None,
@@ -177,6 +202,8 @@ def convert(
     epsg: int | None,
     utm_zone: str | None,
     encoding: str | None,
+    station_z_convention: str,
+    air_threshold_ohm_m: float,
     poly: Path | None,
     origin: str | None,
     azimuth_deg: float | None,
@@ -270,6 +297,8 @@ def convert(
         epsg=epsg,
         utm_zone=utm_zone,
         encoding=encoding.lower() if encoding else None,
+        station_z_convention=station_z_convention.lower(),
+        air_threshold_ohm_m=(air_threshold_ohm_m or None),
         poly=poly,
         origin=_parse_origin(origin),
         azimuth_deg=azimuth_deg,

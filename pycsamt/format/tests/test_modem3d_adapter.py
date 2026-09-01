@@ -262,3 +262,194 @@ class TestModEm3DAdapter:
         empty.model_initial = None
         with pytest.raises(ValueError, match="model_final/model_initial"):
             modem3d_to_pcsf(empty)
+
+
+def _synthetic_model(*, air_layers: int = 3, air_ohm_m: float = 1e12):
+    """A tiny ModEmModel3D whose top *air_layers* z-layers are air fill.
+
+    Mimics a real student ModEM run written with ``n_air == 0`` that
+    still leaves the model cells above topography at 1e10-1e13 ohm.m
+    (see fig08 / the Baohuashan discrepancy this feature fixes).
+    """
+    from pycsamt.models.modem.model3d import ModEmModel3D
+
+    nz, ny, nx = 6, 4, 5
+    m = ModEmModel3D()
+    m.x_widths = np.full(nx, 100.0)
+    m.y_widths = np.full(ny, 100.0)
+    m.z_widths = np.full(nz, 50.0)
+    rho = np.full((nz, ny, nx), 200.0)  # 200 ohm.m earth everywhere
+    rho[:air_layers, :, :] = air_ohm_m  # complete air layers on top
+    rho[air_layers, 0, 0] = air_ohm_m  # + one ragged air cell below them
+    m.rho_loge = np.log(rho)
+    m.n_air = 0
+    m.log_type = "LOGE"
+    m.origin = np.zeros(3)
+    m.rotation = 0.0
+    return m
+
+
+def _fake_result(model):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        mode="3d",
+        model_final=model,
+        model_initial=None,
+        data_obs=None,
+        data_pred=None,
+        log=None,
+        workdir="synthetic",
+        final_rms=1.5,
+        n_iter=10,
+        models=[],
+    )
+
+
+class TestAirFillMasking:
+    def test_air_fill_masked_by_default(self):
+        model = _synthetic_model(air_layers=3)
+        pcsf = modem3d_to_pcsf(_fake_result(model))
+        pcsf.validate()
+
+        rho = pcsf.resistivity
+        # Every air-fill cell (the 3 top layers + the ragged cell) is NaN.
+        assert np.isnan(rho[:3]).all()
+        assert np.isnan(rho[3, 0, 0])
+        # Resolved earth is untouched (bar exp/log float round-off).
+        np.testing.assert_allclose(rho[3:][~np.isnan(rho[3:])], 200.0)
+        # Native array keeps the raw values for provenance.
+        np.testing.assert_array_equal(
+            pcsf.resistivity_native, model.rho_loge
+        )
+        # Complete leading air layers are recorded as n_air.
+        assert pcsf.geometry.n_air == 3
+        meta = pcsf.metadata["air_mask"]
+        assert meta["threshold_ohm_m"] == 1e8
+        assert meta["n_cells_masked"] == 3 * 4 * 5 + 1
+        assert meta["n_air_detected"] == 3
+
+    def test_air_threshold_none_keeps_exact(self):
+        model = _synthetic_model(air_layers=3)
+        pcsf = modem3d_to_pcsf(_fake_result(model), air_threshold_ohm_m=None)
+        np.testing.assert_array_equal(
+            pcsf.resistivity, model.rho_linear
+        )
+        assert np.isfinite(pcsf.resistivity).all()
+        assert pcsf.geometry.n_air == 0
+        assert "air_mask" not in pcsf.metadata
+
+    def test_clean_model_is_untouched(self):
+        # No cell above the threshold -> a pure passthrough, no metadata.
+        model = _synthetic_model(air_layers=0, air_ohm_m=200.0)
+        pcsf = modem3d_to_pcsf(_fake_result(model))
+        np.testing.assert_array_equal(pcsf.resistivity, model.rho_linear)
+        assert "air_mask" not in pcsf.metadata
+        assert pcsf.geometry.n_air == 0
+
+
+def _fake_data(z_values, *, comment="", names=None, lonlat=None):
+    """A minimal ModEmData-like for _stations_from_modem_data."""
+    from types import SimpleNamespace
+
+    names = names or [f"18-{i + 1:03d}" for i in range(len(z_values))]
+    coords = {
+        n: (float(i) * 100.0, 0.0, float(z))
+        for i, (n, z) in enumerate(zip(names, z_values))
+    }
+    return SimpleNamespace(
+        site_names=list(names),
+        site_coords=coords,
+        site_lonlat=dict(lonlat or {}),
+        comment=comment,
+    )
+
+
+class TestLonLatQuantizationWarning:
+    def _pcsf(self, lonlat):
+        model = _synthetic_model(air_layers=0, air_ohm_m=200.0)
+        res = _fake_result(model)
+        res.data_obs = _fake_data(
+            [0.0] * len(lonlat), names=list(lonlat), lonlat=lonlat
+        )
+        return res
+
+    def test_warns_on_3dp_quantized_lonlat(self):
+        # a ModEM '-R' rewrite echo: every value is exactly 3 dp
+        ll = {
+            "18-001": (119.127, 32.118),
+            "18-002": (119.127, 32.118),
+            "18-003": (119.126, 32.119),
+            "18-004": (119.127, 32.120),
+        }
+        with pytest.warns(UserWarning, match="quantized to 3 decimal"):
+            modem3d_to_pcsf(self._pcsf(ll))
+
+    def test_no_warning_on_full_precision_lonlat(self):
+        ll = {
+            "18-001": (119.1269, 32.1179),
+            "18-002": (119.1265, 32.1188),
+            "18-003": (119.1266, 32.1197),
+            "18-004": (119.1264, 32.1206),
+        }
+        import warnings as _w
+
+        with _w.catch_warnings():
+            _w.simplefilter("error")  # any UserWarning -> test failure
+            modem3d_to_pcsf(self._pcsf(ll))
+
+
+class TestStationZConvention:
+    _COMMENT = "Baohuashan. Z(m) is depth below model top (top = 224 m a.s.l.)"
+
+    def _pcsf(self, data, **kw):
+        model = _synthetic_model(air_layers=0, air_ohm_m=200.0)
+        res = _fake_result(model)
+        res.data_obs = data
+        return modem3d_to_pcsf(res, **kw)
+
+    def test_depth_down_comment_flips_to_absolute_elevation(self):
+        data = _fake_data([125.0, 114.0, 143.0], comment=self._COMMENT)
+        with pytest.warns(UserWarning, match="positive-down depth"):
+            pcsf = self._pcsf(data)
+        # elevation = 224 - Z
+        np.testing.assert_allclose(pcsf.stations.z, [99.0, 110.0, 81.0])
+        assert pcsf.metadata["station_z"] == {
+            "convention": "auto",
+            "flipped": True,
+            "datum_masl": 224.0,
+        }
+
+    def test_auto_leaves_plain_elevation_alone(self):
+        # No depth-down marker in the comment -> trust the column.
+        data = _fake_data([99.0, 110.0, 81.0], comment="a normal survey")
+        pcsf = self._pcsf(data)
+        np.testing.assert_allclose(pcsf.stations.z, [99.0, 110.0, 81.0])
+        assert pcsf.metadata["station_z"]["flipped"] is False
+
+    def test_flat_zero_placeholder_untouched(self):
+        data = _fake_data([0.0, 0.0, 0.0], comment=self._COMMENT)
+        pcsf = self._pcsf(data)
+        np.testing.assert_array_equal(pcsf.stations.z, [0.0, 0.0, 0.0])
+        assert pcsf.metadata["station_z"]["flipped"] is False
+
+    def test_depth_down_without_datum_is_relative(self):
+        data = _fake_data(
+            [125.0, 114.0, 143.0], comment="Z is depth below datum"
+        )
+        with pytest.warns(UserWarning, match="relative elevation"):
+            pcsf = self._pcsf(data)
+        # deepest station (143) -> 0, shallower ones positive
+        np.testing.assert_allclose(pcsf.stations.z, [18.0, 29.0, 0.0])
+        assert pcsf.metadata["station_z"]["datum_masl"] is None
+
+    def test_force_elevation_keeps_verbatim(self):
+        data = _fake_data([125.0, 114.0, 143.0], comment=self._COMMENT)
+        pcsf = self._pcsf(data, station_z_convention="elevation")
+        np.testing.assert_allclose(pcsf.stations.z, [125.0, 114.0, 143.0])
+        assert pcsf.metadata["station_z"]["flipped"] is False
+
+    def test_force_depth_down_flips_even_without_comment(self):
+        data = _fake_data([10.0, 20.0], comment="")
+        pcsf = self._pcsf(data, station_z_convention="depth_down")
+        np.testing.assert_allclose(pcsf.stations.z, [10.0, 0.0])

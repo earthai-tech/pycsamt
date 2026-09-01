@@ -245,16 +245,145 @@ class TestLoadPcsfLinesGrid3D:
         assert len(data.stations) == 4
 
         section = data.metadata["sections"]["01"]
-        np.testing.assert_array_equal(section["z"], z_c[n_air:])
+        # The earth depth axis is re-zeroed to the top of the earth
+        # domain (0 at the first earth cell's top edge), matching
+        # pycsamt.models.modem.section.station_curtain -- an n_air > 0
+        # model like this one carries topography in its own air layers,
+        # so no per-station datum shift is applied. 80 m earth cells ->
+        # centres 40, 120, 200, 280, 360.
+        np.testing.assert_allclose(
+            section["z"], [40.0, 120.0, 200.0, 280.0, 360.0]
+        )
 
         # Hand-computed expectation: real x = local_x + 350 (grid centre),
         # real y = local_y + 300 -> nearest (iy, ix) per station, then the
-        # earth-only column at that cell.
+        # earth-only column at that cell (unchanged: n_air > 0 -> no
+        # datum re-reference).
         expected_ix = [0, 2, 4, 6]  # real x = 50, 250, 450, 650
         expected_iy = 2  # real y = 300 -> nearest y_c is 250 (tie -> lower)
         for k, ix in enumerate(expected_ix):
             expected_col = rho[n_air:, expected_iy, ix]
             np.testing.assert_array_equal(section["rho"][:, k], expected_col)
+
+    def test_residual_air_fill_is_masked_for_pre_mask_files(self, tmp_path):
+        """A grid3d PCSF written before the adapter learned to mask air
+        fill (n_air=0, top layers still ~1e12 ohm.m) must still render
+        with the air dropped -- load_pcsf_lines nan-masks cells above
+        _AIR_FILL_THRESHOLD defensively."""
+        from pycsamt.format import PCSFModel, StationTable, write_pcsf
+        from pycsamt.format.schema import Grid3DGeometry
+
+        nz, ny, nx = 6, 4, 5
+        rho = np.full((nz, ny, nx), 200.0)
+        rho[:2, :, :] = 1e12  # two un-flagged air layers
+        z_c = np.arange(nz) * 50.0 + 25.0
+        geometry = Grid3DGeometry(
+            x=np.arange(nx) * 100.0,
+            y=np.arange(ny) * 100.0,
+            z=z_c,
+            n_air=0,
+        )
+        stations = StationTable(
+            name=["23-07-001", "23-07-002"],
+            x=np.array([100.0, 300.0]),
+            y=np.array([150.0, 150.0]),
+            z=np.array([0.0, 0.0]),
+        )
+        path = write_pcsf(
+            PCSFModel(
+                geometry=geometry,
+                resistivity=rho,
+                source_backend="modem3d",
+                stations=stations,
+            ),
+            tmp_path / "grid3d_premask.pcsf",
+        )
+        data = load_pcsf_lines(path, fetch_elevation=False)
+        section = data.metadata["sections"]["07"]
+        col = section["rho"][:, 0]
+        assert np.isnan(col[:2]).all()  # air rows dropped
+        np.testing.assert_allclose(col[2:], 200.0)  # real earth kept
+
+    def test_depth_axis_is_referenced_to_each_station_surface(self, tmp_path):
+        """n_air == 0 + a recorded a.s.l. datum -> every column is
+        re-referenced to its own ground surface, so ``section['z']`` is a
+        true depth-below-surface (not depth-below-model-top)."""
+        from pycsamt.format import PCSFModel, StationTable, write_pcsf
+        from pycsamt.format.schema import Grid3DGeometry
+
+        # 10 uniform 40 m earth cells; a linear rho ramp with depth so the
+        # re-reference is easy to read back.
+        nz = 10
+        z_nodes = np.arange(nz + 1) * 40.0
+        z_c = (z_nodes[:-1] + z_nodes[1:]) / 2.0
+        rho = np.tile(z_c[:, None, None], (1, 3, 3))  # rho == depth-below-top
+        geometry = Grid3DGeometry(
+            x=np.arange(3) * 100.0,
+            y=np.arange(3) * 100.0,
+            z=z_c,
+            z_nodes=z_nodes,
+            n_air=0,
+        )
+        stations = StationTable(
+            name=["23-05-001", "23-05-002"],
+            x=np.array([100.0, 100.0]),
+            y=np.array([100.0, 100.0]),
+            z=np.array([90.0, 60.0]),  # a.s.l. -> 110 / 140 m below top
+        )
+        model = PCSFModel(
+            geometry=geometry,
+            resistivity=rho,
+            source_backend="modem3d",
+            stations=stations,
+            metadata={"station_z": {"datum_masl": 200.0}},
+        )
+        path = write_pcsf(model, tmp_path / "grid3d_topo.pcsf")
+        section = load_pcsf_lines(path, fetch_elevation=False).metadata[
+            "sections"
+        ]["05"]
+
+        # rho == depth-below-model-top, so a column read at
+        # "depth-below-surface d" must come back as d + (200 - elev).
+        z = section["z"]
+        s1 = np.interp(120.0, z, section["rho"][:, 0])  # elev 90 -> +110
+        s2 = np.interp(120.0, z, section["rho"][:, 1])  # elev 60 -> +140
+        assert s1 == pytest.approx(230.0, abs=5.0)
+        assert s2 == pytest.approx(260.0, abs=5.0)
+
+    def test_deep_bc_padding_is_trimmed(self, tmp_path):
+        """The deep, geometrically-growing boundary-condition cells are
+        dropped from a sliced curtain so they don't bloat 3-D views."""
+        from pycsamt.format import PCSFModel, StationTable, write_pcsf
+        from pycsamt.format.schema import Grid3DGeometry
+
+        # 12 x 40 m core cells, then 8 cells doubling each time (deep BC).
+        core = np.full(12, 40.0)
+        pad = 80.0 * 2.0 ** np.arange(8)
+        widths = np.concatenate([core, pad])
+        z_nodes = np.concatenate([[0.0], np.cumsum(widths)])
+        z_c = (z_nodes[:-1] + z_nodes[1:]) / 2.0
+        rho = np.full((z_c.size, 3, 3), 100.0)
+        geometry = Grid3DGeometry(
+            x=np.arange(3) * 100.0, y=np.arange(3) * 100.0,
+            z=z_c, z_nodes=z_nodes, n_air=0,
+        )
+        stations = StationTable(
+            name=["23-06-001", "23-06-002"],
+            x=np.array([100.0, 100.0]), y=np.array([100.0, 100.0]),
+            z=np.array([0.0, 0.0]),
+        )
+        path = write_pcsf(
+            PCSFModel(geometry=geometry, resistivity=rho,
+                      source_backend="modem3d", stations=stations),
+            tmp_path / "grid3d_deep.pcsf",
+        )
+        section = load_pcsf_lines(path, fetch_elevation=False).metadata[
+            "sections"
+        ]["06"]
+        # core zone ends at 480 m; the trim keeps the core plus a cell or
+        # two, never the multi-km padding.
+        assert section["z"].max() < 2000.0
+        assert section["z"].size < z_c.size
 
     def test_multiline_grouping_falls_back_to_name_heuristic(self, tmp_path):
         path, _ = _write_grid3d_pcsf(tmp_path / "grid3d_2lines.pcsf")

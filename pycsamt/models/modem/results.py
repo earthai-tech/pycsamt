@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import numpy as np
 
@@ -40,6 +40,35 @@ def _modem_iter_num(path: Path) -> int | None:
     """Extract trailing iteration number from a path stem, or ``None``."""
     m = _MODEM_ITER_RE.search(path.stem)
     return int(m.group(1)) if m else None
+
+
+# A ModEM ``-R`` "read and rewrite" run echoes the input data back out
+# with ``GG_Lat``/``GG_Lon`` truncated to its fixed 3-decimal (``f9.3``)
+# output format -- ~100 m at mid latitudes. Such a file is a degraded
+# copy of the real input and must not be preferred as the observed-data
+# source when the actual input ``.dat`` is also present.
+_REWRITE_ECHO_RE = re.compile(r"(^|[_-])(rw|rewrite|readwrite)([_-]|$)", re.I)
+
+
+def _looks_coord_quantized(site_lonlat: dict, ndp: int = 3) -> bool:
+    """True when every station's lon/lat equals its own value rounded to
+    *ndp* decimals -- the signature of a ModEM ``f9.3`` rewrite echo."""
+    vals = [c for pair in site_lonlat.values() for c in pair]
+    if not vals:
+        return False
+    return all(abs(v - round(v, ndp)) < 1e-9 for v in vals)
+
+
+def _obs_dat_rank(path: Path, data, sort_index: int) -> tuple:
+    """Sort key for choosing the observed-data ``.dat`` among several
+    valid candidates: a non-echo file wins over a ``-R`` rewrite echo,
+    then a full-precision coordinate file over a 3-decimal one, then the
+    original directory order."""
+    return (
+        bool(_REWRITE_ECHO_RE.search(path.stem)),
+        _looks_coord_quantized(getattr(data, "site_lonlat", {}) or {}),
+        sort_index,
+    )
 
 
 def _detect_mode_from_rho(path: Path) -> str:
@@ -201,22 +230,31 @@ class InversionResult(ModEmBase):
         # (e.g. RERUN-*.dat, the actual input data supplied to the inversion).
         # These are preferred over the Modular_NLCG_NNN.dat files, which store
         # forward-response values and typically carry error = 2e15 (sentinel).
-        for df in sorted(wd.glob("*.dat")):
+        # When several qualify, a real input file beats a ModEM ``-R``
+        # rewrite echo (which truncates GG_Lat/GG_Lon to 3 decimals) and a
+        # full-precision-coordinate file beats a quantized one -- see
+        # :func:`_obs_dat_rank`.
+        p1_candidates: list[tuple[tuple, Any]] = []
+        for i, df in enumerate(sorted(wd.glob("*.dat"))):
             if _modem_iter_num(df) is not None:
                 continue
             if _stem(df) in ("d0", "di", "pr"):
                 continue
             try:
                 candidate = ModEmData.read(df)
-                has_real = any(
-                    row[8] < _ERR_SENTINEL
-                    for blk in candidate.blocks
-                    for row in blk["rows"][:20]
-                )
-                if has_real and self.data_obs is None:
-                    self.data_obs = candidate
             except Exception:
-                pass
+                continue
+            has_real = any(
+                row[8] < _ERR_SENTINEL
+                for blk in candidate.blocks
+                for row in blk["rows"][:20]
+            )
+            if has_real:
+                p1_candidates.append(
+                    (_obs_dat_rank(df, candidate, i), candidate)
+                )
+        if p1_candidates and self.data_obs is None:
+            self.data_obs = min(p1_candidates, key=lambda c: c[0])[1]
 
         # Priority 2: old-convention stems
         for df in sorted(wd.glob("*.dat")):

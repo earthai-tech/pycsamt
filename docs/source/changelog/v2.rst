@@ -10,6 +10,167 @@ each release.
 
 ----
 
+.. _changelog-2-6-0:
+
+2.6.0 |Feature| |New|
+---------------------
+
+*Unreleased.*
+
+Added
+~~~~~
+
+* |New| **Post-inversion data-fit diagnostics for ModEM** --
+  :class:`pycsamt.models.modem.plot.PlotDataFit` and
+  :class:`pycsamt.models.modem.plot.PlotMisfitMap`.
+
+  ``PlotDataFit`` is a publication-style observed-vs-model response
+  panel: each station spans one column group of impedance components
+  (apparent resistivity above, phase below, 2:1, no gap), observed data
+  as error-bar markers on a dotted guide line, the model response as a
+  solid line, per-panel component RMS in each title and the pooled
+  per-station RMS in each header, coloured by mode
+  (``TE`` = ``Zxx``/``Zxy``, ``TM`` = ``Zyx``/``Zyy``) with one shared
+  legend. Only components that actually carry unmasked data are drawn,
+  so an off-diagonal file collapses to two columns per station instead
+  of four half-empty ones. Two or more results can be stacked as
+  labelled bands (``a)``, ``b)``, …) to compare independent inversions.
+
+  ``PlotMisfitMap`` is the spatial companion: every station drawn at its
+  map position (geographic lon/lat when the data file carries it,
+  model-grid easting/northing otherwise) and coloured by its pooled RMS
+  normalised residual, with an optional per-component small-multiple
+  layout. Survey lines are detected from the station-name prefix and
+  labelled (``show_line_labels``, ``line_label_rotation``); ``rotate_deg``
+  spins a narrow north--south survey into a local-kilometre frame that
+  fills the page, and ``aspect`` / ``name_rotation`` are exposed too. The
+  whole-survey RMS in the title reproduces the value ModEM's own NLCG log
+  reports.
+
+  Both accept an :class:`~pycsamt.models.modem.results.InversionResult`
+  or a bare ``data_obs`` / ``data_pred`` pair of
+  :class:`~pycsamt.models.modem.data.ModEmData` objects, and are
+  exported from ``pycsamt.models.modem``.
+
+----
+
+.. _changelog-2-5-2:
+
+2.5.2 |Fix| |Docs|
+------------------
+
+*Released 2026-09-01.*
+
+A patch release. Converting a real, independent third-party ModEM 3-D
+inversion of the Baohuashan Cu--Mo survey to PCSF and exercising every
+Map View mode against it exposed five pre-existing defects in how a
+native ModEM volume's own conventions reach the viewer -- an air-fill
+colour scale, an upside-down topography drape, a depth axis referenced to
+the model top rather than the ground, a block/iso volume left empty by
+real multi-line station geometry, and zig-zag profile lines from a
+3-decimal coordinate echo. None affected a pyCSAMT-written ModEM file or
+the bundled regression data.
+
+Added
+~~~~~
+
+* |New| **Map View 3-D robust colour scale** --
+  ``VolumeMapOptions`` gains ``crange_percentile``
+  (default ``(2.0, 98.0)``) and ``rho_display_max``. The fence /
+  depth-slice / block auto colour range is now clipped to a percentile
+  band instead of the raw min/max, and ``rho_display_max`` is a hard
+  "hide every cell above this resistivity" cutoff that applies in every
+  3-D mode *and* drives the colour range (unlike the ``rho_range``
+  visibility band, which deliberately leaves the scale put). Both are
+  exposed in the Map View inspector's **Appearance** panel as
+  "Colour-scale percentile" and "Hide cells above rho".
+* |New| **``modem3d_to_pcsf`` gains ``air_threshold_ohm_m`` and
+  ``station_z_convention``** -- and ``pycsamt format convert`` gains the
+  matching ``--air-threshold`` and ``--station-z`` options. See Fixed.
+
+Fixed
+~~~~~
+
+* |Fix| **A ModEM 3-D volume's above-topography air fill hijacked Map
+  View's colour scale** -- ModEM leaves the model cells above the real
+  ground surface at air-like resistivity (1e8--1e13 ohm.m) even when the
+  run declares no dedicated air layers (``n_air == 0``; the WS header's
+  4th field is a mapping method, not an air count).
+  :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf` stored the
+  whole ``rho_linear`` volume verbatim, and ``pycsamt.map.volume``'s
+  auto colour range took the raw min/max, so a fence colourbar ran to
+  ``log10 rho`` ~13 and crushed the real 50--15,000 ohm.m earth into one
+  flat band. The adapter now masks those cells to ``NaN`` in the
+  canonical ``PCSFModel.resistivity``
+  (``air_threshold_ohm_m=1e8`` by default; ``resistivity_native`` keeps
+  the raw array bit-exact; ``metadata["air_mask"]`` records it), any
+  complete leading air layers are written to ``Grid3DGeometry.n_air``,
+  and ``pycsamt.map.inversion`` defensively masks the same fill in
+  curtains sliced from an older ``.pcsf`` file. Pass
+  ``air_threshold_ohm_m=None`` /
+  ``--air-threshold 0`` for an exact passthrough.
+* |Fix| **ModEM topography was applied upside-down in every Map View 3-D
+  mode** -- ModEM's model z-axis points downward, so a ``.dat`` file's
+  own ``Z(m)`` station column is a positive-down depth below a datum,
+  not an elevation. ``modem3d_to_pcsf`` copied it verbatim into
+  ``StationTable.z``, which every 3-D view (fence, depth-slice, block,
+  terrain line) treats as a positive-up elevation -- so deeper
+  stations draped *higher* and hills rendered as hollows. The adapter's
+  new ``station_z_convention`` (default ``"auto"``) flips the column to
+  a positive-up elevation when the ``.dat`` comments say it is a
+  positive-down depth, reading an ``... m a.s.l.`` datum from the file
+  when present (else a relative elevation), and records the outcome in
+  ``metadata["station_z"]`` with a :class:`UserWarning`. ``"elevation"``
+  keeps the column verbatim (what pyCSAMT's own ModEM writer produces);
+  ``"depth_down"`` forces the flip.
+* |Fix| **``grid3d`` depth slices were referenced to the model top, not
+  the ground surface** -- ``load_pcsf_lines`` gave every station the full
+  model column measured from ModEM's ``z = 0`` (the flat model top),
+  which for a topography-through-resistivity model sits ~100 m above the
+  real ground, so a "200 m" depth slice really read ~90 m below surface
+  and warped station-to-station with the terrain. For an ``n_air == 0``
+  model with a known a.s.l. datum (``metadata["station_z"]``, else the
+  highest station), each column is now resampled onto true
+  depth-below-*its*-surface; the earth axis is also re-zeroed to the
+  earth top (matching
+  :func:`pycsamt.models.modem.section.station_curtain`), and the deep,
+  geometrically-graded boundary-condition cells -- tens of km of no
+  resolution that dominated every 3-D view's vertical extent -- are
+  trimmed from the sliced curtain.
+* |Fix| **Map View 3-D block / iso-surface rendered nothing on a real
+  multi-line ModEM survey** -- lines whose stations project onto a
+  shared along-strike position (routine for a dense or curved survey)
+  produced duplicate ``x`` coordinates, and
+  ``go.Volume``/``go.Isosurface``'s grid interpolator needs strictly
+  ascending axes, so every line was skipped and the volume came back all
+  ``NaN`` ("resistivity not in the colour-bar range"). Coincident
+  columns/rows are now merged (NaN-aware mean) before the interpolation,
+  the same way the fence panels already de-duplicate, and the draped
+  block keeps the model's own near-surface cell density instead of a
+  uniform lattice that buried it in the deep padding.
+* |Fix| **Profile lines zig-zagged for a ModEM run whose station
+  coordinates were a rewrite echo** --
+  :class:`~pycsamt.models.modem.results.InversionResult` auto-picks the
+  observed-data ``.dat`` from a run folder; when the folder held both the
+  real input and a ModEM ``-R`` "read and rewrite" echo (which truncates
+  ``GG_Lat``/``GG_Lon`` to 3 decimals -- ~100 m at mid latitudes),
+  case-insensitive file sorting on Windows chose the echo. On a survey
+  with ~100 m station spacing the quantized coordinates made Map View's
+  profile polylines saw-tooth and collapsed adjacent stations onto one
+  point. ``InversionResult`` now ranks candidates so a full-precision
+  input beats a rewrite echo, and
+  :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf` warns when the
+  ``.dat`` file's ``GG_Lat``/``GG_Lon`` are quantized to 3 decimals.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| The ``modem3d_to_pcsf`` docstring and ``pycsamt format
+  convert`` help document the new ``air_threshold_ohm_m`` /
+  ``station_z_convention`` parameters and their CLI equivalents.
+
+----
+
 .. _changelog-2-5-0:
 
 2.5.0 |New| |Fix| |Docs|

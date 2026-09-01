@@ -1,0 +1,266 @@
+.. _release_v2_5_2:
+
+-------------
+Version 2.5.2
+-------------
+
+pyCSAMT 2.5.2 |Fix| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-09-01.*
+
+A patch release. Its fixes all came out of verification work: converting
+a real, independent third-party ModEM 3-D inversion of the Baohuashan
+Cu--Mo survey to PCSF, exercising every Map View 3-D mode against it, and
+comparing the result against a section figure built straight from the
+same ``.rho`` file. That exposed five pre-existing defects in the ModEM
+3-D import path -- an air-fill colour scale, an upside-down topography
+drape, a depth axis referenced to the model top instead of the ground, a
+block/iso volume left empty by real multi-line station geometry, and
+zig-zag profile lines from a 3-decimal coordinate rewrite echo. None was
+reachable through a pyCSAMT-written ModEM file, which is why the bundled
+regression data never surfaced them.
+
+Above-topography air fill no longer hijacks the colour scale |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A ModEM 3-D model fills every cell above the real ground surface with
+air-like resistivity -- 1e8 to 1e13 :math:`\Omega\,\mathrm{m}` -- even
+when the run declares **no** dedicated air layers. ModEM's WS-format
+header has no reliable air-layer count (its fourth field is a
+"mapping method", not a count), so ``n_air`` is commonly ``0`` and
+nothing marks those cells as air.
+
+:func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf` previously
+stored the entire ``rho_linear`` volume verbatim, and
+:mod:`pycsamt.map.volume`'s automatic colour range took the raw
+minimum/maximum of every finite cell. On the Baohuashan volume -- where
+about 8.5 % of cells are above 1e8 :math:`\Omega\,\mathrm{m}` -- the
+fence colourbar therefore ran to :math:`\log_{10}\rho \approx 13` and
+compressed the real 50--15,000 :math:`\Omega\,\mathrm{m}` earth into the
+bottom quarter of the ramp, so the whole section read as one flat band
+regardless of the chosen colormap.
+
+Three changes address this:
+
+* :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf` now takes
+  ``air_threshold_ohm_m`` (default ``1e8``). Cells above it are set to
+  ``NaN`` in the canonical ``PCSFModel.resistivity``;
+  ``PCSFModel.resistivity_native`` keeps the raw
+  natural-log array bit-exact for provenance; any *complete* leading air
+  layers are recorded in ``Grid3DGeometry.n_air`` (only when the
+  source model reported ``0``); and ``metadata["air_mask"]`` records the
+  threshold and the masked-cell count. ``air_threshold_ohm_m=None``
+  restores the exact, unmasked passthrough.
+* :mod:`pycsamt.map.inversion` defensively masks the same fill in a
+  curtain sliced from a ``.pcsf`` file written before this change, so an
+  older file renders correctly too.
+* ``VolumeMapOptions`` gains ``crange_percentile``
+  (default ``(2.0, 98.0)``) -- the automatic fence / depth-slice / block
+  colour range is now clipped to that percentile band, matching the
+  convention a hand-drawn ModEM section uses -- and ``rho_display_max``,
+  a hard "hide every cell above this resistivity" cutoff that applies in
+  every 3-D mode *and* feeds the colour-range computation. Unlike the
+  existing ``rho_range`` visibility band (which deliberately leaves the
+  colour scale pinned to the whole model), ``rho_display_max`` is the
+  knob that removes air / overburden fill from a view and its colourbar
+  at once. Both are exposed in the Map View inspector's **Appearance**
+  panel as "Colour-scale percentile" and "Hide cells above rho", next to
+  the existing manual colourbar range.
+
+On the Baohuashan file the fence colourbar now spans about
+52--13,650 :math:`\Omega\,\mathrm{m}` with no manual range set,
+matching a section plotted directly from the model.
+
+ModEM topography is no longer applied upside-down |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ModEM's model z-axis points **downward**. A ModEM ``.dat`` file's own
+``Z(m)`` station column is therefore a *depth below a datum*, positive
+down -- not an elevation. This file states it in its own header::
+
+    # Z(m) is depth below model top (top = 224 m a.s.l.)
+
+:func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf` copied that
+number verbatim into ``StationTable.z``, and every Map View 3-D view
+-- fence, depth-slice, block, and the draped terrain line -- treats
+``StationTable.z`` as a positive-up elevation. The sign was
+therefore inverted: a station with a *larger* ``Z`` (deeper below the
+datum, i.e. *lower* ground) draped *higher*, so hills rendered as
+hollows. The live-folder import path
+(:meth:`~pycsamt.map.MapView.from_inversion_results`) was unaffected --
+it never uses ModEM's ``Z`` for elevation.
+
+:func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf` now takes
+``station_z_convention``:
+
+* ``"auto"`` (default) -- flip the column to a positive-up elevation
+  only when the ``.dat`` file's own ``#`` comments say it is a
+  positive-down depth (markers such as "depth below", "positive down").
+  An ``... m a.s.l.`` phrase in the comments is read as the datum
+  (elevation ``= datum - Z``); without one, the deepest station is taken
+  as ``0`` and the result is a *relative* elevation with the correct
+  shape. A flat all-zero column is always left untouched.
+* ``"elevation"`` -- trust the column as-is. This is what pyCSAMT's own
+  ModEM writer produces.
+* ``"depth_down"`` -- force the flip.
+
+The outcome is recorded in ``metadata["station_z"]`` and, when a flip
+happens, reported with a :class:`UserWarning`.
+
+Depth slices now mean true depth below the ground surface |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``load_pcsf_lines`` sliced each station's curtain straight off
+``geometry.z`` -- ModEM's depth axis, measured downward from the model
+top. For a model that represents topography through a resistivity fill,
+that top is a flat surface ~100 m above the real ground (187 m at the
+extremes on the Baohuashan volume), so a "200--500 m" depth slice
+actually sampled ~90--390 m below each station and undulated with the
+terrain instead of cutting a true horizontal.
+
+For an ``n_air == 0`` model with a recoverable a.s.l. datum -- from
+``metadata["station_z"]`` (see above), or the highest station elevation
+as a floor -- every column is now resampled (in ``log10``) onto depth
+below *its own* surface. The earth depth axis is also re-zeroed to the
+top of the earth domain, matching
+:func:`pycsamt.models.modem.section.station_curtain`, and the deep
+boundary-condition cells -- a ModEM grid grades geometrically to tens of
+km, none of it interpretable -- are trimmed from the curtain so they stop
+dominating the vertical extent of every 3-D view. An ``n_air > 0`` model
+already carries topography in its own air layers and is only re-zeroed,
+not shifted.
+
+3-D block and iso-surface render on a real multi-line survey |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The block and iso-surface builders reconstruct one dense ``(x, y, z)``
+lattice from the per-line curtains through
+:class:`scipy.interpolate.RegularGridInterpolator`, which requires each
+axis to be *strictly* ascending. Real multi-line ModEM geometry
+routinely projects two nearby stations onto the same along-strike
+position (two or three exact duplicates per line on this survey), so
+every line raised ``ValueError``, was skipped, and the volume came back
+entirely ``NaN`` -- the block showed nothing and the colour bar covered a
+range no cell was in.
+
+Coincident columns and rows are now merged (NaN-aware mean) before the
+interpolation, exactly the way the fence panels already de-duplicate
+their station axis. Separately, the terrain-following drape now keeps the
+model's own non-uniform near-surface cell spacing instead of resampling
+onto a uniform elevation lattice that spent almost every sample in the
+deep padding. Fence and depth-slice mode were unaffected (they never went
+through that interpolator).
+
+Profile lines no longer zig-zag from a coordinate rewrite echo |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`~pycsamt.models.modem.results.InversionResult` auto-detects the
+observed-data ``.dat`` in a run folder. The Baohuashan folder held both
+the real Stage-A input and a ModEM ``-R`` "read and rewrite" echo -- and
+ModEM writes ``GG_Lat``/``GG_Lon`` back out with its fixed 3-decimal
+(``f9.3``) format, ~93 m in longitude and ~111 m in latitude at 32 deg N.
+On a survey with ~110 m station spacing that quantization is the same
+size as the spacing: several stations rounded onto the exact same point,
+and a line whose true longitude ran along a ``0.001`` deg boundary
+alternated between the two adjacent grid values, so its Map View profile
+polyline saw-toothed while lines that happened to sit inside one cell
+rendered artificially straight.
+
+Case-insensitive file sorting on Windows put the ``_rw_...`` echo ahead
+of the real ``ModEMData_...`` input, so ``InversionResult`` picked it.
+Candidates are now ranked: a real input beats a ``-R`` rewrite echo, and
+full-precision coordinates beat 3-decimal ones. When only a quantized
+file is available, :func:`~pycsamt.format.adapters.modem3d.modem3d_to_pcsf`
+converts it as before but emits a :class:`UserWarning` pointing to
+``data=`` / ``topo=`` / ``known_stations``. The model's own ``X(m)``,
+``Y(m)`` columns were full precision throughout -- only the geographic
+copy was truncated.
+
+CLI
+~~~
+
+``pycsamt format convert`` gains two ModEM-only options mirroring the
+adapter parameters above:
+
+* ``--station-z {auto,elevation,depth_down}`` (default ``auto``).
+* ``--air-threshold FLOAT`` (default ``1e8``; pass ``0`` to disable).
+
+Fixed
+~~~~~
+
+* |Fix| **ModEM 3-D air fill hijacked the Map View colour scale** --
+  ``modem3d_to_pcsf`` now masks above-topography air fill
+  (> ``air_threshold_ohm_m``, default ``1e8``) to ``NaN`` in the
+  canonical resistivity, records it in ``metadata["air_mask"]`` and
+  ``Grid3DGeometry.n_air``, and keeps ``resistivity_native`` exact.
+  ``pycsamt.map.volume``'s auto colour range is clipped to
+  ``VolumeMapOptions.crange_percentile`` (default 2nd--98th percentile),
+  and ``VolumeMapOptions.rho_display_max`` hides cells above a cutoff in
+  every 3-D mode and its colourbar. ``pycsamt.map.inversion`` applies
+  the same defensive mask to curtains from older ``.pcsf`` files.
+* |Fix| **ModEM topography rendered upside-down in Map View 3-D** --
+  ``modem3d_to_pcsf`` read a ModEM ``.dat`` file's positive-down ``Z``
+  column as a positive-up elevation, so hills draped as hollows in
+  fence / depth-slice / block views. New ``station_z_convention``
+  (default ``"auto"``) flips the column to an elevation when the file's
+  comments say it is a depth, using an ``m a.s.l.`` datum from the file
+  when present.
+* |Fix| **``grid3d`` depth slices were referenced to the model top** --
+  ``load_pcsf_lines`` now resamples each ``n_air == 0`` column onto true
+  depth below its own ground surface (using the recorded a.s.l. datum),
+  re-zeros the earth axis to the earth top, and trims the deep
+  boundary-condition padding cells from the curtain.
+* |Fix| **Map View 3-D block / iso-surface came back empty on a
+  multi-line ModEM survey** -- duplicate along-strike station positions
+  made ``RegularGridInterpolator`` reject every line. Coincident
+  columns/rows are merged before the interpolation, and the block drape
+  keeps the model's own near-surface depth spacing.
+* |Fix| **Profile lines zig-zagged from a 3-decimal coordinate echo** --
+  ``InversionResult`` now prefers a full-precision input ``.dat`` over a
+  ModEM ``-R`` rewrite echo (which truncates ``GG_Lat``/``GG_Lon`` to
+  ~100 m), and ``modem3d_to_pcsf`` warns when the coordinates are
+  quantized to 3 decimals.
+
+Added
+~~~~~
+
+* |New| ``VolumeMapOptions.crange_percentile`` and
+  ``VolumeMapOptions.rho_display_max``, with matching "Colour-scale
+  percentile" and "Hide cells above rho" controls in the Map View
+  inspector.
+* |New| ``modem3d_to_pcsf(air_threshold_ohm_m=..., station_z_convention=...)``
+  and the ``pycsamt format convert --air-threshold`` / ``--station-z``
+  options.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+Existing behaviour is unchanged for a pyCSAMT-written ModEM file (its
+station ``Z`` is already an elevation and its model carries no air
+fill) and for every other backend. A ``.pcsf`` file produced from a
+native ModEM run by pyCSAMT 2.5.1 or earlier keeps the raw air fill and
+positive-down ``Z``; re-run ``pycsamt format convert`` to pick up the
+fixes, or rely on the Map View defensive air mask for the colour scale.
+``modem3d_to_pcsf`` now emits a :class:`UserWarning` when it flips a
+station ``Z`` column.
+
+A ``grid3d`` PCSF file's sliced curtains
+(``MapData.metadata["sections"]``) now carry a shorter, surface-referenced
+depth axis; code that read those arrays expecting a model-top datum or
+the full boundary-condition depth extent should be reviewed. The live
+ModEM-folder path
+(:func:`~pycsamt.map.inversion.load_modem_lines` /
+:func:`~pycsamt.models.modem.section.station_curtain`) is unchanged.
+
+:class:`~pycsamt.models.modem.results.InversionResult` may now pick a
+*different* file as ``data_obs`` than before, for the same run folder --
+only when it previously had more than one non-numbered ``.dat`` with
+genuine measurement errors to choose from (e.g. both a real input and a
+ModEM ``-R`` rewrite echo). The newly preferred file is always a
+full-precision, real-input candidate, never a numbered response file, so
+``data_pred``/model selection is unaffected; a folder with only one such
+candidate (the common case) resolves exactly as before. If a workflow
+depends on a specific one of several such files, pass it explicitly via
+``modem3d_to_pcsf(..., data=ModEmData.read(path))`` rather than relying on
+auto-detection.

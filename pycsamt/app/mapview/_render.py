@@ -322,6 +322,10 @@ def figure_for(
             depth_range=_pair(c.get("depth_lo"), c.get("depth_hi")),
             value_range=_pair(c.get("vmin"), c.get("vmax")),
             rho_range=_pair(c.get("rho_lo"), c.get("rho_hi")),
+            crange_percentile=_pct_pair(
+                c.get("crange_plo"), c.get("crange_phi")
+            ),
+            rho_display_max=_pos_or_none(c.get("rho_cutoff")),
             log_color=c.get("scale", "log") == "log",
             topography=bool(c.get("topography", True)),
             show_terrain=bool(c.get("terrain", True)),
@@ -366,6 +370,30 @@ def _pair(lo, hi):
     if hi_f > lo_f >= 0:
         return (lo_f, hi_f)
     return None
+
+
+def _pct_pair(lo, hi):
+    """Percentile ``(lo, hi)`` in ``[0, 100]`` and ordered, else ``None``.
+
+    ``None`` restores the raw min/max auto colour range (see
+    :attr:`pycsamt.map.config.VolumeMapOptions.crange_percentile`).
+    """
+    try:
+        lo_f, hi_f = float(lo), float(hi)
+    except (TypeError, ValueError):
+        return None
+    if 0.0 <= lo_f < hi_f <= 100.0:
+        return (lo_f, hi_f)
+    return None
+
+
+def _pos_or_none(value):
+    """Return ``float(value)`` when it is a positive number, else ``None``."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
 
 
 def _transparent(fig):

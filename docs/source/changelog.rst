@@ -33,31 +33,32 @@ Latest release
 
 .. _changelog-latest:
 
+**2.5.2** — *2026-09-01* — a patch release. Converting a real,
+independent third-party ModEM 3-D inversion to PCSF and exercising every
+Map View mode against it exposed five pre-existing defects in the native
+ModEM 3-D import path: above-topography air fill drove the automatic
+colour scale; the positive-down ``.dat`` ``Z`` column was read as an
+elevation, draping topography upside-down; depth slices were referenced
+to the model top, not the ground surface; the block / iso-surface volume
+came back empty when real multi-line station geometry produced duplicate
+along-strike coordinates; and profile lines zig-zagged when
+``InversionResult`` picked a 3-decimal ModEM ``-R`` coordinate echo over
+the real input. ``modem3d_to_pcsf`` gains ``air_threshold_ohm_m`` and
+``station_z_convention`` (with ``pycsamt format convert --air-threshold``
+/ ``--station-z``) plus a quantized-coordinate warning; Map View gains
+``crange_percentile`` / ``rho_display_max`` and their inspector controls,
+re-references ``grid3d`` curtains to each station's own surface, trims the
+deep boundary-condition padding, and de-duplicates the block/iso
+interpolation axes; ``InversionResult`` now prefers a full-precision
+input ``.dat`` over a rewrite echo.
+:ref:`Full 2.5.2 entry <changelog-2-5-2>` · :ref:`Release notes
+<release_v2_5_2>`.
+
 **2.5.0** — *2026-08-28* — a major interoperability release centered on two
 complementary common-format families: PCSF/PCSM for subsurface models and
 inversion results, and PCBH for spatial multi-borehole observations and
-geology. Their explicit association supports reproducible model-plus-evidence
-exchange and shared 3-D interpretation. The release also adds a survey-scale
-confidence-ratio QC suite
-with ten complementary plots, smart geographic contours, and CSV/Surfer
-grid export. The release also fixes ``ModEmModel3D`` centre/rotation
-retention, web 3-D topography uploads, and confidence-map/profile geometry,
-with expanded PCSF and confidence-evaluation guides and reproducible
-examples. Running real, full-scale Occam2D and ModEM 3-D inversions
-against a real 128-station survey found and fixed four more real
-solver-launch bugs, including a new ``ModEmForwardControl`` that finally
-lets a 3-D covariance file reach Mod3DMT at all, and a Fortran
-formatted-input decimal-point bug that had silently corrupted control
-values (``target_rms`` included) in every prior 3-D run. The Map View's
-resistivity modes were reworked for real inversion volumes: 3-D
-resistivity/depth filters that mask instead of recolour, block and
-iso-surface modes that render under topography at all, depth slices kept
-inside the real model, a new inversion "Resistivity @ depth" plan-slice
-over the basemap, opt-in volume smoothing, rotatable/thinnable station
-labels, a Borehole Builder with shared web/MapView 3-D rendering, and a
-Windows ``pycsamt-mapview`` logging-flood fix.
-:ref:`Full 2.5.0 entry <changelog-2-5-0>` · :ref:`Release notes
-<release_v2_5_0>`.
+geology. See the :ref:`full 2.5.0 entry <changelog-2-5-0>` and
+:ref:`release notes <release_v2_5_0>`.
 
 .. toctree::
    :maxdepth: 1

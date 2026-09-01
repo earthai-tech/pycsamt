@@ -123,6 +123,9 @@ class ConvertOptions:
     created_by: str = "pycsamt format convert"
     description: str = ""
     verbose: int = 0
+    # ModEM 3-D only.
+    station_z_convention: str = "auto"
+    air_threshold_ohm_m: float | None = 1e8
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +250,8 @@ def _build_from_solver(sk, opts: ConvertOptions):
         result = InversionResult(workdir=workdir, load_data=True)
         return modem3d_to_pcsf(
             result,
+            station_z_convention=opts.station_z_convention,
+            air_threshold_ohm_m=opts.air_threshold_ohm_m,
             topo=str(opts.topo) if opts.topo else None,
             epsg=opts.epsg,
             utm_zone=opts.utm_zone,

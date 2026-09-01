@@ -44,6 +44,62 @@ from ._core import (
 
 __all__ = ["group_modem_stations", "load_modem_lines", "load_pcsf_lines"]
 
+#: Cell resistivity (ohm.m) above which a ``grid3d`` PCSF cell is
+#: treated as ModEM's above-topography "air" / padding fill and dropped
+#: from a sliced curtain. A defensive net for ``.pcsf`` files written
+#: before :func:`pycsamt.format.adapters.modem3d.modem3d_to_pcsf` began
+#: masking that fill itself (mirrors its ``DEFAULT_AIR_THRESHOLD_OHM_M``);
+#: harmless on newer files, whose air cells are already ``nan``.
+_AIR_FILL_THRESHOLD = 1e8
+
+#: A ModEM 3-D grid grades geometrically to tens of km for the boundary
+#: conditions; those deep cells carry no interpretable resolution and,
+#: left in a sliced curtain, dominate the vertical extent of every 3-D
+#: view. Trim trailing cells once a cell is this many times thicker than
+#: the shallowest earth cell (keeping at least ``_MIN_EARTH_CELLS``).
+_BC_PADDING_GROWTH = 15.0
+_MIN_EARTH_CELLS = 8
+
+
+def _earth_cell_cut(z_nodes_earth: np.ndarray) -> int:
+    """Index of the first boundary-condition padding cell in an earth
+    depth-node array (``0`` at the earth top). Cells at and beyond it are
+    dropped from a sliced curtain."""
+    dz = np.diff(np.asarray(z_nodes_earth, dtype=float))
+    if dz.size <= _MIN_EARTH_CELLS:
+        return dz.size
+    too_thick = dz > _BC_PADDING_GROWTH * dz[0]
+    if not too_thick.any():
+        return dz.size
+    return max(_MIN_EARTH_CELLS, int(np.argmax(too_thick)))
+
+
+def _model_top_datum(model: Any, elevs: np.ndarray) -> float | None:
+    """Elevation (m a.s.l.) of a ``grid3d`` model's own ``z = 0`` plane.
+
+    ModEM's model z-axis is measured downward from the *model top*, which
+    for a run that represents topography through a high-resistivity fill
+    (rather than explicit air layers) sits well above the real ground --
+    so a curtain sliced straight off ``geometry.z`` is referenced to the
+    model top, not each station's own surface, and a "200 m" depth slice
+    is really ~(200 - (model_top - station_elev)) m below ground.
+
+    :func:`pycsamt.format.adapters.modem3d.modem3d_to_pcsf` records the
+    datum in ``metadata["station_z"]["datum_masl"]`` when the source
+    ``.dat`` file names one (``... m a.s.l.``). Absent that, the highest
+    station elevation is a safe floor: the model must extend at least to
+    the highest ground. ``None`` when there is no topography to reference
+    at all (flat/zero station z).
+    """
+    meta = (getattr(model, "metadata", None) or {}).get("station_z") or {}
+    datum = meta.get("datum_masl")
+    if datum is not None:
+        return float(datum)
+    finite = elevs[np.isfinite(elevs)]
+    if finite.size == 0 or not np.any(finite != 0.0):
+        return None
+    return float(np.max(finite))
+
 
 def group_modem_stations(
     station_names: Iterable[str],
@@ -195,8 +251,45 @@ def _grid3d_sections(
     )
 
     n_air = int(getattr(geo, "n_air", 0) or 0)
-    z_earth = np.asarray(geo.z[n_air:], dtype=float)
-    rho_earth = model.resistivity[n_air:, :, :]
+    # Re-zero the earth's depth axis so 0 is the *top of the earth
+    # domain*, not the model top (matches
+    # :func:`pycsamt.models.modem.section.station_curtain`); the two
+    # differ by the air-layer thickness for an ``n_air > 0`` model.
+    cut = None
+    if geo.z_nodes is not None and len(geo.z_nodes) >= n_air + 2:
+        z_nodes_earth = np.asarray(geo.z_nodes[n_air:], dtype=float)
+        z_nodes_earth = z_nodes_earth - z_nodes_earth[0]
+        cut = _earth_cell_cut(z_nodes_earth)
+        z_earth = (z_nodes_earth[:-1] + z_nodes_earth[1:]) / 2.0
+    else:
+        z_earth = np.asarray(geo.z[n_air:], dtype=float)
+        z_earth = z_earth - float(z_earth[0]) if z_earth.size else z_earth
+    rho_earth = np.asarray(model.resistivity[n_air:, :, :], dtype=float)
+    if cut is not None and cut < z_earth.size:
+        # Drop the deep boundary-condition padding (no interpretable
+        # resolution; only bloats every 3-D view's vertical extent).
+        z_earth = z_earth[:cut]
+        rho_earth = rho_earth[:cut, :, :]
+    # Defensive: drop any residual above-topography air fill (very high
+    # ohm.m) a pre-mask .pcsf file still carries -- newer files already
+    # have nan here, so this is a no-op for them.
+    rho_earth = np.where(rho_earth > _AIR_FILL_THRESHOLD, np.nan, rho_earth)
+
+    # An ``n_air == 0`` ModEM model represents topography through a
+    # high-resistivity fill, not explicit air layers, so its ``z = 0`` is
+    # the flat model top and a station's real ground surface sits
+    # ``datum - elev`` below it (see :func:`_model_top_datum`).
+    # Re-reference every column to that station's own surface so the
+    # returned ``z`` axis is a true depth-below-surface -- otherwise a
+    # depth slice reads ~100 m shallower than its label and warps with
+    # topography. An ``n_air > 0`` model already carries topography in its
+    # own air layers, so the earth-top-relative axis above is already
+    # correct and no per-station shift is applied.
+    datum = None
+    if n_air == 0:
+        datum = _model_top_datum(
+            model, np.asarray(getattr(st, "z", []), dtype=float)
+        )
 
     stations: list[StationRecord] = []
     sections: dict[str, dict[str, Any]] = {}
@@ -231,7 +324,9 @@ def _grid3d_sections(
             )
             line_names.append(str(name))
             elevs.append(elev)
-            columns.append(rho_earth[:, iy, ix])
+            columns.append(
+                _rezero_column(rho_earth[:, iy, ix], z_earth, datum, elev)
+            )
         if not line_names:
             continue
         sections[str(line_id)] = {
@@ -241,6 +336,42 @@ def _grid3d_sections(
             "elev": np.array(elevs, dtype=float),
         }
     return stations, sections
+
+
+def _rezero_column(
+    col: np.ndarray,
+    z_earth: np.ndarray,
+    datum: float | None,
+    elev: float,
+) -> np.ndarray:
+    """Shift one resistivity column from model-top-referenced depth to
+    depth below *elev*'s own ground surface, resampled onto *z_earth*.
+
+    Interpolation is in ``log10`` (resistivity spans decades). Cells the
+    shift would pull from above the model top, or from deeper than the
+    model reaches, come back ``nan``. A no-op when there is no datum or
+    no real elevation.
+    """
+    col = np.asarray(col, dtype=float)
+    if datum is None or not np.isfinite(elev):
+        return col
+    surf_below_top = float(datum) - float(elev)
+    if abs(surf_below_top) < 1e-6:
+        return col
+    # A cell at ``z_earth[k]`` below the earth top sits
+    # ``z_earth[k] - surf_below_top`` below *this* station's surface.
+    src_depth = z_earth - surf_below_top
+    good = np.isfinite(col) & (col > 0) & np.isfinite(src_depth)
+    if good.sum() < 2:
+        return np.full(z_earth.shape, np.nan)
+    log_out = np.interp(
+        z_earth,
+        src_depth[good],
+        np.log10(col[good]),
+        left=np.nan,
+        right=np.nan,
+    )
+    return np.power(10.0, log_out)
 
 
 _MESH_DEFAULT_N_Z = 60

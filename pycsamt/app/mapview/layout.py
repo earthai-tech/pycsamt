@@ -969,6 +969,51 @@ def _three_d_group() -> html.Div:
                     className="mv-two-col",
                 ),
             ),
+            _ctl_row(
+                "Colour-scale percentile",
+                html.Div(
+                    [
+                        _num(
+                            IDs.CTL_CRANGE_PLO,
+                            2,
+                            min=0,
+                            max=100,
+                            step=1,
+                            placeholder="low %",
+                        ),
+                        _num(
+                            IDs.CTL_CRANGE_PHI,
+                            98,
+                            min=0,
+                            max=100,
+                            step=1,
+                            placeholder="high %",
+                        ),
+                    ],
+                    className="mv-two-col",
+                ),
+            ),
+            _ctl_row(
+                "Hide cells above ρ (Ω·m)",
+                _num(
+                    IDs.CTL_RHO_CUTOFF,
+                    None,
+                    min=0,
+                    placeholder="e.g. 100000",
+                ),
+            ),
+            html.Div(
+                "Air / overburden cells (very high ρ) can dominate the "
+                "colour scale on a ModEM volume — clear the manual range, "
+                "then tighten the percentile or set a cutoff to bring the "
+                "real earth back.",
+                className="mv-help-hint",
+                style={
+                    "fontSize": "10.5px",
+                    "opacity": ".7",
+                    "marginTop": "-2px",
+                },
+            ),
             dbc.Switch(
                 id=IDs.CTL_CONTOURS,
                 label="Contours",

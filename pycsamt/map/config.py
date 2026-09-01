@@ -90,6 +90,19 @@ class VolumeMapOptions:
     rho_range: tuple[float, float] | None = None
     iso_range: tuple[float, float] | None = None
     value_range: tuple[float, float] | None = None
+    # Percentile clip (low, high) for the *auto* colour range — ignored
+    # when ``value_range`` pins it explicitly. Keeps a handful of
+    # extreme cells (e.g. a ModEM volume's above-topography air fill at
+    # 1e10-1e13 ohm.m) from stretching the whole colourscale so the real
+    # earth reads as one flat band. ``None`` or ``(0, 100)`` restores the
+    # raw min/max behaviour.
+    crange_percentile: tuple[float, float] | None = (2.0, 98.0)
+    # Hard "hide every cell above this resistivity (ohm.m)" cutoff. Unlike
+    # ``rho_range`` (a visibility band that deliberately leaves the colour
+    # scale put), this also drops the excluded cells from the colour-range
+    # computation — the one knob that reliably removes air / overburden
+    # fill from a fence/depth/block view and its colourbar at once.
+    rho_display_max: float | None = None
     log_color: bool = True
     opacity: float = 0.85
     show_contours: bool = False

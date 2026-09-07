@@ -24,6 +24,17 @@ right after ``import pycsamt.format``, not only via an explicit
 - :mod:`pycsamt.format.multiline`, :mod:`pycsamt.format.topography`,
   :mod:`pycsamt.format.pointcloud`, :mod:`pycsamt.format.regrid` —
   likewise re-exported here.
+- :mod:`pycsamt.format.pointset` — PCPT, a tiny ``.pcpt.json`` format
+  for targets / points of interest (``read_points``, ``points_from_csv``,
+  ``points_from_xlsx``), re-exported here.
+- :mod:`pycsamt.format.geology` — PCGL, a tiny ``.pcgl.json`` format for
+  a resistivity-to-geology interpretation legend (``GeologyLegend``,
+  ``read_legend``, ``write_legend``, ``legend_from_csv``), re-exported
+  here.
+- :mod:`pycsamt.format.structure` — PCGS, a tiny ``.pcgs.json`` format
+  for field structural evidence -- planar/linear measurements and fault
+  traces (``StructModel``, ``read_structure``, ``write_structure``,
+  ``structure_from_csv``), re-exported here.
 """
 
 from . import adapters, borehole
@@ -46,7 +57,27 @@ from .borehole import (
     write_vtp,
 )
 from .detect import SourceKind, describe_source, detect_source
+from .geology import (
+    PCGL_VERSION,
+    GeologyLegend,
+    GeologyLegendValidationError,
+    legend_from_csv,
+    legend_from_dict,
+    legend_to_dict,
+    read_legend,
+    write_legend,
+)
 from .io import read_pcsf, write_pcsf
+from .structure import (
+    PCGS_VERSION,
+    StructModel,
+    StructModelValidationError,
+    read_structure,
+    structure_from_csv,
+    structure_from_dict,
+    structure_to_dict,
+    write_structure,
+)
 from .multiline import (
     build_multiline_pcsf,
     line_offsets_from_stations,
@@ -54,6 +85,18 @@ from .multiline import (
     stack_lines_to_common_grid,
 )
 from .pointcloud import PointCloud, pcsf_to_point_cloud
+from .pointset import (
+    PCPT_VERSION,
+    Point,
+    PointSet,
+    PointSetValidationError,
+    point_set_from_dict,
+    point_set_to_dict,
+    points_from_csv,
+    points_from_xlsx,
+    read_points,
+    write_points,
+)
 from .provenance import ModelProvenance, compute_checkpoint_hash
 from .regrid import mesh_to_grid2d
 from .schema import (
@@ -161,6 +204,32 @@ __all__ = [
     "resolve_topo",
     "PointCloud",
     "pcsf_to_point_cloud",
+    "PCPT_VERSION",
+    "Point",
+    "PointSet",
+    "PointSetValidationError",
+    "read_points",
+    "write_points",
+    "points_from_csv",
+    "points_from_xlsx",
+    "point_set_to_dict",
+    "point_set_from_dict",
+    "PCGL_VERSION",
+    "GeologyLegend",
+    "GeologyLegendValidationError",
+    "read_legend",
+    "write_legend",
+    "legend_from_csv",
+    "legend_to_dict",
+    "legend_from_dict",
+    "PCGS_VERSION",
+    "StructModel",
+    "StructModelValidationError",
+    "read_structure",
+    "write_structure",
+    "structure_from_csv",
+    "structure_to_dict",
+    "structure_from_dict",
     "ModelProvenance",
     "compute_checkpoint_hash",
     "mesh_to_grid2d",

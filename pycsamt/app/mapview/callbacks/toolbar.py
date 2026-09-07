@@ -42,6 +42,9 @@ def register_toolbar(app) -> None:
     _register_view_visibility(app)
     _register_mode3d_quick(app)
     _register_topo_quick(app)
+    _register_geology_legend_quick(app)
+    _register_viewport(app)
+    _register_spin(app)
 
 
 def _register_view_visibility(app) -> None:
@@ -55,12 +58,14 @@ def _register_view_visibility(app) -> None:
             var show = {display:'flex'}, hide = {display:'none'};
             return [
                 v === 'map'   ? show : hide,
-                v === 'map3d' ? show : hide
+                v === 'map3d' ? show : hide,
+                v === 'bh'    ? show : hide
             ];
         }
         """,
         Output(IDs.TOOLBAR_2D, "style"),
         Output(IDs.TOOLBAR_3D, "style"),
+        Output(IDs.TOOLBAR_BH, "style"),
         Input(IDs.STORE_VIEW, "data"),
         prevent_initial_call=False,
     )
@@ -85,6 +90,155 @@ def _register_fit(app) -> None:
         Output(IDs.STORE_FIT, "data"),
         Input(IDs.TB_FIT, "n_clicks"),
         Input(IDs.TB3D_RESET, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
+
+def _register_viewport(app) -> None:
+    """Persist the user's live camera / pan-zoom so a control change never
+    moves the scene.
+
+    The main render callback rebuilds the whole figure on every control
+    change. ``uirevision`` is supposed to keep the user's view across that,
+    but it leaks here: the 2-D ``map`` (MapLibre) subplot re-applies its
+    ``center``/``zoom`` on each rebuild, and ``dcc.Loading`` can blank the
+    3-D camera mid-update. So we capture every ``relayoutData`` into a
+    per-view store (client-side, no server round-trip) and
+    ``_render._apply_viewport`` replays it onto the fresh figure. Fit /
+    Reset view clear the store, which is what lets those buttons — and
+    only those buttons — snap back to the data.
+    """
+    app.clientside_callback(
+        """
+        function(relayout, view, store) {
+            if (!relayout) return window.dash_clientside.no_update;
+            var s = Object.assign({}, store || {});
+            var v = view || 'map';
+            var cur = Object.assign({}, s[v] || {});
+            var touched = false;
+            if (v === 'map3d') {
+                var cam = relayout['scene.camera'];
+                if (!cam && relayout['scene.camera.eye']) {
+                    cam = Object.assign({}, cur.camera || {});
+                    cam.eye = relayout['scene.camera.eye'];
+                    if (relayout['scene.camera.center'])
+                        cam.center = relayout['scene.camera.center'];
+                    if (relayout['scene.camera.up'])
+                        cam.up = relayout['scene.camera.up'];
+                }
+                if (cam) { cur.camera = cam; touched = true; }
+            } else {
+                ['map', 'mapbox'].forEach(function(p) {
+                    if (relayout[p + '.center'] !== undefined) {
+                        cur.center = relayout[p + '.center']; touched = true;
+                    }
+                    if (relayout[p + '.center.lon'] !== undefined) {
+                        cur.center = {
+                            lon: relayout[p + '.center.lon'],
+                            lat: relayout[p + '.center.lat']
+                        };
+                        touched = true;
+                    }
+                    if (relayout[p + '.zoom'] !== undefined) {
+                        cur.zoom = relayout[p + '.zoom']; touched = true;
+                    }
+                    if (relayout[p + '.bearing'] !== undefined) {
+                        cur.bearing = relayout[p + '.bearing']; touched = true;
+                    }
+                    if (relayout[p + '.pitch'] !== undefined) {
+                        cur.pitch = relayout[p + '.pitch']; touched = true;
+                    }
+                });
+                if (relayout['xaxis.range[0]'] !== undefined) {
+                    cur.xrange = [
+                        relayout['xaxis.range[0]'], relayout['xaxis.range[1]']
+                    ];
+                    touched = true;
+                }
+                if (relayout['yaxis.range[0]'] !== undefined) {
+                    cur.yrange = [
+                        relayout['yaxis.range[0]'], relayout['yaxis.range[1]']
+                    ];
+                    touched = true;
+                }
+            }
+            if (!touched) return window.dash_clientside.no_update;
+            s[v] = cur;
+            return s;
+        }
+        """,
+        Output(IDs.STORE_VIEWPORT, "data"),
+        Input(IDs.CANVAS_GRAPH, "relayoutData"),
+        State(IDs.STORE_VIEW, "data"),
+        State(IDs.STORE_VIEWPORT, "data"),
+        prevent_initial_call=True,
+    )
+    # Fit / Reset view (they bump STORE_FIT) forget the saved viewport so
+    # the render falls back to the data-fitted default.
+    app.clientside_callback(
+        "function(_fit){ return {}; }",
+        Output(IDs.STORE_VIEWPORT, "data", allow_duplicate=True),
+        Input(IDs.STORE_FIT, "data"),
+        prevent_initial_call=True,
+    )
+
+
+def _register_spin(app) -> None:
+    """3-D turntable: a toolbar toggle that orbits the camera eye about
+    the vertical axis, one small step per :class:`dcc.Interval` tick.
+
+    Pure client-side (``Plotly.relayout`` on the live graph div) so it
+    never hits the server or fights the render callback; each frame's
+    ``relayoutData`` flows through ``_register_viewport`` like a manual
+    drag, so stopping the spin just leaves the view where it landed.
+    """
+    app.clientside_callback(
+        "function(n, cur){"
+        " if (!n) return window.dash_clientside.no_update;"
+        " return !cur; }",
+        Output(IDs.STORE_SPIN, "data"),
+        Input(IDs.TB3D_SPIN, "n_clicks"),
+        State(IDs.STORE_SPIN, "data"),
+        prevent_initial_call=True,
+    )
+    app.clientside_callback(
+        """
+        function(spin, view) {
+            var on = !!spin && (view === 'map3d');
+            return [on ? 'mv-tb-btn active' : 'mv-tb-btn', !on];
+        }
+        """,
+        Output(IDs.TB3D_SPIN, "className"),
+        Output(IDs.SPIN_INTERVAL, "disabled"),
+        Input(IDs.STORE_SPIN, "data"),
+        Input(IDs.STORE_VIEW, "data"),
+        prevent_initial_call=False,
+    )
+    app.clientside_callback(
+        """
+        function(_n) {
+            try {
+                var gd = document.getElementById('mv-canvas-graph');
+                if (gd && !gd._fullLayout) {
+                    gd = gd.querySelector('.js-plotly-plot');
+                }
+                if (!gd || !gd._fullLayout || !gd._fullLayout.scene
+                    || !window.Plotly) {
+                    return window.dash_clientside.no_update;
+                }
+                var e = gd._fullLayout.scene.camera.eye;
+                var a = 0.03;
+                var nx = e.x * Math.cos(a) - e.y * Math.sin(a);
+                var ny = e.x * Math.sin(a) + e.y * Math.cos(a);
+                window.Plotly.relayout(
+                    gd, {'scene.camera.eye': {x: nx, y: ny, z: e.z}}
+                );
+            } catch (err) { /* graph not ready yet */ }
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output(IDs.SPIN_TICK, "data"),
+        Input(IDs.SPIN_INTERVAL, "n_intervals"),
         prevent_initial_call=True,
     )
 
@@ -221,6 +375,27 @@ def _register_topo_quick(app) -> None:
         "function(v){ return v ? 'mv-tb-btn active' : 'mv-tb-btn'; }",
         Output(IDs.TB3D_TOPO, "className"),
         Input(IDs.CTL_TOPO, "value"),
+        prevent_initial_call=False,
+    )
+
+
+def _register_geology_legend_quick(app) -> None:
+    """3-D toolbar Legend button flips GEO_LEGEND_VISIBLE (same switch
+    the Inspector's Interpretation section uses) -- hides the on-canvas
+    geology legend to give the plot back its full width without
+    discarding the applied legend itself."""
+    app.clientside_callback(
+        "function(n, cur){ if(!n) return window.dash_clientside.no_update;"
+        " return !cur; }",
+        Output(IDs.GEO_LEGEND_VISIBLE, "value", allow_duplicate=True),
+        Input(IDs.TB3D_LEGEND, "n_clicks"),
+        State(IDs.GEO_LEGEND_VISIBLE, "value"),
+        prevent_initial_call=True,
+    )
+    app.clientside_callback(
+        "function(v){ return v ? 'mv-tb-btn active' : 'mv-tb-btn'; }",
+        Output(IDs.TB3D_LEGEND, "className"),
+        Input(IDs.GEO_LEGEND_VISIBLE, "value"),
         prevent_initial_call=False,
     )
 

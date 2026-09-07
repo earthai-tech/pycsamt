@@ -41,12 +41,15 @@ from .simulator import (
     apply_error_floor,
     apply_galvanic_distortion,
     apply_static_shift,
+    apply_structured_dropout,
     inject_outliers,
     perturb_coordinates,
 )
 from .survey_fit import (
+    StructuredMissingness,
     fit_corruption_config,
     fit_distortion_priors_from_sites,
+    fit_structured_missingness,
     survey_data_from_sites,
 )
 
@@ -67,10 +70,13 @@ __all__ = [
     "apply_error_floor",
     "apply_galvanic_distortion",
     "apply_static_shift",
+    "apply_structured_dropout",
     "inject_outliers",
     "perturb_coordinates",
+    "StructuredMissingness",
     "fit_corruption_config",
     "fit_distortion_priors_from_sites",
+    "fit_structured_missingness",
     "survey_data_from_sites",
     "DistributionComparisonReport",
     "FeatureComparison",

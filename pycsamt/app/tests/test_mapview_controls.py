@@ -40,7 +40,17 @@ class TestPresets:
 
         assert _DEPTH_PRESETS[IDs.BTN_DEPTH_FULL] == (None, None)
         assert _DEPTH_PRESETS[IDs.BTN_DEPTH_500] == (0, 500)
-        assert _DEPTH_PRESETS[IDs.TB3D_DEPTH_2K] == (0, 2000)
+        assert _DEPTH_PRESETS[IDs.BTN_DEPTH_2K] == (0, 2000)
+
+    def test_toolbar_depth_select_presets_cover_full_and_bands(self):
+        from pycsamt.app.mapview.callbacks.controls import (
+            _DEPTH_SELECT_PRESETS,
+        )
+
+        assert _DEPTH_SELECT_PRESETS["full"] == (None, None)
+        assert _DEPTH_SELECT_PRESETS["500"] == (0, 500)
+        assert _DEPTH_SELECT_PRESETS["1000"] == (0, 1000)
+        assert _DEPTH_SELECT_PRESETS["2000"] == (0, 2000)
 
     def test_rho_presets_are_ordered_bands(self):
         from pycsamt.app.mapview.callbacks.controls import _RHO_PRESETS

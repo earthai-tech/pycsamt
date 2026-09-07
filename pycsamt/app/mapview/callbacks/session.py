@@ -65,7 +65,8 @@ def _err_icon(msg: str) -> html.Span:
 
 
 def _build_snapshot(
-    view, controls, lines, line_filter, masked, theme, store_data, note
+    view, controls, lines, line_filter, masked, theme, store_data, note,
+    pcbh=None, pcpt=None, geo=None, struct=None,
 ) -> dict:
     return {
         "version": _VERSION,
@@ -79,6 +80,10 @@ def _build_snapshot(
         "masked": masked,
         "theme": theme,
         "store_data": store_data,
+        "pcbh": pcbh,
+        "pcpt": pcpt,
+        "geo": geo,
+        "struct": struct,
     }
 
 
@@ -116,13 +121,19 @@ def register_session(app) -> None:
         Input(IDs.STORE_MASKED, "data"),
         Input(IDs.STORE_THEME, "data"),
         Input(IDs.STORE_DATA, "data"),
+        Input(IDs.PCBH_STORE, "data"),
+        Input(IDs.PCPT_STORE, "data"),
+        Input(IDs.GEO_STORE, "data"),
+        Input(IDs.STRUCT_STORE, "data"),
         State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
     def _auto_snapshot(
-        view, controls, lines, line_filter, masked, theme, store_data, note
+        view, controls, lines, line_filter, masked, theme, store_data,
+        pcbh, pcpt, geo, struct, note,
     ):
-        if not store_data or not store_data.get("n_stations"):
+        has_survey = bool(store_data and store_data.get("n_stations"))
+        if not has_survey and not pcbh and not pcpt and not geo and not struct:
             return no_update, no_update
         snap = _build_snapshot(
             view,
@@ -133,15 +144,35 @@ def register_session(app) -> None:
             theme,
             store_data,
             note,
+            pcbh,
+            pcpt,
+            geo,
+            struct,
         )
-        n_sta = store_data.get("n_stations", 0)
+        n_sta = (store_data or {}).get("n_stations", 0)
+        extras = []
+        if pcbh:
+            extras.append(f"{pcbh.get('n_boreholes', 0)} borehole(s)")
+        if pcpt:
+            extras.append(f"{pcpt.get('n_points', 0)} point(s)")
+        if geo:
+            extras.append(f"{geo.get('n_entries', 0)} legend entrie(s)")
+        if struct:
+            n_struct = (
+                struct.get("n_planar", 0) + struct.get("n_linear", 0)
+                + struct.get("n_faults", 0)
+            )
+            extras.append(f"{n_struct} structural item(s)")
+        label = f"Auto-saved · {n_sta} stations"
+        if extras:
+            label += " · " + ", ".join(extras)
         chip = html.Span(
             [
                 html.I(
                     className="bi bi-check-circle-fill me-1",
                     style={"color": "var(--mv-accent)", "fontSize": "10px"},
                 ),
-                f"Auto-saved · {n_sta} stations",
+                label,
             ],
         )
         return snap, chip
@@ -158,16 +189,27 @@ def register_session(app) -> None:
         State(IDs.STORE_MASKED, "data"),
         State(IDs.STORE_THEME, "data"),
         State(IDs.STORE_DATA, "data"),
+        State(IDs.PCBH_STORE, "data"),
+        State(IDs.PCPT_STORE, "data"),
+        State(IDs.GEO_STORE, "data"),
+        State(IDs.STRUCT_STORE, "data"),
         State(IDs.SESSION_NOTE, "value"),
         prevent_initial_call=True,
     )
     def _download(
-        n, view, controls, lines, line_filter, masked, theme, store_data, note
+        n, view, controls, lines, line_filter, masked, theme, store_data,
+        pcbh, pcpt, geo, struct, note,
     ):
         if not n:
             return no_update, no_update
-        if not store_data or not store_data.get("n_stations"):
-            return no_update, _err_icon("No survey loaded — nothing to save.")
+        if (
+            not (store_data and store_data.get("n_stations"))
+            and not pcbh
+            and not pcpt
+            and not geo
+            and not struct
+        ):
+            return no_update, _err_icon("Nothing loaded — nothing to save.")
         snap = _build_snapshot(
             view,
             controls,
@@ -177,8 +219,12 @@ def register_session(app) -> None:
             theme,
             store_data,
             note,
+            pcbh,
+            pcpt,
+            geo,
+            struct,
         )
-        n_sta = store_data.get("n_stations", 0)
+        n_sta = (store_data or {}).get("n_stations", 0)
         fname = (
             f"mapview_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         )
@@ -195,6 +241,10 @@ def register_session(app) -> None:
         Output(IDs.STORE_LINE_FILTER, "data", allow_duplicate=True),
         Output(IDs.STORE_MASKED, "data", allow_duplicate=True),
         Output(IDs.STORE_THEME, "data", allow_duplicate=True),
+        Output(IDs.PCBH_STORE, "data", allow_duplicate=True),
+        Output(IDs.PCPT_STORE, "data", allow_duplicate=True),
+        Output(IDs.GEO_STORE, "data", allow_duplicate=True),
+        Output(IDs.STRUCT_STORE, "data", allow_duplicate=True),
         Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
         Input(IDs.SESSION_UL, "contents"),
         State(IDs.SESSION_UL, "filename"),
@@ -202,7 +252,7 @@ def register_session(app) -> None:
     )
     def _upload_restore(contents, filename):
         if not contents:
-            return (no_update,) * 7
+            return (no_update,) * 11
         try:
             _, enc = contents.split(",", 1)
             snap = json.loads(base64.b64decode(enc).decode())
@@ -219,10 +269,14 @@ def register_session(app) -> None:
                 snap.get("line_filter"),
                 snap.get("masked") or [],
                 snap.get("theme") or "light",
+                snap.get("pcbh"),
+                snap.get("pcpt"),
+                snap.get("geo"),
+                snap.get("struct"),
                 msg,
             )
         except Exception as exc:
-            return (no_update,) * 6 + (
+            return (no_update,) * 10 + (
                 _err_icon(f"Could not parse {filename}: {exc}"),
             )
 
@@ -234,6 +288,10 @@ def register_session(app) -> None:
         Output(IDs.STORE_LINE_FILTER, "data", allow_duplicate=True),
         Output(IDs.STORE_MASKED, "data", allow_duplicate=True),
         Output(IDs.STORE_THEME, "data", allow_duplicate=True),
+        Output(IDs.PCBH_STORE, "data", allow_duplicate=True),
+        Output(IDs.PCPT_STORE, "data", allow_duplicate=True),
+        Output(IDs.GEO_STORE, "data", allow_duplicate=True),
+        Output(IDs.STRUCT_STORE, "data", allow_duplicate=True),
         Output(IDs.SESSION_FEEDBACK, "children", allow_duplicate=True),
         Input(IDs.BTN_SESSION_RESTORE, "n_clicks"),
         State(IDs.SESSION_SNAPSHOT, "data"),
@@ -241,9 +299,9 @@ def register_session(app) -> None:
     )
     def _browser_restore(n, snap):
         if not n:
-            return (no_update,) * 7
+            return (no_update,) * 11
         if not snap:
-            return (no_update,) * 6 + (
+            return (no_update,) * 10 + (
                 _err_icon("No browser snapshot found — save a session first."),
             )
         try:
@@ -264,10 +322,14 @@ def register_session(app) -> None:
                 snap.get("line_filter"),
                 snap.get("masked") or [],
                 snap.get("theme") or "light",
+                snap.get("pcbh"),
+                snap.get("pcpt"),
+                snap.get("geo"),
+                snap.get("struct"),
                 msg,
             )
         except Exception as exc:
-            return (no_update,) * 6 + (_err_icon(str(exc)),)
+            return (no_update,) * 10 + (_err_icon(str(exc)),)
 
     # ── 6. Clear the localStorage snapshot ─────────────────────────────────
     @app.callback(

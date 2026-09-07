@@ -46,3 +46,15 @@ class TestRegisterToolbar:
         assert IDs.TB_INFO in cb_outputs
         assert IDs.CTL_BASEMAP in cb_outputs
         assert IDs.CRS_INFO in cb_outputs
+
+    def test_viewport_and_spin_wired(self):
+        from pycsamt.app.mapview._ids import IDs
+        from pycsamt.app.mapview.app import create_app
+
+        app = create_app()
+        blob = str(app.callback_map)
+        # viewport persistence: relayoutData captured into STORE_VIEWPORT
+        assert IDs.STORE_VIEWPORT in blob
+        # turntable: interval gated by spin state, camera stepped per tick
+        assert IDs.STORE_SPIN in blob
+        assert f"{IDs.SPIN_INTERVAL}.disabled" in blob

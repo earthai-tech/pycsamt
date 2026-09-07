@@ -15,12 +15,17 @@ _DEPTH_PRESETS = {
     IDs.BTN_DEPTH_500: (0, 500),
     IDs.BTN_DEPTH_1K: (0, 1000),
     IDs.BTN_DEPTH_2K: (0, 2000),
-    # 3-D toolbar duplicates of the same presets (kept in sync — one dict,
-    # one callback — see _register_depth_presets).
-    IDs.TB3D_DEPTH_FULL: (None, None),
-    IDs.TB3D_DEPTH_500: (0, 500),
-    IDs.TB3D_DEPTH_1K: (0, 1000),
-    IDs.TB3D_DEPTH_2K: (0, 2000),
+}
+
+# 3-D toolbar's compact depth shortcut (a single dbc.Select, replacing four
+# separate buttons that used to crowd the head menu) -- same presets as
+# _DEPTH_PRESETS, keyed by the select's own string value instead of a
+# button id.
+_DEPTH_SELECT_PRESETS = {
+    "full": (None, None),
+    "500": (0, 500),
+    "1000": (0, 1000),
+    "2000": (0, 2000),
 }
 
 _RHO_PRESETS = {
@@ -121,14 +126,20 @@ def _register_depth_presets(app) -> None:
         Input(IDs.BTN_DEPTH_500, "n_clicks"),
         Input(IDs.BTN_DEPTH_1K, "n_clicks"),
         Input(IDs.BTN_DEPTH_2K, "n_clicks"),
-        Input(IDs.TB3D_DEPTH_FULL, "n_clicks"),
-        Input(IDs.TB3D_DEPTH_500, "n_clicks"),
-        Input(IDs.TB3D_DEPTH_1K, "n_clicks"),
-        Input(IDs.TB3D_DEPTH_2K, "n_clicks"),
         prevent_initial_call=True,
     )
     def apply_preset(*_clicks):
         lo, hi = _DEPTH_PRESETS.get(ctx.triggered_id, (None, None))
+        return lo, hi
+
+    @app.callback(
+        Output(IDs.CTL_DEPTH_LO, "value", allow_duplicate=True),
+        Output(IDs.CTL_DEPTH_HI, "value", allow_duplicate=True),
+        Input(IDs.TB3D_DEPTH_SELECT, "value"),
+        prevent_initial_call=True,
+    )
+    def apply_toolbar_preset(value):
+        lo, hi = _DEPTH_SELECT_PRESETS.get(value, (None, None))
         return lo, hi
 
 
@@ -155,13 +166,17 @@ def _register_group_visibility(app) -> None:
             var v = view || 'map';
             var show = {display:'block'}, hide = {display:'none'};
             return [
-                v === 'map'   ? show : hide,   // Map controls
-                v === 'map3d' ? show : hide    // 3-D controls
+                v === 'map'     ? show : hide,   // Map controls
+                v === 'map3d'   ? show : hide,   // 3-D controls
+                v === 'bh'      ? show : hide,   // Borehole controls
+                v === 'geology' ? show : hide    // Geology controls
             ];
         }
         """,
         Output(IDs.GRP_MAP, "style"),
         Output(IDs.GRP_3D, "style"),
+        Output(IDs.GRP_BH, "style"),
+        Output(IDs.GRP_GEO, "style"),
         Input(IDs.STORE_VIEW, "data"),
         prevent_initial_call=False,
     )
@@ -306,6 +321,9 @@ def _register_gather(app) -> None:
         Input(IDs.CTL_SMOOTH, "value"),
         Input(IDs.CTL_SECTION_RES, "value"),
         Input(IDs.CTL_VOL_SMOOTH, "value"),
+        Input(IDs.GEO_LEGEND_VISIBLE, "value"),
+        Input(IDs.TB3D_LEGEND_STYLE, "value"),
+        Input(IDs.TB3D_GEO_FILL, "value"),
         State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
@@ -367,6 +385,9 @@ def _register_gather(app) -> None:
         smooth_sections,
         section_res,
         vol_smooth,
+        geo_legend_visible,
+        geo_legend_style,
+        geo_fill,
         store,
     ):
         freqs = (store or {}).get("frequencies", [])
@@ -439,5 +460,8 @@ def _register_gather(app) -> None:
             "smooth_sections": bool(smooth_sections),
             "section_res": int(section_res) if section_res else 100,
             "volume_smoothing": _as_float(vol_smooth, 0.0),
+            "geology_legend": geo_legend_visible is not False,
+            "geology_legend_style": geo_legend_style or "swatch",
+            "geology_fill": geo_fill or "solid",
         }
         return controls, _fmt_freq(freq)

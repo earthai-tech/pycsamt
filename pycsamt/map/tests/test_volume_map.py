@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from pycsamt.map import VolumeMapOptions
 from pycsamt.map._core import MapData, StationRecord
@@ -390,6 +391,44 @@ def test_depth_slice_rho_range_filters_after_interpolating_the_depth() -> None:
     # right flank (150 ohm.m) is masked
     top = _values_at_depth(grid, 90.0, cond)
     assert np.isfinite(top).any() and np.isnan(top).any()
+
+
+def test_depth_slice_rho_range_opens_holes_not_recolour() -> None:
+    """Regression: a resistivity-range selection in depth-slice mode
+    must open real holes in the mesh (NaN in both the colour and the
+    ``z`` geometry), not leave a full, solid slice tinted by a NaN
+    colour. ``go.Surface`` does not treat a NaN *surfacecolor* cell as
+    transparent on its own -- only NaN in ``z`` opens a real gap (see
+    ``_fence_figure``'s own ``hole``/``zz`` step, applied here to
+    ``_depth_figure`` too). Before the fix, every cell kept rendering
+    at its own true colour regardless of the selected range -- the
+    filter had no visible effect at all in this one mode.
+    """
+    data = _layered_section_data()  # 30 / 500 / 12 ohm.m layers, split at 200/550 m
+    # A shallow slice (~90 m, inside the 30/150 ohm.m conductive
+    # overburden layer, per test_depth_slice_rho_range_filters_after_
+    # interpolating_the_depth above): the left flank (30 ohm.m) is
+    # inside 1-100 ohm.m, the right flank (150 ohm.m, x > 0.7*nsta) is
+    # not -- a genuine partial mask, not all-or-nothing.
+    window = dict(mode="depth", n_slices=1, depth_range=(20.0, 150.0))
+    unfiltered = build_3d_map(data, VolumeMapOptions(**window))
+    filtered = build_3d_map(
+        data,
+        VolumeMapOptions(**window, rho_range=(1.0, 100.0)),
+    )
+    u_color = np.asarray(unfiltered.data[0].surfacecolor, dtype=float)
+    f_color = np.asarray(filtered.data[0].surfacecolor, dtype=float)
+    f_z = np.asarray(filtered.data[0].z, dtype=float)
+    # Filtering must open *more* holes than the unfiltered panel's own
+    # (line-padding) gaps -- the resistivity range, not just the
+    # ragged station counts, is what is being tested here.
+    assert np.isnan(f_color).sum() > np.isnan(u_color).sum()
+    assert np.isnan(f_z).any()
+    assert np.array_equal(np.isnan(f_color), np.isnan(f_z))
+    assert np.isfinite(f_color).any()
+    # the colour scale is still the full unfiltered range
+    assert np.isclose(unfiltered.data[0].cmin, filtered.data[0].cmin)
+    assert np.isclose(unfiltered.data[0].cmax, filtered.data[0].cmax)
 
 
 def test_volume_smoothing_refines_and_softens_without_moving_the_footprint() -> None:
@@ -1238,3 +1277,368 @@ def test_block_and_iso_render_with_duplicate_station_x() -> None:
         assert np.isfinite(val).any()
         # no "empty block" annotation
         assert not getattr(fig.layout, "annotations", None)
+
+
+# ---------------------------------------------------------------------------
+# Interpretation overlay: ``VolumeMapOptions.geology`` discrete colour bands
+# ---------------------------------------------------------------------------
+
+_GEOLOGY_BANDS = (
+    (10.0, 200.0, "#E9C46A"),
+    (1000.0, 20000.0, "#8D99AE"),
+)
+
+
+def test_geology_unset_keeps_the_continuous_named_colorscale() -> None:
+    """Default behaviour (no Interpretation overlay applied) must be
+    bit-for-bit unchanged: a continuous, named Plotly colorscale."""
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    fig = build_3d_map(data, VolumeMapOptions(mode="fence"))
+    scale = fig.data[0].colorscale
+    # A continuous scale has many more than 6 stops and no exact
+    # duplicate-value pair (the hard-step signature of a banded scale).
+    values = [s[0] for s in scale]
+    assert len(scale) > 6
+    assert len(set(values)) == len(values)
+
+
+def test_geology_bands_render_as_hard_stepped_colorscale_on_every_mode() -> None:
+    """``options.geology`` must take over the colour scale (and cmin/cmax)
+    on all four 3-D modes -- block/fence/depth/iso -- while every other
+    render behaviour (trace kind, isomin/isomax, masking) stays as-is."""
+    from pycsamt.map.styles import geology_crange
+
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    lo, hi = geology_crange(_GEOLOGY_BANDS)
+    for mode in ("fence", "block", "depth", "surface"):
+        fig = build_3d_map(
+            data, VolumeMapOptions(mode=mode, geology=_GEOLOGY_BANDS)
+        )
+        colored = [
+            t for t in fig.data if getattr(t, "colorscale", None) is not None
+        ]
+        assert colored, f"{mode}: no coloured trace found"
+        trace = colored[0]
+        scale = trace.colorscale
+        values = [s[0] for s in scale]
+        # Hard-step signature: a repeated stop value at every band edge.
+        assert len(values) != len(set(values))
+        assert scale[0][0] == 0.0 and scale[-1][0] == 1.0
+        assert trace.cmin == pytest.approx(lo)
+        assert trace.cmax == pytest.approx(hi)
+
+
+def test_geology_bands_do_not_change_which_cells_are_masked() -> None:
+    """The Interpretation overlay only recolours -- it must not interact
+    with the independent ``rho_range`` visibility-band masking."""
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    plain = build_3d_map(
+        data, VolumeMapOptions(mode="depth", rho_range=(1.0, 500.0))
+    )
+    with_geology = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="depth", rho_range=(1.0, 500.0), geology=_GEOLOGY_BANDS
+        ),
+    )
+    plain_nan = np.isnan(np.asarray(plain.data[-1].surfacecolor, dtype=float))
+    geo_nan = np.isnan(
+        np.asarray(with_geology.data[-1].surfacecolor, dtype=float)
+    )
+    assert np.array_equal(plain_nan, geo_nan)
+
+
+_NAMED_GEOLOGY_BANDS = (
+    (10.0, 200.0, "#E9C46A", "Sand"),
+    (1000.0, 20000.0, "#8D99AE", "Granodiorite"),
+)
+
+
+def test_geology_named_bands_replace_the_colorbar_ticks_with_rock_names() -> None:
+    """Applying a legend whose bands carry a name masks the numeric
+    Ω·m colourbar with the geology legend itself, on every 3-D mode."""
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    for mode in ("fence", "block", "depth", "surface"):
+        fig = build_3d_map(
+            data, VolumeMapOptions(mode=mode, geology=_NAMED_GEOLOGY_BANDS)
+        )
+        colored = [
+            t for t in fig.data if getattr(t, "colorscale", None) is not None
+        ]
+        assert colored, f"{mode}: no coloured trace found"
+        # The native colourbar is suppressed in favour of the
+        # non-overlapping on-canvas legend chips.
+        assert colored[0].showscale is False
+        chip_texts = {a.text.strip() for a in fig.layout.annotations}
+        assert {"Sand", "Granodiorite"} <= chip_texts
+        assert fig.layout.margin.r > 0
+
+
+def test_geology_legend_toggle_frees_the_plot_width() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    shown = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence", geology=_NAMED_GEOLOGY_BANDS, geology_legend=True,
+        ),
+    )
+    hidden = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence", geology=_NAMED_GEOLOGY_BANDS, geology_legend=False,
+        ),
+    )
+    assert shown.layout.margin.r > 0
+    assert hidden.layout.margin.r == 0
+    assert not any(
+        "Sand" in (a.text or "") for a in hidden.layout.annotations
+    )
+    # Legend hidden still means the classification/colouring itself
+    # stays applied -- only the on-canvas key disappears.
+    assert hidden.data[0].showscale is False
+
+
+def test_geology_unnamed_bands_still_hide_the_native_colorbar() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    fig = build_3d_map(
+        data, VolumeMapOptions(mode="fence", geology=_GEOLOGY_BANDS)
+    )
+    assert fig.data[0].showscale is False
+    # Unnamed bands fall back to a "rho_min-rho_max" chip label instead
+    # of a rock name, but the legend itself still renders.
+    assert any("–" in (a.text or "") for a in fig.layout.annotations)
+
+
+# ---------------------------------------------------------------------------
+# geology_legend_style: "swatch" (default) vs. the previous "colorbar"
+# ---------------------------------------------------------------------------
+
+
+def test_geology_legend_style_colorbar_shows_the_native_colorbar_with_named_ticks() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    for mode in ("fence", "block", "depth", "surface"):
+        fig = build_3d_map(
+            data,
+            VolumeMapOptions(
+                mode=mode, geology=_NAMED_GEOLOGY_BANDS,
+                geology_legend_style="colorbar",
+            ),
+        )
+        colored = [
+            t for t in fig.data if getattr(t, "colorscale", None) is not None
+        ]
+        assert colored, f"{mode}: no coloured trace found"
+        assert colored[0].showscale is True
+        assert list(colored[0].colorbar.ticktext) == ["Sand", "Granodiorite"]
+        # the "colorbar" style relies on Plotly's own colourbar margin,
+        # not the custom on-canvas legend's reserved margin.
+        assert fig.layout.margin.r == 0
+        assert not any(
+            "Sand" in (a.text or "") for a in fig.layout.annotations
+        )
+
+
+def test_geology_legend_style_swatch_is_the_default() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    default_style = build_3d_map(
+        data, VolumeMapOptions(mode="fence", geology=_NAMED_GEOLOGY_BANDS)
+    )
+    explicit_swatch = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence", geology=_NAMED_GEOLOGY_BANDS,
+            geology_legend_style="swatch",
+        ),
+    )
+    assert default_style.data[0].showscale is False
+    assert explicit_swatch.data[0].showscale is False
+    assert default_style.layout.margin.r == explicit_swatch.layout.margin.r > 0
+
+
+def test_geology_legend_toggle_also_hides_the_colorbar_style() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    fig = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence", geology=_NAMED_GEOLOGY_BANDS,
+            geology_legend_style="colorbar", geology_legend=False,
+        ),
+    )
+    assert fig.data[0].showscale is False
+
+
+# ---------------------------------------------------------------------------
+# geology_fill="pattern": true pattern-texture rendering (fence + depth)
+# ---------------------------------------------------------------------------
+
+
+def _checkerboard_stencil(size: int = 8) -> np.ndarray:
+    stencil = np.zeros((size, size))
+    stencil[:, size // 2 :] = 1.0
+    return stencil
+
+
+def test_pattern_fill_fence_varies_within_the_textured_band_only() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    patterns = {"Granodiorite": _checkerboard_stencil()}
+    fig_pattern = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence", geology=_NAMED_GEOLOGY_BANDS,
+            geology_fill="pattern", geology_patterns=patterns,
+            pattern_tile_size_m=5.0,
+        ),
+    )
+    fig_solid = build_3d_map(
+        data, VolumeMapOptions(mode="fence", geology=_NAMED_GEOLOGY_BANDS)
+    )
+    sc_pattern = np.asarray(fig_pattern.data[0].surfacecolor, dtype=float)
+    sc_solid = np.asarray(fig_solid.data[0].surfacecolor, dtype=float)
+    # The untextured "Sand" band's cells (value == log10(100)) are
+    # identical either way -- only the textured band's cells changed.
+    sand_mask = np.isclose(sc_solid, np.log10(100.0))
+    assert np.allclose(sc_pattern[sand_mask], sc_solid[sand_mask])
+    assert not np.allclose(
+        np.nan_to_num(sc_pattern), np.nan_to_num(sc_solid)
+    )
+    # more colorscale stops than the flat/solid case -- an actual
+    # gradient, not one colour.
+    assert len(fig_pattern.data[0].colorscale) > len(fig_solid.data[0].colorscale)
+
+
+def test_pattern_fill_depth_slice_varies_within_the_textured_band_only() -> None:
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    patterns = {"Granodiorite": _checkerboard_stencil()}
+    fig = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="depth", n_slices=2, geology=_NAMED_GEOLOGY_BANDS,
+            geology_fill="pattern", geology_patterns=patterns,
+            pattern_tile_size_m=5.0,
+        ),
+    )
+    surfaces = [t for t in fig.data if getattr(t, "surfacecolor", None) is not None]
+    assert surfaces
+    values = np.concatenate(
+        [np.asarray(t.surfacecolor, dtype=float).ravel() for t in surfaces]
+    )
+    values = values[np.isfinite(values)]
+    # both the checkerboard's two density levels show up within the
+    # textured band's own resistivity range.
+    assert np.any(np.isclose(values, np.log10(1000.0)))
+    assert np.any(np.isclose(values, np.log10(20000.0)))
+
+
+def test_pattern_fill_without_a_pattern_stencil_stays_solid() -> None:
+    """geology_fill="pattern" with no geology_patterns for a band must
+    not change that band's rendering -- degrade to solid, not crash."""
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    fig = build_3d_map(
+        data,
+        VolumeMapOptions(
+            mode="fence", geology=_NAMED_GEOLOGY_BANDS,
+            geology_fill="pattern", geology_patterns=None,
+        ),
+    )
+    solid = build_3d_map(
+        data, VolumeMapOptions(mode="fence", geology=_NAMED_GEOLOGY_BANDS)
+    )
+    assert np.allclose(
+        np.nan_to_num(np.asarray(fig.data[0].surfacecolor, dtype=float)),
+        np.nan_to_num(np.asarray(solid.data[0].surfacecolor, dtype=float)),
+    )
+
+
+def test_pattern_fill_does_not_affect_block_or_surface_modes() -> None:
+    """Block / iso-surface have no per-cell colour-axis override in
+    Plotly -- geology_fill="pattern" must not attempt to touch them,
+    and must not crash either."""
+    data = MapData(
+        sites=_VarSites(),
+        stations=(
+            StationRecord("S00", 1.0, 2.0, 10.0, "L1", 0),
+            StationRecord("S01", 1.1, 2.1, 20.0, "L1", 1),
+        ),
+    )
+    patterns = {"Granodiorite": _checkerboard_stencil()}
+    for mode in ("block", "surface"):
+        fig = build_3d_map(
+            data,
+            VolumeMapOptions(
+                mode=mode, geology=_NAMED_GEOLOGY_BANDS,
+                geology_fill="pattern", geology_patterns=patterns,
+            ),
+        )
+        assert fig.data

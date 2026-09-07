@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 from typing import Any
 
@@ -21,7 +22,14 @@ from .geometry import (
     resolve_offset,
     survey_uv,
 )
-from .styles import theme_colors, to_plotly_cmap
+from .styles import (
+    geology_colorbar_ticks,
+    geology_colorscale,
+    geology_crange,
+    geology_legend_shapes_annotations,
+    theme_colors,
+    to_plotly_cmap,
+)
 
 
 class Map3D:
@@ -342,6 +350,7 @@ def _fence_figure(profiles, options, colors):
     unit = _line_offset_unit(profiles)
     real_offsets = _line_real_offsets(profiles)
     cmin, cmax = _full_value_crange(profiles, options)
+    colorscale, cmin, cmax = _colorscale_for(options, cmin, cmax)
     for idx, (name, grid) in enumerate(profiles.items()):
         x, z_pos, values, elev = _prepare_section(grid, options)
         z = -z_pos
@@ -361,21 +370,28 @@ def _fence_figure(profiles, options, colors):
         hole = ~np.isfinite(np.asarray(values, dtype=float))
         if hole.any():
             zz = np.where(hole, np.nan, zz)
+        surfacecolor = _color_values(values, options)
+        if getattr(options, "geology_fill", "solid") == "pattern":
+            # Physical (along-strike, depth) position per cell, *before*
+            # the topography drape -- a pattern tiles by true metres, not
+            # by the terrain-warped scene z, so it stays undistorted.
+            x_phys, z_phys = np.meshgrid(x, z_pos)
+            surfacecolor = _inject_pattern_values(
+                surfacecolor, values, x_phys, z_phys, options
+            )
         fig.add_trace(
             go.Surface(
                 x=xx,
                 y=yy,
                 z=zz,
-                surfacecolor=_color_values(values, options),
-                colorscale=to_plotly_cmap(options.cmap),
+                surfacecolor=surfacecolor,
+                colorscale=colorscale,
                 cmin=cmin,
                 cmax=cmax,
                 opacity=float(options.opacity),
                 name=name,
-                showscale=idx == 0,
-                colorbar=dict(
-                    title=dict(text=_colorbar_title(options), side="right")
-                ),
+                showscale=_trace_showscale(options, idx == 0),
+                colorbar=_geology_colorbar(options),
                 contours=_surface_contours(options),
             )
         )
@@ -625,9 +641,8 @@ def _block_figure(profiles, options, colors):
         _style_3d(fig, options, colors)
         return fig
     vx, vy, vz, vv, iso_lo, iso_hi, cmin, cmax, banded = cloud
-    colorbar = dict(
-        title=dict(text=_colorbar_title(options), side="right")
-    )
+    colorscale, cmin, cmax = _colorscale_for(options, cmin, cmax)
+    colorbar = _geology_colorbar(options)
     if banded:
         # A resistivity-band selection is a "show me only this zone"
         # request -- render it as one closed iso-surface body with
@@ -642,10 +657,10 @@ def _block_figure(profiles, options, colors):
             surface_count=2,
             opacity=float(options.opacity),
             caps=dict(x_show=True, y_show=True, z_show=True),
-            colorscale=to_plotly_cmap(options.cmap),
+            colorscale=colorscale,
             cmin=cmin,
             cmax=cmax,
-            showscale=True,
+            showscale=_trace_showscale(options, True),
             colorbar=colorbar,
         )
     else:
@@ -667,10 +682,10 @@ def _block_figure(profiles, options, colors):
             opacity=float(options.opacity),
             surface_count=max(2, int(options.surface_count)),
             caps=dict(x_show=False, y_show=False, z_show=False),
-            colorscale=to_plotly_cmap(options.cmap),
+            colorscale=colorscale,
             cmin=cmin,
             cmax=cmax,
-            showscale=True,
+            showscale=_trace_showscale(options, True),
             colorbar=colorbar,
         )
     fig.add_trace(trace)
@@ -696,6 +711,7 @@ def _depth_figure(profiles, options, colors):
     if width == 0:
         return _empty_3d_figure(colors)
     cmin, cmax = _full_value_crange(profiles, options)
+    colorscale, cmin, cmax = _colorscale_for(options, cmin, cmax)
 
     # go.Surface interpolates between *adjacent* rows of the stacked
     # grid below -- lines must be vstacked in real cross-strike
@@ -734,6 +750,7 @@ def _depth_figure(profiles, options, colors):
         y_rows = []
         z_rows = []
         val_rows = []
+        raw_rows = []
         for i in stack_order:
             name = names[i]
             grid = profiles[name]
@@ -755,25 +772,48 @@ def _depth_figure(profiles, options, colors):
             z_rows.append(_pad_row(z, width))
             color = _color_values(values, options)
             val_rows.append(_pad_row(color, width))
+            raw_rows.append(_pad_row(np.asarray(values, dtype=float), width))
         color_grid = np.vstack(val_rows)
         if not np.isfinite(color_grid).any():
             # This depth is outside every line's sampled range -- an
             # all-NaN ghost surface, skip it.
             continue
+        if getattr(options, "geology_fill", "solid") == "pattern":
+            # Plan-view (x, y) physical position per cell -- a depth
+            # slice tiles its pattern in the horizontal plane, not by
+            # depth (every cell here is already at the same depth).
+            color_grid = _inject_pattern_values(
+                color_grid, np.vstack(raw_rows),
+                np.vstack(x_rows), np.vstack(y_rows), options,
+            )
+        # Open real holes in the mesh wherever this slice is masked
+        # (resistivity-range selection or a genuine data gap) -- same
+        # fix as _fence_figure's own ``hole``/``zz`` step. go.Surface
+        # does not treat a NaN *surfacecolor* cell as transparent on
+        # its own: the geometry (``z``) at that cell is still finite,
+        # so Plotly still draws a solid face there, tinted by whatever
+        # fallback colour it substitutes for the undefined value --
+        # which reads as a real (if wrong) colour, not a gap. Without
+        # this, the resistivity-range filter is silently ignored on
+        # this mode alone: the whole slice keeps rendering, solid, at
+        # every cell's own true colour, exactly as if no range had
+        # been selected.
+        z_grid = np.vstack(z_rows)
+        hole = ~np.isfinite(color_grid)
+        if hole.any():
+            z_grid = np.where(hole, np.nan, z_grid)
         fig.add_trace(
             go.Surface(
                 x=np.vstack(x_rows),
                 y=np.vstack(y_rows),
-                z=np.vstack(z_rows),
+                z=z_grid,
                 surfacecolor=color_grid,
-                colorscale=to_plotly_cmap(options.cmap),
+                colorscale=colorscale,
                 cmin=cmin,
                 cmax=cmax,
                 opacity=float(options.opacity),
-                showscale=not drawn_any,
-                colorbar=dict(
-                    title=dict(text=_colorbar_title(options), side="right")
-                ),
+                showscale=_trace_showscale(options, not drawn_any),
+                colorbar=_geology_colorbar(options),
                 contours=_surface_contours(options),
                 name=f"{depth:.0f} m",
                 hovertemplate=(
@@ -816,6 +856,7 @@ def _surface_figure(profiles, options, colors):
         _style_3d(fig, options, colors)
         return fig
     vx, vy, vz, vv, iso_lo, iso_hi, cmin, cmax, banded = cloud
+    colorscale, cmin, cmax = _colorscale_for(options, cmin, cmax)
     fig.add_trace(
         go.Isosurface(
             x=vx,
@@ -826,13 +867,12 @@ def _surface_figure(profiles, options, colors):
             isomax=iso_hi,
             surface_count=2 if banded else max(2, int(options.surface_count)),
             opacity=float(options.opacity),
-            colorscale=to_plotly_cmap(options.cmap),
+            colorscale=colorscale,
             caps=dict(
                 x_show=banded, y_show=banded, z_show=banded
             ),
-            colorbar=dict(
-                title=dict(text=_colorbar_title(options), side="right")
-            ),
+            colorbar=_geology_colorbar(options),
+            showscale=_trace_showscale(options, True),
             cmin=cmin,
             cmax=cmax,
         )
@@ -994,6 +1034,55 @@ def _color_values(values, options):
     return arr
 
 
+def _inject_pattern_values(colored, raw_values, x_phys, z_phys, options):
+    """Overwrite *colored* (the log10(Ω·m) colour-axis values
+    :func:`_color_values` already produced) for every cell whose raw
+    resistivity classifies into a pattern-textured geology band --
+    replacing it with a value picked from that band's
+    :func:`pycsamt.map.styles.pattern_band_stops` gradient sub-range by
+    sampling the assigned pattern's ink-density stencil at the cell's
+    own physical position, tiled every ``pattern_tile_size_m`` so the
+    pattern repeats across the section the way a real hatch legend
+    would. Cells whose band has no pattern (or is out of range) keep
+    their original flat-colour value, unchanged.
+
+    ``x_phys``/``z_phys`` must be the same shape as *raw_values* and
+    *colored* -- physical (along-strike, depth) metres, not the
+    normalised colour-axis space (the mapping into that space happens
+    automatically through the same ``cmin``/``cmax`` the flat bands
+    already use, since the injected value is a real log10(Ω·m) number
+    within the band's own range).
+    """
+    bands = getattr(options, "geology", None)
+    patterns = getattr(options, "geology_patterns", None)
+    if not bands or not patterns:
+        return colored
+    tile_size = float(getattr(options, "pattern_tile_size_m", 20.0) or 20.0)
+    out = np.array(colored, dtype=float, copy=True)
+    raw = np.asarray(raw_values, dtype=float)
+    x_phys = np.asarray(x_phys, dtype=float)
+    z_phys = np.asarray(z_phys, dtype=float)
+    for band in bands:
+        rho_min, rho_max = float(band[0]), float(band[1])
+        name = str(band[3]) if len(band) >= 4 else ""
+        stencil = patterns.get(name) if name else None
+        if stencil is None or not (rho_min > 0 and rho_max > rho_min):
+            continue
+        mask = np.isfinite(raw) & (raw >= rho_min) & (raw < rho_max)
+        if not mask.any():
+            continue
+        stencil = np.asarray(stencil, dtype=float)
+        h, w = stencil.shape
+        col = np.mod(x_phys[mask] / tile_size, 1.0)
+        row = np.mod(z_phys[mask] / tile_size, 1.0)
+        ri = np.clip((row * h).astype(int), 0, h - 1)
+        ci = np.clip((col * w).astype(int), 0, w - 1)
+        density = stencil[ri, ci]
+        t0, t1 = math.log10(rho_min), math.log10(rho_max)
+        out[mask] = t0 + (t1 - t0) * density
+    return out
+
+
 def _full_value_crange(profiles, options) -> tuple[float | None, float | None]:
     """``(cmin, cmax)`` for the fence/depth-slice colour scale.
 
@@ -1046,6 +1135,106 @@ def _full_value_crange(profiles, options) -> tuple[float | None, float | None]:
             if c_hi > c_lo:  # guard a near-uniform model
                 return c_lo, c_hi
     return float(combined.min()), float(combined.max())
+
+
+def _colorscale_for(options, cmin, cmax):
+    """Return ``(colorscale, cmin, cmax)`` for a 3-D trace.
+
+    When ``options.geology`` is unset (the default), returns
+    ``options.cmap``'s continuous Plotly colorscale unchanged, together
+    with whatever ``cmin``/``cmax`` the caller already computed -- every
+    existing colour-range code path (percentile clip, ``rho_display_max``,
+    the banded iso-surface range, ...) is untouched.
+
+    When ``options.geology`` -- a plain ``(rho_min, rho_max, hex_color)``
+    band list -- is set, it takes over instead: the trace is coloured with
+    :func:`pycsamt.map.styles.geology_colorscale`'s hard-stepped legend
+    scale, and ``cmin``/``cmax`` are replaced with the legend's own
+    log10(Ω·m) span (:func:`pycsamt.map.styles.geology_crange`) so the
+    bands line up with the data instead of the (now irrelevant)
+    percentile-clipped auto range.
+    """
+    bands = getattr(options, "geology", None)
+    if not bands:
+        return to_plotly_cmap(options.cmap), cmin, cmax
+    lo, hi = geology_crange(bands)
+    textured = _textured_band_stops(options, bands)
+    scale = geology_colorscale(
+        bands, log_lo=lo, log_hi=hi, textured=textured
+    )
+    return scale, lo, hi
+
+
+_PATTERN_GRADIENT_STOPS = 16
+
+
+def _textured_band_stops(options, bands) -> dict[str, int] | None:
+    """``{band name: stop count}`` for :func:`geology_colorscale`'s
+    ``textured`` argument -- every band with an assigned, loadable
+    pattern stencil, when ``geology_fill == "pattern"``; ``None``
+    (plain flat colours) otherwise."""
+    if getattr(options, "geology_fill", "solid") != "pattern":
+        return None
+    patterns = getattr(options, "geology_patterns", None)
+    if not patterns:
+        return None
+    names = {str(b[3]) for b in bands if len(b) >= 4}
+    return {
+        name: _PATTERN_GRADIENT_STOPS
+        for name in patterns
+        if name in names
+    }
+
+
+def _geology_colorbar(options) -> dict:
+    """Colourbar dict for a 3-D trace.
+
+    Three cases, chosen by ``options.geology_legend_style``:
+
+    - no ``geology`` bands: the plain Ω·m-titled colourbar, unchanged
+      from before the Interpretation overlay existed.
+    - ``"colorbar"`` style: the *previous* Interpretation reading --
+      Plotly's native colourbar stays, with each band's name as a tick
+      label at its own resistivity position
+      (:func:`pycsamt.map.styles.geology_colorbar_ticks`). Compact, but
+      ticks can crowd once bands are numerous or close in value.
+    - ``"swatch"`` style (default): the native colourbar is hidden
+      entirely (see :func:`_trace_showscale`) in favour of the
+      non-overlapping on-canvas legend :func:`_add_geology_legend`
+      draws instead, so this dict is never actually shown.
+    """
+    bands = getattr(options, "geology", None)
+    title = dict(title=dict(text=_colorbar_title(options), side="right"))
+    style = getattr(options, "geology_legend_style", "swatch")
+    if not bands or style != "colorbar":
+        return title
+    tickvals, ticktext = geology_colorbar_ticks(bands)
+    if not tickvals:
+        return title
+    return dict(
+        title=dict(text="Geology", side="right"),
+        tickvals=tickvals,
+        ticktext=ticktext,
+    )
+
+
+def _trace_showscale(options, default: bool) -> bool:
+    """Whether a 3-D trace should show Plotly's own colourbar.
+
+    With the default ``"swatch"`` legend style, a geology legend
+    replaces the native colourbar with its own on-canvas legend
+    (:func:`_add_geology_legend`) -- showing *both* would either
+    duplicate it or (named ticks packed at each band's own value) crowd
+    overlapping labels on a tall/narrow bar. With the ``"colorbar"``
+    style, the native colourbar *is* the legend, so it follows the same
+    show/hide toggle (``geology_legend``) the swatch legend uses.
+    """
+    bands = getattr(options, "geology", None)
+    if not bands:
+        return default
+    if getattr(options, "geology_legend_style", "swatch") == "colorbar":
+        return bool(getattr(options, "geology_legend", True))
+    return False
 
 
 def _crange(options) -> tuple[float | None, float | None]:
@@ -2028,12 +2217,23 @@ def _surface_contours(options):
     )
 
 
+_GEOLOGY_LEGEND_MARGIN_PX = 210
+
+
 def _style_3d(fig, options, colors) -> None:
     title = options.title or f"pyCSAMT 3-D {options.mode} map"
     xu = getattr(options, "x_unit", "m")
     zu = getattr(options, "depth_unit", "m")
     z_label = "Elevation − depth" if options.topography else "Depth"
     z_title = f"{z_label} ({zu})"
+    bands = getattr(options, "geology", None)
+    legend_style = getattr(options, "geology_legend_style", "swatch")
+    show_legend = (
+        bool(bands)
+        and bool(getattr(options, "geology_legend", True))
+        and legend_style == "swatch"
+    )
+    right_margin = _GEOLOGY_LEGEND_MARGIN_PX if show_legend else 0
     fig.update_layout(
         title=title,
         scene=dict(
@@ -2045,8 +2245,15 @@ def _style_3d(fig, options, colors) -> None:
         ),
         paper_bgcolor=colors["paper"],
         font=dict(color=colors["text"]),
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=0, r=right_margin, t=40, b=0),
     )
+    if show_legend:
+        _, legend_annotations = geology_legend_shapes_annotations(bands)
+        # Append rather than replace -- an empty-figure message
+        # (_annotate_3d) may already have added its own annotation.
+        fig.update_layout(
+            annotations=list(fig.layout.annotations or ()) + legend_annotations
+        )
 
 
 def _empty_3d_figure(colors):

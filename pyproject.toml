@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.5.2"
+version     = "2.6.0"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
@@ -100,6 +100,15 @@ geo = [
     "pyproj>=3.3",
     "xarray>=2022.6",
     "contextily>=1.6",
+]
+
+# Rasterizing a PDF/AI geologic pattern sheet for Map View's Interpretation
+# "pattern pack" import (pycsamt.geology.patterns). Nothing else in pycsamt
+# imports pymupdf; importing a pack raises an actionable ImportError (not a
+# silent skip) when this extra is missing, since rasterizing is the whole
+# point of that one operation.
+patterns = [
+    "pymupdf>=1.23",
 ]
 
 # Optional runtime-performance accelerators. Everything that imports these
@@ -196,7 +205,7 @@ app = [
 
 # Everything (prefers torch backend)
 full = [
-    "pycsamt[torch,geo,dev,docs,app,agents]",
+    "pycsamt[torch,geo,patterns,dev,docs,app,agents]",
 ]
 
 # ---------------------------------------------------------------------------

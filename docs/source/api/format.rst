@@ -66,6 +66,20 @@ Provenance
 
    pycsamt.format.provenance
 
+Points and interpretation exchange
+----------------------------------
+
+Small, versioned JSON documents (each with a plain-CSV sibling) that
+travel alongside a PCSF model: PCPT points/targets, the PCGL
+resistivity-to-geology legend, and PCGS field structural evidence.
+
+.. autosummary::
+   :toctree: generated
+
+   pycsamt.format.pointset
+   pycsamt.format.geology
+   pycsamt.format.structure
+
 Borehole exchange
 -----------------
 
@@ -80,6 +94,7 @@ and application-neutral 3-D render/export contracts.
    pycsamt.format.borehole.schema
    pycsamt.format.borehole.jsonio
    pycsamt.format.borehole.csvio
+   pycsamt.format.borehole.xlsxio
    pycsamt.format.borehole.lasio
    pycsamt.format.borehole.relational
    pycsamt.format.borehole.trajectory

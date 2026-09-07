@@ -62,7 +62,9 @@ from .log import ModEmLog
 from .model2d import ModEmModel2D
 from .model3d import ModEmModel3D
 from .plot import (
+    PlotDataFit,
     PlotMisfit,
+    PlotMisfitMap,
     PlotModel2D,
     PlotModel3D,
     PlotPseudo,
@@ -107,6 +109,8 @@ __all__ = [
     "ModEmRunner",
     # plots
     "PlotMisfit",
+    "PlotMisfitMap",
+    "PlotDataFit",
     "PlotModel2D",
     "PlotModel3D",
     "PlotResponse",

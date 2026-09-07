@@ -6,11 +6,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Union
 
 MapTheme = Literal["light", "dark", "publication"]
 MapBackend = Literal["plotly", "matplotlib"]
 VolumeMode = Literal["fence", "block", "depth", "surface"]
+
+# One interpretation-legend band: ``(rho_min, rho_max, hex_color)`` or, with
+# a 4th element, ``(rho_min, rho_max, hex_color, name)`` -- Ω·m linear.
+# (``Union`` rather than ``X | Y``: this is evaluated at import time and the
+# ``|`` operator on ``tuple[...]`` generics only works on Python >= 3.10.)
+GeologyBand = Union[
+    tuple[float, float, str], tuple[float, float, str, str]
+]
+GeologyBands = tuple[GeologyBand, ...]
 
 
 @dataclass
@@ -164,6 +173,59 @@ class VolumeMapOptions:
     # cliff so the envelope is a smooth contour, not a voxel staircase.
     volume_smoothing: float = 0.0
     title: str = ""
+    # Interpretation overlay: a resistivity-to-geology legend applied as a
+    # discrete colour scale instead of ``cmap``'s continuous ramp. A plain
+    # list of ``(rho_min, rho_max, hex_color)`` bands -- or
+    # ``(rho_min, rho_max, hex_color, name)`` to also replace the
+    # colourbar's numeric Ω·m ticks with the band's name -- Ω·m linear,
+    # kept format-agnostic here; the app layer builds it from a
+    # ``pycsamt.geology.lithology.RockDatabase`` /
+    # ``pycsamt.format.geology.GeologyLegend``. ``None`` (default) keeps
+    # the existing continuous-colourscale behaviour untouched. See
+    # ``pycsamt.map.styles.geology_colorscale``/``geology_crange``/
+    # ``geology_colorbar_ticks``.
+    geology: GeologyBands | None = None
+    # Whether the on-canvas geology legend (a fixed-row-height swatch
+    # list in the right margin -- never overlaps, however close two
+    # bands' resistivities are) is actually drawn when ``geology`` is
+    # set. ``True`` by default; the Map View toolbar's legend toggle
+    # flips this to reclaim the plot's full width without discarding
+    # the applied legend itself. See
+    # ``pycsamt.map.styles.geology_legend_shapes_annotations``.
+    geology_legend: bool = True
+    # Which reading of the legend the colour axis draws when both
+    # ``geology`` and ``geology_legend`` are set:
+    # - "swatch" (default) -- Plotly's own colourbar is hidden; a
+    #   non-overlapping on-canvas swatch-chip legend is drawn instead
+    #   (see ``pycsamt.map.styles.geology_legend_shapes_annotations``).
+    # - "colorbar" -- the earlier reading: Plotly's native colourbar
+    #   stays, with each band's name as a tick label at its own
+    #   position (see ``pycsamt.map.styles.geology_colorbar_ticks``) --
+    #   compact for a short legend, but ticks can crowd/overlap once
+    #   bands are numerous or close in value, which is why "swatch" is
+    #   the default. Both honour ``geology_legend`` for show/hide.
+    geology_legend_style: str = "swatch"
+    # Fence / depth-slice pattern *texture* fill -- "solid" (default)
+    # colours a band flat, exactly as before; "pattern" additionally
+    # samples each band's assigned pattern (``geology_patterns``) at
+    # every cell's own physical position, so the swatch's actual
+    # hatch/stipple/brick shape appears tied to real screen position,
+    # not just a flat colour. Block / iso-surface are not affected by
+    # this flag and always render solid -- Plotly's Volume/Isosurface
+    # traces have no per-cell colour-axis override the way go.Surface's
+    # ``surfacecolor`` does, so there is no way to texture-map a
+    # pattern onto that geometry at all; this is a real capability
+    # gap in Plotly, not a scope choice.
+    geology_fill: str = "solid"
+    # ``{band name: ink-density stencil array, values in [0, 1], H x W}``
+    # for every legend entry that has an assigned pattern -- built by
+    # the app layer from ``pycsamt.geology.patterns``
+    # (``pycsamt.app._geology.geology_pattern_stencils_from_store``).
+    # Only consulted when ``geology_fill == "pattern"``.
+    geology_patterns: dict | None = None
+    # Physical repeat size (in ``x_unit``/``depth_unit`` metres) a
+    # pattern tiles at -- smaller reads as a finer/denser hatch.
+    pattern_tile_size_m: float = 20.0
 
 
 @dataclass

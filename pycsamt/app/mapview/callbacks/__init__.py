@@ -11,9 +11,11 @@ def register_all(app) -> None:
     from .borehole import register_borehole
     from .controls import register_controls
     from .export import register_export
+    from .geology import register_geology
     from .inversion_import import register_inversion_import
     from .lines import register_lines
     from .load import register_load
+    from .patterns import register_patterns
     from .session import register_session
     from .settings import register_settings
     from .toolbar import register_toolbar
@@ -22,6 +24,8 @@ def register_all(app) -> None:
 
     register_chrome(app)
     register_borehole(app)
+    register_geology(app)
+    register_patterns(app)
     register_load(app)
     register_inversion_import(app)
     register_view(app)

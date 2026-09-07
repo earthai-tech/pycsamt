@@ -38,6 +38,7 @@ __all__ = [
     "DEFAULT_CSV_MAX_BYTES",
     "DEFAULT_CSV_MAX_ROWS",
     "boreholes_from_csv",
+    "assemble_interval_document",
 ]
 
 DEFAULT_CSV_MAX_BYTES = 10 * 1024 * 1024
@@ -188,11 +189,51 @@ def boreholes_from_csv(
     if report.errors:
         raise PCBHCSVImportError(report)
 
+    return assemble_interval_document(
+        headers,
+        reader,
+        mapping=mapping,
+        constants=supplied_constants,
+        report=report,
+        strict=strict,
+        document_id=document_id or f"csv:{source.stem}",
+        created_by=created_by,
+        source_str=str(source),
+        max_rows=max_rows,
+    )
+
+
+def assemble_interval_document(
+    headers: list[str],
+    value_rows: Any,
+    *,
+    mapping: dict[str, str],
+    constants: dict[str, Any] | None,
+    report: ImportReport,
+    document_id: str,
+    source_str: str,
+    strict: bool = True,
+    created_by: str = "pycsamt tabular importer",
+    max_rows: int = DEFAULT_CSV_MAX_ROWS,
+    row_offset: int = 2,
+    source_kind: str = "csv",
+) -> tuple[PCBHDocument, ImportReport]:
+    """Build a PCBH document from raw value rows aligned to *headers*.
+
+    Shared core of :func:`boreholes_from_csv` and
+    :func:`pycsamt.format.borehole.xlsxio.boreholes_from_xlsx`. ``report``
+    must already carry the source checksum, delimiter, and resolved
+    ``column_mapping``. ``value_rows`` yields one sequence of raw cell
+    values per data row; ``row_offset`` is the source row number of the
+    first such row (for diagnostics).
+    """
+    supplied_constants = dict(constants or {})
     groups: dict[str, _HoleRows] = {}
     vocabulary: dict[str, VocabularyEntry] = {}
     label_codes: dict[str, str] = {}
     global_crs: str | None = None
-    for row_number, values in enumerate(reader, start=2):
+    for row_number, values in enumerate(value_rows, start=row_offset):
+        values = list(values)
         report.rows_read += 1
         if report.rows_read > max_rows:
             report.add(
@@ -314,7 +355,7 @@ def boreholes_from_csv(
         )
         raise PCBHCSVImportError(report)
     document = PCBHDocument(
-        document_id=document_id or f"csv:{source.stem}",
+        document_id=document_id,
         created_at=datetime.now(timezone.utc)
         .isoformat()
         .replace("+00:00", "Z"),
@@ -324,8 +365,8 @@ def boreholes_from_csv(
         boreholes=boreholes,
         lithologies=list(vocabulary.values()),
         metadata={
-            "csv_source": str(source),
-            "csv_source_sha256": report.source_sha256,
+            f"{source_kind}_source": source_str,
+            f"{source_kind}_source_sha256": report.source_sha256,
         },
     )
     try:

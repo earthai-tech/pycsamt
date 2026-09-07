@@ -48,6 +48,7 @@ __all__ = [
     "apply_static_shift",
     "apply_galvanic_distortion",
     "apply_dropout",
+    "apply_structured_dropout",
     "inject_outliers",
     "perturb_coordinates",
     "apply_corruption_suite",
@@ -710,6 +711,82 @@ def apply_dropout(
         "dropped_frequency_count": len(dropped_frequencies),
         "dropped_fraction": float(np.mean(drop)),
     }
+    return (out, sampled) if return_info else out
+
+
+def apply_structured_dropout(
+    survey: SurveyData,
+    *,
+    dropout_probability: np.ndarray,
+    rng: np.random.Generator,
+    return_info: bool = False,
+) -> SurveyData:
+    """Mark observations missing from an externally supplied probability field.
+
+    Unlike :func:`apply_dropout`'s three independent scalar rates (which
+    are mathematically forced to be equal whenever they are each derived
+    from the same overall coverage deficit, and which compound
+    multiplicatively when applied as independent channels), this drops
+    each ``(station, frequency, component)`` cell according to its own
+    fitted Bernoulli probability, allowing missingness that is
+    concentrated in particular stations or frequency bands rather than
+    spread uniformly. Typical usage passes
+    ``pycsamt.ai.domain_gap.survey_fit.StructuredMissingness.dropout_probability()``
+    fit from a real survey's own coverage mask.
+
+    Parameters
+    ----------
+    survey : SurveyData
+        Survey to thin out.
+    dropout_probability : ndarray, shape (n_station, n_frequency, n_component)
+        Per-cell probability that the observation is dropped. Must match
+        ``survey.shape`` exactly, since the probability field is tied to
+        specific station/frequency/component identities rather than being
+        shape-agnostic like :func:`apply_dropout`'s scalar rates.
+    rng : numpy.random.Generator
+        Source of randomness.
+
+    Returns
+    -------
+    SurveyData
+        New survey with additional invalid observations.
+
+    Raises
+    ------
+    ValueError
+        If ``dropout_probability`` does not have ``survey.shape``.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pycsamt.ai.data.contracts import SurveyData
+    >>> z = np.ones((2, 3, 1), dtype=complex)
+    >>> survey = SurveyData(
+    ...     z, [3.0, 2.0, 1.0], ["A", "B"], ["xy"], np.zeros((2, 2))
+    ... )
+    >>> pi = np.full((2, 3, 1), 1.0)
+    >>> thinned = apply_structured_dropout(
+    ...     survey, dropout_probability=pi, rng=np.random.default_rng(0)
+    ... )
+    >>> thinned.n_valid
+    0
+    """
+    pi = np.asarray(dropout_probability, dtype=float)
+    if pi.shape != survey.shape:
+        raise ValueError(
+            "dropout_probability must have shape "
+            f"{survey.shape} (survey.shape); got {pi.shape}. The "
+            "structured missingness field is tied to specific "
+            "station/frequency/component identities, unlike apply_dropout's "
+            "shape-agnostic scalar rates."
+        )
+    if np.any((pi < 0.0) | (pi > 1.0) | ~np.isfinite(pi)):
+        raise ValueError("dropout_probability entries must be finite and in [0, 1].")
+
+    drop = rng.random(survey.shape) < pi
+    impedance = np.where(drop, complex(np.nan, np.nan), survey.impedance)
+    out = replace(survey, impedance=impedance)
+    sampled = {"dropped_fraction": float(np.mean(drop))}
     return (out, sampled) if return_info else out
 
 

@@ -139,7 +139,7 @@ Complete script
 The complete executable version is kept outside the page so repeated setup and
 file-writing code does not interrupt the quickstart narrative:
 
-.. code-dropdown:: /../../scripts/quickstart_first_survey.py
+.. code-dropdown:: ../../scripts/quickstart_first_survey.py
    :language: python
    :linenos:
    :title: View the complete quickstart script

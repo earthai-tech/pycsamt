@@ -26,5 +26,6 @@ UI state and callbacks do not live here.
    profile
    volume
    overlays
+   boreholes
    export
    mapview

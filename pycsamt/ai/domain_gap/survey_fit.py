@@ -32,6 +32,8 @@ principles.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -46,6 +48,8 @@ __all__ = [
     "survey_data_from_sites",
     "fit_corruption_config",
     "fit_distortion_priors_from_sites",
+    "StructuredMissingness",
+    "fit_structured_missingness",
 ]
 
 _COMPONENT_ORDER = ("xx", "xy", "yx", "yy")
@@ -438,3 +442,306 @@ def fit_distortion_priors_from_sites(
         )
 
     return zero
+
+
+def _sum_zero_contrast(n: int) -> np.ndarray:
+    """Return the ``(n, n-1)`` sum-to-zero contrast matrix ``C``.
+
+    ``effect = C @ theta`` satisfies ``sum(effect) == 0`` for every
+    ``theta`` in ``R**(n-1)``, the standard "effect coding" trick for
+    fitting a categorical main effect without an arbitrary reference
+    level.
+    """
+    if n < 1:
+        raise ValueError("n must be positive.")
+    contrast = np.zeros((n, max(n - 1, 0)))
+    if n > 1:
+        contrast[: n - 1, :] = np.eye(n - 1)
+        contrast[n - 1, :] = -1.0
+    return contrast
+
+
+@dataclass(frozen=True)
+class StructuredMissingness:
+    """Fitted station+frequency+component logistic missingness model.
+
+    ``logit(pi_sjc) = alpha + a_s + b_j + q_c``, with the station,
+    frequency, and component effects ``a``, ``b``, ``q`` each constrained
+    to sum to zero for identifiability (an effect relative to its own
+    group's mean, not to an arbitrary reference level). This replaces the
+    three independent scalar dropout rates of
+    :func:`fit_corruption_config`/:func:`~.simulator.apply_dropout` -- which
+    are mathematically forced to be numerically identical whenever each is
+    the mean of the same overall coverage deficit taken along a different
+    axis -- with an explicit model of *where* missingness concentrates.
+    Fit by :func:`fit_structured_missingness`.
+
+    Parameters
+    ----------
+    alpha : float
+        Intercept: logit of the fitted overall mean dropout probability.
+    station_effect, frequency_effect, component_effect : tuple of float
+        Per-station, per-frequency, and per-component effects, each
+        summing to zero by construction.
+    station_names, frequencies_hz, components : tuple
+        Identities the effects are indexed by, kept for provenance. The
+        fitted probability field is tied to this specific grid; it is not
+        meant to be reused against a differently shaped survey.
+    l2 : float, default=1.0
+        L2 penalty weight used during fitting (not applied to ``alpha``).
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pycsamt.ai.data.contracts import SurveyData
+    >>> z = np.ones((3, 4, 1), dtype=complex)
+    >>> z[0, :2] = np.nan
+    >>> survey = SurveyData(
+    ...     z, [4.0, 3.0, 2.0, 1.0], ["A", "B", "C"], ["xy"],
+    ...     np.zeros((3, 2)),
+    ... )
+    >>> model = fit_structured_missingness(survey)
+    >>> model.dropout_probability().shape
+    (3, 4, 1)
+    """
+
+    alpha: float
+    station_effect: tuple[float, ...]
+    frequency_effect: tuple[float, ...]
+    component_effect: tuple[float, ...]
+    station_names: tuple[str, ...]
+    frequencies_hz: tuple[float, ...]
+    components: tuple[str, ...]
+    l2: float = 1.0
+
+    def dropout_probability(self) -> np.ndarray:
+        """Return the fitted per-cell Bernoulli dropout probability.
+
+        Returns
+        -------
+        ndarray, shape (n_station, n_frequency, n_component)
+            ``sigmoid(alpha + a_s + b_j + q_c)``, ready to pass to
+            :func:`~.simulator.apply_structured_dropout`.
+
+        Examples
+        --------
+        >>> model = StructuredMissingness(
+        ...     alpha=0.0, station_effect=(0.0,), frequency_effect=(0.0,),
+        ...     component_effect=(0.0,), station_names=("A",),
+        ...     frequencies_hz=(1.0,), components=("xy",),
+        ... )
+        >>> model.dropout_probability()
+        array([[[0.5]]])
+        """
+        a = np.asarray(self.station_effect, dtype=float)[:, None, None]
+        b = np.asarray(self.frequency_effect, dtype=float)[None, :, None]
+        q = np.asarray(self.component_effect, dtype=float)[None, None, :]
+        z = self.alpha + a + b + q
+        return 1.0 / (1.0 + np.exp(-z))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation.
+
+        Returns
+        -------
+        dict
+            All fields as plain Python types, with a schema discriminator.
+
+        Examples
+        --------
+        >>> model = StructuredMissingness(
+        ...     alpha=0.0, station_effect=(0.0,), frequency_effect=(0.0,),
+        ...     component_effect=(0.0,), station_names=("A",),
+        ...     frequencies_hz=(1.0,), components=("xy",),
+        ... )
+        >>> model.to_dict()["schema_version"]
+        1
+        """
+        return {
+            "schema_version": 1,
+            "alpha": self.alpha,
+            "station_effect": list(self.station_effect),
+            "frequency_effect": list(self.frequency_effect),
+            "component_effect": list(self.component_effect),
+            "station_names": list(self.station_names),
+            "frequencies_hz": list(self.frequencies_hz),
+            "components": list(self.components),
+            "l2": self.l2,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> StructuredMissingness:
+        """Restore a serialized model.
+
+        Parameters
+        ----------
+        data : mapping
+            State previously returned by :meth:`to_dict`.
+
+        Returns
+        -------
+        StructuredMissingness
+            Reconstructed, validated model.
+
+        Examples
+        --------
+        >>> model = StructuredMissingness(
+        ...     alpha=0.0, station_effect=(0.0,), frequency_effect=(0.0,),
+        ...     component_effect=(0.0,), station_names=("A",),
+        ...     frequencies_hz=(1.0,), components=("xy",),
+        ... )
+        >>> StructuredMissingness.from_dict(model.to_dict()) == model
+        True
+        """
+        if data.get("schema_version") != 1:
+            raise ValueError(
+                "unsupported StructuredMissingness schema version."
+            )
+        return cls(
+            alpha=float(data["alpha"]),
+            station_effect=tuple(float(v) for v in data["station_effect"]),
+            frequency_effect=tuple(
+                float(v) for v in data["frequency_effect"]
+            ),
+            component_effect=tuple(
+                float(v) for v in data["component_effect"]
+            ),
+            station_names=tuple(data["station_names"]),
+            frequencies_hz=tuple(float(v) for v in data["frequencies_hz"]),
+            components=tuple(data["components"]),
+            l2=float(data["l2"]),
+        )
+
+
+def fit_structured_missingness(
+    survey: SurveyData,
+    *,
+    l2: float = 1.0,
+    max_iter: int = 500,
+) -> StructuredMissingness:
+    r"""Fit a station+frequency+component logistic missingness model.
+
+    Replaces the three scalar dropout rates of :func:`fit_corruption_config`
+    with an explicit model of where a survey's missingness is
+    concentrated. With ``Y_sjc = 1 - survey.valid[s, j, c]`` the observed
+    missingness indicator and ``pi_sjc = sigmoid(alpha + a_s + b_j + q_c)``,
+    the fit solves the penalized Bernoulli maximum-likelihood problem
+
+    .. math::
+
+        \hat\vartheta = \arg\min_\vartheta \Bigl[
+        -\sum_{sjc}\bigl\{Y_{sjc}\log\pi_{sjc}
+        +(1-Y_{sjc})\log(1-\pi_{sjc})\bigr\}
+        +\lambda\bigl(\lVert a\rVert_2^2+\lVert b\rVert_2^2
+        +\lVert q\rVert_2^2\bigr)\Bigr],
+
+    with ``a``, ``b``, ``q`` each parameterized through a sum-to-zero
+    contrast (:func:`_sum_zero_contrast`) so the fit is identified without
+    an arbitrary reference level, optimized by L-BFGS-B using the
+    closed-form gradient of the penalized negative log-likelihood
+    (``d(nll)/dz_sjc = pi_sjc - Y_sjc``, the standard logistic-regression
+    result).
+
+    Parameters
+    ----------
+    survey : SurveyData
+        Survey whose ``valid`` mask defines the real missingness pattern
+        to fit. Should carry a genuine, disclosed missing-data mask (e.g.
+        a coverage-aware, snap-or-missing survey), not one already
+        interpolated/filled -- interpolating over every gap removes the
+        very signal this fit depends on.
+    l2 : float, default=1.0
+        Ridge penalty weight :math:`\lambda` on the station, frequency,
+        and component effects (the intercept is not penalized).
+    max_iter : int, default=500
+        Maximum L-BFGS-B iterations.
+
+    Returns
+    -------
+    StructuredMissingness
+        Fitted model. Its
+        :meth:`~StructuredMissingness.dropout_probability` gives the full
+        ``(n_station, n_frequency, n_component)`` probability field for
+        :func:`~.simulator.apply_structured_dropout`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pycsamt.ai.data.contracts import SurveyData
+    >>> z = np.ones((3, 4, 1), dtype=complex)
+    >>> z[0, :2] = np.nan
+    >>> survey = SurveyData(
+    ...     z, [4.0, 3.0, 2.0, 1.0], ["A", "B", "C"], ["xy"],
+    ...     np.zeros((3, 2)),
+    ... )
+    >>> model = fit_structured_missingness(survey)
+    >>> abs(sum(model.station_effect)) < 1e-6
+    True
+    >>> abs(sum(model.frequency_effect)) < 1e-6
+    True
+    """
+    from scipy.optimize import minimize
+
+    if l2 < 0.0 or not np.isfinite(l2):
+        raise ValueError("l2 must be finite and non-negative.")
+
+    y = (~survey.valid).astype(float)
+    n_station, n_frequency, n_component = survey.shape
+
+    c_a = _sum_zero_contrast(n_station)
+    c_b = _sum_zero_contrast(n_frequency)
+    c_q = _sum_zero_contrast(n_component)
+    n_a, n_b, n_q = c_a.shape[1], c_b.shape[1], c_q.shape[1]
+
+    def unpack(theta: np.ndarray) -> tuple[float, np.ndarray, np.ndarray, np.ndarray]:
+        alpha = theta[0]
+        theta_a = theta[1 : 1 + n_a]
+        theta_b = theta[1 + n_a : 1 + n_a + n_b]
+        theta_q = theta[1 + n_a + n_b :]
+        return alpha, theta_a, theta_b, theta_q
+
+    def neg_log_posterior(theta: np.ndarray) -> tuple[float, np.ndarray]:
+        alpha, theta_a, theta_b, theta_q = unpack(theta)
+        a = c_a @ theta_a
+        b = c_b @ theta_b
+        q = c_q @ theta_q
+        z = alpha + a[:, None, None] + b[None, :, None] + q[None, None, :]
+        pi = 1.0 / (1.0 + np.exp(-z))
+        eps = 1e-12
+        nll = -np.sum(
+            y * np.log(pi + eps) + (1.0 - y) * np.log(1.0 - pi + eps)
+        )
+        penalty = l2 * (np.sum(a**2) + np.sum(b**2) + np.sum(q**2))
+        loss = nll + penalty
+
+        g = pi - y
+        d_alpha = np.sum(g)
+        d_theta_a = c_a.T @ g.sum(axis=(1, 2)) + 2.0 * l2 * (c_a.T @ a)
+        d_theta_b = c_b.T @ g.sum(axis=(0, 2)) + 2.0 * l2 * (c_b.T @ b)
+        d_theta_q = c_q.T @ g.sum(axis=(0, 1)) + 2.0 * l2 * (c_q.T @ q)
+        grad = np.concatenate(([d_alpha], d_theta_a, d_theta_b, d_theta_q))
+        return float(loss), grad
+
+    theta0 = np.zeros(1 + n_a + n_b + n_q)
+    result = minimize(
+        neg_log_posterior,
+        theta0,
+        jac=True,
+        method="L-BFGS-B",
+        options={"maxiter": max_iter},
+    )
+    alpha, theta_a, theta_b, theta_q = unpack(result.x)
+    a = c_a @ theta_a
+    b = c_b @ theta_b
+    q = c_q @ theta_q
+
+    return StructuredMissingness(
+        alpha=float(alpha),
+        station_effect=tuple(float(v) for v in a),
+        frequency_effect=tuple(float(v) for v in b),
+        component_effect=tuple(float(v) for v in q),
+        station_names=tuple(survey.station_names),
+        frequencies_hz=tuple(float(v) for v in survey.frequencies_hz),
+        components=tuple(survey.components),
+        l2=float(l2),
+    )

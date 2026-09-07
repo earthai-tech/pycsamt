@@ -25,7 +25,9 @@ before calling in here.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -33,6 +35,8 @@ __all__ = [
     "equirect_xy",
     "fit_strike",
     "survey_uv",
+    "SurveyFrame",
+    "survey_frame",
     "normalize_offsets",
     "resolve_offset",
 ]
@@ -140,6 +144,61 @@ def survey_uv(
     u = centered @ strike
     v = centered @ perp
     return {sid: (float(ui), float(vi)) for sid, ui, vi in zip(ids, u, v)}
+
+
+@dataclass(frozen=True)
+class SurveyFrame:
+    """A survey's local along/cross-strike frame, reusable for any point.
+
+    :func:`survey_uv` returns only the station projections; this exposes
+    the frame itself so an *arbitrary* geographic point (a borehole
+    collar, a target) can be placed in the *same* local metres the 3-D
+    map builders use. ``project`` mirrors :func:`survey_uv` exactly:
+    equirectangular metres about the survey's mean latitude, then a shift
+    to the station centroid and a rotation onto the fitted strike.
+    """
+
+    mean_lat_deg: float
+    origin_xy: tuple[float, float]
+    strike: tuple[float, float]
+    perp: tuple[float, float]
+
+    def project(self, lat: float, lon: float) -> tuple[float, float]:
+        """Return ``(u, v)`` local metres for one WGS84 lat/lon."""
+        scale = _LON_M_PER_DEG * math.cos(math.radians(self.mean_lat_deg))
+        dx = float(lon) * scale - self.origin_xy[0]
+        dy = float(lat) * _LAT_M_PER_DEG - self.origin_xy[1]
+        u = dx * self.strike[0] + dy * self.strike[1]
+        v = dx * self.perp[0] + dy * self.perp[1]
+        return float(u), float(v)
+
+
+def survey_frame(
+    lat: Sequence[float],
+    lon: Sequence[float],
+    line: Sequence[str],
+) -> SurveyFrame | None:
+    """Fit the shared local frame used by :func:`survey_uv`.
+
+    Returns ``None`` under the same conditions as :func:`survey_uv`
+    (fewer than two stations, or no strike direction could be fit).
+    """
+    lat_list = list(lat)
+    if len(lat_list) < 2:
+        return None
+    x, y = equirect_xy(lat_list, lon)
+    pts = np.column_stack([x, y])
+    origin = pts.mean(axis=0)
+    strike = fit_strike(pts - origin, np.asarray(list(line), dtype=object))
+    if strike is None:
+        return None
+    perp = np.array([-strike[1], strike[0]])
+    return SurveyFrame(
+        mean_lat_deg=float(np.nanmean(np.asarray(lat_list, dtype=float))),
+        origin_xy=(float(origin[0]), float(origin[1])),
+        strike=(float(strike[0]), float(strike[1])),
+        perp=(float(perp[0]), float(perp[1])),
+    )
 
 
 def normalize_offsets(

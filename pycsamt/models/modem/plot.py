@@ -11,6 +11,7 @@ or phase responses.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 import numpy as np
@@ -28,6 +29,8 @@ __all__ = [
     "PlotModel3D",
     "PlotSection",
     "PlotResponse",
+    "PlotDataFit",
+    "PlotMisfitMap",
     "PlotPseudo",
     "PlotDepthMap",
     "PlotAllProfiles",
@@ -869,8 +872,8 @@ class PlotSection(_ModEmPlotBase):
         ax.set_ylabel("Elevation (km)", fontsize=9)
 
         title = self.title or (
-            f"ModEM {self.direction} section — offset {self.profile_offset:+.0f} m "
-            f"({self.which})"
+            f"ModEM {self.direction} section — "
+            f"offset {self.profile_offset:+.0f} m ({self.which})"
         )
         ax.set_title(title, fontsize=10)
 
@@ -1407,7 +1410,7 @@ class PlotResponse(_ModEmPlotBase):
                         if self.period_max is not None:
                             m2 = pp <= self.period_max
                             pp, rho2, phi2 = pp[m2], rho2[m2], phi2[m2]
-                        # Use predicted_color from style; fall back to obs color
+                        # predicted_color from style; fall back to obs color
                         pred_c = (
                             cstyle.predicted_color
                             if getattr(cstyle, "predicted_color", "")
@@ -2399,5 +2402,956 @@ class PlotCovariance(_ModEmPlotBase):
             f"{cov.nx_earth}×{cov.ny_earth}×{cov.nz_earth} earth cells",
             fontsize=10,
         )
+        fig.tight_layout()
+        return fig
+
+
+# ======================================================================
+# Data-fit helpers (shared by PlotDataFit and PlotMisfitMap)
+# ======================================================================
+
+_MODE_OF_COMP = {"ZXX": "TE", "ZXY": "TE", "ZYX": "TM", "ZYY": "TM"}
+_COMP_PLAIN = {"ZXX": "Zxx", "ZXY": "Zxy", "ZYX": "Zyx", "ZYY": "Zyy"}
+
+
+def _present_components(
+    data, comps: Sequence[str] = _RESP_COMPS
+) -> list[str]:
+    """Return impedance components carrying at least one unmasked observed row.
+
+    A ModEM data file may hold only the off-diagonal impedance
+    (``ZXY``/``ZYX``), the full tensor, or a mix; this keeps the response
+    grid to the components actually present so empty panels are not drawn.
+    """
+    if data is None:
+        return []
+    out: list[str] = []
+    for c in comps:
+        for blk in data.blocks:
+            if any(
+                row[5] == c and float(row[8]) < _ERR_MASK
+                for row in blk["rows"]
+            ):
+                out.append(c)
+                break
+    return out
+
+
+def _z_residuals(
+    obs_rows: list, pred_rows: list, rtol: float = 1e-4
+) -> np.ndarray:
+    """Return normalised residuals ``(obs - pred) / sigma`` for one site+comp.
+
+    Both the real and the imaginary part contribute one entry each. Rows
+    whose observed error is non-positive, non-finite, or the ModEM masked
+    sentinel are skipped, and predicted periods are matched to observed
+    periods within ``rtol`` relative tolerance.
+    """
+    if not obs_rows or not pred_rows:
+        return np.empty(0)
+    pred_p = np.array([r[0] for r in pred_rows])
+    out: list[float] = []
+    for p_o, re_o, im_o, err in obs_rows:
+        if err <= 0 or not np.isfinite(err) or err >= _ERR_MASK:
+            continue
+        di = int(np.argmin(np.abs(pred_p - p_o)))
+        if abs(pred_p[di] - p_o) / max(p_o, 1e-15) < rtol:
+            re_p, im_p = pred_rows[di][1], pred_rows[di][2]
+            out.append((re_o - re_p) / err)
+            out.append((im_o - im_p) / err)
+    return np.asarray(out, dtype=float)
+
+
+def _rms(res) -> float:
+    """Root-mean-square of an array, ignoring non-finite entries."""
+    res = np.asarray(res, dtype=float)
+    res = res[np.isfinite(res)]
+    return float(np.sqrt(np.mean(res**2))) if res.size else float("nan")
+
+
+def _station_misfit(
+    data_obs, data_pred, name: str, comps: Sequence[str]
+) -> tuple[float, dict[str, float], int]:
+    """Return ``(overall_rms, {comp: rms}, n_residuals)`` for one station."""
+    per_comp: dict[str, float] = {}
+    pooled: list[np.ndarray] = []
+    for c in comps:
+        obs = _collect_z_rows(data_obs, name, c)
+        prd = (
+            _collect_z_rows(data_pred, name, c, filter_masked=False)
+            if data_pred is not None
+            else []
+        )
+        res = _z_residuals(obs, prd)
+        per_comp[c] = _rms(res)
+        if res.size:
+            pooled.append(res)
+    allres = np.concatenate(pooled) if pooled else np.empty(0)
+    return _rms(allres), per_comp, int(allres.size)
+
+
+def _wrap_tm_phase(phi, comp: str, enable: bool):
+    """Shift negative ``ZYX``/``ZYY`` phases by +180° for a 0-180° display."""
+    if not enable or comp not in ("ZYX", "ZYY"):
+        return phi
+    phi = np.asarray(phi, dtype=float).copy()
+    phi[phi < 0] += 180.0
+    return phi
+
+
+class _DataBundle:
+    """Minimal :class:`InversionResult` stand-in for the data-fit plots.
+
+    Lets :class:`PlotDataFit` and :class:`PlotMisfitMap` be driven directly
+    from a pair of :class:`~pycsamt.models.modem.data.ModEmData` objects
+    (observed and predicted response) without a scanned run directory.
+    """
+
+    def __init__(self, data_obs, data_pred=None):
+        self.data_obs = data_obs
+        self.data_pred = data_pred
+
+
+_LINE_TOKEN_RE = re.compile(r"^\s*([A-Za-z]*\d+)")
+
+
+def _survey_line_of(name: str) -> str:
+    """Return the survey-line token of a station name.
+
+    The token is the leading ``letters?+digits`` run of the part before the
+    first ``"-"`` — ``"18-001" -> "18"``, ``"L22-5U" -> "L22"``,
+    ``"line3_04" -> "line3"``. Names with no such prefix fall back to the
+    whole pre-``"-"`` head, so grouping is always well defined.
+    """
+    head = str(name).split("-", 1)[0]
+    m = _LINE_TOKEN_RE.match(head)
+    return m.group(1) if m else (head or str(name))
+
+
+# ======================================================================
+# PlotDataFit
+# ======================================================================
+
+
+class PlotDataFit(_ModEmPlotBase):
+    r"""Publication-style observed-vs-model response panel with per-panel RMS.
+
+    ``PlotDataFit`` lays the survey out as a compact grid: each selected
+    station spans one column group of impedance components, with apparent
+    resistivity above and phase below (2:1 height ratio, no gap). Observed
+    data is drawn as error-bar markers joined by a thin dotted line;
+    the model response is a solid line. Components are coloured by mode
+    (``TE`` = ``ZXX``/``ZXY``, ``TM`` = ``ZYX``/``ZYY``), each panel title
+    carries its component RMS, each station header its overall RMS, and a
+    single shared legend sits at the bottom.
+
+    Only components that actually carry unmasked observed data are drawn,
+    so an off-diagonal-only file collapses to two columns per station
+    instead of four half-empty ones.
+
+    Parameters
+    ----------
+    result : InversionResult, optional
+        Loaded inversion result. Ignored when *results* is given.
+    results : sequence of InversionResult, optional
+        Two or more results stacked as labelled row bands ``a)``, ``b)``,
+        … — for comparing independent inversions of the same survey.
+    data_obs, data_pred : ModEmData, optional
+        Observed and predicted-response data given directly, bypassing
+        *result*. Useful when the two ``.dat`` files are known explicitly
+        (a run directory holds several) or no run directory exists.
+    stations : sequence of str, optional
+        Station names to plot. Defaults to the first *max_stations*
+        stations of the first result.
+    max_stations : int, default 3
+        Station cap when *stations* is not given.
+    components : sequence of str, optional
+        Explicit component subset (e.g. ``["ZXY", "ZYX"]``). Defaults to
+        every component present in the data.
+    row_labels : sequence of str, optional
+        Band labels when *results* is used. Defaults to ``a)``, ``b)``, ….
+    period_min, period_max : float, optional
+        Restrict the displayed period range (seconds).
+    wrap_phase : bool, default True
+        Shift negative ``ZYX``/``ZYY`` phases by +180° for a 0-180° axis.
+    show_model : bool, default True
+        Overlay the predicted response when ``result.data_pred`` exists.
+    connect_obs : bool, default True
+        Join observed markers with a thin dotted guide line.
+    style : str, default "modem"
+        Named :data:`~pycsamt.api.style.PYCSAMT_STYLE` preset applied for
+        the duration of the call.
+    figsize : tuple of float, optional
+        Figure size in inches; derived from the grid shape otherwise.
+    title : str, optional
+        Optional figure suptitle.
+
+    Examples
+    --------
+    >>> from pycsamt.models.modem.results import InversionResult
+    >>> from pycsamt.models.modem.plot import PlotDataFit
+    >>> result = InversionResult("modem_run")
+    >>> fig = PlotDataFit(result=result, stations=["S00", "S25", "S50"]).plot()
+    """
+
+    def __init__(
+        self,
+        result: InversionResult | None = None,
+        results: Sequence[InversionResult] | None = None,
+        data_obs=None,
+        data_pred=None,
+        stations: Sequence[str] | None = None,
+        max_stations: int = 3,
+        components: Sequence[str] | None = None,
+        row_labels: Sequence[str] | None = None,
+        period_min: float | None = None,
+        period_max: float | None = None,
+        wrap_phase: bool = True,
+        show_model: bool = True,
+        connect_obs: bool = True,
+        style: str = "modem",
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
+        **kwargs,
+    ):
+        super().__init__(result=result, **kwargs)
+        self.results = list(results) if results else None
+        self.data_obs = data_obs
+        self.data_pred = data_pred
+        self.stations = list(stations) if stations else None
+        self.max_stations = int(max_stations)
+        self.components = (
+            [c.upper() for c in components] if components else None
+        )
+        self.row_labels = list(row_labels) if row_labels else None
+        self.period_min = period_min
+        self.period_max = period_max
+        self.wrap_phase = bool(wrap_phase)
+        self.show_model = bool(show_model)
+        self.connect_obs = bool(connect_obs)
+        self.style = style
+        self.figsize = figsize
+        self.title = title
+
+    def _bands(self) -> list:
+        if self.results:
+            return list(self.results)
+        if self.data_obs is not None:
+            return [_DataBundle(self.data_obs, self.data_pred)]
+        return [self._check_result()]
+
+    def _resolve_components(self, bands) -> list[str]:
+        if self.components:
+            return [c for c in _RESP_COMPS if c in self.components]
+        seen: set[str] = set()
+        for b in bands:
+            seen.update(_present_components(b.data_obs))
+        return [c for c in _RESP_COMPS if c in seen]
+
+    def _period_mask(self, p):
+        m = np.ones(np.shape(p), dtype=bool)
+        if self.period_min is not None:
+            m &= p >= self.period_min
+        if self.period_max is not None:
+            m &= p <= self.period_max
+        return m
+
+    def plot(self):
+        """Return a matplotlib figure with the observed-vs-model panel."""
+        import contextlib
+
+        import matplotlib.gridspec as mgridspec
+        import matplotlib.pyplot as plt
+
+        from ...api.style import PYCSAMT_STYLE
+
+        bands = self._bands()
+        for b in bands:
+            if b.data_obs is None:
+                raise ValueError("InversionResult has no data_obs loaded.")
+
+        comps = self._resolve_components(bands)
+        if not comps:
+            raise ValueError(
+                "No impedance components with usable observed data found."
+            )
+        mode_comps = {
+            md: "/".join(
+                _COMP_PLAIN[c] for c in comps if _MODE_OF_COMP[c] == md
+            )
+            for md in ("TE", "TM")
+        }
+
+        names = list(self.stations or bands[0].data_obs.site_names)
+        names = names[: self.max_stations]
+        if not names:
+            raise ValueError("No stations to plot.")
+
+        n_st, n_cp, n_bd = len(names), len(comps), len(bands)
+        row_labels = self.row_labels or (
+            [f"{chr(97 + i)})" for i in range(n_bd)] if n_bd > 1 else [None]
+        )
+
+        fig_w = (
+            self.figsize[0]
+            if self.figsize
+            else min(24.0, max(6.0, 1.8 * n_st * n_cp + 1.5))
+        )
+        fig_h = self.figsize[1] if self.figsize else 3.2 * n_bd + 1.7
+        fig = plt.figure(figsize=(fig_w, fig_h))
+
+        _ctx = (
+            PYCSAMT_STYLE.context(self.style)
+            if self.style and self.style.lower() != "pycsamt"
+            else contextlib.nullcontext()
+        )
+        with _ctx:
+            mt = PYCSAMT_STYLE.mt
+            outer = mgridspec.GridSpec(
+                n_bd,
+                n_st,
+                figure=fig,
+                hspace=0.55,
+                wspace=0.30,
+                top=0.84 if self.title else 0.90,
+                bottom=0.16,
+                left=0.08,
+                right=0.99,
+            )
+            legend_seen: dict[str, tuple] = {}
+
+            for bi, band in enumerate(bands):
+                d_obs = band.data_obs
+                d_prd = band.data_pred if self.show_model else None
+                last_band = bi == n_bd - 1
+
+                for si, name in enumerate(names):
+                    inner = mgridspec.GridSpecFromSubplotSpec(
+                        2,
+                        n_cp,
+                        subplot_spec=outer[bi, si],
+                        height_ratios=[2, 1],
+                        hspace=0.0,
+                        wspace=0.08,
+                    )
+                    st_rms, per_comp, _ = _station_misfit(
+                        d_obs, d_prd, name, comps
+                    )
+                    ax_r0 = None
+
+                    for ci, comp in enumerate(comps):
+                        ax_r = fig.add_subplot(inner[0, ci])
+                        ax_p = fig.add_subplot(inner[1, ci], sharex=ax_r)
+                        plt.setp(ax_r.get_xticklabels(), visible=False)
+                        if ax_r0 is None:
+                            ax_r0 = ax_r
+
+                        cstyle = getattr(mt, _RESP_STYLE_KEY[comp])
+                        mode = _MODE_OF_COMP[comp]
+                        obs_rows = _collect_z_rows(d_obs, name, comp)
+                        prd_rows = (
+                            _collect_z_rows(
+                                d_prd, name, comp, filter_masked=False
+                            )
+                            if d_prd is not None
+                            else []
+                        )
+
+                        rp = _rho_phase_from_rows(obs_rows)
+                        if rp is not None:
+                            p, rho, drho, phi, dphi = rp
+                            m = self._period_mask(p)
+                            p, rho, drho, phi, dphi = (
+                                p[m],
+                                rho[m],
+                                drho[m],
+                                phi[m],
+                                dphi[m],
+                            )
+                            phi = _wrap_tm_phase(phi, comp, self.wrap_phase)
+                            ekw = cstyle.errorbar_kwargs()
+                            ekw.pop("label", None)
+                            ekw["ls"] = ":" if self.connect_obs else "none"
+                            ekw["lw"] = 0.8
+                            h = ax_r.errorbar(p, rho, yerr=drho, **ekw)
+                            ax_p.errorbar(p, phi, yerr=dphi, **ekw)
+                            lbl = f"observed — {mode} ({mode_comps[mode]})"
+                            legend_seen.setdefault(f"obs-{mode}", (h[0], lbl))
+
+                        rp2 = (
+                            _rho_phase_from_rows(prd_rows)
+                            if d_prd is not None
+                            else None
+                        )
+                        if rp2 is not None:
+                            pp, rho2, _, phi2, _ = rp2
+                            m2 = self._period_mask(pp)
+                            pp, rho2, phi2 = pp[m2], rho2[m2], phi2[m2]
+                            phi2 = _wrap_tm_phase(phi2, comp, self.wrap_phase)
+                            pc = cstyle.predicted_color or cstyle.color
+                            (hl,) = ax_r.plot(
+                                pp, rho2, color=pc, ls="-", lw=1.6,
+                                alpha=0.95, zorder=5,
+                            )
+                            ax_p.plot(
+                                pp, phi2, color=pc, ls="-", lw=1.6,
+                                alpha=0.95, zorder=5,
+                            )
+                            lbl = f"model — {mode} ({mode_comps[mode]})"
+                            legend_seen.setdefault(f"fit-{mode}", (hl, lbl))
+
+                        rms_c = per_comp.get(comp, float("nan"))
+                        ttl = _RESP_LATEX[comp]
+                        if np.isfinite(rms_c):
+                            ttl += f"\nrms {rms_c:.2f}"
+                        ax_r.set_title(ttl, fontsize=7.5, pad=2)
+                        ax_r.set_xscale("log")
+                        ax_r.set_yscale("log")
+                        ax_p.set_xscale("log")
+                        ax_r.tick_params(labelsize=6, which="both")
+                        ax_p.tick_params(labelsize=6, which="both")
+
+                        if ci == 0:
+                            ax_r.set_ylabel(
+                                r"$\rho_a\ (\Omega{\cdot}m)$", fontsize=7
+                            )
+                            ax_p.set_ylabel(r"$\phi\ (\degree)$", fontsize=7)
+                        else:
+                            ax_r.tick_params(labelleft=False)
+                            ax_p.tick_params(labelleft=False)
+
+                        if last_band:
+                            ax_p.set_xlabel(r"$T$ (s)", fontsize=6)
+                        else:
+                            plt.setp(ax_p.get_xticklabels(), visible=False)
+
+                    hdr = name
+                    if np.isfinite(st_rms):
+                        hdr += f"    RMS {st_rms:.2f}"
+                    ax_r0.annotate(
+                        hdr,
+                        xy=(0.0, 1.0),
+                        xycoords="axes fraction",
+                        xytext=(0.0, 1.16),
+                        textcoords="axes fraction",
+                        fontsize=8.5,
+                        fontweight="bold",
+                        va="bottom",
+                        ha="left",
+                        annotation_clip=False,
+                    )
+                    if si == 0 and row_labels[bi]:
+                        ax_r0.annotate(
+                            row_labels[bi],
+                            xy=(0.0, 1.0),
+                            xycoords="axes fraction",
+                            xytext=(-0.70, 1.16),
+                            textcoords="axes fraction",
+                            fontsize=13,
+                            fontweight="bold",
+                            va="bottom",
+                            ha="left",
+                            annotation_clip=False,
+                        )
+
+            if legend_seen:
+                handles = [v[0] for v in legend_seen.values()]
+                labels = [v[1] for v in legend_seen.values()]
+                fig.legend(
+                    handles,
+                    labels,
+                    loc="lower center",
+                    ncol=min(4, len(handles)),
+                    fontsize=8,
+                    frameon=False,
+                    bbox_to_anchor=(0.5, 0.01),
+                )
+            if self.title:
+                fig.suptitle(self.title, fontsize=11, y=0.995)
+
+        return fig
+
+
+# ======================================================================
+# PlotMisfitMap
+# ======================================================================
+
+
+class PlotMisfitMap(_ModEmPlotBase):
+    r"""Plan-view map of per-station RMS data misfit.
+
+    Each station is drawn at its map position and coloured by its
+    root-mean-square normalised residual
+
+    .. math::
+       \mathrm{RMS}_s = \sqrt{\frac{1}{N_s}\sum_{i \in s}
+       \left(\frac{d_i^{obs} - d_i^{pred}}{\sigma_i}\right)^2},
+
+    pooled over every impedance component and period at that station
+    (real and imaginary parts counted separately). This shows *where*
+    an inversion fits well and where it does not \u2014 complementary to the
+    RMS-versus-iteration curve of :class:`PlotMisfit`.
+
+    Coordinates come from the data file's per-station longitude and
+    latitude when present, otherwise from the model-grid
+    easting/northing in kilometres. A narrow, near-linear survey wastes
+    horizontal space in a north-up view; pass *rotate_deg* to spin the
+    whole layout about its centroid into a local, axis-projected frame
+    that fills the page.
+
+    Parameters
+    ----------
+    result : InversionResult, optional
+        Loaded inversion result. Requires both ``data_obs`` and
+        ``data_pred``.
+    data_obs, data_pred : ModEmData, optional
+        Observed and predicted-response data given directly, bypassing
+        *result*.
+    components : sequence of str, optional
+        Component subset used for the misfit. Defaults to every component
+        present in the observed data.
+    use_lonlat : {"auto", True, False}, default "auto"
+        Use geographic coordinates when available (``"auto"``), always,
+        or never. Ignored when *rotate_deg* is set (the rotated frame is
+        always local kilometres).
+    rotate_deg : float, optional
+        Rotate the station layout counter-clockwise by this many degrees
+        about its centroid, in a local east/north kilometre frame. Handy
+        for laying a north\u2013south survey out left\u2013right. Axes are then
+        labelled ``x' (km)`` / ``y' (km)``.
+    aspect : {"equal", "auto"} or float, default "equal"
+        Axes aspect ratio. ``"auto"`` lets a narrow survey stretch to
+        fill the panel.
+    show_line_labels : bool, default True
+        Write each survey line's name (grouped by station-name prefix,
+        e.g. ``18-001`` \u2192 line ``18``) above that line's stations. Does
+        nothing when only one line is present.
+    line_prefix : str, default "L"
+        Prepended to a purely numeric line token for the label
+        (``"18"`` \u2192 ``"L18"``); tokens that already contain a letter are
+        shown unchanged.
+    line_label_rotation : float, default 0.0
+        Rotation (degrees) of the survey-line labels.
+    annotate_names : bool, default False
+        Label every station marker with its own name.
+    name_rotation : float, default 0.0
+        Rotation (degrees) of the per-station name labels.
+    cmap : str, default "RdYlGn_r"
+        Colormap for the RMS values (green = good fit, red = poor).
+    rms_target : float, optional, default 1.0
+        Reference RMS; marked on the colourbar. Pass ``None`` to disable.
+    vmax : float, optional
+        Upper colour limit. Defaults to the 95th percentile of the
+        station RMS values (at least ``2 * rms_target``).
+    by_component : bool, default False
+        Draw one map per component instead of a single pooled map.
+    marker_size : float, default 120.0
+        Marker area in points squared.
+    figsize : tuple of float, optional
+    title : str, optional
+        Replaces the first title line; the RMS / site-count line is kept.
+
+    Examples
+    --------
+    >>> from pycsamt.models.modem.plot import PlotMisfitMap
+    >>> fig = PlotMisfitMap(result=result, rotate_deg=-90).plot()
+    """
+
+    def __init__(
+        self,
+        result: InversionResult | None = None,
+        data_obs=None,
+        data_pred=None,
+        components: Sequence[str] | None = None,
+        use_lonlat: object = "auto",
+        rotate_deg: float | None = None,
+        aspect: object = "equal",
+        show_line_labels: bool = True,
+        line_prefix: str = "L",
+        line_label_rotation: float = 0.0,
+        annotate_names: bool = False,
+        name_rotation: float = 0.0,
+        cmap: str = "RdYlGn_r",
+        rms_target: float | None = 1.0,
+        vmax: float | None = None,
+        by_component: bool = False,
+        marker_size: float = 120.0,
+        figsize: tuple[float, float] | None = None,
+        title: str | None = None,
+        **kwargs,
+    ):
+        super().__init__(result=result, **kwargs)
+        self.data_obs = data_obs
+        self.data_pred = data_pred
+        self.components = (
+            [c.upper() for c in components] if components else None
+        )
+        self.use_lonlat = use_lonlat
+        self.rotate_deg = (
+            None if rotate_deg is None else float(rotate_deg)
+        )
+        self.aspect = aspect
+        self.show_line_labels = bool(show_line_labels)
+        self.line_prefix = str(line_prefix)
+        self.line_label_rotation = float(line_label_rotation)
+        self.annotate_names = bool(annotate_names)
+        self.name_rotation = float(name_rotation)
+        self.cmap = cmap
+        self.rms_target = rms_target
+        self.vmax = vmax
+        self.by_component = bool(by_component)
+        self.marker_size = float(marker_size)
+        self.figsize = figsize
+        self.title = title
+
+    # ------------------------------------------------------------------
+    # coordinate handling
+    # ------------------------------------------------------------------
+
+    def _coords(self, data, names):
+        """Return ``(x, y, xlabel, ylabel, is_lonlat)`` for the stations."""
+        want_ll = self.rotate_deg is None and (
+            self.use_lonlat is True
+            or (
+                self.use_lonlat == "auto"
+                and getattr(data, "has_lonlat", False)
+            )
+        )
+        if want_ll:
+            xs, ys, ok = [], [], True
+            for n in names:
+                ll = data.lonlat_for(n)
+                if ll is None:
+                    ok = False
+                    break
+                xs.append(ll[0])
+                ys.append(ll[1])
+            if ok:
+                return (
+                    np.asarray(xs, dtype=float),
+                    np.asarray(ys, dtype=float),
+                    "Longitude (\u00b0E)",
+                    "Latitude (\u00b0N)",
+                    True,
+                )
+        xs = np.array(
+            [data.site_coords.get(n, (0.0, 0.0, 0.0))[1] for n in names],
+            dtype=float,
+        ) / 1e3
+        ys = np.array(
+            [data.site_coords.get(n, (0.0, 0.0, 0.0))[0] for n in names],
+            dtype=float,
+        ) / 1e3
+        return xs, ys, "Easting (km)", "Northing (km)", False
+
+    def _rotate(self, x, y, is_ll, data, names):
+        """Return coordinates rotated into a local km frame (or unchanged)."""
+        if self.rotate_deg is None:
+            return x, y, None
+        if len(x) == 0:
+            return x, y, ("x' (km)", "y' (km)")
+        if is_ll:
+            lat0 = float(np.nanmean(y))
+            lon0 = float(np.nanmean(x))
+            kx = 111.195 * np.cos(np.radians(lat0))
+            xx = (x - lon0) * kx
+            yy = (y - lat0) * 111.195
+        else:
+            xx = x - float(np.nanmean(x))
+            yy = y - float(np.nanmean(y))
+        th = np.radians(self.rotate_deg)
+        c, s = np.cos(th), np.sin(th)
+        return c * xx - s * yy, s * xx + c * yy, ("x' (km)", "y' (km)")
+
+    # ------------------------------------------------------------------
+    # drawing
+    # ------------------------------------------------------------------
+
+    def _line_groups(self, x, y):
+        groups: dict[str, list[int]] = {}
+        for i, nm in enumerate(self._names):
+            groups.setdefault(_survey_line_of(nm), []).append(i)
+        return groups
+
+    def _draw_line_labels(self, ax, x, y):
+        if not self.show_line_labels or len(x) == 0:
+            return
+        groups = self._line_groups(x, y)
+        if len(groups) < 2:
+            return
+
+        def _lbl(tok: str) -> str:
+            return (
+                tok
+                if any(ch.isalpha() for ch in tok)
+                else f"{self.line_prefix}{tok}"
+            )
+
+        y_span = float(np.nanmax(y) - np.nanmin(y)) or 1.0
+        x_span = float(np.nanmax(x) - np.nanmin(x)) or 1.0
+        y_pad = 0.045 * y_span
+        x_pad = 0.02 * x_span
+
+        # A line is "vertical" when its own stations spread more in y than
+        # in x.  Vertical lines get a shared top baseline (a tidy row of
+        # labels); tilted / horizontal lines are labelled at their right
+        # end instead, where a shared baseline would just overprint.
+        vertical: dict[str, list[int]] = {}
+        tilted: dict[str, list[int]] = {}
+        for tok, idx in groups.items():
+            gx, gy = x[idx], y[idx]
+            dx = float(np.nanmax(gx) - np.nanmin(gx))
+            dy = float(np.nanmax(gy) - np.nanmin(gy))
+            (vertical if dy >= dx else tilted)[tok] = idx
+
+        common = dict(
+            fontsize=8,
+            fontweight="bold",
+            rotation=self.line_label_rotation,
+            rotation_mode="anchor",
+            annotation_clip=False,
+            zorder=6,
+        )
+        top_used = float(np.nanmax(y))
+        if vertical:
+            y_lbl = top_used + y_pad
+            for tok, idx in vertical.items():
+                ax.annotate(
+                    _lbl(tok),
+                    (float(np.nanmean(x[idx])), y_lbl),
+                    ha="center",
+                    va="bottom",
+                    **common,
+                )
+            top_used = max(top_used, y_lbl + 2.0 * y_pad)
+        for tok, idx in tilted.items():
+            end = int(np.argmax(x[idx]))
+            ax.annotate(
+                _lbl(tok),
+                (float(x[idx][end]) + x_pad, float(y[idx][end])),
+                ha="left",
+                va="center",
+                **common,
+            )
+
+        lo, hi = ax.get_ylim()
+        ax.set_ylim(lo, max(hi, top_used))
+
+    def _draw(
+        self, fig, ax, x, y, rms, xl, yl, comp_label, cbar=True, vmax=None
+    ):
+        from matplotlib.ticker import MaxNLocator
+
+        finite = np.isfinite(rms)
+        vmax = self.vmax if self.vmax is not None else vmax
+        if vmax is None:
+            base = rms[finite]
+            vmax = float(np.percentile(base, 95)) if base.size else 2.0
+            if self.rms_target:
+                vmax = max(vmax, 2.0 * float(self.rms_target))
+        vmax = max(float(vmax), 1e-6)
+
+        if len(x) and (~finite).any():
+            ax.scatter(
+                x[~finite],
+                y[~finite],
+                s=self.marker_size,
+                facecolors="none",
+                edgecolors="0.5",
+                linewidths=0.8,
+                marker="o",
+                zorder=2,
+            )
+        sc = ax.scatter(
+            x[finite],
+            y[finite],
+            c=rms[finite],
+            s=self.marker_size,
+            cmap=self.cmap,
+            vmin=0.0,
+            vmax=vmax,
+            edgecolors="k",
+            linewidths=0.5,
+            marker="o",
+            zorder=3,
+        )
+        if self.annotate_names:
+            for xi, yi, nm in zip(x, y, self._names):
+                ax.annotate(
+                    nm,
+                    (xi, yi),
+                    xytext=(3, 3),
+                    textcoords="offset points",
+                    fontsize=5.5,
+                    rotation=self.name_rotation,
+                    zorder=4,
+                )
+        if cbar:
+            cb = fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.9)
+            cb.set_label("per-station RMS", fontsize=8)
+            if self.rms_target and 0.0 < float(self.rms_target) < vmax:
+                cb.ax.axhline(
+                    float(self.rms_target), color="k", lw=1.0, ls="--"
+                )
+        try:
+            ax.set_aspect(self.aspect)
+        except (ValueError, TypeError):
+            ax.set_aspect("equal")
+        if comp_label:
+            ax.set_title(comp_label, fontsize=9)
+        ax.set_xlabel(xl, fontsize=8)
+        ax.set_ylabel(yl, fontsize=8)
+        ax.grid(True, lw=0.3, alpha=0.4)
+        try:
+            ax.ticklabel_format(useOffset=False, style="plain")
+        except (AttributeError, ValueError):
+            pass
+        ax.xaxis.set_major_locator(MaxNLocator(4))
+        ax.tick_params(axis="x", labelrotation=30, labelsize=7)
+        ax.tick_params(axis="y", labelsize=7)
+        self._draw_line_labels(ax, x, y)
+        return sc
+
+    # ------------------------------------------------------------------
+    # public
+    # ------------------------------------------------------------------
+
+    def _resolve_result(self):
+        if self.data_obs is not None:
+            return _DataBundle(self.data_obs, self.data_pred)
+        return self._check_result()
+
+    def plot(self):
+        """Return a matplotlib figure with the per-station misfit map."""
+        import matplotlib.pyplot as plt
+
+        r = self._resolve_result()
+        if r.data_obs is None:
+            raise ValueError("InversionResult has no data_obs loaded.")
+        if r.data_pred is None:
+            raise ValueError(
+                "PlotMisfitMap needs a predicted-response file "
+                "(result.data_pred is None)."
+            )
+
+        comps = self.components or _present_components(r.data_obs)
+        if not comps:
+            raise ValueError(
+                "No impedance components with usable data found."
+            )
+
+        names = list(r.data_obs.site_names)
+        if not names:
+            raise ValueError("No stations in data_obs.")
+        self._names = names
+
+        x, y, xl, yl, is_ll = self._coords(r.data_obs, names)
+        rx, ry, rlab = self._rotate(x, y, is_ll, r.data_obs, names)
+        if rlab is not None:
+            x, y, xl, yl = rx, ry, rlab[0], rlab[1]
+
+        pooled: list[np.ndarray] = []
+        for n in names:
+            for c in comps:
+                res = _z_residuals(
+                    _collect_z_rows(r.data_obs, n, c),
+                    _collect_z_rows(
+                        r.data_pred, n, c, filter_masked=False
+                    ),
+                )
+                if res.size:
+                    pooled.append(res)
+        overall = _rms(
+            np.concatenate(pooled) if pooled else np.empty(0)
+        )
+
+        comp_txt = "/".join(_COMP_PLAIN[c] for c in comps)
+        head = self.title or "ModEM per-station data misfit"
+        sub = (
+            f"overall RMS {overall:.3f}  \u00b7  {len(names)} sites  \u00b7  "
+            f"{comp_txt}"
+        )
+
+        if self.by_component:
+            n = len(comps)
+            ncol = min(2, n)
+            nrow = int(np.ceil(n / ncol))
+            fig, axes = plt.subplots(
+                nrow,
+                ncol,
+                figsize=self.figsize or (5.8 * ncol, 5.2 * nrow),
+                squeeze=False,
+            )
+            rms_by_comp = {
+                c: np.array(
+                    [
+                        _rms(
+                            _z_residuals(
+                                _collect_z_rows(r.data_obs, nm, c),
+                                _collect_z_rows(
+                                    r.data_pred,
+                                    nm,
+                                    c,
+                                    filter_masked=False,
+                                ),
+                            )
+                        )
+                        for nm in names
+                    ]
+                )
+                for c in comps
+            }
+            pooled_rms = np.concatenate(
+                [v[np.isfinite(v)] for v in rms_by_comp.values()]
+            )
+            shared_vmax = (
+                float(np.percentile(pooled_rms, 95))
+                if pooled_rms.size
+                else 2.0
+            )
+            if self.rms_target:
+                shared_vmax = max(
+                    shared_vmax, 2.0 * float(self.rms_target)
+                )
+            for k, c in enumerate(comps):
+                self._draw(
+                    fig,
+                    axes[k // ncol][k % ncol],
+                    x,
+                    y,
+                    rms_by_comp[c],
+                    xl,
+                    yl,
+                    _RESP_LATEX[c],
+                    vmax=shared_vmax,
+                )
+            for k in range(len(comps), nrow * ncol):
+                axes[k // ncol][k % ncol].set_visible(False)
+            fig.suptitle(f"{head}\n{sub}", fontsize=10)
+        else:
+            fig, ax = plt.subplots(
+                figsize=self.figsize or (6.4, 6.6)
+            )
+            rms = np.array(
+                [
+                    _station_misfit(
+                        r.data_obs, r.data_pred, nm, comps
+                    )[0]
+                    for nm in names
+                ]
+            )
+            self._draw(fig, ax, x, y, rms, xl, yl, None)
+            ax.set_title(head, fontsize=11, pad=14)
+            ax.text(
+                0.5,
+                1.012,
+                sub,
+                transform=ax.transAxes,
+                ha="center",
+                va="bottom",
+                fontsize=8,
+                color="#444444",
+            )
+
         fig.tight_layout()
         return fig

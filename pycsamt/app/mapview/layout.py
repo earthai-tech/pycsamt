@@ -55,6 +55,8 @@ _MODES_3D = [
 ]
 _VIEWS = [
     (IDs.RAIL_MAP, "map", "map-view", "Map"),
+    (IDs.RAIL_BH, "bh", "layered-model", "Boreholes"),
+    (IDs.RAIL_GEO, "geology", "interpret", "Geology"),
     (IDs.RAIL_3D, "map3d", "3d", "3-D"),
 ]
 
@@ -809,6 +811,8 @@ def _three_d_group() -> html.Div:
                                     {"label": "75%", "value": "0.75"},
                                     {"label": "50%", "value": "0.5"},
                                     {"label": "25%", "value": "0.25"},
+                                    {"label": "10%", "value": "0.1"},
+                                    {"label": "5%", "value": "0.05"},
                                 ],
                                 value="1",
                                 size="sm",
@@ -870,10 +874,16 @@ def _three_d_group() -> html.Div:
                                 + [
                                     # Not native Plotly Scatter3d symbols
                                     # (that enum has no triangle at all) --
-                                    # rendered as real geometry instead,
-                                    # see pycsamt.map.volume.TRIANGLE_DOWN_SYMBOLS.
-                                    {"label": "Triangle Down (filled)", "value": "triangle-down"},
-                                    {"label": "Triangle Down (open)", "value": "triangle-down-open"},
+                                    # rendered as real geometry instead, see
+                                    # pycsamt.map.volume.TRIANGLE_DOWN_SYMBOLS.
+                                    {
+                                        "label": "Triangle Down (filled)",
+                                        "value": "triangle-down",
+                                    },
+                                    {
+                                        "label": "Triangle Down (open)",
+                                        "value": "triangle-down-open",
+                                    },
                                 ],
                                 value="diamond",
                                 size="sm",
@@ -1090,51 +1100,240 @@ def _three_d_group() -> html.Div:
     )
 
     borehole_sec = _acc_item(
-        "Boreholes (PCBH)",
+        "Boreholes",
         "bi-signpost-split",
         "3d-boreholes",
         [
-            dcc.Upload(
-                id=IDs.PCBH_UPLOAD,
-                children=html.Div(
-                    [html.I(className="bi bi-cloud-upload me-1"),
-                     "Drop / pick .pcbh.json"]
-                ),
-                accept=".pcbh.json,.json",
-                multiple=False,
-                className="mv-upload-drop",
-            ),
-            html.Div(id=IDs.PCBH_UPLOAD_INFO, className="mv-topo-status"),
             dbc.Switch(
-                id=IDs.PCBH_VISIBLE,
-                label="Show boreholes",
-                value=True,
+                id=IDs.PCBH_IN_3D,
+                label="Insert boreholes in this 3-D view",
+                value=False,
                 className="mv-switch",
             ),
+            html.Div(
+                "Off by default. Import, edit and colour boreholes in the "
+                "Boreholes section (left rail); the settings here only "
+                "govern how the already-built holes sit in the fence / "
+                "block / iso scene.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            html.Div("Attitude", className="mv-field-lbl"),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label(
+                                "Lean from vertical °",
+                                className="mv-field-lbl",
+                            ),
+                            _num(
+                                IDs.PCBH_3D_LEAN,
+                                0,
+                                min=0,
+                                max=75,
+                                step=5,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label(
+                                "Lean toward", className="mv-field-lbl"
+                            ),
+                            dbc.Select(
+                                id=IDs.PCBH_3D_LEAN_DIR,
+                                options=[
+                                    {"label": "North", "value": "N"},
+                                    {"label": "North-east", "value": "NE"},
+                                    {"label": "East", "value": "E"},
+                                    {"label": "South-east", "value": "SE"},
+                                    {"label": "South", "value": "S"},
+                                    {"label": "South-west", "value": "SW"},
+                                    {"label": "West", "value": "W"},
+                                    {"label": "North-west", "value": "NW"},
+                                ],
+                                value="N",
+                                size="sm",
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Div(
+                "Applied only to holes with no surveyed (deviated) "
+                "trajectory — imported deviation surveys are kept as-is.",
+                className="mv-help-hint",
+                style={"fontSize": "10px", "opacity": ".6"},
+            ),
+            html.Div("Labels & markers", className="mv-field-lbl"),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label(
+                                "Label angle °", className="mv-field-lbl"
+                            ),
+                            _num(
+                                IDs.PCBH_3D_LABEL_ANGLE,
+                                0,
+                                min=-90,
+                                max=90,
+                                step=15,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label(
+                                "Label size px", className="mv-field-lbl"
+                            ),
+                            _num(
+                                IDs.PCBH_3D_LABEL_SIZE,
+                                11,
+                                min=6,
+                                max=24,
+                                step=1,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label(
+                                "Collar marker size",
+                                className="mv-field-lbl",
+                            ),
+                            _num(
+                                IDs.PCBH_3D_COLLAR_SIZE,
+                                5,
+                                min=2,
+                                max=18,
+                                step=1,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label(
+                                "Depth ticks m", className="mv-field-lbl"
+                            ),
+                            _num(
+                                IDs.PCBH_3D_DEPTH_TICKS,
+                                0,
+                                min=0,
+                                max=1000,
+                                step=25,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Div(
+                "Depth ticks: 0 = off; otherwise annotate measured-depth "
+                "marks along each hole so contacts read against the block.",
+                className="mv-help-hint",
+                style={"fontSize": "10px", "opacity": ".6"},
+            ),
+            html.Div("Patch onto interpretation", className="mv-field-lbl"),
             dbc.Switch(
-                id=IDs.PCBH_LABELS,
-                label="Collar labels",
-                value=True,
+                id=IDs.PCBH_PATCH_GEOLOGY,
+                label="Patch borehole lithology onto the interpreted panel",
+                value=False,
                 className="mv-switch",
             ),
             _ctl_row(
-                "Log family",
-                dbc.Input(
-                    id=IDs.PCBH_FAMILY,
-                    value="lithology",
-                    size="sm",
-                    debounce=True,
+                "Patch width (m)",
+                _num(
+                    IDs.PCBH_PATCH_WIDTH,
+                    20,
+                    min=2,
+                    max=200,
+                    step=2,
                 ),
             ),
-            _ctl_row(
-                "Opacity",
-                dcc.Slider(
-                    id=IDs.PCBH_OPACITY,
-                    min=0.1,
-                    max=1.0,
-                    step=0.1,
-                    value=0.9,
-                ),
+            html.Div(
+                "Stamps each hole's own logged interval — the ground "
+                "truth — directly onto the resistivity-band panel at its "
+                "true depth, right where the Interpretation legend below "
+                "cannot tell facies apart on resistivity alone. Requires "
+                "'Insert boreholes in this 3-D view' above.",
+                className="mv-help-hint",
+                style={"fontSize": "10px", "opacity": ".6"},
+            ),
+        ],
+    )
+
+    geo_sec = _acc_item(
+        "Interpretation",
+        "bi-palette",
+        "3d-geology",
+        [
+            dbc.Switch(
+                id=IDs.GEO_APPLY,
+                label="Apply geology legend to this view",
+                value=False,
+                className="mv-switch",
+            ),
+            dbc.Switch(
+                id=IDs.STRUCT_APPLY,
+                label="Apply structure (faults / measurements)",
+                value=False,
+                className="mv-switch",
+            ),
+            dbc.Switch(
+                id=IDs.GEO_LEGEND_VISIBLE,
+                label="Show on-canvas legend",
+                value=True,
+                className="mv-switch",
+            ),
+            html.Div(
+                "Hides the swatch-list legend to give the plot the full "
+                "width back — the applied legend keeps colouring the "
+                "scene either way. Also toggleable from the 3-D "
+                "toolbar's Legend button.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            html.Div(
+                "Colours block / fence / depth-slice / iso-surface cells "
+                "by a resistivity-to-geology legend instead of the "
+                "continuous ramp, and/or inserts fault planes and "
+                "structural-measurement glyphs into the scene — build "
+                "and edit both in the Geology section (left rail), then "
+                "cross-check against the Boreholes overlay above.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            html.Div(
+                "The Patterns tab imports a swatch pack and assigns a "
+                "swatch to a legend row's pattern_id. With the 3-D "
+                "toolbar's Fill set to \"Pattern textures\", fence and "
+                "depth-slice actually render that swatch's hatch / "
+                "stipple / brick shape, tinted in the row's own "
+                "colour. Block / iso-surface always stay solid — "
+                "Plotly's Volume/Isosurface traces have no per-cell "
+                "colour override the way a fence's surface does, so a "
+                "true texture can't be mapped onto that geometry at "
+                "all; that is a real Plotly limitation, not a setting.",
+                className="mv-help-hint",
+                style={
+                    "fontSize": "10.5px",
+                    "opacity": ".7",
+                    "marginTop": "6px",
+                },
             ),
         ],
     )
@@ -1156,6 +1355,7 @@ def _three_d_group() -> html.Div:
                     topo_sec,
                     sta_sec,
                     borehole_sec,
+                    geo_sec,
                     interp_sec,
                     appearance_sec,
                 ],
@@ -1261,6 +1461,169 @@ def _elevation_source() -> html.Div:
     )
 
 
+def _borehole_group() -> html.Div:
+    """Inspector panel for the Boreholes view — borehole options only."""
+    return html.Div(
+        id=IDs.GRP_BH,
+        style={"display": "none"},
+        children=[
+            html.Hr(className="mv-hr"),
+            html.Div("Boreholes", className="mv-panel-lbl"),
+            dcc.Upload(
+                id=IDs.PCBH_UPLOAD,
+                children=html.Div(
+                    [html.I(className="bi bi-cloud-upload me-1"),
+                     "Drop / pick .pcbh.json"]
+                ),
+                accept=".pcbh.json,.json",
+                multiple=False,
+                className="mv-upload-drop",
+            ),
+            html.Div(id=IDs.PCBH_UPLOAD_INFO, className="mv-topo-status"),
+            dbc.Button(
+                [html.I(className="bi bi-pencil-square me-1"),
+                 "Open Borehole Studio"],
+                id=IDs.BTN_BH_STUDIO,
+                color="secondary",
+                size="sm",
+                outline=True,
+                className="w-100 mb-2",
+                n_clicks=0,
+            ),
+            dbc.Switch(
+                id=IDs.PCBH_VISIBLE,
+                label="Show boreholes",
+                value=True,
+                className="mv-switch",
+            ),
+            dbc.Switch(
+                id=IDs.PCBH_LABELS,
+                label="Collar labels",
+                value=True,
+                className="mv-switch",
+            ),
+            dbc.Switch(
+                id=IDs.PCBH_ON_MAP,
+                label="Collars on the 2-D map",
+                value=True,
+                className="mv-switch",
+            ),
+            dbc.Switch(
+                id=IDs.PCPT_VISIBLE,
+                label="Show targets / points",
+                value=True,
+                className="mv-switch",
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("3-D holes", className="mv-panel-lbl"),
+            dbc.Switch(
+                id=IDs.PCBH_AS_TUBES,
+                label="Solid tubes (vs. lines)",
+                value=True,
+                className="mv-switch",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label(
+                                "Tube radius (m)", className="mv-field-lbl"
+                            ),
+                            _num(
+                                IDs.PCBH_RADIUS, 20, min=2, max=300, step=2
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Opacity", className="mv-field-lbl"),
+                            dcc.Slider(
+                                id=IDs.PCBH_OPACITY,
+                                min=0.1,
+                                max=1.0,
+                                step=0.1,
+                                value=0.9,
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            _ctl_row(
+                "Log family",
+                dbc.Input(
+                    id=IDs.PCBH_FAMILY,
+                    value="lithology",
+                    size="sm",
+                    debounce=True,
+                ),
+            ),
+        ],
+    )
+
+
+def _geology_rail_group() -> html.Div:
+    """Inspector panel for the Geology view — build/import shortcuts
+    and status only; the Studio modal (opened from here) does the
+    heavy editing. Apply switches live in the 3-D options accordion's
+    Interpretation section (mirrors PCBH_IN_3D vs. the Boreholes panel)."""
+    return html.Div(
+        id=IDs.GRP_GEO,
+        style={"display": "none"},
+        children=[
+            html.Hr(className="mv-hr"),
+            html.Div("Geology", className="mv-panel-lbl"),
+            html.Div(
+                "Build a resistivity-to-geology legend and/or structural "
+                "evidence (fault traces, strike/dip measurements), "
+                "preview them here, then apply them to the 3-D scene "
+                "from the Interpretation section of the 3-D options.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            _ctl_row(
+                "Canvas",
+                dbc.Select(
+                    id=IDs.GEO_VIEW_MODE,
+                    options=[
+                        {"label": "Legend", "value": "legend"},
+                        {"label": "Structure section", "value": "structure"},
+                    ],
+                    value="legend",
+                    size="sm",
+                ),
+            ),
+            dbc.Button(
+                [html.I(className="bi bi-palette2 me-1"),
+                 "Open Geology Studio"],
+                id=IDs.BTN_GEO_STUDIO,
+                color="secondary",
+                size="sm",
+                outline=True,
+                className="w-100 mb-2",
+                n_clicks=0,
+            ),
+            html.Div("Legend", className="mv-panel-lbl mt-2"),
+            dcc.Upload(
+                id=IDs.GEO_QUICK_UPLOAD,
+                children=html.Div(
+                    [html.I(className="bi bi-cloud-upload me-1"),
+                     "Drop / pick .pcgl.json"]
+                ),
+                accept=".pcgl.json,.json",
+                multiple=False,
+                className="mv-upload-drop",
+            ),
+            html.Div(id=IDs.GEO_QUICK_UPLOAD_INFO, className="mv-topo-status"),
+            html.Div(id=IDs.GEO_STRIP, className="mv-geo-strip"),
+            html.Div("Structure", className="mv-panel-lbl mt-2"),
+            html.Div(id=IDs.STRUCT_STRIP, className="mv-topo-status"),
+        ],
+    )
+
+
 def _inspector() -> html.Div:
     return html.Div(
         id=IDs.INSPECTOR,
@@ -1306,6 +1669,8 @@ def _inspector() -> html.Div:
                 className="mv-switch-row",
             ),
             _three_d_group(),
+            _borehole_group(),
+            _geology_rail_group(),
             html.Hr(className="mv-hr"),
             html.Div("Station", className="mv-panel-lbl"),
             html.Div(
@@ -1407,6 +1772,12 @@ def _canvas_toolbar_3d() -> html.Div:
                 IDs.TB3D_RESET,
                 "Reset camera to fit the data",
             ),
+            _tb_btn(
+                "bi-arrow-repeat",
+                "Spin",
+                IDs.TB3D_SPIN,
+                "Auto-rotate the view (turntable) — click again to stop",
+            ),
             html.Div(className="mv-tb-sep"),
             html.Span("Mode", className="mv-tb-grp"),
             _tb_btn(
@@ -1431,28 +1802,92 @@ def _canvas_toolbar_3d() -> html.Div:
                 "Iso-resistivity surfaces",
             ),
             html.Div(className="mv-tb-sep"),
-            html.Span("Depth", className="mv-tb-grp"),
-            _tb_btn(
-                "bi-arrows-vertical",
-                "Full",
-                IDs.TB3D_DEPTH_FULL,
-                "Full depth range",
-            ),
-            _tb_btn(
-                "bi-arrows-vertical", "500 m", IDs.TB3D_DEPTH_500, "0 - 500 m"
-            ),
-            _tb_btn(
-                "bi-arrows-vertical", "1 km", IDs.TB3D_DEPTH_1K, "0 - 1000 m"
-            ),
-            _tb_btn(
-                "bi-arrows-vertical", "2 km", IDs.TB3D_DEPTH_2K, "0 - 2000 m"
+            html.I(className="bi bi-arrows-vertical mv-tb-icon",
+                   title="Depth window shortcut"),
+            html.Div(
+                dbc.Select(
+                    id=IDs.TB3D_DEPTH_SELECT,
+                    options=[
+                        {"label": "Full depth", "value": "full"},
+                        {"label": "0 - 500 m", "value": "500"},
+                        {"label": "0 - 1 km", "value": "1000"},
+                        {"label": "0 - 2 km", "value": "2000"},
+                    ],
+                    value="full",
+                    size="sm",
+                    className="mv-tb-select",
+                ),
+                title="Depth window shortcut",
             ),
             html.Div(className="mv-tb-sep"),
             _tb_btn(
                 "bi-geo-alt", "Topo", IDs.TB3D_TOPO, "Toggle topography drape"
             ),
+            _tb_btn(
+                "bi-list-ul", "Legend", IDs.TB3D_LEGEND,
+                "Show/hide the geology legend — hide it for the full "
+                "plot width",
+            ),
+            html.Div(
+                dbc.Select(
+                    id=IDs.TB3D_LEGEND_STYLE,
+                    options=[
+                        {"label": "Swatch list", "value": "swatch"},
+                        {"label": "Colourbar", "value": "colorbar"},
+                    ],
+                    value="swatch",
+                    size="sm",
+                    className="mv-tb-select",
+                ),
+                title="Geology legend style",
+            ),
+            html.Div(
+                dbc.Select(
+                    id=IDs.TB3D_GEO_FILL,
+                    options=[
+                        {"label": "Solid colours", "value": "solid"},
+                        {"label": "Pattern textures", "value": "pattern"},
+                    ],
+                    value="solid",
+                    size="sm",
+                    className="mv-tb-select",
+                ),
+                title="Geology fill — pattern textures apply to fence "
+                "and depth-slice only; block/iso-surface stay solid "
+                "(Plotly can't texture-map a 3-D surface)",
+            ),
         ],
         id=IDs.TOOLBAR_3D,
+        className="mv-toolbar",
+        style={"display": "none"},
+    )
+
+
+def _canvas_toolbar_bh() -> html.Div:
+    """Borehole-view toolbar — strip-log vs 3-D holes, open the studio."""
+    return html.Div(
+        [
+            html.Span("Boreholes", className="mv-canvas-title"),
+            html.Div(className="mv-tb-sep"),
+            dbc.RadioItems(
+                id=IDs.BH_VIEW_MODE,
+                options=[
+                    {"label": "Strip log", "value": "striplog"},
+                    {"label": "3-D holes", "value": "holes3d"},
+                ],
+                value="striplog",
+                inline=True,
+                className="mv-bh-viewmode",
+            ),
+            html.Div(className="mv-tb-sep"),
+            _tb_btn(
+                "bi-pencil-square",
+                "Studio",
+                IDs.BTN_BH_STUDIO_TB,
+                "Import / build / edit boreholes",
+            ),
+        ],
+        id=IDs.TOOLBAR_BH,
         className="mv-toolbar",
         style={"display": "none"},
     )
@@ -1573,6 +2008,7 @@ def _canvas() -> html.Div:
         children=[
             _canvas_toolbar(),
             _canvas_toolbar_3d(),
+            _canvas_toolbar_bh(),
             dcc.Loading(
                 html.Div(
                     [
@@ -1594,6 +2030,17 @@ def _canvas() -> html.Div:
                 ),
                 type="circle",
                 color="#1e66f5",
+                # Keep the graph mounted *and visible* while a render is in
+                # flight -- the default ``visibility:hidden`` makes Plotly
+                # re-read the 3-D camera from a hidden canvas and fall back
+                # to the default eye, which (together with the whole-figure
+                # rebuild) is why pan/zoom/orbit used to snap back on every
+                # control change. See callbacks.toolbar._register_viewport.
+                overlay_style={
+                    "visibility": "visible",
+                    "opacity": 0.55,
+                    "filter": "blur(1px)",
+                },
             ),
         ],
     )
@@ -1673,6 +2120,664 @@ def dash_table_placeholder():
             "padding": "4px 8px",
             "fontFamily": "monospace",
         },
+    )
+
+
+# ── borehole studio modal ──────────────────────────────
+
+_BH_COLLAR_COLS = [
+    "id", "name", "kind", "status", "x", "y", "z", "total_depth_md",
+]
+_BH_LAYER_COLS = [
+    "borehole_id", "from_md", "to_md", "code", "label",
+    "resistivity_ohm_m", "description",
+]
+_BH_SURVEY_COLS = ["borehole_id", "md", "azimuth_deg", "inclination_deg"]
+
+
+def _bh_table(table_id, columns, *, editable=True):
+    from dash import dash_table
+
+    return dash_table.DataTable(
+        id=table_id,
+        columns=[
+            {"name": c.replace("_", " ").title(), "id": c} for c in columns
+        ],
+        data=[],
+        editable=editable,
+        row_deletable=editable,
+        page_action="none",
+        style_table={"height": "300px", "overflowY": "auto"},
+        style_cell={"minWidth": "90px", "fontSize": "11px", "padding": "3px"},
+        style_as_list_view=True,
+    )
+
+
+def _bh_import_body() -> html.Div:
+    _drop = lambda _id, txt, acc: dcc.Upload(  # noqa: E731
+        id=_id,
+        children=html.Div([html.I(className="bi bi-cloud-upload me-1"), txt]),
+        accept=acc,
+        multiple=False,
+        className="mv-upload-drop",
+    )
+    return html.Div(
+        [
+            html.Div("Canonical PCBH", className="mv-panel-lbl"),
+            _drop(
+                IDs.BH_IMPORT_PCBH,
+                "Drop / pick .pcbh.json",
+                ".pcbh.json,.json",
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Combined interval CSV", className="mv-panel-lbl"),
+            _drop(IDs.BH_IMPORT_CSV, "Drop / pick .csv", ".csv,.tsv,.txt"),
+            html.Hr(className="mv-hr"),
+            html.Div("Spreadsheet (.xlsx)", className="mv-panel-lbl"),
+            _drop(IDs.BH_IMPORT_XLSX, "Drop / pick .xlsx", ".xlsx"),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label("Sheet", className="mv-field-lbl"),
+                            dbc.Select(id=IDs.BH_XLSX_SHEET, options=[],
+                                       size="sm"),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Header row", className="mv-field-lbl"),
+                            _num(IDs.BH_XLSX_HEADER, 1, min=1, step=1),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Div(
+                "Map the columns (blank = auto-detect by header name):",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            _ctl_row(
+                "Borehole id column",
+                dbc.Select(id=IDs.BH_XLSX_MAP_ID, options=[], size="sm"),
+            ),
+            _ctl_row(
+                "Lithology / rock column",
+                dbc.Select(id=IDs.BH_XLSX_MAP_LITH, options=[], size="sm"),
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Label("Depth from", className="mv-field-lbl"),
+                            dbc.Select(
+                                id=IDs.BH_XLSX_MAP_FROM, options=[], size="sm"
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Depth to", className="mv-field-lbl"),
+                            dbc.Select(
+                                id=IDs.BH_XLSX_MAP_TO, options=[], size="sm"
+                            ),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            _ctl_row(
+                "Collar x,y,z (optional)",
+                dbc.Input(
+                    id=IDs.BH_XLSX_COLLAR,
+                    placeholder="e.g. 350000, 3000000, 1200",
+                    size="sm",
+                    debounce=True,
+                ),
+            ),
+            html.Div(id=IDs.BH_XLSX_PREVIEW, className="mv-xlsx-preview"),
+            dbc.Button(
+                "Import sheet", id=IDs.BH_XLSX_APPLY, color="primary",
+                size="sm", className="w-100 mt-1", n_clicks=0,
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Points / targets (PCPT)", className="mv-panel-lbl"),
+            _drop(
+                IDs.PCPT_IMPORT,
+                "Drop / pick .pcpt.json · .csv · .xlsx",
+                ".pcpt.json,.json,.csv,.xlsx",
+            ),
+            html.Div(id=IDs.PCPT_IMPORT_INFO, className="mv-topo-status"),
+        ],
+    )
+
+
+def _borehole_studio_modal() -> dbc.Modal:
+    from dash import (
+        dash_table,  # noqa: F401  (keeps import local like siblings)
+    )
+
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [
+                        html.I(className="bi bi-pencil-square me-2"),
+                        "Borehole Studio",
+                    ]
+                ),
+                close_button=True,
+            ),
+            dbc.ModalBody(
+                dbc.Tabs(
+                    [
+                        dbc.Tab(_bh_import_body(), label="Import",
+                                tab_id="bh-import"),
+                        dbc.Tab(
+                            _bh_table(IDs.BH_TABLE_COLLARS, _BH_COLLAR_COLS),
+                            label="Collars", tab_id="bh-collars",
+                        ),
+                        dbc.Tab(
+                            _bh_table(IDs.BH_TABLE_LAYERS, _BH_LAYER_COLS),
+                            label="Layers", tab_id="bh-layers",
+                        ),
+                        dbc.Tab(
+                            _bh_table(
+                                IDs.BH_TABLE_SURVEY, _BH_SURVEY_COLS,
+                                editable=False,
+                            ),
+                            label="Survey", tab_id="bh-survey",
+                        ),
+                        dbc.Tab(
+                            dcc.Graph(id=IDs.BH_STUDIO_PREVIEW,
+                                      style={"height": "360px"}),
+                            label="Preview", tab_id="bh-preview",
+                        ),
+                    ],
+                    id=IDs.BH_STUDIO_TABS,
+                    active_tab="bh-import",
+                ),
+            ),
+            dbc.ModalFooter(
+                [
+                    html.Div(id=IDs.BH_STUDIO_VALIDATION,
+                             className="mv-load-feedback"),
+                    html.Div(id=IDs.BH_STUDIO_STATUS,
+                             className="mv-detected-summary"),
+                    html.Div(className="mv-topbar-spacer"),
+                    dbc.Button(
+                        [html.I(className="bi bi-plus-lg me-1"), "Add row"],
+                        id=IDs.BH_BTN_ADD_ROW, color="secondary",
+                        size="sm", outline=True, n_clicks=0,
+                    ),
+                    dbc.Button(
+                        [html.I(className="bi bi-download me-1"), "Export"],
+                        id=IDs.BH_BTN_EXPORT, color="secondary",
+                        size="sm", outline=True, n_clicks=0,
+                    ),
+                    dbc.Button(
+                        [html.I(className="bi bi-check-lg me-1"),
+                         "Apply to view"],
+                        id=IDs.BH_BTN_APPLY, color="primary", n_clicks=0,
+                    ),
+                ]
+            ),
+        ],
+        id=IDs.BH_STUDIO_MODAL,
+        size="xl",
+        is_open=False,
+        centered=True,
+        scrollable=True,
+        className="mv-modal",
+    )
+
+
+_GEO_LEGEND_COLS = (
+    "name", "rho_min", "rho_max", "color",
+    "pattern_id", "pattern_source", "description", "source",
+)
+
+
+def _geo_table():
+    from dash import dash_table
+
+    return dash_table.DataTable(
+        id=IDs.GEO_TABLE_LEGEND,
+        columns=[
+            {"name": c.replace("_", " ").title(), "id": c}
+            for c in _GEO_LEGEND_COLS
+        ],
+        data=[],
+        editable=True,
+        row_deletable=True,
+        row_selectable="single",
+        page_action="none",
+        style_table={"height": "320px", "overflowY": "auto"},
+        style_cell={"minWidth": "90px", "fontSize": "11px", "padding": "3px"},
+        style_as_list_view=True,
+    )
+
+
+def _geo_legend_tab_body() -> html.Div:
+    return html.Div(
+        [
+            dbc.Button(
+                [html.I(className="bi bi-palette2 me-1"),
+                 "Sync colours with loaded boreholes"],
+                id=IDs.GEO_BTN_SYNC_COLORS, color="secondary", size="sm",
+                outline=True, className="w-100 mb-1", n_clicks=0,
+            ),
+            html.Div(
+                "Where a row's name exactly matches a lithology already "
+                "logged in a loaded borehole, its colour is overwritten "
+                "with that borehole's colour — so the same unit reads "
+                "as the same colour in both overlays, and you can judge "
+                "at a glance whether the interpretation agrees with "
+                "what was actually drilled. Rows with no matching "
+                "borehole unit (routine — the legend covers the whole "
+                "model, a hole only ever intersects part of it) are "
+                "left as-is. Matching is exact, not fuzzy, on purpose.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            _geo_table(),
+        ],
+    )
+
+
+def _geo_import_body() -> html.Div:
+    _drop = lambda _id, txt, acc: dcc.Upload(  # noqa: E731
+        id=_id,
+        children=html.Div([html.I(className="bi bi-cloud-upload me-1"), txt]),
+        accept=acc,
+        multiple=False,
+        className="mv-upload-drop",
+    )
+    return html.Div(
+        [
+            html.Div("Canonical PCGL", className="mv-panel-lbl"),
+            _drop(
+                IDs.GEO_IMPORT_PCGL,
+                "Drop / pick .pcgl.json",
+                ".pcgl.json,.json",
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Legend CSV", className="mv-panel-lbl"),
+            _drop(IDs.GEO_IMPORT_CSV, "Drop / pick .csv", ".csv,.tsv,.txt"),
+            html.Div(
+                "Required columns: name, rho_min, rho_max. Optional: "
+                "color, description, code, source, pattern_id, "
+                "pattern_source.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Start from the built-in rock database",
+                      className="mv-panel-lbl"),
+            dbc.Button(
+                "Load default rock database",
+                id=IDs.GEO_BTN_LOAD_DEFAULT, color="secondary", size="sm",
+                outline=True, className="w-100", n_clicks=0,
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Auto-suggest from this model", className="mv-panel-lbl"),
+            html.Div(
+                "Proposes bins covering the resistivities actually in "
+                "the current view, classified against the default rock "
+                "database — not its full literature range.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            _ctl_row(
+                "Bins",
+                _num(IDs.GEO_AUTO_NBINS, 8, min=2, max=30, step=1),
+            ),
+            dbc.Button(
+                [html.I(className="bi bi-magic me-1"), "Auto-suggest"],
+                id=IDs.GEO_BTN_AUTO_SUGGEST, color="secondary", size="sm",
+                outline=True, className="w-100", n_clicks=0,
+            ),
+        ],
+    )
+
+
+def _geo_structure_table(table_id, columns):
+    from dash import dash_table
+
+    return dash_table.DataTable(
+        id=table_id,
+        columns=[
+            {"name": c.replace("_", " ").title(), "id": c} for c in columns
+        ],
+        data=[],
+        editable=True,
+        row_deletable=True,
+        page_action="none",
+        style_table={"height": "160px", "overflowY": "auto"},
+        style_cell={"minWidth": "80px", "fontSize": "10.5px", "padding": "3px"},
+        style_as_list_view=True,
+    )
+
+
+def _geo_structure_tab_body() -> html.Div:
+    from pycsamt.app._structure import (
+        FAULT_COLUMNS,
+        LINEAR_COLUMNS,
+        PLANAR_COLUMNS,
+    )
+
+    _drop = lambda _id, txt, acc: dcc.Upload(  # noqa: E731
+        id=_id,
+        children=html.Div([html.I(className="bi bi-cloud-upload me-1"), txt]),
+        accept=acc,
+        multiple=False,
+        className="mv-upload-drop",
+    )
+    return html.Div(
+        [
+            html.Div(
+                "Field structural evidence -- fault traces, planar "
+                "(strike/dip), and linear (trend/plunge) measurements. "
+                "Import a canonical .pcgs.json, or up to three CSVs, "
+                "one per table below.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Canonical PCGS",
+                                      className="mv-field-lbl"),
+                            _drop(IDs.GEO_STRUCT_IMPORT_JSON, "Drop .pcgs.json",
+                                  ".pcgs.json,.json"),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Planar CSV", className="mv-field-lbl"),
+                            _drop(IDs.GEO_STRUCT_IMPORT_PLANAR, "Drop .csv",
+                                  ".csv"),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Linear CSV", className="mv-field-lbl"),
+                            _drop(IDs.GEO_STRUCT_IMPORT_LINEAR, "Drop .csv",
+                                  ".csv"),
+                        ],
+                        className="mv-col",
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Faults CSV", className="mv-field-lbl"),
+                            _drop(IDs.GEO_STRUCT_IMPORT_FAULTS, "Drop .csv",
+                                  ".csv"),
+                        ],
+                        className="mv-col",
+                    ),
+                ],
+                className="mv-two-col",
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div(
+                [
+                    html.Span("Planar", className="mv-panel-lbl"),
+                    dbc.Button(
+                        "+ row", id=IDs.GEO_BTN_ADD_PLANAR, color="secondary",
+                        size="sm", outline=True, className="ms-2",
+                        n_clicks=0,
+                    ),
+                ],
+            ),
+            _geo_structure_table(IDs.GEO_TABLE_PLANAR, PLANAR_COLUMNS),
+            html.Div(
+                [
+                    html.Span("Linear", className="mv-panel-lbl"),
+                    dbc.Button(
+                        "+ row", id=IDs.GEO_BTN_ADD_LINEAR, color="secondary",
+                        size="sm", outline=True, className="ms-2",
+                        n_clicks=0,
+                    ),
+                ],
+                className="mt-2",
+            ),
+            _geo_structure_table(IDs.GEO_TABLE_LINEAR, LINEAR_COLUMNS),
+            html.Div(
+                [
+                    html.Span("Faults", className="mv-panel-lbl"),
+                    dbc.Button(
+                        "+ row", id=IDs.GEO_BTN_ADD_FAULT, color="secondary",
+                        size="sm", outline=True, className="ms-2",
+                        n_clicks=0,
+                    ),
+                ],
+                className="mt-2",
+            ),
+            _geo_structure_table(IDs.GEO_TABLE_FAULTS, FAULT_COLUMNS),
+            dcc.Graph(id=IDs.GEO_STRUCT_PREVIEW, style={"height": "260px"},
+                      className="mt-2"),
+            html.Div(id=IDs.GEO_STRUCT_VALIDATION,
+                     className="mv-load-feedback mt-1"),
+            html.Div(id=IDs.GEO_STRUCT_STATUS,
+                     className="mv-detected-summary"),
+            html.Div(
+                [
+                    dbc.Button(
+                        [html.I(className="bi bi-download me-1"), "Export"],
+                        id=IDs.GEO_BTN_STRUCT_EXPORT, color="secondary",
+                        size="sm", outline=True, n_clicks=0,
+                        className="me-2",
+                    ),
+                    dbc.Button(
+                        [html.I(className="bi bi-check-lg me-1"),
+                         "Apply to view"],
+                        id=IDs.GEO_BTN_APPLY_STRUCT, color="primary",
+                        size="sm", n_clicks=0,
+                    ),
+                ],
+                className="mt-2",
+            ),
+        ],
+    )
+
+
+def _geo_patterns_tab_body() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                "Browse or import a pattern/swatch pack, crop a named "
+                "swatch out of a sheet by hand (drag a rectangle, name "
+                "it, save), then assign it to the selected Legend row's "
+                "pattern_id. pycsamt ships only a small built-in set -- "
+                "importing a third-party pack (e.g. the USGS FGDC "
+                "geologic-symbol set) is entirely your own download, "
+                "copied into a persistent local cache so it keeps "
+                "working after you delete the original.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            _ctl_row(
+                "Pack",
+                dbc.Select(id=IDs.GEO_PACK_SELECT, options=[], size="sm"),
+            ),
+            html.Div(
+                [
+                    html.Div("Import a new pack", className="mv-field-lbl"),
+                    dcc.Upload(
+                        id=IDs.GEO_PACK_IMPORT_UPLOAD,
+                        children=html.Div(
+                            [html.I(className="bi bi-cloud-upload me-1"),
+                             "Drop / pick .zip · .pdf · .ai"]
+                        ),
+                        accept=".zip,.pdf,.ai",
+                        multiple=False,
+                        className="mv-upload-drop",
+                    ),
+                    html.Div(
+                        "or a local folder / .zip / .pdf / .ai path "
+                        "(the app runs locally and can read it directly):",
+                        className="mv-help-hint",
+                        style={"fontSize": "10px", "opacity": ".7"},
+                    ),
+                    dbc.Input(
+                        id=IDs.GEO_PACK_PATH_INPUT, type="text",
+                        placeholder=r"e.g. C:\Users\me\Downloads\USGS_AI_pack",
+                        size="sm", debounce=True,
+                    ),
+                    dbc.Input(
+                        id=IDs.GEO_PACK_NAME_INPUT, type="text",
+                        placeholder="Pack name (optional)",
+                        size="sm", debounce=True, className="mt-1",
+                    ),
+                    dbc.Button(
+                        "Import from path", id=IDs.GEO_BTN_IMPORT_PACK_PATH,
+                        color="secondary", size="sm", outline=True,
+                        className="w-100 mt-1", n_clicks=0,
+                    ),
+                ],
+            ),
+            html.Div(id=IDs.GEO_PACK_STATUS, className="mv-topo-status"),
+            html.Hr(className="mv-hr"),
+            _ctl_row(
+                "Sheet",
+                dbc.Select(id=IDs.GEO_PACK_SHEET_SELECT, options=[], size="sm"),
+            ),
+            html.Div(
+                "Drag the rectangle tool (top-right of the image) around "
+                "one symbol, name it below, then Save crop.",
+                className="mv-help-hint",
+                style={"fontSize": "10.5px", "opacity": ".7"},
+            ),
+            dcc.Graph(
+                id=IDs.GEO_PACK_SHEET_GRAPH,
+                config={
+                    "modeBarButtonsToAdd": ["drawrect", "eraseshape"],
+                    "displaylogo": False,
+                },
+                style={"height": "420px"},
+            ),
+            html.Div(
+                [
+                    dbc.Input(
+                        id=IDs.GEO_PACK_CROP_NAME, type="text",
+                        placeholder="Swatch name",
+                        size="sm", debounce=True,
+                    ),
+                    dbc.Button(
+                        "Save crop as swatch", id=IDs.GEO_BTN_SAVE_CROP,
+                        color="secondary", size="sm", outline=True,
+                        className="mt-1 w-100", n_clicks=0,
+                    ),
+                ],
+            ),
+            html.Hr(className="mv-hr"),
+            html.Div("Swatches", className="mv-panel-lbl"),
+            html.Div(
+                id=IDs.GEO_PACK_SWATCH_GRID,
+                style={
+                    "display": "flex", "flexWrap": "wrap", "gap": "6px",
+                    "maxHeight": "180px", "overflowY": "auto",
+                },
+            ),
+            dbc.Button(
+                [html.I(className="bi bi-palette-fill me-1"),
+                 "Assign to selected Legend row"],
+                id=IDs.GEO_BTN_ASSIGN_PATTERN, color="primary", size="sm",
+                className="w-100 mt-2", n_clicks=0,
+            ),
+            html.Div(
+                "Select a row in the Legend tab's table first (click its "
+                "left-edge radio button).",
+                className="mv-help-hint",
+                style={"fontSize": "10px", "opacity": ".7"},
+            ),
+        ],
+    )
+
+
+def _geology_studio_modal() -> dbc.Modal:
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(
+                dbc.ModalTitle(
+                    [
+                        html.I(className="bi bi-palette2 me-2"),
+                        "Geology Studio",
+                    ]
+                ),
+                close_button=True,
+            ),
+            dbc.ModalBody(
+                dbc.Tabs(
+                    [
+                        dbc.Tab(_geo_import_body(), label="Import",
+                                tab_id="geo-import"),
+                        dbc.Tab(
+                            _geo_legend_tab_body(), label="Legend",
+                            tab_id="geo-legend",
+                        ),
+                        dbc.Tab(
+                            _geo_structure_tab_body(), label="Structure",
+                            tab_id="geo-structure",
+                        ),
+                        dbc.Tab(
+                            _geo_patterns_tab_body(), label="Patterns",
+                            tab_id="geo-patterns",
+                        ),
+                        dbc.Tab(
+                            dcc.Graph(id=IDs.GEO_STUDIO_PREVIEW,
+                                      style={"height": "360px"}),
+                            label="Preview", tab_id="geo-preview",
+                        ),
+                    ],
+                    id=IDs.GEO_STUDIO_TABS,
+                    active_tab="geo-import",
+                ),
+            ),
+            dbc.ModalFooter(
+                [
+                    html.Div(id=IDs.GEO_STUDIO_VALIDATION,
+                             className="mv-load-feedback"),
+                    html.Div(id=IDs.GEO_STUDIO_STATUS,
+                             className="mv-detected-summary"),
+                    html.Div(className="mv-topbar-spacer"),
+                    dbc.Button(
+                        [html.I(className="bi bi-plus-lg me-1"), "Add row"],
+                        id=IDs.GEO_BTN_ADD_ROW, color="secondary",
+                        size="sm", outline=True, n_clicks=0,
+                    ),
+                    dbc.Button(
+                        [html.I(className="bi bi-download me-1"), "Export"],
+                        id=IDs.GEO_BTN_EXPORT, color="secondary",
+                        size="sm", outline=True, n_clicks=0,
+                    ),
+                    dbc.Button(
+                        [html.I(className="bi bi-check-lg me-1"),
+                         "Apply to view"],
+                        id=IDs.GEO_BTN_APPLY, color="primary", n_clicks=0,
+                    ),
+                ]
+            ),
+        ],
+        id=IDs.GEO_STUDIO_MODAL,
+        size="xl",
+        is_open=False,
+        centered=True,
+        scrollable=True,
+        className="mv-modal",
     )
 
 
@@ -2407,7 +3512,23 @@ def _stores() -> list:
         dcc.Store(id=IDs.SOURCE_SELECTION, data="none"),
         dcc.Store(id=IDs.TOPO_UPLOAD_STORE, data={}),
         dcc.Store(id=IDs.STORE_FIT, data=0),
+        dcc.Store(id=IDs.STORE_VIEWPORT, data={}),
+        dcc.Store(id=IDs.STORE_SPIN, data=False),
+        dcc.Store(id=IDs.SPIN_TICK, data=0),
+        dcc.Interval(id=IDs.SPIN_INTERVAL, interval=60, disabled=True),
         dcc.Store(id=IDs.PCBH_STORE, data=None),
+        dcc.Store(id=IDs.PCBH_DRAFT_STORE, data=None),
+        dcc.Store(id=IDs.PCPT_STORE, data=None),
+        dcc.Store(id=IDs.BH_XLSX_RAW, data=None),
+        dcc.Store(id=IDs.GEO_STORE, data=None),
+        dcc.Store(id=IDs.GEO_DRAFT_STORE, data=None),
+        dcc.Store(id=IDs.STRUCT_STORE, data=None),
+        dcc.Store(id=IDs.STRUCT_DRAFT_STORE, data=None),
+        dcc.Store(id=IDs.GEO_PACK_SELECTED_TILE_STORE, data=None),
+        dcc.Store(id=IDs.GEO_PACKS_REFRESH_STORE, data=0),
+        dcc.Download(id=IDs.BH_EXPORT_DL),
+        dcc.Download(id=IDs.GEO_EXPORT_DL),
+        dcc.Download(id=IDs.GEO_STRUCT_EXPORT_DL),
         dcc.Download(id=IDs.EXPORT_DL),
         dcc.Store(id=IDs.SESSION_SNAPSHOT, storage_type="local", data=None),
         dcc.Download(id=IDs.SESSION_DL),
@@ -2424,6 +3545,8 @@ def create_layout() -> html.Div:
         children=[
             *_stores(),
             _load_modal(),
+            _borehole_studio_modal(),
+            _geology_studio_modal(),
             _help_modal(),
             _settings_canvas(),
             _session_canvas(),

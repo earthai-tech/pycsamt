@@ -160,6 +160,8 @@ Modules
    pycsamt.map.export
    pycsamt.map.inversion
    pycsamt.map.topo
+   pycsamt.map.geometry
+   pycsamt.map.borehole_align
 
 Detailed Module API
 -------------------
@@ -189,4 +191,10 @@ Detailed Module API
    :members:
 
 .. automodule:: pycsamt.map.export
+   :members:
+
+.. automodule:: pycsamt.map.geometry
+   :members:
+
+.. automodule:: pycsamt.map.borehole_align
    :members:

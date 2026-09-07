@@ -83,17 +83,26 @@ def test_export_and_view_callbacks(monkeypatch):
     monkeypatch.setattr(view, "empty_figure", lambda *a: ("empty", a))
     # render(store, view_name, controls, theme, lines, fit, masked,
     #        pcbh_store, pcbh_visible, pcbh_labels, pcbh_family,
-    #        pcbh_opacity, session_id)
+    #        pcbh_opacity, pcbh_as_tubes, pcbh_radius, pcbh_on_map,
+    #        pcbh_in_3d, pcbh_lean, pcbh_lean_dir, pcbh_label_angle,
+    #        pcbh_label_size, pcbh_collar_size, pcbh_depth_ticks,
+    #        pcbh_patch_geology, pcbh_patch_width,
+    #        pcpt_store, pcpt_visible, bh_view_mode, geo_store, geo_apply,
+    #        struct_store, struct_apply, geo_view_mode, viewport, session_id)
     assert (
         render({}, "map", {}, "light", {}, 0, [], None, None, None, None,
-               None, "sid")[1]["display"]
+               None, True, None, True, False, 0, "N", 0, 11, 5, 0,
+               False, 20, None, True, "striplog", None, False,
+               None, False, "legend", {}, "sid")[1]["display"]
         == "flex"
     )
     monkeypatch.setattr(view, "get_view", lambda _sid: object())
     monkeypatch.setattr(view, "figure_for", lambda *a, **k: "figure")
     assert render(
         {"n_stations": 1}, "map", {}, None, {}, 2, [], None, None, None,
-        None, None, "sid",
+        None, None, True, None, True, False, 0, "N", 0, 11, 5, 0,
+        False, 20, None, True, "striplog", None, False,
+        None, False, "legend", {}, "sid",
     ) == (
         "figure",
         {"display": "none"},
@@ -198,17 +207,18 @@ def test_session_callbacks():
     session._validate_snapshot(snap)
     app = _capture(session, "register_session")
     assert app.get("_toggle")(1, False) is True
-    assert app.get("_auto_snapshot")("map", {}, {}, None, [], "light", {}, "") == (
-        no_update,
-        no_update,
-    )
+    assert app.get("_auto_snapshot")(
+        "map", {}, {}, None, [], "light", {}, None, None, None, None, ""
+    ) == (no_update, no_update)
     saved, chip = app.get("_auto_snapshot")(
-        "map", {}, {}, None, [], "light", {"n_stations": 1}, ""
+        "map", {}, {}, None, [], "light", {"n_stations": 1}, None, None,
+        None, None, "",
     )
     assert saved["app"] == "mapview" and "Auto-saved" in str(chip)
-    assert app.get("_download")(0, *([None] * 8)) == (no_update, no_update)
+    assert app.get("_download")(0, *([None] * 12)) == (no_update, no_update)
     download = app.get("_download")(
-        1, "map", {}, {}, None, [], "light", {"n_stations": 1}, "n"
+        1, "map", {}, {}, None, [], "light", {"n_stations": 1}, None, None,
+        None, None, "n",
     )
     assert download[0]["filename"].endswith(".json")
 

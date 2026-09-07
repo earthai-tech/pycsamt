@@ -398,6 +398,148 @@ class TestFigureFor:
         fig = figure_for("map3d", view, {"mode3d": "fence"}, fit=2)
         assert fig.layout.uirevision == "fit-2"
 
+    def test_viewport_replays_3d_camera(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        eye = {"x": 2.1, "y": -1.4, "z": 0.9}
+        fig = figure_for(
+            "map3d", view, {"mode3d": "fence"},
+            viewport={"map3d": {"camera": {"eye": eye}}},
+        )
+        assert fig.layout.scene.camera.eye.x == eye["x"]
+        assert fig.layout.scene.camera.eye.z == eye["z"]
+
+    def test_viewport_replays_map_center_zoom(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        fig = figure_for(
+            "map", view, {},
+            viewport={"map": {"center": {"lon": 5.0, "lat": 6.0}, "zoom": 11}},
+        )
+        key = "map" if fig.layout.map.zoom is not None else "mapbox"
+        sub = fig.layout[key]
+        assert sub.zoom == 11
+        assert sub.center.lon == 5.0
+
+    def test_viewport_none_is_noop(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        a = figure_for("map3d", view, {"mode3d": "fence"})
+        b = figure_for("map3d", view, {"mode3d": "fence"}, viewport={})
+        assert a.layout.scene.camera == b.layout.scene.camera
+
+    def test_viewport_wrong_view_ignored(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        # a stored 3-D camera must not leak into the 2-D map figure
+        fig = figure_for(
+            "map", view, {},
+            viewport={"map3d": {"camera": {"eye": {"x": 9, "y": 9, "z": 9}}}},
+        )
+        assert fig.layout.scene.camera.eye.x is None
+
+    def _pcbh_store(self):
+        from pycsamt.app._borehole import pcbh_to_dict
+        from pycsamt.format.borehole import (
+            Collar,
+            CoordinateReferenceSystem,
+            LogInterval,
+            PCBHBorehole,
+            PCBHDocument,
+            VocabularyEntry,
+        )
+
+        station = _map_data().stations[0]
+        lat, lon = float(station.latitude), float(station.longitude)
+        document = PCBHDocument(
+            document_id="test:mv",
+            created_at="2026-09-03T00:00:00Z",
+            created_by="pytest",
+            crs=CoordinateReferenceSystem("EPSG:4326"),
+            lithologies=[VocabularyEntry("A", "Clay", color="#abcdef")],
+            boreholes=[
+                PCBHBorehole(
+                    id="BH1",
+                    name="Hole 1",
+                    kind="mining_exploration",
+                    status="completed",
+                    collar=Collar(
+                        lon, lat, 5.0, longitude=lon, latitude=lat
+                    ),
+                    total_depth_md=60.0,
+                    interval_logs={
+                        "lithology": [LogInterval(0.0, 60.0, code="A")]
+                    },
+                )
+            ],
+        )
+        return {"document": pcbh_to_dict(document), "n_boreholes": 1}
+
+    def test_map3d_inserts_scene_aligned_borehole_tubes(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        opts = {
+            "store": self._pcbh_store(),
+            "visible": True,
+            "family": "lithology",
+            "as_tubes": True,
+        }
+        plain = figure_for("map3d", view, {"mode3d": "fence"})
+        withbh = figure_for(
+            "map3d", view, {"mode3d": "fence"}, boreholes=opts
+        )
+        assert len(withbh.data) > len(plain.data)
+        assert any(trace.type == "mesh3d" for trace in withbh.data)
+
+    def _struct_store(self):
+        from pycsamt.app._structure import store_from_structure
+        from pycsamt.format.structure import StructModel
+        from pycsamt.geology.structural import FaultTrace, StructuralModel
+
+        model = StructuralModel(
+            faults=[
+                FaultTrace(
+                    x=1.0, dip_deg=70.0, downthrown_side="right",
+                    line="L1", z_top=0.0,
+                )
+            ],
+        )
+        doc = StructModel.from_structural_model(model)
+        return store_from_structure(doc)
+
+    def test_map3d_inserts_scene_structure_traces(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        opts = {"store": self._struct_store()}
+        plain = figure_for("map3d", view, {"mode3d": "fence"})
+        with_struct = figure_for(
+            "map3d", view, {"mode3d": "fence"}, structure=opts
+        )
+        assert len(with_struct.data) > len(plain.data)
+        assert any(trace.type == "mesh3d" for trace in with_struct.data)
+
+    def test_structure_scene_traces_skipped_when_no_apply(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        fig = figure_for("map3d", view, {"mode3d": "fence"}, structure=None)
+        assert not any(trace.type == "mesh3d" for trace in fig.data)
+
+    def test_map_view_adds_borehole_collar_markers(self):
+        from pycsamt.app.mapview._render import figure_for
+
+        view = _view()
+        opts = {"store": self._pcbh_store(), "visible": True}
+        plain = figure_for("map", view, {})
+        withbh = figure_for("map", view, {}, boreholes=opts)
+        assert len(withbh.data) > len(plain.data)
+
     def test_unknown_view_name_returns_message(self):
         from pycsamt.app.mapview._render import figure_for
 

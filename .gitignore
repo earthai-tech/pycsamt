@@ -502,7 +502,10 @@ docs/examples/**/*.py[cod]
 
 # C&G paper submission files — not for public distribution
 /cag-paper/
+/CAGEO-paper/
 
+
+/BDES-paper/
 # DUHI paper reproduction — local drafts, checkpoints, and configs, not
 # for public distribution
 /DUHI-paper/

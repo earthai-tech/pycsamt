@@ -112,6 +112,12 @@ from .trajectory import (
     desurvey,
     trajectory_checksum,
 )
+from .xlsxio import (
+    SheetOutline,
+    WorkbookOutline,
+    boreholes_from_xlsx,
+    inspect_workbook,
+)
 
 __all__ = [
     "PCBH_VERSION",
@@ -154,6 +160,10 @@ __all__ = [
     "legacy_conversion_losses",
     "DEFAULT_CSV_MAX_BYTES",
     "DEFAULT_CSV_MAX_ROWS",
+    "SheetOutline",
+    "WorkbookOutline",
+    "inspect_workbook",
+    "boreholes_from_xlsx",
     "CSVMappingProfile",
     "BuilderDiagnostic",
     "BuilderValidation",

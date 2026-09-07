@@ -101,6 +101,13 @@ class StructuralMeasurement(PyCSAMTObject):
         ``'cleavage'``, ``'contact'``, ``'fault_plane'``,
         ``'unconformity'``. Free text -- not an enforced enumeration,
         matching :attr:`~pycsamt.geology.borehole.Interval.lithology`.
+    line : str, optional
+        Survey line this measurement's ``x`` is relative to, for a
+        multi-line survey. ``None`` (default) means "the survey's only
+        profile" and is unchanged, backward-compatible behaviour --
+        every existing single-profile construction, CSV, and query
+        keeps working exactly as before. Map View's Geology section
+        sets it when placing measurements from more than one line.
     strike_deg : float
         Compass strike, degrees clockwise from north, ``[0, 360)`` as
         measured. Normalised on construction; not reduced modulo 180, so
@@ -144,6 +151,7 @@ class StructuralMeasurement(PyCSAMTObject):
     confidence: float = 1.0
     notes: str = ""
     dip_direction_tolerance_deg: float = _DIP_DIRECTION_TOLERANCE_DEG
+    line: str | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -245,6 +253,9 @@ class LinearMeasurement(PyCSAMTObject):
     station : str, optional
     confidence : float
     notes : str
+    line : str, optional
+        Survey line, for a multi-line survey; see
+        :attr:`StructuralMeasurement.line`.
 
     Examples
     --------
@@ -260,6 +271,7 @@ class LinearMeasurement(PyCSAMTObject):
     station: str | None = None
     confidence: float = 1.0
     notes: str = ""
+    line: str | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -328,6 +340,9 @@ class FaultTrace(PyCSAMTObject):
         Free-text source, e.g. ``'resistivity offset'``, ``'borehole'``,
         ``'surface mapping'``.
     notes : str
+    line : str, optional
+        Survey line, for a multi-line survey; see
+        :attr:`StructuralMeasurement.line`.
 
     Examples
     --------
@@ -345,6 +360,7 @@ class FaultTrace(PyCSAMTObject):
     confidence: float = 1.0
     evidence: str = ""
     notes: str = ""
+    line: str | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -499,11 +515,15 @@ class StructuralModel(PyCSAMTObject, MetadataMixin):
         be omitted):
 
         * *planar_path* -- ``x, kind, strike_deg, dip_deg,
-          dip_direction_deg[, z, station, confidence, notes]``
+          dip_direction_deg[, z, station, confidence, notes, line]``
         * *linear_path* -- ``x, kind, trend_deg, plunge_deg[, z, station,
-          confidence, notes]``
+          confidence, notes, line]``
         * *faults_path* -- ``x, dip_deg, downthrown_side[, sense,
-          throw_m, strike_deg, z_top, confidence, evidence, notes]``
+          throw_m, strike_deg, z_top, confidence, evidence, notes,
+          line]``
+
+        ``line`` names the survey line each row's ``x`` is relative to,
+        for a multi-line survey; omit it for a single-profile model.
 
         Any path left as ``None`` yields an empty list for that
         evidence type.
@@ -525,12 +545,80 @@ class StructuralModel(PyCSAMTObject, MetadataMixin):
         )
         return cls(planar=planar, linear=linear, faults=faults)
 
+    def by_line(self) -> dict[str, StructuralModel]:
+        """Group every item by :attr:`~StructuralMeasurement.line`.
+
+        Items with ``line is None`` are grouped under the key
+        ``""`` (the survey's single/default profile).
+        """
+        out: dict[str, StructuralModel] = {}
+
+        def _bucket(key: str | None) -> StructuralModel:
+            k = key or ""
+            if k not in out:
+                out[k] = StructuralModel(metadata=dict(self.metadata))
+            return out[k]
+
+        for m in self.planar:
+            _bucket(m.line).add_planar(m)
+        for m in self.linear:
+            _bucket(m.line).add_linear(m)
+        for f in self.faults:
+            _bucket(f.line).add_fault(f)
+        return out
+
     def to_dict(self) -> dict:
         return {
             "planar": [vars(m).copy() for m in self.planar],
             "linear": [vars(m).copy() for m in self.linear],
             "faults": [vars(f).copy() for f in self.faults],
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict) -> StructuralModel:
+        """Build a model from :meth:`to_dict`-shaped data.
+
+        Unknown/extra keys in each item are ignored rather than raising,
+        so a document written by a newer version still loads.
+        """
+        planar_fields = {
+            "x", "kind", "strike_deg", "dip_deg", "dip_direction_deg",
+            "z", "station", "confidence", "notes",
+            "dip_direction_tolerance_deg", "line",
+        }
+        linear_fields = {
+            "x", "kind", "trend_deg", "plunge_deg", "z", "station",
+            "confidence", "notes", "line",
+        }
+        fault_fields = {
+            "x", "dip_deg", "downthrown_side", "sense", "throw_m",
+            "strike_deg", "z_top", "confidence", "evidence", "notes",
+            "line",
+        }
+        planar = [
+            StructuralMeasurement(
+                **{k: v for k, v in item.items() if k in planar_fields}
+            )
+            for item in payload.get("planar", [])
+        ]
+        linear = [
+            LinearMeasurement(
+                **{k: v for k, v in item.items() if k in linear_fields}
+            )
+            for item in payload.get("linear", [])
+        ]
+        faults = [
+            FaultTrace(
+                **{k: v for k, v in item.items() if k in fault_fields}
+            )
+            for item in payload.get("faults", [])
+        ]
+        return cls(
+            planar=planar,
+            linear=linear,
+            faults=faults,
+            metadata=dict(payload.get("metadata", {}) or {}),
+        )
 
     def __repr__(self) -> str:
         return (
@@ -591,6 +679,9 @@ def _read_planar_csv(
             notes = _optional_str(row, h.get("notes"))
             if notes is not None:
                 kwargs["notes"] = notes
+            line = _optional_str(row, h.get("line"))
+            if line is not None:
+                kwargs["line"] = line
             out.append(
                 StructuralMeasurement(
                     x=float(row[h["x"]]),
@@ -628,6 +719,9 @@ def _read_linear_csv(
             notes = _optional_str(row, h.get("notes"))
             if notes is not None:
                 kwargs["notes"] = notes
+            line = _optional_str(row, h.get("line"))
+            if line is not None:
+                kwargs["line"] = line
             out.append(
                 LinearMeasurement(
                     x=float(row[h["x"]]),
@@ -671,6 +765,9 @@ def _read_faults_csv(path: PathLike, delimiter: str) -> list[FaultTrace]:
             notes = _optional_str(row, h.get("notes"))
             if notes is not None:
                 kwargs["notes"] = notes
+            line = _optional_str(row, h.get("line"))
+            if line is not None:
+                kwargs["line"] = line
             out.append(
                 FaultTrace(
                     x=float(row[h["x"]]),

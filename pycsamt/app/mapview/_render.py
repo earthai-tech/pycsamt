@@ -26,6 +26,8 @@ VIEW_TITLES = {
     "map": "Map view",
     "pseudosection": "Pseudosection",
     "map3d": "3-D map",
+    "bh": "Boreholes",
+    "geology": "Geology",
 }
 
 
@@ -260,8 +262,46 @@ def figure_for(
     active_lines: list[str] | None = None,
     masked: list[str] | None = None,
     fit: int = 0,
+    boreholes: dict | None = None,
+    geology: tuple[tuple[float, float, str], ...] | None = None,
+    geology_patterns: dict | None = None,
+    structure: dict | None = None,
+    viewport: dict | None = None,
 ) -> Any:
-    """Build the figure for *view_name* from GUI *controls*."""
+    """Build the figure for *view_name* from GUI *controls*.
+
+    ``viewport`` optionally carries the user's last camera / pan-zoom
+    keyed by view name (``{"map": {...}, "map3d": {"camera": {...}}}`` —
+    see ``pycsamt.app.mapview.callbacks.toolbar._register_viewport``). It
+    is replayed onto the freshly-built figure so a control change never
+    moves the scene; ``uirevision`` alone is unreliable here because the
+    2-D ``map`` (MapLibre) subplot re-applies its ``center``/``zoom`` on
+    every rebuild and ``dcc.Loading`` can blank the 3-D camera.
+
+    ``boreholes`` optionally carries ``{"store": <pcbh store>, ...display
+    options}``; collars are drawn on the 2-D map and scene-aligned tubes
+    on the 3-D views.
+
+    ``geology`` is the applied Interpretation legend as a plain
+    ``(rho_min, rho_max, hex_color)`` band list (see
+    ``pycsamt.app._geology.geology_bands_from_store``) — ``None`` (the
+    default, no legend applied) leaves the continuous colour ramp exactly
+    as before. Only the 3-D ``map3d`` views (block/fence/depth/iso) honour
+    it; see ``pycsamt.map.config.VolumeMapOptions.geology``.
+
+    ``geology_patterns`` optionally carries ``{legend entry name: ink-
+    density stencil array}`` (see ``pycsamt.app._geology.
+    geology_pattern_stencils_from_store``); combined with
+    ``controls["geology_fill"] == "pattern"`` it texture-fills the
+    fence / depth-slice modes instead of a flat colour per band. Block
+    / iso-surface always stay solid regardless -- Plotly's Volume /
+    Isosurface traces have no per-cell colour-axis override.
+
+    ``structure`` optionally carries ``{"store": <pcgs store>}`` — the
+    applied structural model (fault traces, planar/linear measurements),
+    inserted into the 3-D scene the same way ``boreholes`` is; see
+    ``pycsamt.app._structure.structure_scene_traces``.
+    """
     if view is None or view.n_stations == 0:
         return empty_figure(theme)
     c = controls or {}
@@ -298,6 +338,7 @@ def figure_for(
         # uirevision keeps the user's pan/zoom across control changes;
         # the Fit button bumps the token to re-fit to the data.
         fig.update_layout(uirevision=f"fit-{fit}")
+        _add_borehole_collars(fig, boreholes)
     elif name == "pseudosection":
         fig = view.pseudosection(
             theme=theme,
@@ -351,14 +392,460 @@ def figure_for(
             station_size=int(c.get("station_size", 4)),
             station_color=c.get("station_color", "#1f2937"),
             show_labels=bool(c.get("labels", True)),
+            geology=tuple(geology) if geology else None,
+            geology_legend=bool(c.get("geology_legend", True)),
+            geology_legend_style=c.get("geology_legend_style", "swatch"),
+            geology_fill=c.get("geology_fill", "solid"),
+            geology_patterns=geology_patterns or None,
         )
         # uirevision keeps the user's camera orbit/zoom across control
         # changes; the 3-D toolbar's "Reset view" bumps the token to
         # snap the camera back to fit the data (mirrors the 2-D "Fit").
         fig.update_layout(uirevision=f"fit-{fit}")
+        _add_borehole_scene(fig, view, c, boreholes)
+        _add_structure_scene(fig, view, c, structure)
     else:
         return empty_figure(theme, f"Unknown view: {view_name}")
+    _apply_viewport(fig, name, viewport)
     return _transparent(fig)
+
+
+def _apply_viewport(fig: Any, name: str, viewport: dict | None) -> Any:
+    """Replay the user's last camera / pan-zoom for *name* onto *fig*.
+
+    A no-op when nothing is stored (fresh load, or just after Fit / Reset
+    view, which clear the store). Values are the same ones the user is
+    already looking at, so this never produces a visible jump — it only
+    stops the rebuilt figure's defaults from winning.
+    """
+    vp = (viewport or {}).get(name) or {}
+    if not vp:
+        return fig
+    try:
+        if name == "map3d":
+            camera = vp.get("camera")
+            if camera:
+                fig.update_layout(scene_camera=camera)
+        elif name == "map":
+            key = (
+                "map"
+                if any(
+                    getattr(t, "type", "") in ("scattermap", "densitymap")
+                    for t in fig.data
+                )
+                else "mapbox"
+            )
+            sub = {
+                k: vp[k]
+                for k in ("center", "zoom", "bearing", "pitch")
+                if vp.get(k) is not None
+            }
+            if sub:
+                fig.update_layout(**{key: sub})
+        elif name == "pseudosection":
+            axes = {}
+            if vp.get("xrange") is not None:
+                axes["xaxis"] = {"range": vp["xrange"], "autorange": False}
+            if vp.get("yrange") is not None:
+                axes["yaxis"] = {"range": vp["yrange"], "autorange": False}
+            if axes:
+                fig.update_layout(**axes)
+    except (ValueError, AttributeError, TypeError, KeyError):
+        pass
+    return fig
+
+
+# ── borehole overlays (PCBH) ───────────────────────────
+
+_COMPASS_BEARING = {
+    "N": 0.0, "NE": 45.0, "E": 90.0, "SE": 135.0,
+    "S": 180.0, "SW": 225.0, "W": 270.0, "NW": 315.0,
+}
+
+
+def _hole_point_at_md(hole: Any, md: float, td: float):
+    """Scene ``(x, y, z)`` a fraction ``md/td`` along a hole's centerline."""
+    pts = np.asarray(hole.centerline, dtype=float)
+    if pts.shape[0] < 2 or td <= 0:
+        return None
+    seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
+    cum = np.concatenate([[0.0], np.cumsum(seg)])
+    target = cum[-1] * min(max(md / td, 0.0), 1.0)
+    return tuple(
+        float(np.interp(target, cum, pts[:, k])) for k in range(3)
+    )
+
+
+def _add_borehole_annotations(
+    fig: Any,
+    alignment: Any,
+    *,
+    labels: bool,
+    label_angle: float,
+    label_size: float,
+    depth_ticks: float,
+) -> None:
+    """Collar labels + measured-depth ticks as rotatable scene annotations.
+
+    ``go.Scatter3d`` text has no rotation, so — exactly like the 3-D
+    station labels in :mod:`pycsamt.map.volume` — these ride on
+    ``layout.scene.annotations`` instead.
+    """
+    if not labels and depth_ticks <= 0:
+        return
+    notes: list[dict] = []
+    for hole in alignment.placed:
+        cx, cy, cz = hole.collar_scene
+        if labels:
+            notes.append(
+                {
+                    "x": cx, "y": cy, "z": cz,
+                    "text": hole.name,
+                    "showarrow": False,
+                    "textangle": float(label_angle),
+                    "yanchor": "bottom",
+                    "yshift": 10,
+                    "font": {"size": float(label_size), "color": "#b45309"},
+                }
+            )
+        if depth_ticks > 0 and hole.centerline:
+            td = max((s.to_md for s in hole.segments), default=0.0)
+            if td <= 0:
+                continue
+            mark = depth_ticks
+            while mark < td - 1e-6:
+                point = _hole_point_at_md(hole, mark, td)
+                if point is not None:
+                    notes.append(
+                        {
+                            "x": point[0], "y": point[1], "z": point[2],
+                            "text": f"{mark:.0f}",
+                            "showarrow": False,
+                            "xanchor": "left",
+                            "xshift": 5,
+                            "font": {
+                                "size": max(7.0, float(label_size) - 3.0),
+                                "color": "#6b7280",
+                            },
+                        }
+                    )
+                mark += depth_ticks
+    if not notes:
+        return
+    existing = list(getattr(fig.layout.scene, "annotations", None) or [])
+    fig.update_scenes(annotations=tuple(existing) + tuple(notes))
+
+
+def _add_borehole_collars(fig: Any, boreholes: dict | None) -> Any:
+    """Add basemap collar / target markers to the 2-D map figure."""
+    if not boreholes:
+        return fig
+    labels = bool(boreholes.get("labels", True))
+    if boreholes.get("store") and boreholes.get("show_on_map", True):
+        try:
+            from pycsamt.app._borehole import collar_map_markers
+
+            for trace in collar_map_markers(
+                boreholes["store"],
+                show_labels=labels,
+                as_target=bool(boreholes.get("as_target", False)),
+            ):
+                fig.add_trace(trace)
+        except Exception:  # noqa: BLE001 - never break the map
+            pass
+    if boreholes.get("points_store") and boreholes.get(
+        "points_visible", True
+    ):
+        try:
+            from pycsamt.app._points import point_map_markers
+
+            for trace in point_map_markers(
+                boreholes["points_store"], show_labels=labels
+            ):
+                fig.add_trace(trace)
+        except Exception:  # noqa: BLE001
+            pass
+    return fig
+
+
+def _add_borehole_scene(
+    fig: Any, view: MapView, c: dict, boreholes: dict | None
+) -> Any:
+    """Add scene-aligned borehole tubes and target points to the 3-D figure."""
+    if not boreholes:
+        return fig
+    want_holes = bool(boreholes.get("store")) and bool(
+        boreholes.get("visible", True)
+    )
+    want_points = bool(boreholes.get("points_store")) and bool(
+        boreholes.get("points_visible", True)
+    )
+    if not want_holes and not want_points:
+        return fig
+    try:
+        from pycsamt.app._borehole import (
+            borehole_patch_traces,
+            document_from_store,
+            pcbh_plotly_traces,
+            scene_borehole_traces,
+        )
+        from pycsamt.map.borehole_align import (
+            align_boreholes_to_scene,
+            surface_from_sections,
+        )
+        from pycsamt.map.geometry import survey_frame, survey_uv
+
+        document = (
+            document_from_store(boreholes["store"]) if want_holes else None
+        )
+        family = boreholes.get("family") or "lithology"
+        opacity = float(boreholes.get("opacity", 0.9) or 0.9)
+        as_tubes = bool(boreholes.get("as_tubes", True))
+        labels = bool(boreholes.get("labels", True))
+        lean_deg = float(boreholes.get("lean_deg", 0.0) or 0.0)
+        lean_azimuth = _COMPASS_BEARING.get(
+            str(boreholes.get("lean_dir", "N")).upper(), 0.0
+        )
+        label_angle = float(boreholes.get("label_angle", 0.0) or 0.0)
+        label_size = float(boreholes.get("label_size", 11.0) or 11.0)
+        collar_size = float(boreholes.get("collar_size", 5.0) or 5.0)
+        depth_ticks = float(boreholes.get("depth_ticks", 0.0) or 0.0)
+        patch_geology = bool(boreholes.get("patch_geology", False))
+        patch_width = float(boreholes.get("patch_width", 20.0) or 20.0)
+        radius = boreholes.get("radius")
+        radius_policy = None
+        if radius:
+            from pycsamt.format.borehole import DisplayRadiusPolicy
+
+            radius_policy = DisplayRadiusPolicy(
+                mode="fixed", fixed_radius=float(radius)
+            )
+
+        ids, lats, lons, lines, elevs = [], [], [], [], []
+        for station in view.data.stations:
+            if station.latitude is None or station.longitude is None:
+                continue
+            ids.append(str(station.id))
+            lats.append(float(station.latitude))
+            lons.append(float(station.longitude))
+            lines.append(station.line or "line")
+            elevs.append(
+                float(station.elevation)
+                if station.elevation is not None
+                else np.nan
+            )
+        frame = survey_frame(lats, lons, lines) if len(ids) >= 2 else None
+        if frame is None:
+            # No real geometry — fall back to the raw trajectory overlay.
+            if document is not None:
+                for trace in pcbh_plotly_traces(
+                    document,
+                    family=family,
+                    opacity=opacity,
+                    show_labels=labels,
+                ):
+                    fig.add_trace(trace)
+            return fig
+
+        uv = survey_uv(ids, lats, lons, lines)
+        us = np.array([uv[i][0] for i in ids if i in uv], dtype=float)
+        surface = None
+        if bool(c.get("topography", True)) and np.isfinite(elevs).any():
+            paired = [
+                (uv[i][0], e)
+                for i, e in zip(ids, elevs)
+                if i in uv and np.isfinite(e)
+            ]
+            if len(paired) >= 2:
+                surface = surface_from_sections(
+                    [([p[0] for p in paired], [p[1] for p in paired])]
+                )
+        datum = (
+            "surface"
+            if (surface is not None and bool(c.get("topography", True)))
+            else "zero"
+        )
+        depth_lo, depth_hi = c.get("depth_lo"), c.get("depth_hi")
+        depth_range = (
+            (float(depth_lo), float(depth_hi))
+            if depth_lo is not None and depth_hi is not None
+            else None
+        )
+        # The volume builder normalises the line panels: each line sits at
+        # ``(median cross-strike v of its stations - front-most line's
+        # median) * line_spacing`` (geometry.normalize_offsets +
+        # resolve_offset). A borehole collar's raw projected v must go
+        # through the *same* shift + stretch or the hole floats in front of
+        # / behind its line.  See pycsamt.map.volume._line_offset.
+        line_spacing = float(c.get("line_spacing", 1.0) or 1.0)
+        line_v: dict[str, list[float]] = {}
+        for sid, ln in zip(ids, lines):
+            if sid in uv:
+                line_v.setdefault(str(ln), []).append(uv[sid][1])
+        medians = [float(np.nanmedian(v)) for v in line_v.values() if v]
+        offset_shift = float(min(medians)) if medians else 0.0
+
+        scene_bounds = None
+        if us.size:
+            vs = np.array([uv[i][1] for i in ids if i in uv], dtype=float)
+            pad = 0.15 * max(float(np.ptp(us)), 1.0)
+            v_lo = (float(vs.min()) - offset_shift) * line_spacing
+            v_hi = (float(vs.max()) - offset_shift) * line_spacing
+            scene_bounds = (
+                float(us.min() - pad),
+                float(us.max() + pad),
+                min(v_lo, v_hi) - pad,
+                max(v_lo, v_hi) + pad,
+                -1e6,
+                1e6,
+            )
+        azimuth = float(c.get("azimuth", 0.0) or 0.0)
+        if document is not None:
+            alignment = align_boreholes_to_scene(
+                document,
+                frame,
+                family=family,
+                azimuth_deg=azimuth,
+                surface=surface,
+                datum=datum,
+                depth_range=depth_range,
+                scene_bounds=scene_bounds,
+                radius_policy=radius_policy,
+                offset_shift=offset_shift,
+                offset_scale=line_spacing,
+                lean_deg=lean_deg,
+                lean_azimuth_deg=lean_azimuth,
+            )
+            # Labels/depth ticks ride on scene.annotations (rotatable,
+            # screen-facing) — the same trick volume.py uses for stations;
+            # go.Scatter3d text cannot rotate. So suppress the trace text.
+            for trace in scene_borehole_traces(
+                alignment,
+                as_tubes=as_tubes,
+                opacity=opacity,
+                show_labels=False,
+                collar_size=collar_size,
+            ):
+                fig.add_trace(trace)
+            if patch_geology:
+                for trace in borehole_patch_traces(
+                    alignment, half_width=patch_width / 2.0
+                ):
+                    fig.add_trace(trace)
+            _add_borehole_annotations(
+                fig,
+                alignment,
+                labels=labels,
+                label_angle=label_angle,
+                label_size=label_size,
+                depth_ticks=depth_ticks,
+            )
+        if want_points:
+            from pycsamt.app._points import point_scene_traces
+
+            for trace in point_scene_traces(
+                boreholes["points_store"],
+                frame,
+                surface=surface,
+                datum=datum,
+                azimuth_deg=azimuth,
+                offset_shift=offset_shift,
+                offset_scale=line_spacing,
+                show_labels=labels,
+            ):
+                fig.add_trace(trace)
+    except Exception:  # noqa: BLE001 - never break the scene for an overlay
+        pass
+    return fig
+
+
+def _add_structure_scene(fig: Any, view: MapView, c: dict, structure: dict | None) -> Any:
+    """Add applied structural-geology traces (fault planes, planar/linear
+    measurement glyphs) to the 3-D figure — the same per-line offset math
+    :func:`_add_borehole_scene` uses, but simpler: a structural item's
+    ``x`` is already a profile position on its own line (like a fence
+    panel's own along-strike axis), not a real-world lat/lon needing
+    reprojection.
+    """
+    if not structure or not structure.get("store"):
+        return fig
+    try:
+        from pycsamt.app._structure import (
+            structure_from_store,
+            structure_scene_traces,
+        )
+        from pycsamt.map.borehole_align import surface_from_sections
+        from pycsamt.map.geometry import survey_frame, survey_uv
+
+        doc = structure_from_store(structure["store"])
+        if doc is None or len(doc) == 0:
+            return fig
+
+        ids, lats, lons, lines, elevs = [], [], [], [], []
+        for station in view.data.stations:
+            if station.latitude is None or station.longitude is None:
+                continue
+            ids.append(str(station.id))
+            lats.append(float(station.latitude))
+            lons.append(float(station.longitude))
+            lines.append(station.line or "line")
+            elevs.append(
+                float(station.elevation)
+                if station.elevation is not None
+                else np.nan
+            )
+        if len(ids) < 2:
+            return fig
+        frame = survey_frame(lats, lons, lines)
+        uv = survey_uv(ids, lats, lons, lines)
+        surface = None
+        if bool(c.get("topography", True)) and np.isfinite(elevs).any():
+            paired = [
+                (uv[i][0], e)
+                for i, e in zip(ids, elevs)
+                if i in uv and np.isfinite(e)
+            ]
+            if len(paired) >= 2:
+                surface = surface_from_sections(
+                    [([p[0] for p in paired], [p[1] for p in paired])]
+                )
+        # Same per-line offset normalisation the volume builder and
+        # _add_borehole_scene use, see pycsamt.map.volume._line_offset.
+        line_spacing = float(c.get("line_spacing", 1.0) or 1.0)
+        line_v: dict[str, list[float]] = {}
+        for sid, ln in zip(ids, lines):
+            if sid in uv:
+                line_v.setdefault(str(ln), []).append(uv[sid][1])
+        medians = {
+            ln: float(np.nanmedian(v)) for ln, v in line_v.items() if v
+        }
+        if not medians:
+            return fig
+        offset_shift = min(medians.values())
+        line_offsets = {
+            ln: (v - offset_shift) * line_spacing
+            for ln, v in medians.items()
+        }
+        default_line = next(iter(line_offsets))
+        azimuth = float(c.get("azimuth", 0.0) or 0.0)
+        depth_lo, depth_hi = c.get("depth_lo"), c.get("depth_hi")
+        depth_extent = (
+            float(depth_hi) - float(depth_lo)
+            if depth_lo is not None and depth_hi is not None
+            else 300.0
+        )
+        for trace in structure_scene_traces(
+            doc.model,
+            line_offsets=line_offsets,
+            default_line=default_line,
+            azimuth_deg=azimuth,
+            surface=surface,
+            depth_extent=max(depth_extent, 10.0),
+        ):
+            fig.add_trace(trace)
+    except Exception:  # noqa: BLE001 - never break the scene for an overlay
+        pass
+    return fig
 
 
 def _pair(lo, hi):

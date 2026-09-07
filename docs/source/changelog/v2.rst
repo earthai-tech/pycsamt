@@ -15,7 +15,7 @@ each release.
 2.6.0 |Feature| |New|
 ---------------------
 
-*Unreleased.*
+*Released 2026-09-07.*
 
 Added
 ~~~~~
@@ -51,6 +51,149 @@ Added
   or a bare ``data_obs`` / ``data_pred`` pair of
   :class:`~pycsamt.models.modem.data.ModEmData` objects, and are
   exported from ``pycsamt.models.modem``.
+
+* |New| **Boreholes in Map View** -- a dedicated *Boreholes* section
+  and a **Borehole Studio** modal that imports, builds, and edits PCBH
+  boreholes, then inserts them -- correctly projected and depth-datum
+  matched -- into the 3-D block / iso-surface / fence / depth-slice
+  scene and as collar markers on the 2-D basemap.
+
+  - |New| **Spreadsheet import** --
+    :func:`pycsamt.format.borehole.inspect_workbook` and
+    :func:`pycsamt.format.borehole.boreholes_from_xlsx` turn a messy
+    field workbook (merged multi-row header, a *Rock name* column, a
+    *From*/*To* depth pair, no coordinates) into a canonical
+    ``PCBHDocument``: sheet + header-row selection, alias-based column
+    mapping (shared with the combined-CSV importer via the new
+    :func:`~pycsamt.format.borehole.csvio.assemble_interval_document`
+    core), an external per-hole or shared collar source, and a
+    strict/permissive report. ``PAGEO-paper/boreholes/`` ships the paper's
+    dataset built by this path: ``baohuashan_l22.pcbh.json`` -- the three
+    L22 confirmation holes ZK221 / ZK222 / ZK2203 (Kouabena et al. 2025),
+    ZK2203 with its full 172-interval core log (193--1101 m) and
+    ZK221/ZK222 with the published host lithology and Cu--Mo
+    mineralization intervals -- plus ``baohuashan_l26_context.pcpt.json``
+    (CK261, CK262, H01), ``collars.csv``, and a reproducible
+    ``build_boreholes.py``.
+  - |New| **Scene alignment** --
+    :class:`pycsamt.map.geometry.SurveyFrame` /
+    :func:`~pycsamt.map.geometry.survey_frame` project any WGS84 point
+    into the survey's local along/cross-strike frame (the same one the
+    3-D volume builders use), and
+    :func:`pycsamt.map.borehole_align.align_boreholes_to_scene` walks
+    each desurveyed trajectory into scene coordinates -- collar CRS
+    reprojection, a ``surface`` / ``collar_z`` / ``zero`` depth datum,
+    a depth-window clip, and an inside / edge / outside relation.
+  - |New| **Shared Plotly adapters** --
+    ``pycsamt.app._borehole`` gains ``strip_log_figure`` (the
+    side-by-side depth-column "linear" view),
+    ``scene_borehole_traces`` (``Mesh3d`` tubes or fat poly-lines),
+    ``collar_map_markers``, and a builder-draft bridge, all reused by
+    the Map View studio and the web ``Borehole Builder`` page.
+  - |New| **Column-mapping in the Studio** -- the spreadsheet import
+    tab shows the sheet's headers as *Borehole id / Lithology / Depth
+    from / Depth to* dropdowns (auto-guessed by alias, overridable), so
+    a merged multi-row header imports without a script.
+
+* |New| **PCPT -- points and targets** (:mod:`pycsamt.format.pointset`)
+  -- a tiny ``.pcpt.json`` format for drill targets, planned collars,
+  samples, and anomalies, importable from JSON / CSV / ``.xlsx``
+  (``read_points``, ``points_from_csv``, ``points_from_xlsx``). Map View
+  draws them as kind-coloured markers on the 2-D basemap and as
+  depth-stemmed markers in the 3-D scene, independent of any borehole,
+  and both PCBH and PCPT stores now travel in the session snapshot.
+
+* |New| **Geology section in Map View** -- a fourth rail section,
+  *Geology*, below Boreholes, and a **Geology Studio** modal that build
+  and preview both a resistivity-to-geology legend and field structural
+  evidence before applying either to the 3-D scene; the 3-D options
+  accordion's *Interpretation* item keeps only the two Apply switches.
+
+  - Legend: manually, imported from a new ``.pcgl.json`` document or CSV
+    (:mod:`pycsamt.format.geology`, ``GeologyLegend``), or
+    **auto-suggested** as log-spaced bins covering the resistivities
+    actually in the current view -- applied as a hard-stepped discrete
+    colour scale (:func:`pycsamt.map.styles.geology_colorscale`) in
+    place of the continuous ramp. A 3-D-toolbar **Legend style** picks
+    a non-overlapping on-canvas swatch legend (:func:`pycsamt.map.
+    styles.geology_legend_shapes_annotations`, positioned by row index
+    so close-valued or numerous bands never crowd, default) or Plotly's
+    own colourbar with named ticks; a **Legend** button shows/hides
+    either without losing plot width. A **"Sync colours with loaded
+    boreholes"** action (``pycsamt.app._geology.
+    sync_legend_colors_with_boreholes``) overwrites a row's colour with
+    the exact-name-matching borehole lithology's colour, so the same
+    unit reads as the same colour in both overlays. PCGL is a thin,
+    versioned wrapper around the existing
+    :class:`pycsamt.geology.lithology.RockDatabase` classifier, not a
+    parallel format.
+  - Structure: fault traces and planar/linear measurements, imported
+    from a new ``.pcgs.json`` document or up to three CSVs
+    (:mod:`pycsamt.format.structure`, ``StructModel`` wrapping
+    :class:`pycsamt.geology.structural.StructuralModel`, which gained an
+    optional ``line`` field for multi-line surveys), previewed on a
+    profile-position/depth section, and inserted into the 3-D scene as
+    tilted fault planes and measurement glyphs using the same per-line
+    placement boreholes already use.
+  - Patterns: :mod:`pycsamt.geology.patterns` imports a third-party
+    pattern/swatch pack (folder, ``.zip``, or single PDF/AI sheet,
+    e.g. the USGS FGDC geologic-symbol set) into a persistent local
+    cache (``~/.pycsamt/geology_patterns``), rasterizing any PDF/AI
+    sheet via the new optional ``pymupdf`` dependency
+    (``pip install pycsamt[patterns]``); the Studio's Patterns tab crops
+    a named swatch out of a sheet by hand (Plotly's rectangle-draw
+    tool) and assigns it to a Legend row's ``pattern_id``. A small
+    built-in pattern set needs no import. Setting the 3-D toolbar's
+    **Fill** to "Pattern textures" then actually renders it on fence /
+    depth-slice: each tile is read as an ink-density stencil
+    (:func:`~pycsamt.geology.patterns.tile_stencil_array`), tinted by
+    the row's own colour (:func:`pycsamt.map.styles.
+    pattern_band_stops`), and sampled at every cell's true physical
+    position -- a real, position-true texture built entirely from
+    ``geology_colorscale``'s existing ``colorscale``/``cmin``/``cmax``
+    machinery (a new ``textured`` argument subdivides one band's
+    sub-range into a fine gradient), no new trace type. Block /
+    iso-surface stay solid regardless -- Plotly's Volume/Isosurface
+    traces have no per-cell colour-axis override to texture-map onto.
+
+* |Fix| **Map View rail/toolbar polish** -- the Geology rail button
+  referenced a filename with no matching icon asset and rendered blank;
+  now uses the existing ``interpret`` glyph. Rail order is now Map /
+  Boreholes / Geology / 3-D. The 3-D toolbar's four separate depth-preset
+  buttons (Full / 500 m / 1 km / 2 km) are now one compact dropdown.
+
+* |Fix| |New| **Map View: the 3-D scene now holds its camera across
+  control changes, plus a turntable toggle.** Applying any inspector or
+  toolbar change rebuilds the whole figure; ``uirevision`` alone did not
+  keep the view because the 2-D MapLibre basemap re-applies its
+  ``center``/``zoom`` on every rebuild and ``dcc.Loading`` blanked the
+  3-D camera mid-update, so a hand-set orbit or a 95% zoom snapped back
+  on every edit. Map View now records the live camera / pan / zoom
+  (per view) from every interaction and replays it onto the rebuilt
+  figure; **Fit** and **Reset view** clear it, so they -- and only they
+  -- return to the data-fitted default
+  (``pycsamt.app.mapview._render.figure_for`` gained a keyword-only
+  ``viewport`` argument, default ``None``). The 3-D toolbar also gains a
+  **Spin** toggle: a browser-side turntable that orbits the camera about
+  the vertical axis so every face of a block / iso-surface can be
+  inspected without dragging.
+
+* |New| **Structured (station+frequency+component) missingness for the
+  domain-gap simulator** --
+  :class:`pycsamt.ai.domain_gap.survey_fit.StructuredMissingness` and
+  :func:`~pycsamt.ai.domain_gap.survey_fit.fit_structured_missingness`
+  fit a logistic model of where a real survey's coverage mask actually
+  drops observations (a per-station effect, a per-frequency effect, and
+  a per-component effect, each sum-to-zero), and
+  :func:`pycsamt.ai.domain_gap.simulator.apply_structured_dropout` thins
+  a synthetic :class:`~pycsamt.ai.data.contracts.SurveyData` cell-by-cell
+  from that fitted probability field. Unlike
+  :func:`~pycsamt.ai.domain_gap.simulator.apply_dropout`'s three
+  independent scalar rates -- which are forced equal when each is
+  derived from the same overall coverage deficit and compound
+  multiplicatively -- this reproduces missingness concentrated in
+  particular stations or frequency bands. All three are re-exported from
+  :mod:`pycsamt.ai.domain_gap`.
 
 ----
 

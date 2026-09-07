@@ -281,6 +281,11 @@ html, body, #react-entry-point, .mv-root {
 }
 .mv-tb-label { font-size: 12px; }
 .mv-tb-markval { font-size: 12px; font-family: monospace; min-width: 18px; text-align: center; }
+.mv-tb-icon { font-size: 13px; color: var(--mv-muted); margin: 0 2px; }
+.mv-tb-select {
+    display: inline-block; width: auto; max-width: 128px;
+    font-size: 11.5px; padding: 2px 22px 2px 6px; height: 26px;
+}
 .mv-crs-info { font-size: 10px; color: var(--mv-muted); margin: 4px 0; line-height: 1.4; }
 .mv-graph {
     flex: 1 1 auto;

@@ -10,15 +10,15 @@ authors:
     given-names: Kouao Laurent
     orcid: "https://orcid.org/0000-0001-7259-7254"
     email: etanoyau@gmail.com
-  - family-names: Liu
-    given-names: Rong
-    orcid: "https://orcid.org/0000-0003-2937-4658"
-    email: liurongkaoyang@csu.edu.cn
-version: 2.1.0
-date-released: 2026-07-29
+version: 2.6.0
+date-released: 2026-09-07
 url: "https://pycsamt.org"
 repository-code: "https://github.com/earthai-tech/pycsamt"
 license: LGPL-3.0-or-later
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22160713"
+    description: "Archived snapshot of version v2.5.1 on Zenodo."
 keywords:
   - electromagnetic geophysics
   - controlled-source audio-frequency magnetotellurics

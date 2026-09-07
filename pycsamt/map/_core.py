@@ -594,6 +594,40 @@ def resistivity_at_depth(
     return out
 
 
+def all_resistivity_values(data: MapData) -> np.ndarray:
+    """Every finite, positive resistivity sample the 3-D volume
+    renderers could draw *data* from -- pre-computed inversion sections
+    (``data.metadata["sections"]``) when present, else each station's raw
+    EDI resistivity (``Z.resistivity``).
+
+    Used by Map View's Interpretation "auto-suggest" to propose a
+    geology legend covering what a fence/block/depth/iso view is
+    actually rendering, rather than a rock database's full literature
+    range. Returns an empty array (never raises) when neither source is
+    usable.
+    """
+    sections = (data.metadata or {}).get("sections")
+    if sections:
+        chunks = [
+            np.asarray(section.get("rho", []), dtype=float).ravel()
+            for section in sections.values()
+            if np.asarray(section.get("rho", []), dtype=float).size
+        ]
+        if chunks:
+            arr = np.concatenate(chunks)
+            return arr[np.isfinite(arr) & (arr > 0)]
+    chunks = []
+    for edi in data.iter_edis():
+        z_obj = getattr(edi, "Z", None)
+        arr = None if z_obj is None else getattr(z_obj, "resistivity", None)
+        if arr is not None:
+            chunks.append(np.asarray(arr, dtype=float).ravel())
+    if not chunks:
+        return np.array([], dtype=float)
+    arr = np.concatenate(chunks)
+    return arr[np.isfinite(arr) & (arr > 0)]
+
+
 def pseudosection_table(
     data: MapData,
     *,

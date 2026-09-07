@@ -257,6 +257,27 @@ physical diameter, ``fixed`` uses a coordinate-unit radius, and
 ``exaggeration`` scales the physical radius or an automatic fallback. No mode
 changes the borehole's scientific diameter.
 
+## 7.6 Spreadsheet import
+
+The spreadsheet importer reads one worksheet of an ``.xlsx`` workbook.
+``inspect_workbook`` reports each sheet's shape, a bounded preview, and
+its header-row candidates without a bulk data read. ``boreholes_from_xlsx``
+flattens the chosen sheet to a header row plus value rows, resolves the
+same dotted canonical fields as the combined CSV (``interval.from_md``,
+``interval.lithology``, …) through the shared alias table, and then runs
+the identical grouping, vocabulary, overlap, and total-depth logic —
+both importers call one ``assemble_interval_document`` core.
+
+Spreadsheets rarely carry coordinates, so a collar position is supplied
+out of band: ``collars`` accepts a per-borehole table keyed by id, a
+single shared ``{x, y, z}``, or a small CSV. In strict mode a missing
+collar or CRS is an error; in permissive mode it becomes a flagged
+``(0, 0, 0)`` ``LOCAL:unknown`` placeholder and the report records it.
+An explicit column mapping may name a source by header string, 0-based
+index, or Excel column letter, so a merged multi-row header is still
+addressable. Byte and row limits, the missing-token set, and the
+metres/ohm-metre unit requirement are shared with the CSV importer.
+
 ## 8. Vocabularies and logs
 
 Document vocabularies make files understandable without a local rock database.

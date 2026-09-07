@@ -73,6 +73,17 @@ class RockEntry(PyCSAMTObject):
         Optional literature citation for this range (e.g.
         ``'Palacky (1988)'``). Empty when unspecified, as for entries
         loaded from a CSV without a ``source`` column.
+    pattern_id : str
+        Optional reference to a swatch/pattern tile id in a
+        :class:`pycsamt.geology.patterns.PatternLibrary` pack, used by
+        Map View's Interpretation overlay to fill this unit with a
+        hatch/stipple pattern instead of (or on top of) ``color``. Empty
+        means "solid color only" -- this field never affects
+        :meth:`RockDatabase.classify`.
+    pattern_source : str
+        Which pattern pack ``pattern_id`` resolves against (a pack id from
+        :class:`~pycsamt.geology.patterns.PatternLibrary`). Empty when
+        ``pattern_id`` is empty.
     """
 
     name: str
@@ -82,6 +93,8 @@ class RockEntry(PyCSAMTObject):
     description: str = ""
     code: int = 0
     source: str = ""
+    pattern_id: str = ""
+    pattern_source: str = ""
 
     @property
     def rho_mid(self) -> float:
@@ -161,7 +174,11 @@ class RockDatabase(PyCSAMTObject, MetadataMixin):
         """Load from a CSV file.
 
         Required columns: ``name, rho_min, rho_max``
-        Optional columns: ``color, description, code, source``
+        Optional columns: ``color, description, code, source,
+        pattern_id, pattern_source`` (the last two name a swatch/pattern
+        tile from a :class:`~pycsamt.geology.patterns.PatternLibrary`
+        pack; see :mod:`pycsamt.format.geology` for the versioned
+        ``.pcgl.json`` document form of this same table).
         """
         p = Path(path)
         entries: list[RockEntry] = []
@@ -177,12 +194,62 @@ class RockDatabase(PyCSAMTObject, MetadataMixin):
                         description=row.get("description", "").strip(),
                         code=int(row["code"]) if "code" in row else i + 1,
                         source=row.get("source", "").strip(),
+                        pattern_id=row.get("pattern_id", "").strip(),
+                        pattern_source=row.get("pattern_source", "").strip(),
                     )
                 )
         return cls(
             entries,
             metadata={"origin": "csv", "path": str(p)},
         )
+
+    def to_csv(self, path: PathLike) -> Path:
+        """Write this database as a CSV with the same columns
+        :meth:`from_csv` accepts, one row per entry."""
+        p = Path(path)
+        fields = (
+            "name", "rho_min", "rho_max", "color", "description",
+            "code", "source", "pattern_id", "pattern_source",
+        )
+        with p.open("w", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fields)
+            writer.writeheader()
+            for e in self._entries:
+                writer.writerow({f: getattr(e, f) for f in fields})
+        return p
+
+    def to_dict(self) -> dict:
+        """Return a JSON-safe ``{"entries": [...]}`` representation."""
+        fields = (
+            "name", "rho_min", "rho_max", "color", "description",
+            "code", "source", "pattern_id", "pattern_source",
+        )
+        return {
+            "entries": [
+                {f: getattr(e, f) for f in fields} for e in self._entries
+            ]
+        }
+
+    @classmethod
+    def from_dict(
+        cls, payload: dict, *, metadata: dict | None = None
+    ) -> RockDatabase:
+        """Build a database from :meth:`to_dict`-shaped JSON data."""
+        entries = [
+            RockEntry(
+                name=str(item.get("name", "")),
+                rho_min=float(item["rho_min"]),
+                rho_max=float(item["rho_max"]),
+                color=str(item.get("color", "#AAAAAA")) or "#AAAAAA",
+                description=str(item.get("description", "")),
+                code=int(item.get("code", 0) or 0),
+                source=str(item.get("source", "")),
+                pattern_id=str(item.get("pattern_id", "")),
+                pattern_source=str(item.get("pattern_source", "")),
+            )
+            for item in payload.get("entries", [])
+        ]
+        return cls(entries, metadata=dict(metadata or {}))
 
     @classmethod
     def from_provider(cls, provider: RockPropertyProvider) -> RockDatabase:

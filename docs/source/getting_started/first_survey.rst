@@ -214,7 +214,7 @@ available below. It uses public pyCSAMT interfaces and writes the images into
 the documentation image tree; user workflows should call those public APIs
 directly rather than importing this documentation script.
 
-.. code-dropdown:: /../../scripts/generate_tutorial_read_edi.py
+.. code-dropdown:: ../../scripts/generate_tutorial_read_edi.py
    :language: python
    :linenos:
    :title: View the figure-generation source

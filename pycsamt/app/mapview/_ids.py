@@ -50,6 +50,7 @@ class IDs:
     # ── view rail ─────────────────────────────
     RAIL_MAP = "mv-rail-map"
     RAIL_3D = "mv-rail-3d"
+    RAIL_BH = "mv-rail-bh"
 
     # ── data / lines panel ────────────────────
     LINE_PILLS = "mv-line-pills"
@@ -80,26 +81,149 @@ class IDs:
     TB_MARK_INC = "mv-tb-mark-inc"
     TB_MARK_VAL = "mv-tb-mark-val"
     STORE_FIT = "mv-store-fit"
+    STORE_VIEWPORT = "mv-store-viewport"  # live camera / pan-zoom, per view
     PCBH_STORE = "mv-pcbh-store"
+    PCBH_DRAFT_STORE = "mv-pcbh-draft-store"
     PCBH_UPLOAD = "mv-pcbh-upload"
     PCBH_UPLOAD_INFO = "mv-pcbh-upload-info"
     PCBH_VISIBLE = "mv-pcbh-visible"
     PCBH_LABELS = "mv-pcbh-labels"
     PCBH_FAMILY = "mv-pcbh-family"
     PCBH_OPACITY = "mv-pcbh-opacity"
+    PCBH_AS_TUBES = "mv-pcbh-as-tubes"
+    PCBH_RADIUS = "mv-pcbh-radius"
+    PCBH_ON_MAP = "mv-pcbh-on-map"
+    PCBH_IN_3D = "mv-pcbh-in-3d"
+    # 3-D block / iso scene-display options (not editing — that stays in
+    # the Boreholes section)
+    PCBH_3D_LEAN = "mv-pcbh-3d-lean"
+    PCBH_3D_LEAN_DIR = "mv-pcbh-3d-lean-dir"
+    PCBH_3D_LABEL_ANGLE = "mv-pcbh-3d-label-angle"
+    PCBH_3D_LABEL_SIZE = "mv-pcbh-3d-label-size"
+    PCBH_3D_COLLAR_SIZE = "mv-pcbh-3d-collar-size"
+    PCBH_3D_DEPTH_TICKS = "mv-pcbh-3d-depth-ticks"
+    PCBH_PATCH_GEOLOGY = "mv-pcbh-patch-geology"
+    PCBH_PATCH_WIDTH = "mv-pcbh-patch-width"
+    PCPT_STORE = "mv-pcpt-store"
+    PCPT_IMPORT = "mv-pcpt-import"
+    PCPT_IMPORT_INFO = "mv-pcpt-import-info"
+    PCPT_VISIBLE = "mv-pcpt-visible"
+
+    # ── interpretation (PCGL geology legend) ──
+    GEO_STORE = "mv-geo-store"  # applied legend (PCGL dict)
+    GEO_DRAFT_STORE = "mv-geo-draft-store"  # Studio editing state
+    GEO_APPLY = "mv-geo-apply"  # switch: apply to block/fence/depth/iso
+    GEO_LEGEND_VISIBLE = "mv-geo-legend-visible"  # switch: show on-canvas legend
+    GEO_STRIP = "mv-geo-strip"  # mini legend preview in the accordion
+    BTN_GEO_STUDIO = "mv-btn-geo-studio"
+    GEO_STUDIO_MODAL = "mv-geo-studio-modal"
+    GEO_STUDIO_TABS = "mv-geo-studio-tabs"
+    GEO_STUDIO_STATUS = "mv-geo-studio-status"
+    GEO_STUDIO_VALIDATION = "mv-geo-studio-validation"
+    GEO_STUDIO_PREVIEW = "mv-geo-studio-preview"
+    GEO_TABLE_LEGEND = "mv-geo-table-legend"
+    GEO_BTN_ADD_ROW = "mv-geo-btn-add-row"
+    GEO_BTN_SYNC_COLORS = "mv-geo-btn-sync-colors"
+    GEO_BTN_APPLY = "mv-geo-btn-apply"
+    GEO_IMPORT_PCGL = "mv-geo-import-pcgl"
+    GEO_IMPORT_CSV = "mv-geo-import-csv"
+    GEO_BTN_LOAD_DEFAULT = "mv-geo-btn-load-default"
+    GEO_AUTO_NBINS = "mv-geo-auto-nbins"
+    GEO_BTN_AUTO_SUGGEST = "mv-geo-btn-auto-suggest"
+    GEO_BTN_EXPORT = "mv-geo-btn-export"
+    GEO_EXPORT_DL = "mv-geo-export-dl"
+    GEO_QUICK_UPLOAD = "mv-geo-quick-upload"
+    GEO_QUICK_UPLOAD_INFO = "mv-geo-quick-upload-info"
+
+    # ── geology rail section + structural geology (PCGS) ──
+    RAIL_GEO = "mv-rail-geo"
+    GRP_GEO = "mv-grp-geo"
+    GEO_VIEW_MODE = "mv-geo-view-mode"  # canvas: legend | structure
+    STRUCT_STORE = "mv-struct-store"  # applied structure (PCGS dict)
+    STRUCT_DRAFT_STORE = "mv-struct-draft-store"
+    STRUCT_APPLY = "mv-struct-apply"  # switch: apply to the 3-D scene
+    STRUCT_STRIP = "mv-struct-strip"  # mini status in the accordion/panel
+    GEO_TABLE_PLANAR = "mv-geo-table-planar"
+    GEO_TABLE_LINEAR = "mv-geo-table-linear"
+    GEO_TABLE_FAULTS = "mv-geo-table-faults"
+    GEO_BTN_ADD_PLANAR = "mv-geo-btn-add-planar"
+    GEO_BTN_ADD_LINEAR = "mv-geo-btn-add-linear"
+    GEO_BTN_ADD_FAULT = "mv-geo-btn-add-fault"
+    GEO_STRUCT_IMPORT_JSON = "mv-geo-struct-import-json"
+    GEO_STRUCT_IMPORT_PLANAR = "mv-geo-struct-import-planar"
+    GEO_STRUCT_IMPORT_LINEAR = "mv-geo-struct-import-linear"
+    GEO_STRUCT_IMPORT_FAULTS = "mv-geo-struct-import-faults"
+    GEO_STRUCT_STATUS = "mv-geo-struct-status"
+    GEO_STRUCT_VALIDATION = "mv-geo-struct-validation"
+    GEO_STRUCT_PREVIEW = "mv-geo-struct-preview"
+    GEO_BTN_APPLY_STRUCT = "mv-geo-btn-apply-struct"
+    GEO_BTN_STRUCT_EXPORT = "mv-geo-btn-struct-export"
+    GEO_STRUCT_EXPORT_DL = "mv-geo-struct-export-dl"
+
+    # ── pattern packs (Interpretation Studio "Patterns" tab) ──
+    GEO_PACK_SELECT = "mv-geo-pack-select"
+    GEO_PACK_STATUS = "mv-geo-pack-status"
+    GEO_PACK_IMPORT_UPLOAD = "mv-geo-pack-import-upload"
+    GEO_PACK_PATH_INPUT = "mv-geo-pack-path-input"
+    GEO_PACK_NAME_INPUT = "mv-geo-pack-name-input"
+    GEO_BTN_IMPORT_PACK_PATH = "mv-geo-btn-import-pack-path"
+    GEO_PACK_SHEET_SELECT = "mv-geo-pack-sheet-select"
+    GEO_PACK_SHEET_GRAPH = "mv-geo-pack-sheet-graph"
+    GEO_PACK_CROP_NAME = "mv-geo-pack-crop-name"
+    GEO_BTN_SAVE_CROP = "mv-geo-btn-save-crop"
+    GEO_PACK_SWATCH_GRID = "mv-geo-pack-swatch-grid"
+    GEO_PACK_SELECTED_TILE_STORE = "mv-geo-pack-selected-tile-store"
+    GEO_BTN_ASSIGN_PATTERN = "mv-geo-btn-assign-pattern"
+    GEO_PACKS_REFRESH_STORE = "mv-geo-packs-refresh-store"
+
+    # ── borehole view + studio ────────────────
+    GRP_BH = "mv-grp-bh"
+    TOOLBAR_BH = "mv-toolbar-bh"
+    BH_VIEW_MODE = "mv-bh-view-mode"
+    BTN_BH_STUDIO = "mv-btn-bh-studio"
+    BTN_BH_STUDIO_TB = "mv-btn-bh-studio-tb"
+    BH_STUDIO_MODAL = "mv-bh-studio-modal"
+    BH_STUDIO_TABS = "mv-bh-studio-tabs"
+    BH_STUDIO_STATUS = "mv-bh-studio-status"
+    BH_STUDIO_VALIDATION = "mv-bh-studio-validation"
+    BH_STUDIO_PREVIEW = "mv-bh-studio-preview"
+    BH_TABLE_COLLARS = "mv-bh-table-collars"
+    BH_TABLE_LAYERS = "mv-bh-table-layers"
+    BH_TABLE_SURVEY = "mv-bh-table-survey"
+    BH_BTN_ADD_ROW = "mv-bh-btn-add-row"
+    BH_BTN_APPLY = "mv-bh-btn-apply"
+    BH_IMPORT_PCBH = "mv-bh-import-pcbh"
+    BH_IMPORT_CSV = "mv-bh-import-csv"
+    BH_IMPORT_XLSX = "mv-bh-import-xlsx"
+    BH_XLSX_SHEET = "mv-bh-xlsx-sheet"
+    BH_XLSX_HEADER = "mv-bh-xlsx-header"
+    BH_XLSX_PREVIEW = "mv-bh-xlsx-preview"
+    BH_XLSX_COLLAR = "mv-bh-xlsx-collar"
+    BH_XLSX_APPLY = "mv-bh-xlsx-apply"
+    BH_XLSX_RAW = "mv-bh-xlsx-raw"
+    BH_XLSX_MAP_LITH = "mv-bh-xlsx-map-lith"
+    BH_XLSX_MAP_FROM = "mv-bh-xlsx-map-from"
+    BH_XLSX_MAP_TO = "mv-bh-xlsx-map-to"
+    BH_XLSX_MAP_ID = "mv-bh-xlsx-map-id"
+    BH_BTN_EXPORT = "mv-bh-btn-export"
+    BH_EXPORT_DL = "mv-bh-export-dl"
 
     # ── canvas toolbar (3-D map view) ─────────
     TOOLBAR_3D = "mv-toolbar-3d"
     TB3D_RESET = "mv-tb3d-reset"
+    TB3D_SPIN = "mv-tb3d-spin"  # turntable / auto-rotate toggle
+    STORE_SPIN = "mv-store-spin"  # turntable on/off
+    SPIN_INTERVAL = "mv-spin-interval"  # drives each turntable frame
+    SPIN_TICK = "mv-spin-tick"  # dummy sink for the Plotly.relayout call
     TB3D_MODE_FENCE = "mv-tb3d-mode-fence"
     TB3D_MODE_BLOCK = "mv-tb3d-mode-block"
     TB3D_MODE_DEPTH = "mv-tb3d-mode-depth"
     TB3D_MODE_SURFACE = "mv-tb3d-mode-surface"
-    TB3D_DEPTH_FULL = "mv-tb3d-depth-full"
-    TB3D_DEPTH_500 = "mv-tb3d-depth-500"
-    TB3D_DEPTH_1K = "mv-tb3d-depth-1k"
-    TB3D_DEPTH_2K = "mv-tb3d-depth-2k"
+    TB3D_DEPTH_SELECT = "mv-tb3d-depth-select"  # compact Full/500m/1km/2km shortcut
     TB3D_TOPO = "mv-tb3d-topo"
+    TB3D_LEGEND = "mv-tb3d-legend"
+    TB3D_LEGEND_STYLE = "mv-tb3d-legend-style"  # colorbar | swatch legend style
+    TB3D_GEO_FILL = "mv-tb3d-geo-fill"  # solid | pattern fence/depth fill
 
     # ── coordinate system ─────────────────────
     CTL_CRS_MODE = "mv-ctl-crs-mode"

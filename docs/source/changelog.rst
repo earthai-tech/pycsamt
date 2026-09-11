@@ -33,6 +33,36 @@ Latest release
 
 .. _changelog-latest:
 
+**2.6.1** — *2026-09-10* — a magnetotelluric-visualisation release. New
+:class:`pycsamt.emtools.PlotResPhasePseudoSection` (MTPy-style apparent
+resistivity above phase, one column per component, stacked site groups,
+a top / bottom / none station axis, ``share_period`` for mixed AMT / LMT
+stacks); :func:`pycsamt.emtools.plot_phase_tensor_map_grid` (a 1--6
+panel phase-tensor + Parkinson-arrow map, one panel per frequency) with
+a new ``pt_skew`` / ``pt_skew_abs`` colour system in
+:mod:`pycsamt.api`; a reworked
+:class:`pycsamt.models.modem.plot.PlotDepthMap` (station-cropped,
+hull-masked, ``mesh`` / ``gouraud`` / ``contourf`` / ``image`` render, a
+layer-conductance mode, scale bar / north arrow / overlays); and a
+bundled, fully cited Broken Hill 3-D MT survey with an end-to-end
+tutorial. Fixes: a placeholder ``DATAID`` no longer collapses a folder
+of EDIs onto one site; ``InversionResult`` no longer mistakes a stem
+like ``BH_31`` for iteration 31; two ``emtools`` docstrings that broke
+the Sphinx build are repaired.
+:ref:`Full 2.6.1 entry <changelog-2-6-1>` · :ref:`Release notes
+<release_v2_6_1>`.
+
+**2.6.0** — *2026-09-07* — a feature release: **boreholes in Map View**
+(a Boreholes rail + Borehole Studio importing ``.pcbh.json`` / interval
+CSV / ``.xlsx`` / a hand-built table, placed as projected tubes in the
+3-D scene), a **geology interpretation legend** (PCGL resistivity → rock
+legend as a hard-stepped colour scale, PCGS structural evidence),
+**PCPT** points and targets, **post-inversion data-fit diagnostics for
+ModEM** (:class:`pycsamt.models.modem.plot.PlotDataFit` /
+``PlotMisfitMap``), and a Map View 3-D scene that holds its camera
+across control changes. See the :ref:`full 2.6.0 entry
+<changelog-2-6-0>` and :ref:`release notes <release_v2_6_0>`.
+
 **2.5.2** — *2026-09-01* — a patch release. Converting a real,
 independent third-party ModEM 3-D inversion to PCSF and exercising every
 Map View mode against it exposed five pre-existing defects in the native

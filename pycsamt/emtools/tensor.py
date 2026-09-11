@@ -2345,12 +2345,151 @@ def plot_phase_tensor_rose(
     return ax
 
 
+def _topography_bg_grid(
+    topography: Any,
+    sites: Any,
+    coords: dict[str, tuple[float, float]],
+    *,
+    cmap: str = "terrain",
+    alpha: float = 0.55,
+    label: str = "Elevation (m)",
+    n: int = 90,
+) -> dict[str, Any] | None:
+    """Build a ``bg_grid`` dict from an elevation source.
+
+    Parameters
+    ----------
+    topography : dict | bool | str | pathlib.Path
+        ``dict`` — returned unchanged (already a ``bg_grid`` spec).
+        ``True`` — station elevations read from the EDI headers
+        (``ed.coords[2]`` / ``ed.elev`` / ``ed.meta``).
+        path to a CSV — either ``lon,lat,elev`` rows (a scattered DEM)
+        or ``station,elev`` rows (joined to *coords*).
+    sites : any
+        The already-loaded sites/collection.
+    coords : dict[str, (lat, lon)]
+        Station coordinates in the map frame.
+    cmap, alpha, label, n :
+        Background colormap, opacity, colorbar label, and grid density.
+
+    Returns
+    -------
+    dict or None
+        ``{"lons", "lats", "values", "cmap", "alpha", "label"}`` ready
+        for ``plot_phase_tensor_map(bg_grid=...)``, or ``None`` when
+        fewer than 3 finite elevation points are available.
+    """
+    if isinstance(topography, dict):
+        return topography
+
+    tri: list[tuple[float, float, float]] = []
+    if topography is True:
+        for i, ed in enumerate(_iter_items(sites)):
+            st = _name(ed, i)
+            if st not in coords:
+                continue
+            z = None
+            c = getattr(ed, "coords", None)
+            if (
+                c is not None
+                and len(c) >= 3
+                and c[2] is not None
+                and np.isfinite(c[2])
+            ):
+                z = float(c[2])
+            else:
+                e = getattr(ed, "elev", None)
+                if e is None:
+                    e = (getattr(ed, "meta", {}) or {}).get("elev")
+                try:
+                    if e is not None and np.isfinite(float(e)):
+                        z = float(e)
+                except (TypeError, ValueError):
+                    z = None
+            latlon = coords[st]
+            if z is None and len(latlon) >= 3 and np.isfinite(latlon[2]):
+                z = float(latlon[2])  # elevation carried in coords
+            if z is not None:
+                tri.append((float(latlon[1]), float(latlon[0]), z))
+    else:
+        try:
+            df = pd.read_csv(topography)
+        except Exception:  # noqa: BLE001 — best effort
+            return None
+        low = {str(c).lower(): c for c in df.columns}
+
+        def _col(*names: str) -> Any:
+            return next((low[k] for k in names if k in low), None)
+
+        z_c = _col(
+            "elev", "elevation", "elevation_m", "z", "alt", "altitude",
+            "height",
+        )
+        lon_c = _col("lon", "longitude", "long", "x", "easting")
+        lat_c = _col("lat", "latitude", "y", "northing")
+        st_c = _col("station", "site", "id", "name", "sta")
+        if z_c is None:
+            return None
+        if lon_c is not None and lat_c is not None:
+            for _, r in df.iterrows():
+                try:
+                    tri.append(
+                        (float(r[lon_c]), float(r[lat_c]), float(r[z_c]))
+                    )
+                except (TypeError, ValueError):
+                    pass
+        elif st_c is not None:
+            emap: dict[str, float] = {}
+            for _, r in df.iterrows():
+                try:
+                    emap[str(r[st_c])] = float(r[z_c])
+                except (TypeError, ValueError):
+                    pass
+            for st, (lat, lon) in coords.items():
+                if st in emap:
+                    tri.append((lon, lat, emap[st]))
+
+    pts = np.asarray(tri, dtype=float)
+    if pts.ndim != 2 or pts.shape[0] < 3:
+        return None
+    pts = pts[np.isfinite(pts).all(axis=1)]
+    if pts.shape[0] < 3:
+        return None
+
+    lon = np.linspace(pts[:, 0].min(), pts[:, 0].max(), n)
+    lat = np.linspace(pts[:, 1].min(), pts[:, 1].max(), n)
+    grid_lon, grid_lat = np.meshgrid(lon, lat)
+    try:
+        from scipy.interpolate import griddata
+
+        # linear interpolation only — leaves NaN (→ transparent) outside
+        # the data hull so the background does not extrapolate into
+        # unsurveyed ground
+        vals = griddata(
+            pts[:, :2], pts[:, 2], (grid_lon, grid_lat), method="linear"
+        )
+    except Exception:  # noqa: BLE001 — SciPy missing / degenerate points
+        return None
+    if not np.isfinite(vals).any():
+        return None
+    return {
+        "lons": lon,
+        "lats": lat,
+        "values": vals,
+        "cmap": cmap,
+        "alpha": float(alpha),
+        "label": label,
+        "cbar_side": "bottom",
+    }
+
+
 def plot_phase_tensor_map(
     sites: Any,
     *,
     period: float = 10.0,
     # ── ellipse style (honours PhaseTensorEllipseStyle) ───────────────
     scale=_UNSET,
+    ellipse_scale: float = 1.0,
     normalise_by=_UNSET,
     s1_ref=_UNSET,
     min_aspect=_UNSET,
@@ -2375,6 +2514,9 @@ def plot_phase_tensor_map(
     tipper_lw: float = 1.4,
     # ── optional background grid ──────────────────────────────────────
     bg_grid: dict[str, Any] | None = None,
+    topography: Any = None,
+    topography_cmap: str = "terrain",
+    topography_alpha: float = 0.55,
     # ── map decoration ────────────────────────────────────────────────
     station_labels: bool = True,
     station_marker: str = "v",
@@ -2383,6 +2525,7 @@ def plot_phase_tensor_map(
     label_fontsize: float = 7.0,
     title: str = "",
     colorbar_label: str | None = None,
+    show_colorbar: bool = True,
     # ── coordinate override (station → (lat, lon)) ────────────────────
     coords: dict[str, tuple[float, float]] | None = None,
     # ── layout ────────────────────────────────────────────────────────
@@ -2415,6 +2558,9 @@ def plot_phase_tensor_map(
     scale : float or _UNSET
         Maximum ellipse semi-axis in geographic units (degrees).
         ``_UNSET`` → auto-derived from the median inter-station spacing.
+    ellipse_scale : float, default 1.0
+        Multiplier applied on top of *scale* — a quick "make the
+        ellipses bigger/smaller" knob (``1.5`` = 50 % larger).
     normalise_by : ``"cell"`` | ``"unity"`` | ``"abs"``
         Size normalisation strategy, see
         :class:`~pycsamt.api.style.PhaseTensorEllipseStyle`.
@@ -2480,6 +2626,16 @@ def plot_phase_tensor_map(
                 label  = "Gravity (gu)",
             )
 
+    topography : bool | str | dict | None, default None
+        Convenience elevation background (ignored when *bg_grid* is
+        given).  ``True`` interpolates the station elevations from the
+        EDI headers; a CSV path supplies either ``lon,lat,elev`` rows
+        (a scattered DEM) or ``station,elev`` rows; a dict is used
+        directly as *bg_grid*.
+    topography_cmap : str, default ``"terrain"``
+        Colormap for the *topography* background.
+    topography_alpha : float, default 0.55
+        Opacity for the *topography* background.
     station_labels : bool
         Annotate each station position with its name.
     station_marker : str
@@ -2494,6 +2650,10 @@ def plot_phase_tensor_map(
         Axes title.
     colorbar_label : str or None
         Override the automatic colorbar label derived from *c_by*.
+    show_colorbar : bool, default True
+        Draw the fill-colour colorbar.  Set ``False`` when tiling several
+        maps that share one figure-level colorbar (see
+        :func:`plot_phase_tensor_map_grid`).
     coords : dict[str, (lat, lon)] or None
         Explicit station coordinates.  When ``None`` the function reads
         ``ed.coords`` (a ``(lat, lon, elev)`` tuple) from each Site object.
@@ -2702,6 +2862,7 @@ def plot_phase_tensor_map(
             scale_ = 0.01
     else:
         scale_ = float(scale)
+    scale_ = scale_ * max(float(ellipse_scale), 1e-6)
 
     # ── 6. ellipse size normalisation ────────────────────────────────────
     # Clip extreme s1 outliers (robust 95th pct) before normalising
@@ -2736,6 +2897,14 @@ def plot_phase_tensor_map(
     norm_c = plt.Normalize(vmin=v0, vmax=v1)
 
     # ── 8. optional background grid ───────────────────────────────────────
+    if bg_grid is None and topography is not None and topography is not False:
+        bg_grid = _topography_bg_grid(
+            topography,
+            S,
+            coords,
+            cmap=topography_cmap,
+            alpha=topography_alpha,
+        )
     bg_mappable = None
     if bg_grid is not None:
         g_lon = np.asarray(bg_grid.get("lons", []), float)
@@ -2745,6 +2914,7 @@ def plot_phase_tensor_map(
         g_cl = bg_grid.get("clim", None)
         g_al = float(bg_grid.get("alpha", 0.5))
         g_lbl = bg_grid.get("label", "")
+        g_side = bg_grid.get("cbar_side", "bottom")
         if g_val.size > 0:
             if g_val.ndim == 1:
                 g_val = g_val.reshape(len(g_lat), len(g_lon))
@@ -2769,12 +2939,24 @@ def plot_phase_tensor_map(
                 shading="auto",
                 zorder=0,
             )
-            if g_lbl:
+            if g_lbl and g_side == "bottom":
+                cbg = ax.figure.colorbar(
+                    bg_mappable,
+                    ax=ax,
+                    location="bottom",
+                    fraction=0.045,
+                    shrink=0.7,
+                    pad=0.12,
+                    aspect=40,
+                )
+                cbg.set_label(g_lbl, fontsize=8)
+                cbg.ax.tick_params(labelsize=7)
+            elif g_lbl:
                 add_colorbar(
                     bg_mappable,
                     ax,
                     label=g_lbl,
-                    side="left",
+                    side=g_side,
                     size="3.5%",
                     pad=0.08,
                 )
@@ -2961,10 +3143,13 @@ def plot_phase_tensor_map(
         )
 
     # ── 13. colorbar ──────────────────────────────────────────────────────
-    sm = plt.cm.ScalarMappable(cmap=cm_obj, norm=norm_c)
-    sm.set_array([])
-    cb_label = colorbar_label if colorbar_label is not None else c_by
-    add_colorbar(sm, ax, label=cb_label, side="right", size="3.5%", pad=0.06)
+    if show_colorbar:
+        sm = plt.cm.ScalarMappable(cmap=cm_obj, norm=norm_c)
+        sm.set_array([])
+        cb_label = colorbar_label if colorbar_label is not None else c_by
+        add_colorbar(
+            sm, ax, label=cb_label, side="right", size="3.5%", pad=0.06
+        )
 
     # ── 14. axes decoration ───────────────────────────────────────────────
     from matplotlib.ticker import ScalarFormatter
@@ -2994,6 +3179,514 @@ def plot_phase_tensor_map(
         fontweight="bold",
     )
     return ax
+
+
+def _grid_station_lonlat(sites, coords):
+    """Return ``{station: (lat, lon)}`` for a phase-tensor map grid.
+
+    Mirrors the coordinate resolution of :func:`plot_phase_tensor_map`
+    (``ed.coords`` then ``ed.meta``) but only for the shared ellipse-size
+    estimate; the per-panel call resolves coordinates itself.
+    """
+    if coords is not None:
+        return {k: (float(v[0]), float(v[1])) for k, v in coords.items()}
+    out: dict[str, tuple[float, float]] = {}
+    for i, ed in enumerate(_iter_items(sites)):
+        st = _name(ed, i)
+        c = getattr(ed, "coords", None)
+        if (
+            c is not None
+            and len(c) >= 2
+            and c[0] is not None
+            and c[1] is not None
+            and np.isfinite(c[0])
+            and np.isfinite(c[1])
+        ):
+            out[st] = (float(c[0]), float(c[1]))
+            continue
+        meta = getattr(ed, "meta", {}) or {}
+        lat = meta.get("lat") or meta.get("latitude")
+        lon = meta.get("lon") or meta.get("longitude") or meta.get("long")
+        if lat is not None and lon is not None:
+            try:
+                if np.isfinite(float(lat)) and np.isfinite(float(lon)):
+                    out[st] = (float(lat), float(lon))
+            except (TypeError, ValueError):
+                pass
+    return out
+
+
+_MAP_GRID_NCOLS = {1: 1, 2: 2, 3: 3, 4: 2, 5: 3, 6: 3}
+
+
+def plot_phase_tensor_map_grid(
+    sites: Any,
+    *,
+    frequencies: list[float] | None = None,
+    periods: list[float] | None = None,
+    n_cols: int | None = None,
+    panel_labels: bool | list[str] = True,
+    panel_titles: list[str] | None = None,
+    tidy_labels: bool = True,
+    label_by: str = "frequency",
+    share_scale: bool = True,
+    share_color: bool = True,
+    shared_colorbar: bool = True,
+    station_labels: str | bool = "first",
+    ref_ellipse: str | bool = "first",
+    bg_grid: dict[str, Any] | None = None,
+    topography: Any = None,
+    topography_cmap: str = "terrain",
+    topography_alpha: float = 0.55,
+    suptitle: str = "",
+    figsize: tuple[float, float] | None = None,
+    panel_size: tuple[float, float] = (4.6, 4.0),
+    # ── shared ellipse / colour style ────────────────────────────────
+    scale=_UNSET,
+    ellipse_scale: float = 1.0,
+    s1_ref=_UNSET,
+    normalise_by=_UNSET,
+    c_by=_UNSET,
+    abs_skew: bool = False,
+    cmap=_UNSET,
+    clim: tuple[float, float] | None = None,
+    clim_pct=_UNSET,
+    symmetric_clim=_UNSET,
+    skew_threshold=_UNSET,
+    colorbar_label: str | None = None,
+    # ── core ────────────────────────────────────────────────────────
+    coords: dict[str, tuple[float, float]] | None = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+    axes: Any | None = None,
+    **map_kwargs: Any,
+) -> plt.Figure:
+    """Multi-frequency phase-tensor map — one panel per frequency.
+
+    Tiles :func:`plot_phase_tensor_map` across a list of frequencies (or
+    periods) in a subplot grid, with a **single shared colorbar** and,
+    by default, a shared ellipse-size reference and colour scale so the
+    panels are directly comparable.  This reproduces the classic
+    "phase-tensor ellipses filled with skew, induction arrows in
+    Parkinson convention, at 30 / 3 / 0.3 / 0.03 Hz" figure.
+
+    Any number of panels is accepted (1, 2, 3, 4, …); the layout adapts.
+
+    Parameters
+    ----------
+    sites : any
+        EDI paths, objects, or a collection accepted by
+        :func:`~pycsamt.emtools._core.ensure_sites`.
+    frequencies : list of float, optional
+        Panel frequencies in **hertz**, e.g. ``[30, 3, 0.3, 0.03]``.
+        Exactly one of *frequencies* / *periods* must be given.
+    periods : list of float, optional
+        Panel periods in **seconds**.  Alternative to *frequencies*.
+    n_cols : int, optional
+        Columns in the panel grid.  Default: 1→1, 2→2, 3→3, 4→2×2,
+        then 3 per row.
+    panel_labels : bool or list of str, default True
+        ``True`` stamps ``"(a)"``, ``"(b)"`` … in each panel corner; a
+        list sets the text explicitly; ``False`` disables it.
+    panel_titles : list of str, optional
+        Per-panel titles.  Default: ``"30 Hz"`` … (or ``"0.033 s"`` …
+        when ``label_by="period"``).
+    tidy_labels : bool, default True
+        Drop the x-axis label/ticks on non-bottom panels and the y-axis
+        label/ticks on non-left panels (every panel shares the same
+        extent), which tightens the grid.
+    label_by : {"frequency", "period"}, default "frequency"
+        Units for the default panel titles.
+    share_scale : bool, default True
+        Use one ellipse-size reference for every panel (ellipse areas
+        become comparable across frequencies).
+    share_color : bool, default True
+        Use one colour scale for every panel.  Ignored when *clim* is
+        given (that is always shared).
+    shared_colorbar : bool, default True
+        Draw a single figure-level colorbar instead of one per panel.
+    station_labels : {"first", "all", "none"} or bool, default "first"
+        Which panels annotate station names.
+    ref_ellipse : {"first", "all", "none"} or bool, default "first"
+        Which panels draw the reference-circle scale bar.
+    bg_grid : dict, optional
+        Explicit background field (gravity, resistivity, …) drawn behind
+        every panel; see :func:`plot_phase_tensor_map`.  Takes priority
+        over *topography*.
+    topography : bool | str | dict | None, default None
+        Convenience elevation background shared by all panels.  ``True``
+        interpolates the station elevations from the EDI headers; a CSV
+        path supplies ``lon,lat,elev`` or ``station,elev`` rows; a dict
+        is used as *bg_grid*.  A single horizontal "Elevation (m)"
+        colorbar is added.
+    topography_cmap : str, default ``"terrain"``
+    topography_alpha : float, default 0.55
+        Colormap / opacity for the *topography* background.
+    suptitle : str, optional
+        Figure-level title.
+    figsize : tuple of float, optional
+        Overrides ``panel_size``-derived sizing.
+    panel_size : tuple of float, default (4.6, 4.0)
+        Per-panel ``(width, height)`` in inches.
+    ellipse_scale : float, default 1.0
+        Multiplier on the ellipse size for every panel — a quick
+        "bigger/smaller ellipses" knob (``1.5`` = 50 % larger).
+    abs_skew : bool, default False
+        Colour by the **absolute** skew ``|β|`` (sequential) instead of
+        signed ``β`` (diverging).  Shorthand for ``c_by="|beta|"``.
+    scale, s1_ref, normalise_by, c_by, cmap, clim, clim_pct, \
+symmetric_clim, skew_threshold, colorbar_label :
+        Ellipse-style controls forwarded to every panel; see
+        :func:`plot_phase_tensor_map`.  When *share_scale* /
+        *share_color* is on and the value is left unset, a single shared
+        value is derived from the pooled data of every panel.
+    coords : dict[str, (lat, lon)], optional
+        Explicit station coordinates, forwarded to every panel.
+    recursive, on_dup, strict, verbose
+        Forwarded to :func:`~pycsamt.emtools._core.ensure_sites`.
+    axes : array of matplotlib.axes.Axes, optional
+        Pre-existing axes grid (flattened length ≥ number of panels).
+    **map_kwargs
+        Any other keyword (``show_tipper``, ``tipper_convention``,
+        ``tipper_component``, ``tipper_scale``, ``tipper_color``,
+        ``tipper_lw``, ``station_marker``, ``alpha``, ``edgecolor`` …)
+        is passed straight through to every
+        :func:`plot_phase_tensor_map` call.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+
+    Raises
+    ------
+    ValueError
+        If neither or both of *frequencies* / *periods* are given, or the
+        list is empty.
+
+    Examples
+    --------
+    Broken Hill Fig. 3 style — signed skew β on the MTPy-style
+    ``pt_skew`` colormap, Parkinson arrows:
+
+    >>> from pycsamt.emtools import plot_phase_tensor_map_grid
+    >>> fig = plot_phase_tensor_map_grid(
+    ...     "data/MT/broken-hill/edis",
+    ...     frequencies=[30, 3, 0.3, 0.03],
+    ...     c_by="skew",              # signed β; auto "pt_skew" cmap
+    ...     tipper_convention="parkinson",
+    ...     suptitle="Broken Hill — phase tensor + induction arrows",
+    ... )
+
+    Two panels only:
+
+    >>> fig = plot_phase_tensor_map_grid(sites, frequencies=[10, 0.1])
+
+    See Also
+    --------
+    plot_phase_tensor_map : Single-frequency phase-tensor map.
+    plot_phase_tensor_strip_grid : Ellipse strips tiled by profile.
+    """
+    if (frequencies is None) == (periods is None):
+        raise ValueError(
+            "pass exactly one of frequencies= (Hz) or periods= (s)."
+        )
+    if periods is not None:
+        target_p = [float(p) for p in periods]
+        freqs = [1.0 / p if p else np.inf for p in target_p]
+    else:
+        freqs = [float(f) for f in frequencies]
+        target_p = [1.0 / f if f else np.inf for f in freqs]
+    n = len(target_p)
+    if n == 0:
+        raise ValueError("frequencies/periods list is empty.")
+
+    _es = PYCSAMT_STYLE.pt_ellipse
+
+    def _sv(v, attr):
+        return getattr(_es, attr) if v is _UNSET else v
+
+    c_by_ = _sv(c_by, "c_by")
+    if abs_skew and c_by_ in ("skew", "beta"):
+        c_by_ = "|beta|"
+    cmap_ = cmap if cmap is not _UNSET else None
+    if cmap_ is None:
+        cmap_ = _es.copy(c_by=c_by_).resolve_cmap()
+    clim_pct_ = _sv(clim_pct, "clim_pct")
+    symmetric_clim_ = symmetric_clim
+    if symmetric_clim_ is _UNSET:
+        symmetric_clim_ = _es.copy(c_by=c_by_).resolve_symmetric_clim()
+    skew_threshold_ = _sv(skew_threshold, "skew_threshold")
+    normalise_by_ = _sv(normalise_by, "normalise_by")
+
+    # ── load once ───────────────────────────────────────────────────
+    S = ensure_sites(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    df = build_phase_tensor_table(
+        S, recursive=False, on_dup=on_dup, strict=False, verbose=verbose
+    )
+
+    # ── rows nearest to each target period, per station ─────────────
+    sub_rows: list[Any] = []
+    if not df.empty:
+        for _, sdf in df.groupby("station"):
+            p = sdf["period"].to_numpy(float)
+            for tp in target_p:
+                sub_rows.append(sdf.iloc[int(np.nanargmin(np.abs(p - tp)))])
+    df_sub = pd.DataFrame(sub_rows) if sub_rows else df
+
+    # ── shared colour limits ────────────────────────────────────────
+    if clim is not None:
+        clim_shared: tuple[float, float] = (
+            float(clim[0]),
+            float(clim[1]),
+        )
+        cbar_label = colorbar_label or _resolve_cvals(df_sub, c_by_)[1]
+    elif share_color and not df_sub.empty:
+        cvals, cbar_label = _resolve_cvals(df_sub, c_by_)
+        finite = cvals[np.isfinite(cvals)]
+        if finite.size:
+            lo = float(np.nanpercentile(finite, clim_pct_[0]))
+            hi = float(np.nanpercentile(finite, clim_pct_[1]))
+            if symmetric_clim_ and c_by_ in _SYMMETRIC_C:
+                vlim = max(abs(lo), abs(hi))
+                # keep at least ±skew_threshold so a near-1-D survey does
+                # not saturate the whole diverging map at one hue
+                if skew_threshold_ and c_by_ in ("skew", "beta"):
+                    vlim = max(vlim, float(skew_threshold_))
+                lo, hi = -vlim, vlim
+            clim_shared = (lo, hi if hi != lo else lo + 1.0)
+        else:
+            clim_shared = (-1.0, 1.0)
+        if colorbar_label:
+            cbar_label = colorbar_label
+    else:
+        clim_shared = None  # each panel picks its own
+        cbar_label = colorbar_label or c_by_
+
+    # ── shared geographic scale ────────────────────────────────────
+    # Only the geographic ellipse/arrow *scale* is shared: each panel
+    # still normalises ellipse sizes to its own phase distribution
+    # (``s1_ref`` left unset), otherwise the small high-frequency phase
+    # tensors would collapse next to the large low-frequency ones.  Pass
+    # an explicit ``s1_ref`` to compare magnitudes across frequency.
+    scale_arg = scale
+    s1_ref_arg = s1_ref
+    if share_scale and scale is _UNSET:
+        ll = _grid_station_lonlat(S, coords)
+        if len(ll) > 1:
+            lats = np.array([v[0] for v in ll.values()], float)
+            lons = np.array([v[1] for v in ll.values()], float)
+            u_lon = np.unique(np.round(lons, 3))
+            u_lat = np.unique(np.round(lats, 3))
+            d_lon = (
+                float(np.median(np.diff(u_lon)))
+                if len(u_lon) > 1
+                else float(np.ptp(lons) or 0.01)
+            )
+            d_lat = (
+                float(np.median(np.diff(u_lat)))
+                if len(u_lat) > 1
+                else float(np.ptp(lats) or 0.01)
+            )
+            scale_arg = 0.68 * max(abs(d_lon) + 1e-9, abs(d_lat) + 1e-9)
+
+    # ── shared topography background (built once, drawn on every panel)
+    topo_bg: dict[str, Any] | None = None
+    if (
+        bg_grid is None
+        and topography is not None
+        and topography is not False
+    ):
+        topo_bg = _topography_bg_grid(
+            topography,
+            S,
+            _grid_station_lonlat(S, coords),
+            cmap=topography_cmap,
+            alpha=topography_alpha,
+        )
+    panel_bg = bg_grid
+    if panel_bg is None and topo_bg is not None:
+        panel_bg = dict(topo_bg)
+        panel_bg["label"] = ""  # one shared elevation bar instead
+
+    # ── layout ─────────────────────────────────────────────────────
+    if n_cols is None:
+        n_cols = _MAP_GRID_NCOLS.get(n, 3)
+    n_cols = max(1, min(int(n_cols), n))
+    n_rows = int(np.ceil(n / n_cols))
+
+    if axes is None:
+        # Each panel is drawn with a latitude-corrected aspect, so match
+        # the subplot slot to that box (width/height) — otherwise the
+        # fixed-aspect axes leave wide gutters between columns.
+        box_wh = 1.0
+        _ll = _grid_station_lonlat(S, coords)
+        if len(_ll) > 1:
+            _la = np.array([v[0] for v in _ll.values()], float)
+            _lo = np.array([v[1] for v in _ll.values()], float)
+            _dlo = float(np.ptp(_lo)) or 1.0
+            _dla = float(np.ptp(_la)) or 1.0
+            box_wh = float(
+                np.clip(
+                    _dlo * np.cos(np.radians(_la.mean())) / _dla,
+                    0.45,
+                    2.2,
+                )
+            )
+        panel_h = float(panel_size[1])
+        panel_w = panel_h * box_wh + 0.85  # + tick labels / y-axis title
+        fs = figsize or (
+            panel_w * n_cols + (0.95 if shared_colorbar else 0.15),
+            panel_h * n_rows + (0.55 if suptitle else 0.2),
+        )
+        fig, axgrid = plt.subplots(
+            n_rows, n_cols, figsize=fs, squeeze=False,
+            constrained_layout=True,
+        )
+        try:
+            fig.set_constrained_layout_pads(
+                w_pad=0.015, h_pad=0.02, wspace=0.015, hspace=0.03
+            )
+        except Exception:  # noqa: BLE001 — older matplotlib
+            pass
+    else:
+        axgrid = np.atleast_2d(axes)
+        fig = axgrid.flat[0].figure
+    flat = list(np.asarray(axgrid).ravel())
+
+    def _panel_on(spec: str | bool, k: int) -> bool:
+        if isinstance(spec, bool):
+            return spec
+        spec = str(spec).lower()
+        if spec in ("all", "every"):
+            return True
+        if spec in ("none", "off", "never"):
+            return False
+        return k == 0  # "first"
+
+    for k, tp in enumerate(target_p):
+        ax = flat[k]
+        if panel_titles is not None and k < len(panel_titles):
+            ptitle = panel_titles[k]
+        elif label_by == "period":
+            ptitle = (
+                f"{tp * 1e3:.4g} ms" if tp < 1.0 else f"{tp:.4g} s"
+            )
+        else:
+            fk = freqs[k]
+            ptitle = f"{fk:g} Hz" if np.isfinite(fk) else "0 Hz"
+        plot_phase_tensor_map(
+            S,
+            period=tp,
+            ax=ax,
+            show_colorbar=False,
+            c_by=c_by_,
+            cmap=cmap_,
+            clim=clim_shared,
+            clim_pct=clim_pct_,
+            symmetric_clim=symmetric_clim_,
+            skew_threshold=skew_threshold_,
+            scale=scale_arg,
+            ellipse_scale=ellipse_scale,
+            s1_ref=s1_ref_arg,
+            normalise_by=normalise_by_,
+            bg_grid=panel_bg,
+            coords=coords,
+            station_labels=_panel_on(station_labels, k),
+            ref_ellipse=_panel_on(ref_ellipse, k),
+            title=ptitle,
+            recursive=False,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+            **map_kwargs,
+        )
+        ax.locator_params(axis="x", nbins=4)
+        ax.locator_params(axis="y", nbins=5)
+        if tidy_labels and axes is None:
+            row, col = divmod(k, n_cols)
+            last_row_start = (n_rows - 1) * n_cols
+            if k < last_row_start and (k + n_cols) < n:
+                ax.set_xlabel("")
+                ax.tick_params(labelbottom=False)
+            if col != 0:
+                ax.set_ylabel("")
+                ax.tick_params(labelleft=False)
+        if panel_labels is not False:
+            lbl = (
+                panel_labels[k]
+                if isinstance(panel_labels, (list, tuple))
+                and k < len(panel_labels)
+                else f"({chr(97 + k)})"
+            )
+            ax.text(
+                0.02,
+                0.97,
+                lbl,
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=11,
+                fontweight="bold",
+                bbox={
+                    "boxstyle": "square,pad=0.15",
+                    "fc": "white",
+                    "ec": "none",
+                    "alpha": 0.75,
+                },
+            )
+
+    for k in range(n, len(flat)):
+        flat[k].set_visible(False)
+
+    if shared_colorbar and clim_shared is not None:
+        sm = ScalarMappable(
+            cmap=plt.get_cmap(cmap_),
+            norm=Normalize(vmin=clim_shared[0], vmax=clim_shared[1]),
+        )
+        sm.set_array([])
+        cb = fig.colorbar(
+            sm,
+            ax=flat[:n],
+            fraction=0.018,
+            pad=0.006,
+            shrink=0.92,
+            aspect=32,
+        )
+        cb.set_label(cbar_label, fontsize=9)
+        cb.ax.tick_params(labelsize=8)
+
+    if shared_colorbar and topo_bg is not None:
+        tv = np.asarray(topo_bg["values"], float)
+        tv = tv[np.isfinite(tv)]
+        if tv.size:
+            sm2 = ScalarMappable(
+                cmap=plt.get_cmap(topo_bg.get("cmap", topography_cmap)),
+                norm=Normalize(vmin=float(tv.min()), vmax=float(tv.max())),
+            )
+            sm2.set_array([])
+            cb2 = fig.colorbar(
+                sm2,
+                ax=flat[:n],
+                orientation="horizontal",
+                fraction=0.03,
+                shrink=0.55,
+                pad=0.04,
+                aspect=45,
+            )
+            cb2.set_label(topo_bg.get("label") or "Elevation (m)", fontsize=9)
+            cb2.ax.tick_params(labelsize=8)
+
+    if suptitle:
+        fig.suptitle(suptitle, fontsize=12)
+    return fig
 
 
 def plot_phase_tensor_summary(

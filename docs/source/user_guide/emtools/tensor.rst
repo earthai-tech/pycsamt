@@ -21,6 +21,7 @@ tools expose two main workflows:
      - ``build_phase_tensor_table``,
        ``plot_phase_tensor_psection``,
        ``plot_phase_tensor_map``,
+       ``plot_phase_tensor_map_grid``,
        ``plot_phase_tensor_summary``
      - Diagnose dimensionality, strike, skew, ellipticity, and spatial
        coherence without being dominated by static-shift amplitude.
@@ -735,6 +736,76 @@ the period nearest a requested target period.  It can also overlay
 :term:`tipper` arrows when vertical magnetic transfer functions are
 present.
 
+Each ellipse encodes the phase-tensor shape -- its axes are the
+principal values :math:`\Phi_{\max}` and :math:`\Phi_{\min}` and its
+long-axis azimuth is the geoelectric strike :math:`\theta` -- while the
+fill colour carries a fourth scalar, by default the skew angle
+:math:`\beta`.  A circular, uniformly coloured ellipse indicates a 1-D
+response; an elongated ellipse indicates 2-D induction; a strongly
+coloured ellipse (large :math:`|\beta|`) flags 3-D or galvanically
+distorted data.  The skew fill uses the diverging ``pt_skew`` colormap
+(blue for :math:`\beta<0`, white at :math:`0`, red for
+:math:`\beta>0`); pass ``c_by="|beta|"`` for the absolute value on the
+sequential ``pt_skew_abs`` map instead.
+
+Three parameters control how the map reads:
+
+``ellipse_scale``
+    A multiplier on the automatic ellipse size.  ``1.0`` is the default;
+    values around ``1.3``--``1.6`` make a sparse survey easier to read,
+    while values below ``1`` help when ellipses overlap.
+
+``topography``
+    A convenience elevation background.  ``True`` interpolates the
+    station elevations carried in the EDI headers; a path to a
+    ``lon,lat,elev`` (or ``station,elev``) CSV supplies an external DEM;
+    a dict is used directly as ``bg_grid``.  The interpolation is linear
+    and leaves the area outside the station hull transparent so the
+    background never extrapolates into unsurveyed ground.
+
+``show_colorbar``
+    Set to ``False`` when tiling several maps that share one figure-level
+    colorbar -- this is what :func:`plot_phase_tensor_map_grid` does
+    internally.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import ensure_sites, plot_phase_tensor_map
+   >>> bh = ensure_sites("data/MT/broken-hill/edis", recursive=False)
+   >>> _ = plot_phase_tensor_map(
+   ...     bh,
+   ...     period=0.3,
+   ...     c_by="skew",
+   ...     show_tipper=True,
+   ...     tipper_convention="parkinson",
+   ...     ellipse_scale=1.4,
+   ...     topography=True,
+   ...     station_labels=False,
+   ...     recursive=False,
+   ... )
+   >>> plt.gcf().savefig("tensor_map_topo.png", dpi=200, bbox_inches="tight")
+   >>> plt.close()
+
+.. figure:: ../../images/user_guide/emtools/user-guide-emtools-tensor-map-topo.png
+   :align: center
+   :width: 90%
+
+   The bundled 21-station Broken Hill MT survey
+   (``data/MT/broken-hill``; see its ``README.md`` for the data source
+   and citation) at a 0.3 s target period, on a station-elevation
+   background.
+
+At 0.3 s the ellipses are mostly pale blue -- small negative skew,
+consistent with a broadly 2-D to weakly 3-D response -- and they are
+elongated NW--SE, roughly across the regional structural grain.  A few
+stations on the western edge carry longer real induction arrows: in the
+:term:`Parkinson convention` the arrow points *towards* the more
+conductive side, so those stations sense a lateral conductivity contrast
+that the interior stations do not.  The elevation background is gentle
+here (about 240--320 m of relief) and is included mainly to show the
+overlay; on a survey with real topography it helps relate induction
+arrows to drainage and ridges.
+
 .. code-block:: pycon
 
    >>> from pycsamt.emtools import plot_phase_tensor_map
@@ -885,6 +956,102 @@ grid in meters, which is both more physically meaningful for a CSAMT
 transect and immune to header GPS noise.  Reach for ``coords`` whenever
 the header disagrees with better-known survey geometry, not only when a
 map silently comes up empty.
+
+Multi-Frequency Phase-Tensor Maps
+--------------------------------------
+
+A phase-tensor map at a single period answers "what does the response
+look like at this depth of investigation?".  The dimensionality and
+geoelectric strike almost always change with period, so the more useful
+figure is a small grid of maps at several frequencies, read together.
+``plot_phase_tensor_map_grid`` tiles :func:`plot_phase_tensor_map` across
+a list of frequencies (or periods) with one shared colour scale, one
+shared ellipse-size reference, and a single figure-level colorbar, so
+the panels are directly comparable.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import plot_phase_tensor_map_grid
+   >>> fig = plot_phase_tensor_map_grid(
+   ...     bh,
+   ...     frequencies=[30.0, 3.0, 0.3, 0.03],
+   ...     c_by="skew",
+   ...     tipper_convention="parkinson",
+   ...     ellipse_scale=1.3,
+   ...     station_labels="none",
+   ...     ref_ellipse="none",
+   ...     suptitle="Broken Hill -- phase tensor (skew) + Parkinson arrows",
+   ...     recursive=False,
+   ... )
+   >>> fig.savefig("tensor_map_grid.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
+
+.. figure:: ../../images/user_guide/emtools/user-guide-emtools-tensor-map-grid.png
+   :align: center
+   :width: 100%
+
+   The same Broken Hill survey at 30, 3, 0.3 and 0.03 Hz.  Panel labels,
+   per-panel frequency titles, the shared skew colorbar, and the tightened
+   grid layout are all produced automatically.
+
+Read across the panels rather than down them.  At 30 Hz (shallowest) the
+skew is a mix of blue and red -- several stations exceed
+:math:`|\beta|\approx3^\circ`, the usual threshold for calling a response
+3-D -- and the ellipses are short and variably oriented.  By 0.03 Hz
+(deepest) almost every ellipse is a similar pale blue and the long axes
+have settled into a consistent NW--SE orientation.  The physical reading
+is a shallow section broken up by near-surface 3-D structure, over a
+deeper section that behaves as a coherent 2-D layer with a stable
+regional strike -- exactly the situation where a single-period map would
+mislead.
+
+``frequencies`` accepts any number of entries; the layout adapts (one
+column for one panel, ``2 x 2`` for four, three per row beyond that) and
+``n_cols`` overrides it.  ``periods`` in seconds is the alternative to
+``frequencies`` in hertz.  Two further controls matter for comparability
+across a grid:
+
+``share_scale``
+    On by default.  It fixes a single *geographic* ellipse scale for
+    every panel, but lets each panel normalise ellipse sizes to its own
+    phase distribution -- otherwise the small, high-frequency phase
+    tensors would collapse to points beside the large low-frequency
+    ones.  Pass an explicit ``s1_ref`` when you specifically want ellipse
+    *area* to be comparable across frequency.
+
+``abs_skew``
+    A shorthand for ``c_by="|beta|"``.  The absolute skew removes the
+    sign and uses the sequential ``pt_skew_abs`` colormap, which makes a
+    "where is the data 3-D?" map easier to scan than the signed version.
+
+.. code-block:: pycon
+
+   >>> fig = plot_phase_tensor_map_grid(
+   ...     bh,
+   ...     frequencies=[30.0, 0.3],
+   ...     abs_skew=True,
+   ...     tipper_convention="parkinson",
+   ...     station_labels="none",
+   ...     ref_ellipse="none",
+   ...     suptitle="Broken Hill -- |skew| (2-D vs 3-D character)",
+   ...     recursive=False,
+   ... )
+   >>> fig.savefig("tensor_map_grid_abs.png", dpi=200, bbox_inches="tight")
+   >>> plt.close(fig)
+
+.. figure:: ../../images/user_guide/emtools/user-guide-emtools-tensor-map-grid-abs.png
+   :align: center
+   :width: 85%
+
+   Absolute skew at 30 Hz and 0.3 Hz.  The darker cells at 30 Hz mark
+   the stations where a 2-D inversion assumption is least safe; by 0.3 Hz
+   almost all of them have faded towards white.
+
+Every keyword that :func:`plot_phase_tensor_map` accepts -- ``bg_grid``,
+``topography``, ``tipper_component``, ``tipper_scale``, the ellipse-style
+options -- is forwarded to each panel, so the grid is a drop-in
+replacement whenever you find yourself calling the single-period map more
+than once for the same survey.
 
 Per-Station Ellipse Strips
 --------------------------

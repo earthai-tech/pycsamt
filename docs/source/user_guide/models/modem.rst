@@ -886,6 +886,109 @@ No finished 2-D ModEM sample ships with pyCSAMT, so this one is shown without
 a captured figure -- ``runs/modem_2d_v01/native`` here is the half-space
 starting model built earlier, not a converged result.
 
+Geo-Referenced Depth Maps
+-------------------------
+
+``PlotModel3D`` draws depth slices in model-grid coordinates.
+``PlotDepthMap`` (import it from ``pycsamt.models.modem.plot``) draws the
+same slices as *geographic* maps: decimal-degree axes, station markers in
+their true positions, and -- by default -- a crop to the station
+footprint rather than the full padded mesh.  The remaining examples use
+the bundled 21-station **Broken Hill** MT survey and its converged 3-D
+model (``data/MT/broken-hill``; see that folder's ``README.md`` for the
+data source and citation), because it is areal, well constrained, and
+geo-referenced.
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.models.modem import InversionResult
+   >>> from pycsamt.models.modem.plot import PlotDepthMap
+
+   >>> bh = InversionResult("data/MT/broken-hill/final-models")
+
+   >>> fig = PlotDepthMap(
+   ...     bh,
+   ...     depths={"(a) 1 km": 1000, "(b) 2 km": 2000,
+   ...             "(c) 3 km": 3000, "(d) 5 km": 5000},
+   ...     origin_lat=-31.95556,
+   ...     origin_lon=141.53481,
+   ...     rho_range=(1, 10000),
+   ...     mask_outside_hull=True,
+   ...     contours=[1000],
+   ...     scalebar=True,
+   ...     north_arrow=True,
+   ...     title="Broken Hill ModEM -- resistivity depth slices",
+   ... ).plot()
+   >>> fig.savefig("bh_depthmap.png", dpi=200, bbox_inches="tight")
+
+The ModEM data file reduces longitude by 100 degrees (the Broken Hill
+header reads ``41.53481``), so ``origin_lon`` is passed as the true value
+``141.53481``.  ``depths`` accepts a plain list or, as here, a
+``{label: depth}`` mapping that also sets the panel titles.
+``mask_outside_hull=True`` blanks cells beyond the station convex hull so
+the figure does not imply resolution the data cannot provide;
+``contours=[1000]`` adds a single iso-resistivity line at 1000 Ω·m.
+
+
+.. figure:: ../../images/user_guide/models/modem_depthmap_slices.png
+   :align: center
+   :width: 100%
+
+   Broken Hill resistivity at 1, 2, 3 and 5 km depth.  The crust is
+   broadly resistive (blue, > 1000 Ω·m); the 1000 Ω·m contour
+   encloses a resistive core that grows with depth.  At 1 km a few small
+   conductive patches (yellow/orange, < 30 Ω·m) sit along the
+   station line -- these coincide with the sulphide-bearing Broken Hill
+   Group -- and they fade by 3 km, consistent with shallow mineralised
+   horizons over a resistive basement.
+
+The same class produces a **conductance** map -- the depth integral of
+conductivity over a chosen window, :math:`S=\int_{z_1}^{z_2}\sigma\,dz`
+in siemens -- which is often the most useful single view of a
+mineral-system target because it collapses the vertical dimension into
+one number per location:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> fig = PlotDepthMap(
+   ...     bh,
+   ...     quantity="conductance",
+   ...     conductance_window=(1000, 6000),
+   ...     origin_lat=-31.95556,
+   ...     origin_lon=141.53481,
+   ...     render="gouraud",
+   ...     cmap="magma",
+   ...     norm="linear",
+   ...     rho_range=(10, 50),
+   ...     smooth_sigma=0.8,
+   ...     mask_outside_hull=True,
+   ...     station_color="white",
+   ...     cbar_orientation="horizontal",
+   ...     title="Broken Hill -- conductance, 1-6 km",
+   ... ).plot()
+   >>> fig.savefig("bh_conductance.png", dpi=200, bbox_inches="tight")
+
+``render`` selects how the field is drawn: ``"mesh"`` (default) shows the
+raw model cells, while ``"gouraud"``, ``"contourf"`` and ``"image"``
+interpolate between cell centres for the smooth appearance conventional
+in published conductance maps.  ``rho_range`` here sets the colour limits
+to 10--50 S and ``norm="linear"`` keeps the scale linear over that
+narrow window; ``station_color="white"`` makes the markers legible over
+the dark end of ``magma``.
+
+.. figure:: ../../images/user_guide/models/modem_depthmap_conductance.png
+   :align: center
+   :width: 75%
+
+   Conductance over the 1--6 km window.  The interior of the survey is
+   resistive (dark, ~10 S) and the conductive anomalies (yellow, up to
+   ~50 S) sit on the eastern and south-eastern margin, over the mapped
+   trace of the Broken Hill Group.  A conductance map like this is what
+   a mineral-exploration MT survey is usually reduced to before it is
+   compared against geology and potential-field data.
+
 A Vertical Section Through The 3-D Model
 -------------------------------------------
 
@@ -933,6 +1036,54 @@ nothing places text safely on its own, so the caller reserves the room.
    ``PlotModel3D``'s depth slices above were too uniform-looking to convey.
    With RMS still at 3.06, treat this as a candidate feature to re-run and
    re-check, not a finished interpretation.
+
+The axis-aligned mode above cuts the section parallel to a mesh axis at a
+fixed perpendicular offset.  It works well when the mesh is only lightly
+padded, but on a heavily padded 3-D grid the automatic horizontal extent
+can collapse to a sliver or blow out to the full padded width.  The
+robust alternative is **arbitrary-azimuth mode**: pass ``start_point``
+and ``end_point`` as ``(lat, lon)`` with ``use_latlon=True`` and the
+section follows exactly the line you specify, sampled at ``n_samples``
+points.
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> bh = InversionResult("data/MT/broken-hill/final-models")
+   >>> fig = PlotSection(
+   ...     result=bh,
+   ...     start_point=(-31.860, 141.490),   # NW
+   ...     end_point=(-32.020, 141.610),     # SE, across strike
+   ...     use_latlon=True,
+   ...     origin_lat=-31.95556,
+   ...     origin_lon=141.53481,
+   ...     n_samples=320,
+   ...     depth_max=8000.0,
+   ...     rho_min=1.0,
+   ...     rho_max=5000.0,
+   ...     show_station_names=False,
+   ...     station_tol=2500.0,
+   ...     title="Broken Hill ModEM -- section B-B' (NW -> SE)",
+   ... ).plot()
+   >>> fig.savefig("bh_section.png", dpi=200, bbox_inches="tight")
+
+``station_tol`` is the maximum perpendicular distance (metres) for a
+station to be projected onto the section; widen it for a sparse survey,
+tighten it for a dense one.  ``depth_max`` clips the featureless deep
+part of the model that the shallow survey does not constrain.
+
+.. figure:: ../../images/user_guide/models/modem_section_broken_hill.png
+   :align: center
+   :width: 95%
+
+   The Broken Hill model cut NW--SE across the structural grain.  A
+   resistive (> 1000 Ω·m, blue) crust is punctuated by shallow
+   conductors (red/orange, < 10 Ω·m) confined to the top ~1.5 km -- the
+   same anomalies visible as yellow patches on the depth maps above, now
+   resolved as discrete near-surface bodies rather than a smeared layer.
+   Because the section is defined by geographic coordinates it can be
+   drawn along the exact trace of a mapped geological cross-section for a
+   direct comparison.
 
 Conversion And Utility Tools
 -------------------------------

@@ -267,6 +267,25 @@ data/MT/*
 !data/MT/kap03lmt_edis
 !data/MT/README.md
 
+# Exception: Broken Hill, NSW 3-D MT survey (AlQahtani et al., 2026,
+# https://doi.org/10.1029/2026JB035666; data https://doi.org/10.5281/
+# zenodo.21091924) — open-access CC-BY. The 21 EDI files and the light
+# ModEM data/response/residual files are bundled as example data; the
+# two 11 MB WS-format model grids (.rho/.prm), the article PDF, and a
+# LinkedIn screenshot stay local-only — see data/MT/broken-hill/README.md.
+!data/MT/broken-hill
+data/MT/broken-hill/*
+!data/MT/broken-hill/README.md
+!data/MT/broken-hill/CITATION.cff
+!data/MT/broken-hill/edis
+data/MT/broken-hill/edis/*
+!data/MT/broken-hill/edis/*.edi
+!data/MT/broken-hill/final-models
+data/MT/broken-hill/final-models/*
+!data/MT/broken-hill/final-models/BH_31.dat
+!data/MT/broken-hill/final-models/BH_31_NLCG_030.dat
+!data/MT/broken-hill/final-models/BH_31_NLCG_030.res
+
 # Exception: Gabbs Valley, Nevada USGS MT survey (Peacock et al., 2021,
 # https://doi.org/10.5066/P9GZ9Z56) — bundled sample data for the
 # pycsamt.models.occam1d worked example (docs/source/user_guide/models/
@@ -642,3 +661,7 @@ docs/examples/topo/l18_prepared_workspace/
 /HOW-TO-USE-NETLIGY-FOR-OPEN-SOURCE.md
 /NETLIFY-OPEN-SOURCE-APPLICATION.md
 paper.pdf
+
+# Local paper drafts and development plans — not project source
+/PAPERS/
+/PYCSAMT-DEV-PLANS/

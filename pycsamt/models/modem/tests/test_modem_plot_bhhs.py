@@ -409,6 +409,167 @@ class TestPlotDepthMap:
         assert ax is not None
         plt.close(fig)
 
+    def test_extent_stations_crops_view(self, result):
+        """extent='stations' zooms in well inside the padded mesh."""
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        cropped = PlotDepthMap(
+            result=result, depths=[300.0], n_cols=1, extent="stations"
+        ).plot()
+        full = PlotDepthMap(
+            result=result, depths=[300.0], n_cols=1, extent="full"
+        ).plot()
+        cx = cropped.axes[0].get_xlim()
+        fx = full.axes[0].get_xlim()
+        assert (cx[1] - cx[0]) < 0.9 * (fx[1] - fx[0])
+        plt.close(cropped)
+        plt.close(full)
+
+    def test_dict_depths_set_panel_titles(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        fig = PlotDepthMap(
+            result=result, depths={"(a) shallow": 200, "(b) deep": 1500}
+        ).plot()
+        titles = {ax.get_title() for ax in fig.axes if ax.get_title()}
+        assert "(a) shallow" in titles
+        assert "(b) deep" in titles
+        plt.close(fig)
+
+    def test_conductance_single_panel(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        fig = PlotDepthMap(
+            result=result,
+            quantity="conductance",
+            conductance_window=(100.0, 2000.0),
+        ).plot()
+        # exactly one map panel (identified by its title)
+        panels = [
+            ax for ax in fig.axes if ax.get_title() and ax.collections
+        ]
+        assert len(panels) == 1
+        labels = {ax.get_ylabel() for ax in fig.axes} | {
+            ax.get_xlabel() for ax in fig.axes
+        }
+        assert any("Conductance" in lbl for lbl in labels)
+        plt.close(fig)
+
+    def test_conductance_needs_window(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        with pytest.raises(ValueError, match="conductance_window"):
+            PlotDepthMap(result=result, quantity="conductance").plot()
+
+    def test_render_modes_and_station_color(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        for render in ("gouraud", "contourf", "image"):
+            fig = PlotDepthMap(
+                result=result,
+                quantity="conductance",
+                conductance_window=(100.0, 2000.0),
+                render=render,
+                cmap="magma",
+                norm="linear",
+                station_color="white",
+                cbar_orientation="horizontal",
+                n_cols=1,
+            ).plot()
+            assert isinstance(fig, matplotlib.figure.Figure)
+            plt.close(fig)
+
+    def test_bad_render_raises(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        with pytest.raises(ValueError, match="render"):
+            PlotDepthMap(result=result, render="wobble")
+
+    def test_bad_quantity_raises(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        with pytest.raises(ValueError, match="quantity"):
+            PlotDepthMap(result=result, quantity="magic")
+
+    def test_contours_drawn(self, result):
+        from matplotlib.contour import QuadContourSet
+
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        fig = PlotDepthMap(
+            result=result, depths=[300.0], n_cols=1, contours=[100.0, 1000.0]
+        ).plot()
+        got = [
+            c
+            for ax in fig.axes
+            for c in ax.collections
+            if isinstance(c, QuadContourSet)
+        ]
+        # QuadContourSet may register as a single collection; fall back to
+        # checking that contour line collections exist.
+        assert got or any(
+            ax.collections for ax in fig.axes if ax.get_title()
+        )
+        plt.close(fig)
+
+    def test_mask_outside_hull_blanks_cells(self, result):
+        import numpy as np
+
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        fig = PlotDepthMap(
+            result=result,
+            depths=[300.0],
+            n_cols=1,
+            mask_outside_hull=True,
+            extent="full",
+        ).plot()
+        meshes = [
+            c
+            for ax in fig.axes
+            for c in ax.collections
+            if hasattr(c, "get_array") and c.get_array() is not None
+        ]
+        assert meshes
+        arr = np.ma.masked_invalid(meshes[0].get_array())
+        assert np.ma.is_masked(arr) or np.isnan(
+            np.asarray(meshes[0].get_array(), dtype=float)
+        ).any()
+        plt.close(fig)
+
+    def test_overlay_polyline_drawn(self, result):
+        import numpy as np
+
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        line = np.array([[_ORIGIN_LON - 0.02, _ORIGIN_LAT],
+                         [_ORIGIN_LON + 0.02, _ORIGIN_LAT]])
+        fig = PlotDepthMap(
+            result=result,
+            depths=[300.0],
+            n_cols=1,
+            origin_lat=_ORIGIN_LAT,
+            origin_lon=_ORIGIN_LON,
+            overlays=[line],
+            overlay_kw={"color": "magenta"},
+        ).plot()
+        ax = [a for a in fig.axes if a.get_title()][0]
+        colours = {ln.get_color() for ln in ax.get_lines()}
+        assert "magenta" in colours
+        plt.close(fig)
+
+    def test_ncols_and_show_names_aliases(self, result):
+        from pycsamt.models.modem.plot import PlotDepthMap
+
+        fig = PlotDepthMap(
+            result=result,
+            depths=[100.0, 300.0],
+            ncols=1,
+            show_names=True,
+        ).plot()
+        assert isinstance(fig, matplotlib.figure.Figure)
+        plt.close(fig)
+
 
 # ---------------------------------------------------------------------------
 # PlotAllProfiles

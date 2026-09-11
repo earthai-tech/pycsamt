@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from pathlib import Path
 
 import numpy as np
 
@@ -1749,204 +1750,901 @@ def _section_slice(model, col_idx, direction="NS"):
 
 
 # ======================================================================
-# PlotDepthMap
+# PlotDepthMap  (horizontal depth slices / conductance maps)
 # ======================================================================
+
+_DEG_PER_M_LAT = 1.0 / 111_195.0
+
+
+def _auto_pad_cells(widths) -> int:
+    """Return the padding-cell count on one side of a horizontal axis.
+
+    ModEM meshes grow geometrically into a padding region.  This counts
+    the leading cells wider than ``1.4x`` the median interior cell — a
+    robust marker of the padded zone — and never reports more than a
+    third of the axis.
+
+    Parameters
+    ----------
+    widths : ndarray of shape (n_cells,)
+        Cell widths in metres.
+
+    Returns
+    -------
+    int
+    """
+    w = np.asarray(widths, dtype=float)
+    if w.size < 7:
+        return 0
+    core = float(np.median(w[w.size // 3: 2 * w.size // 3]))
+    if core <= 0:
+        return 0
+    big = w[: w.size // 2] > 1.4 * core
+    lead = int(np.argmin(big)) if big.any() else 0
+    return int(min(lead, w.size // 3))
+
+
+def _hull_path(points, buffer: float):
+    """Return a closed :class:`matplotlib.path.Path` around *points*.
+
+    The ring is the convex hull dilated outward by *buffer* (axis
+    units).  Falls back to a padded bounding box when SciPy is missing
+    or the points are collinear, and returns ``None`` for < 3 points.
+
+    Parameters
+    ----------
+    points : ndarray of shape (n_points, 2)
+    buffer : float
+
+    Returns
+    -------
+    matplotlib.path.Path or None
+    """
+    from matplotlib.path import Path as _MplPath
+
+    pts = np.asarray(points, dtype=float)
+    pts = pts[np.isfinite(pts).all(axis=1)]
+    if pts.shape[0] < 3:
+        return None
+    centre = pts.mean(axis=0)
+    ring = None
+    try:
+        from scipy.spatial import ConvexHull
+
+        ring = pts[ConvexHull(pts).vertices]
+    except Exception:
+        ring = None
+    if ring is None or ring.shape[0] < 3:
+        lo = pts.min(axis=0)
+        hi = pts.max(axis=0)
+        ring = np.array(
+            [
+                [lo[0], lo[1]],
+                [hi[0], lo[1]],
+                [hi[0], hi[1]],
+                [lo[0], hi[1]],
+            ]
+        )
+    vec = ring - centre
+    dist = np.hypot(vec[:, 0], vec[:, 1])
+    dist[dist == 0] = 1.0
+    ring = ring + buffer * vec / dist[:, None]
+    return _MplPath(np.vstack([ring, ring[:1]]), closed=True)
+
+
+def _layer_conductance(model, z_top: float, z_bot: float):
+    """Return depth-integrated conductance over a depth window.
+
+    Parameters
+    ----------
+    model : ModEmModel3D
+    z_top, z_bot : float
+        Window limits in metres below the model top.
+
+    Returns
+    -------
+    ndarray of shape (ny, nx)
+        Conductance in siemens.
+
+    Raises
+    ------
+    ValueError
+        If the window does not intersect any model layer.
+    """
+    z_nodes = model.z_nodes
+    z_cent = 0.5 * (z_nodes[:-1] + z_nodes[1:])
+    z_wid = np.diff(z_nodes)
+    sel = (z_cent >= float(z_top)) & (z_cent <= float(z_bot))
+    if not sel.any():
+        raise ValueError(
+            "conductance_window does not intersect any model layer "
+            f"(model spans 0-{z_nodes[-1] / 1e3:.1f} km)."
+        )
+    sigma = 1.0 / np.clip(model.rho_linear[sel], 1e-12, None)
+    return np.tensordot(z_wid[sel], sigma, axes=(0, 0))
 
 
 class PlotDepthMap(_ModEmPlotBase):
-    """Geo-referenced horizontal depth slices through a 3-D ModEM model.
+    """Publication-grade horizontal depth slices of a 3-D ModEM model.
 
-    Each selected depth is displayed as a plan-view resistivity map.
-    When *origin_lat* / *origin_lon* are provided the axes show decimal
-    degrees (lat north, lon east); otherwise axes are in km from the
-    model centre — equivalent to the MATLAB ``pMod3Dlldepsec`` and
-    ``m_pcolor`` layer maps from the post-inversion scripts.
+    Each requested depth is rendered as a plan-view map of resistivity
+    (or conductivity); a depth-integrated *conductance* map can be drawn
+    instead.  Axes are decimal degrees when a geographic origin is
+    available, otherwise kilometres from the model centre.  The view is
+    cropped to the station footprint by default rather than showing the
+    full padded mesh.
 
     Parameters
     ----------
     result : InversionResult, optional
-    depths : sequence of float, optional
-        Depths below the model surface (metres). Defaults to the first
-        four active earth-layer centres.
+        Loaded ModEM result.  Either ``result`` or ``model`` is needed.
+    depths : sequence of float or dict, optional
+        Depths in metres below the model top.  A mapping
+        ``{label: depth}`` sets an explicit panel label per depth.
+        Ignored when ``quantity="conductance"``.  Defaults to the first
+        four earth-layer centres.
+    model : ModEmModel3D or path-like, optional
+        Explicit model, used when no ``result`` is attached.
     which : {"final", "initial"}, default "final"
+        Model to display when taken from ``result``.
+    quantity : {"resistivity", "conductivity", "conductance"}, \
+default "resistivity"
+        Field to map.  ``"conductance"`` integrates conductivity over
+        ``conductance_window`` and produces a single panel.
+    conductance_window : tuple of float, optional
+        ``(z_top_m, z_bot_m)``; required when
+        ``quantity="conductance"``.
     origin_lat, origin_lon : float, optional
-        Geographic coordinates of the model centre. When provided the
-        axes show decimal degrees.
-    rho_min, rho_max : float, default 1.0, 1000.0
-        Colour-scale limits (Ω·m), displayed as log₁₀.
-    cmap : str, default "jet_r"
-    n_cols : int, default 2
+        Latitude / longitude of the model centre.  Taken from the ModEM
+        data-file origin when omitted.
+    lat_shift, lon_shift : float, default 0.0
+        Added to every latitude / longitude.  ModEM often reduces
+        longitude by 100 degrees; pass ``lon_shift=100`` to restore the
+        true longitude.
+    extent : {"stations", "model", "full"} or tuple, default "stations"
+        Map crop.  ``"stations"`` uses the station bounding box grown by
+        ``margin``; ``"model"`` drops padding cells; ``"full"`` shows the
+        whole mesh; a 4-tuple ``(x0, x1, y0, y1)`` sets explicit limits
+        in axis units.
+    margin : float, default 0.15
+        Fractional padding for ``extent="stations"``.
+    pad_cells : int, optional
+        Padding cells to drop for ``extent="model"`` (auto when omitted).
+    mask_outside_hull : bool, default False
+        Blank cells outside the station convex hull grown by
+        ``hull_buffer_km``.
+    hull_buffer_km : float, default 2.0
+        Hull dilation in kilometres.
+    mask_below, mask_above : float, optional
+        Blank cells with resistivity below / above these values (ohm m).
+    smooth_sigma : float, default 0.0
+        Gaussian smoothing (in cells) of the *displayed* field only; the
+        model is not modified.
+    rho_range : tuple of float, optional
+        ``(min, max)`` colour limits in ohm m (S for conductance, S/m
+        for conductivity).  Auto-scaled from the data when omitted.
+    rho_min, rho_max : float, optional
+        Back-compatible colour limits; used only when ``rho_range`` is
+        ``None``.
+    norm : {"log", "linear"}, default "log"
+        Colour normalisation.
+    cmap : str or Colormap, default "jet_r"
+        For a conductance map, a sequential colormap such as ``"magma"``
+        reads best.
+    render : {"mesh", "gouraud", "contourf", "image"}, default "mesh"
+        How the field is drawn.  ``"mesh"`` is blocky cells; ``"gouraud"``
+        and ``"contourf"`` interpolate between cell centres for a smooth
+        look; ``"image"`` uses bicubic-interpolated ``imshow``.
+    station_color : str, optional
+        Override the station-marker colour (e.g. ``"white"`` over a dark
+        conductance colormap).
+    shared_colorbar : bool, default True
+        One colour bar for all panels instead of one per panel.
+    cbar_orientation : {"vertical", "horizontal"}, default "vertical"
+    contours : bool or sequence of float, default False
+        Overlay iso-resistivity contours.  ``True`` picks decade values
+        inside the colour range; a sequence sets explicit levels.
+    contour_labels : bool, default False
+    contour_kw : dict, optional
+        Extra keyword arguments for :meth:`matplotlib.axes.Axes.contour`.
+    overlays : array-like or list, optional
+        Polylines drawn on every panel, each an ``(n, 2)`` array of
+        ``(x, y)`` in axis units.  A list of such arrays, or of
+        ``{"xy": array, **style}`` dicts, is accepted.
+    overlay_kw : dict, optional
+        Default style for ``overlays`` (for example ``color``, ``lw``).
+    profile_lines : list of dict, optional
+        Section traces, each ``{"name": str, "xy": (n, 2) array}``.
+        Endpoints are labelled ``name`` and ``name`` + prime.
     show_stations : bool, default True
+    station_labels : bool, default False
+        Annotate each station with its name.
+    label_kw : dict, optional
+        Extra keyword arguments for the station-label text.
+    n_cols : int, default 2
+        Panel-grid width.
+    figsize : tuple of float, optional
+    panel_labels : bool or sequence of str, default True
+        ``True`` adds ``"(a)"``, ``"(b)"`` ...; a sequence sets them.
+    title : str, optional
+        Figure suptitle.
+    depth_title_fmt : str, default "{depth_km:g} km"
+        Per-panel title template; fields ``depth_km`` and ``depth_m``.
+    scalebar : bool, default False
+    scalebar_km : float, optional
+        Scale-bar length; auto when omitted.
+    north_arrow : bool, default False
+    graticule : bool, default False
+        Draw a dotted coordinate grid.
+    section : str or SectionStyle, default "publication"
+        pyCSAMT section-style preset used for the station markers and
+        the per-panel colour bars.
+    aspect : {"auto", "equal"} or float, default "auto"
+        ``"auto"`` uses a latitude-correct aspect for degree axes and
+        ``"equal"`` for kilometre axes.
+
+    Notes
+    -----
+    ``extent="stations"`` is the default, so unlike earlier releases the
+    map no longer shows the full padded mesh unless ``extent="full"`` is
+    passed.
 
     Examples
     --------
+    >>> from pycsamt.models.modem import InversionResult
     >>> from pycsamt.models.modem.plot import PlotDepthMap
+    >>> r = InversionResult("data/MT/broken-hill/final-models")
     >>> fig = PlotDepthMap(
-    ...     result=result,
-    ...     depths=[200, 500, 1000, 2000],
-    ...     origin_lat=32.129,
-    ...     origin_lon=119.125,
+    ...     r,
+    ...     depths={"(a) 1 km": 1000, "(b) 2 km": 2000},
+    ...     origin_lat=-31.95556,
+    ...     origin_lon=141.53481,
+    ...     rho_range=(1, 10000),
+    ...     mask_outside_hull=True,
+    ...     contours=[1000],
     ... ).plot()
     """
+
+    _QUANTITIES = ("resistivity", "conductivity", "conductance")
+    _LABELS = {
+        "resistivity": "Resistivity (Ω·m)",
+        "conductivity": "Conductivity (S/m)",
+        "conductance": "Conductance (S)",
+    }
 
     def __init__(
         self,
         result: InversionResult | None = None,
-        depths: Sequence[float] | None = None,
+        depths=None,
+        *,
+        model=None,
         which: str = "final",
+        quantity: str = "resistivity",
+        conductance_window: tuple[float, float] | None = None,
         origin_lat: float | None = None,
         origin_lon: float | None = None,
-        rho_min: float = 1.0,
-        rho_max: float = 1000.0,
-        cmap: str = "jet_r",
-        n_cols: int = 2,
+        lat_shift: float = 0.0,
+        lon_shift: float = 0.0,
+        extent="stations",
+        margin: float = 0.15,
+        pad_cells: int | None = None,
+        mask_outside_hull: bool = False,
+        hull_buffer_km: float = 2.0,
+        mask_below: float | None = None,
+        mask_above: float | None = None,
+        smooth_sigma: float = 0.0,
+        rho_range: tuple[float, float] | None = None,
+        rho_min: float | None = None,
+        rho_max: float | None = None,
+        norm: str = "log",
+        cmap="jet_r",
+        render: str = "mesh",
+        station_color: str | None = None,
+        shared_colorbar: bool = True,
+        cbar_orientation: str = "vertical",
+        contours=False,
+        contour_labels: bool = False,
+        contour_kw: dict | None = None,
+        overlays=None,
+        overlay_kw: dict | None = None,
+        profile_lines=None,
         show_stations: bool = True,
+        station_labels: bool = False,
+        label_kw: dict | None = None,
+        n_cols: int = 2,
+        figsize: tuple[float, float] | None = None,
+        panel_labels=True,
+        title: str | None = None,
+        depth_title_fmt: str = "{depth_km:g} km",
+        scalebar: bool = False,
+        scalebar_km: float | None = None,
+        north_arrow: bool = False,
+        graticule: bool = False,
+        section="publication",
+        aspect="auto",
         **kwargs,
     ):
+        if "ncols" in kwargs:
+            n_cols = int(kwargs.pop("ncols"))
+        if "show_names" in kwargs:
+            station_labels = bool(kwargs.pop("show_names"))
         super().__init__(result=result, **kwargs)
+
+        q = str(quantity).lower()
+        if q not in self._QUANTITIES:
+            raise ValueError(
+                f"quantity must be one of {self._QUANTITIES}; "
+                f"got {quantity!r}."
+            )
+        if str(norm).lower() not in ("log", "linear"):
+            raise ValueError("norm must be 'log' or 'linear'.")
+
         self.depths = depths
-        self.which = which
+        self._model_arg = model
+        self.which = str(which)
+        self.quantity = q
+        self.conductance_window = conductance_window
         self.origin_lat = origin_lat
         self.origin_lon = origin_lon
-        self.rho_min = float(rho_min)
-        self.rho_max = float(rho_max)
+        self.lat_shift = float(lat_shift)
+        self.lon_shift = float(lon_shift)
+        self.extent = extent
+        self.margin = float(margin)
+        self.pad_cells = pad_cells
+        self.mask_outside_hull = bool(mask_outside_hull)
+        self.hull_buffer_km = float(hull_buffer_km)
+        self.mask_below = mask_below
+        self.mask_above = mask_above
+        self.smooth_sigma = float(smooth_sigma)
+        if rho_range is None and (
+            rho_min is not None or rho_max is not None
+        ):
+            rho_range = (
+                float(rho_min) if rho_min is not None else 1.0,
+                float(rho_max) if rho_max is not None else 1000.0,
+            )
+        self.rho_range = rho_range
+        self.norm = str(norm).lower()
         self.cmap = cmap
-        self.n_cols = int(n_cols)
-        self.show_stations = show_stations
+        self.render = str(render).lower()
+        if self.render not in ("mesh", "gouraud", "contourf", "image"):
+            msg = (
+                "render must be 'mesh', 'gouraud', 'contourf' or 'image'; "
+                f"got {render!r}."
+            )
+            raise ValueError(msg)
+        self.station_color = station_color
+        self.shared_colorbar = bool(shared_colorbar)
+        self.cbar_orientation = str(cbar_orientation)
+        self.contours = contours
+        self.contour_labels = bool(contour_labels)
+        self.contour_kw = dict(contour_kw or {})
+        self.overlays = overlays
+        self.overlay_kw = dict(overlay_kw or {})
+        self.profile_lines = profile_lines
+        self.show_stations = bool(show_stations)
+        self.station_labels = bool(station_labels)
+        self.label_kw = dict(label_kw or {})
+        self.n_cols = max(1, int(n_cols))
+        self.figsize = figsize
+        self.panel_labels = panel_labels
+        self.title = title
+        self.depth_title_fmt = str(depth_title_fmt)
+        self.scalebar = bool(scalebar)
+        self.scalebar_km = scalebar_km
+        self.north_arrow = bool(north_arrow)
+        self.graticule = bool(graticule)
+        self.section_style = _resolve_section_style(section)
+        self.aspect = aspect
+
+    # -- internal helpers ---------------------------------------------
+
+    def _resolve_model(self):
+        """Return the 3-D model to display, or raise ``ValueError``."""
+        m = self._model_arg
+        if m is not None:
+            if isinstance(m, (str, Path)):
+                from .model3d import ModEmModel3D
+
+                return ModEmModel3D.read(m)
+            return m
+        r = self._check_result()
+        model = (
+            r.model_initial
+            if self.which == "initial"
+            else r.model_final
+        )
+        if model is None:
+            raise ValueError(
+                f"No {self.which} 3-D model available in the result."
+            )
+        return model
+
+    def _resolve_origin(self):
+        """Return ``(lat, lon)`` of the model centre or ``(None, None)``."""
+        if self.origin_lat is not None and self.origin_lon is not None:
+            return float(self.origin_lat), float(self.origin_lon)
+        data = getattr(self.result, "data_obs", None)
+        blocks = getattr(data, "blocks", None) if data is not None else None
+        if blocks:
+            org = blocks[0].get("origin")
+            if org and len(org) == 2 and all(v is not None for v in org):
+                return float(org[0]), float(org[1])
+        return None, None
+
+    def _resolve_panels(self, z_centres, n_air):
+        """Return a list of ``(iz, label_or_None)`` panel descriptors."""
+        if self.quantity == "conductance":
+            if (
+                not self.conductance_window
+                or len(self.conductance_window) != 2
+            ):
+                raise ValueError(
+                    "quantity='conductance' needs conductance_window="
+                    "(z_top_m, z_bot_m)."
+                )
+            return [(None, None)]
+
+        depths = self.depths
+        labels: list = []
+        if isinstance(depths, dict):
+            items = list(depths.items())
+            values = [float(v) for _, v in items]
+            labels = [str(k) for k, _ in items]
+        elif depths is None:
+            values = list(z_centres[n_air: n_air + 4])
+            labels = [None] * len(values)
+        else:
+            values = [float(v) for v in depths]
+            labels = [None] * len(values)
+
+        out = []
+        for value, label in zip(values, labels):
+            iz = int(np.argmin(np.abs(z_centres - value)))
+            out.append((iz, label))
+        return out
+
+    def _field(self, model, iz):
+        """Return the ``(ny, nx)`` field for one panel in display units."""
+        if self.quantity == "conductance":
+            z0, z1 = self.conductance_window
+            return _layer_conductance(model, z0, z1)
+        rho = np.asarray(model.rho_linear[iz], dtype=float)
+        if self.quantity == "conductivity":
+            return 1.0 / np.clip(rho, 1e-12, None)
+        return rho
+
+    def _mask_field(self, field, inside):
+        """Apply value / hull masks to a display field, returning a copy."""
+        out = np.array(field, dtype=float)
+        if self.mask_below is not None:
+            out[out < float(self.mask_below)] = np.nan
+        if self.mask_above is not None:
+            out[out > float(self.mask_above)] = np.nan
+        if inside is not None:
+            out[~inside] = np.nan
+        if self.smooth_sigma > 0:
+            try:
+                from scipy.ndimage import gaussian_filter
+
+                finite = np.isfinite(out)
+                filled = np.where(finite, out, np.nanmedian(out))
+                sm = gaussian_filter(
+                    np.log10(np.clip(filled, 1e-12, None)),
+                    self.smooth_sigma,
+                )
+                out = np.where(finite, 10.0**sm, np.nan)
+            except Exception:
+                self.logger.debug("smooth_sigma ignored: SciPy missing.")
+        return out
+
+    def _colour_limits(self, fields):
+        """Return ``(vmin, vmax)`` for the colour scale."""
+        if self.rho_range is not None:
+            return float(self.rho_range[0]), float(self.rho_range[1])
+        vals = np.concatenate(
+            [f[np.isfinite(f) & (f > 0)].ravel() for f in fields]
+        )
+        if vals.size == 0:
+            return 1.0, 1000.0
+        lo, hi = np.percentile(vals, [2, 98])
+        if self.norm == "log":
+            lo = 10.0 ** np.floor(np.log10(max(lo, 1e-12)))
+            hi = 10.0 ** np.ceil(np.log10(max(hi, lo * 10)))
+        return float(lo), float(hi)
+
+    def _contour_levels(self, vmin, vmax):
+        """Return the iso-resistivity contour levels."""
+        if self.contours is False or self.contours is None:
+            return []
+        if self.contours is True:
+            decades = range(
+                int(np.floor(np.log10(vmin))),
+                int(np.ceil(np.log10(vmax))) + 1,
+            )
+            return [10.0**d for d in decades]
+        return [float(v) for v in self.contours]
+
+    # -- public API -------------------------------------------------
 
     def plot(self):
-        """Return a matplotlib Figure with geo-referenced depth maps.
+        """Build and return the depth-map figure.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
 
         Raises
         ------
         ValueError
-            If no result or model is attached.
+            If no 3-D model is available, ``quantity`` is unknown, or a
+            ``conductance`` map is requested without a valid window.
         """
-        import matplotlib.colors as mcolors
         import matplotlib.pyplot as plt
+        from matplotlib import colors as mcolors
 
-        r = self._check_result()
-        model = r.model_final if self.which == "final" else r.model_initial
-        if model is None:
-            raise ValueError(f"No {self.which} model in InversionResult.")
+        model = self._resolve_model()
+        if getattr(model, "nz", 0) == 0:
+            raise ValueError("The attached model has no resistivity grid.")
 
         z_nodes = model.z_nodes
         z_centres = 0.5 * (z_nodes[:-1] + z_nodes[1:])
-        n_air = model.n_air
+        n_air = int(getattr(model, "n_air", 0) or 0)
+        panels = self._resolve_panels(z_centres, n_air)
 
-        if self.depths is None:
-            active = z_centres[n_air : n_air + 4]
-        else:
-            active = np.asarray(self.depths, dtype=float)
+        olat, olon = self._resolve_origin()
+        use_geo = olat is not None and olon is not None
 
-        iz_list = [int(np.argmin(np.abs(z_centres - d))) for d in active]
-        n_slices = len(iz_list)
-        n_cols = min(self.n_cols, n_slices)
-        n_rows = int(np.ceil(n_slices / n_cols))
-
-        use_geo = self.origin_lat is not None and self.origin_lon is not None
+        # Axis node / centre coordinates (x = east/lon, y = north/lat).
         if use_geo:
             lat_nodes, lon_nodes = _xy_nodes_to_geo(
-                model.x_nodes,
-                model.y_nodes,
-                self.origin_lat,
-                self.origin_lon,
+                model.x_nodes, model.y_nodes, olat, olon
             )
-            x_axis = lon_nodes  # easting on x-axis
-            y_axis = lat_nodes  # northing on y-axis
+            ax_x = lon_nodes + self.lon_shift
+            ax_y = lat_nodes + self.lat_shift
             xlabel, ylabel = "Longitude (°E)", "Latitude (°N)"
+            km_per_x = 111.195 * np.cos(np.radians(olat))
+            km_per_y = 111.195
         else:
             cx = float(model.x_nodes[-1]) / 2e3
             cy = float(model.y_nodes[-1]) / 2e3
-            x_axis = model.y_nodes / 1e3 - cy
-            y_axis = model.x_nodes / 1e3 - cx
+            ax_x = model.y_nodes / 1e3 - cy
+            ax_y = model.x_nodes / 1e3 - cx
             xlabel = "Easting from centre (km)"
             ylabel = "Northing from centre (km)"
+            km_per_x = km_per_y = 1.0
+        ax_xc = 0.5 * (ax_x[:-1] + ax_x[1:])
+        ax_yc = 0.5 * (ax_y[:-1] + ax_y[1:])
 
-        # Station positions
-        sta_x = sta_y = None
-        mk = None
-        if self.show_stations and r.data_obs is not None:
-            mk = PYCSAMT_STATION_RENDERING.style_for("inversion").marker
+        # Station positions in axis units.
+        sta_x = sta_y = sta_names = None
+        data = getattr(self.result, "data_obs", None)
+        if self.show_stations and data is not None:
+            sxm = np.asarray(data.x_coords, dtype=float)
+            sym = np.asarray(data.y_coords, dtype=float)
             if use_geo:
-                m_lat = 111_195.0
-                m_lon = 111_195.0 * np.cos(np.radians(self.origin_lat))
-                sta_x = np.array(
-                    [
-                        self.origin_lon + ym / m_lon
-                        for _, (_, ym, _) in r.data_obs.site_coords.items()
-                    ]
-                )
-                sta_y = np.array(
-                    [
-                        self.origin_lat + xm / m_lat
-                        for _, (xm, _, _) in r.data_obs.site_coords.items()
-                    ]
-                )
+                sta_x = olon + self.lon_shift + sym / (km_per_x * 1e3)
+                sta_y = olat + self.lat_shift + sxm / (km_per_y * 1e3)
             else:
-                sta_x = r.data_obs.y_coords / 1e3
-                sta_y = r.data_obs.x_coords / 1e3
+                sta_x = sym / 1e3
+                sta_y = sxm / 1e3
+            sta_names = list(getattr(data, "site_names", []))
 
-        log_vmin = np.log10(max(self.rho_min, 1e-6))
-        log_vmax = np.log10(max(self.rho_max, self.rho_min * 10))
-        norm = mcolors.Normalize(vmin=log_vmin, vmax=log_vmax)
+        # Fields, colour scale, hull mask.
+        raw_fields = [self._field(model, iz) for iz, _ in panels]
+        inside = None
+        if self.mask_outside_hull and sta_x is not None and len(sta_x) >= 3:
+            buf = self.hull_buffer_km / km_per_y
+            path = _hull_path(np.column_stack([sta_x, sta_y]), buf)
+            if path is not None:
+                gx, gy = np.meshgrid(ax_xc, ax_yc, indexing="ij")  # (ny, nx)
+                pts = np.column_stack([gx.ravel(), gy.ravel()])
+                inside = path.contains_points(pts).reshape(gx.shape)
+        disp_fields = [self._mask_field(f, inside) for f in raw_fields]
+        vmin, vmax = self._colour_limits(disp_fields)
+        if self.norm == "log":
+            cnorm = mcolors.LogNorm(vmin=vmin, vmax=vmax)
+        else:
+            cnorm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+        levels = self._contour_levels(vmin, vmax)
 
-        fig, axes = plt.subplots(
-            n_rows,
-            n_cols,
-            figsize=(5.5 * n_cols, 4.5 * n_rows),
-            squeeze=False,
+        # Figure / axis grid.
+        n = len(panels)
+        ncols = min(self.n_cols, n)
+        nrows = int(np.ceil(n / ncols))
+        figsize = self.figsize or (4.7 * ncols + 1.0, 4.1 * nrows + 0.5)
+        fig, axgrid = plt.subplots(
+            nrows, ncols, figsize=figsize, squeeze=False
+        )
+        axes = axgrid.ravel()
+        marker = PYCSAMT_STATION_RENDERING.style_for(
+            self.section_style.station_preset
+        ).marker
+
+        xlim, ylim = self._limits(
+            ax_x, ax_y, ax_xc, ax_yc, sta_x, sta_y, model
         )
 
-        for k, iz in enumerate(iz_list):
-            row, col = divmod(k, n_cols)
-            ax = axes[row][col]
+        pm = None
+        for k, ((iz, label), field) in enumerate(zip(panels, disp_fields)):
+            ax = axes[k]
+            c_t = field.T
+            if self.render == "gouraud":
+                pm = ax.pcolormesh(
+                    ax_xc, ax_yc, c_t, norm=cnorm, cmap=self.cmap,
+                    shading="gouraud",
+                )
+            elif self.render == "contourf":
+                pm = ax.contourf(
+                    ax_xc, ax_yc, c_t, levels=24, norm=cnorm,
+                    cmap=self.cmap, extend="both",
+                )
+            elif self.render == "image":
+                pm = ax.imshow(
+                    c_t,
+                    origin="lower",
+                    extent=(
+                        float(ax_x[0]), float(ax_x[-1]),
+                        float(ax_y[0]), float(ax_y[-1]),
+                    ),
+                    norm=cnorm,
+                    cmap=self.cmap,
+                    interpolation="bicubic",
+                    aspect="auto",
+                )
+            else:  # "mesh"
+                pm = ax.pcolormesh(
+                    ax_x, ax_y, c_t, norm=cnorm, cmap=self.cmap,
+                    shading="flat",
+                )
+            if levels:
+                ckw = {
+                    "colors": "k",
+                    "linewidths": 0.6,
+                    "alpha": 0.7,
+                }
+                ckw.update(self.contour_kw)
+                cs = ax.contour(ax_xc, ax_yc, field.T, levels=levels, **ckw)
+                if self.contour_labels:
+                    ax.clabel(cs, fmt="%g", fontsize=7)
 
-            rho_slice = model.rho_linear[iz, :, :]  # (ny, nx)
-            log10_rho = np.log10(np.clip(rho_slice, 1e-6, None)).T  # (nx, ny)
+            self._draw_overlays(ax)
+            self._draw_profiles(ax)
 
-            pm = ax.pcolormesh(
-                x_axis,
-                y_axis,
-                log10_rho,
-                norm=norm,
-                cmap=self.cmap,
-                shading="flat",
+            if sta_x is not None:
+                mkw = marker.kwargs(s=14)
+                if self.station_color is not None:
+                    mkw["color"] = self.station_color
+                    mkw.pop("c", None)
+                ax.scatter(sta_x, sta_y, **mkw)
+                if self.station_labels and sta_names is not None:
+                    tkw = {
+                        "fontsize": 6,
+                        "ha": "left",
+                        "va": "bottom",
+                        "color": "k",
+                    }
+                    tkw.update(self.label_kw)
+                    for xx, yy, nm in zip(sta_x, sta_y, sta_names):
+                        ax.text(xx, yy, f" {nm}", **tkw)
+
+            ax.set_title(
+                self._panel_title(k, label, z_centres, iz), fontsize=10
             )
-            cb = fig.colorbar(pm, ax=ax, pad=0.02, shrink=0.80)
-            cb.set_label("Resistivity (Ω·m)", fontsize=8)
-            ticks_rho = [
-                t
-                for t in [1, 10, 100, 1000, 10000]
-                if self.rho_min <= t <= self.rho_max
-            ]
-            cb.set_ticks([np.log10(t) for t in ticks_rho])
-            cb.set_ticklabels([str(t) for t in ticks_rho])
+            ax.set_xlabel(xlabel, fontsize=9)
+            ax.set_ylabel(ylabel, fontsize=9)
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.tick_params(labelsize=8)
+            ax.locator_params(axis="x", nbins=5)
+            ax.locator_params(axis="y", nbins=6)
+            self._set_aspect(ax, use_geo, olat)
+            if self.graticule:
+                ax.grid(True, ls=":", lw=0.4, color="0.6", alpha=0.7)
+            if not self.shared_colorbar:
+                self.section_style.add_colorbar(
+                    pm, ax, label=self._LABELS[self.quantity]
+                )
 
-            depth_km = float(z_centres[iz]) / 1e3
-            ax.set_title(f"z = {depth_km:.2f} km", fontsize=9)
-            ax.set_xlabel(xlabel, fontsize=8)
-            ax.set_ylabel(ylabel, fontsize=8)
+        for k in range(n, nrows * ncols):
+            axes[k].set_visible(False)
 
-            if sta_x is not None and mk is not None:
-                ax.scatter(sta_x, sta_y, **mk.kwargs(s=12))
+        if self.scalebar and n:
+            self._draw_scalebar(axes[0], xlim, ylim, km_per_x)
+        if self.north_arrow and n:
+            self._draw_north(axes[0])
 
-        for k in range(n_slices, n_rows * n_cols):
-            row, col = divmod(k, n_cols)
-            axes[row][col].set_visible(False)
+        if self.shared_colorbar and pm is not None:
+            horiz = self.cbar_orientation == "horizontal"
+            cb = fig.colorbar(
+                pm,
+                ax=list(axes[:n]),
+                orientation=self.cbar_orientation,
+                pad=0.11 if horiz else 0.02,
+                fraction=0.05 if horiz else 0.03,
+                shrink=0.6 if horiz else 0.9,
+                aspect=40,
+            )
+            cb.set_label(self._LABELS[self.quantity], fontsize=9)
 
-        geo_label = (
-            f"  (origin {self.origin_lat:.4f}°N, {self.origin_lon:.4f}°E)"
-            if use_geo
-            else ""
-        )
-        fig.suptitle(
-            f"ModEM depth maps — {self.which}{geo_label}",
-            y=1.01,
-            fontsize=10,
-        )
-        fig.tight_layout()
+        if self.title:
+            fig.suptitle(self.title, fontsize=11)
+        if not self.shared_colorbar:
+            fig.tight_layout()
         return fig
+
+    # -- drawing helpers -------------------------------------------
+
+    def _model_limits(self, ax_x, ax_y, model):
+        """Return the padding-trimmed model extent in axis units."""
+        full_x = (float(ax_x.min()), float(ax_x.max()))
+        full_y = (float(ax_y.min()), float(ax_y.max()))
+        npx = (
+            self.pad_cells
+            if self.pad_cells is not None
+            else _auto_pad_cells(model.y_widths)
+        )
+        npy = (
+            self.pad_cells
+            if self.pad_cells is not None
+            else _auto_pad_cells(model.x_widths)
+        )
+        if npx <= 0 and npy <= 0:
+            return full_x, full_y
+        return (
+            (float(ax_x[npx]), float(ax_x[len(ax_x) - 1 - npx])),
+            (float(ax_y[npy]), float(ax_y[len(ax_y) - 1 - npy])),
+        )
+
+    def _limits(self, ax_x, ax_y, ax_xc, ax_yc, sta_x, sta_y, model):
+        """Return ``((x0, x1), (y0, y1))`` axis limits for the crop."""
+        ex = self.extent
+        if isinstance(ex, (tuple, list)) and len(ex) == 4:
+            return (float(ex[0]), float(ex[1])), (float(ex[2]), float(ex[3]))
+        if ex == "full":
+            return (
+                (float(ax_x.min()), float(ax_x.max())),
+                (float(ax_y.min()), float(ax_y.max())),
+            )
+        mx, my = self._model_limits(ax_x, ax_y, model)
+        if ex == "stations" and sta_x is not None and len(sta_x) >= 2:
+            span = max(
+                float(sta_x.max() - sta_x.min()),
+                float(sta_y.max() - sta_y.min()),
+            )
+            d = span * self.margin + 1e-9
+            # grow around the stations but never past the trimmed model
+            return (
+                (
+                    max(float(sta_x.min()) - d, mx[0]),
+                    min(float(sta_x.max()) + d, mx[1]),
+                ),
+                (
+                    max(float(sta_y.min()) - d, my[0]),
+                    min(float(sta_y.max()) + d, my[1]),
+                ),
+            )
+        return mx, my
+
+    def _panel_title(self, k, label, z_centres, iz):
+        """Return the per-panel title string."""
+        if label is not None:
+            return str(label)
+        if self.quantity == "conductance":
+            z0, z1 = self.conductance_window
+            if self.title:
+                return ""
+            return f"conductance {z0 / 1e3:g}-{z1 / 1e3:g} km"
+        depth_m = float(z_centres[iz])
+        base = self.depth_title_fmt.format(
+            depth_km=depth_m / 1e3, depth_m=depth_m
+        )
+        if self.panel_labels is True:
+            return f"({chr(97 + k)}) {base}"
+        if isinstance(self.panel_labels, (list, tuple)) and k < len(
+            self.panel_labels
+        ):
+            return f"{self.panel_labels[k]} {base}"
+        return base
+
+    def _set_aspect(self, ax, use_geo, olat):
+        """Apply the requested axis aspect ratio."""
+        asp = self.aspect
+        if asp == "auto":
+            if use_geo:
+                ax.set_aspect(1.0 / max(np.cos(np.radians(olat)), 1e-3))
+            else:
+                ax.set_aspect("equal")
+        elif asp is not None:
+            ax.set_aspect(asp)
+
+    def _iter_overlays(self):
+        """Yield ``(xy_array, style_dict)`` for each overlay polyline."""
+        ov = self.overlays
+        if ov is None:
+            return
+        if (
+            isinstance(ov, np.ndarray)
+            and ov.ndim == 2
+            and ov.shape[1] == 2
+        ):
+            yield np.asarray(ov, dtype=float), {}
+            return
+        for item in ov:
+            if isinstance(item, dict):
+                xy = np.asarray(item.get("xy"), dtype=float)
+                style = {
+                    key: val for key, val in item.items() if key != "xy"
+                }
+                yield xy, style
+            else:
+                yield np.asarray(item, dtype=float), {}
+
+    def _draw_overlays(self, ax):
+        """Draw the user overlay polylines on ``ax``."""
+        base = {"color": "k", "lw": 0.7}
+        base.update(self.overlay_kw)
+        for xy, style in self._iter_overlays():
+            if xy.ndim != 2 or xy.shape[1] != 2 or xy.shape[0] < 2:
+                continue
+            kw = dict(base)
+            kw.update(style)
+            ax.plot(xy[:, 0], xy[:, 1], **kw)
+
+    def _draw_profiles(self, ax):
+        """Draw named section traces with end labels."""
+        for spec in self.profile_lines or []:
+            xy = np.asarray(spec.get("xy"), dtype=float)
+            if xy.ndim != 2 or xy.shape[0] < 2:
+                continue
+            name = str(spec.get("name", ""))
+            ax.plot(xy[:, 0], xy[:, 1], color="k", lw=1.1)
+            ax.plot(
+                xy[[0, -1], 0], xy[[0, -1], 1], "o", color="k", ms=3
+            )
+            if name:
+                ax.annotate(
+                    name, xy[0], fontsize=8, fontweight="bold",
+                    ha="right", va="bottom",
+                )
+                ax.annotate(
+                    f"{name}'", xy[-1], fontsize=8, fontweight="bold",
+                    ha="left", va="top",
+                )
+
+    def _draw_scalebar(self, ax, xlim, ylim, km_per_x):
+        """Draw a simple horizontal scale bar on ``ax``."""
+        span_km = (xlim[1] - xlim[0]) * km_per_x
+        length = self.scalebar_km
+        if not length:
+            raw = 0.25 * span_km
+            pow10 = 10.0 ** np.floor(np.log10(max(raw, 1e-6)))
+            length = max(
+                (m * pow10 for m in (1, 2, 5, 10) if m * pow10 <= raw),
+                default=pow10,
+            )
+        dx = length / km_per_x
+        x0 = xlim[0] + 0.06 * (xlim[1] - xlim[0])
+        y0 = ylim[0] + 0.08 * (ylim[1] - ylim[0])
+        ax.plot([x0, x0 + dx], [y0, y0], color="k", lw=2.5)
+        ax.text(
+            x0 + dx / 2, y0, f"{length:g} km", ha="center", va="bottom",
+            fontsize=7,
+        )
+
+    def _draw_north(self, ax):
+        """Draw a north arrow in the upper-right corner of ``ax``."""
+        ax.annotate(
+            "N",
+            xy=(0.93, 0.15),
+            xytext=(0.93, 0.03),
+            xycoords="axes fraction",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            fontweight="bold",
+            arrowprops={"arrowstyle": "-|>", "color": "k"},
+        )
 
 
 # ======================================================================

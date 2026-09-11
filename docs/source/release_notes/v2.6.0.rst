@@ -4,8 +4,8 @@
 Version 2.6.0
 -------------
 
-pyCSAMT 2.6.0 |Feature| |New|
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pyCSAMT 2.6.0 |Feature| |New| |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 *Released 2026-09-07.*
 
@@ -14,8 +14,8 @@ A feature release that brings **boreholes into Map View**, adds a
 adds **post-inversion data-fit diagnostics for ModEM**, and makes the
 Map View 3-D scene hold its camera across control changes.
 
-Boreholes in Map View
-~~~~~~~~~~~~~~~~~~~~~~~
+Boreholes in Map View |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Map View gains a third rail section, **Boreholes**, and a **Borehole
 Studio** modal. The studio imports a borehole from any of four sources
@@ -35,8 +35,8 @@ hole appears:
   (the "linear" view) or a free-standing 3-D hole in its own
   coordinates.
 
-Spreadsheet import
-~~~~~~~~~~~~~~~~~~~
+Spreadsheet import |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Field core logs rarely arrive tidy. :func:`pycsamt.format.borehole.
 inspect_workbook` reports every sheet's shape, a preview, and its
@@ -60,8 +60,8 @@ id / Lithology / Depth from / Depth to* dropdowns, auto-guessed by alias
 and overridable, so a merged multi-row header (like the real ZK2203
 core sheet) imports without a helper script.
 
-Points and targets (PCPT)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Points and targets (PCPT) |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :mod:`pycsamt.format.pointset` adds a small ``.pcpt.json`` format for
 drill targets, planned collars, samples, and anomalies -- a flat list of
@@ -72,8 +72,8 @@ the 2-D basemap and as depth-stemmed markers in the 3-D scene,
 independent of any borehole. Both the PCBH and PCPT stores now travel in
 the Map View session snapshot.
 
-Scene alignment
-~~~~~~~~~~~~~~~
+Scene alignment |New|
+~~~~~~~~~~~~~~~~~~~~~~
 
 :class:`pycsamt.map.geometry.SurveyFrame` and
 :func:`~pycsamt.map.geometry.survey_frame` expose the survey's local
@@ -84,8 +84,8 @@ uses it to walk each desurveyed trajectory into scene coordinates, with a
 ``surface`` / ``collar_z`` / ``zero`` depth datum, a depth-window clip,
 and an inside / edge / outside classification against the imaged volume.
 
-ModEM data-fit diagnostics
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ModEM data-fit diagnostics |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :class:`pycsamt.models.modem.plot.PlotDataFit` is a publication-style
 observed-vs-model response panel with per-panel and per-station RMS;
@@ -96,8 +96,8 @@ normalised residual. Both accept an
 ``data_obs`` / ``data_pred`` pair and are exported from
 ``pycsamt.models.modem``.
 
-Domain-gap simulator: structured missingness
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Domain-gap simulator: structured missingness |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The corruption simulator can now reproduce missingness that is
 concentrated in particular stations or frequency bands rather than
@@ -114,8 +114,8 @@ independent scalar rates are mathematically forced to be equal whenever
 each is derived from the same overall coverage deficit. All three names
 are re-exported from :mod:`pycsamt.ai.domain_gap`.
 
-Geology section in Map View: interpretation legend + structure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Geology section in Map View: interpretation legend + structure |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Map View gains a fourth rail section, **Geology**, below Boreholes: a
 **Geology Studio** modal that builds a resistivity-to-geology legend and
@@ -215,8 +215,8 @@ compact **Interpretation** section keeps only the two "Apply" switches
   The 3-D toolbar's four separate depth-preset buttons (Full / 500 m /
   1 km / 2 km) are now one compact dropdown, freeing up head-menu space.
 
-3-D view: sticky camera + turntable
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3-D view: sticky camera + turntable |Fix| |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Applying any control change -- a resistivity range, an opacity, a
 basemap swap -- used to rebuild the whole figure and snap the camera
@@ -237,8 +237,63 @@ entirely in the browser (no server round-trip) and each frame is
 captured like a manual drag, so stopping it leaves the view where it
 landed.
 
-Compatibility
-~~~~~~~~~~~~~
+Added
+~~~~~
+
+* |New| **Boreholes in Map View** -- a *Boreholes* rail section and a
+  *Borehole Studio* modal that imports a hole from a ``.pcbh.json``, a
+  combined-interval CSV, an ``.xlsx`` sheet (with column-mapping
+  dropdowns), or a hand-built collar + layer table; applied holes render
+  as coloured tubes inside the 3-D volume, as 2-D map collar markers, and
+  as strip logs.
+* |New| **Spreadsheet borehole import** --
+  :func:`pycsamt.format.borehole.inspect_workbook` and
+  :func:`~pycsamt.format.borehole.boreholes_from_xlsx`, sharing one
+  ``assemble_interval_document`` core with the combined-CSV importer.
+* |New| **PCPT -- points and targets** (:mod:`pycsamt.format.pointset`):
+  a small ``.pcpt.json`` list of named positions (drill targets, planned
+  collars, samples, anomalies) with ``read_points`` / ``points_from_csv``
+  / ``points_from_xlsx``, plotted on the 2-D basemap and in the 3-D
+  scene and carried in the Map View session snapshot.
+* |New| **Scene alignment helpers** --
+  :class:`pycsamt.map.geometry.SurveyFrame` /
+  :func:`~pycsamt.map.geometry.survey_frame` and
+  :func:`pycsamt.map.borehole_align.align_boreholes_to_scene`.
+* |New| **ModEM post-inversion data-fit diagnostics** --
+  :class:`pycsamt.models.modem.plot.PlotDataFit` (observed-vs-model
+  response panel, per-panel and per-station RMS) and
+  :class:`~pycsamt.models.modem.plot.PlotMisfitMap` (per-station RMS
+  map), both accepting an
+  :class:`~pycsamt.models.modem.results.InversionResult` or a bare
+  ``data_obs`` / ``data_pred`` pair.
+* |New| **Geology section in Map View** -- a *Geology* rail section and
+  *Geology Studio*: **PCGL** (``.pcgl.json``) interpretation legend
+  around :class:`pycsamt.geology.lithology.RockDatabase`, two maskable
+  legend styles (swatch list / colourbar), **PCGS** (``.pcgs.json``)
+  structural sibling around
+  :class:`pycsamt.geology.structural.StructuralModel`, pattern/swatch
+  pack import (:mod:`pycsamt.geology.patterns`, optional ``pymupdf``),
+  and true position-sampled pattern-texture rendering on fence /
+  depth-slice.
+* |New| **Structured missingness for the domain-gap simulator** --
+  :func:`pycsamt.ai.domain_gap.survey_fit.fit_structured_missingness`,
+  :class:`~pycsamt.ai.domain_gap.survey_fit.StructuredMissingness`, and
+  :func:`pycsamt.ai.domain_gap.simulator.apply_structured_dropout`, all
+  re-exported from :mod:`pycsamt.ai.domain_gap`.
+* |New| **Turntable "Spin" toggle** in the Map View 3-D toolbar.
+
+Fixed
+~~~~~
+
+* |Fix| **Map View 3-D scene no longer snaps its camera back on a
+  control change** -- a stored live camera / pan / zoom is replayed onto
+  the rebuilt figure; only *Fit* / *Reset view* return to the default.
+* |Fix| **Map View Geology rail button renders its own icon** (it
+  previously pointed at a filename with no matching asset and drew
+  blank); the four depth-preset buttons are now one dropdown.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
 
 * ``pycsamt.app.mapview._render.figure_for`` gained a keyword-only
   ``viewport`` argument (default ``None``, previous behaviour); it

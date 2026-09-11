@@ -10,6 +10,127 @@ each release.
 
 ----
 
+.. _changelog-2-6-1:
+
+2.6.1 |Feature| |New| |Fix| |Docs|
+----------------------------------
+
+*Released 2026-09-10.*
+
+A magnetotelluric-visualisation release: two new publication-style
+plotters, a phase-tensor colour system in :mod:`pycsamt.api`, a
+bundled and fully cited Broken Hill 3-D MT survey with an end-to-end
+tutorial, and three bugs surfaced while building them.
+
+Added
+~~~~~
+
+* |New| **MTPy-style apparent-resistivity / phase pseudo-section** --
+  :class:`pycsamt.emtools.PlotResPhasePseudoSection` and the
+  ``plot_res_phase_pseudosection`` wrapper. Apparent resistivity above
+  phase, one column per impedance component (drawn in the order given,
+  or auto-detected), one stacked ``[resistivity, phase]`` row-pair per
+  site group. ``station_side`` puts the station axis -- names plus the
+  inverted-triangle markers from
+  :data:`~pycsamt.api.PYCSAMT_STATION_RENDERING` -- on ``"top"``
+  (default), ``"bottom"``, or ``"none"``; ``res_phase_ratio`` sets the
+  panel split; ``phase_range`` takes the ``"0-90"`` / ``"-45-45"`` /
+  ``"-90-90"`` / ``"-180-180"`` / ``"auto"`` presets or a tuple;
+  ``share_period=False`` gives each stacked line its own period window
+  (for an AMT line above an LMT line); plus ``panel_labels``, ``grid``,
+  ``share_scales``, ``log_res`` / ``log_period``, and an ``axes=`` grid
+  to draw into. The period grid ends are set from the half-decade bins
+  where a fraction of the line's stations carry data, so one file's
+  stray band cannot stretch the axis across empty decades.
+
+* |New| **Multi-frequency phase-tensor map grid** --
+  :func:`pycsamt.emtools.plot_phase_tensor_map_grid` draws phase-tensor
+  ellipses and real-induction (Parkinson) arrows on a geographic grid
+  of 1--6 panels, one per frequency or period, with shared ellipse
+  scaling, one shared skew colour bar, optional station labels, a
+  reference ellipse, an optional topography backdrop, and lat-corrected
+  panel aspect. ``plot_phase_tensor_map`` itself gains ``ellipse_scale``,
+  ``topography`` (station elevations, a CSV, or a dict), ``show_colorbar``,
+  and ``abs_skew``.
+
+* |New| **Phase-tensor skew colour system** -- ``pycsamt.api.style``
+  registers ``pt_skew`` / ``pt_skew_r`` (blue--white--red diverging) and
+  ``pt_skew_abs`` / ``pt_skew_abs_r`` (white--red sequential) with
+  Matplotlib, and :class:`~pycsamt.api.PhaseTensorEllipseStyle` now
+  auto-selects them per ``c_by`` (``skew`` / ``|beta|`` / ``alpha``), so every
+  phase-tensor plot shares one MTPy-like skew ramp. The colour is
+  configurable through :data:`pycsamt.api.PYCSAMT_STYLE`.
+
+* |New| **Geo-referenced ModEM depth-slice and conductance maps** --
+  :class:`pycsamt.models.modem.plot.PlotDepthMap` is reworked from a
+  raw-mesh slicer into a publication plotter: it crops to the station
+  footprint by default (``extent``), masks outside the survey hull,
+  renders as ``mesh`` / ``gouraud`` / ``contourf`` / ``image``, and adds
+  a depth-integrated **layer-conductance** mode (``quantity="conductance"``),
+  contours, overlays, profile lines, a scale bar, a north arrow, a
+  graticule, and configurable station markers, on one shared or
+  per-panel colour bar.
+
+* |New| **Broken Hill 3-D MT dataset and tutorial** --
+  ``data/MT/broken-hill/`` bundles the 21-station AlQahtani et al.
+  (2026, *JGR Solid Earth*, CC-BY) magnetotelluric survey and the
+  published ModEM inversion, with a ``README.md`` and ``CITATION.cff``.
+  A new tutorial, :doc:`/tutorials/model_broken_hill_mt_3d`, walks the
+  whole path from EDI loading and QC through dimensionality, a
+  ``ModEmConfig`` setup, the published ``InversionResult``, and the
+  depth-slice / conductance / section figures, and is regenerated and
+  byte-verified by ``docs/scripts/generate_tutorial_broken_hill.py``.
+
+Changed
+~~~~~~~
+
+* |Enhancement| :class:`~pycsamt.models.modem.plot.PlotDepthMap` accepts
+  the ``ncols`` and ``show_names`` keyword aliases used by the web app,
+  alongside the canonical ``n_cols`` / ``station_labels``.
+
+Fixed
+~~~~~
+
+* |Fix| **EDI files with a placeholder ``DATAID`` collapsed a whole
+  survey onto one site** -- EMpower (and WinGLink) write a literal
+  ``None`` / ``NULL`` into ``DATAID`` when the station id is unset;
+  :attr:`pycsamt.seg.EDIFile.station` returned that string verbatim, so
+  ``read_edis`` on such a folder keyed every file to one sounding.
+  Placeholder ids (``""``, ``none``, ``null``, ``na``, ``nan``, ``-``,
+  ``unknown``, …) are now treated as missing and the filename stem is
+  used instead; the fast header parser in :mod:`pycsamt.seg.cbase`
+  applies the same rule.
+
+* |Fix| **``InversionResult`` mis-read a short project stem as an
+  iteration number** -- the pattern matching ModEM's
+  ``<stem>_NLCG_NNN`` counter also matched a stem like ``BH_31``, so
+  ``BH_31.dat`` was taken as "iteration 31" and the observed and
+  predicted data files were swapped. ModEM writes the counter with
+  ``%03d``; the pattern now requires at least three digits.
+
+* |Fix| **Two ``emtools`` docstrings broke the Sphinx build** --
+  :func:`pycsamt.emtools.ensure_sites` and
+  :func:`pycsamt.emtools.smooth_rho_phase` wrapped a NumPy-style
+  parameter type with a ``\`` line continuation whose remainder sat at
+  source column 0, which defeats ``inspect.cleandoc`` de-denting and
+  makes Napoleon emit the ``Parameters`` / ``Examples`` headers raw
+  (Sphinx ``CRITICAL: Unexpected section title``). Both types are now
+  single-line.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+Every addition is backward compatible and every changed signature is
+additive. :attr:`pycsamt.seg.EDIFile.station` now returns the filename
+stem instead of ``"None"`` / ``None`` for a file whose ``DATAID`` is a
+placeholder -- code that special-cased that string should be reviewed.
+:class:`~pycsamt.models.modem.results.InversionResult` may pick a
+different file as ``data_obs`` for a run folder that contains a
+non-iteration ``.dat`` whose stem ends in digits (e.g. ``BH_31.dat``);
+the newly chosen file is the real input, not a response file.
+
+----
+
 .. _changelog-2-6-0:
 
 2.6.0 |Feature| |New|

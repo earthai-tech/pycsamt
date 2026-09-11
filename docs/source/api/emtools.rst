@@ -27,6 +27,7 @@ Processing and QC
    pycsamt.emtools.ztem
    pycsamt.emtools.mobilemt
    pycsamt.emtools.inspect
+   pycsamt.emtools.resphase_psection
    pycsamt.emtools.qc
    pycsamt.emtools.frequency
    pycsamt.emtools.ss

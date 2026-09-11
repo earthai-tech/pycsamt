@@ -1,0 +1,171 @@
+.. _release_v2_6_1:
+
+-------------
+Version 2.6.1
+-------------
+
+pyCSAMT 2.6.1 |Feature| |New| |Fix| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-09-10.*
+
+A magnetotelluric-visualisation release. It adds two publication-style
+plotters -- an MTPy-style apparent-resistivity / phase pseudo-section
+for ``emtools`` and a geo-referenced depth-slice / conductance map for
+ModEM -- a multi-frequency phase-tensor map grid and a shared skew
+colour system in :mod:`pycsamt.api`, and a bundled, fully cited Broken
+Hill 3-D MT survey with an end-to-end tutorial. Three bugs surfaced
+while building those against real third-party data are fixed along the
+way.
+
+Apparent-resistivity and phase pseudo-sections |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`pycsamt.emtools.PlotResPhasePseudoSection` (and the
+``plot_res_phase_pseudosection`` wrapper) draws the classic MT layout:
+apparent resistivity stacked above phase, one column per impedance
+tensor component, one ``[resistivity, phase]`` row-pair per site group.
+
+* **Components** are drawn in the order you pass them
+  (``components=["yx", "xy"]``), or auto-detected -- every component that
+  carries finite data, in canonical ``xy, yx, xx, yy`` order.
+* **The station axis** -- names plus the inverted-triangle markers from
+  :data:`~pycsamt.api.PYCSAMT_STATION_RENDERING`, the same as every other
+  pyCSAMT section view -- goes on ``station_side="top"`` (the default),
+  ``"bottom"``, or ``"none"``. Each stacked line carries its own.
+* **The panel split** is ``res_phase_ratio`` (default ``2/3``: phase
+  gets more room; ``2.0`` flips it so resistivity fills two-thirds of the
+  row-pair).
+* **Phase limits** are the presets ``"0-90"`` (default, with ``yx`` /
+  ``yy`` rotated by :math:`180^\circ`), ``"-45-45"``, ``"-90-90"``,
+  ``"-180-180"``, the string ``"auto"``, or an explicit ``(vmin, vmax)``.
+* **Stacking several lines** -- pass a ``{label: sites}`` mapping. By
+  default every group shares one period grid and one resistivity / phase
+  colour scale. ``share_period=False`` gives each group its own period
+  window, for stacking an AMT line above an LMT line whose bands barely
+  overlap.
+* Plus ``panel_labels`` (``(a)``, ``(b)``, …), ``grid``, ``share_scales``,
+  ``log_res`` / ``log_period``, ``res_range`` / ``period_range``, and an
+  ``axes=`` grid to draw into.
+
+The period grid's endpoints are taken from the half-decade period bins
+in which at least a fraction of the line's stations carry data, so one
+EDI file's stray high-frequency segment cannot stretch the vertical axis
+across empty decades.
+
+Multi-frequency phase-tensor maps and a skew colour system |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`pycsamt.emtools.plot_phase_tensor_map_grid` draws phase-tensor
+ellipses filled by skew (or ``|beta|``) with real-induction (Parkinson)
+arrows on a geographic grid of 1--6 panels, one per frequency or period.
+The panels share ellipse scaling and one skew colour bar, correct their
+aspect for latitude, and can carry station labels, a reference ellipse,
+and a topography backdrop. ``plot_phase_tensor_map`` gains matching
+``ellipse_scale``, ``topography``, ``show_colorbar``, and ``abs_skew``
+options.
+
+``pycsamt.api.style`` registers four colormaps with Matplotlib --
+``pt_skew`` / ``pt_skew_r`` (blue--white--red diverging) and
+``pt_skew_abs`` / ``pt_skew_abs_r`` (white--red sequential) -- and
+:class:`~pycsamt.api.PhaseTensorEllipseStyle` auto-selects them per
+``c_by``, so every phase-tensor view shares one MTPy-like skew ramp.
+The choice is configurable through :data:`pycsamt.api.PYCSAMT_STYLE`.
+
+Geo-referenced ModEM depth-slice and conductance maps |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`pycsamt.models.modem.plot.PlotDepthMap` is reworked from a
+raw-mesh slicer into a publication plotter. It crops to the station
+footprint by default (``extent="stations"``; ``"model"`` drops the
+geometric padding, ``"full"`` keeps everything), masks cells outside the
+survey hull, and renders as ``mesh``, ``gouraud``, ``contourf``, or
+``image``. A new depth-integrated **layer-conductance** mode
+(``quantity="conductance"``) sums :math:`\sigma\,\Delta z` between two
+depths. Contours, arbitrary overlays, profile lines, a scale bar, a
+north arrow, a graticule, and configurable station markers are all
+available, on one shared or per-panel colour bar. The web app's
+``ncols`` / ``show_names`` keyword names are accepted alongside the
+canonical ``n_cols`` / ``station_labels``.
+
+Broken Hill 3-D MT dataset and tutorial |New| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``data/MT/broken-hill/`` bundles the 21-station magnetotelluric survey
+and published ModEM inversion from AlQahtani et al. (2026,
+*JGR Solid Earth*, DOI ``10.1029/2026JB035666``, CC-BY 4.0), archived on
+Zenodo (``10.5281/zenodo.21272106``). A ``README.md`` and
+``CITATION.cff`` in that folder carry the full data and model citation.
+
+A new tutorial, :doc:`/tutorials/model_broken_hill_mt_3d`, walks the
+entire path -- loading the EDIs, station-confidence and dimensionality
+QC, a multi-frequency phase-tensor map, a ``ModEmConfig`` /
+``InputBuilder`` setup, loading the author's published
+``InversionResult``, per-station misfit, depth slices, layer
+conductance, and an arbitrary-azimuth section -- and closes with an
+interpretation against the paper. It is regenerated and byte-verified
+against captured output by
+``docs/scripts/generate_tutorial_broken_hill.py``.
+
+Fixed
+~~~~~
+
+* |Fix| **A folder of EDI files with a placeholder ``DATAID`` collapsed
+  onto one site.** EMpower and WinGLink write a literal ``None`` /
+  ``NULL`` into ``DATAID`` when the station id is unset;
+  :attr:`pycsamt.seg.EDIFile.station` returned that verbatim, so
+  ``read_edis`` on such a folder keyed every file to one sounding (a
+  21-station Broken Hill survey read as a single station). Placeholder
+  ids -- ``""``, ``none``, ``null``, ``na``, ``n/a``, ``nan``, ``-``,
+  ``--``, ``unknown`` -- are now treated as missing and the filename
+  stem is used instead. The fast header parser in
+  :mod:`pycsamt.seg.cbase` applies the same rule (and now strips
+  surrounding quotes).
+
+* |Fix| **``InversionResult`` mis-read a short project stem as a ModEM
+  iteration number.** The pattern for ModEM's ``<stem>_NLCG_NNN``
+  iteration counter also matched a project stem ending in digits, so
+  ``BH_31.dat`` was parsed as "iteration 31" and the observed and
+  predicted data files were swapped. ModEM writes the counter with
+  ``%03d`` (always :math:`\ge` three digits); the pattern now requires
+  three digits.
+
+* |Fix| **Two ``emtools`` docstrings broke the Sphinx build.**
+  :func:`pycsamt.emtools.ensure_sites` and
+  :func:`pycsamt.emtools.smooth_rho_phase` wrapped a NumPy-style
+  parameter type across two source lines with a ``\`` continuation whose
+  remainder sat at column 0. That defeats ``inspect.cleandoc``'s
+  common-indent strip, so Napoleon stops recognising sections and emits
+  the ``Parameters`` / ``Examples`` headers as raw RST, which Sphinx
+  rejects (``CRITICAL: Unexpected section title``). Both parameter types
+  are now single-line.
+
+Documentation |Docs|
+~~~~~~~~~~~~~~~~~~~~~
+
+* New user-guide material: an *MTPy-style resistivity and phase
+  pseudo-sections* section in :doc:`/user_guide/emtools/inspect` (four
+  figures: L18PLT, the L18PLT + L22PLT stack, the KAP03 long-period
+  line, and a mixed AMT / LMT stack); *multi-frequency phase-tensor
+  maps* in :doc:`/user_guide/emtools/tensor`; and *geo-referenced depth
+  maps* in :doc:`/user_guide/models/modem`.
+* Figure generators under ``docs/scripts/`` for each of the above.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+Every addition is backward compatible and every changed signature is
+additive.
+
+:attr:`pycsamt.seg.EDIFile.station` now returns the filename stem
+instead of the string ``"None"`` (or ``None``) for a file whose
+``DATAID`` is a placeholder. Code that special-cased that string, or
+that relied on two such files sharing one station key, should be
+reviewed -- this is the intended behaviour change.
+
+:class:`~pycsamt.models.modem.results.InversionResult` may select a
+different file as ``data_obs`` for a run folder that also contains a
+non-iteration ``.dat`` whose stem ends in three or more digits (e.g.
+``BH_31.dat``). The newly preferred file is a real input, never a
+numbered response file, so ``data_pred`` / model selection is
+unaffected; pass ``data=ModEmData.read(path)`` to pin a specific file.

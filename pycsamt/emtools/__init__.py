@@ -166,6 +166,10 @@ from .inspect import (
     pseudosection,
     sites_summary,
 )
+from .resphase_psection import (
+    PlotResPhasePseudoSection,
+    plot_res_phase_pseudosection,
+)
 
 # ─── L-curve ──────────────────────────────────────────────────────────────────
 from .lcurve import (
@@ -398,6 +402,7 @@ from .tensor import (
     plot_dimensionality_psection,
     plot_ellipticity_psection,
     plot_phase_tensor_map,
+    plot_phase_tensor_map_grid,
     plot_phase_tensor_psection,
     plot_phase_tensor_rose,
     plot_phase_tensor_skewmap,
@@ -656,6 +661,7 @@ __all__ = [
     "DIMENSIONALITY_TRAFFIC_COLORS",
     "plot_phase_tensor_rose",
     "plot_phase_tensor_map",
+    "plot_phase_tensor_map_grid",
     "phase_tensor_legend",
     "plot_dimensionality_grid",
     "plot_theta_stability_stripe",
@@ -681,6 +687,8 @@ __all__ = [
     "plot_rhoa_phi",
     "plot_tipper_components",
     "pseudosection",
+    "PlotResPhasePseudoSection",
+    "plot_res_phase_pseudosection",
     "plot_station_response",
     # transfer functions / tipper / induction arrows
     "plot_tipper_hodograms",

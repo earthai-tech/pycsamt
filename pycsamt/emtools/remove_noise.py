@@ -730,9 +730,10 @@ def smooth_rho_phase(
     ----------
     sites : object
         Any input accepted by :func:`ensure_sites`.
-    components : {"offdiag", "diagonal", "all", "xx", "xy", "yx", "yy"} \
-or sequence, default "offdiag"
-        Tensor components to smooth.  The default targets ``xy`` and ``yx``
+    components : str or sequence, default "offdiag"
+        Tensor components to smooth: one of ``"offdiag"``, ``"diagonal"``,
+        ``"all"``, ``"xx"``, ``"xy"``, ``"yx"``, ``"yy"``, or a sequence
+        of component names.  The default targets ``xy`` and ``yx``
         because they are the usual MT/CSAMT apparent-resistivity and phase
         components used for interpretation and 2-D preparation.
     degree : int, default 3

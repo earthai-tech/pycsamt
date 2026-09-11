@@ -27,8 +27,12 @@ __all__ = ["InversionResult"]
 
 # Stem patterns ModEM uses for model files (old convention: m0, m1, mi)
 _MODEL_STEM_RE = re.compile(r"^m(\d+|i)$", re.IGNORECASE)
-# Iteration number in real ModEM output names: Modular_NLCG_NNN
-_MODEM_ITER_RE = re.compile(r"_(\d+)$")
+# Iteration number in real ModEM output names: ``<stem>_NLCG_NNN`` /
+# ``Modular_NLCG_NNN``.  ModEM writes the counter with ``%03d``, so it is
+# always zero-padded to at least three digits.  Requiring three digits
+# stops a project stem such as ``BH_31`` from being mistaken for
+# "iteration 31" (which swaps the observed and predicted data files).
+_MODEM_ITER_RE = re.compile(r"_(\d{3,})$")
 
 
 def _stem(p: Path) -> str:

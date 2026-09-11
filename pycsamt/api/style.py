@@ -648,12 +648,90 @@ class RawDataStyle:
 # PhaseTensorEllipseStyle
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ── phase-tensor skew colormap (MTPy-style blue → white → red) ──────────────
+# A diverging map for the geoelectric skew / twist angle β (degrees), with a
+# clean white centre at 0° and vivid — but not neon — blue/red wings.  Close
+# in spirit to MTPy's ``mt_bl2wh2rd`` and easier to read than ``RdBu_r``,
+# whose extremes darken almost to black.  Registered under the names
+# ``"pt_skew"`` / ``"pt_skew_r"`` so it can be used like any other colormap
+# name (``cmap="pt_skew"``) throughout pyCSAMT and matplotlib.
+_PT_SKEW_STOPS: tuple[tuple[float, str], ...] = (
+    (0.00, "#1f5bbf"),  # strong blue (large negative skew) — not near-black
+    (0.20, "#4e8fdc"),
+    (0.38, "#93c1ea"),
+    (0.47, "#d8e8f6"),
+    (0.50, "#ffffff"),  # white — zero skew
+    (0.53, "#fadccb"),
+    (0.62, "#f0a079"),
+    (0.80, "#dd5a3c"),
+    (1.00, "#c02a26"),  # strong red (large positive skew)
+)
+
+
+# Absolute-skew |β| variant — the neutral→red half of ``pt_skew``, for a
+# sequential 0→max colour scale.
+_PT_SKEW_ABS_STOPS: tuple[tuple[float, str], ...] = (
+    (0.00, "#f2f5fa"),  # near-white (|β| ≈ 0)
+    (0.30, "#fadccb"),
+    (0.55, "#f0a079"),
+    (0.80, "#dd5a3c"),
+    (1.00, "#a01f1c"),  # deep red (large |β|)
+)
+
+
+def _register_pt_colormaps() -> tuple[str, str]:
+    """Register the phase-tensor colormaps; return their names.
+
+    Registers ``pt_skew`` / ``pt_skew_r`` (diverging, for signed skew β)
+    and ``pt_skew_abs`` / ``pt_skew_abs_r`` (sequential, for |β|), and
+    returns ``(diverging_name, absolute_name)``.  Safe to call
+    repeatedly.  Falls back to ``("RdBu_r", "Reds")`` when matplotlib is
+    unavailable or registration fails.
+    """
+    try:
+        import matplotlib as _mpl
+        from matplotlib.colors import LinearSegmentedColormap
+
+        base = LinearSegmentedColormap.from_list(
+            "pt_skew", [(pos, col) for pos, col in _PT_SKEW_STOPS]
+        )
+        base_abs = LinearSegmentedColormap.from_list(
+            "pt_skew_abs",
+            [(pos, col) for pos, col in _PT_SKEW_ABS_STOPS],
+        )
+        registry = getattr(_mpl, "colormaps", None)
+        for name, cm in (
+            ("pt_skew", base),
+            ("pt_skew_r", base.reversed()),
+            ("pt_skew_abs", base_abs),
+            ("pt_skew_abs_r", base_abs.reversed()),
+        ):
+            if registry is not None and name in registry:
+                continue  # already registered — idempotent
+            if registry is not None:
+                try:
+                    registry.register(cm, name=name)
+                    continue
+                except Exception:  # noqa: BLE001 — fall through to legacy
+                    pass
+            try:  # matplotlib < 3.5
+                _mpl.cm.register_cmap(name=name, cmap=cm)
+            except Exception:  # noqa: BLE001
+                if registry is None or name not in registry:
+                    return "RdBu_r", "Reds"
+        return "pt_skew", "pt_skew_abs"
+    except Exception:  # noqa: BLE001 — never break import over a colormap
+        return "RdBu_r", "Reds"
+
+
+_PT_SKEW_CMAP, _PT_SKEW_ABS_CMAP = _register_pt_colormaps()
+
 # Recognised c_by values and their natural cmaps / symmetry flag
 _PT_CMAP_DEFAULTS: dict[str, tuple[str, bool]] = {
-    "skew": ("RdBu_r", True),  # diverging — symmetric around 0
-    "beta": ("RdBu_r", True),
-    "|skew|": ("Reds", False),  # absolute → sequential
-    "|beta|": ("Reds", False),
+    "skew": (_PT_SKEW_CMAP, True),  # diverging — symmetric around 0
+    "beta": (_PT_SKEW_CMAP, True),
+    "|skew|": (_PT_SKEW_ABS_CMAP, False),  # absolute → sequential 0→max
+    "|beta|": (_PT_SKEW_ABS_CMAP, False),
     "theta": ("hsv", False),  # circular — 0–180°
     "|theta|": ("plasma", False),
     "ellipt": ("viridis", False),  # 0–1 sequential
@@ -662,7 +740,7 @@ _PT_CMAP_DEFAULTS: dict[str, tuple[str, bool]] = {
     "phi_min": ("plasma", False),
     "s1": ("plasma", False),
     "s2": ("plasma", False),
-    "alpha": ("coolwarm", True),
+    "alpha": (_PT_SKEW_CMAP, True),
 }
 
 
@@ -723,7 +801,7 @@ class PhaseTensorEllipseStyle:
         ``"skew"``, ``"beta"``, ``"|skew|"``, ``"|beta|"``,
         ``"theta"``, ``"|theta|"``, ``"ellipt"``, ``"phi_mean"``,
         ``"phi_max"``, ``"phi_min"``, ``"s1"``, ``"s2"``, ``"alpha"``.
-    cmap : str, default ``"RdBu_r"``
+    cmap : str or None, default ``None``
         Matplotlib colormap.  When ``None``, a sensible default is
         chosen automatically from *c_by* (e.g. ``"RdBu_r"`` for skewness,
         ``"viridis"`` for ellipticity, ``"hsv"`` for strike angle).
@@ -793,7 +871,7 @@ class PhaseTensorEllipseStyle:
 
     # ── fill colour ───────────────────────────────────────────────────────────
     c_by: str = "skew"
-    cmap: str | None = "RdBu_r"
+    cmap: str | None = None  # None → auto per c_by (skew → "pt_skew")
     clim: tuple[float, float] | None = None
     clim_pct: tuple[float, float] = (5.0, 95.0)
     symmetric_clim: bool = True

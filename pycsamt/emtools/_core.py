@@ -503,13 +503,14 @@ def ensure_sites(
     recursive : bool, default=True
         When walking directories, recurse into subfolders if the
         lower-level coercion utility supports it.
-    on_dup : {"replace", "keep_first", "keep_last", "raise"}, \
-default="replace"
-        Duplicate site-name policy. See
+    on_dup : str, default="replace"
+        Duplicate site-name policy: one of ``"replace"``, ``"keep_first"``,
+        ``"keep_last"``, ``"raise"``. See
         :func:`pycsamt.seg.base.to_sites` for semantics.
-    order_by : {"auto", "chainage", "input", "station", "latitude", \
-"longitude"}, optional
-        Site ordering policy. ``None`` uses the package-wide
+    order_by : str, optional
+        Site ordering policy: one of ``"auto"``, ``"chainage"``,
+        ``"input"``, ``"station"``, ``"latitude"``, ``"longitude"``.
+        ``None`` uses the package-wide
         :data:`pycsamt.api.PYCSAMT_ORDERING` setting. Automatic mode uses
         coordinate-derived profile chainage only when the coordinates pass a
         conservative single-line geometry check; otherwise input order is

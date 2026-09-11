@@ -14,7 +14,7 @@ from typing import (
 import numpy as np
 
 from ..log.logger import get_logger
-from .edi import EDIFile
+from .edi import EDIFile, _clean_station_id
 from .validation import IsEdi
 
 logger = get_logger(__name__)
@@ -203,7 +203,8 @@ class ParseMixin:
                         in_head = True
                         continue
                     if in_head and s.upper().startswith("DATAID="):
-                        return s.split("=", 1)[1].strip()
+                        raw_id = s.split("=", 1)[1].strip().strip('"')
+                        return _clean_station_id(raw_id)
         except Exception:
             return None
         return None

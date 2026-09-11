@@ -10,12 +10,15 @@ authors:
     given-names: Kouao Laurent
     orcid: "https://orcid.org/0000-0001-7259-7254"
     email: etanoyau@gmail.com
-version: 2.6.0
-date-released: 2026-09-07
+version: 2.6.1
+date-released: 2026-09-10
 url: "https://pycsamt.org"
 repository-code: "https://github.com/earthai-tech/pycsamt"
 license: LGPL-3.0-or-later
 identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22660675"
+    description: "Archived snapshot of version v2.6.0 on Zenodo."
   - type: doi
     value: "10.5281/zenodo.22160713"
     description: "Archived snapshot of version v2.5.1 on Zenodo."

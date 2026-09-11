@@ -92,7 +92,7 @@ The module is easiest to use as a sequence.
      - ``plot_rhoa_phi``
    * - survey image
      - Where are station-period anomalies?
-     - ``pseudosection``
+     - ``pseudosection``, ``PlotResPhasePseudoSection``
    * - tipper check
      - Is real tipper present and stable?
      - ``plot_tipper_components``
@@ -546,6 +546,170 @@ to a much stronger anomaly on another.
 If topography is configured globally, ``pseudosection`` can draw an
 optional topography strip. Pass ``topo=False`` when you want a compact
 data-only panel.
+
+Resistivity and Phase Pseudo-Sections
+--------------------------------------
+
+``pseudosection`` draws one quantity at a time. When you want the
+familiar MT layout -- apparent resistivity stacked above phase, one
+column per :term:`impedance tensor` component, every panel sharing the
+period axis and one colour scale --
+:class:`~pycsamt.emtools.PlotResPhasePseudoSection` assembles the whole
+figure in a single call.
+
+Each station's samples are snapped onto a log-spaced period grid of
+:math:`N` rows (``n_grid``, default 60). For grid row :math:`T_k` and
+station :math:`s` the cell takes the nearest observed period within
+0.3 decades,
+
+.. math::
+
+   P_c(T_k, s)
+   =
+   q_{c,s,j^\*},
+   \qquad
+   j^\* = \operatorname*{arg\,min}_j
+   \left| \log_{10} T_{s,j} - \log_{10} T_k \right|,
+
+and is left blank when no sample falls inside the window, so gapped or
+decimated stations stay visibly empty rather than being interpolated
+across. The grid ends are set from the half-decade period bins in which
+at least a fraction of the line's stations carry data, so one file's
+stray high-frequency segment cannot stretch the axis across empty
+decades. Resistivity is mapped as :math:`\log_{10}\rho_a` by default;
+the ``yx`` and ``yy`` phases are rotated by :math:`180^\circ` so a 1-D
+response plots near :math:`45^\circ` in every column.
+
+.. code-block:: pycon
+
+   >>> from pycsamt.emtools import PlotResPhasePseudoSection
+   >>> survey = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> len(survey)
+   28
+   >>> fig = PlotResPhasePseudoSection(
+   ...     survey,
+   ...     title="L18PLT -- apparent resistivity and phase",
+   ... ).plot()
+   >>> fig.savefig("l18plt_res_phase_pseudosection.png", dpi=160)
+
+With ``components=None`` every component that carries finite data is
+detected and drawn in canonical ``xy, yx, xx, yy`` order; L18PLT is a
+full-tensor line, so all four columns appear. The station names and the
+inverted-triangle markers come from
+:data:`~pycsamt.api.PYCSAMT_STATION_RENDERING`, so they match every
+other pyCSAMT section view.
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-15.png
+   :width: 100%
+
+The off-diagonal columns (:math:`Z_{xy}`, :math:`Z_{yx}`) carry the
+interpretable signal: a broad low-resistivity band that deepens toward
+one end of the line, with phase above :math:`45^\circ` over the
+conductor and below it over resistive blocks. The diagonal columns
+(:math:`Z_{xx}`, :math:`Z_{yy}`) are an order of magnitude weaker and
+mostly noise here -- their phase saturates against the colour limits --
+which is itself the diagnostic: a quasi-1-D or 2-D site has small
+diagonal terms, and columns that light up coherently instead point to
+3-D structure or a strike misalignment worth following up with the
+:doc:`dimensionality <dimensionality>` and :doc:`strike <strike>` tools.
+
+Panel Layout And The Station Axis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``res_phase_ratio`` sets the height of a resistivity panel relative to
+its phase panel. The default :math:`2/3` gives phase more room because
+phase resolves lateral contacts sharply; pass ``2.0`` for the opposite
+emphasis -- resistivity fills two-thirds of the row-pair and phase the
+remaining third -- or ``1.0`` for equal panels. ``components`` also
+fixes the column order: pass ``["yx", "xy"]`` to lead with the TM-like
+mode.
+
+``station_side`` controls where the station axis is drawn: ``"top"``
+(the default, matching the pyCSAMT section convention), ``"bottom"``,
+or ``"none"``. ``station_markers=False`` keeps only the names.
+``panel_labels=True`` tags each row-pair ``(a)``, ``(b)``, …, and
+``grid=True`` adds faint period grid lines.
+
+.. code-block:: pycon
+
+   >>> kap03 = ensure_sites("data/MT/kap03lmt_edis", strict=True)
+   >>> len(kap03)
+   26
+   >>> fig = PlotResPhasePseudoSection(
+   ...     kap03,
+   ...     components=["xy", "yx"],
+   ...     res_phase_ratio=2.0,
+   ...     station_side="top",
+   ...     title="KAP03 (LMT) -- apparent resistivity and phase",
+   ... ).plot()
+   >>> fig.savefig("kap03_res_phase_pseudosection.png", dpi=160)
+
+KAP03 is the bundled long-period (LMT) line from the MTPy sample data,
+recorded between roughly 30 and 20 000 s. With resistivity given twice
+the height of phase the deep structure dominates the figure: a
+persistent low-resistivity zone under the central stations (``kap145``
+to ``kap157``) with phase pinned near :math:`90^\circ`, flanked by
+resistive blocks where the phase drops below :math:`45^\circ`.
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-17.png
+   :width: 100%
+
+Stacking Several Lines
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Pass a mapping to stack lines as extra ``[resistivity, phase]``
+row-pairs, each with its own station axis. By default every pair is
+resampled onto one shared period grid and shares one resistivity colour
+scale (from the off-diagonal components) and one phase colour scale, so
+the lines are directly comparable.
+
+.. code-block:: pycon
+
+   >>> line18 = ensure_sites("data/AMT/WILLY_DATA/L18PLT", strict=True)
+   >>> line22 = ensure_sites("data/AMT/WILLY_DATA/L22PLT", strict=True)
+   >>> fig = PlotResPhasePseudoSection(
+   ...     {"L18PLT": line18, "L22PLT": line22},
+   ...     components=["xy", "yx"],
+   ...     panel_labels=True,
+   ... ).plot()
+   >>> fig.savefig("willy_two_line_res_phase.png", dpi=160)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-16.png
+   :width: 100%
+
+L18PLT and L22PLT are adjacent AMT lines over the same period band, so
+the shared axis and colour scale make the comparison immediate: both
+show a shallow resistive cap breaking down into a mid-period conductor,
+stronger and shallower under the northern half of L22PLT.
+
+When the lines come from different instruments their period bands
+barely overlap, and one shared axis wastes most of the figure. Set
+``share_period=False`` to give each group its own period window.
+
+.. code-block:: pycon
+
+   >>> fig = PlotResPhasePseudoSection(
+   ...     {"KAP03 (LMT)": kap03, "L18PLT (AMT)": line18},
+   ...     components=["xy", "yx"],
+   ...     res_phase_ratio=2.0,
+   ...     share_period=False,
+   ...     panel_labels=True,
+   ... ).plot()
+   >>> fig.savefig("kap03_l18_stacked.png", dpi=160)
+
+.. image:: ../../images/user_guide/emtools/user-guide-emtools-inspect-18.png
+   :width: 100%
+
+The long-period KAP03 conductor and the shallow, higher-frequency
+structure under L18PLT now each fill their own panel while still sharing
+one colour key.
+
+``phase_range`` accepts the presets ``"0-90"`` (default),
+``"-45-45"``, ``"-90-90"``, ``"-180-180"``, the string ``"auto"``
+(2nd/98th percentiles), or an explicit ``(vmin, vmax)`` tuple. A signed
+window makes out-of-quadrant phases -- 3-D effects, polarisation
+overprint, or a bad station -- stand out instead of being clipped to
+the edge of a :math:`0`--:math:`90^\circ` scale.
 
 Tipper Components
 -----------------

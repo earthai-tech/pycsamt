@@ -39,3 +39,10 @@ from pycsamt.api import read_edis
 
 survey = read_edis("data/MT/kap03lmt_edis", recursive=False)
 ```
+
+## Other MT datasets in this folder
+
+- `broken-hill/` — 21-station high-resolution 3-D broadband MT survey over
+  the Broken Hill Pb-Zn-Ag deposit, NSW (AlQahtani et al., 2026), with the
+  published ModEM data/response/residual files. See
+  `broken-hill/README.md`.

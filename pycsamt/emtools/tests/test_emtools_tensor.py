@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import matplotlib
 import numpy as np
+import pytest
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -494,3 +495,255 @@ def test_phase_tensor_psection_segmented_colors_and_artist_kwargs():
         "< -3", "-3 to 3", "> 3"
     ]
     plt.close("all")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# plot_phase_tensor_map_grid
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestPlotPhaseTensorMapGrid:
+    def _sites_and_coords(self, n: int = 6):
+        fr = _freqs(24, f_lo=1e-3, f_hi=1e3)
+        sites = [
+            _FakeSite(f"S{i:02d}", _3d_z(fr, skew_frac=0.5 + 0.1 * i), fr)
+            for i in range(n)
+        ]
+        coords = {}
+        for i, s in enumerate(sites):
+            lat = -31.9 - 0.01 * i
+            lon = 141.5 + 0.012 * (i % 3)
+            coords[s.station] = (lat, lon)
+            s.coords = (lat, lon, 250.0 + 8.0 * i)  # for topography=True
+        return sites, coords
+
+    def test_four_panels_from_frequencies(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            frequencies=[30, 3, 0.3, 0.03],
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        assert isinstance(fig, plt.Figure)
+        titled = [ax for ax in fig.axes if ax.get_title()]
+        assert len(titled) == 4
+        assert {ax.get_title() for ax in titled} == {
+            "30 Hz", "3 Hz", "0.3 Hz", "0.03 Hz"
+        }
+        plt.close("all")
+
+    def test_two_panels_and_period_labels(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            periods=[0.1, 10.0],
+            label_by="period",
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        titles = {ax.get_title() for ax in fig.axes if ax.get_title()}
+        assert any("s" in t or "ms" in t for t in titles)
+        assert len(titles) == 2
+        plt.close("all")
+
+    def test_shared_colorbar_is_single(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            frequencies=[10, 1, 0.1],
+            c_by="|beta|",
+            clim=(0, 6),
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        # 3 map panels + exactly one colorbar axis
+        panels = [ax for ax in fig.axes if ax.get_title()]
+        assert len(panels) == 3
+        cbars = [
+            ax for ax in fig.axes
+            if ax not in panels and ax.get_ylabel()
+        ]
+        assert len(cbars) == 1
+        plt.close("all")
+
+    def test_panel_labels_and_custom_ncols(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            frequencies=[10, 0.1],
+            n_cols=1,
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        texts = {
+            t.get_text()
+            for ax in fig.axes
+            for t in ax.texts
+        }
+        assert "(a)" in texts and "(b)" in texts
+        plt.close("all")
+
+    def test_requires_exactly_one_selector(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        with pytest.raises(ValueError, match="frequencies|periods"):
+            plot_phase_tensor_map_grid(sites, coords=coords)
+        with pytest.raises(ValueError, match="frequencies|periods"):
+            plot_phase_tensor_map_grid(
+                sites, frequencies=[1], periods=[1], coords=coords
+            )
+
+    def test_map_show_colorbar_toggle(self):
+        from pycsamt.emtools.tensor import plot_phase_tensor_map
+
+        sites, coords = self._sites_and_coords()
+        fig, ax = plt.subplots()
+        n_before = len(fig.axes)
+        plot_phase_tensor_map(
+            sites,
+            period=1.0,
+            coords=coords,
+            show_tipper=False,
+            show_colorbar=False,
+            ax=ax,
+            recursive=False,
+        )
+        assert len(fig.axes) == n_before  # no colorbar axis added
+        plt.close("all")
+
+    def _panel_ellipses(self, fig):
+        from matplotlib.patches import Ellipse
+
+        return [
+            p
+            for ax in fig.axes
+            if ax.get_title()
+            for p in ax.patches
+            if isinstance(p, Ellipse)
+        ]
+
+    def test_ellipse_scale_enlarges_ellipses(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        common = dict(
+            frequencies=[10, 0.1],
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+            ref_ellipse="none",
+        )
+        small = plot_phase_tensor_map_grid(sites, ellipse_scale=1.0, **common)
+        big = plot_phase_tensor_map_grid(sites, ellipse_scale=2.0, **common)
+        w_small = np.median([e.width for e in self._panel_ellipses(small)])
+        w_big = np.median([e.width for e in self._panel_ellipses(big)])
+        assert w_big > 1.7 * w_small
+        plt.close("all")
+
+    def test_abs_skew_uses_absolute_quantity(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            frequencies=[10, 0.1],
+            abs_skew=True,
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        labels = {ax.get_ylabel() for ax in fig.axes} | {
+            ax.get_xlabel() for ax in fig.axes
+        }
+        assert any("β" in lbl and "|" in lbl for lbl in labels)
+        plt.close("all")
+
+    def test_topography_csv_adds_elevation_background(self, tmp_path):
+        import pandas as pd
+
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        rows = [
+            {"lon": lon + dl, "lat": lat + dk, "elev": 250 + 40 * (dk + dl)}
+            for (lat, lon) in coords.values()
+            for dk in (-0.005, 0.005)
+            for dl in (-0.005, 0.005)
+        ]
+        csv = tmp_path / "dem.csv"
+        pd.DataFrame(rows).to_csv(csv, index=False)
+
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            frequencies=[10, 1, 0.1],
+            topography=str(csv),
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        labels = {ax.get_xlabel() for ax in fig.axes}
+        assert any("Elevation" in lbl for lbl in labels)
+        meshes = [
+            c
+            for ax in fig.axes
+            if ax.get_title()
+            for c in ax.collections
+            if c.__class__.__name__ in ("QuadMesh", "AxesImage")
+        ]
+        assert meshes
+        plt.close("all")
+
+    def test_topography_dict_passthrough(self):
+        from pycsamt.emtools import plot_phase_tensor_map_grid
+
+        sites, coords = self._sites_and_coords()
+        lon = np.linspace(141.49, 141.55, 8)
+        lat = np.linspace(-31.98, -31.90, 8)
+        bg = {
+            "lons": lon,
+            "lats": lat,
+            "values": np.random.default_rng(0).random((8, 8)) * 100,
+            "cmap": "terrain",
+            "alpha": 0.5,
+            "label": "Elevation (m)",
+        }
+        fig = plot_phase_tensor_map_grid(
+            sites,
+            frequencies=[10, 0.1],
+            topography=bg,
+            coords=coords,
+            show_tipper=False,
+            recursive=False,
+        )
+        assert isinstance(fig, plt.Figure)
+        plt.close("all")
+
+    def test_map_ellipse_scale_and_topography(self):
+        from pycsamt.emtools.tensor import plot_phase_tensor_map
+
+        sites, coords = self._sites_and_coords()
+        ax = plot_phase_tensor_map(
+            sites,
+            period=1.0,
+            coords=coords,
+            show_tipper=False,
+            ellipse_scale=1.5,
+            topography=True,
+            recursive=False,
+        )
+        assert ax is not None
+        plt.close("all")

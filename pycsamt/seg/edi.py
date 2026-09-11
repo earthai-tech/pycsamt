@@ -30,6 +30,24 @@ logger = get_logger(__name__)
 
 __all__ = ["EDIMixin", "EDIOMixin", "EDIFile"]
 
+#: Literal placeholders that acquisition/processing tools (EMpower,
+#: WinGLink, ...) write into ``DATAID`` when the station id is unset.
+#: Treated as "no id" so a folder of such files keys as distinct
+#: soundings instead of collapsing every one onto a single key.
+_NULLISH_STATION_IDS = frozenset(
+    {"", "none", "null", "na", "n/a", "nan", "-", "--", "unknown"}
+)
+
+
+def _clean_station_id(value: Any) -> str | None:
+    """Return a usable station id, or ``None`` for placeholder values."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() in _NULLISH_STATION_IDS:
+        return None
+    return text
+
 
 class EDIMixin(CoreObject):
     r"""
@@ -1441,9 +1459,19 @@ class EDIFile(EDIMixin, EDIOMixin):
 
     @property
     def station(self) -> str | None:
-        """Return DATAID from >HEAD if present."""
+        """Return the station id: ``>HEAD.DATAID``, else the file stem.
+
+        Some acquisition tools (EMpower, WinGLink) write a literal
+        ``None``/``NULL`` placeholder into ``DATAID``.  Those are treated
+        as missing and the filename stem is used instead, so a folder of
+        such files keys as distinct soundings rather than collapsing onto
+        one id.
+        """
         h = self.get_section("head")
-        return getattr(h, "dataid", None) if h else None
+        sid = _clean_station_id(getattr(h, "dataid", None) if h else None)
+        if sid is not None:
+            return sid
+        return self.path.stem if self.path else None
 
     @station.setter
     def station(self, value: str) -> None:

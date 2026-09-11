@@ -17,6 +17,8 @@ from pycsamt.emtools import (  # noqa: E402
     plot_dimensionality_grid,
     plot_dimensionality_psection,
     plot_ellipticity_psection,
+    plot_phase_tensor_map,
+    plot_phase_tensor_map_grid,
     plot_phase_tensor_psection,
     plot_phase_tensor_rose,
     plot_phase_tensor_skewmap,
@@ -29,6 +31,7 @@ from pycsamt.emtools import (  # noqa: E402
 
 IMAGES = ROOT / "docs/source/images/user_guide/emtools"
 L18PLT = ROOT / "data/AMT/WILLY_DATA/L18PLT"
+BROKEN_HILL = ROOT / "data/MT/broken-hill/edis"
 
 
 def make_simple_views_bundle() -> None:
@@ -152,7 +155,77 @@ def run_recommended_workflow() -> None:
     plt.close(fig)
 
 
+def make_map_grid_bundle() -> None:
+    """Write the geographic phase-tensor map figures used by the
+    "Geographic Phase-Tensor Map" and "Multi-Frequency Phase-Tensor
+    Maps" sections.
+
+    Uses the bundled 21-station Broken Hill MT survey
+    (``data/MT/broken-hill``): an areal layout with real vertical-field
+    data, so both the phase-tensor ellipses and the Parkinson induction
+    arrows carry information across the whole grid.
+    """
+    bh = ensure_sites(BROKEN_HILL, recursive=False)
+
+    # Single map: ellipse_scale and a station-elevation background.
+    plot_phase_tensor_map(
+        bh,
+        period=0.3,
+        c_by="skew",
+        show_tipper=True,
+        tipper_convention="parkinson",
+        ellipse_scale=1.4,
+        topography=True,
+        station_labels=False,
+        recursive=False,
+    )
+    plt.gcf().savefig(
+        IMAGES / "user-guide-emtools-tensor-map-topo.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close()
+
+    # Multi-frequency grid: signed skew on the pt_skew colormap.
+    fig = plot_phase_tensor_map_grid(
+        bh,
+        frequencies=[30.0, 3.0, 0.3, 0.03],
+        c_by="skew",
+        tipper_convention="parkinson",
+        ellipse_scale=1.3,
+        station_labels="none",
+        ref_ellipse="none",
+        suptitle="Broken Hill — phase tensor (skew) + Parkinson arrows",
+        recursive=False,
+    )
+    fig.savefig(
+        IMAGES / "user-guide-emtools-tensor-map-grid.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+
+    # Absolute-skew variant on the sequential pt_skew_abs colormap.
+    fig = plot_phase_tensor_map_grid(
+        bh,
+        frequencies=[30.0, 0.3],
+        abs_skew=True,
+        tipper_convention="parkinson",
+        station_labels="none",
+        ref_ellipse="none",
+        suptitle="Broken Hill — |skew| (2-D vs 3-D character)",
+        recursive=False,
+    )
+    fig.savefig(
+        IMAGES / "user-guide-emtools-tensor-map-grid-abs.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     make_simple_views_bundle()
     make_rose_stability_bundle()
     run_recommended_workflow()
+    make_map_grid_bundle()

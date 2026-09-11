@@ -32,6 +32,7 @@ foundation.
    prepare_modem_inversion
    prepare_mare2dem_inversion
    run_classical_inversions
+   model_broken_hill_mt_3d
    ai_inversion_from_corrected_edis
    essential_3d_ai_inversion
    map_porphyry_mineralization_from_noisy_amt

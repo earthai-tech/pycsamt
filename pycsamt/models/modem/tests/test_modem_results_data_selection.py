@@ -67,3 +67,25 @@ def test_only_a_rewrite_echo_is_still_used(tmp_path):
     r = InversionResult(tmp_path, load_models=False, load_covariance=False)
     assert r.data_obs is not None
     assert len(r.data_obs.site_names) == 4
+
+
+def test_project_stem_with_short_number_is_not_an_iteration(tmp_path):
+    """``BH_31.dat`` is a project name, not "iteration 31".
+
+    ModEM writes its iteration counter with ``%03d`` (``_030``), so a
+    stem ending in ``_<1-2 digits>`` must be treated as the observed
+    data, not as a numbered response -- otherwise the observed and
+    predicted files get swapped.
+    """
+    _write_dat(tmp_path / "BH_31.dat", decimals=4)  # real errors
+    pred = (tmp_path / "BH_31.dat").read_text().replace(
+        "1.000E+02\n", "1.000E+13\n"  # response file: masked errors
+    )
+    (tmp_path / "BH_31_NLCG_030.dat").write_text(pred)
+
+    r = InversionResult(tmp_path, load_models=False, load_covariance=False)
+    assert r.data_obs is not None and r.data_pred is not None
+    obs_err = r.data_obs.blocks[0]["rows"][0][8]
+    pred_err = r.data_pred.blocks[0]["rows"][0][8]
+    assert obs_err < 1e9  # observed keeps its real error floor
+    assert pred_err > 1e9  # predicted carries the masked sentinel

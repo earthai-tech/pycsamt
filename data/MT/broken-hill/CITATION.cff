@@ -1,0 +1,113 @@
+cff-version: 1.2.0
+message: >-
+  This folder redistributes the open-access Broken Hill magnetotelluric
+  data of AlQahtani et al. (2026) as example data for pyCSAMT. If you use
+  it, please cite BOTH the journal article (preferred-citation) AND the
+  Zenodo data release (references), as required by the CC-BY licence.
+title: "Broken Hill high-resolution 3-D magnetotelluric survey and ModEM model (2024)"
+type: dataset
+authors:
+  - family-names: AlQahtani
+    given-names: Yahya
+    affiliation: "School of Geosciences, University of Sydney, Australia"
+  - family-names: Özaydın
+    given-names: Sinan
+    email: sinan.ozaydin@sydney.edu.au
+    affiliation: "School of Geosciences, University of Sydney, Australia"
+  - family-names: Chatzaras
+    given-names: Vasileios
+    affiliation: "School of Geosciences, University of Sydney, Australia"
+  - family-names: Rey
+    given-names: Patrice F.
+    affiliation: "School of Geosciences, University of Sydney, Australia"
+  - family-names: Passos
+    given-names: Tiago
+    affiliation: "School of Geosciences, University of Sydney, Australia"
+license: CC-BY-4.0
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21091923"
+    description: "Zenodo concept DOI (always resolves to the latest version)."
+  - type: doi
+    value: "10.5281/zenodo.21272106"
+    description: "Zenodo data release v2 (2026-07-09): MT data and 3-D resistivity model."
+  - type: doi
+    value: "10.5281/zenodo.21091924"
+    description: >-
+      Zenodo data release v1 (2026-07-01) — cited in the article's reference
+      list. Byte-identical payload to v2 (MD5 9d5f7910da4e5dd8d3fc34376d9c3668);
+      v2 is a title/metadata-only re-release.
+  - type: doi
+    value: "10.1029/2026JB035666"
+    description: "Journal of Geophysical Research: Solid Earth article."
+keywords:
+  - magnetotellurics
+  - Broken Hill
+  - Curnamona Province
+  - mineral exploration
+  - electrical resistivity
+  - ModEM
+  - 3-D inversion
+preferred-citation:
+  type: article
+  title: >-
+    Why does the Broken Hill deposit sit in resistive crust? Magnetotelluric
+    evidence for metamorphic decoupling of a world-class mineral system
+  authors:
+    - family-names: AlQahtani
+      given-names: Yahya
+    - family-names: Özaydın
+      given-names: Sinan
+    - family-names: Chatzaras
+      given-names: Vasileios
+    - family-names: Rey
+      given-names: Patrice F.
+    - family-names: Passos
+      given-names: Tiago
+  journal: "Journal of Geophysical Research: Solid Earth"
+  volume: 131
+  issue: 9
+  year: 2026
+  doi: "10.1029/2026JB035666"
+  notes: "Article number e2026JB035666. Open access, CC-BY."
+references:
+  - type: data
+    title: >-
+      Open data for the article titled "Why does the Broken Hill deposit sit
+      in resistive crust? Magnetotelluric evidence for metamorphic decoupling
+      of a world-class mineral system"
+    authors:
+      - family-names: AlQahtani
+        given-names: Yahya
+      - family-names: Özaydın
+        given-names: Sinan
+      - family-names: Chatzaras
+        given-names: Vasileios
+      - family-names: Rey
+        given-names: Patrice F.
+      - family-names: Passos
+        given-names: Tiago
+    year: 2026
+    month: 7
+    publisher:
+      name: Zenodo
+    doi: "10.5281/zenodo.21272106"
+    notes: >-
+      Data release v2 (2026-07-09). Payload byte-identical to v1
+      (doi:10.5281/zenodo.21091924), which the article's reference list cites.
+      Concept DOI: 10.5281/zenodo.21091923.
+  - type: software
+    title: "ModEM: A modular system for inversion of electromagnetic geophysical data"
+    authors:
+      - family-names: Kelbert
+        given-names: Anna
+      - family-names: Meqbel
+        given-names: Naser
+      - family-names: Egbert
+        given-names: Gary D.
+      - family-names: Tandon
+        given-names: Kush
+    journal: "Computers & Geosciences"
+    volume: 66
+    year: 2014
+    doi: "10.1016/j.cageo.2014.01.010"

@@ -62,6 +62,22 @@ def test_coreparser_parse_file_and_dir(tmp_path: Path) -> None:
     assert pr.errors() == []
 
 
+def test_coreparser_nullish_dataid_falls_back_to_stem(tmp_path: Path) -> None:
+    # EMpower/WinGLink write a literal "None" into DATAID when unset; a
+    # folder of such files must not collapse onto one station key.
+    p1 = _mk_edi(tmp_path, "None", nf=2)
+    p1 = p1.rename(tmp_path / "BH_1_imp.edi")
+    p2 = _mk_edi(tmp_path, "None", nf=2)
+    p2 = p2.rename(tmp_path / "BH_2_imp_rev.edi")
+
+    assert EDIFile(p1).station == "BH_1_imp"
+    assert EDIFile(p2).station == "BH_2_imp_rev"
+
+    pr = CoreParser(recursive=True, strict=False, on_dup="replace")
+    items = pr.parse(tmp_path)
+    assert {ed.station for ed in items} == {"BH_1_imp", "BH_2_imp_rev"}
+
+
 def test_coreparser_glob_and_errors(tmp_path: Path) -> None:
     _mk_edi(tmp_path, "B1", nf=2)
     _mk_edi(tmp_path, "B2", nf=2)

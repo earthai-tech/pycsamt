@@ -51,6 +51,13 @@ task you need.
        through EDI, CSAMT-specific QC, Occam2D, and AI inversion.
      - K1/K2 EDIs, midpoint-corrected coordinates, processing decisions,
        and reproducible classical/AI run recipes.
+   * - :doc:`model_broken_hill_mt_3d`
+     - You want a complete real 3-D MT case study: raw EDIs, dimensionality
+       analysis, ModEM input, and a published inversion model read back and
+       interpreted against the geology.
+     - Station confidence, a phase-tensor map grid, ``InputBuilder``
+       output, and geo-referenced depth / conductance / section figures
+       of the AlQahtani et al. (2026) Broken Hill model.
    * - :doc:`ai_inversion_from_corrected_edis`
      - You have corrected EDIs and want to use AI inversion instead of, or
        alongside, classical inversion, and want to know whether to trust

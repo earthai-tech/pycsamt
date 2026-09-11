@@ -10,6 +10,173 @@ each release.
 
 ----
 
+.. _changelog-2-6-2:
+
+2.6.2 |Feature| |New| |Fix| |Docs|
+-----------------------------------
+
+*Released 2026-09-11.*
+
+An :mod:`pycsamt.ai.processing` release: four new learned tools --
+gap filling, uncertainty calibration, distortion-regime triage, and a
+raw-time-series denoiser -- and the subpackage's first full user
+guide, covering all eight tools. Building real examples against real
+data for the first time surfaced four bugs in already-released code,
+fixed here.
+
+Added
+~~~~~
+
+* |New| **Learned gap filling** --
+  :class:`pycsamt.ai.processing.imputer.EMImputer` reconstructs
+  genuinely missing (station, frequency) cells from the observed ones
+  via masked reconstruction (BERT / image-inpainting style): every
+  training step hides a random fraction of the truly-observed cells
+  and computes loss only there, so training data needs no real
+  missing-data examples with known ground truth.
+  :meth:`~pycsamt.ai.processing.imputer.EMImputer.apply` writes
+  reconstructed values only into cells genuinely missing on the input.
+  RMSE 0.32 vs. a 0.71 naive zero-fill baseline on real gapped data.
+
+* |New| **Learned uncertainty calibration** --
+  :class:`pycsamt.ai.processing.uncertainty.UncertaintyCalibrator`
+  regresses a fractional error :math:`|z_\text{err}|/|Z|` from
+  :class:`~pycsamt.ai.processing.qc.EMQCScorer`'s own per-cell
+  diagnostic features, then
+  :meth:`~pycsamt.ai.processing.uncertainty.UncertaintyCalibrator.apply`
+  rescales (not replaces) each cell's existing ``z_err`` toward the
+  calibrated level. ``snr`` was dropped from the feature set before
+  release -- it and the training target are built from the same pooled
+  terms and are near-perfectly correlated, letting the network learn
+  to invert one input column rather than a genuine relationship (a
+  deceptive 0.994 correlation collapsed to an honest 0.60 once
+  removed).
+
+* |New| **Distortion-regime triage** --
+  :class:`pycsamt.ai.processing.distortion.DistortionTypeClassifier`
+  labels each station clean / static-shift-only / distorted and routes
+  it toward :mod:`pycsamt.emtools.ss` or :mod:`pycsamt.emtools.gb`
+  rather than re-solving the physics -- the same role
+  :class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`
+  plays for dimensionality. Uses a spatial resistivity-trend deviation
+  in place of Groom-Bailey's own ``gain`` column, which the
+  decomposition's normalisation forces to exactly ``1.0`` every fit.
+
+* |New| **Raw time-series denoising (MMF-SVM-K-SVD)** --
+  :class:`pycsamt.ai.processing.tsdenoise.TimeSeriesDenoiser`
+  suppresses strong, non-stationary interference directly on a
+  :class:`~pycsamt.ts.TSData` record, TSData-in / TSData-out via
+  :meth:`~pycsamt.ai.processing.tsdenoise.TimeSeriesDenoiser.apply`,
+  before :func:`~pycsamt.ts.process.ts_to_spectra` Fourier-transforms
+  a contaminated segment. Three stages:
+  :func:`~pycsamt.ai.processing.tsdenoise.mmf_split` (mathematical
+  morphological filtering splits each channel into a low-frequency
+  envelope and a high-frequency residual);
+  :class:`~pycsamt.ai.processing.tsdenoise.SignalQualityClassifier` (a
+  linear-kernel SVM classifies windows of that residual clean/noisy
+  from four complexity features --
+  :func:`~pycsamt.ai.processing.tsdenoise.compute_entropy_features`:
+  sample/fuzzy/approximate entropy and box-counting dimension --
+  trained from
+  :func:`~pycsamt.ai.processing.tsdenoise.generate_synthetic_library`,
+  auto-calibrated to each channel's own robust background amplitude
+  rather than a fixed scale); and
+  :class:`~pycsamt.ai.processing.tsdenoise.KSVDDenoiser` (K-SVD
+  dictionary learning denoises only the flagged windows,
+  self-supervised from patches of the window itself).
+  :func:`~pycsamt.ai.processing.tsdenoise.snr_db` and
+  :func:`~pycsamt.ai.processing.tsdenoise.time_domain_ncc` reproduce
+  the paper's own validation metrics -- 16.9 dB SNR gain and NCC
+  0.37 -> 0.95 on a synthetic record with a known clean reference; a
+  real ~580-unit burst in the bundled ``data/MT/TS/kap103as.ts``
+  recording suppressed to ~4.8, near the channel's own background.
+
+* |New| **A ``history_`` property** on every network-based estimator
+  (:class:`~pycsamt.ai.processing.denoise.EMDenoiser`,
+  :class:`~pycsamt.ai.processing.anomaly.AnomalyDetector`,
+  :class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`,
+  and now :class:`~pycsamt.ai.processing.imputer.EMImputer` /
+  :class:`~pycsamt.ai.processing.uncertainty.UncertaintyCalibrator`),
+  recording per-epoch train/validation loss, plotted by the new shared
+  :func:`~pycsamt.ai.processing.plot.plot_training_history`.
+
+* |New| **23 new plotting functions** across
+  :mod:`pycsamt.ai.processing.plot` -- one page's worth for each of
+  the eight tools: 3 for anomaly detection, 3 for denoising, 2 for
+  dimensionality classification (plus a strike rose), 4 for gap
+  filling, 3 for uncertainty calibration, 3 for distortion triage,
+  and 3 for time-series denoising
+  (:func:`~pycsamt.ai.processing.plot.plot_ts_denoise_mmf_split`,
+  :func:`~pycsamt.ai.processing.plot.plot_ts_denoise_segments`,
+  :func:`~pycsamt.ai.processing.plot.plot_ts_denoise_summary`).
+
+Documentation
+~~~~~~~~~~~~~
+
+* |Docs| First full :mod:`pycsamt.ai.processing` user guide -- a
+  nine-page arc under :doc:`/user_guide/ai_processing/index` covering
+  all eight tools (the four above, plus
+  :doc:`/user_guide/ai_processing/qc`,
+  :doc:`/user_guide/ai_processing/denoise`,
+  :doc:`/user_guide/ai_processing/anomaly`, and
+  :doc:`/user_guide/ai_processing/classify`, shipped in earlier
+  releases without documentation), each with labelled equations, real
+  captured console output, and generated figures. 8 new glossary
+  entries and matching :doc:`/references` additions.
+* |Docs| :mod:`pycsamt.ai.processing.tsdenoise` added to
+  :doc:`/api/ai`.
+
+Fixed
+~~~~~
+
+* |Fix| **``prepare_z_features`` silently corrupted extracted features
+  for most stations in a survey** -- its frequency-grid interpolation
+  called :func:`numpy.interp` without sorting the source frequency
+  array first; real EDI/MT frequency arrays are conventionally stored
+  high-to-low, and ``numpy.interp`` returns wrong, non-``NaN`` values
+  with no error for a descending ``xp``. Every station except whichever
+  one happened to supply ``freq_ref`` (default: the first site) had its
+  :class:`~pycsamt.ai.processing.denoise.EMDenoiser` /
+  :class:`~pycsamt.ai.processing.anomaly.AnomalyDetector` features
+  silently flattened toward the reference station's own curve. Fixed by
+  sorting the source frequency array before interpolating.
+
+* |Fix| **A random-forest fallback could crash, or silently mis-map
+  its probabilities, on a rare class** -- when neither PyTorch nor
+  TensorFlow is installed,
+  :class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`'s
+  :class:`~sklearn.ensemble.RandomForestClassifier` fallback returns
+  one probability column per class *present in the training labels*,
+  not one per ``n_classes``; with a genuinely rare class, the returned
+  array can be narrower than the array the code assigned it into,
+  raising ``ValueError``. Fixed by mapping each returned column to its
+  actual class index explicitly, in both ``DimensionalityClassifier``
+  and the new ``DistortionTypeClassifier``.
+
+* |Fix| **``plot_qc_scores`` crashed on ``threshold_lw=0.0``** with a
+  multi-profile ``dict`` input -- a zero-width dashed legend handle was
+  still built for the hidden threshold line, which crashes Matplotlib's
+  legend renderer. Fixed by guarding the handle the same way as the
+  line itself.
+
+* |Fix| **``plot_qc_scores`` dropped custom ``station_labels`` for any
+  multi-profile comparison**, silently falling back to plain integer
+  ticks. Fixed to apply per-profile labels when their length matches.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+Every addition is backward compatible. The first fix above changes
+*values*, not signatures: :func:`~pycsamt.ai.processing.denoise
+.prepare_z_features` (and any :class:`EMDenoiser` / :class:`AnomalyDetector`
+model trained on its output) will produce different, now-correct
+numbers for a survey where the first site's frequency grid was not
+already the shared reference -- retrain rather than reuse a checkpoint
+trained before this release if that applied to your data. Nothing else
+changes behaviour for existing callers.
+
+----
+
 .. _changelog-2-6-1:
 
 2.6.1 |Feature| |New| |Fix| |Docs|

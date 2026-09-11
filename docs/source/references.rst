@@ -231,6 +231,50 @@ Deep learning and AI-assisted inversion
 
 ----
 
+Machine-learning signal processing and denoising
+----------------------------------------------------
+
+.. [Gui2024] Gui, T., Deng, J., Li, G., Chen, H., Yu, H., Feng, M. (2024). ‡
+   De-noising magnetotelluric data based on machine learning.
+   *Journal of Applied Geophysics*, 230, 105538.
+   https://doi.org/10.1016/j.jappgeo.2024.105538
+
+.. [Gui2021] Gui, T., Deng, J., Li, G., Liu, X., Chen, H., He, Z. (2021).
+   De-noising magnetotelluric data based on mathematical morphology and
+   K-SVD dictionary learning.
+   *Chinese Journal of Nonferrous Metals*, 31(12), 3713–3729 (in Chinese).
+
+.. [Aharon2006] Aharon, M., Elad, M., Bruckstein, A. (2006). ‡
+   K-SVD: An algorithm for designing overcomplete dictionaries for
+   sparse representation.
+   *IEEE Transactions on Signal Processing*, 54(11), 4311–4322.
+   https://doi.org/10.1109/TSP.2006.881199
+
+.. [Richman2000] Richman, J.S., Moorman, J.R. (2000). ‡
+   Physiological time-series analysis using approximate entropy and
+   sample entropy.
+   *American Journal of Physiology-Heart and Circulatory Physiology*,
+   278(6), H2039–H2049.
+   https://doi.org/10.1152/ajpheart.2000.278.6.H2039
+
+.. [Pincus1995] Pincus, S.M. (1995). ‡
+   Approximate entropy (ApEn) as a complexity measure.
+   *Chaos*, 5(1), 110–117.
+   https://doi.org/10.1063/1.166092
+
+.. [Chen2007] Chen, W., Wang, Z., Xie, H., Yu, W. (2007). ‡
+   Characterization of surface EMG signal based on fuzzy entropy.
+   *IEEE Transactions on Neural Systems and Rehabilitation Engineering*,
+   15(2), 266–272.
+   https://doi.org/10.1109/TNSRE.2007.897025
+
+.. [Tang2012] Tang, J., Li, J., Xiao, X., Zhang, L., Lv, Q. (2012).
+   Mathematical morphology filtering and noise suppression of
+   magnetotelluric sounding data.
+   *Chinese Journal of Geophysics*, 55(5), 1784–1793 (in Chinese).
+
+----
+
 Inversion algorithms and rock physics
 ---------------------------------------
 

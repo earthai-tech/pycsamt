@@ -12,6 +12,14 @@ and links to the public API. The same workflows are also available as
 runnable gallery examples in :ref:`EM tools examples <emtools_examples>`. For
 the complete callable reference, see :doc:`../../api/emtools`.
 
+Every rule-based tool here has a trained, machine-learning counterpart in
+:mod:`pycsamt.ai.processing`, documented separately as
+:doc:`../ai_processing/index`: an :term:`isolation forest` complementing
+:doc:`qc`'s confidence ratio, an :term:`autoencoder` complementing
+:doc:`remove_noise`'s filters, and a
+:term:`multi-layer perceptron` complementing
+:doc:`dimensionality`'s threshold rule.
+
 .. toctree::
    :maxdepth: 3
    :class: pycsamt-guide-toc
@@ -42,3 +50,4 @@ the complete callable reference, see :doc:`../../api/emtools`.
    plot
    advanced
    diag
+   ../ai_processing/index

@@ -28,6 +28,14 @@ Input tensor shape
 
 * ``n_components = 4`` (default) → ``[log|Zxy|, \\phi_{xy}, log|Zyx|, \\phi_{yx}]``
 * ``n_components = 8`` → all four impedance tensor components
+
+Working directly with site collections
+---------------------------------------
+:meth:`EMDenoiser.apply` accepts and returns a site collection
+directly -- extracting features, denoising, and writing the
+reconstructed impedance back onto each station's own frequency grid --
+so the network can be dropped into the same sites-in / sites-out chain
+as the rule-based functions in :mod:`pycsamt.emtools.remove_noise`.
 """
 
 from __future__ import annotations
@@ -132,10 +140,8 @@ def prepare_z_features(
         if freq_grid is not fr:
             mat_interp = np.full((mat.shape[0], len(freq_grid)), np.nan)
             for ci in range(mat.shape[0]):
-                mat_interp[ci] = np.interp(
-                    np.log10(freq_grid + 1e-30),
-                    np.log10(fr + 1e-30),
-                    mat[ci],
+                mat_interp[ci] = _interp_channel_to_grid(
+                    mat[ci], fr, freq_grid
                 )
             mat = mat_interp
 
@@ -147,6 +153,66 @@ def prepare_z_features(
     return np.stack(rows, axis=0).astype(
         np.float32
     )  # (n_sites, n_comp, n_freqs)
+
+
+def _interp_channel_to_grid(
+    values: np.ndarray, src_freq: np.ndarray, dst_freq: np.ndarray
+) -> np.ndarray:
+    """
+    Interpolate one feature channel from *src_freq* onto *dst_freq*.
+
+    Interpolation happens in log10-frequency space. ``numpy.interp``
+    requires its ``xp`` argument strictly increasing; real EDI/MT
+    frequency arrays are conventionally stored high-to-low
+    (descending), so *src_freq* is sorted ascending here first.
+    Skipping this silently returns *wrong, non-NaN* values with no
+    error or warning -- verified directly: querying a descending grid
+    at its own sample points returns neighbouring values, not the
+    sampled ones (``np.interp([10, 8, 6], [10, 8, 6], [1, 2, 3])``
+    returns ``[3, 3, 1]``, not ``[1, 2, 3]``).
+    """
+    log_src = np.log10(np.asarray(src_freq, dtype=float) + 1e-30)
+    log_dst = np.log10(np.asarray(dst_freq, dtype=float) + 1e-30)
+    order = np.argsort(log_src)
+    return np.interp(log_dst, log_src[order], np.asarray(values)[order])
+
+
+def _reconstruct_z_block(
+    z: np.ndarray,
+    fr: np.ndarray,
+    freq_ref: np.ndarray,
+    feat: np.ndarray,
+    n_components: int,
+    log_amp: bool,
+) -> np.ndarray:
+    """
+    Invert :func:`prepare_z_features`'s packing for one site.
+
+    Writes the modelled components back onto that site's own
+    frequency grid *fr* and leaves every other component of *z*
+    untouched. Used by :meth:`EMDenoiser.apply`.
+    """
+    z2 = z.copy()
+
+    def _interp(row: np.ndarray) -> np.ndarray:
+        return _interp_channel_to_grid(row, freq_ref, fr)
+
+    def _amp(row: np.ndarray) -> np.ndarray:
+        row = _interp(row)
+        return 10.0**row if log_amp else row
+
+    log_xy, phi_xy = _amp(feat[0]), _interp(feat[1])
+    log_yx, phi_yx = _amp(feat[2]), _interp(feat[3])
+    z2[:, 0, 1] = log_xy * np.exp(1j * np.deg2rad(phi_xy))
+    z2[:, 1, 0] = log_yx * np.exp(1j * np.deg2rad(phi_yx))
+
+    if n_components == 8:
+        log_xx, phi_xx = _amp(feat[4]), _interp(feat[5])
+        log_yy, phi_yy = _amp(feat[6]), _interp(feat[7])
+        z2[:, 0, 0] = log_xx * np.exp(1j * np.deg2rad(phi_xx))
+        z2[:, 1, 1] = log_yy * np.exp(1j * np.deg2rad(phi_yy))
+
+    return z2
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -295,7 +361,9 @@ class EMDenoiser(BaseEMProcessor):
     back to a per-channel Gaussian smoothing filter (requires scipy).
 
     Call :func:`prepare_z_features` to convert a site collection to the
-    ``(n_samples, n_components, n_freqs)`` array expected here.
+    ``(n_samples, n_components, n_freqs)`` array expected here, or use
+    :meth:`apply` to go straight from a site collection to a corrected
+    one without handling the array form yourself.
 
     Examples
     --------
@@ -305,6 +373,12 @@ class EMDenoiser(BaseEMProcessor):
     >>> den.fit(X_clean, epochs=5, verbose=False)  # doctest: +SKIP
     EMDenoiser(n_freqs=32, n_components=4)
     >>> X_denoised = den.transform(X_clean)  # doctest: +SKIP
+
+    Sites in, corrected sites out — the same convention used by
+    rule-based functions such as
+    :func:`~pycsamt.emtools.remove_noise.notch_powerline`:
+
+    >>> clean_sites = den.apply(sites)  # doctest: +SKIP
     """
 
     def __init__(
@@ -471,6 +545,117 @@ class EMDenoiser(BaseEMProcessor):
                 out = self._network(t).cpu().numpy()
 
         return out * self._x_std + self._x_mean
+
+    # ─── sites-in / sites-out ──────────────────────────────────────────────
+
+    def apply(
+        self,
+        sites: Any,
+        *,
+        freq_ref: np.ndarray | None = None,
+        log_amp: bool = True,
+        inplace: bool = False,
+        recursive: bool = True,
+        on_dup: str = "replace",
+        strict: bool = False,
+        verbose: int = 0,
+    ) -> Any:
+        """
+        Denoise a site collection's impedance tensor in place.
+
+        Extracts features with :func:`prepare_z_features`, denoises
+        them with :meth:`transform`, then writes the reconstructed
+        impedance back onto each site's own frequency grid — the same
+        sites-in / sites-out convention used by rule-based correction
+        functions such as
+        :func:`~pycsamt.emtools.remove_noise.notch_powerline`
+        (mutate ``Z.z``, hand the mutation to a shared
+        copy-or-mutate-in-place helper).
+
+        Parameters
+        ----------
+        sites : SiteCollection or compatible
+        freq_ref : ndarray or None
+            Common frequency grid (Hz) the network was trained on.
+            Must match the grid used to prepare the training data —
+            when ``None`` (the default), the first site's own grid is
+            used, matching :func:`prepare_z_features`'s own default.
+            Pass the same explicit array at both training-data
+            preparation time and here whenever *sites* is not the
+            exact collection the model was trained on.
+        log_amp : bool, default ``True``
+            Must match the ``log_amp`` used to build the training
+            features.
+        inplace : bool, default ``False``
+            When ``False`` (the default), *sites* is left untouched
+            and a corrected copy is returned. When ``True``, *sites*
+            is modified in place and returned.
+        recursive, on_dup, strict, verbose
+            Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+        Returns
+        -------
+        corrected : Sites
+            A site collection with the same stations, with each
+            station's ``Z.z`` replaced by the network's denoised
+            reconstruction. Tensor components not modelled by
+            ``n_components`` — the diagonal :math:`Z_{xx}, Z_{yy}`
+            when ``n_components=4`` — are left untouched.
+
+        Examples
+        --------
+        >>> den = EMDenoiser().fit(X_clean, epochs=60)  # doctest: +SKIP
+        >>> clean_sites = den.apply(sites)  # doctest: +SKIP
+        """
+        if not self._is_fitted:
+            raise RuntimeError("Call fit() before apply().")
+
+        try:
+            from pycsamt.emtools._core import (
+                _apply_each,
+                _get_z_block,
+                _iter_items,
+                ensure_sites,
+            )
+        except ImportError as exc:
+            raise ImportError(
+                "emtools is required for EMDenoiser.apply()"
+            ) from exc
+
+        S = ensure_sites(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+
+        if freq_ref is None:
+            first_ed = next(_iter_items(S))
+            _, _, freq_ref = _get_z_block(first_ed, with_errors=False)[:3]
+
+        X = prepare_z_features(
+            S,
+            n_components=self.n_components,
+            log_amp=log_amp,
+            freq_ref=freq_ref,
+        )
+        X_den = self.transform(X)
+
+        site_idx = iter(range(len(X_den)))
+
+        def _one(Si):
+            i = next(site_idx)
+            ed = next(_iter_items(Si))
+            Z, z, fr = _get_z_block(ed, with_errors=False)[:3]
+            if z is None:
+                return Si
+            Z.z = _reconstruct_z_block(
+                z, fr, freq_ref, X_den[i], self.n_components, log_amp
+            )
+            return Si
+
+        return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
     # ─── internal training paths ──────────────────────────────────────────
 
@@ -657,6 +842,22 @@ class EMDenoiser(BaseEMProcessor):
             )
         set_weights(self._network, weights)
         self._is_fitted = True
+
+    @property
+    def history_(self) -> dict[str, list]:
+        """
+        Training history recorded by the last :meth:`fit` call.
+
+        Returns
+        -------
+        history : dict
+            ``{"train_loss": [...], "val_loss": [...]}``, one value per
+            epoch.  Empty when the scipy Gaussian fallback was used
+            (no epoch loop) or before :meth:`fit` has been called.  Pass
+            directly to
+            :func:`~pycsamt.ai.processing.plot.plot_training_history`.
+        """
+        return dict(self._history)
 
     def __repr__(self) -> str:
         status = "fitted" if self._is_fitted else "unfitted"

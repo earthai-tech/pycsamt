@@ -33,6 +33,27 @@ Latest release
 
 .. _changelog-latest:
 
+**2.6.2** — *2026-09-11* — an :mod:`pycsamt.ai.processing` release.
+Four new learned tools: **gap filling**
+(:class:`~pycsamt.ai.processing.imputer.EMImputer`, masked
+reconstruction of genuinely missing cells), **uncertainty calibration**
+(:class:`~pycsamt.ai.processing.uncertainty.UncertaintyCalibrator`,
+learned per-cell error-floor re-estimation), **distortion-regime
+triage** (:class:`~pycsamt.ai.processing.distortion.DistortionTypeClassifier`,
+routes each station to :mod:`~pycsamt.emtools.ss` or
+:mod:`~pycsamt.emtools.gb`), and **raw time-series denoising**
+(:class:`~pycsamt.ai.processing.tsdenoise.TimeSeriesDenoiser`, the
+MMF-SVM-K-SVD method of Gui et al. (2024), working TSData-in /
+TSData-out one stage upstream of the impedance tensor). Plus the
+subpackage's first full user guide (nine pages, all eight tools) and
+four bug fixes in already-released code surfaced while building it,
+including a silent feature-corruption bug in ``prepare_z_features``
+affecting most stations in any
+:class:`~pycsamt.ai.processing.denoise.EMDenoiser` /
+:class:`~pycsamt.ai.processing.anomaly.AnomalyDetector` survey.
+:ref:`Full 2.6.2 entry <changelog-2-6-2>` · :ref:`Release notes
+<release_v2_6_2>`.
+
 **2.6.1** — *2026-09-10* — a magnetotelluric-visualisation release. New
 :class:`pycsamt.emtools.PlotResPhasePseudoSection` (MTPy-style apparent
 resistivity above phase, one column per component, stacked site groups,
@@ -51,17 +72,6 @@ like ``BH_31`` for iteration 31; two ``emtools`` docstrings that broke
 the Sphinx build are repaired.
 :ref:`Full 2.6.1 entry <changelog-2-6-1>` · :ref:`Release notes
 <release_v2_6_1>`.
-
-**2.6.0** — *2026-09-07* — a feature release: **boreholes in Map View**
-(a Boreholes rail + Borehole Studio importing ``.pcbh.json`` / interval
-CSV / ``.xlsx`` / a hand-built table, placed as projected tubes in the
-3-D scene), a **geology interpretation legend** (PCGL resistivity → rock
-legend as a hard-stepped colour scale, PCGS structural evidence),
-**PCPT** points and targets, **post-inversion data-fit diagnostics for
-ModEM** (:class:`pycsamt.models.modem.plot.PlotDataFit` /
-``PlotMisfitMap``), and a Map View 3-D scene that holds its camera
-across control changes. See the :ref:`full 2.6.0 entry
-<changelog-2-6-0>` and :ref:`release notes <release_v2_6_0>`.
 
 **2.5.2** — *2026-09-01* — a patch release. Converting a real,
 independent third-party ModEM 3-D inversion to PCSF and exercising every

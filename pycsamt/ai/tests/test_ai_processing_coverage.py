@@ -339,6 +339,33 @@ def test_dim_classifier_save_load_round_trip_rf(tmp_path, monkeypatch):
     assert "rf" in repr(loaded)
 
 
+def test_dim_classifier_rf_proba_maps_missing_class_columns():
+    """RandomForestClassifier.predict_proba only returns a column per
+    class actually seen in training -- with a class entirely absent
+    from ``y``, ``_predict_proba`` must still return an
+    (n_samples, n_classes) array with that column near-zero rather
+    than raising a shape-mismatch error."""
+    pytest.importorskip("sklearn")
+    from pycsamt.ai.processing.classify import DimensionalityClassifier
+
+    X, y, _ = _dim_Xy(n=60)
+    y = np.where(y == 0, 1, y)  # drop class 0 ("1D") entirely
+    assert set(np.unique(y)) == {1, 2}
+
+    clf = DimensionalityClassifier()
+    Xn = (X - X.mean(0, keepdims=True)) / (X.std(0, keepdims=True) + 1e-8)
+    clf._x_mean = X.mean(0, keepdims=True)
+    clf._x_std = X.std(0, keepdims=True) + 1e-8
+    clf._fit_rf(Xn, y, verbose=False)
+    clf._use_rf = True
+    clf._is_fitted = True
+
+    proba = clf.transform(X)
+    assert proba.shape == (len(X), clf.n_classes)
+    np.testing.assert_allclose(proba.sum(axis=1), 1.0, atol=1e-6)
+    assert np.all(proba[:, 0] < 1e-6)  # missing class carries no mass
+
+
 def test_dim_classifier_predict_table_from_sites(sites):
     from pycsamt.ai.processing.classify import DimensionalityClassifier
 
@@ -439,6 +466,259 @@ def test_plot_qc_summary_dict_and_dataframe_inputs():
     df = _qc_full_dataframe()
     fig2 = plot_qc_summary(df, spread_kind="strip")
     plt.close(fig2)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# distortion.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _distortion_Xy(n=60, seed=11):
+    rng = np.random.default_rng(seed)
+    X = np.zeros((n, 6), dtype=np.float32)
+    X[:, 0] = rng.uniform(0, 5, n)  # beta_abs
+    X[:, 1] = rng.uniform(0, 1, n)  # ellipt_abs
+    X[:, 2] = rng.normal(0, 0.3, n)  # delta_log10_rho
+    X[:, 3] = rng.uniform(-30, 30, n)  # twist_deg
+    X[:, 4] = rng.uniform(-0.5, 0.5, n)  # shear
+    X[:, 5] = rng.uniform(-0.1, 0.1, n)  # anisotropy
+    from pycsamt.ai.processing.distortion import _rule_labels
+
+    y = _rule_labels(X[:, 2], X[:, 3], X[:, 4])
+    return X, y
+
+
+def test_distortion_classifier_fit_transform_predict_torch():
+    from pycsamt.ai.processing.distortion import DistortionTypeClassifier
+
+    X, y = _distortion_Xy()
+    clf = DistortionTypeClassifier(hidden=(16, 8), dropout=0.0)
+    clf.fit(X, y, epochs=5, verbose=False)
+    assert clf._backend_name == "torch"
+
+    proba = clf.transform(X)
+    assert proba.shape == (len(X), clf.n_classes)
+    np.testing.assert_allclose(proba.sum(axis=1), 1.0, atol=1e-5)
+
+    labels = clf.predict(X)
+    assert set(np.unique(labels)).issubset({0, 1, 2})
+    assert "torch" in repr(clf)
+    assert clf.history_["train_loss"]
+
+
+def test_distortion_classifier_save_load_round_trip_torch(tmp_path):
+    from pycsamt.ai.processing.distortion import DistortionTypeClassifier
+
+    X, y = _distortion_Xy()
+    clf = DistortionTypeClassifier(hidden=(16, 8), dropout=0.0)
+    clf.fit(X, y, epochs=5, verbose=False)
+    proba_before = clf.transform(X)
+
+    path = tmp_path / "distortion_torch.npz"
+    clf.save(path)
+    loaded = DistortionTypeClassifier.load(path)
+    proba_after = loaded.transform(X)
+    np.testing.assert_allclose(proba_before, proba_after)
+
+
+def test_distortion_classifier_rf_proba_maps_missing_class_columns():
+    """Same RandomForestClassifier.predict_proba column-mapping bug as
+    DimensionalityClassifier's RF fallback: with a class entirely
+    absent from ``y``, ``_predict_proba`` must still return an
+    (n_samples, n_classes) array rather than raising a shape-mismatch
+    error."""
+    pytest.importorskip("sklearn")
+    from pycsamt.ai.processing.distortion import DistortionTypeClassifier
+
+    X, y = _distortion_Xy()
+    y = np.where(y == 0, 1, y)  # drop class 0 ("clean") entirely
+    assert set(np.unique(y)) == {1, 2}
+
+    clf = DistortionTypeClassifier()
+    clf._x_mean = X.mean(0, keepdims=True)
+    clf._x_std = X.std(0, keepdims=True) + 1e-8
+    Xn = (X - clf._x_mean) / clf._x_std
+    clf._fit_rf(Xn, y, verbose=False)
+    clf._use_rf = True
+    clf._is_fitted = True
+
+    proba = clf.transform(X)
+    assert proba.shape == (len(X), clf.n_classes)
+    np.testing.assert_allclose(proba.sum(axis=1), 1.0, atol=1e-6)
+    assert np.all(proba[:, 0] < 1e-6)  # missing class carries no mass
+
+
+def test_distortion_classifier_predict_table_from_sites(sites):
+    from pycsamt.ai.processing.distortion import DistortionTypeClassifier
+
+    X, y = _distortion_Xy()
+    clf = DistortionTypeClassifier(hidden=(16, 8), dropout=0.0)
+    clf.fit(X, y, epochs=3, verbose=False)
+
+    tbl = clf.predict_table(sites)
+    if tbl.empty:
+        pytest.skip("3edis dataset lacks a full GB + SS + phase overlap.")
+    assert {"station", "regime", "regime_label", "confidence"}.issubset(
+        tbl.columns
+    )
+    assert set(tbl["regime_label"].unique()).issubset(
+        {"clean", "static_shift_only", "distorted"}
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# uncertainty.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _uncertainty_Xy_table(n=200, seed=13):
+    """A synthetic features table shaped like
+    build_uncertainty_features_table's output, with a genuine (not
+    circular) relationship between the four model features and
+    z_err_frac -- larger swift_skew/asym/phase spread -> larger
+    error -- so the regressor has real signal to find."""
+    rng = np.random.default_rng(seed)
+    swift = rng.uniform(0, 1, n)
+    asym = rng.uniform(-1, 1, n)
+    phase_xy = rng.uniform(0, 90, n)
+    phase_yx = rng.uniform(-180, -90, n)
+    noise_level = 0.02 + 0.08 * swift + 0.01 * np.abs(asym)
+    z_err_frac = np.clip(
+        noise_level + rng.normal(0, 0.005, n), 0.005, None
+    )
+    # snr deliberately built as 1/z_err_frac, matching the real
+    # circularity build_uncertainty_features_table produces, so the
+    # excluded-column regression test below is a faithful check.
+    snr = 1.0 / z_err_frac
+    return pd.DataFrame(
+        {
+            "station": [f"S{i:03d}" for i in range(n)],
+            "freq": rng.uniform(1, 1e4, n),
+            "snr": snr,
+            "swift_skew": swift,
+            "asym": asym,
+            "phase_xy": phase_xy,
+            "phase_yx": phase_yx,
+            "z_err_frac": z_err_frac,
+        }
+    )
+
+
+def test_uncertainty_calibrator_excludes_snr_feature():
+    """snr = amp/err and z_err_frac = err/amp share the same amp/err
+    terms in the real feature table -- snr must never reach the
+    regressor's input matrix."""
+    from pycsamt.ai.processing.uncertainty import (
+        _FEATURE_COLS,
+        _TABLE_COLS,
+        UncertaintyCalibrator,
+    )
+
+    assert "snr" not in _FEATURE_COLS
+    assert "snr" in _TABLE_COLS
+    assert UncertaintyCalibrator().n_features == len(_FEATURE_COLS) == 4
+
+    df = _uncertainty_Xy_table(n=20)
+    cal = UncertaintyCalibrator()
+    X, _y = cal._coerce_Xy(df, None)
+    assert X.shape[1] == 4
+
+
+def test_uncertainty_calibrator_fit_transform_torch():
+    from pycsamt.ai.processing.uncertainty import UncertaintyCalibrator
+
+    df = _uncertainty_Xy_table()
+    cal = UncertaintyCalibrator(hidden=(16, 8), dropout=0.0)
+    cal.fit(df, epochs=40, seed=0, verbose=False)
+    assert cal._backend_name == "torch"
+
+    pred = cal.transform(df)
+    assert pred.shape == (len(df),)
+    assert np.all(pred > 0)  # fractional error must stay positive
+
+    corr = np.corrcoef(
+        np.log10(df["z_err_frac"].to_numpy()), np.log10(pred)
+    )[0, 1]
+    assert corr > 0.5, f"expected real predictive signal, got corr={corr}"
+    assert "torch" in repr(cal)
+    assert cal.history_["train_loss"]
+
+
+def test_uncertainty_calibrator_save_load_round_trip_torch(tmp_path):
+    from pycsamt.ai.processing.uncertainty import UncertaintyCalibrator
+
+    df = _uncertainty_Xy_table()
+    cal = UncertaintyCalibrator(hidden=(16, 8), dropout=0.0)
+    cal.fit(df, epochs=20, seed=0, verbose=False)
+    pred_before = cal.transform(df)
+
+    path = tmp_path / "uncertainty_torch.npz"
+    cal.save(path)
+    loaded = UncertaintyCalibrator.load(path)
+    pred_after = loaded.transform(df)
+    np.testing.assert_allclose(pred_before, pred_after)
+    assert loaded._log_target == cal._log_target
+
+
+def test_uncertainty_calibrator_save_load_round_trip_rf(tmp_path, monkeypatch):
+    pytest.importorskip("sklearn")
+    import pycsamt.ai.processing.uncertainty as unc_mod
+
+    monkeypatch.setattr(
+        unc_mod.UncertaintyCalibrator,
+        "_fit_torch",
+        lambda self, Xn, y, **kwargs: (_ for _ in ()).throw(
+            ImportError("no torch")
+        ),
+    )
+    df = _uncertainty_Xy_table()
+    cal = unc_mod.UncertaintyCalibrator()
+    cal.fit(df, epochs=10, verbose=False)
+    assert cal._use_rf is True
+    pred_before = cal.transform(df)
+
+    path = tmp_path / "uncertainty_rf.npz"
+    cal.save(path)
+    loaded = unc_mod.UncertaintyCalibrator.load(path)
+    assert loaded._use_rf is True
+    pred_after = loaded.transform(df)
+    np.testing.assert_allclose(pred_before, pred_after)
+    assert "rf" in repr(loaded)
+
+
+def test_uncertainty_calibrator_fit_requires_target():
+    from pycsamt.ai.processing.uncertainty import UncertaintyCalibrator
+
+    cal = UncertaintyCalibrator()
+    with pytest.raises(ValueError, match="z_err_frac"):
+        cal.fit(np.random.default_rng(0).standard_normal((10, 4)))
+
+    df = _uncertainty_Xy_table(n=10).drop(columns=["z_err_frac"])
+    with pytest.raises(ValueError, match="z_err_frac"):
+        cal.fit(df)
+
+
+def test_uncertainty_calibrator_predict_table_and_apply(sites):
+    from pycsamt.ai.processing.uncertainty import (
+        UncertaintyCalibrator,
+        build_uncertainty_features_table,
+    )
+
+    feats = build_uncertainty_features_table(sites)
+    if feats.empty:
+        pytest.skip("3edis dataset has no usable z_err.")
+
+    cal = UncertaintyCalibrator(hidden=(16, 8), dropout=0.0)
+    cal.fit(feats, epochs=15, seed=0, verbose=False)
+
+    table = cal.predict_table(sites)
+    assert {"station", "freq", "z_err_frac", "z_err_frac_calibrated"}.issubset(
+        table.columns
+    )
+    assert (table["z_err_frac_calibrated"] > 0).all()
+
+    calibrated = cal.apply(sites, inplace=False)
+    assert len(list(calibrated)) == len(list(sites))
 
 
 if __name__ == "__main__":

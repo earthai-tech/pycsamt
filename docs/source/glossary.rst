@@ -704,11 +704,15 @@ definitions here are the single source of truth.
    Dictionary learning
    Sparse coding
       An unsupervised technique that represents a set of feature vectors
-      (for example phase-tensor :term:`Skew`, ellipticity, determinant
-      :term:`apparent resistivity`, and tipper amplitude) as sparse linear
-      combinations of a small learned set of atoms. In pyCSAMT it classifies
-      station-period rows by dimensionality or noise behaviour without
-      predefined thresholds, complementing skew- and ellipticity-based rules.
+      as sparse linear combinations of a small learned set of atoms. In
+      pyCSAMT it classifies station-period rows (phase-tensor
+      :term:`Skew`, ellipticity, determinant :term:`apparent resistivity`,
+      tipper amplitude) by dimensionality or noise behaviour without
+      predefined thresholds, complementing skew- and ellipticity-based
+      rules -- and, applied instead to overlapping patches of a raw
+      time-series channel via K-SVD, learns atoms that sparsely represent
+      strong interference specifically, which
+      :doc:`user_guide/ai_processing/ts_denoise` subtracts to denoise.
 
    Porphyry
    Porphyry deposit
@@ -1899,6 +1903,102 @@ definitions here are the single source of truth.
       usually shown as training and validation loss versus epoch. A decreasing
       curve indicates optimization progress, but final scientific acceptance
       still requires response-space checks and uncertainty review.
+
+   Autoencoder
+      A neural network trained to reconstruct its own input through a
+      bottleneck (a lower-dimensional latent representation), minimizing
+      :math:`\|\mathbf{x}-\hat{\mathbf{x}}\|_2^2` between the input
+      :math:`\mathbf{x}` and the reconstruction :math:`\hat{\mathbf{x}}`.
+      Because the bottleneck cannot memorize every input, the network
+      learns to reproduce the dominant, repeatable structure in the
+      training distribution; inputs that reconstruct poorly deviate from
+      that structure. See :term:`reconstruction error`, and
+      :doc:`user_guide/ai_processing/denoise` and
+      :doc:`user_guide/ai_processing/anomaly` for two pyCSAMT
+      applications (denoising and anomaly detection respectively).
+
+   Reconstruction error
+      The residual between an :term:`autoencoder`'s input and its
+      reconstruction, typically summarized as a mean squared error per
+      sample. A high reconstruction error means the input does not
+      resemble the training distribution the network learned to
+      reproduce -- used directly as an anomaly score in
+      :doc:`user_guide/ai_processing/anomaly`.
+
+   Isolation forest
+      An unsupervised anomaly-detection ensemble that isolates each
+      observation by recursive random splits; observations that
+      separate from the rest of the data in fewer splits, on average
+      across many trees, receive a lower (more anomalous) decision
+      score. Unlike an :term:`autoencoder`, it does not assume the
+      normal class lies near a low-dimensional manifold, which makes it
+      a useful complement to hard threshold rules for a small feature
+      set -- see :doc:`user_guide/ai_processing/qc`.
+
+   Multi-layer perceptron
+   MLP
+      A feed-forward neural network built from stacked fully connected
+      (dense) layers, each followed by a nonlinearity. It has no
+      convolutional or recurrent structure, which makes it a natural
+      choice for tabular, per-observation feature vectors -- as opposed
+      to the ordered frequency sequences a convolutional network such
+      as the one in :doc:`user_guide/ai_processing/denoise` is built
+      for.
+
+   Support vector machine
+   SVM
+      A supervised classifier that finds the hyperplane
+      :math:`(\mathbf{w}\cdot\mathbf{u})+b=0` maximising the margin
+      :math:`2/\|\mathbf{w}\|` between two labelled classes, so that the
+      decision generalises as far as possible from the nearest training
+      examples (the support vectors) on either side. With a linear kernel
+      and a small, well-separated feature set it needs very few training
+      examples relative to a neural network. Used by
+      :class:`~pycsamt.ai.processing.tsdenoise.SignalQualityClassifier` in
+      :doc:`user_guide/ai_processing/ts_denoise` to separate clean from
+      noisy time-series windows on four :term:`sample entropy`-family
+      features.
+
+   Sample entropy
+   Fuzzy entropy
+   Approximate entropy
+      Complexity measures for a time series based on how often
+      :math:`m`-length embedded subsequences that match within a
+      tolerance :math:`r` continue to match at length :math:`m+1` -- low
+      for a regular, self-similar signal (a repeated interference shape)
+      and high for a genuinely random one (a weak, high-quality MT
+      background). Sample entropy and approximate entropy use a hard
+      ``distance <= r`` match; fuzzy entropy replaces it with a smooth
+      exponential membership, making it less sensitive to the choice of
+      :math:`r`. See :doc:`user_guide/ai_processing/ts_denoise` for their
+      use, alongside :term:`box-counting dimension`, as the feature
+      vector behind a :term:`support vector machine`.
+
+   Box-counting dimension
+      A fractal-dimension estimate obtained by covering a curve with a
+      grid of boxes of side :math:`\varepsilon`, counting the occupied
+      boxes :math:`N(\varepsilon)`, and fitting the slope of
+      :math:`\log N(\varepsilon)` against :math:`\log(1/\varepsilon)`
+      over a range of box sizes. Larger for a ragged, high-complexity
+      curve than for a smooth or blocky one -- the fourth feature (after
+      the :term:`sample entropy` family) behind
+      :doc:`user_guide/ai_processing/ts_denoise`'s signal-quality
+      classifier.
+
+   Mathematical morphological filtering
+   MMF
+      A non-linear filter, adapted from image processing, that applies
+      grayscale erosion and dilation with a flat structuring element of
+      length :math:`L` samples to separate a time series into a
+      low-frequency envelope and a high-frequency residual. Unlike
+      Fourier- or wavelet-based decomposition, it stays reliable at
+      extracting the low-frequency part even when strong, non-stationary
+      interference is present, because the operation is local in time
+      rather than a global basis-function fit. :math:`L` must exceed the
+      widest interference pulse in the record or that pulse leaks into
+      the low-frequency output -- see
+      :doc:`user_guide/ai_processing/ts_denoise` for a worked
+      before/after.
 
    Data fit
       The comparison between observed data and the response predicted by a

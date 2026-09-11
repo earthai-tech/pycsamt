@@ -77,18 +77,7 @@
   # the whole chain is always self-consistent -- an 11-script re-run is a
   # small, bounded cost, well inside the time budget the pip/docs/build
   # caches free up elsewhere.
-  # --- STAGE 1 of a two-part v2.6.1 deploy (2026-09-11) ---------------------
-  # `-D plot_gallery=0` builds every prose/API/user-guide page (the new
-  # PlotResPhasePseudoSection / plot_phase_tensor_map_grid / PlotDepthMap
-  # user-guide sections, the Broken Hill tutorial, the MapView demo-video
-  # card, and the v2.6.1 release notes) but skips executing the
-  # sphinx-gallery example scripts, so this deploy stays well inside
-  # Netlify's 18-min timeout while the new content is validated. STAGE 2
-  # restores the line below (drop the `-D plot_gallery=0`) and redeploys
-  # `docs-deploy`; the persisted gallery + docs/build caches let that
-  # second pass execute only example scripts whose source actually
-  # changed (none new for v2.6.1).
-  command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && rm -rf docs/source/examples/inversion docs/examples/inversion/workspaces && python -m sphinx -b html -D plot_gallery=0 docs/source docs/build/html"
+  command = "python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install .[docs,geo] && rm -rf docs/source/examples/inversion docs/examples/inversion/workspaces && python -m sphinx -b html docs/source docs/build/html"
 
 [build.environment]
   # Python runtime on Netlify's build image. Newer (mise-based) images read

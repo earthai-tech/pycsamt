@@ -38,7 +38,12 @@ dedicated references:
    pycsamt.ai.processing.anomaly
    pycsamt.ai.processing.classify
    pycsamt.ai.processing.denoise
+   pycsamt.ai.processing.distortion
+   pycsamt.ai.processing.imputer
+   pycsamt.ai.processing.plot
    pycsamt.ai.processing.qc
+   pycsamt.ai.processing.tsdenoise
+   pycsamt.ai.processing.uncertainty
    pycsamt.ai.training.augment
    pycsamt.ai.training.dataset
    pycsamt.ai.training.metrics

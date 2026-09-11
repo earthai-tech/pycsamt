@@ -17,6 +17,14 @@ Features extracted per (site, frequency) observation
 
 The combined score lies in ``[0, 1]`` — 1 means good quality, 0 means
 flagged bad.
+
+Working directly with site collections
+---------------------------------------
+:meth:`EMQCScorer.apply` accepts and returns a site collection
+directly -- scoring every station-frequency cell and masking (or
+interpolating over) the flagged ones in ``Z.z`` -- so the scorer can
+be dropped into the same sites-in / sites-out chain as the rule-based
+functions in :mod:`pycsamt.emtools.remove_noise`.
 """
 
 from __future__ import annotations
@@ -293,6 +301,113 @@ class EMQCScorer(BaseEMProcessor):
         df["score"] = scores
         df["flag"] = (scores >= self.score_threshold).astype(int)
         return df
+
+    # ─── sites-in / sites-out ──────────────────────────────────────────────
+
+    def apply(
+        self,
+        sites: Any,
+        *,
+        mode: str = "mask",
+        inplace: bool = False,
+        recursive: bool = True,
+        on_dup: str = "replace",
+        strict: bool = False,
+        verbose: int = 0,
+    ) -> Any:
+        """
+        Mask flagged station-frequency cells, sites-in / sites-out.
+
+        Scores every observation with :meth:`score_table`, then, for
+        each station-frequency cell with ``flag == 0``, either blanks
+        the entire impedance row (``mode="mask"``) or replaces it with
+        a linear interpolation from its nearest good neighbours
+        (``mode="interp"``) — the same two modes, and the same
+        underlying mechanism, as
+        :func:`~pycsamt.emtools.remove_noise.notch_powerline`. As
+        there, a whole frequency row is masked together rather than
+        only the components the score is computed from, since a
+        hard-flagged frequency is not considered trustworthy for any
+        component.
+
+        Parameters
+        ----------
+        sites : SiteCollection or compatible
+        mode : ``"mask"`` | ``"interp"``, default ``"mask"``
+        inplace : bool, default ``False``
+            When ``False`` (the default), *sites* is left untouched
+            and a corrected copy is returned. When ``True``, *sites*
+            is modified in place and returned.
+        recursive, on_dup, strict, verbose
+            Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+        Returns
+        -------
+        corrected : Sites
+            A site collection with the same stations; flagged
+            station-frequency rows are masked or interpolated in
+            ``Z.z``, every other row is untouched.
+
+        Examples
+        --------
+        >>> scorer = EMQCScorer(random_state=0).fit(sites)  # doctest: +SKIP
+        >>> masked_sites = scorer.apply(sites)  # doctest: +SKIP
+        """
+        if mode not in ("mask", "interp"):
+            raise ValueError(
+                f"mode must be 'mask' or 'interp', got {mode!r}."
+            )
+
+        try:
+            from pycsamt.emtools._core import (
+                _apply_each,
+                _get_z_block,
+                _iter_items,
+                _name,
+                ensure_sites,
+            )
+            from pycsamt.emtools.remove_noise import _interp_rows
+        except ImportError as exc:
+            raise ImportError(
+                "emtools is required for EMQCScorer.apply()"
+            ) from exc
+
+        S = ensure_sites(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+        table = self.score_table(S)
+
+        bad_by_station: dict[str, np.ndarray] = {}
+        if not table.empty:
+            for station, sub in table.groupby("station", sort=False):
+                bad_by_station[str(station)] = (
+                    sub["flag"].to_numpy() == 0
+                )
+
+        def _one(Si):
+            ed = next(_iter_items(Si))
+            station = _name(ed, 0)
+            Z, z, _fr = _get_z_block(ed, with_errors=False)[:3]
+            if z is None:
+                return Si
+            bad = bad_by_station.get(str(station))
+            if bad is None or bad.size != z.shape[0] or not bad.any():
+                return Si
+            z2 = z.copy()
+            if mode == "mask":
+                z2[bad] = np.nan
+            else:
+                z2[bad] = np.nan
+                good = ~np.isnan(z2).any(axis=(1, 2))
+                z2 = _interp_rows(z2, good)
+            Z.z = z2
+            return Si
+
+        return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
     # ─── internal ─────────────────────────────────────────────────────────
 

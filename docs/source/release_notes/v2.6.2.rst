@@ -1,0 +1,178 @@
+.. _release_v2_6_2:
+
+-------------
+Version 2.6.2
+-------------
+
+pyCSAMT 2.6.2 |Feature| |New| |Fix| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-09-11.*
+
+An :mod:`pycsamt.ai.processing` release. Four learned tools join the
+package -- gap filling, uncertainty calibration, distortion-regime
+triage, and a raw-time-series denoiser -- bringing every planned tool
+to a real implementation. The whole subpackage also gets its first
+full user guide, covering all eight tools (the four new ones and the
+four already shipped silently in earlier releases), which is how three
+real bugs in already-released code surfaced and are fixed here.
+
+Learned gap filling: EMImputer |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`pycsamt.ai.processing.imputer.EMImputer` reconstructs
+*genuinely missing* (station, frequency) cells -- a dropped frequency,
+a component that never converged -- from the observed ones, using
+spectral smoothness. :class:`~pycsamt.ai.processing.denoise.EMDenoiser`
+assumes every cell has *some* value and improves it; nothing else in
+pyCSAMT filled a true gap with anything better than carrying ``NaN``
+through to inversion. The recipe is masked reconstruction (the BERT /
+image-inpainting family): every training step hides a random fraction
+of the *truly observed* cells and computes the loss only there, so
+training data only needs to be mostly complete, not to come with known
+ground truth for real gaps. :meth:`~pycsamt.ai.processing.imputer
+.EMImputer.apply` writes reconstructed values only into cells that were
+genuinely missing on the input; every observed measurement is left
+byte-identical. On real gapped data, RMSE 0.32 against a naive
+zero-fill baseline of 0.71.
+
+Learned uncertainty calibration: UncertaintyCalibrator |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`pycsamt.ai.processing.uncertainty.UncertaintyCalibrator`
+answers a question :class:`~pycsamt.ai.processing.qc.EMQCScorer`
+does not: not "is this cell trustworthy", but "how large should its
+error bar be." It regresses a fractional error
+:math:`|z_\text{err}|/|Z|` from the same per-cell diagnostic features
+``EMQCScorer`` already extracts, then
+:meth:`~pycsamt.ai.processing.uncertainty.UncertaintyCalibrator.apply`
+*rescales* (not replaces) each station-frequency's existing ``z_err``
+toward the calibrated level, preserving whatever per-component error
+structure the field estimate already had. One of those five candidate
+features, ``snr``, was dropped before release: it and the fractional
+-error training target are built from the exact same pooled
+amplitude/error terms and are close to perfectly correlated, so
+including it let the network achieve a deceptively good score (0.994)
+by learning to invert one input column rather than a genuine
+signal-quality relationship. With that feature removed, honestly
+re-measured performance on real data is a correlation of 0.60 and RMSE
+0.158 (log10) against a 0.195 baseline -- a real, more modest
+improvement driven by phase and skew shape.
+
+Distortion-regime triage: DistortionTypeClassifier |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`pycsamt.ai.processing.distortion.DistortionTypeClassifier`
+labels each station clean, static-shift-only, or distorted, and routes
+it toward whichever *existing* correction tool
+(:mod:`pycsamt.emtools.ss` or :mod:`pycsamt.emtools.gb`) that regime
+actually calls for, rather than re-solving the distortion physics
+itself -- the same triage role
+:class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`
+already plays for dimensionality. Its feature vector combines
+phase-tensor skew/ellipticity with Groom-Bailey twist, shear, and a
+spatial resistivity-trend deviation (``delta_log10_rho``) in place of
+Groom-Bailey's own ``gain`` column, which the decomposition's textbook
+normalisation forces to exactly ``1.0`` on every fit and so carries no
+usable signal.
+
+Raw time-series denoising: MMF-SVM-K-SVD |New|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every tool above works downstream of an already-computed impedance
+tensor. :class:`pycsamt.ai.processing.tsdenoise.TimeSeriesDenoiser`
+works one stage further upstream, directly on the raw
+:class:`~pycsamt.ts.TSData` sample stream, implementing the
+MMF-SVM-K-SVD method of Gui et al. (2024) end to end: mathematical
+morphological filtering splits each channel into a low-frequency
+envelope and a high-frequency residual; a linear-kernel support vector
+machine classifies windows of that residual clean or noisy from four
+complexity features (sample, fuzzy, and approximate entropy, plus
+box-counting dimension), trained from a synthetic library
+auto-calibrated to each channel's own robust background amplitude
+rather than a fixed scale; and K-SVD dictionary learning denoises only
+the flagged windows, self-supervised from patches of the window
+itself. On a synthetic record with a known clean reference, the full
+pipeline improves SNR from -6.65 dB to 10.25 dB and normalized
+cross-correlation from 0.37 to 0.95; applied to a real ~580-unit
+interference burst in pyCSAMT's bundled long-period recording
+``data/MT/TS/kap103as.ts``, the peak is suppressed to ~4.8, close to
+the channel's own background level. Three new plots round out
+:mod:`pycsamt.ai.processing.plot`:
+:func:`~pycsamt.ai.processing.plot.plot_ts_denoise_mmf_split`,
+:func:`~pycsamt.ai.processing.plot.plot_ts_denoise_segments`, and
+:func:`~pycsamt.ai.processing.plot.plot_ts_denoise_summary`.
+
+First full pycsamt.ai.processing user guide |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The subpackage had bare autosummary API stubs before this release --
+no worked examples, no figures, for any of its eight tools. A new
+nine-page arc under :doc:`/user_guide/ai_processing/index` now covers
+all of them, each with labelled equations, real captured console
+output, and generated figures: the four tools above, plus
+:doc:`/user_guide/ai_processing/qc`,
+:doc:`/user_guide/ai_processing/denoise`,
+:doc:`/user_guide/ai_processing/anomaly`, and
+:doc:`/user_guide/ai_processing/classify` for the four tools already
+shipped in earlier releases without documentation. Every page's
+figures come from 23 new plotting functions across
+:mod:`pycsamt.ai.processing.plot`, and every network-based estimator
+now carries a ``history_`` property (train/validation loss per epoch),
+plotted with the new shared
+:func:`~pycsamt.ai.processing.plot.plot_training_history`. 8 new
+glossary entries and matching bibliography additions support the new
+pages.
+
+Fixed
+~~~~~~
+
+Building real, worked examples against real data for the first time is
+what surfaces bugs that a scaffold or a unit test alone does not --
+three real, previously-shipped bugs are fixed as a direct result:
+
+* |Fix| **``prepare_z_features`` silently corrupted extracted
+  features for most stations in a survey.** Its frequency-grid
+  interpolation called :func:`numpy.interp` without sorting the source
+  frequency array first; real EDI/MT frequency arrays are
+  conventionally stored high-to-low, and ``numpy.interp`` returns
+  *wrong, non-NaN* values with no error when its ``xp`` argument is
+  descending. Every station except whichever one happened to supply
+  ``freq_ref`` (the default is the first site) had its
+  :class:`~pycsamt.ai.processing.denoise.EMDenoiser` /
+  :class:`~pycsamt.ai.processing.anomaly.AnomalyDetector` features
+  silently flattened toward the reference station's own curve. Fixed
+  by sorting the source frequency array before interpolating.
+
+* |Fix| **A random-forest fallback could crash outright, or silently
+  mis-map its predicted probabilities, on a rare class.** When neither
+  PyTorch nor TensorFlow is installed,
+  :class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`
+  falls back to a :class:`~sklearn.ensemble.RandomForestClassifier`,
+  whose ``predict_proba`` returns one column per class *present in the
+  training labels*, not one per ``n_classes`` -- with a genuinely rare
+  class (plausible on a few dozen stations), the returned array can be
+  narrower than the output array the code assigned it into, raising
+  ``ValueError``. Fixed by mapping each returned column to its actual
+  class index explicitly, in both ``DimensionalityClassifier`` and the
+  new ``DistortionTypeClassifier``.
+
+* |Fix| **``plot_qc_scores`` crashed on a valid, previously-untested
+  combination of arguments**, and separately **dropped custom station
+  labels** for any multi-profile (``dict``) comparison. Passing
+  ``threshold_lw=0.0`` to hide the review-threshold line still built a
+  zero-width dashed legend handle for it, which crashes Matplotlib's
+  legend renderer; and multi-profile input silently replaced any
+  supplied ``station_labels`` with plain integer ticks. Both fixed.
+
+|Compatibility|
+~~~~~~~~~~~~~~~~
+
+Every addition is backward compatible. The first fix above changes
+*values*, not signatures: :func:`~pycsamt.ai.processing.denoise
+.prepare_z_features` (and any :class:`EMDenoiser` /
+:class:`AnomalyDetector` model trained on its output) will produce
+different, now-correct numbers for any survey where the first site's
+frequency grid was not already the shared reference; retrain rather
+than reuse a checkpoint trained before this release if that applied to
+your data. Nothing else changes behaviour for existing callers.

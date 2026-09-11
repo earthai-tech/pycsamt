@@ -1,40 +1,73 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
-DimensionalityClassifier — MLP-based MT data dimensionality classifier.
+DistortionTypeClassifier — learned galvanic-distortion triage.
 
-Replaces the heuristic skew/ellipticity thresholds in
-:func:`~pycsamt.emtools.dimensionality.classify_dimensionality` with a
-trained multi-layer perceptron that operates on per-(site, frequency)
-phase-tensor-derived features.
+Why this does not re-solve the physics
+------------------------------------------
+:mod:`pycsamt.emtools.ss` already estimates static shift with four
+different spatial-statistics methods (AMA, LOESS, bilateral filter,
+reference-median), and :mod:`pycsamt.emtools.gb` already fits a full
+Groom-Bailey galvanic-distortion decomposition
+(:func:`~pycsamt.emtools.gb.groom_bailey_table`,
+:func:`~pycsamt.emtools.gb.apply_groom_bailey`) by nonlinear least
+squares. ``DistortionTypeClassifier`` is not meant to replace either
+-- it is meant to *triage*: given a station's phase-tensor invariants
+and its already-fitted Groom-Bailey parameters, label it as clean,
+static-shift-only, or in need of the full decomposition, the same way
+:class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`
+refines :func:`~pycsamt.emtools.dimensionality.classify_dimensionality`'s
+threshold rule into a smoother multi-feature classifier rather than
+inventing a new definition of dimensionality. The value is routing a
+survey's many stations toward the right *existing* tool quickly, not
+a new distortion model.
 
 Classes
 -------
-* 0 — 1-D  (low skew, low ellipticity)
-* 1 — 2-D  (low skew, high ellipticity)
-* 2 — 3-D  (high skew / arbitrary ellipticity)
+0. **clean** -- resistivity close to the along-line spatial trend,
+   twist and shear close to 0; no correction needed.
+1. **static-shift-only** -- resistivity departs from the spatial trend
+   but twist and shear stay small: a pure multiplicative offset, the
+   case :mod:`pycsamt.emtools.ss` targets directly.
+2. **distorted** -- twist and/or shear are non-negligible: rotation-
+   and anisotropy-like distortion that a static-shift correction alone
+   cannot fix, the case :func:`~pycsamt.emtools.gb.apply_groom_bailey`
+   targets.
 
-The network is also equipped with a regression head that predicts the
-geoelectric strike direction :math:`\\alpha` (in degrees,
-:math:`-90^\\circ` to :math:`90^\\circ`) for 2-D observations.
+Feature vector (per station)
+--------------------------------
+``[beta_abs, ellipt_abs, delta_log10_rho, twist_deg, shear,
+anisotropy]`` -- ``beta_abs``/``ellipt_abs`` from
+:func:`~pycsamt.emtools.dimensionality.phase_features_table` (median
+over frequency, already reused by ``DimensionalityClassifier``);
+``twist_deg``/``shear``/``anisotropy`` from
+:func:`~pycsamt.emtools.gb.groom_bailey_table`, frequency-independent
+by construction (Groom-Bailey assumes one real distortion matrix per
+station); ``delta_log10_rho``, the station's log10-resistivity
+deviation from the spatial trend along the line, from
+:func:`~pycsamt.emtools.ss.estimate_ss_ama`.
+:func:`build_distortion_features_table` builds this table directly
+from a site collection.
 
-Feature vector (per site × frequency)
---------------------------------------
-``[β_abs, ellipt_abs, logrho_det, phi_det, tip_amp]``
+.. note::
 
-where:
+   Groom-Bailey's own fitted distortion matrix is normalised to unit
+   determinant at every iteration
+   (:func:`~pycsamt.emtools.gb._normalise_distortion`) -- the textbook
+   convention, since the absolute gain is degenerate with the unknown
+   regional resistivity and genuinely unrecoverable from one station's
+   data alone. Its ``gain`` column is therefore always exactly ``1.0``
+   and carries no information about static shift; ``delta_log10_rho``,
+   a real cross-station spatial comparison, is used here instead.
 
-* :math:`|\\beta|` — phase tensor skew (Caldwell 2004)
-* ``ellipt_abs`` — phase tensor ellipticity
-* :math:`\\log_{10}\\rho_{\\det}` — determinant apparent resistivity
-* :math:`\\phi_{\\det}` — determinant phase
-* ``tip_amp`` — tipper amplitude :math:`\\sqrt{|T_x|^2 + |T_y|^2}`
-
-Integration with emtools
+Self-training labels
 ------------------------
-Use :meth:`from_features_table` to construct a ready-to-classify
-instance from the DataFrame returned by
-:func:`~pycsamt.emtools.dimensionality.phase_features_table`.
+Mirroring ``DimensionalityClassifier``'s ``_rule_labels`` /
+``from_features_table`` pattern: default training labels come from
+simple thresholds on ``|twist_deg|``, ``|shear|``, and
+``|delta_log10_rho|`` when no ``label_col`` is supplied, so the
+network starts out approximating a transparent rule and can be refined
+with real labels later exactly the way ``DimensionalityClassifier`` is.
 """
 
 from __future__ import annotations
@@ -53,10 +86,158 @@ from .._backend_utils import (
 )
 from .._base import BaseEMProcessor
 
-__all__ = ["DimensionalityClassifier"]
+__all__ = ["DistortionTypeClassifier", "build_distortion_features_table"]
 
-_FEATURE_COLS = ["beta_abs", "ellipt_abs", "logrho_det", "phi_det", "tip_amp"]
+_FEATURE_COLS = [
+    "beta_abs",
+    "ellipt_abs",
+    "delta_log10_rho",
+    "twist_deg",
+    "shear",
+    "anisotropy",
+]
 _N_FEATURES = len(_FEATURE_COLS)
+_DISTORTION_LABELS = ("clean", "static_shift_only", "distorted")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Feature-table builder (no torch / TF dependency)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def build_distortion_features_table(
+    sites: Any,
+    *,
+    band: tuple[float, float] | None = None,
+    recursive: bool = True,
+    on_dup: str = "replace",
+    strict: bool = False,
+    verbose: int = 0,
+) -> pd.DataFrame:
+    """
+    Build the per-station feature table :class:`DistortionTypeClassifier`
+    expects.
+
+    Aggregates
+    :func:`~pycsamt.emtools.dimensionality.phase_features_table`'s
+    per-(station, frequency) ``beta_abs`` / ``ellipt_abs`` to a
+    per-station median, then merges with
+    :func:`~pycsamt.emtools.gb.groom_bailey_table`'s per-station
+    ``twist_deg`` / ``shear`` / ``anisotropy`` and
+    :func:`~pycsamt.emtools.ss.estimate_ss_ama`'s per-station
+    ``delta_log10_rho`` -- one row per station present in all three.
+    Groom-Bailey's own ``gain`` column is *not* used; see the module
+    docstring for why.
+
+    Parameters
+    ----------
+    sites : SiteCollection or compatible
+    band : (f_lo, f_hi) or None
+        Frequency band passed to
+        :func:`~pycsamt.emtools.gb.groom_bailey_table`.
+    recursive, on_dup, strict, verbose
+        Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+    Returns
+    -------
+    df : DataFrame
+        Columns: ``station``, ``beta_abs``, ``ellipt_abs``,
+        ``delta_log10_rho``, ``twist_deg``, ``shear``, ``anisotropy``.
+        Empty (but correctly columned) when no station has estimates
+        from all three sources.
+    """
+    try:
+        from pycsamt.emtools.dimensionality import phase_features_table
+        from pycsamt.emtools.gb import groom_bailey_table
+        from pycsamt.emtools.ss import estimate_ss_ama
+    except ImportError as exc:
+        raise ImportError(
+            "emtools is required for build_distortion_features_table"
+        ) from exc
+
+    cols = ["station", *_FEATURE_COLS]
+
+    phase_df = phase_features_table(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    if phase_df.empty:
+        return pd.DataFrame(columns=cols)
+
+    phase_agg = (
+        phase_df.groupby("station")[["beta_abs", "ellipt_abs"]]
+        .median()
+        .reset_index()
+    )
+
+    gb_df = groom_bailey_table(
+        sites,
+        band=band,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    if gb_df.empty or "status" not in gb_df.columns:
+        return pd.DataFrame(columns=cols)
+    gb_ok = gb_df[gb_df["status"] == "ok"]
+    if gb_ok.empty:
+        return pd.DataFrame(columns=cols)
+
+    ss_df = estimate_ss_ama(
+        sites,
+        recursive=recursive,
+        on_dup=on_dup,
+        strict=strict,
+        verbose=verbose,
+    )
+    if ss_df.empty:
+        return pd.DataFrame(columns=cols)
+
+    merged = phase_agg.merge(
+        gb_ok[["station", "twist_deg", "shear", "anisotropy"]],
+        on="station",
+        how="inner",
+    ).merge(
+        ss_df[["station", "delta_log10_rho"]],
+        on="station",
+        how="inner",
+    )
+    return merged[cols]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Rule-based label generation (for self-training)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _rule_labels(
+    shift: np.ndarray,
+    twist_deg: np.ndarray,
+    shear: np.ndarray,
+    shift_th: float = 0.1,
+    twist_th: float = 10.0,
+    shear_th: float = 0.1,
+) -> np.ndarray:
+    """
+    Threshold-based distortion-regime label, matching the module
+    docstring's class definitions.
+
+    ``shift_th`` is in log10 units on ``delta_log10_rho`` (0.1 ->
+    roughly a 25% resistivity deviation from the spatial trend);
+    ``twist_th`` in degrees; ``shear_th`` on the dimensionless shear
+    ratio.
+    """
+    low_rotation = (np.abs(twist_deg) <= twist_th) & (
+        np.abs(shear) <= shear_th
+    )
+    labels = np.full(len(shift), 2, dtype=int)  # distorted (default)
+    labels[low_rotation & (np.abs(shift) <= shift_th)] = 0  # clean
+    labels[low_rotation & (np.abs(shift) > shift_th)] = 1  # static shift
+    return labels
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,23 +245,23 @@ _N_FEATURES = len(_FEATURE_COLS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _build_dim_mlp_torch(
+def _build_distortion_mlp_torch(
     n_features: int,
     n_classes: int,
     hidden: tuple[int, ...],
     dropout: float,
 ) -> Any:
-    """MLP with shared backbone + classification and strike-regression heads — PyTorch."""
+    """MLP classifier -- PyTorch."""
     try:
         import torch.nn as nn
     except ImportError as exc:
         raise ImportError(
-            "PyTorch is required for DimensionalityClassifier"
+            "PyTorch is required for DistortionTypeClassifier"
         ) from exc
 
-    dims = [n_features] + list(hidden)
+    dims = [n_features, *hidden]
 
-    class _DimMLP(nn.Module):
+    class _DistortionMLP(nn.Module):
         def __init__(self) -> None:
             super().__init__()
             layers: list = []
@@ -93,36 +274,27 @@ def _build_dim_mlp_torch(
                 ]
             self.backbone = nn.Sequential(*layers)
             self.cls_head = nn.Linear(dims[-1], n_classes)
-            self.strike_head = nn.Sequential(
-                nn.Linear(dims[-1], 32),
-                nn.ReLU(),
-                nn.Linear(32, 1),
-            )
 
         def forward(self, x):
-            feat = self.backbone(x)
-            return self.cls_head(feat), self.strike_head(feat).squeeze(-1)
+            return self.cls_head(self.backbone(x))
 
-    return _DimMLP()
+    return _DistortionMLP()
 
 
-def _build_dim_mlp_tf(
+def _build_distortion_mlp_tf(
     n_features: int,
     n_classes: int,
     hidden: tuple[int, ...],
     dropout: float,
 ) -> Any:
-    """
-    MLP with shared backbone + dual outputs — TensorFlow/Keras.
-
-    Outputs: ``[cls_logits (n_classes,), strike_pred (1,)]``.
-    """
+    """MLP classifier -- TensorFlow/Keras."""
     try:
         import tensorflow as tf
         from tensorflow.keras import Model, layers
     except ImportError as exc:
         raise ImportError(
-            "TensorFlow is required for DimensionalityClassifier (TF backend)"
+            "TensorFlow is required for DistortionTypeClassifier "
+            "(TF backend)"
         ) from exc
 
     inp = tf.keras.Input(shape=(n_features,), name="input")
@@ -132,74 +304,58 @@ def _build_dim_mlp_tf(
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         x = layers.Dropout(dropout)(x)
+    out = layers.Dense(n_classes, name="cls")(x)
 
-    cls_out = layers.Dense(n_classes, name="cls")(x)
-    # Strike head: small 2-layer projection
-    s = layers.Dense(32, activation="relu")(x)
-    strike_out = layers.Dense(1, name="strike")(s)
-
-    return Model(inp, [cls_out, strike_out], name="dim_mlp")
+    return Model(inp, out, name="distortion_mlp")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Label generation from rule-based classifier (for self-training)
+# DistortionTypeClassifier
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _rule_labels(
-    beta_abs: np.ndarray,
-    ellipt_abs: np.ndarray,
-    skew_th: float = 3.0,
-    ellipt_th: float = 0.2,
-) -> np.ndarray:
-    labels = np.full(len(beta_abs), 2, dtype=int)
-    ok2 = beta_abs <= skew_th
-    labels[ok2 & (ellipt_abs <= ellipt_th)] = 0
-    labels[ok2 & (ellipt_abs > ellipt_th)] = 1
-    return labels
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# DimensionalityClassifier
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-class DimensionalityClassifier(BaseEMProcessor):
+class DistortionTypeClassifier(BaseEMProcessor):
     """
-    MLP classifier for MT data dimensionality (1-D / 2-D / 3-D).
+    Learned triage classifier for galvanic-distortion regime.
 
     Parameters
     ----------
-    hidden : tuple of int, default (128, 64)
-        Hidden layer widths of the shared MLP backbone.
+    hidden : tuple of int, default (32, 16)
+        Hidden-layer widths of the shared MLP backbone -- deliberately
+        smaller than
+        :class:`~pycsamt.ai.processing.classify.DimensionalityClassifier`'s
+        default, since this problem is station-level (tens to low
+        hundreds of samples per survey) rather than
+        station-frequency-level.
     dropout : float, default 0.2
         Dropout probability in each hidden layer.
     n_classes : int, default 3
-        Number of dimensionality classes (0=1D, 1=2D, 2=3D).
+        Number of distortion-regime classes; see the module docstring.
     lr : float, default 1e-3
         Default learning rate; can be overridden in :meth:`fit`.
     device : str or None
 
     Notes
     -----
-    Falls back to a random-forest classifier (scikit-learn) when neither
-    PyTorch nor TensorFlow is available.
+    Falls back to a random-forest classifier (scikit-learn) when
+    neither PyTorch nor TensorFlow is available; :meth:`transform`
+    then returns the forest's own class probabilities.
 
     Examples
     --------
-    >>> from pycsamt.ai.processing import DimensionalityClassifier
-    >>> clf = DimensionalityClassifier()
-    >>> clf.fit(X_train, y_train, epochs=30)  # doctest: +SKIP
-    DimensionalityClassifier(n_classes=3, torch)
-    >>> clf.predict(X_test)  # doctest: +SKIP
-    array([0, 1, 2, ...])
-    >>> clf.predict_strike(X_2d)  # doctest: +SKIP
-    array([ 35., -12., ...])
+    >>> from pycsamt.ai.processing.distortion import (
+    ...     DistortionTypeClassifier, build_distortion_features_table,
+    ... )
+    >>> feats = build_distortion_features_table(sites)  # doctest: +SKIP
+    >>> clf = DistortionTypeClassifier.from_features_table(
+    ...     feats, epochs=80,
+    ... )  # doctest: +SKIP
+    >>> table = clf.predict_table(sites)  # doctest: +SKIP
     """
 
     def __init__(
         self,
-        hidden: tuple[int, ...] = (128, 64),
+        hidden: tuple[int, ...] = (32, 16),
         dropout: float = 0.2,
         n_classes: int = 3,
         lr: float = 1e-3,
@@ -227,36 +383,35 @@ class DimensionalityClassifier(BaseEMProcessor):
         cls,
         df: pd.DataFrame,
         *,
-        label_col: str | None = "dim",
-        strike_col: str | None = None,
-        skew_th: float = 3.0,
-        ellipt_th: float = 0.2,
+        label_col: str | None = None,
+        shift_th: float = 0.1,
+        twist_th: float = 10.0,
+        shear_th: float = 0.1,
         **fit_kwargs,
-    ) -> DimensionalityClassifier:
+    ) -> DistortionTypeClassifier:
         """
         Construct and train a classifier from a
-        :func:`~pycsamt.emtools.dimensionality.phase_features_table`
-        DataFrame.
+        :func:`build_distortion_features_table` DataFrame.
 
         Parameters
         ----------
         df : DataFrame
         label_col : str or None
-            Column for pre-computed labels; ``None`` → rule-based labels.
-        strike_col : str or None
-            Column for strike direction in degrees.
-        skew_th, ellipt_th : float
+            Column for pre-computed labels; ``None`` -- the default --
+            falls back to rule-based self-training labels (see the
+            module docstring).
+        shift_th, twist_th, shear_th : float
             Rule-based thresholds (used when ``label_col`` is absent).
         **fit_kwargs
-            Passed to :meth:`fit` (e.g. ``epochs=50``).
+            Passed to :meth:`fit` (e.g. ``epochs=80``).
 
         Returns
         -------
-        DimensionalityClassifier
+        DistortionTypeClassifier
         """
-        X, y, strike = _df_to_Xy(df, label_col, strike_col, skew_th, ellipt_th)
+        X, y = _df_to_Xy(df, label_col, shift_th, twist_th, shear_th)
         obj = cls()
-        obj.fit(X, y, strike=strike, **fit_kwargs)
+        obj.fit(X, y, **fit_kwargs)
         return obj
 
     # ─── BaseEMProcessor interface ────────────────────────────────────────
@@ -266,30 +421,41 @@ class DimensionalityClassifier(BaseEMProcessor):
         X: np.ndarray | pd.DataFrame,
         y: np.ndarray | None = None,
         *,
-        strike: np.ndarray | None = None,
         epochs: int = 80,
-        batch_size: int = 256,
+        batch_size: int = 64,
         lr: float | None = None,
         val_frac: float = 0.15,
         seed: int | None = None,
         verbose: bool = True,
-    ) -> DimensionalityClassifier:
+    ) -> DistortionTypeClassifier:
         """
-        Train the dimensionality classifier.
+        Train the distortion-triage classifier.
 
         Parameters
         ----------
-        X : ndarray (n_samples, 5) or DataFrame
+        X : ndarray (n_samples, 6) or DataFrame
         y : int ndarray (n_samples,) or None
-        strike : float ndarray (n_samples,) or None
+            Class labels (0=clean, 1=static-shift-only, 2=distorted).
+            ``None`` falls back to the rule-based self-training labels
+            described in the module docstring.
         epochs, batch_size, lr, val_frac, seed, verbose
-            Training hyper-parameters.
+            Training hyper-parameters. ``epochs`` defaults low (``80``)
+            for a quick look; on a real, small survey (tens of
+            stations, as most are) this is often too few for the
+            self-trained network to converge reliably -- observed on
+            28-station data, repeated fits at the default can disagree
+            on which regime is the *majority* class, not just on a
+            minority label appearing or not. Prefer more epochs (e.g.
+            ``150``-``200``) and treat a single run's
+            :meth:`predict_table` output as one plausible smoothing of
+            the rule boundary rather than a converged answer -- see
+            the user guide for a concrete before/after comparison.
 
         Returns
         -------
         self
         """
-        X_arr, y_arr, strike_arr = self._coerce_Xy(X, y, strike)
+        X_arr, y_arr = self._coerce_Xy(X, y)
 
         self._x_mean = X_arr.mean(axis=0, keepdims=True)
         self._x_std = X_arr.std(axis=0, keepdims=True) + 1e-8
@@ -302,7 +468,6 @@ class DimensionalityClassifier(BaseEMProcessor):
                 self._fit_tensorflow(
                     Xn,
                     y_arr,
-                    strike_arr,
                     epochs=epochs,
                     batch_size=batch_size,
                     lr=_lr,
@@ -314,7 +479,6 @@ class DimensionalityClassifier(BaseEMProcessor):
                 self._fit_torch(
                     Xn,
                     y_arr,
-                    strike_arr,
                     epochs=epochs,
                     batch_size=batch_size,
                     lr=_lr,
@@ -345,75 +509,56 @@ class DimensionalityClassifier(BaseEMProcessor):
         return self._predict_proba(Xn)
 
     def predict(self, X: np.ndarray | pd.DataFrame) -> np.ndarray:
-        """Predict dimensionality class (0=1D, 1=2D, 2=3D)."""
+        """Predict the distortion regime (0=clean, 1=static-shift-only,
+        2=distorted)."""
         return self.transform(X).argmax(axis=1)
 
-    def predict_strike(self, X: np.ndarray | pd.DataFrame) -> np.ndarray:
+    def predict_table(
+        self,
+        sites: Any,
+        *,
+        band: tuple[float, float] | None = None,
+        recursive: bool = True,
+        on_dup: str = "replace",
+        strict: bool = False,
+        verbose: int = 0,
+    ) -> pd.DataFrame:
         """
-        Predict geoelectric strike direction (degrees).
+        Classify an entire site collection and return a result
+        DataFrame.
 
-        Returns ``NaN`` for non-2-D sites and when using the RF fallback.
-        """
-        X_arr = self._coerce_X(X)
-        n = len(X_arr)
-
-        if self._use_rf or self._network is None:
-            return np.full(n, np.nan)
-
-        Xn = (X_arr - self._x_mean) / self._x_std
-
-        if self._backend_name == "tensorflow":
-            _, strike_raw = self._network.predict(
-                Xn.astype(np.float32), verbose=0
-            )
-            strike = np.asarray(strike_raw).ravel()
-        else:
-            try:
-                import torch
-            except ImportError:
-                return np.full(n, np.nan)
-            dev = next(self._network.parameters()).device
-            self._network.eval()
-            with torch.no_grad():
-                t = torch.from_numpy(Xn.astype(np.float32)).to(dev)
-                _, strike_raw = self._network(t)
-                strike = strike_raw.cpu().numpy()
-
-        labels = self._predict_proba(Xn).argmax(axis=1)
-        strike[labels != 1] = np.nan
-        return strike
-
-    def predict_table(self, sites: Any) -> pd.DataFrame:
-        """
-        Classify an entire site collection and return a result DataFrame.
+        Parameters
+        ----------
+        sites : SiteCollection or compatible
+        band : (f_lo, f_hi) or None
+            Passed to :func:`build_distortion_features_table`.
+        recursive, on_dup, strict, verbose
+            Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
 
         Returns
         -------
         df : DataFrame
-            Columns: station, freq, period, dim (0/1/2),
-            dim_label (str), strike (°), confidence.
+            Columns: ``station``, the six input features, ``regime``
+            (0/1/2), ``regime_label`` (str), ``confidence``.
         """
-        try:
-            from pycsamt.emtools.dimensionality import (
-                phase_features_table,
-            )
-        except ImportError as exc:
-            raise ImportError("emtools is required for predict_table") from exc
-
-        df = phase_features_table(sites)
+        df = build_distortion_features_table(
+            sites,
+            band=band,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
         if df.empty:
             return df
 
         X_arr = _df_to_feature_matrix(df)
         labels = self.predict(X_arr)
         proba = self.transform(X_arr)
-        strike = self.predict_strike(X_arr)
 
-        _label_map = {0: "1D", 1: "2D", 2: "3D"}
-        out = df[["station", "freq", "period"]].copy()
-        out["dim"] = labels
-        out["dim_label"] = [_label_map.get(d, "?") for d in labels]
-        out["strike"] = strike
+        out = df.copy()
+        out["regime"] = labels
+        out["regime_label"] = [_DISTORTION_LABELS[label] for label in labels]
         out["confidence"] = proba.max(axis=1)
         return out
 
@@ -421,16 +566,15 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     def _fit_torch(
         self,
-        Xn,
-        y,
-        strike,
+        Xn: np.ndarray,
+        y: np.ndarray,
         *,
-        epochs,
-        batch_size,
-        lr,
-        val_frac,
-        seed,
-        verbose,
+        epochs: int,
+        batch_size: int,
+        lr: float,
+        val_frac: float,
+        seed: int | None,
+        verbose: bool,
     ) -> None:
         import torch
         import torch.nn as nn
@@ -443,23 +587,13 @@ class DimensionalityClassifier(BaseEMProcessor):
         n_val = max(1, int(n * val_frac))
         vi, ti = idx[:n_val], idx[n_val:]
 
-        has_strike = strike is not None and np.any(np.isfinite(strike))
-
-        def _mk_tensors(idx_):
-            t_x = torch.from_numpy(Xn[idx_].astype(np.float32))
-            t_y = torch.from_numpy(y[idx_].astype(np.int64))
-            t_s = (
-                torch.from_numpy(strike[idx_].astype(np.float32))
-                if has_strike
-                else torch.zeros(len(idx_))
-            )
-            return TensorDataset(t_x, t_y, t_s)
-
-        tr_ds = _mk_tensors(ti)
+        tr_ds = TensorDataset(
+            torch.from_numpy(Xn[ti].astype(np.float32)),
+            torch.from_numpy(y[ti].astype(np.int64)),
+        )
         ce = nn.CrossEntropyLoss()
-        mse = nn.MSELoss()
 
-        self._network = _build_dim_mlp_torch(
+        self._network = _build_distortion_mlp_torch(
             _N_FEATURES, self.n_classes, self.hidden, self.dropout
         ).to(dev)
         opt = torch.optim.Adam(self._network.parameters(), lr=lr)
@@ -473,50 +607,28 @@ class DimensionalityClassifier(BaseEMProcessor):
         best_val, best_state = np.inf, None
         train_losses, val_losses = [], []
 
-        def _strike_term(str_out, yb, sb):
-            """Weighted strike MSE on 2-D rows only (0 when unused)."""
-            if not has_strike:
-                return 0.0
-            is2d = yb == 1
-            if not is2d.any():
-                return 0.0
-            s_mask = sb[is2d]
-            valid_s = torch.isfinite(s_mask)
-            if not valid_s.any():
-                return 0.0
-            return 0.1 * mse(str_out[is2d][valid_s], s_mask[valid_s])
-
         for ep in range(1, epochs + 1):
             self._network.train()
             ep_loss = 0.0
-            ep_cls_loss = 0.0
-            for xb, yb, sb in DataLoader(
+            for xb, yb in DataLoader(
                 tr_ds, batch_size=batch_size, shuffle=True
             ):
-                xb, yb, sb = xb.to(dev), yb.to(dev), sb.to(dev)
-                cls_out, str_out = self._network(xb)
-                cls_loss = ce(cls_out, yb)
-                # The strike term feeds gradients to the optimizer step
-                # (it improves the strike head) but is excluded from the
-                # reported history so train/val curves stay comparable
-                # on the classification-loss scale that also drives
-                # the scheduler and checkpoint selection below.
-                loss = cls_loss + _strike_term(str_out, yb, sb)
+                xb, yb = xb.to(dev), yb.to(dev)
+                out = self._network(xb)
+                loss = ce(out, yb)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
                 ep_loss += loss.item() * len(xb)
-                ep_cls_loss += cls_loss.item() * len(xb)
             ep_loss /= len(ti)
-            ep_cls_loss /= len(ti)
 
             self._network.eval()
             with torch.no_grad():
-                cls_v, _str_v = self._network(Xva)
-                v_loss = ce(cls_v, yva).item()
+                v_out = self._network(Xva)
+                v_loss = ce(v_out, yva).item()
 
             sched.step(v_loss)
-            train_losses.append(ep_cls_loss)
+            train_losses.append(ep_loss)
             val_losses.append(v_loss)
 
             if v_loss < best_val:
@@ -524,9 +636,9 @@ class DimensionalityClassifier(BaseEMProcessor):
                 best_state = copy.deepcopy(self._network.state_dict())
 
             if verbose and (ep % max(1, epochs // 5) == 0 or ep == 1):
-                acc = (cls_v.argmax(dim=1) == yva).float().mean().item()
+                acc = (v_out.argmax(dim=1) == yva).float().mean().item()
                 print(
-                    f"  DimClassifier  ep {ep:>4d}/{epochs}  "
+                    f"  DistortionClassifier  ep {ep:>4d}/{epochs}  "
                     f"loss={ep_loss:.4f}  val_loss={v_loss:.4f}  "
                     f"val_acc={acc:.3f}"
                 )
@@ -537,16 +649,15 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     def _fit_tensorflow(
         self,
-        Xn,
-        y,
-        strike,
+        Xn: np.ndarray,
+        y: np.ndarray,
         *,
-        epochs,
-        batch_size,
-        lr,
-        val_frac,
-        seed,
-        verbose,
+        epochs: int,
+        batch_size: int,
+        lr: float,
+        val_frac: float,
+        seed: int | None,
+        verbose: bool,
     ) -> None:
         import tensorflow as tf
 
@@ -561,39 +672,22 @@ class DimensionalityClassifier(BaseEMProcessor):
         Xva = Xn[vi].astype(np.float32)
         yva = y[vi].astype(np.int64)
 
-        has_strike = strike is not None and np.any(np.isfinite(strike))
-        s_tr = (
-            strike[ti].astype(np.float32)
-            if has_strike
-            else np.zeros(len(ti), np.float32)
-        )
-        s_va = (
-            strike[vi].astype(np.float32)
-            if has_strike
-            else np.zeros(len(vi), np.float32)
-        )
-
         dev = resolve_device(self.device)
         with tf.device(dev):
-            self._network = _build_dim_mlp_tf(
+            self._network = _build_distortion_mlp_tf(
                 _N_FEATURES, self.n_classes, self.hidden, self.dropout
             )
-            # Combined CE + MSE loss; strike weight only matters when has_strike
-            strike_weight = 0.1 if has_strike else 0.0
             self._network.compile(
                 optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
-                loss={
-                    "cls": tf.keras.losses.SparseCategoricalCrossentropy(
-                        from_logits=True
-                    ),
-                    "strike": "mse",
-                },
-                loss_weights={"cls": 1.0, "strike": strike_weight},
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(
+                    from_logits=True
+                ),
+                metrics=["accuracy"],
             )
             hist = self._network.fit(
                 Xtr,
-                {"cls": ytr, "strike": s_tr},
-                validation_data=(Xva, {"cls": yva, "strike": s_va}),
+                ytr,
+                validation_data=(Xva, yva),
                 epochs=epochs,
                 batch_size=batch_size,
                 callbacks=[
@@ -619,20 +713,18 @@ class DimensionalityClassifier(BaseEMProcessor):
 
     def _fit_rf(self, Xn: np.ndarray, y: np.ndarray, *, verbose: bool) -> None:
         try:
-            from sklearn.ensemble import (
-                RandomForestClassifier,
-            )
+            from sklearn.ensemble import RandomForestClassifier
         except ImportError as exc:
             raise ImportError(
                 "PyTorch, TensorFlow, or scikit-learn is required for "
-                "DimensionalityClassifier"
+                "DistortionTypeClassifier"
             ) from exc
 
         self._rf = RandomForestClassifier(n_estimators=200, random_state=0)
         valid = np.all(np.isfinite(Xn), axis=1)
         self._rf.fit(Xn[valid], y[valid])
         if verbose:
-            print("  DimClassifier (RandomForest fallback) fitted.")
+            print("  DistortionTypeClassifier (RandomForest fallback) fitted.")
 
     def _predict_proba(self, Xn: np.ndarray) -> np.ndarray:
         if self._use_rf:
@@ -641,9 +733,10 @@ class DimensionalityClassifier(BaseEMProcessor):
             if valid.any():
                 # RandomForestClassifier.predict_proba only returns a
                 # column per class actually present in the training
-                # labels -- e.g. a 1-D-free training set -- so map
-                # columns back by self._rf.classes_ rather than
-                # assuming they span range(n_classes).
+                # labels -- with this few stations and three classes,
+                # one regime (usually "clean") is often entirely
+                # absent, so map columns back by self._rf.classes_
+                # rather than assuming they span range(n_classes).
                 proba = self._rf.predict_proba(Xn[valid])
                 filled = np.zeros((proba.shape[0], self.n_classes))
                 for j, c in enumerate(self._rf.classes_):
@@ -652,11 +745,8 @@ class DimensionalityClassifier(BaseEMProcessor):
             return out
 
         if self._backend_name == "tensorflow":
-            cls_logits, _ = self._network.predict(
-                Xn.astype(np.float32), verbose=0
-            )
-            # Softmax over logits
-            e = np.exp(cls_logits - cls_logits.max(axis=1, keepdims=True))
+            logits = self._network.predict(Xn.astype(np.float32), verbose=0)
+            e = np.exp(logits - logits.max(axis=1, keepdims=True))
             return e / e.sum(axis=1, keepdims=True)
 
         import torch
@@ -665,8 +755,8 @@ class DimensionalityClassifier(BaseEMProcessor):
         self._network.eval()
         with torch.no_grad():
             t = torch.from_numpy(Xn.astype(np.float32)).to(dev)
-            cls_out, _ = self._network(t)
-            proba = torch.softmax(cls_out, dim=1).cpu().numpy()
+            out = self._network(t)
+            proba = torch.softmax(out, dim=1).cpu().numpy()
         return proba
 
     def _coerce_X(self, X) -> np.ndarray:
@@ -674,29 +764,26 @@ class DimensionalityClassifier(BaseEMProcessor):
             return _df_to_feature_matrix(X)
         return np.asarray(X, dtype=np.float32)
 
-    def _coerce_Xy(self, X, y, strike):
+    def _coerce_Xy(self, X, y):
         if isinstance(X, pd.DataFrame):
-            X_arr, y_arr, strike_arr = _df_to_Xy(X, "dim", None, 3.0, 0.2)
+            X_arr, y_arr = _df_to_Xy(X, None)
             if y is not None:
                 y_arr = np.asarray(y, dtype=int)
-            if strike is not None:
-                strike_arr = np.asarray(strike, dtype=float)
         else:
             X_arr = np.asarray(X, dtype=np.float32)
             X_arr = np.where(np.isfinite(X_arr), X_arr, 0.0)
             if y is None:
-                # Auto-generate rule-based labels from feature columns 0 (beta_abs)
-                # and 1 (ellipt_abs) — matches the canonical feature vector layout.
-                if X_arr.shape[1] >= 2:
-                    y_arr = _rule_labels(X_arr[:, 0], X_arr[:, 1])
+                if X_arr.shape[1] >= 5:
+                    # columns: beta_abs, ellipt_abs, delta_log10_rho,
+                    # twist_deg, shear
+                    y_arr = _rule_labels(
+                        X_arr[:, 2], X_arr[:, 3], X_arr[:, 4]
+                    )
                 else:
                     y_arr = np.zeros(len(X_arr), dtype=int)
             else:
                 y_arr = np.asarray(y, dtype=int)
-            strike_arr = (
-                np.asarray(strike, dtype=float) if strike is not None else None
-            )
-        return X_arr, y_arr, strike_arr
+        return X_arr, y_arr
 
     # ─── serialisation ────────────────────────────────────────────────────
 
@@ -756,11 +843,11 @@ class DimensionalityClassifier(BaseEMProcessor):
 
         if weights:
             if self._backend_name == "tensorflow":
-                self._network = _build_dim_mlp_tf(
+                self._network = _build_distortion_mlp_tf(
                     _N_FEATURES, self.n_classes, self.hidden, self.dropout
                 )
             else:
-                self._network = _build_dim_mlp_torch(
+                self._network = _build_distortion_mlp_torch(
                     _N_FEATURES, self.n_classes, self.hidden, self.dropout
                 )
             set_weights(self._network, weights)
@@ -775,8 +862,8 @@ class DimensionalityClassifier(BaseEMProcessor):
         -------
         history : dict
             ``{"train_loss": [...], "val_loss": [...]}``, one value per
-            epoch.  Empty when the random-forest fallback was used (no
-            epoch loop) or before :meth:`fit` has been called.  Pass
+            epoch. Empty when the random-forest fallback was used (no
+            epoch loop) or before :meth:`fit` has been called. Pass
             directly to
             :func:`~pycsamt.ai.processing.plot.plot_training_history`.
         """
@@ -786,7 +873,7 @@ class DimensionalityClassifier(BaseEMProcessor):
         backend = self._backend_name or ("rf" if self._use_rf else "torch")
         status = "fitted" if self._is_fitted else "unfitted"
         return (
-            f"DimensionalityClassifier(n_classes={self.n_classes}, "
+            f"DistortionTypeClassifier(n_classes={self.n_classes}, "
             f"{backend}, {status})"
         )
 
@@ -808,29 +895,30 @@ def _df_to_feature_matrix(df: pd.DataFrame) -> np.ndarray:
 def _df_to_Xy(
     df: pd.DataFrame,
     label_col: str | None,
-    strike_col: str | None,
-    skew_th: float,
-    ellipt_th: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+    shift_th: float = 0.1,
+    twist_th: float = 10.0,
+    shear_th: float = 0.1,
+) -> tuple[np.ndarray, np.ndarray]:
     X = _df_to_feature_matrix(df)
 
     if label_col is not None and label_col in df.columns:
         y = df[label_col].to_numpy(dtype=int)
     else:
-        beta = (
-            df["beta_abs"].to_numpy(dtype=float)
-            if "beta_abs" in df.columns
+        shift = (
+            df["delta_log10_rho"].to_numpy(dtype=float)
+            if "delta_log10_rho" in df.columns
             else np.zeros(len(df))
         )
-        ellipt = (
-            df["ellipt_abs"].to_numpy(dtype=float)
-            if "ellipt_abs" in df.columns
+        twist = (
+            df["twist_deg"].to_numpy(dtype=float)
+            if "twist_deg" in df.columns
             else np.zeros(len(df))
         )
-        y = _rule_labels(beta, ellipt, skew_th, ellipt_th)
+        shear = (
+            df["shear"].to_numpy(dtype=float)
+            if "shear" in df.columns
+            else np.zeros(len(df))
+        )
+        y = _rule_labels(shift, twist, shear, shift_th, twist_th, shear_th)
 
-    strike: np.ndarray | None = None
-    if strike_col is not None and strike_col in df.columns:
-        strike = df[strike_col].to_numpy(dtype=float)
-
-    return X, y, strike
+    return X, y

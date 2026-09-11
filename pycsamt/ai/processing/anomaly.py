@@ -29,6 +29,15 @@ A site is flagged when :math:`s_i` exceeds the
 
 When neither PyTorch nor TensorFlow is available the detector falls back
 to PCA-based reconstruction using :class:`sklearn.decomposition.PCA`.
+
+Working directly with site collections
+---------------------------------------
+:meth:`AnomalyDetector.apply` accepts a site collection directly and
+returns one with every flagged station removed, via
+:meth:`Sites.select() <pycsamt.site.base.Sites.select>` -- the
+sites-in / sites-out counterpart of :meth:`transform` /
+:meth:`flag_anomalies`, shaped as a station *filter* rather than a
+per-station mutation.
 """
 
 from __future__ import annotations
@@ -327,6 +336,120 @@ class AnomalyDetector(BaseEMProcessor):
         """
         return self.transform(X) > self._threshold
 
+    # ─── sites-in / sites-out ──────────────────────────────────────────────
+
+    def apply(
+        self,
+        sites: Any,
+        *,
+        n_components: int = 4,
+        freq_ref: np.ndarray | None = None,
+        log_amp: bool = True,
+        threshold: float | None = None,
+        recursive: bool = True,
+        on_dup: str = "replace",
+        strict: bool = False,
+        verbose: int = 0,
+    ) -> Any:
+        """
+        Drop anomalous stations, sites-in / sites-out.
+
+        Builds one feature vector per station with
+        :func:`~pycsamt.ai.processing.denoise.prepare_z_features`,
+        flattened to ``(n_sites, n_components * n_freqs)`` — the same
+        convention used to fit a detector on site data in the first
+        place — scores each station, and returns a new site collection
+        with every flagged station removed via
+        :meth:`Sites.select() <pycsamt.site.base.Sites.select>`.
+
+        Unlike :meth:`EMDenoiser.apply
+        <pycsamt.ai.processing.denoise.EMDenoiser.apply>`, there is no
+        ``inplace`` option: dropping stations is a *selection*, not a
+        per-station mutation, and :class:`~pycsamt.site.base.Sites`
+        has no in-place removal — :meth:`~pycsamt.site.base.Sites.select`
+        always returns a new container, and so does this method.
+
+        Parameters
+        ----------
+        sites : SiteCollection or compatible
+        n_components, freq_ref, log_amp
+            Passed to
+            :func:`~pycsamt.ai.processing.denoise.prepare_z_features`.
+            Must reproduce the exact feature layout used to build the
+            training data — in particular, ``n_components *
+            len(freq_ref)`` must equal the fitted ``n_features``, or a
+            :class:`ValueError` is raised rather than silently scoring
+            a mismatched feature vector.
+        threshold : float or None
+            Overrides the fitted :attr:`threshold_` for this call.
+        recursive, on_dup, strict, verbose
+            Passed to :func:`~pycsamt.emtools._core.ensure_sites`.
+
+        Returns
+        -------
+        corrected : Sites
+            A new site collection with flagged stations removed.
+
+        Examples
+        --------
+        >>> det = AnomalyDetector(latent_dim=8)
+        >>> det.fit(X, epochs=80)  # doctest: +SKIP
+        >>> clean_sites = det.apply(sites)  # doctest: +SKIP
+        """
+        if not self._is_fitted:
+            raise RuntimeError("Call fit() before apply().")
+
+        try:
+            from pycsamt.emtools._core import _iter_items, _name, ensure_sites
+        except ImportError as exc:
+            raise ImportError(
+                "emtools is required for AnomalyDetector.apply()"
+            ) from exc
+
+        from .denoise import prepare_z_features
+
+        S = ensure_sites(
+            sites,
+            recursive=recursive,
+            on_dup=on_dup,
+            strict=strict,
+            verbose=verbose,
+        )
+        names = [_name(ed, i) for i, ed in enumerate(_iter_items(S))]
+
+        X = prepare_z_features(
+            S, n_components=n_components, log_amp=log_amp, freq_ref=freq_ref
+        )
+        n_sites, n_comp, n_freq = X.shape
+        X_flat = np.nan_to_num(
+            X.reshape(n_sites, n_comp * n_freq), nan=0.0
+        )
+
+        if self.n_features is not None and X_flat.shape[1] != self.n_features:
+            raise ValueError(
+                f"Flattened feature length {X_flat.shape[1]} does not "
+                f"match the fitted detector's n_features="
+                f"{self.n_features}. Pass the same n_components / "
+                "freq_ref used to build the training features."
+            )
+
+        thr = self._threshold if threshold is None else float(threshold)
+        if thr is None:
+            raise RuntimeError(
+                "No threshold available -- call fit() first or pass "
+                "threshold= explicitly."
+            )
+        scores = self.transform(X_flat)
+        flagged = {names[i] for i in range(n_sites) if scores[i] > thr}
+
+        if verbose:
+            print(
+                f"  AnomalyDetector.apply: dropping {len(flagged)}/"
+                f"{n_sites} station(s)"
+            )
+
+        return S.select(predicate=lambda s: s.name not in flagged)
+
     # ─── internal training paths ──────────────────────────────────────────
 
     def _fit_torch(
@@ -567,6 +690,33 @@ class AnomalyDetector(BaseEMProcessor):
             set_weights(self._network, weights)
             self._use_pca = False
         self._is_fitted = True
+
+    @property
+    def history_(self) -> dict[str, list]:
+        """
+        Training history recorded by the last :meth:`fit` call.
+
+        Returns
+        -------
+        history : dict
+            ``{"train_loss": [...], "val_loss": [...]}``, one value per
+            epoch.  Empty when the PCA fallback was used (no epoch
+            loop) or before :meth:`fit` has been called.  Pass directly
+            to
+            :func:`~pycsamt.ai.processing.plot.plot_training_history`.
+        """
+        return dict(self._history)
+
+    @property
+    def threshold_(self) -> float | None:
+        """
+        Fitted anomaly-score threshold.
+
+        The percentile (``threshold_percentile``) of the training
+        reconstruction-error distribution used by
+        :meth:`flag_anomalies`.  ``None`` before :meth:`fit`.
+        """
+        return self._threshold
 
     def __repr__(self) -> str:
         status = "fitted" if self._is_fitted else "unfitted"

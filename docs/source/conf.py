@@ -336,6 +336,7 @@ html_css_files = [
     "css/gallery-hub.css",
     "css/code-action.css",
     "css/code-dropdown.css",
+    "css/download-cta.css",
     "css/hosted-preview.css",
     "css/whats-new.css",
     "css/faq.css",

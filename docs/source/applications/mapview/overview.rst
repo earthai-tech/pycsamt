@@ -3,6 +3,15 @@
 Overview
 ========
 
+.. figure:: ../../_static/applications/mapview/mapview-walkthrough.gif
+   :alt: Animated tour of the pyCSAMT MapView workbench
+   :class: pycsamt-screenshot
+
+   An animated tour of MapView: from the welcome screen to a survey on a
+   basemap, Surfer-style contours, interactive 3-D fence and block scenes,
+   isolating conductive structure, and an imported ModEM inversion model.
+   Each control is documented on the pages below.
+
 When To Use MapView
 -----------------------
 

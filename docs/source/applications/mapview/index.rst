@@ -12,14 +12,36 @@ topography. It is the point-and-click layer over the :doc:`Python mapping API
 :class:`~pycsamt.map.MapView` façade you can drive from code, so a scene you
 build here can be reproduced exactly in a script.
 
-.. figure:: ../../_static/applications/mapview/mapview-walkthrough.gif
-   :alt: Animated tour of the pyCSAMT MapView workbench
-   :class: pycsamt-screenshot
+.. raw:: html
 
-   An animated tour of MapView: from the welcome screen to a survey on a
-   basemap, Surfer-style contours, interactive 3-D fence and block scenes,
-   isolating conductive structure, and an imported ModEM inversion model.
-   Each control is documented on the pages below.
+   <a class="pycsamt-video-card"
+      href="https://youtu.be/DcDA3THoFtw" target="_blank" rel="noopener">
+     <span class="pycsamt-video-thumb">
+       <img src="https://i.ytimg.com/vi/DcDA3THoFtw/hqdefault.jpg"
+            alt="MapView video demo thumbnail" loading="lazy">
+       <span class="pycsamt-video-play" aria-hidden="true">
+         <svg viewBox="0 0 68 48" xmlns="http://www.w3.org/2000/svg">
+           <rect x="0" y="0" width="68" height="48" rx="12"
+                 fill="rgba(20,20,20,0.75)"></rect>
+           <path d="M27 15l18 9-18 9V15z" fill="#fff"></path>
+         </svg>
+       </span>
+     </span>
+     <span class="pycsamt-video-caption">
+       <strong>Watch the demo</strong> &mdash; pyCSAMT v2.6 as an
+       integrated geoscience interpretation platform: EM processing and
+       inversion, 3-D visualization, boreholes, geological information,
+       and the USGS AI Pack in one workflow, illustrated on a real
+       Cu&ndash;Mo (copper&ndash;molybdenum) mineralization case study.
+       Opens on YouTube in a new tab.
+     </span>
+   </a>
+
+The case study shown is the audio-magnetotelluric survey and 2-D
+inversion of [Kouabena2025]_ (bundled as ``data/AMT/WILLY_DATA/``; see
+:doc:`/user_guide/models/occam2d` and the dataset's own ``README.md``).
+Prefer a shorter, silent tour instead? See the animated walkthrough on
+the :doc:`overview` page.
 
 A good first pass, in order, is **Overview → Installation → Loading &
 Sessions → Views & Controls → Exports → Troubleshooting**.

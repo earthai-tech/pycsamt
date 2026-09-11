@@ -17,7 +17,7 @@ build here can be reproduced exactly in a script.
    <a class="pycsamt-video-card"
       href="https://youtu.be/DcDA3THoFtw" target="_blank" rel="noopener">
      <span class="pycsamt-video-thumb">
-       <img src="https://i.ytimg.com/vi/DcDA3THoFtw/hqdefault.jpg"
+       <img src="/_static/applications/mapview/mapview-demo-cover.jpg"
             alt="MapView video demo thumbnail" loading="lazy">
        <span class="pycsamt-video-play" aria-hidden="true">
          <svg viewBox="0 0 68 48" xmlns="http://www.w3.org/2000/svg">

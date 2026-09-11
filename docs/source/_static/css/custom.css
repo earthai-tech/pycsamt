@@ -573,16 +573,17 @@ html[data-theme="dark"] .pycsamt-hero-actions .sd-card {
 .pycsamt-video-thumb {
   position: relative;
   display: block;
-  aspect-ratio: 16 / 9;
-  background: #000;
+  /* No fixed aspect-ratio box: the thumbnail's own dimensions set the
+     card's height, so a cover image that isn't exactly 16:9 is shown
+     in full -- scaled, never cropped or letterboxed. */
+  line-height: 0;
 }
 
 .pycsamt-video-thumb img {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   margin: 0;
-  object-fit: cover;
 }
 
 .pycsamt-video-play {

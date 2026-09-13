@@ -918,6 +918,10 @@ optional rather than central, closer to how
 :doc:`map_porphyry_mineralization_from_noisy_amt` treats it -- let the
 diagnostic decide, not the acquisition method's name.
 
+.. container:: pyc-download-cta
+
+   :download:`Point RAW_DIR at your own raw CSAMT EDI folder to adapt this script <../../scripts/generate_tutorial_csamt_ai_workflow.py>`
+
 See Also
 --------
 

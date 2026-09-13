@@ -638,3 +638,7 @@ Before comparing paths, retain source hashes, EPSG, interpolation rule, EDI
 inventory, native QC, frequency decisions, source offsets, Occam compiler
 and configuration, AI configuration and seeds, software version, and every
 diagnostic. Both paths must use the same reviewed EDI data and topography.
+
+.. container:: pyc-download-cta
+
+   :download:`Point DATA at your own AVG/STN survey folder to adapt this script <../../scripts/generate_tutorial_zonge_avg_workflow.py>`

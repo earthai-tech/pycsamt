@@ -334,6 +334,10 @@ estimated station offsets. Blue bars have positive
 ``delta_log10_rho`` and therefore receive a downward resistivity correction;
 red bars move upward.
 
+.. container:: pyc-download-cta
+
+   :download:`Point DATA_DIR at your own EDI survey folder to adapt this script <../../scripts/generate_tutorial_static_shift.py>`
+
 .. image:: ../images/tutorials/correct_static_shift/ama_factor_profile.png
    :alt: AMA static-shift factors estimated for the L18PLT tutorial line.
    :width: 100%

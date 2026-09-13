@@ -1426,6 +1426,10 @@ Executed output:
    L26PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.310 recovery_RMSE 0.482
    L30PLT stations 25 geology (24, 30) mesh (33, 38) cells 1254 RMS 1.077 recovery_RMSE 0.488
 
+.. container:: pyc-download-cta
+
+   :download:`Point RUN_DIR at your own corrected-EDI run folder to adapt this script <../../scripts/generate_tutorial_porphyry_ai_workflow.py>`
+
 Maxwell-Trained 3-D AI Inversion of Both Lines
 ----------------------------------------------
 
@@ -1605,6 +1609,10 @@ training, so you can inspect the object before committing CPU time:
 .. code-block:: console
 
    python docs/scripts/generate_tutorial_porphyry_ai3d_workflow.py --production
+
+.. container:: pyc-download-cta
+
+   :download:`Set DEPTH_MAX_M to your own target inversion depth to adapt this script <../../scripts/generate_tutorial_porphyry_ai3d_workflow.py>`
 
 Correction Parameter Report
 ---------------------------

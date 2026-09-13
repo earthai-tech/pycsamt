@@ -307,3 +307,7 @@ contracts, :doc:`../user_guide/ai_inversion/geology_priors` for richer prior
 ensembles, :doc:`../user_guide/ai_inversion/training` for experiment control,
 and :doc:`../user_guide/ai_inversion/scientific_validation` before reporting a
 scientific inversion.
+
+.. container:: pyc-download-cta
+
+   :download:`Edit build_model() with your own grid geometry and layer resistivities to adapt this script <../../scripts/generate_tutorial_essential_3d_ai_inversion.py>`

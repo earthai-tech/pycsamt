@@ -515,6 +515,10 @@ station markers belong in the picture, real :mod:`pycsamt.topo`
 functions -- called directly on this page's own real objects, never a
 hand-drawn illustration.
 
+.. container:: pyc-download-cta
+
+   :download:`Point REGIONAL_DB at your own rock resistivity table to adapt this script <../../scripts/generate_tutorial_interpret_two_line_occam2d.py>`
+
 See Also
 --------
 

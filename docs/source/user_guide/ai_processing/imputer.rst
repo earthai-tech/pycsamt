@@ -296,9 +296,4 @@ Full signatures:
 
 .. container:: pyc-download-cta
 
-   .. container:: pyc-download-cta-text
-
-      **Adapt this to your own survey** -- download the script below
-      and point ``load_broken_hill()`` at your own EDI folder.
-
-   :download:`Download script <../../../scripts/generate_user_guide_ai_processing_imputer_figures.py>`
+   :download:`Point load_broken_hill() at your own EDI folder to adapt this script <../../../scripts/generate_user_guide_ai_processing_imputer_figures.py>`

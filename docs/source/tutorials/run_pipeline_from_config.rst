@@ -876,6 +876,10 @@ Near-field correction warns for every station
     It is opt-in. Pass ``--dashboard`` on the CLI, or add ``"dashboard"`` to
     ``report_formats`` in Python -- see `Beyond the Basics`_.
 
+.. container:: pyc-download-cta
+
+   :download:`Point DATA_DIR at your own EDI survey folder to adapt this script <../../scripts/generate_tutorial_pipeline.py>`
+
 Next Steps
 ----------
 

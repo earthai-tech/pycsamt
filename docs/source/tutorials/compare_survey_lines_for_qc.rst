@@ -327,6 +327,10 @@ frequency bands differ, use separate ``select_band`` parameters. If confidence
 distributions differ strongly, inspect the weaker line before applying
 corrections or preparing inversion input.
 
+.. container:: pyc-download-cta
+
+   :download:`Point DATA_ROOT at your own EDI survey folder to adapt this script <../../scripts/generate_tutorial_compare_lines.py>`
+
 See Also
 --------
 

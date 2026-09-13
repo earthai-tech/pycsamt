@@ -454,3 +454,7 @@ real, loaded ``InversionResult`` objects built above --
 :meth:`~pycsamt.forward.grid2d.Grid2D.value_at` directly to sample honest
 ground truth for both calibration and held-out validation boreholes at
 chosen profile positions.
+
+.. container:: pyc-download-cta
+
+   :download:`Point OCCAM_BINARY at your own compiled Occam2D executable to adapt this script <../../scripts/generate_tutorial_two_line_occam2d.py>`

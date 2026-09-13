@@ -853,6 +853,10 @@ declared acceptance criteria on held-out data,
 :doc:`../user_guide/ai_inversion/reporting` is where it turns into a
 package a reviewer who did not run this tutorial can actually check.
 
+.. container:: pyc-download-cta
+
+   :download:`Point K2_DIR at your own corrected EDI folder to adapt this script <../../scripts/generate_tutorial_ai_inversion.py>`
+
 See Also
 --------
 

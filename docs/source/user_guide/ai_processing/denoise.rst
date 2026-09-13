@@ -245,9 +245,4 @@ Full signatures: :class:`~pycsamt.ai.processing.denoise.EMDenoiser`,
 
 .. container:: pyc-download-cta
 
-   .. container:: pyc-download-cta-text
-
-      **Adapt this to your own survey** -- download the script below
-      and point ``load_l18()`` at your own EDI folder.
-
-   :download:`Download script <../../../scripts/generate_user_guide_ai_processing_denoise_figures.py>`
+   :download:`Point load_l18() at your own EDI folder to adapt this script <../../../scripts/generate_user_guide_ai_processing_denoise_figures.py>`

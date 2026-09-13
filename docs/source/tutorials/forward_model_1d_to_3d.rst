@@ -422,6 +422,10 @@ Troubleshooting
     :doc:`../user_guide/forward/maxwell_meshing` describes for the
     rectilinear mesh contract in general.
 
+.. container:: pyc-download-cta
+
+   :download:`Point _load_line() at your own CSAMT EDI folder to adapt this script <../../scripts/generate_tutorial_forward_meshes_1d_to_3d.py>`
+
 See Also
 --------
 

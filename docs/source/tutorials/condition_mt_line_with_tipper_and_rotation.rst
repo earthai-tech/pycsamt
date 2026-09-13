@@ -1230,6 +1230,10 @@ plots but keep the tensor, QC, static-shift, phase-tensor, and rotation steps.
 If the strike rose is broad or multimodal, do not force a single rotation
 angle; split the line into domains or keep the original coordinate frame.
 
+.. container:: pyc-download-cta
+
+   :download:`Point DATA_DIR at your own EDI survey folder to adapt this script <../../scripts/generate_tutorial_kp_mt_conditioning.py>`
+
 See Also
 --------
 

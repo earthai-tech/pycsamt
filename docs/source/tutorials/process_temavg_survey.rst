@@ -644,3 +644,7 @@ is unaffected by that uncertainty, but any step that needs true geographic
 coordinates (a basemap, a distance to a known feature) is not. MARE2DEM's
 ``.emdata`` conversion and the resistivity-grid design that becomes its own
 triangulated mesh are exactly where that tutorial picks up.
+
+.. container:: pyc-download-cta
+
+   :download:`Point DATA at your own TEMAVG survey folder to adapt this script <../../scripts/generate_tutorial_temavg_workflow.py>`

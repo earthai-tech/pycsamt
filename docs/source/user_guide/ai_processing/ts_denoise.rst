@@ -583,10 +583,4 @@ but :class:`KSVDDenoiser` is the interface every example above uses.
 
 .. container:: pyc-download-cta
 
-   .. container:: pyc-download-cta-text
-
-      **Adapt this to your own recording** -- download the script below
-      and point ``read_ts(...)`` at your own field ``.ts``/``.asc``
-      file.
-
-   :download:`Download script <../../../scripts/generate_user_guide_ai_processing_tsdenoise_figures.py>`
+   :download:`Point read_ts(...) at your own field .ts/.asc file to adapt this script <../../../scripts/generate_user_guide_ai_processing_tsdenoise_figures.py>`

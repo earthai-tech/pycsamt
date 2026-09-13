@@ -4,75 +4,59 @@
  * examples all come from one script in docs/scripts/. Complements
  * code-dropdown.css (inline inspect-and-copy of one function) rather
  * than replacing it: this is the "take the whole thing and adapt it"
- * follow-up once a reader has finished the page. Brand variables come
- * from css/custom.css; dark mode is inherited from those variables,
- * no separate override needed here.
+ * follow-up once a reader has finished the page. The whole line *is*
+ * the :download: link -- its label is the instructional sentence
+ * itself (styled italic), with the download glyph at the left, so
+ * clicking anywhere across the full-width bar downloads the script.
+ * No separate "Download script" caption needed. Brand blue gradient
+ * (same tone as the rest of the content-area UI); orange is kept only
+ * as a light hover/focus accent rather than the fill color, so a
+ * full-width bar doesn't read as a wall of orange.
+ * Brand variables come from css/custom.css; dark mode is inherited from
+ * those variables, no separate override needed here.
  */
 .pyc-download-cta {
   --pyc-dl-blue: var(--pycsamt-blue, #3e65b0);
   --pyc-dl-blue-dark: var(--pycsamt-blue-dark, #1f4490);
   --pyc-dl-orange: var(--pycsamt-orange, #f15a29);
-  --pyc-dl-gold: var(--pycsamt-gold, #fbb040);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.1rem;
-  margin: 2.2rem 0 1.2rem;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--pyc-dl-blue) 32%, var(--pst-color-border));
-  border-radius: 0.8rem;
-  background:
-    linear-gradient(135deg,
-      color-mix(in srgb, var(--pyc-dl-blue) 9%, transparent),
-      color-mix(in srgb, var(--pyc-dl-gold) 7%, transparent));
+  margin: 1.6rem 0 1.2rem;
 }
 
-.pyc-download-cta-text {
-  flex: 1 1 22rem;
-  min-width: 0;
-  font-size: 0.92rem;
-  line-height: 1.5;
-  color: var(--pycsamt-ink, var(--pst-color-text-base));
+.pyc-download-cta > p {
+  margin: 0;
 }
 
-.pyc-download-cta-text p { margin: 0.15rem 0; }
-
-.pyc-download-cta-text strong {
-  color: var(--pyc-dl-blue-dark);
-}
-
-html[data-theme="dark"] .pyc-download-cta-text strong {
-  color: color-mix(in srgb, var(--pyc-dl-blue) 55%, white);
-}
-
-/* Sphinx's :download: role renders `a.reference.download`; style it as
- * a solid call-to-action button rather than an inline text link. */
+/* Sphinx's :download: role renders `a.reference.download`; stretch it
+ * into a full-width bar (same height as a normal pill button, just
+ * long) rather than an inline text link. */
 .pyc-download-cta a.reference.download {
-  flex: 0 0 auto;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.65rem 1.2rem;
-  border-radius: 0.55rem;
+  justify-content: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.4rem 1.1rem;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
-  white-space: nowrap;
+  font-style: italic;
+  font-size: 0.88rem;
+  white-space: normal;
   color: #fff !important;
   text-decoration: none !important;
-  background: linear-gradient(135deg, var(--pyc-dl-blue), var(--pyc-dl-blue-dark));
-  box-shadow: 0 0.15rem 0.5rem color-mix(in srgb, var(--pyc-dl-blue) 38%, transparent);
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  background: linear-gradient(120deg, var(--pyc-dl-blue), var(--pyc-dl-blue-dark));
+  box-shadow: 0 4px 12px rgba(31, 68, 144, 0.28);
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
 /* Sphinx renders the :download: link text as a docutils literal
  * (monospace, `.pre` no-wrap spans) by default -- override it back to
- * plain button text. */
+ * plain italic button text. */
 .pyc-download-cta a.reference.download code,
 .pyc-download-cta a.reference.download .pre {
   font-family: inherit;
   font-size: inherit;
   font-weight: inherit;
+  font-style: inherit;
   color: inherit;
   background: none;
   border: none;
@@ -80,42 +64,38 @@ html[data-theme="dark"] .pyc-download-cta-text strong {
   white-space: normal;
 }
 
+/* Crisp monochrome download glyph (Bootstrap Icons' "download" path)
+ * via CSS mask, so it tints with currentColor instead of relying on a
+ * unicode arrow that renders inconsistently across platforms/fonts. */
 .pyc-download-cta a.reference.download::before {
-  content: "\2B07";      /* ⬇ */
+  content: "";
   display: inline-block;
-  font-weight: 700;
-  transition: transform 0.16s ease;
+  width: 0.85em;
+  height: 0.85em;
+  flex: 0 0 auto;
+  background-color: #fff;
+  -webkit-mask: var(--pyc-dl-download-icon) no-repeat center / contain;
+  mask: var(--pyc-dl-download-icon) no-repeat center / contain;
+}
+
+.pyc-download-cta {
+  --pyc-dl-download-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z'/%3E%3Cpath d='M7.5 10.293V1.5a.5.5 0 0 1 1 0v8.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 10.293z'/%3E%3C/svg%3E");
 }
 
 .pyc-download-cta a.reference.download:hover,
 .pyc-download-cta a.reference.download:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 0.35rem 0.85rem color-mix(in srgb, var(--pyc-dl-blue) 48%, transparent);
-  background: linear-gradient(135deg, var(--pyc-dl-orange), var(--pyc-dl-blue));
-}
-
-.pyc-download-cta a.reference.download:hover::before {
-  transform: translateY(0.12rem);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(31, 68, 144, 0.38);
+  background: linear-gradient(120deg, var(--pyc-dl-blue-dark), var(--pyc-dl-blue));
 }
 
 .pyc-download-cta a.reference.download:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--pyc-dl-orange) 65%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--pyc-dl-blue) 55%, transparent);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pyc-download-cta a.reference.download,
-  .pyc-download-cta a.reference.download::before {
-    transition: none;
-  }
-}
-
-@media (max-width: 46rem) {
-  .pyc-download-cta {
-    flex-direction: column;
-    align-items: stretch;
-  }
   .pyc-download-cta a.reference.download {
-    justify-content: center;
+    transition: none;
   }
 }

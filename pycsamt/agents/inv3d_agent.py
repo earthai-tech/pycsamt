@@ -328,6 +328,7 @@ class Inv3DAgent(BaseAgent):
                 f"Inv3DAgent requires PyTorch or TensorFlow: {exc}",
                 hint="pip install torch  or  pip install tensorflow",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         from ..emtools._core import (
@@ -341,12 +342,16 @@ class Inv3DAgent(BaseAgent):
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
             return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
+                "No 'sites' or 'path'.",
+                elapsed=time.time() - t0,
+                warnings=warnings,
             )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
+            return AgentResult.failed(
+                str(exc), elapsed=time.time() - t0, warnings=warnings
+            )
 
         output_dir = input_data.get("output_dir")
         
@@ -367,6 +372,7 @@ class Inv3DAgent(BaseAgent):
                 return AgentResult.failed(
                     "'freqs' must contain at least two finite positive values.",
                     elapsed=time.time() - t0,
+                    warnings=warnings,
                 )
             freqs = np.unique(freqs)
         n_freqs = int(freqs.size)
@@ -377,6 +383,7 @@ class Inv3DAgent(BaseAgent):
             return AgentResult.failed(
                 "'depth_max' must be positive when supplied.",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
         ths = _agent_thicknesses(
             self.n_layers,
@@ -414,6 +421,7 @@ class Inv3DAgent(BaseAgent):
             return AgentResult.failed(
                 f"Only {n_sta} usable station(s) — need ≥ 2 for GCN.",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         X_obs = np.stack(feat_list, axis=0).astype(
@@ -486,6 +494,7 @@ class Inv3DAgent(BaseAgent):
                 return AgentResult.failed(
                     f"3-D Maxwell dataset assembly failed: {exc}",
                     elapsed=time.time() - t0,
+                    warnings=warnings,
                 )
         else:
             n_1d_total = self.n_train_profiles * n_sta
@@ -539,6 +548,7 @@ class Inv3DAgent(BaseAgent):
                 return AgentResult.failed(
                     f"Synthetic dataset generation failed: {exc}",
                     elapsed=time.time() - t0,
+                    warnings=warnings,
                 )
 
         # ── train GCNInverter3D ───────────────────────────────────────────────
@@ -560,6 +570,7 @@ class Inv3DAgent(BaseAgent):
                 f"Inv3DAgent requires PyTorch or TensorFlow: {exc}",
                 hint="pip install torch  or  pip install tensorflow",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         try:
@@ -586,6 +597,7 @@ class Inv3DAgent(BaseAgent):
             return AgentResult.failed(
                 f"GCNInverter3D training failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         # ── predict on observed stations ──────────────────────────────────────
@@ -596,6 +608,7 @@ class Inv3DAgent(BaseAgent):
             return AgentResult.failed(
                 f"3-D prediction failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         pred_rho = y_pred[:, : self.n_layers]  # (n_sta, n_layers)
@@ -863,146 +876,6 @@ def _agent_thicknesses(
     n_finite = max(int(n_layers) - 1, 1)
     weights = np.geomspace(1.0, 3.0, n_finite)
     return (float(depth_max) * weights / weights.sum()).astype(float)
-
-
-def _resolve_agent_topography(
-    config: Any,
-    *,
-    sites: Any,
-    station_names: list[str],
-    coords_m: np.ndarray,
-    warnings_list: list[str],
-) -> dict[str, Any] | None:
-    """Resolve and align optional terrain data to usable inversion stations."""
-    if config is None or config is False:
-        return None
-    if config is True:
-        cfg: dict[str, Any] = {}
-    elif isinstance(config, dict):
-        cfg = dict(config)
-        if not cfg.get("enabled", True):
-            return None
-    else:
-        warnings_list.append(
-            "'topography' must be a bool or mapping; ignored."
-        )
-        return None
-
-    exaggeration = float(cfg.get("exaggeration", 1.0))
-    if not np.isfinite(exaggeration) or exaggeration <= 0:
-        warnings_list.append(
-            "Topography exaggeration must be finite and positive; ignored."
-        )
-        return None
-    interp_method = str(cfg.get("interp_method", "linear")).lower()
-    if interp_method not in {"linear", "nearest", "cubic"}:
-        warnings_list.append(
-            "Topography interp_method must be linear, nearest, or cubic; ignored."
-        )
-        return None
-
-    explicit_elev = cfg.get("elevation_m")
-    explicit_chain = cfg.get("chainage_km")
-    source = "array" if explicit_elev is not None else "sites"
-    if explicit_elev is None:
-        from ..topo.extract import (
-            extract_chainage,
-            extract_elevation,
-            extract_station_names,
-        )
-
-        all_names = extract_station_names(sites)
-        all_elev = extract_elevation(sites)
-        all_chain = extract_chainage(sites)
-        # Name alignment is essential because stations without impedance data
-        # may have been skipped above.  Positional truncation would attach the
-        # wrong hill/valley to every following station.
-        lookup: dict[str, int] = {}
-        for i, name in enumerate(all_names):
-            lookup.setdefault(str(name).strip().casefold(), i)
-        missing = [
-            n for n in station_names if str(n).strip().casefold() not in lookup
-        ]
-        if missing:
-            warnings_list.append(
-                "Topography station-name alignment failed for: "
-                + ", ".join(missing[:5])
-                + (" ..." if len(missing) > 5 else "")
-            )
-            return {
-                "requested": True,
-                "applied": False,
-                "rendered": False,
-                "source": source,
-                "affects_forward_physics": False,
-                "vertical_datum": "metres above sea level",
-                "elevation_m": None,
-                "chainage_km": None,
-                "exaggeration": exaggeration,
-                "interp_method": interp_method,
-            }
-        idx = np.asarray(
-            [lookup[str(n).strip().casefold()] for n in station_names]
-        )
-        elevation = np.asarray(all_elev, dtype=float)[idx]
-        chainage = np.asarray(all_chain, dtype=float)[idx]
-        chainage = chainage - chainage[0]
-    else:
-        elevation = np.asarray(explicit_elev, dtype=float).reshape(-1)
-        if elevation.size != len(station_names):
-            warnings_list.append(
-                "Explicit elevation_m length must equal the usable station count; "
-                "topography ignored."
-            )
-            return None
-        if explicit_chain is None:
-            xy = np.asarray(coords_m, dtype=float)
-            seg = np.sqrt((np.diff(xy, axis=0) ** 2).sum(axis=1))
-            chainage = np.concatenate([[0.0], np.cumsum(seg)]) / 1000.0
-        else:
-            chainage = np.asarray(explicit_chain, dtype=float).reshape(-1)
-
-    if chainage.size != elevation.size or not np.all(np.isfinite(chainage)):
-        warnings_list.append(
-            "Topography chainage is invalid; topography ignored."
-        )
-        return None
-    if not np.all(np.isfinite(elevation)) or not np.any(elevation != 0.0):
-        warnings_list.append(
-            "No finite, non-zero station elevations were available; "
-            "topography was not applied."
-        )
-        return {
-            "requested": True,
-            "applied": False,
-            "rendered": False,
-            "source": source,
-            "affects_forward_physics": False,
-            "vertical_datum": "metres above sea level",
-            "elevation_m": elevation,
-            "chainage_km": chainage,
-            "exaggeration": exaggeration,
-            "interp_method": interp_method,
-        }
-    if np.any(np.diff(chainage) <= 0):
-        warnings_list.append(
-            "Topography chainage must increase in station order; topography ignored."
-        )
-        return None
-
-    return {
-        "requested": True,
-        "applied": True,
-        "rendered": False,
-        "source": source,
-        "affects_forward_physics": False,
-        "vertical_datum": "metres above sea level",
-        "station_names": list(station_names),
-        "elevation_m": elevation,
-        "chainage_km": chainage,
-        "exaggeration": exaggeration,
-        "interp_method": interp_method,
-    }
 
 
 def _extract_station_xy(ed: Any, idx: int) -> np.ndarray:

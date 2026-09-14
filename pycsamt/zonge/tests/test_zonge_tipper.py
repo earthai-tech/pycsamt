@@ -110,6 +110,100 @@ class TestTipper:
         assert "ty" in tipper.frame.columns
         assert pd.isna(tipper.frame["tx"].iloc[0])
 
+    def test_read_raises_typeerror_for_non_dataframe(self):
+        tipper = Tipper()
+        with pytest.raises(TypeError):
+            tipper.read([1, 2, 3])
+
+    def test_read_creates_station_column_when_missing(self):
+        df = pd.DataFrame({"freq": [1024], "tx": [0.1 + 0.2j], "ty": [0.3 + 0.4j]})
+        tipper = Tipper()
+        tipper.read(df)
+        assert "station" in tipper.frame.columns
+        assert pd.isna(tipper.frame["station"].iloc[0])
+
+    def test_read_raises_when_freq_missing(self):
+        df = pd.DataFrame({"station": [101], "tx": [0.1], "ty": [0.2]})
+        tipper = Tipper()
+        with pytest.raises(AvgDataError, match="freq"):
+            tipper.read(df)
+
+    def test_ty_property(self):
+        df = pd.DataFrame(
+            {
+                "station": [101],
+                "freq": [1024],
+                "tx": [0.1 + 0.2j],
+                "ty": [0.3 + 0.4j],
+            }
+        )
+        tipper = Tipper()
+        tipper.read(df)
+        assert np.isclose(tipper.ty.iloc[0], 0.3 + 0.4j)
+
+    def test_tx_ty_default_when_frame_missing_columns(self):
+        tipper = Tipper()
+        assert tipper.tx.empty
+        assert tipper.ty.empty
+
+    def test_write_empty_returns_empty_list(self):
+        tipper = Tipper()
+        assert tipper.write() == []
+
+    def test_write_nonempty_returns_csv_block(self):
+        df = pd.DataFrame(
+            {
+                "station": [101],
+                "freq": [1024],
+                "tx": [0.1 + 0.2j],
+                "ty": [0.3 + 0.4j],
+            }
+        )
+        tipper = Tipper()
+        tipper.read(df)
+        lines = tipper.write()
+        assert isinstance(lines, list) and len(lines) > 0
+        assert any("Tipper Block" in ln for ln in lines)
+
+    def test_to_xarray_raises_when_empty(self):
+        tipper = Tipper()
+        with pytest.raises(AvgDataError):
+            tipper.to_xarray()
+
+    def test_to_xarray_merges_extra_attrs(self):
+        df = pd.DataFrame(
+            {
+                "station": [101],
+                "freq": [1024],
+                "tx": [0.1 + 0.2j],
+                "ty": [0.3 + 0.4j],
+            }
+        )
+        tipper = Tipper()
+        tipper.read(df)
+        ds = tipper.to_xarray(attrs={"custom_attr": "hello"})
+        assert ds.attrs.get("custom_attr") == "hello"
+
+    def test_str_and_repr_empty(self):
+        tipper = Tipper()
+        assert str(tipper) == "Tipper(status=empty)"
+        assert repr(tipper) == str(tipper)
+
+    def test_str_and_repr_nonempty(self):
+        df = pd.DataFrame(
+            {
+                "station": [101, 102],
+                "freq": [1024, 1024],
+                "tx": [0.1 + 0.2j, 0.15 + 0.25j],
+                "ty": [0.3 + 0.4j, 0.35 + 0.45j],
+            }
+        )
+        tipper = Tipper()
+        tipper.read(df)
+        s = str(tipper)
+        assert "rows=2" in s and "stations=2" and "freqs=1" in s
+        assert repr(tipper) == s
+
     def test_to_xarray(self):
         """Test exporting Tipper data to xarray."""
         df = pd.DataFrame(

@@ -458,11 +458,16 @@ class EDIOMixin(CoreObject):
         tip_obj._tipper = t
         tip_obj._tipper_err = te
 
-        tr = np.asarray(comp.get("trot", []), float)
-        tr = _nz(tr, n)
-        if tr.size == n:
+        tr_raw = np.asarray(comp.get("trot", []), float)
+        if tr_raw.size == n:
+            tr = _nz(tr_raw, n)
             tip_obj.rotation_angle = tr[::-1] if rev else tr
         else:
+            # TROT block missing or the wrong length: _nz() would silently
+            # zero-pad/truncate it to length n, masking this case entirely
+            # (any size would then compare equal to n). Fall back to the
+            # impedance rotation angle instead, matching the fallback this
+            # branch was clearly written to provide.
             tip_obj.rotation_angle = z_obj.rotation_angle
 
         tip_obj.compute_amp_phase()

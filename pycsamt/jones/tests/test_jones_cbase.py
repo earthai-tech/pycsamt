@@ -156,3 +156,297 @@ def test_jcoreparser_repr_and_str(j_single_file: Path):
     r = repr(p)
     assert isinstance(s, str) and isinstance(r, str)
     assert "JCoreParser" in r or "JCoreParser" in s
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# JParseMixin: _iter_paths / _push_error / _iter_j_files coverage
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_iter_paths_from_iterable_of_strings(tmp_path: Path):
+    d = JParseMixin()
+    a = tmp_path / "a.j"
+    a.write_text("x", encoding="utf-8")
+    got = list(d._iter_paths([str(a)]))
+    assert got == [a.resolve()]
+
+
+def test_iter_j_files_direct_non_j_file_pushes_error(tmp_path: Path):
+    d = JParseMixin()
+    q = tmp_path / "notes.doc"
+    q.write_text("hello", encoding="utf-8")
+    out = list(d._iter_j_files([str(q)]))
+    assert out == []
+    assert d._errors and "Not a J file" in str(d._errors[0][1])
+
+
+def test_iter_j_files_empty_dir_pushes_error(tmp_path: Path):
+    d = JParseMixin()
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    out = list(d._iter_j_files([str(empty_dir)]))
+    assert out == []
+    assert d._errors and "No .j under" in str(d._errors[0][1])
+
+
+def test_iter_j_files_relative_glob_pattern_matches(tmp_path: Path, monkeypatch):
+    d = JParseMixin()
+    (tmp_path / "kb1.j").write_text("x", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    out = list(d._iter_j_files(["*.j"], root=tmp_path))
+    assert len(out) == 1
+    assert out[0].name == "kb1.j"
+
+
+def test_iter_j_files_relative_glob_pattern_no_match_pushes_error(tmp_path: Path):
+    d = JParseMixin()
+    out = list(d._iter_j_files(["*.nope"], root=tmp_path))
+    assert out == []
+    assert d._errors and "No match" in str(d._errors[0][1])
+
+
+def test_iter_j_files_unresolvable_source_pushes_not_found(tmp_path: Path):
+    d = JParseMixin()
+    out = list(d._iter_j_files(["\x00bad"]))
+    assert out == []
+    assert d._errors
+
+
+def test_push_error_falls_back_when_as_path_raises(monkeypatch):
+    d = JParseMixin()
+
+    def _boom(self, p):
+        raise OSError("cannot resolve glob")
+
+    monkeypatch.setattr(JParseMixin, "_as_path", _boom)
+    d._push_error("*.j", "boom")
+    assert d._errors
+    p, err = d._errors[0]
+    assert str(p) == "*.j"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# JParseMixin: _fast_station
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_fast_station_skips_blank_comment_info_then_matches(tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text(
+        "\n".join(
+            [
+                "",
+                "# a comment",
+                ">AZIMUTH = 0.0",
+                "KB0001",
+                "RXY",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    assert d._fast_station(p) == "KB0001"
+
+
+def test_fast_station_returns_none_when_no_station_found(tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text("# only a comment\n", encoding="utf-8")
+    assert d._fast_station(p) is None
+
+
+def test_fast_station_returns_none_on_read_error(tmp_path: Path):
+    d = JParseMixin()
+    missing = tmp_path / "does_not_exist.j"
+    assert d._fast_station(missing) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# JParseMixin: is_j_like / is_j_file / is_j_candidate
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_is_j_like_false_for_non_j_suffix(tmp_path: Path):
+    d = JParseMixin()
+    q = tmp_path / "notes.doc"
+    q.write_text("hello", encoding="utf-8")
+    assert d.is_j_like(q) is False
+
+
+def test_is_j_like_shallow_true_without_deep_scan(tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text("anything at all", encoding="utf-8")
+    assert d.is_j_like(p, deep=False) is True
+
+
+def test_is_j_like_false_on_read_error(tmp_path: Path):
+    d = JParseMixin()
+    missing = tmp_path / "missing.j"
+    assert d.is_j_like(missing, deep=True) is False
+
+
+def test_is_j_like_detects_banner_and_info_without_triple(tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text(
+        "\n".join(
+            [
+                "#WRITTEN BY TOOL: KB0001 01/01/25 RAW",
+                ">AZIMUTH = 0.0",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    assert d.is_j_like(p, deep=True) is True
+
+
+def test_is_j_like_false_when_neither_triple_nor_banner_info(tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text("KB0001\n", encoding="utf-8")
+    assert d.is_j_like(p, deep=True) is False
+
+
+def test_is_j_file_false_on_exception(monkeypatch, tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text("x", encoding="utf-8")
+
+    from pycsamt.jones import cbase as cbase_mod
+
+    monkeypatch.setattr(
+        cbase_mod.IsJ,
+        "_assert_j",
+        staticmethod(lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))),
+    )
+    assert d.is_j_file(p) is False
+
+
+def test_is_j_candidate_is_alias_of_is_j_like(tmp_path: Path):
+    d = JParseMixin()
+    p = tmp_path / "s.j"
+    p.write_text("anything", encoding="utf-8")
+    assert d.is_j_candidate(p, deep=False) == d.is_j_like(p, deep=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# JCoreParser: on_dup validation, error handling, dedup
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_jcoreparser_invalid_on_dup_raises():
+    with pytest.raises(ValueError):
+        JCoreParser(on_dup="bogus")
+
+
+def test_jcoreparser_read_one_non_strict_records_error(tmp_path: Path):
+    p = tmp_path / "bad.j"
+    p.write_text("not a real J file at all\n", encoding="utf-8")
+    parser = JCoreParser(strict=False, verbose=0)
+    res = parser._read_one(p)
+    assert res.jf is None
+    assert res.error is not None
+
+
+def test_jcoreparser_read_one_strict_reraises(tmp_path: Path):
+    p = tmp_path / "bad.j"
+    p.write_text("not a real J file at all\n", encoding="utf-8")
+    parser = JCoreParser(strict=True, verbose=0)
+    with pytest.raises(Exception):
+        parser._read_one(p)
+
+
+def test_jcoreparser_parse_skips_failed_reads_and_reports_errors(tmp_path: Path):
+    bad = tmp_path / "bad.j"
+    bad.write_text("garbage\n", encoding="utf-8")
+    parser = JCoreParser(strict=False, verbose=0)
+    out = parser.parse([bad])
+    assert out == []
+    assert parser.errors()
+
+
+def test_jcoreparser_parse_on_dup_keep_skips_duplicate_station(j_single_file: Path):
+    parser = JCoreParser(on_dup="keep", verbose=0)
+    out = parser.parse([j_single_file, j_single_file])
+    assert len(out) == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# JCBBase: __getitem__, add() dup-replace, map(), summary() tipper flag
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class _FakeJF:
+    def __init__(self, site, path=None, freq=None, tip=None, res=None, z=None):
+        self.site = site
+        self.path = path
+        self.freq = freq
+        self.Tip = tip
+        self.Res = res
+        self.Z = z
+
+    def write(self, new_jfn, **kwargs):
+        return str(new_jfn)
+
+
+def test_jcbbase_getitem_by_int_and_station_and_missing_key():
+    base = JCBBase(items=[_FakeJF("S1"), _FakeJF("S2")])
+    assert base[0].site == "S1"
+    assert base["S2"].site == "S2"
+    with pytest.raises(KeyError):
+        base["NOPE"]
+
+
+def test_jcbbase_add_replaces_existing_station():
+    base = JCBBase()
+    a = _FakeJF("S1")
+    b = _FakeJF("S1")
+    base.add(a)
+    base.add(b)
+    assert len(base) == 1
+    assert base["S1"] is b
+
+
+def test_jcbbase_map_applies_function_to_each_item():
+    base = JCBBase(items=[_FakeJF("S1"), _FakeJF("S2")])
+    out = base.map(lambda jf: jf.site)
+    assert out == ["S1", "S2"]
+
+
+def test_jcbbase_summary_detects_nonzero_tipper():
+    import numpy as np
+
+    class _Tip:
+        tipper_array = np.array([[0.1, 0.0]])
+
+    base = JCBBase(items=[_FakeJF("S1", tip=_Tip())])
+    rows = base.summary()
+    assert rows[0]["tipper"] is True
+
+
+def test_jcbbase_summary_zero_tipper_array_is_false():
+    import numpy as np
+
+    class _Tip:
+        tipper_array = np.zeros((1, 2))
+
+    base = JCBBase(items=[_FakeJF("S1", tip=_Tip())])
+    rows = base.summary()
+    assert rows[0]["tipper"] is False
+
+
+def test_jcbbase_load_logs_when_errors_present(tmp_path: Path):
+    bad = tmp_path / "bad.j"
+    bad.write_text("garbage\n", encoding="utf-8")
+    col = JCBBase.load([bad], verbose=0)
+    assert isinstance(col, JCBBase)
+    assert len(col) == 0
+
+
+def test_jcbbase_write_uses_pattern_and_item_write(tmp_path: Path):
+    base = JCBBase(items=[_FakeJF("S1")])
+    out = base.write(tmp_path / "out", pattern="{station}.j")
+    assert len(out) == 1
+    assert (tmp_path / "out").is_dir()

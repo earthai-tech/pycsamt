@@ -55,7 +55,7 @@ class FlexDict(dict):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.__dict__ = self
+        object.__setattr__(self, "__dict__", self)
 
     def __getattr__(self, item):
         try:
@@ -74,7 +74,7 @@ class FlexDict(dict):
 
     def __setstate__(self, state):
         self.update(state)
-        self.__dict__ = self
+        object.__setattr__(self, "__dict__", self)
 
     def __dir__(self):
         return list(self.keys())

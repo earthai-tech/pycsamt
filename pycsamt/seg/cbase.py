@@ -99,7 +99,21 @@ class ParseMixin:
     EDI_SUFFIXES = {".edi"}
 
     def _as_path(self, p: Pathish) -> Path:
-        return Path(str(p)).expanduser().resolve()
+        path = Path(str(p)).expanduser()
+        try:
+            return path.resolve()
+        except (OSError, ValueError):
+            # Windows (notably Python <= 3.9) raises OSError (WinError
+            # 123) from Path.resolve() for a name it cannot look up
+            # directly, such as a glob pattern (e.g. "*.edi") passed in
+            # ahead of the later glob-expansion step in
+            # ``_iter_edi_files``, or ValueError for a string the OS
+            # path APIs reject outright (e.g. an embedded null byte)
+            # -- typically an unsupported/malformed source reaching
+            # ``_push_error``. Fall back to a filesystem-free absolute
+            # path so callers still get a usable ``Path`` instead of
+            # an unhandled crash.
+            return path.absolute()
 
     def _is_edi_path(self, p: Path) -> bool:
         return p.is_file() and (p.suffix.lower() in self.EDI_SUFFIXES)

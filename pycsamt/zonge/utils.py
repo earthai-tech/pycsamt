@@ -997,7 +997,7 @@ def load_avg(
     if lat_col in df.columns and lon_col in df.columns:
         try:
             east, north, _ = to_utm(
-                df[lat_col].values, df[lon_col].values, zone=utm_zone
+                df[lat_col].values, df[lon_col].values, utm_zone=utm_zone
             )
             df["easting"] = east
             df["northing"] = north

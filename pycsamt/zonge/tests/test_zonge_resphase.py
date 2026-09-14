@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pycsamt.exceptions import AvgDataError
 from pycsamt.zonge.resphase import Phase, Resistivity
 
 
@@ -174,6 +175,145 @@ def test_phase_write_block_has_banner_and_unit_meta():
     lines = p.write()
     assert _has_line(lines, lambda s: s.strip().startswith(r"\ $Phase Block"))
     assert _has_line(lines, lambda s: s.strip().startswith("$Unit.Phase="))
+
+
+# --------------------------- Additional coverage ---------------------------- #
+
+
+def test_resistivity_read_vector_like_list():
+    r = Resistivity()
+    r.read([1.0, 2.0, 3.0], station=100.0, freq=1.0, comp="ExHy")
+    assert list(r.frame["rho"]) == [1.0, 2.0, 3.0]
+    assert set(r.frame["station"].unique()) == {100.0}
+    assert set(r.frame["comp"].unique()) == {"ExHy"}
+
+
+def test_resistivity_read_vector_like_numpy_array_defaults():
+    r = Resistivity()
+    r.read(np.array([1.0, 2.0]))
+    assert list(r.frame["rho"]) == [1.0, 2.0]
+    assert r.frame["comp"].iloc[0] == "ExHy"
+
+
+def test_resistivity_read_raises_typeerror_for_invalid_source():
+    r = Resistivity()
+    with pytest.raises(TypeError):
+        r.read({"not": "supported"})
+
+
+def test_resistivity_read_creates_missing_rho_column():
+    df = pd.DataFrame({"station": [1.0], "freq": [1.0], "comp": ["ExHy"]})
+    r = Resistivity(verbose=True)
+    r.read(df)
+    assert "rho" in r.frame.columns
+    assert pd.isna(r.frame["rho"].iloc[0])
+
+
+def test_resistivity_read_injects_missing_station_column():
+    df = pd.DataFrame({"freq": [1.0], "ARes.mag": [10.0]})
+    r = Resistivity()
+    r.read(df)
+    assert "station" in r.frame.columns
+    assert pd.isna(r.frame["station"].iloc[0])
+
+
+def test_resistivity_read_raises_when_freq_missing():
+    df = pd.DataFrame({"station": [1.0], "ARes.mag": [10.0]})
+    r = Resistivity()
+    with pytest.raises(AvgDataError, match="freq"):
+        r.read(df)
+
+
+def test_resistivity_to_xarray_merges_extra_attrs():
+    df = pd.DataFrame(
+        {"station": [0.0], "freq": [1.0], "comp": ["ExHy"], "ARes.mag": [1.0]}
+    )
+    r = Resistivity.from_avg((df, {}))
+    ds = r.to_xarray(attrs={"custom": "value"})
+    assert ds.attrs.get("custom") == "value"
+
+
+def test_phase_read_vector_like_list():
+    p = Phase()
+    p.read([1.0, 2.0], station=50.0, freq=1.0, comp="ExHy")
+    assert list(p.frame["phase"]) == [1.0, 2.0]
+    assert set(p.frame["station"].unique()) == {50.0}
+
+
+def test_phase_read_raises_typeerror_for_invalid_source():
+    p = Phase()
+    with pytest.raises(TypeError):
+        p.read({"not": "supported"})
+
+
+def test_phase_read_creates_missing_phase_column():
+    df = pd.DataFrame({"station": [1.0], "freq": [1.0], "comp": ["ExHy"]})
+    p = Phase(verbose=True)
+    p.read(df)
+    assert "phase" in p.frame.columns
+    assert pd.isna(p.frame["phase"].iloc[0])
+
+
+def test_phase_read_injects_missing_comp_and_station_columns():
+    df = pd.DataFrame({"freq": [1.0], "Z.phz": [10.0]})
+    p = Phase()
+    p.read(df)
+    assert "comp" in p.frame.columns
+    assert p.frame["comp"].iloc[0] == "ExHy"
+    assert "station" in p.frame.columns
+    assert pd.isna(p.frame["station"].iloc[0])
+
+
+def test_phase_read_raises_when_freq_missing():
+    df = pd.DataFrame({"station": [1.0], "Z.phz": [10.0]})
+    p = Phase()
+    with pytest.raises(AvgDataError, match="freq"):
+        p.read(df)
+
+
+def test_phase_to_xarray_merges_extra_attrs():
+    df = pd.DataFrame(
+        {"station": [0.0], "freq": [1.0], "comp": ["ExHy"], "Z.phz": [1.0]}
+    )
+    p = Phase.from_avg((df, {}))
+    ds = p.to_xarray(attrs={"custom": "value"})
+    assert ds.attrs.get("custom") == "value"
+
+
+def test_phase_convert_unit_noop_when_same_unit():
+    df = pd.DataFrame(
+        {"station": [0.0], "freq": [1.0], "comp": ["ExHy"], "Z.phz": [10.0]}
+    )
+    p = Phase.from_avg((df, {"Unit.Phase": "mrad"}))
+    before = float(p.frame["phase"].iloc[0])
+    p.convert_unit("mrad")
+    assert float(p.frame["phase"].iloc[0]) == before
+
+
+def test_phase_convert_unit_raises_for_invalid_target():
+    p = Phase.from_avg(
+        (pd.DataFrame({"station": [0.0], "freq": [1.0], "Z.phz": [1.0]}), {})
+    )
+    with pytest.raises(ValueError, match="mrad.*deg"):
+        p.convert_unit("bogus")
+
+
+def test_phase_convert_unit_noop_when_column_missing():
+    p = Phase()
+    p._meta = {"Unit.Phase": "mrad"}
+    # frame has no "phase" column at all
+    p._frame = pd.DataFrame({"station": [0.0], "freq": [1.0]})
+    p.convert_unit("deg")  # should not raise
+    assert p.meta["Unit.Phase"] == "mrad"  # unchanged: early return
+
+
+def test_phase_convert_unit_raises_for_unsupported_current_unit():
+    df = pd.DataFrame(
+        {"station": [0.0], "freq": [1.0], "comp": ["ExHy"], "Z.phz": [1.0]}
+    )
+    p = Phase.from_avg((df, {"Unit.Phase": "rad"}))
+    with pytest.raises(ValueError, match="unsupported conversion"):
+        p.convert_unit("deg")
 
 
 if __name__ == "__main__":  # pragma: no-cover

@@ -12,6 +12,7 @@ from pycsamt.zonge.base import (
     AVGFrame,
     AvgRow,
     FieldAliases,
+    guess_kind_from_df,
 )
 
 
@@ -75,6 +76,18 @@ def test_avgframe_core_helpers_and_reprs(tmp_path: Path):
     assert isinstance(frame.to_json(), str)
     assert isinstance(frame.meta_as_json(), str)
 
+    # asdict() combines data + meta + source into plain types
+    d = frame.asdict()
+    assert d["meta"] == meta
+    assert d["source"] == str(tmp_path / "K2.avg")
+    assert isinstance(d["data"], list)
+
+
+def test_avgframe_asdict_no_source():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    frame = AVGFrame(df, {})
+    assert frame.asdict()["source"] is None
+
 
 class DummyComp(AVGComponentBase):
     """Minimal concrete component for testing the base API."""
@@ -124,6 +137,105 @@ def test_component_read_write_and_validation():
         comp2.read(df_bad, meta)
 
 
+def test_component_from_avg_accepts_avgframe_instance():
+    frame = AVGFrame(pd.DataFrame({"station": [1], "freq": [1.0]}), {})
+    comp = DummyComp.from_avg(frame)
+    assert comp.shape == (1, 2)
+
+
+def test_component_from_avg_accepts_bare_dataframe_and_meta_kwarg():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    comp = DummyComp.from_avg(df, meta={"Survey.Type": "CSAMT"})
+    assert comp.meta.get("Survey.Type") == "CSAMT"
+
+
+def test_component_from_avg_falls_back_on_single_arg_read():
+    class SingleArgComp(AVGComponentBase):
+        def read(self, source: pd.DataFrame) -> None:  # only one arg
+            self._frame = source.copy()
+
+        def write(self):
+            return []
+
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    comp = SingleArgComp.from_avg((df, {"x": 1}))
+    assert comp.shape == (1, 2)
+
+
+def test_component_from_avg_raises_typeerror_for_unsupported_source():
+    with pytest.raises(TypeError):
+        DummyComp.from_avg(12345)
+
+
+def test_component_from_avg_with_legacy_path_transforms(data_path: Path):
+    legacy_file = data_path / "K1.AVG"
+    if not legacy_file.exists():
+        pytest.skip(f"missing fixture: {legacy_file}")
+
+    class PassthroughComp(AVGComponentBase):
+        def read(self, source: pd.DataFrame, meta=None) -> None:
+            self._frame = source.copy()
+            self._meta.update(dict(meta or {}))
+
+        def write(self):
+            return []
+
+    comp = PassthroughComp.from_avg(legacy_file)
+    assert not comp.frame.empty
+
+
+def test_component_from_avg_with_modern_path(data_path: Path):
+    modern_file = data_path / "K2.AVG"
+    if not modern_file.exists():
+        pytest.skip(f"missing fixture: {modern_file}")
+
+    class PassthroughComp(AVGComponentBase):
+        def read(self, source: pd.DataFrame, meta=None) -> None:
+            self._frame = source.copy()
+            self._meta.update(dict(meta or {}))
+
+        def write(self):
+            return []
+
+    comp = PassthroughComp.from_avg(modern_file)
+    assert not comp.frame.empty
+
+
+def test_component_name_property():
+    comp = DummyComp(name="Custom")
+    assert comp.name == "Custom"
+
+
+def test_component_asdict_with_and_without_meta():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    comp = DummyComp.from_avg((df, {"k": "v"}))
+    with_meta = comp.asdict()
+    assert with_meta["meta"] == {"k": "v"}
+    without_meta = comp.asdict(include_meta=False)
+    assert "meta" not in without_meta
+
+
+def test_component_to_json():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    comp = DummyComp.from_avg((df, {}))
+    text = comp.to_json()
+    assert isinstance(text, str) and "station" in text
+
+
+def test_write_csv_block_empty_frame_returns_blank_line():
+    comp = DummyComp()
+    lines = comp.write()
+    assert lines[-1] == ""
+
+
+def test_component_str_and_repr():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    comp = DummyComp.from_avg((df, {}))
+    s = str(comp)
+    assert "DummyComp" in s and "station" in s
+    assert repr(comp) == s
+
+
 @pytest.mark.xfail(
     LegacyAVGBase is None,
     reason="LegacyAVGBase not present yet",
@@ -157,6 +269,78 @@ def test_legacyavgbase_minimal_contract():
             assert isinstance(out, (pd.DataFrame, dict))
         # except NotImplementedError:
         #     pass
+
+
+# --------------------------- guess_kind_from_df ---------------------------- #
+
+
+def test_guess_kind_raises_for_unsupported_input():
+    with pytest.raises(AvgDataError, match="pandas DataFrame or an AVGFrame"):
+        guess_kind_from_df(12345)
+
+
+def test_guess_kind_from_plain_dataframe_modern_dot_notation():
+    df = pd.DataFrame({"ARes.mag": [1.0], "Freq": [1.0]})
+    assert guess_kind_from_df(df) == 2
+
+
+def test_guess_kind_from_avgframe_instance():
+    frame = AVGFrame(pd.DataFrame({"station": [1], "freq": [1.0]}), {})
+    # No modern dot-notation or legacy/canonical indicators -> falls
+    # through to the "no clear indicators" default (kind=2, soft mode).
+    assert guess_kind_from_df(frame) == 2
+
+
+def test_guess_kind_detects_legacy_indicators():
+    df = pd.DataFrame({"station": [1], "freq": [1.0], "sPhz": [1.0]})
+    assert guess_kind_from_df(df) == 1
+
+
+def test_guess_kind_detects_canonical_modern_names():
+    df = pd.DataFrame({"station": [1], "freq": [1.0], "pc_emag": [1.0]})
+    assert guess_kind_from_df(df) == 2
+
+
+def test_guess_kind_strict_raise_when_no_indicators():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    with pytest.raises(AvgDataError, match="Could not determine AVG kind"):
+        guess_kind_from_df(df, mode="strict", error="raise")
+
+
+def test_guess_kind_strict_warn_when_no_indicators():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    with pytest.warns(UserWarning, match="Defaulting to modern"):
+        out = guess_kind_from_df(df, mode="strict", error="warn")
+    assert out == 2
+
+
+def test_guess_kind_strict_ignore_when_no_indicators():
+    df = pd.DataFrame({"station": [1], "freq": [1.0]})
+    out = guess_kind_from_df(df, mode="strict", error="ignore")
+    assert out == 2
+
+
+def test_guess_kind_transform_legacy_returns_tuple():
+    # Raw legacy column names (pre-standardization) so guess_kind_from_df
+    # classifies this as kind=1 and exercises the transform branch.
+    df = pd.DataFrame(
+        {"station": [0.0], "freq": [1.0], "comp": ["ExHy"], "sPhz": [1.0]}
+    )
+    out = guess_kind_from_df(df, meta={}, transform=True, verbose=True)
+    assert isinstance(out, tuple) and len(out) == 3
+    out_df, out_meta, kind = out
+    assert isinstance(out_df, pd.DataFrame)
+    assert kind == 2
+
+
+def test_guess_kind_transform_true_but_already_modern_returns_asis():
+    df = pd.DataFrame({"station": [1], "freq": [1.0], "ARes.mag": [10.0]})
+    out = guess_kind_from_df(df, meta={"a": 1}, transform=True)
+    assert isinstance(out, tuple) and len(out) == 3
+    out_df, out_meta, kind = out
+    assert out_df is df
+    assert out_meta == {"a": 1}
+    assert kind == 2
 
 
 if __name__ == "__main__":  # pragma: no-cover

@@ -140,6 +140,15 @@ class Topography(AVGComponentBase):
         self.utm_zone = utm_zone
         self.epsg = epsg
         self._azimuths: np.ndarray | None = None
+        # Mirror .read()'s initialization so latitude/longitude access
+        # (and convert_coords(to="ll")) works even when the frame was
+        # supplied directly via the constructor instead of via .read().
+        self._longitude = pd.Series(
+            np.zeros((self._frame.shape[0],), dtype=float)
+        )
+        self._latitude = pd.Series(
+            np.zeros((self._frame.shape[0],), dtype=float)
+        )
 
     def read(
         self,
@@ -1047,6 +1056,12 @@ class Station(AVGComponentBase):
     names: list[str] = field(default_factory=list)
     index_by_value: dict[float, np.ndarray] = field(default_factory=dict)
     index_by_name: dict[str, np.ndarray] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # The dataclass-generated __init__ replaces
+        # AVGComponentBase.__init__ entirely, so _frame/_meta/verbose/
+        # _logger would otherwise stay unset until .read() runs.
+        AVGComponentBase.__init__(self)
 
     def read(
         self,

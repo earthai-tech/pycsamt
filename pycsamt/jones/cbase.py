@@ -112,9 +112,11 @@ class JParseMixin:
         err = FileNotFoundError(msg)
         try:
             # src may be an unmatched glob pattern; resolving it can raise
-            # on Windows (GetFinalPathNameByHandle rejects "*"/"?"/"[]").
+            # OSError on Windows (GetFinalPathNameByHandle rejects
+            # "*"/"?"/"[]") or ValueError for a string the OS path APIs
+            # reject outright (e.g. an embedded null byte).
             p = self._as_path(src)
-        except OSError:
+        except (OSError, ValueError):
             p = Path(str(src))
         store.append((p, err))
 

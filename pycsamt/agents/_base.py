@@ -133,6 +133,7 @@ class AgentResult:
         *,
         hint: str | None = None,
         elapsed: float = 0.0,
+        warnings: list[str] | None = None,
     ) -> AgentResult:
         """Convenience constructor for failure results."""
         return cls(
@@ -141,6 +142,7 @@ class AgentResult:
             error=error,
             error_fix_hint=hint,
             elapsed_seconds=elapsed,
+            warnings=warnings or [],
         )
 
 

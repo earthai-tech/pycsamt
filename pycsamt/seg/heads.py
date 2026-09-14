@@ -335,7 +335,13 @@ class Head(EDIComponentBase):
     @lat.setter
     def lat(self, value: str | float | int | None) -> None:
         if value is None:
-            self.Location.latitude = None
+            # Location.latitude's public setter deliberately rejects
+            # None (LocationError) to catch a validator returning it
+            # unexpectedly; clearing is still a legitimate state (the
+            # getter itself is typed float | None, and Location's own
+            # internals set _latitude = None directly), so bypass the
+            # setter here rather than crash on an explicit clear.
+            self.Location._latitude = None
             return
         try:
             self.Location.latitude = float(value)
@@ -351,7 +357,9 @@ class Head(EDIComponentBase):
     @long.setter
     def long(self, value: str | float | int | None) -> None:
         if value is None:
-            self.Location.longitude = None
+            # See the ``lat`` setter above: Location.longitude's public
+            # setter rejects None, but clearing is a legitimate state.
+            self.Location._longitude = None
             return
         try:
             self.Location.longitude = float(value)
@@ -375,7 +383,9 @@ class Head(EDIComponentBase):
     @elev.setter
     def elev(self, value: str | float | int | None) -> None:
         if value is None or (isinstance(value, str) and not value.strip()):
-            self.Location.elevation = None
+            # See the ``lat`` setter above: Location.elevation's public
+            # setter rejects None, but clearing is a legitimate state.
+            self.Location._elevation = None
         else:
             self.Location.elevation = float(value)
 
@@ -1066,9 +1076,9 @@ class Heads(EDIComponentBase):
         """
         Load >HEAD and >INFO from EDI path and return an aggregate container.
         """
-        p = Path(edi_fn)
-        if not p:
+        if edi_fn is None:
             raise FileHandlingError("No EDI path provided.")
+        p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
         lines = p.read_text(

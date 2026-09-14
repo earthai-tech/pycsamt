@@ -10,6 +10,103 @@ each release.
 
 ----
 
+.. _changelog-2-6-3:
+
+2.6.3 |Fix| |Enhancement| |Tests| |Docs|
+-----------------------------------------
+
+*Released 2026-09-14.*
+
+A maintenance and API-hardening release covering agent workflows,
+SEG/Jones/EDI parsing, impedance error handling, Zonge construction and
+coordinates, pandas compatibility, and broad regression coverage.
+
+Changed
+~~~~~~~
+
+* |Enhancement| Agent workflow validation recognises the supported
+  ``mare2dem``, ``pinn_inversion``, ``hybrid_inversion``, ``code_gen``, and
+  ``denoise`` workflow names.
+* |Enhancement| Removed unused duplicate private implementations from the
+  Jones block parser, SEG xarray exporter, Z determinant code, Zonge
+  variance helpers, and :class:`pycsamt.agents.Inv3DAgent` (a ~140-line
+  topography-resolution helper superseded by the shared
+  :mod:`pycsamt.agents._topography` module). No public API was removed.
+* |Enhancement| :func:`pycsamt.api.util.round_numeric_values` prefers
+  :meth:`pandas.DataFrame.map` on modern pandas and retains the legacy
+  fallback for older releases.
+
+Fixed
+~~~~~
+
+* |Fix| :meth:`pycsamt.agents.AgentResult.failure` can preserve warnings,
+  and :class:`pycsamt.agents.IoTFieldAgent` no longer drops warnings when
+  input resolution fails.
+* |Fix| Signed IoT manifests pass their signing key through the write path.
+* |Fix| SEG and Jones parsers tolerate unresolved Windows globs and invalid
+  path strings long enough to report them through their normal parse-error
+  contract.
+* |Fix| Missing or malformed EDI ``TROT`` data falls back to the impedance
+  rotation angle instead of being silently zero-padded.
+* |Fix| :class:`pycsamt.seg.heads.Head` coordinates can be cleared with
+  ``None``, and :class:`~pycsamt.seg.heads.Heads` rejects a missing path
+  before calling :class:`pathlib.Path`.
+* |Fix| Jones collection ``n_freq`` summaries support multi-element NumPy
+  arrays, and the verbose-regex Jones banner parser works under strict Python
+  regex validation.
+* |Fix| SEG time-series xarray export builds its time index with the correct
+  floating dtype.
+* |Fix| :func:`pycsamt.z.utils.invert_z` and
+  :meth:`pycsamt.z.Z.remove_distortion` consistently translate singular
+  inversion failures to :class:`pycsamt.exceptions.ZError`.
+* |Fix| Directly constructed :class:`pycsamt.zonge.survey.Topography` and
+  :class:`~pycsamt.zonge.survey.Station` objects initialise all inherited
+  coordinate/frame state.
+* |Fix| :func:`pycsamt.zonge.utils.load_avg` uses the documented
+  ``utm_zone`` argument when converting latitude/longitude to UTM.
+* |Fix| :class:`pycsamt.api.FlexDict` reliably restores attribute access,
+  including after unpickling.
+* |Fix| :func:`pycsamt.api.util.format_text` cannot loop indefinitely when
+  its key exceeds the wrap width, and
+  :func:`~pycsamt.api.util.format_dict_result` accepts empty mappings.
+
+Tests
+~~~~~
+
+* |Tests| Expanded regression coverage across agents, airborne adapters, API
+  utilities/views, EMTF, emtools, I/O, Jones/SEG, metadata, inversion models,
+  Z, and Zonge.
+* |Tests| Twenty-one :mod:`pycsamt.agents` modules below 80% branch coverage
+  — static-shift/tensor-rotation correction, frequency decimation,
+  denoising, IoT field monitoring, the 2-D/3-D/joint/PINN/hybrid AI
+  inverters, the physics-backend/Occam2D/MARE2DEM inversion drivers, intent
+  routing, the :class:`~pycsamt.agents.AgentMaster` façade, the processing
+  pipeline, the workflow orchestrator, and forward
+  modelling/metrics/plotting/reporting — now reach 80–100%, several new
+  tests exercising real (non-mocked) forward solves and a full non-dry-run
+  orchestrator run including provenance-file writing. Package-wide
+  :mod:`pycsamt.agents` coverage rose from 83% to 92%.
+* |Tests| Added focused rendering and edge tests for
+  :func:`pycsamt.emtools.plot_response_overview`, CSUMT scheduling, and
+  impedance plotting. Focused coverage reaches 94% for ``overview``, 83% for
+  ``csumt``, and 82% for ``impedance``.
+
+Documentation
+~~~~~~~~~~~~~
+
+* |Docs| Added the :ref:`2.6.3 release notes <release_v2_6_3>` and this
+  complete API-oriented change summary.
+
+|Compatibility|
+~~~~~~~~~~~~~~~
+
+No public names or required parameters were removed. The optional
+``warnings`` parameter on :meth:`pycsamt.agents.AgentResult.failure` is
+backward compatible. Singular tensor failures now consistently use the
+documented :class:`pycsamt.exceptions.ZError` boundary.
+
+----
+
 .. _changelog-2-6-2:
 
 2.6.2 |Feature| |New| |Fix| |Docs|

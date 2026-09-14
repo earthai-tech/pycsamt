@@ -152,7 +152,7 @@ RULES_TF: Final[Mapping[str, str]] = {
 
 RE_BANNER = re.compile(
     r"""
-    ^\s*#\s*WRITTEN\s+BY\s+
+    ^\s*\#\s*WRITTEN\s+BY\s+
     (?P<software>[^:]+):\s*
     (?P<station>\S+)\s+
     (?P<date>\S+)

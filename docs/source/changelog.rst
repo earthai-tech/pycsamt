@@ -35,14 +35,17 @@ Latest release
 
 **2.6.3** — *2026-09-14* — a maintenance and API-hardening release.
 Agent workflow validation now accepts all supported inversion and processing
-plans; SEG/Jones/EDI parsing handles malformed paths, rotation fallbacks, and
-NumPy-backed metadata safely; impedance inversion exposes one consistent
-:class:`pycsamt.exceptions.ZError` boundary; Zonge in-memory construction and
-coordinate conversion are repaired; and API utilities gain pandas 3 support
-plus empty-input and narrow-wrap safeguards. Regression coverage was expanded
-across agents, airborne adapters, API, EMTF, emtools, I/O, Jones/SEG,
-metadata, inversion models, Z, and Zonge — 21 agent modules moved from below
-80% to 80–100% coverage, taking package-wide agent coverage to 92%.
+plans; static-shift comparison figures no longer go blank for stations whose
+frequency count differs from the first station loaded; QC and reporting drop
+two sources of noisy/misleading warnings; SEG/Jones/EDI parsing handles
+malformed paths, rotation fallbacks, and NumPy-backed metadata safely;
+impedance inversion exposes one consistent :class:`pycsamt.exceptions.ZError`
+boundary; Zonge in-memory construction and coordinate conversion are
+repaired; and API/Zonge utilities gain pandas 3 support plus empty-input and
+narrow-wrap safeguards. Regression coverage was expanded across agents,
+airborne adapters, API, EMTF, emtools, I/O, Jones/SEG, metadata, inversion
+models, Z, and Zonge — 21 agent modules moved from below 80% to 80–100%
+coverage, taking package-wide agent coverage to 92%.
 :ref:`Full 2.6.3 entry <changelog-2-6-3>` · :ref:`Release notes
 <release_v2_6_3>`.
 

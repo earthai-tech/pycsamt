@@ -69,6 +69,26 @@ Fixed
 * |Fix| :func:`pycsamt.api.util.format_text` cannot loop indefinitely when
   its key exceeds the wrap width, and
   :func:`~pycsamt.api.util.format_dict_result` accepts empty mappings.
+* |Fix| The private ``_collect_rho`` helper behind
+  :class:`pycsamt.agents.StaticShiftAgent` no longer replaces a whole
+  station's before/after apparent-resistivity column with NaN just because
+  its frequency count differs from the first station loaded (the normal
+  case in real surveys); it now interpolates onto the reference grid in
+  log-frequency space.
+* |Fix| :func:`pycsamt.emtools.qc._snr_rows` no longer raises "Mean of
+  empty slice" for a frequency row that is a genuine all-NaN data gap.
+* |Fix| :class:`pycsamt.agents.ReportAgent` no longer tries to copy a
+  figure onto itself (and warn about it) when the producing agent already
+  saved it under the exact destination name in the run's shared
+  ``output_dir``.
+* |Fix| :func:`pycsamt.api.util.format_iterable` and
+  :func:`pycsamt.zonge.utils.split_by_station` detect numeric
+  :class:`pandas.Series`/columns with
+  :func:`pandas.api.types.is_numeric_dtype` instead of a dtype string
+  comparison / :func:`numpy.issubdtype`, both of which raised ``TypeError``
+  on pandas configurations that infer a string extension dtype.
+* |Fix| :meth:`pycsamt.zonge.base.AVGComponentBase.to_json` no longer calls
+  the pandas 2.x-removed ``pd.io.json.dumps``.
 
 Tests
 ~~~~~
@@ -90,6 +110,10 @@ Tests
   :func:`pycsamt.emtools.plot_response_overview`, CSUMT scheduling, and
   impedance plotting. Focused coverage reaches 94% for ``overview``, 83% for
   ``csumt``, and 82% for ``impedance``.
+* |Tests| Updated a glob-dispatch test for Python 3.13's changed
+  ``Path.rglob("**")`` semantics, and skip two Windows-only
+  ``ctypes.windll`` tests on non-Windows CI runners instead of failing at
+  import time.
 
 Documentation
 ~~~~~~~~~~~~~

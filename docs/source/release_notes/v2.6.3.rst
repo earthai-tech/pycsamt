@@ -30,6 +30,37 @@ The workflow-plan validator now recognises the already-supported
 ``denoise`` workflow names. Plans using those public workflows no longer fail
 validation before dispatch.
 
+Static-shift, QC, and report-generation fixes |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three related issues surfaced by a real multi-station run (a public-domain
+broadband MT survey with stations recorded at different frequency counts):
+
+* The private ``_collect_rho`` helper behind
+  :class:`pycsamt.agents.StaticShiftAgent` picked the first loaded station's
+  frequency grid as the reference and silently replaced any other station's
+  entire before/after apparent-resistivity column with NaN whenever its
+  frequency *count* differed -- the common case in real surveys, where
+  per-station recording length varies, not an edge case. It now resamples
+  each station's log₁₀(ρₐ) curve onto the reference grid in log-frequency
+  space (no extrapolation beyond a station's own range), so static-shift
+  comparison figures are populated for every station instead of only the
+  first one loaded.
+* :func:`pycsamt.emtools.qc._snr_rows` raised a "Mean of empty slice"
+  ``RuntimeWarning`` for a frequency row where every impedance-tensor
+  component is a genuine data gap, instead of skipping it the way
+  ``_row_nanmedian`` already does elsewhere in the same module. It now
+  applies the same guard, silencing the warning without changing any
+  numeric result.
+* :class:`pycsamt.agents.ReportAgent`'s figure-copy step recomputes each
+  figure's destination filename inside the run's shared ``output_dir``,
+  which coincides exactly with where, e.g.,
+  :class:`pycsamt.agents.DataQCAgent` already saves
+  ``qc_confidence_section.png``. Every orchestrated run therefore copied
+  that figure onto itself, raising a ``SameFileError`` and logging a
+  "... are the same file" warning on every single run. The report agent
+  now detects an already-in-place figure and skips the redundant copy.
+
 EDI and Jones parsing hardening |Fix|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -90,6 +121,23 @@ Utility compatibility and robustness |Fix| |Enhancement|
   :meth:`pandas.DataFrame.map` when available, while retaining
   :meth:`~pandas.DataFrame.applymap` for older pandas releases. This supports
   pandas 3 without dropping compatibility with earlier versions.
+* :func:`pycsamt.api.util.format_iterable` detects a numeric
+  :class:`pandas.Series` with :func:`pandas.api.types.is_numeric_dtype`
+  instead of comparing its dtype to the literal string ``"object"``, which
+  raised ``TypeError`` on pandas configurations that infer a string
+  extension dtype for plain string columns.
+* :func:`pycsamt.zonge.utils.split_by_station` uses the same
+  :func:`~pandas.api.types.is_numeric_dtype` check rather than
+  :func:`numpy.issubdtype`, which cannot interpret pandas extension dtypes
+  and raised ``TypeError`` for a string-typed ``station`` column.
+* :meth:`pycsamt.zonge.base.AVGComponentBase.to_json` also called the
+  pandas 2.x-removed ``pd.io.json.dumps``; it now uses the standard-library
+  ``json`` module, matching the fix already applied to
+  :meth:`~pycsamt.zonge.base.AVGFrame.meta_as_json`.
+* A glob-dispatch regression test was updated for Python 3.13's changed
+  ``Path.rglob("**")`` semantics (it now also matches files, not only
+  directories), and two Windows-only ``ctypes.windll`` tests are skipped on
+  non-Windows CI runners instead of failing at import time.
 
 Internal cleanup |Enhancement|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

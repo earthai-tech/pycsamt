@@ -401,6 +401,25 @@ class StaticShiftAgent(BaseAgent):
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
+def _interp_log_rho(
+    fr: np.ndarray, log_rho: np.ndarray, freqs_ref: np.ndarray
+) -> np.ndarray:
+    """Resample one station's log10(rho_a) curve onto ``freqs_ref``.
+
+    Interpolates linearly in log-frequency; frequencies in ``freqs_ref``
+    outside this station's own range are left as NaN rather than
+    extrapolated.
+    """
+    valid = np.isfinite(fr) & (fr > 0) & np.isfinite(log_rho)
+    if valid.sum() < 2:
+        return np.full(len(freqs_ref), np.nan)
+    order = np.argsort(fr[valid])
+    log_fr_v = np.log10(fr[valid][order])
+    log_rho_v = log_rho[valid][order]
+    log_fr_ref = np.log10(np.clip(freqs_ref, 1e-30, None))
+    return np.interp(log_fr_ref, log_fr_v, log_rho_v, left=np.nan, right=np.nan)
+
+
 def _collect_rho(
     sites: Any,
 ) -> tuple[np.ndarray | None, np.ndarray | None, list[str]]:
@@ -438,18 +457,19 @@ def _collect_rho(
             cols.append(log_rho)
             labels.append(nm)
         else:
-            # interpolate onto common freq grid
-            if len(fr) == len(freqs_ref):
+            if len(fr) == len(freqs_ref) and np.allclose(
+                fr, freqs_ref, rtol=1e-3
+            ):
                 cols.append(log_rho)
-                labels.append(nm)
             else:
-                # skip stations with different freq counts for now
-                cols.append(
-                    log_rho[: len(freqs_ref)]
-                    if len(log_rho) >= len(freqs_ref)
-                    else np.full(len(freqs_ref), np.nan)
-                )
-                labels.append(nm)
+                # A different frequency count/grid is the common case in
+                # real surveys (per-station recording length/processing
+                # varies), not an edge case -- interpolate onto the
+                # reference grid in log-frequency space instead of
+                # discarding the whole station. Frequencies outside this
+                # station's own range are left NaN (no extrapolation).
+                cols.append(_interp_log_rho(fr, log_rho, freqs_ref))
+            labels.append(nm)
 
     if not cols or freqs_ref is None:
         return None, None, []

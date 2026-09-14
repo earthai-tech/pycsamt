@@ -47,24 +47,24 @@ publication-ready results.
 
 ## ✨ Highlights
 
-- 📥 **Data I/O & QC** — EDI, Zonge AVG, Jones J, TDEM, and MARE2DEM files in
-  one site model; frequency audits and noisy-station flagging.
+- 📥 **Data I/O & QC** — EDI, Zonge AVG, Jones J, TDEM, MARE2DEM, and
+  airborne EMTF-XML (ZTEM, AFMAG, MobileMT) in one site model; frequency
+  audits and noisy-station flagging.
 - 📡 **IoT-enabled field acquisition** — station telemetry with edge QC
-  (powerline harmonics, SNR, contact resistance, frequency coverage),
-  clock-synchronisation audit, power monitoring, pluggable transports
-  (file/HTTP built in; MQTT/serial/WebSocket optional), acquisition
-  provenance, a field-network simulator, and dashboards — feeding directly
-  into the processing pipeline.
+  (powerline harmonics, SNR, contact resistance), clock-synchronisation
+  audit, power monitoring, pluggable transports, acquisition provenance,
+  and dashboards — feeding directly into the processing pipeline.
 - 🎚️ **Processing & corrections** — a catalogue of 25 methods in six
   categories: notch filtering, static-shift removal, tensor rotation,
   phase-tensor analysis, and more.
 - 🧱 **Forward modelling** — synthetic layered-earth and 2-D models, forward
   responses, realistic noise, and datasets for survey design or training.
-- 🧠 **Inversion, classical & AI** — Occam2D, ModEM, and MARE2DEM end to end,
-  plus physics-informed neural networks (PINN 1-D/2-D/3-D) and hybrid
-  deep-learning inverters.
+- 🧠 **AI-assisted processing & inversion** — learned denoising, gap-filling,
+  anomaly detection, and uncertainty tools; classical Occam2D/ModEM/MARE2DEM
+  plus physics-informed (PINN) and hybrid deep-learning inverters.
 - 🗺️ **Interpretation & mapping** — resistivity classification,
-  pseudostratigraphic logs, station maps, pseudosections, and 3-D quick looks.
+  pseudostratigraphic logs, an interactive 3-D MapView (PCSF format,
+  boreholes, geology overlays), and publication-ready pseudosections.
 - 🤖 **Pipelines, agents & apps** — reproducible YAML/JSON/Python workflows,
   LLM-driven agents (Anthropic, OpenAI, Gemini), a web dashboard, and a
   desktop GUI.

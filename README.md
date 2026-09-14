@@ -47,9 +47,9 @@ publication-ready results.
 
 ## ✨ Highlights
 
-- 📥 **Data I/O & QC** — EDI, Zonge AVG, Jones J, TDEM, MARE2DEM, and
-  airborne EMTF-XML (ZTEM, AFMAG, MobileMT) in one site model; frequency
-  audits and noisy-station flagging.
+- 📥 **Data I/O & QC** — EDI, Zonge AVG, Jones J (BIRRP), TDEM, MARE2DEM,
+  and airborne EMTF-XML (ZTEM, AFMAG, MobileMT) in one site model;
+  frequency audits and noisy-station flagging.
 - 📡 **IoT-enabled field acquisition** — station telemetry with edge QC
   (powerline harmonics, SNR, contact resistance), clock-synchronisation
   audit, power monitoring, pluggable transports, acquisition provenance,

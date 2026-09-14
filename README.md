@@ -63,8 +63,10 @@ publication-ready results.
   anomaly detection, and uncertainty tools; classical Occam2D/ModEM/MARE2DEM
   plus physics-informed (PINN) and hybrid deep-learning inverters.
 - 🗺️ **Interpretation & mapping** — resistivity classification,
-  pseudostratigraphic logs, an interactive 3-D MapView (PCSF format,
-  boreholes, geology overlays), and publication-ready pseudosections.
+  pseudostratigraphic logs, an
+  [interactive 3-D MapView](https://youtu.be/DcDA3THoFtw?si=iI2XQxpp547Hn5id)
+  (PCSF format, boreholes, geology overlays), and publication-ready
+  pseudosections.
 - 🤖 **Pipelines, agents & apps** — reproducible YAML/JSON/Python workflows,
   LLM-driven agents (Anthropic, OpenAI, Gemini), a web dashboard, and a
   desktop GUI.

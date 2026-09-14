@@ -199,7 +199,7 @@ class TestSendMessageNoEdiGuard:
         result = fn(1, [None], "run qc pipeline", [], {}, {}, {}, [], True, {})
         msgs, job, disabled, value, stored, pending = result
         assert disabled is True
-        assert "No EDI dataset is loaded" in stored[-1]["content"]
+        assert "No station dataset is loaded" in stored[-1]["content"]
         assert _FakeThread.last_started is None
 
     def test_guard_skipped_for_dataless_workflow(self, agent_app, monkeypatch):

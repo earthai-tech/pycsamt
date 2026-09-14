@@ -2515,9 +2515,9 @@ def _line_station_options(groups, edi_path):
     """Return ``(line_options, station_options, {line: [stations]})`` for the
     param modal's dependent dropdowns.
 
-    Derived from the loaded line groups (or by scanning the EDI path when
-    ungrouped). Station names are the EDI file stems, so no EDI parsing is
-    needed."""
+    Derived from the loaded line groups (or by scanning the data path when
+    ungrouped). Station names are the EDI/XML-TF file stems, so no
+    EDI/XML parsing is needed."""
     from pathlib import Path
 
     line_to_st: dict[str, list[str]] = {}
@@ -2530,8 +2530,12 @@ def _line_station_options(groups, edi_path):
         try:
             p = Path(str(edi_path))
             if p.is_dir():
-                stems = sorted({f.stem for f in p.rglob("*.edi")}) or sorted(
-                    {f.stem for f in p.rglob("*.EDI")}
+                stems = sorted(
+                    {
+                        f.stem
+                        for pat in ("*.edi", "*.EDI", "*.xml", "*.XML")
+                        for f in p.rglob(pat)
+                    }
                 )
                 if stems:
                     line_to_st["(all)"] = stems

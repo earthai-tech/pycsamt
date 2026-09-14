@@ -2758,11 +2758,29 @@ def _dedup_sites(
     combined EDI+XML site list (which may include XML-native
     :class:`Site` objects that never pass through an
     :class:`EDICollection`).
+
+    Notes
+    -----
+    ``"replace"``/``"keep"`` are *not* no-ops here, unlike a bare
+    EDI-only collection (where same-format duplicates are already
+    resolved while the collection is being built). This list combines
+    two independently-built halves -- the EDI-only sites and the
+    XML-native sites discovered alongside them -- so a station present
+    in *both* formats (e.g. ``18-001.edi`` and ``18-001.xml`` in the
+    same folder) would otherwise survive as two separate entries
+    regardless of ``on_dup``. ``"replace"`` keeps the last occurrence
+    (matching :class:`~pycsamt.seg.collection.EDICollection`'s
+    "new entry wins" semantics -- the XML entry, since it is appended
+    after the EDI ones) and ``"keep"`` keeps the first.
     """
 
     key = (policy or "replace").strip().lower()
-    if key in {"replace", "keep"} or len(sites) < 2:
+    if len(sites) < 2:
         return sites
+    if key == "replace":
+        key = "keep_last"
+    elif key == "keep":
+        key = "keep_first"
 
     name_to_idx: dict[str, int] = {}
     names: list[str] = []

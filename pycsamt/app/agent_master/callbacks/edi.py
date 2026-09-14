@@ -66,44 +66,58 @@ def _detect_from_ids(
     return groups
 
 
+_STATION_EXTS = ("*.edi", "*.EDI", "*.xml", "*.XML")
+# XML-TF is the metadata-richer superset (see pycsamt.site.base.Site.tf),
+# so when the same station stem has both an .edi and an .xml file in the
+# same folder, prefer the XML one instead of counting the station twice.
+_PREFERRED_EXT = ".xml"
+
+
+def _discover_station_files(edi_dir: str) -> list[Path]:
+    """Return one file per (folder, station-stem), across EDI *and*
+    XML-TF sources.
+
+    Globs every supported extension under *edi_dir* and de-duplicates
+    same-stem matches within a folder (e.g. ``18-001.edi`` +
+    ``18-001.xml``) so a station is never counted twice just because
+    it exists in both formats.
+    """
+    p = Path(edi_dir)
+    by_key: dict[tuple[Path, str], Path] = {}
+    for pattern in _STATION_EXTS:
+        for f in p.rglob(pattern):
+            key = (f.parent, f.stem)
+            existing = by_key.get(key)
+            if existing is None or f.suffix.lower() == _PREFERRED_EXT:
+                by_key[key] = f
+    return sorted(by_key.values())
+
+
 def _folder_to_lines(
     edi_dir: str,
 ) -> dict[str, list[str]]:
-    """Return {subfolder_name: [edi_files]}."""
-    p = Path(edi_dir)
+    """Return {subfolder_name: [station_files]} (EDI and/or XML-TF)."""
     groups: dict[str, list[str]] = {}
-    edis = sorted(p.rglob("*.edi"))
-    if not edis:
-        edis = sorted(p.rglob("*.EDI"))
-    for edi in edis:
-        line = edi.parent.name
-        groups.setdefault(line, []).append(str(edi))
-    # single flat folder: use parent name
-    if len(groups) == 1:
-        only_key = list(groups.keys())[0]
-        if only_key == p.name:
-            pass  # already correct
-    if not groups and edis:
-        groups["Default"] = [str(e) for e in edis]
+    for f in _discover_station_files(edi_dir):
+        groups.setdefault(f.parent.name, []).append(str(f))
     return groups
 
 
 def _detect_lines_to_files(
     edi_dir: str,
 ) -> dict[str, list[str]]:
-    """Return ``{detected_line: [edi_file_paths]}`` grouped by the station-ID
-    prefix (same rule as :func:`_detect_from_ids`, e.g. ``22-001`` -> ``L22``),
-    but mapping to real file paths so the groups can be loaded/filtered."""
-    p = Path(edi_dir)
-    edis = sorted(p.rglob("*.edi")) or sorted(p.rglob("*.EDI"))
+    """Return ``{detected_line: [station_file_paths]}`` grouped by the
+    station-ID prefix (same rule as :func:`_detect_from_ids`, e.g.
+    ``22-001`` -> ``L22``), but mapping to real file paths (EDI and/or
+    XML-TF) so the groups can be loaded/filtered."""
     groups: dict[str, list[str]] = {}
-    for edi in edis:
-        sid = edi.stem
+    for f in _discover_station_files(edi_dir):
+        sid = f.stem
         m = re.match(r"^([A-Za-z]*\d+)", sid)
         prefix = m.group(1) if m else sid[:4]
         if prefix.isdigit():
             prefix = f"L{prefix}"
-        groups.setdefault(prefix, []).append(str(edi))
+        groups.setdefault(prefix, []).append(str(f))
     return groups
 
 
@@ -115,7 +129,7 @@ def _build_lines_panel(
     if not groups:
         return [
             html.Div(
-                "No EDI files found.",
+                "No EDI or XML-TF files found.",
                 style={
                     "fontSize": "12px",
                     "color": "var(--fg-muted)",
@@ -148,7 +162,7 @@ def _build_lines_panel(
                     ),
                     name_el,
                     html.Span(
-                        f"{count} EDI",
+                        f"{count} station{'s' if count != 1 else ''}",
                         className="am-line-count",
                     ),
                 ],
@@ -292,7 +306,8 @@ def register_edi(app) -> None:
                     style={"color": "var(--tag-ok)"},
                 ),
                 html.Span(
-                    f"{n_edi} EDI file(s) in {len(groups)} line(s)",
+                    f"{n_edi} station{'s' if n_edi != 1 else ''} "
+                    f"in {len(groups)} line(s)",
                     style={"fontSize": "12px"},
                 ),
             ],
@@ -368,7 +383,10 @@ def register_edi(app) -> None:
             "n_edi": n_edi,
             "mode": mode,
         }
-        badge_text = f"{n_edi} EDI · {len(groups)} line(s)"
+        badge_text = (
+            f"{n_edi} station{'s' if n_edi != 1 else ''} · "
+            f"{len(groups)} line(s)"
+        )
         return (
             store,
             "am-edi-badge visible",

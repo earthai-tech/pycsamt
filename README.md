@@ -14,7 +14,7 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python&logoColor=white"/>
   <img alt="Backends" src="https://img.shields.io/badge/backend-PyTorch%20%7C%20TensorFlow-EE4C2C?logo=pytorch&logoColor=white"/>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey"/>
-  <a href="https://github.com/astral-sh/ruff"><img alt="Code style: ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"/></a>
+  <a href="https://github.com/astral-sh/ruff"><img alt="Code style: ruff" src="https://img.shields.io/badge/code%20style-ruff-D7FF64?logo=ruff&logoColor=black"/></a>
   <br/>
   <a href="https://pypi.org/project/pycsamt/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pycsamt?label=downloads&color=brightgreen"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/commits/v2"><img alt="Last commit" src="https://img.shields.io/github/last-commit/earthai-tech/pycsamt/v2"/></a>
@@ -23,8 +23,7 @@
   <a href="https://github.com/earthai-tech/pycsamt/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/earthai-tech/pycsamt?style=flat&color=yellow"/></a>
   <img alt="Code size" src="https://img.shields.io/github/languages/code-size/earthai-tech/pycsamt"/>
   <br/>
-  <a href="https://doi.org/10.5281/zenodo.22660675"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.22660675.svg"/></a>
-  <a href="https://github.com/earthai-tech/pycsamt/blob/v2/CITATION.cff"><img alt="Citation" src="https://img.shields.io/badge/cite-CITATION.cff-blue"/></a>
+  <a href="https://doi.org/10.5281/zenodo.22660675"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.22660675-blue"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/blob/v2/CODE_OF_CONDUCT.md"><img alt="Contributor Covenant" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"/></a>
 </div>
 

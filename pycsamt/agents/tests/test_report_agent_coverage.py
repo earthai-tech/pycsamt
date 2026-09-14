@@ -175,7 +175,7 @@ def test_html_import_error_is_recorded(tmp_path, monkeypatch):
 
 
 def test_html_generic_exception_is_recorded(tmp_path, monkeypatch):
-    import markdown as md_pkg
+    md_pkg = pytest.importorskip("markdown")
 
     monkeypatch.setattr(
         md_pkg,

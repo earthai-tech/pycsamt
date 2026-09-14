@@ -205,18 +205,24 @@ def test_iter_edi_files_absolute_glob_recursive_dispatches_to_rglob(
 ) -> None:
     sub = tmp_path / "nested2"
     sub.mkdir()
-    _mk_edi(sub, "N2")
+    edi_path = _mk_edi(sub, "N2")
     finder = _Finder()
     # An absolute pattern whose final component is "**" triggers the
     # ``rglob`` (recursive) branch -- the glob-pattern path only checks
     # ``**`` on that final path segment, not the whole pattern string.
-    # On this Python's pathlib, ``Path.rglob("**")`` enumerates only
-    # directories (not files), so this exercises the rglob dispatch and
-    # the "no file matched" -> recorded-error path, not a file match.
+    # Whether ``Path.rglob("**")`` enumerates files (not just
+    # directories) is pathlib-version-dependent: Python < 3.13 yields
+    # only directories for a bare ``"**"`` pattern (so nothing matches
+    # here and a "no match" error is recorded), while Python >= 3.13
+    # changed ``**`` to also match files. Either way exercises the
+    # rglob dispatch; only the resulting outcome differs.
     pattern = str(tmp_path / "**")
     found = list(finder._iter_edi_files([pattern]))
-    assert found == []
-    assert finder._errors  # "no match" was recorded
+    if any(p.is_file() for p in tmp_path.rglob("**")):
+        assert found == [edi_path]
+    else:
+        assert found == []
+        assert finder._errors  # "no match" was recorded
 
 
 def test_iter_edi_files_absolute_glob_non_recursive(tmp_path: Path) -> None:

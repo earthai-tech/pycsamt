@@ -54,6 +54,9 @@ def test_get_terminal_size_falls_back_to_default_for_unknown_os(monkeypatch):
     assert u.TerminalSize.get_terminal_size() == u.TerminalSize.DEFAULT_SIZE
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="ctypes.windll only exists on Windows"
+)
 def test_get_terminal_size_windows_falls_back_without_real_console():
     # Under pytest there is normally no attached console, so this
     # exercises the "res falsy / exception" fallback path for real.
@@ -61,6 +64,9 @@ def test_get_terminal_size_windows_falls_back_without_real_console():
     assert size == u.TerminalSize.DEFAULT_SIZE
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="ctypes.windll only exists on Windows"
+)
 def test_get_terminal_size_windows_success(monkeypatch):
     import struct
     from ctypes import windll

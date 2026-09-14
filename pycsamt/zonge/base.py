@@ -496,7 +496,9 @@ class AVGComponentBase(ABC):
 
     def to_json(self, *, indent: int = 0) -> str:
         """JSON serialiser for diagnostics."""
-        return pd.io.json.dumps(self.asdict(), indent=indent)
+        # pandas 2.x removed pd.io.json.dumps/loads; use stdlib json
+        # (default=str covers numpy scalars and other non-JSON-native types)
+        return json.dumps(self.asdict(), indent=indent or None, default=str)
 
     def _require(self, *cols: str) -> None:
         """

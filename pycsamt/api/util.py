@@ -1258,7 +1258,11 @@ def format_iterable(attr):
 
     def _format_pandas_object(obj):
         if isinstance(obj, pd.Series):
-            stats = _numeric_stats(obj) if obj.dtype != "object" else {}
+            stats = (
+                _numeric_stats(obj)
+                if pd.api.types.is_numeric_dtype(obj.dtype)
+                else {}
+            )
             details = ", ".join(
                 [f"{key}={value}" for key, value in stats.items()]
             )

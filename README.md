@@ -22,6 +22,10 @@
   <a href="https://github.com/earthai-tech/pycsamt/pulls"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen"/></a>
   <a href="https://github.com/earthai-tech/pycsamt/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/earthai-tech/pycsamt?style=flat&color=yellow"/></a>
   <img alt="Code size" src="https://img.shields.io/github/languages/code-size/earthai-tech/pycsamt"/>
+  <br/>
+  <a href="https://doi.org/10.5281/zenodo.22660675"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.22660675.svg"/></a>
+  <a href="https://github.com/earthai-tech/pycsamt/blob/v2/CITATION.cff"><img alt="Citation" src="https://img.shields.io/badge/cite-CITATION.cff-blue"/></a>
+  <a href="https://github.com/earthai-tech/pycsamt/blob/v2/CODE_OF_CONDUCT.md"><img alt="Contributor Covenant" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg"/></a>
 </div>
 
 ---

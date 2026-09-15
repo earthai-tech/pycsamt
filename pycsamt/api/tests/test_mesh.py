@@ -194,6 +194,44 @@ def test_edges_from_geology_grid_3d_raises():
         edges_from_geology_grid(grid)
 
 
+def test_mesh_style_copy_overrides_without_mutating_original():
+    style = MeshStyle()
+    copied = style.copy(fill=MeshFillStyle(show=False))
+    assert copied.fill.show is False
+    assert style.fill.show is True
+
+
+def test_cell_edges_from_centres_single_centre():
+    edges = cell_edges_from_centres(np.array([5.0]))
+    assert np.allclose(edges, [4.5, 5.5])
+
+
+def test_style_for_unknown_preset_raises():
+    with pytest.raises(ValueError, match="mesh preset must be one of"):
+        PYCSAMT_MESH.style_for("bogus")
+
+
+def test_use_preset_copies_into_filled_slot():
+    reset_mesh()
+    PYCSAMT_MESH.use_preset("diagram")
+    assert PYCSAMT_MESH.filled.fill.show is False
+    reset_mesh()
+
+
+def test_context_with_preset_and_no_kwargs():
+    reset_mesh()
+    with PYCSAMT_MESH.context("diagram"):
+        assert PYCSAMT_MESH.filled.fill.show is False
+    assert PYCSAMT_MESH.filled.fill.show is True
+
+
+def test_mesh_summary_and_repr():
+    text = PYCSAMT_MESH.summary()
+    assert "PyCSAMTMesh" in text
+    assert "filled:" in text
+    assert repr(PYCSAMT_MESH) == text
+
+
 def test_mesh_reset_restores_defaults():
     """reset_mesh() should undo any configure()/context() drift."""
     configure_mesh(diagram__edge__linewidth=5.0)

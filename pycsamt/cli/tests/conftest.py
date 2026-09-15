@@ -40,6 +40,10 @@ _EDI_OUT = _PROJECT_ROOT / "edi_out"
 _DATA_3EDIS = _PROJECT_ROOT / "data" / "3edis"
 _DATA_AMT_TIP = _PROJECT_ROOT / "data" / "AMT" / "TIPPER"
 _DATA_WILLY = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
+_DATA_ZTEM = _PROJECT_ROOT / "data" / "ZTEM" / "gold_springs_nv"
+_DATA_MOBILEMT = _PROJECT_ROOT / "data" / "mobileMT" / "flammefjeld_greenland"
+_DATA_AFMAG_ORIGINAL = _PROJECT_ROOT / "data" / "AFMAG" / "abitibi_on"
+_DATA_AFMAG_AIRMT = _PROJECT_ROOT / "data" / "AFMAG" / "yulong_belt_cn"
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +281,42 @@ def modem_workdir(tmp_path: Path) -> Path:
     (wd / "ModEM.inv").touch()
     (wd / "ModEM.cov").touch()
     return wd
+
+
+
+# ---------------------------------------------------------------------------
+# Real airborne EMTF-XML sample directories
+# ---------------------------------------------------------------------------
+
+
+def _existing_dir(path: Path) -> Path:
+    if not path.exists() or not any(path.glob("*.xml")):
+        pytest.skip(f"No airborne sample data found at {path}")
+    return path
+
+
+@pytest.fixture(scope="session")
+def ztem_xml_dir() -> Path:
+    """Real ZTEM EMTF-XML sample survey (multi-line)."""
+    return _existing_dir(_DATA_ZTEM)
+
+
+@pytest.fixture(scope="session")
+def mobilemt_xml_dir() -> Path:
+    """Real MobileMT EMTF-XML sample survey."""
+    return _existing_dir(_DATA_MOBILEMT)
+
+
+@pytest.fixture(scope="session")
+def afmag_original_xml_dir() -> Path:
+    """Real original-comparator AFMAG EMTF-XML sample survey."""
+    return _existing_dir(_DATA_AFMAG_ORIGINAL)
+
+
+@pytest.fixture(scope="session")
+def afmag_airmt_xml_dir() -> Path:
+    """Real tensor AFMAG/AirMt EMTF-XML sample survey."""
+    return _existing_dir(_DATA_AFMAG_AIRMT)
 
 
 @pytest.fixture

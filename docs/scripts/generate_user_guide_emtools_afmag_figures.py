@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the figures for the emtools afmag guide.
 
 Reuses the bundled KAP03 long-period MT profile (real tipper, real

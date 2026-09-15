@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Run and plot the two-line Maxwell 3-D AI workflow used by the porphyry tutorial."""
 
 from __future__ import annotations

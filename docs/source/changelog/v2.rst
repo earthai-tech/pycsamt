@@ -10,6 +10,137 @@ each release.
 
 ----
 
+.. _changelog-2-6-4:
+
+2.6.4 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
+----------------------------------------------------------
+
+*Released 2026-09-15.*
+
+A new-surfaces release. **pyCSAMT Format Studio**
+(:mod:`pycsamt.app.converter`) is a new standalone, freezable app dedicated
+to file-format conversion, backed by six new ``pycsamt format`` CLI
+sub-commands (``build-pcbh``/``build-pcgl``/``build-pcgs``/``build-pcpt``/
+``edi-to-xml``/``xml-to-edi``) and a newly public
+:mod:`pycsamt.format.convert_engine`, so the app and the CLI share one
+engine instead of two. A second new CLI group, ``pycsamt airborne``, adds
+``info``/``diagnose`` for ZTEM/MobileMT/AFMAG datasets. Two real EDI
+parsing bugs are fixed: written resistivity/phase-error blocks no longer
+claim "zero uncertainty" when the real value was simply never propagated,
+and a field stamped with the literal string ``"None"`` no longer fails to
+parse. Documentation grows two full pages (:doc:`/applications/converter`,
+:doc:`/cli/airborne`) plus standard headers on every downloadable
+``docs/scripts/`` file, and new CLI test suites cover both command groups.
+
+Added
+~~~~~
+
+* |Feature| **``pycsamt airborne``** -- a new CLI command group for airborne EM
+  datasets (ZTEM, MobileMT, AFMAG/AirMt): ``info`` (dataset or single-site
+  summary) and ``diagnose`` (auto-detects the technology and builds its
+  canonical diagnostic table -- ZTEM total-divergence, MobileMT admittance,
+  or AFMAG/AirMt tilt). Operates on already-decoded EMTF-XML files or
+  directories of them via :func:`pycsamt.airborne.site.ensure_asites`; pyCSAMT
+  still has no raw-vendor-file reader for airborne systems.
+* |Feature| **pyCSAMT Format Studio** (:mod:`pycsamt.app.converter`) -- a new, small,
+  freezable PySide6 application dedicated entirely to file-format conversion,
+  with no survey-loading or processing features. Nine tools: Inversion
+  (Occam2D/ModEM 3-D/MARE2DEM/AI array) to :term:`PCSF`/:term:`PCSM`,
+  PCSF ⇄ PCSM transcoding/validation/info, EDI ⇄ EMTF-XML, PCBH/PCGL/PCGS/PCPT
+  document builders, a mixed batch queue, and persisted defaults. Launch with
+  ``pycsamt-converter`` / ``python -m pycsamt.app.converter``, or build a
+  standalone double-click binary with the new
+  ``packaging/pyinstaller/pycsamt_converter.spec`` (the only pyCSAMT app
+  packaged this way). Every page is a thin widget around a plain, Qt-free
+  function in :mod:`pycsamt.app.converter.jobs` that reuses exactly the same
+  engine as the ``pycsamt format`` CLI.
+* |Feature| **Six new** ``pycsamt format`` **sub-commands**: ``build-pcbh`` (CSV /
+  relational CSV directory / XLSX / LAS 2.0 log -> a PCBH borehole document),
+  ``build-pcgl`` (CSV of named resistivity units -> a PCGL geology legend),
+  ``build-pcgs`` (planar/linear measurement and fault-trace CSVs -> a PCGS
+  structural-evidence document), ``build-pcpt`` (CSV/XLSX of named points ->
+  a PCPT points-of-interest document), and ``edi-to-xml``/``xml-to-edi``
+  (lossless SEG EDI <-> EMTF-XML conversion, one file or a whole directory).
+  These are the CLI face of the same builder functions the new converter app
+  uses, and were previously only reachable from Python.
+
+Fixed
+~~~~~
+
+* |Fix| :class:`pycsamt.seg.heads.Head` now normalizes a field written as the
+  literal string ``"None"`` (e.g. ``DECLINATION=None``, as some EDI writers
+  stamp an unset value instead of omitting the key) to a real Python
+  ``None`` while parsing, matching how ``write()`` already treats that
+  string as equivalent to absent. Previously such a field reached its
+  setter as the string ``"None"`` and failed converting it to a number.
+* |Fix| EDI resistivity/phase-error blocks (``RHOxx.ERR``/``PHSxx.ERR``) written
+  from an :class:`~pycsamt.emtf.document.EMTF` document
+  (:func:`pycsamt.emtf.converters.edi.emtf_to_edi`/``write_edi``) came out as
+  a literal ``0.000000E+00`` for every frequency instead of the real,
+  error-propagated uncertainty -- misrepresenting "not computed" as "zero
+  uncertainty" -- because the impedance error array was attached to
+  :class:`pycsamt.z.Z`'s private ``_z_err`` after construction, bypassing the
+  resistivity/phase error propagation the public ``z_err`` setter triggers.
+  The converter now uses that public setter. Separately,
+  :mod:`pycsamt.seg.edi`'s writer now defaults a genuinely absent error to
+  NaN rather than zero, so any future case that still lacks one correctly
+  round-trips to the SEG-EDI ``1.000000E+32`` EMPTY sentinel instead of a
+  misleading exact zero.
+
+Changed
+~~~~~~~
+
+* |Enhancement| **``pycsamt.format.convert_engine``** -- the "any source -> ``PCSFModel``"
+  dispatch engine behind ``pycsamt format convert`` (``detect``,
+  ``resolve_target``, ``build_model``, ``write_model``, ``model_report``) is
+  promoted from a private helper buried in
+  ``pycsamt.cli.commands.format._base`` into a public, UI-neutral module, so
+  the new converter app (and any other second consumer) can reuse it without
+  reaching into CLI internals. The CLI's own behaviour, options, and output
+  are unchanged.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| Added :doc:`/cli/airborne`, documenting the new ``pycsamt airborne``
+  command group -- full option tables and real captured output from the
+  bundled ZTEM/MobileMT/AFMAG sample surveys, including the genuine
+  "N flight lines detected, pass ``--line``" error a multi-line ZTEM survey
+  raises without one.
+* |Docs| Added :doc:`/applications/converter`, a complete guide to the new
+  standalone converter app: install/launch, compiling a frozen build, the
+  window chrome, and every one of its nine tool pages with a real screenshot,
+  a field-by-field walkthrough, and the equivalent CLI command --
+  :doc:`/cli/format` is cross-referenced for ``convert``/``detect``/``info``/
+  ``validate``'s existing option reference rather than duplicating it, and
+  the six sub-commands documented nowhere else
+  (``edi-to-xml``/``xml-to-edi``/``build-pcbh``/``build-pcgl``/``build-pcgs``/
+  ``build-pcpt``) get full treatment with real captured output.
+  :doc:`/applications/index` and :doc:`/applications/overview` now count
+  five applications instead of four.
+* |Build| Every downloadable script under ``docs/scripts/`` (61 files) now starts
+  with the standard ``#!/usr/bin/env python`` / ``# Author:`` / ``# License:``
+  header used across the rest of the package, since each one is meant to be
+  downloaded and run standalone from a documentation page's code-dropdown.
+* |Tests| Added ``pycsamt/cli/tests/test_cmd_format_build.py`` (the four new
+  ``build-*`` sub-commands) and ``pycsamt/cli/tests/test_cmd_airborne.py``
+  (``airborne info``/``diagnose``), plus session-scoped fixtures for the
+  real bundled ZTEM/MobileMT/AFMAG sample directories in ``conftest.py``;
+  both suites skip automatically when their sample data is absent rather
+  than mocking it.
+
+|Compatibility|
+~~~~~~~~~~~~~~~~
+
+No public names or required parameters were removed or renamed. Everything
+new -- the converter app, the six ``format build-*``/``edi-to-xml``/
+``xml-to-edi`` commands, ``pycsamt airborne``, and
+:mod:`pycsamt.format.convert_engine` -- is additive. ``pycsamt format
+convert``'s own behaviour is unchanged; only the internal module its Click
+wrapper delegates to moved.
+
+----
+
 .. _changelog-2-6-3:
 
 2.6.3 |Fix| |Enhancement| |Tests| |Docs|

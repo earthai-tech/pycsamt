@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate figures for the AI inversion tutorial.
 
 Every figure here comes from actually running the real pipeline

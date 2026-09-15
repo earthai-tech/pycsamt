@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Interpret the two real Occam2D lines built by
 build_two_line_occam2d_survey.rst / generate_tutorial_two_line_occam2d.py:
 calibrate against boreholes, classify into lithology, record structural

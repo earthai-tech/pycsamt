@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate reproducible geology and Maxwell-mesh figures for the 3-D tutorial."""
 
 from __future__ import annotations

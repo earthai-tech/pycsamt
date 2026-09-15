@@ -33,6 +33,24 @@ Latest release
 
 .. _changelog-latest:
 
+**2.6.4** — *2026-09-15* — a new-surfaces release. **pyCSAMT Format
+Studio** (:mod:`pycsamt.app.converter`) is a new standalone, freezable app
+dedicated to file-format conversion, backed by six new ``pycsamt format``
+CLI sub-commands (``build-pcbh``/``build-pcgl``/``build-pcgs``/
+``build-pcpt``/``edi-to-xml``/``xml-to-edi``) and a newly public
+:mod:`pycsamt.format.convert_engine`, so the app and the CLI share one
+engine instead of two. A second new CLI group, ``pycsamt airborne``, adds
+``info``/``diagnose`` for ZTEM/MobileMT/AFMAG datasets. Two real EDI
+parsing bugs are fixed: written resistivity/phase-error blocks no longer
+claim "zero uncertainty" when the real value was simply never propagated,
+and a field stamped with the literal string ``"None"`` no longer fails to
+parse. Documentation grows two full pages
+(:doc:`/applications/converter`, :doc:`/cli/airborne`) plus standard
+headers on every downloadable ``docs/scripts/`` file, and new CLI test
+suites cover both command groups.
+:ref:`Full 2.6.4 entry <changelog-2-6-4>` · :ref:`Release notes
+<release_v2_6_4>`.
+
 **2.6.3** — *2026-09-14* — a maintenance and API-hardening release.
 Agent workflow validation now accepts all supported inversion and processing
 plans; static-shift comparison figures no longer go blank for stations whose

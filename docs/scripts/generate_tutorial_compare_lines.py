@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate figures and sample outputs for the survey-line comparison tutorial."""
 
 from __future__ import annotations

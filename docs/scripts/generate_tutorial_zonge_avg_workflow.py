@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Reproduce the data audit and overview figure for the K1/K2 AVG tutorial."""
 
 from __future__ import annotations

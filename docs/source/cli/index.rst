@@ -6,7 +6,8 @@ CLI
 The pyCSAMT command-line interface is the shell entry point for the same
 survey workflows exposed by the Python API: data inspection, format
 conversion, site inventory, processing pipelines, forward modelling,
-inversion preparation, interpretation, mapping, and TDEM utilities.
+inversion preparation, interpretation, mapping, airborne EM diagnostics,
+and TDEM utilities.
 
 Use the CLI when you need repeatable commands for a field dataset,
 batch-friendly outputs for automation, or a quick way to validate that a
@@ -36,6 +37,7 @@ survey directory can be loaded before writing Python code.
    invert
    format
    map
+   airborne
    interp
    pipe
    tdem

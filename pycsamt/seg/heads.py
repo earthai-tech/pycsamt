@@ -431,6 +431,15 @@ class Head(EDIComponentBase):
                 continue
             key = _norm_key(m.group("key"))
             val = _unquote(m.group("val"))
+            if isinstance(val, str) and val.strip().lower() == "none":
+                # Some EDI writers stamp a literal "None" string for an
+                # unset field (e.g. "DECLINATION=None") instead of
+                # omitting the key. `write()` already treats the string
+                # "None" as equivalent to absent (see the `val in (None,
+                # "", "None")` guard below) -- normalize it to Python
+                # None here too, so every field's setter/property sees
+                # a real missing value rather than trying float("None").
+                val = None
 
             if key == "chainage":
                 try:

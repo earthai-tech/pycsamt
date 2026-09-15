@@ -1,0 +1,366 @@
+/* pyCSAMT Format Studio — light theme.
+   Brand palette lifted from docs/source/_static/css/custom.css (the same
+   tokens pycsamt.org uses): orange #f15a29 as the primary call-to-action
+   colour, blue #3e65b0 as the secondary/interactive colour, plus its ink /
+   muted / surface neutrals -- so the converter app reads as part of the
+   same product family as the docs and the full desktop app.
+*/
+
+* {
+    outline: none;
+}
+
+QWidget {
+    background-color: #ffffff;
+    color: #24324b;
+    font-family: "Segoe UI", "Noto Sans", sans-serif;
+    font-size: 13px;
+}
+
+QMainWindow {
+    background-color: #ffffff;
+}
+
+QToolTip {
+    background-color: #24324b;
+    color: #ffffff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* ── Menu bar ─────────────────────────────────────────────────────────── */
+QMenuBar {
+    background-color: #f6f8fc;
+    color: #24324b;
+    border-bottom: 1px solid #e0e6f2;
+}
+QMenuBar::item:selected {
+    background-color: #e0e6f2;
+    border-radius: 4px;
+}
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #dbe1ee;
+}
+QMenu::item:selected {
+    background-color: #3e65b0;
+    color: #ffffff;
+}
+QMenu::separator {
+    height: 1px;
+    background-color: #e0e6f2;
+    margin: 4px 6px;
+}
+
+/* ── Status bar ───────────────────────────────────────────────────────── */
+QStatusBar {
+    background-color: #f6f8fc;
+    color: #5c677d;
+    border-top: 1px solid #e0e6f2;
+}
+
+/* ── Log dock ─────────────────────────────────────────────────────────── */
+QDockWidget {
+    color: #24324b;
+}
+QDockWidget::title {
+    background-color: #f6f8fc;
+    border-bottom: 1px solid #e0e6f2;
+    padding: 4px 8px;
+    font-weight: 600;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
+
+QWidget#Sidebar {
+    background-color: #f6f8fc;
+    border-right: 1px solid #e0e6f2;
+}
+
+QListWidget#ToolNav {
+    background-color: transparent;
+    border: none;
+    padding: 8px;
+}
+QListWidget#ToolNav::item {
+    padding: 9px 10px;
+    margin: 1px 0px;
+    border-radius: 6px;
+    color: #24324b;
+}
+QListWidget#ToolNav::item:hover:!selected {
+    background-color: #e8edf8;
+}
+QListWidget#ToolNav::item:selected {
+    background-color: #3e65b0;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* ── Page surface ─────────────────────────────────────────────────────── */
+
+QWidget#PageSurface {
+    background-color: #ffffff;
+}
+
+QScrollArea#PageScrollArea {
+    background: transparent;
+    border: none;
+}
+QWidget#PageContent {
+    background: transparent;
+}
+
+QLabel#PageHint {
+    color: #5c677d;
+}
+
+/* ── Group boxes (section cards) ─────────────────────────────────────── */
+
+QGroupBox {
+    background-color: #f6f8fc;
+    border: 1px solid #e0e6f2;
+    border-radius: 8px;
+    margin-top: 14px;
+    padding: 12px 10px 10px 10px;
+    font-weight: 600;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 4px;
+    color: #24324b;
+}
+
+/* ── Drop zone ────────────────────────────────────────────────────────── */
+/* A clean solid-bordered card rather than a dashed outline -- one or two
+   dashed drop targets read as an affordance, but a page with four of them
+   (source / output / topo / poly) reads as noisy. The placeholder text
+   already says "Drop a file or folder here", so the border only needs to
+   escalate -- to the brand blue, filled -- while a file is actually being
+   dragged over it. */
+
+QWidget#DropZone {
+    background-color: #ffffff;
+    border: 1px solid #dbe1ee;
+    border-radius: 8px;
+}
+QWidget#DropZone[dragActive="true"] {
+    border: 1.5px solid #3e65b0;
+    background-color: #eef3fc;
+}
+QLabel#DropZoneLabel {
+    color: #5c677d;
+    font-weight: 600;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+QPushButton {
+    background-color: #eef2fa;
+    color: #24324b;
+    border: 1px solid #dbe1ee;
+    border-radius: 6px;
+    padding: 6px 16px;
+    min-height: 18px;
+}
+QPushButton:hover {
+    background-color: #e3e9f6;
+    border-color: #3e65b0;
+}
+QPushButton:pressed {
+    background-color: #d5deef;
+}
+QPushButton:disabled {
+    color: #9aa4b8;
+    border-color: #e8ecf5;
+    background-color: #f6f8fc;
+}
+
+QPushButton[class~="primary"] {
+    background-color: #f15a29;
+    color: #ffffff;
+    border: 1px solid #f15a29;
+    font-weight: 600;
+    padding: 8px 18px;
+}
+QPushButton[class~="primary"]:hover {
+    background-color: #f37349;
+}
+QPushButton[class~="primary"]:pressed {
+    background-color: #cd4d23;
+}
+QPushButton[class~="primary"]:disabled {
+    background-color: #f3c3ab;
+    color: #ffffff;
+    border-color: #f3c3ab;
+}
+
+QPushButton[class~="danger"] {
+    color: #c23a3a;
+    border-color: #ecc4c4;
+}
+QPushButton[class~="danger"]:hover {
+    background-color: rgba(194, 58, 58, 0.08);
+}
+
+/* ── Inputs ───────────────────────────────────────────────────────────── */
+
+QLineEdit, QPlainTextEdit {
+    background-color: #ffffff;
+    color: #24324b;
+    border: 1px solid #dbe1ee;
+    border-radius: 6px;
+    padding: 5px 8px;
+    min-height: 16px;
+    selection-background-color: #3e65b0;
+    selection-color: #ffffff;
+}
+QLineEdit:focus, QPlainTextEdit:focus {
+    border-color: #3e65b0;
+}
+QLineEdit:disabled {
+    color: #9aa4b8;
+    background-color: #f6f8fc;
+}
+
+QTextEdit#LogText {
+    background-color: #141922;
+    color: #c6d0df;
+    border: 1px solid #e0e6f2;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-family: "Cascadia Mono", "Consolas", monospace;
+    font-size: 12px;
+    selection-background-color: #3e65b0;
+    selection-color: #ffffff;
+}
+
+QComboBox {
+    background-color: #ffffff;
+    color: #24324b;
+    border: 1px solid #dbe1ee;
+    border-radius: 6px;
+    padding: 5px 8px;
+    min-height: 16px;
+}
+QComboBox:hover {
+    border-color: #3e65b0;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 22px;
+}
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #dbe1ee;
+    selection-background-color: #3e65b0;
+    selection-color: #ffffff;
+    outline: none;
+}
+
+QSpinBox, QDoubleSpinBox {
+    background-color: #ffffff;
+    color: #24324b;
+    border: 1px solid #dbe1ee;
+    border-radius: 6px;
+    padding: 5px 6px;
+    min-height: 16px;
+}
+QSpinBox:hover, QDoubleSpinBox:hover {
+    border-color: #3e65b0;
+}
+QSpinBox::up-button, QDoubleSpinBox::up-button,
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    width: 16px;
+    border: none;
+    background-color: transparent;
+}
+
+QCheckBox {
+    spacing: 8px;
+    padding: 3px 0px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #c3ccdf;
+    border-radius: 4px;
+    background-color: #ffffff;
+}
+QCheckBox::indicator:hover {
+    border-color: #3e65b0;
+}
+QCheckBox::indicator:checked {
+    background-color: #3e65b0;
+    border-color: #3e65b0;
+}
+
+/* ── Progress bar ─────────────────────────────────────────────────────── */
+
+QProgressBar {
+    background-color: #e0e6f2;
+    border: none;
+    border-radius: 4px;
+    max-height: 7px;
+    min-height: 7px;
+    color: transparent;
+}
+QProgressBar::chunk {
+    background-color: #3e65b0;
+    border-radius: 4px;
+}
+
+/* ── Table (batch queue) ──────────────────────────────────────────────── */
+
+QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #f6f8fc;
+    gridline-color: #e0e6f2;
+    border: 1px solid #e0e6f2;
+    border-radius: 6px;
+    selection-background-color: #3e65b0;
+    selection-color: #ffffff;
+}
+QHeaderView::section {
+    background-color: #f6f8fc;
+    color: #5c677d;
+    border: none;
+    border-bottom: 1px solid #e0e6f2;
+    border-right: 1px solid #e0e6f2;
+    padding: 6px 8px;
+    font-weight: 600;
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────────── */
+
+QScrollBar:vertical {
+    background-color: transparent;
+    width: 10px;
+    border: none;
+}
+QScrollBar::handle:vertical {
+    background-color: #c3ccdf;
+    border-radius: 5px;
+    min-height: 24px;
+}
+QScrollBar::handle:vertical:hover {
+    background-color: #9aa4b8;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+
+QScrollBar:horizontal {
+    background-color: transparent;
+    height: 10px;
+    border: none;
+}
+QScrollBar::handle:horizontal {
+    background-color: #c3ccdf;
+    border-radius: 5px;
+    min-width: 24px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; }

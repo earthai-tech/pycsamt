@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Validate that every public API catalogue entry has a Sphinx target.
 
 Run this after an HTML documentation build::

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate executed figures for tutorials/forward_model_1d_to_3d.rst."""
 
 from __future__ import annotations

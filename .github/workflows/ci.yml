@@ -30,6 +30,8 @@ jobs:
               pycsamt/seg/tests
               pycsamt/z/tests
               pycsamt/forward/tests
+              pycsamt/airborne
+              pycsamt/emtf/tests
           - test-shard: workflows
             test-paths: >-
               pycsamt/agents/tests
@@ -40,7 +42,7 @@ jobs:
           - test-shard: formats-models
             test-paths: >-
               pycsamt/format/tests
-              pycsamt/api/tests
+              pycsamt/api
               pycsamt/models
               pycsamt/inversion/tests
               pycsamt/zonge/tests
@@ -68,6 +70,9 @@ jobs:
               pycsamt/utils/tests
               pycsamt/gis/tests
               pycsamt/metadata/tests
+              pycsamt/geology/tests
+              pycsamt/io/tests
+              pycsamt/log/tests
 
     steps:
       - name: Check out repository

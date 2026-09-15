@@ -780,6 +780,81 @@ class TestRunItem:
         assert "bi-exclamation-triangle-fill" in str(div)
 
 
+class TestCatchDataLossWarnings:
+    def test_captures_data_loss_warning_message(self):
+        import warnings
+
+        from pycsamt.app.agent_master.callbacks.chat import (
+            _catch_data_loss_warnings,
+        )
+        from pycsamt.emtf.converters.edi import DataLossWarning
+
+        with _catch_data_loss_warnings() as notes:
+            warnings.warn("field X dropped", DataLossWarning, stacklevel=2)
+        assert notes == ["field X dropped"]
+
+    def test_deduplicates_repeated_messages(self):
+        import warnings
+
+        from pycsamt.app.agent_master.callbacks.chat import (
+            _catch_data_loss_warnings,
+        )
+        from pycsamt.emtf.converters.edi import DataLossWarning
+
+        with _catch_data_loss_warnings() as notes:
+            for _ in range(3):
+                warnings.warn(
+                    "field X dropped", DataLossWarning, stacklevel=2
+                )
+            warnings.warn("field Y dropped", DataLossWarning, stacklevel=2)
+        assert notes == ["field X dropped", "field Y dropped"]
+
+    def test_ignores_unrelated_warning_categories(self):
+        import warnings
+
+        from pycsamt.app.agent_master.callbacks.chat import (
+            _catch_data_loss_warnings,
+        )
+
+        with _catch_data_loss_warnings() as notes:
+            warnings.warn("unrelated", UserWarning, stacklevel=2)
+        assert notes == []
+
+    def test_empty_when_no_warning_raised(self):
+        from pycsamt.app.agent_master.callbacks.chat import (
+            _catch_data_loss_warnings,
+        )
+
+        with _catch_data_loss_warnings() as notes:
+            pass
+        assert notes == []
+
+    def test_degrades_without_blocking_when_lock_already_held(self):
+        """Simulates a second, concurrent job: the capture lock is held
+        by "another thread", so this call must not block and must not
+        corrupt anything -- it just runs uncaptured (see the module-level
+        note above `_catch_data_loss_warnings` in chat.py)."""
+        import warnings
+
+        from pycsamt.app.agent_master.callbacks import chat as chat_mod
+        from pycsamt.emtf.converters.edi import DataLossWarning
+
+        assert chat_mod._dlw_capture_lock.acquire(blocking=False)
+        try:
+            with chat_mod._catch_data_loss_warnings() as notes:
+                warnings.warn(
+                    "field X dropped", DataLossWarning, stacklevel=2
+                )
+            assert notes == []
+        finally:
+            chat_mod._dlw_capture_lock.release()
+
+        # the lock is free again afterwards, for the next job
+        with chat_mod._catch_data_loss_warnings() as notes2:
+            warnings.warn("field X dropped", DataLossWarning, stacklevel=2)
+        assert notes2 == ["field X dropped"]
+
+
 def test_record_run_swallows_import_errors(monkeypatch):
     import sys
 

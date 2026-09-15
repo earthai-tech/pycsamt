@@ -495,7 +495,7 @@ class TestEdiRequiredGuard:
         C._run_agent(jid, "run qc", {}, {"provider": "offline"})
         job = C._get_job(jid)
         assert job["kind"] == C.KIND_ERROR
-        assert "No EDI data loaded" in job["result"]
+        assert "No station data loaded" in job["result"]
 
 
 class TestPlotAndToolDispatchRouting:
@@ -620,6 +620,47 @@ class TestOrchestratorResultHandling:
         assert job["kind"] == C.KIND_WORKFLOW
         assert len(job["figs"]) == 1
         assert job["code"] == "print('hi')"
+
+    def test_data_loss_warning_surfaced_in_result(self, monkeypatch):
+        """A DataLossWarning raised while the orchestrator runs (e.g. an
+        XML-native station whose metadata the EDI view can't represent)
+        must reach the chat reply, not vanish into Python's warning
+        stream — see `_catch_data_loss_warnings` in callbacks/chat.py."""
+        import warnings
+
+        _patch_router(monkeypatch, WORKFLOW, workflow=None)
+        _patch_context(monkeypatch, config={"workflow": "qc"})
+        import pycsamt.agents._workflows as wf_mod
+
+        monkeypatch.setattr(
+            wf_mod, "classify_workflow", lambda text, default=None: "qc"
+        )
+
+        from pycsamt.emtf.converters.edi import DataLossWarning
+
+        def _fake_execute(self, input_data):
+            warnings.warn(
+                "Site metadata field 'run_list' has no EDI equivalent",
+                DataLossWarning,
+                stacklevel=2,
+            )
+            return AgentResult(
+                "success",
+                "All good",
+                {"result": AgentResult("success", "inner", {})},
+            )
+
+        monkeypatch.setattr(
+            orch_mod.WorkflowOrchestratorAgent, "execute", _fake_execute
+        )
+        jid = _new_job()
+        C._run_agent(
+            jid, "run qc", {"path": "/tmp/edis"}, {"provider": "offline"}
+        )
+        job = C._get_job(jid)
+        assert job["status"] == "done"
+        assert "run_list" in job["result"]
+        assert "⚠" in job["result"]
 
     def test_failed_orchestrator_result_marks_error(self, monkeypatch):
         _patch_router(monkeypatch, WORKFLOW, workflow=None)

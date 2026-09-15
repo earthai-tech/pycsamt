@@ -195,6 +195,7 @@ class IoTFieldAgent(BaseAgent):
                 hint="e.g. execute({'packets': [...]}) or "
                 "execute({'path': '/data/EDIs'}).",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         n_packets = session.n_packets
@@ -457,7 +458,9 @@ class IoTFieldAgent(BaseAgent):
         try:
             if sign_key:
                 data["signature"] = manifest.sign(sign_key)
-                data["manifest_path"] = manifest.write_signed(path)
+                data["manifest_path"] = manifest.write_signed(
+                    path, sign_key
+                )
             else:
                 data["manifest_path"] = manifest.write(path)
         except Exception as exc:  # noqa: BLE001

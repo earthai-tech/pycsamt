@@ -21,6 +21,7 @@ import numpy as np
 from ..exceptions import ZError
 from ..log.logger import get_logger
 from ..utils.zmath import (
+    MatrixInversionError,
     invertmatrix_incl_errors,
     rotatematrix_incl_errors,
 )
@@ -657,7 +658,7 @@ class Z(ResPhase):
         # --- Invert D with error propagation (errors of DI ignored later) ---
         try:
             DI, DI_err = invertmatrix_incl_errors(D, D_err)
-        except np.linalg.LinAlgError as exc:
+        except (np.linalg.LinAlgError, MatrixInversionError) as exc:
             raise ZError(
                 "Distortion tensor is singular; cannot invert."
             ) from exc
@@ -706,37 +707,6 @@ class Z(ResPhase):
                     Z0_err[k, i, j] = term
 
         return D, Z0, Z0_err
-
-    def _compute_det_variance(self) -> np.ndarray | None:
-        r"""
-        Approximate variance of :math:`\det(Z)` from Z and ``z_err``.
-
-        Uses a simple central-difference style perturbation:
-
-        .. math::
-
-           \sigma_{\det} \approx
-           \tfrac{1}{2}\,\big|\det(Z+\Delta Z) -
-           \det(Z-\Delta Z)\big|
-
-        and returns :math:`\sigma_{\det}^2` as a crude variance
-        proxy. If no error is available the method returns ``None``.
-
-        Returns
-        -------
-        ndarray or None
-            Array of shape ``(n_freq,)`` with the approximate
-            variance of the determinant, or ``None`` if no error
-            information is available.
-        """
-        if self._z_err is None or self._z is None:
-            return None
-
-        det_plus = np.linalg.det(self._z + self._z_err)
-        det_minus = np.linalg.det(self._z - self._z_err)
-        sigma_det = 0.5 * np.abs(det_plus - det_minus)
-
-        return sigma_det**2
 
     # 1-D / 2-D projections
     @property

@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXTS = [".edi"];
+    var EXTS = [".edi", ".xml"];
 
     function hasExt(name) {
         var lo = name.toLowerCase();
@@ -95,7 +95,7 @@
 
     async function sendToStore(pairs) {
         if (!pairs.length) {
-            setStatus("No EDI files found.");
+            setStatus("No EDI/XML-TF files found.");
             return;
         }
         var n = pairs.length;
@@ -178,7 +178,7 @@
                 inp.value = "";
 
                 if (!files.length) {
-                    setStatus("No EDI files found.");
+                    setStatus("No EDI/XML-TF files found.");
                     return;
                 }
 

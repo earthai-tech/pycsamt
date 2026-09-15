@@ -34,6 +34,18 @@ def _mk_xml(tmp_path: Path, edi: EDIFile, stem: str) -> Path:
     return dst
 
 
+def _mk_xml_named(tmp_path: Path, edi: EDIFile, stem: str) -> Path:
+    """Like :func:`_mk_xml`, but stamps the document's own station
+    identity to *stem* too (not just the filename), so fixtures built
+    from the same source EDI for different stems resolve to distinct
+    station names."""
+    tf = EMTF.from_edi(edi)
+    tf.site.site_id = stem
+    dst = tmp_path / f"{stem}.xml"
+    tf.write_xml(dst)
+    return dst
+
+
 # ---------------------------------------------------------------------------
 # Site: construction and lazy dual backend
 # ---------------------------------------------------------------------------
@@ -196,8 +208,8 @@ def test_to_sites_list_of_xml_paths(
     tmp_path: Path, simulated_edi: Path
 ) -> None:
     edi = _load_edi(simulated_edi)
-    p1 = _mk_xml(tmp_path, edi, "L01")
-    p2 = _mk_xml(tmp_path, edi, "L02")
+    p1 = _mk_xml_named(tmp_path, edi, "L01")
+    p2 = _mk_xml_named(tmp_path, edi, "L02")
 
     out = to_sites([p1, p2])
     assert isinstance(out, Sites)
@@ -224,6 +236,41 @@ def test_to_sites_mixed_edi_and_xml_directory(
     assert names == ["D01", "SIM01"]  # D02.xml keeps its own station id
     backends = {s.name: s.backend for s in out}
     assert backends["D01"] == "edi"
+
+
+def test_to_sites_dedups_same_station_across_edi_and_xml(
+    tmp_path: Path, simulated_edi: Path
+) -> None:
+    """A station present as *both* `.edi` and `.xml` in one folder (e.g.
+    re-exported in the newer format alongside the original, such as via
+    ``Site.to_xml``) must not be double-counted. Under the default
+    ``on_dup="replace"`` policy the XML entry -- the metadata-richer
+    superset, see `Site.tf` -- wins; ``"keep"`` retains the EDI one."""
+    survey = tmp_path / "survey"
+    survey.mkdir()
+    edi_path = survey / "same_station.edi"
+    edi_path.write_text(
+        simulated_edi.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    edi = _load_edi(edi_path)
+    # `Site()` normalizes the EDI's dataid to its stable, stem-based
+    # identity (see the `Site` docstring); materializing `.tf` off of
+    # *that* (already-normalized) object, as a real export/reload round
+    # trip would, is what makes the XML resolve to the same station name.
+    site = Site(edi)
+    site.tf.write_xml(survey / "same_station.xml")
+
+    out = to_sites(survey)
+    names = [s.name for s in out]
+    assert names.count("same_station") == 1
+    kept = out[names.index("same_station")]
+    assert kept.backend == "xml"
+
+    # "keep" (first-wins) must retain the EDI entry instead.
+    kept_first = to_sites(survey, on_dup="keep")
+    names_first = [s.name for s in kept_first]
+    assert names_first.count("same_station") == 1
+    assert kept_first[names_first.index("same_station")].backend == "edi"
 
 
 def test_to_sites_xml_backed_site_in_a_list(
@@ -293,8 +340,8 @@ def test_ensure_sites_list_of_xml_paths(
     from pycsamt.emtools._core import ensure_sites
 
     edi = _load_edi(simulated_edi)
-    p1 = _mk_xml(tmp_path, edi, "EX1")
-    p2 = _mk_xml(tmp_path, edi, "EX2")
+    p1 = _mk_xml_named(tmp_path, edi, "EX1")
+    p2 = _mk_xml_named(tmp_path, edi, "EX2")
 
     out = ensure_sites([p1, p2])
     assert len(out) == 2

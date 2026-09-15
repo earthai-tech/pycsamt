@@ -18,6 +18,7 @@ import numpy as np
 from ..exceptions import ZError
 from ..log.logger import get_logger
 from ..utils.zmath import (
+    MatrixInversionError,
     invertmatrix_incl_errors,
     rotatematrix_incl_errors,
     z_error2r_phi_error,
@@ -499,7 +500,7 @@ def invert_z(
                 Zi[k], _ = invertmatrix_incl_errors(Z[k], np.zeros((2, 2)))
             else:
                 Zi[k], Ei[k] = invertmatrix_incl_errors(Z[k], E[k])
-        except np.linalg.LinAlgError as exc:
+        except (np.linalg.LinAlgError, MatrixInversionError) as exc:
             raise ZError("Singular impedance tensor; cannot invert.") from exc
 
     if z.ndim == 2:

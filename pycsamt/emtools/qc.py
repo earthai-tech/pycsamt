@@ -164,10 +164,26 @@ def _row_nanmedian(values: np.ndarray) -> np.ndarray:
 
 
 def _snr_rows(z: np.ndarray, ze: np.ndarray | None) -> np.ndarray:
+    """Return per-row SNR without warning for all-NaN rows.
+
+    Same "no warning" convention as :func:`_row_nanmedian`: a frequency
+    row where every tensor component is NaN (a real per-frequency data
+    gap, not a bug) yields NaN silently instead of a "Mean of empty
+    slice" RuntimeWarning.
+    """
+    n = z.shape[0]
     if ze is None:
-        return np.full(z.shape[0], np.nan, dtype=float)
-    a = np.sqrt(np.nanmean(np.abs(z) ** 2, axis=(1, 2)))
-    e = np.sqrt(np.nanmean(np.abs(ze) ** 2, axis=(1, 2)))
+        return np.full(n, np.nan, dtype=float)
+    z2 = np.abs(z) ** 2
+    ze2 = np.abs(ze) ** 2
+    valid_z = np.isfinite(z2).any(axis=(1, 2))
+    valid_e = np.isfinite(ze2).any(axis=(1, 2))
+    a = np.full(n, np.nan, dtype=float)
+    e = np.full(n, np.nan, dtype=float)
+    if valid_z.any():
+        a[valid_z] = np.sqrt(np.nanmean(z2[valid_z], axis=(1, 2)))
+    if valid_e.any():
+        e[valid_e] = np.sqrt(np.nanmean(ze2[valid_e], axis=(1, 2)))
     return a / (e + 1e-12)
 
 

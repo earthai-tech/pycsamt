@@ -520,7 +520,7 @@ class ToolAgent:
         df["flags"] = df.apply(_flag, axis=1)
         n_flag = int((df["flags"] != "ok").sum())
         summary = (
-            f"**EDI validation** — {len(df)} station(s), {n_flag} flagged"
+            f"**Station validation** — {len(df)} station(s), {n_flag} flagged"
             f"{(' (' + str(len(scan_warn)) + ' warning(s))') if scan_warn else ''}."
         )
         table = _df_to_text(

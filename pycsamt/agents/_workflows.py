@@ -88,7 +88,7 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
     "strike_profile": "Geoelectric strike vs station position",
     "strike": "Geoelectric strike analyzer (per-station table)",
     "dimensionality": "1-D / 2-D / 3-D dimensionality classifier",
-    "validator": "Per-station EDI quality checklist",
+    "validator": "Per-station quality checklist",
     # --- data / IO tools ---
     "coords": "Transform station lat/lon to UTM coordinates",
     "elevation": "Enrich stations with elevation from a web API",
@@ -237,8 +237,10 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
     ],
     "validator": [
         "edi validator",
+        "xml validator",
         "validator",
         "validate edi",
+        "validate xml",
         "validate the data",
         "validate data",
         "validate stations",

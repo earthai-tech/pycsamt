@@ -49,6 +49,28 @@ class TestFolderToLines:
 
         assert _folder_to_lines(str(tmp_path)) == {}
 
+    def test_xml_files_are_found_alongside_edi(self, tmp_path):
+        from pycsamt.app.agent_master.callbacks.edi import _folder_to_lines
+
+        (tmp_path / "L1").mkdir()
+        (tmp_path / "L1" / "a.edi").write_text("x")
+        (tmp_path / "L1" / "b.xml").write_text("x")
+        (tmp_path / "L1" / "c.XML").write_text("x")
+        groups = _folder_to_lines(str(tmp_path))
+        assert len(groups["L1"]) == 3
+
+    def test_same_stem_edi_and_xml_counts_once_preferring_xml(
+        self, tmp_path
+    ):
+        from pycsamt.app.agent_master.callbacks.edi import _folder_to_lines
+
+        (tmp_path / "L1").mkdir()
+        (tmp_path / "L1" / "18-001.edi").write_text("x")
+        (tmp_path / "L1" / "18-001.xml").write_text("x")
+        groups = _folder_to_lines(str(tmp_path))
+        assert len(groups["L1"]) == 1
+        assert groups["L1"][0].endswith(".xml")
+
 
 class TestDetectLinesToFiles:
     def test_groups_by_station_prefix(self, tmp_path):
@@ -59,6 +81,18 @@ class TestDetectLinesToFiles:
         (tmp_path / "22-001.edi").write_text("x")
         (tmp_path / "22-002.edi").write_text("x")
         (tmp_path / "26-001.edi").write_text("x")
+        groups = _detect_lines_to_files(str(tmp_path))
+        assert set(groups) == {"L22", "L26"}
+        assert len(groups["L22"]) == 2
+
+    def test_groups_by_station_prefix_mixed_edi_and_xml(self, tmp_path):
+        from pycsamt.app.agent_master.callbacks.edi import (
+            _detect_lines_to_files,
+        )
+
+        (tmp_path / "22-001.edi").write_text("x")
+        (tmp_path / "22-002.xml").write_text("x")
+        (tmp_path / "26-001.xml").write_text("x")
         groups = _detect_lines_to_files(str(tmp_path))
         assert set(groups) == {"L22", "L26"}
         assert len(groups["L22"]) == 2
@@ -78,7 +112,7 @@ class TestBuildLinesPanel:
         )
 
         panel = _build_lines_panel({})
-        assert "No EDI files found" in str(panel[0])
+        assert "No EDI or XML-TF files found" in str(panel[0])
 
     def test_non_editable_shows_span_names(self):
         from pycsamt.app.agent_master.callbacks.edi import (
@@ -88,7 +122,7 @@ class TestBuildLinesPanel:
         panel = _build_lines_panel({"L1": ["a.edi", "b.edi"]})
         text = str(panel)
         assert "L1" in text
-        assert "2 EDI" in text
+        assert "2 stations" in text
         assert "1 line(s) detected" in text
 
     def test_editable_shows_rename_inputs(self):
@@ -269,7 +303,7 @@ class TestUpdateLinesPanel:
         f.write_text("x")
         fn = self._fn(agent_app)
         panel, status = fn(str(f), None, "folder")
-        assert "1 EDI file(s) in 1 line(s)" in str(status)
+        assert "1 station in 1 line(s)" in str(status)
 
     def test_folder_path_groups_by_subfolder(self, agent_app, tmp_path):
         sub = tmp_path / "L1"
@@ -278,7 +312,7 @@ class TestUpdateLinesPanel:
         (sub / "b.edi").write_text("x")
         fn = self._fn(agent_app)
         panel, status = fn(str(tmp_path), None, "folder")
-        assert "2 EDI file(s) in 1 line(s)" in str(status)
+        assert "2 stations in 1 line(s)" in str(status)
 
     def test_auto_mode_detect_click_regroups_by_station_id(self, agent_app, tmp_path):
         import dash._callback_context as cc
@@ -377,7 +411,7 @@ class TestConfirmLoad:
         store, cls, text, is_open = fn(1, str(f), "folder", [])
         assert store["groups"] == {"Default": [str(f)]}
         assert is_open is False
-        assert "1 EDI" in text
+        assert "1 station" in text
 
     def test_folder_mode_load(self, agent_app, tmp_path):
         sub = tmp_path / "L1"

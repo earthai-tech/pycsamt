@@ -323,6 +323,7 @@ class Inv2DAgent(BaseAgent):
                 f"Inv2DAgent requires PyTorch or TensorFlow: {exc}",
                 hint="pip install torch  or  pip install tensorflow",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         from ..emtools._core import (
@@ -335,12 +336,16 @@ class Inv2DAgent(BaseAgent):
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
             return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
+                "No 'sites' or 'path'.",
+                elapsed=time.time() - t0,
+                warnings=warnings,
             )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
+            return AgentResult.failed(
+                str(exc), elapsed=time.time() - t0, warnings=warnings
+            )
 
         output_dir = input_data.get("output_dir")
         import os
@@ -363,6 +368,7 @@ class Inv2DAgent(BaseAgent):
                 return AgentResult.failed(
                     "'freqs' must contain at least two finite positive values.",
                     elapsed=time.time() - t0,
+                    warnings=warnings,
                 )
             freqs = np.unique(freqs)
         n_freqs = int(freqs.size)
@@ -371,6 +377,7 @@ class Inv2DAgent(BaseAgent):
             return AgentResult.failed(
                 "'depth_max' must be positive when supplied.",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         # ── build observed pseudosection ───────────────────────────────────────
@@ -395,6 +402,7 @@ class Inv2DAgent(BaseAgent):
             return AgentResult.failed(
                 "Fewer than 3 usable stations — cannot run 2-D inversion.",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         n_sta = len(station_names)
@@ -449,6 +457,7 @@ class Inv2DAgent(BaseAgent):
                 return AgentResult.failed(
                     f"2-D Maxwell dataset assembly failed: {exc}",
                     elapsed=time.time() - t0,
+                    warnings=warnings,
                 )
         else:
             self._log.info(
@@ -500,6 +509,7 @@ class Inv2DAgent(BaseAgent):
                 return AgentResult.failed(
                     f"2-D dataset assembly failed: {exc}",
                     elapsed=time.time() - t0,
+                    warnings=warnings,
                 )
 
         # ── train U-Net ────────────────────────────────────────────────────────
@@ -535,6 +545,7 @@ class Inv2DAgent(BaseAgent):
             return AgentResult.failed(
                 f"U-Net training failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         # ── predict ────────────────────────────────────────────────────────────
@@ -544,6 +555,7 @@ class Inv2DAgent(BaseAgent):
             return AgentResult.failed(
                 f"2-D prediction failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         # ── known-truth recovery check (physics="mt2d" only) ────────────────
@@ -804,6 +816,7 @@ class Inv2DAgent(BaseAgent):
             return AgentResult.failed(
                 f"Triangular-mesh Maxwell dataset assembly failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         self._log.info(
@@ -833,7 +846,9 @@ class Inv2DAgent(BaseAgent):
             )
         except Exception as exc:
             return AgentResult.failed(
-                f"GCN training failed: {exc}", elapsed=time.time() - t0
+                f"GCN training failed: {exc}",
+                elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         try:
@@ -849,6 +864,7 @@ class Inv2DAgent(BaseAgent):
             return AgentResult.failed(
                 f"Triangular-mesh prediction failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         mt2d_tri_recovery: dict[str, Any] | None = None

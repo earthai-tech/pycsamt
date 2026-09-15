@@ -155,3 +155,128 @@ def test_jfileacc_components(main_dataset):
     assert isinstance(comps, list)
     assert "zhxhy" in comps
     assert "zhyhx" in comps
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Additional coverage: build_jdataset drop_empty / exception skip
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class _EmptyFreqJF:
+    """Stand-in JFile with zero frequencies -> dropped by drop_empty."""
+
+    site = "EMPTY"
+    path = None
+    heads = None
+    lat = None
+    lon = None
+    elev = None
+    azimuth = None
+    Tip = None
+    Z = None
+    Res = None
+    blocks = None
+    n_freq = 0
+    freq = np.array([])
+
+
+class _BoomJF:
+    """Stand-in JFile whose conversion always raises -> skipped + logged."""
+
+    site = "BOOM"
+
+    def __getattr__(self, name):
+        raise RuntimeError("boom")
+
+
+def test_build_jdataset_drops_empty_freq_when_flag_set():
+    ds = build_jdataset([_EmptyFreqJF()], drop_empty=True)
+    assert ds.sizes["site"] == 0
+
+
+def test_build_jdataset_skips_items_that_raise():
+    ds = build_jdataset([_BoomJF()])
+    assert ds.sizes["site"] == 0
+
+
+def test_xamixin_meta_table_empty_collection():
+    class _EmptyColl(list, XAJMixin):
+        pass
+
+    ds = _EmptyColl().meta_table()
+    assert isinstance(ds, xr.Dataset)
+    assert ds.sizes.get("site", 0) == 0
+
+
+def test_jfileacc_band_without_freq_coord_returns_unchanged():
+    from pycsamt.jones.xa import JFileAcc
+
+    ds = xr.Dataset(coords={"site": ["S1"]})
+    acc = JFileAcc(ds)
+    out = acc.band(fmin=1, fmax=10)
+    assert out is ds
+
+
+def test_jfileacc_plot_apparent_resistivity_smoke(main_dataset):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    site = main_dataset.jfile.stations[0]
+    fig, axes = main_dataset.jfile.plot_apparent_resistivity(
+        site, components=["xy", "bogus"]
+    )
+    assert fig is not None
+    assert len(axes) == 2
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# _get_tensor_or_zeros / _get_rejection_flags direct coverage
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_get_tensor_or_zeros_falls_back_on_shape_mismatch():
+    from pycsamt.jones.xa import _get_tensor_or_zeros
+
+    class _Obj:
+        z = np.zeros((3, 3))  # wrong shape for n_freq=2
+
+    out = _get_tensor_or_zeros(_Obj(), "z", 2, np.complex128)
+    assert out.shape == (2, 2, 2)
+    assert np.all(out == 0)
+
+
+def test_get_rejection_flags_returns_zeros_when_blocks_or_freq_missing():
+    from pycsamt.jones.xa import _get_rejection_flags
+
+    class _NoBlocksJF:
+        blocks = None
+        freq = np.array([1.0])
+
+    out = _get_rejection_flags(_NoBlocksJF(), "Z", 1)
+    assert out.shape == (1, 2, 2)
+    assert not out.any()
+
+    class _NoFreqJF:
+        blocks = object()
+        freq = None
+
+    out2 = _get_rejection_flags(_NoFreqJF(), "Z", 1)
+    assert not out2.any()
+
+
+def test_get_rejection_flags_skips_unknown_component(single_jfile):
+    from pycsamt.jones.xa import _get_rejection_flags
+
+    class _Block:
+        comp = "ZZ"  # not in comp_map -> skipped
+
+    class _Blocks:
+        def select(self, kind):
+            return [_Block()]
+
+    class _JFLike:
+        blocks = _Blocks()
+        freq = single_jfile.freq
+
+    out = _get_rejection_flags(_JFLike(), "Z", single_jfile.n_freq)
+    assert not out.any()

@@ -17,6 +17,8 @@ from pycsamt.emtf import (
     recover_spectra_transfer_functions,
     resolve_spectra_channels,
 )
+from pycsamt.emtf.converters.spectra import spectra_to_emtf
+from pycsamt.emtf.orientation import EMTFRotationError
 from pycsamt.exceptions import EdIDataError
 from pycsamt.seg import EDIFile
 from pycsamt.seg.spectra import (
@@ -506,3 +508,163 @@ def test_legacy_synthetic_spectra_is_not_silently_reinterpreted():
     # original transfer function in the convention it was designed for.
     recovered, _ = sp.to_Z(estimate_error=False)
     np.testing.assert_allclose(recovered.z, z_data)
+
+
+def test_channel_resolution_accepts_explicit_remote_labels_and_normalizes():
+    sp = _make_spectra(
+        ("h-x", "H Y", "EX", "EY", "remote-hx", "rhy"),
+        [_spd_complex(6, 101)],
+    )
+
+    cmap = resolve_spectra_channels(sp)
+
+    assert cmap.local_h == (0, 1)
+    assert cmap.remote_h == (4, 5)
+    assert cmap.outputs == (2, 3)
+    assert cmap.reference_type == "remote_reference"
+
+
+@pytest.mark.parametrize(
+    ("mutator", "message"),
+    [
+        (lambda sp: setattr(sp, "chan_ids", []), "channel order"),
+        (
+            lambda sp: setattr(sp, "chan_ids", sp.chan_ids[:-1]),
+            "channel count",
+        ),
+        (
+            lambda sp: sp.id_to_chtype.update({"4": "AUX"}),
+            "requires local HX, HY, EX, and EY",
+        ),
+    ],
+)
+def test_channel_resolution_rejects_incomplete_metadata(mutator, message):
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 102)],
+    )
+    mutator(sp)
+
+    with pytest.raises(SpectraRecoveryError, match=message):
+        resolve_spectra_channels(sp)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"nfreq_policy": "maybe"}, "nfreq_policy"),
+        ({"missing_policy": "warn"}, "missing_policy"),
+        ({"avgt_policy": "skip"}, "avgt_policy"),
+    ],
+)
+def test_recovery_rejects_unknown_policies(kwargs, message):
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 103)],
+    )
+    with pytest.raises(ValueError, match=message):
+        recover_spectra_transfer_functions(sp, **kwargs)
+
+
+def test_recovery_without_hz_builds_impedance_only_and_fallback_metadata():
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 104), _spd_complex(4, 105)],
+        avgt=(0.0, np.nan),
+    )
+    sp.avgt_present = np.array([False])  # invalid mask length is tolerated
+    sp.rotspec = np.array([12.0])  # invalid vector length becomes NaN
+
+    result = recover_spectra_transfer_functions(sp, avgt_policy="unit")
+
+    assert result.tipper is None
+    assert result.combined_output_channels == ("Ex", "Ey")
+    assert result.avgt.tolist() == [1.0, 1.0]
+    assert np.isnan(result.rotspec).all()
+    assert result.impedance.data.shape == (2, 2, 2)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (
+            lambda sp: (
+                setattr(sp, "_freq", np.array([])),
+                setattr(sp, "validate_frequency_count", lambda policy: True),
+            ),
+            "no usable",
+        ),
+        (
+            lambda sp: setattr(sp, "_freq", np.array([0.0])),
+            "frequency vector",
+        ),
+        (
+            lambda sp: setattr(sp, "_S_fcu", np.zeros((1, 3, 3))),
+            "invalid shape",
+        ),
+        (
+            lambda sp: setattr(sp, "avgt", np.array([])),
+            "AVGT vector",
+        ),
+    ],
+)
+def test_recovery_validates_numerical_container(change, message):
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 106)],
+    )
+    change(sp)
+    with pytest.raises(SpectraRecoveryError, match=message):
+        recover_spectra_transfer_functions(sp)
+
+
+def test_recovery_rejects_all_missing_and_singular_magnetic_block():
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 107)],
+    )
+    sp._missing_mask[:] = True
+    with pytest.raises(SpectraRecoveryError, match="all SPECTRA"):
+        recover_spectra_transfer_functions(sp, missing_policy="skip")
+
+    singular = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [np.ones((4, 4), dtype=complex)],
+    )
+    with pytest.raises(SpectraRecoveryError, match="singular"):
+        recover_spectra_transfer_functions(singular)
+
+
+@pytest.mark.parametrize(
+    ("rotspec", "present", "expected_mode", "message"),
+    [
+        ((10.0, 20.0), (True, True), None, "frequency-dependent"),
+        ((0.0, 0.0), (False, False), "sitelayout", "No ROTSPEC"),
+        ((0.0, 5.0), (True, False), None, "only part"),
+    ],
+)
+def test_bare_spectra_orientation_variants(
+    rotspec, present, expected_mode, message
+):
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 108), _spd_complex(4, 109)],
+        rotspec=rotspec,
+    )
+    sp.rotspec_present = np.asarray(present)
+
+    doc = spectra_to_emtf(sp)
+
+    assert doc.orientation.mode == expected_mode
+    assert message in doc.orientation.rotation_info
+
+
+def test_bare_spectra_target_rotation_uses_sitelayout_mode():
+    sp = _make_spectra(
+        ("HX", "HY", "EX", "EY"),
+        [_spd_complex(4, 110)],
+    )
+    sp.rotspec_present[:] = False
+
+    with pytest.raises(EMTFRotationError, match="SiteLayout metadata"):
+        spectra_to_emtf(sp, target_angle=25.0)

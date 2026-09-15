@@ -1,0 +1,205 @@
+.. _release_v2_6_3:
+
+-------------
+Version 2.6.3
+-------------
+
+pyCSAMT 2.6.3 |Fix| |Enhancement| |Tests| |Docs|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-09-14.*
+
+pyCSAMT 2.6.3 is a maintenance and reliability release. It hardens the
+public agent, EDI/Jones, impedance, Zonge, and utility APIs against malformed
+inputs and dependency changes, corrects several previously unreachable or
+incorrect fallback paths, and substantially expands regression coverage in
+the package's lower-covered modules.
+
+Agent workflow reliability |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Agent failures now retain warnings collected before the failure. The
+:meth:`pycsamt.agents.AgentResult.failure` constructor accepts ``warnings``
+and :class:`pycsamt.agents.IoTFieldAgent` forwards its session warnings when
+it cannot resolve an input source. Signed IoT manifests are also written with
+the signing key supplied to the writer, fixing the signed-manifest execution
+path.
+
+The workflow-plan validator now recognises the already-supported
+``mare2dem``, ``pinn_inversion``, ``hybrid_inversion``, ``code_gen``, and
+``denoise`` workflow names. Plans using those public workflows no longer fail
+validation before dispatch.
+
+Static-shift, QC, and report-generation fixes |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three related issues surfaced by a real multi-station run (a public-domain
+broadband MT survey with stations recorded at different frequency counts):
+
+* The private ``_collect_rho`` helper behind
+  :class:`pycsamt.agents.StaticShiftAgent` picked the first loaded station's
+  frequency grid as the reference and silently replaced any other station's
+  entire before/after apparent-resistivity column with NaN whenever its
+  frequency *count* differed -- the common case in real surveys, where
+  per-station recording length varies, not an edge case. It now resamples
+  each station's log₁₀(ρₐ) curve onto the reference grid in log-frequency
+  space (no extrapolation beyond a station's own range), so static-shift
+  comparison figures are populated for every station instead of only the
+  first one loaded.
+* :func:`pycsamt.emtools.qc._snr_rows` raised a "Mean of empty slice"
+  ``RuntimeWarning`` for a frequency row where every impedance-tensor
+  component is a genuine data gap, instead of skipping it the way
+  ``_row_nanmedian`` already does elsewhere in the same module. It now
+  applies the same guard, silencing the warning without changing any
+  numeric result.
+* :class:`pycsamt.agents.ReportAgent`'s figure-copy step recomputes each
+  figure's destination filename inside the run's shared ``output_dir``,
+  which coincides exactly with where, e.g.,
+  :class:`pycsamt.agents.DataQCAgent` already saves
+  ``qc_confidence_section.png``. Every orchestrated run therefore copied
+  that figure onto itself, raising a ``SameFileError`` and logging a
+  "... are the same file" warning on every single run. The report agent
+  now detects an already-in-place figure and skips the redundant copy.
+
+EDI and Jones parsing hardening |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Several input edge cases now follow the documented tolerant/strict parsing
+contract instead of escaping as unrelated low-level exceptions:
+
+* SEG and Jones source handling tolerates unresolved Windows glob patterns
+  and OS-invalid path strings while recording the appropriate parse error.
+* Missing or incorrectly sized ``TROT`` data now falls back to the impedance
+  rotation angle. Previously, early zero-padding made the fallback branch
+  unreachable and silently replaced the rotation with zeros.
+* :class:`pycsamt.seg.heads.Head` latitude, longitude, and elevation values
+  can be explicitly cleared with ``None``; this no longer conflicts with the
+  stricter validation performed by the underlying location setters.
+* :class:`pycsamt.seg.heads.Heads` now rejects ``None`` as a missing EDI path
+  before constructing a :class:`pathlib.Path`.
+* Jones collection summaries calculate ``n_freq`` safely when frequency data
+  is a multi-element NumPy array, avoiding its ambiguous truth-value error.
+* The Jones banner expression is valid under Python's strict verbose-regex
+  parsing.
+* SEG time-series export constructs its sample axis with an explicit floating
+  dtype, fixing the ``numpy.arange`` call used by the xarray export path.
+
+Impedance error consistency |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`pycsamt.z.utils.invert_z` and
+:meth:`pycsamt.z.Z.remove_distortion` now translate both NumPy singular-matrix
+errors and pyCSAMT's own matrix-inversion error into the documented
+:class:`pycsamt.exceptions.ZError`. Callers therefore receive one stable
+public exception type regardless of which inversion check detects a singular
+tensor.
+
+Zonge construction and coordinate fixes |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`pycsamt.zonge.survey.Topography` now initialises latitude and
+longitude storage when constructed directly from an in-memory frame, making
+coordinate access and ``convert_coords(to="ll")`` behave the same as the
+``read()`` path. :class:`pycsamt.zonge.survey.Station` now initialises its
+inherited frame, metadata, verbosity, and logger state from its dataclass
+constructor. :func:`pycsamt.zonge.utils.load_avg` passes the documented
+``utm_zone`` keyword to the coordinate converter, restoring latitude/
+longitude-to-UTM conversion.
+
+Utility compatibility and robustness |Fix| |Enhancement|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* :class:`pycsamt.api.FlexDict` restores its attribute mapping through
+  :func:`object.__setattr__`, including after unpickling, so subclasses with
+  custom attribute behaviour cannot intercept the internal binding.
+* :func:`pycsamt.api.util.format_text` always makes forward progress when a
+  key is wider than the requested line width; the former zero/negative slice
+  could loop indefinitely.
+* :func:`pycsamt.api.util.format_dict_result` now formats an empty mapping
+  instead of raising from ``max()``.
+* :func:`pycsamt.api.util.round_numeric_values` uses
+  :meth:`pandas.DataFrame.map` when available, while retaining
+  :meth:`~pandas.DataFrame.applymap` for older pandas releases. This supports
+  pandas 3 without dropping compatibility with earlier versions.
+* :func:`pycsamt.api.util.format_iterable` detects a numeric
+  :class:`pandas.Series` with :func:`pandas.api.types.is_numeric_dtype`
+  instead of comparing its dtype to the literal string ``"object"``, which
+  raised ``TypeError`` on pandas configurations that infer a string
+  extension dtype for plain string columns.
+* :func:`pycsamt.zonge.utils.split_by_station` uses the same
+  :func:`~pandas.api.types.is_numeric_dtype` check rather than
+  :func:`numpy.issubdtype`, which cannot interpret pandas extension dtypes
+  and raised ``TypeError`` for a string-typed ``station`` column.
+* :meth:`pycsamt.zonge.base.AVGComponentBase.to_json` also called the
+  pandas 2.x-removed ``pd.io.json.dumps``; it now uses the standard-library
+  ``json`` module, matching the fix already applied to
+  :meth:`~pycsamt.zonge.base.AVGFrame.meta_as_json`.
+* A glob-dispatch regression test was updated for Python 3.13's changed
+  ``Path.rglob("**")`` semantics (it now also matches files, not only
+  directories), and two Windows-only ``ctypes.windll`` tests are skipped on
+  non-Windows CI runners instead of failing at import time.
+
+Internal cleanup |Enhancement|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unused duplicate private helpers in the Jones block parser, SEG xarray
+exporter, Z determinant implementation, and Zonge variance utilities were
+removed. This reduces competing implementations without changing the public
+API. :class:`pycsamt.agents.Inv3DAgent` also drops a ~140-line duplicate
+topography-resolution helper that had been superseded by the shared
+:mod:`pycsamt.agents._topography` module and was never called.
+
+Regression and coverage expansion |Tests|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Coverage was expanded across agents, airborne AFMAG/MobileMT/ZTEM adapters,
+the public API and view layer, EMTF conversion, SEG/Jones parsing, Z and Zonge
+processing, inversion-model helpers, metadata, and I/O.
+
+Twenty-one :mod:`pycsamt.agents` modules that sat below 80% branch coverage
+now all reach 80% or higher, several at 95–100%: static-shift and
+tensor-rotation correction (:class:`~pycsamt.agents.StaticShiftAgent`,
+:class:`~pycsamt.agents.TensorRotationAgent`), frequency decimation
+(:class:`~pycsamt.agents.FrequencyDecimationAgent`), denoising
+(:class:`~pycsamt.agents.DenoisingAgent`), IoT field monitoring
+(:class:`~pycsamt.agents.IoTFieldAgent`), the 2-D/3-D/joint/PINN/hybrid AI
+inverters (:class:`~pycsamt.agents.Inv2DAgent`,
+:class:`~pycsamt.agents.Inv3DAgent`,
+:class:`~pycsamt.agents.JointInversionAgent`,
+:class:`~pycsamt.agents.PINNInversionAgent`,
+:class:`~pycsamt.agents.HybridInversionAgent`), the physics-backend, Occam2D,
+and MARE2DEM inversion drivers
+(:class:`pycsamt.agents.inversion_backend.InversionBackendAgent`,
+:class:`~pycsamt.agents.Occam2DAgent`, :class:`~pycsamt.agents.Mare2DEMAgent`),
+intent routing and the top-level façade (:class:`~pycsamt.agents.IntentRouter`,
+:class:`~pycsamt.agents.AgentMaster`), the processing pipeline and workflow
+orchestrator (:class:`~pycsamt.agents.PipelineAgent`,
+:class:`~pycsamt.agents.WorkflowOrchestratorAgent`), and forward modelling,
+inline metrics, plotting, and reporting
+(:class:`~pycsamt.agents.ForwardModelAgent`,
+:class:`pycsamt.agents.metrics.MetricsAgent`,
+:class:`pycsamt.agents.plotting.PlotAgent`,
+:class:`~pycsamt.agents.ReportAgent`). Several of the new tests exercise real,
+non-mocked forward solves, pipeline runs, and a full non-dry-run
+orchestrator execution — including its provenance-file writing path, which
+had no prior coverage. Package-wide :mod:`pycsamt.agents` line coverage rose
+from 83% to 92% over the course of this work.
+
+The :mod:`pycsamt.emtools` work adds end-to-end and edge coverage for the
+single-station response overview, CSUMT frequency scheduling, impedance
+placeholders, and legacy impedance access. In focused runs,
+:mod:`pycsamt.emtools.overview` reaches 94%,
+:mod:`pycsamt.emtools.csumt` 83%, and
+:mod:`pycsamt.emtools.impedance` 82%; the complete emtools test selection
+reaches 82% aggregate coverage.
+
+|Compatibility|
+~~~~~~~~~~~~~~~~
+
+This patch release does not intentionally remove or rename public APIs. The
+new optional ``warnings`` argument on
+:meth:`pycsamt.agents.AgentResult.failure` is backward compatible. Singular
+matrix failures are now consistently surfaced as
+:class:`pycsamt.exceptions.ZError`, and malformed paths that previously
+raised platform-specific exceptions now follow the parser's normal error
+collection policy.

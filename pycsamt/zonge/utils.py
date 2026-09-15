@@ -489,8 +489,11 @@ def split_by_station(df: pd.DataFrame) -> dict[Any, pd.DataFrame]:
         raise AvgDataError("'station' column missing – cannot split")
 
     # Coerce 'station' to numeric if needed to avoid object
-    # mixes and to keep group keys consistent.
-    if not np.issubdtype(df["station"].dtype, np.number):
+    # mixes and to keep group keys consistent. `pd.api.types` is used
+    # instead of `np.issubdtype` because the latter cannot interpret
+    # pandas extension dtypes (e.g. StringDtype), which some pandas
+    # versions infer by default for plain string columns.
+    if not pd.api.types.is_numeric_dtype(df["station"].dtype):
         df = df.copy()
         df["station"] = pd.to_numeric(df["station"], errors="coerce")
 
@@ -997,7 +1000,7 @@ def load_avg(
     if lat_col in df.columns and lon_col in df.columns:
         try:
             east, north, _ = to_utm(
-                df[lat_col].values, df[lon_col].values, zone=utm_zone
+                df[lat_col].values, df[lon_col].values, utm_zone=utm_zone
             )
             df["easting"] = east
             df["northing"] = north

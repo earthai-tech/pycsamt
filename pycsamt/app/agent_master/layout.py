@@ -16,7 +16,7 @@ from ._providers import (
 )
 
 _PROMPT_CHIPS = [
-    "Load EDI data, run quality control and clean the data",
+    "Load station data, run quality control and clean the data",
     "Run full AI-assisted 1-D neural inversion",
     "Run phase tensor and dimensionality analysis",
     "Prepare Occam2D inversion files and mesh",
@@ -83,11 +83,11 @@ def _splash() -> html.Div:
                         className="wlc-card-icon",
                     ),
                     html.Div(
-                        "Load EDI",
+                        "Load Data",
                         className="wlc-card-title",
                     ),
                     html.Div(
-                        "EDI files · folders · multi-line",
+                        "EDI / XML-TF files · folders · multi-line",
                         className="wlc-card-desc",
                     ),
                 ],
@@ -205,7 +205,8 @@ def _splash() -> html.Div:
                         n_clicks=0,
                     ),
                     html.P(
-                        "Load an EDI folder or type a request to begin",
+                        "Load an EDI/XML-TF folder or type a "
+                        "request to begin",
                         className="wlc-hint",
                     ),
                 ],
@@ -406,11 +407,11 @@ def _topbar() -> html.Div:
                 ],
                 className="am-brand",
             ),
-            # Load EDI
+            # Load EDI / XML-TF data
             html.Button(
                 [
                     html.I(className=("bi bi-folder2-open me-1")),
-                    "Load EDI",
+                    "Load Data",
                 ],
                 id=IDs.BTN_LOAD_EDI,
                 className="am-tbtn primary",
@@ -497,7 +498,7 @@ def _chat_welcome() -> html.Div:
             ),
             html.H3("pyCSAMT Agent Master"),
             html.P(
-                "Load an EDI dataset and describe "
+                "Load an EDI or XML-TF dataset and describe "
                 "your workflow in natural language."
             ),
             html.Div(
@@ -566,7 +567,7 @@ def _plus_menu() -> html.Div:
             ),
             _action(
                 "bi-folder2-open",
-                "Load EDI files",
+                "Load EDI / XML-TF files",
                 IDs.PLUS_LOAD,
             ),
             _action(
@@ -611,7 +612,7 @@ def _input_bar() -> html.Div:
                         html.I(className=("bi bi-paperclip")),
                         id=IDs.BTN_ATTACH,
                         className="am-attach-btn",
-                        title="Load EDI file",
+                        title="Load EDI / XML-TF file",
                         n_clicks=0,
                     ),
                     dcc.Textarea(
@@ -681,7 +682,7 @@ def _edi_canvas() -> dbc.Offcanvas:
         [
             # ── Source selection ──────────────────
             html.Div(
-                "Select EDI source",
+                "Select data source (EDI or XML-TF)",
                 className="am-section-lbl",
             ),
             # Big browse-folder button (primary)
@@ -713,12 +714,14 @@ def _edi_canvas() -> dbc.Offcanvas:
                 children=html.Div(
                     [
                         html.I(className=("bi bi-file-earmark-plus me-2")),
-                        html.Span("Drop EDI files or click to pick"),
+                        html.Span(
+                            "Drop EDI or XML-TF files or click to pick"
+                        ),
                     ]
                 ),
                 className="am-upload-zone mb-2",
                 multiple=True,
-                accept=".edi,.EDI",
+                accept=".edi,.EDI,.xml,.XML",
             ),
             # Passive path display / manual edit
             html.Div(
@@ -802,7 +805,7 @@ def _edi_canvas() -> dbc.Offcanvas:
             ),
         ],
         id=IDs.CANVAS_EDI,
-        title="Load EDI Data",
+        title="Load Station Data (EDI / XML-TF)",
         placement="start",
         is_open=False,
         style={"width": "360px"},
@@ -999,8 +1002,8 @@ def _settings_canvas() -> dbc.Offcanvas:
                 className="mb-1",
             ),
             html.Div(
-                "Map survey line names to EDI"
-                " directories (YAML format)."
+                "Map survey line names to data"
+                " directories (EDI or XML-TF, YAML format)."
                 " Agent Master resolves them"
                 " automatically when you name"
                 " a line in the chat.",
@@ -1830,8 +1833,8 @@ def _help_modal() -> dbc.Modal:
                         [
                             _help_tip(
                                 "bi-folder2-open",
-                                "Load an EDI dataset first for"
-                                " data workflows — questions and"
+                                "Load an EDI or XML-TF dataset first"
+                                " for data workflows — questions and"
                                 " code work without it.",
                             ),
                             _help_tip(

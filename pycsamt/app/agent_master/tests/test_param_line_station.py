@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import importlib.util
+import tempfile
 import unittest
+from pathlib import Path
 
 _HAS_DASH = importlib.util.find_spec("dash") is not None
 
@@ -27,6 +29,17 @@ class TestParamLineStation(unittest.TestCase):
         self.assertEqual([o["value"] for o in line_opts], ["L18", "L22"])
         self.assertEqual(len(station_opts), 5)
         self.assertEqual(set(line_to_st), {"L18", "L22"})
+
+    def test_line_station_options_scans_edi_and_xml_when_ungrouped(self):
+        p = self._mod()
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "a.edi").write_text("x")
+            (d / "b.xml").write_text("x")
+            (d / "c.XML").write_text("x")
+            _, station_opts, line_to_st = p._line_station_options({}, str(d))
+        self.assertEqual(len(station_opts), 3)
+        self.assertEqual(set(line_to_st), {"(all)"})
 
     def test_line_field_injected_only_when_multiline(self):
         p = self._mod()

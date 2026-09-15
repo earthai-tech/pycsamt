@@ -146,7 +146,13 @@ class JCollectionMixin(JParseMixin):
                 )
             if key == "n_freq":
                 f = getattr(jf, "freq", None)
-                return int(getattr(f, "size", len(f or [])))
+                # ``getattr``'s default is evaluated eagerly, so
+                # ``len(f or [])`` would run (and raise on a multi-
+                # element numpy array's ambiguous truth value) even
+                # when ``f`` already has ``.size``. Guard explicitly.
+                if hasattr(f, "size"):
+                    return int(f.size)
+                return len(f or [])
             if key == "path":
                 return str(jf.path) if jf.path else ""
             if key == "lat":

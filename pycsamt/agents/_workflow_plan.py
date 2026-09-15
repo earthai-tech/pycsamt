@@ -52,6 +52,11 @@ VALID_WORKFLOWS = frozenset(
         "batch",
         "comparison",
         "full_ai_workflow",
+        "mare2dem",
+        "pinn_inversion",
+        "hybrid_inversion",
+        "code_gen",
+        "denoise",
     }
 )
 

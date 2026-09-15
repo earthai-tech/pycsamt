@@ -436,3 +436,293 @@ def test_real_synthetic_mobilemt_xml_loads():
     s0 = asites[0]
     assert s0.admittance is not None
     assert s0.admittance.shape[1:] == (3, 2)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# _navigation_coords elevation fallback branches
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_navigation_coords_uses_platform_elevation_when_present():
+    from pycsamt.airborne.site import _navigation_coords
+
+    nav = NavigationTrack(
+        sample_ids=("A",), latitude=(1.0,), longitude=(2.0,),
+        platform_elevation=(150.0,),
+    )
+    _lat, _lon, elev = _navigation_coords(nav, 0)
+    assert elev == 150.0
+
+
+def test_navigation_coords_falls_back_to_terrain_elevation():
+    from pycsamt.airborne.site import _navigation_coords
+
+    nav = NavigationTrack(
+        sample_ids=("A",), latitude=(1.0,), longitude=(2.0,),
+        terrain_elevation=(90.0,),
+    )
+    _lat, _lon, elev = _navigation_coords(nav, 0)
+    assert elev == 90.0
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# AirborneSite.from_xml identifier resolution + _stem_from_source
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_from_xml_uses_station_when_no_site_id():
+    doc = _ztem_line().get_record("P000").emtf
+    doc.station = "STATION42"
+    site = AirborneSite.from_xml(doc)
+    assert site.sample_id == "STATION42"
+
+
+def test_from_xml_falls_back_to_literal_site_when_source_not_path():
+    doc = _ztem_line().get_record("P000").emtf
+    doc.station = None
+    site = AirborneSite.from_xml(doc)
+    assert site.sample_id == "site"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Simple accessor properties
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_airborne_site_simple_accessors():
+    record = _ztem_line().get_record("P000")
+    site = AirborneSite(record)
+    assert site.record is record
+    assert site.emtf is record.emtf
+    assert site.tf is record.emtf
+    assert isinstance(site.quality, dict)
+    assert isinstance(site.fields, dict)
+    assert site.site_meta is record.emtf.site
+    assert site.site_layout is record.emtf.site_layout
+    assert site.provenance is record.emtf.provenance
+    assert site.processing is record.emtf.processing
+    assert site.copyright is record.emtf.copyright
+    assert site.quality_meta is record.emtf.quality
+
+
+def test_airborne_site_technology_none_when_unresolvable():
+    record = AirborneEMRecord(sample_id="S1")
+    site = AirborneSite(record)
+    assert site.technology is None
+
+
+def test_airborne_site_name_falls_back_to_doc_station():
+    record = _ztem_line().get_record("P000")
+    record.emtf.site = None
+    record.emtf.station = "DOCSTATION"
+    site = AirborneSite(record)
+    assert site.name == "DOCSTATION"
+
+
+def test_airborne_site_coords_nan_when_site_has_no_location():
+    record = _ztem_line().get_record("P000")
+    record.emtf.site = SiteMeta(site_id="X")
+    site = AirborneSite(record)
+    lat, lon, elev = site.coords
+    assert np.isnan(lat) and np.isnan(lon) and np.isnan(elev)
+
+
+def test_airborne_site_optional_accessors_none_without_emtf():
+    record = AirborneEMRecord(sample_id="S1")
+    site = AirborneSite(record)
+    assert site.admittance is None
+    assert site.interstation_tensor is None
+    assert site.afmag_tilt_deg is None
+    assert site.afmag_amplification_parameter is None
+
+
+def test_airborne_site_has_component_default_falls_back_to_z():
+    record = _ztem_line().get_record("P000")
+    site = AirborneSite(record)
+    assert site.has_component("z") is False
+    assert site.has_component("something_unknown") is False
+
+
+def test_airborne_site_to_dataframe_z_kind_empty_when_no_impedance():
+    record = _ztem_line().get_record("P000")
+    site = AirborneSite(record)
+    df = site.to_dataframe("impedance")
+    assert list(df.columns) == []
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# AirborneSite.tipper setter
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_tipper_setter_raises_without_emtf():
+    record = AirborneEMRecord(sample_id="S1")
+    site = AirborneSite(record)
+    with pytest.raises(ValueError):
+        site.tipper = np.zeros((2, 2), dtype=complex)
+
+
+def test_tipper_setter_raises_without_tipper_tf():
+    record = _mobilemt_line().get_record("Q000")
+    site = AirborneSite(record)
+    with pytest.raises(ValueError):
+        site.tipper = np.zeros((2, 2), dtype=complex)
+
+
+def test_tipper_setter_accepts_nf2_and_nf1_2_shapes():
+    site = AirborneSite(_ztem_line().get_record("P000"))
+    new_values = np.arange(8, dtype=complex).reshape(4, 2)
+    site.tipper = new_values
+    assert np.allclose(site.tipper[:, 0, :], new_values)
+
+    site2 = AirborneSite(_ztem_line().get_record("P000"))
+    canonical = np.arange(8, dtype=complex).reshape(4, 1, 2)
+    site2.tipper = canonical
+    assert np.allclose(site2.tipper, canonical)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# AirborneSites construction from a bare str/Path/EMTF, single-item wrapping
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_airborne_sites_accepts_single_path_item(tmp_path):
+    site = AirborneSite(_ztem_line().get_record("P000"))
+    target = tmp_path / "P000.xml"
+    site.to_xml(target)
+    asites = AirborneSites(target)
+    assert len(asites) == 1
+    assert asites[0].sample_id == "P000"
+
+
+def test_airborne_sites_accepts_single_emtf_item():
+    doc = _ztem_line().get_record("P000").emtf
+    asites = AirborneSites(doc)
+    assert len(asites) == 1
+
+
+def test_airborne_sites_accepts_single_non_iterable_unsupported_item():
+    with pytest.raises(TypeError):
+        AirborneSites(123)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# AirborneSites.from_xml_dir error handling
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_from_xml_dir_skips_malformed_file_by_default(tmp_path):
+    AirborneSites.from_line(_ztem_line(n=2)).write_xml(tmp_path)
+    bad = tmp_path / "broken.xml"
+    bad.write_text("not valid xml <<<", encoding="utf-8")
+    asites = AirborneSites.from_xml_dir(tmp_path)
+    assert len(asites) == 2
+
+
+def test_from_xml_dir_strict_raises_on_malformed_file(tmp_path):
+    AirborneSites.from_line(_ztem_line(n=1)).write_xml(tmp_path)
+    bad = tmp_path / "broken.xml"
+    bad.write_text("not valid xml <<<", encoding="utf-8")
+    with pytest.raises(Exception):
+        AirborneSites.from_xml_dir(tmp_path, strict=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# AirborneSites misc: to_emtf_list / select() / closest()
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_airborne_sites_to_emtf_list():
+    asites = AirborneSites.from_line(_ztem_line(n=2))
+    docs = asites.to_emtf_list()
+    assert len(docs) == 2
+    assert all(doc is not None for doc in docs)
+
+
+def test_airborne_sites_select_with_no_args_returns_copy():
+    asites = AirborneSites.from_line(_ztem_line(n=2))
+    copy = asites.select()
+    assert len(copy) == 2
+    assert copy is not asites
+
+
+def test_airborne_sites_closest_skips_nan_coords_and_returns_none_when_empty():
+    nav_site = AirborneSites.from_line(_ztem_line(n=1))[0]
+    nan_site = AirborneSite(AirborneEMRecord(sample_id="NAN1"))
+    combined = AirborneSites([nan_site, nav_site])
+    nearest = combined.closest(5.0, -3.0)
+    assert nearest.sample_id == "P000"
+
+    only_nan = AirborneSites([AirborneEMRecord(sample_id="NAN2")])
+    assert only_nan.closest(5.0, -3.0) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# ensure_asites: dataset-in-iterable, TypeError skip/raise, verbose warning
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_ensure_asites_iterable_containing_a_dataset():
+    line = _ztem_line(n=2)
+    dataset = build_ztem_dataset("SURVEY", [line])
+    combined = ensure_asites([dataset])
+    assert len(combined) == 2
+
+
+def test_ensure_asites_iterable_skips_unsupported_items_when_not_strict():
+    line = _ztem_line(n=1)
+    combined = ensure_asites([line, 123])
+    assert len(combined) == 1
+
+
+def test_ensure_asites_iterable_raises_on_unsupported_item_when_strict():
+    with pytest.raises(TypeError):
+        ensure_asites([123], strict=True)
+
+
+def test_ensure_asites_verbose_warns_on_empty_result():
+    with pytest.warns(RuntimeWarning):
+        result = ensure_asites([123], verbose=1)
+    assert len(result) == 0
+
+
+def test_ensure_asites_empty_iterable_strict_raises():
+    with pytest.raises(ValueError):
+        ensure_asites([], strict=True)
+
+
+def test_ensure_asites_passthrough_invalid_on_dup_raises():
+    asites = AirborneSites.from_line(_ztem_line(n=1))
+    with pytest.raises(ValueError):
+        ensure_asites(asites, on_dup="bogus")
+
+
+def test_ensure_asites_passthrough_empty_strict_raises():
+    empty = AirborneSites([])
+    with pytest.raises(ValueError):
+        ensure_asites(empty, strict=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# from_line / from_dataset type checks and AirborneSites.__repr__
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_from_line_rejects_non_line():
+    with pytest.raises(TypeError):
+        AirborneSites.from_line("not-a-line")
+
+
+def test_from_dataset_rejects_non_dataset():
+    with pytest.raises(TypeError):
+        AirborneSites.from_dataset("not-a-dataset")
+
+
+def test_airborne_sites_repr():
+    asites = AirborneSites.from_line(_ztem_line(n=1))
+    text = repr(asites)
+    assert "AirborneSites(n=1" in text
+    assert "ztem" in text
+
+    empty = AirborneSites([])
+    assert "?" in repr(empty)

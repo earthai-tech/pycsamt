@@ -138,7 +138,7 @@ class TestLinesQuery(unittest.TestCase):
         job = C._get_job(jid)
         self.assertEqual(job["kind"], C.KIND_ANSWER)
         self.assertIn("2 survey lines are loaded", job["result"])
-        self.assertIn("**K1** — 18 EDI files", job["result"])
+        self.assertIn("**K1** — 18 stations", job["result"])
         self.assertIn("read line K1", job["result"])
 
     def test_lines_reply_no_data(self):
@@ -152,7 +152,7 @@ class TestLinesQuery(unittest.TestCase):
         )
         job = C._get_job(jid)
         self.assertEqual(job["kind"], C.KIND_META)
-        self.assertIn("Load EDI", job["result"])
+        self.assertIn("Load Data", job["result"])
 
 
 class TestSmartUnknownReply(unittest.TestCase):
@@ -277,7 +277,7 @@ class TestDispatchNoData(unittest.TestCase):
         job = C._get_job(jid)
         self.assertEqual(job["status"], "done")
         self.assertEqual(job["kind"], C.KIND_META)
-        self.assertIn("Load EDI", job["result"])
+        self.assertIn("Load Data", job["result"])
         self.assertIsNone(job.get("card"))
 
 

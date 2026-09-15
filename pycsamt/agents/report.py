@@ -162,13 +162,21 @@ class ReportAgent(BaseAgent):
                         dst = os.path.join(
                             output_dir, f"{step_name}_{fig_name}.png"
                         )
+                        ref_name = f"{step_name}_{fig_name}"
+                        # Every orchestrated step shares the run's single
+                        # output_dir, and some agents already save their
+                        # figure there under exactly this computed name
+                        # (e.g. DataQCAgent's "qc_confidence_section.png").
+                        # Copying it onto itself would otherwise raise
+                        # shutil.SameFileError on every such run.
+                        if _same_path(src_path, dst):
+                            fig_refs[ref_name] = os.path.basename(dst)
+                            continue
                         try:
                             import shutil
 
                             shutil.copy2(src_path, dst)
-                            fig_refs[f"{step_name}_{fig_name}"] = (
-                                os.path.basename(dst)
-                            )
+                            fig_refs[ref_name] = os.path.basename(dst)
                         except Exception as exc:
                             warnings.append(
                                 f"Could not copy figure {src_path}: {exc}"
@@ -360,6 +368,19 @@ class ReportAgent(BaseAgent):
             "Consider independent Bostick depth estimates to guide the "
             "mesh parametrisation."
         )
+
+
+def _same_path(a: str, b: str) -> bool:
+    """True when *a* and *b* resolve to the same on-disk path.
+
+    Purely lexical (no filesystem access), so it is safe to call before
+    *b* exists -- unlike :func:`os.path.samefile`, which requires both
+    paths to already exist.
+    """
+    def _norm(p: str) -> str:
+        return os.path.normcase(os.path.normpath(os.path.abspath(str(p))))
+
+    return _norm(a) == _norm(b)
 
 
 # ── markdown assembler ────────────────────────────────────────────────────────

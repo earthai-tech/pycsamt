@@ -20,11 +20,13 @@ as an am-fig-card with view + export buttons.
 from __future__ import annotations
 
 import base64
+import contextlib
 import io
 import re
 import threading
 import time
 import uuid
+import warnings as _warnings
 from datetime import datetime
 from typing import Any
 
@@ -403,7 +405,7 @@ def _user_bubble(text: str, mid: str | None = None) -> html.Div:
         html.Button(
             html.I(className="bi bi-folder2-open"),
             className="am-msg-action am-edi-msg-btn",
-            title="Load EDI",
+            title="Load Data",
             n_clicks=0,
         ),
     ]
@@ -1080,7 +1082,7 @@ _WF_LABELS: dict[str, str] = {
     "strike_profile": "strike profile",
     "strike": "strike analyzer",
     "dimensionality": "dimensionality classifier",
-    "validator": "EDI validator",
+    "validator": "station validator",
     "coords": "coordinate transformer",
     "elevation": "elevation enrichment",
     "converter": "format converter",
@@ -1705,7 +1707,8 @@ def _capability_text() -> str:
     """Static capability summary for META / greeting / 'list tasks' intents."""
     return (
         "I'm the **pyCSAMT v2 assistant**. Here's what I can do for you:\n\n"
-        "**Run processing workflows** on your loaded EDI data:\n"
+        "**Run processing workflows** on your loaded station data"
+        " (EDI or XML-TF):\n"
         "- `qc` — quality control & per-station scan\n"
         "- `static_shift` — static-shift detection & AMA/LOESS correction\n"
         "- `denoise` — RPCA / Hampel / AI denoising\n"
@@ -1735,7 +1738,7 @@ def _capability_text() -> str:
         "**Analyze** your data (results as a table + figure):\n"
         "- strike analyzer (geoelectric strike per station)\n"
         "- dimensionality classifier (1-D / 2-D / 3-D)\n"
-        "- EDI validator (per-station quality checklist)\n\n"
+        "- station validator (per-station quality checklist)\n\n"
         + _correction_capability_block()
         + "**Data & I/O tools** (I'll ask for the options first):\n"
         "- coordinate transformer (station lat/lon → UTM)\n"
@@ -1756,8 +1759,9 @@ def _capability_text() -> str:
         "**Answer questions** about pyCSAMT — classes, functions, the Sites"
         " data model, and which method to use.\n\n"
         "**Generate Python code** that reproduces a pyCSAMT workflow.\n\n"
-        "To run a workflow, load an EDI dataset first with **Load EDI**"
-        " (top-left). Questions and code requests need no data.\n\n"
+        "To run a workflow, load an EDI or XML-TF dataset first with"
+        " **Load Data** (top-left). Questions and code requests need"
+        " no data.\n\n"
         "**Launch the other pyCSAMT apps** — just say the word and I'll"
         " start them for you:\n"
         "- *“open the map view”* — MapView workbench (station maps,"
@@ -1780,7 +1784,7 @@ def _unknown_task_text(text: str) -> str:
         f"I'm not sure how to handle that as a task{quoted}.\n\n"
         "I didn't recognise a workflow I can run for that request, so I"
         " won't guess. Here's what I can actually do:\n"
-        "- **Run workflows** on loaded EDI data: QC, static-shift,"
+        "- **Run workflows** on loaded station data: QC, static-shift,"
         " phase-tensor analysis, denoising, tipper, rotation, frequency"
         " decimation, sensitivity/DOI, inversions (AI 1-D/2-D/3-D, PINN,"
         " hybrid, ensemble, joint), ModEM/Occam2D/MARE2DEM prep, and"
@@ -1825,7 +1829,7 @@ _PLOT_MENU: tuple[tuple[str, str], ...] = (
 
 def _lines_bullets(groups: dict) -> str:
     return "\n".join(
-        f"- **{ln}** — {len(groups[ln])} EDI file"
+        f"- **{ln}** — {len(groups[ln])} station"
         f"{'s' if len(groups[ln]) != 1 else ''}"
         for ln in sorted(groups)
     )
@@ -1968,6 +1972,65 @@ def _dispatch_question(
     )
 
 
+# ── DataLossWarning capture ────────────────────────
+#
+# Each chat request runs its agent chain on its own background thread
+# (see the module docstring). `warnings.catch_warnings()` swaps
+# *process-global* state (`warnings.filters`, its internal message-sink
+# hook) with no locking of its own, so two jobs entering it concurrently
+# on different threads could in principle misattribute a warning to the
+# wrong job -- and it must stay entered for the whole wrapped call (the
+# warning can fire at any point deep inside it), so that window can be
+# long. Rather than block a second job's workflow behind the first
+# job's `catch_warnings` window (or worse, let them race), the lock
+# below is acquired *non-blockingly*: whichever job gets there first
+# captures normally for its full call; any other job whose capture
+# window overlaps it just runs uncaptured instead of waiting -- its
+# DataLossWarning (if any) still fires, it just won't be echoed into
+# that job's chat reply.
+_dlw_capture_lock = threading.Lock()
+
+
+@contextlib.contextmanager
+def _catch_data_loss_warnings():
+    """Capture ``DataLossWarning``\\ s raised while the ``with`` body runs.
+
+    XML-native stations lazily materialize an EDI view the first time a
+    workflow touches ``Site.edi`` (deep inside whatever the wrapped agent
+    does — not necessarily at load time), and that materialization can
+    silently drop metadata the legacy EDI format has no field for.
+    Python's ``warnings`` module already reports this via
+    :class:`~pycsamt.emtf.converters.edi.DataLossWarning`, but a bare
+    ``warnings.warn`` from a background thread never reaches the chat UI
+    on its own — this turns it into text the caller can fold into the
+    agent's own ``result.warnings`` list, right alongside the workflow's
+    other non-fatal notices.
+
+    Yields a list that is populated (deduplicated, in first-seen order)
+    once the ``with`` block exits. See the module-level note above for
+    the concurrency behavior when two jobs' capture windows overlap.
+    """
+    from pycsamt.emtf.converters.edi import DataLossWarning
+
+    notes: list[str] = []
+    if not _dlw_capture_lock.acquire(blocking=False):
+        yield notes
+        return
+    try:
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always", DataLossWarning)
+            yield notes
+    finally:
+        _dlw_capture_lock.release()
+    seen: set[str] = set()
+    for w in caught:
+        if issubclass(w.category, DataLossWarning):
+            msg = str(w.message)
+            if msg not in seen:
+                seen.add(msg)
+                notes.append(msg)
+
+
 def _dispatch_plot(
     jid: str,
     edi_path: Any,
@@ -1996,7 +2059,9 @@ def _dispatch_plot(
     step(f"Rendering {_labels.get(kind, kind)}...", "running")
 
     agent_input = {"path": edi_path, "kind": kind, **(params or {})}
-    res = PlotAgent().execute(agent_input)
+    with _catch_data_loss_warnings() as _dl_notes:
+        res = PlotAgent().execute(agent_input)
+    res.warnings.extend(_dl_notes)
 
     if res.status == "failed":
         step("Plot unavailable", "done")
@@ -2076,7 +2141,7 @@ def _dispatch_tool(
     _labels = {
         "strike": "strike analysis",
         "dimensionality": "dimensionality classification",
-        "validator": "EDI validation",
+        "validator": "station validation",
         "coords": "coordinate transform",
         "elevation": "elevation enrichment",
         "converter": "format conversion",
@@ -2088,9 +2153,11 @@ def _dispatch_tool(
     where = f" for {label}" if label else ""
     step(f"Running {_labels.get(kind, kind)}...", "running")
 
-    res = ToolAgent().execute(
-        {"path": edi_path, "kind": kind, **(params or {})}
-    )
+    with _catch_data_loss_warnings() as _dl_notes:
+        res = ToolAgent().execute(
+            {"path": edi_path, "kind": kind, **(params or {})}
+        )
+    res.warnings.extend(_dl_notes)
     if res.status == "failed":
         step("Analysis failed", "done")
         _update_job(
@@ -2246,8 +2313,8 @@ def _dispatch_metrics(
             status="done",
             result=(
                 "I don't have any survey data to read values from yet. "
-                "Load an EDI dataset with **Load EDI** (top-left), or name a "
-                "known survey line, then ask again."
+                "Load an EDI or XML-TF dataset with **Load Data** "
+                "(top-left), or name a known survey line, then ask again."
             ),
             steps=_JOBS[jid]["steps"],
             kind=KIND_META,
@@ -2258,18 +2325,21 @@ def _dispatch_metrics(
     warnings: list[str] = []
     if len(targets) == 1:
         label, src = targets[0]
-        res = MetricsAgent().execute(
-            {"sites": src, "kinds": kinds, "label": label}
-        )
+        with _catch_data_loss_warnings() as _dl_notes:
+            res = MetricsAgent().execute(
+                {"sites": src, "kinds": kinds, "label": label}
+            )
         result_text = res.summary
-        warnings = list(res.warnings or [])
+        warnings = list(res.warnings or []) + _dl_notes
     else:
         # All lines: one compact line per survey line.
         out_lines = []
         for label, src in targets:
-            res = MetricsAgent().execute(
-                {"sites": src, "kinds": kinds, "label": label}
-            )
+            with _catch_data_loss_warnings() as _dl_notes:
+                res = MetricsAgent().execute(
+                    {"sites": src, "kinds": kinds, "label": label}
+                )
+            warnings.extend(_dl_notes)
             if res.status != "success":
                 out_lines.append(f"- **{label}**: {res.summary}")
                 continue
@@ -2504,7 +2574,7 @@ def _dispatch_inversion_prep(
             status="done",
             result=(
                 "I don't have survey data to prepare inversion files "
-                "from yet. Load an EDI dataset with **Load EDI** "
+                "from yet. Load an EDI or XML-TF dataset with **Load Data** "
                 "(top-left), or name a known survey line, then ask again."
             ),
             steps=_JOBS[jid]["steps"],
@@ -2544,14 +2614,15 @@ def _dispatch_inversion_prep(
                     api_key=api_key,
                     model=sel_model,
                 )
-                result = orch.execute(
-                    {
-                        "config": dict(cfg),
-                        "request": text,
-                        "data_path": src,
-                        "output_dir": out_dir,
-                    }
-                )
+                with _catch_data_loss_warnings() as _dl_notes:
+                    result = orch.execute(
+                        {
+                            "config": dict(cfg),
+                            "request": text,
+                            "data_path": src,
+                            "output_dir": out_dir,
+                        }
+                    )
         except Exception as exc:  # noqa: BLE001
             sections.append(f"**{label}** — ⚠ {exc}")
             step(f"{label} failed", "error")
@@ -2561,6 +2632,7 @@ def _dispatch_inversion_prep(
         files, stats, warns, step_results = _collect_prep_files(
             result, prep_step
         )
+        warns = warns + _dl_notes
 
         # keep only the prep/report step figures, labelled per line
         _fig_steps = _WORKFLOW_FIGURE_STEPS.get(wtype) or set()
@@ -2657,6 +2729,7 @@ _DATA_READ_VERBS = (
 )
 _DATA_READ_NOUNS = (
     "edi",
+    "xml",
     "data",
     "dataset",
     "station",
@@ -2722,8 +2795,8 @@ _NO_DATA_GUIDANCE = (
     "**No survey data is stored yet.**\n\n"
     "Load a dataset first and I'll read it and report the "
     "statistics:\n\n"
-    "- **Load EDI** — use the ⊕ menu (top-left) and "
-    "pick your EDI folder;\n"
+    "- **Load Data** — use the ⊕ menu (top-left) and "
+    "pick your EDI or XML-TF folder;\n"
     "- or name a known survey line, e.g. "
     "*“read line L22PLT”*.\n\n"
     "Once loaded, ask me to *“read the data”* again."
@@ -3031,7 +3104,7 @@ def _dispatch_data_overview(
             n = len(groups)
             keys = sorted(groups)
             rows = "\n".join(
-                f"- **{ln}** — {len(groups[ln])} EDI file"
+                f"- **{ln}** — {len(groups[ln])} station"
                 f"{'s' if len(groups[ln]) != 1 else ''}"
                 for ln in keys
             )
@@ -3482,7 +3555,7 @@ def _run_agent(
                 result=(
                     "I could not classify your "
                     "request. Please try rephrasing "
-                    "or load an EDI dataset first."
+                    "or load an EDI/XML-TF dataset first."
                 ),
                 steps=_JOBS[jid]["steps"],
                 kind=KIND_ERROR,
@@ -3740,9 +3813,9 @@ def _run_agent(
                 jid,
                 status="done",
                 result=(
-                    "No EDI data loaded. "
-                    "Please load an EDI dataset "
-                    "first using the Load EDI "
+                    "No station data loaded. "
+                    "Please load an EDI or XML-TF dataset "
+                    "first using the Load Data "
                     "button, then retry."
                 ),
                 steps=_JOBS[jid]["steps"],
@@ -3824,7 +3897,8 @@ def _run_agent(
                 f"Executing {wtype}...",
                 "running",
             )
-            result = orch.execute(orch_input)
+            with _catch_data_loss_warnings() as _dl_notes:
+                result = orch.execute(orch_input)
 
         _step(
             f"Completed {wtype}",
@@ -3899,6 +3973,9 @@ def _run_agent(
 
         # AgentResult.summary is the text field
         summary = result.summary or result.error or "Workflow completed."
+        _extra_warns = list(result.warnings or []) + _dl_notes
+        if _extra_warns:
+            summary += "\n\n" + "\n".join(f"⚠ {w}" for w in _extra_warns[:3])
 
         # Trace the run to the workflow history (observability +
         # the sidebar "Recent runs" view). Best-effort.
@@ -3928,7 +4005,7 @@ def _run_agent(
             error=str(exc),
             result=(
                 f"An error occurred: {exc}\n\n"
-                "Check that the EDI path is set "
+                "Check that the data path is set "
                 "and your API key is configured "
                 "in Settings if needed."
             ),
@@ -4355,10 +4432,10 @@ def register_chat(app) -> None:
             and not _session_has_data()
         ):
             _no_edi = (
-                "No EDI dataset is loaded.\n"
-                "Please click Load EDI "
+                "No station dataset is loaded.\n"
+                "Please click Load Data "
                 "(top-left) to select your "
-                "files, then confirm."
+                "EDI or XML-TF files, then confirm."
             )
             msgs.append(_agent_bubble(_no_edi))
             new_stored.append(

@@ -498,21 +498,25 @@ def format_text(
     )
     formatted_text = ""
     text = str(text)
+    wrap_width = effective_max_char_text - buffer_space
     while text:
         # If the remaining text is shorter than the effective
         # max length, or if there's no key part, add it as is
-        if len(text) <= effective_max_char_text - buffer_space or not key_str:
+        if len(text) <= wrap_width or not key_str:
             formatted_text += key_str + text
             break
         else:
             # Find the space to break the line, ensuring it doesn't
-            # exceed effective_max_char_text
-            break_point = text.rfind(
-                " ", 0, effective_max_char_text - buffer_space
-            )
+            # exceed the wrap width. The wrap width is clamped to at
+            # least 1 char so a very long key/small max_char_text
+            # combination (making ``wrap_width`` zero or negative)
+            # cannot produce a break_point <= 0 -- which would leave
+            # ``text`` unchanged after slicing and spin forever.
+            safe_width = max(wrap_width, 1)
+            break_point = text.rfind(" ", 0, safe_width)
 
-            if break_point == -1:  # No spaces found, force break
-                break_point = effective_max_char_text - buffer_space
+            if break_point <= 0:  # No usable space found, force break
+                break_point = safe_width
             # Add the line to formatted_text
             formatted_text += key_str + text[:break_point].rstrip() + "\n"
             # Remove the added part from text
@@ -1254,7 +1258,11 @@ def format_iterable(attr):
 
     def _format_pandas_object(obj):
         if isinstance(obj, pd.Series):
-            stats = _numeric_stats(obj) if obj.dtype != "object" else {}
+            stats = (
+                _numeric_stats(obj)
+                if pd.api.types.is_numeric_dtype(obj.dtype)
+                else {}
+            )
             details = ", ".join(
                 [f"{key}={value}" for key, value in stats.items()]
             )
@@ -1339,7 +1347,9 @@ def format_dict_result(
     dictionary name and the maximum key length. If a value exceeds the specified
     maximum length, it truncates the value and appends an ellipsis ("...").
     """
-    max_key_length = max(len(str(key)) for key in dictionary.keys())
+    max_key_length = max(
+        (len(str(key)) for key in dictionary.keys()), default=0
+    )
     formatted_lines = [f"{dict_name}({{"]
 
     for key, value in dictionary.items():
@@ -1601,4 +1611,8 @@ def round_numeric_values(df, precision=4):
             return round(x, precision)
         return x
 
+    if hasattr(df, "map"):
+        # pandas >= 2.1: DataFrame.applymap was deprecated then removed
+        # (pandas 3.0) in favor of the element-wise DataFrame.map.
+        return df.map(round_if_float)
     return df.applymap(round_if_float)

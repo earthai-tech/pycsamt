@@ -476,23 +476,6 @@ class SHphz(PhaseStdBase):
     LABEL = "H phase σ (sHphz)"
 
 
-def _find_col(
-    df: pd.DataFrame,
-    candidates: Sequence[str],
-) -> str | None:
-    """
-    Return the first column name present in *df* among *candidates*.
-
-    Matching is case-insensitive and ignores surrounding spaces.
-    """
-    low = {str(c).strip().lower(): c for c in df.columns}
-    for want in candidates:
-        key = str(want).strip().lower()
-        if key in low:
-            return low[key]
-    return None
-
-
 def _to_num(x: Any) -> float | np.floating | np.nan:
     """
     Robust numeric coercion:

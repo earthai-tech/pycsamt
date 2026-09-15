@@ -152,6 +152,7 @@ class JointInversionAgent(BaseAgent):
                 f"JointInversionAgent requires PyTorch or TensorFlow: {exc}",
                 hint="pip install torch  or  pip install tensorflow",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         from ..emtools._core import (
@@ -165,12 +166,16 @@ class JointInversionAgent(BaseAgent):
         sites_raw = input_data.get("sites") or input_data.get("path")
         if sites_raw is None:
             return AgentResult.failed(
-                "No 'sites' or 'path'.", elapsed=time.time() - t0
+                "No 'sites' or 'path'.",
+                elapsed=time.time() - t0,
+                warnings=warnings,
             )
         try:
             sites = ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
-            return AgentResult.failed(str(exc), elapsed=time.time() - t0)
+            return AgentResult.failed(
+                str(exc), elapsed=time.time() - t0, warnings=warnings
+            )
 
         output_dir = input_data.get("output_dir")
         import os
@@ -216,6 +221,7 @@ class JointInversionAgent(BaseAgent):
             return AgentResult.failed(
                 "Need ≥ 2 usable stations for joint inversion.",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         len(station_names)
@@ -280,6 +286,7 @@ class JointInversionAgent(BaseAgent):
             return AgentResult.failed(
                 f"Synthetic dataset generation failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         # ── train JointInverter ───────────────────────────────────────────────
@@ -306,6 +313,7 @@ class JointInversionAgent(BaseAgent):
             return AgentResult.failed(
                 f"JointInverter training failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         # ── predict on observed stations ──────────────────────────────────────
@@ -323,6 +331,7 @@ class JointInversionAgent(BaseAgent):
             return AgentResult.failed(
                 f"Joint prediction failed: {exc}",
                 elapsed=time.time() - t0,
+                warnings=warnings,
             )
 
         for si, nm in enumerate(station_names):

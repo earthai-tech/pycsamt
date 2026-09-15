@@ -105,6 +105,26 @@ def test_xml_notes_mapping_includes_full_location_metadata():
     assert mobile["ReferenceDatum"] == "WGS84"
 
 
+def test_xml_notes_mapping_reference_station_without_id_or_site():
+    ref = MobileMTReferenceStation()
+    notes = _xml_notes_mapping(MobileMTSystemSpec(), ref)
+    mobile = notes["MobileMT"]
+    assert "ReferenceStationId" not in mobile
+    assert "ReferenceLatitude" not in mobile
+
+
+def test_xml_notes_mapping_reference_location_with_no_optional_fields():
+    ref = MobileMTReferenceStation(
+        site=SiteMeta(site_id="BASE02", location=LocationMeta(datum=None)),
+    )
+    notes = _xml_notes_mapping(MobileMTSystemSpec(), ref)
+    mobile = notes["MobileMT"]
+    assert "ReferenceLatitude" not in mobile
+    assert "ReferenceLongitude" not in mobile
+    assert "ReferenceElevation" not in mobile
+    assert "ReferenceDatum" not in mobile
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # validate_mobilemt_transfer_function
 # ─────────────────────────────────────────────────────────────────────────

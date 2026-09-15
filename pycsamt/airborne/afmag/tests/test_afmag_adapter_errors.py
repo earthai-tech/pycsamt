@@ -77,6 +77,11 @@ def test_normalize_scalar_variance_accepts_1x1_matrix():
     assert arr.shape == (1, 1, 1)
 
 
+def test_normalize_scalar_variance_accepts_pre_shaped_array():
+    arr = _normalize_scalar_variance(np.ones((2, 1, 1)), n_frequency=2)
+    assert arr.shape == (2, 1, 1)
+
+
 def test_normalize_scalar_variance_rejects_bad_shape():
     with pytest.raises(AFMAGValidationError):
         _normalize_scalar_variance(np.ones((3,)), n_frequency=2)
@@ -244,6 +249,26 @@ def test_airmt_notes_includes_full_reference_location():
     assert afmag["ReferenceDatum"] == "WGS84"
 
 
+def test_airmt_notes_reference_station_without_id_or_site():
+    ref = AFMAGReferenceStation()
+    notes = _airmt_notes(AirMtSystemSpec(), ref)
+    afmag = notes["AFMAG"]
+    assert "ReferenceStationId" not in afmag
+    assert "ReferenceLatitude" not in afmag
+
+
+def test_airmt_notes_reference_location_with_no_optional_fields():
+    ref = AFMAGReferenceStation(
+        site=SiteMeta(site_id="REF02", location=LocationMeta(datum=None)),
+    )
+    notes = _airmt_notes(AirMtSystemSpec(), ref)
+    afmag = notes["AFMAG"]
+    assert "ReferenceLatitude" not in afmag
+    assert "ReferenceLongitude" not in afmag
+    assert "ReferenceElevation" not in afmag
+    assert "ReferenceDatum" not in afmag
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # build_airmt_emtf: type checks
 # ─────────────────────────────────────────────────────────────────────────
@@ -269,6 +294,17 @@ def test_build_airmt_emtf_rejects_bad_site():
 def test_build_airmt_emtf_rejects_bad_orientation():
     with pytest.raises(TypeError):
         build_airmt_emtf(_tensor(1), frequency=[10.0], orientation="bad")
+
+
+def test_build_airmt_emtf_without_amplification_parameter():
+    from pycsamt.airborne.afmag.constants import AFMAG_AP_TAG
+
+    doc = build_airmt_emtf(
+        _tensor(1),
+        frequency=[10.0],
+        include_amplification_parameter=False,
+    )
+    assert doc.get_transfer_function(AFMAG_AP_TAG) is None
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -350,6 +386,13 @@ def test_build_airmt_line_rejects_non_navigation():
 def test_build_airmt_line_single_sample_2d_promotion():
     nav = _nav(1)
     line = build_airmt_line("L1", nav, np.ones((3, 2), dtype=complex), frequency=[10.0])
+    assert line.n_records == 1
+
+
+def test_build_airmt_line_single_sample_accepts_pre_batched_4d_tensor():
+    nav = _nav(1)
+    data = np.ones((1, 2, 3, 2), dtype=complex)
+    line = build_airmt_line("L1", nav, data, frequency=[10.0, 20.0])
     assert line.n_records == 1
 
 

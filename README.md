@@ -237,6 +237,6 @@ before opening a pull request. Participation is governed by our
 <p align="center">
   Developed by <a href="https://github.com/earthai-tech">earthai-tech</a>
   &nbsp;&mdash;&nbsp;
-  Lead developer: <a href="mailto:etanoyau@gmail.com">Laurent Kouadio</a>
-  <a href="https://lkouadio.com/" title="lkouadio.com">🌐</a>
+  Lead developer:
+  <a href="https://lkouadio.com/" title="lkouadio.com">Laurent Kouadio 🌐</a>
 </p>

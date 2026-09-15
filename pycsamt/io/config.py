@@ -29,7 +29,7 @@ class Config:
         Mapping of file extensions → DataFrame writer methods.
         Pass in the DataFrame (or similar) instance as `obj`.
         """
-        return {
+        writers = {
             ".csv": obj.to_csv,
             ".hdf": obj.to_hdf,
             ".sql": obj.to_sql,
@@ -40,7 +40,6 @@ class Config:
             ".feather": obj.to_feather,
             ".tex": obj.to_latex,
             ".stata": obj.to_stata,
-            ".gbq": obj.to_gbq,
             ".rec": obj.to_records,
             ".str": obj.to_string,
             ".clip": obj.to_clipboard,
@@ -49,3 +48,11 @@ class Config:
             ".pkl": obj.to_pickle,
             # add more as needed
         }
+        # pandas removed the DataFrame.to_gbq bound method in newer
+        # releases (BigQuery export now lives only in the standalone
+        # pandas-gbq package) -- keep it when present instead of hard
+        # failing every writers() call on newer pandas.
+        to_gbq = getattr(obj, "to_gbq", None)
+        if to_gbq is not None:
+            writers[".gbq"] = to_gbq
+        return writers

@@ -272,3 +272,31 @@ def test_rollover_swallows_reopen_failure(tmp_path, monkeypatch):
     )
     handler.doRollover()
     assert handler.stream is None
+
+
+def test_module_import_falls_back_to_basic_config_on_unexpected_error(
+    monkeypatch,
+):
+    """The auto-configure-on-import guard at the bottom of logger.py
+    must never let a broken configure_logging() crash the import.
+
+    dictConfig is patched (not configure_logging itself) because
+    importlib.reload() re-executes the module top-to-bottom: patching
+    configure_logging as a module attribute would just be overwritten
+    by the module's own `def configure_logging` before the bottom
+    auto-run block ever calls it.
+    """
+    import importlib
+
+    logger_module._CONFIGURED = False
+    monkeypatch.setattr(
+        logging.config,
+        "dictConfig",
+        lambda cfg: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    try:
+        importlib.reload(logger_module)
+    finally:
+        monkeypatch.undo()
+        logger_module._CONFIGURED = False
+        importlib.reload(logger_module)

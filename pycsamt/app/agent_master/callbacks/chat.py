@@ -442,6 +442,20 @@ def _user_bubble(text: str, mid: str | None = None) -> html.Div:
     )
 
 
+def _agent_avatar(*, thinking: bool = False) -> html.Div:
+    """Round agent avatar showing the pyCSAMT logo.
+
+    When *thinking* is True (a job is actually running) a CSS class
+    drives a breathing pulse + rotating halo on the logo; finished
+    messages get the same avatar fully static.
+    """
+    cls = "am-avatar agent am-avatar-logo" + (" is-thinking" if thinking else "")
+    return html.Div(
+        html.Img(src="/am-icons/pycsamt-v2-symbol.svg", alt="pyCSAMT"),
+        className=cls,
+    )
+
+
 def _exec_step_row(label: str, status: str) -> html.Div:
     """One row of the executing timeline (rail dot + label)."""
     if status == "done":
@@ -591,7 +605,7 @@ def _thinking_bubble(
     body += [line, track, panel]
 
     return html.Div(
-        html.Div(body, className="am-think"),
+        [_agent_avatar(thinking=True), html.Div(body, className="am-think")],
         className="am-msg-row am-msg-row--think",
         id="am-thinking-bubble",
     )
@@ -888,10 +902,7 @@ def _agent_bubble(
 
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(children),
@@ -1118,10 +1129,7 @@ def _waiting_bubble(wf: str) -> html.Div:
     label = _WF_LABELS.get(wf, wf.replace("_", " "))
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(
@@ -1156,10 +1164,7 @@ def _line_waiting_bubble() -> html.Div:
     """Bubble shown while the line picker is open."""
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(
@@ -1642,10 +1647,7 @@ def _launch_bubble(
 
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(card, className="am-webapp-card"),

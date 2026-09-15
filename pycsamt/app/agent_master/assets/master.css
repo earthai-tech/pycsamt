@@ -762,6 +762,49 @@ body {
   font-size: 13px;
 }
 
+/* Logo avatar — pyCSAMT symbol, animated only while a job is
+   actually running (.is-thinking); static otherwise. */
+.am-avatar-logo {
+  background: var(--crust);
+  position: relative;
+  overflow: visible;
+}
+.am-avatar-logo img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+.am-avatar-logo.is-thinking img {
+  animation:
+    am-avatar-breathe 1.6s var(--ease) infinite,
+    am-avatar-spin 2.4s linear infinite;
+}
+.am-avatar-logo.is-thinking::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg, var(--blue), transparent 55%, var(--blue)
+  );
+  animation: am-rot 1.8s linear infinite;
+  opacity: .5;
+  z-index: 0;
+}
+/* scale/rotate are independent transform properties (CSS Transforms
+   Level 2) so the pulse and the spin can run on their own timings
+   without one animation's `transform` keyframe overwriting the
+   other's. */
+@keyframes am-avatar-breathe {
+  0%, 100% { scale: 1;    opacity: .88; }
+  50%      { scale: 1.12; opacity: 1;   }
+}
+@keyframes am-avatar-spin {
+  to { rotate: 360deg; }
+}
+
 /* Bubble */
 .am-bubble {
   max-width: min(82%, 820px);
@@ -1194,9 +1237,6 @@ body {
    No box: a quiet shimmering line showing the current
    step, swapping in place as the agent advances.  The
    full timeline (.am-tl above) appears on hover. */
-.am-msg-row--think {
-  padding-left: 42px;   /* avatar 32px + gap 10px: align with agent bubbles */
-}
 .am-think {
   position: relative;
   width: min(82%, 560px);

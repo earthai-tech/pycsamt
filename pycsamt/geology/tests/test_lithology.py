@@ -113,6 +113,62 @@ def test_classify_nearest_and_overlap_can_disagree():
     assert nearest.name != overlap.name
 
 
+def test_classify_overlap_falls_back_to_nearest_when_no_range_contains_it():
+    # A gap between the two entries' ranges: 50 belongs to neither.
+    db = RockDatabase(
+        [
+            RockEntry(name="Low", rho_min=1, rho_max=10),
+            RockEntry(name="High", rho_min=100, rho_max=1000),
+        ]
+    )
+    result = db.classify(50.0, method="overlap")
+    assert not result.contains(50.0)
+    assert result.name in {"Low", "High"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RockDatabase — serialization
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_to_csv_round_trips_through_from_csv(tmp_path):
+    db = RockDatabase(
+        [
+            RockEntry(
+                name="Peat", rho_min=1, rho_max=10, color="#000000",
+                description="Organic soil", code=1, source="ref",
+                pattern_id="p1", pattern_source="src1",
+            ),
+        ]
+    )
+    path = db.to_csv(tmp_path / "rocks.csv")
+    reloaded = RockDatabase.from_csv(path)
+    assert reloaded.entries[0].name == "Peat"
+    assert reloaded.entries[0].pattern_id == "p1"
+
+
+def test_to_dict_and_from_dict_round_trip():
+    db = RockDatabase(
+        [RockEntry(name="Till", rho_min=20, rho_max=300, code=2)],
+        metadata={"origin": "custom"},
+    )
+    payload = db.to_dict()
+    assert payload["entries"][0]["name"] == "Till"
+
+    rebuilt = RockDatabase.from_dict(payload, metadata={"origin": "custom"})
+    assert rebuilt.entries[0].name == "Till"
+    assert rebuilt.entries[0].rho_min == 20.0
+
+
+def test_from_dict_applies_defaults_for_missing_optional_fields():
+    payload = {"entries": [{"name": "Bare", "rho_min": 5, "rho_max": 50}]}
+    db = RockDatabase.from_dict(payload)
+    entry = db.entries[0]
+    assert entry.color == "#AAAAAA"
+    assert entry.code == 0
+    assert entry.source == ""
+
+
 def test_classify_nearest_extrapolates_beyond_database_coverage():
     # Below the lowest range (Sulfide ore body: 0.001-0.1 ohm.m) or above
     # the highest (Air / void: 1e6-1e12 ohm.m), "nearest" still returns an

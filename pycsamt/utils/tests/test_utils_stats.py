@@ -70,6 +70,28 @@ def test_confidence_ratio_scalar_and_errors():
         get_confidence_ratio(np.ones((2, 2)), axis=5)
 
 
+def test_confidence_ratio_scalar_matches_invalid_value():
+    assert get_confidence_ratio(np.float64(0.0), invalid=[0.0]) == 0.0
+    assert get_confidence_ratio(np.float64(0.0), invalid=0.0) == 0.0
+
+
+def test_confidence_ratio_int_dtype_skips_nan_masking():
+    # np.issubdtype(int_dtype, float) is False, so the NaN branch is
+    # skipped entirely even with consider_nan=True (ints can't hold NaN).
+    arr = np.array([[1, 2], [3, 4]])
+    ratio = get_confidence_ratio(arr, axis=0, consider_nan=True)
+    assert np.allclose(ratio, [1.0, 1.0])
+
+
+def test_confidence_ratio_rejects_unconvertible_input():
+    class Unconvertible:
+        def __array__(self, dtype=None):
+            raise RuntimeError("cannot convert")
+
+    with pytest.raises(StatsError, match="Cannot convert input"):
+        get_confidence_ratio(Unconvertible())
+
+
 # ---------------------------- remove_outliers -------------------------
 
 
@@ -128,6 +150,20 @@ def test_remove_outliers_dataframe_paths():
     assert filled.loc[7, "a"] == 0.0
 
 
+def test_remove_outliers_dataframe_zscore_method():
+    df = pd.DataFrame({"a": [10.0, 11.0, 9.0, 10.5, 9.5, 10.2, 9.8, 1000.0]})
+    out = remove_outliers(df, method="z-score", threshold=2.0)
+    assert 1000.0 not in out["a"].values
+
+
+def test_remove_outliers_dataframe_fill_and_interpolate():
+    df = pd.DataFrame({"a": [10.0, 11.0, 9.0, 10.5, 9.5, 10.2, 9.8, 1000.0]})
+    out = remove_outliers(
+        df, method="IQR", fill_value=np.nan, interpolate=True, axis=0,
+    )
+    assert not out["a"].isna().any()
+
+
 def test_remove_outliers_bad_inputs_raise():
     with pytest.raises(StatsError):
         remove_outliers(_data_with_outlier(), method="mad")
@@ -175,6 +211,32 @@ def test_scale_position_custom_func():
     assert popt[0] == pytest.approx(3.0)
 
 
+def test_scale_position_dropna_and_series_x_and_explicit_plot_kwargs():
+    y = pd.Series([1.0, np.nan, 5.0, 7.0])
+    x = pd.Series([0.0, 1.0, 2.0, 3.0])
+    y_fit, popt, _ = scale_position(
+        y, x, dropna=True, plot_kwargs={"alpha": 0.5},
+    )
+    assert len(y_fit) == 3  # the NaN row was dropped
+    assert popt[0] == pytest.approx(2.0, abs=1.0)
+
+
+def test_scale_position_xy_numeric_coercion():
+    y = pd.Series(["1.0", "3.0", "5.0", "7.0"])
+    x = pd.Series(["0", "1", "2", "3"])
+    y_fit, popt, _ = scale_position(y, x, xy_numeric=True)
+    assert popt[0] == pytest.approx(2.0)
+
+
+def test_scale_position_show_plots_without_error(monkeypatch):
+    import matplotlib
+    matplotlib.use("Agg")
+    x = np.arange(5.0)
+    y = 2.0 * x + 1.0
+    y_fit, popt, _ = scale_position(y, x, show=True)
+    assert popt[0] == pytest.approx(2.0)
+
+
 # ---------------------------- drawn_boundaries ------------------------
 
 
@@ -195,3 +257,13 @@ def test_drawn_boundaries_peak_at_edge():
 def test_drawn_boundaries_out_of_bounds_raises():
     with pytest.raises(StatsError):
         drawn_boundaries([1.0, 2.0], 1.0, 5)
+
+
+def test_drawn_boundaries_stops_early_on_non_monotonic_diff():
+    # Left of the peak: 5.0 (diff=4) then 2.0 (diff=1, not > 4) -> break.
+    # Right of the peak: 8.0 (diff=7) then 3.0 (diff=2, not > 7) -> break.
+    profile = [2.0, 5.0, 1.0, 8.0, 3.0]
+    peak, idx, bounds = drawn_boundaries(profile, 1.0, 2)
+    assert peak == 1.0
+    assert idx == 2
+    assert np.allclose(bounds, [5.0, 1.0, 8.0])

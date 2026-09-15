@@ -161,6 +161,18 @@ def test_short_value_sequence_with_ellipsis_when_long():
     assert "len=5" in out
 
 
+def test_short_value_mapping_with_few_keys_has_no_ellipsis():
+    out = PyCSAMTObject._short_value({"a": 1, "b": 2})
+    assert "..." not in out
+    assert "len=2" in out
+
+
+def test_short_value_mapping_with_many_keys_has_ellipsis():
+    out = PyCSAMTObject._short_value({"a": 1, "b": 2, "c": 3, "d": 4})
+    assert "..." in out
+    assert "len=4" in out
+
+
 def test_short_value_array_like_without_ndarray_type():
     class FakeArray:
         shape = (3, 3)

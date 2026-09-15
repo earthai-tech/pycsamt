@@ -69,6 +69,19 @@ def test_read_sites_is_alias_for_read_edis():
 
 
 @pytest.mark.skipif(not _THREE_EDIS.exists(), reason="sample EDI data not found")
+def test_read_edis_skips_unparseable_file_when_not_strict(tmp_path):
+    good = next(_THREE_EDIS.glob("*.edi"))
+    (tmp_path / "good.edi").write_text(
+        good.read_text(encoding="utf-8"), encoding="utf-8",
+    )
+    (tmp_path / "bad.edi").write_text("not a valid EDI file at all", encoding="utf-8")
+
+    survey = read_edis(tmp_path, progress=False, strict=False)
+    assert survey.n_sites == 1
+    assert survey.errors()
+
+
+@pytest.mark.skipif(not _THREE_EDIS.exists(), reason="sample EDI data not found")
 def test_read_edis_on_dup_keep_skips_duplicate_station(tmp_path):
     # Two files sharing the same >HEAD DATAID collapse onto one station;
     # on_dup="keep" must retain the first one read rather than the last.

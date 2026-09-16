@@ -162,6 +162,53 @@ def _make_pcsf(path: Path) -> Path:
     return write_pcsf(model, path)
 
 
+def _make_rich_pcsf(path: Path) -> Path:
+    """PCSF exercising stations/topography/history/provenance/geometry
+    extras + a NaN in resistivity and an all-NaN uncertainty field."""
+    from pycsamt.format.adapters.generic import grid2d_to_pcsf
+    from pycsamt.format.io import write_pcsf
+    from pycsamt.format.provenance import ModelProvenance
+    from pycsamt.format.schema import TopographyPerStation
+
+    rho = np.geomspace(10, 1000, 40).reshape(5, 8)
+    rho[0, 0] = np.nan
+    names = [f"S{i:02d}" for i in range(8)]
+    model = grid2d_to_pcsf(
+        rho,
+        np.arange(8.0),
+        np.arange(5.0),
+        origin=(10.0, 20.0),
+        azimuth_deg=15.0,
+        uncertainty=np.full((5, 8), np.nan),
+        station_names=names,
+        station_x=np.arange(8.0),
+        topography=TopographyPerStation(
+            station_id=names, elevation=np.arange(8.0)
+        ),
+        history={
+            "iteration": np.arange(3),
+            "rms": np.array([2.0, 1.5, 1.1]),
+        },
+        provenance=ModelProvenance(framework="pytorch", architecture="unet"),
+        description="a rich test model",
+        source_backend="ai",
+    )
+    return write_pcsf(model, path)
+
+
+def _make_all_nan_pcsf(path: Path) -> Path:
+    from pycsamt.format.adapters.generic import grid2d_to_pcsf
+    from pycsamt.format.io import write_pcsf
+
+    model = grid2d_to_pcsf(
+        np.full((2, 2), np.nan),
+        np.arange(2.0),
+        np.arange(2.0),
+        source_backend="ai",
+    )
+    return write_pcsf(model, path)
+
+
 def test_transcode_pcsf_to_pcsm_and_back(runner, tmp_path):
     pcsf = _make_pcsf(tmp_path / "m.pcsf")
     pcsm = tmp_path / "m.pcsm"
@@ -207,6 +254,68 @@ def test_info_rejects_non_pcsf(runner, tmp_path):
     p.write_text("hi")
     result = runner.invoke(main, ["format", "info", str(p)])
     assert result.exit_code != 0
+
+
+def test_info_text_rich_fields(runner, tmp_path):
+    pcsf = _make_rich_pcsf(tmp_path / "rich.pcsf")
+    result = runner.invoke(main, ["format", "info", str(pcsf)])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    assert "resistivity NaNs" in out
+    assert "stations" in out
+    assert "topography" in out
+    assert "history keys" in out
+    assert "model provenance" in out
+    assert "pytorch/unet" in out
+    assert "a rich test model" in out
+    assert "origin" in out
+    assert "azimuth_deg" in out
+
+
+def test_info_json_rich_fields(runner, tmp_path):
+    pcsf = _make_rich_pcsf(tmp_path / "rich.pcsf")
+    result = runner.invoke(main, ["format", "info", str(pcsf), "-f", "json"])
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["resistivity"]["n_nan"] == 1
+    assert report["uncertainty"]["n_nan"] == 40
+    assert "min" not in report["uncertainty"]
+    assert report["geometry"]["origin"] == [10.0, 20.0]
+    assert report["geometry"]["azimuth_deg"] == 15.0
+    assert report["stations"]["n"] == 8
+    assert report["topography"]["kind"] == "per_station"
+    assert report["topography"]["n"] == 8
+    assert report["history"] == {"iteration": [3], "rms": [3]}
+    assert report["model_provenance"]["framework"] == "pytorch"
+
+
+def test_info_all_nan_resistivity_text(runner, tmp_path):
+    pcsf = _make_all_nan_pcsf(tmp_path / "allnan.pcsf")
+    result = runner.invoke(main, ["format", "info", str(pcsf)])
+    assert result.exit_code == 0, result.output
+    assert "all NaN" in result.output
+
+
+def test_info_header_read_error(runner, tmp_path, monkeypatch):
+    pcsf = _make_pcsf(tmp_path / "m.pcsf")
+    monkeypatch.setattr(
+        "pycsamt.format.text.peek_kind",
+        lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("corrupt header")),
+    )
+    result = runner.invoke(main, ["format", "info", str(pcsf)])
+    assert result.exit_code != 0
+    assert "Cannot read header" in str(result.output) + str(result.exception)
+
+
+def test_info_model_read_error(runner, tmp_path, monkeypatch):
+    pcsf = _make_pcsf(tmp_path / "m.pcsf")
+    monkeypatch.setattr(
+        "pycsamt.format.text.read_pcsf_or_pcsm",
+        lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("bad payload")),
+    )
+    result = runner.invoke(main, ["format", "info", str(pcsf)])
+    assert result.exit_code != 0
+    assert "Cannot read" in str(result.output) + str(result.exception)
 
 
 def test_validate_ok(runner, tmp_path):

@@ -404,14 +404,15 @@ def _register_builder(app):
                     id={
                         "type": "pcbh-builder-issue",
                         "editor": item.editor,
-                        "row": item.row or 0,
+                        "row": item.row if item.row is not None else -1,
+                        "index": position,
                     },
                     className=(
                         "btn btn-link text-danger text-start p-0 d-block"
                     ),
                     title=item.path,
                 )
-                for item in validation.diagnostics[:100]
+                for position, item in enumerate(validation.diagnostics[:100])
             ]
             return draft, None, messages, go.Figure(), go.Figure()
         document = validation.document
@@ -440,7 +441,12 @@ def _register_issue_navigation(app):
             for name in _TABLES
         ],
         Input(
-            {"type": "pcbh-builder-issue", "editor": ALL, "row": ALL},
+            {
+                "type": "pcbh-builder-issue",
+                "editor": ALL,
+                "row": ALL,
+                "index": ALL,
+            },
             "n_clicks",
         ),
         prevent_initial_call=True,
@@ -450,7 +456,7 @@ def _register_issue_navigation(app):
         if not isinstance(target, dict):
             raise PreventUpdate
         editor = target.get("editor", "project")
-        row = int(target.get("row", 0))
+        row = max(int(target.get("row", -1)), 0)
         cells = []
         for name in _TABLES:
             cells.append(

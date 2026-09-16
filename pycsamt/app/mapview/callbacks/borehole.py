@@ -423,10 +423,11 @@ def _register_export(app) -> None:
             raise PreventUpdate
         from pycsamt.format.borehole import pcbh_to_dict
 
-        document = None
         try:
             document = document_from_builder_draft(draft)
         except Exception:  # noqa: BLE001
+            document = None
+        if document is None:
             document = document_from_store(store)
         if document is None:
             raise PreventUpdate

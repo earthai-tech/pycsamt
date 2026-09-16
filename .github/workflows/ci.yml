@@ -51,6 +51,7 @@ jobs:
             test-paths: >-
               pycsamt/app/tests
               pycsamt/app/agent_master/tests
+              pycsamt/app/converter/tests
           - test-shard: interfaces-cli
             test-paths: >-
               pycsamt/cli/tests

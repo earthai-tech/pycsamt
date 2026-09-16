@@ -126,13 +126,16 @@ class DropZone(QWidget):
     # -- Browse -------------------------------------------------------------
 
     def _browse_file(self) -> None:
-        start = self.path() or str(Path.home())
+        # QFileDialog rejects a Path object outright (TypeError) -- always
+        # pass str, or Browse crashes as soon as the field already holds a
+        # value from a previous pick/drop.
+        start = str(self.path() or Path.home())
         chosen, _ = QFileDialog.getOpenFileName(self, "Select file", start, self._file_filter)
         if chosen:
             self._edit.setText(chosen)
 
     def _browse_dir(self) -> None:
-        start = self.path() or str(Path.home())
+        start = str(self.path() or Path.home())
         chosen = QFileDialog.getExistingDirectory(self, "Select folder", start)
         if chosen:
             self._edit.setText(chosen)

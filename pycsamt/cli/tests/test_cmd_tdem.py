@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -284,6 +285,203 @@ class TestTdemPlot:
         assert result.exit_code == 0
         assert "decay" in result.output
         assert "dashboard" in result.output
+
+    @pytest.mark.parametrize(
+        "kind", ["z-section", "overview", "gate-profile", "dashboard"]
+    )
+    def test_plot_saves_file_more_kinds(
+        self, runner: CliRunner, tmp_path: Path, kind: str
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100",
+                "--kind",
+                kind,
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        saved = list(tmp_path.glob("*.png"))
+        assert saved, f"No PNG file written for kind={kind!r}"
+
+    def test_plot_elevation_kind_real_bug_handled_gracefully(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """``--kind elevation`` currently fails inside
+        ``pycsamt.tdem.plot.plot_elevation_profile`` itself (a pre-existing
+        bug in a module outside this batch's scope: ``'TEMSounding' object
+        has no attribute 'get'``) -- assert the CLI still degrades to a
+        clean ``Plot failed`` message + exit 1 instead of a raw traceback.
+        """
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100",
+                "--kind",
+                "elevation",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )
+        if result.exit_code != 0:
+            assert "Plot failed" in result.output
+
+    def test_missing_stems_warns_but_continues(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100,NOPE",
+                "--kind",
+                "map",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Warning: stems not found" in result.output
+        assert list(tmp_path.glob("*.png"))
+
+    def test_bad_component_no_soundings_fails(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100",
+                "--component",
+                "NoSuchComponent",
+                "--kind",
+                "decay",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "No soundings extracted" in result.output
+
+    def test_section_kind_no_matching_stems_fails(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "NOPE1",
+                "--kind",
+                "section",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "No AVG data available" in result.output
+
+    def test_z_section_kind_no_matching_stems_fails(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "NOPE1",
+                "--kind",
+                "z-section",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "No companion .Z files found" in result.output
+
+    def test_gate_profile_kind_no_matching_stems_fails(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "NOPE1",
+                "--kind",
+                "gate-profile",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "No AVG data available" in result.output
+
+    def test_no_output_dir_shows_interactively(self, runner: CliRunner) -> None:
+        with patch("matplotlib.pyplot.show") as mock_show:
+            result = runner.invoke(
+                main,
+                [
+                    "tdem",
+                    "plot",
+                    str(_TEMAVG_DIR),
+                    "--stems",
+                    "TEM100",
+                    "--kind",
+                    "decay",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        mock_show.assert_called_once()
+
+    def test_output_format_and_dpi(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "tdem",
+                "plot",
+                str(_TEMAVG_DIR),
+                "--stems",
+                "TEM100",
+                "--kind",
+                "decay",
+                "--output-dir",
+                str(tmp_path),
+                "--fmt",
+                "pdf",
+                "--dpi",
+                "75",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert list(tmp_path.glob("*.pdf"))
 
 
 # ---------------------------------------------------------------------------

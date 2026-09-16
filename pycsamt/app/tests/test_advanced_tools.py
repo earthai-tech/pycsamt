@@ -1193,3 +1193,439 @@ class TestRegressions:
 
         et.plot_sites_panels(willy_sites, verbose=0)
         _close()
+
+
+# ── _EXTRA_ARGS_FUNS branch ───────────────────────────────────────────────────
+
+
+class TestExtraArgsFunsBranch:
+    def test_plot_phase_tensor_strip_shows_instruction(self, adv_ctrl, willy_sites):
+        adv_ctrl.set_sites(willy_sites)
+        fig = _fig()
+        adv_ctrl.draw("plot_phase_tensor_strip", True, fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "cannot render from catalogue" in texts
+        _close()
+
+    def test_plot_phase_tensor_strip_grid_shows_instruction(
+        self, adv_ctrl, willy_sites
+    ):
+        adv_ctrl.set_sites(willy_sites)
+        fig = _fig()
+        adv_ctrl.draw("plot_phase_tensor_strip_grid", False, fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "cannot render from catalogue" in texts
+        _close()
+
+
+# ── draw() kwargs TypeError fallback + general exception paths ───────────────
+
+
+class TestDrawFallbackAndExceptions:
+    def test_has_ax_typeerror_kwarg_falls_back(self, adv_ctrl, willy_sites):
+        """plot_strike_ribbon is keyword-only with no **kwargs — an unknown
+        kwarg must raise TypeError internally and be retried without it."""
+        adv_ctrl.set_sites(willy_sites)
+        fig = _fig()
+        adv_ctrl.draw("plot_strike_ribbon", True, fig, not_a_real_kwarg=123)
+        assert len(fig.axes) >= 1
+        _close()
+
+    def test_figure_fn_typeerror_kwarg_falls_back(self, adv_ctrl, willy_sites):
+        adv_ctrl.set_sites(willy_sites)
+        fig = _fig()
+        ret = adv_ctrl.draw("plot_strike_rose", False, fig, not_a_real_kwarg=123)
+        target = fig if ret is None else ret
+        assert len(target.axes) >= 1
+        _close()
+
+    def test_has_ax_general_exception_annotates(self, willy_sites, monkeypatch):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
+        import pycsamt.emtools as et
+
+        ctrl = AdvancedController()
+        ctrl.set_sites(willy_sites)
+
+        def _boom(*a, **k):
+            raise RuntimeError("plot boom")
+
+        monkeypatch.setattr(et, "plot_phase_tensor_map", _boom)
+        fig = _fig()
+        ctrl.draw("plot_phase_tensor_map", True, fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "plot_phase_tensor_map error" in texts
+        _close()
+
+    def test_figure_fn_general_exception_annotates(self, willy_sites, monkeypatch):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
+        import pycsamt.emtools as et
+
+        ctrl = AdvancedController()
+        ctrl.set_sites(willy_sites)
+
+        def _boom(*a, **k):
+            raise RuntimeError("plot boom")
+
+        monkeypatch.setattr(et, "plot_strike_rose", _boom)
+        fig = _fig()
+        ctrl.draw("plot_strike_rose", False, fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "plot_strike_rose error" in texts
+        _close()
+
+
+class TestAtomPsectionExceptionBranch:
+    def test_trained_model_fn_raises_annotates_error(self, willy_sites, monkeypatch):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+        )
+        import pycsamt.emtools as et
+
+        ctrl = AdvancedController()
+        ctrl.set_sites(willy_sites)
+        ctrl.train_dim_model(n_atoms=4, n_iter=10)
+
+        def _boom(*a, **k):
+            raise RuntimeError("atom boom")
+
+        monkeypatch.setattr(et, "plot_atom_psection", _boom)
+        fig = _fig()
+        ctrl.draw("plot_atom_psection", True, fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "plot_atom_psection error" in texts
+        _close()
+
+
+# ── DimModelWorker / ConversionWorker — direct run() (no thread) ─────────────
+
+
+class TestDimModelWorkerDirect:
+    def test_run_emits_finished_with_model(self, qapp, willy_sites):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+            DimModelWorker,
+        )
+
+        ctrl = AdvancedController()
+        ctrl.set_sites(willy_sites)
+        worker = DimModelWorker(ctrl, n_atoms=4, n_iter=10)
+        results: dict = {}
+        worker.finished.connect(lambda model: results.setdefault("model", model))
+        worker.run()
+        assert "model" in results
+        assert isinstance(results["model"], dict)
+
+    def test_run_emits_error_without_sites(self, qapp):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            AdvancedController,
+            DimModelWorker,
+        )
+
+        ctrl = AdvancedController()
+        worker = DimModelWorker(ctrl, n_atoms=4, n_iter=10)
+        errors: list = []
+        worker.error.connect(errors.append)
+        worker.run()
+        assert errors and "No survey data" in errors[0]
+
+
+class TestConversionWorkerDirect:
+    def test_run_emits_finished_with_collection(self, qapp, monkeypatch):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            ConversionController,
+            ConversionWorker,
+        )
+        import pycsamt.transformers as transformers
+
+        class FakeAVG:
+            def transform(self, path, **kw):
+                return ["edi"]
+
+        monkeypatch.setattr(transformers, "AVGtoEDI", lambda: FakeAVG())
+        ctrl = ConversionController()
+        ctrl.set_source("AVG -> EDI", "/tmp/in.avg")
+        worker = ConversionWorker(ctrl, {})
+        results: dict = {}
+        worker.finished.connect(
+            lambda col, failures: results.update(col=col, failures=failures)
+        )
+        worker.run()
+        assert results["col"] == ["edi"]
+        assert results["failures"] == []
+
+    def test_run_emits_error_on_bad_source(self, qapp):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            ConversionController,
+            ConversionWorker,
+        )
+
+        ctrl = ConversionController()
+        ctrl.set_source("UNKNOWN -> EDI", "/tmp/x")
+        worker = ConversionWorker(ctrl, {})
+        errors: list = []
+        worker.error.connect(errors.append)
+        worker.run()
+        assert errors and "Unknown source type" in errors[0]
+
+
+# ── ConversionController._write_collection ────────────────────────────────────
+
+
+class TestWriteCollection:
+    def test_empty_out_dir_returns_zero(self, conv_ctrl):
+        assert conv_ctrl._write_collection(["x"], "") == 0
+
+    def test_none_collection_returns_zero(self, conv_ctrl):
+        assert conv_ctrl._write_collection(None, "/tmp/out") == 0
+
+    def test_writes_via_write_edifile(self, conv_ctrl, tmp_path):
+        calls = []
+
+        class _Ed:
+            def write_edifile(self, save_dir):
+                calls.append(save_dir)
+
+        n = conv_ctrl._write_collection([_Ed(), _Ed()], str(tmp_path))
+        assert n == 2
+        assert calls == [str(tmp_path), str(tmp_path)]
+        assert tmp_path.exists()
+
+    def test_falls_back_to_write(self, conv_ctrl, tmp_path):
+        calls = []
+
+        class _Ed:
+            def write(self, save_dir):
+                calls.append(save_dir)
+
+        n = conv_ctrl._write_collection([_Ed()], str(tmp_path))
+        assert n == 1
+        assert calls == [str(tmp_path)]
+
+    def test_skips_items_without_write_method(self, conv_ctrl, tmp_path):
+        class _Ed:
+            pass
+
+        n = conv_ctrl._write_collection([_Ed(), _Ed()], str(tmp_path))
+        assert n == 0
+
+
+# ── ConversionController._avg_source validation ───────────────────────────────
+
+
+class TestAvgSourceValidation:
+    def test_convert_without_epsg_or_utm_raises(self, conv_ctrl, monkeypatch):
+        import pycsamt.zonge.avg as avg_mod
+
+        class FakeTopo:
+            pass
+
+        class FakeAVGObject:
+            topo = FakeTopo()
+
+            def add_topography(self, stn_file, *, utm_zone=None, epsg=None):
+                return self
+
+        class FakeAVG:
+            @classmethod
+            def from_file(cls, path):
+                return FakeAVGObject()
+
+        monkeypatch.setattr(avg_mod, "AVG", FakeAVG)
+        with pytest.raises(ValueError, match="EPSG code or a UTM zone"):
+            conv_ctrl._avg_source(
+                "/tmp/x.avg",
+                {"stn_path": "/tmp/x.stn", "convert_stn_coords": True},
+            )
+
+    def test_no_stn_path_returns_raw_path(self, conv_ctrl):
+        assert conv_ctrl._avg_source("/tmp/plain.avg", {}) == "/tmp/plain.avg"
+
+
+# ── ConversionController.plot_impedance_curves / plot_station_map branches ───
+
+
+class TestPlotImpedanceCurvesBranches:
+    def test_empty_collection_message(self, conv_ctrl, monkeypatch):
+        import pycsamt.emtools._core as core_mod
+
+        conv_ctrl._result = ["placeholder"]
+        monkeypatch.setattr(core_mod, "_iter_items", lambda x: iter([]))
+        fig = _fig()
+        conv_ctrl.plot_impedance_curves(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "empty collection" in texts
+        _close()
+
+    def test_no_valid_z_message(self, conv_ctrl, monkeypatch):
+        import pycsamt.emtools._core as core_mod
+
+        conv_ctrl._result = ["ed1"]
+        monkeypatch.setattr(core_mod, "_iter_items", lambda x: iter(["ed1"]))
+        monkeypatch.setattr(core_mod, "_get_z_block", lambda ed: (None, None, None))
+        fig = _fig()
+        conv_ctrl.plot_impedance_curves(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "no valid z" in texts
+        _close()
+
+    def test_real_data_plots_curves(self, conv_ctrl, monkeypatch):
+        import numpy as np
+        import pycsamt.emtools._core as core_mod
+
+        conv_ctrl._result = ["ed1", "ed2"]
+        monkeypatch.setattr(
+            core_mod, "_iter_items", lambda x: iter(["ed1", "ed2"])
+        )
+        freqs = np.array([1.0, 10.0, 100.0])
+        z = np.zeros((3, 2, 2), dtype=complex)
+        z[:, 0, 1] = 1.0 + 1.0j
+        monkeypatch.setattr(core_mod, "_get_z_block", lambda ed: (None, z, freqs))
+        fig = _fig()
+        conv_ctrl.plot_impedance_curves(fig)
+        assert len(fig.axes) >= 1
+        _close()
+
+    def test_exception_branch_annotates(self, conv_ctrl, monkeypatch):
+        import pycsamt.emtools._core as core_mod
+
+        conv_ctrl._result = ["ed1"]
+
+        def _boom(x):
+            raise RuntimeError("iter boom")
+
+        monkeypatch.setattr(core_mod, "_iter_items", _boom)
+        fig = _fig()
+        conv_ctrl.plot_impedance_curves(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "error" in texts
+        _close()
+
+
+class TestPlotStationMapBranches:
+    def test_no_coordinate_data_message(self, conv_ctrl, monkeypatch):
+        import pycsamt.emtools._core as core_mod
+
+        conv_ctrl._result = ["placeholder"]
+        monkeypatch.setattr(core_mod, "_iter_items", lambda x: iter([]))
+        fig = _fig()
+        conv_ctrl.plot_station_map(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "no coordinate data" in texts
+        _close()
+
+    def test_real_data_plots_map(self, conv_ctrl, monkeypatch):
+        import pycsamt.emtools._core as core_mod
+
+        class _FakeHead:
+            def __init__(self, lat, lon):
+                self.lat = lat
+                self.lon = lon
+
+        class _FakeEd:
+            def __init__(self, lat, lon, station):
+                self.Head = _FakeHead(lat, lon)
+                self.station = station
+
+        conv_ctrl._result = ["ed1", "ed2"]
+        items = [_FakeEd(10.0, 20.0, "S1"), _FakeEd(11.0, 21.0, "S2")]
+        monkeypatch.setattr(core_mod, "_iter_items", lambda x: iter(items))
+        fig = _fig()
+        conv_ctrl.plot_station_map(fig)
+        assert len(fig.axes) >= 1
+        _close()
+
+    def test_exception_branch_annotates(self, conv_ctrl, monkeypatch):
+        import pycsamt.emtools._core as core_mod
+
+        conv_ctrl._result = ["ed1"]
+
+        def _boom(x):
+            raise RuntimeError("iter boom")
+
+        monkeypatch.setattr(core_mod, "_iter_items", _boom)
+        fig = _fig()
+        conv_ctrl.plot_station_map(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "error" in texts
+        _close()
+
+
+# ── TopoPreviewController.plot_elevation_profile branches ────────────────────
+
+
+class TestElevationProfileBranches:
+    def test_with_sites_renders(self, topo_ctrl, willy_sites):
+        topo_ctrl.set_sites(willy_sites)
+        fig = _fig()
+        topo_ctrl.plot_elevation_profile(fig)
+        assert len(fig.axes) >= 1
+        _close()
+
+    def test_zero_size_arrays_shows_message(self, topo_ctrl, willy_sites, monkeypatch):
+        import numpy as np
+        import pycsamt.topo.extract as topo_extract
+
+        topo_ctrl.set_sites(willy_sites)
+        monkeypatch.setattr(topo_extract, "extract_chainage", lambda sites: np.array([]))
+        monkeypatch.setattr(topo_extract, "extract_elevation", lambda sites: np.array([]))
+        monkeypatch.setattr(topo_extract, "extract_station_names", lambda sites: [])
+        fig = _fig()
+        topo_ctrl.plot_elevation_profile(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "no elevation data" in texts
+        _close()
+
+    def test_exception_branch_annotates(self, topo_ctrl, willy_sites, monkeypatch):
+        import pycsamt.topo.extract as topo_extract
+
+        topo_ctrl.set_sites(willy_sites)
+
+        def _boom(sites):
+            raise RuntimeError("chain boom")
+
+        monkeypatch.setattr(topo_extract, "extract_chainage", _boom)
+        fig = _fig()
+        topo_ctrl.plot_elevation_profile(fig)
+        texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()
+        assert "error" in texts
+        _close()
+
+
+class TestGetStatsExceptionSwallowed:
+    def test_exception_returns_defaults(self, topo_ctrl, willy_sites, monkeypatch):
+        import pycsamt.topo.extract as topo_extract
+
+        topo_ctrl.set_sites(willy_sites)
+
+        def _boom(sites):
+            raise RuntimeError("stats boom")
+
+        monkeypatch.setattr(topo_extract, "extract_elevation", _boom)
+        stats = topo_ctrl.get_stats()
+        assert stats["n_stations"] == 0
+        assert stats["has_elev"] is False
+
+
+# ── describe_advanced_plot ─────────────────────────────────────────────────────
+
+
+class TestDescribeAdvancedPlot:
+    def test_known_function_returns_description(self):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            describe_advanced_plot,
+        )
+
+        assert "rose" in describe_advanced_plot("plot_strike_rose").lower()
+
+    def test_unknown_function_returns_default(self):
+        from pycsamt.app.desktop.controllers.advanced_controller import (
+            describe_advanced_plot,
+        )
+
+        assert describe_advanced_plot("not_a_real_fn") == (
+            "Render this Advanced Tools diagnostic plot."
+        )

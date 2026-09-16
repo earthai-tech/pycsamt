@@ -62,7 +62,7 @@ class EmbeddingBackend(Protocol):
 
     def embed(self, texts: Sequence[str]) -> np.ndarray:
         """Return a ``(len(texts), dim)`` float32 array, rows unit-norm."""
-        ...
+        ...  # pragma: no cover - Protocol stub, never executed
 
 
 def _l2_normalize(mat: np.ndarray) -> np.ndarray:

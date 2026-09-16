@@ -184,6 +184,17 @@ def test_read_group_rms_log_header_only_no_data_rows(tmp_path):
     assert log.rms_log.shape == (0, 0)
 
 
+def test_read_group_rms_log_partial_trailing_row_is_dropped(tmp_path):
+    # Header names 2 columns but only a single trailing numeric value is
+    # present -> n_rows == 0, so no partial row is materialized.
+    path = tmp_path / "partial.log"
+    path.write_text("Iteration, Total RMS\n1\n")
+    log = read_group_rms_log(path)
+    assert log.headers == ["Iteration", "Total RMS"]
+    assert log.n_iterations == 0
+    assert log.rms_log.shape == (0, 0)
+
+
 def test_read_group_rms_log_reexported_from_log_module():
     # Mare2DEMLog re-exports GroupRMSLog/read_group_rms_log from iotools.
     from pycsamt.models.mare2dem.iotools.group_rms import (

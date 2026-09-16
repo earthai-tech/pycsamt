@@ -199,6 +199,102 @@ class TestEDIRenamer:
         with pytest.raises(Exception):
             EDIRenamer().dst_paths()
 
+    def test_skip_existing_and_summary_are_verbose_logged(self, tmp_path, capsys):
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        _make_edi_dir(tmp_path, n=2)
+        out = tmp_path / "renamed"
+        EDIRenamer(basename="T.").fit(tmp_path / "edis", out)
+        capsys.readouterr()
+        rn = EDIRenamer(basename="T.", overwrite=False, verbose=1).fit(
+            tmp_path / "edis", out
+        )
+        text = capsys.readouterr().out
+        assert "skip existing" in text
+        assert f"renamed {rn.n_renamed_} files" in text
+
+    def test_load_failure_is_skipped_and_reported(self, tmp_path, capsys, monkeypatch):
+        import pycsamt.stratagem.rename as rename_mod
+
+        _make_edi_dir(tmp_path, n=1)
+
+        class _BoomEDIFile:
+            def __init__(self, *a, **k):
+                raise ValueError("corrupt EDI")
+
+        monkeypatch.setattr(rename_mod, "EDIFile", _BoomEDIFile)
+        rn = rename_mod.EDIRenamer(basename="T.", verbose=1).fit(
+            tmp_path / "edis", tmp_path / "out"
+        )
+        assert rn.n_renamed_ == 0
+        assert "load failed" in capsys.readouterr().out
+
+    def test_none_entries_in_source_list_are_skipped(self, tmp_path):
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        rn = EDIRenamer().fit([None, None], tmp_path / "out")
+        assert rn.n_renamed_ == 0
+
+    def test_empty_source_list(self, tmp_path):
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        rn = EDIRenamer().fit([], tmp_path / "out")
+        assert rn.n_renamed_ == 0
+
+    def test_accepts_list_of_paths(self, tmp_path):
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        d = _make_edi_dir(tmp_path, n=3)
+        paths = sorted(d.glob("*.edi"))
+        out = tmp_path / "renamed"
+        rn = EDIRenamer(basename="P.").fit(paths, out)
+        assert rn.n_renamed_ == 3
+        assert (out / "P.000.edi").exists()
+
+    def test_update_dataid_false_leaves_original_id(self, tmp_path):
+        from pycsamt.seg.edi import EDIFile
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        _make_edi_dir(tmp_path, n=1)
+        out = tmp_path / "renamed"
+        EDIRenamer(basename="Q.", update_dataid=False).fit(
+            tmp_path / "edis", out
+        )
+        edi = EDIFile(out / "Q.000.edi")
+        assert edi.station != "Q.000"
+
+    def test_station_setter_exception_is_swallowed(self, tmp_path):
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        class _NoStationSetter:
+            path = None
+
+            @property
+            def station(self):
+                return "X"
+
+            def write(self, *, new_edifn, savepath):
+                return None
+
+        rn = EDIRenamer(basename="N.").fit([_NoStationSetter()], tmp_path / "out")
+        assert rn.n_renamed_ == 1
+
+    def test_write_failure_is_recorded_and_reported(self, tmp_path, capsys):
+        from pycsamt.stratagem.rename import EDIRenamer
+
+        class _BoomWriter:
+            path = None
+            station = "X"
+
+            def write(self, *, new_edifn, savepath):
+                raise OSError("disk full")
+
+        rn = EDIRenamer(basename="B.", verbose=1).fit(
+            [_BoomWriter()], tmp_path / "out"
+        )
+        assert rn.n_renamed_ == 0
+        assert "write failed" in capsys.readouterr().out
+
 
 # ---------------------------------------------------------------------------
 # EDIWriter
@@ -239,6 +335,76 @@ class TestEDIWriter:
         out = tmp_path / "out"
         wr = EDIWriter().fit(edis, out)
         assert all(p.exists() for p in wr.written_)
+
+    def test_no_overwrite_skips_existing_output(self, tmp_path):
+        from pycsamt.stratagem.rename import EDIWriter
+
+        edis = _load_edis(tmp_path, n=2)
+        out = tmp_path / "out"
+        EDIWriter().fit(edis, out)
+        wr2 = EDIWriter(overwrite=False).fit(edis, out)
+        assert wr2.n_written_ == 2
+
+    def test_dataid_prefix_setter_exception_is_swallowed(self, tmp_path):
+        from pycsamt.stratagem.rename import EDIWriter
+
+        class _NoStationSetter:
+            path = None
+
+            @property
+            def station(self):
+                return "Z"
+
+            def write(self, *, new_edifn, savepath):
+                return None
+
+        wr = EDIWriter(dataid_prefix="P", zero_pad=2).fit(
+            [_NoStationSetter()], tmp_path / "out"
+        )
+        assert wr.n_written_ == 1
+
+    def test_head_overrides_applied_and_exception_is_swallowed(self, tmp_path, capsys):
+        from pycsamt.stratagem.rename import EDIWriter
+
+        class _FakeHead:
+            def __setattr__(self, name, value):
+                if name == "boom":
+                    raise RuntimeError("no such field")
+                object.__setattr__(self, name, value)
+
+        class _FakeEdi:
+            path = None
+
+            def __init__(self):
+                self._head = _FakeHead()
+
+            def get_section(self, name):
+                return self._head if name == "head" else None
+
+            def write(self, *, new_edifn, savepath):
+                return None
+
+        fake = _FakeEdi()
+        wr = EDIWriter(verbose=1).fit(
+            [fake], tmp_path / "out", head_overrides={"acqby": "NEWACQ", "boom": "x"}
+        )
+        assert wr.n_written_ == 1
+        assert fake._head.acqby == "NEWACQ"
+        assert "wrote" in capsys.readouterr().out
+
+    def test_write_failure_is_recorded_and_reported(self, tmp_path, capsys):
+        from pycsamt.stratagem.rename import EDIWriter
+
+        class _BoomWriter:
+            path = None
+
+            def write(self, *, new_edifn, savepath):
+                raise OSError("disk full")
+
+        wr = EDIWriter(verbose=1).fit([_BoomWriter()], tmp_path / "out")
+        assert wr.n_written_ == 0
+        assert len(wr.failed_) == 1
+        assert "write failed" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

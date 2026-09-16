@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -162,3 +163,176 @@ def test_convert_help_documents_modern_syntax(runner: CliRunner):
     assert "station.edi station.xml" in result.output
     assert "--from" in result.output
     assert "--on-loss" in result.output
+
+
+def test_convert_lone_xml_defaults_to_edi_target(
+    runner: CliRunner, tmp_path: Path
+):
+    """A lone .xml SOURCE with no TARGET/--to naturally converts to EDI."""
+    src = _write_xml(tmp_path / "lone.xml")
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        main, ["convert", str(src), "--output-dir", str(out)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (out / "lone.edi").exists()
+
+
+def test_convert_modern_success_json_format(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    dst = tmp_path / "converted.xml"
+
+    result = runner.invoke(
+        main, ["convert", str(src), str(dst), "--format", "json"]
+    )
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data[0]["status"] == "ok"
+    assert data[0]["target_format"] == "emtf_xml"
+
+
+def test_convert_modern_success_csv_format(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    dst = tmp_path / "converted.xml"
+
+    result = runner.invoke(
+        main, ["convert", str(src), str(dst), "--format", "csv"]
+    )
+
+    assert result.exit_code == 0, result.output
+    lines = [ln for ln in result.output.splitlines() if ln.strip()]
+    assert len(lines) >= 2
+
+
+def test_convert_modern_verbose_echoes_progress(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    dst = tmp_path / "converted.xml"
+
+    result = runner.invoke(main, ["convert", str(src), str(dst), "-v"])
+
+    assert result.exit_code == 0, result.output
+    assert "→" in result.output
+
+
+def test_convert_modern_existing_target_skipped_text(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    dst = tmp_path / "converted.xml"
+    runner.invoke(main, ["convert", str(src), str(dst)])
+    assert dst.exists()
+
+    result = runner.invoke(main, ["convert", str(src), str(dst)])
+
+    assert result.exit_code == 0
+    assert "skipped" in result.output.lower() or "0" in result.output
+
+
+def test_convert_modern_existing_target_skipped_json(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    dst = tmp_path / "converted.xml"
+    runner.invoke(main, ["convert", str(src), str(dst)])
+
+    result = runner.invoke(
+        main, ["convert", str(src), str(dst), "--format", "json"]
+    )
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data[0]["status"] == "skipped"
+
+
+def test_convert_modern_existing_target_skipped_csv(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    dst = tmp_path / "converted.xml"
+    runner.invoke(main, ["convert", str(src), str(dst)])
+
+    result = runner.invoke(
+        main, ["convert", str(src), str(dst), "--format", "csv"]
+    )
+
+    assert result.exit_code == 0
+    assert "skipped" in result.output.lower()
+
+
+def test_convert_invalid_to_format_reports_clear_error(
+    runner: CliRunner, tmp_path: Path
+):
+    src = _write_edi(tmp_path / "source.edi")
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        main,
+        [
+            "convert",
+            str(src),
+            "--to",
+            "bogus_format_xyz",
+            "--output-dir",
+            str(out),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert result.output.strip()
+
+
+def test_convert_corrupt_xml_source_reports_error(
+    runner: CliRunner, tmp_path: Path
+):
+    src = tmp_path / "corrupt.xml"
+    src.write_text("<EM_TF><Data count=1 not valid xml", encoding="utf-8")
+    dst = tmp_path / "out.edi"
+
+    result = runner.invoke(
+        main, ["convert", str(src), str(dst), "--format", "json"]
+    )
+
+    assert result.exit_code != 0
+    # The command also raises a ClickException after printing the JSON
+    # result (to set a non-zero exit code), whose rendered "Error: ..."
+    # message CliRunner appends after the JSON payload.
+    payload = result.output.split("\nError:")[0]
+    data = json.loads(payload)
+    assert data[0]["status"] == "error"
+
+
+def test_convert_tf_with_no_target_format_infers_from_dst():
+    """Unit test: _convert_tf must resolve target format from dst's
+    extension when target_format is None (defensive branch not reachable
+    from the CLI, since convert() always resolves a concrete target
+    format before calling _convert_tf)."""
+    import pycsamt.cli.commands.convert as _convert_mod
+
+    with tempfile.TemporaryDirectory() as d:
+        src = _write_edi(Path(d) / "source.edi")
+        dst = Path(d) / "converted.xml"
+        result = _convert_mod._convert_tf(
+            src,
+            dst,
+            source_format=None,
+            target_format=None,
+            on_loss="ignore",
+            verbose=0,
+        )
+        assert result["status"] == "ok"
+        assert result["target_format"] == "emtf_xml"
+
+
+def test_canonical_tf_format_none_returns_none():
+    from pycsamt.cli.commands.convert import _canonical_tf_format
+
+    assert _canonical_tf_format(None) is None

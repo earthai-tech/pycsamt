@@ -59,33 +59,31 @@ def _collect_inputs(source: Path) -> list[Path]:
 
 
 def _convert_j(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
-    """Convert a Jones J-file to EDI."""
+    """Convert a Jones J-file to impedance EDI via :class:`~pycsamt.transformers.JtoEDI`.
+
+    Mirrors :func:`pycsamt.cli.commands.transform.j.j`, the dedicated
+    ``pycsamt transform j`` command this delegates to.
+    """
     try:
-        from pycsamt.jones import JFile  # noqa: PLC0415
-        from pycsamt.jones.xa import (
-            _meta_from_jfile,  # noqa: PLC0415
-        )
+        from pycsamt.transformers import JtoEDI  # noqa: PLC0415
+
+        ed = JtoEDI().transform(src)
+        written = ed.write(savepath=str(dst.parent), new_edifn=dst.name)
+        station = getattr(ed, "station", src.stem)
+        if verbose >= 1:
+            click.echo(f"  {src.name}  →  {dst.name}", err=True)
+        return {
+            "src": str(src),
+            "dst": str(written),
+            "status": "ok",
+            "station": station,
+        }
     except ImportError as exc:
         return {
             "src": str(src),
             "dst": str(dst),
             "status": "error",
-            "message": f"jones package unavailable: {exc}",
-        }
-
-    try:
-        jf = JFile(src)
-        meta = _meta_from_jfile(jf)
-        station = meta.get("station_id", src.stem)
-        edi_text = _jfile_to_edi_text(jf, meta)
-        dst.write_text(edi_text, encoding="utf-8")
-        if verbose >= 1:
-            click.echo(f"  {src.name}  →  {dst.name}", err=True)
-        return {
-            "src": str(src),
-            "dst": str(dst),
-            "status": "ok",
-            "station": station,
+            "message": f"jones/transformers package unavailable: {exc}",
         }
     except Exception as exc:  # noqa: BLE001
         return {
@@ -96,86 +94,48 @@ def _convert_j(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
         }
 
 
-def _jfile_to_edi_text(jf: Any, meta: dict[str, Any]) -> str:
-    """Render a minimal valid EDI from a JFile object and its metadata."""
-    import numpy as np  # noqa: PLC0415
-
-    station = str(meta.get("station_id", "UNKNOWN"))
-    lat = float(meta.get("lat", 0.0))
-    lon = float(meta.get("lon", 0.0))
-    elev = float(meta.get("elev", 0.0))
-
-    # Extract frequency array from the JFile blocks
-    freqs: list[float] = []
-    zxx_r = zxx_i = zxy_r = zxy_i = zyx_r = zyx_i = zyy_r = zyy_i = None
-    try:
-        rblock = jf.rblock
-        freqs = list(np.asarray(rblock.freq, dtype=float))
-        zxx_r = list(np.asarray(rblock.zxx_r, dtype=float))
-        zxx_i = list(np.asarray(rblock.zxx_i, dtype=float))
-        zxy_r = list(np.asarray(rblock.zxy_r, dtype=float))
-        zxy_i = list(np.asarray(rblock.zxy_i, dtype=float))
-        zyx_r = list(np.asarray(rblock.zyx_r, dtype=float))
-        zyx_i = list(np.asarray(rblock.zyx_i, dtype=float))
-        zyy_r = list(np.asarray(rblock.zyy_r, dtype=float))
-        zyy_i = list(np.asarray(rblock.zyy_i, dtype=float))
-    except AttributeError:
-        pass
-
-    nfreq = len(freqs)
-
-    def _block(tag: str, values: list[float] | None) -> str:
-        if values is None:
-            return ""
-        nums = "  ".join(f"{v: .6E}" for v in values)
-        return f">{tag}  // {nfreq}\n{nums}\n"
-
-    lines = [
-        ">HEAD",
-        f"  DATAID={station!r}",
-        f"  LAT={lat:.6f}",
-        f"  LONG={lon:.6f}",
-        f"  ELEV={elev:.2f}",
-        f"  NFREQ={nfreq}",
-        ">END_HEAD",
-        "",
-        ">INFO",
-        "  Converted from Jones J-file by pyCSAMT",
-        ">END_INFO",
-        "",
-        _block("FREQ", freqs),
-        _block("ZXXR", zxx_r),
-        _block("ZXXI", zxx_i),
-        _block("ZXYR", zxy_r),
-        _block("ZXYI", zxy_i),
-        _block("ZYXR", zyx_r),
-        _block("ZYXI", zyx_i),
-        _block("ZYYR", zyy_r),
-        _block("ZYYI", zyy_i),
-        ">END",
-    ]
-    return "\n".join(lines)
-
-
 def _convert_avg(src: Path, dst: Path, verbose: int) -> dict[str, Any]:
-    """Convert a Zonge AVG file to EDI (stub — wired to zonge package)."""
-    try:
-        from pycsamt.zonge import AVGFile  # noqa: PLC0415
+    """Convert a Zonge AVG file to one impedance EDI per station.
 
-        avg = AVGFile(src)
-        avg.to_edi(dst)
+    An AVG file commonly holds many stations, so unlike the other
+    legacy converters this writes into ``dst.parent`` using each
+    station's own name rather than the single ``dst`` path the caller
+    derived from the source stem — mirroring
+    :func:`pycsamt.cli.commands.transform.avg.avg`, the dedicated
+    ``pycsamt transform avg`` command this delegates to.
+    """
+    try:
+        from pycsamt.transformers import AVGtoEDI  # noqa: PLC0415
+
+        collection = AVGtoEDI().transform(src)
+        stations = []
+        for ed in collection:
+            ed.write(savepath=str(dst.parent))
+            stations.append(getattr(ed, "station", "?"))
+        if not stations:
+            return {
+                "src": str(src),
+                "dst": str(dst),
+                "status": "error",
+                "message": "no stations extracted from AVG file",
+            }
         if verbose >= 1:
-            click.echo(f"  {src.name}  →  {dst.name}", err=True)
-        return {"src": str(src), "dst": str(dst), "status": "ok"}
-    except ImportError:
+            click.echo(
+                f"  {src.name}  →  {len(stations)} EDI(s) in {dst.parent}",
+                err=True,
+            )
+        return {
+            "src": str(src),
+            "dst": str(dst.parent),
+            "status": "ok",
+            "stations": stations,
+        }
+    except ImportError as exc:
         return {
             "src": str(src),
             "dst": str(dst),
             "status": "error",
-            "message": (
-                "zonge package unavailable — AVG conversion not "
-                "supported yet"
-            ),
+            "message": f"zonge/transformers package unavailable: {exc}",
         }
     except Exception as exc:  # noqa: BLE001
         return {

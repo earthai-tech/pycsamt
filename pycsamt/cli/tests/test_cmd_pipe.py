@@ -629,6 +629,55 @@ class TestPipeInit:
         r = runner.invoke(main, ["pipe", "init", "--print", "--format", "xml"])
         assert r.exit_code != 0
 
+    def test_unknown_preset_raises_click_exception(
+        self, runner: CliRunner
+    ) -> None:
+        r = runner.invoke(
+            main, ["pipe", "init", "--print", "--preset", "no_such_preset"]
+        )
+        assert r.exit_code != 0
+        assert "Unknown preset" in (r.output + str(r.exception or ""))
+
+    def test_default_output_path_in_cwd(self, runner: CliRunner) -> None:
+        with runner.isolated_filesystem():
+            r = runner.invoke(main, ["pipe", "init", "--name", "cwd_test"])
+            assert r.exit_code == 0, r.output
+            assert Path("cwd_test.yaml").exists()
+            assert "Created: cwd_test.yaml" in r.output
+
+    def test_verbose_load_and_run_hints_yaml(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "wf.yaml"
+        r = runner.invoke(
+            main, ["pipe", "init", "-o", str(out), "-v"]
+        )
+        assert r.exit_code == 0, r.output
+        assert "Load with:" in r.output
+        assert "Pipeline.from_yaml" in r.output
+        assert "Run with:" in r.output
+        assert f"pycsamt pipe run --config {out}" in r.output
+
+    def test_verbose_load_hint_json(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "wf.json"
+        r = runner.invoke(
+            main, ["pipe", "init", "--format", "json", "-o", str(out), "-v"]
+        )
+        assert r.exit_code == 0, r.output
+        assert "Pipeline.from_json" in r.output
+
+    def test_verbose_load_hint_py(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "wf.py"
+        r = runner.invoke(
+            main, ["pipe", "init", "--format", "py", "-o", str(out), "-v"]
+        )
+        assert r.exit_code == 0, r.output
+        assert "Pipeline.from_py" in r.output
+
 
 # ============================================================================
 # 6 · pycsamt pipe show

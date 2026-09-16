@@ -362,7 +362,7 @@ class TransformerMixin(MTBase):
                 take.append(i)
                 continue
             prev = out_f[-1]
-            denom = prev if prev else 1.0
+            denom = max(prev, 1.0)
             if abs(f - prev) / denom > tol:
                 out_f.append(f)
                 take.append(i)

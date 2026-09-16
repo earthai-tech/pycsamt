@@ -101,6 +101,29 @@ def site_edi_dir() -> Path:
     return found
 
 
+@pytest.fixture(scope="session")
+def willy_subset_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Well-spaced subset of the real WILLY_DATA/L18PLT profile.
+
+    ``invert build`` rejects along-line offsets closer than 1% of the
+    horizontal cell size — several adjacent WILLY stations are QC repeats
+    at ~0 m spacing. Taking every third station keeps real EDI content
+    (real coordinates, real Z/tipper data) while giving Occam2D/ModEM a
+    profile geometry their mesh builders accept.
+    """
+    if not _has(_DATA_WILLY):
+        pytest.skip("data/AMT/WILLY_DATA/L18PLT not found")
+    src = sorted(_DATA_WILLY.glob("*.edi"))[::3]
+    dst = tmp_path_factory.mktemp("willy_subset")
+    for f in src:
+        shutil.copy(f, dst)
+    return dst
+
+
+def _has(p: Path) -> bool:
+    return p.exists() and bool(list(p.glob("*.edi")))
+
+
 @pytest.fixture
 def site_edi_dir_writable(site_edi_dir: Path, tmp_path: Path) -> Path:
     """Copy of site_edi_dir in a writable tmp directory.

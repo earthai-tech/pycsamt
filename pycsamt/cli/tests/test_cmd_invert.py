@@ -89,6 +89,142 @@ class TestInvertBuild:
         # deeply, but it should not raise a Python exception
         assert result.exception is None or isinstance(result.exception, SystemExit)
 
+    def test_occam2d_build_real_data(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        """Real EDI → real Occam2D input files, no mocking."""
+        workdir = tmp_path / "run01"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "occam2d",
+                "--workdir",
+                str(workdir),
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Build complete" in result.output
+        assert (workdir / "OccamDataFile.dat").exists()
+        assert (workdir / "Occam2DMesh").exists()
+        assert (workdir / "Occam2DModel").exists()
+
+    def test_occam2d_build_all_tuning_options(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        """Exercise every Occam2D-specific tuning branch in one call."""
+        workdir = tmp_path / "run_tuned"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "occam2d",
+                "--workdir",
+                str(workdir),
+                "--modes",
+                "TE,TM,DET",
+                "--freq",
+                "0.1:1000",
+                "--error-floor-rho",
+                "0.07",
+                "--error-floor-phase",
+                "1.5",
+                "--n-layers",
+                "12",
+                "--cell-size",
+                "150",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert (workdir / "OccamDataFile.dat").exists()
+
+    def test_modem_build_3d_default(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        workdir = tmp_path / "run_modem3d"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "modem",
+                "--workdir",
+                str(workdir),
+                "-v",
+                "--freq",
+                "0.1:1000",
+                "--cell-size",
+                "200",
+                "--n-layers",
+                "20",
+                "--initial-rho",
+                "150",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert (workdir / "data.dat").exists()
+
+    def test_modem_build_2d_mode(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        workdir = tmp_path / "run_modem2d"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "modem",
+                "--modem-mode",
+                "2d",
+                "--workdir",
+                str(workdir),
+                "--n-layers",
+                "10",
+                "--cell-size",
+                "100",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert (workdir / "data.dat").exists()
+
+    def test_build_error_from_bad_geometry_exits_1(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """Co-located stations (real bundled data/3edis) trip Occam2D's
+        mesh-builder QC check; the CLI must degrade to Error + exit 1
+        rather than an uncaught traceback."""
+        edi_3 = (
+            Path(__file__).resolve().parents[3] / "data" / "3edis"
+        )
+        if not edi_3.exists() or not list(edi_3.glob("*.edi")):
+            pytest.skip("data/3edis not found")
+        workdir = tmp_path / "run_bad"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(edi_3),
+                "--solver",
+                "occam2d",
+                "--workdir",
+                str(workdir),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+
     def test_explicit_path_takes_priority_over_context(
         self,
         runner: CliRunner,
@@ -393,6 +529,15 @@ class TestInvertRun:
 # ---------------------------------------------------------------------------
 
 
+_RESULTS_OCCAM_REAL = Path(__file__).resolve().parents[3] / "data" / "occam2D"
+_RESULTS_MODEM_REAL = (
+    Path(__file__).resolve().parents[3]
+    / "data"
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
+)
+
+
 class TestInvertResults:
     def test_help(self, runner: CliRunner) -> None:
         result = runner.invoke(main, ["invert", "results", "--help"])
@@ -405,6 +550,200 @@ class TestInvertResults:
         result = runner.invoke(main, ["invert", "results", str(occam_workdir)])
         # Expected to fail (no iter files) but should not traceback uncontrolled
         assert result.exception is None or isinstance(result.exception, SystemExit)
+
+    def test_error_loading_reported_and_exits_1(
+        self, runner: CliRunner, occam_workdir: Path
+    ) -> None:
+        with patch(
+            "pycsamt.cli.commands.invert.results._load_inversion_result",
+            side_effect=RuntimeError("boom"),
+        ):
+            result = runner.invoke(
+                main,
+                ["invert", "results", str(occam_workdir), "--solver", "occam2d"],
+            )
+        assert result.exit_code == 1
+        assert "Error loading results" in result.output
+
+    @pytest.mark.skipif(
+        not (_RESULTS_OCCAM_REAL / "OccamDataFile.dat").exists(),
+        reason="bundled data/occam2D absent",
+    )
+    class TestOccamReal:
+        def test_json_output_fields(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_OCCAM_REAL),
+                    "--format",
+                    "json",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            data = json.loads(result.output)
+            assert data["solver"] == "occam2d"
+            assert data["iteration"] == 17
+            # Regression test: OccamIter exposes `misfit_value`, not
+            # `misfit`/`rms` — the RMS field must not be silently None.
+            assert data["rms"] is not None
+            assert data["model_shape"] == [31, 576]
+            assert data["rho_min"] is not None
+            assert data["rho_max"] is not None
+            assert data["rho_mean"] is not None
+            assert data["n_iter_files"] == 1
+
+        def test_text_output(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main, ["invert", "results", str(_RESULTS_OCCAM_REAL)]
+            )
+            assert result.exit_code == 0, result.output
+            assert "Inversion Results" in result.output
+            assert "OCCAM2D" in result.output
+
+        def test_explicit_iteration_option(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_OCCAM_REAL),
+                    "--iteration",
+                    "17",
+                    "--format",
+                    "json",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            assert json.loads(result.output)["iteration"] == 17
+
+        def test_solver_auto_detected(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                ["invert", "results", str(_RESULTS_OCCAM_REAL), "--format", "json"],
+            )
+            assert result.exit_code == 0, result.output
+            assert json.loads(result.output)["solver"] == "occam2d"
+
+    @pytest.mark.skipif(
+        not (_RESULTS_MODEM_REAL / "Modular_NLCG.log").exists(),
+        reason="bundled ModEM sample absent",
+    )
+    class TestModemReal:
+        def test_json_output_fields(self, runner: CliRunner) -> None:
+            """Regression test for the ModEM results bug: `_results_dict`
+            used to assume Occam2D's `best_iter`/`iter_files`/`rho_2d`
+            attributes, none of which exist on ModEM's InversionResult,
+            silently reporting every field as null."""
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_MODEM_REAL),
+                    "--solver",
+                    "modem",
+                    "--format",
+                    "json",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            data = json.loads(result.output)
+            assert data["solver"] == "modem"
+            assert data["iteration"] is not None
+            assert data["rms"] is not None
+            assert data["model_shape"] is not None
+            assert len(data["model_shape"]) == 3
+            assert data["rho_min"] is not None
+            assert data["rho_max"] is not None
+            assert data["rho_mean"] is not None
+            assert data["n_iter_files"] is not None
+
+        def test_text_output(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_MODEM_REAL),
+                    "--solver",
+                    "modem",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            assert "MODEM" in result.output
+            assert "—" not in result.output.split("Final RMS")[1].split("\n")[0]
+
+    def test_fill_occam_info_tolerates_missing_attrs(self) -> None:
+        """A result object missing every Occam2D attribute must not raise —
+        each field-fill block is independently guarded by AttributeError."""
+        from pycsamt.cli.commands.invert.results import _fill_occam_info
+
+        info = {
+            "iteration": None,
+            "rms": None,
+            "model_shape": None,
+            "rho_min": None,
+            "rho_max": None,
+            "rho_mean": None,
+            "n_iter_files": None,
+        }
+        _fill_occam_info(object(), info)
+        assert info == {
+            "iteration": None,
+            "rms": None,
+            "model_shape": None,
+            "rho_min": None,
+            "rho_max": None,
+            "rho_mean": None,
+            "n_iter_files": None,
+        }
+
+    def test_fill_modem_info_tolerates_missing_attrs(self) -> None:
+        from pycsamt.cli.commands.invert.results import _fill_modem_info
+
+        info = {
+            "iteration": None,
+            "rms": None,
+            "model_shape": None,
+            "rho_min": None,
+            "rho_max": None,
+            "rho_mean": None,
+            "n_iter_files": None,
+        }
+        _fill_modem_info(object(), info)
+        assert all(v is None for v in info.values())
+
+    def test_fill_occam_info_best_iter_none(self) -> None:
+        from pycsamt.cli.commands.invert.results import _fill_occam_info
+
+        class _Fake:
+            iter_files = [1, 2, 3]
+            best_iter = None
+            rho_2d = None
+
+        info = {"iteration": None, "rms": None, "n_iter_files": None}
+        _fill_occam_info(_Fake(), info)
+        assert info["n_iter_files"] == 3
+        assert info["iteration"] is None
+        assert info["rms"] is None
+
+    def test_fill_modem_info_nan_rms_stays_none(self) -> None:
+        import math
+
+        from pycsamt.cli.commands.invert.results import _fill_modem_info
+
+        class _Fake:
+            models: dict = {}
+            iteration_numbers = []
+            final_rms = float("nan")
+            model_final = None
+
+        info = {"rms": None, "iteration": None, "model_shape": None}
+        _fill_modem_info(_Fake(), info)
+        assert info["rms"] is None
+        assert math.isnan(_Fake.final_rms)
 
 
 # ---------------------------------------------------------------------------

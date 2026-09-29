@@ -151,10 +151,11 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 _PROVIDERS: frozenset[str] = frozenset(
-    {"claude", "openai", "gemini", "deepseek", "minimax"}
+    {"claude", "openai", "gemini", "deepseek", "minimax", "ollama"}
 )
 
 _DEFAULT_MODELS: dict[str, str] = {
+    "ollama": "qwen2.5-coder:1.5b",
     "claude": "claude-sonnet-4-6",
     "openai": "gpt-4o",
     "gemini": "gemini-2.0-flash",
@@ -229,6 +230,7 @@ _BUILTIN_RATES: dict[str, dict[str, dict[str, float]]] = {
 
 # Provider-level defaults when the exact model is not found anywhere
 _PROVIDER_DEFAULTS: dict[str, dict[str, float]] = {
+    "ollama": {"input": 0.0, "output": 0.0},
     "claude": {"input": 3.00, "output": 15.00},
     "openai": {"input": 2.50, "output": 10.00},
     "gemini": {"input": 3.50, "output": 10.50},
@@ -346,7 +348,7 @@ class AgentConfig:
         self,
         *,
         provider: str,
-        api_key: str,
+        api_key: str | None = None,
         model: str | None = None,
     ) -> AgentConfig:
         """Set the active provider, key, and optional model in one call.
@@ -762,7 +764,14 @@ class AgentConfig:
     @property
     def is_configured(self) -> bool:
         """``True`` when a provider and a resolvable key are both present."""
-        return self._provider is not None and self.api_key is not None
+        return self._provider is not None and (
+            self._provider == "ollama" or self.api_key is not None
+        )
+
+    @property
+    def is_offline(self) -> bool:
+        """Whether this thread explicitly disables all language models."""
+        return bool(getattr(_TLS, "force_offline", False))
 
     # ------------------------------------------------------------------
     # Resolution used by BaseAgent
@@ -793,6 +802,20 @@ class AgentConfig:
               provider matches the globally active provider.
         """
         provider = provider.lower()
+
+        from pycsamt.agents._local import current_request
+
+        local = current_request()
+        if local is not None:
+            return "ollama", None, local.settings.model
+        if provider == "ollama":
+            return (
+                provider,
+                None,
+                model
+                or (self._model if self._provider == provider else None)
+                or _DEFAULT_MODELS[provider],
+            )
 
         if api_key is not None:
             return provider, api_key, model or _DEFAULT_MODELS.get(provider)
@@ -934,7 +957,7 @@ class AgentConfig:
         env-var lookup is skipped so that a key in the OS environment
         (e.g. from ``.env.local``) does not cause unexpected LLM calls.
         """
-        if provider is None:
+        if provider is None or provider == "ollama" or self.is_offline:
             return None
         explicit = self._keys.get(provider)
         if explicit:
@@ -1019,7 +1042,7 @@ AGENT_CONFIG: AgentConfig = AgentConfig()
 def configure_agents(
     *,
     provider: str,
-    api_key: str,
+    api_key: str | None = None,
     model: str | None = None,
 ) -> AgentConfig:
     """Configure :data:`AGENT_CONFIG` in one call and return it.

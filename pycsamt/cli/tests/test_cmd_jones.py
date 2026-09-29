@@ -169,6 +169,50 @@ class TestJonesInfo:
         data = json.loads(result.output)
         assert len(data) == 1
 
+    def test_single_file_text_verbose_lists_blocks(
+        self, runner: CliRunner, j_single: Path
+    ) -> None:
+        result = runner.invoke(main, ["jones", "info", str(j_single), "-v"])
+        assert result.exit_code == 0
+        assert "Blocks" in result.output
+        assert "RXY" in result.output or "RYX" in result.output
+
+    def test_directory_no_jfiles_shows_message(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        empty = tmp_path / "empty_j"
+        empty.mkdir()
+        result = runner.invoke(main, ["jones", "info", str(empty)])
+        assert result.exit_code == 0
+        assert "No J-files found" in result.output
+
+    def test_directory_csv_output(self, runner: CliRunner, j_dir: Path) -> None:
+        result = runner.invoke(
+            main, ["jones", "info", str(j_dir), "--format", "csv"]
+        )
+        assert result.exit_code == 0
+        lines = [l for l in result.output.strip().splitlines() if l]
+        assert "station" in lines[0]
+        assert len(lines) == 3  # header + 2 stations
+
+    def test_directory_text_without_rich_plain_table(
+        self, runner: CliRunner, j_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name in ("rich.console", "rich.table"):
+                raise ImportError("simulated: rich unavailable")
+            return real_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        result = runner.invoke(main, ["jones", "info", str(j_dir)])
+        assert result.exit_code == 0
+        assert "Station" in result.output
+        assert "S01" in result.output and "S02" in result.output
+
 
 # ---------------------------------------------------------------------------
 # pycsamt jones validate
@@ -345,6 +389,43 @@ class TestJonesBlocks:
     def test_no_match_shows_error(self, runner: CliRunner, j_single: Path) -> None:
         result = runner.invoke(main, ["jones", "blocks", str(j_single), "--kind", "T"])
         assert result.exit_code != 0
+
+    def test_qa_summary_exception_falls_back_to_empty_dict(
+        self, runner: CliRunner, j_single: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pycsamt.jones.blocks import RBlock
+
+        def _boom(self):
+            raise RuntimeError("simulated qa failure")
+
+        monkeypatch.setattr(RBlock, "qa_summary", _boom)
+        result = runner.invoke(
+            main,
+            ["jones", "blocks", str(j_single), "--qa", "--format", "json"],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert all(b["qa"] == {} for b in data["blocks"])
+
+    def test_text_output_without_rich_plain_table(
+        self, runner: CliRunner, j_single: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name in ("rich.console", "rich.table"):
+                raise ImportError("simulated: rich unavailable")
+            return real_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        result = runner.invoke(
+            main, ["jones", "blocks", str(j_single), "--qa"]
+        )
+        assert result.exit_code == 0, result.output
+        assert "Token" in result.output
+        assert "QA" in result.output
 
 
 # ---------------------------------------------------------------------------

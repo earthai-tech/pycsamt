@@ -157,9 +157,18 @@ docs = [
 
 # Desktop application
 desktop = [
+    # Plain PySide6 wheels bundle PySide6-Essentials + PySide6-Addons, which
+    # includes QtWebEngineWidgets -- used by
+    # pycsamt.app.desktop.widgets.plotly_view.PlotlyView to embed the same
+    # Plotly figures pycsamt.map.MapView / pycsamt.map.volume already build
+    # for Map View, instead of reimplementing their geometry in matplotlib.
+    # No separate extra needed; nothing here pins a narrower PySide6 wheel.
     "PySide6>=6.9",
     "pyqtgraph>=0.13",
     "contextily>=1.6",
+    # Offline Ed25519 license-key verification
+    # (pycsamt.app.desktop.licensing.signing) -- Phase 11.
+    "cryptography>=41.0",
 ]
 
 # LLM provider clients used by the agent layer.
@@ -255,11 +264,14 @@ exclude = ["*.tests", "*.tests.*", "tests", "tests.*"]
     "format/borehole/templates/*.csv",
     "gis/*.npy",
     "app/desktop/resources/*.qss",
+    "app/desktop/resources/*.png",
     "app/desktop/resources/icons/*",
     "app/converter/resources/icons/*",
     "app/converter/resources/*.qss",
     "app/web/assets/*",
     "app/mapview/assets/*",
+    "app/agent_master/assets/*",
+    "app/agent_master/assets/icons/*",
     "models/occam2d/_source/*",
     "models/modem/_source/**/*",
     "models/_solver_build/**/*",

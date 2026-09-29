@@ -161,6 +161,31 @@ detect_fortran_toolchain() {
     local os
     os="$(pycsamt_build_os)"
 
+    # A pycsamt-managed toolchain (created with micromamba by the desktop
+    # Solver Builder -- no conda installation needed) takes precedence.
+    if [ -n "${PYCSAMT_FORTRAN_PREFIX:-}" ]; then
+        local mp
+        mp="$(_to_posix_path "$PYCSAMT_FORTRAN_PREFIX")"
+        if [ "$os" = "windows" ]; then
+            if [ -x "$mp/Library/mingw-w64/bin/gfortran.exe" ]                 && [ -x "$mp/Library/bin/make.exe" ]                 && [ -f "$mp/Library/mingw-w64/lib/libopenblas.a" ]; then
+                TOOLCHAIN_OK=1
+                TOOLCHAIN_F90="$mp/Library/mingw-w64/bin/gfortran.exe"
+                TOOLCHAIN_MAKE="$mp/Library/bin/make.exe"
+                TOOLCHAIN_LIBS="-L$mp/Library/mingw-w64/lib -lopenblas"
+                TOOLCHAIN_BIN_DIR="$mp/Library/mingw-w64/bin"
+                return 0
+            fi
+        elif [ -x "$mp/bin/gfortran" ] && [ -x "$mp/bin/make" ]; then
+            TOOLCHAIN_OK=1
+            TOOLCHAIN_F90="$mp/bin/gfortran"
+            TOOLCHAIN_MAKE="$mp/bin/make"
+            TOOLCHAIN_LIBS="-L$mp/lib -Wl,-rpath,$mp/lib -lopenblas"
+            TOOLCHAIN_BIN_DIR="$mp/bin"
+            return 0
+        fi
+        log_warn "PYCSAMT_FORTRAN_PREFIX=$PYCSAMT_FORTRAN_PREFIX is not a complete toolchain; ignoring it."
+    fi
+
     if [ "$os" = "windows" ]; then
         # gfortran/make are not reliably available on Windows outside
         # a dedicated MinGW-w64 toolchain; look for our conda env

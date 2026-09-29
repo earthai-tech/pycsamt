@@ -855,6 +855,8 @@ def plot_model_3d(
     show_stations: bool = True,
     title: str = "",
     figsize: tuple[float, float] = (13, 4.5),
+    axes=None,
+    shared_colorbar: bool = True,
 ) -> np.ndarray:
     """Three orthogonal slice panels for a 3-D resistivity model.
 
@@ -873,6 +875,15 @@ def plot_model_3d(
     show_stations : bool
     title : str
     figsize : (float, float)
+        Ignored when *axes* is given.
+    axes : sequence of 3 Axes, optional
+        Draw into these existing axes (e.g. an embedded GUI canvas)
+        instead of creating a new figure.
+    shared_colorbar : bool
+        One colour scale and a single colour bar for all three slices
+        (default). They are cuts through the same model, so a common scale
+        is what makes them comparable; per-panel bars also crowded narrow
+        figures. ``False`` restores one autoscaled bar per panel.
 
     Returns
     -------
@@ -942,8 +953,24 @@ def plot_model_3d(
         else r"$\rho$  ($\Omega\cdot$m)"
     )
 
-    fig, axs = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
+    if axes is None:
+        fig, axs = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
+    else:
+        axs = np.asarray(axes, dtype=object).ravel()
+        if axs.size != 3:
+            raise ValueError(f"axes must hold 3 Axes, got {axs.size}")
+        fig = axs[0].figure
 
+    if shared_colorbar and vmin is None and vmax is None:
+        finite = np.concatenate(
+            [d[np.isfinite(d)].ravel() for d, *_ in slices]
+        )
+        if finite.size:
+            vmin, vmax = float(finite.min()), float(finite.max())
+            if vmax - vmin < 1e-9:  # uniform model: centre a small span
+                vmin, vmax = vmin - 0.2, vmax + 0.2
+
+    pc = None
     for ax, (data, h_nodes, v_nodes, xlb, ylb, ttl) in zip(axs, slices):
         pc = ax.pcolormesh(
             h_nodes,
@@ -954,7 +981,10 @@ def plot_model_3d(
             vmin=vmin,
             vmax=vmax,
         )
-        _add_colorbar(fig, ax, pc, clabel, fontsize=7.5, pad=0.02, shrink=0.92)
+        if not shared_colorbar:
+            _add_colorbar(
+                fig, ax, pc, clabel, fontsize=7.5, pad=0.02, shrink=0.92
+            )
         if ylb == "z (m)":
             ax.invert_yaxis()
         ax.set_xlabel(xlb, fontsize=8)
@@ -974,8 +1004,16 @@ def plot_model_3d(
         )
         axs[2].legend(fontsize=7, framealpha=0.7, loc="upper right")
 
+    if shared_colorbar and pc is not None:
+        cb = fig.colorbar(pc, ax=list(axs), pad=0.02, shrink=0.92, aspect=30)
+        cb.set_label(clabel, fontsize=8)
+        cb.ax.tick_params(labelsize=7)
+
     fig.suptitle(
-        title or (grid3d.name or "3-D resistivity model"), fontsize=10, y=1.01
+        title or (grid3d.name or "3-D resistivity model"),
+        fontsize=10,
+        # above a standalone (tight-bbox) figure; clipped if embedded
+        **({"y": 1.01} if axes is None else {}),
     )
     return np.array(axs)
 
@@ -983,6 +1021,36 @@ def plot_model_3d(
 # ─────────────────────────────────────────────────────────────────────────────
 # 3-D response — map view (one frequency)
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+def _min_span(lo: float, hi: float, quantity: str) -> tuple[float, float]:
+    """Widen ``[lo, hi]`` to at least 0.1 decade (ρ_a) or 2° (phase).
+
+    Keeps a percent-level spread from being painted as the colormap's two
+    extremes, while real contrasts (> the floor) keep full resolution.
+    """
+    span = 0.1 if quantity == "rho_a" else 2.0
+    if hi - lo < span:
+        mid = 0.5 * (lo + hi)
+        lo, hi = mid - span / 2, mid + span / 2
+    return lo, hi
+
+
+def _map_values(response3d, freq_idx, comp, quantity):
+    """(values, default cmap, colour-bar label) for one tensor component."""
+    attr = f"rho_a_{comp}" if quantity == "rho_a" else f"phase_{comp}"
+    raw = getattr(response3d, attr)[freq_idx, :]
+    if quantity == "rho_a":
+        return (
+            np.log10(np.maximum(raw, 1e-12)),
+            "jet_r",
+            r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  " f"[Z_{comp.upper()}]",
+        )
+    return (
+        _phase_vals(raw),
+        "RdBu_r",
+        _phase_label() + f"  [Z_{comp.upper()}]",
+    )
 
 
 def plot_response_map_3d(
@@ -999,6 +1067,7 @@ def plot_response_map_3d(
     title: str = "",
     figsize: tuple[float, float] = (7, 6),
     ax: Axes | None = None,
+    colorbar: bool = True,
 ) -> Axes:
     """Map-view scatter of ρ_a or phase at one frequency.
 
@@ -1026,19 +1095,9 @@ def plot_response_map_3d(
     from ..api.plot import add_colorbar as _add_cb
 
     comp = component.lower()
-    attr = f"rho_a_{comp}" if quantity == "rho_a" else f"phase_{comp}"
-    raw = getattr(response3d, attr)[freq_idx, :]
-
-    if quantity == "rho_a":
-        data_c = np.log10(np.maximum(raw, 1e-12))
-        default_cmap = "jet_r"
-        cb_label = (
-            r"$\log_{10}\rho_a$  ($\Omega\cdot$m)  " f"[Z_{comp.upper()}]"
-        )
-    else:
-        data_c = _phase_vals(raw)
-        default_cmap = "RdBu_r"
-        cb_label = _phase_label() + f"  [Z_{comp.upper()}]"
+    data_c, default_cmap, cb_label = _map_values(
+        response3d, freq_idx, comp, quantity
+    )
 
     if cmap is _UNSET:
         cmap = default_cmap
@@ -1050,6 +1109,18 @@ def plot_response_map_3d(
 
     x_st = response3d.stations_xy[:, 0]
     y_st = response3d.stations_xy[:, 1]
+
+    if vmin is None and vmax is None:
+        # A (near-)uniform response -- e.g. a half-space, or a small shallow
+        # body at long periods -- can differ between stations by round-off
+        # (~1e-11) or a few percent. Autoscaling stretched that over the
+        # full colormap (fake red/blue station patterns) and forced an
+        # offset-notation colorbar label. Enforce a minimum colour span.
+        fin = data_c[np.isfinite(data_c)]
+        if fin.size:
+            vmin, vmax = _min_span(
+                float(fin.min()), float(fin.max()), quantity
+            )
 
     sc = ax.scatter(
         x_st,
@@ -1063,9 +1134,16 @@ def plot_response_map_3d(
         linewidths=0.6,
         zorder=4,
     )
-    _add_cb(
-        sc, ax, label=cb_label, side="right", size="4%", pad=0.06, max_ticks=6
-    )
+    if colorbar:
+        _add_cb(
+            sc, ax, label=cb_label, side="right", size="4%", pad=0.06,
+            max_ticks=6,
+        )
+    cbar = getattr(sc, "colorbar", None)
+    if cbar is not None:
+        fmt = cbar.ax.yaxis.get_major_formatter()
+        if hasattr(fmt, "set_useOffset"):
+            fmt.set_useOffset(False)  # no "1e-11+2.0005" label over the title
 
     if show_labels:
         for i, (xi, yi) in enumerate(zip(x_st, y_st)):
@@ -1262,6 +1340,7 @@ def plot_tensor_components_3d(
     marker_size: float = 100.0,
     title: str = "",
     figsize: tuple[float, float] = (12, 10),
+    axes=None,
 ) -> np.ndarray:
     """2 × 2 map panel showing all four impedance tensor components.
 
@@ -1278,27 +1357,80 @@ def plot_tensor_components_3d(
     marker_size : float
     title : str
     figsize : (float, float)
+        Ignored when *axes* is given.
+    axes : 2 × 2 array of Axes, optional
+        Draw into these existing axes instead of creating a new figure.
 
     Returns
     -------
     axes : ndarray of Axes, shape (2, 2)
     """
-    fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
+    if axes is None:
+        fig, axs = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
+    else:
+        axs = np.asarray(axes, dtype=object).reshape(2, 2)
+        fig = axs[0, 0].figure
 
+    # One colour scale per component *pair*: XY/YX (off-diagonal) share a
+    # bar, XX/YY (diagonal) share another. The pairs differ by orders of
+    # magnitude (diagonals vanish for 1-D/2-D earths), so one bar for all
+    # four would flatten one pair; four bars crowded the panels.
+    pairs = {"off": ("xy", "yx"), "diag": ("xx", "yy")}
+    limits = {}
+    for key, comps in pairs.items():
+        if vmin is not None or vmax is not None:
+            limits[key] = (vmin, vmax)
+            continue
+        vals = np.concatenate(
+            [_map_values(response3d, freq_idx, c, quantity)[0] for c in comps]
+        )
+        vals = vals[np.isfinite(vals)]
+        lo, hi = (float(vals.min()), float(vals.max())) if vals.size else (0, 1)
+        limits[key] = _min_span(lo, hi, quantity)
+
+    mappables = {}
     for idx, comp in enumerate(["xx", "xy", "yx", "yy"]):
         r, c = divmod(idx, 2)
+        key = "diag" if comp in pairs["diag"] else "off"
+        lo, hi = limits[key]
         plot_response_map_3d(
             response3d,
             freq_idx=freq_idx,
             component=comp,
             quantity=quantity,
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
+            vmin=lo,
+            vmax=hi,
             show_labels=False,
             marker_size=marker_size,
             ax=axs[r, c],
+            colorbar=False,
         )
+        mappables[key] = axs[r, c].collections[-1]
+
+    qlabel = (
+        r"$\log_{10}\rho_a$  ($\Omega\cdot$m)"
+        if quantity == "rho_a"
+        else _phase_label()
+    )
+    # Both pairs span the whole grid, so two bars on the same side would
+    # stack on top of each other: off-diagonal right, diagonal bottom.
+    for key, name, loc in (
+        ("off", "XY / YX", "right"),
+        ("diag", "XX / YY", "bottom"),
+    ):
+        # attached to the whole grid (a diagonal pair is not a rectangle,
+        # which made constrained layout shift one row sideways)
+        cb = fig.colorbar(
+            mappables[key], ax=list(axs.ravel()), location=loc, pad=0.02,
+            shrink=0.9, aspect=25 if loc == "right" else 40,
+        )
+        cb.set_label(f"{qlabel}  [{name}]", fontsize=8)
+        cb.ax.tick_params(labelsize=7)
+        axis = cb.ax.yaxis if loc == "right" else cb.ax.xaxis
+        fmt = axis.get_major_formatter()
+        if hasattr(fmt, "set_useOffset"):
+            fmt.set_useOffset(False)
 
     freq = response3d.freqs[freq_idx]
     per = 1.0 / freq
@@ -1306,6 +1438,8 @@ def plot_tensor_components_3d(
     fig.suptitle(
         title or f"Full impedance tensor — {qty_lbl}   T = {per:.3g} s",
         fontsize=11,
-        y=1.01,
+        # 1.01 sits just above a standalone figure (saved with a tight
+        # bbox); inside a supplied, embedded figure it would be clipped.
+        **({"y": 1.01} if axes is None else {}),
     )
     return axs

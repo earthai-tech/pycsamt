@@ -1,5 +1,5 @@
 {"query": "what can you do?", "expected_intent": "meta"}
-{"query": "what workflows are supported?", "expected_intent": "question"}
+{"query": "what workflows are supported?", "expected_intent": "meta"}
 {"query": "how do I access impedance Z values?", "expected_intent": "question"}
 {"query": "what is the difference between qc and denoise?", "expected_intent": "question"}
 {"query": "denoise the survey data", "expected_intent": "workflow", "expected_workflow": "denoise"}

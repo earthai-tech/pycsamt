@@ -124,11 +124,28 @@ delegates to ``Figure.savefig`` and supports:
      - Vector, legacy
      - Older publishing pipelines that still request EPS.
 
-The dialog defaults to 300 DPI, which is a good report setting for raster
-exports.  Use 150 DPI for quick review images, 300 DPI for most reports, and
-600 DPI only when a publisher or print workflow needs it.  Vector formats are
-usually better for line plots, rose diagrams, and profile curves because labels
-remain sharp at any zoom level.
+The dialog starts at a publication preset of 600 DPI, or the configured
+``PLOT_CONFIG.dpi`` when that is higher. The per-export control allows
+36--2400 DPI. Format (PNG by default), destination folder, transparency, and
+bounding-box defaults come from ``PLOT_CONFIG``. Vector formats keep text and
+lines sharp at any zoom level; DPI affects their embedded raster content.
+
+The compact controls at the upper right of each plot provide navigation,
+export, and an independent plot window. In **API Configuration > View
+Controls > Plot panel**, choose white or transparent backgrounds, show or
+hide the controls, and enable automatic label fitting. Equivalent API settings
+are::
+
+    from pycsamt.api.control import PYCSAMT_CONTROL
+    PYCSAMT_CONTROL.configure(
+        panel__background="white",
+        panel__toolbar=True,
+        panel__fit_layout=True,
+    )
+
+Automatic fitting accounts for display scaling and measures axis decorations
+after rendering, including long bottom labels and manually placed colorbars.
+It adjusts the plotting area without changing the application window size.
 
 When exporting a figure for a processing decision, put the decision in the
 filename:

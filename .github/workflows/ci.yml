@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        test-shard: [science, workflows, formats-models, interfaces-desktop, interfaces-cli, support]
+        test-shard: [science, workflows, formats-models, interfaces-desktop, interfaces-web, interfaces-cli, support]
         include:
           - test-shard: science
             test-paths: >-
@@ -48,10 +48,25 @@ jobs:
               pycsamt/zonge/tests
               pycsamt/jones/tests
           - test-shard: interfaces-desktop
+            # The three PySide6/Qt suites -- each needs the Qt runtime libs
+            # below and the Shiboken-teardown workaround in the
+            # "Test interfaces-desktop" step further down.
             test-paths: >-
-              pycsamt/app/tests
+              pycsamt/app/desktop/tests
               pycsamt/app/agent_master/tests
               pycsamt/app/converter/tests
+          - test-shard: interfaces-web
+            # Map View and the web app are both pure Dash -- no PySide6
+            # import anywhere in either package or its tests -- so this
+            # shard skips the Qt runtime-library install and the
+            # interfaces-desktop shard's special exit-139-tolerant step.
+            # pycsamt/app/tests now only holds the shared, backend-neutral
+            # overlay modules (_geology.py, _borehole.py, ...) Map View's
+            # Geology/Borehole rails build on, so it travels with them here.
+            test-paths: >-
+              pycsamt/app/tests
+              pycsamt/app/mapview/tests
+              pycsamt/app/web/tests
           - test-shard: interfaces-cli
             test-paths: >-
               pycsamt/cli/tests

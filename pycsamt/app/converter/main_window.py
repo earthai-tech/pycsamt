@@ -143,8 +143,13 @@ def _icon(name: str) -> QIcon:
 
 
 class ConverterMainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(
+        self, *, embedded: bool = False, host_theme: str | None = None
+    ) -> None:
         super().__init__()
+        # When hosted by pycsamt-desktop, styling must remain local to this
+        # window. The standalone app may continue styling its QApplication.
+        self._embedded = bool(embedded)
         self._settings = load_settings()
         self._theme = "light"
         self._tool_actions: list = []
@@ -159,8 +164,13 @@ class ConverterMainWindow(QMainWindow):
 
         self._build_ui()
 
-        theme = self._settings.theme if self._settings.theme in ("light", "dark") else "light"
-        self._apply_theme(theme)
+        saved_theme = (
+            self._settings.theme
+            if self._settings.theme in ("light", "dark")
+            else "light"
+        )
+        theme = host_theme if embedded and host_theme in ("light", "dark") else saved_theme
+        self._apply_theme(theme, persist=not embedded)
 
     def _build_ui(self) -> None:
         central = QWidget()
@@ -316,14 +326,18 @@ class ConverterMainWindow(QMainWindow):
 
     # ── Theme ────────────────────────────────────────────────────────
 
-    def _apply_theme(self, theme: str) -> None:
+    def _apply_theme(self, theme: str, *, persist: bool = True) -> None:
         global _DARK_MODE
         _DARK_MODE = theme == "dark"
         self._theme = theme
 
         qss = _RESOURCES / f"{theme}_theme.qss"
         if qss.exists():
-            QApplication.instance().setStyleSheet(qss.read_text(encoding="utf-8"))
+            stylesheet = qss.read_text(encoding="utf-8")
+            if self._embedded:
+                self.setStyleSheet(stylesheet)
+            else:
+                QApplication.instance().setStyleSheet(stylesheet)
 
         if hasattr(self, "_act_dark"):
             self._act_dark.setChecked(theme == "dark")
@@ -338,9 +352,14 @@ class ConverterMainWindow(QMainWindow):
                 if item is not None:
                     item.setIcon(_icon(icon_name))
 
-        if self._settings.theme != theme:
+        if persist and self._settings.theme != theme:
             self._settings.theme = theme
             save_settings(self._settings)
+
+    def set_host_theme(self, theme: str) -> None:
+        """Synchronize an embedded converter with its desktop host theme."""
+        if self._embedded and theme in ("light", "dark"):
+            self._apply_theme(theme, persist=False)
 
     # ── Help menu handlers ───────────────────────────────────────────
 
@@ -357,11 +376,14 @@ class ConverterMainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl("https://github.com/earthai-tech/pycsamt"))
 
     def _open_about(self) -> None:
+        import pycsamt
+
+        version = getattr(pycsamt, "__version__", "0.0.0")
         QMessageBox.about(
             self,
             "About pyCSAMT Format Studio",
             "<b>pyCSAMT Format Studio</b><br>"
-            "Version 2.0<br><br>"
+            f"Version {version}<br><br>"
             "Convert inversion results, AI/DL array bundles, EDI/EMTF-XML "
             "files, and build PCBH/PCGL/PCGS/PCPT documents -- the "
             "standalone GUI face of <code>pycsamt format</code>.<br><br>"

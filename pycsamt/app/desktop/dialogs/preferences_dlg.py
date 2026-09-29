@@ -18,6 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -37,13 +38,19 @@ from pycsamt.app.desktop.models.session import SessionState
 
 _THEMES = ["dark", "light"]
 _LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-_LLM_PROVIDERS = ["claude", "openai"]
+_LLM_PROVIDERS = ["claude", "openai", "gemini"]
 _CLAUDE_MODELS = [
     "claude-opus-4-8",
     "claude-sonnet-4-6",
     "claude-haiku-4-5-20251001",
 ]
 _OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+_GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+_MODELS_BY_PROVIDER = {
+    "claude": _CLAUDE_MODELS,
+    "openai": _OPENAI_MODELS,
+    "gemini": _GEMINI_MODELS,
+}
 _TILE_PROVIDERS = [
     "OpenStreetMap.Mapnik",
     "Esri.WorldTopoMap",
@@ -93,21 +100,29 @@ def _path_row(
 
 class PreferencesDialog(QDialog):
     """
-    Four-tab preferences dialog.
+    Five-tab preferences dialog (General / Solvers / AI-LLM / License /
+    Advanced).
 
     Pass the current ``SessionState``; after ``exec()`` returns ``Accepted``
     the session is already updated — the caller just needs to ``save()`` it.
+
+    ``license_manager`` is forwarded to the License tab's
+    ``LicensePage`` unchanged; omit it to fall back to an unconditional
+    ``NullLicenseManager`` trial (tests, or any caller that deliberately
+    wants no persisted license state).
     """
 
     def __init__(
         self,
         session: SessionState,
         parent: QWidget | None = None,
+        license_manager=None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Preferences")
         self.setMinimumSize(540, 380)
         self._session = session
+        self._license_manager = license_manager
         self._build_ui()
 
     # ── Build ──────────────────────────────────────────────────────────
@@ -121,6 +136,7 @@ class PreferencesDialog(QDialog):
         self._build_general_tab()
         self._build_solvers_tab()
         self._build_llm_tab()
+        self._build_license_tab()
         self._build_advanced_tab()
 
         buttons = QDialogButtonBox(
@@ -152,6 +168,14 @@ class PreferencesDialog(QDialog):
         self._max_recent_spin.setRange(1, 100)
         self._max_recent_spin.setValue(self._session.max_recent_files)
         form.addRow("Max recent files:", self._max_recent_spin)
+
+        self._anim_chk = QCheckBox("Animate station statistics")
+        self._anim_chk.setToolTip(
+            "Draw the response preview and frequency coverage with a short "
+            "left-to-right animation when a station is selected")
+        self._anim_chk.setChecked(bool(getattr(self._session,
+                                               "ui_animations", True)))
+        form.addRow("Motion:", self._anim_chk)
 
         self._tabs.addTab(w, "General")
 
@@ -211,9 +235,22 @@ class PreferencesDialog(QDialog):
         self._model_combo.addItems(_CLAUDE_MODELS)
         form.addRow("Model:", self._model_combo)
 
+        # Restore the saved provider/model now that both combos exist.
+        # setCurrentText on the provider combo fires _on_provider_changed
+        # (rebuilding the model list for that provider) before the saved
+        # model is selected below.
+        saved_provider = self._session.llm_provider
+        if saved_provider in _LLM_PROVIDERS:
+            self._provider_combo.setCurrentText(saved_provider)
+        if self._session.llm_model:
+            idx = self._model_combo.findText(self._session.llm_model)
+            if idx >= 0:
+                self._model_combo.setCurrentIndex(idx)
+
         note = QLabel(
             "<i>API key is stored in ~/.pycsamt/session.json.<br>"
-            "Alternatively set ANTHROPIC_API_KEY or OPENAI_API_KEY env var.</i>"
+            "Alternatively set ANTHROPIC_API_KEY, OPENAI_API_KEY, or "
+            "GEMINI_API_KEY / GOOGLE_API_KEY env var.</i>"
         )
         note.setWordWrap(True)
         form.addRow(note)
@@ -222,12 +259,19 @@ class PreferencesDialog(QDialog):
 
     def _on_provider_changed(self, provider: str) -> None:
         self._model_combo.clear()
-        if provider == "claude":
-            self._model_combo.addItems(_CLAUDE_MODELS)
-        else:
-            self._model_combo.addItems(_OPENAI_MODELS)
+        self._model_combo.addItems(
+            _MODELS_BY_PROVIDER.get(provider, _CLAUDE_MODELS)
+        )
 
-    # ── Tab 3: Advanced ───────────────────────────────────────────────
+    # ── Tab 3: License ────────────────────────────────────────────────
+
+    def _build_license_tab(self) -> None:
+        from pycsamt.app.desktop.widgets.license_page import LicensePage
+
+        self._license_page = LicensePage(license_manager=self._license_manager)
+        self._tabs.addTab(self._license_page, "License")
+
+    # ── Tab 4: Advanced ───────────────────────────────────────────────
 
     def _build_advanced_tab(self) -> None:
         w = QWidget()
@@ -262,6 +306,7 @@ class PreferencesDialog(QDialog):
         s.theme = self._theme_combo.currentText()
         s.last_data_dir = self._data_dir_edit.text().strip()
         s.max_recent_files = self._max_recent_spin.value()
+        s.ui_animations = self._anim_chk.isChecked()
 
         # Solvers
         s.occam2d_binary = self._occam2d_edit.text().strip()
@@ -271,6 +316,8 @@ class PreferencesDialog(QDialog):
 
         # AI / LLM
         s.api_key = self._api_key_edit.text().strip()
+        s.llm_provider = self._provider_combo.currentText()
+        s.llm_model = self._model_combo.currentText()
 
         # Advanced
         s.log_level = self._log_level_combo.currentText()

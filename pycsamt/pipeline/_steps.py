@@ -45,6 +45,52 @@ def _to_figure(obj: Any) -> Any:
     return None
 
 
+def _required_positional(fn: Any) -> list[str]:
+    import inspect
+
+    try:
+        params = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return []
+    return [
+        p.name
+        for p in params
+        if p.default is p.empty
+        and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+    ]
+
+
+def call_qc_fn(fn: Any, sites: Any, before: Any = None) -> Any:
+    """Call a registry QC plot function with the arguments it expects.
+
+    Three shapes exist among the registered QC functions:
+
+    * ``fn(sites)`` -- a single dataset (most plots);
+    * ``fn(before, after)`` -- a before/after dataset pair (frequency-edit
+      and static-shift delta plots);
+    * ``fn(logRho_before, logRho_after, *, freqs=...)`` -- station x
+      frequency ``log10 rho`` arrays (static-shift summary/comparison),
+      built with :func:`pycsamt.emtools.ss.ss_logrho_arrays`.
+
+    The comparison shapes need the step's *input* as *before*; without it
+    they return ``None`` (skipped) instead of raising.  Before this helper,
+    every comparison QC plot was called as ``fn(sites)``, raised a
+    ``TypeError`` that ``generate_qc_plots`` swallowed, and so was
+    silently never produced (13 of the 81 registered QC figures).
+    """
+    required = _required_positional(fn)
+    if len(required) <= 1:
+        return fn(sites)
+    if before is None:
+        return None
+    if required[0].lower().startswith("logrho"):
+        from pycsamt.emtools.ss import ss_logrho_arrays
+
+        log_b, log_a, freqs, labels = ss_logrho_arrays(before, sites)
+        return fn(log_b, log_a, freqs=freqs, station_labels=labels)
+    return fn(before, sites)
+
+
 # ---------------------------------------------------------------------------
 # Step
 # ---------------------------------------------------------------------------
@@ -99,8 +145,11 @@ class Step:
             return sites
         return self.spec.get_fn()(sites, **self.params)
 
-    def generate_qc_plots(self, sites: Any) -> list:
+    def generate_qc_plots(self, sites: Any, before: Any = None) -> list:
         """Call QC plot functions on *sites* and return ``(name, Figure)`` pairs.
+
+        *before* is the step's input; comparison plots (before/after) need
+        it and are skipped when it is not given (see :func:`call_qc_fn`).
 
         Return values are normalised to :class:`matplotlib.figure.Figure` so
         the pipeline can call ``savefig`` regardless of whether the underlying
@@ -111,7 +160,7 @@ class Step:
         figs = []
         for fn_name, fn in self.spec.get_qc_fns():
             try:
-                result = fn(sites)
+                result = call_qc_fn(fn, sites, before=before)
                 if result is not None:
                     fig = _to_figure(result)
                     if fig is not None:

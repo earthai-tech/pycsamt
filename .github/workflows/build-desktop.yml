@@ -1,0 +1,91 @@
+name: Build pycsamt-desktop
+
+# Manual only, per PYCSAMT-DESKTOP-V2.6-MODERNIZATION-PLAN.md Phase 13: no CI
+# currently builds any frozen binary automatically (true even for the
+# converter app), and this build is large/slow enough (torch + tensorflow +
+# the full scientific stack -- see pycsamt_desktop.spec's own docstring for
+# why it can't be trimmed the way the converter's is) that it should stay an
+# intentional, on-demand action rather than something every push pays for.
+on:
+  workflow_dispatch:
+    inputs:
+      build_installer:
+        description: "Also wrap the build into a Setup.exe via Inno Setup"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows onedir + installer
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pycsamt with every extra this build reaches
+        # desktop: PySide6/pyqtgraph/contextily/cryptography (Phase 11 licensing)
+        # agents + agent-master: LLM provider clients + the Agent Master Dash app
+        #   (launched as a subprocess by the desktop app -- see
+        #   pycsamt/app/desktop/agent_master_bridge.py -- but bundled into the
+        #   same frozen build, see entry_desktop.py)
+        # torch + tensorflow: both are genuinely reachable (function-local
+        #   imports throughout pycsamt.ai/pycsamt.agents -- see
+        #   pycsamt_desktop.spec's docstring). tensorflow specifically backs
+        #   the already-registered CAE Anomaly Detection / Denoising agents;
+        #   skipping it here would silently ship those two agents broken.
+        # geo, patterns: pyproj/xarray/pymupdf reachable from Interpretation/GIS
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[desktop,agents,agent-master,torch,tensorflow,geo,patterns]"
+          python -m pip install pyinstaller
+
+      - name: Run PyInstaller
+        run: pyinstaller --noconfirm --clean packaging/pyinstaller/pycsamt_desktop.spec
+
+      - name: Smoke-test the frozen build launches
+        # Not a full UI smoke test (see packaging/pyinstaller/README.md's
+        # checklist for that, done by hand before a real release) -- just
+        # confirms the exe starts and doesn't immediately crash with a
+        # ModuleNotFoundError, the failure mode PyInstaller bundling most
+        # commonly produces.
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "dist\pycsamt-desktop\pycsamt-desktop.exe" -PassThru
+          Start-Sleep -Seconds 15
+          if ($proc.HasExited) {
+            Write-Error "pycsamt-desktop.exe exited within 15s (exit code $($proc.ExitCode)) -- likely a missing-module or import-time crash."
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force
+
+      - name: Upload onedir build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pycsamt-desktop-windows-onedir
+          path: dist/pycsamt-desktop/
+
+      - name: Install Inno Setup
+        if: ${{ inputs.build_installer }}
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Setup.exe
+        if: ${{ inputs.build_installer }}
+        shell: pwsh
+        run: |
+          $Version = python -c "import pycsamt; print(pycsamt.__version__)"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$Version" packaging\inno\pycsamt_desktop.iss
+
+      - name: Upload installer artifact
+        if: ${{ inputs.build_installer }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pycsamt-desktop-windows-installer
+          path: dist/installer/

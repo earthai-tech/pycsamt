@@ -61,6 +61,16 @@ class IDs:
     KEY_INPUT = "am-key-input"
     BTN_KEY_REVEAL = "am-btn-key-reveal"
     MODEL_SELECT = "am-model-select"
+    LOCAL_PANEL = "am-local-panel"
+    LOCAL_ENDPOINT = "am-local-endpoint"
+    LOCAL_MODEL = "am-local-model"
+    LOCAL_TIMEOUT = "am-local-timeout"
+    LOCAL_CONTEXT = "am-local-context"
+    LOCAL_OUTPUT = "am-local-output"
+    LOCAL_TEMPERATURE = "am-local-temperature"
+    LOCAL_CALLS = "am-local-calls"
+    LOCAL_CHECK = "am-local-check"
+    LOCAL_STATUS = "am-local-status"
     # Unsaved keys/models typed per provider, so switching the dropdown
     # (or reopening the panel) never silently drops what you entered.
     STORE_KEY_DRAFTS = "am-store-key-drafts"

@@ -516,7 +516,7 @@ class IoTFieldAgent(BaseAgent):
         data: dict[str, Any],
         warnings: list[str],
     ) -> str | None:
-        if not self.api_key or status is None:
+        if not self.llm_available or status is None:
             return None
         prompt = (
             "IoT field acquisition monitoring summary:\n"

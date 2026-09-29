@@ -91,6 +91,8 @@ class AgentWorker(QThread):
         sites,
         params: dict[str, Any],
         api_key: str | None = None,
+        llm_provider: str | None = None,
+        model: str | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -98,6 +100,8 @@ class AgentWorker(QThread):
         self._sites = sites
         self._params = params
         self._api_key = api_key
+        self._llm_provider = llm_provider
+        self._model = model
         self._cancelled = False
 
     # ── Cancellation ──────────────────────────────────────────────────
@@ -158,6 +162,10 @@ class AgentWorker(QThread):
         }
         if self._api_key:
             init_kwargs["api_key"] = self._api_key
+        if self._llm_provider:
+            init_kwargs["llm_provider"] = self._llm_provider
+        if self._model:
+            init_kwargs["model"] = self._model
 
         agent = cls(**init_kwargs)
         self.agent_ready.emit(agent)

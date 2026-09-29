@@ -250,7 +250,7 @@ class TensorRotationAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and n_written:
+        if self.llm_available and n_written:
             dr_str = (
                 f"{diag_reduction:+.3f}"
                 if not np.isnan(diag_reduction)

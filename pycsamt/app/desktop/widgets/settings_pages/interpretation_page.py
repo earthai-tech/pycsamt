@@ -86,13 +86,13 @@ class InterpretationPage(SettingsPage):
         root.addWidget(grp_sec)
 
         # ── Profile style ─────────────────────────────────────────────────────
-        grp_prof = QGroupBox("Profile Style  (PYCSAMT_INTERP.profile)")
+        grp_prof = QGroupBox("Additional Section Quantities")
         form_prof = QFormLayout(grp_prof)
         form_prof.setSpacing(8)
 
         self._prof_cmap = QComboBox()
         self._prof_cmap.addItems(_CMAPS)
-        form_prof.addRow("Colormap:", self._prof_cmap)
+        form_prof.addRow("Saturation colormap:", self._prof_cmap)
 
         root.addWidget(grp_prof)
         root.addStretch()
@@ -103,29 +103,47 @@ class InterpretationPage(SettingsPage):
         try:
             from pycsamt.api.interp import PYCSAMT_INTERP as I
 
-            sec = I.pseudosection
-            prof = I.profile
+            style = getattr(I, "default", I)
+            sec = getattr(style, "section", getattr(I, "pseudosection", None))
+            prof = getattr(style, "profile", getattr(I, "profile", None))
 
-            sec_cmap = getattr(sec, "cmap", None) or "viridis"
+            sec_cmap = (
+                getattr(sec, "cmap_K", None)
+                or getattr(sec, "cmap", None)
+                or "viridis"
+            )
             if sec_cmap in _CMAPS:
                 self._sec_cmap.setCurrentText(sec_cmap)
 
-            wt_ls = getattr(sec, "wt_linestyle", "--") or "--"
+            wt_ls = (
+                getattr(sec, "wt_ls", None)
+                or getattr(sec, "wt_linestyle", "--")
+                or "--"
+            )
             idx = next(
                 (i for i, (_, v) in enumerate(_WT_MARKERS) if v == wt_ls), 1
             )
             self._wt_combo.setCurrentIndex(idx)
 
-            alpha = getattr(sec, "alpha", 0.85) or 0.85
+            alpha = (
+                getattr(sec, "station_alpha", None)
+                or getattr(sec, "alpha", 0.85)
+                or 0.85
+            )
             self._alpha_spin.setValue(alpha)
 
-            prof_cmap = getattr(prof, "cmap", None) or "viridis"
+            prof_cmap = (
+                getattr(sec, "cmap_Sw", None)
+                or getattr(prof, "cmap", None)
+                or "viridis"
+            )
             if prof_cmap in _CMAPS:
                 self._prof_cmap.setCurrentText(prof_cmap)
         except Exception:
             self._alpha_spin.setValue(0.85)
 
     def collect(self) -> dict:
+        fields: dict = {}
         try:
             from pycsamt.api.interp import PYCSAMT_INTERP as I
 
@@ -133,27 +151,46 @@ class InterpretationPage(SettingsPage):
             wt_ls = _WT_MARKERS[self._wt_combo.currentIndex()][1]
             alpha = self._alpha_spin.value()
             prof_cmap = self._prof_cmap.currentText()
+            fields = {
+                "section_cmap": sec_cmap,
+                "water_table_linestyle": wt_ls,
+                "section_alpha": alpha,
+                "profile_cmap": prof_cmap,
+            }
 
             try:
-                sec = I.pseudosection
-                if hasattr(sec, "cmap"):
+                style = getattr(I, "default", I)
+                sec = getattr(
+                    style, "section", getattr(I, "pseudosection", None)
+                )
+                if hasattr(sec, "cmap_K"):
+                    sec.cmap_K = sec_cmap
+                elif hasattr(sec, "cmap"):
                     sec.cmap = sec_cmap
-                if hasattr(sec, "wt_linestyle"):
+                if hasattr(sec, "wt_ls"):
+                    sec.wt_ls = wt_ls
+                elif hasattr(sec, "wt_linestyle"):
                     sec.wt_linestyle = wt_ls
-                if hasattr(sec, "alpha"):
+                if hasattr(sec, "station_alpha"):
+                    sec.station_alpha = alpha
+                elif hasattr(sec, "alpha"):
                     sec.alpha = alpha
             except Exception:
                 pass
 
             try:
-                prof = I.profile
-                if hasattr(prof, "cmap"):
+                style = getattr(I, "default", I)
+                sec = getattr(style, "section", None)
+                prof = getattr(style, "profile", getattr(I, "profile", None))
+                if hasattr(sec, "cmap_Sw"):
+                    sec.cmap_Sw = prof_cmap
+                elif hasattr(prof, "cmap"):
                     prof.cmap = prof_cmap
             except Exception:
                 pass
         except Exception:
             pass
-        return {}
+        return {"interpretation": fields} if fields else {}
 
     def reset(self) -> None:
         try:

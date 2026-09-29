@@ -121,6 +121,14 @@ panel selects the diagnostic family and plot; the right panel renders one
 focused matplotlib view at a time.  Use it as a decision window, not just as a
 figure viewer.
 
+For static-shift QC, choose **AMA**, **LOESS**, **Bilateral**, or
+**Reference median** from the Method dropdown. Controls change with the
+method: neighbourhood and weighting options for AMA, polynomial degree and
+robust iterations for LOESS, bandwidths for Bilateral, and a station smoothing
+window for Reference median. Blank Bilateral bandwidths use the automatic
+defaults. Each method retains its parameter values when you switch away and
+back; only the selected method's controls are sent to the estimator.
+
 The dashboard groups diagnostics into overview, coverage, noise/SNR,
 skew/dimensionality, static shift, and distortion/source-effect checks.  Start
 with coverage and SNR because missing frequencies or unstable stations can
@@ -243,9 +251,27 @@ steps live in a correction stack until they are committed.
 
 The main correction families are static shift, noise removal, source effects,
 tensor rotation, coordinates, and Stratagem workflows.  For impedance data,
-use **Preview** first, then **Apply** to add the result to the stack.  Use
-**Before / After**, **Overlay**, **Diff**, and **2D Section** views to compare
-the effect before committing.
+use **Preview** first, then **Apply** to add the result to the stack.
+
+The view toolbar makes two independent choices, so every correction can be
+judged the same way:
+
+* **Compare** decides *how* the raw and corrected states are contrasted:
+  **Before / After** (side by side on one shared scale), **Overlay** (both on
+  one plot: before dashed or grey, or drawn as contour lines over a
+  pseudosection), or **Diff** (what the correction changed: the resistivity
+  factor ρ_after/ρ_before and the phase change Δφ).
+* **Display** decides *what* is drawn: **Curves (1-D)** or
+  **Pseudosection (2-D)** for every impedance correction, plus **Strike rose**
+  for tensor rotation and **Position map** / **Elevation profile** for
+  coordinate corrections.
+
+For impedance views, **Quantity** shows ρ_a and φ together by default, because
+a correction that alters phase is only visible in φ.  **Comp.** selects XY,
+YX, or both, and **Station** limits the curves to one sounding (in a
+pseudosection it outlines that station's column).  When a view cannot be drawn,
+for example Diff before any correction has been previewed, the panel states the
+reason instead of showing empty axes.
 
 Corrections are intentionally staged.  **Preview** lets you see the result
 without changing the stack.  **Apply** records one correction step in the local
@@ -276,9 +302,18 @@ Read the static-shift figure in four passes:
    geological contrasts.
 3. Switch to **Overlay** or **Diff** when the change is subtle.  Overlay shows
    shape preservation; Diff shows whether a correction is concentrated where
-   you expected.
-4. Use **2D Section** for static shift because pseudosections reveal whether
-   the corrected profile is more coherent along the line.
+   you expected.  A clean static-shift correction shows a flat resistivity
+   factor per station and Δφ = 0 everywhere, labelled "unchanged by this
+   correction".  Any phase change means the method did more than remove a
+   galvanic shift.
+4. Keep **Display** on **Pseudosection (2-D)**, the default for static shift,
+   because pseudosections reveal whether the corrected profile is more coherent
+   along the line.  Pick a **Station** to outline it, and switch to
+   **Curves (1-D)** to inspect that sounding in detail.
+
+Names typed into **Affected Stations** restrict the correction to those
+stations; every other station keeps its input impedance.  Leave the box empty
+to correct the whole profile.
 
 Commit this correction only when the factor is finite, positive, and supported
 by QC/static-shift diagnostics.  If a strongly 3-D area causes the method to

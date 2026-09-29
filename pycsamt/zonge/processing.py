@@ -458,7 +458,7 @@ class ASTATIC(Zonge):
 
         return pd.DataFrame(
             {
-                "station": stations,
+                "station": list(interp_data.keys()),
                 "rho_original": rho_profile,
                 "rho_smoothed": smoothed_rho,
                 "shift_factor": shift_factors,

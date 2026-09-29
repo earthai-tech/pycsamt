@@ -33,7 +33,7 @@ from pycsamt.app.desktop.controllers.tdem_controller import (
     TDEM_GROUPS,
     TDEMController,
 )
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
     icon_button,
@@ -139,8 +139,16 @@ class TDEMWindow(PanelWindow):
     # ── Content panel (right) ─────────────────────────────────────────
 
     def _build_content(self, layout: QVBoxLayout) -> None:
-        self._canvas = MplCanvas(self, toolbar=True)
-        layout.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            toolbar=True,
+            empty_title="No plot yet",
+            empty_reason="Load TDEM data, pick a plot, then click Run to generate it.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            self._on_run, tooltip="Render the selected TDEM plot"
+        )
+        layout.addWidget(self._canvas_view)
 
     # ── Public API ────────────────────────────────────────────────────
 
@@ -214,8 +222,12 @@ class TDEMWindow(PanelWindow):
             else:
                 self._canvas.draw()
             self._status_lbl.setText("Done.")
+            self._canvas_view.show_canvas()
         except Exception as exc:
             self._status_lbl.setText(f"Error: {exc}")
+            self._canvas_view.show_unavailable(
+                "Plot unavailable", f"{class_name} failed: {exc}"
+            )
         finally:
             self._btn_run.setEnabled(True)
 

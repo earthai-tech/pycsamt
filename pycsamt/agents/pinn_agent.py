@@ -268,7 +268,7 @@ class PINNInversionAgent(BaseAgent):
                 warns.append(f"Convergence plot: {exc}")
 
         interp: str | None = None
-        if self.api_key and n_st > 0:
+        if self.llm_available and n_st > 0:
             rms_s = f"{rms_global:.3f}" if not np.isnan(rms_global) else "N/A"
             n_hi = sum(1 for v in rms_per.values() if v > 0.5)
             prompt = (

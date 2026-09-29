@@ -60,18 +60,29 @@ def _infer_from(source: Path) -> str:
     help="Source kind (default: inferred from SOURCE's suffix / type).",
 )
 @click.option(
-    "--collar-id", default=None, help="LAS only: this borehole's id."
+    "--collar-id",
+    default=None,
+    help="LAS/XLSX (single-hole): this borehole's id.",
 )
-@click.option("--x", type=float, default=None, help="LAS only: collar X.")
-@click.option("--y", type=float, default=None, help="LAS only: collar Y.")
 @click.option(
-    "--z", type=float, default=None, help="LAS only: collar Z (elevation)."
+    "--x", type=float, default=None, help="LAS/XLSX (single-hole): collar X."
+)
+@click.option(
+    "--y", type=float, default=None, help="LAS/XLSX (single-hole): collar Y."
+)
+@click.option(
+    "--z",
+    type=float,
+    default=None,
+    help="LAS/XLSX (single-hole): collar Z (elevation).",
 )
 @click.option(
     "--crs",
     "crs_horizontal",
     default=None,
-    help="LAS only: horizontal CRS (e.g. 'EPSG:32650').",
+    help=(
+        "LAS/XLSX (single-hole): horizontal CRS (e.g. 'EPSG:32650')."
+    ),
 )
 @click.option(
     "--document-id", default=None, help="Explicit document id (default: auto)."
@@ -112,13 +123,16 @@ def build_pcbh(
 
     SOURCE is a combined collar+interval CSV, a directory of relational
     tables (with an ``import.yaml`` manifest), an XLSX workbook, or a
-    single LAS 2.0 log (needs --collar-id/--x/--y/--z/--crs).
+    single LAS 2.0 log. XLSX and LAS logs rarely carry collar
+    coordinates, so a single-hole workbook or log needs
+    --collar-id/--x/--y/--z/--crs.
 
     \b
     Examples:
       pycsamt format build-pcbh boreholes.csv
       pycsamt format build-pcbh project_dir/ --from csv-dir
-      pycsamt format build-pcbh logs.xlsx -o site.pcbh.json
+      pycsamt format build-pcbh logs.xlsx --collar-id ZK01 \\
+          --x 512340 --y 2894210 --z 118.4 --crs EPSG:32650
       pycsamt format build-pcbh ZK01.las --collar-id ZK01 \\
           --x 512340 --y 2894210 --z 118.4 --crs EPSG:32650
     """
@@ -154,8 +168,22 @@ def build_pcbh(
         elif kind == "xlsx":
             from pycsamt.format.borehole.xlsxio import boreholes_from_xlsx
 
+            constants: dict[str, str] = {}
+            if collar_id is not None:
+                constants["borehole.id"] = collar_id
+            if crs_horizontal is not None:
+                constants["crs.horizontal"] = crs_horizontal
+            collars = (
+                {"x": x, "y": y, "z": z}
+                if x is not None and y is not None and z is not None
+                else None
+            )
             document, report = boreholes_from_xlsx(
-                source, document_id=document_id, created_by=created_by
+                source,
+                constants=constants or None,
+                collars=collars,
+                document_id=document_id,
+                created_by=created_by,
             )
         elif kind == "las":
             if collar_id is None or x is None or y is None or z is None or (

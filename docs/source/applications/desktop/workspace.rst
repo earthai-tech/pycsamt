@@ -38,6 +38,12 @@ and log before changing the data state.
 Main Window Regions
 -------------------
 
+The **Survey Overview** keeps animated summary cards and compact figures
+side by side. Counts ease into place, the frequency bars rise into view, and
+the station footprint fades in. Hover over a figure or station for details.
+Tipper statistics and the tipper ring appear only when at least one loaded
+station has tipper data. The remaining figures expand to fill the row.
+
 The main window has four persistent regions:
 
 * **Toolbar** -- one-click access to loading, saving, viewers, processing, and

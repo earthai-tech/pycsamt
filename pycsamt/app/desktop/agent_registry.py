@@ -141,6 +141,30 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
         },
         "result_plot": None,
     },
+    "Uncertainty Calibration": {
+        "type": "llm",
+        "category": "Quality Control",
+        "class_name": "UncertaintyCalibrationAgent",
+        "description": "Learned per-cell error-floor re-estimation; rescales Z.z_err toward a signal-quality-consistent level (Z.z itself is never touched).",
+        "params": {
+            "epochs": {
+                "type": "int",
+                "default": 150,
+                "range": (10, 500),
+                "step": 10,
+                "label": "Training epochs",
+            },
+            "val_frac": {
+                "type": "float",
+                "default": 0.2,
+                "range": (0.05, 0.5),
+                "step": 0.05,
+                "label": "Held-out fraction",
+                "tip": "Fraction of rows held out for the reported RMSE/R^2 validation metrics.",
+            },
+        },
+        "result_plot": None,
+    },
     # ── Pre-processing ─────────────────────────────────────────────────────────
     "Static Shift": {
         "type": "llm",
@@ -220,6 +244,104 @@ AGENT_REGISTRY: dict[str, AgentEntry] = {
             },
         },
         "result_plot": None,
+    },
+    "Impute Missing Data": {
+        "type": "llm",
+        "category": "Pre-processing",
+        "class_name": "ImputerAgent",
+        "description": "Fill genuinely missing impedance cells via masked-reconstruction CAE (distinct from Denoising, which corrects present-but-noisy cells).",
+        "params": {
+            "n_components": {
+                "type": "combo",
+                "options": ["4", "8"],
+                "default": "4",
+                "label": "Components",
+                "tip": "4 = off-diagonal Zxy/Zyx only; 8 = also models the diagonal Zxx/Zyy.",
+            },
+            "mask_frac": {
+                "type": "float",
+                "default": 0.15,
+                "range": (0.01, 0.5),
+                "step": 0.01,
+                "label": "Training mask fraction",
+                "tip": "Fraction of observed cells hidden per training step to supply a reconstruction target.",
+            },
+            "epochs": {
+                "type": "int",
+                "default": 80,
+                "range": (5, 500),
+                "step": 5,
+                "label": "Training epochs",
+            },
+        },
+        "result_plot": None,
+    },
+    "Time-Series Denoising": {
+        "type": "llm",
+        "category": "Pre-processing",
+        "class_name": "TimeSeriesDenoisingAgent",
+        "description": "Raw field time-series denoising (MMF-SVM-K-SVD), one stage upstream of spectral processing -- distinct from Denoising, which operates on impedance spectra.",
+        "params": {
+            "ts_path": {
+                "type": "str",
+                "default": "",
+                "label": "Time-series file path",
+                "tip": (
+                    "Path to a raw field time-series file (read via "
+                    "pycsamt.ts.read_ts) -- this agent works on Ex/Ey/Hx/"
+                    "Hy/Hz samples, not the loaded EDI survey, since "
+                    "MainWindow has no time-series loader yet."
+                ),
+            },
+            "mmf_size": {
+                "type": "int",
+                "default": 121,
+                "range": (11, 999),
+                "step": 10,
+                "label": "MMF window (samples)",
+                "tip": "Morphological filter window separating the smooth low-frequency component from the high-frequency residual.",
+            },
+            "win_seconds": {
+                "type": "float",
+                "default": 60.0,
+                "range": (5.0, 3600.0),
+                "step": 5.0,
+                "label": "Classification window (s)",
+            },
+        },
+        "result_plot": None,
+    },
+    "Distortion Classification": {
+        "type": "llm",
+        "category": "Pre-processing",
+        "class_name": "DistortionClassificationAgent",
+        "description": "Triage galvanic-distortion regime per station (clean / static-shift-only / distorted) and route to correction. Self-trained -- treat results as a plausible triage, not a converged answer.",
+        "params": {
+            "epochs": {
+                "type": "int",
+                "default": 200,
+                "range": (20, 500),
+                "step": 10,
+                "label": "Training epochs",
+                "tip": "Self-trained on rule-based labels; a small survey can disagree on the majority class at low epoch counts (see Notes below).",
+            },
+            "route_corrections": {
+                "type": "bool",
+                "default": True,
+                "label": "Run routed corrections",
+                "tip": "Also run correct_ss_ama / apply_groom_bailey on the triaged stations.",
+            },
+        },
+        "result_plot": None,
+        "notes": (
+            "Known, documented instability: DistortionTypeClassifier is "
+            "self-trained on rule-based labels, and on a small survey "
+            "(tens of stations) repeated fits can disagree on which regime "
+            "is the majority class, not just on a minority label appearing "
+            "or not. Treat the regime table as one plausible smoothing of "
+            "the rule boundary, not a converged ground truth -- the agent "
+            "always attaches this as a result warning too."
+        ),
     },
     "Frequency Decimation": {
         "type": "llm",

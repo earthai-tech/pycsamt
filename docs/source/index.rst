@@ -71,6 +71,10 @@
            <a class="pyc-btn pyc-btn--primary" href="getting_started/index.html">
              <i class="fa-solid fa-rocket"></i> Get started
            </a>
+           <a class="pyc-btn pyc-btn--ghost"
+              href="applications/desktop/installation.html#applications-desktop-download">
+             <i class="fa-solid fa-download"></i> Download Desktop
+           </a>
            <a class="pyc-btn pyc-btn--ghost" href="user_guide/index.html">
              <i class="fa-solid fa-book-open"></i> User guide
            </a>

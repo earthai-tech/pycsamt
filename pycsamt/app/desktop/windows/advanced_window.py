@@ -1,26 +1,39 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
-AdvancedToolsWindow — independent floating window for advanced emtools analyses,
-topography configuration, and format conversion.
+AdvancedToolsWindow — the Advanced Tools studio (desktop v2.6).
 
-Left params panel
-─────────────────
-  Category     Sidebar list (Strike · Phase Tensor · Induction · Impedance ·
-                              Depth Imaging · Survey Tools · Topography · Conversion)
-  [Stacked pages based on category selection]
+┌ Advanced Tools ───────────────────────────────────────────────────────────┐
+│ Phase Tensor — ellipses, roses, skew…          26 stations  Export▾ Lib ▸ │
+├────────────┬──────────────┬─────────────────────────────────┬─────────────┤
+│ ANALYSES   │ PLOTS        │                                 │ PINNED      │
+│ ▣ Strike   │ ● PT psection│   figure (or "why not" card)    │ [thumb]     │
+│ ▣ Phase T. │ ● PT map     │                                 │             │
+│ ▣ Induction│ ○ PT strip   │                                 │             │
+│ ▣ Impedance│ OPTIONS      │                                 │             │
+│ ▣ Depth    │ Colour map ▾ │                                 │             │
+│ ▣ Survey   │ Station  ▾   │                                 │             │
+│ UTILITIES  │ [↻ Draw]     │           [📌 Pin] [Export…]    │             │
+│ ▣ Topo     │              │                                 │             │
+│ ▣ Convert  │              │                                 │             │
+└────────────┴──────────────┴─────────────────────────────────┴─────────────┘
 
-Right content
-─────────────
-  Stacked pages:
-    Page 0 — single large MplCanvas (for emtools plots)
-    Page 1 — topography preview canvas + view selector
-    Page 2 — conversion results tabs (table + curves + map)
+The navigation rail picks a section: six emtools analysis sections (one
+plot page) and two utilities with their own pages (Topography,
+Conversion).  Each plot's options come from its signature
+(:mod:`pycsamt.app.desktop.controllers.advanced_studio`), so only options
+the plot takes are shown; plots that need a station or line grouping get
+it from the Options box.  Figures are always publication-white; pinned
+ones collect in the Library for side-by-side review and batch export.
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer, Signal
+import io
+from pathlib import Path
+
+from PySide6.QtCore import QByteArray, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -30,23 +43,24 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
     QProgressBar,
     QPushButton,
-    QSizePolicy,
+    QScrollArea,
+    QSplitter,
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
+    QLineEdit,
 )
 
 from pycsamt.app.desktop.controllers.advanced_controller import (
-    ADVANCED_GROUP_ICONS,
-    ADVANCED_GROUPS,
-    CONV_INDEX,
-    TOPO_INDEX,
     AdvancedController,
     ConversionController,
     ConversionWorker,
@@ -54,176 +68,706 @@ from pycsamt.app.desktop.controllers.advanced_controller import (
     TopoPreviewController,
     describe_advanced_plot,
 )
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
-from pycsamt.app.desktop.windows._base import (
-    PanelWindow,
-    _icon,
-    icon_button,
-    make_group,
+from pycsamt.app.desktop.controllers.advanced_studio import (
+    LINE_MODES,
+    SECTIONS,
+    is_polar,
+    line_groups,
+    plot_inputs,
+    plot_kwargs,
+    plot_options,
+    site_names,
 )
+from pycsamt.app.desktop.controllers.correction_views import (
+    figure_blank_reason,
+)
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
+from pycsamt.app.desktop.widgets.compact_button import compact_button
+from pycsamt.app.desktop.windows._base import _icon, icon_button, make_group
+from pycsamt.app.desktop.windows.inversion.forms import SettingsForm
+
+_KEY_ROLE = Qt.ItemDataRole.UserRole
+_MISSING = QColor("#8a94a3")
 
 
-class AdvancedToolsWindow(PanelWindow):
-    """
-    Floating Advanced Tools window.
+def _thumbnail(fig) -> QIcon:
+    try:
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=28, facecolor="white")
+        pix = QPixmap()
+        pix.loadFromData(buf.getvalue())
+        return QIcon(pix.scaled(120, 80, Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation))
+    except Exception:
+        return QIcon()
 
-    Pages
-    -----
-    0-5  emtools plots (Strike / Phase Tensor / Induction / Impedance /
-                        Depth / Survey)
-    6    Topography configuration + preview
-    7    Format conversion (AVG / J / Spectra -> EDI)
-    """
 
-    # Emitted when the user commits a conversion result as the main dataset
+def _caption(text: str) -> QLabel:
+    lbl = QLabel(text)
+    lbl.setObjectName("InfoLabel")
+    return lbl
+
+
+class AdvancedToolsWindow(QWidget):
+    """Advanced Tools studio: emtools analyses, topography, conversion."""
+
+    # the user commits a conversion result as the main dataset
     conversion_committed = Signal(object)  # EDICollection
+    panel_closed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        # Controllers created before super().__init__ so they are available
-        # inside _build_params / _build_content which are called from __init__.
+        flags = (Qt.WindowType.Window | Qt.WindowType.WindowCloseButtonHint
+                 | Qt.WindowType.WindowMinimizeButtonHint
+                 | Qt.WindowType.WindowMaximizeButtonHint)
+        super().__init__(parent, flags)
+        self.setWindowTitle("pycsamt — Advanced Tools")
+        ic = _icon("advanced-tools")
+        if not ic.isNull():
+            self.setWindowIcon(ic)
+        self.resize(1320, 840)
+        self._session_key = "advanced_tools"
+        self._sites = None
+        self._dark = False
         self._ctrl = AdvancedController()
+        self._ctrl.dark = False  # figures are for publication: white
         self._topo_ctrl = TopoPreviewController()
         self._conv_ctrl = ConversionController()
-
-        # Topo color state
         self._topo_fill_color = "#a89070"
         self._topo_line_color = "#6b4e2a"
-
-        # Conversion worker handle + result rows
         self._conv_worker: ConversionWorker | None = None
         self._conv_running = False
         self._conv_result_stats: list = []
-
-        # Dictionary-model training worker
         self._dim_worker: DimModelWorker | None = None
-
-        super().__init__(
-            title="Advanced Tools",
-            session_key="advanced_tools",
-            params_width=310,
-            icon_name="advanced-tools",
-            parent=parent,
-        )
-        self.resize(1240, 820)
+        self._section = 0
+        self._plot_row: dict[int, int] = {}  # last plot per section
+        self._forms: dict[str, SettingsForm] = {}
+        self._figure = None
+        self._figure_label = ""
+        self._pinned: list = []  # (label, Figure)
         self._auto_rendered = False
-        self._populate_category_combo()
-        self._on_category_changed(0)
+        self._build_ui()
+        self.select_section(0)
 
-    # ── Params panel (left) ───────────────────────────────────────────
+    # ══ UI ═══════════════════════════════════════════════════════════════
+    def _build_ui(self) -> None:
+        root = QVBoxLayout(self)
+        root.setContentsMargins(6, 6, 6, 6)
+        root.setSpacing(6)
+        root.addWidget(self._build_header())
+        body = QSplitter(Qt.Orientation.Horizontal)
+        body.setChildrenCollapsible(False)
+        body.addWidget(self._build_nav())
+        self._page_stack = QStackedWidget()
+        self._page_stack.addWidget(self._build_plot_page())
+        self._page_stack.addWidget(self._build_utility_page(
+            self._build_topo_params_page(), self._build_topo_content()))
+        self._page_stack.addWidget(self._build_utility_page(
+            self._build_conv_params_page(), self._build_conv_content()))
+        body.addWidget(self._page_stack)
+        self._lib_panel = self._build_library()
+        body.addWidget(self._lib_panel)
+        body.setStretchFactor(1, 1)
+        body.setSizes([190, 940, 190])
+        root.addWidget(body, 1)
+        QShortcut(QKeySequence("Ctrl+L"), self,
+                  activated=lambda: self._btn_library.toggle())
+        QShortcut(QKeySequence("Ctrl+R"), self, activated=self._on_run)
+        QShortcut(QKeySequence("F5"), self, activated=self._on_run)
 
-    def _build_params(self, layout: QVBoxLayout) -> None:
-        # ── Category selector ─────────────────────────────────────────
-        grp_cat, lay_cat = make_group("Category")
-        self._combo_category = QComboBox()
-        self._combo_category.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self._combo_category.currentIndexChanged.connect(
-            self._on_category_changed
-        )
-        lay_cat.addWidget(self._combo_category)
-        layout.addWidget(grp_cat)
+    def _build_header(self) -> QWidget:
+        bar = QWidget()
+        h = QHBoxLayout(bar)
+        h.setContentsMargins(2, 0, 2, 0)
+        h.setSpacing(8)
+        self._title_lbl = QLabel("")
+        self._title_lbl.setTextFormat(Qt.TextFormat.RichText)
+        h.addWidget(self._title_lbl, 1)
+        self._data_lbl = _caption("No EDI/XML data")
+        h.addWidget(self._data_lbl)
+        self._btn_export_menu = QToolButton()
+        self._btn_export_menu.setText("Export  ▾")
+        self._btn_export_menu.setPopupMode(
+            QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(self._btn_export_menu)
+        menu.addAction("Current figure…", self._on_export)
+        menu.addAction("Pinned figures to a folder…", self._export_pinned)
+        self._btn_export_menu.setMenu(menu)
+        h.addWidget(self._btn_export_menu)
+        self._btn_library = QToolButton()
+        self._btn_library.setCheckable(True)
+        self._btn_library.setChecked(True)
+        self._btn_library.setText("Library ▸")
+        self._btn_library.setToolTip("Show / hide pinned figures (Ctrl+L)")
+        self._btn_library.toggled.connect(
+            lambda on: self._lib_panel.setVisible(on))
+        h.addWidget(self._btn_library)
+        return bar
 
-        # ── Stacked pages for per-category params ─────────────────────
-        self._params_stack = QStackedWidget()
-        self._params_stack.addWidget(self._build_plot_params_page())  # 0
-        self._params_stack.addWidget(self._build_topo_params_page())  # 1
-        self._params_stack.addWidget(self._build_conv_params_page())  # 2
-        layout.addWidget(self._params_stack)
+    def _build_nav(self) -> QWidget:
+        w = QWidget()
+        w.setMinimumWidth(170)
+        w.setMaximumWidth(230)
+        v = QVBoxLayout(w)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(4)
+        v.addWidget(_caption("ANALYSES  ·  UTILITIES"))
+        self._nav = QListWidget()
+        self._nav.setObjectName("EngineList")
+        self._nav.setIconSize(QSize(20, 20))
+        for i, sec in enumerate(SECTIONS):
+            if i and sec.key != "plots" and SECTIONS[i - 1].key == "plots":
+                sep = QListWidgetItem("")
+                sep.setFlags(Qt.ItemFlag.NoItemFlags)
+                sep.setSizeHint(QSize(10, 10))
+                self._nav.addItem(sep)
+            item = QListWidgetItem(_icon(sec.icon), sec.label)
+            item.setData(_KEY_ROLE, i)
+            item.setToolTip(sec.help)
+            item.setSizeHint(QSize(160, 30))
+            self._nav.addItem(item)
+        self._nav.currentItemChanged.connect(
+            lambda cur, _p: cur is not None and cur.data(_KEY_ROLE)
+            is not None and self.select_section(cur.data(_KEY_ROLE)))
+        v.addWidget(self._nav, 1)
+        return w
 
-    # ── Plot params page (page 0) ─────────────────────────────────────
-
-    def _build_plot_params_page(self) -> QWidget:
-        page = QWidget()
-        vlay = QVBoxLayout(page)
-        vlay.setContentsMargins(0, 0, 0, 0)
-        vlay.setSpacing(5)
-
-        # Plot combo
-        grp_plot, lay_plot = make_group("Plot")
-        self._combo_plot = QComboBox()
-        self._combo_plot.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self._combo_plot.currentIndexChanged.connect(self._on_plot_changed)
-        lay_plot.addWidget(self._combo_plot)
-        vlay.addWidget(grp_plot)
-
-        # Description
+    def _build_plot_page(self) -> QWidget:
+        page = QSplitter(Qt.Orientation.Horizontal)
+        page.setChildrenCollapsible(False)
+        left = QWidget()
+        left.setMinimumWidth(230)
+        left.setMaximumWidth(320)
+        lv = QVBoxLayout(left)
+        lv.setContentsMargins(0, 0, 0, 0)
+        lv.setSpacing(4)
+        lv.addWidget(_caption("PLOTS"))
+        self._plot_list = QListWidget()
+        self._plot_list.setObjectName("EngineList")
+        self._plot_list.setStyleSheet("QListWidget::item { padding: 4px 3px; }")
+        self._plot_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._plot_list.currentRowChanged.connect(self._on_plot_changed)
+        self._plot_list.itemDoubleClicked.connect(lambda *_: self._on_run())
+        lv.addWidget(self._plot_list, 3)
         self._desc_lbl = QLabel("")
         self._desc_lbl.setWordWrap(True)
         self._desc_lbl.setObjectName("InfoLabel")
-        self._desc_lbl.setAlignment(Qt.AlignmentFlag.AlignTop)
-        vlay.addWidget(self._desc_lbl)
+        self._desc_lbl.setTextFormat(Qt.TextFormat.RichText)
+        lv.addWidget(self._desc_lbl)
 
-        # ── Dictionary Model group (shown only for ATOM psection) ─────
-        grp_model, lay_model = make_group("Dictionary Model")
+        # options: survey inputs + the plot's own options
+        self._grp_opts, gl = make_group("Options")
+        inputs = QFormLayout()
+        inputs.setSpacing(5)
+        self._station_combo = QComboBox()
+        self._station_combo.setToolTip("Station for single-station plots")
+        self._station_combo.activated.connect(lambda *_: self._on_run())
+        self._station_row_lbl = QLabel("Station:")
+        inputs.addRow(self._station_row_lbl, self._station_combo)
+        self._lines_combo = QComboBox()
+        for value, label in LINE_MODES:
+            self._lines_combo.addItem(label, value)
+        self._lines_combo.setToolTip("How stations are grouped into lines")
+        self._lines_combo.activated.connect(self._on_lines_changed)
+        self._lines_row_lbl = QLabel("Lines:")
+        inputs.addRow(self._lines_row_lbl, self._lines_combo)
+        self._lines_info = _caption("")
+        self._lines_info.setWordWrap(True)
+        inputs.addRow(self._lines_info)
+        gl.addLayout(inputs)
+        self._form_stack = QStackedWidget()
+        self._no_opts = _caption("This plot has no options.")
+        self._form_stack.addWidget(self._no_opts)
+        gl.addWidget(self._form_stack)
+        lv.addWidget(self._grp_opts)
 
-        row_natoms = QWidget()
-        h_na = QHBoxLayout(row_natoms)
-        h_na.setContentsMargins(0, 0, 0, 0)
-        h_na.addWidget(QLabel("n_atoms"))
+        # dictionary model (ATOM pseudosection)
+        grp_model, lay_model = make_group("Dictionary model")
+        row = QFormLayout()
         self._spin_n_atoms = QDoubleSpinBox()
         self._spin_n_atoms.setDecimals(0)
         self._spin_n_atoms.setRange(2, 20)
-        self._spin_n_atoms.setSingleStep(1)
         self._spin_n_atoms.setValue(6)
-        h_na.addWidget(self._spin_n_atoms)
-        lay_model.addWidget(row_natoms)
-
-        row_niter = QWidget()
-        h_ni = QHBoxLayout(row_niter)
-        h_ni.setContentsMargins(0, 0, 0, 0)
-        h_ni.addWidget(QLabel("n_iter"))
+        row.addRow("Atoms:", self._spin_n_atoms)
         self._spin_n_iter = QDoubleSpinBox()
         self._spin_n_iter.setDecimals(0)
         self._spin_n_iter.setRange(10, 200)
         self._spin_n_iter.setSingleStep(10)
         self._spin_n_iter.setValue(40)
-        h_ni.addWidget(self._spin_n_iter)
-        lay_model.addWidget(row_niter)
-
-        self._btn_train_model = QPushButton("⚙  Train Model from Survey")
+        row.addRow("Iterations:", self._spin_n_iter)
+        lay_model.addLayout(row)
+        self._btn_train_model = QPushButton("⚙  Train from survey")
         self._btn_train_model.setToolTip(
             "Learn a sparse-coding dictionary from the phase-tensor features\n"
-            "of the loaded sites.  Required before plotting ATOM psection."
-        )
+            "of the loaded sites.  Required before plotting ATOM psection.")
         self._btn_train_model.clicked.connect(self._on_train_model)
         lay_model.addWidget(self._btn_train_model)
-
-        self._model_status_lbl = QLabel("Not trained")
-        self._model_status_lbl.setObjectName("InfoLabel")
+        self._model_status_lbl = _caption("Not trained")
         self._model_status_lbl.setWordWrap(True)
         lay_model.addWidget(self._model_status_lbl)
-
         self._grp_model = grp_model
         self._grp_model.setVisible(False)
-        vlay.addWidget(grp_model)
+        lv.addWidget(grp_model)
 
-        # Actions
-        grp_act, lay_act = make_group("Actions")
-        self._btn_run = icon_button(
-            "↻  Run / Refresh", "advanced-tools", "Render selected plot"
-        )
-        self._btn_export = icon_button(
-            "⬆  Export…", "export", "Save figure to file"
-        )
+        run = QHBoxLayout()
+        self._btn_run = QPushButton("↻  Draw")
+        self._btn_run.setToolTip("Render the selected plot (Ctrl+R / F5)")
         self._btn_run.clicked.connect(self._on_run)
-        self._btn_export.clicked.connect(self._on_export)
-        lay_act.addWidget(self._btn_run)
-        lay_act.addWidget(self._btn_export)
-        vlay.addWidget(grp_act)
-
-        # Status
-        self._status_lbl = QLabel("")
-        self._status_lbl.setObjectName("InfoLabel")
+        run.addWidget(self._btn_run)
+        self._chk_auto = QCheckBox("Auto")
+        self._chk_auto.setChecked(True)
+        self._chk_auto.setToolTip("Redraw when the plot or an option "
+                                  "changes")
+        run.addWidget(self._chk_auto)
+        lv.addLayout(run)
+        self._status_lbl = _caption("")
         self._status_lbl.setWordWrap(True)
-        vlay.addWidget(self._status_lbl)
+        lv.addWidget(self._status_lbl)
+        page.addWidget(left)
 
-        vlay.addStretch(1)
+        right = QWidget()
+        rv = QVBoxLayout(right)
+        rv.setContentsMargins(0, 0, 0, 0)
+        rv.setSpacing(2)
+        self._canvas_view = CanvasResultView(
+            right, toolbar=True, empty_title="No plot yet",
+            empty_reason="Load EDI/XML data in the main window, then pick a "
+                         "plot.")
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(self._on_run,
+                                          tooltip="Render selected plot")
+        rv.addWidget(self._canvas_view, 1)
+        tools = QHBoxLayout()
+        tools.addStretch(1)
+        self._btn_pin = QPushButton("📌  Pin to library")
+        self._btn_pin.setObjectName("FileListBtn")
+        self._btn_pin.clicked.connect(self._pin_current)
+        self._btn_export = QPushButton("⬆  Export…")
+        self._btn_export.setObjectName("FileListBtn")
+        self._btn_export.clicked.connect(self._on_export)
+        tools.addWidget(self._btn_pin)
+        tools.addWidget(self._btn_export)
+        rv.addLayout(tools)
+        page.addWidget(right)
+        page.setStretchFactor(1, 1)
+        page.setSizes([260, 700])
         return page
 
-    # ── Topo params page (page 1) ─────────────────────────────────────
+    @staticmethod
+    def _build_utility_page(params: QWidget, content: QWidget) -> QWidget:
+        page = QSplitter(Qt.Orientation.Horizontal)
+        page.setChildrenCollapsible(False)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(params)
+        scroll.setMinimumWidth(280)
+        scroll.setMaximumWidth(360)
+        page.addWidget(scroll)
+        page.addWidget(content)
+        page.setStretchFactor(1, 1)
+        page.setSizes([310, 700])
+        return page
+
+    def _build_topo_content(self) -> QWidget:
+        page1 = QWidget()
+        v1 = QVBoxLayout(page1)
+        v1.setContentsMargins(0, 0, 0, 0)
+        bar1 = QHBoxLayout()
+        bar1.addWidget(QLabel("Preview:"))
+        self._combo_topo_view = QComboBox()
+        self._combo_topo_view.addItems(
+            ["Elevation Profile", "Terrain Fill Preview",
+             "Elevation Histogram"])
+        self._combo_topo_view.currentIndexChanged.connect(
+            self._on_topo_view_changed)
+        bar1.addWidget(self._combo_topo_view)
+        bar1.addStretch()
+        self._topo_stats_lbl = _caption("")
+        bar1.addWidget(self._topo_stats_lbl)
+        v1.addLayout(bar1)
+        self._canvas_topo_view = CanvasResultView(
+            page1, toolbar=True, empty_title="No topography preview yet",
+            empty_reason="Load survey data, then click Preview / Refresh.")
+        self._canvas_topo = self._canvas_topo_view.canvas
+        self._canvas_topo.set_refresh_callback(
+            self._refresh_topo_preview, tooltip="Refresh the preview canvas")
+        v1.addWidget(self._canvas_topo_view)
+        return page1
+
+    def _build_conv_content(self) -> QWidget:
+        self._conv_tabs = QTabWidget()
+        self._conv_tabs.setDocumentMode(True)
+        results_page = QWidget()
+        rp_v = QVBoxLayout(results_page)
+        self._conv_table = QTableWidget()
+        self._conv_table.setAlternatingRowColors(True)
+        self._conv_table.horizontalHeader().setStretchLastSection(True)
+        self._conv_table.setEditTriggers(
+            QTableWidget.EditTrigger.NoEditTriggers)
+        rp_v.addWidget(self._conv_table)
+        self._conv_tabs.addTab(results_page, "Results")
+        for attr, title, empty in (
+                ("_canvas_conv_curves", "Impedance Curves",
+                 "No impedance curves yet"),
+                ("_canvas_conv_map", "Station Map", "No station map yet")):
+            tab = QWidget()
+            tv = QVBoxLayout(tab)
+            view = CanvasResultView(
+                tab, toolbar=True, empty_title=empty,
+                empty_reason="Run a conversion to see it.")
+            view.canvas.set_refresh_callback(self._on_conv_run,
+                                             tooltip="Run the conversion")
+            setattr(self, f"{attr}_view", view)
+            setattr(self, attr, view.canvas)
+            tv.addWidget(view)
+            self._conv_tabs.addTab(tab, title)
+        return self._conv_tabs
+
+    def _build_library(self) -> QWidget:
+        w = QWidget()
+        w.setMinimumWidth(160)
+        w.setMaximumWidth(250)
+        v = QVBoxLayout(w)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(4)
+        v.addWidget(_caption("PINNED FIGURES"))
+        self._gallery = QListWidget()
+        self._gallery.setObjectName("GalleryList")
+        self._gallery.setViewMode(QListWidget.ViewMode.IconMode)
+        self._gallery.setIconSize(QSize(120, 80))
+        self._gallery.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self._gallery.setMovement(QListWidget.Movement.Static)
+        self._gallery.setWordWrap(True)
+        self._gallery.setSpacing(4)
+        self._gallery.itemClicked.connect(self._show_pinned)
+        v.addWidget(self._gallery, 1)
+        row = QHBoxLayout()
+        b = QPushButton("Remove")
+        b.setObjectName("FileListBtn")
+        b.clicked.connect(self._unpin)
+        row.addWidget(b)
+        b = QPushButton("Export all…")
+        b.setObjectName("FileListBtn")
+        b.clicked.connect(self._export_pinned)
+        row.addWidget(b)
+        v.addLayout(row)
+        return w
+
+    # ══ sections & plots ═════════════════════════════════════════════════
+    def select_section(self, i: int) -> None:
+        if not 0 <= i < len(SECTIONS):
+            return
+        if i != self._section and self._plot_list.currentRow() >= 0 \
+                and SECTIONS[self._section].key == "plots":
+            self._plot_row[self._section] = self._plot_list.currentRow()
+        self._section = i
+        sec = SECTIONS[i]
+        for r in range(self._nav.count()):
+            if self._nav.item(r).data(_KEY_ROLE) == i:
+                self._nav.blockSignals(True)
+                self._nav.setCurrentRow(r)
+                self._nav.blockSignals(False)
+        self._title_lbl.setText(
+            f"<b>{sec.label}</b> <span style='color:#6b7280'>— "
+            f"{sec.help}</span>")
+        if sec.key == "topo":
+            self._page_stack.setCurrentIndex(1)
+            self._refresh_topo_preview()
+            return
+        if sec.key == "conv":
+            self._page_stack.setCurrentIndex(2)
+            return
+        self._page_stack.setCurrentIndex(0)
+        self._plot_list.blockSignals(True)
+        self._plot_list.clear()
+        for label, fn, _has_ax in sec.plots:
+            tags = " · polar" if is_polar(fn) else ""
+            item = QListWidgetItem(label)
+            item.setData(_KEY_ROLE, fn)
+            item.setToolTip(describe_advanced_plot(fn) + tags)
+            self._plot_list.addItem(item)
+        self._plot_list.blockSignals(False)
+        self._plot_list.setCurrentRow(self._plot_row.get(i, 0))
+        self._on_plot_changed(self._plot_list.currentRow())
+
+    @property
+    def current_plot(self) -> tuple:
+        sec = SECTIONS[self._section]
+        row = self._plot_list.currentRow()
+        if sec.key != "plots" or not 0 <= row < len(sec.plots):
+            return ()
+        return sec.plots[row]
+
+    def select_plot(self, fn_name: str) -> None:
+        """Switch to the section holding *fn_name* and select it."""
+        for i, sec in enumerate(SECTIONS):
+            fns = [p[1] for p in sec.plots]
+            if fn_name in fns:
+                self._plot_row[i] = fns.index(fn_name)
+                if i == self._section:
+                    self._plot_list.setCurrentRow(fns.index(fn_name))
+                else:
+                    self.select_section(i)
+                return
+
+    def _form_for(self, fn: str) -> SettingsForm | None:
+        if fn not in self._forms:
+            fields = plot_options(fn)
+            if not fields:
+                return None
+            form = SettingsForm(fields)
+            form.changed.connect(self._on_option_changed)
+            self._forms[fn] = form
+            self._form_stack.addWidget(form)
+        return self._forms[fn]
+
+    def _on_plot_changed(self, _row: int) -> None:
+        plot = self.current_plot
+        if not plot:
+            return
+        label, fn, _has_ax = plot
+        self._update_desc(label, fn)
+        form = self._form_for(fn)
+        self._form_stack.setCurrentWidget(form or self._no_opts)
+        need = plot_inputs(fn)
+        for w in (self._station_row_lbl, self._station_combo):
+            w.setVisible("station" in need)
+        for w in (self._lines_row_lbl, self._lines_combo, self._lines_info):
+            w.setVisible("lines" in need)
+        self._update_lines_info()
+        self._grp_model.setVisible("model" in need)
+        if self._chk_auto.isChecked():
+            self._on_run()
+
+    def _update_desc(self, label: str, fn: str) -> None:
+        polar = " · polar" if is_polar(fn) else ""
+        self._desc_lbl.setText(
+            f"<b>{label}</b><span style='color:#888'>{polar}</span><br/>"
+            f"<small style='color:#6b7280'>{describe_advanced_plot(fn)}"
+            f"</small>")
+
+    def _on_option_changed(self) -> None:
+        if self._chk_auto.isChecked():
+            QTimer.singleShot(0, self._on_run)
+
+    def _lines(self) -> dict:
+        return line_groups(site_names(self._ctrl._sites),
+                           self._lines_combo.currentData() or "prefix")
+
+    def _update_lines_info(self) -> None:
+        g = self._lines()
+        self._lines_info.setText(
+            ", ".join(f"{k} ({len(v)})" for k, v in list(g.items())[:6])
+            + (" …" if len(g) > 6 else "") if g else "")
+
+    def _on_lines_changed(self, *_) -> None:
+        self._update_lines_info()
+        self._on_run()
+
+    # ══ drawing ══════════════════════════════════════════════════════════
+    def _on_run(self) -> None:
+        plot = self.current_plot
+        if not plot or not self._page_stack.currentIndex() == 0:
+            return
+        label, fn_name, has_ax = plot
+        if self._ctrl._sites is None:
+            self._status_lbl.setText("Load survey data first.")
+            self._show_card(label, "Load EDI/XML data in the main window.")
+            return
+        need = plot_inputs(fn_name)
+        form = self._forms.get(fn_name)
+        kw = plot_kwargs(
+            fn_name, form.values() if form else {},
+            station=self._station_combo.currentText()
+            if "station" in need else "",
+            lines=self._lines() if "lines" in need else None)
+        self._status_lbl.setText(f"Drawing {label}…")
+        self._btn_run.setEnabled(False)
+        self.setCursor(Qt.CursorShape.WaitCursor)
+        import matplotlib.pyplot as plt
+
+        target = plt.figure()
+        try:
+            new_fig = self._ctrl.draw(fn_name, has_ax, target, **kw)
+        except Exception as exc:
+            new_fig, target = None, None
+            self._show_card(label, f"{fn_name} failed: {exc}")
+            self._status_lbl.setText(f"Error: {exc}")
+            return
+        finally:
+            self._btn_run.setEnabled(True)
+            self.unsetCursor()
+        fig = new_fig if new_fig is not None else target
+        if new_fig is not None and target is not new_fig:
+            plt.close(target)
+        why = figure_blank_reason(fig)
+        if why is not None:
+            plt.close(fig)
+            self._show_card(label, why.replace("error:", "error —"))
+            self._status_lbl.setText("Nothing drawn — see the card.")
+            return
+        self._close_figure(self._figure)
+        self._figure, self._figure_label = fig, label
+        self._canvas.show_figure(fig)
+        self._canvas_view.show_canvas()
+        self._btn_pin.setEnabled(True)
+        self._status_lbl.setText("Done.")
+
+    def _show_card(self, title: str, reason: str) -> None:
+        self._close_figure(self._figure)
+        self._figure = None
+        self._btn_pin.setEnabled(False)
+        self._canvas_view.show_unavailable(title, reason)
+
+    def _close_figure(self, fig) -> None:
+        if fig is None or any(f is fig for _l, f in self._pinned):
+            return
+        import matplotlib.pyplot as plt
+
+        plt.close(fig)
+
+    def _on_export(self) -> None:
+        if self._page_stack.currentIndex() == 1:
+            fig = self._canvas_topo.figure
+        elif self._figure is not None:
+            fig = self._figure
+        else:
+            self._status_lbl.setText("No figure to export.")
+            return
+        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+
+        ExportDialog(figure=fig, parent=self).exec()
+
+    def _auto_render_if_ready(self) -> None:
+        if self._auto_rendered or self._ctrl._sites is None:
+            return
+        if not self.isVisible() or not self.current_plot:
+            return
+        self._auto_rendered = True
+        QTimer.singleShot(0, self._on_run)
+
+    # ══ library ══════════════════════════════════════════════════════════
+    def _pin_current(self) -> None:
+        if self._figure is None:
+            return
+        label = f"{SECTIONS[self._section].label} · {self._figure_label}"
+        self._pinned.append((label, self._figure))
+        item = QListWidgetItem(_thumbnail(self._figure), label)
+        item.setToolTip(label)
+        self._gallery.addItem(item)
+        self._btn_library.setChecked(True)
+
+    def _show_pinned(self, item: QListWidgetItem) -> None:
+        i = self._gallery.row(item)
+        if 0 <= i < len(self._pinned):
+            label, fig = self._pinned[i]
+            if self._page_stack.currentIndex() != 0:
+                self._page_stack.setCurrentIndex(0)
+            self._close_figure(self._figure)
+            self._figure, self._figure_label = fig, label
+            self._canvas.show_figure(fig)
+            self._canvas_view.show_canvas()
+
+    def _unpin(self) -> None:
+        i = self._gallery.currentRow()
+        if 0 <= i < len(self._pinned):
+            _label, fig = self._pinned.pop(i)
+            self._gallery.takeItem(i)
+            if fig is not self._figure:
+                self._close_figure(fig)
+
+    def pinned_labels(self) -> list[str]:
+        return [label for label, _f in self._pinned]
+
+    def export_pinned(self, folder, fmt: str = "png", dpi: int = 300) -> list:
+        """Save every pinned figure into *folder*; returns the paths."""
+        out = []
+        folder = Path(folder)
+        folder.mkdir(parents=True, exist_ok=True)
+        for i, (label, fig) in enumerate(self._pinned, 1):
+            stem = "".join(ch if ch.isalnum() else "_" for ch in label)
+            path = folder / f"{i:02d}_{stem.strip('_')}.{fmt}"
+            fig.savefig(path, dpi=dpi, facecolor="white", bbox_inches="tight")
+            out.append(path)
+        return out
+
+    def _export_pinned(self) -> None:
+        if not self._pinned:
+            self._status_lbl.setText("Pin figures first (📌 under the plot).")
+            return
+        d = QFileDialog.getExistingDirectory(self, "Export pinned figures")
+        if d:
+            paths = self.export_pinned(d)
+            self._status_lbl.setText(f"Exported {len(paths)} figure(s).")
+
+    # ══ public API (main window) ═════════════════════════════════════════
+    def set_sites(self, sites) -> None:
+        self._sites = sites
+        self._ctrl.set_sites(sites)
+        self._topo_ctrl.set_sites(sites)
+        self._auto_rendered = False
+        names = site_names(sites)
+        self._data_lbl.setText(f"{len(names)} EDI/XML stations" if names
+                               else "No EDI/XML data")
+        cur = self._station_combo.currentText()
+        self._station_combo.clear()
+        self._station_combo.addItems(names)
+        if cur in names:
+            self._station_combo.setCurrentText(cur)
+        self._update_lines_info()
+        if SECTIONS[self._section].key == "topo":
+            self._refresh_topo_preview()
+        elif self.isVisible() and self.current_plot:
+            self._on_run()
+
+    def set_dark_mode(self, dark: bool) -> None:
+        # the UI follows the app theme; figures stay publication-white
+        self._dark = dark
+        self._ctrl.dark = False
+        self._topo_ctrl.dark = False
+        self._conv_ctrl.dark = False
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        self._auto_render_if_ready()
+
+    def save_geometry_to(self, store: dict) -> None:
+        store[self._session_key] = {
+            "geometry": self.saveGeometry().toBase64().data().decode(),
+            "visible": self.isVisible(),
+            "library_visible": self._btn_library.isChecked(),
+            "section": self._section,
+            "auto": self._chk_auto.isChecked(),
+        }
+
+    def restore_geometry_from(self, store: dict) -> None:
+        entry = store.get(self._session_key)
+        if not entry:
+            return
+        geo = entry.get("geometry")
+        if geo:
+            try:
+                self.restoreGeometry(QByteArray.fromBase64(geo.encode()))
+            except Exception:
+                pass
+        if "library_visible" in entry:
+            self._btn_library.setChecked(bool(entry["library_visible"]))
+        if "auto" in entry:
+            self._chk_auto.setChecked(bool(entry["auto"]))
+        sec = entry.get("section")
+        if isinstance(sec, int) and 0 <= sec < len(SECTIONS):
+            self.select_section(sec)
+
+    def closeEvent(self, event) -> None:  # noqa: N802
+        """Hide instead of destroying so state is preserved."""
+        self.hide()
+        event.ignore()
+        self.panel_closed.emit()
+
+    # ══ topography & conversion (unchanged from v2.5) ═══════════════════
 
     def _build_topo_params_page(self) -> QWidget:
         page = QWidget()
@@ -256,7 +800,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._edit_topo_file = QLineEdit()
         self._edit_topo_file.setPlaceholderText("Elevation file path…")
         btn_browse_topo = QPushButton("…")
-        btn_browse_topo.setFixedWidth(28)
+        compact_button(btn_browse_topo)
         btn_browse_topo.clicked.connect(self._browse_topo_file)
         h_file.addWidget(self._edit_topo_file)
         h_file.addWidget(btn_browse_topo)
@@ -433,7 +977,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._edit_conv_path.setPlaceholderText("File or directory path…")
         self._edit_conv_path.textChanged.connect(self._update_conv_run_state)
         btn_browse_conv = QPushButton("📂")
-        btn_browse_conv.setFixedWidth(28)
+        compact_button(btn_browse_conv)
         btn_browse_conv.clicked.connect(self._browse_conv_path)
         h_cfile.addWidget(self._edit_conv_path)
         h_cfile.addWidget(btn_browse_conv)
@@ -564,7 +1108,7 @@ class AdvancedToolsWindow(PanelWindow):
         self._edit_out_dir = QLineEdit()
         self._edit_out_dir.setPlaceholderText("Output directory…")
         btn_browse_out = QPushButton("…")
-        btn_browse_out.setFixedWidth(28)
+        compact_button(btn_browse_out)
         btn_browse_out.clicked.connect(self._browse_out_dir)
         h_outdir.addWidget(self._edit_out_dir)
         h_outdir.addWidget(btn_browse_out)
@@ -620,215 +1164,6 @@ class AdvancedToolsWindow(PanelWindow):
         vlay.addStretch(1)
         return page
 
-    # ── Content panel (right) ─────────────────────────────────────────
-
-    def _build_content(self, layout: QVBoxLayout) -> None:
-        self._content_stack = QStackedWidget()
-
-        # ── Page 0: plot canvas ───────────────────────────────────────
-        page0 = QWidget()
-        v0 = QVBoxLayout(page0)
-        v0.setContentsMargins(0, 0, 0, 0)
-        self._canvas = MplCanvas(page0, toolbar=True)
-        v0.addWidget(self._canvas)
-        self._content_stack.addWidget(page0)
-
-        # ── Page 1: topo content ──────────────────────────────────────
-        page1 = QWidget()
-        v1 = QVBoxLayout(page1)
-        v1.setContentsMargins(4, 4, 4, 4)
-
-        bar1 = QHBoxLayout()
-        bar1.addWidget(QLabel("Preview:"))
-        self._combo_topo_view = QComboBox()
-        self._combo_topo_view.addItems(
-            [
-                "Elevation Profile",
-                "Terrain Fill Preview",
-                "Elevation Histogram",
-            ]
-        )
-        self._combo_topo_view.currentIndexChanged.connect(
-            self._on_topo_view_changed
-        )
-        bar1.addWidget(self._combo_topo_view)
-        bar1.addStretch()
-        self._topo_stats_lbl = QLabel("")
-        self._topo_stats_lbl.setObjectName("InfoLabel")
-        bar1.addWidget(self._topo_stats_lbl)
-        bar_w1 = QWidget()
-        bar_w1.setLayout(bar1)
-        v1.addWidget(bar_w1)
-
-        self._canvas_topo = MplCanvas(page1, toolbar=True)
-        v1.addWidget(self._canvas_topo)
-        self._content_stack.addWidget(page1)
-
-        # ── Page 2: conversion content ────────────────────────────────
-        page2 = QWidget()
-        v2 = QVBoxLayout(page2)
-        v2.setContentsMargins(0, 0, 0, 0)
-
-        self._conv_tabs = QTabWidget()
-        self._conv_tabs.setDocumentMode(True)
-
-        # Tab 0 — Results table
-        results_page = QWidget()
-        rp_v = QVBoxLayout(results_page)
-        self._conv_table = QTableWidget()
-        self._conv_table.setAlternatingRowColors(True)
-        self._conv_table.horizontalHeader().setStretchLastSection(True)
-        self._conv_table.setEditTriggers(
-            QTableWidget.EditTrigger.NoEditTriggers
-        )
-        rp_v.addWidget(self._conv_table)
-        self._conv_tabs.addTab(results_page, "Results")
-
-        # Tab 1 — Impedance Curves
-        curves_page = QWidget()
-        cp_v = QVBoxLayout(curves_page)
-        self._canvas_conv_curves = MplCanvas(curves_page, toolbar=False)
-        cp_v.addWidget(self._canvas_conv_curves)
-        self._conv_tabs.addTab(curves_page, "Impedance Curves")
-
-        # Tab 2 — Station Map
-        map_page = QWidget()
-        mp_v = QVBoxLayout(map_page)
-        self._canvas_conv_map = MplCanvas(map_page, toolbar=False)
-        mp_v.addWidget(self._canvas_conv_map)
-        self._conv_tabs.addTab(map_page, "Station Map")
-
-        v2.addWidget(self._conv_tabs)
-        self._content_stack.addWidget(page2)
-
-        layout.addWidget(self._content_stack)
-
-    # ── Public API ────────────────────────────────────────────────────
-
-    def set_sites(self, sites) -> None:
-        super().set_sites(sites)
-        self._ctrl.set_sites(sites)
-        self._topo_ctrl.set_sites(sites)
-        self._auto_rendered = False
-        # Refresh topo preview if that page is active
-        if self._combo_category.currentIndex() == TOPO_INDEX:
-            self._refresh_topo_preview()
-        else:
-            self._auto_render_if_ready()
-
-    def set_dark_mode(self, dark: bool) -> None:
-        super().set_dark_mode(dark)
-        self._ctrl.dark = dark
-        self._topo_ctrl.dark = dark
-        self._conv_ctrl.dark = dark
-
-    def showEvent(self, event) -> None:  # noqa: N802
-        super().showEvent(event)
-        self._auto_render_if_ready()
-
-    # ── Category slot ─────────────────────────────────────────────────
-
-    def _on_category_changed(self, row: int) -> None:
-        if row < 0 or row >= len(ADVANCED_GROUPS):
-            return
-
-        if row == TOPO_INDEX:
-            self._params_stack.setCurrentIndex(1)
-            self._content_stack.setCurrentIndex(1)
-            self._refresh_topo_preview()
-            return
-
-        if row == CONV_INDEX:
-            self._params_stack.setCurrentIndex(2)
-            self._content_stack.setCurrentIndex(2)
-            return
-
-        # Regular emtools plot category
-        self._params_stack.setCurrentIndex(0)
-        self._content_stack.setCurrentIndex(0)
-
-        _label, plots = ADVANCED_GROUPS[row]
-        self._combo_plot.blockSignals(True)
-        self._combo_plot.clear()
-        for label, _fn, _has_ax in plots:
-            self._combo_plot.addItem(label)
-        self._combo_plot.blockSignals(False)
-        self._combo_plot.setCurrentIndex(0)
-        self._update_desc(row, 0)
-        self._update_model_group_visibility()
-
-    # ── Run / Export slots ────────────────────────────────────────────
-
-    def _on_run(self) -> None:
-        cat_row = self._combo_category.currentIndex()
-        plot_row = self._combo_plot.currentIndex()
-        if cat_row < 0 or plot_row < 0:
-            return
-        _label, plots = ADVANCED_GROUPS[cat_row]
-        if plot_row >= len(plots):
-            return
-        _plot_label, fn_name, has_ax = plots[plot_row]
-
-        if self._ctrl._sites is None:
-            self._status_lbl.setText("Load survey data first.")
-            return
-
-        self._status_lbl.setText(f"Running {fn_name}…")
-        self._btn_run.setEnabled(False)
-        try:
-            new_fig = self._ctrl.draw(fn_name, has_ax, self._canvas.figure)
-            if new_fig is not None:
-                self._canvas.show_figure(new_fig)
-            else:
-                self._canvas.draw()
-            self._status_lbl.setText("Done.")
-        except Exception as exc:
-            self._status_lbl.setText(f"Error: {exc}")
-        finally:
-            self._btn_run.setEnabled(True)
-
-    def _on_export(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import (
-            ExportDialog,
-        )
-
-        ExportDialog(figure=self._canvas.figure, parent=self).exec()
-
-    def _auto_render_if_ready(self) -> None:
-        if self._auto_rendered or self._ctrl._sites is None:
-            return
-        if not self.isVisible():
-            return
-        cat_row = self._combo_category.currentIndex()
-        if cat_row < 0 or cat_row >= len(ADVANCED_GROUPS):
-            return
-        _label, plots = ADVANCED_GROUPS[cat_row]
-        if not plots:
-            return
-        self._auto_rendered = True
-        QTimer.singleShot(0, self._on_run)
-
-    # ── Plot-selection slot ───────────────────────────────────────────
-
-    def _on_plot_changed(self, _: int) -> None:
-        cat_row = self._combo_category.currentIndex()
-        plot_row = self._combo_plot.currentIndex()
-        self._update_desc(cat_row, plot_row)
-        self._update_model_group_visibility()
-
-    def _update_model_group_visibility(self) -> None:
-        self._grp_model.setVisible(self._is_atom_psection_selected())
-
-    def _is_atom_psection_selected(self) -> bool:
-        cat = self._combo_category.currentIndex()
-        if cat < 0 or cat >= len(ADVANCED_GROUPS):
-            return False
-        _, plots = ADVANCED_GROUPS[cat]
-        pi = self._combo_plot.currentIndex()
-        if pi < 0 or pi >= len(plots):
-            return False
-        return plots[pi][1] == "plot_atom_psection"
-
     # ── Train-model slots ─────────────────────────────────────────────
 
     def _on_train_model(self) -> None:
@@ -852,7 +1187,8 @@ class AdvancedToolsWindow(PanelWindow):
         self._model_status_lbl.setText(
             f"Ready: {n_atoms} atoms · {n_samples} samples"
         )
-        self._status_lbl.setText("Model trained. Click Run to plot.")
+        self._status_lbl.setText("Model trained.")
+        self._on_run()
 
     def _on_model_train_error(self, msg: str) -> None:
         self._btn_train_model.setEnabled(True)
@@ -987,19 +1323,12 @@ class AdvancedToolsWindow(PanelWindow):
                 self._topo_ctrl.plot_fill_preview(fig)
             else:
                 self._topo_ctrl.plot_elevation_histogram(fig)
+            self._canvas_topo.draw()
+            self._canvas_topo_view.show_canvas()
         except Exception as exc:
-            fig.clear()
-            ax = fig.add_subplot(111)
-            ax.text(
-                0.5,
-                0.5,
-                f"Preview error: {exc}",
-                ha="center",
-                va="center",
-                transform=ax.transAxes,
-                fontsize=9,
+            self._canvas_topo_view.show_unavailable(
+                "Preview unavailable", f"Preview error: {exc}"
             )
-        self._canvas_topo.draw()
 
     def _on_topo_view_changed(self, _: int) -> None:
         self._refresh_topo_preview()
@@ -1194,10 +1523,24 @@ class AdvancedToolsWindow(PanelWindow):
             )
 
         # Refresh plots
-        self._conv_ctrl.plot_impedance_curves(self._canvas_conv_curves.figure)
-        self._canvas_conv_curves.draw()
-        self._conv_ctrl.plot_station_map(self._canvas_conv_map.figure)
-        self._canvas_conv_map.draw()
+        try:
+            self._conv_ctrl.plot_impedance_curves(
+                self._canvas_conv_curves.figure
+            )
+            self._canvas_conv_curves.draw()
+            self._canvas_conv_curves_view.show_canvas()
+        except Exception as exc:
+            self._canvas_conv_curves_view.show_unavailable(
+                "Impedance curves unavailable", str(exc)
+            )
+        try:
+            self._conv_ctrl.plot_station_map(self._canvas_conv_map.figure)
+            self._canvas_conv_map.draw()
+            self._canvas_conv_map_view.show_canvas()
+        except Exception as exc:
+            self._canvas_conv_map_view.show_unavailable(
+                "Station map unavailable", str(exc)
+            )
 
         n_ok = stats.get("n_total", 0)
         n_fail = stats.get("n_failures", 0)
@@ -1258,44 +1601,17 @@ class AdvancedToolsWindow(PanelWindow):
         for canvas in (self._canvas_conv_curves, self._canvas_conv_map):
             canvas.figure.clear()
             canvas.draw()
+        self._canvas_conv_curves_view.show_unavailable(
+            "No impedance curves yet", "Run a conversion to see impedance curves."
+        )
+        self._canvas_conv_map_view.show_unavailable(
+            "No station map yet", "Run a conversion to see the station map."
+        )
         self._btn_conv_commit.setEnabled(False)
         self._btn_conv_export.setEnabled(False)
         self._conv_status.setText("Cleared.")
         self._conv_progress.setVisible(False)
 
-    # ── Helpers ───────────────────────────────────────────────────────
 
-    def _populate_category_combo(self) -> None:
-        self._combo_category.blockSignals(True)
-        for group_label, _plots in ADVANCED_GROUPS:
-            icon_name = ADVANCED_GROUP_ICONS.get(group_label, "advanced-tools")
-            icon = _icon(icon_name)
-            if icon.isNull():
-                self._combo_category.addItem(group_label)
-            else:
-                self._combo_category.addItem(icon, group_label)
-        self._combo_category.blockSignals(False)
 
-    def _update_desc(self, cat_row: int, plot_row: int) -> None:
-        try:
-            _label, plots = ADVANCED_GROUPS[cat_row]
-            if not plots:
-                self._desc_lbl.setText("")
-                return
-            plot_label, fn_name, has_ax = plots[plot_row]
-            proj = (
-                " · polar"
-                if fn_name
-                in __import__(
-                    "pycsamt.app.desktop.controllers.advanced_controller",
-                    fromlist=["_POLAR_FNS"],
-                )._POLAR_FNS
-                else ""
-            )
-            desc = describe_advanced_plot(fn_name)
-            self._desc_lbl.setText(
-                f"<b>{plot_label}</b>{proj}<br/>"
-                f"<small style='color:#888'>{desc}</small>"
-            )
-        except Exception:
-            self._desc_lbl.setText("")
+__all__ = ["AdvancedToolsWindow"]

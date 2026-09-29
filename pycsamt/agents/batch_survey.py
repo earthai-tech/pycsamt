@@ -238,7 +238,7 @@ class BatchSurveyAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and profile_results:
+        if self.llm_available and profile_results:
             worst = max(
                 profile_results,
                 key=lambda n: len(profile_results[n].warnings),

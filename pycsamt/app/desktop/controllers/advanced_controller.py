@@ -45,13 +45,14 @@ _POLAR_FNS = {
 # (desktop: Profile Viewer "PT Strip" tab / Tools menu; web: the Advanced
 # Plots "pt" tab special-cases these two directly — see callbacks/advanced.py).
 _EXTRA_ARGS_FUNS: dict[str, str] = {
-    "plot_phase_tensor_strip": (
-        "Needs a station= pick — use the Profile Viewer's 'PT Strip' tab."
-    ),
+    "plot_phase_tensor_strip": "Pick a station (Options ▸ Station).",
     "plot_phase_tensor_strip_grid": (
-        "Needs a profiles= grouping — use Tools → Phase Tensor Strip Grid…"
+        "Group the stations into lines (Options ▸ Lines)."
     ),
 }
+# the keyword each of those needs; given it, they draw like any other plot
+_EXTRA_ARG_KEY = {"plot_phase_tensor_strip": "station",
+                  "plot_phase_tensor_strip_grid": "profiles"}
 
 # ── Plot catalogue ─────────────────────────────────────────────────────────────
 # Each entry: (display_label, fn_name, has_ax_param)
@@ -193,12 +194,12 @@ ADVANCED_PLOT_DESCRIPTIONS: dict[str, str] = {
     ),
     "plot_phase_tensor_strip": (
         "Single-station phase-tensor ellipse strip vs. period — the "
-        "classic 'ellipse timeseries' view. Needs a station= pick "
-        "(see the note below)."
+        "classic 'ellipse timeseries' view, for the station picked in "
+        "Options."
     ),
     "plot_phase_tensor_strip_grid": (
         "Phase-tensor ellipse strips tiled by survey line, one shared "
-        "colour scale. Needs a profiles= grouping (see the note below)."
+        "colour scale; lines are grouped as chosen in Options."
     ),
     "plot_phase_tensor_rose": (
         "Rose diagram summarizing phase-tensor principal directions."
@@ -420,7 +421,8 @@ class AdvancedController:
             _style_all_axes(fig, self.dark)
             return None
 
-        if fn_name in _EXTRA_ARGS_FUNS:
+        if fn_name in _EXTRA_ARGS_FUNS and not kwargs.get(
+                _EXTRA_ARG_KEY[fn_name]):
             ax = fig.add_subplot(111)
             _annotate_empty(
                 ax,
@@ -445,6 +447,12 @@ class AdvancedController:
                     fn(self._sites, ax=ax, verbose=0, **kwargs)
                 except TypeError:
                     fn(self._sites, ax=ax, verbose=0)
+            elif fn_name == "plot_phase_tensor_strip_grid":
+                # ``profiles`` is positional
+                profiles = kwargs.pop("profiles")
+                src_fig = fn(self._sites, profiles, verbose=0, **kwargs)
+                _style_all_axes(src_fig, self.dark)
+                return src_fig
             else:
                 src_fig = self._call_figure_fn(fn, **kwargs)
                 if src_fig is None:
@@ -544,8 +552,8 @@ class TopoPreviewController:
                 "grid": "#313244",
             }
         return {
-            "bg": "#eff1f5",
-            "fig_bg": "#e6e9ef",
+            "bg": "#ffffff",
+            "fig_bg": "#ffffff",
             "fg": "#4c4f69",
             "title": "#4c4f69",
             "tick": "#6c6f85",
@@ -1261,8 +1269,8 @@ class ConversionController:
                 "grid": "#313244",
             }
         return {
-            "bg": "#eff1f5",
-            "fig_bg": "#e6e9ef",
+            "bg": "#ffffff",
+            "fig_bg": "#ffffff",
             "fg": "#4c4f69",
             "title": "#4c4f69",
             "tick": "#6c6f85",

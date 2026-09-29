@@ -252,7 +252,7 @@ class ReportAgent(BaseAgent):
 
     def _llm_section(self, section_key: str, data_str: str) -> str:
         """Query the LLM for one report section, or return a fallback."""
-        if not self.api_key:
+        if not self.llm_available:
             return ""
         prompt = _SECTION_PROMPTS[section_key].format(data=data_str)
         text = self.query_llm(prompt, max_tokens=200)
@@ -274,7 +274,7 @@ class ReportAgent(BaseAgent):
             f"Period range: {per_str}. "
             f"Mean QC score: {stats.get('mean_qc_score', '?'):.0f}/100."
         )
-        if self.api_key:
+        if self.llm_available:
             llm_text = self._llm_section("loading", str(stats))
             return llm_text or base
         return base
@@ -290,7 +290,7 @@ class ReportAgent(BaseAgent):
             + (f"Flagged: {', '.join(flagged)}. " if flagged else "")
             + "All other stations met minimum data quality criteria."
         )
-        if self.api_key:
+        if self.llm_available:
             llm_text = self._llm_section(
                 "qc", f"n_flagged={n_flagged}, flagged={flagged}"
             )
@@ -307,7 +307,7 @@ class ReportAgent(BaseAgent):
             f"Mean correction: {ds.get('mean', '?'):.3f} log₁₀(Ω·m). "
             f"{ds.get('n_shifted', '?')} station(s) showed significant shift (>0.05)."
         )
-        if self.api_key:
+        if self.llm_available:
             llm_text = self._llm_section("static_shift", str(ds))
             return llm_text or base
         return base
@@ -327,7 +327,7 @@ class ReportAgent(BaseAgent):
             f"character ({n_1d}/{n_2d}/{n_3d} 1-D/2-D/3-D observations). "
             f"Consensus geoelectric strike: {st:.1f}° ± {iqr:.1f}°."
         )
-        if self.api_key:
+        if self.llm_available:
             data_str = f"1D={n_1d}, 2D={n_2d}, 3D={n_3d}, strike={st:.1f}, iqr={iqr:.1f}"
             llm_text = self._llm_section("phase_analysis", data_str)
             return llm_text or base
@@ -343,7 +343,7 @@ class ReportAgent(BaseAgent):
             + (f"Data–model RMS misfit: {rms:.3f} log₁₀(Ω·m). " if rms else "")
             + "The synthetic response covers the full available period range."
         )
-        if self.api_key:
+        if self.llm_available:
             llm_text = self._llm_section("forward", f"rms={rms}")
             return llm_text or base
         return base
@@ -354,7 +354,7 @@ class ReportAgent(BaseAgent):
         sections: dict[str, str],
         warnings: list,
     ) -> str:
-        if self.api_key:
+        if self.llm_available:
             summary = " | ".join(
                 f"{k}: {v[:100]}" for k, v in sections.items() if v.strip()
             )

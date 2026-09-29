@@ -2220,6 +2220,47 @@ def _surface_contours(options):
 _GEOLOGY_LEGEND_MARGIN_PX = 210
 
 
+def apply_vertical_exaggeration(fig, ve: float = 0.0,
+                                *, max_ratio: float = 3.0) -> float:
+    """Stretch the scene's vertical axis by *ve* (``0`` = automatic).
+
+    Sets ``aspectmode="manual"`` with an aspect ratio from the data
+    extents of every trace, so x and y stay true to each other and z is
+    exaggerated (capped at *max_ratio* times the horizontal size).
+    Automatic makes the depth about half the horizontal extent (1-50x).
+    Returns the factor used (1.0 when the scene has no 3-D extent).
+    """
+    spans = {"x": [], "y": [], "z": []}
+    for tr in fig.data:
+        for k in spans:
+            v = getattr(tr, k, None)
+            if v is None or isinstance(v, str):
+                continue
+            try:
+                a = np.asarray(v, dtype=float)
+            except (TypeError, ValueError):
+                continue
+            a = a[np.isfinite(a)]
+            if a.size:
+                spans[k].extend([a.min(), a.max()])
+    if not all(spans[k] for k in spans):
+        return 1.0
+    dx = max(float(np.ptp(spans["x"])), 1e-9)
+    dy = max(float(np.ptp(spans["y"])), 1e-9)
+    dz = max(float(np.ptp(spans["z"])), 1e-9)
+    horiz = max(dx, dy)
+    ve = float(ve or 0.0)
+    if ve <= 0:
+        ve = float(np.clip(0.5 * horiz / dz, 1.0, 50.0))
+    # a single-line fence has (almost) no cross-line extent: keep the box
+    # at least a fifth as deep as it is long, or it collapses to a sheet
+    fig.update_layout(scene=dict(
+        aspectmode="manual",
+        aspectratio=dict(x=max(dx / horiz, 0.2), y=max(dy / horiz, 0.2),
+                         z=min(ve * dz / horiz, max_ratio))))
+    return ve
+
+
 def _style_3d(fig, options, colors) -> None:
     title = options.title or f"pyCSAMT 3-D {options.mode} map"
     xu = getattr(options, "x_unit", "m")
@@ -2247,6 +2288,9 @@ def _style_3d(fig, options, colors) -> None:
         font=dict(color=colors["text"]),
         margin=dict(l=0, r=right_margin, t=40, b=0),
     )
+    ve = getattr(options, "vertical_exaggeration", None)
+    if ve is not None:
+        apply_vertical_exaggeration(fig, ve)
     if show_legend:
         _, legend_annotations = geology_legend_shapes_annotations(bands)
         # Append rather than replace -- an empty-figure message

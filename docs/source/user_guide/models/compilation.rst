@@ -10,6 +10,17 @@ their executable, and launches them as a subprocess (see
 any of them. This page covers the one step that has to happen before any of
 that: getting a working executable in the first place.
 
+.. tip::
+
+   In the desktop application, **Tools ▸ Solver Builder…** does all of
+   this with a checklist and a progress bar: it checks each solver's
+   dependencies, can install a private compiler toolchain for the current
+   user (no administrator rights; created with micromamba from conda-forge),
+   builds from the bundled source or your own source folder, and registers
+   the binary so the Inversion window uses it automatically. On Windows,
+   MARE2DEM is built inside WSL2 and run from the Inversion window through
+   WSL.
+
 ``pycsamt/models/_solver_build/`` holds a small set of bash scripts written
 for exactly this. They work identically in intent on Windows, Linux, and
 macOS, detect (and, if asked, install) a Fortran toolchain, and print exactly
@@ -69,7 +80,8 @@ the script's own flags applies to all three.
    * - ``mare2dem.sh``
      - MARE2DEM
      - downloaded on demand
-     - Intel ``mpiifort``/``mpiicc`` + MKL, Linux/macOS/WSL only
+     - MPI + oneMKL: Intel oneAPI, or GNU gfortran + OpenMPI + free oneMKL
+       (Linux/macOS/WSL only)
 
 A ``build.sh`` dispatcher forwards to whichever of these you name -- it is
 what ``pycsamt build <solver>`` itself calls into:
@@ -318,9 +330,16 @@ reimplementation:
 * its source is **not vendored** (``pycsamt/models/mare2dem/_source/`` ships
   only a ``.gitkeep`` -- the real tree is roughly 49 MB and under its own
   license), so it has to be downloaded first;
-* it genuinely needs an Intel MPI Fortran/C toolchain and the Intel MKL for
-  ScaLAPACK/BLACS -- there is no generic gfortran/conda path for it the way
-  there is for ModEM and Occam2D;
+* it needs an MPI Fortran/C toolchain and Intel **oneMKL** (its forward
+  solvers call MKL's sparse direct solver; there is no OpenBLAS
+  substitute). oneMKL is free, and Intel's *compilers* are not required:
+  besides Intel oneAPI, GNU gfortran + OpenMPI + oneMKL (from conda-forge,
+  pip ``mkl-devel``/``mkl-include`` or apt ``libmkl-dev``) builds it.
+  :class:`~pycsamt.models.mare2dem.SourceManager` then applies a few source
+  fixes (Intel-only syntax, plus two upstream memory bugs that made GNU
+  builds crash) -- verified on 2026-09-25 with gfortran 15/16, OpenMPI 5 and
+  oneMKL: the half-space benchmark in
+  ``pycsamt/forward/tests/test_maxwell_mare2dem.py`` passes;
 * it **cannot be built natively on Windows at all** --
   ``SourceManager.build()`` raises immediately on ``sys.platform ==
   "win32"``.

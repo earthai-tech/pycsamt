@@ -22,6 +22,7 @@ import numpy as np
 from ..api.control import wrap_phase
 from ..api.labels import LOG10_PERIOD_LABEL, PERIOD_LABEL, STATION_LABEL
 from ..api.station import PYCSAMT_STATION_RENDERING
+from ..api.station import _NICE_STEPS
 from ..core.base import CoreObject
 from ._core import _iter_items, _name, ensure_sites
 from .inspect import _df_resphase
@@ -82,11 +83,12 @@ class PlotResPhasePseudoSection(CoreObject):
         (default) auto-detects: every component that carries finite data
         in at least one group is plotted, in canonical ``xy, yx, xx, yy``
         order.
-    res_phase_ratio : float, default ``2/3``
-        Height of a resistivity panel relative to its phase panel.  The
-        default makes resistivity two-thirds the height of phase; pass
-        ``2.0`` to give resistivity two-thirds of the row-pair and phase
-        the remaining third, or ``1.0`` for equal panels.
+    res_phase_ratio : float, default ``2.0``
+        Height of a resistivity panel relative to its phase panel, fed
+        straight into the ``[res, phase]`` ``height_ratios``. The default
+        gives resistivity two-thirds of the row-pair and phase the
+        remaining third; pass ``1.0`` for equal panels, or a fraction
+        below ``1.0`` to make phase the taller of the two.
     station_side : {"top", "bottom", "none"}, default "top"
         Where the station axis (ticks, names, and inverted-triangle
         markers) is drawn.  ``"top"`` matches the pyCSAMT section
@@ -117,9 +119,12 @@ class PlotResPhasePseudoSection(CoreObject):
         ``None`` uses the 5th/95th percentiles.
     log_res : bool, default True
         Map :math:`\log_{10}\rho_a` rather than :math:`\rho_a` to colour.
-    log_period : bool, default False
-        Label the vertical axis with :math:`\log_{10}T` on a linear axis.
-        ``False`` keeps :math:`T` in seconds on a logarithmic axis.
+    log_period : bool, default True
+        Label the vertical axis with :math:`\log_{10}T` on a linear axis
+        -- the convention :func:`~pycsamt.emtools.tensor
+        .plot_phase_tensor_psection` and the rest of this module's
+        pseudo-section family already default to. ``False`` keeps
+        :math:`T` in seconds on a logarithmic axis instead.
     res_cmap, phase_cmap : str or Colormap, optional
         Colormaps.  ``None`` uses the pyCSAMT defaults
         (``"jet_r"`` for resistivity, ``"plasma"`` for phase).
@@ -183,11 +188,11 @@ class PlotResPhasePseudoSection(CoreObject):
         sites: Any,
         *,
         components: list[str] | tuple[str, ...] | None = None,
-        res_phase_ratio: float = 2.0 / 3.0,
+        res_phase_ratio: float = 2.0,
         phase_range: str | tuple[float, float] = "0-90",
         res_range: tuple[float, float] | None = None,
         log_res: bool = True,
-        log_period: bool = False,
+        log_period: bool = True,
         res_cmap: Any = None,
         phase_cmap: Any = None,
         share_scales: bool = True,
@@ -496,18 +501,27 @@ class PlotResPhasePseudoSection(CoreObject):
             # a repeated "Station" caption above every column only adds
             # noise -- the triangle markers already read as stations
             st.xlabel = ""
-        # columns are narrow, so thin the names harder than the global
-        # station-axis default would -- and prefer a step that divides
-        # ``n_st - 1`` so the last tick lands on the final station
-        # instead of being crammed next to the previous one
+        # Columns are narrow, so thin the names harder than the global
+        # station-axis default ("auto") would if it saw the whole shared
+        # figure width -- but pick the step the same way
+        # StationAxisStyle.compute_every() does (round up to a "nice"
+        # step) rather than requiring it to exactly divide ``n_st - 1``.
+        # That divisor search used to leave ``every=1`` (every station
+        # labelled -- exactly the clutter this thinning exists to avoid)
+        # whenever ``n_st - 1`` happened to be prime or otherwise
+        # low-divisor (e.g. n_st=44 or 60); label_indices() already
+        # force-includes the final station regardless of whether the
+        # step evenly divides the run, so that constraint bought nothing.
         if self.station_label_step:
             st.every = int(self.station_label_step)
         elif n_st > 3:
             target = n_st / (6.0 if n_col <= 2 else 4.5)
-            divs = [d for d in range(1, n_st) if (n_st - 1) % d == 0]
-            st.every = min(
-                divs, key=lambda d: abs(d - target)
-            ) if divs else max(1, round(target))
+            for step in _NICE_STEPS:
+                if step >= target:
+                    st.every = step
+                    break
+            else:
+                st.every = max(1, round(target))
         else:
             st.every = 1
         return st

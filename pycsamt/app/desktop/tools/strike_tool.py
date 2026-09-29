@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
@@ -156,8 +156,17 @@ class StrikeAnalyzerDialog(QDialog):
         top.setStretchFactor(0, 0)
 
         # Rose diagram canvas
-        self._canvas = MplCanvas(self, toolbar=False)
-        top.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            self,
+            toolbar=False,
+            empty_title="No rose diagram yet",
+            empty_reason="Click Run Analysis to compute regional strike.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            self._on_run, tooltip="Rerun strike analysis"
+        )
+        top.addWidget(self._canvas_view)
         top.setStretchFactor(1, 1)
 
         root.addWidget(top, stretch=2)
@@ -206,6 +215,10 @@ class StrikeAnalyzerDialog(QDialog):
             self._status_lbl.setText(
                 "No strike estimates — check data coverage."
             )
+            self._canvas_view.show_unavailable(
+                "No strike estimates",
+                "No strike estimates were returned — check data coverage.",
+            )
             return
         self._status_lbl.setText(f"Done — {len(df)} stations.")
         self._fill_table(df)
@@ -214,6 +227,7 @@ class StrikeAnalyzerDialog(QDialog):
     def _on_error(self, msg: str) -> None:
         self._run_btn.setEnabled(True)
         self._status_lbl.setText(f"Error: {msg}")
+        self._canvas_view.show_unavailable("Strike analysis failed", msg)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -243,6 +257,11 @@ class StrikeAnalyzerDialog(QDialog):
     def _draw_rose(self, df) -> None:
         angles = df["ang"].dropna().values
         if angles.size == 0:
+            self._canvas_view.show_unavailable(
+                "No strike angles to plot",
+                "All per-station strike estimates were NaN for this period"
+                " band.",
+            )
             return
         fig = self._canvas.figure
         fig.clear()
@@ -280,3 +299,4 @@ class StrikeAnalyzerDialog(QDialog):
         ax.set_theta_zero_location("N")
         ax.set_theta_direction(-1)
         self._canvas.draw()
+        self._canvas_view.show_canvas()

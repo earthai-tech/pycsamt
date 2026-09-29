@@ -591,3 +591,145 @@ class TestStratagemSurvey:
         edi_dir, csv = self._setup(tmp_path)
         sv = StratagemSurvey(edi_dir, csv, epsg=32649).fit()
         assert sv.raw_reader_ is None
+
+    def test_verbose_fit_message(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit()
+        out = capsys.readouterr().out
+        assert "loaded 3 EDI files" in out
+        assert "coordinates injected" in out
+
+    def test_drop_stations_removes_by_index(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        _make_edi_dir(tmp_path, n=5)
+        csv = _make_coord_csv(tmp_path, n=4)  # one row per remaining station
+        sv = StratagemSurvey(
+            tmp_path / "edis", csv, epsg=32649, drop_stations=[0], verbose=1
+        ).fit()
+        assert sv.n_stations_ == 4
+        out = capsys.readouterr().out
+        assert "using 4 after dropping 1 station(s)" in out
+
+    def test_raw_dir_loaded_successfully(self, tmp_path):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        raw_dir = tmp_path / "raw"
+        raw_dir.mkdir()
+        raw_row = (
+            " 1.130e+001 2.930e+000 2.400e+001  3.728e+001  2.152e+002 "
+            "-5.546e-001 -1.695e+002  1.336e+002  3.336e+004 -2.382e+002 "
+            "-3.418e+003  3.016e+001  1.338e+002  2.845e+001 -1.052e+002 "
+            "-2.512e+002 -1.384e+004 -2.318e+002  1.866e+004\n"
+        )
+        for i in range(3):
+            (raw_dir / f"X2HX.{i + 1:03d}").write_text(raw_row, encoding="utf-8")
+
+        sv = StratagemSurvey(
+            edi_dir, csv, epsg=32649, raw_dir=raw_dir, verbose=1
+        ).fit()
+        assert sv.raw_reader_ is not None
+        assert sv.raw_reader_.n_stations_ == 3
+
+    def test_raw_dir_failure_is_caught(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        sv = StratagemSurvey(
+            edi_dir, csv, epsg=32649, raw_dir=tmp_path / "no_such_raw_dir", verbose=1
+        ).fit()
+        assert sv.raw_reader_ is None
+        assert "raw reader failed" in capsys.readouterr().out
+
+    def test_run_qc_verbose_message(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit().run_qc(
+            include_skew=False
+        )
+        out = capsys.readouterr().out
+        assert "QC:" in out and "flagged" in out
+
+    def test_remove_static_shift_verbose_message(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit().remove_static_shift()
+        out = capsys.readouterr().out
+        assert "static shift" in out and "median fac_z=" in out
+
+    def test_drop_frequencies_verbose_message(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit().drop_frequencies(
+            fmin=1.0
+        )
+        out = capsys.readouterr().out
+        assert "freq filter" in out
+
+    def test_remove_noises_verbose_message(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit().remove_noises()
+        out = capsys.readouterr().out
+        assert "noise removal" in out
+
+    def test_export_verbose_message(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        out_dir = tmp_path / "exp"
+        StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit().export(out_dir)
+        out = capsys.readouterr().out
+        assert "export:" in out
+
+    def test_rename_verbose_message_and_explicit_source(self, tmp_path, capsys):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        out_ren = tmp_path / "ren"
+        sv = StratagemSurvey(edi_dir, csv, epsg=32649, verbose=1).fit()
+        sv.rename(basename="T.", dst_path=out_ren, source=edi_dir)
+        out = capsys.readouterr().out
+        assert "renamed 3 files" in out
+
+    def test_rename_falls_back_to_edi_objects(self, tmp_path):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        out_ren = tmp_path / "ren2"
+        sv = StratagemSurvey(edi_dir, csv, epsg=32649).fit()
+        # no export() call -> rename must fall back to edi_objects_
+        sv.rename(basename="Q.", dst_path=out_ren)
+        assert sv._renamer_.n_renamed_ == 3
+
+    def test_summary_includes_all_optional_sections(self, tmp_path):
+        from pycsamt.stratagem.survey import StratagemSurvey
+
+        edi_dir, csv = self._setup(tmp_path, n=3)
+        out_exp = tmp_path / "exp2"
+        out_ren = tmp_path / "ren3"
+        sv = (
+            StratagemSurvey(edi_dir, csv, epsg=32649)
+            .fit()
+            .run_qc(include_skew=False)
+            .remove_static_shift()
+            .drop_frequencies(fmin=1.0)
+            .remove_noises()
+            .export(out_exp)
+            .rename(basename="T.", dst_path=out_ren)
+        )
+        s = sv.summary()
+        assert "coord order" in s
+        assert "QC flags" in s
+        assert "SS fac_z" in s
+        assert "freq filter" in s
+        assert "noise rm" in s
+        assert "export" in s
+        assert "rename" in s

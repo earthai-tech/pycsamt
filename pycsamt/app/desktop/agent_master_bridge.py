@@ -1,6 +1,16 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""Bridge from the desktop app to the Agent Master web interface."""
+"""Bridge from the desktop app to the Agent Master web interface.
+
+Agent Master always runs as a separate subprocess (a Dash server), never
+in-process. When running from source that subprocess is
+``sys.executable -m pycsamt.app.agent_master``; a PyInstaller-frozen
+``pycsamt-desktop`` build has no real Python interpreter behind
+``sys.executable`` for ``-m`` to work against, so the frozen branch instead
+re-execs the same frozen binary with ``AGENT_MASTER_SERVER_FLAG`` --
+``packaging/pyinstaller/entry_desktop.py`` recognizes that flag and
+dispatches to Agent Master's own entry point instead of the desktop app's.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +28,11 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 _PROCESS: subprocess.Popen | None = None
 _LOCK = threading.Lock()
+
+#: Sentinel CLI flag recognized by ``packaging/pyinstaller/entry_desktop.py``
+#: when re-exec'ing a frozen ``pycsamt-desktop`` binary as an Agent Master
+#: server subprocess (see ``launch_agent_master``'s frozen-build branch).
+AGENT_MASTER_SERVER_FLAG = "--agent-master-server"
 
 
 @dataclass(frozen=True)
@@ -79,16 +94,35 @@ def launch_agent_master(
                 process=_PROCESS,
             )
 
-        cmd = [
-            sys.executable,
-            "-m",
-            "pycsamt.app.agent_master",
-            "--host",
-            host,
-            "--port",
-            str(int(port)),
-            "--no-browser",
-        ]
+        if getattr(sys, "frozen", False):
+            # A PyInstaller-frozen ``pycsamt-desktop`` binary has no real
+            # Python interpreter behind ``sys.executable`` -- it *is* the
+            # frozen app, so ``-m pycsamt.app.agent_master`` cannot work
+            # the way it does when running from source. Re-exec the same
+            # frozen binary with a sentinel flag instead; the packaged
+            # entry point (packaging/pyinstaller/entry_desktop.py) checks
+            # for it before launching the desktop app itself and
+            # dispatches to Agent Master's own server entry point.
+            cmd = [
+                sys.executable,
+                AGENT_MASTER_SERVER_FLAG,
+                "--host",
+                host,
+                "--port",
+                str(int(port)),
+                "--no-browser",
+            ]
+        else:
+            cmd = [
+                sys.executable,
+                "-m",
+                "pycsamt.app.agent_master",
+                "--host",
+                host,
+                "--port",
+                str(int(port)),
+                "--no-browser",
+            ]
         env = dict(os.environ)
         env.setdefault("PYTHONDONTWRITEBYTECODE", "1")
         kwargs: dict[str, object] = {

@@ -293,6 +293,205 @@ class TestSiteSelect:
         )
         assert result.exception is None or isinstance(result.exception, SystemExit)
 
+    # --- verbose messages for each filter ---
+
+    def test_stations_filter_verbose_message(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        first = sorted(site_edi_dir.glob("*.edi"))[0].stem
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--stations",
+                first,
+                "--dry-run",
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "after name filter" in result.output
+
+    def test_freq_filter_verbose_message(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--freq",
+                "0.001:100000",
+                "--dry-run",
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "after freq filter" in result.output
+
+    def test_drop_empty_verbose_message(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--drop-empty",
+                "--dry-run",
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "after drop_empty" in result.output
+
+    # --- bbox filter ---
+
+    def test_bbox_filter_dry_run_verbose(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--bbox",
+                "-1,-1,1,1",
+                "--dry-run",
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "after bbox filter" in result.output
+
+    def test_bbox_bad_format_fails(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--bbox",
+                "not,a,bbox",
+                "--dry-run",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "LAT_MIN" in result.output
+
+    # --- keep-finite / phase-err-thresh ---
+
+    def test_keep_finite_dry_run_verbose(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--keep-finite",
+                "--dry-run",
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "after keep_finite" in result.output
+
+    def test_phase_err_thresh_dry_run_verbose(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--phase-err-thresh",
+                "5.0",
+                "--dry-run",
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "after phase-err mask" in result.output
+
+    # --- non-dry-run write + output formats ---
+
+    def test_write_output_verbose_message(
+        self, runner: CliRunner, site_edi_dir: Path, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "subset_verbose"
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--output-dir",
+                str(out),
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Wrote" in result.output
+
+    def test_write_output_json_format(
+        self, runner: CliRunner, site_edi_dir: Path, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "subset_json"
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--output-dir",
+                str(out),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "written" in data
+
+    def test_write_output_csv_format(
+        self, runner: CliRunner, site_edi_dir: Path, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "subset_csv"
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "select",
+                str(site_edi_dir),
+                "--output-dir",
+                str(out),
+                "--format",
+                "csv",
+            ],
+        )
+        assert result.exit_code == 0
+        lines = [l for l in result.output.splitlines() if l.strip()]
+        assert lines[0] == "station"
+
+    def test_plain_invocation_no_write_text_output(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        """No --dry-run and no --output-dir: prints the text summary only."""
+        result = runner.invoke(main, ["site", "select", str(site_edi_dir)])
+        assert result.exit_code == 0
+        assert "Selected" in result.output
+        assert "Written to" not in result.output
+
 
 # ---------------------------------------------------------------------------
 # pycsamt site edit
@@ -730,6 +929,148 @@ class TestSiteCompute:
         result = runner.invoke(main, ["site", "compute", "strike"])
         assert result.exit_code != 0
         assert "No active survey" in result.output
+
+    # --- error paths (library raises, CLI reports and exits 1) ---
+
+    def test_strike_error_path(
+        self, runner: CliRunner, site_edi_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.site.compute as sc
+
+        def _boom(*a, **kw):
+            raise ValueError("boom")
+
+        monkeypatch.setattr(sc, "strike_estimate", _boom)
+        result = runner.invoke(main, ["site", "compute", "strike", str(site_edi_dir)])
+        assert result.exit_code == 1
+        assert "Error: boom" in result.output
+
+    def test_resistivity_error_path(
+        self, runner: CliRunner, site_edi_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.site.compute as sc
+
+        def _boom(*a, **kw):
+            raise ValueError("boom")
+
+        monkeypatch.setattr(sc, "res_at_freq", _boom)
+        result = runner.invoke(
+            main,
+            ["site", "compute", "resistivity", str(site_edi_dir), "--freq", "10.0"],
+        )
+        assert result.exit_code == 1
+        assert "Error: boom" in result.output
+
+    def test_phase_slope_error_path(
+        self, runner: CliRunner, site_edi_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.site.compute as sc
+
+        def _boom(*a, **kw):
+            raise ValueError("boom")
+
+        monkeypatch.setattr(sc, "phase_slope", _boom)
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "compute",
+                "phase-slope",
+                str(site_edi_dir),
+                "--band",
+                "0.1:1000",
+            ],
+        )
+        assert result.exit_code == 1
+        assert "Error: boom" in result.output
+
+    def test_tipper_error_path(
+        self, runner: CliRunner, site_edi_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.site.compute as sc
+
+        def _boom(*a, **kw):
+            raise ValueError("boom")
+
+        monkeypatch.setattr(sc, "tipper_magnitude", _boom)
+        result = runner.invoke(main, ["site", "compute", "tipper", str(site_edi_dir)])
+        assert result.exit_code == 1
+        assert "Error: boom" in result.output
+
+    # --- phase-slope band inference ---
+
+    def test_phase_slope_bad_band_format(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "site",
+                "compute",
+                "phase-slope",
+                str(site_edi_dir),
+                "--band",
+                "not_a_band",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "FMIN:FMAX" in result.output
+
+    def test_phase_slope_infers_band_when_omitted(
+        self, runner: CliRunner, site_edi_dir: Path
+    ) -> None:
+        """No --band: the command infers the range from each site's freq."""
+        result = runner.invoke(
+            main, ["site", "compute", "phase-slope", str(site_edi_dir)]
+        )
+        assert result.exit_code == 0
+
+    def test_phase_slope_no_inferable_freq_raises(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.cli.commands.site.compute as cmod
+
+        class _NoFreqSite:
+            pass
+
+        monkeypatch.setattr(
+            cmod, "_get_sites", lambda *a, **kw: [_NoFreqSite(), _NoFreqSite()]
+        )
+        result = runner.invoke(
+            main, ["site", "compute", "phase-slope", "--survey", "."]
+        )
+        assert result.exit_code != 0
+        assert "Cannot infer frequency range" in result.output
+
+    # --- _emit direct coverage (dict / list / DataFrame inputs) ---
+
+    def test_emit_with_dict_text(self, capsys: pytest.CaptureFixture[str]) -> None:
+        from pycsamt.cli.commands.site.compute import _emit
+
+        _emit({"station": "S01", "theta_deg": 12.0}, "text")
+        out = capsys.readouterr().out
+        assert "S01" in out
+
+    def test_emit_with_list_of_dicts_json(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from pycsamt.cli.commands.site.compute import _emit
+
+        _emit([{"station": "S01"}, {"station": "S02"}], "json")
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert len(data) == 2
+
+    def test_emit_with_dataframe_csv(self, capsys: pytest.CaptureFixture[str]) -> None:
+        import pandas as pd
+
+        from pycsamt.cli.commands.site.compute import _emit
+
+        df = pd.DataFrame({"station": ["S01", "S02"]})
+        _emit(df, "csv")
+        out = capsys.readouterr().out
+        lines = [l for l in out.splitlines() if l.strip()]
+        assert lines[0] == "station"
 
 
 # ---------------------------------------------------------------------------

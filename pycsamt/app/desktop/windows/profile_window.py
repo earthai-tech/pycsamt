@@ -13,13 +13,14 @@ Left params panel
 
 Right content
 ─────────────
-  7-tab ProfilePanel:
+  ProfilePanel tabs:
     ρₐ / φ  |  Pseudosection ρₐ  |  Pseudosection φ  |
-    Tipper  |  Phase Tensor       |  PT Strip  |  2D Section
+    Tipper (when available)  |  Phase Tensor  |  PT Strip
 """
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -27,6 +28,8 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -46,7 +49,7 @@ from pycsamt.app.desktop.windows._base import (
 
 
 class ProfileViewerWindow(PanelWindow):
-    """Floating Profile Viewer — params left, 6-tab plot panel right."""
+    """Floating Profile Viewer with parameters and scientific plots."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(
@@ -61,6 +64,22 @@ class ProfileViewerWindow(PanelWindow):
     # ── Params panel (left) ───────────────────────────────────────────
 
     def _build_params(self, layout: QVBoxLayout) -> None:
+        grp_line, lay_line = make_group("Survey lines")
+        self._line_list = QListWidget(self)
+        self._line_list.setSelectionMode(
+            QListWidget.SelectionMode.MultiSelection
+        )
+        self._line_list.setMaximumHeight(112)
+        self._line_list.setToolTip(
+            "Select one or more survey lines. All lines is the default."
+        )
+        self._line_list.itemSelectionChanged.connect(
+            self._on_line_selection_changed
+        )
+        self._line_list.itemClicked.connect(self._on_line_item_clicked)
+        lay_line.addWidget(self._line_list)
+        layout.addWidget(grp_line)
+
         # ── Station ───────────────────────────────────────────────────
         grp_sta, lay_sta = make_group("Station")
 
@@ -153,6 +172,21 @@ class ProfileViewerWindow(PanelWindow):
         lay_opt.addWidget(self._chk_errbar)
         lay_opt.addWidget(self._chk_legend)
         lay_opt.addWidget(self._chk_bw)
+        skew_row = QFormLayout()
+        self._combo_pt_skew = QComboBox()
+        self._combo_pt_skew.addItems(["Signed skew β", "Absolute skew |β|"])
+        self._combo_pt_skew.setToolTip(
+            "Choose signed or absolute skew colouring — shared by the\n"
+            "Phase Tensor and PT Strip tabs. Absolute (|β|) puts the\n"
+            "1-D/2-D vs 3-D structure threshold (|β| = 3°) on a plain\n"
+            "0..max colour scale instead of splitting it across a\n"
+            "signed -10..10° range."
+        )
+        self._combo_pt_skew.currentIndexChanged.connect(
+            self._on_pt_skew_mode_changed
+        )
+        skew_row.addRow("Skew colour:", self._combo_pt_skew)
+        lay_opt.addLayout(skew_row)
         layout.addWidget(grp_opt)
 
         # ── Topography ────────────────────────────────────────────────
@@ -218,16 +252,135 @@ class ProfileViewerWindow(PanelWindow):
         self._profile_panel = ProfilePanel(self)
         layout.addWidget(self._profile_panel)
 
+        # Floating hover-reveal "hard refresh" button on every tab's own
+        # canvas, alongside the sidebar Refresh button — see
+        # MplCanvas.set_refresh_callback() for why it never overlaps the
+        # canvas's own "open in separate window" toolbar icon.
+        for canvas in (
+            self._profile_panel._canvas_rho_phi,
+            self._profile_panel._canvas_rho_ps,
+            self._profile_panel._canvas_ph_ps,
+            self._profile_panel._canvas_tipper,
+            self._profile_panel._canvas_pt,
+            self._profile_panel._canvas_pt_strip,
+        ):
+            canvas.set_refresh_callback(
+                self._on_refresh,
+                tooltip="Hard refresh — recompute the current tab",
+            )
+
     # ── Public API ────────────────────────────────────────────────────
 
-    def set_sites(self, sites) -> None:
+    def set_sites(self, sites, dataframe=None) -> None:
         super().set_sites(sites)
+        self._all_sites = sites
+        try:
+            self._station_to_line = self._build_line_map(sites, dataframe)
+            self._populate_line_list()
+        except Exception:
+            self._station_to_line = {}
+            self._line_list.clear()
+            self._line_list.setEnabled(False)
         try:
             self._profile_panel.set_sites(sites)
         except Exception:
             pass  # panel redraw errors must not block combo population
         self._populate_station_combo(sites)
         self._update_period_range(sites)
+
+    def _build_line_map(self, sites, dataframe=None) -> dict[str, str]:
+        """Map station names to survey lines from metadata or source paths."""
+        mapping: dict[str, str] = {}
+        if dataframe is not None and {"ID", "Line"}.issubset(dataframe.columns):
+            for row in dataframe[["ID", "Line"]].itertuples(index=False):
+                line = str(row.Line)
+                if line and line != "—":
+                    mapping[str(row.ID)] = line
+        for site in sites:
+            name = str(getattr(site, "name", ""))
+            if name in mapping:
+                continue
+            try:
+                path = getattr(site.edi, "path", None)
+                if path is not None:
+                    mapping[name] = str(path.parent.name)
+            except Exception:
+                pass
+        return mapping
+
+    def _populate_line_list(self) -> None:
+        counts: dict[str, int] = {}
+        for line in self._station_to_line.values():
+            counts[line] = counts.get(line, 0) + 1
+
+        self._line_list.blockSignals(True)
+        self._line_list.clear()
+        all_item = QListWidgetItem(
+            f"All lines ({len(self._all_sites)} stations)"
+        )
+        all_item.setData(Qt.ItemDataRole.UserRole, None)
+        self._line_list.addItem(all_item)
+        all_item.setSelected(True)
+        for line in sorted(counts):
+            item = QListWidgetItem(f"{line} ({counts[line]} stations)")
+            item.setData(Qt.ItemDataRole.UserRole, line)
+            self._line_list.addItem(item)
+        self._line_list.setEnabled(bool(counts))
+        self._line_list.blockSignals(False)
+
+    def _on_line_selection_changed(self) -> None:
+        """Apply selected survey lines only to the Profile Viewer."""
+        if not hasattr(self, "_all_sites") or self._line_list.count() == 0:
+            return
+        selected_items = self._line_list.selectedItems()
+        specific = [
+            item.data(Qt.ItemDataRole.UserRole)
+            for item in selected_items
+            if item.data(Qt.ItemDataRole.UserRole) is not None
+        ]
+        all_item = self._line_list.item(0)
+        self._line_list.blockSignals(True)
+        if specific:
+            all_item.setSelected(False)
+        elif all_item not in selected_items:
+            all_item.setSelected(True)
+        self._line_list.blockSignals(False)
+
+        if specific:
+            from pycsamt.site.base import Sites
+
+            wanted = set(specific)
+            sites = Sites(
+                [
+                    site
+                    for site in self._all_sites
+                    if self._station_to_line.get(site.name) in wanted
+                ]
+            )
+        else:
+            sites = self._all_sites
+
+        self._profile_panel.set_sites(sites)
+        names = [site.name for site in sites]
+        current = self._profile_panel._ctrl._station_id
+        if current not in names:
+            self._profile_panel._ctrl.set_station(names[0] if names else None)
+        self._populate_station_combo(sites)
+        self._update_period_range(sites)
+        label = ", ".join(specific) if specific else "All lines"
+        self._info_lbl.setText(f"Lines: {label} · {len(sites)} stations")
+
+    def _on_line_item_clicked(self, item: QListWidgetItem) -> None:
+        """Give the synthetic All-lines row radio-button-like behavior."""
+        is_all = item.data(Qt.ItemDataRole.UserRole) is None
+        self._line_list.blockSignals(True)
+        if is_all:
+            self._line_list.clearSelection()
+            item.setSelected(True)
+        elif self._line_list.count():
+            self._line_list.item(0).setSelected(False)
+        self._line_list.blockSignals(False)
+        self._on_line_selection_changed()
 
     def set_station(self, station_id: str) -> None:
         """Select a station by ID — called from main window on double-click."""
@@ -257,32 +410,22 @@ class ProfileViewerWindow(PanelWindow):
         from pycsamt.topo import configure_topo
 
         configure_topo(enabled=checked)
+        self._profile_panel._mark_all_dirty()
         self._spin_exag.setEnabled(checked)
-        # Sync the section_panel checkbox if it exists
-        try:
-            sp = self._profile_panel._section_panel
-            sp._chk_topo.blockSignals(True)
-            sp._chk_topo.setChecked(checked)
-            sp._chk_topo.blockSignals(False)
-        except Exception:
-            pass
         # Redraw pseudosection tabs
         tab = self._profile_panel._tabs.currentIndex()
         if tab in (1, 2):
             self._profile_panel._redraw_current_tab()
-        elif tab == 6:
-            self._profile_panel._section_panel._redraw()
 
     def _on_exag_changed(self, value: float) -> None:
         from pycsamt.topo import configure_topo
 
         configure_topo(exaggeration=value)
+        self._profile_panel._mark_all_dirty()
         if self._chk_topo.isChecked():
             tab = self._profile_panel._tabs.currentIndex()
             if tab in (1, 2):
                 self._profile_panel._redraw_current_tab()
-            elif tab == 5:
-                self._profile_panel._section_panel._redraw()
 
     # ── Slots ─────────────────────────────────────────────────────────
 
@@ -296,9 +439,21 @@ class ProfileViewerWindow(PanelWindow):
         if self._profile_panel._tabs.currentIndex() == 0:
             self._profile_panel._redraw_rho_phi()
 
+    def _on_pt_skew_mode_changed(self, index: int) -> None:
+        """Switch Phase Tensor / PT Strip colouring between signed and
+        absolute skew — one shared setting drives both tabs."""
+        panel = self._profile_panel
+        panel._ctrl.set_pt_absolute_skew(index == 1)
+        panel._dirty_canvases.add(panel._canvas_pt)
+        panel._dirty_canvases.add(panel._canvas_pt_strip)
+        current = panel._tabs.currentWidget()
+        if current in (panel._canvas_pt, panel._canvas_pt_strip):
+            panel._redraw_current_tab(force=True)
+
     def _on_component_changed(self) -> None:
         """Push new component selection to controller and redraw ρₐ/φ tab."""
         self._apply_components()
+        self._profile_panel._mark_all_dirty()
         # Only re-render if ρₐ/φ tab (index 0) is active or
         # the user is on that tab — always safe to refresh it
         tab = self._profile_panel._tabs.currentIndex()
@@ -346,6 +501,7 @@ class ProfileViewerWindow(PanelWindow):
         # Explicit refresh → force the Phase Tensor tab to fully recompute,
         # even if the panel-level key would otherwise say "nothing changed".
         self._profile_panel.invalidate_phase_tensor()
+        self._profile_panel._mark_all_dirty()
         self._profile_panel._redraw_current_tab()
 
     def _on_export(self) -> None:
@@ -353,18 +509,73 @@ class ProfileViewerWindow(PanelWindow):
             ExportDialog,
         )
 
-        tab = self._profile_panel._tabs.currentIndex()
-        canvases = [
-            self._profile_panel._canvas_rho_phi,
-            self._profile_panel._canvas_rho_ps,
-            self._profile_panel._canvas_ph_ps,
-            self._profile_panel._canvas_tipper,
-            self._profile_panel._canvas_pt,
-            self._profile_panel._canvas_pt_strip,
-        ]
-        fig = canvases[tab].figure if tab < len(canvases) else None
+        canvas = self._profile_panel.current_canvas()
+        fig = canvas.figure if canvas is not None else None
         if fig:
-            ExportDialog(figure=fig, parent=self).exec()
+            ExportDialog(
+                figure=fig,
+                figure_factory=self._build_publication_export_figure,
+                parent=self,
+            ).exec()
+
+    def _build_publication_export_figure(self):
+        """Redraw the active plot as a white publication-quality figure."""
+        from matplotlib.figure import Figure
+
+        panel = self._profile_panel
+        widget = panel._tabs.currentWidget()
+        try:
+            n_stations = len(panel._ctrl._sites or ())
+        except Exception:
+            n_stations = 1
+
+        multi_station = widget in (
+            panel._canvas_rho_ps,
+            panel._canvas_ph_ps,
+            panel._canvas_pt,
+        )
+        if multi_station:
+            width = max(10.0, min(24.0, 4.0 + 0.16 * n_stations))
+            figsize = (width, 7.5)
+        elif widget is panel._canvas_pt_strip:
+            figsize = (11.0, 4.2)
+        else:
+            figsize = (9.0, 7.0)
+
+        fig = Figure(figsize=figsize, facecolor="white")
+        old_dark = panel._ctrl.dark
+        panel._ctrl.dark = False
+        try:
+            if widget is panel._canvas_rho_phi:
+                panel._ctrl.draw_rho_phi(fig)
+            else:
+                ax = fig.add_subplot(111)
+                draw = {
+                    panel._canvas_rho_ps: panel._ctrl.draw_rho_pseudosection,
+                    panel._canvas_ph_ps: panel._ctrl.draw_phase_pseudosection,
+                    panel._canvas_tipper: panel._ctrl.draw_tipper,
+                    panel._canvas_pt: panel._ctrl.draw_phase_tensor,
+                    panel._canvas_pt_strip: panel._ctrl.draw_phase_tensor_strip,
+                }.get(widget)
+                if draw is not None:
+                    draw(ax)
+        finally:
+            panel._ctrl.dark = old_dark
+
+        fig.set_facecolor("white")
+        for ax in fig.axes:
+            ax.set_facecolor("white")
+            ax.tick_params(colors="#222222", labelcolor="#222222")
+            ax.xaxis.label.set_color("#222222")
+            ax.yaxis.label.set_color("#222222")
+            ax.title.set_color("#111111")
+            for spine in ax.spines.values():
+                spine.set_color("#444444")
+            for text in ax.texts:
+                text.set_color("#222222")
+        if multi_station:
+            fig.subplots_adjust(left=0.07, right=0.94, bottom=0.10, top=0.82)
+        return fig
 
     def _on_pub_view(self) -> None:
         """Open a standalone publication-quality figure in a new dialog."""

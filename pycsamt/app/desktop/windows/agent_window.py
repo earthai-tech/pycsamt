@@ -62,11 +62,13 @@ from PySide6.QtWidgets import (
 from pycsamt.app.desktop.widgets.agent_browser import (
     AgentBrowserWidget,
 )
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
     _icon,
 )
+from pycsamt.app.desktop.widgets.compact_button import compact_button
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Figure pop-out: hover-reveal overlay button + publication-ready viewer
@@ -679,8 +681,17 @@ class AgentRunnerWindow(PanelWindow):
             True
         )  # hidden when only 1 figure
         # Seed with a placeholder canvas so the widget is never empty
-        self._result_canvas = MplCanvas(self, toolbar=True)
-        self._result_inner_tabs.addTab(self._result_canvas, "Result")
+        self._result_canvas_view = CanvasResultView(
+            self,
+            toolbar=True,
+            empty_title="No result yet",
+            empty_reason="Run an agent to see its output here.",
+        )
+        self._result_canvas = self._result_canvas_view.canvas
+        self._result_canvas.set_refresh_callback(
+            self._on_run, tooltip="Rerun agent — repeats the last run"
+        )
+        self._result_inner_tabs.addTab(self._result_canvas_view, "Result")
         _result_vlay.addWidget(self._result_inner_tabs)
         self._tabs.addTab(_result_container, _icon("results"), "Result")
 
@@ -720,13 +731,7 @@ class AgentRunnerWindow(PanelWindow):
         # __init__, and the resulting instance is missing `_container`.
         self._result_pop_out_button = _HoverRevealButton(
             container=_result_container,
-            get_canvas_fn=lambda: (
-                w
-                if isinstance(
-                    w := self._result_inner_tabs.currentWidget(), MplCanvas
-                )
-                else None
-            ),
+            get_canvas_fn=self._current_result_canvas,
         )
 
         self._content_vsplit.addWidget(self._tabs)
@@ -792,7 +797,7 @@ class AgentRunnerWindow(PanelWindow):
         chat_inp_row.addWidget(self._chat_input)
 
         self._btn_chat_send = QPushButton("▶")
-        self._btn_chat_send.setFixedSize(36, 36)
+        compact_button(self._btn_chat_send, 36, 36)
         self._btn_chat_send.setToolTip("Send  (Enter)")
         self._btn_chat_send.clicked.connect(self._on_chat_send)
         chat_inp_row.addWidget(
@@ -863,6 +868,9 @@ class AgentRunnerWindow(PanelWindow):
 
         params = self._collect_params()
         api_key = self._edit_apikey.text().strip() or None
+        session = getattr(self._ctrl, "session", None)
+        llm_provider = getattr(session, "llm_provider", None) or None
+        llm_model = getattr(session, "llm_model", None) or None
 
         self._log_text.clear()
         self._summary_browser.clear()
@@ -882,6 +890,8 @@ class AgentRunnerWindow(PanelWindow):
             sites=self._ctrl.sites,
             params=params,
             api_key=api_key,
+            llm_provider=llm_provider,
+            model=llm_model,
             parent=self,
         )
         self._worker.log_line.connect(self._on_log_line)
@@ -901,6 +911,14 @@ class AgentRunnerWindow(PanelWindow):
 
     # ── Worker signal handlers ─────────────────────────────────────────────────
 
+    def _current_result_canvas(self) -> MplCanvas | None:
+        w = self._result_inner_tabs.currentWidget()
+        if isinstance(w, CanvasResultView):
+            return w.canvas
+        if isinstance(w, MplCanvas):
+            return w
+        return None
+
     @Slot(str)
     def _on_log_line(self, line: str) -> None:
         self.append_log(line)
@@ -918,16 +936,21 @@ class AgentRunnerWindow(PanelWindow):
                 self._result_inner_tabs.removeTab(0)
 
             for i, (label, renderable) in enumerate(figs):
-                canvas = (
-                    self._result_canvas
-                    if i == 0
-                    else MplCanvas(self, toolbar=True)
-                )
+                if i == 0:
+                    canvas, tab_widget = self._result_canvas, self._result_canvas_view
+                else:
+                    canvas = MplCanvas(self, toolbar=True)
+                    tab_widget = canvas
                 try:
                     canvas.show_figure(renderable)
-                except Exception:
-                    pass
-                self._result_inner_tabs.addTab(canvas, label)
+                    if i == 0:
+                        self._result_canvas_view.show_canvas()
+                except Exception as exc:
+                    if i == 0:
+                        self._result_canvas_view.show_unavailable(
+                            "Figure could not be rendered", str(exc)
+                        )
+                self._result_inner_tabs.addTab(tab_widget, label)
 
             self._last_figure = (
                 figs[0][1].get_figure()

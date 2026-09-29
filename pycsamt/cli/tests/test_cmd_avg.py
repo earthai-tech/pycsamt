@@ -192,6 +192,102 @@ class TestAvgValidate:
         # All stations should be flagged when threshold is 0
         assert data["n_flagged"] >= 0
 
+    def test_comp_filter(self, runner: CliRunner) -> None:
+        result = runner.invoke(
+            main,
+            ["avg", "validate", str(_K2_AVG), "--format", "json"],
+        )
+        data = json.loads(result.output)
+        # Determine a real component present in the file (if any) via
+        # the raw loader, then filter on it.
+        from pycsamt.cli.commands.avg._base import _load_raw
+
+        df, _, _ = _load_raw(_K2_AVG)
+        if "comp" not in df.columns:
+            pytest.skip("K2.AVG has no 'comp' column")
+        comp = str(df["comp"].iloc[0])
+        result = runner.invoke(
+            main,
+            ["avg", "validate", str(_K2_AVG), "--comp", comp, "--format", "json"],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data["stations"]) > 0
+
+    def test_comp_filter_no_match(self, runner: CliRunner) -> None:
+        result = runner.invoke(
+            main,
+            ["avg", "validate", str(_K2_AVG), "--comp", "NOPE_XYZ"],
+        )
+        assert result.exit_code == 1
+        assert "No rows match component" in result.output
+
+    def test_no_data_loaded_exits(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pandas as pd
+
+        import pycsamt.cli.commands.avg.validate as _validate_mod
+
+        class _FakeObj:
+            df = pd.DataFrame()
+
+        monkeypatch.setattr(_validate_mod, "_get_avg", lambda *a, **k: _FakeObj())
+        result = runner.invoke(main, ["avg", "validate", str(_K2_AVG)])
+        assert result.exit_code == 1
+        assert "No data loaded" in result.output
+
+    def test_falls_back_to_raw_loader(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import click
+
+        import pycsamt.cli.commands.avg.validate as _validate_mod
+
+        def _raise_usage_error(*a, **k):
+            raise click.UsageError("requires xarray")
+
+        monkeypatch.setattr(_validate_mod, "_get_avg", _raise_usage_error)
+        result = runner.invoke(
+            main, ["avg", "validate", str(_K2_AVG), "--format", "json"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["n_stations"] > 0
+
+    def test_no_qc_columns_exits(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pandas as pd
+
+        import pycsamt.cli.commands.avg.validate as _validate_mod
+
+        class _FakeObj:
+            df = pd.DataFrame({"station": ["S1", "S2"], "freq": [1.0, 2.0]})
+
+        monkeypatch.setattr(_validate_mod, "_get_avg", lambda *a, **k: _FakeObj())
+        result = runner.invoke(main, ["avg", "validate", str(_K2_AVG)])
+        assert result.exit_code == 1
+        assert "No QC columns found" in result.output
+
+    def test_text_output_without_rich_plain_table(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name in ("rich.console", "rich.table"):
+                raise ImportError("simulated: rich unavailable")
+            return real_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        result = runner.invoke(main, ["avg", "validate", str(_K2_AVG)])
+        assert result.exit_code == 0
+        assert "Station" in result.output
+        assert "OK?" in result.output
+
 
 # ---------------------------------------------------------------------------
 # pycsamt avg stations
@@ -409,10 +505,185 @@ class TestAvgCorrect:
         )
         assert result.exit_code == 0
 
+    def test_num_or_col_helper(self) -> None:
+        from pycsamt.cli.commands.avg.correct import _num_or_col
+
+        assert _num_or_col("5000") == 5000.0
+        assert _num_or_col("rx_length") == "rx_length"
+
     def test_no_output_dir_uses_dot(self, runner: CliRunner) -> None:
         # Default output_dir is "." — should still work
         result = runner.invoke(main, ["avg", "correct", str(_K2_AVG), "--dry-run"])
         assert result.exit_code == 0
+
+    def test_explicit_ref_freq(self, runner: CliRunner, tmp_path: Path) -> None:
+        from pycsamt.cli.commands.avg._base import _load_raw
+
+        df, _, _ = _load_raw(_K2_AVG)
+        freqs = sorted(df["freq"].unique())
+        result = runner.invoke(
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--ref-freq",
+                str(freqs[-1]),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        ss = next(
+            c for c in data["corrections"] if c["correction"] == "static_shift"
+        )
+        assert ss["ref_freq"] == float(freqs[-1])
+
+    def test_ref_freq_snapped_to_nearest(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        from pycsamt.cli.commands.avg._base import _load_raw
+
+        df, _, _ = _load_raw(_K2_AVG)
+        freqs = sorted(df["freq"].unique())
+        off_freq = freqs[0] * 1.0001
+        result = runner.invoke(
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--ref-freq",
+                str(off_freq),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "adjusted ref-freq to nearest available" in result.output
+
+    def test_capacitive_method(self, runner: CliRunner, tmp_path: Path) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "capacitive",
+                "--contact-resistance",
+                "5000",
+                "--setup-length",
+                "50",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Capacitive coupling corrected" in result.output
+
+    def test_capacitive_method_json(self, runner: CliRunner, tmp_path: Path) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "capacitive",
+                "--contact-resistance",
+                "5000",
+                "--setup-length",
+                "50",
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert any(
+            c["correction"] == "capacitive_coupling" for c in data["corrections"]
+        )
+        assert not any(c["correction"] == "static_shift" for c in data["corrections"])
+
+    def test_capacitive_missing_contact_resistance_skips(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "capacitive",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "--contact-resistance and --setup-length" in result.output
+
+    def test_capacitive_failure_warns(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pycsamt.zonge.processing import ASTATIC
+
+        def _boom(self, *a, **k):
+            raise RuntimeError("simulated capacitive failure")
+
+        monkeypatch.setattr(
+            ASTATIC, "correct_capacitive_coupling", _boom, raising=True
+        )
+        result = runner.invoke(
+            main,
+            [
+                "avg",
+                "correct",
+                str(_K2_AVG),
+                "--method",
+                "capacitive",
+                "--contact-resistance",
+                "5000",
+                "--setup-length",
+                "50",
+                "--output-dir",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Warning: capacitive correction failed" in result.output
+
+    def test_no_data_loaded_exits(
+        self, runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pycsamt.zonge.processing import ASTATIC
+
+        import pycsamt.cli.commands.avg.correct as _correct_mod
+
+        class _FakeObj:
+            df = None
+
+        monkeypatch.setattr(_correct_mod, "_get_avg", lambda *a, **k: _FakeObj())
+
+        def _fake_read(self, source, meta=None):
+            self.avg = source
+            return self
+
+        monkeypatch.setattr(ASTATIC, "read", _fake_read, raising=True)
+        result = runner.invoke(
+            main,
+            ["avg", "correct", str(_K2_AVG), "--output-dir", str(tmp_path)],
+        )
+        assert result.exit_code == 1
+        assert "No data loaded" in result.output
 
 
 # ---------------------------------------------------------------------------

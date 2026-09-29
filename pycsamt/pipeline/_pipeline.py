@@ -451,7 +451,9 @@ class Pipeline(PipelineBase):
 
             # --- QC plots -------------------------------------------
             if save_plots and out is not None and error is None:
-                for fn_name, fig in step.generate_qc_plots(sites_after):
+                # current_sites is still this step's input here: the
+                # before/after comparison QC plots need it.
+                for fn_name, fig in _qc_plots(step, sites_after, current_sites):
                     p = out.save_figure(fig, fn_name, step_idx, label, api=cfg)
                     if p is not None:
                         plot_paths.append(p)
@@ -813,6 +815,23 @@ class Pipeline(PipelineBase):
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
+
+
+def _qc_plots(step: Any, sites_after: Any, before: Any) -> list:
+    """``step.generate_qc_plots`` with *before* when the step supports it.
+
+    Custom or plugin step objects may still implement the pre-v2.6.5
+    ``generate_qc_plots(self, sites)``; they keep working, just without the
+    before/after comparison figures.
+    """
+    import inspect
+
+    fn = step.generate_qc_plots
+    try:
+        accepts = "before" in inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        accepts = False
+    return fn(sites_after, before=before) if accepts else fn(sites_after)
 
 
 def _count_sites(sites: Any) -> int:

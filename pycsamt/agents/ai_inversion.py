@@ -464,7 +464,7 @@ class AIInversionAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and n_pred:
+        if self.llm_available and n_pred:
             n_hi = sum(1 for v in rms_per.values() if v > 0.5)
             prompt = (
                 f"AI inversion summary:\n"

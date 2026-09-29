@@ -105,6 +105,7 @@ __pycache__/
 # ignore description project
 project_description.md 
 DOCSTRING_DOCUMENTATION_PLAN.md
+PYCSAMT-DESKTOP-V2.6-MODERNIZATION-PLAN.md
 
 #libraries
 /lib/

@@ -19,6 +19,7 @@ from .._providers import (
     is_llm,
     label_for,
     models_for,
+    requires_api_key,
 )
 
 _CFG_DIR = Path.home() / ".config" / "pycsamt"
@@ -59,6 +60,8 @@ def _source_for(provider: str, typed: str | None, cfg: dict) -> str:
     "Unsaved" the moment it diverges from what is on disk — rather than
     still claiming "Key saved".
     """
+    if provider == "ollama":
+        return "local"
     typed = (typed or "").strip()
     saved = (cfg.get(f"key_{provider}") or "").strip()
     env = _env_key(provider)
@@ -81,6 +84,8 @@ def _badge(text: str, color: str, icon: str) -> html.Span:
 
 def _status_badge(provider: str, source: str) -> html.Span:
     """Where the active key came from — so the user never guesses."""
+    if provider == "ollama":
+        return _badge("Local model · no API key", "--blue", "bi-pc-display")
     if not is_llm(provider):
         return _badge("Zero cost", "--fg-muted", "bi-shield-check")
     if source == "saved":
@@ -150,6 +155,16 @@ def register_settings(app) -> None:
     def sync_provider_panel(provider, drafts):
         hide = {"display": "none"}
         show = {"display": "block"}
+        if provider == "ollama":
+            return (
+                hide,
+                hide,
+                "",
+                [],
+                None,
+                "",
+                _status_badge(provider, "local"),
+            )
         if not is_llm(provider):
             return (
                 hide,
@@ -204,7 +219,7 @@ def register_settings(app) -> None:
         prevent_initial_call=True,
     )
     def stash_draft(key, model, provider, drafts):
-        if not is_llm(provider):
+        if not requires_api_key(provider):
             raise PreventUpdate
         drafts = dict(drafts or {})
         drafts[f"key_{provider}"] = key or ""
@@ -273,6 +288,13 @@ def register_settings(app) -> None:
         State(IDs.OUTPUT_DIR, "value"),
         State(IDs.LINE_REGISTRY, "value"),
         State(IDs.STORE_KEY_DRAFTS, "data"),
+        State(IDs.LOCAL_ENDPOINT, "value"),
+        State(IDs.LOCAL_MODEL, "value"),
+        State(IDs.LOCAL_TIMEOUT, "value"),
+        State(IDs.LOCAL_CONTEXT, "value"),
+        State(IDs.LOCAL_OUTPUT, "value"),
+        State(IDs.LOCAL_TEMPERATURE, "value"),
+        State(IDs.LOCAL_CALLS, "value"),
         prevent_initial_call=True,
     )
     def save_settings(
@@ -284,6 +306,13 @@ def register_settings(app) -> None:
         output_dir,
         line_registry,
         drafts,
+        local_endpoint="http://127.0.0.1:11434",
+        local_model="qwen2.5-coder:1.5b",
+        local_timeout=60,
+        local_context=8192,
+        local_output=1024,
+        local_temperature=0.2,
+        local_calls=4,
     ):
         if not n:
             raise PreventUpdate
@@ -293,9 +322,31 @@ def register_settings(app) -> None:
         for field, value in (drafts or {}).items():
             if value:
                 cfg[field] = value
-        if is_llm(provider):
+        if requires_api_key(provider):
             cfg[f"key_{provider}"] = (key or "").strip()
             cfg[f"model_{provider}"] = model or default_model(provider) or ""
+        if provider == "ollama":
+            from pycsamt.agents._local import LocalSettings
+
+            fields = dict(
+                ollama_endpoint=local_endpoint,
+                model_ollama=local_model,
+                ollama_timeout=local_timeout,
+                ollama_context=local_context,
+                ollama_output=local_output,
+                ollama_temperature=local_temperature,
+                ollama_max_calls=local_calls,
+            )
+            try:
+                LocalSettings.from_mapping(fields)
+            except (ValueError, TypeError) as exc:
+                return (
+                    no_update,
+                    html.Span(str(exc), style={"color": "var(--peach)"}),
+                    no_update,
+                )
+            cfg.update(fields)
+            cfg.pop("key_ollama", None)
         cfg["provider"] = provider or OFFLINE
         cfg["export_fmt"] = export_fmt or "png"
         cfg["output_dir"] = output_dir or ""
@@ -319,6 +370,54 @@ def register_settings(app) -> None:
             style={"color": "var(--tag-ok)"},
         )
         return dict(cfg), status, _status_badge(provider, source)
+
+    @app.callback(
+        Output(IDs.LOCAL_PANEL, "style"),
+        Output(IDs.LOCAL_ENDPOINT, "value"),
+        Output(IDs.LOCAL_MODEL, "value"),
+        Output(IDs.LOCAL_TIMEOUT, "value"),
+        Output(IDs.LOCAL_CONTEXT, "value"),
+        Output(IDs.LOCAL_OUTPUT, "value"),
+        Output(IDs.LOCAL_TEMPERATURE, "value"),
+        Output(IDs.LOCAL_CALLS, "value"),
+        Input(IDs.ACTIVE_PROVIDER, "value"),
+    )
+    def local_panel(provider):
+        cfg = _load_cfg()
+        return (
+            {"display": "block" if provider == "ollama" else "none"},
+            cfg.get("ollama_endpoint", "http://127.0.0.1:11434"),
+            cfg.get("model_ollama", "qwen2.5-coder:1.5b"),
+            cfg.get("ollama_timeout", 60),
+            cfg.get("ollama_context", 8192),
+            cfg.get("ollama_output", 1024),
+            cfg.get("ollama_temperature", 0.2),
+            cfg.get("ollama_max_calls", 4),
+        )
+
+    @app.callback(
+        Output(IDs.LOCAL_STATUS, "children"),
+        Input(IDs.LOCAL_CHECK, "n_clicks"),
+        State(IDs.LOCAL_ENDPOINT, "value"),
+        State(IDs.LOCAL_MODEL, "value"),
+        prevent_initial_call=True,
+    )
+    def check_local(n, endpoint, model):
+        if not n:
+            raise PreventUpdate
+        from pycsamt.agents._local import LocalSettings, model_status
+
+        try:
+            status = model_status(
+                LocalSettings(endpoint=endpoint, model=model, timeout=5)
+            )
+            details = status["details"]
+            return (
+                f"Ready: {model}. {details.get('parameter_size', '')} "
+                f"{details.get('quantization_level', '')}. " + status["note"]
+            )
+        except (ValueError, TypeError, RuntimeError) as exc:
+            return str(exc)
 
     # Theme toggle
     @app.callback(

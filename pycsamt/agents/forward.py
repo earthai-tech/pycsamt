@@ -236,7 +236,7 @@ class ForwardModelAgent(BaseAgent):
             response, layered, output_dir, warnings
         )
 
-        interp = self._llm_1d(layered, freqs, rms) if self.api_key else None
+        interp = self._llm_1d(layered, freqs, rms) if self.llm_available else None
 
         n_layers = len(
             np.asarray(
@@ -296,7 +296,7 @@ class ForwardModelAgent(BaseAgent):
         figures, fig_paths = self._plot_2d(
             grid, response, output_dir, warnings
         )
-        interp = self._llm_2d(grid, response, freqs) if self.api_key else None
+        interp = self._llm_2d(grid, response, freqs) if self.llm_available else None
 
         ns = response.rho_a_te.shape[1]
         nf = len(freqs)
@@ -352,7 +352,7 @@ class ForwardModelAgent(BaseAgent):
         )
         interp = (
             self._llm_3d(grid, response, freqs, method)
-            if self.api_key
+            if self.llm_available
             else None
         )
 

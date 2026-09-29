@@ -1915,3 +1915,174 @@ class TestPipeRunIntegration:
         content = dashboard_html.read_text(encoding="utf-8")
         assert "pycsamt-dashboard" in content
         assert "NR001" in content
+
+
+class TestPipeBaseHelpers:
+    """Direct unit tests for the shared helpers in ``pipe/_base.py``.
+
+    These cover config formats and messaging paths that are hard to
+    reach end-to-end through the ``run``/``show`` commands (JSON/Python
+    config loading, --name overrides, verbose echoes, and the
+    ``_rich_pipe_table`` fallback), by calling the helpers directly.
+    """
+
+    def test_resolve_pipeline_from_json_config(self, tmp_path: Path) -> None:
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline
+        from pycsamt.pipeline import Pipeline
+
+        cfg = tmp_path / "wf.json"
+        Pipeline.from_preset("basic_qc").to_json(cfg)
+
+        pipe = _resolve_pipeline(cfg, None, None, None)
+        assert len(pipe) > 0
+
+    def test_resolve_pipeline_from_py_config(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline
+
+        cfg = tmp_path / "wf.py"
+        r = runner.invoke(
+            main,
+            ["pipe", "init", "--format", "py", "--preset", "basic_qc", "-o", str(cfg)],
+        )
+        assert r.exit_code == 0, r.output
+
+        pipe = _resolve_pipeline(cfg, None, None, None)
+        assert len(pipe) > 0
+
+    def test_resolve_pipeline_unsupported_suffix(self, tmp_path: Path) -> None:
+        import click
+
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline
+
+        cfg = tmp_path / "wf.txt"
+        cfg.write_text("not a config")
+        with pytest.raises(click.BadParameter):
+            _resolve_pipeline(cfg, None, None, None)
+
+    def test_resolve_pipeline_config_rename_and_verbose(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline
+        from pycsamt.pipeline import Pipeline
+
+        cfg = tmp_path / "wf.yaml"
+        Pipeline.from_preset("basic_qc").to_yaml(cfg)
+
+        pipe = _resolve_pipeline(cfg, None, None, "renamed", verbose=1)
+        assert pipe.name == "renamed"
+        captured = capsys.readouterr()
+        assert "Loaded pipeline from" in captured.err
+
+    def test_resolve_pipeline_preset_rename_and_verbose(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline
+
+        pipe = _resolve_pipeline(None, "basic_qc", None, "renamed", verbose=1)
+        assert pipe.name == "renamed"
+        captured = capsys.readouterr()
+        assert "Loaded preset" in captured.err
+
+    def test_resolve_pipeline_steps_verbose(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline
+
+        pipe = _resolve_pipeline(None, None, ["NR001"], None, verbose=1)
+        assert len(pipe) == 1
+        captured = capsys.readouterr()
+        assert "Built pipeline from --steps" in captured.err
+
+    def test_trim_pipeline_bad_until_step_raises(self) -> None:
+        import click
+
+        from pycsamt.cli.commands.pipe._base import _resolve_pipeline, _trim_pipeline
+
+        pipe = _resolve_pipeline(None, "basic_qc", None, None)
+        with pytest.raises(click.BadParameter):
+            _trim_pipeline(pipe, None, "no_such_step", None)
+
+    def test_rich_pipe_table_uses_rich_when_available(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from pycsamt.cli.commands.pipe._base import _rich_pipe_table
+
+        _rich_pipe_table("My Title", [("a", 1), ("b", "two")])
+        out = capsys.readouterr().out
+        assert "My Title" in out or out == ""  # rich renders via its own console
+
+    def test_rich_pipe_table_plain_fallback(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        import sys
+
+        from pycsamt.cli.commands.pipe._base import _rich_pipe_table
+
+        monkeypatch.setitem(sys.modules, "rich.console", None)
+        _rich_pipe_table("Plain Title", [("k1", "v1"), ("k2", 2)])
+        out = capsys.readouterr().out
+        assert "Plain Title" in out
+        assert "k1" in out
+        assert "v1" in out
+
+
+class TestPipeRunConfigFormats:
+    def test_run_from_json_config(
+        self, runner: CliRunner, patched_run, tmp_path: Path
+    ) -> None:
+        from pycsamt.pipeline import Pipeline
+
+        cfg = tmp_path / "wf.json"
+        Pipeline.from_preset("basic_qc").to_json(cfg)
+
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--config",
+                str(cfg),
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+            ],
+        )
+        assert r.exit_code == 0, r.output
+
+    def test_run_from_unsupported_config_suffix(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        cfg = tmp_path / "wf.txt"
+        cfg.write_text("nope")
+        r = runner.invoke(
+            main,
+            ["pipe", "run", "--config", str(cfg), "--survey", ".", "--dry-run"],
+        )
+        assert r.exit_code != 0
+        assert "Unsupported config format" in r.output
+
+
+    def test_run_with_verbose_shows_load_hint(
+        self, runner: CliRunner, patched_run, yaml_config_file: Path
+    ) -> None:
+        r = runner.invoke(
+            main,
+            [
+                "pipe",
+                "run",
+                "--config",
+                str(yaml_config_file),
+                "--survey",
+                ".",
+                "--no-plots",
+                "--no-edi",
+                "--no-report",
+                "-v",
+            ],
+        )
+        assert r.exit_code == 0, r.output
+        assert "Loaded pipeline from" in r.output

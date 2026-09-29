@@ -121,6 +121,18 @@ class FrequencyAxisControl:
         return self.view.lower() in {"period", "frequency"}
 
 
+@dataclass
+class PlotPanelControl:
+    """Desktop plot presentation, independent of the application theme.
+
+    Export format and DPI are controlled separately by PLOT_CONFIG.
+    """
+
+    background: str = "white"
+    toolbar: bool = True
+    fit_layout: bool = True
+
+
 class PyCSAMTControl:
     """Package-wide plotting-view control container."""
 
@@ -131,10 +143,13 @@ class PyCSAMTControl:
         self.phase = PhaseViewControl()
         self.rho = RhoViewControl()
         self.x = FrequencyAxisControl()
+        self.panel = PlotPanelControl()
 
     def configure(self, **kw: Any) -> None:
         """Configure controls using ``section__attribute`` paths."""
         for path, value in kw.items():
+            if path == "panel__background" and value not in {"white", "transparent"}:
+                raise ValueError("panel background must be white or transparent")
             parts = path.split("__")
             obj = self
             for part in parts[:-1]:
@@ -165,6 +180,7 @@ class PyCSAMTControl:
             f"  phase.wrap  = {self.phase.wrap}",
             f"  rho.view    = {self.rho.view!r}",
             f"  x.view      = {self.x.view!r}",
+            f"  panel       = {self.panel!r}",
         ]
         return "\n".join(lines)
 
@@ -176,12 +192,14 @@ class PyCSAMTControl:
             "phase": copy.deepcopy(self.phase),
             "rho": copy.deepcopy(self.rho),
             "x": copy.deepcopy(self.x),
+            "panel": copy.deepcopy(self.panel),
         }
 
     def _restore(self, snapshot: dict[str, Any]) -> None:
         self.phase = snapshot["phase"]
         self.rho = snapshot["rho"]
         self.x = snapshot["x"]
+        self.panel = snapshot["panel"]
 
 
 def wrap_phase(

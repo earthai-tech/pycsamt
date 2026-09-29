@@ -149,7 +149,7 @@ class DisplayPage(SettingsPage):
             pass
 
     def collect(self) -> dict:
-        changes: dict = {}
+        fields: dict = {}
         try:
             from pycsamt.api.style import PYCSAMT_STYLE as S
 
@@ -160,25 +160,29 @@ class DisplayPage(SettingsPage):
                 new_color = getattr(cbtn, "_color", None)
                 if new_color and new_color != getattr(comp, "color", None):
                     comp.color = new_color
+                fields[f"{key}_color"] = new_color
                 new_lw = lw_spin.value()
                 if abs(new_lw - (getattr(comp, "lw", 1.5) or 1.5)) > 0.05:
                     comp.lw = new_lw
+                fields[f"{key}_lw"] = new_lw
             # correction
             bc = getattr(self._corr_before_btn, "_color", None)
             if bc:
+                fields["correction_before"] = bc
                 try:
                     S.correction.before.color = bc
                 except Exception:
                     pass
             ac = getattr(self._corr_after_btn, "_color", None)
             if ac:
+                fields["correction_after"] = ac
                 try:
                     S.correction.after.color = ac
                 except Exception:
                     pass
         except Exception:
             pass
-        return changes
+        return {"style": fields} if fields else {}
 
     def reset(self) -> None:
         try:

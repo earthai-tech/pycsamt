@@ -353,7 +353,7 @@ class EnsembleAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and n_pred:
+        if self.llm_available and n_pred:
             mean_std = (
                 float(np.nanmean([v.mean() for v in pred_std.values()]))
                 if pred_std

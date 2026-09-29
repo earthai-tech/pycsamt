@@ -685,6 +685,31 @@ def _compute_metric(
     )
 
 
+def _z_attr(z: Any, duck_name: str, real_name: str) -> np.ndarray | None:
+    """
+    Return a per-component array from a Z-like object.
+
+    Prefers a duck-typed *duck_name* attribute (a plain ndarray, as
+    used by lightweight Z stand-ins in tests/agents), falling back to
+    the real :class:`~pycsamt.z.z.Z` property *real_name*.  The real
+    property raises a :class:`~pycsamt.exceptions.PycsamtError`
+    subclass -- not ``AttributeError`` -- when resistivity/phase have
+    not been computed yet, so a plain ``getattr(z, real_name, None)``
+    cannot be used to detect that case; any exception is treated the
+    same as "not available" here.
+    """
+    try:
+        val = getattr(z, duck_name, None)
+    except Exception:
+        val = None
+    if val is not None:
+        return val
+    try:
+        return getattr(z, real_name)
+    except Exception:
+        return None
+
+
 def _z_list_to_array(
     z_list: list,
     *,
@@ -694,8 +719,13 @@ def _z_list_to_array(
     """Convert a list of Z objects to a (n_sites, n_features) numpy array."""
     rows = []
     for z in z_list:
-        rho_xy = z.resistivity_xy
-        phs_xy = z.phase_xy
+        # The real pycsamt.z.z.Z class exposes per-component apparent
+        # resistivity as `res_xy`, not `resistivity_xy` -- only the
+        # phase property happens to be named `phase_xy` on both the
+        # real class and the duck-typed stand-ins used elsewhere in
+        # the codebase (see pycsamt.agents.ai_inversion).
+        rho_xy = _z_attr(z, "resistivity_xy", "res_xy")
+        phs_xy = _z_attr(z, "phase_xy", "phase_xy")
         if rho_xy is None or phs_xy is None:
             raise ValueError(
                 "Z object has no computed resistivity/phase.  "

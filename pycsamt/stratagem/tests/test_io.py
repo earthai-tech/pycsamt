@@ -272,3 +272,139 @@ class TestEDIBatch:
         (tmp_path / "empty").mkdir()
         with pytest.raises(Exception):
             EDIBatch(tmp_path / "empty").fit()
+
+    def test_fit_dir_override_param(self, tmp_path):
+        _make_edi_dir(tmp_path, n=2)
+        batch = EDIBatch()
+        batch.fit(tmp_path / "edis")
+        assert batch.n_stations_ == 2
+
+    def test_verbose_loaded_message(self, tmp_path, capsys):
+        _make_edi_dir(tmp_path, n=2)
+        EDIBatch(tmp_path / "edis", verbose=1).fit()
+        out = capsys.readouterr().out
+        assert "loaded 2 EDI files" in out
+
+    def test_load_failure_is_skipped_and_reported(self, tmp_path, capsys):
+        d = tmp_path / "edis"
+        d.mkdir()
+        (d / "Z2HX001.edi").write_text(_HEADER.format(sid=0), encoding="utf-8")
+        (d / "Z2HX002.edi").write_text("not a valid edi file", encoding="utf-8")
+        batch = EDIBatch(d, verbose=1).fit()
+        assert batch.n_stations_ == 1
+        out = capsys.readouterr().out
+        assert "skip Z2HX002.edi" in out
+        assert "(1 skipped)" in out
+
+
+# ---------------------------------------------------------------------------
+# StratagemRawReader: additional coverage
+# ---------------------------------------------------------------------------
+
+
+class TestStratagemRawReaderExtra:
+    def test_fit_dir_override_param(self, tmp_path):
+        _make_raw_dir(tmp_path, n=2)
+        rdr = StratagemRawReader()
+        rdr.fit(tmp_path / "raw")
+        assert rdr.n_stations_ == 2
+
+    def test_verbose_fit_message(self, tmp_path, capsys):
+        _make_raw_dir(tmp_path, n=2)
+        StratagemRawReader(tmp_path / "raw", verbose=1).fit()
+        out = capsys.readouterr().out
+        assert "2 stations" in out
+
+    def test_component_all_builds_component_masks(self, tmp_path):
+        d = tmp_path / "raw"
+        d.mkdir()
+        for comp in ("X", "Y", "Z"):
+            for i in range(2):
+                (d / f"{comp}2HX.{i + 1:03d}").write_text(
+                    _RAW_19COL, encoding="utf-8"
+                )
+        rdr = StratagemRawReader(d, component="ALL").fit()
+        assert set(rdr.component_masks_.keys()) == {"X", "Y", "Z"}
+        for cm, cs in rdr.component_masks_.values():
+            assert cm.shape == (2, 3)
+            assert cs.shape == (2, 3)
+
+    def test_sensors_tbl_parsed(self, tmp_path):
+        d = tmp_path / "raw"
+        d.mkdir()
+        (d / "X2HX.001").write_text(_RAW_19COL, encoding="utf-8")
+        (d / "SENSORS.TBL").write_text("Sensor01\nSensor02\n\n", encoding="utf-8")
+        rdr = StratagemRawReader(d).fit()
+        assert rdr.sensors_ == {"sensor01": "Sensor01", "sensor02": "Sensor02"}
+
+    def test_no_sensors_tbl_gives_empty_dict(self, tmp_path):
+        _make_raw_dir(tmp_path, n=1)
+        rdr = StratagemRawReader(tmp_path / "raw").fit()
+        assert rdr.sensors_ == {}
+
+    def test_match_to_edis_dataid_fallback(self, tmp_path):
+        """When edi.path is None, fall back to the DATAID numeric suffix."""
+        _make_raw_dir(tmp_path, n=3)
+        rdr = StratagemRawReader(tmp_path / "raw").fit()
+
+        class _FakeEdi:
+            path = None
+            station = "Z2HX002"
+
+        mapping = rdr.match_to_edis([_FakeEdi()])
+        assert mapping[0] == 1  # raw station 2 -> index 1
+
+    def test_station_frame_and_freq_frame_and_stack_audit(self, tmp_path):
+        _make_raw_dir(tmp_path, n=3)
+        rdr = StratagemRawReader(tmp_path / "raw").fit()
+        sf = rdr.station_frame()
+        ff = rdr.freq_frame()
+        audit = rdr.stack_audit()
+        assert len(sf) == 3
+        assert len(ff) == 3
+        assert audit.shape == (3, 3)
+
+    def test_plot_coverage_snr_and_stacks(self, tmp_path):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        _make_raw_dir(tmp_path, n=2)
+        rdr = StratagemRawReader(tmp_path / "raw").fit()
+        fig1 = rdr.plot_coverage(kind="snr")
+        fig2 = rdr.plot_coverage(kind="stacks", log_freq=False, title="custom")
+        assert fig1 is not None
+        assert fig2 is not None
+
+    def test_build_masks_handles_oserror(self, tmp_path, monkeypatch):
+        import pycsamt.stratagem.io as io_mod
+
+        _make_raw_dir(tmp_path, n=2)
+        real_read = io_mod._read_19col
+
+        def _boom(path):
+            if path.name.endswith("001"):
+                raise OSError("cannot read")
+            return real_read(path)
+
+        monkeypatch.setattr(io_mod, "_read_19col", _boom)
+        rdr = StratagemRawReader(tmp_path / "raw").fit()
+        # station 0's row was unreadable -> all-False mask, but station 1 ok
+        assert rdr.n_stations_ == 2
+        assert not rdr.snr_mask_[0].any()
+
+    def test_build_masks_all_files_empty(self, tmp_path):
+        d = tmp_path / "raw"
+        d.mkdir()
+        for i in range(2):
+            (d / f"X2HX.{i + 1:03d}").write_text("", encoding="utf-8")
+        rdr = StratagemRawReader(d).fit()
+        assert rdr.n_freqs_ == 0
+        assert rdr.snr_mask_.shape == (2, 0)
+
+    def test_row_with_fewer_than_19_values_is_zero_padded(self, tmp_path):
+        f = tmp_path / "X.001"
+        # 5 numbers per row -> zero-padded to 19 columns
+        f.write_text("1.0 2.0 3.0 4.0 5.0\n6.0 7.0 8.0 9.0 10.0\n", encoding="utf-8")
+        mat = _read_19col(f)
+        assert mat.shape == (2, 19)
+        assert mat[0, 5] == 0.0

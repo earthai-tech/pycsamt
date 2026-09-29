@@ -199,7 +199,7 @@ class InversionComparisonAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             max_diff_idx = np.unravel_index(
                 np.nanargmax(np.abs(difference)), difference.shape
             )

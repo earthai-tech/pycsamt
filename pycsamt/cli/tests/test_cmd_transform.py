@@ -406,6 +406,144 @@ class TestTransformAvgCLI:
         result = runner.invoke(main, ["transform", "avg", str(avgs[0])])
         assert result.exit_code != 0
 
+    def test_no_avg_files_found(self, runner: CliRunner, tmp_path: Path) -> None:
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        result = runner.invoke(
+            main, ["transform", "avg", str(empty), "--output-dir", str(tmp_path)]
+        )
+        assert result.exit_code == 1
+        assert "No .avg files found" in result.output
+
+    def test_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "avg",
+                str(avgs[0]),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert "n_input" in data
+        assert "n_ok" in data
+        assert "converted" in data
+
+    def test_station_name_override(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "avg",
+                str(avgs[0]),
+                "--output-dir",
+                str(tmp_path),
+                "--station-name",
+                "CUSTOM_AVG",
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        if data["converted"]:
+            assert data["converted"][0]["station"] == "CUSTOM_AVG"
+
+    def test_directory_converts_all(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "avg",
+                str(_AVG_DIR),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0 or result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_input"] == len(avgs)
+
+    def test_write_failure_reported(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        with patch(
+            "pycsamt.seg.edi.EDIFile.write",
+            side_effect=OSError("disk full"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "avg",
+                    str(avgs[0]),
+                    "--output-dir",
+                    str(tmp_path),
+                    "--format",
+                    "json",
+                ],
+            )
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_fail"] >= 1
+        assert "disk full" in data["failures"][0]["error"]
+
+    def test_write_failure_reported_text(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        with patch(
+            "pycsamt.seg.edi.EDIFile.write",
+            side_effect=OSError("disk full"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "avg",
+                    str(avgs[0]),
+                    "--output-dir",
+                    str(tmp_path),
+                ],
+            )
+        assert result.exit_code == 1
+        assert "disk full" in result.output
+
+    def test_conversion_failure_reported(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        with patch(
+            "pycsamt.transformers.AVGtoEDI.transform",
+            side_effect=RuntimeError("bad AVG file"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "avg",
+                    str(avgs[0]),
+                    "--output-dir",
+                    str(tmp_path),
+                    "--format",
+                    "json",
+                ],
+            )
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_fail"] == 1
+        assert data["n_ok"] == 0
+        assert "bad AVG file" in data["failures"][0]["error"]
+
 
 # ---------------------------------------------------------------------------
 # CLI integration tests — pycsamt transform j

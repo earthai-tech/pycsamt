@@ -21,7 +21,7 @@ from pycsamt.app.desktop.controllers.data_controller import (
 
 
 class LoaderWorker(QThread):
-    """Background EDI loader thread."""
+    """Background transfer-function loader thread."""
 
     progress = Signal(int)
     finished = Signal(object)  # Sites

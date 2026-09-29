@@ -31,13 +31,27 @@ def _terminate_process(code: int) -> None:
         os._exit(code)
 
 
+_QT_TEST_DIRS = (
+    "pycsamt/app/desktop/tests",
+    "pycsamt/app/agent_master/tests",
+    "pycsamt/app/converter/tests",
+)
+
+
 def _is_qt_interface_run(config) -> bool:
-    """Return whether this pytest invocation owns the desktop Qt tests."""
+    """Return whether this pytest invocation owns the desktop Qt tests.
+
+    ``pycsamt/app/mapview/tests`` and ``pycsamt/app/web/tests`` are pure
+    Dash test suites (no PySide6 import anywhere in either package or its
+    tests) and are deliberately not in ``_QT_TEST_DIRS`` -- a run that only
+    touches those two never needs the Shiboken-teardown workaround below.
+    """
 
     args = {str(arg).replace("\\", "/").rstrip("/") for arg in config.args}
     return "PySide6" in sys.modules and any(
-        arg == "pycsamt/app/tests" or "/pycsamt/app/tests" in arg
+        arg == qt_dir or f"/{qt_dir}" in arg
         for arg in args
+        for qt_dir in _QT_TEST_DIRS
     )
 
 
@@ -68,7 +82,7 @@ def pytest_sessionfinish(session, exitstatus):
 # import torch at module scope for the first time mid-session; initializing
 # torch's C extension while coverage.py is already tracing corrupts memory
 # and causes unrelated-looking segfaults later on (see
-# pycsamt/app/tests/_cov_runner_scratch.py for the original diagnosis).
+# pycsamt/app/desktop/tests/_cov_runner_scratch.py for the original diagnosis).
 # Pre-importing here, before tracing begins, avoids it.
 try:
     import torch  # noqa: F401

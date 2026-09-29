@@ -94,7 +94,7 @@ Priority: highest return for the least new code.
   in CI so a hung GUI test cannot stall a shard.  Two such hangs existed:
   the ``MainWindow`` quit-confirmation ``QMessageBox`` and the global
   ``QApplication.setStyleSheet`` restyle; both are neutralized by autouse
-  fixtures in ``pycsamt/app/tests/conftest.py``.
+  fixtures in ``pycsamt/app/desktop/tests/conftest.py``.
 * [ ] Keep GUI, torch, GIS, and other heavy optional stacks in dedicated jobs
   if they make the fast suite fragile.
 * [ ] Publish test counts, skipped-test reasons, and coverage artifacts on

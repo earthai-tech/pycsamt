@@ -75,10 +75,10 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
 
     Notes
     -----
-    - Error arrays (``z_error`` or aliases) are rotated with a
-      magnitude-only scheme (using absolute values of the
-      rotation matrices) as a pragmatic best-effort. This is a
-      common, but approximate, practice.
+    - Error arrays (``z_error`` or aliases) are propagated linearly,
+      assuming independent component errors:
+      :math:`\sigma'^2 = (R\circ R)\,\sigma^2\,(R^{-1}\circ R^{-1})`.
+    - A non-finite ``angle_deg`` leaves the data unchanged.
     - Only arrays with shapes consistent with MT tensors
       (``(n, 2, 2)`` for Z, ``(n, 2)`` for T) are rotated. Other
       shapes are ignored silently.
@@ -108,6 +108,10 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
     """
 
     ed = _to_mutable(site, inplace=inplace)
+    if not np.isfinite(float(angle_deg)):
+        # A NaN angle (e.g. an undefined strike) would turn every value
+        # into NaN; leave the data as it is.
+        return ed
 
     z = getattr(ed, "Z", None)
     if z is not None:
@@ -122,11 +126,16 @@ def rotate(site: Any, angle_deg: float, *, inplace: bool = False) -> Any:
                 z, "z_error", "z_err", "impedance_err", "_z_err"
             )
             if ze is not None:
-                ar = np.abs(r)
-                ari = np.abs(rinv)
                 e = np.asarray(ze, float)
                 if e.ndim == 3 and e.shape[-2:] == (2, 2):
-                    newe = ar[None, :, :] * e * ari[None, :, :]
+                    # Linear propagation of independent component errors
+                    # through Z' = R Z R^-1:  s'^2 = (R*R) s^2 (Ri*Ri).
+                    # (The element-wise product used before gave e.g.
+                    # s'_xx = 0 at 90 deg instead of s_yy.)
+                    newe = np.sqrt(
+                        (r * r)[None, :, :] @ (e * e)
+                        @ (rinv * rinv)[None, :, :]
+                    )
                     _set_attr_first(
                         z,
                         ("z_error", "z_err", "impedance_err", "_z_err"),
@@ -958,7 +967,12 @@ def set_coords_all(
                 lo = float(row["lon"].iloc[0])
             else:
                 lo = float(row["longitude"].iloc[0])
-            ev = float(row.get("elev", row.get("elevation", 0.0)).iloc[0])
+            if "elev" in row.columns:
+                ev = float(row["elev"].iloc[0])
+            elif "elevation" in row.columns:
+                ev = float(row["elevation"].iloc[0])
+            else:
+                ev = 0.0
             return la, lo, ev
         except Exception:
             return None
@@ -1567,6 +1581,17 @@ def _get_attr_any(obj: Any, *names: str) -> Any:
 
 
 def _set_attr_first(obj: Any, names: Iterable[str], val: Any):
+    names = list(names)
+    # Write to an alias the object really carries.  Setting the first name
+    # blindly created e.g. a new ``z_error`` next to the real ``z_err``,
+    # so rotated errors never reached the data.
+    for n in names:
+        if getattr(obj, n, None) is not None:
+            try:
+                setattr(obj, n, val)
+                return
+            except Exception:
+                pass
     for n in names:
         try:
             setattr(obj, n, val)

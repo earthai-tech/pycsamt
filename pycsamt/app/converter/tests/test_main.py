@@ -112,7 +112,9 @@ def test_main_launches_app_successfully(monkeypatch):
     assert app_calls.argv == ["pycsamt-converter"]
     assert app_calls.app_name == "pycsamt-converter"
     assert app_calls.display_name == "pyCSAMT Format Studio"
-    assert app_calls.app_version == "2.0"
+    import pycsamt
+
+    assert app_calls.app_version == pycsamt.__version__
     assert app_calls.org_name == "earthai-tech"
     assert app_calls.exec_called is True
     assert shown == [True]

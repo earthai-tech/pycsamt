@@ -301,6 +301,58 @@ CATALOGUE: dict[str, dict[str, dict]] = {
             ],
         },
     },
+    "Distortion": {
+        "Groom-Bailey decomposition": {
+            "fn": "_wrap_groom_bailey",
+            "desc": "Fits a real, frequency-independent 2x2 galvanic-distortion "
+            "matrix per station (Groom & Bailey 1989-style decomposition into "
+            "gain, twist and shear) against the anti-diagonal 2-D model and "
+            "removes it, leaving the underlying 2-D impedance response.",
+            "params": [
+                ParamSpec(
+                    "band_lo",
+                    "Period min (s)",
+                    "dspin",
+                    0.0,
+                    (0.0, 1000.0, 0.001),
+                    "Lower period bound for the distortion fit. 0 = no limit.",
+                ),
+                ParamSpec(
+                    "band_hi",
+                    "Period max (s)",
+                    "dspin",
+                    0.0,
+                    (0.0, 10000.0, 1.0),
+                    "Upper period bound for the distortion fit. 0 = no limit.",
+                ),
+                ParamSpec(
+                    "rotate_deg",
+                    "Pre-rotate (°)",
+                    "dspin",
+                    0.0,
+                    (-180.0, 180.0, 0.5),
+                    "Rotate the tensor by this angle before fitting the "
+                    "distortion matrix (e.g. to a known strike).",
+                ),
+                ParamSpec(
+                    "min_freq",
+                    "Min frequencies",
+                    "spin",
+                    4,
+                    (2, 50, 1),
+                    "Minimum number of frequencies required in the fit band.",
+                ),
+                ParamSpec(
+                    "robust",
+                    "Robust fit",
+                    "check",
+                    True,
+                    None,
+                    "Down-weight outlier frequencies during the fit.",
+                ),
+            ],
+        },
+    },
     "Tensor Rotation": {
         "Rotate by fixed angle": {
             "fn": "_wrap_rotate",
@@ -1449,7 +1501,47 @@ class CorrectionController:
             base = step.sites_after
 
     def _call_fn(self, fn_name: str, sites, **kwargs):
-        """Dispatch to emtools function or internal wrapper."""
+        """Dispatch to emtools function or internal wrapper.
+
+        ``affected_stations`` (Static Shift's "Affected Stations" box) is a
+        UI-level selection, not a library argument: it is removed here --
+        passing it on made ``correct_ss_ama`` raise a TypeError -- and,
+        when non-empty, restricts the correction to those stations (every
+        other station keeps its input impedance).
+        """
+        affected = kwargs.pop("affected_stations", None) or []
+        result = self._dispatch(fn_name, sites, **kwargs)
+        if affected and fn_name not in _STRAT_FN_NAMES:
+            result = self._restrict_to_stations(sites, result, affected)
+        return result
+
+    @staticmethod
+    def _restrict_to_stations(sites, corrected, affected):
+        """Keep the correction only for *affected* stations.
+
+        Every other station in *corrected* gets a copy of its impedance
+        from *sites* (the correction's input), matched by station name.
+        """
+        from pycsamt.emtools._core import _iter_items, _name
+
+        before = {_name(ed, i): ed for i, ed in enumerate(_iter_items(sites))}
+        unknown = [n for n in affected if n not in before]
+        if unknown:
+            raise ValueError(
+                "Unknown station(s) in Affected Stations: "
+                + ", ".join(unknown)
+            )
+        wanted = set(affected)
+        for i, ed in enumerate(_iter_items(corrected)):
+            name = _name(ed, i)
+            if name in wanted or name not in before:
+                continue
+            src = getattr(before[name], "edi", before[name])
+            dst = getattr(ed, "edi", ed)
+            dst.Z = src.Z.deepcopy()
+        return corrected
+
+    def _dispatch(self, fn_name: str, sites, **kwargs):
         # Stratagem wrappers (bypass normal sites path)
         if fn_name in _STRAT_FN_NAMES:
             fn = getattr(self, fn_name)
@@ -1461,6 +1553,8 @@ class CorrectionController:
             "_correct_ss_bilateral": self._wrap_ss_bilateral,
             "_correct_ss_refmedian": self._wrap_ss_refmedian,
             "_correct_near_field": self._wrap_near_field,
+            # Distortion wrappers
+            "_wrap_groom_bailey": self._wrap_groom_bailey,
             # Tensor-rotation wrappers
             "_wrap_rotate": self._wrap_rotate,
             "_wrap_rotate_to_strike": self._wrap_rotate_to_strike,
@@ -1534,6 +1628,33 @@ class CorrectionController:
 
         return et.correct_near_field(
             sites, source_offset, inplace=False, verbose=0
+        )
+
+    # ── Distortion wrappers ───────────────────────────────────────────────────
+
+    @staticmethod
+    def _wrap_groom_bailey(
+        sites,
+        band_lo=0.0,
+        band_hi=0.0,
+        rotate_deg=0.0,
+        min_freq=4,
+        robust=True,
+        **_,
+    ):
+        import pycsamt.emtools as et
+
+        band = None
+        if float(band_lo) > 0 and float(band_hi) > float(band_lo):
+            band = (float(band_lo), float(band_hi))
+        return et.apply_groom_bailey(
+            sites,
+            band=band,
+            rotate_deg=float(rotate_deg),
+            min_freq=int(min_freq),
+            robust=bool(robust),
+            inplace=False,
+            verbose=0,
         )
 
     # ── Tensor rotation wrappers ──────────────────────────────────────────────
@@ -2701,26 +2822,21 @@ class CorrectionController:
             except Exception:
                 pass
 
-    def _draw_strike_rose(self, sites, ax, s) -> None:
-        """Compute per-station |Zxy| amplitude weighted by azimuth and plot rose."""
+    @staticmethod
+    def _strike_angles(sites) -> list[float]:
+        """Per-station azimuth (deg, [0, 180)) that maximises mean |Zxy|."""
         from pycsamt.emtools._core import (
             _get_z_block,
             _iter_items,
         )
+        from pycsamt.emtools.strike import _rotate_tensor
 
-        angles, weights = [], []
+        angles = []
         for ed in _iter_items(sites):
             _, z, freqs = _get_z_block(ed)
             if z is None or freqs is None or freqs.size == 0:
                 continue
-            # Apparent resistivity for xy and yx — ratio tells us strike proximity
-            # field-unit ρ_a = 0.2·|Z|²/f (used here only as a relative weight)
-            rho_xy = 0.2 * np.abs(z[:, 0, 1]) ** 2 / np.maximum(freqs, 1e-30)
-            0.2 * np.abs(z[:, 1, 0]) ** 2 / np.maximum(freqs, 1e-30)
-            # Angle: direction of maximum off-diagonal element
-            # Sweep through 0–180° and find angle that maximises |Zxy|
-            from pycsamt.emtools.strike import _rotate_tensor
-
+            # Sweep through -90..90 deg and keep the angle maximising |Zxy|
             best_ang = 0.0
             best_val = -np.inf
             for deg in np.arange(-90, 91, 5):
@@ -2730,7 +2846,52 @@ class CorrectionController:
                     best_val = val
                     best_ang = deg
             angles.append(best_ang % 180)
-            weights.append(float(np.nanmean(rho_xy)))
+        return angles
+
+    @staticmethod
+    def _style_rose_axes(ax, s) -> None:
+        ax.set_theta_zero_location("N")
+        ax.set_theta_direction(-1)  # clockwise = geographic convention
+        ax.set_xticks(np.radians([0, 45, 90, 135]))
+        ax.set_xticklabels(["N", "NE", "E", "SE"], fontsize=6, color=s["tick"])
+        ax.yaxis.set_tick_params(labelsize=5, colors=s["tick"])
+        ax.grid(True, color=s["grid"], alpha=0.3, lw=0.5)
+
+    def plot_rotation_rose_overlay(self, before_sites, after_sites, fig) -> None:
+        """Both strike distributions on ONE rose: before as an open grey
+        outline, after as filled bars, so the rotation reads as a shift."""
+        s = _DARK if self.dark else _LIGHT
+        fig.clear()
+        fig.patch.set_facecolor(s["fig_bg"])
+        ax = fig.add_subplot(111, projection="polar")
+        ax.set_facecolor(s["bg"])
+        bins = np.linspace(0, np.pi, 19)  # 10 deg bins over [0, 180)
+        width = bins[1] - bins[0]
+        theta = (bins[:-1] + bins[1:]) / 2
+        drawn = False
+        for sites, style, label in (
+            (after_sites, dict(color="#1f6fd1", alpha=0.55, edgecolor="#1f6fd1",
+                               linewidth=0.6), "After"),
+            (before_sites, dict(color="none", edgecolor="#5c6370", linewidth=1.3,
+                                linestyle="--"), "Before"),
+        ):
+            if sites is None:
+                continue
+            angles = self._strike_angles(sites)
+            if not angles:
+                continue
+            counts, _ = np.histogram(np.radians(angles), bins=bins)
+            ax.bar(theta, counts, width=width, bottom=0.0, label=label, **style)
+            drawn = True
+        self._style_rose_axes(ax, s)
+        ax.set_title("Strike distribution  —  before (dashed) vs after (filled)",
+                     fontsize=9, color=s["title"], pad=12)
+        if drawn:
+            ax.legend(fontsize=7, loc="upper left", bbox_to_anchor=(1.02, 1.0))
+
+    def _draw_strike_rose(self, sites, ax, s) -> None:
+        """Rose diagram of per-station strike azimuths (10 deg bins)."""
+        angles = self._strike_angles(sites)
 
         if not angles:
             ax.text(
@@ -2764,12 +2925,7 @@ class CorrectionController:
             linewidth=0.4,
             alpha=0.85,
         )
-        ax.set_theta_zero_location("N")
-        ax.set_theta_direction(-1)  # clockwise = geographic convention
-        ax.set_xticks(np.radians([0, 45, 90, 135]))
-        ax.set_xticklabels(["N", "NE", "E", "SE"], fontsize=6, color=s["tick"])
-        ax.yaxis.set_tick_params(labelsize=5, colors=s["tick"])
-        ax.grid(True, color=s["grid"], alpha=0.3, lw=0.5)
+        self._style_rose_axes(ax, s)
 
     def plot_displacement_diff(self, before, after, ax) -> None:
         """Horizontal bar chart of displacement per station (metres moved)."""
@@ -2875,8 +3031,8 @@ _DARK = dict(
     muted="#585b70",
 )
 _LIGHT = dict(
-    bg="#eff1f5",
-    fig_bg="#e6e9ef",
+    bg="#ffffff",
+    fig_bg="#ffffff",
     fg="#4c4f69",
     title="#4c4f69",
     tick="#6c6f85",

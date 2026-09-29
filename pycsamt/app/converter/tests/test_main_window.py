@@ -107,6 +107,18 @@ def test_apply_theme_noop_persist_when_unchanged(window):
     assert calls == []
 
 
+def test_embedded_theme_is_scoped_to_converter_window(qapp, isolated_qsettings):
+    window = ConverterMainWindow(embedded=True, host_theme="dark")
+    try:
+        assert window._embedded is True
+        assert window._theme == "dark"
+        assert window.styleSheet()
+        window.set_host_theme("light")
+        assert window._theme == "light"
+    finally:
+        window.close()
+
+
 # ── icon helpers ─────────────────────────────────────────────────────────
 
 

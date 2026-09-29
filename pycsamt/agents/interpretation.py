@@ -179,7 +179,7 @@ class InterpretationAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp_text = ""
-        if self.api_key:
+        if self.llm_available:
 
             def _bot_str(d):
                 b = d.get("depth_bot_m")

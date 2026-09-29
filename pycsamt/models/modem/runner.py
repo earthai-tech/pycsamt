@@ -7,10 +7,11 @@ from __future__ import annotations
 import shlex
 import shutil
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Union
 
+from .._process import run_streamed
 from .base import ModEmBase
 from .config import ModEmConfig
 from .doc import _modem_param_docs as _params
@@ -98,6 +99,8 @@ class ModEmRunner(ModEmBase):
         extra_args: Sequence[str] | None = None,
         timeout: int | None = None,
         load_result: bool = True,
+        on_output: Callable[[str], None] | None = None,
+        cancel: Callable[[], bool] | None = None,
     ) -> InversionResult | None:
         """Run a nonlinear ModEM inversion subprocess.
 
@@ -177,6 +180,14 @@ class ModEmRunner(ModEmBase):
             :class:`InversionResult` after the executable
             finishes. Set to ``False`` when the caller only
             needs process completion.
+        on_output : callable, optional
+            Called with every console line while ModEM runs (stdout and
+            stderr merged). Supplying it, or ``cancel``, runs the solver
+            through :func:`pycsamt.models._process.run_streamed`.
+        cancel : callable returning bool, optional
+            Polled while the solver runs; returning ``True`` stops the
+            whole process tree and raises
+            :class:`~pycsamt.models._process.ProcessCancelled`.
 
         Returns
         -------
@@ -266,14 +277,14 @@ class ModEmRunner(ModEmBase):
             str(binary),
             "-I",
             "NLCG",
-            str(model),
-            str(data),
-            str(control),
+            self._arg(model),
+            self._arg(data),
+            self._arg(control),
         ]
         if fwd_control_arg is not None:
-            cmd.append(fwd_control_arg)
+            cmd.append(self._arg(fwd_control_arg))
         if covariance is not None:
-            cmd.append(str(covariance))
+            cmd.append(self._arg(covariance))
         if extra_args:
             cmd.extend(extra_args)
 
@@ -283,16 +294,39 @@ class ModEmRunner(ModEmBase):
                 " ".join(shlex.quote(c) for c in cmd),
             )
 
-        proc = subprocess.run(
-            cmd,
-            cwd=str(self.workdir),
-            timeout=timeout,
-        )
-        proc.check_returncode()
+        if on_output is not None or cancel is not None:
+            # Live console + stoppable run (desktop Inversion window)
+            code = run_streamed(cmd, cwd=self.workdir, on_output=on_output,
+                                cancel=cancel, timeout=timeout)
+            if code:
+                raise subprocess.CalledProcessError(code, cmd)
+        else:
+            proc = subprocess.run(
+                cmd,
+                cwd=str(self.workdir),
+                timeout=timeout,
+            )
+            proc.check_returncode()
 
         if load_result:
             return InversionResult(self.workdir, config=cfg)
         return None
+
+    def _arg(self, path) -> str:
+        """Command-line form of a file argument.
+
+        ModEM's Fortran front end reads each argument into an 80-character
+        buffer, so a long absolute path (the usual Windows temp or user
+        folder) is silently cut and the run stops with "Please specify a
+        valid inverse control file".  Files inside ``workdir`` -- where the
+        solver runs -- are therefore passed by their relative name.
+        """
+        p = Path(str(path))
+        try:
+            rel = p.resolve().relative_to(self.workdir.resolve())
+        except (OSError, ValueError):
+            return str(path)
+        return rel.as_posix()
 
     # ------------------------------------------------------------------
     # Forward-only run
@@ -383,7 +417,7 @@ class ModEmRunner(ModEmBase):
         cmd: list[str] = []
         if _mpi:
             cmd += [cfg.mpi_command, "-np", str(_procs)]
-        cmd += [str(binary), "-F", str(model), str(data)]
+        cmd += [str(binary), "-F", self._arg(model), self._arg(data)]
 
         if self.verbose:
             self.logger.info(
@@ -495,14 +529,14 @@ class ModEmRunner(ModEmBase):
             bin_name,
             "-I",
             "NLCG",
-            str(model),
-            str(data),
-            str(control),
+            self._arg(model),
+            self._arg(data),
+            self._arg(control),
         ]
         if fwd_control_arg is not None:
-            cmd.append(fwd_control_arg)
+            cmd.append(self._arg(fwd_control_arg))
         if covariance is not None:
-            cmd.append(str(covariance))
+            cmd.append(self._arg(covariance))
         return " ".join(shlex.quote(c) for c in cmd)
 
 

@@ -26,10 +26,12 @@ def main() -> None:
 
     from pycsamt.app.converter.main_window import ConverterMainWindow
 
+    import pycsamt
+
     app = QApplication(sys.argv)
     app.setApplicationName("pycsamt-converter")
     app.setApplicationDisplayName("pyCSAMT Format Studio")
-    app.setApplicationVersion("2.0")
+    app.setApplicationVersion(getattr(pycsamt, "__version__", "0.0.0"))
     app.setOrganizationName("earthai-tech")
 
     icon_path = Path(__file__).parent / "resources" / "icons" / "pycsamt.ico"

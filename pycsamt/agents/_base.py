@@ -37,10 +37,11 @@ from ..api.style import PYCSAMT_STYLE
 logger = logging.getLogger(__name__)
 
 # ── constants ─────────────────────────────────────────────────────────────────
-_PROVIDERS = {"claude", "openai", "gemini", "deepseek", "minimax"}
+_PROVIDERS = {"claude", "openai", "gemini", "deepseek", "minimax", "ollama"}
 _STATUS = {"success", "failed", "needs_review"}
 
 _DEFAULT_MODELS = {
+    "ollama": "qwen2.5-coder:1.5b",
     "claude": "claude-sonnet-4-6",
     "openai": "gpt-4o",
     "gemini": "gemini-2.0-flash",
@@ -241,6 +242,8 @@ class BaseAgent(ABC):
 
         # cost accumulator reset each execute() call
         self._last_cost: float = 0.0
+        self.last_usage: dict[str, Any] = {}
+        self._offline_at_creation = AGENT_CONFIG.is_offline
 
         self._log = logging.getLogger(f"pycsamt.agents.{name}")
 
@@ -259,6 +262,13 @@ class BaseAgent(ABC):
         """
 
     # ── LLM interface ─────────────────────────────────────────────────────────
+
+    @property
+    def llm_available(self) -> bool:
+        """Provider configured for inference; connectivity is checked on use."""
+        return not (AGENT_CONFIG.is_offline or self._offline_at_creation) and (
+            self.llm_provider == "ollama" or bool(self.api_key)
+        )
 
     def query_llm(
         self,
@@ -285,9 +295,26 @@ class BaseAgent(ABC):
         -------
         str or None
         """
-        if not self.api_key:
+        if not self.llm_available:
             self._log.debug("No API key — LLM query skipped.")
             return None
+
+        from ._local import LocalModelError, generate, local_only
+
+        if local_only() and self.llm_provider != "ollama":
+            raise LocalModelError(
+                "Cloud inference is disabled in this local-only request."
+            )
+        if self.llm_provider == "ollama":
+            text, usage = generate(
+                prompt,
+                system_message or self.SYSTEM_PROMPT,
+                model=self.model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            self.last_usage = usage
+            return text
 
         # Raise before the API call if the session budget is already exhausted.
         AGENT_CONFIG._check_budget()
@@ -610,7 +637,11 @@ class BaseAgent(ABC):
     # ── repr ──────────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        llm = f"{self.llm_provider}/{self.model}" if self.api_key else "no-LLM"
+        llm = (
+            f"{self.llm_provider}/{self.model}"
+            if self.llm_available
+            else "no-LLM"
+        )
         return f"{type(self).__name__}(name={self.name!r}, llm={llm!r})"
 
 

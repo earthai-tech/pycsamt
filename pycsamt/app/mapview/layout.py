@@ -620,6 +620,11 @@ def _three_d_group() -> html.Div:
                     size="sm",
                 ),
             ),
+            _ctl_row(
+                "Vertical exaggeration ×",
+                _num(IDs.CTL_VE, None, min=0, max=50, step=0.5,
+                     placeholder="off  (0 = auto)"),
+            ),
             html.Div(
                 [
                     html.Div(

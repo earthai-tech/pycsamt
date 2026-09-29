@@ -99,6 +99,7 @@ def launch(
     debug: bool = False,
     open_browser: bool = True,
     view: object | None = None,
+    state: dict | None = None,
 ) -> None:
     """Launch the Map View platform in a local browser.
 
@@ -113,11 +114,18 @@ def launch(
     view :
         Optional :class:`~pycsamt.map.MapView` to seed the first
         session with (used by ``MapView.launch``).
+    state :
+        Optional scene to open with *view* (3-D mode, colours, depth,
+        topography, overlays, spin, camera) -- see
+        :func:`pycsamt.app.desktop.controllers.pcsf_scene.mapview_state`.
     """
     if view is not None:
         from .cache import set_seed
 
-        set_seed(view)
+        if state:
+            set_seed(view, state)
+        else:
+            set_seed(view)
 
     app = create_app(debug=debug)
 

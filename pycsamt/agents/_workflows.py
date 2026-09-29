@@ -627,6 +627,7 @@ WORKFLOW_KEYWORDS: dict[str, list[str]] = {
     ],
     "forward": [
         "forward model",
+        "forward-model",
         "forward modeling",
         "synthetic data",
         "simulate",

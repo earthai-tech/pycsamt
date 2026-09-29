@@ -26,7 +26,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import matplotlib.figure
 
 
@@ -115,7 +115,10 @@ class OutputDir:
         plot_dir = self.step_plot_dir(step_idx, step_name)
         path = plot_dir / f"{fn_name}.{cfg.plot_fmt}"
         try:
-            fig.savefig(str(path), dpi=cfg.plot_dpi, bbox_inches="tight")
+            # White page whatever the caller's matplotlib style (a themed
+            # host app used to turn every saved QC figure grey).
+            fig.savefig(str(path), dpi=cfg.plot_dpi, bbox_inches="tight",
+                        facecolor="white")
             return path
         except Exception as exc:
             warnings.warn(

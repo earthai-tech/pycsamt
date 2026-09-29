@@ -32,12 +32,16 @@ class AppController:
     def __init__(self, session: SessionState | None = None) -> None:
         self.session: SessionState = session or SessionState.load()
         self.sites = None
+        self.all_sites = None
+        self.active_lines: set[str] = set(self.session.active_lines)
+        self.primary_line: str | None = self.session.primary_line
         self.selected_station: str | None = self.session.selected_station
 
         # ── Callback lists (listeners register here) ──────────────────
         self._on_data_loaded: list[Callable] = []
         self._on_station_selected: list[Callable] = []
         self._on_status_message: list[Callable] = []
+        self._on_active_lines_changed: list[Callable] = []
 
     # ── Registration ──────────────────────────────────────────────────
 
@@ -53,14 +57,33 @@ class AppController:
         """Register *callback(message: str)* for status-bar updates."""
         self._on_status_message.append(callback)
 
+    def on_active_lines_changed(self, callback: Callable) -> None:
+        self._on_active_lines_changed.append(callback)
+
     # ── State mutations (called by workers / panels) ───────────────────
 
     def set_sites(self, sites) -> None:
         """Store the loaded Sites and notify all data-loaded listeners."""
         self.sites = sites
+        self.all_sites = sites
         for cb in self._on_data_loaded:
             try:
                 cb(sites)
+            except Exception:
+                pass
+
+    def set_active_scope(
+        self, sites, active_lines: set[str], primary_line: str | None
+    ) -> None:
+        """Update the application-wide filtered survey without reloading data."""
+        self.sites = sites
+        self.active_lines = set(active_lines)
+        self.primary_line = primary_line
+        self.session.active_lines = sorted(active_lines)
+        self.session.primary_line = primary_line
+        for callback in self._on_active_lines_changed:
+            try:
+                callback(sites, set(active_lines), primary_line)
             except Exception:
                 pass
 

@@ -39,10 +39,10 @@ from PySide6.QtWidgets import (
 from pycsamt.app.desktop.controllers.plot_controller import (
     style_axes,
 )
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.widgets.colorbar_widget import (
     ColorbarWidget,
 )
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
 _COLORMAPS = [
     "jet_r",
@@ -128,10 +128,20 @@ class SectionPanel(QWidget):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
 
-        self._canvas = MplCanvas(self, toolbar=True)
-        right_layout.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            self, toolbar=True,
+            empty_title="No section yet",
+            empty_reason="Load an inversion result to view the section.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            self._redraw, tooltip="Redraw the current section"
+        )
+        right_layout.addWidget(self._canvas_view)
 
-        self._cbar = ColorbarWidget(orientation="vertical", parent=self)
+        self._cbar = ColorbarWidget(
+            orientation="vertical", parent=self, dark=self._dark
+        )
         self._cbar.setFixedWidth(60)
         right_layout.addWidget(self._cbar)
 
@@ -249,8 +259,11 @@ class SectionPanel(QWidget):
 
     def set_dark_mode(self, dark: bool) -> None:
         self._dark = dark
+        self._cbar.set_dark_mode(dark)
         if self._result is not None:
             self._redraw()
+        else:
+            self._draw_empty()
 
     # ── Topo slots ────────────────────────────────────────────────────
 
@@ -323,21 +336,12 @@ class SectionPanel(QWidget):
     # ── Drawing ────────────────────────────────────────────────────────
 
     def _draw_empty(self) -> None:
-        ax = self._canvas.axes
-        ax.cla()
-        ax.text(
-            0.5,
-            0.5,
-            "Load an inversion result\nor run an inversion from\n"
-            "Processing → Inversion Wizard",
-            transform=ax.transAxes,
-            ha="center",
-            va="center",
-            fontsize=11,
-            color="#585b70",
+        self._cbar.clear()
+        self._canvas_view.show_unavailable(
+            "No section yet",
+            "Load an inversion result or run an inversion from "
+            "Processing → Inversion Wizard.",
         )
-        style_axes(ax, self._dark)
-        self._canvas.draw()
 
     def _redraw(self) -> None:
         if self._result is None:
@@ -352,20 +356,16 @@ class SectionPanel(QWidget):
             if self._result_ref is not None:
                 self._draw_section_contours(ax, self._result_ref)
         except Exception as exc:
-            ax.cla()
-            ax.text(
-                0.5,
-                0.5,
-                f"Render error:\n{exc}",
-                transform=ax.transAxes,
-                ha="center",
-                va="center",
-                fontsize=10,
-                color="#f38ba8",
-            )
+            style_axes(ax, self._dark)
+            self._canvas.draw()
+            # A colorbar for a section that failed to render is misleading.
+            self._cbar.clear()
+            self._canvas_view.show_unavailable("Section render error", str(exc))
+            return
 
         style_axes(ax, self._dark)
         self._canvas.draw()
+        self._canvas_view.show_canvas()
 
         # Update colorbar
         self._cbar.update_colorbar(

@@ -38,14 +38,27 @@ class ColorbarWidget(QWidget):
     parent : QWidget, optional
     """
 
+    _THEME = {
+        True: dict(fig_bg="#1e1e2e", tick="#a6adc8", label="#cdd6f4"),
+        False: dict(fig_bg="#e6e9ef", tick="#6c6f85", label="#4c4f69"),
+    }
+
     def __init__(
         self,
         orientation: str = "vertical",
         parent: QWidget | None = None,
+        dark: bool = True,
     ) -> None:
         super().__init__(parent)
         self._orientation = orientation
+        self._dark = dark
         self._cb = None
+        # Cached params so set_dark_mode() can redraw without the caller
+        # needing to re-supply the last cmap/vmin/vmax/label.
+        self._last_cmap: str | mcolors.Colormap = "plasma"
+        self._last_vmin = 0.0
+        self._last_vmax = 1.0
+        self._last_label = ""
         self._build_ui()
 
     # ── Construction ──────────────────────────────────────────────────
@@ -58,7 +71,9 @@ class ColorbarWidget(QWidget):
         else:
             figsize = (4.0, 0.5)
 
-        self._fig = Figure(figsize=figsize, facecolor="#1e1e2e")
+        self._fig = Figure(
+            figsize=figsize, facecolor=self._THEME[self._dark]["fig_bg"]
+        )
         self._ax = self._fig.add_axes([0.1, 0.05, 0.4, 0.9])
         self._canvas = FigureCanvasQTAgg(self._fig)
         self._canvas.setSizePolicy(
@@ -75,6 +90,34 @@ class ColorbarWidget(QWidget):
 
     # ── Public API ─────────────────────────────────────────────────────
 
+    def set_dark_mode(self, dark: bool) -> None:
+        """Re-theme the colorbar figure to match the app's dark/light mode.
+
+        Previously this widget's figure background was hardcoded to the
+        dark palette regardless of the active theme, so in light mode it
+        stood out as a mismatched black box next to an otherwise
+        light-themed panel.
+        """
+        if dark == self._dark:
+            return
+        self._dark = dark
+        self.update_colorbar(
+            self._last_cmap, self._last_vmin, self._last_vmax,
+            self._last_label,
+        )
+
+    def clear(self) -> None:
+        """Blank the colorbar (no gradient/ticks/label) for an empty state.
+
+        Used instead of leaving a stale gradient visible when the parent
+        panel has no data loaded — a colorbar with no data behind it is
+        just as unprofessional as an empty axes with default 0..1 ticks.
+        """
+        self._fig.clear()
+        self._fig.set_facecolor(self._THEME[self._dark]["fig_bg"])
+        self._cb = None
+        self._canvas.draw_idle()
+
     def update_colorbar(
         self,
         cmap: str | mcolors.Colormap = "plasma",
@@ -83,9 +126,13 @@ class ColorbarWidget(QWidget):
         label: str = "",
     ) -> None:
         """Redraw the colorbar with new range and label."""
+        self._last_cmap, self._last_vmin = cmap, vmin
+        self._last_vmax, self._last_label = vmax, label
+
         # Recreate axes each call to avoid matplotlib figure-ownership issues
         # when a previous colorbar is removed and the cax becomes orphaned.
         self._fig.clear()
+        self._fig.set_facecolor(self._THEME[self._dark]["fig_bg"])
         if self._orientation == "vertical":
             self._ax = self._fig.add_axes([0.15, 0.05, 0.35, 0.90])
         else:
@@ -97,13 +144,14 @@ class ColorbarWidget(QWidget):
         sm = mcm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
 
+        theme = self._THEME[self._dark]
         self._cb = self._fig.colorbar(
             sm,
             cax=self._ax,
             orientation=self._orientation,
         )
-        self._cb.ax.tick_params(colors="#a6adc8", labelsize=8)
+        self._cb.ax.tick_params(colors=theme["tick"], labelsize=8)
         if label:
-            self._cb.set_label(label, color="#cdd6f4", fontsize=9)
+            self._cb.set_label(label, color=theme["label"], fontsize=9)
 
         self._canvas.draw_idle()

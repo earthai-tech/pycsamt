@@ -33,6 +33,43 @@ class _EDIStub:
         self.azimuth = 0.0
 
 
+def test_get_returns_none_when_nothing_matches():
+    class Empty:
+        pass
+
+    b = m.bundle_from_edi(Empty())
+    assert b.freq is None
+    assert b.z is None
+    assert b.station is None
+
+
+def test_bundle_from_edi_leaves_non_3d_tipper_untouched():
+    class E:
+        tipper = np.zeros((5, 2), dtype=complex)  # already (n, 2)
+
+    b = m.bundle_from_edi(E())
+    assert b.tipper.shape == (5, 2)
+
+
+def test_bundle_from_edi_tipper_3d_non_1x2_left_untouched():
+    class E:
+        tipper = np.zeros((5, 2, 2), dtype=complex)  # ndim==3 but not (1, 2)
+
+    b = m.bundle_from_edi(E())
+    assert b.tipper.shape == (5, 2, 2)
+
+
+def test_bundle_from_edi_tipper_shape_probe_exception_is_swallowed():
+    class _BadTipper:
+        ndim = 3  # lies about ndim, has no .shape
+
+    class E:
+        tipper = _BadTipper()
+
+    b = m.bundle_from_edi(E())
+    assert isinstance(b.tipper, _BadTipper)
+
+
 def test_bundle_from_edi_extracts_and_normalizes():
     edi = _EDIStub(n=4)
     b = m.bundle_from_edi(edi)
@@ -57,6 +94,27 @@ class Host(m.BundleMixin):
     @classmethod
     def from_bundle(cls, bundle: m.TFBundle):
         return cls(bundle)
+
+
+def test_looks_collection_heuristics():
+    assert m._looks_collection([1, 2]) is True
+    assert m._looks_collection((1, 2)) is True
+    assert m._looks_collection({1, 2}) is True
+    assert m._looks_collection("a string") is False
+    assert m._looks_collection(b"bytes") is False
+    # generic iterable without a `z` attribute -> collection
+    assert m._looks_collection(iter([1, 2])) is True
+    # has __iter__ but also a `z` attribute -> treated as a single item,
+    # not a collection
+    class IterableWithZ:
+        z = 1
+
+        def __iter__(self):
+            return iter([])
+
+    assert m._looks_collection(IterableWithZ()) is False
+    # neither iterable nor list-like -> False
+    assert m._looks_collection(object()) is False
 
 
 def test_bundle_mixin_ensure_station_name():
@@ -109,6 +167,36 @@ class Container(m.BundleContainerMixin):
 
     def items(self):  # mapping-like
         return list(self._items.items())
+
+
+def test_container_items_skips_entries_without_to_bundle():
+    class Container2(m.BundleContainerMixin):
+        def __init__(self):
+            self._items = {"A": Item("A"), "B": object()}
+
+        def items(self):
+            return list(self._items.items())
+
+    c = Container2()
+    bundles = list(c.iter_bundles())
+    assert len(bundles) == 1
+    assert bundles[0].station == "A"
+
+
+class ListContainer(m.BundleContainerMixin):
+    """No items() method: falls back to plain __iter__."""
+
+    def __init__(self, items):
+        self._items = items
+
+    def __iter__(self):
+        return iter(self._items)
+
+
+def test_container_iter_bundles_fallback_to_plain_iteration():
+    c = ListContainer([Item("X"), object(), Item("Y")])
+    bundles = list(c.iter_bundles())
+    assert {b.station for b in bundles} == {"X", "Y"}
 
 
 def test_container_iter_bundles_and_to_edi_collection():

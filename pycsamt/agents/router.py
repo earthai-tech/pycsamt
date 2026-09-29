@@ -310,8 +310,15 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
         return META, 0.88
 
     # ── CODE: explicit script requests ─────────────────────────────────────
-    if any(p in t for p in _CODE_PHRASES):
+    if any(p in t for p in _CODE_PHRASES) or re.search(
+        r"\b(?:write|generate|create)\b.{0,80}\b(?:example|script|code|notebook)\b", t
+    ):
         return CODE, 0.85
+
+    from pycsamt.assistant.tools.repository import is_developer_question
+
+    if is_developer_question(text):
+        return QUESTION, 0.95
 
     # ── METRICS: a question about a computed VALUE of a line ────────────────
     # ("what's the strike of L22PLT?", "azimuth of all lines"). Checked before
@@ -328,6 +335,19 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
 
     if t in _AMBIGUOUS_COMMANDS:
         return CLARIFY, 0.72
+
+    # Bare API documentation queries need not begin with "what/how".
+    # Explicit code requests and dataset actions retain their precedence.
+    if (
+        not has_path
+        and not has_line
+        and re.search(
+            r"\b(parameters?|arguments?|return (?:values?|columns?|types?)|signature|docstring)\b",
+            t,
+        )
+        and not re.match(r"^(run|execute|apply|compute|set|change|use)\b", t)
+    ):
+        return QUESTION, 0.8
 
     # ── QUESTION: genuine "what/how/why…" or trailing "?" ──────────────────
     is_question = t.endswith("?") or t.startswith(_QUESTION_STARTS)
@@ -508,6 +528,11 @@ class IntentRouter(BaseAgent):
         heuristic on any failure or when offline.
         """
         text = (text or "").strip()
+        from ._generation import is_code_followup, pending_code_request
+
+        if is_code_followup(text, history) or pending_code_request(text, history):
+            return RouterDecision(intent=CODE, confidence=1.0, source="offline",
+                                  reasoning="Edit of the recent code artifact")
         if not text:
             return RouterDecision(
                 intent=META,
@@ -516,8 +541,22 @@ class IntentRouter(BaseAgent):
                 source="offline",
             )
 
+        from pycsamt.assistant.tools.repository import is_developer_question
+
+        if is_developer_question(text) and classify_intent_offline(text)[0] == QUESTION:
+            return self._offline_decision(text)
+
         # offline path
-        if not self._caller_key:
+        if not self.llm_available or (
+            self.llm_provider != "ollama" and not self._caller_key
+        ):
+            return self._offline_decision(text)
+
+        # Save CPU inference for answers when deterministic routing is clear.
+        if (
+            self.llm_provider == "ollama"
+            and classify_intent_offline(text)[1] >= 0.7
+        ):
             return self._offline_decision(text)
 
         # online path — structured JSON

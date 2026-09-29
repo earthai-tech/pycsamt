@@ -25,7 +25,6 @@ from __future__ import annotations
 import math
 import platform
 import sys
-from pathlib import Path
 
 from PySide6.QtCore import QRectF, Qt, QUrl
 from PySide6.QtGui import (
@@ -49,13 +48,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pycsamt.app.desktop import branding
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
-_ICONS = Path(__file__).parent.parent / "resources" / "icons"
-_LOGO_SVG = _ICONS / "pycsamt_logo.svg"
+_LOGO_SVG = branding.LOGO_SVG
 
 # ── External links ────────────────────────────────────────────────────────────
-_URL_DOCS = "https://pycsamt.org/"
-_URL_GH = "https://github.com/earthai-tech/pycsamt"
+_URL_DOCS = branding.URL_DOCS
+_URL_GH = branding.URL_GITHUB
 
 # ── Brand palette ─────────────────────────────────────────────────────────────
 _C_BG_DARK = QColor("#0c1f4a")
@@ -152,12 +152,7 @@ class _HeroBanner(QWidget):
             self._renderer.render(p, QRectF(lx, ly, lw, lh))
 
         # ── Version badge ──────────────────────────────────────────────
-        try:
-            import pycsamt
-
-            ver = getattr(pycsamt, "__version__", "2.0.0")
-        except Exception:
-            ver = "2.0.0"
+        ver = branding.get_version()
 
         vfont = QFont()
         vfont.setFamily("Arial")
@@ -180,7 +175,7 @@ class _HeroBanner(QWidget):
         p.drawText(
             QRectF(0, 114, w, 18),
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
-            "Python  MT · AMT · CSAMT · CSEM  —  Geophysical Processing Suite",
+            branding.TAGLINE,
         )
 
         p.end()
@@ -231,18 +226,28 @@ class AboutDialog(QDialog):
     Parameters
     ----------
     parent : QWidget, optional
+    license_manager : LicenseManager, optional
+        Defaults to :class:`~pycsamt.app.desktop.licensing.null_manager
+        .NullLicenseManager` (unlimited trial) when the caller doesn't
+        pass one. ``main_window.py`` passes
+        ``licensing.manager.get_default_manager()`` for the real,
+        persisted license/trial state.
     """
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        license_manager=None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("About pycsamt")
         self.setFixedWidth(530)
         self.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum
         )
-        self._build_ui()
+        self._build_ui(license_manager)
 
-    def _build_ui(self) -> None:
+    def _build_ui(self, license_manager=None) -> None:
         root = QVBoxLayout(self)
         root.setSpacing(0)
         root.setContentsMargins(0, 0, 0, 0)
@@ -287,12 +292,7 @@ class AboutDialog(QDialog):
         lay.addWidget(div)
 
         # Metadata
-        try:
-            import pycsamt
-
-            ver = getattr(pycsamt, "__version__", "2.0.0")
-        except Exception:
-            ver = "2.0.0"
+        ver = branding.get_version()
 
         py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
         plat = platform.system()
@@ -304,20 +304,43 @@ class AboutDialog(QDialog):
             f"  <td>&nbsp;&nbsp;&nbsp;<b>Python</b></td><td>&nbsp;{py_ver}</td>"
             f"</tr>"
             f"<tr>"
-            f"  <td><b>License</b></td><td>&nbsp;LGPL-3.0</td>"
+            f"  <td><b>License</b></td><td>&nbsp;{branding.LICENSE_SPDX}</td>"
             f"  <td>&nbsp;&nbsp;&nbsp;<b>Platform</b></td><td>&nbsp;{plat}</td>"
             f"</tr>"
             f"<tr>"
             f"  <td><b>Author&nbsp;</b></td>"
-            f"  <td colspan='3'>&nbsp;Laurent Kouadio &nbsp;"
-            f"<a href='mailto:etanoyau@gmail.com' style='color:{_C_LINK};'>"
-            f"etanoyau@gmail.com</a></td>"
+            f"  <td colspan='3'>&nbsp;{branding.AUTHOR_NAME} &nbsp;"
+            f"<a href='mailto:{branding.AUTHOR_EMAIL}' style='color:{_C_LINK};'>"
+            f"{branding.AUTHOR_EMAIL}</a></td>"
             f"</tr>"
             f"</table>"
         )
         meta.setTextFormat(Qt.TextFormat.RichText)
         meta.setOpenExternalLinks(True)
         lay.addWidget(meta)
+
+        # License / trial status — see widgets/license_page.py for the
+        # full activation UI (Preferences ▸ License tab); this is a
+        # compact read-only summary sharing the same status wording.
+        from pycsamt.app.desktop.licensing.null_manager import (
+            NullLicenseManager,
+        )
+        from pycsamt.app.desktop.widgets.license_page import (
+            status_badge_html,
+        )
+
+        manager = license_manager or NullLicenseManager()
+        status = manager.status()
+        trial = manager.trial_state()
+        trial_note = ""
+        if trial is not None and not trial.is_expired:
+            trial_note = f" &nbsp; {trial.days_remaining} day(s) remaining"
+        license_row = QLabel(
+            f"<b>License status</b>&nbsp; {status_badge_html(status)}{trial_note}"
+        )
+        license_row.setObjectName("LicenseStatusRow")
+        license_row.setTextFormat(Qt.TextFormat.RichText)
+        lay.addWidget(license_row)
 
         # Link buttons row
         link_row = QHBoxLayout()

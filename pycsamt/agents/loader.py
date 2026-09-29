@@ -199,7 +199,7 @@ class MTLoaderAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interpretation: str | None = None
-        if self.api_key:
+        if self.llm_available:
             prompt = _build_interpretation_prompt(
                 summary_stats, rows, warnings
             )

@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -54,17 +55,21 @@ class ExportDialog(QDialog):
         self,
         figure,
         default_path: str = "",
+        figure_factory=None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Export Figure")
         self.setMinimumWidth(480)
         self._figure = figure
+        self._figure_factory = figure_factory
         self._build_ui(default_path)
 
     # ── UI ────────────────────────────────────────────────────────────
 
     def _build_ui(self, default_path: str) -> None:
+        from pycsamt.api.plot import PLOT_CONFIG
+
         root = QVBoxLayout(self)
 
         form = QFormLayout()
@@ -78,15 +83,16 @@ class ExportDialog(QDialog):
 
         # DPI
         self._dpi_spin = QSpinBox()
-        self._dpi_spin.setRange(36, 1200)
+        self._dpi_spin.setRange(36, 2400)
         self._dpi_spin.setSingleStep(50)
-        self._dpi_spin.setValue(300)
+        self._dpi_spin.setValue(max(600, int(PLOT_CONFIG.dpi)))
+        self._dpi_spin.setToolTip("Publication preset: at least 600 DPI; adjustable for this export.")
         form.addRow("DPI:", self._dpi_spin)
 
         # Destination path
         path_row = QHBoxLayout()
         self._path_edit = QLineEdit(
-            default_path or str(Path.home() / "pycsamt_figure.png")
+            default_path or str(Path(PLOT_CONFIG.savedir or Path.home()) / "pycsamt_figure.png")
         )
         self._path_edit.setPlaceholderText("Destination file path…")
         btn_browse = QPushButton("Browse…")
@@ -95,6 +101,16 @@ class ExportDialog(QDialog):
         path_row.addWidget(self._path_edit)
         path_row.addWidget(btn_browse)
         form.addRow("Save to:", path_row)
+
+        self._transparent = QCheckBox("Transparent background")
+        self._transparent.setChecked(bool(PLOT_CONFIG.transparent))
+        form.addRow("", self._transparent)
+        self._bbox_inches = PLOT_CONFIG.bbox_inches
+        preferred = PLOT_CONFIG.resolve_formats()[0]
+        for label, (extension, _) in _FORMATS.items():
+            if extension == preferred:
+                self._fmt_combo.setCurrentText(label)
+                break
 
         root.addLayout(form)
 
@@ -140,13 +156,25 @@ class ExportDialog(QDialog):
             return
 
         try:
-            self._figure.savefig(
+            figure = (
+                self._figure_factory()
+                if self._figure_factory is not None
+                else self._figure
+            )
+            figure.savefig(
                 path,
                 dpi=dpi,
                 format=ext,
-                bbox_inches="tight",
-                facecolor=self._figure.get_facecolor(),
+                bbox_inches=self._bbox_inches,
+                transparent=self._transparent.isChecked(),
+                facecolor="none" if self._transparent.isChecked() else "white",
+                edgecolor="none",
+                pad_inches=0.12,
             )
+            if figure is not self._figure:
+                from matplotlib.pyplot import close
+
+                close(figure)
             self.accept()
         except Exception as exc:
             QMessageBox.critical(

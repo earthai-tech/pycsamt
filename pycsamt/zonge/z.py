@@ -412,12 +412,20 @@ class Z(TensorBase):
         df_write["z_imag"] = self.z_imag
         df_write["z_err"] = self.z_err
 
-        return self._write_csv_block(
-            cols=list(df_write.columns),
-            title="$Z (Impedance) Block",
-            include_meta=True,
-            stamp=True,
-        )
+        # `_write_csv_block` selects its columns from `self._frame`, so
+        # swap in the enriched table for the duration of the call (the
+        # original frame is restored immediately after).
+        original_frame = self._frame
+        try:
+            self._frame = df_write
+            return self._write_csv_block(
+                cols=list(df_write.columns),
+                title="$Z (Impedance) Block",
+                include_meta=True,
+                stamp=True,
+            )
+        finally:
+            self._frame = original_frame
 
     def __str__(self) -> str:
         """Provide a concise, human-readable representation."""

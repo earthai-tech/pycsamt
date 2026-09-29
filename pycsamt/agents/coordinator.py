@@ -194,7 +194,7 @@ class AgentCoordinator:
             agent = step.agent
             llm_str = (
                 f"{agent.llm_provider}/{agent.model}"
-                if agent.api_key
+                if agent.llm_available
                 else "no-LLM"
             )
             req_str = "" if step.required else " [optional]"

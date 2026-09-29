@@ -263,6 +263,8 @@ def _drop_workflow(inv_config: dict | None) -> dict:
 def _update_job(jid: str, **kw: Any) -> None:
     with _JOBS_LOCK:
         if jid in _JOBS:
+            if _JOBS[jid].get("status") == "cancelled":
+                return
             _JOBS[jid].update(kw)
 
 
@@ -1947,6 +1949,11 @@ def _dispatch_question(
             {"question": text, "context": ctx_str, "session": session_ctx}
         )
 
+    if res.status == "failed":
+        _update_job(jid, status="error", error=res.error or res.summary,
+                    result=res.error or res.summary, kind=KIND_ERROR)
+        return
+
     answer = (
         res.get("answer")
         or res.summary
@@ -1961,8 +1968,8 @@ def _dispatch_question(
         answer = (
             answer
             + "\n\n---\n*Offline answer composed from the pyCSAMT reference."
-            " For a fuller, synthesised response, add an API key (Claude,"
-            " OpenAI, Gemini, DeepSeek or MiniMax) in **Settings**.*"
+            " For a fuller, synthesised response, select a local Ollama model"
+            " or configure a cloud provider in **Settings**.*"
         )
     step("Answer ready", "done")
     _update_job(
@@ -2807,6 +2814,10 @@ _NO_DATA_GUIDANCE = (
 
 def _looks_like_data_read(text: str) -> bool:
     """True when *text* asks to read/summarise the loaded survey data."""
+    from pycsamt.assistant.tools.repository import is_developer_question
+
+    if is_developer_question(text):
+        return False
     t = (text or "").lower()
     if _looks_like_lines_query(text):
         return True
@@ -3241,12 +3252,44 @@ def _dispatch_code(
     sel_model: str | None,
     offline: bool,
     step,
+    history: list[dict] | None = None,
 ) -> None:
     """Generate a standalone pyCSAMT script via CodeGenerationAgent."""
+    from pathlib import Path
+
+    from pycsamt.agents._generation import (
+        GenerationInput,
+        clarification_for,
+        exact_artifact_edit,
+        pending_code_request,
+    )
     from pycsamt.agents.code_gen import CodeGenerationAgent
     from pycsamt.agents.context import ContextInputAgent
     from pycsamt.api.agents import AGENT_CONFIG
 
+    edit_input = GenerationInput.from_chat(text, history)
+    if exact_artifact_edit(edit_input):
+        prior = next((m.get("generation", {}) for m in reversed(history or [])
+                      if m.get("role") == "assistant" and m.get("code")), {})
+        edit_input.workflow_config = {"workflow": prior.get("workflow", "custom"),
+                                      "output_dir": edit_input.previous_output_dir}
+        step("Applying the requested artifact edit...", "done")
+        with AGENT_CONFIG.offline():
+            result = CodeGenerationAgent().execute({
+                "generation_input": edit_input,
+                "output_dir": settings.get("output_dir", "pycsamt_agent_output"),
+            })
+        data = result.data or {}
+        from pycsamt.assistant.tools.validation_tools import validation_summary
+
+        _update_job(jid, status="done", kind=KIND_CODE,
+                    result=(data.get("review_reason") or "Updated only the requested literal values.") + "\n\n" + validation_summary(data.get("validation", {})),
+                    code=data.get("code", ""), generation=data.get("generation", {}),
+                    script_path=data.get("script_path"), validation=data.get("validation"), validation_path=data.get("validation_path"))
+        return
+
+    pending = pending_code_request(text, history)
+    task_text = pending + "\nUser clarification: " + text if pending else text
     step("Extracting configuration...", "done")
     with AGENT_CONFIG.offline() if offline else _nullctx():
         ctx_agent = ContextInputAgent(
@@ -3254,25 +3297,34 @@ def _dispatch_code(
             api_key=api_key,
             model=sel_model,
         )
-        ctx_res = ctx_agent.execute({"request": text})
+        ctx_res = ctx_agent.execute({"request": task_text})
     cfg = ctx_res.data.get("config", {}) if ctx_res and ctx_res.data else {}
     # Pick the workflow the code should be ABOUT (the subject), not the
     # "code_gen" action. Priority: router slot (if specific) → subject
-    # extracted from the text → sensible default.
+    # extracted from the text → custom composition (no invented QC default).
     target = (
         workflow
         if (workflow and workflow != "code_gen")
-        else _code_target_workflow(text)
+        else _code_target_workflow(task_text)
     )
     if target:
         cfg["workflow"] = target
-    elif cfg.get("workflow", "") in ("", "code_gen"):
-        # plain "write me a script" with no subject → default to qc
-        cfg["workflow"] = "qc"
+    else:
+        # The parser's default is not evidence of the requested task.
+        cfg["workflow"] = "custom"
+
+    generation = GenerationInput.from_chat(text, history, workflow_config=cfg)
+    question = clarification_for(generation)
+    if question:
+        _update_job(jid, status="done", result=question, kind=KIND_CLARIFY,
+                    pending_request=generation.task_text)
+        return
 
     # ── RAG grounding: resolve a named survey line to its real path and
     # retrieve real symbols/recipe so the generated code is accurate. ──
     rag_text = ""
+    pc = {}
+    api_symbols = []
     resolved_line = None
     try:
         from pycsamt.assistant.rag.context_builder import (
@@ -3281,28 +3333,56 @@ def _dispatch_code(
 
         builder = default_context_builder()
         if builder is not None:
-            ac = builder.build(text)
+            ac = (builder.build(task_text, max_chars=1800)
+                  if llm_prov == "ollama" else builder.build(task_text))
             rag_text = ac.context_text
             pc = ac.project_context
+            api_symbols = [c.symbol for c in getattr(ac, "chunks", []) if c.symbol]
+            # A custom composition may need a second targeted lookup; keep
+            # the original request intact and bound only the evidence.
+            if cfg["workflow"] == "custom" and not api_symbols:
+                targeted = " ".join(re.findall(r"\b(?:pycsamt\.)?[A-Za-z]\w*_[A-Za-z_]+\b", text))
+                if targeted:
+                    extra = builder.build(targeted, max_chars=1200)
+                    rag_text += "\n" + extra.context_text
+                    api_symbols.extend(c.symbol for c in getattr(extra, "chunks", []) if c.symbol)
             if pc.get("exists") and pc.get("edi_dir"):
                 resolved_line = pc.get("line")
-                cfg["data_path"] = pc["edi_dir"]
+                cfg.setdefault("data_path", pc["edi_dir"])
     except Exception:  # noqa: BLE001 — RAG is best-effort
         rag_text = ""
+
+    # Preserve all named lines for a composition, rather than replacing a
+    # two-line request with the registry's first match.
+    try:
+        from pycsamt.assistant.tools.project_registry import ProjectRegistry
+
+        registry_path = settings.get("line_registry")
+        registry = ProjectRegistry(registry_path) if registry_path else ProjectRegistry.from_default()
+        if registry:
+            named = [name for name in registry.lines() if re.search(r"\b" + re.escape(name) + r"\b", task_text, re.I)]
+            if named:
+                pc = {**pc, "lines": [registry.resolve_line(name) for name in named[:8]]}
+    except (OSError, ValueError, KeyError):
+        pass
 
     # Use a loaded EDI path when present (and no line was resolved) so the
     # script is immediately runnable; otherwise code_gen inserts a
     # /path/to/EDIs placeholder.
     if not resolved_line:
-        edi_path = (edi_store or {}).get("path", "") or cfg.get(
-            "data_path", ""
-        )
+        edi_path = cfg.get("data_path", "") or (edi_store or {}).get("path", "")
         if edi_path:
             cfg["data_path"] = edi_path
 
     output_dir = (
         settings.get("output_dir") or ""
     ).strip() or "pycsamt_workflow_output"
+    if cfg.get("output_dir") in (None, "", str(Path("pycsamt_agent_output").resolve())):
+        cfg["output_dir"] = output_dir
+    generation.workflow_config = cfg
+    generation.project_context = pc
+    generation.retrieved_evidence = rag_text
+    generation.api_symbols = api_symbols
 
     _update_job(jid, workflow="code_gen")
     step("Generating code...", "running")
@@ -3318,51 +3398,62 @@ def _dispatch_code(
                 "results": {},
                 "output_dir": output_dir,
                 "rag_context": rag_text,
+                "generation_input": generation,
             }
         )
 
-    code = res.get("code", "") if res else ""
+    code = res.get("code", "") if res is not None else ""
+    if res is None or res.status == "failed":
+        message = (res.error or res.summary) if res is not None else "Code generation returned no result."
+        if res is not None and res.get("validation"):
+            from pycsamt.assistant.tools.validation_tools import (
+                validation_summary,
+            )
+            message += "\n\n" + validation_summary(res.get("validation"))
+        _update_job(jid, status="error", result=message, error=message, kind=KIND_ERROR,
+                    code=code, validation=res.get("validation") if res is not None else None)
+        return
+    if res.get("clarification"):
+        _update_job(jid, status="done", result=res.get("clarification"), kind=KIND_CLARIFY,
+                    pending_request=generation.task_text)
+        return
 
-    # Validate the generated script (deterministic): catch syntax errors
-    # and any hallucinated pyCSAMT symbols before the user runs it.
-    _valid_note = ""
-    try:
-        from pycsamt.assistant.tools.validation_tools import (
-            validate_generated_code,
-        )
+    from pycsamt.assistant.tools.validation_tools import validation_summary
 
-        rep = validate_generated_code(code)
-        if rep["ok"]:
-            _valid_note = (
-                "\n\n✓ Validated: syntax OK and all pyCSAMT imports"
-                " resolve to real symbols."
+    rep = res.get("validation")
+    if rep is None:
+        try:
+            from pycsamt.assistant.tools.validation_tools import (
+                validate_generated_code,
             )
-        elif not rep["syntax_ok"]:
-            _valid_note = (
-                "\n\n⚠ Validation: the script has a syntax error — "
-                + "; ".join(rep["errors"][:2])
-            )
-        else:
-            _valid_note = (
-                "\n\n⚠ Validation: some symbols could not be verified — "
-                + "; ".join(rep["errors"][:3])
-            )
-    except Exception:  # noqa: BLE001 — validation is best-effort
-        _valid_note = ""
+            rep = validate_generated_code(code)
+        except Exception as exc:
+            rep = {"ok": False, "checks": {"validation": {"state": "unverifiable", "reason": str(exc)}}, "errors": [str(exc)]}
+    _valid_note = "\n\n" + validation_summary(rep)
 
     _line_note = f" for line {resolved_line}" if resolved_line else ""
     summary = (
-        "Here is a standalone pyCSAMT script that"
-        f" reproduces the {cfg.get('workflow', 'qc')}"
+        "Here is a pyCSAMT script draft for"
+        f" the {cfg.get('workflow', 'custom')}"
         f" workflow{_line_note}. Copy it from the code block"
         " below — edit the data path if needed." + _valid_note
     )
+    if res.status == "needs_review":
+        summary = (res.get("review_reason") or f"Offline template{_line_note} for review; your request-specific constraints have not been applied.") + _valid_note
+    if res.warnings:
+        summary += "\n\n" + "\n".join(res.warnings)
+    if generation.assumptions:
+        summary += "\n\n" + "\n".join(generation.assumptions)
+    summary += "\n\nGenerated only; not executed."
     step("Code ready", "done")
     _update_job(
         jid,
         status="done",
         result=summary,
         code=code,
+        generation=res.get("generation", {}),
+        script_path=res.get("script_path"),
+        validation=rep, validation_path=res.get("validation_path"),
         steps=_JOBS[jid]["steps"],
         kind=KIND_CODE,
     )
@@ -3372,6 +3463,26 @@ def _dispatch_code(
 
 
 def _run_agent(
+    jid: str, text: str, edi_store: dict, settings: dict,
+    inv_config: dict | None = None, history: list[dict] | None = None,
+) -> None:
+    if settings.get("provider") != "ollama":
+        return _run_agent_impl(jid, text, edi_store, settings, inv_config, history)
+    from pycsamt.agents._local import LocalSettings, local_session
+
+    def cancelled():
+        job = _get_job(jid)
+        return job is None or job.get("status") == "cancelled"
+
+    try:
+        with local_session(LocalSettings.from_mapping(settings), cancelled) as request:
+            _run_agent_impl(jid, text, edi_store, settings, inv_config, history)
+            _update_job(jid, local_usage=request.usage)
+    except Exception as exc:  # configuration/transport failure, never cloud fallback
+        _update_job(jid, status="error", error=str(exc), result=str(exc), kind=KIND_ERROR)
+
+
+def _run_agent_impl(
     jid: str,
     text: str,
     edi_store: dict,
@@ -3536,6 +3647,7 @@ def _run_agent(
                 sel_model=sel_model,
                 offline=_offline,
                 step=_step,
+                history=history,
             )
             return
 
@@ -4007,9 +4119,7 @@ def _run_agent(
             error=str(exc),
             result=(
                 f"An error occurred: {exc}\n\n"
-                "Check that the data path is set "
-                "and your API key is configured "
-                "in Settings if needed."
+                "Check the data path and the selected provider settings."
             ),
             steps=_JOBS[jid]["steps"],
             kind=KIND_ERROR,
@@ -4378,6 +4488,13 @@ def register_chat(app) -> None:
         )
 
         _qi, _ = classify_intent_offline(text)
+        from pycsamt.agents._generation import (
+            is_code_followup,
+            pending_code_request,
+        )
+
+        if is_code_followup(text, stored_messages) or pending_code_request(text, stored_messages):
+            _qi = "code"
         # Data-overview requests skip the EDI guard too: with no data
         # stored, the dispatcher replies with load instructions instead
         # of the terse guard message.
@@ -4700,6 +4817,12 @@ def register_chat(app) -> None:
                 "content": result_text,
                 "ts": _ts(),
                 "mid": _agent_mid,
+                "code": code,
+                "generation": job.get("generation", {}),
+                "script_path": job.get("script_path"),
+                "validation": job.get("validation"),
+                "validation_path": job.get("validation_path"),
+                "pending_request": job.get("pending_request", ""),
             }
         )
         return (

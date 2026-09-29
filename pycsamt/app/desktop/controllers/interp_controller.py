@@ -63,6 +63,14 @@ WORKFLOW_CATALOGUE: dict[str, list[tuple]] = {
             "Colour-coded resistivity ranges from database",
         ),
     ],
+    "Structural": [
+        (
+            "Structural section",
+            "plot_structural_section",
+            "Fault traces, planar (strike/dip) and linear (trend/plunge) "
+            "measurements on the survey profile",
+        ),
+    ],
     "Hydrology": [
         (
             "Hydraulic K map",
@@ -253,6 +261,13 @@ class InterpState:
     constraints: list = field(default_factory=list)
     fusion_model: Any = None  # ResistivityModel (fused)
     timelapse_surveys: list = field(default_factory=list)
+    structural_model: Any = None  # pycsamt.geology.structural.StructuralModel
+    model_info: Any = None  # interp_sources.ModelInfo of the loaded model
+    secondary_model: Any = None  # ResistivityModel to fuse with the model
+    timelapse_labels: list = field(default_factory=list)
+    original_model: Any = None  # the model before borehole calibration
+    misfit_map: Any = None  # calibration misfit (ModelCalibrator)
+    calibration_error: str = ""
 
 
 # ── Controller ─────────────────────────────────────────────────────────────────
@@ -281,17 +296,79 @@ class InterpController:
 
     def set_model_from_occam2d(self, result_dir: str) -> None:
         from pycsamt.interp._base import ResistivityModel
-        from pycsamt.models.occam2d.plot import (
-            InversionResult,
-        )
+        # InversionResult lives in occam2d.results (it was imported from
+        # occam2d.plot, which never defined it: "Load Occam2D…" always
+        # failed with ImportError).
+        from pycsamt.models.occam2d import InversionResult
 
         res = InversionResult(result_dir)
         self.state.model = ResistivityModel.from_occam2d(res)
+
+    def load_model_source(self, path: str, line: str | None = None):
+        """Any PCSF/PCSM file or inversion run folder -> the model
+        (see :mod:`pycsamt.app.desktop.controllers.interp_sources`)."""
+        from pycsamt.app.desktop.controllers.interp_sources import load_model
+
+        model, info = load_model(path, line=line)
+        self.state.model = model
+        self.state.model_info = info
+        # results computed on the previous model no longer apply
+        self.state.strat_logs = []
+        self.state.hydro_result = None
+        self.state.mc_result = None
+        self.state.fusion_model = None
+        return info
+
+    def add_timelapse_survey(self, path: str, label: str = "") -> int:
+        """Append a repeat-survey model (same grid as the others)."""
+        from pycsamt.app.desktop.controllers.interp_sources import load_model
+
+        from pycsamt.interp.timelapse import assert_compatible_grids
+
+        model, _info = load_model(path)
+        surveys = list(self.state.timelapse_surveys)
+        labels = list(self.state.timelapse_labels)
+        if not surveys and self.state.model is not None:
+            # the baseline is the model as inverted, not its calibration
+            surveys.append(self.state.original_model or self.state.model)
+            labels.append("baseline")
+        surveys.append(model)
+        labels.append(label or f"survey {len(surveys)}")
+        assert_compatible_grids(surveys)  # raises before anything changes
+        self.state.timelapse_surveys = surveys
+        self.state.timelapse_labels = labels
+        return len(surveys)
+
+    def clear_timelapse(self) -> None:
+        self.state.timelapse_surveys = []
+        self.state.timelapse_labels = []
+
+    def set_secondary_model(self, path: str) -> str:
+        from pycsamt.app.desktop.controllers.interp_sources import load_model
+
+        model, info = load_model(path)
+        self.state.secondary_model = model
+        return info.source
+
+    def run_fusion(self, primary_max_depth: float = 0.0,
+                   secondary_min_depth: float = 0.0,
+                   blend: str = "linear") -> str:
+        if self.state.model is None or self.state.secondary_model is None:
+            return "Load a model and a second (deeper) model first."
+        from pycsamt.interp.fusion import MultiMethodEMModel
+
+        mm = MultiMethodEMModel(
+            self.state.model, self.state.secondary_model,
+            primary_max_depth=primary_max_depth or None,
+            secondary_min_depth=secondary_min_depth or None, blend=blend)
+        self.state.fusion_model = mm.merge()
+        return "Models fused."
 
     def add_borehole_csv(self, path: str) -> str:
         from pycsamt.geology.borehole import Borehole
 
         bh = Borehole.from_csv(path)
+        self._check_borehole(bh, path)
         self.state.boreholes.append(bh)
         return bh.name
 
@@ -299,13 +376,103 @@ class InterpController:
         from pycsamt.geology.borehole import Borehole
 
         bh = Borehole.from_las(path)
+        self._check_borehole(bh, path)
         self.state.boreholes.append(bh)
         return bh.name
+
+    @staticmethod
+    def _check_borehole(bh, path) -> None:
+        # a file that is not a log reads as a borehole with no intervals,
+        # which then silently contributes nothing to calibration
+        if not getattr(bh, "intervals", None):
+            from pathlib import Path
+
+            raise ValueError(f"no log intervals could be read from "
+                             f"{Path(path).name}")
+
+    def pcbh_positions(self, path: str) -> tuple[list[str], dict[str, float]]:
+        """Borehole ids in a PCBH file and the profile distance of those
+        whose id, name or alias is a model station."""
+        from pycsamt.format.borehole import read_pcbh
+
+        doc = read_pcbh(path)
+        model = self.state.model
+        known: dict[str, float] = {}
+        if model is not None and getattr(model, "station_names", None):
+            known = {str(n).lower(): float(x) for n, x in
+                     zip(model.station_names, model.station_x)}
+        ids, pos = [], {}
+        for bh in doc.boreholes:
+            ids.append(bh.id)
+            for key in (bh.id, bh.name, *bh.aliases):
+                if key and str(key).lower() in known:
+                    pos[bh.id] = known[str(key).lower()]
+                    break
+        return ids, pos
+
+    def add_borehole_pcbh(self, path: str,
+                          profile_x: dict[str, float]) -> list[str]:
+        """Add the boreholes of a PCBH file; *profile_x* gives each one's
+        distance along the model profile (PCBH collars are map
+        coordinates, never silently taken as profile distance)."""
+        from pycsamt.format.borehole import read_pcbh
+        from pycsamt.format.borehole.adapters import legacy_borehole_views
+
+        doc = read_pcbh(path)
+        if self.state.db is None:
+            self.set_rock_db_default()
+        views = legacy_borehole_views(doc, profile_x=dict(profile_x),
+                                      rock_db=self.state.db)
+        self.state.boreholes.extend(views)
+        return [b.name for b in views]
 
     def remove_borehole(self, name: str) -> None:
         self.state.boreholes = [
             b for b in self.state.boreholes if b.name != name
         ]
+
+    # ── Structural geology ───────────────────────────────────────────────────
+    # Same three-evidence-type model (planar/linear/faults) Map View's Geology
+    # rail edits and previews (pycsamt.app._structure); the desktop loads it
+    # from CSV rather than a Studio table, matching how boreholes are loaded
+    # here (CSV/LAS) instead of interactively.
+
+    def _ensure_structural_model(self):
+        from pycsamt.geology.structural import StructuralModel
+
+        if self.state.structural_model is None:
+            self.state.structural_model = StructuralModel()
+        return self.state.structural_model
+
+    def add_structural_planar_csv(self, path: str) -> int:
+        from pycsamt.geology.structural import StructuralModel
+
+        loaded = StructuralModel.from_csv(planar_path=path)
+        model = self._ensure_structural_model()
+        for m in loaded.planar:
+            model.add_planar(m)
+        return len(loaded.planar)
+
+    def add_structural_linear_csv(self, path: str) -> int:
+        from pycsamt.geology.structural import StructuralModel
+
+        loaded = StructuralModel.from_csv(linear_path=path)
+        model = self._ensure_structural_model()
+        for m in loaded.linear:
+            model.add_linear(m)
+        return len(loaded.linear)
+
+    def add_structural_faults_csv(self, path: str) -> int:
+        from pycsamt.geology.structural import StructuralModel
+
+        loaded = StructuralModel.from_csv(faults_path=path)
+        model = self._ensure_structural_model()
+        for f in loaded.faults:
+            model.add_fault(f)
+        return len(loaded.faults)
+
+    def clear_structural_model(self) -> None:
+        self.state.structural_model = None
 
     def set_rock_db_default(self) -> None:
         from pycsamt.geology.lithology import RockDatabase
@@ -323,14 +490,23 @@ class InterpController:
         )
         from pycsamt.interp.petrophysics import ArchieModel
 
+        from pycsamt.interp.petrophysics import WaxmanSmitsModel
+
         m = float(kwargs.get("m", 2.0))
         n = float(kwargs.get("n", 2.0))
         a = float(kwargs.get("a", 1.0))
         rho_w = float(kwargs.get("rho_w", 10.0))
         phi = float(kwargs.get("phi", 0.35))
         d50 = float(kwargs.get("d50_m", 5e-4))
+        if kwargs.get("petro_model", "archie") == "waxman_smits":
+            # clay surface conduction (shaly sands)
+            petro = WaxmanSmitsModel(m=m, n=n, a=a,
+                                     sigma_s=float(kwargs.get("sigma_s",
+                                                              0.0)))
+        else:
+            petro = ArchieModel(m=m, n=n, a=a)
         self.state.petro_cfg = PetrophysicalConfig(
-            petro=ArchieModel(m=m, n=n, a=a),
+            petro=petro,
             rho_w=rho_w,
             porosity_prior=phi,
             d50_m=d50,
@@ -376,20 +552,23 @@ class InterpController:
         model = self.state.model
         logs = []
         try:
-            for i in range(model.n_x):
-                col = model.x_centers[i] if hasattr(model, "x_centers") else i
-                st = (
-                    model.station_names[i]
-                    if hasattr(model, "station_names") and model.station_names
-                    else f"S{i + 1}"
-                )
-                z = model.z_centers
-                rho = model.rho_2d[:, i]
-                log = StratigraphicLog.from_column(st, float(col), z, rho, db)
+            # One log per station, at the model column under it.  (The loop
+            # used to run over every grid column -- 576 for an Occam2D mesh
+            # -- indexing the 47 station names: "list index out of range".)
+            xs = np.asarray(model.x_centers, dtype=float)
+            names = list(getattr(model, "station_names", None) or [])
+            sx = np.asarray(getattr(model, "station_x", xs), dtype=float)
+            if not names:
+                names = [f"S{i + 1}" for i in range(sx.size)]
+            for st, x in zip(names, sx):
+                i = int(np.argmin(np.abs(xs - x)))
+                log = StratigraphicLog.from_column(
+                    st, float(xs[i]), model.z_centers, model.rho_2d[:, i], db)
                 logs.append(log)
         except Exception as exc:
             return f"Geological classification failed: {exc}"
         self.state.strat_logs = logs
+        self.state.calibration_error = ""
         if self.state.boreholes:
             try:
                 from pycsamt.interp.calibrate import (
@@ -398,10 +577,17 @@ class InterpController:
 
                 cal = ModelCalibrator(db=db)
                 cal.fit(model, self.state.boreholes)
+                self.state.original_model = model
                 self.state.model = cal.calibrated_model()
+                self.state.misfit_map = cal.misfit_map()
                 self.state.strat_logs = cal.stratigraphic_logs()
-            except Exception:
-                pass
+            except Exception as exc:
+                # was swallowed silently: say why calibration did not apply
+                self.state.calibration_error = str(exc)
+                return (f"Classified {len(logs)} stations; borehole "
+                        f"calibration failed: {exc}")
+            return (f"Classified {len(logs)} stations and calibrated "
+                    f"against {len(self.state.boreholes)} borehole(s).")
         return f"Classified {len(logs)} stations."
 
     def run_hydro(self) -> str:
@@ -634,6 +820,124 @@ class InterpController:
         except Exception as exc:
             return self._error_fig(str(exc))
 
+    # ── Structural ────────────────────────────────────────────────────────
+
+    _STRUCTURAL_SENSE_COLOR = {
+        "normal": "#3b82f6",
+        "reverse": "#ef4444",
+        "strike_slip": "#a855f7",
+        "unknown": "#6b7280",
+    }
+
+    def plot_structural_section(
+        self, *, depth_extent: float = 300.0, **kw
+    ) -> Figure:
+        """Profile-position/depth section of faults + planar/linear picks.
+
+        Matplotlib port of the exact same reading
+        :func:`pycsamt.app._structure.structure_section_figure` uses for
+        Map View's Geology rail preview: a fault trace is a straight line
+        through ``(x, z_top)`` tilted by its apparent dip, a planar
+        measurement is a short tilted tick through ``(x, z)`` labelled
+        ``strike/dip``, and a linear measurement is a diamond marker
+        labelled ``trend/plunge``.
+        """
+        import matplotlib.pyplot as plt
+
+        from pycsamt.geology.structural import StructuralModel
+
+        model = self.state.structural_model or StructuralModel()
+        fig, ax = plt.subplots(figsize=(9, 5))
+        self._apply_fig_style(fig, ax)
+
+        if not (model.faults or model.planar or model.linear):
+            ax.text(
+                0.5,
+                0.5,
+                "No structural data yet — load planar/linear/fault CSVs",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+            )
+            return fig
+
+        half = max(float(depth_extent) * 0.06, 5.0)
+
+        for fault in model.faults:
+            z_top = float(fault.z_top or 0.0)
+            z_bot = z_top + float(depth_extent)
+            dip = max(1.0, min(89.0, float(fault.dip_deg)))
+            direction = 1.0 if fault.downthrown_side == "right" else -1.0
+            dx = direction * float(depth_extent) / np.tan(np.radians(dip))
+            color = self._STRUCTURAL_SENSE_COLOR.get(
+                fault.sense, self._STRUCTURAL_SENSE_COLOR["unknown"]
+            )
+            ax.plot(
+                [fault.x, fault.x + dx],
+                [z_top, z_bot],
+                color=color,
+                lw=2.5,
+                solid_capstyle="round",
+            )
+
+        for m in model.planar:
+            z = float(m.z or 0.0)
+            dip = max(1.0, min(89.0, float(m.dip_deg)))
+            dx = half / np.tan(np.radians(dip))
+            ax.plot(
+                [m.x - dx, m.x + dx],
+                [z - half, z + half],
+                color="#22c55e",
+                lw=1.5,
+                marker="o",
+                ms=3,
+            )
+            ax.annotate(
+                f"{m.strike_deg:.0f}/{m.dip_deg:.0f}",
+                (m.x, z),
+                fontsize=6,
+                color="#22c55e",
+            )
+
+        for m in model.linear:
+            z = float(m.z or 0.0)
+            ax.plot(m.x, z, marker="D", ms=8, color="#f59e0b")
+            ax.annotate(
+                f"{m.trend_deg:.0f}/{m.plunge_deg:.0f}",
+                (m.x, z),
+                fontsize=6,
+                color="#f59e0b",
+            )
+
+        ax.invert_yaxis()
+        ax.set_xlabel("Profile position (m)", fontsize=9)
+        ax.set_ylabel("Depth (m)", fontsize=9)
+        ax.set_title("Structural section", fontsize=10)
+        from matplotlib.lines import Line2D
+
+        legend_items = [
+            Line2D([0], [0], color=c, lw=2.5, label=sense)
+            for sense, c in self._STRUCTURAL_SENSE_COLOR.items()
+            if any(f.sense == sense for f in model.faults)
+        ]
+        if model.planar:
+            legend_items.append(
+                Line2D(
+                    [0], [0], color="#22c55e", lw=1.5, marker="o",
+                    ms=3, label="planar",
+                )
+            )
+        if model.linear:
+            legend_items.append(
+                Line2D(
+                    [0], [0], color="#f59e0b", marker="D", ms=6,
+                    ls="none", label="linear",
+                )
+            )
+        if legend_items:
+            ax.legend(handles=legend_items, fontsize=7)
+        return fig
+
     def plot_calibrated_model(self, **kw) -> Figure:
         if self.state.model is None:
             return self._no_model_fig()
@@ -642,7 +946,14 @@ class InterpController:
                 PlotCalibratedModel,
             )
 
-            plotter = PlotCalibratedModel(self.state.model)
+            # (was called with the model only -> TypeError every time)
+            if self.state.original_model is None:
+                reason = self.state.calibration_error or (
+                    "Add boreholes and run Classify & calibrate")
+                return self._needs_run_fig(reason)
+            plotter = PlotCalibratedModel(self.state.original_model,
+                                          self.state.model,
+                                          self.state.misfit_map)
             fig = plotter.plot()
             self._apply_fig_style_minimal(fig)
             return fig
@@ -742,7 +1053,7 @@ class InterpController:
 
     def plot_K_map(self, **kw):
         return self._hydro_section_plot(
-            "hydraulic_conductivity",
+            "hydraulic_K",
             "Hydraulic Conductivity K  (m/s)",
             "viridis_r",
             "log₁₀ K (m/s)",
@@ -761,9 +1072,7 @@ class InterpController:
                 PlotWaterTableProfile,
             )
 
-            fig = PlotWaterTableProfile(
-                self.state.model, self.state.hydro_result
-            ).plot()
+            fig = PlotWaterTableProfile(self.state.hydro_result).plot()
             self._apply_fig_style_minimal(fig)
             return fig
         except Exception as exc:
@@ -783,8 +1092,12 @@ class InterpController:
             if db is None:
                 self.set_rock_db_default()
                 db = self.state.db
-            hi = HydroInterpreter(self.state.model, db=db)
-            zones = hi.identify_aquifers()
+            # (was HydroInterpreter(model, db=) + identify_aquifers(): the
+            # constructor takes no model and that method does not exist)
+            hi = HydroInterpreter(db=db)
+            hi.fit(self.state.original_model or self.state.model,
+                   boreholes=self.state.boreholes or None)
+            zones = hi.aquifer_zones()
             model = self.state.model
             x = (
                 model.x_centers / 1e3
@@ -852,9 +1165,7 @@ class InterpController:
                 PlotAquiferCharacterization,
             )
 
-            fig = PlotAquiferCharacterization(
-                self.state.model, self.state.hydro_result
-            ).plot()
+            fig = PlotAquiferCharacterization(self.state.hydro_result).plot()
             self._apply_fig_style_minimal(fig)
             return fig
         except Exception as exc:
@@ -868,10 +1179,13 @@ class InterpController:
                 PlotPetrophysicalCrossPlot,
             )
 
+            # (was called with 3 positionals -> TypeError every time)
+            cfg = self.state.petro_cfg
             fig = PlotPetrophysicalCrossPlot(
-                self.state.model,
                 self.state.hydro_result,
-                self.state.petro_cfg,
+                petro=getattr(cfg, "petro", None),
+                show_hs_bounds=bool(kw.get("show_hs_bounds", True)),
+                rho_matrix=float(kw.get("rho_matrix", 5000.0)),
             ).plot()
             self._apply_fig_style_minimal(fig)
             return fig
@@ -902,28 +1216,32 @@ class InterpController:
         fn = getattr(et, fn_name, None)
         if fn is None:
             return self._not_implemented(fn_name)
-        try:
-            params = inspect.signature(fn).parameters
-            subplot_kw = {"projection": "polar"} if polar else {}
-            fig, ax = plt.subplots(figsize=(12, 5), subplot_kw=subplot_kw)
+        params = inspect.signature(fn).parameters
+        extra = {"verbose": 0} if "verbose" in params else {}
+        result = None
+        if "ax" in params and not polar:
+            # single-panel function: draw into our axes
+            fig, ax = plt.subplots(figsize=(12, 5))
             self._apply_fig_style(fig, ax)
-            if "ax" in params:
-                result = fn(self.state.sites, ax=ax, verbose=0, **kw)
-            elif "axes" in params:
-                result = fn(self.state.sites, axes=ax, verbose=0, **kw)
-            else:
-                # Function manages its own figure; close the placeholder
+            try:
+                result = fn(self.state.sites, ax=ax, **extra, **kw)
+            except Exception:
                 plt.close(fig)
-                result = fn(self.state.sites, verbose=0, **kw)
-                fig = None
-            if isinstance(result, plt.Figure):
-                if fig is not None and result is not fig:
-                    plt.close(fig)
-                fig = result
-                self._apply_fig_style_minimal(fig)
-            return fig
+                result = None
+            else:
+                return fig if not isinstance(result, plt.Figure) else result
+        # Multi-panel ("axes=") or polar functions build their own figure:
+        # a single placeholder axes made them fail ("axes must provide at
+        # least 2 axes", "no attribute set_theta_offset").
+        try:
+            result = fn(self.state.sites, **extra, **kw)
         except Exception as exc:
             return self._error_fig(f"{fn_name}: {exc}")
+        fig = _figure_from(result)
+        if fig is None:
+            return self._error_fig(f"{fn_name} returned no figure")
+        self._apply_fig_style_minimal(fig)
+        return fig
 
     def plot_pt_section(self, **kw):
         return self._emtools_plot(
@@ -975,7 +1293,7 @@ class InterpController:
             )
 
             fig = PlotUncertaintySection(
-                self.state.model, self.state.mc_result
+                self.state.mc_result, quantity=kw.get("quantity", "K")
             ).plot()
             self._apply_fig_style_minimal(fig)
             return fig
@@ -990,9 +1308,7 @@ class InterpController:
                 PlotUncertaintyProfile,
             )
 
-            fig = PlotUncertaintyProfile(
-                self.state.model, self.state.mc_result
-            ).plot()
+            fig = PlotUncertaintyProfile(self.state.mc_result).plot()
             self._apply_fig_style_minimal(fig)
             return fig
         except Exception as exc:
@@ -1077,44 +1393,89 @@ class InterpController:
         self_copy._style_cb = self._style_cb
         return self.plot_model_summary.__func__(self_copy)
 
-    def plot_timelapse_change(self, **kw) -> Figure:
-        if not self.state.timelapse_surveys:
+    def _timelapse(self):
+        from pycsamt.interp.timelapse import TimeLapseEM
+
+        labels = self.state.timelapse_labels or None
+        return TimeLapseEM(surveys=self.state.timelapse_surveys,
+                           labels=labels)
+
+    def _timelapse_grid(self, quantity: str, **kw) -> Figure:
+        if len(self.state.timelapse_surveys) < 2:
             return self._needs_run_fig(
-                "Load at least 2 surveys for time-lapse"
-            )
-        try:
-            from pycsamt.interp.timelapse import TimeLapseEM
+                "Add at least one repeat survey (Monitoring ▸ Surveys)")
+        from pycsamt.interp.plot import PlotMultiTimeLapseGrid
 
-            tl = TimeLapseEM(surveys=self.state.timelapse_surveys)
-            changes = tl.resistivity_change()
-            import matplotlib.pyplot as plt
+        cfg = self.state.petro_cfg
+        if quantity == "delta_saturation" and cfg is None:
+            self.set_petro_config()
+            cfg = self.state.petro_cfg
+        fig = PlotMultiTimeLapseGrid(
+            self._timelapse(), quantity=quantity,
+            petro=getattr(cfg, "petro", None),
+            rho_w=float(getattr(cfg, "rho_w", 20.0)),
+            phi=float(getattr(cfg, "porosity_prior", 0.25)),
+        ).plot()
+        self._apply_fig_style_minimal(fig)
+        return fig
 
-            fig, axes = plt.subplots(1, len(changes), figsize=(14, 5))
-            if len(changes) == 1:
-                axes = [axes]
-            for ax, dc in zip(axes, changes):
-                im = ax.pcolormesh(
-                    dc, cmap="RdBu_r", shading="auto", vmin=-50, vmax=50
-                )
-                ax.invert_yaxis()
-                self._apply_fig_style(fig, ax)
-            fig.colorbar(im, ax=axes[-1], label="Δρ (%)").set_label(
-                "Δρ (%)", fontsize=8
-            )
-            fig.suptitle("Time-Lapse Resistivity Change", fontsize=11)
-            return fig
-        except Exception as exc:
-            return self._error_fig(str(exc))
+    def plot_timelapse_change(self, **kw) -> Figure:
+        return self._timelapse_grid("delta_rho", **kw)
 
     def plot_timelapse_sat(self, **kw) -> Figure:
-        return self._needs_run_fig(
-            "Time-lapse ΔSw — run time-lapse analysis first"
-        )
+        return self._timelapse_grid("delta_saturation", **kw)
 
     def plot_timelapse_wt(self, **kw) -> Figure:
-        return self._needs_run_fig(
-            "Time-lapse WT displacement — run analysis first"
-        )
+        if len(self.state.timelapse_surveys) < 2:
+            return self._needs_run_fig(
+                "Add at least one repeat survey (Monitoring ▸ Surveys)")
+        import matplotlib.pyplot as plt
+
+        if self.state.petro_cfg is None:
+            self.set_petro_config()
+        cfg = self.state.petro_cfg
+        disp = np.asarray(self._timelapse().water_table_displacement(
+            cfg.petro, rho_w=float(cfg.rho_w)), dtype=float)
+        x = self.state.timelapse_surveys[0].x_centers
+        fig, ax = plt.subplots(figsize=(9, 4))
+        rows = disp if disp.ndim == 2 else disp[None, :]
+        labels = self.state.timelapse_labels[1:] or [
+            f"survey {i + 2}" for i in range(len(rows))]
+        for row, lab in zip(rows, labels):
+            ax.plot(x[: row.size], row, lw=1.6, label=lab)
+        ax.axhline(0, color="0.5", lw=0.8)
+        ax.set_xlabel("Distance (m)")
+        ax.set_ylabel("Water-table change (m, + = rise)")
+        ax.set_title("Water-table displacement from the baseline",
+                     fontsize=10)
+        ax.legend(fontsize=8)
+        self._apply_fig_style(fig, ax)
+        return fig
+
+    def plot_depth_profile(self, station: str = "", **kw) -> Figure:
+        if self.state.model is None:
+            return self._no_model_fig()
+        from pycsamt.interp.plot import PlotResistivityDepthProfile
+
+        names = list(getattr(self.state.model, "station_names", []) or [])
+        st = station if station in names else 0
+        bh = next((b for b in self.state.boreholes
+                   if getattr(b, "name", None) == station), None)
+        fig = PlotResistivityDepthProfile(self.state.model, st,
+                                          borehole=bh).plot()
+        self._apply_fig_style_minimal(fig)
+        return fig
+
+    def plot_borehole_fence(self, **kw) -> Figure:
+        if not self.state.boreholes:
+            return self._needs_run_fig("Add boreholes first (Evidence)")
+        from pycsamt.interp.plot import PlotBoreholeFence
+
+        if self.state.db is None:
+            self.set_rock_db_default()
+        fig = PlotBoreholeFence(self.state.boreholes, db=self.state.db).plot()
+        self._apply_fig_style_minimal(fig)
+        return fig
 
     def plot_export_preview(self, **kw) -> Figure:
         import matplotlib.pyplot as plt
@@ -1298,6 +1659,28 @@ class InterpController:
 
 # ── Theme dicts ────────────────────────────────────────────────────────────────
 
+def _figure_from(obj):
+    """The Figure behind a plot function's return value."""
+    from matplotlib.figure import Figure
+
+    if isinstance(obj, Figure):
+        return obj
+    if hasattr(obj, "figure") and isinstance(getattr(obj, "figure"), Figure):
+        return obj.figure
+    try:
+        items = list(np.ravel(obj)) if not isinstance(obj, dict) else \
+            list(obj.values())
+    except Exception:
+        items = []
+    for it in items:
+        f = _figure_from(it) if it is not obj else None
+        if f is not None:
+            return f
+    import matplotlib.pyplot as plt
+
+    return plt.gcf() if plt.get_fignums() else None
+
+
 _DARK = dict(
     bg="#1e1e2e",
     fig_bg="#181825",
@@ -1308,13 +1691,15 @@ _DARK = dict(
     grid="#313244",
     muted="#585b70",
 )
+# Publication white (the theme greys #eff1f5/#e6e9ef made every exported
+# interpretation figure grey, like the pipeline plots).
 _LIGHT = dict(
-    bg="#eff1f5",
-    fig_bg="#e6e9ef",
-    fg="#4c4f69",
-    title="#4c4f69",
-    tick="#6c6f85",
-    spine="#bcc0cc",
-    grid="#ccd0da",
-    muted="#9ca0b0",
+    bg="#ffffff",
+    fig_bg="#ffffff",
+    fg="#1f2937",
+    title="#111827",
+    tick="#374151",
+    spine="#6b7280",
+    grid="#d1d5db",
+    muted="#6b7280",
 )

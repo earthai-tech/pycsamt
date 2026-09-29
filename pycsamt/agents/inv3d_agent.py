@@ -774,7 +774,7 @@ class Inv3DAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             rho_mean = float(np.nanmean(10**pred_rho))
             rho_std = float(np.nanstd(10**pred_rho))
             extent_km = (

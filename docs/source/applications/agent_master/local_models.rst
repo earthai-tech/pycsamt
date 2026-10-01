@@ -48,11 +48,21 @@ RAG evidence is retained, with smaller context selections for local answers
 and code. Arbitrary request fidelity and stronger code verification remain
 separate capabilities from the model-provider integration.
 
-The client checks a conservative UTF-8 byte bound before generation; this is
-not an exact tokenizer count. If the prompt exceeds that bound, the request
-fails explicitly instead of silently dropping evidence. Truncated model
-output is also reported as an error. A larger configured context consumes
-more memory and can increase latency.
+Evidence is never silently dropped to fit the context window. Before
+generation, the client estimates the prompt at one token per 3 bytes of
+UTF-8 text. Typical English and code use about 3.5–4 bytes per token, so the
+estimate over-counts. The request fails with the estimated size if the
+prompt plus the answer limit would not fit.
+
+After the reply, Ollama's own count of prompt tokens is checked. If the
+prompt filled the window, part of it may have been cut, so the answer is
+discarded with an explanation. Truncated model output is also reported as an
+error.
+
+If a request reports that the context window is too small, raise
+**Context window** in Settings (for example to 16384), or start a New Chat to
+shorten the conversation history. A larger context consumes more memory and
+can increase latency.
 
 The Stop button interrupts the local HTTP request, including model loading.
 Late results cannot overwrite a cancelled chat job. Local token counts and

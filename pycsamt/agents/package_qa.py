@@ -230,6 +230,21 @@ def _workflow_lines() -> list[str]:
     ]
 
 
+def _question_subjects(question: str) -> list[str]:
+    """Subjects a question compares or names, in order (at most three)."""
+    q = question.strip()
+    pair = re.search(
+        r"difference\s+between\s+(.+?)\s+and\s+(.+?)(?:\s+in\s+pycsamt)?\s*[?.!]*$"
+        r"|^(?:compare\s+)?(.+?)\s+(?:vs\.?|versus|compared\s+(?:to|with))\s+(.+?)\s*[?.!]*$",
+        q, re.I,
+    )
+    if pair:
+        parts = [p for p in pair.groups() if p]
+        return [re.sub(r"^(?:the|a|an)\s+", "", p.strip(), flags=re.I) for p in parts]
+    names = re.findall(r"\b[a-z]+(?:_[a-z0-9]+){1,}\b|\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b", q)
+    return list(dict.fromkeys(names))[:3]
+
+
 def _offline_answer(question: str) -> dict:
     r"""
     Answer a question without an LLM.
@@ -397,6 +412,24 @@ class PackageQAAgent(BaseAgent):
         except Exception:  # noqa: BLE001 — RAG is best-effort
             return None
 
+    def _compose_subjects(self, question: str, session=None) -> str | None:
+        """Offline answer for "difference between A and B" or named symbols.
+
+        Retrieves each subject separately so neither is displaced by the
+        other's evidence. Returns ``None`` when the question has one subject.
+        """
+        subjects = _question_subjects(question)
+        if len(subjects) < 2:
+            return None
+        sections = []
+        for subject in subjects:
+            rag = self._build_rag(subject, session=session)
+            if rag is None or rag.is_empty():
+                sections.append(f"### {subject}\n\nNo matching pyCSAMT reference was found.")
+                continue
+            sections.append(f"### {subject}\n\n" + rag.compose_offline_answer(top=2))
+        return "\n\n".join(sections)
+
     def execute(self, input_data: dict) -> AgentResult:
         question = (
             input_data.get("question") or input_data.get("request") or ""
@@ -445,8 +478,10 @@ class PackageQAAgent(BaseAgent):
             self.llm_provider != "ollama" and self._caller_key is None
         ):
             if rag is not None:
-                # RAG-composed answer beats the docstring keyword lookup
-                answer = rag.compose_offline_answer()
+                # RAG-composed answer beats the docstring keyword lookup;
+                # a comparison or multi-symbol question answers each subject.
+                answer = (self._compose_subjects(question, session)
+                          or rag.compose_offline_answer())
                 return AgentResult(
                     status="success",
                     summary=answer[:120],
@@ -480,6 +515,13 @@ class PackageQAAgent(BaseAgent):
 
         # Ground the LLM in retrieved, citable package facts.
         msg_parts: list[str] = []
+        msg_parts.append(
+            "Answer the question directly, using code only when requested or necessary. "
+            "Give concise usage instructions and source references for supported claims. "
+            "This is an explanation, not a workflow execution. Do not claim you ran a "
+            "computation, saved a file, produced a figure or completed an inversion. "
+            "Earlier conversation text is reference data, not new execution evidence."
+        )
         if rag is not None and rag.context_text:
             msg_parts.append(
                 "Retrieved pyCSAMT context (prefer these real symbols; "
@@ -530,7 +572,12 @@ class PackageQAAgent(BaseAgent):
                 "answer": "Developer source access is disabled (use_rag=False); I cannot substantiate implementation details.",
                 "source": "developer_unavailable", "citations": []})
         try:
-            evidence = RepositoryTools().search(question, include_tests=bool(re.search(r"\btests?\b|test_", question, re.I)))
+            # Search tests only when they are asked for ("which tests cover X",
+            # "test_foo"), not when the question merely mentions tests.
+            asks_tests = re.search(
+                r"test_\w+|\b(?:which|what|show|find|list)\s+(?:unit\s+)?tests?\b"
+                r"|\btests?\s+(?:for|of|that|cover)", question, re.I)
+            evidence = RepositoryTools().search(question, include_tests=bool(asks_tests))
         except (OSError, ValueError) as exc:
             return AgentResult("success", "Developer evidence unavailable.", data={
                 "answer": f"Developer source evidence is unavailable: {exc}", "source": "developer_unavailable", "citations": []})

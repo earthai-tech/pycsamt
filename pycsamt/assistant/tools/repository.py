@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import math
 import os
 import re
 import subprocess
 import sys
 import time
+from collections import Counter
 from datetime import datetime, timezone
+from functools import lru_cache
 from importlib import metadata
 from pathlib import Path
 
@@ -41,7 +44,8 @@ _SECRET = re.compile(
     r"(?:secret|credential|password|token|api[_-]?key|private[_-]?key)", re.I
 )
 _STOP = set(
-    "the and for how what where why does this that from with which explain implementation implemented source code function method pycsamt please find show tests test example examples".split()
+    "the and for how what where why does this that from with which explain implementation implemented source code function method pycsamt please find show tests test example examples"
+    " not about into only can will would should could are was were has have its any all use used using".split()
 )
 
 
@@ -62,7 +66,37 @@ def is_developer_question(text: str) -> bool:
         text,
         re.I,
     )
-    return bool(intent and scope and not action)
+    if action:
+        return False
+    if intent and scope:
+        return True
+    # A question naming an assistant-infrastructure function
+    # ("does validate_generated_code prove ...?") is about the implementation.
+    names = set(re.findall(r"\b[a-z]+(?:_[a-z0-9]+)+\b", text))
+    asks = re.search(r"\b(?:does|do|is|are|can|what|how|why|where|which)\b|\?", text, re.I)
+    return bool(asks and names & _infrastructure_names())
+
+
+@lru_cache(maxsize=1)
+def _infrastructure_names() -> frozenset[str]:
+    """Function/class names defined in Agent Master's own infrastructure."""
+    package = Path(__file__).resolve().parents[2]
+    files = [
+        *(package / "assistant").rglob("*.py"),
+        *(package / "app" / "agent_master").rglob("*.py"),
+        *(package / "agents").glob("_*.py"),
+        *(package / "agents" / n for n in ("code_gen.py", "router.py", "package_qa.py")),
+    ]
+    names = set()
+    for path in files:
+        if "tests" in path.parts or not path.is_file():
+            continue
+        try:
+            source = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        names.update(re.findall(r"^\s*(?:async\s+)?def\s+([a-z]\w*_\w+)", source, re.M))
+    return frozenset(names)
 
 
 class RepositoryTools:
@@ -239,6 +273,12 @@ class RepositoryTools:
         terms = set(re.findall(r"[a-z_][a-z_0-9]{2,}", query.lower())) - _STOP
         if "agent master" in query.lower():
             terms.add("agent_master")
+        # CamelCase names ("CodeGenerationAgent") are identifiers as much as
+        # snake_case ones; common words must not outrank them.
+        camel = {
+            m.lower()
+            for m in re.findall(r"\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b", query)
+        } & terms
         paths, truncated = [], False
         for approved in _ROOTS:
             for directory, dirs, files in os.walk(
@@ -283,7 +323,7 @@ class RepositoryTools:
                 p,
             )
         )
-        hits, size, scanned = [], 0, 0
+        candidates, size, scanned = [], 0, 0
         for relative in paths:
             if size >= 32_000_000 or time.monotonic() - started > 10:
                 truncated = True
@@ -307,15 +347,34 @@ class RepositoryTools:
             # generic app hit for a missing named symbol.
             identifiers = {
                 t for t in terms if "_" in t and t != "agent_master"
-            }
+            } | camel
             if identifiers and not identifiers.intersection(matched):
                 continue
-            score = len(matched) / len(terms) + sum(
-                2 for t in matched if t in relative.lower()
+            candidates.append((relative, matched, source, digest))
+        # Rare terms ("rag", "cancel") identify the answer; words present
+        # in most files ("app", "answer", "callbacks") must not outrank them.
+        frequency = Counter(t for _, matched, _, _ in candidates for t in matched)
+        weight = {t: math.log(1 + len(candidates) / n) for t, n in frequency.items()}
+        # "Where is X defined / which code handles Y" asks for source, not prose.
+        wants_source = re.search(
+            r"\b(?:defined|implemented|handles?|handled|code|function|class)\b",
+            query, re.I,
+        )
+        ranked = []
+        for relative, matched, source, digest in candidates:
+            score = sum(weight[t] for t in matched) + sum(
+                2 * weight[t] for t in matched if t in relative.lower()
             )
-            best_line, best_score, symbol = 1, -1, ""
+            if wants_source and not relative.endswith(".py"):
+                score *= 0.5
+            ranked.append((score, relative, matched, source, digest))
+        ranked.sort(key=lambda h: (-h[0], h[1]))
+        hits = []
+        for score, relative, matched, source, digest in ranked[:24]:
+            best_line, best_score, symbol = 1, -1.0, ""
             for i, line in enumerate(source.splitlines(), 1):
-                value = sum(t in line.lower() for t in matched)
+                low = line.lower()
+                value = sum(weight[t] for t in matched if t in low)
                 definition = re.match(
                     r"\s*(?:async )?(?:def|class)\s+(\w+)", line
                 )

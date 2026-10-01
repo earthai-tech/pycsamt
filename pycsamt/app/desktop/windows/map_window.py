@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pycsamt.api.colormaps import colormap_choices
 from pycsamt.app.desktop.panels.map_panel import MapPanel
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
@@ -57,20 +58,8 @@ from pycsamt.app.desktop.windows._base import (
 
 # ── available colormaps ───────────────────────────────────────────────────────
 
-_CMAPS = [
-    "plasma",
-    "viridis",
-    "magma",
-    "inferno",
-    "jet",
-    "RdBu_r",
-    "seismic",
-    "coolwarm",
-    "terrain",
-    "hot",
-    "YlOrRd",
-    "copper",
-]
+# the shared catalogue (jet_r, RdYlBu_r, …) behind this map's default
+_CMAPS = colormap_choices(first=("plasma",))
 
 # ── basemap providers (must match MapPanel._BASEMAP_PROVIDERS keys) ───────────
 

@@ -1996,9 +1996,17 @@ def plot_ztem_map(
     grid_lon = np.linspace(lon.min(), lon.max(), nx)
     grid_lat = np.linspace(lat.min(), lat.max(), ny)
     gx, gy = np.meshgrid(grid_lon, grid_lat)
-    grid_z = griddata(
-        (lon, lat), values, (gx, gy), method="linear",
-    )
+    # Stations along one flight line are (nearly) collinear: they cannot
+    # be triangulated ("QH6154 Qhull precision error: initial simplex is
+    # flat"), which used to abort the whole plot. Such surveys are drawn
+    # as coloured station points instead of a gridded surface.
+    try:
+        grid_z = griddata(
+            (lon, lat), values, (gx, gy), method="linear",
+        )
+        gridded = bool(np.isfinite(grid_z).any())
+    except Exception:
+        grid_z, gridded = None, False
 
     if clim is None:
         finite = np.abs(values[np.isfinite(values)])
@@ -2007,12 +2015,23 @@ def plot_ztem_map(
         clim = (-vabs, vabs)
     vmin, vmax = clim
 
-    im = ax.pcolormesh(
-        gx, gy, grid_z, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto",
-    )
-    if show_stations:
-        ax.scatter(
-            lon, lat, s=10, color="black", alpha=0.5, zorder=3,
+    if gridded:
+        im = ax.pcolormesh(
+            gx, gy, grid_z, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto",
+        )
+        if show_stations:
+            ax.scatter(
+                lon, lat, s=10, color="black", alpha=0.5, zorder=3,
+            )
+    else:
+        im = ax.scatter(
+            lon, lat, c=values, cmap=cmap, vmin=vmin, vmax=vmax, s=60,
+            edgecolors="0.2", linewidths=0.5, zorder=3,
+        )
+        ax.text(
+            0.01, 0.99, "stations lie on one line — shown as points",
+            transform=ax.transAxes, ha="left", va="top", fontsize=8,
+            color="0.35",
         )
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")

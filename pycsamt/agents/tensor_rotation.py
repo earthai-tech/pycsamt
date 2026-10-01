@@ -14,9 +14,10 @@ Rotation convention
 -------------------
 The standard two-sided rotation ``Z' = R(θ) Z R(θ)ᵀ`` is applied per
 frequency using :func:`~pycsamt.seg.ops.rotate_impedance`.  Tipper vectors
-are rotated with :func:`~pycsamt.seg.ops.rotate_tipper`.  A positive angle
-θ rotates the measurement frame counter-clockwise (geological azimuth
-convention: N → E positive).
+are rotated with :func:`~pycsamt.seg.ops.rotate_tipper`.  With x = north and
+y = east, a positive angle θ rotates the measurement axes clockwise in map
+view, from north toward east (geological azimuth convention: N → E
+positive); θ = 90° turns the new x axis to east.
 """
 
 from __future__ import annotations
@@ -52,7 +53,8 @@ class TensorRotationAgent(BaseAgent):
     Input keys
     ----------
     ``sites`` / ``path`` : Sites or str
-    ``strike_deg`` : float — counter-clockwise rotation angle (degrees)
+    ``strike_deg`` : float — rotation angle (degrees); positive rotates the
+        axes clockwise in map view, from north toward east
     ``output_dir`` : str — directory for rotated EDI files
     ``overwrite`` : bool — allow overwriting existing files (default False)
     ``file_suffix`` : str — appended to station name, e.g. ``"_rot"``

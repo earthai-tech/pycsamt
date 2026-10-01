@@ -224,3 +224,46 @@ def test_forward_literal_constraints():
     bad = "frequencies = np.logspace(0, 2, 20)\nmodel = LayeredModel(resistivities=[100], thicknesses=[])"
     assert len(missing_request_constraints(request, bad)) == 2
     assert not missing_request_constraints(request, "frequencies = np.logspace(-2, 2, 20)\nmodel = LayeredModel(resistivity=[100], thickness=[])")
+
+
+@pytest.mark.parametrize("text, folder", [
+    ("Export one image per station in selected_plots, stations in data/3edis.", "selected_plots"),
+    ("save the figures into results/qc_review", "results/qc_review"),
+    ("put the plots in the figures folder", "figures"),
+    ("save the table to qc_results.csv in an output folder.", None),
+    ("compare L18PLT and L22PLT in one figure", None),
+    ("load EDIs from my_survey/edis and plot", None),
+])
+def test_requested_output_folder(text, folder):
+    from pycsamt.agents._generation import requested_output_dir
+
+    assert requested_output_dir(text) == folder
+
+
+def test_existing_data_folder_is_input_not_output(tmp_path, monkeypatch):
+    from pycsamt.agents._generation import requested_output_dir
+
+    (tmp_path / "raw_edis").mkdir()
+    (tmp_path / "raw_edis" / "S01.edi").write_text(">HEAD\n")
+    monkeypatch.chdir(tmp_path)
+    assert requested_output_dir("plot the sites in raw_edis") is None
+
+
+def test_script_ignoring_requested_folder_violates_request():
+    from pycsamt.agents._generation import GenerationInput, missing_request_constraints
+
+    request = GenerationInput(original_request="Save one image per station in selected_plots.")
+    wrong = "fig.savefig('pycsamt_workflow_output/S01.png')\n"
+    right = "import os\nos.makedirs('selected_plots', exist_ok=True)\nfig.savefig('selected_plots/S01.png')\n"
+    assert "Requested output folder is absent: selected_plots" in missing_request_constraints(request, wrong)
+    assert not missing_request_constraints(request, right)
+
+
+def test_script_defaults_to_agent_output_folder_not_cwd(tmp_path, monkeypatch):
+    from pycsamt.agents.code_gen import DEFAULT_OUTPUT_DIR
+
+    monkeypatch.chdir(tmp_path)
+    result = CodeGenerationAgent().execute({"workflow_config": {"workflow": "qc"}, "results": {}})
+    script = Path(result.data["script_path"])
+    assert script.parent.name == DEFAULT_OUTPUT_DIR
+    assert not list(tmp_path.glob("workflow_script*.py"))

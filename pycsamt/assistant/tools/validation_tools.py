@@ -1,6 +1,6 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
-"""Static validation of generated scripts; never import or execute the script."""
+"""Static script checks with explicit, optional isolated fixture execution."""
 
 from __future__ import annotations
 
@@ -21,8 +21,10 @@ def _check(state, reason, **details):
     return {"state": state, "reason": reason, **details}
 
 
-def validate_generated_code(code, *, root=None, execute_fixture=False):
-    """``ok`` means no detected static errors, not runtime/scientific success.
+def validate_generated_code(code, *, root=None, execute_fixture=False,
+                            fixture_image=None, fixture_outputs=None,
+                            fixture_timeout=20, cancelled=None):
+    """``ok`` means no detected errors in performed checks, not full correctness.
 
     Arbitrary fixture execution fails closed without an isolated executor.
     """
@@ -320,6 +322,30 @@ def validate_generated_code(code, *, root=None, execute_fixture=False):
     report["scope"] = (
         "Static checks only. Execution, artifacts and runtime scientific invariants are not certified."
     )
+    if execute_fixture and fixture_image and report["ok"]:
+        from .fixture_execution import execute_fixture as run_fixture
+
+        runtime = run_fixture(code, image=fixture_image, outputs=fixture_outputs,
+                              timeout=fixture_timeout, cancelled=cancelled)
+        report["executed"] = runtime["executed"]
+        report["execution_attempted"] = runtime.get("execution_attempted", False)
+        for name in ("execution", "artifacts", "runtime_scientific"):
+            checks[name] = runtime[name]
+            if runtime[name]["state"] == "failed":
+                report["errors"].append(f"{name}: {runtime[name]['reason']}")
+                report["errors"].extend(
+                    f"{path}: {item['reason']}"
+                    for path, item in runtime[name].get("items", {}).items()
+                    if item["state"] == "failed"
+                )
+            elif runtime[name]["state"] == "unverifiable":
+                report["warnings"].append(runtime[name]["reason"])
+        if runtime.get("cleanup"):
+            report["warnings"].append(runtime["cleanup"])
+        report["ok"] = not report["errors"]
+        report["status"] = ("failed" if report["errors"] else
+                            "unverifiable" if report["warnings"] else "passed")
+        report["scope"] = "Static checks and optional isolated fixture contracts; not full scientific correctness."
     return report
 
 
@@ -352,7 +378,11 @@ def validation_summary(report):
             if report.get("repair")
             else ""
         )
-        + "\nStatic checks do not establish scientific correctness. Script not executed."
+        + "\nChecks do not establish full scientific correctness. "
+        + ("Script executed only in an isolated fixture; outputs were not published."
+           if report.get("executed") else
+           "Fixture execution was attempted but completion could not be verified."
+           if report.get("execution_attempted") else "Script not executed.")
     )
 
 

@@ -468,7 +468,8 @@ class TestSubmitParams:
             [],
             [],
         )
-        _jid, _text, edi_use, _settings, _new_ic = captured["args"]
+        _jid, _text, edi_use, _settings, _new_ic, history = captured["args"]
+        assert history == []
         assert edi_use["path"] == "/fallback/path"
         assert edi_use["groups"] == {"L1": ["a.edi"]}
         assert edi_use["selected_lines"] == ["L1"]

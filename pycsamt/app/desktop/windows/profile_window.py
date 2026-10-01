@@ -187,6 +187,14 @@ class ProfileViewerWindow(PanelWindow):
         )
         skew_row.addRow("Skew colour:", self._combo_pt_skew)
         lay_opt.addLayout(skew_row)
+        self._chk_pt_labels = QCheckBox("Phase-tensor in-plot labels")
+        self._chk_pt_labels.setChecked(True)
+        self._chk_pt_labels.setToolTip(
+            "Show the |β| 1-D/2-D vs 3-D legend and the size-reference\n"
+            "ellipse (Phase Tensor tab) and the station name (PT Strip)."
+        )
+        self._chk_pt_labels.toggled.connect(self._on_pt_labels_toggled)
+        lay_opt.addWidget(self._chk_pt_labels)
         layout.addWidget(grp_opt)
 
         # ── Topography ────────────────────────────────────────────────
@@ -438,6 +446,15 @@ class ProfileViewerWindow(PanelWindow):
         self._profile_panel._ctrl.set_bw_mode(checked)
         if self._profile_panel._tabs.currentIndex() == 0:
             self._profile_panel._redraw_rho_phi()
+
+    def _on_pt_labels_toggled(self, checked: bool) -> None:
+        panel = self._profile_panel
+        panel._ctrl.set_pt_annotations(checked)
+        panel._dirty_canvases.add(panel._canvas_pt)
+        panel._dirty_canvases.add(panel._canvas_pt_strip)
+        current = panel._tabs.currentWidget()
+        if current in (panel._canvas_pt, panel._canvas_pt_strip):
+            panel._redraw_current_tab(force=True)
 
     def _on_pt_skew_mode_changed(self, index: int) -> None:
         """Switch Phase Tensor / PT Strip colouring between signed and

@@ -2144,7 +2144,7 @@ class CorrectionController:
                     draw_topo_strip,
                 )
 
-                elev = extract_elevation(sites)
+                elev = extract_elevation(sites, warn=False)
                 names = _ext_names(sites)
                 if len(elev) == n_st and np.any(elev > 0):
                     chain_idx = np.arange(n_st, dtype=float)

@@ -75,6 +75,33 @@ def style_axes(ax, dark: bool = True) -> None:
         fig.patch.set_facecolor("#1e1e2e" if dark else "#ffffff")
 
 
+_DARK_TEXT_MAP = {
+    "#2166ac": "#89b4fa",  # dark blue -> Catppuccin blue
+    "#b2182b": "#f38ba8",  # dark red  -> Catppuccin red
+}
+
+
+def _readable_on_dark(color, fallback: str) -> str:
+    """*color* if it already reads on a dark background, else a lighter
+    version of the same hue (near-greys become the theme's label colour)."""
+    from matplotlib.colors import to_hex, to_rgb
+
+    try:
+        hx = to_hex(color).lower()
+        r, g, b = to_rgb(color)
+    except (ValueError, TypeError):
+        return fallback
+    if hx in _DARK_TEXT_MAP:
+        return _DARK_TEXT_MAP[hx]
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    if lum >= 0.45:
+        return hx
+    if max(r, g, b) - min(r, g, b) < 0.15:  # black / grey text
+        return fallback
+    mix = 0.6  # towards white, keeping the hue
+    return to_hex((r + (1 - r) * mix, g + (1 - g) * mix, b + (1 - b) * mix))
+
+
 def _style_figure_full(ref_ax, dark: bool) -> None:
     """
     Post-process every axes in the figure, then fix theme-unaware elements
@@ -107,35 +134,26 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
         except Exception:
             pass
 
-    # ── 2. Fix annotation Text boxes (emtools hard-codes fc="white") ──────
+    # ── 2./3. Annotation text readable on the theme ──────────────────────
+    # emtools draws labels on white boxes (fc="white").  On dark the box is
+    # repainted dark, so the text must be light: every too-dark colour is
+    # lightened keeping its hue (blue stays blue) -- the old two-colour map
+    # left the default-black "size reference" / station labels black on
+    # near-black.
     if dark:
-        bbox_fc = "#1a1a2e"  # near-black, slightly blue-tinted
-        bbox_ec = "#45475a"  # subtle border
-        # Remap the annotation text colours to palette variants visible on dark
-        _COL_MAP = {
-            "#2166ac": "#89b4fa",  # dark-blue → Catppuccin blue
-            "#b2182b": "#f38ba8",  # dark-red  → Catppuccin red
-        }
+        bbox_fc, bbox_ec = "#1a1a2e", "#6c7086"
     else:
-        bbox_fc = "white"
-        bbox_ec = "none"
-        _COL_MAP = {}  # no remapping in light mode
-
-    for txt in ref_ax.texts:
-        bb = txt.get_bbox_patch()
-        if bb is not None:
-            bb.set_facecolor(bbox_fc)
-            bb.set_edgecolor(bbox_ec)
-            bb.set_alpha(0.88)
-        if dark:
-            col = txt.get_color()
-            txt.set_color(_COL_MAP.get(col, col))
-
-    # ── 3. Fix free text (no bbox) — reference ellipse label, etc. ───────
-    if dark:
-        for txt in ref_ax.texts:
-            if txt.get_bbox_patch() is None:
-                txt.set_color(s["labelcolor"])
+        bbox_fc, bbox_ec = "white", "none"
+    for ax in fig.axes:
+        for txt in ax.texts:
+            bb = txt.get_bbox_patch()
+            if bb is not None:
+                bb.set_facecolor(bbox_fc)
+                bb.set_edgecolor(bbox_ec)
+                bb.set_alpha(0.88)
+            if dark:
+                txt.set_color(_readable_on_dark(txt.get_color(),
+                                                s["labelcolor"]))
 
     # ── 4. Fix unfilled patches: reference ellipse edgecolor "k" → visible
     ref_ec = "#cccccc" if dark else "#444444"
@@ -388,6 +406,7 @@ class PlotController:
         # 1-D/2-D vs 3-D structure threshold) or by |beta| (0..max, so the
         # skew_threshold boundary reads directly off the colour scale).
         self._pt_abs_skew: bool = False
+        self._pt_annotations: bool = True
         self.dark: bool = True
         # Phase-tensor DataFrame cache: id(sites) → built DataFrame
         # Avoids re-running build_phase_tensor_table() on every tab switch.
@@ -428,6 +447,11 @@ class PlotController:
         """
         self._bw_mode = on
 
+    def set_pt_annotations(self, show: bool) -> None:
+        """Show the in-plot labels of the Phase Tensor (|β| legend, size
+        reference) and PT Strip (station name) tabs."""
+        self._pt_annotations = bool(show)
+
     def set_pt_absolute_skew(self, absolute: bool) -> None:
         """Use absolute (|beta|) rather than signed skew colouring.
 
@@ -466,6 +490,7 @@ class PlotController:
             self._period_range,
             self.dark,
             self._pt_abs_skew,
+            self._pt_annotations,  # the labels checkbox must force a redraw
         )
 
     def invalidate_phase_tensor(self) -> None:
@@ -829,6 +854,7 @@ class PlotController:
                 verbose=0,
                 c_by=("|beta|" if self._pt_abs_skew else "skew"),
                 symmetric_clim=not self._pt_abs_skew,
+                annotations=self._pt_annotations,
                 **edge_kw,
             )
 
@@ -944,6 +970,7 @@ class PlotController:
                 c_by=("|beta|" if self._pt_abs_skew else "skew"),
                 symmetric_clim=not self._pt_abs_skew,
                 axis_style="logperiod",
+                station_label=self._pt_annotations,
                 **edge_kw,
             )
             ax.set_title(

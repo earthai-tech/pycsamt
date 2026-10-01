@@ -69,6 +69,13 @@ from pycsamt.pipeline._report import (
     make_text_report,
 )
 
+
+@pytest.fixture(autouse=True)
+def _run_in_tmp_dir(tmp_path, monkeypatch):
+    """Run in a temporary directory so default output folders, which are
+    created relative to the working directory, never land in the repo."""
+    monkeypatch.chdir(tmp_path)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Test doubles
 # ─────────────────────────────────────────────────────────────────────────────

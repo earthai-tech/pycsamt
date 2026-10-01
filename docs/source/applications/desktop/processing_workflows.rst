@@ -116,10 +116,35 @@ unreliable output.
 Quality Control
 ---------------
 
-Open **QC Dashboard** from the main toolbar after loading EDI data.  The left
-panel selects the diagnostic family and plot; the right panel renders one
-focused matplotlib view at a time.  Use it as a decision window, not just as a
-figure viewer.
+Open the **QC Studio** (toolbar **QC**, ``Ctrl+Q``) after loading data.  It
+has three tabs:
+
+* **Plot** -- one diagnostic at a time, chosen from the list on the left.
+  The diagnostics are grouped as Confidence, Coverage, Noise / SNR,
+  Dimensionality & skew, Static shift, Distortion & source, and Strike, and
+  the filter box above the list finds one by name.
+* **Summary** -- one row per station: confidence ratio, composite score,
+  coverage, median SNR, median |skew|, flags, and a **pass / warn / fail**
+  status.  The status follows the confidence ratio (the share of frequencies
+  with a valid tensor) against the *safe* and *recoverable* thresholds, plus
+  the low-SNR and high-skew flags; the thresholds are editable above the
+  table.  Sort by any column, show only failing stations, export to CSV, and
+  double-click a station to open its confidence dashboard.
+* **Quick-look** -- the multi-panel survey overview.
+
+**Scope.**  Profiles and pseudo-sections assume one survey line.  When the
+active survey holds several lines, pick one in **Line**, or keep *All lines*
+and choose **One panel per line** (a grid of per-line panels) or **All lines
+together** (the confidence profile then colours each line).  Line names come
+from the station table's *Line* column.  Single-station diagnostics (station
+dashboard, consistency fan, static-shift radar …) add a **Station** picker.
+
+**Options.**  Each diagnostic shows its own parameters: **Analysis** for the
+computation, **Plot view** for the display.  Fixed choices are drop-downs,
+colour maps come from the shared list (``jet_r``, ``jet``, ``RdYlBu_r`` …),
+pairs and lists such as *Y limits* or *Period band* are comma-separated, and
+a blank optional field keeps the function's own default.  Colours, number
+formats and line styles fold away under **More settings**.
 
 For static-shift QC, choose **AMA**, **LOESS**, **Bilateral**, or
 **Reference median** from the Method dropdown. Controls change with the
@@ -129,10 +154,11 @@ window for Reference median. Blank Bilateral bandwidths use the automatic
 defaults. Each method retains its parameter values when you switch away and
 back; only the selected method's controls are sent to the estimator.
 
-The dashboard groups diagnostics into overview, coverage, noise/SNR,
-skew/dimensionality, static shift, and distortion/source-effect checks.  Start
-with coverage and SNR because missing frequencies or unstable stations can
-mislead later static-shift and strike interpretation.
+Start with the Summary and with coverage and SNR, because missing frequencies
+or unstable stations can mislead later static-shift and strike
+interpretation.  Source-overprint and field-zone diagnostics need the
+source–receiver offset: enter **Source offset** when the EDI metadata lacks
+it.
 
 The QC pass answers this question: "Is the survey complete and stable enough
 to correct or model?"  It is deliberately upstream of corrections.  If a

@@ -10,6 +10,14 @@ from __future__ import annotations
 
 import importlib.util
 import unittest
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _run_in_tmp_dir(tmp_path, monkeypatch):
+    """Run in a temporary directory so default output folders, which are
+    created relative to the working directory, never land in the repo."""
+    monkeypatch.chdir(tmp_path)
 
 _HAS_DASH = importlib.util.find_spec("dash") is not None
 
@@ -50,7 +58,7 @@ class TestExecutingMessage(unittest.TestCase):
         import pycsamt.app.agent_master.callbacks.chat as C
 
         steps = [
-            {"label": "Parsing request...", "status": "done"},
+            {"label": "Reading your request...", "status": "done"},
             {"label": "Executing phase_analysis...", "status": "running"},
         ]
         b = C._thinking_bubble(steps, workflow="phase_analysis", elapsed=3.0)
@@ -458,6 +466,7 @@ class TestSessionFollowup(unittest.TestCase):
         self._orig = pr.ProjectRegistry.from_default
         pr.ProjectRegistry.from_default = classmethod(lambda cls, root=None: _Reg())
         C._reset_session()
+        self._history = []
 
     def tearDown(self):
         import pycsamt.app.agent_master.callbacks.chat as C
@@ -485,7 +494,10 @@ class TestSessionFollowup(unittest.TestCase):
         O.WorkflowOrchestratorAgent.execute = fake_exec
         try:
             jid = C._new_job()
-            C._run_agent(jid, text, {}, {"provider": "offline"}, {}, [])
+            self._history.append({"role": "user", "content": text})
+            C._run_agent(jid, text, {}, {"provider": "offline"}, {}, self._history)
+            self._history.append({"role": "assistant", "content": "stub",
+                                  "memory": C._get_job(jid).get("memory")})
         finally:
             O.WorkflowOrchestratorAgent.execute = orig
         return captured.get("data_path")
@@ -496,7 +508,7 @@ class TestSessionFollowup(unittest.TestCase):
         # 1) name the line
         p1 = self._run_capturing("run static shift on line L22PLT")
         self.assertEqual(p1, self._edi_dir)
-        self.assertTrue(C._session_has_data())
+        self.assertTrue(C._session_has_data(self._history, {"provider": "offline"}))
         # 2) follow-up with no line / no data inherits it
         p2 = self._run_capturing("now run phase tensor analysis")
         self.assertEqual(p2, self._edi_dir)
@@ -505,9 +517,10 @@ class TestSessionFollowup(unittest.TestCase):
         import pycsamt.app.agent_master.callbacks.chat as C
 
         self._run_capturing("run static shift on line L22PLT")
-        self.assertTrue(C._session_has_data())
+        self.assertTrue(C._session_has_data(self._history, {"provider": "offline"}))
         C._reset_session()
-        self.assertFalse(C._session_has_data())
+        self._history = []
+        self.assertFalse(C._session_has_data(self._history, {"provider": "offline"}))
 
 
 @unittest.skipUnless(_HAS_DASH, "Dash not installed")
@@ -574,3 +587,102 @@ class TestPinCallbacksRegistered(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+def _dump(component) -> str:
+    import json
+
+    import plotly.utils
+
+    return json.dumps(component, cls=plotly.utils.PlotlyJSONEncoder)
+
+
+@unittest.skipUnless(_HAS_DASH, "Dash not installed")
+class TestThinkingLayout(unittest.TestCase):
+    """One animated logo; no pulse, star, ghost or progress bar."""
+
+    def test_thinking_line_is_logo_plus_quiet_status(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+
+        steps = [
+            {"label": "Load EDI files", "status": "done"},
+            {"label": "Data quality control", "status": "running"},
+            {"label": "Rotate tensors", "status": "pending"},
+        ]
+        text = _dump(C._thinking_bubble(steps, workflow="rotation", elapsed=4.0))
+        self.assertIn("am-logo-live", text)
+        self.assertIn("am-logo-signal", text)
+        self.assertIn("Step 2 of 3", text)
+        self.assertIn("Data quality control", text)
+        self.assertIn('"role": "status"', text)
+        self.assertIn("Show steps", text)
+        for retired in ("bi-stars", "am-think-glyph", "am-think-ghost", "am-think-track"):
+            self.assertNotIn(retired, text)
+
+    def test_avatar_states(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+
+        self.assertIn("am-logo.svg", _dump(C._agent_avatar()))
+        self.assertIn("am-logo-muted.svg", _dump(C._agent_avatar(muted=True)))
+        self.assertIn("am-logo-muted.svg", _dump(C._agent_bubble("Stopped.", kind=C.KIND_ERROR)))
+        self.assertIn("am-logo.svg", _dump(C._agent_bubble("Done.", kind=C.KIND_ANSWER)))
+
+    def test_logo_assets_exist_and_static_files_do_not_animate(self):
+        from pathlib import Path
+
+        icons = Path(__file__).resolve().parents[1] / "assets" / "icons"
+        for name in ("am-logo.svg", "am-logo-muted.svg",
+                     "am-logo-signal-tile.svg", "am-logo-bands-tile.svg"):
+            self.assertNotIn("@keyframes", (icons / name).read_text(encoding="utf-8"))
+
+    def test_sync_script_periods_match_css_durations(self):
+        """The poll re-render must not restart the wave or the shimmer.
+
+        am-anim-sync.js phases each animation from the page clock using its
+        period; a period that disagrees with the CSS duration would jump.
+        """
+        import re
+        from pathlib import Path
+
+        assets = Path(__file__).resolve().parents[1] / "assets"
+        css = (assets / "master.css").read_text(encoding="utf-8")
+        js = (assets / "am-anim-sync.js").read_text(encoding="utf-8")
+        periods = {k: int(v) for k, v in re.findall(r"'(am-[\w-]+)':\s*(\d+)", js)}
+
+        def duration(selector, keyframes):
+            block = re.search(re.escape(selector) + r"\s*\{[^}]*?animation:\s*"
+                              + keyframes + r"\s+([\d.]+)s", css)
+            self.assertIsNotNone(block, selector)
+            return round(float(block.group(1)) * 1000)
+
+        self.assertEqual(periods["am-logo-signal"], duration(".am-logo-signal", "am-logo-signal"))
+        self.assertEqual(periods["am-logo-bands"], duration(".am-logo-bands", "am-logo-bands"))
+        self.assertEqual(periods["am-think-lbl"], duration(".am-think-lbl", "am-think-shimmer"))
+        # the status text keeps no enter animation that would replay per poll
+        self.assertNotIn("am-think-in", css)
+
+    def test_reply_chips(self):
+        import pycsamt.app.agent_master.callbacks.chat as C
+
+        suggestions = [{"label": "45° clockwise", "reply": "Rotate the data by 45 degrees clockwise."},
+                       "Rotate the data to the strike.", "", {"label": "no reply"},
+                       "a", "b", "c"]
+        pairs = C._suggestion_pairs(suggestions)
+        self.assertEqual(pairs[0], ("45° clockwise", "Rotate the data by 45 degrees clockwise."))
+        self.assertEqual(pairs[1], ("Rotate the data to the strike.",) * 2)
+        self.assertEqual(len(pairs), 4)
+        text = _dump(C._agent_bubble("In which sense?", kind=C.KIND_CLARIFY,
+                                     suggestions=suggestions[:1]))
+        self.assertIn('"type": "am-reply-chip"', text)
+        self.assertIn("Rotate the data by 45 degrees clockwise.", text)
+        self.assertNotIn("am-reply-chip", _dump(C._agent_bubble("Plain answer.")))
+
+    def test_chip_click_sends_through_the_normal_path(self):
+        from pycsamt.app.agent_master import create_app
+
+        app = create_app()
+        found = [
+            v for v in app.callback_map.values()
+            if any("am-reply-chip" in str(i.get("id")) for i in v.get("inputs", []))
+        ]
+        self.assertTrue(found, "reply-chip callback not registered")

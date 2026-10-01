@@ -141,6 +141,22 @@ class TestMenuLayout:
         corner = window.menuBar().cornerWidget(Qt.Corner.TopRightCorner)
         assert [a.text() for a in corner.actions()] == ["&Help"]
 
+    def test_help_opens_the_panel_directly(self, window, monkeypatch):
+        """Help is one entry (F1) that opens the Help & About panel; the
+        old Documentation / GitHub items only duplicated its links."""
+        from PySide6.QtCore import Qt
+
+        corner = window.menuBar().cornerWidget(Qt.Corner.TopRightCorner)
+        act = corner.actions()[0]
+        assert act.menu() is None
+        assert act.shortcut().toString() == "F1"
+        opened = []
+        monkeypatch.setattr(window, "_open_about", lambda: opened.append(1))
+        act.triggered.disconnect()
+        act.triggered.connect(window._open_about)
+        act.trigger()
+        assert opened == [1]
+
     def test_edit_menu_contents(self, window):
         texts = [a.text().replace("&", "").split("\t")[0]
                  for a in _all_actions(window._edit_menu)]

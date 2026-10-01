@@ -9,6 +9,8 @@ class IDs:
     # ── stores ────────────────────────────────
     STORE_MESSAGES = "am-store-messages"
     STORE_EDI = "am-store-edi"
+    URL = "am-url"  # ?handoff=<token> from the desktop
+    WELCOME_NOTE = "am-welcome-note"
     STORE_SESSION = "am-store-session"
     STORE_SETTINGS = "am-store-settings"
     STORE_JOB = "am-store-job"

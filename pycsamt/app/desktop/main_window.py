@@ -114,6 +114,15 @@ _DARK_MODE: bool = False
 
 # Matches any 6-digit hex colour in an SVG source string.
 _HEX6_RE = re.compile(r"#[0-9a-fA-F]{6}", re.IGNORECASE)
+# 3-digit hex (#000, #333) and rgb()/rgba() -- SVG Repo icons write
+# ``style="fill: rgb(0, 0, 0)"``, which the hex pass never saw.
+_HEX3_RE = re.compile(r"#[0-9a-fA-F]{3}(?![0-9a-fA-F])")
+_RGB_RE = re.compile(
+    r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)",
+    re.IGNORECASE)
+# QIcon.cacheKey() -> icon name, so a theme switch can re-icon every action
+# built by _icon() (menus, submenus, toolbars) without a hand-kept list.
+_ICON_NAMES: dict[int, str] = {}
 
 
 def _is_near_black(hex6: str) -> bool:
@@ -126,6 +135,16 @@ def _recolor_svg(text: str, target: str = "#cdd6f4") -> bytes:
     result = _HEX6_RE.sub(
         lambda m: target if _is_near_black(m.group(0)) else m.group(0),
         text,
+    )
+    result = _HEX3_RE.sub(
+        lambda m: target if _is_near_black(
+            "#" + "".join(ch * 2 for ch in m.group(0)[1:])) else m.group(0),
+        result,
+    )
+    result = _RGB_RE.sub(
+        lambda m: target if _is_near_black("#{:02x}{:02x}{:02x}".format(
+            *(min(255, int(v)) for v in m.groups()))) else m.group(0),
+        result,
     )
     # Pass 2: replace the named keyword "black" in attribute values / inline styles
     result = re.sub(
@@ -147,16 +166,29 @@ def _recolor_svg(text: str, target: str = "#cdd6f4") -> bytes:
             )
         return tag
 
-    result = re.sub(
-        r"<(?:path|rect|circle|ellipse|polygon|polyline|line)\b[^>]*?(?:/>|>)",
-        _maybe_fill,
-        result,
-    )
+    # Only shapes that really fall back to the default black fill: when an
+    # enclosing <svg>/<g> sets one, it is either already recoloured (pass 1)
+    # or deliberately "none" -- stroke-only icons such as depth.svg were
+    # being filled into solid squares.
+    if not re.search(r"<(?:svg|g)\b[^>]*\bfill\s*=", result):
+        result = re.sub(
+            r"<(?:path|rect|circle|ellipse|polygon|polyline|line)\b[^>]*?"
+            r"(?:/>|>)",
+            _maybe_fill,
+            result,
+        )
     return result.encode("utf-8")
 
 
 def _icon(name: str) -> QIcon:
     """Load an icon by name, recolouring dark SVG strokes for dark mode."""
+    icon = _load_icon(name)
+    if not icon.isNull():
+        _ICON_NAMES[icon.cacheKey()] = name
+    return icon
+
+
+def _load_icon(name: str) -> QIcon:
     for c in (name, f"{name}.svg", f"{name}.png"):
         p = _ICONS / c
         if p.exists():
@@ -297,6 +329,13 @@ class MainWindow(QMainWindow):
         # Re-apply ALL icon-bearing actions (menu + toolbar)
         for action, icon_name in getattr(self, "_all_icon_actions", []):
             action.setIcon(_icon(icon_name))
+        # ... and every other action _icon() built (Edit / View / Tools
+        # entries and submenus were missing from the list above and stayed
+        # black on the dark theme)
+        for action in self.findChildren(QAction):
+            name = _ICON_NAMES.get(action.icon().cacheKey())
+            if name is not None:
+                action.setIcon(_icon(name))
 
         for win in self._panel_windows():
             try:
@@ -358,6 +397,9 @@ class MainWindow(QMainWindow):
         self._advanced_win.conversion_committed.connect(
             self._on_conversion_committed
         )
+        QApplication.instance().focusChanged.connect(self._on_focus_changed)
+        # TDEM Studio "Send to survey" (TEM -> impedance sites)
+        self._tdem_win.send_to_survey.connect(self._on_tdem_sites)
 
         # Restore positions from session
         geo = self._session.window_geometries
@@ -592,7 +634,7 @@ class MainWindow(QMainWindow):
         )
         view_menu.addAction(act_pcsf3d)
 
-        act_qc = QAction(_icon("qc"), "&QC Dashboard", self)
+        act_qc = QAction(_icon("qc"), "&QC Studio", self)
         act_qc.setShortcut("Ctrl+Shift+Q")  # Ctrl+Q is Quit
         act_qc.triggered.connect(lambda: self._show_window(self._qc_win))
         view_menu.addAction(act_qc)
@@ -667,7 +709,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction(_log_tva)
         view_menu.addSeparator()
 
-        theme_menu = view_menu.addMenu("Theme")
+        theme_menu = view_menu.addMenu(_icon("theme"), "Theme")
         self._act_dark = QAction("☾  Dark", self, checkable=True)
         self._act_light = QAction("☀  Light", self, checkable=True)
         # QActionGroup enforces mutual exclusivity: checking one unchecks the other.
@@ -887,29 +929,19 @@ class MainWindow(QMainWindow):
         self._all_icon_actions.append((act_api, "tools"))
 
         # ── Help ──────────────────────────────────────────────────────
-        help_menu = QMenu("&Help", self)
-        self._help_menu = help_menu
+        # One entry at the far right that opens the Help & About panel
+        # (documentation, GitHub, release notes, system info, author) --
+        # the old three-item menu only duplicated the panel's links.
         help_bar = QMenuBar(mb)
-        help_bar.addMenu(help_menu)
-        mb.setCornerWidget(help_bar, Qt.Corner.TopRightCorner)
-        act_docs = QAction(_icon("docs"), "&Documentation", self)
-        act_docs.setStatusTip("Open pycsamt documentation in your browser")
-        act_docs.triggered.connect(self._open_documentation)
-        help_menu.addAction(act_docs)
-
-        act_gh = QAction(_icon("github"), "pycsamt on &GitHub", self)
-        act_gh.setStatusTip(
-            "Open the pycsamt GitHub repository in your browser"
-        )
-        act_gh.triggered.connect(self._open_github)
-        help_menu.addAction(act_gh)
-
-        help_menu.addSeparator()
-
-        act_about = QAction(_icon("help"), "&About pycsamt", self)
-        act_about.setStatusTip("About pycsamt v2 — version, author and links")
+        act_about = QAction(_icon("help"), "&Help", self)
+        act_about.setShortcut("F1")
+        act_about.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+        act_about.setStatusTip("Help & About — documentation, tutorials, "
+                               "release notes, system info (F1)")
         act_about.triggered.connect(self._open_about)
-        help_menu.addAction(act_about)
+        help_bar.addAction(act_about)
+        mb.setCornerWidget(help_bar, Qt.Corner.TopRightCorner)
+        self._act_help = act_about
 
         # Register every icon-bearing action created in this method so that
         # _apply_theme can re-ice all of them when the user switches theme.
@@ -930,8 +962,6 @@ class MainWindow(QMainWindow):
                 (act_agents, "agents"),
                 (act_adv, "advanced-tools"),
                 (_log_tva, "log"),
-                (act_docs, "docs"),
-                (act_gh, "github"),
                 (act_about, "help"),
             ]
         )
@@ -1010,7 +1040,7 @@ class MainWindow(QMainWindow):
         _tb(
             "qc",
             "QC",
-            "Open QC Dashboard",
+            "Open the QC Studio",
             lambda: self._show_window(self._qc_win),
         )
         _tb(
@@ -1481,6 +1511,7 @@ class MainWindow(QMainWindow):
             lambda: self._map_win.set_dataframe(active_df),
             lambda: self._map_win.set_sites(active_sites),
             lambda: self._pcsf3d_win.set_sites(active_sites),
+            lambda: self._qc_win.set_lines(self._lines_of(active_df)),
             lambda: self._qc_win.set_sites(active_sites),
             lambda: self._advanced_win.set_sites(active_sites),
             lambda: self._pipeline_win.set_input_sites(active_sites),
@@ -1575,10 +1606,44 @@ class MainWindow(QMainWindow):
         y = available.y() + (available.height() - height) // 2
         win.setGeometry(x, y, width, height)
 
+    def _agent_handoff(self) -> tuple[str, str]:
+        """Write the survey as it is now for Agent Master.
+
+        Returns ``(token, description)``; ``("", "")`` without stations.
+        The survey is written from memory -- corrections, edits and
+        pipeline output included -- so Agent Master continues from the
+        desktop session instead of re-reading (or losing) it.
+        """
+        sites = self._all_sites
+        if sites is None or not len(list(sites)):
+            return "", ""
+        from pycsamt.app.agent_master._handoff import write_handoff
+
+        history = getattr(self, "_history", None)
+        edited = bool(history is not None and history.position > 0)
+        paths = getattr(self, "_loaded_paths", None) or []
+        token = write_handoff(
+            sites, self._lines_of(self._all_dataframe), edited=edited,
+            label=str(paths[0]) if paths else "")
+        n = len(list(sites))
+        return token, (f"{n} station{'s' if n != 1 else ''}"
+                       + (" (edited)" if edited else ""))
+
     def _open_agent_master(self) -> None:
-        """Launch Agent Master in the user's default browser."""
+        """Launch Agent Master in the user's default browser.
+
+        With a survey loaded, Agent Master starts on it (see
+        :meth:`_agent_handoff`); without one it opens on its welcome
+        screen to start from scratch.
+        """
+        token, what = "", ""
         try:
-            result = launch_agent_master(open_browser=True)
+            token, what = self._agent_handoff()
+        except Exception as exc:  # noqa: BLE001 - still open Agent Master
+            self._log(f"Could not hand the survey to Agent Master ({exc}); "
+                      "opening it without data.")
+        try:
+            result = launch_agent_master(open_browser=True, handoff=token)
         except Exception as exc:  # noqa: BLE001 - surface GUI errors
             msg = f"Could not launch Agent Master: {exc}"
             self._log(msg)
@@ -1587,6 +1652,8 @@ class MainWindow(QMainWindow):
 
         state = "Starting" if result.started else "Opening"
         msg = f"{state} Agent Master at {result.url}"
+        if what:
+            msg = f"{state} Agent Master with the desktop survey ({what})"
         self._log(msg)
         self.statusBar().showMessage(msg, 6000)
 
@@ -1727,6 +1794,34 @@ class MainWindow(QMainWindow):
         self._status_file_lbl.setText(f"{n} stations (converted)")
         self._log(f"Converted dataset committed — {n} stations.")
 
+    def _on_tdem_sites(self, sites, mode: str = "append") -> None:
+        """Adopt TEM soundings converted to impedance by TDEM Studio;
+        *mode* ``"append"`` adds them to the survey, ``"replace"`` makes
+        them the survey.  One Edit ▸ Undo step either way."""
+        from pycsamt.site.base import to_sites
+
+        try:
+            new = list(to_sites(sites))
+            if mode == "append" and self._all_sites is not None:
+                names = {s.name for s in new}
+                new = [s for s in self._all_sites
+                       if s.name not in names] + new
+            merged = to_sites(new)
+        except Exception as exc:
+            self._log(f"Could not adopt the TDEM sites: {exc}")
+            return
+        lines = None
+        if mode == "append" and self._all_dataframe is not None:
+            lines = self._lines_of(self._all_dataframe)
+        if not self._adopt_full_dataset(merged, label=f"TDEM sites ({mode})",
+                                        lines=lines, merge=False):
+            self._log("TDEM sites could not be adopted (no usable data).")
+            return
+        n = self._controller.n_stations
+        self._status_file_lbl.setText(f"{n} stations (TDEM {mode})")
+        self._log(f"TDEM sites {'appended' if mode == 'append' else 'loaded'}"
+                  f" — {n} stations.")
+
     # ── Forward → Inversion bridge ────────────────────────────────────
 
     def _on_forward_send_to_inversion(self, payload: dict) -> None:
@@ -1764,27 +1859,53 @@ class MainWindow(QMainWindow):
 
     # ── Export ────────────────────────────────────────────────────────
 
-    def _on_export_figure(self) -> None:
-        from pycsamt.app.desktop.dialogs.export_dlg import (
-            ExportDialog,
-        )
+    def _figure_windows(self) -> list:
+        """Every visible window that may hold a figure (panels, tools)."""
+        from PySide6.QtWidgets import QMenu
 
-        # Try to grab figure from the most recently active panel window
-        fig = None
-        for win in reversed(self._panel_windows()):
-            if not win.isVisible():
-                continue
-            for attr in ("_canvas", "_result_canvas"):
-                canvas = getattr(win, attr, None)
-                if canvas is not None:
-                    fig = canvas.figure
-                    break
-            if fig is not None:
-                break
-        if fig is None:
-            self.statusBar().showMessage("No figure to export.", 3000)
+        wins = [w for w in QApplication.topLevelWidgets()
+                if w.isWindow() and w.isVisible()
+                and not isinstance(w, QMenu)]
+        return wins or [self]
+
+    def _on_focus_changed(self, _old, new) -> None:
+        """Remember the last window worked in: Export offers its figure first."""
+        if new is None:
             return
-        ExportDialog(figure=fig, parent=self).exec()
+        win = new.window()
+        if win is not None and win is not self:
+            self._last_figure_window = win
+
+    def _figure_sources(self) -> list:
+        from pycsamt.app.desktop.dialogs.export_dlg import collect_sources
+
+        return collect_sources(self._figure_windows(),
+                               first=getattr(self, "_last_figure_window",
+                                             None))
+
+    def _on_export_figure(self) -> None:
+        """Export a figure drawn in any open window (Export toolbar button).
+
+        Figures are found by walking the windows' canvases, so every plot
+        window and tool counts; the one worked in last is offered first.
+        """
+        from PySide6.QtWidgets import QMessageBox
+
+        from pycsamt.app.desktop.dialogs.export_dlg import ExportDialog
+
+        sources = self._figure_sources()
+        if not sources:
+            QMessageBox.information(
+                self, "Export figure",
+                "There is no figure to export yet.\n\n"
+                "Draw a plot first — for example in View ▸ Profile, Map, "
+                "QC, TDEM, Airborne or PCSF 3-D — then click Export again: "
+                "every figure shown in an open window is offered.\n\n"
+                "To save the survey data itself use Tools ▸ Format "
+                "Converter; to save every open figure at once use "
+                "Tools ▸ Batch Export Plots.")
+            return
+        ExportDialog(sources=sources, parent=self).exec()
 
     # ── Preferences ───────────────────────────────────────────────────
 
@@ -2029,31 +2150,10 @@ class MainWindow(QMainWindow):
         ).exec()
 
     def _collect_figures(self) -> list:
-        """Return [(label, Figure)] for every visible canvas in all panel windows."""
-        figures = []
-        _LABEL = {
-            "_profile_win": "Profile",
-            "_map_win": "Map",
-            "_pcsf3d_win": "PCSF 3D",
-            "_qc_win": "QC",
-            "_correction_win": "Correction",
-            "_advanced_win": "Advanced",
-            "_tdem_win": "TDEM",
-            "_pipeline_win": "Pipeline",
-            "_forward_win": "Forward",
-            "_inversion_win": "Inversion",
-            "_interp_win": "Interpretation",
-            "_airborne_win": "Airborne",
-        }
-        for attr, label in _LABEL.items():
-            win = getattr(self, attr, None)
-            if win is None or not win.isVisible():
-                continue
-            for canvas_attr in ("_canvas", "_result_canvas"):
-                canvas = getattr(win, canvas_attr, None)
-                if canvas is not None and hasattr(canvas, "figure"):
-                    figures.append((label, canvas.figure))
-        return figures
+        """Return [(label, Figure)] for every matplotlib figure drawn in an
+        open window (3-D scenes are exported from Export / PCSF 3-D)."""
+        return [(src.label, src.figure) for src in self._figure_sources()
+                if src.kind == "mpl"]
 
     def _open_station_response(self) -> None:
         if not self._require_sites("Station Response Inspector"):
@@ -2227,7 +2327,7 @@ class MainWindow(QMainWindow):
         self._act_redo.setShortcuts(
             [QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")])
         self._act_redo.triggered.connect(self.redo_edit)
-        self._act_history = QAction(_icon("log"), "&History…", self)
+        self._act_history = QAction(_icon("history"), "&History…", self)
         self._act_history.setShortcut("Ctrl+H")
         self._act_history.setStatusTip("Every change to the survey; jump "
                                        "back to any of them")
@@ -2240,7 +2340,7 @@ class MainWindow(QMainWindow):
             edit.addAction(act)
         edit.addAction(self._act_revert)
         edit.addSeparator()
-        self._act_find = QAction(_icon("tools"), "&Find Station…", self)
+        self._act_find = QAction(_icon("find-station"), "&Find Station…", self)
         self._act_find.setShortcut(QKeySequence.StandardKey.Find)
         self._act_find.setStatusTip("Jump to a station by name")
         self._act_find.triggered.connect(self._find_station)
@@ -2267,7 +2367,7 @@ class MainWindow(QMainWindow):
         self._edit_station_menu.addSeparator()
         self._edit_freq_menu = edit.addMenu(_icon("frequency-editor"),
                                             "F&requencies")
-        act_points = QAction(_icon("station-response"), "&Point Editor…",
+        act_points = QAction(_icon("point-editor"), "&Point Editor…",
                              self)
         act_points.setShortcut("Ctrl+Alt+E")
         act_points.setStatusTip(
@@ -2292,8 +2392,8 @@ class MainWindow(QMainWindow):
         edit.addSeparator()
         edit.addAction(act_prefs)
         self._all_icon_actions.extend([(self._act_undo, "reset"),
-                                       (self._act_history, "log"),
-                                       (self._act_find, "tools")])
+                                       (self._act_history, "history"),
+                                       (self._act_find, "find-station")])
         self._refresh_edit_state()
 
     def open_station_editor(self, tab: str = "coordinates") -> None:
@@ -2576,7 +2676,8 @@ class MainWindow(QMainWindow):
         )
         from pycsamt.app.desktop.licensing import get_default_manager
 
-        AboutDialog(parent=self, license_manager=get_default_manager()).exec()
+        AboutDialog(parent=self, license_manager=get_default_manager(),
+                    dark=_DARK_MODE).exec()
 
     # ── Recent files ──────────────────────────────────────────────────
 
@@ -2599,8 +2700,8 @@ class MainWindow(QMainWindow):
     def _on_filter_changed(self, text: str) -> None:
         try:
             self._station_panel.filter(text)
-        except Exception:
-            pass
+        except Exception as exc:  # never silently: it hid a missing method
+            self._log(f"Station filter failed: {exc}")
 
     # ── Session ───────────────────────────────────────────────────────
 

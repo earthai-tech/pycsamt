@@ -44,14 +44,9 @@ from pycsamt.app.desktop.widgets.colorbar_widget import (
     ColorbarWidget,
 )
 
-_COLORMAPS = [
-    "jet_r",
-    "RdBu_r",
-    "viridis_r",
-    "plasma_r",
-    "rainbow_r",
-    "bwr_r",
-]
+from pycsamt.api.colormaps import COLORMAPS  # noqa: E402
+
+_COLORMAPS = list(COLORMAPS)  # jet_r first: the section default
 
 
 class SectionPanel(QWidget):

@@ -32,6 +32,8 @@ main window only through the explicit **Apply to main data** button.
 
 from __future__ import annotations
 
+from pycsamt.app.desktop.windows._base import refresh_icons
+
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSize, Qt, Signal, Slot
@@ -620,6 +622,7 @@ class PipelineWindow(QWidget):
     def set_dark_mode(self, dark: bool) -> None:
         # Status pills are theme-independent (white on saturated colour).
         self._dark = dark
+        refresh_icons(self, dark)
 
     # ══ Workflow list ═════════════════════════════════════════════════════════
 

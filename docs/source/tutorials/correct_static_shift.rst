@@ -113,7 +113,7 @@ real field surveys:
 
 ``data/MT/kap03lmt_edis``
     26-station KAP03 long-period MT profile from the Southern African
-    Magnetotelluric Experiment (SAMTEX), roughly 60 km long, 18-20
+    Magnetotelluric Experiment (SAMTEX), about 1450 km long, 18-20
     frequencies per station spanning periods from about 25 s to nearly 5
     hours. It reappears later in this tutorial as a survey where AMA
     returns large, real factors that are still not safe to apply without
@@ -704,8 +704,9 @@ A Long-Period MT Line Where Large Factors Are Not Enough (KAP03)
 ``L18PLT`` has a station spacing and profile geometry where a 3-station
 neighbourhood is a physically reasonable proxy for "the regional trend near
 this station." That assumption gets much weaker on ``data/MT/kap03lmt_edis``:
-KAP03 spans roughly 60 km with only 26 stations, so each AMA neighbourhood
-covers many kilometres, not tens of metres.
+KAP03 spans about 1450 km with only 26 stations (median nearest-neighbour
+spacing about 57 km), so each AMA neighbourhood
+covers hundreds of kilometres, not tens of metres.
 
 .. code-block:: pycon
 

@@ -52,14 +52,54 @@ THEME_COLORS: dict[MapTheme, dict[str, str]] = {
 }
 
 
+def _plotly_named(name: str) -> bool:
+    """``True`` when Plotly has a built-in colour scale called *name*
+    (case-insensitive; any name may end in ``_r``)."""
+    try:
+        from plotly.colors import named_colorscales
+    except Exception:  # plotly missing: nothing to validate against
+        return True
+    base = name.lower()
+    base = base[:-2] if base.endswith("_r") else base
+    return base in named_colorscales()
+
+
+def _sampled_colorscale(cmap: str, n: int = 11) -> list | None:
+    """A matplotlib colormap as an explicit Plotly colour scale."""
+    try:
+        import matplotlib
+
+        cm = matplotlib.colormaps[cmap]
+    except Exception:
+        return None
+    out = []
+    for i in range(n):
+        pos = i / (n - 1)
+        r, g, b, _a = cm(pos)
+        out.append([round(pos, 4),
+                    f"rgb({int(r * 255)},{int(g * 255)},{int(b * 255)})"])
+    return out
+
+
 def to_plotly_cmap(
     cmap: str | None,
     fallback: str = "plasma",
-) -> str:
-    """Return a Plotly-compatible colorscale name."""
+):
+    """Return a Plotly colour scale for *cmap*.
+
+    A Plotly name when Plotly has one; otherwise the matplotlib colormap
+    sampled into an explicit scale, so every entry of
+    :data:`pycsamt.api.colormaps.COLORMAPS` (``gist_earth``, ``bwr``,
+    ``Spectral_r`` …) renders in the 3-D and map views instead of failing.
+    """
     if not cmap:
         return fallback
-    return PLOTLY_CMAP_REMAP.get(cmap, cmap)
+    if not isinstance(cmap, str):
+        return cmap  # already an explicit scale
+    name = PLOTLY_CMAP_REMAP.get(cmap, cmap)
+    if _plotly_named(name):
+        return name
+    return _sampled_colorscale(cmap) or fallback
 
 
 # ---------------------------------------------------------------------------

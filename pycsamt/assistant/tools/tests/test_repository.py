@@ -139,6 +139,43 @@ def test_science_not_redirected(query):
     assert not is_developer_question(query)
 
 
+def test_question_naming_infrastructure_function_is_developer():
+    assert is_developer_question(
+        "Does validate_generated_code prove my script executes correctly?")
+    # Science API names stay with the science corpus.
+    assert not is_developer_question("estimate_ss_ama parameters and return columns")
+    assert not is_developer_question("Explain estimate_ss_ama and correct_ss_ama.")
+
+
+def test_rare_terms_outrank_common_words(tmp_path):
+    package = tmp_path / "pycsamt"
+    (package / "app").mkdir(parents=True)
+    (package / "rag").mkdir()
+    common = "app callbacks answer questions\n" * 3
+    for i in range(6):
+        (package / "app" / f"view{i}.py").write_text(
+            f"# {common}def view{i}():\n    return 'app callbacks'\n", encoding="utf-8")
+    (package / "rag" / "config.py").write_text(
+        "# The science RAG corpus excludes app callbacks.\nEXCLUDE = ('app',)\n",
+        encoding="utf-8")
+    result = RepositoryTools(tmp_path).search(
+        "Why does the science RAG not answer questions about app callbacks?")
+    assert result["sources"][0]["path"] == "pycsamt/rag/config.py"
+
+
+def test_camelcase_names_are_required_identifiers(tmp_path):
+    package = tmp_path / "pycsamt"
+    package.mkdir()
+    (package / "heads.py").write_text(
+        "def write(request):\n    '''Write the request code.'''\n", encoding="utf-8")
+    (package / "code_gen.py").write_text(
+        "class CodeGenerationAgent:\n    '''Generates code for a request.'''\n",
+        encoding="utf-8")
+    result = RepositoryTools(tmp_path).search(
+        "Trace how a write-code request reaches CodeGenerationAgent.")
+    assert [s["path"] for s in result["sources"]] == ["pycsamt/code_gen.py"]
+
+
 def test_agent_bypasses_science_rag_and_reports_missing(
     monkeypatch, repository
 ):

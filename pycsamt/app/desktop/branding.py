@@ -28,10 +28,22 @@ TAGLINE = "Python  MT · AMT · CSAMT · CSEM  —  Geophysical Processing Suite
 
 AUTHOR_NAME = "Laurent Kouadio"
 AUTHOR_EMAIL = "etanoyau@gmail.com"
+AUTHOR_WEBSITE = "https://lkouadio.com"
+# the copyright belongs to the organisation (more developers to come), the
+# author line credits the lead developer
+COPYRIGHT_HOLDER = ORG_NAME
+AUTHOR_ROLE = "Lead developer of pyCSAMT"
 LICENSE_SPDX = "LGPL-3.0"
 
 URL_DOCS = "https://pycsamt.org/"
 URL_GITHUB = "https://github.com/earthai-tech/pycsamt"
+URL_ISSUES = "https://github.com/earthai-tech/pycsamt/issues"
+
+# how to cite (the docs landing page and references.rst say the same)
+CITATION = ("Kouadio et al. (2022), Journal of Applied Geophysics, "
+            "pyCSAMT.")
+CITATION_DOI = "10.1016/j.jappgeo.2022.104647"
+URL_CITATION = f"https://doi.org/{CITATION_DOI}"
 
 _FALLBACK_VERSION = "0.0.0"
 

@@ -43,5 +43,7 @@ Outputs → Agent Master & Other Apps → Troubleshooting**.
    code_validation
    repository_access
    tools_memory_outputs
+   conversation_context
    handoff_from_apps
+   evaluation
    troubleshooting

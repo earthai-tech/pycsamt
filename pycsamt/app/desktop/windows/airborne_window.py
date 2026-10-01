@@ -1,327 +1,429 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """
-AirborneWindow — ZTEM / AFMAG / MobileMT diagnostics and map plotting.
+AirborneWindow — Airborne EM studio (ZTEM, AFMAG, AirMt, MobileMT).
 
-Net-new floating panel (Phase 8 of the desktop modernization plan).
-Loads an :class:`~pycsamt.airborne.site.AirborneSites` from an EMTF-XML
-file or directory via :func:`~pycsamt.airborne.site.ensure_asites`, then
-dispatches Category -> Plot combos into
-:class:`~pycsamt.app.desktop.controllers.airborne_controller
-.AirborneController`.
+Left
+    **Data** — load EMTF-XML (a folder or one file); the card shows the
+    technology detected, stations, flight lines and frequency band.
+    **Flight line** — restrict every view to one line.
+    **Views** — only the views that can draw the loaded technology
+    (profiles, sections, maps, motion, tables; see
+    :mod:`pycsamt.app.desktop.controllers.airborne_studio`).
+    **Options** — the view's own settings, with the data's real
+    frequencies / stations as choices.
+    **Survey geometry** — geomagnetic field and aircraft attitude, shared
+    by the motion views (shown when the view needs it).
+Right
+    **Plot** · **Table** (diagnostic tables, CSV export) · **Stations**
+    (what was loaded).
 
-MobileMT is generic-adapter-only: only already-decoded EMTF-XML is ever
-read (raw vendor MobileMT files are a permanent restriction, not a gap
-this window works around — see the controller module docstring and
-``MEMORY.md``'s ``project_mobilemt_vendor_data_blocked.md``). The "Load"
-button and the MobileMT category description say so explicitly rather
-than implying raw-format import is supported or forthcoming.
+MobileMT is generic-adapter-only: only already-decoded EMTF-XML is read;
+raw vendor MobileMT files are a permanent restriction, not a gap.
 """
 
 from __future__ import annotations
 
-import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDoubleSpinBox,
     QFileDialog,
-    QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
     QPushButton,
-    QSizePolicy,
-    QSpinBox,
+    QStackedWidget,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
+from pycsamt.app.desktop.controllers import airborne_studio as st
 from pycsamt.app.desktop.controllers.airborne_controller import (
-    CATALOGUE,
-    CATEGORIES,
     AirborneController,
-    ParamSpec,
+)
+from pycsamt.app.desktop.controllers.correction_views import (
+    figure_blank_reason,
 )
 from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
-from pycsamt.app.desktop.windows._base import (
-    PanelWindow,
-    icon_button,
-    make_group,
-)
+from pycsamt.app.desktop.windows._base import PanelWindow, make_group
+from pycsamt.app.desktop.windows.inversion.forms import SettingsForm
 
-_CATEGORY_NOTE = {
-    "ZTEM": "Along-profile divergence, phase rotation, and usable-band "
-    "diagnostics for Geotech ZTEM-style tipper data.",
-    "AFMAG": "Tilt-angle profiles/pseudosections and aircraft-motion "
-    "susceptibility diagnostics.",
-    "MobileMT": "Generic-adapter-only: reads already-decoded EMTF-XML. "
-    "pyCSAMT never reads raw vendor MobileMT files — this is a "
-    "permanent restriction, not a temporary gap.",
-}
+_KEY = Qt.ItemDataRole.UserRole
+_MOBILEMT_NOTE = ("MobileMT: only already-decoded EMTF-XML is read — raw "
+                  "vendor MobileMT files are never read (a permanent "
+                  "restriction).")
 
 
 class AirborneWindow(PanelWindow):
-    """Floating ZTEM / AFMAG / MobileMT diagnostics panel."""
+    """Airborne EM studio: technology-aware views, options and tables."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         self._ctrl = AirborneController()
-        super().__init__(
-            title="Airborne EM",
-            session_key="airborne_window",
-            params_width=300,
-            icon_name="induction",
-            parent=parent,
-        )
-        self.resize(1100, 720)
-        self._populate_category_combo()
-        self._on_category_changed(0)
+        self._ctrl.dark = False  # figures are for publication: white
+        self._ctx: dict = {}
+        self._forms: dict[str, SettingsForm] = {}
+        self._tables: list = []
+        super().__init__(title="Airborne EM", session_key="airborne_window",
+                         params_width=300, icon_name="induction",
+                         parent=parent)
+        self.resize(1200, 780)
+        self._refresh_data()
 
-    # =========================================================================
-    # Left panel
-    # =========================================================================
-
+    # ══ left panel ═══════════════════════════════════════════════════════
     def _build_params(self, layout: QVBoxLayout) -> None:
-        # ── Data ─────────────────────────────────────────────────────────
-        grp_data, lay_data = make_group("Data")
+        grp, lay = make_group("Data")
         self._data_status = QLabel("No airborne data loaded")
         self._data_status.setObjectName("InfoLabel")
         self._data_status.setWordWrap(True)
-        lay_data.addWidget(self._data_status)
+        self._data_status.setTextFormat(Qt.TextFormat.RichText)
+        lay.addWidget(self._data_status)
+        row = QHBoxLayout()
+        btn = QToolButton()
+        btn.setText("Load EMTF-XML  ▾")
+        btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        btn.setToolTip("EMTF-XML files, one per station. " + _MOBILEMT_NOTE)
+        menu = QMenu(btn)
+        menu.addAction("Folder…", self._on_load)
+        menu.addAction("Single file…", self._on_load_file)
+        btn.setMenu(menu)
+        self._btn_load = btn
+        clear = QPushButton("Clear")
+        clear.clicked.connect(self._on_clear)
+        row.addWidget(btn, 1)
+        row.addWidget(clear)
+        lay.addLayout(row)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Flight line:"))
+        self._line_combo = QComboBox()
+        self._line_combo.setToolTip("Restrict every view to one line")
+        self._line_combo.currentIndexChanged.connect(
+            lambda _i: self._schedule())
+        row.addWidget(self._line_combo, 1)
+        lay.addLayout(row)
+        layout.addWidget(grp)
+
+        grp, lay = make_group("Views")
+        self._view_list = QListWidget()
+        self._view_list.setMinimumHeight(230)
+        self._view_list.currentItemChanged.connect(self._on_view)
+        lay.addWidget(self._view_list)
+        self._view_desc = QLabel("")
+        self._view_desc.setObjectName("InfoLabel")
+        self._view_desc.setWordWrap(True)
+        lay.addWidget(self._view_desc)
+        layout.addWidget(grp)
+
+        self._grp_opts, lay = make_group("Options")
+        self._form_stack = QStackedWidget()
+        self._no_opts = QLabel("This view has no options.")
+        self._no_opts.setObjectName("InfoLabel")
+        self._form_stack.addWidget(self._no_opts)
+        lay.addWidget(self._form_stack)
+        layout.addWidget(self._grp_opts)
+
+        self._grp_geo, lay = make_group("Survey geometry")
+        self._geo_form = SettingsForm(list(st.GEOMETRY_FIELDS))
+        self._geo_form.changed.connect(self._schedule)
+        lay.addWidget(self._geo_form)
+        layout.addWidget(self._grp_geo)
 
         row = QHBoxLayout()
-        btn_load = QPushButton("Load EMTF-XML…")
-        btn_load.setToolTip(
-            "Select a directory of EMTF-XML files (one per station/"
-            "line) or a single EMTF-XML file. Raw vendor MobileMT "
-            "files are never read — see the MobileMT category note."
-        )
-        btn_load.clicked.connect(self._on_load)
-        btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self._on_clear)
-        row.addWidget(btn_load)
-        row.addWidget(btn_clear)
-        lay_data.addLayout(row)
-        layout.addWidget(grp_data)
-
-        # ── Category / plot navigation ──────────────────────────────────
-        grp_nav, lay_nav = make_group("Diagnostic")
-        self._combo_category = QComboBox()
-        self._combo_category.currentIndexChanged.connect(
-            self._on_category_changed
-        )
-        lay_nav.addWidget(QLabel("Category:"))
-        lay_nav.addWidget(self._combo_category)
-
-        self._category_note = QLabel("")
-        self._category_note.setWordWrap(True)
-        self._category_note.setObjectName("InfoLabel")
-        lay_nav.addWidget(self._category_note)
-
-        self._combo_plot = QComboBox()
-        self._combo_plot.currentIndexChanged.connect(self._on_plot_changed)
-        lay_nav.addWidget(QLabel("Plot:"))
-        lay_nav.addWidget(self._combo_plot)
-
-        self._plot_desc = QLabel("")
-        self._plot_desc.setWordWrap(True)
-        self._plot_desc.setObjectName("InfoLabel")
-        lay_nav.addWidget(self._plot_desc)
-        layout.addWidget(grp_nav)
-
-        # ── Dynamic parameters ───────────────────────────────────────────
-        self._grp_params, lay_params = make_group("Parameters")
-        self._param_form = QFormLayout()
-        self._param_form.setSpacing(4)
-        lay_params.addLayout(self._param_form)
-        self._no_params_lbl = QLabel("(no parameters)")
-        self._no_params_lbl.setObjectName("InfoLabel")
-        lay_params.addWidget(self._no_params_lbl)
-        layout.addWidget(self._grp_params)
-
-        # ── Draw ──────────────────────────────────────────────────────────
-        self._btn_draw = icon_button(
-            "▶  Draw", "results", "Render the selected diagnostic"
-        )
+        self._btn_draw = QPushButton("▶  Draw")
+        self._btn_draw.setToolTip("Render the selected view (F5)")
         self._btn_draw.clicked.connect(self._on_draw)
-        layout.addWidget(self._btn_draw)
+        row.addWidget(self._btn_draw, 1)
+        self._chk_auto = QCheckBox("Auto")
+        self._chk_auto.setChecked(True)
+        self._chk_auto.setToolTip("Redraw when the view or an option "
+                                  "changes")
+        row.addWidget(self._chk_auto)
+        layout.addLayout(row)
+        self._status = QLabel("")
+        self._status.setObjectName("InfoLabel")
+        self._status.setWordWrap(True)
+        layout.addWidget(self._status)
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.setInterval(300)
+        self._timer.timeout.connect(self._on_draw)
 
-    # =========================================================================
-    # Right panel
-    # =========================================================================
-
+    # ══ right panel ══════════════════════════════════════════════════════
     def _build_content(self, layout: QVBoxLayout) -> None:
+        self._tabs = QTabWidget()
         self._canvas_view = CanvasResultView(
-            toolbar=True,
-            empty_title="No plot yet",
-            empty_reason="Pick a category and plot, then click Draw.",
-        )
+            toolbar=True, empty_title="No airborne data",
+            empty_reason="Load EMTF-XML (a folder or one file).",
+            empty_guidance=_MOBILEMT_NOTE)
         self._canvas = self._canvas_view.canvas
-        self._canvas.set_refresh_callback(
-            self._on_draw, tooltip="Render the selected diagnostic"
-        )
-        layout.addWidget(self._canvas_view)
+        self._canvas.set_refresh_callback(self._on_draw,
+                                          tooltip="Render the selected view")
+        self._tabs.addTab(self._canvas_view, "Plot")
 
-    # =========================================================================
-    # Data loading
-    # =========================================================================
+        tab = QWidget()
+        v = QVBoxLayout(tab)
+        row = QHBoxLayout()
+        self._table_pick = QComboBox()
+        self._table_pick.currentIndexChanged.connect(self._show_table)
+        row.addWidget(self._table_pick, 1)
+        b = QPushButton("Export CSV…")
+        b.clicked.connect(self._export_table)
+        row.addWidget(b)
+        v.addLayout(row)
+        self._table = QTableWidget()
+        self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._table.setAlternatingRowColors(True)
+        v.addWidget(self._table, 1)
+        self._tabs.addTab(tab, "Table")
+
+        self._stations = QTableWidget()
+        self._stations.setEditTriggers(
+            QTableWidget.EditTrigger.NoEditTriggers)
+        self._stations.setAlternatingRowColors(True)
+        self._tabs.addTab(self._stations, "Stations")
+        layout.addWidget(self._tabs)
+
+    # ══ data ═════════════════════════════════════════════════════════════
+    def load(self, path: str) -> int:
+        """Load an EMTF-XML folder or file; returns the station count."""
+        n = self._ctrl.load(path)
+        self._refresh_data()
+        return n
 
     def _on_load(self) -> None:
-        path = QFileDialog.getExistingDirectory(
-            self, "Select EMTF-XML directory"
-        )
-        if not path:
-            path, _ = QFileDialog.getOpenFileName(
-                self, "Select EMTF-XML file", "",
-                "EMTF-XML (*.xml);;All files (*)",
-            )
-        if not path:
-            return
+        path = QFileDialog.getExistingDirectory(self,
+                                                "Select EMTF-XML folder")
+        if path:
+            self._load_reporting(path)
+
+    def _on_load_file(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select EMTF-XML file", "",
+            "EMTF-XML (*.xml);;All files (*)")
+        if path:
+            self._load_reporting(path)
+
+    def _load_reporting(self, path: str) -> None:
         try:
-            n = self._ctrl.load(path)
-            self._data_status.setText(f"{n} station(s) loaded.")
+            self.load(path)
         except Exception as exc:
             self._data_status.setText(f"Load failed: {exc}")
 
     def _on_clear(self) -> None:
         self._ctrl.clear()
-        self._data_status.setText("No airborne data loaded")
+        self._refresh_data()
 
-    # =========================================================================
-    # Category / plot navigation
-    # =========================================================================
+    def _asites(self):
+        s = self._ctrl.state.asites
+        line = self._line_combo.currentData()
+        if s is not None and line:
+            s = s.select(predicate=lambda x: x.line_id == line)
+        return s
 
-    def _populate_category_combo(self) -> None:
-        self._combo_category.blockSignals(True)
-        self._combo_category.addItems(CATEGORIES)
-        self._combo_category.blockSignals(False)
+    def _refresh_data(self) -> None:
+        s = self._ctrl.state.asites
+        has = self._ctrl.has_data
+        self._ctx = st.data_context(s) if has else {}
+        # data card
+        if not has:
+            self._data_status.setText("No airborne data loaded")
+        else:
+            techs = ", ".join(st.TECH_LABELS.get(t, t)
+                              for t in self._ctx["techs"]) or "unknown"
+            f = self._ctx["freqs"]
+            band = (f"{min(f):.4g} – {max(f):.4g} Hz ({len(f)})"
+                    if f else "no frequencies")
+            lines = len(self._ctx["lines"])
+            self._data_status.setText(
+                f"<b>{techs}</b><br>{len(s)} stations · "
+                f"{lines or 'no'} flight line{'s' if lines != 1 else ''}"
+                f"<br>{band}")
+        # flight lines
+        self._line_combo.blockSignals(True)
+        self._line_combo.clear()
+        self._line_combo.addItem("All lines", "")
+        for ln in self._ctx.get("lines", []):
+            self._line_combo.addItem(ln, ln)
+        self._line_combo.blockSignals(False)
+        self._line_combo.setEnabled(len(self._ctx.get("lines", [])) > 1)
+        # views + their forms (choices depend on the data)
+        for form in self._forms.values():
+            self._form_stack.removeWidget(form)
+            form.deleteLater()
+        self._forms.clear()
+        self._view_list.blockSignals(True)
+        self._view_list.clear()
+        views = st.views_for(self._ctx.get("techs", []))
+        for group in st.GROUPS:
+            members = [v for v in views if v.group == group]
+            if not members:
+                continue
+            head = QListWidgetItem(group.upper())
+            head.setFlags(Qt.ItemFlag.NoItemFlags)
+            self._view_list.addItem(head)
+            for v in members:
+                it = QListWidgetItem("   " + v.label)
+                it.setData(_KEY, v.key)
+                it.setToolTip(v.help)
+                self._view_list.addItem(it)
+        self._view_list.blockSignals(False)
+        self._fill_stations()
+        if views:
+            self.select_view(views[0].key)
+        else:
+            self._grp_geo.setVisible(False)
+            self._canvas_view.show_unavailable(
+                "No airborne data" if not has else "No view for this data",
+                "Load EMTF-XML (a folder or one file)." if not has else
+                "The technology of these files is not recognised.",
+                _MOBILEMT_NOTE)
 
-    def _on_category_changed(self, row: int) -> None:
-        if row < 0 or row >= len(CATEGORIES):
+    def _fill_stations(self) -> None:
+        s = self._ctrl.state.asites
+        cols = ["Station", "Line", "Technology", "Latitude", "Longitude",
+                "Elevation", "Frequencies"]
+        self._stations.setColumnCount(len(cols))
+        self._stations.setHorizontalHeaderLabels(cols)
+        rows = list(s) if self._ctrl.has_data else []
+        self._stations.setRowCount(len(rows))
+        for r, site in enumerate(rows):
+            try:
+                lat, lon, elev = site.coords
+            except Exception:
+                lat = lon = elev = float("nan")
+            f = getattr(site, "freq", None)
+            vals = [site.name, site.line_id or "—",
+                    st.TECH_LABELS.get(site.technology, site.technology
+                                       or "—"),
+                    f"{lat:.6f}", f"{lon:.6f}", f"{elev:.1f}",
+                    "—" if f is None else str(len(f))]
+            for c, text in enumerate(vals):
+                self._stations.setItem(r, c, QTableWidgetItem(str(text)))
+        self._stations.resizeColumnsToContents()
+
+    # ══ views ════════════════════════════════════════════════════════════
+    def _view(self) -> st.AirView | None:
+        it = self._view_list.currentItem()
+        key = it.data(_KEY) if it is not None else None
+        return next((v for v in st.VIEWS if v.key == key), None)
+
+    def select_view(self, key: str) -> None:
+        for r in range(self._view_list.count()):
+            if self._view_list.item(r).data(_KEY) == key:
+                self._view_list.setCurrentRow(r)
+                return
+
+    def _on_view(self, cur, _prev) -> None:
+        v = self._view()
+        if v is None:
             return
-        cat = CATEGORIES[row]
-        self._category_note.setText(
-            f"<small style='color:#888'>{_CATEGORY_NOTE.get(cat, '')}</small>"
-        )
-        entries = CATALOGUE[cat]
-        self._combo_plot.blockSignals(True)
-        self._combo_plot.clear()
-        for label, fn_name, desc, params, multi in entries:
-            self._combo_plot.addItem(label)
-        self._combo_plot.blockSignals(False)
-        self._combo_plot.setCurrentIndex(0)
-        self._on_plot_changed(0)
+        self._view_desc.setText(v.help)
+        if v.key not in self._forms:
+            fields = st.options_for(v, self._ctx)
+            if fields:
+                form = SettingsForm(fields)
+                form.changed.connect(self._schedule)
+                self._forms[v.key] = form
+                self._form_stack.addWidget(form)
+        form = self._forms.get(v.key)
+        self._form_stack.setCurrentWidget(form or self._no_opts)
+        self._grp_geo.setVisible(st.needs_geometry(v))
+        self._schedule(immediate=True)
 
-    def _on_plot_changed(self, idx: int) -> None:
-        cat = CATEGORIES[self._combo_category.currentIndex()]
-        entries = CATALOGUE[cat]
-        if idx < 0 or idx >= len(entries):
+    def _schedule(self, *_a, immediate: bool = False) -> None:
+        if not self._chk_auto.isChecked() or not self._ctrl.has_data:
             return
-        label, fn_name, desc, params, multi = entries[idx]
-        self._plot_desc.setText(f"<small style='color:#888'>{desc}</small>")
-        self._rebuild_param_form(params)
-
-    def _current_entry(self):
-        cat = CATEGORIES[self._combo_category.currentIndex()]
-        idx = self._combo_plot.currentIndex()
-        entries = CATALOGUE[cat]
-        if idx < 0 or idx >= len(entries):
-            return cat, None
-        return cat, entries[idx]
-
-    # =========================================================================
-    # Dynamic parameter form (same widget kinds as CorrectionWindow's)
-    # =========================================================================
-
-    def _rebuild_param_form(self, params: list) -> None:
-        while self._param_form.rowCount():
-            self._param_form.removeRow(0)
-        self._param_widgets: dict[str, QWidget] = {}
-
-        for spec in params:
-            widget = self._make_widget(spec)
-            self._param_widgets[spec.name] = widget
-            if spec.tip:
-                widget.setToolTip(spec.tip)
-            self._param_form.addRow(spec.label + ":", widget)
-
-        self._no_params_lbl.setVisible(len(params) == 0)
-
-    def _make_widget(self, spec: ParamSpec) -> QWidget:
-        if spec.kind == "spin":
-            w = QSpinBox()
-            lo, hi, step = spec.opts
-            w.setRange(lo, hi)
-            w.setSingleStep(step)
-            w.setValue(int(spec.default))
-            return w
-        if spec.kind == "dspin":
-            w = QDoubleSpinBox()
-            lo, hi, step = spec.opts
-            decimals = max(
-                0, -int(np.floor(np.log10(step))) if step < 1 else 1
-            )
-            w.setRange(lo, hi)
-            w.setSingleStep(step)
-            w.setDecimals(decimals)
-            w.setValue(float(spec.default))
-            return w
-        if spec.kind == "combo":
-            w = QComboBox()
-            w.addItems(spec.opts)
-            idx = (
-                spec.opts.index(spec.default)
-                if spec.default in spec.opts
-                else 0
-            )
-            w.setCurrentIndex(idx)
-            return w
-        if spec.kind == "check":
-            w = QCheckBox()
-            w.setChecked(bool(spec.default))
-            return w
-        w = QLineEdit(str(spec.default))
-        return w
-
-    def _get_param_values(self) -> dict:
-        vals: dict = {}
-        for name, widget in self._param_widgets.items():
-            if isinstance(widget, QSpinBox):
-                vals[name] = widget.value()
-            elif isinstance(widget, QDoubleSpinBox):
-                vals[name] = widget.value()
-            elif isinstance(widget, QComboBox):
-                vals[name] = widget.currentText()
-            elif isinstance(widget, QCheckBox):
-                vals[name] = widget.isChecked()
-            elif isinstance(widget, QLineEdit):
-                vals[name] = widget.text()
-        return vals
-
-    # =========================================================================
-    # Draw
-    # =========================================================================
+        if immediate:
+            self._on_draw()
+        else:
+            self._timer.start()
 
     def _on_draw(self) -> None:
-        cat, entry = self._current_entry()
-        if entry is None:
+        v = self._view()
+        if v is None or not self._ctrl.has_data:
             return
-        label, fn_name, desc, params, multi = entry
-        kwargs = self._get_param_values()
+        form = self._forms.get(v.key)
+        values = form.values() if form else {}
+        self.setCursor(Qt.CursorShape.WaitCursor)
         try:
-            fig = self._ctrl.generate(cat, fn_name, **kwargs)
-            self._canvas.show_figure(fig)
-            self._canvas_view.show_canvas()
+            out = st.run_view(v, self._asites(), values,
+                              self._geo_form.values())
         except Exception as exc:
-            self._canvas_view.show_unavailable(
-                "Plot unavailable", f"{label} failed: {exc}"
-            )
+            self._canvas_view.show_unavailable(v.label, f"{exc}")
+            self._status.setText(f"✕ {v.label}: {exc}")
+            return
+        finally:
+            self.unsetCursor()
+        if v.kind == "table":
+            self._set_tables(out)
+            self._tabs.setCurrentIndex(1)
+            self._status.setText(f"{v.label}: {len(self._tables)} "
+                                 "table(s).")
+            return
+        why = figure_blank_reason(out)
+        if why is not None:
+            import matplotlib.pyplot as plt
 
-    # =========================================================================
-    # Theme
-    # =========================================================================
+            plt.close(out)
+            self._canvas_view.show_unavailable(v.label, why)
+            self._status.setText(f"{v.label}: nothing to draw.")
+            return
+        self._canvas.show_figure(out)
+        self._canvas_view.show_canvas()
+        self._tabs.setCurrentIndex(0)
+        self._status.setText(f"✓ {v.label}")
 
+    # ══ tables ═══════════════════════════════════════════════════════════
+    def _set_tables(self, tables) -> None:
+        self._tables = list(tables)
+        self._table_pick.blockSignals(True)
+        self._table_pick.clear()
+        for title, df in self._tables:
+            self._table_pick.addItem(f"{title}  ({len(df)} rows)")
+        self._table_pick.blockSignals(False)
+        self._show_table(0)
+
+    def _show_table(self, i: int) -> None:
+        if not 0 <= i < len(self._tables):
+            self._table.setRowCount(0)
+            return
+        _title, df = self._tables[i]
+        self._table.setColumnCount(len(df.columns))
+        self._table.setHorizontalHeaderLabels([str(c) for c in df.columns])
+        self._table.setRowCount(len(df))
+        for r in range(len(df)):
+            for c, col in enumerate(df.columns):
+                v = df.iloc[r, c]
+                text = f"{v:.6g}" if isinstance(v, float) else str(v)
+                self._table.setItem(r, c, QTableWidgetItem(text))
+        self._table.resizeColumnsToContents()
+
+    def export_table(self, path: str, index: int | None = None) -> str:
+        i = self._table_pick.currentIndex() if index is None else index
+        _title, df = self._tables[i]
+        df.to_csv(path, index=False)
+        return path
+
+    def _export_table(self) -> None:
+        if not self._tables:
+            self._status.setText("Draw a table view first.")
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Export table", "",
+                                              "CSV (*.csv)")
+        if path:
+            self.export_table(path)
+            self._status.setText(f"Exported {path}")
+
+    # ══ theme ════════════════════════════════════════════════════════════
     def set_dark_mode(self, dark: bool) -> None:
         super().set_dark_mode(dark)
-        self._ctrl.dark = dark
+        self._ctrl.dark = False
+
+
+__all__ = ["AirborneWindow"]

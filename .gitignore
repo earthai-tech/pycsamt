@@ -649,6 +649,13 @@ docs/examples/topo/l18_prepared_workspace/
 /my_inv.yml
 /run.json
 /workflow_script.py
+/workflow_script_*.py
+/workflow_script*.validation.json
+pycsamt_agent_output/
+/pytest_temp/
+/.test-tmp/
+/test_out.log
+/test_err.log
 /mt1d_train*.npz
 /*_train.npz
 /out.txt

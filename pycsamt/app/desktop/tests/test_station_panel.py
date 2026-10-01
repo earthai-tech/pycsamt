@@ -121,3 +121,63 @@ def test_table_selection_signal_wired(panel, df):
     panel.station_selected.connect(received.append)
     panel._table.rows_selected.emit(["S01"])
     assert received == ["S01"]
+
+
+# ── "Filter stations" box (the main window called a method that did not
+# exist; the swallowed error left the list unfiltered) ──────────────────
+
+
+def test_filter_by_station_id(panel, df):
+    panel.set_dataframe(df)
+    assert panel.filter("s02") == 1  # case-insensitive
+    assert "1 of 3 stations shown" in panel._summary_lbl.text()
+
+
+def test_filter_matches_any_column(panel, df):
+    panel.set_dataframe(df)
+    assert panel.filter("L1") == 2  # the Line column
+
+
+def test_clearing_the_filter_shows_everything(panel, df):
+    panel.set_dataframe(df)
+    panel.filter("S03")
+    assert panel.filter("") == 3
+    assert "3 stations loaded" in panel._summary_lbl.text()
+
+
+def test_filter_survives_a_reload(panel, df):
+    panel.set_dataframe(df)
+    panel.filter("L2")
+    panel.set_dataframe(df)
+    assert panel._table.visible_count() == 1
+
+
+def test_highlight_of_a_filtered_out_station_is_ignored(panel, df):
+    panel.set_dataframe(df)
+    panel.filter("S01")
+    panel.highlight_station("S03")  # hidden: must not select a bad index
+    assert not panel._table.selectionModel().selectedRows()
+
+
+def test_main_window_search_box_filters(qapp, df, monkeypatch, tmp_path):
+    from pycsamt.app.desktop.models.session import SessionState
+
+    monkeypatch.setattr(SessionState, "load", classmethod(lambda cls: cls()))
+    monkeypatch.setattr("pycsamt.app.desktop.models.session._SESSION_PATH",
+                        tmp_path / "session.json")
+    from pycsamt.app.desktop.main_window import MainWindow
+
+    w = MainWindow()
+    try:
+        w._station_panel.set_dataframe(df)
+        w._search_bar.setText("S0")
+        assert w._station_panel._table.visible_count() == 3
+        w._search_bar.setText("S02")
+        assert w._station_panel._table.visible_count() == 1
+    finally:
+        w.close()
+
+
+def test_comma_separated_terms_are_alternatives(panel, df):
+    panel.set_dataframe(df)
+    assert panel.filter("S01, S03") == 2

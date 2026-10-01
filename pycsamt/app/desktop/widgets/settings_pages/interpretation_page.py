@@ -27,19 +27,19 @@ from PySide6.QtWidgets import (
 
 from .base_page import SettingsPage
 
-_CMAPS = [
-    "viridis",
-    "plasma",
-    "magma",
-    "inferno",
-    "RdBu_r",
-    "seismic",
-    "jet",
-    "turbo",
-    "coolwarm",
-    "bwr",
-    "Spectral_r",
-]
+from pycsamt.api.colormaps import COLORMAPS, colormap_choices
+
+_CMAPS = list(COLORMAPS)
+
+
+def _select_cmap(combo: QComboBox, name: str) -> None:
+    """Show *name*: a valid colormap missing from the catalogue is added
+    rather than silently showing (and later saving) another one."""
+    if combo.findText(name) < 0:
+        for extra in colormap_choices(name)[len(_CMAPS):]:
+            combo.addItem(extra)
+    if combo.findText(name) >= 0:
+        combo.setCurrentText(name)
 
 _WT_MARKERS = [
     ("None (no marker)", "none"),
@@ -112,8 +112,7 @@ class InterpretationPage(SettingsPage):
                 or getattr(sec, "cmap", None)
                 or "viridis"
             )
-            if sec_cmap in _CMAPS:
-                self._sec_cmap.setCurrentText(sec_cmap)
+            _select_cmap(self._sec_cmap, sec_cmap)
 
             wt_ls = (
                 getattr(sec, "wt_ls", None)
@@ -137,8 +136,7 @@ class InterpretationPage(SettingsPage):
                 or getattr(prof, "cmap", None)
                 or "viridis"
             )
-            if prof_cmap in _CMAPS:
-                self._prof_cmap.setCurrentText(prof_cmap)
+            _select_cmap(self._prof_cmap, prof_cmap)
         except Exception:
             self._alpha_spin.setValue(0.85)
 

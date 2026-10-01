@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
+    QLineEdit,
     QSizePolicy,
     QSpinBox,
     QToolButton,
@@ -35,6 +36,9 @@ def _make_widget(f: Field) -> QWidget:
         for value, label in f.choices:
             w.addItem(label, value)
         w.setCurrentIndex(max(w.findData(f.default), 0))
+    elif f.kind == "text":  # lists, pairs, optional numbers (blank = auto)
+        w = QLineEdit(str(f.default if f.default is not None else ""))
+        w.setPlaceholderText("Automatic")
     elif f.kind == "int":
         w = QSpinBox()
         w.setRange(int(f.lo if f.lo is not None else -10**9),
@@ -54,7 +58,7 @@ def _make_widget(f: Field) -> QWidget:
             w.setSuffix(f" {f.unit}")
         if f.auto_zero:
             w.setSpecialValueText("Auto")
-    if isinstance(w, (QSpinBox, QDoubleSpinBox, QComboBox)):
+    if isinstance(w, (QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit)):
         w.setSizePolicy(QSizePolicy.Policy.Expanding,
                         QSizePolicy.Policy.Fixed)
     if f.help:
@@ -67,6 +71,8 @@ def _value(w: QWidget):
         return w.isChecked()
     if isinstance(w, QComboBox):
         return w.currentData()
+    if isinstance(w, QLineEdit):
+        return w.text()
     return w.value()
 
 
@@ -77,6 +83,8 @@ def _set(w: QWidget, value) -> None:
         i = w.findData(value)
         if i >= 0:
             w.setCurrentIndex(i)
+    elif isinstance(w, QLineEdit):
+        w.setText(str(value))
     elif isinstance(w, QSpinBox):
         w.setValue(int(value))
     else:
@@ -88,6 +96,8 @@ def _changed_signal(w: QWidget):
         return w.toggled
     if isinstance(w, QComboBox):
         return w.currentIndexChanged
+    if isinstance(w, QLineEdit):
+        return w.editingFinished
     return w.valueChanged
 
 

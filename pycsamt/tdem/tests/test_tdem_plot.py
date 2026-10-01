@@ -262,3 +262,42 @@ def test_plot_tem_dashboard_class_and_function():
     assert len(fig2.axes) >= 4
     plt.close(fig)
     plt.close(fig2)
+
+
+class TestSparseSectionFill:
+    """``y="depth"``: every station has its own gate depths, so the union
+    grid used to leave each column ~97 % empty (a section of slivers)."""
+
+    def test_columns_filled_within_own_range_only(self):
+        import numpy as np
+
+        from pycsamt.tdem.plot import _records_to_section
+
+        rows = [{"station": 1.0, "depth": d, "v": d} for d in (10, 50)]
+        rows += [{"station": 2.0, "depth": d, "v": d} for d in (20, 30, 90)]
+        rows += [{"station": 3.0, "depth": d, "v": d} for d in (60, 70)]
+        sec = _records_to_section(rows, x_key="station", y_key="depth",
+                                  value_key="v", absolute=False,
+                                  log_value=False)
+        y = list(sec["y"])  # 10 20 30 50 60 70 90
+        col1, col2 = sec["values"][:, 0], sec["values"][:, 1]
+        # station 1: 20, 30 take the nearest sample (a tie goes up);
+        # below its deepest sample (50) stays empty
+        assert list(col1[:4]) == [10, 10, 10, 50]
+        assert np.isnan(col1[y.index(90)])
+        # station 2: 10 is above its first sample -> not extrapolated
+        assert np.isnan(col2[0])
+        assert col2[y.index(50)] == 30  # nearest of 30 / 90
+
+    def test_shared_rows_left_unchanged(self):
+        import numpy as np
+
+        from pycsamt.tdem.plot import _records_to_section
+
+        rows = [{"station": s, "t": t, "v": 1.0}
+                for s in (1.0, 2.0, 3.0) for t in (1.0, 2.0, 3.0)
+                if not (s == 2.0 and t == 2.0)]
+        sec = _records_to_section(rows, x_key="station", y_key="t",
+                                  value_key="v", absolute=False,
+                                  log_value=False)
+        assert np.isnan(sec["values"][1, 1])  # a real gap stays a gap

@@ -68,18 +68,20 @@ def _mahalanobis_scores(x: np.ndarray, reference: np.ndarray) -> np.ndarray:
         )
     mean = reference.mean(axis=0)
     covariance = np.atleast_2d(np.cov(reference, rowvar=False))
-    try:
-        inverse_covariance = np.linalg.inv(covariance)
-    except np.linalg.LinAlgError as error:
+    # A symmetric eigen-decomposition keeps every squared distance
+    # non-negative. A plain inverse of an ill-conditioned covariance can
+    # return negative quadratic forms, which clipping would silently turn
+    # into a distance of zero.
+    eigval, eigvec = np.linalg.eigh(covariance)
+    if eigval[-1] <= 0.0 or eigval[0] <= eigval[-1] * 1e-12:
         raise ValueError(
-            "reference covariance is singular; the mahalanobis "
-            "method requires linearly independent features."
-        ) from error
-    difference = x - mean
-    squared = np.einsum(
-        "ij,jk,ik->i", difference, inverse_covariance, difference
-    )
-    return np.sqrt(np.clip(squared, 0.0, None))
+            "reference covariance is singular or numerically singular; "
+            "the mahalanobis method requires linearly independent features. "
+            "Remove constant or duplicated features (e.g. all-zero rows "
+            "from missing soundings) or use method='knn'."
+        )
+    whitened = ((x - mean) @ eigvec) / np.sqrt(eigval)
+    return np.sqrt(np.sum(whitened**2, axis=1))
 
 
 def _knn_scores(x: np.ndarray, reference: np.ndarray, k: int) -> np.ndarray:

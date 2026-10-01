@@ -414,14 +414,55 @@ def test_open_agent_master_success(window, monkeypatch):
     result = SimpleNamespace(url="http://127.0.0.1:8765", started=True)
     monkeypatch.setattr(
         "pycsamt.app.desktop.main_window.launch_agent_master",
-        lambda open_browser=True: result,
+        lambda open_browser=True, handoff="": result,
     )
     window._open_agent_master()
     assert "Starting Agent Master" in window._log_panel._text.toPlainText()
 
 
+def test_open_agent_master_without_data_starts_from_scratch(window,
+                                                           monkeypatch):
+    seen = {}
+
+    def _launch(open_browser=True, handoff=""):
+        seen["handoff"] = handoff
+        return SimpleNamespace(url="http://127.0.0.1:8765", started=False)
+
+    monkeypatch.setattr(
+        "pycsamt.app.desktop.main_window.launch_agent_master", _launch)
+    window._open_agent_master()
+    assert seen["handoff"] == ""
+
+
+def test_open_agent_master_hands_over_the_loaded_survey(
+        window, loaded_data, monkeypatch, tmp_path):
+    """With stations loaded (and edited), Agent Master starts on the
+    desktop's survey instead of an empty session."""
+    from pycsamt.app.agent_master._handoff import read_handoff
+
+    monkeypatch.setenv("PYCSAMT_AGENT_HANDOFF_DIR", str(tmp_path))
+    sites, _df = loaded_data
+    window._on_corrections_committed(sites)  # an edit in the history
+    seen = {}
+
+    def _launch(open_browser=True, handoff=""):
+        seen["handoff"] = handoff
+        return SimpleNamespace(url="http://127.0.0.1:8765/?handoff=x",
+                               started=True)
+
+    monkeypatch.setattr(
+        "pycsamt.app.desktop.main_window.launch_agent_master", _launch)
+    window._open_agent_master()
+    session = read_handoff(seen["handoff"])
+    assert session is not None
+    assert session["n_edi"] == len(list(window._all_sites))
+    assert session["edited"] is True
+    log = window._log_panel._text.toPlainText()
+    assert "with the desktop survey" in log and "(edited)" in log
+
+
 def test_open_agent_master_handles_exception(window, monkeypatch):
-    def _raise(open_browser=True):
+    def _raise(open_browser=True, handoff=""):
         raise RuntimeError("no port")
 
     monkeypatch.setattr("pycsamt.app.desktop.main_window.launch_agent_master", _raise)
@@ -483,23 +524,61 @@ def test_on_inversion_result_ready_with_result_dir(window):
 # ── Export figure ────────────────────────────────────────────────────────────
 
 
-def test_on_export_figure_no_figure_shows_status(window):
+def _draw(win, title="real data"):
+    """Draw a real (non-placeholder) figure on *win*'s canvas and show it."""
+    canvas = win._canvas
+    fig = canvas.figure
+    fig.clf()
+    ax = fig.add_subplot(111)
+    ax.plot([1, 2, 3], [3, 1, 2])
+    ax.set_title(title)
+    win.show()
+    return fig
+
+
+def test_on_export_figure_no_figure_explains(window, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    shown = []
+    monkeypatch.setattr(QMessageBox, "information",
+                        staticmethod(lambda *a, **k: shown.append(a[2])))
     window._on_export_figure()
-    # nothing visible => early return; just must not raise
+    assert shown and "no figure to export" in shown[0].lower()
 
 
-def test_on_export_figure_with_visible_canvas(window, monkeypatch):
-    fake_figure = object()
-    window._profile_win._canvas = SimpleNamespace(figure=fake_figure)
-    window._profile_win.show()
-
+def test_on_export_figure_offers_every_drawn_figure(window, monkeypatch):
+    fig_tdem = _draw(window._tdem_win, "TDEM decay")
+    fig_qc = _draw(window._qc_win, "QC plot")
     fake_export = _make_dialog(exec_return=_DialogCode.Accepted)
     monkeypatch.setattr(
         "pycsamt.app.desktop.dialogs.export_dlg.ExportDialog", fake_export
     )
+    window._last_figure_window = window._qc_win
     window._on_export_figure()
-    assert fake_export.captured
-    assert fake_export.captured[0].kwargs.get("figure") is fake_figure
+    sources = fake_export.captured[0].kwargs["sources"]
+    figs = [src.figure for src in sources]
+    assert fig_tdem in figs and fig_qc in figs
+    assert sources[0].figure is fig_qc  # last window worked in comes first
+    assert any("TDEM decay" in src.label for src in sources)
+
+
+def test_export_skips_placeholder_figures(window):
+    window._tdem_win.show()  # nothing drawn: empty placeholder canvas
+    assert all(src.window is not window._tdem_win
+               for src in window._figure_sources())
+
+
+# ── Batch export ─────────────────────────────────────────────────────────────
+
+
+def test_collect_figures_empty_by_default(window):
+    assert window._collect_figures() == []
+
+
+def test_collect_figures_finds_drawn_canvas(window):
+    fig = _draw(window._tdem_win, "decay")
+    figs = window._collect_figures()
+    assert any(f is fig and "TDEM" in label for label, f in figs)
 
 
 # ── Preferences ───────────────────────────────────────────────────────────────
@@ -817,17 +896,6 @@ def test_frequency_editor_applies_edited_sites(window, monkeypatch, loaded_data)
     )
     window._open_frequency_editor()
     assert "Frequency Editor" in window._log_panel._text.toPlainText()
-
-
-def test_collect_figures_empty_by_default(window):
-    assert window._collect_figures() == []
-
-
-def test_collect_figures_finds_visible_canvas(window):
-    window._profile_win._canvas = SimpleNamespace(figure=object())
-    window._profile_win.show()
-    figs = window._collect_figures()
-    assert any(label == "Profile" for label, _fig in figs)
 
 
 # ── Recompute ─────────────────────────────────────────────────────────────────

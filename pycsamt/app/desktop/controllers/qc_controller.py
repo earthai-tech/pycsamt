@@ -129,15 +129,15 @@ _PARAMETER_CHOICES: dict[tuple[str, str] | str, tuple[str, ...]] = {
     "rotate_stat": ("median", "mean"),
     "radial": ("log10rho", "rho", "phase"),
     "weights": ("tri", "uniform"),
+    # station_confidence_table only knows these two criteria ("error" and
+    # "snr" used to be offered here and always failed)
     ("plot_frequency_confidence_psection", "method"): (
-        "composite", "presence", "error", "snr"
+        "composite", "presence"
     ),
-    ("plot_confidence_band_summary", "method"): (
-        "composite", "presence", "error", "snr"
-    ),
-    ("plot_confidence_profile", "method"): (
-        "presence", "composite", "error", "snr"
-    ),
+    ("plot_confidence_band_summary", "method"): ("composite", "presence"),
+    ("plot_confidence_profile", "method"): ("presence", "composite"),
+    ("plot_polar_coverage", "rho_comp"): ("xy", "yx"),
+    ("plot_width_drift", "rho_comp"): ("xy", "yx"),
     ("plot_coverage_psection", "metric"): ("presence", "error", "snr"),
     ("plot_coverage_psection", "alpha_by"): ("none", "confidence"),
     ("plot_strike_profile", "method"): ("consensus", "pt", "swift"),
@@ -177,12 +177,14 @@ def qc_parameter_specs(
         elif isinstance(default, (tuple, list)):
             kind = "sequence"
         elif default is None:
-            if "float" in annotation:
+            # containers first: "tuple[float, float] | None" also contains
+            # "float" and used to become a single number (ylim, vlim, pband)
+            if "tuple" in annotation or "list" in annotation:
+                kind = "optional_sequence"
+            elif "float" in annotation:
                 kind = "optional_float"
             elif "int" in annotation:
                 kind = "optional_int"
-            elif "tuple" in annotation or "list" in annotation:
-                kind = "optional_sequence"
             elif "str" in annotation or name in {"station", "sort_by"}:
                 kind = "optional_str"
             elif name == "source_offset":
@@ -632,6 +634,14 @@ class QCController:
         return None
 
     @staticmethod
+    def _figure_message(fig) -> str:
+        """The sentence a plotting helper wrote into an empty figure (its
+        own reason, e.g. "no projected coordinates"), if any."""
+        texts = [t.get_text().strip() for ax in fig.get_axes()
+                 for t in ax.texts if t.get_text().strip()]
+        return "; ".join(dict.fromkeys(texts))
+
+    @staticmethod
     def _looks_empty(fig) -> bool:
         """Detect a placeholder-only single plot returned by an emtools helper."""
         axes = fig.get_axes()
@@ -785,7 +795,9 @@ class QCController:
             if self._looks_empty(fig):
                 self._unavailable(
                     "This diagnostic cannot be computed",
-                    "The loaded stations do not provide usable values for this plot.",
+                    self._figure_message(fig)
+                    or "The loaded stations do not provide usable values for "
+                       "this plot.",
                     (
                         "Check the required channels, frequencies, station count, "
                         "and survey metadata, or choose another diagnostic."
@@ -888,4 +900,5 @@ def _dispatch_polar_ax(ctrl: QCController, fn, fig, **kw) -> None:
 _SPECIAL_DISPATCHERS: dict = {
     "plot_polar_coverage": _dispatch_polar_coverage,
     "plot_ss_radar": _dispatch_polar_ax,
+    "plot_distortion_radar": _dispatch_polar_ax,
 }

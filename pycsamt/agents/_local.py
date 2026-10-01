@@ -22,9 +22,23 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
+# Pre-flight prompt-size estimate (see generate): bytes per token, kept
+# below typical tokenizer ratios so the estimate over-counts.
+_BYTES_PER_TOKEN = 3
+_CONTEXT_MARGIN = 128
+
 
 class LocalModelError(RuntimeError):
     """Actionable local-provider failure; never triggers cloud fallback."""
+
+
+class LocalBudgetExhausted(LocalModelError):
+    """The request's local call budget is spent; no generation attempted.
+
+    Agents treat this as "no optional narrative", not as a failed
+    computation: a workflow step must not abort because an earlier step
+    used the budget for its own summary.
+    """
 
 
 class LocalCancelled(LocalModelError):
@@ -291,7 +305,8 @@ def generate(
     )
     request.check()
     if request.calls >= request.settings.max_calls:
-        raise LocalModelError(
+        request.usage.append({"model": model, "skipped": "call budget exhausted"})
+        raise LocalBudgetExhausted(
             "Local request call budget exhausted; no further generation attempted."
         )
     request.calls += 1
@@ -300,14 +315,19 @@ def generate(
         request.verified_models.add(model)
     settings = request.settings
     output = min(max_tokens, settings.output_tokens)
-    # Conservative UTF-8 byte bound, not a tokenizer claim. Never silently
-    # truncate grounded context or ask Ollama to drop earlier instructions.
-    if (
-        len((system + prompt).encode("utf-8")) + output + 128
-        > settings.context_tokens
-    ):
+    # Never silently truncate grounded context. Two checks: a pre-flight
+    # estimate (bytes / 3; typical English and code tokenize at about
+    # 3.5-4 bytes per token, so this over-counts), and after the reply,
+    # Ollama's own prompt token count (below). Comparing raw bytes with
+    # tokens, as before, rejected prompts at a third of the real capacity.
+    prompt_bytes = len((system + prompt).encode("utf-8"))
+    estimate = math.ceil(prompt_bytes / _BYTES_PER_TOKEN)
+    if estimate + output + _CONTEXT_MARGIN > settings.context_tokens:
         raise LocalModelError(
-            "Retrieved prompt exceeds the conservative local context budget. Increase context or shorten the request/evidence."
+            f"The request and its retrieved evidence need about {estimate} tokens, plus "
+            f"{output} for the answer, but the local context window is "
+            f"{settings.context_tokens} tokens. Increase the context window in Settings "
+            "(for example 16384), or shorten the conversation with New Chat."
         )
     text, final = _exchange(
         request,
@@ -332,6 +352,16 @@ def generate(
     )
     if not text.strip():
         raise LocalModelError("Ollama returned no answer text.")
+    # Exact check: a prompt that filled the window may have been cut by
+    # Ollama, so the answer could rest on missing evidence. (Cached prompt
+    # prefixes are not counted, so this can miss a cut, never invent one.)
+    evaluated = final.get("prompt_eval_count")
+    if isinstance(evaluated, int) and evaluated + output + 16 >= settings.context_tokens:
+        raise LocalModelError(
+            f"The prompt filled the local context window ({evaluated} of "
+            f"{settings.context_tokens} tokens), so part of the evidence may have been "
+            "dropped; the answer was discarded. Increase the context window in Settings."
+        )
     usage = {
         k: final.get(k)
         for k in (

@@ -41,13 +41,13 @@
   --bg-surface: var(--srf0);
   --bg-input:   var(--mantle);
   --bg-topbar:  var(--crust);
-  --bg-user:    var(--blue);
+  --bg-user:    var(--srf0);   /* quiet: the answers carry the colour */
   --bg-agent:   var(--srf0);
   --border:     var(--srf1);
   --border-inp: var(--srf2);
   --fg:         var(--txt);
   --fg-muted:   var(--ov0);
-  --fg-user:    var(--crust);
+  --fg-user:    var(--txt);
   --fg-agent:   var(--txt);
   --accent:     var(--blue);
   --accent2:    var(--sapphire);
@@ -92,7 +92,7 @@
   --sh-sm:  0 1px 4px rgba(0,0,0,.10);
   --sh-md:  0 4px 16px rgba(0,0,0,.14);
   --sh-lg:  0 8px 36px rgba(0,0,0,.18);
-  --bg-user:    var(--blue);
+  --bg-user:    var(--crust);
   --bg-agent:   var(--crust);
   --bg-topbar:  var(--mantle);
   --bg-input:   var(--base);
@@ -736,6 +736,10 @@ body {
   gap: 10px;
 }
 .am-msg-row.user { flex-direction: row-reverse; }
+/* Agent replies are flat text: the logo sits beside the first line,
+   not at the bottom of a long answer. */
+.am-msg-row:not(.user) { align-items: flex-start; }
+.am-msg-row:not(.user) > .am-avatar-logo { margin-top: 2px; }
 
 /* Avatar */
 .am-avatar {
@@ -762,47 +766,59 @@ body {
   font-size: 13px;
 }
 
-/* Logo avatar — pyCSAMT symbol, animated only while a job is
-   actually running (.is-thinking); static otherwise. */
-.am-avatar-logo {
-  background: var(--crust);
-  position: relative;
-  overflow: visible;
+/* Logo avatar — the pyCSAMT symbol is the only moving element; no disc,
+   halo, pulse or shadow around it. Finished replies use am-logo.svg. */
+.am-avatar.am-avatar-logo {
+  background: none;
+  box-shadow: none;
+  width: 28px;
+  height: 28px;
 }
 .am-avatar-logo img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+/* Working logo: blue disc with two repeating strips (earth layers,
+   signal) that scroll by exactly one tile per cycle. am-anim-sync.js
+   phases both from the page clock, so the 600 ms poll re-render never
+   restarts them. Disc = 27 px, the static logo's 96 % circle. */
+.am-logo-live {
+  --am-logo: 27px;
   position: relative;
-  z-index: 1;
-}
-.am-avatar-logo.is-thinking img {
-  animation:
-    am-avatar-breathe 1.6s var(--ease) infinite,
-    am-avatar-spin 2.4s linear infinite;
-}
-.am-avatar-logo.is-thinking::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
+  width: var(--am-logo);
+  height: var(--am-logo);
+  margin: .5px;
   border-radius: 50%;
-  background: conic-gradient(
-    from 0deg, var(--blue), transparent 55%, var(--blue)
-  );
-  animation: am-rot 1.8s linear infinite;
-  opacity: .5;
-  z-index: 0;
+  overflow: hidden;
+  background: #1f4490;
 }
-/* scale/rotate are independent transform properties (CSS Transforms
-   Level 2) so the pulse and the spin can run on their own timings
-   without one animation's `transform` keyframe overwriting the
-   other's. */
-@keyframes am-avatar-breathe {
-  0%, 100% { scale: 1;    opacity: .88; }
-  50%      { scale: 1.12; opacity: 1;   }
+.am-logo-bands,
+.am-logo-signal {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat-x;
 }
-@keyframes am-avatar-spin {
-  to { rotate: 360deg; }
+.am-logo-bands {
+  background-image: url("/am-icons/am-logo-bands-tile.svg");
+  background-size: calc(var(--am-logo) * .9) var(--am-logo);
+  animation: am-logo-bands 7s linear infinite;
+}
+.am-logo-signal {
+  background-image: url("/am-icons/am-logo-signal-tile.svg");
+  background-size: calc(var(--am-logo) * .6) var(--am-logo);
+  animation: am-logo-signal 1.6s linear infinite;
+}
+@keyframes am-logo-bands {
+  from { background-position: 0 0; }
+  to   { background-position: calc(var(--am-logo) * -.9) 0; }
+}
+@keyframes am-logo-signal {
+  from { background-position: 0 0; }
+  to   { background-position: calc(var(--am-logo) * -.6) 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .am-logo-bands, .am-logo-signal { animation: none; }
 }
 
 /* Bubble */
@@ -825,8 +841,8 @@ body {
   border: 1px solid var(--srf1);
 }
 .am-bubble.user {
-  background: var(--blue);
-  color: var(--crust);
+  background: var(--bg-user);
+  color: var(--fg-user);
   border-bottom-right-radius: 3px;
   width: fit-content;
   min-width: 320px;
@@ -853,13 +869,13 @@ body {
   margin: 6px 0;
   font-size: 12px;
 }
-.am-bubble.user code { background: rgba(0,0,0,.18); }
+.am-bubble.user code { background: rgba(127,132,156,.18); }
 .am-bubble.user pre  {
   background: rgba(0,0,0,.2);
   border-color: rgba(0,0,0,.2);
 }
 .am-bubble strong { color: var(--lavender); }
-.am-bubble.user strong { color: var(--crust); }
+.am-bubble.user strong { color: var(--fg-user); }
 
 /* ── Exposed agent reply (no box) — ChatGPT/Claude style ───────────
    The main reply is rendered flat: the markdown speaks for itself,
@@ -1233,102 +1249,77 @@ body {
   margin-top: 9px;
 }
 
-/* ── Claude-style thinking line ───────────────────────
-   No box: a quiet shimmering line showing the current
-   step, swapping in place as the agent advances.  The
-   full timeline (.am-tl above) appears on hover. */
+/* ── Thinking line ─────────────────────────────────
+   The animated logo is the only motion; this line is quiet text:
+   the current step (soft shimmer) and "Step n of m · elapsed".
+   "Show steps" reveals the full timeline on hover or keyboard
+   focus (both survive the 600 ms poll re-renders). */
 .am-think {
   position: relative;
-  width: min(82%, 560px);
-  padding: 16px 0 4px;  /* headroom for the ghost label */
+  width: min(82%, 620px);
+  padding: 4px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .am-think-line {
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.am-think-glyph {
-  color: var(--blue);
-  font-size: 13px;
-  animation: am-think-pulse 1.6s var(--ease) infinite;
-}
-.am-think-glyph.error {
-  color: var(--red);
-  animation: none;
-}
-@keyframes am-think-pulse {
-  0%, 100% { opacity: .55; transform: scale(.92); }
-  50%      { opacity: 1;   transform: scale(1.08); }
+  align-items: baseline;
+  gap: 12px;
+  min-height: 24px;
 }
 .am-think-lbl {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
   background: linear-gradient(
     90deg,
-    var(--sub1) 20%, var(--txt) 40%,
-    var(--txt) 60%, var(--sub1) 80%
+    var(--sub0) 0%, var(--sub0) 35%,
+    var(--txt) 50%,
+    var(--sub0) 65%, var(--sub0) 100%
   );
-  background-size: 200% 100%;
+  background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation:
-    am-think-in .3s var(--ease),
-    am-think-shimmer 2.2s linear infinite;
+  /* shimmer only: an enter fade would replay on every poll re-render */
+  animation: am-think-shimmer 2.6s linear infinite;
 }
-@keyframes am-think-in {
-  from { opacity: 0; transform: translateY(5px); }
+.am-think-lbl.error {
+  animation: none;
+  background: none;
+  color: var(--red);
 }
 @keyframes am-think-shimmer {
-  from { background-position: 200% 0; }
-  to   { background-position: -200% 0; }
+  from { background-position: 100% 0; }
+  to   { background-position: -150% 0; }
 }
 .am-think-meta {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--ov0);
+  font-size: 12.5px;
+  color: var(--sub0);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.am-think-ghost {
-  position: absolute;
-  top: 0;
-  left: 21px;
-  max-width: 80%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 11.5px;
-  color: var(--sub1);
-  opacity: 0;
-  animation: am-think-ghost .9s var(--ease) forwards;
-  pointer-events: none;
+.am-think-details { position: relative; align-self: flex-start; }
+.am-think-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--sub0);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
 }
-@keyframes am-think-ghost {
-  0%   { opacity: .6; transform: translateY(7px); }
-  70%  { opacity: .3; }
-  100% { opacity: 0; transform: translateY(-3px); }
-}
-.am-think-track {
-  height: 2px;
-  margin-top: 8px;
-  border-radius: 2px;
-  background: var(--srf1);
-  overflow: hidden;
-}
-.am-think-track > i {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--blue);
-  transition: width .45s var(--ease);
-}
-.am-think-track.indet > i {
-  width: 40%;
-  animation: am-bar-slide 1.4s var(--ease) infinite;
-}
-/* Floating full-timeline panel — opens upward (the
-   thinking line sits at the bottom of the chat). */
+.am-think-toggle:hover,
+.am-think-toggle:focus-visible { color: var(--txt); }
+.am-think-chev { font-size: 11px; transition: transform .18s var(--ease); }
+.am-think-details:hover .am-think-chev,
+.am-think-details:focus-within .am-think-chev { transform: rotate(90deg); }
+/* Floating full-timeline panel — opens upward (the thinking line
+   sits at the bottom of the chat). */
 .am-think-panel {
   position: absolute;
   bottom: calc(100% + 6px);
@@ -1349,7 +1340,8 @@ body {
     transform .18s var(--ease),
     visibility .18s;
 }
-.am-think:hover .am-think-panel {
+.am-think-details:hover .am-think-panel,
+.am-think-details:focus-within .am-think-panel {
   opacity: 1;
   visibility: visible;
   transform: none;
@@ -1360,23 +1352,45 @@ body {
   font-weight: 600;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: var(--ov0);
+  color: var(--ov1);
 }
 .am-think-panel-empty {
   font-size: 12px;
-  color: var(--ov0);
+  color: var(--ov1);
+}
+/* One-click replies to a clarifying question. */
+.am-reply-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.am-reply-chip {
+  min-height: 36px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--srf1);
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.am-reply-chip:hover,
+.am-reply-chip:focus-visible {
+  background: var(--srf0);
+  border-color: var(--blue);
 }
 @media (prefers-reduced-motion: reduce) {
-  .am-think-glyph,
-  .am-think-ghost,
-  .am-think-track.indet > i { animation: none; }
-  .am-think-ghost { display: none; }
   .am-think-lbl {
     animation: none;
     background: none;
-    color: var(--txt);
+    color: var(--sub0);
   }
+  .am-think-chev, .am-think-panel, .am-reply-chip { transition: none; }
 }
+
 
 /* ── Survey data overview card ────────────────────── */
 .am-ov-card {

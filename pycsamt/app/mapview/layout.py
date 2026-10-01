@@ -14,6 +14,8 @@ import uuid
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
+from pycsamt.api.colormaps import colormap_choices
+
 from ._ids import IDs
 
 try:
@@ -28,18 +30,8 @@ except Exception:  # pragma: no cover - fallback if map extra missing
     )
 
 _COMPONENTS = ["xy", "yx", "xx", "yy", "det", "avg"]
-_CMAPS = [
-    "plasma",
-    "viridis",
-    "jet",
-    "jet_r",
-    "turbo",
-    "magma",
-    "cividis",
-    "RdYlBu_r",
-    "RdBu_r",
-    "coolwarm",
-]
+# matplotlib names: pycsamt.map.styles.to_plotly_cmap renders every one
+_CMAPS = colormap_choices(first=("plasma",))
 _OVERLAYS = [
     ("index", "Station index"),
     ("elevation", "Elevation"),

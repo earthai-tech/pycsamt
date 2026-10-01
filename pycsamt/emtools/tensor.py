@@ -727,6 +727,7 @@ def plot_phase_tensor_psection(
     mark_3d=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
     ref_ellipse=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.show_ref
     legend_fontsize: float = 8.0,
+    annotations: bool = True,
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
     xlabel: str = "",
@@ -855,6 +856,10 @@ def plot_phase_tensor_psection(
     legend_fontsize : float, default ``8.0``
         Font size for the reference-circle label and the 1-D/2-D vs 3-D
         annotation shown when *ref_ellipse* / *skew_threshold* are active.
+    annotations : bool, default ``True``
+        Draw the in-figure legend strip (the |β| 1-D/2-D vs 3-D labels and
+        the size-reference ellipse).  ``False`` hides it and gives the
+        ellipses the full height.
     title, xlabel, ylabel : str
         Axes title and axis labels.  Sensible defaults are used when empty.
     tick_label_rotation : float, default ``45.0``
@@ -1174,9 +1179,9 @@ def plot_phase_tensor_psection(
 
     # Reserve a dedicated legend strip beyond the data so the reference
     # ellipse and 1-D/2-D vs 3-D annotation never overlap real ellipses.
-    want_legend = bool(ref_ellipse) or (
+    want_legend = bool(annotations) and (bool(ref_ellipse) or (
         skew_threshold is not None and c_by in ("skew", "beta")
-    )
+    ))
     legend_depth = 0.0
     if period_up:
         top_edge, top_sign = y_hi, 1.0

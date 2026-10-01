@@ -500,6 +500,8 @@ def _chat_welcome() -> html.Div:
                 "Load an EDI or XML-TF dataset and describe "
                 "your workflow in natural language."
             ),
+            # filled when the desktop hands over its survey
+            html.Div(id=IDs.WELCOME_NOTE),
             html.Div(
                 chips,
                 className="am-prompt-chips",
@@ -2004,6 +2006,7 @@ def create_layout() -> html.Div:
             # ── data stores ────────────────────────
             dcc.Store(id=IDs.STORE_MESSAGES, data=[]),
             dcc.Store(id=IDs.STORE_EDI, data={}),
+            dcc.Location(id=IDs.URL, refresh=False),
             dcc.Store(id=IDs.STORE_SESSION, data={}),
             dcc.Store(
                 id=IDs.STORE_SETTINGS,

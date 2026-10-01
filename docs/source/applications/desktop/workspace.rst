@@ -167,8 +167,8 @@ Core panel windows:
      - Toolbar, **View > Map Viewer**, ``Ctrl+M``
      - Station geometry, contours, map editing, and spatial context.
    * - **QC**
-     - Toolbar, **View > QC Dashboard**, ``Ctrl+Q``
-     - Coverage, SNR, skew, dimensionality, static-shift, and distortion checks.
+     - Toolbar, **View > QC Studio**, ``Ctrl+Q``
+     - Station pass / warn / fail summary; confidence, coverage, SNR, skew, dimensionality, static-shift, distortion and strike checks, per line.
    * - **Corrections**
      - Toolbar, **View > Data Corrections**, ``Ctrl+R``
      - Previewing, stacking, and committing data corrections.
@@ -285,9 +285,20 @@ The toolbar is optimized for the normal survey workflow:
 7. **More** exposes secondary tools and figure export.
 8. **Theme** toggles dark and light appearances.
 
-The menu bar mirrors these actions and adds recent files, preferences, help,
-documentation, GitHub, and about dialogs.  If a toolbar button is hidden by a
-small screen, use the menu bar as the complete command list.
+The menu bar mirrors these actions and adds recent files, the Edit menu and
+preferences.  If a toolbar button is hidden by a small screen, use the menu
+bar as the complete command list.
+
+**Help** sits at the far right of the menu bar (or press ``F1``) and opens the
+Help & About panel directly:
+
+* **Overview** -- what pyCSAMT does and what is new in this release;
+* **Resources** -- documentation, this desktop guide, tutorials, release
+  notes, the GitHub repository, the issue tracker, and how to cite pyCSAMT;
+* **System** -- versions of pyCSAMT, Python and Qt, the platform, license
+  status, and **Copy system info** to paste into a bug report;
+* **Author** -- Laurent Kouadio, lead developer (`lkouadio.com <https://lkouadio.com>`_,
+  etanoyau@gmail.com).
 
 Read Toolbar Actions As Workflow Stages
 ---------------------------------------

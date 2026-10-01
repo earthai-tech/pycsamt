@@ -122,7 +122,7 @@ def test_creates(dlg):
 
 
 def test_fixed_width(dlg):
-    assert dlg.maximumWidth() == 530
+    assert dlg.maximumWidth() == 600
 
 
 def test_has_close_button_that_accepts(dlg):
@@ -132,9 +132,58 @@ def test_has_close_button_that_accepts(dlg):
     assert dlg.result() == QDialog.DialogCode.Accepted
 
 
-def test_has_two_link_buttons(dlg):
+def test_resources_link_cards(dlg):
     links = dlg.findChildren(_LinkButton)
-    assert len(links) == 2
+    urls = {b._url for b in links}
+    assert len(links) == 6
+    assert "https://pycsamt.org/" in urls
+    assert "https://github.com/earthai-tech/pycsamt" in urls
+    assert any(u.endswith("/issues") for u in urls)
+    assert any("release_notes" in u for u in urls)
+
+
+def test_tabs_and_start_tab(qapp):
+    d = AboutDialog(tab="author")
+    try:
+        assert [d.tabs.tabText(i) for i in range(d.tabs.count())] == [
+            "Overview", "Resources", "System", "Author"]
+        assert d.tabs.currentIndex() == 3
+    finally:
+        d.close()
+
+
+def test_author_details(dlg):
+    text = " ".join(lab.text() for lab in dlg.findChildren(QLabel))
+    assert "Laurent Kouadio" in text
+    assert "lkouadio.com" in text
+    assert "etanoyau@gmail.com" in text
+    assert "Lead developer" in text
+
+
+def test_copyright_belongs_to_the_organisation(dlg):
+    text = " ".join(lab.text() for lab in dlg.findChildren(QLabel))
+    assert "earthai-tech" in text.split("©", 1)[1][:40]
+
+
+def test_overview_lists_whats_new(dlg):
+    text = " ".join(lab.text() for lab in dlg.findChildren(QLabel))
+    assert "New in 2.6" in text and "QC Studio" in text
+
+
+def test_copy_system_info(dlg):
+    from PySide6.QtGui import QGuiApplication
+
+    text = dlg.copy_system_info()
+    assert text.startswith("pyCSAMT:") and "Python:" in text
+    assert QGuiApplication.clipboard().text() == text
+
+
+def test_dark_colours(qapp):
+    d = AboutDialog(dark=True)
+    try:
+        assert d._dark and d._c_head != "#1a3a7c"
+    finally:
+        d.close()
 
 
 def test_has_hero_banner(dlg):

@@ -31,6 +31,8 @@ Left panel (260 px, analysis-layout grid):
 
 from __future__ import annotations
 
+from pycsamt.api.colormaps import colormap_options
+
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
@@ -66,15 +68,7 @@ _COMP_OPTS = [
     {"label": "ZYY", "value": "ZYY"},
 ]
 
-_CMAP_OPTS = [
-    {"label": "jet_r", "value": "jet_r"},
-    {"label": "viridis", "value": "viridis"},
-    {"label": "plasma", "value": "plasma"},
-    {"label": "RdBu_r", "value": "RdBu_r"},
-    {"label": "coolwarm", "value": "coolwarm"},
-    {"label": "bwr", "value": "bwr"},
-    {"label": "seismic", "value": "seismic"},
-]
+_CMAP_OPTS = colormap_options()  # jet_r first (the default), then jet …
 
 _COV_CMAP_OPTS = [
     {"label": "Blues", "value": "Blues"},

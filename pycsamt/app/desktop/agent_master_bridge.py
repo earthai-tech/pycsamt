@@ -71,10 +71,18 @@ def launch_agent_master(
     port: int = DEFAULT_PORT,
     *,
     open_browser: bool = True,
+    handoff: str = "",
 ) -> AgentMasterLaunch:
-    """Start Agent Master if needed and open it in the default browser."""
+    """Start Agent Master if needed and open it in the default browser.
+
+    *handoff* is a token from
+    :func:`pycsamt.app.agent_master._handoff.write_handoff`: the page opens
+    on ``/?handoff=<token>`` and starts on the desktop's survey (works
+    whether the server is already running or not).
+    """
     global _PROCESS
-    url = agent_master_url(host, port)
+    base = agent_master_url(host, port)
+    url = f"{base}/?handoff={handoff}" if handoff else base
     with _LOCK:
         if is_agent_master_running(host, port):
             if open_browser:
@@ -149,6 +157,7 @@ def launch_agent_master(
             daemon=True,
         ).start()
     return AgentMasterLaunch(url=url, started=True, process=proc)
+
 
 
 def _open_when_ready(

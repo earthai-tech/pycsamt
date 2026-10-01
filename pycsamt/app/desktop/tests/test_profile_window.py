@@ -344,3 +344,22 @@ class TestSetDarkMode:
     def test_set_dark_mode_delegates_to_panel(self, win):
         win.set_dark_mode(False)
         assert win._profile_panel._ctrl.dark is False
+
+
+def test_pt_labels_checkbox_hides_in_plot_labels(qapp):
+    """Profile ▸ "Phase-tensor in-plot labels": on by default; off removes
+    the |β| legend / size reference and redraws (part of the PT key)."""
+    from pycsamt.app.desktop.windows.profile_window import (
+        ProfileViewerWindow,
+    )
+
+    w = ProfileViewerWindow()
+    try:
+        ctrl = w._profile_panel._ctrl
+        assert w._chk_pt_labels.isChecked() and ctrl._pt_annotations
+        key_on = ctrl.phase_tensor_key()
+        w._chk_pt_labels.setChecked(False)
+        assert ctrl._pt_annotations is False
+        assert ctrl.phase_tensor_key() != key_on
+    finally:
+        w.close()

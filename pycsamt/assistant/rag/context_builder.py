@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from pycsamt.agents._request import request_stage
+
 from .retriever import Retriever, build_retriever
 from .schemas import RAGChunk, RetrievedContext
 
@@ -316,6 +318,7 @@ class ContextBuilder:
         # Optional SymbolGraph: surfaces the API a retrieved symbol calls.
         self.graph = graph
 
+    @request_stage
     def build(
         self,
         query: str,

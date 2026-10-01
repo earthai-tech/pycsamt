@@ -62,6 +62,20 @@ same kind of message you could type yourself. The input bar at the bottom is
 for plain language; the **+** button and paperclip attach context, and the send
 button changes to a stop control while a workflow is executing.
 
+While Agent Master works, the pyCSAMT logo beside the reply is the only
+moving element: its orange signal wave travels and its earth layers drift.
+Next to it, one line names the current step with "Step n of m" and the
+elapsed time. **Show steps** reveals the full step list on hover or keyboard
+focus. When the reply arrives, the logo stops and stays as that reply's
+marker. A stopped or failed reply shows the logo grey with a flat signal.
+With the operating system's reduce-motion setting on, the logo stays still
+and the status text carries the progress.
+
+When Agent Master needs a decision before it can act (for example the sense
+of a rotation, or which registered line to use instead of an unknown one),
+the question comes with reply chips. Clicking one sends it as your next
+message; you can also type any other answer.
+
 Loading EDI Data
 ----------------
 

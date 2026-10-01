@@ -28,6 +28,8 @@ import math
 
 import numpy as np
 
+from pycsamt.api.colormaps import colormap_choices
+
 __all__ = [
     "CMAPS",
     "DEPTH_PRESETS",
@@ -38,9 +40,9 @@ __all__ = [
     "mapview_state",
 ]
 
-# the Map View 3-D colour maps (so a hand-off always finds its colour map)
-CMAPS = ("RdYlBu_r", "jet_r", "jet", "turbo", "viridis", "plasma", "magma",
-         "cividis", "RdBu_r", "coolwarm")
+# the shared catalogue, as Map View offers it (a hand-off always finds its
+# colour map); RdYlBu_r stays this window's default
+CMAPS = tuple(colormap_choices(first=("RdYlBu_r",)))
 MODES = (("fence", "Fence"), ("block", "Block"), ("depth", "Depth slices"),
          ("surface", "Iso-surface"))
 DEPTH_PRESETS = ((0.0, "Full model"), (500.0, "500 m"), (1000.0, "1 km"),

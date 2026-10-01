@@ -9,6 +9,7 @@ import json
 import math
 import re
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
 
@@ -30,7 +31,7 @@ def is_code_followup(text: str, history: list[dict] | None) -> bool:
     """Only route editing language when a recent code artifact exists."""
     if not any(
         m.get("role") == "assistant" and m.get("code")
-        for m in (history or [])[-6:]
+        for m in (history or [])
     ):
         return False
     if re.search(r"\b(explain|describe|why|without changing)\b", text, re.I):
@@ -65,6 +66,7 @@ class GenerationInput:
     previous_output_dir: str = ""
     assumptions: list[str] = field(default_factory=list)
     omitted_history_turns: int = 0
+    history_summary: str = ""
 
     @classmethod
     def from_mapping(cls, data: dict) -> GenerationInput:
@@ -92,7 +94,7 @@ class GenerationInput:
             size += len(content)
         previous_code, previous_output = "", ""
         if is_code_followup(text, history):
-            for message in reversed(history[-6:]):
+            for message in reversed(history):
                 if message.get("role") == "assistant" and message.get("code"):
                     previous_code = message["code"]
                     previous_output = (message.get("generation") or {}).get(
@@ -104,6 +106,9 @@ class GenerationInput:
         requirements = [
             s.strip() for s in re.split(r"\n|;", text) if s.strip()
         ]
+        from pycsamt.assistant.memory import SessionState
+
+        omitted = max(0, len(history) - len(turns) - current_removed)
         return cls(
             original_request=text,
             recent_turns=turns,
@@ -111,9 +116,8 @@ class GenerationInput:
             output_requirements=requirements,
             previous_code=previous_code,
             previous_output_dir=previous_output,
-            omitted_history_turns=max(
-                0, len(history) - len(turns) - current_removed
-            ),
+            omitted_history_turns=omitted,
+            history_summary=SessionState.history_summary(history, omitted),
             **kwargs,
         )
 
@@ -218,6 +222,49 @@ def forward_parameters(text: str) -> dict:
     return result
 
 
+_FOLDER_CANDIDATE = re.compile(
+    r"\b(in|into|to|under)\s+(?:(an?|the)\s+)?"
+    r"(?:(?:folder|directory|dir)\s+(?:named\s+|called\s+)?)?"
+    r"[`'\"]?([A-Za-z_.][\w.\-]*(?:[/\\][\w.\-]+)*)[`'\"]?"
+    r"(\s+(?:folder|directory))?",
+    re.I,
+)
+_INPUT_CONTEXT = re.compile(
+    r"\b(?:load|loads|loading|read|reads|from|stations|sites|files|edis?|data)\s*$", re.I)
+_DATA_SUFFIXES = {".edi", ".xml", ".j", ".avg", ".dat"}
+
+
+def requested_output_dir(text: str) -> str | None:
+    """Return the output folder a request names, e.g. ``selected_plots``.
+
+    Conservative: a name counts only when it is folder-like (contains ``_``,
+    ``/`` or ``\\``) or is introduced as a folder/directory. Filenames, input
+    data locations, survey lines and indefinite phrases ("in an output
+    folder") are not output folders. The last qualifying name wins.
+    """
+    found = None
+    for match in _FOLDER_CANDIDATE.finditer(text or ""):
+        _, article, name, folder_word = match.groups()
+        name = name.rstrip(".,;:")
+        explicit = bool(folder_word) or re.search(
+            r"(?:folder|directory|dir)\s+(?:named\s+|called\s+)?\S*$",
+            text[: match.start(3)], re.I)
+        if not name or re.search(r"\.\w{1,5}$", name) or re.fullmatch(r"L\d+\w*", name, re.I):
+            continue
+        if article and article.lower() in {"a", "an"}:
+            continue  # "in an output folder" names no folder
+        if not (explicit or re.search(r"[_/\\]", name)):
+            continue
+        if _INPUT_CONTEXT.search(text[: match.start()]):
+            continue  # "stations in data/3edis" is an input location
+        path = Path(name)
+        if path.is_dir() and any(p.suffix.lower() in _DATA_SUFFIXES
+                                 for p in list(path.iterdir())[:200]):
+            continue  # an existing data folder is input, not output
+        found = name.replace("\\", "/")
+    return found
+
+
 def missing_request_constraints(
     generation: GenerationInput, code: str
 ) -> list[str]:
@@ -242,6 +289,9 @@ def missing_request_constraints(
         for name in dict.fromkeys(filenames)
         if not any(name in value for value in strings)
     ]
+    folder = requested_output_dir(generation.task_text)
+    if folder and not any(folder in value.replace("\\", "/") for value in strings):
+        missing.append(f"Requested output folder is absent: {folder}")
     text = generation.task_text.lower()
     if excludes_correction(text):
         called = {

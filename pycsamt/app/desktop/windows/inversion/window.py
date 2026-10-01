@@ -77,6 +77,7 @@ from pycsamt.app.desktop.panels.section_panel import SectionPanel
 from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.widgets.compact_button import compact_button
 from pycsamt.app.desktop.windows._base import _icon, make_group
+from pycsamt.app.desktop.windows._base import refresh_icons
 from pycsamt.app.desktop.windows.inversion.ai_page import (
     AIInversionPage,
     draw_into,
@@ -1634,6 +1635,7 @@ class InversionWindow(QWidget):
 
     def set_dark_mode(self, dark: bool) -> None:
         self._dark = dark
+        refresh_icons(self, dark)
         from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
         for canvas in self.findChildren(MplCanvas):

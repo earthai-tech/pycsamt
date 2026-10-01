@@ -1595,7 +1595,7 @@ class InterpController:
             # Elevation: prefer model attribute, else try from sites state
             elev_m = getattr(model, "station_elev", None)
             if elev_m is None and self.state.sites is not None:
-                elev_m = extract_elevation(self.state.sites)
+                elev_m = extract_elevation(self.state.sites, warn=False)
                 chain = extract_chainage(self.state.sites)
                 if len(chain) > 0 and len(sx_km) > 0:
                     elev_m = (

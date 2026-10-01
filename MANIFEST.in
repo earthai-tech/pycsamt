@@ -24,6 +24,8 @@ recursive-include pycsamt/format/borehole/schemas *.json
 recursive-include pycsamt/format/borehole/examples *.pcbh.json
 recursive-include pycsamt/format/borehole/templates *.csv
 recursive-include pycsamt/gis *.npy
+recursive-include pycsamt/assistant/evals/suites *.jsonl
+recursive-include pycsamt/assistant/evals/answer_suites *.jsonl *.py
 recursive-include pycsamt/models/occam2d/_source *
 recursive-include pycsamt/models/modem/_source *
 recursive-include pycsamt/data/occam2d *

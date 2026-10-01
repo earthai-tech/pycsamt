@@ -708,3 +708,42 @@ class TestOnlinePath(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestQuestionSubjects(unittest.TestCase):
+    """Offline composition answers each compared or named subject."""
+
+    def test_subjects(self):
+        from pycsamt.agents.package_qa import _question_subjects
+
+        self.assertEqual(
+            _question_subjects(
+                "What is the difference between quality control and denoising in pyCSAMT?"),
+            ["quality control", "denoising"])
+        self.assertEqual(_question_subjects("Occam2D vs ModEM?"), ["Occam2D", "ModEM"])
+        self.assertEqual(
+            _question_subjects("Explain estimate_ss_ama and correct_ss_ama."),
+            ["estimate_ss_ama", "correct_ss_ama"])
+        self.assertEqual(_question_subjects("How do I load EDI files?"), [])
+
+    def test_compose_subjects_retrieves_each(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        asked = []
+
+        class Rag:
+            def __init__(self, subject):
+                self.subject = subject
+
+            def is_empty(self):
+                return False
+
+            def compose_offline_answer(self, top=3):
+                return f"about {self.subject}"
+
+        agent = PackageQAAgent()
+        agent._build_rag = lambda q, session=None: asked.append(q) or Rag(q)
+        text = agent._compose_subjects("Occam2D vs ModEM?")
+        self.assertEqual(asked, ["Occam2D", "ModEM"])
+        self.assertIn("### Occam2D\n\nabout Occam2D", text)
+        self.assertIsNone(agent._compose_subjects("How do I load EDI files?"))

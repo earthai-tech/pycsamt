@@ -57,6 +57,10 @@ def _restore_bubble(msg: dict) -> html.Div:
         if (text or "").strip()
         else html.P("(no content)")
     )
+    if msg.get("code"):
+        from .chat import _code_block
+
+        body = html.Div([body, _code_block(msg["code"])])
     return html.Div(
         [
             html.Div(
@@ -218,21 +222,28 @@ def register_sidebar(app) -> None:
             "children",
             allow_duplicate=True,
         ),
+        Output(IDs.INTERVAL_POLL, "disabled", allow_duplicate=True),
+        Output(IDs.STORE_PENDING, "data", allow_duplicate=True),
+        Output(IDs.STORE_POSTPROC, "data", allow_duplicate=True),
+        Output(IDs.STORE_INV_CONFIG, "data", allow_duplicate=True),
         Input(IDs.BTN_NEW_CHAT, "n_clicks"),
         Input(IDs.BTN_NEW_SESSION, "n_clicks"),
+        State(IDs.STORE_JOB, "data"),
         prevent_initial_call=True,
     )
-    def _new_chat(n_chat, n_session):
+    def _new_chat(n_chat, n_session, job_store=None):
         if not n_chat and not n_session:
             raise PreventUpdate
         # clear the assistant session so a new chat starts context-free
         try:
-            from .chat import _reset_session
+            from .chat import _reset_session, _update_job
 
+            if (job_store or {}).get("jid"):
+                _update_job(job_store["jid"], status="cancelled")
             _reset_session()
         except Exception:  # noqa: BLE001
             pass
-        return [], {}, {}, {}, [_chat_welcome()]
+        return [], {}, {}, {}, [_chat_welcome()], True, {}, {}, {}
 
     # ── auto-save to history ──────────────────
     # Fires whenever STORE_MESSAGES changes.
@@ -270,11 +281,13 @@ def register_sidebar(app) -> None:
             "preview": preview or "(empty)",
             "messages": messages,
         }
-        # Replace any existing entry with the
-        # same preview (across whole history list)
-        # and move it to the top.
+        from .._conversation import conversation_id
+
+        entry["session_id"] = conversation_id(messages)
+        # Update this conversation only; old entries without IDs use preview.
         for j, h in enumerate(history):
-            if h.get("preview") == preview:
+            if (h.get("session_id") == entry["session_id"]
+                    and (entry["session_id"] or h.get("preview") == preview)):
                 history.pop(j)
                 break
         history.insert(0, entry)
@@ -306,9 +319,13 @@ def register_sidebar(app) -> None:
             "preview": preview or "(empty)",
             "messages": messages,
         }
-        # Replace any existing same-preview entry
+        from .._conversation import conversation_id
+
+        entry["session_id"] = conversation_id(messages)
+        # Keep separate conversations even when their opening text matches.
         for j, h in enumerate(history):
-            if h.get("preview") == preview:
+            if (h.get("session_id") == entry["session_id"]
+                    and (entry["session_id"] or h.get("preview") == preview)):
                 history.pop(j)
                 break
         history.insert(0, entry)
@@ -326,14 +343,22 @@ def register_sidebar(app) -> None:
             "children",
             allow_duplicate=True,
         ),
+        Output(IDs.STORE_JOB, "data", allow_duplicate=True),
+        Output(IDs.STORE_EDI, "data", allow_duplicate=True),
+        Output(IDs.STORE_FIGS, "data", allow_duplicate=True),
+        Output(IDs.INTERVAL_POLL, "disabled", allow_duplicate=True),
+        Output(IDs.STORE_PENDING, "data", allow_duplicate=True),
+        Output(IDs.STORE_POSTPROC, "data", allow_duplicate=True),
+        Output(IDs.STORE_INV_CONFIG, "data", allow_duplicate=True),
         Input(
             {"type": "am-hist-item", "index": ALL},
             "n_clicks",
         ),
         State(IDs.STORE_HISTORY, "data"),
+        State(IDs.STORE_JOB, "data"),
         prevent_initial_call=True,
     )
-    def _restore_session(clicks, history):
+    def _restore_session(clicks, history, job_store=None):
         if not any(clicks) or not history:
             raise PreventUpdate
         triggered = ctx.triggered_id
@@ -358,7 +383,11 @@ def register_sidebar(app) -> None:
             className="am-restore-banner",
         )
         children = [banner] + [_restore_bubble(m) for m in messages]
-        return messages, children
+        from .chat import _update_job
+
+        if (job_store or {}).get("jid"):
+            _update_job(job_store["jid"], status="cancelled")
+        return messages, children, {}, {}, {}, True, {}, {}, {}
 
     # ── delete history entry ──────────────────
     @app.callback(

@@ -50,7 +50,8 @@ def server():
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'{"message":{"content":"grounded answer"},"done":false}\n')
-                end = {"done": True, "prompt_eval_count": 15, "eval_count": 2,
+                end = {"done": True, "prompt_eval_count": state.get("prompt_eval_count", 15),
+                       "eval_count": 2,
                        "done_reason": "length" if state["length"] else "stop"}
                 self.wfile.write(json.dumps(end).encode() + b"\n")
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
@@ -90,8 +91,13 @@ def test_real_http_key_free_usage_and_limits(server, monkeypatch):
         assert agent.last_usage["eval_count"] == 2
         assert agent._last_cost == 0
         assert req.calls == 1
-        with pytest.raises(_local.LocalModelError, match="budget"):
-            agent.query_llm("again")
+        # The budget is a hard limit at the transport level ...
+        with pytest.raises(_local.LocalBudgetExhausted, match="budget"):
+            _local.generate("again", "sys", model=agent.model, max_tokens=10,
+                            temperature=0)
+        # ... while an agent skips its optional call instead of failing.
+        assert agent.query_llm("again") is None
+        assert req.usage[-1] == {"model": agent.model, "skipped": "call budget exhausted"}
     assert [p for p, _ in state["requests"]] == ["/api/show", "/api/chat"]
     assert state["requests"][-1][1]["options"]["num_predict"] == 50
     assert state["requests"][-1][1]["options"]["temperature"] == 0.7
@@ -159,9 +165,28 @@ def test_missing_model_error(server):
 def test_context_overflow_does_not_generate(server):
     endpoint, state = server
     with _local.local_session(_local.LocalSettings(endpoint=endpoint, context_tokens=512, output_tokens=10)):
-        with pytest.raises(_local.LocalModelError, match="context budget"):
-            Agent("local").query_llm("x" * 1000)
+        with pytest.raises(_local.LocalModelError, match="context window is 512 tokens"):
+            Agent("local").query_llm("x" * 3000)
     assert all(p != "/api/chat" for p, _ in state["requests"])
+
+
+def test_prompt_estimate_uses_tokens_not_bytes(server):
+    """7 KB fits an 8192-token window; comparing bytes to tokens rejected it."""
+    endpoint, state = server
+    with _local.local_session(_local.LocalSettings(endpoint=endpoint, context_tokens=8192,
+                                                   output_tokens=1024)):
+        assert Agent("local").query_llm("x" * 7500) == "grounded answer"
+    assert any(p == "/api/chat" for p, _ in state["requests"])
+
+
+def test_answer_from_a_filled_window_is_discarded(server):
+    """Ollama's own count shows the window was full: evidence may be cut."""
+    endpoint, state = server
+    state["prompt_eval_count"] = 500
+    with _local.local_session(_local.LocalSettings(endpoint=endpoint, context_tokens=512,
+                                                   output_tokens=10)):
+        with pytest.raises(_local.LocalModelError, match="filled the local context window"):
+            Agent("local").query_llm("short")
 
 
 def test_local_retrieval_cannot_reuse_dense_cache(monkeypatch):

@@ -21,6 +21,8 @@ Some plots need an input the survey has to supply:
 
 from __future__ import annotations
 
+from pycsamt.api.colormaps import COLORMAPS, colormap_label
+
 import inspect
 import re
 from dataclasses import dataclass
@@ -73,11 +75,8 @@ SECTIONS: tuple[Section, ...] = tuple(
 )
 
 # common colour maps offered for every function taking ``cmap``
-_CMAPS = (("", "Default"), ("viridis", "viridis"), ("plasma", "plasma"),
-          ("magma", "magma"), ("cividis", "cividis"),
-          ("RdBu_r", "RdBu (diverging)"), ("coolwarm", "coolwarm"),
-          ("Spectral_r", "Spectral"), ("jet_r", "jet (legacy)"),
-          ("turbo", "turbo"))
+_CMAPS = (("", "Default"),) + tuple(
+    (c, colormap_label(c)) for c in COLORMAPS)
 
 _LINE_MODES = (("prefix", "By name prefix (e.g. L1-, L2-)"),
                ("single", "All stations on one line"))

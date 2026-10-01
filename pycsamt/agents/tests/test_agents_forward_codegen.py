@@ -104,9 +104,11 @@ def test_code_generation_agent_offline_templates(tmp_path, edi_dir):
     assert scripts or code, "expected a generated script"
 
 
-def test_code_generation_agent_missing_config():
+def test_code_generation_agent_missing_config(tmp_path, monkeypatch):
     from pycsamt.agents import CodeGenerationAgent
 
+    # No output_dir is given, so keep the default folder out of the repo.
+    monkeypatch.chdir(tmp_path)
     result = mk(CodeGenerationAgent).execute({})
     assert result.status in {"success", "failed"}
     assert result.summary or result.error

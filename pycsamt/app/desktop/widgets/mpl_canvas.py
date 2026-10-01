@@ -163,6 +163,15 @@ class MplCanvas(QWidget):
             # Theme-generated labels must remain legible on publication white.
             for text in ax.findobj(Text):
                 text.set_color("#334155")
+                # ... and so must their boxes: a dark-theme restyle had
+                # painted them near-black, leaving the (now slate) text
+                # unreadable -- the phase-tensor |β| legend, size reference
+                # and PT-strip station label on dark.
+                box = text.get_bbox_patch()
+                if box is not None:
+                    box.set_facecolor("white")
+                    box.set_edgecolor("#cbd5e1")
+                    box.set_alpha(0.92)
             legend = ax.get_legend()
             if legend is not None:
                 legend.get_frame().set_facecolor(bg)

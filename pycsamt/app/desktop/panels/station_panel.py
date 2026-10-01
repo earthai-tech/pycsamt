@@ -51,12 +51,32 @@ class StationPanel(QWidget):
 
     def set_dataframe(self, df: pd.DataFrame) -> None:
         self._table.set_dataframe(df)
-        n = len(df)
-        self._summary_lbl.setText(f"{n} station{'s' if n != 1 else ''} loaded")
+        self._update_summary()
 
     def clear(self) -> None:
         self._table.clear()
         self._summary_lbl.setText("No stations loaded")
+
+    # ── Filtering (the main window's "Filter stations" box) ──────────
+
+    def filter(self, text: str) -> int:
+        """Show only stations whose row contains *text*; returns how many
+        are shown.  (The search box called this method, which did not
+        exist -- the error was swallowed, so filtering did nothing.)"""
+        self._filter_text = (text or "").strip()
+        shown = self._table.filter(self._filter_text)
+        self._update_summary()
+        return shown
+
+    def _update_summary(self) -> None:
+        total = self._table.total_count()
+        shown = self._table.visible_count()
+        if getattr(self, "_filter_text", "") and shown != total:
+            self._summary_lbl.setText(
+                f"{shown} of {total} stations shown")
+        else:
+            self._summary_lbl.setText(
+                f"{total} station{'s' if total != 1 else ''} loaded")
 
     # ── Programmatic highlight (called by AppController) ─────────────
 

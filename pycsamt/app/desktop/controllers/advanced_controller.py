@@ -460,10 +460,20 @@ class AdvancedController:
                     _annotate_empty(ax, "No figure produced")
                 else:
                     _style_all_axes(src_fig, self.dark)
-                    try:
-                        src_fig.tight_layout(pad=1.2)
-                    except Exception:
-                        pass
+                    # a figure with its own layout engine (constrained)
+                    # keeps it: tight_layout() over it warned "The figure
+                    # layout has changed to tight" on every draw
+                    if src_fig.get_layout_engine() is None:
+                        import warnings
+
+                        # colour-bar / inset axes: "not compatible with
+                        # tight_layout" -- it still lays out the rest
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", UserWarning)
+                            try:
+                                src_fig.tight_layout(pad=1.2)
+                            except Exception:
+                                pass
                     return src_fig
         except Exception as exc:
             fig.clear()
@@ -592,7 +602,7 @@ class TopoPreviewController:
                 return
 
             chain = extract_chainage(self._sites)  # km
-            elev = extract_elevation(self._sites)  # m
+            elev = extract_elevation(self._sites, warn=False)  # m
             extract_station_names(self._sites)
 
             if chain.size == 0 or elev.size == 0:
@@ -803,7 +813,7 @@ class TopoPreviewController:
                 self._style_ax(ax, s)
                 return
 
-            elev = extract_elevation(self._sites)
+            elev = extract_elevation(self._sites, warn=False)
             if elev.size == 0:
                 ax.text(
                     0.5,
@@ -879,7 +889,7 @@ class TopoPreviewController:
                 has_elevation,
             )
 
-            elev = extract_elevation(self._sites)
+            elev = extract_elevation(self._sites, warn=False)
             chain = extract_chainage(self._sites)
             result["n_stations"] = int(elev.size)
             result["has_elev"] = bool(has_elevation(self._sites))

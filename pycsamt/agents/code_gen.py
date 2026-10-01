@@ -29,6 +29,11 @@ from ._generation import (
     forward_parameters,
 )
 
+#: Folder used when no ``output_dir`` is given. Matches the Agent Master
+#: default so generated scripts never land in the current working
+#: directory (e.g. a repository root).
+DEFAULT_OUTPUT_DIR = "pycsamt_agent_output"
+
 _SYSTEM_PROMPT = """\
 You are an expert Python developer specialising in geophysics scripting.
 Generate or edit a clean Python script for the user's complete request.
@@ -474,6 +479,8 @@ class CodeGenerationAgent(BaseAgent):
     ``results`` : dict
         The agent results dict from :class:`AgentCoordinator`.
     ``output_dir`` : str, optional
+        Folder for the script and its ``.validation.json`` report;
+        defaults to :data:`DEFAULT_OUTPUT_DIR` (``pycsamt_agent_output``).
 
     Output data keys
     ----------------
@@ -532,7 +539,7 @@ class CodeGenerationAgent(BaseAgent):
             else input_data.get("workflow_config") or {}
         )
         results = input_data.get("results") or {}
-        output_dir = input_data.get("output_dir", ".")
+        output_dir = input_data.get("output_dir") or DEFAULT_OUTPUT_DIR
         if generation:
             cfg.setdefault("output_dir", output_dir)
             if cfg.get("workflow") == "forward":
@@ -887,6 +894,8 @@ class CodeGenerationAgent(BaseAgent):
             allow_repair=not exact_edit,
             max_repairs=input_data.get("max_repairs", 2),
             execute_fixture=bool(input_data.get("execute_fixture", False)),
+            fixture_image=input_data.get("fixture_image"),
+            fixture_outputs=input_data.get("fixture_outputs"),
         )
         if not validation["ok"]:
             message = (
@@ -920,6 +929,9 @@ class CodeGenerationAgent(BaseAgent):
 
         # ── write file ────────────────────────────────────────────────────────
         script_path: str | None = None
+        from ._request import checkpoint
+
+        checkpoint()
         validation_path = None
         try:
             os.makedirs(output_dir, exist_ok=True)

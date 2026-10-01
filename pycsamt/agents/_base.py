@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
@@ -203,6 +202,14 @@ class BaseAgent(ABC):
         "magnetotelluric (MT/AMT/CSAMT) data processing and interpretation."
     )
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        from ._request import request_stage
+
+        execute = cls.__dict__.get("execute")
+        if execute is not None:
+            cls.execute = request_stage(execute)
+
     def __init__(
         self,
         name: str,
@@ -295,25 +302,41 @@ class BaseAgent(ABC):
         -------
         str or None
         """
+        from ._request import RequestCancelled, cancellable_sleep, checkpoint
+
+        checkpoint()
         if not self.llm_available:
             self._log.debug("No API key — LLM query skipped.")
             return None
 
-        from ._local import LocalModelError, generate, local_only
+        from ._local import (
+            LocalBudgetExhausted,
+            LocalModelError,
+            generate,
+            local_only,
+        )
 
         if local_only() and self.llm_provider != "ollama":
             raise LocalModelError(
                 "Cloud inference is disabled in this local-only request."
             )
         if self.llm_provider == "ollama":
-            text, usage = generate(
-                prompt,
-                system_message or self.SYSTEM_PROMPT,
-                model=self.model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            try:
+                text, usage = generate(
+                    prompt,
+                    system_message or self.SYSTEM_PROMPT,
+                    model=self.model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            except LocalBudgetExhausted:
+                # Same contract as a failed cloud call: no text. The skip is
+                # recorded in the request usage; other local errors still raise.
+                self._log.warning("Local call budget spent; %s skipped its model call.",
+                                  self.name)
+                return None
             self.last_usage = usage
+            checkpoint()
             return text
 
         # Raise before the API call if the session budget is already exhausted.
@@ -332,17 +355,21 @@ class BaseAgent(ABC):
         last_exc: Exception | None = None
         for delay in (*_RETRY_DELAYS, None):
             try:
+                checkpoint()
                 text, cost = fn(prompt, sys_msg, temperature, max_tokens)
                 self._last_cost += cost
                 AGENT_CONFIG._add_spend(cost)  # update session counter
+                checkpoint()
                 return text
+            except RequestCancelled:
+                raise
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
                 is_rate = "rate" in str(exc).lower() or "429" in str(exc)
                 if delay is None or not is_rate:
                     break
                 self._log.warning("LLM rate limit, retrying in %ss…", delay)
-                time.sleep(delay)
+                cancellable_sleep(delay)
 
         self._log.error("LLM query failed: %s", last_exc)
         return None

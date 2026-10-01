@@ -50,8 +50,8 @@ the data* and pressing enter produces this, unedited:
 Reading the reply against the bullets above makes the mapping explicit.
 *Understands plain-language requests and routes them* is the first line —
 *Orchestrator routed to 'qc' workflow (4 steps)*. *Runs the real agents and
-streams progress* is the expanded trace: **Parsing request** → **Intent:
-workflow** → **Classifying workflow** → **Workflow: qc** → **Executing qc** →
+streams progress* is the expanded trace: **Reading your request** → **Intent:
+workflow** → **Choosing a workflow** → **Workflow: qc** → **Executing qc** →
 **Completed qc**, each step ticking green as it completes rather than
 appearing all at once. *Returns products* is the outcome line — *4/4 steps
 succeeded in 7.6s* — plus the five figures now sitting in the sidebar and a

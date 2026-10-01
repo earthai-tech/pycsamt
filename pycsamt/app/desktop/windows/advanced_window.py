@@ -84,6 +84,7 @@ from pycsamt.app.desktop.controllers.correction_views import (
 from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.widgets.compact_button import compact_button
 from pycsamt.app.desktop.windows._base import _icon, icon_button, make_group
+from pycsamt.app.desktop.windows._base import refresh_icons
 from pycsamt.app.desktop.windows.inversion.forms import SettingsForm
 
 _KEY_ROLE = Qt.ItemDataRole.UserRole
@@ -726,6 +727,7 @@ class AdvancedToolsWindow(QWidget):
     def set_dark_mode(self, dark: bool) -> None:
         # the UI follows the app theme; figures stay publication-white
         self._dark = dark
+        refresh_icons(self, dark)
         self._ctrl.dark = False
         self._topo_ctrl.dark = False
         self._conv_ctrl.dark = False

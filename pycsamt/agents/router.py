@@ -309,13 +309,20 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
     if _CAPABILITY_RE.search(t):
         return META, 0.88
 
+    from pycsamt.assistant.tools.repository import is_developer_question
+
+    # An inquiry about the implementation ("trace how a write-code request
+    # reaches ...") names code without asking for any.
+    if is_developer_question(text) and re.match(
+        r"\s*(?:trace|where|which|why|explain|inspect|find|how (?:does|is|are))\b", t
+    ):
+        return QUESTION, 0.95
+
     # ── CODE: explicit script requests ─────────────────────────────────────
     if any(p in t for p in _CODE_PHRASES) or re.search(
         r"\b(?:write|generate|create)\b.{0,80}\b(?:example|script|code|notebook)\b", t
     ):
         return CODE, 0.85
-
-    from pycsamt.assistant.tools.repository import is_developer_question
 
     if is_developer_question(text):
         return QUESTION, 0.95

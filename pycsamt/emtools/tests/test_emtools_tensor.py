@@ -816,3 +816,26 @@ class TestPlotPhaseTensorStrip:
         with pytest.raises(ValueError, match="axis_style"):
             plot_phase_tensor_strip(pt_df, station="S00", axis_style="bogus")
         plt.close("all")
+
+
+def test_psection_annotations_switch():
+    """``annotations=False`` drops the |β| legend and size reference."""
+    import glob
+    from pathlib import Path
+
+    import matplotlib.pyplot as plt
+
+    root = Path(__file__).resolve().parents[3] / "data" / "AMT" / \
+        "WILLY_DATA" / "L22PLT"
+    files = sorted(glob.glob(str(root / "*.edi")))[:6]
+    if len(files) < 3:
+        pytest.skip("Baohuashan data missing")
+    from pycsamt.emtools import plot_phase_tensor_psection
+
+    ax = plot_phase_tensor_psection(files, verbose=0)
+    labels = " ".join(t.get_text() for t in ax.texts)
+    assert "|β|" in labels
+    ax2 = plot_phase_tensor_psection(files, verbose=0, annotations=False)
+    assert not [t for t in ax2.texts if "|β|" in t.get_text()
+                or "reference" in t.get_text()]
+    plt.close("all")

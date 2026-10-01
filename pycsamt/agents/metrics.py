@@ -194,6 +194,7 @@ _CONCEPT_OVERLAP = frozenset(
         "dimensionality",
         "skew",
         "summary",
+        "quality",  # "quality control" is a concept, not a value lookup
     }
 )
 

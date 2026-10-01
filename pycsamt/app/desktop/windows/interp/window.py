@@ -61,6 +61,7 @@ from pycsamt.app.desktop.controllers.interp_studio import (
 )
 from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.windows._base import _icon, make_group
+from pycsamt.app.desktop.windows._base import refresh_icons
 from pycsamt.app.desktop.windows.interp.evidence import EvidencePanel
 from pycsamt.app.desktop.windows.inversion.console import (
     ConsolePanel,
@@ -740,6 +741,7 @@ class InterpretationWindow(QWidget):
     def set_dark_mode(self, dark: bool) -> None:
         # the UI follows the app theme; figures stay publication-white
         self._dark = dark
+        refresh_icons(self, dark)
         self._ctrl.dark = False
 
     def _update_status_card(self) -> None:

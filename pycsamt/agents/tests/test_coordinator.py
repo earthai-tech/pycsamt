@@ -3,6 +3,14 @@
 """Tests for AgentCoordinator — dry-run, checkpointing, cost tracking."""
 
 import unittest
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _run_in_tmp_dir(tmp_path, monkeypatch):
+    """Run in a temporary directory so default output folders, which are
+    created relative to the working directory, never land in the repo."""
+    monkeypatch.chdir(tmp_path)
 
 
 class TestAgentCoordinatorDryRun(unittest.TestCase):

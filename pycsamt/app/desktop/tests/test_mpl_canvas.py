@@ -177,3 +177,23 @@ def test_manual_colorbar_and_long_bottom_labels_remain_visible(qapp):
         assert bounds.y0 >= 8
         assert bounds.y1 <= view.figure.bbox.height
     view.close()
+
+
+def test_label_boxes_stay_white_after_a_dark_restyle(qapp):
+    """The phase-tensor |β| legend / size reference / PT-strip station label
+    sit in boxes a dark restyle painted near-black, while the canvas set the
+    text dark slate: unreadable.  The publication style resets the boxes."""
+    from matplotlib.colors import to_hex
+
+    from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+
+    c = MplCanvas()
+    try:
+        ax = c.figure.add_subplot(111)
+        t = ax.text(0.1, 0.9, "|β| < 3°", transform=ax.transAxes,
+                    bbox=dict(fc="white"))
+        t.get_bbox_patch().set_facecolor("#1a1a2e")  # dark restyle
+        c.apply_theme(True)
+        assert to_hex(t.get_bbox_patch().get_facecolor()) == "#ffffff"
+    finally:
+        c.close()

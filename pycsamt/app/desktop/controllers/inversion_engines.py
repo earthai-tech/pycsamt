@@ -61,7 +61,7 @@ class Field:
 
     key: str
     label: str
-    kind: str  # "int" | "float" | "bool" | "choice"
+    kind: str  # "int" | "float" | "bool" | "choice" | "text"
     default: Any
     lo: float | None = None
     hi: float | None = None

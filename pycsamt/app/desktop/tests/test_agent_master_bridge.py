@@ -292,3 +292,13 @@ def test_open_when_ready_opens_anyway_after_exhausting_attempts(monkeypatch):
     bridge._open_when_ready("h", 1, "http://h:1", attempts=3, interval=0)
 
     assert opened == ["http://h:1"]
+
+
+def test_launch_with_handoff_opens_the_handoff_url(monkeypatch):
+    monkeypatch.setattr(bridge, "is_agent_master_running", lambda h, p: True)
+    opened = []
+    monkeypatch.setattr(bridge.webbrowser, "open",
+                        lambda url: opened.append(url))
+    res = bridge.launch_agent_master(handoff="abc123def4567890")
+    assert res.url.endswith("/?handoff=abc123def4567890")
+    assert opened == [res.url]

@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from pycsamt.api.colormaps import colormap_choices
+
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
@@ -11,18 +13,7 @@ from pycsamt.app.web.layout import IDs, _command_bar
 
 PAGE_ID = "map3d"
 
-_CMAPS = [
-    "RdYlBu_r",
-    "RdBu_r",
-    "seismic",
-    "coolwarm",
-    "jet",
-    "viridis",
-    "plasma",
-    "inferno",
-    "hot_r",
-    "rainbow",
-]
+_CMAPS = colormap_choices(first=("RdYlBu_r",))  # rendered via to_plotly_cmap
 
 # ── Mode metadata ─────────────────────────────────────────────────────────────
 _MAP3D_MODES = [

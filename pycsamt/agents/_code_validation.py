@@ -23,6 +23,8 @@ def validate_and_repair(
     allow_repair=True,
     max_repairs=2,
     execute_fixture=False,
+    fixture_image=None,
+    fixture_outputs=None,
 ):
     """At most two local repair calls sharing the original request deadline.
 
@@ -36,8 +38,16 @@ def validate_and_repair(
         deadline = min(deadline, request.started + request.settings.timeout)
 
     def validate(candidate):
+        from ._request import checkpoint, is_cancelled
+
+        checkpoint()
+        remaining = deadline - time.monotonic()
         result = validate_generated_code(
-            candidate, execute_fixture=execute_fixture
+            candidate, execute_fixture=execute_fixture,
+            fixture_image=fixture_image if remaining > 0 else None,
+            fixture_outputs=fixture_outputs,
+            fixture_timeout=min(20, max(0.01, remaining)),
+            cancelled=lambda: is_cancelled() or bool(request and request.cancelled()),
         )
         if generation and result["syntax_ok"]:
             missing = missing_request_constraints(generation, candidate)
@@ -57,6 +67,9 @@ def validate_and_repair(
     report = validate(code)
     stop = "no detected static errors"
     for attempt in range(min(2, max(0, int(max_repairs)))):
+        from ._request import checkpoint
+
+        checkpoint()
         if report["ok"]:
             break
         if not allow_repair or not agent.llm_available:

@@ -122,6 +122,8 @@ PYCSAMT-DESKTOP-V2.6-MODERNIZATION-PLAN.md
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# The hand-written specs the packaging scripts build from are source.
+!packaging/pyinstaller/*.spec
 .pypirc
 
 # Installer logs

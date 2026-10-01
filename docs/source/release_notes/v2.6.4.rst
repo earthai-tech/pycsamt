@@ -7,12 +7,13 @@ Version 2.6.4
 pyCSAMT 2.6.4 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Released 2026-09-15.*
+*Released 2026-10-01.*
 
-pyCSAMT 2.6.4 adds two new command-line surfaces, ships them as the first
-standalone application in the project, fixes two real EDI parsing bugs
-found while validating that app end to end, and documents everything it
-touches.
+pyCSAMT 2.6.4 adds two new command-line surfaces and a standalone
+format-conversion app, rebuilds most of the desktop suite as studios with
+a new Edit menu, ships the desktop suite as Windows and Linux installers,
+extends Agent Master, and fixes more than twenty real bugs, most of them
+found while raising test coverage.
 
 A standalone format-conversion app |Feature|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,9 +42,8 @@ spec (``packaging/pyinstaller/pycsamt_converter.spec``, plus wrapper
 ``build_converter.ps1``/``.sh`` scripts) freezes the app into a
 double-click-able ``onedir`` build under ``dist/pycsamt-converter/`` --
 roughly 600 MB, since PyTorch, TensorFlow, and the other pyCSAMT apps are
-excluded as unreachable from the converter's own code. This is the only
-pyCSAMT application packaged as a frozen binary; every other surface stays
-a normal Python entry point.
+excluded as unreachable from the converter's own code. The full desktop
+suite is frozen the same way for its installers (see below).
 
 Every page is a thin widget around one plain, Qt-free function in
 :mod:`pycsamt.app.converter.jobs`, which calls exactly the same engine as
@@ -81,6 +81,86 @@ table is a profile quantity, so a multi-line survey without ``--line``
 refuses outright with a message naming the flight lines detected
 geometrically from station coordinates, rather than silently
 differentiating across a line boundary.
+
+Desktop studios and an Edit menu |Feature|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Five desktop windows are rebuilt as studios, each with its own controls
+rail and figure area:
+
+* **Inversion Studio** builds, runs and reviews Occam1D/2D, ModEM 2-D/3-D
+  and MARE2DEM inversions through Qt-free engines, with the solver's output
+  streamed into a run console.
+* **Interpretation Studio** opens any PCSF/PCSM file or inversion run folder
+  and groups its views into Geology, Structure, Hydrology, Monitoring,
+  Uncertainty and Diagnostics tabs, with a library of pinned figures.
+* **QC Studio** scopes a check to one line or the whole survey, lays panels
+  out in a grid, and ends with a pass/warn/fail summary.
+* **Airborne** and **TDEM** studios replace the older single-plot windows.
+
+The new **Edit menu** puts every survey change under Undo / Redo, with a
+History list and Revert, and saves the edited survey as EDI or EMTF-XML.
+Its editors cover station coordinates (EPSG, pasted from Excel, or
+imported from CSV), names, lines and EDI header metadata; individual data
+points (mask, delete, interpolate, restore, static shift, each logged to
+the station's EDI ``INFO`` block); and frequency and tensor operations
+(trim, regrid, decimate, align, dedupe, fill gaps, rotate, rotate to
+strike) with a per-station preview.
+
+The PCSF 3-D view reads topography from the file, including rasters, and
+**Open in Map View** passes the whole scene to ``pycsamt-mapview
+--state``. Plot pickers across the desktop share one colormap catalogue,
+:mod:`pycsamt.api.colormaps`.
+
+Desktop installers |Build|
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The desktop suite now installs without a Python environment: a Windows
+setup ``.exe`` (Inno Setup, ``packaging/inno/build_installer.ps1``) and a
+self-extracting Linux ``.sh`` (``packaging/linux/build_installer.sh``,
+which also takes ``--uninstall``). Both are built from
+``packaging/pyinstaller/pycsamt_desktop.spec``, which bundles the package
+data the frozen app reads at run time, such as the EPSG table, logging
+configuration, borehole templates and solver sources. See
+:doc:`/applications/desktop/installation`.
+
+Agent Master |Feature|
+~~~~~~~~~~~~~~~~~~~~~~
+
+Agent Master now keeps the context of a conversation across turns (see
+:doc:`/applications/agent_master/conversation_context`), hands a task to
+the desktop suite and back, checks a run's preconditions before executing
+it, and can cancel a request in progress. The assistant has an answer
+benchmark (``pycsamt/assistant/evals/``) that can run generated scripts
+against fixtures inside a Docker image (recipe in
+``packaging/agent-fixture/``); :doc:`/applications/agent_master/evaluation`
+describes it.
+
+More bug fixes |Fix|
+~~~~~~~~~~~~~~~~~~~~
+
+A coverage pass over 95 files that were below 85 % found these:
+
+* ``pycsamt convert`` on ``.avg`` files imported a class that does not
+  exist, and on J files wrote an EDI with ``DATAID='UNKNOWN'`` and no
+  frequencies; both silently failed. ``pycsamt transform j`` raised
+  ``TypeError`` on every single-file or directory conversion. All three now
+  go through the working ``AVGtoEDI``/``JtoEDI`` transformers.
+* ``pycsamt invert results`` read Occam2D's RMS from the wrong attribute and
+  returned only nulls for ModEM; ``pycsamt config set agent.model`` did
+  nothing; the ModEM backend passed unrelated config fields to the input
+  builder and failed as "ModEM preparation failed".
+* Frequency regridding filled values outside a station's measured band, and
+  ``decimate_step`` emptied every station by misaligning ``z``, ``z_err``
+  and ``freq``. The pipeline's ``full_processing`` also wiped the data.
+* MARE2DEM ``merge`` deduplicated receiver names and positions separately,
+  so merged ``.emdata`` files could pair stations with the wrong names.
+* The TensorFlow PINN fit averaged with ``mean`` rather than ``nanmean``, so
+  one missing frequency turned a whole station's fit into NaN;
+  ``EMImputer`` and the joint inverter failed to reload after saving.
+* Plot fixes: ``plot_confidence_profile`` no longer zig-zags across line
+  boundaries, the ZTEM map draws collinear stations, TDEM depth sections
+  lose their slivers, and a single-line fence volume keeps its width.
 
 EDI parsing fixes |Fix|
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,4 +245,6 @@ commands, ``pycsamt airborne``, and the now-public
 private module its Click wrapper delegated to changed location. The two
 EDI fixes change *values* written by a previously-broken path (a real
 uncertainty instead of zero, a parsed ``None`` instead of a crash) but no
-function signatures.
+function signatures. Frequency regridding now returns NaN outside a
+station's measured band where it used to extrapolate; code that relied on
+those extrapolated values should trim or mask first.

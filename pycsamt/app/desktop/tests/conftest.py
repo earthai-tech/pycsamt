@@ -53,14 +53,23 @@ def _terminate_after_qt() -> None:
         os._exit(_exit_status)
 
 
-@pytest.hookimpl(trylast=True)
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     global _exit_status
     _exit_status = int(exitstatus)
     # Conftest plugins may be unregistered before pytest_unconfigure, so that
     # hook is not reliable on every pytest/Python combination. Sessionfinish
-    # is guaranteed while this plugin is active; ``trylast`` lets coverage and
-    # terminal reporters persist their results first.
+    # is guaranteed while this plugin is active.
+    #
+    # The exit must come after *every* other sessionfinish implementation,
+    # wrappers included: an xdist worker reports ``workerfinished`` to the
+    # controller only after its own hookwrapper's ``yield``. Exiting from a
+    # plain (even ``trylast``) impl kills the worker before that message, so
+    # each worker that ran out of work mid-run showed up as "node down: Not
+    # properly terminated" and xdist's restart then crashed the scheduler
+    # (``KeyError: <WorkerController gwN>``). A ``tryfirst`` hookwrapper is
+    # the outermost layer, so its post-``yield`` code runs last.
+    yield
     _terminate_after_qt()
 
 

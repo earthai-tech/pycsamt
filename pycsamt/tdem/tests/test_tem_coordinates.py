@@ -198,6 +198,8 @@ def test_read_tem_coordinates_tsv(tmp_path):
 
 def test_read_tem_coordinates_real_xls_sample():
     pytest.importorskip("pandas")
+    if not XLS_FILE.exists():
+        pytest.skip(f"coordinate table not bundled: {XLS_FILE}")
     try:
         table = read_tem_coordinates(XLS_FILE)
     except ImportError:

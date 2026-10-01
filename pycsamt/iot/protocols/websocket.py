@@ -47,12 +47,14 @@ class WebSocketTelemetryClient(BaseTelemetryClient):
         super().__init__(endpoint, dry_run=dry_run, timeout=timeout, **options)
 
     def _connect(self) -> None:
-        websocket = _import_websocket()
+        # Validate the endpoint before the optional import, so a bad URL is
+        # reported as such even where websocket-client is not installed.
         url = self._require_endpoint()
         if not str(url).lower().startswith(("ws://", "wss://")):
             raise TelemetryError(
                 f"WebSocket endpoint must start with ws:// or wss:// (got {url!r})."
             )
+        websocket = _import_websocket()
         self._handle = websocket.create_connection(
             url, timeout=float(self.options.get("timeout", 10.0))
         )

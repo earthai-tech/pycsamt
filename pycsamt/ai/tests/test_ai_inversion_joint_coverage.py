@@ -138,9 +138,21 @@ class TestJointInverterFitPredictTorch(unittest.TestCase):
 
     def test_verbose_progress_and_early_stopping_prints(self):
         inv = self._new()
-        # lr=0 freezes the network -> val loss is bit-identical every
-        # epoch after the first, guaranteeing no_improve reaches
-        # patience=1 deterministically (real early-stopping branch).
+        # lr=0 freezes the weights, but BatchNorm running statistics still
+        # move on every train() pass, so the val loss can keep creeping
+        # down. Momentum 0 freezes those too -> val loss is identical every
+        # epoch, guaranteeing no_improve reaches patience=1 (real
+        # early-stopping branch).
+        build = inv._build_network
+
+        def _frozen_build():
+            net = build()
+            for m in getattr(net, "modules", lambda: [])():
+                if type(m).__name__.startswith("BatchNorm"):
+                    m.momentum = 0.0
+            return net
+
+        inv._build_network = _frozen_build
         inv.fit(
             self.X_list,
             self.y,

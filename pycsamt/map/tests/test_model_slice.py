@@ -15,7 +15,8 @@ BH = ROOT / "data" / "MT" / "broken-hill" / "final-models"
 
 @pytest.fixture(scope="module")
 def bh_model(tmp_path_factory):
-    if not BH.is_dir():
+    # Only the .dat/.res files are tracked; the ~11 MB .rho model is not.
+    if not BH.is_dir() or not list(BH.glob("*.rho")):
         pytest.skip("Broken Hill ModEM result not present")
     from pycsamt.format import convert_engine as ce
     from pycsamt.format.text import read_pcsf_or_pcsm

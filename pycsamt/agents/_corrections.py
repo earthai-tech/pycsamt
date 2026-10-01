@@ -382,6 +382,24 @@ CORRECTION_METHODS: dict[str, dict] = {
             "remove near field",
         ],
     },
+    # ── Distortion ───────────────────────────────────────────────────────────
+    "corr_groom_bailey": {
+        "fn": "_wrap_groom_bailey",
+        "category": "Distortion",
+        "label": "Groom-Bailey decomposition",
+        "title": "Distortion — Groom-Bailey decomposition",
+        "icon": "bi-bounding-box",
+        "running_label": "Groom-Bailey distortion removal",
+        "description": "Remove galvanic distortion (Groom-Bailey gain/twist/shear)",
+        "keywords": [
+            "groom bailey",
+            "groom-bailey",
+            "groom bailey decomposition",
+            "remove galvanic distortion",
+            "galvanic distortion removal",
+            "twist and shear",
+        ],
+    },
     # ── Stratagem EDI-native pipeline (Wave E) ───────────────────────────────
     "corr_strat_qc": {
         "fn": "_strat_qc",

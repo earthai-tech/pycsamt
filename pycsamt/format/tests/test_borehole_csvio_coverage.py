@@ -22,6 +22,19 @@ def _write(tmp_path, name, text):
     return path
 
 
+def _report(source, **kwargs):
+    """Import report whether or not any borehole survived.
+
+    With ``strict=False`` an import whose every row is bad still raises
+    (``csv.no_valid_rows``); the row-level diagnostics are on the report
+    either way.
+    """
+    try:
+        return boreholes_from_csv(source, **kwargs)[1]
+    except PCBHCSVImportError as error:
+        return error.report
+
+
 # --------------------------------------------------------------------- #
 # top-level input validation
 # --------------------------------------------------------------------- #
@@ -90,7 +103,8 @@ class TestInputValidation:
         assert caught.value.report.errors[0].code == "csv.empty"
 
     def test_header_too_short_or_blank_cell(self, tmp_path):
-        source = _write(tmp_path, "short_header.csv", "onlyone\n1\n")
+        # Blank second header cell (a one-column file cannot be sniffed).
+        source = _write(tmp_path, "short_header.csv", "onlyone,\n1,2\n")
         with pytest.raises(PCBHCSVImportError) as caught:
             boreholes_from_csv(source)
         codes = {i.code for i in caught.value.report.errors}
@@ -134,7 +148,8 @@ class TestRowHandling:
             "borehole_id,x,y,z,crs,from_md,to_md,lithology\n"
             "B1,1,2,3,EPSG:32629,0,10\n",  # missing lithology cell
         )
-        document, report = boreholes_from_csv(source, strict=False)
+        # Ragged rows defeat the sniffer, so name the delimiter.
+        report = _report(source, strict=False, delimiter=",")
         assert report.rows_rejected == 1
         assert any(i.code == "csv.row_width" for i in report.errors)
 
@@ -277,7 +292,7 @@ class TestParseRowFieldErrors:
             ",1,2,3,EPSG:32629,0,10,Sand\n"
             "  ,1,2,3,EPSG:32629,0,10,Sand\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         codes = [i.code for i in report.errors]
         assert codes.count("csv.missing_id") == 2
 
@@ -289,7 +304,7 @@ class TestParseRowFieldErrors:
             "B1,1,2,3,EPSG:32629,0,10,\n"
             "B2,1,2,3,EPSG:32629,0,10,  \n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         codes = [i.code for i in report.errors]
         assert codes.count("csv.missing_lithology") == 2
 
@@ -301,7 +316,7 @@ class TestParseRowFieldErrors:
             "B1,1,2,3,,0,10,Sand\n"
             "B2,1,2,3,  ,0,10,Clay\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         codes = [i.code for i in report.errors]
         assert codes.count("csv.missing_crs") == 2
 
@@ -313,7 +328,7 @@ class TestParseRowFieldErrors:
             "B1,1,2,3,EPSG:32629,-1,10,Sand\n"
             "B2,1,2,3,EPSG:32629,10,10,Clay\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         assert sum(
             i.code == "csv.interval_bounds" for i in report.errors
         ) == 2
@@ -325,7 +340,7 @@ class TestParseRowFieldErrors:
             "borehole_id,x,y,z,crs,from_md,to_md,lithology,resistivity\n"
             "B1,1,2,3,EPSG:32629,0,10,Sand,0\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         assert any(i.code == "csv.resistivity" for i in report.errors)
 
     def test_total_depth_must_be_positive(self, tmp_path):
@@ -335,7 +350,7 @@ class TestParseRowFieldErrors:
             "borehole_id,x,y,z,crs,total_depth_md,from_md,to_md,lithology\n"
             "B1,1,2,3,EPSG:32629,0,0,10,Sand\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         assert any(i.code == "csv.total_depth" for i in report.errors)
 
     def test_unsupported_borehole_kind_and_status(self, tmp_path):
@@ -346,7 +361,7 @@ class TestParseRowFieldErrors:
             "B1,1,2,3,EPSG:32629,not_a_kind,unknown,0,10,Sand\n"
             "B2,1,2,3,EPSG:32629,water,not_a_status,0,10,Clay\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         codes = {i.code for i in report.errors}
         assert "csv.borehole_kind" in codes
         assert "csv.borehole_status" in codes
@@ -389,7 +404,7 @@ class TestParseRowFieldErrors:
             "borehole_id,x,y,z,crs,from_md,to_md,lithology,resistivity\n"
             "B1,1,2,3,EPSG:32629,0,10,Sand,True\n",
         )
-        _, report = boreholes_from_csv(
+        report = _report(
             source,
             constants={"interval.resistivity_ohm_m": True},
             strict=False,
@@ -403,7 +418,7 @@ class TestParseRowFieldErrors:
             "borehole_id,x,y,z,crs,from_md,to_md,lithology\n"
             "B1,inf,2,3,EPSG:32629,0,10,Sand\n",
         )
-        _, report = boreholes_from_csv(source, strict=False)
+        report = _report(source, strict=False)
         assert any(i.code == "csv.invalid_number" for i in report.errors)
 
 

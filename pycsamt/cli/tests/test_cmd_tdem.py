@@ -34,6 +34,13 @@ def _has_temavg() -> bool:
     return _TEMAVG_DIR.exists() and bool(list(_TEMAVG_DIR.glob("*.AVG")))
 
 
+def _skip_without_coordinates() -> None:
+    # Map-based kinds need the station coordinate table, which is not
+    # redistributed (gitignored) -- only the AVG soundings are bundled.
+    if not list(_TEMAVG_DIR.glob("Coordinate*")):
+        pytest.skip("JIANGSU coordinate table not bundled")
+
+
 # ---------------------------------------------------------------------------
 # pycsamt tdem  (group help)
 # ---------------------------------------------------------------------------
@@ -292,6 +299,8 @@ class TestTdemPlot:
     def test_plot_saves_file_more_kinds(
         self, runner: CliRunner, tmp_path: Path, kind: str
     ) -> None:
+        if kind == "overview":
+            _skip_without_coordinates()
         result = runner.invoke(
             main,
             [
@@ -342,6 +351,7 @@ class TestTdemPlot:
     def test_missing_stems_warns_but_continues(
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
+        _skip_without_coordinates()
         result = runner.invoke(
             main,
             [

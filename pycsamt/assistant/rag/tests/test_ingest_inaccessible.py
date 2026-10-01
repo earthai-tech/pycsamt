@@ -1,6 +1,7 @@
 # Author: LKouadio <etanoyau@gmail.com>
 # License: LGPL-3.0
 """Unsupported or inaccessible files must not break index freshness."""
+import logging
 from pathlib import Path
 
 from pycsamt.assistant.rag.ingest import iter_index_files, source_fingerprint
@@ -42,6 +43,17 @@ def test_filters_before_stat_and_reports_unreadable_sources(tmp_path, monkeypatc
         return original(path)
 
     monkeypatch.setattr(Path, "is_file", is_file)
+    # The packaged logging config sets ``propagate: no`` on the ``pycsamt``
+    # logger, so once another test has loaded it the warning never reaches
+    # caplog's root handler -- attach the handler to the logger directly.
+    ingest_logger = logging.getLogger("pycsamt.assistant.rag.ingest")
+    ingest_logger.addHandler(caplog.handler)
+    monkeypatch.setattr(ingest_logger, "disabled", False)
+    caplog.set_level(logging.WARNING, logger=ingest_logger.name)
+    try:
+        assert list(iter_index_files(tmp_path)) == [good]
+    finally:
+        ingest_logger.removeHandler(caplog.handler)
     assert list(iter_index_files(tmp_path)) == [good]
     assert source_fingerprint(tmp_path) == source_fingerprint(tmp_path, files=[good])
     assert "unreadable.py" in caplog.text

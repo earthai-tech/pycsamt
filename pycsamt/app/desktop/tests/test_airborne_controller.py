@@ -136,9 +136,8 @@ class TestGenerateNoData:
 
 @pytest.mark.skipif(not _HAS_ZTEM, reason="ZTEM sample data not available")
 class TestGenerateZtemSweep:
-    @classmethod
     @pytest.fixture(scope="class")
-    def ctrl(cls):
+    def ctrl(self):
         c = AirborneController()
         c.load(str(_ZTEM_DIR))
         return c
@@ -160,9 +159,8 @@ class TestGenerateZtemSweep:
 
 @pytest.mark.skipif(not _HAS_AFMAG, reason="AFMAG sample data not available")
 class TestGenerateAfmagSweep:
-    @classmethod
     @pytest.fixture(scope="class")
-    def ctrl(cls):
+    def ctrl(self):
         c = AirborneController()
         c.load(str(_AFMAG_DIR))
         return c
@@ -184,9 +182,8 @@ class TestGenerateAfmagSweep:
 
 @pytest.mark.skipif(not _HAS_MOBILEMT, reason="MobileMT sample data not available")
 class TestGenerateMobileMtSweep:
-    @classmethod
     @pytest.fixture(scope="class")
-    def ctrl(cls):
+    def ctrl(self):
         c = AirborneController()
         c.load(str(_MOBILEMT_DIR))
         return c

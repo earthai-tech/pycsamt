@@ -7,7 +7,7 @@ Version 2.6.4
 pyCSAMT 2.6.4 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Released 2026-10-01.*
+*Released 2026-10-02.*
 
 pyCSAMT 2.6.4 adds two new command-line surfaces and a standalone
 format-conversion app, rebuilds most of the desktop suite as studios with
@@ -167,6 +167,16 @@ A coverage pass over 95 files that were below 85 % found these:
 * Plot fixes: ``plot_confidence_profile`` no longer zig-zags across line
   boundaries, the ZTEM map draws collinear stations, TDEM depth sections
   lose their slivers, and a single-line fence volume keeps its width.
+* In the installed desktop app, Occam1D could neither build its inputs nor
+  run: the app has no console, so ``sys.stdout`` is ``None`` and Occam1D
+  stopped with "stream must provide a callable write method". It now writes
+  its progress to a silent sink. The 3-D window also no longer starts a web
+  engine until it is first shown, which saves memory at start-up.
+* AVG files written by older pyCSAMT exports (header ``skpStation`` with no
+  space) were rejected as "Unrecognised AVG header"; they now load.
+* An empty borehole CSV reported "could not detect CSV delimiter" instead
+  of "CSV file is empty", and the trial's "days remaining" was one day short
+  (a new 30-day trial showed 29).
 
 EDI parsing fixes |Fix|
 ~~~~~~~~~~~~~~~~~~~~~~~~

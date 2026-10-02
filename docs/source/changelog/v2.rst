@@ -15,7 +15,7 @@ each release.
 2.6.4 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
 ----------------------------------------------------------
 
-*Released 2026-10-01.*
+*Released 2026-10-02.*
 
 A new-surfaces release. **pyCSAMT Format Studio**
 (:mod:`pycsamt.app.converter`) is a new standalone, freezable app
@@ -140,6 +140,15 @@ Fixed
 * |Fix| AI: PINN TF station fits used ``mean`` instead of ``nanmean`` (one
   missing frequency made the whole fit NaN); ``EMImputer`` and the joint
   inverter failed save/load round trips.
+* |Fix| Occam1D failed in the installed desktop app ("stream must provide a
+  callable write method"): a windowed build has no ``sys.stdout``. It now
+  falls back to a silent stream, and the frozen entry point gives
+  ``stdout``/``stderr`` a sink.
+* |Fix| Kind-1 AVG files with a ``skpStation`` header (older pyCSAMT exports)
+  were rejected as unrecognised; an empty borehole CSV now reports
+  ``csv.empty``; the trial's days remaining rounds part-days up.
+* |Enhancement| The PCSF 3-D view creates its web engine on first show, not
+  at desktop start-up.
 * |Fix| Smaller fixes: ``ensure_head_coords`` returned a stale head on its
   fallback path; ``_dedup_freq``'s list and NumPy paths disagreed below 1 Hz;
   ``Config.writers()`` broke on pandas without ``DataFrame.to_gbq``;

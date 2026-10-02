@@ -224,11 +224,13 @@ def _stub_mpl_qt_toolbar():
     same 3.9-only fragility that the terminal matplotlib 3.9.x line shows
     elsewhere; Python >=3.10 pulls matplotlib >=3.10 and is unaffected.
 
-    The toolbar is a pure matplotlib convenience widget carrying no pycsamt
-    logic, and no test asserts on it, so swapping it for a ``QWidget`` that
-    satisfies the little the widget touches (``.canvas`` attribute,
-    ``sizeHint()``, ``update()``) removes the crash without losing meaningful
-    coverage. ``MplCanvas`` resolves the class lazily via ``_qt_mpl_classes``
+    The stub is a plain ``QToolBar`` (with the ``.canvas`` attribute
+    matplotlib's toolbar carries): it skips matplotlib's own navigation
+    buttons and icon loading -- where the crash happens -- but still
+    satisfies ``MplCanvas._build_toolbar``'s ``setIconSize`` check, so
+    pycsamt's own actions (Export, "Open in separate plot window") and the
+    toolbar-height layout logic are still exercised. A bare ``QWidget`` stub
+    skipped those, failing the detach/overlay tests on 3.9 only. ``MplCanvas`` resolves the class lazily via ``_qt_mpl_classes``
     (``from matplotlib.backends.backend_qtagg import NavigationToolbar2QT``),
     so patching the name on that module is enough.
 
@@ -241,12 +243,12 @@ def _stub_mpl_qt_toolbar():
         return
     try:
         from matplotlib.backends import backend_qtagg
-        from PySide6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QToolBar
     except Exception:
         yield
         return
 
-    class _StubNavigationToolbar(QWidget):
+    class _StubNavigationToolbar(QToolBar):
         def __init__(self, canvas, parent=None):
             super().__init__(parent)
             self.canvas = canvas

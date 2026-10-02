@@ -22,6 +22,7 @@ Examples
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
@@ -67,19 +68,30 @@ def iter_index_files(root: Path) -> Iterator[Path]:
     root = Path(root)
     for name in ROOT_DOCS:
         path = root / name
-        if path.is_file() and should_index(name):
-            yield path
+        if should_index(name):
+            try:
+                if path.is_file():
+                    yield path
+            except OSError as exc:
+                logging.getLogger(__name__).warning(
+                    "Cannot inspect %s: %s", path, exc
+                )
     for index_root in INDEX_ROOTS:
         base = root / index_root
         if not base.is_dir():
             continue
         for path in base.rglob("*"):
-            if not path.is_file():
+            # Filter before stat: unsupported vendor files can be broken
+            # symlinks or inaccessible Windows reparse points.
+            if not should_index(path.relative_to(root).as_posix()):
                 continue
-            if path.suffix.lower() not in (".py", ".rst", ".md"):
-                continue
-            if should_index(path.relative_to(root).as_posix()):
-                yield path
+            try:
+                if path.is_file():
+                    yield path
+            except OSError as exc:
+                logging.getLogger(__name__).warning(
+                    "Cannot inspect %s: %s", path, exc
+                )
 
 
 def build_chunks(

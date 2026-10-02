@@ -300,3 +300,40 @@ def test_masks_and_errors_stay_consistent_after_full_suite():
     if out.impedance_error is not None:
         assert np.all(out.impedance_error[out.valid] > 0)
     assert isinstance(record.to_dict()["config_hash"], str)
+
+
+def test_noise_sampling_default_keeps_config_hash_stable():
+    base = CorruptionConfig(noise_level_range=(0.01, 0.05))
+    assert "noise_sampling" not in base.to_dict()
+    logn = CorruptionConfig(noise_level_range=(0.01, 0.05), noise_sampling="lognormal")
+    assert logn.to_dict()["noise_sampling"] == "lognormal"
+    assert CorruptionConfig.from_dict(logn.to_dict()) == logn
+    assert logn.config_hash() != base.config_hash()
+
+
+def test_noise_sampling_rejects_unknown_name():
+    with pytest.raises(ValueError, match="noise_sampling"):
+        CorruptionConfig(noise_sampling="gamma")
+
+
+@pytest.mark.parametrize("sampling", ["loguniform", "lognormal"])
+def test_log_scale_noise_levels_match_quartiles(sampling):
+    from pycsamt.ai.domain_gap.simulator import _sample_noise_level
+
+    lo, hi = 0.001, 0.02
+    draw = _sample_noise_level(lo, hi, sampling, np.random.default_rng(0), size=(200_000,))
+    assert draw.min() > 0.0
+    median = np.median(draw)
+    assert np.isclose(median, np.sqrt(lo * hi), rtol=0.05)
+    if sampling == "lognormal":
+        q25, q75 = np.percentile(draw, [25, 75])
+        assert np.isclose(q25, lo, rtol=0.05) and np.isclose(q75, hi, rtol=0.05)
+    else:
+        assert draw.min() >= lo and draw.max() <= hi
+
+
+def test_log_scale_noise_needs_positive_lower_bound():
+    from pycsamt.ai.domain_gap.simulator import _sample_noise_level
+
+    with pytest.raises(ValueError, match="strictly positive"):
+        _sample_noise_level(0.0, 0.02, "lognormal", np.random.default_rng(0), size=(3,))

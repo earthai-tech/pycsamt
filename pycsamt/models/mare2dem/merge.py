@@ -129,16 +129,25 @@ def _merge_mt(
     mt_data[:, 1] = ifreq_map[mt_data[:, 1].astype(int) - 1]
 
     # merge receivers
+    n_out_rx = len(out.mt.receivers)
     rx_combined, irx_map = _merge_arrays(out.mt.receivers, src.mt.receivers)
     out.mt.receivers = rx_combined
     mt_data[:, 3] = irx_map[mt_data[:, 3].astype(int) - 1]
     mt_data[:, 2] = irx_map[mt_data[:, 2].astype(int) - 1]  # Tx#==H-rx# for MT
 
-    # merge receiver names
-    names_combined, _ = _merge_lists(
-        out.mt.receiver_name, src.mt.receiver_name
-    )
-    out.mt.receiver_name = names_combined
+    # merge receiver names, mirroring the position-based dedup above (new
+    # rows are appended to rx_combined in the exact order they are first
+    # encountered while scanning src.mt.receivers -- see _merge_arrays)
+    # rather than deduplicating names independently by string equality,
+    # which can desync receiver_name from receivers in length and order
+    # -- write_emdata indexes receiver_name[i] positionally against
+    # receivers[i].
+    new_names = [
+        name
+        for name, mapped in zip(src.mt.receiver_name, irx_map)
+        if mapped > n_out_rx
+    ]
+    out.mt.receiver_name = list(out.mt.receiver_name) + new_names
 
     out.data = np.vstack([out.data, mt_data]) if len(out.data) else mt_data
     return out
@@ -189,6 +198,7 @@ def _merge_csem(
 
     tx_a = _tx_with_type(out.csem)
     tx_b = _tx_with_type(src.csem)
+    n_out_tx = len(tx_a)
     tx_combined, itx_map = _merge_arrays(tx_a, tx_b)
 
     # restore type list from flag column
@@ -196,10 +206,16 @@ def _merge_csem(
     out.csem.transmitter_type = [
         "edipole" if f > 0.5 else "bdipole" for f in tx_combined[:, -1]
     ]
-    names_combined_tx, _ = _merge_lists(
-        out.csem.transmitter_name, src.csem.transmitter_name
-    )
-    out.csem.transmitter_name = names_combined_tx
+    # See the matching comment in _merge_mt: mirror the position-based
+    # dedup's own order/selection instead of deduplicating names
+    # independently, which can desync transmitter_name from
+    # transmitters.
+    new_tx_names = [
+        name
+        for name, mapped in zip(src.csem.transmitter_name, itx_map)
+        if mapped > n_out_tx
+    ]
+    out.csem.transmitter_name = list(out.csem.transmitter_name) + new_tx_names
     csem_data[:, 2] = itx_map[csem_data[:, 2].astype(int) - 1]
 
     # receivers
@@ -218,14 +234,17 @@ def _merge_csem(
         )
         csem_data[:, 3] = irx_map[csem_data[:, 3].astype(int) - 1]
     else:
+        n_out_rx = len(out.csem.receivers)
         rx_combined, irx_map = _merge_arrays(
             out.csem.receivers, src.csem.receivers
         )
         out.csem.receivers = rx_combined
-        names_combined_rx, _ = _merge_lists(
-            out.csem.receiver_name, src.csem.receiver_name
-        )
-        out.csem.receiver_name = names_combined_rx
+        new_rx_names = [
+            name
+            for name, mapped in zip(src.csem.receiver_name, irx_map)
+            if mapped > n_out_rx
+        ]
+        out.csem.receiver_name = list(out.csem.receiver_name) + new_rx_names
         csem_data[:, 3] = irx_map[csem_data[:, 3].astype(int) - 1]
 
     out.data = np.vstack([out.data, csem_data]) if len(out.data) else csem_data

@@ -2609,6 +2609,56 @@ def ss_qc_profile(
     return (ax, S1) if return_sites else ax
 
 
+def ss_logrho_arrays(
+    before: Any, after: Any
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+    """Station x frequency ``log10 rho_det`` arrays for a before/after pair.
+
+    Builds exactly the inputs :func:`plot_ss_comparison_psection` and
+    :func:`plot_ss_summary` expect from two ``Sites``-like collections
+    (the uncorrected and corrected survey), on the union of frequencies.
+
+    Returns
+    -------
+    logRho_before, logRho_after : ndarray, shape (n_station, n_freq)
+    freqs : ndarray, shape (n_freq,)
+    labels : list of str
+        Station names, in the order of *before*.
+    """
+    items0 = list(_iter_items(before))
+    items1 = list(_iter_items(after))
+    labels = [_name(e, k) for k, e in enumerate(items0)]
+    n_st = len(labels)
+
+    all_f: set = set()
+    rho0_map: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    rho1_map: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for k, (e0, e1) in enumerate(zip(items0, items1)):
+        _, z0, fr0 = _get_z_block(e0)
+        _, z1, fr1 = _get_z_block(e1)
+        if z0 is None or z1 is None:
+            continue
+        st = labels[k]
+        rho0_map[st] = (_rho_det_from_z(z0, fr0), fr0)
+        rho1_map[st] = (_rho_det_from_z(z1, fr1), fr1)
+        all_f.update(fr0.tolist())
+
+    freqs_union = np.array(sorted(all_f))
+    n_f = freqs_union.size
+    logRho_b = np.full((n_st, n_f), np.nan)
+    logRho_a = np.full((n_st, n_f), np.nan)
+    for k, st in enumerate(labels):
+        if st not in rho0_map:
+            continue
+        rho0, fr0 = rho0_map[st]
+        rho1, fr1 = rho1_map[st]
+        j0 = _nearest_idx(freqs_union, fr0)
+        j1 = _nearest_idx(freqs_union, fr1)
+        logRho_b[k, j0] = np.log10(np.maximum(rho0, 1e-24))
+        logRho_a[k, j1] = np.log10(np.maximum(rho1, 1e-24))
+    return logRho_b, logRho_a, freqs_union, labels
+
+
 def ss_comparison_psection(
     sites: Any,
     *,
@@ -2661,28 +2711,9 @@ def ss_comparison_psection(
     S0 = ensure_sites(sites, recursive=True, strict=False, verbose=verbose)
     S1 = _correct_sites(S0, method, **corr)
 
-    items0 = list(_iter_items(S0))
-    items1 = list(_iter_items(S1))
+    logRho_b, logRho_a, freqs_union, labels = ss_logrho_arrays(S0, S1)
 
-    labels = [_name(e, k) for k, e in enumerate(items0)]
-    n_st = len(labels)
-
-    # collect rho_det arrays from each site pair
-    all_f: set = set()
-    rho0_map: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    rho1_map: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-
-    for k, (e0, e1) in enumerate(zip(items0, items1)):
-        _, z0, fr0 = _get_z_block(e0)
-        _, z1, fr1 = _get_z_block(e1)
-        if z0 is None:
-            continue
-        st = labels[k]
-        rho0_map[st] = (_rho_det_from_z(z0, fr0), fr0)
-        rho1_map[st] = (_rho_det_from_z(z1, fr1), fr1)
-        all_f.update(fr0.tolist())
-
-    if not all_f:
+    if not freqs_union.size:
         fig, ax = plt.subplots(figsize=(8, 3))
         ax.text(
             0.5,
@@ -2692,21 +2723,6 @@ def ss_comparison_psection(
             va="center",
         )
         return (fig, S1) if return_sites else fig
-
-    freqs_union = np.array(sorted(all_f))
-    n_f = freqs_union.size
-    logRho_b = np.full((n_st, n_f), np.nan)
-    logRho_a = np.full((n_st, n_f), np.nan)
-
-    for k, st in enumerate(labels):
-        if st not in rho0_map:
-            continue
-        rho0, fr0 = rho0_map[st]
-        rho1, fr1 = rho1_map[st]
-        j0 = _nearest_idx(freqs_union, fr0)
-        j1 = _nearest_idx(freqs_union, fr1)
-        logRho_b[k, j0] = np.log10(np.maximum(rho0, 1e-24))
-        logRho_a[k, j1] = np.log10(np.maximum(rho1, 1e-24))
 
     fig = plot_ss_comparison_psection(
         logRho_b,

@@ -194,7 +194,7 @@ class AgentCoordinator:
             agent = step.agent
             llm_str = (
                 f"{agent.llm_provider}/{agent.model}"
-                if agent.api_key
+                if agent.llm_available
                 else "no-LLM"
             )
             req_str = "" if step.required else " [optional]"
@@ -266,6 +266,9 @@ class AgentCoordinator:
         )
 
         for step in self._steps:
+            from ._request import checkpoint
+
+            checkpoint()
             # ── resume: skip completed checkpoints ───────────────────────────
             ckpt_path = self._ckpt_dir / f"{step.name}.pkl"
             if resume and ckpt_path.exists():
@@ -297,6 +300,7 @@ class AgentCoordinator:
             # ── run agent ────────────────────────────────────────────────────
             self._print(f"  ▶  [{step.name}] {step.description}")
             try:
+                checkpoint()
                 result = step.agent.execute(step_input)
             except Exception as exc:
                 result = AgentResult.failed(
@@ -305,6 +309,7 @@ class AgentCoordinator:
                     elapsed=0.0,
                 )
 
+            checkpoint()
             results[step.name] = result
             total_cost += result.cost_estimate_usd
             all_warnings += result.warnings

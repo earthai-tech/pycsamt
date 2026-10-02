@@ -10,6 +10,222 @@ each release.
 
 ----
 
+.. _changelog-2-6-4:
+
+2.6.4 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
+----------------------------------------------------------
+
+*Released 2026-10-02.*
+
+A new-surfaces release. **pyCSAMT Format Studio**
+(:mod:`pycsamt.app.converter`) is a new standalone, freezable app
+dedicated to file-format conversion, backed by six new ``pycsamt format``
+CLI sub-commands and a newly public :mod:`pycsamt.format.convert_engine`.
+A second new CLI group, ``pycsamt airborne``, adds ``info``/``diagnose``
+for ZTEM/MobileMT/AFMAG datasets. The **desktop suite** gains five
+rebuilt studios (Inversion, Interpretation, QC, Airborne, TDEM), a new
+**Edit menu** with undo history and station/point/frequency editors, and
+a PCSF 3-D view that hands its scene over to Map View; it now ships as a
+Windows setup ``.exe`` and a self-extracting Linux ``.sh`` installer.
+**Agent Master** carries conversation context across turns, hands work
+to and from the desktop, checks run preconditions, can cancel a request,
+and has an answer benchmark with Docker-backed script execution. More
+than twenty real bugs are fixed, including two EDI parsing bugs, silently
+broken ``pycsamt convert``/``transform j``/``invert results`` paths, and
+frequency regridding that invented values outside a station's band.
+
+Added
+~~~~~
+
+* |Feature| **``pycsamt airborne``** -- a new CLI command group for airborne EM
+  datasets (ZTEM, MobileMT, AFMAG/AirMt): ``info`` (dataset or single-site
+  summary) and ``diagnose`` (auto-detects the technology and builds its
+  canonical diagnostic table -- ZTEM total-divergence, MobileMT admittance,
+  or AFMAG/AirMt tilt). Operates on already-decoded EMTF-XML files or
+  directories of them via :func:`pycsamt.airborne.site.ensure_asites`; pyCSAMT
+  still has no raw-vendor-file reader for airborne systems.
+* |Feature| **pyCSAMT Format Studio** (:mod:`pycsamt.app.converter`) -- a new, small,
+  freezable PySide6 application dedicated entirely to file-format conversion,
+  with no survey-loading or processing features. Nine tools: Inversion
+  (Occam2D/ModEM 3-D/MARE2DEM/AI array) to :term:`PCSF`/:term:`PCSM`,
+  PCSF ⇄ PCSM transcoding/validation/info, EDI ⇄ EMTF-XML, PCBH/PCGL/PCGS/PCPT
+  document builders, a mixed batch queue, and persisted defaults. Launch with
+  ``pycsamt-converter`` / ``python -m pycsamt.app.converter``, or build a
+  standalone double-click binary with the new
+  ``packaging/pyinstaller/pycsamt_converter.spec``. Every page is a thin
+  widget around a plain, Qt-free function in :mod:`pycsamt.app.converter.jobs` that reuses exactly the same
+  engine as the ``pycsamt format`` CLI.
+* |Feature| **Six new** ``pycsamt format`` **sub-commands**: ``build-pcbh`` (CSV /
+  relational CSV directory / XLSX / LAS 2.0 log -> a PCBH borehole document),
+  ``build-pcgl`` (CSV of named resistivity units -> a PCGL geology legend),
+  ``build-pcgs`` (planar/linear measurement and fault-trace CSVs -> a PCGS
+  structural-evidence document), ``build-pcpt`` (CSV/XLSX of named points ->
+  a PCPT points-of-interest document), and ``edi-to-xml``/``xml-to-edi``
+  (lossless SEG EDI <-> EMTF-XML conversion, one file or a whole directory).
+  These are the CLI face of the same builder functions the new converter app
+  uses, and were previously only reachable from Python.
+* |Feature| **Desktop studios.** The Inversion
+  (``windows/inversion/``; Qt-free engines for Occam1D/2D, ModEM 2-D/3-D and
+  MARE2DEM with a streamed run console), Interpretation (``windows/interp/``;
+  any PCSF/PCSM file or inversion run folder, Geology/Structure/Hydrology/
+  Monitoring/Uncertainty/Diagnostics tabs, pinned-figure library), QC (line
+  scope, panel grid, pass/warn/fail summary), Airborne and TDEM windows are
+  rebuilt as studios, and the Advanced Tools studio builds each plot's options
+  from its signature.
+* |Feature| **Edit menu** in the desktop suite: Undo / Redo / History / Revert
+  over every survey change, Save Edited Survey (EDI or EMTF-XML), Find
+  Station, a Station Editor (coordinates with EPSG, Excel paste and CSV
+  import; rename; lines; EDI header metadata), a Point Editor (mask, delete,
+  interpolate, restore, static shift; edits logged to each station's EDI
+  INFO), and frequency/tensor tools (trim, regrid, decimate, align, dedupe,
+  fill gaps, rotate, rotate to strike) with a per-station preview.
+* |Feature| **PCSF 3-D view hand-off.** The PCSF 3-D window gets a compact
+  toolbar, a Controls panel, and topography read from the file (including
+  rasters); "Open in Map View" passes the whole scene to
+  ``pycsamt-mapview --state``. The desktop Map panel also draws PCSF/PCSM
+  depth and resistivity maps.
+* |Feature| **Agent Master**: conversation context carried across turns,
+  desktop ⇄ web hand-off, run preconditions checked before execution,
+  request cancellation, and an animated pyCSAMT logo while the agent works.
+* |Feature| **Answer benchmark** for the assistant
+  (``pycsamt/assistant/evals/answers.py``, ``runner.py`` and the
+  ``answer_suites/`` set), plus Docker-backed execution of generated scripts
+  against fixtures (:mod:`pycsamt.assistant.tools.fixture_execution`, image
+  recipe in ``packaging/agent-fixture/``).
+* |Feature| A shared colormap catalogue, :mod:`pycsamt.api.colormaps`, used by
+  every desktop plot picker.
+
+Fixed
+~~~~~
+
+* |Fix| :class:`pycsamt.seg.heads.Head` now normalizes a field written as the
+  literal string ``"None"`` (e.g. ``DECLINATION=None``, as some EDI writers
+  stamp an unset value instead of omitting the key) to a real Python
+  ``None`` while parsing, matching how ``write()`` already treats that
+  string as equivalent to absent. Previously such a field reached its
+  setter as the string ``"None"`` and failed converting it to a number.
+* |Fix| EDI resistivity/phase-error blocks (``RHOxx.ERR``/``PHSxx.ERR``) written
+  from an :class:`~pycsamt.emtf.document.EMTF` document
+  (:func:`pycsamt.emtf.converters.edi.emtf_to_edi`/``write_edi``) came out as
+  a literal ``0.000000E+00`` for every frequency instead of the real,
+  error-propagated uncertainty -- misrepresenting "not computed" as "zero
+  uncertainty" -- because the impedance error array was attached to
+  :class:`pycsamt.z.Z`'s private ``_z_err`` after construction, bypassing the
+  resistivity/phase error propagation the public ``z_err`` setter triggers.
+  The converter now uses that public setter. Separately,
+  :mod:`pycsamt.seg.edi`'s writer now defaults a genuinely absent error to
+  NaN rather than zero, so any future case that still lacks one correctly
+  round-trips to the SEG-EDI ``1.000000E+32`` EMPTY sentinel instead of a
+  misleading exact zero.
+* |Fix| ``pycsamt convert`` on ``.avg`` and J files silently failed (a
+  nonexistent ``AVGFile`` import; J files produced an EDI with
+  ``DATAID='UNKNOWN'`` and no frequencies). Both now use the working
+  ``AVGtoEDI``/``JtoEDI`` transformers. ``pycsamt transform j`` raised
+  ``TypeError`` on every single-file or directory conversion.
+* |Fix| ``pycsamt invert results`` reported RMS as ``None`` for Occam2D and
+  every field as null for ModEM; ``pycsamt config set agent.model`` was a
+  silent no-op; the ModEM backend leaked config fields into
+  ``InputBuilder.build()`` and crashed as "ModEM preparation failed".
+* |Fix| :mod:`pycsamt.emtools.frequency`: regridding no longer invents values
+  outside a station's measured band (NaN instead), and ``decimate_step``
+  keeps ``z``/``z_err``/``freq`` aligned instead of emptying every station.
+* |Fix| The pipeline's ``full_processing`` no longer wipes the data
+  (descending-frequency interpolation, phase-tensor β threshold, NaN strike).
+* |Fix| ``plot_confidence_profile`` handles several lines (no zig-zag across
+  line boundaries); the ZTEM map draws collinear stations; TDEM depth
+  sections no longer show slivers; :mod:`pycsamt.map.volume` no longer
+  collapses a single-line fence to a zero-width box.
+* |Fix| MARE2DEM ``merge`` deduplicated receiver names separately from their
+  positions, corrupting station names in merged ``.emdata`` files.
+* |Fix| AI: PINN TF station fits used ``mean`` instead of ``nanmean`` (one
+  missing frequency made the whole fit NaN); ``EMImputer`` and the joint
+  inverter failed save/load round trips.
+* |Fix| Occam1D failed in the installed desktop app ("stream must provide a
+  callable write method"): a windowed build has no ``sys.stdout``. It now
+  falls back to a silent stream, and the frozen entry point gives
+  ``stdout``/``stderr`` a sink.
+* |Fix| Kind-1 AVG files with a ``skpStation`` header (older pyCSAMT exports)
+  were rejected as unrecognised; an empty borehole CSV now reports
+  ``csv.empty``; the trial's days remaining rounds part-days up.
+* |Enhancement| The PCSF 3-D view creates its web engine on first show, not
+  at desktop start-up.
+* |Fix| Smaller fixes: ``ensure_head_coords`` returned a stale head on its
+  fallback path; ``_dedup_freq``'s list and NumPy paths disagreed below 1 Hz;
+  ``Config.writers()`` broke on pandas without ``DataFrame.to_gbq``;
+  converter Browse buttons crashed on a second click; Map View borehole export
+  no-op'd on an empty draft; duplicate Dash ids in the Borehole Builder; dark
+  desktop menus showed black icons.
+
+Changed
+~~~~~~~
+
+* |Enhancement| **``pycsamt.format.convert_engine``** -- the "any source -> ``PCSFModel``"
+  dispatch engine behind ``pycsamt format convert`` (``detect``,
+  ``resolve_target``, ``build_model``, ``write_model``, ``model_report``) is
+  promoted from a private helper buried in
+  ``pycsamt.cli.commands.format._base`` into a public, UI-neutral module, so
+  the new converter app (and any other second consumer) can reuse it without
+  reaching into CLI internals. The CLI's own behaviour, options, and output
+  are unchanged.
+
+Docs & tooling
+~~~~~~~~~~~~~~
+
+* |Docs| Added :doc:`/cli/airborne`, documenting the new ``pycsamt airborne``
+  command group -- full option tables and real captured output from the
+  bundled ZTEM/MobileMT/AFMAG sample surveys, including the genuine
+  "N flight lines detected, pass ``--line``" error a multi-line ZTEM survey
+  raises without one.
+* |Docs| Added :doc:`/applications/converter`, a complete guide to the new
+  standalone converter app: install/launch, compiling a frozen build, the
+  window chrome, and every one of its nine tool pages with a real screenshot,
+  a field-by-field walkthrough, and the equivalent CLI command --
+  :doc:`/cli/format` is cross-referenced for ``convert``/``detect``/``info``/
+  ``validate``'s existing option reference rather than duplicating it, and
+  the six sub-commands documented nowhere else
+  (``edi-to-xml``/``xml-to-edi``/``build-pcbh``/``build-pcgl``/``build-pcgs``/
+  ``build-pcpt``) get full treatment with real captured output.
+  :doc:`/applications/index` and :doc:`/applications/overview` now count
+  five applications instead of four.
+* |Build| Every downloadable script under ``docs/scripts/`` (61 files) now starts
+  with the standard ``#!/usr/bin/env python`` / ``# Author:`` / ``# License:``
+  header used across the rest of the package, since each one is meant to be
+  downloaded and run standalone from a documentation page's code-dropdown.
+* |Tests| Added ``pycsamt/cli/tests/test_cmd_format_build.py`` (the four new
+  ``build-*`` sub-commands) and ``pycsamt/cli/tests/test_cmd_airborne.py``
+  (``airborne info``/``diagnose``), plus session-scoped fixtures for the
+  real bundled ZTEM/MobileMT/AFMAG sample directories in ``conftest.py``;
+  both suites skip automatically when their sample data is absent rather
+  than mocking it.
+* |Build| **Desktop installers**: a Windows Inno Setup ``.exe``
+  (``packaging/inno/build_installer.ps1``) and a self-extracting Linux
+  ``.sh`` (``packaging/linux/build_installer.sh``), both built from the new
+  ``packaging/pyinstaller/pycsamt_desktop.spec``, which bundles the package
+  data the frozen app needs (``gis/epsg.npy``, logging config, borehole
+  templates, solver sources). The PyInstaller spec files were previously
+  excluded by a generic ``*.spec`` ignore rule and are now tracked.
+* |Docs| New Agent Master pages: :doc:`/applications/agent_master/conversation_context`
+  and :doc:`/applications/agent_master/evaluation`.
+* |Tests| Coverage pass over 95 files that were below 85 % (all now at about
+  85 % or higher); the CI desktop shard now runs the converter tests; three
+  failures in the py3.9–3.13 matrix fixed (xdist registry grouping, pandas
+  ``to_gbq``, pandas 3 ``str`` dtype).
+
+|Compatibility|
+~~~~~~~~~~~~~~~~
+
+No public names or required parameters were removed or renamed. Everything
+new -- the converter app, the six ``format build-*``/``edi-to-xml``/
+``xml-to-edi`` commands, ``pycsamt airborne``, and
+:mod:`pycsamt.format.convert_engine` -- is additive. ``pycsamt format
+convert``'s own behaviour is unchanged; only the internal module its Click
+wrapper delegates to moved. The desktop studios, Edit menu and Agent Master
+features are additive as well. One behaviour change: frequency regridding
+in :mod:`pycsamt.emtools.frequency` now returns NaN outside a station's
+measured band where it previously extrapolated.
+
+----
+
 .. _changelog-2-6-3:
 
 2.6.3 |Fix| |Enhancement| |Tests| |Docs|

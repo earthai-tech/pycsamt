@@ -107,6 +107,13 @@ def _interp_complex(
 ) -> np.ndarray:
     if y.ndim == 1:
         y = y[:, None]
+    # EDI / EMTF-XML store frequencies high -> low; both searchsorted
+    # (nearest) and np.interp (linear) need ascending x.  Unsorted, every
+    # target mapped to one of the two end values (align_grid turned a
+    # whole survey into a constant tensor).
+    order = np.argsort(x, kind="stable")
+    x = np.asarray(x)[order]
+    y = y[order]
     r = y.real
     im = y.imag
     if method == "nearest":
@@ -363,7 +370,25 @@ def _regrid_z(
         for b in range(2):
             y = z[:, a, b]
             out[:, a, b] = _interp_complex(x, y, xn, method=method)
+    out[_outside_band(x, xn)] = np.nan
     return out
+
+
+def _outside_band(x: np.ndarray, xn: np.ndarray) -> np.ndarray:
+    """Target points (log f) outside the station's own measured band.
+
+    Nearest / linear interpolation would copy or clamp the end values
+    there, inventing data at frequencies the station never recorded (a
+    union grid gave a 1-100 Hz station values down to 0.001 Hz); they are
+    left NaN (masked) instead.
+    """
+    x = np.asarray(x, dtype=float)
+    x = x[np.isfinite(x)]
+    if x.size == 0:
+        return np.ones(np.shape(xn), dtype=bool)
+    tol = 1e-9 * max(1.0, float(np.max(np.abs(x))))
+    xn = np.asarray(xn, dtype=float)
+    return (xn < x.min() - tol) | (xn > x.max() + tol)
 
 
 def _regrid_t(
@@ -381,6 +406,7 @@ def _regrid_t(
     for k in range(2):
         y = t[:, k]
         out[:, k] = _interp_complex(x, y, xn, method=method)
+    out[_outside_band(x, xn)] = np.nan
     return out
 
 
@@ -1505,18 +1531,26 @@ def decimate_step(
         verbose=verbose,
     )
 
+    step = max(int(step), 1)
+
+    def _every(n: int) -> np.ndarray:
+        keep = np.zeros(n, dtype=bool)
+        keep[::step] = True
+        return keep
+
     def _one(Si):
+        # Subset z/z_err (and tipper/tipper_err) with their frequencies
+        # atomically: this used to shorten z alone -- z_err kept the old
+        # length and the freq write was refused, leaving every station
+        # with no usable frequencies.
         ed = next(_iter_items(Si))
         Z, z, frz = _get_z_block(ed)
         if Z is not None:
-            idx = np.arange(0, frz.size, step, dtype=int)
-            Z.z = z[idx]
-            _set_block_freq(Z, frz[idx])
+            _apply_row_mask_to_block(Z, ("z", "z_err"), _every(frz.size), frz)
         T, t, frt = _get_t_block(ed)
         if T is not None:
-            idx = np.arange(0, frt.size, step, dtype=int)
-            T.tipper = t[idx]
-            _set_block_freq(T, frt[idx])
+            _apply_row_mask_to_block(T, ("tipper", "tipper_err"),
+                                     _every(frt.size), frt)
         return Si
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)

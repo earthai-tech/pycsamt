@@ -185,7 +185,16 @@ class FormatConverterDialog(QDialog):
         If None the dialog still opens and the user can pick a source folder
         (conversion will use the loaded survey once data is loaded).
     parent : QWidget, optional
+
+    Signals
+    -------
+    open_format_studio_requested()
+        Emitted when the user clicks "Open in Format Studio…" — this
+        dialog only re-exports a loaded survey to EDI/CSV/JSON; anything
+        else (PCSF/PCSM/PCBH/PCGL/PCGS/PCPT) needs the full converter app.
     """
+
+    open_format_studio_requested = Signal()
 
     def __init__(self, sites, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -254,10 +263,21 @@ class FormatConverterDialog(QDialog):
         self._run_btn.clicked.connect(self._on_run)
         btn_row.addWidget(self._run_btn)
         btn_row.addStretch()
+        btn_format_studio = QPushButton("Open in Format Studio…")
+        btn_format_studio.setToolTip(
+            "Need PCSF/PCSM/PCBH/PCGL/PCGS/PCPT? Open the full pyCSAMT "
+            "Format Studio."
+        )
+        btn_format_studio.clicked.connect(self._on_open_format_studio)
+        btn_row.addWidget(btn_format_studio)
         box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         box.rejected.connect(self.reject)
         btn_row.addWidget(box)
         root.addLayout(btn_row)
+
+    def _on_open_format_studio(self) -> None:
+        self.open_format_studio_requested.emit()
+        self.reject()
 
     # ── Slots ─────────────────────────────────────────────────────────────────
 

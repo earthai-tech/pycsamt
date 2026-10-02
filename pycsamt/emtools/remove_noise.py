@@ -72,6 +72,22 @@ class EMAPFilterResult:
 # ----------------------------- SNR table -------------------------------- #
 
 
+def _finite_rms_rows(values: np.ndarray) -> np.ndarray:
+    """RMS over tensor components, leaving all-missing rows as NaN.
+
+    ``np.nanmean`` warns for an all-NaN frequency row. Such rows are valid
+    missing-data markers in EDI/XML transfer functions, so count finite
+    samples explicitly and preserve their result as NaN without a warning.
+    """
+    power = np.abs(np.asarray(values)) ** 2
+    finite = np.isfinite(power)
+    count = finite.sum(axis=(1, 2))
+    total = np.where(finite, power, 0.0).sum(axis=(1, 2))
+    mean = np.full(count.shape, np.nan, dtype=float)
+    np.divide(total, count, out=mean, where=count > 0)
+    return np.sqrt(mean)
+
+
 def snr_table(
     sites: Any,
     *,
@@ -97,9 +113,9 @@ def snr_table(
             Z, z, fr, ze = (out + (None,))[:4]
         if Z is None:
             continue
-        a = np.sqrt(np.nanmean(np.abs(z) ** 2, axis=(1, 2)))
+        a = _finite_rms_rows(z)
         if isinstance(ze, np.ndarray) and ze.shape == z.shape:
-            e = np.sqrt(np.nanmean(np.abs(ze) ** 2, axis=(1, 2)))
+            e = _finite_rms_rows(ze)
         else:
             e = np.full_like(a, np.nan)
         snr = a / (e + 1e-12)

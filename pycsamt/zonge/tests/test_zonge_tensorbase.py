@@ -197,5 +197,165 @@ def test_to_xarray_tensor_dims_and_coords_single_and_multi():
     assert np.all(np.unique(da2.coords["station"]) == np.array([100.0]))
 
 
+# ---------------------------------------------------------------------- #
+# Coverage: TensorBase.read/write/__str__ (concrete, non-mixin usage)   #
+# ---------------------------------------------------------------------- #
+def test_tensorbase_read_without_comp_column_is_left_untouched():
+    df = pd.DataFrame({"freq": [1.0, 2.0], "rho": [10.0, 20.0]})
+    tb = TensorBase()
+    tb.read(df)
+    assert "comp" not in tb._frame.columns
+    assert tb.frame.shape[0] == 2
+
+
+def test_tensorbase_read_rejects_non_dataframe():
+    tb = TensorBase()
+    with pytest.raises(TypeError):
+        tb.read([1, 2, 3])
+
+
+def test_tensorbase_write_empty_and_nonempty():
+    tb = TensorBase()
+    out = tb.write()
+    assert out and "$_TensorBase" in out[0]
+
+    tb2 = TensorBase()
+    tb2.read(_df_single_station_csamt())
+    out2 = tb2.write()
+    assert isinstance(out2, list)
+    assert len(out2) > 0
+
+
+def test_tensorbase_str_and_repr():
+    tb = TensorBase()
+    tb.read(_df_single_station_csamt())
+    s = str(tb)
+    assert s.startswith("TensorBase[")
+    assert repr(tb) == s
+
+
+# ---------------------------------------------------------------------- #
+# Coverage: to_tensor edge cases                                        #
+# ---------------------------------------------------------------------- #
+def test_to_tensor_single_station_without_station_column():
+    df = pd.DataFrame(
+        {
+            "freq": [1.0, 1.0],
+            "comp": ["ExHy", "EyHx"],
+            "rho": [10.0, 20.0],
+        }
+    )
+    obj = DummyTensor.from_avg((df, {}))
+    T, freqs, stations = obj.to_tensor(var="rho")
+    assert T.shape == (1, 2, 2)
+    assert stations.size == 0
+    assert np.isclose(T[0, 0, 1], 10.0)
+    assert np.isclose(T[0, 1, 0], 20.0)
+
+
+def test_to_tensor_no_agg_keeps_duplicates_first_group():
+    df = pd.DataFrame(
+        {
+            "freq": [1.0, 1.0],
+            "comp": ["ExHy", "ExHy"],
+            "rho": [10.0, 30.0],
+        }
+    )
+    obj = DummyTensor.from_avg((df, {}))
+    # agg=None -> no dedup; to_tensor still fills the single (freq,comp)
+    # cell by iterating rows (last row wins).
+    T, freqs, _ = obj.to_tensor(var="rho", station=None, agg=None)
+    assert freqs.size == 1
+    assert T[0, 0, 1] in (10.0, 30.0)
+
+
+def test_to_tensor_nonexistent_station_returns_empty_grid():
+    df = _df_single_station_csamt()
+    obj = DummyTensor.from_avg((df, {}))
+    T, freqs, stations = obj.to_tensor(var="rho", station=999.0)
+    assert freqs.size == 0
+    assert T.shape == (0, 2, 2)
+    assert stations.size == 0
+
+
+def test_to_tensor_multi_station_intersection_all_nan_rows_skipped():
+    rows = [
+        {"station": 1.0, "freq": 1.0, "comp": "ExHy", "rho": np.nan},
+        {"station": 1.0, "freq": 2.0, "comp": "ExHy", "rho": 5.0},
+        {"station": 2.0, "freq": 2.0, "comp": "ExHy", "rho": 6.0},
+    ]
+    df = pd.DataFrame.from_records(rows)
+    obj = DummyTensor.from_avg((df, {}))
+    T, freqs, stations = obj.to_tensor(var="rho", align="intersection")
+    assert np.allclose(freqs, [2.0])
+    assert np.allclose(np.sort(stations), [1.0, 2.0])
+
+
+# ---------------------------------------------------------------------- #
+# Coverage: from_tensor 4-D (multi-station) roundtrip + default comp   #
+# ---------------------------------------------------------------------- #
+def test_from_tensor_default_comp_style_is_mt():
+    freqs = np.array([1.0])
+    T = np.array([[[1.0, 2.0], [3.0, 4.0]]])
+    df_back = TensorBase.from_tensor(T, freqs, var="zabs")
+    assert set(df_back["comp"]) == {"Zxx", "Zxy", "Zyx", "Zyy"}
+
+
+def test_from_tensor_multi_station_with_explicit_and_default_labels():
+    freqs = np.array([1.0, 2.0])
+    T = np.zeros((2, 2, 2, 2), float)
+    T[0, 0] = [[1.1, 1.2], [1.3, 1.4]]
+    T[0, 1] = [[2.1, 2.2], [2.3, 2.4]]
+    T[1, 0] = [[9.1, 9.2], [9.3, 9.4]]
+    T[1, 1] = [[8.1, 8.2], [8.3, 8.4]]
+
+    df_named = TensorBase.from_tensor(
+        T, freqs, var="rho", stations=["A", "B"], comp_style="csamt"
+    )
+    assert set(df_named["station"]) == {"A", "B"}
+    v = float(
+        df_named.query("station=='B' and freq==1.0 and comp=='EyHy'")[
+            "rho"
+        ].iloc[0]
+    )
+    assert np.isclose(v, 9.4)
+
+    # stations=None -> defaults to range(n_stations)
+    df_default = TensorBase.from_tensor(T, freqs, var="rho", comp_style="csamt")
+    assert set(df_default["station"]) == {0, 1}
+
+
+def test_from_tensor_invalid_ndim_raises():
+    with pytest.raises(Exception):
+        TensorBase.from_tensor(np.zeros((2, 2)), [1.0], var="rho")
+
+
+def test_from_tensor_wrong_last_dims_raises():
+    with pytest.raises(Exception):
+        TensorBase.from_tensor(np.zeros((2, 3, 3)), [1.0, 2.0], var="rho")
+
+
+# ---------------------------------------------------------------------- #
+# Coverage: _norm_comp / _station_array private helpers                #
+# ---------------------------------------------------------------------- #
+def test_norm_comp_strips_non_alnum_and_rejects_unknown():
+    from pycsamt.zonge.tensor import _norm_comp
+
+    assert _norm_comp("Ex-Hy") == "EXHY"
+    assert _norm_comp(None) is None
+    assert _norm_comp("bogus") is None
+
+
+def test_station_array_falls_back_to_strings():
+    from pycsamt.zonge.tensor import _station_array
+
+    out_numeric = _station_array([1.0, 2.0, 3.0])
+    assert out_numeric.dtype.kind in "fi"
+
+    out_strings = _station_array(["A", "B"])
+    assert out_strings.dtype.kind in ("U", "O")
+    assert set(out_strings) == {"A", "B"}
+
+
 if __name__ == "__main__":  # pragma: no-cover
     pytest.main([__file__])

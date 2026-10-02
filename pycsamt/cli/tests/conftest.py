@@ -40,6 +40,10 @@ _EDI_OUT = _PROJECT_ROOT / "edi_out"
 _DATA_3EDIS = _PROJECT_ROOT / "data" / "3edis"
 _DATA_AMT_TIP = _PROJECT_ROOT / "data" / "AMT" / "TIPPER"
 _DATA_WILLY = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
+_DATA_ZTEM = _PROJECT_ROOT / "data" / "ZTEM" / "gold_springs_nv"
+_DATA_MOBILEMT = _PROJECT_ROOT / "data" / "mobileMT" / "flammefjeld_greenland"
+_DATA_AFMAG_ORIGINAL = _PROJECT_ROOT / "data" / "AFMAG" / "abitibi_on"
+_DATA_AFMAG_AIRMT = _PROJECT_ROOT / "data" / "AFMAG" / "yulong_belt_cn"
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +99,29 @@ def site_edi_dir() -> Path:
     if found is None:
         pytest.skip("No small EDI directory found — skipping site live tests")
     return found
+
+
+@pytest.fixture(scope="session")
+def willy_subset_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Well-spaced subset of the real WILLY_DATA/L18PLT profile.
+
+    ``invert build`` rejects along-line offsets closer than 1% of the
+    horizontal cell size — several adjacent WILLY stations are QC repeats
+    at ~0 m spacing. Taking every third station keeps real EDI content
+    (real coordinates, real Z/tipper data) while giving Occam2D/ModEM a
+    profile geometry their mesh builders accept.
+    """
+    if not _has(_DATA_WILLY):
+        pytest.skip("data/AMT/WILLY_DATA/L18PLT not found")
+    src = sorted(_DATA_WILLY.glob("*.edi"))[::3]
+    dst = tmp_path_factory.mktemp("willy_subset")
+    for f in src:
+        shutil.copy(f, dst)
+    return dst
+
+
+def _has(p: Path) -> bool:
+    return p.exists() and bool(list(p.glob("*.edi")))
 
 
 @pytest.fixture
@@ -277,6 +304,42 @@ def modem_workdir(tmp_path: Path) -> Path:
     (wd / "ModEM.inv").touch()
     (wd / "ModEM.cov").touch()
     return wd
+
+
+
+# ---------------------------------------------------------------------------
+# Real airborne EMTF-XML sample directories
+# ---------------------------------------------------------------------------
+
+
+def _existing_dir(path: Path) -> Path:
+    if not path.exists() or not any(path.glob("*.xml")):
+        pytest.skip(f"No airborne sample data found at {path}")
+    return path
+
+
+@pytest.fixture(scope="session")
+def ztem_xml_dir() -> Path:
+    """Real ZTEM EMTF-XML sample survey (multi-line)."""
+    return _existing_dir(_DATA_ZTEM)
+
+
+@pytest.fixture(scope="session")
+def mobilemt_xml_dir() -> Path:
+    """Real MobileMT EMTF-XML sample survey."""
+    return _existing_dir(_DATA_MOBILEMT)
+
+
+@pytest.fixture(scope="session")
+def afmag_original_xml_dir() -> Path:
+    """Real original-comparator AFMAG EMTF-XML sample survey."""
+    return _existing_dir(_DATA_AFMAG_ORIGINAL)
+
+
+@pytest.fixture(scope="session")
+def afmag_airmt_xml_dir() -> Path:
+    """Real tensor AFMAG/AirMt EMTF-XML sample survey."""
+    return _existing_dir(_DATA_AFMAG_AIRMT)
 
 
 @pytest.fixture

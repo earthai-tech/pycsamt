@@ -251,7 +251,7 @@ def grid_to_mare2dem(
         anisotropy="isotropic",
         target_misfit=target_misfit,
         max_iterations=max_iterations,
-        global_bounds=np.array([-1.0, 5.0]),
+        global_bounds=np.array([0.1, 1e5]),  # linear ohm-m
         roughness_penalty_method="gradient",
         yz_penalty_weights=np.array([3.0, 1.0]),
         penalty_cut_weight=0.1,
@@ -261,7 +261,8 @@ def grid_to_mare2dem(
     rf.free_parameter = np.ones((n_reg, 1), dtype=float)
     # air region and padding: fix them
     rf.free_parameter[-2:] = 0
-    rf.bounds = np.tile([-1.0, 5.0], (n_reg, 1))
+    # 0 0 = no per-region bounds: the global (linear) ones apply
+    rf.bounds = np.zeros((n_reg, 2))
     rf.prejudice = np.zeros((n_reg, 2))
     res_path = write_resistivity(rf, dest / f"{model_name}.0.resistivity")
 

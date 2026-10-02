@@ -116,3 +116,12 @@ def test_metadata_view_is_read_only_and_source_mapping_is_copied():
     assert base.metadata_view["survey"] == "A"
     with pytest.raises(TypeError):
         base.metadata_view["survey"] = "C"
+
+
+def test_console_less_process_gets_a_sink_not_an_error(monkeypatch):
+    # The windowed desktop build and pythonw start with sys.stdout = None;
+    # building Occam1D inputs there failed with "stream must provide a
+    # callable write method".
+    monkeypatch.setattr("sys.stdout", None)
+    base = Occam1DBase(logger=_logger(), verbose=1)
+    base._stream.write("progress\n")  # must not raise

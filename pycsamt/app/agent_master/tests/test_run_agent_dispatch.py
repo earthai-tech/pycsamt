@@ -494,8 +494,74 @@ class TestEdiRequiredGuard:
         jid = _new_job()
         C._run_agent(jid, "run qc", {}, {"provider": "offline"})
         job = C._get_job(jid)
-        assert job["kind"] == C.KIND_ERROR
-        assert "No station data loaded" in job["result"]
+        # Missing input is a question back to the user, not a failure.
+        assert job["kind"] == C.KIND_CLARIFY
+        assert "needs station data" in job["result"]
+
+    @pytest.mark.parametrize("text, workflow, expected", [
+        ("Run QC on L99PLT.", "qc", "Line L99PLT is not in the project registry"),
+        ("Run ModEM now.", "modem", "installed ModEM executable"),
+        ("Invert my survey.", "ai_inversion", "I will not start an inversion"),
+    ])
+    def test_missing_data_message_is_request_specific(
+        self, monkeypatch, text, workflow, expected
+    ):
+        _patch_router(monkeypatch, WORKFLOW, workflow=None)
+        _patch_context(monkeypatch, config={"workflow": workflow})
+        import pycsamt.agents._workflows as wf_mod
+
+        monkeypatch.setattr(
+            wf_mod, "classify_workflow", lambda text, default=None: workflow
+        )
+        monkeypatch.setattr(C, "_session", lambda: None)
+        jid = _new_job()
+        C._run_agent(jid, text, {}, {"provider": "offline"})
+        job = C._get_job(jid)
+        assert job["kind"] == C.KIND_CLARIFY, job
+        assert expected in job["result"]
+
+
+class TestRotationAngle:
+    """A stated angle is applied; an angle without a sense is asked about."""
+
+    def _run(self, monkeypatch, text):
+        _patch_router(monkeypatch, WORKFLOW, workflow=None)
+        _patch_context(monkeypatch, config={"workflow": "rotation"})
+        import pycsamt.agents._workflows as wf_mod
+
+        monkeypatch.setattr(
+            wf_mod, "classify_workflow", lambda text, default=None: "rotation"
+        )
+        captured = {}
+
+        def _fake_execute(self, input_data):
+            captured["config"] = input_data.get("config")
+            return AgentResult("success", "done",
+                               {"result": AgentResult("success", "inner", {})})
+
+        monkeypatch.setattr(orch_mod.WorkflowOrchestratorAgent, "execute", _fake_execute)
+        monkeypatch.setattr(C, "_session", lambda: None)
+        jid = _new_job()
+        C._run_agent(jid, text, {"path": "/tmp/edis"}, {"provider": "offline"})
+        return C._get_job(jid), captured
+
+    def test_ambiguous_sense_is_asked_not_replaced_by_strike(self, monkeypatch):
+        job, captured = self._run(monkeypatch, "Rotate the data by 45 degrees.")
+        assert job["kind"] == C.KIND_CLARIFY
+        assert "clockwise in map view" in job["result"]
+        assert not captured  # nothing ran
+
+    @pytest.mark.parametrize("text, angle", [
+        ("Rotate the data by 45 degrees clockwise.", 45.0),
+        ("rotate by 30 deg counter-clockwise", -30.0),
+    ])
+    def test_stated_angle_reaches_rotate_step(self, monkeypatch, text, angle):
+        _, captured = self._run(monkeypatch, text)
+        assert captured["config"]["step_params"]["rotate"]["strike_deg"] == angle
+
+    def test_rotation_to_strike_keeps_estimated_strike(self, monkeypatch):
+        _, captured = self._run(monkeypatch, "Rotate the data to the strike.")
+        assert "rotate" not in (captured["config"].get("step_params") or {})
 
 
 class TestPlotAndToolDispatchRouting:

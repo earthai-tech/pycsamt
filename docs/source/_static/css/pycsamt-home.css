@@ -325,6 +325,32 @@ html[data-theme="dark"] .pyc-btn--ghost { color: #b9cdf3 !important; }
   background: color-mix(in srgb, var(--pyc-blue) 10%, var(--pyc-surface));
 }
 
+/* Desktop download: teal-accented outline so the ready-made app stands
+   apart from the plain links, without competing with the solid
+   "Get started" call to action. */
+.pyc-btn--download {
+  border: 1.5px solid var(--pyc-teal);
+  color: #0b6f66 !important;
+}
+
+.pyc-btn--download i { color: var(--pyc-teal); }
+
+.pyc-btn--download:hover {
+  background: color-mix(in srgb, var(--pyc-teal) 10%, var(--pyc-surface));
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.18);
+}
+
+html[data-theme="dark"] .pyc-btn--download {
+  border-color: #2dd4bf;
+  color: #99f6e4 !important;
+}
+
+html[data-theme="dark"] .pyc-btn--download i { color: #2dd4bf; }
+
+html[data-theme="dark"] .pyc-btn--download:hover {
+  background: color-mix(in srgb, #2dd4bf 12%, var(--pyc-surface));
+}
+
 /* Right column: "why pyCSAMT" points straight on the artwork */
 .pyc-hero-points {
   display: grid;

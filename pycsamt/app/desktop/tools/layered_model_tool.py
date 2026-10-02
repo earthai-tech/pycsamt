@@ -41,7 +41,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 _PRESETS = ["— choose preset —", "Random", "Blocky", "Smooth"]
 _DEFAULT_LAYERS = [
@@ -148,8 +148,17 @@ class LayeredModelDialog(QDialog):
         splitter.addWidget(left)
 
         # ── Right: canvas ─────────────────────────────────────────────────
-        self._canvas = MplCanvas(parent=self)
-        splitter.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            self,
+            toolbar=True,
+            empty_title="No preview yet",
+            empty_reason="Click Preview model to render the ρ–depth profile.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            self._on_preview, tooltip="Redraw the model preview"
+        )
+        splitter.addWidget(self._canvas_view)
         splitter.setStretchFactor(1, 1)
 
         root.addWidget(splitter, stretch=1)
@@ -253,12 +262,14 @@ class LayeredModelDialog(QDialog):
             model = self._read_model()
         except Exception as exc:
             self._status_lbl.setText(str(exc))
+            self._canvas_view.show_unavailable("Model preview unavailable", str(exc))
             return
 
         fig, ax = plt.subplots(figsize=(4, 5))
         model.plot(ax=ax)
         fig.tight_layout()
         self._canvas.show_figure(fig)
+        self._canvas_view.show_canvas()
         self._status_lbl.setText(
             f"{model.n_layers} layers  |  "
             f"ρ: {model.resistivity.min():.1f}–{model.resistivity.max():.1f} Ω·m  |  "

@@ -80,6 +80,55 @@ def test_source_probe_handles_bytes_paths_inline_and_seekable_streams(tmp_path):
         _source_probe(object())
 
 
+def test_source_probe_stream_without_tell_seek_returns_decoded_bytes():
+    class _ReadOnlyBytesStream:
+        def read(self, limit):
+            return b"raw-bytes"
+
+    assert _source_probe(_ReadOnlyBytesStream()) == "raw-bytes"
+
+
+def test_source_probe_stream_with_failing_tell_and_seek_is_tolerated():
+    class _FlakyStream:
+        def __init__(self):
+            self.seek_called_with = None
+
+        def tell(self):
+            raise OSError("tell not supported")
+
+        def seek(self, position):
+            self.seek_called_with = position
+            raise OSError("seek not supported")
+
+        def read(self, limit):
+            return "text"
+
+    stream = _FlakyStream()
+    assert _source_probe(stream) == "text"
+    # position was None (tell() failed), so seek() must never be called
+    assert stream.seek_called_with is None
+
+
+def test_source_probe_restores_position_even_when_seek_back_fails():
+    class _NoRewindStream:
+        def __init__(self):
+            self.seek_calls = []
+
+        def tell(self):
+            return 5
+
+        def seek(self, position):
+            self.seek_calls.append(position)
+            raise OSError("cannot rewind")
+
+        def read(self, limit):
+            return "abc"
+
+    stream = _NoRewindStream()
+    assert _source_probe(stream) == "abc"
+    assert stream.seek_calls == [5]
+
+
 def test_tf_detection_and_target_errors_include_useful_hints(tmp_path):
     assert detect_tf_format("<?xml version='1.0'?><x:EM_TF xmlns:x='u'/>") == "emtf_xml"
     assert detect_tf_format("# comment\n>HEAD\n>=DEFINEMEAS\n") == "edi"
@@ -154,6 +203,20 @@ def test_pcsf_detector_rejects_missing_and_non_hdf_files(tmp_path):
     path = tmp_path / "fake.pcsf"
     path.write_bytes(b"not hdf5")
     assert not _is_pcsf(path)
+
+
+def test_pcsf_detector_rejects_hdf5_signature_with_corrupt_body(tmp_path):
+    # Real HDF5 magic bytes, but not a well-formed HDF5 file: h5py.File
+    # raises OSError while opening it, hit by _is_pcsf's except clause.
+    path = tmp_path / "corrupt.pcsf"
+    path.write_bytes(b"\x89HDF\r\n\x1a\n" + b"\x00" * 32)
+    assert not _is_pcsf(path)
+
+
+def test_is_pcsm_returns_false_when_no_version_header_present(tmp_path):
+    path = tmp_path / "no_header.txt"
+    path.write_text("just some unrelated text\nno marker here\n", encoding="utf-8")
+    assert not _is_pcsm(path)
 
 
 def test_generic_parser_dispatch_and_errors(monkeypatch, tmp_path):

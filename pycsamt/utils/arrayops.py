@@ -413,7 +413,7 @@ def frameify(
                 "NaN columns found in the data",
                 " ",
                 inline=True,
-                lstyle=".",
+                bullet=".",
             )
         # drop rows and columns with NaN values everywhere.
         df.dropna(axis=1, how="all", inplace=True)
@@ -442,7 +442,7 @@ def frameify(
                 " from the dataframe."
             )
             print(msg) if len(cf) == 0 else listing_items_format(
-                cf, b, e, lstyle=".", inline=True
+                cf, b, e, bullet=".", inline=True
             )
 
         return df

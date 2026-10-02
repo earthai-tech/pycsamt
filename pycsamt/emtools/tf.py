@@ -369,7 +369,11 @@ def plot_induction_arrows(
                 ),
             )
         )
-    if not per_layers:
+    # stations whose tipper rows are all NaN (no Hz recorded) leave nothing
+    # to draw: same outcome as no tipper at all, instead of a blank axes and
+    # a "Mean of empty slice" warning from the normalisation below
+    all_mag = np.hstack([np.hypot(L[2], L[3]) for _, L in per_layers])         if per_layers else np.zeros(0)
+    if not per_layers or not np.isfinite(all_mag).any():
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
         ax.text(0.5, 0.5, "no tipper", ha="center", va="center")
@@ -377,11 +381,7 @@ def plot_induction_arrows(
 
     # normalization
     if normalize:
-        all_mag = []
-        for _, L in per_layers:
-            mag = np.hypot(L[2], L[3])
-            all_mag.append(mag)
-        m95 = np.nanpercentile(np.hstack(all_mag), 95) + 1e-24
+        m95 = np.nanpercentile(all_mag, 95) + 1e-24
         for k in range(len(per_layers)):
             p, L = per_layers[k]
             L[2] /= m95

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.6.2"
+version     = "2.6.4"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
@@ -157,9 +157,18 @@ docs = [
 
 # Desktop application
 desktop = [
+    # Plain PySide6 wheels bundle PySide6-Essentials + PySide6-Addons, which
+    # includes QtWebEngineWidgets -- used by
+    # pycsamt.app.desktop.widgets.plotly_view.PlotlyView to embed the same
+    # Plotly figures pycsamt.map.MapView / pycsamt.map.volume already build
+    # for Map View, instead of reimplementing their geometry in matplotlib.
+    # No separate extra needed; nothing here pins a narrower PySide6 wheel.
     "PySide6>=6.9",
     "pyqtgraph>=0.13",
     "contextily>=1.6",
+    # Offline Ed25519 license-key verification
+    # (pycsamt.app.desktop.licensing.signing) -- Phase 11.
+    "cryptography>=41.0",
 ]
 
 # LLM provider clients used by the agent layer.
@@ -228,6 +237,7 @@ pycsamt-desktop = "pycsamt.app.desktop.__main__:main"
 pycsamt-web    = "pycsamt.app.web.__main__:main"
 pycsamt-agent  = "pycsamt.app.agent_master.__main__:main"
 pycsamt-mapview = "pycsamt.app.mapview.__main__:main"
+pycsamt-converter = "pycsamt.app.converter.__main__:main"
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration
@@ -254,14 +264,22 @@ exclude = ["*.tests", "*.tests.*", "tests", "tests.*"]
     "format/borehole/templates/*.csv",
     "gis/*.npy",
     "app/desktop/resources/*.qss",
+    "app/desktop/resources/*.png",
     "app/desktop/resources/icons/*",
+    "app/converter/resources/icons/*",
+    "app/converter/resources/*.qss",
     "app/web/assets/*",
     "app/mapview/assets/*",
+    "app/agent_master/assets/*",
+    "app/agent_master/assets/icons/*",
     "models/occam2d/_source/*",
     "models/modem/_source/**/*",
     "models/_solver_build/**/*",
     "data/occam2d/*",
     "data/3edis/*.edi",
+    "assistant/evals/suites/*.jsonl",
+    "assistant/evals/answer_suites/*.jsonl",
+    "assistant/evals/answer_suites/fixtures/*.py",
     "data/inversionFiles/*",
 ]
 
@@ -280,7 +298,7 @@ testpaths  = ["pycsamt"]
 # walking it since `testpaths = ["pycsamt"]` recurses the whole tree.
 norecursedirs = ["fcu-v4.1", ".git", "build", "dist", "*.egg"]
 markers    = [
-    "live: tests that require an LLM API key (deselect with -m 'not live')",
+    "live: tests that require a live model: an LLM API key or a running local Ollama server (deselect with -m 'not live')",
     "slow: tests that are deterministic but too slow for the tightest local loop",
     "integration: tests that exercise multiple pycsamt subsystems together",
     "gui: tests that require Qt, Dash, browser, or other UI runtime support",

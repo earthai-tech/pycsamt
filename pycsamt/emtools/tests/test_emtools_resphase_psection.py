@@ -123,6 +123,52 @@ class TestPlotResPhasePseudoSection:
         assert any("log" in lbl for lbl in ylabels)
         plt.close(fig)
 
+    def test_log_period_defaults_to_true(self, sites):
+        # Matches plot_phase_tensor_psection's own default convention
+        # (log10(T) values on a linear axis, not a real log-scale axis)
+        # so every tab in the desktop ProfilePanel presents periods the
+        # same way.
+        obj = PlotResPhasePseudoSection(sites, components=["xy"])
+        assert obj.log_period is True
+        fig = obj.plot()
+        ylabels = {ax.get_ylabel() for ax in fig.axes}
+        assert any("log" in lbl for lbl in ylabels)
+        # A pre-transformed log10(T) axis must NOT also carry a log
+        # matplotlib scale (that would double-log the values).
+        panel_axes = _panel_axes(fig)
+        assert all(ax.get_yscale() == "linear" for ax in panel_axes)
+        plt.close(fig)
+
+    def test_res_phase_ratio_defaults_to_two_thirds_one_third(self, sites):
+        # res_phase_ratio's default used to be 2/3 fed directly into
+        # height_ratios=[ratio, 1.0], which actually made resistivity
+        # the SHORTER panel (2/3 : 1 normalises to 40%/60%, phase
+        # taller) -- the opposite of the documented "resistivity gets
+        # two-thirds" intent. The fix is the default value itself
+        # (2.0, not 2.0/3.0); height_ratios=[ratio, 1.0] is unchanged.
+        obj = PlotResPhasePseudoSection(sites, components=["xy"])
+        assert obj.res_phase_ratio == pytest.approx(2.0)
+        fig = obj.plot()
+        # Data panels are wide (share the res/phase column width); the two
+        # colorbar axes are narrow slivers -- distinguish by width rather
+        # than title (only the topmost, resistivity, panel carries one).
+        max_w = max(ax.get_position().width for ax in fig.axes)
+        data_axes = sorted(
+            (
+                ax
+                for ax in fig.axes
+                if ax.collections and ax.get_position().width > 0.5 * max_w
+            ),
+            key=lambda a: -a.get_position().y0,
+        )
+        assert len(data_axes) == 2
+        res_ax, phase_ax = data_axes[0], data_axes[1]
+        res_h = res_ax.get_position().height
+        phase_h = phase_ax.get_position().height
+        # resistivity should occupy roughly 2/3 of the res+phase pair
+        assert res_h / (res_h + phase_h) == pytest.approx(2.0 / 3.0, abs=0.02)
+        plt.close(fig)
+
     def test_res_range_and_linear_res(self, sites):
         fig = PlotResPhasePseudoSection(
             sites,
@@ -212,6 +258,24 @@ class TestPlotResPhasePseudoSection:
     def test_bad_station_side_raises(self, sites):
         with pytest.raises(ValueError, match="station_side"):
             PlotResPhasePseudoSection(sites, station_side="left")
+
+    @pytest.mark.parametrize("n_st", [28, 44, 50, 60, 71, 97, 100, 105])
+    def test_station_thinning_never_collapses_to_every_station(
+        self, sites, n_st
+    ):
+        # _station_style() used to search for a step that evenly divides
+        # (n_st - 1), so any n_st whose (n_st - 1) was prime or otherwise
+        # low-divisor (44, 60, ...) fell back to every=1 -- every single
+        # station labelled, exactly the clutter this thinning exists to
+        # avoid. It now snaps up to a "nice" step like
+        # StationAxisStyle.compute_every() does; label_indices() already
+        # force-includes the final station regardless of the step's
+        # divisibility, so nothing depended on the old constraint.
+        obj = PlotResPhasePseudoSection(sites, components=["xy"])
+        st = obj._station_style(ci=0, n_col=4, n_st=n_st)
+        assert st.every > 1
+        # sanity: still a real thinning step, not absurdly sparse either
+        assert st.every < n_st
 
     def test_panel_labels(self, sites):
         from pycsamt.site.base import Sites

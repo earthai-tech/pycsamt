@@ -271,6 +271,7 @@ class IDs:
     CTL_CONTOURS = "mv-ctl-contours"
     CTL_SCALE = "mv-ctl-scale"
     CTL_ASPECT = "mv-ctl-aspect"
+    CTL_VE = "mv-ctl-ve"  # vertical exaggeration (blank = off, 0 = auto)
     CTL_X_UNIT = "mv-ctl-x-unit"
     CTL_DEPTH_UNIT = "mv-ctl-depth-unit"
     CTL_SMOOTH = "mv-ctl-smooth"

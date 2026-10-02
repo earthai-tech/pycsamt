@@ -212,7 +212,7 @@ class SensitivityAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and doi_per_station:
+        if self.llm_available and doi_per_station:
             max_doi_sta = max(doi_per_station, key=doi_per_station.get)
             min_doi_sta = min(doi_per_station, key=doi_per_station.get)
             prompt = (

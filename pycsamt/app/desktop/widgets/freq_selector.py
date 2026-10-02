@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from pycsamt.app.desktop.widgets.compact_button import compact_button
 
 _ICONS = Path(__file__).parent.parent / "resources" / "icons"
 
@@ -270,7 +271,7 @@ class FreqSelector(QWidget):
             self._reset_btn.setText("↺")
         else:
             self._reset_btn.setIcon(ico)
-        self._reset_btn.setFixedWidth(28)
+        compact_button(self._reset_btn)
         self._reset_btn.setObjectName("FreqResetButton")
         self._reset_btn.setToolTip("Reset to full frequency / period range")
         self._reset_btn.clicked.connect(self._on_reset)

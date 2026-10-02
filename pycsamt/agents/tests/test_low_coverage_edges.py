@@ -122,7 +122,8 @@ def test_query_llm_retry_and_non_rate_failure(monkeypatch):
         return "ok", 0.5
 
     monkeypatch.setattr(agent, "_query_openai", rate_then_ok)
-    monkeypatch.setattr("pycsamt.agents._base.time.sleep", lambda delay: None)
+    # Retry waits are cancellable; _base imports the helper at call time.
+    monkeypatch.setattr("pycsamt.agents._request.cancellable_sleep", lambda delay: None)
     assert agent.query_llm("prompt") == "ok"
     assert agent._last_cost == 0.5
     monkeypatch.setattr(agent, "_query_openai", lambda *a: (_ for _ in ()).throw(ValueError("bad")))

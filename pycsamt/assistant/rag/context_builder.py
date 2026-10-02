@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from pycsamt.agents._request import request_stage
+
 from .retriever import Retriever, build_retriever
 from .schemas import RAGChunk, RetrievedContext
 
@@ -316,6 +318,7 @@ class ContextBuilder:
         # Optional SymbolGraph: surfaces the API a retrieved symbol calls.
         self.graph = graph
 
+    @request_stage
     def build(
         self,
         query: str,
@@ -338,6 +341,12 @@ class ContextBuilder:
         so it inherits the conversation's topic — the original *query* is
         still used for project-line resolution and is echoed back.
         """
+        from pycsamt.agents._local import local_only
+
+        if local_only():
+            rerank_fn = (
+                None  # an arbitrary supplied ranker may call a cloud API
+            )
         retrieval_query = query
         if session:
             from .rewrite import rewrite_query
@@ -502,22 +511,31 @@ def needs_clarification(
 _BUILDER_CACHE: dict[str, ContextBuilder | None] = {}
 
 
-def default_context_builder(root=None) -> ContextBuilder | None:
+def default_context_builder(
+    root=None, *, lexical_only=False
+) -> ContextBuilder | None:
     """Build (and cache) a :class:`ContextBuilder` from the repo + registry.
 
     Returns ``None`` if the corpus can't be built (e.g. running from a
     wheel install with no source tree) — callers should degrade
     gracefully.
     """
+    from pycsamt.agents._local import local_only
+
     from .ingest import repo_root
 
-    key = str(root or repo_root())
+    lexical_only = lexical_only or local_only()
+    key = str(root or repo_root()) + ("#lexical-only" if lexical_only else "")
     if key in _BUILDER_CACHE:
         return _BUILDER_CACHE[key]
 
     builder: ContextBuilder | None
     try:
-        retriever = build_retriever(root)
+        retriever = (
+            build_retriever(root, lexical_only=True)
+            if lexical_only
+            else build_retriever(root)
+        )
         if not retriever.chunks:
             builder = None
         else:

@@ -150,7 +150,7 @@ class InversionPrepAgent(BaseAgent):
             warnings.append(f"Unknown inversion code {code!r}.")
 
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             prompt = (
                 f"Inversion prep summary:\n"
                 f"  Code: {code}, stations: {n_st}, periods: {n_per}\n"

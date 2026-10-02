@@ -43,7 +43,7 @@ def _latlon(ed: Any) -> tuple[float, float]:
             from ...site.utils import get_coords
 
             c = get_coords(obj)
-            if c is not None:
+            if c is not None and np.isfinite(c.lat) and np.isfinite(c.lon):
                 return float(c.lat), float(c.lon)
         except Exception:  # noqa: BLE001
             pass

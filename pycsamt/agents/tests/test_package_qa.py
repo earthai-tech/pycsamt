@@ -438,5 +438,312 @@ class TestPackageQALive(unittest.TestCase):
         )
 
 
+# ── tier selection (private helpers) ─────────────────────────────────────────
+
+
+class TestSelectTiers(unittest.TestCase):
+    """Direct coverage of ``_select_tiers`` / ``_tiers_used`` — these are
+    normally reached only from the online (LLM) path, which the offline
+    tests above never exercise."""
+
+    def test_select_tiers_always_includes_core(self):
+        from pycsamt.agents.package_qa import TIER_CORE, _select_tiers
+
+        ctx = _select_tiers("What is DataQCAgent?")
+        self.assertIn(TIER_CORE, ctx)
+
+    def test_select_tiers_nothing_matched_includes_everything(self):
+        from pycsamt.agents.package_qa import (
+            TIER_AGENTS,
+            TIER_EMTOOLS,
+            TIER_EXAMPLES,
+            TIER_SITES,
+            _select_tiers,
+        )
+
+        ctx = _select_tiers("xyzzy qwerty plugh")
+        for tier in (TIER_AGENTS, TIER_SITES, TIER_EXAMPLES, TIER_EMTOOLS):
+            self.assertIn(tier, ctx)
+
+    def test_select_tiers_sites_keyword_only(self):
+        from pycsamt.agents.package_qa import TIER_SITES, _select_tiers
+
+        ctx = _select_tiers("How do I access impedance tensor data?")
+        self.assertIn(TIER_SITES, ctx)
+
+    def test_select_tiers_agent_keyword(self):
+        from pycsamt.agents.package_qa import TIER_AGENTS, _select_tiers
+
+        ctx = _select_tiers("What does the StaticShiftAgent correction do?")
+        self.assertIn(TIER_AGENTS, ctx)
+
+    def test_select_tiers_workflow_keyword(self):
+        from pycsamt.agents.package_qa import TIER_CORE, _select_tiers
+
+        ctx = _select_tiers("What workflows are supported?")
+        # workflow-only match still always carries TIER_CORE
+        self.assertIn(TIER_CORE, ctx)
+
+    def test_select_tiers_emtools_keyword(self):
+        from pycsamt.agents.package_qa import TIER_EMTOOLS, _select_tiers
+
+        ctx = _select_tiers("How does estimate_ss_ama compute the shift_factor?")
+        self.assertIn(TIER_EMTOOLS, ctx)
+
+
+class TestTiersUsed(unittest.TestCase):
+    def test_tiers_used_nothing_matched_returns_all(self):
+        from pycsamt.agents.package_qa import _tiers_used
+
+        out = _tiers_used("xyzzy qwerty plugh")
+        self.assertEqual(
+            out, ["core", "agents", "sites", "examples", "emtools"]
+        )
+
+    def test_tiers_used_agent_keyword(self):
+        from pycsamt.agents.package_qa import _tiers_used
+
+        out = _tiers_used("What galvanic shift correction method is used?")
+        self.assertIn("core", out)
+        self.assertIn("agents", out)
+
+    def test_tiers_used_sites_keyword(self):
+        from pycsamt.agents.package_qa import _tiers_used
+
+        out = _tiers_used("How do I access impedance from Sites?")
+        self.assertIn("sites", out)
+
+    def test_tiers_used_examples_keyword(self):
+        from pycsamt.agents.package_qa import _tiers_used
+
+        out = _tiers_used("Show me a code usage example.")
+        self.assertIn("examples", out)
+
+    def test_tiers_used_emtools_keyword(self):
+        from pycsamt.agents.package_qa import _tiers_used
+
+        out = _tiers_used("Explain the sounding pseudosection collection.")
+        self.assertIn("emtools", out)
+
+
+# ── offline "no match" fallback ───────────────────────────────────────────────
+
+
+class TestOfflineNoMatch(unittest.TestCase):
+    def test_offline_answer_no_match_returns_workflow_fallback(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        agent = PackageQAAgent(use_rag=False)
+        r = agent.execute({"question": "xyzzy qwerty plugh"})
+        self.assertEqual(r.status, "success")
+        self.assertIn(
+            "could not find a specific match", r.data["answer"]
+        )
+        self.assertEqual(r.data["excerpts"], [])
+
+
+# ── RAG wiring (_build_rag, needs_clarification, rag_offline) ────────────────
+
+
+class _FakeRagContext:
+    def __init__(self, context_text="ctx", citations=None, empty=False):
+        self.context_text = context_text
+        self.citations = citations if citations is not None else [{"n": 1}]
+        self._empty = empty
+
+    def is_empty(self):
+        return self._empty
+
+    def compose_offline_answer(self):
+        return "RAG says: use StaticShiftAgent for static shift correction."
+
+
+class _FakeBuilder:
+    def __init__(self, ctx):
+        self._ctx = ctx
+
+    def build(self, question, session=None):
+        return self._ctx
+
+
+class TestRagWiring(unittest.TestCase):
+    """These exercise ``_build_rag``'s try/except and the RAG-dependent
+    branches of ``execute`` by monkeypatching
+    ``pycsamt.assistant.rag.context_builder`` — the real corpus builder
+    returns ``None`` in this environment (no bundled RAG index), so the
+    non-trivial branches are otherwise unreachable."""
+
+    def setUp(self):
+        import pycsamt.assistant.rag.context_builder as cb
+
+        self.cb = cb
+        self._orig_builder = cb.default_context_builder
+        self._orig_clarify = cb.needs_clarification
+
+    def tearDown(self):
+        self.cb.default_context_builder = self._orig_builder
+        self.cb.needs_clarification = self._orig_clarify
+
+    def test_build_rag_returns_context_when_builder_succeeds(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        fake_ctx = _FakeRagContext()
+        self.cb.default_context_builder = lambda *a, **k: _FakeBuilder(fake_ctx)
+
+        agent = PackageQAAgent()
+        rag = agent._build_rag("What is the Sites class?")
+        self.assertIs(rag, fake_ctx)
+
+    def test_build_rag_swallows_exceptions(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        def _boom(*a, **k):
+            raise RuntimeError("corpus unavailable")
+
+        self.cb.default_context_builder = _boom
+
+        agent = PackageQAAgent()
+        rag = agent._build_rag("What is the Sites class?")
+        self.assertIsNone(rag)
+
+    def test_execute_returns_clarifying_question_when_rag_unsure(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        fake_ctx = _FakeRagContext()
+        self.cb.default_context_builder = lambda *a, **k: _FakeBuilder(fake_ctx)
+        self.cb.needs_clarification = lambda *a, **k: "Which agent do you mean?"
+
+        agent = PackageQAAgent()
+        r = agent.execute({"question": "what about it?"})
+        self.assertEqual(r.status, "success")
+        self.assertEqual(r.data["source"], "rag_clarify")
+        self.assertEqual(r.data["answer"], "Which agent do you mean?")
+        self.assertEqual(r.data["citations"], [])
+
+    def test_execute_offline_uses_rag_composed_answer(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        fake_ctx = _FakeRagContext(citations=[{"n": 1, "source": "x.py"}])
+        self.cb.default_context_builder = lambda *a, **k: _FakeBuilder(fake_ctx)
+        self.cb.needs_clarification = lambda *a, **k: None
+
+        agent = PackageQAAgent()  # no api_key -> offline path
+        r = agent.execute({"question": "What does StaticShiftAgent do?"})
+        self.assertEqual(r.status, "success")
+        self.assertEqual(r.data["source"], "rag_offline")
+        self.assertIn("StaticShiftAgent", r.data["answer"])
+        self.assertEqual(r.data["citations"], fake_ctx.citations)
+
+
+# ── online (LLM) path ─────────────────────────────────────────────────────────
+
+
+class TestOnlinePath(unittest.TestCase):
+    """The LLM call itself is mocked out on the agent instance so these
+    stay network-free and CI-safe, while still exercising the real
+    ``execute`` online branch (tier selection, prompt assembly, error
+    handling)."""
+
+    def test_execute_online_success_without_rag(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        agent = PackageQAAgent(api_key="fake-key", use_rag=False)
+        agent.query_llm = lambda *a, **k: "The Sites class holds EDI data."
+        r = agent.execute({"question": "What is the Sites class?"})
+        self.assertEqual(r.status, "success")
+        self.assertEqual(r.data["source"], "llm")
+        self.assertEqual(
+            r.data["answer"], "The Sites class holds EDI data."
+        )
+        self.assertIn("tiers_used", r.data)
+
+    def test_execute_online_success_with_rag_and_extra_context(self):
+        import pycsamt.assistant.rag.context_builder as cb
+
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        orig_builder, orig_clarify = cb.default_context_builder, cb.needs_clarification
+        try:
+            fake_ctx = _FakeRagContext(context_text="StaticShiftAgent docs")
+            cb.default_context_builder = lambda *a, **k: _FakeBuilder(fake_ctx)
+            cb.needs_clarification = lambda *a, **k: None
+
+            agent = PackageQAAgent(api_key="fake-key")
+            agent.query_llm = lambda *a, **k: "grounded answer"
+            r = agent.execute(
+                {
+                    "question": "What does StaticShiftAgent do?",
+                    "context": "session note",
+                }
+            )
+            self.assertEqual(r.status, "success")
+            self.assertEqual(r.data["source"], "llm+rag")
+            self.assertEqual(r.data["citations"], fake_ctx.citations)
+        finally:
+            cb.default_context_builder = orig_builder
+            cb.needs_clarification = orig_clarify
+
+    def test_execute_online_llm_failure_returns_failed_status(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        agent = PackageQAAgent(api_key="fake-key", use_rag=False)
+
+        def _boom(*a, **k):
+            raise RuntimeError("provider unreachable")
+
+        agent.query_llm = _boom
+        r = agent.execute({"question": "What is the Sites class?"})
+        self.assertEqual(r.status, "failed")
+        self.assertIn("provider unreachable", r.error)
+
+    def test_execute_online_no_answer_falls_back_to_placeholder(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        agent = PackageQAAgent(api_key="fake-key", use_rag=False)
+        agent.query_llm = lambda *a, **k: ""
+        r = agent.execute({"question": "What is the Sites class?"})
+        self.assertEqual(r.status, "success")
+        self.assertEqual(r.data["answer"], "(no answer)")
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestQuestionSubjects(unittest.TestCase):
+    """Offline composition answers each compared or named subject."""
+
+    def test_subjects(self):
+        from pycsamt.agents.package_qa import _question_subjects
+
+        self.assertEqual(
+            _question_subjects(
+                "What is the difference between quality control and denoising in pyCSAMT?"),
+            ["quality control", "denoising"])
+        self.assertEqual(_question_subjects("Occam2D vs ModEM?"), ["Occam2D", "ModEM"])
+        self.assertEqual(
+            _question_subjects("Explain estimate_ss_ama and correct_ss_ama."),
+            ["estimate_ss_ama", "correct_ss_ama"])
+        self.assertEqual(_question_subjects("How do I load EDI files?"), [])
+
+    def test_compose_subjects_retrieves_each(self):
+        from pycsamt.agents.package_qa import PackageQAAgent
+
+        asked = []
+
+        class Rag:
+            def __init__(self, subject):
+                self.subject = subject
+
+            def is_empty(self):
+                return False
+
+            def compose_offline_answer(self, top=3):
+                return f"about {self.subject}"
+
+        agent = PackageQAAgent()
+        agent._build_rag = lambda q, session=None: asked.append(q) or Rag(q)
+        text = agent._compose_subjects("Occam2D vs ModEM?")
+        self.assertEqual(asked, ["Occam2D", "ModEM"])
+        self.assertIn("### Occam2D\n\nabout Occam2D", text)
+        self.assertIsNone(agent._compose_subjects("How do I load EDI files?"))

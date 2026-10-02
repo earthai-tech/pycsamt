@@ -277,7 +277,7 @@ class AnomalyDetectionAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             top5 = sorted(zip(station_names, scores), key=lambda x: -x[1])[:5]
             prompt = (
                 f"Anomaly detection summary:\n"

@@ -154,6 +154,99 @@ def test_emqc_scorer_save_load_round_trip_with_ml_model(tmp_path):
     np.testing.assert_allclose(loaded.transform(feat), scores)
 
 
+def test_extract_qc_features_with_errors_uses_error_based_snr():
+    from pycsamt.ai.processing.qc import _extract_qc_features
+
+    n = 8
+    z = np.zeros((n, 2, 2), dtype=complex)
+    z[:, 0, 1] = 1.0 + 1j
+    z[:, 1, 0] = -1.0 - 1j
+    ze = np.full((n, 2, 2), 0.1)
+
+    F = _extract_qc_features(z, ze)
+    assert F.shape == (n, 5)
+    assert np.all(np.isfinite(F[:, 0]))
+    assert np.all(F[:, 0] > 0)
+
+
+def test_extract_qc_features_short_series_snr_is_nan():
+    from pycsamt.ai.processing.qc import _extract_qc_features
+
+    n = 2  # <= 3 -> too short for the smoothness fallback
+    z = np.zeros((n, 2, 2), dtype=complex)
+    z[:, 0, 1] = 1.0 + 1j
+    z[:, 1, 0] = -1.0 - 1j
+
+    F = _extract_qc_features(z, None)
+    assert np.all(np.isnan(F[:, 0]))
+
+
+def test_emqc_scorer_fit_no_valid_rows_raises():
+    from pycsamt.ai.processing.qc import EMQCScorer
+
+    feat = np.full((5, 5), np.nan)
+    scorer = EMQCScorer(use_ml=True, n_estimators=5, random_state=0)
+    with pytest.raises(ValueError, match="No valid"):
+        scorer.fit(feat)
+
+
+def test_emqc_scorer_score_features_constant_decision_function(monkeypatch):
+    """rmax == rmin in _score_features's ML-normalisation branch."""
+    from pycsamt.ai.processing.qc import EMQCScorer
+
+    rng = np.random.default_rng(5)
+    feat = np.column_stack(
+        [
+            rng.uniform(5.0, 10.0, 20),
+            rng.uniform(0.0, 0.1, 20),
+            rng.uniform(-0.1, 0.1, 20),
+            rng.uniform(30.0, 40.0, 20),
+            rng.uniform(-140.0, -130.0, 20),
+        ]
+    )
+    scorer = EMQCScorer(use_ml=True, n_estimators=5, random_state=0)
+    scorer.fit(feat)
+    monkeypatch.setattr(
+        scorer._model,
+        "decision_function",
+        lambda X: np.full(len(X), 0.42),
+    )
+    scores = scorer.transform(feat)
+    assert np.all(np.isfinite(scores))
+
+
+def test_emqc_scorer_get_weights_empty_without_model():
+    from pycsamt.ai.processing.qc import EMQCScorer
+
+    scorer = EMQCScorer(use_ml=False)
+    assert scorer._get_weights() == {}
+
+
+def test_emqc_scorer_invalid_mode_raises():
+    from pycsamt.ai.processing.qc import EMQCScorer
+
+    scorer = EMQCScorer(use_ml=False)
+    with pytest.raises(ValueError, match="mode must be"):
+        scorer.apply(np.zeros((1, 5)), mode="bogus")
+
+
+def test_emqc_scorer_apply_mask_and_interp(sites):
+    from pycsamt.ai.processing.qc import EMQCScorer
+
+    scorer = EMQCScorer(
+        use_ml=True,
+        n_estimators=10,
+        random_state=0,
+        snr_threshold=1e6,  # force every row to hard-fail the SNR rule
+    )
+    scorer.fit(sites)
+
+    masked = scorer.apply(sites, mode="mask", inplace=False)
+    interped = scorer.apply(sites, mode="interp", inplace=False)
+    assert len(list(masked)) == len(list(sites))
+    assert len(list(interped)) == len(list(sites))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # denoise.py
 # ─────────────────────────────────────────────────────────────────────────────
@@ -260,6 +353,102 @@ def test_anomaly_detector_pca_fallback_verbose_prints(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "PCA fallback" in out
     assert det._use_pca is True
+
+
+def test_anomaly_detector_transform_before_fit_raises():
+    from pycsamt.ai.processing.anomaly import AnomalyDetector
+
+    det = AnomalyDetector(latent_dim=4)
+    with pytest.raises(RuntimeError, match=r"fit\(\) before transform"):
+        det.transform(_anomaly_X())
+
+
+def test_anomaly_detector_flag_anomalies_and_properties():
+    from pycsamt.ai.processing.anomaly import AnomalyDetector
+
+    X = _anomaly_X(n=60)
+    det = AnomalyDetector(latent_dim=4, channels=(8,), threshold_percentile=90.0)
+    det.fit(X, epochs=3, verbose=False)
+
+    flags = det.flag_anomalies(X)
+    assert flags.dtype == bool
+    assert flags.shape == (60,)
+    assert det.threshold_ is not None
+    assert "train_loss" in det.history_
+    assert "unfitted" not in repr(det)
+    assert "torch" in repr(det)
+
+
+def test_anomaly_detector_repr_unfitted():
+    from pycsamt.ai.processing.anomaly import AnomalyDetector
+
+    det = AnomalyDetector(n_features=12, latent_dim=4)
+    assert "unfitted" in repr(det)
+    assert det.threshold_ is None
+    assert det.history_ == {}
+
+
+def test_anomaly_detector_pca_save_load_round_trip(tmp_path, monkeypatch):
+    pytest.importorskip("sklearn")
+    import pycsamt.ai.processing.anomaly as anomaly_mod
+
+    monkeypatch.setattr(
+        anomaly_mod.AnomalyDetector,
+        "_fit_torch",
+        lambda self, Xn, **kwargs: (_ for _ in ()).throw(ImportError("no torch")),
+    )
+    X = _anomaly_X(n=30, n_feat=10)
+    det = anomaly_mod.AnomalyDetector(latent_dim=3)
+    det.fit(X, epochs=1, verbose=False)
+    assert det._use_pca is True
+    scores_before = det.transform(X)
+
+    path = tmp_path / "anomaly_pca.npz"
+    det.save(path)
+    loaded = anomaly_mod.AnomalyDetector.load(path)
+
+    assert loaded._use_pca is True
+    scores_after = loaded.transform(X)
+    np.testing.assert_allclose(scores_before, scores_after)
+    assert "pca" in repr(loaded)
+
+
+def test_anomaly_detector_apply_before_fit_raises(sites):
+    from pycsamt.ai.processing.anomaly import AnomalyDetector
+
+    det = AnomalyDetector(latent_dim=4)
+    with pytest.raises(RuntimeError, match=r"fit\(\) before apply"):
+        det.apply(sites)
+
+
+def test_anomaly_detector_apply_feature_mismatch_raises(sites):
+    from pycsamt.ai.processing.anomaly import AnomalyDetector
+
+    det = AnomalyDetector(n_features=999, latent_dim=4)
+    det.fit(
+        np.random.default_rng(0).standard_normal((20, 999)).astype(np.float32),
+        epochs=1,
+        verbose=False,
+    )
+    with pytest.raises(ValueError, match="does not match"):
+        det.apply(sites, n_components=4)
+
+
+def test_anomaly_detector_apply_drops_flagged_stations(sites):
+    from pycsamt.ai.processing.anomaly import AnomalyDetector
+    from pycsamt.ai.processing.denoise import prepare_z_features
+
+    X = prepare_z_features(sites, n_components=4)
+    n_sites, n_comp, n_freq = X.shape
+    X_flat = np.nan_to_num(X.reshape(n_sites, n_comp * n_freq), nan=0.0)
+
+    det = AnomalyDetector(latent_dim=4, channels=(8,))
+    det.fit(X_flat, epochs=3, verbose=False)
+
+    # Force at least one station to be flagged deterministically via an
+    # explicit low threshold override, exercising the drop-and-select path.
+    corrected = det.apply(sites, n_components=4, threshold=-np.inf, verbose=1)
+    assert len(list(corrected)) < len(list(sites))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

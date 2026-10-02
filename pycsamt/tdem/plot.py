@@ -1344,6 +1344,7 @@ def _records_to_section(
         if log_value:
             value = np.log10(value) if value > 0.0 else np.nan
         matrix[y_index[y], x_index[x]] = value
+    matrix = _fill_sparse_columns(matrix, np.asarray(y_vals, dtype=float))
     return {
         "x": np.asarray(x_vals, dtype=float),
         "y": np.asarray(y_vals, dtype=float),
@@ -1351,6 +1352,34 @@ def _records_to_section(
         "y_edges": _edges(y_vals),
         "values": matrix,
     }
+
+
+def _fill_sparse_columns(matrix: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Fill each column between its shallowest and deepest sample.
+
+    When every station has its own y values (``y="depth"``: the gate
+    depths depend on the local resistivity) the union grid has one row per
+    distinct depth, so each column is mostly empty and the section draws as
+    scattered slivers.  Each empty cell inside a column's own sampled range
+    takes the nearest sample of that column; nothing is extrapolated above
+    or below it.  Grids whose rows are shared (time, gate number) are left
+    unchanged.
+    """
+    if matrix.size == 0 or np.isfinite(matrix).mean() >= 0.5:
+        return matrix
+    out = matrix.copy()
+    for j in range(out.shape[1]):
+        col = out[:, j]
+        ok = np.flatnonzero(np.isfinite(col))
+        if ok.size < 2:
+            continue
+        rows = np.arange(ok[0], ok[-1] + 1)
+        pos = np.searchsorted(y[ok], y[rows]).clip(1, ok.size - 1)
+        left, right = ok[pos - 1], ok[pos]
+        near = np.where(np.abs(y[rows] - y[left]) <= np.abs(y[right] - y[rows]),
+                        left, right)
+        out[rows, j] = col[near]
+    return out
 
 
 def _edges(values: list[float]) -> np.ndarray:

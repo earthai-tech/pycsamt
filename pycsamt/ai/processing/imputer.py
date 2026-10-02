@@ -877,6 +877,16 @@ class EMImputer(BaseEMProcessor):
             str(backend_blob) if backend_blob is not None else "torch"
         )
 
+        if self._backend_name == "numpy":
+            # Frequency-interpolation fallback: no network was ever
+            # trained, so there is nothing to rebuild here -- restoring
+            # _use_numpy is what makes transform() take the fallback
+            # path again instead of calling a (nonexistent) network.
+            self._use_numpy = True
+            self._network = None
+            self._is_fitted = True
+            return
+
         if self._backend_name == "tensorflow":
             self._network = _build_masked_cae_tf(
                 self.n_components, self.n_freqs, self.channels, self.dropout

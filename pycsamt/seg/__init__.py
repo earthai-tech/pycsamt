@@ -71,7 +71,7 @@ def __getattr__(name: str):
 
 
 # Type checkers/IDE intellisense still see the symbols:
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .edi import EDIFile, EDIMixin, EDIOMixin
     from .other import OtherIO, OtherSECT
     from .spectra import (

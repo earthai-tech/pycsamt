@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the recommended-workflow figures for the emtools tf guide."""
 
 from pathlib import Path

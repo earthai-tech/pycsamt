@@ -13,10 +13,13 @@ filesystem.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
+from pycsamt.cli.commands.build import _base as build_base
 from pycsamt.cli.commands.build._base import (
     find_bash,
     run_solver_script,
@@ -72,3 +75,41 @@ class TestRunSolverScript:
         )
         code = run_solver_script("occam2d", ())
         assert code == 1
+
+    def test_keyboard_interrupt_returns_130(self, monkeypatch) -> None:
+        def _raise(cmd):
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(build_base.subprocess, "call", _raise)
+        code = run_solver_script("occam2d", ())
+        assert code == 130
+
+
+class TestFindBash:
+    def test_returns_first_candidate_on_path(self, monkeypatch) -> None:
+        monkeypatch.setattr(build_base.shutil, "which", lambda c: f"/usr/bin/{c}")
+        assert find_bash() == "/usr/bin/bash"
+
+    def test_falls_through_to_second_candidate(self, monkeypatch) -> None:
+        def _which(candidate):
+            return None if candidate == "bash" else f"/usr/bin/{candidate}"
+
+        monkeypatch.setattr(build_base.shutil, "which", _which)
+        assert find_bash() == "/usr/bin/sh"
+
+    def test_windows_fallback_found(self, monkeypatch) -> None:
+        monkeypatch.setattr(build_base.shutil, "which", lambda c: None)
+        monkeypatch.setattr(build_base.sys, "platform", "win32")
+        monkeypatch.setattr(build_base.Path, "exists", lambda self: True)
+        assert find_bash() == build_base._WINDOWS_BASH_CANDIDATES[0]
+
+    def test_windows_fallback_not_found(self, monkeypatch) -> None:
+        monkeypatch.setattr(build_base.shutil, "which", lambda c: None)
+        monkeypatch.setattr(build_base.sys, "platform", "win32")
+        monkeypatch.setattr(build_base.Path, "exists", lambda self: False)
+        assert find_bash() is None
+
+    def test_non_windows_no_fallback(self, monkeypatch) -> None:
+        monkeypatch.setattr(build_base.shutil, "which", lambda c: None)
+        monkeypatch.setattr(build_base.sys, "platform", "linux")
+        assert find_bash() is None

@@ -193,6 +193,191 @@ class TestApplySection:
         assert PLOT_CONFIG.dpi == 77
         PLOT_CONFIG.dpi = original
 
+    def test_load_all_config_skips_non_dict_section(self) -> None:
+        # "plot" mapped to a non-dict value must be skipped, not raise.
+        load_all_config({"plot": "not-a-dict", "control": {}})
+
+    def test_apply_section_empty_kwargs_is_noop(self) -> None:
+        apply_section("plot", {})
+
+    def test_apply_section_unknown_section_is_noop(self) -> None:
+        # No branch matches; must fall through silently.
+        apply_section("totally_unknown_section", {"foo": "bar"})
+
+    def test_apply_section_cli_flat(self) -> None:
+        from pycsamt.api.cli.config import PYCSAMT_CLI
+
+        original = PYCSAMT_CLI.log.level
+        try:
+            apply_section("cli", {"log__level": 2})
+            assert PYCSAMT_CLI.log.level == 2
+        finally:
+            PYCSAMT_CLI.log.level = original
+
+    def test_apply_section_cli_nested_legacy_form(self) -> None:
+        from pycsamt.api.cli.config import PYCSAMT_CLI
+
+        original = PYCSAMT_CLI.log.level
+        try:
+            apply_section("cli", {"log": {"level": 1}})
+            assert PYCSAMT_CLI.log.level == 1
+        finally:
+            PYCSAMT_CLI.log.level = original
+
+    def test_apply_section_style_preset_only(self) -> None:
+        apply_section("style", {"preset": "publication"})
+
+    def test_apply_section_style_extra_kwargs(self) -> None:
+        # No preset key: goes straight to configure_style(**kw).
+        apply_section("style", {"multiline__mode": "gradient"})
+
+    def test_apply_section_section_view(self) -> None:
+        apply_section("section_view", {"figsize": "10,8"})
+
+    def test_apply_section_station(self) -> None:
+        apply_section("station", {"density": 5})
+
+    def test_apply_section_interp_preset_only(self) -> None:
+        apply_section("interp", {"preset": "accessible"})
+
+    def test_apply_section_interp_extra_kwargs(self) -> None:
+        apply_section("interp", {"cmap": "viridis"})
+
+    def test_apply_section_agent_provider(self) -> None:
+        # provider is a read-only property; restoration is handled by the
+        # autouse _isolate_config_singletons fixture (it snapshots/restores
+        # __dict__ directly, bypassing the property).
+        apply_section("agent", {"provider": "claude"})
+
+    def test_apply_section_agent_model_only(self) -> None:
+        from pycsamt.api.agents import AGENT_CONFIG
+
+        apply_section("agent", {"model": "claude-x"})
+        assert AGENT_CONFIG.model == "claude-x"
+
+    def test_apply_section_agent_budget(self) -> None:
+        from pycsamt.api.agents import AGENT_CONFIG
+
+        apply_section("agent", {"budget_usd": 3.5})
+        assert AGENT_CONFIG.remaining_usd is not None
+
+    def test_apply_section_error_is_caught_and_warned(
+        self, capsys: pytest.CaptureFixture
+    ) -> None:
+        apply_section("view", {"backend": "bogus_backend_xyz"})
+        captured = capsys.readouterr()
+        assert "Warning" in captured.err
+
+
+class TestSingletonGetters:
+    def test_get_singleton_all_known_sections(self) -> None:
+        from pycsamt.cli.commands.config._base import (
+            _SINGLETON_MAP,
+            get_singleton,
+        )
+
+        for section in _SINGLETON_MAP:
+            assert get_singleton(section) is not None
+
+    def test_section_summary_unknown_section_is_unavailable(self) -> None:
+        from pycsamt.cli.commands.config._base import section_summary
+
+        assert section_summary("no_such_section") == "(unavailable)"
+
+    def test_section_summary_falls_back_to_repr_when_summary_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.cli.commands.config._base as _b
+        from pycsamt.cli.commands.config._base import section_summary
+
+        class _Weird:
+            def summary(self):
+                raise RuntimeError("boom")
+
+            def __repr__(self):
+                return "weird-repr"
+
+        monkeypatch.setattr(_b, "get_singleton", lambda s: _Weird())
+        assert section_summary("plot") == "weird-repr"
+
+    def test_section_summary_falls_back_to_str_when_repr_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import pycsamt.cli.commands.config._base as _b
+        from pycsamt.cli.commands.config._base import section_summary
+
+        class _Weird:
+            def __repr__(self):
+                raise RuntimeError("no repr")
+
+            def __str__(self):
+                return "weird-str"
+
+        monkeypatch.setattr(_b, "get_singleton", lambda s: _Weird())
+        assert section_summary("plot") == "weird-str"
+
+
+class TestTomlIoEdgeCases:
+    def test_read_toml_corrupted_file_returns_empty(
+        self, isolated_toml: Path
+    ) -> None:
+        isolated_toml.write_text("not [ valid toml =", encoding="utf-8")
+        assert _read_toml() == {}
+
+    def test_read_toml_missing_both_backends_returns_empty(
+        self, isolated_toml: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import builtins
+
+        isolated_toml.write_text("[plot]\ndpi = 1\n", encoding="utf-8")
+        real_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name in ("tomllib", "tomli"):
+                raise ImportError("simulated: no toml backend")
+            return real_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        assert _read_toml() == {}
+
+    def test_write_toml_uses_tomli_w_when_available(
+        self, isolated_toml: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        import types
+
+        calls: dict = {}
+        fake_mod = types.ModuleType("tomli_w")
+
+        def fake_dump(data, fh):
+            calls["data"] = data
+            fh.write(b"[fake]\n")
+
+        fake_mod.dump = fake_dump
+        monkeypatch.setitem(sys.modules, "tomli_w", fake_mod)
+
+        _write_toml({"plot": {"dpi": 9}})
+        assert calls["data"] == {"plot": {"dpi": 9}}
+        assert isolated_toml.read_bytes() == b"[fake]\n"
+
+    def test_write_toml_fallback_skips_non_dict_and_empty_sections(
+        self, isolated_toml: Path
+    ) -> None:
+        _write_toml(
+            {"bad": "not-a-dict", "empty": {}, "good": {"k": "v"}}
+        )
+        text = isolated_toml.read_text(encoding="utf-8")
+        assert "[good]" in text
+        assert "[bad]" not in text
+        assert "[empty]" not in text
+
+    def test_write_toml_fallback_else_branch_for_other_types(
+        self, isolated_toml: Path
+    ) -> None:
+        _write_toml({"sec": {"k": [1, 2, 3]}})
+        text = isolated_toml.read_text(encoding="utf-8")
+        assert "k =" in text
+
 
 # ---------------------------------------------------------------------------
 # CLI help wiring

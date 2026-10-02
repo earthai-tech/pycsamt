@@ -36,7 +36,7 @@ from .survey import (
 
 PathLike = Union[str, Path]
 
-__all__ = ["InputBuilder"]
+__all__ = ["InputBuilder", "build_mt_inputs", "mt_core_grid"]
 
 
 class InputBuilder(Mare2DEMBase):
@@ -128,7 +128,6 @@ class InputBuilder(Mare2DEMBase):
         dest = Path(workdir)
         dest.mkdir(parents=True, exist_ok=True)
         fname = filename or cfg.resistivity_file
-        log10_rho = math.log10(max(cfg.initial_rho, 1e-10))
         import numpy as np
 
         rf = ResistivityFile(
@@ -139,9 +138,11 @@ class InputBuilder(Mare2DEMBase):
             target_misfit=cfg.target_rms,
             max_iterations=cfg.max_iterations,
         )
-        rf.resistivity = np.array([[log10_rho]])
+        # The Rho column is linear ohm-m (it used to receive log10 rho, so
+        # 100 ohm-m became 2 ohm-m); 0 0 bounds defer to the global ones.
+        rf.resistivity = np.array([[max(cfg.initial_rho, 1e-10)]])
         rf.free_parameter = np.array([[1]])
-        rf.bounds = np.array([[-2.0, 5.0]])
+        rf.bounds = np.zeros((1, 2))
         rf.prejudice = np.zeros((1, 2))
         path = write_resistivity(rf, dest / fname)
         if self.verbose:
@@ -284,3 +285,182 @@ Mare2DEMRunner
 make_data_file
     Low-level data file generator.
 """
+
+
+# ---------------------------------------------------------------------------
+# EDI → complete MT inversion input set (data + mesh + model + settings)
+# ---------------------------------------------------------------------------
+
+
+def mt_core_grid(
+    rx_y,
+    frequencies,
+    *,
+    initial_rho: float = 100.0,
+    cell_y: float | None = None,
+    n_extra_y: int = 2,
+    z_first: float | None = None,
+    depth_max: float | None = None,
+    growth: float = 1.15,
+):
+    """Return the core-grid cell edges under a line of MT receivers.
+
+    Parameters
+    ----------
+    rx_y : array-like
+        Along-profile receiver positions in metres.
+    frequencies : array-like
+        Data frequencies in Hz; they set the depth range through skin
+        depths ``δ = 503·sqrt(ρ / f)`` of the starting resistivity.
+    initial_rho : float, default 100
+        Starting resistivity in ohm metres (skin-depth estimate only).
+    cell_y : float, optional
+        Lateral cell width. Default: half the median receiver spacing.
+    n_extra_y : int, default 2
+        Core cells added beyond the first and last receiver.
+    z_first : float, optional
+        First cell thickness. Default: a quarter of the shallowest skin
+        depth, at least 5 m.
+    depth_max : float, optional
+        Bottom of the core grid. Default: 1.5 × the deepest skin depth.
+    growth : float, default 1.15
+        Geometric thickness growth factor with depth.
+
+    Returns
+    -------
+    y_edges, z_edges : numpy.ndarray
+        Cell edges in metres (``z`` positive down, starting at 0).
+    """
+    import numpy as np
+
+    y = np.unique(np.asarray(rx_y, dtype=float))
+    f = np.asarray(frequencies, dtype=float)
+    f = f[np.isfinite(f) & (f > 0)]
+    if y.size == 0 or f.size == 0:
+        raise ValueError("need at least one receiver and one frequency")
+    rho = max(float(initial_rho), 1e-3)
+    if cell_y is None:
+        spacing = float(np.median(np.diff(y))) if y.size > 1 else 500.0
+        cell_y = max(spacing / 2.0, 10.0)
+    y0 = y.min() - n_extra_y * cell_y
+    y1 = y.max() + n_extra_y * cell_y
+    n_y = max(int(math.ceil((y1 - y0) / cell_y)), 1)
+    y_edges = y0 + cell_y * np.arange(n_y + 1)
+
+    delta_min = 503.0 * math.sqrt(rho / f.max())
+    delta_max = 503.0 * math.sqrt(rho / f.min())
+    dz = max(z_first if z_first is not None else delta_min / 4.0, 5.0)
+    bottom = depth_max if depth_max is not None else 1.5 * delta_max
+    z_edges = [0.0]
+    while z_edges[-1] < bottom:
+        z_edges.append(z_edges[-1] + dz)
+        dz *= max(float(growth), 1.0)
+    return y_edges, np.asarray(z_edges)
+
+
+def build_mt_inputs(
+    sites,
+    workdir: PathLike,
+    config: Mare2DEMConfig | None = None,
+    *,
+    stem: str = "mare2dem",
+    error_floor: float = 0.05,
+    output_modes: str = "all",
+    cell_y: float | None = None,
+    z_first: float | None = None,
+    depth_max: float | None = None,
+    growth: float = 1.15,
+    padding: float | None = None,
+    **edi_kwargs,
+) -> dict:
+    """Write a complete, runnable MARE2DEM MT inversion from EDI sites.
+
+    :meth:`InputBuilder.write_resistivity` writes a one-region stub with
+    no ``.poly`` mesh, which MARE2DEM cannot run.  This builds the whole
+    set: the ``.emdata`` from the sites
+    (:func:`~pycsamt.models.mare2dem.edi.make_mt_data_from_edi`), then a
+    regular core grid under the receivers (:func:`mt_core_grid`) turned
+    into ``.poly`` + ``.resistivity`` + ``.settings`` by
+    :func:`~pycsamt.models.mare2dem.grid_to_m2d.grid_to_mare2dem` (fixed
+    air, fixed padding, one free parameter per core cell).
+
+    Parameters
+    ----------
+    sites : Sites or path-like
+        Anything accepted by ``make_mt_data_from_edi``.
+    workdir : path-like
+        Output directory (created).
+    config : Mare2DEMConfig, optional
+        Supplies ``initial_rho``, ``target_rms`` and ``max_iterations``.
+    stem : str, default "mare2dem"
+        Base name; the model is ``<stem>.0.resistivity``.
+    error_floor : float, default 0.05
+        Relative impedance error floor (TE and TM).
+    output_modes : str, default "all"
+        Forwarded to ``make_mt_data_from_edi``.
+    cell_y, z_first, depth_max, growth
+        Core-grid controls, see :func:`mt_core_grid`.
+    padding : float, optional
+        Lateral and vertical padding around the core grid in metres.
+        Default: twice the larger core dimension, at least 50 km, so the
+        model boundaries stay far from the receivers at every period.
+    **edi_kwargs
+        Extra ``make_mt_data_from_edi`` options.
+
+    Returns
+    -------
+    dict
+        ``files`` ({data, poly, model, settings}), ``run_stem`` (argument
+        for :meth:`Mare2DEMRunner.run`), ``y_edges``, ``z_edges``,
+        ``rx_y``, ``rx_z``, ``frequencies`` and ``n_parameters``.
+    """
+    import numpy as np
+
+    from .edi import make_mt_data_from_edi
+    from .grid_to_m2d import grid_to_mare2dem
+
+    cfg = config or Mare2DEMConfig()
+    dest = Path(workdir)
+    dest.mkdir(parents=True, exist_ok=True)
+    data_path = dest / f"{stem}.emdata"
+    make_mt_data_from_edi(
+        sites, data_path, output_modes=output_modes,
+        error_floor_te=error_floor, error_floor_tm=error_floor,
+        **edi_kwargs,
+    )
+    em = read_emdata(data_path)
+    if em.mt is None or not len(em.mt.receivers):
+        raise ValueError(f"{data_path.name} contains no MT receivers")
+    rx = np.asarray(em.mt.receivers, dtype=float)
+    freqs = np.asarray(em.mt.frequencies, dtype=float)
+    rho0 = max(float(cfg.initial_rho), 1e-3)
+    y_edges, z_edges = mt_core_grid(
+        rx[:, 1], freqs, initial_rho=rho0, cell_y=cell_y,
+        z_first=z_first, depth_max=depth_max, growth=growth,
+    )
+    yc = 0.5 * (y_edges[:-1] + y_edges[1:])
+    zc = 0.5 * (z_edges[:-1] + z_edges[1:])
+    Y, Z = np.meshgrid(yc, zc)
+    if padding is None:
+        core = max(y_edges[-1] - y_edges[0], z_edges[-1])
+        padding = max(50000.0, 2.0 * core)
+    files = grid_to_mare2dem(
+        Y, Z, np.full(Y.shape, rho0),
+        padding_y=padding, padding_z=padding, out_dir=dest,
+        model_name=stem, data_file=data_path.name,
+        target_misfit=float(cfg.target_rms),
+        max_iterations=int(cfg.max_iterations),
+    )
+    return {
+        "files": {"data": data_path, "poly": files["poly"],
+                  "model": files["resistivity"],
+                  "settings": files["settings"]},
+        "run_stem": files["resistivity"].name[: -len(".resistivity")],
+        "y_edges": y_edges,
+        "z_edges": z_edges,
+        "rx_y": rx[:, 1],
+        "rx_z": rx[:, 2],
+        "frequencies": freqs,
+        "n_parameters": int(Y.size),
+        "padding": float(padding),
+    }

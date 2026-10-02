@@ -176,3 +176,139 @@ def test_raises_for_anisotropic_model():
     )
     with pytest.raises(ValueError, match="isotropic"):
         mare2dem_to_pcsf(empty, mesh)
+
+
+# ---------------------------------------------------------------------------
+# Fully self-contained tests (no bundled data/mare2dem/ dependency, so the
+# coverage gain is real in CI — see test class above which entirely skips
+# there since data/mare2dem/ is gitignored).
+# ---------------------------------------------------------------------------
+
+
+class _FakeRF:
+    resistivity = np.array([[10.0], [20.0], [30.0]])
+    anisotropy = "isotropic"
+    num_regions = 3
+
+
+class _FakeIterRecord:
+    def __init__(self, iteration, rms, roughness, lambda_):
+        self.iteration = iteration
+        self.rms = rms
+        self.roughness = roughness
+        self.lambda_ = lambda_
+
+
+class _FakeLog:
+    def __init__(self, iterations):
+        self.iterations = iterations
+        self.final_rms = iterations[-1].rms if iterations else None
+        self.n_iterations = len(iterations)
+        self.converged = True
+
+
+def _fake_result(with_log=True):
+    result = InversionResult.__new__(InversionResult)
+    result.model = _FakeRF()
+    result.workdir = Path("fake_workdir")
+    result.log = (
+        _FakeLog(
+            [
+                _FakeIterRecord(0, 5.0, 2.0, 100.0),
+                _FakeIterRecord(1, 1.2, 1.5, 10.0),
+            ]
+        )
+        if with_log
+        else None
+    )
+    return result
+
+
+def _fake_mesh():
+    return TriMesh(
+        nodes_m=[[0, 0], [1, 0], [0, 1], [1, 1]],
+        triangles=[[0, 1, 2], [1, 3, 2]],
+        region_ids=np.array([1, 3]),
+    )
+
+
+def test_mare2dem_to_pcsf_full_synthetic_build():
+    result = _fake_result()
+    mesh = _fake_mesh()
+    model = mare2dem_to_pcsf(
+        result,
+        mesh,
+        created_by="pytest",
+        crs="EPSG:32650",
+        description="synthetic MARE2DEM run",
+    )
+
+    assert model.kind == "mesh_unstructured"
+    assert model.source_backend == "mare2dem"
+    assert model.created_by == "pytest"
+    assert model.crs == "EPSG:32650"
+    assert model.description == "synthetic MARE2DEM run"
+    np.testing.assert_array_equal(model.resistivity, [10.0, 30.0])
+    np.testing.assert_array_equal(
+        model.resistivity_by_region, [10.0, 20.0, 30.0]
+    )
+    assert model.geometry.plane == "xz"
+    np.testing.assert_array_equal(
+        model.geometry.connectivity, mesh.triangles
+    )
+
+    assert model.metadata["workdir"] == str(Path("fake_workdir"))
+    assert model.metadata["final_rms"] == 1.2
+    assert model.metadata["n_iterations"] == 2
+    assert model.metadata["converged"] is True
+    assert model.metadata["n_regions"] == 3
+    assert model.metadata["anisotropy"] == "isotropic"
+
+    assert set(model.history) == {"iteration", "rms", "roughness", "lambda"}
+    np.testing.assert_array_equal(model.history["iteration"], [0.0, 1.0])
+    np.testing.assert_array_equal(model.history["rms"], [5.0, 1.2])
+    np.testing.assert_array_equal(model.history["roughness"], [2.0, 1.5])
+    np.testing.assert_array_equal(model.history["lambda"], [100.0, 10.0])
+
+
+def test_mare2dem_to_pcsf_without_log_history_is_empty():
+    result = _fake_result(with_log=False)
+    mesh = _fake_mesh()
+    model = mare2dem_to_pcsf(result, mesh)
+    assert model.history == {}
+
+
+def test_mare2dem_to_pcsf_with_stations_and_dict_survey():
+    from pycsamt.format.schema import StationTable
+
+    result = _fake_result()
+    mesh = _fake_mesh()
+    stations = StationTable(
+        name=["S1", "S2"],
+        x=np.array([0.0, 10.0]),
+        y=np.array([0.0, 0.0]),
+        z=np.array([0.0, 0.0]),
+    )
+    model = mare2dem_to_pcsf(
+        result, mesh, stations=stations, survey={"name": "demo survey"}
+    )
+    assert model.stations is stations
+    assert model.survey == {"name": "demo survey"}
+
+
+def test_mare2dem_to_pcsf_with_survey_object_using_to_dict():
+    class _Survey:
+        def to_dict(self):
+            return {"name": "obj survey", "crew": "A"}
+
+    result = _fake_result()
+    mesh = _fake_mesh()
+    model = mare2dem_to_pcsf(result, mesh, survey=_Survey())
+    assert model.survey == {"name": "obj survey", "crew": "A"}
+
+
+def test_survey_to_dict_none_and_mapping():
+    from pycsamt.format.adapters.mare2dem import _survey_to_dict
+
+    assert _survey_to_dict(None) == {}
+    assert _survey_to_dict({"a": 1}) == {"a": 1}

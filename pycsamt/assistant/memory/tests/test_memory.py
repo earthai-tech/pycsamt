@@ -44,6 +44,35 @@ class TestSessionState(unittest.TestCase):
     def test_unique_ids(self):
         self.assertNotEqual(SessionState().session_id, SessionState().session_id)
 
+    def test_reset_drops_all_context(self):
+        s = SessionState(line="L22", edi_path="old", last_workflow="qc",
+                         last_summary="old result", turns=[{"content": "secret"}],
+                         facts={"artifact": "old.py"})
+        previous_id = s.session_id
+        s.reset()
+        self.assertNotEqual(s.session_id, previous_id)
+        self.assertIsNone(s.last_summary)
+        self.assertIsNone(s.edi_path)
+        self.assertEqual(s.turns, [])
+        self.assertEqual(s.facts, {})
+
+    def test_context_budget_keeps_whole_recent_turns(self):
+        history = [{"role": "user", "content": "a" * 9000},
+                   {"role": "assistant", "content": "recent"}]
+        turns, omitted = SessionState.bounded_turns(history)
+        self.assertEqual(turns, history[-1:])
+        self.assertEqual(omitted, 1)
+        self.assertEqual(SessionState().recent_turns(0), [])
+
+    def test_serialized_context_does_not_alias_another_session(self):
+        first = SessionState(facts={"choices": ["L22"]})
+        payload = first.to_dict()
+        second = SessionState.from_dict(payload)
+        second.facts["choices"].append("L30")
+        payload["facts"]["choices"].append("L18")
+        self.assertEqual(first.facts["choices"], ["L22"])
+        self.assertEqual(second.facts["choices"], ["L22", "L30"])
+
 
 class TestProjectState(unittest.TestCase):
     def setUp(self):

@@ -28,6 +28,9 @@ class SessionState:
     freq_min_hz: float | None = None
     freq_max_hz: float | None = None
     overlay: str = "Apparent Resistivity"
+    open_profile_on_station_select: bool = False
+    active_lines: list[str] = field(default_factory=list)
+    primary_line: str | None = None
     dock_geometry: str | None = None  # base64-encoded QMainWindow geometry
     dock_state: str | None = (
         None  # base64-encoded QMainWindow state (docks/toolbars)
@@ -38,12 +41,16 @@ class SessionState:
     window_geometries: dict = field(default_factory=dict)
 
     # ── Phase 5: solver paths + LLM key + advanced prefs ──────────────
-    api_key: str = ""  # Anthropic / OpenAI API key
+    api_key: str = ""  # Anthropic / OpenAI / Gemini API key
+    llm_provider: str = "claude"  # {"claude", "openai", "gemini"}
+    llm_model: str = ""  # explicit model id; "" = provider's own default
     occam2d_binary: str = ""  # path to Occam2D executable
     modem_binary: str = ""  # path to ModEM executable
     mare2dem_binary: str = ""  # path to MARE2DEM executable
     inversion_workdir: str = ""  # default working directory for inversions
     log_level: str = "WARNING"  # Python logging level name
+    ui_animations: bool = True  # animate the Station Statistics card
+    log_visible: bool = False  # the Log dock (status-bar "Log" chip)
     tile_provider: str = "OpenStreetMap.Mapnik"  # contextily tile source
     max_recent_files: int = 20  # cap on Recent Files list
 

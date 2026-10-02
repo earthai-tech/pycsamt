@@ -23,10 +23,11 @@ Results (centre tabs)
     2D: Pseudosection | 2D Model | Profile Responses
     3D: 3D Model | Response Map | Section | Tensors
 
-Library (right)
+Library (right, collapsible drawer — "Library" toggle in the tab bar, Ctrl+L)
     • Saved-model list  → [Save] [Rename] [Delete] [Load]
-    • Presets           → one button per geology prior
-    • [→ Send to Inversion]
+    • Presets           → one button per geology prior (1-D only)
+
+[Send to Inversion →] sits with [Compute] / [Export] in the left panel.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ from typing import Any
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -59,6 +61,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -67,12 +70,14 @@ from pycsamt.app.desktop.controllers.forward_controller import (
     GEOLOGY_PRESET_NAMES,
     ForwardController,
 )
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
     icon_button,
     make_group,
 )
+from pycsamt.app.desktop.widgets.compact_button import compact_button
 
 logger = logging.getLogger(__name__)
 
@@ -152,27 +157,93 @@ class ForwardModelWindow(PanelWindow):
         self._build_run_buttons(layout)
 
     def _build_content(self, layout: QVBoxLayout) -> None:
-        """Right area — inner splitter: centre tabs | library."""
+        """Right area — result tabs, plus a collapsible library drawer.
+
+        Saved models and presets are occasional, library-style actions, so
+        they live in a side drawer that can be hidden (tab-bar toggle or
+        Ctrl+L): hidden, the figures take the full width. "Send to
+        Inversion" is the primary next step after a run, so it sits with
+        Compute/Export in the model builder, reachable with the drawer
+        closed.
+        """
         inner = QSplitter(Qt.Orientation.Horizontal)
         inner.setHandleWidth(4)
+        inner.setChildrenCollapsible(False)
+        self._inner_splitter = inner
 
         # ── Centre: tab widget with result canvases ────────────────────
         self._tab_widget = QTabWidget()
         self._tab_widget.setObjectName("ForwardTabWidget")
         self._build_result_tabs()
+        self._tab_widget.setCornerWidget(
+            self._build_tab_corner(), Qt.Corner.TopRightCorner
+        )
         inner.addWidget(self._tab_widget)
 
-        # ── Right: library panel ───────────────────────────────────────
-        lib_widget = self._build_library_widget()
-        lib_widget.setMinimumWidth(190)
-        lib_widget.setMaximumWidth(240)
-        inner.addWidget(lib_widget)
+        # ── Right: library drawer ──────────────────────────────────────
+        self._lib_panel = self._build_library_widget()
+        self._lib_panel.setMinimumWidth(190)
+        self._lib_panel.setMaximumWidth(260)
+        inner.addWidget(self._lib_panel)
 
         inner.setStretchFactor(0, 1)
         inner.setStretchFactor(1, 0)
         inner.setSizes([900, 210])
 
         layout.addWidget(inner)
+
+        QShortcut(QKeySequence("Ctrl+L"), self, activated=self._toggle_library)
+
+    def _build_tab_corner(self) -> QWidget:
+        """Tab-bar corner: the library drawer toggle (kept small so the
+        result tabs never scroll, even on a ~960 px wide window)."""
+        corner = QWidget()
+        h = QHBoxLayout(corner)
+        h.setContentsMargins(0, 2, 4, 2)
+        h.setSpacing(6)
+
+        self._btn_library = QToolButton()
+        self._btn_library.setObjectName("LibraryToggle")
+        self._btn_library.setText("Library ▸")
+        self._btn_library.setCheckable(True)
+        self._btn_library.setChecked(True)
+        self._btn_library.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextOnly
+        )
+        self._btn_library.setToolTip(
+            "Show / hide saved models and presets  (Ctrl+L)"
+        )
+        self._btn_library.toggled.connect(self._set_library_visible)
+        h.addWidget(self._btn_library)
+        return corner
+
+    # ── Library drawer ──────────────────────────────────────────────────
+
+    @property
+    def library_visible(self) -> bool:
+        return self._btn_library.isChecked()
+
+    def _toggle_library(self) -> None:
+        self._btn_library.toggle()
+
+    def _set_library_visible(self, visible: bool) -> None:
+        """Show/hide the drawer; hidden, the result tabs take its width."""
+        if self._btn_library.isChecked() != visible:
+            self._btn_library.setChecked(visible)  # re-enters via toggled
+            return
+        self._lib_panel.setVisible(visible)
+        # ▸ = "collapse to the right" while open, ◂ = "open" while closed
+        self._btn_library.setText("Library ▸" if visible else "◂ Library")
+
+    def save_geometry_to(self, store: dict) -> None:
+        super().save_geometry_to(store)
+        store[self._session_key]["library_visible"] = self.library_visible
+
+    def restore_geometry_from(self, store: dict) -> None:
+        super().restore_geometry_from(store)
+        entry = store.get(self._session_key) or {}
+        if "library_visible" in entry:
+            self._set_library_visible(bool(entry["library_visible"]))
 
     # =========================================================================
     # Left panel builders
@@ -226,16 +297,16 @@ class ForwardModelWindow(PanelWindow):
         # CRUD row
         btn_row = QHBoxLayout()
         self._btn_add_layer = QPushButton("+")
-        self._btn_add_layer.setFixedWidth(28)
+        compact_button(self._btn_add_layer)
         self._btn_add_layer.setToolTip("Add layer below")
         self._btn_rem_layer = QPushButton("−")
-        self._btn_rem_layer.setFixedWidth(28)
+        compact_button(self._btn_rem_layer)
         self._btn_rem_layer.setToolTip("Remove selected layer")
         self._btn_up_layer = QPushButton("↑")
-        self._btn_up_layer.setFixedWidth(28)
+        compact_button(self._btn_up_layer)
         self._btn_up_layer.setToolTip("Move layer up")
         self._btn_dn_layer = QPushButton("↓")
-        self._btn_dn_layer.setFixedWidth(28)
+        compact_button(self._btn_dn_layer)
         self._btn_dn_layer.setToolTip("Move layer down")
         for b in (
             self._btn_add_layer,
@@ -532,8 +603,17 @@ class ForwardModelWindow(PanelWindow):
         self._btn_export = icon_button(
             "⬆  Export", "export", "Export current figure"
         )
+        # Primary next step after a run -- always visible with the model
+        # builder, whatever the state of the library drawer.
+        self._btn_send_inv = QPushButton("Send to Inversion  →")
+        self._btn_send_inv.setObjectName("SendToInversionButton")
+        self._btn_send_inv.setToolTip(
+            "Send current model as starting model for the Inversion window"
+        )
+        self._btn_send_inv.clicked.connect(self._on_send_to_inversion)
         layout.addWidget(self._btn_compute)
         layout.addWidget(self._btn_export)
+        layout.addWidget(self._btn_send_inv)
         self._btn_compute.clicked.connect(self._on_compute)
         self._btn_export.clicked.connect(self._on_export)
 
@@ -546,24 +626,70 @@ class ForwardModelWindow(PanelWindow):
     # Centre: result tabs
     # =========================================================================
 
+    def _make_result_canvas(self, empty_title: str, empty_reason: str) -> CanvasResultView:
+        view = CanvasResultView(
+            toolbar=True, empty_title=empty_title, empty_reason=empty_reason,
+        )
+        view.canvas.set_refresh_callback(
+            self._on_compute, tooltip="Recompute — reruns the forward model"
+        )
+        return view
+
     def _build_result_tabs(self) -> None:
         """Create all canvas tabs for 1D, 2D, 3D results."""
         # ── 1D canvases ───────────────────────────────────────────────
-        self._c1d_curves = MplCanvas(toolbar=True)
-        self._c1d_model = MplCanvas(toolbar=True)
-        self._c1d_sensitivity = MplCanvas(toolbar=True)
-        self._c1d_observed = MplCanvas(toolbar=True)
+        self._c1d_curves_view = self._make_result_canvas(
+            "No response yet", "Click Compute to generate ρₐ/φ curves."
+        )
+        self._c1d_model_view = self._make_result_canvas(
+            "No model profile yet", "Click Compute to generate the model profile."
+        )
+        self._c1d_sensitivity_view = self._make_result_canvas(
+            "No sensitivity yet", "Click Compute to generate the Jacobian sensitivity."
+        )
+        # Never drawn: comparison against real/observed data isn't wired up yet.
+        self._c1d_observed_view = CanvasResultView(
+            toolbar=True,
+            empty_title="Not available",
+            empty_reason="Comparing the forward model against observed data "
+            "isn't implemented yet.",
+        )
+        self._c1d_curves = self._c1d_curves_view.canvas
+        self._c1d_model = self._c1d_model_view.canvas
+        self._c1d_sensitivity = self._c1d_sensitivity_view.canvas
+        self._c1d_observed = self._c1d_observed_view.canvas
 
         # ── 2D canvases ───────────────────────────────────────────────
-        self._c2d_pseudo = MplCanvas(toolbar=True)
-        self._c2d_model = MplCanvas(toolbar=True)
-        self._c2d_profiles = MplCanvas(toolbar=True)
+        self._c2d_pseudo_view = self._make_result_canvas(
+            "No pseudosection yet", "Click Compute to generate the pseudosection."
+        )
+        self._c2d_model_view = self._make_result_canvas(
+            "No model yet", "Click Compute to generate the 2-D model."
+        )
+        self._c2d_profiles_view = self._make_result_canvas(
+            "No profiles yet", "Click Compute to generate station response profiles."
+        )
+        self._c2d_pseudo = self._c2d_pseudo_view.canvas
+        self._c2d_model = self._c2d_model_view.canvas
+        self._c2d_profiles = self._c2d_profiles_view.canvas
 
         # ── 3D canvases ───────────────────────────────────────────────
-        self._c3d_model = MplCanvas(toolbar=True)
-        self._c3d_map = MplCanvas(toolbar=True)
-        self._c3d_section = MplCanvas(toolbar=True)
-        self._c3d_tensors = MplCanvas(toolbar=True)
+        self._c3d_model_view = self._make_result_canvas(
+            "No model yet", "Click Compute to generate the 3-D model."
+        )
+        self._c3d_map_view = self._make_result_canvas(
+            "No response map yet", "Click Compute to generate the response map."
+        )
+        self._c3d_section_view = self._make_result_canvas(
+            "No section yet", "Click Compute to generate the section."
+        )
+        self._c3d_tensors_view = self._make_result_canvas(
+            "No tensors yet", "Click Compute to generate the tensor components."
+        )
+        self._c3d_model = self._c3d_model_view.canvas
+        self._c3d_map = self._c3d_map_view.canvas
+        self._c3d_section = self._c3d_section_view.canvas
+        self._c3d_tensors = self._c3d_tensors_view.canvas
 
         # Initially show 1D tabs
         self._set_tabs_for_dim("1D")
@@ -571,19 +697,19 @@ class ForwardModelWindow(PanelWindow):
     def _set_tabs_for_dim(self, dim: str) -> None:
         self._tab_widget.clear()
         if dim == "1D":
-            self._tab_widget.addTab(self._c1d_curves, "ρₐ / φ Curves")
-            self._tab_widget.addTab(self._c1d_model, "Model Profile")
-            self._tab_widget.addTab(self._c1d_sensitivity, "Sensitivity")
-            self._tab_widget.addTab(self._c1d_observed, "vs Observed")
+            self._tab_widget.addTab(self._c1d_curves_view, "ρₐ / φ Curves")
+            self._tab_widget.addTab(self._c1d_model_view, "Model Profile")
+            self._tab_widget.addTab(self._c1d_sensitivity_view, "Sensitivity")
+            self._tab_widget.addTab(self._c1d_observed_view, "vs Observed")
         elif dim == "2D":
-            self._tab_widget.addTab(self._c2d_pseudo, "Pseudosection")
-            self._tab_widget.addTab(self._c2d_model, "2D Model")
-            self._tab_widget.addTab(self._c2d_profiles, "Profile Responses")
+            self._tab_widget.addTab(self._c2d_pseudo_view, "Pseudosection")
+            self._tab_widget.addTab(self._c2d_model_view, "2D Model")
+            self._tab_widget.addTab(self._c2d_profiles_view, "Profile Responses")
         else:
-            self._tab_widget.addTab(self._c3d_model, "3D Model")
-            self._tab_widget.addTab(self._c3d_map, "Response Map")
-            self._tab_widget.addTab(self._c3d_section, "Section")
-            self._tab_widget.addTab(self._c3d_tensors, "Tensors")
+            self._tab_widget.addTab(self._c3d_model_view, "3D Model")
+            self._tab_widget.addTab(self._c3d_map_view, "Response Map")
+            self._tab_widget.addTab(self._c3d_section_view, "Section")
+            self._tab_widget.addTab(self._c3d_tensors_view, "Tensors")
 
     # =========================================================================
     # Right: library panel
@@ -624,6 +750,7 @@ class ForwardModelWindow(PanelWindow):
 
         # ── Presets ───────────────────────────────────────────────────
         preset_grp, preset_lay = make_group("Presets (1D)")
+        self._preset_grp = preset_grp
 
         scroll_inner = QWidget()
         scroll_v = QVBoxLayout(scroll_inner)
@@ -651,15 +778,6 @@ class ForwardModelWindow(PanelWindow):
         preset_lay.addWidget(scroll)
         v.addWidget(preset_grp)
 
-        # ── Send to Inversion ─────────────────────────────────────────
-        self._btn_send_inv = QPushButton("→ Send to Inversion")
-        self._btn_send_inv.setObjectName("SendToInversionButton")
-        self._btn_send_inv.setToolTip(
-            "Send current model as starting model for the Inversion window"
-        )
-        self._btn_send_inv.clicked.connect(self._on_send_to_inversion)
-        v.addWidget(self._btn_send_inv)
-
         v.addStretch(1)
         return widget
 
@@ -676,6 +794,12 @@ class ForwardModelWindow(PanelWindow):
         idx = {"1D": 0, "2D": 1, "3D": 2}[dim]
         self._stacked.setCurrentIndex(idx)
         self._set_tabs_for_dim(dim)
+        # Presets are 1-D layered geological priors
+        self._preset_grp.setEnabled(dim == "1D")
+        self._preset_grp.setToolTip(
+            "" if dim == "1D"
+            else "Presets are 1-D layered priors — switch to 1D to use them."
+        )
         # 3D is slow — warn the user
         if dim == "3D":
             self._compute_label.setText("3D can take several minutes.")
@@ -806,6 +930,7 @@ class ForwardModelWindow(PanelWindow):
         ax2.set_ylim(0, 90)
         self._c1d_curves.figure.tight_layout()
         self._c1d_curves.draw()
+        self._c1d_curves_view.show_canvas()
 
         # Tab 1: model profile
         rho, h = self._read_1d_model()
@@ -828,6 +953,7 @@ class ForwardModelWindow(PanelWindow):
             ax.set_ylabel("Depth (m)")
         self._c1d_model.figure.tight_layout()
         self._c1d_model.draw()
+        self._c1d_model_view.show_canvas()
 
         # Tab 2: sensitivity (approximate — dρₐ/dρ per layer, numeric)
         try:
@@ -875,6 +1001,7 @@ class ForwardModelWindow(PanelWindow):
         ax.set_title("Jacobian sensitivity")
         self._c1d_sensitivity.figure.tight_layout()
         self._c1d_sensitivity.draw()
+        self._c1d_sensitivity_view.show_canvas()
 
     def _plot_2d(self, resp) -> None:
         from pycsamt.forward.plot import (
@@ -888,37 +1015,35 @@ class ForwardModelWindow(PanelWindow):
         ax = self._c2d_pseudo.figure.add_subplot(111)
         try:
             plot_pseudosection_2d(resp, ax=ax, mode="TE")
+            self._c2d_pseudo.figure.tight_layout()
+            self._c2d_pseudo.draw()
+            self._c2d_pseudo_view.show_canvas()
         except Exception as exc:
-            ax.set_title(f"Pseudosection unavailable: {exc}")
-        self._c2d_pseudo.figure.tight_layout()
-        self._c2d_pseudo.draw()
+            self._c2d_pseudo_view.show_unavailable("Pseudosection unavailable", str(exc))
 
         # Tab 1: 2D model
         self._c2d_model.figure.clear()
         ax = self._c2d_model.figure.add_subplot(111)
         try:
             plot_model_2d(resp.grid, ax=ax)
+            self._c2d_model.figure.tight_layout()
+            self._c2d_model.draw()
+            self._c2d_model_view.show_canvas()
         except Exception as exc:
-            ax.set_title(f"Model plot unavailable: {exc}")
-        self._c2d_model.figure.tight_layout()
-        self._c2d_model.draw()
+            self._c2d_model_view.show_unavailable("Model plot unavailable", str(exc))
 
         # Tab 2: station profiles
         self._c2d_profiles.figure.clear()
         ax = self._c2d_profiles.figure.add_subplot(111)
         try:
             plot_response_profiles(resp, ax=ax, mode="TE")
+            self._c2d_profiles.figure.tight_layout()
+            self._c2d_profiles.draw()
+            self._c2d_profiles_view.show_canvas()
         except Exception as exc:
-            ax.set_title(f"Profile plot unavailable: {exc}")
-        self._c2d_profiles.figure.tight_layout()
-        self._c2d_profiles.draw()
+            self._c2d_profiles_view.show_unavailable("Profile plot unavailable", str(exc))
 
     def _plot_3d(self, resp) -> None:
-        import io
-
-        import matplotlib.pyplot as plt
-        from matplotlib.image import imread as _imread
-
         from pycsamt.forward.plot import (
             plot_model_3d,
             plot_response_map_3d,
@@ -926,38 +1051,35 @@ class ForwardModelWindow(PanelWindow):
             plot_tensor_components_3d,
         )
 
-        def _render_own_figure(canvas, func, *args, label="", **kwargs):
-            """Call a plot function that creates its own figure, then rasterise
-            it into the canvas so it lives inside the existing MplCanvas."""
-            canvas.figure.clear()
-            ax_img = canvas.figure.add_subplot(111)
-            try:
-                result = func(*args, **kwargs)
-                # result is an ndarray of Axes — grab their parent figure
-                if hasattr(result, "flat"):
-                    src_fig = next(iter(result.flat)).figure
-                else:
-                    src_fig = result.figure
-                buf = io.BytesIO()
-                src_fig.savefig(
-                    buf, format="png", dpi=110, bbox_inches="tight"
-                )
-                plt.close(src_fig)
-                buf.seek(0)
-                img = _imread(buf)
-                ax_img.imshow(img)
-                ax_img.axis("off")
-            except Exception as exc:
-                ax_img.set_title(f"{label}: {exc}")
-            canvas.figure.tight_layout(pad=0)
-            canvas.draw()
+        def _render_multi(canvas, view, func, arg, shape, label):
+            """Draw a multi-panel plot natively into *canvas*'s figure.
 
-        # ── Tab 0: 3D Model (no ax, takes grid3d) ──────────────────────
-        _render_own_figure(
+            These plots used to build their own figure that was saved to PNG
+            and pasted in with imshow: that showed the global theme's grey
+            figure background, was blurry at other sizes, and made the
+            canvas toolbar zoom/pan act on a bitmap.  Passing ``axes=``
+            keeps them live, crisp and styled like the 1-D/2-D tabs.
+            """
+            fig = canvas.figure
+            fig.clear()
+            fig.set_layout_engine("constrained")
+            try:
+                axs = fig.subplots(*shape)
+                func(arg, axes=axs)
+                canvas.draw()
+                view.show_canvas()
+            except Exception as exc:
+                fig.clear()
+                view.show_unavailable(f"{label} unavailable", str(exc))
+
+        # ── Tab 0: 3D Model — XZ / YZ / XY slices ──────────────────────
+        _render_multi(
             self._c3d_model,
+            self._c3d_model_view,
             plot_model_3d,
             resp.grid,
-            label="3D Model",
+            (1, 3),
+            "3D Model",
         )
 
         # ── Tab 1: Response Map (accepts ax) ───────────────────────────
@@ -965,27 +1087,31 @@ class ForwardModelWindow(PanelWindow):
         ax = self._c3d_map.figure.add_subplot(111)
         try:
             plot_response_map_3d(resp, ax=ax)
+            self._c3d_map.figure.tight_layout()
+            self._c3d_map.draw()
+            self._c3d_map_view.show_canvas()
         except Exception as exc:
-            ax.set_title(f"Response Map: {exc}")
-        self._c3d_map.figure.tight_layout()
-        self._c3d_map.draw()
+            self._c3d_map_view.show_unavailable("Response Map unavailable", str(exc))
 
         # ── Tab 2: Section (accepts ax) ────────────────────────────────
         self._c3d_section.figure.clear()
         ax = self._c3d_section.figure.add_subplot(111)
         try:
             plot_response_section_3d(resp, ax=ax)
+            self._c3d_section.figure.tight_layout()
+            self._c3d_section.draw()
+            self._c3d_section_view.show_canvas()
         except Exception as exc:
-            ax.set_title(f"Section: {exc}")
-        self._c3d_section.figure.tight_layout()
-        self._c3d_section.draw()
+            self._c3d_section_view.show_unavailable("Section unavailable", str(exc))
 
-        # ── Tab 3: Tensor components (no ax, multi-panel) ──────────────
-        _render_own_figure(
+        # ── Tab 3: Tensor components — 2 × 2 maps ──────────────────────
+        _render_multi(
             self._c3d_tensors,
+            self._c3d_tensors_view,
             plot_tensor_components_3d,
             resp,
-            label="Tensors",
+            (2, 2),
+            "Tensors",
         )
 
     # =========================================================================
@@ -1111,6 +1237,8 @@ class ForwardModelWindow(PanelWindow):
         )
 
         current = self._tab_widget.currentWidget()
+        if isinstance(current, CanvasResultView):
+            current = current.canvas
         if not isinstance(current, MplCanvas):
             return
         ExportDialog(figure=current.figure, parent=self).exec()

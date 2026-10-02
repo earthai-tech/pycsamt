@@ -12,21 +12,39 @@ it).  It is the "save your workflow as code" button.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from ._base import AgentResult, BaseAgent
+from ._generation import (
+    GenerationInput,
+    clarification_for,
+    exact_artifact_edit,
+    excludes_correction,
+    forward_parameters,
+)
+
+#: Folder used when no ``output_dir`` is given. Matches the Agent Master
+#: default so generated scripts never land in the current working
+#: directory (e.g. a repository root).
+DEFAULT_OUTPUT_DIR = "pycsamt_agent_output"
 
 _SYSTEM_PROMPT = """\
 You are an expert Python developer specialising in geophysics scripting.
-Given a pycsamt workflow configuration and execution log, generate a clean,
-well-commented Python script that reproduces the workflow step by step.
+Generate or edit a clean Python script for the user's complete request.
+Workflow configurations and templates are references, not fixed plans.
+Preserve requested selections, quantities, units, filenames, formats, and
+exclusions. For an edit, preserve the prior script except for requested changes.
 Use pycsamt v2 public API only.  Add a one-line comment above each major
 block.  Do not use the agents/ subpackage — call emtools, forward, and
-site functions directly.  Output only valid Python code.
+site functions directly. Never invent missing APIs or scientific parameters.
+Output only valid Python code, or CLARIFY: and one focused question when
+required information is missing. Do not claim to have executed the script.
 """
 
 # ── static script template fragments ─────────────────────────────────────────
@@ -70,6 +88,18 @@ fig_qc.savefig(
     {out!r} + "/qc_confidence.png",
     dpi=150, bbox_inches="tight",
 )
+
+"""
+
+_SS_ESTIMATE_BLOCK = """\
+# Estimate and export factors; do not apply correction.
+from pycsamt.emtools.ss import estimate_ss_ama
+ss_table = estimate_ss_ama(sites)
+if ss_table.empty:
+    print("No applicable static-shift factors were estimated.")
+else:
+    ss_table.to_csv({out!r} + "/static_shift_factors.csv", index=False)
+sites_corr = sites
 
 """
 
@@ -201,10 +231,10 @@ from pycsamt.forward import (
 )
 
 layered = LayeredModel(
-    resistivities={rhos},
-    thicknesses={ths},
+    resistivity={rhos},
+    thickness={ths},
 )
-freqs   = np.logspace(-4, 3, 60)
+freqs   = {freqs}
 fwd     = MT1DForward(freqs=freqs)
 resp    = fwd.run(layered)
 fig_fwd = plot_response_and_model_1d(resp, layered)
@@ -449,6 +479,8 @@ class CodeGenerationAgent(BaseAgent):
     ``results`` : dict
         The agent results dict from :class:`AgentCoordinator`.
     ``output_dir`` : str, optional
+        Folder for the script and its ``.validation.json`` report;
+        defaults to :data:`DEFAULT_OUTPUT_DIR` (``pycsamt_agent_output``).
 
     Output data keys
     ----------------
@@ -490,21 +522,120 @@ class CodeGenerationAgent(BaseAgent):
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
         t0 = time.time()
+        validation_started = time.monotonic()
         warnings: list[str] = []
 
-        cfg = input_data.get("workflow_config") or {}
+        generation_data = input_data.get("generation_input")
+        generation = (
+            generation_data
+            if isinstance(generation_data, GenerationInput)
+            else GenerationInput.from_mapping(generation_data)
+            if generation_data is not None
+            else None
+        )
+        cfg = dict(
+            generation.workflow_config
+            if generation
+            else input_data.get("workflow_config") or {}
+        )
         results = input_data.get("results") or {}
-        output_dir = input_data.get("output_dir", ".")
+        output_dir = input_data.get("output_dir") or DEFAULT_OUTPUT_DIR
+        if generation:
+            cfg.setdefault("output_dir", output_dir)
+            if cfg.get("workflow") == "forward":
+                cfg.update(forward_parameters(generation.task_text))
+            generation.workflow_config = cfg
         title = input_data.get("title", self.script_title)
         # Optional RAG context (real symbols / recipe) to ground the LLM
         # refinement pass; ignored offline.
-        rag_context = input_data.get("rag_context") or ""
+        rag_context = (
+            generation.retrieved_evidence
+            if generation
+            else input_data.get("rag_context") or ""
+        )
+        exact_edit = exact_artifact_edit(generation) if generation else None
+        if generation:
+            question = clarification_for(generation)
+            if question:
+                return AgentResult(
+                    "needs_review",
+                    question,
+                    data={
+                        "clarification": question,
+                        "generation_input": generation.to_dict(),
+                    },
+                )
+            if (
+                not cfg.get("data_path")
+                and cfg.get("workflow") not in (None, "custom", "forward")
+                and not generation.previous_code
+            ):
+                generation.assumptions.append(
+                    "/path/to/EDIs is a placeholder; replace it with your data directory."
+                )
+            if generation.omitted_history_turns:
+                warnings.append(
+                    "Older conversation turns were omitted from the bounded generation context."
+                )
 
-        os.makedirs(output_dir, exist_ok=True)
+        data_path = cfg.get("data_path") or "/path/to/EDIs"
+        workflow = cfg.get("workflow") or ("custom" if generation else "qc")
+        out_dir = cfg.get("output_dir") or output_dir
+        supported = {
+            "qc",
+            "full",
+            "static_shift",
+            "phase_analysis",
+            "forward",
+            "pre_inversion",
+            "occam2d",
+            "tipper",
+            "tipper_plot",
+            "sensitivity",
+            "ai_inversion",
+            "inv1d",
+            "ensemble_inversion",
+            "inv2d",
+            "full_ai_workflow",
+        }
+        if (
+            generation
+            and not self.llm_available
+            and not exact_edit
+            and (workflow not in supported or generation.previous_code)
+        ):
+            message = "This request needs a configured local or cloud model to compose or edit the script. Offline templates cannot apply it reliably."
+            return AgentResult(
+                "needs_review",
+                message,
+                data={
+                    "clarification": message,
+                    "generation_input": generation.to_dict(),
+                },
+            )
+        if generation and self.llm_available and not exact_edit:
+            from pycsamt.assistant.tools.api_evidence import (
+                generation_api_evidence,
+            )
 
-        data_path = cfg.get("data_path", "/path/to/EDIs")
-        workflow = cfg.get("workflow", "qc")
-        out_dir = cfg.get("output_dir", output_dir)
+            generation.api_evidence = generation_api_evidence(
+                generation.task_text, workflow, generation.api_symbols
+            )
+            if (
+                workflow not in supported
+                and not generation.previous_code
+                and not rag_context
+                and len(generation.api_evidence) <= 1
+            ):
+                question = "Which pyCSAMT operation or API should this script use? I could not find enough verified evidence to compose it."
+                return AgentResult(
+                    "needs_review",
+                    question,
+                    data={
+                        "clarification": question,
+                        "generation_input": generation.to_dict(),
+                    },
+                )
 
         # ── build script from templates ───────────────────────────────────────
         code = _HEADER.format(
@@ -512,17 +643,41 @@ class CodeGenerationAgent(BaseAgent):
             date=datetime.now().strftime("%Y-%m-%d"),
         )
         code += f"import os\nos.makedirs({out_dir!r}, exist_ok=True)\n\n"
-        code += _LOAD_BLOCK.format(path=data_path)
+        needs_sites = workflow != "forward" or any(
+            k in results for k in ("qc", "static_shift", "phase_analysis")
+        )
+        if needs_sites:
+            code += _LOAD_BLOCK.format(path=data_path)
 
         # add blocks based on workflow + available results
         if workflow in ("qc", "full") or "qc" in results:
             code += _QC_BLOCK.format(out=out_dir)
+            if generation:
+                csv = re.search(
+                    r"\b[\w.-]+\.csv\b", generation.task_text, re.I
+                )
+                if (
+                    csv
+                    and re.search(
+                        r"\b(save|export)\b", generation.task_text, re.I
+                    )
+                    and not re.search(
+                        r"(?:do not|don't|never)\s+(?:save|export|write)",
+                        generation.task_text,
+                        re.I,
+                    )
+                ):
+                    code += f"qc_table.to_csv({out_dir!r} + '/{csv[0]}', index=False)\n\n"
 
         if workflow in ("static_shift", "full") or "static_shift" in results:
             hw = 3
             results.get("static_shift")
-            code += _SS_BLOCK.format(hw=hw, out=out_dir)
-        else:
+            code += (
+                _SS_ESTIMATE_BLOCK.format(out=out_dir)
+                if generation and excludes_correction(generation.task_text)
+                else _SS_BLOCK.format(hw=hw, out=out_dir)
+            )
+        elif needs_sites:
             code += "sites_corr = sites  # no static-shift correction\n\n"
 
         if (
@@ -540,8 +695,8 @@ class CodeGenerationAgent(BaseAgent):
 
         if "forward" in results or workflow == "forward":
             fwd_r = results.get("forward")
-            rhos = [100, 10, 1000, 100]
-            ths = [500, 1000, 2000]
+            rhos = cfg.get("resistivity", [100, 10, 1000, 100])
+            ths = cfg.get("thickness", [500, 1000, 2000])
             if fwd_r is not None:
                 lm = fwd_r.get("layered_model")
                 if lm is not None:
@@ -559,7 +714,15 @@ class CodeGenerationAgent(BaseAgent):
                             getattr(lm, "thicknesses", ths),
                         )
                     )
-            code += _FWD_BLOCK.format(rhos=rhos, ths=ths, out=out_dir)
+            grid = cfg.get("frequency_grid")
+            freq_expr = (
+                f"np.geomspace({grid[0]!r}, {grid[1]!r}, {grid[2]!r})"
+                if grid
+                else "np.logspace(-4, 3, 60)"
+            )
+            code += _FWD_BLOCK.format(
+                rhos=rhos, ths=ths, out=out_dir, freqs=freq_expr
+            )
 
         if (
             workflow in ("pre_inversion", "occam2d")
@@ -633,7 +796,12 @@ class CodeGenerationAgent(BaseAgent):
         code += _FOOTER
 
         # ── optional LLM refinement ───────────────────────────────────────────
-        if self.api_key:
+        if exact_edit:
+            code, updated_output = exact_edit
+            out_dir = (
+                updated_output or generation.previous_output_dir or out_dir
+            )
+        elif self.llm_available:
             grounding = ""
             if rag_context:
                 grounding = (
@@ -648,8 +816,59 @@ class CodeGenerationAgent(BaseAgent):
                 f"{grounding}"
                 f"```python\n{code}\n```"
             )
+            if generation:
+                template_allowed = workflow in supported and (
+                    workflow != "forward"
+                    or all(
+                        k in cfg
+                        for k in ("resistivity", "thickness", "frequency_grid")
+                    )
+                )
+                prompt = generation.prompt(code if template_allowed else "")
+                if self.llm_provider == "ollama":
+                    from ._local import LocalSettings, current_request
+
+                    request = current_request()
+                    settings = request.settings if request else LocalSettings()
+                    needed = (
+                        len((self.SYSTEM_PROMPT + prompt).encode("utf-8"))
+                        + min(2000, settings.output_tokens)
+                        + 128
+                    )
+                    if needed > settings.context_tokens:
+                        # Drop the optional example, never the request or prior script.
+                        prompt = generation.prompt()
+                        needed = (
+                            len((self.SYSTEM_PROMPT + prompt).encode("utf-8"))
+                            + min(2000, settings.output_tokens)
+                            + 128
+                        )
+                        if needed > settings.context_tokens:
+                            generation.compact_evidence()
+                            prompt = generation.prompt()
             llm_code = self.query_llm(prompt, max_tokens=2000)
+            if generation and not llm_code:
+                return AgentResult(
+                    "failed",
+                    "No generated script received.",
+                    error="The configured model returned no code.",
+                )
             if llm_code:
+                if generation and llm_code.strip().startswith("CLARIFY:"):
+                    question = (
+                        llm_code.strip()
+                        .removeprefix("CLARIFY:")
+                        .split("```", 1)[0]
+                        .strip()[:800]
+                    )
+                    return AgentResult(
+                        "needs_review",
+                        question,
+                        data={
+                            "clarification": question,
+                            "generation_input": generation.to_dict(),
+                        },
+                    )
                 # strip markdown fences if present
                 if "```python" in llm_code:
                     llm_code = llm_code.split("```python", 1)[1]
@@ -657,25 +876,130 @@ class CodeGenerationAgent(BaseAgent):
                     llm_code = llm_code.rsplit("```", 1)[0]
                 code = llm_code.strip()
 
+        from ._code_validation import validate_and_repair
+
+        if generation and generation.assumptions:
+            code = (
+                "".join(
+                    "# Assumption: " + a.replace("\n", " ") + "\n"
+                    for a in generation.assumptions
+                )
+                + code
+            )
+        code, validation = validate_and_repair(
+            self,
+            code,
+            generation,
+            started=validation_started,
+            allow_repair=not exact_edit,
+            max_repairs=input_data.get("max_repairs", 2),
+            execute_fixture=bool(input_data.get("execute_fixture", False)),
+            fixture_image=input_data.get("fixture_image"),
+            fixture_outputs=input_data.get("fixture_outputs"),
+        )
+        if not validation["ok"]:
+            message = (
+                "Generated draft failed validation; no script was saved. "
+                + " ".join(validation["errors"][:4])
+            )
+            return AgentResult(
+                "needs_review" if validation["syntax_ok"] else "failed",
+                message,
+                error=None if validation["syntax_ok"] else message,
+                data={
+                    "code": code,
+                    "review_reason": message,
+                    "script_path": None,
+                    "validation": validation,
+                    "generation_input": generation.to_dict()
+                    if generation
+                    else None,
+                    "generation": {
+                        "mode": "exact_edit"
+                        if exact_edit
+                        else "model"
+                        if self.llm_available
+                        else "template",
+                        "requirements_verified": False,
+                        "executed": False,
+                    },
+                },
+                warnings=validation["warnings"],
+            )
+
         # ── write file ────────────────────────────────────────────────────────
         script_path: str | None = None
+        from ._request import checkpoint
+
+        checkpoint()
+        validation_path = None
         try:
-            script_path = os.path.join(output_dir, "workflow_script.py")
-            Path(script_path).write_text(code, encoding="utf-8")
+            os.makedirs(output_dir, exist_ok=True)
+            filename = "workflow_script.py"
+            if generation:
+                requested = re.search(
+                    r"\b(?:save(?:\s+(?:it|the script|code))?\s+as|name(?:\s+it)?|called|write)\s+[`\"']?([\w.-]+\.py)\b",
+                    generation.task_text,
+                    re.I,
+                )
+                filename = requested[1] if requested else filename
+            # Version every artifact, including the legacy template interface.
+            destination = Path(output_dir) / filename
+            suffix = 2
+            while (
+                destination.exists()
+                or destination.with_suffix(".validation.json").exists()
+            ):
+                destination = (
+                    Path(output_dir) / f"{Path(filename).stem}_{suffix}.py"
+                )
+                suffix += 1
+            with destination.open("x", encoding="utf-8", newline="\n") as stream:
+                stream.write(code)
+            script_path = str(destination)
+            report_path = destination.with_suffix(".validation.json")
+            with report_path.open("x", encoding="utf-8") as stream:
+                stream.write(json.dumps(validation, indent=2))
+            validation_path = str(report_path)
         except Exception as exc:
             warnings.append(f"Could not write script: {exc}")
             script_path = None
+            validation_path = None
 
         elapsed = time.time() - t0
         n_lines = code.count("\n")
+        tailored = bool(exact_edit or self.llm_available or not generation)
+        if generation and not tailored:
+            warnings.append(
+                "Offline template only: request-specific constraints have not been applied. Configure a language model for a tailored script."
+            )
         return AgentResult(
-            status="success",
+            status="success" if tailored else "needs_review",
             summary=(
                 f"Generated {n_lines}-line Python script for "
                 f"workflow={workflow!r}. "
                 + (f"Saved to {script_path}" if script_path else "")
             ),
-            data={"code": code, "script_path": script_path},
+            data={
+                "code": code,
+                "script_path": script_path,
+                "validation": validation,
+                "validation_path": validation_path,
+                "generation_input": generation.to_dict()
+                if generation
+                else None,
+                "generation": {
+                    "output_dir": out_dir,
+                    "workflow": workflow,
+                    "mode": "exact_edit"
+                    if exact_edit
+                    else "model"
+                    if self.llm_available
+                    else "template",
+                    "requirements_verified": bool(exact_edit),
+                    "executed": False,
+                },
+            },
             warnings=warnings,
             elapsed_seconds=elapsed,
             cost_estimate_usd=self._last_cost,

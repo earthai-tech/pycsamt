@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the figures for the airborne site user_guide page.
 
 Reads four of the committed synthetic airborne sample surveys directly

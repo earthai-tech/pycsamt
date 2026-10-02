@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 
 class AgentPanel(QWidget):
@@ -113,8 +113,13 @@ class AgentPanel(QWidget):
         self._tabs.addTab(self._log_text, "Log")
 
         # Tab 1: Result figure
-        self._result_canvas = MplCanvas(self, toolbar=True)
-        self._tabs.addTab(self._result_canvas, "Result")
+        self._result_canvas_view = CanvasResultView(
+            self, toolbar=True,
+            empty_title="No agent result yet",
+            empty_reason="Run an agent to see its output here.",
+        )
+        self._result_canvas = self._result_canvas_view.canvas
+        self._tabs.addTab(self._result_canvas_view, "Result")
 
         # Tab 2: Summary / interpretation
         self._summary_browser = QTextBrowser()
@@ -240,6 +245,7 @@ class AgentPanel(QWidget):
             )
             try:
                 self._result_canvas.show_figure(renderable)
+                self._result_canvas_view.show_canvas()
             except Exception:
                 pass
             self._tabs.setCurrentIndex(1)

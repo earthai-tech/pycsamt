@@ -240,7 +240,7 @@ class FrequencyDecimationAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and n_sta_sel:
+        if self.llm_available and n_sta_sel:
             prompt = (
                 f"Frequency decimation summary:\n"
                 f"  Stations: {n_sta_sel} with data\n"

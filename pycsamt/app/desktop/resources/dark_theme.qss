@@ -31,6 +31,9 @@ QMenu::item:selected {
     background-color: #89b4fa;
     color: #1e1e2e;
 }
+QMenu::item:disabled {
+    color: #6c7086;
+}
 
 /* ── Toolbar ──────────────────────────────────────────────────────────── */
 QToolBar {
@@ -64,6 +67,23 @@ QToolButton#MoreToolButton:hover {
 }
 QToolButton#MoreToolButton::menu-indicator { width: 0; }
 
+
+/* Toolbar overflow button ("…", shown when the tools do not fit):
+   outlined so it reads on both themes; its icon is painted in the
+   theme's text colour by MainWindow._style_toolbar_overflow. */
+QToolButton#qt_toolbar_ext_button {
+    background-color: #313244;
+    border: 1px solid #585b70;
+    border-radius: 5px;
+    padding: 0px;
+    margin: 2px 1px;
+    min-width: 14px;
+}
+QToolButton#qt_toolbar_ext_button:hover {
+    background-color: #45475a;
+    border-color: #89b4fa;
+}
+
 /* ── Status bar ───────────────────────────────────────────────────────── */
 QStatusBar {
     background-color: #181825;
@@ -90,6 +110,16 @@ QTableView {
     selection-background-color: #89b4fa;
     selection-color: #1e1e2e;
     border: none;
+}
+QTableView::item:selected,
+QTableView::item:selected:active,
+QTableView::item:selected:!active {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+QTableView::item:hover:!selected {
+    background-color: #2563eb;
+    color: #ffffff;
 }
 QHeaderView::section {
     background-color: #181825;
@@ -305,6 +335,38 @@ QScrollArea#DetailScrollArea {
 }
 QWidget#DetailBody {
     background-color: transparent;
+}
+
+/* Survey analytics dashboard */
+QFrame#SurveyKpiCard {
+    background-color: #181825;
+    border: 1px solid #313244;
+    border-radius: 9px;
+}
+QLabel#SurveyKpiLabel {
+    color: #7f849c;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+}
+QLabel#SurveyKpiValue {
+    color: #89b4fa;
+    font-size: 25px;
+    font-weight: 700;
+}
+QLabel#SurveyKpiSubtext, QLabel#SurveyMeta {
+    color: #a6adc8;
+    font-size: 11px;
+}
+QLabel#SurveyMeta {
+    background-color: #181825;
+    border: 1px solid #313244;
+    border-radius: 6px;
+    padding: 7px 10px;
+}
+QScrollArea#SurveyDashboardScroll, QWidget#SurveyDashboardBody {
+    background-color: transparent;
+    border: none;
 }
 
 /* ── Drop zone (LoadDataDialog) ───────────────────────────────────────── */
@@ -659,4 +721,89 @@ QListWidget#StationList::item:hover {
 QListWidget#StationList::item:selected {
     background-color: #45475a;
     color: #89dceb;
+}
+
+/* Analytical result unavailable / not-computable state */
+QWidget#UnavailableResultView { background: #1e1e2e; }
+QFrame#UnavailableResultCard {
+    background: #181825;
+    border: 1px solid #45475a;
+    border-radius: 12px;
+}
+QLabel#UnavailableResultBadge {
+    background: #313244;
+    color: #89b4fa;
+    border: 1px solid #45475a;
+    border-radius: 13px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 12px;
+}
+QLabel#UnavailableResultTitle {
+    color: #cdd6f4;
+    font-size: 20px;
+    font-weight: 650;
+    border: none;
+}
+QLabel#UnavailableResultReason {
+    color: #bac2de;
+    font-size: 13px;
+    border: none;
+}
+QLabel#UnavailableResultGuidance {
+    background: #1e1e2e;
+    color: #a6adc8;
+    border: 1px solid #313244;
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-size: 12px;
+}
+
+QToolButton#PlotRefreshOverlay {
+    background: rgba(30, 30, 46, 32);
+    color: rgba(205, 214, 244, 90);
+    border: 1px solid rgba(69, 71, 90, 45);
+    border-radius: 18px;
+    font-size: 19px;
+    font-weight: 700;
+}
+QToolButton#PlotRefreshOverlay:hover {
+    background: rgba(49, 50, 68, 235);
+    color: #cdd6f4;
+    border-color: #89b4fa;
+}
+QToolButton#PlotRefreshOverlay:pressed {
+    background: #45475a;
+    color: #89dceb;
+}
+
+/* Keep the compact KPI cards visually continuous. */
+QLabel#SurveyKpiLabel, QLabel#SurveyKpiValue, QLabel#SurveyKpiSubtext {
+    background: transparent;
+    border: none;
+}
+
+/* Explicit radio indicators: independent of the native Windows theme. */
+QRadioButton { spacing: 7px; background: transparent; }
+QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 10px;
+    border: 1px solid #7f849c;
+    background: #181825;
+}
+QRadioButton::indicator:checked {
+    border-color: #89b4fa;
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
+        fx:0.5, fy:0.5, stop:0 #89b4fa, stop:0.48 #89b4fa,
+        stop:0.52 #181825, stop:1 #181825);
+}
+QRadioButton::indicator:hover { border: 1px solid #89b4fa; }
+QRadioButton::indicator:focus { border: 2px solid #89b4fa; }
+QRadioButton::indicator:disabled { border-color: #585b70; }
+QRadioButton::indicator:checked:disabled {
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
+        fx:0.5, fy:0.5, stop:0 #585b70, stop:0.48 #585b70,
+        stop:0.52 #181825, stop:1 #181825);
 }

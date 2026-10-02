@@ -342,7 +342,7 @@ class StaticShiftAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and delta_stats:
+        if self.llm_available and delta_stats:
             prompt = (
                 f"Static-shift correction summary ({method}):\n"
                 f"  Mean correction magnitude: {delta_stats.get('mean', '?'):.3f} "

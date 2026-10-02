@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Build and invert the Gabbs Valley Occam1D example, and render its figures.
 
 This script is documentation-only glue for

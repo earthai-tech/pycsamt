@@ -51,6 +51,7 @@ while [ $# -gt 0 ]; do
         --mpi) BUILD_TARGET="mpi" ;;
         --intel) BUILD_TARGET="intel" ;;
         --prefix) shift; PREFIX_DIR="${1:-}" ;;
+        --source-dir) shift; SOURCE_DIR="$(cd "${1:-.}" 2>/dev/null && pwd)" || die "--source-dir: not a directory: ${1:-}" ;;
         -h|--help) print_help; exit 0 ;;
         *) die "Unknown option: $1 (see --help)" ;;
     esac

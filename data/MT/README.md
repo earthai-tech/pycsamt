@@ -3,7 +3,8 @@
 Twenty-six long-period magnetotelluric (MT) EDI files from the **KAP03**
 profile of **SAMTEX** (Southern African Magnetotelluric Experiment), a
 NE–SW transect across the Kaapvaal Craton, South Africa, from the SW end
-(`kap103`) to the NE end (`kap175`), roughly 60 km long.
+(`kap103`) to the NE end (`kap175`), about 1450 km long (nearest-neighbour spacing
+18.5–68.5 km, median 56.8 km).
 
 Downloaded from <https://www.mtnet.info/data/kap03/kap03.html>. Unlike the
 AMT lines in `data/AMT/WILLY_DATA/`, this survey has a real vertical-field

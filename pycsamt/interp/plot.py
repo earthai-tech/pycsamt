@@ -173,6 +173,14 @@ class PlotStratigraphicLog:
             gridspec_kw={"width_ratios": [1, 1.4]},
         )
 
+        z_bottom = max(
+            float(np.nanmax(log.z_centers)),
+            max((layer.bottom for layer in log.layers), default=0.0),
+        )
+        # a two-line label needs ~5 % of the column; thinner layers keep
+        # their colour and hatch but no label (they used to overprint)
+        min_label = 0.05 * z_bottom
+
         # ── left: stratigraphic column ──────────────────────────────
         for layer in log.layers:
             ax_log.barh(
@@ -185,6 +193,8 @@ class PlotStratigraphicLog:
                 edgecolor="0.3",
                 linewidth=0.5,
             )
+            if layer.thickness < min_label:
+                continue
             mid = (layer.top + layer.bottom) / 2
             label = (
                 f"{layer.lithology}\n({layer.thickness:.1f} {self.depth_unit})"
@@ -198,10 +208,6 @@ class PlotStratigraphicLog:
                 **self.annotation_kws,
             )
 
-        z_bottom = max(
-            float(np.nanmax(log.z_centers)),
-            max((layer.bottom for layer in log.layers), default=0.0),
-        )
         ax_log.set_xlim(0, 1)
         ax_log.set_ylim(z_bottom, 0.0)
         ax_log.set_xticks([])
@@ -233,8 +239,10 @@ class PlotStratigraphicLog:
         ax_rho.set_title("Resistivity", fontsize=9)
         ax_rho.grid(axis="x", alpha=0.3)
 
-        fig.suptitle(self.title, fontweight="bold", y=1.01)
-        fig.tight_layout()
+        # inside the figure: y > 1 was cut off on screen (only
+        # bbox_inches="tight" saves rescued it)
+        fig.suptitle(self.title, fontweight="bold")
+        fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
         return fig
 
 

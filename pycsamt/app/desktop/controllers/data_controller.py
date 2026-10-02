@@ -16,7 +16,7 @@ import pandas as pd
 
 class DataController:
     """
-    Loads EDI / AVG / J files into a Sites collection and exposes
+    Loads EDI and EMTF XML files into a Sites collection and exposes
     a filtered pandas DataFrame for the StationModel.
 
     Parameters
@@ -41,6 +41,7 @@ class DataController:
         self._sites = None
         self._df: pd.DataFrame | None = None
         self._station_to_line: dict[str, str] = {}
+        self.source_paths: list[str] = []
 
     # ── Loading ───────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ class DataController:
         path_to_line: dict[str, str] | None = None,
     ) -> object:
         """
-        Load EDI (or other supported) files and return a ``Sites`` object.
+        Load EDI or EMTF XML files and return a ``Sites`` object.
 
         Parameters
         ----------
@@ -60,30 +61,72 @@ class DataController:
             Maps each EDI file path to its survey-line name.  When supplied,
             a ``Line`` column is populated in :attr:`dataframe`.
         """
-        from pycsamt.seg.edi import EDIFile
+        from pycsamt.io import read_transfer_function
         from pycsamt.site.base import Sites
 
         paths = [Path(p) for p in paths]
 
         # Build stem → line lookup (EDIFile.station == Path.stem typically)
-        self._station_to_line = {
-            Path(p).stem: line for p, line in (path_to_line or {}).items()
-        }
+        explicit_lines = path_to_line or {}
+        self._station_to_line = {}
 
         edis = []
         total = len(paths)
         for i, p in enumerate(paths):
-            edis.append(EDIFile(p))
+            transfer_function = read_transfer_function(p)
+            edis.append(transfer_function)
+            station = (
+                str(getattr(transfer_function, "station", None) or p.stem)
+                if p.suffix.lower() == ".xml"
+                else p.stem
+            )
+            if path_to_line is None:
+                self._station_to_line[station] = p.parent.name
+            else:
+                line = explicit_lines.get(str(p), explicit_lines.get(p))
+                if line is not None:
+                    self._station_to_line[station] = line
             if self._progress_cb is not None:
                 self._progress_cb(int((i + 1) / total * 90))
 
         self._sites = Sites(edis)
         self._df = self._build_dataframe()
+        self.source_paths = [str(p) for p in paths]
 
         if self._progress_cb is not None:
             self._progress_cb(100)
 
         return self._sites
+
+    def prepend_existing(self, sites, dataframe: pd.DataFrame) -> dict:
+        """Merge newly loaded stations without modifying the existing survey.
+
+        Station lookup is case-insensitive. Keep existing objects (including
+        in-memory corrections), skip matching incoming IDs, and retain the
+        original line metadata. Only this new controller is updated.
+        """
+        from pycsamt.site.base import Sites
+
+        existing = list(sites)
+        seen = {str(site.name).strip().casefold() for site in existing}
+        additions, keep, skipped = [], [], []
+        for index, site in enumerate(self._sites):
+            key = str(site.name).strip().casefold()
+            if key in seen:
+                skipped.append(str(site.name))
+                continue
+            seen.add(key)
+            additions.append(site)
+            keep.append(index)
+        merged = Sites(existing + additions)
+        frame = pd.concat(
+            [dataframe, self.dataframe.iloc[keep]], ignore_index=True
+        )
+        paths = [self.source_paths[i] for i in keep]
+        self._sites, self._df = merged, frame
+        self.source_paths = paths
+        self._station_to_line = dict(zip(frame["ID"], frame["Line"]))
+        return {"added": len(additions), "skipped": skipped}
 
     # ── DataFrame ─────────────────────────────────────────────────────
 
@@ -101,27 +144,45 @@ class DataController:
                 return pd.DataFrame(columns=self.STATION_COLUMNS)
 
         rows: list[dict] = []
-        for edi in self._sites.as_list():
-            # sites.as_list() returns EDIFile objects; Sites.get() returns a
-            # proper Site whose .summary() yields a dict with lat/lon/name/etc.
-            try:
-                site = self._sites.get(edi.station)
-                s = site.summary()
-            except Exception:
-                # Fallback: read metadata directly from the EDIFile header
-                try:
-                    head = edi.get_section("head")
-                    loc = head.Location
-                except Exception:
-                    loc = None
+        for site in self._sites:
+            if getattr(site, "backend", "edi") == "xml":
+                # Preserve XML-native EMTF documents, including transfer
+                # functions that cannot be reduced to impedance EDI.
+                tf = site.tf
+                meta = getattr(tf, "site", None)
+                loc = getattr(meta, "location", None)
+                frequency = getattr(tf, "frequency", None)
                 s = {
-                    "name": edi.station,
-                    "lat": loc.lat if loc is not None else float("nan"),
-                    "lon": loc.lon if loc is not None else float("nan"),
-                    "elev": loc.elev if loc is not None else float("nan"),
-                    "nfreq": edi.n_freq,
-                    "tipper": edi.has_tipper,
+                    "name": getattr(site, "name", ""),
+                    "lat": getattr(loc, "latitude", float("nan")),
+                    "lon": getattr(loc, "longitude", float("nan")),
+                    "elev": getattr(loc, "elevation", float("nan")),
+                    "nfreq": 0 if frequency is None else len(frequency),
+                    "tipper": getattr(tf, "tipper_tf", None) is not None,
                 }
+                has_tipper = bool(s["tipper"])
+            else:
+                edi = site.edi
+                try:
+                    resolved = self._sites.get(edi.station)
+                    s = resolved.summary()
+                except Exception:
+                    head = edi.get_section("head")
+                    try:
+                        loc = head.Location
+                    except Exception:
+                        loc = None
+                    s = {
+                        "name": edi.station,
+                        "lat": loc.lat if loc is not None else float("nan"),
+                        "lon": loc.lon if loc is not None else float("nan"),
+                        "elev": loc.elev if loc is not None else float("nan"),
+                        "nfreq": edi.n_freq,
+                        "tipper": edi.has_tipper,
+                    }
+                has_tipper = bool(s.get("tipper", False)) or bool(
+                    edi.has_tipper
+                )
             station_name = s.get("name", "")
             rows.append(
                 {
@@ -131,8 +192,7 @@ class DataController:
                     "Longitude": s.get("lon", float("nan")),
                     "Elevation": s.get("elev", float("nan")),
                     "N_freq": s.get("nfreq", 0),
-                    "Tipper": bool(s.get("tipper", False))
-                    or bool(edi.has_tipper),
+                    "Tipper": has_tipper,
                 }
             )
 

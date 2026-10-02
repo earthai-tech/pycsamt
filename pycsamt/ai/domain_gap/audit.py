@@ -305,8 +305,9 @@ class SurveyAuditReport:
         5th/50th/95th percentile of declared ``impedance_error / |Z|``
         over valid observations, when available.
     station_spacing_m : mapping or None
-        ``min``, ``median``, and ``max`` consecutive station spacing in
-        the survey's stored order.
+        ``min``, ``median``, and ``max`` nearest-neighbour station
+        spacing (independent of station order), plus ``aperture``, the
+        largest inter-station distance.
     elevation_coverage : float
         Fraction of included stations with a finite elevation.
     crs_declared : bool
@@ -757,11 +758,16 @@ class SurveyAuditReport:
             )
         if self.station_spacing_m is not None:
             lines.append(
-                "  Station spacing (m): min="
+                "  Nearest-neighbour spacing (m): min="
                 f"{self.station_spacing_m['min']:.1f}, "
                 f"median={self.station_spacing_m['median']:.1f}, "
                 f"max={self.station_spacing_m['max']:.1f}"
             )
+            if "aperture" in self.station_spacing_m:
+                lines.append(
+                    "  Array aperture (m): "
+                    f"{self.station_spacing_m['aperture']:.1f}"
+                )
         lines.append(f"  CRS declared: {self.crs_declared}")
         lines.append(
             f"  Elevation coverage: {self.elevation_coverage * 100:.1f}%"
@@ -925,9 +931,17 @@ def audit_survey(
     xy, elevation = _station_coordinates_m(
         kept, station_spacing=station_spacing_fallback
     )
-    if len(kept) >= 2:
-        steps = np.linalg.norm(np.diff(xy, axis=0), axis=1)
-        steps = steps[np.isfinite(steps)]
+    # Nearest-neighbour spacing is independent of the order in which
+    # stations were read, so it is meaningful for areal arrays as well
+    # as profiles; consecutive differences in file order are not.
+    finite_xy = xy[np.all(np.isfinite(xy), axis=1)]
+    if len(finite_xy) >= 2:
+        pair = np.linalg.norm(
+            finite_xy[:, np.newaxis, :] - finite_xy[np.newaxis, :, :], axis=-1
+        )
+        aperture = float(np.max(pair))
+        np.fill_diagonal(pair, np.inf)
+        steps = np.min(pair, axis=1)
     else:
         steps = np.empty(0)
     spacing = (
@@ -937,6 +951,7 @@ def audit_survey(
             "min": float(np.min(steps)),
             "median": float(np.median(steps)),
             "max": float(np.max(steps)),
+            "aperture": aperture,
         }
     )
     elevation_coverage = (

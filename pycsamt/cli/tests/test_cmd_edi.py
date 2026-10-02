@@ -294,6 +294,72 @@ class TestEdiProfile:
         assert result.exit_code == 0
         assert "station_table" in json.loads(result.output)
 
+    def test_csv_output(self, runner: CliRunner) -> None:
+        result = runner.invoke(
+            main,
+            ["edi", "profile", str(_EDI_WILLY), "--format", "csv"],
+        )
+        assert result.exit_code == 0
+        lines = result.output.strip().splitlines()
+        assert "station" in lines[0]
+        assert "easting" not in lines[0] and "northing" not in lines[0]
+        assert len(lines) > 1
+
+    def test_text_output_with_distances(self, runner: CliRunner) -> None:
+        result = runner.invoke(
+            main, ["edi", "profile", str(_EDI_WILLY), "--distances"]
+        )
+        assert result.exit_code == 0
+        assert "Dist (m)" in result.output
+        assert "Station" in result.output
+
+    def test_step_method_median(self, runner: CliRunner) -> None:
+        result = runner.invoke(
+            main,
+            [
+                "edi",
+                "profile",
+                str(_EDI_WILLY),
+                "--step-method",
+                "median",
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0
+        assert json.loads(result.output)["step_method"] == "median"
+
+    def test_no_edi_files_in_dir(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        result = runner.invoke(main, ["edi", "profile", str(empty)])
+        assert result.exit_code == 0
+        assert "No EDI files found" in result.output
+
+    def test_single_station_insufficient_bearing(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        single = tmp_path / "single"
+        single.mkdir()
+        import shutil
+
+        one_edi = sorted(_EDI_WILLY.glob("*.edi"))[0]
+        shutil.copy(one_edi, single)
+
+        result = runner.invoke(main, ["edi", "profile", str(single)])
+        assert result.exit_code == 0
+        assert "insufficient data" in result.output.lower()
+
+        result_json = runner.invoke(
+            main, ["edi", "profile", str(single), "--format", "json"]
+        )
+        assert result_json.exit_code == 0
+        data = json.loads(result_json.output)
+        assert data["bearing_deg"] is None
+        assert data["n_stations"] == 1
+
 
 # ---------------------------------------------------------------------------
 # pycsamt edi rotate

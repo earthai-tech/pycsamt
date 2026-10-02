@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the figure for the airborne data_model user_guide page.
 
 Builds one small, deterministic synthetic flight line (a hill under a

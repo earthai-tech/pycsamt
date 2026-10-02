@@ -324,6 +324,7 @@ def _register_gather(app) -> None:
         Input(IDs.GEO_LEGEND_VISIBLE, "value"),
         Input(IDs.TB3D_LEGEND_STYLE, "value"),
         Input(IDs.TB3D_GEO_FILL, "value"),
+        Input(IDs.CTL_VE, "value"),
         State(IDs.STORE_DATA, "data"),
         prevent_initial_call=True,
     )
@@ -388,6 +389,7 @@ def _register_gather(app) -> None:
         geo_legend_visible,
         geo_legend_style,
         geo_fill,
+        ve,
         store,
     ):
         freqs = (store or {}).get("frequencies", [])
@@ -463,5 +465,8 @@ def _register_gather(app) -> None:
             "geology_legend": geo_legend_visible is not False,
             "geology_legend_style": geo_legend_style or "swatch",
             "geology_fill": geo_fill or "solid",
+            "vertical_exaggeration": (
+                None if ve in (None, "") else _as_float(ve, None)
+            ),
         }
         return controls, _fmt_freq(freq)

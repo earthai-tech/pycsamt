@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from pycsamt.core.base import TFBundle
 from pycsamt.core.config import config_context
@@ -119,3 +120,147 @@ def test_finalize_with_no_freq_is_robust():
     assert out.station == "A"
     # no freq → ordering/dedup are no-ops
     assert out.freq is None
+
+
+def test_default_post_emit_and_compute_hooks_are_noop():
+    mixin = t.TransformerMixin()
+    sentinel = object()
+    assert mixin.post_emit(sentinel, None, None) is sentinel
+
+    b = TFBundle(freq=[1.0])
+    assert mixin.compute_res_from_z(b) is b
+    assert mixin.compute_z_from_res(b) is b
+
+
+def test_order_and_dedup_freq_numpy_branch_touches_all_optional_fields():
+    freq = np.array([1.0, 3.0, 2.0])
+    n = freq.size
+    z = np.arange(n * 4).reshape(n, 2, 2).astype(complex)
+    z_err = np.ones((n, 2, 2))
+    tipper = np.ones((n, 1, 2), complex)
+    tipper_err = np.ones((n, 1, 2))
+    rho = np.arange(n * 4).reshape(n, 2, 2).astype(float)
+    phase = np.arange(n * 4).reshape(n, 2, 2).astype(float)
+    b = TFBundle(
+        freq=freq,
+        z=z,
+        z_err=z_err,
+        tipper=tipper,
+        tipper_err=tipper_err,
+        rho=rho,
+        phase=phase,
+    )
+    mixin = t.TransformerMixin()
+    ordered = mixin._order_freq(b)
+    # default freq_order is desc
+    assert np.all(np.diff(ordered.freq) <= 0)
+    assert ordered.freq.tolist() == [3.0, 2.0, 1.0]
+    assert ordered.z.shape[0] == n
+    assert ordered.z_err.shape[0] == n
+    assert ordered.tipper.shape[0] == n
+    assert ordered.tipper_err.shape[0] == n
+    assert ordered.rho.shape[0] == n
+    assert ordered.phase.shape[0] == n
+
+    deduped = mixin._dedup_freq(ordered)
+    # no near-duplicates present, nothing dropped, all optional arrays kept
+    assert deduped.freq.size == n
+    assert deduped.z_err.shape[0] == n
+    assert deduped.tipper.shape[0] == n
+    assert deduped.tipper_err.shape[0] == n
+    assert deduped.rho.shape[0] == n
+    assert deduped.phase.shape[0] == n
+
+
+def test_order_freq_list_mode_fallback_without_numpy(monkeypatch):
+    monkeypatch.setattr(t, "np", None)
+    b = TFBundle(
+        freq=[1.0, 3.0, 2.0],
+        z=[10, 30, 20],
+        z_err=[0.1, 0.3, 0.2],
+        tipper=[100, 300, 200],
+        tipper_err=[1, 3, 2],
+        rho=[1000, 3000, 2000],
+        phase=[45, 46, 47],
+    )
+    out = t.TransformerMixin()._order_freq(b)
+    assert out.freq == [3.0, 2.0, 1.0]
+    assert out.z == [30, 20, 10]
+    assert out.z_err == [0.3, 0.2, 0.1]
+    assert out.tipper == [300, 200, 100]
+    assert out.tipper_err == [3, 2, 1]
+    assert out.rho == [3000, 2000, 1000]
+    assert out.phase == [46, 47, 45]
+
+
+def test_dedup_freq_list_mode_fallback_without_numpy(monkeypatch):
+    monkeypatch.setattr(t, "np", None)
+    # 0.1 and 0.1 + 5e-10 are only distinguishable if the "denom" floor is
+    # 1.0 (as in the numpy branch); this is a regression check for a bug
+    # where the sub-1.0 relative-tolerance denominator diverged from the
+    # numpy code path (see fix in _dedup_freq's list-mode fallback).
+    b = TFBundle(
+        freq=[0.1, 0.1 + 5e-10, 5.0],
+        z=[1, 2, 3],
+        z_err=[0.1, 0.2, 0.3],
+        tipper=[1, 2, 3],
+        tipper_err=[1, 2, 3],
+        rho=[1, 2, 3],
+        phase=[1, 2, 3],
+    )
+    out = t.TransformerMixin()._dedup_freq(b)
+    assert out.freq == [0.1, 5.0]
+    assert out.z == [1, 3]
+    assert out.z_err == [0.1, 0.3]
+    assert out.tipper == [1, 3]
+    assert out.tipper_err == [1, 3]
+    assert out.rho == [1, 3]
+    assert out.phase == [1, 3]
+
+
+def test_ensure_head_info_definemeas_mtsect_helpers():
+    from pycsamt.seg.edi import EDIFile
+
+    mixin = t.TransformerMixin()
+    ed = EDIFile(verbose=0)
+
+    head1 = mixin._ensure_head(ed, station="S01", empty=1e32)
+    assert head1.dataid == "S01"
+    assert head1.stdvers == "SEG 1.0"
+    assert head1.progvers == "PYCSAMT"
+    assert head1.empty == 1e32
+    assert head1.lat == 0.0 and head1.long == 0.0 and head1.elev == 0.0
+
+    # second call finds the existing section and does not recreate it
+    head2 = mixin._ensure_head(ed, station="OTHER", empty=1e32)
+    assert head2 is head1
+    assert head2.dataid == "S01"
+
+    info1 = mixin._ensure_info(ed, survey_id="SURV1")
+    assert ed.get_section("info") is info1
+    info2 = mixin._ensure_info(ed, survey_id="OTHER")
+    assert info2 is info1
+
+    head1.lat, head1.long, head1.elev = 10.0, 20.0, 300.0
+    dm1 = mixin._ensure_definemeas(ed, units="M", reftype="CART")
+    assert dm1.units == "M" and dm1.reftype == "CART"
+    assert dm1.reflat == pytest.approx(10.0)
+    assert dm1.reflong == pytest.approx(20.0)
+    assert dm1.refelev == pytest.approx(300.0)
+    dm2 = mixin._ensure_definemeas(ed)
+    assert dm2 is dm1
+
+    mt1 = mixin._ensure_mtsect(ed, sectid="S01", nfreq=5)
+    assert mt1.sectid == "S01" and mt1.nfreq == 5
+    mt2 = mixin._ensure_mtsect(ed, sectid="S02", nfreq=8)
+    assert mt2 is mt1
+    assert mt1.sectid == "S02" and mt1.nfreq == 8
+
+
+def test_ensure_definemeas_without_existing_head_section():
+    from pycsamt.seg.edi import EDIFile
+
+    ed = EDIFile(verbose=0)
+    dm = t.TransformerMixin()._ensure_definemeas(ed)
+    assert dm.units == "M"
+    assert dm.reftype == "CART"

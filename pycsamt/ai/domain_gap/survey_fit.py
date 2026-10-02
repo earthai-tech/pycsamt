@@ -32,7 +32,7 @@ principles.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -263,6 +263,8 @@ def fit_corruption_config(
     survey: SurveyData,
     *,
     severity_scale: float = 1.0,
+    components: Sequence[str] | None = None,
+    noise_sampling: str = "lognormal",
 ) -> CorruptionConfig:
     """Derive plausible noise/dropout ranges from a real survey's QC.
 
@@ -279,6 +281,20 @@ def fit_corruption_config(
     severity_scale : float, default=1.0
         Multiplier applied to every fitted range/rate, letting a caller
         derive a milder or harsher preset from the same empirical fit.
+    components : sequence of str, optional
+        Impedance components whose error ratio calibrates the noise range
+        and error floor, e.g. ``("xy", "yx")``. Calibrate on the
+        components that will later be compared: diagonal components
+        usually carry much larger relative errors, and including them
+        inflates the fitted range for an off-diagonal comparison.
+        ``None`` uses every component present. Dropout rates always use
+        the full coverage mask.
+    noise_sampling : {"lognormal", "loguniform", "uniform"}, default="lognormal"
+        Stored on the returned configuration. The default treats the
+        fitted range as the interquartile range of a log-normal error
+        distribution, which reproduces the median and spread of
+        declared field errors; ``"uniform"`` restores a flat draw
+        between the quartiles.
 
     Returns
     -------
@@ -322,6 +338,17 @@ def fit_corruption_config(
             "defaults instead."
         )
     valid = survey.valid
+    if components is not None:
+        missing = [c for c in components if c not in survey.components]
+        if missing:
+            raise ValueError(
+                f"components {missing} are not in survey.components "
+                f"{survey.components}."
+            )
+        keep = np.zeros(survey.shape, dtype=bool)
+        for c in components:
+            keep[..., survey.components.index(c)] = True
+        valid = valid & keep
     ratio = np.abs(survey.impedance_error[valid]) / np.maximum(
         np.abs(survey.impedance[valid]), 1e-24
     )
@@ -355,6 +382,7 @@ def fit_corruption_config(
         station_dropout_rate=station_dropout,
         frequency_dropout_rate=frequency_dropout,
         random_dropout_rate=random_dropout,
+        noise_sampling=noise_sampling,
     )
 
 

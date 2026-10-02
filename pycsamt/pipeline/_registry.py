@@ -691,11 +691,14 @@ STEP_REGISTRY: dict[str, StepSpec] = {
         StepSpec(
             code="SK001",
             name="mask_by_skew",
-            label="Mask by Bahr Skewness Threshold",
+            label="Mask by Phase-Tensor Skew (|β| > 3°)",
             category="skew",
             mod=f"{_EMTOOLS}.skew",
             fn_name="mask_by_skew",
-            defaults={"thresh": 0.3},
+            # The skew used is the phase-tensor beta in DEGREES (3° is the
+            # usual 2-D limit).  0.3 -- a Bahr-skew value -- masked 96-100 %
+            # of real data (median |beta| 2-4°), leaving all-NaN tensors.
+            defaults={"thresh": 3.0},
             qc_defs=[
                 (f"{_EMTOOLS}.skew", "plot_skew_traffic_psection"),
             ],
@@ -707,7 +710,7 @@ STEP_REGISTRY: dict[str, StepSpec] = {
             category="skew",
             mod=f"{_EMTOOLS}.skew",
             fn_name="keep_longest_low_skew",
-            defaults={"thresh": 0.3},
+            defaults={"thresh": 3.0},  # phase-tensor beta, degrees
             qc_defs=[
                 (f"{_EMTOOLS}.skew", "plot_skew_percentile_ribbon"),
             ],

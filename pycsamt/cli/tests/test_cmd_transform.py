@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -405,6 +406,144 @@ class TestTransformAvgCLI:
         result = runner.invoke(main, ["transform", "avg", str(avgs[0])])
         assert result.exit_code != 0
 
+    def test_no_avg_files_found(self, runner: CliRunner, tmp_path: Path) -> None:
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        result = runner.invoke(
+            main, ["transform", "avg", str(empty), "--output-dir", str(tmp_path)]
+        )
+        assert result.exit_code == 1
+        assert "No .avg files found" in result.output
+
+    def test_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "avg",
+                str(avgs[0]),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert "n_input" in data
+        assert "n_ok" in data
+        assert "converted" in data
+
+    def test_station_name_override(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "avg",
+                str(avgs[0]),
+                "--output-dir",
+                str(tmp_path),
+                "--station-name",
+                "CUSTOM_AVG",
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        if data["converted"]:
+            assert data["converted"][0]["station"] == "CUSTOM_AVG"
+
+    def test_directory_converts_all(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "avg",
+                str(_AVG_DIR),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0 or result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_input"] == len(avgs)
+
+    def test_write_failure_reported(self, runner: CliRunner, tmp_path: Path) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        with patch(
+            "pycsamt.seg.edi.EDIFile.write",
+            side_effect=OSError("disk full"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "avg",
+                    str(avgs[0]),
+                    "--output-dir",
+                    str(tmp_path),
+                    "--format",
+                    "json",
+                ],
+            )
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_fail"] >= 1
+        assert "disk full" in data["failures"][0]["error"]
+
+    def test_write_failure_reported_text(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        with patch(
+            "pycsamt.seg.edi.EDIFile.write",
+            side_effect=OSError("disk full"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "avg",
+                    str(avgs[0]),
+                    "--output-dir",
+                    str(tmp_path),
+                ],
+            )
+        assert result.exit_code == 1
+        assert "disk full" in result.output
+
+    def test_conversion_failure_reported(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        avgs = sorted(_AVG_DIR.glob("*.avg"))
+        with patch(
+            "pycsamt.transformers.AVGtoEDI.transform",
+            side_effect=RuntimeError("bad AVG file"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "avg",
+                    str(avgs[0]),
+                    "--output-dir",
+                    str(tmp_path),
+                    "--format",
+                    "json",
+                ],
+            )
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_fail"] == 1
+        assert data["n_ok"] == 0
+        assert "bad AVG file" in data["failures"][0]["error"]
+
 
 # ---------------------------------------------------------------------------
 # CLI integration tests — pycsamt transform j
@@ -415,17 +554,32 @@ class TestTransformJCLI:
     @pytest.fixture(autouse=True)
     def require_j(self) -> None:
         # J files may carry .j/.jones/.txt/.dat (see JParseMixin.J_SUFFIXES);
-        # the bundled sample (data/j/nia/) uses .dat.
+        # those extensions collide with plenty of unrelated files elsewhere
+        # under data/ (e.g. data/avg/*/output/summary.txt), so prefer the
+        # dedicated bundled sample (data/j/nia/, real Jones .dat files)
+        # rather than trusting a suffix-only rglob() to land on a J-only
+        # directory.
         from pycsamt.jones.cbase import JParseMixin
 
-        j_files = [
+        nia_dir = _PROJECT_ROOT / "data" / "j" / "nia"
+        if nia_dir.exists() and list(nia_dir.glob("*.dat")):
+            self.j_dir = nia_dir
+        else:
+            j_files = [
+                p
+                for p in (_PROJECT_ROOT / "data").rglob("*")
+                if p.is_file() and p.suffix.lower() in JParseMixin.J_SUFFIXES
+            ]
+            if not j_files:
+                pytest.skip("No J files found — skipping J transform tests")
+            self.j_dir = j_files[0].parent
+        self.j_files = sorted(
             p
-            for p in (_PROJECT_ROOT / "data").rglob("*")
+            for p in self.j_dir.iterdir()
             if p.is_file() and p.suffix.lower() in JParseMixin.J_SUFFIXES
-        ]
-        if not j_files:
-            pytest.skip("No J files found — skipping J transform tests")
-        self.j_dir = j_files[0].parent
+        )
+        if not self.j_files:
+            pytest.skip("No J files found in selected directory")
 
     def test_dry_run(self, runner: CliRunner) -> None:
         result = runner.invoke(
@@ -433,3 +587,127 @@ class TestTransformJCLI:
             ["transform", "j", str(self.j_dir), "--dry-run"],
         )
         assert result.exit_code == 0
+
+    def test_dry_run_lists_files(self, runner: CliRunner) -> None:
+        result = runner.invoke(
+            main,
+            ["transform", "j", str(self.j_dir), "--dry-run"],
+        )
+        n = len(self.j_files)
+        assert f"{n} J-file(s)" in result.output
+
+    def test_single_file_converts(self, runner: CliRunner, tmp_path: Path) -> None:
+        src = self.j_files[0]
+        result = runner.invoke(
+            main,
+            ["transform", "j", str(src), "--output-dir", str(tmp_path)],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Converted: 1/1" in result.output
+        assert list(tmp_path.glob("*.edi"))
+
+    def test_directory_converts_all(self, runner: CliRunner, tmp_path: Path) -> None:
+        n = len(self.j_files)
+        result = runner.invoke(
+            main,
+            ["transform", "j", str(self.j_dir), "--output-dir", str(tmp_path)],
+        )
+        assert result.exit_code == 0, result.output
+        assert f"Converted: {n}/{n}" in result.output
+        assert len(list(tmp_path.glob("*.edi"))) == n
+
+    def test_json_output(self, runner: CliRunner, tmp_path: Path) -> None:
+        src = self.j_files[0]
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "j",
+                str(src),
+                "--output-dir",
+                str(tmp_path),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data["n_ok"] == 1
+        assert data["n_fail"] == 0
+        assert data["converted"][0]["source"] == src.name
+
+    def test_station_name_override(self, runner: CliRunner, tmp_path: Path) -> None:
+        src = self.j_files[0]
+        result = runner.invoke(
+            main,
+            [
+                "transform",
+                "j",
+                str(src),
+                "--output-dir",
+                str(tmp_path),
+                "--station-name",
+                "CUSTOM01",
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data["converted"][0]["station"] == "CUSTOM01"
+
+    def test_missing_output_dir_fails(self, runner: CliRunner) -> None:
+        src = self.j_files[0]
+        result = runner.invoke(main, ["transform", "j", str(src)])
+        assert result.exit_code != 0
+        assert "--output-dir" in result.output
+
+    def test_empty_dir_no_j_files(self, runner: CliRunner, tmp_path: Path) -> None:
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        result = runner.invoke(
+            main, ["transform", "j", str(empty), "--output-dir", str(tmp_path)]
+        )
+        assert result.exit_code == 1
+        assert "No J file found" in result.output
+
+    def test_write_failure_reported(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        src = self.j_files[0]
+        with patch(
+            "pycsamt.seg.edi.EDIFile.write",
+            side_effect=OSError("disk full"),
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "transform",
+                    "j",
+                    str(src),
+                    "--output-dir",
+                    str(tmp_path),
+                    "--format",
+                    "json",
+                ],
+            )
+        assert result.exit_code == 1
+        data = json.loads(result.output)
+        assert data["n_fail"] == 1
+        assert data["n_ok"] == 0
+        assert "disk full" in data["failures"][0]["error"]
+
+    def test_conversion_failure_reported(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        src = self.j_files[0]
+        with patch(
+            "pycsamt.transformers.JtoEDI.transform",
+            side_effect=RuntimeError("bad J file"),
+        ):
+            result = runner.invoke(
+                main,
+                ["transform", "j", str(src), "--output-dir", str(tmp_path)],
+            )
+        assert result.exit_code == 1
+        assert "bad J file" in result.output

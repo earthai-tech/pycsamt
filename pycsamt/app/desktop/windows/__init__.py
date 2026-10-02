@@ -1,8 +1,9 @@
 from .advanced_window import AdvancedToolsWindow
 from .agent_window import AgentRunnerWindow
+from .airborne_window import AirborneWindow
 from .correction_window import CorrectionWindow
 from .forward_window import ForwardModelWindow
-from .interp_window import InterpretationWindow
+from .interp import InterpretationWindow
 from .inversion_window import InversionWindow
 from .map_window import MapViewerWindow
 from .pcsf3d_window import Pcsf3DWindow
@@ -22,4 +23,5 @@ __all__ = [
     "ForwardModelWindow",
     "InversionWindow",
     "InterpretationWindow",
+    "AirborneWindow",
 ]

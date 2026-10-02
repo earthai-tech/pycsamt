@@ -35,7 +35,7 @@ _DARK: dict = {
 }
 
 _LIGHT: dict = {
-    "facecolor": "#eff1f5",
+    "facecolor": "#ffffff",
     "labelcolor": "#4c4f69",
     "title_color": "#4c4f69",
     "tick_params": {"colors": "#6c6f85", "labelsize": 8},
@@ -72,7 +72,34 @@ def style_axes(ax, dark: bool = True) -> None:
     )
     fig = ax.get_figure()
     if fig is not None:
-        fig.patch.set_facecolor("#1e1e2e" if dark else "#e6e9ef")
+        fig.patch.set_facecolor("#1e1e2e" if dark else "#ffffff")
+
+
+_DARK_TEXT_MAP = {
+    "#2166ac": "#89b4fa",  # dark blue -> Catppuccin blue
+    "#b2182b": "#f38ba8",  # dark red  -> Catppuccin red
+}
+
+
+def _readable_on_dark(color, fallback: str) -> str:
+    """*color* if it already reads on a dark background, else a lighter
+    version of the same hue (near-greys become the theme's label colour)."""
+    from matplotlib.colors import to_hex, to_rgb
+
+    try:
+        hx = to_hex(color).lower()
+        r, g, b = to_rgb(color)
+    except (ValueError, TypeError):
+        return fallback
+    if hx in _DARK_TEXT_MAP:
+        return _DARK_TEXT_MAP[hx]
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    if lum >= 0.45:
+        return hx
+    if max(r, g, b) - min(r, g, b) < 0.15:  # black / grey text
+        return fallback
+    mix = 0.6  # towards white, keeping the hue
+    return to_hex((r + (1 - r) * mix, g + (1 - g) * mix, b + (1 - b) * mix))
 
 
 def _style_figure_full(ref_ax, dark: bool) -> None:
@@ -107,35 +134,26 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
         except Exception:
             pass
 
-    # ── 2. Fix annotation Text boxes (emtools hard-codes fc="white") ──────
+    # ── 2./3. Annotation text readable on the theme ──────────────────────
+    # emtools draws labels on white boxes (fc="white").  On dark the box is
+    # repainted dark, so the text must be light: every too-dark colour is
+    # lightened keeping its hue (blue stays blue) -- the old two-colour map
+    # left the default-black "size reference" / station labels black on
+    # near-black.
     if dark:
-        bbox_fc = "#1a1a2e"  # near-black, slightly blue-tinted
-        bbox_ec = "#45475a"  # subtle border
-        # Remap the annotation text colours to palette variants visible on dark
-        _COL_MAP = {
-            "#2166ac": "#89b4fa",  # dark-blue → Catppuccin blue
-            "#b2182b": "#f38ba8",  # dark-red  → Catppuccin red
-        }
+        bbox_fc, bbox_ec = "#1a1a2e", "#6c7086"
     else:
-        bbox_fc = "white"
-        bbox_ec = "none"
-        _COL_MAP = {}  # no remapping in light mode
-
-    for txt in ref_ax.texts:
-        bb = txt.get_bbox_patch()
-        if bb is not None:
-            bb.set_facecolor(bbox_fc)
-            bb.set_edgecolor(bbox_ec)
-            bb.set_alpha(0.88)
-        if dark:
-            col = txt.get_color()
-            txt.set_color(_COL_MAP.get(col, col))
-
-    # ── 3. Fix free text (no bbox) — reference ellipse label, etc. ───────
-    if dark:
-        for txt in ref_ax.texts:
-            if txt.get_bbox_patch() is None:
-                txt.set_color(s["labelcolor"])
+        bbox_fc, bbox_ec = "white", "none"
+    for ax in fig.axes:
+        for txt in ax.texts:
+            bb = txt.get_bbox_patch()
+            if bb is not None:
+                bb.set_facecolor(bbox_fc)
+                bb.set_edgecolor(bbox_ec)
+                bb.set_alpha(0.88)
+            if dark:
+                txt.set_color(_readable_on_dark(txt.get_color(),
+                                                s["labelcolor"]))
 
     # ── 4. Fix unfilled patches: reference ellipse edgecolor "k" → visible
     ref_ec = "#cccccc" if dark else "#444444"
@@ -145,6 +163,21 @@ def _style_figure_full(ref_ax, dark: bool) -> None:
 
 
 def _annotate_empty(ax, msg: str = "No data") -> None:
+    """Clear *ax* and show a centred placeholder message.
+
+    Used for "no data yet" / "select a station" / plot-error states.
+    Clearing first guarantees a clean placeholder even when called from
+    an ``except`` block after a plot function partially drew before
+    failing. Hiding ticks and spines avoids a meaningless default 0..1
+    grid on an otherwise-empty axes -- style_axes()'s later
+    ``ax.grid(True, ...)`` call still runs but draws nothing since there
+    are no tick positions left to align gridlines to.
+    """
+    ax.cla()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     ax.text(
         0.5,
         0.5,
@@ -155,6 +188,19 @@ def _annotate_empty(ax, msg: str = "No data") -> None:
         fontsize=11,
         color="#585b70",
     )
+
+
+def _clear_figure(fig) -> None:
+    """Clear a reusable figure without resetting logarithmic limits to zero."""
+    for ax in tuple(fig.axes):
+        try:
+            if ax.get_xscale() != "linear":
+                ax.set_xscale("linear")
+            if ax.get_yscale() != "linear":
+                ax.set_yscale("linear")
+        except Exception:
+            pass
+    fig.clear()
 
 
 def _relabel_colorbar_log10(cb_ax) -> None:
@@ -183,8 +229,10 @@ def _relabel_colorbar_log10(cb_ax) -> None:
             else:
                 labels.append("")
         if orient == "y":
+            cb_ax.set_yticks(ticks)
             cb_ax.set_yticklabels(labels, fontsize=8)
         else:
+            cb_ax.set_xticks(ticks)
             cb_ax.set_xticklabels(labels, fontsize=8)
     except Exception:
         pass
@@ -218,6 +266,43 @@ def _add_station_markers(ax, dark: bool = True) -> None:
             transform=ax.get_xaxis_transform(),
             **kw,
         )
+    except Exception:
+        pass
+
+
+def _thin_pseudosection_xlabels(ax, keep_label: str | None = None) -> None:
+    """Thin cluttered per-station x-tick labels on a pseudosection axes.
+
+    et.pseudosection() labels every station unconditionally, which turns
+    into unreadable overlapping text once a profile has more than a
+    handful of stations. This reuses the same density-aware
+    PYCSAMT_STATION_RENDERING mechanism already applied to the Phase
+    Tensor and Res/Phase Section tabs: tick *positions* are left
+    untouched (so the triangle markers added by _add_station_markers,
+    which reads those same positions, still mark every station) — only
+    the label *text* at non-selected positions is blanked out, and the
+    final station is always kept.
+
+    Must be called AFTER _mark_station(), which locates the highlighted
+    station by matching its rendered tick-label text — blanking that
+    text first would make the highlight silently fail to draw.
+    *keep_label*, when given, is force-kept visible even where thinning
+    would otherwise drop it (keeps the selected station's name on-screen
+    alongside its highlight line).
+    """
+    try:
+        from pycsamt.api.station import PYCSAMT_STATION_RENDERING
+
+        labels = [t.get_text() for t in ax.get_xticklabels()]
+        if len(labels) <= 1:
+            return
+        style = PYCSAMT_STATION_RENDERING.style_for("pseudosection")
+        figwidth = ax.figure.get_figwidth() if ax.figure is not None else 10.0
+        idx = set(int(i) for i in style.label_indices(labels, figwidth))
+        if keep_label is not None and keep_label in labels:
+            idx.add(labels.index(keep_label))
+        new_labels = [lbl if i in idx else "" for i, lbl in enumerate(labels)]
+        ax.set_xticklabels(new_labels, rotation=90, fontsize=7, ha="center")
     except Exception:
         pass
 
@@ -315,6 +400,13 @@ class PlotController:
         self._phase_ylim: tuple[float, float] | None = None
         self._show_errbar: bool = True
         self._bw_mode: bool = False
+        # Shared between the Phase Tensor pseudosection and PT Strip tabs:
+        # one toggle controls whether both colour ellipses by signed skew
+        # beta (range roughly -10..10 deg, hard to eyeball against the
+        # 1-D/2-D vs 3-D structure threshold) or by |beta| (0..max, so the
+        # skew_threshold boundary reads directly off the colour scale).
+        self._pt_abs_skew: bool = False
+        self._pt_annotations: bool = True
         self.dark: bool = True
         # Phase-tensor DataFrame cache: id(sites) → built DataFrame
         # Avoids re-running build_phase_tensor_table() on every tab switch.
@@ -355,6 +447,18 @@ class PlotController:
         """
         self._bw_mode = on
 
+    def set_pt_annotations(self, show: bool) -> None:
+        """Show the in-plot labels of the Phase Tensor (|β| legend, size
+        reference) and PT Strip (station name) tabs."""
+        self._pt_annotations = bool(show)
+
+    def set_pt_absolute_skew(self, absolute: bool) -> None:
+        """Use absolute (|beta|) rather than signed skew colouring.
+
+        Shared by both the Phase Tensor pseudosection and PT Strip tabs.
+        """
+        self._pt_abs_skew = bool(absolute)
+
     def set_phase_ylim(
         self,
         ymin: float | None,
@@ -381,7 +485,13 @@ class PlotController:
         Panel-level code compares this to the key stored after the last draw
         and skips the full redraw when they match.
         """
-        return (id(self._sites), self._period_range, self.dark)
+        return (
+            id(self._sites),
+            self._period_range,
+            self.dark,
+            self._pt_abs_skew,
+            self._pt_annotations,  # the labels checkbox must force a redraw
+        )
 
     def invalidate_phase_tensor(self) -> None:
         """Force the next draw_phase_tensor() call to recompute from scratch."""
@@ -420,12 +530,21 @@ class PlotController:
             return None  # full range → no filter needed
         return (T_min, T_max)
 
-    def _clip_xaxis_period(self, *axes) -> None:
-        """Set X-axis limits to the active period range on all supplied axes."""
+    def _clip_xaxis_period(self, *axes, log: bool = False) -> None:
+        """Set X-axis limits to the active period range on all supplied axes.
+
+        *log* must be True when the axis holds pre-transformed
+        log10(period) values on a linear scale (the "logperiod"
+        convention) rather than raw period on a log-scale axis.
+        """
+        import math
+
         pr = self._active_period_range()
         if pr is None:
             return
         T_min, T_max = pr
+        if log:
+            T_min, T_max = math.log10(T_min), math.log10(T_max)
         for ax in axes:
             try:
                 ax.set_xlim(T_min, T_max)
@@ -487,7 +606,7 @@ class PlotController:
             _zblk_flex,
         )
 
-        fig.clear()
+        _clear_figure(fig)
         # Tight 2:1 layout — rho gets the extra space freed by hiding
         # the duplicate x-axis on the top panel.
         gs = fig.add_gridspec(2, 1, height_ratios=[2, 1], hspace=0.0)
@@ -595,7 +714,11 @@ class PlotController:
         for ax in (ax_r, ax_p):
             style_axes(ax, self.dark)
 
-        fig.tight_layout(pad=1.0, h_pad=0.4)
+        # Explicit margins are stable inside the resizable Qt canvas; calling
+        # tight_layout here repeatedly warns when decorations cannot fit.
+        fig.subplots_adjust(
+            left=0.11, right=0.97, bottom=0.10, top=0.94, hspace=0.08
+        )
 
     # ── Apparent-resistivity pseudosection ────────────────────────────
 
@@ -620,6 +743,7 @@ class PlotController:
             )
             _add_station_markers(ax, self.dark)
             self._mark_station(ax)
+            _thin_pseudosection_xlabels(ax, keep_label=self._station_id)
             ax.set_title(
                 r"$\rho_a$ (XY) — Pseudosection",
                 fontsize=10,
@@ -652,6 +776,7 @@ class PlotController:
             _fix_psection_axes(ax, colorbar_label=r"$\varphi$ (°)")
             _add_station_markers(ax, self.dark)
             self._mark_station(ax)
+            _thin_pseudosection_xlabels(ax, keep_label=self._station_id)
             ax.set_title(
                 r"$\varphi$ (XY) — Pseudosection",
                 fontsize=10,
@@ -674,18 +799,16 @@ class PlotController:
             style_axes(ax, self.dark)
             return
         try:
-            target = (
-                self._get_site(self._station_id)
-                if self._station_id
-                else self._sites
-            )
-            et.plot_tipper_components(target, ax=ax, verbose=0)
+            selected = self._get_site(self._station_id) if self._station_id else None
+            target = selected if selected is not None else self._sites
+            et.plot_tipper_components(target, ax=ax, axis="logperiod", verbose=0)
+            station_label = self._station_id if selected is not None else None
             ax.set_title(
-                f"Tipper{' — ' + self._station_id if self._station_id else ''}",
+                f"Tipper{' — ' + station_label if station_label else ''}",
                 fontsize=10,
                 pad=3,
             )
-            self._clip_xaxis_period(ax)
+            self._clip_xaxis_period(ax, log=True)
         except Exception as exc:
             _annotate_empty(ax, f"Tipper error:\n{exc}")
         style_axes(ax, self.dark)
@@ -729,6 +852,9 @@ class PlotController:
                 period_range=self._active_period_range(),
                 period_up=False,  # high freq (short T, near-surface) at TOP
                 verbose=0,
+                c_by=("|beta|" if self._pt_abs_skew else "skew"),
+                symmetric_clim=not self._pt_abs_skew,
+                annotations=self._pt_annotations,
                 **edge_kw,
             )
 
@@ -783,6 +909,28 @@ class PlotController:
             for lbl in ax.get_xticklabels():
                 lbl.set_color(tick_col)
 
+            # Reserve headroom for the rotated (90°) station labels above
+            # the axes. plot_phase_tensor_psection's colorbar is attached
+            # via make_axes_locatable (no subplotspec), so MplCanvas's own
+            # fit_to_view() intentionally skips both tight_layout() and its
+            # auto label-space reservation for this figure (see that
+            # method's "manually positioned colorbars/insets ... retain
+            # the layout defined by their plotting function" docstring) —
+            # without this, a short/wide docked panel clips the labels
+            # clean off the top of the canvas (confirmed by reproducing at
+            # a realistic panel aspect ratio: labels present as Text
+            # objects, invisible because the default ~12% top margin isn't
+            # enough for 90°-rotated multi-character station names).
+            #
+            # Same root cause pushes the RIGHT edge too: _attach_cbar()
+            # appends the colorbar via make_axes_locatable right at the
+            # main axes' current right edge, so its own label ("skew",
+            # "|beta|", ...) sits right at the figure's right border and
+            # gets clipped by the canvas edge on a docked panel unless we
+            # explicitly reserve room for it here (fit_to_view() skips its
+            # own auto-margin pass for this same locator-colorbar reason).
+            ax.figure.subplots_adjust(top=0.78, right=0.88)
+
         except Exception as exc:
             _annotate_empty(ax, f"Phase tensor error:\n{exc}")
 
@@ -819,6 +967,10 @@ class PlotController:
                 period_range=self._active_period_range(),
                 ax=ax,
                 verbose=0,
+                c_by=("|beta|" if self._pt_abs_skew else "skew"),
+                symmetric_clim=not self._pt_abs_skew,
+                axis_style="logperiod",
+                station_label=self._pt_annotations,
                 **edge_kw,
             )
             ax.set_title(
@@ -826,6 +978,19 @@ class PlotController:
                 fontsize=10,
                 pad=3,
             )
+
+            # Same root cause as draw_phase_tensor()'s margin fix:
+            # _attach_cbar() attaches this colorbar via
+            # make_axes_locatable (no subplotspec), so MplCanvas's own
+            # fit_to_view() skips tight_layout()/auto margin reservation
+            # for this figure. On a short docked panel the default
+            # margins aren't enough for the x-label ("log10(T) (s)"),
+            # y-label ("Phase (deg)") and colorbar label ("Skew beta
+            # (deg)") to all fit -- confirmed by reproducing at a
+            # realistic panel aspect ratio (9.8x1.8in): the x-label was
+            # dropped off the canvas entirely.
+            ax.figure.subplots_adjust(bottom=0.32, right=0.88, top=0.82)
+
         except Exception as exc:
             _annotate_empty(ax, f"Phase tensor strip error:\n{exc}")
 
@@ -859,7 +1024,7 @@ class PlotController:
             _zblk_flex,
         )
 
-        fig.clear()
+        _clear_figure(fig)
 
         if self._sites is None or self._station_id is None:
             ax = fig.add_subplot(111)
@@ -1088,7 +1253,7 @@ class PlotController:
             )
 
         except Exception as exc:
-            fig.clear()
+            _clear_figure(fig)
             ax = fig.add_subplot(111)
             _annotate_empty(ax, f"Publication view error:\n{exc}")
             style_axes(ax, self.dark)

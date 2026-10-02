@@ -231,7 +231,7 @@ class ResistivityMapAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             depth_levels = [dm["depth_km"] for dm in depth_maps]
             mean_rhos = [
                 float(np.nanmean(dm["grid_rho"])) for dm in depth_maps

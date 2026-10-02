@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate AI inversion figures for the user guide.
 
 The figures are deterministic documentation examples.  They avoid long model

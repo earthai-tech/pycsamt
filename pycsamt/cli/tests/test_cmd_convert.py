@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from pycsamt.cli import main
@@ -225,3 +226,208 @@ class TestConvertCommand:
             ["convert", str(src), "--output-dir", str(out)],
         )
         assert result.exit_code != 0
+
+    # ------------------------------------------------------------------
+    # Jones J-file conversion (real bundled sample: data/j/kb0-s001.txt)
+    # ------------------------------------------------------------------
+
+    def test_j_file_success(
+        self, runner: CliRunner, j_single_file: Path, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "kb0-s001.j"
+        src.write_text(j_single_file.read_text(encoding="utf-8"), encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            ["convert", str(src), "--output-dir", str(out), "--format", "json"],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data[0]["status"] == "ok"
+        assert data[0]["station"] == "KB0001"
+        edi = out / "kb0-s001.edi"
+        assert edi.exists()
+        assert 'DATAID="KB0001"' in edi.read_text(encoding="utf-8")
+
+    def test_j_file_verbose_echoes_progress(
+        self, runner: CliRunner, j_single_file: Path, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "kb0-s001.j"
+        src.write_text(j_single_file.read_text(encoding="utf-8"), encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            ["convert", str(src), "--output-dir", str(out), "-v"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "→" in result.output
+
+    def test_j_file_malformed_reports_error(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "bad.j"
+        src.write_text("not a real j-file\n1 2 3\n", encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            ["convert", str(src), "--output-dir", str(out), "--format", "json"],
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data[0]["status"] == "error"
+
+    def test_j_file_error_text_format_lists_message(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "bad.j"
+        src.write_text("garbage\n", encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main, ["convert", str(src), "--output-dir", str(out)]
+        )
+        assert result.exit_code != 0
+        assert "Errors" in result.output
+
+    # ------------------------------------------------------------------
+    # Zonge AVG conversion (real bundled sample data/avg/K1.AVG, K2.AVG)
+    # ------------------------------------------------------------------
+
+    def test_avg_file_success_multi_station(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        avg_src = Path("data/avg/K2.AVG")
+        if not avg_src.exists():
+            pytest.skip("data/avg/K2.AVG not found")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            [
+                "convert",
+                str(avg_src),
+                "--output-dir",
+                str(out),
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data[0]["status"] == "ok"
+        assert len(data[0]["stations"]) == 28
+        assert len(list(out.glob("*.edi"))) == 28
+
+    def test_avg_file_malformed_reports_error(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "bad.avg"
+        src.write_text("not a real avg file\ngarbage\n", encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main, ["convert", str(src), "--output-dir", str(out), "--format", "json"]
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data[0]["status"] == "error"
+
+    def test_avg_csv_format(self, runner: CliRunner, tmp_path: Path) -> None:
+        avg_src = Path("data/avg/K1.AVG")
+        if not avg_src.exists():
+            pytest.skip("data/avg/K1.AVG not found")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            [
+                "convert",
+                str(avg_src),
+                "--output-dir",
+                str(out),
+                "--format",
+                "csv",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        lines = [l for l in result.output.splitlines() if l.strip()]
+        assert len(lines) >= 2
+
+    def test_avg_verbose_echoes_station_count(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        avg_src = Path("data/avg/K1.AVG")
+        if not avg_src.exists():
+            pytest.skip("data/avg/K1.AVG not found")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main, ["convert", str(avg_src), "--output-dir", str(out), "-v"]
+        )
+        assert result.exit_code == 0, result.output
+        assert "→" in result.output
+
+    # ------------------------------------------------------------------
+    # EDI pass-through verbose flag
+    # ------------------------------------------------------------------
+
+    def test_edi_passthrough_verbose_echoes_copy(
+        self, runner: CliRunner, single_edi: Path, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main, ["convert", str(single_edi), "--output-dir", str(out), "-v"]
+        )
+        assert result.exit_code == 0
+        assert "copy" in result.output.lower()
+
+    # ------------------------------------------------------------------
+    # Single unsupported-extension file (not a directory)
+    # ------------------------------------------------------------------
+
+    def test_single_file_unsupported_extension_fails(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "notes.txt"
+        src.write_text("irrelevant", encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main, ["convert", str(src), "--output-dir", str(out)]
+        )
+        assert result.exit_code != 0
+        assert "No convertible files" in result.output
+
+    # ------------------------------------------------------------------
+    # Defensive "no converter for extension" branch: _SUPPORTED_EXTS and
+    # _CONVERTERS are always kept in sync in real usage, so this is only
+    # reachable by deliberately desyncing them.
+    # ------------------------------------------------------------------
+
+    def test_no_converter_for_extension_branch(
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import pycsamt.cli.commands.convert as _convert_mod
+
+        monkeypatch.setattr(
+            _convert_mod,
+            "_SUPPORTED_EXTS",
+            _convert_mod._SUPPORTED_EXTS | {".zzz"},
+        )
+        src = tmp_path / "weird.zzz"
+        src.write_text("irrelevant", encoding="utf-8")
+        out = tmp_path / "out"
+        result = runner.invoke(
+            main,
+            ["convert", str(src), "--output-dir", str(out), "--format", "json"],
+        )
+        assert result.exit_code != 0
+        data = json.loads(result.output)
+        assert data[0]["status"] == "error"
+        assert "no converter" in data[0]["message"].lower()
+
+    # ------------------------------------------------------------------
+    # _fmt_csv helper — empty input
+    # ------------------------------------------------------------------
+
+    def test_fmt_csv_empty_results(self) -> None:
+        from pycsamt.cli.commands.convert import _fmt_csv
+
+        assert _fmt_csv([]) == ""

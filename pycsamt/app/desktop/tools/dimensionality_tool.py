@@ -46,7 +46,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 _C_1D = QColor("#c8e6c9")  # green
 _C_2D = QColor("#fff9c4")  # yellow
@@ -213,12 +213,30 @@ class DimensionalityDialog(QDialog):
         self._tabs.addTab(self._table, "Classification Table")
 
         # Bar chart tab
-        self._bar_canvas = MplCanvas(parent=self)
-        self._tabs.addTab(self._bar_canvas, "Summary Chart")
+        self._bar_canvas_view = CanvasResultView(
+            self,
+            toolbar=True,
+            empty_title="No summary yet",
+            empty_reason="Click Classify to compute the 1D/2D/3D summary.",
+        )
+        self._bar_canvas = self._bar_canvas_view.canvas
+        self._bar_canvas.set_refresh_callback(
+            self._on_run, tooltip="Reclassify and redraw the summary"
+        )
+        self._tabs.addTab(self._bar_canvas_view, "Summary Chart")
 
         # Map tab
-        self._map_canvas = MplCanvas(parent=self)
-        self._tabs.addTab(self._map_canvas, "Dimensionality Map")
+        self._map_canvas_view = CanvasResultView(
+            self,
+            toolbar=True,
+            empty_title="No map yet",
+            empty_reason="Enable the map option and click Classify.",
+        )
+        self._map_canvas = self._map_canvas_view.canvas
+        self._map_canvas.set_refresh_callback(
+            self._on_run, tooltip="Reclassify and redraw the map"
+        )
+        self._tabs.addTab(self._map_canvas_view, "Dimensionality Map")
 
         root.addWidget(self._tabs, stretch=1)
 
@@ -248,11 +266,30 @@ class DimensionalityDialog(QDialog):
         self._df = df
         if df is None or df.empty:
             self._status_lbl.setText("No results.")
+            self._bar_canvas_view.show_unavailable(
+                "No results",
+                "The classifier returned no rows for this survey.",
+            )
+            self._map_canvas_view.show_unavailable(
+                "No results",
+                "The classifier returned no rows for this survey.",
+            )
             return
         self._fill_table(df)
         self._draw_bar(df)
         if map_fig is not None:
             self._map_canvas.show_figure(map_fig)
+            self._map_canvas_view.show_canvas()
+        elif self._map_cb.isChecked():
+            self._map_canvas_view.show_unavailable(
+                "Map unavailable",
+                "The dimensionality map could not be generated for this run.",
+            )
+        else:
+            self._map_canvas_view.show_unavailable(
+                "No map requested",
+                "Enable the map option and run again.",
+            )
         total = len(df)
         counts = (
             df["dim"].value_counts().to_dict() if "dim" in df.columns else {}
@@ -265,6 +302,8 @@ class DimensionalityDialog(QDialog):
     def _on_error(self, msg: str) -> None:
         self._run_btn.setEnabled(True)
         self._status_lbl.setText(f"Error: {msg}")
+        self._bar_canvas_view.show_unavailable("Classification failed", msg)
+        self._map_canvas_view.show_unavailable("Classification failed", msg)
 
     # ── Fill table ────────────────────────────────────────────────────────────
 
@@ -308,11 +347,19 @@ class DimensionalityDialog(QDialog):
 
     def _draw_bar(self, df) -> None:
         if "dim" not in df.columns:
+            self._bar_canvas_view.show_unavailable(
+                "No dimensionality data",
+                "The result table has no 'dim' column to summarize.",
+            )
             return
         station_col = next(
             (c for c in ("station", "Station", "id") if c in df.columns), None
         )
         if station_col is None:
+            self._bar_canvas_view.show_unavailable(
+                "No station column",
+                "The result table has no station identifier column.",
+            )
             return
 
         stations = df[station_col].unique()
@@ -338,3 +385,4 @@ class DimensionalityDialog(QDialog):
         ax.legend(fontsize=8)
         fig.tight_layout()
         self._bar_canvas.show_figure(fig)
+        self._bar_canvas_view.show_canvas()

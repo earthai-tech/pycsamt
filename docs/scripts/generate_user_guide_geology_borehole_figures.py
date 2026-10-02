@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the borehole figures for the geology borehole guide."""
 
 from pathlib import Path

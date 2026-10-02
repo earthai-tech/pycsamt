@@ -32,10 +32,10 @@ from pycsamt.app.desktop.controllers.qc_controller import (
     ALL_GROUPS,
     QCController,
 )
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.widgets.category_bar import (
     CategoryComboBar,
 )
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
 
 
 class QCPanel(QWidget):
@@ -68,8 +68,16 @@ class QCPanel(QWidget):
         root.addWidget(self._bar)
 
         # ── Single canvas ─────────────────────────────────────────────
-        self._canvas = MplCanvas(self, toolbar=False)
-        root.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            self, toolbar=False,
+            empty_title="Load survey data",
+            empty_reason="Load survey data to enable QC plots.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            self.refresh, tooltip="Re-render the current QC plot"
+        )
+        root.addWidget(self._canvas_view)
 
         # Populate the item combo for the first category without triggering
         # a double-render (category_changed fires before items are set).
@@ -97,11 +105,15 @@ class QCPanel(QWidget):
         if item_idx < 0 or item_idx >= len(plot_list):
             return
         _label, fn_name, has_ax = plot_list[item_idx]
+        if self._ctrl._sites is None:
+            self._draw_empty()
+            return
         new_fig = self._ctrl.draw(fn_name, has_ax, self._canvas.figure)
         if new_fig is not None:
             self._canvas.show_figure(new_fig)
         else:
             self._canvas.draw()
+        self._canvas_view.show_canvas()
 
     # ── Slots ─────────────────────────────────────────────────────────
 
@@ -129,14 +141,6 @@ class QCPanel(QWidget):
         self._bar.set_items([label for label, _fn, _ax in plot_list])
 
     def _draw_empty(self) -> None:
-        from pycsamt.app.desktop.controllers.plot_controller import (
-            _annotate_empty,
-            style_axes,
+        self._canvas_view.show_unavailable(
+            "Load survey data", "Load survey data to enable QC plots."
         )
-
-        fig = self._canvas.figure
-        fig.clear()
-        ax = fig.add_subplot(111)
-        _annotate_empty(ax, "Load survey data to enable QC plots")
-        style_axes(ax, self._ctrl.dark)
-        self._canvas.draw()

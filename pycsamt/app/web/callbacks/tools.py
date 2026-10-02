@@ -3471,15 +3471,9 @@ def _phase_tensor_body(
             },
         )
 
-    _CMAP_OPTS = [
-        {"label": "RdBu_r  (diverging)", "value": "RdBu_r"},
-        {"label": "RdYlBu_r  (warm→cool)", "value": "RdYlBu_r"},
-        {"label": "coolwarm", "value": "coolwarm"},
-        {"label": "viridis  (sequential)", "value": "viridis"},
-        {"label": "plasma", "value": "plasma"},
-        {"label": "inferno", "value": "inferno"},
-        {"label": "jet", "value": "jet"},
-    ]
+    from pycsamt.api.colormaps import colormap_options
+
+    _CMAP_OPTS = colormap_options(first=("RdBu_r",))
 
     return html.Div(
         [

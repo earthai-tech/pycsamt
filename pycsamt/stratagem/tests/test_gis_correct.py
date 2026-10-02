@@ -13,6 +13,9 @@ from pycsamt.stratagem.gis_correct import (
     CoordinateInjector,
     StationLocator,
     _detect_coord_cols,
+    _isnan_median,
+    _load_coord_frame,
+    _station_numeric_id,
 )
 from pycsamt.stratagem.io import EDIBatch
 
@@ -333,3 +336,169 @@ class TestCoordinateInjector:
             batch, csv, easting_col="E", northing_col="N"
         )
         assert inj.latitudes_.shape == (2,)
+
+    def test_verbose_prints_column_and_summary(self, tmp_path, capsys):
+        _make_edi_dir(tmp_path, n=2)
+        batch = EDIBatch(tmp_path / "edis").fit()
+        csv = _make_csv(tmp_path, n=2)
+        CoordinateInjector(epsg=32649, utm_zone="49N", verbose=1).fit(batch, csv)
+        out = capsys.readouterr().out
+        assert "easting=" in out
+        assert "injected coordinates into 2/2 EDIs" in out
+
+    def test_head_none_verbose_warns(self, tmp_path, capsys):
+        _make_edi_dir(tmp_path, n=2)
+        batch = EDIBatch(tmp_path / "edis").fit()
+        csv = _make_csv(tmp_path, n=2)
+
+        class _NoHead:
+            path = None
+
+            def get_section(self, name):
+                return None
+
+        inj = CoordinateInjector(epsg=32649, utm_zone="49N", verbose=1).fit(
+            [_NoHead(), _NoHead()], csv
+        )
+        out = capsys.readouterr().out
+        assert "no HEAD section" in out
+        assert "injected coordinates into 0/2 EDIs" in out
+
+    def test_copy_true_does_not_mutate_original(self, tmp_path):
+        _make_edi_dir(tmp_path, n=2)
+        batch = EDIBatch(tmp_path / "edis").fit()
+        orig_edis = list(batch.edi_objects_)
+        csv = _make_csv(tmp_path, n=2)
+        inj = CoordinateInjector(epsg=32649, utm_zone="49N").fit(
+            batch, csv, copy=True
+        )
+        # the returned objects are shallow copies, not the same instances
+        assert inj.edi_objects_[0] is not orig_edis[0]
+
+    def test_export_with_basename(self, tmp_path):
+        _make_edi_dir(tmp_path, n=2)
+        batch = EDIBatch(tmp_path / "edis").fit()
+        csv = _make_csv(tmp_path, n=2)
+        inj = CoordinateInjector(epsg=32649, utm_zone="49N").fit(batch, csv)
+        out = tmp_path / "out_basename"
+        paths = inj.export(out, basename="Z2HX")
+        assert [p.name for p in paths] == ["Z2HX001.edi", "Z2HX002.edi"]
+
+    def test_export_no_path_no_basename_uses_station_fallback(self, tmp_path):
+        written_names = []
+
+        class _FakeEdi:
+            path = None
+
+            def write(self, *, new_edifn, savepath):
+                written_names.append(new_edifn)
+
+        inj = CoordinateInjector()
+        inj.edi_objects_ = [_FakeEdi(), _FakeEdi()]
+        paths = inj.export(tmp_path / "out")
+        assert written_names == ["station_001.edi", "station_002.edi"]
+        assert [p.name for p in paths] == ["station_001.edi", "station_002.edi"]
+
+    def test_export_skip_existing_verbose(self, tmp_path, capsys):
+        _make_edi_dir(tmp_path, n=2)
+        batch = EDIBatch(tmp_path / "edis").fit()
+        csv = _make_csv(tmp_path, n=2)
+        inj = CoordinateInjector(epsg=32649, utm_zone="49N").fit(batch, csv)
+        out = tmp_path / "out_skip"
+        inj.export(out)
+        capsys.readouterr()
+        inj2 = CoordinateInjector(epsg=32649, utm_zone="49N", verbose=1).fit(
+            batch, csv
+        )
+        inj2.export(out, overwrite=False)
+        text = capsys.readouterr().out
+        assert "skip existing" in text
+        assert "exported 2 files" in text
+
+    def test_export_write_failure_reported(self, tmp_path, capsys):
+        _make_edi_dir(tmp_path, n=1)
+        batch = EDIBatch(tmp_path / "edis").fit()
+        csv = _make_csv(tmp_path, n=1)
+        inj = CoordinateInjector(epsg=32649, utm_zone="49N", verbose=1).fit(
+            batch, csv
+        )
+
+        def _boom(*, new_edifn, savepath):
+            raise OSError("disk full")
+
+        inj.edi_objects_[0].write = _boom
+        paths = inj.export(tmp_path / "out_fail")
+        assert paths == []
+        assert "failed to write" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# module-level helpers
+# ---------------------------------------------------------------------------
+
+
+class TestLoadCoordFrame:
+    def test_xls_uses_read_excel(self, tmp_path, monkeypatch):
+        import pycsamt.stratagem.gis_correct as gc_mod
+
+        called = {}
+
+        def _fake_read_excel(path, **kw):
+            called["path"] = path
+            return pd.DataFrame({"a": [1]})
+
+        monkeypatch.setattr(gc_mod.pd, "read_excel", _fake_read_excel)
+        df = _load_coord_frame(Path("dummy.xls"))
+        assert called["path"] == "dummy.xls"
+        assert list(df.columns) == ["a"]
+
+    def test_csv_uses_read_any(self, tmp_path):
+        csv = tmp_path / "coords.csv"
+        pd.DataFrame({"a": [1, 2]}).to_csv(csv, index=False)
+        df = _load_coord_frame(csv)
+        assert list(df["a"]) == [1, 2]
+
+
+class TestIsnanMedian:
+    def test_all_nan_column(self):
+        s = pd.Series([np.nan, np.nan])
+        assert _isnan_median(s) is True
+
+    def test_normal_column(self):
+        s = pd.Series([1.0, 2.0, 3.0])
+        assert _isnan_median(s) is False
+
+    def test_non_numeric_series_returns_true(self):
+        s = pd.Series(["a", "b", "c"])
+        assert _isnan_median(s) is True
+
+
+class TestStationNumericId:
+    def test_from_path_stem(self):
+        edi = type("_E", (), {"path": Path("ZHX005.edi"), "station": None})()
+        assert _station_numeric_id(edi) == 5
+
+    def test_from_station_when_no_path(self):
+        edi = type("_E", (), {"path": None, "station": "S12"})()
+        assert _station_numeric_id(edi) == 12
+
+    def test_returns_zero_when_no_digits(self):
+        edi = type("_E", (), {"path": None, "station": None})()
+        assert _station_numeric_id(edi) == 0
+
+
+class TestStationLocatorVerbose:
+    def test_auto_verbose_message(self, capsys):
+        n = 4
+        lats = np.linspace(25.0, 25.5, n)
+        lons = np.zeros(n)
+
+        class _E:
+            path = None
+            station = None
+
+        StationLocator(order="auto", verbose=1).fit(
+            [_E() for _ in range(n)], lats, lons
+        )
+        out = capsys.readouterr().out
+        assert "auto-detected order: forward" in out

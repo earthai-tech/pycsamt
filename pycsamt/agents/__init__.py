@@ -42,6 +42,14 @@ Agent catalogue
     RPCA / Hampel / EMAP / AI-CAE denoising.
 :class:`AnomalyDetectionAgent`
     Unsupervised CAE anomaly flagging per (station, frequency).
+:class:`ImputerAgent`
+    Fill genuinely missing impedance cells (masked-reconstruction CAE).
+:class:`UncertaintyCalibrationAgent`
+    Learned per-cell error-floor re-estimation (Z.z_err rescaling).
+:class:`DistortionClassificationAgent`
+    Triage galvanic-distortion regime per station and route to correction.
+:class:`TimeSeriesDenoisingAgent`
+    Raw field time-series denoising (MMF-SVM-K-SVD), upstream of spectra.
 :class:`AIInversionAgent`
     End-to-end 1-D AI inversion (ResNet / CNN / FCN).
 :class:`Inv2DAgent`
@@ -151,6 +159,10 @@ from .coordinator import AgentCoordinator, WorkflowStep
 
 # ── lazy agent map ────────────────────────────────────────────────────────────
 _LAZY: dict[str, str] = {
+    "LocalSettings": "._local",
+    "GenerationInput": "._generation",
+    "local_session": "._local",
+    "LocalModelError": "._local",
     "AgentMaster": ".master",
     "ContextInputAgent": ".context",
     "IntentRouter": ".router",
@@ -191,6 +203,10 @@ _LAZY: dict[str, str] = {
     "PINNInversionAgent": ".pinn_agent",
     "HybridInversionAgent": ".hybrid_agent",
     "IoTFieldAgent": ".iot_agent",
+    "ImputerAgent": ".imputer_agent",
+    "UncertaintyCalibrationAgent": ".uncertainty_agent",
+    "DistortionClassificationAgent": ".distortion_agent",
+    "TimeSeriesDenoisingAgent": ".tsdenoise_agent",
 }
 
 
@@ -211,6 +227,10 @@ def __dir__():
 if TYPE_CHECKING:  # pragma: no cover - imports exist only for static analyzers
     from .ai_inversion import AIInversionAgent
     from .anomaly_agent import AnomalyDetectionAgent
+    from .imputer_agent import ImputerAgent
+    from .uncertainty_agent import UncertaintyCalibrationAgent
+    from .distortion_agent import DistortionClassificationAgent
+    from .tsdenoise_agent import TimeSeriesDenoisingAgent
     from .batch_survey import BatchSurveyAgent
     from .code_gen import CodeGenerationAgent
     from .context import ContextInputAgent
@@ -259,6 +279,10 @@ __all__ = [
     "BudgetExceededError",
     "configure_agents",
     "reset_agents",
+    "LocalSettings",
+    "GenerationInput",
+    "local_session",
+    "LocalModelError",
     # core infrastructure
     "AgentResult",
     "BaseAgent",
@@ -292,6 +316,10 @@ __all__ = [
     "DenoisingAgent",
     "AIInversionAgent",
     "AnomalyDetectionAgent",
+    "ImputerAgent",
+    "UncertaintyCalibrationAgent",
+    "DistortionClassificationAgent",
+    "TimeSeriesDenoisingAgent",
     "Occam2DAgent",
     "ModEmAgent",
     "Inv2DAgent",

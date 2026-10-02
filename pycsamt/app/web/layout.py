@@ -13,6 +13,8 @@ Four-zone layout (v2 redesign):
 
 from __future__ import annotations
 
+from pycsamt.api.colormaps import colormap_choices
+
 import dash_bootstrap_components as dbc
 from dash import dash_table, dcc, html
 
@@ -2458,40 +2460,11 @@ def _home_content() -> html.Div:
     )
 
 
-_MAP_CMAPS = [
-    # All names must be valid Plotly colorscale names (used in Scattermapbox.marker)
-    "plasma",
-    "viridis",
-    "magma",
-    "inferno",
-    "jet",
-    "rdbu_r",
-    "balance",
-    "spectral",
-    "earth",
-    "hot",
-    "ylorrd",
-    "thermal",
-    "turbo",
-]
+# Plotly colour-scale names (Scattermapbox.marker); jet and jet_r both offered
+_MAP_CMAPS = colormap_choices(first=("plasma",), plotly=True)
 
-_CONTOUR_CMAPS = [
-    # Used by matplotlib contourf — any matplotlib name is valid here
-    "jet",
-    "rainbow",
-    "plasma",
-    "viridis",
-    "magma",
-    "RdBu_r",
-    "seismic",
-    "coolwarm",
-    "terrain",
-    "hot",
-    "YlOrRd",
-    "copper",
-    "turbo",
-    "gnuplot2",
-]
+# matplotlib names (contourf): the shared catalogue, jet first as before
+_CONTOUR_CMAPS = colormap_choices(first=("jet",)) + ["gnuplot2"]
 
 _BASEMAP_OPTIONS = [
     # ── Vector tile styles ─────────────────────────────────────

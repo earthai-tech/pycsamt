@@ -33,6 +33,21 @@ Latest release
 
 .. _changelog-latest:
 
+**2.6.4** — *2026-10-01* — a new-surfaces release. **pyCSAMT Format
+Studio** (:mod:`pycsamt.app.converter`) is a new standalone, freezable app
+for file-format conversion, backed by six new ``pycsamt format``
+sub-commands, and ``pycsamt airborne`` adds ``info``/``diagnose`` for
+ZTEM/MobileMT/AFMAG datasets. The desktop suite gains five rebuilt studios
+(Inversion, Interpretation, QC, Airborne, TDEM), an Edit menu with undo
+history and station/point/frequency editors, and a PCSF 3-D to Map View
+hand-off, and now ships as Windows and Linux installers. Agent Master
+carries conversation context, hands work to and from the desktop, and has
+an answer benchmark. More than twenty real bugs are fixed, including two
+EDI parsing bugs and silently broken ``convert``/``transform j``/``invert
+results`` CLI paths.
+:ref:`Full 2.6.4 entry <changelog-2-6-4>` · :ref:`Release notes
+<release_v2_6_4>`.
+
 **2.6.3** — *2026-09-14* — a maintenance and API-hardening release.
 Agent workflow validation now accepts all supported inversion and processing
 plans; static-shift comparison figures no longer go blank for stations whose

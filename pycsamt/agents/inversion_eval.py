@@ -213,7 +213,7 @@ class InversionEvaluationAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and not np.isnan(rms_global):
+        if self.llm_available and not np.isnan(rms_global):
             bad = [f"{st}={v:.2f}" for st, v in rms_per.items() if v > 1.5]
             prompt = (
                 f"Inversion evaluation:\n"

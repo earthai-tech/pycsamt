@@ -198,5 +198,139 @@ class TestZ:
         assert np.isclose(val, z_comp.z.iloc[0])
 
 
+class TestZCoverage:
+    """Additional coverage for edge cases and less-used branches."""
+
+    def test_unread_instance_empty_properties(self):
+        z_comp = Z()
+        assert z_comp.z.empty
+        assert z_comp.z_real.empty
+        assert z_comp.z_imag.empty
+        assert z_comp.z_err.empty
+        assert z_comp.z_xy.empty
+        assert z_comp.z_xy_err.empty
+
+    def test_read_verbose_logs_missing_optional_columns(self, sample_avg_data):
+        df = sample_avg_data.drop(columns=["pc_rho"])
+        z_comp = Z(verbose=True)
+        z_comp.read(df)
+        assert "pc_rho" in z_comp.frame.columns
+        assert z_comp.frame["pc_rho"].isna().all()
+
+    def test_read_fills_missing_station_and_comp(self):
+        df = pd.DataFrame(
+            {"rho": [10.0], "phase": [500.0], "freq": [1024.0]}
+        )
+        z_comp = Z()
+        z_comp.read(df)
+        assert "station" in z_comp.frame.columns
+        assert z_comp.frame["comp"].iloc[0] == "EXHY"
+
+    def test_z_err_without_any_error_columns_returns_all_nan(self):
+        z_comp = Z()
+        z_comp._frame = pd.DataFrame(
+            {
+                "station": [1.0],
+                "freq": [1024.0],
+                "comp": ["EXHY"],
+                "rho": [10.0],
+            }
+        )
+        err = z_comp.z_err
+        assert len(err) == 1
+        assert err.isna().all()
+
+    def test_z_err_with_only_rho_error(self):
+        z_comp = Z()
+        z_comp._frame = pd.DataFrame(
+            {
+                "station": [1.0],
+                "freq": [1024.0],
+                "comp": ["EXHY"],
+                "rho": [10.0],
+                "pc_rho": [5.0],
+            }
+        )
+        err = z_comp.z_err
+        assert not err.empty
+        assert np.isfinite(err.iloc[0])
+
+    def test_z_err_with_only_phase_error(self):
+        z_comp = Z()
+        z_comp._frame = pd.DataFrame(
+            {
+                "station": [1.0],
+                "freq": [1024.0],
+                "comp": ["EXHY"],
+                "rho": [10.0],
+                "s_phz": [20.0],
+            }
+        )
+        err = z_comp.z_err
+        assert not err.empty
+        assert np.isfinite(err.iloc[0])
+
+    def test_all_component_err_properties(self, sample_avg_data):
+        z_comp = Z()
+        z_comp.read(sample_avg_data)
+        # exercise every component accessor at least once
+        assert z_comp.z_xx.empty
+        assert z_comp.z_yy.empty
+        assert z_comp.z_xx_err.empty
+        assert z_comp.z_yy_err.empty
+        assert len(z_comp.z_yx_err) == 3
+
+    def test_to_tensor_var_z_real_z_imag_z_err(self, sample_avg_data):
+        z_comp = Z()
+        z_comp.read(sample_avg_data)
+
+        T_real, freqs, _ = z_comp.to_tensor(var="z_real", station=100)
+        assert T_real.shape == (2, 2, 2)
+
+        T_imag, _, _ = z_comp.to_tensor(var="z_imag", station=100)
+        assert T_imag.shape == (2, 2, 2)
+
+        T_err, _, _ = z_comp.to_tensor(var="z_err", station=100)
+        assert T_err.shape == (2, 2, 2)
+
+    def test_to_tensor_fallback_to_base_for_other_vars(self, sample_avg_data):
+        z_comp = Z()
+        z_comp.read(sample_avg_data)
+        T, freqs, stations = z_comp.to_tensor(var="rho", station=100)
+        assert T.shape == (2, 2, 2)
+        assert np.isclose(T[1, 0, 1], 50.0)  # ExHy rho at freq=1024
+
+    def test_to_xarray_merges_meta_and_explicit_attrs(self, sample_avg_data):
+        z_comp = Z()
+        z_comp.read(sample_avg_data, meta={"survey": "K2"})
+        da = z_comp.to_xarray(station=100, attrs={"note": "test"})
+        assert da.attrs["survey"] == "K2"
+        assert da.attrs["note"] == "test"
+        assert da.dims == ("freq", "e", "h")
+
+    def test_write_empty_and_nonempty(self, sample_avg_data):
+        z_empty = Z()
+        out_empty = z_empty.write()
+        assert "$Z (Impedance) Block" in out_empty[0]
+
+        z_comp = Z()
+        z_comp.read(sample_avg_data)
+        out = z_comp.write()
+        assert isinstance(out, list)
+        assert any("$Z (Impedance) Block" in line for line in out)
+
+    def test_str_and_repr_empty_and_nonempty(self, sample_avg_data):
+        z_empty = Z()
+        assert str(z_empty) == "Z(status=empty)"
+        assert repr(z_empty) == "Z(status=empty)"
+
+        z_comp = Z()
+        z_comp.read(sample_avg_data)
+        s = str(z_comp)
+        assert s.startswith("Z(rows=")
+        assert "stations=2" in s
+        assert repr(z_comp) == s
+
+
 if __name__ == "__main__":  # pragma: no-cover
     pytest.main([__file__])

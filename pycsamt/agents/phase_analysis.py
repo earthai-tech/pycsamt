@@ -352,7 +352,7 @@ class PhaseAnalysisAgent(BaseAgent):
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
         n_obs = (n_1d + n_2d + n_3d) or 1
-        if self.api_key:
+        if self.llm_available:
             prompt = (
                 f"Phase tensor analysis summary:\n"
                 f"  1-D observations: {n_1d} ({100 * n_1d / n_obs:.0f}%)\n"

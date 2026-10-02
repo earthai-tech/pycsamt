@@ -335,6 +335,7 @@ def ensure_head_coords(
             # so that get_section can still discover it.
             try:
                 ed.Head = nh  # fallback path
+                h = nh
             except Exception:
                 pass
 

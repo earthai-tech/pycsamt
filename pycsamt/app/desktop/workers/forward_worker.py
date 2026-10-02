@@ -120,17 +120,19 @@ class ForwardWorker(QThread):
 
         # Inject anomaly if provided
         if p.get("anomaly", False):
-            ax = float(p.get("anom_x", np.sum(pad) + nx * dx / 2))
+            # Centre x is in *survey* coordinates (0..nx*dx; the UI default
+            # 7500 m is mid-survey for 30 x 500 m). It used to be applied
+            # from the outer padding edge, shifting the anomaly left by the
+            # whole padding width (~5.9 km with the defaults).
+            ax = float(p.get("anom_x", nx * dx / 2))
             az = float(p.get("anom_z", 500.0))
             aw = float(p.get("anom_w", 2000.0))
             ah = float(p.get("anom_h", 1000.0))
             arho = float(p.get("anom_rho", 10.0))
             xn = np.concatenate([[0], np.cumsum(dx_full)])
             zn = np.concatenate([[0], np.cumsum(dz_full)])
-            ix = np.where((xn[:-1] >= ax - aw / 2) & (xn[1:] <= ax + aw / 2))[
-                0
-            ]
-            iz = np.where((zn[:-1] >= az) & (zn[1:] <= az + ah))[0]
+            ix = _cells_near(xn, np.sum(pad) + ax, aw / 2)
+            iz = _cells_in(zn, az, az + ah)
             if ix.size and iz.size:
                 resistivity[np.ix_(iz, ix)] = arho
 
@@ -206,10 +208,19 @@ class ForwardWorker(QThread):
             xn = np.concatenate([[0], np.cumsum(grid.dx)])
             yn = np.concatenate([[0], np.cumsum(grid.dy)])
             zn = np.concatenate([[0], np.cumsum(grid.dz)])
+            # The UI's anomaly centre is in *survey* coordinates (0..nx*dx,
+            # default = mid-survey); the node arrays start at the outer edge
+            # of the padding. Without this offset the default anomaly landed
+            # in the padding and -- combined with the old "cell must lie
+            # entirely inside the window" test, which the wide padding cells
+            # never pass -- was silently never inserted at all.
+            gp = int(getattr(grid, "n_pad", n_pad))
+            ax_abs = xn[gp] + ax
+            ay_abs = yn[gp] + ay
             half = min(dx, dy)
-            ix = np.where((xn[:-1] >= ax - half) & (xn[1:] <= ax + half))[0]
-            iy = np.where((yn[:-1] >= ay - half) & (yn[1:] <= ay + half))[0]
-            iz = np.where((zn[:-1] >= az) & (zn[1:] <= az + 2000))[0]
+            ix = _cells_near(xn, ax_abs, half)
+            iy = _cells_near(yn, ay_abs, half)
+            iz = _cells_in(zn, az, az + 2000.0)
             if ix.size and iy.size and iz.size:
                 grid.resistivity[np.ix_(iz, iy, ix)] = arho
 
@@ -221,3 +232,35 @@ class ForwardWorker(QThread):
         resp = solver.run()
         self.progress.emit(100)
         return resp
+
+
+def _cells_near(nodes: np.ndarray, centre: float, half: float) -> np.ndarray:
+    """Indices of cells whose centre lies within ``centre ± half``.
+
+    Falls back to the single nearest cell, so an anomaly narrower than the
+    local cell size (e.g. in coarse padding) is still represented -- but
+    only when *centre* lies inside the grid; outside it, nothing is returned
+    rather than clamping the body onto an edge cell.
+    """
+    centres = 0.5 * (nodes[:-1] + nodes[1:])
+    idx = np.where(np.abs(centres - centre) <= half)[0]
+    if idx.size:
+        return idx
+    if nodes[0] <= centre <= nodes[-1]:
+        return np.array([int(np.argmin(np.abs(centres - centre)))])
+    return np.array([], dtype=int)
+
+
+def _cells_in(nodes: np.ndarray, top: float, bottom: float) -> np.ndarray:
+    """Indices of cells whose centre lies in ``[top, bottom]``.
+
+    Falls back to the cell containing *top* when the interval is thinner
+    than the local cells; empty when *top* is below the grid.
+    """
+    centres = 0.5 * (nodes[:-1] + nodes[1:])
+    idx = np.where((centres >= top) & (centres <= bottom))[0]
+    if idx.size:
+        return idx
+    if nodes[0] <= top < nodes[-1]:
+        return np.array([int(np.searchsorted(nodes, top, side="right") - 1)])
+    return np.array([], dtype=int)

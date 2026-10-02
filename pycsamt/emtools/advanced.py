@@ -30,6 +30,8 @@ plot_sensitivity_depth_section
 
 from __future__ import annotations
 
+import warnings
+
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -2130,7 +2132,9 @@ def plot_strike_stability_bands(
     # ── consensus zone ────────────────────────────────────────────────────
     if len(stats) >= 2:
         meds = np.vstack([st["med"] for st in stats.values()])
-        max_spread = np.nanmax(meds, axis=0) - np.nanmin(meds, axis=0)
+        with warnings.catch_warnings():  # periods no method resolved
+            warnings.simplefilter("ignore", RuntimeWarning)
+            max_spread = np.nanmax(meds, axis=0) - np.nanmin(meds, axis=0)
         agree = max_spread <= float(agreement_tol)
         # shade periods of agreement
         for gi in range(len(per_grid) - 1):

@@ -52,7 +52,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 _MODES = ["recover", "drop", "mask"]
 _METHODS = ["composite", "snr", "phase_slope", "coherence"]
@@ -272,8 +272,17 @@ class FrequencyEditorDialog(QDialog):
         self._tabs.addTab(self._table, "Decision Table")
 
         # Summary chart
-        self._chart_canvas = MplCanvas(parent=self)
-        self._tabs.addTab(self._chart_canvas, "Before / After Chart")
+        self._chart_canvas_view = CanvasResultView(
+            self,
+            toolbar=True,
+            empty_title="No chart yet",
+            empty_reason="Click Run to compute the before/after frequency chart.",
+        )
+        self._chart_canvas = self._chart_canvas_view.canvas
+        self._chart_canvas.set_refresh_callback(
+            self._on_run, tooltip="Rerun the frequency editor"
+        )
+        self._tabs.addTab(self._chart_canvas_view, "Before / After Chart")
 
         root.addWidget(self._tabs, stretch=1)
 
@@ -338,11 +347,21 @@ class FrequencyEditorDialog(QDialog):
             self._fill_table(decisions)
         if fig is not None:
             self._chart_canvas.show_figure(fig)
+            self._chart_canvas_view.show_canvas()
             self._tabs.setCurrentIndex(1)
+        else:
+            self._chart_canvas_view.show_unavailable(
+                "No chart produced",
+                "The before/after frequency chart could not be generated"
+                " for this run.",
+            )
 
     def _on_error(self, msg: str) -> None:
         self._run_btn.setEnabled(True)
         self._status_lbl.setText(f"Error: {msg}")
+        self._chart_canvas_view.show_unavailable(
+            "Frequency editor failed", msg
+        )
 
     # ── Fill table ────────────────────────────────────────────────────────────
 

@@ -264,6 +264,20 @@ def test_snr_table_with_errors_finite_snr():
     assert np.isfinite(df["snr"]).all()
 
 
+def test_snr_table_all_nan_frequency_is_quiet_and_remains_nan():
+    freq = np.array([1.0, 10.0])
+    z = np.ones((2, 2, 2), dtype=complex)
+    z_err = np.full((2, 2, 2), 0.1)
+    z[1] = np.nan
+    z_err[1] = np.nan
+    site = _FakeSite("S00", z, freq, z_err=z_err)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        df = snr_table([site])
+    assert np.isfinite(df.loc[0, "snr"])
+    assert np.isnan(df.loc[1, "snr"])
+
+
 def test_snr_table_empty_input():
     df = snr_table([])
     assert df.empty

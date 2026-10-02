@@ -149,7 +149,12 @@ def boreholes_from_csv(
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as error:
         raise ValueError("PCBH CSV input must be UTF-8") from error
-    chosen_delimiter = _delimiter(text, delimiter)
+    # An empty file has nothing to sniff; report it as empty rather than
+    # as an undetectable delimiter.
+    is_empty = not text.strip()
+    chosen_delimiter = (
+        "," if is_empty and delimiter is None else _delimiter(text, delimiter)
+    )
     supplied_constants = dict(constants or {})
     report = ImportReport(
         source=str(source),
@@ -168,6 +173,8 @@ def boreholes_from_csv(
 
     reader = csv.reader(io.StringIO(text), delimiter=chosen_delimiter)
     try:
+        if is_empty:
+            raise StopIteration
         headers = next(reader)
     except StopIteration:
         report.add("error", "csv.empty", "CSV file is empty")

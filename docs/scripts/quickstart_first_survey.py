@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Run the complete first-survey quickstart and save its fingerprint plot."""
 
 from __future__ import annotations

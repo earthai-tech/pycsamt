@@ -82,6 +82,19 @@ The dialog keeps the selection visible before any data are loaded.  Use
 selection.  **Load Data** stays disabled until at least one compatible file is
 selected.
 
+You can use **Browse Files**, **Browse Folder**, or drag and drop repeatedly
+to build one selection; duplicate file paths are ignored. When a survey is
+already loaded, **Add to current survey** is selected by default. Press
+**Add Data** to append new stations and lines while retaining existing
+in-memory data. New lines become active alongside the current line selection.
+
+Station IDs are matched without regard to case. Matching IDs are skipped and
+reported in the status bar and log; the existing stations are kept. Use unique
+station IDs when different survey lines contain distinct stations with the
+same name. To start over, explicitly choose **Replace current survey**.
+A failed load leaves the current survey intact. The **Load Recomputed EDIs**
+shortcut selects replacement because recomputed files reuse station IDs.
+
 Read the file list before pressing **Load Data**.  It is the last moment where
 you can catch a wrong folder, duplicated files, or an accidental mix of survey
 lines without affecting the active desktop session.  For a careful first pass,

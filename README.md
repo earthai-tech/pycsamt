@@ -80,6 +80,23 @@ pip install "pycsamt[full]"   # + ML backends, apps, geospatial, docs
 
 Requires **Python 3.9+**.
 
+<a id="desktop-app"></a>
+
+### 🖥️ Desktop app 
+
+Prefer point-and-click? Download the ready-made desktop suite (Profile, Map,
+QC, Correction, Forward, Inversion, Interpretation, Airborne EM, AI agents):
+
+| Platform | Download | Install |
+|---|---|---|
+| Windows 10/11 (64-bit) | [**pycsamt-desktop-setup.exe**](https://github.com/earthai-tech/pycsamt/releases/latest/download/pycsamt-desktop-setup.exe) | Run the installer. SmartScreen warns on unsigned builds: **More info → Run anyway**. |
+| Linux (x86-64) | [**pycsamt-desktop-linux-x86_64.sh**](https://github.com/earthai-tech/pycsamt/releases/latest/download/pycsamt-desktop-linux-x86_64.sh) | `chmod +x pycsamt-desktop-linux-x86_64.sh && ./pycsamt-desktop-linux-x86_64.sh` (no root needed) |
+
+Every install starts a 30-day full-feature trial. Checksums, older versions
+and details are on the
+[releases page](https://github.com/earthai-tech/pycsamt/releases) and in the
+[desktop installation guide](https://pycsamt.org/applications/desktop/installation.html).
+
 <details>
 <summary><b>Optional extras &amp; source install</b></summary>
 
@@ -190,6 +207,8 @@ pycsamt pipe run --config pipeline.yaml --survey data/edi/ --out outputs/run01/
 | `import pycsamt` | `pycsamt --help` | `pycsamt-web` | `pycsamt-desktop` |
 
 The same engine drives all four — script it, automate it, or point and click.
+The desktop GUI also ships as a standalone installer — see
+[Desktop app](#desktop-app).
 
 ## 📖 Citation
 
@@ -237,6 +256,6 @@ before opening a pull request. Participation is governed by our
 <p align="center">
   Developed by <a href="https://github.com/earthai-tech">earthai-tech</a>
   &nbsp;&mdash;&nbsp;
-  Lead developer: <a href="mailto:etanoyau@gmail.com">Laurent Kouadio</a>
-  <a href="https://lkouadio.com/" title="lkouadio.com">🌐</a>
+  Lead developer:
+  <a href="https://lkouadio.com/" title="lkouadio.com">Laurent Kouadio 🌐</a>
 </p>

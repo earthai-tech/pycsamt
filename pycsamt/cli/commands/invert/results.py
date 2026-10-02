@@ -106,6 +106,16 @@ def _results_dict(
         "n_iter_files": None,
     }
 
+    if solver == "occam2d":
+        _fill_occam_info(result, info)
+    else:
+        _fill_modem_info(result, info)
+
+    return info
+
+
+def _fill_occam_info(result: Any, info: dict[str, Any]) -> None:
+    """Populate *info* from an Occam2D ``InversionResult``."""
     try:
         info["n_iter_files"] = len(result.iter_files)
     except AttributeError:
@@ -115,9 +125,9 @@ def _results_dict(
         best = result.best_iter
         if best is not None:
             info["iteration"] = getattr(best, "iteration", None)
-            info["rms"] = getattr(best, "misfit", None) or getattr(
-                best, "rms", None
-            )
+            # OccamIter stores the normalized RMS misfit as
+            # ``misfit_value`` — not ``misfit``/``rms`` (neither exists).
+            info["rms"] = getattr(best, "misfit_value", None)
     except AttributeError:
         pass
 
@@ -135,7 +145,53 @@ def _results_dict(
     except AttributeError:
         pass
 
-    return info
+
+def _fill_modem_info(result: Any, info: dict[str, Any]) -> None:
+    """Populate *info* from a ModEM ``InversionResult``.
+
+    ModEM's ``InversionResult`` has a different shape than Occam2D's —
+    no ``best_iter``/``iter_files``/``rho_2d`` — so it needs its own
+    field mapping rather than reusing the Occam2D accessors (which
+    silently produced an all-``None`` report via ``AttributeError``).
+    """
+    try:
+        info["n_iter_files"] = len(result.models)
+    except AttributeError:
+        pass
+
+    try:
+        iters = result.iteration_numbers
+        if iters is not None and len(iters):
+            info["iteration"] = int(iters[-1])
+    except AttributeError:
+        pass
+
+    try:
+        import math  # noqa: PLC0415
+
+        rms = result.final_rms
+        if rms is not None and not (
+            isinstance(rms, float) and math.isnan(rms)
+        ):
+            info["rms"] = round(float(rms), 4)
+    except AttributeError:
+        pass
+
+    try:
+        import numpy as np  # noqa: PLC0415
+
+        model = result.model_final
+        if model is not None:
+            rho_lin = model.rho_linear
+            finite = rho_lin[np.isfinite(rho_lin) & (rho_lin > 0)]
+            if finite.size:
+                log_rho = np.log10(finite)
+                info["model_shape"] = list(model.shape)
+                info["rho_min"] = round(float(log_rho.min()), 4)
+                info["rho_max"] = round(float(log_rho.max()), 4)
+                info["rho_mean"] = round(float(log_rho.mean()), 4)
+    except AttributeError:
+        pass
 
 
 def _print_results(info: dict[str, Any], solver: str) -> None:

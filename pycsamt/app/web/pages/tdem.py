@@ -5,6 +5,8 @@ rich parameter controls, and high-resolution export."""
 
 from __future__ import annotations
 
+from pycsamt.api.colormaps import colormap_options
+
 from pathlib import Path
 
 import dash_bootstrap_components as dbc
@@ -58,13 +60,8 @@ _FIGSIZE_OPTIONS = [
     {"label": "Tall     10×7", "value": "10x7"},
 ]
 
-_CMAP_OPTIONS = [
-    {"label": "RdYlBu_r (default)", "value": "RdYlBu_r"},
-    {"label": "viridis", "value": "viridis"},
-    {"label": "terrain", "value": "terrain"},
-    {"label": "coolwarm", "value": "coolwarm"},
-    {"label": "jet", "value": "jet"},
-]
+_CMAP_OPTIONS = [{"label": "RdYlBu_r (default)", "value": "RdYlBu_r"}] + [
+    o for o in colormap_options() if o["value"] != "RdYlBu_r"]
 
 
 def _ctrl_label(text: str) -> html.Div:

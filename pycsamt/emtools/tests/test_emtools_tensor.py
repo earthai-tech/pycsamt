@@ -14,6 +14,7 @@ from pycsamt.emtools.tensor import (
     balance_offdiag,
     build_phase_tensor_table,
     invert,
+    plot_phase_tensor_strip,
     rotate,
     sigma_clip_z,
 )
@@ -436,6 +437,37 @@ def test_phase_tensor_psection_uses_dynamic_frame_and_skew_limits():
     plt.close("all")
 
 
+def test_phase_tensor_psection_abs_beta_clim_is_non_negative():
+    """|beta| is an absolute quantity: forcing vmin = -vmax (as the
+    signed "skew"/"beta" colouring does) would burn half the colour
+    range on negative values that never occur. _SYMMETRIC_C used to
+    incorrectly include "|beta|"/"|skew|" alongside the real signed
+    quantities; this locks in the fix at the public-function level."""
+    from pycsamt.emtools.tensor import plot_phase_tensor_psection
+
+    fr = _freqs(12, f_lo=1e-4, f_hi=1e-1)
+    sites = [
+        _FakeSite("S00", _3d_z(fr, skew_frac=0.7), fr),
+        _FakeSite("S01", _3d_z(fr, skew_frac=1.1), fr),
+    ]
+    ax = plot_phase_tensor_psection(
+        sites,
+        c_by="|beta|",
+        symmetric_clim=True,  # explicit True must not be sabotaged
+        period_up=False,
+        recursive=False,
+    )
+    cbar = ax.figure.axes[-1]
+    mappables = [
+        item for item in cbar.collections if item.get_clim() != (None, None)
+    ]
+    assert mappables
+    vmin, vmax = mappables[0].get_clim()
+    assert vmin >= 0.0
+    assert vmax > vmin
+    plt.close("all")
+
+
 def test_phase_tensor_psection_shape_mode_and_explicit_skew_clip():
     """Shape mode keeps cells visible while allowing a publication beta scale."""
     from matplotlib.patches import Ellipse
@@ -747,3 +779,63 @@ class TestPlotPhaseTensorMapGrid:
         )
         assert ax is not None
         plt.close("all")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# plot_phase_tensor_strip
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestPlotPhaseTensorStrip:
+    def _pt_df(self):
+        sites = [_site("S00", z=_3d_z(_freqs()))]
+        return build_phase_tensor_table(sites)
+
+    def test_default_axis_style_uses_power_of_ten_ticks(self):
+        pt_df = self._pt_df()
+        fig, ax = plt.subplots()
+        plot_phase_tensor_strip(pt_df, station="S00", ax=ax)
+        assert ax.get_xlabel() == "Period (s)"
+        labels = [t.get_text() for t in ax.get_xticklabels()]
+        assert any(lbl.startswith("$10^") for lbl in labels)
+        plt.close(fig)
+
+    def test_logperiod_axis_style_uses_raw_log10_ticks(self):
+        pt_df = self._pt_df()
+        fig, ax = plt.subplots()
+        plot_phase_tensor_strip(
+            pt_df, station="S00", ax=ax, axis_style="logperiod"
+        )
+        assert "log" in ax.get_xlabel().lower()
+        labels = [t.get_text() for t in ax.get_xticklabels()]
+        assert labels and all("^" not in lbl for lbl in labels)
+        plt.close(fig)
+
+    def test_bad_axis_style_raises(self):
+        pt_df = self._pt_df()
+        with pytest.raises(ValueError, match="axis_style"):
+            plot_phase_tensor_strip(pt_df, station="S00", axis_style="bogus")
+        plt.close("all")
+
+
+def test_psection_annotations_switch():
+    """``annotations=False`` drops the |β| legend and size reference."""
+    import glob
+    from pathlib import Path
+
+    import matplotlib.pyplot as plt
+
+    root = Path(__file__).resolve().parents[3] / "data" / "AMT" / \
+        "WILLY_DATA" / "L22PLT"
+    files = sorted(glob.glob(str(root / "*.edi")))[:6]
+    if len(files) < 3:
+        pytest.skip("Baohuashan data missing")
+    from pycsamt.emtools import plot_phase_tensor_psection
+
+    ax = plot_phase_tensor_psection(files, verbose=0)
+    labels = " ".join(t.get_text() for t in ax.texts)
+    assert "|β|" in labels
+    ax2 = plot_phase_tensor_psection(files, verbose=0, annotations=False)
+    assert not [t for t in ax2.texts if "|β|" in t.get_text()
+                or "reference" in t.get_text()]
+    plt.close("all")

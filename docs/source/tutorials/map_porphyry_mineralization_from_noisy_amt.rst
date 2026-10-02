@@ -22,14 +22,17 @@ have them -- either substitute ``L18PLT``/``L22PLT``, or your own two-line
 survey, or contact the corresponding author of the cited paper for the full
 delivery.
 
-.. code-block:: text
+.. dropdown:: Data citation
+   :animate: fade-in
+   :color: secondary
 
    Kouabena, K.A.W., Zhou, J., Chen, R., Yin, L., Cai, H., Lu, Z., Gu, J.,
    Yu, W. (2025). Enhanced prediction of deep-seated Cu-Mo porphyry
    mineralization: A comprehensive interpretation based on 2D inversion of
-   audio-magnetotelluric data. Ore Geology Reviews, 185, 106798.
+   audio-magnetotelluric data. *Ore Geology Reviews*, **185**, 106798.
+   `<https://doi.org/10.1016/j.oregeorev.2025.106798>`__
 
-See also ``[Kouabena2025]`` in :doc:`../references`.
+   Listed as [Kouabena2025]_ in :doc:`../references`.
 
 WILLY_DATA is :term:`AMT`, a natural-source method -- there is no controlled
 transmitter anywhere near this survey, so the near-field, source-offset, and

@@ -384,7 +384,13 @@ def _edi_site(edi: Any) -> SiteMeta | None:
             else None,
         )
 
+    # `EDIFile.station` is the canonical station-id resolver: >HEAD.DATAID,
+    # cleaned of literal "None"/"NULL" placeholders some acquisition tools
+    # (EMpower, WinGLink) write, else the filename stem. `>MTSECT.SECTID`
+    # is a weaker, sometimes-generic per-section code (e.g. "P") that must
+    # not outrank it, so it stays only as a last-resort fallback.
     site_id = _first(
+        getattr(edi, "station", None),
         getattr(head, "dataid", None) if head is not None else None,
         getattr(mtsect, "sectid", None) if mtsect is not None else None,
     )
@@ -1548,18 +1554,22 @@ def emtf_to_edi(
     edi.add_section("mtsect", mtsect)
 
     zerr = _tf_to_edi_error(ztf)
-    # Build Z without uncertainty first. The compatibility Z class computes
-    # rho/phase during ``freq`` assignment and requires finite errors, while
-    # EMTF legitimately allows missing variance components. The EDI serializer
-    # can represent those missing uncertainties using EMPTY, so attach the
-    # legacy error carrier after Z initialization.
+    # Build Z without uncertainty first, then attach the error through the
+    # public ``z_err`` setter rather than the private ``_z_err`` attribute.
+    # The setter re-runs ``compute_resistivity_phase()`` so RHOxx.ERR/PHSxx.ERR
+    # get properly error-propagated from the impedance uncertainty instead of
+    # staying None (which the EDI writer would otherwise silently zero-fill).
+    # ``compute_resistivity_phase`` already tolerates NaN z_err entries --
+    # EMTF legitimately allows missing variance components -- treating them
+    # as "uncertainty unavailable" rather than a caller error, so they still
+    # round-trip to the EDI EMPTY sentinel at write time.
     edi.Z = Z(
         z_array=np.array(ztf.data, copy=True),
         freq=np.asarray(freq, dtype=float),
         name=str(station),
     )
     if zerr is not None:
-        edi.Z._z_err = np.array(zerr, copy=True)
+        edi.Z.z_err = np.array(zerr, copy=True)
 
     ttf = document.tipper_tf
     if ttf is not None:

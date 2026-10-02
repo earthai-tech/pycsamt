@@ -332,6 +332,7 @@ def build_retriever(
     embed_api_key: str | None = None,
     embed_provider: str | None = None,
     use_feedback: bool = True,
+    lexical_only: bool = False,
 ) -> Retriever:
     """Build (or fetch a cached) :class:`Retriever`.
 
@@ -354,9 +355,12 @@ def build_retriever(
     if chunks is not None:
         return Retriever(chunks)
 
+    from pycsamt.agents._local import local_only
+
     from .ingest import build_chunks, repo_root
 
-    key = str(root or repo_root())
+    lexical_only = lexical_only or local_only()
+    key = str(root or repo_root()) + ("#lexical-only" if lexical_only else "")
     if use_cache and key in _CACHE:
         return _CACHE[key]
 
@@ -380,7 +384,7 @@ def build_retriever(
             )
 
     corpus = loaded if loaded else build_chunks(root)
-    vectors, backend = _resolve_dense(
+    vectors, backend = (None, None) if lexical_only else _resolve_dense(
         corpus, root=root, api_key=embed_api_key, provider=embed_provider
     )
     adjust = None

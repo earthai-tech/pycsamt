@@ -30,6 +30,17 @@ def _parse() -> argparse.Namespace:
         help="Optional EDI folder to preload (one or more lines).",
     )
     p.add_argument(
+        "--pcsf",
+        default=None,
+        help="Optional .pcsf/.pcsm inversion model to preload.",
+    )
+    p.add_argument(
+        "--state",
+        default=None,
+        help="Optional scene JSON to open with --pcsf (written by the "
+        "desktop's 'Open in Map View').",
+    )
+    p.add_argument(
         "--debug",
         action="store_true",
         help="Enable Dash debug / hot-reload",
@@ -48,7 +59,23 @@ def main() -> int:
     from .app import launch
 
     view = None
-    if args.data:
+    state = None
+    if args.state:
+        import json
+        from pathlib import Path
+
+        try:
+            state = json.loads(Path(args.state).read_text(encoding="utf-8"))
+        except Exception as exc:  # open the model anyway
+            print(f"pycsamt-mapview: ignoring --state: {exc}", file=sys.stderr)
+    if args.pcsf:
+        from pycsamt.map import MapView
+
+        view = MapView.from_pcsf(args.pcsf, fetch_elevation=False)
+        elev = (state or {}).get("elevations")
+        if elev:  # the topography the desktop scene used
+            view = view.with_elevations(elev)
+    elif args.data:
         from pycsamt.map import MapView
 
         view = MapView.from_folder(args.data)
@@ -59,6 +86,7 @@ def main() -> int:
         debug=args.debug,
         open_browser=not args.no_browser,
         view=view,
+        state=state,
     )
     return 0
 

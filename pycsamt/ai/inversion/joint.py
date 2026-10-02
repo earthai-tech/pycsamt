@@ -384,7 +384,9 @@ class JointInverter(BaseEMNet):
             X_list = [X_list]
 
         X_normed = [
-            norm.transform(np.asarray(Xm, dtype=np.float32))
+            norm.transform(np.asarray(Xm, dtype=np.float32)).astype(
+                np.float32
+            )
             for norm, Xm in zip(self._x_norms, X_list)
         ]
 
@@ -434,15 +436,26 @@ class JointInverter(BaseEMNet):
         out: dict[str, np.ndarray] = {}
         if self._network is not None:
             out.update(get_weights(self._network))
+        # Store mean/std as ndarrays directly rather than round-tripping
+        # through Normalizer.to_dict() (which calls .tolist(), losing the
+        # float32 dtype -- np.array() on the resulting Python float list
+        # defaults to float64 and produces a dtype mismatch against the
+        # float32 network on the next predict() after a save/load cycle).
         for i, norm in enumerate(self._x_norms):
             if norm is not None:
-                d = norm.to_dict()
-                out[f"_xnorm_{i}_mean"] = np.array(d["mean"])
-                out[f"_xnorm_{i}_std"] = np.array(d["std"])
+                out[f"_xnorm_{i}_mean"] = np.asarray(
+                    norm.mean, dtype=np.float32
+                )
+                out[f"_xnorm_{i}_std"] = np.asarray(
+                    norm.std, dtype=np.float32
+                )
         if self._y_norm is not None:
-            d = self._y_norm.to_dict()
-            out["_ynorm_mean"] = np.array(d["mean"])
-            out["_ynorm_std"] = np.array(d["std"])
+            out["_ynorm_mean"] = np.asarray(
+                self._y_norm.mean, dtype=np.float32
+            )
+            out["_ynorm_std"] = np.asarray(
+                self._y_norm.std, dtype=np.float32
+            )
         if self._backend_name:
             out["_backend"] = np.array(self._backend_name)
         return out

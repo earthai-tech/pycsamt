@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the multi-figure report-bundle image for the emtools plot guide."""
 
 from pathlib import Path

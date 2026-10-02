@@ -7,10 +7,11 @@ from __future__ import annotations
 import shlex
 import shutil
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Union
 
+from .._process import run_streamed
 from .base import Mare2DEMBase
 from .config import Mare2DEMConfig
 from .doc import _mare2dem_param_docs as _params
@@ -35,6 +36,53 @@ def _resolve_binary(
     if shutil.which(name):
         return Path(name)
     return source_mgr.resolve_binary()
+
+
+def _is_wsl(binary) -> bool:
+    return isinstance(binary, str) and binary.startswith("wsl:")
+
+
+def _run_stem(resistivity_stem) -> str:
+    """MARE2DEM's command-line argument for a ``.resistivity`` file.
+
+    Only a trailing ``.resistivity`` is removed: the iteration number is
+    part of the stem (``mare2dem.0``), and ``Path.with_suffix("")`` would
+    strip it as if ``.0`` were an extension -- MARE2DEM then stops with
+    "no iteration number in resistivity file" (and exits 0).
+    """
+    name = Path(str(resistivity_stem)).name
+    if name.lower().endswith(".resistivity"):
+        name = name[: -len(".resistivity")]
+    return name
+
+
+def _wsl_command(cfg, workdir, resistivity_stem, use_mpi, n_procs,
+                 extra_args) -> list[str]:
+    """``wsl -e bash -lc ...`` for a binary built inside WSL2.
+
+    MARE2DEM cannot be built as a native Windows program; the desktop
+    Solver Builder builds it in WSL and registers it as
+    ``wsl:/home/<user>/.local/share/pycsamt/mare2dem/build/MARE2DEM``.
+    The Windows work directory is reached through ``/mnt/<drive>``, and the
+    pycsamt-managed toolchain (for ``mpirun``) is put on ``PATH``.
+    """
+    from pycsamt.models.solver_build import to_wsl_path
+
+    binary = cfg.binary[len("wsl:"):]
+    stem = _run_stem(resistivity_stem)
+    parts = []
+    if use_mpi:
+        parts += [cfg.mpi_command, "-np", str(n_procs)]
+    parts += [binary, stem, *(extra_args or [])]
+    inner = (
+        'TC="${XDG_DATA_HOME:-$HOME/.local/share}/pycsamt/toolchain/'
+        'mare2dem"; [ -d "$TC/bin" ] && export PATH="$TC/bin:$PATH"; '
+        "export OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 "
+        "GFORTRAN_UNBUFFERED_ALL=y; "
+        f"cd {shlex.quote(to_wsl_path(Path(workdir).resolve()))} && "
+        + " ".join(shlex.quote(p) for p in parts)
+    )
+    return ["wsl", "-e", "bash", "-lc", inner]
 
 
 class Mare2DEMRunner(Mare2DEMBase):
@@ -79,6 +127,8 @@ class Mare2DEMRunner(Mare2DEMBase):
         extra_args: Sequence[str] | None = None,
         timeout: int | None = None,
         load_result: bool = True,
+        on_output: Callable[[str], None] | None = None,
+        cancel: Callable[[], bool] | None = None,
     ) -> InversionResult | None:
         """Run a MARE2DEM inversion subprocess.
 
@@ -107,6 +157,14 @@ class Mare2DEMRunner(Mare2DEMBase):
             Whether to scan ``workdir`` and return an
             :class:`~pycsamt.models.mare2dem.results.InversionResult`
             after the run completes.
+        on_output : callable, optional
+            Called with every console line while MARE2DEM runs. Supplying
+            it, or ``cancel``, runs the solver through
+            :func:`pycsamt.models._process.run_streamed`.
+        cancel : callable returning bool, optional
+            Polled while the solver runs; returning ``True`` stops the
+            process tree (``mpirun`` and its ranks) and raises
+            :class:`~pycsamt.models._process.ProcessCancelled`.
 
         Returns
         -------
@@ -143,6 +201,18 @@ class Mare2DEMRunner(Mare2DEMBase):
         _mpi = cfg.use_mpi if use_mpi is None else use_mpi
         _procs = cfg.n_procs if n_procs is None else n_procs
 
+        if _is_wsl(cfg.binary):
+            cmd = _wsl_command(cfg, self.workdir, resistivity_stem, _mpi,
+                               _procs, extra_args)
+            if self.verbose:
+                self.logger.info("Mare2DEMRunner (WSL): %s", cmd[-1])
+            self._execute(cmd, None, timeout, on_output, cancel)
+            if load_result:
+                from .results import InversionResult
+
+                return InversionResult(self.workdir, config=cfg)
+            return None
+
         binary = _resolve_binary(cfg.binary, self._source_mgr)
         if binary is None:
             raise FileNotFoundError(
@@ -152,7 +222,7 @@ class Mare2DEMRunner(Mare2DEMBase):
                 "SourceManager().build()"
             )
 
-        stem = Path(str(resistivity_stem)).with_suffix("").name
+        stem = _run_stem(resistivity_stem)
 
         cmd: list[str] = []
         if _mpi:
@@ -167,18 +237,29 @@ class Mare2DEMRunner(Mare2DEMBase):
                 " ".join(shlex.quote(c) for c in cmd),
             )
 
-        proc = subprocess.run(
-            cmd,
-            cwd=str(self.workdir),
-            timeout=timeout,
-        )
-        proc.check_returncode()
+        self._execute(cmd, self.workdir, timeout, on_output, cancel)
 
         if load_result:
             from .results import InversionResult
 
             return InversionResult(self.workdir, config=cfg)
         return None
+
+    @staticmethod
+    def _execute(cmd, cwd, timeout, on_output, cancel) -> None:
+        """Run *cmd*; stream it when a console/cancel hook is given."""
+        if on_output is not None or cancel is not None:
+            code = run_streamed(cmd, cwd=cwd, on_output=on_output,
+                                cancel=cancel, timeout=timeout)
+            if code:
+                raise subprocess.CalledProcessError(code, cmd)
+            return
+        proc = subprocess.run(
+            cmd,
+            cwd=None if cwd is None else str(cwd),
+            timeout=timeout,
+        )
+        proc.check_returncode()
 
     # ------------------------------------------------------------------
     # Dry-run helper
@@ -218,7 +299,7 @@ class Mare2DEMRunner(Mare2DEMBase):
         cfg = self.config
         _mpi = cfg.use_mpi if use_mpi is None else use_mpi
         _procs = cfg.n_procs if n_procs is None else n_procs
-        stem = Path(str(resistivity_stem)).with_suffix("").name
+        stem = _run_stem(resistivity_stem)
 
         cmd: list[str] = []
         if _mpi:

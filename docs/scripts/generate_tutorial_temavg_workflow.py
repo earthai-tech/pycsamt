@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Reproduce the data, QC, and correction figures for the TEMAVG tutorial.
 
 Everything here is executed against the real, bundled

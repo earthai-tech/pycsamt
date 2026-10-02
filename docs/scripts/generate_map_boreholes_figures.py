@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the static figures for the Map View boreholes guide.
 
 Uses the real Baohuashan AMT block (5 lines, 128 stations) and the

@@ -92,7 +92,7 @@ class ResistivityModel:
         m._rf = ResistivityFile()
         m._rf.resistivity = np.array([[10.0**log10_rho]])
         m._rf.free_parameter = np.zeros((1, 1))
-        m._rf.bounds = np.array([[-2.0, 5.0]])
+        m._rf.bounds = np.zeros((1, 2))  # use the global bounds
         m._rf.prejudice = np.zeros((1, 2))
         return m
 

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Execute and verify the ModEM preparation tutorial's pycon blocks.
 
 This script is the single source of truth check for

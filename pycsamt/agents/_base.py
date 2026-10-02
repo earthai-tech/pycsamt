@@ -640,8 +640,13 @@ class BaseAgent(ABC):
         name: str,
         *,
         warnings_list: list[str] | None = None,
+        dpi: int | None = None,
+        fmt: str | list[str] | None = None,
     ) -> str | None:
         """Save *fig* to ``<output_dir>/<name>`` using :attr:`_plot_cfg`.
+
+        *dpi* and *fmt* override :data:`~pycsamt.api.plot.PLOT_CONFIG` for
+        this figure only (e.g. ``dpi=300, fmt=["png", "pdf"]``).
 
         Returns the saved path string, or ``None`` when *output_dir* is falsy
         or saving fails.  Appends a warning string to *warnings_list* on error.
@@ -652,7 +657,9 @@ class BaseAgent(ABC):
 
         os.makedirs(output_dir, exist_ok=True)
         try:
-            paths = self._plot_cfg.save(fig, os.path.join(output_dir, name))
+            paths = self._plot_cfg.save(
+                fig, os.path.join(output_dir, name), fmt=fmt, dpi=dpi
+            )
             return str(paths[0]) if paths else None
         except Exception as exc:  # noqa: BLE001
             msg = f"Could not save figure {name!r}: {exc}"

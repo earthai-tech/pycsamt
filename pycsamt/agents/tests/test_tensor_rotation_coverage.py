@@ -374,3 +374,112 @@ def test_plot_rotation_summary_skips_all_zero_off_diag():
     site = _FakeSite(z=z, freq=fr, station="flat")
     fig = _plot_rotation_summary([site], 15.0, [])
     assert fig is None
+
+
+# ── adaptive layout (GitHub issue: unreadable chart on long profiles) ───────
+
+
+def _profile(n):
+    return [
+        _FakeSite(*_zblock(n=6, seed=k), station=f"L44-{k:03d}")
+        for k in range(n)
+    ]
+
+
+def test_long_profile_wraps_onto_rows_with_printable_size():
+    from pycsamt.emtools import plot_rotation_summary
+
+    fig = plot_rotation_summary(_profile(57), -44.5)
+    assert len(fig.axes) == 2  # 57 stations -> 2 rows of <= 30
+    w, h = fig.get_size_inches()
+    assert 7.0 <= w <= 16.0 and w / h < 3.0  # not a thin strip
+    # every station labelled once, across the rows
+    labels = [t.get_text() for a in fig.axes for t in a.get_xticklabels()]
+    assert len(labels) == 57 and labels[0] == "L44-000"
+
+
+def test_short_profile_stays_on_one_row():
+    from pycsamt.emtools import plot_rotation_summary
+
+    fig = plot_rotation_summary(_profile(12), 10.0)
+    assert len(fig.axes) == 1
+
+
+def test_layout_controls_are_honoured():
+    from pycsamt.emtools import plot_rotation_summary
+
+    fig = plot_rotation_summary(
+        _profile(41), 5.0, max_per_row=15, figsize=(12, 9), label_step=2
+    )
+    assert len(fig.axes) == 3
+    assert tuple(fig.get_size_inches()) == (12, 9)
+    assert len(fig.axes[0].get_xticks()) == 7  # 14 stations, every 2nd
+
+
+def test_auto_ylim_caps_outliers_and_labels_them():
+    from pycsamt.emtools import (
+        plot_rotation_summary,
+        rotation_suppression_table,
+    )
+
+    sites = _profile(20)
+    z = np.ones((6, 2, 2), dtype=complex)
+    z[:, 0, 0] = 50.0  # |Zxx|/|Zxy| = 50 before rotation: an outlier
+    sites.append(_FakeSite(z=z, freq=np.linspace(1, 6, 6), station="BIG"))
+    df = rotation_suppression_table(sites, 0.0)
+    assert df.set_index("station").loc["BIG", "before"] > 40
+
+    fig = plot_rotation_summary(sites, 0.0)
+    top = fig.axes[0].get_ylim()[1]
+    assert top < 40  # axis not stretched to the outlier
+    marks = [t.get_text() for t in fig.axes[0].texts]
+    assert "50" in marks  # clipped bar carries its true value
+
+    full = plot_rotation_summary(sites, 0.0, ylim=None)
+    assert full.axes[0].get_ylim()[1] > 50
+    with pytest.raises(ValueError, match="ylim"):
+        plot_rotation_summary(sites, 0.0, ylim="bogus")
+
+
+def test_embedding_on_a_given_axes():
+    import matplotlib.pyplot as plt
+
+    from pycsamt.emtools import plot_rotation_summary
+
+    fig, ax = plt.subplots()
+    out = plot_rotation_summary(_profile(40), 3.0, ax=ax, title="L44")
+    assert out is fig and len(fig.axes) == 1
+    assert ax.get_title() == "L44"
+
+
+def test_agent_forwards_plot_and_export_options(
+    no_llm_kw, monkeypatch, tmp_output
+):
+    import pycsamt.agents.tensor_rotation as tr
+
+    sites = _profile(3)
+    _passthrough_ensure_sites(monkeypatch, sites)
+    monkeypatch.setattr(tr, "_write_rotated_edi", lambda *a, **k: None)
+    seen = {}
+
+    def fake_plot(s, theta, warnings, **opts):
+        seen["plot"] = opts
+        import matplotlib.pyplot as plt
+
+        return plt.figure()
+
+    def fake_save(self, fig, output_dir, name, **kw):
+        seen["save"] = kw
+        return None
+
+    monkeypatch.setattr(tr, "_plot_rotation_summary", fake_plot)
+    monkeypatch.setattr(tr.TensorRotationAgent, "_save_figure", fake_save)
+    agent = TensorRotationAgent(**no_llm_kw)
+    agent.execute({
+        "sites": sites,
+        "output_dir": str(tmp_output),
+        "plot": {"max_per_row": 20, "dpi": 300, "fmt": ["png", "pdf"]},
+    })
+    assert seen["plot"] == {"max_per_row": 20}
+    assert seen["save"]["dpi"] == 300
+    assert seen["save"]["fmt"] == ["png", "pdf"]

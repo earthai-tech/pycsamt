@@ -415,8 +415,10 @@ from .tensor import (
     plot_theta_rose_grid,
     plot_theta_stability_stripe,
     plot_theta_vs_period,
+    plot_rotation_summary,
     rotate,
     rotate_by_map,
+    rotation_suppression_table,
     sigma_clip_z,
 )
 
@@ -646,8 +648,10 @@ __all__ = [
     "plot_strike_analysis",
     # tensor operations
     "rotate_z_to_strike",
+    "plot_rotation_summary",
     "rotate",
     "rotate_by_map",
+    "rotation_suppression_table",
     "antisymmetrize",
     "invert",
     "orient_from_sensors",

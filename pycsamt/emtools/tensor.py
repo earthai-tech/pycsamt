@@ -159,6 +159,196 @@ def rotate_by_map(
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 
 
+def rotation_suppression_table(sites: Any, theta: float) -> pd.DataFrame:
+    """Diagonal suppression per station before and after a rotation.
+
+    For each station, the mean of :math:`|Z_{xx}| / |Z_{xy}|` over the
+    finite frequencies is computed for the measured tensor and for the
+    tensor rotated by ``theta`` degrees. A lower value after rotation means
+    the rotation moved more energy onto the off-diagonal (2-D) components.
+
+    Parameters
+    ----------
+    sites : Sites, path, or list of EDI-like objects
+        The survey (anything :func:`~pycsamt.emtools.ensure_sites` accepts).
+    theta : float
+        Rotation angle in degrees.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns ``station``, ``before`` and ``after``, one row per station
+        with a usable impedance tensor, in survey order.
+    """
+    from ..seg.ops import rotate_impedance
+
+    rows = []
+    for i, ed in enumerate(_iter_items(sites)):
+        _, z, _ = _get_z_block(ed)
+        if z is None:
+            continue
+        try:
+            mask = np.isfinite(z[:, 0, 0]) & (np.abs(z[:, 0, 1]) > 1e-30)
+            if not mask.any():
+                continue
+            before = np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1]))
+            z_r = rotate_impedance(z, theta)
+            if z_r.ndim == 2:
+                z_r = z_r[np.newaxis]
+            after = np.nanmean(
+                np.abs(z_r[mask, 0, 0]) / np.abs(z_r[mask, 0, 1])
+            )
+        except Exception:
+            continue
+        rows.append((_name(ed, i), float(before), float(after)))
+    return pd.DataFrame(rows, columns=["station", "before", "after"])
+
+
+def plot_rotation_summary(
+    sites: Any,
+    theta: float,
+    *,
+    max_per_row: int = 30,
+    figsize: tuple[float, float] | None = None,
+    row_height: float = 2.6,
+    label_step: int | None = None,
+    ylim: float | str | None = "auto",
+    title: str | None = None,
+    colors: tuple[str, str] = ("#3498db", "#e74c3c"),
+    ax: plt.Axes | None = None,
+) -> plt.Figure | None:
+    """Bar chart of diagonal suppression per station, before vs after.
+
+    Long profiles are wrapped onto several stacked rows that share one
+    y-scale, so the figure keeps a printable aspect ratio instead of
+    becoming a thin strip whose bars and station labels shrink to nothing
+    when it is fitted to a page or panel.
+
+    Parameters
+    ----------
+    sites : Sites, path, or list of EDI-like objects
+        The survey.
+    theta : float
+        Rotation angle in degrees.
+    max_per_row : int, default 30
+        Most stations drawn on one row. Profiles with more stations are
+        split into ``ceil(n / max_per_row)`` rows of near-equal length.
+    figsize : (float, float), optional
+        Overall figure size in inches. Default: width grows with the
+        stations per row (clamped to 7-16 in) and height with the number
+        of rows (``row_height`` each).
+    row_height : float, default 2.6
+        Height of one row in inches when ``figsize`` is not given.
+    label_step : int, optional
+        Label every ``label_step``-th station. Default: every station up to
+        40 per row, thinned beyond that so labels do not overlap.
+    ylim : "auto", float, or None, default "auto"
+        Upper y-limit. ``"auto"`` caps the axis when a few stations dwarf
+        the rest (largest value more than 3x the 90th percentile), so the
+        typical bars stay readable; clipped bars are marked with their true
+        value. A number sets the limit; ``None`` always shows the full range.
+    title : str, optional
+        Figure title. Default names the rotation angle.
+    colors : (str, str)
+        Bar colours for "before" and "after".
+    ax : matplotlib Axes, optional
+        Draw everything on this single axes (no wrapping) to embed the
+        chart in your own layout.
+
+    Returns
+    -------
+    matplotlib.figure.Figure or None
+        ``None`` when no station has a usable impedance tensor.
+
+    Notes
+    -----
+    Export with :func:`pycsamt.api.plot.save_fig`, e.g.
+    ``save_fig(fig, "rotation", fmt=["png", "pdf"], dpi=300)``; a vector
+    format (PDF/SVG) stays sharp at any print size.
+
+    Examples
+    --------
+    >>> import pycsamt.emtools as et
+    >>> fig = et.plot_rotation_summary("data/L44", -44.5)  # doctest: +SKIP
+    """
+    df = rotation_suppression_table(sites, theta)
+    if df.empty:
+        return None
+    n = len(df)
+    max_per_row = max(1, int(max_per_row))
+
+    if ax is not None:
+        fig = ax.figure
+        chunks, axes = [np.arange(n)], [ax]
+    else:
+        n_rows = int(np.ceil(n / max_per_row))
+        per_row = int(np.ceil(n / n_rows))
+        chunks = [
+            np.arange(n)[k * per_row:(k + 1) * per_row] for k in range(n_rows)
+        ]
+        if figsize is None:
+            width = float(np.clip(1.6 + 0.32 * per_row, 7.0, 16.0))
+            figsize = (width, row_height * n_rows + 0.9)
+        fig, axs = plt.subplots(n_rows, 1, figsize=figsize, sharey=True,
+                                squeeze=False)
+        axes = list(axs[:, 0])
+
+    vals = df[["before", "after"]].to_numpy().ravel()
+    vals = vals[np.isfinite(vals)]
+    vmax = float(vals.max()) if vals.size else 1.0
+    if ylim is None:
+        ymax = vmax * 1.08
+    elif isinstance(ylim, str):
+        if ylim != "auto":
+            raise ValueError("ylim must be 'auto', a number, or None.")
+        p90 = float(np.percentile(vals, 90)) if vals.size else vmax
+        ymax = (2.0 * p90 if p90 > 0 and vmax > 3.0 * p90 else vmax) * 1.08
+    else:
+        ymax = float(ylim)
+    if not np.isfinite(ymax) or ymax <= 0:
+        ymax = 1.0
+    after_label = f"After θ={theta:.1f}°"
+    for a, idx in zip(axes, chunks):
+        part = df.iloc[idx]
+        x = np.arange(len(part))
+        a.bar(x - 0.2, part["before"], width=0.38, color=colors[0],
+              alpha=0.85, label="Before")
+        a.bar(x + 0.2, part["after"], width=0.38, color=colors[1],
+              alpha=0.85, label=after_label)
+        for off, col in ((-0.2, "before"), (0.2, "after")):
+            for xi, v in zip(x, part[col]):
+                if np.isfinite(v) and v > ymax:  # clipped: show true value
+                    a.annotate(f"{v:.2g}", (xi + off, ymax), xytext=(0, -2),
+                               textcoords="offset points", ha="center",
+                               va="top", fontsize=7, fontweight="bold",
+                               color="white", rotation=90)
+        step = label_step or max(1, int(np.ceil(len(part) / 40)))
+        a.set_xticks(x[::step])
+        a.set_xticklabels(part["station"].iloc[::step], rotation=90,
+                          fontsize=8 if len(part) <= 30 else 7)
+        a.set_xlim(-0.6, len(part) - 0.4)
+        a.set_ylim(0, ymax)
+        a.tick_params(axis="y", labelsize=8)
+        a.grid(axis="y", alpha=0.25)
+        a.set_axisbelow(True)
+    axes[0].legend(fontsize=8, loc="upper right")
+    if ax is None:
+        fig.supylabel("|Zxx| / |Zxy|  (lower = better suppression)",
+                      fontsize=9)
+        fig.suptitle(
+            title or f"Tensor rotation — diagonal suppression "
+                     f"(θ = {theta:.1f}°, {n} stations)",
+            fontsize=10, fontweight="bold",
+        )
+        fig.tight_layout()
+    else:
+        ax.set_ylabel("|Zxx| / |Zxy|  (lower = better suppression)",
+                      fontsize=8)
+        if title:
+            ax.set_title(title, fontsize=9, fontweight="bold")
+    return fig
+
+
 # --- 3) enforce off-diagonal antisymmetry -------------------------------- #
 
 

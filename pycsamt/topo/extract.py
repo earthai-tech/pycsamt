@@ -36,7 +36,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
-def extract_elevation(sites: Any) -> np.ndarray:
+def extract_elevation(sites: Any, *, warn: bool = True) -> np.ndarray:
     """Extract per-station elevation (m a.s.l.) from a Sites or EDI collection.
 
     Reads the ``.elev`` (or ``.elevation`` / ``.alt``) field from each
@@ -47,6 +47,10 @@ def extract_elevation(sites: Any) -> np.ndarray:
     ----------
     sites : Sites, EDICollection, list[EDIFile], or single EDIFile
         Any object that contains station data with HEAD lat/lon/elev.
+    warn : bool
+        Emit the "no non-zero elevation" warning.  Applications that report
+        a flat survey themselves (the desktop Topography view) pass
+        ``False``.
 
     Returns
     -------
@@ -61,7 +65,7 @@ def extract_elevation(sites: Any) -> np.ndarray:
         [v if (v is not None and np.isfinite(v)) else 0.0 for v in elevs],
         dtype=float,
     )
-    if not np.any(arr != 0.0):
+    if warn and not np.any(arr != 0.0):
         warnings.warn(
             "No non-zero elevation data found in the station collection. "
             "Topography will appear flat (all zeros).  "

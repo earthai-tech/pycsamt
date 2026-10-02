@@ -22,6 +22,8 @@
 #                       instead of gfortran. You are responsible for
 #                       ifort already being on PATH; --auto-install
 #                       never installs a commercial compiler.
+#   --source-dir DIR   Build from this source tree instead of the vendored
+#                       one (default: pycsamt's own _source directory).
 #   --prefix DIR        After a successful build, also copy the
 #                       binary (and, on Windows, its runtime DLLs)
 #                       into DIR.
@@ -71,6 +73,7 @@ while [ $# -gt 0 ]; do
         --mpi) BUILD_TARGET="mpi" ;;
         --intel) BUILD_TARGET="intel" ;;
         --prefix) shift; PREFIX_DIR="${1:-}" ;;
+        --source-dir) shift; SOURCE_DIR="$(cd "${1:-.}" 2>/dev/null && pwd)" || die "--source-dir: not a directory: ${1:-}" ;;
         -h|--help) print_help; exit 0 ;;
         *) die "Unknown option: $1 (see --help)" ;;
     esac

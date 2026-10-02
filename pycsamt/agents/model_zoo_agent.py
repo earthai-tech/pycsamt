@@ -340,7 +340,7 @@ class ModelZooAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and predictions:
+        if self.llm_available and predictions:
             prompt = (
                 f"Model zoo prediction summary:\n"
                 f"  Model: {model_name}\n"

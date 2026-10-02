@@ -35,9 +35,15 @@ right after ``import pycsamt.format``, not only via an explicit
   for field structural evidence -- planar/linear measurements and fault
   traces (``StructModel``, ``read_structure``, ``write_structure``,
   ``structure_from_csv``), re-exported here.
+- :mod:`pycsamt.format.convert_engine` — the UI-neutral "any source →
+  PCSFModel" dispatch engine behind ``pycsamt format convert``
+  (``detect``, ``resolve_target``, ``build_model``, ``write_model``,
+  ``model_report``). Any second consumer of this dispatch logic (a GUI,
+  a notebook, another CLI) should import from here rather than reaching
+  into ``pycsamt.cli.commands.format._base``'s private Click wrappers.
 """
 
-from . import adapters, borehole
+from . import adapters, borehole, convert_engine
 from .borehole import (
     align_pcbh_to_pcsf,
     borehole_from_las,
@@ -144,6 +150,7 @@ from .topography import (
 __all__ = [
     "adapters",
     "borehole",
+    "convert_engine",
     "read_pcbh",
     "write_pcbh",
     "desurvey",

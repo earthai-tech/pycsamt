@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Run and plot the Tongkeng triangular-mesh Maxwell-AI workflow used by the
 CSAMT groundwater-geology tutorial.
 """

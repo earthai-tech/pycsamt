@@ -371,6 +371,7 @@ def figure_for(
             topography=bool(c.get("topography", True)),
             show_terrain=bool(c.get("terrain", True)),
             aspectmode=c.get("aspect", "data"),
+            vertical_exaggeration=c.get("vertical_exaggeration"),
             x_unit=c.get("x_unit", "m"),
             depth_unit=c.get("depth_unit", "m"),
             smooth_sections=bool(c.get("smooth_sections", True)),

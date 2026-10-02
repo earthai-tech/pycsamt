@@ -27,6 +27,15 @@ def _is_df(x: Any) -> bool:
 
 
 def _name(ed: Any, idx: int) -> str:
+    # For Sites-wrapped Site objects the real station name lives in ed.edi.
+    # Check that path first so the generic Site.name = "site" placeholder
+    # is not picked up instead (mirrors ``_core._name``).
+    edi = getattr(ed, "edi", None)
+    if edi is not None:
+        for k in ("station", "id"):
+            v = getattr(edi, k, None)
+            if isinstance(v, str) and v:
+                return v
     for k in ("station", "name", "site", "id"):
         v = getattr(ed, k, None)
         if isinstance(v, str) and v:
@@ -735,7 +744,29 @@ def plot_tipper_components(
     verbose: int = 0,
     ax: plt.Axes | None = None,
 ) -> plt.Axes:
+    """
+    ...
+
+    Parameters
+    ----------
+    axis : {"period", "logperiod", "frequency"}, default "period"
+        ``"period"`` (default, unchanged) plots raw period on a
+        matplotlib log-scale x-axis, labelled ``"Period (s)"``.
+        ``"logperiod"`` instead pre-transforms x to log10(period) on a
+        linear axis, labelled with
+        :data:`~pycsamt.api.labels.LOG10_PERIOD_LABEL` -- matching
+        :func:`~pycsamt.emtools.tensor.plot_phase_tensor_psection`'s own
+        convention. ``"frequency"`` plots raw frequency on a log-scale
+        axis, labelled ``"Frequency (Hz)"``.
+    """
+    from ..api.labels import LOG10_PERIOD_LABEL
     from ._core import _get_t_block, _iter_items, _name
+
+    if axis not in ("period", "logperiod", "frequency"):
+        raise ValueError(
+            "axis must be 'period', 'logperiod', or 'frequency'; "
+            f"got {axis!r}."
+        )
 
     S = ensure_sites(
         sites,
@@ -776,7 +807,11 @@ def plot_tipper_components(
         if t.ndim != 2 or t.shape[1] < 2:
             continue
 
-        x = 1.0 / np.where(fr == 0, np.nan, fr) if axis == "period" else fr
+        if axis == "frequency":
+            x = fr
+        else:
+            per = 1.0 / np.where(fr == 0, np.nan, fr)
+            x = np.log10(per) if axis == "logperiod" else per
 
         for ci, comp in enumerate(("tx", "ty")):
             col_t = t[:, ci]
@@ -786,10 +821,14 @@ def plot_tipper_components(
                 ax.plot(x, vals, label=f"{nm}:{comp}_{k}", **sty)
                 n_plotted += 1
 
-    ax.set_xscale("log")
-    ax.set_xlabel(
-        "Period (s)" if axis == "period" else "Frequency (Hz)", fontsize=9
-    )
+    if axis == "logperiod":
+        ax.set_xlabel(LOG10_PERIOD_LABEL, fontsize=9)
+    else:
+        ax.set_xscale("log")
+        ax.set_xlabel(
+            "Period (s)" if axis == "period" else "Frequency (Hz)",
+            fontsize=9,
+        )
     ax.set_ylabel("Tipper", fontsize=9)
     ax.axhline(0, color="k", lw=0.5, ls=":")
     ax.tick_params(labelsize=8)

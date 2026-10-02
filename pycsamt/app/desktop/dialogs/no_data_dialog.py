@@ -7,7 +7,7 @@ Usage (from MainWindow or any panel window)
 -------------------------------------------
     from pycsamt.app.desktop.dialogs.no_data_dialog import NoDataDialog
 
-    # Returns True if the user clicked "Load EDI files…" (caller should then
+    # Returns True if the user clicked "Load Data…" (caller should then
     # trigger the file-open flow).  Returns False on Cancel.
     if NoDataDialog.require(parent=self, tool_name="Phase Tensor Map"):
         self._act_open.trigger()
@@ -108,7 +108,7 @@ class NoDataDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
-        self._load_btn = QPushButton("Load EDI files…")
+        self._load_btn = QPushButton("Load Data…")
         self._load_btn.setDefault(True)
         self._load_btn.setMinimumWidth(130)
         self._load_btn.clicked.connect(self.accept)
@@ -125,7 +125,7 @@ class NoDataDialog(QDialog):
     @classmethod
     def require(cls, parent: QWidget | None, tool_name: str = "") -> bool:
         """
-        Show the dialog; return ``True`` if the user clicked *Load EDI files*.
+        Show the dialog; return ``True`` if the user clicked *Load Data*.
 
         Typical caller pattern in MainWindow::
 

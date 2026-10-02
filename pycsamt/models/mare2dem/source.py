@@ -132,17 +132,65 @@ def _detect_cc() -> str:
     return "mpicc"
 
 
+def toolchain_dir() -> Path:
+    """Per-user folder for pycsamt-managed build toolchains."""
+    return _user_data_dir().parent / "toolchain"
+
+
+def _mkl_layout(root: str | Path) -> tuple[Path, Path] | None:
+    """Return ``(include_dir, lib_dir)`` of an MKL install, or ``None``.
+
+    Recognised layouts: Intel oneAPI (``include``, ``lib`` or
+    ``lib/intel64``), a conda/pip environment (``include``, ``lib``), and
+    Debian/Ubuntu ``libmkl-dev`` (``/usr/include/mkl``,
+    ``/usr/lib/x86_64-linux-gnu``).  An install counts only when both the
+    DSS include file MARE2DEM needs and ``libmkl_core`` are present.
+    """
+    root = Path(root)
+    incs = [root / "include", root / "include" / "mkl"]
+    libs = [root / "lib", root / "lib" / "intel64",
+            root / "lib" / "x86_64-linux-gnu", root / "lib64"]
+    inc = next((d for d in incs if (d / "mkl_dss.f90").is_file()), None)
+    lib = next((d for d in libs if any(d.glob("libmkl_core.*"))), None)
+    return (inc, lib) if inc and lib else None
+
+
+def _link_flag(lib_dir: Path, name: str) -> str:
+    """``-lname``, or ``-l:libname.so.N`` when only a versioned library
+    exists (the pip ``mkl-devel`` wheels ship ``libmkl_core.so.2`` with no
+    unversioned symlink, so a plain ``-lmkl_core`` fails to link)."""
+    if (lib_dir / f"lib{name}.so").exists() or (lib_dir / f"lib{name}.a").exists():
+        return f"-l{name}"
+    versioned = sorted(lib_dir.glob(f"lib{name}.so.*"))
+    return f"-l:{versioned[0].name}" if versioned else f"-l{name}"
+
+
 def _detect_mkl() -> str | None:
-    """Return the MKLROOT path from the environment or None."""
-    mklroot = os.environ.get("MKLROOT")
-    if mklroot and Path(mklroot).is_dir():
-        return mklroot
+    """Return the root of a usable MKL install, or ``None``.
+
+    Order: ``$MKLROOT``; Intel oneAPI defaults; the pycsamt-managed
+    toolchain (see :func:`toolchain_dir`); the active conda/virtual
+    environment (``mkl-devel`` + ``mkl-include``); Debian/Ubuntu
+    ``libmkl-dev`` under ``/usr``.  oneMKL is free: any of these works
+    with gfortran, not only with Intel compilers.
+    """
+    # Explicit $MKLROOT and the Intel install locations are trusted as
+    # before (their standard include/lib layout is assumed if unrecognised).
     for candidate in (
+        os.environ.get("MKLROOT", ""),
         "/opt/intel/oneapi/mkl/latest",
         "/opt/intel/mkl",
         "/usr/local/intel/mkl",
     ):
-        if Path(candidate).is_dir():
+        if candidate and Path(candidate).is_dir():
+            return candidate
+    # Newer, auto-discovered locations must really contain MKL.
+    managed = toolchain_dir()
+    for candidate in (
+        str(managed / "mare2dem"), str(managed / "mkl"), sys.prefix,
+        os.environ.get("CONDA_PREFIX", ""), "/usr",
+    ):
+        if candidate and Path(candidate).is_dir() and _mkl_layout(candidate):
             return candidate
     return None
 
@@ -216,10 +264,21 @@ def _generate_inc(
     if intel:
         fflags = "-cxxlib -O2 -fpp -fPIC" if "ifx" in fc else "-O2 -fpp -fPIC"
         cflags = "-O2 -fPIC -std=gnu89"
+        tricopts = "-O2 -fPIC"
     else:
-        fflags = "-O2 -cpp -fPIC"
-        cflags = "-O2 -fPIC"
-    tricopts = "-O2 -fPIC"
+        # GNU (verified with gfortran/gcc 15, 2026-09-25):
+        # * -fallow-argument-mismatch: the bundled ScaLAPACK passes scalars
+        #   where rank-1 arrays are declared (legacy F77) -- a hard error
+        #   since gfortran 10;
+        # * -fdec-format-defaults: MARE2DEM writes formats like '(i,1x)'
+        #   with no field width (an Intel extension);
+        # * -std=gnu89 for C *and* Triangle: the vendored BLACS C and
+        #   Triangle use K&R-style declarations that GCC >= 14 (C23 default)
+        #   rejects.
+        # Source-level Intel extensions are rewritten by _gnu_compat.
+        fflags = "-O2 -cpp -fPIC -fallow-argument-mismatch -fdec-format-defaults"
+        cflags = "-O2 -fPIC -std=gnu89"
+        tricopts = "-O2 -fPIC -std=gnu89"
 
     # ``xiar`` (the classic Intel archiver) no longer exists in current
     # oneAPI releases; plain GNU ``ar`` links ifx-compiled .o files on
@@ -228,12 +287,25 @@ def _generate_inc(
     arch_tool = "ar"
     ranlib = "ranlib"
 
-    if mklroot:
-        mkllib = (
-            f"-L{mklroot}/lib -Wl,-rpath,{mklroot}/lib -I{mklroot}/include "
-            "-lmkl_intel_lp64 -lmkl_sequential -lmkl_core "
-            "-lpthread -lm -ldl"
+    layout = _mkl_layout(mklroot) if mklroot else None
+    if mklroot and layout is None:
+        # a trusted root with an unrecognised tree: assume oneAPI's layout
+        layout = (f"{mklroot}/include", f"{mklroot}/lib")
+    if layout:
+        inc_dir, lib_dir = layout
+        # MKL's Fortran interface layer is compiler-specific: gf_lp64 for
+        # gfortran, intel_lp64 for ifort/ifx.
+        iface = "mkl_intel_lp64" if intel else "mkl_gf_lp64"
+        libs = " ".join(
+            _link_flag(Path(lib_dir), name)
+            for name in (iface, "mkl_sequential", "mkl_core")
         )
+        mkllib = (
+            f"-L{lib_dir} -Wl,-rpath,{lib_dir} -I{inc_dir} "
+            f"{libs} -lpthread -lm -ldl"
+        )
+        if not intel:  # gfortran needs the DSS include path at compile time
+            fflags += f" -I{inc_dir}"
     else:
         # Fallback: OpenBLAS or system LAPACK — may not link fully
         mkllib = "-lopenblas -lpthread -lm -ldl"
@@ -648,6 +720,13 @@ class SourceManager(Mare2DEMBase):
                 "or produce an unusable binary without MKL.\n"
             )
 
+        # ---- source fixes (memory-safety always; syntax for GNU) ----
+        from ._gnu_compat import patch_source_tree
+
+        patched = patch_source_tree(src, gnu=not _is_intel_compiler(_fc))
+        if patched:
+            print(f"Applied pycsamt source fixes to: {', '.join(patched)}")
+
         # ---- resolve include file ----
         if inc_file is not None:
             _inc = Path(inc_file)
@@ -683,9 +762,10 @@ class SourceManager(Mare2DEMBase):
             raise RuntimeError(
                 f"MARE2DEM build failed (make exit code {proc.returncode}). "
                 "Check the compiler output above. Common fixes:\n"
-                "  • Ensure Intel oneAPI compilers are loaded "
-                "(source /opt/intel/oneapi/setvars.sh)\n"
-                "  • Set MKLROOT to your MKL installation directory\n"
+                "  • Provide MPI compiler wrappers: Intel oneAPI "
+                "(mpiifx/mpiicx) or GNU + OpenMPI (mpifort/mpicc)\n"
+                "  • Install the free oneMKL (conda/pip 'mkl-devel' + "
+                "'mkl-include', apt 'libmkl-dev', or oneAPI) or set MKLROOT\n"
                 "  • Pass inc_file= with a custom make include file for "
                 "your cluster"
             )

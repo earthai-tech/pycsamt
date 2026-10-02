@@ -332,7 +332,7 @@ class TipperAnalysisAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and records:
+        if self.llm_available and records:
             amps = [
                 r["amplitude"] for r in records if np.isfinite(r["amplitude"])
             ]

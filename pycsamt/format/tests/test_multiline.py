@@ -170,6 +170,23 @@ class TestBuildMultilinePcsf:
             model.topography.elevation, [10.0, 12.0, 9.0, 11.0, 13.0, 8.0]
         )
 
+    def test_station_keys_accept_numpy_arrays_not_only_lists(self):
+        # Regression: `p.get("sta_x") or []` evaluated a numpy array's
+        # truthiness directly and raised ("truth value ... is ambiguous")
+        # for any of sta_names/sta_x/sta_elev/sta_lat/sta_lon supplied as
+        # an array of 2+ elements -- the documented per-line key shape is
+        # "(n,) array-like", not "list only".
+        profiles = _flat_profiles()
+        for line in profiles.values():
+            line["sta_x"] = np.asarray(line["sta_x"])
+            line["sta_names"] = np.asarray(line["sta_names"])
+            line["sta_elev"] = np.asarray(line["sta_elev"])
+        model = build_multiline_pcsf(profiles)
+        assert model.stations.name == ["S0", "S1", "S2", "S3", "S4", "S5"]
+        np.testing.assert_allclose(
+            model.topography.elevation, [10.0, 12.0, 9.0, 11.0, 13.0, 8.0]
+        )
+
     def test_no_stations_when_absent(self):
         profiles = {
             "L1": {"x": np.array([0.0, 1.0]), "z": np.array([1.0]),

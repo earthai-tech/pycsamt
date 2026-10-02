@@ -33,6 +33,8 @@ class WorkflowRun:
     output_dir: str | None = None
     summary: str = ""
     n_figures: int = 0
+    session_id: str | None = None
+    project_id: str | None = None
     timestamp: str = field(
         default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%S")
     )

@@ -1568,6 +1568,55 @@ class TestPlotConfidenceProfile:
         assert isinstance(ax, plt.Axes)
         plt.close("all")
 
+    def test_connector_follows_distance_not_file_order(self):
+        """The line joining the points zig-zagged when the stations were
+        not listed in distance order."""
+        order = [3, 0, 4, 1, 2]
+        sites = [_site(f"S{i:02d}", east=i * 300.0, north=0.0)
+                 for i in order]
+        ax = plot_confidence_profile(sites)
+        solid = [ln for ln in ax.get_lines() if ln.get_linestyle() == "-"]
+        xs = solid[0].get_xdata()
+        assert list(xs) == sorted(xs)
+        plt.close("all")
+
+    def test_legend_low_colour_matches_points(self):
+        ax = plot_confidence_profile(self._sites_mixed(), ci_hi=0.95,
+                                     ci_lo=0.5)
+        low = ax.get_legend().legend_handles[2] if hasattr(
+            ax.get_legend(), "legend_handles") else             ax.get_legend().legendHandles[2]
+        from matplotlib.colors import to_hex
+
+        assert to_hex(low.get_markerfacecolor()) == "#d62728"
+        plt.close("all")
+
+    def test_lines_get_their_own_axis_and_connector(self):
+        """Two parallel lines: each measured from its own first station,
+        one coloured connector each, no shared top station axis."""
+        a = [_site(f"A{i}", east=i * 300.0, north=0.0) for i in range(4)]
+        b = [_site(f"B{i}", east=i * 300.0, north=5000.0) for i in range(4)]
+        lines = {**{f"A{i}": "LA" for i in range(4)},
+                 **{f"B{i}": "LB" for i in range(4)}}
+        ax = plot_confidence_profile(a + b, lines=lines)
+        solid = [ln for ln in ax.get_lines() if ln.get_linestyle() == "-"]
+        assert len(solid) == 2
+        xa, xb = (list(ln.get_xdata()) for ln in solid)
+        assert xa == xb and xa[0] == 0.0  # each line from its own start
+        assert xa == sorted(xa)
+        texts = [t.get_text() for t in ax.get_legend().get_texts()]
+        assert "LA" in texts and "LB" in texts
+        assert not ax.child_axes  # no top station axis for several lines
+        plt.close("all")
+
+    def test_threshold_ticks_do_not_overlap(self):
+        ax = plot_confidence_profile(self._sites_mixed(), ci_hi=0.95,
+                                     ci_lo=0.85)
+        ticks = sorted(ax.get_yticks())
+        span = np.diff(ax.get_ylim())[0]
+        assert all(b - a >= 0.06 * span - 1e-9
+                   for a, b in zip(ticks, ticks[1:]))
+        plt.close("all")
+
     def test_figsize_kwarg(self):
         sites = self._sites_all_good(3)
         ax = plot_confidence_profile(sites, figsize=(6.0, 3.0))

@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate executed figures for user_guide/forward/maxwell_meshing.rst."""
 
 from __future__ import annotations

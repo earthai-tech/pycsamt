@@ -136,7 +136,11 @@ def test_api_frame_schema():
     obj = APIFrame({"a": [1], "b": ["x"]})
     schema = obj.schema
     assert schema["a"] == "int64"
-    assert schema["b"] == "object"
+    # pandas >= 3.0 (and 2.x with the `future.infer_string` option) infers
+    # plain Python str columns as its new arrow-backed StringDtype
+    # ("str") instead of the legacy numpy "object" dtype; both are the
+    # correct dtype name for the pandas version under test.
+    assert schema["b"] in ("object", "str")
 
 
 def test_api_frame_len_iter_contains():

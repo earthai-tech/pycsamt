@@ -306,7 +306,10 @@ def compute_phase_slope(
         all_freqs = []
         for s in sites_obj:
             try:
-                f = np.asarray(getattr(s, "freq", None) or [], float)
+                freq_attr = getattr(s, "freq", None)
+                f = np.asarray(
+                    freq_attr if freq_attr is not None else [], float
+                )
                 if f.size:
                     all_freqs.extend([float(f.min()), float(f.max())])
             except Exception:  # noqa: BLE001

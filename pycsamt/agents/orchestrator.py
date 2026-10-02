@@ -909,7 +909,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         reasoning = ""
 
         if not workflow_type and request:
-            if self.api_key:
+            if self.llm_available:
                 raw = self.query_llm(request, max_tokens=120)
                 parsed = self.extract_json(raw or "")
                 if parsed and isinstance(parsed, dict):
@@ -996,9 +996,9 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # Push resolved LLM config into AGENT_CONFIG so every
         # sub-agent in the registry inherits it automatically.
         with AGENT_CONFIG.using(
-            provider=self.llm_provider if self.api_key else None,
+            provider=self.llm_provider if self.llm_available else None,
             api_key=self.api_key,
-            model=self.model if self.api_key else None,
+            model=self.model if self.llm_available else None,
         ):
             agent_registry, reg_failures = _build_registry(
                 pinn_init=pinn_init,
@@ -1133,7 +1133,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         plan = WorkflowPlan.from_config(
             plan_config,
             request=request,
-            provider=(self.llm_provider if self.api_key else "offline"),
+            provider=(self.llm_provider if self.llm_available else "offline"),
             citations=plan_citations,
         )
         warnings.extend(plan.risk_flags)

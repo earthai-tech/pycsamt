@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
@@ -162,8 +162,17 @@ class StationResponseDialog(QDialog):
         splitter.addWidget(ctrl)
 
         # ── Right: canvas ─────────────────────────────────────────────────
-        self._canvas = MplCanvas(parent=self)
-        splitter.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            self,
+            toolbar=True,
+            empty_title="No response yet",
+            empty_reason="Select a station and click Plot Response.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            self._on_plot, tooltip="Recompute the station response"
+        )
+        splitter.addWidget(self._canvas_view)
         splitter.setStretchFactor(1, 1)
 
         root.addWidget(splitter, stretch=1)
@@ -247,7 +256,9 @@ class StationResponseDialog(QDialog):
         self._run_btn.setEnabled(True)
         self._status_lbl.setText("Done.")
         self._canvas.show_figure(fig)
+        self._canvas_view.show_canvas()
 
     def _on_error(self, msg: str) -> None:
         self._run_btn.setEnabled(True)
         self._status_lbl.setText(f"Error: {msg}")
+        self._canvas_view.show_unavailable("Response unavailable", msg)

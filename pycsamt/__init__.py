@@ -12,12 +12,18 @@ from __future__ import annotations
 import importlib
 
 # ── Version ───────────────────────────────────────────────────────────────────
+# pyproject.toml's `[project] version` is the single source of truth; this
+# always reads it back from the installed package metadata rather than
+# duplicating the number here. Bump it in pyproject.toml only, then
+# reinstall (`pip install -e .`) so the installed metadata picks it up.
 try:
     from importlib.metadata import version as _pkg_version
 
     __version__ = _pkg_version(__name__)
 except Exception:
-    __version__ = "2.6.3"
+    # Package metadata unavailable (e.g. run from a source checkout that
+    # was never `pip install`-ed). Not a real version -- just a marker.
+    __version__ = "0+unknown"
 
 # ── Removed v1 names ──────────────────────────────────────────────────────────
 # Defined BEFORE logging (and before __getattr__) so this dict is always

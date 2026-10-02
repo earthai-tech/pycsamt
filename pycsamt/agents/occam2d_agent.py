@@ -251,7 +251,7 @@ class Occam2DAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and n_sites:
+        if self.llm_available and n_sites:
             n_x = getattr(occ_mesh, "n_xcells", "?") if occ_mesh else "?"
             n_z = getattr(occ_mesh, "n_zcells", "?") if occ_mesh else "?"
             prompt = (

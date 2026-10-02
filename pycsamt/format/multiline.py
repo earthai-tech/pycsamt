@@ -59,6 +59,18 @@ __all__ = [
 ]
 
 
+def _opt_list(mapping: Mapping[str, Any], key: str) -> list:
+    """``list(mapping.get(key))``, or ``[]`` when the key is absent/None.
+
+    Never write ``mapping.get(key) or []`` for an optional array-like value:
+    when the caller supplies a numpy array of 2+ elements, ``or`` evaluates
+    its truthiness directly and raises ("truth value ... is ambiguous").
+    Checking ``is not None`` instead accepts both plain lists and arrays.
+    """
+    value = mapping.get(key)
+    return list(value) if value is not None else []
+
+
 def _survey_to_dict(survey: Any | Mapping[str, Any] | None) -> dict[str, Any]:
     if survey is None:
         return {}
@@ -87,9 +99,9 @@ def line_offsets_from_stations(
     lines: list[str] = []
     per_line_ids: dict[str, list[str]] = {}
     for name, p in profiles.items():
-        lat = p.get("sta_lat") or []
-        lon = p.get("sta_lon") or []
-        names = p.get("sta_names") or []
+        lat = _opt_list(p, "sta_lat")
+        lon = _opt_list(p, "sta_lon")
+        names = _opt_list(p, "sta_names")
         if not lat or not lon or len(lat) != len(lon) or len(lat) != len(names):
             return None
         line_ids = [f"{name}::{n}" for n in names]
@@ -324,7 +336,7 @@ def build_multiline_pcsf(
                 stacklevel=2,
             )
         station_names_by_line = {
-            name: list(profiles[name].get("sta_names") or []) for name in line_names
+            name: _opt_list(profiles[name], "sta_names") for name in line_names
         }
         attr = resolve_topo(
             topo,
@@ -337,11 +349,11 @@ def build_multiline_pcsf(
         patched: dict[str, Mapping[str, Any]] = {}
         for name in line_names:
             p = dict(profiles[name])
-            sta_names = list(p.get("sta_names") or [])
+            sta_names = _opt_list(p, "sta_names")
             if sta_names:
-                old_lat = list(p.get("sta_lat") or [])
-                old_lon = list(p.get("sta_lon") or [])
-                old_elev = list(p.get("sta_elev") or [])
+                old_lat = _opt_list(p, "sta_lat")
+                old_lon = _opt_list(p, "sta_lon")
+                old_elev = _opt_list(p, "sta_elev")
                 p["sta_lat"] = [
                     attr.lat.get(n, old_lat[i] if i < len(old_lat) else float("nan"))
                     for i, n in enumerate(sta_names)
@@ -387,11 +399,11 @@ def build_multiline_pcsf(
             )
         )
 
-        sta_names = list(p.get("sta_names") or [])
-        sta_x = list(p.get("sta_x") or [])
-        sta_elev = list(p.get("sta_elev") or [])
-        sta_lat = list(p.get("sta_lat") or [])
-        sta_lon = list(p.get("sta_lon") or [])
+        sta_names = _opt_list(p, "sta_names")
+        sta_x = _opt_list(p, "sta_x")
+        sta_elev = _opt_list(p, "sta_elev")
+        sta_lat = _opt_list(p, "sta_lat")
+        sta_lon = _opt_list(p, "sta_lon")
         if sta_names and len(sta_x) == len(sta_names):
             station_names.extend(sta_names)
             station_x.extend(float(v) for v in sta_x)

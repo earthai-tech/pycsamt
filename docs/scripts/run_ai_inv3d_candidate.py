@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Run the experimental graph candidate without publishing it as 3-D inversion.
 
 The command writes a machine-readable gate report into a quarantine directory.

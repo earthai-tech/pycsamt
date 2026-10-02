@@ -376,6 +376,51 @@ def test_leaf_objects_to_dict_uses_pycsamt_object():
     assert d["strike_deg"] == 45.0
 
 
+def test_structural_model_from_dict_round_trip_ignores_unknown_keys():
+    model = _demo_model()
+    payload = model.to_dict()
+    payload["planar"][0]["bogus_future_field"] = "ignored"
+    payload["metadata"] = {"source": "field_notebook"}
+
+    rebuilt = StructuralModel.from_dict(payload)
+    assert len(rebuilt.planar) == len(model.planar)
+    assert len(rebuilt.linear) == len(model.linear)
+    assert len(rebuilt.faults) == len(model.faults)
+    assert rebuilt.metadata == {"source": "field_notebook"}
+
+
+def test_structural_model_from_dict_defaults_empty_lists_and_metadata():
+    rebuilt = StructuralModel.from_dict({})
+    assert rebuilt.planar == []
+    assert rebuilt.linear == []
+    assert rebuilt.faults == []
+    assert rebuilt.metadata == {}
+
+
+def test_structural_model_by_line_groups_and_buckets_none_under_empty_key():
+    model = StructuralModel()
+    model.add_planar(
+        StructuralMeasurement(
+            x=0, kind="bedding", strike_deg=0.0, dip_deg=10.0,
+            dip_direction_deg=90.0, line="L1",
+        )
+    )
+    model.add_linear(
+        LinearMeasurement(
+            x=0, kind="fold_axis", trend_deg=0.0, plunge_deg=5.0, line="L1",
+        )
+    )
+    model.add_fault(
+        FaultTrace(x=0, dip_deg=60.0, downthrown_side="left", line=None)
+    )
+
+    grouped = model.by_line()
+    assert set(grouped) == {"L1", ""}
+    assert len(grouped["L1"].planar) == 1
+    assert len(grouped["L1"].linear) == 1
+    assert len(grouped[""].faults) == 1
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CSV I/O
 # ─────────────────────────────────────────────────────────────────────────────
@@ -414,6 +459,29 @@ def test_from_csv_all_three(tmp_path):
     assert model.faults[0].sense == "normal"
     assert model.faults[0].throw_m == 12.0
     assert model.faults[0].evidence == "resistivity offset"
+
+
+def test_from_csv_reads_optional_line_column(tmp_path):
+    planar_csv = tmp_path / "planar.csv"
+    planar_csv.write_text(
+        "x,kind,strike_deg,dip_deg,dip_direction_deg,line\n"
+        "500,bedding,45,30,135,L1\n"
+    )
+    linear_csv = tmp_path / "linear.csv"
+    linear_csv.write_text(
+        "x,kind,trend_deg,plunge_deg,line\n500,fold_axis,210,15,L1\n"
+    )
+    faults_csv = tmp_path / "faults.csv"
+    faults_csv.write_text(
+        "x,dip_deg,downthrown_side,line\n500,70,right,L1\n"
+    )
+
+    model = StructuralModel.from_csv(
+        planar_path=planar_csv, linear_path=linear_csv, faults_path=faults_csv,
+    )
+    assert model.planar[0].line == "L1"
+    assert model.linear[0].line == "L1"
+    assert model.faults[0].line == "L1"
 
 
 def test_from_csv_optional_paths_yield_empty_lists(tmp_path):

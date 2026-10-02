@@ -21,6 +21,15 @@ from .validation import (
 __all__ = ["InversionResult"]
 
 
+def _iteration_of(path: Path) -> tuple[int, str]:
+    """Sort key: the iteration number in ``<stem>.<n>.<ext>`` (-1 if none)."""
+    parts = path.name.split(".")
+    for token in reversed(parts[1:-1]):
+        if token.isdigit():
+            return int(token), path.name
+    return -1, path.name
+
+
 class InversionResult(Mare2DEMBase):
     """Load and expose MARE2DEM inversion output files.
 
@@ -79,6 +88,8 @@ class InversionResult(Mare2DEMBase):
         self.model: ResistivityModel | None = None
         self.data: EMData | None = None
         self.response: EMData | None = None
+        self.model_files: list[Path] = []
+        self.response_files: list[Path] = []
 
         self._scan()
 
@@ -96,19 +107,31 @@ class InversionResult(Mare2DEMBase):
                 )
             return
 
-        all_files = list(self.workdir.iterdir())
+        all_files = sorted(self.workdir.iterdir())
+        models: list[Path] = []
+        responses: list[Path] = []
 
         for f in all_files:
             if not f.is_file():
                 continue
             if is_log_file(f) and self.log is None:
                 self.log = Mare2DEMLog(f)
-            elif is_response_file(f) and self.response is None:
-                self.response = read_emdata(f)
+            elif is_response_file(f):
+                responses.append(f)
             elif is_emdata_file(f) and self.data is None:
                 self.data = read_emdata(f)
-            elif is_resistivity_file(f) and self.model is None:
-                self.model = read_resistivity(f)
+            elif is_resistivity_file(f):
+                models.append(f)
+
+        # MARE2DEM writes <stem>.<n>.resistivity / .resp per iteration; the
+        # result is the *last* one (the first found used to be picked,
+        # i.e. the starting model / its response).
+        if models:
+            self.model_files = sorted(models, key=_iteration_of)
+            self.model = read_resistivity(self.model_files[-1])
+        if responses:
+            self.response_files = sorted(responses, key=_iteration_of)
+            self.response = read_emdata(self.response_files[-1])
 
         if self.verbose:
             self.logger.info(

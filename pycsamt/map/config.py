@@ -154,6 +154,12 @@ class VolumeMapOptions:
     # option existed.
     max_stations: int | None = None
     aspectmode: str = "data"
+    # Vertical exaggeration of the 3-D scene.  ``None`` keeps
+    # ``aspectmode``; ``0`` = automatic (depth about half the horizontal
+    # extent -- a survey tens of km wide over a few km of model otherwise
+    # reads as a thin sheet); ``> 0`` = that factor.  See
+    # :func:`pycsamt.map.volume.apply_vertical_exaggeration`.
+    vertical_exaggeration: float | None = None
     x_unit: str = "m"
     depth_unit: str = "m"
     # Fence panels: resample each per-line section onto a denser

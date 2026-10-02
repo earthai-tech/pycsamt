@@ -194,7 +194,7 @@ class TestSendMessageNoDataIntentGate:
 class TestSendMessageNoEdiGuard:
     def test_guard_blocks_when_no_data_available(self, agent_app, monkeypatch):
         monkeypatch.setattr(C, "_names_registry_line", lambda text: False)
-        monkeypatch.setattr(C, "_session_has_data", lambda: False)
+        monkeypatch.setattr(C, "_session_has_data", lambda *args: False)
         fn = _send_fn(agent_app)
         result = fn(1, [None], "run qc pipeline", [], {}, {}, {}, [], True, {})
         msgs, job, disabled, value, stored, pending = result
@@ -246,7 +246,7 @@ class TestSendMessageNoEdiGuard:
 
     def test_guard_skipped_when_session_has_data(self, agent_app, monkeypatch):
         monkeypatch.setattr(C, "_names_registry_line", lambda text: False)
-        monkeypatch.setattr(C, "_session_has_data", lambda: True)
+        monkeypatch.setattr(C, "_session_has_data", lambda *args: True)
         fn = _send_fn(agent_app)
         result = fn(
             1,
@@ -477,7 +477,8 @@ class TestPollJob:
         msgs, disabled, fig_store, stored, postproc = fn(1, {"jid": jid}, [], {}, [])
         assert disabled is True
         assert "f1" in fig_store
-        assert stored[-1]["content"] == "All good"
+        assert stored[-1]["content"].startswith("All good\n")
+        assert "Registered workflow returned" in stored[-1]["execution"]
         assert C._get_job(jid) is None  # cleaned up
 
     def test_done_job_with_postproc_returns_it(self, agent_app):
@@ -498,7 +499,8 @@ class TestPollJob:
         C._update_job(jid, status="error", error="boom", result=None, steps=[])
         fn = _poll_fn(agent_app)
         _msgs, _disabled, _figs, stored, _postproc = fn(1, {"jid": jid}, [], {}, [])
-        assert stored[-1]["content"] == "boom"
+        assert stored[-1]["content"].startswith("boom\n")
+        assert "Request failed" in stored[-1]["execution"]
 
 
 # ── toggle_send_stop ─────────────────────────────────────────────────────────

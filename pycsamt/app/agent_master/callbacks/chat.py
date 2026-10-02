@@ -27,6 +27,7 @@ import threading
 import time
 import uuid
 import warnings as _warnings
+from contextvars import ContextVar
 from datetime import datetime
 from typing import Any
 
@@ -59,6 +60,8 @@ from .._ids import IDs
 # ── shared job registry ────────────────────────────
 _JOBS: dict[str, dict] = {}
 _JOBS_LOCK = threading.Lock()
+_ACTIVE_SESSION = ContextVar('agent_master_session', default=None)
+_ACTIVE_JOB = ContextVar('agent_master_job', default=None)
 
 # Corrected-sites cache keyed by job ID.
 # Populated after correction workflows so the
@@ -263,6 +266,24 @@ def _drop_workflow(inv_config: dict | None) -> dict:
 def _update_job(jid: str, **kw: Any) -> None:
     with _JOBS_LOCK:
         if jid in _JOBS:
+            if _JOBS[jid].get("status") == "cancelled":
+                return
+            if kw.get("status") == "cancelled":
+                _CORR_CACHE.pop(jid, None)
+            if kw.get("status") in {"done", "error", "cancelled"}:
+                kw["finished"] = time.time()
+                for step in kw.get("steps", _JOBS[jid].get("steps", [])):
+                    if step.get("status") == "running":
+                        step["status"] = {"done": "done", "error": "failed",
+                                          "cancelled": "cancelled"}[kw["status"]]
+            if kw.get("status") in {"done", "error"}:
+                from .._conversation import remember_result, result_evidence
+
+                completed = {**_JOBS[jid], **kw}
+                kw["execution"] = result_evidence(completed)
+                state = _ACTIVE_SESSION.get()
+                if state is not None and _ACTIVE_JOB.get() == jid:
+                    kw["memory"] = remember_result(state, {**completed, **kw})
             _JOBS[jid].update(kw)
 
 
@@ -442,6 +463,34 @@ def _user_bubble(text: str, mid: str | None = None) -> html.Div:
     )
 
 
+def _agent_avatar(*, thinking: bool = False, muted: bool = False) -> html.Div:
+    """The pyCSAMT logo marking an agent message; the only moving element.
+
+    While a job runs (*thinking*) the logo's orange signal wave travels
+    and its earth layers drift. The layers are CSS-animated strips, and
+    ``assets/am-anim-sync.js`` phases each animation from the page clock,
+    so the 600 ms poll re-render never restarts the wave, and the wave
+    and the status-text shimmer run on independent clocks. Finished
+    replies show the logo static; stopped or failed replies show it muted.
+    """
+    if thinking:
+        return html.Div(
+            html.Div(
+                [html.Div(className="am-logo-bands"),
+                 html.Div(className="am-logo-signal")],
+                className="am-logo-live",
+                role="img",
+                **{"aria-label": "Agent Master is working"},
+            ),
+            className="am-avatar agent am-avatar-logo is-thinking",
+        )
+    if muted:
+        src, label = "/am-icons/am-logo-muted.svg", "pyCSAMT (stopped or failed)"
+    else:
+        src, label = "/am-icons/am-logo.svg", "pyCSAMT"
+    return html.Div(html.Img(src=src, alt=label), className="am-avatar agent am-avatar-logo")
+
+
 def _exec_step_row(label: str, status: str) -> html.Div:
     """One row of the executing timeline (rail dot + label)."""
     if status == "done":
@@ -472,27 +521,25 @@ def _thinking_bubble(
     workflow: str | None = None,
     elapsed: float | None = None,
 ) -> html.Div:
-    """Claude-style thinking line.
+    """Thinking state: the animated logo plus one quiet status line.
 
-    Instead of a boxed timeline of every step, a single quiet line shows
-    the *current* step with a text shimmer; when the agent advances, the
-    old label fades away above ("ghost") and the new one slides in.  A
-    2 px hairline tracks n_done/n_total, and hovering the line reveals
-    the full step timeline as a floating panel (CSS :hover survives the
-    600 ms poll re-renders, unlike a <details> open state).
+    The logo (see :func:`_agent_avatar`) is the only motion. The line
+    shows the *current* step with a soft text shimmer and a muted
+    "Step n of m · elapsed" note. A "Show steps" control reveals the full
+    timeline on hover or keyboard focus (CSS :hover/:focus-within survive
+    the 600 ms poll re-renders, unlike a <details> open state).
     """
     steps = steps or []
     n_total = len(steps)
-    n_done = sum(1 for s in steps if s.get("status") == "done")
     name = _WF_RUNNING_LABEL.get(workflow, workflow) if workflow else None
 
-    # Current step = last non-done step, else last step, else a
-    # workflow-level fallback while the first step is being created.
-    cur_idx = None
-    for i in range(n_total - 1, -1, -1):
-        if steps[i].get("status") != "done":
-            cur_idx = i
-            break
+    # Current step = the running one; else the last unfinished; else the
+    # last step; else a workflow-level fallback while the first is created.
+    cur_idx = next((i for i in range(n_total - 1, -1, -1)
+                    if steps[i].get("status") == "running"), None)
+    if cur_idx is None:
+        cur_idx = next((i for i in range(n_total - 1, -1, -1)
+                        if steps[i].get("status") != "done"), None)
     if cur_idx is None and n_total:
         cur_idx = n_total - 1
     if cur_idx is not None:
@@ -502,34 +549,19 @@ def _thinking_bubble(
         cur_label = f"Running {name}..." if name else "Thinking..."
         cur_status = "running"
 
-    # Ghost: the most recent completed step other than the current one.
-    ghost = None
-    for i in range(n_total - 1, -1, -1):
-        if i != cur_idx and steps[i].get("status") == "done":
-            ghost = (i, steps[i].get("label", ""))
-            break
-
-    # The ids embed the step index: across 600 ms polls React keeps the
-    # same DOM node (animations keep running); when the step changes the
-    # id changes, the node is re-mounted, and the enter/fade animations
-    # replay exactly once per transition.
+    # The row is re-rendered on every 600 ms poll; the shimmer is phased
+    # from the page clock by assets/am-anim-sync.js, so a re-render never
+    # restarts it and it stays independent of the logo's wave.
     meta_bits = []
-    if n_total:
-        meta_bits.append(f"{n_done}/{n_total}")
+    if n_total and cur_idx is not None:
+        meta_bits.append(f"Step {cur_idx + 1} of {n_total}")
     if elapsed is not None:
         meta_bits.append(_fmt_elapsed(elapsed))
     line = html.Div(
         [
-            html.I(
-                className=(
-                    "bi bi-stars am-think-glyph"
-                    + (" error" if cur_status == "error" else "")
-                )
-            ),
             html.Span(
                 cur_label,
-                className="am-think-lbl",
-                id=(f"am-think-lbl-{cur_idx if cur_idx is not None else 'x'}"),
+                className="am-think-lbl" + (" error" if cur_status == "error" else ""),
             ),
             html.Span(
                 " · ".join(meta_bits),
@@ -537,29 +569,12 @@ def _thinking_bubble(
             ),
         ],
         className="am-think-line",
+        role="status",
+        **{"aria-live": "polite"},
     )
 
-    ghost_el = (
-        html.Div(
-            ghost[1],
-            className="am-think-ghost",
-            id=f"am-think-ghost-{ghost[0]}",
-        )
-        if ghost
-        else None
-    )
-
-    # Hairline progress: determinate once steps exist, sweep before.
-    if n_total:
-        pct = int(round(100.0 * n_done / n_total))
-        track = html.Div(
-            html.I(style={"width": f"{max(pct, 4)}%"}),
-            className="am-think-track",
-        )
-    else:
-        track = html.Div(html.I(), className="am-think-track indet")
-
-    # Full timeline, revealed on hover (reuses the rail/dot rows).
+    # Full timeline behind a focusable "Show steps" control: revealed on
+    # hover or keyboard focus (reuses the rail/dot rows).
     panel_children = []
     if name:
         panel_children.append(
@@ -585,13 +600,24 @@ def _thinking_bubble(
             className="am-think-panel-empty",
         )
     )
-    panel = html.Div(panel_children, className="am-think-panel")
+    details = html.Div(
+        [
+            html.Button(
+                [html.I(className="bi bi-chevron-right am-think-chev"),
+                 html.Span("Show steps")],
+                className="am-think-toggle",
+                type="button",
+                n_clicks=0,
+            ),
+            html.Div(panel_children, className="am-think-panel"),
+        ],
+        className="am-think-details",
+    )
 
-    body = [ghost_el] if ghost_el is not None else []
-    body += [line, track, panel]
+    body = [line, details]
 
     return html.Div(
-        html.Div(body, className="am-think"),
+        [_agent_avatar(thinking=True), html.Div(body, className="am-think")],
         className="am-msg-row am-msg-row--think",
         id="am-thinking-bubble",
     )
@@ -630,12 +656,16 @@ def _stop_job_response(
     if jid:
         _update_job(jid, status="cancelled")
     msgs = _strip_thinking(current_msgs)
-    msgs.append(_agent_bubble("Task stopped.", kind=KIND_ERROR))
+    stop_notice = (
+        "Task stopped. No further stages will run and late results will be discarded. "
+        "An in-flight provider call or scientific operation may finish; files already written remain."
+    )
+    msgs.append(_agent_bubble(stop_notice, kind=KIND_ERROR))
     new_stored = list(stored_messages or [])
     new_stored.append(
         {
             "role": "assistant",
-            "content": "Task stopped by user.",
+            "content": stop_notice,
             "ts": _ts(),
         }
     )
@@ -767,6 +797,21 @@ def _kind_header(kind: str | None) -> html.Div | None:
     )
 
 
+def _suggestion_pairs(suggestions) -> list[tuple[str, str]]:
+    """Normalise suggestions to (chip label, reply text) pairs.
+
+    Each item is either a string (label and reply alike) or a
+    ``{"label": ..., "reply": ...}`` mapping; at most four are shown.
+    """
+    pairs = []
+    for item in suggestions or []:
+        if isinstance(item, dict) and item.get("reply"):
+            pairs.append((str(item.get("label") or item["reply"]), str(item["reply"])))
+        elif isinstance(item, str) and item.strip():
+            pairs.append((item, item))
+    return pairs[:4]
+
+
 def _agent_bubble(
     text: str,
     steps: list[dict] | None = None,
@@ -775,6 +820,7 @@ def _agent_bubble(
     kind: str | None = None,
     mid: str | None = None,
     card: dict | None = None,
+    suggestions: list[str] | None = None,
 ) -> html.Div:
     children: list = []
 
@@ -789,6 +835,26 @@ def _agent_bubble(
     # structured payloads (e.g. the survey data overview)
     if card:
         children.append(_data_overview_card(card))
+
+    # one-click replies to a clarifying question: a chip sends its text
+    if suggestions:
+        children.append(
+            html.Div(
+                [
+                    html.Button(
+                        label,
+                        id={"type": "am-reply-chip", "text": reply},
+                        className="am-reply-chip",
+                        type="button",
+                        n_clicks=0,
+                    )
+                    for label, reply in _suggestion_pairs(suggestions)
+                ],
+                className="am-reply-chips",
+                role="group",
+                **{"aria-label": "Suggested replies"},
+            )
+        )
 
     # step summary — collapsed by default once the request is done. The live
     # "thinking" bubble shows the full timeline; here we mask it behind a
@@ -888,10 +954,7 @@ def _agent_bubble(
 
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(muted=kind == KIND_ERROR),
             html.Div(
                 [
                     html.Div(children),
@@ -1118,10 +1181,7 @@ def _waiting_bubble(wf: str) -> html.Div:
     label = _WF_LABELS.get(wf, wf.replace("_", " "))
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(
@@ -1156,10 +1216,7 @@ def _line_waiting_bubble() -> html.Div:
     """Bubble shown while the line picker is open."""
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(
@@ -1642,10 +1699,7 @@ def _launch_bubble(
 
     return html.Div(
         [
-            html.Div(
-                html.I(className="bi bi-robot"),
-                className="am-avatar agent",
-            ),
+            _agent_avatar(),
             html.Div(
                 [
                     html.Div(card, className="am-webapp-card"),
@@ -1915,24 +1969,31 @@ def _dispatch_question(
     from pycsamt.agents.package_qa import PackageQAAgent
     from pycsamt.api.agents import AGENT_CONFIG
 
-    step("Answering question...", "running")
+    step("Thinking...", "running")
+    from pycsamt.assistant.memory import SessionState
+
+    recent_turns, omitted_turns = SessionState.bounded_turns(history, max_chars=6000)
     ctx_str = ""
-    if history:
+    if recent_turns:
         recent = [
             f"{m.get('role', 'user')}: {m.get('content', '')}"
-            for m in history[-4:]
+            for m in recent_turns
         ]
         ctx_str = "\n".join(recent)
+    if omitted_turns:
+        ctx_str = SessionState.history_summary(history, omitted_turns) + "\n" + ctx_str
 
     # Conversational context so a subject-less follow-up ("now do that",
     # "same for line 3") inherits the active workflow / line for retrieval.
     sess = _session()
+    if sess is not None:
+        ctx_str = sess.context_summary() + "\n" + ctx_str
     session_ctx = {
         "last_workflow": getattr(sess, "last_workflow", None)
         if sess
         else None,
         "last_line": getattr(sess, "line", None) if sess else None,
-        "recent_turns": history[-6:] if history else None,
+        "recent_turns": recent_turns or None,
     }
 
     with AGENT_CONFIG.offline() if offline else _nullctx():
@@ -1945,11 +2006,20 @@ def _dispatch_question(
             {"question": text, "context": ctx_str, "session": session_ctx}
         )
 
+    if res.status == "failed":
+        _update_job(jid, status="error", error=res.error or res.summary,
+                    result=res.error or res.summary, kind=KIND_ERROR)
+        return
+
     answer = (
         res.get("answer")
         or res.summary
         or "I couldn't find an answer in the pyCSAMT reference."
     )
+    from .._conversation import grounded_answer
+
+    if res.get("source") in {"llm", "llm+rag", "developer_llm"}:
+        answer = grounded_answer(answer)
     # When running without a key, the answer is the deterministic offline
     # composition — nudge the user that an API key unlocks a fluent reply.
     # (A clarify prompt is already complete — don't tack the nudge on.)
@@ -1959,14 +2029,15 @@ def _dispatch_question(
         answer = (
             answer
             + "\n\n---\n*Offline answer composed from the pyCSAMT reference."
-            " For a fuller, synthesised response, add an API key (Claude,"
-            " OpenAI, Gemini, DeepSeek or MiniMax) in **Settings**.*"
+            " For a fuller, synthesised response, select a local Ollama model"
+            " or configure a cloud provider in **Settings**.*"
         )
     step("Answer ready", "done")
     _update_job(
         jid,
         status="done",
         result=answer,
+        citations=res.get("citations", []),
         steps=_JOBS[jid]["steps"],
         kind=KIND_ANSWER,
     )
@@ -2323,6 +2394,7 @@ def _dispatch_metrics(
 
     step("Computing values...", "running")
     warnings: list[str] = []
+    metric_statuses = []
     if len(targets) == 1:
         label, src = targets[0]
         with _catch_data_loss_warnings() as _dl_notes:
@@ -2330,6 +2402,7 @@ def _dispatch_metrics(
                 {"sites": src, "kinds": kinds, "label": label}
             )
         result_text = res.summary
+        metric_statuses.append(res.status)
         warnings = list(res.warnings or []) + _dl_notes
     else:
         # All lines: one compact line per survey line.
@@ -2340,6 +2413,7 @@ def _dispatch_metrics(
                     {"sites": src, "kinds": kinds, "label": label}
                 )
             warnings.extend(_dl_notes)
+            metric_statuses.append(res.status)
             if res.status != "success":
                 out_lines.append(f"- **{label}**: {res.summary}")
                 continue
@@ -2363,7 +2437,8 @@ def _dispatch_metrics(
         workflow="metrics",
         path="",
         output_dir="",
-        status="success",
+        status=("success" if all(s == "success" for s in metric_statuses) else
+                "failed" if all(s == "failed" for s in metric_statuses) else "needs_review"),
         summary=result_text[:200],
         n_figures=0,
     )
@@ -2805,6 +2880,10 @@ _NO_DATA_GUIDANCE = (
 
 def _looks_like_data_read(text: str) -> bool:
     """True when *text* asks to read/summarise the loaded survey data."""
+    from pycsamt.assistant.tools.repository import is_developer_question
+
+    if is_developer_question(text):
+        return False
     t = (text or "").lower()
     if _looks_like_lines_query(text):
         return True
@@ -3239,38 +3318,79 @@ def _dispatch_code(
     sel_model: str | None,
     offline: bool,
     step,
+    history: list[dict] | None = None,
 ) -> None:
     """Generate a standalone pyCSAMT script via CodeGenerationAgent."""
+    from pathlib import Path
+
+    from pycsamt.agents._generation import (
+        GenerationInput,
+        clarification_for,
+        exact_artifact_edit,
+        pending_code_request,
+    )
     from pycsamt.agents.code_gen import CodeGenerationAgent
     from pycsamt.agents.context import ContextInputAgent
     from pycsamt.api.agents import AGENT_CONFIG
 
-    step("Extracting configuration...", "done")
+    edit_input = GenerationInput.from_chat(text, history)
+    if exact_artifact_edit(edit_input):
+        prior = next((m.get("generation", {}) for m in reversed(history or [])
+                      if m.get("role") == "assistant" and m.get("code")), {})
+        edit_input.workflow_config = {"workflow": prior.get("workflow", "custom"),
+                                      "output_dir": edit_input.previous_output_dir}
+        step("Applying the requested artifact edit...", "done")
+        with AGENT_CONFIG.offline():
+            result = CodeGenerationAgent().execute({
+                "generation_input": edit_input,
+                "output_dir": settings.get("output_dir", "pycsamt_agent_output"),
+            })
+        data = result.data or {}
+        from pycsamt.assistant.tools.validation_tools import validation_summary
+
+        _update_job(jid, status="done", kind=KIND_CODE,
+                    result=(data.get("review_reason") or "Updated only the requested literal values.") + "\n\n" + validation_summary(data.get("validation", {})),
+                    code=data.get("code", ""), generation=data.get("generation", {}),
+                    script_path=data.get("script_path"), validation=data.get("validation"), validation_path=data.get("validation_path"))
+        return
+
+    pending = pending_code_request(text, history)
+    task_text = pending + "\nUser clarification: " + text if pending else text
+    step("Working out the parameters...", "done")
     with AGENT_CONFIG.offline() if offline else _nullctx():
         ctx_agent = ContextInputAgent(
             llm_provider=llm_prov,
             api_key=api_key,
             model=sel_model,
         )
-        ctx_res = ctx_agent.execute({"request": text})
+        ctx_res = ctx_agent.execute({"request": task_text})
     cfg = ctx_res.data.get("config", {}) if ctx_res and ctx_res.data else {}
     # Pick the workflow the code should be ABOUT (the subject), not the
     # "code_gen" action. Priority: router slot (if specific) → subject
-    # extracted from the text → sensible default.
+    # extracted from the text → custom composition (no invented QC default).
     target = (
         workflow
         if (workflow and workflow != "code_gen")
-        else _code_target_workflow(text)
+        else _code_target_workflow(task_text)
     )
     if target:
         cfg["workflow"] = target
-    elif cfg.get("workflow", "") in ("", "code_gen"):
-        # plain "write me a script" with no subject → default to qc
-        cfg["workflow"] = "qc"
+    else:
+        # The parser's default is not evidence of the requested task.
+        cfg["workflow"] = "custom"
+
+    generation = GenerationInput.from_chat(text, history, workflow_config=cfg)
+    question = clarification_for(generation)
+    if question:
+        _update_job(jid, status="done", result=question, kind=KIND_CLARIFY,
+                    pending_request=generation.task_text)
+        return
 
     # ── RAG grounding: resolve a named survey line to its real path and
     # retrieve real symbols/recipe so the generated code is accurate. ──
     rag_text = ""
+    pc = {}
+    api_symbols = []
     resolved_line = None
     try:
         from pycsamt.assistant.rag.context_builder import (
@@ -3279,31 +3399,77 @@ def _dispatch_code(
 
         builder = default_context_builder()
         if builder is not None:
-            ac = builder.build(text)
+            ac = (builder.build(task_text, max_chars=1800)
+                  if llm_prov == "ollama" else builder.build(task_text))
             rag_text = ac.context_text
             pc = ac.project_context
+            api_symbols = [c.symbol for c in getattr(ac, "chunks", []) if c.symbol]
+            # A custom composition may need a second targeted lookup; keep
+            # the original request intact and bound only the evidence.
+            if cfg["workflow"] == "custom" and not api_symbols:
+                targeted = " ".join(re.findall(r"\b(?:pycsamt\.)?[A-Za-z]\w*_[A-Za-z_]+\b", text))
+                if targeted:
+                    extra = builder.build(targeted, max_chars=1200)
+                    rag_text += "\n" + extra.context_text
+                    api_symbols.extend(c.symbol for c in getattr(extra, "chunks", []) if c.symbol)
             if pc.get("exists") and pc.get("edi_dir"):
                 resolved_line = pc.get("line")
-                cfg["data_path"] = pc["edi_dir"]
+                cfg.setdefault("data_path", pc["edi_dir"])
     except Exception:  # noqa: BLE001 — RAG is best-effort
         rag_text = ""
+
+    # Preserve all named lines for a composition, rather than replacing a
+    # two-line request with the registry's first match.
+    try:
+        from pycsamt.assistant.tools.project_registry import ProjectRegistry
+
+        registry_path = settings.get("line_registry")
+        registry = ProjectRegistry(registry_path) if registry_path else ProjectRegistry.from_default()
+        if registry:
+            named = [name for name in registry.lines() if re.search(r"\b" + re.escape(name) + r"\b", task_text, re.I)]
+            if named:
+                pc = {**pc, "lines": [registry.resolve_line(name) for name in named[:8]]}
+    except (OSError, ValueError, KeyError):
+        pass
 
     # Use a loaded EDI path when present (and no line was resolved) so the
     # script is immediately runnable; otherwise code_gen inserts a
     # /path/to/EDIs placeholder.
     if not resolved_line:
-        edi_path = (edi_store or {}).get("path", "") or cfg.get(
-            "data_path", ""
-        )
+        edi_path = (cfg.get("data_path", "") or (edi_store or {}).get("path", "")
+                    or getattr(_session(), "edi_path", ""))
         if edi_path:
             cfg["data_path"] = edi_path
+    memory = _session()
+    if memory is not None and cfg.get("data_path") and (resolved_line or (edi_store or {}).get("path")):
+        memory.set_data(edi_path=cfg["data_path"], line=resolved_line)
 
     output_dir = (
         settings.get("output_dir") or ""
     ).strip() or "pycsamt_workflow_output"
+    if cfg.get("output_dir") in (None, "", str(Path("pycsamt_agent_output").resolve())):
+        cfg["output_dir"] = output_dir
+    # A folder the user names ("one image per station in selected_plots")
+    # is where the script writes; the configured directory only stores
+    # the generated script itself.
+    from pycsamt.agents._generation import requested_output_dir
+
+    requested_dir = requested_output_dir(task_text)
+    if requested_dir:
+        cfg["output_dir"] = requested_dir
+        state = _session()
+        if state is not None:  # a genuine choice, carried into follow-ups
+            state.facts["choices"] = {**state.facts.get("choices", {}),
+                                      "output_dir": requested_dir}
+    generation.workflow_config = cfg
+    if memory is not None:
+        pc = {**pc, "conversation": memory.context_summary()}
+    generation.project_context = pc
+    generation.retrieved_evidence = rag_text
+    generation.api_symbols = api_symbols
 
     _update_job(jid, workflow="code_gen")
-    step("Generating code...", "running")
+    step("Writing code...", "running")
     with AGENT_CONFIG.offline() if offline else _nullctx():
         cg = CodeGenerationAgent(
             llm_provider=llm_prov,
@@ -3316,51 +3482,62 @@ def _dispatch_code(
                 "results": {},
                 "output_dir": output_dir,
                 "rag_context": rag_text,
+                "generation_input": generation,
             }
         )
 
-    code = res.get("code", "") if res else ""
+    code = res.get("code", "") if res is not None else ""
+    if res is None or res.status == "failed":
+        message = (res.error or res.summary) if res is not None else "Code generation returned no result."
+        if res is not None and res.get("validation"):
+            from pycsamt.assistant.tools.validation_tools import (
+                validation_summary,
+            )
+            message += "\n\n" + validation_summary(res.get("validation"))
+        _update_job(jid, status="error", result=message, error=message, kind=KIND_ERROR,
+                    code=code, validation=res.get("validation") if res is not None else None)
+        return
+    if res.get("clarification"):
+        _update_job(jid, status="done", result=res.get("clarification"), kind=KIND_CLARIFY,
+                    pending_request=generation.task_text)
+        return
 
-    # Validate the generated script (deterministic): catch syntax errors
-    # and any hallucinated pyCSAMT symbols before the user runs it.
-    _valid_note = ""
-    try:
-        from pycsamt.assistant.tools.validation_tools import (
-            validate_generated_code,
-        )
+    from pycsamt.assistant.tools.validation_tools import validation_summary
 
-        rep = validate_generated_code(code)
-        if rep["ok"]:
-            _valid_note = (
-                "\n\n✓ Validated: syntax OK and all pyCSAMT imports"
-                " resolve to real symbols."
+    rep = res.get("validation")
+    if rep is None:
+        try:
+            from pycsamt.assistant.tools.validation_tools import (
+                validate_generated_code,
             )
-        elif not rep["syntax_ok"]:
-            _valid_note = (
-                "\n\n⚠ Validation: the script has a syntax error — "
-                + "; ".join(rep["errors"][:2])
-            )
-        else:
-            _valid_note = (
-                "\n\n⚠ Validation: some symbols could not be verified — "
-                + "; ".join(rep["errors"][:3])
-            )
-    except Exception:  # noqa: BLE001 — validation is best-effort
-        _valid_note = ""
+            rep = validate_generated_code(code)
+        except Exception as exc:
+            rep = {"ok": False, "checks": {"validation": {"state": "unverifiable", "reason": str(exc)}}, "errors": [str(exc)]}
+    _valid_note = "\n\n" + validation_summary(rep)
 
     _line_note = f" for line {resolved_line}" if resolved_line else ""
     summary = (
-        "Here is a standalone pyCSAMT script that"
-        f" reproduces the {cfg.get('workflow', 'qc')}"
+        "Here is a pyCSAMT script draft for"
+        f" the {cfg.get('workflow', 'custom')}"
         f" workflow{_line_note}. Copy it from the code block"
         " below — edit the data path if needed." + _valid_note
     )
+    if res.status == "needs_review":
+        summary = (res.get("review_reason") or f"Offline template{_line_note} for review; your request-specific constraints have not been applied.") + _valid_note
+    if res.warnings:
+        summary += "\n\n" + "\n".join(res.warnings)
+    if generation.assumptions:
+        summary += "\n\n" + "\n".join(generation.assumptions)
+    summary += "\n\nGenerated only; not executed."
     step("Code ready", "done")
     _update_job(
         jid,
         status="done",
         result=summary,
         code=code,
+        generation=res.get("generation", {}),
+        script_path=res.get("script_path"),
+        validation=rep, validation_path=res.get("validation_path"),
         steps=_JOBS[jid]["steps"],
         kind=KIND_CODE,
     )
@@ -3370,6 +3547,59 @@ def _dispatch_code(
 
 
 def _run_agent(
+    jid: str, text: str, edi_store: dict, settings: dict,
+    inv_config: dict | None = None, history: list[dict] | None = None,
+) -> None:
+    from pycsamt.agents._local import LocalSettings, local_session
+    from pycsamt.agents._request import RequestCancelled, request_scope
+
+    from .._conversation import (
+        conversation_id,
+        project_changed,
+        restore_memory,
+        scoped_data,
+    )
+
+    # UI jobs always pass their own history, including [] for a fresh chat.
+    # History-less programmatic calls retain only their thread's local context.
+    original_history = history
+    edi_store = scoped_data(history, settings, edi_store)
+    state, history = restore_memory(history or [], settings, edi_store)
+    if original_history is None:
+        state = _session() or state
+    if project_changed(original_history, state.project_id) and not (inv_config or {}).get("workflow"):
+        inv_config = {}
+    token = _ACTIVE_SESSION.set(state)
+    job_token = _ACTIVE_JOB.set(jid)
+    _update_job(jid, conversation_id=conversation_id(original_history),
+                context_reset=project_changed(original_history, state.project_id))
+    if inv_config:
+        state.facts["choices"] = {**state.facts.get("choices", {}),
+                                  **{k: v for k, v in inv_config.items()
+                                     if k in {"workflow", "stations", "lines", "step_params"}}}
+
+    def cancelled():
+        job = _get_job(jid)
+        return job is None or job.get("status") == "cancelled"
+
+    try:
+        with request_scope(cancelled):
+            if settings.get("provider") == "ollama":
+                with local_session(LocalSettings.from_mapping(settings), cancelled) as request:
+                    _run_agent_impl(jid, text, edi_store, settings, inv_config, history)
+                    _update_job(jid, local_usage=request.usage)
+            else:
+                _run_agent_impl(jid, text, edi_store, settings, inv_config, history)
+    except RequestCancelled:
+        _update_job(jid, status="cancelled")
+    except Exception as exc:  # configuration/transport failure, never cloud fallback
+        _update_job(jid, status="error", error=str(exc), result=str(exc), kind=KIND_ERROR)
+    finally:
+        _ACTIVE_SESSION.reset(token)
+        _ACTIVE_JOB.reset(job_token)
+
+
+def _run_agent_impl(
     jid: str,
     text: str,
     edi_store: dict,
@@ -3383,11 +3613,23 @@ def _run_agent(
     """
 
     def _step(label: str, status: str = "done"):
+        from pycsamt.agents._request import checkpoint
+
+        checkpoint()
         with _JOBS_LOCK:
-            _JOBS[jid]["steps"].append({"label": label, "status": status})
+            if jid in _JOBS and _JOBS[jid].get("status") != "cancelled":
+                _JOBS[jid]["steps"].append({"label": label, "status": status})
 
     try:
-        _step("Parsing request...", "done")
+        _step("Reading your request...", "done")
+        from .._conversation import execution_status, recall_result
+
+        recalled = recall_result(text, _session()) or execution_status(
+            text, _session(), history)
+        if recalled:
+            _update_job(jid, status="done", result=recalled, kind=KIND_ANSWER,
+                        execution="Conversation result recalled; no new computation performed")
+            return
 
         # configure provider + api key
         provider = settings.get("provider", "offline")
@@ -3401,10 +3643,6 @@ def _run_agent(
         api_key: str | None = None
         if provider in key_map:
             api_key = settings.get(f"key_{provider}", "") or None
-            if api_key:
-                import os
-
-                os.environ[key_map[provider]] = api_key
 
         # "offline" maps to "claude" provider
         # name so BaseAgent validates it, but
@@ -3453,6 +3691,19 @@ def _run_agent(
         from pycsamt.agents.router import (
             IntentRouter,
         )
+
+        # Requests that cannot be served as asked (a nonexistent pycsamt
+        # API, an absent input path, invalid literal correction factors)
+        # are answered before any routing, workflow or model call.
+        from .._preconditions import check_request
+
+        unservable = check_request(text)
+        if unservable:
+            _step("Checking request prerequisites...", "done")
+            _update_job(jid, status="done", result=unservable[1],
+                        steps=_JOBS[jid]["steps"],
+                        kind=KIND_CLARIFY if unservable[0] == "clarify" else KIND_ANSWER)
+            return
 
         # Deterministic data-overview gate: "read the EDI data /
         # stations / sites" is answered inline from the stored
@@ -3534,11 +3785,12 @@ def _run_agent(
                 sel_model=sel_model,
                 offline=_offline,
                 step=_step,
+                history=history,
             )
             return
 
         # ── WORKFLOW / PLOT → run the pipeline ─────
-        _step("Classifying workflow...", "done")
+        _step("Choosing a workflow...", "done")
 
         with AGENT_CONFIG.offline() if _offline else _nullctx():
             ctx_agent = ContextInputAgent(
@@ -3809,19 +4061,46 @@ def _run_agent(
             }
         ) | frozenset(_CORR_METHODS)  # all correction methods need data
         if wtype in _EDI_REQUIRED and not edi_path:
+            from pycsamt.assistant.tools.project_registry import (
+                ProjectRegistry,
+            )
+
+            from .._preconditions import no_data_message
+
+            try:
+                _reg_path = (settings or {}).get("line_registry")
+                _reg = (ProjectRegistry(_reg_path) if _reg_path
+                        and str(_reg_path).endswith((".yml", ".yaml"))
+                        else ProjectRegistry.from_default())
+            except Exception:  # noqa: BLE001 — registry is advisory here
+                _reg = None
+            from .._preconditions import line_suggestions
+
             _update_job(
                 jid,
                 status="done",
-                result=(
-                    "No station data loaded. "
-                    "Please load an EDI or XML-TF dataset "
-                    "first using the Load Data "
-                    "button, then retry."
-                ),
+                result=no_data_message(
+                    wtype, text, _WF_RUNNING_LABEL.get(wtype, wtype), _reg),
                 steps=_JOBS[jid]["steps"],
-                kind=KIND_ERROR,
+                kind=KIND_CLARIFY,
+                suggestions=line_suggestions(text, _reg),
             )
             return
+
+        # A stated rotation angle is applied, never silently replaced by the
+        # estimated strike; an angle without a stated sense is asked about.
+        if wtype == "rotation":
+            from .._preconditions import rotation_request
+
+            rotation = rotation_request(text)
+            if rotation["question"]:
+                _update_job(jid, status="done", result=rotation["question"],
+                            steps=_JOBS[jid]["steps"], kind=KIND_CLARIFY,
+                            suggestions=rotation["suggestions"])
+                return
+            if rotation["angle"] is not None:
+                cfg.setdefault("step_params", {}).setdefault("rotate", {})[
+                    "strike_deg"] = rotation["angle"]
 
         # Friendly label for plot / tool messages (line, selected lines, dir).
         import os as _os
@@ -4005,9 +4284,7 @@ def _run_agent(
             error=str(exc),
             result=(
                 f"An error occurred: {exc}\n\n"
-                "Check that the data path is set "
-                "and your API key is configured "
-                "in Settings if needed."
+                "Check the data path and the selected provider settings."
             ),
             steps=_JOBS[jid]["steps"],
             kind=KIND_ERROR,
@@ -4103,6 +4380,22 @@ def _record_run(
     n_figures: int,
 ) -> None:
     """Append a completed workflow to the persistent trace (best-effort)."""
+    from pycsamt.agents._request import checkpoint
+
+    checkpoint()
+    state = _ACTIVE_SESSION.get() or _session()
+    if _ACTIVE_JOB.get() and state is not None:
+        state.last_workflow = workflow
+        run = {"workflow": workflow, "status": status, "summary": str(summary)[:1200],
+               "n_figures": n_figures, "timestamp": _ts(),
+               "session_id": state.session_id, "project_id": state.project_id}
+        state.facts["runs"] = [*state.facts.get("runs", []), run][-8:]
+        state.facts["last_workflow_result"] = {
+            "workflow": workflow, "summary": str(summary)[:1200], "status": status,
+            "figure_count": n_figures,
+        }
+        _update_job(_ACTIVE_JOB.get(), execution=f"Recorded {workflow} run: {status}",
+                    workflow=workflow)
     try:
         from pycsamt.assistant.memory.workflow_history import (
             WorkflowHistory,
@@ -4117,46 +4410,44 @@ def _record_run(
                 output_dir=output_dir,
                 summary=summary,
                 n_figures=n_figures,
+                session_id=getattr(state, "session_id", None),
+                project_id=getattr(state, "project_id", None),
             )
         )
     except Exception:  # noqa: BLE001 — tracing must never break a job
         pass
 
 
-# Module-level assistant session (the Agent Master is a local,
-# single-user app — consistent with _JOBS / _CORR_CACHE singletons).
-# Tracks the active data path / line / last workflow so follow-ups like
-# "now run phase analysis" inherit context.
-_SESSION: Any = None
+# Each worker owns a snapshot restored from its browser conversation.
+# No active survey or choices are shared through process-global memory.
 
 
 def _session() -> Any:
-    """Lazily create the per-process SessionState (or None if unavailable)."""
-    global _SESSION
-    if _SESSION is None:
+    """Current job snapshot; standalone callers get context-local state."""
+    state = _ACTIVE_SESSION.get()
+    if state is None:
         try:
             from pycsamt.assistant.memory import SessionState
 
-            _SESSION = SessionState()
+            state = SessionState()
+            _ACTIVE_SESSION.set(state)
         except Exception:  # noqa: BLE001
-            _SESSION = False  # mark as tried-and-unavailable
-    return _SESSION or None
+            return None
+    return state
 
 
-def _session_has_data() -> bool:
-    s = _session()
+def _session_has_data(history=None, settings=None) -> bool:
+    from .._conversation import restore_memory
+
+    s = restore_memory(history, settings or {}, {})[0] if history is not None else _session()
     return bool(s and s.edi_path)
 
 
 def _reset_session() -> None:
     """Clear the active session (e.g. on New Chat)."""
-    global _SESSION
     s = _session()
     if s is not None:
-        s.edi_path = None
-        s.line = None
-        s.last_workflow = None
-        s.facts = {}
+        s.reset()
 
 
 def _names_registry_line(text: str) -> bool:
@@ -4376,6 +4667,16 @@ def register_chat(app) -> None:
         )
 
         _qi, _ = classify_intent_offline(text)
+        from pycsamt.agents._generation import (
+            is_code_followup,
+            pending_code_request,
+        )
+
+        from .._conversation import project_id, scoped_history
+
+        context_history = scoped_history(stored_messages, project_id(settings))
+        if is_code_followup(text, context_history) or pending_code_request(text, context_history):
+            _qi = "code"
         # Data-overview requests skip the EDI guard too: with no data
         # stored, the dispatcher replies with load instructions instead
         # of the terse guard message.
@@ -4384,7 +4685,7 @@ def register_chat(app) -> None:
                 _thinking_bubble(
                     [
                         {
-                            "label": "Parsing request...",
+                            "label": "Reading your request...",
                             "status": "running",
                         }
                     ]
@@ -4429,7 +4730,7 @@ def register_chat(app) -> None:
             not edi_path
             and not _dataless
             and not _names_registry_line(text)
-            and not _session_has_data()
+            and not _session_has_data(stored_messages or [], settings)
         ):
             _no_edi = (
                 "No station dataset is loaded.\n"
@@ -4538,7 +4839,7 @@ def register_chat(app) -> None:
             _thinking_bubble(
                 [
                     {
-                        "label": "Parsing request...",
+                        "label": "Reading your request...",
                         "status": "running",
                     }
                 ]
@@ -4613,6 +4914,12 @@ def register_chat(app) -> None:
         job = _get_job(jid)
         if not job:
             raise PreventUpdate
+        from .._conversation import conversation_id
+
+        if (job.get("conversation_id") is not None
+                and job["conversation_id"] != conversation_id(stored_messages)):
+            _update_job(jid, status="cancelled")
+            return no_update, True, no_update, no_update, no_update
 
         steps = job.get("steps", [])
         status = job.get("status", "running")
@@ -4658,7 +4965,9 @@ def register_chat(app) -> None:
             )
 
         # job done / error
-        result_text = job.get("result") or job.get("error") or "Done."
+        from .._conversation import present_result
+
+        result_text = present_result(job)
         figs = job.get("figs", {})
         code = job.get("code", "")
         kind = job.get("kind")
@@ -4677,6 +4986,7 @@ def register_chat(app) -> None:
             kind=kind,
             mid=_agent_mid,
             card=card,
+            suggestions=job.get("suggestions"),
         )
 
         # replace thinking with agent bubble
@@ -4698,6 +5008,18 @@ def register_chat(app) -> None:
                 "content": result_text,
                 "ts": _ts(),
                 "mid": _agent_mid,
+                "code": code,
+                "generation": job.get("generation", {}),
+                "script_path": job.get("script_path"),
+                "validation": job.get("validation"),
+                "validation_path": job.get("validation_path"),
+                "pending_request": job.get("pending_request", ""),
+                "memory": job.get("memory"),
+                "context_reset": job.get("context_reset", False),
+                "execution": job.get("execution"),
+                "workflow": job.get("workflow"),
+                "figure_count": len(figs),
+                "citations": job.get("citations", []),
             }
         )
         return (
@@ -4850,6 +5172,35 @@ def register_chat(app) -> None:
             )
         return [_pin_item(p) for p in pins]
 
+    # 7b. Click a suggested reply → send it as the user's next message.
+    # The value is set first; the Send click follows on the next tick so
+    # send_message reads the new value through its normal State.
+    app.clientside_callback(
+        """
+        function(n_clicks) {
+            const t = window.dash_clientside.callback_context.triggered;
+            if (!t || !t.length || !t[0].value) {
+                return window.dash_clientside.no_update;
+            }
+            let text;
+            try {
+                text = JSON.parse(t[0].prop_id.split('.')[0]).text;
+            } catch (e) {
+                return window.dash_clientside.no_update;
+            }
+            if (!text) { return window.dash_clientside.no_update; }
+            setTimeout(function () {
+                const btn = document.getElementById('%s');
+                if (btn) { btn.click(); }
+            }, 60);
+            return text;
+        }
+        """ % IDs.BTN_SEND,
+        Output(IDs.INPUT, "value", allow_duplicate=True),
+        Input({"type": "am-reply-chip", "text": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+
     # 8. Click a pinned item → scroll to the message
     app.clientside_callback(
         """
@@ -4892,9 +5243,14 @@ def register_chat(app) -> None:
     @app.callback(
         Output(IDs.SIDEBAR_RUNS, "children"),
         Input(IDs.CHAT_WINDOW, "children"),
+        State(IDs.STORE_MESSAGES, "data"),
+        State(IDs.STORE_SETTINGS, "data"),
     )
-    def render_recent_runs(_children):
-        runs = _recent_runs()
+    def render_recent_runs(_children, messages=None, settings=None):
+        from .._conversation import restore_memory
+
+        state, _ = restore_memory(messages or [], settings or {}, {})
+        runs = list(reversed(state.facts.get("runs", [])))
         if not runs:
             return html.Div(
                 "No workflows run yet.",

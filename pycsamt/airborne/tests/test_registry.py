@@ -29,6 +29,17 @@ from pycsamt.airborne.mobilemt import build_mobilemt_emtf
 from pycsamt.airborne.ztem import build_ztem_emtf
 from pycsamt.emtf import EMTF, TransferFunction
 
+# Several tests below register entries into the module-level airborne
+# format/technology registries and later tests assert those entries are
+# still there (e.g. test_list_airborne_formats_without_filter_returns_
+# everything expects to see what test_register_format_rewrites_alias_
+# technology_to_canonical_name registered). pytest-xdist's default
+# load-balanced scheduling does not keep a module's tests on one worker,
+# so this file must be pinned to a single worker or the registration and
+# the read-back can land in different, independently-registry-seeded
+# workers. See test_pipeline_integration.py for the same pattern.
+pytestmark = pytest.mark.xdist_group(name="airborne_registry")
+
 
 def test_builtin_technology_registry():
     names = {item.name for item in list_airborne_technologies()}

@@ -605,13 +605,22 @@ class ModEmData(ModEmBase):
                 if fi is None:
                     continue
 
-                z_max_at_freq = float(np.max(np.abs(z_arr[fi, :, :])))
+                # NaN-aware: scalar (CSAMT) EDIs carry only Zxy, and EDIs
+                # without error blocks give NaN z_err.  A plain max() let
+                # the NaN through and every error became NAN, which made
+                # Mod2DMT's objective NaN from the first line search.
+                mags = np.abs(z_arr[fi, :, :])
+                z_max_at_freq = (float(np.nanmax(mags))
+                                 if np.isfinite(mags).any() else 0.0)
                 for comp_str, (ri, ci) in _comp_indices(comp_type):
                     z_val = complex(z_arr[fi, ri, ci])
+                    if not (np.isfinite(z_val.real)
+                            and np.isfinite(z_val.imag)):
+                        continue  # component not measured at this site
+                    z_e = 0.0
                     if z_err_arr is not None:
-                        z_e = abs(float(np.asarray(z_err_arr)[fi, ri, ci]))
-                    else:
-                        z_e = 0.0
+                        e = float(np.asarray(z_err_arr)[fi, ri, ci])
+                        z_e = abs(e) if np.isfinite(e) else 0.0
                     # Floor relative to max |Z| at this frequency.
                     floor = max(
                         z_max_at_freq * cfg.error_floor_z,

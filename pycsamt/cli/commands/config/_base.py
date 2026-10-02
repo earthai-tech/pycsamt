@@ -335,7 +335,12 @@ def apply_section(section: str, kwargs: dict[str, Any]) -> None:
                 except Exception:  # noqa: BLE001
                     pass
             elif model:
-                AGENT_CONFIG.model = model
+                # AgentConfig.model is a read-only property (backed by
+                # ``_model``) — there is no public setter for overriding
+                # just the model without also switching provider via
+                # switch()/configure(), so the private attribute is set
+                # directly here.
+                AGENT_CONFIG._model = model  # noqa: SLF001
             if budget_usd is not None:
                 AGENT_CONFIG.set_budget(usd=float(budget_usd))
 

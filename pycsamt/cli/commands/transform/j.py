@@ -99,18 +99,26 @@ def j(
 
     for f in files:
         try:
-            col = JtoEDI().transform(f, name=station_name)
-            for ed in col:
-                try:
-                    ed.write(savepath=str(output_dir))
-                except Exception as we:  # noqa: BLE001
-                    failures.append({"source": str(f), "error": str(we)})
-                    continue
-                edis.append(
-                    {"station": getattr(ed, "station", "?"), "source": f.name}
-                )
+            result = JtoEDI().transform(f, name=station_name)
         except Exception as exc:  # noqa: BLE001
             failures.append({"source": str(f), "error": str(exc)})
+            continue
+
+        # JtoEDI.transform() returns a single EDIFile for a path/JFile
+        # source and an EDICollection only for a JCollection source; a
+        # single-file/dir CLI invocation always hits the former, so
+        # normalize to an iterable of EDI items here rather than
+        # assuming ``result`` itself is iterable.
+        items = result if hasattr(result, "__iter__") else [result]
+        for ed in items:
+            try:
+                ed.write(savepath=str(output_dir))
+            except Exception as we:  # noqa: BLE001
+                failures.append({"source": str(f), "error": str(we)})
+                continue
+            edis.append(
+                {"station": getattr(ed, "station", "?"), "source": f.name}
+            )
 
     summary = {
         "n_input": len(files),

@@ -540,23 +540,64 @@ class PlotModel(Mare2DEMBase):
                 break
 
         if node_p is None:
-            return None, None, None
-
-        try:
-            nodes, tris, ri = read_triangulation(node_p)
-        except FileNotFoundError:
-            return None, None, None
+            # MARE2DEM itself writes no .node/.ele (it refines internally),
+            # so a real run folder only has the .poly PSLG: rebuild the
+            # region triangulation from it (as the PCSF converter does).
+            nodes, tris, ri = self._triangulate_poly(
+                self._workdir / rf.poly_file)
+            if nodes is None:
+                return None, None, None
+        else:
+            try:
+                nodes, tris, ri = read_triangulation(node_p)
+            except FileNotFoundError:
+                return None, None, None
         if len(nodes) == 0 or len(tris) == 0:
             return None, None, None
 
-        rho_table = rf.resistivity
+        # The .resistivity table is linear ohm-m; the colour axis is
+        # log10 rho.  Air (>= 1e10 ohm-m) is left blank (NaN).
+        rho_table = np.asarray(rf.resistivity, dtype=float)
         n_reg = len(rho_table)
-        rho_vals = np.zeros(len(tris))
-        for k, r in enumerate(ri):
+        rho_vals = np.full(len(tris), np.nan)
+        free = np.zeros(len(tris), dtype=bool)
+        fp = (np.asarray(rf.free_parameter)
+              if getattr(rf, "free_parameter", None) is not None else None)
+        for k, r in enumerate(np.asarray(ri, dtype=int)):
             if 0 < r <= n_reg:
-                rho_vals[k] = float(rho_table[r - 1, 0])
-
+                rho = float(rho_table[r - 1, 0])
+                if 0 < rho < 1e10:
+                    rho_vals[k] = np.log10(rho)
+                if fp is not None and len(fp) >= r and np.any(fp[r - 1] > 0):
+                    free[k] = True
+        self._free_tris = free
         return nodes, tris, rho_vals
+
+    @staticmethod
+    def _triangulate_poly(poly_path):
+        """(nodes, triangles, region ids) of a .poly PSLG, or Nones."""
+        try:
+            import triangle
+
+            from .iotools.poly import read_poly
+        except ImportError:
+            return None, None, None
+        if not Path(poly_path).is_file():
+            return None, None, None
+        try:
+            poly = read_poly(poly_path)
+            pslg = {"vertices": np.asarray(poly.nodes, dtype=float),
+                    "segments": np.asarray(poly.segments, dtype=int) - 1}
+            if getattr(poly, "regions", None) is not None and                     len(poly.regions):
+                pslg["regions"] = np.asarray(poly.regions, dtype=float)
+            tri = triangle.triangulate(pslg, "pA")
+        except Exception:
+            return None, None, None
+        attrs = tri.get("triangle_attributes")
+        if attrs is None:
+            return None, None, None
+        ri = np.round(np.asarray(attrs).ravel()).astype(int)
+        return tri["vertices"], tri["triangles"], ri
 
     # -------------------------------------------------------
 
@@ -653,6 +694,9 @@ class PlotModel(Mare2DEMBase):
             if (rf is not None and rf.global_bounds is not None)
             else None
         )
+        # Global bounds are linear ohm-m; the colour axis is log10 rho.
+        if gb is not None and len(gb) >= 2 and gb[0] > 0 and gb[1] > 0:
+            gb = np.log10(np.asarray(gb[:2], dtype=float))
         _vmin = (
             vmin
             if vmin is not None
@@ -668,11 +712,17 @@ class PlotModel(Mare2DEMBase):
             y,
             z,
             els,
-            facecolors=rho_vals,
+            facecolors=np.ma.masked_invalid(rho_vals),
             cmap=cmap,
             vmin=_vmin,
             vmax=_vmax,
         )
+        # Zoom on the inverted (free) regions rather than the padding.
+        free = getattr(self, "_free_tris", None)
+        if free is not None and free.any():
+            used = np.unique(np.asarray(els)[free].ravel())
+            ax.set_xlim(y[used].min(), y[used].max())
+            ax.set_ylim(z[used].min(), z[used].max())
         cb = plt.colorbar(tc, ax=ax)
         cb.set_label("log10 rho (ohm-m)")
         ax.invert_yaxis()

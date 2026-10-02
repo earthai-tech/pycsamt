@@ -222,7 +222,7 @@ class ModEmAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key and n_stations:
+        if self.llm_available and n_stations:
             prompt = (
                 f"ModEM3D data file summary:\n"
                 f"  Stations: {n_stations}, periods: {n_periods}\n"

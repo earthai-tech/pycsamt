@@ -106,6 +106,16 @@ class ViewControlsPage(SettingsPage):
         form_x.addRow("View:", self._x_combo)
         root.addWidget(grp_x)
 
+        panel = QGroupBox("Plot panel")
+        form = QFormLayout(panel)
+        self._panel_background = QComboBox()
+        self._panel_background.addItems(["white", "transparent"])
+        form.addRow("Background:", self._panel_background)
+        self._panel_toolbar = QCheckBox("Show plot navigation and export tools")
+        form.addRow("", self._panel_toolbar)
+        self._panel_fit = QCheckBox("Fit labels and colorbars to panel")
+        form.addRow("", self._panel_fit)
+        root.addWidget(panel)
         root.addStretch()
 
     # ── SettingsPage interface ────────────────────────────────────────────────
@@ -116,6 +126,9 @@ class ViewControlsPage(SettingsPage):
                 PYCSAMT_CONTROL as C,
             )
 
+            self._panel_background.setCurrentText(C.panel.background)
+            self._panel_toolbar.setChecked(C.panel.toolbar)
+            self._panel_fit.setChecked(C.panel.fit_layout)
             self._rho_combo.setCurrentIndex(
                 next(
                     (
@@ -152,6 +165,9 @@ class ViewControlsPage(SettingsPage):
     def collect(self) -> dict:
         return {
             "view_controls": {
+                "panel_background": self._panel_background.currentText(),
+                "panel_toolbar": self._panel_toolbar.isChecked(),
+                "panel_fit_layout": self._panel_fit.isChecked(),
                 "rho_view": _RHO_VIEWS[self._rho_combo.currentIndex()][1],
                 "phase_range": (self._ph_min.value(), self._ph_max.value()),
                 "phase_unit": _PHASE_UNITS[self._ph_unit_combo.currentIndex()][

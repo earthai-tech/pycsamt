@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from pycsamt.api.colormaps import colormap_choices
 from pycsamt.app.desktop.panels.map_panel import MapPanel
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
@@ -57,20 +58,8 @@ from pycsamt.app.desktop.windows._base import (
 
 # ── available colormaps ───────────────────────────────────────────────────────
 
-_CMAPS = [
-    "plasma",
-    "viridis",
-    "magma",
-    "inferno",
-    "jet",
-    "RdBu_r",
-    "seismic",
-    "coolwarm",
-    "terrain",
-    "hot",
-    "YlOrRd",
-    "copper",
-]
+# the shared catalogue (jet_r, RdYlBu_r, …) behind this map's default
+_CMAPS = colormap_choices(first=("plasma",))
 
 # ── basemap providers (must match MapPanel._BASEMAP_PROVIDERS keys) ───────────
 
@@ -88,7 +77,15 @@ _MAP_TYPE_ICONS = {
     "Elevation": "elevation",
     "Depth": "depth",
     "Resistivity": "resistivity",
+    "Phase tensor": "phase-tensor",
+    "Induction arrows": "induction",
+    "Strike": "strike-analyzer",
+    "Dimensionality": "dimensionnality",
+    "Confidence": "qc",
 }
+MAP_TYPES = tuple(_MAP_TYPE_ICONS)
+# Map types drawn by pycsamt.emtools from the loaded EDI/XML sites.
+_PERIOD_TYPES = ("phase tensor", "induction arrows", "dimensionality")
 
 
 def _add_icon_item(combo: QComboBox, label: str, icon_name: str) -> None:
@@ -129,10 +126,46 @@ class MapViewerWindow(PanelWindow):
 
     def _build_params(self, layout: QVBoxLayout) -> None:
 
+        # ── 0. File (PCSF station loading) ──────────────────────────────────
+        grp_file, lay_file = make_group("File")
+        self._btn_load_pcsf = icon_button(
+            "📂  Load PCSF/PCSM model…",
+            "map-view",
+            "Load a .pcsf/.pcsm inversion model: its stations on the map, "
+            "and the Depth / Resistivity maps drawn from the "
+            "inverted resistivity (not the EDI pseudo-depth)",
+        )
+        self._btn_load_pcsf.clicked.connect(self._on_load_pcsf)
+        lay_file.addWidget(self._btn_load_pcsf)
+
+        self._chk_pcsf_fetch_elev = QCheckBox("Fetch elevation online")
+        self._chk_pcsf_fetch_elev.setChecked(False)
+        self._chk_pcsf_fetch_elev.setToolTip(
+            "A ModEM/MARE2DEM result carries no real elevation of its own.\n"
+            "When checked, a best-effort online lookup runs on load — off\n"
+            "by default so this works without a network connection."
+        )
+        lay_file.addWidget(self._chk_pcsf_fetch_elev)
+
+        self._chk_model_slice = QCheckBox("Show 3-D model slice")
+        self._chk_model_slice.setChecked(True)
+        self._chk_model_slice.setToolTip(
+            "Depth/Resistivity maps of a 3-D model: draw the real model "
+            "cells at that depth under the stations (off = stations only)")
+        self._chk_model_slice.toggled.connect(
+            lambda on: self._map_panel.set_show_model_slice(on))
+        lay_file.addWidget(self._chk_model_slice)
+
+        self._lbl_pcsf = QLabel("")
+        self._lbl_pcsf.setWordWrap(True)
+        self._lbl_pcsf.setObjectName("InfoLabel")
+        lay_file.addWidget(self._lbl_pcsf)
+        layout.addWidget(grp_file)
+
         # ── 1. Map type ───────────────────────────────────────────────────────
         grp_type, lay_type = make_group("Map Type")
         self._combo_type = QComboBox()
-        for item in ("Station", "Elevation", "Depth", "Resistivity"):
+        for item in MAP_TYPES:
             _add_icon_item(
                 self._combo_type,
                 item,
@@ -389,6 +422,9 @@ class MapViewerWindow(PanelWindow):
     def set_sites(self, sites) -> None:
         super().set_sites(sites)
         self._map_panel.set_sites(sites)
+        if sites is not None:
+            self._lbl_pcsf.setText("")
+            self._on_type_changed(self._combo_type.currentText())
 
     def set_dark_mode(self, dark: bool) -> None:
         super().set_dark_mode(dark)
@@ -441,6 +477,13 @@ class MapViewerWindow(PanelWindow):
 
     def _update_depth_label(self) -> None:
         depth = self._spin_depth.value()
+        panel = getattr(self, "_map_panel", None)
+        rng = panel.model_depth_range() if panel is not None else None
+        if rng is not None:
+            self._lbl_depth_period.setText(
+                f"Inversion model depth: {rng[0]:,.0f} – {rng[1]:,.0f} m\n"
+                "(true depth of the inverted model)")
+            return
         # Estimate median ρ̄ from freq list length as a rough proxy
         rho_bar = self._estimate_median_rho()
         if rho_bar > 0:
@@ -489,8 +532,20 @@ class MapViewerWindow(PanelWindow):
 
     def _on_type_changed(self, text: str) -> None:
         t = text.lower()
-        self._grp_freq.setVisible(t in ("depth", "resistivity"))
+        panel = getattr(self, "_map_panel", None)  # None while building
+        if panel is not None and panel.has_model:
+            # A model has depths, not frequencies: both typed maps are
+            # read at a depth (Resistivity = mean from the surface to it).
+            self._grp_freq.setVisible(False)
+            self._grp_depth.setVisible(t in ("depth", "resistivity"))
+            self._grp_depth.setTitle(
+                "Model depth" if t == "depth"
+                else "Average from the surface to")
+            return
+        self._grp_freq.setVisible(
+            t in ("depth", "resistivity") or t in _PERIOD_TYPES)
         self._grp_depth.setVisible(t == "depth")
+        self._grp_depth.setTitle("Depth Settings")
 
     def _on_cbar_toggle(self, checked: bool) -> None:
         self._radio_cbar_v.setEnabled(checked)
@@ -573,12 +628,7 @@ class MapViewerWindow(PanelWindow):
         controls, then refresh.  Called by _MapPopOutButton._on_click().
         """
         # Map type
-        _type_labels = {
-            "station": "Station",
-            "elevation": "Elevation",
-            "depth": "Depth",
-            "resistivity": "Resistivity",
-        }
+        _type_labels = {t.lower(): t for t in MAP_TYPES}
         idx = self._combo_type.findText(
             _type_labels.get(panel._map_type, "Station")
         )
@@ -720,6 +770,46 @@ class MapViewerWindow(PanelWindow):
 
         ExportDialog(figure=self._map_panel._canvas.figure, parent=self).exec()
 
+    def _on_load_pcsf(self) -> None:
+        from PySide6.QtWidgets import QFileDialog
+
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load PCSF file",
+            "",
+            "PCSF files (*.pcsf *.pcsm *.pcsm.gz)",
+        )
+        if not path:
+            return
+        try:
+            from pathlib import Path
+
+            panel = self._map_panel
+            panel.load_pcsf(
+                path, fetch_elevation=self._chk_pcsf_fetch_elev.isChecked()
+            )
+            rng = panel.model_depth_range()
+            if rng is not None:
+                lo, hi = max(rng[0], 0.0), rng[1]
+                self._spin_depth.setRange(max(lo, 1.0), max(hi, lo + 1.0))
+                if not lo <= self._spin_depth.value() <= hi:
+                    self._spin_depth.setValue(min(max(500.0, lo), hi))
+                self._spin_depth.setSingleStep(max((hi - lo) / 50.0, 1.0))
+            self._combo_type.setCurrentText("Depth" if rng else "Station")
+            self._on_type_changed(self._combo_type.currentText())
+            self._update_depth_label()
+            self._on_refresh()
+            n = len(panel._df)
+            where = ("local model x/y (no lon/lat in the file)"
+                     if panel._pcsf_local else "geographic")
+            depth_txt = (f"model depth {rng[0]:,.0f}–{rng[1]:,.0f} m"
+                         if rng else "no depth sections")
+            self._lbl_pcsf.setText(
+                f"{Path(path).name}\n{n} station(s) · {depth_txt}\n"
+                f"positions: {where}")
+        except Exception as exc:
+            self._lbl_pcsf.setText(f"Load error: {exc}")
+
 
 # ── MapDetailWindow ───────────────────────────────────────────────────────────
 
@@ -773,7 +863,7 @@ class MapDetailWindow(QDialog):
         # Map type
         row.addWidget(QLabel("Type:"))
         self._combo_type = QComboBox()
-        for t in ("Station", "Elevation", "Depth", "Resistivity"):
+        for t in MAP_TYPES:
             _add_icon_item(
                 self._combo_type,
                 t,
@@ -1002,12 +1092,7 @@ class MapDetailWindow(QDialog):
         controls, then refresh.  Called by _MapPopOutButton._on_click().
         """
         # Map type
-        _type_labels = {
-            "station": "Station",
-            "elevation": "Elevation",
-            "depth": "Depth",
-            "resistivity": "Resistivity",
-        }
+        _type_labels = {t.lower(): t for t in MAP_TYPES}
         idx = self._combo_type.findText(
             _type_labels.get(panel._map_type, "Station")
         )
@@ -1113,7 +1198,8 @@ class MapDetailWindow(QDialog):
 
     def _on_type_changed(self, text: str) -> None:
         t = text.lower()
-        self._wgt_freq.setVisible(t in ("depth", "resistivity"))
+        self._wgt_freq.setVisible(
+            t in ("depth", "resistivity") or t in _PERIOD_TYPES)
         self._wgt_comp.setVisible(t in ("depth", "resistivity"))
         self._wgt_depth.setVisible(t == "depth")
 

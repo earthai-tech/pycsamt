@@ -208,7 +208,9 @@ def _fit_station_tf(
     valid = tf.math.is_finite(lr_obs_t) & tf.math.is_finite(ph_obs_t)
 
     if init_log_rho is None:
-        init_lr = float(np.mean(np.log10(np.maximum(rho_obs, 1e-3))))
+        init_lr = float(np.nanmean(np.log10(np.maximum(rho_obs, 1e-3))))
+        if not np.isfinite(init_lr):
+            init_lr = 2.0
         init_lr_v = np.full(n_layers, init_lr, dtype=np.float64)
     else:
         init_lr_v = np.asarray(init_log_rho, dtype=np.float64)

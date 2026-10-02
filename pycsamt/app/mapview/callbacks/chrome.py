@@ -8,11 +8,12 @@ from dash import Input, Output, State, no_update
 
 from .._ids import IDs
 from .._render import store_from_view
-from ..cache import set_view, take_seed
+from ..cache import set_view, take_seed, take_seed_state
 
 
 def register_chrome(app) -> None:
     _register_seed(app)
+    _register_seed_state(app)
     _register_theme(app)
     _register_help(app)
     _register_sidebar(app)
@@ -45,6 +46,100 @@ def _register_seed(app) -> None:
         store = store_from_view(view)
         badge = f"{store['n_stations']} stations · {store['n_lines']} line(s)"
         return store, badge, "mv-data-badge visible"
+
+
+# widget -> the seed-state control feeding it (see pcsf_scene.mapview_state)
+_SEED_WIDGETS = (
+    (IDs.CTL_MODE3D, "mode3d"),
+    (IDs.CTL_CMAP, "cmap"),
+    (IDs.CTL_DEPTH_LO, "depth_lo"),
+    (IDs.CTL_DEPTH_HI, "depth_hi"),
+    (IDs.CTL_TOPO, "topography"),
+    (IDs.CTL_TERRAIN, "terrain"),
+    (IDs.CTL_OPACITY, "opacity"),
+    (IDs.CTL_SHOW_STA, "show_stations"),
+    (IDs.CTL_STA_LABELS, "station_labels"),
+    (IDs.GEO_LEGEND_VISIBLE, "geology_legend"),
+    (IDs.TB3D_GEO_FILL, "geology_fill"),
+    (IDs.CTL_ASPECT, "aspect"),
+    (IDs.CTL_VE, "vertical_exaggeration"),
+    (IDs.CTL_STA_SYMBOL, "station_symbol"),
+    (IDs.CTL_STA_SIZE, "station_size"),
+    (IDs.CTL_STA_COLOR, "station_color"),
+    (IDs.CTL_STA_MAX, "station_max"),
+    (IDs.CTL_STA_LABEL_ANGLE, "station_label_angle"),
+    (IDs.CTL_STA_LABEL_DENSITY, "station_label_density"),
+    (IDs.CTL_STA_LABEL_NAMES, "station_label_names"),
+    (IDs.CTL_LABELS, "labels"),
+    (IDs.CTL_SCALE, "scale"),
+    (IDs.CTL_VMIN, "vmin"),
+    (IDs.CTL_VMAX, "vmax"),
+    (IDs.CTL_CRANGE_PLO, "crange_plo"),
+    (IDs.CTL_CRANGE_PHI, "crange_phi"),
+    (IDs.CTL_RHO_LO, "rho_lo"),
+    (IDs.CTL_RHO_HI, "rho_hi"),
+    (IDs.CTL_RHO_CUTOFF, "rho_cutoff"),
+    (IDs.CTL_CONTOURS, "contours"),
+    (IDs.CTL_NSLICES, "n_slices"),
+    (IDs.CTL_SURFACES, "surface_count"),
+    (IDs.CTL_SPACING, "line_spacing"),
+    (IDs.CTL_AZIMUTH, "azimuth"),
+    (IDs.CTL_X_UNIT, "x_unit"),
+    (IDs.CTL_DEPTH_UNIT, "depth_unit"),
+    (IDs.CTL_SMOOTH, "smooth_sections"),
+    (IDs.CTL_SECTION_RES, "section_res"),
+    (IDs.CTL_VOL_SMOOTH, "volume_smoothing"),
+)
+
+
+def _register_seed_state(app) -> None:
+    """Open on the scene the launcher had (desktop "Open in Map View").
+
+    Runs once, when the seeded survey lands in STORE_DATA: sets the 3-D
+    widgets (so Map View's own control gathering keeps them), the
+    overlays, spin, theme and camera, and switches to the 3-D view by
+    "clicking" its rail button.
+    """
+
+    @app.callback(
+        *[Output(wid, "value", allow_duplicate=True)
+          for wid, _k in _SEED_WIDGETS],
+        Output(IDs.GEO_STORE, "data", allow_duplicate=True),
+        Output(IDs.PCBH_STORE, "data", allow_duplicate=True),
+        Output(IDs.STRUCT_STORE, "data", allow_duplicate=True),
+        Output(IDs.STORE_SPIN, "data", allow_duplicate=True),
+        Output(IDs.STORE_THEME, "data", allow_duplicate=True),
+        Output(IDs.STORE_VIEWPORT, "data", allow_duplicate=True),
+        Output(IDs.RAIL_3D, "n_clicks", allow_duplicate=True),
+        Input(IDs.STORE_DATA, "data"),
+        prevent_initial_call=True,
+    )
+    def apply_seed_state(store):
+        if not store:
+            return seed_state_outputs(None)
+        return seed_state_outputs(take_seed_state())
+
+
+def seed_state_outputs(state: dict | None) -> tuple:
+    """Callback outputs for a seed *state* (``no_update`` where unset):
+    the 3-D widgets, GEO/PCBH/STRUCT stores, spin, theme, viewport and
+    the 3-D rail click."""
+    n = len(_SEED_WIDGETS) + 7
+    if not state:
+        return (no_update,) * n
+    c = state.get("controls") or {}
+    widgets = [c[k] if k in c else no_update for _w, k in _SEED_WIDGETS]
+    camera = state.get("camera")
+    return (
+        *widgets,
+        state.get("geo") or no_update,
+        state.get("pcbh") or no_update,
+        state.get("struct") or no_update,
+        bool(state.get("spin", False)),
+        state.get("theme") or no_update,
+        {"map3d": {"camera": camera}} if camera else no_update,
+        1 if state.get("view") == "map3d" else no_update,
+    )
 
 
 def _register_theme(app) -> None:

@@ -88,7 +88,11 @@ class ResistivityFile:
     bounds_transform : str
         Bounds transform type (``"bandpass"``).
     global_bounds : numpy.ndarray, shape (2,)
-        Lower and upper log10-resistivity bounds.
+        Lower and upper resistivity bounds in **linear** ohm-m (MARE2DEM
+        takes their log10 itself; its demos use ``0.1, 100000``).
+        Writing log10 values here (e.g. ``-2, 5``) gives a negative lower
+        bound, the bandpass transform stops bounding, and trial models
+        run away (log10 rho ~ 70) until the forward solver segfaults.
     roughness_penalty_method : str
         Smoothing type (``"gradient"`` or ``"first_difference"``).
     yz_penalty_weights : numpy.ndarray, shape (2,)
@@ -149,7 +153,7 @@ class ResistivityFile:
 
     bounds_transform: str = "bandpass"
     global_bounds: np.ndarray = field(
-        default_factory=lambda: np.array([-2.0, 5.0], dtype=float)
+        default_factory=lambda: np.array([0.1, 1e5], dtype=float)
     )
     roughness_penalty_method: str = "gradient"
     yz_penalty_weights: np.ndarray = field(
@@ -487,7 +491,7 @@ def write_resistivity(
     bounds_str = (
         f"{rf.global_bounds[0]:.10g}, {rf.global_bounds[1]:.10g}"
         if rf.global_bounds is not None and len(rf.global_bounds) >= 2
-        else "-2, 5"
+        else "0.1, 100000"
     )
     weights_str = (
         f"{rf.yz_penalty_weights[0]:.10g}, {rf.yz_penalty_weights[1]:.10g}"

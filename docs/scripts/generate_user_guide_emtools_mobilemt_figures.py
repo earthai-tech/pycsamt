@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the figures for the emtools mobilemt guide.
 
 Reads the two synthetic MobileMT sample surveys committed under

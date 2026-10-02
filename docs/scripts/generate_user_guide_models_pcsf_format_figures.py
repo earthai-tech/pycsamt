@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the Occam2D PCSF section figure for the models user guide.
 
 Run from the repository root::

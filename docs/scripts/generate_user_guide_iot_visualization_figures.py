@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the executed figures for user_guide/iot/visualization.rst."""
 
 from __future__ import annotations

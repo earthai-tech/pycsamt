@@ -119,7 +119,7 @@ International*, 207(1), 571–588. doi:10.1093/gji/ggw290.
 """
 
 # ---- configuration ----
-from .builder import InputBuilder
+from .builder import InputBuilder, build_mt_inputs, mt_core_grid
 from .config import Mare2DEMConfig
 
 # ---- compatibility wrappers (original stub API) ----
@@ -363,6 +363,8 @@ __all__ = [
     "merge_emdata",
     # grid to MARE2DEM
     "grid_to_mare2dem",
+    "build_mt_inputs",
+    "mt_core_grid",
     # topo import
     "TopoConfig",
     "TopoProfile",

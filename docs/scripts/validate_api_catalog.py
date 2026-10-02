@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Validate that every public API catalogue entry has a Sphinx target.
 
 Run this after an HTML documentation build::
@@ -23,7 +26,6 @@ from sphinx.util.inventory import InventoryFile
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-os.environ.setdefault("PYCSAMT_DOCS_BUILD", "1")
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 API_INDEX = REPO_ROOT / "docs" / "source" / "api" / "index.rst"
@@ -124,4 +126,9 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # Quiets the INFO-level console logging that importing every cataloged
+    # package would otherwise emit through configure_logging(); scoped to
+    # __main__ so importing this module (e.g. from a test) has no process-
+    # global side effect.
+    os.environ.setdefault("PYCSAMT_DOCS_BUILD", "1")
     raise SystemExit(main())

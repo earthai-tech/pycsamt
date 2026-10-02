@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QWidget,
 )
+from pycsamt.app.desktop.widgets.compact_button import compact_button
 
 
 class CategoryComboBar(QWidget):
@@ -87,13 +88,13 @@ class CategoryComboBar(QWidget):
         bar.addWidget(self._combo_item, 3)
 
         self._btn_refresh = QPushButton("↻")
-        self._btn_refresh.setFixedWidth(28)
+        compact_button(self._btn_refresh)
         self._btn_refresh.setToolTip("Refresh plot")
         self._btn_refresh.clicked.connect(self.refresh_clicked)
         bar.addWidget(self._btn_refresh)
 
         self._btn_export = QPushButton("⬆")
-        self._btn_export.setFixedWidth(28)
+        compact_button(self._btn_export)
         self._btn_export.setToolTip("Export figure…")
         self._btn_export.clicked.connect(self.export_clicked)
         bar.addWidget(self._btn_export)

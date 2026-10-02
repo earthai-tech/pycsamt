@@ -31,6 +31,8 @@ required.
 
 from __future__ import annotations
 
+import warnings
+
 from typing import Any
 
 import numpy as np
@@ -514,18 +516,22 @@ def rho_joint_gradient(
 
     # For depth: use median rho_a of the 4 surrounding corners
     # corners: rho_grid[j, k-1], rho_grid[j, k], rho_grid[j+1, k-1], rho_grid[j+1, k]
-    rho_corners = np.nanmedian(
-        np.stack(
-            [
-                rho_grid[:-1, :-1],  # (j,   k-1)
-                rho_grid[:-1, 1:],  # (j,   k  )
-                rho_grid[1:, :-1],  # (j+1, k-1)
-                rho_grid[1:, 1:],  # (j+1, k  )
-            ],
+    # cells with no station data on any corner are all-NaN: their median
+    # is NaN (masked in the section), not a warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        rho_corners = np.nanmedian(
+            np.stack(
+                [
+                    rho_grid[:-1, :-1],  # (j,   k-1)
+                    rho_grid[:-1, 1:],  # (j,   k  )
+                    rho_grid[1:, :-1],  # (j+1, k-1)
+                    rho_grid[1:, 1:],  # (j+1, k  )
+                ],
+                axis=0,
+            ),
             axis=0,
-        ),
-        axis=0,
-    )  # (N-1, F-1)
+        )  # (N-1, F-1)
 
     rows: list[dict] = []
     for j in range(N - 1):

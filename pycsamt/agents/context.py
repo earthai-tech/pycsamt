@@ -188,10 +188,14 @@ class ContextInputAgent(BaseAgent):
         )
         citations = self._citation_paths(rag)
 
-        config: dict[str, Any] | None = None
+        # Reserve local CPU generation for answers/scripts; the existing
+        # deterministic parser supplies workflow configuration in local mode.
+        config: dict[str, Any] | None = (
+            regex_cfg if self.llm_provider == "ollama" else None
+        )
         llm_raw: str | None = None
 
-        if self.api_key:
+        if self.llm_available and self.llm_provider != "ollama":
             llm_input = request
             if rag is not None and rag.context_text:
                 llm_input = (
@@ -213,7 +217,7 @@ class ContextInputAgent(BaseAgent):
 
         if config is None:
             config = regex_cfg
-            if not self.api_key:
+            if not self.llm_available:
                 self._log.debug("No API key -- using regex.")
             else:
                 self._log.warning("LLM failed; falling back to regex.")
@@ -228,13 +232,17 @@ class ContextInputAgent(BaseAgent):
         plan = WorkflowPlan.from_config(
             config,
             request=request,
-            provider=(self.llm_provider if self.api_key else "offline"),
+            provider=(self.llm_provider if self.llm_available else "offline"),
             citations=citations,
         )
 
         # ── optional LLM summary ──────────────────────────────────
         interpretation: str | None = None
-        if self.api_key and config.get("data_path"):
+        if (
+            self.llm_available
+            and self.llm_provider != "ollama"
+            and config.get("data_path")
+        ):
             interp_prompt = (
                 "Briefly summarise in 2 sentences what the "
                 "following pycsamt workflow configuration "
@@ -292,6 +300,8 @@ def _regex_extract(text: str) -> dict[str, Any]:
         # keyword immediately followed by an absolute/home path
         r"(?:load(?:ing)?|read(?:ing)?|from|on|in|at|path[:\s]+)"
         r'\s+["\']?([/~][\w/\\\-\.]+)["\']?',
+        # An explicit input verb may introduce a relative or drive path.
+        r'(?:load(?:ing)?|read(?:ing)?|from|on|for)\s+["\']?((?:[A-Za-z]:)?[\w.~-]+[/\\][\w/\\.~-]+)["\']?',
         # quoted absolute path (any extension)
         r'["\']([/~][\w/\\\-\.]+)["\']',
         # bare absolute path — must NOT be preceded by a
@@ -312,12 +322,24 @@ def _regex_extract(text: str) -> dict[str, Any]:
 
     # ── output directory ──────────────────────────────────────────────────────
     m = re.search(
-        r'(?:save|output|write|report)\s+(?:to\s+)?["\']?([/~\w][\w/\\\-\.]+)["\']?',
+        r'(?:\b(?:save|write|report)\s+to|\boutput(?:\s+(?:directory|dir|folder))?(?:\s+to)?|\b(?:save|write|report)(?=\s+["\']?[/~]))\s+["\']?([/~\w][\w/\\\-\.]+)["\']?',
         text,
         re.IGNORECASE,
     )
     if m:
-        cfg["output_dir"] = os.path.expanduser(m.group(1))
+        candidate = m.group(1).rstrip(".,;)")
+        if candidate.lower() not in {
+            "folder",
+            "directory",
+            "dir",
+            "the",
+            "a",
+            "an",
+            "table",
+            "figure",
+            "plot",
+        }:
+            cfg["output_dir"] = os.path.expanduser(candidate)
 
     # ── workflow ──────────────────────────────────────────────────────────
     # Single source of truth for the keyword table lives in

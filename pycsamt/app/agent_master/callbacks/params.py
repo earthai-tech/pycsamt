@@ -2785,6 +2785,7 @@ def register_params(app) -> None:
                 _edi_use,
                 settings or {},
                 new_ic,
+                list(stored_msgs or []),
             ),
             daemon=True,
         ).start()

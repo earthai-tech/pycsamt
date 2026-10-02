@@ -205,8 +205,7 @@ def _splash() -> html.Div:
                         n_clicks=0,
                     ),
                     html.P(
-                        "Load an EDI/XML-TF folder or type a "
-                        "request to begin",
+                        "Load an EDI/XML-TF folder or type a request to begin",
                         className="wlc-hint",
                     ),
                 ],
@@ -501,6 +500,8 @@ def _chat_welcome() -> html.Div:
                 "Load an EDI or XML-TF dataset and describe "
                 "your workflow in natural language."
             ),
+            # filled when the desktop hands over its survey
+            html.Div(id=IDs.WELCOME_NOTE),
             html.Div(
                 chips,
                 className="am-prompt-chips",
@@ -714,9 +715,7 @@ def _edi_canvas() -> dbc.Offcanvas:
                 children=html.Div(
                     [
                         html.I(className=("bi bi-file-earmark-plus me-2")),
-                        html.Span(
-                            "Drop EDI or XML-TF files or click to pick"
-                        ),
+                        html.Span("Drop EDI or XML-TF files or click to pick"),
                     ]
                 ),
                 className="am-upload-zone mb-2",
@@ -906,6 +905,92 @@ def _settings_canvas() -> dbc.Offcanvas:
             ),
             provider_panel,
             offline_note,
+            html.Div(
+                [
+                    html.P(
+                        "Generate answers on this computer. No API key or cloud fallback. Local compute uses your hardware.",
+                        className="small",
+                    )
+                ]
+                + [
+                    html.Div(
+                        [
+                            dbc.Label(label, className="small mb-1"),
+                            dbc.Input(
+                                id=ident,
+                                value=value,
+                                type=kind,
+                                size="sm",
+                                **limits,
+                            ),
+                        ],
+                        className="mb-2",
+                    )
+                    for label, ident, value, kind, limits in [
+                        (
+                            "Ollama endpoint",
+                            IDs.LOCAL_ENDPOINT,
+                            "http://127.0.0.1:11434",
+                            "text",
+                            {},
+                        ),
+                        (
+                            "Installed model name",
+                            IDs.LOCAL_MODEL,
+                            "qwen2.5-coder:1.5b",
+                            "text",
+                            {},
+                        ),
+                        (
+                            "Request time limit (seconds)",
+                            IDs.LOCAL_TIMEOUT,
+                            60,
+                            "number",
+                            {"min": 1, "max": 600},
+                        ),
+                        (
+                            "Context window (tokens)",
+                            IDs.LOCAL_CONTEXT,
+                            8192,
+                            "number",
+                            {"min": 512, "max": 131072, "step": 1},
+                        ),
+                        (
+                            "Maximum output tokens per call",
+                            IDs.LOCAL_OUTPUT,
+                            1024,
+                            "number",
+                            {"min": 1, "max": 16384, "step": 1},
+                        ),
+                        (
+                            "Temperature",
+                            IDs.LOCAL_TEMPERATURE,
+                            0.2,
+                            "number",
+                            {"min": 0, "max": 2, "step": 0.1},
+                        ),
+                        (
+                            "Maximum model calls per request",
+                            IDs.LOCAL_CALLS,
+                            4,
+                            "number",
+                            {"min": 1, "max": 20, "step": 1},
+                        ),
+                    ]
+                ]
+                + [
+                    dbc.Button(
+                        "Check connection and model",
+                        id=IDs.LOCAL_CHECK,
+                        n_clicks=0,
+                        size="sm",
+                        className="mb-2",
+                    ),
+                    html.Div(id=IDs.LOCAL_STATUS, className="small"),
+                ],
+                id=IDs.LOCAL_PANEL,
+                style={"display": "none"},
+            ),
             html.Div(
                 id=IDs.KEYS_STATUS,
                 style={
@@ -1921,6 +2006,7 @@ def create_layout() -> html.Div:
             # ── data stores ────────────────────────
             dcc.Store(id=IDs.STORE_MESSAGES, data=[]),
             dcc.Store(id=IDs.STORE_EDI, data={}),
+            dcc.Location(id=IDs.URL, refresh=False),
             dcc.Store(id=IDs.STORE_SESSION, data={}),
             dcc.Store(
                 id=IDs.STORE_SETTINGS,

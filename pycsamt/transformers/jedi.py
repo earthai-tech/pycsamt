@@ -176,12 +176,20 @@ class AVGtoEDI(TransformerMixin):
             return b
         f = np.asarray(b.freq, float)
         wmu = 2.0 * float(np.pi) * self.MU0 * f
-        amp = np.sqrt(np.asarray(b.rho) * wmu)
+        rho = np.asarray(b.rho, float)
+        # ``rho``/``phase`` are usually full (n, 2, 2) tensors (as
+        # produced by AVG.to_tensor(var="rho")), matching what the
+        # rest of this module assumes everywhere else — but a flat
+        # per-frequency (n,) apparent resistivity is also accepted.
+        # Reshape wmu's trailing axes so it broadcasts against either.
+        extra = rho.ndim - wmu.ndim
+        wmu_b = wmu.reshape(wmu.shape + (1,) * extra) if extra > 0 else wmu
+        amp = np.sqrt(rho * wmu_b)
         # assume milliradians → radians
         phi = np.asarray(b.phase, float) / 1000.0
         c = np.cos(phi)
         s = np.sin(phi)
-        z = amp[..., None, None] * (c + 1j * s)
+        z = amp * (c + 1j * s)
         b.z = z  # type: ignore[assignment]
         return b
 
@@ -1210,11 +1218,15 @@ class JtoEDI(TransformerMixin):
             if info is not None and getattr(info, "info", None):
                 _info = edi_obj.get_section("info")
                 # keep it small and predictable; don’t overwrite
-                _info.setdefault(
-                    "PROCESSEDBY",
-                    f"pyCSAMT v{get_config().version}",
-                )
-                _info.setdefault("SIGNCONVENTION", "EXP(+I Ω T)")
+                # (Info is attribute-based, not dict-like: it has no
+                # .setdefault, so route through update() and only set
+                # when the nested value is still unset.)
+                if not getattr(_info.Processing, "processedby", None):
+                    _info.update(
+                        processedby=f"pyCSAMT v{get_config().version}",
+                    )
+                if not getattr(_info.Processing, "signconvention", None):
+                    _info.update(signconvention="EXP(+I Ω T)")
         except Exception:
             pass
 

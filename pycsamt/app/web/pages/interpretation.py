@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from pycsamt.api.colormaps import colormap_choices
+
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
@@ -47,18 +49,7 @@ def _plot_opts(cat: str) -> list:
 _FIRST_CAT = _CAT_BY_SLUG[_DEFAULT_CAT_SLUG]
 _FIRST_OPTS = _plot_opts(_FIRST_CAT)
 
-_CMAPS = [
-    "viridis",
-    "plasma",
-    "inferno",
-    "magma",
-    "RdBu_r",
-    "seismic",
-    "coolwarm",
-    "jet",
-    "hot",
-    "gray",
-]
+_CMAPS = colormap_choices(first=("viridis",)) + ["gray"]
 _FIGSIZE_OPTS = [
     {"label": "Auto", "value": "auto"},
     {"label": "Wide", "value": "wide"},

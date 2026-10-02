@@ -216,6 +216,7 @@ def register_line_sel(app) -> None:
                 _edi_use,
                 settings or {},
                 _inv_clean,
+                new_stored,
             ),
             daemon=True,
         ).start()

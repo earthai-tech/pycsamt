@@ -116,15 +116,49 @@ unreliable output.
 Quality Control
 ---------------
 
-Open **QC Dashboard** from the main toolbar after loading EDI data.  The left
-panel selects the diagnostic family and plot; the right panel renders one
-focused matplotlib view at a time.  Use it as a decision window, not just as a
-figure viewer.
+Open the **QC Studio** (toolbar **QC**, ``Ctrl+Q``) after loading data.  It
+has three tabs:
 
-The dashboard groups diagnostics into overview, coverage, noise/SNR,
-skew/dimensionality, static shift, and distortion/source-effect checks.  Start
-with coverage and SNR because missing frequencies or unstable stations can
-mislead later static-shift and strike interpretation.
+* **Plot** -- one diagnostic at a time, chosen from the list on the left.
+  The diagnostics are grouped as Confidence, Coverage, Noise / SNR,
+  Dimensionality & skew, Static shift, Distortion & source, and Strike, and
+  the filter box above the list finds one by name.
+* **Summary** -- one row per station: confidence ratio, composite score,
+  coverage, median SNR, median |skew|, flags, and a **pass / warn / fail**
+  status.  The status follows the confidence ratio (the share of frequencies
+  with a valid tensor) against the *safe* and *recoverable* thresholds, plus
+  the low-SNR and high-skew flags; the thresholds are editable above the
+  table.  Sort by any column, show only failing stations, export to CSV, and
+  double-click a station to open its confidence dashboard.
+* **Quick-look** -- the multi-panel survey overview.
+
+**Scope.**  Profiles and pseudo-sections assume one survey line.  When the
+active survey holds several lines, pick one in **Line**, or keep *All lines*
+and choose **One panel per line** (a grid of per-line panels) or **All lines
+together** (the confidence profile then colours each line).  Line names come
+from the station table's *Line* column.  Single-station diagnostics (station
+dashboard, consistency fan, static-shift radar …) add a **Station** picker.
+
+**Options.**  Each diagnostic shows its own parameters: **Analysis** for the
+computation, **Plot view** for the display.  Fixed choices are drop-downs,
+colour maps come from the shared list (``jet_r``, ``jet``, ``RdYlBu_r`` …),
+pairs and lists such as *Y limits* or *Period band* are comma-separated, and
+a blank optional field keeps the function's own default.  Colours, number
+formats and line styles fold away under **More settings**.
+
+For static-shift QC, choose **AMA**, **LOESS**, **Bilateral**, or
+**Reference median** from the Method dropdown. Controls change with the
+method: neighbourhood and weighting options for AMA, polynomial degree and
+robust iterations for LOESS, bandwidths for Bilateral, and a station smoothing
+window for Reference median. Blank Bilateral bandwidths use the automatic
+defaults. Each method retains its parameter values when you switch away and
+back; only the selected method's controls are sent to the estimator.
+
+Start with the Summary and with coverage and SNR, because missing frequencies
+or unstable stations can mislead later static-shift and strike
+interpretation.  Source-overprint and field-zone diagnostics need the
+source–receiver offset: enter **Source offset** when the EDI metadata lacks
+it.
 
 The QC pass answers this question: "Is the survey complete and stable enough
 to correct or model?"  It is deliberately upstream of corrections.  If a
@@ -243,9 +277,27 @@ steps live in a correction stack until they are committed.
 
 The main correction families are static shift, noise removal, source effects,
 tensor rotation, coordinates, and Stratagem workflows.  For impedance data,
-use **Preview** first, then **Apply** to add the result to the stack.  Use
-**Before / After**, **Overlay**, **Diff**, and **2D Section** views to compare
-the effect before committing.
+use **Preview** first, then **Apply** to add the result to the stack.
+
+The view toolbar makes two independent choices, so every correction can be
+judged the same way:
+
+* **Compare** decides *how* the raw and corrected states are contrasted:
+  **Before / After** (side by side on one shared scale), **Overlay** (both on
+  one plot: before dashed or grey, or drawn as contour lines over a
+  pseudosection), or **Diff** (what the correction changed: the resistivity
+  factor ρ_after/ρ_before and the phase change Δφ).
+* **Display** decides *what* is drawn: **Curves (1-D)** or
+  **Pseudosection (2-D)** for every impedance correction, plus **Strike rose**
+  for tensor rotation and **Position map** / **Elevation profile** for
+  coordinate corrections.
+
+For impedance views, **Quantity** shows ρ_a and φ together by default, because
+a correction that alters phase is only visible in φ.  **Comp.** selects XY,
+YX, or both, and **Station** limits the curves to one sounding (in a
+pseudosection it outlines that station's column).  When a view cannot be drawn,
+for example Diff before any correction has been previewed, the panel states the
+reason instead of showing empty axes.
 
 Corrections are intentionally staged.  **Preview** lets you see the result
 without changing the stack.  **Apply** records one correction step in the local
@@ -276,9 +328,18 @@ Read the static-shift figure in four passes:
    geological contrasts.
 3. Switch to **Overlay** or **Diff** when the change is subtle.  Overlay shows
    shape preservation; Diff shows whether a correction is concentrated where
-   you expected.
-4. Use **2D Section** for static shift because pseudosections reveal whether
-   the corrected profile is more coherent along the line.
+   you expected.  A clean static-shift correction shows a flat resistivity
+   factor per station and Δφ = 0 everywhere, labelled "unchanged by this
+   correction".  Any phase change means the method did more than remove a
+   galvanic shift.
+4. Keep **Display** on **Pseudosection (2-D)**, the default for static shift,
+   because pseudosections reveal whether the corrected profile is more coherent
+   along the line.  Pick a **Station** to outline it, and switch to
+   **Curves (1-D)** to inspect that sounding in detail.
+
+Names typed into **Affected Stations** restrict the correction to those
+stations; every other station keeps its input impedance.  Leave the box empty
+to correct the whole profile.
 
 Commit this correction only when the factor is finite, positive, and supported
 by QC/static-shift diagnostics.  If a strongly 3-D area causes the method to

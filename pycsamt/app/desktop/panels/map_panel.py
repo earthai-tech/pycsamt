@@ -38,6 +38,7 @@ from __future__ import annotations
 import importlib
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -51,7 +52,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 
 # ── optional deps ─────────────────────────────────────────────────────────────
 
@@ -329,6 +330,14 @@ class MapPanel(QWidget):
             columns=["ID", "Latitude", "Longitude"]
         )
         self._sites = None
+        # Inversion model loaded from a .pcsf/.pcsm file (MapView), and
+        # whether its stations are plotted in local metres (no lat/lon).
+        self._pcsf_view = None
+        self._pcsf_name = ""
+        self._pcsf_local = False
+        self._pcsf_kind = ""
+        self._pcsf_model = None  # PCSFModel, for 3-D depth slices
+        self._show_model_slice = True
         self._selected_id: str | None = None
         self._scatter = None
         self._annots: dict = {}
@@ -349,8 +358,16 @@ class MapPanel(QWidget):
         bar.addStretch()
         layout.addLayout(bar)
 
-        self._canvas = MplCanvas(self, toolbar=True)
-        layout.addWidget(self._canvas)
+        self._canvas_view = CanvasResultView(
+            self, toolbar=True,
+            empty_title="No stations loaded",
+            empty_reason="Load survey data to plot station locations on the map.",
+        )
+        self._canvas = self._canvas_view.canvas
+        self._canvas.set_refresh_callback(
+            lambda: self.redraw(), tooltip="Refresh map"
+        )
+        layout.addWidget(self._canvas_view)
 
         # Hover-reveal pop-out button — floats over the top-right corner.
         # Keep a reference on self: PySide6 only owns the button on the C++
@@ -373,8 +390,118 @@ class MapPanel(QWidget):
         self._selected_id = None
         self._draw_map()
 
+    def load_pcsf(self, path: str, *, fetch_elevation: bool = False) -> None:
+        """Load a ``.pcsf``/``.pcsm`` inversion model for the map.
+
+        The model's per-station resistivity columns (the inversion
+        sections of :meth:`pycsamt.map.MapView.from_pcsf`) drive the
+        *Depth* map (true model resistivity at a depth, instead of the
+        Niblett-Bostick pseudo-depth of EDI/XML data) and the
+        *Resistivity* map (log-mean model resistivity from the surface to
+        that depth -- a model has no impedances, so no apparent
+        resistivity at a frequency).
+
+        Station positions: the file's lon/lat; else names matched against
+        the survey already on the map (e.g. Occam files carry no
+        coordinates); else the file's local x/y in metres.
+        """
+        from pycsamt.map import MapView
+        from pycsamt.map._core import StationRecord
+
+        known = None
+        if not self._df.empty and self._pcsf_view is None:
+            known = [
+                StationRecord(id=str(r.ID), latitude=float(r.Latitude),
+                              longitude=float(r.Longitude))
+                for r in self._df.itertuples()
+                if pd.notna(r.Latitude) and pd.notna(r.Longitude)
+            ]
+        view = MapView.from_pcsf(path, known_stations=known,
+                                 fetch_elevation=fetch_elevation)
+        rows = [(s.id, s.latitude, s.longitude, s.elevation)
+                for s in view.data.stations]
+        local = not any(la is not None and lo is not None
+                        for _i, la, lo, _e in rows)
+        if local:
+            xy = _pcsf_local_xy(path)
+            rows = [(i, xy.get(i, (np.nan, np.nan))[1],
+                     xy.get(i, (np.nan, np.nan))[0], e)
+                    for i, _la, _lo, e in rows]
+        self._sites = None
+        self._pcsf_view = view
+        self._pcsf_name = Path(str(path)).name
+        self._pcsf_local = local
+        try:
+            from pycsamt.format import detect_source
+
+            self._pcsf_kind = detect_source(path).geometry or ""
+        except Exception:
+            self._pcsf_kind = ""
+        self._pcsf_model = None
+        if self._pcsf_kind == "grid3d":
+            try:
+                from pycsamt.format.text import read_pcsf_or_pcsm
+
+                self._pcsf_model = read_pcsf_or_pcsm(path)
+            except Exception:
+                self._pcsf_model = None
+        self.set_dataframe(pd.DataFrame(
+            rows, columns=["ID", "Latitude", "Longitude", "Elevation"]))
+
+    def set_show_model_slice(self, on: bool) -> None:
+        """Draw the 3-D model's depth slice under the stations."""
+        self._show_model_slice = bool(on)
+        self._draw_map()
+
+    def clear_pcsf(self) -> None:
+        self._pcsf_model = None
+        self._pcsf_kind = ""
+        self._pcsf_view = None
+        self._pcsf_name = ""
+        self._pcsf_local = False
+
+    @property
+    def has_model(self) -> bool:
+        """A PCSF/PCSM inversion model drives the Depth/Resistivity maps."""
+        return self._pcsf_view is not None
+
+    def model_depth_range(self) -> tuple[float, float] | None:
+        if self._pcsf_view is None:
+            return None
+        from pycsamt.map._core import inversion_depth_range
+
+        return inversion_depth_range(self._pcsf_view.data)
+
+    def _model_rho_at_depth(self, depth: float) -> dict:
+        from pycsamt.map._core import resistivity_at_depth
+
+        return resistivity_at_depth(self._pcsf_view.data, depth)
+
+    def _model_rho_average(self, depth: float) -> dict:
+        """Log-mean model resistivity from the surface to *depth*."""
+        out: dict = {}
+        sections = (self._pcsf_view.data.metadata or {}).get("sections", {})
+        for sec in sections.values():
+            z = np.asarray(sec.get("z", []), float)
+            rho = np.asarray(sec.get("rho", []), float)
+            names = list(sec.get("stations", []))
+            if z.ndim != 1 or rho.ndim != 2 or rho.shape[0] != z.size:
+                continue
+            top = max(float(np.nanmin(z)), 0.0)
+            sel = (z >= top) & (z <= depth)
+            if not sel.any():
+                continue
+            for col, name in enumerate(names[: rho.shape[1]]):
+                v = rho[sel, col]
+                v = v[np.isfinite(v) & (v > 0)]
+                if v.size:
+                    out[str(name)] = float(10 ** np.mean(np.log10(v)))
+        return out
+
     def set_sites(self, sites) -> None:
         self._sites = sites
+        if sites is not None:
+            self.clear_pcsf()
         freqs = self._collect_frequencies()
         if freqs:
             self.freq_list_ready.emit(freqs)
@@ -395,6 +522,10 @@ class MapPanel(QWidget):
         self._annots = {}
         self._canvas.axes.cla()
         self._canvas.draw()
+        self._canvas_view.show_unavailable(
+            "No stations loaded",
+            "Load survey data to plot station locations on the map.",
+        )
 
     def redraw(self, **kwargs) -> None:
         for k, v in kwargs.items():
@@ -488,16 +619,30 @@ class MapPanel(QWidget):
         self._scatter = None
         self._annots = {}
 
-        if self._df.empty:
-            ax.set_title("No stations loaded", fontsize=10, color="gray")
+        if self._map_type in _EMTOOLS_MAPS:
+            # Drawn by pycsamt.emtools from the sites' own coordinates
+            # (no web basemap: tiles would need a Mercator re-projection).
+            self._canvas_view.show_canvas()
+            self._draw_emtools_map(ax, self._map_type)
             self._canvas.draw()
             return
 
+        if self._df.empty:
+            self._canvas_view.show_unavailable(
+                "No stations loaded",
+                "Load survey data to plot station locations on the map.",
+            )
+            self._canvas.draw()
+            return
+
+        self._canvas_view.show_canvas()
+
         # Decide coordinate system up front
-        use_merc = self._provider not in (None, "None", "")
+        use_merc = (self._provider not in (None, "None", "")
+                    and not self._pcsf_local)
         raw_xs = self._df["Longitude"].values  # column name kept for compat
         raw_ys = self._df["Latitude"].values
-        is_geo = _is_geographic(self._source_crs)
+        is_geo = _is_geographic(self._source_crs) and not self._pcsf_local
 
         if use_merc:
             try:
@@ -512,6 +657,7 @@ class MapPanel(QWidget):
         ids = self._df["ID"].values
         mt = self._map_type
 
+
         if mt == "elevation":
             self._draw_typed_map(
                 ax,
@@ -523,6 +669,23 @@ class MapPanel(QWidget):
                 title="Elevation Map",
                 log_scale=False,
             )
+        elif mt in ("depth", "resistivity") and self._pcsf_view is not None:
+            d = self._target_depth_m
+            if mt == "depth":
+                vm = self._model_rho_at_depth(d)
+                label = rf"model $\rho\ (\Omega\cdot m)$ at {d:,.0f} m"
+                title = f"Model resistivity at {d:,.0f} m  ({self._pcsf_name})"
+            else:
+                vm = self._model_rho_average(d)
+                label = (rf"model $\bar\rho\ (\Omega\cdot m)$, "
+                         f"0–{d:,.0f} m")
+                title = (f"Mean model resistivity, surface to {d:,.0f} m  "
+                         f"({self._pcsf_name})")
+            clim = self._draw_model_slice(ax, d, mt, use_merc)
+            self._draw_typed_map(ax, xs, ys, ids, vm, cbar_label=label,
+                                 title=title, log_scale=self._log_scale,
+                                 empty_reason=self._model_empty_reason(d),
+                                 clim=clim)
         elif mt == "depth":
             vm = self._rho_at_depth(self._target_depth_m, self._component)
             self._draw_typed_map(
@@ -625,6 +788,8 @@ class MapPanel(QWidget):
         cbar_label: str,
         title: str,
         log_scale: bool = False,
+        empty_reason: str = "no valid data — check EDI elevation/impedance",
+        clim: tuple[float, float] | None = None,
     ) -> None:
 
         raw = np.array([value_map.get(str(sid), np.nan) for sid in ids], float)
@@ -632,7 +797,7 @@ class MapPanel(QWidget):
 
         if not finite.any():
             ax.set_title(
-                f"{title}\n(no valid data — check EDI elevation/impedance)",
+                f"{title}\n({empty_reason})",
                 fontsize=9,
                 color="gray",
             )
@@ -658,6 +823,8 @@ class MapPanel(QWidget):
             if finite.sum() > 2
             else None
         )
+        if clim is not None:  # shared with a model slice drawn underneath
+            vmin, vmax = clim
 
         self._scatter = ax.scatter(
             xs,
@@ -684,6 +851,117 @@ class MapPanel(QWidget):
 
         ax.set_title(title, fontsize=9)
         self._update_highlight()
+
+    def _draw_model_slice(self, ax, depth: float, mt: str,
+                          use_merc: bool) -> tuple[float, float] | None:
+        """Real 3-D model cells at (or averaged down to) *depth*.
+
+        Returns the colour limits (in the plotted scale) so the station
+        markers use the same colours; ``None`` when nothing was drawn.
+        """
+        if self._pcsf_model is None or not self._show_model_slice:
+            return None
+        from pycsamt.map.model_slice import model_depth_slice
+
+        try:
+            sl = model_depth_slice(self._pcsf_model, depth,
+                                   mode="at" if mt == "depth" else "mean",
+                                   georeference=not self._pcsf_local)
+        except ValueError:
+            return None
+        X, Y = sl.x, sl.y
+        if sl.geo == self._pcsf_local:
+            return None  # frames disagree: do not mis-place the slice
+        if use_merc:
+            try:
+                mx, my = _project_to_merc(X.ravel(), Y.ravel(),
+                                          self._source_crs)
+                X = np.asarray(mx).reshape(X.shape)
+                Y = np.asarray(my).reshape(Y.shape)
+            except Exception:
+                return None
+        vals = np.log10(sl.rho) if self._log_scale else sl.rho
+        finite = vals[np.isfinite(vals)]
+        if not finite.size:
+            return None
+        vmin, vmax = (float(np.percentile(finite, 2)),
+                      float(np.percentile(finite, 98)))
+        ax.pcolormesh(X, Y, np.ma.masked_invalid(vals), cmap=self._cmap_name,
+                      vmin=vmin, vmax=vmax, shading="flat", alpha=0.85,
+                      zorder=1, rasterized=True, edgecolors="face",
+                      linewidth=0, antialiased=False)
+        return vmin, vmax
+
+    def _draw_emtools_map(self, ax, mt: str) -> None:
+        """Phase-tensor / induction / strike / dimensionality / confidence
+        maps from the loaded EDI/XML sites (library plots)."""
+        if self._sites is None:
+            why = ("a PCSF/PCSM file is a model: it has no transfer "
+                   "functions" if self._pcsf_view is not None
+                   else "load EDI or EMTF-XML data first")
+            ax.set_axis_off()
+            ax.text(0.5, 0.5, f"{_EMTOOLS_MAPS[mt][0]} map needs impedance "
+                    f"data —\n{why}.", ha="center", va="center",
+                    fontsize=10, color="gray", transform=ax.transAxes)
+            return
+        import importlib
+
+        label, mod, fn, uses_period = _EMTOOLS_MAPS[mt]
+        func = getattr(importlib.import_module(mod), fn)
+        kw = {"ax": ax}
+        f = self._nearest_survey_freq()
+        if uses_period:
+            kw["period"] = 1.0 / f
+        if mt == "strike":
+            # Stick length ~4 % of the survey extent (the 0.02 deg default
+            # is invisible on a regional survey).
+            ext = self._survey_extent_deg()
+            if ext:
+                kw["len_deg"] = 0.04 * ext
+        try:
+            func(self._sites, **kw)
+        except Exception as exc:
+            ax.cla()
+            ax.set_axis_off()
+            ax.text(0.5, 0.5, f"{label} map could not be drawn:\n"
+                    f"{type(exc).__name__}: {exc}", ha="center",
+                    va="center", fontsize=9, color="gray", wrap=True,
+                    transform=ax.transAxes)
+            return
+        if not uses_period and not ax.get_title():
+            ax.set_title(f"{label} map", fontsize=9)
+        if uses_period:
+            ax.set_title(f"{label}  —  T = {1.0 / f:.4g} s "
+                         f"({f:.4g} Hz)", fontsize=9)
+
+    def _nearest_survey_freq(self) -> float:
+        """The survey frequency closest (in log) to the requested one."""
+        f = self._target_freq_hz if self._target_freq_hz > 0 else 1.0
+        freqs = np.asarray(self._collect_frequencies(), float)
+        if freqs.size:
+            f = float(freqs[np.argmin(np.abs(np.log10(freqs / f)))])
+        return f
+
+    def _survey_extent_deg(self) -> float | None:
+        lats, lons = [], []
+        for site in self._sites or []:
+            try:
+                la, lo = (float(v) for v in site.coords[:2])
+            except Exception:
+                continue
+            if np.isfinite(la) and np.isfinite(lo):
+                lats.append(la)
+                lons.append(lo)
+        if len(lats) < 2:
+            return None
+        return float(max(np.ptp(lats), np.ptp(lons))) or None
+
+    def _model_empty_reason(self, depth: float) -> str:
+        rng = self.model_depth_range()
+        if rng is None:
+            return "the model has no depth samples"
+        return (f"{depth:,.0f} m is outside the model "
+                f"({rng[0]:,.0f}–{rng[1]:,.0f} m)")
 
     # ── colourbar — always an inset (never resizes the map) ──────────────────
 
@@ -805,7 +1083,9 @@ class MapPanel(QWidget):
     # ── overlays ──────────────────────────────────────────────────────────────
 
     def _add_profile_lines(self, ax, xs: np.ndarray, ys: np.ndarray) -> None:
-        if len(xs) < 2:
+        if len(xs) < 2 or self._pcsf_kind == "grid3d":
+            # A 3-D model lists every station in one "line": joining them
+            # draws a meaningless web across the survey.
             return
         lc = "#bbbbbb" if self._dark else "#555555"
         ax.plot(xs, ys, "-", color=lc, linewidth=0.9, alpha=0.5, zorder=2)
@@ -922,8 +1202,8 @@ class MapPanel(QWidget):
     def _style_axes(
         self, ax, is_geo: bool = True, use_merc: bool = False
     ) -> None:
-        bg = "#181825" if self._dark else "#eff1f5"
-        fbg = "#1e1e2e" if self._dark else "#e6e9ef"
+        bg = "#181825" if self._dark else "#ffffff"
+        fbg = "#1e1e2e" if self._dark else "#ffffff"
         tc = "white" if self._dark else "#222222"
 
         ax.set_facecolor(bg)
@@ -936,6 +1216,9 @@ class MapPanel(QWidget):
         elif is_geo:
             ax.set_xlabel("Longitude", fontsize=9, color=tc)
             ax.set_ylabel("Latitude", fontsize=9, color=tc)
+        elif self._pcsf_local:
+            ax.set_xlabel("x (m, model frame)", fontsize=9, color=tc)
+            ax.set_ylabel("y (m, model frame)", fontsize=9, color=tc)
         else:
             ax.set_xlabel(
                 f"Easting (m)  [{self._source_crs}]", fontsize=8, color=tc
@@ -985,3 +1268,33 @@ class MapPanel(QWidget):
     def _on_click(self, event) -> None:
         if event.inaxes is None:
             return
+
+
+# map type -> (label, module, function, takes a period)
+_EMTOOLS_MAPS = {
+    "phase tensor": ("Phase-tensor", "pycsamt.emtools.tensor",
+                     "plot_phase_tensor_map", True),
+    "induction arrows": ("Induction-arrow", "pycsamt.emtools.tf",
+                         "plot_induction_map", True),
+    "strike": ("Geoelectric strike", "pycsamt.emtools.strike",
+               "plot_strike_mapsticks", False),
+    "dimensionality": ("Dimensionality", "pycsamt.emtools.dimensionality",
+                       "plot_dim_map", True),
+    "confidence": ("Data-confidence", "pycsamt.emtools.qc",
+                   "plot_confidence_map", False),
+}
+
+
+def _pcsf_local_xy(path) -> dict:
+    """{station: (x, y)} in metres from a PCSF/PCSM station table."""
+    try:
+        from pycsamt.format.text import read_pcsf_or_pcsm
+
+        st = read_pcsf_or_pcsm(path).stations
+        names = [str(n) for n in st.name]
+        x = np.asarray(st.x, float)
+        y = (np.asarray(st.y, float) if st.y is not None
+             else np.zeros_like(x))
+    except Exception:
+        return {}
+    return {n: (float(a), float(b)) for n, a, b in zip(names, x, y)}

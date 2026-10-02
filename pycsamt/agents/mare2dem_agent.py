@@ -531,7 +531,7 @@ class Mare2DEMAgent(BaseAgent):
 
         # ── LLM interpretation ─────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             prompt = (
                 f"MARE2DEM 2.5-D EM inversion summary:\n"
                 f"  Mode: {mode}, output dir: {output_dir}\n"
@@ -643,7 +643,7 @@ class Mare2DEMAgent(BaseAgent):
 
         # LLM interpretation
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             prompt = (
                 f"MARE2DEM inversion result report:\n"
                 f"  Run directory: {output_dir}\n"

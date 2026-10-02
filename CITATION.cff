@@ -10,7 +10,7 @@ authors:
     given-names: Kouao Laurent
     orcid: "https://orcid.org/0000-0001-7259-7254"
     email: etanoyau@gmail.com
-version: 2.6.3
+version: 2.6.4
 date-released: 2026-09-15
 url: "https://pycsamt.org"
 repository-code: "https://github.com/earthai-tech/pycsamt"

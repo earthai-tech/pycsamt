@@ -196,7 +196,7 @@ ensure_sites(source) — universal EDI loader
 Accepts: a Sites object, a directory path (str/Path),
          a list of EDI file paths, or an EDICollection.
 Returns: Sites object.
-Import:  from pycsamt.ai.inversion._sites_bridge import ensure_sites
+Import:  from pycsamt.emtools._core import ensure_sites
 Use case: any agent or function that needs to accept
           flexible EDI input without caring about the format.
 """
@@ -301,7 +301,7 @@ col   = EDICollection("/data/L22PLT")
 sites = col.to_sites()     # -> Sites object
 
 # 5. Universal loader (accepts dir, list, or Sites)
-from pycsamt.ai.inversion._sites_bridge import ensure_sites
+from pycsamt.emtools._core import ensure_sites
 sites = ensure_sites("/data/L22PLT")     # dir
 sites = ensure_sites(["a.edi", "b.edi"]) # list
 
@@ -343,7 +343,12 @@ def _build_tier_core() -> str:
         " processing, correction, and AI-assisted"
         " inversion. Agents are self-contained"
         " workflow components; Sites is the main"
-        " data container for loaded EDI data.\n\n" + _WORKFLOW_TABLE
+        " data container for loaded EDI data.\n\n"
+        + _WORKFLOW_TABLE
+        + "\n\n"
+        + _ENSURE_SITES_NOTE
+        + '\nExample: sites = ensure_sites("/path/to/EDIs", recursive=True)\n'
+        + "The return value is Sites directly, not a dictionary containing 'sites'.\n"
     )
 
 

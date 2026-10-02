@@ -123,7 +123,12 @@ class ModEMBackend(BaseInversionBackend):
         if builder_cls is not None and source is not None:
             try:
                 builder = builder_cls(config=modem_cfg)
-                build_options = _build_options(cfg.backend_options)
+                build_options = _build_options(
+                    cfg.backend_options,
+                    modem_fields=getattr(
+                        type(modem_cfg), "__dataclass_fields__", {}
+                    ),
+                )
                 files = builder.build(source, workdir=workdir, **build_options)
                 native = builder
                 file_map = {key: str(value) for key, value in files.items()}
@@ -267,16 +272,28 @@ def _modem_config(modem: Any, cfg: Any) -> Any:
     return raw
 
 
-def _build_options(options: dict[str, Any]) -> dict[str, Any]:
+def _build_options(
+    options: dict[str, Any], modem_fields: Any = None
+) -> dict[str, Any]:
+    """Filter ``backend_options`` down to genuine ``InputBuilder.build`` kwargs.
+
+    Any key that is itself a :class:`~pycsamt.models.modem.ModEmConfig`
+    dataclass field (e.g. ``nz``, ``target_rms``, ``use_mpi``) is treated as
+    configuration already consumed by :func:`_modem_config` and must not be
+    forwarded to ``builder.build(**build_options)``, which only accepts
+    filename-related keywords -- forwarding it raises a ``TypeError`` that
+    previously surfaced as a misleading "ModEM preparation failed" warning.
+    """
     excluded = {"config", "runner", "files"}
-    modem_fields = {
-        "mode",
-        "binary_2d",
-        "binary_3d",
-        "use_mpi",
-        "n_procs",
-        "mpi_command",
-    }
+    if modem_fields is None:
+        modem_fields = {
+            "mode",
+            "binary_2d",
+            "binary_3d",
+            "use_mpi",
+            "n_procs",
+            "mpi_command",
+        }
     return {
         key: value
         for key, value in options.items()

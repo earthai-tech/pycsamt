@@ -218,7 +218,7 @@ class DenoisingAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             prompt = (
                 f"Denoising summary (method: {method}):\n"
                 f"  Mean SNR gain: {snr_gain:+.2f}\n"

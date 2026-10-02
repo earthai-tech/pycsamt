@@ -4332,6 +4332,7 @@ def plot_confidence_profile(
     weights: dict[str, float] | None = None,
     spacing_m: float = 200.0,
     force_spacing: bool = False,
+    lines: dict[str, str] | None = None,
     figsize: tuple[float, float] = (9.0, 4.0),
     recursive: bool = True,
     on_dup: str = "replace",
@@ -4403,6 +4404,13 @@ def plot_confidence_profile(
         station out at uniform ``spacing_m`` steps -- e.g. when the
         available coordinates are known to be unreliable and a
         user-supplied spacing should be trusted instead.
+    lines : dict or None
+        ``{station: line}`` for a survey of several profiles.  Each line
+        gets its own distance axis (from its first station) and its own
+        coloured connector; without it every station is projected onto
+        one first-to-last bearing, which for several parallel lines
+        stacks unrelated stations on top of each other.  The top station
+        axis is drawn only for a single line.
     figsize : tuple
         Figure size when a new figure is created.
     recursive, on_dup, strict, verbose
@@ -4421,17 +4429,38 @@ def plot_confidence_profile(
         msg = "shade_mode must be 'score', 'full', or 'none'."
         raise ValueError(msg)
 
-    tb = station_confidence_table(
-        sites,
+    table_kw = dict(
         method=method,
         weights=weights,
         spacing_m=spacing_m,
         force_spacing=force_spacing,
-        recursive=recursive,
         on_dup=on_dup,
         strict=strict,
         verbose=verbose,
+        api=False,
     )
+    if lines:
+        S = ensure_sites(
+            sites, recursive=recursive, on_dup=on_dup, strict=strict,
+            verbose=verbose,
+        )
+        groups: dict[str, list] = {}
+        for i, ed in enumerate(_iter_items(S)):
+            key = str(lines.get(_name(ed, i), "") or "unassigned")
+            groups.setdefault(key, []).append(ed)
+        parts = []
+        for key, eds in groups.items():
+            part = station_confidence_table(eds, recursive=False, **table_kw)
+            part["line"] = key
+            parts.append(part)
+        tb = (
+            pd.concat(parts, ignore_index=True)
+            if parts
+            else pd.DataFrame(columns=["station", "distance_m", "confidence"])
+        )
+    else:
+        tb = station_confidence_table(sites, recursive=recursive, **table_kw)
+        tb["line"] = ""
     if tb.empty:
         ax.text(0.5, 0.5, "no stations", ha="center", va="center")
         ax.set_xlabel("Distance along profile (m)")
@@ -4445,6 +4474,9 @@ def plot_confidence_profile(
         pd.Series(np.nan, index=tb.index),
     ).to_numpy(dtype=float)
     names = tb["station"].astype(str).tolist()
+    line_of = tb["line"].astype(str).to_numpy()
+    line_names = list(dict.fromkeys(line_of))
+    multi_line = len(line_names) > 1
     colors = np.full(len(tb), "#d62728", dtype=object)
     colors[ys >= ci_lo] = "#ff99c8"
     colors[ys >= ci_hi] = "#20b455"
@@ -4525,8 +4557,21 @@ def plot_confidence_profile(
                     zorder=1,
                 )
 
+    line_handles = []
     if len(xs):
-        ax.plot(xs, ys, color="black", lw=1.5, zorder=2)
+        # connect stations in distance order, one connector per line (the
+        # table order is the file order: joining it zig-zagged)
+        palette = plt.get_cmap("tab10")
+        for k, key in enumerate(line_names):
+            sel = np.flatnonzero(line_of == key)
+            sel = sel[np.argsort(xs[sel], kind="stable")]
+            color = palette(k % 10) if multi_line else "black"
+            ax.plot(xs[sel], ys[sel], color=color, lw=1.3 if multi_line
+                    else 1.5, zorder=2)
+            if multi_line:
+                line_handles.append(
+                    plt.Line2D([], [], color=color, lw=1.6, label=key)
+                )
         if show_errorbars and np.isfinite(yerr).any():
             ax.errorbar(
                 xs,
@@ -4548,31 +4593,6 @@ def plot_confidence_profile(
             edgecolors="black",
             linewidths=1.0,
         )
-    if annotate_low:
-        low_idx = np.flatnonzero(ys < ci_lo)
-        if low_idx.size:
-            if annotate_low_step is None:
-                low_step = (
-                    max(1, int(np.ceil(low_idx.size / 12)))
-                    if low_idx.size > 18
-                    else 1
-                )
-            else:
-                low_step = max(1, int(annotate_low_step))
-            keep = low_idx[::low_step]
-            if low_idx[-1] not in keep:
-                keep = np.r_[keep, low_idx[-1]]
-            for i in keep:
-                ax.text(
-                    xs[i],
-                    max(ys[i] + 0.04, 0.04),
-                    names[i],
-                    ha="center",
-                    va="bottom",
-                    rotation=90,
-                    fontsize=7,
-                )
-
     ax.axhline(
         ci_hi,
         ls="--",
@@ -4611,12 +4631,12 @@ def plot_confidence_profile(
             [],
             marker="o",
             ls="",
-            mfc="#8b0026",
+            mfc="#d62728",
             mec="black",
             label=f"Conf. < {ci_lo:.2f}",
         ),
     ]
-    if station_labels:
+    if station_labels and not multi_line:
         top = ax.secondary_xaxis("top")
         top.set_xticks(xs, minor=True)
         top.tick_params(which="minor", length=3)
@@ -4646,15 +4666,51 @@ def plot_confidence_profile(
     else:
         low = min(0.0, np.nanmin(ys) - 0.05)
         ax.set_ylim(max(-0.03, low), 1.08)
-    ticks = sorted({0.0, ci_lo, ci_hi, 1.0})
+    ylo_, yhi_ = ax.get_ylim()
     ticks = [
-        tick for tick in ticks if ax.get_ylim()[0] <= tick <= ax.get_ylim()[1]
+        tick for tick in sorted({0.0, ci_lo, ci_hi, 1.0})
+        if ylo_ <= tick <= yhi_
     ]
-    if ticks:
-        ax.set_yticks(ticks)
+    # drop a tick that would print on top of its neighbour (1.00 / 0.95 on
+    # a full 0-1 axis); the thresholds win over the round numbers
+    min_gap = 0.06 * (yhi_ - ylo_)
+    kept: list[float] = []
+    for tick in sorted(ticks, key=lambda t: t not in (ci_lo, ci_hi)):
+        if all(abs(tick - other) >= min_gap for other in kept):
+            kept.append(tick)
+    if kept:
+        ax.set_yticks(sorted(kept))
+    if annotate_low:
+        low_idx = np.flatnonzero(ys < ci_lo)
+        if low_idx.size:
+            if annotate_low_step is None:
+                low_step = (
+                    max(1, int(np.ceil(low_idx.size / 12)))
+                    if low_idx.size > 18
+                    else 1
+                )
+            else:
+                low_step = max(1, int(annotate_low_step))
+            keep = low_idx[::low_step]
+            if low_idx[-1] not in keep:
+                keep = np.r_[keep, low_idx[-1]]
+            for i in keep:
+                ytop = ax.get_ylim()[1]
+                ypos = min(max(ys[i] + 0.04, 0.04), ytop - 0.02)
+                ax.text(
+                    xs[i],
+                    ypos,
+                    names[i],
+                    ha="center",
+                    va="bottom" if ypos < ytop - 0.1 else "top",
+                    rotation=90,
+                    fontsize=7,
+                    clip_on=True,
+                )
     ax.set_xlabel("Distance along profile (m)")
     ax.set_ylabel("Confidence ratio")
-    ax.legend(handles=handles, fontsize=8, loc="lower left")
+    ax.legend(handles=handles + line_handles, fontsize=8, loc="lower left",
+              ncol=2 if line_handles else 1)
     title = "Station confidence"
     if method != "presence":
         title += f" ({method})"

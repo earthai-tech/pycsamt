@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Figures for the ModEM plotting sections of the models/modem guide.
 
 The bundled ``willy_27freq_watex_line02_sample`` run stalled at RMS ~3

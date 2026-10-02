@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - web extra missing
 
 
 _VIEW_PREFIX = "mapview::"
-_SEED: dict[str, Any] = {"view": None}
+_SEED: dict[str, Any] = {"view": None, "state": None}
 
 
 def set_view(session_id: str, view: Any) -> None:
@@ -52,9 +52,23 @@ def get_view(session_id: str) -> Any:
     return _web_get(_VIEW_PREFIX + session_id)
 
 
-def set_seed(view: Any) -> None:
-    """Stash a view for the first session to adopt (launch handoff)."""
+def set_seed(view: Any, state: dict | None = None) -> None:
+    """Stash a view for the first session to adopt (launch handoff).
+
+    *state* (optional) is the scene the caller had open -- the view,
+    3-D controls, overlays, spin, theme, camera; see
+    ``callbacks.chrome._register_seed_state``.  The desktop's PCSF 3-D
+    window uses it so Map View opens on the same scene.
+    """
     _SEED["view"] = view
+    _SEED["state"] = state
+
+
+def take_seed_state() -> dict | None:
+    """Return and clear the pending seed scene state (one-shot)."""
+    state = _SEED.get("state")
+    _SEED["state"] = None
+    return state
 
 
 def take_seed() -> Any:

@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pycsamt.ai.data.contracts import SurveyData
 from pycsamt.ai.domain_gap.simulator import CorruptionConfig
 from pycsamt.ai.domain_gap.survey_fit import (
     fit_corruption_config,
@@ -116,3 +117,34 @@ def test_fit_distortion_priors_from_real_willy_line_are_finite_and_nonnegative()
         assert value >= 0.0
     # A real, non-degenerate survey line should show some twist spread.
     assert priors["distortion_twist_deg_sigma"] > 0.0
+
+
+def _two_level_error_survey():
+    z = np.full((3, 5, 4), 100 + 50j)
+    err = np.empty(z.shape)
+    err[..., [1, 2]] = 1.0  # off-diagonal: ~0.9 % of |Z|
+    err[..., [0, 3]] = 50.0  # diagonal: ~45 % of |Z|
+    return SurveyData(
+        z, np.linspace(100, 1, 5), ["A", "B", "C"], ["xx", "xy", "yx", "yy"],
+        np.zeros((3, 2)), impedance_error=err,
+    )
+
+
+def test_fit_corruption_config_components_excludes_noisy_diagonals():
+    survey = _two_level_error_survey()
+    all_comp = fit_corruption_config(survey)
+    off = fit_corruption_config(survey, components=("xy", "yx"))
+    ratio = 1.0 / abs(100 + 50j)
+    assert np.allclose(off.noise_level_range, (ratio, ratio))
+    assert all_comp.noise_level_range[1] > 10 * off.noise_level_range[1]
+
+
+def test_fit_corruption_config_defaults_to_lognormal_sampling():
+    survey = _two_level_error_survey()
+    assert fit_corruption_config(survey).noise_sampling == "lognormal"
+    assert fit_corruption_config(survey, noise_sampling="uniform").noise_sampling == "uniform"
+
+
+def test_fit_corruption_config_rejects_unknown_component():
+    with pytest.raises(ValueError, match="not in survey.components"):
+        fit_corruption_config(_two_level_error_survey(), components=("zz",))

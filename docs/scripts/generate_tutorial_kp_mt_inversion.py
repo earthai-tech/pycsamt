@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Prepare KAP03 ModEM inputs and optional MT3D-AI inversion artifacts."""
 
 from __future__ import annotations

@@ -89,6 +89,142 @@ class TestInvertBuild:
         # deeply, but it should not raise a Python exception
         assert result.exception is None or isinstance(result.exception, SystemExit)
 
+    def test_occam2d_build_real_data(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        """Real EDI → real Occam2D input files, no mocking."""
+        workdir = tmp_path / "run01"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "occam2d",
+                "--workdir",
+                str(workdir),
+                "-v",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Build complete" in result.output
+        assert (workdir / "OccamDataFile.dat").exists()
+        assert (workdir / "Occam2DMesh").exists()
+        assert (workdir / "Occam2DModel").exists()
+
+    def test_occam2d_build_all_tuning_options(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        """Exercise every Occam2D-specific tuning branch in one call."""
+        workdir = tmp_path / "run_tuned"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "occam2d",
+                "--workdir",
+                str(workdir),
+                "--modes",
+                "TE,TM,DET",
+                "--freq",
+                "0.1:1000",
+                "--error-floor-rho",
+                "0.07",
+                "--error-floor-phase",
+                "1.5",
+                "--n-layers",
+                "12",
+                "--cell-size",
+                "150",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert (workdir / "OccamDataFile.dat").exists()
+
+    def test_modem_build_3d_default(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        workdir = tmp_path / "run_modem3d"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "modem",
+                "--workdir",
+                str(workdir),
+                "-v",
+                "--freq",
+                "0.1:1000",
+                "--cell-size",
+                "200",
+                "--n-layers",
+                "20",
+                "--initial-rho",
+                "150",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert (workdir / "data.dat").exists()
+
+    def test_modem_build_2d_mode(
+        self, runner: CliRunner, willy_subset_dir: Path, tmp_path: Path
+    ) -> None:
+        workdir = tmp_path / "run_modem2d"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(willy_subset_dir),
+                "--solver",
+                "modem",
+                "--modem-mode",
+                "2d",
+                "--workdir",
+                str(workdir),
+                "--n-layers",
+                "10",
+                "--cell-size",
+                "100",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert (workdir / "data.dat").exists()
+
+    def test_build_error_from_bad_geometry_exits_1(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """Co-located stations (real bundled data/3edis) trip Occam2D's
+        mesh-builder QC check; the CLI must degrade to Error + exit 1
+        rather than an uncaught traceback."""
+        edi_3 = (
+            Path(__file__).resolve().parents[3] / "data" / "3edis"
+        )
+        if not edi_3.exists() or not list(edi_3.glob("*.edi")):
+            pytest.skip("data/3edis not found")
+        workdir = tmp_path / "run_bad"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "build",
+                str(edi_3),
+                "--solver",
+                "occam2d",
+                "--workdir",
+                str(workdir),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+
     def test_explicit_path_takes_priority_over_context(
         self,
         runner: CliRunner,
@@ -268,10 +404,138 @@ class TestInvertRun:
         # OccamRunner may not be importable in test env, but should not traceback
         assert result.exception is None or isinstance(result.exception, SystemExit)
 
+    def test_occam2d_sync_success(
+        self, runner: CliRunner, occam_workdir: Path
+    ) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run.return_value = 0
+        with patch("pycsamt.models.occam2d.runner.OccamRunner", mock_cls):
+            result = runner.invoke(
+                main,
+                ["invert", "run", str(occam_workdir), "--solver", "occam2d", "-v"],
+            )
+        assert result.exit_code == 0, result.output
+        assert "Starting OCCAM2D" in result.output
+        assert "Occam2D finished successfully." in result.output
+        mock_cls.return_value.run.assert_called_once_with(
+            max_iter=None, target_misfit=None
+        )
+
+    def test_occam2d_sync_nonzero_exit(
+        self, runner: CliRunner, occam_workdir: Path
+    ) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run.return_value = 2
+        with patch("pycsamt.models.occam2d.runner.OccamRunner", mock_cls):
+            result = runner.invoke(
+                main, ["invert", "run", str(occam_workdir), "--solver", "occam2d"]
+            )
+        assert result.exit_code == 2
+        assert "Occam2D exited with code 2" in result.output
+
+    def test_occam2d_async(self, runner: CliRunner, occam_workdir: Path) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run_async.return_value = 12345
+        with patch("pycsamt.models.occam2d.runner.OccamRunner", mock_cls):
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "run",
+                    str(occam_workdir),
+                    "--solver",
+                    "occam2d",
+                    "--async",
+                    "--max-iter",
+                    "50",
+                    "--target-misfit",
+                    "1.05",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        assert "Occam2D started (PID 12345)" in result.output
+        mock_cls.return_value.run_async.assert_called_once_with(
+            max_iter=50, target_misfit=1.05
+        )
+
+    def test_modem_sync_success(
+        self, runner: CliRunner, modem_workdir: Path
+    ) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run.return_value = 0
+        with patch("pycsamt.models.modem.runner.ModEmRunner", mock_cls):
+            result = runner.invoke(
+                main, ["invert", "run", str(modem_workdir), "--solver", "modem"]
+            )
+        assert result.exit_code == 0, result.output
+        assert "ModEM finished successfully." in result.output
+
+    def test_modem_sync_nonzero_exit(
+        self, runner: CliRunner, modem_workdir: Path
+    ) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run.return_value = 3
+        with patch("pycsamt.models.modem.runner.ModEmRunner", mock_cls):
+            result = runner.invoke(
+                main, ["invert", "run", str(modem_workdir), "--solver", "modem"]
+            )
+        assert result.exit_code == 3
+        assert "ModEM exited with code 3" in result.output
+
+    def test_modem_async(self, runner: CliRunner, modem_workdir: Path) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run.return_value = 999
+        with patch("pycsamt.models.modem.runner.ModEmRunner", mock_cls):
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "run",
+                    str(modem_workdir),
+                    "--solver",
+                    "modem",
+                    "--async",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        assert "ModEM started (PID 999)" in result.output
+        mock_cls.return_value.run.assert_called_once_with(
+            run_async=True, max_iterations=None, target_rms=None
+        )
+
+    def test_runner_exception_reported(
+        self, runner: CliRunner, occam_workdir: Path
+    ) -> None:
+        mock_cls = MagicMock(side_effect=RuntimeError("binary missing"))
+        with patch("pycsamt.models.occam2d.runner.OccamRunner", mock_cls):
+            result = runner.invoke(
+                main, ["invert", "run", str(occam_workdir), "--solver", "occam2d"]
+            )
+        assert result.exit_code == 1
+        assert "Error: binary missing" in result.output
+
+    def test_solver_auto_detected(
+        self, runner: CliRunner, modem_workdir: Path
+    ) -> None:
+        mock_cls = MagicMock()
+        mock_cls.return_value.run.return_value = 0
+        with patch("pycsamt.models.modem.runner.ModEmRunner", mock_cls):
+            result = runner.invoke(main, ["invert", "run", str(modem_workdir)])
+        assert result.exit_code == 0, result.output
+
 
 # ---------------------------------------------------------------------------
 # invert results
 # ---------------------------------------------------------------------------
+
+
+_RESULTS_OCCAM_REAL = Path(__file__).resolve().parents[3] / "data" / "occam2D"
+_RESULTS_MODEM_REAL = (
+    Path(__file__).resolve().parents[3]
+    / "data"
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
+)
 
 
 class TestInvertResults:
@@ -286,6 +550,200 @@ class TestInvertResults:
         result = runner.invoke(main, ["invert", "results", str(occam_workdir)])
         # Expected to fail (no iter files) but should not traceback uncontrolled
         assert result.exception is None or isinstance(result.exception, SystemExit)
+
+    def test_error_loading_reported_and_exits_1(
+        self, runner: CliRunner, occam_workdir: Path
+    ) -> None:
+        with patch(
+            "pycsamt.cli.commands.invert.results._load_inversion_result",
+            side_effect=RuntimeError("boom"),
+        ):
+            result = runner.invoke(
+                main,
+                ["invert", "results", str(occam_workdir), "--solver", "occam2d"],
+            )
+        assert result.exit_code == 1
+        assert "Error loading results" in result.output
+
+    @pytest.mark.skipif(
+        not (_RESULTS_OCCAM_REAL / "OccamDataFile.dat").exists(),
+        reason="bundled data/occam2D absent",
+    )
+    class TestOccamReal:
+        def test_json_output_fields(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_OCCAM_REAL),
+                    "--format",
+                    "json",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            data = json.loads(result.output)
+            assert data["solver"] == "occam2d"
+            assert data["iteration"] == 17
+            # Regression test: OccamIter exposes `misfit_value`, not
+            # `misfit`/`rms` — the RMS field must not be silently None.
+            assert data["rms"] is not None
+            assert data["model_shape"] == [31, 576]
+            assert data["rho_min"] is not None
+            assert data["rho_max"] is not None
+            assert data["rho_mean"] is not None
+            assert data["n_iter_files"] == 1
+
+        def test_text_output(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main, ["invert", "results", str(_RESULTS_OCCAM_REAL)]
+            )
+            assert result.exit_code == 0, result.output
+            assert "Inversion Results" in result.output
+            assert "OCCAM2D" in result.output
+
+        def test_explicit_iteration_option(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_OCCAM_REAL),
+                    "--iteration",
+                    "17",
+                    "--format",
+                    "json",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            assert json.loads(result.output)["iteration"] == 17
+
+        def test_solver_auto_detected(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                ["invert", "results", str(_RESULTS_OCCAM_REAL), "--format", "json"],
+            )
+            assert result.exit_code == 0, result.output
+            assert json.loads(result.output)["solver"] == "occam2d"
+
+    @pytest.mark.skipif(
+        not (_RESULTS_MODEM_REAL / "Modular_NLCG.log").exists(),
+        reason="bundled ModEM sample absent",
+    )
+    class TestModemReal:
+        def test_json_output_fields(self, runner: CliRunner) -> None:
+            """Regression test for the ModEM results bug: `_results_dict`
+            used to assume Occam2D's `best_iter`/`iter_files`/`rho_2d`
+            attributes, none of which exist on ModEM's InversionResult,
+            silently reporting every field as null."""
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_MODEM_REAL),
+                    "--solver",
+                    "modem",
+                    "--format",
+                    "json",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            data = json.loads(result.output)
+            assert data["solver"] == "modem"
+            assert data["iteration"] is not None
+            assert data["rms"] is not None
+            assert data["model_shape"] is not None
+            assert len(data["model_shape"]) == 3
+            assert data["rho_min"] is not None
+            assert data["rho_max"] is not None
+            assert data["rho_mean"] is not None
+            assert data["n_iter_files"] is not None
+
+        def test_text_output(self, runner: CliRunner) -> None:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "results",
+                    str(_RESULTS_MODEM_REAL),
+                    "--solver",
+                    "modem",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+            assert "MODEM" in result.output
+            assert "—" not in result.output.split("Final RMS")[1].split("\n")[0]
+
+    def test_fill_occam_info_tolerates_missing_attrs(self) -> None:
+        """A result object missing every Occam2D attribute must not raise —
+        each field-fill block is independently guarded by AttributeError."""
+        from pycsamt.cli.commands.invert.results import _fill_occam_info
+
+        info = {
+            "iteration": None,
+            "rms": None,
+            "model_shape": None,
+            "rho_min": None,
+            "rho_max": None,
+            "rho_mean": None,
+            "n_iter_files": None,
+        }
+        _fill_occam_info(object(), info)
+        assert info == {
+            "iteration": None,
+            "rms": None,
+            "model_shape": None,
+            "rho_min": None,
+            "rho_max": None,
+            "rho_mean": None,
+            "n_iter_files": None,
+        }
+
+    def test_fill_modem_info_tolerates_missing_attrs(self) -> None:
+        from pycsamt.cli.commands.invert.results import _fill_modem_info
+
+        info = {
+            "iteration": None,
+            "rms": None,
+            "model_shape": None,
+            "rho_min": None,
+            "rho_max": None,
+            "rho_mean": None,
+            "n_iter_files": None,
+        }
+        _fill_modem_info(object(), info)
+        assert all(v is None for v in info.values())
+
+    def test_fill_occam_info_best_iter_none(self) -> None:
+        from pycsamt.cli.commands.invert.results import _fill_occam_info
+
+        class _Fake:
+            iter_files = [1, 2, 3]
+            best_iter = None
+            rho_2d = None
+
+        info = {"iteration": None, "rms": None, "n_iter_files": None}
+        _fill_occam_info(_Fake(), info)
+        assert info["n_iter_files"] == 3
+        assert info["iteration"] is None
+        assert info["rms"] is None
+
+    def test_fill_modem_info_nan_rms_stays_none(self) -> None:
+        import math
+
+        from pycsamt.cli.commands.invert.results import _fill_modem_info
+
+        class _Fake:
+            models: dict = {}
+            iteration_numbers = []
+            final_rms = float("nan")
+            model_final = None
+
+        info = {"rms": None, "iteration": None, "model_shape": None}
+        _fill_modem_info(_Fake(), info)
+        assert info["rms"] is None
+        assert math.isnan(_Fake.final_rms)
 
 
 # ---------------------------------------------------------------------------
@@ -328,3 +786,385 @@ class TestInvertPlot:
         assert "WORKDIR" in result.output
         assert "--save" in result.output
         assert "--show" in result.output
+
+
+# ---------------------------------------------------------------------------
+# invert plot — real bundled Occam2D + ModEM data
+# ---------------------------------------------------------------------------
+
+_OCCAM_REAL = Path(__file__).resolve().parents[3] / "data" / "occam2D"
+_MODEM_REAL = (
+    Path(__file__).resolve().parents[3]
+    / "data"
+    / "modem"
+    / "willy_27freq_watex_line02_sample"
+)
+
+
+def _has_occam_real() -> bool:
+    return (_OCCAM_REAL / "OccamDataFile.dat").exists()
+
+
+def _has_modem_real() -> bool:
+    return (_MODEM_REAL / "Modular_NLCG.log").exists()
+
+
+@pytest.mark.skipif(not _has_occam_real(), reason="bundled data/occam2D absent")
+class TestInvertPlotOccamReal:
+    def test_model_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "model.png"
+        result = runner.invoke(
+            main, ["invert", "plot", "model", str(_OCCAM_REAL), "--save", str(out)]
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_model_options(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "model.png"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "plot",
+                "model",
+                str(_OCCAM_REAL),
+                "--rho-min",
+                "1",
+                "--rho-max",
+                "1000",
+                "--depth-max",
+                "5000",
+                "--no-stations",
+                "--cmap",
+                "viridis",
+                "--iteration",
+                "17",
+                "--save",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_misfit_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "misfit.png"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "plot",
+                "misfit",
+                str(_OCCAM_REAL),
+                "--no-roughness",
+                "--lagrange",
+                "--save",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_response_station_filter(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "resp.png"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "plot",
+                "response",
+                str(_OCCAM_REAL),
+                "--station",
+                "S00",
+                "--save",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_pseudo_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "pseudo.png"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "plot",
+                "pseudo",
+                str(_OCCAM_REAL),
+                "--cmap",
+                "viridis",
+                "--save",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_1d_with_station_list(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "profiles.png"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "plot",
+                "1d",
+                str(_OCCAM_REAL),
+                "--stations",
+                "S00,S01",
+                "--save",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_per_site_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "site_rms.png"
+        result = runner.invoke(
+            main,
+            ["invert", "plot", "per-site", str(_OCCAM_REAL), "--save", str(out)],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_grid_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "grid.png"
+        result = runner.invoke(
+            main, ["invert", "plot", "grid", str(_OCCAM_REAL), "--save", str(out)]
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_section_rejected_for_occam(self, runner: CliRunner) -> None:
+        result = runner.invoke(main, ["invert", "plot", "section", str(_OCCAM_REAL)])
+        assert result.exit_code != 0
+        assert "ModEM-only" in result.output
+
+    def test_1d_rejected_for_modem(
+        self, runner: CliRunner, modem_workdir: Path
+    ) -> None:
+        result = runner.invoke(main, ["invert", "plot", "1d", str(modem_workdir)])
+        assert result.exit_code != 0
+        assert "Occam2D-only" in result.output
+
+    def test_per_site_rejected_for_modem(
+        self, runner: CliRunner, modem_workdir: Path
+    ) -> None:
+        result = runner.invoke(
+            main, ["invert", "plot", "per-site", str(modem_workdir)]
+        )
+        assert result.exit_code != 0
+        assert "Occam2D-only" in result.output
+
+    def test_grid_rejected_for_modem(
+        self, runner: CliRunner, modem_workdir: Path
+    ) -> None:
+        result = runner.invoke(main, ["invert", "plot", "grid", str(modem_workdir)])
+        assert result.exit_code != 0
+        assert "Occam2D-only" in result.output
+
+    def test_no_save_no_show_warns(self, runner: CliRunner) -> None:
+        result = runner.invoke(main, ["invert", "plot", "misfit", str(_OCCAM_REAL)])
+        assert result.exit_code == 0
+        assert "not saved" in result.output
+
+    def test_show_flag_opens_window(self, runner: CliRunner) -> None:
+        with patch("matplotlib.pyplot.show") as mock_show:
+            result = runner.invoke(
+                main, ["invert", "plot", "misfit", str(_OCCAM_REAL), "--show"]
+            )
+        assert result.exit_code == 0, result.output
+        mock_show.assert_called_once()
+
+    def test_save_and_show_together(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "both.png"
+        with patch("matplotlib.pyplot.show") as mock_show:
+            result = runner.invoke(
+                main,
+                [
+                    "invert",
+                    "plot",
+                    "misfit",
+                    str(_OCCAM_REAL),
+                    "--save",
+                    str(out),
+                    "--show",
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+        mock_show.assert_called_once()
+
+    def test_model_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.occam2d.plot.PlotModel.plot",
+            side_effect=RuntimeError("boom"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "model", str(_OCCAM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: boom" in result.output
+
+    def test_pseudo_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.occam2d.plot.PlotPseudo.plot",
+            side_effect=RuntimeError("bad pseudo"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "pseudo", str(_OCCAM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad pseudo" in result.output
+
+    def test_1d_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.occam2d.plot.PlotSounding1D.plot",
+            side_effect=RuntimeError("bad 1d"),
+        ):
+            result = runner.invoke(main, ["invert", "plot", "1d", str(_OCCAM_REAL)])
+        assert result.exit_code == 1
+        assert "Error: bad 1d" in result.output
+
+    def test_per_site_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.occam2d.plot.PlotSiteMisfit.plot",
+            side_effect=RuntimeError("bad site"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "per-site", str(_OCCAM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad site" in result.output
+
+    def test_grid_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.occam2d.plot.PlotResponseGrid.plot",
+            side_effect=RuntimeError("bad grid"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "grid", str(_OCCAM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad grid" in result.output
+
+    def test_response_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.occam2d.plot.PlotResponse.plot",
+            side_effect=RuntimeError("bad response"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "response", str(_OCCAM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad response" in result.output
+
+
+@pytest.mark.skipif(not _has_modem_real(), reason="bundled ModEM sample absent")
+class TestInvertPlotModemReal:
+    def test_model_plot_real_bug_handled_gracefully(
+        self, runner: CliRunner
+    ) -> None:
+        """``invert plot model`` on this real ModEM run currently fails
+        inside ``PlotModel2D`` itself (a pre-existing bug outside this
+        batch's scope) -- assert the CLI still degrades to a clean
+        ``Error: ...`` + exit 1 instead of an uncaught traceback."""
+        result = runner.invoke(main, ["invert", "plot", "model", str(_MODEM_REAL)])
+        assert result.exception is None or isinstance(
+            result.exception, SystemExit
+        )
+        if result.exit_code != 0:
+            assert "Error:" in result.output
+
+    def test_misfit_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "misfit.png"
+        result = runner.invoke(
+            main,
+            ["invert", "plot", "misfit", str(_MODEM_REAL), "--save", str(out)],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_response_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "resp.png"
+        result = runner.invoke(
+            main,
+            ["invert", "plot", "response", str(_MODEM_REAL), "--save", str(out)],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_pseudo_saves_figure(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "pseudo.png"
+        result = runner.invoke(
+            main,
+            ["invert", "plot", "pseudo", str(_MODEM_REAL), "--save", str(out)],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_section_with_depth(self, runner: CliRunner, tmp_path: Path) -> None:
+        out = tmp_path / "section.png"
+        result = runner.invoke(
+            main,
+            [
+                "invert",
+                "plot",
+                "section",
+                str(_MODEM_REAL),
+                "--depth",
+                "5000",
+                "--save",
+                str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_section_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.modem.plot.PlotSection.plot",
+            side_effect=RuntimeError("bad section"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "section", str(_MODEM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad section" in result.output
+
+    def test_misfit_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.modem.plot.PlotMisfit.plot",
+            side_effect=RuntimeError("bad misfit"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "misfit", str(_MODEM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad misfit" in result.output
+
+    def test_response_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.modem.plot.PlotResponse.plot",
+            side_effect=RuntimeError("bad response"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "response", str(_MODEM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad response" in result.output
+
+    def test_pseudo_plot_error_handled(self, runner: CliRunner) -> None:
+        with patch(
+            "pycsamt.models.modem.plot.PlotPseudo.plot",
+            side_effect=RuntimeError("bad pseudo"),
+        ):
+            result = runner.invoke(
+                main, ["invert", "plot", "pseudo", str(_MODEM_REAL)]
+            )
+        assert result.exit_code == 1
+        assert "Error: bad pseudo" in result.output

@@ -28,10 +28,12 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Union
 
 from ...compat.sklearn import validate_params
+from .._process import run_streamed
 from .base import OccamBase
 from .schema import OCCAM_RUNNER_FORWARD_SCHEMA
 
@@ -343,6 +345,8 @@ class OccamRunner(OccamBase):
         target_misfit: float | None = None,
         auto_compile: bool = True,
         timeout: float | None = None,
+        on_output: Callable[[str], None] | None = None,
+        cancel: Callable[[], bool] | None = None,
     ) -> int:
         """Run Occam2D synchronously.
 
@@ -377,6 +381,13 @@ class OccamRunner(OccamBase):
             case; pass an explicit bound for unattended batch runs.
             On expiry, the process (and its full process group, on
             POSIX) is killed and :attr:`exit_code` is set to ``-9``.
+        on_output : callable, optional
+            Called with every console line as Occam2D prints it. The lines
+            are still written to ``stdout_log`` (stderr is merged into it
+            in this mode).
+        cancel : callable returning bool, optional
+            Polled while Occam2D runs; returning ``True`` kills the solver
+            and raises :class:`~pycsamt.models._process.ProcessCancelled`.
 
         Returns
         -------
@@ -421,6 +432,28 @@ class OccamRunner(OccamBase):
             self._patch_startup(max_iter=max_iter, target_misfit=target_misfit)
 
         self.logger.info("Running Occam2D in %s", self.workdir)
+
+        if on_output is not None or cancel is not None:
+            # Streamed mode (desktop Inversion window): live console lines,
+            # stoppable; the stdout log is still written for OccamLog/
+            # post-mortem use.
+            self.stdout_log.write_text("", encoding="utf-8")
+            self.stderr_log.write_text("", encoding="utf-8")
+            try:
+                self.exit_code = run_streamed(
+                    [str(self.binary), self.startup_file],
+                    cwd=self.workdir, on_output=on_output, cancel=cancel,
+                    timeout=timeout, tee=self.stdout_log)
+            except subprocess.TimeoutExpired:
+                self.exit_code = -9
+                self.logger.warning(
+                    "Occam2D exceeded timeout=%s s in %s; process killed.",
+                    timeout, self.workdir)
+                return self.exit_code
+            if self.exit_code != 0:
+                self.logger.warning("Occam2D exited with code %d.",
+                                    self.exit_code)
+            return self.exit_code
 
         with (
             open(self.stdout_log, "w") as fout,

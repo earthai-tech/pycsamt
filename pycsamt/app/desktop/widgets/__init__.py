@@ -5,3 +5,8 @@
 from pycsamt.app.desktop.widgets.agent_browser import (
     AgentBrowserWidget,  # noqa: F401
 )
+from pycsamt.app.desktop.widgets.unavailable_view import (
+    UnavailableResultView,  # noqa: F401
+)
+
+__all__ = ["AgentBrowserWidget", "UnavailableResultView"]

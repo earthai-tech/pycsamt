@@ -80,6 +80,10 @@ def rotate_to_strike(
                 ang = float(getattr(r, "angle", 0.0))
         except Exception:
             ang = 0.0
+        if not np.isfinite(ang):
+            # No strike (e.g. every row masked upstream): rotating by NaN
+            # used to turn the whole tensor -- and its errors -- into NaN.
+            return Si
         # _edit.rotate looks for a ``.Z`` section (the raw EDI layout);
         # a Site wrapper only exposes ``.z`` directly, so calling it on
         # `Si` (a Sites collection) is a silent no-op for every real
@@ -618,10 +622,15 @@ _C_LABEL: dict[str, str] = {
     "phimin_deg": r"$\phi_{min}$ (°)",
 }
 
-# Symmetric c_by quantities (vmin = -vmax enforced by default)
-_SYMMETRIC_C: frozenset = frozenset(
-    ("skew", "beta", "alpha", "|skew|", "|beta|")
-)
+# Symmetric c_by quantities (vmin = -vmax enforced by default).
+# Absolute-value variants ("|skew|", "|beta|") are deliberately excluded:
+# they are >= 0 by construction, so forcing vmin = -vmax would burn half
+# the colour range on values that can never occur and desaturate the
+# colours actually used for the 0..vmax data (see also
+# PhaseTensorEllipseStyle's per-c_by natural_sym flag in api/style.py,
+# which already gets this right and is the source of truth when
+# symmetric_clim is left at its _UNSET default).
+_SYMMETRIC_C: frozenset = frozenset(("skew", "beta", "alpha"))
 
 
 def _resolve_cvals(df: pd.DataFrame, c_by: str) -> tuple[np.ndarray, str]:
@@ -718,6 +727,7 @@ def plot_phase_tensor_psection(
     mark_3d=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.mark_3d
     ref_ellipse=_UNSET,  # default: PYCSAMT_STYLE.pt_ellipse.show_ref
     legend_fontsize: float = 8.0,
+    annotations: bool = True,
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
     xlabel: str = "",
@@ -846,6 +856,10 @@ def plot_phase_tensor_psection(
     legend_fontsize : float, default ``8.0``
         Font size for the reference-circle label and the 1-D/2-D vs 3-D
         annotation shown when *ref_ellipse* / *skew_threshold* are active.
+    annotations : bool, default ``True``
+        Draw the in-figure legend strip (the |β| 1-D/2-D vs 3-D labels and
+        the size-reference ellipse).  ``False`` hides it and gives the
+        ellipses the full height.
     title, xlabel, ylabel : str
         Axes title and axis labels.  Sensible defaults are used when empty.
     tick_label_rotation : float, default ``45.0``
@@ -1165,9 +1179,9 @@ def plot_phase_tensor_psection(
 
     # Reserve a dedicated legend strip beyond the data so the reference
     # ellipse and 1-D/2-D vs 3-D annotation never overlap real ellipses.
-    want_legend = bool(ref_ellipse) or (
+    want_legend = bool(annotations) and (bool(ref_ellipse) or (
         skew_threshold is not None and c_by in ("skew", "beta")
-    )
+    ))
     legend_depth = 0.0
     if period_up:
         top_edge, top_sign = y_hi, 1.0
@@ -4691,6 +4705,7 @@ def plot_phase_tensor_strip(
     # ── labels & layout ───────────────────────────────────────────────────
     title: str = "",
     xlabel: str = "",
+    axis_style: str = "period",
     figsize: tuple[float, float] = (6.0, 1.4),
     show_colorbar: bool = True,
     colorbar_label: str | None = None,
@@ -4759,7 +4774,16 @@ def plot_phase_tensor_strip(
         Annotate the station name in the upper-left corner of the axes.
     station_label_fontsize : float, default ``8.0``
     title, xlabel : str
-        Axes title / x-label.  *xlabel* defaults to ``"Period (s)"``.
+        Axes title / x-label.  *xlabel* defaults to ``"Period (s)"``
+        (or :data:`~pycsamt.api.labels.LOG10_PERIOD_LABEL` when
+        *axis_style* is ``"logperiod"``).
+    axis_style : {"period", "logperiod"}, default ``"period"``
+        Tick-label convention for the internally log10(period)-spaced
+        x-axis. ``"period"`` (default, unchanged) formats ticks as
+        ``$10^{n}$`` under a ``"Period (s)"`` label. ``"logperiod"``
+        shows the raw log10 values (``-3``, ``-2``, ...) under
+        :data:`~pycsamt.api.labels.LOG10_PERIOD_LABEL`, matching
+        :func:`plot_phase_tensor_psection`'s own convention.
     figsize : (float, float), default ``(6.0, 1.4)``
         Figure size (ignored when *ax* is provided).
     show_colorbar : bool, default ``True``
@@ -4950,15 +4974,24 @@ def plot_phase_tensor_strip(
             )
         )
 
-    # ── x-axis limits & ticks (log10 period, "10^n" labels) ───────────────
+    # ── x-axis limits & ticks (log10 period; label convention per
+    # *axis_style*) ─────────────────────────────────────────────────────
+    if axis_style not in ("period", "logperiod"):
+        raise ValueError(
+            f"axis_style must be 'period' or 'logperiod'; got {axis_style!r}."
+        )
     x_lo = float(np.nanmin(x_all)) if len(x_all) else 0.0
     x_hi = float(np.nanmax(x_all)) if len(x_all) else 1.0
     margin = max(0.5 * cell_x, 0.02 * (x_hi - x_lo + 1e-9))
     ax.set_xlim(x_lo - margin, x_hi + margin)
     x_int = np.arange(int(np.floor(x_lo)), int(np.ceil(x_hi)) + 1)
     ax.set_xticks(x_int)
-    ax.set_xticklabels([f"$10^{{{int(v)}}}$" for v in x_int], fontsize=8)
-    ax.set_xlabel(xlabel or "Period (s)", fontsize=9)
+    if axis_style == "logperiod":
+        ax.set_xticklabels([f"{int(v)}" for v in x_int], fontsize=8)
+        ax.set_xlabel(xlabel or LOG10_PERIOD_LABEL, fontsize=9)
+    else:
+        ax.set_xticklabels([f"$10^{{{int(v)}}}$" for v in x_int], fontsize=8)
+        ax.set_xlabel(xlabel or "Period (s)", fontsize=9)
 
     # ── y-axis: schematic phase scale, no real data ───────────────────────
     ax.set_ylim(-0.62, 0.62)

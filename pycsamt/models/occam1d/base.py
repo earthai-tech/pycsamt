@@ -34,6 +34,16 @@ PathLike = Union[str, OSPathLike]
 __all__ = ["Occam1DBase", "Occam1DObjectState", "PathLike"]
 
 
+class _NullStream:
+    """Writable sink used when the process has no console stdout."""
+
+    def write(self, text: str) -> int:
+        return len(text)
+
+    def flush(self) -> None:
+        pass
+
+
 class Occam1DObjectState(str, Enum):
     """Lifecycle states exposed by :class:`Occam1DBase`.
 
@@ -188,7 +198,12 @@ class Occam1DBase(MTBase):
     @staticmethod
     def _validate_stream(value: TextIO | None) -> TextIO:
         """Return a writable stream for user-facing messages."""
-        stream = sys.stdout if value is None else value
+        if value is None:
+            # A windowed (console-less) build -- the frozen desktop app,
+            # pythonw -- has ``sys.stdout = None``; that is not a caller
+            # error, so fall back to a sink instead of refusing to work.
+            return sys.stdout if sys.stdout is not None else _NullStream()
+        stream = value
         if not callable(getattr(stream, "write", None)):
             raise TypeError("stream must provide a callable write method.")
         return stream

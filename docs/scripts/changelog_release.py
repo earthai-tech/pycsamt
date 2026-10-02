@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Assemble docs/changelog.d/ fragments into a versioned changelog entry.
 
 Usage

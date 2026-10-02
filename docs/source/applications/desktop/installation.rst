@@ -35,6 +35,10 @@ Most users should choose one of these paths:
    * - Situation
      - Install Command
      - Why Choose It
+   * - You do not want to set up Python at all
+     - Download the installer — see :ref:`applications-desktop-download`
+     - One-click install (Windows ``Setup.exe`` / Linux ``.sh``); nothing to
+       manage, no environment, no ``pip``.
    * - You want only the desktop GUI
      - ``pip install "pycsamt[desktop]"``
      - Installs the Qt interface and desktop plotting dependencies without
@@ -54,7 +58,107 @@ Most users should choose one of these paths:
 
 If you are unsure, start with ``pycsamt[desktop]``.  Add the broader extras
 only when you know you need the web app, documentation build, agents, or full
-development stack.
+development stack. Prefer not to install Python at all? Use the installer
+below instead.
+
+.. _applications-desktop-download:
+
+Download A Ready-Made Installer
+--------------------------------
+
+Every application surface shares the same scientific core, so the installer
+below contains the full desktop suite: Profile, Map, QC, Correction, Forward,
+Inversion, Interpretation, Airborne EM, and the AI-processing agents — one
+binary, no separate "lite" build. It ships with a 30-day full-feature trial;
+see :ref:`applications-desktop-licensing` below for what happens after that.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Platform
+     - Download
+     - Notes
+   * - Windows
+     - `pycsamt-desktop-setup.exe
+       <https://github.com/earthai-tech/pycsamt/releases/latest/download/pycsamt-desktop-setup.exe>`__
+     - Installs to Program Files with Start Menu / Desktop shortcuts and a
+       proper uninstaller. Unsigned build — Windows SmartScreen will warn on
+       first run; choose **More info → Run anyway**.
+   * - Linux (x86-64)
+     - `pycsamt-desktop-linux-x86_64.sh
+       <https://github.com/earthai-tech/pycsamt/releases/latest/download/pycsamt-desktop-linux-x86_64.sh>`__
+     - Self-extracting installer; no root needed. Installs to
+       ``~/.local/share/pycsamt-desktop`` and adds a ``pycsamt-desktop``
+       launcher and a desktop menu entry. Remove it with ``--uninstall``.
+
+Both links always point to the newest release. Older versions, the release
+notes and a ``SHA256SUMS.txt`` checksum file are on the
+`GitHub releases page <https://github.com/earthai-tech/pycsamt/releases>`__.
+
+On Linux, make the downloaded file executable and run it:
+
+.. code-block:: bash
+
+   chmod +x pycsamt-desktop-linux-x86_64.sh
+   ./pycsamt-desktop-linux-x86_64.sh               # install
+   ./pycsamt-desktop-linux-x86_64.sh --uninstall   # remove
+
+To check a download against the published checksums, put
+``SHA256SUMS.txt`` next to it and run
+``sha256sum -c --ignore-missing SHA256SUMS.txt`` (Linux) or
+``Get-FileHash pycsamt-desktop-setup.exe`` (Windows PowerShell).
+
+.. comment
+   The links use GitHub's "latest release" asset-download convention
+   (`.../releases/latest/download/<exact-asset-filename>`), so they never
+   need editing across releases PROVIDED each release uploads the assets
+   under these exact version-agnostic names: `pycsamt-desktop-setup.exe`,
+   `pycsamt-desktop-linux-x86_64.sh` and `SHA256SUMS.txt`
+   (dist/installer/release-assets/ holds the staged copies).
+
+Uninstalling leaves your trial/license state untouched (Windows registry
+under ``HKCU\Software\earthai-tech\pycsamt``; Linux ``~/.pycsamt`` and
+``~/.config/earthai-tech``), so reinstalling later does not reset the clock
+or drop an already-activated key.
+
+.. _applications-desktop-licensing:
+
+Licensing
+---------
+
+The installer and the ``pip``-installed package are the same software with
+the same features either way — licensing only gates how long it keeps
+running, not which tools are available.
+
+Trial
+   Every fresh install starts a 30-day full-feature trial, timed from first
+   launch. When it ends, the app opens straight to a license-key prompt
+   instead of the main window.
+
+Academic and educational use
+   Free for coursework, research, and teaching. Paste this key into
+   **Preferences ▸ License** (or the trial-expiry dialog's key field):
+
+   .. comment
+      Insert the current academic key here once issued, e.g.:
+      .. code-block:: text
+
+         <academic-key-string>
+
+      Re-issued yearly (365-day validity) — replace this block each time a
+      new one is generated with:
+      issue_license.py --customer "Academic / Educational Use" --days 365
+      --feature edu
+
+   *(Academic key not yet published — check back after the v2.6.4 release,
+   or contact earthai-tech directly in the meantime.)*
+
+Professional use
+   Contact `earthai-tech <https://pycsamt.org/>`__ to purchase a license.
+   You will receive a key by the same **Preferences ▸ License** field once
+   payment is arranged — there is no separate "professional build" to
+   install.
 
 Install The Desktop Extra
 -------------------------

@@ -57,6 +57,10 @@ def _skew_track_for(
     per = 1.0 / fr
     p_ref = sdf["period"].to_numpy(dtype=float)
     sk_ref = sdf["skew"].to_numpy(dtype=float)
+    # The table follows the data order (periods usually descending);
+    # searchsorted needs them ascending.
+    order = np.argsort(p_ref, kind="stable")
+    p_ref, sk_ref = p_ref[order], sk_ref[order]
     idx = np.searchsorted(p_ref, per)
     idx = np.clip(idx, 0, p_ref.size - 1)
     sk = sk_ref[idx]
@@ -197,6 +201,9 @@ def mask_by_skew(
                 if np.isfinite(thresh)
                 else np.ones(sk.size, dtype=bool)
             )
+        # Unknown skew (station absent from the table, singular tensor) is
+        # not evidence of 3-D data: keep those rows instead of masking them.
+        keep = keep | ~np.isfinite(sk)
         _mask_apply(ed, keep, also=also)
         return Si
 

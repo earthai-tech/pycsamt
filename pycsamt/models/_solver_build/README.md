@@ -9,7 +9,7 @@ solvers from source, so using them does not require hand-writing
 | `modem2d.sh` | ModEM `Mod2DMT` (2-D) | vendored, committed | gfortran + make (+ LAPACK/BLAS) |
 | `modem3d.sh` | ModEM `Mod3DMT` (3-D) | vendored, committed | gfortran + make (+ LAPACK/BLAS) |
 | `occam2d.sh` | Occam2DMT | vendored, committed | gfortran + make |
-| `mare2dem.sh` | MARE2DEM | downloaded on demand (not vendored — see below) | Intel `mpiifort`/`mpiicc` + MKL, Linux/macOS/WSL only |
+| `mare2dem.sh` | MARE2DEM | downloaded on demand (not vendored — see below) | MPI + free oneMKL: Intel oneAPI, or gfortran + OpenMPI (Linux/macOS/WSL only) |
 
 A single dispatcher is also provided:
 
@@ -78,10 +78,16 @@ and requires a `y` confirmation unless you also pass `-y`/`--yes`.
   path from the env's own `Library/mingw-w64/bin`/`Library/bin`, so
   you never need to `conda activate` it yourself.
 
-MARE2DEM is the one exception: it needs Intel's commercial compilers
-and MKL, which nothing here can install for you (see `mare2dem.sh`'s
-own header for details) — `--auto-install` there only runs the
-download-then-build step assuming you already have those.
+MARE2DEM is the one exception here: it needs MPI and Intel oneMKL
+(free). Since 2026-09 it also builds with GNU gfortran + OpenMPI +
+oneMKL -- `SourceManager` applies the needed source fixes (see
+`pycsamt/models/mare2dem/_gnu_compat.py`). This script does not install
+MPI/MKL itself; the desktop **Tools ▸ Solver Builder** does, root-free,
+via a micromamba conda-forge toolchain (and on Windows builds inside WSL2).
+
+`--source-dir DIR` (ModEM/Occam2D scripts) builds from your own source
+tree; `PYCSAMT_FORTRAN_PREFIX` points the scripts at a toolchain prefix
+created by the Solver Builder.
 
 ## Windows-specific notes
 

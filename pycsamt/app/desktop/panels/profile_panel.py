@@ -3,22 +3,34 @@
 """
 ProfilePanel — tabbed scientific plot panel.
 
-Seven tabs driven by PlotController:
+Core tabs driven by PlotController, with Tipper added when available, plus
+one self-contained tab that manages its own controls:
 
   [ρₐ / φ]           Single-station apparent-resistivity + phase curves
   [Pseudosection ρₐ]  ρₐ pseudosection (full profile)
   [Pseudosection φ]   φ pseudosection (full profile)
+  [Res/Phase Section] MTPy-style stacked ρₐ/φ pseudo-section, one column
+                       per component (PlotResPhasePseudoSection)
   [Tipper]            Tipper components
   [Phase Tensor]      Phase-tensor pseudosection (Caldwell 2004 style)
   [PT Strip]          Single-station phase-tensor ellipse strip vs period
-  [2D Section]        SectionPanel — inversion result viewer
+
+Every tab here reads from raw survey soundings (``set_sites`` / EDI data).
+A 2-D *inversion-result* section is a different kind of data (a loaded
+``InversionResult``, not a Sites collection) and lives in
+``InversionWindow`` instead, which is where a result is actually produced
+and where every other result-viewing tab (Model/Fit/Convergence) already
+is — see that window's own "2-D Section" tab (``SectionPanel``). It was
+briefly wired in here during Phase 1 on the strength of a stale test/
+docstring that anticipated it on this panel; moved once the mismatch was
+caught (an inversion result has no natural link to ``set_sites``' survey
+soundings at all).
 
 Public API:
     set_sites(sites)
     set_selected_station(sid)
     set_period_range(lo_hz, hi_hz)
     set_dark_mode(bool)
-    set_inversion_result(result)
 """
 
 from __future__ import annotations
@@ -33,8 +45,8 @@ from PySide6.QtWidgets import (
 from pycsamt.app.desktop.controllers.plot_controller import (
     PlotController,
 )
-from pycsamt.app.desktop.panels.section_panel import (
-    SectionPanel,
+from pycsamt.app.desktop.panels.resphase_section_panel import (
+    ResPhaseSectionPanel,
 )
 from pycsamt.app.desktop.widgets.freq_selector import (
     FreqSelector,
@@ -48,6 +60,7 @@ class ProfilePanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._ctrl = PlotController()
+        self._dirty_canvases: set[MplCanvas] = set()
         # Phase-tensor tab cache key: tuple returned by PlotController.phase_tensor_key()
         # stored after the last successful draw.  When the current key matches,
         # skip the full matplotlib redraw and just repaint the existing canvas.
@@ -84,26 +97,29 @@ class ProfilePanel(QWidget):
         self._canvas_ph_ps = MplCanvas(self, toolbar=True)
         self._tabs.addTab(self._canvas_ph_ps, "Pseudosection φ")
 
-        # Tab 3: Tipper
+        # Optional Tipper tab (inserted at index 3 when data is available)
         self._canvas_tipper = MplCanvas(self, toolbar=True)
-        self._tabs.addTab(self._canvas_tipper, "Tipper")
+        self._canvas_tipper.hide()
 
-        # Tab 4: Phase tensor
+        # Phase tensor
         self._canvas_pt = MplCanvas(self, toolbar=True)
         self._tabs.addTab(self._canvas_pt, "Phase Tensor")
 
-        # Tab 5: Phase-tensor ellipse strip (single selected station)
+        # Phase-tensor ellipse strip (single selected station)
         self._canvas_pt_strip = MplCanvas(self, toolbar=True)
         self._tabs.addTab(self._canvas_pt_strip, "PT Strip")
 
-        # Tab 6: 2D section — SectionPanel
-        self._section_panel = SectionPanel(self)
-        self._tabs.addTab(self._section_panel, "2D Section")
+        # MTPy-style stacked res/phase pseudo-section (self-contained: owns
+        # its own controls bar, so it is not part of the MplCanvas-only
+        # dirty-tracking/lazy-redraw scheme below).
+        self._resphase_section = ResPhaseSectionPanel(self)
+        self._tabs.addTab(self._resphase_section, "Res/Phase Section")
 
         # Lazy redraw on tab switch
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
         self._draw_empty_all()
+        self._dirty_canvases.clear()
 
     # ── Public API ─────────────────────────────────────────────────────
 
@@ -111,6 +127,16 @@ class ProfilePanel(QWidget):
         """Load a Sites collection and redraw all tabs."""
         self._pt_last_key = None  # new data always means a fresh PT draw
         self._ctrl.set_sites(sites)
+        # A global/profile line change may remove the formerly selected
+        # station. Never leave a stale ID that resolves to None in a
+        # station-specific plot such as Tipper or PT Strip.
+        try:
+            names = [str(site.name) for site in sites]
+        except Exception:
+            names = []
+        if self._ctrl._station_id not in names:
+            self._ctrl.set_station(names[0] if names else None)
+        self._set_tipper_tab_visible(self._sites_have_tipper(sites))
         try:
             freqs = []
             for site in sites:
@@ -120,34 +146,38 @@ class ProfilePanel(QWidget):
             if freqs:
                 f_min = max(float(min(freqs)), 1e-6)
                 f_max = float(max(freqs))
+                self._freq_sel.blockSignals(True)
                 self._freq_sel.set_freq_range(f_min, f_max)
+                self._freq_sel.blockSignals(False)
         except Exception:
+            self._freq_sel.blockSignals(False)
             pass
+        self._mark_all_dirty()
         try:
-            self._redraw_all()
+            self._redraw_current_tab(force=True)
         except Exception:
-            pass  # never let a canvas draw block the caller's post-set_sites work
+            pass  # a plot failure must not block line/station controls
+        try:
+            self._resphase_section.set_sites(sites)
+        except Exception:
+            pass  # a plot failure in one tab must not block the others
 
     def set_selected_station(self, station_id: str) -> None:
         """Highlight a station; redraw ρₐ/φ tab and mark active pseudosection."""
         self._ctrl.set_station(station_id)
-        self._redraw_rho_phi()
-        tab = self._tabs.currentIndex()
-        if tab == 1:
-            self._redraw_rho_pseudosection()
-        elif tab == 2:
-            self._redraw_phase_pseudosection()
-        elif tab == 3:
-            self._redraw_tipper()
-        elif tab == 5:
-            self._redraw_phase_tensor_strip()
+        self._mark_all_dirty()
+        self._redraw_current_tab(force=True)
 
     def set_dark_mode(self, dark: bool) -> None:
         self._ctrl.dark = dark
-        self._section_panel.set_dark_mode(dark)
         # Dark mode changes the PT plot styling → force a full redraw next time
         self._pt_last_key = None
+        self._mark_all_dirty()
         self._redraw_current_tab()
+        try:
+            self._resphase_section.set_dark_mode(dark)
+        except Exception:
+            pass
 
     def invalidate_phase_tensor(self) -> None:
         """Force the Phase Tensor tab to recompute and redraw on the next visit.
@@ -159,31 +189,42 @@ class ProfilePanel(QWidget):
         self._pt_last_key = None
         self._ctrl.invalidate_phase_tensor()
 
-    def set_inversion_result(self, result) -> None:
-        """Load an InversionResult into the 2D Section tab."""
-        self._section_panel.set_result(result)
-        self._tabs.setCurrentWidget(self._section_panel)
-
     # ── Slots ─────────────────────────────────────────────────────────
 
     def _on_freq_range_changed(self, lo_hz: float, hi_hz: float) -> None:
         T_max = 1.0 / lo_hz if lo_hz > 0 else None
         T_min = 1.0 / hi_hz if hi_hz > 0 else None
         self._ctrl.set_period_range(T_min, T_max)
+        self._mark_all_dirty()
         self._redraw_current_tab()
 
     def _on_tab_changed(self, index: int) -> None:
         """Lazy-redraw: only draw the tab when it becomes visible."""
-        _redraw = [
-            self._redraw_rho_phi,
-            self._redraw_rho_pseudosection,
-            self._redraw_phase_pseudosection,
-            self._redraw_tipper,
-            self._redraw_phase_tensor,
-            self._redraw_phase_tensor_strip,
-        ]
-        if index < len(_redraw):
-            _redraw[index]()
+        self._redraw_current_tab(force=False)
+        current = self._tabs.widget(index)
+        self._resphase_section.set_active(current is self._resphase_section)
+
+    @staticmethod
+    def _sites_have_tipper(sites) -> bool:
+        try:
+            for site in sites or ():
+                tipper = getattr(site, "tipper", None)
+                if tipper is not None and np.asarray(tipper).size:
+                    return True
+                if bool(site.summary().get("tipper", False)):
+                    return True
+        except Exception:
+            return False
+        return False
+
+    def _set_tipper_tab_visible(self, visible: bool) -> None:
+        index = self._tabs.indexOf(self._canvas_tipper)
+        if visible and index < 0:
+            self._canvas_tipper.show()
+            self._tabs.insertTab(3, self._canvas_tipper, "Tipper")
+        elif not visible and index >= 0:
+            self._tabs.removeTab(index)
+            self._canvas_tipper.hide()
 
     # ── Internal draw helpers ──────────────────────────────────────────
 
@@ -217,19 +258,38 @@ class ProfilePanel(QWidget):
         self._redraw_tipper()
         self._redraw_phase_tensor()
         self._redraw_phase_tensor_strip()
+        self._dirty_canvases.clear()
 
-    def _redraw_current_tab(self) -> None:
-        tab = self._tabs.currentIndex()
-        _redraw = [
-            self._redraw_rho_phi,
-            self._redraw_rho_pseudosection,
-            self._redraw_phase_pseudosection,
-            self._redraw_tipper,
-            self._redraw_phase_tensor,
-            self._redraw_phase_tensor_strip,
-        ]
-        if tab < len(_redraw):
-            _redraw[tab]()
+    def _mark_all_dirty(self) -> None:
+        self._dirty_canvases = {
+            self._canvas_rho_phi,
+            self._canvas_rho_ps,
+            self._canvas_ph_ps,
+            self._canvas_tipper,
+            self._canvas_pt,
+            self._canvas_pt_strip,
+        }
+
+    def _redraw_current_tab(self, force: bool = True) -> None:
+        widget = self._tabs.currentWidget()
+        if not force and widget not in self._dirty_canvases:
+            return
+        redraw = {
+            self._canvas_rho_phi: self._redraw_rho_phi,
+            self._canvas_rho_ps: self._redraw_rho_pseudosection,
+            self._canvas_ph_ps: self._redraw_phase_pseudosection,
+            self._canvas_tipper: self._redraw_tipper,
+            self._canvas_pt: self._redraw_phase_tensor,
+            self._canvas_pt_strip: self._redraw_phase_tensor_strip,
+        }.get(widget)
+        if redraw is not None:
+            redraw()
+            self._dirty_canvases.discard(widget)
+
+    def current_canvas(self):
+        """Return the canvas shown by the active tab."""
+        widget = self._tabs.currentWidget()
+        return widget if isinstance(widget, MplCanvas) else None
 
     def _redraw_rho_phi(self) -> None:
         fig = self._canvas_rho_phi.figure

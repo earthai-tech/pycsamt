@@ -706,7 +706,7 @@ class Inv2DAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             rho_mean = float(np.nanmean(10**pred_2d))
             rho_std = float(np.nanstd(10**pred_2d))
             prompt = (
@@ -992,7 +992,7 @@ class Inv2DAgent(BaseAgent):
             warnings.append(f"draw_tri_mesh: {exc}")
 
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             rho_mean = float(np.nanmean(10.0**pred_log_rho))
             rho_std = float(np.nanstd(10.0**pred_log_rho))
             prompt = (

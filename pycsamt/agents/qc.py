@@ -233,7 +233,7 @@ class DataQCAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             n_st = len(qc_table) if qc_table is not None else "?"
             prompt = (
                 f"Survey QC summary:\n"

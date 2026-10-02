@@ -86,6 +86,26 @@ def test_xml_notes_mapping_includes_full_reference_location():
     assert ztem["ReferenceDatum"] == "WGS84"
 
 
+def test_xml_notes_mapping_reference_station_without_id_or_site():
+    ref = ZTEMReferenceStation()
+    notes = _xml_notes_mapping(ZTEMSystemSpec(), ref)
+    ztem = notes["ZTEM"]
+    assert "ReferenceStationId" not in ztem
+    assert "ReferenceLatitude" not in ztem
+
+
+def test_xml_notes_mapping_reference_location_with_no_optional_fields():
+    ref = ZTEMReferenceStation(
+        site=SiteMeta(site_id="BASE02", location=LocationMeta(datum=None)),
+    )
+    notes = _xml_notes_mapping(ZTEMSystemSpec(), ref)
+    ztem = notes["ZTEM"]
+    assert "ReferenceLatitude" not in ztem
+    assert "ReferenceLongitude" not in ztem
+    assert "ReferenceElevation" not in ztem
+    assert "ReferenceDatum" not in ztem
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # _processing_for_reference
 # ─────────────────────────────────────────────────────────────────────────
@@ -111,6 +131,17 @@ def test_processing_for_reference_passthrough_when_site_matches():
     processing = ProcessingMeta(
         remote_reference=RemoteReferenceMeta(
             reference_type="fixed_ground_horizontal_magnetic", site="BASE01",
+        ),
+    )
+    merged = _processing_for_reference(ref, processing)
+    assert merged is processing
+
+
+def test_processing_for_reference_skips_conflict_check_when_existing_site_missing():
+    ref = ZTEMReferenceStation(station_id="BASE01")
+    processing = ProcessingMeta(
+        remote_reference=RemoteReferenceMeta(
+            reference_type="fixed_ground_horizontal_magnetic", site=None,
         ),
     )
     merged = _processing_for_reference(ref, processing)

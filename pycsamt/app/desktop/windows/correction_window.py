@@ -7,10 +7,17 @@ Left panel  — category selector, correction chooser, dynamic parameter form,
               Preview/Apply actions, correction stack with undo/remove,
               Commit-to-Main and Revert-to-Raw controls.
 
-Right panel — dual MplCanvas (Before / After) with view-mode switcher:
-              Before/After  → two stacked canvases
-              Overlay       → both datasets on one canvas (dashed=before, solid=after)
-              Diff          → relative change section (ΔΩ/Ω %)
+Right panel — one comparison canvas driven by two orthogonal choices:
+              Compare  → Before / After · Overlay · Diff
+              Display  → Curves (1-D) · Pseudosection (2-D) · Strike rose
+                         (rotation) · Position map / Elevation profile
+                         (coordinates)
+              Every Compare mode works with every Display, so e.g. a
+              static-shift correction can be judged as a 2-D before/after
+              section, a 1-D overlay for one station, or a ρ_a-ratio / Δφ
+              diff.  Rendering lives in ``controllers/correction_views.py``.
+              When a view cannot be drawn the canvas is replaced by a card
+              explaining why — never left as empty axes.
 
 The correction stack is non-destructive: raw Sites are never modified.
 ``corrections_committed`` signal carries the final corrected Sites so
@@ -21,6 +28,8 @@ MainWindow can replace the global dataset.
 
 from __future__ import annotations
 
+import warnings
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -29,7 +38,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -54,6 +62,7 @@ _CAT_ICON = {
     "Static Shift": "⇅",
     "Noise Removal": "∿",
     "Source Effects": "⊕",
+    "Distortion": "◈",
     "Tensor Rotation": "↻",
     "Coordinates": "⊙",
     "Stratagem": "✦",
@@ -69,12 +78,38 @@ from pycsamt.app.desktop.controllers.correction_controller import (
     CorrectionController,
     ParamSpec,
 )
-from pycsamt.app.desktop.widgets.mpl_canvas import MplCanvas
+from pycsamt.app.desktop.controllers.correction_views import (
+    ALL_STATIONS,
+    COMPARE_MODES,
+    COMPONENT_CHOICES,
+    QUANTITY_CHOICES,
+    PlotUnavailable,
+    extract_responses,
+    figure_blank_reason,
+    render_curves,
+    render_section,
+)
+from pycsamt.app.desktop.widgets.canvas_stack import CanvasResultView
 from pycsamt.app.desktop.windows._base import (
     PanelWindow,
     icon_button,
     make_group,
 )
+from pycsamt.app.desktop.widgets.compact_button import compact_button
+
+
+# Stacked-widget pages of the right-hand panel
+_PAGE_COMPARE = 0
+_PAGE_STRAT = 1
+
+# Display choices per category family
+DISPLAY_CURVES = "Curves (1-D)"
+DISPLAY_SECTION = "Pseudosection (2-D)"
+DISPLAY_ROSE = "Strike rose"
+DISPLAY_MAP = "Position map"
+DISPLAY_ELEV = "Elevation profile"
+# Static shift is a lateral (station-to-station) effect: open it as a section.
+_DEFAULT_DISPLAY = {"Static Shift": DISPLAY_SECTION}
 
 
 class CorrectionWindow(PanelWindow):
@@ -97,13 +132,17 @@ class CorrectionWindow(PanelWindow):
         super().__init__(
             title="Data Corrections",
             session_key="correction_window",
-            params_width=290,
+            params_width=270,
             icon_name="sites-correction",
             parent=parent,
         )
-        self.resize(1300, 780)
+        # MainWindow clamps panels to 75 % of the screen (960 px on a
+        # 1280-px-wide laptop display); keep the minimum well below that.
+        self.resize(1180, 760)
         self._ctrl = CorrectionController()
         self._preview_sites = None  # result of last Preview (not in stack)
+        # Last Display chosen per category, restored when switching back
+        self._display_memory: dict[str, str] = dict(_DEFAULT_DISPLAY)
 
         self._populate_category_combo()
         self._on_category_changed(
@@ -175,7 +214,7 @@ class CorrectionWindow(PanelWindow):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
         btn_browse = QPushButton("📂")
-        btn_browse.setFixedSize(28, 26)
+        compact_button(btn_browse, 28, 26)
         btn_browse.setToolTip("Browse for EDI directory")
         btn_browse.clicked.connect(self._on_browse_edi_dir)
         dir_h.addWidget(self._edi_dir_label)
@@ -325,94 +364,147 @@ class CorrectionWindow(PanelWindow):
 
     def _build_content(self, layout: QVBoxLayout) -> None:
         # ── Toolbar ───────────────────────────────────────────────────
+        # Two orthogonal choices drive every comparison view:
+        #   Compare  — HOW before and after are contrasted
+        #              (Before / After, Overlay, Diff)
+        #   Display  — WHAT is drawn (1-D curves, 2-D pseudosection,
+        #              strike rose, station map, ...), per category
+        # plus quantity / component / station refinements for Z views.
+        #
+        # Laid out on two short rows with fixed-length combos: one long row
+        # of combos sized to their longest entry (e.g. station names) forced
+        # a ~1700 px minimum window width that did not fit on laptop screens.
         bar = QHBoxLayout()
-        bar.setContentsMargins(8, 4, 8, 0)
-        bar.setSpacing(8)
+        bar.setContentsMargins(8, 4, 8, 2)
+        bar.setSpacing(6)
 
-        bar.addWidget(QLabel("View:"))
+        self._view_controls = QWidget()
+        vc_rows = QVBoxLayout(self._view_controls)
+        vc_rows.setContentsMargins(0, 0, 0, 0)
+        vc_rows.setSpacing(3)
+        vc = QHBoxLayout()
+        vc.setSpacing(6)
+        vc_rows.addLayout(vc)
+
+        def _labelled(text: str, widget: QWidget, tip: str) -> None:
+            lbl = QLabel(text)
+            lbl.setObjectName("FieldLabel")
+            widget.setToolTip(tip)
+            vc.addWidget(lbl)
+            vc.addWidget(widget)
+
         self._combo_mode = QComboBox()
-        self._combo_mode.addItems(
-            ["Before / After", "Overlay", "Diff", "2D Section"]
-        )
-        self._combo_mode.setFixedWidth(150)
+        self._combo_mode.addItems(list(COMPARE_MODES))
         self._combo_mode.currentIndexChanged.connect(self._on_mode_changed)
-        bar.addWidget(self._combo_mode)
+        _labelled(
+            "Compare:",
+            self._combo_mode,
+            "Before / After — raw and corrected side by side, same scale\n"
+            "Overlay — both states on one plot (before dashed/grey or as "
+            "contours)\n"
+            "Diff — what the correction changed: ρ_a ratio (×) and Δφ (°)",
+        )
 
-        # Sub-view for Coordinates category
-        self._combo_coord_view = QComboBox()
-        self._combo_coord_view.addItems(["Position map", "Elevation profile"])
-        self._combo_coord_view.setFixedWidth(140)
-        self._combo_coord_view.currentIndexChanged.connect(self._refresh_plots)
-        self._combo_coord_view.setVisible(False)
-        bar.addWidget(self._combo_coord_view)
+        self._combo_display = QComboBox()
+        self._combo_display.currentIndexChanged.connect(
+            self._on_display_changed
+        )
+        _labelled("Display:", self._combo_display, "What to draw")
 
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.VLine)
-        sep.setObjectName("Separator")
-        bar.addWidget(sep)
+        self._z_controls = QWidget()
+        zc = QHBoxLayout(self._z_controls)
+        zc.setContentsMargins(0, 0, 0, 0)
+        zc.setSpacing(6)
+        self._combo_quantity = QComboBox()
+        self._combo_quantity.addItems(list(QUANTITY_CHOICES))
+        self._combo_quantity.setToolTip(
+            "ρ_a + φ is recommended: a correction that alters phase (e.g. "
+            "rotation, distortion removal) is only visible in φ, while a "
+            "pure static shift must leave φ unchanged."
+        )
+        self._combo_component = QComboBox()
+        self._combo_component.addItems(list(COMPONENT_CHOICES))
+        self._combo_component.setToolTip("Impedance component(s) to show")
+        self._combo_station = QComboBox()
+        self._combo_station.setMaxVisibleItems(20)
+        self._combo_station.addItem(ALL_STATIONS)
+        self._combo_station.setToolTip(
+            "Curves: show only this station's before/after.\n"
+            "Pseudosection: outline this station's column."
+        )
+        # One "Show:" label for the row: the entries ("ρ_a + φ", "XY + YX",
+        # "All stations" / a station name) are self-describing, and three
+        # separate labels cost ~150 px of window width.
+        lbl = QLabel("Show:")
+        lbl.setObjectName("FieldLabel")
+        zc.addWidget(lbl)
+        for w in (self._combo_quantity, self._combo_component,
+                  self._combo_station):
+            zc.addWidget(w)
+            w.currentIndexChanged.connect(self._refresh_plots)
+        zc.addStretch(1)
+        vc.addStretch(1)
+        vc_rows.addWidget(self._z_controls)
+        for combo, chars in (
+            (self._combo_mode, 12),
+            (self._combo_display, 15),
+            (self._combo_quantity, 7),
+            (self._combo_component, 7),
+            (self._combo_station, 9),
+        ):
+            _compact_combo(combo, chars)
+        bar.addWidget(self._view_controls, 1)
 
+        side = QVBoxLayout()
+        side.setSpacing(3)
         self._btn_export = icon_button(
             "⬆  Export…", "export", "Export current figure"
         )
         self._btn_export.setFixedWidth(110)
         self._btn_export.clicked.connect(self._on_export)
-        bar.addWidget(self._btn_export)
-
-        bar.addStretch()
+        side.addWidget(self._btn_export, 0, Qt.AlignmentFlag.AlignRight)
         self._view_status = QLabel("")
         self._view_status.setObjectName("InfoLabel")
-        bar.addWidget(self._view_status)
+        self._view_status.setAlignment(Qt.AlignmentFlag.AlignRight)
+        # Long status messages must not widen the window
+        self._view_status.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        side.addWidget(self._view_status)
+        side_w = QWidget()
+        side_w.setLayout(side)
+        side_w.setFixedWidth(120)
+        bar.addWidget(side_w)
 
         bar_w = QWidget()
         bar_w.setLayout(bar)
         layout.addWidget(bar_w)
 
-        # ── Stacked view: page 0 = split, page 1 = single (overlay/diff) ──
+        # ── Stacked view: page 0 = comparison canvas, page 1 = Stratagem ──
         self._view_stack = QStackedWidget()
         layout.addWidget(self._view_stack)
 
-        # ── Page 0: vertical split before / after ─────────────────────
-        split_page = QWidget()
-        split_v = QVBoxLayout(split_page)
-        split_v.setContentsMargins(0, 0, 0, 0)
-        split_v.setSpacing(0)
+        # ── Page 0: one canvas for every comparison view ──────────────
+        # A single figure (not separate Before/After canvases) keeps both
+        # states on a shared axis scale and exports as one image.
+        cmp_page = QWidget()
+        cmp_v = QVBoxLayout(cmp_page)
+        cmp_v.setContentsMargins(0, 0, 0, 0)
+        cmp_v.setSpacing(0)
+        self._plot_view = CanvasResultView(
+            cmp_page,
+            toolbar=True,
+            empty_title="No data loaded",
+            empty_reason="Load survey data, then Preview or Apply a correction.",
+        )
+        self._canvas = self._plot_view.canvas
+        self._canvas.set_refresh_callback(
+            self._refresh_plots, tooltip="Redraw current view"
+        )
+        cmp_v.addWidget(self._plot_view)
+        self._view_stack.addWidget(cmp_page)
 
-        self._canvas_splitter = QSplitter(Qt.Orientation.Vertical)
-        self._canvas_splitter.setHandleWidth(4)
-
-        def _canvas_pane(title: str) -> tuple[QWidget, MplCanvas]:
-            pane = QWidget()
-            pane.setObjectName("CanvasPane")
-            v = QVBoxLayout(pane)
-            v.setContentsMargins(0, 0, 0, 0)
-            v.setSpacing(0)
-            lbl = QLabel(f"  {title}")
-            lbl.setObjectName("CanvasLabel")
-            lbl.setFixedHeight(22)
-            v.addWidget(lbl)
-            canvas = MplCanvas(pane, toolbar=False)
-            v.addWidget(canvas)
-            return pane, canvas
-
-        before_pane, self._canvas_before = _canvas_pane("Before")
-        after_pane, self._canvas_after = _canvas_pane("After / Preview")
-
-        self._canvas_splitter.addWidget(before_pane)
-        self._canvas_splitter.addWidget(after_pane)
-        self._canvas_splitter.setSizes([360, 360])
-        split_v.addWidget(self._canvas_splitter)
-        self._view_stack.addWidget(split_page)
-
-        # ── Page 1: single canvas for overlay / diff ──────────────────
-        single_page = QWidget()
-        single_v = QVBoxLayout(single_page)
-        single_v.setContentsMargins(0, 0, 0, 0)
-        single_v.setSpacing(0)
-        self._canvas_single = MplCanvas(single_page, toolbar=True)
-        single_v.addWidget(self._canvas_single)
-        self._view_stack.addWidget(single_page)
-
-        # ── Page 2: Stratagem Studio ───────────────────────────────────
+        # ── Page 1: Stratagem Studio ───────────────────────────────────
         strat_page = QWidget()
         strat_v = QVBoxLayout(strat_page)
         strat_v.setContentsMargins(0, 0, 0, 0)
@@ -433,8 +525,17 @@ class CorrectionWindow(PanelWindow):
         qc_page = QWidget()
         qc_v = QVBoxLayout(qc_page)
         qc_v.setContentsMargins(0, 0, 0, 0)
-        self._canvas_strat_qc = MplCanvas(qc_page, toolbar=True)
-        qc_v.addWidget(self._canvas_strat_qc)
+        self._canvas_strat_qc_view = CanvasResultView(
+            qc_page,
+            toolbar=True,
+            empty_title="No QC report yet",
+            empty_reason="Load Stratagem EDI data to generate a QC report.",
+        )
+        self._canvas_strat_qc = self._canvas_strat_qc_view.canvas
+        self._canvas_strat_qc.set_refresh_callback(
+            self._refresh_strat_plots, tooltip="Redraw Stratagem plots"
+        )
+        qc_v.addWidget(self._canvas_strat_qc_view)
         self._strat_tabs.addTab(qc_page, "QC Report")
 
         # Tab 1 — Before / After impedance
@@ -444,7 +545,7 @@ class CorrectionWindow(PanelWindow):
         ba_splitter = QSplitter(Qt.Orientation.Vertical)
         ba_splitter.setHandleWidth(4)
 
-        def _strat_pane(title):
+        def _strat_pane(title, empty_title, empty_reason):
             p = QWidget()
             p.setObjectName("CanvasPane")
             v = QVBoxLayout(p)
@@ -454,14 +555,29 @@ class CorrectionWindow(PanelWindow):
             lbl.setObjectName("CanvasLabel")
             lbl.setFixedHeight(22)
             v.addWidget(lbl)
-            c = MplCanvas(p, toolbar=False)
-            v.addWidget(c)
-            return p, c
+            view = CanvasResultView(
+                p, toolbar=False,
+                empty_title=empty_title, empty_reason=empty_reason,
+            )
+            v.addWidget(view)
+            return p, view
 
-        ba_before_pane, self._canvas_strat_before = _strat_pane("Before (raw)")
-        ba_after_pane, self._canvas_strat_after = _strat_pane(
-            "After (corrected)"
+        ba_before_pane, self._canvas_strat_before_view = _strat_pane(
+            "Before (raw)",
+            "No data loaded",
+            "Load Stratagem EDI data to see the raw curves.",
         )
+        ba_after_pane, self._canvas_strat_after_view = _strat_pane(
+            "After (corrected)",
+            "No corrections applied yet",
+            "Apply a Stratagem correction to see the corrected curves.",
+        )
+        self._canvas_strat_before = self._canvas_strat_before_view.canvas
+        self._canvas_strat_after = self._canvas_strat_after_view.canvas
+        for view in (self._canvas_strat_before_view, self._canvas_strat_after_view):
+            view.canvas.set_refresh_callback(
+                self._refresh_strat_plots, tooltip="Redraw Stratagem plots"
+            )
         ba_splitter.addWidget(ba_before_pane)
         ba_splitter.addWidget(ba_after_pane)
         ba_splitter.setSizes([350, 350])
@@ -472,8 +588,17 @@ class CorrectionWindow(PanelWindow):
         ss_page = QWidget()
         ss_v = QVBoxLayout(ss_page)
         ss_v.setContentsMargins(0, 0, 0, 0)
-        self._canvas_strat_ss = MplCanvas(ss_page, toolbar=True)
-        ss_v.addWidget(self._canvas_strat_ss)
+        self._canvas_strat_ss_view = CanvasResultView(
+            ss_page,
+            toolbar=True,
+            empty_title="No static-shift factors yet",
+            empty_reason="Load Stratagem EDI data to compute static-shift factors.",
+        )
+        self._canvas_strat_ss = self._canvas_strat_ss_view.canvas
+        self._canvas_strat_ss.set_refresh_callback(
+            self._refresh_strat_plots, tooltip="Redraw Stratagem plots"
+        )
+        ss_v.addWidget(self._canvas_strat_ss_view)
         self._strat_tabs.addTab(ss_page, "SS Factors")
 
         # Tab 3 — Station QC table (raw numbers)
@@ -488,16 +613,7 @@ class CorrectionWindow(PanelWindow):
 
         self._view_stack.addWidget(strat_page)
 
-        # ── Page 3: 2-D ρ_a pseudosection (Static Shift) ─────────────
-        pseudo_page = QWidget()
-        pseudo_v = QVBoxLayout(pseudo_page)
-        pseudo_v.setContentsMargins(0, 0, 0, 0)
-        pseudo_v.setSpacing(0)
-        self._canvas_pseudo = MplCanvas(pseudo_page, toolbar=True)
-        pseudo_v.addWidget(self._canvas_pseudo)
-        self._view_stack.addWidget(pseudo_page)
-
-        self._view_stack.setCurrentIndex(0)
+        self._view_stack.setCurrentIndex(_PAGE_COMPARE)
 
     # ── Populate category combo ────────────────────────────────────────
 
@@ -514,6 +630,7 @@ class CorrectionWindow(PanelWindow):
         super().set_sites(sites)
         self._ctrl.set_raw_sites(sites)
         self._preview_sites = None
+        self._populate_station_combo()
         self._refresh_all()
 
     def set_dark_mode(self, dark: bool) -> None:
@@ -540,35 +657,15 @@ class CorrectionWindow(PanelWindow):
         # Show / hide category-specific side panels
         self._grp_strat.setVisible(is_strat)
         self._grp_ss_affected.setVisible(is_ss)
-        self._combo_mode.setVisible(not is_strat)
-        self._combo_coord_view.setVisible(
-            self._is_coord_category() and not is_strat
-        )
+        self._view_controls.setVisible(not is_strat)
         self._btn_export_strat.setVisible(is_strat)
 
         if is_strat:
-            self._view_stack.setCurrentIndex(2)
+            self._view_stack.setCurrentIndex(_PAGE_STRAT)
             self._refresh_strat_plots()
         else:
-            # Auto-switch view mode
-            if is_ss:
-                self._combo_mode.blockSignals(True)
-                self._combo_mode.setCurrentText("2D Section")
-                self._combo_mode.blockSignals(False)
-                self._view_stack.setCurrentIndex(3)
-            else:
-                mode = self._combo_mode.currentText()
-                if mode == "2D Section":
-                    # 2D Section requires impedance data — not for coord corrections
-                    # or when switching away from Static Shift to another category
-                    self._combo_mode.blockSignals(True)
-                    self._combo_mode.setCurrentText("Before / After")
-                    self._combo_mode.blockSignals(False)
-                    self._view_stack.setCurrentIndex(0)
-                elif mode == "Before / After":
-                    self._view_stack.setCurrentIndex(0)
-                else:
-                    self._view_stack.setCurrentIndex(1)
+            self._view_stack.setCurrentIndex(_PAGE_COMPARE)
+            self._populate_display_combo(cat)
 
         self._on_correction_changed(0)
         self._preview_sites = None
@@ -748,7 +845,7 @@ class CorrectionWindow(PanelWindow):
                 self._action_status.setText(f"Applied: {label}")
                 self._refresh_stack_list()
                 # Stratagem page needs its own refresh; normal page otherwise
-                if self._view_stack.currentIndex() == 2:
+                if self._view_stack.currentIndex() == _PAGE_STRAT:
                     self._refresh_strat_plots()
                 else:
                     self._refresh_plots()
@@ -837,33 +934,59 @@ class CorrectionWindow(PanelWindow):
         try:
             self._ctrl.plot_strat_qc(fig_qc)
             self._canvas_strat_qc.draw()
-        except Exception:
-            pass
+            self._canvas_strat_qc_view.show_canvas()
+        except Exception as exc:
+            self._canvas_strat_qc_view.show_unavailable(
+                "No QC report yet",
+                str(exc) or "Load Stratagem EDI data to generate a QC report.",
+            )
         # SS factors
         ax_ss = self._canvas_strat_ss.axes
         try:
             self._ctrl.plot_strat_ss_factors(ax_ss)
             self._canvas_strat_ss.draw()
-        except Exception:
-            pass
+            self._canvas_strat_ss_view.show_canvas()
+        except Exception as exc:
+            self._canvas_strat_ss_view.show_unavailable(
+                "No static-shift factors yet",
+                str(exc) or "Load Stratagem EDI data to compute static-shift factors.",
+            )
         # Before / After impedance curves
-        try:
-            raw_sites = self._ctrl.raw_sites
-            curr_sites = self._ctrl.current_sites
-            if raw_sites is not None:
+        raw_sites = self._ctrl.raw_sites
+        curr_sites = self._ctrl.current_sites
+        if raw_sites is not None:
+            try:
                 ax_b = self._canvas_strat_before.axes
                 ax_b.cla()
                 self._ctrl.plot_rho_curves(raw_sites, ax_b, "Before (raw)")
                 self._canvas_strat_before.draw()
-            if curr_sites is not None and curr_sites is not raw_sites:
+                self._canvas_strat_before_view.show_canvas()
+            except Exception as exc:
+                self._canvas_strat_before_view.show_unavailable(
+                    "Plot unavailable", str(exc)
+                )
+        else:
+            self._canvas_strat_before_view.show_unavailable(
+                "No data loaded", "Load Stratagem EDI data to see the raw curves."
+            )
+        if curr_sites is not None and curr_sites is not raw_sites:
+            try:
                 ax_a = self._canvas_strat_after.axes
                 ax_a.cla()
                 self._ctrl.plot_rho_curves(
                     curr_sites, ax_a, "After (corrected)"
                 )
                 self._canvas_strat_after.draw()
-        except Exception:
-            pass
+                self._canvas_strat_after_view.show_canvas()
+            except Exception as exc:
+                self._canvas_strat_after_view.show_unavailable(
+                    "Plot unavailable", str(exc)
+                )
+        else:
+            self._canvas_strat_after_view.show_unavailable(
+                "No corrections applied yet",
+                "Apply a Stratagem correction to see the corrected curves.",
+            )
         # QC data table
         self._populate_strat_qc_table()
 
@@ -914,14 +1037,62 @@ class CorrectionWindow(PanelWindow):
     # ── View-mode slot ────────────────────────────────────────────────
 
     def _on_mode_changed(self, _idx: int) -> None:
-        mode = self._combo_mode.currentText()
-        if mode == "Before / After":
-            self._view_stack.setCurrentIndex(0)
-        elif mode == "2D Section":
-            self._view_stack.setCurrentIndex(3)
-        else:
-            self._view_stack.setCurrentIndex(1)
         self._refresh_plots()
+
+    def _on_display_changed(self, _idx: int) -> None:
+        cat = self._current_category()
+        display = self._combo_display.currentText()
+        if cat and display:
+            self._display_memory[cat] = display
+        # Quantity / component / station only refine impedance views
+        self._z_controls.setVisible(display in (DISPLAY_CURVES, DISPLAY_SECTION))
+        self._refresh_plots()
+
+    def _populate_display_combo(self, cat: str) -> None:
+        """Offer the Display choices that make sense for *cat*."""
+        if cat in COORD_CATEGORIES:
+            choices = [DISPLAY_MAP, DISPLAY_ELEV]
+        else:
+            choices = [DISPLAY_CURVES, DISPLAY_SECTION]
+            if cat in ROTATION_CATEGORIES:
+                choices.append(DISPLAY_ROSE)
+        wanted = self._display_memory.get(cat, choices[0])
+        self._combo_display.blockSignals(True)
+        self._combo_display.clear()
+        self._combo_display.addItems(choices)
+        self._combo_display.setCurrentText(
+            wanted if wanted in choices else choices[0]
+        )
+        self._combo_display.blockSignals(False)
+        _fit_popup(self._combo_display)
+        self._z_controls.setVisible(
+            self._combo_display.currentText()
+            in (DISPLAY_CURVES, DISPLAY_SECTION)
+        )
+
+    def _populate_station_combo(self) -> None:
+        """Refill the Station picker from the raw dataset, keeping the
+        current choice when that station still exists."""
+        current = self._combo_station.currentText()
+        names = []
+        if self._ctrl.raw_sites is not None:
+            try:
+                names = list(extract_responses(self._ctrl.raw_sites))
+            except Exception:
+                names = []
+        self._combo_station.blockSignals(True)
+        self._combo_station.clear()
+        self._combo_station.addItem(ALL_STATIONS)
+        self._combo_station.addItems(names)
+        self._combo_station.setCurrentText(
+            current if current in names else ALL_STATIONS
+        )
+        self._combo_station.blockSignals(False)
+        _fit_popup(self._combo_station)
+
+    def _current_category(self) -> str:
+        row = self._combo_category.currentIndex()
+        return CATEGORIES[row] if 0 <= row < len(CATEGORIES) else ""
 
     # ── Commit / Revert ───────────────────────────────────────────────
 
@@ -958,13 +1129,7 @@ class CorrectionWindow(PanelWindow):
             ExportDialog,
         )
 
-        mode = self._combo_mode.currentText()
-        fig = (
-            self._canvas_single.figure
-            if mode != "Before / After"
-            else self._canvas_after.figure
-        )
-        ExportDialog(figure=fig, parent=self).exec()
+        ExportDialog(figure=self._canvas.figure, parent=self).exec()
 
     # ── View-mode helpers ─────────────────────────────────────────────
 
@@ -1011,223 +1176,210 @@ class CorrectionWindow(PanelWindow):
         return CATEGORIES[row] in STATIC_SHIFT_CATEGORIES
 
     def _refresh_plots(self) -> None:
-        mode = self._combo_mode.currentText()
-        is_coord = self._is_coord_category()
-        _crow = self._combo_category.currentIndex()
-        is_rotation = (
-            CATEGORIES[_crow] in ROTATION_CATEGORIES
-            if 0 <= _crow < len(CATEGORIES)
-            else False
-        )
-        elev_view = (
-            self._combo_coord_view.currentText() == "Elevation profile"
-            if is_coord
-            else False
-        )
+        """Redraw the comparison canvas for the current Compare × Display.
 
-        # ── 2D pseudosection view (Static Shift only) ────────────────────────
-        if mode == "2D Section":
-            self._view_stack.setCurrentIndex(3)
-            fig_ps = self._canvas_pseudo.figure
-            if is_coord:
-                # Coordinates category has no impedance data — show message
-                fig_ps.clear()
-                ax_msg = fig_ps.add_subplot(111)
-                ax_msg.set_facecolor(
-                    "#181825" if self._ctrl.dark else "#eff1f5"
-                )
-                fig_ps.patch.set_facecolor(
-                    "#1e1e2e" if self._ctrl.dark else "#e6e9ef"
-                )
-                tc = "#a6adc8" if self._ctrl.dark else "#6c6f85"
-                ax_msg.text(
-                    0.5,
-                    0.5,
-                    "2D pseudosection requires impedance (Z) data.\n"
-                    "Not applicable for coordinate corrections.\n\n"
-                    "Switch to  Before / After  or  Overlay  to compare positions.",
-                    transform=ax_msg.transAxes,
-                    ha="center",
-                    va="center",
-                    fontsize=10,
-                    color=tc,
-                    multialignment="center",
-                )
-                ax_msg.axis("off")
-                self._canvas_pseudo.draw()
-                return
-            current_data = (
-                self._preview_sites
-                if self._preview_sites is not None
-                else self._ctrl.current_sites
+        Never leaves empty axes on screen: anything that prevents a real
+        plot (no data, nothing to compare yet, missing component, a
+        plotting error) swaps the canvas for a card stating the reason.
+        """
+        if self._current_category() in STRATAGEM_CATEGORIES:
+            return
+        view = self._plot_view
+        fig = self._canvas.figure
+        if not self._ctrl.has_data:
+            view.show_unavailable(
+                "No data loaded",
+                "There is no survey in this panel yet.",
+                "Load EDI / EMTF-XML data in the main window; it is sent "
+                "here automatically.",
             )
-            affected = self._get_affected_stations()
-            try:
-                self._ctrl.plot_rho_pseudosection(
-                    current_data,
-                    fig_ps,
-                    affected_stations=affected or None,
-                    title="ρ_a Pseudosection  —  Static Shift",
-                )
-                try:
-                    fig_ps.tight_layout(pad=1.0)
-                except Exception:
-                    pass
-            except Exception:
-                pass
-            self._canvas_pseudo.draw()
             return
 
-        # ── Determine before / after data sources ────────────────────────────
-        if is_coord:
-            # Coords: always use DataFrame snapshots (never EDI head objects)
-            before_data = self._ctrl.raw_coords_df
-            after_data = (
-                self._preview_sites  # may be a DataFrame from preview()
-                if self._preview_sites is not None
-                else self._ctrl.current_coords_df()
-            )
-            after_label = (
-                "Preview"
-                if self._preview_sites is not None
-                else f"After  ({self._ctrl.n_steps} step{'s' if self._ctrl.n_steps != 1 else ''})"
-            )
-        else:
-            before_data = self._ctrl.raw_sites
-            after_data = (
-                self._preview_sites
-                if self._preview_sites is not None
-                else self._ctrl.current_sites
-            )
-            after_label = (
-                "Preview"
-                if self._preview_sites is not None
-                else f"After  ({self._ctrl.n_steps} step{'s' if self._ctrl.n_steps != 1 else ''})"
-            )
-
-        def _draw(fn, *args):
-            try:
-                fn(*args)
-            except Exception:
-                pass
-
-        # ── Before / After split view ─────────────────────────────────────────
-        if mode == "Before / After":
-            self._view_stack.setCurrentIndex(0)
-
-            self._canvas_before.figure.clear()
-            ax_b = self._canvas_before.figure.add_subplot(111)
-            if is_coord and elev_view:
-                _draw(
-                    self._ctrl.plot_station_elevation,
-                    before_data,
-                    ax_b,
-                    "Before — elevation",
-                )
-            elif is_coord:
-                _draw(
-                    self._ctrl.plot_station_map,
-                    before_data,
-                    ax_b,
-                    "Before — positions",
-                )
-            else:
-                _draw(
-                    self._ctrl.plot_rho_curves,
-                    before_data,
-                    ax_b,
-                    "Before (raw)",
-                )
-            try:
-                self._canvas_before.figure.tight_layout(pad=1.0)
-            except Exception:
-                pass
-            self._canvas_before.draw()
-
-            self._canvas_after.figure.clear()
-            ax_a = self._canvas_after.figure.add_subplot(111)
-            if is_coord and elev_view:
-                _draw(
-                    self._ctrl.plot_station_elevation,
-                    after_data,
-                    ax_a,
-                    after_label,
-                )
-            elif is_coord:
-                _draw(
-                    self._ctrl.plot_station_map, after_data, ax_a, after_label
-                )
-            else:
-                _draw(
-                    self._ctrl.plot_rho_curves, after_data, ax_a, after_label
-                )
-            try:
-                self._canvas_after.figure.tight_layout(pad=1.0)
-            except Exception:
-                pass
-            self._canvas_after.draw()
-
-        # ── Overlay / Rose / Diff single-canvas view ──────────────────────────
-        else:
-            self._view_stack.setCurrentIndex(1)
-            fig = self._canvas_single.figure
+        with warnings.catch_warnings():
+            # Clearing shared log axes briefly resets limits to (0, 1)
+            warnings.simplefilter("ignore", UserWarning)
             fig.clear()
+        # Constrained layout keeps shared colour bars and side-by-side
+        # panels aligned at any canvas size.
+        fig.set_layout_engine("constrained")
+        try:
+            self._render_comparison(fig)
+            reason = figure_blank_reason(fig)
+            if reason:
+                raise PlotUnavailable(
+                    "Nothing to display for this view",
+                    reason,
+                    "Try another Display or Compare mode, or check the "
+                    "correction parameters.",
+                )
+        except PlotUnavailable as exc:
+            fig.clear()
+            view.show_unavailable(exc.title, exc.reason, exc.guidance)
+            return
+        except Exception as exc:  # a plotting bug must not blank the UI
+            fig.clear()
+            view.show_unavailable(
+                "This view could not be drawn",
+                f"{type(exc).__name__}: {exc}",
+                "Try another Display or Compare mode. If it persists, "
+                "please report it with the data that triggers it.",
+            )
+            return
+        self._canvas.draw()
+        view.show_canvas()
 
+    def _after_state(self):
+        """Return (after_data, after_title) for the current comparison."""
+        n = self._ctrl.n_steps
+        if self._preview_sites is not None:
+            fn, label = self._current_fn_label()
+            return self._preview_sites, f"Preview: {label}" if label else "Preview"
+        if n == 0:
+            title = "After (no corrections yet)"
+        else:
+            title = f"After ({n} step{'s' if n != 1 else ''})"
+        if self._is_coord_category():
+            return self._ctrl.current_coords_df(), title
+        return self._ctrl.current_sites, title
+
+    def _render_comparison(self, fig) -> None:
+        mode = self._combo_mode.currentText()
+        display = self._combo_display.currentText()
+        after_data, after_title = self._after_state()
+
+        if self._is_coord_category():
+            self._render_coords(fig, mode, display, after_data, after_title)
+            return
+
+        before = self._ctrl.raw_sites
+        if display == DISPLAY_ROSE:
+            if mode == "Diff":
+                raise PlotUnavailable(
+                    "No Diff view for a strike rose",
+                    "A rose diagram compares two direction distributions; "
+                    "subtracting them bin by bin has no physical meaning.",
+                    "Use Before / After or Overlay for the rose, or switch "
+                    "Display to Curves / Pseudosection to see how the "
+                    "rotation changed ρ_a and φ.",
+                )
             if mode == "Overlay":
-                if is_coord and elev_view:
-                    # True overlay: both profiles on one axis, distinct colours
-                    ax = fig.add_subplot(111)
-                    _draw(
-                        self._ctrl.plot_station_elevation_overlay,
-                        before_data,
-                        after_data,
-                        ax,
-                    )
-                elif is_coord:
-                    ax = fig.add_subplot(111)
-                    _draw(
-                        self._ctrl.plot_station_map_overlay,
-                        before_data,
-                        after_data,
-                        ax,
-                    )
-                elif is_rotation:
-                    # Rose diagram for tensor rotation
-                    _draw(
-                        self._ctrl.plot_rotation_rose,
-                        before_data,
-                        after_data,
-                        fig,
-                    )
-                else:
-                    ax = fig.add_subplot(111)
-                    _draw(self._ctrl.plot_overlay, before_data, after_data, ax)
+                self._ctrl.plot_rotation_rose_overlay(before, after_data, fig)
+            else:
+                self._ctrl.plot_rotation_rose(before, after_data, fig)
+            return
 
-            else:  # Diff
-                if is_coord:
-                    ax = fig.add_subplot(111)
-                    _draw(
-                        self._ctrl.plot_displacement_diff,
-                        before_data,
-                        after_data,
-                        ax,
-                    )
-                elif is_rotation:
-                    _draw(
-                        self._ctrl.plot_rotation_rose,
-                        before_data,
-                        after_data,
-                        fig,
-                    )
-                else:
-                    ax = fig.add_subplot(111)
-                    _draw(self._ctrl.plot_diff, before_data, after_data, ax)
+        theme = _theme(self._ctrl.dark)
+        station = self._combo_station.currentText()
+        quantities = QUANTITY_CHOICES[self._combo_quantity.currentText()]
+        components = COMPONENT_CHOICES[self._combo_component.currentText()]
+        if display == DISPLAY_SECTION:
+            render_section(
+                fig,
+                before,
+                after_data,
+                mode=mode,
+                station=station,
+                quantities=quantities,
+                components=components,
+                affected_stations=(
+                    self._get_affected_stations()
+                    if self._is_ss_category()
+                    else None
+                ),
+                theme=theme,
+                after_title=after_title,
+            )
+        else:
+            render_curves(
+                fig,
+                before,
+                after_data,
+                mode=mode,
+                station=station,
+                quantities=quantities,
+                components=components,
+                theme=theme,
+                after_title=after_title,
+            )
 
-            try:
-                fig.tight_layout(pad=1.2)
-            except Exception:
-                pass
-            self._canvas_single.draw()
+    def _render_coords(self, fig, mode, display, after, after_title) -> None:
+        before = self._ctrl.raw_coords_df
+        elev = display == DISPLAY_ELEV
+        if mode == "Diff":
+            if _coords_equal(before, after):
+                raise PlotUnavailable(
+                    "Nothing to compare yet",
+                    "No coordinate correction has been previewed or "
+                    "applied, so every station is still at its raw "
+                    "position.",
+                    "Choose a correction and click Preview or Apply.",
+                )
+            self._ctrl.plot_displacement_diff(before, after, fig.add_subplot(111))
+        elif mode == "Overlay":
+            ax = fig.add_subplot(111)
+            if elev:
+                self._ctrl.plot_station_elevation_overlay(before, after, ax)
+            else:
+                self._ctrl.plot_station_map_overlay(before, after, ax)
+        else:
+            # Not sharex/sharey: the station map uses an equal aspect with
+            # adjustable="datalim", which matplotlib forbids on axes shared
+            # in both directions. Identical limits are imposed afterwards.
+            ax_b, ax_a = fig.subplots(1, 2)
+            plot = (
+                self._ctrl.plot_station_elevation
+                if elev
+                else self._ctrl.plot_station_map
+            )
+            what = "elevation" if elev else "positions"
+            plot(before, ax_b, f"Before (raw) — {what}")
+            plot(after, ax_a, f"{after_title} — {what}")
+            for get, set_ in (("get_xlim", "set_xlim"), ("get_ylim", "set_ylim")):
+                lims = [getattr(ax, get)() for ax in (ax_b, ax_a)]
+                lo = min(min(l) for l in lims)
+                hi = max(max(l) for l in lims)
+                for ax in (ax_b, ax_a):
+                    getattr(ax, set_)(lo, hi)
+
+
+def _compact_combo(combo: QComboBox, chars: int) -> None:
+    """Size *combo* for ~*chars* characters instead of its longest item.
+
+    The drop-down list still shows full item text; only the closed box is
+    capped, so long station names cannot inflate the window's minimum width.
+    """
+    combo.setSizeAdjustPolicy(
+        QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+    )
+    combo.setMinimumContentsLength(chars)
+    _fit_popup(combo)
+
+
+def _fit_popup(combo: QComboBox) -> None:
+    """Let the drop-down list be as wide as its longest item."""
+    combo.view().setMinimumWidth(combo.view().sizeHintForColumn(0) + 24)
+
+
+def _theme(dark: bool) -> dict:
+    from pycsamt.app.desktop.controllers.correction_controller import (
+        _DARK,
+        _LIGHT,
+    )
+
+    return _DARK if dark else _LIGHT
+
+
+def _coords_equal(a, b) -> bool:
+    """True when two coordinate tables hold the same station positions."""
+    try:
+        if a is None or b is None:
+            return a is b
+        cols = [c for c in ("station", "lat", "lon", "elev") if c in a.columns]
+        return a[cols].reset_index(drop=True).equals(
+            b[cols].reset_index(drop=True)
+        )
+    except Exception:
+        return False
 
 
 # ── Needed for type hint in _make_widget ──────────────────────────────────────

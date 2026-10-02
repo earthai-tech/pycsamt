@@ -152,6 +152,10 @@ class CorruptionConfig:
     coordinate_sigma_m, elevation_sigma_m : float, default=0.0
         Std. dev. of Gaussian perturbation applied to station horizontal
         coordinates and elevation, respectively.
+    noise_sampling : {"uniform", "loguniform", "lognormal"}, default="uniform"
+        How the relative noise level is drawn from ``noise_level_range``;
+        see :func:`add_heteroscedastic_noise`. With ``"lognormal"`` the
+        range is read as the 25th and 75th percentiles.
 
     Examples
     --------
@@ -176,8 +180,14 @@ class CorruptionConfig:
     outlier_log10_shift_range: tuple[float, float] = (0.5, 1.5)
     coordinate_sigma_m: float = 0.0
     elevation_sigma_m: float = 0.0
+    noise_sampling: str = "uniform"
 
     def __post_init__(self) -> None:
+        if self.noise_sampling not in _NOISE_SAMPLING:
+            raise ValueError(
+                f"noise_sampling must be one of {_NOISE_SAMPLING}; "
+                f"got {self.noise_sampling!r}."
+            )
         object.__setattr__(
             self,
             "noise_level_range",
@@ -228,7 +238,7 @@ class CorruptionConfig:
         >>> CorruptionConfig().to_dict()["schema_version"]
         1
         """
-        return {
+        out = {
             "schema_version": 1,
             "noise_level_range": list(self.noise_level_range),
             "error_floor_fraction": self.error_floor_fraction,
@@ -245,6 +255,11 @@ class CorruptionConfig:
             "coordinate_sigma_m": self.coordinate_sigma_m,
             "elevation_sigma_m": self.elevation_sigma_m,
         }
+        # Omitted at its default so hashes of existing configurations
+        # are unchanged.
+        if self.noise_sampling != "uniform":
+            out["noise_sampling"] = self.noise_sampling
+        return out
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> CorruptionConfig:
@@ -338,11 +353,44 @@ class CorruptionRecord:
         }
 
 
+_NOISE_SAMPLING = ("uniform", "loguniform", "lognormal")
+
+
+def _sample_noise_level(
+    lo: float,
+    hi: float,
+    sampling: str,
+    rng: np.random.Generator,
+    *,
+    size: tuple[int, ...],
+) -> np.ndarray:
+    """Draw relative noise levels between (or around) ``lo`` and ``hi``."""
+    if sampling not in _NOISE_SAMPLING:
+        raise ValueError(
+            f"sampling must be one of {_NOISE_SAMPLING}; got {sampling!r}."
+        )
+    if sampling == "uniform" or lo == hi:
+        return rng.uniform(lo, hi, size=size)
+    if lo <= 0.0:
+        raise ValueError(
+            f"{sampling!r} noise sampling needs a strictly positive lower "
+            "bound."
+        )
+    log_lo, log_hi = np.log10(lo), np.log10(hi)
+    if sampling == "loguniform":
+        return 10.0 ** rng.uniform(log_lo, log_hi, size=size)
+    median = 0.5 * (log_lo + log_hi)
+    sd = (log_hi - log_lo) / 1.349  # IQR of a standard normal
+    cap = median + 3.090 * sd  # 99.9th percentile
+    return 10.0 ** np.minimum(rng.normal(median, sd, size=size), cap)
+
+
 def add_heteroscedastic_noise(
     survey: SurveyData,
     *,
     level_range: tuple[float, float] = (0.02, 0.05),
     rng: np.random.Generator,
+    sampling: str = "uniform",
 ) -> SurveyData:
     """Add complex, per-observation heteroscedastic Gaussian noise.
 
@@ -357,6 +405,15 @@ def add_heteroscedastic_noise(
         noise.
     rng : numpy.random.Generator
         Source of randomness; callers control reproducibility.
+    sampling : {"uniform", "loguniform", "lognormal"}, default="uniform"
+        Distribution of the relative noise level. ``"uniform"`` draws
+        uniformly between the bounds; ``"loguniform"`` draws uniformly in
+        log10 between them; ``"lognormal"`` reads ``level_range`` as the
+        25th and 75th percentiles of a log-normal distribution (median
+        ``sqrt(lo * hi)``, log10 standard deviation
+        ``log10(hi / lo) / 1.349``) truncated at its 99.9th percentile.
+        Declared field errors are usually spread over orders of
+        magnitude, which the log-scale options reproduce.
 
     Returns
     -------
@@ -381,7 +438,9 @@ def add_heteroscedastic_noise(
     if lo == 0.0 and hi == 0.0:
         return survey
     n_station, n_frequency, n_component = survey.shape
-    sigma_sf = rng.uniform(lo, hi, size=(n_station, n_frequency))
+    sigma_sf = _sample_noise_level(
+        lo, hi, sampling, rng, size=(n_station, n_frequency)
+    )
     sigma = np.broadcast_to(sigma_sf[:, :, None], survey.shape)
     magnitude = np.abs(survey.impedance)
 
@@ -1053,7 +1112,10 @@ def apply_corruption_suite(
 
     if config.noise_level_range != (0.0, 0.0):
         out = add_heteroscedastic_noise(
-            out, level_range=config.noise_level_range, rng=_child_rng(parent)
+            out,
+            level_range=config.noise_level_range,
+            rng=_child_rng(parent),
+            sampling=config.noise_sampling,
         )
 
     if config.error_floor_fraction > 0.0:

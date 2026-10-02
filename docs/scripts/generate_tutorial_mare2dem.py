@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Execute and verify the MARE2DEM preparation tutorial's pycon blocks.
 
 Mirrors ``generate_tutorial_modem.py``: parses every

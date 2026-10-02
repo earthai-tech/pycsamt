@@ -35,12 +35,100 @@ from PySide6.QtWidgets import (
 _ICONS = Path(__file__).parent.parent / "resources" / "icons"
 
 
-def _icon(name: str) -> QIcon:
+# Icons follow the theme like the main window's: black SVG artwork is
+# recoloured on the dark theme (the Advanced "Analyses / Utilities" list and
+# other panel icons used to stay black on dark).  cacheKey -> name lets a
+# theme switch find and redraw every icon built here.
+_ICON_DARK = False
+_ICON_NAMES: dict[int, str] = {}
+
+
+def _load_icon(name: str, dark: bool) -> QIcon:
     for c in (name, f"{name}.svg", f"{name}.png"):
         p = _ICONS / c
-        if p.exists():
-            return QIcon(str(p))
+        if not p.exists():
+            continue
+        if dark and p.suffix == ".svg":
+            try:
+                from PySide6.QtGui import QPainter, QPixmap
+                from PySide6.QtSvg import QSvgRenderer
+
+                from pycsamt.app.desktop.main_window import _recolor_svg
+
+                r = QSvgRenderer(QByteArray(_recolor_svg(
+                    p.read_text("utf-8"))))
+                icon = QIcon()
+                for size in (16, 20, 24, 32, 48):
+                    pm = QPixmap(size, size)
+                    pm.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(pm)
+                    r.render(painter)
+                    painter.end()
+                    icon.addPixmap(pm)
+                return icon
+            except Exception:
+                pass
+        return QIcon(str(p))
     return QIcon()
+
+
+def _icon(name: str) -> QIcon:
+    icon = _load_icon(name, _ICON_DARK)
+    if not icon.isNull():
+        _ICON_NAMES[icon.cacheKey()] = name
+    return icon
+
+
+def refresh_icons(root, dark: bool) -> None:
+    """Redraw every icon built by :func:`_icon` under *root* for *dark*."""
+    global _ICON_DARK
+    _ICON_DARK = bool(dark)
+    from PySide6.QtGui import QAction
+    from PySide6.QtWidgets import (
+        QAbstractButton,
+        QComboBox,
+        QListWidget,
+        QTabWidget,
+        QTreeWidget,
+    )
+
+    def again(icon):
+        name = _ICON_NAMES.get(icon.cacheKey())
+        return None if name is None else _icon(name)
+
+    for w in root.findChildren(QAbstractButton):
+        new = again(w.icon())
+        if new is not None:
+            w.setIcon(new)
+    for a in root.findChildren(QAction):
+        new = again(a.icon())
+        if new is not None:
+            a.setIcon(new)
+    for lw in root.findChildren(QListWidget):
+        for i in range(lw.count()):
+            it = lw.item(i)
+            new = again(it.icon())
+            if new is not None:
+                it.setIcon(new)
+    for tw in root.findChildren(QTreeWidget):
+        stack = [tw.topLevelItem(i) for i in range(tw.topLevelItemCount())]
+        while stack:
+            it = stack.pop()
+            for col in range(tw.columnCount()):
+                new = again(it.icon(col))
+                if new is not None:
+                    it.setIcon(col, new)
+            stack.extend(it.child(k) for k in range(it.childCount()))
+    for tabs in root.findChildren(QTabWidget):
+        for i in range(tabs.count()):
+            new = again(tabs.tabIcon(i))
+            if new is not None:
+                tabs.setTabIcon(i, new)
+    for cb in root.findChildren(QComboBox):
+        for i in range(cb.count()):
+            new = again(cb.itemIcon(i))
+            if new is not None:
+                cb.setItemIcon(i, new)
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
@@ -192,6 +280,7 @@ class PanelWindow(QWidget):
 
     def set_dark_mode(self, dark: bool) -> None:
         self._dark = dark
+        refresh_icons(self, dark)
         # Re-style any MplCanvas instances that already hold a rendered figure
         # so the theme applies immediately without requiring a manual redraw.
         from pycsamt.app.desktop.widgets.mpl_canvas import (

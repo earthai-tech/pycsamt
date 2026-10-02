@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Build the two synthetic Occam2D lines used by the two-line interpretation
 tutorial pair (build_two_line_occam2d_survey.rst /
 interpret_two_line_occam2d_survey.rst), and render their figures.

@@ -15,6 +15,7 @@ __all__ = [
     "PROVIDER_META",
     "PROVIDER_OPTIONS",
     "is_llm",
+    "requires_api_key",
     "label_for",
     "env_var",
     "models_for",
@@ -25,6 +26,7 @@ __all__ = [
 OFFLINE = "offline"
 
 PROVIDER_MODELS: dict[str, list[str]] = {
+    "ollama": ["qwen2.5-coder:1.5b", "qwen2.5-coder:0.5b"],
     "claude": [
         "claude-sonnet-4-6",
         "claude-opus-4-8",
@@ -50,7 +52,8 @@ PROVIDER_MODELS: dict[str, list[str]] = {
 }
 
 #: ``provider -> (display name, environment variable fallback)``
-PROVIDER_META: dict[str, tuple[str, str]] = {
+PROVIDER_META: dict[str, tuple[str, str | None]] = {
+    "ollama": ("Local LLM (Ollama)", None),
     "claude": ("Claude (Anthropic)", "ANTHROPIC_API_KEY"),
     "openai": ("OpenAI", "OPENAI_API_KEY"),
     "gemini": ("Gemini (Google)", "GOOGLE_API_KEY"),
@@ -65,8 +68,12 @@ PROVIDER_OPTIONS: list[dict[str, str]] = [
 
 
 def is_llm(provider: str | None) -> bool:
-    """True when *provider* needs an API key (i.e. is not offline)."""
+    """True for a language model, including key-free local inference."""
     return bool(provider) and provider in PROVIDER_META
+
+
+def requires_api_key(provider: str | None) -> bool:
+    return is_llm(provider) and provider != "ollama"
 
 
 def label_for(provider: str | None) -> str:

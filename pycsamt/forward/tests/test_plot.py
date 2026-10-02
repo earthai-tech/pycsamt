@@ -718,3 +718,70 @@ def test_plot_tensor_components_3d_phase_and_title(resp3d):
     axs = plot_tensor_components_3d(resp3d, quantity="phase", title="Full tensor")
     fig = axs[0, 0].get_figure()
     assert fig._suptitle.get_text() == "Full tensor"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# axes= support (embedding in GUI canvases) and uniform-map colour floor
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_plot_model_3d_draws_into_supplied_axes(small_grid3d):
+    fig = plt.figure()
+    axs = fig.subplots(1, 3)
+    out = plot_model_3d(small_grid3d, axes=axs)
+    # Same figure, no new one created (the desktop app used to rasterise a
+    # separate figure to PNG, which showed the theme's grey background).
+    assert all(ax.figure is fig for ax in out)
+    assert plt.get_fignums() == [fig.number]
+    assert all(len(ax.collections) >= 1 for ax in axs)
+
+
+def test_plot_model_3d_rejects_wrong_axes_count(small_grid3d):
+    fig = plt.figure()
+    with pytest.raises(ValueError, match="3 Axes"):
+        plot_model_3d(small_grid3d, axes=fig.subplots(1, 2))
+
+
+def test_plot_tensor_components_3d_draws_into_supplied_axes(resp3d):
+    fig = plt.figure()
+    axs = fig.subplots(2, 2)
+    out = plot_tensor_components_3d(resp3d, axes=axs)
+    assert out[0, 0].figure is fig
+    assert plt.get_fignums() == [fig.number]
+    # embedded: suptitle keeps matplotlib's in-figure default position
+    assert fig._suptitle.get_position()[1] < 1.0
+
+
+def test_plot_response_map_3d_uniform_response_not_stretched(resp3d):
+    """Round-off differences (~1e-11) must not span the whole colormap."""
+    uniform = 100.0 * (1.0 + 1e-12 * np.arange(resp3d.rho_a_xy.shape[1]))
+    resp3d.rho_a_xy[0, :] = uniform
+    ax = plot_response_map_3d(resp3d, freq_idx=0, component="xy")
+    lo, hi = ax.collections[0].get_clim()
+    assert hi - lo == pytest.approx(0.1)  # ±0.05 decade floor
+    assert (lo + hi) / 2 == pytest.approx(2.0)
+
+
+def test_plot_model_3d_single_shared_colorbar(small_grid3d):
+    axs = plot_model_3d(small_grid3d)
+    fig = axs[0].figure
+    meshes = [ax.collections[0] for ax in axs]
+    assert len({tuple(m.get_clim()) for m in meshes}) == 1
+    cbars = [a for a in fig.axes if a.get_label() == "<colorbar>"]
+    assert len(cbars) == 1
+
+
+def test_plot_model_3d_per_panel_colorbars_optional(small_grid3d):
+    axs = plot_model_3d(small_grid3d, shared_colorbar=False)
+    fig = axs[0].figure
+    assert len([a for a in fig.axes if a.get_label() == "<colorbar>"]) == 3
+
+
+def test_plot_tensor_components_3d_pair_colorbars(resp3d):
+    axs = plot_tensor_components_3d(resp3d)
+    fig = axs[0, 0].figure
+    cbars = [a for a in fig.axes if a.get_label() == "<colorbar>"]
+    assert len(cbars) == 2  # off-diagonal pair + diagonal pair
+    clim = {c: axs.ravel()[i].collections[-1].get_clim()
+            for i, c in enumerate(["xx", "xy", "yx", "yy"])}
+    assert clim["xy"] == clim["yx"] and clim["xx"] == clim["yy"]

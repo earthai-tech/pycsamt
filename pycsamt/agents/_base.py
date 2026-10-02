@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
@@ -37,10 +36,11 @@ from ..api.style import PYCSAMT_STYLE
 logger = logging.getLogger(__name__)
 
 # ── constants ─────────────────────────────────────────────────────────────────
-_PROVIDERS = {"claude", "openai", "gemini", "deepseek", "minimax"}
+_PROVIDERS = {"claude", "openai", "gemini", "deepseek", "minimax", "ollama"}
 _STATUS = {"success", "failed", "needs_review"}
 
 _DEFAULT_MODELS = {
+    "ollama": "qwen2.5-coder:1.5b",
     "claude": "claude-sonnet-4-6",
     "openai": "gpt-4o",
     "gemini": "gemini-2.0-flash",
@@ -202,6 +202,14 @@ class BaseAgent(ABC):
         "magnetotelluric (MT/AMT/CSAMT) data processing and interpretation."
     )
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        from ._request import request_stage
+
+        execute = cls.__dict__.get("execute")
+        if execute is not None:
+            cls.execute = request_stage(execute)
+
     def __init__(
         self,
         name: str,
@@ -241,6 +249,8 @@ class BaseAgent(ABC):
 
         # cost accumulator reset each execute() call
         self._last_cost: float = 0.0
+        self.last_usage: dict[str, Any] = {}
+        self._offline_at_creation = AGENT_CONFIG.is_offline
 
         self._log = logging.getLogger(f"pycsamt.agents.{name}")
 
@@ -259,6 +269,13 @@ class BaseAgent(ABC):
         """
 
     # ── LLM interface ─────────────────────────────────────────────────────────
+
+    @property
+    def llm_available(self) -> bool:
+        """Provider configured for inference; connectivity is checked on use."""
+        return not (AGENT_CONFIG.is_offline or self._offline_at_creation) and (
+            self.llm_provider == "ollama" or bool(self.api_key)
+        )
 
     def query_llm(
         self,
@@ -285,9 +302,42 @@ class BaseAgent(ABC):
         -------
         str or None
         """
-        if not self.api_key:
+        from ._request import RequestCancelled, cancellable_sleep, checkpoint
+
+        checkpoint()
+        if not self.llm_available:
             self._log.debug("No API key — LLM query skipped.")
             return None
+
+        from ._local import (
+            LocalBudgetExhausted,
+            LocalModelError,
+            generate,
+            local_only,
+        )
+
+        if local_only() and self.llm_provider != "ollama":
+            raise LocalModelError(
+                "Cloud inference is disabled in this local-only request."
+            )
+        if self.llm_provider == "ollama":
+            try:
+                text, usage = generate(
+                    prompt,
+                    system_message or self.SYSTEM_PROMPT,
+                    model=self.model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            except LocalBudgetExhausted:
+                # Same contract as a failed cloud call: no text. The skip is
+                # recorded in the request usage; other local errors still raise.
+                self._log.warning("Local call budget spent; %s skipped its model call.",
+                                  self.name)
+                return None
+            self.last_usage = usage
+            checkpoint()
+            return text
 
         # Raise before the API call if the session budget is already exhausted.
         AGENT_CONFIG._check_budget()
@@ -305,17 +355,21 @@ class BaseAgent(ABC):
         last_exc: Exception | None = None
         for delay in (*_RETRY_DELAYS, None):
             try:
+                checkpoint()
                 text, cost = fn(prompt, sys_msg, temperature, max_tokens)
                 self._last_cost += cost
                 AGENT_CONFIG._add_spend(cost)  # update session counter
+                checkpoint()
                 return text
+            except RequestCancelled:
+                raise
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
                 is_rate = "rate" in str(exc).lower() or "429" in str(exc)
                 if delay is None or not is_rate:
                     break
                 self._log.warning("LLM rate limit, retrying in %ss…", delay)
-                time.sleep(delay)
+                cancellable_sleep(delay)
 
         self._log.error("LLM query failed: %s", last_exc)
         return None
@@ -610,7 +664,11 @@ class BaseAgent(ABC):
     # ── repr ──────────────────────────────────────────────────────────────────
 
     def __repr__(self) -> str:
-        llm = f"{self.llm_provider}/{self.model}" if self.api_key else "no-LLM"
+        llm = (
+            f"{self.llm_provider}/{self.model}"
+            if self.llm_available
+            else "no-LLM"
+        )
         return f"{type(self).__name__}(name={self.name!r}, llm={llm!r})"
 
 

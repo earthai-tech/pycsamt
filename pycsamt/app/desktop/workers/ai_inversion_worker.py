@@ -133,184 +133,104 @@ class AIInversionWorker(QThread):
             "n_layers": n_layers,
             "freqs": freqs,
             "inverter": inv,
+            # Real station names when X_obs came from the loaded survey;
+            # empty for the synthetic demo samples.
+            "stations": list(p.get("stations") or []) if p.get("X_obs")
+            is not None else [],
         }
 
-    # ── 2-D  (EMInverter2D) ───────────────────────────────────────────────────
+    # ── 2-D  (EMInverter2D via Inv2DAgent) ──────────────────────────────────────
+    #
+    # Delegates to pycsamt.agents.inv2d_agent.Inv2DAgent rather than building
+    # its own dataset/training pipeline. That agent already implements a
+    # validated "physics" dispatch (mt1d tiled-1-D vs. mt2d real 2-D
+    # finite-difference training data via generate_2d_maxwell_dataset), trains
+    # and predicts directly against the real Sites survey, and produces its
+    # own section figure -- the hand-rolled version this replaced duplicated
+    # that logic with a real, confirmed bug (constructing EMInverter2D with
+    # n_components=4 while only ever building a 2-channel array, guaranteeing
+    # a shape-mismatch crash on first real use).
 
     def _run_2d(self) -> dict:
-        from pycsamt.ai.inversion.inv2d import EMInverter2D
-        from pycsamt.forward.batch import generate_dataset
+        from pycsamt.agents.inv2d_agent import Inv2DAgent
 
         p = self._params
-        n_components = int(p.get("n_components", 4))
-        n_depth = int(p.get("n_depth", 40))
-        n_stations = int(p.get("n_stations", 20))
+        sites = p.get("sites")
+        if sites is None:
+            raise RuntimeError("No sites loaded for 2-D AI inversion.")
+        physics = p.get("physics", "mt1d")
         n_freqs = int(p.get("n_freq", 32))
-        epochs = int(p.get("epochs", 40))
-        batch_size = int(p.get("batch_size", 16))
-        lr = float(p.get("lr", 1e-3))
-        n_samples = int(p.get("n_samples", 500))
-
         f_min = max(float(p.get("f_min", 1e-3)), 1e-6)
         f_max = max(float(p.get("f_max", 1e2)), f_min * 10)
         freqs = np.logspace(np.log10(f_min), np.log10(f_max), n_freqs)
 
-        self._log(f"Generating {n_samples} 2-D training samples…")
-        self.progress.emit(5)
-
-        # For 2D, generate per-station 1D datasets and stack into profiles
-        dataset = generate_dataset(
-            solver="mt1d",
-            n_samples=n_samples * n_stations,
-            freqs=freqs,
-            n_layers=(3, 6),
-            noise_level=0.05,
-            verbose=False,
-        )
-        # Reshape to (n_samples, n_components=2, n_freqs, n_stations)
-        # Using only rho_a and phase (2 components) for simplicity
-        n_total = n_samples * n_stations
-        X_flat = dataset.X[:n_total]  # (n*ns, 2*nf)
-        y_flat = dataset.y[:n_total]  # (n*ns, 2*nl-1)
-        n_used = (len(X_flat) // n_stations) * n_stations
-        X_2d = X_flat[:n_used].reshape(-1, n_stations, 2, n_freqs)
-        # → (n_samples, n_stations, 2, n_freqs) → (n_samples, 2, n_freqs, n_stations)
-        X_2d = X_2d.transpose(0, 2, 3, 1)
-        y_2d = y_flat[:n_used].reshape(-1, n_stations, y_flat.shape[-1])
-
-        self._log(f"Training EMInverter2D  epochs={epochs}…")
-        self.progress.emit(20)
-        inv = EMInverter2D(
-            n_components=n_components,
-            n_depth=n_depth,
-            n_stations=n_stations,
+        self._log(f"Running Inv2DAgent (physics={physics})…")
+        self.progress.emit(10)
+        agent = Inv2DAgent(
+            n_depth=int(p.get("n_depth", 40)),
             n_freqs=n_freqs,
-        )
-        inv.fit(
-            X_2d,
-            y_2d,
-            epochs=epochs,
-            batch_size=batch_size,
-            lr=lr,
+            n_components=int(p.get("n_components", 2)),
+            n_train_profiles=int(p.get("n_samples", 500)),
+            n_stations_per_profile=int(p.get("n_stations", 20)),
+            epochs=int(p.get("epochs", 40)),
+            physics=physics,
             verbose=False,
         )
-        self.progress.emit(80)
+        result = agent.execute({"sites": sites, "freqs": freqs})
+        self.progress.emit(90)
 
-        X_obs = p.get("X_obs")
-        if X_obs is not None:
-            X_obs = np.asarray(X_obs, dtype=float)
-        else:
-            X_obs = X_2d[:2]
-        self._log(f"Predicting on {len(X_obs)} profile(s)…")
-        y_pred = inv.predict(X_obs, as_log_rho=True)
+        for w in result.warnings:
+            self._log(f"WARNING: {w}")
+        if result.status != "success":
+            raise RuntimeError(result.error or "Inv2DAgent failed.")
 
         self.progress.emit(100)
-        self._log("AI 2-D inversion complete.")
-        return {
-            "dim": "2D",
-            "y_pred": y_pred,
-            "X_obs": X_obs,
-            "n_stations": n_stations,
-            "n_depth": n_depth,
-            "freqs": freqs,
-            "inverter": inv,
-        }
+        self._log(result.summary)
+        return {"dim": "2D", "agent_result": result}
 
-    # ── 3-D  (GCNInverter3D) ──────────────────────────────────────────────────
+    # ── 3-D  (GCNInverter3D via Inv3DAgent) ─────────────────────────────────────
+    #
+    # Same rationale as _run_2d: delegates to the already-validated
+    # pycsamt.agents.inv3d_agent.Inv3DAgent, which trains/predicts on the
+    # real Sites survey (including its actual station coordinates for the
+    # GCN adjacency graph) instead of a synthetic duplicated-coordinate
+    # station grid, and offers the same real mt1d/mt3d physics dispatch.
 
     def _run_3d(self) -> dict:
-        from pycsamt.ai.inversion.inv3d import GCNInverter3D
-        from pycsamt.forward.batch import generate_dataset
+        from pycsamt.agents.inv3d_agent import Inv3DAgent
 
         p = self._params
-        n_features = int(p.get("n_features", 40))
-        n_layers = int(p.get("n_layers", 5))
-        hidden = p.get("hidden", [256, 128, 64])
-        dropout = float(p.get("dropout", 0.1))
-        epochs = int(p.get("epochs", 40))
-        batch_size = int(p.get("batch_size", 16))
-        lr = float(p.get("lr", 1e-3))
-        n_samples = int(p.get("n_samples", 300))
-        n_sta = int(p.get("n_sta", 16))
-        radius = float(p.get("radius", 5000.0))
-
+        sites = p.get("sites")
+        if sites is None:
+            raise RuntimeError("No sites loaded for 3-D AI inversion.")
+        physics = p.get("physics", "mt1d")
+        n_freq = int(p.get("n_freq", 20))
         f_min = max(float(p.get("f_min", 1e-3)), 1e-6)
         f_max = max(float(p.get("f_max", 1e1)), f_min * 10)
-        n_freq = int(p.get("n_freq", 20))
         freqs = np.logspace(np.log10(f_min), np.log10(f_max), n_freq)
 
-        self._log(
-            f"Generating {n_samples} 3-D training samples ({n_sta} stations each)…"
-        )
-        self.progress.emit(5)
-
-        dataset = generate_dataset(
-            solver="mt1d",
-            n_samples=n_samples * n_sta,
-            freqs=freqs,
-            n_layers=(3, 6),
-            noise_level=0.05,
+        self._log(f"Running Inv3DAgent (physics={physics})…")
+        self.progress.emit(10)
+        agent = Inv3DAgent(
+            n_layers=int(p.get("n_layers", 5)),
+            n_freqs=n_freq,
+            hidden=tuple(p.get("hidden", [256, 128, 64])),
+            dropout=float(p.get("dropout", 0.1)),
+            n_train_profiles=int(p.get("n_samples", 300)),
+            epochs=int(p.get("epochs", 40)),
+            radius=float(p.get("radius", 5000.0)),
+            physics=physics,
+            n_mc=0,  # MC-dropout uncertainty not surfaced by this panel yet
             verbose=False,
         )
-        n_total = n_samples * n_sta
-        X_flat = dataset.X[:n_total]
-        y_flat = dataset.y[:n_total]
-        n_used = (len(X_flat) // n_sta) * n_sta
-        X_3d = X_flat[:n_used].reshape(
-            -1, n_sta, X_flat.shape[-1]
-        )  # (N, ns, nf*2)
-        X_3d = X_3d.reshape(
-            -1, X_flat.shape[-1]
-        )  # flatten back to (N*ns, nf*2)
-        y_3d = y_flat[:n_used]
+        result = agent.execute({"sites": sites, "freqs": freqs})
+        self.progress.emit(90)
 
-        # Synthetic station coordinates for training
-        grid_side = int(np.ceil(np.sqrt(n_sta)))
-        xs = np.linspace(0, (grid_side - 1) * 1000, grid_side)
-        ys = np.linspace(0, (grid_side - 1) * 1000, grid_side)
-        gx, gy = np.meshgrid(xs, ys)
-        coords_base = np.column_stack([gx.ravel()[:n_sta], gy.ravel()[:n_sta]])
-        coords = np.tile(coords_base, (n_samples, 1))[:n_used]
-
-        self._log(f"Training GCNInverter3D  epochs={epochs}…")
-        self.progress.emit(20)
-        inv = GCNInverter3D(
-            n_features=n_features,
-            n_layers=n_layers,
-            hidden=hidden,
-            dropout=dropout,
-        )
-        inv.fit(
-            X_3d,
-            y_3d,
-            coords=coords,
-            radius=radius,
-            epochs=epochs,
-            batch_size=batch_size,
-            lr=lr,
-            verbose=False,
-        )
-        self.progress.emit(80)
-
-        X_obs = p.get("X_obs")
-        coords_obs = p.get("coords_obs")
-        if X_obs is not None:
-            X_obs = np.asarray(X_obs, dtype=float)
-        else:
-            X_obs = X_3d[:n_sta]
-            coords_obs = coords[:n_sta]
-        self._log(f"Predicting on {len(X_obs)} station(s)…")
-        y_pred = inv.predict(
-            X_obs, coords=coords_obs, radius=radius, as_log_rho=True
-        )
+        for w in result.warnings:
+            self._log(f"WARNING: {w}")
+        if result.status != "success":
+            raise RuntimeError(result.error or "Inv3DAgent failed.")
 
         self.progress.emit(100)
-        self._log("AI 3-D inversion complete.")
-        return {
-            "dim": "3D",
-            "y_pred": y_pred,
-            "X_obs": X_obs,
-            "coords": coords_obs,
-            "freqs": freqs,
-            "inverter": inv,
-        }
+        self._log(result.summary)
+        return {"dim": "3D", "agent_result": result}

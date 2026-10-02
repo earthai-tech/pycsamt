@@ -209,6 +209,9 @@ def main(ctx: click.Context, verbose: int, no_color: bool) -> None:
 
 
 def _register_commands() -> None:
+    from pycsamt.cli.commands.airborne import (
+        airborne,  # noqa: PLC0415
+    )
     from pycsamt.cli.commands.avg import avg  # noqa: PLC0415
     from pycsamt.cli.commands.build import (
         build,  # noqa: PLC0415
@@ -259,6 +262,7 @@ def _register_commands() -> None:
 
     main.add_command(survey)
     main.add_command(site)
+    main.add_command(airborne)
     main.add_command(pipe)
     main.add_command(map)
     main.add_command(info)

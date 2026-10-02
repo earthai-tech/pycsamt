@@ -286,11 +286,18 @@ by hand: for a rotation angle :math:`\theta`, the two-sided rotation
    \mathbf{Z}' = \mathbf{R}(\theta)\, \mathbf{Z}\, \mathbf{R}(\theta)^{\mathsf{T}}
 
 is applied per frequency to the :term:`impedance tensor`, with the tipper
-vector rotated the same way.  A positive :math:`\theta` rotates the
-measurement frame counter-clockwise, following the geological azimuth
-convention (north toward east is positive) rather than a mathematics-style
-convention -- the detail that most often causes a rotated section to come
-out mirrored when ported from another code base.
+vector rotated the same way.  With :math:`x` north and :math:`y` east, a
+positive :math:`\theta` rotates the measurement axes clockwise in map view,
+from north toward east, following the geological azimuth convention rather
+than a mathematics-style counter-clockwise convention; :math:`\theta = 90^\circ`
+turns the new :math:`x` axis to east.  This is the detail that most often
+causes a rotated section to come out mirrored when ported from another code
+base.
+
+In Agent Master, a stated angle is applied as given ("rotate by 30 degrees
+clockwise" or "counter-clockwise").  An angle without a stated sense prompts a
+question rather than a guess, and "rotate to the strike" uses the estimated
+geoelectric strike.
 
 
 Forward and inversion workflows

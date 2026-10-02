@@ -216,8 +216,14 @@ class ModEmModel2D(ModEmBase):
         else:
             for i in range(len(offsets) - 1):
                 gap = float(offsets[i + 1] - offsets[i])
+                if gap <= 0.01 * cell_h:
+                    # Co-located (repeat) stations: a zero-width cell made
+                    # Mod2DMT's forward solution -- and every RMS -- NaN.
+                    continue
                 n_cell = max(1, round(gap / cell_h))
                 station_widths.extend([gap / n_cell] * n_cell)
+            if not station_widths:
+                station_widths = [cell_h]
         if len(station_widths) % 2 != 0:
             station_widths.append(
                 station_widths[-1] if station_widths else cell_h

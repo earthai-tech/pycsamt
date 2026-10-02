@@ -75,7 +75,8 @@ logger = get_logger(__name__)
 _RX_WS = re.compile(r"\s+")
 
 _RX_K2_HEADER = re.compile(r"^\s*Z\.mwgt\s*,", re.I)
-_RX_K1_HEADER = re.compile(r"^\s*skp\s+Station", re.I)
+# Older pyCSAMT exports wrote "skpStation" with no separating space.
+_RX_K1_HEADER = re.compile(r"^\s*skp\s*Station", re.I)
 
 _NUMERIC_REPLACE = {"*": np.nan, "nan": np.nan, "NaN": np.nan, "": np.nan}
 _COMMENT_PREFIXES = ("\\", "/", "!", '"')
@@ -192,7 +193,14 @@ def _parse_kind1(lines: Sequence[str]) -> pd.DataFrame:
     if idx is None:
         raise AvgFileError("Header row not found in kind‑1 file")
 
-    hdr_tokens = _RX_WS.sub(" ", lines[idx].strip()).split()
+    # Older pyCSAMT exports merged the first two names ("skpStation").
+    hdr_line = re.sub(
+        r"^(\s*skp)(Station)",
+        lambda m: f"{m.group(1)} {m.group(2)}",
+        lines[idx],
+        flags=re.I,
+    )
+    hdr_tokens = _RX_WS.sub(" ", hdr_line.strip()).split()
     data_rows: list[list[Any]] = []
     for ln in lines[idx + 1 :]:
         if not ln.strip() or _RX_K1_HEADER.search(ln):

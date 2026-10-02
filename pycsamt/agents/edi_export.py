@@ -155,7 +155,7 @@ class EDIExportAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             prompt = (
                 f"EDI export summary:\n"
                 f"  Output directory: {output_dir}\n"

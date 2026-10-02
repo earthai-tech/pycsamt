@@ -309,7 +309,7 @@ class InversionBackendAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.api_key:
+        if self.llm_available:
             rms_str = f"{rms:.4f}" if not np.isnan(rms) else "N/A"
             n_sta = (
                 log_rho_section.shape[1]

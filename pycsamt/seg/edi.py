@@ -1065,7 +1065,13 @@ class EDIFile(EDIMixin, EDIOMixin):
                     a: np.ndarray,
                     e: np.ndarray | None,
                 ) -> None:
-                    err = np.zeros_like(a) if e is None else e
+                    # An absent error means "uncertainty unavailable", not
+                    # "zero uncertainty" -- NaN here always becomes the EDI
+                    # EMPTY sentinel in _sanitize_payload below regardless of
+                    # preserve_zero, whereas a literal zero would (with
+                    # preserve_zero=True) be written out verbatim and
+                    # misread as a perfectly-certain measurement.
+                    err = np.full_like(a, np.nan) if e is None else e
                     _append(
                         self._emit_block(
                             tag,

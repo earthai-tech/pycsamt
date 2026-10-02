@@ -31,13 +31,27 @@ def _terminate_process(code: int) -> None:
         os._exit(code)
 
 
+_QT_TEST_DIRS = (
+    "pycsamt/app/desktop/tests",
+    "pycsamt/app/agent_master/tests",
+    "pycsamt/app/converter/tests",
+)
+
+
 def _is_qt_interface_run(config) -> bool:
-    """Return whether this pytest invocation owns the desktop Qt tests."""
+    """Return whether this pytest invocation owns the desktop Qt tests.
+
+    ``pycsamt/app/mapview/tests`` and ``pycsamt/app/web/tests`` are pure
+    Dash test suites (no PySide6 import anywhere in either package or its
+    tests) and are deliberately not in ``_QT_TEST_DIRS`` -- a run that only
+    touches those two never needs the Shiboken-teardown workaround below.
+    """
 
     args = {str(arg).replace("\\", "/").rstrip("/") for arg in config.args}
     return "PySide6" in sys.modules and any(
-        arg == "pycsamt/app/tests" or "/pycsamt/app/tests" in arg
+        arg == qt_dir or f"/{qt_dir}" in arg
         for arg in args
+        for qt_dir in _QT_TEST_DIRS
     )
 
 
@@ -56,10 +70,39 @@ def pytest_sessionfinish(session, exitstatus):
     if not _is_qt_interface_run(session.config):
         return
 
+    global _worker_exit_status
+    if _IS_XDIST_WORKER:
+        # An xdist worker sends ``workerfinished`` to the controller around
+        # this hook; exiting here killed it before the message went out, so
+        # every worker that finished -- and every replacement, which imports
+        # PySide6 while collecting -- was reported "node down: Not properly
+        # terminated" and restarted in a loop (the restart path is what
+        # crashed xdist's scheduler with ``KeyError: <WorkerController>``).
+        # Workers leave from pytest_unconfigure instead, after that message.
+        _worker_exit_status = int(exitstatus)
+        return
+
     # Root conftest is loaded during pytest's initial configuration, so this
     # session hook cannot be unregistered with a nested test directory.
     # ``trylast`` lets coverage and terminal reporters persist results first.
     _terminate_process(int(exitstatus))
+
+
+# POSIX only: on Windows the ``TerminateProcess`` exit above does not lose
+# the worker's message, while deferring it to pytest_unconfigure crashed
+# the workers there.
+_IS_XDIST_WORKER = (
+    bool(os.environ.get("PYTEST_XDIST_WORKER")) and sys.platform != "win32"
+)
+_worker_exit_status: int | None = None
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):  # noqa: ARG001
+    """Skip Qt/Shiboken finalization in xdist workers (see sessionfinish)."""
+
+    if _IS_XDIST_WORKER and _worker_exit_status is not None:
+        _terminate_process(_worker_exit_status)
 
 
 # Root conftest.py is imported during pytest's initial-conftest phase,
@@ -68,7 +111,7 @@ def pytest_sessionfinish(session, exitstatus):
 # import torch at module scope for the first time mid-session; initializing
 # torch's C extension while coverage.py is already tracing corrupts memory
 # and causes unrelated-looking segfaults later on (see
-# pycsamt/app/tests/_cov_runner_scratch.py for the original diagnosis).
+# pycsamt/app/desktop/tests/_cov_runner_scratch.py for the original diagnosis).
 # Pre-importing here, before tracing begins, avoids it.
 try:
     import torch  # noqa: F401

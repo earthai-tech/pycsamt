@@ -52,6 +52,20 @@ def test_concat_flattens_higher_dims_and_scalars():
     assert result[0, 1] == 7.0
 
 
+def test_concat_rejects_non_iterable_list_of_arrays():
+    with pytest.raises(TypeError, match="must be iterable"):
+        concat_array_from_list(42)
+
+
+def test_concat_rejects_non_array_like_item():
+    class Unconvertible:
+        def __array__(self, dtype=None):
+            raise RuntimeError("cannot convert")
+
+    with pytest.raises(TypeError, match="is not array-like"):
+        concat_array_from_list([Unconvertible()])
+
+
 # ------------------------------ is_iterable ---------------------------
 
 
@@ -69,6 +83,30 @@ def test_is_iterable_transform_and_parse():
     assert parsed == ["a", "b"]
     with pytest.raises(ValueError):
         is_iterable("a b", parse_string=True)
+
+
+def test_is_iterable_wraps_string_parsing_failure(monkeypatch):
+    from pycsamt.utils import arrayops as arrayops_mod
+
+    def _boom(_text):
+        raise RuntimeError("parse failure")
+
+    monkeypatch.setattr(arrayops_mod, "str2columns", _boom)
+    with pytest.raises(TypeError, match="Error parsing string"):
+        is_iterable("a b", transform=True, parse_string=True)
+
+
+def test_is_iterable_transform_falls_back_when_list_conversion_fails():
+    class BrokenIterable:
+        def __iter__(self):
+            def _gen():
+                yield 1
+                raise RuntimeError("boom mid-iteration")
+
+            return _gen()
+
+    obj = BrokenIterable()
+    assert is_iterable(obj, transform=True) == [obj]
 
 
 # -------------------------------- reshape -----------------------------
@@ -90,6 +128,20 @@ def test_reshape_2d_squeeze_and_passthrough():
     assert reshape(row).shape == (4,)
     assert reshape(full).shape == (2, 3)
     assert reshape(full, axis=0).shape == (2, 3)
+
+
+def test_reshape_2d_axis0_and_axis1_targeted():
+    col = np.arange(4).reshape(4, 1)  # n=4, m=1
+    row = np.arange(4).reshape(1, 4)  # n=1, m=4
+
+    # axis=0 with m already 1 -> reshape(n, 1) branch
+    assert reshape(col, axis=0).shape == (4, 1)
+    # axis=1 with n already 1 -> reshape(1, m) branch
+    assert reshape(row, axis=1).shape == (1, 4)
+    # axis=1 with n != 1 -> passthrough branch
+    assert reshape(col, axis=1).shape == (4, 1)
+    # axis=0 with m != 1 -> passthrough branch (via a row vector)
+    assert reshape(row, axis=0).shape == (1, 4)
 
 
 def test_reshape_invalid_inputs():
@@ -142,6 +194,75 @@ def test_frameify_pop_cat_features():
     assert list(df.columns) == ["n"]
 
 
+def test_frameify_pop_cat_features_verbose_with_and_without_cat(capsys):
+    numeric_only = pd.DataFrame({"n": [1, 2]})
+    frameify(numeric_only, pop_cat_features=True, verbose=True)
+    assert "does not contain any categorial" in capsys.readouterr().out
+
+    df_in = pd.DataFrame({"n": [1, 2], "c": ["u", "v"]})
+    frameify(df_in, pop_cat_features=True, verbose=True)
+    assert capsys.readouterr().out  # some listing was printed
+
+
+def test_frameify_dataframe_input_replaces_columns_verbose(capsys):
+    df_in = pd.DataFrame({"a": [1.0, 2.0], "b": [3.0, 4.0]})
+    df = frameify(df_in, columns=["x", "y"], verbose=True)
+    assert list(df.columns) == ["x", "y"]
+    assert "Columns should be replaced" in capsys.readouterr().out
+
+
+def test_frameify_dataframe_input_replaces_columns_quiet(capsys):
+    df_in = pd.DataFrame({"a": [1.0, 2.0], "b": [3.0, 4.0]})
+    df = frameify(df_in, columns=["x", "y"])  # verbose=False (default)
+    assert list(df.columns) == ["x", "y"]
+    assert capsys.readouterr().out == ""
+
+
+def test_frameify_drop_nan_columns_disabled_keeps_all_nan_column():
+    df_in = pd.DataFrame({"a": [1.0, 2.0], "b": [np.nan, np.nan]})
+    df = frameify(df_in, drop_nan_columns=False)
+    assert "b" in df.columns
+
+
+def test_frameify_sanitize_columns_skips_already_numeric_headers():
+    # Purely integer column labels have nothing to sanitize, so
+    # sanitize_columns=True leaves them untouched (no str conversion).
+    df_in = pd.DataFrame(np.ones((2, 2)))  # integer column labels 0, 1
+    df = frameify(df_in, sanitize_columns=True)
+    assert list(df.columns) == [0, 1]
+
+
+def test_frameify_sanitize_columns_cleans_string_headers():
+    df_in = pd.DataFrame({"a b": [1.0], "c-d": [2.0]})
+    df = frameify(df_in, sanitize_columns=True)
+    assert list(df.columns) == ["a_b", "c_d"]
+
+
+def test_frameify_drop_nan_columns_verbose_reports_found_and_none(capsys):
+    with_nan = pd.DataFrame({"a": [1.0, 2.0], "b": [np.nan, np.nan]})
+    frameify(with_nan, verbose=True)
+    assert "NaN columns found" in capsys.readouterr().out
+
+    without_nan = pd.DataFrame({"a": [1.0, 2.0]})
+    frameify(without_nan, verbose=True)
+    assert "No NaN column found" in capsys.readouterr().out
+
+
+def test_frameify_how_not_all_keeps_partially_nan_rows():
+    df_in = pd.DataFrame({"a": [1.0, np.nan], "b": [np.nan, np.nan]})
+    df = frameify(df_in, how="any")
+    # column "b" is dropped (all-NaN); row 1 (now all-NaN in "a" only)
+    # is kept since how != "all" skips the row-drop step entirely.
+    assert "b" not in df.columns
+    assert len(df) == 2
+
+
+def test_frameify_reset_index():
+    df_in = pd.DataFrame({"a": [1.0, 2.0]}, index=[5, 6])
+    df = frameify(df_in, reset_index=True)
+    assert list(df.index) == [0, 1]
+
+
 def test_frameify_rejects_non_array():
     with pytest.raises(TypeError):
         frameify("not-an-array")
@@ -170,6 +291,22 @@ def test_assert_xy_in_dropna_and_numeric():
     assert x.size == y.size == 2
     x2, _ = assert_xy_in(["1", "2"], ["3", "4"], xy_numeric=True)
     assert x2.dtype.kind in "if"
+
+
+def test_assert_xy_in_accepts_series_directly():
+    x_in = pd.Series([1.0, 2.0], name="x")
+    y_in = pd.Series([3.0, 4.0], name="y")
+    x, y = assert_xy_in(x_in, y_in, asarray=False)
+    assert x is x_in
+    assert y is y_in
+
+
+def test_assert_xy_in_wraps_unseriesable_scalar():
+    # A 2-D array cannot become a 1-D pandas Series directly; the
+    # fallback wraps it as a single-element Series instead of raising.
+    x, y = assert_xy_in(np.ones((2, 2)), [1], asarray=False)
+    assert len(x) == 1
+    assert len(y) == 1
 
 
 def test_assert_xy_in_errors():
@@ -209,6 +346,71 @@ def test_interpolate_grid_constant_fill_value():
     arr = np.array([[1.0, np.nan], [np.nan, 4.0]])
     out = interpolate_grid(arr, fill_value=0.0)
     assert not np.isnan(out).any()
+
+
+def test_interpolate_grid_accepts_plain_list_without_dunder_array():
+    arr = [[1.0, np.nan], [np.nan, 4.0]]  # plain list, no __array__
+    out = interpolate_grid(arr)
+    assert not np.isnan(out).any()
+
+
+def test_interpolate_grid_sparse_input_auto_fill():
+    # Only 2 valid points (< 4): triggers the fill-only fallback with
+    # the default fill_value="auto" (forward/backward fill).
+    arr = np.array([[1.0, np.nan], [np.nan, 4.0]])
+    out = interpolate_grid(arr)  # fill_value defaults to "auto"
+    assert not np.isnan(out).any()
+
+
+def test_interpolate_grid_sparse_1d_input_auto_fill():
+    arr = np.array([1.0, np.nan, np.nan, np.nan])  # < 4 valid points, 1D
+    out = interpolate_grid(arr)
+    assert out.ndim == 1
+    assert not np.isnan(out).any()
+
+
+def test_interpolate_grid_dense_constant_fill_value():
+    # >= 4 valid points: exercises the real griddata path with a
+    # non-"auto" fill_value for the remaining NaNs at the edges.
+    x = [28, np.nan, 50, 60]
+    y = [np.nan, 1000, 2000, 3000]
+    xy = np.vstack((x, y)).T
+    out = interpolate_grid(xy, fill_value=0.0)
+    assert not np.isnan(out).any()
+
+
+def test_interpolate_grid_view_plots_without_error():
+    import matplotlib
+    matplotlib.use("Agg")
+    x = [28, np.nan, 50, 60]
+    y = [np.nan, 1000, 2000, 3000]
+    xy = np.vstack((x, y)).T
+    out = interpolate_grid(xy, view=True)
+    assert not np.isnan(out).any()
+
+
+# ------------------------------- _fill_nan ------------------------------
+
+
+def test_private_fill_nan_1d_input_and_every_method():
+    from pycsamt.utils.arrayops import _fill_nan
+
+    a = np.array([np.nan, 1.0, np.nan, 2.0])
+    ff = _fill_nan(a, method="ff")
+    assert ff[2] == 1.0
+    bf = _fill_nan(a, method="bf")
+    assert np.isnan(bf).sum() == 0 or bf[0] == 1.0
+    both = _fill_nan(a, method="both")
+    assert not np.isnan(both).any()
+
+
+def test_private_fill_nan_rejects_bad_ndim_and_method():
+    from pycsamt.utils.arrayops import _fill_nan
+
+    with pytest.raises(ValueError, match="only 1D or 2D"):
+        _fill_nan(np.zeros((2, 2, 2)))
+    with pytest.raises(ValueError, match="Unknown method"):
+        _fill_nan(np.array([1.0]), method="sideways")
 
 
 # -------------------------------- fill_nan ----------------------------
@@ -271,3 +473,18 @@ def test_drop_nan_in_policies():
 def test_drop_nan_in_shape_mismatch():
     with pytest.raises(ValueError):
         drop_nan_in(np.ones(3), np.ones(4))
+
+
+def test_drop_nan_in_no_nan_present_skips_error_handling():
+    yt = np.array([1.0, 2.0, 3.0])
+    yp = np.array([1.1, 2.1, 3.1])
+    yt_f, yp_f = drop_nan_in(yt, yp)  # default error="raise", but no NaNs
+    assert np.allclose(yt_f, yt)
+    assert np.allclose(yp_f, yp)
+
+
+def test_drop_nan_in_rejects_invalid_error_value():
+    yt = np.array([1.0, np.nan])
+    yp = np.array([1.0, 2.0])
+    with pytest.raises(ValueError, match="error must be one of"):
+        drop_nan_in(yt, yp, error="bogus")

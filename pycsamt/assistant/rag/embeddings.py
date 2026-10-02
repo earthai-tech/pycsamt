@@ -62,7 +62,7 @@ class EmbeddingBackend(Protocol):
 
     def embed(self, texts: Sequence[str]) -> np.ndarray:
         """Return a ``(len(texts), dim)`` float32 array, rows unit-norm."""
-        ...
+        ...  # pragma: no cover - Protocol stub, never executed
 
 
 def _l2_normalize(mat: np.ndarray) -> np.ndarray:
@@ -126,7 +126,9 @@ def resolve_embedding_backend(
     the ``openai`` client imports. Returns ``None`` (dense retrieval
     stays off) otherwise — callers must degrade to BM25.
     """
-    if not api_key:
+    from pycsamt.agents._local import local_only
+
+    if local_only() or not api_key:
         return None
     prov = (provider or "openai").lower()
     if prov in ("openai", "oai", ""):

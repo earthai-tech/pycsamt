@@ -19,6 +19,14 @@ from ....api.cli.options import (
 from ._base import _get_avg, avg
 
 
+def _num_or_col(value: str) -> float | str:
+    """Coerce a CLI string to a float when numeric, else keep as a column name."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
+
+
 @avg.command("correct")
 @click.argument(
     "source",
@@ -72,6 +80,28 @@ from ._base import _get_avg, avg
     metavar="N",
     help="Window size for the TMA filter (number of stations).",
 )
+@click.option(
+    "--contact-resistance",
+    "contact_resistance",
+    default=None,
+    metavar="OHMS_OR_COL",
+    help=(
+        "Electrode contact resistance (Ohms) for capacitive-coupling "
+        "correction.  Accepts a numeric value or the name of a column "
+        "in the AVG data.  Required when --method is capacitive or both."
+    ),
+)
+@click.option(
+    "--setup-length",
+    "setup_length",
+    default=None,
+    metavar="METERS_OR_COL",
+    help=(
+        "Receiver setup-wire length (meters) for capacitive-coupling "
+        "correction.  Accepts a numeric value or the name of a column "
+        "in the AVG data.  Required when --method is capacitive or both."
+    ),
+)
 @output_dir_option
 @click.option(
     "--format",
@@ -96,6 +126,8 @@ def correct(
     filter_method: str,
     ref_freq: float | None,
     window: int,
+    contact_resistance: str | None,
+    setup_length: str | None,
     output_dir: Path,
     output_format: str,
     dry_run: bool,
@@ -127,7 +159,13 @@ def correct(
 
       # apply both corrections:
       pycsamt avg correct data/avg/K2.AVG --method both \\
+          --contact-resistance 5000 --setup-length 50 \\
           --output-dir corrected/ --format json
+
+      # capacitive-coupling correction (both options required):
+      pycsamt avg correct data/avg/K2.AVG --method capacitive \\
+          --contact-resistance 5000 --setup-length 50 \\
+          --output-dir corrected/
     """
     configure_cli(log__level=verbose, log__color=not no_color)
 
@@ -197,13 +235,25 @@ def correct(
 
     # --- Capacitive coupling ---
     if method in ("capacitive", "both"):
-        try:
-            proc.correct_capacitive_coupling(update_components=True)
-            results.append({"correction": "capacitive_coupling"})
-        except Exception as exc:  # noqa: BLE001
+        if contact_resistance is None or setup_length is None:
             click.echo(
-                f"Warning: capacitive correction failed: {exc}", err=True
+                "Warning: capacitive correction skipped — "
+                "--contact-resistance and --setup-length are both required "
+                "(numeric value, or a column name).",
+                err=True,
             )
+        else:
+            try:
+                proc.correct_capacitive_coupling(
+                    contact_resistance=_num_or_col(contact_resistance),
+                    setup_length=_num_or_col(setup_length),
+                    update_components=True,
+                )
+                results.append({"correction": "capacitive_coupling"})
+            except Exception as exc:  # noqa: BLE001
+                click.echo(
+                    f"Warning: capacitive correction failed: {exc}", err=True
+                )
 
     # Write output
     out_name = source.stem + "_corrected.avg"

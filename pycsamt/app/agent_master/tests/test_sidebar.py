@@ -111,12 +111,13 @@ class TestNewChat:
             lambda: "welcome",
         )
         fn = _find(agent_app, "am-btn-new-chat", "am-chat-window.children")
-        messages, edi, figs, job, children = fn(1, None)
+        messages, edi, figs, job, children, disabled, pending, postproc, config = fn(1, None)
         assert messages == []
         assert edi == {}
         assert figs == {}
         assert job == {}
         assert children == ["welcome"]
+        assert disabled and pending == postproc == config == {}
 
 
 class TestAutoSave:
@@ -236,7 +237,8 @@ class TestRestoreSession:
             }
         ]
         fn = self._fn(agent_app)
-        messages, children = fn([1], history)
+        messages, children, job, edi, figs, disabled, pending, postproc, config = fn([1], history)
+        assert disabled and job == edi == figs == pending == postproc == config == {}
         assert messages == history[0]["messages"]
         assert len(children) == 2  # banner + 1 restored bubble
 

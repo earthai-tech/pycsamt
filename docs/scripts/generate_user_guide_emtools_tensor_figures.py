@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# Author: LKouadio <etanoyau@gmail.com>
+# License: LGPL-3.0
 """Generate the multi-panel figure bundles for the emtools tensor guide."""
 
 from pathlib import Path

@@ -4,6 +4,16 @@
 
 from __future__ import annotations
 
+import os
+
+# Agent Master dispatches into pycsamt.agents.* subclasses that import
+# torch/tensorflow/sklearn (pycsamt.ai.processing) and real scipy.optimize
+# (pycsamt.agents.inv2d_agent/inv3d_agent) in the same process. On
+# Windows/conda that combination can abort the whole interpreter -- see
+# pycsamt/app/desktop/__main__.py's identical guard for the full
+# explanation. Must be set before either is imported.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 import argparse
 import sys
 

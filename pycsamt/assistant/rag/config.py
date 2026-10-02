@@ -120,8 +120,8 @@ WORKFLOW_KEYWORDS: dict[str, tuple[str, ...]] = {
         "neural inversion",
         "cnn inversion",
     ),
-    "inv2d": ("unet", "inv2d", "2d inversion"),
-    "inv3d": ("gcn", "inv3d", "3d inversion"),
+    "inv2d": ("unet", "u-net", "inv2d", "eminverter2d", "2d inversion"),
+    "inv3d": ("gcn", "inv3d", "eminverter3d", "3d inversion"),
     "pre_inversion": ("occam2d", "occam", "mesh", "startup"),
     "modem": ("modem",),
     "mare2dem": ("mare2dem",),
@@ -226,6 +226,30 @@ def infer_workflow(*texts: str) -> str | None:
     Returns the first workflow whose keyword appears in the lowered,
     concatenated *texts*, else ``None``.
     """
+    # A named dimensional model is more specific than its generic
+    # ai/inversion package path. Limit this preference to source identity
+    # and title/symbol, not incidental mentions in long docstrings.
+    identity = " ".join(t for t in texts[:2] if t).lower().replace("\\", "/")
+    # Preparing inputs for an external solver differs from running a
+    # dimensional neural inversion. Keep the former with export/prep APIs.
+    if len(texts) == 1 and "inversion" in identity:
+        if any(
+            term in identity
+            for term in ("third party", "third-party", "external")
+        ) and any(term in identity for term in ("prepare", "export", "input")):
+            return "pre_inversion"
+    for dimension in ("2d", "3d"):
+        if any(
+            marker in identity
+            for marker in (
+                f"inv{dimension}_agent",
+                f"inversion/inv{dimension}",
+                f"inversion.inv{dimension}",
+                f"eminverter{dimension}",
+                f"inv{dimension}agent",
+            )
+        ):
+            return f"inv{dimension}"
     blob = " ".join(t for t in texts if t).lower()
     if not blob:
         return None

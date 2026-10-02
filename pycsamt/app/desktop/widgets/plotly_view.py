@@ -56,19 +56,16 @@ class PlotlyView(QWidget):
         self._tmp_dir = Path(tempfile.mkdtemp(prefix="pycsamt_plotly_"))
         self._html_path = self._tmp_dir / f"{uuid.uuid4().hex}.html"
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
-        from PySide6.QtWebEngineWidgets import QWebEngineView
-
-        self._web = QWebEngineView(self)
-        # Chromium's console chatter (e.g. Plotly's "Canvas2D: Multiple
-        # readback operations ... willReadFrequently") went to the terminal;
-        # route it to the Python log instead.
-        self._web.setPage(_quiet_page(self._web))
+        # The QWebEngineView is created on first show (or first JavaScript
+        # call), not here: each one starts Chromium renderer processes, and
+        # the main window builds this widget eagerly for a 3-D window the
+        # user may never open. Until then the page lives only in
+        # ``_html_path``, which the view loads when it is created.
+        self._web = None
         self._plot_ready = False  # a plot page (not a placeholder) loaded
-        self._web.loadFinished.connect(self._on_load_finished)
-        layout.addWidget(self._web)
 
         self._draw_placeholder("Nothing to display yet.")
 
@@ -114,11 +111,11 @@ class PlotlyView(QWidget):
 
     def run_js(self, code: str) -> None:
         """Run JavaScript in the page (e.g. to toggle an animation)."""
-        self._web.page().runJavaScript(code)
+        self._ensure_web().page().runJavaScript(code)
 
     def eval_js(self, code: str, callback) -> None:
         """Evaluate *code* in the page; *callback* gets the result."""
-        self._web.page().runJavaScript(code, 0, callback)
+        self._ensure_web().page().runJavaScript(code, 0, callback)
 
     @property
     def plot_ready(self) -> bool:
@@ -161,6 +158,10 @@ class PlotlyView(QWidget):
             b.move(x, 8)
             b.raise_()
             x += b.width() + 4
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._ensure_web()
+        super().showEvent(event)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -231,10 +232,27 @@ class PlotlyView(QWidget):
     def _on_load_finished(self, ok: bool) -> None:
         self._plot_ready = bool(ok) and self._figure is not None
 
+    def _ensure_web(self):
+        """Create the web view on first use and load the current page."""
+        if self._web is None:
+            from PySide6.QtWebEngineWidgets import QWebEngineView
+
+            self._web = QWebEngineView(self)
+            # Chromium's console chatter (e.g. Plotly's "Canvas2D: Multiple
+            # readback operations ... willReadFrequently") went to the
+            # terminal; route it to the Python log instead.
+            self._web.setPage(_quiet_page(self._web))
+            self._web.loadFinished.connect(self._on_load_finished)
+            self._layout.addWidget(self._web)
+            self._place_overlays()
+            self._web.load(QUrl.fromLocalFile(str(self._html_path)))
+        return self._web
+
     def _load_html(self, html: str) -> None:
         self._plot_ready = False
         self._html_path.write_text(html, encoding="utf-8")
-        self._web.load(QUrl.fromLocalFile(str(self._html_path)))
+        if self._web is not None:
+            self._web.load(QUrl.fromLocalFile(str(self._html_path)))
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self._cleanup_tmp()

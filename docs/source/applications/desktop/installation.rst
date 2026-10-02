@@ -85,23 +85,37 @@ see :ref:`applications-desktop-licensing` below for what happens after that.
      - Installs to Program Files with Start Menu / Desktop shortcuts and a
        proper uninstaller. Unsigned build — Windows SmartScreen will warn on
        first run; choose **More info → Run anyway**.
-   * - Linux
-     - Coming soon
-     - A self-extracting ``.sh`` installer (installs to
-       ``~/.local/share/pycsamt-desktop``, adds a launcher and a desktop
-       menu entry) is built and tested but not yet attached to a release.
+   * - Linux (x86-64)
+     - `pycsamt-desktop-linux-x86_64.sh
+       <https://github.com/earthai-tech/pycsamt/releases/latest/download/pycsamt-desktop-linux-x86_64.sh>`__
+     - Self-extracting installer; no root needed. Installs to
+       ``~/.local/share/pycsamt-desktop`` and adds a ``pycsamt-desktop``
+       launcher and a desktop menu entry. Remove it with ``--uninstall``.
+
+Both links always point to the newest release. Older versions, the release
+notes and a ``SHA256SUMS.txt`` checksum file are on the
+`GitHub releases page <https://github.com/earthai-tech/pycsamt/releases>`__.
+
+On Linux, make the downloaded file executable and run it:
+
+.. code-block:: bash
+
+   chmod +x pycsamt-desktop-linux-x86_64.sh
+   ./pycsamt-desktop-linux-x86_64.sh               # install
+   ./pycsamt-desktop-linux-x86_64.sh --uninstall   # remove
+
+To check a download against the published checksums, put
+``SHA256SUMS.txt`` next to it and run
+``sha256sum -c --ignore-missing SHA256SUMS.txt`` (Linux) or
+``Get-FileHash pycsamt-desktop-setup.exe`` (Windows PowerShell).
 
 .. comment
-   The Windows link above uses GitHub's "latest release" asset-download
-   convention (`.../releases/latest/download/<exact-asset-filename>`), which
-   always resolves to whatever the most recent release's same-named asset
-   is -- it never needs updating here across future releases, PROVIDED the
-   uploaded asset is always named exactly `pycsamt-desktop-setup.exe`
-   (version-agnostic), not `pycsamt-desktop-setup-2.6.4.exe`. Upload it
-   under that stable name (in addition to a version-named copy if you want
-   one for the record) when you publish the v2.6.4 release, then update the
-   Linux row once a real Linux-built binary is attached the same way (e.g.
-   `pycsamt-desktop-linux-x86_64.sh`).
+   The links use GitHub's "latest release" asset-download convention
+   (`.../releases/latest/download/<exact-asset-filename>`), so they never
+   need editing across releases PROVIDED each release uploads the assets
+   under these exact version-agnostic names: `pycsamt-desktop-setup.exe`,
+   `pycsamt-desktop-linux-x86_64.sh` and `SHA256SUMS.txt`
+   (dist/installer/release-assets/ holds the staged copies).
 
 Uninstalling leaves your trial/license state untouched (Windows registry
 under ``HKCU\Software\earthai-tech\pycsamt``; Linux ``~/.pycsamt`` and

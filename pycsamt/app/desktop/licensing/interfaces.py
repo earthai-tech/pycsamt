@@ -13,6 +13,7 @@ caller needing to import a concrete class today.
 from __future__ import annotations
 
 import datetime as _dt
+import math
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Protocol, runtime_checkable
@@ -48,8 +49,10 @@ class TrialState:
 
     @property
     def days_remaining(self) -> int:
+        # Count part-days as a day: ``timedelta.days`` truncates, so a trial
+        # with 2 d 23 h left read "2 days" and a fresh 30-day trial "29".
         delta = self.expires_at - _dt.datetime.now(_dt.timezone.utc)
-        return max(0, delta.days)
+        return max(0, math.ceil(delta.total_seconds() / 86400.0))
 
 
 @runtime_checkable

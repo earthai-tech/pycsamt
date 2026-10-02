@@ -242,7 +242,8 @@ def test_detect_and_load_bundled_results():
 
 
 def test_modem3d_result_views_and_missing_log():
-    if not MODEM3D.is_dir():
+    # The ~11 MB .rho model is not tracked; only .dat/.res are.
+    if not MODEM3D.is_dir() or not list(MODEM3D.glob("*.rho")):
         pytest.skip("bundled ModEM result not found")
     key = ie.detect_engine(MODEM3D)
     assert key == "modem3d"

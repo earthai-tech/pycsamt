@@ -3,7 +3,7 @@
 """
 Tests for the QC studio (controllers/qc_studio + windows/qc_window).
 
-Real data: two profiles (L22, L26) of the bundled Baohuashan CSAMT survey
+Real data: two profiles (L18, L22) of the bundled Baohuashan CSAMT survey
 (``data/AMT/WILLY_DATA``, Kouabena 2025).
 """
 
@@ -36,8 +36,8 @@ pytestmark = pytest.mark.skipif(not (_WILLY / "L22PLT").exists(),
 def sites():
     from pycsamt.site.base import to_sites
 
-    files = sorted(glob.glob(str(_WILLY / "L22PLT" / "*.edi"))
-                   + glob.glob(str(_WILLY / "L26PLT" / "*.edi")))
+    files = sorted(glob.glob(str(_WILLY / "L18PLT" / "*.edi"))
+                   + glob.glob(str(_WILLY / "L22PLT" / "*.edi")))
     return to_sites(files)
 
 
@@ -154,7 +154,7 @@ class TestRender:
         assert un is None
         tags = [t.get_text() for ax in fig.axes for t in ax.texts
                 if t.get_text().startswith("Line ")]
-        assert sorted(tags) == ["Line L22", "Line L26"]
+        assert sorted(tags) == ["Line L18", "Line L22"]
         assert fig._suptitle is not None
         plt.close("all")
 
@@ -162,7 +162,7 @@ class TestRender:
         fig, _un = _render(st.view("plot_confidence_profile"), sites,
                            lines=lines, layout="together")
         legend = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
-        assert "L22" in legend and "L26" in legend
+        assert "L18" in legend and "L22" in legend
         plt.close("all")
 
     def test_strike_rose_by_line_gets_groups(self, sites, lines):
@@ -181,7 +181,7 @@ class TestScorecard:
                 "Composite score", "Coverage", "SNR (median)",
                 "Flags"} <= set(df.columns)
         assert set(df["Status"]) <= {"pass", "warn", "fail"}
-        assert set(df["Line"]) == {"L22", "L26"}
+        assert set(df["Line"]) == {"L18", "L22"}
 
     def test_thresholds_drive_status(self, sites):
         strict = st.scorecard(sites, ci_lo=1.01, ci_hi=1.02)
@@ -207,9 +207,9 @@ class TestWindow:
         assert "2 lines" in win._data_status.text()
         items = [win._line_combo.itemData(i)
                  for i in range(win._line_combo.count())]
-        assert items == ["", "L22", "L26"]
+        assert items == ["", "L18", "L22"]
         win._line_combo.setCurrentIndex(1)
-        assert all(win._station_combo.itemData(i).startswith("22-")
+        assert all(win._station_combo.itemData(i).startswith("18-")
                    for i in range(win._station_combo.count()))
 
     def test_scope_rows_follow_the_view(self, win):
@@ -270,10 +270,10 @@ class TestWindow:
         assert win._summary is not df  # thresholds recompute it
 
     def test_open_station_from_summary(self, win):
-        win.open_station("26-005U")
+        win.open_station("22-15U")
         assert win._view().fn == "plot_station_confidence_dashboard"
-        assert win._station_combo.currentData() == "26-005U"
-        assert win._line_combo.currentData() == "L26"
+        assert win._station_combo.currentData() == "22-15U"
+        assert win._line_combo.currentData() == "L22"
 
     def test_quicklook_tab(self, win):
         win._tabs.setCurrentIndex(2)

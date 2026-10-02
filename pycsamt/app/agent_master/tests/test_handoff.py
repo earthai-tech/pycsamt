@@ -20,9 +20,9 @@ from pycsamt.app.agent_master._ids import IDs
 _ROOT = Path(__file__).resolve().parents[4]
 _L22 = sorted(glob.glob(str(_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
                             / "*.edi")))[:3]
-_L26 = sorted(glob.glob(str(_ROOT / "data" / "AMT" / "WILLY_DATA" / "L26PLT"
+_L18 = sorted(glob.glob(str(_ROOT / "data" / "AMT" / "WILLY_DATA" / "L18PLT"
                             / "*.edi")))[:2]
-pytestmark = pytest.mark.skipif(len(_L22) < 3 or len(_L26) < 2,
+pytestmark = pytest.mark.skipif(len(_L22) < 3 or len(_L18) < 2,
                                 reason="Baohuashan data missing")
 
 
@@ -36,7 +36,7 @@ def root(tmp_path, monkeypatch):
 def sites():
     from pycsamt.site.base import to_sites
 
-    return to_sites(_L22 + _L26)
+    return to_sites(_L22 + _L18)
 
 
 def _lines(sites):
@@ -48,7 +48,7 @@ def test_write_then_read_round_trip(root, sites):
                              label="WILLY")
     session = ho.read_handoff(token)
     assert session["n_edi"] == 5
-    assert set(session["groups"]) == {"L22", "L26"}
+    assert set(session["groups"]) == {"L18", "L22"}
     assert len(session["groups"]["L22"]) == 3
     assert all(Path(f).exists() for fs in session["groups"].values()
                for f in fs)
@@ -106,7 +106,7 @@ def test_agent_master_starts_on_the_handoff(agent_app, root, sites):
         fn("")
     token = ho.write_handoff(sites, _lines(sites), edited=True)
     store, badge_cls, badge, splash, note = fn(f"?handoff={token}")
-    assert store["n_edi"] == 5 and set(store["groups"]) == {"L22", "L26"}
+    assert store["n_edi"] == 5 and set(store["groups"]) == {"L18", "L22"}
     assert "visible" in badge_cls and "desktop" in badge
     assert "wlc-gone" in splash  # the welcome splash is skipped
     text = json.dumps(note.to_plotly_json(), default=str)

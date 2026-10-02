@@ -53,23 +53,25 @@ def _terminate_after_qt() -> None:
         os._exit(_exit_status)
 
 
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+@pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     global _exit_status
     _exit_status = int(exitstatus)
     # Conftest plugins may be unregistered before pytest_unconfigure, so that
     # hook is not reliable on every pytest/Python combination. Sessionfinish
-    # is guaranteed while this plugin is active.
+    # is guaranteed while this plugin is active; ``trylast`` lets coverage and
+    # terminal reporters persist their results first.
     #
-    # The exit must come after *every* other sessionfinish implementation,
-    # wrappers included: an xdist worker reports ``workerfinished`` to the
-    # controller only after its own hookwrapper's ``yield``. Exiting from a
-    # plain (even ``trylast``) impl kills the worker before that message, so
-    # each worker that ran out of work mid-run showed up as "node down: Not
-    # properly terminated" and xdist's restart then crashed the scheduler
-    # (``KeyError: <WorkerController gwN>``). A ``tryfirst`` hookwrapper is
-    # the outermost layer, so its post-``yield`` code runs last.
-    yield
+    # Not in an xdist worker, though: a worker reports ``workerfinished`` to
+    # the controller around this hook, and exiting here killed it before
+    # that message got out, so every worker that ran out of work showed up
+    # as "node down: Not properly terminated" and was restarted, over and
+    # over. Workers leave through pytest_unconfigure instead, well after the
+    # message is sent; a native teardown crash after that point no longer
+    # matters to the controller.
+    # (POSIX only -- see the root conftest.py.)
+    if os.environ.get("PYTEST_XDIST_WORKER") and not _IS_WINDOWS:
+        return
     _terminate_after_qt()
 
 
@@ -148,12 +150,64 @@ def _settle_qt_gc_after_test():
     segfault under Python 3.9 (see ``pycsamt.compat.qt.settle_qt_gc``).
     Autouse and undependent so it tears down last, after every widget
     fixture in this file has already closed its widgets.
+
+    It also *deletes* every top-level widget the test created. ``close()``
+    only hides a window, so without this each test's windows -- with their
+    canvases, data and child panels -- stayed alive for the whole session;
+    under xdist the workers grew until the CI runner ran out of memory and
+    every worker died at once ("node down: Not properly terminated" at
+    ~40 %). Widgets that already existed when the test started (module- or
+    session-scoped fixtures set up first) are left alone.
     """
+    before = _top_level_widget_ids() if _qt_active else set()
     yield
     if _qt_active:
         from pycsamt.compat.qt import settle_qt_gc
 
+        _delete_new_top_level_widgets(before)
         settle_qt_gc()
+
+
+def _top_level_widget_ids() -> set[int]:
+    try:
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        return set()
+    if QApplication.instance() is None:
+        return set()
+    return {_cpp_ptr(w) for w in QApplication.topLevelWidgets()}
+
+
+def _cpp_ptr(widget) -> int:
+    # Key on the C++ object: Shiboken may hand back a fresh Python wrapper
+    # (with a recycled ``id()``) for the same widget between calls.
+    import shiboken6
+
+    return int(shiboken6.getCppPointer(widget)[0])
+
+
+def _delete_new_top_level_widgets(before: set[int]) -> None:
+    try:
+        from PySide6.QtCore import QCoreApplication, QEvent
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        return
+    if QApplication.instance() is None:
+        return
+    for widget in QApplication.topLevelWidgets():
+        try:
+            # Parented windows (panels built with ``parent=main_window``)
+            # are listed as top-level too; they go with their parent.
+            if widget.parent() is not None or _cpp_ptr(widget) in before:
+                continue
+            # hide(), not close(): closeEvent handlers (e.g. MainWindow's
+            # unsaved-edits prompt) would block on a modal dialog now that
+            # the no_modal_dialogs patch has been undone.
+            widget.hide()
+            widget.deleteLater()
+        except RuntimeError:  # C++ object already gone
+            continue
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture(scope="session", autouse=True)

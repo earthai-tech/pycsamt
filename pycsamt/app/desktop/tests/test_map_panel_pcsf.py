@@ -250,7 +250,8 @@ def test_window_load_pcsf_fetch_elevation_checkbox_forwarded(qapp, tmp_path):
 def _bh_pcsf(tmp_path) -> Path:
     bh = Path(__file__).parents[4] / "data" / "MT" / "broken-hill" / \
         "final-models"
-    if not bh.is_dir():
+    # The ~11 MB .rho model is not tracked; only .dat/.res are.
+    if not bh.is_dir() or not list(bh.glob("*.rho")):
         pytest.skip("Broken Hill ModEM result not present")
     from pycsamt.format import convert_engine as ce
 

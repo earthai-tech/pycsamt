@@ -121,8 +121,14 @@ self-extracting Linux ``.sh`` (``packaging/linux/build_installer.sh``,
 which also takes ``--uninstall``). Both are built from
 ``packaging/pyinstaller/pycsamt_desktop.spec``, which bundles the package
 data the frozen app reads at run time, such as the EPSG table, logging
-configuration, borehole templates and solver sources. See
-:doc:`/applications/desktop/installation`.
+configuration, borehole templates and solver sources. Download them from
+the `v2.6.4 release
+<https://github.com/earthai-tech/pycsamt/releases/tag/v2.6.4>`__ (Windows
+`setup .exe
+<https://github.com/earthai-tech/pycsamt/releases/download/v2.6.4/pycsamt-desktop-setup.exe>`__,
+Linux `.sh
+<https://github.com/earthai-tech/pycsamt/releases/download/v2.6.4/pycsamt-desktop-linux-x86_64.sh>`__);
+see :ref:`applications-desktop-download`.
 
 Agent Master |Feature|
 ~~~~~~~~~~~~~~~~~~~~~~

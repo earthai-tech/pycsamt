@@ -1570,9 +1570,9 @@ class TestElevationProfileBranches:
         import pycsamt.topo.extract as topo_extract
 
         topo_ctrl.set_sites(willy_sites)
-        monkeypatch.setattr(topo_extract, "extract_chainage", lambda sites: np.array([]))
-        monkeypatch.setattr(topo_extract, "extract_elevation", lambda sites: np.array([]))
-        monkeypatch.setattr(topo_extract, "extract_station_names", lambda sites: [])
+        monkeypatch.setattr(topo_extract, "extract_chainage", lambda sites, **_: np.array([]))
+        monkeypatch.setattr(topo_extract, "extract_elevation", lambda sites, **_: np.array([]))
+        monkeypatch.setattr(topo_extract, "extract_station_names", lambda sites, **_: [])
         fig = _fig()
         topo_ctrl.plot_elevation_profile(fig)
         texts = " ".join(t.get_text() for ax in fig.axes for t in ax.texts).lower()

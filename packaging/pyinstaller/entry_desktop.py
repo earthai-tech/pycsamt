@@ -32,6 +32,15 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 import sys
 
+# The windowed build (``console=False``) starts with ``sys.stdout`` and
+# ``sys.stderr`` set to None. Library code that writes progress there --
+# tqdm bars, ``stream.write(...)`` -- then fails (e.g. Occam1D refused to
+# build its inputs: "stream must provide a callable write method"). Give
+# both a real sink before anything is imported.
+for _name in ("stdout", "stderr"):
+    if getattr(sys, _name) is None:
+        setattr(sys, _name, open(os.devnull, "w", encoding="utf-8"))
+
 
 def main() -> None:
     from pycsamt.app.desktop.agent_master_bridge import (

@@ -32,6 +32,15 @@ _JIANGSU = _ROOT / "data" / "TEMAVG" / "JIANGSU"
 _STEMS = ("TEM100", "TEM1020")
 pytestmark = pytest.mark.skipif(
     not (_JIANGSU / "TEM100.AVG").exists(), reason="JIANGSU data missing")
+# The station coordinate table is not redistributed (gitignored); without it
+# the coordinate-based views legitimately refuse to draw.
+_HAS_COORDS = bool(list(_JIANGSU.glob("Coordinate*")))
+_COORD_VIEWS = {"map", "elevation", "overview"}
+
+
+def _views():
+    return [v for v in st.VIEWS
+            if _HAS_COORDS or v.key not in _COORD_VIEWS]
 
 
 @pytest.fixture(scope="module")
@@ -73,7 +82,7 @@ class TestStudio:
 
     def test_every_view_and_choice_renders(self, data):
         sel = data.profiles["TEM100"][:3]
-        for v in st.VIEWS:
+        for v in _views():
             base = defaults(list(v.fields))
             variants = [base] + [dict(base, **{f.key: c})
                                  for f in v.fields if f.kind == "choice"
@@ -187,7 +196,7 @@ class TestWindow:
 
     def test_every_view_draws(self, win, folder):
         win.load(str(folder), source="temavg")
-        for v in st.VIEWS:
+        for v in _views():
             win.select_view(v.key)
             win._on_draw()
             assert win._status.text().startswith("✓"), (v.key,

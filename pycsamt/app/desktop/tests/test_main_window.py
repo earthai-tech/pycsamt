@@ -63,12 +63,17 @@ def test_opened_panel_fits_reasonably_within_screen(window):
     window._show_window(panel)
 
     available = panel.screen().availableGeometry()
-    assert panel.width() <= min(
+    # The policy never shrinks a window below what its layout needs, so on
+    # a small screen (Linux offscreen is 800x800) the floor is the layout
+    # minimum, not the screen fraction.
+    floor = panel.minimumSizeHint().expandedTo(panel.minimumSize())
+    assert panel.width() <= max(floor.width(), min(
         1280, int(available.width() * 0.75), available.width() - 40
-    )
-    assert panel.height() <= min(
+    ))
+    assert panel.height() <= max(floor.height(), min(
         760, int(available.height() * 0.75), available.height() - 40
-    )
+    ))
+    assert panel.width() < 4000 and panel.height() < 3000  # was clamped
     panel.hide()
 
 

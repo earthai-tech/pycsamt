@@ -476,7 +476,8 @@ class TestResults:
         assert out is not None and out.stat().st_size > 0
 
     def test_modem3d_folder(self, win):
-        if not MODEM3D.is_dir():
+        # The ~11 MB .rho model is not tracked; only .dat/.res are.
+        if not MODEM3D.is_dir() or not list(MODEM3D.glob("*.rho")):
             pytest.skip("bundled ModEM result not found")
         assert win.open_run(MODEM3D)
         assert win._loaded.engine == "modem3d"

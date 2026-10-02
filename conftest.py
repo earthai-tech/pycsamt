@@ -70,10 +70,39 @@ def pytest_sessionfinish(session, exitstatus):
     if not _is_qt_interface_run(session.config):
         return
 
+    global _worker_exit_status
+    if _IS_XDIST_WORKER:
+        # An xdist worker sends ``workerfinished`` to the controller around
+        # this hook; exiting here killed it before the message went out, so
+        # every worker that finished -- and every replacement, which imports
+        # PySide6 while collecting -- was reported "node down: Not properly
+        # terminated" and restarted in a loop (the restart path is what
+        # crashed xdist's scheduler with ``KeyError: <WorkerController>``).
+        # Workers leave from pytest_unconfigure instead, after that message.
+        _worker_exit_status = int(exitstatus)
+        return
+
     # Root conftest is loaded during pytest's initial configuration, so this
     # session hook cannot be unregistered with a nested test directory.
     # ``trylast`` lets coverage and terminal reporters persist results first.
     _terminate_process(int(exitstatus))
+
+
+# POSIX only: on Windows the ``TerminateProcess`` exit above does not lose
+# the worker's message, while deferring it to pytest_unconfigure crashed
+# the workers there.
+_IS_XDIST_WORKER = (
+    bool(os.environ.get("PYTEST_XDIST_WORKER")) and sys.platform != "win32"
+)
+_worker_exit_status: int | None = None
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):  # noqa: ARG001
+    """Skip Qt/Shiboken finalization in xdist workers (see sessionfinish)."""
+
+    if _IS_XDIST_WORKER and _worker_exit_status is not None:
+        _terminate_process(_worker_exit_status)
 
 
 # Root conftest.py is imported during pytest's initial-conftest phase,

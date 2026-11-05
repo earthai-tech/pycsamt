@@ -483,3 +483,24 @@ def test_agent_forwards_plot_and_export_options(
     assert seen["plot"] == {"max_per_row": 20}
     assert seen["save"]["dpi"] == 300
     assert seen["save"]["fmt"] == ["png", "pdf"]
+
+
+def test_rotated_sites_returned_in_memory_match_rotate_all(
+    no_llm_kw, loaded_sites, tmp_output
+):
+    # Chained steps (field_inversion) consume the in-memory rotated sites,
+    # which must equal the library rotation (same sign convention).
+    from pycsamt.agents.tensor_rotation import TensorRotationAgent
+    from pycsamt.site.edit import rotate_all
+
+    result = TensorRotationAgent(**no_llm_kw).execute(
+        {"sites": loaded_sites, "strike_deg": 30.0,
+         "output_dir": str(tmp_output), "overwrite": True}
+    )
+    got = list(result.data["sites"])
+    want = list(rotate_all(loaded_sites, 30.0))
+    assert len(got) == len(want) > 0
+    for g, w in zip(got, want):
+        zg = np.asarray(getattr(g, "z", None) if getattr(g, "z", None) is not None else g.Z.z)
+        zw = np.asarray(getattr(w, "z", None) if getattr(w, "z", None) is not None else w.Z.z)
+        np.testing.assert_allclose(zg, zw)

@@ -168,3 +168,71 @@ def test_tm_mode_converges_under_joint_mesh_refinement():
     coarse_to_medium = abs(medium - coarse)
     medium_to_fine = abs(fine - medium)
     assert medium_to_fine < coarse_to_medium
+
+
+# ─── layered-earth exactness of the boundary fields and surface impedance ───
+
+
+def _layered_grid(rho_layers, thick_layers, *, dz0=5.0, growth=1.08,
+                  z_max=40_000.0, nx=20, width=10_000.0):
+    from pycsamt.forward.grid2d import make_padding
+
+    dz = [dz0]
+    while sum(dz) < z_max:
+        dz.append(dz[-1] * growth)
+    dz = np.concatenate([dz, make_padding(dz[-1], 8, 1.5)])
+    zc = np.cumsum(dz) - dz / 2
+    tops = np.concatenate([[0.0], np.cumsum(thick_layers)])
+    col = np.asarray(rho_layers)[np.searchsorted(tops, zc, side="right") - 1]
+    dx = np.concatenate([make_padding(width / nx, 8, 1.5)[::-1],
+                         np.full(nx, width / nx), make_padding(width / nx, 8, 1.5)])
+    off = dx[:8].sum()
+    xs = off + np.array([0.25, 0.5, 0.75]) * width
+    return Grid2D(dx, dz, np.tile(col[:, None], (1, dx.size)), xs, n_pad=8)
+
+
+def test_layered_field_profiles_match_wait_recursion():
+    """The boundary profiles are the exact layered plane-wave fields:
+    E/H at every depth equals the Wait-recursion impedance of the column
+    below, and both fields are continuous across interfaces."""
+    from pycsamt.forward.em1d import _z_surface_mt
+    from pycsamt.forward.em2d import _layered_field_profiles
+
+    rho = np.array([30.0, 1000.0, 3.0, 300.0])
+    thick = np.array([200.0, 1500.0, 800.0])
+    omega = 2 * np.pi * 0.7
+    z = np.array([0.0, 100.0, 200.0, 1000.0, 1700.0, 2000.0, 2500.0, 6000.0])
+    e, h = _layered_field_profiles(omega, rho, thick, z)
+    z_s = _z_surface_mt(omega, rho, thick)
+    tops = np.concatenate([[0.0], np.cumsum(thick)])
+    for zi, ei, hi in zip(z, e, h):
+        j = min(np.searchsorted(tops, zi, side="right") - 1, rho.size - 1)
+        d = zi - tops[j]
+        sub_thick = np.concatenate([[thick[j] - d], thick[j + 1:]]) if j < thick.size else np.array([])
+        z_here = _z_surface_mt(omega, rho[j:], sub_thick) if sub_thick.size else _z_surface_mt(omega, rho[-1:], sub_thick)
+        np.testing.assert_allclose(z_s * ei / hi, z_here, rtol=1e-9)
+
+
+def test_layered_earth_is_one_dimensional_in_both_modes():
+    """For a laterally uniform layered earth the TE and TM impedances
+    must match the exact 1-D impedance (Zxy = Z1D, Zyx = -Z1D), so the
+    phase tensor is 1-D. The former approximate boundary fields and
+    one-sided surface difference gave TM phase errors of tens of degrees
+    for strongly layered columns."""
+    from pycsamt.forward.em1d import MT1DForward
+    from pycsamt.forward.em2d import MT2DForward
+    from pycsamt.forward.synthetic import LayeredModel
+
+    rho = [3.0, 2000.0, 10.0, 1000.0]
+    thick = [60.0, 900.0, 3000.0]
+    freqs = np.logspace(-3, np.log10(500.0), 12)
+    grid = _layered_grid(rho, thick)
+    resp = MT2DForward(freqs, grid, verbose=False).run()
+    z1d = MT1DForward(freqs).run(LayeredModel(resistivity=rho, thickness=thick)).z
+    for z in (resp.zxy, -resp.zyx):
+        ratio = z / z1d[:, None]
+        assert np.max(np.abs(np.abs(ratio) - 1.0)) < 0.05
+        assert np.max(np.abs(np.degrees(np.angle(ratio)))) < 1.5
+    # TE and TM agree with each other far better than the 3° skew limit
+    te_tm = np.degrees(np.angle(-resp.zyx / resp.zxy))
+    assert np.max(np.abs(te_tm)) < 1.5

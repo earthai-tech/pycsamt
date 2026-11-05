@@ -153,6 +153,37 @@ def test_run_external_success_sets_executed_status(monkeypatch, tmp_path):
     assert result.status in {"executed", "loaded"}
 
 
+@pytest.mark.parametrize(
+    ("runner_opts", "expected"),
+    [({}, 25), ({"runner": {"max_iter": 7}}, 7)],
+)
+def test_run_external_passes_iteration_budget(
+    monkeypatch, tmp_path, runner_opts, expected
+):
+    # InversionConfig.max_iter is the caller's budget (what the agent sets);
+    # it used to be dropped, leaving the startup file's default of 100.
+    for name in ("OccamDataFile.dat", "Occam2DMesh", "Occam2DModel", "Startup"):
+        (tmp_path / name).write_text("", encoding="utf-8")
+    seen = {}
+
+    def _run(self, **kw):
+        seen.update(kw)
+        return 0
+
+    monkeypatch.setattr(OccamRunner, "run", _run)
+    cfg = InversionConfig(
+        method="mt",
+        dimension="2d",
+        backend="occam2d",
+        workdir=str(tmp_path),
+        run_external=True,
+        max_iter=25,
+        backend_options={"binary_name": "Occam2D", **runner_opts},
+    )
+    Occam2DBackend(cfg).run()
+    assert seen["max_iter"] == expected
+
+
 def test_run_external_nonzero_exit_sets_needs_review(monkeypatch, tmp_path):
     for name in (
         "OccamDataFile.dat",
@@ -206,6 +237,32 @@ def test_run_external_runner_exception_sets_needs_review(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 # OccamResult loading branches
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("reached", "expected"), [(True, True), (False, False)])
+def test_loaded_result_reports_iteration_and_native_convergence(
+    monkeypatch, tmp_path, reached, expected
+):
+    # A run that stalls above the target is loaded, but not converged.
+    from types import SimpleNamespace
+
+    class FakeLoadedResult:
+        def __init__(self, workdir, config=None, **kw):
+            self.rho_2d = np.ones((2, 2))
+            self.final_rms = 4.3
+            self.best_iter = SimpleNamespace(
+                iteration=12, misfit_reached=reached, target_misfit=1.0
+            )
+
+    monkeypatch.setattr(occam2d_models, "InversionResult", FakeLoadedResult)
+    cfg = InversionConfig(
+        method="mt", dimension="2d", backend="occam2d",
+        workdir=str(tmp_path), data=_make_sites(2),
+    )
+    result = Occam2DBackend(cfg).run()
+    assert result.n_iter == 12
+    assert result.metadata["converged"] is expected
+    assert result.metadata["target_misfit"] == 1.0
 
 
 def test_run_result_loaded_when_rho_2d_present(monkeypatch, tmp_path):

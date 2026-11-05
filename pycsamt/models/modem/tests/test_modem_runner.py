@@ -261,6 +261,16 @@ class TestRunSuccess:
 # ---------------------------------------------------------------------------
 
 
+def _forward_success(cmd, **kwargs):
+    from pathlib import Path
+    # A successful native forward creates its declared output.
+    output = Path(cmd[-1])
+    if not output.is_absolute():
+        output = Path(kwargs["cwd"]) / output
+    output.write_text("response fixture", encoding="utf-8")
+    return _FakeCompletedProcess(0)
+
+
 class TestRunForwardSuccess:
     def test_run_forward_loads_result(self, tmp_path):
         cfg = ModEmConfig(mode="3d", use_mpi=False, binary_3d="Mod3DMT")
@@ -269,7 +279,7 @@ class TestRunForwardSuccess:
             "pycsamt.models.modem.runner.shutil.which", return_value="Mod3DMT"
         ), patch(
             "pycsamt.models.modem.runner.subprocess.run",
-            return_value=_FakeCompletedProcess(0),
+            side_effect=lambda cmd, **kw: _forward_success(cmd, **kw),
         ) as mock_run:
             result = r.run_forward("mi.ws", "d0.dat")
         assert isinstance(result, InversionResult)
@@ -286,7 +296,7 @@ class TestRunForwardSuccess:
             "pycsamt.models.modem.runner.shutil.which", return_value="Mod3DMT"
         ), patch(
             "pycsamt.models.modem.runner.subprocess.run",
-            return_value=_FakeCompletedProcess(0),
+            side_effect=lambda cmd, **kw: _forward_success(cmd, **kw),
         ) as mock_run:
             r.run_forward("mi.ws", "d0.dat", load_result=False)
         cmd = mock_run.call_args.args[0]
@@ -299,7 +309,7 @@ class TestRunForwardSuccess:
             "pycsamt.models.modem.runner.shutil.which", return_value="Mod3DMT"
         ), patch(
             "pycsamt.models.modem.runner.subprocess.run",
-            return_value=_FakeCompletedProcess(0),
+            side_effect=lambda cmd, **kw: _forward_success(cmd, **kw),
         ):
             result = r.run_forward("mi.ws", "d0.dat", load_result=False)
         assert result is None
@@ -323,7 +333,7 @@ class TestRunForwardSuccess:
             "pycsamt.models.modem.runner.shutil.which", return_value="Mod3DMT"
         ), patch(
             "pycsamt.models.modem.runner.subprocess.run",
-            return_value=_FakeCompletedProcess(0),
+            side_effect=lambda cmd, **kw: _forward_success(cmd, **kw),
         ):
             r.run_forward("mi.ws", "d0.dat", load_result=False)
 
@@ -334,7 +344,7 @@ class TestRunForwardSuccess:
             "pycsamt.models.modem.runner.shutil.which", return_value="Mod2DMT"
         ), patch(
             "pycsamt.models.modem.runner.subprocess.run",
-            return_value=_FakeCompletedProcess(0),
+            side_effect=lambda cmd, **kw: _forward_success(cmd, **kw),
         ) as mock_run:
             r.run_forward("m0.rho", "d0.dat", mode="2d", load_result=False)
         cmd = mock_run.call_args.args[0]

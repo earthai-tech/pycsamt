@@ -105,8 +105,13 @@ EDI files were processed with **mtpy-v2** (Kirkby et al., 2019, *JOSS*
   geographic frame before joint analysis.
 - `final-models/BH_31.dat` is already the **inversion-ready** form:
   ModEM local `X` (north) / `Y` (east) metres about the model origin
-  `-31.95556, 41.53481` (ModEM subtracts 100° from longitude), geographic
-  orientation.
+  `-31.95556, 41.53481`, with a zero rotation header. The ModEM
+  longitude metadata differ by approximately -100 degrees from the EDI
+  longitudes near 141.5 degrees. This is an unresolved source-metadata
+  discrepancy: no automatic 100-degree correction was identified in the
+  native reader. The solver uses local X/Y coordinates in metres; do not
+  use the shifted longitude metadata for geographic mapping without
+  resolving their provenance. The original data files remain unchanged.
 
 ## A pyCSAMT bug found while adding this dataset
 

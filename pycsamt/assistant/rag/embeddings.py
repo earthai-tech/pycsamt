@@ -42,6 +42,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 __all__ = [
     "EmbeddingBackend",
+    "OllamaEmbeddingBackend",
     "OpenAIEmbeddingBackend",
     "resolve_embedding_backend",
     "save_vectors",
@@ -114,6 +115,65 @@ class OpenAIEmbeddingBackend:
         return _l2_normalize(np.asarray(vecs, dtype=np.float32))
 
 
+class OllamaEmbeddingBackend:
+    """Embed with an open-weight model served by a local Ollama server.
+
+    No API key and no data leave the machine, so the dense index is
+    reproducible from the model tag alone (record ``name``).
+
+    Parameters
+    ----------
+    model : str
+        Ollama embedding model tag, e.g. ``"nomic-embed-text"``.
+    host : str
+        Ollama base URL (default ``$OLLAMA_HOST`` or loopback).
+    batch_size : int
+        Texts per ``/api/embed`` request.
+    """
+
+    def __init__(
+        self,
+        *,
+        model: str = "nomic-embed-text",
+        host: str | None = None,
+        batch_size: int = 32,
+        timeout: float = 600.0,
+    ) -> None:
+        import os
+
+        self.model = model
+        self.host = (host or os.environ.get("OLLAMA_HOST")
+                     or "http://127.0.0.1:11434").rstrip("/")
+        self.batch_size = batch_size
+        self.timeout = timeout
+        self.name = f"ollama:{model}"
+
+    def embed(self, texts: Sequence[str]) -> np.ndarray:
+        import json
+        import urllib.request
+
+        import numpy as np
+
+        vecs: list[list[float]] = []
+        for i in range(0, len(texts), self.batch_size):
+            batch = [t or " " for t in texts[i : i + self.batch_size]]
+            req = urllib.request.Request(
+                self.host + "/api/embed",
+                data=json.dumps({"model": self.model, "input": batch}).encode(),
+                headers={"content-type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                out = json.loads(r.read())
+            emb = out.get("embeddings")
+            if not emb or len(emb) != len(batch):
+                raise RuntimeError(
+                    f"Ollama returned {len(emb or [])} embeddings for "
+                    f"{len(batch)} texts (model {self.model!r})."
+                )
+            vecs.extend(emb)
+        return _l2_normalize(np.asarray(vecs, dtype=np.float32))
+
+
 def resolve_embedding_backend(
     *,
     api_key: str | None = None,
@@ -128,9 +188,12 @@ def resolve_embedding_backend(
     """
     from pycsamt.agents._local import local_only
 
+    prov = (provider or "openai").lower()
+    if prov == "ollama":
+        # Local, keyless and allowed in local-only mode.
+        return OllamaEmbeddingBackend(model=model or "nomic-embed-text")
     if local_only() or not api_key:
         return None
-    prov = (provider or "openai").lower()
     if prov in ("openai", "oai", ""):
         try:
             import openai  # noqa: F401

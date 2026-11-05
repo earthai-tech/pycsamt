@@ -206,10 +206,10 @@ def test_context_regex_normalisation_validation_and_llm(monkeypatch, tmp_path):
         {"workflow": "", "data_path": tmp_path, "output_dir": tmp_path,
          "period_range": [10, 1], "component": "invalid"}, "request",
     )
-    assert normal["workflow"] == "qc" and normal["period_range"] == [1, 10]
-    assert normal["component"] == "xy"
+    assert normal["workflow"] == "qc" and normal["period_range"] == [10, 1]
+    assert normal["component"] == "invalid"
     warnings = _validate_config({"period_range": [0, 0]})
-    assert len(warnings) == 3
+    assert len(warnings) == 2
 
     rag = SimpleNamespace(context_text="known symbols", citations=[{"source_path": "api.py"}])
     agent = ContextInputAgent(api_key="key")

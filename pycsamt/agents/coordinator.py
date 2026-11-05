@@ -20,9 +20,12 @@ import pickle
 import time
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ._base import AgentResult, BaseAgent
 from ._pricing import format_cost
+from ._checkpoint_identity import digest, file_hash, workflow_identity
+from ._provenance import emit, observe_artifacts
 
 logger = logging.getLogger(__name__)
 
@@ -251,13 +254,17 @@ class AgentCoordinator:
             ``data`` contains one key per step name with its :class:`AgentResult`.
         """
         if dry_run:
+            emit("coordinator_preview", workflow=self.workflow_name)
             return self.preview(config)
 
+        emit("coordinator_boundary", workflow=self.workflow_name, resume=resume)
         self._ckpt_dir.mkdir(parents=True, exist_ok=True)
         t_workflow = time.time()
         results: dict[str, AgentResult] = {}
         total_cost = 0.0
         all_warnings: list[str] = []
+        run_identity = workflow_identity(config, self._steps, self.workflow_name)
+        upstream_hashes: list[str] = []
 
         self._log.info(
             "Starting workflow %r (%d steps)",
@@ -269,17 +276,31 @@ class AgentCoordinator:
             from ._request import checkpoint
 
             checkpoint()
-            # ── resume: skip completed checkpoints ───────────────────────────
+            # Resume only verified successful results from this exact input,
+            # configuration, source and upstream-result chain. Opaque settings
+            # disable reuse rather than falling back to unstable repr/hash.
+            signature = (digest({"run": run_identity, "step": step.name,
+                                 "upstream": upstream_hashes})
+                         if run_identity is not None else None)
             ckpt_path = self._ckpt_dir / f"{step.name}.pkl"
-            if resume and ckpt_path.exists():
+            if resume and signature is not None and ckpt_path.exists():
                 try:
-                    results[step.name] = self._load_checkpoint(step.name)
+                    results[step.name] = self._load_checkpoint(step.name, signature)
+                    upstream_hashes.append(file_hash(ckpt_path))
+                    all_warnings.extend(results[step.name].warnings)
+                    emit("checkpoint_reused", step=step.name, agent=type(step.agent).__name__,
+                         status=results[step.name].status, warnings=results[step.name].warnings,
+                         signature=signature, payload_sha256=upstream_hashes[-1])
                     self._print(f"  ↩  [{step.name}] resumed from checkpoint")
                     continue
                 except Exception as exc:
                     self._log.warning(
                         "Failed to load checkpoint for %r: %s", step.name, exc
                     )
+
+            # Invalidate the old sidecar before rebuilding input too: a failed
+            # adapter must not leave an older result looking reusable.
+            ckpt_path.with_suffix(".json").unlink(missing_ok=True)
 
             # ── build input ──────────────────────────────────────────────────
             try:
@@ -290,6 +311,7 @@ class AgentCoordinator:
             except Exception as exc:
                 msg = f"input_fn for step {step.name!r} raised: {exc}"
                 self._log.error(msg)
+                emit("step_input_failed", step=step.name, required=step.required, error=msg)
                 if step.required:
                     return AgentResult.failed(
                         msg, elapsed=time.time() - t_workflow
@@ -299,8 +321,13 @@ class AgentCoordinator:
 
             # ── run agent ────────────────────────────────────────────────────
             self._print(f"  ▶  [{step.name}] {step.description}")
+            before = observe_artifacts(config.get("output_dir"))
+            checkpoint()
+            call_id = uuid4().hex
+            emit("dispatch_started", call_id=call_id, step=step.name,
+                 agent=type(step.agent).__name__, required=step.required, inputs=step_input)
+            dispatched_at = time.perf_counter()
             try:
-                checkpoint()
                 result = step.agent.execute(step_input)
             except Exception as exc:
                 result = AgentResult.failed(
@@ -309,13 +336,23 @@ class AgentCoordinator:
                     elapsed=0.0,
                 )
 
+            after = observe_artifacts(config.get("output_dir"))
+            emit("dispatch_finished", call_id=call_id, step=step.name,
+                 agent=type(step.agent).__name__, status=result.status,
+                 elapsed_seconds=time.perf_counter() - dispatched_at,
+                 warnings=result.warnings, error=result.error, output_summary=result.data,
+                 artifact_changes={p: meta for p, meta in after.items() if before.get(p) != meta})
             checkpoint()
             results[step.name] = result
             total_cost += result.cost_estimate_usd
             all_warnings += result.warnings
 
             # ── checkpoint ───────────────────────────────────────────────────
-            self._save_checkpoint(step.name, result)
+            payload_hash = self._save_checkpoint(step.name, result, signature)
+            if payload_hash is None:
+                run_identity = None
+            else:
+                upstream_hashes.append(payload_hash)
 
             # ── status check ─────────────────────────────────────────────────
             status_icon = {
@@ -341,6 +378,15 @@ class AgentCoordinator:
                     error=result.error,
                     error_fix_hint=result.error_fix_hint,
                     elapsed_seconds=time.time() - t_workflow,
+                    cost_estimate_usd=total_cost,
+                )
+            if result.status == "needs_review":
+                emit("review_gate", stage="step", step=step.name, decision="blocked")
+                summary = f"Workflow paused at step {step.name!r}: review required."
+                self._save_workflow_state(results, summary)
+                return AgentResult(
+                    status="needs_review", summary=summary, data=results,
+                    warnings=all_warnings, elapsed_seconds=time.time() - t_workflow,
                     cost_estimate_usd=total_cost,
                 )
 
@@ -396,13 +442,22 @@ class AgentCoordinator:
         }
         return replace(result, data=safe_data)
 
-    def _save_checkpoint(self, step_name: str, result: AgentResult) -> None:
+    def _save_checkpoint(
+        self, step_name: str, result: AgentResult, signature: str | None = None,
+    ) -> str | None:
         path = self._ckpt_dir / f"{step_name}.pkl"
         try:
-            with open(path, "wb") as f:
+            payload_tmp = path.with_suffix(".pkl.tmp")
+            with open(payload_tmp, "wb") as f:
                 pickle.dump(self._checkpoint_safe(result), f)
+            payload_tmp.replace(path)
+            payload_hash = file_hash(path)
             # JSON sidecar for human inspection
             meta = {
+                "schema_version": 1,
+                "workflow": self.workflow_name,
+                "signature": signature,
+                "payload_sha256": payload_hash,
                 "step": step_name,
                 "status": result.status,
                 "summary": result.summary,
@@ -411,18 +466,33 @@ class AgentCoordinator:
                 "warnings": result.warnings,
                 "error": result.error,
             }
-            with open(path.with_suffix(".json"), "w") as f:
+            meta_tmp = path.with_suffix(".json.tmp")
+            with open(meta_tmp, "w", encoding="utf-8") as f:
                 json.dump(meta, f, indent=2)
+            meta_tmp.replace(path.with_suffix(".json"))
+            return payload_hash
         except Exception as exc:
             # Best-effort: checkpoints are an optimisation, never fatal.
             self._log.debug(
                 "Could not save checkpoint for %r: %s", step_name, exc
             )
+            return None
 
-    def _load_checkpoint(self, step_name: str) -> AgentResult:
+    def _load_checkpoint(self, step_name: str, signature: str) -> AgentResult:
         path = self._ckpt_dir / f"{step_name}.pkl"
+        # Check compatibility and bytes before deserializing a local checkpoint.
+        # This is integrity checking, not authentication of untrusted pickles.
+        meta = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
+        if (meta.get("schema_version") != 1 or meta.get("workflow") != self.workflow_name
+                or meta.get("step") != step_name or meta.get("status") != "success"
+                or meta.get("signature") != signature
+                or meta.get("payload_sha256") != file_hash(path)):
+            raise ValueError("Checkpoint is unsuccessful, incompatible or corrupt.")
         with open(path, "rb") as f:
-            return pickle.load(f)
+            result = pickle.load(f)
+        if not isinstance(result, AgentResult) or result.status != "success":
+            raise ValueError("Checkpoint does not contain a successful AgentResult.")
+        return result
 
     def _save_workflow_state(
         self, results: dict[str, AgentResult], summary: str

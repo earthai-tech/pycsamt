@@ -32,6 +32,7 @@ from ..api.plot import PLOT_CONFIG, add_colorbar
 from ..api.section import PYCSAMT_SECTION, SectionStyle
 from ..api.station import PYCSAMT_STATION_RENDERING
 from ..api.style import PYCSAMT_STYLE
+from ._provenance import recorded_language_call, record_retrieval, emit, transport_attempt, provider_response
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +278,7 @@ class BaseAgent(ABC):
             self.llm_provider == "ollama" or bool(self.api_key)
         )
 
+    @recorded_language_call
     def query_llm(
         self,
         prompt: str,
@@ -322,6 +324,7 @@ class BaseAgent(ABC):
             )
         if self.llm_provider == "ollama":
             try:
+                transport_attempt(self)
                 text, usage = generate(
                     prompt,
                     system_message or self.SYSTEM_PROMPT,
@@ -356,6 +359,7 @@ class BaseAgent(ABC):
         for delay in (*_RETRY_DELAYS, None):
             try:
                 checkpoint()
+                transport_attempt(self)
                 text, cost = fn(prompt, sys_msg, temperature, max_tokens)
                 self._last_cost += cost
                 AGENT_CONFIG._add_spend(cost)  # update session counter
@@ -394,6 +398,7 @@ class BaseAgent(ABC):
             system=system_message,
             messages=[{"role": "user", "content": prompt}],
         )
+        provider_response(self, msg)
         text = msg.content[0].text
         cost = AGENT_CONFIG.estimate_cost(
             self.llm_provider,
@@ -424,6 +429,7 @@ class BaseAgent(ABC):
             ],
         )
         text = resp.choices[0].message.content
+        provider_response(self, resp)
         cost = AGENT_CONFIG.estimate_cost(
             self.llm_provider,
             self.model,
@@ -453,6 +459,7 @@ class BaseAgent(ABC):
             generation_config=gen_cfg,
         )
         resp = gemini_model.generate_content(prompt)
+        provider_response(self, resp)
         text = resp.text
         # Gemini doesn't expose exact token counts via the basic API; estimate
         n_in = len(prompt.split()) * 4 // 3
@@ -494,6 +501,7 @@ class BaseAgent(ABC):
             ],
         )
         text = resp.choices[0].message.content
+        provider_response(self, resp)
         cost = AGENT_CONFIG.estimate_cost(
             self.llm_provider,
             self.model,
@@ -531,6 +539,7 @@ class BaseAgent(ABC):
             ],
         )
         text = resp.choices[0].message.content
+        provider_response(self, resp)
         cost = AGENT_CONFIG.estimate_cost(
             self.llm_provider,
             self.model,
@@ -598,8 +607,18 @@ class BaseAgent(ABC):
             if builder is None:
                 return None
             ctx = builder.build(query, session=session)
+            try:
+                record_retrieval(self.name, query, ctx, getattr(builder, "retriever", None))
+            except Exception as exc:
+                # Observation must not discard a successfully retrieved context.
+                from ._provenance import current_record
+                record = current_record()
+                if record is not None:
+                    record.errors.append(f"Retrieval recording failed: {exc}")
+                emit("retrieval_recording_failed", agent=self.name, error=str(exc))
             return None if ctx.is_empty() else ctx
-        except Exception:  # noqa: BLE001 — RAG is best-effort
+        except Exception as exc:  # noqa: BLE001 — RAG is best-effort
+            emit("retrieval_failed", agent=self.name, query=query, error=str(exc))
             return None
 
     @staticmethod

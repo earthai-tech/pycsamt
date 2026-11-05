@@ -230,6 +230,17 @@ class TensorRotationAgent(BaseAgent):
 
         n_written = len(written_paths)
 
+        # In-memory rotated copy for downstream steps (same convention as
+        # rotate_impedance), so a chained inversion does not depend on the
+        # precision of the EDI write/read round trip.
+        rotated_sites = None
+        try:
+            from ..site.edit import rotate_all
+
+            rotated_sites = rotate_all(sites, theta)
+        except Exception as exc:
+            warnings.append(f"In-memory rotation for downstream steps: {exc}")
+
         # ── diagonal-suppression summary ──────────────────────────────────
         diag_reduction = float("nan")
         if diag_ratios_before and diag_ratios_after:
@@ -292,6 +303,7 @@ class TensorRotationAgent(BaseAgent):
             ),
             data={
                 "strike_deg": theta,
+                "sites": rotated_sites,
                 "written_paths": written_paths,
                 "failed_stations": failed_stations,
                 "n_written": n_written,

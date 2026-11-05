@@ -377,6 +377,18 @@ def test_llm_interpretation_branch(monkeypatch):
     _passthrough_ensure_sites(monkeypatch)
     _mock_all(monkeypatch)
     agent = PhaseAnalysisAgent(api_key="fake-key")
+    monkeypatch.setattr(type(agent), "llm_available", property(lambda self: True))
     agent.query_llm = lambda *a, **k: "mocked interpretation"
     result = agent.execute({"sites": object()})
     assert result.llm_interpretation == "mocked interpretation"
+
+
+def test_summary_counts_use_declared_threshold_classifier(monkeypatch):
+    import pycsamt.emtools.tensor as tensor_mod
+    _passthrough_ensure_sites(monkeypatch)
+    _mock_all(monkeypatch)
+    monkeypatch.setattr(tensor_mod, 'build_phase_tensor_table',
+        lambda *a, **k: pd.DataFrame({'station':['S1'], 'period':[1.],
+                                     'beta':[2.], 'ellipt':[.25]}))
+    result = PhaseAnalysisAgent().execute({'sites':object(), 'run_fingerprint':False})
+    assert (result['n_1d'], result['n_2d'], result['n_3d']) == (0,1,0)

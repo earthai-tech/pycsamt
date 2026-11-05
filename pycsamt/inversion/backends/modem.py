@@ -12,6 +12,7 @@ files, validates the external-run lifecycle, optionally calls the runner when
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -72,9 +73,12 @@ class ModEMBackend(BaseInversionBackend):
         ``"ready"``
             Required files exist and a command string could be assembled.
         ``"executed"``
-            The external runner completed without loading a result object.
+            The external process completed; output identity and convergence
+            have not been qualified for this invocation.
         ``"loaded"``
-            A ModEM result object was found and attached to ``native``.
+            An archive was inspected or an explicitly declared current-run
+            triplet passed consistency checks. See output_provenance metadata;
+            this status alone does not establish convergence.
         ``"needs_review"``
             Preparation, runner execution, or validation raised a recoverable
             issue. Details are stored in ``warnings``.
@@ -110,6 +114,8 @@ class ModEMBackend(BaseInversionBackend):
         status = "prepared"
         command: str | None = None
         executed = False
+        output_provenance = "not_executed"
+        validated_outputs = None
 
         try:
             from ...models import modem
@@ -141,7 +147,7 @@ class ModEMBackend(BaseInversionBackend):
                 workdir, modem_cfg, cfg.backend_options
             )
             warnings.append(
-                "ModEM InputBuilder is not available; created workdir only."
+                "ModEM input preparation skipped: no source or InputBuilder available."
             )
 
         runner_cls = getattr(modem, "ModEmRunner", None)
@@ -153,6 +159,13 @@ class ModEMBackend(BaseInversionBackend):
             missing = _missing_runner_files(
                 file_map, required=_required_runner_keys(modem_cfg)
             )
+            fwd_control = runner_options.get("fwd_control")
+            if fwd_control is not None:
+                fwd_path = _resolve_workdir_path(fwd_control, workdir)
+                if not fwd_path.is_file() or fwd_path.stat().st_size == 0:
+                    missing.append(f"fwd_control={fwd_path}")
+                    status = "needs_review"
+                fwd_control = _relative_to_workdir(str(fwd_path), workdir)
             if missing:
                 warnings.append(
                     "ModEM runner not ready; missing files: "
@@ -168,6 +181,7 @@ class ModEMBackend(BaseInversionBackend):
                         if "covariance" in file_map
                         else None
                     ),
+                    fwd_control=fwd_control,
                     mode=modem_cfg.mode,
                     use_mpi=runner_options.get("use_mpi", None),
                     n_procs=runner_options.get("n_procs", None),
@@ -175,6 +189,17 @@ class ModEMBackend(BaseInversionBackend):
                 status = "ready" if status == "prepared" else status
                 if cfg.run_external:
                     try:
+                        output_contract = None
+                        if "outputs" in runner_options:
+                            if modem_cfg.mode != "3d":
+                                raise ValueError("Explicit output validation currently requires 3d")
+                            from ._modem_outputs import prepare_outputs, validate_outputs, native_control
+                            native_control(file_map["control"])
+                            protected_inputs = list(file_map.values())
+                            if fwd_control is not None:
+                                protected_inputs.append(str(_resolve_workdir_path(fwd_control, workdir)))
+                            output_contract = prepare_outputs(
+                                runner_options["outputs"], workdir, protected_inputs)
                         loaded = runner.run(
                             _relative_to_workdir(file_map["model"], workdir),
                             _relative_to_workdir(file_map["data"], workdir),
@@ -186,18 +211,35 @@ class ModEMBackend(BaseInversionBackend):
                                 if "covariance" in file_map
                                 else None
                             ),
+                            fwd_control=fwd_control,
                             mode=modem_cfg.mode,
                             use_mpi=runner_options.get("use_mpi", None),
                             n_procs=runner_options.get("n_procs", None),
                             extra_args=runner_options.get("extra_args", None),
                             timeout=runner_options.get("timeout", None),
-                            load_result=bool(
-                                runner_options.get("load_result", True)
-                            ),
+                            # Directory-wide discovery cannot bind outputs
+                            # to this invocation. Archive loading is separate.
+                            load_result=False,
                         )
-                        native = loaded or runner
+                        # A directory-scanned object is not evidence that this
+                        # invocation produced a model, response or convergence log.
+                        native = runner
                         executed = True
-                        status = "loaded" if loaded is not None else "executed"
+                        status = "executed"
+                        output_provenance = "unverified"
+                        if output_contract is not None:
+                            validated_outputs = validate_outputs(
+                                *output_contract, observation=file_map["data"],
+                                control=file_map["control"], initial_model=file_map["model"])
+                            native = validated_outputs
+                            output_provenance = "validated_triplet"
+                            status = "loaded"
+                        warnings.append(
+                            "ModEM convergence is unverified. "
+                            + ("Declared model/response/log triplet validated."
+                               if validated_outputs is not None else
+                               "Current-run output identity is unverified; directory-scanned results are not promoted.")
+                        )
                     except Exception as exc:
                         warnings.append(f"ModEM runner failed: {exc}")
                         status = "needs_review"
@@ -207,13 +249,14 @@ class ModEMBackend(BaseInversionBackend):
             )
 
         result_cls = getattr(modem, "InversionResult", None)
-        rms = float("nan")
-        if result_cls is not None and status != "needs_review":
+        rms = validated_outputs["rms"] if validated_outputs else float("nan")
+        if result_cls is not None and status != "needs_review" and not cfg.run_external:
             try:
                 loaded = result_cls(workdir, config=modem_cfg)
                 if _has_loaded_result(loaded):
                     native = loaded
                     status = "loaded"
+                    output_provenance = "archive_only"
                     rms = float(
                         getattr(
                             loaded,
@@ -241,6 +284,12 @@ class ModEMBackend(BaseInversionBackend):
                 "mode": modem_cfg.mode,
                 "run_external": cfg.run_external,
                 "executed": executed,
+                "output_provenance": output_provenance,
+                "converged": False,
+                "validated_outputs": ({k: v for k, v in validated_outputs.items()
+                                       if k not in {"model", "log"}}
+                                      if validated_outputs else None),
+                "scientific_acceptance": None,
                 "command": command,
                 "binary": modem_cfg.binary_name,
                 "use_mpi": modem_cfg.use_mpi,
@@ -254,22 +303,21 @@ def _modem_config(modem: Any, cfg: Any) -> Any:
     raw = cfg.backend_options.get("config")
     if raw is None:
         values = {
-            key: value
-            for key, value in cfg.backend_options.items()
+            key: value for key, value in cfg.backend_options.items()
             if key in getattr(cfg_cls, "__dataclass_fields__", {})
         }
-        values.setdefault("mode", cfg.dimension)
-        return cfg_cls(**values)
-    if isinstance(raw, cfg_cls):
-        raw.mode = cfg.dimension
-        return raw
-    if isinstance(raw, dict):
-        values = dict(raw)
-        values.setdefault("mode", cfg.dimension)
-        return cfg_cls(**values)
-    if hasattr(raw, "mode"):
-        raw.mode = cfg.dimension
-    return raw
+    elif isinstance(raw, cfg_cls):
+        if raw.mode != cfg.dimension:
+            raise ValueError("ModEM mode conflicts with inversion dimension")
+        return deepcopy(raw)
+    elif isinstance(raw, dict):
+        values = deepcopy(raw)
+    else:
+        raise TypeError("ModEM config must be a ModEmConfig or dictionary")
+    values.setdefault("mode", cfg.dimension)
+    if values["mode"] != cfg.dimension:
+        raise ValueError("ModEM mode conflicts with inversion dimension")
+    return cfg_cls(**values)
 
 
 def _build_options(
@@ -413,7 +461,7 @@ Notes
     resolved inside ``workdir``.
 ``runner``
     Runner-only options including ``use_mpi``, ``n_procs``, ``extra_args``,
-    ``timeout``, and ``load_result``.
+    ``timeout``, ``fwd_control``, and ``load_result``.
 ``data_file``, ``model_file``, ``control_file``, ``covariance_file``
     Convenience aliases for file names when a full ``files`` mapping is not
     supplied.

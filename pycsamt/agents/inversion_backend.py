@@ -137,16 +137,21 @@ class InversionBackendAgent(BaseAgent):
         from ..emtools._core import ensure_sites
 
         sites_raw = input_data.get("sites") or input_data.get("path")
-        if sites_raw is None:
+        prepared = input_data.get("backend_options", {}).get("prepared_project")
+        if prepared is not None and str(input_data.get("backend", self.backend)).strip().lower() != "occam2d":
+            return AgentResult.failed("Prepared project is only supported for occam2d.")
+        if sites_raw is None and prepared is None:
             return AgentResult.failed(
                 "No 'sites' or 'path'.", elapsed=time.time() - t0
             )
         try:
-            sites = ensure_sites(sites_raw, verbose=0)
+            if prepared is not None and sites_raw is not None:
+                raise ValueError("Prepared project cannot be combined with sites/path.")
+            sites = None if prepared is not None else ensure_sites(sites_raw, verbose=0)
         except Exception as exc:
             return AgentResult.failed(str(exc), elapsed=time.time() - t0)
 
-        backend = str(input_data.get("backend", self.backend))
+        backend = str(input_data.get("backend", self.backend)).strip().lower()
         dimension = str(input_data.get("dimension", self.dimension))
         method = str(input_data.get("method", self.method))
         n_layers = int(input_data.get("n_layers", self.n_layers))
@@ -164,23 +169,27 @@ class InversionBackendAgent(BaseAgent):
         # so probe the lazy import before committing to it.
         avail = available_backends()
         if backend not in avail:
-            warnings.append(
-                f"Backend {backend!r} not in registry. "
-                f"Available: {list(avail)}. Falling back to 'builtin'."
+            return AgentResult.failed(
+                f"Requested backend {backend!r} is not registered; no inversion was run.",
+                hint=f"Choose an available backend explicitly: {list(avail)}.",
+                elapsed=time.time() - t0,
             )
-            backend = "builtin"
 
-        if backend != "builtin":
-            try:
-                from ..inversion.backends import get_backend
+        try:
+            from ..inversion.backends import get_backend
 
-                get_backend(backend)
-            except Exception as exc:
-                warnings.append(
-                    f"Backend {backend!r} is registered but unavailable "
-                    f"({exc}). Falling back to 'builtin'."
-                )
-                backend = "builtin"
+            get_backend(backend)
+        except Exception as exc:
+            return AgentResult.failed(
+                f"Requested backend {backend!r} is unavailable: {exc}; no inversion was run.",
+                hint="Install or configure the requested backend, or explicitly choose another.",
+                elapsed=time.time() - t0,
+            )
+
+        if not isinstance(input_data.get("run_external", False), bool):
+            return AgentResult.failed(
+                "run_external must be a boolean.", elapsed=time.time() - t0
+            )
 
         # ── build InversionConfig ─────────────────────────────────────────
         try:
@@ -195,6 +204,13 @@ class InversionBackendAgent(BaseAgent):
                 error_floor=error_floor,
                 regularization=regularization,
                 max_iter=max_iter,
+                run_external=input_data.get("run_external", False),
+                starting_model=input_data.get("starting_model"),
+                reference_model=input_data.get("reference_model"),
+                include_phase=input_data.get("include_phase", True),
+                phase_error=input_data.get("phase_error", 3.0),
+                tol=input_data.get("tol", 1e-5),
+                bounds=input_data.get("bounds", {}),
                 backend_options=backend_options,
             )
         except Exception as exc:
@@ -218,6 +234,22 @@ class InversionBackendAgent(BaseAgent):
                 f"Inversion failed: {exc}",
                 hint=f"Check backend availability: available_backends() = {avail}",
                 elapsed=time.time() - t0,
+            )
+
+        warnings.extend(getattr(inv_result, "warnings", None) or [])
+        backend_status = str(getattr(inv_result, "status", "unknown")).lower()
+        # Loading a model or obtaining a finite objective is not convergence.
+        # Generic "success" reports completion only; require an explicit
+        # convergence signal before promoting the agent result.
+        result_metadata = dict(getattr(inv_result, "metadata", None) or {})
+        convergence_confirmed = (
+            backend_status == "converged"
+            or (backend_status == "success"
+                and result_metadata.get("converged") is True)
+        )
+        if not convergence_confirmed:
+            warnings.append(
+                f"Backend status {backend_status!r} does not confirm convergence."
             )
 
         # ── extract results ───────────────────────────────────────────────
@@ -309,7 +341,7 @@ class InversionBackendAgent(BaseAgent):
 
         # ── LLM interpretation ────────────────────────────────────────────
         interp: str | None = None
-        if self.llm_available:
+        if self.llm_available and convergence_confirmed and np.isfinite(rms):
             rms_str = f"{rms:.4f}" if not np.isnan(rms) else "N/A"
             n_sta = (
                 log_rho_section.shape[1]
@@ -330,14 +362,17 @@ class InversionBackendAgent(BaseAgent):
         elapsed = time.time() - t0
         rms_str = f"{rms:.4f}" if not np.isnan(rms) else "N/A"
         return AgentResult(
-            status="success" if not np.isnan(rms) else "needs_review",
+            status="success" if convergence_confirmed and np.isfinite(rms) else "needs_review",
             summary=(
                 f"Inversion ({backend}, {dimension}, {method}): "
-                f"RMS={rms_str}, {n_iter} iterations. "
+                f"backend status={backend_status}; RMS={rms_str}, {n_iter} iterations. "
                 f"{len(figures)} figures."
             ),
             data={
                 "inversion_result": inv_result,
+                "backend_status": backend_status,
+                "convergence_confirmed": convergence_confirmed,
+                "scientific_acceptance": None,
                 "rms": rms,
                 "n_iter": n_iter,
                 "log_rho_section": log_rho_section,

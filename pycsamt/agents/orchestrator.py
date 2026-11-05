@@ -79,6 +79,7 @@ from datetime import datetime, timezone
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
+from ._provenance import recorded_request, emit, current_record
 
 from ..api.agents import AGENT_CONFIG
 from ._base import AgentResult, BaseAgent
@@ -89,7 +90,7 @@ Given a natural-language MT processing request,
 return a JSON object with:
 {
   "workflow_type": one of:
-    "qc", "phase_analysis", "pre_inversion",
+    "conventional_inversion", "qc", "phase_analysis", "pre_inversion",
     "ai_inversion", "inv2d", "inv3d",
     "ensemble_inversion", "joint_inversion",
     "modem", "mare2dem", "full", "full_ai_workflow",
@@ -243,7 +244,34 @@ def _ifn_hybrid_model(r):
     return {"model": r["hybrid_inv"].get("section", {})}
 
 
+def _ifn_rotated_sites(r):
+    return {"sites": _require(r, "rotate", "sites")}
+
+
+def _ifn_prepared_project(results):
+    """Prepared native inputs are supplied explicitly in per-step settings."""
+    return {}
+
+
 _WORKFLOW_STEPS = {
+    # Field data to an executed, validated conventional inversion. Every
+    # scientific choice (band, strike, backend, errors, budget) must be
+    # explicit in step_params; the orchestrator refuses defaults.
+    "field_inversion": [
+        ("load", "MTLoaderAgent", None, "Load EDI files"),
+        ("qc", "DataQCAgent", _ifn_load_sites, "Data quality flags (sites unchanged)"),
+        ("static_shift", "StaticShiftAgent", _ifn_qc_sites,
+         "Static-shift correction in the declared period band"),
+        ("rotate", "TensorRotationAgent", _ifn_ss_corrected,
+         "Rotate impedances to the declared geoelectric strike"),
+        ("inversion", "InversionBackendAgent", _ifn_rotated_sites,
+         "Run the conventional inversion and validate numerical outputs"),
+        ("report", "ReportAgent", _ifn_results, "Generate inversion report"),
+    ],
+    "conventional_inversion": [
+        ("conventional_inversion", "InversionBackendAgent", _ifn_prepared_project,
+         "Execute explicit conventional inversion and validate numerical outputs"),
+    ],
     "qc": [
         (
             "load",
@@ -256,12 +284,6 @@ _WORKFLOW_STEPS = {
             "DataQCAgent",
             _ifn_load_sites,
             "Frequency confidence assessment and QC flags",
-        ),
-        (
-            "static_shift",
-            "StaticShiftAgent",
-            _ifn_qc_sites,
-            "Static-shift detection and AMA correction",
         ),
         ("report", "ReportAgent", _ifn_results, "Generate QC report"),
     ],
@@ -802,7 +824,7 @@ _WORKFLOW_STEPS = {
 # Steps whose deliverable is an inversion input file set on disk.  These
 # receive the run's ``output_dir`` (in a per-code subfolder) even though
 # their ``input_fn`` chain only carries the upstream ``sites``.
-_PREP_FILE_STEPS = frozenset({"occam2d", "modem", "mare2dem"})
+_PREP_FILE_STEPS = frozenset({"occam2d", "modem", "mare2dem", "conventional_inversion"})
 
 
 def _make_outdir_injector(fn, od):
@@ -893,6 +915,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         )
         self.default_workflow = default_workflow
 
+    @recorded_request
     def execute(self, input_data: dict[str, Any]) -> AgentResult:
         self._last_cost = 0.0
         t0 = time.time()
@@ -901,6 +924,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         request = str(input_data.get("request", ""))
         config = input_data.get("config") or {}
         dry_run = bool(input_data.get("dry_run", False))
+        emit("execution_boundary", dry_run=dry_run)
         output_dir = input_data.get("output_dir", "pycsamt_workflow_output")
         data_path = input_data.get("data_path") or config.get("data_path", "")
 
@@ -933,6 +957,39 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 f"Unknown workflow {workflow_type!r}.  Available: {available}",
                 elapsed=time.time() - t0,
             )
+
+        if workflow_type == "conventional_inversion":
+            explicit = config.get("step_params", {}).get("conventional_inversion", {})
+            if (explicit.get("backend") != "occam2d"
+                    or explicit.get("method") != "mt"
+                    or explicit.get("dimension") != "2d"
+                    or not isinstance(explicit.get("run_external"), bool)
+                    or not isinstance(explicit.get("backend_options", {}).get("prepared_project"), dict)):
+                return AgentResult.failed(
+                    "Conventional inversion requires explicit MT/2d Occam backend, boolean "
+                    "run_external and a prepared_project contract in step_params.conventional_inversion."
+                )
+
+        if workflow_type == "field_inversion":
+            sp = config.get("step_params", {})
+            inv = sp.get("inversion", {})
+            rot = sp.get("rotate", {})
+            ss = sp.get("static_shift", {})
+            problems = []
+            if not inv.get("backend") or not inv.get("method") or not inv.get("dimension"):
+                problems.append("inversion backend/method/dimension")
+            if not isinstance(inv.get("run_external"), bool):
+                problems.append("boolean inversion.run_external")
+            if not isinstance(rot.get("strike_deg"), (int, float)):
+                problems.append("numeric rotate.strike_deg")
+            if "pband" not in ss:
+                problems.append("static_shift.pband (or null for full band)")
+            if problems:
+                return AgentResult.failed(
+                    "Field inversion requires explicit settings: "
+                    + ", ".join(problems) + ". No step was run.",
+                    elapsed=time.time() - t0,
+                )
 
         steps_spec = _WORKFLOW_STEPS[workflow_type]
 
@@ -1120,9 +1177,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         from ._workflow_plan import WorkflowPlan, validate_workflow_plan
 
         plan_config = dict(config)
-        plan_config.setdefault("workflow", workflow_type)
-        plan_config.setdefault("data_path", data_path)
-        plan_config.setdefault("output_dir", output_dir)
+        plan_config.update(workflow=workflow_type, data_path=data_path, output_dir=output_dir)
 
         # Ground the plan in retrieved package evidence (same retrieval
         # layer PackageQAAgent uses) so the provenance trail can cite
@@ -1141,6 +1196,15 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # ── validation gate: a plan with hard errors never touches
         # disk. Preview (dry_run) is exempt since it executes nothing. ──
         plan_errors = validate_workflow_plan(plan)
+        emit("plan_validation", plan=plan.to_dict(), errors=plan_errors,
+             passed=not plan_errors, dry_run=dry_run)
+        from ._checkpoint_identity import input_identities
+        try:
+            emit("resolved_input_manifest", inputs=input_identities(plan.to_dict()))
+        except (TypeError, ValueError, OSError) as exc:
+            emit("resolved_input_manifest", inputs=None, error=str(exc))
+            if not plan_errors and current_record() is not None:
+                current_record().errors.append(f"Resolved input identity unavailable: {exc}")
         if plan_errors and not dry_run:
             elapsed = time.time() - t0
             return AgentResult(
@@ -1161,11 +1225,33 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 cost_estimate_usd=self._last_cost,
             )
 
+        # A preview can be inspected without approval, but a review-required
+        # plan may not execute on a truthy flag alone. Bind caller approval to
+        # the exact displayed plan and current input bytes.
+        if plan.requires_human_review and not dry_run:
+            try:
+                required_hash = plan.approval_digest()
+            except (ValueError, TypeError, OSError) as exc:
+                return AgentResult.failed(f"Cannot identify plan inputs for review: {exc}")
+            if input_data.get("approved_plan_hash") != required_hash:
+                emit("review_gate", stage="plan", decision="blocked", plan_hash=required_hash)
+                return AgentResult(
+                    status="needs_review", summary="Workflow requires approval of this exact plan before execution.",
+                    data={"workflow_type": workflow_type, "workflow_plan": plan,
+                          "approval_plan_hash": required_hash, "steps": step_meta},
+                    warnings=warnings, elapsed_seconds=time.time() - t0,
+                    cost_estimate_usd=self._last_cost,
+                )
+            emit("review_gate", stage="plan", decision="approved", plan_hash=required_hash)
+
         # ── run (or preview) ──────────────────────────────────────
         exec_config = {
             "path": data_path,
             "output_dir": output_dir,
             "request": request,
+            # Resume identity includes all resolved science settings, not only
+            # the loader path. This field is metadata, not tool arguments.
+            "workflow_plan": plan.to_dict(),
         }
         # Merge "load" step params into exec_config
         # so the root load agent sees period range,
@@ -1179,7 +1265,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
         # ── write provenance trail ────────────────────────────────
         if not dry_run:
-            _write_provenance(
+            provenance_written = _write_provenance(
                 output_dir=output_dir,
                 plan=plan,
                 step_meta=step_meta,
@@ -1187,6 +1273,13 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 elapsed=elapsed,
                 all_warnings=warnings + exec_result.warnings,
             )
+            if provenance_written is False:
+                warnings.append("Required provenance files could not be written completely.")
+                if exec_result.status == "success":
+                    exec_result.status = "needs_review"
+                record = current_record()
+                if record is not None:
+                    record.errors.append("Required workflow provenance persistence failed.")
 
         return AgentResult(
             status=exec_result.status,
@@ -1221,7 +1314,7 @@ def _write_provenance(
     exec_result: Any,
     elapsed: float,
     all_warnings: list,
-) -> None:
+) -> bool:
     """
     Write provenance artefacts to *output_dir*.
 
@@ -1262,13 +1355,21 @@ def _write_provenance(
             json.dump(env, fh, indent=2)
 
         # agent_trace.json
+        record = current_record()
+        events = record.snapshot()["events"] if record is not None else []
+        observed_steps = [e for e in events if e["event"] in
+                          {"dispatch_finished", "checkpoint_reused", "step_input_failed"}]
         trace: dict[str, Any] = {
             "user_request": plan.request,
             "parsed_workflow": plan.workflow_type,
             "provider": plan.provider,
             "validation_status": ("passed" if plan.is_valid() else "failed"),
-            "executed_agents": [s["agent"] for s in step_meta],
-            "steps": step_meta,
+            "executed_agents": [e["agent"] for e in events if e["event"] == "dispatch_started"],
+            "resumed_agents": [e["agent"] for e in events if e["event"] == "checkpoint_reused"],
+            "planned_steps": step_meta,
+            "steps": observed_steps,
+            "event_observation_available": record is not None,
+            "run_record": "run_record.json" if record is not None else None,
             "parameters": plan.parameters,
             "warnings": all_warnings,
             "human_review_required": plan.requires_human_review,
@@ -1294,8 +1395,21 @@ def _write_provenance(
             ),
         }
         manifest_path = os.path.join(output_dir, "output_manifest.json")
+        if record is not None:
+            producers = {}
+            for event in events:
+                if event["event"] == "dispatch_finished":
+                    for path in event.get("artifact_changes", {}):
+                        producers[path] = event["step"]
+            for entry in manifest["files"]:
+                entry["producing_step"] = producers.get(entry["path"])
+                entry["attribution"] = "observed_change" if entry["producing_step"] else "unattributed"
         with open(manifest_path, "w", encoding="utf-8") as fh:
             json.dump(manifest, fh, indent=2)
+        if record is not None:
+            emit("workflow_outcome", status=exec_result.status)
+            record.persist(Path(output_dir) / "run_record.json")
+        return True
 
     except Exception as exc:
         import logging
@@ -1304,6 +1418,7 @@ def _write_provenance(
             "Could not write provenance: %s",
             exc,
         )
+        return False
 
 
 _PROVENANCE_FILES = frozenset(
@@ -1312,6 +1427,7 @@ _PROVENANCE_FILES = frozenset(
         "agent_trace.json",
         "environment.json",
         "output_manifest.json",
+        "run_record.json",
     }
 )
 

@@ -18,8 +18,9 @@ Three EM methods are provided, all using the same
 
 ``CSAMT1DForward``
     Controlled-source AMT.  In the far-field limit this reduces to
-    MT.  A near-field geometry correction factor is applied when
-    source–receiver distance and frequencies are provided.
+    MT.  When a source–receiver distance is given, the exact layered-earth
+    response of a grounded bipole (empymod) is returned instead, including
+    near-field and transition-zone effects.
 
 References
 ----------
@@ -440,8 +441,8 @@ class CSAMT1DForward(_Base1DForward):
     freqs : array-like
         Frequencies [Hz].
     source_offset : float or None
-        Source–receiver distance [m].  If ``None``, the far-field
-        approximation is used without correction.
+        Broadside source–receiver distance [m].  If ``None``, the
+        far-field (plane-wave MT) response is returned.
     dipole_length : float
         Electric dipole length [m].  Default 1000 m.
 
@@ -484,28 +485,50 @@ class CSAMT1DForward(_Base1DForward):
         self, resp: ForwardResponse, model
     ) -> ForwardResponse:
         """
-        First-order near-field correction after Zonge & Hughes (1991).
+        Exact layered-earth CSAMT response at the finite source offset.
 
-        The correction factor f_nf = 1 / (1 + (r/δ)⁻²) modulates the
-        apparent resistivity so that ρ_a → ρ_true as r/δ → ∞.
+        Replaces the plane-wave impedance by the Cagniard impedance
+        :math:`Z = E_x/H_y` of a grounded electric bipole of length
+        ``dipole_length`` (x-directed, centred at the origin) observed at
+        the broadside receiver ``(0, source_offset)``, computed with
+        :mod:`empymod` in the quasi-static limit. Both fields include all
+        near-field and transition-zone terms, so the apparent resistivity
+        rises above the plane-wave value and the phase drops at low
+        induction number, as observed in CSAMT data.
+
+        Before v2.6.5 this method multiplied the plane-wave apparent
+        resistivity by ``1/(1 + (r/delta)**-2)``, which *lowered* it in the
+        near field -- the opposite of the physical behaviour.
         """
-        omega = 2.0 * np.pi * self.freqs
-        # Skin depth for the first layer  δ = sqrt(2ρ/(ωμ₀))
-        rho1 = model.resistivity[0]
-        delta = np.sqrt(2.0 * rho1 / (omega * MU0))
-        r = self.source_offset
-        f_nf = 1.0 / (1.0 + (r / delta) ** (-2))
+        import empymod
 
-        # Correct apparent resistivity and recompute phase-compatible Z
-        rho_a_corr = resp.rho_a * f_nf
-        z_corr = np.sqrt(rho_a_corr * omega * MU0) * np.exp(
-            1j * np.angle(resp.z)
+        res = np.asarray(model.resistivity, dtype=float)
+        thk = np.asarray(model.thickness, dtype=float).ravel()
+        depth = np.r_[0.0, np.cumsum(thk)] if thk.size else np.array([0.0])
+        half = 0.5 * self.dipole_length
+        r = float(self.source_offset)
+        common = dict(
+            src=[-half, half, 0.0, 0.0, 0.001, 0.001],
+            depth=list(depth),
+            res=[2e14, *res.tolist()],
+            freqtime=self.freqs,
+            epermH=[0.0] * (res.size + 1),
+            epermV=[0.0] * (res.size + 1),
+            verb=0,
         )
+        ex = np.asarray(
+            empymod.bipole(rec=[0.0, r, 0.001, 0.0, 0.0], mrec=False, **common)
+        )
+        hy = np.asarray(
+            empymod.bipole(rec=[0.0, r, 0.001, 90.0, 0.0], mrec=True, **common)
+        )
+        z = ex / hy
+        omega = 2.0 * np.pi * self.freqs
         return ForwardResponse(
             method="CSAMT1D",
             freqs=self.freqs,
-            z=z_corr,
-            rho_a=rho_a_corr,
-            phase=np.angle(z_corr, deg=True),
+            z=z,
+            rho_a=np.abs(z) ** 2 / (omega * MU0),
+            phase=np.angle(z, deg=True),
             model=model,
         )

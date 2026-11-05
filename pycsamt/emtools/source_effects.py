@@ -728,25 +728,6 @@ def _zone_wang(kr: np.ndarray) -> np.ndarray:
     )
 
 
-def _F_complex(rho: np.ndarray, freq: np.ndarray, offset: float) -> np.ndarray:
-    """
-    Complex near-field factor F(p) = 1 − 3/p² + 3/p³  (equatorial HED).
-
-    p = k · r,  k = √(i·ω·μ₀ / ρ_a)
-    F → 1 in the far field; diverges in the geometric near field.
-    """
-    omega = 2.0 * np.pi * np.maximum(np.asarray(freq, dtype=float), 1e-12)
-    k_abs = np.sqrt(
-        omega * _MU0 / np.maximum(np.asarray(rho, dtype=float), 1e-6)
-    )
-    p = k_abs * abs(offset) * (1.0 + 1j) / np.sqrt(2.0)
-    tiny = np.abs(p) < 1e-10
-    if np.any(tiny):
-        p = p.copy()
-        p[tiny] = 1e-10 * (1.0 + 1j)
-    return 1.0 - 3.0 / p**2 + 3.0 / p**3
-
-
 def _label_pseudo_ax(
     ax: Any,
     stations: list[str],
@@ -921,14 +902,35 @@ def correct_near_field(
     """
     Correct impedance tensor for CSAMT near-field contamination.
 
-    Divides each element of **Z** by the complex near-field factor F(p)::
+    For every datum the observed apparent resistivity is matched by the
+    exact broadside CSAMT response of an *equivalent homogeneous
+    half-space* (electric point dipole, empymod solution; see
+    :mod:`pycsamt.emtools._csamt_halfspace`). The impedance is then divided
+    by that half-space's complex ratio to the plane-wave impedance::
 
-        Z_corrected = Z_obs / F(p)
+        Z_corrected = Z_obs / R(u_h),   R = Z_hs / Z_pw,   u_h = r / delta_h
 
-    where F(p) = 1 − 3/p² + 3/p³ is the equatorial HED transfer-function
-    ratio and p = k · r,  k = √(i·ω·μ₀ / ρ_a).  In the far field
-    F(p) → 1 so no correction is applied; in the near/transition zone the
-    correction restores the plane-wave equivalent impedance.
+    In the far field ``R -> 1`` and nothing changes. On a homogeneous
+    half-space the correction is exact (apparent resistivity and phase
+    return to the plane-wave values); on a layered earth it is the usual
+    equivalent-half-space approximation. In layered tests (r = 6 km) it
+    reduced the transition-zone apparent-resistivity error three- to
+    four-fold, but residual phase errors of 10-20 degrees can remain, so
+    quantitative interpretation of transition-zone data should invert the
+    full-field response (``CSAMT1DForward(source_offset=...)``) instead. Data deeper in the near field
+    than the tabulated range (``r/delta < 0.01``) are left unchanged and
+    reported with a warning.
+
+    Before v2.6.5 this function divided by the electric-field-only factor
+    ``1 - 3/p**2 + 3/p**3`` evaluated at the biased apparent resistivity.
+    That ignored the near-field departure of the magnetic field and failed
+    a check against the exact solution (wrong apparent resistivity and
+    scrambled phase in the transition zone).
+
+    Assumptions: broadside geometry, grounded source much shorter than the
+    offset, approximately 1-D earth under the spread. The factor is
+    computed from the determinant apparent resistivity and applied to all
+    tensor elements; impedance errors (if present) are scaled by ``1/|R|``.
 
     Uses :func:`~pycsamt.emtools._core._apply_each` to apply the
     per-site correction and return a new ``Sites`` (or modify in-place).
@@ -950,9 +952,13 @@ def correct_near_field(
 
     References
     ----------
-    Wang & Lin (2023), *Geophysics* **88**(6), E215–E230.
-    Chen & Yan (2005), eqs. (8)–(10).
+    Zonge, K.L. & Hughes, L.J. (1991). Controlled source audio-frequency
+    magnetotellurics. In *Electromagnetic Methods in Applied Geophysics*,
+    vol. 2B, 713–809.
+    Werthmüller, D. (2017). empymod. *Geophysics* 82(6), WB9–WB19.
     """
+    from ._csamt_halfspace import near_field_ratio
+
     S = ensure_sites(
         sites,
         recursive=recursive,
@@ -979,13 +985,24 @@ def correct_near_field(
                     )
                 return
             rho_a = _rho_a_det(z, fr)
-            F = _F_complex(rho_a, fr, off)
-            F_mag = np.abs(F)
-            # guard: don't amplify Z by more than 1000× (|F| floor at 1e-3)
-            F_eff = np.where(
-                F_mag >= 1e-3, F, F * (1e-3 / np.maximum(F_mag, 1e-30))
-            )
-            Z_wrap.z = z / F_eff[:, None, None]
+            R, _, in_range = near_field_ratio(rho_a, fr, off)
+            ok = in_range & np.isfinite(R)
+            if not np.all(ok):
+                warnings.warn(
+                    f"correct_near_field: {int(np.sum(~ok))} frequencies at "
+                    f"'{stn}' are too deep in the near field (r/delta < 0.01) "
+                    "or invalid; left uncorrected.",
+                    UserWarning,
+                    stacklevel=4,
+                )
+            R = np.where(ok, R, 1.0)
+            Z_wrap.z = z / R[:, None, None]
+            z_err = getattr(Z_wrap, "z_err", None)
+            if z_err is not None:
+                try:
+                    Z_wrap.z_err = np.asarray(z_err) / np.abs(R)[:, None, None]
+                except (TypeError, ValueError, AttributeError):
+                    pass
 
     return _apply_each(S, _one, inplace=inplace, verbose=verbose)
 

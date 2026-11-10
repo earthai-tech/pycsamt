@@ -179,7 +179,12 @@ def test_misfit_map_overall_rms_in_title_matches_log(result):
     )
     assert "overall RMS" in blob
     val = float(blob.split("overall RMS")[1].split()[0])
-    if np.isfinite(result.final_rms):
+    assert np.isfinite(val) and val > 0
+    # The bundled sample keeps only the public stations (lines L18
+    # and L22) of a 125-station run, while the log's RMS covers all
+    # of them; compare only when the data hold the whole survey.
+    full = len(result.data_obs.site_names) == 125
+    if full and np.isfinite(result.final_rms):
         assert abs(val - result.final_rms) < 0.15
     plt.close(fig)
 

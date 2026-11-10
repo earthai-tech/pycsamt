@@ -371,14 +371,14 @@ latest compatible pair automatically.
    ...     fetch_elevation=False,
    ... )
    >>> print(inversion.lines)
-   ('18', '22', '26', '30', '34')
+   ('18', '22')
    >>> print(len(inversion.stations), inversion.metadata["rms"])
-   125 3.057151
+   50 3.057151
    >>> print({
    ...     line: section["rho"].shape
    ...     for line, section in inversion.metadata["sections"].items()
    ... })
-   {'18': (41, 25), '22': (41, 25), '26': (41, 25), '30': (41, 25), '34': (41, 25)}
+   {'18': (41, 25), '22': (41, 25)}
 
 These arrays are vertical curtains sampled through the inversion mesh at
 the ModEM stations.  They bypass the skin-depth calculation in

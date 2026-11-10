@@ -675,3 +675,11 @@ paper.pdf
 # Local paper drafts and development plans — not project source
 /PAPERS/
 /PYCSAMT-DEV-PLANS/
+# Baohuashan (WILLY) survey: only lines L18 and L22 are public.
+# Measured data of lines L26, L30 and L34 stay local, never in git.
+_restricted_local/
+paper_repro/**/three_station_replay_subset/
+paper_repro/**/l26plt_field_arrays.npz
+data/AMT/WILLY_DATA/L26PLT/
+data/AMT/WILLY_DATA/L30PLT/
+data/AMT/WILLY_DATA/L34PLT/

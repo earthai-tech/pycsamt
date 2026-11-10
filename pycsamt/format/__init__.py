@@ -3,6 +3,18 @@
 See ``PYCSAMT-PCSF-INVERSION-FORMAT-PLAN.md`` at the repository root
 for the full design and phase-by-phase status.
 
+The format core -- schema, ``.pcsf`` and ``.pcsm`` I/O, provenance,
+inversion records, sampling, comparison and regridding -- is the
+standalone ``pcsf`` package, the reference implementation of the
+format. :mod:`~pycsamt.format.schema`, :mod:`~pycsamt.format.io`,
+:mod:`~pycsamt.format.text`, :mod:`~pycsamt.format.provenance`,
+:mod:`~pycsamt.format.inversion_record`,
+:mod:`~pycsamt.format.compare` and :mod:`~pycsamt.format.regrid`
+re-export it, so ``pycsamt.format.PCSFModel is pcsf.PCSFModel``.
+pyCSAMT keeps what is specific to it: the adapters from its own
+result objects, the companion formats (PCBH, PCGL, PCGS, PCPT),
+multi-line assembly, topography sources and conversion dispatch.
+
 Public second-level namespaces (importable as ``pycsamt.format.<name>``
 right after ``import pycsamt.format``, not only via an explicit
 ``from pycsamt.format.<name> import ...``):
@@ -22,7 +34,8 @@ right after ``import pycsamt.format``, not only via an explicit
   ``pcsf_to_pcsm``/``pcsm_to_pcsf``: PCSM, the hand-editable ASCII
   sibling of a ``.pcsf`` file, also re-exported here.
 - :mod:`pycsamt.format.multiline`, :mod:`pycsamt.format.topography`,
-  :mod:`pycsamt.format.pointcloud`, :mod:`pycsamt.format.regrid` —
+  :mod:`pycsamt.format.pointcloud`, :mod:`pycsamt.format.regrid`,
+  :mod:`pycsamt.format.compare` —
   likewise re-exported here.
 - :mod:`pycsamt.format.pointset` — PCPT, a tiny ``.pcpt.json`` format
   for targets / points of interest (``read_points``, ``points_from_csv``,
@@ -61,6 +74,18 @@ from .borehole import (
     write_las_subset,
     write_pcbh,
     write_vtp,
+)
+from .compare import (
+    ComparisonResult,
+    compare_log10,
+    log_uncertainty,
+    sample_log10,
+)
+from .inversion_record import (
+    InversionRecord,
+    attach_inversion_record,
+    check_inversion_record,
+    get_inversion_record,
 )
 from .detect import SourceKind, describe_source, detect_source
 from .geology import (
@@ -148,6 +173,14 @@ from .topography import (
 )
 
 __all__ = [
+    "ComparisonResult",
+    "compare_log10",
+    "log_uncertainty",
+    "InversionRecord",
+    "attach_inversion_record",
+    "check_inversion_record",
+    "get_inversion_record",
+    "sample_log10",
     "adapters",
     "borehole",
     "convert_engine",

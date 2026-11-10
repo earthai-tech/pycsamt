@@ -80,6 +80,9 @@ dependencies = [
     "empymod>=2.5; python_version >= '3.10'",
     # optional HDF5 elevation export/import (pycsamt.map.topo)
     "h5py>=3.8",
+    # PCSF reference implementation (github.com/earthai-tech/pcsf):
+    # pycsamt.format re-exports its schema, I/O and algorithms.
+    "pcsf>=0.1.0.dev0",
 ]
 
 # ---------------------------------------------------------------------------

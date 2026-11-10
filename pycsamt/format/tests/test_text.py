@@ -26,8 +26,8 @@ from pycsamt.format.schema import (
     TopographyRaster,
     UnstructuredMeshGeometry,
 )
+from pcsf.core.text import _DEFAULT_ROW_WIDTH
 from pycsamt.format.text import (
-    _DEFAULT_ROW_WIDTH,
     pcsf_to_pcsm,
     pcsm_to_pcsf,
     read_pcsm,

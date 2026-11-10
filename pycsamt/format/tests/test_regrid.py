@@ -13,6 +13,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pcsf.exceptions import GeometryError
+
 from pycsamt.format.regrid import mesh_to_grid2d
 from pycsamt.format.schema import (
     Grid2DGeometry,
@@ -56,7 +58,7 @@ class TestMeshToGrid2DSynthetic:
             region_ids=np.array([0, 1]),
         )
         model = PCSFModel(geometry=geometry, resistivity=np.array([10.0]))
-        with pytest.raises(ValueError, match="per-cell"):
+        with pytest.raises(ValueError, match="per-triangle"):
             mesh_to_grid2d(model)
 
     def test_rejects_non_xz_plane(self):
@@ -67,7 +69,7 @@ class TestMeshToGrid2DSynthetic:
             plane="xy",
         )
         model = PCSFModel(geometry=geometry, resistivity=np.array([10.0, 20.0]))
-        with pytest.raises(NotImplementedError, match="plane"):
+        with pytest.raises(GeometryError, match="plane='xz'"):
             mesh_to_grid2d(model)
 
     def test_result_is_grid2d_with_requested_resolution(self):

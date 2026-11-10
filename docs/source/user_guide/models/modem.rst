@@ -743,7 +743,7 @@ every step the production run wrote.
    >>> observed = result.data_obs
    >>> predicted = result.data_pred
    >>> print(final_model.shape, observed.n_sites)
-   (41, 50, 288) 125
+   (41, 50, 288) 50
 
 ``result.n_iter`` (74) counts iterations recorded in the log, not how many
 ``.rho`` snapshots are physically present -- only 3 of those 74 models are
@@ -864,7 +864,9 @@ figures. All of the figures below come from the same
    :align: center
    :width: 85%
 
-   ``component="ZXY"`` pseudo-section over all 125 stations. The banded
+   ``component="ZXY"`` pseudo-section over the stations of the run
+   (the bundled data now keep the 50 public stations of lines L18 and
+   L22). The banded
    structure -- alternating resistive and conductive columns rather than a
    smooth lateral trend -- reflects that this is an areal 3-D deployment
    sampled along an arbitrary station ordering, not a single profile line;

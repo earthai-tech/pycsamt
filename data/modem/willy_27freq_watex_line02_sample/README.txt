@@ -83,3 +83,15 @@ Use this folder for read-only documentation workflows:
 
 Do not assume this folder is a complete restartable inversion directory.  It is
 a compact teaching dataset, not the full production run.
+
+Public stations only
+--------------------
+
+The run inverted 125 stations of five Baohuashan lines (L18, L22,
+L26, L30, L34). Only lines L18 and L22 of that survey are public, so
+the ``.dat`` and ``.res`` files here keep the 50 stations of those
+two lines (5368 of the 13468 data values); the header counts were
+updated to match. The model files (``.rho``), the covariance, the
+controls and the logs are those of the full run, so the RMS values in
+``Modular_NLCG.log`` refer to all 125 stations. The complete data are
+available from the authors on reasonable request.

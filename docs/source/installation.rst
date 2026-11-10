@@ -113,8 +113,8 @@ Every group can be combined freely, for example
      - PySide6, pyqtgraph, contextily
      - The native desktop application
    * - ``web``
-     - Dash, dash-bootstrap-components, Flask, diskcache, multiprocess,
-       Plotly, Pillow
+     - Dash, dash-bootstrap-components, Flask, diskcache-community,
+       diskcache, multiprocess, Plotly, Pillow
      - The Dash web dashboard
    * - ``app``
      - ``desktop`` + ``web``

@@ -16,26 +16,57 @@ Usage::
 
 from __future__ import annotations
 
+import functools
+import importlib
 import os
+from pathlib import PosixPath, WindowsPath
 from typing import Any
 
+_CACHED_MODULES = (
+    "pycsamt.site.base",
+    "pycsamt.seg",
+    "pycsamt.z",
+    "pycsamt.loc",
+    "pycsamt.emtf",
+    "pycsamt.metadata",
+    "pycsamt.map._core",
+    "pycsamt.map.view",
+    "pycsamt.forward.em1d",
+    "pycsamt.forward.em2d",
+    "pycsamt.forward.em3d",
+    "pycsamt.forward.grid2d",
+    "pycsamt.forward.grid3d",
+    "pycsamt.forward.synthetic",
+    "pycsamt.inversion.data",
+    "pycsamt.inversion.mesh",
+    "pycsamt.inversion.model",
+    "pycsamt.inversion.results",
+)
+
 try:
-    import diskcache
+    import diskcache_community as diskcache
 
     _BASE_DIR = os.environ.get(
         "PYCSAMT_DATA",
         os.path.join(os.path.expanduser("~"), ".pycsamt"),
     )
     _DIR = os.path.join(_BASE_DIR, "web_cache")
-    cache: diskcache.Cache = diskcache.Cache(_DIR)
+    cache: diskcache.Cache = diskcache.Cache(
+        _DIR,
+        disk=diskcache.SafeDisk.with_types(
+            PosixPath, WindowsPath, modules=_CACHED_MODULES
+        )
+        .with_numpy()
+        .with_options(on_error="miss"),
+    )
 except Exception:
     cache = None  # type: ignore[assignment]
 
 SESSION_TTL: int = 86_400  # seconds — cached Sites expire after 24 hours
 
-# In-memory fallback — used when diskcache is not installed.
-# Works fine for single-process development servers; install diskcache for
-# multi-worker / background-callback production use.
+# In-memory fallback — used when diskcache-community is not installed.
+# Works fine for single-process development servers; install
+# diskcache-community for multi-worker / background-callback production use.
 _MEM: dict[str, Any] = {}
 
 # True only when the full Dash background-callback chain works:
@@ -48,8 +79,21 @@ if cache is not None:
     try:
         from dash import DiskcacheManager as _DM  # noqa: F401
 
-        bg_manager = _DM(cache)
+        bg_manager = _DM()
         HAS_BG_MANAGER = True
+    except Exception:
+        pass
+
+
+@functools.cache
+def _import_cached_modules() -> None:
+    for name in _CACHED_MODULES:
+        importlib.import_module(name)
+
+
+def _drop(key: str) -> None:
+    try:
+        cache.delete(key)
     except Exception:
         pass
 
@@ -68,7 +112,7 @@ def cache_set(session_id: str, sites: Any) -> None:
         try:
             cache.set(session_id, sites, expire=SESSION_TTL)
         except Exception:
-            pass
+            _drop(session_id)
 
 
 def cache_get(session_id: str) -> Any:
@@ -77,6 +121,7 @@ def cache_get(session_id: str) -> Any:
         return None
     if cache is not None:
         try:
+            _import_cached_modules()
             result = cache.get(session_id)
             if result is not None:
                 return result
@@ -136,7 +181,7 @@ def cache_set_fwd(session_id: str, dim: str, response: Any) -> None:
         try:
             cache.set(key, response, expire=SESSION_TTL)
         except Exception:
-            pass
+            _drop(key)
 
 
 def cache_get_fwd(session_id: str, dim: str) -> Any:
@@ -146,6 +191,7 @@ def cache_get_fwd(session_id: str, dim: str) -> Any:
     key = f"{session_id}_fwd_{dim}"
     if cache is not None:
         try:
+            _import_cached_modules()
             result = cache.get(key)
             if result is not None:
                 return result
@@ -167,7 +213,7 @@ def cache_set_inversion_result(session_id: str, result: Any) -> None:
         try:
             cache.set(key, result, expire=SESSION_TTL)
         except Exception:
-            pass
+            _drop(key)
 
 
 def cache_get_inversion_result(session_id: str) -> Any:
@@ -177,6 +223,7 @@ def cache_get_inversion_result(session_id: str) -> Any:
     key = f"{session_id}_inversion_result"
     if cache is not None:
         try:
+            _import_cached_modules()
             result = cache.get(key)
             if result is not None:
                 return result
@@ -198,7 +245,7 @@ def cache_set_freq_edit(session_id: str, sites: Any) -> None:
         try:
             cache.set(key, sites, expire=SESSION_TTL)
         except Exception:
-            pass
+            _drop(key)
 
 
 def cache_get_freq_edit(session_id: str) -> Any:
@@ -208,6 +255,7 @@ def cache_get_freq_edit(session_id: str) -> Any:
     key = f"{session_id}_freq_edit"
     if cache is not None:
         try:
+            _import_cached_modules()
             result = cache.get(key)
             if result is not None:
                 return result

@@ -175,10 +175,12 @@ def mare2dem_to_pcsf(
         resistivity_by_region, mesh.region_ids
     )
 
+    # MARE2DEM numbers regions from 1; PCSF stores 0-based indices into
+    # the per-region table (specification, rule C10).
     geometry = UnstructuredMeshGeometry(
         nodes=mesh.nodes_m,
         connectivity=mesh.triangles,
-        region_ids=mesh.region_ids,
+        region_ids=np.asarray(mesh.region_ids, dtype=np.int64) - 1,
         plane="xz",
     )
 

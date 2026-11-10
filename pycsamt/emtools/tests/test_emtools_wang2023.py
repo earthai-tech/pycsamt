@@ -306,9 +306,14 @@ def test_correct_near_field_far_field_near_identity():
 
 
 def test_correct_near_field_near_field_modifies_z():
-    """In the near field (tiny offset) F ≠ 1 → Z is changed."""
-    offset = 1.0
-    s = _site("S01", rho=1000.0, n=6, f_lo=0.1, f_hi=1.0, offset=offset)
+    """In the near/transition zone (r/delta ~ 0.6-1.7) Z is changed.
+
+    The previous version used a 1 m offset; such data lie beyond the
+    correctable range (r/delta < 0.01) and are now left unchanged with a
+    warning instead of being divided by an extrapolated factor.
+    """
+    offset = 3000.0
+    s = _site("S01", rho=100.0, n=6, f_lo=1.0, f_hi=8.0, offset=offset)
     z_before = s.Z.z.copy()
 
     result = correct_near_field([s], source_offset=offset)

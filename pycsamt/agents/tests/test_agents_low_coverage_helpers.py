@@ -192,7 +192,7 @@ def test_interpretation_object_llm_and_boundaries(monkeypatch):
     assert result.status == "success" and result.llm_interpretation == "geological answer"
 
 
-def test_inversion_backend_mocked_success_and_fallback(tmp_path, monkeypatch):
+def test_inversion_backend_mocked_success(tmp_path, monkeypatch):
     from pycsamt.agents.inversion_backend import InversionBackendAgent, _plot_inversion_section
     import pycsamt.emtools._core as core
     import pycsamt.inversion as inversion
@@ -207,16 +207,18 @@ def test_inversion_backend_mocked_success_and_fallback(tmp_path, monkeypatch):
     inv_result = SimpleNamespace(
         rms=0.2, n_iter=3, model={"log_rho_section": [1., 2.]},
         station_names=["S1"], history=None,
+        # A finite RMS alone is not convergence; success needs the signal.
+        status="converged",
     )
     monkeypatch.setattr(inversion, "InversionConfig", Config)
     monkeypatch.setattr(inversion, "run_inversion", lambda cfg: inv_result)
-    agent = InversionBackendAgent(api_key="key", backend="missing")
+    agent = InversionBackendAgent(api_key="key", backend="builtin")
     monkeypatch.setattr(agent, "query_llm", lambda *a, **k: "good fit")
     monkeypatch.setattr(agent, "_save_figure", lambda *a, **k: str(tmp_path / "fig.png"))
     result = agent.execute({"sites": object(), "output_dir": str(tmp_path)})
     assert result.status == "success" and result.data["backend"] == "builtin"
     assert result.data["log_rho_section"].shape == (2, 1)
-    assert result.llm_interpretation == "good fit" and result.warnings
+    assert result.llm_interpretation == "good fit"
     assert _plot_inversion_section(np.empty((2, 0)), [], np.nan, "x", "1d") is None
 
 

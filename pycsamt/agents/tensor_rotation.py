@@ -58,6 +58,11 @@ class TensorRotationAgent(BaseAgent):
     ``output_dir`` : str — directory for rotated EDI files
     ``overwrite`` : bool — allow overwriting existing files (default False)
     ``file_suffix`` : str — appended to station name, e.g. ``"_rot"``
+    ``plot`` : dict — options for the summary figure: ``max_per_row``
+        (default 30; long profiles wrap onto stacked rows), ``figsize``,
+        ``row_height``, ``label_step``, ``title``, plus export controls
+        ``dpi`` and ``fmt`` (e.g. ``["png", "pdf"]``). See
+        :func:`pycsamt.emtools.plot_rotation_summary`.
 
     Output data keys
     ----------------
@@ -225,6 +230,17 @@ class TensorRotationAgent(BaseAgent):
 
         n_written = len(written_paths)
 
+        # In-memory rotated copy for downstream steps (same convention as
+        # rotate_impedance), so a chained inversion does not depend on the
+        # precision of the EDI write/read round trip.
+        rotated_sites = None
+        try:
+            from ..site.edit import rotate_all
+
+            rotated_sites = rotate_all(sites, theta)
+        except Exception as exc:
+            warnings.append(f"In-memory rotation for downstream steps: {exc}")
+
         # ── diagonal-suppression summary ──────────────────────────────────
         diag_reduction = float("nan")
         if diag_ratios_before and diag_ratios_after:
@@ -236,7 +252,11 @@ class TensorRotationAgent(BaseAgent):
         figures: dict[str, Any] = {}
         fig_paths: dict[str, str] = {}
         try:
-            fig = _plot_rotation_summary(sites, theta, warnings)
+            plot_opts = dict(input_data.get("plot") or {})
+            save_opts = {
+                k: plot_opts.pop(k) for k in ("dpi", "fmt") if k in plot_opts
+            }
+            fig = _plot_rotation_summary(sites, theta, warnings, **plot_opts)
             if fig is not None:
                 figures["rotation_summary"] = fig
                 p = self._save_figure(
@@ -244,6 +264,7 @@ class TensorRotationAgent(BaseAgent):
                     output_dir,
                     "tensor_rotation_summary",
                     warnings_list=warnings,
+                    **save_opts,
                 )
                 if p:
                     fig_paths["rotation_summary"] = p
@@ -282,6 +303,7 @@ class TensorRotationAgent(BaseAgent):
             ),
             data={
                 "strike_deg": theta,
+                "sites": rotated_sites,
                 "written_paths": written_paths,
                 "failed_stations": failed_stations,
                 "n_written": n_written,
@@ -374,78 +396,17 @@ def _write_rotated_edi(
 
 
 def _plot_rotation_summary(
-    sites: Any, theta: float, warnings: list[str]
+    sites: Any, theta: float, warnings: list[str], **plot_opts: Any
 ) -> Any:
-    """Simple bar chart: mean |Zxx/Zxy| per station before rotation."""
-    import matplotlib.pyplot as plt
+    """Before/after diagonal-suppression bar chart (wraps long profiles).
 
-    from ..emtools._core import (
-        _get_z_block,
-        _iter_items,
-        _name,
-    )
-    from ..seg.ops import rotate_impedance
+    Thin wrapper over :func:`pycsamt.emtools.plot_rotation_summary`;
+    *plot_opts* are its keyword arguments (``max_per_row``, ``figsize``,
+    ``row_height``, ``label_step``, ``title``).
+    """
+    from ..emtools.tensor import plot_rotation_summary
 
-    station_names, ratios_before, ratios_after = [], [], []
-
-    for i, ed in enumerate(_iter_items(sites)):
-        nm = _name(ed, i)
-        _, z, fr = _get_z_block(ed)
-        if z is None:
-            continue
-        try:
-            mask = np.isfinite(z[:, 0, 0]) & (np.abs(z[:, 0, 1]) > 1e-30)
-            if not mask.any():
-                continue
-            rb = float(
-                np.nanmean(np.abs(z[mask, 0, 0]) / np.abs(z[mask, 0, 1]))
-            )
-            z_r = rotate_impedance(z, theta)
-            if z_r.ndim == 2:
-                z_r = z_r[np.newaxis]
-            ra = float(
-                np.nanmean(np.abs(z_r[mask, 0, 0]) / np.abs(z_r[mask, 0, 1]))
-            )
-            station_names.append(nm)
-            ratios_before.append(rb)
-            ratios_after.append(ra)
-        except Exception:
-            continue
-
-    if not station_names:
-        return None
-
-    n = len(station_names)
-    x = np.arange(n)
-    fig, ax = plt.subplots(figsize=(max(6, n * 0.6), 4))
-    ax.bar(
-        x - 0.18,
-        ratios_before,
-        width=0.35,
-        label="Before",
-        color="#3498db",
-        alpha=0.8,
-    )
-    ax.bar(
-        x + 0.18,
-        ratios_after,
-        width=0.35,
-        label=f"After θ={theta:.1f}°",
-        color="#e74c3c",
-        alpha=0.8,
-    )
-    ax.set_xticks(x)
-    ax.set_xticklabels(station_names, rotation=90, fontsize=7)
-    ax.set_ylabel("|Zxx| / |Zxy|  (lower = better suppression)", fontsize=8)
-    ax.set_title(
-        f"Tensor rotation — diagonal suppression  (θ = {theta:.1f}°)",
-        fontsize=9,
-        fontweight="bold",
-    )
-    ax.legend(fontsize=8)
-    ax.tick_params(labelsize=7)
-    fig.tight_layout()
-    return fig
+    return plot_rotation_summary(sites, theta, **plot_opts)
 
 
 __all__ = ["TensorRotationAgent"]

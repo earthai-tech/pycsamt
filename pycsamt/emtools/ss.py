@@ -24,9 +24,10 @@ from .tensor import build_phase_tensor_table
 
 
 def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
-    """Geometric-mean apparent resistivity from off-diagonal Z (Ω·m).
+    """Determinant apparent resistivity (Ω·m), rotation invariant.
 
-    ρa_det ≈ sqrt(ρ_xy ρ_yx) ; ρ = 0.2|Z|^2/f. Falls back to whichever
+    ρa_det = 0.2|det Z|/f, which equals sqrt(ρ_xy ρ_yx) when the diagonal
+    terms vanish; ρ = 0.2|Z|^2/f. Falls back to whichever
     off-diagonal component is actually populated when the other is
     identically zero, e.g. scalar single-component CSAMT surveys that
     only record Zxy (or Zyx) -- see :func:`pycsamt.emtools.fieldzone
@@ -42,7 +43,16 @@ def _rho_det_from_z(z: np.ndarray, fr: np.ndarray) -> np.ndarray:
     y_ok = np.abs(zy) > 0
     both = x_ok & y_ok
     out = np.full(rx.shape, np.nan)
-    out[both] = np.sqrt(np.maximum(rx[both] * ry[both], 1e-12))
+    # Use the full determinant, 0.2|Zxx Zyy - Zxy Zyx|/f, which is
+    # invariant under rotation of the measurement axes. With zero (or
+    # missing) diagonals it reduces exactly to sqrt(rho_xy rho_yx); the
+    # off-diagonal product alone made static-shift factors depend on the
+    # acquisition frame (up to 0.6 decades on Baohuashan L26 at 52.5 deg).
+    zxx = np.nan_to_num(z[:, 0, 0])
+    zyy = np.nan_to_num(z[:, 1, 1])
+    det = np.abs(zxx * zyy - zx * zy)
+    rdet = 0.2 * det / (fr + 1e-24)
+    out[both] = np.maximum(rdet[both], 1e-12)
     only_x = x_ok & ~y_ok
     out[only_x] = rx[only_x]
     only_y = y_ok & ~x_ok
@@ -489,7 +499,8 @@ def apply_ss_factors(
         Column name or dict key holding the impedance
         scaling factors. Common choices are
         ``'fac_z'`` (impedance) or
-        ``'fac_rho'`` (resistivity).
+        ``'fac_rho'`` (resistivity). Resistivity factors are converted
+        to impedance factors by their positive square root before scaling.
     inplace : bool, default False
         Modify the input Sites object.  When False,
         a corrected copy is returned.
@@ -538,6 +549,8 @@ def apply_ss_factors(
         ed = next(_iter_items(Si))
         st = _name(ed, 0)
         s = fmap.get(st, 1.0)
+        if key == "fac_rho" and np.isfinite(s) and s > 0:
+            s = np.sqrt(s)
         _scale_site_Z(ed, s)
         return Si
 

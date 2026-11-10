@@ -169,7 +169,9 @@ def _make_data_from_offsets(offsets, mode="2d"):
     for i, off in enumerate(offsets):
         s = _Site()
         s.name = f"S{i:02d}"
-        s.coords = (0.0, float(off), 0.0)
+        # Coordinates are (lat, lon, elev) in degrees; express the metre
+        # offset as the longitude that projects back to it at lat=0.
+        s.coords = (0.0, float(np.degrees(off / 6_371_000.0)), 0.0)
         omega = 2 * np.pi * freqs
         mu0 = 4 * np.pi * 1e-7
         z_mag = np.sqrt(omega * mu0 * 100.0)

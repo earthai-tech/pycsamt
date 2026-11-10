@@ -450,17 +450,17 @@ def _normalise_config(
     else:
         cfg["output_dir"] = str(Path("pycsamt_agent_output").resolve())
 
-    # period_range
+    # Normalize numeric spelling only; do not silently reverse explicit bounds.
     if "period_range" in cfg:
         pr = cfg["period_range"]
-        if isinstance(pr, (list, tuple)) and len(pr) == 2:
-            lo, hi = float(pr[0]), float(pr[1])
-            cfg["period_range"] = [min(lo, hi), max(lo, hi)]
+        if isinstance(pr, (list, tuple)) and len(pr) == 2 and not any(isinstance(x, bool) for x in pr):
+            try:
+                cfg["period_range"] = [float(pr[0]), float(pr[1])]
+            except (TypeError, ValueError):
+                pass  # preserve invalid values for a precise validation error
 
     # component normalisation
     comp = str(cfg.get("component", "xy")).lower()
-    if comp not in _COMPONENTS:
-        comp = "xy"
     cfg["component"] = comp
 
     # boolean verbose
@@ -487,15 +487,8 @@ def _validate_config(cfg: dict[str, Any]) -> list[str]:
             "Check the path and try again."
         )
 
-    pr = cfg.get("period_range")
-    if pr is not None:
-        lo, hi = pr
-        if lo <= 0:
-            warnings.append(f"period_range lower bound must be > 0; got {lo}.")
-        if hi <= lo:
-            warnings.append(
-                f"period_range upper bound {hi} ≤ lower bound {lo}."
-            )
+    from ._workflow_plan import parameter_errors
+    warnings.extend(parameter_errors(cfg))
 
     return warnings
 

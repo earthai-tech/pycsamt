@@ -17,6 +17,8 @@ representation of user intent.
 from __future__ import annotations
 
 import json
+import math
+from numbers import Integral, Real
 import warnings as _warnings
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -27,6 +29,8 @@ __all__ = ["WorkflowPlan", "validate_workflow_plan"]
 # Canonical set of workflow identifiers recognised by the orchestrator
 VALID_WORKFLOWS = frozenset(
     {
+        "conventional_inversion",
+        "field_inversion",
         "qc",
         "static_shift",
         "phase_analysis",
@@ -110,24 +114,37 @@ class WorkflowPlan:
     # ── validation ────────────────────────────────────────────
 
     def is_valid(self) -> bool:
-        """Return True when the plan passes basic validation."""
-        return bool(self.request) and self.workflow_type in VALID_WORKFLOWS
+        """Return True only when all declared plan checks pass."""
+        return not self.validation_errors()
 
     def validation_errors(self) -> list[str]:
         """Return a list of validation error messages."""
         errs: list[str] = []
-        if not self.request:
+        if not isinstance(self.request, str) or not self.request.strip():
             errs.append("'request' is empty.")
-        if self.workflow_type not in VALID_WORKFLOWS:
+        if not isinstance(self.workflow_type, str) or self.workflow_type not in VALID_WORKFLOWS:
             errs.append(
                 f"Unknown workflow_type {self.workflow_type!r}. "
                 f"Valid: {sorted(VALID_WORKFLOWS)}"
             )
         if not self.data_path:
             errs.append("No data_path extracted from the request.")
-        elif not Path(self.data_path).exists():
-            errs.append(f"data_path does not exist: {self.data_path!r}")
+        else:
+            try:
+                if not Path(self.data_path).exists():
+                    errs.append(f"data_path does not exist: {self.data_path!r}")
+            except (TypeError, ValueError, OSError):
+                errs.append("data_path must be a valid file or directory path.")
+        if not isinstance(self.requires_human_review, bool):
+            errs.append("requires_human_review must be a boolean.")
+        errs.extend(parameter_errors(self.parameters))
         return errs
+
+    def approval_digest(self) -> str:
+        """Bind explicit review approval to this plan and current input bytes."""
+        from ._checkpoint_identity import input_identities, digest
+
+        return digest({"plan": self.to_dict(), "inputs": input_identities(self.to_dict())})
 
     # ── serialisation ──────────────────────────────────────────
 
@@ -157,28 +174,21 @@ class WorkflowPlan:
         """
         wf = config.get("workflow", "qc")
 
-        params: dict[str, Any] = {}
-        for k in (
-            "period_range",
-            "component",
-            "station",
-            "inversion_code",
-            "depth_max_km",
-            "n_periods",
-            "verbose",
-        ):
-            if k in config:
-                params[k] = config[k]
+        # Preserve the full scientific configuration, including per-step and
+        # solver settings, so approval cannot outlive a parameter change.
+        excluded = {"workflow", "data_path", "output_dir", "risk_flags",
+                    "requires_human_review", "approved_plan_hash"}
+        params = {k: v for k, v in config.items() if k not in excluded}
 
         # identify risk flags
-        flags: list[str] = []
+        flags: list[str] = list(config.get("risk_flags") or [])
         if not config.get("data_path"):
             flags.append("No data path found — user must supply.")
-        if wf not in VALID_WORKFLOWS:
+        if not isinstance(wf, str) or wf not in VALID_WORKFLOWS:
             flags.append(f"Unrecognised workflow {wf!r}.")
 
-        expected = _expected_outputs(wf)
-        needs_review = bool(flags) or not config.get("data_path")
+        expected = _expected_outputs(wf) if isinstance(wf, str) else []
+        needs_review = wf in ("conventional_inversion", "field_inversion") or config.get("requires_human_review", False) or bool(flags) or not config.get("data_path")
 
         return cls(
             request=request,
@@ -195,6 +205,47 @@ class WorkflowPlan:
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
+
+
+def parameter_errors(parameters: Any, prefix: str = "parameters") -> list[str]:
+    """Validate supported core settings without repairing scientific intent.
+
+    This is a bounded contract, not validation of every solver-specific option.
+    Nested per-step settings receive the same numeric period/depth/count checks.
+    """
+    if not isinstance(parameters, dict):
+        return [f"{prefix} must be a mapping."]
+    errors = []
+    period = parameters.get("period_range")
+    if period is not None:
+        valid = isinstance(period, (list, tuple)) and len(period) == 2
+        if valid:
+            valid = all(isinstance(x, Real) and not isinstance(x, bool) and math.isfinite(x) for x in period)
+        if not valid or not (0 < period[0] < period[1]):
+            errors.append(f"{prefix}.period_range must contain two finite positive bounds in increasing order.")
+    component = parameters.get("component")
+    if component is not None and component not in ("xy", "yx", "xx", "yy", "all", "off_diagonal"):
+        errors.append(f"{prefix}.component is unsupported: {component!r}.")
+    backend = parameters.get("inversion_code")
+    if backend is not None and backend not in ("occam2d", "modem", "mare2dem"):
+        errors.append(f"{prefix}.inversion_code is unsupported: {backend!r}.")
+    for name in ("depth_max_km", "depth_max"):
+        value = parameters.get(name)
+        if value is not None and (not isinstance(value, Real) or isinstance(value, bool) or not math.isfinite(value) or value <= 0):
+            errors.append(f"{prefix}.{name} must be finite and positive.")
+    for name in ("n_periods", "n_layers", "epochs", "n_train_samples"):
+        value = parameters.get(name)
+        if value is not None and (not isinstance(value, Integral) or isinstance(value, bool) or value < 1):
+            errors.append(f"{prefix}.{name} must be a positive integer.")
+    for name in ("step_params", "pinn_params", "hybrid_params", "ai_inv_params"):
+        nested = parameters.get(name)
+        if nested is not None:
+            if name == "step_params" and isinstance(nested, dict):
+                for step, settings in nested.items():
+                    errors.extend(parameter_errors(settings, f"{prefix}.{name}.{step}"))
+            else:
+                errors.extend(parameter_errors(nested, f"{prefix}.{name}"))
+    return errors
 
 
 def _expected_outputs(workflow_type: str) -> list[str]:
@@ -236,6 +287,7 @@ def _expected_outputs(workflow_type: str) -> list[str]:
             "occam2d_startup.txt",
         ],
         "modem": ["ModEM_Data.dat"],
+        "field_inversion": ["static_shift_report.md", "report.md"],
         "full": [
             "qc_confidence.png",
             "pt_psection.png",

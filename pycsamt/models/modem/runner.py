@@ -337,6 +337,7 @@ class ModEmRunner(ModEmBase):
         model: PathLike,
         data: PathLike,
         *,
+        output_data: PathLike = "ModEM_Forward.dat",
         mode: str | None = None,
         use_mpi: bool | None = None,
         n_procs: int | None = None,
@@ -362,6 +363,9 @@ class ModEmRunner(ModEmBase):
             Data file that defines the stations, periods,
             components, and errors for which responses are
             calculated.
+        output_data : path-like, default "ModEM_Forward.dat"
+            New output filename inside workdir. Existing output is rejected
+            so an old response cannot stand in for the current calculation.
         mode : {"2d", "3d"}, optional
             Dimensionality override for this invocation. If omitted,
             ``config.mode`` selects the executable.
@@ -417,7 +421,15 @@ class ModEmRunner(ModEmBase):
         cmd: list[str] = []
         if _mpi:
             cmd += [cfg.mpi_command, "-np", str(_procs)]
-        cmd += [str(binary), "-F", self._arg(model), self._arg(data)]
+        output = Path(output_data)
+        if not output.is_absolute():
+            output = self.workdir / output
+        output = output.resolve()
+        if output.parent != self.workdir.resolve():
+            raise ValueError("Forward output must be a file in workdir.")
+        if output.exists():
+            raise FileExistsError(f"Forward output already exists: {output}")
+        cmd += [str(binary), "-F", self._arg(model), self._arg(data), self._arg(output)]
 
         if self.verbose:
             self.logger.info(
@@ -425,12 +437,16 @@ class ModEmRunner(ModEmBase):
                 " ".join(shlex.quote(c) for c in cmd),
             )
 
-        proc = subprocess.run(
-            cmd,
-            cwd=str(self.workdir),
-            timeout=timeout,
-        )
+        with (self.workdir / "modem_forward_stdout.log").open("w") as out, \
+                (self.workdir / "modem_forward_stderr.log").open("w") as err:
+            proc = subprocess.run(
+                cmd, cwd=str(self.workdir), timeout=timeout,
+                stdout=out, stderr=err,
+            )
         proc.check_returncode()
+        if not output.is_file() or output.stat().st_size == 0:
+            raise RuntimeError("ModEM returned without a nonempty forward output.")
+        self.forward_output = output
 
         if load_result:
             return InversionResult(self.workdir, config=cfg)

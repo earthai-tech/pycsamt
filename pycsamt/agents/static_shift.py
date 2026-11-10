@@ -133,6 +133,17 @@ class StaticShiftAgent(BaseAgent):
             or self.method
         ).lower()
         output_dir = input_data.get("output_dir")
+        # Per-call settings (plan step_params) override the constructor;
+        # they used to be ignored, so a requested band was not applied.
+        half_window = int(input_data.get("half_window", self.half_window))
+        pband = input_data.get("pband", self.pband)
+        if pband is not None:
+            pband = (float(pband[0]), float(pband[1]))
+            if not (0 < pband[0] < pband[1]):
+                return AgentResult.failed(
+                    f"Invalid static-shift period band {pband!r}.",
+                    elapsed=time.time() - t0,
+                )
 
         # ── import ss functions ───────────────────────────────────────────────
         from ..emtools.ss import (
@@ -163,16 +174,16 @@ class StaticShiftAgent(BaseAgent):
             elif method == "ama":
                 corrected_sites = correct_ss_ama(
                     sites,
-                    half_window=self.half_window,
-                    pband=self.pband,
+                    half_window=half_window,
+                    pband=pband,
                     inplace=self.inplace,
                     verbose=0,
                 )
             elif method == "loess":
                 result_loess = estimate_ss_loess(
                     sites,
-                    half_window=self.half_window,
-                    pband=self.pband,
+                    half_window=half_window,
+                    pband=pband,
                     verbose=0,
                 )
                 corrected_sites = apply_ss_factors(
@@ -184,8 +195,8 @@ class StaticShiftAgent(BaseAgent):
             elif method == "bilateral":
                 result_bilateral = estimate_ss_bilateral(
                     sites,
-                    half_window=self.half_window,
-                    pband=self.pband,
+                    half_window=half_window,
+                    pband=pband,
                     verbose=0,
                 )
                 corrected_sites = apply_ss_factors(
@@ -197,7 +208,7 @@ class StaticShiftAgent(BaseAgent):
             elif method == "refmedian":
                 result_ss = estimate_ss_refmedian(
                     sites,
-                    pband=self.pband,
+                    pband=pband,
                     verbose=0,
                 )
                 if hasattr(result_ss, "iterrows"):
@@ -218,7 +229,7 @@ class StaticShiftAgent(BaseAgent):
                     )
                     corrected_sites = correct_ss_ama(
                         sites,
-                        half_window=self.half_window,
+                        half_window=half_window,
                         inplace=self.inplace,
                         verbose=0,
                     )
@@ -228,7 +239,7 @@ class StaticShiftAgent(BaseAgent):
                 )
                 corrected_sites = correct_ss_ama(
                     sites,
-                    half_window=self.half_window,
+                    half_window=half_window,
                     inplace=self.inplace,
                     verbose=0,
                 )

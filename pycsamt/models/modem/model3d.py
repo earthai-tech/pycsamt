@@ -115,7 +115,7 @@ def _parse_model3d(path: Path) -> dict:
     rho_arr = np.array(
         rho_flat[:total],
         dtype=float,
-    ).reshape(nz, ny, nx)
+    ).reshape(nz, ny, nx)[:, :, ::-1].copy()
 
     # A real ModEM writer appends the grid centre (2 or 3 floats: x,
     # y[, z], already in metres -- unlike the Mackie-format footer
@@ -125,13 +125,9 @@ def _parse_model3d(path: Path) -> dict:
     # rho_flat reaches `total` -- exactly when the next line *is* this
     # trailer -- without ever visiting it, so it has to be picked up
     # separately here rather than silently discarded as previously
-    # happened. Defaults (zeros / 0.0) deliberately match
-    # ``read_mackie3d``'s ``origin``/``rotation`` convention, which
-    # every existing consumer of these attributes
-    # (``iotools.export.write_meshtools3d``, ``iotools.interpolate``)
-    # already assumes -- ``None`` would break their
-    # ``getattr(model, "origin", [0.0, 0.0, 0.0])`` fallback.
-    origin = np.zeros(3, dtype=float)
+    # happened. Missing trailers follow native WS defaults: the horizontal
+    # grid is centred at the coordinate origin and the surface is z=0.
+    origin = np.array([-x_widths.sum()/2., -y_widths.sum()/2., 0.], dtype=float)
     rotation = 0.0
     trailer = [
         stripped
@@ -380,6 +376,11 @@ class ModEmModel3D(ModEmBase):
         obj.y_widths = y_w
         obj.z_widths = z_w
         obj.n_air = 0
+        obj.origin = np.array([
+            float(xs.min()) - (cell_h/2. if xs.size == 1 else 0.) - sum(pad),
+            float(ys.min()) - (cell_h/2. if ys.size == 1 else 0.) - sum(pad),
+            0.,
+        ])
         obj.rho_loge = rho_grid
 
         if obj.verbose:
@@ -514,16 +515,35 @@ class ModEmModel3D(ModEmBase):
         lines.append(_floats(self.z_widths))
         lines.append("\n")
 
+        if self.rho_loge.shape != (self.nz, self.ny, self.nx):
+            raise ValueError("Model parameter shape does not match grid widths.")
+        if self.n_air != 0:
+            raise ValueError("WS mapping flag must be zero; native air is configured separately.")
+        if self.log_type == "LOGE":
+            values = self.rho_loge
+        elif self.log_type == "LOG10":
+            values = self.rho_loge / np.log(10.)
+        elif self.log_type == "LINEAR":
+            values = np.exp(self.rho_loge)
+        else:
+            raise ValueError("Unsupported WS resistivity encoding.")
+        # Native WS records write x from nx down to 1, while in-memory
+        # arrays use increasing north coordinate.
         for iz in range(self.nz):
             for iy in range(self.ny):
                 lines.append(
                     "  "
                     + "  ".join(
-                        f"{v:>12.5E}" for v in self.rho_loge[iz, iy, :]
+                        f"{v:>12.5E}" for v in values[iz, iy, ::-1]
                     )
                     + "\n"
                 )
 
+        origin = np.asarray(self.origin, dtype=float)
+        if origin.shape != (3,) or not np.isfinite(origin).all() or not np.isfinite(self.rotation):
+            raise ValueError("Finite three-coordinate origin and rotation required.")
+        lines.append("  " + "  ".join(f"{v:.12g}" for v in origin) + "\n")
+        lines.append(f"  {self.rotation:.12g}\n")
         with p.open("w") as fh:
             fh.writelines(lines)
         return p
@@ -534,7 +554,7 @@ Represent a ModEM three-dimensional resistivity model.
 
 ``ModEmModel3D`` stores the grid and resistivity values used by
 the ModEM 3-D executable. The model contains x, y, and z cell
-widths, a count of air layers at the top of the mesh, and a
+widths, a legacy-named zero WS mapping flag (``n_air``), and a
 resistivity volume with shape ``(nz, ny, nx)``. Resistivity is
 stored internally as natural logarithms, so a linear
 resistivity :math:`\rho` is represented as
@@ -544,7 +564,9 @@ resistivity :math:`\rho` is represented as
    m = \ln(\rho).
 
 The ASCII ``.ws`` format contains a header with ``nx``, ``ny``,
-``nz``, optional air-layer count, and log encoding. It then
+``nz``, a zero mapping flag, and log encoding. Air is configured
+by the native forward solver. Values are stored in decreasing native x order;
+in-memory arrays use increasing x. Origin and rotation are preserved. It then
 stores cell widths followed by the resistivity volume written
 layer by layer.
 
@@ -564,8 +586,8 @@ x_widths : numpy.ndarray, shape (nx,)
 y_widths : numpy.ndarray, shape (ny,)
     Cell widths in metres along the ModEM y direction.
 z_widths : numpy.ndarray, shape (nz,)
-    Vertical layer thicknesses in metres. The array includes
-    air layers followed by active earth layers.
+    Earth-layer thicknesses in metres. Native forward controls specify air
+    layers separately.
 rho_loge : numpy.ndarray, shape (nz, ny, nx)
     Natural-log resistivity values. Earth cells in a default
     half-space are initialized as

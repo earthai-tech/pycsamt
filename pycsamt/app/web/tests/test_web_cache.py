@@ -221,3 +221,31 @@ def test_cache_freq_edit_roundtrip_and_empty_session():
 
     cache_mod.cache_set_freq_edit("", {"edited": True})
     assert cache_mod.cache_get_freq_edit("") is None
+
+
+
+_planted_calls = []
+
+
+def _planted():
+    _planted_calls.append(1)
+    return {"n_stations": 99}
+
+
+class _Planted:
+    def __reduce__(self):
+        return (_planted, ())
+
+
+@pytest.mark.skipif(cache_mod.cache is None, reason="no disk cache")
+def test_cache_get_does_not_unpickle_planted_entry():
+    import diskcache_community
+
+    cache_mod.cache_set("sess-planted", {"n_stations": 5})
+    with diskcache_community.Cache(
+        cache_mod.cache.directory, disk=diskcache_community.Disk
+    ) as writer:
+        writer.set("sess-planted", _Planted())
+    cache_mod._MEM.clear()
+    assert cache_mod.cache_get("sess-planted") is None
+    assert _planted_calls == []

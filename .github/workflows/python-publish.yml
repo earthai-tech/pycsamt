@@ -94,3 +94,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+          # A release is usually tagged (push -> upload) and then published
+          # on GitHub (release event -> upload again). Skip the version
+          # that is already on PyPI instead of failing the second run.
+          skip-existing: true

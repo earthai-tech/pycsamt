@@ -71,20 +71,12 @@
            <a class="pyc-btn pyc-btn--primary" href="getting_started/index.html">
              <i class="fa-solid fa-rocket"></i> Get started
            </a>
-           <span class="pyc-dl">
-             <a class="pyc-btn pyc-btn--ghost pyc-btn--download"
-                href="applications/desktop/installation.html#applications-desktop-download">
-               <i class="fa-solid fa-download"></i> Download Desktop
-             </a>
-             <span class="pyc-dl-note">Windows &amp; Linux · no Python needed</span>
-           </span>
+           <a class="pyc-btn pyc-btn--ghost pyc-btn--download"
+              href="applications/desktop/installation.html#applications-desktop-download">
+             <i class="fa-solid fa-download"></i> Download Desktop
+           </a>
            <a class="pyc-btn pyc-btn--ghost" href="user_guide/index.html">
              <i class="fa-solid fa-book-open"></i> User guide
-           </a>
-           <a class="pyc-btn pyc-btn--ghost"
-              href="https://github.com/earthai-tech/pycsamt"
-              target="_blank" rel="noopener">
-             <i class="fa-brands fa-github"></i> GitHub
            </a>
          </div>
        </div>

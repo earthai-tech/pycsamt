@@ -40,6 +40,8 @@ __all__ = [
 # ── canonical workflow descriptions ─────────────────────────────────────────────
 
 WORKFLOW_DESCRIPTIONS: dict[str, str] = {
+    "conventional_inversion": "Execute an explicit conventional physics inversion project",
+    "field_inversion": "EDI -> QC -> static shift -> rotation -> executed conventional inversion",
     # --- core processing ---
     "qc": "Data quality control and preprocessing",
     "static_shift": "Static-shift detection and correction",
@@ -105,6 +107,14 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
 # "gcn" does not get swallowed by "inversion".
 
 WORKFLOW_KEYWORDS: dict[str, list[str]] = {
+    "conventional_inversion": ["conventional inversion", "conventional occam2d inversion", "execute prepared occam2d"],
+    "field_inversion": [
+        "field inversion",
+        "invert the field data",
+        "run the occam2d inversion of line",
+        "run occam2d inversion on line",
+        "execute the occam2d inversion of line",
+    ],
     # ── plotting tasks (highest priority: the phase-tensor pseudo-section
     # must win over the bare "phase tensor" → phase_analysis match) ──────────
     # pt_strip_grid / pt_strip come before pt_psection: "phase tensor ellipse
@@ -806,6 +816,10 @@ _STAGE_FAMILY: dict[str, str] = {
 
 _COMPOUND_MIN_FAMILIES = 3
 
+#: Workflows that execute an external solver on declared inputs. They are
+#: review-gated and exempt from the compound-request override.
+_EXECUTION_WORKFLOWS = frozenset({"conventional_inversion", "field_inversion"})
+
 
 def classify_workflow(
     text: str,
@@ -857,6 +871,11 @@ def classify_workflow(
     ]
     if not matched:
         return default
+    # Explicit execution chains already contain their own stages; naming
+    # those stages must not reroute the request to the generic "full"
+    # pipeline (which runs different steps, including an AI inversion).
+    if matched[0] in _EXECUTION_WORKFLOWS:
+        return matched[0]
     families = {_STAGE_FAMILY[wf] for wf in matched if wf in _STAGE_FAMILY}
     if "full" not in matched and len(families) >= _COMPOUND_MIN_FAMILIES:
         return "full"

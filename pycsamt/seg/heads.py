@@ -798,6 +798,7 @@ class Info(EDIComponentBase):
         # Split payload into KV lines vs free text; strip outer quotes on KV.
         kv_lines: list[str] = []
         text_lines: list[str] = []
+        extra_kv: list[tuple[str, str]] = []
         for raw in payload:
             s = raw.strip()
             if not s:
@@ -805,19 +806,25 @@ class Info(EDIComponentBase):
                 text_lines.append(raw)
                 continue
             m = _KV_RE.match(s)
-            # Only recognised INFO keys are fields. Free text that
-            # happens to contain '=' (e.g. 'N = 2830301 m, E = ...',
-            # 'UTM_zone = 49') is kept verbatim; it used to become an
-            # attribute that write() never serialised, so it was lost.
+            # Recognised INFO keys are fields. Any other KEY=VALUE
+            # line (ELEVATION=573.4, 'N = 2830301 m, E = ...',
+            # 'UTM_zone = 49') is still exposed as an attribute (the
+            # topo INFO-location fallback relies on it) but is also
+            # kept verbatim as text: write() only serialises
+            # infokeys, so such lines used to be lost on write.
             if m and _norm_key(m.group("key")) in cls.infokeys:
                 key = _norm_key(m.group("key"))
                 val = _unquote(m.group("val"))
                 kv_lines.append(f"{key}={val}")
             else:
+                if m:
+                    extra_kv.append((_norm_key(m.group("key")),
+                                     _unquote(m.group("val"))))
                 text_lines.append(raw)
 
         obj = cls(edi_info_list=kv_lines, info_text=text_lines)
-        # If we had KV lines, __init__ already parsed them. If not, that's fine.
+        for key, val in extra_kv:
+            setattr(obj, key, val)
         return obj
 
     def read(

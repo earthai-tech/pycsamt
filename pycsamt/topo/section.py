@@ -243,7 +243,8 @@ def build_topo_section(
     station_names : sequence of str, optional
         Overrides the station labels carried by *model* / *sites*.
     station_x : array_like, optional
-        Overrides the marker x-positions carried by *model*.
+        Overrides the marker x-positions carried by *model*, in
+        *model_unit* (unlike *chainage*, which is always km).
     topo_source : {"auto", "sites", "array", "model"}
         Which topography source to use.  ``"auto"`` prefers *sites*,
         then *elevation*, then model-derived (air-cell) inference,
@@ -486,9 +487,11 @@ def plot_topo_section(
     station_marker : pycsamt.api.station.StationMarkerStyle, optional
         Station-pin style override, forwarded to
         :func:`~pycsamt.topo.overlay.draw_topo_section` /
-        :func:`~pycsamt.topo.overlay.draw_topo_strip`.  Defaults to a
-        white-filled, black-edged marker sized for legibility against
-        a busy ``cmap`` background; pass a
+        :func:`~pycsamt.topo.overlay.draw_topo_strip`.  Defaults to
+        the package inversion preset
+        (``PYCSAMT_STATION_RENDERING.inversion.marker``: filled black
+        downward triangle; open triangles are the pseudosection
+        convention); pass a
         :class:`~pycsamt.api.station.StationMarkerStyle` to override.
     dark : bool, default False
         Use light-on-dark label colours for the terrain overlay.
@@ -621,8 +624,8 @@ def plot_topo_section(
         station_marker = StationMarkerStyle(
             marker=_base.marker,
             size=_base.size,
-            facecolor="white",
-            edgecolor="black",
+            facecolor=_base.facecolor,
+            edgecolor=_base.edgecolor,
             linewidth=_base.linewidth,
             alpha=_base.alpha,
             offset=_base.offset,
@@ -670,6 +673,7 @@ def plot_topo_section(
             cfg=topo_cfg,
             dark=dark,
             marker_style=station_marker,
+            show_stations=show_stations,
         )
     else:  # imshow
         n_x = data.x_centers_km.size
@@ -916,8 +920,9 @@ def plot_topo_array(
 
         _base = PYCSAMT_STATION_RENDERING.inversion.marker
         station_marker = StationMarkerStyle(
-            marker=_base.marker, size=_base.size, facecolor="white",
-            edgecolor="black", linewidth=_base.linewidth, alpha=_base.alpha,
+            marker=_base.marker, size=_base.size,
+            facecolor=_base.facecolor, edgecolor=_base.edgecolor,
+            linewidth=_base.linewidth, alpha=_base.alpha,
             offset=_base.offset, zorder=_base.zorder,
         )
     topo_cfg = TopoConfig(station_pins_at_surface=show_stations, fill_alpha=0.0)
@@ -925,6 +930,7 @@ def plot_topo_array(
         ax, chain_km, elev_km * 1000.0,
         names if show_station_names else None,
         station_x_km=sx_km, cfg=topo_cfg, dark=dark, marker_style=station_marker,
+        show_stations=show_stations,
     )
     return ax
 
@@ -1256,6 +1262,40 @@ def extract_grid(
 _extract_grid = extract_grid
 
 
+def _norm_station(name: Any) -> str:
+    """Station label without a file/DATAID extension, upper case."""
+    s = str(name).strip()
+    stem = s.rsplit(".", 1)[0] if "." in s else s
+    return stem.upper()
+
+
+def _match_by_name(
+    grid: _GridInfo,
+    site_names: Sequence[str],
+    elev_m: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Elevations aligned to the model stations by name, if possible.
+
+    Returns ``(station_x_km, elev_m)`` in the model's station order
+    when every model station name is found among *site_names* (case
+    and ``.ext`` insensitive) and the model carries station
+    positions; otherwise ``None``.
+    """
+    g_names = list(getattr(grid, "station_names", []) or [])
+    sx = getattr(grid, "station_x", None)
+    if not g_names or sx is None or len(sx) != len(g_names):
+        return None
+    if len(site_names) != len(elev_m):
+        return None
+    lut = {_norm_station(n): float(e)
+           for n, e in zip(site_names, elev_m)}
+    try:
+        el = np.array([lut[_norm_station(n)] for n in g_names])
+    except KeyError:
+        return None
+    return _to_km(np.asarray(sx, dtype=float), grid.unit), el
+
+
 def _resolve_topography(
     grid: _GridInfo,
     *,
@@ -1290,10 +1330,18 @@ def _resolve_topography(
             extract_station_names,
         )
 
-        chain_km = extract_chainage(sites)
         elev_m = extract_elevation(sites)
+        site_names = extract_station_names(sites)
+        matched = _match_by_name(grid, site_names, elev_m)
+        if matched is not None:
+            # Pair each model station with its own elevation and the
+            # model's station positions: independent of the order of
+            # *sites* and of the profile direction.
+            chain_km, elev_m = matched
+            return chain_km, elev_m, names or site_names, "sites"
+        chain_km = extract_chainage(sites)
         if not names:
-            names = extract_station_names(sites)
+            names = site_names
         return chain_km, elev_m, names, "sites"
 
     if topo_source == "array" or (

@@ -53,7 +53,7 @@ from ..exceptions import FileHandlingError
 from ._base import TSData
 
 __all__ = ["AtexhgHeader", "is_atexhg", "read_atexhg_header",
-           "read_atexhg"]
+           "read_atexhg", "gain_from_code"]
 
 MAGIC = b"<ATEXHG>"
 _REC0 = 0x58
@@ -183,10 +183,38 @@ def read_atexhg_header(path: str | Path) -> AtexhgHeader:
         channels=channels, raw={"word_0x20": w20, "word_0x24": w24})
 
 
+def gain_from_code(code: int) -> float:
+    """Channel gain implied by an ATEXHG per-channel code.
+
+    Positive codes are gains (``5`` -> x5), negative codes
+    attenuations (``-2`` -> x1/2). **Inferred**, not specified: on
+    123 field files the station-to-station scale between impedances
+    estimated from these samples and the vendor-processed (prMT)
+    impedances followed ``G_H / G_E`` with this rule to within
+    ~0.05 decade (codes 5/25 on E, -2/1/5/25 on H).
+
+    Raises
+    ------
+    ValueError
+        For code 0, which has no interpretation.
+
+    Examples
+    --------
+    >>> from pycsamt.ts.atexhg import gain_from_code
+    >>> gain_from_code(25), gain_from_code(-2)
+    (25.0, 0.5)
+    """
+    c = int(code)
+    if c == 0:
+        raise ValueError("gain code 0 has no interpretation.")
+    return float(c) if c > 0 else 1.0 / abs(c)
+
+
 def read_atexhg(
     path: str | Path,
     *,
     station: str | None = None,
+    apply_gain: bool = False,
     verbose: int = 0,
 ) -> TSData:
     """Read an ``<ATEXHG>`` (``.atts``) time-series file.
@@ -197,6 +225,12 @@ def read_atexhg(
         Input file.
     station : str, optional
         Station name; defaults to the file stem.
+    apply_gain : bool, default False
+        Divide each channel by :func:`gain_from_code` of its code,
+        giving voltages at the sensor rather than after the field
+        gain. Needed to compare stations recorded with different
+        gain settings (otherwise impedances jump by factors such as
+        5 or 50 between stations).
     verbose : int, default 0
         Verbosity forwarded to :class:`TSData`.
 
@@ -207,18 +241,23 @@ def read_atexhg(
         if recorded) as float64 arrays of recorded voltage in mV;
         ``dt = 1 / sampling_rate``; ``azim``, ``dipole`` (electric
         channels), ``units`` (``"mV"``) and, in ``meta``,
-        ``gain_code`` per channel, ``calibrated=False`` and the
-        parsed :class:`AtexhgHeader`.
+        ``gain_code`` per channel, ``gain_applied``,
+        ``calibrated=False`` and the parsed :class:`AtexhgHeader`.
 
     Raises
     ------
     FileHandlingError
         See :func:`read_atexhg_header`.
+    ValueError
+        If ``apply_gain`` is set and a channel code is 0.
 
     Notes
     -----
     The magnetic channels are **not** in nT: they are the coil
-    output voltage. Apply the coil transfer function with
+    output voltage. In the field files examined, the vendor's
+    processing scaled them by a frequency-independent constant only
+    (consistent with flat-response sensors in 0.1-860 Hz); with a
+    calibration table, apply it with
     :func:`pycsamt.ts.calibrate.apply_sensor_response` before
     estimating impedances.
 
@@ -235,6 +274,9 @@ def read_atexhg(
     raw = raw.reshape(hdr.n_samples, hdr.n_channels)
     data = {c["id"]: raw[:, j].astype(float)
             for j, c in enumerate(hdr.channels)}
+    if apply_gain:
+        for c in hdr.channels:
+            data[c["id"]] /= gain_from_code(c["gain_code"])
     return TSData(
         data=data,
         dt=1.0 / hdr.sampling_rate,
@@ -247,6 +289,7 @@ def read_atexhg(
         source=str(p),
         format="atexhg",
         gain_code={c["id"]: c["gain_code"] for c in hdr.channels},
+        gain_applied=bool(apply_gain),
         calibrated=False,
         header=hdr,
     )

@@ -192,3 +192,20 @@ def test_apply_errors():
         apply_sensor_response(ts, {"HY": resp})
     with pytest.raises(ValueError, match="water_level"):
         apply_sensor_response(ts, {"HX": resp}, water_level=0)
+
+
+def test_apply_gain(tmp_path):
+    from pycsamt.ts.atexhg import gain_from_code
+
+    data = np.ones((20, 4), dtype="<f4")
+    p = _write_atexhg(tmp_path / "g.atts", data)
+    ts = read_ts(p, apply_gain=True)
+    # codes from _CH: EX 5, EY 25, HX -2 (x1/2), HY 1
+    np.testing.assert_allclose(ts.get("EX"), 1 / 5)
+    np.testing.assert_allclose(ts.get("EY"), 1 / 25)
+    np.testing.assert_allclose(ts.get("HX"), 2.0)
+    np.testing.assert_allclose(ts.get("HY"), 1.0)
+    assert ts.meta["gain_applied"] is True
+    assert read_ts(p).meta["gain_applied"] is False
+    with pytest.raises(ValueError):
+        gain_from_code(0)

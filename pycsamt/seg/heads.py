@@ -805,7 +805,11 @@ class Info(EDIComponentBase):
                 text_lines.append(raw)
                 continue
             m = _KV_RE.match(s)
-            if m:
+            # Only recognised INFO keys are fields. Free text that
+            # happens to contain '=' (e.g. 'N = 2830301 m, E = ...',
+            # 'UTM_zone = 49') is kept verbatim; it used to become an
+            # attribute that write() never serialised, so it was lost.
+            if m and _norm_key(m.group("key")) in cls.infokeys:
                 key = _norm_key(m.group("key"))
                 val = _unquote(m.group("val"))
                 kv_lines.append(f"{key}={val}")
@@ -872,8 +876,11 @@ class Info(EDIComponentBase):
                 except Exception:
                     self.maxinfo = 999
             else:
-                # accept other fields as direct attributes
+                # accept other fields as direct attributes and keep
+                # the line as text: write() only serialises infokeys
                 setattr(self, key, val)
+                self.info_text.append(raw)
+                continue
 
             normalized.append(f"{key.upper()}={val}")
 

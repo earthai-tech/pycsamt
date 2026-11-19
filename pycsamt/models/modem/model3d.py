@@ -394,6 +394,104 @@ class ModEmModel3D(ModEmBase):
             )
         return obj
 
+    @classmethod
+    def from_widths(
+        cls,
+        x_widths,
+        y_widths,
+        z_widths,
+        *,
+        rho: float | np.ndarray = 100.0,
+        origin=None,
+        rotation: float = 0.0,
+        config: ModEmConfig | None = None,
+        **kwargs,
+    ) -> ModEmModel3D:
+        """Build a model from explicit cell widths (custom grids).
+
+        Use this instead of filling an empty :class:`ModEmModel3D`
+        by hand: the default ``origin`` of a bare instance is
+        ``(0, 0, 0)``, which Mod3DMT reads as the grid's *corner*,
+        so stations given in survey-centred coordinates would sit in
+        the corner padding (the model then diverges).
+
+        Parameters
+        ----------
+        x_widths, y_widths, z_widths : array_like
+            Cell widths (m) along x (north / model x), y and depth
+            (earth layers only; Mod3DMT adds the air layers).
+        rho : float or ndarray, default 100.0
+            Starting resistivity (ohm.m), scalar or array of shape
+            ``(nz, ny, nx)``.
+        origin : array_like of 3 float, optional
+            Grid corner (x, y, z) in the data coordinate frame.
+            Default: the grid is centred on (0, 0) at the surface,
+            ``(-sum(x)/2, -sum(y)/2, 0)``, ModEM's own default.
+        rotation : float, default 0.0
+            Grid rotation written to the file trailer (degrees).
+        config : ModEmConfig, optional
+            Stored on the model.
+
+        Returns
+        -------
+        ModEmModel3D
+
+        Raises
+        ------
+        ValueError
+            If a width is not finite and > 0, or *rho* has the wrong
+            shape or non-positive values.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pycsamt.models.modem.model3d import ModEmModel3D
+        >>> m = ModEmModel3D.from_widths([100.0] * 4, [50.0] * 2,
+        ...                              [10.0, 20.0], rho=50.0)
+        >>> m.origin.tolist()
+        [-200.0, -50.0, 0.0]
+        """
+        obj = cls(config=config, **kwargs)
+        widths = []
+        for name, w in (("x", x_widths), ("y", y_widths),
+                        ("z", z_widths)):
+            a = np.asarray(w, dtype=float).ravel()
+            if a.size == 0 or not np.all(np.isfinite(a) & (a > 0)):
+                raise ValueError(
+                    f"{name}_widths must be finite and > 0.")
+            widths.append(a)
+        xw, yw, zw = widths
+        shape = (zw.size, yw.size, xw.size)
+        r = np.asarray(rho, dtype=float)
+        if r.ndim == 0:
+            r = np.full(shape, float(r))
+        if r.shape != shape or np.any(~(r > 0)):
+            raise ValueError(
+                f"rho must be > 0 and scalar or of shape {shape}.")
+        obj.x_widths, obj.y_widths, obj.z_widths = xw, yw, zw
+        obj.n_air = 0
+        obj.rho_loge = np.log(r)
+        obj.rotation = float(rotation)
+        if origin is None:
+            obj.centre_origin()
+        else:
+            obj.origin = np.asarray(origin, dtype=float).reshape(3)
+        return obj
+
+    def centre_origin(self) -> np.ndarray:
+        """Centre the grid on (0, 0) at the surface.
+
+        Sets ``origin = (-sum(x_widths)/2, -sum(y_widths)/2, 0)``,
+        the position Mod3DMT assumes when a model file has no origin
+        trailer, and returns it.
+        """
+        self.origin = np.array([
+            -float(np.sum(self.x_widths)) / 2.0,
+            -float(np.sum(self.y_widths)) / 2.0,
+            0.0,
+        ])
+        return self.origin
+
     # ------------------------------------------------------------------
     # I/O
     # ------------------------------------------------------------------
@@ -542,6 +640,15 @@ class ModEmModel3D(ModEmBase):
         origin = np.asarray(self.origin, dtype=float)
         if origin.shape != (3,) or not np.isfinite(origin).all() or not np.isfinite(self.rotation):
             raise ValueError("Finite three-coordinate origin and rotation required.")
+        if not np.any(origin) and self.nx > 1 and self.ny > 1:
+            # A zero origin is legal but is the grid *corner*: with
+            # survey-centred station coordinates the stations land in
+            # the corner padding and NLCG diverges.
+            self.logger.warning(
+                "ModEmModel3D.write: origin is (0, 0, 0), i.e. the "
+                "grid corner sits at the data origin. If the station "
+                "coordinates are centred on the survey, call "
+                "centre_origin() or build with from_widths().")
         lines.append("  " + "  ".join(f"{v:.12g}" for v in origin) + "\n")
         lines.append(f"  {self.rotation:.12g}\n")
         with p.open("w") as fh:

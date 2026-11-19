@@ -12,7 +12,7 @@ from .mtemap import MTEMAP
 from .other import OtherSECT
 from .spectra import SpectraSECT
 from .time_series import TSect
-from .validation import _extract_tag
+from .validation import _extract_tag, read_edi_lines
 
 logger = get_logger(__name__)
 
@@ -103,8 +103,7 @@ def iter_sections(
     if not os.path.isfile(edi_path):
         raise FileNotFoundError(f"{edi_path!r} is not a file.")
 
-    with open(edi_path, encoding="utf-8") as f:
-        lines = f.readlines()
+    lines = read_edi_lines(edi_path)
 
     want = {t.upper(): True for t in include} if include else None
 

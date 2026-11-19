@@ -40,7 +40,7 @@ except (ImportError, RuntimeError):
 
 from .base import EDIComponentBase
 from .property import Copyright, Processing, Software, Source
-from .validation import IsEdi
+from .validation import IsEdi, read_edi_lines
 
 logger = get_logger(__name__)
 
@@ -402,9 +402,7 @@ class Head(EDIComponentBase):
         # Validate EDI (deep check)
         IsEdi._assert_edi(edi_path, deep=True)
 
-        lines = edi_path.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = "".join(read_edi_lines(edi_path)).splitlines()
         payload, _, _ = _slice_section(
             lines, ">HEAD", after_tags=[">INFO", ">=DEFINEMEAS"]
         )
@@ -768,9 +766,7 @@ class Info(EDIComponentBase):
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = "".join(read_edi_lines(p)).splitlines()
 
         # Slice INFO payload until next section (>=DEFINEMEAS, >=MTSECT, or any '>' tag)
         start, stop = None, None
@@ -1090,9 +1086,7 @@ class Heads(EDIComponentBase):
         p = Path(edi_fn)
         IsEdi._assert_edi(p, deep=True)
 
-        lines = p.read_text(
-            encoding="utf-8-sig", errors="replace"
-        ).splitlines()
+        lines = "".join(read_edi_lines(p)).splitlines()
 
         # HEAD
         head_payload, _, stop_h = _slice_section(

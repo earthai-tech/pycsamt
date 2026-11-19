@@ -20,6 +20,74 @@ _TAG_RE = re.compile(r"^\s*>(=)?\s*([A-Za-z0-9!.]+)")
 _FLOAT_RE = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?")
 _NFREQ_RE = re.compile(r"\bNFREQ\s*=\s*(\d+)\b", re.IGNORECASE)
 
+#: Encodings tried, in order, by :func:`read_edi_lines`.
+EDI_ENCODINGS: tuple[str, ...] = ("utf-8-sig", "gb18030", "latin-1")
+
+
+def read_edi_lines(
+    path: str | os.PathLike,
+    encodings: Sequence[str] = EDI_ENCODINGS,
+) -> list[str]:
+    """Read an EDI file as text lines, tolerating legacy encodings.
+
+    SEG EDI data blocks are pure ASCII, but free-text header fields
+    (``ACQBY``, ``PROSPECT``, ``>INFO`` ...) are often written by
+    vendor software in a local code page, e.g. GBK for Chinese
+    instruments. A strict UTF-8 read then fails on the first
+    non-ASCII byte although every number in the file is readable.
+
+    Parameters
+    ----------
+    path : str or os.PathLike
+        EDI file to read.
+    encodings : sequence of str, default :data:`EDI_ENCODINGS`
+        Codecs tried in order with strict error handling. The
+        default ends with ``'latin-1'``, which maps every byte, so
+        the read never fails on decoding.
+
+    Returns
+    -------
+    list of str
+        Lines with their line terminators, as from
+        :meth:`io.TextIOBase.readlines`.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``path`` does not exist.
+    UnicodeDecodeError
+        If no codec in ``encodings`` can decode the file (only
+        possible with a custom list that omits ``'latin-1'``).
+
+    Notes
+    -----
+    UTF-8 is tried first, so valid UTF-8 files (including ASCII
+    and BOM-prefixed files) are read exactly as before. GB18030 is
+    a superset of GBK and GB2312.
+
+    Examples
+    --------
+    >>> import tempfile, os
+    >>> from pycsamt.seg.validation import read_edi_lines
+    >>> fd, p = tempfile.mkstemp(suffix=".edi")
+    >>> with os.fdopen(fd, "wb") as f:
+    ...     _ = f.write('>HEAD\\n ACQBY="中南大学"\\n'.encode("gbk"))
+    >>> read_edi_lines(p)[1].strip()
+    'ACQBY="中南大学"'
+    >>> os.remove(p)
+    """
+    raw = Path(path).read_bytes()
+    err: UnicodeDecodeError | None = None
+    for enc in encodings:
+        try:
+            text = raw.decode(enc)
+        except UnicodeDecodeError as exc:
+            err = exc
+            continue
+        return text.splitlines(keepends=True)
+    assert err is not None
+    raise err
+
 
 def _strip_norm(s: str) -> str:
     return s.strip().strip('"').strip("'")

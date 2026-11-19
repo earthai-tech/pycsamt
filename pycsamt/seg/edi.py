@@ -24,7 +24,7 @@ from .sections import iter_sections
 from .spectra import Spectra, SpectraIO, SpectraSECT
 from .time_series import TSIO, TimeSeries
 from .utils import _format_block_numbers
-from .validation import IsEdi
+from .validation import IsEdi, read_edi_lines
 
 logger = get_logger(__name__)
 
@@ -221,8 +221,7 @@ class EDIOMixin(CoreObject):
     ) -> dict[str, list]:
         IsEdi._assert_edi(path, deep=True)
 
-        with path.open("r", encoding="utf-8") as f:
-            lines = f.readlines()
+        lines = read_edi_lines(path)
 
         i0 = 0 if start is None else int(start)
         if i0 <= 0:

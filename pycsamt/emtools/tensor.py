@@ -636,7 +636,8 @@ def _angles_deg(
     Caldwell, Bibby & Brown (2004) convention, Phi = [[a, b], [c, d]]:
 
         alpha = 0.5 * atan2(b + c, a - d)   -- rotation-variant orientation
-        beta  = 0.5 * atan2(b - c, a + d)   -- rotation-invariant skew
+        beta  = 0.5 * atan2(b - c, a + d)   -- rotation-invariant skew,
+                folded into [-45, 45) deg
 
     alpha shifts with coordinate rotation (like the strike angle); beta
     does not, which is what makes it usable as a distortion/dimensionality
@@ -648,6 +649,11 @@ def _angles_deg(
     """
     alpha = 0.5 * np.degrees(np.arctan2(b + c, a - d))
     beta = 0.5 * np.degrees(np.arctan2(b - c, a + d))
+    # Fold into Caldwell et al.'s (2004) range [-45, 45): their
+    # beta = 0.5*arctan((b - c)/(a + d)); arctan2 alone reaches
+    # +/-90 deg whenever trace(Phi) < 0 (out-of-quadrant phases),
+    # inflating |beta|. arctan2 is kept so that 0/0 gives 0.
+    beta = (beta + 45.0) % 90.0 - 45.0
     return alpha, beta
 
 

@@ -94,6 +94,15 @@ class TestMare2DEMAdapter:
         expected = result.model.resistivity[:, 0][mesh.region_ids - 1]
         np.testing.assert_array_equal(model.resistivity, expected)
 
+    def test_region_ids_are_zero_based(self, model, mesh):
+        # Regression: MARE2DEM numbers regions from 1, PCSF stores
+        # 0-based indices into the per-region table (rule C10).
+        np.testing.assert_array_equal(
+            model.geometry.region_ids,
+            np.asarray(mesh.region_ids) - 1,
+        )
+        assert model.geometry.region_ids.min() == 0
+
     def test_resistivity_is_already_linear_no_native_conversion(self, model):
         # Unlike Occam2D (log10) / ModEM (ln), MARE2DEM's own file is
         # already linear ohm.m -- nothing to preserve as "native".

@@ -931,6 +931,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # ── classify workflow ─────────────────────────────────────────────────
         workflow_type = config.get("workflow", "")
         reasoning = ""
+        route_flags: list[str] = []
 
         if not workflow_type and request:
             if self.llm_available:
@@ -939,6 +940,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 if parsed and isinstance(parsed, dict):
                     workflow_type = str(parsed.get("workflow_type", ""))
                     reasoning = str(parsed.get("reasoning", ""))
+                    route_flags = _route_cross_check(request, workflow_type)
 
             if not workflow_type:
                 workflow_type, reasoning = _keyword_classify(request)
@@ -1178,6 +1180,9 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
         plan_config = dict(config)
         plan_config.update(workflow=workflow_type, data_path=data_path, output_dir=output_dir)
+        if route_flags:
+            # Any risk flag makes WorkflowPlan require approval of this plan hash.
+            plan_config["risk_flags"] = list(plan_config.get("risk_flags") or []) + route_flags
 
         # Ground the plan in retrieved package evidence (same retrieval
         # layer PackageQAAgent uses) so the provenance trail can cite
@@ -1492,6 +1497,25 @@ def _build_output_manifest(
         except OSError as exc:
             entries.append({"path": rel, "error": str(exc)})
     return entries
+
+
+def _route_cross_check(text: str, llm_workflow: str) -> list[str]:
+    """Risk flag when the LLM-chosen workflow and the keyword route disagree.
+
+    A misread request can name a valid, registered workflow and pass every
+    plan check, so an LLM choice whose analysis family differs from the
+    deterministic keyword route is sent to the plan-hash review gate instead
+    of running. No flag when the keyword table matches nothing.
+    """
+    from ._workflows import workflow_family
+
+    kw = _classify_workflow(text, default=None)
+    if not llm_workflow or kw in (None, "code_gen"):
+        return []
+    if workflow_family(llm_workflow) == workflow_family(kw):
+        return []
+    return [f"LLM chose workflow {llm_workflow!r} but the keyword route reads "
+            f"{kw!r}; confirm the workflow before it runs."]
 
 
 def _keyword_classify(text: str) -> tuple[str, str]:

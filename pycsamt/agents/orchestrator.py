@@ -899,6 +899,11 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
     SYSTEM_PROMPT = _SYSTEM_PROMPT
 
+    #: Domain plugin used for the step lookup, cross-check, plan
+    #: validation and review gate (see :mod:`pycsamt.agents.plugins`).
+    #: ``None`` selects the built-in ``"pycsamt"`` plugin.
+    plugin_name: str | None = None
+
     def __init__(
         self,
         *,
@@ -928,6 +933,10 @@ class WorkflowOrchestratorAgent(BaseAgent):
         output_dir = input_data.get("output_dir", "pycsamt_workflow_output")
         data_path = input_data.get("data_path") or config.get("data_path", "")
 
+        from .plugins import get_plugin
+
+        plugin = get_plugin(self.plugin_name)
+
         # ── classify workflow ─────────────────────────────────────────────────
         workflow_type = config.get("workflow", "")
         reasoning = ""
@@ -940,14 +949,16 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 if parsed and isinstance(parsed, dict):
                     workflow_type = str(parsed.get("workflow_type", ""))
                     reasoning = str(parsed.get("reasoning", ""))
-                    route_flags = _route_cross_check(request, workflow_type)
+                    route_flags = plugin.validator.route_flags(
+                        request, workflow_type)
 
             if not workflow_type:
                 workflow_type, reasoning = _keyword_classify(request)
 
-        available = sorted(_WORKFLOW_STEPS)
-        if workflow_type not in _WORKFLOW_STEPS:
-            if self.default_workflow in _WORKFLOW_STEPS:
+        dispatchable = plugin.registry.dispatchable
+        available = sorted(dispatchable)
+        if workflow_type not in dispatchable:
+            if self.default_workflow in dispatchable:
                 return AgentResult.failed(
                     f"Workflow {workflow_type!r} is recognised by "
                     f"the classifier but has no registered step "
@@ -993,7 +1004,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
                     elapsed=time.time() - t0,
                 )
 
-        steps_spec = _WORKFLOW_STEPS[workflow_type]
+        steps_spec = plugin.registry.steps(workflow_type)
 
         # ── if no data_path yet, try to extract from request ─────────────────
         if not data_path and request:
@@ -1176,7 +1187,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
             )
 
         # ── build and validate WorkflowPlan ──────────────────────
-        from ._workflow_plan import WorkflowPlan, validate_workflow_plan
+        from ._workflow_plan import WorkflowPlan
 
         plan_config = dict(config)
         plan_config.update(workflow=workflow_type, data_path=data_path, output_dir=output_dir)
@@ -1200,7 +1211,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
         # ── validation gate: a plan with hard errors never touches
         # disk. Preview (dry_run) is exempt since it executes nothing. ──
-        plan_errors = validate_workflow_plan(plan)
+        plan_errors = plugin.validator.errors(plan)
         emit("plan_validation", plan=plan.to_dict(), errors=plan_errors,
              passed=not plan_errors, dry_run=dry_run)
         from ._checkpoint_identity import input_identities
@@ -1233,7 +1244,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # A preview can be inspected without approval, but a review-required
         # plan may not execute on a truthy flag alone. Bind caller approval to
         # the exact displayed plan and current input bytes.
-        if plan.requires_human_review and not dry_run:
+        if plugin.validator.needs_review(plan) and not dry_run:
             try:
                 required_hash = plan.approval_digest()
             except (ValueError, TypeError, OSError) as exc:

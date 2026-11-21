@@ -326,9 +326,13 @@ class FieldInversionSafeguards(unittest.TestCase):
         from pycsamt.agents.orchestrator import WorkflowOrchestratorAgent
         from pycsamt.api.agents import AGENT_CONFIG
         out = Path(__file__).resolve().parents[3]/'.tmp'/('field_refuse_'+uuid4().hex)
+        # A small dedicated input directory: data_path='.' made the input
+        # manifest hash the whole repository (tens of minutes).
+        data = out.parent/(out.name+'_edi')
+        data.mkdir(parents=True)
         payload = {'request': 'Run the Occam2D inversion of line L26PLT',
                    'output_dir': str(out),
-                   'config': {'data_path': '.', 'workflow': 'field_inversion',
+                   'config': {'data_path': str(data), 'workflow': 'field_inversion',
                               'step_params': {'inversion': {'backend': 'occam2d'}}}}
         with AGENT_CONFIG.offline():
             agent = WorkflowOrchestratorAgent()
@@ -338,3 +342,59 @@ class FieldInversionSafeguards(unittest.TestCase):
         self.assertEqual(result.status, 'failed')
         self.assertIn('explicit settings', result.error or '')
         self.assertIn('strike_deg', result.error or '')
+
+
+class RouteCrossCheckSafeguards(unittest.TestCase):
+    """An LLM-chosen workflow that the keyword route reads differently must
+    wait for approval of the exact plan (E1: 'denoise' requests planned as qc)."""
+
+    def setUp(self):
+        # Ordinary mkdir avoids managed-Windows private-temp-directory ACLs.
+        root = Path(__file__).resolve().parents[3]
+        self.directory = root / ".tmp" / "route_cross_check" / uuid4().hex
+        self.directory.mkdir(parents=True)
+        self.input = self.directory / "edi"
+        self.input.mkdir()
+
+    def _run(self, request, llm_workflow, approve=False):
+        import pycsamt.agents.orchestrator as module
+        from pycsamt.api.agents import AGENT_CONFIG
+
+        with AGENT_CONFIG.offline():
+            orchestrator = module.WorkflowOrchestratorAgent()
+        dummy = DummyAgent()
+        payload = {"request": request, "data_path": str(self.input),
+                   "output_dir": str(self.directory / "run")}
+        steps = {wf: [("first", "Dummy", None, "dummy")] for wf in ("qc", "denoise", "strike")}
+        with patch.object(type(orchestrator), "llm_available", new=True), \
+             patch.object(orchestrator, "query_llm",
+                          return_value=json.dumps({"workflow_type": llm_workflow})), \
+             patch.object(module, "_WORKFLOW_STEPS", steps), \
+             patch.object(module, "_build_registry", return_value=({"Dummy": dummy}, {})), \
+             patch.object(orchestrator, "_retrieve_context", return_value=None), \
+             patch.object(module, "_write_provenance"):
+            result = orchestrator.execute(payload)
+            if approve and result.status == "needs_review":
+                payload["approved_plan_hash"] = result.data["approval_plan_hash"]
+                result = orchestrator.execute(payload)
+        return result, dummy
+
+    def test_disagreeing_llm_workflow_waits_for_approval(self):
+        result, dummy = self._run("denoise the survey data", "qc")
+        self.assertEqual(result.status, "needs_review")
+        self.assertEqual(dummy.calls, [])
+        self.assertTrue(any("keyword route reads 'denoise'" in w for w in result.warnings))
+        approved, dummy = self._run("denoise the survey data", "qc", approve=True)
+        self.assertEqual(approved.status, "success")
+        self.assertEqual(len(dummy.calls), 1)
+
+    def test_agreeing_llm_workflow_runs_without_review(self):
+        result, dummy = self._run("denoise the survey data", "denoise")
+        self.assertEqual(result.status, "success")
+        self.assertEqual(len(dummy.calls), 1)
+
+    def test_route_cross_check_rules(self):
+        from pycsamt.agents.orchestrator import _route_cross_check
+        self.assertEqual(_route_cross_check("estimate geoelectric strike", "strike"), [])
+        self.assertEqual(_route_cross_check("xyzzy", "qc"), [])
+        self.assertEqual(len(_route_cross_check("denoise the data", "qc")), 1)

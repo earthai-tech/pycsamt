@@ -83,6 +83,13 @@ class RouterDecision:
         One-sentence rationale (useful for logs / debugging).
     source : str
         ``"llm"`` or ``"offline"`` — which path produced the decision.
+    cross_check : str
+        For an LLM decision: ``"agree"`` when the deterministic offline
+        route reads the request the same way, or ``"disagree: ..."`` when it
+        does not (the decision is then escalated to :data:`CLARIFY`).
+        Empty for offline decisions.
+    escalated_from : str or None
+        The LLM's own intent when a route disagreement escalated it.
     """
 
     intent: str
@@ -91,6 +98,8 @@ class RouterDecision:
     clarification: str | None = None
     reasoning: str = ""
     source: str = "offline"
+    cross_check: str = ""
+    escalated_from: str | None = None
 
     @property
     def needs_data(self) -> bool:
@@ -378,6 +387,32 @@ def classify_intent_offline(text: str) -> tuple[str, float]:
     return WORKFLOW, 0.4
 
 
+def route_disagreement(text: str, intent: str, workflow: str | None) -> str | None:
+    """Compare an LLM route with the deterministic offline route.
+
+    Returns ``None`` when they agree, else a short description of the
+    offline reading. They disagree when the intents differ, or when the
+    offline keyword table names an analysis whose family differs from the
+    LLM workflow's family (:func:`~pycsamt.agents._workflows.workflow_family`).
+    The offline ``code_gen`` id names the output mode, not an analysis, so it
+    never constrains the workflow; neither does an offline non-match.
+
+    >>> route_disagreement("estimate geoelectric strike for L26PLT", "workflow", "strike") is None
+    True
+    >>> route_disagreement("denoise the survey data for L26PLT", "workflow", "qc")
+    "workflow 'denoise'"
+    """
+    from ._workflows import classify_workflow, workflow_family
+
+    off_intent, _ = classify_intent_offline(text)
+    off_wf = classify_workflow(text)
+    wf_clash = (off_wf not in (None, "code_gen")
+                and workflow_family(workflow) != workflow_family(off_wf))
+    if off_intent != intent or wf_clash:
+        return f"{off_intent}" + (f" {off_wf!r}" if off_wf and off_wf != "code_gen" else "")
+    return None
+
+
 # ── LLM routing prompt ─────────────────────────────────────────────────────────
 
 _KNOWN_WF = (
@@ -608,13 +643,30 @@ class IntentRouter(BaseAgent):
         if conf < _CLARIFY_THRESHOLD and clar:
             intent = CLARIFY
 
+        wf = str(wf) if wf else None
+        cross, escalated = "", None
+        if intent != CLARIFY:
+            disagreement = route_disagreement(text, intent, wf)
+            cross = f"disagree: {disagreement}" if disagreement else "agree"
+            if disagreement:
+                # A valid-looking but misread plan passes every registry and
+                # parameter check, so the two routes must agree before an
+                # LLM-routed request proceeds; otherwise ask the user.
+                escalated, intent = intent, CLARIFY
+                clar = (f"I read this as a {escalated} request"
+                        + (f" ({wf})" if wf else "")
+                        + f", but the deterministic parser reads {disagreement}. "
+                        "Which did you mean?")
+
         return RouterDecision(
             intent=intent,
-            workflow=str(wf) if wf else None,
+            workflow=wf,
             confidence=conf,
             clarification=clar,
             reasoning=str(parsed.get("reasoning", "")),
             source="llm",
+            cross_check=cross,
+            escalated_from=escalated,
         )
 
     # ── helpers ────────────────────────────────────────────────────────────
@@ -633,6 +685,7 @@ __all__ = [
     "IntentRouter",
     "RouterDecision",
     "classify_intent_offline",
+    "route_disagreement",
     "QUESTION",
     "CODE",
     "PLOT",

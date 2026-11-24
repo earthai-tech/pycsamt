@@ -73,6 +73,15 @@ class SiteMixin(CoreObject):
 
     def __init__(self, source: Any, *, on_loss: str = "warn") -> None:
         self._on_loss = on_loss
+        if isinstance(source, (str, Path, PathLike)):
+            # A path used to be stored unread, giving a silently empty site
+            # (``Site("a.edi").z is None``); read it like from_edi/from_xml.
+            if _is_xml_path(source):
+                from ..emtf.document import EMTF
+
+                source = EMTF.from_xml(source)
+            else:
+                source = EDIFile(source)
         if _is_xml_like(source):
             self._native = "xml"
             self._tf_obj: Any = source

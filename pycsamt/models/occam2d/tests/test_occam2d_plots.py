@@ -372,3 +372,29 @@ def test_response_grid_no_response_raises():
 
     with pytest.raises(RuntimeError, match="no response data"):
         PlotResponseGrid(result=_FakeResult()).plot()
+
+
+def test_plot_model_stations_sit_over_the_fine_mesh(result):
+    """Station markers and model share the survey frame (regression).
+
+    The section used to centre the mesh on the unweighted mean of its cell
+    centres while stations stayed in survey coordinates, so the markers
+    landed over the left padding, far from the structure.
+    """
+    import numpy as np
+
+    from pycsamt.models.occam2d.plot import PlotModel
+
+    pm = PlotModel(result=result, profile_distance_unit="m")
+    xs, centre = pm._survey_frame()
+    n_pad = result.mesh.N_PAD
+    fine_lo, fine_hi = xs[n_pad] - centre, xs[-1 - n_pad] - centre
+    sta = np.asarray(result.data.offsets, dtype=float) - centre
+    assert fine_lo <= sta.min() and sta.max() <= fine_hi
+    assert abs(0.5 * (sta.min() + sta.max())) < 1e-6
+
+    fig = pm.plot()
+    ax = fig.axes[0]
+    lo, hi = ax.get_xlim()
+    assert lo <= sta.min() and sta.max() <= hi
+    assert (hi - lo) < (xs[-1] - xs[0])  # padding cropped by default

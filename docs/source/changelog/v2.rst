@@ -10,6 +10,83 @@ each release.
 
 ----
 
+.. _changelog-2-6-5:
+
+2.6.5 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
+----------------------------------------------------------
+
+*Released 2026-11-24.*
+
+A correctness and agent-extensibility release. Agent Master gains a
+plugin interface for its workflow registry, plan validators and run
+record, with an MTpy example plugin, and a deterministic route
+cross-check that sends router disagreements to the review gate. The
+PCSF core now comes from the standalone ``pcsf`` package. Fixes cover
+the CSAMT near-field correction and forward, MARE2DEM region ids, EDI
+files with non-UTF-8 headers, ``Site(path)``, Occam2D plots and mesh
+depth, and ModEM/Occam2D builds with gfortran 10 or newer. Archived on
+Zenodo as DOI `10.5281/zenodo.24493348
+<https://doi.org/10.5281/zenodo.24493348>`__.
+
+Added
+~~~~~
+
+* |Feature| :mod:`pycsamt.agents.plugins` -- ``WorkflowRegistry``,
+  ``PlanValidator`` and ``RecordWriter`` protocols, a ``DomainPlugin``
+  bundle, ``register_plugin``/``get_plugin``/``available_plugins`` and
+  entry-point discovery in the ``pycsamt.agent_plugins`` group. The
+  built-in ``pycsamt`` plugin delegates to the existing workflow
+  tables, so default behaviour is unchanged.
+* |Feature| ``examples/agent_plugins/mtpy_example`` -- an example
+  domain plugin (EDI plotting, phase tensor, strike) with parameter
+  checks and a ``RunRecord``-based writer; it imports without MTpy.
+* |Feature| Deterministic route cross-check: ``WORKFLOW_FAMILIES``,
+  ``workflow_family``, ``router.route_disagreement`` and
+  ``orchestrator._route_cross_check`` turn an LLM/keyword workflow
+  family disagreement into a plan risk flag, so the plan-hash review
+  gate fires.
+* |Feature| Review-gated ``field_inversion`` agent workflow (load, QC,
+  static shift, rotation, executed inversion, report) that refuses
+  missing scientific settings.
+* |Feature| :func:`pycsamt.emtools.rotation_suppression_table` and
+  :func:`pycsamt.emtools.plot_rotation_summary` -- readable
+  tensor-rotation summaries for long profiles.
+* |Feature| ``OllamaEmbeddingBackend`` for local open-weight RAG
+  embeddings.
+
+Changed
+~~~~~~~
+
+* |Enhancement| :mod:`pycsamt.format` re-exports the standalone
+  ``pcsf`` reference implementation (schema, I/O, provenance,
+  comparison, regridding); about 2500 duplicated lines are removed.
+* |Enhancement| Occam2D backend warns when the mesh ends above the
+  median Niblett-Bostick depth of the lowest-frequency data.
+* |Enhancement| Occam2D ``PlotModel`` draws in the survey
+  (station-offset) frame and crops padding cells (new ``x_margin``).
+* |Build| Add ``pyproj>=3.3`` and ``pcsf`` to the dependencies.
+* |Build| ModEM 2-D/3-D and Occam2D build scripts support gfortran 10
+  or newer and keep ``mpif90`` for the MPI target.
+
+Fixed
+~~~~~
+
+* |Fix| ``correct_near_field`` and ``CSAMT1DForward`` use the exact
+  half-space/bipole response (the old forward lowered apparent
+  resistivity in the near field).
+* |Fix| Static-shift (AMA) uses the rotation-invariant determinant
+  apparent resistivity.
+* |Fix| MARE2DEM meshes store 0-based PCSF region ids.
+* |Fix| EDI readers accept GBK/latin-1 header text instead of raising
+  ``UnicodeDecodeError``.
+* |Fix| ``Site("a.edi")``/``Site("a.xml")`` read the file instead of
+  returning an empty site.
+* |Fix| Occam2D station markers no longer land over the padding cells.
+* |Fix| Occam2D backend honours ``max_iter``; TM phases are wrapped to
+  (-180, 180].
+
+----
+
 .. _changelog-2-6-4:
 
 2.6.4 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|

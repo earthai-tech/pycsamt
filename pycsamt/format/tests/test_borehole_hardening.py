@@ -86,7 +86,12 @@ def test_benchmark_exercises_large_project_contract():
 
 def test_ci_matrix_runs_format_tests():
     root = Path(__file__).resolve().parents[3]
-    workflow = (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    assert 'python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]' in workflow
+    yaml = pytest.importorskip("yaml")
+    path = root / ".github/workflows/ci.yml"
+    workflow = path.read_text(encoding="utf-8")
+    matrix = yaml.safe_load(workflow)["jobs"]["test"]["strategy"][
+        "matrix"
+    ]
+    assert matrix["python-version"] == ["3.10", "3.11", "3.12", "3.13"]
     assert "pycsamt/format/tests" in workflow
 

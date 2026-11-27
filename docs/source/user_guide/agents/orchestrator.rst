@@ -322,6 +322,20 @@ below groups the most important routes by the work they represent.
    * - ``freq_decimation``
      - load -> QC -> frequency decimation -> report
      - Select stable periods or reduce frequency density.
+   * - ``field_inversion``
+     - load -> QC -> static shift -> rotation -> executed inversion -> report
+     - Invert field data end to end with a conventional solver. Every
+       scientific choice must be explicit in ``step_params``:
+       ``inversion`` backend, method, dimension and a boolean
+       ``run_external``; a numeric ``rotate.strike_deg``; and
+       ``static_shift.pband`` (``None`` for the full band). A missing
+       setting fails the run before any step, and the plan always goes
+       through the :doc:`review gate <review_gate>`.
+   * - ``conventional_inversion``
+     - executed Occam2D inversion of a prepared project
+     - Run an MT 2-D Occam2D project already prepared by
+       ``pre_inversion``; requires an explicit backend contract in
+       ``step_params.conventional_inversion`` and plan-hash approval.
    * - ``full``
      - load -> QC -> static shift -> phase analysis -> denoise -> AI inversion
        -> Occam2D -> report
@@ -456,6 +470,12 @@ There are three common failure classes:
    * - Plan validation error
      - A non-preview run failed the workflow-plan checks, for example because
        required execution information is missing.
+
+A valid plan can still stop with status ``needs_review``: executed
+inversions, plans with risk flags, and plans that disagree with the
+deterministic keyword route must be approved by returning their plan
+hash.  :doc:`review_gate` describes validation, the route cross-check
+and plan-hash approval in detail.
 
 Warnings should be read as reproducibility signals.  They can indicate missing
 paths during preview, risk flags from the workflow plan, skipped optional

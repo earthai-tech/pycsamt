@@ -821,6 +821,26 @@ _WORKFLOW_STEPS = {
     ],
 }
 
+# Catalogue corrections run as two-step workflows: load the survey, then apply
+# the selected method through CorrectionStepAgent (the same
+# CorrectionController chain the desktop correction section uses). Each
+# correction id is its own workflow, so its plan names the method and its
+# parameters and goes through validation, the cross-check, the review gate and
+# the provenance record like every other workflow.
+from ._corrections import CORRECTION_METHODS as _CORRECTION_METHODS  # noqa: E402
+
+_CORRECTION_CHAIN = [
+    ("load", "MTLoaderAgent", None, "Load EDI files"),
+    (
+        "correction",
+        "CorrectionStepAgent",
+        _ifn_load_sites,
+        "Apply the selected catalogue correction (corrected copy; inputs unchanged)",
+    ),
+]
+for _corr_wf in _CORRECTION_METHODS:
+    _WORKFLOW_STEPS.setdefault(_corr_wf, list(_CORRECTION_CHAIN))
+
 # Steps whose deliverable is an inversion input file set on disk.  These
 # receive the run's ``output_dir`` (in a per-code subfolder) even though
 # their ``input_fn`` chain only carries the upstream ``sites``.
@@ -899,6 +919,11 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
     SYSTEM_PROMPT = _SYSTEM_PROMPT
 
+    #: Domain plugin used for the step lookup, cross-check, plan
+    #: validation and review gate (see :mod:`pycsamt.agents.plugins`).
+    #: ``None`` selects the built-in ``"pycsamt"`` plugin.
+    plugin_name: str | None = None
+
     def __init__(
         self,
         *,
@@ -928,9 +953,14 @@ class WorkflowOrchestratorAgent(BaseAgent):
         output_dir = input_data.get("output_dir", "pycsamt_workflow_output")
         data_path = input_data.get("data_path") or config.get("data_path", "")
 
+        from .plugins import get_plugin
+
+        plugin = get_plugin(self.plugin_name)
+
         # ── classify workflow ─────────────────────────────────────────────────
         workflow_type = config.get("workflow", "")
         reasoning = ""
+        route_flags: list[str] = []
 
         if not workflow_type and request:
             if self.llm_available:
@@ -939,13 +969,16 @@ class WorkflowOrchestratorAgent(BaseAgent):
                 if parsed and isinstance(parsed, dict):
                     workflow_type = str(parsed.get("workflow_type", ""))
                     reasoning = str(parsed.get("reasoning", ""))
+                    route_flags = plugin.validator.route_flags(
+                        request, workflow_type)
 
             if not workflow_type:
                 workflow_type, reasoning = _keyword_classify(request)
 
-        available = sorted(_WORKFLOW_STEPS)
-        if workflow_type not in _WORKFLOW_STEPS:
-            if self.default_workflow in _WORKFLOW_STEPS:
+        dispatchable = plugin.registry.dispatchable
+        available = sorted(dispatchable)
+        if workflow_type not in dispatchable:
+            if self.default_workflow in dispatchable:
                 return AgentResult.failed(
                     f"Workflow {workflow_type!r} is recognised by "
                     f"the classifier but has no registered step "
@@ -991,7 +1024,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
                     elapsed=time.time() - t0,
                 )
 
-        steps_spec = _WORKFLOW_STEPS[workflow_type]
+        steps_spec = plugin.registry.steps(workflow_type)
 
         # ── if no data_path yet, try to extract from request ─────────────────
         if not data_path and request:
@@ -1065,6 +1098,17 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
         # Per-step params from the smart modal
         _step_params_cfg = config.get("step_params", {})
+        if workflow_type in _CORRECTION_METHODS:
+            # The correction step always applies the method its workflow id
+            # names, on the declared data (stratagem methods load the folder).
+            from ._corrections import fn_for
+
+            _corr = dict(_step_params_cfg.get("correction") or {})
+            _corr["corr_wf"] = workflow_type
+            _corr["fn_name"] = fn_for(workflow_type)
+            if isinstance(data_path, str) and data_path:
+                _corr.setdefault("path", data_path)
+            _step_params_cfg = {**_step_params_cfg, "correction": _corr}
 
         step_meta = []
         for _item in steps_spec:
@@ -1174,10 +1218,13 @@ class WorkflowOrchestratorAgent(BaseAgent):
             )
 
         # ── build and validate WorkflowPlan ──────────────────────
-        from ._workflow_plan import WorkflowPlan, validate_workflow_plan
+        from ._workflow_plan import WorkflowPlan
 
         plan_config = dict(config)
         plan_config.update(workflow=workflow_type, data_path=data_path, output_dir=output_dir)
+        if route_flags:
+            # Any risk flag makes WorkflowPlan require approval of this plan hash.
+            plan_config["risk_flags"] = list(plan_config.get("risk_flags") or []) + route_flags
 
         # Ground the plan in retrieved package evidence (same retrieval
         # layer PackageQAAgent uses) so the provenance trail can cite
@@ -1195,7 +1242,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
         # ── validation gate: a plan with hard errors never touches
         # disk. Preview (dry_run) is exempt since it executes nothing. ──
-        plan_errors = validate_workflow_plan(plan)
+        plan_errors = plugin.validator.errors(plan)
         emit("plan_validation", plan=plan.to_dict(), errors=plan_errors,
              passed=not plan_errors, dry_run=dry_run)
         from ._checkpoint_identity import input_identities
@@ -1228,7 +1275,7 @@ class WorkflowOrchestratorAgent(BaseAgent):
         # A preview can be inspected without approval, but a review-required
         # plan may not execute on a truthy flag alone. Bind caller approval to
         # the exact displayed plan and current input bytes.
-        if plan.requires_human_review and not dry_run:
+        if plugin.validator.needs_review(plan) and not dry_run:
             try:
                 required_hash = plan.approval_digest()
             except (ValueError, TypeError, OSError) as exc:
@@ -1494,6 +1541,25 @@ def _build_output_manifest(
     return entries
 
 
+def _route_cross_check(text: str, llm_workflow: str) -> list[str]:
+    """Risk flag when the LLM-chosen workflow and the keyword route disagree.
+
+    A misread request can name a valid, registered workflow and pass every
+    plan check, so an LLM choice whose analysis family differs from the
+    deterministic keyword route is sent to the plan-hash review gate instead
+    of running. No flag when the keyword table matches nothing.
+    """
+    from ._workflows import workflow_family
+
+    kw = _classify_workflow(text, default=None)
+    if not llm_workflow or kw in (None, "code_gen"):
+        return []
+    if workflow_family(llm_workflow) == workflow_family(kw):
+        return []
+    return [f"LLM chose workflow {llm_workflow!r} but the keyword route reads "
+            f"{kw!r}; confirm the workflow before it runs."]
+
+
 def _keyword_classify(text: str) -> tuple[str, str]:
     """Rule-based workflow classification from *text*.
 
@@ -1582,6 +1648,10 @@ def _build_registry(
         lambda: _import("interpretation", "InterpretationAgent")(),
     )
     _try("ReportAgent", lambda: _import("report", "ReportAgent")())
+    _try(
+        "CorrectionStepAgent",
+        lambda: _import("tooling", "CorrectionStepAgent")(),
+    )
     _try(
         "CodeGenerationAgent",
         lambda: _import("code_gen", "CodeGenerationAgent")(),

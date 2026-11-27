@@ -57,6 +57,7 @@ Agent Modules
    pycsamt.agents.package_qa
    pycsamt.agents.pinn_agent
    pycsamt.agents.plotting
+   pycsamt.agents.plugins
    pycsamt.agents.router
    pycsamt.agents.tooling
    pycsamt.agents.web

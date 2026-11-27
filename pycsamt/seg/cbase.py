@@ -15,7 +15,7 @@ import numpy as np
 
 from ..log.logger import get_logger
 from .edi import EDIFile, _clean_station_id
-from .validation import IsEdi
+from .validation import IsEdi, read_edi_lines
 
 logger = get_logger(__name__)
 
@@ -202,25 +202,25 @@ class ParseMixin:
         Quick scan for DATAID inside >HEAD.  Best effort.
         """
         try:
-            with p.open("r", encoding="utf-8") as f:
-                in_head = False
-                for raw in f:
-                    s = raw.strip()
-                    if not s:
-                        continue
-                    if s.startswith(">=") or (
-                        s.startswith(">") and not s.upper().startswith(">HEAD")
-                    ):
-                        if in_head:
-                            break
-                    if s.upper().startswith(">HEAD"):
-                        in_head = True
-                        continue
-                    if in_head and s.upper().startswith("DATAID="):
-                        raw_id = s.split("=", 1)[1].strip().strip('"')
-                        return _clean_station_id(raw_id)
+            lines = read_edi_lines(p)
         except Exception:
             return None
+        in_head = False
+        for raw in lines:
+            s = raw.strip()
+            if not s:
+                continue
+            if s.startswith(">=") or (
+                s.startswith(">") and not s.upper().startswith(">HEAD")
+            ):
+                if in_head:
+                    break
+            if s.upper().startswith(">HEAD"):
+                in_head = True
+                continue
+            if in_head and s.upper().startswith("DATAID="):
+                raw_id = s.split("=", 1)[1].strip().strip('"')
+                return _clean_station_id(raw_id)
         return None
 
 

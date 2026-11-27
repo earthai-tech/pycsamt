@@ -68,6 +68,11 @@ _ACTIVE_JOB = ContextVar('agent_master_job', default=None)
 # post-processing modal can export EDI files.
 _CORR_CACHE: dict[str, Any] = {}
 
+# Plans held at the review gate, keyed by the token of their Approve button.
+# In memory only: approval codes never reach the browser store, and an app
+# restart invalidates every pending approval.
+_PENDING_PLANS: dict[str, dict] = {}
+
 # Workflows that produce corrected_sites data.
 _CORRECTION_WFLOWS = frozenset(
     {
@@ -821,6 +826,7 @@ def _agent_bubble(
     mid: str | None = None,
     card: dict | None = None,
     suggestions: list[str] | None = None,
+    approval: dict | None = None,
 ) -> html.Div:
     children: list = []
 
@@ -853,6 +859,28 @@ def _agent_bubble(
                 className="am-reply-chips",
                 role="group",
                 **{"aria-label": "Suggested replies"},
+            )
+        )
+
+    # a plan held at the review gate: one button approves this exact plan
+    if approval and approval.get("token"):
+        _h = str(approval.get("hash") or "")
+        children.append(
+            html.Div(
+                [
+                    html.Button(
+                        [html.I(className="bi bi-shield-check"), " Approve and run"],
+                        id={"type": "am-approve-plan", "token": approval["token"]},
+                        className="am-reply-chip am-approve-btn",
+                        type="button",
+                        n_clicks=0,
+                        title=f"Approve plan {_h}",
+                    ),
+                    html.Span(f"plan {_h[:12]}", className="am-approve-hash"),
+                ],
+                className="am-reply-chips am-approve",
+                role="group",
+                **{"aria-label": "Approve this plan"},
             )
         )
 
@@ -3546,6 +3574,361 @@ def _dispatch_code(
 # ── agent runner ───────────────────────────────────
 
 
+def _run_orchestrated(
+    jid: str,
+    *,
+    wtype: str,
+    text: str,
+    cfg: dict,
+    edi_path: Any,
+    output_dir: str,
+    llm_prov: str,
+    api_key: str | None,
+    sel_model: str | None,
+    offline: bool,
+    step,
+    settings: dict | None = None,
+    orch_input: dict | None = None,
+    approved_plan_hash: str | None = None,
+) -> None:
+    """Run *wtype* through the orchestrator and publish the result.
+
+    Every chat workflow that runs a registered step chain (corrections
+    included) comes here, so its plan is validated, cross-checked, held at
+    the review gate when needed and recorded. A held plan is shown with an
+    Approve button; approving resends the same ``orch_input`` with its
+    ``approved_plan_hash`` (see :func:`_run_approved`).
+    """
+    from pycsamt.agents.orchestrator import WorkflowOrchestratorAgent
+    from pycsamt.api.agents import AGENT_CONFIG
+
+    if orch_input is None:
+        orch_input = {
+            "config": cfg,
+            "request": text,
+            "data_path": edi_path,
+            "output_dir": output_dir,
+        }
+    run_input = dict(orch_input)
+    if approved_plan_hash:
+        run_input["approved_plan_hash"] = approved_plan_hash
+
+    with AGENT_CONFIG.offline() if offline else _nullctx():
+        orch = WorkflowOrchestratorAgent(
+            llm_provider=llm_prov,
+            api_key=api_key,
+            model=sel_model,
+        )
+        step(
+            f"Executing {wtype}...",
+            "running",
+        )
+        with _catch_data_loss_warnings() as _dl_notes:
+            result = orch.execute(run_input)
+
+    # Review gate: the orchestrator held the plan. Show it with an Approve
+    # button bound to its approval hash; nothing has run.
+    if result.status == "needs_review" and (result.data or {}).get(
+        "approval_plan_hash"
+    ):
+        step("Plan held for approval", "done")
+        _hold_plan(
+            jid,
+            result,
+            orch_input=orch_input,
+            wtype=wtype,
+            text=text,
+            edi_path=edi_path,
+            output_dir=output_dir,
+            llm=(llm_prov, api_key, sel_model, offline),
+            settings=settings,
+        )
+        return
+
+    step(
+        f"Completed {wtype}",
+        "done" if result.status != "failed" else "error",
+    )
+
+    # collect figures and generated code
+    # result.data["result"] = coordinator AgentResult
+    # coordinator AgentResult.data = {step: AgentResult}
+    # each step AgentResult.data may have "figures"
+    figs: dict = {}
+    generated_code: str = ""
+    step_results: dict = {}
+    if result.status != "failed":
+        exec_res = (result.data or {}).get("result")
+        step_results = exec_res.data if exec_res and exec_res.data else {}
+        _fig_steps = _WORKFLOW_FIGURE_STEPS.get(wtype)
+        # None means "show all steps";
+        # a set means only those steps.
+        # For unlisted workflows, skip
+        # load/denoise by default.
+        if _fig_steps is None and wtype not in _WORKFLOW_FIGURE_STEPS:
+            _fig_steps = None  # show all
+        for sname, sres in step_results.items():
+            if not hasattr(sres, "data"):
+                continue
+            # Skip prerequisite step figures
+            # unless the workflow explicitly
+            # keeps them (None = keep all).
+            if _fig_steps is not None:
+                if sname not in _fig_steps:
+                    # close any open figs for
+                    # this suppressed step
+                    _sf = (sres.data or {}).get("figures", {})
+                    for _f in (_sf or {}).values():
+                        if isinstance(_f, plt.Figure):
+                            plt.close(_f)
+                    continue
+            elif sname in _SKIP_ALWAYS:
+                continue
+            step_figs = (sres.data or {}).get("figures", {})
+            for fname, fig in (step_figs or {}).items():
+                if isinstance(fig, plt.Figure):
+                    b64 = _fig_to_b64(fig)
+                    plt.close(fig)
+                    figs[str(uuid.uuid4())] = {
+                        "title": (f"[{sname}] {fname}"),
+                        "b64": b64,
+                    }
+
+        # extract generated code (code_gen step)
+        code_res = step_results.get("code_gen")
+        if code_res and hasattr(code_res, "data"):
+            generated_code = (code_res.data or {}).get("code", "") or ""
+
+    # cache corrected sites for post-proc modal
+    if result.status != "failed" and (
+        wtype in _CORRECTION_WFLOWS or wtype in _CORR_METHODS
+    ):
+        for _sn, _sr in step_results.items():
+            _d = getattr(_sr, "data", None) or {}
+            _corr = _d.get("corrected_sites")
+            if _corr is not None:
+                _CORR_CACHE[jid] = _corr
+                _update_job(
+                    jid,
+                    postproc={
+                        "jid": jid,
+                        "workflow": wtype,
+                        "output_dir": output_dir,
+                    },
+                )
+                break
+
+    # AgentResult.summary is the text field
+    summary = result.summary or result.error or "Workflow completed."
+    _corr_step = step_results.get("correction")
+    _corr_table = (getattr(_corr_step, "data", None) or {}).get("table_text", "")
+    if _corr_table:
+        summary += "\n\n```\n" + _corr_table + "\n```"
+    _extra_warns = list(result.warnings or []) + _dl_notes
+    if _extra_warns:
+        summary += "\n\n" + "\n".join(f"⚠ {w}" for w in _extra_warns[:3])
+
+    # Trace the run to the workflow history (observability +
+    # the sidebar "Recent runs" view). Best-effort.
+    _record_run(
+        workflow=wtype,
+        path=edi_path,
+        output_dir=output_dir,
+        status=result.status,
+        summary=summary,
+        n_figures=len(figs),
+    )
+
+    _update_job(
+        jid,
+        status="done",
+        result=summary,
+        steps=_JOBS[jid]["steps"],
+        figs=figs,
+        code=generated_code,
+        kind=(KIND_ERROR if result.status == "failed" else KIND_WORKFLOW),
+    )
+
+
+def _plan_route_flags(text: str, wtype: str) -> list[str]:
+    """Orchestrator cross-check of the chat-chosen workflow (risk flags)."""
+    from pycsamt.agents.plugins import get_plugin
+
+    try:
+        return list(get_plugin().validator.route_flags(text, wtype))
+    except Exception:  # noqa: BLE001 - a failed check must not hide the plan
+        return [f"Cross-check unavailable for {wtype!r}; confirm the workflow "
+                "before it runs."]
+
+
+def _correction_step_params(wtype: str, values: dict) -> dict:
+    """Plan parameters of a correction: its own ParamSpec values only."""
+    from pycsamt.agents._corrections import param_specs
+
+    out: dict[str, Any] = {}
+    for ps in param_specs(wtype):
+        if ps.name in values and values[ps.name] not in (None, ""):
+            out[ps.name] = values[ps.name]
+    stations = values.get("stations")
+    if stations:
+        out["stations"] = list(stations) if isinstance(stations, (list, tuple)) else stations
+    return out
+
+
+_PENDING_MAX = 50
+
+
+def _plan_summary_text(result, wtype: str, edi_path: Any, plan_hash: str) -> str:
+    """Chat text for a plan held at the review gate."""
+    data = result.data or {}
+    plan = data.get("workflow_plan")
+    flags = list(getattr(plan, "risk_flags", []) or result.warnings or [])
+    steps = [s.get("name", "") for s in (data.get("steps") or []) if isinstance(s, dict)]
+    if isinstance(edi_path, (list, tuple)):
+        where = f"{len(edi_path)} EDI file(s)"
+    else:
+        where = f"`{edi_path}`" if edi_path else "(no data path)"
+    lines = [
+        "**This plan needs your approval before it runs.** Nothing has been "
+        "computed yet.",
+        "",
+        f"- Workflow: `{wtype}`",
+        f"- Data: {where}",
+    ]
+    if steps:
+        lines.append("- Steps: " + " → ".join(steps))
+    if flags:
+        lines.append("- Why it was held:")
+        lines.extend(f"  - {f}" for f in flags)
+    lines += [
+        "",
+        f"Approval is bound to plan `{plan_hash[:12]}`. A change to the "
+        "request, a parameter or the input files needs a new approval.",
+    ]
+    return "\n".join(lines)
+
+
+def _hold_plan(jid, result, *, orch_input, wtype, text, edi_path, output_dir,
+               llm, settings) -> None:
+    """Register a held plan and publish it with an Approve button."""
+    plan_hash = str((result.data or {}).get("approval_plan_hash") or "")
+    token = uuid.uuid4().hex
+    with _JOBS_LOCK:
+        while len(_PENDING_PLANS) >= _PENDING_MAX:
+            _PENDING_PLANS.pop(next(iter(_PENDING_PLANS)))
+        _PENDING_PLANS[token] = {
+            "plan_hash": plan_hash,
+            "orch_input": orch_input,
+            "wtype": wtype,
+            "text": text,
+            "edi_path": edi_path,
+            "output_dir": output_dir,
+            "llm": llm,
+            "settings": dict(settings or {}),
+            "session": _session(),
+        }
+    summary = _plan_summary_text(result, wtype, edi_path, plan_hash)
+    _record_run(
+        workflow=wtype,
+        path=edi_path,
+        output_dir=output_dir,
+        status="needs_review",
+        summary=summary,
+        n_figures=0,
+    )
+    _update_job(
+        jid,
+        status="done",
+        result=summary,
+        steps=_JOBS[jid]["steps"],
+        kind=KIND_CLARIFY,
+        approval={"token": token, "hash": plan_hash},
+    )
+
+
+def _run_approved(jid: str, pending: dict) -> None:
+    """Background job: run a held plan the user approved in the chat."""
+    from pycsamt.agents._local import LocalSettings, local_session
+    from pycsamt.agents._request import RequestCancelled, request_scope
+
+    settings = pending.get("settings") or {}
+    llm_prov, api_key, sel_model, offline = pending["llm"]
+    token = _ACTIVE_SESSION.set(pending.get("session"))
+    job_token = _ACTIVE_JOB.set(jid)
+
+    def cancelled():
+        job = _get_job(jid)
+        return job is None or job.get("status") == "cancelled"
+
+    def _step(label: str, status: str = "done"):
+        from pycsamt.agents._request import checkpoint
+
+        checkpoint()
+        with _JOBS_LOCK:
+            if jid in _JOBS and _JOBS[jid].get("status") != "cancelled":
+                _JOBS[jid]["steps"].append({"label": label, "status": status})
+
+    def _go():
+        _step(f"Approved plan {str(pending['plan_hash'])[:12]}", "done")
+        _run_orchestrated(
+            jid,
+            wtype=pending["wtype"],
+            text=pending["text"],
+            cfg=(pending["orch_input"] or {}).get("config") or {},
+            edi_path=pending["edi_path"],
+            output_dir=pending["output_dir"],
+            llm_prov=llm_prov,
+            api_key=api_key,
+            sel_model=sel_model,
+            offline=offline,
+            step=_step,
+            settings=settings,
+            orch_input=pending["orch_input"],
+            approved_plan_hash=pending["plan_hash"],
+        )
+
+    try:
+        with request_scope(cancelled):
+            if settings.get("provider") == "ollama":
+                with local_session(LocalSettings.from_mapping(settings), cancelled) as request:
+                    _go()
+                    _update_job(jid, local_usage=request.usage)
+            else:
+                _go()
+    except RequestCancelled:
+        _update_job(jid, status="cancelled")
+    except Exception as exc:  # noqa: BLE001
+        _update_job(jid, status="error", error=str(exc), result=str(exc), kind=KIND_ERROR)
+    finally:
+        _ACTIVE_SESSION.reset(token)
+        _ACTIVE_JOB.reset(job_token)
+
+
+def _approve_plan_response(token, current_msgs, stored_messages):
+    """Chat update for a click on a held plan's Approve button."""
+    with _JOBS_LOCK:
+        pending = _PENDING_PLANS.pop(str(token), None)
+    msgs = list(current_msgs or [])
+    new_stored = list(stored_messages or [])
+    if pending is None:
+        note = ("This approval is no longer valid (it was already used or the "
+                "app restarted). Send the request again to get a new plan.")
+        _amid = _mid()
+        msgs.append(_agent_bubble(note, kind=KIND_CLARIFY, mid=_amid))
+        new_stored.append({"role": "assistant", "content": note, "ts": _ts(), "mid": _amid})
+        return msgs, no_update, True, new_stored
+    label = f"Approve plan {str(pending['plan_hash'])[:12]}"
+    _umid = _mid()
+    new_stored.append({"role": "user", "content": label, "ts": _ts(), "mid": _umid,
+                       "approved_plan_hash": pending["plan_hash"]})
+    msgs.append(_user_bubble(label, mid=_umid))
+    msgs.append(_thinking_bubble([{"label": "Running the approved plan...", "status": "running"}]))
+    jid = _new_job()
+    _update_job(jid, workflow=pending["wtype"])
+    threading.Thread(target=_run_approved, args=(jid, pending), daemon=True).start()
+    return msgs, {"jid": jid}, False, new_stored
+
+
 def _run_agent(
     jid: str, text: str, edi_store: dict, settings: dict,
     inv_config: dict | None = None, history: list[dict] | None = None,
@@ -4141,14 +4524,15 @@ def _run_agent_impl(
             )
             return
 
+        # ── catalogue corrections → orchestrator (validated, gated, recorded) ──
+        if wtype in _CORR_METHODS:
+            cfg.setdefault("step_params", {})["correction"] = _correction_step_params(
+                wtype, inv_config or {}
+            )
+
         # ── analysis tools → lightweight ToolAgent (table + figure) ──
-        if wtype in _TOOL_WORKFLOWS:
+        if wtype in _TOOL_WORKFLOWS and wtype not in _CORR_METHODS:
             _tool_params = dict(inv_config or {})
-            # Correction workflows share one ToolAgent kind; tell the agent
-            # which catalogue method to apply (and let it coerce the params).
-            if wtype in _CORR_METHODS:
-                _tool_params["corr_wf"] = wtype
-                _tool_params["fn_name"] = _CORR_METHODS[wtype]["fn"]
             _dispatch_tool(
                 jid,
                 edi_path,
@@ -4159,122 +4543,27 @@ def _run_agent_impl(
             )
             return
 
-        orch_input = {
-            "config": cfg,
-            "request": text,
-            "data_path": edi_path,
-            "output_dir": output_dir,
-        }
+        # Cross-check: compare the workflow the chat picked with the
+        # deterministic keyword route; a disagreement becomes a plan risk
+        # flag, which sends the plan to the review gate.
+        _route_flags = _plan_route_flags(text, wtype)
+        if _route_flags:
+            cfg["risk_flags"] = list(cfg.get("risk_flags") or []) + _route_flags
+            _step("Cross-check: routes disagree; plan needs approval", "done")
 
-        with AGENT_CONFIG.offline() if _offline else _nullctx():
-            orch = WorkflowOrchestratorAgent(
-                llm_provider=llm_prov,
-                api_key=api_key,
-                model=sel_model,
-            )
-            _step(
-                f"Executing {wtype}...",
-                "running",
-            )
-            with _catch_data_loss_warnings() as _dl_notes:
-                result = orch.execute(orch_input)
-
-        _step(
-            f"Completed {wtype}",
-            "done" if result.status != "failed" else "error",
-        )
-
-        # collect figures and generated code
-        # result.data["result"] = coordinator AgentResult
-        # coordinator AgentResult.data = {step: AgentResult}
-        # each step AgentResult.data may have "figures"
-        figs: dict = {}
-        generated_code: str = ""
-        step_results: dict = {}
-        if result.status != "failed":
-            exec_res = (result.data or {}).get("result")
-            step_results = exec_res.data if exec_res and exec_res.data else {}
-            _fig_steps = _WORKFLOW_FIGURE_STEPS.get(wtype)
-            # None means "show all steps";
-            # a set means only those steps.
-            # For unlisted workflows, skip
-            # load/denoise by default.
-            if _fig_steps is None and wtype not in _WORKFLOW_FIGURE_STEPS:
-                _fig_steps = None  # show all
-            for sname, sres in step_results.items():
-                if not hasattr(sres, "data"):
-                    continue
-                # Skip prerequisite step figures
-                # unless the workflow explicitly
-                # keeps them (None = keep all).
-                if _fig_steps is not None:
-                    if sname not in _fig_steps:
-                        # close any open figs for
-                        # this suppressed step
-                        _sf = (sres.data or {}).get("figures", {})
-                        for _f in (_sf or {}).values():
-                            if isinstance(_f, plt.Figure):
-                                plt.close(_f)
-                        continue
-                elif sname in _SKIP_ALWAYS:
-                    continue
-                step_figs = (sres.data or {}).get("figures", {})
-                for fname, fig in (step_figs or {}).items():
-                    if isinstance(fig, plt.Figure):
-                        b64 = _fig_to_b64(fig)
-                        plt.close(fig)
-                        figs[str(uuid.uuid4())] = {
-                            "title": (f"[{sname}] {fname}"),
-                            "b64": b64,
-                        }
-
-            # extract generated code (code_gen step)
-            code_res = step_results.get("code_gen")
-            if code_res and hasattr(code_res, "data"):
-                generated_code = (code_res.data or {}).get("code", "") or ""
-
-        # cache corrected sites for post-proc modal
-        if result.status != "failed" and wtype in _CORRECTION_WFLOWS:
-            for _sn, _sr in step_results.items():
-                _d = getattr(_sr, "data", None) or {}
-                _corr = _d.get("corrected_sites")
-                if _corr is not None:
-                    _CORR_CACHE[jid] = _corr
-                    _update_job(
-                        jid,
-                        postproc={
-                            "jid": jid,
-                            "workflow": wtype,
-                            "output_dir": output_dir,
-                        },
-                    )
-                    break
-
-        # AgentResult.summary is the text field
-        summary = result.summary or result.error or "Workflow completed."
-        _extra_warns = list(result.warnings or []) + _dl_notes
-        if _extra_warns:
-            summary += "\n\n" + "\n".join(f"⚠ {w}" for w in _extra_warns[:3])
-
-        # Trace the run to the workflow history (observability +
-        # the sidebar "Recent runs" view). Best-effort.
-        _record_run(
-            workflow=wtype,
-            path=edi_path,
-            output_dir=output_dir,
-            status=result.status,
-            summary=summary,
-            n_figures=len(figs),
-        )
-
-        _update_job(
+        _run_orchestrated(
             jid,
-            status="done",
-            result=summary,
-            steps=_JOBS[jid]["steps"],
-            figs=figs,
-            code=generated_code,
-            kind=(KIND_ERROR if result.status == "failed" else KIND_WORKFLOW),
+            wtype=wtype,
+            text=text,
+            cfg=cfg,
+            edi_path=edi_path,
+            output_dir=output_dir,
+            llm_prov=llm_prov,
+            api_key=api_key,
+            sel_model=sel_model,
+            offline=_offline,
+            step=_step,
+            settings=settings,
         )
 
     except Exception as exc:  # noqa: BLE001
@@ -4987,6 +5276,7 @@ def register_chat(app) -> None:
             mid=_agent_mid,
             card=card,
             suggestions=job.get("suggestions"),
+            approval=job.get("approval"),
         )
 
         # replace thinking with agent bubble
@@ -5020,6 +5310,7 @@ def register_chat(app) -> None:
                 "workflow": job.get("workflow"),
                 "figure_count": len(figs),
                 "citations": job.get("citations", []),
+                "approval_plan_hash": (job.get("approval") or {}).get("hash"),
             }
         )
         return (
@@ -5200,6 +5491,28 @@ def register_chat(app) -> None:
         Input({"type": "am-reply-chip", "text": ALL}, "n_clicks"),
         prevent_initial_call=True,
     )
+
+    # 7b. Approve a plan held at the review gate → run exactly that plan
+    @app.callback(
+        Output(IDs.CHAT_WINDOW, "children", allow_duplicate=True),
+        Output(IDs.STORE_JOB, "data", allow_duplicate=True),
+        Output(IDs.INTERVAL_POLL, "disabled", allow_duplicate=True),
+        Output(IDs.STORE_MESSAGES, "data", allow_duplicate=True),
+        Input({"type": "am-approve-plan", "token": ALL}, "n_clicks"),
+        State(IDs.CHAT_WINDOW, "children"),
+        State(IDs.STORE_MESSAGES, "data"),
+        State(IDs.INTERVAL_POLL, "disabled"),
+        prevent_initial_call=True,
+    )
+    def approve_plan(_clicks, current_msgs, stored_messages, poll_disabled):
+        trig = ctx.triggered[0] if ctx.triggered else {}
+        tid = ctx.triggered_id
+        # A newly rendered button fires with n_clicks 0: not a click.
+        if not trig.get("value") or not isinstance(tid, dict):
+            raise PreventUpdate
+        if poll_disabled is False:  # another job is running
+            raise PreventUpdate
+        return _approve_plan_response(tid.get("token"), current_msgs, stored_messages)
 
     # 8. Click a pinned item → scroll to the message
     app.clientside_callback(

@@ -24,7 +24,7 @@ from .sections import iter_sections
 from .spectra import Spectra, SpectraIO, SpectraSECT
 from .time_series import TSIO, TimeSeries
 from .utils import _format_block_numbers
-from .validation import IsEdi
+from .validation import IsEdi, read_edi_lines
 
 logger = get_logger(__name__)
 
@@ -221,8 +221,7 @@ class EDIOMixin(CoreObject):
     ) -> dict[str, list]:
         IsEdi._assert_edi(path, deep=True)
 
-        with path.open("r", encoding="utf-8") as f:
-            lines = f.readlines()
+        lines = read_edi_lines(path)
 
         i0 = 0 if start is None else int(start)
         if i0 <= 0:
@@ -843,6 +842,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         converters may disable stamping when they need to retain mapped
         provenance metadata exactly.
         """
+        self._sync_mtsect_nfreq()
         out: list[str] = []
         for key in (
             "head",
@@ -867,6 +867,21 @@ class EDIFile(EDIMixin, EDIOMixin):
                     pass
         return "".join(out)
 
+    def _sync_mtsect_nfreq(self) -> None:
+        """Keep ``>=MTSECT NFREQ`` equal to the impedance length.
+
+        Replacing or trimming ``self.Z`` (e.g. a frequency-band
+        selection) otherwise left the header count of the source
+        file, so readers that trust ``NFREQ`` mis-parsed the blocks.
+        """
+        m = self.get_section("mtsect")
+        freq = getattr(self.Z, "freq", None)
+        if m is None or freq is None or not hasattr(m, "nfreq"):
+            return
+        n = int(np.asarray(freq).size)
+        if n > 0:
+            m.nfreq = n
+
     def write(  # noqa: C901
         self,
         edi_fn: str | None = None,
@@ -884,6 +899,7 @@ class EDIFile(EDIMixin, EDIOMixin):
         v = kwargs.pop("verbose", None)
         if v is not None:
             self.verbose = int(v)
+        self._sync_mtsect_nfreq()
         if force_tipper is None:
             force_tipper = bool(
                 getattr(self, "_force_tipper_on_write", False)

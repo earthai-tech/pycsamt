@@ -18,6 +18,7 @@ from .validation import (
     _strip_norm,
     _to_float_or_none,
     _to_int_or_none,
+    read_edi_lines,
 )
 
 logger = get_logger(__name__)
@@ -349,8 +350,7 @@ class TSIO(EDIComponentBase):
     ) -> TSIO:
         if not os.path.isfile(edi_path):
             raise FileNotFoundError(f"{edi_path!r} is not a file.")
-        with open(edi_path, encoding="utf-8") as f:
-            lines = f.readlines()
+        lines = read_edi_lines(edi_path)
 
         if start_line is None:
             for i, ln in enumerate(lines):

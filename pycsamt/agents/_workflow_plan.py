@@ -64,6 +64,13 @@ VALID_WORKFLOWS = frozenset(
     }
 )
 
+# Catalogue corrections (Static Shift, Noise Removal, Tensor Rotation, …) are
+# workflows too: the chat sends them through the orchestrator so they are
+# validated, cross-checked, gated and recorded like every other workflow.
+from ._corrections import CORRECTION_METHODS as _CORRECTION_METHODS  # noqa: E402
+
+VALID_WORKFLOWS = VALID_WORKFLOWS | frozenset(_CORRECTION_METHODS)
+
 
 @dataclass
 class WorkflowPlan:
@@ -130,11 +137,19 @@ class WorkflowPlan:
         if not self.data_path:
             errs.append("No data_path extracted from the request.")
         else:
+            # A list of EDI files (the chat's selected survey lines) is a
+            # valid input when every listed file exists.
+            paths = (list(self.data_path)
+                     if isinstance(self.data_path, (list, tuple))
+                     else [self.data_path])
             try:
-                if not Path(self.data_path).exists():
-                    errs.append(f"data_path does not exist: {self.data_path!r}")
+                missing = [p for p in paths if not Path(p).exists()]
             except (TypeError, ValueError, OSError):
                 errs.append("data_path must be a valid file or directory path.")
+            else:
+                if missing:
+                    shown = self.data_path if len(paths) == 1 else missing
+                    errs.append(f"data_path does not exist: {shown!r}")
         if not isinstance(self.requires_human_review, bool):
             errs.append("requires_human_review must be a boolean.")
         errs.extend(parameter_errors(self.parameters))

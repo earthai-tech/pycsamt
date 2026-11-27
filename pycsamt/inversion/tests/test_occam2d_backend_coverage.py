@@ -414,3 +414,50 @@ def test_missing_runner_files_key_absent_entirely():
     assert "model" in missing
     assert "startup" in missing
     assert "data" in missing
+
+
+# ---------------------------------------------------------------------------
+# Mesh depth versus data penetration depth
+# ---------------------------------------------------------------------------
+def _depth_fixture(z_total, log_rho, f_low):
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    data = SimpleNamespace(
+        frequencies=np.array([f_low * 100.0, f_low]),
+        # site, freq index (1-based), type, datum, error
+        data_blocks=np.array([
+            [1, 1, 1, log_rho, 0.1],
+            [1, 2, 1, log_rho, 0.1],
+            [1, 2, 5, log_rho, 0.1],
+            [1, 2, 2, 45.0, 2.0],
+        ]),
+    )
+    mesh = SimpleNamespace(z_widths=np.full(10, z_total / 10.0), n_airlayers=0)
+    return data, mesh
+
+
+def test_mesh_depth_warning_flags_truncated_long_period_mesh():
+    from pycsamt.inversion.backends.occam2d import _mesh_depth_warning
+
+    # 100 ohm-m at 1e-4 Hz senses 356*sqrt(1e6) = 356 km; mesh is 13 km.
+    data, mesh = _depth_fixture(13_000.0, 2.0, 1e-4)
+    msg = _mesh_depth_warning(data, mesh)
+    assert msg is not None
+    assert "13.0 km" in msg and "356.0 km" in msg
+
+
+def test_mesh_depth_warning_silent_when_mesh_is_deep_enough():
+    from pycsamt.inversion.backends.occam2d import _mesh_depth_warning
+
+    data, mesh = _depth_fixture(400_000.0, 2.0, 1e-4)
+    assert _mesh_depth_warning(data, mesh) is None
+
+
+def test_mesh_depth_warning_ignores_missing_inputs():
+    from types import SimpleNamespace
+
+    from pycsamt.inversion.backends.occam2d import _mesh_depth_warning
+
+    assert _mesh_depth_warning(SimpleNamespace(), SimpleNamespace()) is None

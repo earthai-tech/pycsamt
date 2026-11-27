@@ -142,6 +142,9 @@ class Occam2DBackend(BaseInversionBackend):
                 native = builder
                 masked_rows = list(getattr(builder.data, "masked", []) or [])
                 files = _builder_files(builder)
+                depth_note = _mesh_depth_warning(builder.data, builder.mesh)
+                if depth_note:
+                    warnings.append(depth_note)
             except Exception as exc:
                 warnings.append(f"Occam2D preparation failed: {exc}")
                 status = "needs_review"
@@ -257,6 +260,46 @@ class Occam2DBackend(BaseInversionBackend):
                 "target_misfit": target,
             },
         )
+
+
+def _mesh_depth_warning(data: Any, mesh: Any) -> str | None:
+    """Warn when the mesh is shallower than the data's penetration depth.
+
+    The Occam2D mesh depth is set by ``n_layers``, ``cell_size_vertical_top``
+    and ``depth_scale``; ``max_depth`` only caps it. A mesh that ends above
+    the depth the longest periods sense truncates the forward problem, and
+    the inversion then stalls near its starting half-space. The comparison
+    uses the median Niblett-Bostick depth ``356 * sqrt(rho_a * T)`` [m] of
+    the apparent-resistivity data at the lowest frequency.
+    """
+    import numpy as np
+
+    try:
+        z = np.asarray(getattr(mesh, "z_widths", []), dtype=float)
+        blocks = np.asarray(getattr(data, "data_blocks", []), dtype=float)
+        freqs = np.asarray(getattr(data, "frequencies", []), dtype=float)
+        if not z.size or not blocks.size or not freqs.size:
+            return None
+        n_air = int(getattr(mesh, "n_airlayers", 0) or 0)
+        mesh_depth = float(np.sum(z[n_air:]))
+        # Occam2D types 1/5: TE/TM log10 apparent resistivity.
+        rho_rows = blocks[np.isin(blocks[:, 2].astype(int), (1, 5))]
+        if not rho_rows.size:
+            return None
+        idx = rho_rows[:, 1].astype(int) - 1
+        f_low = float(np.min(freqs[idx]))
+        low = rho_rows[np.isclose(freqs[idx], f_low)]
+        depth = 356.0 * np.sqrt(10.0 ** float(np.median(low[:, 3])) / f_low)
+    except Exception:
+        return None
+    if mesh_depth >= depth:
+        return None
+    return (
+        f"Occam2D mesh reaches {mesh_depth / 1e3:.1f} km but the data at the "
+        f"lowest frequency ({f_low:.3g} Hz) sense ~{depth / 1e3:.1f} km "
+        "(median Bostick depth); the truncated mesh biases the forward "
+        "response. Increase n_layers, cell_size_vertical_top or depth_scale."
+    )
 
 
 def _occam_config(config_cls: Any, cfg: Any) -> Any:

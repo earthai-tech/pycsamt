@@ -15,7 +15,7 @@ complete :doc:`installation reference <../installation>`.
 Check Python
 ------------
 
-pyCSAMT requires Python 3.9 or later. Python 3.11 or 3.12 is a practical
+pyCSAMT requires Python 3.10 or later. Python 3.11 or 3.12 is a practical
 choice for a new environment because both versions are covered by the test
 suite and are widely supported by scientific Python packages.
 

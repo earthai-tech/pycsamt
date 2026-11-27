@@ -551,7 +551,8 @@ class TestPlotTopoSectionSynthetic:
 
 
 # ---------------------------------------------------------------------------
-# plot_topo_section's default styling: white air fill, white markers
+# plot_topo_section's default styling: white air fill, inversion-preset
+# markers (filled black triangles; open ones are for pseudosections)
 # ---------------------------------------------------------------------------
 
 
@@ -563,12 +564,12 @@ class TestPlotTopoSectionDefaultStyling:
         alphas = [p.get_alpha() for p in ax.patches]
         assert alphas and all(a == 0.0 for a in alphas)
 
-    def test_pcolormesh_markers_are_white_faced_by_default(self):
+    def test_pcolormesh_markers_use_inversion_preset_by_default(self):
         x_c, z_c, rho = _grid(n_x=8, n_z=15)
         elev = np.linspace(80.0, 220.0, 8)
         ax = plot_topo_section((x_c, z_c, rho), elevation=elev, chainage=x_c)
         scatter = ax.collections[-1]
-        assert tuple(scatter.get_facecolor()[0]) == (1.0, 1.0, 1.0, 1.0)
+        assert tuple(scatter.get_facecolor()[0]) == (0.0, 0.0, 0.0, 1.0)
         assert tuple(scatter.get_edgecolor()[0]) == (0.0, 0.0, 0.0, 1.0)
 
     @staticmethod
@@ -578,7 +579,7 @@ class TestPlotTopoSectionDefaultStyling:
                 return a
         raise AssertionError("strip axes (ylabel='Elev (m)') not found")
 
-    def test_imshow_markers_are_white_faced_by_default(self):
+    def test_imshow_markers_use_inversion_preset_by_default(self):
         x_c, z_c, rho = _grid(n_x=8, n_z=15)
         elev = np.linspace(80.0, 220.0, 8)
         ax = plot_topo_section(
@@ -586,7 +587,7 @@ class TestPlotTopoSectionDefaultStyling:
         )
         strip_ax = self._find_strip_axes(ax)
         scatter = strip_ax.collections[-1]
-        assert tuple(scatter.get_facecolor()[0]) == (1.0, 1.0, 1.0, 1.0)
+        assert tuple(scatter.get_facecolor()[0]) == (0.0, 0.0, 0.0, 1.0)
 
     def test_imshow_strip_background_is_transparent_by_default(self):
         x_c, z_c, rho = _grid(n_x=8, n_z=15)

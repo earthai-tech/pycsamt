@@ -1168,9 +1168,14 @@ class MTBase(CoreObject):
         Phi = self.phase_tensor(z).astype(float)
         a, b = Phi[..., 0, 0], Phi[..., 0, 1]
         c, d = Phi[..., 1, 0], Phi[..., 1, 1]
-        # Caldwell et al. 2004 parameterization
-        alpha = 0.5 * np.arctan2(b - c, a + d)  # azimuth
-        beta = 0.5 * np.arctan2(b + c, a - d)  # skew
+        # Caldwell et al. (2004): alpha = 0.5 atan2(b + c, a - d)
+        # (rotation-variant orientation), beta = 0.5 arctan(
+        # (b - c) / (a + d)) (rotation-invariant skew). The two were
+        # previously swapped. beta is folded into (-pi/4, pi/4].
+        alpha = 0.5 * np.arctan2(b + c, a - d)
+        beta = 0.5 * np.arctan2(b - c, a + d)
+        q = np.pi / 4.0
+        beta = -((-beta + q) % (2.0 * q) - q)
         # Eigenvalues (real for real Phi)
         # vals = np.linalg.eigvals(Phi)
         # vals = np.real_if_close(vals, tol=1e5)

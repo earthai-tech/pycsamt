@@ -78,7 +78,7 @@ pip install pycsamt           # core, minimal dependencies
 pip install "pycsamt[full]"   # + ML backends, apps, geospatial, docs
 ```
 
-Requires **Python 3.9+**.
+Requires **Python 3.10+**.
 
 <a id="desktop-app"></a>
 

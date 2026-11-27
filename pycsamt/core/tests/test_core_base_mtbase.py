@@ -244,17 +244,27 @@ def test_phase_tensor_params_shapes_and_values(mt):
 
 
 def test_phase_tensor_azimuth(mt):
-    # Construct a Phi with a clear azimuth (~45 deg)
-    # Z = X + iY with X = I, Y = [[0, b], [c, 0]] with b>0, c<0 gives az ~ 45°
-    b, c = 1.0, -1.0
-    Z = np.zeros((2, 2), dtype=complex)
-    Z.real[...] = np.eye(2)
-    Z.imag[...] = np.array([[0.0, b], [c, 0.0]])
+    # Symmetric Phi with principal axis at 30 deg (beta = 0):
+    # Phi = R(30) diag(1.0, 0.4) R(30)^T; Caldwell et al. (2004)
+    # alpha = 0.5 atan2(b + c, a - d) = 30 deg.
+    t = np.radians(30.0)
+    r = np.array([[np.cos(t), -np.sin(t)], [np.sin(t), np.cos(t)]])
+    phi = r @ np.diag([1.0, 0.4]) @ r.T
+    Z = np.eye(2) + 1j * phi
     az = mt.phase_tensor_azimuth(Z, unit="deg")
-
-    # Single tensor -> scalar; wrap in array for uniformity
     assert np.ndim(az) == 0
-    assert_allclose(az, 45.0, rtol=1e-12, atol=1e-12)
+    assert_allclose(az, 30.0, rtol=0, atol=1e-10)
+    _, _, _, beta, _ = mt.phase_tensor_params(Z, angle_unit="deg")
+    assert_allclose(beta, 0.0, atol=1e-10)
+
+
+def test_phase_tensor_skew_antisymmetric(mt):
+    # Phi = [[0, 1], [-1, 0]] is pure skew: beta = +45 deg
+    # (it was reported as a 45-deg azimuth when alpha/beta were
+    # swapped).
+    Z = np.eye(2) + 1j * np.array([[0.0, 1.0], [-1.0, 0.0]])
+    _, _, _, beta, _ = mt.phase_tensor_params(Z, angle_unit="deg")
+    assert_allclose(beta, 45.0, atol=1e-10)
 
 
 # ----------------------------- Swift skew --------------------------------- #

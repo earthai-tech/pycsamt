@@ -1,0 +1,71 @@
+.. _release_v2_6_5:
+
+-------------
+Version 2.6.5
+-------------
+
+pyCSAMT 2.6.5 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Released 2026-11-24.* Archived on Zenodo as DOI
+`10.5281/zenodo.24493348 <https://doi.org/10.5281/zenodo.24493348>`__.
+
+pyCSAMT 2.6.5 opens Agent Master to third-party domain plugins, adds a
+deterministic check on its workflow routing, moves the PCSF core to the
+standalone ``pcsf`` package, and fixes several scientific and I/O bugs.
+See the :ref:`full changelog entry <changelog-2-6-5>` for the complete
+list.
+
+Agent plugins and route cross-check |Feature|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:mod:`pycsamt.agents.plugins` defines three protocols --
+``WorkflowRegistry``, ``PlanValidator`` and ``RecordWriter`` -- bundled
+as a ``DomainPlugin``. Plugins are registered with ``register_plugin``
+or discovered through the ``pycsamt.agent_plugins`` entry-point group.
+The built-in ``pycsamt`` plugin is a set of thin adapters over the
+existing workflow tables, so default behaviour does not change.
+``examples/agent_plugins/mtpy_example`` shows a complete plugin for MTpy
+operations that imports without MTpy installed.
+
+Before the review gate, the orchestrator now compares the workflow
+family chosen by the LLM router with the one chosen by the keyword
+router (``router.route_disagreement``, ``workflow_family``). A
+disagreement becomes a plan risk flag, so the plan-hash review gate
+asks for confirmation. A new review-gated ``field_inversion`` workflow
+runs loading, QC, static shift, rotation and an executed inversion, and
+refuses to start without the required scientific settings.
+
+Scientific and I/O fixes |Fix|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The CSAMT near-field correction and ``CSAMT1DForward`` now use the
+exact half-space and grounded-bipole responses computed with empymod;
+the previous forward lowered the apparent resistivity in the near
+field. Static-shift correction uses the rotation-invariant determinant
+apparent resistivity. MARE2DEM meshes store 0-based PCSF region ids,
+EDI files with GBK or latin-1 header text are read without errors, and
+``Site("a.edi")`` reads the file instead of returning an empty site.
+Occam2D model sections are drawn in the survey frame so stations sit
+over the fine mesh, and the backend warns when the mesh is shallower
+than the depth sensed at the lowest frequency.
+
+Build and compatibility |Build|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``pyproj`` and ``pcsf`` are new runtime dependencies. The ModEM 2-D/3-D
+and Occam2D build scripts work with gfortran 10 or newer.
+
+Further reading
+~~~~~~~~~~~~~~~
+
+* :doc:`/user_guide/agents/review_gate` -- validation, route cross-check
+  and plan-hash approval.
+* :doc:`/user_guide/agents/plugins` -- the agent plugin interface and the
+  MTpy example.
+* :ref:`models_occam2d` -- the mesh-depth check and ``x_margin``.
+* :doc:`/user_guide/emtools/tensor` -- ``rotation_suppression_table`` and
+  ``plot_rotation_summary``.
+* :doc:`/user_guide/agents/orchestrator` -- the ``field_inversion``
+  workflow.
+* :doc:`/user_guide/agents/assistant_rag` -- ``OllamaEmbeddingBackend``.

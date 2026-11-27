@@ -11,8 +11,9 @@ Background
 WinGLink exports EDI files with placeholder coordinates
 (``LAT=0:00:00.00``, ``LONG=0:00:00.00``).  The actual survey positions
 are recorded separately in a GPS table (CSV / XLS / XLSX) using a local
-projected coordinate system (typically Beijing 1954 / Gauss-Kruger for
-Chinese surveys, EPSG 15921).
+projected coordinate system, often a Gauss-Kruger projection for
+Chinese surveys (e.g. EPSG 4508, CGCS2000 / Gauss-Kruger CM 111E).
+Use :func:`pycsamt.gis.stations.compare_crs` to check candidates.
 
 :class:`CoordinateInjector` reads that table, converts each projected
 point to WGS84 decimal degrees via
@@ -348,10 +349,11 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
         only supported value; geographic tables can be loaded with
         ``easting_col`` / ``northing_col`` pointing to decimal-degree
         columns and ``epsg=4326``).
-    epsg : int, default 15921
-        EPSG code for the projected CRS.  15921 = Beijing 1954 /
-        Gauss-Kruger Zone 49 (standard for Chinese AMT surveys in that
-        belt).  Change to match your survey area.
+    epsg : int, optional
+        EPSG code of the projected CRS of the GPS table (e.g. 4508,
+        CGCS2000 / Gauss-Kruger CM 111E; 32649, WGS 84 / UTM 49N).
+        When omitted, ``utm_zone``/``datum`` are used. The former
+        default, 15921, is not a valid EPSG code (PROJ rejects it).
     utm_zone : str, default ``'49N'``
         UTM zone string passed to ``project_point_utm2ll`` when ``epsg``
         is not provided.  Ignored when ``epsg`` is set.
@@ -382,14 +384,14 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
 
         >>> from pycsamt.stratagem import EDIBatch, CoordinateInjector
         >>> batch  = EDIBatch("2/2EDI").fit()
-        >>> injector = CoordinateInjector(epsg=15921, utm_zone="49N")
+        >>> injector = CoordinateInjector(epsg=4508)
         >>> injector.fit(batch, "2.csv")
-        CoordinateInjector(epsg=15921, ...)
+        CoordinateInjector(epsg=4508, ...)
         >>> paths = injector.export("2/2EDI_coords")
 
     Custom column names and reversed order::
 
-        >>> injector = CoordinateInjector(epsg=15921, order="reversed")
+        >>> injector = CoordinateInjector(epsg=4508, order="reversed")
         >>> injector.fit(
         ...     batch, "coords.xlsx",
         ...     easting_col="E", northing_col="N", elev_col="elevation",
@@ -408,12 +410,21 @@ class CoordinateInjector(PyCSAMTObject, MetadataMixin):
         self,
         *,
         coordinate_system: str = "utm",
-        epsg: int = 15921,
+        epsg: int | None = None,
         utm_zone: str = "49N",
         datum: str = "WGS84",
         order: str = "auto",
         verbose: int = 0,
     ) -> None:
+        if epsg is not None:
+            from pyproj import CRS
+            from pyproj.exceptions import CRSError
+
+            try:
+                CRS.from_epsg(int(epsg))
+            except CRSError as exc:
+                raise ValidationError(
+                    f"EPSG:{epsg} is not a valid CRS code.") from exc
         self.coordinate_system = coordinate_system
         self.epsg = epsg
         self.utm_zone = utm_zone

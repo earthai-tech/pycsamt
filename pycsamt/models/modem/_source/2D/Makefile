@@ -82,7 +82,9 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(OUT): $(OBJ)
-	$(F90) $(FFLAGS) -o $@ $(OBJ) $(LIBS)
+	# Link without '-x f95-cpp-input' (added by the mpi target): it would make
+	# gfortran read the object files as Fortran source.
+	$(F90) $(filter-out -x f95-cpp-input,$(FFLAGS)) -o $@ $(OBJ) $(LIBS)
 
 # ---- UTILS ----
 $(OBJDIR)/math_constants.o: $(UTILS)/math_constants.f90

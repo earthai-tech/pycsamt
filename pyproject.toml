@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.6.4"
+version     = "2.6.5"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
@@ -80,6 +80,13 @@ dependencies = [
     "empymod>=2.5; python_version >= '3.10'",
     # optional HDF5 elevation export/import (pycsamt.map.topo)
     "h5py>=3.8",
+    # pycsamt.site (Site/Sites, EDI loading) imports pycsamt.gis, which needs
+    # pyproj when GDAL is absent: a clean `pip install pycsamt` could not
+    # read an EDI file without it (found by the E1 sandbox run, 2026-11-07).
+    "pyproj>=3.3",
+    # PCSF reference implementation (github.com/earthai-tech/pcsf):
+    # pycsamt.format re-exports its schema, I/O and algorithms.
+    "pcsf>=0.1.0.dev0",
 ]
 
 # ---------------------------------------------------------------------------

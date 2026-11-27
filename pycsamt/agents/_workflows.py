@@ -34,6 +34,8 @@ __all__ = [
     "WORKFLOW_ALIASES",
     "classify_workflow",
     "normalise_workflow",
+    "WORKFLOW_FAMILIES",
+    "workflow_family",
 ]
 
 
@@ -880,6 +882,46 @@ def classify_workflow(
     if "full" not in matched and len(families) >= _COMPOUND_MIN_FAMILIES:
         return "full"
     return matched[0]
+
+
+#: Analysis families: a family id and the registry ids that are its
+#: sub-tools (identical description, or the correction category / plot of the
+#: same analysis). Used to compare two routes that name different but
+#: equivalent ids (``strike`` vs ``phase_analysis``).
+WORKFLOW_FAMILIES: dict[str, frozenset[str]] = {
+    "ai_inversion": frozenset({"ai_inversion", "inv1d"}),
+    "phase_analysis": frozenset({
+        "phase_analysis", "strike", "dimensionality", "strike_profile",
+        "phase_tensor_map", "pt_psection", "pt_strip", "pt_strip_grid"}),
+    "static_shift": frozenset({
+        "static_shift", "corr_ss_ama", "corr_ss_loess", "corr_ss_bilateral",
+        "corr_ss_refmedian", "corr_ss_emap", "corr_strat_static_shift"}),
+    "denoise": frozenset({
+        "denoise", "corr_notch", "corr_smooth_logfreq",
+        "corr_smooth_rho_phase", "corr_strat_noise"}),
+    "tipper": frozenset({"tipper", "tipper_plot"}),
+    "pre_inversion": frozenset({
+        "pre_inversion", "inversion_prep", "occam2d", "modem", "mare2dem"}),
+    "qc": frozenset({"qc", "validator", "corr_strat_qc"}),
+    "sensitivity": frozenset({"sensitivity"}),
+}
+_FAMILY_OF = {wf: fam for fam, ids in WORKFLOW_FAMILIES.items() for wf in ids}
+
+
+def workflow_family(workflow: str | None) -> str | None:
+    """Return the analysis family of *workflow* (itself when it has none).
+
+    >>> workflow_family("strike")
+    'phase_analysis'
+    >>> workflow_family("report")
+    'report'
+    >>> workflow_family(None) is None
+    True
+    """
+    if not workflow:
+        return None
+    wf = normalise_workflow(workflow)
+    return _FAMILY_OF.get(wf, wf)
 
 
 def normalise_workflow(workflow: str) -> str:

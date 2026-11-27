@@ -465,8 +465,27 @@ Example:
 
 When embeddings are active, the index stores ``embeddings.npz`` alongside the
 manifest and chunk file.  The default embedding backend is OpenAI embeddings
-when an API key is supplied.  The interface is backend-agnostic, so a local
-embedding backend can be added without changing the retrieval callers.
+when an API key is supplied.  The interface is backend-agnostic, and
+``OllamaEmbeddingBackend`` (in ``pycsamt.assistant.rag.embeddings``) embeds
+with an open-weight model served by a local Ollama server instead:
+
+.. code-block:: bash
+   :linenos:
+
+   ollama pull nomic-embed-text
+   python -m pycsamt.assistant.rag build --embed --embed-provider ollama
+   python -m pycsamt.assistant.rag query "static shift correction" --dense --embed-provider ollama
+
+The Ollama backend needs no API key, sends no text off the machine and is
+allowed in local-only mode.  It posts batches of 32 chunks to
+``/api/embed`` on ``$OLLAMA_HOST`` (default ``http://127.0.0.1:11434``) and
+L2-normalises the returned vectors.  The default model is
+``nomic-embed-text``.  ``--embed-model`` accepts another tag at build
+time, but the query path always resolves the default model, so keep the
+default unless the query side is changed too; vectors from two models
+are not comparable.  The
+manifest records the backend as ``ollama:<model>``, which makes the dense
+index reproducible from the model tag alone.
 
 The dense path is fused with the lexical ranking using :term:`Reciprocal
 Rank Fusion` rather than raw score fusion.  This matters because BM25 scores

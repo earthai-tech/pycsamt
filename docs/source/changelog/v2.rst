@@ -10,6 +10,77 @@ each release.
 
 ----
 
+.. _changelog-unreleased:
+
+Unreleased (2.6.6) |Feature| |Fix| |Docs|
+-----------------------------------------
+
+Changes on the ``v2`` branch that are not part of the 2.6.5 release.
+
+Added
+~~~~~
+
+* |Feature| ``pycsamt.emtools.fieldqc`` -- field QC for noisy surveys:
+  ``detect_polarity``/``correct_polarity``/``polarity_table`` (per-mode
+  quadrant test; a flip of an electric or magnetic channel),
+  ``find_duplicate_stations``, ``hampel_mask``, ``point_qc_flags`` and
+  ``point_qc_table`` (per-point error, quadrant, spike and
+  neighbour-phase flags), ``detect_band_break`` and
+  ``estimate_static_shift_neighbours`` (local-median static shift per
+  mode, applied only with enough QC-good points and within bounds).
+* |Feature| ``pycsamt.emtools.frames`` -- ``rotate_tensor`` (multiples
+  of 90 degrees applied as an exact signed permutation, so per-element
+  NaN masks follow their element), ``rotate_meas``, ``frame_azimuth``
+  and ``to_frame`` (rotate an EDI to a geographic, profile or strike
+  frame and record it in ZROT).
+* |Feature| ``pycsamt.gis.stations`` -- ``read_station_table``
+  (CSV/TXT/XLS(X), with or without header), ``to_wgs84``,
+  ``compare_crs`` and ``embed_station_coordinates``, which writes
+  coordinates into EDI headers matched by station name, not file order.
+* |Feature| ``pycsamt.ts.atexhg`` -- ``read_atexhg`` and
+  ``read_atexhg_header`` for the binary ``<ATEXHG>`` ``.atts``
+  time-series container, with optional per-channel gain correction
+  (``apply_gain=True``); ``pycsamt.ts.calibrate`` removes a coil
+  transfer function by water-levelled spectral division.
+
+Fixed
+~~~~~
+
+* |Fix| ``MTBase.phase_tensor_params`` returned the phase-tensor
+  azimuth and skew swapped; :math:`\alpha` and :math:`\beta` now follow
+  Caldwell et al. (2004), with :math:`\beta` folded into
+  :math:`(-45^\circ, 45^\circ]`.
+* |Fix| ``emtools`` phase-tensor skew is folded into the same range;
+  out-of-quadrant phases no longer inflate :math:`|\beta|` towards
+  :math:`90^\circ`, which had flagged nearly every station of a noisy
+  AMT survey as ``high_skew``.
+* |Fix| ``plot_topo_section(sites=...)`` pairs elevations with stations
+  by name instead of container order; ``extract_chainage`` gains
+  ``order="auto"``; ``show_stations=False`` draws no markers.
+* |Fix| ModEM 2-D: ``ModEmModel2D.write`` writes earth layers only and
+  station positions are shifted to the grid's left edge, as Mod2DMT
+  expects. ModEM 3-D: ``ModEmModel3D.from_widths`` and
+  ``centre_origin()`` build centred custom grids; ``write()`` warns
+  about a corner origin.
+* |Fix| ``EDIFile.write`` updates ``>=MTSECT NFREQ`` from the current
+  impedance length; free-text ``>INFO`` lines containing ``=`` are kept
+  on write, and non-standard ``KEY=VALUE`` lines remain attributes.
+* |Fix| The Dash session cache reads through diskcache-community's
+  ``SafeDisk`` (``diskcache-community`` added to the ``web`` extra);
+  contributed by August Vi.
+* |Fix| ``CoordinateInjector`` no longer defaults to the invalid
+  EPSG code 15921.
+
+Documentation
+~~~~~~~~~~~~~
+
+* |Docs| New user-guide pages :doc:`/user_guide/agents/review_gate` and
+  :doc:`/user_guide/agents/plugins`; ``pycsamt.agents.plugins`` in the
+  API reference; the Occam2D guide documents the mesh-depth check and
+  ``x_margin``; the RAG guide documents ``OllamaEmbeddingBackend``.
+
+----
+
 .. _changelog-2-6-5:
 
 2.6.5 |Feature| |Fix| |Enhancement| |Docs| |Build| |Tests|

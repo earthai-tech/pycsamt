@@ -55,3 +55,17 @@ Build and compatibility |Build|
 
 ``pyproj`` and ``pcsf`` are new runtime dependencies. The ModEM 2-D/3-D
 and Occam2D build scripts work with gfortran 10 or newer.
+
+Further reading
+~~~~~~~~~~~~~~~
+
+* :doc:`/user_guide/agents/review_gate` -- validation, route cross-check
+  and plan-hash approval.
+* :doc:`/user_guide/agents/plugins` -- the agent plugin interface and the
+  MTpy example.
+* :ref:`models_occam2d` -- the mesh-depth check and ``x_margin``.
+* :doc:`/user_guide/emtools/tensor` -- ``rotation_suppression_table`` and
+  ``plot_rotation_summary``.
+* :doc:`/user_guide/agents/orchestrator` -- the ``field_inversion``
+  workflow.
+* :doc:`/user_guide/agents/assistant_rag` -- ``OllamaEmbeddingBackend``.

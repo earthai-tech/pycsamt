@@ -523,7 +523,7 @@ The backend-neutral inversion API can drive the same native workflow through
    ...     method="mt",
    ...     dimension="2d",
    ...     backend="occam2d",
-   ...     data="data/AMT/WILLY_DATA/L18PLT",
+   ...     data="data/AMT/WILLY_DATA/L22PLT",
    ...     workdir="runs/profile_a_occam2d_backend_neutral",
    ...     run_external=False,
    ...     backend_options={
@@ -553,6 +553,87 @@ and inspect ``OccamConfig`` directly rather than trust a nested dictionary.
 With ``run_external=False``, pyCSAMT prepares or validates the native
 directory without requiring the external binary to run. This is useful for
 documentation, cluster workflows, and dry-run checks.
+
+Mesh Depth Check
+~~~~~~~~~~~~~~~~
+
+When the backend builds the input files, it also compares the depth of
+the mesh with the depth the data can sense. A mesh that ends above the
+penetration depth of the longest periods truncates the forward problem:
+the bottom boundary sits inside the volume that the data see, the
+computed responses are biased, and the inversion tends to stall near its
+starting half-space. The Occam2D mesh grows geometrically, so with top
+thickness :math:`h_0` (``cell_size_vertical_top``, in m), growth factor
+:math:`s` (``depth_scale``) and :math:`n` earth layers (``n_layers``)
+its depth is
+
+.. math::
+   :label: eq-occam2d-mesh-depth
+
+   z_{\mathrm{mesh}} = \min\!\left(h_0\,\frac{s^{n} - 1}{s - 1},\;
+   z_{\max}\right),
+
+where :math:`z_{\max}` is ``max_depth``. The depth sensed by the data is
+estimated with the :term:`Bostick depth`
+
+.. math::
+   :label: eq-occam2d-bostick-check
+
+   D = 356\,\sqrt{\tilde\rho_a\,T_{\max}}\quad[\mathrm{m}],
+
+where :math:`T_{\max}` is the longest period (s), that is the inverse of
+the lowest frequency in the data file, and :math:`\tilde\rho_a`
+(:math:`\Omega\,\mathrm{m}`) is the median TE and TM apparent
+resistivity of all stations at that frequency. When
+:math:`z_{\mathrm{mesh}} < D`, the result carries a warning. The status
+stays ``ready`` because the files are valid; in an agent workflow the
+warning is passed to ``InversionBackendAgent`` and shown with the run
+for review. The check is a guard against an obviously short mesh, not a
+resolution analysis: :math:`D` is a one-dimensional estimate from the
+median station.
+
+The defaults show why the check matters. With :math:`h_0 = 10` m,
+:math:`s = 1.2` and :math:`n = 30`, the geometric series reaches about
+11.8 km, but the default ``max_depth`` of 1500 m stops it at 1.5 km.
+The AMT line L22PLT reaches 1 Hz, where the median apparent resistivity
+gives a Bostick depth near 14 km:
+
+.. code-block:: pycon
+   :linenos:
+
+   >>> from pycsamt.inversion import InversionConfig, InversionWorkflow
+   >>> from pycsamt.site import Sites
+
+   >>> sites = Sites.from_any("data/AMT/WILLY_DATA/L22PLT")
+   >>> def prepare(native, workdir):
+   ...     cfg = InversionConfig(
+   ...         method="mt", dimension="2d", backend="occam2d",
+   ...         data="data/AMT/WILLY_DATA/L22PLT", workdir=workdir,
+   ...         run_external=False, backend_options={"config": native},
+   ...     )
+   ...     return InversionWorkflow(cfg).run(data=sites)
+
+   >>> shallow = prepare(
+   ...     {"modes": ["TE", "TM"], "n_layers": 32},
+   ...     "runs/l22_occam2d_shallow",
+   ... )
+   >>> print(shallow.status)
+   ready
+   >>> print(shallow.warnings[0])
+   Occam2D mesh reaches 1.5 km but the data at the lowest frequency (1.01 Hz) sense ~13.7 km (median Bostick depth); the truncated mesh biases the forward response. Increase n_layers, cell_size_vertical_top or depth_scale.
+
+   >>> deep = prepare(
+   ...     {"modes": ["TE", "TM"], "n_layers": 40, "max_depth": 20000.0},
+   ...     "runs/l22_occam2d_deep",
+   ... )
+   >>> print(deep.status, deep.warnings)
+   ready []
+
+The message names the growth parameters, but here the cap was
+``max_depth``: raising ``n_layers`` alone leaves the mesh at 1.5 km.
+Forty layers with ``max_depth`` set to 20 km clear the check. Deeper
+meshes cost more cells and runtime, so set ``max_depth`` from the
+lowest frequency of the data and not from habit.
 
 Load Results
 -------------
@@ -730,75 +811,55 @@ buries the near-surface structure in a couple of screen pixels. Passing
 and since ``PlotModel`` only marks stations with unlabelled triangles, station
 names can be added afterward directly on the returned ``Axes``.
 
-``PlotModel`` also centers its x-axis on the mesh's own cell-center mean, not
-on the stations. This particular mesh has :term:`padding <mesh>` on only one
-side -- it reaches 1.82 km past the last station, S46, but 0 km past the
-first, S00 -- so the mesh mean sits about 665 m (roughly 13 average
-station-spacings) to the right of the stations' own mean. The practical
-effect is a profile that reads as shifted toward the padding-heavy side.
-Re-centering on the stations instead means shifting the pcolormesh image by
-that same offset, using an affine transform so the resistivity image itself
-moves rather than being redrawn:
+``PlotModel`` draws the section in the survey frame: the horizontal axis
+is the station offset along the profile, centred on the midpoint of the
+first and last stations, so the triangles sit over the fine part of the
+mesh whatever the padding looks like. ``x_margin`` controls the view. The
+default ``0.2`` shows the station span plus 20 % of it on each side and
+crops the padding cells; ``x_margin=None`` shows the whole mesh. Here the
+47 stations span 2.31 km and the mesh, padding included, about 3.64 km:
 
 .. code-block:: pycon
    :linenos:
 
-   >>> import matplotlib.transforms as mtransforms
    >>> from pycsamt.models.occam2d import PlotModel
 
-   >>> plotter = PlotModel(result, depth_max=1000.0, figsize=(14, 6.5))
-   >>> fig = plotter.plot()
+   >>> fig = PlotModel(result, depth_max=1000.0, figsize=(14, 6.5)).plot()
    >>> ax = fig.axes[0]
+   >>> print([round(float(v), 3) for v in ax.get_xlim()])
+   [-1.619, 1.619]
+   >>> full = PlotModel(result, depth_max=1000.0, x_margin=None).plot()
+   >>> print([round(float(v), 3) for v in full.axes[0].get_xlim()])
+   [-1.817, 1.821]
 
-   >>> cell_centers = (result.mesh.x_nodes[:-1] + result.mesh.x_nodes[1:]) / 2.0
-   >>> x_shift_mesh = float(cell_centers.mean())
-   >>> x_shift_station = float(result.data.offsets.mean())
-   >>> delta_km = (x_shift_mesh - x_shift_station) / 1000.0
-   >>> print(round(delta_km, 4))
-   0.6651
-
-   >>> quad = ax.collections[0]  # the pcolormesh image
-   >>> quad.set_transform(mtransforms.Affine2D().translate(delta_km, 0) + ax.transData)
-
-   >>> station_x = ax.lines[0].get_xdata() + delta_km  # shift the triangles too
-   >>> ax.lines[0].set_xdata(station_x)
-
-   >>> xlo, xhi = ax.get_xlim()  # follow the same shift -- a transform alone
-   >>> ax.set_xlim(xlo + delta_km, xhi + delta_km)  # does not move the view
-
+   >>> station_x = ax.lines[0].get_xdata()  # the station triangles
    >>> ylo, _ = ax.get_ylim()               # (1004.0, 0.0): depth axis is inverted
    >>> for x, name in zip(station_x, result.data.sites):
-   ...     ax.text(x, -0.06 * ylo, name, rotation=90, ha="center", va="bottom",
-   ...             fontsize=6, rotation_mode="anchor")
-   >>> ax.set_ylim(ylo, -0.22 * ylo)         # reserve headroom for the labels
+   ...     _ = ax.text(x, -0.06 * ylo, name, rotation=90, ha="center",
+   ...                 va="bottom", fontsize=6, rotation_mode="anchor")
+   >>> _ = ax.set_ylim(ylo, -0.22 * ylo)    # reserve headroom for the labels
+   >>> fig.savefig("occam2d_model_section.png", dpi=200, bbox_inches="tight")
 
-Two things are easy to miss here. First, rotated text is anchored on its
-*unrotated* bounding box unless told otherwise, which visibly shifts
-90-degree labels off to one side of the point they are meant to mark;
-``rotation_mode="anchor"`` applies ``ha``/``va`` after rotation instead, so
-each label lines up exactly above its triangle. Second, a transform only
-changes where an artist is *drawn* -- it does not touch the axes' own view
-limits, so without explicitly shifting ``xlim`` by the same ``delta_km`` the
-view keeps showing the old, unshifted window: part of the resistivity image
-would run off the right edge while a blank gap opens up on the left where
-the mesh used to be. The full mesh width -- padding included -- stays
-visible; only the coordinate the profile is centered on changes.
+Rotated text is anchored on its *unrotated* bounding box unless told
+otherwise, which shifts 90-degree
+labels to one side of the point they mark; ``rotation_mode="anchor"``
+applies ``ha``/``va`` after rotation, so each label lines up above its
+triangle.
 
 .. figure:: ../../images/user_guide/models/occam2d_model_section.png
-   :alt: Occam2D reconstructed 2-D resistivity section cropped to 1 km depth and re-centered on the station spread, with station names labelled above the profile.
+   :alt: Occam2D 2-D resistivity section in the survey frame, cropped to 1 km depth and to the station span plus a 20 percent margin, with station names above the profile.
    :align: center
    :width: 95%
 
-   The same model as before, cropped to 1 km depth instead of the full 6 km
-   mesh, re-centered on the stations rather than on the mesh's own
-   padding-skewed mean, and still showing the full mesh width on both
-   sides -- nothing is cropped out. A series of separate near-surface
-   conductive fingers (green/yellow, mostly above 100-300 m) sit under
-   stations S16 through roughly S42, with S00-S15 and S43-S46 over resistive
-   background, and the wide resistive margin to the right of S46 is visibly
-   mesh padding rather than surveyed ground. That asymmetry -- padding on
-   one side only -- is worth checking with real numbers rather than assumed
-   away, exactly the "is the mesh far wider than the interpreted target"
+   The converged model cropped to 1 km depth and, with the default
+   ``x_margin=0.2``, to the station span plus 20 % on each side, with
+   each station triangle over its own column. Separate near-surface
+   conductive pockets (green to yellow, above about 200 m) sit under
+   S04-S05, S10-S11, S16-S17 and S22-S23; the strongest, reaching red,
+   lies under S38-S45. A weaker conductive band dips from about 250 m
+   under S10 to about 600 m under S30-S37. The padding cells beyond the
+   margin are hidden; use ``x_margin=None`` to check them
+   against the "is the mesh far wider than the interpreted target"
    question from `Mesh And Model Review`_.
 
 .. figure:: ../../images/user_guide/models/occam2d_pseudosection_tm.png

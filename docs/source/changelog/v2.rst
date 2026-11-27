@@ -46,6 +46,20 @@ Added
 Fixed
 ~~~~~
 
+* |Fix| Agent Master chat: the safeguards of the agent API now apply in
+  the chat. The orchestrator cross-check runs on the workflow the chat
+  picks (a disagreement with the keyword route adds a risk flag); a plan
+  held at the review gate is shown with an **Approve and run** button
+  that resends that exact plan with its ``approved_plan_hash``
+  (previously a held plan could not be approved from the chat); and
+  catalogue corrections run through the orchestrator instead of calling
+  ``ToolAgent`` directly, so they are validated, gated and recorded. Each
+  correction id is now a registered two-step workflow (``load``,
+  ``correction``) served by the new ``CorrectionStepAgent``. See
+  :doc:`/user_guide/agents/review_gate`.
+* |Fix| ``WorkflowPlan`` accepts a list of existing EDI files as
+  ``data_path`` (the chat's selected survey lines), and approval hashes
+  identify such inputs file by file; a list used to fail validation.
 * |Fix| ``MTBase.phase_tensor_params`` returned the phase-tensor
   azimuth and skew swapped; :math:`\alpha` and :math:`\beta` now follow
   Caldwell et al. (2004), with :math:`\beta` folded into
@@ -74,6 +88,8 @@ Fixed
 Documentation
 ~~~~~~~~~~~~~
 
+* |Docs| :doc:`/user_guide/agents/review_gate` describes the review cycle
+  in the Agent Master chat.
 * |Docs| New user-guide pages :doc:`/user_guide/agents/review_gate` and
   :doc:`/user_guide/agents/plugins`; ``pycsamt.agents.plugins`` in the
   API reference; the Occam2D guide documents the mesh-depth check and

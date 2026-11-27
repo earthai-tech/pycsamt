@@ -616,7 +616,7 @@ class TestPlotAndToolDispatchRouting:
         )
         assert called["kind"] == "strike"
 
-    def test_correction_workflow_sets_corr_wf_and_fn_name(self, monkeypatch):
+    def test_correction_workflow_runs_through_orchestrator(self, monkeypatch):
         _patch_router(monkeypatch, WORKFLOW, workflow=None)
         corr_wf = next(iter(C._CORR_METHODS))
         _patch_context(monkeypatch, config={"workflow": corr_wf})
@@ -627,14 +627,18 @@ class TestPlotAndToolDispatchRouting:
             "classify_workflow",
             lambda text, default=None: corr_wf,
         )
-        called = {}
         monkeypatch.setattr(
-            C,
-            "_dispatch_tool",
-            lambda jid, edi_path, *, kind, params, step, label="": (
-                called.update(kind=kind, params=params)
-            ),
+            C, "_dispatch_tool",
+            lambda *a, **k: pytest.fail("corrections must not bypass the orchestrator"),
         )
+        captured = {}
+
+        def _fake_execute(self, input_data):
+            captured.update(input_data)
+            return AgentResult("success", "done",
+                               {"result": AgentResult("success", "inner", {})})
+
+        monkeypatch.setattr(orch_mod.WorkflowOrchestratorAgent, "execute", _fake_execute)
         jid = _new_job()
         C._run_agent(
             jid,
@@ -642,9 +646,9 @@ class TestPlotAndToolDispatchRouting:
             {"path": "/tmp/edis"},
             {"provider": "offline"},
         )
-        assert called["kind"] == "correction"
-        assert called["params"]["corr_wf"] == corr_wf
-        assert called["params"]["fn_name"] == C._CORR_METHODS[corr_wf]["fn"]
+        assert captured["config"]["workflow"] == corr_wf
+        assert "correction" in captured["config"]["step_params"]
+        assert "approved_plan_hash" not in captured
 
 
 class TestOrchestratorResultHandling:

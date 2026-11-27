@@ -821,6 +821,26 @@ _WORKFLOW_STEPS = {
     ],
 }
 
+# Catalogue corrections run as two-step workflows: load the survey, then apply
+# the selected method through CorrectionStepAgent (the same
+# CorrectionController chain the desktop correction section uses). Each
+# correction id is its own workflow, so its plan names the method and its
+# parameters and goes through validation, the cross-check, the review gate and
+# the provenance record like every other workflow.
+from ._corrections import CORRECTION_METHODS as _CORRECTION_METHODS  # noqa: E402
+
+_CORRECTION_CHAIN = [
+    ("load", "MTLoaderAgent", None, "Load EDI files"),
+    (
+        "correction",
+        "CorrectionStepAgent",
+        _ifn_load_sites,
+        "Apply the selected catalogue correction (corrected copy; inputs unchanged)",
+    ),
+]
+for _corr_wf in _CORRECTION_METHODS:
+    _WORKFLOW_STEPS.setdefault(_corr_wf, list(_CORRECTION_CHAIN))
+
 # Steps whose deliverable is an inversion input file set on disk.  These
 # receive the run's ``output_dir`` (in a per-code subfolder) even though
 # their ``input_fn`` chain only carries the upstream ``sites``.
@@ -1078,6 +1098,17 @@ class WorkflowOrchestratorAgent(BaseAgent):
 
         # Per-step params from the smart modal
         _step_params_cfg = config.get("step_params", {})
+        if workflow_type in _CORRECTION_METHODS:
+            # The correction step always applies the method its workflow id
+            # names, on the declared data (stratagem methods load the folder).
+            from ._corrections import fn_for
+
+            _corr = dict(_step_params_cfg.get("correction") or {})
+            _corr["corr_wf"] = workflow_type
+            _corr["fn_name"] = fn_for(workflow_type)
+            if isinstance(data_path, str) and data_path:
+                _corr.setdefault("path", data_path)
+            _step_params_cfg = {**_step_params_cfg, "correction": _corr}
 
         step_meta = []
         for _item in steps_spec:
@@ -1617,6 +1648,10 @@ def _build_registry(
         lambda: _import("interpretation", "InterpretationAgent")(),
     )
     _try("ReportAgent", lambda: _import("report", "ReportAgent")())
+    _try(
+        "CorrectionStepAgent",
+        lambda: _import("tooling", "CorrectionStepAgent")(),
+    )
     _try(
         "CodeGenerationAgent",
         lambda: _import("code_gen", "CodeGenerationAgent")(),

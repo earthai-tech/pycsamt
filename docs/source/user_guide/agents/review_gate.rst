@@ -225,6 +225,37 @@ send back the hash of the plan that was displayed, never a hash
 recomputed after the user edited something.
 
 
+In The Agent Master Chat
+------------------------
+
+The Agent Master web chat (``pycsamt.app.agent_master``) follows that
+cycle. Since 2.6.6:
+
+* the chat picks the workflow from the parameter form, the keyword
+  registry or the language model, and the orchestrator cross-check then
+  compares that choice with the keyword route; a disagreement adds a risk
+  flag, so the plan goes to the gate;
+* a held plan is shown in the chat with its workflow, data, steps and
+  risk flags and an **Approve and run** button. The button resends the
+  plan that was displayed, with its ``approved_plan_hash``. The approval
+  is kept in the server's memory only; it can be used once, and a restart
+  of the app invalidates it;
+* catalogue corrections (static shift, noise removal, rotation,
+  coordinate and Stratagem methods) run as orchestrator workflows, one per
+  correction id, with a ``load`` step and a ``correction`` step. They are
+  validated, cross-checked, gated when flagged and recorded. The corrected
+  data stay in memory for the post-processing dialog; the input files are
+  not changed.
+
+Plots and the other tools (strike, dimensionality, station validation,
+coordinates, elevation, format conversion, batch plot export, the
+frequency editor and the layered-model builder) still run directly and
+are listed in the workflow history. None of them modifies the input
+files: the converter and the batch export write new files to an export
+folder, and the frequency editor, like a correction, returns an edited
+copy that reaches the session only through the post-processing dialog.
+
+
 Reading The Result
 ------------------
 

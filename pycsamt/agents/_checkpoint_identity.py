@@ -23,7 +23,13 @@ def file_hash(path: Path) -> str:
 
 
 def data_identity(path: str | Path) -> dict:
-    """Identify an input file/directory by names and bytes, not timestamps."""
+    """Identify an input file/directory by names and bytes, not timestamps.
+
+    A list of paths (for example the EDI files of selected survey lines) is
+    identified item by item, in order.
+    """
+    if isinstance(path, (list, tuple)):
+        return {"paths": [data_identity(item) for item in path]}
     path = Path(path).resolve(strict=True)
     if path.is_file():
         return {"path": str(path), "sha256": file_hash(path)}

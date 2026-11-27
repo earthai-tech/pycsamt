@@ -98,10 +98,16 @@ class Occam2DBackend(BaseInversionBackend):
         """
         self.check_supported()
         cfg = self.config
+        if "prepared_project" in cfg.backend_options:
+            if data is not None:
+                raise ValueError("Prepared project does not accept a data override.")
+            from ._occam_project import run_project
+            return run_project(cfg)
         source = cfg.data if data is None else data
         workdir = Path(cfg.workdir)
         workdir.mkdir(parents=True, exist_ok=True)
         warnings: list[str] = []
+        masked_rows: list[dict] = []
         files: dict[str, str] = {}
         native = None
         status = "prepared"
@@ -134,7 +140,11 @@ class Occam2DBackend(BaseInversionBackend):
                 build_options.setdefault("error_floor_phase", cfg.phase_error)
                 builder.build(**build_options)
                 native = builder
+                masked_rows = list(getattr(builder.data, "masked", []) or [])
                 files = _builder_files(builder)
+                depth_note = _mesh_depth_warning(builder.data, builder.mesh)
+                if depth_note:
+                    warnings.append(depth_note)
             except Exception as exc:
                 warnings.append(f"Occam2D preparation failed: {exc}")
                 status = "needs_review"
@@ -173,10 +183,14 @@ class Occam2DBackend(BaseInversionBackend):
             if cfg.run_external:
                 try:
                     exit_code = runner.run(
-                        max_iter=runner_options.get("max_iter", None),
+                        # The generic InversionConfig.max_iter is the
+                        # caller's iteration budget; a runner-specific
+                        # value takes precedence when given.
+                        max_iter=runner_options.get("max_iter", cfg.max_iter),
                         target_misfit=runner_options.get(
                             "target_misfit", None
                         ),
+                        timeout=runner_options.get("timeout"),
                         auto_compile=bool(
                             runner_options.get("auto_compile", False)
                         ),
@@ -195,12 +209,27 @@ class Occam2DBackend(BaseInversionBackend):
                     status = "needs_review"
 
         rms = float("nan")
+        n_iter = 0
+        converged = None
+        target = None
         try:
+            # A failed requested execution must not be overwritten by stale
+            # models already present in the working directory.
+            if status == "needs_review" or (cfg.run_external and not executed):
+                raise RuntimeError("current execution did not complete successfully")
             loaded = OccamResult(workdir, config=occam_cfg)
             if getattr(loaded, "rho_2d", None) is not None:
                 native = loaded
                 status = "loaded"
                 rms = float(getattr(loaded, "final_rms", float("nan")))
+                best = getattr(loaded, "best_iter", None)
+                if best is not None:
+                    n_iter = int(getattr(best, "iteration", 0) or 0)
+                    # Occam's own flag: the target misfit was attained.
+                    # A stalled run ("may have reached minimum possible
+                    # RMS") is loaded but not converged.
+                    converged = bool(getattr(best, "misfit_reached", False))
+                    target = getattr(best, "target_misfit", None)
         except Exception as exc:
             warnings.append(f"Occam2D result loading skipped: {exc}")
 
@@ -211,6 +240,7 @@ class Occam2DBackend(BaseInversionBackend):
             status=status,
             data=source,
             rms=rms,
+            n_iter=n_iter,
             workdir=str(workdir),
             files=files,
             native=native,
@@ -224,8 +254,52 @@ class Occam2DBackend(BaseInversionBackend):
                 "command": command,
                 "binary": occam_cfg.binary_name,
                 "startup_file": occam_cfg.startup_file,
+                "converged": converged,
+                # Rows removed by OccamConfig.phase_quadrant (QC record).
+                "masked_rows": masked_rows,
+                "target_misfit": target,
             },
         )
+
+
+def _mesh_depth_warning(data: Any, mesh: Any) -> str | None:
+    """Warn when the mesh is shallower than the data's penetration depth.
+
+    The Occam2D mesh depth is set by ``n_layers``, ``cell_size_vertical_top``
+    and ``depth_scale``; ``max_depth`` only caps it. A mesh that ends above
+    the depth the longest periods sense truncates the forward problem, and
+    the inversion then stalls near its starting half-space. The comparison
+    uses the median Niblett-Bostick depth ``356 * sqrt(rho_a * T)`` [m] of
+    the apparent-resistivity data at the lowest frequency.
+    """
+    import numpy as np
+
+    try:
+        z = np.asarray(getattr(mesh, "z_widths", []), dtype=float)
+        blocks = np.asarray(getattr(data, "data_blocks", []), dtype=float)
+        freqs = np.asarray(getattr(data, "frequencies", []), dtype=float)
+        if not z.size or not blocks.size or not freqs.size:
+            return None
+        n_air = int(getattr(mesh, "n_airlayers", 0) or 0)
+        mesh_depth = float(np.sum(z[n_air:]))
+        # Occam2D types 1/5: TE/TM log10 apparent resistivity.
+        rho_rows = blocks[np.isin(blocks[:, 2].astype(int), (1, 5))]
+        if not rho_rows.size:
+            return None
+        idx = rho_rows[:, 1].astype(int) - 1
+        f_low = float(np.min(freqs[idx]))
+        low = rho_rows[np.isclose(freqs[idx], f_low)]
+        depth = 356.0 * np.sqrt(10.0 ** float(np.median(low[:, 3])) / f_low)
+    except Exception:
+        return None
+    if mesh_depth >= depth:
+        return None
+    return (
+        f"Occam2D mesh reaches {mesh_depth / 1e3:.1f} km but the data at the "
+        f"lowest frequency ({f_low:.3g} Hz) sense ~{depth / 1e3:.1f} km "
+        "(median Bostick depth); the truncated mesh biases the forward "
+        "response. Increase n_layers, cell_size_vertical_top or depth_scale."
+    )
 
 
 def _occam_config(config_cls: Any, cfg: Any) -> Any:

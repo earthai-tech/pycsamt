@@ -374,13 +374,13 @@ class ModEmData(ModEmBase):
         p.parent.mkdir(parents=True, exist_ok=True)
 
         lines: list[str] = []
-        lines.append(f"# {self.comment}\n")
-        lines.append(
-            "# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) "
-            "Component Real Imag Error\n"
-        )
-
         for blk in self.blocks:
+            # The native 2-D reader consumes two header lines for each block.
+            lines.append(f"# {self.comment}\n")
+            lines.append(
+                "# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) "
+                "Component Real Imag Error\n"
+            )
             comp = blk["component_type"]
             sign = blk.get(
                 "sign_convention",
@@ -406,6 +406,8 @@ class ModEmData(ModEmBase):
 
             for row in rows:
                 period, sidx, x, y, z, comp_str, real, imag, err = row
+                if comp == "Full_Vertical_Components":
+                    comp_str = {"HZX": "TX", "HZY": "TY"}.get(comp_str, comp_str)
                 code = (
                     self.site_names[sidx]
                     if sidx < len(self.site_names)
@@ -491,6 +493,11 @@ class ModEmData(ModEmBase):
         ['Full_Impedance']
         """
         cfg = config or ModEmConfig()
+        if cfg.component_type == "Full_Vertical_Components":
+            raise NotImplementedError(
+                "Vertical transfer functions must be supplied as explicit ModEM blocks; "
+                "the impedance-only EDI builder cannot construct tipper observations."
+            )
         obj = cls(config=cfg, **kwargs)
 
         items = _normalise_source(source)
@@ -792,6 +799,10 @@ def _latlon_to_xy(
     lon_ref: float,
 ) -> tuple[float, float]:
     """Approximate lat/lon as local northing/easting metres."""
+    coordinates = np.asarray([lat, lon, lat_ref, lon_ref], dtype=float)
+    if (not np.isfinite(coordinates).all() or abs(lat) > 90 or abs(lat_ref) > 90
+            or abs(lon) > 180 or abs(lon_ref) > 180):
+        raise ValueError("Invalid geographic coordinates; expected latitude/longitude in degrees, not metre offsets.")
     R = 6_371_000.0
     dlat = np.radians(lat - lat_ref)
     dlon = np.radians(lon - lon_ref)

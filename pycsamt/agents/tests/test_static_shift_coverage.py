@@ -278,3 +278,34 @@ def test_ama_happy_path_saves_figures(no_llm_kw, loaded_sites, tmp_output):
     assert result["figure_paths"]
     for p in result["figure_paths"].values():
         assert Path(p).exists()
+
+
+def test_per_call_band_and_window_override_constructor(
+    no_llm_kw, loaded_sites, monkeypatch
+):
+    # Plan step_params reach the agent as input keys; they used to be
+    # ignored in favour of the constructor values.
+    import pycsamt.emtools.ss as ss
+
+    seen = {}
+
+    def _fake(sites, **k):
+        seen.update(k)
+        return sites
+
+    monkeypatch.setattr(ss, "correct_ss_ama", _fake)
+    agent = StaticShiftAgent(**no_llm_kw, method="ama", half_window=3)
+    agent.execute({"sites": loaded_sites, "pband": [1e-3, 1e-1], "half_window": 5})
+    assert seen["pband"] == (1e-3, 1e-1)
+    assert seen["half_window"] == 5
+
+
+def test_invalid_band_fails_before_correction(no_llm_kw, loaded_sites, monkeypatch):
+    import pycsamt.emtools.ss as ss
+
+    monkeypatch.setattr(
+        ss, "correct_ss_ama", lambda *a, **k: pytest.fail("must not run")
+    )
+    agent = StaticShiftAgent(**no_llm_kw, method="ama")
+    result = agent.execute({"sites": loaded_sites, "pband": [0.1, 0.001]})
+    assert result.status == "failed"

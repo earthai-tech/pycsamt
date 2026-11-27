@@ -24,7 +24,7 @@
        <div class="pyc-hero-copy">
          <div class="pyc-hero-badges">
            <span class="pyc-chip pyc-chip--accent"><i class="fa-solid fa-tag"></i> v2.0 · LGPL-3.0</span>
-           <span class="pyc-chip"><i class="fa-brands fa-python"></i> Python 3.9+</span>
+           <span class="pyc-chip"><i class="fa-brands fa-python"></i> Python 3.10+</span>
            <span class="pyc-chip"><i class="fa-solid fa-code-branch"></i> Open source</span>
          </div>
          <h1 class="pyc-hero-logo" aria-label="pyCSAMT">
@@ -71,20 +71,12 @@
            <a class="pyc-btn pyc-btn--primary" href="getting_started/index.html">
              <i class="fa-solid fa-rocket"></i> Get started
            </a>
-           <span class="pyc-dl">
-             <a class="pyc-btn pyc-btn--ghost pyc-btn--download"
-                href="applications/desktop/installation.html#applications-desktop-download">
-               <i class="fa-solid fa-download"></i> Download Desktop
-             </a>
-             <span class="pyc-dl-note">Windows &amp; Linux · no Python needed</span>
-           </span>
+           <a class="pyc-btn pyc-btn--ghost pyc-btn--download"
+              href="applications/desktop/installation.html#applications-desktop-download">
+             <i class="fa-solid fa-download"></i> Download Desktop
+           </a>
            <a class="pyc-btn pyc-btn--ghost" href="user_guide/index.html">
              <i class="fa-solid fa-book-open"></i> User guide
-           </a>
-           <a class="pyc-btn pyc-btn--ghost"
-              href="https://github.com/earthai-tech/pycsamt"
-              target="_blank" rel="noopener">
-             <i class="fa-brands fa-github"></i> GitHub
            </a>
          </div>
        </div>

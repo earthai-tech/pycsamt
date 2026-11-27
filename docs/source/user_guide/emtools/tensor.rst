@@ -27,6 +27,7 @@ tools expose two main workflows:
        coherence without being dominated by static-shift amplitude.
    * - Impedance-tensor editing
      - ``rotate``, ``rotate_by_map``, ``rotate_z_to_strike``,
+       ``rotation_suppression_table``, ``plot_rotation_summary``,
        ``antisymmetrize``, ``orient_from_sensors``, ``sigma_clip_z``,
        ``balance_offdiag``, ``invert``
      - Apply deliberate preprocessing operations to ``Z`` before
@@ -1174,6 +1175,16 @@ compare phase-tensor and impedance diagnostics before and after.
    * - ``rotate_z_to_strike``
      - Estimates a tensor strike for each station and rotates by it.
      - Exploratory tensor-level strike rotation.
+   * - ``rotation_suppression_table``
+     - Mean :math:`|Z_{xx}|/|Z_{xy}|` per station before and after a
+       rotation angle.
+     - Judge whether a candidate rotation moves energy off the diagonal.
+   * - ``plot_rotation_summary``
+     - Before/after bar chart of that ratio; long profiles wrap onto
+       stacked rows (``max_per_row``) and outliers are capped
+       (``ylim="auto"``) so every station stays readable.
+     - Publication or report figure of a rotation's effect; export with
+       :func:`~pycsamt.api.plot.save_fig` (``dpi=300``, ``fmt="pdf"``).
    * - ``antisymmetrize``
      - Enforces off-diagonal antisymmetry.
      - Prepare data for methods that assume ``Zxy = -Zyx``.

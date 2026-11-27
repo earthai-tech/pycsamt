@@ -168,9 +168,20 @@ def test_register_format_rewrites_alias_technology_to_canonical_name():
 
 
 def test_list_airborne_formats_without_filter_returns_everything():
+    # Register its own entry instead of relying on an earlier test: the
+    # order and worker of tests is not guaranteed under xdist.
+    register_airborne_format(
+        AirborneFormatDefinition(
+            name="test_list_all_formats_entry",
+            technology="ztem",
+        ),
+        replace=True,
+    )
     all_formats = list_airborne_formats()
     assert isinstance(all_formats, tuple)
-    assert any(fmt.name == "test_alias_technology_format" for fmt in all_formats)
+    names = {fmt.name for fmt in all_formats}
+    assert "test_list_all_formats_entry" in names
+    assert {fmt.technology for fmt in all_formats} >= {"ztem"}
 
 
 def test_list_airborne_formats_unknown_technology_raises():

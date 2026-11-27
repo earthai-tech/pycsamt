@@ -45,6 +45,14 @@ _OCCAM_CONFIG_SCHEMA = [
         "Data Options",
     ),
     ConfigParameter(
+        "phase_quadrant",
+        "Optional (min, max) phase window in degrees, e.g. (0, 90). "
+        "Rows whose written TE/TM phase falls outside it are dropped "
+        "together with the matching resistivity row and counted in "
+        "OccamData.masked. None keeps every finite row.",
+        "Data Options",
+    ),
+    ConfigParameter(
         "freq_min",
         "Optional lower frequency limit in hertz. Frequencies "
         "below this value are excluded when building data from "
@@ -216,6 +224,13 @@ class OccamConfig:
         Absolute phase error floor in degrees. This keeps
         phase rows with unrealistically small source errors
         from dominating the normalized data misfit.
+    phase_quadrant : tuple of float or None
+        Optional ``(min, max)`` window in degrees for the written phase
+        (after the TM :math:`+180^\circ` shift and wrapping to
+        :math:`(-180^\circ, 180^\circ]`). A 2-D passive-source response
+        lies in the first quadrant, so ``(0, 90)`` drops out-of-quadrant
+        rows (and their resistivity partner), which a 2-D model cannot
+        fit. ``None`` (default) keeps all finite rows.
     freq_min : float or None
         Lower frequency limit in hertz. Frequencies below this
         value are excluded when built from EDI sources.
@@ -392,6 +407,7 @@ class OccamConfig:
     modes: list[str] = field(default_factory=lambda: ["TE", "TM"])
     error_floor_rho: float = 0.05
     error_floor_phase: float = 0.5
+    phase_quadrant: tuple[float, float] | None = None
     freq_min: float | None = None
     freq_max: float | None = None
 

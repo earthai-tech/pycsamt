@@ -29,12 +29,14 @@ from pycsamt.api import read_edis
 from pycsamt.emtools._core import _get_z_block, _iter_items
 from pycsamt.emtools.source_effects import correct_near_field
 from pycsamt.pipeline import Pipeline, configure_pipe, reset_pipe
+from pycsamt.pipeline.tests._outdirs import pipe_results_dir
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DATA_MT = _PROJECT_ROOT / "data" / "MT" / "kap03lmt_edis"
 _DATA_AMT = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
 _DATA_CSAMT = _PROJECT_ROOT / "data" / "CSAMT"
-_OUTROOT = _PROJECT_ROOT / "pipe_results" / "smart_presets_test"
+# One folder per xdist worker: see _outdirs.py.
+_OUTROOT = pipe_results_dir("smart_presets_test")
 
 _N_STATIONS = 5
 

@@ -17,6 +17,7 @@ import pytest
 
 from pycsamt.pipeline import StepResult
 from pycsamt.pipeline._dashboard import make_dashboard_html
+from pycsamt.pipeline.tests._outdirs import pipe_results_dir
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Test doubles
@@ -279,7 +280,8 @@ class TestEmptyStepResults:
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DATA_DIR = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
-_OUTDIR = _PROJECT_ROOT / "pipe_results" / "dashboard_test"
+# One folder per xdist worker: see _outdirs.py.
+_OUTDIR = pipe_results_dir("dashboard_test")
 
 pytestmark_willy = pytest.mark.skipif(
     not _DATA_DIR.exists(),

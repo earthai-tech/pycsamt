@@ -34,12 +34,16 @@ __all__ = [
     "WORKFLOW_ALIASES",
     "classify_workflow",
     "normalise_workflow",
+    "WORKFLOW_FAMILIES",
+    "workflow_family",
 ]
 
 
 # ── canonical workflow descriptions ─────────────────────────────────────────────
 
 WORKFLOW_DESCRIPTIONS: dict[str, str] = {
+    "conventional_inversion": "Execute an explicit conventional physics inversion project",
+    "field_inversion": "EDI -> QC -> static shift -> rotation -> executed conventional inversion",
     # --- core processing ---
     "qc": "Data quality control and preprocessing",
     "static_shift": "Static-shift detection and correction",
@@ -105,6 +109,14 @@ WORKFLOW_DESCRIPTIONS: dict[str, str] = {
 # "gcn" does not get swallowed by "inversion".
 
 WORKFLOW_KEYWORDS: dict[str, list[str]] = {
+    "conventional_inversion": ["conventional inversion", "conventional occam2d inversion", "execute prepared occam2d"],
+    "field_inversion": [
+        "field inversion",
+        "invert the field data",
+        "run the occam2d inversion of line",
+        "run occam2d inversion on line",
+        "execute the occam2d inversion of line",
+    ],
     # ── plotting tasks (highest priority: the phase-tensor pseudo-section
     # must win over the bare "phase tensor" → phase_analysis match) ──────────
     # pt_strip_grid / pt_strip come before pt_psection: "phase tensor ellipse
@@ -806,6 +818,10 @@ _STAGE_FAMILY: dict[str, str] = {
 
 _COMPOUND_MIN_FAMILIES = 3
 
+#: Workflows that execute an external solver on declared inputs. They are
+#: review-gated and exempt from the compound-request override.
+_EXECUTION_WORKFLOWS = frozenset({"conventional_inversion", "field_inversion"})
+
 
 def classify_workflow(
     text: str,
@@ -857,10 +873,55 @@ def classify_workflow(
     ]
     if not matched:
         return default
+    # Explicit execution chains already contain their own stages; naming
+    # those stages must not reroute the request to the generic "full"
+    # pipeline (which runs different steps, including an AI inversion).
+    if matched[0] in _EXECUTION_WORKFLOWS:
+        return matched[0]
     families = {_STAGE_FAMILY[wf] for wf in matched if wf in _STAGE_FAMILY}
     if "full" not in matched and len(families) >= _COMPOUND_MIN_FAMILIES:
         return "full"
     return matched[0]
+
+
+#: Analysis families: a family id and the registry ids that are its
+#: sub-tools (identical description, or the correction category / plot of the
+#: same analysis). Used to compare two routes that name different but
+#: equivalent ids (``strike`` vs ``phase_analysis``).
+WORKFLOW_FAMILIES: dict[str, frozenset[str]] = {
+    "ai_inversion": frozenset({"ai_inversion", "inv1d"}),
+    "phase_analysis": frozenset({
+        "phase_analysis", "strike", "dimensionality", "strike_profile",
+        "phase_tensor_map", "pt_psection", "pt_strip", "pt_strip_grid"}),
+    "static_shift": frozenset({
+        "static_shift", "corr_ss_ama", "corr_ss_loess", "corr_ss_bilateral",
+        "corr_ss_refmedian", "corr_ss_emap", "corr_strat_static_shift"}),
+    "denoise": frozenset({
+        "denoise", "corr_notch", "corr_smooth_logfreq",
+        "corr_smooth_rho_phase", "corr_strat_noise"}),
+    "tipper": frozenset({"tipper", "tipper_plot"}),
+    "pre_inversion": frozenset({
+        "pre_inversion", "inversion_prep", "occam2d", "modem", "mare2dem"}),
+    "qc": frozenset({"qc", "validator", "corr_strat_qc"}),
+    "sensitivity": frozenset({"sensitivity"}),
+}
+_FAMILY_OF = {wf: fam for fam, ids in WORKFLOW_FAMILIES.items() for wf in ids}
+
+
+def workflow_family(workflow: str | None) -> str | None:
+    """Return the analysis family of *workflow* (itself when it has none).
+
+    >>> workflow_family("strike")
+    'phase_analysis'
+    >>> workflow_family("report")
+    'report'
+    >>> workflow_family(None) is None
+    True
+    """
+    if not workflow:
+        return None
+    wf = normalise_workflow(workflow)
+    return _FAMILY_OF.get(wf, wf)
 
 
 def normalise_workflow(workflow: str) -> str:

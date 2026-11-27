@@ -119,6 +119,9 @@ class ModEmModel2D(ModEmBase):
         self.z_widths: np.ndarray = np.array([])
         self.rho_loge: np.ndarray = np.empty((0, 0))
         self.log_type: str = "LOGE"
+        #: Leading air layers held in ``z_widths`` / ``rho_loge``
+        #: (set by :meth:`halfspace`; 0 for models read from file).
+        self.n_air: int = 0
 
     # ------------------------------------------------------------------
     # Derived
@@ -259,6 +262,7 @@ class ModEmModel2D(ModEmBase):
         obj.x_widths = x_w
         obj.z_widths = z_w_arr
         obj.rho_loge = rho_grid
+        obj.n_air = int(n_air)
 
         if obj.verbose:
             obj.logger.info(
@@ -324,7 +328,8 @@ class ModEmModel2D(ModEmBase):
             )
         return obj
 
-    def write(self, path: PathLike) -> Path:
+    def write(self, path: PathLike, *, include_air: bool = False
+              ) -> Path:
         """Write the model to ``path`` in ModEM 2-D format.
 
         Parameters
@@ -333,6 +338,13 @@ class ModEmModel2D(ModEmBase):
             Destination model file. Parent directories are
             created before writing. Existing files are
             overwritten.
+        include_air : bool, default False
+            Also write the ``n_air`` leading air layers. Mod2DMT
+            reads this (Mackie) format as **earth layers only** and
+            adds 10 air layers itself (``read_grid`` in
+            ``ioAscii.f90``), so air rows written here would become
+            a 10**12 ohm.m slab at the top of the earth. Keep the
+            default unless another program expects them.
 
         Returns
         -------
@@ -367,17 +379,20 @@ class ModEmModel2D(ModEmBase):
                 )
             return "\n".join(rows) + "\n"
 
+        k0 = 0 if include_air else int(getattr(self, "n_air", 0))
+        z_w = np.asarray(self.z_widths)[k0:]
+        rho = np.asarray(self.rho_loge)[k0:, :]
         lines: list[str] = [
-            f"  {self.nx}  {self.nz}  {self.log_type}\n",
+            f"  {self.nx}  {z_w.size}  {self.log_type}\n",
         ]
         lines.append(_floats(self.x_widths))
-        lines.append(_floats(self.z_widths))
+        lines.append(_floats(z_w))
         lines.append("  1\n")  # block count
 
-        for iz in range(self.nz):
+        for iz in range(z_w.size):
             lines.append(
                 "  "
-                + "  ".join(f"{v:>12.5E}" for v in self.rho_loge[iz, :])
+                + "  ".join(f"{v:>12.5E}" for v in rho[iz, :])
                 + "\n"
             )
 

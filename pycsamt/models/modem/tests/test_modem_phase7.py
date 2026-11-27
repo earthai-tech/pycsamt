@@ -1,4 +1,4 @@
-"""Phase 7 tests — InputBuilder."""
+"""Phase 7 tests â€” InputBuilder."""
 
 import numpy as np
 import pytest
@@ -20,7 +20,8 @@ def _make_site(name, x_offset, y_offset=0.0, n_freq=5):
 
     s = _Site()
     s.name = name
-    s.coords = (x_offset, y_offset, 0.0)
+    s.coords = (-32.0 + x_offset/111195.,
+                141.0 + y_offset/(111195.*np.cos(np.radians(32.))), 0.0)
     s.freq = freqs
     s.z = z_arr
     s.z_err = np.abs(z_arr) * 0.05
@@ -35,7 +36,7 @@ def _make_site(name, x_offset, y_offset=0.0, n_freq=5):
 @pytest.fixture
 def sites_3d():
     return [
-        _make_site(f"S{i:02d}", i * 1000.0, j * 1000.0)
+        _make_site(f"S{i}{j}", i * 1000.0, j * 1000.0)
         for i in range(3)
         for j in range(3)
     ]

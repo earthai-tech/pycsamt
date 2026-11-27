@@ -8,7 +8,10 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass, replace
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
+
+from pcsf.api.registry import register_format
 
 from ...api.property import PyCSAMTObject
 from .jsonio import pcbh_from_dict, pcbh_to_dict
@@ -28,6 +31,7 @@ __all__ = [
     "embed_pcbh",
     "reference_pcbh",
     "extract_pcbh",
+    "model_association",
     "align_pcbh_to_pcsf",
 ]
 
@@ -73,6 +77,21 @@ class PCBHAssociation(PyCSAMTObject):
                 raise ValueError(
                     "embedded PCBH does not match reference checksum"
                 )
+
+    def to_dict(self) -> dict[str, Any]:
+        """JSON payload stored in the ``boreholes`` group of a file.
+
+        pcsf writes the borehole association through this method
+        and reads it back as a plain dictionary, which
+        :func:`association_from_dict` turns into an association again.
+
+        Returns
+        -------
+        dict
+            ``{"embedded": dict or None, "reference": dict or None}``,
+            as produced by :func:`association_to_dict`.
+        """
+        return association_to_dict(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -142,8 +161,45 @@ def reference_pcbh(model: PCSFModel, uri: str, sha256: str) -> PCSFModel:
 
 def extract_pcbh(model: PCSFModel) -> PCBHDocument | None:
     """Return embedded PCBH data without resolving external resources."""
-    association = model.boreholes
+    association = model_association(model)
     return association.embedded if association is not None else None
+
+
+def model_association(model: PCSFModel) -> PCBHAssociation | None:
+    """Borehole association of a model, decoded when needed.
+
+    pcsf stores the ``boreholes`` group without interpreting it, so a
+    model read from a file carries the association as the dictionary
+    written by :meth:`PCBHAssociation.to_dict`. This function returns
+    a validated :class:`PCBHAssociation` in both cases.
+
+    Parameters
+    ----------
+    model : PCSFModel
+        Model whose ``boreholes`` attribute is ``None``, a
+        :class:`PCBHAssociation` or its dictionary payload.
+
+    Returns
+    -------
+    PCBHAssociation or None
+        ``None`` when the model has no borehole association.
+
+    Raises
+    ------
+    TypeError
+        If ``model.boreholes`` is neither of the accepted types.
+    ValueError
+        If the decoded association fails validation.
+    """
+    value = model.boreholes
+    if value is None or isinstance(value, PCBHAssociation):
+        return value
+    if isinstance(value, dict):
+        return association_from_dict(value)
+    raise TypeError(
+        "model.boreholes must be a PCBHAssociation or its dict "
+        f"payload, got {type(value).__name__}"
+    )
 
 
 def align_pcbh_to_pcsf(
@@ -335,3 +391,16 @@ def association_from_dict(payload: dict[str, Any]) -> PCBHAssociation:
     )
     result.validate()
     return result
+
+
+#: PCBH as a pcsf companion format. pcsf stores the ``boreholes``
+#: group of a ``.pcsf`` file without interpreting it; registering
+#: ``from_dict`` makes :func:`pcsf.read_pcsf` (and so
+#: :func:`pycsamt.format.read_pcsf`) return a
+#: :class:`PCBHAssociation` instead of its dictionary.
+PCBH_FORMAT = SimpleNamespace(
+    name="pcbh",
+    version="0.1.0",
+    from_dict=association_from_dict,
+)
+register_format("pcbh", PCBH_FORMAT, replace=True)

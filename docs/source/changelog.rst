@@ -33,6 +33,18 @@ Latest release
 
 .. _changelog-latest:
 
+**2.6.5** — *2026-11-24* — a correctness and agent-extensibility
+release. Agent Master gains a plugin interface for its workflow
+registry, plan validators and run record (:mod:`pycsamt.agents.plugins`,
+with an MTpy example plugin) and a deterministic route cross-check
+before the review gate. The PCSF core now comes from the standalone
+``pcsf`` package, and fixes cover the CSAMT near-field correction,
+MARE2DEM region ids, non-UTF-8 EDI headers, ``Site(path)``, Occam2D
+plots and mesh depth, and gfortran 10 solver builds. DOI
+`10.5281/zenodo.24493348 <https://doi.org/10.5281/zenodo.24493348>`__.
+:ref:`Full 2.6.5 entry <changelog-2-6-5>` · :ref:`Release notes
+<release_v2_6_5>`.
+
 **2.6.4** — *2026-10-01* — a new-surfaces release. **pyCSAMT Format
 Studio** (:mod:`pycsamt.app.converter`) is a new standalone, freezable app
 for file-format conversion, backed by six new ``pycsamt format``

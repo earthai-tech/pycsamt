@@ -446,3 +446,35 @@ class TestPlotDimMap:
         texts = [t.get_text() for t in ax.texts]
         plt.close("all")
         assert "no data" in texts
+
+
+@pytest.mark.parametrize('order', [[0,1,2], [2,1,0], [1,2,0]])
+def test_phase_features_preserve_analytic_frequency_identity(order):
+    freq = np.array([1., 10., 100.])
+    phi = np.array([[[1., .2], [-.2, 2.]], [[1., 0.], [0., 1.]],
+                    [[2., .8], [-.1, 1.]]])
+    real = np.array([[0., 1.], [-1., 0.]])
+    z = np.array([real + 1j*(real @ p) for p in phi])
+    site = _FakeSite('analytic', z[order], freq[order])
+    table = phase_features_table([site], api=False)
+    expected = 0.5*np.degrees(np.arctan2(phi[:,0,1]-phi[:,1,0],
+                                       phi[:,0,0]+phi[:,1,1]))
+    assert len(table) == 3
+    for row in table.itertuples():
+        idx = int(np.flatnonzero(freq == row.freq)[0])
+        assert row.beta_abs == pytest.approx(abs(expected[idx]))
+
+
+def test_invalid_tensor_row_does_not_inherit_neighbour_features():
+    freq = np.array([1.,10.,100.])
+    z = _iso_z(freq)
+    z[1,0,0] = complex(float('nan'),0.)
+    table = phase_features_table([_FakeSite('missing', z, freq)], api=False)
+    assert set(table.freq) == {1.,100.}
+
+
+def test_empty_period_band_never_recommends_2d_acceptance():
+    table = pre2d_inversion_assessment([_iso_site('empty_band')],
+                                      band=(1e6,1e7),api=False)
+    assert table.iloc[0].n_samples == 0
+    assert table.iloc[0].recommendation == 'insufficient_data_for_2d'

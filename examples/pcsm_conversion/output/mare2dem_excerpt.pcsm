@@ -6,7 +6,7 @@
 PCSM_VERSION 0.1.0
 SOURCE_BACKEND mare2dem
 CREATED_BY pcsf_conversion_demo
-CREATED_AT 2026-08-26T18:19:22.121359+00:00
+CREATED_AT 2026-11-05T18:38:42.580120+00:00
 RESISTIVITY_UNIT ohm.m
 DESCRIPTION MARE2DEM demo_mt_inversion -- real mesh + real per-region resistivity
 
@@ -40,17 +40,17 @@ REGION_IDS
 END_REGION_IDS
 
 RESISTIVITY  # linear ohm.m (canonical, see model/resistivity in SPEC.md S4)
-1000000000000.0             0.3             1.0             0.3             0.3             1.0             0.3             1.0
-            0.3             0.3             1.0             1.0             1.0             0.3             0.3             0.3
+1000000000000.0             0.3          29.267             0.3             0.3          13.708             0.3          36.572
+            0.3             0.3         0.55219         0.50705          3.3524             0.3             0.3             0.3
 # ... 843 data rows omitted ...
-            1.0             1.0             1.0             1.0             1.0             1.0             1.0             1.0
-            1.0             1.0             1.0             1.0             1.0             1.0
+         42.444          4.6418          139.52          28.468          44.764          8.2438          36.124          26.843
+         226.21          7.7773          18.161          10.658           43.96          1.8518
 END_RESISTIVITY
 
 RESISTIVITY_BY_REGION
-            1.0 1000000000000.0             0.3             1.0             1.0             1.0             1.0             1.0
-            1.0             1.0             1.0             1.0             1.0             1.0             1.0             1.0
+        0.78655 1000000000000.0             0.3          41.464          6.6336          1.4994          6.1638          8.0145
+        0.74271           3.252          10.532          8.7738           2.056          10.831          1.3717          28.481
 # ... 814 data rows omitted ...
-            1.0             1.0             1.0             1.0             1.0             1.0             1.0             1.0
-            1.0             1.0             1.0             1.0
+        0.54117          5.8031          8.2438         0.66058          2.7263          2.8866          2.2362          10.563
+         33.333          6.2365           39.71          37.693
 END_RESISTIVITY_BY_REGION

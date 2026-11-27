@@ -13,6 +13,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Union
 
+import numpy as np
+
 from .base import ModEmBase
 from .config import ModEmConfig
 from .control import ModEmControl
@@ -167,15 +169,16 @@ class InputBuilder(ModEmBase):
         if model_filename is None:
             model_filename = "m0.ws" if is_3d else "m0.rho"
 
-        # 1. Data ------------------------------------------------------
+        # 1-2. Data and starting model -------------------------------
+        # The 2-D data positions depend on the grid (see
+        # _shift_2d_to_grid), so the model is built first.
         self.data = ModEmData.from_edi(list(source), config=cfg)
-        data_path = self.data.write(wd / data_filename)
-
-        # 2. Starting model --------------------------------------------
         if is_3d:
             self.model = ModEmModel3D.halfspace(self.data, config=cfg)
         else:
             self.model = ModEmModel2D.halfspace(self.data, config=cfg)
+            _shift_2d_to_grid(self.data, self.model, cfg)
+        data_path = self.data.write(wd / data_filename)
         model_path = self.model.write(wd / model_filename)
 
         # 3. Covariance + forward-solver control (3-D only) -------------
@@ -482,3 +485,36 @@ References
    Geosciences, 66, 40-53, 2014,
    doi:10.1016/j.cageo.2014.01.010.
 """
+
+
+def _shift_2d_to_grid(data, model, cfg) -> float:
+    """Express 2-D station positions from the grid's left edge.
+
+    Mod2DMT places the first y node at 0 (``yNode(1) = 0`` in
+    ``GridDef.f90``) and reads a station's y from that edge, whereas
+    :meth:`ModEmData.from_edi` writes offsets centred on the survey.
+    :meth:`ModEmModel2D.halfspace` starts its station zone at the
+    first offset, after ``cfg.n_padding_x_2d`` padding cells, so
+    every y is shifted by ``sum(left padding) - min(offset)``.
+    Without it the receivers fall outside the grid (Mod2DMT:
+    "indices for sparse-full dot product out of bounds", RMS NaN).
+
+    Returns
+    -------
+    float
+        The shift applied (m).
+    """
+    offs = np.asarray(data.offsets, dtype=float)
+    if offs.size == 0:
+        return 0.0
+    n_pad = int(cfg.n_padding_x_2d)
+    shift = (float(np.sum(model.x_widths[:n_pad]))
+             - float(offs.min()))
+    data.site_coords = {
+        k: (v[0], v[1] + shift, v[2])
+        for k, v in data.site_coords.items()
+    }
+    for blk in data.blocks:
+        blk["rows"] = [(*r[:3], r[3] + shift, *r[4:])
+                       for r in blk["rows"]]
+    return shift

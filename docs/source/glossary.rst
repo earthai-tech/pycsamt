@@ -1140,6 +1140,46 @@ definitions here are the single source of truth.
       only means the programmed workflow returned, not that the result
       meets scientific acceptance criteria.
 
+   Review gate
+      The check that :class:`~pycsamt.agents.WorkflowOrchestratorAgent`
+      applies between planning and execution. A plan with validation
+      errors is blocked; a plan that needs review runs only when the
+      caller returns its :term:`plan hash`. The :term:`route cross-check`
+      feeds it with risk flags. A :term:`dry run` is exempt because it
+      executes nothing.
+
+   Plan hash
+      The SHA-256 digest returned by ``WorkflowPlan.approval_digest()``
+      over the serialised workflow plan (request, workflow, paths,
+      parameters, risk flags, provider, expected outputs) and the names
+      and content hashes of its input files. Approval of a plan is the
+      return of this exact value as ``approved_plan_hash``, so any change
+      to the parameters or input bytes invalidates an earlier approval.
+
+   Route cross-check
+      The deterministic comparison of a workflow chosen by a language
+      model with the workflow read from the same text by the keyword
+      table. A disagreement between their :term:`analysis families
+      <analysis family>` makes the router ask a clarification question
+      or adds a risk flag to the plan, which sends it to the
+      :term:`review gate`. An unmatched keyword route never constrains
+      the model.
+
+   Analysis family
+      A group of agent workflow identifiers that are sub-tools of one
+      analysis, for example ``strike``, ``pt_psection`` and
+      ``phase_analysis`` in the ``phase_analysis`` family. Defined in
+      ``pycsamt.agents._workflows.WORKFLOW_FAMILIES``; an identifier
+      outside every family is its own family.
+
+   Agent plugin
+      A :class:`~pycsamt.agents.plugins.DomainPlugin` that supplies a
+      workflow registry, a plan validator and a run-record factory to
+      the pyCSAMT agent loop. Plugins are registered with
+      ``register_plugin`` or advertised in the ``pycsamt.agent_plugins``
+      entry-point group, which is separate from the pipeline
+      :term:`plugin entry-point group`.
+
    Steps trace
       The ordered, user-visible record of workflow steps reported by Agent
       Master after a request completes. It summarises which routed steps ran,

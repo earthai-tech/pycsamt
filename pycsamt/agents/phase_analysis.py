@@ -172,13 +172,12 @@ class PhaseAnalysisAgent(BaseAgent):
             try:
                 beta = np.abs(pt_table["beta"].to_numpy(float))
                 ellipt = pt_table["ellipt"].to_numpy(float)
-                u3d = np.clip(beta / self.skew_th, 0, 1)
-                u1d = (1 - u3d) * np.clip(1 - ellipt / self.ellipt_th, 0, 1)
-                u2d = 1 - u1d - u3d
-                dom = np.argmax(np.column_stack([u1d, u2d, u3d]), axis=1)
-                n_1d = int((dom == 0).sum())
-                n_2d = int((dom == 1).sum())
-                n_3d = int((dom == 2).sum())
+                # Report the same threshold labels as classify_dimensionality;
+                # soft-membership argmax is a different classifier.
+                low_skew = beta <= self.skew_th
+                n_1d = int((low_skew & (np.abs(ellipt) <= self.ellipt_th)).sum())
+                n_2d = int((low_skew & (np.abs(ellipt) > self.ellipt_th)).sum())
+                n_3d = int((~low_skew).sum())
             except Exception:
                 pass
 

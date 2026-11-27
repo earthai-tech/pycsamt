@@ -418,3 +418,54 @@ def test_plot_ns_no_ss_overlay():
     ax = plot_ns_detection(sites, show_ss=False)
     assert ax is not None
     plt.close("all")
+
+
+@pytest.mark.parametrize('key,factor', [('fac_rho', 0.25), ('fac_z', 0.5)])
+def test_factor_units_preserve_phase_and_scale_resistivity_once(key, factor):
+    site = _clean_site('S1', rho=400.)
+    original = site.Z.z.copy()
+    site.Z.z_err = np.full(original.shape, 0.2)
+    corr = apply_ss_factors([site], {'S1': factor}, key=key, inplace=False)
+    corrected = next(_iter_items(corr))
+    actual_block, actual, fr = _get_z_block(corrected)
+    assert np.allclose(0.2*abs(actual[:, 0, 1])**2/fr, 100.)
+    assert np.allclose(actual, original*0.5)
+    assert np.allclose(np.angle(actual[:, 0, 1]), np.angle(original[:, 0, 1]))
+    assert np.allclose(actual_block.z_err, 0.1)
+    assert np.array_equal(site.Z.z, original)
+    assert np.allclose(site.Z.z_err, 0.2)
+
+
+def test_ama_known_isolated_scalar_distortion_recovers_background():
+    sites = [_clean_site(f'S{i}', rho=400. if i == 3 else 100.) for i in range(7)]
+    table = estimate_ss_ama(sites, sort_by='input', half_window=3,
+                            max_skew=None, api=False)
+    centre = table.loc[table.station == 'S3'].iloc[0]
+    assert centre.fac_rho == pytest.approx(0.25)
+    assert centre.fac_z == pytest.approx(0.5)
+    assert centre.delta_log10_rho == pytest.approx(np.log10(4.))
+    corr = apply_ss_factors(sites, table, key='fac_rho', inplace=False)
+    for item in _iter_items(corr):
+        _, z, fr = _get_z_block(item)
+        assert np.allclose(0.2*abs(z[:, 0, 1])**2/fr, 100.)
+
+
+def test_rho_det_is_rotation_invariant_and_reduces_to_offdiagonal_mean():
+    # The AMA resistivity must not depend on the measurement frame. It used
+    # to be sqrt(rho_xy*rho_yx), which changes when the axes are rotated.
+    import numpy as np
+
+    from pycsamt.emtools.ss import _rho_det_from_z
+    from pycsamt.seg.ops import rotate_impedance
+
+    rng = np.random.default_rng(3)
+    fr = np.array([100.0, 10.0, 1.0])
+    z = rng.normal(size=(3, 2, 2)) + 1j * rng.normal(size=(3, 2, 2))
+    np.testing.assert_allclose(
+        _rho_det_from_z(rotate_impedance(z, 52.5), fr), _rho_det_from_z(z, fr)
+    )
+    z1d = z.copy()
+    z1d[:, 0, 0] = z1d[:, 1, 1] = 0.0
+    rx = 0.2 * np.abs(z1d[:, 0, 1]) ** 2 / fr
+    ry = 0.2 * np.abs(z1d[:, 1, 0]) ** 2 / fr
+    np.testing.assert_allclose(_rho_det_from_z(z1d, fr), np.sqrt(rx * ry))

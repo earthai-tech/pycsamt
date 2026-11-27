@@ -45,7 +45,7 @@ def _make_site(name, x_offset, y_offset=0.0, n_freq=5):
 
     s = _Site()
     s.name = name
-    s.coords = (x_offset, y_offset, 0.0)
+    s.coords = (-31.9 + y_offset / 111000, 141.5 + x_offset / 94000, 0.0)
     s.freq = freqs
     s.z = z_arr
     s.z_err = np.abs(z_arr) * 0.05
@@ -138,7 +138,7 @@ def test_run_without_data_source_configures_files_only(tmp_path):
     )
     result = ModEMBackend(cfg).run()
     assert any(
-        "InputBuilder is not available" in w for w in result.warnings
+        "input preparation skipped" in w for w in result.warnings
     )
     assert result.files["data"].endswith("ModEMData.dat")
     assert result.files["covariance"].endswith("ModEM.cov")
@@ -238,7 +238,7 @@ def test_run_runner_unavailable_sets_warning(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_run_external_success_loads_result(monkeypatch, tmp_path):
+def test_run_external_does_not_promote_unbound_result(monkeypatch, tmp_path):
     for name in (
         "ModEMData.dat",
         "ModEM_Model.rho",
@@ -260,8 +260,11 @@ def test_run_external_success_loads_result(monkeypatch, tmp_path):
     )
     result = ModEMBackend(cfg).run()
     assert result.metadata["executed"] is True
-    assert result.status == "loaded"
-    assert result.native is sentinel
+    assert result.status == "executed"
+    assert result.native is not sentinel
+    assert result.metadata["output_provenance"] == "unverified"
+    assert result.metadata["converged"] is False
+    assert np.isnan(result.rms)
 
 
 def test_run_external_no_loaded_result_sets_executed(monkeypatch, tmp_path):
@@ -457,7 +460,7 @@ def test_modem_config_dict_branch():
 
 
 def test_modem_config_instance_branch():
-    provided = ModEmConfig(mode="2d", binary_3d="AlreadyBuilt")
+    provided = ModEmConfig(mode="3d", binary_3d="AlreadyBuilt")
     cfg = InversionConfig(
         method="mt",
         dimension="3d",
@@ -465,8 +468,8 @@ def test_modem_config_instance_branch():
         backend_options={"config": provided},
     )
     modem_cfg = modem_backend_mod._modem_config(modem_models, cfg)
-    assert modem_cfg is provided
-    assert modem_cfg.mode == "3d"  # overwritten to match cfg.dimension
+    assert modem_cfg is not provided
+    assert modem_cfg.mode == provided.mode == "3d"
 
 
 def test_modem_config_raw_passthrough_with_mode_attr():
@@ -480,9 +483,9 @@ def test_modem_config_raw_passthrough_with_mode_attr():
         backend="modem",
         backend_options={"config": fake},
     )
-    out = modem_backend_mod._modem_config(modem_models, cfg)
-    assert out is fake
-    assert out.mode == "3d"
+    with pytest.raises(TypeError):
+        modem_backend_mod._modem_config(modem_models, cfg)
+    assert fake.mode == "old"
 
 
 def test_modem_config_raw_passthrough_without_mode_attr():
@@ -493,7 +496,8 @@ def test_modem_config_raw_passthrough_without_mode_attr():
         backend="modem",
         backend_options={"config": sentinel},
     )
-    assert modem_backend_mod._modem_config(modem_models, cfg) is sentinel
+    with pytest.raises(TypeError):
+        modem_backend_mod._modem_config(modem_models, cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -641,3 +645,83 @@ def test_has_loaded_result_variants():
         rho_2d = np.zeros((2, 2))
 
     assert modem_backend_mod._has_loaded_result(_WithRho2D()) is True
+
+
+@pytest.mark.parametrize("raw", [{"mode": "2d"}, ModEmConfig(mode="2d")])
+def test_conflicting_dimension_rejected_without_mutation(raw):
+    cfg = InversionConfig(method="mt", dimension="3d", backend="modem",
+                          backend_options={"config": raw})
+    with pytest.raises(ValueError, match="conflicts"):
+        modem_backend_mod._modem_config(modem_models, cfg)
+    assert (raw["mode"] if isinstance(raw, dict) else raw.mode) == "2d"
+
+
+def test_top_level_conflicting_mode_rejected():
+    cfg = InversionConfig(method="mt", dimension="3d", backend="modem",
+                          backend_options={"mode": "2d"})
+    with pytest.raises(ValueError, match="conflicts"):
+        modem_backend_mod._modem_config(modem_models, cfg)
+
+
+@pytest.mark.parametrize("present", [True, False])
+def test_explicit_forward_control_preserved_or_blocks_execution(tmp_path, monkeypatch, present):
+    for name in ["ModEMData.dat", "ModEM_Model.rho", "ModEM.inv", "ModEM.cov"]:
+        (tmp_path / name).write_text("fixture")
+    if present:
+        (tmp_path / "explicit.ctrl").write_text("user forward tolerances")
+    calls = []
+    class Runner:
+        def __init__(self, **kwargs): pass
+        def command(self, *args, **kwargs):
+            calls.append(("preview", kwargs)); return "preview"
+        def run(self, *args, **kwargs):
+            calls.append(("execute", kwargs)); return None
+    monkeypatch.setattr(modem_models, "ModEmRunner", Runner)
+    monkeypatch.setattr(modem_models, "InversionResult", None)
+    cfg = InversionConfig(method="mt", dimension="3d", backend="modem",
+        workdir=str(tmp_path), run_external=True,
+        backend_options={"runner": {"fwd_control": "explicit.ctrl"}})
+    result = ModEMBackend(cfg).run()
+    if present:
+        assert [stage for stage, _ in calls] == ["preview", "execute"]
+        assert all(kw["fwd_control"] == "explicit.ctrl" for _, kw in calls)
+        assert result.metadata["executed"] is True
+    else:
+        assert calls == []
+        assert result.status == "needs_review"
+        assert result.metadata["executed"] is False
+
+
+def test_external_zero_exit_cannot_load_existing_archive(monkeypatch, tmp_path):
+    for name in ["ModEMData.dat", "ModEM_Model.rho", "ModEM.inv", "ModEM.cov"]:
+        (tmp_path / name).write_text("existing input or archive")
+    calls = []
+    class StaleResult:
+        def __init__(self, *args, **kwargs):
+            calls.append("loaded")
+            self.models = [object()]
+            self.final_rms = 0.01
+    monkeypatch.setattr(modem_models, "InversionResult", StaleResult)
+    monkeypatch.setattr(modem_models.ModEmRunner, "run", lambda *a, **kw: object())
+    cfg = InversionConfig(method="mt", dimension="3d", backend="modem",
+                          workdir=str(tmp_path), run_external=True)
+    result = ModEMBackend(cfg).run()
+    assert calls == []
+    assert result.status == "executed"
+    assert np.isnan(result.rms)
+    assert result.metadata["output_provenance"] == "unverified"
+    assert result.metadata["converged"] is False
+
+
+def test_archive_loaded_is_explicitly_not_current_execution(monkeypatch, tmp_path):
+    class Archive:
+        def __init__(self, *args, **kwargs):
+            self.models = [object()]
+            self.final_rms = 0.01
+    monkeypatch.setattr(modem_models, "InversionResult", Archive)
+    cfg = InversionConfig(method="mt", dimension="3d", backend="modem", workdir=str(tmp_path))
+    result = ModEMBackend(cfg).run()
+    assert result.status == "loaded"
+    assert result.metadata["output_provenance"] == "archive_only"
+    assert result.metadata["executed"] is False
+    assert result.metadata["converged"] is False

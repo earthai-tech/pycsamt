@@ -47,7 +47,7 @@ from .plotting import (
     _period_range,
 )
 
-__all__ = ["ToolAgent", "TOOL_KINDS"]
+__all__ = ["ToolAgent", "CorrectionStepAgent", "TOOL_KINDS"]
 
 TOOL_KINDS = (
     "strike",
@@ -1152,3 +1152,26 @@ class ToolAgent:
             max_rows=22,
         )
         return summary, table, ({"1-D resistivity model": fig} if fig else {})
+
+
+class CorrectionStepAgent:
+    """Workflow step that applies one catalogue correction.
+
+    The orchestrator's correction workflows (one per
+    :data:`~pycsamt.agents._corrections.CORRECTION_METHODS` id) end with this
+    step. It runs :class:`ToolAgent`'s ``correction`` kind on the loaded
+    sites, so the chat and the orchestrator share one implementation, and
+    returns the corrected copy in ``data["corrected_sites"]``. It never calls
+    a language model.
+    """
+
+    llm_provider = None
+    model = None
+    llm_available = False
+
+    def __init__(self, **_: Any) -> None:
+        self._last_cost = 0.0
+
+    def execute(self, input_data: dict[str, Any]) -> AgentResult:
+        return ToolAgent().execute({**dict(input_data), "kind": "correction"})
+

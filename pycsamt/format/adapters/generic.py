@@ -38,6 +38,8 @@ import warnings
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+from pcsf.algorithms import NODE_AVERAGES, node_to_cell
+from pcsf.api.registry import get_encoding
 
 from ..provenance import ModelProvenance
 from ..schema import (
@@ -90,13 +92,14 @@ def _apply_encoding(
     arr = np.asarray(values, dtype=float)
     if encoding == "linear":
         return arr, None, None
-    if encoding == "log10":
-        return 10.0**arr, arr, "log10"
-    if encoding == "ln":
-        return np.exp(arr), arr, "ln"
-    raise ValueError(
-        f"encoding must be one of {RESISTIVITY_ENCODINGS}, got {encoding!r}"
-    )
+    if encoding not in RESISTIVITY_ENCODINGS:
+        raise ValueError(
+            f"encoding must be one of {RESISTIVITY_ENCODINGS}, "
+            f"got {encoding!r}"
+        )
+    # The conversion itself is pcsf's (the encoding registry), so
+    # every adapter decodes a given encoding identically.
+    return get_encoding(encoding)(arr), arr, encoding
 
 
 def _build_stations(
@@ -261,7 +264,7 @@ def grid2d_to_pcsf(
     x, z : array-like
         Cell-centre coordinates (metres) matching
         :class:`~pycsamt.format.schema.Grid2DGeometry`.
-    encoding : {"linear", "log10", "ln"}, default "linear"
+    encoding : {"linear", "log10", "ln", "log10_conductivity", "conductivity"}, default "linear"
         Encoding of *resistivity*. Many DL models predict log-resistivity
         for training stability; when not ``"linear"``, the given array is
         kept verbatim as ``resistivity_native`` and the canonical linear
@@ -400,7 +403,7 @@ def grid3d_to_pcsf(
         this axis order -- ModEM's own native convention).
     x, y, z : array-like
         Cell-centre coordinates (metres).
-    encoding : {"linear", "log10", "ln"}, default "linear"
+    encoding : {"linear", "log10", "ln", "log10_conductivity", "conductivity"}, default "linear"
         See :func:`grid2d_to_pcsf`'s identical parameter.
     x_nodes, y_nodes, z_nodes, origin, rotation_deg, n_air
         Forwarded to :class:`~pycsamt.format.schema.Grid3DGeometry`.
@@ -467,16 +470,34 @@ def grid3d_to_pcsf(
     )
 
 
-def _node_values_to_triangles(
-    connectivity: np.ndarray, node_values: np.ndarray
-) -> np.ndarray:
-    """Per-triangle value as the arithmetic mean of its 3 vertex values.
 
-    A deliberate, documented, reproducible convention -- not a hidden
-    default -- for turning a graph-model's native per-node output into
-    PCSF's canonical per-cell ``resistivity``.
+
+def _node_values_to_triangles(
+    connectivity: np.ndarray, node_values: np.ndarray,
+    node_average: str = "arithmetic",
+) -> np.ndarray:
+    """Per-triangle value from its 3 vertex values (linear ohm.m).
+
+    ``"arithmetic"`` (default) takes the mean of the linear values;
+    ``"geometric"`` takes the mean of ``log10`` values, i.e. the
+    geometric mean, which is more accurate for resistivity fields that
+    vary over orders of magnitude. The choice is recorded in the
+    model metadata by :func:`mesh_to_pcsf`.
     """
-    return node_values[connectivity].mean(axis=1)
+    if node_average not in NODE_AVERAGES:
+        raise ValueError(
+            f"node_average must be one of {NODE_AVERAGES}, "
+            f"got {node_average!r}"
+        )
+    return node_to_cell(connectivity, node_values, average=node_average)
+
+
+def _mesh_metadata(provenance, metadata, primary, node_average):
+    meta = _provenance_to_metadata(provenance, metadata)
+    if primary == "resistivity_by_node":
+        meta = dict(meta or {})
+        meta["node_average"] = node_average
+    return meta
 
 
 def _expand_region_resistivity(
@@ -508,6 +529,7 @@ def mesh_to_pcsf(
     resistivity_by_node: Any = None,
     resistivity_by_region: Any = None,
     encoding: str = "linear",
+    node_average: str = "arithmetic",
     plane: str = "xz",
     uncertainty: Any = None,
     sensitivity: Any = None,
@@ -566,9 +588,14 @@ def mesh_to_pcsf(
         :func:`_expand_region_resistivity`). Any of the other two tables
         also given alongside the canonical source is stored as-is,
         assumed already linear ohm.m.
-    encoding : {"linear", "log10", "ln"}, default "linear"
+    encoding : {"linear", "log10", "ln", "log10_conductivity", "conductivity"}, default "linear"
         Encoding of whichever of the three resistivity arrays above is
         the canonical source (see precedence above).
+    node_average : {"arithmetic", "geometric"}, default "arithmetic"
+        How per-node values are projected onto triangles when
+        *resistivity_by_node* is the canonical source: the mean of the
+        linear values, or the mean of their ``log10`` (geometric mean).
+        Recorded as ``metadata["node_average"]``.
     plane : {"xz", "xy", "3d"}, default "xz"
         Forwarded to :class:`~pycsamt.format.schema.UnstructuredMeshGeometry`.
     uncertainty, sensitivity : array-like, optional
@@ -643,7 +670,9 @@ def mesh_to_pcsf(
     if primary == "resistivity":
         resistivity_lin = primary_lin
     elif primary == "resistivity_by_node":
-        resistivity_lin = _node_values_to_triangles(connectivity_arr, primary_lin)
+        resistivity_lin = _node_values_to_triangles(
+            connectivity_arr, primary_lin, node_average
+        )
     else:
         resistivity_lin = _expand_region_resistivity(primary_lin, region_ids_arr)
 
@@ -683,5 +712,5 @@ def mesh_to_pcsf(
         created_by=created_by,
         crs=crs,
         description=description,
-        metadata=_provenance_to_metadata(provenance, metadata),
+        metadata=_mesh_metadata(provenance, metadata, primary, node_average),
     )

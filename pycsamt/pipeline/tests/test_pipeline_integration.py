@@ -32,6 +32,7 @@ matplotlib.use("Agg")
 import pytest
 
 from pycsamt.emtools._core import ensure_sites
+from pycsamt.pipeline.tests._outdirs import pipe_results_dir
 from pycsamt.pipeline import (
     Pipeline,
     PipelineResult,
@@ -44,7 +45,8 @@ from pycsamt.pipeline import (
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DATA_DIR = _PROJECT_ROOT / "data" / "AMT" / "WILLY_DATA" / "L22PLT"
-_PIPE_RESULTS = _PROJECT_ROOT / "pipe_results" / "integration_test"
+# One folder per xdist worker: see _outdirs.py.
+_PIPE_RESULTS = pipe_results_dir("integration_test")
 
 # ── Skip guard ────────────────────────────────────────────────────────────────
 

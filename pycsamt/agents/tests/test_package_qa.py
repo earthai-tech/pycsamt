@@ -51,9 +51,13 @@ def _api_key() -> str | None:
 
 
 def _provider() -> str:
-    if os.environ.get("OPENAI_API_KEY"):
-        return "openai"
-    return "claude"
+    # Must agree with _api_key(): the Anthropic key is preferred there, so
+    # only fall back to OpenAI when it is the key actually returned.
+    if os.environ.get("PYCSAMT_TEST_API_KEY") or os.environ.get(
+        "ANTHROPIC_API_KEY"
+    ):
+        return "claude"
+    return "openai" if os.environ.get("OPENAI_API_KEY") else "claude"
 
 
 # ── offline tests ─────────────────────────────────────────────────────────────

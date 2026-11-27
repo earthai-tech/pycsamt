@@ -285,7 +285,9 @@ class PlotModel(_OccamPlotBase):
 
         \rho(x, z) = 10^{m(x, z)}.
 
-    The mesh is centered around the profile midpoint.
+    Horizontal coordinates are survey (station-offset) distances,
+    centred on the station midpoint; the padding cells are cropped
+    from view unless ``x_margin`` is ``None``.
     Depth is positive downward.
 
     Parameters
@@ -314,6 +316,9 @@ class PlotModel(_OccamPlotBase):
         Colormap used for the resistivity image.
     dpi : int, default 100
         Figure resolution in dots per inch.
+    x_margin : float or None, default 0.2
+        Horizontal view = station span plus this fraction of it on each
+        side. ``None`` shows the whole mesh, padding included.
 
     Returns
     -------
@@ -366,6 +371,7 @@ class PlotModel(_OccamPlotBase):
         show_stations: bool = True,
         profile_distance_unit: str = "km",
         section: str | SectionStyle = "inversion",
+        x_margin: float | None = 0.2,
         **kwargs,
     ):
         super().__init__(result=result, **kwargs)
@@ -375,6 +381,35 @@ class PlotModel(_OccamPlotBase):
         self.show_stations = show_stations
         self.profile_distance_unit = profile_distance_unit
         self.section_style = _resolve_section_style(section)
+        self.x_margin = x_margin
+
+    def _survey_frame(self) -> tuple[np.ndarray, float]:
+        """Mesh x-nodes in the survey (station-offset) frame, and its centre.
+
+        Occam mesh nodes are zero-based at the outer edge of the left
+        padding, whereas station offsets are survey coordinates. The
+        padding block's right edge sits at the model's binding offset, so
+        ``x_survey = x_mesh - left_pad_width + binding_offset``. The
+        returned centre is the station midpoint (the mesh midpoint when no
+        stations are known), which defines the centred profile frame used
+        by :meth:`plot` and :meth:`extract_profile`.
+        """
+        result = self.result
+        mesh = result.mesh
+        xn = np.asarray(mesh.x_nodes, dtype=float)
+        n_pad = int(getattr(mesh, "N_PAD", 7))
+        widths = np.diff(xn)
+        left_pad = float(np.sum(widths[:n_pad])) if widths.size > 2 * n_pad else 0.0
+        boffs = float(getattr(getattr(result, "model", None), "binding_offset", 0.0) or 0.0)
+        xs = xn - left_pad + boffs
+        data_obj = getattr(result, "data", None)
+        offs = np.asarray(getattr(data_obj, "offsets", []) if data_obj is not None else [],
+                          dtype=float)
+        if offs.size:
+            centre = 0.5 * (float(offs.min()) + float(offs.max()))
+        else:
+            centre = 0.5 * (float(xs[0]) + float(xs[-1]))
+        return xs, centre
 
     def plot(self):
         """Return a pcolormesh Figure of the 2-D resistivity model.
@@ -396,11 +431,9 @@ class PlotModel(_OccamPlotBase):
         with np.errstate(over="ignore"):
             rho_lin = np.where(np.isfinite(rho), 10.0**rho, np.nan)
 
-        xn = mesh.x_nodes.copy()
+        xs, x_shift = self._survey_frame()
         zn = mesh.z_nodes.copy()
-        xc = (xn[:-1] + xn[1:]) / 2.0
-        x_shift = float(xc.mean())
-        xn_c = xn - x_shift
+        xn_c = xs - x_shift
 
         if self.profile_distance_unit == "km":
             xn_plot = xn_c / 1000.0
@@ -449,6 +482,17 @@ class PlotModel(_OccamPlotBase):
             title=f"Occam2D resistivity model  [iter {iter_n}]",
         )
         ax.set_ylim(float(zn[zi_max - 1]), 0.0)
+        offs = (
+            np.asarray(data_obj.offsets, dtype=float)
+            if data_obj is not None and getattr(data_obj, "offsets", None) is not None
+            else np.array([])
+        )
+        if self.x_margin is not None and offs.size > 1:
+            # Show the stations' span plus a margin, not the padding cells.
+            span = float(np.ptp(offs))
+            lo = (float(offs.min()) - self.x_margin * span - x_shift) / x_off_scale
+            hi = (float(offs.max()) + self.x_margin * span - x_shift) / x_off_scale
+            ax.set_xlim(max(lo, float(xn_plot[0])), min(hi, float(xn_plot[-1])))
         self.section_style.add_colorbar(
             im,
             ax,
@@ -475,7 +519,8 @@ class PlotModel(_OccamPlotBase):
         """Extract (x_centers, z_centers, rho_subset) between x0 and x1.
 
         Coordinates use ``profile_distance_unit``.
-        ``x0`` and ``x1`` are in the centered profile frame.
+        ``x0`` and ``x1`` are in the centered profile frame: survey
+        (station-offset) coordinates relative to the station midpoint.
 
         Returns
         -------
@@ -489,12 +534,12 @@ class PlotModel(_OccamPlotBase):
             raise RuntimeError("extract_profile: no rho_2d available")
 
         mesh = result.mesh
-        xn = mesh.x_nodes
+        xs, x_shift = self._survey_frame()
         zn = mesh.z_nodes
-        xc = (xn[:-1] + xn[1:]) / 2.0
+        xc = (xs[:-1] + xs[1:]) / 2.0
         zc = (zn[:-1] + zn[1:]) / 2.0
 
-        xc_c = xc - float(xc.mean())
+        xc_c = xc - x_shift
         scale = 1000.0 if self.profile_distance_unit == "km" else 1.0
         xc_s = xc_c / scale
 

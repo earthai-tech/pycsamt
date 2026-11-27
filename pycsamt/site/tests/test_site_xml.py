@@ -410,3 +410,29 @@ def test_edi_materialization_default_warns_not_silent(
     s = Site(tf)  # default on_loss="warn"
     with pytest.warns(DataLossWarning):
         _ = s.edi
+
+
+# ---------------------------------------------------------------------------
+# Site(path): a path is read, never stored unread (was a silently empty site)
+# ---------------------------------------------------------------------------
+
+
+def test_site_from_edi_path_reads_the_file(simulated_edi: Path) -> None:
+    a = Site(simulated_edi)
+    b = Site.from_edi(simulated_edi)
+    assert a.backend == "edi"
+    assert np.asarray(a.z).shape == np.asarray(b.z).shape
+    np.testing.assert_array_equal(a.z, b.z)
+    np.testing.assert_array_equal(Site(str(simulated_edi)).freq, b.freq)
+
+
+def test_site_from_xml_path_reads_the_file(tmp_path: Path, simulated_edi: Path) -> None:
+    xml = _mk_xml(tmp_path, _load_edi(simulated_edi), "S01")
+    s = Site(xml)
+    assert s.backend == "xml"
+    np.testing.assert_allclose(s.z, Site.from_xml(xml).z)
+
+
+def test_site_missing_path_raises(tmp_path: Path) -> None:
+    with pytest.raises(Exception):
+        Site(tmp_path / "does_not_exist.edi").z

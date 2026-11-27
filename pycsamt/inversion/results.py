@@ -139,8 +139,8 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
         Returns
         -------
         bool
-            ``True`` for statuses ``"success"``, ``"converged"``,
-            ``"prepared"``, and ``"loaded"``.
+            Explicit boolean convergence metadata takes precedence. Otherwise
+            the legacy usable-status convention is retained.
 
         Examples
         --------
@@ -150,6 +150,8 @@ class InversionResult(PyCSAMTObject, MetadataMixin):
         ... ).converged
         True
         """
+        if "converged" in self.metadata:
+            return self.metadata["converged"] is True
         return self.status in {"success", "converged", "prepared", "loaded"}
 
     def to_resistivity_model(self):

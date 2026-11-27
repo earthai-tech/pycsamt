@@ -6,7 +6,7 @@ Mocks ``InversionConfig``/``run_inversion``/``available_backends``/
 ``get_backend`` (all imported locally inside ``execute()``) so the whole
 pipeline runs deterministically without a real physics backend: the
 ``pycsamt.inversion`` import guard, ``ensure_sites`` exception, the
-backend-fallback branches (unregistered name / registered-but-unavailable),
+backend rejection branches (unregistered name / registered-but-unavailable),
 the ``InversionConfig`` construction exception, the ``log_rho_section`` /
 ``station_names`` extraction exception guards, the two figure exception
 guards, and the convergence-figure block.
@@ -34,6 +34,7 @@ class _FakeInvResult:
         station_names=None,
         history=None,
     ):
+        self.status = "converged"
         self.rms = rms
         self.n_iter = n_iter
         self.model = model
@@ -103,18 +104,18 @@ def test_ensure_sites_exception_fails(monkeypatch):
     assert "bad sites" in result.error
 
 
-def test_unregistered_backend_falls_back_to_builtin(monkeypatch, tmp_output):
+def test_unregistered_backend_fails(monkeypatch, tmp_output):
     _passthrough_ensure_sites(monkeypatch)
     _mock_inversion(monkeypatch)
     agent = InversionBackendAgent(backend="not_a_real_backend")
     result = agent.execute(
         {"sites": object(), "output_dir": str(tmp_output)}
     )
-    assert any("not in registry" in w for w in result.warnings)
-    assert result["backend"] == "builtin"
+    assert result.status == "failed"
+    assert "not registered" in result.error
 
 
-def test_registered_but_unavailable_backend_falls_back(
+def test_registered_but_unavailable_backend_fails(
     monkeypatch, tmp_output
 ):
     import pycsamt.inversion as inv_pkg
@@ -134,8 +135,8 @@ def test_registered_but_unavailable_backend_falls_back(
     result = agent.execute(
         {"sites": object(), "output_dir": str(tmp_output)}
     )
-    assert any("registered but unavailable" in w for w in result.warnings)
-    assert result["backend"] == "builtin"
+    assert result.status == "failed"
+    assert "unavailable" in result.error
 
 
 def test_inversion_config_exception_fails(monkeypatch):
@@ -240,6 +241,7 @@ def test_convergence_figure_success_and_llm(monkeypatch, tmp_output):
         ),
     )
     agent = InversionBackendAgent(api_key="fake-key")
+    monkeypatch.setattr(type(agent), "llm_available", property(lambda self: True))
     agent.query_llm = lambda *a, **k: "mocked interpretation"
     result = agent.execute(
         {"sites": object(), "output_dir": str(tmp_output)}

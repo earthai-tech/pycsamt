@@ -15,6 +15,7 @@ Subclasses only need to:
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import (
     Iterable,
@@ -90,6 +91,18 @@ class Base:  # picked by seg.config (mixin discovery)
         if not lg.handlers:
             lg.addHandler(_logging.NullHandler())
         return lg
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        if isinstance(state.get("_logger"), logging.Logger):
+            state["_logger"] = state["_logger"].name
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        name = state.get("_logger")
+        if isinstance(name, str):
+            state = dict(state, _logger=logging.getLogger(name))
+        self.__dict__.update(state)
 
 
 # Back-compat / alternate mixin names expected by config

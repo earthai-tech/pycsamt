@@ -91,9 +91,19 @@ if [ "$DO_CLEAN" = "1" ]; then
     "$TOOLCHAIN_MAKE" clean
 fi
 
+OCCAM_FCFLAGS="-O2 -ffree-line-length-none"
+# Occam2D's legacy Fortran calls OBJMAT/FwdCalc with more actual than formal
+# arguments. gfortran >= 10 turns such mismatches into hard errors; this flag
+# restores the long-standing warning. Older gfortran does not know the flag.
+F90_MAJOR="$("$TOOLCHAIN_F90" -dumpversion 2>/dev/null | cut -d. -f1)"
+case "$F90_MAJOR" in
+    ''|*[!0-9]*) ;;
+    *) [ "$F90_MAJOR" -ge 10 ] && OCCAM_FCFLAGS="$OCCAM_FCFLAGS -fallow-argument-mismatch" ;;
+esac
+
 log_step "Compiling"
 if ! run_make_with_retries 3 "$TOOLCHAIN_MAKE" \
-        "FC90=$TOOLCHAIN_F90" "FCFLAGS=-O2 -ffree-line-length-none"; then
+        "FC90=$TOOLCHAIN_F90" "FCFLAGS=$OCCAM_FCFLAGS"; then
     log_error "Build failed. Last pass's output:"
     printf '%s\n' "$MAKE_LAST_OUTPUT" | tail -n 40
     exit 1

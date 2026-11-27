@@ -33,6 +33,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from ..api.property import PyCSAMTObject
+from ._provenance import recorded_request, emit
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from ._base import AgentResult
@@ -148,6 +149,7 @@ class AgentMaster(PyCSAMTObject):
         return self._orchestrator
 
     # ------------------------------------------------------------------
+    @recorded_request
     def run(
         self,
         request: str,
@@ -212,6 +214,8 @@ class AgentMaster(PyCSAMTObject):
             llm_provider=self.provider,
         )
         decision = router.route(text)
+        emit("routing_decision", intent=decision.intent, workflow=getattr(decision, "workflow", None),
+             source=getattr(decision, "source", None), confidence=getattr(decision, "confidence", None))
 
         if decision.intent == META:
             return self._agent_result(

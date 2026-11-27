@@ -98,28 +98,21 @@ def _nf_correction(
     offset: float,
 ) -> np.ndarray:
     """
-    Near-field correction factor |F(p)| for E_y (equatorial, HED).
+    Near-field bias factor :math:`|R|` for broadside CSAMT data.
 
-    For a horizontal electric dipole over a uniform half-space the ratio
-    of the actual E_y to the far-field (plane-wave) approximation is:
-
-        F(p) = 1 − 3/p² + 3/p³   where  p = k·r (complex),
-        k = |k|·e^{iπ/4} = (1+i)/√2 · √(ωμ₀/ρ_a)
-
-    F → 1 in the far field (|p| >> 1), deviates strongly in the near
-    field.  |F|² gives the bias factor for apparent resistivity.
-
-    References
-    ----------
-    Chen & Yan (2005) eqs. (8)–(10).
+    ``R = Z_hs / Z_pw`` is the exact ratio between the CSAMT Cagniard
+    impedance of a homogeneous half-space and its plane-wave impedance,
+    evaluated at the *equivalent half-space* of each datum (see
+    :mod:`pycsamt.emtools._csamt_halfspace`). ``|R|**2`` is the bias of the
+    apparent resistivity: 1 in the far field, larger than 1 in the near
+    field. This replaces the electric-field-only factor
+    ``1 - 3/p**2 + 3/p**3`` used before v2.6.5, which ignored the
+    near-field departure of the magnetic field.
     """
-    omega = 2.0 * np.pi * np.maximum(freq, 1e-12)
-    k_abs = np.sqrt(omega * _MU0 / np.maximum(rho, 1e-6))
-    # complex wave number: k = |k| * exp(i*pi/4)
-    p = k_abs * offset * (1.0 + 1j) / np.sqrt(2.0)
-    p = np.where(np.abs(p) < 1e-12, 1e-12 * (1.0 + 1j), p)
-    F = 1.0 - 3.0 / p**2 + 3.0 / p**3
-    return np.abs(F)
+    from ._csamt_halfspace import near_field_ratio
+
+    ratio, _, _ = near_field_ratio(rho, freq, offset)
+    return np.abs(ratio)
 
 
 def _resolve_offset(
@@ -305,17 +298,15 @@ def near_field_factor(
     verbose: int = 0,
 ) -> pd.DataFrame:
     """
-    Near-field correction factor for apparent resistivity (equatorial HED).
+    Near-field bias factor for apparent resistivity (broadside HED).
 
-    For the equatorial E_y component from a horizontal electric dipole
-    over a homogeneous half-space, the ratio of the measured E_y to the
-    plane-wave (far-field) E_y is:
-
-        F(p) = 1 − 3/p² + 3/p³     p = k·r  (complex)
-
-    so the apparent resistivity is biased by factor |F(p)|².  When
-    |F(p)| ≈ 1 the data are in the plane-wave zone; strong departures
-    indicate near-field contamination.
+    For each datum the observed apparent resistivity is matched by the
+    exact CSAMT response of an equivalent homogeneous half-space (empymod
+    solution, broadside electric point dipole). The factor
+    ``nf_factor = |Z_hs / Z_pw|`` is the impedance bias of that half-space,
+    so the apparent resistivity is biased by ``nf_factor**2``. Values near
+    1 indicate plane-wave data; values above 1 indicate near-field
+    contamination.
 
     Parameters
     ----------
@@ -331,12 +322,16 @@ def near_field_factor(
         Columns: ``station``, ``freq_hz``, ``period_s``, ``offset_m``,
         ``rho_a_ohmm``, ``kr``, ``nf_factor``.
 
-        * ``nf_factor`` = |F(p)|; close to 1.0 → far-field (safe).
+        * ``nf_factor`` = |Z_hs/Z_pw|; close to 1.0 → far-field (safe).
         * ``nf_factor`` far from 1.0 → near-field bias present.
 
     References
     ----------
-    Chen & Yan (2005), eqs. (8)–(10).
+    Zonge, K.L. & Hughes, L.J. (1991). Controlled source audio-frequency
+    magnetotellurics. In *Electromagnetic Methods in Applied Geophysics*,
+    vol. 2B, 713–809.
+    Werthmüller, D. (2017). An open-source full 3D electromagnetic modeler
+    for 1D VTI media in Python: empymod. *Geophysics* 82(6), WB9–WB19.
     """
     S = ensure_sites(
         sites,

@@ -77,22 +77,52 @@ def extract_elevation(sites: Any, *, warn: bool = True) -> np.ndarray:
     return arr
 
 
-def extract_chainage(sites: Any) -> np.ndarray:
+def extract_chainage(sites: Any, *, order: str = "given") -> np.ndarray:
     """Compute along-profile cumulative distance (km) for each station.
 
     Uses a flat-Earth approximation: cumulative Euclidean distance in
-    lat/lon space scaled to metres, converted to km.  Stations are
-    assumed to be in profile order.
+    lat/lon space scaled to metres, converted to km.
 
     Parameters
     ----------
     sites : Sites, EDICollection, list[EDIFile]
+    order : {"given", "auto"}, default "given"
+        ``"given"`` accumulates distance in the container order,
+        which must be the profile order (correct for crooked lines).
+        ``"auto"`` first sorts the stations by their projection on
+        the profile's principal axis (first principal component of
+        the positions, pointing east for mostly E-W lines and north
+        for mostly N-S lines; chainage 0 is at that axis' start), so
+        the result does not depend on how the container is sorted.
+        Use it for a ``Sites`` loaded from a folder, which is in
+        *file-name* order (``L1-0, L1-1020, L1-1110, L1-150,
+        ...``): there ``"given"`` zig-zags and returns chainages far
+        too large. On strongly bent lines ``"auto"`` can swap close
+        neighbours.
 
     Returns
     -------
     numpy.ndarray, shape (n_stations,)
-        Cumulative chainage in **km** from the first station (starts at 0).
+        Chainage in **km** of each station, **in the order of
+        *sites***, measured from the profile's first station (0).
+
+    Raises
+    ------
+    ValueError
+        If *order* is not ``"auto"`` or ``"given"``.
+
+    Examples
+    --------
+    With ``order="auto"`` the chainage of each station is the same
+    whatever the order of the input (here two stations given in
+    reverse, 0.1 deg of latitude apart)::
+
+        >>> extract_chainage(sites_reversed, order="auto")
+        ... # doctest: +SKIP
+        array([11.1,  0. ])
     """
+    if order not in ("auto", "given"):
+        raise ValueError("order must be 'auto' or 'given'.")
     coords = _read_latlon(sites)
     n = len(coords)
     if n == 0:
@@ -105,11 +135,29 @@ def extract_chainage(sites: Any) -> np.ndarray:
 
     R_lat = 111_000.0  # m / deg latitude
     R_lon = 111_000.0 * np.cos(np.radians(np.mean(lats)))  # m / deg longitude
+    y_m = lats * R_lat
+    x_m = lons * R_lon
 
-    dlat = np.diff(lats) * R_lat
-    dlon = np.diff(lons) * R_lon
-    segs = np.sqrt(dlat**2 + dlon**2)  # m
-    return np.concatenate([[0.0], np.cumsum(segs)]) / 1000.0  # km
+    if order == "auto":
+        pts = np.column_stack([x_m - x_m.mean(), y_m - y_m.mean()])
+        # principal axis of the station cloud; stable for n >= 2
+        _, _, vt = np.linalg.svd(pts, full_matrices=False)
+        axis = vt[0]
+        # SVD sign is arbitrary: point the axis along the positive
+        # direction of its dominant component (west->east for an E-W
+        # line, south->north for a N-S one) so the result does not
+        # depend on the input order.
+        if axis[np.argmax(np.abs(axis))] < 0:
+            axis = -axis
+        idx = np.argsort(pts @ axis, kind="stable")
+    else:
+        idx = np.arange(n)
+
+    segs = np.hypot(np.diff(x_m[idx]), np.diff(y_m[idx]))  # m
+    chain_sorted = np.concatenate([[0.0], np.cumsum(segs)]) / 1000.0
+    out = np.empty(n)
+    out[idx] = chain_sorted
+    return out  # km, in the caller's order
 
 
 def has_elevation(sites: Any) -> bool:

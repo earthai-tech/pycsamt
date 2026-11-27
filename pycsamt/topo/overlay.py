@@ -67,6 +67,7 @@ def draw_topo_section(
     dark: bool = True,
     marker_style=None,
     label_fontsize: float = 7.0,
+    show_stations: bool = True,
 ) -> None:
     """Overlay terrain on a depth-section axes (terrain-following frame).
 
@@ -173,9 +174,11 @@ def draw_topo_section(
         from pycsamt.api.station import PYCSAMT_STATION_RENDERING
 
         _mstyle = PYCSAMT_STATION_RENDERING.inversion.marker
+    # show_stations=False draws no markers at all (previously the
+    # pins were only moved to elevation 0, i.e. inside the section).
     ax.scatter(
-        sx,
-        marker_y,
+        sx if show_stations else [],
+        marker_y if show_stations else [],
         marker=_mstyle.marker,
         s=_mstyle.size,
         facecolors=_mstyle.facecolor,

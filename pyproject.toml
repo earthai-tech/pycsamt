@@ -7,11 +7,11 @@ build-backend = "setuptools.build_meta"
 # ---------------------------------------------------------------------------
 [project]
 name        = "pycsamt"
-version     = "2.6.4"
+version     = "2.6.5"
 description = "Scientific Python for electromagnetic geophysics — processing, inversion, AI agents, and apps"
 readme      = "README.md"
 license     = { text = "LGPL-3.0-or-later" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 authors = [
     { name = "Laurent Kouadio", email = "etanoyau@gmail.com" },
@@ -33,7 +33,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
     "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -80,6 +79,13 @@ dependencies = [
     "empymod>=2.5; python_version >= '3.10'",
     # optional HDF5 elevation export/import (pycsamt.map.topo)
     "h5py>=3.8",
+    # pycsamt.site (Site/Sites, EDI loading) imports pycsamt.gis, which needs
+    # pyproj when GDAL is absent: a clean `pip install pycsamt` could not
+    # read an EDI file without it (found by the E1 sandbox run, 2026-11-07).
+    "pyproj>=3.3",
+    # PCSF reference implementation (github.com/earthai-tech/pcsf):
+    # pycsamt.format re-exports its schema, I/O and algorithms.
+    "pcsf>=0.1.0.dev0",
 ]
 
 # ---------------------------------------------------------------------------
@@ -188,6 +194,7 @@ web = [
     "dash>=2.18",
     "dash-bootstrap-components>=1.6",
     "flask>=3.0",
+    "diskcache-community>=5.8.4",
     "diskcache>=5.6",
     "multiprocess>=0.70",
     "plotly>=5.24",
@@ -201,7 +208,7 @@ agent-master = [
     "dash>=4.0",
     "dash-bootstrap-components>=2.0",
     "flask>=3.0",
-    "diskcache>=5.6",
+    "diskcache-community>=5.8.4",
     "multiprocess>=0.70",
     "plotly>=5.24",
     "Pillow>=10.0",

@@ -28,6 +28,9 @@ Supported formats
 ``ascii``
     Generic whitespace table, one column per channel
     (requires ``dt`` and optionally ``chan``).
+``atexhg``
+    ``<ATEXHG>`` binary ``.atts`` files (float32, channel
+    interleaved); see :mod:`pycsamt.ts.atexhg`.
 
 References
 ----------
@@ -52,6 +55,7 @@ import pandas as pd
 from ..exceptions import FileHandlingError
 from ..log.logger import get_logger
 from ._base import CHANNEL_ORDER, TSData
+from .atexhg import is_atexhg, read_atexhg
 
 logger = get_logger(__name__)
 
@@ -61,6 +65,7 @@ __all__ = [
     "read_emslab",
     "read_edi_tseries",
     "read_ascii",
+    "read_atexhg",
     "sniff_format",
 ]
 
@@ -82,10 +87,13 @@ def sniff_format(path: str | Path) -> str:
     """
     Guess the time-series file format.
 
-    Returns one of ``"lims"``, ``"emslab"``, ``"edi"`` or
-    ``"ascii"`` (fallback).
+    Returns one of ``"atexhg"`` (binary, detected from its magic
+    bytes), ``"lims"``, ``"emslab"``, ``"edi"`` or ``"ascii"``
+    (fallback).
     """
     p = Path(path)
+    if is_atexhg(p):
+        return "atexhg"
     head: list[str] = []
     with p.open("r", encoding="utf-8-sig", errors="replace") as f:
         for _ in range(400):
@@ -591,7 +599,7 @@ def read_ts(
     ----------
     path : str or Path
         Input file.
-    format : {'lims', 'emslab', 'edi', 'ascii'}, optional
+    format : {'lims', 'emslab', 'edi', 'ascii', 'atexhg'}, optional
         Force a reader.  When omitted the format is sniffed
         with :func:`sniff_format`.
     **kws
@@ -612,7 +620,8 @@ def read_ts(
 
     See Also
     --------
-    read_lims, read_emslab, read_edi_tseries, read_ascii
+    read_lims, read_emslab, read_edi_tseries, read_ascii,
+    read_atexhg
     """
     fmt = (format or sniff_format(path)).strip().lower()
     if fmt == "lims":
@@ -623,7 +632,9 @@ def read_ts(
         return read_edi_tseries(path, **kws)
     if fmt == "ascii":
         return read_ascii(path, **kws)
+    if fmt == "atexhg":
+        return read_atexhg(path, **kws)
     raise FileHandlingError(
         f"Unknown time-series format {fmt!r}. Expected "
-        "'lims', 'emslab', 'edi' or 'ascii'."
+        "'lims', 'emslab', 'edi', 'ascii' or 'atexhg'."
     )

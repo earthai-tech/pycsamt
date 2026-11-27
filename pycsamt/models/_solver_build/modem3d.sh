@@ -84,7 +84,26 @@ if [ "$DO_CLEAN" = "1" ]; then
     "$TOOLCHAIN_MAKE" clean
 fi
 
-MAKE_ARGS=("$TOOLCHAIN_MAKE" "F90=$TOOLCHAIN_F90")
+# The Makefile's mpi/intel targets set their own compiler (mpif90/ifort) as
+# target-specific variables; an F90=... on the command line would override
+# them and compile the MPI sources with plain gfortran (no mpif.h).
+# ModEM's MPI code passes LOGICAL buffers to MPI_Pack/MPI_Unpack through
+# mpif.h; gfortran >= 10 rejects such argument mismatches unless told to
+# allow them. The Makefile reads FFLAGS with ?=, so setting it in the
+# environment keeps its target-specific += additions (-DMPI etc.).
+if [ "$BUILD_TARGET" != "intel" ]; then
+    F90_FOR_VERSION="$TOOLCHAIN_F90"
+    [ "$BUILD_TARGET" = "mpi" ] && F90_FOR_VERSION="mpif90"
+    F90_MAJOR="$("$F90_FOR_VERSION" -dumpversion 2>/dev/null | cut -d. -f1)"
+    case "$F90_MAJOR" in
+        ''|*[!0-9]*) ;;
+        *) if [ "$F90_MAJOR" -ge 10 ]; then
+               export FFLAGS="-O3 -ffree-line-length-none -cpp -fallow-argument-mismatch"
+           fi ;;
+    esac
+fi
+MAKE_ARGS=("$TOOLCHAIN_MAKE")
+[ -z "$BUILD_TARGET" ] && MAKE_ARGS+=("F90=$TOOLCHAIN_F90")
 [ -n "$TOOLCHAIN_LIBS" ] && MAKE_ARGS+=("LIBS=$TOOLCHAIN_LIBS")
 if [ "$BUILD_TARGET" = "mpi" ]; then
     have_cmd mpif90 || die "--mpi requested but mpif90 was not found on PATH."

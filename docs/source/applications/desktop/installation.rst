@@ -79,7 +79,7 @@ see :ref:`applications-desktop-licensing` below for what happens after that.
    * - Platform
      - Download
      - Notes
-   * - Windows
+   * - Windows 10/11 (64-bit)
      - `pycsamt-desktop-setup.exe
        <https://github.com/earthai-tech/pycsamt/releases/latest/download/pycsamt-desktop-setup.exe>`__
      - Installs to Program Files with Start Menu / Desktop shortcuts and a

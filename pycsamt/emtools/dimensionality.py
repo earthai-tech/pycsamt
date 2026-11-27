@@ -112,21 +112,28 @@ def phase_features_table(
         pdf = pt.loc[mask]
         if pdf.empty:
             continue
-        # align by nearest period
-        p_pt = pdf["period"].to_numpy()
-        p_z = 1.0 / fr
-        idx = np.searchsorted(p_pt, p_z)
-        idx = np.clip(idx, 0, len(p_pt) - 1)
-        beta_abs = np.abs(pdf["beta"].to_numpy()[idx])
-        ellipt = np.abs(pdf["ellipt"].to_numpy()[idx])
-        for j in range(len(fr)):
+        # The phase table is a finite subset of these same observations.
+        # Match exact native frequencies in occurrence order; searchsorted
+        # on unsorted periods mislabels observations and imputes invalid rows.
+        from collections import defaultdict, deque
+
+        phase_rows = defaultdict(deque)
+        for row in pdf.itertuples(index=False):
+            phase_rows[float(row.freq)].append(row)
+        for j, f in enumerate(fr):
+            if not (np.isfinite(f) and f > 0 and np.isfinite(z[j]).all()):
+                continue
+            matches = phase_rows.get(float(f))
+            if not matches:
+                continue
+            phase_row = matches.popleft()
             rows.append(
                 dict(
                     station=st,
                     freq=float(fr[j]),
-                    period=float(p_z[j]),
-                    beta_abs=float(beta_abs[j]),
-                    ellipt_abs=float(ellipt[j]),
+                    period=float(1.0 / f),
+                    beta_abs=float(abs(phase_row.beta)),
+                    ellipt_abs=float(abs(phase_row.ellipt)),
                     logrho_det=float(lgr[j]),
                     phi_det=float(ph[j]),
                     tip_amp=float(ta[j]) if ta is not None else np.nan,
@@ -323,7 +330,11 @@ def pre2d_inversion_assessment(
             )
         cons_ang = _by_station(consensus, station, "ang")
         cons_iqr = _by_station(consensus, station, "iqr")
-        if np.isfinite(frac_3d) and frac_3d > 0.5:
+        if n == 0:
+            recommendation = "insufficient_data_for_2d"
+        elif not (np.isfinite(cons_ang) and np.isfinite(cons_iqr)):
+            recommendation = "insufficient_strike_evidence_for_2d"
+        elif np.isfinite(frac_3d) and frac_3d > 0.5:
             recommendation = "review_3d_effects_before_2d"
         elif np.isfinite(cons_iqr) and cons_iqr > 20.0:
             recommendation = "unstable_strike_review_band"

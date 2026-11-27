@@ -16,6 +16,8 @@ for the full reference of every agent group.
    :class: pycsamt-guide-toc
 
    orchestrator
+   review_gate
+   plugins
    assistant_rag
    overview
    agent_catalogue

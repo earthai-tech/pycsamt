@@ -29,9 +29,9 @@ the bottom is row *i = nz*.
 
 Boundary conditions
 -------------------
-Dirichlet conditions are applied at all four boundaries using the analytic
-1-D MT response of the edge column profiles (left/right) or the halfspace
-(top/bottom).  For the TE mode the normalised plane-wave source
+Dirichlet conditions are applied at all four boundaries using the exact
+1-D plane-wave fields of the edge column profiles (left/right and bottom;
+see :func:`_layered_field_profiles`).  For the TE mode the normalised plane-wave source
 ``E_y = 1`` at the surface is the natural starting point; the BC values
 at depth follow from the 1-D recursion.  For the TM mode the analogous
 1-D ``H_y`` field is used.
@@ -248,44 +248,101 @@ def _z1d_column(omega: float, rho: np.ndarray, thick: np.ndarray) -> complex:
     return _z_surface_mt(omega, rho, thick)
 
 
+def _layered_field_profiles(
+    omega: float,
+    rho: np.ndarray,
+    thick: np.ndarray,
+    z_nodes: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Exact 1-D plane-wave field profiles of a layered column.
+
+    Within each layer the field is ``a e^{-kd} + b e^{kd}``; the up- and
+    down-going amplitudes follow from the impedance at the layer top and
+    bottom (Wait recursion), written so that no growing exponential is
+    evaluated on its own (the up-going term is formed as
+    ``e^{k(d-2h)}``, bounded for ``0 <= d <= h``).
+
+    Parameters
+    ----------
+    omega : float
+        Angular frequency [rad/s].
+    rho : ndarray, shape (n,)
+        Layer resistivities top to bottom; the last one is a halfspace.
+    thick : ndarray, shape (n-1,)
+        Layer thicknesses [m].
+    z_nodes : ndarray
+        Depths [m] at which the profiles are evaluated.
+
+    Returns
+    -------
+    e_norm, h_norm : ndarray of complex
+        Tangential electric and magnetic fields normalised to their
+        surface values: the TE-mode ``E_y`` and TM-mode ``H_y`` profiles
+        of a laterally uniform earth.
+    """
+    rho = np.asarray(rho, dtype=float)
+    thick = np.asarray(thick, dtype=float)
+    n = rho.size
+    k = np.sqrt(1j * omega * MU0 / rho)
+    zeta = 1j * omega * MU0 / k  # intrinsic impedance of each layer
+
+    # Impedance at the top and bottom of each layer.
+    z_top = np.empty(n, dtype=complex)
+    z_bot = np.empty(n, dtype=complex)
+    z_top[-1] = z_bot[-1] = zeta[-1]
+    tanh_kh = np.zeros(n, dtype=complex)
+    for j in range(n - 2, -1, -1):
+        z_bot[j] = z_top[j + 1]
+        tanh_kh[j] = np.tanh(k[j] * thick[j])
+        z_top[j] = zeta[j] * (z_bot[j] + zeta[j] * tanh_kh[j]) / (
+            zeta[j] + z_bot[j] * tanh_kh[j]
+        )
+
+    def in_layer(j, d):
+        """E(d)/E(top) and H(d)/H(top) at local depth d in layer j."""
+        down = np.exp(-k[j] * d)
+        if j == n - 1:
+            return down, down
+        h = thick[j]
+        # e^{kd} (1 - tanh kh), bounded for d <= h
+        up = 2.0 * np.exp(k[j] * (d - 2.0 * h)) / (1.0 + np.exp(-2.0 * k[j] * h))
+        zb, ze, t = z_bot[j], zeta[j], tanh_kh[j]
+        e = 0.5 * down * (1.0 + ze / z_top[j]) + 0.5 * up * (zb - ze) / (zb + ze * t)
+        hh = 0.5 * down * (1.0 + z_top[j] / ze) - 0.5 * up * (zb - ze) / (ze + zb * t)
+        return e, hh
+
+    tops = np.concatenate([[0.0], np.cumsum(thick)])
+    e_top = np.ones(n, dtype=complex)
+    h_top = np.ones(n, dtype=complex)
+    for j in range(n - 1):
+        e_b, h_b = in_layer(j, thick[j])
+        e_top[j + 1] = e_top[j] * e_b
+        h_top[j + 1] = h_top[j] * h_b
+
+    z_nodes = np.asarray(z_nodes, dtype=float)
+    lay = np.clip(np.searchsorted(tops, z_nodes, side="right") - 1, 0, n - 1)
+    e_norm = np.empty(z_nodes.size, dtype=complex)
+    h_norm = np.empty(z_nodes.size, dtype=complex)
+    for idx, (z, j) in enumerate(zip(z_nodes, lay)):
+        e_l, h_l = in_layer(j, z - tops[j])
+        e_norm[idx] = e_top[j] * e_l
+        h_norm[idx] = h_top[j] * h_l
+    return e_norm, h_norm
+
+
 def _ey_1d_profile(
     omega: float,
     rho: np.ndarray,
     thick: np.ndarray,
     z_nodes: np.ndarray,
 ) -> np.ndarray:
-    """Compute the normalised TE field E_y(z) at the grid node depths.
-
-    Uses the standard downward-continuation formula.  The surface value
-    is normalised to 1 + 0j.
+    """Normalised TE field ``E_y(z) / E_y(0)`` of a layered column.
 
     Returns
     -------
     Ey : ndarray of complex, shape (nz+1,)
     """
-    nz1 = len(z_nodes)
-    Ey = np.zeros(nz1, dtype=complex)
-    Ey[0] = 1.0 + 0j
-
-    # k_j = sqrt(i * omega * mu0 / rho_j)
-    k = np.sqrt(1j * omega * MU0 / rho)  # shape (n_layers,)
-
-    z_top = np.concatenate([[0.0], np.cumsum(thick)])  # layer top depths
-
-    for n in range(1, nz1):
-        z = z_nodes[n]
-        # Find which layer z falls in
-        lay = np.searchsorted(z_top, z, side="right") - 1
-        lay = min(lay, len(rho) - 1)
-        z - z_top[lay]
-        k_j = k[lay]
-        # Propagate E_y into this layer using the upward-recursion impedance
-        # E_y(z) = E_y(z_top) * cosh(k_j*dz) + (Z(z_top)/iωμ₀/k_j) * ...
-        # For the FD BC we only need a smooth exponential-like profile:
-        # E_y(z) ≈ exp(-k_j * dz)  (downgoing wave in uniform layer)
-        Ey[n] = Ey[0] * np.exp(-k_j * z)
-
-    return Ey
+    return _layered_field_profiles(omega, rho, thick, z_nodes)[0]
 
 
 def _hy_1d_profile(
@@ -294,24 +351,45 @@ def _hy_1d_profile(
     thick: np.ndarray,
     z_nodes: np.ndarray,
 ) -> np.ndarray:
-    """Compute the normalised TM field H_y(z) at grid node depths.
-
-    Surface value normalised to 1 + 0j.
+    """Normalised TM field ``H_y(z) / H_y(0)`` of a layered column.
 
     Returns
     -------
     Hy : ndarray of complex, shape (nz+1,)
     """
-    nz1 = len(z_nodes)
-    Hy = np.zeros(nz1, dtype=complex)
-    Hy[0] = 1.0 + 0j
-    k = np.sqrt(1j * omega * MU0 / rho)
-    z_top = np.concatenate([[0.0], np.cumsum(thick)])
-    for n in range(1, nz1):
-        z = z_nodes[n]
-        lay = min(np.searchsorted(z_top, z, side="right") - 1, len(rho) - 1)
-        Hy[n] = Hy[0] * np.exp(-k[lay] * z)
-    return Hy
+    return _layered_field_profiles(omega, rho, thick, z_nodes)[1]
+
+
+def _top_cell_derivative(
+    f_surface: np.ndarray,
+    f_below: np.ndarray,
+    dz0: float,
+    k: np.ndarray,
+) -> np.ndarray:
+    """Surface z-derivative of a field from its values at z=0 and z=dz0.
+
+    Inside a locally 1-D top cell the field obeys ``f'' = k^2 f``, so
+    ``f'(0) = k (f(dz0) - f(0) cosh(k dz0)) / sinh(k dz0)``. This reduces
+    to the one-sided difference ``(f(dz0) - f(0)) / dz0`` as
+    ``k dz0 -> 0`` but, unlike it, does not evaluate the derivative half
+    a cell below the field. Only decaying exponentials are evaluated.
+    """
+    e = np.exp(-k * dz0)
+    e2 = e * e
+    inv_sinh = 2.0 * e / (1.0 - e2)
+    coth = (1.0 + e2) / (1.0 - e2)
+    return k * (f_below * inv_sinh - f_surface * coth)
+
+
+def _node_average(sigma_top: np.ndarray, dx: np.ndarray) -> np.ndarray:
+    """Width-weighted conductivity of the top cells at the surface nodes."""
+    s = np.empty(len(dx) + 1)
+    s[0] = sigma_top[0]
+    s[-1] = sigma_top[-1]
+    s[1:-1] = (dx[:-1] * sigma_top[:-1] + dx[1:] * sigma_top[1:]) / (
+        dx[:-1] + dx[1:]
+    )
+    return s
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -655,17 +733,25 @@ def _surface_impedance_te(
     ey_below: np.ndarray,  # E_y at z=dz[0], shape (nx+1,)
     dz0: float,
     omega: float,
+    sigma_nodes: np.ndarray | None = None,
 ) -> np.ndarray:
     """Compute Z_xy = E_y / H_x at the surface nodes.
 
-    From Faraday's law:  H_x = (1/iωμ₀) ∂E_y/∂z
-    Approximated as:     H_x ≈ (E_y(dz0) - E_y(0)) / (dz0 * iωμ₀)
+    From Faraday's law ``H_x = (1/iωμ₀) ∂E_y/∂z``. When ``sigma_nodes``
+    (conductivity at the surface nodes) is given, ``∂E_y/∂z`` comes from
+    the top-cell solution (:func:`_top_cell_derivative`); otherwise from
+    the first-order one-sided difference, which evaluates H_x half a
+    cell below E_y and biases the phase by about ``|k| dz0 / 2`` rad.
 
     Returns
     -------
     Zxy : ndarray of complex, shape (nx+1,)
     """
-    dEy_dz = (ey_below - ey_surface) / dz0
+    if sigma_nodes is None:
+        dEy_dz = (ey_below - ey_surface) / dz0
+    else:
+        k = np.sqrt(1j * omega * MU0 * np.asarray(sigma_nodes))
+        dEy_dz = _top_cell_derivative(ey_surface, ey_below, dz0, k)
     # Faraday's law (e^{+iωt}): ∂E_y/∂z = iωμ₀ H_x  →  H_x = ∂E_y/∂z / (iωμ₀)
     # But with the downgoing-wave normalisation used in the FD assembler the
     # correct sign for Z_xy = E_y/H_x gives a +45° phase on a halfspace:
@@ -682,8 +768,13 @@ def _surface_impedance_tm(
     dx: np.ndarray,  # cell widths, shape (nx,)
     dz0: float,
     omega: float,
+    exact_top_cell: bool = True,
 ) -> np.ndarray:
     """Compute Z_yx = −E_x / H_y at the surface nodes.
+
+    ``∂H_y/∂z`` at the surface comes from the top-cell solution
+    (:func:`_top_cell_derivative`) unless ``exact_top_cell`` is False,
+    in which case the first-order one-sided difference is used.
 
     From Ampere's law in 2-D (no y-dependence), the x-component of
     curl(H) is ``-∂H_y/∂z``, so ``-∂H_y/∂z = σ E_x`` and
@@ -696,13 +787,14 @@ def _surface_impedance_tm(
     -------
     Zyx : ndarray of complex, shape (nx+1,)
     """
-    dHy_dz = (hy_below - hy_surface) / dz0
-
-    # σ at nodes: average of left/right cells (edge nodes get one side)
-    sigma_nodes = np.empty(len(dx) + 1)
-    sigma_nodes[0] = sigma_top[0]
-    sigma_nodes[1:-1] = 0.5 * (sigma_top[:-1] + sigma_top[1:])
-    sigma_nodes[-1] = sigma_top[-1]
+    # σ at nodes: width-weighted average of left/right cells (parallel
+    # current paths; edge nodes get one side)
+    sigma_nodes = _node_average(sigma_top, dx)
+    if exact_top_cell:
+        k = np.sqrt(1j * omega * MU0 * sigma_nodes)
+        dHy_dz = _top_cell_derivative(hy_surface, hy_below, dz0, k)
+    else:
+        dHy_dz = (hy_below - hy_surface) / dz0
 
     with np.errstate(divide="ignore", invalid="ignore"):
         Ex = np.where(sigma_nodes > 0.0, -dHy_dz / sigma_nodes, 0.0 + 0j)
@@ -820,6 +912,7 @@ class MT2DForward:
         residual_tm = np.zeros(nf)
 
         sigma_top = grid.conductivity[0, :]  # top cell row
+        sigma_nodes = _node_average(sigma_top, grid.dx)
 
         for fi, freq in enumerate(freqs):
             omega = 2.0 * np.pi * freq
@@ -837,7 +930,9 @@ class MT2DForward:
 
             ey_surf = ey_grid[0, :]
             ey_below = ey_grid[1, :]
-            Zxy_nodes = _surface_impedance_te(ey_surf, ey_below, dz0, omega)
+            Zxy_nodes = _surface_impedance_te(
+                ey_surf, ey_below, dz0, omega, sigma_nodes=sigma_nodes
+            )
             Zxy_st = _interpolate_to_stations(
                 Zxy_nodes, x_nodes, grid.x_stations
             )

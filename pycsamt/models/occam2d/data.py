@@ -403,6 +403,9 @@ class OccamData(OccamBase):
         #: known") otherwise -- Occam2D's own file formats carry no
         #: elevation field at all.
         self.elevations: np.ndarray = np.array([])
+        #: Rows dropped by ``config.phase_quadrant`` (site, freq, mode,
+        #: phase); empty when no window is set.
+        self.masked: list[dict] = []
 
     # ------------------------------------------------------------------
     # Construction from EDI
@@ -472,6 +475,7 @@ class OccamData(OccamBase):
         # ---- build data rows ---------------------------------------------
         _ln10 = float(np.log(10.0))
         data_rows: list[list] = []
+        masked: list[dict] = []
 
         for si, (_name, site) in enumerate(zip(names, items)):
             s_freq = _site_attr(site, "freq")
@@ -532,6 +536,18 @@ class OccamData(OccamBase):
                     # Normalise TM phase to 1st quadrant: phase_yx + 180°
                     if rho_code == 5:
                         phs_val = phs_val + 180.0
+                    # Wrap to (-180, 180]: a +178° yx phase must become
+                    # -2°, not 358°, which no model response can approach.
+                    phs_val = float(180.0 - (180.0 - phs_val) % 360.0)
+                    quad = cfg.phase_quadrant
+                    if quad is not None and not (
+                        quad[0] <= phs_val <= quad[1]
+                    ):
+                        masked.append(
+                            {"site": str(_name), "freq": float(f),
+                             "mode": _mode_name, "phase": phs_val}
+                        )
+                        continue
 
                     log_rho = float(np.log10(rho_val))
 
@@ -567,6 +583,7 @@ class OccamData(OccamBase):
 
         obj = cls(title=title, config=cfg, **kwargs)
         obj.sites = names
+        obj.masked = masked
         obj.offsets = np.array(offsets, dtype=float)
         obj.frequencies = freqs
         obj.elevations = np.asarray(elevations, dtype=float)

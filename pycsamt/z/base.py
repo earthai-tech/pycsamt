@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy as _copy
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Union
@@ -232,6 +233,18 @@ class EMBase:
 
     def deepcopy(self) -> EMBase:
         return _copy.deepcopy(self)
+
+    def __getstate__(self) -> dict[str, Any]:
+        state = self.__dict__.copy()
+        if isinstance(state.get("log"), logging.Logger):
+            state["log"] = state["log"].name
+        return state
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        name = state.get("log")
+        if isinstance(name, str):
+            state = dict(state, log=logging.getLogger(name))
+        self.__dict__.update(state)
 
     def _sliceable_predicate(
         self,

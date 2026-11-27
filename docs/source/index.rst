@@ -24,7 +24,7 @@
        <div class="pyc-hero-copy">
          <div class="pyc-hero-badges">
            <span class="pyc-chip pyc-chip--accent"><i class="fa-solid fa-tag"></i> v2.0 · LGPL-3.0</span>
-           <span class="pyc-chip"><i class="fa-brands fa-python"></i> Python 3.9+</span>
+           <span class="pyc-chip"><i class="fa-brands fa-python"></i> Python 3.10+</span>
            <span class="pyc-chip"><i class="fa-solid fa-code-branch"></i> Open source</span>
          </div>
          <h1 class="pyc-hero-logo" aria-label="pyCSAMT">

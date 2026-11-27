@@ -12,7 +12,7 @@ see :doc:`getting_started/installation` instead.
 Requirements
 ------------
 
-* **Python 3.9 or later** (3.9–3.13 are tested in CI).
+* **Python 3.10 or later** (3.10–3.13 are tested in CI).
 * Linux, macOS, and Windows are supported for the Python package. External
   solver toolchains have additional platform requirements described below.
 * The core installation pulls in a deliberately small scientific stack:
@@ -58,11 +58,6 @@ Requirements
    * - h5py
      - 3.8
      - HDF5 elevation import/export (:mod:`pycsamt.map.topo`)
-
-Python 3.9 installations constrain NumPy to the 1.x line for compatibility
-with the supported Matplotlib and desktop stack, and use empymod 2.3.1 (the
-newest release with a Python 3.9 wheel) instead of 2.5+. pip applies both
-markers automatically from the package metadata.
 
 Standard Install
 ----------------
